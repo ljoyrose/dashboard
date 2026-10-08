@@ -273,7 +273,7 @@ async function load(){
     try{
       var txt=await readDriveFile(byTitle[title][0]);
       txt=String(txt||'').replace(/^\uFEFF/,'');
-      if(title==='BLD-_MANIFEST.csv'){ var nl=txt.indexOf('\n'); LOAD.manifestLine=txt.slice(0,nl<0?txt.length:nl).replace(/^"|"\s*$/g,'').trim(); txt=nl<0?'':txt.slice(nl+1); }
+      if(title==='BLD-_MANIFEST.csv' && !/^"?file,/i.test(txt)){ var nl=txt.indexOf('\n'); LOAD.manifestLine=txt.slice(0,nl<0?txt.length:nl).replace(/^"|"\s*$/g,'').trim(); txt=nl<0?'':txt.slice(nl+1); }
       T[title]=parseCSV(txt); done++;
     }catch(e){ T[title]=[]; LOAD.notes.push(title+': '+((e&&e.code)||'read failed')); }
   }
@@ -302,7 +302,7 @@ function build(){
       copies:r.copies,interp:r.interpretation,need:r.ruling_needed,lab:r.lab||'',on:r.tested_on||''}); });
   CD.dna=DNA;
   CD.outdoor=(T['BLD-outdoor_temp.csv']||[]).map(function(r){ return {on:r.on_date,kind:r.reading_kind,
-    min:r.min_c,max:r.max_c,phrase:r.phrase,cap:r.captured_at,src:r.source}; });
+    min:r.min_temp,max:r.max_temp,phrase:r.phrase,cap:r.captured_at,src:r.source}; });
   CD.docTypes=(T['BLD-doc_type.csv']||[]);
   CD.work=(T['BLD-WORK.csv']||[]);
   
@@ -322,7 +322,7 @@ function build(){
     var o=OCC[r.id]||{}, s=ST[r.id]||{}, m=MC[r.id]||{};
     var lits=LITBYDAM[r.id]||[];
     return {id:r.id,name:r.name,sex:r.sex,dob:r.dob,size:r.size_band,coat:r.coat_type,kind:r.kind,
-      neuter:r.neuter_status,state:s.state||'',classification:o.source_where||'',area_id:o.area_id||'',
+      neuter:r.neuter_status,state:s.state||'',classification:o.classification||'',area_id:o.area_id||'',
       
       where:'',off:o.off_site_kind||'',
       treats:DSP[r.id]||[], dna:DNA[r.id]||[],
@@ -336,7 +336,7 @@ function build(){
   
   CD.areas=(T['BLD-area.csv']||[]).map(function(r){ return {id:r.id,code:r.code,cabin:r.code,
     grouping:r.grouping||'other',group_sort:r.group_sort||'99',
-    m2:r.m2||'',m2ok:r.m2_confirmed||'',m2note:r.m2_note||''}; });
+    m2:r.area_value||'',m2ok:r.m2_confirmed||'',m2note:r.m2_note||''}; });
   var CAP={}; (T['BLD-area_capacity.csv']||[]).forEach(function(r){
     var a=CAP[r.area_id]=CAP[r.area_id]||{free:{},limited:{}};
     (a[r.access_type]||(a[r.access_type]={}))[r.size_band]={n:r.max_dogs,basis:r.basis||''}; });
@@ -349,7 +349,7 @@ function build(){
   });
   CD.tempBands=(T['BLD-temperature_band.csv']||[]).map(function(r){
     return {band:r.band,from:parseInt(r.age_from_days,10),to:r.age_to_days===''?99999:parseInt(r.age_to_days,10),
-            min:r.min_c===''?null:parseFloat(r.min_c),max:r.max_c===''?null:parseFloat(r.max_c),
+            min:(r.min_temp==null||r.min_temp==='')?null:parseFloat(r.min_temp),max:(r.max_temp==null||r.max_temp==='')?null:parseFloat(r.max_temp),
             stated:!r.ruling_needed,basis:r.basis||'',note:r.note||''};
   }).sort(function(a,b){return a.from-b.from;});
   CD.assoc=T['BLD-association.csv']||[]; CD.prospects=T['BLD-prospect.csv']||[];
@@ -360,10 +360,21 @@ function build(){
   }).sort(function(a,b){return b.at-a.at;});
   CD.litters=T['BLD-litter.csv']||[]; CD.matings=T['BLD-mating.csv']||[];
   CD.vetlink=T['BLD-MAP-animana.csv']||[]; CD.manifest=T['BLD-_MANIFEST.csv']||[];
-  var VM={}; CD.vetlink.forEach(function(m){ if(m.subject_id && !VM[m.subject_id]) VM[m.subject_id]=m; });
-  CD.dogs.forEach(function(d){ var m=VM[d.id]; if(!m) return;
+  var MCN={}; (T['BLD-microchip.csv']||[]).forEach(function(r){ if(r.subject_id&&r.chip_number) MCN[r.subject_id]=r.chip_number; });
+  var vmScore=function(m){ var sc=0, st=String(m.vet_status||''), nm=String(m.vet_name||''), cl=String(m.vet_client||'');
+    if(m.vet_active==='true') sc+=8;
+    if(/status\.normal$/i.test(st)) sc+=4;
+    if(/otherowner/i.test(st)) sc-=20;
+    if(/\bmoved\b/i.test(nm)||/moved to another client/i.test(m.warning||'')) sc-=20;
+    if(/^Carson,\s*Lisa$/i.test(cl.trim())) sc+=3; else if(/Carson/i.test(cl)) sc+=1;
+    if(m.matched_on_chip) sc+=(MCN[m.subject_id]&&MCN[m.subject_id]===m.matched_on_chip)?3:1;
+    return sc; };
+  var VM={}, VDOD={}; CD.vetlink.forEach(function(m){ if(!m.subject_id) return;
+    if(m.date_of_death) VDOD[m.subject_id]=m.date_of_death;
+    var cur=VM[m.subject_id]; if(!cur || vmScore(m)>vmScore(cur)) VM[m.subject_id]=m; });
+  CD.dogs.forEach(function(d){ var m=VM[d.id]; if(!m) return; d.vetRec=m;
    d.vetStatus=m.vet_status||''; d.vetActive=m.vet_active||''; d.descent=m.descent||'';
-   if(!d.breed) d.breed=m.breed||''; d.dod=m.date_of_death||''; d.insurance=m.insurance_number||''; d.warning=m.warning||'';
+   if(!d.breed) d.breed=m.breed||''; d.dod=m.date_of_death||VDOD[d.id]||''; d.insurance=m.insurance_number||''; d.warning=m.warning||'';
    if(!d.chip && m.matched_on_chip) d.chip=m.matched_on_chip; });
   CD.tenant=(T['BLD-tenant.csv']||[])[0]||{};
   CD._byId={}; CD.dogs.forEach(function(d){ CD._byId[d.id]=d; });
@@ -404,7 +415,8 @@ function statusOf(d){
  var w=d.classification||'';
  
  if(d.dod) return {code:'DE',label:'Deceased',cls:'st-de'};
- if(w==='Collected' || /otherowner/i.test(d.vetStatus||'') || (d.vetActive||'')==='false')
+ var here=/^(active|in training)$/i.test(d.state||'');
+ if(w==='Collected' || (!here && (/otherowner/i.test(d.vetStatus||'') || (d.vetActive||'')==='false')))
    return {code:'CL',label:'Collected',cls:'st-cl'};
  
  if(/^cerys/i.test(d.off||'') || /^Cerys/i.test(w)) return {code:'CE',label:'Cerys',cls:'st-ce'};
@@ -885,7 +897,8 @@ async function accessSave(aid,mode,msgEl){
  catch(e){ var c=(e&&(e.code||e.message))||'error'; if(msgEl) msgEl.textContent='NOT saved \u2014 '+c; console.log('access save failed',e); }
 }
 
-function inCabin(aid,date){ var k=roundKey(date||todayISO(),aid); return ((ROUND[k]||{}).subjects||[]); }
+function inCabin(aid,date){ var k=roundKey(date||todayISO(),aid); if(ROUND[k]) return (ROUND[k].subjects||[]);
+ return (CD.dogs||[]).filter(function(d){return d.area_id===aid;}).map(function(d){return d.id;}); }
 
 function pageAreas(){
  var date=CD._roundDate||todayISO();
@@ -897,7 +910,7 @@ function pageAreas(){
  +'<div class="tiles">'+tile('b4',CD.areas.length,'cabins','BLD-area.csv')
  +tile('b6',CD.areas.filter(function(a){return a.m2ok==='NO';}).length,'m\u00b2 unconfirmed','two figures were on record for one room')
  +tile(set===CD.areas.length?'b5':'b2',set,'have a mode chosen','of '+CD.areas.length)
- +tile('b3',CD.areas.filter(function(a){return inCabin(a.id,date).length;}).length,'occupied today','from the round')+'</div>'
+ +tile('b3',CD.areas.filter(function(a){return inCabin(a.id,date).length;}).length,'occupied today','from the round, else BLD-occupancy')+'</div>'
  +'<div class="card acc6"><h4>Free access and limited are the same cabin run two ways</h4>'
  +'<div class="card acc6"><h4>Free access or limited \u2014 one or the other</h4>'
  +'<p style="margin-bottom:0">The same cabin run two ways, each with its own floor area and its own permitted numbers. Pick one and the capacity check runs.</p></div>'
@@ -954,8 +967,11 @@ function pageLitters(){
  +'<select id="ld"><option value="">date of birth</option><option value="y">has a DOB</option><option value="n">missing a DOB</option></select>'
  +'<select id="ly"><option value="">year</option></select>'
  +'<select id="ls"><option value="">status</option></select>'
+ +'<select id="lm"><option value="">dam</option></select>'
+ +'<select id="lp"><option value="">sire</option></select>'
+ +'<select id="lk"><option value="">pups</option><option value="y">pups linked</option><option value="n">no pups linked</option></select>'
  +'<button id="lclr">clear</button><span class="mut" id="lcnt"></span></div>'
- +'<div class="scroll"><table><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
+ +'<div class="scroll"><table><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>pups</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
  return h;
 }
 function litterPups(){
@@ -993,7 +1009,7 @@ function drawLitters(){
 function pageVet(){
  var wcount={}; CD.dogs.forEach(function(d){ wcount[d.id]=d.weights.length; });
  var byId={}; CD.dogs.forEach(function(d){ byId[d.id]=d; });
- var here=CD.vetlink.filter(function(l){ var d=byId[l.subject_id]; if(!d) return false;
+ var here=CD.vetlink.filter(function(l){ var d=byId[l.subject_id]; if(!d || d.vetRec!==l) return false;
    var c=statusOf(d).code; return c!=='CL' && c!=='DE'; });
  var hidden=CD.vetlink.length-here.length;
  var h='<h2>Vet link</h2><p class="sub">Chip → Animana patient ID → weight history. The chip is the join.</p>'
@@ -1004,7 +1020,7 @@ function pageVet(){
  +'<p style="margin-bottom:0">Animana patient ids appear in <code>BLD-MAP-animana.csv</code> and nowhere else. If Animana renumbers, one file changes.</p></div>'
  +'<div class="scroll"><table><thead><tr><th>dog</th><th>chip</th><th>animana patient ID</th><th>weighings</th></tr></thead><tbody>';
  here.slice().sort(function(a,b){return (a.vet_name||'')<(b.vet_name||'')?-1:1;}).forEach(function(l){
-  h+='<tr><td><b>'+esc(l.vet_name)+'</b></td><td><code>'+esc(l.matched_on_chip)+'</code></td>'
+  h+='<tr><td><b>'+esc(l.vet_name)+'</b></td><td><code>'+esc(l.matched_on_chip||(byId[l.subject_id]||{}).chip||'')+'</code></td>'
    +'<td><code class="mut">'+esc(l.foreign_id)+'</code></td><td>'+(wcount[l.subject_id]||0)+'</td></tr>';});
  return h+'</tbody></table></div>';
 }
@@ -1463,10 +1479,11 @@ function go(id,push){
     Array.prototype.forEach.call(document.querySelectorAll('.sfb'),function(x){
       x.setAttribute('aria-pressed', x.dataset.code===f.value ? 'true':'false'); });
     drawDogs(); }); });
-  Array.prototype.forEach.call(document.querySelectorAll('.wtc'),function(el){
-   el.addEventListener('click',function(){
-     if(el.classList.contains('trc')) showTreats(el.dataset.dog); else showWeights(el.dataset.dog); }); });
-  ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){ var e=document.getElementById(i); e.addEventListener('input',drawDogs); e.addEventListener('change',drawDogs); });
+  document.getElementById('rows').addEventListener('click',function(ev){
+   var el=ev.target&&ev.target.closest?ev.target.closest('.wtc'):null; if(!el||!el.dataset.dog) return;
+   if(el.classList.contains('trc')) showTreats(el.dataset.dog); else showWeights(el.dataset.dog);
+   var wp=document.getElementById('wpanel'); if(wp&&wp.scrollIntoView) wp.scrollIntoView({behavior:'smooth',block:'start'}); });
+  ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawDogs); if(i!=='q') e.addEventListener('change',drawDogs); });
   document.getElementById('clr').addEventListener('click',function(){ ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){document.getElementById(i).value='';}); drawDogs(); });
   drawDogs();
  }
@@ -1474,14 +1491,14 @@ function go(id,push){
   var ys={},ss={},dm={},sr={};
   CD.litters.forEach(function(l){ if(l.dob) ys[l.dob.slice(0,4)]=1; if(l.status) ss[l.status]=1;
    if(l.dam_subject_id) dm[l.dam_subject_id]=1; if(l.sire_subject_id) sr[l.sire_subject_id]=1; });
-  var add=function(sel,keys,lab){ var e=document.getElementById(sel);
+  var add=function(sel,keys,lab){ var e=document.getElementById(sel); if(!e) return;
    keys.forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=lab?lab(k):k; e.appendChild(o); }); };
   add('ly',Object.keys(ys).sort().reverse());
   add('ls',Object.keys(ss).sort());
   add('lm',Object.keys(dm).sort(function(x,y){return nameOf(x)<nameOf(y)?-1:1;}),nameOf);
   add('lp',Object.keys(sr).sort(function(x,y){return nameOf(x)<nameOf(y)?-1:1;}),nameOf);
-  ['lq','ld','ly','ls','lm','lp','lk'].forEach(function(i){ var e=document.getElementById(i); e.addEventListener('input',drawLitters); e.addEventListener('change',drawLitters); });
-  document.getElementById('lclr').addEventListener('click',function(){ ['lq','ld','ly','ls','lm','lp','lk'].forEach(function(i){document.getElementById(i).value='';}); drawLitters(); });
+  ['lq','ld','ly','ls','lm','lp','lk'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawLitters); if(i!=='lq') e.addEventListener('change',drawLitters); });
+  document.getElementById('lclr').addEventListener('click',function(){ ['lq','ld','ly','ls','lm','lp','lk'].forEach(function(i){var e=document.getElementById(i); if(e) e.value='';}); drawLitters(); });
   drawLitters();
  }
  if(id==='today'){
