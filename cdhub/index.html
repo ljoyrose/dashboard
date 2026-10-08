@@ -1,0 +1,1546 @@
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CD Hub</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--p0:#B8B1A5;--p2:#BE6A5D;--p3:#C07D59;--p4:#B3A74D;--p5:#89AF6A;--p6:#4098BE;--p7:#8D6B9C;--p8:#2C2C2A;
+ --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:#B8B1A5;
+ --bg:#FFFEFB;--fg:#22211F;--ln:#E1DCD2;--sub:#6C665C;--card:#FFFFFF;--soft:#F7F5F0;}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16161A;--fg:#EFEDE8;--ln:#33322E;--sub:#A7A197;--card:#1D1D21;--soft:#212126;}}
+:root[data-theme="dark"]{--bg:#16161A;--fg:#EFEDE8;--ln:#33322E;--sub:#A7A197;--card:#1D1D21;--soft:#212126;}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.55 Lexend,system-ui,sans-serif;-webkit-text-size-adjust:100%;hyphens:auto}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 80px}
+header.top{border-bottom:1px solid var(--ln);background:var(--card);position:sticky;top:0;z-index:20}
+.hin{max-width:1180px;margin:0 auto;padding:12px 16px}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand h1{font-size:19px;margin:0;font-weight:600;letter-spacing:-.01em}
+.brand .sl{font-size:12px;color:var(--sub)}
+.live{font-size:11px;font-weight:600;border:1px solid var(--ln);border-radius:999px;padding:2px 9px;color:var(--sub);white-space:nowrap}
+.live.ok{border-color:rgba(137,175,106,.6);color:#5d8a3e}
+.live.bad{border-color:rgba(190,106,93,.6);color:var(--p2)}
+nav{display:flex;gap:4px;overflow-x:auto;margin-top:9px;padding-bottom:2px}
+nav button{flex:0 0 auto;background:transparent;border:1px solid transparent;border-radius:999px;padding:5px 12px;font:500 13px Lexend,sans-serif;color:var(--sub);cursor:pointer;white-space:nowrap}
+nav button:hover{background:var(--soft);color:var(--fg)}
+nav button[aria-current="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+h2{font-size:23px;font-weight:600;letter-spacing:-.015em;margin:26px 0 4px}
+h3{font-size:16px;font-weight:600;margin:26px 0 8px;display:flex;align-items:center;gap:8px}
+.sub{color:var(--sub);font-size:13.5px;margin:0 0 16px;max-width:74ch}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px 16px;margin:0 0 12px}
+.card.dash{border-style:dashed}
+.card h4{margin:0 0 6px;font-size:14.5px;font-weight:600}
+.card p{margin:0 0 8px;font-size:13.5px}.card p:last-child{margin-bottom:0}
+.acc2{border-left:3px solid var(--p2)}.acc3{border-left:3px solid var(--p3)}.acc4{border-left:3px solid var(--p4)}
+.acc5{border-left:3px solid var(--p5)}.acc6{border-left:3px solid var(--p6)}.acc7{border-left:3px solid var(--p7)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px;margin:0 0 14px}
+.tile{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:13px 14px}
+.tile .n{font-size:30px;font-weight:600;line-height:1.05;letter-spacing:-.02em}
+.tile .k{font-size:12px;color:var(--sub);margin-top:3px;font-weight:500}
+.tile .src{font-size:10.5px;color:var(--sub);margin-top:7px;opacity:.8;line-height:1.35}
+.tile.b0{border-top:3px solid var(--p0)}.tile.b2{border-top:3px solid var(--p2)}.tile.b3{border-top:3px solid var(--p3)}
+.tile.b4{border-top:3px solid var(--p4)}.tile.b5{border-top:3px solid var(--p5)}.tile.b6{border-top:3px solid var(--p6)}
+.tile.b7{border-top:3px solid var(--p7)}
+.scroll{overflow-x:auto;border:1px solid var(--ln);border-radius:12px;background:var(--card)}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--ln);font-weight:600;white-space:nowrap;position:sticky;top:0;background:var(--card)}
+td{padding:7px 10px;border-bottom:1px solid var(--ln);vertical-align:top}
+tr:last-child td{border-bottom:none}
+code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--soft);padding:1px 5px;border-radius:4px}
+.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid var(--ln);white-space:nowrap}
+.pill.ok{background:rgba(137,175,106,.16);border-color:rgba(137,175,106,.5)}
+.pill.no{background:rgba(190,106,93,.16);border-color:rgba(190,106,93,.5)}
+.pill.w{background:rgba(179,167,77,.18);border-color:rgba(179,167,77,.5)}
+.pill.i{background:rgba(64,152,190,.16);border-color:rgba(64,152,190,.5)}
+.mut{color:var(--sub);font-size:11.5px}
+.filt{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
+.filt input,.filt select{font:400 13px Lexend,sans-serif;padding:6px 10px;border:1px solid var(--ln);border-radius:8px;background:var(--card);color:var(--fg)}
+.filt input{min-width:190px}
+.filt button{font:500 13px Lexend,sans-serif;padding:6px 12px;border:1px solid var(--ln);border-radius:8px;background:var(--card);color:var(--sub);cursor:pointer}
+.filt button:hover{color:var(--fg);border-color:var(--fg)}
+.next{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px;padding-top:16px;border-top:1px solid var(--ln)}
+.next button{background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:9px 14px;font:500 13px Lexend,sans-serif;color:var(--fg);cursor:pointer}
+.next button:hover{border-color:var(--fg)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:10px}
+.dc{background:var(--card);border:1px solid var(--ln);border-left:4px solid var(--unk);border-radius:12px;display:flex;flex-direction:column}
+.dc.me{border-left-color:var(--male)}.dc.fe{border-left-color:var(--female)}
+.dc.mn{border-left-color:var(--male-n);border-left-style:dotted}
+.dc.fn{border-left-color:var(--female-n);border-left-style:dotted}
+.dc.u{border-left-style:dotted}
+.dc .bd{padding:11px 13px 12px;display:flex;flex-direction:column;gap:7px;flex:1}
+.dc .hd{display:flex;align-items:flex-start;gap:9px}
+.ph{position:relative;flex:0 0 auto;width:44px;height:44px;border-radius:10px;background:var(--soft);border:1px dashed var(--ln);display:grid;place-items:center;font-size:17px;font-weight:600;color:var(--sub)}
+.dc.me .ph{border-color:var(--male)}.dc.fe .ph{border-color:var(--female)}
+.sym{position:absolute;right:-6px;bottom:-6px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600;border:2px solid var(--unk);color:var(--unk);background:var(--card);line-height:1}
+.dc.me .sym{border-color:var(--male);color:var(--male)}.dc.fe .sym{border-color:var(--female);color:var(--female)}
+.dc.mn .sym{border-color:var(--male-n);color:var(--male-n);border-style:dotted}
+.dc.fn .sym{border-color:var(--female-n);color:var(--female-n);border-style:dotted}
+.dc.u .sym{border-style:dotted}
+.dc .nm{font-weight:600;font-size:14.5px;line-height:1.25}
+.dc .meta{font-size:11.5px;color:var(--sub);margin-top:1px}
+.dc .age{margin-left:auto;font-size:11px;font-weight:600;color:var(--sub);border:1px solid var(--ln);border-radius:999px;padding:1px 7px;white-space:nowrap}
+.dc .par{font-size:11.5px;color:var(--sub)}.dc .par b{color:var(--fg);font-weight:500}
+.dc .chips{display:flex;flex-wrap:wrap;gap:3px}
+.st{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;letter-spacing:.04em;border-radius:999px;padding:2px 9px 2px 3px;border:1px solid transparent;color:#1B1B19}
+.st b{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:rgba(255,255,255,.65);font-size:9px;letter-spacing:0}
+/* status colour follows the sex it implies: BB = female pink, ST = male blue */
+.st-bi{background:var(--female)}.st-bi b{color:#7A2F4C}
+.st-st{background:var(--male);color:#FFF}.st-st b{color:#10465F}
+.st-tr{background:#C07D59}.st-gr{background:#89AF6A}
+.st-ce{background:#7FB8C9}.st-ce b{color:#1F4C58}
+.st-ln{background:#B3A74D}.st-ln b{color:#4A4318}
+.st-pu{background:#C9B2DB}.st-pu b{color:#5B4270}
+.st-de{background:transparent;border-color:var(--p8);color:var(--sub)}.st-de b{background:var(--soft)}
+.st-cl{background:transparent;border-color:var(--ln);color:var(--sub)}.st-cl b{background:var(--soft)}
+.st-un{background:transparent;border-color:var(--p2);color:var(--p2)}.st-un b{background:transparent;border:1px solid var(--p2)}
+.swwrap{position:relative;display:inline-block;flex:0 0 auto;line-height:0;vertical-align:-3px}
+.sw{display:block;width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.25)}
+.sw-none{background:repeating-linear-gradient(45deg,var(--soft) 0 3px,var(--ln) 3px 6px)}
+.nose{position:absolute;right:-3px;bottom:-2px;width:8px;height:8px;border-radius:50%;border:1.5px solid var(--card);box-shadow:0 0 0 .5px rgba(0,0,0,.35)}
+.coat{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--sub)}
+.wt{display:flex;align-items:baseline;gap:6px;font-size:11.5px;color:var(--sub);flex-wrap:wrap}
+.wt .lb,.chipline .lb{font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;opacity:.75}
+.wt b{color:var(--fg);font-size:13px}
+.wt .up{color:var(--p5);font-weight:600}.wt .dn{color:var(--p2);font-weight:600}
+.wt.none{opacity:.6;font-style:italic}
+.tmp{display:grid;grid-template-columns:auto repeat(2,minmax(0,1fr)) auto;gap:6px 8px;align-items:center;border-top:1px dashed var(--ln);padding-top:8px;margin-top:4px}
+.tmp .sl{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--sub);font-weight:600}
+.tmp input{width:100%;font:400 13px ui-monospace,Menlo,monospace;padding:5px 8px;border:1px solid var(--ln);border-radius:8px;background:var(--card);color:var(--fg);text-align:right}
+.tmp input.bad{border-color:var(--p2);background:rgba(190,106,93,.08)}
+.tmp .hd2{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--sub);text-align:right}
+.tmp .msg{font-size:11px;color:var(--sub);min-width:54px}
+.spk{color:var(--p6);opacity:.85;overflow:visible}
+.chipline{display:flex;align-items:baseline;gap:7px;font-size:11.5px;color:var(--sub);border-top:1px dashed var(--ln);padding-top:6px}
+.chipline .vl{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--fg)}
+.chipline .none{color:var(--p2);font-style:italic;font-family:inherit}
+.key{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--sub);margin:0 0 10px}
+.key i{display:inline-block;width:4px;height:15px;border-radius:2px;margin-right:6px;vertical-align:-3px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px}
+.bar{height:7px;background:var(--soft);border-radius:4px;overflow:hidden;min-width:60px}
+.bar i{display:block;height:100%;background:var(--p6)}
+.note{font-size:12px;color:var(--sub);margin-top:8px}
+.neu{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.06em;border:1px dashed var(--sub);color:var(--sub);vertical-align:2px}
+.sym.nx::after{content:'';position:absolute;left:0;right:0;top:50%;height:1.5px;background:currentColor;transform:rotate(-20deg)}
+.chk{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.ci{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;border:1px solid var(--ln);background:var(--card);color:var(--sub);font:600 11.5px Lexend,sans-serif;cursor:pointer}
+.ci i{width:8px;height:8px;border-radius:50%;background:var(--p5);flex:0 0 auto}
+.ci.bad{border-color:rgba(190,106,93,.65);color:var(--p2)}
+.ci.bad i{background:var(--p2)}
+.ci:hover{border-color:var(--fg)}
+.tl{cursor:pointer;text-align:left;font:inherit;width:100%}
+.tl:hover{border-color:var(--fg)}
+.srch{position:relative;display:inline-flex;align-items:center}
+.srch svg{position:absolute;left:10px;color:var(--sub);pointer-events:none}
+.srch input{padding-left:30px}
+.stf{gap:6px}
+.sfb{cursor:pointer;font-family:inherit;border:1px solid transparent;opacity:.55;transition:opacity .12s}
+.sfb:hover{opacity:.85}
+.sfb[aria-pressed="true"]{opacity:1;outline:2px solid var(--fg);outline-offset:1px}
+.st-all{background:var(--soft);color:var(--sub)}
+.wtc{cursor:pointer;border-radius:6px;padding:2px 3px;margin:-2px -3px}
+.wtc:hover{background:var(--soft)}
+.cbs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}
+.cb{display:inline-block;padding:7px 11px;border-radius:8px;border:1px solid var(--ln);background:var(--soft);color:var(--fg);text-decoration:none;font-size:12px;font-weight:600;line-height:18px}
+.cb:hover{border-color:var(--fg)}
+.cb.wa{background:rgba(37,211,102,.16);border-color:rgba(37,211,102,.55)}
+.ct{min-width:152px}
+.sel{user-select:all;-webkit-user-select:all;word-break:break-all}
+@media(max-width:640px){.cb{padding:10px 14px;font-size:13px}}
+.boot{padding:40px 0;text-align:center;color:var(--sub);font-size:14px}
+.boot .rows{margin-top:14px;font-size:12px;line-height:1.9;font-family:ui-monospace,Menlo,monospace}
+</style></head><body>
+<header class="top"><div class="hin">
+<div class="brand"><h1>Cobberdog Hub</h1>
+<span class="sl">CurlyCwtch Australian Cobberdogs</span>
+<span class="live" id="livepill">connecting&hellip;</span></div>
+<nav id="nav"></nav></div></header>
+<div class="wrap"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
+<div class="next" id="next"></div></div>
+<script>
+
+var FOLDER='10m8HauOLAdj2QStgNJ2T3b3W599VXWro';   
+var FOLDER_NAME='*01 SLA Inspections / BLD-app-tables';
+var WANT=['BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
+ 'BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-microchip_registration.csv','BLD-weight.csv',
+ 'BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-association.csv','BLD-prospect.csv','BLD-export_route.csv','BLD-breeder_category.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv',
+ 'BLD-occupancy.csv','BLD-MAP-animana.csv','BLD-MAP-animana-client.csv','BLD-visit.csv','BLD-reminder.csv','BLD-medicinal_product.csv','BLD-stock_level.csv','BLD-clinical_note.csv','BLD-dispense.csv',
+ 'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-WORK.csv',
+ 'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
+ 'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
+ 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv'];
+var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
+var DB=null, ROUND={}, ACCESS={}, DBERR=null;
+
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function unesc(s){ return String(s||''); }
+function parseCSV(text){
+  text=unesc(text).replace(/[ \t]+\n/g,'\n').replace(/\r/g,'');
+  var rows=[],row=[],f='',q=false;
+  for(var i=0;i<text.length;i++){
+    var c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+    else if(c==='"') q=true;
+    else if(c===','){ row.push(f); f=''; }
+    else if(c==='\n'){ row.push(f.replace(/\s+$/,'')); rows.push(row); row=[]; f=''; }
+    else f+=c;
+  }
+  if(f!==''||row.length){ row.push(f.replace(/\s+$/,'')); rows.push(row); }
+  rows=rows.filter(function(r){ return r.length>1 || (r[0]||'').trim()!==''; });
+  if(!rows.length) return [];
+  var head=rows[0].map(function(h){return h.trim();});
+  return rows.slice(1).map(function(r){ var o={}; head.forEach(function(h,i){o[h]=(r[i]==null?'':r[i]).trim();}); return o; });
+}
+function setBoot(msg,rows){
+  var b=document.getElementById('boot'); if(!b) return;
+  b.firstChild.nodeValue=msg;
+  if(rows!=null) document.getElementById('bootrows').innerHTML=rows;
+}
+var CLIENT_ID='135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com';
+var SCOPE='https://www.googleapis.com/auth/drive.readonly';
+var DRIVE='https://www.googleapis.com/drive/v3/files';
+var TOKEN=null, TOKEN_EXP=0, TOKENCLIENT=null;
+var SAVE_OFF='Saving is turned off on this web version for now. The round, cabin access and flags are read-only here, and nothing is written to Drive or kept in this browser. Saving comes later.';
+LOAD.state='signin'; DBERR=SAVE_OFF;
+function DriveErr(status,msg){ var e=new Error(msg); e.status=status;
+  e.code=status===401?'Sign-in expired':status===403?('Google refused access'+(msg?' ('+msg+')':'')):status===404?'Folder not found, or this account cannot see it':('Drive error '+status+(msg?' ('+msg+')':''));
+  return e; }
+function gget(url,asText){
+  if(!TOKEN||Date.now()>TOKEN_EXP) return Promise.reject(DriveErr(401,''));
+  return fetch(url,{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
+    if(res.ok) return asText?res.text():res.json();
+    return res.text().then(function(b){ var m=''; try{ var j=JSON.parse(b); m=(j.error&&j.error.message)||''; }catch(x){} throw DriveErr(res.status,m); }); });
+}
+async function listFolder(){
+  var files=[], pt='';
+  do{
+    var q=new URLSearchParams({q:"'"+FOLDER+"' in parents and trashed = false",
+      fields:'nextPageToken,files(id,name,mimeType,modifiedTime)',pageSize:'1000',
+      supportsAllDrives:'true',includeItemsFromAllDrives:'true',corpora:'allDrives'});
+    if(pt) q.set('pageToken',pt);
+    var r=await gget(DRIVE+'?'+q.toString());
+    files=files.concat(r.files||[]); pt=r.nextPageToken||'';
+  }while(pt);
+  return files;
+}
+function readDriveFile(f){
+  if(f.mimeType==='application/vnd.google-apps.spreadsheet')
+    return gget(DRIVE+'/'+encodeURIComponent(f.id)+'/export?mimeType=text%2Fcsv',true);
+  return gget(DRIVE+'/'+encodeURIComponent(f.id)+'?alt=media&supportsAllDrives=true',true);
+}
+function signIn(){ if(TOKENCLIENT) TOKENCLIENT.requestAccessToken({prompt:TOKEN?'':'select_account'}); }
+function signOut(){
+  var t=TOKEN; TOKEN=null; TOKEN_EXP=0;
+  if(t&&window.google&&google.accounts&&google.accounts.oauth2) google.accounts.oauth2.revoke(t,function(){});
+  T={}; CD={}; LOAD={state:'signin',err:null,storedAt:null,notes:[]}; render();
+}
+function initGoogle(){
+  if(!(window.google&&google.accounts&&google.accounts.oauth2)) return false;
+  TOKENCLIENT=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPE,
+    callback:function(resp){
+      if(resp.error){ LOAD.state='signin'; LOAD.err='Sign-in did not complete.'; render(); return; }
+      if(!google.accounts.oauth2.hasGrantedAllScopes(resp,SCOPE)){ LOAD.state='signin'; LOAD.err='Drive read access was not granted, so the tables cannot be read.'; render(); return; }
+      TOKEN=resp.access_token; TOKEN_EXP=Date.now()+(Number(resp.expires_in)||3600)*1000-60000;
+      load(); },
+    error_callback:function(e){ var t=(e&&e.type)||'';
+      LOAD.err=t==='popup_failed_to_open'?'The browser blocked the sign-in window. Allow pop-ups for this page and try again.':t==='popup_closed'?'The sign-in window was closed before it finished.':'Sign-in did not complete.';
+      if(LOAD.state!=='ok') LOAD.state='signin'; render(); } });
+  render(); return true;
+}
+(function waitGoogle(n){ if(!initGoogle() && n<100) setTimeout(function(){ waitGoogle(n+1); },100);
+  else if(!TOKENCLIENT){ LOAD.err='Google sign-in could not load. Check the connection and reload the page.'; render(); } })(0);
+async function load(){
+  T={}; LOAD={state:'loading',err:null,storedAt:null,notes:[]};
+  document.getElementById('nav').innerHTML=''; pill();
+  document.getElementById('main').innerHTML='<div class="boot" id="boot">Reading the tables from Drive&hellip;<div class="rows" id="bootrows"></div></div>';
+  var files;
+  try{ files=await listFolder(); }
+  catch(e){ LOAD.state='err'; LOAD.err=(e&&e.code)||String(e&&e.message||e); render(); return; }
+  LOAD.storedAt=new Date().toISOString();
+  var byTitle={};
+  files.forEach(function(f){ (byTitle[f.name]=byTitle[f.name]||[]).push(f); });
+  var dup=Object.keys(byTitle).filter(function(t){return byTitle[t].length>1;});
+  if(dup.length){ LOAD.state='ambiguous'; LOAD.err=dup.join(', '); render(); return; }
+  var missing=WANT.filter(function(t){return !byTitle[t];});
+  if(missing.length) LOAD.notes.push(missing.length+' file(s) not in the folder: '+missing.join(', '));
+  var done=0;
+  for(var i=0;i<WANT.length;i++){
+    var title=WANT[i];
+    if(!byTitle[title]){ T[title]=[]; continue; }
+    setBoot('Reading the tables from Drive…',
+      WANT.slice(0,i+1).map(function(t,j){ return (j<=i-1?'✓ ':'· ')+t; }).join('<br>'));
+    try{
+      var txt=await readDriveFile(byTitle[title][0]);
+      txt=String(txt||'').replace(/^\uFEFF/,'');
+      if(title==='BLD-_MANIFEST.csv'){ var nl=txt.indexOf('\n'); LOAD.manifestLine=txt.slice(0,nl<0?txt.length:nl).replace(/^"|"\s*$/g,'').trim(); txt=nl<0?'':txt.slice(nl+1); }
+      T[title]=parseCSV(txt); done++;
+    }catch(e){ T[title]=[]; LOAD.notes.push(title+': '+((e&&e.code)||'read failed')); }
+  }
+  LOAD.state='ok'; LOAD.files=done;
+  DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF;
+  build(); render();
+}
+var CD={};
+function idx(rows,k){ var m={}; (rows||[]).forEach(function(r){ m[r[k]]=r; }); return m; }
+function build(){
+  var COL=idx(T['BLD-coat_colour.csv'],'id'), PAT=idx(T['BLD-coat_pattern.csv'],'id'), PIG=idx(T['BLD-nose_pigment.csv'],'id');
+  var ST=idx(T['BLD-subject_status.csv'],'subject_id'), OCC=idx(T['BLD-occupancy.csv'],'subject_id'),
+      MC=idx(T['BLD-microchip.csv'],'subject_id');
+  var W={}; (T['BLD-weight.csv']||[]).forEach(function(r){ (W[r.subject_id]=W[r.subject_id]||[]).push({on:r.performed_on,kg:parseFloat(r.weight_kg),unit:r.unit,bcs:r.body_condition_score||'',scale:r.bcs_scale||'',src:r.source||''}); });
+  Object.keys(W).forEach(function(k){ W[k].sort(function(a,b){return a.on<b.on?-1:1;}); });
+  var DSP={}; (T['BLD-dispense.csv']||[]).forEach(function(r){
+    (DSP[r.subject_id]=DSP[r.subject_id]||[]).push({on:r.given_on,product:r.product,pres:r.presentation,
+      dose:r.dose_volume,band:r.weight_band,kg:r.weight_kg_used,basis:r.dosage_basis,route:r.route,
+      reason:r.reason,src:r.source,need:r.ruling_needed,note:r.note}); });
+  Object.keys(DSP).forEach(function(k){ DSP[k].sort(function(a,b){return a.on<b.on?-1:1;}); });
+  CD.dispense=DSP;
+  
+  CD.markers={}; (T['BLD-dna_marker.csv']||[]).forEach(function(r){ CD.markers[r.code]=r; });
+  var DNA={}; (T['BLD-dna_result.csv']||[]).forEach(function(r){
+    (DNA[r.subject_id]=DNA[r.subject_id]||[]).push({code:r.marker_code,genotype:r.genotype,
+      copies:r.copies,interp:r.interpretation,need:r.ruling_needed,lab:r.lab||'',on:r.tested_on||''}); });
+  CD.dna=DNA;
+  CD.outdoor=(T['BLD-outdoor_temp.csv']||[]).map(function(r){ return {on:r.on_date,kind:r.reading_kind,
+    min:r.min_c,max:r.max_c,phrase:r.phrase,cap:r.captured_at,src:r.source}; });
+  CD.docTypes=(T['BLD-doc_type.csv']||[]);
+  CD.work=(T['BLD-WORK.csv']||[]);
+  
+  CD.matings=(T['BLD-mating.csv']||[]).map(function(r){ return {id:r.id,dam:r.dam_subject_id,
+    sire:r.sire_subject_id,on:r.mated_on,no:r.mating_no,method:r.method||'',
+    first:r.is_first_of_season==='yes',due:r.due_from_this_mating||'',
+    litter:r.litter_id||'',produced:r.produced_litter||'',notes:r.notes||''}; });
+  CD.litters2=(T['BLD-litter.csv']||[]);
+  var HS={}; (T['BLD-health_screen.csv']||[]).forEach(function(r){
+    (HS[r.subject_id]=HS[r.subject_id]||[]).push({test:r.test,grade:r.grade,certainty:r.certainty,attributed_to:r.attributed_to,from_text:r.source_text}); });
+  var LIT=idx(T['BLD-litter.csv'],'id'), LITBYDAM={};
+  (T['BLD-litter.csv']||[]).forEach(function(l){ if(l.dam_subject_id) (LITBYDAM[l.dam_subject_id]=LITBYDAM[l.dam_subject_id]||[]).push(l); });
+
+  CD.colour=COL; CD.pattern=PAT; CD.pigment=PIG;
+  CD.dogs=(T['BLD-subject.csv']||[]).map(function(r){
+    var c=COL[r.coat_colour_id], p=PAT[r.coat_pattern_id], g=PIG[r.nose_pigment_id];
+    var o=OCC[r.id]||{}, s=ST[r.id]||{}, m=MC[r.id]||{};
+    var lits=LITBYDAM[r.id]||[];
+    return {id:r.id,name:r.name,sex:r.sex,dob:r.dob,size:r.size_band,coat:r.coat_type,kind:r.kind,
+      neuter:r.neuter_status,state:s.state||'',classification:o.source_where||'',area_id:o.area_id||'',
+      
+      where:'',off:o.off_site_kind||'',
+      treats:DSP[r.id]||[], dna:DNA[r.id]||[],
+      chip:m.chip_number||'',source:r.source,
+      species:r.species||'',breed:r.breed||'',breed_vet:r.breed_vet_recorded||'',
+      colour:c?{name:c.name,family:c.base_family,hex:c.swatch_hex,noseApplies:c.nose_pigment_applies==='true'}:null,
+      pat:p?p.name:'',pig:g?{name:g.name,code:g.code,hex:g.swatch_hex}:null,
+      weights:W[r.id]||[],findings:HS[r.id]||[],littersAsDam:lits};
+  });
+  
+  
+  CD.areas=(T['BLD-area.csv']||[]).map(function(r){ return {id:r.id,code:r.code,cabin:r.code,
+    grouping:r.grouping||'other',group_sort:r.group_sort||'99',
+    m2:r.m2||'',m2ok:r.m2_confirmed||'',m2note:r.m2_note||''}; });
+  var CAP={}; (T['BLD-area_capacity.csv']||[]).forEach(function(r){
+    var a=CAP[r.area_id]=CAP[r.area_id]||{free:{},limited:{}};
+    (a[r.access_type]||(a[r.access_type]={}))[r.size_band]={n:r.max_dogs,basis:r.basis||''}; });
+  CD.cap=CAP;
+  CD.accessCsv={}; (T['BLD-area_access.csv']||[]).forEach(function(r){ CD.accessCsv[r.area_id]=r; });
+  
+  var _an={}; (T['BLD-area.csv']||[]).forEach(function(a){ _an[a.id]=a.code||a.id; });
+  CD.dogs.forEach(function(d){
+   d.where = d.area_id ? (_an[d.area_id]||d.area_id) : (d.off ? ('off site \u2014 '+d.off) : '');
+  });
+  CD.tempBands=(T['BLD-temperature_band.csv']||[]).map(function(r){
+    return {band:r.band,from:parseInt(r.age_from_days,10),to:r.age_to_days===''?99999:parseInt(r.age_to_days,10),
+            min:r.min_c===''?null:parseFloat(r.min_c),max:r.max_c===''?null:parseFloat(r.max_c),
+            stated:!r.ruling_needed,basis:r.basis||'',note:r.note||''};
+  }).sort(function(a,b){return a.from-b.from;});
+  CD.assoc=T['BLD-association.csv']||[]; CD.prospects=T['BLD-prospect.csv']||[];
+  CD.exportRoutes=T['BLD-export_route.csv']||[];
+  CD.categories=T['BLD-breeder_category.csv']||[];
+  CD.tempActions=(T['BLD-temperature_action.csv']||[]).map(function(r){
+    return {dir:r.direction,at:parseFloat(r.threshold_c),action:r.action,source:r.source};
+  }).sort(function(a,b){return b.at-a.at;});
+  CD.litters=T['BLD-litter.csv']||[]; CD.matings=T['BLD-mating.csv']||[];
+  CD.vetlink=T['BLD-MAP-animana.csv']||[]; CD.manifest=T['BLD-_MANIFEST.csv']||[];
+  var VM={}; CD.vetlink.forEach(function(m){ if(m.subject_id && !VM[m.subject_id]) VM[m.subject_id]=m; });
+  CD.dogs.forEach(function(d){ var m=VM[d.id]; if(!m) return;
+   d.vetStatus=m.vet_status||''; d.vetActive=m.vet_active||''; d.descent=m.descent||'';
+   if(!d.breed) d.breed=m.breed||''; d.dod=m.date_of_death||''; d.insurance=m.insurance_number||''; d.warning=m.warning||'';
+   if(!d.chip && m.matched_on_chip) d.chip=m.matched_on_chip; });
+  CD.tenant=(T['BLD-tenant.csv']||[])[0]||{};
+  CD._byId={}; CD.dogs.forEach(function(d){ CD._byId[d.id]=d; });
+  CD.counts={}; WANT.forEach(function(t){ CD.counts[t.replace('BLD-','').replace('.csv','')]=(T[t]||[]).length; });
+}
+
+var TODAY=new Date();
+function dmy(iso){ if(!iso) return ''; var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso); return m? m[3]+'/'+m[2]+'/'+m[1] : iso; }
+function nameOf(sid){ if(!sid) return ''; var d=(CD._byId||{})[sid]; return (d&&d.name)?d.name:sid.replace(/^sub-/,'').replace(/-/g,' '); }
+
+function months(iso){ if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+ var b=new Date(iso+'T00:00:00'); if(isNaN(b)) return null;
+ var m=(TODAY.getFullYear()-b.getFullYear())*12+(TODAY.getMonth()-b.getMonth());
+ if(TODAY.getDate()<b.getDate()) m--;
+ return m<0?null:m; }
+function isEntire(d){ return (d.neuter||'entire')!=='neutered'; }
+function onPrem(d){ return !!d.classification && d.classification!=='Collected' && !d.off; }
+var STATUS=[['BI','Bitch','st-bi',null],['ST','Stud','st-st',null],
+ ['TR','Training','st-tr',null],['CE','Cerys','st-ce',null],['GR','Grace','st-gr',null],
+ ['LN','Litter no mum','st-ln',null],['PU','Puppy','st-pu',null],['DE','Deceased','st-de',null],['CL','Collected','st-cl',null]];
+
+
+
+var _SIRE=null,_DAM=null;
+function _breeders(){
+ if(_SIRE) return;
+ _SIRE={};_DAM={};
+ (T['BLD-mating.csv']||[]).forEach(function(r){
+  var s=(r.sire_subject_id||'').trim(), d=(r.dam_subject_id||'').trim();
+  if(s) _SIRE[s]=(_SIRE[s]||0)+1;
+  if(d) _DAM[d]=(_DAM[d]||0)+1; });
+}
+function hasSired(id){ _breeders(); return !!(id&&_SIRE[id]); }
+function hasWhelped(id){ _breeders(); return !!(id&&_DAM[id]); }
+function siredCount(id){ _breeders(); return (id&&_SIRE[id])||0; }
+function whelpedCount(id){ _breeders(); return (id&&_DAM[id])||0; }
+function statusOf(d){
+ var w=d.classification||'';
+ 
+ if(d.dod) return {code:'DE',label:'Deceased',cls:'st-de'};
+ if(w==='Collected' || /otherowner/i.test(d.vetStatus||'') || (d.vetActive||'')==='false')
+   return {code:'CL',label:'Collected',cls:'st-cl'};
+ 
+ if(/^cerys/i.test(d.off||'') || /^Cerys/i.test(w)) return {code:'CE',label:'Cerys',cls:'st-ce'};
+ if(/owned_by_family/i.test(d.off||'') || /Owned by (GC|CC)/i.test(w))
+   return {code:'GR',label:'Grace',cls:'st-gr'};
+ 
+ var m=months(d.dob);
+ if(d.kind==='Pup' || (m!==null && m<6)) return {code:'PU',label:'Puppy',cls:'st-pu'};
+ 
+ 
+ if(/breeding|brood|bitch/i.test(d.kind||'') || /Breeding Bitch/i.test(d.classification||'') || hasWhelped(d.id))
+   return {code:'BI',label:'Bitch',cls:'st-bi'};
+ if(/stud/i.test(d.kind||'') || /Stud/i.test(d.classification||'') || hasSired(d.id))
+   return {code:'ST',label:'Stud',cls:'st-st'};
+ if(/training/i.test(d.state||'')|| /Training/i.test(w)) return {code:'TR',label:'Training',cls:'st-tr'};
+ 
+ if(/Breeding Bitch/i.test(w)) return {code:'BI',label:'Bitch',cls:'st-bi'};
+ if(/Stud Boy/i.test(w))       return {code:'ST',label:'Stud',cls:'st-st'};
+ if(/Litters/i.test(w))        return {code:'LN',label:'Litter no mum',cls:'st-ln'};
+ if((d.vetActive||'')==='true') return {code:'\u2013',label:'on premises, no role recorded',cls:'st-un'};
+ return {code:'\u2013',label:'unclassified',cls:'st-un'}; }
+var FAMRANK={'Cream':1,'Gold':2,'Apricot':3,'Red':4,'Chocolate':5,'Black':6};
+var PATRANK={'Solid':0,'Merle':1,'Parti':2};
+function colourLabel(d){ if(!d.colour) return 'colour not recorded';
+ return d.colour.name+(d.pat&&d.pat!=='Solid'?' '+d.pat.toLowerCase():'')
+  +((d.pig&&d.colour.noseApplies)?' '+d.pig.code:''); }
+function colourKey(d){ if(!d.colour) return [99,99,9,9];
+ var ps=d.colour.name.split('/');
+ return [FAMRANK[ps[0]]||50, ps[1]?(FAMRANK[ps[1]]||50):0, PATRANK[d.pat]||0, (d.pig&&d.pig.code==='(r)')?2:((d.pig)?1:0)]; }
+function swatch(d){
+ if(!d||!d.colour) return '<span class="swwrap"><span class="sw sw-none" title="colour not recorded"></span></span>';
+ var h=d.colour.hex||'#9C948A', st='background:'+h;
+ if(d.pat==='Merle') st='background:'+h+';background-image:radial-gradient(circle at 30% 30%,rgba(255,255,255,.78) 19%,transparent 20%),radial-gradient(circle at 70% 66%,rgba(255,255,255,.62) 16%,transparent 17%),radial-gradient(circle at 44% 82%,rgba(255,255,255,.5) 12%,transparent 13%)';
+ if(d.pat==='Parti') st='background:linear-gradient(120deg,'+h+' 0 50%,#F5F2EC 50% 100%)';
+ var nose=(d.pig&&d.colour.noseApplies)?'<i class="nose" style="background:'+(d.pig.hex||'#2C2C2A')+'" title="'+esc(d.pig.name)+'"></i>':'';
+ return '<span class="swwrap"><span class="sw" style="'+st+'" title="'+esc(colourLabel(d))+'"></span>'+nose+'</span>';
+}
+function spark(h,w,ht){ if(h.length<2) return '';
+ var xs=h.map(function(x){return x.kg;}),mn=Math.min.apply(null,xs),mx=Math.max.apply(null,xs),rg=(mx-mn)||1,n=h.length;
+ var pts=h.map(function(x,i){return (i/(n-1)*w).toFixed(1)+','+(ht-((x.kg-mn)/rg)*ht).toFixed(1);}).join(' ');
+ return '<svg class="spk" viewBox="0 0 '+w+' '+ht+'" width="'+w+'" height="'+ht+'" preserveAspectRatio="none"><polyline points="'+pts+'" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>'; }
+function tile(c,n,k,s){ return '<div class="tile '+c+'"><div class="n">'+n+'</div><div class="k">'+k+'</div>'+(s?'<div class="src">'+s+'</div>':'')+'</div>'; }
+function counts(){
+ if(CD._cnt) return CD._cnt;
+ var here=CD.dogs.filter(onPrem);
+ var adults=here.filter(function(d){var m=months(d.dob);return m!==null&&m>=6;});
+ CD._cnt={here:here,adults:adults,
+  bitches:adults.filter(function(d){return d.sex==='Female'&&isEntire(d);}),
+  active:here.filter(function(d){return statusOf(d).code==='BI';}),
+  studs:here.filter(function(d){return statusOf(d).code==='ST';}),
+  pups:here.filter(function(d){var m=months(d.dob);return m!==null&&m<6;}),
+  nodob:here.filter(function(d){return months(d.dob)===null;}),
+  nochip:here.filter(function(d){return !d.chip;}),
+  noarea:here.filter(function(d){return !d.area_id;}),
+  offsite:CD.dogs.filter(function(d){return d.off==='owned_by_family';})};
+ return CD._cnt;
+}
+
+
+var DATEISH=/(^|_)(dob|date|given_on|performed_on|mated_on|whelped_on|tested_on|assessed_on|from_date|to_date|moved_in|moved_out|verified_on|counted_on|expiry|use_by|next_due|on_date|captured_at|_at|_on)$/i;
+function isISODate(v){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+ var p=v.split('-'), y=+p[0], m=+p[1], d=+p[2], dt=new Date(Date.UTC(y,m-1,d));
+ return dt.getUTCFullYear()===y && dt.getUTCMonth()===m-1 && dt.getUTCDate()===d;
+}
+function isISOStamp(v){ return /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(v); }
+
+var REFMAP={subject_id:'BLD-subject.csv',dam_subject_id:'BLD-subject.csv',sire_subject_id:'BLD-subject.csv',
+ dam_id:'BLD-subject.csv',sire_id:'BLD-subject.csv',birth_litter_id:'BLD-litter.csv',litter_id:'BLD-litter.csv',
+ area_id:'BLD-area.csv',coat_colour_id:'BLD-coat_colour.csv',coat_pattern_id:'BLD-coat_pattern.csv',
+ nose_pigment_id:'BLD-nose_pigment.csv',
+ 
+ person_id:'BLD-person.csv',client_id:'BLD-person.csv',document_id:'BLD-document.csv',
+ media_id:'BLD-media.csv',staff_id:'BLD-person.csv',sop_version_id:'BLD-sop_version.csv',
+ supplier_id:'BLD-supplier.csv',prescription_id:'BLD-prescription.csv'};
+function refAudit(){
+ var idsOf={}, bad=[], n=0, checked=0;
+ var absent={};
+ Object.keys(REFMAP).forEach(function(c){ var f=REFMAP[c];
+  if(idsOf[f]||absent[f]) return;
+  var rows=T[f];
+  if(!rows||!rows.length){ absent[f]=1; return; }   
+  var s={}; rows.forEach(function(r){ if(r.id) s[r.id]=1; }); idsOf[f]=s; });
+ var seen={};
+ Object.keys(T||{}).forEach(function(f){
+  var rows=T[f]; if(!rows||!rows.length) return;
+  Object.keys(rows[0]).forEach(function(c){
+   var tgt=REFMAP[c]; if(!tgt) return;
+   
+   if(absent[tgt]){
+    var used=0; for(var z=0;z<rows.length;z++){ if((rows[z][c]||'').trim()) used++; }
+    if(used){ var kk=f.replace(/^BLD-|\.csv$/g,'')+'.'+c;
+      if(!seen[kk]){ seen[kk]=1; n+=used;
+        bad.push(kk+' \u2192 '+tgt.replace(/^BLD-|\.csv$/g,'')+' TABLE DOES NOT EXIST ('+used+' rows point at nothing)'); } }
+    return; }
+   var miss=0, eg='';
+   for(var i=0;i<rows.length;i++){
+    var v=(rows[i][c]||'').trim(); if(!v) continue;
+    checked++;
+    if(!idsOf[tgt][v]){ miss++; n++; if(!eg) eg=v; }
+   }
+   if(miss){ var k=f.replace(/^BLD-|\.csv$/g,'')+'.'+c;
+     if(!seen[k]){ seen[k]=1; bad.push(k+' ('+miss+', e.g. '+eg+')'); } }
+  });
+ });
+ return {bad:bad,n:n,checked:checked};
+}
+
+function ruleAudit(){
+ var D=T['BLD-declaration.csv']||[], bad=[], keys={};
+ D.forEach(function(r){ var k=(r.declaration_key||r.id||'').trim(); if(!k) return;
+   (keys[k]=keys[k]||[]).push(r); });
+ var nk=0;
+ Object.keys(keys).forEach(function(k){
+  nk++;
+  var v=keys[k].slice().sort(function(a,b){return (a.effective_from||'').localeCompare(b.effective_from||'');});
+  var open=0;
+  for(var i=0;i<v.length;i++){
+   var f=(v[i].effective_from||'').trim(), t=(v[i].effective_to||'').trim();
+   if(!f){ bad.push(k+' v'+(v[i].version||'?')+' has no effective_from'); continue; }
+   if(!t) open++;
+   if(t && t<f) bad.push(k+' v'+(v[i].version||'?')+' ends before it starts');
+   if(i){ var pt=(v[i-1].effective_to||'').trim();
+    if(!pt) bad.push(k+': '+v[i-1].id+' never closed but '+v[i].id+' starts - two rules claim the same day');
+    else if(pt>=f) bad.push(k+': '+v[i-1].id+' and '+v[i].id+' overlap');
+    else if(addDays(pt,1)!==f) bad.push(k+': gap between '+pt+' and '+f+' - a record dated in it resolves to nothing'); }
+  }
+  if(open>1) bad.push(k+' has '+open+' versions still open');
+  
+  var nums=v.map(function(x){return parseInt(x.version,10);}).filter(function(x){return x>0;}).sort(function(a,b){return a-b;});
+  if(nums.length!==v.length) bad.push(k+' has a version with no number - the sequence cannot be checked');
+  else{
+   if(nums[0]!==1) bad.push(k+' starts at v'+nums[0]+', not v1 - an earlier version was destroyed, not superseded');
+   for(var j=1;j<nums.length;j++){
+    if(nums[j]===nums[j-1]) bad.push(k+' has two rows numbered v'+nums[j]);
+    else if(nums[j]!==nums[j-1]+1) bad.push(k+' jumps v'+nums[j-1]+' to v'+nums[j]+' - a version was destroyed');
+   }
+  }
+ });
+ 
+ var orph=0, checked=0;
+ Object.keys(T||{}).forEach(function(f){
+  var rows=T[f]; if(!rows||!rows.length||!rows[0].hasOwnProperty('declaration_id')) return;
+  rows.forEach(function(r){
+   var id=(r.declaration_id||'').trim(); if(!id) return;
+   checked++;
+   var on=(r.on_date||r.given_on||r.completed_at||r.created_at||r.due_on||'').slice(0,10);
+   var hit=null; D.forEach(function(d){ if(d.id===id) hit=d; });
+   if(!hit){ orph++; return; }
+   if(on){ var f0=(hit.effective_from||''), t0=(hit.effective_to||'');
+     if((f0&&on<f0)||(t0&&on>t0)) orph++; }
+  });
+ });
+ if(orph) bad.push(orph+' record(s) point at a declaration that did not cover their own date');
+ return {bad:bad,n:D.length,keys:nk,checked:checked};
+}
+function addDays(iso,n){ var d=new Date(iso+'T00:00:00Z'); if(isNaN(d)) return ''; 
+ d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
+function dateAudit(){
+ var bad=[], n=0, t=0;
+ Object.keys(T||{}).forEach(function(f){
+  var rows=T[f]; if(!rows||!rows.length) return; t++;
+  Object.keys(rows[0]).forEach(function(c){
+   if(!c||!DATEISH.test(c)) return;
+   n++;
+   var offenders=0, sample='';
+   for(var i=0;i<rows.length;i++){
+    var v=(rows[i][c]||'').trim(); if(!v) continue;
+    if(!isISODate(v) && !isISOStamp(v)){ offenders++; if(!sample) sample=v; }
+   }
+   if(offenders) bad.push(f.replace(/^BLD-|\.csv$/g,'')+'.'+c+' ('+offenders+', e.g. '+sample+')');
+  });
+ });
+ return {bad:bad,n:n,t:t};
+}
+
+function addDays(iso,n){ var p=(iso||'').split('-'); if(p.length!==3) return '';
+ var d=new Date(Date.UTC(+p[0],+p[1]-1,+p[2])); d.setUTCDate(d.getUTCDate()+n);
+ return d.toISOString().slice(0,10); }
+function daysBetween(a,b){ var x=(a||'').split('-'),y=(b||'').split('-');
+ if(x.length!==3||y.length!==3) return null;
+ return Math.round((Date.UTC(+y[0],+y[1]-1,+y[2])-Date.UTC(+x[0],+x[1]-1,+x[2]))/86400000); }
+function inWhelp(onISO){
+ var today=onISO||new Date().toISOString().slice(0,10), out=[], bydam={};
+ (CD.matings||[]).forEach(function(m){ if(!m.dam) return; (bydam[m.dam]=bydam[m.dam]||[]).push(m); });
+ Object.keys(bydam).forEach(function(dam){
+  var ms=bydam[dam].slice().sort(function(a,b){return (a.on||'')<(b.on||'')?-1:1;});
+  var open=ms.filter(function(m){ return !m.litter && (m.produced||'').toLowerCase()!=='yes'; });
+  if(!open.length) return;
+  var first=open.filter(function(m){return m.on;})[0];
+  var d=CD._byId[dam]; if(!d) return;
+  if(!first||!first.on){
+    out.push({dog:d,dam:dam,matings:open.length,on:'',due:'',from:'',to:'',day:null,unknown:true});
+    return; }
+  var day=daysBetween(first.on,today);
+  if(day===null||day<0||day>72) return;          
+  out.push({dog:d,dam:dam,matings:open.length,on:first.on,
+    due:addDays(first.on,63),from:addDays(first.on,57),to:addDays(first.on,72),day:day,
+    sires:open.map(function(m){var x=CD._byId[m.sire];return x?x.name:(m.sire||'?');}),
+    methods:open.map(function(m){return m.method||'not recorded';})});
+ });
+ return out.sort(function(a,b){ return (a.due||'9')<(b.due||'9')?-1:1; });
+}
+function checks(){
+ var c=counts(), out=[];
+ var man=CD.manifest||[], mism=[];
+ man.forEach(function(r){ var live=CD.counts[r.table]; if(live!=null && String(live)!==String(r.rows)) mism.push(r.table); });
+ out.push({k:'tables',ok:!mism.length&&!LOAD.notes.length,
+   msg:mism.length?mism.length+' tables disagree with the manifest: '+mism.join(', ')
+     :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, all match')});
+ out.push({k:'law vs yours',ok:c.bitches.length===c.active.length,
+   msg:c.bitches.length===c.active.length?'both counts agree at '+c.bitches.length
+     :'law says '+c.bitches.length+', your list says '+c.active.length,list:'bitches'});
+ out.push({k:'date of birth',ok:!c.nodob.length,
+   msg:c.nodob.length?c.nodob.length+' here have no DOB: '+c.nodob.map(function(d){return d.name;}).join(', ')
+     :'every dog here has one',list:'nodob'});
+ out.push({k:'microchip',ok:!c.nochip.length,
+   msg:c.nochip.length?c.nochip.length+' here have no chip recorded':'every dog here has one',list:'nochip'});
+ out.push({k:'placed in an area',ok:!c.noarea.length,
+   msg:c.noarea.length?c.noarea.length+' here are not in a cabin':'every dog here is placed',list:'noarea'});
+ 
+
+ var rc=refAudit();
+ out.push({k:'joins',ok:!rc.bad.length,
+   msg:rc.bad.length? rc.n+' references do not resolve: '+rc.bad.slice(0,5).join(', ')+(rc.bad.length>5?' \u2026':'')
+     :rc.checked+' references checked, all resolve'});
+ var dc=dateAudit();
+ out.push({k:'dates',ok:!dc.bad.length,
+   msg:dc.bad.length? dc.bad.length+' date columns are not ISO yyyy-mm-dd: '+dc.bad.slice(0,6).join(', ')+(dc.bad.length>6?' \u2026':'')
+     :dc.n+' date columns checked across '+dc.t+' tables, all ISO'});
+ var ra=ruleAudit();
+ out.push({k:'rule changes',ok:!ra.bad.length,
+   msg:ra.bad.length? ra.bad.slice(0,4).join('; ')+(ra.bad.length>4?' \u2026':'')
+     :ra.keys+' declaration(s) version cleanly; '+ra.checked+' record(s) still resolve to the rule in force on their own date'});
+ out.push({k:'saving off',ok:true,msg:DBERR||'saving is off in this web version'});
+ return out;
+}
+function strip(){
+ return '<div class="chk">'+checks().map(function(x){
+  return '<button class="ci'+(x.ok?' ok':' bad')+'" data-list="'+(x.list||'')+'" title="'+esc(x.msg)+'">'
+   +'<i></i>'+esc(x.k)+'</button>'; }).join('')+'</div>';
+}
+
+
+function pageMap(){
+ var c=counts(), bad=checks().filter(function(x){return !x.ok;});
+ return '<h2>Live from Drive</h2>'
+ +'<p class="sub">Read fresh from <code>'+esc(FOLDER_NAME)+'</code> every time you open it.</p>'
+ +strip()
+ +(bad.length?'<div class="card acc2"><h4>'+bad.length+' need looking at</h4><p style="margin-bottom:0">'
+    +bad.map(function(x){return '<b>'+esc(x.k)+'</b> \u2014 '+esc(x.msg);}).join('<br>')+'</p></div>'
+   :'<div class="card acc5"><h4>Everything checks out</h4><p style="margin-bottom:0">Every dot is green. Counts agree, tables match the manifest, nothing is missing a date of birth, a chip or a cabin.</p></div>')
+ +'<div class="tiles">'
+ +tile('b5',c.here.length,'dogs here','on the premises today')
+ +tile('b6',c.adults.length,'adults','6 months and over')
+ +tile('b7',c.pups.length,'under 6 months','')
+ +tile('b0',c.offsite.length,'off site','owned by family, still tracked')+'</div>'
+ +'<div class="mut">'+CD.dogs.length+' subjects and '+CD.counts.weight+' weighings are on file in total \u2014 archive, not today.</div>';
+}
+
+function pageToday(){
+ var c=counts(), date=CD._roundDate||todayISO();
+ var placed={}; Object.keys(ROUND).forEach(function(k){ if(k.indexOf(date+'__')===0)
+   (ROUND[k].subjects||[]).forEach(function(sid){ placed[sid]=ROUND[k].areaId; }); });
+ var temps=Object.keys(ROUND).filter(function(k){ return k.indexOf(date+'__')===0 && (ROUND[k].t_am||ROUND[k].t_pm); });
+ var cabins=CD.areas.length;
+ var unplaced=c.here.filter(function(d){ return !placed[d.id] && !d.area_id; });
+ var ft=Math.ceil(c.adults.length/20), pt=Math.ceil(c.adults.length/10);
+ var h='<h2>Today</h2><p class="sub">'+esc(dmy(date))+'</p>'
+ +'<div class="tiles">'
+ +tileC('b'+(temps.length>=cabins?'5':'2'),temps.length+' of '+cabins,'cabins with a temperature','','')
+ +tileC('b'+(unplaced.length?'2':'5'),unplaced.length,'dogs not yet placed','','unplaced')
+ +tileC('b6',c.here.length,'dogs here','tap for the list','here')
+ +tileC('b4',ft+' FT',(pt+' PT')+' \u2014 staffing','1 per 20 adults, or 1 per 10','adults')+'</div>'
+ +(function(){ var w=inWhelp(date); if(!w.length) return '';
+   return '<h3>In whelp \u2014 '+w.length+'</h3><div class="card acc3">'
+    +'<div class="scroll"><table><thead><tr><th>bitch</th><th>day</th><th>first mated</th><th>working due (+63)</th><th>window 57\u201372</th><th>sire(s) \u00b7 method</th></tr></thead><tbody>'
+    +w.map(function(x){
+      if(x.unknown) return '<tr><td><b>'+esc(x.dog.name)+'</b></td><td colspan="5"><span class="pill no">mating date not recorded</span> '+esc(x.matings)+' mating row(s), no date \u2014 no due date can be computed</td></tr>';
+      var late=x.day>72, close=x.day>=57;
+      return '<tr><td><b>'+esc(x.dog.name)+'</b></td>'
+       +'<td><span class="pill '+(close?'w':'i')+'">day '+x.day+'</span></td>'
+       +'<td>'+esc(dmy(x.on))+'</td><td><b>'+esc(dmy(x.due))+'</b></td>'
+       +'<td class="mut">'+esc(dmy(x.from))+' \u2013 '+esc(dmy(x.to))+'</td>'
+       +'<td class="mut">'+esc((x.sires||[]).join(', '))+' \u00b7 '+esc((x.methods||[]).join(', '))+'</td></tr>'; }).join('')
+    +'</tbody></table></div>'
+    +'<p class="note" style="margin-bottom:0">In whelp is <b>derived from the mating rows</b>, never a stored flag \u2014 a flag would still say pregnant the day after she whelps. <b>Two sources disagree on the window and both are shown:</b> Lisa gives first mating + 63 days, which is the working date; register FI18 gives 63\u00b11 from <i>ovulation</i> and <b>57\u201372 from first mating, stated as poor confidence</b>. A single date off a mating would claim a precision the source denies.</p></div>'; })()
+ +'<div id="tpanel"></div>'
+ +'<h3>The licence counts</h3><div class="tiles">'
+ +tileC('b2',c.adults.length,'adult dogs here','6 months or over','adults')
+ +tileC('b2',c.bitches.length,'breeding bitches in law','female + entire + 6mths+ + here','bitches')
+ +tileC('b6',c.active.length,'your working list','classified Breeding Bitch','active')
+ +tileC('b5',c.studs.length,'stud males','','studs')+'</div>';
+ var gap=c.bitches.length-c.active.length;
+ h+='<div class="card '+(gap===0?'acc5':'acc2')+'"><h4>'+(gap===0?'Both counts agree at '+c.bitches.length
+   :'Law says '+c.bitches.length+'. You say '+c.active.length+'.')+'</h4>'
+  +'<p style="margin-bottom:0">'+(gap>0?'<b>'+gap+' retired-but-entire bitches still count in law.</b> Only spaying or rehoming moves that number.'
+   :(gap<0?'<b>'+Math.abs(gap)+' in your list fail the statutory test.</b>'
+   :'They part the moment a bitch is retired and kept entire. Both are shown; never reconcile them into one figure.'))+'</p></div>'
+ +'<div class="mut">Tap any number to see the dogs behind it. If one is wrong, tap the dog and flag it \u2014 I pick the flags up and correct the tables.</div>';
+ return h;
+}
+function tileC(c,n,k,s,list){
+ return '<button class="tile tl '+c+'"'+(list?' data-list="'+list+'"':'')+'><div class="n">'+n+'</div>'
+  +'<div class="k">'+k+'</div>'+(s?'<div class="src">'+s+'</div>':'')+'</button>';
+}
+function listFor(key){
+ var c=counts();
+ if(key==='unplaced'){ var date=CD._roundDate||todayISO(), placed={};
+   Object.keys(ROUND).forEach(function(k){ if(k.indexOf(date+'__')===0) (ROUND[k].subjects||[]).forEach(function(s){placed[s]=1;}); });
+   return c.here.filter(function(d){return !placed[d.id]&&!d.area_id;}); }
+ return c[key]||[];
+}
+function showList(key){
+ var el=document.getElementById('tpanel'); if(!el) return;
+ if(!key){ el.innerHTML=''; return; }
+ var list=listFor(key);
+ var areaName={}; CD.areas.forEach(function(a){ areaName[a.id]=a.code; });
+ var h='<div class="card acc6"><h4>'+list.length+' \u2014 '+esc(key)+'</h4>'
+  +'<div class="scroll"><table><thead><tr><th>dog</th><th>age</th><th>sex</th><th>status</th><th>where (location)</th><th>classification</th><th></th></tr></thead><tbody>';
+ list.slice().sort(function(a,b){return (a.name||'')<(b.name||'')?-1:1;}).forEach(function(d){
+  var m=months(d.dob), st=statusOf(d);
+  h+='<tr><td><b>'+esc(d.name)+'</b></td>'
+   +'<td>'+(m===null?'<span class="pill no">no DOB</span>':(m<12?m+'m':Math.floor(m/12)+'y'+(m%12?' '+(m%12)+'m':'')))+'</td>'
+   +'<td>'+esc(d.sex||'?')+(isEntire(d)?'':' <span class="mut">'+(d.sex==='Female'?'spayed':'neutered')+'</span>')+'</td>'
+   +'<td><span class="st '+st.cls+'"><b>'+st.code+'</b>'+esc(st.label)+'</span></td>'
+   +'<td>'+esc(areaName[d.area_id]||'\u2014')+'</td>'
+   +'<td class="mut">'+esc(d.classification||'')+'</td>'
+   +'<td><button class="cb flagb" data-dog="'+esc(d.id)+'">flag</button></td></tr>'; });
+ h+='</tbody></table></div><button id="tclose" class="cb" style="margin-top:8px">close</button></div>';
+ el.innerHTML=h;
+ var cl=document.getElementById('tclose'); if(cl) cl.addEventListener('click',function(){ el.innerHTML=''; });
+ Array.prototype.forEach.call(document.querySelectorAll('.flagb'),function(b){
+  b.addEventListener('click',function(){ flagDog(b.dataset.dog,b); }); });
+}
+async function flagDog(id,btn){
+ if(!DB){ btn.textContent='saving off'; return; }
+ btn.textContent='flagging\u2026';
+ try{ await DB.doc('flag/'+id).set({subject_id:id,at:new Date().toISOString(),note:'flagged from Today'});
+      btn.textContent='flagged'; btn.disabled=true; }
+ catch(e){ btn.textContent='NOT saved \u2014 '+((e&&e.code)||'error'); }
+}
+
+function pageDogs(){
+ 
+ var missAll=CD.dogs.filter(function(d){return !d.sex;});
+ var missVis=missAll.filter(function(d){var c=statusOf(d).code; return c!=='CL'&&c!=='DE';});
+ var miss=missVis.length, missGone=missAll.length-missVis.length;
+ return '<h2>Dogs</h2>'
+ +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="q" placeholder="name, chip…"></span>'
+ +'<select id="fs"><option value="">sex</option><option>Female</option><option>Male</option><option value="__none">not recorded</option></select>'
+ +'<select id="fn"><option value="">neuter</option><option value="e">entire</option><option value="n">neutered</option></select>'
+ +'<select id="fa"><option value="">age</option><option value="p">under 6m</option><option value="j">6m–12m</option><option value="a">1–7y</option><option value="o">7y+</option><option value="__none">no DOB</option></select>'
+ +'<input type="hidden" id="fst" value="">'
+ +'<select id="fc"><option value="">colour</option></select>'
+ +'<select id="ft"><option value="">screening</option></select>'
+ +'<button id="clr">clear</button><span class="mut" id="cnt"></span></div>'
+ +'<div class="key"><span><i style="background:var(--male)"></i>entire male</span>'
+ +'<span><i style="background:var(--male-n)"></i>neutered male</span>'
+ +'<span><i style="background:var(--female)"></i>entire female</span>'
+ +'<span><i style="background:var(--female-n)"></i>neutered female</span>'
+ +'<span><i style="background:var(--unk)"></i>sex missing</span></div>'
+ +'<div class="key stf">'+STATUS.map(function(x){return '<button class="st sfb '+x[2]+'" data-code="'+x[0]+'"><b>'+x[0]+'</b>'+x[1]+'</button>';}).join('')+'<button class="st sfb st-all" data-code="">ALL</button></div>'
+ +'<div class="note" style="margin:-4px 0 10px"><b>Left edge of each card = sex.</b> Blue male, pink female, grey not recorded. An entire dog shows nothing extra. A dog that has been done carries the word SPAYED or NEUTERED beside its status, a struck-through sex symbol, and a dotted edge. The coloured buttons above are the status \u2014 tap one to filter, tap ALL to clear. Collected and deceased are hidden until you tap them.</div>'
+ +(miss?'<div class="card acc2"><h4>'+miss+' here carry no sex</h4><p style="margin-bottom:0">A blank sex drops a dog out of the breeding-bitch count silently.'+(missGone?' A further <b>'+missGone+'</b> have no sex but have been collected or have died — nothing to fix there.':'')+'</p></div>':(missGone?'<div class="card acc5"><h4>Every dog still here has a sex recorded</h4><p style="margin-bottom:0">'+missGone+' subjects carry no sex, and <b>all of them have been collected or have died</b>. Nothing to chase.</p></div>':''))
+ +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
+}
+function ageBand(m){ if(m===null) return '__none'; if(m<6) return 'p'; if(m<12) return 'j'; if(m<84) return 'a'; return 'o'; }
+function showWeights(id){
+ var d=CD._byId[id]; if(!d) return;
+ var el=document.getElementById('wpanel'); if(!el) return;
+ if(!d.weights.length){ el.innerHTML='<div class="card acc2"><h4>'+esc(d.name)+' has no weighings</h4></div>'; return; }
+ var h='<div class="card acc6"><h4>'+esc(d.name)+' \u2014 '+d.weights.length+' weighings</h4>'
+  +'<div class="scroll"><table><thead><tr><th>date</th><th>weight</th><th>change</th><th>BCS</th><th>source</th></tr></thead><tbody>';
+ for(var i=d.weights.length-1;i>=0;i--){ var w=d.weights[i], pv=i>0?d.weights[i-1]:null;
+  var dl=pv?(w.kg-pv.kg):null;
+  h+='<tr><td>'+esc(dmy(w.on))+'</td><td><b>'+w.kg+' kg</b></td>'
+   +'<td>'+(dl===null?'<span class="mut">first</span>':'<span class="'+(dl>0?'up':(dl<0?'dn':''))+'">'+(dl>0?'+':'')+dl.toFixed(1)+'</span>')+'</td>'
+   +'<td>'+(w.bcs?'<span class="pill '+(w.bcs==='5'?'ok':(parseInt(w.bcs,10)>5?'w':'no'))+'">'+esc(w.bcs)+'</span>':'<span class="mut">\u2014</span>')+'</td>'
+   +'<td class="mut">'+esc(w.src||'')+'</td></tr>'; }
+ h+='</tbody></table></div><button id="wclose" class="cb" style="margin-top:8px">close</button></div>';
+ el.innerHTML=h;
+ var c=document.getElementById('wclose'); if(c) c.addEventListener('click',function(){ el.innerHTML=''; });
+ if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function showTreats(id){
+ var d=CD._byId[id]; if(!d) return;
+ var el=document.getElementById('wpanel'); if(!el) return;
+ var t=d.treats||[];
+ if(!t.length){ el.innerHTML='<div class="card acc2"><h4>'+esc(d.name)+' has no treatments recorded</h4></div>'; return; }
+ var h='<div class="card acc4"><h4>'+esc(d.name)+' \u2014 '+t.length+' treatment'+(t.length===1?'':'s')+'</h4>'
+  +'<div class="scroll"><table><thead><tr><th>date</th><th>product</th><th>dose</th><th>chosen because</th><th>source</th></tr></thead><tbody>';
+ for(var i=t.length-1;i>=0;i--){ var r=t[i];
+  var unk=/NOT STATED/.test(r.product||'');
+  h+='<tr><td>'+esc(dmy(r.on))+'</td>'
+   +'<td>'+(unk?'<span class="pill no">not stated</span>':'<b>'+esc(r.product)+'</b>'+(r.pres?'<br><span class="mut">'+esc(r.pres)+'</span>':''))+'</td>'
+   +'<td>'+(r.dose?'<b>'+esc(r.dose)+'</b>':'<span class="mut">\u2014</span>')+'</td>'
+   +'<td class="mut">'+(r.kg?esc(r.kg)+' kg on the day'+(r.band?', band '+esc(r.band):''):(r.need?esc(r.need):''))+'</td>'
+   +'<td class="mut">'+esc(r.src||'')+'</td></tr>'; }
+ h+='</tbody></table></div>'
+  +'<p class="note" style="margin-bottom:0">Every dose here is worked out from the weight recorded on the same date, never from today\u2019s weight. Moxiclear does not treat tapeworm \u2014 the SPC names no cestode at all \u2014 so a tapeworm wormer is always a second row.</p>'
+  +'<button id="mclose" class="cb" style="margin-top:8px">close</button></div>';
+ el.innerHTML=h;
+ var c=document.getElementById('mclose'); if(c) c.addEventListener('click',function(){ el.innerHTML=''; });
+ if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function drawDogs(){
+ var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
+ var q=v('q').toLowerCase(),fs=v('fs'),fn=v('fn'),fa=v('fa'),fst=v('fst'),fc=v('fc'),ft=v('ft');
+ var list=CD.dogs.filter(function(d){
+  var sc=statusOf(d).code;
+  if(!fst && (sc==='CL'||sc==='DE')) return false;      
+  if(fs==='__none'){ if(d.sex) return false; } else if(fs&&d.sex!==fs) return false;
+  if(fn){ var e=isEntire(d); if(fn==='e'&&!e) return false; if(fn==='n'&&e) return false; }
+  if(fa&&ageBand(months(d.dob))!==fa) return false;
+  if(fst&&statusOf(d).code!==fst) return false;
+  if(fc&&colourLabel(d)!==fc) return false;
+  if(ft&&!d.findings.some(function(f){return f.test===ft;})) return false;
+  if(!q) return true;
+  return ((d.name||'')+' '+(d.chip||'')).toLowerCase().indexOf(q)>=0; });
+ var h='';
+ list.slice(0,300).forEach(function(d){
+  var m=months(d.dob), st=statusOf(d);
+  var cls=!d.sex?'u':((d.sex==='Male'?'m':'f')+(isEntire(d)?'e':'n'));
+  var sym=!d.sex?'?':(d.sex==='Male'?'♂':'♀'); var nEd=!isEntire(d);
+  var age=m===null?'no DOB':(m<12?m+'m':(Math.floor(m/12)+'y'+(m%12?' '+(m%12)+'m':'')));
+  var lastB=null; for(var bi=d.weights.length-1;bi>=0;bi--){ if(d.weights[bi].bcs){lastB=d.weights[bi];break;} }
+  var w=d.weights.length?{kg:d.weights[d.weights.length-1].kg,on:d.weights[d.weights.length-1].on,n:d.weights.length,
+       delta:d.weights.length>1?(d.weights[d.weights.length-1].kg-d.weights[d.weights.length-2].kg):null}:null;
+  h+='<article class="dc '+cls+'"><div class="bd">'
+   +'<div class="hd"><div class="ph">'+esc((d.name||'?').slice(0,1).toUpperCase())
+   +'<span class="sym'+(nEd?' nx':'')+'" title="'+(d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered')+'">'+sym+'</span></div>'
+   +'<div><div class="nm">'+esc(d.name||'—')+'</div><div class="meta">'+esc(d.size||'size not recorded')+((d.breed&&d.breed!=='Australian Cobberdog')?'<br><b>'+esc(d.breed)+'</b>':'')+'</div></div>'
+   +'<span class="age">'+age+'</span></div>'
+   +'<div><span class="st '+st.cls+'" title="'+esc(d.where||'location not recorded')+'"><b>'+st.code+'</b>'+esc(st.label)+'</span>'+(nEd?'<span class="neu">'+(d.sex==='Female'?'SPAYED':'NEUTERED')+'</span>':'')+'</div>'
+   +'<div class="coat">'+swatch(d)+'<span>'+esc(colourLabel(d))+'</span></div>'
+   +(w?'<div class="wt wtc" data-dog="'+esc(d.id)+'" title="tap for the full weight history"><span class="lb">weight</span><b>'+w.kg+' kg</b>'
+      +(w.delta!==null?'<span class="'+(w.delta>0?'up':(w.delta<0?'dn':''))+'">'+(w.delta>0?'↑':(w.delta<0?'↓':'→'))+' '+Math.abs(w.delta).toFixed(1)+'</span>':'')
+      +(lastB?'<span class="pill '+(lastB.bcs==="5"?'ok':(parseInt(lastB.bcs,10)>5?'w':'no'))+'" title="body condition score '+esc(lastB.bcs)+' of 9, '+esc(dmy(lastB.on))+'">BCS '+esc(lastB.bcs)+'</span>':'')
+      +spark(d.weights,54,15)
+
+      +'<span class="mut">'+esc(dmy(w.on))+' · '+w.n+' weighings</span></div>'
+     :'<div class="wt none"><span class="lb">weight</span><span>no weighings recorded</span></div>')
+   +(d.findings.length?'<div class="chips">'+d.findings.map(function(f){
+      return '<span class="pill '+(f.certainty==='possible'?'w':(f.certainty==='clear'?'ok':'no'))+'" title="'+esc(f.from_text)+'">'
+      +esc(f.test)+(f.grade?' '+esc(f.grade):'')+(f.certainty==='possible'?'?':'')+'</span>';}).join('')+'</div>':'')
+   +(d.treats.length?'<div class="wt wtc trc" data-dog="'+esc(d.id)+'" title="tap for every treatment"><span class="lb">meds</span>'
+      +'<b>'+d.treats.filter(function(x){return !/NOT STATED/.test(x.product||'');}).length+' given</b>'
+      +(d.treats.some(function(x){return /NOT STATED/.test(x.product||'');})?'<span class="pill no">1 not named</span>':'')
+      +'<span class="mut">last '+esc(dmy(d.treats[d.treats.length-1].on))+'</span></div>':'')
+   +(d.chip?'<div class="chipline"><span class="lb">chip</span><span class="vl">'+esc(d.chip)+'</span></div>'
+          :'<div class="chipline"><span class="lb">chip</span><span class="none">none recorded</span></div>')
+   +'</div></article>';});
+ document.getElementById('rows').innerHTML=h;
+ document.getElementById('cnt').textContent=list.length+' of '+CD.dogs.length+(list.length>300?' · first 300 shown':'');
+}
+function familyOf(a){ return (a&&a.grouping)?a.grouping:'other'; }
+var FAMNAME={};
+function famSort(g){ var r=CD.areas.filter(function(a){return a.grouping===g;})[0];
+ return r?parseInt(r.group_sort,10):99; }
+function cabSort(x){ var n=(x.match(/\d+/g)||[]).map(Number); return n.length?n[n.length-1]:0; }
+var BANDS=['<10kg (small)','10-25kg (medium)','25kg+ (large)','small + pups','medium + pups','large + pups'];
+var PUPBAND={'small + pups':1,'medium + pups':1,'large + pups':1};
+
+function accessOf(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return d.access_type;
+ var r=CD.accessCsv[aid]; return (r&&r.access_type)||''; }
+function accessReason(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return 'set here '+(d.at?d.at.slice(0,10):'');
+ var r=CD.accessCsv[aid]; return (r&&r.reason)||''; }
+function modesOf(a){ return ['free','limited']; }
+function capFor(aid,band,access){ var a=CD.cap[aid]; if(!a||!access) return null;
+ var c=(a[access]||{})[band]; return (c && c.n!=='' && c.n!=null)?c.n:null; }
+async function accessSave(aid,mode,msgEl){
+ if(!DB){ if(msgEl) msgEl.textContent='saving off'; return; }
+ if(msgEl) msgEl.textContent='saving\u2026';
+ try{ await DB.doc('access/'+aid).set({area_id:aid,access_type:mode,at:new Date().toISOString()});
+      ACCESS[aid]={area_id:aid,access_type:mode,at:new Date().toISOString()};
+      if(msgEl) msgEl.textContent='saved'; go('areas',false); }
+ catch(e){ var c=(e&&(e.code||e.message))||'error'; if(msgEl) msgEl.textContent='NOT saved \u2014 '+c; console.log('access save failed',e); }
+}
+
+function inCabin(aid,date){ var k=roundKey(date||todayISO(),aid); return ((ROUND[k]||{}).subjects||[]); }
+
+function pageAreas(){
+ var date=CD._roundDate||todayISO();
+ var fam={}; CD.areas.forEach(function(a){ (fam[familyOf(a)]=fam[familyOf(a)]||[]).push(a); });
+ var order=Object.keys(fam).sort(function(a,b){return famSort(a)-famSort(b);});
+ var set=CD.areas.filter(function(a){return accessOf(a.id);}).length;
+ var both=CD.areas.filter(function(a){return modesOf(a).length===2;}).length;
+ var h='<h2>Areas</h2><p class="sub">One card per cabin, in walk order.</p>'
+ +'<div class="tiles">'+tile('b4',CD.areas.length,'cabins','BLD-area.csv')
+ +tile('b6',CD.areas.filter(function(a){return a.m2ok==='NO';}).length,'m\u00b2 unconfirmed','two figures were on record for one room')
+ +tile(set===CD.areas.length?'b5':'b2',set,'have a mode chosen','of '+CD.areas.length)
+ +tile('b3',CD.areas.filter(function(a){return inCabin(a.id,date).length;}).length,'occupied today','from the round')+'</div>'
+ +'<div class="card acc6"><h4>Free access and limited are the same cabin run two ways</h4>'
+ +'<div class="card acc6"><h4>Free access or limited \u2014 one or the other</h4>'
+ +'<p style="margin-bottom:0">The same cabin run two ways, each with its own floor area and its own permitted numbers. Pick one and the capacity check runs.</p></div>'
+ +'<p style="margin-bottom:0"><b>Every number below is a headcount \u2014 how many dogs, not square metres.</b> '
+ +'All of them come from the Welsh Government guidance s1.2 Size of Quarters. A cabin has ONE floor area; the flap only decides which minimum it must meet, because a confined dog needs more room than one that can come and go. '
+ +'The three <b>+ pups</b> columns are a yes/no: can one bitch whelp and raise a litter here? That minimum is double the one-adult figure, per the SRS conditions.</p></div>';
+ order.forEach(function(f){
+  var rows=fam[f].sort(function(x,y){return cabSort(x.code)-cabSort(y.code)||(x.code<y.code?-1:1);});
+  h+='<h3><span class="dot" style="background:'+(f.charAt(0)==='H'?'var(--p5)':(f.charAt(0)==='3'?'var(--p6)':'var(--p3)'))+'"></span>'
+   +(FAMNAME[f]||f)+' <span class="mut" style="font-weight:400">'+rows.length+(rows.length===1?' cabin':' cabins')+'</span></h3>';
+  rows.forEach(function(a){
+   var cur=accessOf(a.id), who=inCabin(a.id,date);
+   var m2=a.m2;
+   h+='<div class="card '+(cur?(who.length?'acc5':''):'acc2')+'">'
+    +'<h4>'+esc(a.code)+' <span class="mut" style="font-weight:400">'+esc(m2)+' m\u00b2</span>'
+    +(cur?' <span class="pill '+(cur==='free'?'i':'w')+'">'+cur+'</span>':' <span class="pill no">flap?</span>')
+    +(a.m2ok==='NO'?' <span class="pill w" title="'+esc(a.m2note)+'">m\u00b2 unconfirmed</span>':'')+'</h4>'
+    +'<div class="filt" style="margin-bottom:6px"><select class="aacc" data-area="'+a.id+'">'
+    +'<option value="">how is it being run?</option>'
+    +['free','limited'].map(function(m){
+        return '<option value="'+m+'"'+(cur===m?' selected':'')+'>'
+          +(m==='free'?'free access \u2014 flap open':'limited \u2014 flap shut')+'</option>';}).join('')
+    +'</select><span class="mut asave" data-area="'+a.id+'"></span>'
+    +'<span class="mut">'+esc(accessReason(a.id))+'</span></div>';
+   
+   {
+    var modes = cur ? [cur] : ['free','limited'];
+    h+='<div class="scroll"><table><thead><tr><th>flap</th>'+BANDS.map(function(b){return '<th>'+esc(b)+'</th>';}).join('')+'</tr></thead><tbody>'
+     +modes.map(function(mo){
+        return '<tr><td><b>'+mo+'</b>'+(cur?'':' <span class="mut">(not chosen)</span>')+'</td>'
+         +BANDS.map(function(b){ var v=capFor(a.id,b,mo);
+            return '<td'+(v==='0'?' class="mut"':'')+'>'+(v==null?'<span class="pill no">no figure</span>':(v==='0'?'0':'<b>'+esc(v)+'</b>'))+'</td>';}).join('')
+         +'</tr>'; }).join('')
+     +'</tbody></table></div>'
+     +(cur?'':'<p class="mut" style="margin:6px 0 0">Both modes shown because the flap has not been set for this cabin. Choose above to pin one.</p>')
+     +'<div class="mut" style="margin-top:6px">in here on '+esc(date)+': '
+     +(who.length?who.map(function(sid){var d=CD._byId[sid];return '<span class="pill i">'+esc(d?d.name:sid)+'</span>';}).join(' ')
+       :'<span class="mut">empty</span>')
+     +(function(){ var n=who.length, c=capFor(a.id,'10-25kg (medium)',cur);
+        return (c!=null && n>parseInt(c,10))?' <span class="pill no">over the 10-25 kg figure</span>':''; })()
+     +'</div>';
+   }
+   h+='</div>';});});
+ return h;
+}
+function pageLitters(){
+ var withDob=CD.litters.filter(function(l){return l.dob;}).length;
+ var pups={}; CD.dogs.forEach(function(d){ (d.littersAsDam||[]).forEach(function(){}); });
+ var h='<h2>Litters</h2><p class="sub">'+CD.litters.length+' rows. '+withDob+' have a date of birth.</p>'
+ +'<div class="tiles">'+tile('b7',CD.litters.length,'litters','')
+ +tile('b5',withDob,'born','')+tile('b2',CD.litters.length-withDob,'no DOB','planned, in progress, or did not take')
+ +tile('b6',CD.matings.length,'matings recorded','including those that did not take')+'</div>'
+ +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="lq" placeholder="dam, sire, litter name…"></span>'
+ +'<select id="ld"><option value="">date of birth</option><option value="y">has a DOB</option><option value="n">missing a DOB</option></select>'
+ +'<select id="ly"><option value="">year</option></select>'
+ +'<select id="ls"><option value="">status</option></select>'
+ +'<button id="lclr">clear</button><span class="mut" id="lcnt"></span></div>'
+ +'<div class="scroll"><table><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
+ return h;
+}
+function litterPups(){
+ if(CD._pups) return CD._pups;
+ var byRaw={}; CD.litters.forEach(function(l){ if(l.raw_name) byRaw[l.raw_name.toLowerCase().replace(/\s+/g,'')]=l.id; });
+ var out={};
+ CD.dogs.forEach(function(d){ var k=(d.descent||'').toLowerCase().replace(/\s+/g,'');
+  if(k && byRaw[k]) out[byRaw[k]]=(out[byRaw[k]]||0)+1; });
+ CD._pups=out; return out;
+}
+function drawLitters(){
+ var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
+ var q=v('lq').toLowerCase(),ld=v('ld'),ly=v('ly'),ls=v('ls'),lm=v('lm'),lp=v('lp'),lk=v('lk');
+ var pups=litterPups();
+ var list=CD.litters.filter(function(l){
+  if(ld==='y'&&!l.dob) return false; if(ld==='n'&&l.dob) return false;
+  if(ly&&(l.dob||'').slice(0,4)!==ly) return false;
+  if(ls&&(l.status||'')!==ls) return false;
+  if(lm&&l.dam_subject_id!==lm) return false;
+  if(lp&&l.sire_subject_id!==lp) return false;
+  if(lk==='y'&&!(pups[l.id]||0)) return false;
+  if(lk==='n'&&(pups[l.id]||0)) return false;
+  if(!q) return true;
+  return ((l.pairing||'')+' '+(l.raw_name||'')+' '+nameOf(l.dam_subject_id)+' '+nameOf(l.sire_subject_id)).toLowerCase().indexOf(q)>=0;});
+ list.sort(function(a,b){return (b.dob||'')>(a.dob||'')?1:-1;});
+ document.getElementById('lrows').innerHTML=list.map(function(l){
+  return '<tr><td><b>'+esc(l.pairing)+'</b></td><td class="mut"><code>'+esc(l.raw_name||'—')+'</code></td>'
+   +'<td>'+esc(nameOf(l.dam_subject_id)||'—')+'</td>'
+   +'<td>'+esc(nameOf(l.sire_subject_id)||'—')+'</td>'
+   +'<td>'+(l.dob?esc(dmy(l.dob)):'<span class="pill w">no DOB</span>')+'</td>'
+   +'<td>'+((pups[l.id]||0)?'<b>'+pups[l.id]+'</b>':'<span class="mut">—</span>')+'</td>'
+   +'<td class="mut">'+esc(l.status||'—')+'</td></tr>';}).join('');
+ document.getElementById('lcnt').textContent=list.length+' of '+CD.litters.length;
+}
+function pageVet(){
+ var wcount={}; CD.dogs.forEach(function(d){ wcount[d.id]=d.weights.length; });
+ var byId={}; CD.dogs.forEach(function(d){ byId[d.id]=d; });
+ var here=CD.vetlink.filter(function(l){ var d=byId[l.subject_id]; if(!d) return false;
+   var c=statusOf(d).code; return c!=='CL' && c!=='DE'; });
+ var hidden=CD.vetlink.length-here.length;
+ var h='<h2>Vet link</h2><p class="sub">Chip → Animana patient ID → weight history. The chip is the join.</p>'
+ +'<div class="tiles">'+tile('b5',here.length,'active dogs linked','collected and deceased excluded')+tile('b0',hidden,'linked but not here','still in the map file')
+ +tile('b6',CD.counts.weight,'weighings','BLD-weight.csv')
+ +tile('b4',here.filter(function(l){return (byId[l.subject_id].weights||[]).length;}).length,'of these have weights','')+'</div>'
+ +'<div class="card acc5"><h4>A foreign id lives in one file only</h4>'
+ +'<p style="margin-bottom:0">Animana patient ids appear in <code>BLD-MAP-animana.csv</code> and nowhere else. If Animana renumbers, one file changes.</p></div>'
+ +'<div class="scroll"><table><thead><tr><th>dog</th><th>chip</th><th>animana patient ID</th><th>weighings</th></tr></thead><tbody>';
+ here.slice().sort(function(a,b){return (a.vet_name||'')<(b.vet_name||'')?-1:1;}).forEach(function(l){
+  h+='<tr><td><b>'+esc(l.vet_name)+'</b></td><td><code>'+esc(l.matched_on_chip)+'</code></td>'
+   +'<td><code class="mut">'+esc(l.foreign_id)+'</code></td><td>'+(wcount[l.subject_id]||0)+'</td></tr>';});
+ return h+'</tbody></table></div>';
+}
+function flag(iso){ iso=(iso||'').toUpperCase();
+ if(iso==='EU') return '\u{1F1EA}\u{1F1FA}';
+ if(!/^[A-Z]{2}$/.test(iso)) return '\u{1F3F3}';
+ return String.fromCodePoint(0x1F1E6+iso.charCodeAt(0)-65,0x1F1E6+iso.charCodeAt(1)-65); }
+function pageBuyers(){
+ var live=CD.assoc.filter(function(a){return a.status!=='DEFUNCT';});
+ var cob=live.filter(function(a){return a.recognises_cobberdog==='true';});
+ var h='<h2>Buyers</h2><p class="sub">Who could take the lines on. Associations first \u2014 their directories are where the breeders are.</p>'
+ +'<div class="tiles">'+tile('b6',CD.prospects.length,'prospects logged','BLD-prospect.csv')
+ +tile('b5',live.length,'live associations','BLD-association.csv')
+ +tile('b2',cob.length,'recognise the Cobberdog','of '+live.length)
+ +tile('b3',new Set(CD.assoc.map(function(a){return a.country_iso;})).size,'countries','')+'</div>'
+ +'<div class="card acc2"><h4>The Cobberdog buyer pool is small, and there is no list to download</h4>'
+ +'<p style="margin-bottom:0">Only <b>three live bodies recognise the Australian Cobberdog at all</b> \u2014 MDBA, ACS and ACCA. '
+ +'MDBA is the registry that matters and it has <b>no browsable member directory</b>: Classifieds is the only public place to reach its members. '
+ +'The big Labradoodle directories hold far more breeders, but <b>ALAA Rule 15 requires a 6-generation AKC/CKC-traceable pedigree</b>, '
+ +'which an MDBA Cobberdog pedigree is not. Volume and eligibility point in opposite directions.</p></div>';
+ if(!CD.prospects.length) h+='<div class="card dash acc4"><h4>No prospects harvested yet</h4>'
+  +'<p style="margin-bottom:0">The sheet exists and is empty on purpose. Pass 2 walks each directory below and fills it \u2014 kennel, country, website, contact, association, directory entry. Nothing is invented.</p></div>';
+ h+='<h3><span class="dot" style="background:var(--p2)"></span>Associations</h3>'
+ +'<div class="scroll"><table><thead><tr><th>body</th><th>country</th><th>Cobberdog</th><th>registry</th>'
+ +'<th>breeders listed</th><th>directory</th></tr></thead><tbody>';
+ live.slice().sort(function(a,b){ return (b.recognises_cobberdog==='true')-(a.recognises_cobberdog==='true') || (a.acronym<b.acronym?-1:1); })
+  .forEach(function(a){
+  h+='<tr><td><b>'+esc(a.acronym)+'</b><div class="mut">'+esc(a.name)+'</div></td>'
+   +'<td>'+flag(a.country_iso)+' '+esc(a.country)+'</td>'
+   +'<td>'+(a.recognises_cobberdog==='true'?'<span class="pill ok">yes</span>':'<span class="mut">Labradoodle only</span>')+'</td>'
+   +'<td>'+(a.is_registry==='true'?'<span class="pill i">registry</span>':'<span class="mut">club</span>')+'</td>'
+   +'<td class="mut">'+esc(a.listed_breeders)+'</td>'
+   +'<td>'+(a.directory_url?'<a href="'+esc(a.directory_url)+'" target="_blank" rel="noopener">open \u2197</a>':'<span class="mut">none</span>')+'</td></tr>'
+   +(a.note?'<tr><td colspan="6" class="mut" style="padding-top:0">'+esc(a.note)+'</td></tr>':'');});
+ h+='</tbody></table></div>';
+ var dead=CD.assoc.filter(function(a){return a.status==='DEFUNCT';});
+ if(dead.length) h+='<div class="card dash"><h4>'+dead.length+' bodies are dead but still linked from breeder sites</h4>'
+  +'<p style="margin-bottom:0" class="mut">'+dead.map(function(a){return esc(a.acronym)+' \u2014 '+esc(a.note);}).join('<br>')+'</p></div>';
+ h+='<h3><span class="dot" style="background:var(--p3)"></span>Getting a dog there</h3>'
+ +'<div class="card acc3"><h4>Every sale is a commercial export</h4>'
+ +'<p style="margin-bottom:0">A change of ownership is commercial even where no money moves, so the ordinary pet travel certificate does not apply. '
+ +'Read each route before promising a buyer a date.</p></div>'
+ +'<div class="scroll"><table><thead><tr><th>to</th><th>difficulty</th><th>lead time</th><th>what is required</th></tr></thead><tbody>';
+ CD.exportRoutes.forEach(function(e){
+  var cls=e.difficulty==='LOW'?'ok':(e.difficulty==='HIGH'?'no':'w');
+  h+='<tr><td>'+flag(e.country_iso)+' <b>'+esc(e.country)+'</b></td>'
+   +'<td><span class="pill '+cls+'">'+esc(e.difficulty)+'</span></td><td class="mut">'+esc(e.lead_time)+'</td>'
+   +'<td>'+esc(e.requirement)+(e.conflict?'<div class="mut" style="margin-top:4px"><b>'+esc(e.conflict)+'</b></div>':'')+'</td></tr>';});
+ h+='</tbody></table></div>';
+ if(CD.prospects.length){
+  var cats=CD.categories.filter(function(c){return c.code!=='Not yet categorised';});
+  var ctry={}; CD.prospects.forEach(function(p){ if(p.country_iso&&p.country_iso!=='unknown') ctry[p.country_iso]=p.country; });
+  h+='<h3><span class="dot" style="background:var(--p6)"></span>Prospects</h3>'
+   +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="bq" placeholder="kennel, person, MDBA number\u2026"></span>'
+   +'<select id="bcat"><option value="">breeder type</option>'
+   +cats.map(function(c){return '<option value="'+esc(c.code)+'">'+esc(c.code)+'</option>';}).join('')+'</select>'
+   +'<select id="bctry"><option value="">country</option>'
+   +Object.keys(ctry).sort().map(function(k){return '<option value="'+k+'">'+flag(k)+' '+esc(ctry[k])+'</option>';}).join('')
+   +'<option value="unknown">country not known</option></select>'
+   +'<select id="bapp"><option value="">upgrade appetite</option>'
+   +['HIGHEST','HIGH','MED-HIGH','MED','LOW-MED','LOW','unknown'].map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('')+'</select>'
+   +'<select id="bsig"><option value="">buyer signal</option>'
+   +['VERY STRONG','STRONG','MODERATE','UNKNOWN'].map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('')+'</select>'
+   +'<select id="bmd"><option value="">MDBA number</option><option value="y">has one</option><option value="n">none found</option></select>'
+   +'<select id="bem"><option value="">email</option><option value="y">has an email</option><option value="n">no email</option></select>'
+   +'<select id="bch"><option value="">reachable by</option>'
+   +['whatsapp','email','website form','none found'].map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('')+'</select>'
+   +'<button id="bclr">clear</button><span class="mut" id="bcnt"></span></div>'
+   +'<div class="scroll"><table><thead><tr><th>kennel</th><th>country</th><th>MDBA</th><th>type</th>'
+   +'<th>appetite</th><th>contact</th><th>why them</th></tr></thead><tbody id="brows"></tbody></table></div>';
+ }
+ return h;
+}
+function contactLinks(p){
+ var o=[], ok=function(x){return x && x!=='unknown';};
+ if(ok(p.whatsapp)) o.push('<a class="cb wa" href="https://wa.me/'+esc(p.whatsapp.replace(/[^0-9]/g,''))+'" target="_blank" rel="noopener">WhatsApp</a>');
+ if(ok(p.phone)) o.push('<a class="cb" href="tel:'+esc(p.phone.replace(/[^0-9+]/g,''))+'">Call</a>');
+ if(ok(p.email)) o.push('<a class="cb" href="mailto:'+esc(p.email)+'">Email</a>');
+ if(ok(p.facebook)) o.push('<a class="cb" href="'+esc(p.facebook)+'" target="_blank" rel="noopener">Facebook</a>');
+ if(ok(p.instagram)) o.push('<a class="cb" href="'+esc(p.instagram)+'" target="_blank" rel="noopener">Instagram</a>');
+ if(ok(p.linkedin)) o.push('<a class="cb" href="'+esc(p.linkedin)+'" target="_blank" rel="noopener">LinkedIn</a>');
+ if(!o.length && ok(p.website) && p.website.indexOf('SITE')<0)
+   o.push('<a class="cb" href="https://'+esc(p.website.replace(/^https?:\/\//,''))+'" target="_blank" rel="noopener">Website form</a>');
+ var det='';
+ if(ok(p.email)) det+='<div class="mut sel">'+esc(p.email)+'</div>';
+ if(ok(p.phone)) det+='<div class="mut sel">'+esc(p.phone)+'</div>';
+ return (o.length?'<div class="cbs">'+o.join('')+'</div>':'<span class="mut">no route found</span>')+det;
+}
+function drawBuyers(){
+ var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
+ var q=v('bq').toLowerCase(),c=v('bcat'),ct=v('bctry'),ap=v('bapp'),sg=v('bsig'),md=v('bmd'),em=v('bem'),ch=v('bch');
+ var list=CD.prospects.filter(function(p){
+  if(c && (p.categories||'').split('; ').indexOf(c)<0) return false;
+  if(ct && p.country_iso!==ct) return false;
+  if(ap && p.upgrade_appetite!==ap) return false;
+  if(sg && p.buyer_signal!==sg) return false;
+  var hasMd=p.mdba_number && p.mdba_number!=='unknown';
+  if(md==='y'&&!hasMd) return false; if(md==='n'&&hasMd) return false;
+  var hasEm=p.email && p.email!=='unknown';
+  if(em==='y'&&!hasEm) return false; if(em==='n'&&hasEm) return false;
+  if(ch && p.preferred_channel!==ch) return false;
+  if(!q) return true;
+  return ((p.kennel_name||'')+' '+(p.contact_name||'')+' '+(p.mdba_number||'')+' '+(p.region||'')).toLowerCase().indexOf(q)>=0;});
+ var RK={'VERY STRONG':0,'STRONG':1,'MODERATE':2,'UNKNOWN':3};
+ list.sort(function(a,b){ return (RK[a.buyer_signal]||9)-(RK[b.buyer_signal]||9) || (a.kennel_name<b.kennel_name?-1:1); });
+ var el=document.getElementById('brows'); if(!el) return;
+ el.innerHTML=list.map(function(p){
+  var sig=p.buyer_signal==='VERY STRONG'?'ok':(p.buyer_signal==='STRONG'?'i':(p.buyer_signal==='UNKNOWN'?'':'w'));
+  var apc=(p.upgrade_appetite==='HIGHEST'||p.upgrade_appetite==='HIGH')?'ok':(p.upgrade_appetite==='LOW'?'':'w');
+  return '<tr><td><b>'+esc(p.kennel_name)+'</b>'+(p.contact_name&&p.contact_name!=='unknown'?'<div class="mut">'+esc(p.contact_name)+'</div>':'')
+   +(p.website&&p.website.indexOf('SITE')<0?'<div><a href="https://'+esc(p.website.replace(/^https?:\/\//,''))+'" target="_blank" rel="noopener">'+esc(p.website)+' \u2197</a></div>':(p.website?'<div class="mut">'+esc(p.website)+'</div>':''))+'</td>'
+   +'<td>'+flag(p.country_iso)+' '+esc(p.country)+(p.region&&p.region!=='unknown'?'<div class="mut">'+esc(p.region)+'</div>':'')+'</td>'
+   +'<td>'+(p.mdba_number&&p.mdba_number!=='unknown'?'<code>'+esc(p.mdba_number)+'</code>':'<span class="mut">\u2014</span>')+'</td>'
+   +'<td>'+(p.categories||'').split('; ').filter(Boolean).map(function(x){return '<span class="pill">'+esc(x)+'</span>';}).join(' ')+'</td>'
+   +'<td><span class="pill '+apc+'">'+esc(p.upgrade_appetite||'?')+'</span></td>'
+   +'<td class="ct">'+contactLinks(p)+'</td>'
+   +'<td><span class="pill '+sig+'">'+esc(p.buyer_signal)+'</span><div class="mut">'+esc(p.notes)+'</div></td></tr>';}).join('');
+ var cnt=document.getElementById('bcnt'); if(cnt) cnt.textContent=list.length+' of '+CD.prospects.length;
+}
+function todayISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
+
+function walkList(){
+ var fam={}; CD.areas.forEach(function(a){ (fam[familyOf(a)]=fam[familyOf(a)]||[]).push(a); });
+ var out=[], step=0;
+ Object.keys(fam).sort(function(a,b){return famSort(a)-famSort(b);}).forEach(function(f){
+  fam[f].sort(function(x,y){return cabSort(x.code)-cabSort(y.code)||(x.code<y.code?-1:1);}).forEach(function(a){
+   step++; out.push({step:step,family:f,cabin:a.code,area:a}); });});
+ return out;
+}
+function hereNow(){ return CD.dogs.filter(function(d){
+  var c=statusOf(d).code;
+  if(c==='CL'||c==='DE') return false;
+  return /^SLA\b/i.test(d.classification||'');
+ }).sort(function(a,b){ return (a.name||'')<(b.name||'')?-1:1; }); }
+
+function roundKey(date,areaId){ return date+'__'+areaId; }
+function pageRound(){
+ var date=(CD._roundDate||todayISO());
+ var w=walkList(), dogs=hereNow();
+ var placed={}; Object.keys(ROUND).forEach(function(k){ if(k.indexOf(date+'__')===0)
+   (ROUND[k].subjects||[]).forEach(function(sid){ placed[sid]=ROUND[k].areaId; }); });
+ var unplaced=dogs.filter(function(d){ return !placed[d.id]; });
+ var h='<h2>The round</h2><p class="sub">Walk the cabins in order. Say who is in each, and how it is being run.</p>'
+ +'<div class="filt"><label class="mut">date</label><input id="rdate" type="date" value="'+date+'">'
+ +'<span class="mut" id="rstat">'+(DB?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'read-only \u2014 saving is off for now')+'</span></div>';
+ if(!DB) h+='<div class="card acc2"><h4>Saving is off in this web version</h4><p style="margin-bottom:0">'
+  +esc(DBERR||'The page has no store, so a tick would look identical whether or not it landed.')+'</p></div>';
+ else h+='<div class="card acc4"><h4>Where this saves</h4><p style="margin-bottom:0">'
+  +'Into the page\u2019s own store, <b>not into the Drive tables</b>. It shows here and to anyone else with the page open. '
+  +'I fold it into <code>BLD-occupancy.csv</code> <code>BLD-area_access.csv</code> and <code>BLD-area_reading.csv</code> when you ask. <b>Temperatures are kept exactly as typed, to two decimal places</b> \u2014 a rounded reading cannot be un-rounded.</p></div>';
+ h+='<div class="card '+(unplaced.length?'acc2':'acc5')+'"><h4>'+(unplaced.length?unplaced.length+' dogs not yet placed':'Every dog on the premises is placed')+'</h4>'
+  +(unplaced.length?'<p style="margin-bottom:0" class="mut">'+unplaced.slice(0,40).map(function(d){return esc(d.name);}).join(' \u00b7 ')+(unplaced.length>40?' \u2026':'')+'</p>':'')+'</div>';
+ w.forEach(function(c){
+  var a=c.area, aid=a.id;
+  var k=roundKey(date,aid), r=ROUND[k]||{}, sel=r.subjects||[];
+  if(!ROUND[k]){ var lives=CD.dogs.filter(function(d){return d.area_id===aid;}).map(function(d){return d.id;});
+    if(lives.length) sel=lives; }
+  var acc=r.access||accessOf(aid), fromArea=!r.access&&!!acc;
+   var m2=a.m2;
+  var cap=capFor(aid,'10-25kg (medium)',acc);   
+  var over=(cap!=null && sel.length>parseInt(cap,10));
+  h+='<div class="card '+(over?'acc2':(sel.length?'acc5':''))+'" data-area="'+aid+'">'
+   +'<h4>'+c.step+'. '+esc(c.cabin)
+   +' <span class="mut" style="font-weight:400">'+esc(m2)+' m\u00b2</span>'
+   +(acc?' <span class="pill '+(acc==='free'?'i':'w')+'">'+acc+'</span>':' <span class="pill no">flap?</span>')+'</h4>'
+   +'<div class="filt" style="margin-bottom:6px">'
+   +'<select class="racc" data-area="'+aid+'"><option value="">how is it being run?</option>'
+   +['free','limited'].map(function(m){
+      return '<option value="'+m+'"'+(acc===m?' selected':'')+'>'
+        +(m==='free'?'free access \u2014 flap open':'limited \u2014 flap shut')+'</option>';}).join('')
+   +'</select>'
+   +'<select class="radd" data-area="'+aid+'"><option value="">add a dog\u2026</option>'
+   +dogs.map(function(d){ return '<option value="'+d.id+'"'+(sel.indexOf(d.id)>=0?' disabled':'')+'>'+esc(d.name)
+     +(placed[d.id]&&placed[d.id]!==aid?' \u2014 in '+esc(placed[d.id].replace(/^area-/,'')):'')+'</option>'; }).join('')
+   +'</select>'
+   +'<span class="mut rsave" data-area="'+aid+'"></span>'
+   +(fromArea?'<span class="mut">from Areas</span>':'')+'</div>'
+   +'<div class="chips" style="margin-bottom:4px">'
+   +(sel.length?sel.map(function(sid){ var d=CD._byId[sid];
+       return '<span class="pill i">'+esc(d?d.name:sid)+' <b class="rdel" data-area="'+aid+'" data-sub="'+sid+'" style="cursor:pointer">\u00d7</b></span>'; }).join('')
+     :'<span class="mut">empty</span>')+'</div>'
+   +(function(){ var bd=bandFor(sel,date);
+       if(!bd) return sel.length?'<div class="mut">no date of birth for anyone in here \u2014 no band can be set</div>':'';
+       return '<div class="mut"><span class="pill '+(bd.b.stated?'i':'w')+'">'+bd.b.min.toFixed(2)+'\u2013'+bd.b.max.toFixed(2)+' \u00b0C</span> '
+         +esc(bd.b.band)+' \u2014 set by '+esc(bd.dog.name)+', the youngest in here at '+bd.days+' days'
+         +'</div>'; })()
+   +'<div class="tmp">'
+   +'<span></span><span class="hd2">min &deg;C</span><span class="hd2">max &deg;C</span><span></span>'
+   +['am','pm'].map(function(slot){ var t=(ROUND[k]&&ROUND[k]['t_'+slot])||{};
+      var bd=bandFor(sel,date);
+      var vmin=tempVerdict(t.min,bd), vmax=tempVerdict(t.max,bd);
+      var flag=function(v,raw){ if(!v||v==='ok') return '';
+        var act=actionFor(parseFloat(raw));
+        return ' <span class="pill no" title="'+esc(act)+'">'+(v==='low'?'below band':'above band')+'</span>'
+          +(act?' <span class="mut">'+esc(act)+'</span>':''); };
+      return '<span class="sl">'+slot+'</span>'
+       +'<input class="tmin'+(vmin&&vmin!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal" placeholder="00.00" value="'+esc(t.min||'')+'">'
+       +'<input class="tmax'+(vmax&&vmax!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal" placeholder="00.00" value="'+esc(t.max||'')+'">'
+       +'<span class="msg tmsg" data-area="'+aid+'" data-slot="'+slot+'">'+(t.at?'saved':'')+flag(vmin,t.min)+flag(vmax,t.max)+'</span>'; }).join('')
+   +'</div>'
+   +'<div class="mut">'+(acc?('permitted in '+acc+' mode, 10\u201325 kg: '+(cap==null?'not recorded':cap)+' \u00b7 in here: '+sel.length)
+                            :'choose how it is being run and the capacity check can run')
+   +(over?' <span class="pill no">OVER</span>':'')+'</div>'
+   +'</div>';
+ });
+ return h;
+}
+function ageDays(iso,onISO){ if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
+ var b=new Date(iso+'T00:00:00'), d=new Date((onISO||todayISO())+'T00:00:00');
+ return Math.floor((d-b)/86400000); }
+
+function bandFor(subjectIds,onISO){
+ var young=null, who=null;
+ (subjectIds||[]).forEach(function(sid){ var d=CD._byId[sid]; if(!d) return;
+   var a=ageDays(d.dob,onISO); if(a===null) return;
+   if(young===null||a<young){ young=a; who=d; } });
+ if(young===null) return null;
+ for(var i=0;i<CD.tempBands.length;i++){ var b=CD.tempBands[i];
+   if(young>=b.from && young<=b.to) return {b:b,days:young,dog:who}; }
+ return null;
+}
+function actionFor(n){
+ if(n==null||isNaN(n)) return '';
+ var cold=CD.tempActions.filter(function(a){return a.dir==='below' && n<a.at;});
+ if(cold.length) return cold[0].action;
+ var hot=CD.tempActions.filter(function(a){return a.dir==='above' && n>a.at;});
+ return hot.length?hot[0].action:'';
+}
+function tempVerdict(val,band){
+ if(val===''||val==null||!band||band.b.min===null) return '';
+ var n=parseFloat(val); if(isNaN(n)) return '';
+ if(n<band.b.min) return 'low'; if(n>band.b.max) return 'high'; return 'ok';
+}
+function temp2dp(v){ v=String(v==null?'':v).trim(); if(!v) return {ok:true,val:''};
+ if(!/^-?\d{1,2}(\.\d{1,2})?$/.test(v)) return {ok:false};
+ var n=parseFloat(v); if(n<-30||n>60) return {ok:false};
+ return {ok:true,val:n.toFixed(2)}; }
+async function tempSave(areaId,slot,which,raw,el,msgEl){
+ var c=temp2dp(raw);
+ if(!c.ok){ if(el&&el.classList) el.classList.add('bad'); if(msgEl) msgEl.textContent='2 dp only'; return; }
+ if(el&&el.classList) el.classList.remove('bad');
+ if(!DB){ if(msgEl) msgEl.textContent='saving off'; return; }
+ var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId);
+ var cur=ROUND[k]||{areaId:areaId,date:date,subjects:[],access:''};
+ var t={}; var prev=cur['t_'+slot]||{}; for(var q in prev) t[q]=prev[q];
+ t[which]=c.val; t.at=new Date().toISOString();
+ var next={}; for(var q2 in cur) next[q2]=cur[q2];
+ next['t_'+slot]=t; next.areaId=areaId; next.date=date;
+ if(msgEl) msgEl.textContent='saving...';
+ try{ await DB.doc('round/'+k).set(next); ROUND[k]=next; if(msgEl) msgEl.textContent='saved'; if(el) el.value=c.val; }
+ catch(e){ var c2=(e&&(e.code||e.message))||'error'; if(msgEl) msgEl.textContent='NOT saved \u2014 '+c2; console.log('temp save failed',e); }
+}
+async function roundSave(areaId,patch,msgEl){
+ if(!DB){ if(msgEl) msgEl.textContent='saving off'; return; }
+ var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId);
+ var cur=ROUND[k]||{areaId:areaId,date:date,subjects:[],access:''};
+ var next={areaId:areaId,date:date,subjects:patch.subjects!=null?patch.subjects:(cur.subjects||[]),
+           access:patch.access!=null?patch.access:(cur.access||''),at:new Date().toISOString()};
+ if(msgEl) msgEl.textContent='saving\u2026';
+ try{ await DB.doc('round/'+k).set(next); ROUND[k]=next; if(msgEl) msgEl.textContent='saved';
+      go('round',false); }
+ catch(e){ var c=(e&&(e.code||e.message))||'error'; if(msgEl) msgEl.textContent='NOT saved \u2014 '+c; console.log('round save failed',e); }
+}
+function pageWork(){
+ var W=CD.work||[];
+ if(!W.length) return '<h2>Outstanding</h2><div class="card acc2"><h4>BLD-WORK.csv did not load</h4><p style="margin-bottom:0">The outstanding list is a live file, not a list kept in a reply. If this card is showing, the file is missing or unreadable.</p></div>';
+ var by={}; W.forEach(function(r){ (by[r.status]=by[r.status]||[]).push(r); });
+ var mine=W.filter(function(r){return r.status!=='DONE' && r.owner==='Claude';}).length;
+ var hers=W.filter(function(r){return r.status!=='DONE' && r.owner==='Lisa';}).length;
+ var h='<h2>Outstanding</h2>'
+  +'<p class="note">Every ask in this project, with who it is waiting on. <b>'+hers+'</b> are waiting on you, <b>'+mine+'</b> on me, <b>'+(by.DONE||[]).length+'</b> done. This is a live file \u2014 change BLD-WORK.csv and this page changes.</p>';
+ [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me'],['DONE','acc5','Done']].forEach(function(g){
+  var rows=by[g[0]]||[]; if(!rows.length) return;
+  rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
+  h+='<div class="card '+g[1]+'"><h4>'+g[2]+' \u2014 '+rows.length+'</h4>'
+   +'<div class="scroll"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
+   +rows.map(function(r){
+     return '<tr><td class="mut">'+esc(r.id)+'</td><td><span class="pill i">'+esc(r.area)+'</span></td>'
+      +'<td>'+esc(r.item)+(r.note?'<br><span class="mut">'+esc(r.note)+'</span>':'')+'</td>'
+      +'<td class="mut">'+esc(g[0]==='DONE'?(r.evidence||''):(r.blocked_on||r.note||''))+'</td></tr>'; }).join('')
+   +'</tbody></table></div></div>';
+ });
+ return h;
+}
+
+
+var MAPTGT={subject_id:'subject',dam_subject_id:'subject',sire_subject_id:'subject',dam_id:'subject',
+ sire_id:'subject',birth_litter_id:'litter',litter_id:'litter',area_id:'area',
+ coat_colour_id:'coat_colour',coat_pattern_id:'coat_pattern',nose_pigment_id:'nose_pigment',
+ product_id:'medicinal_product',association_id:'association',marker_code:'dna_marker'};
+
+var GHOSTS=[['person',10,'Families, retirement homes, rehomes, staff'],
+            ['document',13,'every certificate, scan and vaccine card'],
+            ['media',8,'photos and galleries'],
+            ['product',12,'the shop side'],
+            ['sop_version',9,'procedures']];
+function mapModel(){
+ var nodes={}, edges=[];
+ Object.keys(T||{}).forEach(function(f){
+  var rows=T[f]; if(!rows||!rows.length) return;
+  var t=f.replace(/^BLD-|\.csv$/g,'');
+  if(/^_|^SWEEP|^WORK$|^MAP-/.test(t)) return;
+  nodes[t]={id:t,rows:rows.length,in:0,out:0};
+ });
+ Object.keys(T||{}).forEach(function(f){
+  var rows=T[f]; if(!rows||!rows.length) return;
+  var t=f.replace(/^BLD-|\.csv$/g,''); if(!nodes[t]) return;
+  Object.keys(rows[0]).forEach(function(c){
+   var tgt=MAPTGT[c]; if(!tgt||tgt===t||!nodes[tgt]) return;
+   var filled=0; for(var i=0;i<rows.length;i++){ if((rows[i][c]||'').trim()) filled++; }
+   if(!filled) return;
+   edges.push({from:t,to:tgt,col:c,filled:filled,of:rows.length,pct:Math.round(100*filled/rows.length)});
+   nodes[tgt].in++; nodes[t].out++;
+  });
+ });
+ return {nodes:nodes,edges:edges};
+}
+function pageShape(){
+ var m=mapModel(), N=m.nodes, E=m.edges;
+ var SPINE=['subject','litter','area'];
+ var look=Object.keys(N).filter(function(t){return N[t].in>0 && SPINE.indexOf(t)<0;}).sort();
+ var ev=Object.keys(N).filter(function(t){return N[t].out>0 && SPINE.indexOf(t)<0 && look.indexOf(t)<0;})
+          .sort(function(a,b){return N[b].rows-N[a].rows;});
+ var loose=Object.keys(N).filter(function(t){return N[t].in===0&&N[t].out===0;}).sort();
+
+ var W=1180, PAD=28, colL=PAD+10, colS=430, colE=800;
+ var rowsH=Math.max(look.length,ev.length,3);
+ var H=Math.max(560, 90+rowsH*46);
+ function box(x,y,w,h,label,sub,cls){
+  return '<g><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6" '+cls+'/>'
+   +'<text x="'+(x+10)+'" y="'+(y+18)+'" font-size="12.5" font-weight="600" fill="currentColor">'+esc(label)+'</text>'
+   +(sub?'<text x="'+(x+10)+'" y="'+(y+32)+'" font-size="10.5" fill="currentColor" opacity=".62">'+esc(sub)+'</text>':'')
+   +'</g>';
+ }
+ var g='';
+ // spine
+ var spineY={}, sy=86;
+ SPINE.forEach(function(t){
+  if(!N[t]) return;
+  var h=40+Math.min(34,Math.round(N[t].rows/12));
+  spineY[t]=sy+h/2;
+  g+=box(colS,sy,215,h,t,N[t].rows+' rows · '+N[t].in+' tables point here',
+     'fill="none" stroke="#BE6A5D" stroke-width="2.2"');
+  sy+=h+30;
+ });
+ // lookups left
+ var lookY={};
+ look.forEach(function(t,i){ var y=86+i*44; lookY[t]=y+15;
+  g+=box(colL,y,190,30,t,N[t].rows+' rows','fill="none" stroke="currentColor" stroke-width="1" opacity=".55"'); });
+ // events right
+ var evY={};
+ ev.forEach(function(t,i){ var y=86+i*44; evY[t]=y+15;
+  g+=box(colE,y,230,30,t,N[t].rows+' rows','fill="none" stroke="#89AF6A" stroke-width="1.4"'); });
+
+ function yOf(t){ return spineY[t]!==undefined?spineY[t]:(lookY[t]!==undefined?lookY[t]:evY[t]); }
+ function xOut(t){ return evY[t]!==undefined?colE:(lookY[t]!==undefined?colL+190:colS); }
+ function xIn(t){ return spineY[t]!==undefined?(lookY[t]===undefined?colS+215:colS):colS; }
+ // edges: weight and dash carry the FILL RATE
+ E.forEach(function(e){
+  var y1=yOf(e.from), y2=yOf(e.to); if(y1===undefined||y2===undefined) return;
+  var x1,x2;
+  if(evY[e.from]!==undefined){ x1=colE; x2=colS+215; }
+  else if(lookY[e.from]!==undefined){ x1=colL+190; x2=colS; }
+  else if(spineY[e.from]!==undefined && lookY[e.to]!==undefined){ x1=colS; x2=colL+190; }
+  else { x1=colS; x2=colS+215; }
+  var thin=e.pct<25, mid=e.pct<75;
+  var col=thin?'#BE6A5D':(mid?'#C07D59':'#89AF6A');
+  var mx=(x1+x2)/2;
+  g+='<path d="M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2+'" fill="none" stroke="'+col+'"'
+    +' stroke-width="'+(thin?1:(mid?1.8:2.6))+'"'+(thin?' stroke-dasharray="3 3"':'')+' opacity="'+(thin?.95:.7)+'"/>'
+    +'<text x="'+(mx)+'" y="'+((y1+y2)/2-4)+'" font-size="9.5" text-anchor="middle" fill="'+col+'">'+e.pct+'%</text>';
+ });
+ var svg='<figure style="margin:0"><svg role="img" aria-label="Map of the breeder tables: subject is the spine with '
+  +(N.subject?N.subject.in:0)+' tables pointing at it; arrow weight shows how much of each join is actually filled." '
+  +'viewBox="0 0 '+W+' '+H+'" style="max-width:100%;height:auto">'
+  +'<text x="'+colL+'" y="42" font-size="11" font-weight="700" fill="currentColor" opacity=".6">LOOKED UP</text>'
+  +'<text x="'+colS+'" y="42" font-size="11" font-weight="700" fill="#BE6A5D">THE SPINE</text>'
+  +'<text x="'+colE+'" y="42" font-size="11" font-weight="700" fill="#89AF6A">WHAT HAPPENS TO A DOG</text>'
+  +'<text x="'+colL+'" y="62" font-size="10" fill="currentColor" opacity=".5">colour, markers, products</text>'
+  +'<text x="'+colS+'" y="62" font-size="10" fill="currentColor" opacity=".5">what a thing IS</text>'
+  +'<text x="'+colE+'" y="62" font-size="10" fill="currentColor" opacity=".5">one row per event, never a column</text>'
+  +g+'</svg><figcaption class="mut" style="margin-top:8px">Arrow weight and colour are the <b>fill rate</b>, not the relationship: solid green is 75%+ of rows carrying the link, amber 25–74%, dashed red under 25%. Box height is row count. Drawn from the tables loaded on this page.</figcaption></figure>';
+
+ var thin=E.filter(function(e){return e.pct<25;}).sort(function(a,b){return a.pct-b.pct;});
+ var h='<h2>Table map</h2>'
+  +'<p class="note">A normal entity diagram shows only which tables are joined. That hides the thing that actually matters — <b>a join can exist and be almost empty</b>. This one draws all three dimensions: who points at whom, how many rows, and how much of each link is filled.</p>'
+  +'<div class="card acc6">'+svg+'</div>'
+  +'<div class="card acc2"><h4>Joins that exist but are nearly empty — '+thin.length+'</h4>'
+  +'<p>These are the ones a flat diagram would draw the same as a full one.</p><div class="scroll"><table><thead><tr><th>from</th><th>column</th><th>to</th><th>filled</th></tr></thead><tbody>'
+  +thin.map(function(e){return '<tr><td>'+esc(e.from)+'</td><td class="mut">'+esc(e.col)+'</td><td>'+esc(e.to)+'</td><td><span class="pill no">'+e.pct+'%</span> '+e.filled+' of '+e.of+'</td></tr>';}).join('')
+  +'</tbody></table></div></div>'
+  +'<div class="card acc4"><h4>tenant_id is on every table and is deliberately not drawn</h4><p style="margin-bottom:0">All '+Object.keys(N).length+' tables carry it at 100%, so drawing it would add a line to every box and say nothing. It is a band across the whole picture, not a relationship. <b>And one tenant in the data never proves isolation</b> — that needs a second tenant.</p></div>'
+  +'<div class="card acc7"><h4>Tables other tables point at that do not exist</h4>'
+  +'<p>Dashed, because nothing is there. This is where the picture stops.</p><div class="scroll"><table><thead><tr><th>table</th><th>pointed at by</th><th>what it would hold</th></tr></thead><tbody>'
+  +GHOSTS.map(function(x){return '<tr><td><b>'+esc(x[0])+'</b></td><td><span class="pill no">'+x[1]+' tables</span></td><td class="mut">'+esc(x[2])+'</td></tr>';}).join('')
+  +'</tbody></table></div></div>'
+  +(loose.length?'<div class="card"><h4>Loaded but joined to nothing — '+loose.length+'</h4><p style="margin-bottom:0" class="mut">'+loose.map(esc).join(', ')+'</p></div>':'');
+ return h;
+}
+
+var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,vet:pageVet,buyers:pageBuyers};
+var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Buyers']];
+var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','vet'],areas:['today','litters'],litters:['dogs','vet'],vet:['dogs','buyers'],buyers:['dogs','map']};
+function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
+function pill(){
+ var p=document.getElementById('livepill');
+ if(LOAD.state==='ok'){ p.className='live ok';
+  p.textContent='live · read-only · '+(CD.counts?Object.keys(CD.counts).length:0)+' tables'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):''); }
+ else if(LOAD.state==='signin'){ p.className='live bad'; p.textContent='signed out'; }
+ else if(LOAD.state==='loading'){ p.className='live'; p.textContent='reading Drive\u2026'; }
+ else if(LOAD.state==='ambiguous'){ p.className='live bad'; p.textContent='duplicate file titles'; }
+ else if(LOAD.state==='err'){ p.className='live bad'; p.textContent='read failed'; }
+}
+function render(){ go((location.hash||'#/map').replace('#/',''),false); }
+function go(id,push){
+ pill();
+ var main=document.getElementById('main');
+ if(LOAD.state==='signin'){
+  main.innerHTML='<div class="card acc4" style="margin-top:24px"><h4>Sign in to see the tables</h4>'
+   +'<p>This page holds no data of its own. Once you sign in with Google it reads the tables live from '+esc(FOLDER_NAME)+', with read-only access. Nothing is saved on this page or in this browser, and signing out forgets everything.</p>'
+   +(LOAD.err?'<p class="mut">'+esc(LOAD.err)+'</p>':'')
+   +'<p style="margin-bottom:0"><button id="signinbtn" data-signin="1"'+(TOKENCLIENT?'':' disabled')+'>'+(TOKENCLIENT?'Sign in with Google':'Loading Google sign-in\u2026')+'</button></p></div>';
+  document.getElementById('nav').innerHTML=''; return;
+ }
+ if(LOAD.state==='loading'){ return; }
+ if(LOAD.state!=='ok'){
+  main.innerHTML='<div class="card acc2" style="margin-top:24px"><h4>'+
+   (LOAD.state==='ambiguous'?'More than one file shares a title'
+    :LOAD.state==='err'?'The folder could not be read':'Loading…')+'</h4>'
+   +'<p>'+(LOAD.state==='ambiguous'
+     ?'Refusing to guess which is current: '+esc(LOAD.err)
+     :LOAD.state==='err'?esc(LOAD.err||'')+'. The tables live in '+esc(FOLDER_NAME)+'.'
+     :'The tables live in '+esc(FOLDER_NAME)+'. Nothing is stored in this page, so there is nothing to show without them.')+'</p>'
+   +'<p style="margin-bottom:0"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
+  document.getElementById('nav').innerHTML=''; return;
+ }
+ if(!PAGES[id]) id='map';
+ document.getElementById('nav').innerHTML=SECTIONS.map(function(s){return '<button data-go="'+s[0]+'">'+s[1]+'</button>';}).join('')+'<button data-reload="1" title="Read the tables from Drive again">Reread</button><button data-signout="1">Sign out</button>';
+ main.innerHTML=PAGES[id]();
+ Array.prototype.forEach.call(document.querySelectorAll('#nav button'),function(b){ b.setAttribute('aria-current',b.dataset.go===id?'true':'false'); });
+ document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
+ if(id==='dogs'){
+  var fst=document.getElementById('fst');
+  STATUS.forEach(function(x){ var o=document.createElement('option'); o.value=x[0]; o.textContent=x[1]; fst.appendChild(o); });
+  var cs={}; CD.dogs.forEach(function(d){ if(d.colour) cs[colourLabel(d)]=d; });
+  var fc=document.getElementById('fc');
+  Object.keys(cs).sort(function(a,b){ var ka=colourKey(cs[a]),kb=colourKey(cs[b]);
+   for(var i=0;i<ka.length;i++){ if(ka[i]!==kb[i]) return ka[i]-kb[i]; } return a<b?-1:1; })
+   .forEach(function(k){ var o=document.createElement('option'); o.textContent=k; fc.appendChild(o); });
+  var ts={}; CD.dogs.forEach(function(d){ d.findings.forEach(function(f){ts[f.test]=1;}); });
+  var ft=document.getElementById('ft');
+  Object.keys(ts).sort().forEach(function(t){ var o=document.createElement('option'); o.textContent=t; ft.appendChild(o); });
+  Array.prototype.forEach.call(document.querySelectorAll('.sfb'),function(b){
+   b.addEventListener('click',function(){ var f=document.getElementById('fst');
+    f.value=(f.value===b.dataset.code)?'':b.dataset.code;
+    Array.prototype.forEach.call(document.querySelectorAll('.sfb'),function(x){
+      x.setAttribute('aria-pressed', x.dataset.code===f.value ? 'true':'false'); });
+    drawDogs(); }); });
+  Array.prototype.forEach.call(document.querySelectorAll('.wtc'),function(el){
+   el.addEventListener('click',function(){
+     if(el.classList.contains('trc')) showTreats(el.dataset.dog); else showWeights(el.dataset.dog); }); });
+  ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){ var e=document.getElementById(i); e.addEventListener('input',drawDogs); e.addEventListener('change',drawDogs); });
+  document.getElementById('clr').addEventListener('click',function(){ ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){document.getElementById(i).value='';}); drawDogs(); });
+  drawDogs();
+ }
+ if(id==='litters'){
+  var ys={},ss={},dm={},sr={};
+  CD.litters.forEach(function(l){ if(l.dob) ys[l.dob.slice(0,4)]=1; if(l.status) ss[l.status]=1;
+   if(l.dam_subject_id) dm[l.dam_subject_id]=1; if(l.sire_subject_id) sr[l.sire_subject_id]=1; });
+  var add=function(sel,keys,lab){ var e=document.getElementById(sel);
+   keys.forEach(function(k){ var o=document.createElement('option'); o.value=k; o.textContent=lab?lab(k):k; e.appendChild(o); }); };
+  add('ly',Object.keys(ys).sort().reverse());
+  add('ls',Object.keys(ss).sort());
+  add('lm',Object.keys(dm).sort(function(x,y){return nameOf(x)<nameOf(y)?-1:1;}),nameOf);
+  add('lp',Object.keys(sr).sort(function(x,y){return nameOf(x)<nameOf(y)?-1:1;}),nameOf);
+  ['lq','ld','ly','ls','lm','lp','lk'].forEach(function(i){ var e=document.getElementById(i); e.addEventListener('input',drawLitters); e.addEventListener('change',drawLitters); });
+  document.getElementById('lclr').addEventListener('click',function(){ ['lq','ld','ly','ls','lm','lp','lk'].forEach(function(i){document.getElementById(i).value='';}); drawLitters(); });
+  drawLitters();
+ }
+ if(id==='today'){
+  Array.prototype.forEach.call(document.querySelectorAll('.tl'),function(b){
+   if(!b.dataset.list) return;
+   b.addEventListener('click',function(){ showList(b.dataset.list); }); });
+ }
+ if(id==='map'){
+  Array.prototype.forEach.call(document.querySelectorAll('.ci'),function(b){
+   b.addEventListener('click',function(){ if(b.dataset.list){ go('today',true); setTimeout(function(){showList(b.dataset.list);},60);} }); });
+ }
+ if(id==='buyers'){
+  ['bq','bcat','bctry','bapp','bsig','bmd','bem','bch'].forEach(function(i){ var e=document.getElementById(i);
+    if(e){ e.addEventListener('input',drawBuyers); e.addEventListener('change',drawBuyers); } });
+  var bc=document.getElementById('bclr');
+  if(bc) bc.addEventListener('click',function(){ ['bq','bcat','bctry','bapp','bsig','bmd','bem','bch'].forEach(function(i){
+    var e=document.getElementById(i); if(e) e.value=''; }); drawBuyers(); });
+  drawBuyers();
+ }
+ if(id==='areas'){
+  Array.prototype.forEach.call(document.querySelectorAll('.aacc'),function(el){
+   el.addEventListener('change',function(){
+    var msg=document.querySelector('.asave[data-area="'+el.dataset.area+'"]');
+    accessSave(el.dataset.area,el.value,msg); }); });
+ }
+ if(id==='round'){
+  var dEl=document.getElementById('rdate');
+  if(dEl) dEl.addEventListener('change',function(){ CD._roundDate=dEl.value||todayISO(); go('round',false); });
+  Array.prototype.forEach.call(document.querySelectorAll('.racc'),function(el){
+   el.addEventListener('change',function(){
+    var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
+    roundSave(el.dataset.area,{access:el.value},msg); }); });
+  Array.prototype.forEach.call(document.querySelectorAll('.radd'),function(el){
+   el.addEventListener('change',function(){
+    if(!el.value) return;
+    var k=roundKey(CD._roundDate||todayISO(),el.dataset.area);
+    var cur=((ROUND[k]||{}).subjects||[]).slice();
+    if(cur.indexOf(el.value)<0) cur.push(el.value);
+    var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
+    roundSave(el.dataset.area,{subjects:cur},msg); }); });
+  Array.prototype.forEach.call(document.querySelectorAll('.tmin, .tmax'),function(el){
+   var which=(el.className.indexOf('tmin')>=0)?'min':'max';
+   var msg=document.querySelector('.tmsg[data-area="'+el.dataset.area+'"][data-slot="'+el.dataset.slot+'"]');
+   var h=function(){ tempSave(el.dataset.area,el.dataset.slot,which,el.value,el,msg); };
+   el.addEventListener('change',h); el.addEventListener('blur',h); });
+  Array.prototype.forEach.call(document.querySelectorAll('.rdel'),function(el){
+   el.addEventListener('click',function(){
+    var k=roundKey(CD._roundDate||todayISO(),el.dataset.area);
+    var cur=((ROUND[k]||{}).subjects||[]).filter(function(x){return x!==el.dataset.sub;});
+    var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
+    roundSave(el.dataset.area,{subjects:cur},msg); }); });
+ }
+ if(push!==false && location.hash!=='#/'+id) history.pushState({id:id},'','#/'+id);
+ window.scrollTo(0,0);
+}
+document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b) go(b.dataset.go); });
+document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('[data-signin],[data-signout],[data-reload]'); if(!t||t.disabled) return;
+ if(t.dataset.signin) signIn(); else if(t.dataset.signout) signOut();
+ else if(t.dataset.reload){ if(TOKEN&&Date.now()<TOKEN_EXP) load(); else signIn(); } });
+window.addEventListener('popstate',function(){ if(LOAD.state==='ok') go((location.hash||'#/map').replace('#/',''),false); });
+render();
+</script></body></html>
