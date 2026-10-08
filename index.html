@@ -4,108 +4,171 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="build" content="ljr-dash-v2-hub-2026-10-08">
 <title>Lisa Dashboard</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
+  /* LJR7 palette. Slot 0 Prefix, 1 Vision, 7 Ideas. Failed reads use slot 2 only. */
   :root {
-    --bg: #f6f7f9; --card: #ffffff; --text: #1f2933; --muted: #6b7785;
-    --line: #e4e7eb; --accent: #2563eb; --accent-soft: #e8efff;
-    --warn-bg: #fff7e6; --warn-line: #f5c26b; --err-bg: #fdecec; --err-line: #f0a3a3;
+    --bg: #FAF7F2; --surface: #FFFEFB; --ink: #2C2C2A; --muted: #756E65; --line: #DED5C8;
+    --s0: #B8B1A5; --s1: #FFFEFB; --s1-edge: #2C2C2A; --s1-stripe: #FFFEFB; --s7: #8D6B9C; --fail: #BE6A5D;
+    --s0-tint: #F0ECE5; --s7-tint: #F1EAF4; --fail-tint: #F8E9E6;
+    --shadow: 0 4px 12px rgba(44, 44, 42, 0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #191714; --surface: #232019; --ink: #F3EEE5; --muted: #B4AB9E; --line: #3D372F;
+      --s0: #8E877B; --s1: #232019; --s1-edge: #F3EEE5; --s1-stripe: #F3EEE5; --s7: #B08FC0; --fail: #D98B7E;
+      --s0-tint: #2F2B25; --s7-tint: #35293B; --fail-tint: #3A2723;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+    }
   }
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-         background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.45; }
-  header { background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
-  .bar { max-width: 1200px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  h1 { font-size: 20px; margin: 0; flex: 1 1 auto; }
-  .status { color: var(--muted); font-size: 13px; }
-  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text);
-           padding: 7px 14px; border-radius: 8px; cursor: pointer; }
-  button:hover { border-color: #c5ccd3; }
-  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-  button.primary:hover { background: #1d4fd8; }
-  button:disabled { opacity: .55; cursor: default; }
-  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
-  .hidden { display: none !important; }
-  .signin { text-align: center; padding: 64px 16px; }
-  .signin p { color: var(--muted); max-width: 460px; margin: 12px auto 24px; }
-  .notice { border: 1px solid var(--warn-line); background: var(--warn-bg); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
-  .notice.error { border-color: var(--err-line); background: var(--err-bg); }
-  .notice button { margin-left: 8px; }
-  .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
-  .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
-  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
-  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
-  .card h2 { font-size: 16px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .card h2 small { color: var(--muted); font-weight: normal; font-size: 12px; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: 'Lexend', sans-serif; font-size: 16px; line-height: 1.6;
+    text-align: justify; hyphens: auto; -webkit-hyphens: auto;
+    font-variant-numeric: tabular-nums;
+  }
+  button, input { font: inherit; color: inherit; }
+  a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+  a:hover { text-decoration-thickness: 2px; }
+  .wrap { max-width: calc(66ch + 32px); margin: 0 auto; padding: 0 16px; }
+  .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  /* Header: the only fixed element (desktop only). */
+  header { background: var(--surface); border-bottom: 1px solid var(--line); }
+  @media (min-width: 700px) { header { position: sticky; top: 0; z-index: 2; } }
+  .top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-top: 12px; padding-bottom: 8px; text-align: left; }
+  .top h1 { font-size: 18px; font-weight: 700; margin: 0; flex: 1 1 auto; }
+  .readstamp { color: var(--muted); font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; border-radius: 12px;
+         border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 14px; text-decoration: none; }
+  .btn:hover { border-color: var(--muted); }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .btn.vision { border: 1px solid var(--s1-edge); background: var(--s1); font-weight: 600; }
+  nav.main { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; }
+  nav.main a { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; text-decoration: none;
+               font-size: 14px; border: 1px solid var(--line); border-left-width: 4px; background: var(--surface); }
+  @media (max-width: 479px) { nav.main { display: grid; grid-template-columns: 1fr 1fr; } }
+  nav.main a[aria-current="page"] { font-weight: 700; background: var(--s0-tint); border-color: var(--ink); }
+
+  main { padding-top: 16px; padding-bottom: 32px; }
+  .here { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; text-align: left; }
+  .here span { color: var(--muted); font-size: 14px; }
+  .here h2 { margin: 0; font-size: 22px; font-weight: 700; }
+  #view { display: flex; flex-direction: column; gap: 16px; transition: opacity 150ms ease; }
+  #view.fade { opacity: 0; }
+  @media (prefers-reduced-motion: reduce) { #view { transition: none; } }
+
+  /* Cards: solid = established, dashed = not established. */
+  .card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--slot, var(--s0));
+          border-radius: 16px; padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); min-width: 0; }
+  .card.sec { border-radius: 12px; }
+  .card.pending { border-style: dashed; }
+  .card.failed { border-style: dashed; border-color: var(--fail); }
+  .card.vision, nav.main a.vision { --slot: var(--s1-stripe); border-color: var(--s1-edge); border-left-color: var(--s1-stripe); background: var(--s1); box-shadow: var(--shadow), -1px 0 0 0 var(--s1-edge); }
+  nav.main a.slot0 { border-left-color: var(--s0); }
+  nav.main a.slot7 { border-left-color: var(--s7); }
+  .slot0 { --slot: var(--s0); --tint: var(--s0-tint); }
+  .slot7 { --slot: var(--s7); --tint: var(--s7-tint); }
+  .card h3 { margin: 0; font-size: 18px; font-weight: 600; text-align: left; }
+  .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .note { margin: 0; color: var(--muted); font-size: 14px; text-align: left; }
+  .note.fail { color: var(--fail); font-weight: 600; }
+  .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 8px; text-align: left; }
+  .source a { color: var(--muted); }
+
+  /* State badge: colour + shape + word. */
+  .state { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); white-space: nowrap; }
+  .shape { width: 12px; height: 12px; flex: none; display: inline-block; }
+  .st-ok .shape { border-radius: 50%; background: var(--slot, var(--s0)); }
+  .st-empty .shape { border: 2px solid var(--slot, var(--s0)); border-radius: 2px; }
+  .st-idle .shape { border: 2px solid var(--muted); border-radius: 50%; }
+  .st-loading .shape { border: 2px dashed var(--muted); border-radius: 50%; }
+  .st-failed { color: var(--fail); font-weight: 600; }
+  .st-failed .shape { background: var(--fail); clip-path: polygon(20% 0, 50% 30%, 80% 0, 100% 20%, 70% 50%, 100% 80%, 80% 100%, 50% 70%, 20% 100%, 0 80%, 30% 50%, 0 20%); }
+
+  /* Figures: thing, then number, then action. */
+  .figs { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .fig { gap: 4px; padding: 12px 16px; }
+  .fig .label { font-size: 14px; color: var(--muted); text-align: left; }
+  .fig .num { font-size: 32px; font-weight: 700; line-height: 1.2; }
+  .fig .meta { font-size: 14px; color: var(--muted); text-align: left; }
+  .fig .act { font-size: 14px; font-weight: 600; margin-top: 4px; }
+
+  /* Lists */
   ul.files { list-style: none; margin: 0; padding: 0; }
-  ul.files li { padding: 8px 0; border-top: 1px solid var(--line); }
-  ul.files li:first-child { border-top: none; }
-  .fname { font-weight: 600; word-break: break-word; }
-  a { color: var(--accent); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  .meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 2px; }
-  .chip { background: var(--accent-soft); color: #1e3a8a; border-radius: 6px; padding: 0 6px; font-size: 12px; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-  .stat { background: var(--bg); border-radius: 10px; padding: 10px; text-align: center; }
-  .stat .n { font-size: 24px; font-weight: 700; }
-  .stat .l { color: var(--muted); font-size: 12px; }
-  .empty, .loading { color: var(--muted); font-style: italic; padding: 6px 0; }
-  .icon { display: inline-block; width: 1.2em; }
-  footer { max-width: 1200px; margin: 0 auto; padding: 8px 16px 32px; color: var(--muted); font-size: 12px; }
+  ul.files li { padding: 8px 0; border-top: 1px solid var(--line); text-align: left; }
+  ul.files li:first-child { border-top: none; padding-top: 0; }
+  .fname { font-weight: 600; overflow-wrap: anywhere; hyphens: none; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--muted); font-size: 14px; }
+  .chip { font-size: 12px; background: var(--tint, var(--s0-tint)); color: var(--ink); border-radius: 8px; padding: 0 8px; line-height: 1.6; overflow-wrap: anywhere; }
+  .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+  .pager .count { font-size: 14px; color: var(--muted); }
+  .pager .gap { width: 1px; }
+  .subnav { display: flex; flex-wrap: wrap; gap: 8px; }
+  .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 4px solid var(--s7); background: var(--surface); text-decoration: none; font-size: 14px; }
+  .subnav a[aria-current="page"] { font-weight: 700; background: var(--s7-tint); border-color: var(--s7); }
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .stat { background: var(--tint, var(--s0-tint)); border-radius: 12px; padding: 8px 12px; text-align: left; }
+  .stat .num { font-size: 24px; font-weight: 700; }
+  .stat .label { font-size: 14px; color: var(--muted); }
+
+  /* Named next steps */
+  .next { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 8px; }
+  .next a { text-align: left; text-decoration: none; font-weight: 600; flex-direction: row; align-items: center; gap: 8px; }
+  .next a .k { color: var(--muted); font-weight: 400; }
+
+  .banner { border-radius: 16px; padding: 12px 16px; border: 1px dashed var(--fail); background: var(--fail-tint); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; text-align: left; }
+  .banner.info { border-color: var(--line); background: var(--surface); }
+  .banner p { margin: 0; flex: 1 1 200px; }
+  .hidden { display: none !important; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  footer { padding-bottom: 32px; text-align: left; }
+  footer p { margin: 0; color: var(--muted); font-size: 14px; }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
+  <symbol id="i-read" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5z"/><path d="M4 19a2 2 0 0 1 2-2h13"/></symbol>
+  <symbol id="i-drive" viewBox="0 0 24 24"><path d="M3 15h18l-3-9H6l-3 9z"/><path d="M3 15v4h18v-4"/><path d="M7 17h2"/></symbol>
+  <symbol id="i-changes" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6"/><path d="M20 4v7h-7"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/></symbol>
+  <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M11 8l4 4-4 4M15 12H4"/></symbol>
+</svg>
+
 <header>
-  <div class="bar">
+  <div class="wrap top">
     <h1>Lisa Dashboard</h1>
-    <span id="lastUpdated" class="status"></span>
-    <button id="refreshBtn" class="hidden" type="button">Refresh</button>
-    <button id="signOutBtn" class="hidden" type="button">Sign out</button>
+    <span id="readStamp" class="readstamp">Not read</span>
+    <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh"><svg class="icon"><use href="#i-refresh"/></svg><span>Refresh</span></button>
+    <button id="signOutBtn" class="btn hidden" type="button" data-action="signout"><svg class="icon"><use href="#i-out"/></svg><span>Sign out</span></button>
+    <button id="signInBtn" class="btn vision" type="button" data-action="signin" disabled><svg class="icon"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
   </div>
+  <nav class="wrap main" aria-label="Sections">
+    <a href="#/map" data-nav="map" class="vision"><svg class="icon"><use href="#i-map"/></svg>Map</a>
+    <a href="#/readfirst" data-nav="readfirst" class="slot0"><svg class="icon"><use href="#i-read"/></svg>Read first</a>
+    <a href="#/drive" data-nav="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive</a>
+    <a href="#/changes" data-nav="changes" class="slot7"><svg class="icon"><use href="#i-changes"/></svg>Changes</a>
+  </nav>
 </header>
 
-<main>
-  <div id="notice" class="notice hidden"></div>
-
-  <section id="signinView" class="signin">
-    <h2>Welcome</h2>
-    <p>Sign in with your Google account to see your Drive dashboard. Access is read-only. Nothing is stored in this browser, so you'll sign in each time you open the page.</p>
-    <button id="signInBtn" class="primary" type="button" disabled>Loading Google sign-in…</button>
-  </section>
-
-  <section id="dashView" class="hidden">
-    <div class="grid">
-      <div class="col">
-        <div class="card">
-          <h2>Recently changed in Cf overskill <small id="cfNote"></small></h2>
-          <ul id="cfRecent" class="files"><li class="loading">Loading…</li></ul>
-        </div>
-        <div class="card">
-          <h2>Recently modified anywhere in Drive <small>last 15</small></h2>
-          <ul id="driveRecent" class="files"><li class="loading">Loading…</li></ul>
-        </div>
-      </div>
-      <div class="col">
-        <div class="card">
-          <h2>Cf overskill totals</h2>
-          <div class="stats">
-            <div class="stat"><div class="n" id="cntFiles">–</div><div class="l">Files</div></div>
-            <div class="stat"><div class="n" id="cntFolders">–</div><div class="l">Folders</div></div>
-            <div class="stat"><div class="n" id="cntDepth">–</div><div class="l">Levels deep</div></div>
-          </div>
-          <div id="cntNote" class="meta" style="margin-top:8px"></div>
-        </div>
-        <div class="card">
-          <h2>Read first <small>0 - AI (read first)</small></h2>
-          <ul id="readFirst" class="files"><li class="loading">Loading…</li></ul>
-        </div>
-      </div>
-    </div>
-  </section>
+<main class="wrap">
+  <div id="banner" class="banner hidden" role="status"></div>
+  <div class="here"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Map</h2></div>
+  <div id="view" data-view="map"></div>
 </main>
 
-<footer>Read-only view of Google Drive. Updates every 5 minutes while this page is open. Times shown are UK time.</footer>
+<footer class="wrap"><p>Read-only Google Drive. UK time. Rereads every 5 minutes.</p></footer>
 
 <script>
 (function () {
@@ -117,159 +180,94 @@
   var CF_FOLDER_ID = '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A';
   var READ_FIRST_ID = '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L';
   var REFRESH_MS = 5 * 60 * 1000;
+  var PAGE_SIZE = 7;
   var CF_RECENT_COUNT = 25;
   var DRIVE_RECENT_COUNT = 15;
-  var MAX_DEPTH = 10;          // how many folder levels to walk
-  var MAX_REQUESTS = 150;      // safety cap on API calls per refresh walk
-  var PARENTS_PER_QUERY = 25;  // folders combined into one list query
+  var MAX_DEPTH = 10;
+  var MAX_REQUESTS = 150;
+  var PARENTS_PER_QUERY = 25;
   var FOLDER_MIME = 'application/vnd.google-apps.folder';
   var API = 'https://www.googleapis.com/drive/v3/files';
   var FILE_FIELDS = 'id,name,mimeType,modifiedTime,webViewLink,parents,lastModifyingUser(displayName,emailAddress)';
+  var DAY = 86400000;
 
-  // ---- State (memory only, never written to storage) ----
-  var tokenClient = null;
-  var accessToken = null;
-  var tokenExpiresAt = 0;
-  var refreshTimer = null;
-  var loading = false;
+  // ---- State: memory only. No browser storage anywhere. ----
+  var tokenClient = null, accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
+  var signedIn = false;
+  function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
+  var S = { readfirst: blank(), drive: blank(), cf: blank() };
 
   var $ = function (id) { return document.getElementById(id); };
-
-  var timeFmt = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: false
-  });
-  var clockFmt = new Intl.DateTimeFormat('en-GB', {
-    timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
-  });
+  var timeFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+  var stampFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false, timeZoneName: 'short' });
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
   }
-
-  function fmtTime(iso) {
-    if (!iso) return '';
-    var d = new Date(iso);
-    return isNaN(d) ? '' : timeFmt.format(d);
+  function fmtTime(iso) { var d = new Date(iso); return iso && !isNaN(d) ? timeFmt.format(d) : ''; }
+  function stamp(t) { return t ? stampFmt.format(new Date(t)) : ''; }
+  function folderUrl(id) { return 'https://drive.google.com/drive/folders/' + encodeURIComponent(id); }
+  function icon(name) { return '<svg class="icon" aria-hidden="true"><use href="#i-' + name + '"/></svg>'; }
+  function typeWord(mime) {
+    if (mime === FOLDER_MIME) return 'Folder';
+    if (/google-apps\.document|wordprocessing|msword/.test(mime)) return 'Doc';
+    if (/spreadsheet|excel|csv/.test(mime)) return 'Sheet';
+    if (/presentation|powerpoint/.test(mime)) return 'Slides';
+    if (/pdf/.test(mime)) return 'PDF';
+    if (/^image\//.test(mime)) return 'Image';
+    if (/^video\//.test(mime)) return 'Video';
+    if (/markdown|^text\//.test(mime)) return 'Text';
+    return 'File';
   }
 
-  function relTime(iso) {
-    var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
-    if (isNaN(mins)) return '';
-    if (mins < 1) return 'just now';
-    if (mins < 60) return mins + ' min ago';
-    var hrs = Math.round(mins / 60);
-    if (hrs < 24) return hrs + ' hr ago';
-    var days = Math.round(hrs / 24);
-    return days + (days === 1 ? ' day ago' : ' days ago');
-  }
-
-  function iconFor(mime) {
-    if (mime === FOLDER_MIME) return '📁';
-    if (/document/.test(mime)) return '📄';
-    if (/spreadsheet|excel|csv/.test(mime)) return '📊';
-    if (/presentation|powerpoint/.test(mime)) return '📽️';
-    if (/pdf/.test(mime)) return '📕';
-    if (/^image\//.test(mime)) return '🖼️';
-    if (/^video\//.test(mime)) return '🎞️';
-    return '📎';
-  }
-
-  function showNotice(html, isError) {
-    var n = $('notice');
-    n.innerHTML = html;
-    n.className = 'notice' + (isError ? ' error' : '');
-    var again = n.querySelector('[data-action="signin"]');
-    if (again) again.addEventListener('click', function () { requestToken(true); });
-  }
-  function clearNotice() { $('notice').className = 'notice hidden'; $('notice').innerHTML = ''; }
-
-  // ---- Errors ----
-  function ApiError(status, message, reason) {
-    this.status = status; this.message = message; this.reason = reason;
-  }
-
+  // ---- Errors: short, plain words ----
+  function ApiError(status, message, reason) { this.status = status; this.message = message; this.reason = reason; }
   function friendlyError(err) {
     if (err instanceof ApiError) {
-      if (err.status === 401) {
-        return { expired: true, text: 'Your Google sign-in has expired. Please sign in again.' };
-      }
+      var r = err.reason + ' ' + err.message;
+      if (err.status === 401) return { expired: true, text: 'Sign-in expired.' };
       if (err.status === 403) {
-        if (/accessNotConfigured|SERVICE_DISABLED/i.test(err.reason + ' ' + err.message)) {
-          return { text: 'The Google Drive API is turned off for this project in Google Cloud. Turn it on, then press Refresh.' };
-        }
-        if (/insufficient|scope/i.test(err.reason + ' ' + err.message)) {
-          return { expired: true, text: 'Google didn\'t grant Drive access. Sign in again and allow "See and download your Google Drive files".' };
-        }
-        if (/rateLimit|userRateLimit|quota/i.test(err.reason + ' ' + err.message)) {
-          return { text: 'Google is limiting requests for a moment. It will try again at the next refresh.' };
-        }
-        return { text: 'Google refused access: ' + err.message };
+        if (/accessNotConfigured|SERVICE_DISABLED/i.test(r)) return { text: 'Drive API turned off.' };
+        if (/insufficient|scope/i.test(r)) return { expired: true, text: 'Drive access not granted.' };
+        if (/rateLimit|quota/i.test(r)) return { text: 'Google rate limit. Retrying soon.' };
+        return { text: 'Access refused by Google.' };
       }
-      if (err.status === 404) {
-        return { text: 'A folder couldn\'t be found, or this account can\'t see it. Check you signed in with the right Google account.' };
-      }
-      if (err.status >= 500) {
-        return { text: 'Google Drive is having trouble right now (' + err.status + '). It will try again at the next refresh.' };
-      }
-      return { text: 'Drive error (' + err.status + '): ' + err.message };
+      if (err.status === 404) return { text: 'Folder not found or no access.' };
+      if (err.status >= 500) return { text: 'Google error ' + err.status + '.' };
+      return { text: 'Drive error ' + err.status + '.' };
     }
-    if (err && err.name === 'TypeError') {
-      return { text: 'Couldn\'t reach Google. Check your internet connection, then press Refresh.' };
-    }
-    return { text: 'Something went wrong: ' + (err && err.message ? err.message : err) };
+    if (err && err.name === 'TypeError') return { text: 'No connection to Google.' };
+    return { text: 'Unexpected error.' };
   }
 
-  // ---- Drive API ----
+  // ---- Drive API (read-only GETs) ----
+  function apiGet(url) {
+    if (!accessToken || Date.now() > tokenExpiresAt) return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
+    return fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } }).then(function (res) {
+      if (res.ok) return res.json();
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        var e = body && body.error ? body.error : {};
+        var reason = (e.errors && e.errors[0] && e.errors[0].reason) || e.status || '';
+        throw new ApiError(res.status, e.message || res.statusText, reason);
+      });
+    });
+  }
   function driveList(params) {
-    if (!accessToken || Date.now() > tokenExpiresAt) {
-      return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
-    }
     var q = new URLSearchParams(params);
     q.set('supportsAllDrives', 'true');
     q.set('includeItemsFromAllDrives', 'true');
-    return fetch(API + '?' + q.toString(), {
-      headers: { Authorization: 'Bearer ' + accessToken }
-    }).then(function (res) {
-      if (res.ok) return res.json();
-      return res.json().catch(function () { return {}; }).then(function (body) {
-        var e = body && body.error ? body.error : {};
-        var reason = (e.errors && e.errors[0] && e.errors[0].reason) || e.status || '';
-        throw new ApiError(res.status, e.message || res.statusText, reason);
-      });
-    });
+    return apiGet(API + '?' + q.toString());
+  }
+  function getFolder(id) {
+    return apiGet(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,webViewLink');
   }
 
-  function getFile(id) {
-    if (!accessToken || Date.now() > tokenExpiresAt) {
-      return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
-    }
-    return fetch(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,webViewLink', {
-      headers: { Authorization: 'Bearer ' + accessToken }
-    }).then(function (res) {
-      if (res.ok) return res.json();
-      return res.json().catch(function () { return {}; }).then(function (body) {
-        var e = body && body.error ? body.error : {};
-        var reason = (e.errors && e.errors[0] && e.errors[0].reason) || e.status || '';
-        throw new ApiError(res.status, e.message || res.statusText, reason);
-      });
-    });
-  }
-
-  // Walk the folder tree breadth-first, combining several parents per query.
+  // Breadth-first walk, several parents per query, capped.
   function walkTree(rootId, rootName) {
-    var files = [];
-    var folderInfo = {};          // id -> { name, path, depth }
+    var files = [], folderInfo = {}, level = [rootId], depth = 0, requests = 0, capped = false, folderCount = 0, maxDepthSeen = 0, depthCapped = false;
     folderInfo[rootId] = { name: rootName, path: rootName, depth: 0 };
-    var level = [rootId];
-    var depth = 0;
-    var requests = 0;
-    var capped = false;
-    var folderCount = 0;
-    var maxDepthSeen = 0;
-
     function listChildren(parentIds) {
       var q = '(' + parentIds.map(function (id) { return "'" + id + "' in parents"; }).join(' or ') + ') and trashed = false';
       var out = [];
@@ -285,22 +283,18 @@
       }
       return page(null);
     }
-
     function nextLevel() {
       if (!level.length) return Promise.resolve();
-      if (depth >= MAX_DEPTH) { capped = true; return Promise.resolve(); }
-      var chunks = [];
+      if (depth >= MAX_DEPTH) { capped = true; depthCapped = true; return Promise.resolve(); }
+      var chunks = [], nextIds = [];
       for (var i = 0; i < level.length; i += PARENTS_PER_QUERY) chunks.push(level.slice(i, i + PARENTS_PER_QUERY));
-      var nextIds = [];
-      // Run chunks sequentially to stay polite with the API.
       return chunks.reduce(function (prev, chunk) {
         return prev.then(function () {
           return listChildren(chunk).then(function (items) {
             items.forEach(function (f) {
               var parentId = (f.parents || []).filter(function (p) { return folderInfo[p]; })[0];
               var parent = folderInfo[parentId] || folderInfo[rootId];
-              f._folder = parent.name;
-              f._path = parent.path;
+              f._folder = parent.name; f._path = parent.path;
               if (f.mimeType === FOLDER_MIME) {
                 if (!folderInfo[f.id]) {
                   folderInfo[f.id] = { name: f.name, path: parent.path + ' / ' + f.name, depth: parent.depth + 1 };
@@ -308,208 +302,350 @@
                   if (parent.depth + 1 > maxDepthSeen) maxDepthSeen = parent.depth + 1;
                   nextIds.push(f.id);
                 }
-              } else {
-                files.push(f);
-              }
+              } else { files.push(f); }
             });
           });
         });
       }, Promise.resolve()).then(function () {
-        depth++;
-        level = nextIds;
+        depth++; level = nextIds;
         if (requests >= MAX_REQUESTS && level.length) { capped = true; return; }
         return nextLevel();
       });
     }
-
     return nextLevel().then(function () {
-      return { files: files, folderCount: folderCount, maxDepth: maxDepthSeen, capped: capped, requests: requests };
+      files.sort(function (a, b) { return (b.modifiedTime || '').localeCompare(a.modifiedTime || ''); });
+      return { files: files, folderCount: folderCount, maxDepth: maxDepthSeen, capped: capped, depthCapped: depthCapped, requests: requests };
     });
   }
 
-  // ---- Rendering ----
-  function fileItem(f, opts) {
-    opts = opts || {};
-    var who = f.lastModifyingUser ? (f.lastModifyingUser.displayName || f.lastModifyingUser.emailAddress) : '';
-    var name = esc(f.name);
-    var link = f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + name + '</a>' : name;
-    var meta = [];
-    if (opts.showFolder && f._path) meta.push('<span class="chip" title="' + esc(f._path) + '">' + esc(f._folder) + '</span>');
-    if (f.modifiedTime) meta.push('<span title="' + esc(relTime(f.modifiedTime)) + '">' + esc(fmtTime(f.modifiedTime)) + '</span>');
-    if (who && opts.showWho !== false) meta.push('<span>by ' + esc(who) + '</span>');
-    return '<li><div class="fname"><span class="icon">' + iconFor(f.mimeType) + '</span>' + link + '</div>' +
-           (meta.length ? '<div class="meta">' + meta.join('') + '</div>' : '') + '</li>';
+  // ---- Loaders: each panel keeps its own status and read time ----
+  function run(key, promise) {
+    S[key].status = 'loading'; S[key].error = null;
+    render();
+    return promise.then(function (data) {
+      S[key] = { status: 'ok', readAt: Date.now(), error: null, data: data };
+    }).catch(function (err) {
+      S[key] = { status: 'failed', readAt: Date.now(), error: err, data: null };
+    }).then(render);
   }
 
-  function renderList(el, items, emptyText, opts) {
-    el.innerHTML = items.length ? items.map(function (f) { return fileItem(f, opts); }).join('') :
-      '<li class="empty">' + esc(emptyText) + '</li>';
-  }
-
-  function renderPanelError(el, err) {
-    el.innerHTML = '<li class="empty">' + esc(friendlyError(err).text) + '</li>';
-  }
-
-  // ---- Load everything ----
   function loadAll() {
     if (loading) return;
     if (!accessToken || Date.now() > tokenExpiresAt) { handleExpired(); return; }
     loading = true;
-    $('refreshBtn').disabled = true;
-    $('refreshBtn').textContent = 'Refreshing…';
-    clearNotice();
-    var firstError = null;
-    function note(err) { if (!firstError) firstError = err; }
-
-    var cfPromise = getFile(CF_FOLDER_ID).then(function (root) {
-      return walkTree(CF_FOLDER_ID, root.name || 'Cf overskill');
-    }).then(function (res) {
-      var recent = res.files.slice().sort(function (a, b) {
-        return (b.modifiedTime || '').localeCompare(a.modifiedTime || '');
-      }).slice(0, CF_RECENT_COUNT);
-      renderList($('cfRecent'), recent, 'No files found in this folder.', { showFolder: true });
-      $('cfNote').textContent = 'last ' + recent.length;
-      $('cntFiles').textContent = res.files.length.toLocaleString('en-GB');
-      $('cntFolders').textContent = res.folderCount.toLocaleString('en-GB');
-      $('cntDepth').textContent = res.maxDepth;
-      $('cntNote').textContent = res.capped
-        ? 'Large folder: stopped after ' + res.requests + ' requests, so counts and recent changes may be incomplete.'
-        : 'Includes all subfolders (' + res.requests + ' Drive requests).';
-    }).catch(function (err) {
-      note(err);
-      renderPanelError($('cfRecent'), err);
-      $('cntFiles').textContent = $('cntFolders').textContent = $('cntDepth').textContent = '–';
-      $('cntNote').textContent = '';
-    });
-
-    var drivePromise = driveList({
-      q: "trashed = false and mimeType != '" + FOLDER_MIME + "'",
-      corpora: 'allDrives',
-      orderBy: 'modifiedTime desc',
-      pageSize: String(DRIVE_RECENT_COUNT),
-      fields: 'files(' + FILE_FIELDS + ')'
-    }).then(function (r) {
-      renderList($('driveRecent'), r.files || [], 'Nothing found.');
-    }).catch(function (err) { note(err); renderPanelError($('driveRecent'), err); });
-
-    var readPromise = driveList({
-      q: "'" + READ_FIRST_ID + "' in parents and trashed = false",
-      corpora: 'allDrives',
-      orderBy: 'folder,name',
-      pageSize: '100',
-      fields: 'files(' + FILE_FIELDS + ')'
-    }).then(function (r) {
-      renderList($('readFirst'), r.files || [], 'This folder is empty.', { showWho: false });
-    }).catch(function (err) { note(err); renderPanelError($('readFirst'), err); });
-
-    Promise.all([cfPromise, drivePromise, readPromise]).then(function () {
+    var b = $('refreshBtn'); b.disabled = true; b.querySelector('span').textContent = 'Reading…';
+    clearBanner();
+    var since = new Date(Date.now() - DAY).toISOString();
+    Promise.all([
+      run('readfirst', Promise.all([
+        getFolder(READ_FIRST_ID),
+        driveList({ q: "'" + READ_FIRST_ID + "' in parents and trashed = false", corpora: 'allDrives', orderBy: 'folder,name', pageSize: '200', fields: 'files(' + FILE_FIELDS + ')' })
+      ]).then(function (r) { return { folder: r[0], files: r[1].files || [] }; })),
+      run('drive', Promise.all([
+        driveList({ q: "trashed = false and mimeType != '" + FOLDER_MIME + "'", corpora: 'allDrives', orderBy: 'modifiedTime desc', pageSize: String(DRIVE_RECENT_COUNT), fields: 'files(' + FILE_FIELDS + ')' }),
+        driveList({ q: "trashed = false and mimeType != '" + FOLDER_MIME + "' and modifiedTime > '" + since + "'", corpora: 'allDrives', pageSize: '100', fields: 'nextPageToken,files(id)' })
+      ]).then(function (r) { return { files: r[0].files || [], day: (r[1].files || []).length, dayMore: !!r[1].nextPageToken }; })),
+      run('cf', getFolder(CF_FOLDER_ID).then(function (root) {
+        return walkTree(CF_FOLDER_ID, root.name || 'Cf overskill').then(function (t) { t.folder = root; return t; });
+      }))
+    ]).then(function () {
       loading = false;
-      $('refreshBtn').disabled = false;
-      $('refreshBtn').textContent = 'Refresh';
-      if (firstError) {
-        var fe = friendlyError(firstError);
-        if (fe.expired) { handleExpired(fe.text); return; }
-        showNotice(esc(fe.text), true);
-      }
-      $('lastUpdated').textContent = 'Last updated ' + clockFmt.format(new Date());
+      b.disabled = false; b.querySelector('span').textContent = 'Refresh';
+      var expired = ['readfirst', 'drive', 'cf'].some(function (k) { return S[k].status === 'failed' && friendlyError(S[k].error).expired; });
+      if (expired) handleExpired();
+      render();
     });
   }
+
+  // ---- Small render helpers ----
+  function stateBadge(p, emptyCount) {
+    if (!signedIn && p.status === 'idle') return '<span class="state st-idle"><span class="shape"></span>Not signed in</span>';
+    if (p.status === 'idle') return '<span class="state st-idle"><span class="shape"></span>Not read yet</span>';
+    if (p.status === 'loading') return '<span class="state st-loading"><span class="shape"></span>Reading…</span>';
+    if (p.status === 'failed') return '<span class="state st-failed"><span class="shape"></span>Read failed</span>';
+    if (emptyCount === 0) return '<span class="state st-empty"><span class="shape"></span>Empty</span>';
+    return '<span class="state st-ok"><span class="shape"></span>Read ' + esc(stamp(p.readAt)) + '</span>';
+  }
+  function cardClass(p) {
+    return p.status === 'ok' ? '' : p.status === 'failed' ? ' failed' : ' pending';
+  }
+  function failNote(p) {
+    if (p.status === 'failed') return '<p class="note fail">Read failed: ' + esc(friendlyError(p.error).text) + '</p>';
+    if (p.status === 'idle') return '<p class="note">' + (signedIn ? 'Not read yet.' : 'Not read: not signed in.') + '</p>';
+    if (p.status === 'loading' && !p.data) return '<p class="note">Reading from Google Drive…</p>';
+    return '';
+  }
+  function sourceLine(name, url, p) {
+    var when = p.readAt ? (p.status === 'failed' ? 'Failed ' : 'Read ') + esc(stamp(p.readAt)) : 'Not read yet';
+    return '<div class="source"><span>From <a href="' + esc(url) + '" target="_blank" rel="noopener">' + esc(name) + '</a></span><span>' + when + '</span></div>';
+  }
+  function fileRow(f, opts) {
+    opts = opts || {};
+    var who = f.lastModifyingUser ? (f.lastModifyingUser.displayName || f.lastModifyingUser.emailAddress) : '';
+    var name = esc(f.name);
+    var link = f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + name + '</a>' : name;
+    var meta = ['<span class="chip">' + typeWord(f.mimeType) + '</span>'];
+    if (opts.folder && f._folder) meta.push('<span class="chip" title="' + esc(f._path) + '">' + esc(f._folder) + '</span>');
+    if (f.modifiedTime && opts.time !== false) meta.push('<span>' + esc(fmtTime(f.modifiedTime)) + '</span>');
+    if (who && opts.who !== false) meta.push('<span>' + esc(who) + '</span>');
+    return '<li><div class="fname">' + link + '</div><div class="meta">' + meta.join('') + '</div></li>';
+  }
+  function pagedList(items, page, baseHash, opts, emptyText) {
+    if (!items.length) return '<p class="note">' + esc(emptyText) + '</p>';
+    var pages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+    page = Math.min(Math.max(1, page), pages);
+    var slice = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+    var html = '<ul class="files">' + slice.map(function (f) { return fileRow(f, opts); }).join('') + '</ul>';
+    if (pages > 1) {
+      html += '<div class="pager">' +
+        (page > 1 ? '<a class="btn" href="#/' + baseHash + '/p' + (page - 1) + '">‹ Page ' + (page - 1) + '</a>' : '<span class="gap"></span>') +
+        '<span class="count">Page ' + page + ' of ' + pages + ' · ' + items.length + ' items</span>' +
+        (page < pages ? '<a class="btn" href="#/' + baseHash + '/p' + (page + 1) + '">Page ' + (page + 1) + ' ›</a>' : '<span class="gap"></span>') +
+        '</div>';
+    }
+    return html;
+  }
+  function num(n, more) { return n == null ? '–' : n.toLocaleString('en-GB') + (more ? '+' : ''); }
+  function nextSteps(list) {
+    return '<nav class="next" aria-label="Next steps">' + list.map(function (s) {
+      return '<a class="card sec ' + s.slot + '" href="#/' + s.to + '">' + icon(s.icon) + '<span><span class="k">Next:</span> ' + esc(s.label) + '</span></a>';
+    }).join('') + '</nav>';
+  }
+  var NX = {
+    map: { to: 'map', label: 'Map', icon: 'map', slot: 'vision' },
+    readfirst: { to: 'readfirst', label: 'Read first', icon: 'read', slot: 'slot0' },
+    drive: { to: 'drive', label: 'Drive', icon: 'drive', slot: 'slot0' },
+    changes: { to: 'changes', label: 'Changes', icon: 'changes', slot: 'slot7' }
+  };
+  function cfName() { return S.cf.data && S.cf.data.folder ? S.cf.data.folder.name : 'Cf overskill'; }
+  function cfUrl() { return S.cf.data && S.cf.data.folder && S.cf.data.folder.webViewLink || folderUrl(CF_FOLDER_ID); }
+  function rfName() { return S.readfirst.data && S.readfirst.data.folder ? S.readfirst.data.folder.name : '0 - AI (read first)'; }
+  function rfUrl() { return S.readfirst.data && S.readfirst.data.folder && S.readfirst.data.folder.webViewLink || folderUrl(READ_FIRST_ID); }
+  function cfWithin(ms) {
+    if (!S.cf.data) return null;
+    var cut = S.cf.readAt - ms;
+    return S.cf.data.files.filter(function (f) { return new Date(f.modifiedTime).getTime() >= cut; });
+  }
+  function cappedNote() {
+    var d = S.cf.data;
+    if (!d || !d.capped) return '';
+    return '<p class="note fail">Partial: stopped at ' + d.requests + ' requests' + (d.depthCapped ? ', ' + MAX_DEPTH + ' levels' : '') + '.</p>';
+  }
+
+  // ---- Views ----
+  function figure(slot, label, value, p, srcName, srcUrl, actHash, actLabel, partial) {
+    var cls = value === '–' ? (p.status === 'failed' ? ' failed' : ' pending') : '';
+    var meta = p.status === 'failed' ? '<span class="state st-failed"><span class="shape"></span>Read failed</span>' :
+      p.status === 'loading' ? '<span class="state st-loading"><span class="shape"></span>Reading…</span>' :
+      p.readAt ? esc(srcName) + ' · ' + esc(stamp(p.readAt)) :
+      '<span class="state st-idle"><span class="shape"></span>' + (signedIn ? 'Not read yet' : 'Not signed in') + '</span>';
+    return '<div class="card sec fig ' + slot + cls + '">' +
+      '<div class="label">' + esc(label) + '</div>' +
+      '<div class="num">' + value + '</div>' +
+      '<div class="meta">' + meta + (partial ? ' <span class="chip">Partial</span>' : '') + '</div>' +
+      '<a class="act" href="#/' + actHash + '">' + esc(actLabel) + '</a></div>';
+  }
+
+  function viewMap() {
+    var html = '';
+    if (!signedIn) {
+      html += '<div class="card vision pending"><div class="cardhead"><h3>Not signed in</h3>' +
+        '<span class="state st-idle"><span class="shape"></span>No reads</span></div>' +
+        '<p class="note">Read-only access to Google Drive.</p>' +
+        '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
+    }
+    var rf = S.readfirst, dr = S.drive, cf = S.cf;
+    var day = cfWithin(DAY), week = cfWithin(7 * DAY), partial = cf.data && cf.data.capped;
+    html += '<div class="figs">' +
+      figure('slot0', 'Read first items', rf.data ? num(rf.data.files.length) : '–', rf, 'Read first', rfUrl(), 'readfirst', 'Open Read first') +
+      figure('slot0', 'Drive last 24h', dr.data ? num(dr.data.day, dr.data.dayMore) : '–', dr, 'Whole Drive', 'https://drive.google.com/drive/recent', 'drive', 'Open Drive') +
+      figure('slot7', 'Cf files', cf.data ? num(cf.data.files.length) : '–', cf, cfName(), cfUrl(), 'changes/totals', 'Open totals', partial) +
+      figure('slot7', 'Cf folders', cf.data ? num(cf.data.folderCount) : '–', cf, cfName(), cfUrl(), 'changes/totals', 'Open totals', partial) +
+      figure('slot7', 'Cf last 24h', day ? num(day.length) : '–', cf, cfName(), cfUrl(), 'changes/24h', 'Open last 24h', partial) +
+      figure('slot7', 'Cf 7 days', week ? num(week.length) : '–', cf, cfName(), cfUrl(), 'changes/7d', 'Open 7 days', partial) +
+      '</div>';
+    html += nextSteps([NX.readfirst, NX.drive, NX.changes]);
+    return html;
+  }
+
+  function viewReadFirst(r) {
+    var p = S.readfirst, items = p.data ? p.data.files : [];
+    var html = '<section class="card slot0' + cardClass(p) + '"><div class="cardhead"><h3>Read first</h3>' + stateBadge(p, p.data ? items.length : null) + '</div>';
+    html += failNote(p);
+    if (p.data) html += '<p class="note">' + num(items.length) + ' items in folder.</p>' + pagedList(items, r.page, 'readfirst', { who: false, time: false }, 'Folder is empty.');
+    html += sourceLine(rfName(), rfUrl(), p) + '</section>';
+    return html + nextSteps([NX.changes, NX.drive, NX.map]);
+  }
+
+  function viewDrive(r) {
+    var p = S.drive, d = p.data;
+    var html = '<section class="card slot0' + cardClass(p) + '"><div class="cardhead"><h3>Recent in Drive</h3>' + stateBadge(p, d ? d.files.length : null) + '</div>';
+    html += failNote(p);
+    if (d) {
+      html += '<div class="stats"><div class="stat"><div class="num">' + num(d.day, d.dayMore) + '</div><div class="label">Changed last 24h</div></div>' +
+        '<div class="stat"><div class="num">' + num(d.files.length) + '</div><div class="label">Latest files read</div></div></div>';
+      html += pagedList(d.files, r.page, 'drive', {}, 'No files found.');
+    }
+    html += sourceLine('Whole Drive', 'https://drive.google.com/drive/recent', p) + '</section>';
+    return html + nextSteps([NX.changes, NX.readfirst, NX.map]);
+  }
+
+  var SUBS = [
+    { key: 'recent', label: 'Recent' },
+    { key: '24h', label: 'Last 24h' },
+    { key: '7d', label: 'Last 7 days' },
+    { key: 'totals', label: 'Totals' }
+  ];
+  function viewChanges(r) {
+    var p = S.cf, d = p.data, sub = r.sub;
+    var html = '<nav class="subnav" aria-label="Changes views">' + SUBS.map(function (s) {
+      return '<a href="#/changes/' + s.key + '"' + (s.key === sub ? ' aria-current="page"' : '') + '>' + esc(s.label) + '</a>';
+    }).join('') + '</nav>';
+    var title = SUBS.filter(function (s) { return s.key === sub; })[0].label;
+    var items = null;
+    if (d) {
+      if (sub === 'recent') items = d.files.slice(0, CF_RECENT_COUNT);
+      if (sub === '24h') items = cfWithin(DAY);
+      if (sub === '7d') items = cfWithin(7 * DAY);
+    }
+    var emptyCount = sub === 'totals' ? (d ? 1 : null) : (items ? items.length : null);
+    html += '<section class="card slot7' + cardClass(p) + '"><div class="cardhead"><h3>' + esc(title) + '</h3>' + stateBadge(p, emptyCount) + '</div>';
+    html += failNote(p);
+    if (d && sub === 'totals') {
+      html += '<div class="stats">' +
+        '<div class="stat"><div class="num">' + num(d.files.length) + '</div><div class="label">Files</div></div>' +
+        '<div class="stat"><div class="num">' + num(d.folderCount) + '</div><div class="label">Folders</div></div>' +
+        '<div class="stat"><div class="num">' + num(d.maxDepth) + '</div><div class="label">Levels deep</div></div>' +
+        '<div class="stat"><div class="num">' + num(d.requests) + '</div><div class="label">Drive requests</div></div></div>';
+    } else if (items) {
+      var empty = sub === 'recent' ? 'No files in this folder.' : sub === '24h' ? 'No changes in last 24h.' : 'No changes in last 7 days.';
+      html += pagedList(items, r.page, 'changes/' + sub, { folder: true }, empty);
+    }
+    html += cappedNote();
+    html += sourceLine(cfName(), cfUrl(), p) + '</section>';
+    var i = SUBS.map(function (s) { return s.key; }).indexOf(sub);
+    var nextSub = SUBS[(i + 1) % SUBS.length];
+    return html + nextSteps([{ to: 'changes/' + nextSub.key, label: nextSub.label, icon: 'changes', slot: 'slot7' }, NX.readfirst, NX.map]);
+  }
+
+  // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
+  var VIEWS = { map: 'Map', readfirst: 'Read first', drive: 'Drive', changes: 'Changes' };
+  function parseRoute() {
+    var parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+    var view = parts[0] && VIEWS[parts[0]] ? parts[0] : null;
+    var r = { view: view, sub: null, page: 1 };
+    parts.slice(1).forEach(function (x) {
+      if (/^p\d+$/.test(x)) r.page = parseInt(x.slice(1), 10);
+      else if (view === 'changes' && SUBS.some(function (s) { return s.key === x; })) r.sub = x;
+    });
+    if (view === 'changes' && !r.sub) r.sub = 'recent';
+    return r;
+  }
+  var lastView = null;
+  function render() {
+    var r = parseRoute();
+    if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
+    var el = $('view');
+    var html = r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : viewChanges(r);
+    var routeKey = location.hash;
+    var changed = routeKey !== lastView;
+    el.setAttribute('data-view', r.view);
+    el.setAttribute('data-route', routeKey);
+    $('hereTitle').textContent = VIEWS[r.view] + (r.view === 'changes' ? ' · ' + SUBS.filter(function (s) { return s.key === r.sub; })[0].label : '');
+    document.title = VIEWS[r.view] + ' · Lisa Dashboard';
+    Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
+      if (a.getAttribute('data-nav') === r.view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    if (changed && lastView !== null) {
+      el.classList.add('fade');
+      el.innerHTML = html;
+      window.scrollTo(0, 0);
+      requestAnimationFrame(function () { requestAnimationFrame(function () { el.classList.remove('fade'); }); });
+    } else {
+      el.innerHTML = html;
+    }
+    lastView = routeKey;
+    updateHeader();
+  }
+  function updateHeader() {
+    var times = ['readfirst', 'drive', 'cf'].map(function (k) { return S[k].status === 'ok' ? S[k].readAt : null; }).filter(Boolean);
+    var failed = ['readfirst', 'drive', 'cf'].some(function (k) { return S[k].status === 'failed'; });
+    $('readStamp').textContent = !signedIn ? 'Not signed in' : loading ? 'Reading…' :
+      failed ? 'A read failed' : times.length ? 'Read ' + stamp(Math.min.apply(null, times)) : 'Not read';
+    $('refreshBtn').classList.toggle('hidden', !signedIn);
+    $('signOutBtn').classList.toggle('hidden', !signedIn);
+    $('signInBtn').classList.toggle('hidden', signedIn);
+  }
+
+  // ---- Banner ----
+  function showBanner(text, isInfo, withSignIn) {
+    var b = $('banner');
+    b.className = 'banner' + (isInfo ? ' info' : '');
+    b.innerHTML = '<p>' + esc(text) + '</p>' + (withSignIn ? '<button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in again</span></button>' : '');
+  }
+  function clearBanner() { $('banner').className = 'banner hidden'; $('banner').innerHTML = ''; }
 
   // ---- Auth (Google Identity Services token client) ----
-  function requestToken(withPrompt) {
-    if (!tokenClient) return;
-    tokenClient.requestAccessToken({ prompt: withPrompt ? 'select_account' : '' });
-  }
-
+  function requestToken() { if (tokenClient) tokenClient.requestAccessToken({ prompt: 'select_account' }); }
   function onToken(resp) {
-    if (resp.error) {
-      showNotice('Sign-in didn\'t complete (' + esc(resp.error) + '). <button type="button" data-action="signin">Try again</button>', true);
-      return;
-    }
-    if (!google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) {
-      showNotice('Drive access wasn\'t allowed, so there\'s nothing to show. <button type="button" data-action="signin">Sign in again</button>', true);
-      return;
-    }
+    if (resp.error) { showBanner('Sign-in did not complete.', false, true); return; }
+    if (!google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) { showBanner('Drive access not granted.', false, true); return; }
     accessToken = resp.access_token;
     tokenExpiresAt = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
-    $('signinView').classList.add('hidden');
-    $('dashView').classList.remove('hidden');
-    $('refreshBtn').classList.remove('hidden');
-    $('signOutBtn').classList.remove('hidden');
-    clearNotice();
+    signedIn = true;
+    clearBanner();
     startTimer();
     loadAll();
   }
-
   function startTimer() {
     stopTimer();
-    refreshTimer = setInterval(function () {
-      if (Date.now() > tokenExpiresAt) { handleExpired(); return; }
-      loadAll();
-    }, REFRESH_MS);
+    refreshTimer = setInterval(function () { if (Date.now() > tokenExpiresAt) { handleExpired(); return; } loadAll(); }, REFRESH_MS);
   }
   function stopTimer() { if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; } }
-
-  function handleExpired(text) {
+  function handleExpired() {
     stopTimer();
     accessToken = null;
-    showNotice(esc(text || 'Your Google sign-in has expired (they last about an hour). Please sign in again to keep the dashboard updating.') +
-      ' <button type="button" class="primary" data-action="signin">Sign in again</button>', false);
+    showBanner('Sign-in expired. Rereads paused.', false, true);
   }
-
   function signOut() {
     stopTimer();
     var t = accessToken;
-    accessToken = null;
-    tokenExpiresAt = 0;
-    if (t && window.google && google.accounts && google.accounts.oauth2) {
-      google.accounts.oauth2.revoke(t, function () {});
-    }
-    ['cfRecent', 'driveRecent', 'readFirst'].forEach(function (id) { $(id).innerHTML = '<li class="loading">Loading…</li>'; });
-    ['cntFiles', 'cntFolders', 'cntDepth'].forEach(function (id) { $(id).textContent = '–'; });
-    $('cntNote').textContent = '';
-    $('cfNote').textContent = '';
-    $('lastUpdated').textContent = '';
-    $('dashView').classList.add('hidden');
-    $('refreshBtn').classList.add('hidden');
-    $('signOutBtn').classList.add('hidden');
-    $('signinView').classList.remove('hidden');
-    showNotice('You\'re signed out.', false);
+    accessToken = null; tokenExpiresAt = 0; signedIn = false;
+    if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
+    S = { readfirst: blank(), drive: blank(), cf: blank() };
+    showBanner('Signed out. Nothing kept.', true, false);
+    render();
   }
-
   function initGoogle() {
     if (!(window.google && google.accounts && google.accounts.oauth2)) return false;
     tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPE,
-      callback: onToken,
+      client_id: CLIENT_ID, scope: SCOPE, callback: onToken,
       error_callback: function (e) {
-        var type = e && e.type ? e.type : 'unknown';
-        var msg = type === 'popup_failed_to_open'
-          ? 'The Google sign-in window was blocked. Allow pop-ups for this site, then try again.'
-          : type === 'popup_closed'
-            ? 'The sign-in window was closed before finishing.'
-            : 'Sign-in didn\'t complete (' + type + ').';
-        showNotice(esc(msg) + ' <button type="button" data-action="signin">Try again</button>', true);
+        var type = e && e.type ? e.type : '';
+        showBanner(type === 'popup_failed_to_open' ? 'Sign-in window blocked by browser.' : type === 'popup_closed' ? 'Sign-in window closed early.' : 'Sign-in did not complete.', false, true);
       }
     });
-    var btn = $('signInBtn');
-    btn.disabled = false;
-    btn.textContent = 'Sign in with Google';
+    var b = $('signInBtn'); b.disabled = false; b.querySelector('span').textContent = 'Sign in with Google';
     return true;
   }
 
-  $('signInBtn').addEventListener('click', function () { requestToken(true); });
-  $('refreshBtn').addEventListener('click', loadAll);
-  $('signOutBtn').addEventListener('click', signOut);
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-action]');
+    if (!t || t.disabled) return;
+    var a = t.getAttribute('data-action');
+    if (a === 'signin') requestToken();
+    else if (a === 'signout') signOut();
+    else if (a === 'refresh') loadAll();
+  });
+  window.addEventListener('hashchange', render);
+  render();
 
-  // Wait for the Google script to load.
   var tries = 0;
   (function waitForGoogle() {
     if (initGoogle()) return;
     if (++tries > 100) {
-      $('signInBtn').textContent = 'Google sign-in unavailable';
-      showNotice('Couldn\'t load Google sign-in. Check your connection or any ad/script blocker, then reload the page.', true);
+      $('signInBtn').querySelector('span').textContent = 'Sign-in unavailable';
+      showBanner('Google sign-in did not load.', false, false);
       return;
     }
     setTimeout(waitForGoogle, 100);
