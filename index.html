@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Lisa Dashboard</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root {
+    --bg: #f6f7f9; --card: #ffffff; --text: #1f2933; --muted: #6b7785;
+    --line: #e4e7eb; --accent: #2563eb; --accent-soft: #e8efff;
+    --warn-bg: #fff7e6; --warn-line: #f5c26b; --err-bg: #fdecec; --err-line: #f0a3a3;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+         background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.45; }
+  header { background: var(--card); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+  .bar { max-width: 1200px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; flex: 1 1 auto; }
+  .status { color: var(--muted); font-size: 13px; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text);
+           padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+  button:hover { border-color: #c5ccd3; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover { background: #1d4fd8; }
+  button:disabled { opacity: .55; cursor: default; }
+  main { max-width: 1200px; margin: 0 auto; padding: 16px; }
+  .hidden { display: none !important; }
+  .signin { text-align: center; padding: 64px 16px; }
+  .signin p { color: var(--muted); max-width: 460px; margin: 12px auto 24px; }
+  .notice { border: 1px solid var(--warn-line); background: var(--warn-bg); padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; }
+  .notice.error { border-color: var(--err-line); background: var(--err-bg); }
+  .notice button { margin-left: 8px; }
+  .grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+  .col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+  .card h2 { font-size: 16px; margin: 0 0 10px; display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .card h2 small { color: var(--muted); font-weight: normal; font-size: 12px; }
+  ul.files { list-style: none; margin: 0; padding: 0; }
+  ul.files li { padding: 8px 0; border-top: 1px solid var(--line); }
+  ul.files li:first-child { border-top: none; }
+  .fname { font-weight: 600; word-break: break-word; }
+  a { color: var(--accent); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .meta { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 2px; }
+  .chip { background: var(--accent-soft); color: #1e3a8a; border-radius: 6px; padding: 0 6px; font-size: 12px; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat { background: var(--bg); border-radius: 10px; padding: 10px; text-align: center; }
+  .stat .n { font-size: 24px; font-weight: 700; }
+  .stat .l { color: var(--muted); font-size: 12px; }
+  .empty, .loading { color: var(--muted); font-style: italic; padding: 6px 0; }
+  .icon { display: inline-block; width: 1.2em; }
+  footer { max-width: 1200px; margin: 0 auto; padding: 8px 16px 32px; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <h1>Lisa Dashboard</h1>
+    <span id="lastUpdated" class="status"></span>
+    <button id="refreshBtn" class="hidden" type="button">Refresh</button>
+    <button id="signOutBtn" class="hidden" type="button">Sign out</button>
+  </div>
+</header>
+
+<main>
+  <div id="notice" class="notice hidden"></div>
+
+  <section id="signinView" class="signin">
+    <h2>Welcome</h2>
+    <p>Sign in with your Google account to see your Drive dashboard. Access is read-only. Nothing is stored in this browser, so you'll sign in each time you open the page.</p>
+    <button id="signInBtn" class="primary" type="button" disabled>Loading Google sign-in…</button>
+  </section>
+
+  <section id="dashView" class="hidden">
+    <div class="grid">
+      <div class="col">
+        <div class="card">
+          <h2>Recently changed in Cf overskill <small id="cfNote"></small></h2>
+          <ul id="cfRecent" class="files"><li class="loading">Loading…</li></ul>
+        </div>
+        <div class="card">
+          <h2>Recently modified anywhere in Drive <small>last 15</small></h2>
+          <ul id="driveRecent" class="files"><li class="loading">Loading…</li></ul>
+        </div>
+      </div>
+      <div class="col">
+        <div class="card">
+          <h2>Cf overskill totals</h2>
+          <div class="stats">
+            <div class="stat"><div class="n" id="cntFiles">–</div><div class="l">Files</div></div>
+            <div class="stat"><div class="n" id="cntFolders">–</div><div class="l">Folders</div></div>
+            <div class="stat"><div class="n" id="cntDepth">–</div><div class="l">Levels deep</div></div>
+          </div>
+          <div id="cntNote" class="meta" style="margin-top:8px"></div>
+        </div>
+        <div class="card">
+          <h2>Read first <small>0 - AI (read first)</small></h2>
+          <ul id="readFirst" class="files"><li class="loading">Loading…</li></ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>Read-only view of Google Drive. Updates every 5 minutes while this page is open. Times shown are UK time.</footer>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---- Settings (none of these are secrets) ----
+  var CLIENT_ID = '135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com';
+  var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+  var CF_FOLDER_ID = '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A';
+  var READ_FIRST_ID = '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L';
+  var REFRESH_MS = 5 * 60 * 1000;
+  var CF_RECENT_COUNT = 25;
+  var DRIVE_RECENT_COUNT = 15;
+  var MAX_DEPTH = 10;          // how many folder levels to walk
+  var MAX_REQUESTS = 150;      // safety cap on API calls per refresh walk
+  var PARENTS_PER_QUERY = 25;  // folders combined into one list query
+  var FOLDER_MIME = 'application/vnd.google-apps.folder';
+  var API = 'https://www.googleapis.com/drive/v3/files';
+  var FILE_FIELDS = 'id,name,mimeType,modifiedTime,webViewLink,parents,lastModifyingUser(displayName,emailAddress)';
+
+  // ---- State (memory only, never written to storage) ----
+  var tokenClient = null;
+  var accessToken = null;
+  var tokenExpiresAt = 0;
+  var refreshTimer = null;
+  var loading = false;
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  var timeFmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London', day: 'numeric', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: false
+  });
+  var clockFmt = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+  });
+
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function fmtTime(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return isNaN(d) ? '' : timeFmt.format(d);
+  }
+
+  function relTime(iso) {
+    var mins = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+    if (isNaN(mins)) return '';
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + ' min ago';
+    var hrs = Math.round(mins / 60);
+    if (hrs < 24) return hrs + ' hr ago';
+    var days = Math.round(hrs / 24);
+    return days + (days === 1 ? ' day ago' : ' days ago');
+  }
+
+  function iconFor(mime) {
+    if (mime === FOLDER_MIME) return '📁';
+    if (/document/.test(mime)) return '📄';
+    if (/spreadsheet|excel|csv/.test(mime)) return '📊';
+    if (/presentation|powerpoint/.test(mime)) return '📽️';
+    if (/pdf/.test(mime)) return '📕';
+    if (/^image\//.test(mime)) return '🖼️';
+    if (/^video\//.test(mime)) return '🎞️';
+    return '📎';
+  }
+
+  function showNotice(html, isError) {
+    var n = $('notice');
+    n.innerHTML = html;
+    n.className = 'notice' + (isError ? ' error' : '');
+    var again = n.querySelector('[data-action="signin"]');
+    if (again) again.addEventListener('click', function () { requestToken(true); });
+  }
+  function clearNotice() { $('notice').className = 'notice hidden'; $('notice').innerHTML = ''; }
+
+  // ---- Errors ----
+  function ApiError(status, message, reason) {
+    this.status = status; this.message = message; this.reason = reason;
+  }
+
+  function friendlyError(err) {
+    if (err instanceof ApiError) {
+      if (err.status === 401) {
+        return { expired: true, text: 'Your Google sign-in has expired. Please sign in again.' };
+      }
+      if (err.status === 403) {
+        if (/accessNotConfigured|SERVICE_DISABLED/i.test(err.reason + ' ' + err.message)) {
+          return { text: 'The Google Drive API is turned off for this project in Google Cloud. Turn it on, then press Refresh.' };
+        }
+        if (/insufficient|scope/i.test(err.reason + ' ' + err.message)) {
+          return { expired: true, text: 'Google didn\'t grant Drive access. Sign in again and allow "See and download your Google Drive files".' };
+        }
+        if (/rateLimit|userRateLimit|quota/i.test(err.reason + ' ' + err.message)) {
+          return { text: 'Google is limiting requests for a moment. It will try again at the next refresh.' };
+        }
+        return { text: 'Google refused access: ' + err.message };
+      }
+      if (err.status === 404) {
+        return { text: 'A folder couldn\'t be found, or this account can\'t see it. Check you signed in with the right Google account.' };
+      }
+      if (err.status >= 500) {
+        return { text: 'Google Drive is having trouble right now (' + err.status + '). It will try again at the next refresh.' };
+      }
+      return { text: 'Drive error (' + err.status + '): ' + err.message };
+    }
+    if (err && err.name === 'TypeError') {
+      return { text: 'Couldn\'t reach Google. Check your internet connection, then press Refresh.' };
+    }
+    return { text: 'Something went wrong: ' + (err && err.message ? err.message : err) };
+  }
+
+  // ---- Drive API ----
+  function driveList(params) {
+    if (!accessToken || Date.now() > tokenExpiresAt) {
+      return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
+    }
+    var q = new URLSearchParams(params);
+    q.set('supportsAllDrives', 'true');
+    q.set('includeItemsFromAllDrives', 'true');
+    return fetch(API + '?' + q.toString(), {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    }).then(function (res) {
+      if (res.ok) return res.json();
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        var e = body && body.error ? body.error : {};
+        var reason = (e.errors && e.errors[0] && e.errors[0].reason) || e.status || '';
+        throw new ApiError(res.status, e.message || res.statusText, reason);
+      });
+    });
+  }
+
+  function getFile(id) {
+    if (!accessToken || Date.now() > tokenExpiresAt) {
+      return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
+    }
+    return fetch(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,webViewLink', {
+      headers: { Authorization: 'Bearer ' + accessToken }
+    }).then(function (res) {
+      if (res.ok) return res.json();
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        var e = body && body.error ? body.error : {};
+        var reason = (e.errors && e.errors[0] && e.errors[0].reason) || e.status || '';
+        throw new ApiError(res.status, e.message || res.statusText, reason);
+      });
+    });
+  }
+
+  // Walk the folder tree breadth-first, combining several parents per query.
+  function walkTree(rootId, rootName) {
+    var files = [];
+    var folderInfo = {};          // id -> { name, path, depth }
+    folderInfo[rootId] = { name: rootName, path: rootName, depth: 0 };
+    var level = [rootId];
+    var depth = 0;
+    var requests = 0;
+    var capped = false;
+    var folderCount = 0;
+    var maxDepthSeen = 0;
+
+    function listChildren(parentIds) {
+      var q = '(' + parentIds.map(function (id) { return "'" + id + "' in parents"; }).join(' or ') + ') and trashed = false';
+      var out = [];
+      function page(token) {
+        if (requests >= MAX_REQUESTS) { capped = true; return Promise.resolve(out); }
+        requests++;
+        var p = { q: q, corpora: 'allDrives', pageSize: '1000', fields: 'nextPageToken,files(' + FILE_FIELDS + ')' };
+        if (token) p.pageToken = token;
+        return driveList(p).then(function (r) {
+          out = out.concat(r.files || []);
+          return r.nextPageToken ? page(r.nextPageToken) : out;
+        });
+      }
+      return page(null);
+    }
+
+    function nextLevel() {
+      if (!level.length) return Promise.resolve();
+      if (depth >= MAX_DEPTH) { capped = true; return Promise.resolve(); }
+      var chunks = [];
+      for (var i = 0; i < level.length; i += PARENTS_PER_QUERY) chunks.push(level.slice(i, i + PARENTS_PER_QUERY));
+      var nextIds = [];
+      // Run chunks sequentially to stay polite with the API.
+      return chunks.reduce(function (prev, chunk) {
+        return prev.then(function () {
+          return listChildren(chunk).then(function (items) {
+            items.forEach(function (f) {
+              var parentId = (f.parents || []).filter(function (p) { return folderInfo[p]; })[0];
+              var parent = folderInfo[parentId] || folderInfo[rootId];
+              f._folder = parent.name;
+              f._path = parent.path;
+              if (f.mimeType === FOLDER_MIME) {
+                if (!folderInfo[f.id]) {
+                  folderInfo[f.id] = { name: f.name, path: parent.path + ' / ' + f.name, depth: parent.depth + 1 };
+                  folderCount++;
+                  if (parent.depth + 1 > maxDepthSeen) maxDepthSeen = parent.depth + 1;
+                  nextIds.push(f.id);
+                }
+              } else {
+                files.push(f);
+              }
+            });
+          });
+        });
+      }, Promise.resolve()).then(function () {
+        depth++;
+        level = nextIds;
+        if (requests >= MAX_REQUESTS && level.length) { capped = true; return; }
+        return nextLevel();
+      });
+    }
+
+    return nextLevel().then(function () {
+      return { files: files, folderCount: folderCount, maxDepth: maxDepthSeen, capped: capped, requests: requests };
+    });
+  }
+
+  // ---- Rendering ----
+  function fileItem(f, opts) {
+    opts = opts || {};
+    var who = f.lastModifyingUser ? (f.lastModifyingUser.displayName || f.lastModifyingUser.emailAddress) : '';
+    var name = esc(f.name);
+    var link = f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + name + '</a>' : name;
+    var meta = [];
+    if (opts.showFolder && f._path) meta.push('<span class="chip" title="' + esc(f._path) + '">' + esc(f._folder) + '</span>');
+    if (f.modifiedTime) meta.push('<span title="' + esc(relTime(f.modifiedTime)) + '">' + esc(fmtTime(f.modifiedTime)) + '</span>');
+    if (who && opts.showWho !== false) meta.push('<span>by ' + esc(who) + '</span>');
+    return '<li><div class="fname"><span class="icon">' + iconFor(f.mimeType) + '</span>' + link + '</div>' +
+           (meta.length ? '<div class="meta">' + meta.join('') + '</div>' : '') + '</li>';
+  }
+
+  function renderList(el, items, emptyText, opts) {
+    el.innerHTML = items.length ? items.map(function (f) { return fileItem(f, opts); }).join('') :
+      '<li class="empty">' + esc(emptyText) + '</li>';
+  }
+
+  function renderPanelError(el, err) {
+    el.innerHTML = '<li class="empty">' + esc(friendlyError(err).text) + '</li>';
+  }
+
+  // ---- Load everything ----
+  function loadAll() {
+    if (loading) return;
+    if (!accessToken || Date.now() > tokenExpiresAt) { handleExpired(); return; }
+    loading = true;
+    $('refreshBtn').disabled = true;
+    $('refreshBtn').textContent = 'Refreshing…';
+    clearNotice();
+    var firstError = null;
+    function note(err) { if (!firstError) firstError = err; }
+
+    var cfPromise = getFile(CF_FOLDER_ID).then(function (root) {
+      return walkTree(CF_FOLDER_ID, root.name || 'Cf overskill');
+    }).then(function (res) {
+      var recent = res.files.slice().sort(function (a, b) {
+        return (b.modifiedTime || '').localeCompare(a.modifiedTime || '');
+      }).slice(0, CF_RECENT_COUNT);
+      renderList($('cfRecent'), recent, 'No files found in this folder.', { showFolder: true });
+      $('cfNote').textContent = 'last ' + recent.length;
+      $('cntFiles').textContent = res.files.length.toLocaleString('en-GB');
+      $('cntFolders').textContent = res.folderCount.toLocaleString('en-GB');
+      $('cntDepth').textContent = res.maxDepth;
+      $('cntNote').textContent = res.capped
+        ? 'Large folder: stopped after ' + res.requests + ' requests, so counts and recent changes may be incomplete.'
+        : 'Includes all subfolders (' + res.requests + ' Drive requests).';
+    }).catch(function (err) {
+      note(err);
+      renderPanelError($('cfRecent'), err);
+      $('cntFiles').textContent = $('cntFolders').textContent = $('cntDepth').textContent = '–';
+      $('cntNote').textContent = '';
+    });
+
+    var drivePromise = driveList({
+      q: "trashed = false and mimeType != '" + FOLDER_MIME + "'",
+      corpora: 'allDrives',
+      orderBy: 'modifiedTime desc',
+      pageSize: String(DRIVE_RECENT_COUNT),
+      fields: 'files(' + FILE_FIELDS + ')'
+    }).then(function (r) {
+      renderList($('driveRecent'), r.files || [], 'Nothing found.');
+    }).catch(function (err) { note(err); renderPanelError($('driveRecent'), err); });
+
+    var readPromise = driveList({
+      q: "'" + READ_FIRST_ID + "' in parents and trashed = false",
+      corpora: 'allDrives',
+      orderBy: 'folder,name',
+      pageSize: '100',
+      fields: 'files(' + FILE_FIELDS + ')'
+    }).then(function (r) {
+      renderList($('readFirst'), r.files || [], 'This folder is empty.', { showWho: false });
+    }).catch(function (err) { note(err); renderPanelError($('readFirst'), err); });
+
+    Promise.all([cfPromise, drivePromise, readPromise]).then(function () {
+      loading = false;
+      $('refreshBtn').disabled = false;
+      $('refreshBtn').textContent = 'Refresh';
+      if (firstError) {
+        var fe = friendlyError(firstError);
+        if (fe.expired) { handleExpired(fe.text); return; }
+        showNotice(esc(fe.text), true);
+      }
+      $('lastUpdated').textContent = 'Last updated ' + clockFmt.format(new Date());
+    });
+  }
+
+  // ---- Auth (Google Identity Services token client) ----
+  function requestToken(withPrompt) {
+    if (!tokenClient) return;
+    tokenClient.requestAccessToken({ prompt: withPrompt ? 'select_account' : '' });
+  }
+
+  function onToken(resp) {
+    if (resp.error) {
+      showNotice('Sign-in didn\'t complete (' + esc(resp.error) + '). <button type="button" data-action="signin">Try again</button>', true);
+      return;
+    }
+    if (!google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) {
+      showNotice('Drive access wasn\'t allowed, so there\'s nothing to show. <button type="button" data-action="signin">Sign in again</button>', true);
+      return;
+    }
+    accessToken = resp.access_token;
+    tokenExpiresAt = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
+    $('signinView').classList.add('hidden');
+    $('dashView').classList.remove('hidden');
+    $('refreshBtn').classList.remove('hidden');
+    $('signOutBtn').classList.remove('hidden');
+    clearNotice();
+    startTimer();
+    loadAll();
+  }
+
+  function startTimer() {
+    stopTimer();
+    refreshTimer = setInterval(function () {
+      if (Date.now() > tokenExpiresAt) { handleExpired(); return; }
+      loadAll();
+    }, REFRESH_MS);
+  }
+  function stopTimer() { if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; } }
+
+  function handleExpired(text) {
+    stopTimer();
+    accessToken = null;
+    showNotice(esc(text || 'Your Google sign-in has expired (they last about an hour). Please sign in again to keep the dashboard updating.') +
+      ' <button type="button" class="primary" data-action="signin">Sign in again</button>', false);
+  }
+
+  function signOut() {
+    stopTimer();
+    var t = accessToken;
+    accessToken = null;
+    tokenExpiresAt = 0;
+    if (t && window.google && google.accounts && google.accounts.oauth2) {
+      google.accounts.oauth2.revoke(t, function () {});
+    }
+    ['cfRecent', 'driveRecent', 'readFirst'].forEach(function (id) { $(id).innerHTML = '<li class="loading">Loading…</li>'; });
+    ['cntFiles', 'cntFolders', 'cntDepth'].forEach(function (id) { $(id).textContent = '–'; });
+    $('cntNote').textContent = '';
+    $('cfNote').textContent = '';
+    $('lastUpdated').textContent = '';
+    $('dashView').classList.add('hidden');
+    $('refreshBtn').classList.add('hidden');
+    $('signOutBtn').classList.add('hidden');
+    $('signinView').classList.remove('hidden');
+    showNotice('You\'re signed out.', false);
+  }
+
+  function initGoogle() {
+    if (!(window.google && google.accounts && google.accounts.oauth2)) return false;
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPE,
+      callback: onToken,
+      error_callback: function (e) {
+        var type = e && e.type ? e.type : 'unknown';
+        var msg = type === 'popup_failed_to_open'
+          ? 'The Google sign-in window was blocked. Allow pop-ups for this site, then try again.'
+          : type === 'popup_closed'
+            ? 'The sign-in window was closed before finishing.'
+            : 'Sign-in didn\'t complete (' + type + ').';
+        showNotice(esc(msg) + ' <button type="button" data-action="signin">Try again</button>', true);
+      }
+    });
+    var btn = $('signInBtn');
+    btn.disabled = false;
+    btn.textContent = 'Sign in with Google';
+    return true;
+  }
+
+  $('signInBtn').addEventListener('click', function () { requestToken(true); });
+  $('refreshBtn').addEventListener('click', loadAll);
+  $('signOutBtn').addEventListener('click', signOut);
+
+  // Wait for the Google script to load.
+  var tries = 0;
+  (function waitForGoogle() {
+    if (initGoogle()) return;
+    if (++tries > 100) {
+      $('signInBtn').textContent = 'Google sign-in unavailable';
+      showNotice('Couldn\'t load Google sign-in. Check your connection or any ad/script blocker, then reload the page.', true);
+      return;
+    }
+    setTimeout(waitForGoogle, 100);
+  })();
+})();
+</script>
+</body>
+</html>
