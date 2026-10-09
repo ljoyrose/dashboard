@@ -13,6 +13,7 @@ A single-page Google **shared drives** surface (read-only browsing, plus a Bin),
 - **Every panel** shows where it read from and when it was read (UK time). It also shows whether the read
   is pending, failed, empty or capped.
 - **Look:** Lexend only, LJR7 palette (slot 0 for Read first and Drive, slot 2 Risks for the Bin, slot 7 for Cf overskill), light and dark modes.
+- **Money tile** (on Map, Lisa's account only): cash per entity (business and personal kept apart, never summed), stale and runs-dry flags, ready to-dos, and dates overdue or due in the next 14 days. It reads through `money/core.js` and links to `/money/`.
 - **Writes:** only from the Bin buttons (files.update trashed=true; files.emptyTrash per shared drive).
 
 The repo contains no secrets. The OAuth client ID in `index.html` is public by design and only works from the
