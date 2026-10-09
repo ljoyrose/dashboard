@@ -1,15 +1,19 @@
 # Lisa Dashboard
 
-A single-page, **read-only** Google Drive surface, served by GitHub Pages at
+A single-page Google **shared drives** surface (read-only browsing, plus a Bin), served by GitHub Pages at
 <https://ljoyrose.github.io/dashboard/>. It reads Drive live each time it opens. Nothing is baked in.
 
-- **Sections** (one shared header, Map first): Map, Read first, Drive, Changes (Recent, Last 24h, Last 7 days, Totals).
+- **Sections** (one shared header, Map first): Map, Read first, Drive, Bin, Changes (Recent, Last 24h, Last 7 days, Totals).
+- **Drive** lists shared drives only (`drives.list`, `corpora=drive`), with a picker and folder browsing (`#/drive/<driveId>/<folderId>`). My Drive is never listed.
+- **Bin** (`#/bin`): ZZ_ sweep (names starting `ZZ_`; never `RR_`, nothing inside an `RR_` folder, no `ZZ_` folder that holds an `RR_` item),
+  then one "Move all to bin" button behind a confirm. Per shared drive bin list (name, date binned, who) and an "Empty bin" button
+  that needs `EMPTY` typed (Manager role). Nothing runs automatically.
   The section is in the URL (`#/changes/24h`), so back, reload and links all work. Browser storage is not used.
-- **Sign-in:** Google, Drive read-only scope only. The access token is kept in memory and never saved.
+- **Sign-in:** Google, Drive read-only scope. The full `drive` scope is asked for only when Bin actions are used. The access token is kept in memory and never saved.
 - **Every panel** shows where it read from and when it was read (UK time). It also shows whether the read
   is pending, failed, empty or capped.
-- **Look:** Lexend only, LJR7 palette (slot 0 for Read first and Drive, slot 7 for Cf overskill), light and dark modes.
-- **Writes:** none.
+- **Look:** Lexend only, LJR7 palette (slot 0 for Read first and Drive, slot 2 Risks for the Bin, slot 7 for Cf overskill), light and dark modes.
+- **Writes:** only from the Bin buttons (files.update trashed=true; files.emptyTrash per shared drive).
 
 The repo contains no secrets. The OAuth client ID in `index.html` is public by design and only works from the
 authorised origin `https://ljoyrose.github.io`.

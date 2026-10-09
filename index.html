@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-dash-v2-hub-2026-10-08">
+<meta name="build" content="ljr-dash-v3-shared-bin-2026-10-09">
 <title>Lisa Dashboard</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,18 +13,18 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
-  /* LJR7 palette. Slot 0 Prefix, 1 Vision, 7 Ideas. Failed reads use slot 2 only. */
+  /* LJR7 palette. Slot 0 Prefix, 1 Vision, 2 Risks (Bin), 7 Ideas. Failed reads also use slot 2. */
   :root {
     --bg: #FAF7F2; --surface: #FFFEFB; --ink: #2C2C2A; --muted: #756E65; --line: #DED5C8;
-    --s0: #B8B1A5; --s1: #FFFEFB; --s1-edge: #2C2C2A; --s1-stripe: #FFFEFB; --s7: #8D6B9C; --fail: #BE6A5D;
-    --s0-tint: #F0ECE5; --s7-tint: #F1EAF4; --fail-tint: #F8E9E6;
+    --s0: #B8B1A5; --s1: #FFFEFB; --s1-edge: #2C2C2A; --s1-stripe: #FFFEFB; --s7: #8D6B9C; --fail: #BE6A5D; --s2: #BE6A5D;
+    --s0-tint: #F0ECE5; --s7-tint: #F1EAF4; --fail-tint: #F8E9E6; --s2-tint: #F8E9E6;
     --shadow: 0 4px 12px rgba(44, 44, 42, 0.06);
   }
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #191714; --surface: #232019; --ink: #F3EEE5; --muted: #B4AB9E; --line: #3D372F;
-      --s0: #8E877B; --s1: #232019; --s1-edge: #F3EEE5; --s1-stripe: #F3EEE5; --s7: #B08FC0; --fail: #D98B7E;
-      --s0-tint: #2F2B25; --s7-tint: #35293B; --fail-tint: #3A2723;
+      --s0: #8E877B; --s1: #232019; --s1-edge: #F3EEE5; --s1-stripe: #F3EEE5; --s7: #B08FC0; --fail: #D98B7E; --s2: #D98B7E;
+      --s0-tint: #2F2B25; --s7-tint: #35293B; --fail-tint: #3A2723; --s2-tint: #3A2723;
       --shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
     }
   }
@@ -76,8 +76,10 @@
   .card.vision, nav.main a.vision { --slot: var(--s1-stripe); border-color: var(--s1-edge); border-left-color: var(--s1-stripe); background: var(--s1); box-shadow: var(--shadow), -1px 0 0 0 var(--s1-edge); }
   nav.main a.slot0 { border-left-color: var(--s0); }
   nav.main a.slot7 { border-left-color: var(--s7); }
+  nav.main a.slot2 { border-left-color: var(--s2); }
   .slot0 { --slot: var(--s0); --tint: var(--s0-tint); }
   .slot7 { --slot: var(--s7); --tint: var(--s7-tint); }
+  .slot2 { --slot: var(--s2); --tint: var(--s2-tint); }
   .card h3 { margin: 0; font-size: 18px; font-weight: 600; text-align: left; }
   .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
   .note { margin: 0; color: var(--muted); font-size: 14px; text-align: left; }
@@ -129,6 +131,22 @@
   .banner { border-radius: 16px; padding: 12px 16px; border: 1px dashed var(--fail); background: var(--fail-tint); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; text-align: left; }
   .banner.info { border-color: var(--line); background: var(--surface); }
   .banner p { margin: 0; flex: 1 1 200px; }
+  /* Shared-drive picker and Bin */
+  .card h4 { margin: 0; font-size: 16px; font-weight: 600; text-align: left; overflow-wrap: anywhere; }
+  .picker { display: flex; flex-direction: column; gap: 4px; text-align: left; }
+  .picker label { font-size: 14px; color: var(--muted); }
+  .picker select { font: inherit; min-height: 40px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line);
+                   background: var(--surface); color: var(--ink); width: 100%; max-width: 100%; }
+  .crumbs { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; color: var(--muted); text-align: left; overflow-wrap: anywhere; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .btn.danger { border-color: var(--s2); color: var(--s2); font-weight: 600; }
+  .btn.danger.solid { background: var(--s2); color: #FFFEFB; }
+  .binsec { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
+  .binsec:first-of-type { border-top: none; padding-top: 0; }
+  .res { font-size: 14px; text-align: left; margin: 0; }
+  .res.ok { color: var(--muted); }
+  .res.bad { color: var(--fail); font-weight: 600; }
+  .skip { color: var(--fail); font-size: 14px; }
   .hidden { display: none !important; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
@@ -143,6 +161,8 @@
   <symbol id="i-changes" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6"/><path d="M20 4v7h-7"/></symbol>
   <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/></symbol>
+  <symbol id="i-bin" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"/></symbol>
   <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M11 8l4 4-4 4M15 12H4"/></symbol>
 </svg>
 
@@ -158,6 +178,7 @@
     <a href="#/map" data-nav="map" class="vision"><svg class="icon"><use href="#i-map"/></svg>Map</a>
     <a href="#/readfirst" data-nav="readfirst" class="slot0"><svg class="icon"><use href="#i-read"/></svg>Read first</a>
     <a href="#/drive" data-nav="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive</a>
+    <a href="#/bin" data-nav="bin" class="slot2"><svg class="icon"><use href="#i-bin"/></svg>Bin</a>
     <a href="#/changes" data-nav="changes" class="slot7"><svg class="icon"><use href="#i-changes"/></svg>Changes</a>
   </nav>
 </header>
@@ -168,7 +189,7 @@
   <div id="view" data-view="map"></div>
 </main>
 
-<footer class="wrap"><p>Read-only Google Drive. UK time. Rereads every 5 minutes.</p></footer>
+<footer class="wrap"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
 
 <script>
 (function () {
@@ -177,6 +198,12 @@
   // ---- Settings (none of these are secrets) ----
   var CLIENT_ID = '135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com';
   var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+  // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
+  var WRITE_SCOPE = 'https://www.googleapis.com/auth/drive';
+  var DRIVES_API = 'https://www.googleapis.com/drive/v3/drives';
+  var SWEEP_PREFIX = 'ZZ_';   // ZZ_delete, ZZ_dupe, ZZ_SUPERSEDED_... go to the bin
+  var ARCHIVE_PREFIX = 'RR_'; // archive: never touched
+  var BIN_SHOW = 50;
   var CF_FOLDER_ID = '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A';
   var READ_FIRST_ID = '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L';
   var REFRESH_MS = 5 * 60 * 1000;
@@ -188,14 +215,16 @@
   var PARENTS_PER_QUERY = 25;
   var FOLDER_MIME = 'application/vnd.google-apps.folder';
   var API = 'https://www.googleapis.com/drive/v3/files';
-  var FILE_FIELDS = 'id,name,mimeType,modifiedTime,webViewLink,parents,lastModifyingUser(displayName,emailAddress)';
+  var FILE_FIELDS = 'id,name,mimeType,modifiedTime,webViewLink,parents,driveId,lastModifyingUser(displayName,emailAddress)';
   var DAY = 86400000;
 
   // ---- State: memory only. No browser storage anywhere. ----
   var tokenClient = null, accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
-  var signedIn = false;
+  var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
-  var S = { readfirst: blank(), drive: blank(), cf: blank() };
+  var S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank() };
+  var F = {};                       // folder listings, key driveId/folderId
+  var R = { sweep: null, empty: {} }; // results of Bin actions, kept until sign-out
 
   var $ = function (id) { return document.getElementById(id); };
   var timeFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -224,13 +253,14 @@
 
   // ---- Errors: short, plain words ----
   function ApiError(status, message, reason) { this.status = status; this.message = message; this.reason = reason; }
+  function isScopeError(err) { return err instanceof ApiError && err.status === 403 && (err.reason === 'insufficientPermissions' || /scope/i.test(err.message)); }
   function friendlyError(err) {
     if (err instanceof ApiError) {
       var r = err.reason + ' ' + err.message;
       if (err.status === 401) return { expired: true, text: 'Sign-in expired.' };
       if (err.status === 403) {
         if (/accessNotConfigured|SERVICE_DISABLED/i.test(r)) return { text: 'Drive API turned off.' };
-        if (/insufficient|scope/i.test(r)) return { expired: true, text: 'Drive access not granted.' };
+        if (isScopeError(err)) return { expired: true, text: 'Drive access not granted.' };
         if (/rateLimit|quota/i.test(r)) return { text: 'Google rate limit. Retrying soon.' };
         return { text: 'Access refused by Google.' };
       }
@@ -242,11 +272,13 @@
     return { text: 'Unexpected error.' };
   }
 
-  // ---- Drive API (read-only GETs) ----
-  function apiGet(url) {
+  // ---- Drive API. GETs for browsing; PATCH/DELETE only from the Bin buttons. ----
+  function apiCall(method, url, body) {
     if (!accessToken || Date.now() > tokenExpiresAt) return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
-    return fetch(url, { headers: { Authorization: 'Bearer ' + accessToken } }).then(function (res) {
-      if (res.ok) return res.json();
+    var opt = { method: method, headers: { Authorization: 'Bearer ' + accessToken } };
+    if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+    return fetch(url, opt).then(function (res) {
+      if (res.ok) return res.status === 204 ? {} : res.json().catch(function () { return {}; });
       return res.json().catch(function () { return {}; }).then(function (body) {
         var e = body && body.error ? body.error : {};
         var reason = (e.errors && e.errors[0] && e.errors[0].reason) || e.status || '';
@@ -254,6 +286,7 @@
       });
     });
   }
+  function apiGet(url) { return apiCall('GET', url); }
   function driveList(params) {
     var q = new URLSearchParams(params);
     q.set('supportsAllDrives', 'true');
@@ -261,7 +294,94 @@
     return apiGet(API + '?' + q.toString());
   }
   function getFolder(id) {
-    return apiGet(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,webViewLink');
+    return apiGet(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,webViewLink,parents,driveId');
+  }
+  // Every list in the Drive view and Bin is scoped to one shared drive (corpora=drive). My Drive is never listed.
+  function inDrive(driveId, params) {
+    var p = { corpora: 'drive', driveId: driveId };
+    Object.keys(params).forEach(function (k) { p[k] = params[k]; });
+    return p;
+  }
+  function listAll(params, maxPages) {
+    var out = [], n = 0;
+    function page(tok) {
+      var p = {}; Object.keys(params).forEach(function (k) { p[k] = params[k]; });
+      if (tok) p.pageToken = tok;
+      n++;
+      return driveList(p).then(function (r) {
+        out = out.concat(r.files || []);
+        return r.nextPageToken && n < (maxPages || 10) ? page(r.nextPageToken) : { files: out, more: !!r.nextPageToken };
+      });
+    }
+    return page(null);
+  }
+  function listDrives() {
+    var out = [];
+    function page(tok) {
+      var q = new URLSearchParams({ pageSize: '100', fields: 'nextPageToken,drives(id,name,capabilities(canTrashChildren,canDeleteChildren))' });
+      if (tok) q.set('pageToken', tok);
+      return apiGet(DRIVES_API + '?' + q.toString()).then(function (r) {
+        out = out.concat(r.drives || []);
+        return r.nextPageToken ? page(r.nextPageToken) : out;
+      });
+    }
+    return page(null).then(function (d) { return d.sort(function (a, b) { return a.name.localeCompare(b.name, 'en-GB', { numeric: true }); }); });
+  }
+  function mapLimit(items, limit, fn) {
+    var results = new Array(items.length), i = 0, workers = [];
+    function worker() {
+      if (i >= items.length) return Promise.resolve();
+      var k = i++;
+      return Promise.resolve(fn(items[k], k)).then(function (r) { results[k] = r; return worker(); });
+    }
+    for (var w = 0; w < Math.min(limit, items.length); w++) workers.push(worker());
+    return Promise.all(workers).then(function () { return results; });
+  }
+  function drives() { return S.drive.data ? S.drive.data.drives : null; }
+  function driveById(id) { return (drives() || []).filter(function (d) { return d.id === id; })[0] || null; }
+  function driveName(id) { var d = driveById(id); return d ? d.name : 'Shared drive'; }
+
+  // ---- Bin rules ----
+  // Sweep only names that START with ZZ_ (case as written). Never RR_. Drive's "contains" is token-based,
+  // so the search is wide and this check is the real filter.
+  function isSweepName(name) {
+    name = String(name == null ? '' : name);
+    return name.indexOf(SWEEP_PREFIX) === 0 && name.indexOf(ARCHIVE_PREFIX) !== 0;
+  }
+  function isArchiveName(name) { return String(name == null ? '' : name).indexOf(ARCHIVE_PREFIX) === 0; }
+  var metaCache = {};
+  function getMeta(id) {
+    if (!metaCache[id]) metaCache[id] = apiGet(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,parents,driveId');
+    return metaCache[id];
+  }
+  // Folder names from the shared drive root down to the item. null if too deep to be sure.
+  function ancestors(item, driveId) {
+    var chain = [], guard = 0;
+    function step(pid) {
+      if (!pid || pid === driveId) return Promise.resolve(chain);
+      if (++guard > 25) return Promise.resolve(null);
+      return getMeta(pid).then(function (m) { chain.unshift(m.name); return step((m.parents || [])[0]); });
+    }
+    return step((item.parents || [])[0]);
+  }
+  // Does a ZZ_ folder hold any RR_ item? true / false / null (too big to check, so treat as unsafe).
+  function archiveInside(folderId, driveId) {
+    var level = [folderId], req = 0;
+    function next() {
+      if (!level.length) return Promise.resolve(false);
+      if (req >= 30) return Promise.resolve(null);
+      var chunk = level.splice(0, PARENTS_PER_QUERY); req++;
+      var q = '(' + chunk.map(function (id) { return "'" + id + "' in parents"; }).join(' or ') + ') and trashed = false';
+      return listAll(inDrive(driveId, { q: q, pageSize: '1000', fields: 'nextPageToken,files(id,name,mimeType)' }), 3).then(function (r) {
+        if (r.more) return null;
+        for (var i = 0; i < r.files.length; i++) {
+          if (isArchiveName(r.files[i].name)) return true;
+          if (r.files[i].mimeType === FOLDER_MIME) level.push(r.files[i].id);
+        }
+        return next();
+      });
+    }
+    return next();
   }
 
   // Breadth-first walk, several parents per query, capped.
@@ -335,16 +455,26 @@
     loading = true;
     var b = $('refreshBtn'); b.disabled = true; b.querySelector('span').textContent = 'Reading…';
     clearBanner();
+    F = {}; S.bin = blank(); metaCache = {};
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
         getFolder(READ_FIRST_ID),
         driveList({ q: "'" + READ_FIRST_ID + "' in parents and trashed = false", corpora: 'allDrives', orderBy: 'folder,name', pageSize: '200', fields: 'files(' + FILE_FIELDS + ')' })
       ]).then(function (r) { return { folder: r[0], files: r[1].files || [] }; })),
-      run('drive', Promise.all([
-        driveList({ q: "trashed = false and mimeType != '" + FOLDER_MIME + "'", corpora: 'allDrives', orderBy: 'modifiedTime desc', pageSize: String(DRIVE_RECENT_COUNT), fields: 'files(' + FILE_FIELDS + ')' }),
-        driveList({ q: "trashed = false and mimeType != '" + FOLDER_MIME + "' and modifiedTime > '" + since + "'", corpora: 'allDrives', pageSize: '100', fields: 'nextPageToken,files(id)' })
-      ]).then(function (r) { return { files: r[0].files || [], day: (r[1].files || []).length, dayMore: !!r[1].nextPageToken }; })),
+      run('drive', listDrives().then(function (list) {
+        return mapLimit(list, 4, function (d) {
+          return Promise.all([
+            driveList(inDrive(d.id, { q: "trashed = false and mimeType != '" + FOLDER_MIME + "'", orderBy: 'modifiedTime desc', pageSize: String(DRIVE_RECENT_COUNT), fields: 'files(' + FILE_FIELDS + ')' })),
+            driveList(inDrive(d.id, { q: "trashed = false and mimeType != '" + FOLDER_MIME + "' and modifiedTime > '" + since + "'", pageSize: '100', fields: 'nextPageToken,files(id)' }))
+          ]);
+        }).then(function (rs) {
+          var files = [], day = 0, more = false;
+          rs.forEach(function (r) { files = files.concat(r[0].files || []); day += (r[1].files || []).length; more = more || !!r[1].nextPageToken; });
+          files.sort(function (a, b) { return (b.modifiedTime || '').localeCompare(a.modifiedTime || ''); });
+          return { drives: list, files: files.slice(0, DRIVE_RECENT_COUNT), day: day, dayMore: more };
+        });
+      })),
       run('cf', getFolder(CF_FOLDER_ID).then(function (root) {
         return walkTree(CF_FOLDER_ID, root.name || 'Cf overskill').then(function (t) { t.folder = root; return t; });
       }))
@@ -354,7 +484,108 @@
       var expired = ['readfirst', 'drive', 'cf'].some(function (k) { return S[k].status === 'failed' && friendlyError(S[k].error).expired; });
       if (expired) handleExpired();
       render();
+      ensureRoute();
     });
+  }
+
+  // Lazy reads for the current route: a folder in a shared drive, or the Bin lists.
+  function ensureRoute() {
+    if (!signedIn || !accessToken || loading) return;
+    var r = parseRoute();
+    if (r.view === 'drive' && r.driveId && driveById(r.driveId) && !F[folderKey(r)]) loadFolder(r);
+    if (r.view === 'bin' && S.bin.status === 'idle' && drives()) loadBin();
+  }
+  function folderKey(r) { return r.driveId + '/' + (r.folderId || ''); }
+  function loadFolder(r) {
+    var key = folderKey(r), parent = r.folderId || r.driveId;
+    F[key] = blank(); F[key].status = 'loading';
+    render();
+    Promise.all([
+      r.folderId ? getFolder(r.folderId) : Promise.resolve(null),
+      listAll(inDrive(r.driveId, { q: "'" + parent + "' in parents and trashed = false", orderBy: 'folder,name', pageSize: '200', fields: 'nextPageToken,files(' + FILE_FIELDS + ')' }), 5)
+    ]).then(function (x) {
+      if (x[0] && x[0].driveId !== r.driveId) throw new ApiError(404, 'Not in this shared drive', 'notFound');
+      F[key] = { status: 'ok', readAt: Date.now(), error: null, data: { folder: x[0], files: x[1].files, more: x[1].more } };
+    }).catch(function (err) {
+      F[key] = { status: 'failed', readAt: Date.now(), error: err, data: null };
+    }).then(render);
+  }
+  function loadBin() {
+    var list = drives();
+    run('bin', mapLimit(list, 3, function (d) {
+      return Promise.all([
+        listAll(inDrive(d.id, { q: "name contains '" + SWEEP_PREFIX + "' and trashed = false", pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,webViewLink)' }), 5),
+        listAll(inDrive(d.id, { q: 'trashed = true', pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,driveId,trashedTime,explicitlyTrashed,webViewLink,trashingUser(displayName,emailAddress))' }), 5)
+      ]).then(function (x) {
+        var zz = x[0].files.filter(function (f) { return isSweepName(f.name); });
+        return mapLimit(zz, 4, function (f) {
+          f._drive = d.name;
+          return ancestors(f, d.id).then(function (chain) {
+            if (chain === null) { f._path = d.name; f._skip = 'Folder path too deep to check, left alone.'; return; }
+            f._path = [d.name].concat(chain).join(' / ');
+            f._folder = chain.length ? chain[chain.length - 1] : d.name;
+            if (chain.some(isArchiveName)) { f._skip = 'Inside an RR_ archive folder, left alone.'; return; }
+            if (f.mimeType === FOLDER_MIME) {
+              return archiveInside(f.id, d.id).then(function (has) {
+                if (has === true) f._skip = 'Folder holds an RR_ item, left alone.';
+                else if (has === null) f._skip = 'Folder too big to check for RR_ items, left alone.';
+              });
+            }
+          });
+        }).then(function () {
+          var trash = x[1].files.filter(function (f) { return f.explicitlyTrashed !== false; });
+          trash.sort(function (a, b) { return (b.trashedTime || '').localeCompare(a.trashedTime || ''); });
+          return { drive: d, zz: zz, zzMore: x[0].more, trash: trash, inside: x[1].files.length - trash.length, trashMore: x[1].more };
+        });
+      });
+    }).then(function (per) {
+      var zz = [];
+      per.forEach(function (p) { zz = zz.concat(p.zz); });
+      return { per: per, zz: zz, sweepable: zz.filter(function (f) { return !f._skip; }), zzMore: per.some(function (p) { return p.zzMore; }) };
+    }));
+  }
+
+  // ---- Bin actions: only from Lisa's own clicks, each behind a confirm ----
+  function requestWrite() {
+    if (!tokenClient) return;
+    wantWrite = true;
+    tokenClient.requestAccessToken({ scope: SCOPE + ' ' + WRITE_SCOPE, include_granted_scopes: true, prompt: '' });
+  }
+  function sweep() {
+    if (busy) return;
+    if (!writeGranted) { requestWrite(); return; }
+    var d = S.bin.data; if (!d) return;
+    var items = d.sweepable.filter(function (f) { return isSweepName(f.name) && !f._skip; });
+    if (!items.length) return;
+    var ok = window.confirm('Move ' + items.length + ' item' + (items.length === 1 ? '' : 's') + ' starting ZZ_ to the bin?\n\n' +
+      'RR_ archive items are never included. Folders go with their contents. Shared-drive bins delete items for good after 30 days.');
+    if (!ok) { R.sweep = { at: Date.now(), cancelled: true, items: [] }; render(); return; }
+    busy = true; render();
+    mapLimit(items, 3, function (f) {
+      var row = { name: f.name, path: f._path };
+      return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }).then(function (res) {
+        row.ok = res.trashed === true; row.text = row.ok ? 'Moved to bin' : 'Not moved'; return row;
+      }, function (err) {
+        row.ok = false; row.text = 'Not moved: ' + (err && err.status === 403 && !isScopeError(err) ? 'no permission to bin this.' : friendlyError(err).text); return row;
+      });
+    }).then(function (rows) {
+      R.sweep = { at: Date.now(), items: rows };
+      busy = false; S.bin = blank(); metaCache = {};
+      render(); ensureRoute();
+    });
+  }
+  function emptyBin(driveId) {
+    if (busy) return;
+    var d = driveById(driveId); if (!d) return;
+    if (!writeGranted) { requestWrite(); return; }
+    var typed = window.prompt('Permanently delete everything in the bin of "' + d.name + '"?\nThis cannot be undone.\n\nType EMPTY to confirm.');
+    if (typed !== 'EMPTY') { R.empty[driveId] = { ok: false, text: typed === null ? 'Cancelled. Nothing deleted.' : 'Not emptied: EMPTY was not typed.' }; render(); return; }
+    busy = true; render();
+    apiCall('DELETE', API + '/trash?driveId=' + encodeURIComponent(driveId)).then(function () {
+      R.empty[driveId] = { ok: true, text: 'Bin emptied ' + stamp(Date.now()) + '.' };
+    }, function (err) {
+      R.empty[driveId] = { ok: false, text: 'Not emptied: ' + (err && err.status === 403 && !isScopeError(err) ? 'needs Manager role on this shared drive.' : friendlyError(err).text) };
+    }).then(function () { busy = false; S.bin = blank(); render(); ensureRoute(); });
   }
 
   // ---- Small render helpers ----
@@ -383,8 +614,10 @@
     opts = opts || {};
     var who = f.lastModifyingUser ? (f.lastModifyingUser.displayName || f.lastModifyingUser.emailAddress) : '';
     var name = esc(f.name);
-    var link = f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + name + '</a>' : name;
+    var link = opts.folderHref && f.mimeType === FOLDER_MIME ? '<a href="' + esc(opts.folderHref(f)) + '">' + name + '</a>' :
+      f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + name + '</a>' : name;
     var meta = ['<span class="chip">' + typeWord(f.mimeType) + '</span>'];
+    if (opts.drive && f.driveId) meta.push('<span class="chip">' + esc(driveName(f.driveId)) + '</span>');
     if (opts.folder && f._folder) meta.push('<span class="chip" title="' + esc(f._path) + '">' + esc(f._folder) + '</span>');
     if (f.modifiedTime && opts.time !== false) meta.push('<span>' + esc(fmtTime(f.modifiedTime)) + '</span>');
     if (who && opts.who !== false) meta.push('<span>' + esc(who) + '</span>');
@@ -415,7 +648,8 @@
     map: { to: 'map', label: 'Map', icon: 'map', slot: 'vision' },
     readfirst: { to: 'readfirst', label: 'Read first', icon: 'read', slot: 'slot0' },
     drive: { to: 'drive', label: 'Drive', icon: 'drive', slot: 'slot0' },
-    changes: { to: 'changes', label: 'Changes', icon: 'changes', slot: 'slot7' }
+    changes: { to: 'changes', label: 'Changes', icon: 'changes', slot: 'slot7' },
+    bin: { to: 'bin', label: 'Bin', icon: 'bin', slot: 'slot2' }
   };
   function cfName() { return S.cf.data && S.cf.data.folder ? S.cf.data.folder.name : 'Cf overskill'; }
   function cfUrl() { return S.cf.data && S.cf.data.folder && S.cf.data.folder.webViewLink || folderUrl(CF_FOLDER_ID); }
@@ -451,20 +685,20 @@
     if (!signedIn) {
       html += '<div class="card vision pending"><div class="cardhead"><h3>Not signed in</h3>' +
         '<span class="state st-idle"><span class="shape"></span>No reads</span></div>' +
-        '<p class="note">Read-only access to Google Drive.</p>' +
+        '<p class="note">Read-only access to your shared drives. The Bin asks for more only when you use it.</p>' +
         '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
     }
     var rf = S.readfirst, dr = S.drive, cf = S.cf;
     var day = cfWithin(DAY), week = cfWithin(7 * DAY), partial = cf.data && cf.data.capped;
     html += '<div class="figs">' +
       figure('slot0', 'Read first items', rf.data ? num(rf.data.files.length) : '–', rf, 'Read first', rfUrl(), 'readfirst', 'Open Read first') +
-      figure('slot0', 'Drive last 24h', dr.data ? num(dr.data.day, dr.data.dayMore) : '–', dr, 'Whole Drive', 'https://drive.google.com/drive/recent', 'drive', 'Open Drive') +
+      figure('slot0', 'Shared drives last 24h', dr.data ? num(dr.data.day, dr.data.dayMore) : '–', dr, 'Shared drives', 'https://drive.google.com/drive/shared-drives', 'drive', 'Open Drive') +
       figure('slot7', 'Cf files', cf.data ? num(cf.data.files.length) : '–', cf, cfName(), cfUrl(), 'changes/totals', 'Open totals', partial) +
       figure('slot7', 'Cf folders', cf.data ? num(cf.data.folderCount) : '–', cf, cfName(), cfUrl(), 'changes/totals', 'Open totals', partial) +
       figure('slot7', 'Cf last 24h', day ? num(day.length) : '–', cf, cfName(), cfUrl(), 'changes/24h', 'Open last 24h', partial) +
       figure('slot7', 'Cf 7 days', week ? num(week.length) : '–', cf, cfName(), cfUrl(), 'changes/7d', 'Open 7 days', partial) +
       '</div>';
-    html += nextSteps([NX.readfirst, NX.drive, NX.changes]);
+    html += nextSteps([NX.readfirst, NX.drive, NX.bin, NX.changes]);
     return html;
   }
 
@@ -477,17 +711,112 @@
     return html + nextSteps([NX.changes, NX.drive, NX.map]);
   }
 
+  function drivePicker(r) {
+    var list = drives();
+    if (!list) return '';
+    return '<div class="picker"><label for="drivePicker">Shared drive</label><select id="drivePicker">' +
+      '<option value="">All shared drives · recent</option>' +
+      list.map(function (d) { return '<option value="' + esc(d.id) + '"' + (d.id === r.driveId ? ' selected' : '') + '>' + esc(d.name) + '</option>'; }).join('') +
+      '</select></div>';
+  }
   function viewDrive(r) {
-    var p = S.drive, d = p.data;
-    var html = '<section class="card slot0' + cardClass(p) + '"><div class="cardhead"><h3>Recent in Drive</h3>' + stateBadge(p, d ? d.files.length : null) + '</div>';
+    var p = S.drive, d = p.data, html;
+    if (!r.driveId) {
+      html = '<section class="card slot0' + cardClass(p) + '"><div class="cardhead"><h3>Recent in shared drives</h3>' + stateBadge(p, d ? d.files.length : null) + '</div>';
+      html += failNote(p);
+      if (d) {
+        html += drivePicker(r);
+        html += '<div class="stats"><div class="stat"><div class="num">' + num(d.day, d.dayMore) + '</div><div class="label">Changed last 24h</div></div>' +
+          '<div class="stat"><div class="num">' + num(d.drives.length) + '</div><div class="label">Shared drives</div></div></div>';
+        html += pagedList(d.files, r.page, 'drive', { drive: true }, d.drives.length ? 'No files found.' : 'No shared drives found for this account.');
+      }
+      html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</section>';
+      return html + nextSteps([NX.bin, NX.changes, NX.map]);
+    }
+    var drv = driveById(r.driveId);
+    var key = folderKey(r), fp = F[key] || blank();
+    if (d && !drv) fp = { status: 'failed', readAt: p.readAt, error: new ApiError(404, 'Not a shared drive', 'notFound'), data: null };
+    var fd = fp.data;
+    var title = fd && fd.folder ? fd.folder.name : drv ? drv.name : 'Shared drive';
+    html = '<section class="card slot0' + cardClass(fp) + '"><div class="cardhead"><h3>' + esc(title) + '</h3>' + stateBadge(fp, fd ? fd.files.length : null) + '</div>';
+    html += drivePicker(r);
+    if (drv && r.folderId) {
+      var up = fd && fd.folder && fd.folder.parents && fd.folder.parents[0] && fd.folder.parents[0] !== r.driveId ? '#/drive/' + r.driveId + '/' + fd.folder.parents[0] : '#/drive/' + r.driveId;
+      html += '<div class="crumbs"><a href="#/drive/' + esc(r.driveId) + '">' + esc(drv.name) + '</a><span>/ ' + esc(title) + '</span><a href="' + esc(up) + '">Up one level</a></div>';
+    }
+    html += failNote(fp);
+    if (fd) {
+      html += '<p class="note">' + num(fd.files.length) + (fd.more ? '+' : '') + ' items.</p>';
+      html += pagedList(fd.files, r.page, 'drive/' + r.driveId + (r.folderId ? '/' + r.folderId : ''),
+        { who: true, folderHref: function (f) { return '#/drive/' + r.driveId + '/' + f.id; } }, 'Folder is empty.');
+    }
+    var url = fd && fd.folder && fd.folder.webViewLink || folderUrl(r.folderId || r.driveId);
+    html += sourceLine(title, url, fp) + '</section>';
+    return html + nextSteps([{ to: 'drive', label: 'All shared drives', icon: 'drive', slot: 'slot0' }, NX.bin, NX.map]);
+  }
+
+  function binList(items, render1) {
+    var shown = items.slice(0, BIN_SHOW);
+    return '<ul class="files">' + shown.map(render1).join('') + '</ul>' +
+      (items.length > BIN_SHOW ? '<p class="note">Showing ' + BIN_SHOW + ' of ' + num(items.length) + '.</p>' : '');
+  }
+  function viewBin() {
+    var p = S.bin, d = p.data, html = '';
+    // Access card
+    html += '<section class="card slot2' + (signedIn && writeGranted ? '' : ' pending') + '"><div class="cardhead"><h3>Bin access</h3>' +
+      (writeGranted ? '<span class="state st-ok"><span class="shape"></span>Bin actions on</span>' : '<span class="state st-idle"><span class="shape"></span>Read-only</span>') + '</div>' +
+      '<p class="note">Lists below are read-only. Moving ZZ_ items to the bin and emptying a bin need full Drive access, asked for only here and kept in memory until you sign out.</p>' +
+      (signedIn && !writeGranted ? '<div class="actions"><button class="btn danger" type="button" data-action="grantwrite">' + icon('in') + '<span>Allow Bin actions</span></button></div>' : '') +
+      '</section>';
+    // ZZ_ sweep
+    var zz = d ? d.zz : [];
+    html += '<section class="card slot2' + cardClass(p) + '" id="sweepCard"><div class="cardhead"><h3>ZZ_ sweep</h3>' + stateBadge(p, d ? zz.length : null) + '</div>';
+    html += '<p class="note">Names starting ZZ_ (ZZ_delete, ZZ_dupe, ZZ_SUPERSEDED…) in every shared drive. RR_ archive items, and anything inside an RR_ folder, are never included.</p>';
     html += failNote(p);
     if (d) {
-      html += '<div class="stats"><div class="stat"><div class="num">' + num(d.day, d.dayMore) + '</div><div class="label">Changed last 24h</div></div>' +
-        '<div class="stat"><div class="num">' + num(d.files.length) + '</div><div class="label">Latest files read</div></div></div>';
-      html += pagedList(d.files, r.page, 'drive', {}, 'No files found.');
+      html += zz.length ? binList(zz, function (f) {
+        return '<li data-zz="' + esc(f.id) + '"><div class="fname">' + (f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name)) + '</div>' +
+          '<div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' +
+          '<span class="chip" title="' + esc(f._path) + '">' + esc(f._path) + '</span></div>' +
+          (f._skip ? '<div class="skip">' + esc(f._skip) + '</div>' : '') + '</li>';
+      }) : '<p class="note">Nothing named ZZ_ found. All clear.</p>';
+      if (d.zzMore) html += '<p class="note fail">Partial: some drives have more matches than one read can hold.</p>';
+      var n = d.sweepable.length;
+      html += '<div class="actions"><button class="btn danger solid" type="button" data-action="sweep"' + (n && !busy ? '' : ' disabled') + '>' + icon('bin') +
+        '<span>' + (writeGranted ? 'Move all to bin (' + n + ')' : 'Allow, then move all to bin (' + n + ')') + '</span></button></div>';
     }
-    html += sourceLine('Whole Drive', 'https://drive.google.com/drive/recent', p) + '</section>';
-    return html + nextSteps([NX.changes, NX.readfirst, NX.map]);
+    if (R.sweep) {
+      html += '<div id="sweepResults"><h4>Last sweep · ' + esc(stamp(R.sweep.at)) + '</h4>' + (R.sweep.cancelled ? '<p class="res ok">Cancelled. Nothing moved.</p>' :
+        '<ul class="files">' + R.sweep.items.map(function (x) {
+          return '<li><div class="fname">' + esc(x.name) + '</div><p class="res ' + (x.ok ? 'ok' : 'bad') + '">' + esc(x.text) + ' · ' + esc(x.path) + '</p></li>';
+        }).join('') + '</ul>') + '</div>';
+    }
+    html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</section>';
+    // Bin per shared drive
+    html += '<section class="card slot2' + cardClass(p) + '" id="binCard"><div class="cardhead"><h3>In the bin</h3>' + stateBadge(p, d ? d.per.length : null) + '</div>';
+    html += failNote(p);
+    if (d) {
+      if (!d.per.length) html += '<p class="note">No shared drives found for this account.</p>';
+      d.per.forEach(function (x) {
+        var res = R.empty[x.drive.id], can = !x.drive.capabilities || x.drive.capabilities.canDeleteChildren !== false;
+        html += '<div class="binsec" data-drive="' + esc(x.drive.id) + '"><div class="cardhead"><h4>' + esc(x.drive.name) + '</h4><span class="state">' +
+          num(x.trash.length) + (x.trashMore ? '+' : '') + ' in bin</span></div>';
+        if (x.trash.length) {
+          html += binList(x.trash, function (f) {
+            var who = f.trashingUser ? (f.trashingUser.displayName || f.trashingUser.emailAddress) : 'Unknown';
+            return '<li><div class="fname">' + esc(f.name) + '</div><div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' +
+              '<span>Binned ' + esc(fmtTime(f.trashedTime) || 'date unknown') + '</span><span>by ' + esc(who) + '</span></div></li>';
+          });
+          if (x.inside) html += '<p class="note">Plus ' + num(x.inside) + (x.inside === 1 ? ' item' : ' items') + ' inside binned folders.</p>';
+          html += '<div class="actions"><button class="btn danger" type="button" data-action="empty" data-drive="' + esc(x.drive.id) + '"' + (busy || !can ? ' disabled' : '') + '>' +
+            icon('bin') + '<span>Empty bin</span></button>' + (can ? '' : '<span class="note">Needs Manager role.</span>') + '</div>';
+        } else html += '<p class="note">Bin is empty.</p>';
+        if (res) html += '<p class="res ' + (res.ok ? 'ok' : 'bad') + '">' + esc(res.text) + '</p>';
+        html += '</div>';
+      });
+    }
+    html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</section>';
+    return html + nextSteps([NX.drive, NX.changes, NX.map]);
   }
 
   var SUBS = [
@@ -529,7 +858,7 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Map', readfirst: 'Read first', drive: 'Drive', changes: 'Changes' };
+  var VIEWS = { map: 'Map', readfirst: 'Read first', drive: 'Drive', bin: 'Bin', changes: 'Changes' };
   function parseRoute() {
     var parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
     var view = parts[0] && VIEWS[parts[0]] ? parts[0] : null;
@@ -537,6 +866,7 @@
     parts.slice(1).forEach(function (x) {
       if (/^p\d+$/.test(x)) r.page = parseInt(x.slice(1), 10);
       else if (view === 'changes' && SUBS.some(function (s) { return s.key === x; })) r.sub = x;
+      else if (view === 'drive' && /^[A-Za-z0-9_-]{5,}$/.test(x)) { if (!r.driveId) r.driveId = x; else if (!r.folderId) r.folderId = x; }
     });
     if (view === 'changes' && !r.sub) r.sub = 'recent';
     return r;
@@ -546,12 +876,13 @@
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : viewChanges(r);
+    var html = r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : viewChanges(r);
     var routeKey = location.hash;
     var changed = routeKey !== lastView;
     el.setAttribute('data-view', r.view);
     el.setAttribute('data-route', routeKey);
-    $('hereTitle').textContent = VIEWS[r.view] + (r.view === 'changes' ? ' · ' + SUBS.filter(function (s) { return s.key === r.sub; })[0].label : '');
+    $('hereTitle').textContent = VIEWS[r.view] + (r.view === 'changes' ? ' · ' + SUBS.filter(function (s) { return s.key === r.sub; })[0].label : '') +
+      (r.view === 'drive' && r.driveId ? ' · ' + driveName(r.driveId) : '');
     document.title = VIEWS[r.view] + ' · Lisa Dashboard';
     Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
       if (a.getAttribute('data-nav') === r.view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
@@ -588,14 +919,19 @@
   // ---- Auth (Google Identity Services token client) ----
   function requestToken() { if (tokenClient) tokenClient.requestAccessToken({ prompt: 'select_account' }); }
   function onToken(resp) {
-    if (resp.error) { showBanner('Sign-in did not complete.', false, true); return; }
-    if (!google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) { showBanner('Drive access not granted.', false, true); return; }
+    var askedWrite = wantWrite; wantWrite = false;
+    if (resp.error) { showBanner(askedWrite ? 'Bin access not granted. Browsing still works.' : 'Sign-in did not complete.', false, !askedWrite); return; }
+    var g = google.accounts.oauth2;
+    var hasWrite = g.hasGrantedAllScopes(resp, WRITE_SCOPE);
+    if (!hasWrite && !g.hasGrantedAllScopes(resp, SCOPE)) { showBanner('Drive access not granted.', false, true); return; }
+    var upgrade = askedWrite && signedIn;
     accessToken = resp.access_token;
     tokenExpiresAt = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
     signedIn = true;
-    clearBanner();
+    writeGranted = hasWrite;
+    if (askedWrite && !hasWrite) showBanner('Bin access not granted. Browsing still works.', false, false); else clearBanner();
     startTimer();
-    loadAll();
+    if (upgrade) { render(); ensureRoute(); } else loadAll();
   }
   function startTimer() {
     stopTimer();
@@ -610,9 +946,10 @@
   function signOut() {
     stopTimer();
     var t = accessToken;
-    accessToken = null; tokenExpiresAt = 0; signedIn = false;
+    accessToken = null; tokenExpiresAt = 0; signedIn = false; writeGranted = false; busy = false;
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
-    S = { readfirst: blank(), drive: blank(), cf: blank() };
+    S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank() };
+    F = {}; R = { sweep: null, empty: {} }; metaCache = {};
     showBanner('Signed out. Nothing kept.', true, false);
     render();
   }
@@ -636,8 +973,14 @@
     if (a === 'signin') requestToken();
     else if (a === 'signout') signOut();
     else if (a === 'refresh') loadAll();
+    else if (a === 'grantwrite') requestWrite();
+    else if (a === 'sweep') sweep();
+    else if (a === 'empty') emptyBin(t.getAttribute('data-drive'));
   });
-  window.addEventListener('hashchange', render);
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.id === 'drivePicker') location.hash = e.target.value ? '#/drive/' + e.target.value : '#/drive';
+  });
+  window.addEventListener('hashchange', function () { render(); ensureRoute(); });
   render();
 
   var tries = 0;
