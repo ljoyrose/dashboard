@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="build" content="ljr-money-v1-2026-10-09">
+<title>Money Hub</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="core.js"></script>
+<style>
+  :root {
+    --bg: #FAF7F2; --surface: #FFFEFB; --ink: #2C2C2A; --muted: #756E65; --line: #DED5C8;
+    --risk: #BE6A5D; --fin: #C07D59; --ops: #B3A74D; --ok: #89AF6A; --sales: #4098BE; --ideas: #8D6B9C; --s0: #B8B1A5;
+    --risk-t: #F8E9E6; --fin-t: #F7EDE6; --ops-t: #F4F1DF; --ok-t: #EDF3E7; --sales-t: #E6F1F7; --ideas-t: #F1EAF4; --s0-t: #F0ECE5;
+    --shadow: 0 4px 12px rgba(44, 44, 42, 0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #191714; --surface: #232019; --ink: #F3EEE5; --muted: #B4AB9E; --line: #3D372F;
+      --risk: #D98B7E; --fin: #D49A7A; --ops: #CBBF68; --ok: #A3C788; --sales: #6AB3D6; --ideas: #B08FC0; --s0: #8E877B;
+      --risk-t: #3A2723; --fin-t: #3A2B22; --ops-t: #33301F; --ok-t: #26301F; --sales-t: #1F2E36; --ideas-t: #35293B; --s0-t: #2F2B25;
+      --shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Lexend', sans-serif; font-size: 17px; line-height: 1.6; font-variant-numeric: tabular-nums; }
+  button { font: inherit; color: inherit; }
+  a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
+  a:hover { text-decoration-thickness: 2px; }
+  .wrap { max-width: calc(66ch + 32px); margin: 0 auto; padding: 0 16px; }
+  .wide { max-width: 1040px; }
+  .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  header { background: var(--surface); border-bottom: 1px solid var(--line); }
+  @media (min-width: 700px) { header { position: sticky; top: 0; z-index: 2; } }
+  .top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-top: 12px; padding-bottom: 8px; }
+  .top h1 { font-size: 20px; font-weight: 700; margin: 0; flex: 1 1 auto; }
+  .top h1 a { text-decoration: none; }
+  .back { font-size: 14px; color: var(--muted); }
+  .readstamp { color: var(--muted); font-size: 14px; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border-radius: 12px;
+         border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 15px; text-decoration: none; }
+  .btn:hover { border-color: var(--muted); }
+  .btn:disabled { opacity: .6; cursor: default; }
+  .btn.main { border-color: var(--ink); font-weight: 600; }
+  nav.main { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; }
+  nav.main a { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; text-decoration: none;
+               font-size: 15px; border: 1px solid var(--line); border-left: 4px solid var(--c, var(--s0)); background: var(--surface); min-height: 44px; }
+  nav.main a[aria-current="page"] { font-weight: 700; background: var(--t, var(--s0-t)); border-color: var(--ink); border-left-color: var(--c, var(--s0)); }
+  @media (max-width: 520px) { nav.main { display: grid; grid-template-columns: 1fr 1fr 1fr; } nav.main a { justify-content: center; padding: 8px 6px; font-size: 14px; } }
+
+  .c-risk { --c: var(--risk); --t: var(--risk-t); }
+  .c-fin { --c: var(--fin); --t: var(--fin-t); }
+  .c-ops { --c: var(--ops); --t: var(--ops-t); }
+  .c-ok { --c: var(--ok); --t: var(--ok-t); }
+  .c-sales { --c: var(--sales); --t: var(--sales-t); }
+  .c-ideas { --c: var(--ideas); --t: var(--ideas-t); }
+  .c-ink { --c: var(--ink); --t: var(--s0-t); }
+  .c-mute { --c: var(--s0); --t: var(--s0-t); }
+
+  main { padding-top: 16px; padding-bottom: 32px; }
+  .here { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; }
+  .here span { color: var(--muted); font-size: 14px; }
+  .here h2 { margin: 0; font-size: 24px; font-weight: 700; }
+  #view { display: flex; flex-direction: column; gap: 16px; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--c, var(--s0));
+          border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); min-width: 0; }
+  .card.now { border: 2px solid var(--ink); border-left: 8px solid var(--c, var(--ink)); }
+  .card.pending { border-style: dashed; box-shadow: none; }
+  .card h3 { margin: 0; font-size: 19px; font-weight: 700; }
+  .card h4 { margin: 0; font-size: 16px; font-weight: 600; }
+  .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .note { margin: 0; color: var(--muted); font-size: 15px; }
+  .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .source a { color: var(--muted); }
+  .sec-h { margin: 8px 0 -4px; font-size: 15px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+
+  .tag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; background: var(--t, var(--s0-t)); color: var(--ink);
+         border-radius: 8px; padding: 1px 8px; white-space: nowrap; }
+  .tag::before { content: ''; width: 9px; height: 9px; background: var(--c, var(--s0)); flex: none; }
+  .tag.c-risk::before { clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 10px; height: 10px; }
+  .tag.c-ops::before { border-radius: 2px; }
+  .tag.c-ok::before { border-radius: 50%; }
+  .tag.c-fin::before { border-radius: 50%; }
+  .chip { font-size: 13px; background: var(--s0-t); color: var(--ink); border-radius: 8px; padding: 0 8px; line-height: 1.7; white-space: nowrap; }
+
+  ul.items { list-style: none; margin: 0; padding: 0; }
+  ul.items > li { padding: 10px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+  ul.items > li:first-child { border-top: none; padding-top: 0; }
+  .itext { font-weight: 600; overflow-wrap: anywhere; }
+  .itext a { text-decoration: none; }
+  .itext a:hover { text-decoration: underline; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; color: var(--muted); font-size: 14px; }
+  details > summary { cursor: pointer; font-weight: 600; font-size: 15px; min-height: 32px; }
+  details[open] > summary { margin-bottom: 8px; }
+  .more { color: var(--muted); }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .ent { gap: 6px; }
+  .ent .who { display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+  .ent .code { font-size: 18px; font-weight: 700; }
+  .ent .full { font-size: 13px; color: var(--muted); text-align: right; overflow-wrap: anywhere; }
+  .big { font-size: 34px; font-weight: 700; line-height: 1.15; }
+  .big.neg { color: var(--risk); }
+  .lbl { font-size: 14px; color: var(--muted); }
+  .line { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; border-top: 1px solid var(--line); padding-top: 6px; }
+  .line span:first-child { white-space: nowrap; }
+  .line b { font-weight: 600; text-align: right; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .stat { background: var(--t, var(--s0-t)); border-radius: 12px; padding: 10px 12px; border-left: 4px solid var(--c, var(--s0)); }
+  .stat .num { font-size: 24px; font-weight: 700; line-height: 1.2; }
+  .stat .label { font-size: 14px; color: var(--muted); }
+  .stat .sub { font-size: 13px; color: var(--muted); }
+  .quiet { color: var(--muted); font-size: 15px; }
+
+  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  th, td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 13px; color: var(--muted); font-weight: 600; border-top: none; }
+  td.r, th.r { text-align: right; white-space: nowrap; }
+  .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .bar { display: inline-block; height: 10px; border-radius: 3px; vertical-align: middle; }
+  .bar.in { background: var(--ok); } .bar.out { background: var(--fin); }
+
+  .subnav { display: flex; flex-wrap: wrap; gap: 8px; }
+  .subnav a { padding: 6px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 4px solid var(--c, var(--s0)); background: var(--surface); text-decoration: none; font-size: 15px; min-height: 40px; display: inline-flex; align-items: center; }
+  .subnav a[aria-current="page"] { font-weight: 700; background: var(--t, var(--s0-t)); border-color: var(--ink); border-left-color: var(--c, var(--s0)); }
+
+  .banner { border-radius: 16px; padding: 12px 16px; border: 1px dashed var(--risk); background: var(--risk-t); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .banner.info { border-color: var(--line); background: var(--surface); }
+  .banner p { margin: 0; flex: 1 1 200px; }
+  .hidden { display: none !important; }
+  footer { padding-bottom: 32px; }
+  footer p { margin: 0; color: var(--muted); font-size: 14px; }
+  @media (max-width: 520px) {
+    body { font-size: 16px; }
+    .big { font-size: 30px; }
+    .card { padding: 12px 14px; }
+    th, td { padding: 6px 4px; font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6"/><path d="M20 4v7h-7"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/></symbol>
+  <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M11 8l4 4-4 4M15 12H4"/></symbol>
+</svg>
+<header>
+  <div class="wrap wide top">
+    <a class="back" href="../">← Dashboard</a>
+    <h1><a href="#/now">Money Hub</a></h1>
+    <span id="readStamp" class="readstamp">Not signed in</span>
+    <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh"><svg class="icon"><use href="#i-refresh"/></svg><span>Reread</span></button>
+    <button id="signOutBtn" class="btn hidden" type="button" data-action="signout"><svg class="icon"><use href="#i-out"/></svg><span>Sign out</span></button>
+    <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="icon"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
+  </div>
+  <nav class="wrap wide main" aria-label="Sections">
+    <a href="#/now" data-nav="now" class="c-ink">Now</a>
+    <a href="#/money" data-nav="money" class="c-fin">Money</a>
+    <a href="#/dates" data-nav="dates" class="c-ops">Dates</a>
+    <a href="#/todo" data-nav="todo" class="c-ops">To-do</a>
+    <a href="#/accountant" data-nav="accountant" class="c-sales">Accountant</a>
+    <a href="#/control" data-nav="control" class="c-mute">Control</a>
+  </nav>
+</header>
+<main class="wrap wide">
+  <div id="banner" class="banner hidden" role="status"></div>
+  <div class="here"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Now</h2></div>
+  <div id="view"></div>
+</main>
+<footer class="wrap wide"><p>Read-only. Figures come straight from the CSV files in the Money Hub shared drive each time you sign in or press Reread. Each entity stands alone: business and personal money are never added together. Not tax advice. UK time.</p></footer>
+
+<script>
+(function () {
+  'use strict';
+  var M = window.MoneyCore;
+  var CLIENT_ID = '135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com';
+  var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+  var REFRESH_MS = 10 * 60 * 1000;
+  var NOW_SHOW = 6, TURN_SHOW = 5;
+
+  var tokenClient = null, accessToken = null, tokenExpiresAt = 0, timer = null;
+  var signedIn = false, loading = false, R = null, err = null;
+  var $ = function (id) { return document.getElementById(id); };
+  var stampFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false });
+  var whenFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  var gbp = M.gbp;
+  function d(iso) { return esc(M.fmtDate(iso, R ? R.today : null)); }
+  function tag(cls, text) { return '<span class="tag ' + cls + '">' + esc(text) + '</span>'; }
+  function chip(text) { return '<span class="chip">' + esc(text) + '</span>'; }
+  function ents(s) { return String(s || '').split(';').filter(Boolean).map(function (e) { return chip(e.trim()); }).join(''); }
+  function src(name, m) {
+    var bits = ['From ' + (m && m.file && m.file.webViewLink ? '<a href="' + esc(m.file.webViewLink) + '" target="_blank" rel="noopener">' + esc(name) + '</a>' : esc(name))];
+    if (m && m.asOf) bits.push('data as of ' + d(m.asOf));
+    if (m && m.error) bits.push('<b>' + esc(m.error) + '</b>');
+    if (R) bits.push('read ' + esc(stampFmt.format(new Date(R.readAt))));
+    return '<div class="source">' + bits.map(function (b) { return '<span>' + b + '</span>'; }).join('') + '</div>';
+  }
+  function meta(k) { return R && R.meta[k] || null; }
+  function emoney(code) { return R ? R.money.filter(function (m) { return m.code === code; })[0] : null; }
+  function efile(code, k) { return R && R.files[code] && R.files[code][k] || null; }
+  function ago(days) { return days === 0 ? 'today' : days === 1 ? '1 day old' : days + ' days old'; }
+  function levelCls(l) { return l === 'risk' ? 'c-risk' : l === 'ops' ? 'c-ops' : l === 'ok' ? 'c-ok' : 'c-fin'; }
+
+  // ---- Shared bits ----
+  function dryLine(m) {
+    if (!m.dryState) return '';
+    if (m.dryState === 'stale') return '<div class="line"><span>Runs dry</span><b>' + tag('c-ops', 'Stale') + ' <span class="lbl">said ' + d(m.dry) + '</span></b></div>';
+    if (m.dryState === 'dry') return '<div class="line"><span>Runs dry</span><b>' + tag(m.dryDays <= 30 ? 'c-risk' : 'c-ops', d(m.dry)) + '</b></div>';
+    if (m.dryState === 'stale-ok') return '<div class="line"><span>Runs dry</span><b>' + tag('c-ops', 'Stale') + ' <span class="lbl">ended ' + d(m.forecastTo) + '</span></b></div>';
+    return '<div class="line"><span>Runs dry</span><b>' + tag('c-ok', 'Not before ' + d(m.forecastTo)) + '</b></div>';
+  }
+  function entCard(m) {
+    var bad = (m.liab && m.liab.overdue.length) || (m.dryState === 'dry' && m.dryDays <= 30) || (m.bank != null && m.bank < 0);
+    var h = '<a class="card ent ' + (bad ? 'c-risk' : 'c-fin') + '" href="#/e/' + esc(m.code) + '" style="text-decoration:none">';
+    h += '<div class="who"><span class="code">' + esc(m.code) + '</span><span class="full">' + esc(m.name !== m.code ? m.name : (m.company ? 'Business' : 'Personal')) + '</span></div>';
+    if (m.bank != null) {
+      h += '<div class="big' + (m.bank < 0 ? ' neg' : '') + '">' + gbp(m.bank) + '</div>';
+      h += '<div class="lbl">In the bank · ' + d(m.bankAsOf) + ' ' + (m.bankStale ? tag('c-ops', ago(m.bankAge)) : '') + '</div>';
+      if (m.unknownAccounts && m.unknownAccounts.length) h += '<div class="lbl">Plus ' + m.unknownAccounts.length + ' account(s) with no balance yet</div>';
+    } else {
+      h += '<div class="big" style="color:var(--muted)">–</div><div class="lbl">No bank statement yet</div>';
+    }
+    if (m.out30 != null) h += '<div class="line"><span>Due out, next 30 days</span><b>' + gbp(m.out30) + '</b></div>';
+    h += dryLine(m);
+    if (m.xcash && m.xcash.v != null) h += '<div class="line"><span>Xero cash · ' + d(m.xcash.at) + '</span><b>' + gbp(m.xcash.v) + '</b></div>';
+    if (m.bills) h += '<div class="line"><span>Unpaid bills in Xero</span><b>' + gbp(m.bills.total) + '</b></div>';
+    if (m.liab) {
+      if (m.liab.overdue.length) h += '<div class="line"><span>Overdue to ' + esc(m.liab.overdue[0].creditor) + '</span><b>' + tag('c-risk', gbp(m.liab.overdueTotal, 2)) + '</b></div>';
+      else if (m.liab.checkTotal >= 5) h += '<div class="line"><span>Paid? Not confirmed</span><b>' + tag('c-ops', gbp(m.liab.checkTotal, 2)) + '</b></div>';
+      else h += '<div class="line"><span>Tax and debts</span><b>' + tag('c-ok', 'Nothing overdue') + '</b></div>';
+    }
+    return h + '</a>';
+  }
+  function entGroups(list) {
+    var withData = list.filter(function (m) { return !m.noData; }), none = list.filter(function (m) { return m.noData; });
+    var biz = withData.filter(function (m) { return m.company; }), ppl = withData.filter(function (m) { return !m.company; });
+    var h = '';
+    if (biz.length) h += '<h3 class="sec-h">Businesses</h3><div class="grid">' + biz.map(entCard).join('') + '</div>';
+    if (ppl.length) h += '<h3 class="sec-h">Personal · private to you</h3><div class="grid">' + ppl.map(entCard).join('') + '</div>';
+    if (none.length) h += '<p class="quiet">No statements yet: ' + none.map(function (m) { return '<a href="#/e/' + esc(m.code) + '">' + esc(m.code) + '</a>'; }).join(', ') + '.</p>';
+    h += '<p class="note">Each card stands alone. There is no grand total: business and personal money are separate.</p>';
+    return h;
+  }
+  function itemLi(i) {
+    var t = i.href ? '<a href="' + esc(i.href) + '">' + esc(i.text) + '</a>' : esc(i.text);
+    return '<li><div class="meta">' + tag(levelCls(i.level), i.tag) + (i.when ? '<span>' + d(i.when) + '</span>' : '') + '</div>' +
+      '<div class="itext">' + t + '</div><div class="meta">' + ents(i.ent) + (i.who ? '<span>' + esc(i.who) + '</span>' : '') + (i.src ? '<span>' + esc(i.src) + '</span>' : '') + '</div></li>';
+  }
+  function dateLi(x) {
+    var cls = x.days !== null && x.days < 0 ? 'c-risk' : x.sev === 'risk' ? 'c-risk' : x.sev === 'soon' ? 'c-ops' : x.gap ? 'c-mute' : 'c-ok';
+    var word = x.gap ? 'Date unknown' : x.days < 0 ? 'Overdue ' + (-x.days) + 'd' : x.days === 0 ? 'Today' : 'In ' + x.days + 'd';
+    return '<li><div class="meta">' + tag(cls, word) + (x.gap ? '' : '<span>' + d(x.due) + '</span>') + (x.recurring ? chip('repeats') : '') + '</div>' +
+      '<div class="itext">' + esc(x.r.filing) + '</div><div class="meta">' + ents(x.r.entity) + '<span>' + esc(x.r.owner) + '</span><span>' + esc(x.r.status) + '</span><span>' + esc(x.r.id) + '</span></div></li>';
+  }
+  function turnLi(x) {
+    var r = x.r, pc = /urgent/i.test(r.priority) ? 'c-risk' : /high/i.test(r.priority) ? 'c-fin' : 'c-mute';
+    var body = [['Why / evidence', r.evidence], ['What happened', r.incident], ['Believed before', r.previously_believed], ['Starts when', r.trigger_or_event], ['Opened', r.opened_on], ['Closed', r.closed_on]]
+      .filter(function (p) { return p[1]; }).map(function (p) { return '<div><span class="lbl">' + esc(p[0]) + ':</span> ' + esc(p[1]) + '</div>'; }).join('');
+    return '<li id="row-' + esc(r.id) + '"><div class="meta">' + tag(x.ready === 'ready' ? 'c-ops' : 'c-mute', x.ready === 'ready' ? 'Ready' : x.ready) +
+      tag(pc, r.priority || 'normal') + chip(r.kind) + '<span>' + esc(r.id) + '</span></div>' +
+      '<div class="itext">' + esc(r.subject) + '</div><div class="meta">' + ents(r.entity) + '<span>' + esc(r.owner) + '</span><span>' + esc(r.state) + '</span></div>' +
+      (body ? '<details><summary class="more">Details</summary>' + body + '</details>' : '') + '</li>';
+  }
+  function listWithMore(items, show, render1, moreLabel) {
+    var h = '<ul class="items">' + items.slice(0, show).map(render1).join('') + '</ul>';
+    if (items.length > show) h += '<details><summary class="more">' + esc(moreLabel || ('Show ' + (items.length - show) + ' more')) + '</summary><ul class="items">' + items.slice(show).map(render1).join('') + '</ul></details>';
+    return h;
+  }
+  function notReady() {
+    if (!signedIn) return '<div class="card c-ink now"><h3>Sign in to see your money</h3><p class="note">Read-only access to the Money Hub shared drive. Nothing is stored in this browser.</p><div><button class="btn main" type="button" data-action="signin"><svg class="icon"><use href="#i-in"/></svg><span>Sign in with Google</span></button></div></div>';
+    if (err) return '<div class="card c-risk pending"><h3>Could not read Drive</h3><p class="note">' + esc(err) + '</p><div><button class="btn" type="button" data-action="refresh">Try again</button></div></div>';
+    if (R && R.gate === 'denied') return '<div class="card c-risk"><h3>This page is for Lisa only</h3><p class="note">Signed in as ' + esc(R.email) + '. Sign out and sign in with Lisa\'s account.</p></div>';
+    return '<div class="card pending"><h3>Reading…</h3><p class="note">Reading the Money Hub files from Google Drive.</p></div>';
+  }
+
+  // ---- Views ----
+  function viewNow() {
+    var items = M.needsNow(R.data, R.money, R.today);
+    var risk = items.filter(function (i) { return i.level === 'risk'; }).length;
+    var h = '<section class="card now ' + (risk ? 'c-risk' : 'c-ok') + '"><div class="cardhead"><h3>What needs you now</h3>' +
+      (items.length ? tag(risk ? 'c-risk' : 'c-ops', items.length + (items.length === 1 ? ' thing' : ' things')) : tag('c-ok', 'All clear')) + '</div>';
+    h += items.length ? listWithMore(items, NOW_SHOW, itemLi) : '<p class="note">Nothing overdue, urgent or due in the next 14 days.</p>';
+    h += src('MON-DATES, MON-REGISTER, MON-INTAKE and the ledgers', null) + '</section>';
+    h += '<section class="card c-fin"><div class="cardhead"><h3>Money by entity</h3></div>' + entGroups(R.money) + src('BALANCES, OUTGOINGS-NEXT, FORECAST, LIABILITIES and XERO files per entity', null) + '</section>';
+    var soon = M.overdueDates(R.data, R.today).concat(M.dueWithin(R.data, R.today, 14));
+    h += '<section class="card c-ops"><div class="cardhead"><h3>Dates: overdue and next 14 days</h3>' + tag(soon.some(function (x) { return x.days < 0; }) ? 'c-risk' : 'c-ops', String(soon.length)) + '</div>' +
+      (soon.length ? listWithMore(soon, 6, dateLi) : '<p class="note">Nothing due in the next 14 days.</p>') + '<a href="#/dates">All dates</a>' + src('MON-DATES.csv', meta('dates')) + '</section>';
+    var turn = M.yourTurn(R.data), readyN = turn.filter(function (x) { return x.ready === 'ready'; }).length;
+    h += '<section class="card c-ops"><div class="cardhead"><h3>Your turn</h3>' + tag('c-ops', readyN + ' ready · ' + turn.length + ' open') + '</div>' +
+      '<ul class="items">' + turn.slice(0, TURN_SHOW).map(turnLi).join('') + '</ul><a href="#/todo">All ' + turn.length + ' to-dos</a>' + src('MON-REGISTER.csv', meta('register')) + '</section>';
+    return h;
+  }
+
+  function viewMoney() {
+    var h = '<section class="card c-fin"><div class="cardhead"><h3>Every entity</h3></div>' + entGroups(R.money) + '</section>';
+    var rs = R.data.reports || [];
+    if (rs.length) {
+      var wk = rs.map(function (r) { return r.week_of; }).sort().slice(-1)[0];
+      var rows = rs.filter(function (r) { return r.week_of === wk; });
+      h += '<section class="card c-mute"><div class="cardhead"><h3>Last weekly pack · week of ' + d(wk) + '</h3>' + tag('c-ops', 'Job paused') + '</div><div class="scroll"><table><tr><th>Entity</th><th class="r">Cash</th><th class="r">Month net</th><th>Vs 3-month average</th><th>Runs dry</th></tr>' +
+        rows.map(function (r) {
+          var pct = function (v) { return v === '' || isNaN(+v) ? '–' : (+v >= 0 ? '+' : '') + Math.round(+v) + '%'; };
+          return '<tr><td><b>' + esc(r.entity) + '</b></td><td class="r">' + (r.cash_bank ? gbp(+r.cash_bank) + '<div class="lbl">' + d(r.cash_as_of) + '</div>' : '–') + '</td><td class="r">' + (r.net_month ? gbp(+r.net_month) + '<div class="lbl">' + esc(r.month) + '</div>' : '–') + '</td><td>' +
+            (r.variance_flag ? tag('c-ops', r.variance_flag) : r.month ? 'in ' + pct(r.income_vs_avg_pct) + ' · out ' + pct(r.expense_vs_avg_pct) : '–') + '</td><td>' + (r.runs_dry_on ? (r.runs_dry_on < R.today ? tag('c-ops', 'Stale') + ' ' : '') + d(r.runs_dry_on) : r.month ? 'not in 90 days' : '–') + '</td></tr>';
+        }).join('') + '</table></div><p class="note">Written by the Monday weekly-pack job, which is paused. The cards above are worked out from the ledgers each time you read.</p>' + src('MON-REPORTS.csv', meta('reports')) + '</section>';
+    }
+    return h;
+  }
+
+  function monthTable(m) {
+    var rows = (m.months || []).slice(-13);
+    if (!rows.length) return '';
+    var max = Math.max.apply(null, rows.map(function (r) { return Math.max(M.n(r.money_in) || 0, -(M.n(r.money_out) || 0)); })) || 1;
+    var partial = m.bankAsOf ? m.bankAsOf.slice(0, 7) : '';
+    return '<div class="scroll"><table><tr><th>Month</th><th class="r">In</th><th class="r">Out</th><th class="r">Net</th><th style="width:30%"></th></tr>' + rows.map(function (r) {
+      var i = M.n(r.money_in) || 0, o = -(M.n(r.money_out) || 0), nn = M.n(r.net) || 0;
+      return '<tr><td>' + esc(r.month) + (r.month === partial ? ' ' + chip('part month') : '') + '</td><td class="r">' + gbp(i) + '</td><td class="r">' + gbp(o) + '</td><td class="r"' + (nn < 0 ? ' style="color:var(--risk)"' : '') + '>' + gbp(nn) + '</td>' +
+        '<td><span class="bar in" style="width:' + Math.round(i / max * 100) + '%"></span><br><span class="bar out" style="width:' + Math.round(o / max * 100) + '%"></span></td></tr>';
+    }).join('') + '</table></div>';
+  }
+  function viewEntity(code) {
+    var m = emoney(code);
+    if (!m) return '<div class="card c-risk"><h3>No entity called ' + esc(code) + '</h3><p class="note">Entities come from MON-SUBJECTS rows of kind entity.</p></div>';
+    var h = '';
+    var stats = [];
+    stats.push(['c-fin', m.bank != null ? gbp(m.bank) : '–', 'In the bank', m.bankAsOf ? 'as at ' + M.fmtDate(m.bankAsOf, R.today) + (m.bankStale ? ' · ' + ago(m.bankAge) : '') : 'no statement yet']);
+    if (m.out30 != null) stats.push(['c-fin', gbp(m.out30), 'Due out, next 30 days', 'plan made ' + M.fmtDate(m.planDate, R.today) + (m.out30Partial ? ' · plan ends early' : '')]);
+    if (m.dryState) stats.push([m.dryState === 'dry' ? 'c-risk' : m.dryState === 'ok' ? 'c-ok' : 'c-ops', m.dryState === 'dry' ? M.fmtDate(m.dry, R.today) : m.dryState === 'ok' ? 'No' : 'Stale', 'Runs dry', m.dryState === 'stale' ? 'forecast said ' + M.fmtDate(m.dry, R.today) + ', now past' : m.dryState === 'ok' ? 'not before ' + M.fmtDate(m.forecastTo, R.today) : 'forecast from ' + M.fmtDate(m.forecastFrom, R.today)]);
+    if (m.month) stats.push([m.month.net < 0 ? 'c-risk' : 'c-ok', gbp(m.month.net), 'Net, ' + m.month.month, 'in ' + gbp(m.month.in) + ' · out ' + gbp(m.month.out)]);
+    if (m.avg3) stats.push(['c-mute', gbp(m.avg3.in - m.avg3.out), '3-month average net', m.avg3.months[0] + ' to ' + m.avg3.months[2]]);
+    if (m.xcash) stats.push(['c-fin', gbp(m.xcash.v), 'Xero cash', 'as at ' + M.fmtDate(m.xcash.at, R.today)]);
+    if (m.owedToYou) stats.push(['c-ok', gbp(m.owedToYou.v), 'Owed to you (Xero)', m.owedToYou.basis || '']);
+    if (m.youOwe) stats.push(['c-risk', gbp(m.youOwe.v), 'You owe (Xero)', 'depends on Xero being reconciled']);
+    if (m.liab && m.liab.overdueTotal) stats.push(['c-risk', gbp(m.liab.overdueTotal, 2), 'Overdue tax or debt', m.liab.overdue[0].creditor]);
+    h += '<section class="card ' + (m.company ? 'c-fin' : 'c-ideas') + '"><div class="cardhead"><h3>' + esc(m.name) + '</h3>' + chip(m.company ? 'Business' : 'Personal · private') + '</div>' +
+      '<div class="stats">' + stats.map(function (s) { return '<div class="stat ' + s[0] + '"><div class="num">' + esc(s[1]) + '</div><div class="label">' + esc(s[2]) + '</div><div class="sub">' + esc(s[3]) + '</div></div>'; }).join('') + '</div>' +
+      (m.noData ? '<p class="note">No ledger files found for ' + esc(m.code) + ' yet. Drop statements into Drop / ' + esc(m.code) + ' and they will be filed into the ledger.</p>' : '') + '</section>';
+    if (m.accounts && m.accounts.length) {
+      var bal = efile(code, 'balances');
+      h += '<section class="card c-fin"><h3>Accounts</h3><div class="scroll"><table><tr><th>Account</th><th class="r">Balance</th><th>As at</th></tr>' + bal.table.rows.map(function (a) {
+        return '<tr><td>' + esc(a.account) + (a.status === 'nil' ? ' ' + chip('closed / nil') : '') + '</td><td class="r">' + (a.balance !== '' ? gbp(+a.balance, 2) : '?') + '</td><td>' + d(a.as_of) + '</td></tr>';
+      }).join('') + '</table></div>' + src('BALANCES.csv · ' + code, bal) + '</section>';
+    }
+    var cf = efile(code, 'cashflow');
+    if (cf && cf.table) {
+      var end = M.addDays(R.today, 30);
+      var due = cf.table.rows.filter(function (r) { return r.status === 'due' && r.confidence !== 'low' && r.expected_on >= R.today && r.expected_on < end; })
+        .sort(function (a, b) { return a.expected_on.localeCompare(b.expected_on); });
+      var inn = M.sum(due.filter(function (r) { return r.direction === 'in'; }), function (r) { return r.amount; });
+      var out = -M.sum(due.filter(function (r) { return r.direction === 'out'; }), function (r) { return r.amount; });
+      h += '<section class="card c-fin"><div class="cardhead"><h3>Expected in and out, next 30 days</h3>' + tag('c-ok', '+' + gbp(inn)) + tag('c-fin', '−' + gbp(out)) + '</div>' +
+        (due.length ? '<details><summary class="more">' + due.length + ' expected items</summary><div class="scroll"><table><tr><th>Date</th><th>Who</th><th class="r">Amount</th><th>Sure?</th></tr>' + due.map(function (r) {
+          return '<tr><td>' + d(r.expected_on) + '</td><td>' + esc(r.counterparty) + '</td><td class="r">' + gbp(M.n(r.amount) * (r.direction === 'out' && M.n(r.amount) > 0 ? -1 : 1), 2) + '</td><td>' + esc(r.confidence) + '</td></tr>';
+        }).join('') + '</table></div></details>' : '<p class="note">Nothing expected in this window.</p>') +
+        '<p class="note">Learned regular items only, low-confidence ones left out. The plan was made ' + d(M.provDate(cf.table.prov)) + ', so some of these may already have happened.</p>' + src('CASHFLOW.csv · ' + code, cf) + '</section>';
+    }
+    if (m.months && m.months.length) h += '<section class="card c-fin"><h3>Month by month</h3>' + monthTable(m) + '<p class="note">Bank movements, cash basis, from the TOTAL rows. Green bar money in, copper bar money out.</p>' + src('MONTHLY.csv · ' + code, efile(code, 'monthly')) + '</section>';
+    var rec = efile(code, 'recurring');
+    if (rec && rec.table) {
+      var rr = rec.table.rows.slice().sort(function (a, b) { return Math.abs(M.n(b.amount_expected) || 0) - Math.abs(M.n(a.amount_expected) || 0); });
+      var trow = function (r) { return '<tr><td>' + esc(r.counterparty) + '<div class="lbl">' + esc(r.cadence) + ' · ' + esc(r.direction) + (r.status && r.status !== 'learned' ? ' · ' + esc(r.status) : '') + '</div></td><td class="r">' + gbp(M.n(r.amount_expected), 2) + '</td><td>' + d(r.next_expected) + '</td></tr>'; };
+      h += '<section class="card c-fin"><h3>Regular payments</h3><div class="scroll"><table><tr><th>Who</th><th class="r">Usual amount</th><th>Next</th></tr>' + rr.slice(0, 8).map(trow).join('') + '</table></div>' +
+        (rr.length > 8 ? '<details><summary class="more">Show ' + (rr.length - 8) + ' more</summary><div class="scroll"><table>' + rr.slice(8).map(trow).join('') + '</table></div></details>' : '') + src('RECURRING.csv · ' + code, rec) + '</section>';
+    }
+    if (m.liab) {
+      var lf = efile(code, 'liabilities');
+      h += '<section class="card ' + (m.liab.overdue.length ? 'c-risk' : 'c-fin') + '"><h3>Tax and debts</h3><ul class="items">' + m.liab.rows.map(function (r) {
+        var cls = r.status === 'overdue' ? 'c-risk' : r.status === 'check' ? 'c-ops' : r.status === 'plan' ? 'c-mute' : 'c-fin';
+        return '<li><div class="meta">' + tag(cls, r.status) + '<span>' + esc(r.creditor) + '</span><span>' + (M.isISO(r.due) ? 'due ' + d(r.due) : esc(r.due)) + '</span></div><div class="itext">' + gbp(M.n(r.amount), 2) + ' · ' + esc(r.item) + '</div>' +
+          (r.note || r.plan ? '<div class="meta">' + esc([r.plan, r.note].filter(Boolean).join(' · ')) + '</div>' : '') + '</li>';
+      }).join('') + '</ul><p class="note">Plan rows repeat and are not added up. This lists what the files say; it is not tax advice.</p>' + src('LIABILITIES.csv · ' + code, lf) + '</section>';
+    }
+    h += xeroCards(code, m);
+    var dts = M.datesView(R.data, R.today).filter(function (x) { return !x.done && (x.r.entity || '').split(';').indexOf(code) >= 0; });
+    if (dts.length) h += '<section class="card c-ops"><h3>Dates for ' + esc(code) + '</h3>' + listWithMore(dts, 5, dateLi) + src('MON-DATES.csv', meta('dates')) + '</section>';
+    var turn = M.yourTurn(R.data).filter(function (x) { return (x.r.entity || '').split(';').indexOf(code) >= 0; });
+    if (turn.length) h += '<section class="card c-ops"><h3>Your to-dos for ' + esc(code) + '</h3>' + listWithMore(turn, 5, turnLi) + src('MON-REGISTER.csv', meta('register')) + '</section>';
+    return h;
+  }
+  function xeroCards(code, m) {
+    var h = '', pay = efile(code, 'pay'), recv = efile(code, 'recv'), pnl = efile(code, 'pnl'), inc = efile(code, 'income'), un = efile(code, 'unrec');
+    if (!pay && !recv && !pnl) return '';
+    h += '<section class="card c-sales"><div class="cardhead"><h3>Xero</h3>' + chip('connector not configured here') + '</div><p class="note">From the Xero export files in Drive. Xero bills and cash only match the bank once Xero is reconciled.</p>';
+    if (pnl && pnl.table) {
+      h += '<h4>Profit and loss by year</h4><div class="scroll"><table><tr><th>Year</th><th class="r">Income</th><th class="r">Expenses</th><th class="r">Net profit</th></tr>' + pnl.table.rows.map(function (r) {
+        return '<tr><td>' + esc(r.fy) + '</td><td class="r">' + gbp(M.n(r.income)) + '</td><td class="r">' + gbp(M.n(r.expenses)) + '</td><td class="r"' + (M.n(r.net_profit) < 0 ? ' style="color:var(--risk)"' : '') + '>' + gbp(M.n(r.net_profit)) + '</td></tr>';
+      }).join('') + '</table></div>';
+    }
+    if (pay && pay.table) {
+      var pr = pay.table.rows.slice().sort(function (a, b) { return (M.n(b.amount_due) || 0) - (M.n(a.amount_due) || 0); });
+      var prow = function (r) { return '<tr><td>' + esc(r.supplier) + '<div class="lbl">' + esc(r.unpaid_bills) + ' bill(s) · oldest ' + d(r.oldest_due) + '</div></td><td class="r">' + gbp(M.n(r.amount_due), 2) + '</td></tr>'; };
+      h += '<h4>Unpaid bills by supplier · ' + gbp(m.bills.total, 2) + ' across ' + m.bills.suppliers + '</h4><div class="scroll"><table>' + pr.slice(0, 6).map(prow).join('') + '</table></div>' +
+        (pr.length > 6 ? '<details><summary class="more">Show ' + (pr.length - 6) + ' more</summary><div class="scroll"><table>' + pr.slice(6).map(prow).join('') + '</table></div></details>' : '');
+    }
+    if (recv && recv.table) h += '<h4>Owed to you</h4><ul class="items">' + recv.table.rows.map(function (r) { return '<li><div class="itext">' + gbp(M.n(r.amount_due), 2) + ' · ' + esc(r.customer) + '</div><div class="meta"><span>' + esc(r.invoice_number) + '</span><span>due ' + d(r.due_date) + '</span></div></li>'; }).join('') + '</ul>';
+    if (inc && inc.table) {
+      var cols = inc.table.head.filter(function (c) { return c !== 'account'; });
+      h += '<details><summary class="more">Income by account</summary><div class="scroll"><table><tr><th>Account</th>' + cols.map(function (c) { return '<th class="r">' + esc(c) + '</th>'; }).join('') + '</tr>' +
+        inc.table.rows.map(function (r) { return '<tr><td>' + esc(r.account) + '</td>' + cols.map(function (c) { return '<td class="r">' + gbp(M.n(r[c])) + '</td>'; }).join('') + '</tr>'; }).join('') + '</table></div></details>';
+    }
+    if (un && un.table) h += '<details><summary class="more">' + un.table.rows.length + ' unreconciled bank lines</summary><div class="scroll"><table>' + un.table.rows.map(function (r) { return '<tr><td>' + d(r.date) + '</td><td>' + esc(r.account) + '<div class="lbl">' + esc(r.reference) + '</div></td><td class="r">' + gbp(M.n(r.amount), 2) + '</td></tr>'; }).join('') + '</table></div></details>';
+    var srcs = ['pnl', 'pay', 'recv', 'income', 'unrec', 'snapshot', 'banks'].map(function (k) { var f = efile(code, k); return f ? f : null; }).filter(Boolean);
+    h += '<div class="source">' + srcs.map(function (f) { return '<span>' + (f.file ? '<a href="' + esc(f.file.webViewLink || '#') + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name)) + (f.asOf ? ' · ' + d(f.asOf) : '') + (f.error ? ' · <b>' + esc(f.error) + '</b>' : '') + '</span>'; }).join('') + '</div>';
+    return h + '</section>';
+  }
+
+  function viewDates() {
+    var all = M.datesView(R.data, R.today).filter(function (x) { return !x.done; });
+    var groups = [
+      ['Overdue', 'c-risk', all.filter(function (x) { return !x.recurring && x.days !== null && x.days < 0; })],
+      ['Next 14 days', 'c-risk', all.filter(function (x) { return !x.recurring && x.days !== null && x.days >= 0 && x.days <= 14; })],
+      ['Next 15 to 45 days', 'c-ops', all.filter(function (x) { return !x.recurring && x.days > 14 && x.days <= 45; })],
+      ['Later', 'c-ok', all.filter(function (x) { return !x.recurring && x.days > 45; })],
+      ['Repeating', 'c-ops', all.filter(function (x) { return x.recurring; })],
+      ['Date not known yet', 'c-mute', all.filter(function (x) { return x.gap; })]
+    ];
+    return groups.filter(function (g) { return g[2].length; }).map(function (g) {
+      return '<section class="card ' + g[1] + '"><div class="cardhead"><h3>' + esc(g[0]) + '</h3>' + tag(g[1], String(g[2].length)) + '</div>' + listWithMore(g[2], g[0] === 'Later' ? 5 : 8, dateLi) + '</section>';
+    }).join('') + '<p class="note">Repeating dates roll to their next day. Done rows are hidden.</p>' + src('MON-DATES.csv', meta('dates'));
+  }
+
+  var TODO_SUBS = [['yours', 'Yours'], ['others', 'Waiting on others'], ['watch', 'Watching'], ['closed', 'Closed']];
+  function viewTodo(sub, rowId) {
+    var reg = R.data.register || [];
+    if (rowId) {
+      var r = reg.filter(function (x) { return x.id === rowId; })[0];
+      if (r) return '<section class="card c-ops"><ul class="items">' + turnLi({ r: r, ready: M.ready(r, reg) }) + '</ul>' + src('MON-REGISTER.csv', meta('register')) + '</section><a href="#/todo">All to-dos</a>';
+    }
+    sub = sub || 'yours';
+    var h = '<nav class="subnav" aria-label="To-do views">' + TODO_SUBS.map(function (s) { return '<a class="c-ops" href="#/todo/' + s[0] + '"' + (s[0] === sub ? ' aria-current="page"' : '') + '>' + esc(s[1]) + '</a>'; }).join('') + '</nav>';
+    var wrap = function (title, cls, list, show) { return '<section class="card ' + cls + '"><div class="cardhead"><h3>' + esc(title) + '</h3>' + tag(cls, String(list.length)) + '</div>' + (list.length ? listWithMore(list, show || 10, turnLi) : '<p class="note">None.</p>') + '</section>'; };
+    var mk = function (rows) { return rows.map(function (r) { return { r: r, ready: M.ready(r, reg) }; }); };
+    if (sub === 'yours') {
+      var t = M.yourTurn(R.data);
+      h += wrap('Ready now', 'c-ops', t.filter(function (x) { return x.ready === 'ready'; }), 8) + wrap('Waiting on something first', 'c-mute', t.filter(function (x) { return x.ready !== 'ready'; }), 5);
+    } else if (sub === 'others') {
+      h += wrap('Waiting on others', 'c-sales', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isLisa(r) && M.isTask(r); })));
+    } else if (sub === 'watch') {
+      h += wrap('Conditions and checks being watched', 'c-ideas', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isTask(r); })));
+    } else {
+      h += wrap('Closed', 'c-ok', mk(reg.filter(function (r) { return !M.isOpen(r); }).reverse()), 10);
+    }
+    return h + '<p class="note">Answering and closing rows from this page is off for now. Rows change in MON-REGISTER.csv.</p>' + src('MON-REGISTER.csv', meta('register'));
+  }
+
+  function viewAccountant() {
+    var rows = R.data.accountant || [];
+    var open = rows.filter(function (r) { return !r.answer; }), done = rows.filter(function (r) { return r.answer; });
+    var li = function (r) { return '<li><div class="meta">' + tag(r.answer ? 'c-ok' : /not yet/i.test(r.status) ? 'c-ops' : 'c-sales', r.answer ? 'Answered' : r.status) + '<span>' + esc(r.id) + '</span>' + ents(r.entity) + '</div><div class="itext">' + esc(r.question) + '</div>' +
+      '<div class="meta"><span>About: ' + esc(r.about_document) + '</span><span>Asked ' + d(r.asked_on) + '</span></div>' + (r.answer ? '<div>' + esc(r.answer) + '</div>' : '') + '</li>'; };
+    return '<section class="card c-sales"><div class="cardhead"><h3>Questions waiting on the accountant</h3>' + tag('c-sales', String(open.length)) + '</div><ul class="items">' + open.map(li).join('') + '</ul>' + src('QUESTIONS-FOR-ACCOUNTANT.csv', meta('accountant')) + '</section>' +
+      (done.length ? '<section class="card c-ok"><h3>Answered</h3><ul class="items">' + done.map(li).join('') + '</ul></section>' : '') +
+      '<p class="note">Chasing by email stays a manual step. Nothing is sent from this page.</p>';
+  }
+
+  function viewControl() {
+    var fc = M.fileChecks(R);
+    var bad = fc.filter(function (f) { return f.state === 'fail'; }), warn = fc.filter(function (f) { return f.state === 'warn'; });
+    var h = '<section class="card ' + (bad.length ? 'c-risk' : warn.length ? 'c-ops' : 'c-ok') + '"><div class="cardhead"><h3>Files</h3>' +
+      tag(bad.length ? 'c-risk' : 'c-ok', (fc.length - bad.length) + ' of ' + fc.length + ' found once') + '</div>' +
+      '<p class="note">Each file is found by folder and exact title. Two live copies, or none, is an error: the page never falls back to an old file id.</p>' +
+      (bad.length || warn.length ? '' : '<details><summary class="more">Show all ' + fc.length + ' files</summary>') +
+      '<div class="scroll"><table><tr><th>Where</th><th>File</th><th>State</th><th>Data as of</th></tr>' + fc.slice().sort(function (a, b) { var o = { fail: 0, warn: 1, wait: 2, ok: 3 }; return o[a.state] - o[b.state]; }).map(function (f) {
+        return '<tr><td>' + esc(f.scope) + '</td><td>' + (f.link ? '<a href="' + esc(f.link) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name)) + '</td><td>' +
+          tag(f.state === 'fail' ? 'c-risk' : f.state === 'warn' ? 'c-ops' : f.state === 'ok' ? 'c-ok' : 'c-mute', f.state === 'ok' ? 'OK' : f.state === 'warn' ? 'Count off' : f.state === 'fail' ? 'Problem' : 'Not read') + '<div class="lbl">' + esc(f.note) + '</div></td><td>' + d(f.asOf) + '</td></tr>';
+      }).join('') + '</table></div>' + (bad.length || warn.length ? '' : '</details>') + '</section>';
+    var checks = R.data.checks || [], latest = {};
+    checks.forEach(function (c) { if (!latest[c.check_id] || c.run_on > latest[c.check_id].run_on) latest[c.check_id] = c; });
+    var ks = Object.keys(latest).sort(function (a, b) { return a.localeCompare(b, 'en-GB', { numeric: true }); }).map(function (k) { return latest[k]; });
+    var failing = ks.filter(function (c) { return !/^(PASS|INFO)/i.test(c.result || ''); });
+    h += '<section class="card ' + (failing.length ? 'c-risk' : 'c-ok') + '"><div class="cardhead"><h3>Checks</h3>' + tag(failing.length ? 'c-risk' : 'c-ok', failing.length ? failing.length + ' failing' : 'None failing') + '</div>' +
+      '<p class="note">Latest run of each check. Results starting PASS or INFO are not failures.</p><ul class="items">' + ks.map(function (c) {
+        var ok = /^(PASS|INFO)/i.test(c.result || '');
+        return '<li><div class="meta">' + tag(ok ? 'c-ok' : 'c-risk', ok ? (/^INFO/i.test(c.result) ? 'Info' : 'Pass') : 'Fail') + '<b>' + esc(c.check_id) + '</b><span>' + esc(whenOf(c.run_on)) + '</span><span>' + esc(c.job) + '</span></div><div>' + esc(c.result) + '</div></li>';
+      }).join('') + '</ul>' + src('CHECK-LOG.csv', meta('checks')) + '</section>';
+    var trig = (R.data.triggers || []).filter(function (t) { return t.hub === 'MON'; });
+    var k14 = latest.K014, tm = meta('triggers');
+    h += '<section class="card c-ops"><div class="cardhead"><h3>Scheduled jobs</h3>' + tag('c-ops', 'Paused') + '</div>' +
+      '<p>All scheduled money jobs are paused while you review the hub. ' + (k14 ? 'Last confirmed ' + esc(whenOf(k14.run_on)) + ': ' + esc(k14.result) : '') + '</p>' +
+      (trig.length ? '<details><summary class="more">' + trig.length + ' money jobs listed in TRIGGERS.csv</summary><div class="scroll"><table><tr><th>Job</th><th>When</th><th>Task id</th><th>File says</th></tr>' + trig.map(function (t) {
+        return '<tr><td><b>' + esc(t.trigger_id) + '</b><div class="lbl">' + esc(String(t.name || '').replace(/^TR-\S+ · /, '')) + '</div></td><td>' + esc(t.cadence_uk) + '</td><td><code>' + esc(t.mechanism_id) + '</code></td><td>' + esc(t.status) + '</td></tr>';
+      }).join('') + '</table></div><p class="note">TRIGGERS.csv was last recounted ' + d(tm && tm.asOf) + ' and still says ENABLED for these; the pause check above is newer.</p></details>' : '<p class="note">TRIGGERS.csv not read' + (tm && tm.error ? ': ' + esc(tm.error) : '') + '.</p>') +
+      src('TRIGGERS.csv', tm) + '</section>';
+    var intake = R.data.intake || [], od = M.intakeOverdue(R.data, R.today).map(function (r) { return r.id; });
+    var byE = {}; intake.forEach(function (r) { (byE[r.entity] = byE[r.entity] || []).push(r); });
+    h += '<section class="card ' + (od.length ? 'c-ops' : 'c-ok') + '"><div class="cardhead"><h3>Statements to drop</h3>' + tag(od.length ? 'c-ops' : 'c-ok', od.length + ' past due') + '</div>' +
+      '<p class="note">Put files in the <a href="https://drive.google.com/drive/folders/' + esc(M.CFG.folders.drop) + '" target="_blank" rel="noopener">Drop folder</a> under the right entity. Uploading from this page is off for now.</p>' +
+      Object.keys(byE).map(function (e) {
+        return '<h4>' + esc(e) + '</h4><ul class="items">' + byE[e].map(function (r) {
+          var late = od.indexOf(r.id) >= 0;
+          return '<li><div class="meta">' + tag(late ? 'c-ops' : r.status === 'live' ? 'c-ok' : r.last_received ? 'c-ok' : 'c-mute', late ? 'Due ' + M.fmtDate(r.next_due, R.today) : r.status === 'live' ? 'Live' : r.next_due ? 'Next ' + M.fmtDate(r.next_due, R.today) : r.status) + '<span>' + esc(r.cadence) + '</span><span>' + (r.last_received ? 'last ' + d(r.last_received) : 'never received') + '</span></div><div class="itext">' + esc(r.account) + '</div></li>';
+        }).join('') + '</ul>';
+      }).join('') + src('MON-INTAKE.csv', meta('intake')) + '</section>';
+    h += '<section class="card c-mute"><h3>Connections and saving</h3><ul class="items">' +
+      '<li><div class="meta">' + tag('c-mute', 'Not configured') + '</div><div class="itext">Xero and PayPal</div><div class="meta">Xero figures come from the export files in Drive. Connecting either needs its keys kept in a secure store, never in this page.</div></li>' +
+      '<li><div class="meta">' + tag('c-mute', 'Off') + '</div><div class="itext">Saving and answers</div><div class="meta">This page only reads. Writing rows back needs either an Apps Script web app run as Lisa or the full Drive scope, plus the living-file rewrite rule.</div></li>' +
+      '</ul></section>';
+    return h;
+  }
+  function whenOf(s) { var t = new Date(s); return s && !isNaN(t) ? whenFmt.format(t) : String(s || ''); }
+
+  // ---- Router ----
+  var TITLES = { now: 'Now', money: 'Money', e: 'Entity', dates: 'Dates', todo: 'To-do', register: 'To-do', accountant: 'Accountant', control: 'Control' };
+  function route() {
+    var p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+    return { view: TITLES[p[0]] ? p[0] : 'now', a: p[1] || null };
+  }
+  function render() {
+    var r = route(), html;
+    if (!signedIn || !R || R.gate !== 'ok') html = notReady();
+    else if (r.view === 'money') html = viewMoney();
+    else if (r.view === 'e') html = viewEntity(r.a);
+    else if (r.view === 'dates') html = viewDates();
+    else if (r.view === 'todo') html = viewTodo(r.a);
+    else if (r.view === 'register') html = viewTodo(null, r.a);
+    else if (r.view === 'accountant') html = viewAccountant();
+    else if (r.view === 'control') html = viewControl();
+    else html = viewNow();
+    var v = $('view');
+    v.innerHTML = html;
+    v.setAttribute('data-view', r.view);
+    var title = r.view === 'e' ? (r.a || 'Entity') : TITLES[r.view];
+    $('hereTitle').textContent = title;
+    document.title = title + ' · Money Hub';
+    var nav = r.view === 'e' ? 'money' : r.view === 'register' ? 'todo' : r.view;
+    Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
+      if (a.getAttribute('data-nav') === nav) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    $('readStamp').textContent = !signedIn ? 'Not signed in' : loading ? 'Reading…' : err ? 'Read failed' : R ? 'Read ' + stampFmt.format(new Date(R.readAt)) : 'Not read';
+    $('refreshBtn').classList.toggle('hidden', !signedIn);
+    $('signOutBtn').classList.toggle('hidden', !signedIn);
+    $('signInBtn').classList.toggle('hidden', signedIn);
+  }
+  var lastHash = location.hash;
+  window.addEventListener('hashchange', function () {
+    render();
+    if (location.hash !== lastHash) { window.scrollTo(0, 0); lastHash = location.hash; }
+    var row = /^#\/register\//.test(location.hash);
+    if (!row) $('hereTitle').focus({ preventScroll: true });
+  });
+
+  // ---- Data ----
+  function load() {
+    if (!accessToken || loading) return;
+    if (Date.now() > tokenExpiresAt) { expired(); return; }
+    loading = true; err = null; render();
+    M.loadAll(function () { return accessToken; }).then(function (res) {
+      R = res; loading = false;
+      if (res.gate !== 'ok') { stopTimer(); }
+      render();
+    }, function (e) {
+      loading = false;
+      err = e && e.status === 401 ? 'Sign-in expired. Sign in again.' : e && e.status === 403 ? 'Google Drive refused access (' + (e.reason || 'forbidden') + ').' : (e && e.message) || 'Unknown error';
+      if (e && e.status === 401) expired();
+      render();
+    });
+  }
+  function banner(text, info, withSignIn) {
+    var b = $('banner');
+    b.className = 'banner' + (info ? ' info' : '');
+    b.innerHTML = '<p>' + esc(text) + '</p>' + (withSignIn ? '<button class="btn main" type="button" data-action="signin">Sign in again</button>' : '');
+  }
+  function clearBanner() { $('banner').className = 'banner hidden'; $('banner').innerHTML = ''; }
+  function startTimer() { stopTimer(); timer = setInterval(load, REFRESH_MS); }
+  function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
+  function expired() { stopTimer(); accessToken = null; banner('Sign-in expired. Rereads paused.', false, true); }
+  function onToken(resp) {
+    if (resp.error) { banner('Sign-in did not complete.', false, true); return; }
+    if (!google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) { banner('Drive read access was not granted.', false, true); return; }
+    accessToken = resp.access_token;
+    tokenExpiresAt = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
+    signedIn = true; clearBanner(); startTimer(); load();
+  }
+  function signOut() {
+    stopTimer();
+    var t = accessToken;
+    accessToken = null; tokenExpiresAt = 0; signedIn = false; R = null; err = null;
+    if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
+    banner('Signed out. Nothing kept.', true, false);
+    render();
+  }
+  function initGoogle() {
+    if (!(window.google && google.accounts && google.accounts.oauth2)) return false;
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID, scope: SCOPE, callback: onToken,
+      error_callback: function (e) { var ty = e && e.type; banner(ty === 'popup_failed_to_open' ? 'Sign-in window blocked by the browser.' : ty === 'popup_closed' ? 'Sign-in window closed early.' : 'Sign-in did not complete.', false, true); }
+    });
+    var b = $('signInBtn'); b.disabled = false; b.querySelector('span').textContent = 'Sign in with Google';
+    return true;
+  }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-action]');
+    if (!t || t.disabled) return;
+    var a = t.getAttribute('data-action');
+    if (a === 'signin' && tokenClient) tokenClient.requestAccessToken({ prompt: 'select_account', login_hint: M.CFG.owner });
+    else if (a === 'signout') signOut();
+    else if (a === 'refresh') load();
+  });
+  render();
+  var tries = 0;
+  (function wait() {
+    if (initGoogle()) return;
+    if (++tries > 100) { $('signInBtn').querySelector('span').textContent = 'Sign-in unavailable'; banner('Google sign-in did not load.', false, false); return; }
+    setTimeout(wait, 100);
+  })();
+})();
+</script>
+</body>
+</html>

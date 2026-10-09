@@ -24,3 +24,12 @@ authorised origin `https://ljoyrose.github.io`.
 After Google sign-in (same OAuth client, Drive read-only scope) it lists the `BLD-app-tables` folder and reads
 the `BLD-*.csv` tables live. No data is in the repo, nothing is kept in the browser, and saving (the round,
 cabin access, flags) is switched off for now.
+
+## Money Hub (`/money/`)
+
+<https://ljoyrose.github.io/dashboard/money/> is the Money Hub, read-only. After Google sign-in (same OAuth client,
+Drive read-only scope) it checks the account is Lisa's, then reads the `MON-*.csv` index files and each entity's
+ledger CSVs in the Money Hub shared drive. Files are found by folder and exact title. A missing or duplicate file
+is shown as an error, and the page never falls back to an old file id. Entities come from `MON-SUBJECTS.csv` at read time.
+The repo holds no figures or names, only the folder ids it needs. `money/core.js` is shared with the dashboard Money tile.
+Business and personal entities are shown separately and are never added together. Saving and answers are off.
