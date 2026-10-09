@@ -5,13 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-dash-v3-shared-bin-2026-10-09">
+<meta name="build" content="ljr-dash-v4-money-tile-2026-10-09">
 <title>Lisa Dashboard</title>
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="money/core.js"></script>
 <style>
   /* LJR7 palette. Slot 0 Prefix, 1 Vision, 2 Risks (Bin), 7 Ideas. Failed reads also use slot 2. */
   :root {
@@ -19,6 +20,7 @@
     --s0: #B8B1A5; --s1: #FFFEFB; --s1-edge: #2C2C2A; --s1-stripe: #FFFEFB; --s7: #8D6B9C; --fail: #BE6A5D; --s2: #BE6A5D;
     --s0-tint: #F0ECE5; --s7-tint: #F1EAF4; --fail-tint: #F8E9E6; --s2-tint: #F8E9E6;
     --shadow: 0 4px 12px rgba(44, 44, 42, 0.06);
+    --fin: #C07D59; --ops: #B3A74D; --ok: #89AF6A; --fin-tint: #F7EDE6; --ops-tint: #F4F1DF; --ok-tint: #EDF3E7;
   }
   @media (prefers-color-scheme: dark) {
     :root {
@@ -26,6 +28,7 @@
       --s0: #8E877B; --s1: #232019; --s1-edge: #F3EEE5; --s1-stripe: #F3EEE5; --s7: #B08FC0; --fail: #D98B7E; --s2: #D98B7E;
       --s0-tint: #2F2B25; --s7-tint: #35293B; --fail-tint: #3A2723; --s2-tint: #3A2723;
       --shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
+      --fin: #D49A7A; --ops: #CBBF68; --ok: #A3C788; --fin-tint: #3A2B22; --ops-tint: #33301F; --ok-tint: #26301F;
     }
   }
   * { box-sizing: border-box; }
@@ -147,6 +150,21 @@
   .res.ok { color: var(--muted); }
   .res.bad { color: var(--fail); font-weight: 600; }
   .skip { color: var(--fail); font-size: 14px; }
+  /* Money tile: Finances copper for money, Operations for to-dos and dates, Risks for overdue, Connections for on track. */
+  .slotfin { --slot: var(--fin); --tint: var(--fin-tint); }
+  nav.main a.slotfin { border-left-color: var(--fin); }
+  .mtag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; background: var(--mt, var(--s0-tint)); border-radius: 8px; padding: 0 8px; white-space: nowrap; }
+  .mtag::before { content: ''; width: 9px; height: 9px; background: var(--mc, var(--s0)); border-radius: 50%; flex: none; }
+  .mtag.risk { --mc: var(--s2); --mt: var(--s2-tint); } .mtag.risk::before { border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 10px; height: 10px; }
+  .mtag.ops { --mc: var(--ops); --mt: var(--ops-tint); } .mtag.ops::before { border-radius: 2px; }
+  .mtag.ok { --mc: var(--ok); --mt: var(--ok-tint); }
+  .ments { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
+  .ment { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--fin); border-radius: 12px; padding: 8px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
+  .ment.bad { background: var(--s2-tint); border-left-color: var(--s2); }
+  .ment .num { font-size: 26px; font-weight: 700; line-height: 1.2; }
+  .ment .who { font-weight: 600; }
+  .ment .sub { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+  .mgroup { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 0; text-align: left; }
   .hidden { display: none !important; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
@@ -163,6 +181,7 @@
   <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/></symbol>
   <symbol id="i-bin" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/><path d="M10 11v6M14 11v6"/></symbol>
   <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6h6l2 2h10v11H3z"/></symbol>
+  <symbol id="i-money" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M7 9v.01M17 15v.01"/></symbol>
   <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M11 8l4 4-4 4M15 12H4"/></symbol>
 </svg>
 
@@ -180,6 +199,7 @@
     <a href="#/drive" data-nav="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive</a>
     <a href="#/bin" data-nav="bin" class="slot2"><svg class="icon"><use href="#i-bin"/></svg>Bin</a>
     <a href="#/changes" data-nav="changes" class="slot7"><svg class="icon"><use href="#i-changes"/></svg>Changes</a>
+    <a href="money/" class="slotfin"><svg class="icon"><use href="#i-money"/></svg>Money</a>
   </nav>
 </header>
 
@@ -222,7 +242,7 @@
   var tokenClient = null, accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
-  var S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank() };
+  var S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank() };
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, empty: {} }; // results of Bin actions, kept until sign-out
 
@@ -477,7 +497,8 @@
       })),
       run('cf', getFolder(CF_FOLDER_ID).then(function (root) {
         return walkTree(CF_FOLDER_ID, root.name || 'Cf overskill').then(function (t) { t.folder = root; return t; });
-      }))
+      })),
+      window.MoneyCore ? run('money', window.MoneyCore.loadAll(function () { return accessToken; })) : Promise.resolve()
     ]).then(function () {
       loading = false;
       b.disabled = false; b.querySelector('span').textContent = 'Refresh';
@@ -680,6 +701,45 @@
       '<a class="act" href="#/' + actHash + '">' + esc(actLabel) + '</a></div>';
   }
 
+  function moneyTile() {
+    var MC = window.MoneyCore, p = S.money, d = p.data;
+    var head = '<div class="cardhead"><h3>Money</h3>' + stateBadge(p, d ? 1 : null) + '</div>';
+    var foot = '<div class="source"><span>From the Money Hub shared drive</span><span><a href="money/">Open Money Hub</a></span></div>';
+    if (!MC) return '<section class="card slotfin pending">' + head + '<p class="note fail">Money Hub code did not load.</p>' + foot + '</section>';
+    if (!d) return '<section class="card slotfin' + cardClass(p) + '" id="moneyTile">' + head + failNote(p) + foot + '</section>';
+    if (d.gate !== 'ok') return '<section class="card slotfin pending" id="moneyTile">' + head + '<p class="note">Money is shown only for Lisa\'s account.</p>' + foot + '</section>';
+    var gbpf = MC.gbp, fd = function (x) { return esc(MC.fmtDate(x, d.today)); };
+    function ent(m) {
+      var bad = (m.liab && m.liab.overdue.length) || (m.dryState === 'dry' && m.dryDays <= 30);
+      var sub = [];
+      if (m.bank != null) sub.push('<span>bank ' + fd(m.bankAsOf) + '</span>' + (m.bankStale ? '<span class="mtag ops">' + esc(m.bankAge) + ' days old</span>' : ''));
+      if (m.dryState === 'stale') sub.push('<span class="mtag ops">Runs dry: stale</span>');
+      else if (m.dryState === 'dry') sub.push('<span class="mtag ' + (m.dryDays <= 30 ? 'risk' : 'ops') + '">Runs dry ' + fd(m.dry) + '</span>');
+      else if (m.dryState === 'ok') sub.push('<span class="mtag ok">Not dry by ' + fd(m.forecastTo) + '</span>');
+      if (m.liab && m.liab.overdue.length) sub.push('<span class="mtag risk">' + gbpf(m.liab.overdueTotal, 2) + ' overdue</span>');
+      else if (m.liab && m.liab.checkTotal >= 5) sub.push('<span class="mtag ops">' + gbpf(m.liab.checkTotal) + ' paid?</span>');
+      else if (m.liab) sub.push('<span class="mtag ok">Tax: nothing overdue</span>');
+      return '<a class="ment' + (bad ? ' bad' : '') + '" href="money/#/e/' + encodeURIComponent(m.code) + '" style="text-decoration:none"><span class="who">' + esc(m.code) + '</span>' +
+        '<span class="num">' + (m.bank != null ? gbpf(m.bank) : '–') + '</span><span class="sub">' + (sub.join('') || (m.bank == null ? '<span>no bank statement yet</span>' : '')) + '</span></a>';
+    }
+    var shown = d.money.filter(function (m) { return !m.noData; });
+    var biz = shown.filter(function (m) { return m.company; }), ppl = shown.filter(function (m) { return !m.company; });
+    var h = '<section class="card slotfin" id="moneyTile">' + head;
+    if (biz.length) h += '<p class="mgroup">Business</p><div class="ments">' + biz.map(ent).join('') + '</div>';
+    if (ppl.length) h += '<p class="mgroup">Personal</p><div class="ments">' + ppl.map(ent).join('') + '</div>';
+    h += '<p class="note">Each entity on its own. Business and personal are never added together.</p>';
+    var turn = MC.yourTurn(d.data), ready = turn.filter(function (x) { return x.ready === 'ready'; });
+    h += '<div class="cardhead"><h4>To-dos</h4><span class="mtag ops">' + ready.length + ' ready · ' + turn.length + ' open</span></div><ul class="files">' +
+      ready.slice(0, 3).map(function (x) { return '<li><div class="fname"><a href="money/#/register/' + encodeURIComponent(x.r.id) + '">' + esc(x.r.subject) + '</a></div><div class="meta">' + (/urgent/i.test(x.r.priority) ? '<span class="mtag risk">urgent</span>' : /high/i.test(x.r.priority) ? '<span class="mtag ops">high</span>' : '') + '<span>' + esc(x.r.id) + '</span></div></li>'; }).join('') + '</ul>';
+    var dates = MC.overdueDates(d.data, d.today).concat(MC.dueWithin(d.data, d.today, 14));
+    h += '<div class="cardhead"><h4>Dates · overdue and next 14 days</h4><span class="mtag ' + (dates.some(function (x) { return x.days < 0; }) ? 'risk' : 'ops') + '">' + dates.length + '</span></div>';
+    h += dates.length ? '<ul class="files">' + dates.slice(0, 6).map(function (x) {
+      var late = x.days < 0;
+      return '<li><div class="fname">' + esc(x.r.filing) + '</div><div class="meta"><span class="mtag ' + (late ? 'risk' : 'ops') + '">' + (late ? 'Overdue ' + (-x.days) + 'd' : x.days === 0 ? 'Today' : 'In ' + x.days + 'd') + '</span><span>' + fd(x.due) + '</span><span>' + esc(x.r.entity) + '</span></div></li>';
+    }).join('') + '</ul>' + (dates.length > 6 ? '<p class="note">' + (dates.length - 6) + ' more in the Money Hub.</p>' : '') : '<p class="note">Nothing due in the next 14 days.</p>';
+    return h + foot + '</section>';
+  }
+
   function viewMap() {
     var html = '';
     if (!signedIn) {
@@ -688,6 +748,7 @@
         '<p class="note">Read-only access to your shared drives. The Bin asks for more only when you use it.</p>' +
         '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
     }
+    html += moneyTile();
     var rf = S.readfirst, dr = S.drive, cf = S.cf;
     var day = cfWithin(DAY), week = cfWithin(7 * DAY), partial = cf.data && cf.data.capped;
     html += '<div class="figs">' +
@@ -948,7 +1009,7 @@
     var t = accessToken;
     accessToken = null; tokenExpiresAt = 0; signedIn = false; writeGranted = false; busy = false;
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
-    S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank() };
+    S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank() };
     F = {}; R = { sweep: null, empty: {} }; metaCache = {};
     showBanner('Signed out. Nothing kept.', true, false);
     render();
