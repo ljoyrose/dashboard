@@ -197,6 +197,7 @@
     <a href="#/map" data-nav="map" class="vision"><svg class="icon"><use href="#i-map"/></svg>Map</a>
     <a href="#/readfirst" data-nav="readfirst" class="slot0"><svg class="icon"><use href="#i-read"/></svg>Read first</a>
     <a href="#/drive" data-nav="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive</a>
+    <a href="#/personal" data-nav="personal" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>PC-Personal</a>
     <a href="#/bin" data-nav="bin" class="slot2"><svg class="icon"><use href="#i-bin"/></svg>Bin</a>
     <a href="#/changes" data-nav="changes" class="slot7"><svg class="icon"><use href="#i-changes"/></svg>Changes</a>
     <a href="money/" class="slotfin"><svg class="icon"><use href="#i-money"/></svg>Money</a>
@@ -626,6 +627,109 @@
     }).then(function () { busy = false; S.bin = blank(); render(); ensureRoute(); });
   }
 
+  // ---- PC-Personal / lisah Personal: files in MY Drive that already exist, byte for byte (MD5 + size), in a shared drive ----
+  var PCP_PREFIX = 'ZZ_DELETE_DRIVE_';
+  var P = { status: 'idle', log: '', email: '', mine: 0, matches: [], matchBytes: 0, marked: null, binned: null, error: '' };
+  function pcpLabel() {
+    return P.email === 'lisa@puppyclassroom.com' ? 'PC-Personal' : P.email === 'lisahcarson@gmail.com' ? 'lisah Personal' : (P.email || 'Personal drive');
+  }
+  function pcpAllPages(params, each) {
+    var n = 0;
+    function page(tok) {
+      var p = {}; Object.keys(params).forEach(function (k) { p[k] = params[k]; });
+      if (tok) p.pageToken = tok;
+      return driveList(p).then(function (r) {
+        each(r.files || [], ++n);
+        return r.nextPageToken ? page(r.nextPageToken) : null;
+      });
+    }
+    return page(null);
+  }
+  function pcpScan() {
+    if (busy) return;
+    busy = true;
+    P = { status: 'running', log: 'Starting…', email: '', mine: 0, matches: [], matchBytes: 0, marked: null, binned: null, error: '' };
+    render();
+    var seen = Object.create(null), shared = 0;
+    apiGet('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (a) {
+      P.email = a && a.user ? a.user.emailAddress : '';
+      return listDrives();
+    }).then(function (ds) {
+      var i = 0;
+      function nextDrive() {
+        if (i >= ds.length) return Promise.resolve();
+        var d = ds[i++], idx = i;
+        return pcpAllPages({ corpora: 'drive', driveId: d.id, q: "trashed = false and mimeType != '" + FOLDER_MIME + "'", pageSize: '1000', fields: 'nextPageToken,files(md5Checksum,size)' }, function (files, n) {
+          files.forEach(function (f) { if (f.md5Checksum) { seen[f.md5Checksum + ':' + f.size] = 1; shared++; } });
+          if (n % 5 === 1) { P.log = 'Reading shared drive ' + idx + ' of ' + ds.length + ' (' + d.name + '): ' + num(shared) + ' files read so far'; render(); }
+        }).then(nextDrive);
+      }
+      return nextDrive();
+    }).then(function () {
+      P.log = 'Reading your personal drive…'; render();
+      return pcpAllPages({ corpora: 'user', q: "'me' in owners and trashed = false and mimeType != '" + FOLDER_MIME + "'", pageSize: '1000', fields: 'nextPageToken,files(id,name,size,md5Checksum)' }, function (files, n) {
+        files.forEach(function (f) {
+          if (!f.md5Checksum) return;
+          P.mine++;
+          if (f.name.indexOf('ZZ_') === 0) return;
+          if (seen[f.md5Checksum + ':' + f.size]) { P.matches.push({ id: f.id, name: f.name }); P.matchBytes += parseInt(f.size || '0', 10); }
+        });
+        if (n % 5 === 1) { P.log = 'Reading your personal drive: ' + num(P.mine) + ' files so far'; render(); }
+      });
+    }).then(function () {
+      P.status = 'done'; P.log = 'Finished ' + stamp(Date.now()) + '. Compared ' + num(shared) + ' shared-drive files with ' + num(P.mine) + ' personal files.';
+    }, function (err) {
+      P.status = 'failed'; P.error = friendlyError(err).text;
+    }).then(function () { busy = false; render(); });
+  }
+  function pcpMark() {
+    if (busy || !P.matches.length) return;
+    if (!writeGranted) { requestWrite(); return; }
+    var ok = window.confirm('Rename ' + P.matches.length + ' personal files to start ' + PCP_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted yet.');
+    if (!ok) return;
+    busy = true; P.marked = { done: 0, failed: 0 }; render();
+    mapLimit(P.matches, 4, function (f) {
+      return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: PCP_PREFIX + f.name }).then(function () { P.marked.done++; }, function () { P.marked.failed++; });
+    }).then(function () { P.matches = []; busy = false; render(); });
+  }
+  function pcpBin() {
+    if (busy) return;
+    if (!writeGranted) { requestWrite(); return; }
+    busy = true; P.binned = { done: 0, failed: 0, found: 0 }; render();
+    var found = [];
+    pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "' and 'me' in owners and trashed = false", pageSize: '1000', fields: 'nextPageToken,files(id,name)' }, function (files) {
+      files.forEach(function (f) { if (f.name.indexOf(PCP_PREFIX) === 0) found.push(f); });
+    }).then(function () {
+      P.binned.found = found.length;
+      if (!found.length) return null;
+      if (!window.confirm('Move ' + found.length + ' personal files starting ' + PCP_PREFIX + ' to the bin? Drive keeps binned items for 30 days.')) { P.binned.cancelled = true; return null; }
+      return mapLimit(found, 4, function (f) {
+        return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }).then(function () { P.binned.done++; }, function () { P.binned.failed++; });
+      });
+    }).then(function () { busy = false; render(); }, function (err) { P.binned.error = friendlyError(err).text; busy = false; render(); });
+  }
+  function viewPersonal() {
+    var running = P.status === 'running';
+    var html = '<section class="card slot0' + (P.status === 'done' ? '' : P.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + esc(P.email ? pcpLabel() : 'PC-Personal') + '</h3>' +
+      '<span class="state ' + (P.status === 'done' ? 'st-ok' : P.status === 'failed' ? 'st-failed' : running ? 'st-loading' : 'st-idle') + '"><span class="shape"></span>' +
+      (P.status === 'done' ? 'Scanned' : P.status === 'failed' ? 'Failed' : running ? 'Reading…' : 'Not scanned') + '</span></div>' +
+      '<p class="note">Finds files in your own personal Google Drive that already exist, byte for byte, in a shared drive. PC-Personal is lisa@puppyclassroom.com; lisah Personal is lisahcarson@gmail.com (sign in with that account, and it only matches shared drives it can read). Nothing changes until you click Rename.</p>';
+    if (P.log) html += '<p class="note">' + esc(P.log) + '</p>';
+    if (P.error) html += '<p class="note fail">Stopped: ' + esc(P.error) + '</p>';
+    if (P.status === 'done') {
+      html += '<p class="note"><strong>' + num(P.matches.length) + '</strong> personal files (' + (P.matchBytes / 1e9).toFixed(2) + ' GB) already in a shared drive.</p>';
+      if (P.matches.length) html += '<ul class="files">' + P.matches.slice(0, 30).map(function (f) { return '<li><div class="fname">' + esc(f.name) + '</div></li>'; }).join('') + '</ul>' + (P.matches.length > 30 ? '<p class="note">Showing 30 of ' + num(P.matches.length) + '.</p>' : '');
+    }
+    if (P.marked) html += '<p class="res ' + (P.marked.failed ? 'bad' : 'ok') + '">Renamed ' + num(P.marked.done) + ' to ' + esc(PCP_PREFIX) + '…' + (P.marked.failed ? ', ' + P.marked.failed + ' failed' : '') + '.</p>';
+    if (P.binned) html += '<p class="res ' + (P.binned.failed || P.binned.error ? 'bad' : 'ok') + '">' + (P.binned.cancelled ? 'Cancelled. Nothing binned.' : P.binned.error ? esc(P.binned.error) : 'Found ' + num(P.binned.found) + ', moved ' + num(P.binned.done) + ' to the bin' + (P.binned.failed ? ', ' + P.binned.failed + ' failed' : '') + '.') + '</p>';
+    html += '<div class="actions">' +
+      '<button class="btn" type="button" data-action="pcpscan"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>1. Scan this account vs shared drives</span></button>' +
+      '<button class="btn danger" type="button" data-action="pcpmark"' + (busy || !P.matches.length ? ' disabled' : '') + '>' + icon('bin') + '<span>2. Rename matches ' + esc(PCP_PREFIX) + '</span></button>' +
+      '<button class="btn danger solid" type="button" data-action="pcpbin"' + (busy ? ' disabled' : '') + '>' + icon('bin') + '<span>3. Move renamed files to the bin</span></button></div>' +
+      '<p class="note">Steps 2 and 3 ask for full Drive access (once) and a confirm each. Only files you own in your personal drive are touched. The shared-drive copy is never changed.</p></section>';
+    return html + nextSteps([NX.drive, NX.bin, NX.map]);
+  }
+
   // ---- Small render helpers ----
   function stateBadge(p, emptyCount) {
     if (!signedIn && p.status === 'idle') return '<span class="state st-idle"><span class="shape"></span>Not signed in</span>';
@@ -960,7 +1064,7 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Map', readfirst: 'Read first', drive: 'Drive', bin: 'Bin', changes: 'Changes' };
+  var VIEWS = { map: 'Map', readfirst: 'Read first', drive: 'Drive', personal: 'PC-Personal', bin: 'Bin', changes: 'Changes' };
   function parseRoute() {
     var parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
     var view = parts[0] && VIEWS[parts[0]] ? parts[0] : null;
@@ -978,7 +1082,7 @@
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : viewChanges(r);
+    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal() : viewChanges(r);
     var routeKey = location.hash;
     var changed = routeKey !== lastView;
     el.setAttribute('data-view', r.view);
@@ -1080,6 +1184,9 @@
     else if (a === 'grantwrite') requestWrite();
     else if (a === 'sweep') sweep();
     else if (a === 'empty') emptyBin(t.getAttribute('data-drive'));
+    else if (a === 'pcpscan') pcpScan();
+    else if (a === 'pcpmark') pcpMark();
+    else if (a === 'pcpbin') pcpBin();
   });
   document.addEventListener('change', function (e) {
     if (e.target && e.target.id === 'drivePicker') location.hash = e.target.value ? '#/drive/' + e.target.value : '#/drive';
