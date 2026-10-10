@@ -242,7 +242,7 @@
   var tokenClient = null, accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
-  var S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank() };
+  var S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank() };
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, empty: {} }; // results of Bin actions, kept until sign-out
 
@@ -467,6 +467,17 @@
     }).catch(function (err) {
       S[key] = { status: 'failed', readAt: Date.now(), error: err, data: null };
     }).then(render);
+  }
+
+  // ---- Dropbox line (counts only; the page holds no Dropbox key and shows no Dropbox file names) ----
+  var DBX_TOTALS_URL = 'dropbox/totals.json';   // written by the private Dropbox scan job
+  var DBX_JOB_URL = '';                          // GitHub Actions page of the private delete job; empty until set up
+  function loadDbx() {
+    run('dbx', fetch(DBX_TOTALS_URL, { cache: 'no-store' }).then(function (res) {
+      if (res.status === 404) return { none: true };
+      if (!res.ok) return { unreachable: true };
+      return res.json();
+    }).catch(function () { return { unreachable: true }; }));
   }
 
   function loadAll() {
@@ -853,6 +864,20 @@
         }).join('') + '</ul>') + '</div>';
     }
     html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</section>';
+    // Dropbox (counts only)
+    var dx = S.dbx, dd = dx.data;
+    html += '<section class="card slot2' + cardClass(dx) + '" id="dropboxCard"><div class="cardhead"><h3>Dropbox</h3>' + stateBadge(dx, null) + '</div>';
+    if (dd && dd.none) html += '<p class="note">No Dropbox scan published yet. Nothing is waiting.</p>';
+    else if (dd && dd.unreachable) html += '<p class="note fail">Could not read the Dropbox totals just now.</p>';
+    else if (dd) {
+      html += '<p class="note">Waiting to delete: <strong>' + num(dd.marked_files || 0) + '</strong> files (' + num(dd.marked_gb || 0) + ' GB) named ZZ_DELETE_.</p>' +
+        '<p class="note">Duplicates found: ' + num(dd.duplicate_files || 0) + ' files, ' + num(dd.wasted_gb || 0) + ' GB wasted' +
+        (dd.complete === false ? ' (scan not finished)' : '') + '. Scan ' + esc(fmtTime(dd.generated) || 'date unknown') + '.</p>';
+    }
+    html += DBX_JOB_URL ? '<div class="actions"><a class="btn danger" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>Open Dropbox delete job</span></a></div>' +
+      '<p class="note">Opens GitHub. Press Run workflow there. Files go to Dropbox Deleted files, recoverable for a time.</p>'
+      : '<p class="note">Delete job not linked yet. Until then, search ZZ_DELETE_ in Dropbox on the web, select all, delete.</p>';
+    html += sourceLine('Dropbox totals', DBX_TOTALS_URL, dx) + '</section>';
     // Bin per shared drive
     html += '<section class="card slot2' + cardClass(p) + '" id="binCard"><div class="cardhead"><h3>In the bin</h3>' + stateBadge(p, d ? d.per.length : null) + '</div>';
     html += failNote(p);
@@ -958,6 +983,7 @@
     }
     lastView = routeKey;
     updateHeader();
+    if (r.view === 'bin' && S.dbx.status === 'idle') loadDbx();
   }
   function updateHeader() {
     var times = ['readfirst', 'drive', 'cf'].map(function (k) { return S[k].status === 'ok' ? S[k].readAt : null; }).filter(Boolean);
