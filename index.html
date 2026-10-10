@@ -154,8 +154,11 @@
   details.subfold { border-top: 1px solid var(--line); padding-top: 8px; }
   .scrollbox { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
   .index { display: flex; flex-wrap: wrap; gap: 8px; }
+  .index.top { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
   .index .btn { font-size: 14px; padding: 4px 12px; }
-  .index .n { color: var(--muted); }
+  .index.top .btn { padding: 8px 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
+  .index.top .btn b { font-weight: 600; }
+  .index .n { color: var(--muted); font-size: 13px; }
   input.find { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); }
   .binsec { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
   .binsec:first-of-type { border-top: none; padding-top: 0; }
@@ -1159,20 +1162,21 @@
     var p = S.bin, d = p.data, html = '';
     // Index: every section on one line, with its count
     var zzN = d ? d.zz.length : null, dxd = S.dbx.data, binsN = d ? d.per.reduce(function (t, x) { return t + x.trash.length; }, 0) : null;
-    html += '<nav class="card slot2" aria-label="Bin index"><div class="index">' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="sweep">ZZ_ sweep <span class="n">' + num(zzN) + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="dropbox">Dropbox <span class="n">' + (dxd && dxd.marked_files != null ? num(dxd.marked_files) : '–') + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="bins">In the bin <span class="n">' + num(binsN) + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="access">Access</button></div></nav>';
+    var cnt = function (n, word) { return n == null ? 'reading…' : num(n) + ' ' + word; };
+    html += '<nav class="card slot2" aria-label="Bin index"><div class="index top">' +
+      '<button class="btn" type="button" data-action="foldjump" data-key="sweep"><b>Google Drive: ZZ_ files</b><span class="n">' + cnt(zzN, 'to move to the bin') + '</span></button>' +
+      '<button class="btn" type="button" data-action="foldjump" data-key="dropbox"><b>Dropbox: marked files</b><span class="n">' + (dxd && dxd.marked_files != null ? num(dxd.marked_files) + ' at last scan' : 'delete, then empty trash') + '</span></button>' +
+      '<button class="btn" type="button" data-action="foldjump" data-key="bins"><b>Google Drive: bins</b><span class="n">' + cnt(binsN, 'items to empty') + '</span></button>' +
+      '<button class="btn" type="button" data-action="foldjump" data-key="access"><b>Permission</b><span class="n">' + (writeGranted ? 'bin actions on' : 'allow bin actions') + '</span></button></div></nav>';
     // Access card
-    html += foldOpen('access', !writeGranted, 'card slot2' + (signedIn && writeGranted ? '' : ' pending')) + '<summary><h3>Bin access</h3>' +
+    html += foldOpen('access', !writeGranted, 'card slot2' + (signedIn && writeGranted ? '' : ' pending')) + '<summary><h3>Permission to use the bin</h3>' +
       (writeGranted ? '<span class="state st-ok"><span class="shape"></span>Bin actions on</span>' : '<span class="state st-idle"><span class="shape"></span>Read-only</span>') + '</summary><div class="fbody">' +
       '<p class="note">Lists below are read-only. Moving ZZ_ items to the bin and emptying a bin need full Drive access, asked for only here and kept in memory until you sign out.</p>' +
       (signedIn && !writeGranted ? '<div class="actions"><button class="btn danger" type="button" data-action="grantwrite">' + icon('in') + '<span>Allow Bin actions</span></button></div>' : '') +
       '</div></details>';
     // ZZ_ sweep
     var zz = d ? d.zz : [];
-    html += foldOpen('sweep', zz.length > 0, 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>ZZ_ sweep</h3>' + stateBadge(p, d ? zz.length : null) + '</summary><div class="fbody">';
+    html += foldOpen('sweep', zz.length > 0, 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Google Drive: ZZ_ files to bin</h3>' + stateBadge(p, d ? zz.length : null) + '</summary><div class="fbody">';
     html += '<p class="note">Names starting ZZ_ (ZZ_delete, ZZ_dupe, ZZ_SUPERSEDED…) in every shared drive. RR_ archive items, and anything inside an RR_ folder, are never included.</p>';
     html += failNote(p);
     if (d) {
@@ -1196,7 +1200,7 @@
     html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
     // Dropbox (counts only)
     var dx = S.dbx, dd = dx.data;
-    html += foldOpen('dropbox', true, 'card slot2' + cardClass(dx), 'dropboxCard') + '<summary><h3>Dropbox</h3>' + stateBadge(dx, null) + '</summary><div class="fbody">';
+    html += foldOpen('dropbox', true, 'card slot2' + cardClass(dx), 'dropboxCard') + '<summary><h3>Dropbox: delete marked files</h3>' + stateBadge(dx, null) + '</summary><div class="fbody">';
     if (dd && dd.notConnected) html += '<p class="note">Dropbox counts are not connected yet.</p>';
     else if (dd && dd.none) html += '<p class="note">No Dropbox scan published yet. Nothing is waiting.</p>';
     else if (dx.status === 'failed') html += failNote(dx);
@@ -1211,7 +1215,7 @@
       '<p class="note">2 opens Dropbox Deleted files: select all, then Permanently delete. Dropbox only. Dropbox does not allow this to be automated for a personal account.</p>';
     html += sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</div></details>';
     // Bin per shared drive: indexed, drives with items first, each folded; empty bins grouped.
-    html += foldOpen('bins', true, 'card slot2' + cardClass(p), 'binCard') + '<summary><h3>In the bin</h3>' + stateBadge(p, d ? d.per.length : null) + '</summary><div class="fbody">';
+    html += foldOpen('bins', true, 'card slot2' + cardClass(p), 'binCard') + '<summary><h3>Google Drive: shared-drive bins</h3>' + stateBadge(p, d ? d.per.length : null) + '</summary><div class="fbody">';
     html += failNote(p);
     if (d) {
       if (!d.per.length) html += '<p class="note">No shared drives found for this account.</p>';
