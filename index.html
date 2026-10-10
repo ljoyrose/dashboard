@@ -871,14 +871,14 @@
     if (dd && dd.none) html += '<p class="note">No Dropbox scan published yet. Nothing is waiting.</p>';
     else if (dd && dd.unreachable) html += '<p class="note fail">Could not read the Dropbox totals just now.</p>';
     else if (dd) {
-      html += '<p class="note">Waiting to delete: <strong>' + num(dd.marked_files || 0) + '</strong> files (' + num(dd.marked_gb || 0) + ' GB) named ZZ_DELETE_.</p>' +
+      html += '<p class="note">Waiting to delete: <strong>' + num(dd.marked_files || 0) + '</strong> files (' + num(dd.marked_gb || 0) + ' GB) named ZZ_DELETE_DROPBOX_ (Dropbox copies only).</p>' +
         '<p class="note">Duplicates found: ' + num(dd.duplicate_files || 0) + ' files, ' + num(dd.wasted_gb || 0) + ' GB wasted' +
         (dd.complete === false ? ' (scan not finished)' : '') + '. Scan ' + esc(fmtTime(dd.generated) || 'date unknown') + '.</p>';
     }
-    html += '<div class="actions"><a class="btn danger" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>1. Delete ZZ_DELETE_ files</span></a>' +
-      '<a class="btn danger" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>2. Empty Dropbox trash</span></a></div>' +
-      '<p class="note">1 opens GitHub: leave the box empty for a dry run, or type DELETE and press Run workflow. Files move to Dropbox Deleted files, recoverable for a time.</p>' +
-      '<p class="note">2 opens Dropbox Deleted files: select all, then Permanently delete. Dropbox does not allow this to be automated for a personal account.</p>';
+    html += '<div class="actions"><a class="btn danger" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>1. Delete marked files from DROPBOX only</span></a>' +
+      '<a class="btn danger" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>2. Empty DROPBOX trash</span></a></div>' +
+      '<p class="note">1 opens GitHub, workflow 3. Leave the box empty for a dry run, or type DELETE and press Run workflow. Only Dropbox files named ZZ_DELETE_DROPBOX_ move to Dropbox Deleted files, recoverable for a time. Google Drive is never changed.</p>' +
+      '<p class="note">2 opens Dropbox Deleted files: select all, then Permanently delete. Dropbox only. Dropbox does not allow this to be automated for a personal account.</p>';
     html += sourceLine('Dropbox totals', DBX_TOTALS_URL, dx) + '</section>';
     // Bin per shared drive
     html += '<section class="card slot2' + cardClass(p) + '" id="binCard"><div class="cardhead"><h3>In the bin</h3>' + stateBadge(p, d ? d.per.length : null) + '</div>';
