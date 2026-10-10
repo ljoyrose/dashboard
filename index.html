@@ -198,6 +198,7 @@
     <a href="#/readfirst" data-nav="readfirst" class="slot0"><svg class="icon"><use href="#i-read"/></svg>Read first</a>
     <a href="#/drive" data-nav="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive</a>
     <a href="#/personal" data-nav="personal" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>PC-Personal</a>
+    <a href="#/usb" data-nav="usb" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive check</a>
     <a href="#/bin" data-nav="bin" class="slot2"><svg class="icon"><use href="#i-bin"/></svg>Bin</a>
     <a href="#/changes" data-nav="changes" class="slot7"><svg class="icon"><use href="#i-changes"/></svg>Changes</a>
     <a href="money/" class="slotfin"><svg class="icon"><use href="#i-money"/></svg>Money</a>
@@ -730,6 +731,184 @@
     return html + nextSteps([NX.drive, NX.bin, NX.map]);
   }
 
+  // ---- Streaming MD5 (browsers have no built-in MD5). Matches Google Drive's md5Checksum. ----
+  var MD5_K = [], MD5_S = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
+  for (var mi = 0; mi < 64; mi++) MD5_K[mi] = Math.floor(Math.abs(Math.sin(mi + 1)) * 4294967296) >>> 0;
+  function Md5() { this.h = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476]; this.buf = new Uint8Array(64); this.n = 0; this.len = 0; this.w = new Int32Array(16); }
+  Md5.prototype.block = function (b, o) {
+    var w = this.w, i;
+    for (i = 0; i < 16; i++, o += 4) w[i] = b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24);
+    var a = this.h[0] | 0, bb = this.h[1] | 0, c = this.h[2] | 0, d = this.h[3] | 0, f, g, t;
+    for (i = 0; i < 64; i++) {
+      if (i < 16) { f = (bb & c) | (~bb & d); g = i; }
+      else if (i < 32) { f = (d & bb) | (~d & c); g = (5 * i + 1) & 15; }
+      else if (i < 48) { f = bb ^ c ^ d; g = (3 * i + 5) & 15; }
+      else { f = c ^ (bb | ~d); g = (7 * i) & 15; }
+      t = (a + f + MD5_K[i] + w[g]) | 0;
+      a = d; d = c; c = bb;
+      var s = MD5_S[((i >> 4) << 2) | (i & 3)];
+      bb = (bb + ((t << s) | (t >>> (32 - s)))) | 0;
+    }
+    this.h[0] = (this.h[0] + a) | 0; this.h[1] = (this.h[1] + bb) | 0; this.h[2] = (this.h[2] + c) | 0; this.h[3] = (this.h[3] + d) | 0;
+  };
+  Md5.prototype.update = function (bytes) {
+    var i = 0, len = bytes.length;
+    this.len += len;
+    if (this.n) {
+      while (i < len && this.n < 64) this.buf[this.n++] = bytes[i++];
+      if (this.n < 64) return;
+      this.block(this.buf, 0); this.n = 0;
+    }
+    for (; i + 64 <= len; i += 64) this.block(bytes, i);
+    while (i < len) this.buf[this.n++] = bytes[i++];
+  };
+  Md5.prototype.hex = function () {
+    var bits = this.len * 8, pad = new Uint8Array(((this.n < 56 ? 56 : 120) - this.n) + 8);
+    pad[0] = 0x80;
+    var lo = bits >>> 0, hi = Math.floor(bits / 4294967296) >>> 0, k = pad.length - 8;
+    for (var j = 0; j < 4; j++) { pad[k + j] = (lo >>> (8 * j)) & 255; pad[k + 4 + j] = (hi >>> (8 * j)) & 255; }
+    var keep = this.len; this.update(pad); this.len = keep;
+    var out = '';
+    for (var x = 0; x < 4; x++) for (var y = 0; y < 4; y++) out += ('0' + ((this.h[x] >>> (8 * y)) & 255).toString(16)).slice(-2);
+    return out;
+  };
+
+  // ==USB-START==
+  // ---- Drive check: a USB stick, external drive or Mac folder vs the shared drives. Files are read on this computer only. ----
+  var USB_PREFIX = 'ZZ_DELETE_LOCAL_';
+  var USB_SKIP = /^(\.|\$RECYCLE\.BIN$|System Volume Information$)/;
+  function usbBlank() { return { status: 'idle', log: '', root: '', files: 0, hashed: 0, bytes: 0, skipped: 0, matches: [], matchBytes: 0, only: [], onlyBytes: 0, stop: false, marked: null, error: '' }; }
+  var U = usbBlank();
+  var usbLast = 0;
+  function usbTick(msg) {
+    if (msg) U.log = msg;
+    if (Date.now() - usbLast < 800) return Promise.resolve();
+    usbLast = Date.now(); render();
+    return new Promise(function (r) { setTimeout(r, 0); });
+  }
+  async function usbSharedIndex() {
+    var idx = new Map(), n = 0, ds = await listDrives();
+    for (var i = 0; i < ds.length; i++) {
+      await pcpAllPages({ corpora: 'drive', driveId: ds[i].id, q: "trashed = false and mimeType != '" + FOLDER_MIME + "'", pageSize: '1000', fields: 'nextPageToken,files(md5Checksum,size)' }, function (files) {
+        files.forEach(function (f) {
+          if (!f.md5Checksum || !f.size) return;
+          var s = parseInt(f.size, 10), set = idx.get(s);
+          if (!set) { set = new Set(); idx.set(s, set); }
+          set.add(f.md5Checksum); n++;
+        });
+        U.log = 'Reading shared drive ' + (i + 1) + ' of ' + ds.length + ': ' + num(n) + ' files read so far'; usbTick();
+      });
+    }
+    U.shared = n;
+    return idx;
+  }
+  async function usbHash(file) {
+    var m = new Md5(), CH = 8 * 1024 * 1024;
+    for (var o = 0; o < file.size; o += CH) {
+      if (U.stop) return null;
+      var buf = new Uint8Array(await file.slice(o, o + CH).arrayBuffer());
+      m.update(buf); U.bytes += buf.length;
+      await usbTick();
+    }
+    return m.hex();
+  }
+  async function usbWalk(dir, path, idx) {
+    for await (var ent of dir.entries()) {
+      if (U.stop) return;
+      var name = ent[0], h = ent[1];
+      if (USB_SKIP.test(name)) continue;
+      if (h.kind === 'directory') { await usbWalk(h, path + name + '/', idx); continue; }
+      U.files++;
+      if (name.indexOf(USB_PREFIX) === 0) continue;
+      var file;
+      try { file = await h.getFile(); } catch (e) { U.skipped++; continue; }
+      if (file.size < 1024) continue;
+      var set = idx.get(file.size), hit = false;
+      if (set) {
+        U.log = 'Checking ' + path + name;
+        var md5 = null;
+        try { md5 = await usbHash(file); } catch (e2) { U.skipped++; continue; }
+        if (md5 === null) return;
+        U.hashed++;
+        hit = set.has(md5);
+      }
+      if (hit) { U.matches.push({ handle: h, name: name, path: path + name, size: file.size, mtime: file.lastModified }); U.matchBytes += file.size; }
+      else { U.only.push({ path: path + name, size: file.size }); U.onlyBytes += file.size; }
+      await usbTick('Looked at ' + num(U.files) + ' files, ' + num(U.matches.length) + ' already in a shared drive');
+    }
+  }
+  function usbScan() {
+    if (busy) return;
+    if (typeof window.showDirectoryPicker !== 'function') { U = usbBlank(); U.status = 'failed'; U.error = 'This browser cannot open a drive. Use Chrome or Edge.'; render(); return; }
+    window.showDirectoryPicker({ mode: 'readwrite' }).then(function (dir) {
+      busy = true; U = usbBlank(); U.status = 'running'; U.root = dir.name; U.log = 'Reading the shared drives…'; render();
+      return usbSharedIndex().then(function (idx) { return usbWalk(dir, '', idx); }).then(function () {
+        U.status = 'done'; U.log = (U.stop ? 'Stopped ' : 'Finished ') + stamp(Date.now()) + '. Looked at ' + num(U.files) + ' files, compared with ' + num(U.shared || 0) + ' shared-drive files.';
+      }, function (err) {
+        U.status = 'failed'; U.error = err instanceof ApiError ? friendlyError(err).text : 'Could not read the drive (' + (err && err.name || 'error') + ').';
+      }).then(function () { busy = false; render(); });
+    }, function (err) {
+      if (!err || err.name !== 'AbortError') { U = usbBlank(); U.status = 'failed'; U.error = 'Chrome refused that folder. Pick a folder inside the drive instead of the top of it.'; render(); }
+    });
+  }
+  async function usbMark() {
+    if (busy || !U.matches.length) return;
+    if (!window.confirm('Rename ' + U.matches.length + ' files on "' + U.root + '" to start ' + USB_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted.')) return;
+    busy = true; U.marked = { done: 0, failed: 0, unsupported: false }; render();
+    for (var i = 0; i < U.matches.length; i++) {
+      var m = U.matches[i];
+      try {
+        if (typeof m.handle.move !== 'function') { U.marked.unsupported = true; break; }
+        var f = await m.handle.getFile();
+        if (f.size !== m.size || f.lastModified !== m.mtime) { U.marked.failed++; continue; }
+        await m.handle.move(USB_PREFIX + m.name);
+        U.marked.done++;
+      } catch (e) {
+        if (e && e.name === 'TypeError' && i === 0) { U.marked.unsupported = true; break; }
+        U.marked.failed++;
+      }
+      await usbTick();
+    }
+    if (!U.marked.unsupported) U.matches = [];
+    busy = false; render();
+  }
+  function usbCsv(which) {
+    var rows = which === 'only' ? U.only : U.matches;
+    var text = 'path,size\n' + rows.map(function (r) { return '"' + r.path.replace(/"/g, '""') + '",' + r.size; }).join('\n') + '\n';
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv' }));
+    a.download = which === 'only' ? 'only-on-this-drive.csv' : 'already-in-shared-drives.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  function viewUsb() {
+    var running = U.status === 'running';
+    var html = '<section class="card slot0' + (U.status === 'done' ? '' : U.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + esc(U.root ? 'Drive: ' + U.root : 'Drive check') + '</h3>' +
+      '<span class="state ' + (U.status === 'done' ? 'st-ok' : U.status === 'failed' ? 'st-failed' : running ? 'st-loading' : 'st-idle') + '"><span class="shape"></span>' +
+      (U.status === 'done' ? 'Checked' : U.status === 'failed' ? 'Failed' : running ? 'Checking…' : 'Not checked') + '</span></div>' +
+      '<p class="note">Plug in the USB stick or drive, click the button, and pick it. Every file on it is compared with the shared drives. Files are read on this computer only; nothing is uploaded. Works in Chrome or Edge.</p>';
+    if (U.log) html += '<p class="note">' + esc(U.log) + '</p>';
+    if (U.error) html += '<p class="note fail">Stopped: ' + esc(U.error) + '</p>';
+    if (U.status === 'done') {
+      html += '<p class="note"><strong>' + num(U.matches.length + (U.marked ? U.marked.done : 0)) + '</strong> files (' + (U.matchBytes / 1e9).toFixed(2) + ' GB) are already in a shared drive.</p>' +
+        '<p class="note"><strong>' + num(U.only.length) + '</strong> files (' + (U.onlyBytes / 1e9).toFixed(2) + ' GB) are NOT in a shared drive. Copy them there before you clear this drive.</p>';
+      if (U.skipped) html += '<p class="note">' + num(U.skipped) + ' files could not be read and were skipped.</p>';
+      if (U.matches.length) html += '<ul class="files">' + U.matches.slice(0, 30).map(function (f) { return '<li><div class="fname">' + esc(f.path) + '</div></li>'; }).join('') + '</ul>' + (U.matches.length > 30 ? '<p class="note">Showing 30 of ' + num(U.matches.length) + '. Download the full list below.</p>' : '');
+    }
+    if (U.marked) {
+      html += '<p class="res ' + (U.marked.failed || U.marked.unsupported ? 'bad' : 'ok') + '">' + (U.marked.unsupported ? 'This Chrome cannot rename files on a drive. Download the list and rename them another way.' :
+        'Renamed ' + num(U.marked.done) + ' to ' + esc(USB_PREFIX) + '…' + (U.marked.failed ? ', ' + U.marked.failed + ' skipped (changed or locked)' : '') + '. Now open the drive in Finder, search ' + esc(USB_PREFIX) + ', select all, and move them to the Bin.') + '</p>';
+    }
+    html += '<div class="actions">' +
+      '<button class="btn" type="button" data-action="usbscan"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>1. Choose a drive or folder and check it</span></button>' +
+      (running ? '<button class="btn" type="button" data-action="usbstop"><span>Stop</span></button>' : '') +
+      '<button class="btn danger" type="button" data-action="usbmark"' + (busy || !U.matches.length ? ' disabled' : '') + '>' + icon('bin') + '<span>2. Rename matches ' + esc(USB_PREFIX) + '</span></button>' +
+      '<button class="btn" type="button" data-action="usbcsv" data-which="match"' + (U.matches.length ? '' : ' disabled') + '><span>Download list: already in shared</span></button>' +
+      '<button class="btn" type="button" data-action="usbcsv" data-which="only"' + (U.only.length ? '' : ' disabled') + '><span>Download list: only on this drive</span></button></div>' +
+      '<p class="note">Renaming never deletes anything. The files stay on the drive until you move them to the Bin in Finder. If Chrome refuses the top of a drive, pick a folder inside it.</p></section>';
+    return html + nextSteps([NX.drive, NX.bin, NX.map]);
+  }
+  // ==USB-END==
+
   // ---- Small render helpers ----
   function stateBadge(p, emptyCount) {
     if (!signedIn && p.status === 'idle') return '<span class="state st-idle"><span class="shape"></span>Not signed in</span>';
@@ -1064,7 +1243,7 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Map', readfirst: 'Read first', drive: 'Drive', personal: 'PC-Personal', bin: 'Bin', changes: 'Changes' };
+  var VIEWS = { map: 'Map', readfirst: 'Read first', drive: 'Drive', personal: 'PC-Personal', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
   function parseRoute() {
     var parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
     var view = parts[0] && VIEWS[parts[0]] ? parts[0] : null;
@@ -1082,7 +1261,7 @@
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal() : viewChanges(r);
+    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal() : r.view === 'usb' ? viewUsb() : viewChanges(r);
     var routeKey = location.hash;
     var changed = routeKey !== lastView;
     el.setAttribute('data-view', r.view);
@@ -1187,6 +1366,10 @@
     else if (a === 'pcpscan') pcpScan();
     else if (a === 'pcpmark') pcpMark();
     else if (a === 'pcpbin') pcpBin();
+    else if (a === 'usbscan') usbScan();
+    else if (a === 'usbstop') { U.stop = true; }
+    else if (a === 'usbmark') usbMark();
+    else if (a === 'usbcsv') usbCsv(t.getAttribute('data-which'));
   });
   document.addEventListener('change', function (e) {
     if (e.target && e.target.id === 'drivePicker') location.hash = e.target.value ? '#/drive/' + e.target.value : '#/drive';
