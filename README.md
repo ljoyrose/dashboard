@@ -14,7 +14,8 @@ A single-page Google **shared drives** surface (read-only browsing, plus a Bin),
   is pending, failed, empty or capped.
 - **Look:** Lexend only, LJR7 palette (slot 0 for Read first and Drive, slot 2 Risks for the Bin, slot 7 for Cf overskill), light and dark modes.
 - **Money tile** (on Map, Lisa's account only): cash per entity (business and personal kept apart, never summed), stale and runs-dry flags, ready to-dos, and dates overdue or due in the next 14 days. It reads through `money/core.js` and links to `/money/`.
-- **Dropbox line** (on Bin): reads `dropbox/totals.json` (counts and GB only, no file names) and shows how many `ZZ_DELETE_` files are waiting in Dropbox. Two buttons: `DBX_JOB_URL` opens workflow 3 in the private repo (Dropbox only: empty box = dry run, type DELETE to move ZZ_DELETE_DROPBOX_ files to Dropbox Deleted files), `DBX_TRASH_URL` opens Dropbox Deleted files (emptying it cannot be automated on a personal account). The page holds no Dropbox key.
+- **Dropbox line** (on Bin, after sign-in only): reads `DROPBOX-TOTALS.json` (counts and GB only, no file names) from the Drive folder set in `DBX_FOLDER_ID`, so nothing about Dropbox is public. Shows how many `ZZ_DELETE_DROPBOX_` files are waiting. Two buttons: `DBX_JOB_URL` opens workflow 3 in the private repo (Dropbox only: empty box = dry run, type DELETE), `DBX_TRASH_URL` opens Dropbox Deleted files (cannot be automated on a personal account).
+- **Signed out:** only a sign-in button is shown (no tabs, labels or data). This is a display choice; the real protection is that all data is read from Drive with the viewer's own Google sign-in.
 - **Writes:** only from the Bin buttons (files.update trashed=true; files.emptyTrash per shared drive).
 
 The repo contains no secrets. The OAuth client ID in `index.html` is public by design and only works from the

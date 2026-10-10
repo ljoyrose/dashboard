@@ -193,7 +193,7 @@
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout"><svg class="icon"><use href="#i-out"/></svg><span>Sign out</span></button>
     <button id="signInBtn" class="btn vision" type="button" data-action="signin" disabled><svg class="icon"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
   </div>
-  <nav class="wrap main" aria-label="Sections">
+  <nav id="mainNav" class="wrap main hidden" aria-label="Sections">
     <a href="#/map" data-nav="map" class="vision"><svg class="icon"><use href="#i-map"/></svg>Map</a>
     <a href="#/readfirst" data-nav="readfirst" class="slot0"><svg class="icon"><use href="#i-read"/></svg>Read first</a>
     <a href="#/drive" data-nav="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive</a>
@@ -205,11 +205,11 @@
 
 <main class="wrap">
   <div id="banner" class="banner hidden" role="status"></div>
-  <div class="here"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Map</h2></div>
+  <div id="hereBox" class="here hidden"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Map</h2></div>
   <div id="view" data-view="map"></div>
 </main>
 
-<footer class="wrap"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
+<footer id="pageFoot" class="wrap hidden"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
 
 <script>
 (function () {
@@ -469,16 +469,21 @@
     }).then(render);
   }
 
-  // ---- Dropbox line (counts only; the page holds no Dropbox key and shows no Dropbox file names) ----
-  var DBX_TOTALS_URL = 'dropbox/totals.json';   // written by the private Dropbox scan job
-  var DBX_JOB_URL = 'https://github.com/ljoyrose/dropbox-cleanup/actions/workflows/dropbox-delete.yml';   // private delete job (press Run workflow there)
+  // ---- Dropbox line (counts only). Read from a Drive folder after sign-in, so nothing about Dropbox is public. ----
+  var DBX_FOLDER_ID = '';                       // Drive folder holding DROPBOX-TOTALS.json (set once the folder exists)
+  var DBX_TOTALS_NAME = 'DROPBOX-TOTALS.json';  // written by the private Dropbox scan job
+  var DBX_JOB_URL = 'https://github.com/ljoyrose/dropbox-cleanup/actions/workflows/dropbox-delete.yml';   // workflow 3 (press Run workflow there)
   var DBX_TRASH_URL = 'https://www.dropbox.com/deleted_files';   // Dropbox cannot empty this by API on a personal account
   function loadDbx() {
-    run('dbx', fetch(DBX_TOTALS_URL, { cache: 'no-store' }).then(function (res) {
-      if (res.status === 404) return { none: true };
-      if (!res.ok) return { unreachable: true };
-      return res.json();
-    }).catch(function () { return { unreachable: true }; }));
+    if (!signedIn || !accessToken) return;
+    if (!DBX_FOLDER_ID) { S.dbx = { status: 'ok', readAt: Date.now(), error: null, data: { notConnected: true } }; render(); return; }
+    run('dbx', driveList({
+      q: "'" + DBX_FOLDER_ID + "' in parents and name = '" + DBX_TOTALS_NAME + "' and trashed = false",
+      corpora: 'allDrives', pageSize: '1', fields: 'files(id,name)'
+    }).then(function (r) {
+      if (!r.files || !r.files.length) return { none: true };
+      return apiGet(API + '/' + encodeURIComponent(r.files[0].id) + '?alt=media&supportsAllDrives=true');
+    }));
   }
 
   function loadAll() {
@@ -752,6 +757,14 @@
     return h + foot + '</section>';
   }
 
+  // Signed out: nothing about the dashboard is shown, only the sign-in button.
+  function viewGate() {
+    return '<div class="card vision pending"><div class="cardhead"><h3>Sign in</h3>' +
+      '<span class="state st-idle"><span class="shape"></span>Not signed in</span></div>' +
+      '<p class="note">Sign in with Google to open the dashboard.</p>' +
+      '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
+  }
+
   function viewMap() {
     var html = '';
     if (!signedIn) {
@@ -868,8 +881,9 @@
     // Dropbox (counts only)
     var dx = S.dbx, dd = dx.data;
     html += '<section class="card slot2' + cardClass(dx) + '" id="dropboxCard"><div class="cardhead"><h3>Dropbox</h3>' + stateBadge(dx, null) + '</div>';
-    if (dd && dd.none) html += '<p class="note">No Dropbox scan published yet. Nothing is waiting.</p>';
-    else if (dd && dd.unreachable) html += '<p class="note fail">Could not read the Dropbox totals just now.</p>';
+    if (dd && dd.notConnected) html += '<p class="note">Dropbox counts are not connected yet.</p>';
+    else if (dd && dd.none) html += '<p class="note">No Dropbox scan published yet. Nothing is waiting.</p>';
+    else if (dx.status === 'failed') html += failNote(dx);
     else if (dd) {
       html += '<p class="note">Waiting to delete: <strong>' + num(dd.marked_files || 0) + '</strong> files (' + num(dd.marked_gb || 0) + ' GB) named ZZ_DELETE_DROPBOX_ (Dropbox copies only).</p>' +
         '<p class="note">Duplicates found: ' + num(dd.duplicate_files || 0) + ' files, ' + num(dd.wasted_gb || 0) + ' GB wasted' +
@@ -879,7 +893,7 @@
       '<a class="btn danger" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>2. Empty DROPBOX trash</span></a></div>' +
       '<p class="note">1 opens GitHub, workflow 3. Leave the box empty for a dry run, or type DELETE and press Run workflow. Only Dropbox files named ZZ_DELETE_DROPBOX_ move to Dropbox Deleted files, recoverable for a time. Google Drive is never changed.</p>' +
       '<p class="note">2 opens Dropbox Deleted files: select all, then Permanently delete. Dropbox only. Dropbox does not allow this to be automated for a personal account.</p>';
-    html += sourceLine('Dropbox totals', DBX_TOTALS_URL, dx) + '</section>';
+    html += sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</section>';
     // Bin per shared drive
     html += '<section class="card slot2' + cardClass(p) + '" id="binCard"><div class="cardhead"><h3>In the bin</h3>' + stateBadge(p, d ? d.per.length : null) + '</div>';
     html += failNote(p);
@@ -964,7 +978,7 @@
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : viewChanges(r);
+    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : viewChanges(r);
     var routeKey = location.hash;
     var changed = routeKey !== lastView;
     el.setAttribute('data-view', r.view);
@@ -995,6 +1009,7 @@
     $('refreshBtn').classList.toggle('hidden', !signedIn);
     $('signOutBtn').classList.toggle('hidden', !signedIn);
     $('signInBtn').classList.toggle('hidden', signedIn);
+    ['mainNav', 'hereBox', 'pageFoot'].forEach(function (id) { $(id).classList.toggle('hidden', !signedIn); });
   }
 
   // ---- Banner ----
