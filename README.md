@@ -14,7 +14,7 @@ A single-page Google **shared drives** surface (read-only browsing, plus a Bin),
   is pending, failed, empty or capped.
 - **Look:** Lexend only, LJR7 palette (slot 0 for Read first and Drive, slot 2 Risks for the Bin, slot 7 for Cf overskill), light and dark modes.
 - **Money tile** (on Map, Lisa's account only): cash per entity (business and personal kept apart, never summed), stale and runs-dry flags, ready to-dos, and dates overdue or due in the next 14 days. It reads through `money/core.js` and links to `/money/`.
-- **Dropbox line** (on Bin): reads `dropbox/totals.json` (counts and GB only, no file names) and shows how many `ZZ_DELETE_` files are waiting in Dropbox. Delete job link is `DBX_JOB_URL` in `index.html`, empty until the private Dropbox job exists. The page holds no Dropbox key.
+- **Dropbox line** (on Bin): reads `dropbox/totals.json` (counts and GB only, no file names) and shows how many `ZZ_DELETE_` files are waiting in Dropbox. Two buttons: `DBX_JOB_URL` opens the private delete job on GitHub (press Run workflow; empty box = dry run, type DELETE to delete), `DBX_TRASH_URL` opens Dropbox Deleted files (emptying it cannot be automated on a personal account). The page holds no Dropbox key.
 - **Writes:** only from the Bin buttons (files.update trashed=true; files.emptyTrash per shared drive).
 
 The repo contains no secrets. The OAuth client ID in `index.html` is public by design and only works from the
