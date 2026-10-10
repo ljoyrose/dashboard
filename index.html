@@ -144,8 +144,22 @@
   .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .btn.danger { border-color: var(--s2); color: var(--s2); font-weight: 600; }
   .btn.danger.solid { background: var(--s2); color: #FFFEFB; }
+  /* Folded cards: summary always shows title + count; body opens on click and stays open across redraws. */
+  details.fold > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 32px; }
+  details.fold > summary::-webkit-details-marker { display: none; }
+  details.fold > summary h3, details.fold > summary h4 { display: flex; align-items: center; gap: 8px; }
+  details.fold > summary h3::before, details.fold > summary h4::before { content: '\25B8'; color: var(--muted); font-size: 14px; }
+  details.fold[open] > summary h3::before, details.fold[open] > summary h4::before { content: '\25BE'; }
+  details.fold > .fbody { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; min-width: 0; }
+  details.subfold { border-top: 1px solid var(--line); padding-top: 8px; }
+  .scrollbox { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+  .index { display: flex; flex-wrap: wrap; gap: 8px; }
+  .index .btn { font-size: 14px; padding: 4px 12px; }
+  .index .n { color: var(--muted); }
+  input.find { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); }
   .binsec { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
   .binsec:first-of-type { border-top: none; padding-top: 0; }
+  .hidden-by-filter { display: none !important; }
   .res { font-size: 14px; text-align: left; margin: 0; }
   .res.ok { color: var(--muted); }
   .res.bad { color: var(--fail); font-weight: 600; }
@@ -1124,25 +1138,47 @@
     return html + nextSteps([{ to: 'drive', label: 'All shared drives', icon: 'drive', slot: 'slot0' }, NX.bin, NX.map]);
   }
 
+  // Fold state lives here so a redraw never closes a section you opened.
+  var FOLD = {}, BF = '';
+  function foldOpen(key, dflt, cls, id) {
+    var open = key in FOLD ? FOLD[key] : dflt;
+    return '<details class="' + cls + ' fold" data-fold="' + key + '"' + (id ? ' id="' + id + '"' : '') + (open ? ' open' : '') + '>';
+  }
+  function applyBinFilter() {
+    var q = BF.trim().toLowerCase();
+    Array.prototype.forEach.call(document.querySelectorAll('[data-name]'), function (el) {
+      el.classList.toggle('hidden-by-filter', !!q && el.getAttribute('data-name').indexOf(q) < 0);
+    });
+  }
   function binList(items, render1) {
     var shown = items.slice(0, BIN_SHOW);
-    return '<ul class="files">' + shown.map(render1).join('') + '</ul>' +
+    return '<div class="scrollbox"><ul class="files">' + shown.map(render1).join('') + '</ul></div>' +
       (items.length > BIN_SHOW ? '<p class="note">Showing ' + BIN_SHOW + ' of ' + num(items.length) + '.</p>' : '');
   }
   function viewBin() {
     var p = S.bin, d = p.data, html = '';
+    // Index: every section on one line, with its count
+    var zzN = d ? d.zz.length : null, dxd = S.dbx.data, binsN = d ? d.per.reduce(function (t, x) { return t + x.trash.length; }, 0) : null;
+    html += '<nav class="card slot2" aria-label="Bin index"><div class="index">' +
+      '<button class="btn" type="button" data-action="foldjump" data-key="sweep">ZZ_ sweep <span class="n">' + num(zzN) + '</span></button>' +
+      '<button class="btn" type="button" data-action="foldjump" data-key="dropbox">Dropbox <span class="n">' + (dxd && dxd.marked_files != null ? num(dxd.marked_files) : '–') + '</span></button>' +
+      '<button class="btn" type="button" data-action="foldjump" data-key="bins">In the bin <span class="n">' + num(binsN) + '</span></button>' +
+      '<button class="btn" type="button" data-action="foldjump" data-key="access">Access</button></div></nav>';
     // Access card
-    html += '<section class="card slot2' + (signedIn && writeGranted ? '' : ' pending') + '"><div class="cardhead"><h3>Bin access</h3>' +
-      (writeGranted ? '<span class="state st-ok"><span class="shape"></span>Bin actions on</span>' : '<span class="state st-idle"><span class="shape"></span>Read-only</span>') + '</div>' +
+    html += foldOpen('access', !writeGranted, 'card slot2' + (signedIn && writeGranted ? '' : ' pending')) + '<summary><h3>Bin access</h3>' +
+      (writeGranted ? '<span class="state st-ok"><span class="shape"></span>Bin actions on</span>' : '<span class="state st-idle"><span class="shape"></span>Read-only</span>') + '</summary><div class="fbody">' +
       '<p class="note">Lists below are read-only. Moving ZZ_ items to the bin and emptying a bin need full Drive access, asked for only here and kept in memory until you sign out.</p>' +
       (signedIn && !writeGranted ? '<div class="actions"><button class="btn danger" type="button" data-action="grantwrite">' + icon('in') + '<span>Allow Bin actions</span></button></div>' : '') +
-      '</section>';
+      '</div></details>';
     // ZZ_ sweep
     var zz = d ? d.zz : [];
-    html += '<section class="card slot2' + cardClass(p) + '" id="sweepCard"><div class="cardhead"><h3>ZZ_ sweep</h3>' + stateBadge(p, d ? zz.length : null) + '</div>';
+    html += foldOpen('sweep', zz.length > 0, 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>ZZ_ sweep</h3>' + stateBadge(p, d ? zz.length : null) + '</summary><div class="fbody">';
     html += '<p class="note">Names starting ZZ_ (ZZ_delete, ZZ_dupe, ZZ_SUPERSEDED…) in every shared drive. RR_ archive items, and anything inside an RR_ folder, are never included.</p>';
     html += failNote(p);
     if (d) {
+      var n = d.sweepable.length;
+      html += '<div class="actions"><button class="btn danger solid" type="button" data-action="sweep"' + (n && !busy ? '' : ' disabled') + '>' + icon('bin') +
+        '<span>' + (writeGranted ? 'Move all to bin (' + n + ')' : 'Allow, then move all to bin (' + n + ')') + '</span></button></div>';
       html += zz.length ? binList(zz, function (f) {
         return '<li data-zz="' + esc(f.id) + '"><div class="fname">' + (f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name)) + '</div>' +
           '<div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' +
@@ -1150,9 +1186,6 @@
           (f._skip ? '<div class="skip">' + esc(f._skip) + '</div>' : '') + '</li>';
       }) : '<p class="note">Nothing named ZZ_ found. All clear.</p>';
       if (d.zzMore) html += '<p class="note fail">Partial: some drives have more matches than one read can hold.</p>';
-      var n = d.sweepable.length;
-      html += '<div class="actions"><button class="btn danger solid" type="button" data-action="sweep"' + (n && !busy ? '' : ' disabled') + '>' + icon('bin') +
-        '<span>' + (writeGranted ? 'Move all to bin (' + n + ')' : 'Allow, then move all to bin (' + n + ')') + '</span></button></div>';
     }
     if (R.sweep) {
       html += '<div id="sweepResults"><h4>Last sweep · ' + esc(stamp(R.sweep.at)) + '</h4>' + (R.sweep.cancelled ? '<p class="res ok">Cancelled. Nothing moved.</p>' :
@@ -1160,10 +1193,10 @@
           return '<li><div class="fname">' + esc(x.name) + '</div><p class="res ' + (x.ok ? 'ok' : 'bad') + '">' + esc(x.text) + ' · ' + esc(x.path) + '</p></li>';
         }).join('') + '</ul>') + '</div>';
     }
-    html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</section>';
+    html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
     // Dropbox (counts only)
     var dx = S.dbx, dd = dx.data;
-    html += '<section class="card slot2' + cardClass(dx) + '" id="dropboxCard"><div class="cardhead"><h3>Dropbox</h3>' + stateBadge(dx, null) + '</div>';
+    html += foldOpen('dropbox', true, 'card slot2' + cardClass(dx), 'dropboxCard') + '<summary><h3>Dropbox</h3>' + stateBadge(dx, null) + '</summary><div class="fbody">';
     if (dd && dd.notConnected) html += '<p class="note">Dropbox counts are not connected yet.</p>';
     else if (dd && dd.none) html += '<p class="note">No Dropbox scan published yet. Nothing is waiting.</p>';
     else if (dx.status === 'failed') html += failNote(dx);
@@ -1176,31 +1209,39 @@
       '<a class="btn danger" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>2. Empty DROPBOX trash</span></a></div>' +
       '<p class="note">1 opens GitHub, workflow 3. Leave the box empty for a dry run, or type DELETE and press Run workflow. Only Dropbox files named ZZ_DELETE_DROPBOX_ move to Dropbox Deleted files, recoverable for a time. Google Drive is never changed.</p>' +
       '<p class="note">2 opens Dropbox Deleted files: select all, then Permanently delete. Dropbox only. Dropbox does not allow this to be automated for a personal account.</p>';
-    html += sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</section>';
-    // Bin per shared drive
-    html += '<section class="card slot2' + cardClass(p) + '" id="binCard"><div class="cardhead"><h3>In the bin</h3>' + stateBadge(p, d ? d.per.length : null) + '</div>';
+    html += sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</div></details>';
+    // Bin per shared drive: indexed, drives with items first, each folded; empty bins grouped.
+    html += foldOpen('bins', true, 'card slot2' + cardClass(p), 'binCard') + '<summary><h3>In the bin</h3>' + stateBadge(p, d ? d.per.length : null) + '</summary><div class="fbody">';
     html += failNote(p);
     if (d) {
       if (!d.per.length) html += '<p class="note">No shared drives found for this account.</p>';
-      d.per.forEach(function (x) {
+      var full = d.per.filter(function (x) { return x.trash.length; }).sort(function (a, b) { return b.trash.length - a.trash.length; });
+      var empty = d.per.filter(function (x) { return !x.trash.length; });
+      if (d.per.length > 6) html += '<input class="find" id="binFilter" type="search" placeholder="Find a shared drive (' + d.per.length + ')" value="' + esc(BF) + '" aria-label="Find a shared drive">';
+      if (full.length) html += '<div class="index" aria-label="Drives with items in the bin">' + full.map(function (x) {
+        return '<button class="btn" type="button" data-action="foldjump" data-key="bin-' + esc(x.drive.id) + '" data-name="' + esc(x.drive.name.toLowerCase()) + '">' + esc(x.drive.name) + ' <span class="n">' + num(x.trash.length) + (x.trashMore ? '+' : '') + '</span></button>';
+      }).join('') + '</div>';
+      else html += '<p class="note">Every shared drive has an empty bin.</p>';
+      full.forEach(function (x) {
         var res = R.empty[x.drive.id], can = !x.drive.capabilities || x.drive.capabilities.canDeleteChildren !== false;
-        html += '<div class="binsec" data-drive="' + esc(x.drive.id) + '"><div class="cardhead"><h4>' + esc(x.drive.name) + '</h4><span class="state">' +
-          num(x.trash.length) + (x.trashMore ? '+' : '') + ' in bin</span></div>';
-        if (x.trash.length) {
-          html += binList(x.trash, function (f) {
-            var who = f.trashingUser ? (f.trashingUser.displayName || f.trashingUser.emailAddress) : 'Unknown';
-            return '<li><div class="fname">' + esc(f.name) + '</div><div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' +
-              '<span>Binned ' + esc(fmtTime(f.trashedTime) || 'date unknown') + '</span><span>by ' + esc(who) + '</span></div></li>';
-          });
-          if (x.inside) html += '<p class="note">Plus ' + num(x.inside) + (x.inside === 1 ? ' item' : ' items') + ' inside binned folders.</p>';
-          html += '<div class="actions"><button class="btn danger" type="button" data-action="empty" data-drive="' + esc(x.drive.id) + '"' + (busy || !can ? ' disabled' : '') + '>' +
-            icon('bin') + '<span>Empty bin</span></button>' + (can ? '' : '<span class="note">Needs Manager role.</span>') + '</div>';
-        } else html += '<p class="note">Bin is empty.</p>';
+        html += foldOpen('bin-' + x.drive.id, false, 'binsec subfold') .replace('<details ', '<details data-drive="' + esc(x.drive.id) + '" data-name="' + esc(x.drive.name.toLowerCase()) + '" ') +
+          '<summary><h4>' + esc(x.drive.name) + '</h4><span class="state">' + num(x.trash.length) + (x.trashMore ? '+' : '') + ' in bin</span></summary><div class="fbody">';
+        html += '<div class="actions"><button class="btn danger" type="button" data-action="empty" data-drive="' + esc(x.drive.id) + '"' + (busy || !can ? ' disabled' : '') + '>' +
+          icon('bin') + '<span>Empty bin</span></button>' + (can ? '' : '<span class="note">Needs Manager role.</span>') + '</div>';
+        html += binList(x.trash, function (f) {
+          var who = f.trashingUser ? (f.trashingUser.displayName || f.trashingUser.emailAddress) : 'Unknown';
+          return '<li><div class="fname">' + esc(f.name) + '</div><div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' +
+            '<span>Binned ' + esc(fmtTime(f.trashedTime) || 'date unknown') + '</span><span>by ' + esc(who) + '</span></div></li>';
+        });
+        if (x.inside) html += '<p class="note">Plus ' + num(x.inside) + (x.inside === 1 ? ' item' : ' items') + ' inside binned folders.</p>';
         if (res) html += '<p class="res ' + (res.ok ? 'ok' : 'bad') + '">' + esc(res.text) + '</p>';
-        html += '</div>';
+        html += '</div></details>';
       });
+      empty.forEach(function (x) { if (R.empty[x.drive.id]) html += '<p class="res ' + (R.empty[x.drive.id].ok ? 'ok' : 'bad') + '" data-name="' + esc(x.drive.name.toLowerCase()) + '">' + esc(x.drive.name) + ': ' + esc(R.empty[x.drive.id].text) + '</p>'; });
+      if (empty.length) html += foldOpen('emptybins', false, 'subfold') + '<summary><h4>' + num(empty.length) + (empty.length === 1 ? ' shared drive has' : ' shared drives have') + ' an empty bin</h4></summary><div class="fbody"><ul class="files">' +
+        empty.map(function (x) { return '<li data-name="' + esc(x.drive.name.toLowerCase()) + '"><div class="fname">' + esc(x.drive.name) + '</div></li>'; }).join('') + '</ul></div></details>';
     }
-    html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</section>';
+    html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
     return html + nextSteps([NX.drive, NX.changes, NX.map]);
   }
 
@@ -1281,6 +1322,7 @@
       el.innerHTML = html;
     }
     lastView = routeKey;
+    applyBinFilter();
     updateHeader();
     if (r.view === 'bin' && S.dbx.status === 'idle') loadDbx();
   }
@@ -1363,6 +1405,14 @@
     else if (a === 'grantwrite') requestWrite();
     else if (a === 'sweep') sweep();
     else if (a === 'empty') emptyBin(t.getAttribute('data-drive'));
+    else if (a === 'foldjump') {
+      var key = t.getAttribute('data-key');
+      FOLD[key] = true;
+      if (key.indexOf('bin-') === 0) FOLD.bins = true;
+      render();
+      var el = document.querySelector('[data-fold="' + key + '"]');
+      if (el) { el.scrollIntoView({ block: 'start' }); var sm = el.querySelector('summary'); if (sm) sm.focus(); }
+    }
     else if (a === 'pcpscan') pcpScan();
     else if (a === 'pcpmark') pcpMark();
     else if (a === 'pcpbin') pcpBin();
@@ -1370,6 +1420,13 @@
     else if (a === 'usbstop') { U.stop = true; }
     else if (a === 'usbmark') usbMark();
     else if (a === 'usbcsv') usbCsv(t.getAttribute('data-which'));
+  });
+  document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (d && d.matches && d.matches('details[data-fold]')) FOLD[d.getAttribute('data-fold')] = d.open;
+  }, true);
+  document.addEventListener('input', function (e) {
+    if (e.target && e.target.id === 'binFilter') { BF = e.target.value; applyBinFilter(); }
   });
   document.addEventListener('change', function (e) {
     if (e.target && e.target.id === 'drivePicker') location.hash = e.target.value ? '#/drive/' + e.target.value : '#/drive';
