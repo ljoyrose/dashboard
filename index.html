@@ -471,7 +471,8 @@
 
   // ---- Dropbox line (counts only; the page holds no Dropbox key and shows no Dropbox file names) ----
   var DBX_TOTALS_URL = 'dropbox/totals.json';   // written by the private Dropbox scan job
-  var DBX_JOB_URL = '';                          // GitHub Actions page of the private delete job; empty until set up
+  var DBX_JOB_URL = 'https://github.com/ljoyrose/dropbox-cleanup/actions/workflows/dropbox-delete.yml';   // private delete job (press Run workflow there)
+  var DBX_TRASH_URL = 'https://www.dropbox.com/deleted_files';   // Dropbox cannot empty this by API on a personal account
   function loadDbx() {
     run('dbx', fetch(DBX_TOTALS_URL, { cache: 'no-store' }).then(function (res) {
       if (res.status === 404) return { none: true };
@@ -874,9 +875,10 @@
         '<p class="note">Duplicates found: ' + num(dd.duplicate_files || 0) + ' files, ' + num(dd.wasted_gb || 0) + ' GB wasted' +
         (dd.complete === false ? ' (scan not finished)' : '') + '. Scan ' + esc(fmtTime(dd.generated) || 'date unknown') + '.</p>';
     }
-    html += DBX_JOB_URL ? '<div class="actions"><a class="btn danger" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>Open Dropbox delete job</span></a></div>' +
-      '<p class="note">Opens GitHub. Press Run workflow there. Files go to Dropbox Deleted files, recoverable for a time.</p>'
-      : '<p class="note">Delete job not linked yet. Until then, search ZZ_DELETE_ in Dropbox on the web, select all, delete.</p>';
+    html += '<div class="actions"><a class="btn danger" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>1. Delete ZZ_DELETE_ files</span></a>' +
+      '<a class="btn danger" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>2. Empty Dropbox trash</span></a></div>' +
+      '<p class="note">1 opens GitHub: leave the box empty for a dry run, or type DELETE and press Run workflow. Files move to Dropbox Deleted files, recoverable for a time.</p>' +
+      '<p class="note">2 opens Dropbox Deleted files: select all, then Permanently delete. Dropbox does not allow this to be automated for a personal account.</p>';
     html += sourceLine('Dropbox totals', DBX_TOTALS_URL, dx) + '</section>';
     // Bin per shared drive
     html += '<section class="card slot2' + cardClass(p) + '" id="binCard"><div class="cardhead"><h3>In the bin</h3>' + stateBadge(p, d ? d.per.length : null) + '</div>';
