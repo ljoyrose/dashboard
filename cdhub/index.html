@@ -322,7 +322,7 @@ function build(){
     var o=OCC[r.id]||{}, s=ST[r.id]||{}, m=MC[r.id]||{};
     var lits=LITBYDAM[r.id]||[];
     return {id:r.id,name:r.name,sex:r.sex,dob:r.dob,size:r.size_band,coat:r.coat_type,kind:r.kind,
-      neuter:r.neuter_status,state:s.state||'',classification:o.classification||'',area_id:o.area_id||'',
+      neuter:r.neuter_status,state:s.state||'',classification:o.classification||'',area_id:o.area_id||'',birthLitter:r.birth_litter_id||'',
       
       where:'',off:o.off_site_kind||'',
       treats:DSP[r.id]||[], dna:DNA[r.id]||[],
@@ -391,7 +391,10 @@ function months(iso){ if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
  if(TODAY.getDate()<b.getDate()) m--;
  return m<0?null:m; }
 function isEntire(d){ return (d.neuter||'entire')!=='neutered'; }
-function onPrem(d){ return !!d.classification && d.classification!=='Collected' && !d.off; }
+function onPrem(d){
+ if(d.classification) return d.classification!=='Collected' && !d.off;
+ // a live pup with no occupancy row yet (new litter) is still here
+ return d.kind==='Pup' && !d.off && /^(active|in training)$/i.test(d.state||''); }
 var STATUS=[['BI','Bitch','st-bi',null],['ST','Stud','st-st',null],
  ['TR','Training','st-tr',null],['CE','Cerys','st-ce',null],['GR','Grace','st-gr',null],
  ['LN','Litter no mum','st-ln',null],['PU','Puppy','st-pu',null],['DE','Deceased','st-de',null],['CL','Collected','st-cl',null]];
@@ -978,7 +981,10 @@ function litterPups(){
  if(CD._pups) return CD._pups;
  var byRaw={}; CD.litters.forEach(function(l){ if(l.raw_name) byRaw[l.raw_name.toLowerCase().replace(/\s+/g,'')]=l.id; });
  var out={};
- CD.dogs.forEach(function(d){ var k=(d.descent||'').toLowerCase().replace(/\s+/g,'');
+ var litIds={}; CD.litters.forEach(function(l){ litIds[l.id]=1; });
+ CD.dogs.forEach(function(d){
+  if(d.birthLitter && litIds[d.birthLitter]){ out[d.birthLitter]=(out[d.birthLitter]||0)+1; return; }
+  var k=(d.descent||'').toLowerCase().replace(/\s+/g,'');
   if(k && byRaw[k]) out[byRaw[k]]=(out[byRaw[k]]||0)+1; });
  CD._pups=out; return out;
 }
