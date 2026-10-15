@@ -1,0 +1,4 @@
+CURRENT: 2 rows held 2026-03-09
+id,entity,account,cadence,next_due,last_received,status
+I001,TESTCO,Sample current account,monthly,2026-03-20,2026-02-20,live
+I002,TESTPERS,Sample savings,monthly,2026-03-05,2026-02-05,open

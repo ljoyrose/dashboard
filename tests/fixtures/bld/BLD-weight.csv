@@ -1,0 +1,4 @@
+subject_id,performed_on,weight_kg,unit,body_condition_score,bcs_scale,source
+sub-test-dog-1,2026-02-01,14.2,kg,5,9,invented
+sub-test-dog-1,2026-03-01,14.6,kg,5,9,invented
+sub-test-pup-1,2026-03-01,2.1,kg,,,invented
