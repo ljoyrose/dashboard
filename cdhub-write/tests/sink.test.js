@@ -6,6 +6,8 @@ const fx = require('./fixtures');
 
 const lines = (t) => t.split('\r\n').filter(Boolean);
 const rows = (env, title) => env.ctx.csvRecords_(env.text(title)).records;
+/** Simulates the later decision to put a proposed table on the allow-list (a one-line code change). */
+const promote = (env, key) => { env.ctx.TABLES[key] = env.ctx.PROPOSED_TABLES[key]; };
 
 /** Every write the script made only ever ADDED text to the end of the old text. */
 function assertAppendOnly(env) {
@@ -114,7 +116,7 @@ test('a file that is not on the allow-list is refused, and no live table is touc
   assert.throws(() => env.ctx.store_append_('BLD-subject.csv', ['id'], ['x'], { header: ['id'], file: {}, text: '', size: 0 }),
     (e) => e.code === 'FILE_NOT_ALLOWED');
   assert.deepEqual(Array.from(env.ctx.allowedFiles_()).sort(),
-    ['BLD-_pending.csv', 'BLD-area_reading.csv', 'BLD-round_event.csv', 'BLD-staff.csv']);
+    ['BLD-_pending.csv', 'BLD-area_reading.csv']);
 });
 
 test('the exact file name is accepted as an alias for the table key', () => {
@@ -302,12 +304,23 @@ test('ships OFF: no SAVE_ENABLED means every save is refused', () => {
   assert.equal(env.writes.length, 0);
 });
 
-test('each table has its own switch', () => {
+test('each allow-listed table has its own switch', () => {
   const env = standardEnv({ props: { TABLE_ON_area_reading: 'false' } });
   assert.equal(save(env, req(env)).code, 'TABLE_OFF');
-  // round_event and staff are off unless switched on, even with saving ON
-  assert.equal(save(env, req(env, { table: 'round_event', fields: {} })).code, 'TABLE_OFF');
-  assert.equal(save(env, req(env, { table: 'staff', fields: {} })).code, 'TABLE_OFF');
+});
+
+test('proposed tables (round_event, staff) are NOT on the allow-list: refused even if every switch is on', () => {
+  const env = standardEnv({ props: { TABLE_ON_round_event: 'true', TABLE_ON_staff: 'true', MODE_round_event: 'direct', MODE_staff: 'direct' } });
+  env.addFile('BLD-round_event.csv', fx.headerOnly(['id', 'tenant_id']));
+  env.addFile('BLD-staff.csv', fx.headerOnly(fx.STAFF_HEADER));
+  ['round_event', 'staff', 'BLD-round_event.csv', 'BLD-staff.csv'].forEach((t) => {
+    const r = save(env, req(env, { table: t, code: env.codes.owner, fields: {} }));
+    assert.equal(r.code, 'FILE_NOT_ALLOWED', t);
+  });
+  assert.deepEqual(Array.from(Object.keys(env.ctx.TABLES)), ['area_reading']);
+  assert.deepEqual(Array.from(Object.keys(env.ctx.PROPOSED_TABLES)).sort(), ['round_event', 'staff']);
+  assert.equal(env.writes.length, 0);
+  assert.throws(() => env.ctx.store_append_('BLD-staff.csv', fx.STAFF_HEADER, [], { header: fx.STAFF_HEADER, file: {}, text: '' }), (e) => e.code === 'FILE_NOT_ALLOWED');
 });
 
 test('wrong, missing and switched-off staff codes are refused; the code is never stored in clear', () => {
@@ -331,8 +344,9 @@ test('too many wrong codes pauses saving for everyone for a while', () => {
   assert.equal(r.code, 'TOO_MANY_TRIES');
 });
 
-test('roles: staff cannot change the roster; the owner can, but it still waits for approval', () => {
+test('roles (once the proposed staff table is promoted): staff cannot change the roster; the owner can, but it still waits for approval', () => {
   const env = standardEnv({ props: { TABLE_ON_staff: 'true', MODE_staff: 'direct' } });
+  promote(env, 'staff');
   env.addFile('BLD-staff.csv', fx.headerOnly(fx.STAFF_HEADER));
   const f = { person_id: 'per-test-1', role: 'Kennel assistant', employment: 'part_time', started_on: '2026-09-01' };
   assert.equal(save(env, req(env, { table: 'staff', fields: f })).code, 'NOT_ALLOWED');
@@ -348,8 +362,9 @@ test('roles: staff cannot change the roster; the owner can, but it still waits f
   assert.match(r2.fields.person_id, /Not found/);
 });
 
-test('round_event: placed needs a dog, access_set needs a flap setting', () => {
+test('round_event (once promoted): placed needs a dog, access_set needs a flap setting', () => {
   const env = standardEnv({ props: { TABLE_ON_round_event: 'true', MODE_round_event: 'direct' } });
+  promote(env, 'round_event');
   env.addFile('BLD-round_event.csv', fx.headerOnly(['id', 'tenant_id', 'round_date', 'area_id', 'subject_id', 'event_type', 'access_type', 'recorded_by', 'recorded_at', 'corrects_id']));
   let r = save(env, req(env, { table: 'round_event', fields: { round_date: '2026-10-15', area_id: 'area-t1', event_type: 'placed' } }));
   assert.match(r.fields.subject_id, /which dog/);
@@ -401,19 +416,98 @@ test('a file that ends without a newline is handled, line ending style is kept, 
   assertAppendOnly(env);
 });
 
-test('if Drive hands back something different after the write, the script says so loudly', () => {
+test('read-back check fails once: the EXACT old text is put back, nothing is saved, and it is logged in the waiting list', () => {
+  const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
+  assert.equal(save(env, req(env)).ok, true);          // one good row first
+  const before = env.text('BLD-area_reading.csv');
+  env.nowMs += 13 * 3600000;
+  env.breakSetContent = 'once'; env.breakTitle = 'BLD-area_reading.csv';
+  const r = save(env, req(env, { fields: { area_id: 'area-t2', min_c: '19', max_c: '23' } }));
+  assert.equal(r.code, 'VERIFY_FAILED');
+  assert.match(r.message, /put back exactly/);
+  assert.equal(env.text('BLD-area_reading.csv'), before);   // byte-for-byte what it was
+  const ev = rows(env, 'BLD-_pending.csv').pop();
+  assert.equal(ev.event, 'write_check_failed');
+  assert.equal(ev.target_file, 'BLD-area_reading.csv');
+  assert.equal(ev.result, 'old text restored');
+  env.breakSetContent = false;                          // and a retry then works
+  env.nowMs += 1000;
+  assert.equal(save(env, req(env, { fields: { area_id: 'area-t2', min_c: '19', max_c: '23' } })).ok, true);
+});
+
+test('read-back check fails AND the restore cannot be confirmed: say so loudly', () => {
   const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
   env.breakSetContent = true;
   const r = save(env, req(env));
   assert.equal(r.code, 'VERIFY_FAILED');
-  assert.match(r.message, /Tell Lisa/);
+  assert.match(r.message, /Tell Lisa now/);
+  assert.match(r.message, /could not be confirmed/);
 });
 
-test('if the file changes size while saving, the save stops', () => {
+test('a failed read-back during approval is logged on that waiting item, and it can be approved again', () => {
+  const env = standardEnv();
+  const q = save(env, req(env));
+  env.email = 'owner@example.test';
+  const before = env.text('BLD-area_reading.csv');
+  env.breakSetContent = 'once'; env.breakTitle = 'BLD-area_reading.csv';
+  const d = env.ctx.ui_decide(q.result.pending_id, 'approve', '');
+  assert.equal(d.code, 'VERIFY_FAILED');
+  assert.equal(env.text('BLD-area_reading.csv'), before);
+  const last = rows(env, 'BLD-_pending.csv').pop();
+  assert.equal(last.event, 'apply_failed');
+  assert.equal(last.result, 'old text restored');
+  env.breakSetContent = false;
+  assert.equal(env.ctx.ui_decide(q.result.pending_id, 'approve', '').ok, true);
+  assert.equal(lines(env.text('BLD-area_reading.csv')).length, 2);
+});
+
+test('if the file changes while saving, the save stops (longer file, and an edit of the SAME length)', () => {
   const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
-  const target = env.ctx.store_read_('BLD-area_reading.csv', true);
-  env.file('BLD-area_reading.csv')[0].content += 'sneaky,edit\r\n';
-  assert.throws(() => env.ctx.store_append_('BLD-area_reading.csv', env.ctx.TABLES.area_reading.columns, ['x'], target), (e) => e.code === 'CHANGED_DURING_WRITE');
+  assert.equal(save(env, req(env)).ok, true);
+  const cols = env.ctx.TABLES.area_reading.columns;
+  const f = env.file('BLD-area_reading.csv')[0];
+  let target = env.ctx.store_read_('BLD-area_reading.csv', true);
+  f.content += 'sneaky,edit\r\n';
+  assert.throws(() => env.ctx.store_append_('BLD-area_reading.csv', cols, ['x'], target), (e) => e.code === 'CHANGED_DURING_WRITE');
+  target = env.ctx.store_read_('BLD-area_reading.csv', true);
+  f.content = f.content.replace('sneaky,edit', 'sneaky,EDIT'); // same length, different text: a size check would miss this
+  assert.equal(Buffer.byteLength(f.content), target.size);
+  assert.throws(() => env.ctx.store_append_('BLD-area_reading.csv', cols, ['x'], target), (e) => e.code === 'CHANGED_DURING_WRITE');
+});
+
+// ------------------------------------------------------------------ optional daily backup
+test('backup is off by default and copies nothing', () => {
+  const env = standardEnv();
+  env.ctx.adminDailyBackup();
+  assert.equal(env.copies.length, 0);
+  assert.equal(Object.keys(env.subfolders).length, 0);
+  assert.ok(env.logs.some((l) => /Backup is off/.test(l)));
+});
+
+test('backup when on: one copy per existing file per day, in BLD-backups, nothing deleted or overwritten', () => {
+  const env = standardEnv({ props: { BACKUP_ON: 'true' } });
+  const live = JSON.stringify(env.drive);
+  env.ctx.adminDailyBackup();
+  assert.deepEqual(env.copies.map((c) => c.name).sort(),
+    ['BLD-_pending.csv.pre-daily-2026-10-15.bak', 'BLD-area_reading.csv.pre-daily-2026-10-15.bak']);
+  assert.equal(JSON.stringify(env.drive), live);            // the live files are untouched
+  env.ctx.adminDailyBackup();                               // same day again: nothing new
+  assert.equal(env.copies.length, 2);
+  env.nowMs += 24 * 3600000;
+  env.ctx.adminDailyBackup();                               // next day: two more, the old ones stay
+  assert.equal(env.copies.length, 4);
+  assert.equal(env.subfolders['BLD-backups'].files.length, 4);
+  assert.equal(env.writes.length, 0);
+});
+
+test('backup schedule installs once and removes without touching copies', () => {
+  const env = standardEnv({ props: { BACKUP_ON: 'true' } });
+  env.ctx.adminInstallDailyBackup(); env.ctx.adminInstallDailyBackup();
+  assert.equal(env.triggers.length, 1);
+  env.ctx.adminDailyBackup();
+  env.ctx.adminRemoveDailyBackup();
+  assert.equal(env.triggers.length, 0);
+  assert.equal(env.copies.length, 2);
 });
 
 test('bad requests are not understood, not crashed on', () => {
@@ -436,7 +530,8 @@ test('status check shows switches only: no codes, no ids, no data', () => {
   assert.equal(out.saveEnabled, true);
   const s = JSON.stringify(out);
   assert.ok(!s.includes(env.codes.staff) && !s.includes(fx.TENANT) && !s.includes('FOLDER-TEST'));
-  assert.deepEqual(out.tables.map((t) => t.key), ['area_reading', 'round_event', 'staff']);
+  assert.deepEqual(Array.from(out.tables).map((t) => t.key), ['area_reading']);
+  assert.deepEqual(Array.from(out.proposed), ['round_event', 'staff']);
   // approval page is only for owners
   assert.match(env.ctx.doGet({ parameter: { page: 'approve' } }).html, /for the kennel owner/);
   env.email = 'owner@example.test';
@@ -465,7 +560,8 @@ test('admin: health check changes nothing and speaks plainly', () => {
   env.ctx.adminCheckSetup();
   assert.equal(env.writes.length, 0);
   assert.ok(env.logs.some((l) => /BLD-area_reading.csv exists with 0 row/.test(l)));
-  assert.ok(env.logs.some((l) => /BLD-staff.csv does not exist yet/.test(l)));
+  assert.ok(env.logs.some((l) => /BLD-_pending.csv exists with 0 row/.test(l)));
+  assert.ok(!env.logs.some((l) => /BLD-staff.csv/.test(l))); // proposed tables are not checked
   assert.ok(env.logs.some((l) => /SAVE_ENABLED is TRUE/.test(l)));
 });
 

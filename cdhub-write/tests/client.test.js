@@ -1,8 +1,10 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const BLDSave = require('../client/bld-save.js');
-const BLDBands = require('../client/bands.js');
+const fsx = require('node:fs'), pathx = require('node:path');
+const CODE = fsx.existsSync(pathx.join(__dirname, '..', 'code')) ? pathx.join(__dirname, '..', 'code') : pathx.join(__dirname, '..');
+const BLDSave = require(CODE + '/client/bld-save.js');
+const BLDBands = require(CODE + '/client/bands.js');
 
 const GOOD_URL = 'https://script.google.com/macros/s/AKfycbxTESTTESTTEST/exec';
 
@@ -11,14 +13,15 @@ function fakeServer(over = {}) {
   const calls = [];
   const state = Object.assign({
     saveEnabled: true,
-    tables: [{ key: 'area_reading', file: 'BLD-area_reading.csv', on: true, mode: 'pending' }, { key: 'staff', file: 'BLD-staff.csv', on: false, mode: 'pending' }],
+    tables: [{ key: 'area_reading', file: 'BLD-area_reading.csv', on: true, mode: 'pending' }],
+    proposed: ['round_event', 'staff'],
     reply: { ok: true, result: { status: 'queued', id: 'rdg-test-1', pending_id: 'pnd-1' } },
     fail: false
   }, over);
   const f = async (url, init = {}) => {
     calls.push({ url, init });
     if (state.fail) throw new Error('offline');
-    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, version: '1.0.0', saveEnabled: state.saveEnabled, tables: state.tables }) };
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, version: '1.0.0', saveEnabled: state.saveEnabled, tables: state.tables, proposed: state.proposed }) };
     return { json: async () => state.reply };
   };
   return { f, calls, state };
@@ -59,7 +62,7 @@ test('banner follows what the script reports', async () => {
   assert.equal(s.banner('area_reading').kind, 'pending');
   assert.equal(s.banner('area_reading').canSave, true);
   assert.equal(s.banner('staff').canSave, false);
-  assert.match(s.banner('staff').text, /not switched on yet/);
+  assert.match(s.banner('staff').text, /only a proposal/);
   srv.state.tables[0].mode = 'direct'; await s.checkStatus();
   assert.equal(s.banner('area_reading').kind, 'on');
   srv.state.saveEnabled = false; await s.checkStatus();
@@ -188,8 +191,9 @@ test('bands: verdicts and the action ladder', () => {
 });
 
 // ------------------------------------------------------------------ screens (DOM)
-let JSDOM; try { ({ JSDOM } = require('jsdom')); } catch (e) { JSDOM = null; }
-const domTest = JSDOM ? test : test.skip;
+// jsdom is a required dev dependency: these screen tests must run, never be skipped. (`npm install` first.)
+const { JSDOM } = require('jsdom');
+const domTest = test;
 
 function page() {
   const dom = new JSDOM('<!doctype html><body><div id="h"></div></body>');
@@ -198,7 +202,7 @@ function page() {
 
 domTest('temperature screen: saving off disables every Save button and says why', async () => {
   global.BLDBands = BLDBands;
-  const Screens = require('../screens/screens.js');
+  const Screens = require(CODE + '/screens/screens.js');
   const { doc, host } = page();
   const save = mk(fakeServer());
   Screens.temperatureEntry(host, { save, document: doc, areas: [{ id: 'area-t1', label: 'T1' }, { id: 'area-t2', label: 'T2' }] });
@@ -209,7 +213,7 @@ domTest('temperature screen: saving off disables every Save button and says why'
 });
 
 domTest('temperature screen: honest empty state when no rooms are loaded', () => {
-  const Screens = require('../screens/screens.js');
+  const Screens = require(CODE + '/screens/screens.js');
   const { doc, host } = page();
   Screens.temperatureEntry(host, { save: mk(fakeServer()), document: doc, areas: [] });
   assert.match(host.querySelector('.bs-empty').textContent, /No rooms are loaded/);
@@ -218,7 +222,7 @@ domTest('temperature screen: honest empty state when no rooms are loaded', () =>
 
 domTest('temperature screen: save, show the result, offer a correction; out-of-band asks what was done', async () => {
   global.BLDBands = BLDBands;
-  const Screens = require('../screens/screens.js');
+  const Screens = require(CODE + '/screens/screens.js');
   const { doc, host } = page();
   const srv = fakeServer({ reply: { ok: true, result: { status: 'queued', id: 'rdg-test-9', pending_id: 'pnd-9' } } });
   const save = mk(srv, { scriptUrl: GOOD_URL });
@@ -254,13 +258,13 @@ domTest('temperature screen: save, show the result, offer a correction; out-of-b
 });
 
 domTest('staff screen: empty state, then a working form that always says it waits for approval', async () => {
-  const Screens = require('../screens/screens.js');
+  const Screens = require(CODE + '/screens/screens.js');
   let { doc, host } = page();
   Screens.staffInput(host, { save: mk(fakeServer()), document: doc, people: [] });
   assert.match(host.querySelector('.bs-empty').textContent, /No people are loaded/);
 
   ({ doc, host } = page());
-  const srv = fakeServer({ tables: [{ key: 'staff', file: 'BLD-staff.csv', on: true, mode: 'pending' }], reply: { ok: true, result: { status: 'queued', id: 'stf-1', pending_id: 'p' } } });
+  const srv = fakeServer({ tables: [{ key: 'staff', file: 'BLD-staff.csv', on: true, mode: 'pending' }], proposed: [], reply: { ok: true, result: { status: 'queued', id: 'stf-1', pending_id: 'p' } } });
   const save = mk(srv, { scriptUrl: GOOD_URL });
   await save.checkStatus(); save.setLookups({ person: [{ id: 'per-1' }] }); save.setCode('C');
   Screens.staffInput(host, { save, document: doc, people: [{ id: 'per-1', label: 'Pat Tester' }] });
@@ -275,7 +279,7 @@ domTest('staff screen: empty state, then a working form that always says it wait
 
 domTest('Board drop-in: opens the temperature screen from tables the Board already loaded; empty occupancy says "room unknown"', () => {
   global.BLDBands = BLDBands;
-  const Board = require('../wired/board-dropin.js');
+  const Board = require(CODE + '/wired/board-dropin.js');
   const { doc, host } = page();
   const T = {
     'BLD-area.csv': [{ id: 'area-t1', code: 'T1', grouping: 'T house', group_sort: '1' }],
@@ -291,4 +295,111 @@ domTest('Board drop-in: opens the temperature screen from tables the Board alrea
   const b2 = Board.create({ tables: T, document: h2.window.document, save: mk(fakeServer()) });
   b2.open('staff', h2.window.document.getElementById('s'));
   assert.match(h2.window.document.querySelector('.bs-empty').textContent, /No people are loaded/);
+});
+
+// ------------------------------------------------------------------ Bloodline wiring (the screens as they run inside the Bloodline page)
+const fs = require('node:fs');
+const path = require('node:path');
+const read = (p) => fs.readFileSync(path.join(CODE, p), 'utf8');
+
+/** A Bloodline-like page: its own palette variables, a #main, and the wiring scripts loaded as the patch loads them. */
+function bloodlinePage(fakeFetch) {
+  const dom = new JSDOM('<!doctype html><html><head></head><body><main id="main"></main></body></html>',
+    { runScripts: 'outside-only', url: 'https://ljoyrose.github.io/dashboard/bloodline/' });
+  const w = dom.window;
+  if (fakeFetch) w.fetch = fakeFetch;
+  ['client/bands.js', 'client/bld-save.js', 'client/drive-lookups.js', 'screens/screens.js', 'wired/bloodline-wire.js']
+    .forEach((f) => w.eval(read(f)));
+  // what Bloodline's render() does for these two stages, per the patch
+  w.show = (stage) => {
+    w.document.getElementById('main').innerHTML = stage === 'entertemp' ? w.BLDWire.pageTemp() : w.BLDWire.pageStaff();
+    w.BLDWire.mount(stage);
+  };
+  return w;
+}
+const tick = (ms = 30) => new Promise((r) => setTimeout(r, ms));
+
+domTest('Bloodline: "Enter temperatures" opens with saving OFF and an honest "no rooms" message', () => {
+  const w = bloodlinePage();
+  w.show('entertemp');
+  const d = w.document;
+  assert.match(d.querySelector('h2').textContent, /Enter temperatures/);
+  assert.match(d.querySelector('.bs-banner').textContent, /Saving is off/);
+  assert.match(d.querySelector('.bs-empty').textContent, /No rooms are loaded/);
+  assert.equal(d.querySelectorAll('.bs-btn[aria-disabled]').length, 0); // no room cards, so nothing to press
+});
+
+domTest('Bloodline: "Staff input" opens with saving OFF and an honest "no people" message', () => {
+  const w = bloodlinePage();
+  w.show('staffin');
+  assert.match(w.document.querySelector('.bs-banner').textContent, /Saving is off/);
+  assert.match(w.document.querySelector('.bs-empty').textContent, /No people are loaded/);
+});
+
+domTest('Bloodline: once rooms are provided, each room has a Save button that stays disabled while saving is off', () => {
+  const w = bloodlinePage();
+  w.show('entertemp');
+  w.BLDWire.provide({
+    areas: [{ id: 'area-t1', label: 'T1', group: 'Test house' }, { id: 'area-t2', label: 'T2', group: 'Test house' }],
+    people: [], subjects: [], bandForArea: () => ({ reason: 'room unknown: nobody is recorded in this room' }), actionFor: () => ''
+  });
+  const cards = w.document.querySelectorAll('.bs-card[data-area]');
+  assert.equal(cards.length, 2);
+  cards.forEach((c) => {
+    assert.equal(c.querySelector('.bs-btn').disabled, true);
+    assert.match(c.querySelector('.bs-band').textContent, /room unknown/);
+  });
+});
+
+domTest('Bloodline: pasting a wrong address is refused; a right one turns saving on for the screen (pending mode) and a save goes through', async () => {
+  const calls = [];
+  const fetchFake = async (url, init = {}) => {
+    calls.push({ url, init });
+    if (!init.method || init.method === 'GET') return { json: async () => ({ ok: true, version: '1.0.0', saveEnabled: true, tables: [{ key: 'area_reading', file: 'BLD-area_reading.csv', on: true, mode: 'pending' }], proposed: ['round_event', 'staff'] }) };
+    return { json: async () => ({ ok: true, result: { status: 'queued', id: 'rdg-test-7', pending_id: 'pnd-7' } }) };
+  };
+  const w = bloodlinePage(fetchFake);
+  w.show('entertemp');
+  w.BLDWire.provide({ areas: [{ id: 'area-t1', label: 'T1' }], people: [], subjects: [], bandForArea: null, actionFor: null });
+  const d = w.document;
+  d.querySelector('#bw-url').value = 'https://evil.example/exec';
+  d.querySelector('#bw-on').click();
+  assert.match(d.querySelector('#bw-msg').textContent, /does not look like a Script URL/);
+  assert.equal(calls.length, 0);
+
+  d.querySelector('#bw-url').value = 'https://script.google.com/macros/s/AKfycbxTESTTEST/exec';
+  d.querySelector('#bw-on').click();
+  await tick();
+  assert.match(d.querySelector('.bs-banner').textContent, /waits for Lisa to approve/);
+  const card = d.querySelector('.bs-card[data-area="area-t1"]');
+  assert.equal(card.querySelector('.bs-btn').disabled, false);
+
+  d.querySelector('input[type=password]').value = 'CODE123456';
+  d.querySelector('input[type=password]').dispatchEvent(new w.Event('input'));
+  const [mn, mx] = card.querySelectorAll('.bs-pair .bs-in');
+  mn.value = '21.47'; mx.value = '24.10';
+  card.querySelector('.bs-btn').click();
+  await tick();
+  assert.match(card.querySelector('.bs-result').textContent, /waiting for Lisa to approve/);
+  const post = calls.find((c) => c.init.method === 'POST');
+  const body = JSON.parse(post.init.body);
+  assert.equal(body.table, 'area_reading');
+  assert.equal(body.fields.min_c, '21.47');
+  assert.equal(body.code, 'CODE123456');
+  assert.ok(!post.url.includes('CODE123456'));
+});
+
+domTest('Bloodline patch: only ADDS lines (two stages, the scripts, one mount call); touches nothing of Lisa\'s page', () => {
+  const patch = read('wired/bloodline-wiring.patch');
+  const body = patch.split('\n').filter((l) => /^[+-]/.test(l) && !/^(\+\+\+|---)/.test(l));
+  const removed = body.filter((l) => l.startsWith('-'));
+  const added = body.filter((l) => l.startsWith('+'));
+  // the only removed line is the one PAGES line, re-added with two extra entries in front
+  assert.equal(removed.length, 1);
+  assert.match(removed[0], /var PAGES=\{relations:pageRelations/);
+  assert.ok(added.some((l) => /\['entertemp','Enter temperatures'/.test(l)));
+  assert.ok(added.some((l) => /\['staffin','Staff input'/.test(l)));
+  assert.ok(added.some((l) => /BLDWire\.mount\(CUR\)/.test(l)));
+  assert.ok(added.some((l) => /var PAGES=\{entertemp:/.test(l) && l.includes('relations:pageRelations')));
+  assert.equal(added.filter((l) => /<script src=/.test(l)).length, 5);
 });

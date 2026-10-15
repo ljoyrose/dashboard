@@ -1,0 +1,13 @@
+{
+  "name": "bld-write-path",
+  "version": "1.0.0",
+  "private": true,
+  "description": "BLD write path: append-only Apps Script sink, browser module and staff screens, with tests. Ships OFF.",
+  "scripts": {
+    "test": "node --test tests/sink.test.js tests/client.test.js",
+    "fixtures": "node tests/write-fixtures.js"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0"
+  }
+}

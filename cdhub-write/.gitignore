@@ -1,2 +1,7 @@
 config.js
 node_modules/
+
+# the repo-wide .gitignore ignores *.json; these three are code and must be committed
+!package.json
+!package-lock.json
+!apps-script/appsscript.json

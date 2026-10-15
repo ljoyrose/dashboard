@@ -13,6 +13,10 @@
  *   CODE_SALT        random text, created by adminSetup(). Never share.
  *   STAFF_REGISTRY   JSON of hashed staff codes, managed by adminAddStaffCode().
  *   ALLOW_CREATE     'true' only while Lisa runs adminCreateEmptyTables().
+ *   BACKUP_ON        'true' to let the optional daily backup copy run (see adminInstallDailyBackup).
+ *
+ * NOBODY should hand-edit the files this script writes to. Edits in Drive can collide with a save and
+ * are not recorded. Corrections go through the screen.
  */
 var BLD = {
   VERSION: '1.0.0',
@@ -26,7 +30,8 @@ var BLD = {
     ADMIN_EMAILS: 'ADMIN_EMAILS',
     SALT: 'CODE_SALT',
     REGISTRY: 'STAFF_REGISTRY',
-    ALLOW_CREATE: 'ALLOW_CREATE'
+    ALLOW_CREATE: 'ALLOW_CREATE',
+    BACKUP_ON: 'BACKUP_ON'
   },
   LIMITS: {
     MAX_BODY_CHARS: 20000,

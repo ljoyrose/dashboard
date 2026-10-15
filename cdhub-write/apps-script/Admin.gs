@@ -94,3 +94,45 @@ function adminCheckSetup() {
   Logger.log('--   SAVE_ENABLED is ' + (saveEnabled_() ? 'TRUE (saving is ON)' : 'not true (saving is OFF)'));
   Logger.log(ok ? 'Everything checked is fine.' : 'Some things need fixing (lines starting FIX).');
 }
+
+/* ------------------------------------------------------------------------------------------------
+ * OPTIONAL daily backup copy. Off unless Lisa turns it on. It never deletes anything.
+ * Copies each existing allow-listed file into a sub-folder BLD-backups, once a day, named
+ * <file>.pre-daily-<YYYY-MM-DD>.bak (the pattern in the naming protocol, N-14). The copies are .bak
+ * files in a sub-folder, so CD Hub (which reads .csv files in the main folder) never loads them.
+ * Old copies pile up: tidying them is Lisa's call (the script will not delete or rename them).
+ * ---------------------------------------------------------------------------------------------- */
+
+var BACKUP_FOLDER_NAME = 'BLD-backups';
+
+/** The daily job. Does nothing unless the Script Property BACKUP_ON is 'true'. */
+function adminDailyBackup() {
+  if (prop_(BLD.PROP.BACKUP_ON) !== 'true') { Logger.log('Backup is off (BACKUP_ON is not true). Nothing copied.'); return; }
+  var folder = store_folder_();
+  var it = folder.getFoldersByName(BACKUP_FOLDER_NAME);
+  var dest = it.hasNext() ? it.next() : folder.createFolder(BACKUP_FOLDER_NAME);
+  var day = Utilities.formatDate(new Date(), BLD.TZ, 'yyyy-MM-dd');
+  allowedFiles_().forEach(function (title) {
+    var file = store_findOne_(title);
+    if (!file) return;
+    var name = title + '.pre-daily-' + day + '.bak';
+    if (dest.getFilesByName(name).hasNext()) { Logger.log('Already copied today: ' + name); return; }
+    file.makeCopy(name, dest);
+    Logger.log('Copied ' + title + ' to ' + BACKUP_FOLDER_NAME + '/' + name);
+  });
+}
+
+/** Run once to have the backup run every night about 03:00. Also set BACKUP_ON to true. */
+function adminInstallDailyBackup() {
+  var existing = ScriptApp.getProjectTriggers().filter(function (t) { return t.getHandlerFunction() === 'adminDailyBackup'; });
+  if (existing.length) { Logger.log('The daily backup is already scheduled. Nothing changed.'); return; }
+  ScriptApp.newTrigger('adminDailyBackup').timeBased().everyDays(1).atHour(3).create();
+  Logger.log('Daily backup scheduled for about 03:00. It only copies while BACKUP_ON is true.');
+}
+
+/** Run to stop the nightly backup. Leaves every copy already made exactly where it is. */
+function adminRemoveDailyBackup() {
+  var n = 0;
+  ScriptApp.getProjectTriggers().forEach(function (t) { if (t.getHandlerFunction() === 'adminDailyBackup') { ScriptApp.deleteTrigger(t); n++; } });
+  Logger.log(n ? 'Stopped the nightly backup. Existing copies were not touched.' : 'No nightly backup was scheduled.');
+}

@@ -12,6 +12,7 @@
   var save = BLDSave.create({});
   var L = { areas: [], people: [], subjects: [], bandForArea: null, actionFor: null };
   var started = false;
+  var lastStage = '';
 
   function settingsBox() {
     var d = document.createElement('div');
@@ -26,6 +27,7 @@
   function mount(cur) {
     var host = document.getElementById('bs-host');
     if (!host || (cur !== 'entertemp' && cur !== 'staffin')) return;
+    lastStage = cur;
     function draw() {
       var box = host.querySelector('.bw-screen');
       if (box) box.remove();
@@ -51,6 +53,6 @@
     pageTemp: function () { return '<h2>Enter temperatures</h2><div id="bs-host"></div>'; },
     pageStaff: function () { return '<h2>Staff input</h2><div id="bs-host"></div>'; },
     mount: mount,
-    provide: function (lookups) { L = lookups; save.setLookups({ area: L.areas, person: L.people, subject: L.subjects || [] }); mount((location.hash || '').replace('#/', '')); }
+    provide: function (lookups) { L = lookups; save.setLookups({ area: L.areas, person: L.people, subject: L.subjects || [] }); mount(lastStage || (location.hash || '').replace('#/', '')); }
   };
 }());

@@ -1,15 +1,15 @@
-# Job 4: CD Hub write path (BLD)
+# cdhub-write: gated, append-only write path for BLD (CD Hub is Bloodline)
 
-A gated, append-only way for staff to save room temperatures (and, later, cabin placements and the staff roster) into the BLD CSV files, without ever overwriting or deleting anything. **Built and tested on FAKE data. Nothing is on. No live file was touched.**
+A way for staff to save room temperatures into the BLD temperature log without ever overwriting or deleting anything. **Built and tested on FAKE data. Nothing is on. No live file was touched.**
 
 ## How the pieces fit
 
 ```
-phone screen (BLDScreens)  ->  BLDSave (checks, sends ONE POST)  ->  Apps Script web app
-                                                                     |  staff code, allow-list, field checks, lock
-                                                                     v
-                       pending list  BLD-_pending.csv  --Lisa approves-->  BLD-area_reading.csv (one new line)
-                       (or straight in, if Lisa sets MODE=direct)
+Bloodline screen (BLDScreens)  ->  BLDSave (checks, sends ONE POST)  ->  Apps Script web app
+                                                                          |  staff code, allow-list, field checks, lock
+                                                                          v
+              waiting list  BLD-_pending.csv  --Lisa approves-->  BLD-area_reading.csv (one new line)
+              (or straight in, if Lisa sets MODE_area_reading=direct)
 ```
 
 The page stays on `drive.readonly`. Only the script writes.
@@ -19,32 +19,36 @@ The page stays on `drive.readonly`. Only the script writes.
 | Thing | State |
 |---|---|
 | Saving (`SAVE_ENABLED`) | **OFF** until Lisa sets it |
-| Each table (`TABLE_ON_<table>`) | **OFF** until Lisa sets it |
-| Mode | **pending** (everything waits for Lisa) unless she sets `direct` |
-| Corrections, staff roster | always pending |
+| Allow-list | **two files only**: `BLD-area_reading.csv`, `BLD-_pending.csv` |
+| Cabin placement log, staff roster | **proposed only**, kept in code on a separate list, refused until agreed |
+| Mode | **pending** (everything waits for Lisa) unless she sets `direct`; corrections always wait |
 | Script URL | **not set**; screens show "Saving is off" |
-| Files on Drive | nothing created; Lisa creates `BLD-area_reading.csv` and `BLD-_pending.csv` (SETUP step 7) |
-| Old `/cdhub/` | untouched; PR adds a new path |
+| Files on Drive | nothing created; Lisa creates the two files (SETUP step 7) |
+| Daily backup copy | optional, **OFF** (`BACKUP_ON`) |
+| Old `/cdhub/` | untouched |
+
+**Do not hand-edit the two files in Drive.** A save rewrites the whole file with one line added (Drive has no true "append"), so a hand edit at the same moment could collide. Safeguards: hash check before and after, exact restore if the read-back check fails, a log line in the waiting list, and the optional daily backup.
 
 ## Folders
 
-- `docs/` SETUP.md (for Lisa) and the design note (MAP note, options and Q&A rows are kept in Drive, not in this public repo)
-- `apps-script/` the 9 script files, `appsscript.json`, approval page
-- `client/` `bld-save.js`, `bands.js`, `drive-lookups.js`, test page `index.html`
+- `apps-script/` the script files, `appsscript.json`, approval page
+- `client/` `bld-save.js`, `bands.js`, `drive-lookups.js`, standalone test page
 - `screens/` `screens.js`, `bld-save.css`
-- `wired/` Bloodline patch and script, Board drop-in
-- `tests/` fake fixtures and 51 tests (`npm install` then `npm test`; the UI tests need `jsdom`)
+- `wired/` the Bloodline patch and script (in use); `board-dropin.js` (parked, not used)
+- `tests/` fake fixtures and the tests
+- `docs/` SETUP.md (for Lisa), design note, MAP note, options note
+- `PROGRESS.md` what is done and what is next
 
 ## Run the tests
 
 ```
-npm install      # jsdom only
-npm test         # 51 tests, no network, no Google account
-node tests/write-fixtures.js   # writes the FAKE sample CSVs to tests/fixtures/
+npm install      # jsdom (needed: the screen tests must run, they are never skipped)
+npm test         # no network, no Google account
+npm run fixtures # writes the FAKE sample CSVs to tests/fixtures/
 ```
 
-Tests use made-up data only (tenant `ten-test`). They never touch Drive.
+Tests use made-up data only (tenant `ten-test`) and never touch Drive.
 
 ## Start here
 
-Lisa: `docs/SETUP.md`. Anyone continuing: `HANDOVER.md`.
+Lisa: `docs/SETUP.md`. Reviewers: `docs/AA_2026-10-15_JOB4-DESIGN-NOTE__claude-job4.md`.
