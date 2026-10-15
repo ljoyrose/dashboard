@@ -1,0 +1,4 @@
+id,area,item,status,owner,blocked_on,evidence,note
+W001,sample,Sample item waiting on Lisa,BLOCKED,Lisa,a sample answer,,
+W002,sample,Sample item waiting on Claude,OPEN,Claude,,,
+W003,sample,Sample finished item,DONE,Claude,,sample evidence,

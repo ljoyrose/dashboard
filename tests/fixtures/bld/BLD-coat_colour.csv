@@ -1,0 +1,3 @@
+id,name,base_family,swatch_hex,nose_pigment_applies
+col-1,Sample Gold,gold,#d9a441,true
+col-2,Sample Black,black,#222222,false

@@ -1,0 +1,4 @@
+id,name,sex,dob,size_band,coat_type,kind,neuter_status,source,species,breed,coat_colour_id,coat_pattern_id,nose_pigment_id,birth_litter_id
+sub-test-dog-1,Test Dog One,F,2022-03-01,medium,fleece,Adult,entire,invented,dog,Sample Breed,col-1,pat-1,pig-1,
+sub-test-dog-2,Test Dog Two,M,2021-06-15,medium,wool,Adult,entire,invented,dog,Sample Breed,col-2,pat-1,pig-1,
+sub-test-pup-1,Test Pup One,F,2026-01-20,small,fleece,Pup,entire,invented,dog,Sample Breed,col-1,pat-1,pig-1,lit-test-1
