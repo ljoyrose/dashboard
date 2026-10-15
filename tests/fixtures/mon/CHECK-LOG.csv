@@ -1,0 +1,4 @@
+CURRENT: 2 rows held 2026-03-09
+check_id,run_on,job,result
+K001,2026-03-09T08:00:00Z,sample-job,PASS invented check
+K014,2026-03-09T08:05:00Z,sample-job,INFO scheduled jobs paused (invented)

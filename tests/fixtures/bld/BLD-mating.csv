@@ -1,0 +1,2 @@
+id,dam_subject_id,sire_subject_id,mated_on,mating_no,method,is_first_of_season,due_from_this_mating,litter_id,produced_litter,notes
+mat-test-1,sub-test-dog-1,sub-test-dog-2,2025-11-18,1,natural,yes,2026-01-20,lit-test-1,yes,invented

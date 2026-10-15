@@ -1,0 +1,4 @@
+CURRENT: 2 rows held 2026-03-09
+id,entity,question,about_document,asked_on,status,answer
+Q001,TESTCO,Sample open question?,sample-doc,2026-03-01,not yet asked,
+Q002,TESTCO,Sample answered question?,sample-doc,2026-02-01,asked,Sample answer.
