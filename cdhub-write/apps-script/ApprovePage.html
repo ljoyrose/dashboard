@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Waiting to approve</title>
+<style>
+  :root{--bg:#f6f7f3;--card:#fff;--ink:#18201b;--mut:#5d6860;--line:#dde2da;--good:#2e7d4f;--bad:#c2402b;--warn:#b26a00}
+  @media (prefers-color-scheme:dark){:root{--bg:#141a16;--card:#1c241f;--ink:#e8ede6;--mut:#9aa69d;--line:#2a342d;--good:#5fc28a;--bad:#ec7a63;--warn:#e7a43c}}
+  body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+  main{max-width:640px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 4px}
+  p.sub{color:var(--mut);margin:0 0 16px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .k{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mut)}
+  dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:8px 0}
+  dt{color:var(--mut)} dd{margin:0;word-break:break-word}
+  input[type=text]{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;margin:6px 0}
+  button{font:inherit;font-weight:700;border:0;border-radius:999px;padding:10px 16px;margin-right:8px;cursor:pointer;min-height:44px}
+  .ok{background:var(--good);color:#fff}.no{background:transparent;color:var(--bad);border:1px solid var(--bad)}
+  .msg{margin-top:8px;font-weight:600}
+  .empty{padding:18px;border:1px dashed var(--line);border-radius:14px;color:var(--mut);text-align:center}
+</style>
+</head>
+<body>
+<main>
+  <h1>Waiting to approve</h1>
+  <p class="sub">Nothing here is in the real tables yet. Approve adds one new row. Reject leaves the tables as they are. Nothing is ever overwritten or deleted.</p>
+  <div id="list"><div class="empty">Loading...</div></div>
+</main>
+<script>
+  function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; }
+  function load(){
+    google.script.run.withSuccessHandler(show).withFailureHandler(function(e){
+      var l=document.getElementById('list'); l.textContent=''; l.appendChild(el('div','empty','Could not load: '+e.message));
+    }).ui_pending();
+  }
+  function show(res){
+    var l=document.getElementById('list'); l.textContent='';
+    if(!res.ok){ l.appendChild(el('div','empty',res.message)); return; }
+    if(!res.items.length){ l.appendChild(el('div','empty','Nothing waiting. All clear.')); return; }
+    res.items.forEach(function(it){
+      var c=el('div','card');
+      c.appendChild(el('div','k',(it.kind==='correction'?'Correction':'New entry')+' for '+it.target_file));
+      var dl=el('dl');
+      function add(k,v){ if(v===undefined||v===''||v===null) return; dl.appendChild(el('dt',null,k)); dl.appendChild(el('dd',null,v)); }
+      add('From', it.by); add('Sent', it.at);
+      if(it.corrects_id){ add('Corrects', it.corrects_id); add('Reason', it.reason); }
+      if(it.state==='approved' || it.state==='apply_failed'){ add('Status', it.state==='approved'?'approved but not yet written - approve again to finish':'last try failed: '+it.last_note); }
+      Object.keys(it.row||{}).forEach(function(k){ if(it.row[k]!=='' && k!=='tenant_id') add(k, it.row[k]); });
+      c.appendChild(dl);
+      var note=el('input'); note.type='text'; note.placeholder='Note (optional)'; c.appendChild(note);
+      var msg=el('div','msg');
+      function decide(d){
+        msg.textContent='Working...';
+        google.script.run.withSuccessHandler(function(r){
+          msg.textContent = r.ok ? (d==='approve'?'Added to the table.':'Rejected. Nothing was added.') : r.message;
+          if(r.ok) setTimeout(load, 900);
+        }).withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_decide(it.pending_id, d, note.value);
+      }
+      var a=el('button','ok','Approve'); a.onclick=function(){ decide('approve'); };
+      var r=el('button','no','Reject'); r.onclick=function(){ decide('reject'); };
+      c.appendChild(a); c.appendChild(r); c.appendChild(msg);
+      l.appendChild(c);
+    });
+  }
+  load();
+</script>
+</body>
+</html>
