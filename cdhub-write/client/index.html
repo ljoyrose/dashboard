@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>BLD saving - test page</title>
+<link rel="stylesheet" href="../screens/bld-save.css">
+<style>
+  :root{color-scheme:light dark;--bg:#f6f7f3;--card:#fff;--ink:#18201b;--mut:#5d6860;--line:#dde2da;--chip:#eef1ea;--good:#2e7d4f;--warn:#b26a00;--bad:#c2402b;--accent:#2e7d4f;--accent-ink:#fff}
+  @media (prefers-color-scheme:dark){:root{--bg:#141a16;--card:#1c241f;--ink:#e8ede6;--mut:#9aa69d;--line:#2a342d;--chip:#232c26;--good:#5fc28a;--warn:#e7a43c;--bad:#ec7a63;--accent:#5fc28a;--accent-ink:#0d110e}}
+  body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,sans-serif}
+  nav{display:flex;gap:8px;flex-wrap:wrap;max-width:560px;margin:0 auto 14px}
+  nav button{min-height:44px;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer}
+  nav button[aria-current="true"]{background:var(--ink);color:var(--bg)}
+  .box{max-width:560px;margin:0 auto 14px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px;font-size:13px}
+  .box input{width:100%;box-sizing:border-box;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;margin:6px 0}
+  .box button{min-height:44px;border:0;border-radius:999px;padding:8px 16px;font:inherit;font-weight:700;background:var(--accent);color:var(--accent-ink);cursor:pointer}
+  .demo{color:var(--warn);font-weight:700}
+</style>
+</head>
+<body>
+<nav aria-label="Screens">
+  <button data-s="temp" aria-current="true">Temperatures</button>
+  <button data-s="staff">Staff roster</button>
+</nav>
+
+<div class="box" id="setup">
+  <b>Turn saving on</b> (Lisa only). Paste the Script URL from the Apps Script deployment. It is kept on this device only.
+  <input id="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" aria-label="Script URL">
+  <button id="urlBtn" type="button">Use this address</button>
+  <button id="urlOff" type="button" style="background:transparent;color:var(--mut);border:1px solid var(--line)">Switch off on this device</button>
+  <div id="urlMsg" role="status"></div>
+</div>
+<div class="box" id="data">
+  <span id="dataMsg">Rooms and people come from Drive (read only).</span>
+  <div style="margin-top:6px"><button id="loadDrive" type="button">Load rooms from Drive</button>
+  <button id="loadDemo" type="button" style="background:transparent;color:var(--mut);border:1px solid var(--line)">Use FAKE demo rooms</button></div>
+</div>
+
+<main id="host"></main>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="config.js" onerror="void 0"></script>
+<script src="bands.js"></script>
+<script src="bld-save.js"></script>
+<script src="drive-lookups.js"></script>
+<script src="../screens/screens.js"></script>
+<script>
+(function(){
+  var save = BLDSave.create({});
+  var L = { areas: [], people: [], bandForArea: null, actionFor: null };
+  var cur = 'temp';
+  var host = document.getElementById('host');
+
+  function draw(){
+    if (cur === 'temp') BLDScreens.temperatureEntry(host, { save: save, areas: L.areas, bandForArea: L.bandForArea, actionFor: L.actionFor });
+    else BLDScreens.staffInput(host, { save: save, people: L.people });
+    document.querySelectorAll('nav button').forEach(function(b){ b.setAttribute('aria-current', String(b.dataset.s === cur)); });
+  }
+  function refreshStatus(){ return save.checkStatus().then(draw); }
+
+  document.querySelectorAll('nav button').forEach(function(b){ b.onclick = function(){ cur = b.dataset.s; draw(); }; });
+
+  document.getElementById('urlBtn').onclick = function(){
+    var r = save.setScriptUrl(document.getElementById('url').value, true);
+    document.getElementById('urlMsg').textContent = r.ok ? 'Address kept on this device. Checking...' : r.message;
+    if (r.ok) refreshStatus().then(function(){ document.getElementById('urlMsg').textContent = save.banner('area_reading').text; });
+  };
+  document.getElementById('urlOff').onclick = function(){
+    save.setScriptUrl('', true); document.getElementById('urlMsg').textContent = 'Saving switched off on this device.'; draw();
+  };
+
+  function setLookups(l){
+    L = l; save.setLookups({ area: l.areas, person: l.people, subject: l.subjects || [] });
+    document.getElementById('dataMsg').textContent = l.areas.length + ' rooms, ' + l.people.length + (l.people.length === 1 ? ' person' : ' people') + ' loaded' +
+      (l.roomsWithDogs === 0 ? '. No room has any dog recorded in it yet, so temperature bands show as "room unknown".' : '.');
+    draw();
+  }
+  document.getElementById('loadDrive').onclick = function(){
+    var today = new Date().toISOString().slice(0,10);
+    BLDLookups.loadFromDrive(window.BLD_CONFIG, today).then(function(r){
+      if (!r.ok) { document.getElementById('dataMsg').textContent = r.message; return; }
+      setLookups(r.lookups);
+      // optional: pick up the Script URL from the Drive config file Lisa owns
+      if (window.BLD_CONFIG && !save.getScriptUrlSet()) save.loadConfigFromDrive(r.token, window.BLD_CONFIG.folderId).then(function(c){ if (c.ok) refreshStatus(); });
+    });
+  };
+  document.getElementById('loadDemo').onclick = function(){
+    // FAKE sample rooms for trying the screens. Not real data.
+    var T = {
+      'BLD-area.csv': [{id:'area-demo-1',code:'Demo 1',grouping:'Demo house',group_sort:'1'},{id:'area-demo-2',code:'Demo 2',grouping:'Demo cabins',group_sort:'2'}],
+      'BLD-subject.csv': [{id:'sub-demo-pup',name:'Demo pup',dob:new Date(Date.now()-14*864e5).toISOString().slice(0,10)},{id:'sub-demo-adult',name:'Demo adult',dob:'2020-01-01'}],
+      'BLD-occupancy.csv': [{subject_id:'sub-demo-pup',area_id:'area-demo-1',moved_out:''},{subject_id:'sub-demo-adult',area_id:'area-demo-2',moved_out:''}],
+      'BLD-person.csv': [{id:'per-demo-1',full_name:'Demo Person'}],
+      'BLD-temperature_band.csv': [{id:'b1',band:'under four weeks',age_from_days:'0',age_to_days:'28',min_temp:'26.00',max_temp:'28.00'},{id:'b2',band:'four weeks and over',age_from_days:'29',age_to_days:'',min_temp:'10.00',max_temp:'26.00'}],
+      'BLD-temperature_action.csv': [{direction:'below',threshold_c:'10.00',action:'EMERGENCY'},{direction:'above',threshold_c:'26.00',action:'fans on'}]
+    };
+    setLookups(BLDLookups.fromTables(T, new Date().toISOString().slice(0,10)));
+    document.getElementById('dataMsg').innerHTML += ' <span class="demo">FAKE demo data.</span>';
+  };
+
+  draw();
+  refreshStatus();
+})();
+</script>
+</body>
+</html>
