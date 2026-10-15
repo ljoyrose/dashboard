@@ -1,42 +1,18 @@
 // Turns Playwright's results file into a short, readable table for the GitHub "Actions" page.
 // Usage: node tests/support/summary.js [results.json]   (writes to $GITHUB_STEP_SUMMARY if set, else prints)
 const fs = require('fs');
+const { groupOf, load, isFailed, isRegression } = require('./results');
 
 const file = process.argv[2] || 'test-results/results.json';
 const out = [];
-const GROUPS = [
-  ['main-dashboard', 'Main dashboard', '/dashboard/'],
-  ['cdhub', 'CD Hub', '/dashboard/cdhub/'],
-  ['money', 'Money Hub', '/dashboard/money/'],
-  ['csv-parsing', 'Reading CSV files', 'both CSV readers'],
-  ['repo-hygiene', 'Safety checks (no secrets, no real data)', 'whole repo'],
-  ['live-smoke', 'Live site check (optional)', 'ljoyrose.github.io'],
-];
 
-if (!fs.existsSync(file)) {
+const tests = load(file);
+if (!tests) {
   out.push('## ❌ Tests did not produce a results file', '', 'The test run stopped before it finished. Open the "Run tests" step above to see why.');
   finish(out);
   process.exit(0);
 }
 
-const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-const tests = [];
-(function walk(suite, trail) {
-  const here = suite.title && !/\.spec\.js$/.test(suite.title) ? trail.concat(suite.title) : trail;
-  (suite.specs || []).forEach((spec) =>
-    spec.tests.forEach((t) => {
-      const last = t.results[t.results.length - 1] || {};
-      tests.push({
-        file: spec.file, title: here.concat(spec.title).join(' › '), status: t.status,
-        ms: t.results.reduce((a, r) => a + (r.duration || 0), 0),
-        error: ((last.error && last.error.message) || '').replace(/\u001b\[[0-9;]*m/g, '').split('\n').find((l) => l.trim()) || '',
-      });
-    })
-  );
-  (suite.suites || []).forEach((s) => walk(s, here));
-})({ suites: data.suites }, []);
-
-const groupOf = (f) => GROUPS.find((g) => f.includes(g[0])) || [f, f, ''];
 const rows = new Map();
 tests.forEach((t) => {
   const g = groupOf(t.file);
@@ -59,7 +35,15 @@ out.push('| Result | Page or area | Where | Passed | Failed | Skipped | Time |',
   const icon = r.fail ? '❌' : r.pass ? '✅' : '⏭️';
   out.push(`| ${icon} | ${r.name} | ${r.where} | ${r.pass} | ${r.fail} | ${r.skip} | ${(r.ms / 1000).toFixed(0)}s |`);
 });
-const failed = tests.filter((t) => t.status === 'unexpected' || t.status === 'timedOut' || t.status === 'failed');
+
+// Bug-fix tests ("@regression") and pretend-Drive drift, each as one plain line.
+const reg = tests.filter(isRegression);
+const regOk = reg.filter((t) => t.status === 'expected' || t.status === 'flaky').length;
+out.push('', `**Regression tests** (each one guards a bug that was fixed): ${reg.length} in the suite, ${regOk} passing.`);
+const drift = readDrift();
+out.push(drift === null ? '' : `**Pretend-Drive drift:** the pages made ${drift} Drive request${drift === 1 ? '' : 's'} the pretend Drive did not know how to answer.${drift ? ' Not a failure. If this number grows, the pages have started asking Drive something new, and the pretend Drive needs teaching.' : ''}`);
+
+const failed = tests.filter(isFailed);
 if (failed.length) {
   out.push('', '### What failed', '');
   failed.slice(0, 25).forEach((t) => out.push(`- **${t.title}** (${groupOf(t.file)[1]})  \n  ${t.error.slice(0, 200)}`));
@@ -67,6 +51,13 @@ if (failed.length) {
   out.push('', 'Screenshots and step-by-step recordings of each failure are in the **playwright-report** download at the bottom of this page.');
 }
 finish(out);
+
+function readDrift() {
+  const f = require('path').join(require('path').dirname(file), 'unhandled-drive.jsonl');
+  if (!tests.some((t) => /(^|\/)(mocked|phone)\//.test(t.file))) return null; // the live check uses no pretend Drive
+  if (!fs.existsSync(f)) return 0;
+  return fs.readFileSync(f, 'utf8').split('\n').filter(Boolean).length;
+}
 
 function finish(lines) {
   const text = lines.join('\n') + '\n';
