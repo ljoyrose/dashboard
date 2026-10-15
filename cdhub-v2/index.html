@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="color-scheme" content="light dark">
+<title>The Board · CD Hub</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<!-- Step 1b: uncomment to sign in and read BLD-*.csv. Do not show a sign-in gate in place of the Board.
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+-->
+<style>
+/* The Board: one phone-width column, cards stacked, floating pill at the bottom. */
+:root{
+  --bg:#e9ece6; --phone:#f6f7f3; --card:#ffffff; --ink:#18201b; --mut:#5d6860; --line:#dde2da;
+  --hero:#18201b; --hero-ink:#f6f7f3; --accent:#e39a2d; --accent-ink:#1d1406;
+  --good:#2e7d4f; --warn:#b26a00; --bad:#c2402b; --chip:#eef1ea;
+  --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --body:"Figtree",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0d110e; --phone:#141a16; --card:#1c241f; --ink:#e8ede6; --mut:#9aa69d; --line:#2a342d;
+  --hero:#26332b; --hero-ink:#f3f6f1; --accent:#f0ad46; --accent-ink:#1d1406;
+  --good:#5fc28a; --warn:#e7a43c; --bad:#ec7a63; --chip:#232c26; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0d110e; --phone:#141a16; --card:#1c241f; --ink:#e8ede6; --mut:#9aa69d; --line:#2a342d;
+  --hero:#26332b; --hero-ink:#f3f6f1; --accent:#f0ad46; --accent-ink:#1d1406;
+  --good:#5fc28a; --warn:#e7a43c; --bad:#ec7a63; --chip:#232c26; color-scheme:dark}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;margin:0;padding-inline:16px;padding-block:20px 40px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.draft{max-width:430px;margin:0 auto 12px;padding:8px 12px;border:1px dashed var(--accent);border-radius:14px;background:var(--card);color:var(--mut);font-size:12.5px;text-align:center;line-height:1.4}
+.draft a{color:var(--ink);font-weight:700}
+.top{max-width:430px;margin:0 auto 14px;display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.top b{font-family:var(--display);font-size:15px;margin-right:4px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--phone);border-color:var(--ink)}
+.phone{max-width:430px;margin:0 auto;background:var(--phone);border-radius:34px;border:1px solid var(--line);position:relative;min-height:760px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,.12)}
+.screen{padding:22px 16px 110px}
+.hello{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.hello h1{font-family:var(--display);font-weight:800;font-size:28px;line-height:1.05;margin:0;text-wrap:balance}
+.hello p{margin:4px 0 0;color:var(--mut);font-size:13px}
+.edit{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:600;white-space:nowrap}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}
+.three button{border:0;border-radius:16px;padding:10px;text-align:left;background:var(--card)}
+.three .n{font-family:var(--display);font-weight:800;font-size:26px;line-height:1;font-variant-numeric:tabular-nums}
+.three .l{display:flex;align-items:center;gap:5px;font-size:12px;font-weight:600;margin-top:6px}
+.ok .l{color:var(--good)} .att .l{color:var(--warn)} .over .l{color:var(--bad)}
+.cards{display:grid;gap:10px}
+.card{background:var(--card);border-radius:22px;padding:16px;border:1px solid var(--line);position:relative;text-align:left;width:100%}
+.card.edit-pad{padding-top:52px}
+.card.hero{background:var(--hero);color:var(--hero-ink);border-color:transparent}
+.card .k{font-size:12px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--mut);display:flex;align-items:center;gap:6px}
+.card.hero .k{color:var(--accent)}
+.card .t{font-family:var(--display);font-weight:700;font-size:19px;margin:6px 0 2px;line-height:1.2}
+.card .s{font-size:13px;color:var(--mut)}
+.card.hero .s{color:color-mix(in srgb,var(--hero-ink) 70%,transparent)}
+.row{display:flex;align-items:center;gap:14px}
+.big{font-family:var(--display);font-weight:800;font-size:40px;line-height:1;font-variant-numeric:tabular-nums}
+.trend{font-size:12px;font-weight:600}
+.trend.up{color:var(--good)} .trend.down{color:var(--bad)}
+.act{margin-top:12px;display:inline-flex;align-items:center;gap:6px;border:0;border-radius:999px;padding:8px 14px;font-weight:700;font-size:13px;background:var(--accent);color:var(--accent-ink)}
+.card:not(.hero) .act{background:var(--chip);color:var(--ink)}
+ul.mini{list-style:none;margin:10px 0 0;padding:0;display:grid;gap:6px}
+ul.mini li{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+ul.mini li span:last-child{color:var(--bad);font-weight:600;white-space:nowrap;font-size:13px}
+.ctl{position:absolute;top:10px;right:10px;display:flex;gap:4px}
+.ctl button{width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:var(--phone);color:var(--ink);font-size:15px;line-height:1}
+.ctl button:disabled{opacity:.35;cursor:default}
+.pill{position:fixed;z-index:20;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;gap:6px;background:var(--ink);padding:6px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.pill button{border:0;background:transparent;color:var(--phone);border-radius:999px;height:44px;min-width:44px;padding:0 12px;display:flex;align-items:center;gap:6px;font-weight:600;font-size:13px}
+.pill button[aria-current="page"]{background:var(--phone);color:var(--ink)}
+.pill .plus{background:var(--accent);color:var(--accent-ink);font-size:22px;font-weight:700}
+.pill svg{width:20px;height:20px}
+h2{font-family:var(--display);font-weight:800;font-size:24px;margin:0 0 4px}
+.sub{color:var(--mut);font-size:13px;margin:0 0 14px}
+.tl{display:grid;gap:0}
+.tl .it{display:grid;grid-template-columns:52px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.tl .tm{font-variant-numeric:tabular-nums;font-weight:700;font-size:14px}
+.tl .what{font-weight:600}
+.tl .where{color:var(--mut);font-size:13px}
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;border-radius:999px;padding:2px 8px;margin-top:4px;background:var(--chip)}
+.tag.bad{color:var(--bad)} .tag.warn{color:var(--warn)} .tag.good{color:var(--good)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.mod{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;text-align:left;position:relative;min-height:96px}
+.mod .nm{font-weight:700;margin-top:24px}
+.mod .ds{font-size:12px;color:var(--mut)}
+.star{position:absolute;top:8px;right:8px;width:38px;height:38px;border-radius:50%;border:0;background:transparent;font-size:20px;color:var(--mut)}
+.star[aria-pressed="true"]{color:var(--accent)}
+.mod .ic{font-family:var(--display);font-weight:800;font-size:13px;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--chip);color:var(--ink)}
+.sheet{position:fixed;z-index:15;bottom:0;left:50%;transform:translateX(-50%);width:min(430px,calc(100% - 32px));background:var(--card);border-radius:26px 26px 0 0;padding:18px 16px calc(96px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 30px rgba(0,0,0,.18)}
+.sheet .grid button{border:1px solid var(--line);background:var(--phone);border-radius:16px;padding:14px;font-weight:700;text-align:left}
+.back{border:0;background:transparent;font-weight:600;color:var(--mut);padding:0;margin-bottom:10px}
+.prog{height:8px;border-radius:99px;background:var(--chip);overflow:hidden;margin:10px 0 4px}
+.prog i{display:block;height:100%;background:var(--good);border-radius:99px}
+.sec{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:18px 0 8px}
+.item{display:flex;align-items:center;gap:12px;width:100%;border:1px solid var(--line);background:var(--card);border-radius:16px;padding:12px;margin-bottom:8px;text-align:left}
+.item .bx{width:26px;height:26px;border-radius:50%;border:2px solid var(--accent);flex:none;display:grid;place-items:center;font-weight:800;font-size:14px}
+.item[aria-pressed="true"] .bx{background:var(--good);border-color:var(--good);color:#fff}
+.item .ev{margin-left:auto;font-size:12px;color:var(--mut);white-space:nowrap}
+.sw{touch-action:pan-y;position:relative;transition:transform .18s}
+.sw.dragging{transition:none}
+.sw.yes{background:color-mix(in srgb,var(--good) 14%,var(--card))}
+.sw.no{background:color-mix(in srgb,var(--bad) 12%,var(--card))}
+.yn{display:flex;gap:6px;margin-left:auto;flex:none}
+.yn button{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--phone);color:var(--ink);font-weight:800}
+.yn button[aria-pressed="true"].y{background:var(--good);border-color:var(--good);color:#fff}
+.yn button[aria-pressed="true"].n{background:var(--bad);border-color:var(--bad);color:#fff}
+.hint{font-size:12px;color:var(--mut);margin:6px 0 0}
+.tl .it{align-items:center;padding:10px 8px;border-radius:14px}
+.favs{display:flex;gap:12px;overflow-x:auto;padding-bottom:6px;margin-bottom:12px}
+.fav{flex:none;width:72px;text-align:center;font-size:12px;font-weight:600}
+.av{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;margin:0 auto 4px;font-family:var(--display);font-weight:800;font-size:18px;background:var(--hero);color:var(--hero-ink)}
+.ct{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.ct .av{width:42px;height:42px;font-size:14px;margin:0}
+.ct .who{min-width:0;flex:1}.ct .who b{display:block}.ct .who span{font-size:12px;color:var(--mut)}
+.ct a{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--chip);color:var(--ink);text-decoration:none;font-size:16px;flex:none}
+label{display:grid;gap:4px;font-size:12px;font-weight:700;color:var(--mut)}
+.search{width:100%;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:12px;font:inherit;color:var(--ink)}
+.note{max-width:430px;margin:12px auto 0;color:var(--mut);font-size:12.5px;text-align:center}
+.empty{padding:16px;border:1px dashed var(--line);border-radius:18px;color:var(--mut);font-size:13px;text-align:center}
+.toast{max-width:430px;margin:10px auto 0;padding:8px 12px;border-radius:12px;background:var(--ink);color:var(--phone);font-size:13px;font-weight:600;text-align:center}
+@media (prefers-reduced-motion:reduce){.sw,.card,.mod{transition:none}}
+@media (prefers-reduced-motion:no-preference){.card,.mod{transition:transform .15s}.card:active{transform:scale(.99)}}
+</style>
+</head>
+<body>
+<p class="draft" role="status">Draft · example data, not live kennel tables. <a href="../cdhub/">Classic CD Hub</a></p>
+<div class="top"><b>Trade pack</b><div class="seg" id="trades" role="group" aria-label="Trade pack"></div></div>
+<div class="phone" id="phone"><div class="screen" id="screen"></div><nav class="pill" id="pill" aria-label="Main"></nav></div>
+<p class="note" id="foot">Example data. Tap a card, swipe a check right or left, star a module in More, or use Edit home. Same base, different trade pack.</p>
+<p class="toast" id="toast" hidden></p>
+<noscript><p class="note">The Board needs JavaScript.</p></noscript>
+
+<script>
+/* Example trade packs only. Names, phones (UK drama ranges) and figures are invented.
+   Nothing here is read from Drive and nothing is written to the browser. */
+const IC={
+ home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>',
+ today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',
+ search:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>',
+ contacts:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
+ more:'<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="6" r="2.2"/><circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="18" r="2.2"/></svg>'
+};
+const PACKS={
+ breeder:{label:"Breeder",who:"Lisa",three:[14,3,2],
+  modules:[
+   {id:"round",ic:"KR",nm:"Kennel rounds",ds:"Checklists per room"},
+   {id:"temp",ic:"°C",nm:"Room temperatures",ds:"Readings against limits"},
+   {id:"litters",ic:"LT",nm:"Litters",ds:"Matings, due dates, puppies"},
+   {id:"vacc",ic:"VX",nm:"Health",ds:"Vaccines, worming, vet visits"},
+   {id:"licence",ic:"LC",nm:"Licence & registers",ds:"Licence, certificates, training"},
+   {id:"money",ic:"£",nm:"Invoices & deposits",ds:"Deposits, invoices, receipts"},
+   {id:"cal",ic:"CA",nm:"Calendar",ds:"Visits, collections, vet"},
+   {id:"families",ic:"FM",nm:"Families portal",ds:"Waitlist, puppy updates"},
+   {id:"staff",ic:"ST",nm:"Staff",ds:"Rota, training records"},
+   {id:"incidents",ic:"!",nm:"Incidents",ds:"Log, cause, action taken"},
+   {id:"alerts",ic:"⚑",nm:"Alerts & rules",ds:"Tell me when…"}],
+  cards:{
+   alerts:{type:"list",k:"Alerts",t:"2 triggered",list:[["Wormer stock 3 · min 5","below min"],["Puppy room 19.2 °C · min 20","40 min ago"]],act:"Add a rule"},
+   next:{type:"hero",k:"Next",t:"Evening temperature round",s:"Puppy room and Block B · due 18:00",act:"Start round"},
+   round:{type:"ring",k:"Kennel round",t:"Morning round",done:9,total:12,s:"3 left · Block B",act:"Continue",run:"round"},
+   temp:{type:"fig",k:"Room temperatures",big:"21.4°",t:"Puppy room",s:"Limit 20–26 °C · read 07:40 by sensor · outside 9 °C (auto, hourly)",trend:"in range",tr:"up"},
+   litters:{type:"fig",k:"Litters due",big:"2",t:"Bramble ~14 Oct · Willow ~22 Oct",s:"Whelping box ready: Bramble",act:"Open litters"},
+   vacc:{type:"list",k:"Overdue health",t:"3 overdue",list:[["Juno · DHP booster","3 days"],["Pip · worming","1 day"],["Moss · flea","today"]],act:"Mark done"},
+   licence:{type:"fig",k:"Licence",big:"41",t:"days to renewal",s:"Expires 16 Nov 2026 · 2 documents to upload",act:"Prepare pack"},
+   money:{type:"fig",k:"Deposits this month",big:"£2,400",t:"6 families",s:"",trend:"↑ 3 vs September",tr:"up"},
+   cal:{type:"list",k:"Calendar",t:"Today",list:[["Vet visit · Juno","11:30"],["Puppy collection · Smith","15:00"]],act:"Open calendar",tone:"plain"},
+   families:{type:"fig",k:"Families portal",big:"4",t:"new enquiries",s:"2 waiting for a reply over 48 h",act:"Reply"},
+   staff:{type:"fig",k:"Staff",big:"2",t:"on today",s:"First-aid certificate expires in 19 days: Sam"},
+   incidents:{type:"fig",k:"Incidents",big:"0",t:"open",s:"Last closed 2 Oct · root cause recorded"}},
+  pins:["next","alerts","round","temp","vacc","licence","money"],
+  today:[["07:30","Morning kennel round","Block A and B","good","done"],["07:40","Temperature reading","Puppy room","good","21.4 °C"],["11:30","Vet visit · Juno","Booster overdue","bad","overdue"],["15:00","Puppy collection · Smith","Contract and puppy pack","warn","prep"],["18:00","Evening temperature round","Puppy room and Block B","warn","due"]],
+  quick:["Log reading","Start round","Add puppy","Take deposit","Log incident","Add vet visit"],
+  run:{title:"Morning kennel round",about:"Block B",secs:[["Water and food",[["Water bowls clean and full","",1],["Food recorded per dog","",1]]],["Rooms",[["Temperature in range","reading",1],["Bedding clean","photo",0],["Isolation pen empty or logged","",1]]],["Dogs",[["Each dog seen and checked","",0],["Any concern logged","note",0]]]]}},
+ fire:{label:"Fire safety",who:"Sam",three:[22,2,1],
+  modules:[
+   {id:"round",ic:"AL",nm:"Alarm tests",ds:"Weekly call point tests"},
+   {id:"ext",ic:"EX",nm:"Extinguishers",ds:"Service and checks"},
+   {id:"doors",ic:"FD",nm:"Fire doors",ds:"Monthly door checks"},
+   {id:"drill",ic:"DR",nm:"Drills",ds:"Evacuation drills"},
+   {id:"licence",ic:"CT",nm:"Certificates",ds:"Training, wardens, servicing"},
+   {id:"money",ic:"£",nm:"Invoices",ds:"Contractors and parts"},
+   {id:"cal",ic:"CA",nm:"Calendar",ds:"Contractor visits"},
+   {id:"incidents",ic:"!",nm:"Incidents",ds:"Near misses, actions"}],
+  cards:{
+   next:{type:"hero",k:"Next",t:"Weekly alarm test",s:"Call points 7 and 8 · due 10:00",act:"Start test"},
+   round:{type:"ring",k:"Alarm test",t:"This week",done:6,total:8,s:"2 call points left",act:"Continue",run:"round"},
+   ext:{type:"fig",k:"Extinguishers",big:"12",t:"days to annual service",s:"Contractor booked: no",act:"Book"},
+   doors:{type:"list",k:"Fire doors",t:"2 failed",list:[["Door 3 · closer slow","failed"],["Door 9 · gap at seal","failed"]],act:"Raise action"},
+   drill:{type:"fig",k:"Last drill",big:"87",t:"days ago",s:"Your target: every 180 days",trend:"on track",tr:"up"},
+   licence:{type:"fig",k:"Certificates",big:"3",t:"expiring this quarter",s:"Fire warden training × 2, alarm service",act:"View"},
+   money:{type:"fig",k:"Spend this month",big:"£640",t:"3 invoices",s:"",trend:"↓ £120 vs September",tr:"up"},
+   cal:{type:"list",k:"Calendar",t:"This week",list:[["Alarm contractor","Thu"],["Drill (planned)","Fri"]],act:"Open calendar",tone:"plain"},
+   incidents:{type:"fig",k:"Incidents",big:"1",t:"open",s:"Blocked exit, Store room · action due Fri"}},
+  pins:["next","round","doors","ext","drill","licence"],
+  today:[["09:00","Escape routes walk","Ground floor","good","done"],["10:00","Weekly alarm test","Call points 7–8","warn","due"],["14:00","Door 3 closer repair","Contractor","warn","booked"],["16:30","Close incident: blocked exit","Store room","bad","overdue"]],
+  quick:["Log test","Check a door","Log incident","Add certificate","Book contractor","Log drill"],
+  run:{title:"Weekly alarm test",about:"Building A",secs:[["Call points",[["Call point 1–6 tested","",1],["Call point 7","",0],["Call point 8","",0]]],["Panel",[["Panel shows no faults","photo",1],["Result logged in book","",1]]]]}},
+ groom:{label:"Groomer",who:"Ellie",three:[9,2,0],
+  modules:[
+   {id:"round",ic:"AP",nm:"Appointments",ds:"Today's dogs"},
+   {id:"money",ic:"£",nm:"Takings",ds:"Payments and invoices"},
+   {id:"vacc",ic:"VX",nm:"Vaccination proof",ds:"Required before booking"},
+   {id:"kit",ic:"KT",nm:"Equipment",ds:"Blade and dryer servicing"},
+   {id:"cal",ic:"CA",nm:"Calendar",ds:"Bookings by hour"},
+   {id:"families",ic:"CL",nm:"Client portal",ds:"Bookings, reminders, photos"},
+   {id:"staff",ic:"ST",nm:"Staff",ds:"Rota and training"}],
+  cards:{
+   next:{type:"hero",k:"Next",t:"Biscuit · full groom",s:"Cockapoo · 11:00 · Table 2",act:"Check in"},
+   round:{type:"ring",k:"Appointments",t:"Today",done:4,total:9,s:"Next: Biscuit 11:00",act:"Open day",run:"round"},
+   money:{type:"fig",k:"Takings today",big:"£312",t:"4 paid",s:"",trend:"↑ £40 vs last Tuesday",tr:"up"},
+   vacc:{type:"list",k:"Vaccination proof",t:"2 missing",list:[["Biscuit","needed today"],["Rolo","Friday"]],act:"Ask owner"},
+   kit:{type:"fig",k:"Equipment",big:"5",t:"days to blade service",s:"Dryer 2 serviced 3 Sep"},
+   cal:{type:"list",k:"Calendar",t:"This afternoon",list:[["Rolo · bath","13:30"],["Mabel · nails","15:00"]],act:"Open calendar",tone:"plain"},
+   families:{type:"fig",k:"Client portal",big:"3",t:"new bookings",s:"1 asks for Saturday"},
+   staff:{type:"fig",k:"Staff",big:"2",t:"on today",s:"Jo off from 14:00"}},
+  pins:["next","round","money","vacc","kit"],
+  today:[["09:00","Bella · nails","Done and paid","good","done"],["11:00","Biscuit · full groom","Vaccination proof missing","bad","blocked"],["13:30","Rolo · bath","","warn","next"],["15:00","Mabel · nails","","warn","booked"]],
+  quick:["New booking","Take payment","Add client","Upload proof","Log incident","Service kit"],
+  run:{title:"Opening checks",about:"Salon",secs:[["Before first dog",[["Tables cleaned and disinfected","",1],["Dryers checked","",1],["Blades sharp","",0]]],["Safety",[["First-aid kit stocked","photo",0],["Fire exit clear","",1]]]]}}
+};
+const CONTACTS={
+ breeder:[["Vet · Valley Vets","01632 960 101","VV",1],["Sam (kennel staff)","07700 900 212","SA",1],["Council licensing","01632 960 303","CL",1],["Mrs Smith (family)","07700 900 414","MS",0],["Feed supplier","01632 960 505","FS",0]],
+ fire:[["Alarm contractor","01632 960 611","AC",1],["Building manager","07700 900 722","BM",1],["Fire warden · Jo","07700 900 833","JO",1],["Extinguisher service","01632 960 944","ES",0]],
+ groom:[["Biscuit's owner","07700 900 155","BO",1],["Jo (groomer)","07700 900 266","JO",1],["Blade sharpening","01632 960 377","BS",1],["Rolo's owner","07700 900 488","RO",0]]};
+const todayState={breeder:{},fire:{},groom:{}};
+let trade="breeder", screen="home", edit=false, sheet=false, runState=null, q="", toast="";
+const pins={}; Object.keys(PACKS).forEach(k=>pins[k]=[...PACKS[k].pins]);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function ring(d,t){const r=26,c=2*Math.PI*r,p=t?d/t:0;return `<svg width="68" height="68" viewBox="0 0 68 68" aria-hidden="true"><circle cx="34" cy="34" r="${r}" fill="none" stroke="var(--chip)" stroke-width="8"/><circle cx="34" cy="34" r="${r}" fill="none" stroke="var(--good)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(c*p).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 34 34)"/><text x="34" y="39" text-anchor="middle" font-family="Bricolage Grotesque,sans-serif" font-weight="800" font-size="16" fill="var(--ink)">${d}/${t}</text></svg>`}
+function cardHTML(id,i,n){const c=PACKS[trade].cards[id];if(!c)return"";
+ let body="";
+ if(c.type==="hero"||c.type==="fig"){body=`<div class="k">${esc(c.k)}</div>${c.big?`<div class="row"><div class="big">${esc(c.big)}</div><div><div class="t">${esc(c.t)}</div>${c.trend?`<div class="trend ${c.tr}">${esc(c.trend)}</div>`:""}</div></div>`:`<div class="t">${esc(c.t)}</div>`}${c.s?`<div class="s">${esc(c.s)}</div>`:""}`}
+ if(c.type==="ring"){body=`<div class="k">${esc(c.k)}</div><div class="row">${ring(c.done,c.total)}<div><div class="t">${esc(c.t)}</div><div class="s">${esc(c.s)}</div></div></div>`}
+ if(c.type==="list"){body=`<div class="k">${esc(c.k)}</div><div class="t">${esc(c.t)}</div><ul class="mini">${c.list.map(([a,b])=>`<li><span>${esc(a)}</span><span${c.tone==="plain"?' style="color:var(--mut)"':""}>${esc(b)}</span></li>`).join("")}</ul>`}
+ const act=c.act&&!edit?`<button type="button" class="act" data-act="${id}">${esc(c.act)} →</button>`:"";
+ const ctl=edit?`<div class="ctl"><button type="button" data-up="${i}" aria-label="Move up" ${i===0?"disabled":""}>↑</button><button type="button" data-down="${i}" aria-label="Move down" ${i===n-1?"disabled":""}>↓</button><button type="button" data-rm="${id}" aria-label="Remove from home">✕</button></div>`:"";
+ return `<div class="card ${c.type==="hero"?"hero":""} ${edit?"edit-pad":""}">${ctl}${body}${act}</div>`}
+function home(){const p=PACKS[trade],t=p.three,list=pins[trade];
+ const d=new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long"});
+ return `<div class="hello"><div><h1>Good morning, ${esc(p.who)}</h1><p>${esc(d)}</p></div><button type="button" class="edit" id="editBtn">${edit?"Done":"Edit home"}</button></div>
+ <div class="three"><button type="button" class="ok"><div class="n">${t[0]}</div><div class="l">✓ On track</div></button><button type="button" class="att"><div class="n">${t[1]}</div><div class="l">! Needs you</div></button><button type="button" class="over"><div class="n">${t[2]}</div><div class="l">⨯ Overdue</div></button></div>
+ <div class="cards">${list.length?list.map((id,i)=>cardHTML(id,i,list.length)).join(""):`<div class="empty">Nothing pinned. Star a module in More to add it here.</div>`}</div>`}
+function today(){const p=PACKS[trade],st=todayState[trade];return `<h2>Today</h2><p class="sub">Everything due, in time order.</p><p class="hint">Swipe right = done · swipe left = not today</p><div class="tl">${p.today.map(([tm,w,wh,tone,lab],i)=>{const v=st[i];const t2=v===true?"good":v===false?"bad":tone;const l2=v===true?"done":v===false?"not today":lab;return `<div class="it sw ${v===true?"yes":v===false?"no":""}" data-swipe="t-${i}"><div class="tm">${esc(tm)}</div><div style="display:flex;align-items:center;gap:8px;min-width:0"><div style="min-width:0"><div class="what">${esc(w)}</div>${wh?`<div class="where">${esc(wh)}</div>`:""}<span class="tag ${t2}">${t2==="good"?"✓":t2==="bad"?"⨯":"!"} ${esc(l2)}</span></div><div class="yn"><button type="button" class="y" data-yn="t-${i}-1" aria-pressed="${v===true}" aria-label="Done">✓</button><button type="button" class="n" data-yn="t-${i}-0" aria-pressed="${v===false}" aria-label="Not today">✕</button></div></div></div>`}).join("")}</div>`}
+function more(){const p=PACKS[trade];const ms=p.modules.filter(m=>(m.nm+" "+m.ds).toLowerCase().includes(q.toLowerCase()));return `<h2>Modules</h2><p class="sub">Star a module to pin it to your home.</p><input class="search" id="q" type="search" placeholder="Search modules, animals, people" value="${esc(q)}" aria-label="Search" style="margin-bottom:12px"><div class="grid">${ms.length?ms.map(m=>{const on=pins[trade].includes(m.id);return `<div class="mod"><div class="ic">${esc(m.ic)}</div><button type="button" class="star" data-star="${m.id}" aria-pressed="${on}" aria-label="${on?"Unpin":"Pin"} ${esc(m.nm)}">${on?"★":"☆"}</button><div class="nm">${esc(m.nm)}</div><div class="ds">${esc(m.ds)}</div></div>`}).join(""):'<div class="empty">No match.</div>'}</div>`}
+function search(){const p=PACKS[trade];const hits=p.modules.filter(m=>(m.nm+" "+m.ds).toLowerCase().includes(q.toLowerCase()));return `<h2>Search</h2><p class="sub">Modules, dogs, people, documents.</p><input class="search" id="q" type="search" placeholder="Search" value="${esc(q)}" aria-label="Search"><div class="tl" style="margin-top:10px">${hits.map(m=>`<div class="it"><div class="tm">${esc(m.ic)}</div><div><div class="what">${esc(m.nm)}</div><div class="where">${esc(m.ds)}</div></div></div>`).join("")||'<div class="empty">No match.</div>'}</div>`}
+function run(){const r=PACKS[trade].run;if(!runState)runState=r.secs.map(([,items])=>items.map(x=>x[2]?true:null));
+ const all=runState.flat(),done=all.filter(v=>v!==null).length,no=all.filter(v=>v===false).length;
+ return `<button type="button" class="back" id="back">← Home</button><h2>${esc(r.title)}</h2><p class="sub">${esc(r.about)} · ${done} of ${all.length} answered${no?` · <span style="color:var(--bad);font-weight:700">${no} no</span>`:""}</p><div class="prog" role="progressbar" aria-valuemin="0" aria-valuemax="${all.length}" aria-valuenow="${done}"><i style="width:${all.length?Math.round(done/all.length*100):0}%"></i></div><p class="hint">Swipe right = yes · swipe left = no</p><button type="button" class="edit" id="checkAll" style="margin-top:8px">All yes</button>
+ ${r.secs.map(([sec,items],si)=>`<div class="sec">${esc(sec)}</div>${items.map(([lab,ev],ii)=>{const v=runState[si][ii];return `<div class="item sw ${v===true?"yes":v===false?"no":""}" data-swipe="r-${si}-${ii}"><span>${esc(lab)}${ev?`<br><span class="ev" style="margin:0">${ev==="photo"?"📷 photo needed":ev==="reading"?"°C reading needed":"note"}</span>`:""}</span><div class="yn"><button type="button" class="y" data-yn="r-${si}-${ii}-1" aria-pressed="${v===true}" aria-label="Yes">✓</button><button type="button" class="n" data-yn="r-${si}-${ii}-0" aria-pressed="${v===false}" aria-label="No">✕</button></div></div>`}).join("")}`).join("")}`}
+const RULES=[["Wormer stock","below",5,"Show on home"],["Puppy room temperature","below",20,"Notify me"],["Puppy room temperature","above",26,"Notify me"],["Kennel round","not done by","10:00","Create a task"]];
+function rule(){return `<button type="button" class="back" id="back">← Home</button><h2>Tell me when…</h2><p class="sub">Every rule is a row. It is checked when new data comes in and every hour.</p>
+<div class="card" style="display:grid;gap:10px"><label>What<select id="rw" class="search">${["Wormer stock","Dog food stock","Puppy room temperature","Block B temperature","Kennel round","Licence renewal","Deposits unpaid"].map(x=>`<option>${esc(x)}</option>`).join("")}</select></label>
+<label>Is<select id="rc" class="search"><option>below</option><option>above</option><option>not done by</option><option>has no reading for (hours)</option><option>due within (days)</option></select></label>
+<label>Value<input id="rv" class="search" value="5" inputmode="decimal"></label>
+<label>Then<select id="ra" class="search"><option>Show on home</option><option>Notify me</option><option>Notify staff</option><option>Create a task</option></select></label>
+<button type="button" class="act" id="saveRule" style="justify-self:start;background:var(--accent);color:var(--accent-ink)">Save rule</button></div>
+<div class="sec">Your rules</div>${RULES.map(([w,c,v,a])=>`<div class="ct"><div class="who"><b>${esc(w)} ${esc(c)} ${esc(String(v))}</b><span>${esc(a)}</span></div></div>`).join("")}`}
+function contacts(){const c=CONTACTS[trade],fav=c.filter(x=>x[3]);return `<h2>Contacts</h2><p class="sub">Tap to call, text or WhatsApp. On your phone this opens the dialler.</p><div class="favs">${fav.map(([n,t,i])=>`<a class="fav" href="tel:${t.replace(/ /g,"")}" style="color:inherit;text-decoration:none"><div class="av">${esc(i)}</div>${esc(n.split(" ·")[0].split(" (")[0])}</a>`).join("")}</div>${c.map(([n,t,i])=>{const num=t.replace(/ /g,"");return `<div class="ct"><div class="av">${esc(i)}</div><div class="who"><b>${esc(n)}</b><span>${esc(t)}</span></div><a href="tel:${num}" aria-label="Call ${esc(n)}">📞</a><a href="sms:${num}" aria-label="Text ${esc(n)}">💬</a><a href="https://wa.me/44${num.replace(/^0/,"")}" aria-label="WhatsApp ${esc(n)}">🟢</a></div>`}).join("")}`}
+function flash(msg){toast=msg;clearTimeout(flash._t);flash._t=setTimeout(()=>{toast="";const el=$("#toast");if(el){el.hidden=true;el.textContent=""}},2200)}
+function render(){
+ $("#trades").innerHTML=Object.entries(PACKS).map(([k,p])=>`<button type="button" data-trade="${k}" aria-pressed="${k===trade}">${esc(p.label)}</button>`).join("");
+ const S={home,today,more,search,run,contacts,rule}[screen]();
+ $("#screen").innerHTML=S+(sheet?`<div class="sheet" role="dialog" aria-label="Quick add"><h2 style="font-size:20px">Quick add</h2><p class="sub">${esc(PACKS[trade].label)} pack</p><div class="grid">${PACKS[trade].quick.map(x=>`<button type="button" data-quick="${esc(x)}">${esc(x)}</button>`).join("")}</div></div>`:"");
+ const tab=(id,label,ic)=>`<button type="button" data-tab="${id}" ${screen===id||(id==="home"&&(screen==="run"||screen==="rule"))?'aria-current="page"':""} aria-label="${label}">${ic}${screen===id?`<span>${label}</span>`:""}</button>`;
+ $("#pill").innerHTML=tab("home","Home",IC.home)+tab("today","Today",IC.today)+`<button type="button" class="plus" data-plus aria-label="Quick add" aria-expanded="${sheet}">+</button>`+tab("contacts","Contacts",IC.contacts)+tab("more","More",IC.more);
+ const qi=$("#q"); if(qi){qi.oninput=e=>{q=e.target.value;const pos=qi.selectionStart;render();const n=$("#q");if(n){n.focus();try{n.setSelectionRange(pos,pos)}catch(err){}}}}
+ const tn=$("#toast"); if(tn){tn.hidden=!toast;tn.textContent=toast||""}
+ document.title=(screen==="home"?PACKS[trade].label:(screen==="rule"?"Tell me when…":screen[0].toUpperCase()+screen.slice(1)))+" · The Board";
+}
+document.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const d=b.dataset;
+ if(d.trade){trade=d.trade;screen="home";edit=false;sheet=false;runState=null;q=""}
+ else if(d.tab){screen=d.tab;sheet=false;edit=false;if(d.tab!=="more")q=""}
+ else if("plus" in d){sheet=!sheet}
+ else if("quick" in d){sheet=false;flash(d.quick+" · example only, not saved")}
+ else if(b.id==="editBtn"){edit=!edit}
+ else if(d.up!=null&&d.up!==""){const a=pins[trade],i=+d.up;if(i>0)[a[i-1],a[i]]=[a[i],a[i-1]]}
+ else if(d.down!=null&&d.down!==""){const a=pins[trade],i=+d.down;if(i<a.length-1)[a[i+1],a[i]]=[a[i],a[i+1]]}
+ else if(d.rm){pins[trade]=pins[trade].filter(x=>x!==d.rm)}
+ else if(d.star){const a=pins[trade];pins[trade]=a.includes(d.star)?a.filter(x=>x!==d.star):[...a,d.star]}
+ else if(d.act==="alerts"){screen="rule"}
+ else if(b.id==="saveRule"){const w=$("#rw"),c=$("#rc"),v=$("#rv"),a=$("#ra");if(w&&c&&v&&a){RULES.unshift([w.value,c.value,v.value,a.value]);flash("Rule saved on this page only")}}
+ else if(d.act){const c=PACKS[trade].cards[d.act];if(c&&(c.run||d.act==="next")){screen="run";runState=null}else if(d.act==="cal"){screen="today"}else flash(c&&c.act?c.act+" · example only":"Example only")}
+ else if(b.id==="back"){screen="home";runState=null}
+ else if(b.id==="checkAll"){if(runState)runState=runState.map(s=>s.map(()=>true))}
+ else if(d.yn){setYN(d.yn)}
+ else return;
+ render()});
+function setYN(code){const a=code.split("-");const v=a.pop()==="1";
+ if(a[0]==="t"){const i=+a[1],st=todayState[trade];st[i]=st[i]===v?undefined:v}
+ else if(runState){const si=+a[1],ii=+a[2];if(runState[si])runState[si][ii]=runState[si][ii]===v?null:v}}
+let drag=null;
+document.addEventListener("pointerdown",e=>{const el=e.target.closest(".sw");if(!el||e.target.closest("button,a"))return;drag={el,x:e.clientX,y:e.clientY,dx:0};try{el.setPointerCapture(e.pointerId)}catch(err){}});
+document.addEventListener("pointermove",e=>{if(!drag)return;drag.dx=e.clientX-drag.x;if(Math.abs(drag.dx)>8&&Math.abs(drag.dx)>Math.abs(e.clientY-drag.y)){drag.el.classList.add("dragging");drag.el.style.transform=`translateX(${Math.max(-120,Math.min(120,drag.dx))}px)`}});
+document.addEventListener("pointerup",()=>{if(!drag)return;const {el,dx}=drag;drag=null;el.classList.remove("dragging");el.style.transform="";
+ if(Math.abs(dx)>70){const k=el.dataset.swipe;if(k){setYN(k+"-"+(dx>0?"1":"0"));render()}}});
+document.addEventListener("pointercancel",()=>{if(!drag)return;drag.el.classList.remove("dragging");drag.el.style.transform="";drag=null});
+render();
+
+/* ------------------------------------------------------------------
+   Step 1b stub. NOT called. The Board above is the page you see.
+   Copied from ../cdhub/index.html: public OAuth client, Drive read-only,
+   list BLD-app-tables, read each CSV as text. No writes. No storage.
+   TODO: uncomment the GIS script in <head>, then call driveStub.connect()
+   and map parsed rows onto PACKS.breeder. Do not replace this shell.
+------------------------------------------------------------------ */
+var driveStub=(function(){
+  var CLIENT_ID='135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com';
+  var SCOPE='https://www.googleapis.com/auth/drive.readonly';
+  var FOLDER='10m8HauOLAdj2QStgNJ2T3b3W599VXWro';
+  var FOLDER_NAME='*01 SLA Inspections / BLD-app-tables';
+  var DRIVE='https://www.googleapis.com/drive/v3/files';
+  var TOKEN=null, TOKEN_EXP=0, TOKENCLIENT=null;
+  function DriveErr(status,msg){var e=new Error(msg||'');e.status=status;return e}
+  function gget(url,asText){
+    if(!TOKEN||Date.now()>TOKEN_EXP) return Promise.reject(DriveErr(401,'Sign-in expired'));
+    return fetch(url,{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
+      if(res.ok) return asText?res.text():res.json();
+      return res.text().then(function(){throw DriveErr(res.status,'Drive read failed')});
+    });
+  }
+  function parseCSV(text){
+    text=String(text||'').replace(/^\uFEFF/,'').replace(/\r/g,'');
+    var rows=[],row=[],f='',q=false;
+    for(var i=0;i<text.length;i++){
+      var c=text[i];
+      if(q){ if(c==='"'){ if(text[i+1]==='"'){f+='"';i++;} else q=false; } else f+=c; }
+      else if(c==='"') q=true;
+      else if(c===','){ row.push(f); f=''; }
+      else if(c==='\n'){ row.push(f); rows.push(row); row=[]; f=''; }
+      else f+=c;
+    }
+    if(f!==''||row.length){ row.push(f); rows.push(row); }
+    rows=rows.filter(function(r){return r.some(function(x){return String(x).trim()!==''})});
+    if(!rows.length) return [];
+    var head=rows[0].map(function(h){return h.trim()});
+    return rows.slice(1).map(function(r){var o={};head.forEach(function(h,i){o[h]=(r[i]==null?'':String(r[i])).trim()});return o});
+  }
+  async function listFolder(){
+    var files=[],pt='';
+    do{
+      var qs=new URLSearchParams({q:"'"+FOLDER+"' in parents and trashed = false",
+        fields:'nextPageToken,files(id,name,mimeType,modifiedTime)',pageSize:'1000',
+        supportsAllDrives:'true',includeItemsFromAllDrives:'true',corpora:'allDrives'});
+      if(pt) qs.set('pageToken',pt);
+      var r=await gget(DRIVE+'?'+qs.toString());
+      files=files.concat(r.files||[]);pt=r.nextPageToken||'';
+    }while(pt);
+    return files;
+  }
+  function readDriveFile(f){
+    if(f.mimeType==='application/vnd.google-apps.spreadsheet')
+      return gget(DRIVE+'/'+encodeURIComponent(f.id)+'/export?mimeType=text%2Fcsv',true);
+    return gget(DRIVE+'/'+encodeURIComponent(f.id)+'?alt=media&supportsAllDrives=true',true);
+  }
+  function connect(){
+    /* TODO(step-1b): initTokenClient({client_id:CLIENT_ID, scope:SCOPE}), then listFolder + readDriveFile + parseCSV.
+       Leave the Board shell in place. Example packs stay until that mapping exists. */
+    return Promise.resolve({wired:false,folder:FOLDER_NAME,reason:'TODO step 1b: live CSVs are not connected.'});
+  }
+  return {CLIENT_ID:CLIENT_ID,SCOPE:SCOPE,FOLDER:FOLDER,FOLDER_NAME:FOLDER_NAME,parseCSV:parseCSV,listFolder:listFolder,readDriveFile:readDriveFile,connect:connect,TOKENCLIENT:function(){return TOKENCLIENT}};
+})();
+</script>
+</body>
+</html>
