@@ -5,8 +5,9 @@
  * Google Drive has no real "append", so the script reads the whole file, adds one
  * line, and writes it back. To make that safe it:
  *   1. refuses unless the file header is exactly what the sink expects,
- *   2. refuses if the file changed while it was working,
- *   3. checks afterwards that every old byte is still there and only one line was added.
+ *   2. refuses if the file changed while it was working (compared by a hash of the text, not just its size),
+ *   3. checks afterwards that every old byte is still there and only one line was added,
+ *   4. if that check fails, puts the exact old text back and says so.
  * It never truncates, never edits a line, never deletes. Drive keeps the previous
  * version in the file's version history as a second safety net.
  */
@@ -46,9 +47,23 @@ function sameHeader_(a, b) {
   return true;
 }
 
+/** SHA-256 of a piece of text, as hex. Used to prove a file is unchanged, not just the same size. */
+function textHash_(text) {
+  return hex_(Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, text, Utilities.Charset.UTF_8));
+}
+
 /**
  * Append one row. `title` must be on the allow-list. `read` is the result of
  * store_read_ taken inside the same lock.
+ *
+ * Safety, in order:
+ *  1. file header must be exactly what the sink expects
+ *  2. just before writing, the file is read again and its HASH must equal the hash of what we read
+ *     earlier (so a same-size edit is caught too)
+ *  3. write, then read back: the hash must equal the hash of the text we meant to write, and every
+ *     old byte must still be there
+ *  4. if step 3 fails, the EXACT old text is written back and checked by hash. The error says whether
+ *     the restore worked. The caller logs it in the waiting list.
  */
 function store_append_(title, expectedHeader, rowValues, read) {
   if (allowedFiles_().indexOf(title) < 0) {
@@ -59,18 +74,28 @@ function store_append_(title, expectedHeader, rowValues, read) {
   }
   var file = read.file;
   var before = read.text;
-  if (file.getSize() !== read.size) {
+  var beforeHash = textHash_(before);
+  if (textHash_(file.getBlob().getDataAsString('UTF-8')) !== beforeHash) {
     throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
   }
   var eol = csvEol_(before);
   var base = before;
   if (base.length && !/(\r\n|\n)$/.test(base)) base += eol;
   var after = base + csvLine_(rowValues) + eol;
+  var afterHash = textHash_(after);
   file.setContent(after);
-  // verify: every old byte still there, exactly one new line added
   var check = file.getBlob().getDataAsString('UTF-8');
-  if (check !== after || check.indexOf(before) !== 0) {
-    throw err_('VERIFY_FAILED', 'The file did not read back as expected after saving. Tell Lisa now; the earlier version is in the file history.');
+  if (textHash_(check) !== afterHash || check.indexOf(before) !== 0) {
+    var restored = false;
+    try {
+      file.setContent(before);
+      restored = textHash_(file.getBlob().getDataAsString('UTF-8')) === beforeHash;
+    } catch (e) { restored = false; }
+    throw err_('VERIFY_FAILED',
+      restored
+        ? 'The file did not read back as expected after saving, so the earlier text was put back exactly and nothing was saved. Try again; if it repeats, tell Lisa.'
+        : 'The file did not read back as expected after saving AND putting the earlier text back could not be confirmed. Tell Lisa now; do not save again. The earlier version is in the file history.',
+      { restored: restored, file: title });
   }
   return after;
 }

@@ -70,7 +70,7 @@
     var local = opts.localStorage !== undefined ? opts.localStorage : safeStorage('localStorage');
     var session = opts.sessionStorage !== undefined ? opts.sessionStorage : safeStorage('sessionStorage');
     var lookups = {};
-    var status = { checked: false, reachable: null, saveEnabled: false, tables: {}, version: '' };
+    var status = { checked: false, reachable: null, saveEnabled: false, tables: {}, proposed: [], version: '' };
     var scriptUrl = '';
 
     function get(store, k) { try { return store ? (store.getItem(k) || '') : ''; } catch (e) { return ''; } }
@@ -106,7 +106,7 @@
         .then(function (j) {
           var t = {};
           (j.tables || []).forEach(function (x) { t[x.key] = { on: !!x.on, mode: x.mode, file: x.file }; });
-          status = { checked: true, reachable: true, saveEnabled: !!j.saveEnabled, tables: t, version: j.version || '' };
+          status = { checked: true, reachable: true, saveEnabled: !!j.saveEnabled, tables: t, proposed: j.proposed || [], version: j.version || '' };
           return status;
         })
         .catch(function () {
@@ -129,6 +129,9 @@
       if (status.checked && status.reachable === false) return { kind: 'off', canSave: false, text: 'Cannot reach the save service right now, so nothing can be saved. Try again in a moment.' };
       if (!status.checked) return { kind: 'checking', canSave: false, text: 'Checking whether saving is on...' };
       if (!status.saveEnabled) return { kind: 'off', canSave: false, text: 'Saving is off. Nothing you type here is kept. Lisa switches it on when it is ready.' };
+      if (tableKey && !tb && status.proposed && status.proposed.indexOf(tableKey) >= 0) {
+        return { kind: 'off', canSave: false, text: '"' + ((TABLES[tableKey] || {}).label || tableKey) + '" is only a proposal so far. Nothing can be saved to it until Lisa agrees it.' };
+      }
       if (tableKey && (!tb || !tb.on)) {
         return { kind: 'off', canSave: false, text: 'Saving to "' + ((TABLES[tableKey] || {}).label || tableKey) + '" is not switched on yet.' };
       }

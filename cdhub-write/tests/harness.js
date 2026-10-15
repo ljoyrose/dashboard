@@ -10,7 +10,9 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const fx = require('./fixtures');
 
-const GS_DIR = path.join(__dirname, '..', 'apps-script');
+// Works in the repo layout (cdhub-write/apps-script) and in the zip layout (code/apps-script).
+const CODE = fs.existsSync(path.join(__dirname, '..', 'code')) ? path.join(__dirname, '..', 'code') : path.join(__dirname, '..');
+const GS_DIR = path.join(CODE, 'apps-script');
 const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Sink', 'Web', 'Admin'];
 
 // 2026-10-15 22:30:00 UTC = 23:30 BST (London is +01:00 until 25 Oct 2026)
@@ -37,6 +39,10 @@ function makeEnv(opts = {}) {
     drive: [],          // [{id,title,content}]
     writes: [],         // every setContent: {title, old, next}
     created: [],        // every createFile title
+    copies: [],         // every makeCopy {from,name}
+    subfolders: {},     // name -> {files:[]}
+    triggers: [],       // time-driven triggers created
+    brokeOnce: false,
     logs: [],
     breakSetContent: false
   };
@@ -52,10 +58,19 @@ function makeEnv(opts = {}) {
     getBlob: () => ({ getDataAsString: () => f.content }),
     setContent(s) {
       env.writes.push({ title: f.title, old: f.content, next: s });
-      f.content = env.breakSetContent ? s.slice(0, -1) : s;
-    }
+      const hit = !env.breakTitle || env.breakTitle === f.title;
+      const bad = hit && (env.breakSetContent === true || (env.breakSetContent === 'once' && !env.brokeOnce && (env.brokeOnce = true)));
+      f.content = bad ? s.slice(0, -1) : s;
+    },
+    makeCopy(name, dest) { env.copies.push({ from: f.title, name }); const c = { id: 'copy' + (++idc), title: name, content: f.content }; dest.files.push(c); return wrap(c); }
+  });
+  const subFolderObj = (sf) => ({
+    files: sf.files,
+    getFilesByName(t) { const m = sf.files.filter((f) => f.title === t).map(wrap); let i = 0; return { hasNext: () => i < m.length, next: () => m[i++] }; }
   });
   const folder = {
+    getFoldersByName(n) { const m = env.subfolders[n] ? [subFolderObj(env.subfolders[n])] : []; let i = 0; return { hasNext: () => i < m.length, next: () => m[i++] }; },
+    createFolder(n) { env.subfolders[n] = { files: [] }; return subFolderObj(env.subfolders[n]); },
     getFilesByName(t) {
       const m = env.drive.filter((f) => f.title === t).map(wrap); let i = 0;
       return { hasNext: () => i < m.length, next: () => m[i++] };
@@ -79,6 +94,11 @@ function makeEnv(opts = {}) {
       get: (k) => (k in env.cache ? env.cache[k] : null),
       put: (k, v) => { env.cache[k] = String(v); }
     }) },
+    ScriptApp: {
+      getProjectTriggers: () => env.triggers,
+      deleteTrigger: (t) => { env.triggers.splice(env.triggers.indexOf(t), 1); },
+      newTrigger: (fn) => ({ timeBased() { return this; }, everyDays() { return this; }, atHour() { return this; }, create() { const t = { getHandlerFunction: () => fn }; env.triggers.push(t); return t; } })
+    },
     LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
     Session: { getActiveUser: () => ({ getEmail: () => env.email }) },
     DriveApp: { getFolderById: (id) => { if (id !== 'FOLDER-TEST') throw new Error('no folder'); return folder; } },
@@ -96,6 +116,7 @@ function makeEnv(opts = {}) {
       getUuid: () => crypto.randomUUID(),
       formatDate(d, tz, pattern) {
         const p = londonParts(d.getTime());
+        if (pattern === 'yyyy-MM-dd') return `${p.y}-${p.mo}-${p.d}`;
         if (pattern === 'yyyyMMdd-HHmmss') return `${p.y}${p.mo}${p.d}-${p.h}${p.mi}${p.s}`;
         if (pattern === "yyyy-MM-dd'T'HH:mm:ssXXX") return `${p.y}-${p.mo}-${p.d}T${p.h}:${p.mi}:${p.s}${p.off}`;
         throw new Error('pattern not mocked: ' + pattern);

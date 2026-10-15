@@ -42,7 +42,7 @@ function doGet(e) {
   var tables = Object.keys(TABLES).map(function (k) {
     return { key: k, file: TABLES[k].file, on: tableOn_(TABLES[k]), mode: modeFor_(TABLES[k]) };
   });
-  return jsonOut_({ ok: true, version: BLD.VERSION, saveEnabled: saveEnabled_(), tables: tables });
+  return jsonOut_({ ok: true, version: BLD.VERSION, saveEnabled: saveEnabled_(), tables: tables, proposed: Object.keys(PROPOSED_TABLES) });
 }
 
 function approvePage_() {
