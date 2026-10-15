@@ -11,6 +11,7 @@ class FakeDrive {
     this.drives = []; // {id, name}
     this.files = []; // {id,name,mimeType,parents,driveId,modifiedTime,content,trashed,...}
     this.calls = []; // every request seen, for assertions
+    this.unhandled = []; // Drive calls the pretend Drive did not know how to answer (drift check, see summary.js)
     this.failWith = null; // {status, reason, message} makes every files call fail (error-path tests)
     this.failFor = null; // optional: only fail when the URL contains this text
     this._n = 0;
@@ -126,12 +127,14 @@ class FakeDrive {
         if (req.method() === 'PATCH') {
           const body = JSON.parse(req.postData() || '{}');
           if (body.trashed === true) { f.trashed = true; f.trashedTime = '2026-03-09T12:00:00.000Z'; }
-          return json(200, { id: f.id, trashed: !!f.trashed });
+          if (typeof body.name === 'string') f.name = body.name; // rename (PC-Personal step 2)
+          return json(200, { id: f.id, name: f.name, trashed: !!f.trashed });
         }
         if (params.get('alt') === 'media') return route.fulfill({ status: 200, contentType: f.mimeType === 'application/json' ? 'application/json' : 'text/plain', body: f.content || '' });
         const { content, ...meta } = f;
         return json(200, meta);
       }
+      this.unhandled.push(req.method() + ' ' + p);
       return json(404, { error: { code: 404, message: 'Not handled by the pretend Drive: ' + p } });
     });
   }

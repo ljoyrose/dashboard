@@ -4,6 +4,8 @@
 //  - Blocks every other outside address and remembers it, so a test fails if the page tries to call out.
 //  - Watches the browser console and fails the test on unexpected errors.
 const base = require('@playwright/test');
+const fs = require('fs');
+const path = require('path');
 const gisStub = require('./gis-stub');
 const { buildWorld } = require('./world');
 
@@ -52,6 +54,14 @@ const test = base.test.extend({
 
       const guard = { outside, consoleSeen, problems, world };
       await use(guard);
+
+      // Drift check: remember Drive calls the pretend Drive could not answer (counted in the Action summary).
+      if (world.unhandled && world.unhandled.length) {
+        try {
+          fs.mkdirSync('test-results', { recursive: true });
+          fs.appendFileSync(path.join('test-results', 'unhandled-drive.jsonl'), world.unhandled.map((c) => JSON.stringify({ call: c })).join('\n') + '\n');
+        } catch (e) { /* never let bookkeeping fail a test */ }
+      }
 
       const unexpected = consoleSeen.filter((t) => !allowedConsole.some((re) => re.test(t)));
       base.expect(problems, 'Uncaught errors on the page').toEqual([]);

@@ -1,6 +1,6 @@
 # TESTS: how we know the dashboard still works
 
-*For Lisa. Plain English. Last updated 15 Oct 2026.*
+*For Lisa. Plain English. Last updated 15 Oct 2026 (Job 6b).*
 
 ## The short version
 
@@ -9,8 +9,10 @@
 - **It never signs in to your real Google. It never reads your real Drive.** Both are pretend.
 - It runs by itself on GitHub every time a change is saved, and every Monday morning.
 - **Green tick = good. Red cross = something needs a look.**
+- **A change cannot be merged into `main` unless the tick is green** (once you switch that on: see "Make the tick compulsory").
+- If the Monday run is red, **GitHub opens one Issue and emails you.** It closes itself when things are green again.
 
-You do not need to do anything. This page just explains what the robot checks.
+You do not need to do anything day to day. This page just explains what the robot checks.
 
 ## What "green" means
 
@@ -24,6 +26,9 @@ Green means all of these are true on all three pages:
 6. The browser shows **no unexpected errors** in its hidden error log.
 7. The page never tries to contact any address we did not plan for.
 8. Nothing is saved in the browser.
+9. On a phone-sized screen, each page opens, the menu works and nothing scrolls sideways.
+10. The column names the pages expect in your Drive files are still the ones on our list.
+11. Dark mode still works, and accessibility and the smallest text size have not got worse.
 
 If any of these breaks, the tick turns red and says which page.
 
@@ -34,8 +39,15 @@ If any of these breaks, the tick turns red and says which page.
 | Main dashboard | `/dashboard/` | 47 |
 | CD Hub | `/dashboard/cdhub/` | 30 |
 | Money Hub | `/dashboard/money/` | 41 |
-| Reading CSV files | both readers | 16 |
+| Reading CSV files | both readers | 17 |
 | Safety checks | the whole repo | 4 |
+| Bin safety (`RR_` archives never taken) | `#/bin` | 2 |
+| PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 8 (+1 waiting on your answer) |
+| Header contract (column names) | list of expected columns | 12 |
+| Dark mode, accessibility, smallest text | all three pages | 18 |
+| Phone-sized screen (390 × 844) | all three pages | 3 |
+
+That is 182 checks that must pass, plus 1 that is parked until you answer a question (see "Needs your answer").
 
 **Main dashboard**
 - Opens and shows only a sign-in button until you sign in.
@@ -67,10 +79,26 @@ If any of these breaks, the tick turns red and says which page.
 - Sample ledgers show the right cash, overdue items, dates and to-dos.
 - A missing, doubled or wrongly-shaped file shows as an error. It never quietly uses an old one.
 
+**Bin safety**
+- A `ZZ_` folder with an `RR_` item anywhere inside is **left alone**, with a note saying why.
+- A `ZZ_` file inside an `RR_` folder is **left alone**.
+- Only `ZZ_` things with no `RR_` anywhere near them are moved to the bin.
+
+**PC-Personal and Drive check (these rename and bin real files, so they matter most)**
+- Every write goes to a pretend Drive or a pretend plugged-in drive that only exists in memory. Nothing real can be renamed or binned.
+- PC-Personal "Rename": asks for the extra permission, then asks you to confirm. Cancel changes nothing. Confirm renames **only** the files that match a shared-drive copy, adds `ZZ_DELETE_DRIVE_`, and never touches the shared copy or a file with no match.
+- PC-Personal "Bin": finds **only** files starting `ZZ_DELETE_DRIVE_`, asks first, and moves them to the bin (never deletes).
+- Drive check: finds the files already in a shared drive, ignores tiny and system files, asks first, and renames only the matches (`ZZ_DELETE_LOCAL_`). Deletes nothing.
+
+**Header contract**
+- The file `tests/contract/expected-headers.json` lists the **column names** (names only, no figures) each Drive file should have.
+- The robot checks that the sample files, the page code and that list all agree, and that the pages still read the columns they read before. A column renamed in the page or in the samples turns the tick red.
+- This is how a renamed column gets noticed even though the pretend Drive can never rename one. To check your **real** files, see "Check your real column names".
+
 **Reading CSV files**
 - Commas inside quotes, quotes inside quotes, line breaks inside quotes.
 - Windows line endings, a blank last line, short rows, empty files.
-- A hidden marker at the start of a file (a "BOM").
+- A hidden marker at the start of a file (a "BOM"), including in front of the "CURRENT: 3 rows held" line.
 - The first line the Money files carry ("CURRENT: 3 rows held"), and a warning when the count is wrong.
 
 **Safety checks**
@@ -100,7 +128,9 @@ Because Drive is pretend, a green tick does **not** prove your real Drive folder
 
 Each run writes a short table at the top of its page in the Actions tab: one line per page, with passed and failed counts.
 
-There is also a small **optional** check of the three live web addresses. It opens them signed out and confirms they are up. It runs on Mondays and on the button. It never blocks anything, because GitHub Pages can have a slow day.
+There is also a small **optional** check of the three live web addresses. It opens them signed out and confirms they are up. It runs **a minute or so after every publish to the live site** (so a bad merge is noticed in minutes), on Mondays, and on the button. It never blocks anything, because GitHub Pages can have a slow day. It starts working once this change is merged (GitHub only runs it from `main`).
+
+Every Tuesday a separate **"teeth check"** breaks things on purpose in a throw-away copy (a wrong link, a lost safety rule, a renamed column, a page too wide for a phone, and so on) and makes sure the tests go red each time. If one slips through, it turns red and opens an Issue. It cannot block a merge.
 
 ## How to run it on your own computer (optional)
 
@@ -123,7 +153,7 @@ You need **Node.js** (the free program that runs the tests) version 22.
 5. To watch the browser work, use `npm run test:headed`.
 6. To also check the live site, use `npm run test:live`.
 
-It takes about 40 seconds.
+It takes about 90 seconds.
 
 ## If something goes red
 
@@ -132,22 +162,81 @@ It takes about 40 seconds.
 3. Download **playwright-report** at the bottom. It has a screenshot and a replay of each failure.
 4. Send the link to your builder. It is not urgent unless it is the Money Hub or the Bin.
 
+**The Issue rule (one short paragraph).** When the Monday run (or any scheduled or hand-started run on `main`) goes red, the robot opens **one** GitHub Issue named "Dashboard tests are red: " plus the failing page, and GitHub emails you. If it is still red next time, it updates that same Issue (no second one). When a run on `main` is green again, it closes the Issue by itself. The live-site check has its own single Issue ("Live site check is red") and the teeth check has its own ("Teeth check failed"), so a Pages hiccup never hides a real test failure. Nothing here uses Slack, webhooks or any new secret.
+
+## Make the tick compulsory (branch protection)
+
+This is what turns the tests from "advice" into "protection". It needs your admin rights on GitHub, so it is one thing for you to click (the robot that built this was not allowed to change repository settings). **If it is already done, there is nothing to do.**
+
+1. GitHub > the **dashboard** repository > **Settings** (top row).
+2. Left side: **Branches**. Click **Add branch protection rule** (or **Add classic branch protection rule**).
+3. **Branch name pattern:** type `main`.
+4. Tick **Require a pull request before merging**. Leave "Required approvals" at **0** (you are the only person, so you could not approve your own).
+5. Tick **Require status checks to pass before merging**. In the search box type `Browser tests` and pick **Browser tests (pretend Google and Drive)**. (It only appears in the list because it has run recently. If you cannot find it, open the Actions tab, run "Dashboard tests" once, then try again.)
+6. Tick **Do not allow bypassing the above settings** (this makes it apply to you too).
+7. Leave **Allow force pushes** and **Allow deletions** **unticked**.
+8. Click **Create** (or **Save changes**).
+
+What changes for you: nothing can go straight into `main`; every change comes as a pull request, and the green **Merge** button only lights up when the tests are green. A red tick means "fix it first". If you ever need to bypass it in an emergency, untick step 6 for a moment.
+
+Do not rename the job "Browser tests (pretend Google and Drive)" in `tests.yml`. If it is renamed, merges stick on "Expected, waiting for status" and the rule must be edited to the new name.
+
+## Check your real column names (optional, on your computer only)
+
+The pretend Drive cannot tell us if a column was renamed in your real files. This little script can, without any sign-in:
+
+1. In Google Drive, download the files to check (for example the Money index files and the `BLD-app-tables` files) into one folder on your computer.
+2. In a terminal in the `dashboard` folder: `node tests/contract/check-real-headers.js /path/to/that/folder`
+3. It prints `ok` or `PROBLEM` per file and names any missing or renamed column. It reads only the top of each file, prints column names only, never values, and sends nothing anywhere.
+
+GitHub does not run this one, on purpose: it would need a Google key stored in GitHub, and none is stored.
+
+## Needs your answer
+
+**PC-Personal renames `RR_` archive files too.** If a file in your personal drive starts `RR_` and is an exact copy of a shared-drive file, PC-Personal renames it to `ZZ_DELETE_DRIVE_RR_…` and step 3 then moves it to the bin. The Bin page promises "RR_ archive items are never included", so this may not be what you want. The test for the safer behaviour is written and parked (shown as "1 skipped"). If you say "leave RR_ alone", it is a one-line change to the page and the test is switched on. Nothing was changed in the page.
+
+## Known gaps in looks and reading (not new, now written down)
+
+- **Colour contrast** (text hard to read against its background) is flagged by the accessibility check in some places: main dashboard 7 spots, CD Hub up to 8.
+- **Small text:** the CD Hub has text as small as 10.5 px; the other two pages start at 13 px.
+- **Heading order** on the main dashboard and CD Hub skips a level.
+The check only fails if these get **worse**. When one is fixed, the number in `tests/mocked/look-and-access.spec.js` is lowered so it can never creep back.
+
+## Caught after merge (and how to add to it)
+
+Each line is a bug that got past the tests once, and the test that now stops it. These tests have `@regression` in their name, and every run's summary counts them.
+
+| Date | What went wrong | Test that now guards it |
+|---|---|---|
+| 8 Oct 2026 | CD Hub: the Litters page crashed, and occupancy was read from the wrong column (commit `4284758`) | "joined tables work: cabins show their dogs, litters show dam and sire…" (covers Litters and occupancy; the Animana record choice is **not** yet covered) |
+| 15 Oct 2026 | (found by the teeth check, not a live bug) a hidden marker in front of the "CURRENT" line made the row-count warning disappear; and the rules that stop a `ZZ_` folder holding an `RR_` item being binned had no test | "a BOM in front of the CURRENT line…", and the two Bin safety tests |
+
+**Recipe when a bug is fixed:**
+1. Write a test that **fails** on the broken page and **passes** on the fixed one.
+2. Put `@regression` at the end of its name.
+3. Add a row to the table above (date, what went wrong, test name).
+4. Tick "Bug fix? Regression test added?" in the pull request. If the pull request is called a fix and changes nothing under `tests/`, the robot adds a yellow warning (it never blocks).
+
 ## What is not covered (honest list)
 
 - The real Google consent screen.
 - Real Drive speed, limits and permissions.
-- Phone-sized screens (the tests use a desktop-sized window).
 - Whether the numbers in your real files are right. That is the job of the Control page in the Money Hub.
-- The "Rename" and "Move to bin" steps of PC-Personal, and the Drive check page (they use local files).
+- Your real column names in CI (use the local script above).
+- Phone sizes beyond one Pixel-sized screen, and only a short list of checks on it.
+- A real USB stick or real renaming on a disk (the Drive check is tested against a pretend plugged-in drive).
 
 ## Where things live
 
 | What | Where |
 |---|---|
-| The tests | `tests/mocked/` |
+| The tests | `tests/mocked/` (desktop), `tests/phone/` (phone) |
 | The pretend Google and Drive | `tests/support/` |
 | The invented sample files | `tests/fixtures/` |
-| The robot's schedule | `.github/workflows/tests.yml` |
+| Expected column names | `tests/contract/` |
+| The "teeth" check | `tests/teeth/` |
+| The robot's schedule | `.github/workflows/` (`tests.yml`, `live-after-deploy.yml`, `teeth.yml`, `fix-needs-test.yml`) |
+| Weekly update nudges (never auto-merged) | `.github/dependabot.yml` |
 | Settings | `playwright.config.js`, `package.json` |
 
-Nothing in the dashboard pages themselves was changed to add these tests.
+Nothing in the dashboard pages themselves was changed to add these tests (Job 6 or Job 6b).

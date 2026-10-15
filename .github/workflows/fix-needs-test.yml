@@ -1,0 +1,43 @@
+name: Bug fix without a test?
+
+# Gentle nudge, never a blocker. If a pull request looks like a bug fix (title starts with fix/bugfix/hotfix,
+# or it carries a "bug" / "fix" label) and changes nothing under tests/, it prints a yellow warning.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check:
+    name: Bug fix without a test? (warning only)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Look at the title, labels and changed files
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TITLE: ${{ github.event.pull_request.title }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          if ! echo "$TITLE" | grep -Eiq '^\s*(fix|bugfix|hotfix)(\(.*\))?[:! ]|\bfix(es|ed)?\b' && ! echo " $LABELS " | grep -Eiq ' (bug|bugfix|fix) '; then
+            echo "Not a bug fix. Nothing to check."; exit 0
+          fi
+          files=$(gh api "repos/$REPO/pulls/$PR/files" --paginate --jq '.[].filename')
+          if echo "$files" | grep -q '^tests/'; then
+            echo "Looks like a bug fix and it changes tests under tests/. Good."
+            echo "### ✅ Bug fix, and tests changed" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::warning title=Bug fix without a test::This looks like a bug fix but changes nothing under tests/. Add a test that fails without the fix, tag it @regression, and add a line to the 'Caught after merge' list in TESTS.md. If a test really is not possible, say why in the PR."
+            {
+              echo "### ⚠️ Bug fix without a test"
+              echo ""
+              echo "This pull request looks like a bug fix, but it changes nothing under \`tests/\`."
+              echo "Add a test that fails without the fix and passes with it, put \`@regression\` in its title, and add one line to **Caught after merge** in TESTS.md."
+              echo "If a test is genuinely not possible, say why in the pull request. This is a warning, not a block."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi

@@ -75,6 +75,13 @@ test.describe('Money Hub CSV reader', () => {
     const t = await table(page, '﻿id,name\na,Alpha\n', 'id');
     expect(t.rows[0].id).toBe('a');
   });
+  test('a BOM in front of the "CURRENT: n rows held" line is ignored, and the count is still checked', async ({ page }) => {
+    // Regression-style gap found by the teeth check: with the BOM left in, the count line was no longer recognised.
+    const t = await table(page, '\uFEFFCURRENT: 2 rows held 2026-03-09\nid,name\na,Alpha\nb,Beta\n', 'id');
+    expect(t.hasCountLine).toBe(true);
+    expect(t.held).toBe(2);
+    expect(t.countOk).toBe(true);
+  });
   test('money helpers: pounds text becomes numbers; blanks stay empty (null)', async ({ page }) => {
     const out = await page.evaluate(() => ({ a: window.MoneyCore.n('£1,234.50'), b: window.MoneyCore.n(''), c: window.MoneyCore.n('abc'), d: window.MoneyCore.gbp(-1500), e: window.MoneyCore.gbp(null) }));
     expect(out).toEqual({ a: 1234.5, b: null, c: null, d: '−£1,500', e: '–' });
