@@ -29,6 +29,14 @@ After Google sign-in (same OAuth client, Drive read-only scope) it lists the `BL
 the `BLD-*.csv` tables live. No data is in the repo, nothing is kept in the browser, and saving (the round,
 cabin access, flags) is switched off for now.
 
+## CD Hub v2 (`/cdhub-v2/`) — draft
+
+<https://ljoyrose.github.io/dashboard/cdhub-v2/> is The Board: a phone-first shell with trade packs
+(Breeder first, then Fire and Groomer). Home pinned cards, Today swipe checks, More (star to pin),
+Contacts, Quick add, checklist Runs, and Tell me when… rules. Fonts are Bricolage Grotesque and Figtree.
+This draft shows example data only. A banner links back to the classic hub. Live `BLD-*.csv` reads are a
+later step; the Drive auth pattern sits in the page unused. `/cdhub/` is unchanged.
+
 ## Money Hub (`/money/`)
 
 <https://ljoyrose.github.io/dashboard/money/> is the Money Hub, read-only. After Google sign-in (same OAuth client,
