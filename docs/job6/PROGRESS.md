@@ -19,7 +19,7 @@
 
 ## Left to do
 
-- [ ] Confirm the Action is green on the PR (see slip for result).
+- [x] Action green on the PR (run 38818011211).
 - [ ] Lisa/AF6 review and merge. Not merged by this job.
 - [ ] Optional later: see "Ideas" below.
 
