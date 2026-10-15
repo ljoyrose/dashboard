@@ -1,0 +1,5 @@
+CURRENT: 3 rows held 2026-03-09
+id,kind,entity,name,drive_id,status
+S001,entity,TESTCO,Test Co Ltd,fx-folder-testco,live
+S002,entity,TESTPERS,Test Personal,fx-folder-testpers,live
+S003,entity,OLDCO,Old Co Ltd,fx-folder-oldco,retired

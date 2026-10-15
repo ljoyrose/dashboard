@@ -1,0 +1,4 @@
+CURRENT: 2 rows held 2026-03-09
+week_of,entity,cash_bank,cash_as_of,month,net_month,income_vs_avg_pct,expense_vs_avg_pct,variance_flag,runs_dry_on
+2026-03-02,TESTCO,12000,2026-03-06,2026-02,1500,5,-3,,
+2026-03-02,TESTPERS,3000,2026-03-06,2026-02,200,0,0,,

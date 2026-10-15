@@ -1,0 +1,6 @@
+CURRENT: 4 rows held 2026-03-09
+id,subject,kind,owner,state,priority,trigger_or_event,entity
+R001,Sample task ready now,todo,Lisa,open,high,now,TESTCO
+R002,Sample task waiting on R001,todo,Lisa,open,normal,after R001,TESTCO
+R003,Sample task for someone else,todo,Sam Sample,open,normal,now,TESTPERS
+R004,Sample finished task,todo,Lisa,closed,low,now,TESTCO
