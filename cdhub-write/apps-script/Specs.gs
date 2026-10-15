@@ -10,6 +10,7 @@
  */
 var ROLE_ALL = ['OWNER', 'STAFF', 'VET', 'TRAINER'];
 
+/** The default allow-list: the temperature log (plus the waiting list, see Config.gs PENDING_FILE). */
 var TABLES = {
 
   // ---------------------------------------------------------------- area_reading
@@ -56,7 +57,15 @@ var TABLES = {
         errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
       }
     }
-  },
+  }
+};
+
+/**
+ * PROPOSED tables. NOT on the allow-list: the script refuses these files today, whatever switches are set.
+ * They are kept here, complete and tested, so a later decision (Lisa, Q&A slip D1) is a one-line change:
+ * move an entry from PROPOSED_TABLES into TABLES. Until then nothing can write to them.
+ */
+var PROPOSED_TABLES = {
 
   // ---------------------------------------------------------------- round_event
   // Placement / cabin-access log from "The round". DESIGN ONLY: not in the BLD design,
@@ -138,7 +147,7 @@ function specFor_(keyOrFile) {
   return null;
 }
 
-/** The complete list of file names the sink can ever write to. */
+/** The complete list of file names the sink can ever write to (proposed tables are NOT in it). */
 function allowedFiles_() {
   var out = [BLD.PENDING_FILE];
   for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k)) out.push(TABLES[k].file);

@@ -48,6 +48,18 @@ function appendPendingEvent_(ev) {
   store_append_(BLD.PENDING_FILE, BLD.PENDING_COLUMNS, rowValues_(BLD.PENDING_COLUMNS, full), p);
 }
 
+/** If the read-back check failed, record it in the waiting list (append-only) so Lisa can see it. */
+function logWriteFailure_(e, spec, rowId, by, now, pendingId) {
+  if (!e || e.code !== 'VERIFY_FAILED') return;
+  try {
+    appendPendingEvent_({
+      event_id: newId_('evt', now), pending_id: pendingId || ('direct-' + rowId), event: 'write_check_failed',
+      at: londonIso_(now), by: by, target_file: spec.file, row_id: rowId, note: e.userMessage,
+      result: e.restored ? 'old text restored' : 'RESTORE NOT CONFIRMED'
+    });
+  } catch (x) { Logger.log('Could not log a write-check failure for ' + spec.file + ': ' + (x && x.message)); }
+}
+
 function waitingRows_(pendState, spec) {
   var out = [];
   Object.keys(pendState).forEach(function (id) {
@@ -159,7 +171,9 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   });
 
   if (!needPending) {
-    store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
+    try {
+      store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
+    } catch (e) { logWriteFailure_(e, spec, rowId, who.who, now); throw e; }
     return { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.recorded_at || '' };
   }
 
@@ -241,7 +255,8 @@ function sinkDecide_(pendingId, decision, note, adminEmail) {
       try {
         store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
       } catch (e) {
-        appendPendingEvent_(merge_(base, { event_id: newId_('evt', now), event: 'apply_failed', at: londonIso_(now), by: adminEmail, role: 'OWNER', note: e.userMessage || String(e), result: 'not written' }));
+        appendPendingEvent_(merge_(base, { event_id: newId_('evt', now), event: 'apply_failed', at: londonIso_(now), by: adminEmail, role: 'OWNER', note: e.userMessage || String(e),
+          result: e.code === 'VERIFY_FAILED' ? (e.restored ? 'old text restored' : 'RESTORE NOT CONFIRMED') : 'not written' }));
         throw e;
       }
     }
