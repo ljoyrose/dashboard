@@ -26,7 +26,8 @@
 
 - [ ] **Lisa: switch on branch protection** (click-path in `TESTS.md`). Until then, tests are advice, not protection.
 - [ ] Lisa: answer the `RR_` question (PC-Personal).
-- [ ] Merge this PR (after the Action is green). Then `live-after-deploy.yml` and the weekly teeth check start running by themselves.
+- [x] Action green on the PR (run 38823562125). PR: https://github.com/ljoyrose/dashboard/pull/12
+- [ ] Merge this PR. Then `live-after-deploy.yml` and the weekly teeth check start running by themselves.
 - [ ] Optional: run `node tests/contract/check-real-headers.js <folder>` once on downloaded real files.
 
 ## Decisions made
