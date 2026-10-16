@@ -10,7 +10,7 @@
  */
 var ROLE_ALL = ['OWNER', 'STAFF', 'VET', 'TRAINER'];
 
-/** The default allow-list: the temperature log (plus the waiting list, see Config.gs PENDING_FILE). */
+/** The default allow-list: the temperature log (plus the approvals queue, see Config.gs PENDING_FILE). */
 var TABLES = {
 
   // ---------------------------------------------------------------- area_reading
@@ -33,6 +33,7 @@ var TABLES = {
     lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
     perms: { add: ROLE_ALL, correct: ROLE_ALL },
     alwaysPending: false,
+    defaultMode: 'direct',   // Lisa 16 Oct: temperature readings go straight in; corrections always wait
     // fields the browser may send (everything else is set by the server)
     input: {
       area_id:             { type: 'ref', lookup: 'area', required: true },
@@ -57,15 +58,137 @@ var TABLES = {
         errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
       }
     }
+  },
+
+  // ---------------------------------------------------------------- occupancy
+  // Where each dog is. LIVE table (BLD-occupancy.csv, header checked 15 Oct). EXISTING column names only.
+  // A move APPENDS a new row (subject_id, area_id, moved_in = today). moved_out is NEVER written and no
+  // existing row is ever edited: the current room is the row with the latest moved_in.
+  // Own switch (TABLE_ON_occupancy), OFF by default. Moves queue for Lisa unless MODE_occupancy=direct.
+  // There is no corrects_id column here, so a wrong room is fixed by moving the dog again.
+  occupancy: {
+    key: 'occupancy',
+    file: 'BLD-occupancy.csv',
+    idPrefix: 'occ',
+    columns: ['id', 'tenant_id', 'subject_id', 'area_id', 'off_site_kind', 'moved_in', 'moved_out', 'classification', 'classification_note'],
+    proposedColumns: [],
+    computedColumns: [],
+    lookups: [
+      { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
+      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' }
+    ],
+    perms: { add: ['OWNER', 'STAFF'], correct: [] },
+    noCorrect: true,
+    // fields ONLY the owner's in-place edit may also change (staff can never set these)
+    ownerEdit: { moved_in: { type: 'date' }, moved_out: { type: 'date' } },
+    alwaysPending: false,
+    defaultMode: 'pending',
+    input: {
+      subject_id: { type: 'ref', lookup: 'subject', required: true },
+      area_id:    { type: 'ref', lookup: 'area', required: true }
+    },
+    // same dog into the same room twice on one day is a repeat tap, not a second move
+    dupKey: ['subject_id', 'area_id'], dupTimeCol: null, dupDayCol: 'moved_in',
+    stamp: function (row, ctx) { row.moved_in = ctx.today; },
+    checkRow: function () {},
+    checkAgainst: function (clean, records, errors) {
+      if (errors.subject_id || errors.area_id) return;
+      var cur = occupancyLatest_(records, clean.subject_id);
+      if (!cur) return;
+      if (cur.off_site_kind === 'sold' || cur.off_site_kind === 'owned_by_family' || cur.classification === 'Collected') {
+        errors.subject_id = 'This dog is recorded as no longer on site. Ask Lisa before moving it.';
+      } else if (cur.area_id && cur.area_id === clean.area_id) {
+        errors.area_id = 'That dog is already recorded in that room. Tap Same instead of moving it.';
+      }
+    }
   }
 };
 
 /**
+ * Latest occupancy row for a dog: the highest moved_in. A row with no moved_in ranks below any dated row,
+ * and a tie goes to the later row in the file. Nothing is ever edited, so "current" is always computed.
+ */
+function occupancyLatest_(records, subjectId) {
+  var best = null, bestKey = '', bestIdx = -1;
+  for (var i = 0; i < records.length; i++) {
+    var r = records[i];
+    if (r.subject_id !== subjectId) continue;
+    var key = r.moved_in || '';
+    if (best === null || key > bestKey || (key === bestKey && i >= bestIdx)) { best = r; bestKey = key; bestIdx = i; }
+  }
+  return best;
+}
+
+/**
  * PROPOSED tables. NOT on the allow-list: the script refuses these files today, whatever switches are set.
- * They are kept here, complete and tested, so a later decision (Lisa, Q&A slip D1) is a one-line change:
+ * They are kept here, complete and tested, so a later decision (Lisa, Q&A slip) is a one-line change:
  * move an entry from PROPOSED_TABLES into TABLES. Until then nothing can write to them.
  */
 var PROPOSED_TABLES = {
+
+  // ---------------------------------------------------------------- occupancy_check
+  // The daily "is every dog where we think?" confirmation. NOT in the BLD design, not on Drive: PROPOSED.
+  // Replaces the retired round_event idea (see RETIRED_TABLES). One row per dog per day: result same|moved.
+  // check_date and recorded_at are set by the script, never by the browser.
+  occupancy_check: {
+    key: 'occupancy_check',
+    file: 'BLD-occupancy_check.csv',
+    idPrefix: 'chk',
+    columns: ['id', 'tenant_id', 'check_date', 'subject_id', 'area_id', 'result', 'recorded_by', 'recorded_at', 'corrects_id'],
+    proposedColumns: ['check_date', 'subject_id', 'area_id', 'result', 'recorded_by', 'recorded_at', 'corrects_id'],
+    computedColumns: [],
+    lookups: [
+      { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
+      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' }
+    ],
+    perms: { add: ['OWNER', 'STAFF'], correct: ['OWNER', 'STAFF'] },
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      subject_id: { type: 'ref', lookup: 'subject', required: true },
+      area_id:    { type: 'ref', lookup: 'area', required: true },
+      result:     { type: 'enum', values: ['same', 'moved'], required: true }
+    },
+    dupKey: ['subject_id'], dupTimeCol: null, dupDayCol: 'check_date',
+    stamp: function (row, ctx) { row.check_date = ctx.today; row.recorded_at = ctx.nowIso; row.recorded_by = ctx.who; },
+    checkRow: function () {}
+  },
+
+  // ---------------------------------------------------------------- staff
+  // Staff roster. Columns from the `staff` design table. File ABSENT on Drive.
+  // Roster changes are OWNER-only and always go through the pending queue.
+  staff: {
+    key: 'staff',
+    file: 'BLD-staff.csv',
+    idPrefix: 'stf',
+    columns: ['id', 'tenant_id', 'person_id', 'role', 'employment', 'started_on', 'ended_on', 'corrects_id'],
+    proposedColumns: ['corrects_id'],
+    computedColumns: [],
+    lookups: [{ name: 'person', file: 'BLD-person.csv', idCol: 'id' }],
+    perms: { add: ['OWNER'], correct: ['OWNER'] },
+    alwaysPending: true,
+    input: {
+      person_id:  { type: 'ref', lookup: 'person', required: true },
+      role:       { type: 'text', required: true },
+      employment: { type: 'enum', values: ['full_time', 'part_time'], required: true },
+      started_on: { type: 'date', required: true },
+      ended_on:   { type: 'date' }
+    },
+    dupKey: ['person_id', 'started_on'], dupTimeCol: null,
+    stamp: function () {},
+    checkRow: function (row, errors) {
+      if (row.ended_on && row.started_on && row.ended_on < row.started_on && !errors.ended_on) {
+        errors.ended_on = 'The end date cannot be before the start date.';
+      }
+    }
+  }
+};
+
+/**
+ * RETIRED tables. Kept for the record, never written to, refused like the proposed ones. Nothing was deleted.
+ * round_event (16 Oct 2026, Lisa): replaced by occupancy_check + the live occupancy table.
+ */
+var RETIRED_TABLES = {
 
   // ---------------------------------------------------------------- round_event
   // Placement / cabin-access log from "The round". DESIGN ONLY: not in the BLD design,
@@ -105,35 +228,6 @@ var PROPOSED_TABLES = {
         errors.access_type = 'Say whether the flap was free or limited.';
       }
     }
-  },
-
-  // ---------------------------------------------------------------- staff
-  // Staff roster. Columns from the `staff` design table. File ABSENT on Drive.
-  // Roster changes are OWNER-only and always go through the pending queue.
-  staff: {
-    key: 'staff',
-    file: 'BLD-staff.csv',
-    idPrefix: 'stf',
-    columns: ['id', 'tenant_id', 'person_id', 'role', 'employment', 'started_on', 'ended_on', 'corrects_id'],
-    proposedColumns: ['corrects_id'],
-    computedColumns: [],
-    lookups: [{ name: 'person', file: 'BLD-person.csv', idCol: 'id' }],
-    perms: { add: ['OWNER'], correct: ['OWNER'] },
-    alwaysPending: true,
-    input: {
-      person_id:  { type: 'ref', lookup: 'person', required: true },
-      role:       { type: 'text', required: true },
-      employment: { type: 'enum', values: ['full_time', 'part_time'], required: true },
-      started_on: { type: 'date', required: true },
-      ended_on:   { type: 'date' }
-    },
-    dupKey: ['person_id', 'started_on'], dupTimeCol: null,
-    stamp: function () {},
-    checkRow: function (row, errors) {
-      if (row.ended_on && row.started_on && row.ended_on < row.started_on && !errors.ended_on) {
-        errors.ended_on = 'The end date cannot be before the start date.';
-      }
-    }
   }
 };
 
@@ -153,3 +247,17 @@ function allowedFiles_() {
   for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k)) out.push(TABLES[k].file);
   return out;
 }
+
+/**
+ * Lists a staff code may READ, through the read action (Read.gs), and only as far as BLD-field_visibility.csv allows.
+ * `vis` is the table_name used in BLD-field_visibility.csv rows. authorCol/dateCol let a row rule such as
+ * own_rows_days<=14 work; a table without them cannot be narrowed that way (such a rule is refused, not guessed).
+ */
+var READABLE = {
+  area:            { file: 'BLD-area.csv',            vis: 'area',            authorCol: '',            dateCol: '' },
+  subject:         { file: 'BLD-subject.csv',         vis: 'subject',         authorCol: '',            dateCol: '' },
+  subject_status:  { file: 'BLD-subject_status.csv',  vis: 'subject_status',  authorCol: '',            dateCol: '' },
+  occupancy:       { file: 'BLD-occupancy.csv',       vis: 'occupancy',       authorCol: '',            dateCol: '' },
+  area_reading:    { file: 'BLD-area_reading.csv',    vis: 'area_reading',    authorCol: 'taken_by',    dateCol: 'taken_at' },
+  occupancy_check: { file: 'BLD-occupancy_check.csv', vis: 'occupancy_check', authorCol: 'recorded_by', dateCol: 'check_date' }
+};
