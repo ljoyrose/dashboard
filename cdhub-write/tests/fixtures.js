@@ -85,6 +85,6 @@ const STAFF_HEADER = ['id', 'tenant_id', 'person_id', 'role', 'employment', 'sta
 
 const headerOnly = (cols) => cols.join(',') + '\r\n';
 
-const OCCUPANCY_CHECK_HEADER = ['id', 'tenant_id', 'check_date', 'subject_id', 'area_id', 'result', 'recorded_by', 'recorded_at', 'corrects_id'];
+const OCCUPANCY_CHECK_HEADER = ['id', 'tenant_id', 'confirmed_at', 'confirmed_by', 'dog_ids', 'moved_count', 'note'];
 
 module.exports = { TENANT, csvFiles, AREA_READING_HEADER, PENDING_HEADER, STAFF_HEADER, OCCUPANCY_HEADER, OCCUPANCY_CHECK_HEADER, VIS_HEADER, headerOnly };

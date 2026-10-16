@@ -38,6 +38,11 @@
     <div class="msg" id="ed-msg"></div>
   </div>
   <div id="ed-list"></div>
+
+  <h1 style="margin-top:28px">Staff codes (owner only)</h1>
+  <p class="sub">Switch off the code of someone who has left. It stops working at once for reading and saving. The entry stays in the list and the switch-off is noted in the approvals queue file. The code itself is never shown here.</p>
+  <div class="card"><button class="ok" id="sc-show" type="button">Show staff codes</button><div class="msg" id="sc-msg"></div></div>
+  <div id="sc-list"></div>
 </main>
 <script>
   function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; }
@@ -76,6 +81,40 @@
     });
   }
   load();
+
+  /* ---- staff codes: switch one off ---- */
+  function scMsg(t){ document.getElementById('sc-msg').textContent=t; }
+  function showStaff(){
+    scMsg('Loading...');
+    google.script.run.withSuccessHandler(function(res){
+      var box=document.getElementById('sc-list'); box.textContent='';
+      if(!res.ok){ scMsg(res.message); return; }
+      var list=res.result.staff; scMsg(list.length ? '' : 'No staff codes yet.');
+      list.forEach(function(p){
+        var c=el('div','card'); var dl=el('dl');
+        dl.appendChild(el('dt',null,'Name')); dl.appendChild(el('dd',null,p.who));
+        dl.appendChild(el('dt',null,'Role')); dl.appendChild(el('dd',null,p.role));
+        dl.appendChild(el('dt',null,'Code id')); dl.appendChild(el('dd',null,p.id || '(none yet: run adminAssignCodeIds)'));
+        dl.appendChild(el('dt',null,'State')); dl.appendChild(el('dd',null,p.active ? 'active' : 'SWITCHED OFF ' + (p.revoked_at || '')));
+        c.appendChild(dl);
+        var msg=el('div','msg');
+        if(p.active && p.id){
+          var b=el('button','no','Switch this code off'); b.type='button';
+          b.onclick=function(){
+            if(!window.confirm('Switch off the code for '+p.who+'? They will be refused at once.')) return;
+            msg.textContent='Working...';
+            google.script.run.withSuccessHandler(function(r){
+              msg.textContent = r.ok ? ('Switched off.' + (r.result.logged ? '' : ' It could not be noted in the approvals queue file, so check that file exists.')) : r.message;
+              if(r.ok) setTimeout(showStaff, 900);
+            }).withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_revokeCode(p.id);
+          };
+          c.appendChild(b);
+        }
+        c.appendChild(msg); box.appendChild(c);
+      });
+    }).withFailureHandler(function(e){ scMsg('Failed: '+e.message); }).ui_staffList();
+  }
+  document.getElementById('sc-show').onclick=showStaff;
 
   /* ---- owner edit ---- */
   function edMsg(t){ document.getElementById('ed-msg').textContent=t; }

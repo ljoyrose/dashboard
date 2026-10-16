@@ -43,6 +43,7 @@ function validateInput_(spec, fields, lookups, nowMs) {
     if (!Object.prototype.hasOwnProperty.call(spec.input, name)) continue;
     var def = spec.input[name];
     var raw = fields[name];
+    if (Array.isArray(raw) && def.type === 'idlist') raw = raw.join('|');
     var v = (raw === undefined || raw === null) ? '' : String(raw).trim();
     if (v === '' && def.dflt !== undefined) v = def.dflt;
     if (v === '') {
@@ -89,6 +90,28 @@ function validateInput_(spec, fields, lookups, nowMs) {
           else clean[name] = v;
         }
         break;
+      case 'count':
+        if (!/^\d{1,3}$/.test(v)) errors[name] = 'Use a whole number from 0 to 999.';
+        else clean[name] = String(parseInt(v, 10));
+        break;
+      case 'idlist': {
+        // a pipe-separated list of ids, each of which must exist in the lookup. Sorted and de-duplicated so the
+        // same set of dogs always gives the same text (the repeat-tap guard relies on it).
+        var parts = v.split('|').map(function (x) { return x.trim(); }).filter(String), seenIds = {}, uniq = [], badIds = [], j;
+        for (j = 0; j < parts.length; j++) {
+          if (seenIds[parts[j]]) continue;
+          seenIds[parts[j]] = true; uniq.push(parts[j]);
+        }
+        if (!uniq.length) errors[name] = 'This is needed.';
+        else if (uniq.length > (def.max || BLD.LIMITS.CHECK_MAX_DOGS)) errors[name] = 'Too many dogs in one list (the limit is ' + (def.max || BLD.LIMITS.CHECK_MAX_DOGS) + ').';
+        else if (!lookups[def.lookup]) errors[name] = 'Cannot check this against ' + def.lookup + ' right now.';
+        else {
+          for (j = 0; j < uniq.length; j++) if (!ID_RE_.test(uniq[j]) || !lookups[def.lookup][uniq[j]]) badIds.push(uniq[j]);
+          if (badIds.length) errors[name] = 'Not found in the ' + def.lookup + ' list: ' + badIds.slice(0, 3).join(', ') + (badIds.length > 3 ? ' and ' + (badIds.length - 3) + ' more' : '') + '.';
+          else clean[name] = uniq.sort().join('|');
+        }
+        break;
+      }
       case 'ref':
         if (!ID_RE_.test(v)) {
           errors[name] = 'That is not a valid id.';
