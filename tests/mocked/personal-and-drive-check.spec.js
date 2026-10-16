@@ -115,11 +115,11 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
     expect(writes(guard.world)).toEqual([]);
   });
 
-  // OPEN QUESTION for Lisa (found while writing these tests). Today, an RR_ archive file in the personal
-  // drive that is an exact copy of a shared-drive file IS renamed to ZZ_DELETE_DRIVE_RR_... and later binned.
-  // The Bin page promises "RR_ archive items are never included". If PC-Personal should follow the same rule,
-  // the page needs a one-line change and this test should be switched on (change test.fixme to test).
-  test.fixme('Rename: leaves RR_ archive files alone (not true today, see note above)', async ({ page, guard }) => {
+  // DECIDED by Lisa (15 Oct 2026): keep this behaviour. Shared drives are the correct home and only one copy is needed,
+  // so a personal RR_ file that is an exact copy of a shared-drive file IS renamed ZZ_DELETE_DRIVE_RR_... and later binned.
+  // (This differs from the Bin page, which leaves RR_ items in shared drives alone. That is intended.)
+  // This test pins the decision: if someone later makes PC-Personal skip RR_ files, it goes red and must be discussed first.
+  test('Rename and bin: a personal RR_ file that matches a shared-drive copy IS renamed and then binned (decided, not a bug)', async ({ page, guard }) => {
     guard.world.file('me-rr', 'RR_archive.pdf', 'x', { parents: ['my-root'], driveId: null, mimeType: 'application/pdf', md5Checksum: 'md5-aaa', size: 100 });
     page.on('dialog', (d) => d.accept());
     await page.goto('./#/personal');
@@ -128,8 +128,13 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
     await expect(page.locator('#view')).toContainText(/Finished/);
     await askForWriteThen(page, 'pcpmark');
     await page.locator('[data-action="pcpmark"]').click();
-    await expect(page.locator('#view')).toContainText('Renamed');
-    expect(guard.world.byId('me-rr').name).toBe('RR_archive.pdf');
+    await expect(page.locator('#view')).toContainText('Renamed 3 to ' + PCP);
+    expect(guard.world.byId('me-rr').name).toBe(PCP + 'RR_archive.pdf');
+    expect(guard.world.byId('sh-a').name).toBe('invoice-a.pdf'); // the shared copy it matched is untouched
+    await page.locator('[data-action="pcpbin"]').click();
+    await expect(page.locator('#view')).toContainText('moved 4 to the bin'); // 3 just renamed + the one already marked
+    expect(guard.world.byId('me-rr').trashed).toBe(true);
+    expect(guard.world.byId('sh-a').trashed).toBeFalsy();
   });
 });
 
