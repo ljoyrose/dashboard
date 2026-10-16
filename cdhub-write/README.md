@@ -43,7 +43,7 @@ Bloodline screens (BLDScreens)  ->  BLDSave (checks, sends ONE POST)  ->  Apps S
 - `code/screens/` `screens.js`, `bld-save.css`
 - `code/wired/` the Bloodline patch and script (in use); `board-dropin.js` (parked, not used)
 - `tests/` fake fixtures and the tests (run from this folder: `npm install && npm test`)
-- `docs/` SETUP.md (for Lisa), design note, MAP note, options note, Q&A rows, proposed permission rows
+- `docs/` SETUP.md (for Lisa), design note, MAP note, options note, Q&A rows, proposed permission rows (two `.csv` files)
 - `PROGRESS.md` what is done and what is next; `HANDOVER.md` state, decisions, ids
 
 (In the repo the same folders sit directly under `cdhub-write/` without the `code/` level.)

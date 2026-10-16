@@ -14,7 +14,7 @@ Written 15 Oct 2026 (Europe/London) by claude-job4; fix-up applied the same nigh
 | Room temperature screen; staff roster screen (proposal, refused until agreed) | `screens/` | Built, honest empty states |
 | Band and action logic (ported from the live hub's round) | `code/client/bands.js` | Built, tested |
 | Standalone test page | `code/client/index.html` | Built, checked in a headless browser |
-| Bloodline wiring (patch + script): two new stages, "Enter temperatures" and "Staff input" | `wired/bloodline-*` | Built, tested, checked in a headless browser |
+| Bloodline wiring (patch + script): three new stages, "Where is everyone?" (v2), "Enter temperatures" and "Staff input" | `wired/bloodline-*` | Built, tested, checked in a headless browser |
 | Board drop-in | `wired/board-dropin.js` | **Parked** (kept, not used, not part of this PR's aim) |
 | Optional daily backup copy | `Admin.gs` | Built, tested, **OFF** |
 
@@ -73,7 +73,7 @@ The repo is public, so the URL is never in it. Two ways, both built:
 1. **Not run against real Google.** The Apps Script runs here only in a faithful fake of Drive, properties, cache and lock. The first real run is Lisa's practice folder (SETUP step 8). **UNVERIFIED on live Drive.**
 2. **Browser to Apps Script (CORS).** The module sends `text/plain` and follows the redirect, which is the usual way a static page talks to an Apps Script web app. I did not test this against a real deployment. **UNVERIFIED.**
 3. `taken_at` is the time the **script** received the save, not the time on the thermometer (see Options 6).
-4. `subject.dob` is used for bands because the live hub reads `d.dob`; I did not open `BLD-subject.csv`'s header myself.
+4. `subject.dob` is used for bands; the live `BLD-subject.csv` header (read 16 Oct) has a `dob` column.
 5. `reading_type` accepts only `temperature` (humidity, clean and check have different meanings for min and max; not wired).
 6. The three computed columns (`in_range`, `compliant`, `mitigation_required`) and `applied_limit_id` are written blank. The app must work them out when reading.
 7. **The Board mock's colours** were copied by eye from the mock; not diffed.
@@ -81,13 +81,13 @@ The repo is public, so the URL is never in it. Two ways, both built:
 
 ## 8. Wiring
 
-- **Bloodline** (`wired/bloodline-wiring.patch` + `bloodline-wire.js`): adds two stages, "Enter temperatures" and "Staff input". The patch only adds lines (plus one existing line re-written to add two entries) and a test checks that. Bloodline has no Drive link yet, so both start with "No rooms are loaded". When the redesign lifts the CD Hub sign-in and CSV reading, call `BLDWire.provide(BLDLookups.fromTables(T, todayIso))` and they fill in. "Staff input" shows "only a proposal" until the roster table is agreed.
+- **Bloodline** (`wired/bloodline-wiring.patch` + `bloodline-wire.js`): adds three stages, "Where is everyone?" (v2), "Enter temperatures" and "Staff input". The patch only adds lines (plus one existing line re-written to add three entries) and a test checks that. Bloodline has no Drive link yet, so all three start with an honest empty state ("No rooms are loaded" / "No dogs are loaded"). When the redesign lifts the CD Hub sign-in and CSV reading, call `BLDWire.provide(BLDLookups.fromTables(T, todayIso))` and they fill in. "Staff input" shows "only a proposal" until the roster table is agreed.
 - **The Board:** parked. `wired/board-dropin.js` is kept but not used and not part of this fix-up.
 - **Old `/cdhub/`:** untouched. The PR adds a new path (`cdhub-write/`).
 
 ## 9. Not built (on purpose)
 
-Occupancy writes, outdoor temperature (Open-Meteo), the data-health script, humidity/clean/check readings, hours for part-time staff (not in the `staff` design table), a Google Forms front end, saving to the placement log or roster (proposed only), and any change to a live CSV.
+Outdoor temperature (Open-Meteo), the data-health script, humidity/clean/check readings, hours for part-time staff (not in the `staff` design table), a Google Forms front end, saving to the daily check log or roster (proposed only), back-filling the blank `area_id`s, and any change to a live CSV.
 
 ## 10. v2 follow-up (16 Oct 2026, Lisa's follow-up brief)
 
@@ -98,6 +98,6 @@ Occupancy writes, outdoor temperature (Open-Meteo), the data-health script, humi
 5. **Corrections** stay as new rows with `corrects_id` (temperature log). Temperature readings now go **straight in** by default (`MODE_area_reading` unset = direct); corrections always go to the approvals queue. "Waiting list" is now "approvals queue" everywhere.
 6. **Owner edit (new, Lisa's change to item 5).** Lisa, signed in with her own Google account on the owner-only approvals page, can overwrite a wrong entry **in place** with **no record kept** (`OWNER_EDIT_ENABLED`, off). Staff can never edit or delete: the save endpoint only knows add and correct, and a staff code (even an `OWNER`-role code) cannot reach the owner functions. The edit replaces exactly one record in the file; the same lock and whole-file hash check as a staff save make a clash impossible (a busy lock says so; a same-length outside edit is caught; a bad read-back puts the exact old text back and logs only a failure notice, never the old value). Every byte outside the replaced record is checked unchanged. **Consequences:** the correction trail is gone for those entries; Drive's file history and the optional nightly backups still hold the earlier whole-file version for a while; an inspector sees only the corrected value; allowed only for `BLD-area_reading.csv` and `BLD-occupancy.csv`, never the approvals queue.
 
-**Also changed:** `bands.js` untouched; `round_event` removed from the screens and the browser module; version 1.1.0; the Bloodline patch adds three stages and one more script (`client/occupancy.js`).
+**Also changed:** `bands.js` untouched; `round_event` removed from the screens and the browser module; version 1.1.0; the Bloodline patch adds three stages and one more script (`client/occupancy.js`). The temperature-band lookup now counts a dog in its **latest** room only (a move never closes the old row, so counting every open row would have put a dog in two rooms).
 
 **UNVERIFIED (not run on real Google):** the whole read action and owner edit run only in the fake Drive; the Board fonts need internet; Drive's `file.setContent` replacing a middle record has the same untested-live status as the append.
