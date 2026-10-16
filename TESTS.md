@@ -46,9 +46,9 @@ If any of these breaks, the tick turns red and says which page.
 | Header contract (column names) | list of expected columns | 12 |
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
-| Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
+| Learning loop, alarm wiring and publish gate (the safety net checks itself) | this file, `.github`, `tests/` | 17 |
 
-That is 193 checks that must pass.
+That is 200 checks that must pass.
 
 **Main dashboard**
 - Opens and shows only a sign-in button until you sign in.
@@ -181,6 +181,28 @@ This is what turns the tests from "advice" into "protection". It needs your admi
 What changes for you: nothing can go straight into `main`; every change comes as a pull request, and the green **Merge** button only lights up when the tests are green. A red tick means "fix it first". If you ever need to bypass it in an emergency, untick step 6 for a moment.
 
 Do not rename the job "Browser tests (pretend Google and Drive)" in `tests.yml`. If it is renamed, merges stick on "Expected, waiting for status" and the rule must be edited to the new name.
+
+## Publishing waits for the tests (Job 6d)
+
+**The problem it fixes:** until now GitHub Pages put every merge on the live site straight away, in parallel with the tests, so a bad merge could be live before the red tick appeared.
+
+**What was built:** a new workflow, "Publish site (after tests)". On every merge to `main` it first runs the same tests as the required check (the "gate"). Only if they all pass does it publish. If they fail, the live site stays exactly as it was and the Monday-style Issue is not needed because the tick is already red. It publishes only `index.html`, `cdhub/` and `money/` (the three pages and `money/core.js`), not `tests/`, `docs/` or `.github/`. Checked by tests, with deliberate breaks proving they catch an ungated or over-wide publish.
+
+**Lisa: one click, once (about 30 seconds).**
+
+1. GitHub > the **dashboard** repository > **Settings** > **Pages** (left side) > under **Build and deployment**, set **Source** to **GitHub Actions**. (Nothing to save; it applies at once.)
+
+Then AF6 presses **Actions > Publish site (after tests) > Run workflow** once so the first gated publish happens straight away (or you can press it yourself). Until you click, the new workflow does nothing harmful: it says "waiting for Lisa's one click" in its summary and the old branch publishing carries on.
+
+**To undo it:** Settings > Pages > Source > **Deploy from a branch** > `main` > `/ (root)` > Save.
+
+**Read-back (for AF6, proves the click):** the Monday protection watch says in its summary whether Pages "publishes through Publish site (after tests)" or "is still published straight from the branch".
+
+**One thing to know:** the tests now run twice on each merge to `main` (once as the required check, once as the gate), about two extra minutes of free GitHub time, and a merge reaches the live site a couple of minutes later than before. That is the price of the gate.
+
+## Also needs one click: GitHub Issues are switched off
+
+The alarm opens a GitHub Issue when something is red, but **Issues are currently switched off on this repository**, so it cannot. (Checked 17 Oct 2026: `has_issues` is false.) Settings > General > Features > tick **Issues**. The Monday protection watch now goes red while this is off, so it cannot be forgotten.
 
 ## Check your real column names (optional, on your computer only)
 
