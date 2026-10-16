@@ -129,6 +129,8 @@ Because Drive is pretend, a green tick does **not** prove your real Drive folder
 
 Each run writes a short table at the top of its page in the Actions tab: one line per page, with passed and failed counts.
 
+The live site now only updates after the tests pass. A green tick on `main` publishes the pages, and a red tick leaves the site as it was. **Settings > Pages > Source** must be **GitHub Actions**.
+
 There is also a small **optional** check of the three live web addresses. It opens them signed out and confirms they are up. It runs **a minute or so after every publish to the live site** (so a bad merge is noticed in minutes), on Mondays, and on the button. It never blocks anything, because GitHub Pages can have a slow day. It also checks that **what is live is exactly the file that was merged** (compared byte for byte, waiting up to 90 seconds for GitHub Pages to finish). It has run after the last two publishes and passed.
 
 Every Tuesday a separate **"teeth check"** breaks things on purpose in a throw-away copy (a wrong link, a lost safety rule, a renamed column, a page too wide for a phone, and so on) and makes sure the tests go red each time. If one slips through, it turns red and opens an Issue. It cannot block a merge.
