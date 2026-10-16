@@ -1,7 +1,7 @@
 JOB 6c IMPROVE — review delivered, awaiting Lisa
 
 **From:** Claude Code (cloud) · **To:** Lisa Carson ([email removed]), AF6 Dashboard Tests · **Date:** 16 Oct 2026 (UK)
-**PR:** (filled in below once open) · **Branch:** `claude/job6c-improve` · **Not merged. Not pushed to `main`.**
+**PR:** https://github.com/ljoyrose/dashboard/pull/16 · **Branch:** `claude/job6c-improve` · **Not merged. Not pushed to `main`.**
 `credits_estimated: 0 · credits_actual: 0 · credits_variance: 0`
 
 ## PROCESS GATE (proof)
