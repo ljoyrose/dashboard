@@ -14,9 +14,27 @@ function withLock_(fn) {
 }
 
 function tableOn_(spec) { return prop_(BLD.PROP.TABLE_ON_PREFIX + spec.key) === 'true'; }
-function modeFor_(spec) {
+/** A YYYY-MM-DD date plus n whole days (calendar arithmetic, so a clock change cannot shift it). */
+function addDays_(ymd, n) {
+  var p = ymd.split('-'), t = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2] + n));
+  return t.getUTCFullYear() + '-' + ('0' + (t.getUTCMonth() + 1)).slice(-2) + '-' + ('0' + t.getUTCDate()).slice(-2);
+}
+
+function todayLondon_(d) { return Utilities.formatDate(d || new Date(), BLD.TZ, 'yyyy-MM-dd'); }
+
+/**
+ * Where does a new row go? Order: an explicit MODE_<key> wins. Otherwise, for dog moves (spec.movesQueue) the date
+ * decides: up to and including MOVES_QUEUE_UNTIL (London) a move goes to the approvals queue, after it straight in.
+ * A missing or unreadable date means "queue" (the safe side). Everything else uses the table's own default.
+ */
+function modeFor_(spec, now) {
   var m = prop_(BLD.PROP.MODE_PREFIX + spec.key);
   if (m === 'direct' || m === 'pending') return m;
+  if (spec.movesQueue) {
+    var until = prop_(BLD.PROP.MOVES_QUEUE_UNTIL);
+    if (!isRealDate_(until)) return 'pending';
+    return todayLondon_(now) > until ? 'direct' : 'pending';
+  }
   return spec.defaultMode === 'direct' ? 'direct' : 'pending';   // nothing set = the table's own default
 }
 function saveEnabled_() { return prop_(BLD.PROP.SAVE_ENABLED) === 'true'; }
@@ -177,14 +195,14 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   while (ids[rowId]) rowId = newId_(spec.idPrefix, now);
 
   var row = buildRow_(spec, v.clean, {
-    rowId: rowId, tenantId: tenant, nowIso: londonIso_(now), today: today, who: who.who, correctsId: correctsId
+    rowId: rowId, tenantId: tenant, nowIso: londonIso_(now), today: today, who: who.who, whoId: who.id || '', correctsId: correctsId
   });
 
   if (!needPending) {
     try {
       store_append_(spec.file, spec.columns, rowValues_(spec.columns, row), target);
     } catch (e) { logWriteFailure_(e, spec, rowId, who.who, now); throw e; }
-    return { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.recorded_at || row.moved_in || '' };
+    return { status: 'saved', table: spec.key, file: spec.file, id: rowId, at: row.taken_at || row.confirmed_at || row.moved_in || '' };
   }
 
   var pid = newId_('pnd', now);
@@ -303,7 +321,8 @@ function ownerEditDefs_(spec) {
 function ownerEditSpec_(tableKey) {
   if (!ownerEditEnabled_()) throw err_('EDIT_OFF', 'Editing an entry in place is switched off.');
   var spec = specFor_(String(tableKey || ''));
-  if (!spec || spec.file === BLD.PENDING_FILE) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
+  // only the lists the owner edit is built for: never the approvals queue, the daily check log or anything else
+  if (!spec || spec.file === BLD.PENDING_FILE || spec.ownerEditable !== true) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
   return spec;
 }
 

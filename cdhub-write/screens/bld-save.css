@@ -61,7 +61,8 @@
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bs.bs-board{
   --bs-card:#1c241f; --bs-ink:#e8ede6; --bs-mut:#9aa69d; --bs-line:#2a342d; --bs-chip:#232c26;
-  --bs-good:#5fc28a; --bs-warn:#e7a43c; --bs-bad:#ec7a63; --bs-accent:#f0ad46; background:#141a16}}
+  --bs-good:#5fc28a; --bs-warn:#e7a43c; --bs-bad:#ec7a63; --bs-accent:#f0ad46; background:#141a16}
+  :root:not([data-theme="light"]) .bs.bs-board .bs-sticky{background:linear-gradient(to top,#141a16 78%,rgba(20,26,22,0))}}
 .bs-board .bs-h{font-family:var(--bs-display);font-weight:800;font-size:28px;line-height:1.05;text-wrap:balance}
 .bs-board .bs-card{border-radius:22px;padding:16px}
 .bs-board .bs-dog-name{font-family:var(--bs-display);font-weight:700;font-size:21px;margin:0 0 2px;line-height:1.2}
@@ -84,4 +85,10 @@
 .bs-board .bs-big{min-height:56px;font-size:17px;width:100%}
 .bs-board .bs-dog.bs-done{border-color:var(--bs-good);background:color-mix(in srgb,var(--bs-good) 10%,var(--bs-card))}
 .bs-board .bs-result.bs-warn{color:var(--bs-warn)}
+.bs-board .bs-yn.bs-one{grid-template-columns:1fr}
+.bs-board .bs-card.bs-away{opacity:.8;border-style:dashed}
+.bs-board .bs-away-h{font-family:var(--bs-display);font-weight:700;margin:18px 0 8px}
+.bs-board .bs-sticky{position:sticky;bottom:0;margin:14px -14px -28px;padding:12px 14px 16px;background:linear-gradient(to top,#f6f7f3 78%,rgba(246,247,243,0))}
+.bs-board .bs-rest{background:var(--bs-accent);color:var(--bs-accent-ink);border-color:var(--bs-accent);font-family:var(--bs-display);font-weight:800;font-size:19px;min-height:60px;border-radius:18px}
+.bs-wrong{margin-top:8px;font-size:12.5px;color:var(--bs-mut)}
 @media (prefers-reduced-motion:reduce){.bs-board .bs-prog i{transition:none}}

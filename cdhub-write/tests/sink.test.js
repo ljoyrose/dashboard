@@ -116,7 +116,7 @@ test('a file that is not on the allow-list is refused, and no live table is touc
   assert.throws(() => env.ctx.store_append_('BLD-subject.csv', ['id'], ['x'], { header: ['id'], file: {}, text: '', size: 0 }),
     (e) => e.code === 'FILE_NOT_ALLOWED');
   assert.deepEqual(Array.from(env.ctx.allowedFiles_()).sort(),
-    ['BLD-_pending.csv', 'BLD-area_reading.csv', 'BLD-occupancy.csv']);
+    ['BLD-_pending.csv', 'BLD-area_reading.csv', 'BLD-occupancy.csv', 'BLD-occupancy_check.csv']);
 });
 
 test('the exact file name is accepted as an alias for the table key', () => {
@@ -248,7 +248,7 @@ test('a correction is a NEW row pointing at the old one, and always waits for ap
   const origLine = lines(t1)[1];
 
   const c = save(env, req(env, {
-    action: 'correct', corrects_id: first.result.id, reason: 'typed the wrong digit',
+    code: env.codes.owner, action: 'correct', corrects_id: first.result.id, reason: 'typed the wrong digit',
     fields: { area_id: 'area-t1', min_c: '21.74', max_c: '24.10' }
   }));
   assert.equal(c.ok, true);
@@ -267,7 +267,7 @@ test('a correction is a NEW row pointing at the old one, and always waits for ap
   assertAppendOnly(env);
 
   // the original cannot be corrected a second time
-  const c2 = save(env, req(env, { action: 'correct', corrects_id: first.result.id, reason: 'again', fields: { area_id: 'area-t1', min_c: '20', max_c: '21' } }));
+  const c2 = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: first.result.id, reason: 'again', fields: { area_id: 'area-t1', min_c: '20', max_c: '21' } }));
   assert.equal(c2.ok, false);
   assert.match(c2.fields.corrects_id, /already has a correction/);
 });
@@ -275,12 +275,12 @@ test('a correction is a NEW row pointing at the old one, and always waits for ap
 test('a correction needs a real target row and a reason', () => {
   const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
   const f = { area_id: 'area-t1', min_c: '20', max_c: '21' };
-  let r = save(env, req(env, { action: 'correct', corrects_id: 'rdg-nope', reason: 'because', fields: f }));
+  let r = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: 'rdg-nope', reason: 'because', fields: f }));
   assert.match(r.fields.corrects_id, /not found/);
   const ok = save(env, req(env));
-  r = save(env, req(env, { action: 'correct', corrects_id: ok.result.id, reason: '', fields: f }));
+  r = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: ok.result.id, reason: '', fields: f }));
   assert.match(r.fields.reason, /why it needs correcting/);
-  r = save(env, req(env, { action: 'correct', corrects_id: '', reason: 'abc', fields: f }));
+  r = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: '', reason: 'abc', fields: f }));
   assert.match(r.fields.corrects_id, /Say which/);
 });
 
@@ -288,8 +288,8 @@ test('a waiting correction blocks a second correction of the same row', () => {
   const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
   const ok = save(env, req(env));
   const f = { area_id: 'area-t1', min_c: '20', max_c: '21' };
-  assert.equal(save(env, req(env, { action: 'correct', corrects_id: ok.result.id, reason: 'first fix', fields: f })).ok, true);
-  const r = save(env, req(env, { action: 'correct', corrects_id: ok.result.id, reason: 'second fix', fields: f }));
+  assert.equal(save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: ok.result.id, reason: 'first fix', fields: f })).ok, true);
+  const r = save(env, req(env, { code: env.codes.owner, action: 'correct', corrects_id: ok.result.id, reason: 'second fix', fields: f }));
   assert.equal(r.ok, false);
   assert.match(r.fields.corrects_id, /already has a correction/);
 });
@@ -309,21 +309,19 @@ test('each allow-listed table has its own switch', () => {
   assert.equal(save(env, req(env)).code, 'TABLE_OFF');
 });
 
-test('proposed tables (occupancy_check, staff) and the retired round_event are NOT on the allow-list: refused even if every switch is on', () => {
-  const env = standardEnv({ props: { TABLE_ON_occupancy_check: 'true', TABLE_ON_staff: 'true', TABLE_ON_round_event: 'true', MODE_occupancy_check: 'direct', MODE_staff: 'direct' } });
-  env.addFile('BLD-occupancy_check.csv', fx.headerOnly(fx.OCCUPANCY_CHECK_HEADER));
+test('the proposed staff table and the retired round_event are NOT on the allow-list: refused even if every switch is on', () => {
+  const env = standardEnv({ props: { TABLE_ON_staff: 'true', TABLE_ON_round_event: 'true', MODE_staff: 'direct' } });
   env.addFile('BLD-round_event.csv', fx.headerOnly(['id', 'tenant_id']));
   env.addFile('BLD-staff.csv', fx.headerOnly(fx.STAFF_HEADER));
-  ['occupancy_check', 'staff', 'round_event', 'BLD-occupancy_check.csv', 'BLD-round_event.csv', 'BLD-staff.csv'].forEach((t) => {
+  ['staff', 'round_event', 'BLD-round_event.csv', 'BLD-staff.csv'].forEach((t) => {
     const r = save(env, req(env, { table: t, code: env.codes.owner, fields: {} }));
     assert.equal(r.code, 'FILE_NOT_ALLOWED', t);
   });
-  assert.deepEqual(Array.from(Object.keys(env.ctx.TABLES)), ['area_reading', 'occupancy']);
-  assert.deepEqual(Array.from(Object.keys(env.ctx.PROPOSED_TABLES)).sort(), ['occupancy_check', 'staff']);
+  assert.deepEqual(Array.from(Object.keys(env.ctx.TABLES)), ['area_reading', 'occupancy', 'occupancy_check']);
+  assert.deepEqual(Array.from(Object.keys(env.ctx.PROPOSED_TABLES)), ['staff']);
   assert.deepEqual(Array.from(Object.keys(env.ctx.RETIRED_TABLES)), ['round_event']);
   assert.equal(env.writes.length, 0);
   assert.throws(() => env.ctx.store_append_('BLD-staff.csv', fx.STAFF_HEADER, [], { header: fx.STAFF_HEADER, file: {}, text: '' }), (e) => e.code === 'FILE_NOT_ALLOWED');
-  assert.throws(() => env.ctx.store_append_('BLD-occupancy_check.csv', fx.OCCUPANCY_CHECK_HEADER, [], { header: fx.OCCUPANCY_CHECK_HEADER, file: {}, text: '' }), (e) => e.code === 'FILE_NOT_ALLOWED');
 });
 
 test('wrong, missing and switched-off staff codes are refused; the code is never stored in clear', () => {
@@ -363,31 +361,6 @@ test('roles (once the proposed staff table is promoted): staff cannot change the
   // unknown person refused
   const r2 = save(env, req(env, { table: 'staff', code: env.codes.owner, fields: Object.assign({}, f, { person_id: 'per-nope', started_on: '2026-09-02' }) }));
   assert.match(r2.fields.person_id, /Not found/);
-});
-
-test('occupancy_check (once promoted): needs a dog, a room and same|moved; one per dog per day; dates are set by the script', () => {
-  const env = standardEnv({ props: { TABLE_ON_occupancy_check: 'true', MODE_occupancy_check: 'direct' } });
-  promote(env, 'occupancy_check');
-  env.addFile('BLD-occupancy_check.csv', fx.headerOnly(fx.OCCUPANCY_CHECK_HEADER));
-  const mk = (f) => req(env, { table: 'occupancy_check', fields: f });
-  let r = save(env, mk({ area_id: 'area-t1', result: 'same' }));
-  assert.match(r.fields.subject_id, /needed/);
-  r = save(env, mk({ subject_id: 'sub-test-a', area_id: 'area-t2', result: 'maybe' }));
-  assert.match(r.fields.result, /Not one of/);
-  r = save(env, mk({ subject_id: 'sub-test-a', area_id: 'area-t2', result: 'same', check_date: '2020-01-01' }));
-  assert.match(r.fields.check_date, /system fills/);
-  r = save(env, mk({ subject_id: 'sub-test-a', area_id: 'area-t2', result: 'same' }));
-  assert.equal(r.result.status, 'saved');
-  const row = rows(env, 'BLD-occupancy_check.csv')[0];
-  assert.equal(row.check_date, '2026-10-15');
-  assert.equal(row.recorded_by, 'Sam Staff');
-  assert.equal(row.result, 'same');
-  r = save(env, mk({ subject_id: 'sub-test-a', area_id: 'area-t2', result: 'same' }));
-  assert.equal(r.code, 'DUPLICATE');                                   // second tap, same day
-  env.nowMs += 24 * 3600000;                                           // next day it is fine again
-  assert.equal(save(env, mk({ subject_id: 'sub-test-a', area_id: 'area-t2', result: 'same' })).ok, true);
-  r = save(env, mk({ subject_id: 'sub-test-zzz', area_id: 'area-t2', result: 'same' }));
-  assert.match(r.fields.subject_id, /Not found/);
 });
 
 test('a table file that does not exist yet is said plainly (the sink never creates files)', () => {
@@ -503,14 +476,14 @@ test('backup when on: one copy per existing file per day, in BLD-backups, nothin
   const live = JSON.stringify(env.drive);
   env.ctx.adminDailyBackup();
   assert.deepEqual(env.copies.map((c) => c.name).sort(),
-    ['BLD-_pending.csv.pre-daily-2026-10-15.bak', 'BLD-area_reading.csv.pre-daily-2026-10-15.bak', 'BLD-occupancy.csv.pre-daily-2026-10-15.bak']);
+    ['BLD-_pending.csv.pre-daily-2026-10-15.bak', 'BLD-area_reading.csv.pre-daily-2026-10-15.bak', 'BLD-occupancy.csv.pre-daily-2026-10-15.bak', 'BLD-occupancy_check.csv.pre-daily-2026-10-15.bak']);
   assert.equal(JSON.stringify(env.drive), live);            // the live files are untouched
   env.ctx.adminDailyBackup();                               // same day again: nothing new
-  assert.equal(env.copies.length, 3);
+  assert.equal(env.copies.length, 4);
   env.nowMs += 24 * 3600000;
-  env.ctx.adminDailyBackup();                               // next day: three more, the old ones stay
-  assert.equal(env.copies.length, 6);
-  assert.equal(env.subfolders['BLD-backups'].files.length, 6);
+  env.ctx.adminDailyBackup();                               // next day: four more, the old ones stay
+  assert.equal(env.copies.length, 8);
+  assert.equal(env.subfolders['BLD-backups'].files.length, 8);
   assert.equal(env.writes.length, 0);
 });
 
@@ -521,7 +494,7 @@ test('backup schedule installs once and removes without touching copies', () => 
   env.ctx.adminDailyBackup();
   env.ctx.adminRemoveDailyBackup();
   assert.equal(env.triggers.length, 0);
-  assert.equal(env.copies.length, 3);
+  assert.equal(env.copies.length, 4);
 });
 
 test('bad requests are not understood, not crashed on', () => {
@@ -544,11 +517,11 @@ test('status check shows switches only: no codes, no ids, no data', () => {
   assert.equal(out.saveEnabled, true);
   const s = JSON.stringify(out);
   assert.ok(!s.includes(env.codes.staff) && !s.includes(fx.TENANT) && !s.includes('FOLDER-TEST'));
-  assert.deepEqual(Array.from(out.tables).map((t) => t.key), ['area_reading', 'occupancy']);
-  assert.deepEqual(Array.from(out.tables).map((t) => t.on), [true, false]);               // occupancy has its own switch, OFF
-  assert.deepEqual(Array.from(out.tables).map((t) => t.mode), ['direct', 'pending']);     // temperature straight in, moves queue
+  assert.deepEqual(Array.from(out.tables).map((t) => t.key), ['area_reading', 'occupancy', 'occupancy_check']);
+  assert.deepEqual(Array.from(out.tables).map((t) => t.on), [true, false, false]);        // occupancy and the daily check have their own switches, OFF
+  assert.deepEqual(Array.from(out.tables).map((t) => t.mode), ['direct', 'pending', 'direct']);   // temperature straight in, moves queue, the check log straight in
   assert.equal(out.readEnabled, false);                                                    // reading is OFF by default
-  assert.deepEqual(Array.from(out.proposed), ['occupancy_check', 'staff']);
+  assert.deepEqual(Array.from(out.proposed), ['staff']);
   // approval page is only for owners
   assert.match(env.ctx.doGet({ parameter: { page: 'approve' } }).html, /for the kennel owner/);
   env.email = 'owner@example.test';
@@ -563,9 +536,10 @@ test('admin: empty files are created only when allowed, only the listed ones, ne
   assert.ok(env.logs.some((l) => /Refused/.test(l)));
   env.props.ALLOW_CREATE = 'true';
   env.ctx.adminCreateEmptyTables();
-  assert.deepEqual(env.created.sort(), ['BLD-_pending.csv', 'BLD-area_reading.csv']);
+  assert.deepEqual(env.created.sort(), ['BLD-_pending.csv', 'BLD-area_reading.csv', 'BLD-occupancy_check.csv']);
   assert.equal(env.text('BLD-area_reading.csv'), fx.headerOnly(fx.AREA_READING_HEADER));
   assert.equal(env.text('BLD-_pending.csv'), fx.headerOnly(fx.PENDING_HEADER));
+  assert.equal(env.text('BLD-occupancy_check.csv'), fx.headerOnly(fx.OCCUPANCY_CHECK_HEADER));
   env.created.length = 0;
   env.ctx.adminCreateEmptyTables(); // second run: nothing is overwritten
   assert.equal(env.created.length, 0);
@@ -632,13 +606,13 @@ test('a move APPENDS one new row (subject, room, moved_in = today); no existing 
   assert.deepEqual(Array.from(env.ctx.TABLES.occupancy.columns), fx.OCCUPANCY_HEADER);
 });
 
-test('current room = the latest moved_in; moving into the room it is already in is refused (tap Same)', () => {
+test('current room = the latest moved_in; moving into the room it is already in is refused (it has not moved)', () => {
   const env = standardEnv({ props: { TABLE_ON_occupancy: 'true', MODE_occupancy: 'direct' } });
   // Test A has an older row for t1 and a newer one for t2: it is in t2
   assert.equal(env.ctx.occupancyLatest_(occTable(env), 'sub-test-a').area_id, 'area-t2');
   const same = move(env, 'sub-test-a', 'area-t2');
   assert.equal(same.code, 'INVALID');
-  assert.match(same.fields.area_id, /Tap Same/);
+  assert.match(same.fields.area_id, /has not moved/);
   assert.equal(move(env, 'sub-test-a', 'area-t1').ok, true);          // a real move back to t1 is fine
   assert.equal(env.ctx.occupancyLatest_(occTable(env), 'sub-test-a').area_id, 'area-t1');
   assertAppendOnly(env);
@@ -669,7 +643,7 @@ test('occupancy in pending mode (its default): the move waits in the approvals q
   const r = move(env, 'sub-test-b', 'area-t2');
   assert.equal(r.result.status, 'queued');
   assert.equal(env.text('BLD-occupancy.csv'), before);
-  assert.match(move(env, 'sub-test-b', 'area-t2').fields.area_id, /Tap Same/);       // a waiting move counts as the current room
+  assert.match(move(env, 'sub-test-b', 'area-t2').fields.area_id, /has not moved/);       // a waiting move counts as the current room
   env.email = 'owner@example.test';
   assert.equal(env.ctx.ui_decide(r.result.pending_id, 'approve', '').ok, true);
   assert.equal(occTable(env).pop().subject_id, 'sub-test-b');
@@ -1051,7 +1025,7 @@ test('owner edit leaves awkward neighbouring rows alone (quoted commas and line 
   });
 });
 
-test('the PROPOSED permission rows (docs) give staff exactly the daily-check lists and only their own recent temperature entries', () => {
+test('the PROPOSED permission rows (docs) give staff exactly the daily-check lists and NO past temperature entries (S02-4)', () => {
   const fs = require('node:fs'), path = require('node:path');
   const text = fs.readFileSync(path.join(__dirname, '..', 'docs', 'AA_2026-10-16_JOB4-PROPOSED-visibility-rows__claude-job4.csv'), 'utf8').split('ten-REPLACE-ME').join(fx.TENANT);
   const env = withRead();
@@ -1062,9 +1036,10 @@ test('the PROPOSED permission rows (docs) give staff exactly the daily-check lis
   assert.deepEqual(f('subject'), ['id', 'name']);                                           // no dob, no chip number, no sex
   assert.deepEqual(f('subject_status'), ['subject_id', 'state']);
   assert.deepEqual(f('occupancy'), ['subject_id', 'area_id', 'off_site_kind', 'moved_in', 'classification']);
-  assert.deepEqual(f('area_reading'), ['id', 'area_id', 'min_c', 'max_c', 'taken_at', 'taken_by']);
-  assert.equal(f('occupancy_check'), 'NOT_ALLOWED');                                         // nothing proposed for the log itself
-  assert.equal(read(env, { table: 'area_reading' }).result.scope.includes('your own rows'), true);
+  assert.equal(f('area_reading'), 'NOT_ALLOWED');                                           // staff: not even their own entries
+  assert.equal(f('occupancy_check'), 'NOT_ALLOWED');                                        // nothing proposed for the log itself
+  assert.equal(save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22' } })).ok, true);
+  assert.equal(f('area_reading'), 'NOT_ALLOWED');                                           // still nothing after they have saved one
   assert.equal(f('area_reading', env.codes.owner).includes('mitigation_note'), true);       // the owner sees the note
   assert.equal(read(env, { table: 'area_reading', code: env.codes.owner }).result.scope, 'all rows');
 });

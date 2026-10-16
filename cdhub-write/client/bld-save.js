@@ -45,11 +45,11 @@
       }
     },
     occupancy_check: {
-      label: 'Daily location check', file: 'BLD-occupancy_check.csv',
+      label: 'All the rest unmoved', file: 'BLD-occupancy_check.csv',
       fields: {
-        subject_id: { type: 'ref', lookup: 'subject', required: true, label: 'Dog' },
-        area_id: { type: 'ref', lookup: 'area', required: true, label: 'Room' },
-        result: { type: 'enum', values: ['same', 'moved'], required: true, label: 'Same or moved' }
+        dog_ids: { type: 'idlist', lookup: 'subject', required: true, max: 500, label: 'Dogs confirmed where they were' },
+        moved_count: { type: 'count', label: 'Dogs moved today' },
+        note: { type: 'text', label: 'Note' }
       }
     },
     staff: {
@@ -141,7 +141,7 @@
         return { kind: 'off', canSave: false, text: 'Saving to "' + ((TABLES[tableKey] || {}).label || tableKey) + '" is not switched on yet.' };
       }
       if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving is on. What you send goes into the approvals queue until Lisa approves it; then it joins the records.' };
-      return { kind: 'on', canSave: true, text: 'Saving is on. What you send is added to the records straight away. It cannot be edited afterwards, only corrected.' };
+      return { kind: 'on', canSave: true, text: 'Saving is on. What you send is added to the records straight away. It cannot be changed afterwards. If something is wrong, tell the owner.' };
     }
 
     /** Check the fields on the page. */
@@ -149,7 +149,7 @@
       var spec = TABLES[tableKey], errors = {};
       if (!spec) return { ok: false, errors: { _: 'Unknown table.' } };
       Object.keys(spec.fields).forEach(function (name) {
-        var def = spec.fields[name], raw = fields[name], v = (raw === undefined || raw === null) ? '' : String(raw).trim();
+        var def = spec.fields[name], raw = fields[name], v = (raw === undefined || raw === null) ? '' : (Array.isArray(raw) ? raw.join('|') : String(raw)).trim();
         if (v === '') { if (def.required) errors[name] = 'This is needed.'; return; }
         if (def.type === 'temp') {
           if (!TEMP_RE.test(v)) errors[name] = 'Type degrees C with at most 2 decimals, e.g. 21.47.';
@@ -161,6 +161,17 @@
           if (def.values.indexOf(v) < 0) errors[name] = 'Choose one of: ' + def.values.join(', ') + '.';
         } else if (def.type === 'date') {
           if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) errors[name] = 'Use a date as YYYY-MM-DD.';
+        } else if (def.type === 'count') {
+          if (!/^\d{1,3}$/.test(v)) errors[name] = 'Use a whole number from 0 to 999.';
+        } else if (def.type === 'idlist') {
+          var ids = (Array.isArray(raw) ? raw : String(raw).split('|')).map(function (x) { return String(x).trim(); }).filter(String);
+          if (!ids.length) errors[name] = 'This is needed.';
+          else if (ids.length > (def.max || 500)) errors[name] = 'Too many dogs in one list (the limit is ' + (def.max || 500) + ').';
+          else if (lookupSize(def.lookup) === 0) errors[name] = 'The ' + def.lookup + ' list is not loaded, so this cannot be checked.';
+          else {
+            var bad = ids.filter(function (id) { return !hasId(lookups[def.lookup], id); });
+            if (bad.length) errors[name] = 'Not found in the ' + def.lookup + ' list: ' + bad.slice(0, 3).join(', ') + (bad.length > 3 ? ' and ' + (bad.length - 3) + ' more' : '') + '.';
+          }
         } else if (def.type === 'ref') {
           if (lookupSize(def.lookup) === 0) errors[name] = 'The ' + def.lookup + ' list is not loaded, so this cannot be checked.';
           else if (!hasId(lookups[def.lookup], v)) errors[name] = 'Not found in the ' + def.lookup + ' list.';

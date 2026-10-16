@@ -220,7 +220,7 @@ domTest('temperature screen: honest empty state when no rooms are loaded', () =>
   assert.equal(host.querySelectorAll('.bs-btn').length, 0);
 });
 
-domTest('temperature screen: save, show the result, offer a correction; out-of-band asks what was done', async () => {
+domTest('temperature screen: save, show the result, no staff correction path, "Wrong entry? Tell the owner"; out-of-band asks what was done', async () => {
   global.BLDBands = BLDBands;
   const Screens = require(CODE + '/screens/screens.js');
   const { doc, host } = page();
@@ -253,7 +253,10 @@ domTest('temperature screen: save, show the result, offer a correction; out-of-b
   const post = JSON.parse(srv.calls.find((c) => c.init.method === 'POST').init.body);
   assert.equal(post.fields.mitigation_note, 'fans on, doors open');
   assert.match(card.querySelector('.bs-result').textContent, /approvals queue/);
-  assert.match(card.querySelector('.bs-link').textContent, /send a correction/i);
+  assert.equal(card.querySelector('.bs-link'), null);                                        // no "send a correction" for staff
+  assert.equal([...host.querySelectorAll('button')].some((b) => /correction/i.test(b.textContent)), false);
+  assert.match(card.querySelector('.bs-wrong').textContent, /Wrong entry\? Tell the owner \u2013 she can fix it\./);
+  assert.match(host.querySelector('.bs-sub').textContent, /Wrong entry\? Tell the owner \u2013 she can fix it\./);
   assert.equal(minIn.value, ''); // cleared after a successful send
 });
 
@@ -460,8 +463,8 @@ function scriptFake(over = {}) {
   const calls = [];
   const st = Object.assign({
     saveEnabled: true, readEnabled: true,
-    tables: [{ key: 'area_reading', file: 'BLD-area_reading.csv', on: true, mode: 'direct' }, { key: 'occupancy', file: 'BLD-occupancy.csv', on: true, mode: 'pending' }],
-    proposed: ['occupancy_check', 'staff'],
+    tables: [{ key: 'area_reading', file: 'BLD-area_reading.csv', on: true, mode: 'direct' }, { key: 'occupancy', file: 'BLD-occupancy.csv', on: true, mode: 'pending' }, { key: 'occupancy_check', file: 'BLD-occupancy_check.csv', on: true, mode: 'direct' }],
+    proposed: ['staff'],
     reads: null, saveReply: { ok: true, result: { status: 'queued', id: 'occ-test-1', pending_id: 'pnd-1' } }
   }, over);
   const T = fakeTables();
@@ -522,13 +525,15 @@ test('readMany: area, subject and occupancy are required; subject_status may be 
   assert.equal(no.ok, false); assert.match(no.message, /not allowed/);
 });
 
-test('banners for the live occupancy list and the proposed daily check log', async () => {
+test('banners for the live occupancy list, the daily check log and the still-proposed staff roster', async () => {
   const srv = scriptFake();
   const s = mkSave(srv); await s.checkStatus();
   assert.equal(s.banner('occupancy').kind, 'pending');
   assert.match(s.banner('occupancy').text, /approvals queue until Lisa approves/);
-  assert.equal(s.banner('occupancy_check').canSave, false);
-  assert.match(s.banner('occupancy_check').text, /only a proposal/);
+  assert.equal(s.banner('occupancy_check').canSave, true);                          // on the allow-list now, straight in
+  assert.equal(s.banner('occupancy_check').kind, 'on');
+  assert.equal(s.banner('staff').canSave, false);                                      // still only a proposal
+  assert.match(s.banner('staff').text, /only a proposal/);
   srv.st.tables[1].on = false; await s.checkStatus();
   assert.equal(s.banner('occupancy').canSave, false);                              // its own switch, off
   assert.match(s.banner('occupancy').text, /not switched on/);
@@ -537,10 +542,13 @@ test('banners for the live occupancy list and the proposed daily check log', asy
 const DOGS = [
   { id: 'sub-test-a', label: 'Test A', areaId: 'area-t2', areaLabel: 'T2', known: true },
   { id: 'sub-test-b', label: 'Test B', areaId: 'area-t1', areaLabel: 'T1', known: true },
-  { id: 'sub-test-e', label: 'Test E', areaId: '', areaLabel: '', known: false }
+  { id: 'sub-test-e', label: 'Test E', areaId: '', areaLabel: '', known: false },
+  { id: 'sub-test-f', label: 'Test F', areaId: 'area-t1', areaLabel: 'T1', known: true, away: true }
 ];
 const ROOMS = [{ id: 'area-t1', label: 'T1', group: 'T - Test house' }, { id: 'area-t2', label: 'T2', group: 'T - Test house' }, { id: 'area-t3-1', label: 'T3.1', group: 'T - Test cabins' }];
-const lookups = (save) => save.setLookups({ area: ROOMS, subject: DOGS.map((d) => ({ id: d.id })) });
+const lookups = (save, dogs) => save.setLookups({ area: ROOMS, subject: (dogs || DOGS).map((d) => ({ id: d.id })) });
+const checkPosts = (srv) => srv.posts().filter((x) => x.table === 'occupancy_check');
+const restBtn = (host) => host.querySelector('.bs-rest');
 
 domTest('location check: saving off disables every tap and says why; no dogs shows an honest empty state', async () => {
   const Screens = require(CODE + '/screens/screens.js');
@@ -548,66 +556,63 @@ domTest('location check: saving off disables every tap and says why; no dogs sho
   Screens.locationConfirm(host, { save: BLDSave.create({ fetch: scriptFake().f, localStorage: null, sessionStorage: null }), dogs: DOGS, areas: ROOMS, document: doc });
   assert.match(host.querySelector('.bs-banner').textContent, /Saving is off/);
   host.querySelectorAll('button').forEach((b) => assert.equal(b.disabled, true, b.textContent));
-  assert.match(host.querySelector('.bs-prog-t').textContent, /0 of 3 confirmed/);
+  assert.match(host.querySelector('.bs-prog-t').textContent, /0 of 3 dogs done \(1 away\)/);
   ({ doc, host } = page());
   Screens.locationConfirm(host, { save: BLDSave.create({ fetch: scriptFake().f, localStorage: null, sessionStorage: null }), dogs: [], areas: ROOMS, document: doc });
   assert.match(host.querySelector('.bs-empty').textContent, /No dogs are loaded/);
 });
 
-domTest('location check: each dog shows its last room, pre-filled; an unknown room has no Same button; big yes/no taps', async () => {
+domTest('location check: each dog shows its last room, pre-filled; only a Moved tap per dog; an unknown room goes straight to picking; Away dogs have no buttons', async () => {
   const Screens = require(CODE + '/screens/screens.js');
   const { doc, host } = page();
   const srv = scriptFake(); const save = mkSave(srv); await save.checkStatus(); lookups(save); save.setCode('CODE');
   Screens.locationConfirm(host, { save, dogs: DOGS, areas: ROOMS, document: doc });
-  const a = host.querySelector('[data-dog="sub-test-a"]'), e = host.querySelector('[data-dog="sub-test-e"]');
+  const a = host.querySelector('[data-dog="sub-test-a"]'), e = host.querySelector('[data-dog="sub-test-e"]'), f = host.querySelector('[data-dog="sub-test-f"]');
   assert.match(a.querySelector('.bs-dog-was').textContent, /Last recorded: T2/);
-  assert.equal(a.querySelector('.bs-yes').disabled, false);
-  assert.equal(a.querySelector('.bs-yes').hidden, false);
-  assert.match(a.querySelector('.bs-yes').textContent, /Same/);
+  assert.equal(a.querySelector('.bs-yes'), null);                                          // no per-dog "Same" any more
   assert.match(a.querySelector('.bs-no').textContent, /Moved/);
+  assert.equal(a.querySelector('.bs-no').disabled, false);
   assert.equal(a.querySelector('.bs-move').hidden, true);                                  // the room picker opens on Moved
   assert.deepEqual([...a.querySelectorAll('select option')].map((o) => o.value), ['', 'area-t1', 'area-t3-1']);   // its own room is not offered
   assert.match(e.querySelector('.bs-dog-was').textContent, /Room not recorded yet/);
-  assert.equal(e.querySelector('.bs-yes').hidden, true);                                   // nothing to confirm yet
+  assert.equal(e.querySelector('.bs-no').hidden, true);
   assert.equal(e.querySelector('.bs-move').hidden, false);                                 // goes straight to picking a room
+  // Away: shown, keeps its room, no buttons, not counted as something to do
+  assert.ok(f.className.includes('bs-away'));
+  assert.match(f.textContent, /Away/); assert.match(f.textContent, /keeps its room: T1/);
+  assert.equal(f.querySelectorAll('button').length, 0);
+  assert.match(host.querySelector('.bs-away-h').textContent, /not asked to move/);
+  // exactly ONE confirm button, with the count of dogs it will confirm (a and b; not e, not the away dog)
+  assert.equal(host.querySelectorAll('.bs-rest').length, 1);
+  assert.match(restBtn(host).textContent, /All the rest unmoved \(2\)/);
 });
 
-domTest('location check: Same while the daily log is only a proposal is kept on the screen only, and says so (nothing sent)', async () => {
+domTest('location check: "All the rest unmoved" sends ONE entry listing every dog that did not move; not the unknown-room dog, not the Away dog', async () => {
   const Screens = require(CODE + '/screens/screens.js');
   const { doc, host } = page();
-  const srv = scriptFake(); const save = mkSave(srv); await save.checkStatus(); lookups(save); save.setCode('CODE');
-  Screens.locationConfirm(host, { save, dogs: DOGS, areas: ROOMS, document: doc });
-  const a = host.querySelector('[data-dog="sub-test-a"]');
-  a.querySelector('.bs-yes').click();
-  await new Promise((r) => setTimeout(r, 20));
-  assert.match(a.querySelector('.bs-result').textContent, /this screen only.*proposal/);
-  assert.equal(srv.posts().length, 0);                                                     // nothing was written
-  assert.match(host.querySelector('.bs-prog-t').textContent, /1 of 3 confirmed/);
-  assert.equal(a.querySelector('.bs-yes').disabled, true);                                 // a done card cannot be tapped twice
-});
-
-domTest('location check: once the daily log is agreed, Same sends exactly dog + room + "same"; the script sets the date and who', async () => {
-  const Screens = require(CODE + '/screens/screens.js');
-  const { doc, host } = page();
-  const srv = scriptFake({ proposed: ['staff'], saveReply: { ok: true, result: { status: 'saved', id: 'chk-1' } } });
-  srv.st.tables.push({ key: 'occupancy_check', file: 'BLD-occupancy_check.csv', on: true, mode: 'direct' });
+  const srv = scriptFake({ saveReply: { ok: true, result: { status: 'saved', id: 'chk-1' } } });
   const save = mkSave(srv); await save.checkStatus(); lookups(save); save.setCode('CODE');
   Screens.locationConfirm(host, { save, dogs: DOGS, areas: ROOMS, document: doc });
-  const a = host.querySelector('[data-dog="sub-test-a"]');
-  a.querySelector('.bs-yes').click();
-  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(restBtn(host).disabled, false);
+  restBtn(host).click();
+  await new Promise((r) => setTimeout(r, 30));
   const p = srv.posts();
   assert.equal(p.length, 1);
   assert.equal(p[0].table, 'occupancy_check');
-  assert.deepEqual(p[0].fields, { subject_id: 'sub-test-a', area_id: 'area-t2', result: 'same' });
-  assert.match(a.querySelector('.bs-result').textContent, /Confirmed in T2/);
-  assert.ok(a.className.includes('bs-done'));
+  assert.equal(p[0].action, 'add');
+  assert.deepEqual(p[0].fields, { dog_ids: ['sub-test-a', 'sub-test-b'], moved_count: 0 });   // no date, no name: the script sets those
+  assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /Confirmed 2 dogs unmoved\. 1 dog\(s\) still have no room recorded/);
+  assert.ok(host.querySelector('[data-dog="sub-test-a"]').className.includes('bs-done'));
+  assert.equal(host.querySelector('[data-dog="sub-test-f"]').className.includes('bs-done'), false);   // the Away dog is not "done"
+  assert.equal(restBtn(host).disabled, true);                                              // cannot be sent twice
+  assert.equal(host.querySelector('[data-dog="sub-test-a"] .bs-no').disabled, true);
 });
 
-domTest('location check: Moved needs a room, then sends one new occupancy entry (dog + room only) and shows the approvals-queue message', async () => {
+domTest('location check: a Moved dog is saved as a move (dog + room only) and is left out of the unmoved list; moved_count says how many', async () => {
   const Screens = require(CODE + '/screens/screens.js');
   const { doc, host } = page();
-  const srv = scriptFake(); const save = mkSave(srv); await save.checkStatus(); lookups(save); save.setCode('CODE');
+  const srv = scriptFake({ saveReply: { ok: true, result: { status: 'queued', id: 'occ-test-1', pending_id: 'pnd-1' } } });
+  const save = mkSave(srv); await save.checkStatus(); lookups(save); save.setCode('CODE');
   Screens.locationConfirm(host, { save, dogs: DOGS, areas: ROOMS, document: doc });
   const b = host.querySelector('[data-dog="sub-test-b"]');
   b.querySelector('.bs-no').click();
@@ -623,13 +628,75 @@ domTest('location check: Moved needs a room, then sends one new occupancy entry 
   assert.deepEqual(occ[0].fields, { subject_id: 'sub-test-b', area_id: 'area-t3-1' });     // no dates, no moved_out, no file name
   assert.equal(occ[0].action, 'add');
   assert.match(b.querySelector('.bs-result').textContent, /Move to T3\.1 sent.*approvals queue/);
-  assert.match(host.querySelector('.bs-prog-t').textContent, /1 of 3 confirmed/);
+  assert.match(host.querySelector('.bs-prog-t').textContent, /1 of 3 dogs done/);
+  assert.match(restBtn(host).textContent, /All the rest unmoved \(1\)/);
+  srv.st.saveReply = { ok: true, result: { status: 'saved', id: 'chk-1' } };
+  restBtn(host).click();
+  await new Promise((r) => setTimeout(r, 30));
+  const chk = checkPosts(srv);
+  assert.equal(chk.length, 1);
+  assert.deepEqual(chk[0].fields, { dog_ids: ['sub-test-a'], moved_count: 1 });            // b moved, so it is not "unmoved"
+  assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /Confirmed 1 dog unmoved, 1 moved/);
+});
+
+domTest('location check: 150 dogs - the movers are picked, then ONE tap sends ONE entry with all the others', async () => {
+  const Screens = require(CODE + '/screens/screens.js');
+  const { doc, host } = page();
+  const many = Array.from({ length: 150 }, (_, i) => ({ id: 'sub-bulk-' + String(i + 1).padStart(4, '0'), label: 'Bulk ' + (i + 1), areaId: i % 2 ? 'area-t1' : 'area-t2', areaLabel: i % 2 ? 'T1' : 'T2', known: true }));
+  const srv = scriptFake({ saveReply: { ok: true, result: { status: 'saved', id: 'x-1' } } });
+  const save = mkSave(srv); await save.checkStatus(); lookups(save, many); save.setCode('CODE');
+  Screens.locationConfirm(host, { save, dogs: many, areas: ROOMS, document: doc });
+  assert.equal(host.querySelectorAll('.bs-dog').length, 150);
+  assert.match(restBtn(host).textContent, /\(150\)/);
+  for (const id of ['sub-bulk-0003', 'sub-bulk-0100']) {                                  // two movers
+    const c = host.querySelector('[data-dog="' + id + '"]');
+    c.querySelector('.bs-no').click();
+    const sel = c.querySelector('select'); sel.value = 'area-t3-1'; sel.dispatchEvent(new (doc.defaultView.Event)('input'));
+    c.querySelector('.bs-btn').click();
+    await new Promise((r) => setTimeout(r, 15));
+  }
+  assert.match(restBtn(host).textContent, /\(148\)/);
+  restBtn(host).click();
+  await new Promise((r) => setTimeout(r, 30));
+  const chk = checkPosts(srv);
+  assert.equal(chk.length, 1);                                                             // ONE entry
+  assert.equal(chk[0].fields.dog_ids.length, 148);
+  assert.equal(chk[0].fields.moved_count, 2);
+  assert.equal(chk[0].fields.dog_ids.includes('sub-bulk-0003'), false);
+  assert.equal(chk[0].fields.dog_ids.includes('sub-bulk-0100'), false);
+  assert.equal(srv.posts().filter((x) => x.table === 'occupancy').length, 2);
+});
+
+domTest('location check: if the daily log is switched off the button says so and nothing is sent; a network failure keeps the same request id', async () => {
+  const Screens = require(CODE + '/screens/screens.js');
+  let { doc, host } = page();
+  const srv = scriptFake(); srv.st.tables = srv.st.tables.filter((t) => t.key !== 'occupancy_check'); srv.st.proposed = ['staff', 'occupancy_check'];
+  let save = mkSave(srv); await save.checkStatus(); lookups(save); save.setCode('CODE');
+  Screens.locationConfirm(host, { save, dogs: DOGS, areas: ROOMS, document: doc });
+  assert.equal(restBtn(host).disabled, true);
+  assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /only a proposal|not switched on/);
+  assert.equal(srv.posts().length, 0);
+  // network failure then retry
+  ({ doc, host } = page());
+  const srv2 = scriptFake({ saveReply: { ok: true, result: { status: 'saved', id: 'chk-1' } } });
+  save = mkSave(srv2); await save.checkStatus(); lookups(save); save.setCode('CODE');
+  Screens.locationConfirm(host, { save, dogs: DOGS, areas: ROOMS, document: doc });
+  srv2.st.fail = true;
+  restBtn(host).click();
+  await new Promise((r) => setTimeout(r, 30));
+  assert.match(host.querySelector('.bs-sticky .bs-result').textContent, /not confirmed as saved/);
+  assert.equal(restBtn(host).disabled, false);
+  srv2.st.fail = false;
+  restBtn(host).click();
+  await new Promise((r) => setTimeout(r, 30));
+  const ids = [...new Set(srv2.calls.filter((c) => c.init.method === 'POST').map((c) => JSON.parse(c.init.body).request_id))];
+  assert.equal(ids.length, 1);                                                             // same request id, so the script cannot save twice
 });
 
 domTest('location check: a refused move shows the script\'s plain message and can be tried again', async () => {
   const Screens = require(CODE + '/screens/screens.js');
   const { doc, host } = page();
-  const srv = scriptFake({ saveReply: { ok: false, code: 'INVALID', message: 'Some details need fixing', fields: { area_id: 'That dog is already recorded in that room. Tap Same instead of moving it.' } } });
+  const srv = scriptFake({ saveReply: { ok: false, code: 'INVALID', message: 'Some details need fixing', fields: { area_id: 'That dog is already recorded in that room, so it has not moved.' } } });
   const save = mkSave(srv); await save.checkStatus(); lookups(save); save.setCode('CODE');
   Screens.locationConfirm(host, { save, dogs: DOGS, areas: ROOMS, document: doc });
   const b = host.querySelector('[data-dog="sub-test-b"]');
@@ -637,9 +704,31 @@ domTest('location check: a refused move shows the script\'s plain message and ca
   const sel = b.querySelector('select'); sel.value = 'area-t2'; sel.dispatchEvent(new (doc.defaultView.Event)('input'));
   b.querySelector('.bs-btn').click();
   await new Promise((r) => setTimeout(r, 30));
-  assert.match(b.querySelector('.bs-err').textContent, /Tap Same/);
+  assert.match(b.querySelector('.bs-err').textContent, /has not moved/);
   assert.equal(b.className.includes('bs-done'), false);
   assert.equal(b.querySelector('.bs-btn').disabled, false);
+  assert.match(restBtn(host).textContent, /\(2\)/);                                        // a refused move does not take the dog out of the list
+});
+
+domTest('away and gone dogs in the daily list (browser side): off_site_temp is Away and keeps its room; deceased, sold, family, collected are dropped', () => {
+  const T = fakeTables();
+  const subj = T['BLD-subject.csv'].concat([{ id: 'sub-v', name: 'Vet Dog' }, { id: 'sub-g', name: 'Gone Dog' }, { id: 'sub-h', name: 'Dead Dog' }, { id: 'sub-r', name: 'Row Dead' }]);
+  const status = T['BLD-subject_status.csv'].concat([{ subject_id: 'sub-v', state: 'off_site_temp' }, { subject_id: 'sub-g', state: 'Active' }, { subject_id: 'sub-h', state: 'deceased' }, { subject_id: 'sub-r', state: 'Active' }]);
+  const occ = T['BLD-occupancy.csv'].concat([
+    { id: 'o1', subject_id: 'sub-v', area_id: 'area-t1', moved_in: '2026-10-01' },
+    { id: 'o2', subject_id: 'sub-g', area_id: 'area-t1', moved_in: '2026-10-01' }, { id: 'o3', subject_id: 'sub-g', off_site_kind: 'deceased', moved_in: '2026-10-09' },
+    { id: 'o4', subject_id: 'sub-r', area_id: 'area-t2', moved_in: '2026-10-01' }, { id: 'o5', subject_id: 'sub-r', classification: 'Deceased', moved_in: '2026-10-09' }
+  ]);
+  const d = BLDOcc.dailyList({ area: T['BLD-area.csv'], subject: subj, subject_status: status, occupancy: occ });
+  const ids = d.dogs.map((x) => x.id).sort();
+  assert.deepEqual(ids, ['sub-test-a', 'sub-test-b', 'sub-v']);                           // sub-h, sub-g, sub-r (deceased) and sold/family/collected are gone
+  const v = d.dogs.filter((x) => x.id === 'sub-v')[0];
+  assert.equal(v.away, true); assert.equal(v.areaId, 'area-t1'); assert.equal(v.known, true);   // keeps its room
+  assert.equal(d.dogs[d.dogs.length - 1].id, 'sub-v');                                    // Away dogs are listed last
+  assert.equal(d.dogs.filter((x) => x.away).length, 1);
+  // an Away dog still counts in its room for the temperature band
+  const lk = BLDLook.fromTables(Object.assign({}, T, { 'BLD-subject.csv': subj, 'BLD-subject_status.csv': status, 'BLD-occupancy.csv': occ }), '2026-10-15');
+  assert.ok(lk.dogs.some((x) => x.away));
 });
 
 domTest('location check look: The Board\'s fonts and tokens are in the stylesheet, scoped to this screen', () => {
@@ -672,7 +761,7 @@ domTest('Bloodline: with the Drive route, dogs appear pre-filled from their late
   const d = w.document;
   assert.equal(d.querySelectorAll('.bs-dog').length, 2);
   assert.match(d.querySelector('[data-dog="sub-test-a"] .bs-dog-was').textContent, /Last recorded: T2/);
-  d.querySelectorAll('.bs-dog button').forEach((b) => assert.equal(b.disabled, true));
+  d.querySelectorAll('.bs-dog button, .bs-rest').forEach((b) => assert.equal(b.disabled, true));
 });
 
 domTest('Bloodline: staff load the dogs with their personal code, no Google sign-in; only the allowed lists are asked for', async () => {
@@ -695,7 +784,9 @@ domTest('Bloodline: staff load the dogs with their personal code, no Google sign
   srv.calls.forEach((c) => assert.ok(!c.url.includes('STAFFCODE12')));
   assert.equal(d.querySelectorAll('.bs-dog').length, 2);
   assert.match(d.querySelector('[data-dog="sub-test-b"] .bs-dog-was').textContent, /Last recorded: T1/);
-  assert.equal(d.querySelector('[data-dog="sub-test-a"] .bs-yes').disabled, false);   // occupancy is switched on in this fake script
+  assert.equal(d.querySelector('[data-dog="sub-test-a"] .bs-no').disabled, false);    // occupancy is switched on in this fake script
+  assert.match(d.querySelector('.bs-rest').textContent, /All the rest unmoved \(2\)/);
+  assert.equal(d.querySelector('.bs-rest').disabled, false);
 });
 
 test('rooms and bands: after a move the dog is in its NEW room only (the old row is never closed, so it must not count)', () => {
@@ -709,4 +800,31 @@ test('rooms and bands: after a move the dog is in its NEW room only (the old row
   assert.equal(after.bandForArea('area-t3-1').dogId, 'sub-test-a');
   assert.match(after.bandForArea('area-t2').reason, /room unknown/);                      // no longer counted in T2
   assert.equal(after.roomsWithDogs, 2);                                                   // T1 (Test B) and T3.1 (Test A)
+});
+
+test('Bloodline patch: no escaped-newline text anywhere, and `git apply --check` accepts it on the page it was made for', () => {
+  const { execFileSync } = require('node:child_process');
+  const os = require('node:os');
+  const patch = read('wired/bloodline-wiring.patch');
+  // 1. real text, not escaped text: no literal backslash-n / backslash-t / backslash-r pairs (the original page's own
+  //    \uXXXX escapes appear only on unchanged context lines, where they must stay exactly as they are)
+  assert.equal(/\\[ntr]/.test(patch), false, 'a literal \\n, \\t or \\r in the patch');
+  assert.equal(patch.includes('\r'), false);
+  patch.split('\n').filter((l) => /^\+/.test(l) && !/^\+\+\+/.test(l)).forEach((l) => assert.equal(/\\u[0-9a-fA-F]{4}/.test(l), false, 'an added line carries an escape: ' + l));
+  // 2. rebuild the page the patch expects (every context and removed line at its line number, filler elsewhere) and ask git
+  const lines = [], hunks = patch.split('\n').reduce((acc, l) => { const m = /^@@ -(\d+),(\d+) \+(\d+),(\d+) @@/.exec(l); if (m) acc.push({ start: +m[1], body: [] }); else if (acc.length && /^[ -]/.test(l) && !/^---/.test(l)) acc[acc.length - 1].body.push(l.slice(1)); return acc; }, []);
+  assert.equal(hunks.length, 4);
+  hunks.forEach((h) => { h.body.forEach((t, i) => { lines[h.start - 1 + i] = t; }); });
+  for (let i = 0; i < lines.length; i++) if (lines[i] === undefined) lines[i] = 'filler line ' + (i + 1);
+  const dir = fsx.mkdtempSync(pathx.join(os.tmpdir(), 'patchchk-'));
+  try {
+    execFileSync('git', ['init', '-q', dir]);
+    fsx.writeFileSync(pathx.join(dir, 'index.html'), lines.join('\n') + '\n');
+    fsx.writeFileSync(pathx.join(dir, 'p.patch'), patch);
+    execFileSync('git', ['-C', dir, 'apply', '--check', 'p.patch']);          // throws (non-zero exit) if it does not apply
+    execFileSync('git', ['-C', dir, 'apply', 'p.patch']);
+    const after = fsx.readFileSync(pathx.join(dir, 'index.html'), 'utf8');
+    assert.equal((after.match(/<script src="/g) || []).length, 7);           // bld-schema.js (context) + the six added
+    assert.match(after, /BLDWire\.mount\(CUR\)/);
+  } finally { fsx.rmSync(dir, { recursive: true, force: true }); }
 });

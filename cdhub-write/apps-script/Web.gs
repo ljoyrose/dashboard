@@ -72,6 +72,18 @@ function ui_decide(pendingId, decision, note) {
   } catch (ex) { return errorBody_(ex); }
 }
 
+/** Called from the approval page. Owner-only: who has a staff code (names, roles, ids; never a code). */
+function ui_staffList() {
+  try { requireAdmin_(); return { ok: true, result: { staff: sinkStaffList_() } }; }
+  catch (ex) { return errorBody_(ex); }
+}
+
+/** Called from the approval page. Owner-only: switch a staff code off (kept in the list, refused from now on). */
+function ui_revokeCode(codeId) {
+  try { requireAdmin_(); return { ok: true, result: sinkRevokeCode_(String(codeId), adminEmail_()) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+
 /** Called from the approval page. Owner-only: lists the newest entries of one table so one can be picked. */
 function ui_editList(table) {
   try { requireAdmin_(); return { ok: true, result: sinkOwnerEditList_(String(table)) }; }

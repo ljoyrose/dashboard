@@ -20,12 +20,15 @@
  *   STAFF_REGISTRY   JSON of hashed staff codes, managed by adminAddStaffCode().
  *   ALLOW_CREATE     'true' only while Lisa runs adminCreateEmptyTables().
  *   BACKUP_ON        'true' to let the optional daily backup copy run (see adminInstallDailyBackup).
+ *   MOVES_QUEUE_UNTIL  last day (YYYY-MM-DD, London) on which a dog move goes to the approvals queue. After that
+ *                    day moves go straight in. Run adminStartMovesQueue() on go-live day to set it to today + 14 days.
+ *                    Missing or not a date = moves always queue. MODE_occupancy, if set, beats this.
  *
  * NOBODY should hand-edit the files this script writes to. Edits in Drive can collide with a save and
  * are not recorded. Corrections go through the screen.
  */
 var BLD = {
-  VERSION: '1.1.0',
+  VERSION: '1.2.0',
   TZ: 'Europe/London',
   PROP: {
     SAVE_ENABLED: 'SAVE_ENABLED',
@@ -39,10 +42,11 @@ var BLD = {
     ALLOW_CREATE: 'ALLOW_CREATE',
     BACKUP_ON: 'BACKUP_ON',
     READ_ENABLED: 'READ_ENABLED',
-    OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED'
+    OWNER_EDIT_ENABLED: 'OWNER_EDIT_ENABLED',
+    MOVES_QUEUE_UNTIL: 'MOVES_QUEUE_UNTIL'
   },
   LIMITS: {
-    MAX_BODY_CHARS: 20000,
+    MAX_BODY_CHARS: 60000,   // room for the daily check: one id per dog, 500 dogs at most
     MAX_TEXT_CHARS: 500,
     FAIL_WINDOW_SEC: 600,   // bad staff codes are counted for 10 minutes
     FAIL_MAX: 25,           // after this many, every save is refused until the window ends
@@ -52,7 +56,9 @@ var BLD = {
     LOCK_WAIT_MS: 20000,
     TEMP_MIN: -30,
     TEMP_MAX: 60,
-    READ_MAX_ROWS: 3000     // a read never returns more rows than this
+    READ_MAX_ROWS: 3000,    // a read never returns more rows than this
+    MOVES_QUEUE_DAYS: 14,   // moves queue for this many days after go-live (adminStartMovesQueue)
+    CHECK_MAX_DOGS: 500     // most dogs one daily-check confirmation may list
   },
   // The permissions file the read action consults. It is only ever READ by the script.
   VISIBILITY_FILE: 'BLD-field_visibility.csv',

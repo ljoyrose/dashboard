@@ -140,6 +140,7 @@ function standardEnv(over = {}) {
   if (over.noTargets !== true) {
     env.addFile('BLD-area_reading.csv', fx.headerOnly(fx.AREA_READING_HEADER));
     env.addFile('BLD-_pending.csv', fx.headerOnly(fx.PENDING_HEADER));
+    env.addFile('BLD-occupancy_check.csv', fx.headerOnly(fx.OCCUPANCY_CHECK_HEADER));
   }
   Object.assign(env.props, {
     BLD_FOLDER_ID: 'FOLDER-TEST', TENANT_ID: fx.TENANT, ADMIN_EMAILS: 'owner@example.test',
@@ -156,6 +157,10 @@ function standardEnv(over = {}) {
   };
   env.codes.staff = mk('Sam Staff', 'STAFF');
   env.codes.owner = mk('Olive Owner', 'OWNER');
+  // public ids (sc-xxxxxx) of the two codes, read from the registry; the ids are not secret
+  env.ids = {};
+  const reg = JSON.parse(env.props.STAFF_REGISTRY);
+  Object.keys(reg).forEach((h) => { env.ids[reg[h].who === 'Sam Staff' ? 'staff' : 'owner'] = reg[h].id; });
   return env;
 }
 
