@@ -16,13 +16,6 @@ fv-p014,ten-REPLACE-ME,occupancy,off_site_kind,aud-staff,yes,,,PROPOSED - claude
 fv-p015,ten-REPLACE-ME,occupancy,moved_in,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
 fv-p016,ten-REPLACE-ME,occupancy,classification,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
 fv-p017,ten-REPLACE-ME,occupancy,*,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,every row of this kennel (rows rule)
-fv-p018,ten-REPLACE-ME,area_reading,id,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,earlier temperature entries (to see what to correct)
-fv-p019,ten-REPLACE-ME,area_reading,area_id,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,earlier temperature entries (to see what to correct)
-fv-p020,ten-REPLACE-ME,area_reading,min_c,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,earlier temperature entries (to see what to correct)
-fv-p021,ten-REPLACE-ME,area_reading,max_c,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,earlier temperature entries (to see what to correct)
-fv-p022,ten-REPLACE-ME,area_reading,taken_at,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,earlier temperature entries (to see what to correct)
-fv-p023,ten-REPLACE-ME,area_reading,taken_by,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,earlier temperature entries (to see what to correct)
-fv-p024,ten-REPLACE-ME,area_reading,*,aud-staff,yes,own_rows_days<=14,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,"staff: only the entries they made themselves, last 14 days"
 fv-p025,ten-REPLACE-ME,area,id,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
 fv-p026,ten-REPLACE-ME,area,code,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
 fv-p027,ten-REPLACE-ME,area,grouping,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff

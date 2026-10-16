@@ -4,7 +4,7 @@
   "private": true,
   "description": "BLD write path: append-only Apps Script sink, browser module and staff screens, with tests. Ships OFF.",
   "scripts": {
-    "test": "node --test tests/sink.test.js tests/client.test.js",
+    "test": "node --test tests/sink.test.js tests/client.test.js tests/v3.test.js tests/backfill.test.js",
     "fixtures": "node tests/write-fixtures.js"
   },
   "devDependencies": {

@@ -15,8 +15,11 @@
 }(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var GONE_KIND = { sold: true, owned_by_family: true };
-  var GONE_STATE = { sold: true, collected: true };
+  // Permanently not on site (Lisa 16 Oct, S02-7): sold, owned_by_family, Collected, deceased. Never asked to move.
+  var GONE_KIND = { sold: true, owned_by_family: true, deceased: true };
+  var GONE_STATE = { sold: true, collected: true, deceased: true };
+  // Temporarily off site (vets, groomers...): status off_site_temp. Shown as "Away", keeps its room, not asked to move.
+  var AWAY_STATE = 'off_site_temp';
 
   /** Latest occupancy row for one dog, or null. */
   function latestRow(rows, subjectId) {
@@ -33,15 +36,17 @@
   /** Is a dog off site according to its latest row? */
   function offSite(row) {
     if (!row) return false;
-    return !!GONE_KIND[String(row.off_site_kind || '').toLowerCase()] || String(row.classification || '').toLowerCase() === 'collected';
+    var cls = String(row.classification || '').toLowerCase();
+    return !!GONE_KIND[String(row.off_site_kind || '').toLowerCase()] || cls === 'collected' || cls === 'deceased';
   }
 
   /**
    * The daily list: every dog on site, with the room it was last recorded in.
-   * A dog is NOT listed when its latest occupancy row says sold / owned_by_family / collected, or when
-   * its status says Sold / Collected. A dog with no occupancy row at all is listed (room not recorded)
+   * A dog is NOT listed when its latest occupancy row says sold / owned_by_family / collected / deceased, or when
+   * its status says Sold / Collected / Deceased. A dog whose status is off_site_temp IS listed, flagged `away: true`:
+   * it keeps its room and is not asked to move. A dog with no occupancy row at all is listed (room not recorded)
    * only when a status row says it is not sold or collected; otherwise it is counted in `skipped`.
-   * @return {{dogs:Array<{id,label,areaId,areaLabel,known,lastMovedIn}>, skipped:number, areas:Array}}
+   * @return {{dogs:Array<{id,label,areaId,areaLabel,known,lastMovedIn,away}>, skipped:number, areas:Array}}
    */
   function dailyList(T) {
     T = T || {};
@@ -63,11 +68,13 @@
       dogs.push({
         id: s.id, label: s.name || s.id,
         areaId: a ? a.id : '', areaLabel: a ? a.label : '', known: !!a,
-        lastMovedIn: row ? (row.moved_in || '') : ''
+        lastMovedIn: row ? (row.moved_in || '') : '',
+        away: st === AWAY_STATE
       });
     });
-    // dogs whose room is not recorded come first (they need a person to pick), then by room, then name
+    // dogs whose room is not recorded come first (they need a person to pick), then by room, then name; Away dogs last
     dogs.sort(function (x, y) {
+      if (!!x.away !== !!y.away) return x.away ? 1 : -1;
       if (x.known !== y.known) return x.known ? 1 : -1;
       var ax = x.known ? areaById[x.areaId].sort : 0, ay = y.known ? areaById[y.areaId].sort : 0;
       if (ax !== ay) return ax - ay;

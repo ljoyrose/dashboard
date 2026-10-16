@@ -31,7 +31,10 @@ var TABLES = {
     proposedColumns: ['corrects_id', 'mitigation_note'],
     computedColumns: ['applied_limit_id', 'in_range', 'compliant', 'mitigation_required'],
     lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
-    perms: { add: ROLE_ALL, correct: ROLE_ALL },
+    // Lisa 16 Oct (S02-4): staff see NO past entries, so they cannot point at one. A wrong entry is reported to
+    // the owner, who fixes it with the owner edit (or an OWNER code sends a correction row).
+    perms: { add: ROLE_ALL, correct: ['OWNER'] },
+    ownerEditable: true,
     alwaysPending: false,
     defaultMode: 'direct',   // Lisa 16 Oct: temperature readings go straight in; corrections always wait
     // fields the browser may send (everything else is set by the server)
@@ -64,7 +67,8 @@ var TABLES = {
   // Where each dog is. LIVE table (BLD-occupancy.csv, header checked 15 Oct). EXISTING column names only.
   // A move APPENDS a new row (subject_id, area_id, moved_in = today). moved_out is NEVER written and no
   // existing row is ever edited: the current room is the row with the latest moved_in.
-  // Own switch (TABLE_ON_occupancy), OFF by default. Moves queue for Lisa unless MODE_occupancy=direct.
+  // Own switch (TABLE_ON_occupancy), OFF by default. Moves queue for Lisa for the first 14 days after go-live
+  // (MOVES_QUEUE_UNTIL), then go straight in; MODE_occupancy, if set, beats the date.
   // There is no corrects_id column here, so a wrong room is fixed by moving the dog again.
   occupancy: {
     key: 'occupancy',
@@ -79,6 +83,9 @@ var TABLES = {
     ],
     perms: { add: ['OWNER', 'STAFF'], correct: [] },
     noCorrect: true,
+    ownerEditable: true,
+    // moves queue for the first MOVES_QUEUE_DAYS days after go-live, then go straight in (modeFor_ in Sink.gs)
+    movesQueue: true,
     // fields ONLY the owner's in-place edit may also change (staff can never set these)
     ownerEdit: { moved_in: { type: 'date' }, moved_out: { type: 'date' } },
     alwaysPending: false,
@@ -95,14 +102,50 @@ var TABLES = {
       if (errors.subject_id || errors.area_id) return;
       var cur = occupancyLatest_(records, clean.subject_id);
       if (!cur) return;
-      if (cur.off_site_kind === 'sold' || cur.off_site_kind === 'owned_by_family' || cur.classification === 'Collected') {
+      if (permanentlyGone_(cur)) {
         errors.subject_id = 'This dog is recorded as no longer on site. Ask Lisa before moving it.';
       } else if (cur.area_id && cur.area_id === clean.area_id) {
-        errors.area_id = 'That dog is already recorded in that room. Tap Same instead of moving it.';
+        errors.area_id = 'That dog is already recorded in that room, so it has not moved.';
       }
     }
+  },
+
+  // ---------------------------------------------------------------- occupancy_check
+  // The daily "All the rest unmoved" confirmation (Lisa 16 Oct, S02-1). ONE row per tap: who confirmed, when,
+  // and the list of dogs confirmed where they were last recorded. Moves are separate: they still append
+  // BLD-occupancy rows. NEW table (not in the BLD design, not on Drive): Lisa creates the file, and it has its
+  // own switch (TABLE_ON_occupancy_check), OFF by default. confirmed_at and confirmed_by are set by the script.
+  // dog_ids is pipe-separated (sorted); 500 dogs at most per row.
+  occupancy_check: {
+    key: 'occupancy_check',
+    file: 'BLD-occupancy_check.csv',
+    idPrefix: 'chk',
+    columns: ['id', 'tenant_id', 'confirmed_at', 'confirmed_by', 'dog_ids', 'moved_count', 'note'],
+    proposedColumns: ['confirmed_at', 'confirmed_by', 'dog_ids', 'moved_count', 'note'],
+    computedColumns: [],
+    lookups: [{ name: 'subject', file: 'BLD-subject.csv', idCol: 'id' }],
+    perms: { add: ['OWNER', 'STAFF'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      dog_ids:     { type: 'idlist', lookup: 'subject', required: true },
+      moved_count: { type: 'count', dflt: '0' },
+      note:        { type: 'text' }
+    },
+    // the same set of dogs confirmed twice within DUP_WINDOW_MIN is a repeat tap
+    dupKey: ['dog_ids'], dupTimeCol: 'confirmed_at',
+    stamp: function (row, ctx) { row.confirmed_at = ctx.nowIso; row.confirmed_by = ctx.whoId || ctx.who; },
+    checkRow: function () {}
   }
 };
+
+/** Permanently not on site (Lisa 16 Oct, S02-7): sold, owned_by_family, Collected or deceased. Such a dog is never asked to move. */
+function permanentlyGone_(row) {
+  if (!row) return false;
+  var kind = String(row.off_site_kind || '').toLowerCase(), cls = String(row.classification || '').toLowerCase();
+  return kind === 'sold' || kind === 'owned_by_family' || kind === 'deceased' || cls === 'collected' || cls === 'deceased';
+}
 
 /**
  * Latest occupancy row for a dog: the highest moved_in. A row with no moved_in ranks below any dated row,
@@ -125,34 +168,6 @@ function occupancyLatest_(records, subjectId) {
  * move an entry from PROPOSED_TABLES into TABLES. Until then nothing can write to them.
  */
 var PROPOSED_TABLES = {
-
-  // ---------------------------------------------------------------- occupancy_check
-  // The daily "is every dog where we think?" confirmation. NOT in the BLD design, not on Drive: PROPOSED.
-  // Replaces the retired round_event idea (see RETIRED_TABLES). One row per dog per day: result same|moved.
-  // check_date and recorded_at are set by the script, never by the browser.
-  occupancy_check: {
-    key: 'occupancy_check',
-    file: 'BLD-occupancy_check.csv',
-    idPrefix: 'chk',
-    columns: ['id', 'tenant_id', 'check_date', 'subject_id', 'area_id', 'result', 'recorded_by', 'recorded_at', 'corrects_id'],
-    proposedColumns: ['check_date', 'subject_id', 'area_id', 'result', 'recorded_by', 'recorded_at', 'corrects_id'],
-    computedColumns: [],
-    lookups: [
-      { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
-      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' }
-    ],
-    perms: { add: ['OWNER', 'STAFF'], correct: ['OWNER', 'STAFF'] },
-    alwaysPending: false,
-    defaultMode: 'direct',
-    input: {
-      subject_id: { type: 'ref', lookup: 'subject', required: true },
-      area_id:    { type: 'ref', lookup: 'area', required: true },
-      result:     { type: 'enum', values: ['same', 'moved'], required: true }
-    },
-    dupKey: ['subject_id'], dupTimeCol: null, dupDayCol: 'check_date',
-    stamp: function (row, ctx) { row.check_date = ctx.today; row.recorded_at = ctx.nowIso; row.recorded_by = ctx.who; },
-    checkRow: function () {}
-  },
 
   // ---------------------------------------------------------------- staff
   // Staff roster. Columns from the `staff` design table. File ABSENT on Drive.
@@ -186,7 +201,7 @@ var PROPOSED_TABLES = {
 
 /**
  * RETIRED tables. Kept for the record, never written to, refused like the proposed ones. Nothing was deleted.
- * round_event (16 Oct 2026, Lisa): replaced by occupancy_check + the live occupancy table.
+ * round_event (16 Oct 2026, Lisa): replaced by occupancy_check (now on the allow-list, own switch) + the live occupancy table.
  */
 var RETIRED_TABLES = {
 
@@ -259,5 +274,5 @@ var READABLE = {
   subject_status:  { file: 'BLD-subject_status.csv',  vis: 'subject_status',  authorCol: '',            dateCol: '' },
   occupancy:       { file: 'BLD-occupancy.csv',       vis: 'occupancy',       authorCol: '',            dateCol: '' },
   area_reading:    { file: 'BLD-area_reading.csv',    vis: 'area_reading',    authorCol: 'taken_by',    dateCol: 'taken_at' },
-  occupancy_check: { file: 'BLD-occupancy_check.csv', vis: 'occupancy_check', authorCol: 'recorded_by', dateCol: 'check_date' }
+  occupancy_check: { file: 'BLD-occupancy_check.csv', vis: 'occupancy_check', authorCol: 'confirmed_by', dateCol: 'confirmed_at' }
 };
