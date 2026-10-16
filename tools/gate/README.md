@@ -23,4 +23,6 @@ Gate names on a card may be the framework name or any old name (`G1`, `Gate 0`, 
 **Conflicts:** `gates.unified.json` lists conflicts between the four gate sources. A gate with an OPEN conflict reports
 `WAITS-LISA` and is never auto-passed. When Lisa rules, change that conflict's `status` to `RESOLVED` (data only).
 
+PROGRESS and HANDOVER are rewritten after each ruling (not appended).
+
 This tool reads no register and writes nothing. It does not replace `GATES.csv`; changes to that file are proposals in the job slips.
