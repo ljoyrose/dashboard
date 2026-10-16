@@ -46,11 +46,16 @@
     });
     var subj = {};
     (T['BLD-subject.csv'] || []).forEach(function (s) { subj[s.id] = s; });
-    var dogsByArea = {};
+    // Who is in each room NOW: a dog's current room is its LATEST occupancy row (moves append new rows and never
+    // close the old one), so an older row must not count the dog in two rooms.
+    var dogsByArea = {}, seen = {};
     (T['BLD-occupancy.csv'] || []).forEach(function (o) {
-      if (!o.area_id || o.moved_out) return;
-      var s = subj[o.subject_id];
-      (dogsByArea[o.area_id] = dogsByArea[o.area_id] || []).push({ id: o.subject_id, dob: s ? s.dob : '' });
+      if (seen[o.subject_id]) return;
+      seen[o.subject_id] = true;
+      var cur = Occupancy.latestRow(T['BLD-occupancy.csv'], o.subject_id);
+      if (!cur || !cur.area_id || cur.moved_out || Occupancy.offSite(cur)) return;
+      var s = subj[cur.subject_id];
+      (dogsByArea[cur.area_id] = dogsByArea[cur.area_id] || []).push({ id: cur.subject_id, dob: s ? s.dob : '' });
     });
     var bands = Bands.parseBands(T['BLD-temperature_band.csv'] || []);
     var actions = Bands.parseActions(T['BLD-temperature_action.csv'] || []);
