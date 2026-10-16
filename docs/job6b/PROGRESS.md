@@ -10,7 +10,7 @@
 - [x] **4. Header contract:** `tests/contract/expected-headers.json` (column names only), `tests/mocked/header-contract.spec.js` (12 checks, runs every push and Monday), plus a local/manual `tests/contract/check-real-headers.js` for real files (no auth, prints names only).
 - [x] **5. Phone subset:** `phone` project (390 × 844). 3 checks: load, sign in, menu, no sideways scroll, no unexpected console errors. Included in the required job.
 - [x] **6. Learning loop:** PR template with "Bug fix? regression test added?"; `fix-needs-test.yml` (warning only); `@regression` tag counted in the Action summary; "Caught after merge" list and recipe in `TESTS.md`.
-- [x] **7. PC-Personal + Drive-check:** covered, fully in memory (8 checks + 1 parked). Writes go to the pretend Drive or a pretend plugged-in drive only. **Found:** PC-Personal renames `RR_` files (see Open questions).
+- [x] **7. PC-Personal + Drive-check:** covered, fully in memory (9 checks). Writes go to the pretend Drive or a pretend plugged-in drive only. PC-Personal renames `RR_` files; **Lisa decided to keep that** (shared drive is the right home, one copy is enough). A test pins it.
 - [x] **8. Dark mode** on all three pages (3 checks).
 - [x] **9. axe accessibility + smallest-text floor** (15 checks). Ratchet: known problems recorded, fails only if worse.
 - [x] **10. Fake-Drive drift counter** (Drive calls the pretend Drive could not answer; shown in the Action summary; currently 0).
@@ -20,12 +20,12 @@
 
 ## Numbers
 
-182 pass + 1 parked (was 138). Local run about 80 s. Teeth check about 4 min.
+183 pass (was 138). Local run about 80 s. Teeth check about 4 min.
 
 ## Left to do
 
 - [ ] **Lisa: switch on branch protection** (click-path in `TESTS.md`). Until then, tests are advice, not protection.
-- [ ] Lisa: answer the `RR_` question (PC-Personal).
+- [x] Lisa answered the `RR_` question: keep renaming. Parked test converted to a normal test that asserts it.
 - [x] Action green on the PR (run 38823562125). PR: https://github.com/ljoyrose/dashboard/pull/12
 - [ ] Merge this PR. Then `live-after-deploy.yml` and the weekly teeth check start running by themselves.
 - [ ] Optional: run `node tests/contract/check-real-headers.js <folder>` once on downloaded real files.
@@ -41,11 +41,11 @@
 | Three issue labels (tests, live, teeth) rather than one | One issue can't be both "closed because the mocked suite is green" and "open because the live site is down". Each kind still has exactly one, deduped. |
 | `@axe-core/playwright` 4.10.2 pinned exactly | Same result tomorrow as today. |
 | No page was changed | Everything is testable as is. `.gitignore` gained one allow-line for `tests/contract/*.json`. |
-| `test.fixme` for RR_ in PC-Personal | A parked test shows as "1 skipped" in every summary, so the question is not forgotten. |
+| PC-Personal keeps renaming `RR_` matches (Lisa's decision, 15 Oct 2026) | Shared is the right home; one copy needed. Pinned by a normal test so it can't change by accident. |
 
 ## Open questions
 
-1. Should PC-Personal leave `RR_` files alone (like the Bin does)? Today it does not.
+1. (Closed) `RR_` in PC-Personal: keep renaming. See Decisions.
 2. The sample header lists were built from the invented samples. Run the local script on real files once to confirm they are the real names.
 
 ## Job 6c stubs (not done)
