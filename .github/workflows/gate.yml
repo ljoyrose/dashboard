@@ -1,0 +1,31 @@
+name: Gate checker tests
+
+# Tests for tools/gate/gate.mjs (the App Factory gate checker). Plain Node, no browser, no packages, no secrets.
+# Kept in its own workflow on purpose: the Playwright suite and its required check
+# ("Browser tests (pretend Google and Drive)") in tests.yml are untouched.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: Gate checker (node:test)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - name: Gate checker control cases (the tool tests itself first)
+        run: node tools/gate/gate.mjs --selftest
+      - name: Gate checker tests
+        run: node --test tests/gate/gate.test.mjs

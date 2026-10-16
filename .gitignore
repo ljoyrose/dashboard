@@ -16,3 +16,6 @@ playwright-report/
 # Header contract (column names only: no values)
 !tests/contract/*.json
 !docs/job6b/branch-protection.json
+
+# The gate checker's rules file (gate names, transitions, conflicts: no personal data)
+!tools/gate/gates.unified.json
