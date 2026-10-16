@@ -31,4 +31,6 @@ UK time, newest last. (This is Job 4's file. Job 2 has its own PROGRESS.md in Dr
 | 16 Oct (v3) | Step 6: deceased + permanent kinds dropped from the daily check; off_site_temp shown as Away, keeps its room | done |
 | 16 Oct (v3) | Step 7: tools/backfill-rooms.js (new rows only, never edits) + tests | done |
 | 16 Oct (v3) | Step 9: patch checked with `git apply --check` (test); package.json present | done |
-| next | Steps 8 and 10: PRACTICE-RUN.md, docs, slip AA_JOB4_SLIP_03.md, zip, PR description | in progress |
+| 16 Oct (v3) | Step 8: docs/PRACTICE-RUN.md (12 steps, copied folder only) | done |
+| 16 Oct (v3) | Step 10: 139 tests pass, 0 skipped; docs, HANDOVER (with archive checklist), PR #10 description; slip AA_JOB4_SLIP_03.md and the zip AA_JOB4_v3_cdhub-write.zip handed to Lisa (nothing uploaded to Drive by this run) | done |
+| next | Lisa answers AA_JOB4_SLIP_03; the bot uploads, verifies, runs the tests and the practice run | waiting on Lisa and the bot |
