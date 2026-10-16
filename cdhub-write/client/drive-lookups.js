@@ -9,13 +9,13 @@
  * come from window.BLD_CONFIG (see config.example.js), never from this file.
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./bands.js'));
-  else root.BLDLookups = factory(root.BLDBands);
-}(typeof self !== 'undefined' ? self : this, function (Bands) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./bands.js'), require('./occupancy.js'));
+  else root.BLDLookups = factory(root.BLDBands, root.BLDOccupancy);
+}(typeof self !== 'undefined' ? self : this, function (Bands, Occupancy) {
   'use strict';
 
   var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
-  var NEED = ['BLD-area.csv', 'BLD-subject.csv', 'BLD-occupancy.csv', 'BLD-person.csv', 'BLD-temperature_band.csv', 'BLD-temperature_action.csv'];
+  var NEED = ['BLD-area.csv', 'BLD-subject.csv', 'BLD-occupancy.csv', 'BLD-subject_status.csv', 'BLD-person.csv', 'BLD-temperature_band.csv', 'BLD-temperature_action.csv'];
 
   function parseCsv(text) {
     var rows = [], row = [], f = '', q = false, i = 0, n = text.length;
@@ -55,7 +55,11 @@
     var bands = Bands.parseBands(T['BLD-temperature_band.csv'] || []);
     var actions = Bands.parseActions(T['BLD-temperature_action.csv'] || []);
     var people = (T['BLD-person.csv'] || []).map(function (p) { return { id: p.id, label: p.known_as || p.full_name || p.id }; });
+    var daily = Occupancy.dailyList({
+      area: T['BLD-area.csv'], subject: T['BLD-subject.csv'], subject_status: T['BLD-subject_status.csv'], occupancy: T['BLD-occupancy.csv']
+    });
     return {
+      dogs: daily.dogs, dogsSkipped: daily.skipped,
       areas: areas, people: people, bands: bands, actions: actions,
       subjects: (T['BLD-subject.csv'] || []).map(function (s) { return { id: s.id, label: s.name || s.id }; }),
       bandForArea: function (areaId) { return Bands.bandFor(dogsByArea[areaId] || [], onIso, bands); },

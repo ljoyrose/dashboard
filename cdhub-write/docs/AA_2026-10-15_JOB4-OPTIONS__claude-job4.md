@@ -1,17 +1,17 @@
 # Options for each choice (Job 4)
 
-15 Oct 2026. Each choice: options, what each means, my recommendation, and what was built. **The four decisions that are Lisa's alone are D1 to D4.** The rest I settled with a default and flagged.
+15 Oct 2026, updated 16 Oct (v2: D1, D3 and sections O12 to O17). Each choice: options, what each means, my recommendation, and what was built. **The four decisions that are Lisa's alone are D1 to D4.** The rest I settled with a default and flagged.
 
 ## D1. Approve the append-only write, and which files it may touch (LISA)
 
 | | Meaning |
 |---|---|
-| A | Approve for `BLD-area_reading.csv` and the waiting list `BLD-_pending.csv` only. |
+| A | Approve for `BLD-area_reading.csv` and the approvals queue `BLD-_pending.csv` only. |
 | B | A, plus `BLD-round_event.csv` (cabin placement and flap log). |
 | C | A and B, plus `BLD-staff.csv` (roster). |
 | D | Keep saving off. |
 
-**Recommend A** (the smallest useful step, and the temperature log is the thing the council asks for). **Built:** the default allow-list is **A only**. `round_event` and `staff` are kept in the code on a separate PROPOSED list and are refused whatever switches are set. Choosing B or C later is a one-line code change (move the entry into the main list) plus its own `TABLE_ON_<table>` switch.
+**Recommend A** (the smallest useful step, and the temperature log is the thing the council asks for). **Built (v2):** the allow-list is **A plus `BLD-occupancy.csv`** (Lisa's 16 Oct follow-up: the daily location check appends occupancy rows), the occupancy file behind its own switch, off by default. `occupancy_check` and `staff` are kept in the code on a separate PROPOSED list; `round_event` is retired (kept, refused). All are refused whatever switches are set. Agreeing one later is a one-line code change (move the entry into the main list) plus its own `TABLE_ON_<table>` switch.
 
 ## D2. Create the files on Drive (LISA)
 
@@ -33,7 +33,7 @@ Files to create: `BLD-area_reading.csv`, `BLD-_pending.csv` (and later `BLD-roun
 | B | **Direct** (`MODE_area_reading=direct`) | Readings land immediately, append-only. A mistake needs a correction, which still waits for Lisa |
 | C | Direct for staff, pending for trainees | Not built: needs a per-role rule. Say if wanted |
 
-**Recommend A for the first two weeks, then B** once the screen has been trusted. **Built:** both. Corrections and roster entries are always pending.
+**Recommend A for the first two weeks, then B** once the screen has been trusted. **Built:** both. Corrections and roster entries are always pending. **v2 (Lisa, 16 Oct): temperature readings go straight in** (the table's own default is now direct; set `MODE_area_reading=pending` to hold them). Occupancy moves default to pending (see O14).
 
 ## D4. `occupancy.area_id` blank: fill it, or show "room unknown" (LISA)
 
@@ -98,7 +98,7 @@ The design says the app should ask for it when a reading is outside the band, bu
 
 **Recommend A**, with the thermometer window in `period_start` (staff-typed, optional, up to 7 days back).
 
-## O6. Name and place of the waiting list
+## O6. Name and place of the approvals queue
 
 `BLD-_pending.csv` in the main folder (built; the `BLD-_` prefix is how the folder already names non-data files such as `BLD-_MANIFEST.csv`, `BLD-_README.md`), or in the empty `BLD-DROP` subfolder. **Recommend main folder**: it makes it visible to the data-health check later. The name uses the existing `BLD-_` convention; I did not check it against the naming ledger.
 
@@ -127,8 +127,55 @@ CSV append over Drive works for tens of readings a day. It does not suit hundred
 
 | | Meaning |
 |---|---|
-| A | Compare a hash of the text (not just the size) before and after, and put the exact old text back if the check fails, logging it in the waiting list (built). |
+| A | Compare a hash of the text (not just the size) before and after, and put the exact old text back if the check fails, logging it in the approvals queue (built). |
 | B | Also keep an optional daily backup copy (built, off by default). |
 | C | Stop using Drive CSV append and use a database. Not recommended at this size (see O10). |
 
 **Recommend A and B.** Backups are never deleted by the script; the naming protocol's "keep the last 2" tidy-up is Lisa's call.
+
+## O12. Where the daily "Same / Moved" confirmation is recorded (16 Oct)
+
+| | Meaning | Consequence |
+|---|---|---|
+| A | **New proposed list `BLD-occupancy_check.csv`** (`id, tenant_id, check_date, subject_id, area_id, result, recorded_by, recorded_at, corrects_id`). Built, on the proposed list (refused until agreed). | One row per dog per day: a per-dog record of who confirmed what and when. A new table: Lisa must agree it and create the file. Until then a **Same** tap is kept on the screen only and says so. |
+| B | **The existing checklist tables:** a `BLD-checklist_instance.csv` row per round (template `clt-round`) and a `BLD-checklist_item.csv` tick for template item `cti-round-02` "Check every dog is in its recorded cabin" (evidence: tick, role `rol-staff`). No new table. | One tick per round for the whole kennel, not per dog, so it cannot show which dog was checked or where; `done_by_person_id` needs a person id (staff are known by label); both files are empty header-only files today and would need adding to the allow-list. Not built. |
+| C | No confirmation log: only moves are written (to the occupancy file). | Simplest. Nothing proves a "Same" check happened, which is what an inspection asks. |
+
+**Recommend A**, and agree it before the screen goes live so "Same" is not screen-only. B is the better fit if you want the round to stay one checklist. **Built:** A (proposed) with C behaviour until it is agreed.
+
+## O13. How to hold what staff may read (16 Oct)
+
+| | Meaning |
+|---|---|
+| A | **Existing `BLD-field_visibility.csv`**: rows for `aud-staff` / `aud-admin` per table and column; a row whose `field_name` is `*` sets which rows (all / last N days / my own last N days). Built; proposed rows supplied. Uses existing columns, new row values. |
+| B | A new small table of read rights (not built). More expressive (per person), another file to keep. |
+| C | Fixed rules in the code (not built). Nothing for Lisa to edit; every change needs a code change. |
+
+**Recommend A** (permissions stay in one place Lisa already owns, default deny with no change). `BLD-table_policy.csv` is not used: it is free text per table (see the MAP note). Limit of A: audience level only, so all staff see the same, not person by person.
+
+## O14. Do occupancy moves go straight in or into the approvals queue?
+
+| | Meaning | Consequence |
+|---|---|---|
+| A | **Approvals queue** (default, `MODE_occupancy` unset) | Lisa sees every move before it lands. The legal record of where a dog is stays checked. A move shows only after approval, so the next day's list can be stale if she is away. |
+| B | **Straight in** (`MODE_occupancy=direct`) | Current for everyone at once. A wrong move is fixed by moving again or by Lisa's owner edit. |
+
+**Recommend A for two weeks, then B** (most dogs are "Same"; moves are few).
+
+## O15. Lisa's owner edit (in place, no record kept) - her decision of 16 Oct, recorded with its consequences
+
+| | Meaning | Consequence |
+|---|---|---|
+| A | **Overwrite in place, nothing kept** (built, off by default). Owner page only. | Fast and tidy. The old value is gone from the log: no trail for an inspector; only Drive's file history and any nightly backup copies keep an earlier whole-file version. |
+| B | Edit, but keep a log line "edited by, when, old value" (not built). | Trail kept; the log grows; the old value is in a file again. |
+| C | Corrections only (staff and Lisa). | Full trail; slower for a typo. This is how staff already work. |
+
+**Built A as asked.** My advice: use C (a correction) for anything an inspector might look at, and A for typos on the same day. If the nightly backup is on, an edit leaves the old value in yesterday's `.bak` copy.
+
+## O16. What "Same" does before the daily check log is agreed
+
+Built: the tap is kept on the screen only, the card turns amber ("this screen only, not saved yet") and counts toward "n of N confirmed". Alternative (not built): refuse the tap until the log exists. **Recommend agreeing O12 first** so this never shows.
+
+## O17. Who may use the daily check
+
+Any staff code (`STAFF`) or owner code (`OWNER`); vet and trainer codes get nothing. Reading what the screen needs needs the permission rows in O13, so a code with no rows sees "no dogs".

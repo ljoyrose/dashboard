@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <title>BLD saving - test page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="../screens/bld-save.css">
 <style>
   :root{color-scheme:light dark;--bg:#f6f7f3;--card:#fff;--ink:#18201b;--mut:#5d6860;--line:#dde2da;--chip:#eef1ea;--good:#2e7d4f;--warn:#b26a00;--bad:#c2402b;--accent:#2e7d4f;--accent-ink:#fff}
@@ -21,7 +23,8 @@
 </head>
 <body>
 <nav aria-label="Screens">
-  <button data-s="temp" aria-current="true">Temperatures</button>
+  <button data-s="confirm" aria-current="true">Where is everyone?</button>
+  <button data-s="temp">Temperatures</button>
   <button data-s="staff">Staff roster</button>
 </nav>
 
@@ -44,19 +47,29 @@
 <script src="config.js" onerror="void 0"></script>
 <script src="bands.js"></script>
 <script src="bld-save.js"></script>
+<script src="occupancy.js"></script>
 <script src="drive-lookups.js"></script>
 <script src="../screens/screens.js"></script>
 <script>
 (function(){
   var save = BLDSave.create({});
-  var L = { areas: [], people: [], bandForArea: null, actionFor: null };
-  var cur = 'temp';
+  var L = { areas: [], people: [], dogs: [], dogsSkipped: 0, bandForArea: null, actionFor: null };
+  var cur = 'confirm';
   var host = document.getElementById('host');
 
   function draw(){
-    if (cur === 'temp') BLDScreens.temperatureEntry(host, { save: save, areas: L.areas, bandForArea: L.bandForArea, actionFor: L.actionFor });
+    if (cur === 'confirm') BLDScreens.locationConfirm(host, { save: save, dogs: L.dogs, areas: L.areas, skipped: L.dogsSkipped, loader: loadViaScript });
+    else if (cur === 'temp') BLDScreens.temperatureEntry(host, { save: save, areas: L.areas, bandForArea: L.bandForArea, actionFor: L.actionFor });
     else BLDScreens.staffInput(host, { save: save, people: L.people });
     document.querySelectorAll('nav button').forEach(function(b){ b.setAttribute('aria-current', String(b.dataset.s === cur)); });
+  }
+  function loadViaScript(){
+    return BLDOccupancy.loadViaScript(save).then(function(r){
+      if (!r.ok) return r;
+      L.areas = r.lookups.areas; L.dogs = r.lookups.dogs; L.dogsSkipped = r.lookups.dogsSkipped;
+      save.setLookups({ area: L.areas, subject: r.lookups.subjects, person: L.people });
+      draw(); return { ok: true };
+    });
   }
   function refreshStatus(){ return save.checkStatus().then(draw); }
 
@@ -91,7 +104,7 @@
     var T = {
       'BLD-area.csv': [{id:'area-demo-1',code:'Demo 1',grouping:'Demo house',group_sort:'1'},{id:'area-demo-2',code:'Demo 2',grouping:'Demo cabins',group_sort:'2'}],
       'BLD-subject.csv': [{id:'sub-demo-pup',name:'Demo pup',dob:new Date(Date.now()-14*864e5).toISOString().slice(0,10)},{id:'sub-demo-adult',name:'Demo adult',dob:'2020-01-01'}],
-      'BLD-occupancy.csv': [{subject_id:'sub-demo-pup',area_id:'area-demo-1',moved_out:''},{subject_id:'sub-demo-adult',area_id:'area-demo-2',moved_out:''}],
+      'BLD-occupancy.csv': [{subject_id:'sub-demo-pup',area_id:'area-demo-1',moved_in:'2026-10-01',moved_out:''},{subject_id:'sub-demo-adult',area_id:'area-demo-2',moved_in:'2026-10-01',moved_out:''}],
       'BLD-person.csv': [{id:'per-demo-1',full_name:'Demo Person'}],
       'BLD-temperature_band.csv': [{id:'b1',band:'under four weeks',age_from_days:'0',age_to_days:'28',min_temp:'26.00',max_temp:'28.00'},{id:'b2',band:'four weeks and over',age_from_days:'29',age_to_days:'',min_temp:'10.00',max_temp:'26.00'}],
       'BLD-temperature_action.csv': [{direction:'below',threshold_c:'10.00',action:'EMERGENCY'},{direction:'above',threshold_c:'26.00',action:'fans on'}]

@@ -44,3 +44,44 @@
 .bs-result.bs-bad{color:var(--bs-bad)}
 .bs-empty{padding:16px;border:1px dashed var(--bs-line);border-radius:16px;color:var(--bs-mut);font-size:13px;text-align:center}
 @media (prefers-reduced-motion:no-preference){.bs-btn{transition:opacity .15s}}
+
+/* ------------------------------------------------------------------------------------------------
+ * The daily location check uses The Board's look (AA_2026-10-15_THE-BOARD.html): Bricolage Grotesque for
+ * headings, Figtree for text, soft green page, white cards, big round yes/no taps, amber call-to-action.
+ * The tokens are set here (not borrowed from the host page) so it looks the same inside Bloodline.
+ * Fonts are loaded by the page (bloodline-wire.js adds the Google Fonts link); if they cannot load,
+ * the system fonts below are used and nothing breaks.
+ * ---------------------------------------------------------------------------------------------- */
+.bs.bs-board{
+  --bs-card:#ffffff; --bs-ink:#18201b; --bs-mut:#5d6860; --bs-line:#dde2da; --bs-chip:#eef1ea;
+  --bs-good:#2e7d4f; --bs-warn:#b26a00; --bs-bad:#c2402b; --bs-accent:#e39a2d; --bs-accent-ink:#1d1406;
+  --bs-display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;
+  --bs-body:"Figtree",ui-sans-serif,system-ui,-apple-system,sans-serif;
+  background:#f6f7f3;border-radius:28px;padding:18px 14px 28px;font-family:var(--bs-body);color:var(--bs-ink)
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .bs.bs-board{
+  --bs-card:#1c241f; --bs-ink:#e8ede6; --bs-mut:#9aa69d; --bs-line:#2a342d; --bs-chip:#232c26;
+  --bs-good:#5fc28a; --bs-warn:#e7a43c; --bs-bad:#ec7a63; --bs-accent:#f0ad46; background:#141a16}}
+.bs-board .bs-h{font-family:var(--bs-display);font-weight:800;font-size:28px;line-height:1.05;text-wrap:balance}
+.bs-board .bs-card{border-radius:22px;padding:16px}
+.bs-board .bs-dog-name{font-family:var(--bs-display);font-weight:700;font-size:21px;margin:0 0 2px;line-height:1.2}
+.bs-board .bs-dog-was{font-size:13px;color:var(--bs-mut);margin:0 0 12px}
+.bs-board .bs-prog{height:8px;border-radius:99px;background:var(--bs-chip);overflow:hidden;margin:10px 0 4px}
+.bs-board .bs-prog i{display:block;height:100%;width:0;background:var(--bs-good);border-radius:99px;transition:width .2s}
+.bs-board .bs-prog-t{font-size:13px;font-weight:600;color:var(--bs-mut);margin:0 0 12px;font-variant-numeric:tabular-nums}
+.bs-board .bs-yn{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bs-board .bs-yes,.bs-board .bs-no{min-height:60px;border-radius:18px;border:2px solid var(--bs-line);background:var(--bs-chip);color:var(--bs-ink);font:inherit;font-family:var(--bs-display);font-weight:800;font-size:20px;cursor:pointer}
+.bs-board .bs-yes{border-color:var(--bs-good);color:var(--bs-good)}
+.bs-board .bs-no{border-color:var(--bs-bad);color:var(--bs-bad)}
+.bs-board .bs-yes:hover:not(:disabled){background:var(--bs-good);color:#fff}
+.bs-board .bs-no:hover:not(:disabled){background:var(--bs-bad);color:#fff}
+.bs-board .bs-yes:disabled,.bs-board .bs-no:disabled{opacity:.4;cursor:not-allowed}
+.bs-board .bs-yes:focus-visible,.bs-board .bs-no:focus-visible{outline:3px solid var(--bs-accent);outline-offset:2px}
+.bs-board .bs-yes[hidden]{display:none}
+.bs-board .bs-yn:has(.bs-yes[hidden]){grid-template-columns:1fr}
+.bs-board .bs-move{margin-top:12px;display:grid;gap:8px}
+.bs-board .bs-move[hidden]{display:none}
+.bs-board .bs-big{min-height:56px;font-size:17px;width:100%}
+.bs-board .bs-dog.bs-done{border-color:var(--bs-good);background:color-mix(in srgb,var(--bs-good) 10%,var(--bs-card))}
+.bs-board .bs-result.bs-warn{color:var(--bs-warn)}
+@media (prefers-reduced-motion:reduce){.bs-board .bs-prog i{transition:none}}

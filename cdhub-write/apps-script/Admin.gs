@@ -55,7 +55,7 @@ function adminRevokeStaff() {
 /**
  * 5. Creates EMPTY, header-only files - ONLY the ones listed, ONLY if they do not exist, and ONLY while
  * the Script Property ALLOW_CREATE is 'true'. This is Lisa's decision (2): creating the temperature log
- * and the waiting list on Drive. Set ALLOW_CREATE back to anything else afterwards.
+ * and the approvals queue on Drive. Set ALLOW_CREATE back to anything else afterwards.
  */
 function adminCreateEmptyTables() {
   var TO_CREATE = [BLD.PENDING_FILE, 'BLD-area_reading.csv'];   // <- trim or extend, then Run
@@ -92,6 +92,12 @@ function adminCheckSetup() {
     Logger.log('--   table ' + k + ': ' + (tableOn_(TABLES[k]) ? 'ON' : 'off') + ', mode ' + modeFor_(TABLES[k]));
   });
   Logger.log('--   SAVE_ENABLED is ' + (saveEnabled_() ? 'TRUE (saving is ON)' : 'not true (saving is OFF)'));
+  Logger.log('--   OWNER_EDIT_ENABLED is ' + (ownerEditEnabled_() ? 'TRUE (the owner page can overwrite an entry in place; no record of the old value is kept)' : 'not true (owner edit is OFF)'));
+  Logger.log('--   READ_ENABLED is ' + (readEnabled_() ? 'TRUE (staff codes can read what the permissions file allows)' : 'not true (staff cannot read)'));
+  try {
+    var pv = store_read_(BLD.VISIBILITY_FILE, false);
+    Logger.log(pv ? ('OK   ' + BLD.VISIBILITY_FILE + ' found (' + pv.records.length + ' rows). The script only reads it.') : ('--   ' + BLD.VISIBILITY_FILE + ' not found: reading will refuse everything'));
+  } catch (e) { say(false, BLD.VISIBILITY_FILE + ': ' + (e.userMessage || e)); }
   Logger.log(ok ? 'Everything checked is fine.' : 'Some things need fixing (lines starting FIX).');
 }
 

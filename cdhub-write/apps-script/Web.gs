@@ -1,7 +1,7 @@
 /**
  * Web entry points. Two deployments of this one project (see docs/SETUP.md):
  *   A) "Save" deployment  - runs as Lisa, open to anyone WITH THE URL; every save still needs a staff code.
- *   B) "Approve" deployment - runs as the person using it, only Lisa; shows the waiting list.
+ *   B) "Approve" deployment - runs as the person using it, only Lisa; shows the approvals queue.
  */
 
 function jsonOut_(obj) {
@@ -22,13 +22,14 @@ function errorBody_(ex) {
   };
 }
 
-/** POST = a save request (JSON body, sent as text/plain so the browser needs no pre-flight). */
+/** POST = a save request or a read request (JSON body, sent as text/plain so the browser needs no pre-flight). */
 function doPost(e) {
   try {
     var body = (e && e.postData && e.postData.contents) || '';
     if (body.length > BLD.LIMITS.MAX_BODY_CHARS) throw err_('BAD_REQUEST', 'That request was too large.');
     var req;
     try { req = JSON.parse(body); } catch (x) { throw err_('BAD_REQUEST', 'That request was not understood.'); }
+    if (req && typeof req === 'object' && req.action === 'read') return jsonOut_({ ok: true, result: sinkRead_(req) });
     return jsonOut_({ ok: true, result: sinkHandle_(req) });
   } catch (ex) {
     return jsonOut_(errorBody_(ex));
@@ -42,7 +43,7 @@ function doGet(e) {
   var tables = Object.keys(TABLES).map(function (k) {
     return { key: k, file: TABLES[k].file, on: tableOn_(TABLES[k]), mode: modeFor_(TABLES[k]) };
   });
-  return jsonOut_({ ok: true, version: BLD.VERSION, saveEnabled: saveEnabled_(), tables: tables, proposed: Object.keys(PROPOSED_TABLES) });
+  return jsonOut_({ ok: true, version: BLD.VERSION, saveEnabled: saveEnabled_(), readEnabled: readEnabled_(), tables: tables, proposed: Object.keys(PROPOSED_TABLES) });
 }
 
 function approvePage_() {
@@ -50,7 +51,7 @@ function approvePage_() {
     return HtmlService.createHtmlOutput('<p style="font:16px sans-serif;padding:24px">This page is for the kennel owner. ' +
       'Open it while signed in to the owner\'s Google account.</p>');
   }
-  return HtmlService.createHtmlOutputFromFile('ApprovePage').setTitle('Waiting to approve');
+  return HtmlService.createHtmlOutputFromFile('ApprovePage').setTitle('Approvals queue');
 }
 
 function requireAdmin_() {
@@ -68,5 +69,22 @@ function ui_decide(pendingId, decision, note) {
   try {
     requireAdmin_();
     return { ok: true, result: sinkDecide_(String(pendingId), String(decision), note, adminEmail_()) };
+  } catch (ex) { return errorBody_(ex); }
+}
+
+/** Called from the approval page. Owner-only: lists the newest entries of one table so one can be picked. */
+function ui_editList(table) {
+  try { requireAdmin_(); return { ok: true, result: sinkOwnerEditList_(String(table)) }; }
+  catch (ex) { return errorBody_(ex); }
+}
+
+/**
+ * Called from the approval page. Owner-only (a signed-in Google account in ADMIN_EMAILS, never a staff code).
+ * Overwrites the entry in place. No record of the old value is kept by this script.
+ */
+function ui_edit(table, rowId, fields) {
+  try {
+    requireAdmin_();
+    return { ok: true, result: sinkOwnerEdit_(String(table), String(rowId), fields, adminEmail_()) };
   } catch (ex) { return errorBody_(ex); }
 }

@@ -55,3 +55,38 @@ function csvEol_(text) {
   var m = /\r\n|\n/.exec(text);
   return m ? m[0] : '\r\n';
 }
+
+/**
+ * Where each record sits in the raw text, so one record can be replaced without touching a byte of the others.
+ * Returns [{start, end, next}] for the header (index 0) and then each non-blank record in order, matching
+ * csvRecords_: start..end is the record without its line ending, next is where the following record begins.
+ */
+function csvSpans_(text) {
+  var spans = [], n = text.length, i = 0, inQ = false, start = 0, fields = 0, field = '';
+  if (n && text.charCodeAt(0) === 0xFEFF) { i = 1; start = 1; }
+  function closeRow(end, next) {
+    fields++; // the field in progress
+    var blank = fields === 1 && field === '';
+    if (!blank) spans.push({ start: start, end: end, next: next });
+    fields = 0; field = '';
+  }
+  for (; i < n; i++) {
+    var c = text.charAt(i);
+    if (inQ) {
+      if (c === '"') { if (text.charAt(i + 1) === '"') { field += '"'; i++; } else { inQ = false; } } else { field += c; }
+    } else if (c === '"' && field === '') {
+      inQ = true;
+    } else if (c === ',') {
+      fields++; field = '';
+    } else if (c === '\r' || c === '\n') {
+      var end = i, next = i + 1;
+      if (c === '\r' && text.charAt(i + 1) === '\n') { next = i + 2; i++; }
+      closeRow(end, next);
+      start = next;
+    } else {
+      field += c;
+    }
+  }
+  if (field !== '' || fields > 0) closeRow(n, n);
+  return spans;
+}

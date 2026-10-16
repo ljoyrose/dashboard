@@ -1,6 +1,6 @@
 # MAP note: design names, Drive names, columns (Job 4)
 
-15 Oct 2026. **Nothing was renamed.** Where the design (Bloodline `bld-schema.js`, 23 Sep) and Drive differ, the Drive name wins and this note links them.
+15 Oct 2026, updated 16 Oct (v2: occupancy writes, occupancy_check, round_event retired, staff reading, owner edit; sections 6 and 7). **Nothing was renamed.** Where the design (Bloodline `bld-schema.js`, 23 Sep) and Drive differ, the Drive name wins and this note links them.
 
 ## 1. Table names
 
@@ -9,17 +9,21 @@
 | `area` | `BLD-area.csv` | live, 23 rows | read (room list, id check) |
 | `area_access` | `BLD-area_access.csv` | live | not used (flap mode is in the proposed round log) |
 | `area_capacity` | `BLD-area_capacity.csv` | live | not used |
-| `occupancy` | `BLD-occupancy.csv` | live, 137 rows, **134 with blank `area_id`** | read (dogs per room for bands) |
+| `occupancy` | `BLD-occupancy.csv` | live, 137 rows, **134 with blank `area_id`** | read (dogs per room for bands) **and (v2) write target: a move appends a new row; own switch, off** |
 | `subject` | `BLD-subject.csv` | live | read (id check, `dob`) |
 | `person` | `BLD-person.csv` | live | read (roster person list) |
 | `role` | `BLD-role.csv` | live (OWNER, STAFF, VET, TRAINER) | roles for staff codes mirror these |
 | `environment_limit` | **`BLD-temperature_band.csv` + `BLD-temperature_action.csv`** | live (2 + 5 rows) | read (band by youngest dog's age; SOP action ladder) |
 | `reading_requirement` | none | design only | not built |
 | `area_reading` | `BLD-area_reading.csv` | **ABSENT** | **write target** |
-| (placement log) | `BLD-round_event.csv` | **ABSENT, proposed here** | **PROPOSED, not on the allow-list**: refused until agreed |
+| (placement log) | `BLD-round_event.csv` | **RETIRED 16 Oct** (never on Drive) | replaced by `occupancy_check` + the live occupancy table; kept in the code, refused |
+| (daily check log) | `BLD-occupancy_check.csv` | **ABSENT, proposed here** | **PROPOSED, not on the allow-list**: refused until agreed |
 | `staff` | `BLD-staff.csv` | **ABSENT** | **PROPOSED, not on the allow-list**: refused until agreed |
 | `staff_training`, `staff_duty`, `staff_competency` | none | design only | not built |
-| (waiting list) | `BLD-_pending.csv` | **ABSENT, proposed here** | **write target (queue), on the allow-list** |
+| (approvals queue, was "waiting list") | `BLD-_pending.csv` | **ABSENT, proposed here** | **write target (queue), on the allow-list** |
+| `field_visibility` | `BLD-field_visibility.csv` | live, 65 rows, none for staff on the lists below | **read only by the script** (decides what a staff code may read) |
+| `table_policy` | `BLD-table_policy.csv` | live, 73 rows | **not used by the script** (see section 7) |
+| `subject_status` | `BLD-subject_status.csv` | live | read (a dog whose state is Sold or Collected is not listed) |
 
 ## 2. `area_reading` columns
 
@@ -48,8 +52,8 @@
 | Old hub (saving off) | New |
 |---|---|
 | `ROUND['date__area'].t_am / t_pm {min,max,at}` | one `area_reading` row per reading. **No AM/PM column in the design**: morning or evening is read from `taken_at` |
-| `.access` free / limited | `BLD-round_event.csv` `event_type=access_set`, `access_type` (proposed) |
-| `.subjects[]` (who is in the cabin) | `BLD-round_event.csv` `event_type=placed/removed` (proposed). Writing to `BLD-occupancy.csv` itself is **not** done |
+| `.access` free / limited | **not built** (the round_event idea is retired; flap setting stays in `BLD-area_access.csv`, untouched) |
+| `.subjects[]` (who is in the cabin) | (v2) the live `BLD-occupancy.csv`: a move **appends** a row; the daily check log is the proposed `BLD-occupancy_check.csv` |
 | `temp2dp()` rule: `-?\d{1,2}(\.\d{1,2})?`, -30 to 60, kept to 2 dp | same rule, now enforced on the page **and** in the script |
 | `bandFor()`: band by the youngest dog's age in days | ported to `bands.js` unchanged |
 | `actionFor()`: returns the **first** matching rung | **changed**: returns the **highest** rung reached (a reading of 28.5 shows the 28 action, not the 25 one). Old behaviour was probably unintended; tell me if not |
@@ -66,3 +70,33 @@
 - **Two files called `BLD-MAP-animana.csv`** (one 24 Sep 10:22 UTC, one 24 Sep 01:31 UTC; their ids are in the inventory, Addendum A, kept out of this public copy). CD Hub's duplicate-title guard may refuse to load. This job's script uses the same rule for the tables it reads: two files with one name = refuse. Neither of these two is read or written by this job.
 - **Google Sheet `BLD-area`** sits beside `BLD-area.csv` (id in the inventory, Addendum A). Different title (no `.csv`), so the script reads the CSV only. If a tool ever matches by prefix it could clash.
 - **Retrieved facts not in the inventory:** `BLD-temperature_band.csv` has only two bands (under four weeks 26 to 28 C; four weeks and over 10 to 26 C). Its note says the older 0-10 day / 2-4 week / 5-8 / 9-10 week split was deleted as invented.
+
+## 6. v2: how occupancy is used (existing BLD column names only)
+
+| Column | Meaning here | Written by |
+|---|---|---|
+| `id` | `occ-YYYYMMDD-HHMMSS-xxxx` | script |
+| `tenant_id` | from `TENANT_ID` | script |
+| `subject_id` | the dog | staff (checked against `BLD-subject.csv`) |
+| `area_id` | the new room | staff (checked against `BLD-area.csv`) |
+| `moved_in` | today's date (London) | script |
+| `off_site_kind`, `moved_out`, `classification`, `classification_note` | **left blank, never written** | nobody (old rows untouched) |
+
+- **Current room** = the row with the latest `moved_in` (an undated legacy row ranks lowest; a tie goes to the later row). Anything that reads occupancy must use that rule, not "the row with no `moved_out`": new rows leave the old row's `moved_out` blank.
+- **On site** = not (`off_site_kind` sold / owned_by_family, or `classification` Collected, or status Sold / Collected). The three legacy values were seen in the live file on 24 Sep (`sold`, `owned_by_family`; `Collected`); other values are treated as on site.
+- 134 of 137 live rows have a blank `area_id`: the daily check shows those dogs as **"Room not recorded yet"** (no Same button) and the first confirmation fills the gap by adding a row. This is Lisa's D4, now worked by the screen itself.
+- `occupancy_check` (PROPOSED): `id, tenant_id, check_date, subject_id, area_id, result (same|moved), recorded_by, recorded_at, corrects_id`. All new names; nothing in the design or on Drive yet.
+
+## 7. v2: can the existing permission files hold staff read rights? (checked 16 Oct against the live files)
+
+**`BLD-field_visibility.csv`** (columns `id, tenant_id, table_name, field_name, audience_id, visible, condition, redaction, set_by, set_on, reason`; 65 rows):
+- **Columns: yes, as is.** One row per table, field and audience, `visible` yes/no. The audience `aud-staff` already exists in `BLD-audience.csv` (rank 60, `aud-admin` 70). Today it has rows only for `person` fields; **none** for subject, area, occupancy, subject_status or area_reading, so today staff can read nothing (the default deny holds with no change).
+- **Rows (which records): only partly.** The `condition` column is free text ("person is the recorded owner of THIS subject") that nothing can run. The script therefore understands **three** forms, put on a row whose `field_name` is `*`: empty (every row), `rows_days<=N`, `own_rows_days<=N` (my own entries from the last N days). Anything else is refused, not guessed. This uses the existing columns with new values, so it is a proposal for Lisa to agree, not a schema change.
+- **Redaction:** not applied; a column with a redaction or an unreadable condition simply stays hidden.
+- **Per person:** not possible (audience level only): every `STAFF` code is `aud-staff`, every `OWNER` code is `aud-admin`. Other roles (vet, trainer) get nothing.
+
+**`BLD-table_policy.csv`** (73 rows): one coarse row per table with free-text "who may read/write by default" (for example `occupancy`: staff / staff). It cannot say which columns or which rows, and nothing can run it, so the script **does not use it**. It has no row for `area_reading` or `occupancy_check`.
+
+**Proposed rows (in this folder, never written to Drive by this job):**
+- `AA_2026-10-16_JOB4-PROPOSED-visibility-rows__claude-job4.csv` - 49 rows for `BLD-field_visibility.csv` (staff: the four lists the daily check needs, no dob, chip, sex or notes; their own temperature entries for 14 days. Owner: the same lists and the whole temperature log). Replace `ten-REPLACE-ME` with the tenant id.
+- `AA_2026-10-16_JOB4-PROPOSED-table_policy-rows__claude-job4.csv` - 2 rows (`area_reading`, `occupancy_check`), documentation only.

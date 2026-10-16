@@ -63,7 +63,7 @@ function textHash_(text) {
  *  3. write, then read back: the hash must equal the hash of the text we meant to write, and every
  *     old byte must still be there
  *  4. if step 3 fails, the EXACT old text is written back and checked by hash. The error says whether
- *     the restore worked. The caller logs it in the waiting list.
+ *     the restore worked. The caller logs it in the approvals queue.
  */
 function store_append_(title, expectedHeader, rowValues, read) {
   if (allowedFiles_().indexOf(title) < 0) {
@@ -82,10 +82,18 @@ function store_append_(title, expectedHeader, rowValues, read) {
   var base = before;
   if (base.length && !/(\r\n|\n)$/.test(base)) base += eol;
   var after = base + csvLine_(rowValues) + eol;
+  return store_commit_(file, title, before, beforeHash, after, function (check) { return check.indexOf(before) === 0; });
+}
+
+/**
+ * Write `after`, read it back, prove it is exactly what was meant (hash) and that `unchangedOk(check)` holds
+ * (every byte that must not change did not). If not, put the EXACT old text back and say whether that worked.
+ */
+function store_commit_(file, title, before, beforeHash, after, unchangedOk) {
   var afterHash = textHash_(after);
   file.setContent(after);
   var check = file.getBlob().getDataAsString('UTF-8');
-  if (textHash_(check) !== afterHash || check.indexOf(before) !== 0) {
+  if (textHash_(check) !== afterHash || !unchangedOk(check)) {
     var restored = false;
     try {
       file.setContent(before);
@@ -98,6 +106,36 @@ function store_append_(title, expectedHeader, rowValues, read) {
       { restored: restored, file: title });
   }
   return after;
+}
+
+/**
+ * OWNER EDIT: replace ONE existing record in place. Called only from the owner-only approval page.
+ * Same safeguards as an append: allow-list, exact header, hash of the file unchanged since it was read,
+ * read-back by hash, exact restore on failure. In addition every byte OUTSIDE the replaced record must be
+ * identical afterwards. No copy of the old record is kept by this script (Drive's own file history still is).
+ * `index` is the position in read.records (0 = first data row).
+ */
+function store_replaceRow_(title, expectedHeader, index, rowValues, read) {
+  if (allowedFiles_().indexOf(title) < 0 || title === BLD.PENDING_FILE) {
+    throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
+  }
+  if (!sameHeader_(read.header, expectedHeader)) {
+    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was changed. Lisa needs to check the file header.');
+  }
+  var file = read.file, before = read.text, beforeHash = textHash_(before);
+  if (textHash_(file.getBlob().getDataAsString('UTF-8')) !== beforeHash) {
+    throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was changed. Try again.');
+  }
+  var spans = csvSpans_(before);
+  if (spans.length !== read.records.length + 1 || index < 0 || index >= read.records.length) {
+    throw err_('UNEXPECTED_LAYOUT', title + ' is laid out in a way the edit cannot handle safely, so nothing was changed.');
+  }
+  var sp = spans[index + 1];
+  var head = before.slice(0, sp.start), tail = before.slice(sp.end);
+  var after = head + csvLine_(rowValues) + tail;
+  return store_commit_(file, title, before, beforeHash, after, function (check) {
+    return check.slice(0, head.length) === head && check.slice(check.length - tail.length) === tail;
+  });
 }
 
 /** Create a header-only file. Used ONLY by adminCreateEmptyTables (Lisa, from the editor). */
