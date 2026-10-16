@@ -185,7 +185,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     var dup = findDuplicate_(spec, v.clean, target.records.concat(waiting), nowMs, today);
     if (dup) {
       throw err_('DUPLICATE', 'This looks like the same entry as one already saved' + (dup.id ? ' (' + dup.id + ')' : '') +
-        '. If that one is wrong, send a correction instead.', { duplicate_of: dup.id || '' });
+        '. If that one is wrong, tell the owner.', { duplicate_of: dup.id || '' });
     }
   }
 

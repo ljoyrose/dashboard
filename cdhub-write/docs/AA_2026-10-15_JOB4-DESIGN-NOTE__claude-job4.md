@@ -45,7 +45,7 @@ The pending list is itself append-only: it is an event log (`queued`, `approved`
 
 ## 4. Safety rails
 
-- **Allow-list (v2):** three file names only: `BLD-area_reading.csv`, `BLD-occupancy.csv` (own switch, off by default) and the approvals queue `BLD-_pending.csv`. The low-level writer checks the list again on its own. Lookup tables (`BLD-area`, `BLD-subject`, `BLD-person`) are only ever read. `occupancy_check` (the daily check log) and `staff` (roster) are kept in the code in a separate **PROPOSED** list; `round_event` is **retired** (kept, refused). None is on the allow-list, so the script refuses them whatever switches are set. Agreeing one later is a one-line code change (move it into the main list) plus its own switch.
+- **Allow-list (v2, v3 adds `BLD-occupancy_check.csv` - see section 11):** `BLD-area_reading.csv`, `BLD-occupancy.csv` (own switch, off by default) and the approvals queue `BLD-_pending.csv`. The low-level writer checks the list again on its own. Lookup tables (`BLD-area`, `BLD-subject`, `BLD-person`) are only ever read. `occupancy_check` (the daily check log) and `staff` (roster) are kept in the code in a separate **PROPOSED** list; `round_event` is **retired** (kept, refused). None is on the allow-list, so the script refuses them whatever switches are set. Agreeing one later is a one-line code change (move it into the main list) plus its own switch.
 - **Switches (v2):** `SAVE_ENABLED` (everything), `TABLE_ON_<table>` (each table on its own, all off by default), `MODE_<table>` (direct or pending; unset = the table's own default: temperatures direct, moves pending), `READ_ENABLED` (staff reading, off), `OWNER_EDIT_ENABLED` (owner edit, off).
 - **Never creates files** while saving. Creating the two new files is a separate action Lisa runs from the editor (`adminCreateEmptyTables`), guarded by `ALLOW_CREATE`.
 - **Duplicate guard:** same room within 30 minutes is refused ("send a correction instead"). A repeated request id returns the first answer (a retry on a flaky phone cannot double-save).
@@ -101,3 +101,17 @@ Outdoor temperature (Open-Meteo), the data-health script, humidity/clean/check r
 **Also changed:** `bands.js` untouched; `round_event` removed from the screens and the browser module; version 1.1.0; the Bloodline patch adds three stages and one more script (`client/occupancy.js`). The temperature-band lookup now counts a dog in its **latest** room only (a move never closes the old row, so counting every open row would have put a dog in two rooms).
 
 **UNVERIFIED (not run on real Google):** the whole read action and owner edit run only in the fake Drive; the Board fonts need internet; Drive's `file.setContent` replacing a middle record has the same untested-live status as the append.
+
+
+## 11. v3 (16 Oct 2026, Lisa's answers to slip 02)
+
+1. **Permissions.** Staff read rows for `area_reading` removed (42 of 49 proposed rows remain, `tp-p01` = "owner (all)"); the staff screen has no correction path and says "Wrong entry? Tell the owner - she can fix it."; a staff code can no longer send `correct`. Proposed CSVs keep CRLF (tested).
+2. **Per-person overrides** in `Read.gs`: `readLayer_` evaluates one audience's rows; `readAccess_` lays the person's rows over the role's. Person row beats role row (column by column and for the row-rule); default deny stays. Code id comes from the registry entry (`id`, `sc-xxxxxx`), returned by `authStaff_`.
+3. **Owner revoke** (`Auth.gs`): `sinkStaffList_`, `sinkRevokeCode_` under the same script lock; owner-only through `ui_staffList` / `ui_revokeCode` (Google session in `ADMIN_EMAILS`). Entry kept, `code_revoke` line appended to `BLD-_pending.csv`; if that append fails the code is still off and the answer says `logged: false`.
+4. **Owner edit** unchanged; test added that the switch is OFF by default; `ownerEditable` flag on a table spec limits it to temperatures and moves (never the daily check log).
+5. **Daily check log** `BLD-occupancy_check.csv` on the allow-list behind `TABLE_ON_occupancy_check`; new field types `idlist` (pipe list, each id must exist in the kennel's `BLD-subject.csv`, sorted, de-duplicated, at most 500) and `count`. Body limit raised to 60,000 characters so 500 dogs fit. Screen: **Moved** per dog, one sticky **All the rest unmoved** button, tested with 150 dogs.
+6. **Moves queue by date.** `modeFor_` order: explicit `MODE_occupancy`, else the date `MOVES_QUEUE_UNTIL`, else queue. Calendar arithmetic (`addDays_`) so a clock change cannot shift the date.
+7. **Away and gone dogs** (browser side `BLDOccupancy.dailyList`; server side `permanentlyGone_` blocks moving them).
+8. **`tools/backfill-rooms.js`**, **`docs/PRACTICE-RUN.md`**, version 1.2.0.
+
+**Still UNVERIFIED (not run on real Google):** everything in the practice run; person audience rows in the live permissions file; real-size occupancy files; several staff saving at the same moment.

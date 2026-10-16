@@ -179,3 +179,39 @@ Built: the tap is kept on the screen only, the card turns amber ("this screen on
 ## O17. Who may use the daily check
 
 Any staff code (`STAFF`) or owner code (`OWNER`); vet and trainer codes get nothing. Reading what the screen needs needs the permission rows in O13, so a code with no rows sees "no dogs".
+
+
+---
+
+# v3 (16 Oct 2026): decisions Lisa made on slip 02, with what each one means
+
+O12 to O17 above are the v2 options. Lisa's answers (AA_JOB4_SLIP_02_ANSWERS.md) settled several; the rest of this section records each decision, what else was possible, and the consequence of the choice made.
+
+## O18. Daily confirmation: one tap for the whole kennel (S02-1, Lisa's own option, replaces O12 A and C)
+| | Meaning | Consequence |
+|---|---|---|
+| **Built** | Staff change only the dogs that moved, then press **All the rest unmoved** once. ONE row in `BLD-occupancy_check.csv`: code id, time, list of dog ids, moved count. | Fast for 150+ dogs. A dog's own history is "was it in the list on that day", not a row per dog; the screen cannot confirm a dog whose room is not recorded (it is left out and the screen says so). `moved_count` is sent by the screen and not checked by the script. |
+| Other | One row per dog per day (the v2 proposal) | Per-dog rows, 150+ writes a day, each a whole-file rewrite: slow and heavy on Drive. Not chosen. |
+
+## O19. Moves: queue for 14 days then straight in (S02-2 A)
+Built: `MOVES_QUEUE_UNTIL` (a date), set by `adminStartMovesQueue` on go-live day to today + 13 days. If it is never run, moves queue for ever (the safe side). `MODE_occupancy` beats the date. **Consequence:** after the date a wrong move lands at once; it is fixed by moving the dog again or by the owner edit (O15). Staff on other days see the new room as soon as the owner approves (inside the 14 days).
+
+## O20. Staff see NO past temperature entries (S02-3 A with S02-4 D)
+Built as decided. **Consequences:** a member of staff cannot check what they typed; the "duplicate" refusal still tells them an entry exists for that room in the last 30 minutes (and its id), and now says "tell the owner"; the owner becomes the one place wrong entries are fixed (O15 owner edit, no record kept; or an owner correction row). Staff still add entries; the owner reads the whole log.
+
+## O21. Per-person permission rows (Lisa's extra)
+| | Meaning | Consequence |
+|---|---|---|
+| **A (built)** | Rows in the existing `BLD-field_visibility.csv` with `audience_id` = `person:<code id>`; person beats role. | Permissions stay as rows, one place. **UNVERIFIED:** anything else that reads the file and expects `audience_id` to exist in `BLD-audience.csv` may reject these rows. |
+| B | Add one row per person to `BLD-audience.csv` first (id `person:<code id>`), then A. | Keeps the audience list complete; needs rows added to a live table (a human decision). |
+| C | A new table of per-person rights. | Not built; another file. |
+**Recommend A, and the bot checks what else reads the permissions file before go-live; if anything complains, add B.**
+
+## O22. Switching a staff code off (Lisa's extra 2b)
+Built: owner page, **Staff codes**. The code entry is kept (marked `revoked_at`, `revoked_by`, `active` false) and a `code_revoke` line is appended to `BLD-_pending.csv`. **Deviation from the brief, stated plainly:** the brief says "append a row to the codes table"; there is no codes table. The codes live (as one-way hashes) in a Script Property, because a Drive file that held code hashes could be read by anyone with access to the folder. A codes table would be a new table (proposal only). **Consequence:** the permanent record of a switch-off is the appended line in `BLD-_pending.csv`; the entry itself is only in the script's private settings.
+
+## O23. Away dogs and gone dogs (S02-7 B)
+Built: sold, owned_by_family, Collected, deceased are left off the daily check and cannot be moved; status `off_site_temp` shows as **Away**, keeps its room, is not asked to move, is not in the confirmation list. **Consequence:** `off_site_temp` is a new status value in `BLD-subject_status.csv` (existing column `state`); someone has to set and clear it. A dog left Away for ever is never asked about.
+
+## O24. Missing rooms (S02-6 B)
+Built: `tools/backfill-rooms.js`, new rows only, never overwriting a different room, run on a copy first. **Consequence:** the new rows carry `moved_in` = the back-fill date, so they become each dog's current room; a dog whose latest dated row is later than that date is skipped and reported.
