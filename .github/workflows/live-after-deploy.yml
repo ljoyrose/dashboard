@@ -8,7 +8,9 @@ name: Live check after deploy
 # NOTE: GitHub only runs "workflow_run" workflows from the file on the main branch, so this starts working once merged.
 on:
   workflow_run:
-    workflows: ['pages-build-deployment', 'pages build and deployment']
+    # 'Publish the site' is the deploy that waits for the tests. The pages-build names stay
+    # so this check still runs for the old branch publish until Source is GitHub Actions.
+    workflows: ['pages-build-deployment', 'pages build and deployment', 'Publish the site']
     types: [completed]
   workflow_dispatch:
 
