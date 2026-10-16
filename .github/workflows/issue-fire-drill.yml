@@ -1,0 +1,42 @@
+name: Alarm fire drill (manual)
+
+# Proves the alarm really works on GitHub: opens a clearly-labelled TEST issue, checks the same issue is reused
+# (not duplicated) on a second "red", then closes it. Press once after any change to the alarm.
+# Manual only (Actions > Alarm fire drill > Run workflow). Lisa gets about 3 emails headed "FIRE DRILL", all safe to ignore.
+# No secrets: only the run's own built-in token.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    name: Alarm fire drill (opens, reuses, closes one test issue)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: 1. Red -> a test issue is opened
+        run: node tests/support/report-issue.js --state red --label fire-drill --title-prefix "FIRE DRILL (a test of the alarm, please ignore)" --results none --note "This is only a drill."
+      - name: 2. Red again -> the SAME issue is reused (never a second one)
+        run: node tests/support/report-issue.js --state red --label fire-drill --title-prefix "FIRE DRILL (a test of the alarm, please ignore)" --results none --note "Drill, second red."
+      - name: 3. Check there is exactly one open drill issue
+        run: |
+          n=$(gh issue list --label fire-drill --state open --json number --jq 'length')
+          echo "Open drill issues: $n"
+          test "$n" = "1"
+      - name: 4. Green -> the test issue is closed
+        run: node tests/support/report-issue.js --state green --label fire-drill
+      - name: 5. Check nothing is left open
+        run: |
+          n=$(gh issue list --label fire-drill --state open --json number --jq 'length')
+          echo "Open drill issues: $n"
+          test "$n" = "0"
+          echo "### ✅ The alarm works: opened, reused, closed." >> "$GITHUB_STEP_SUMMARY"

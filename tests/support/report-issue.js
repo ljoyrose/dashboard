@@ -49,6 +49,7 @@ if (state === 'red') {
   const what = pages.length ? pages.join(', ') : (note || 'unknown page');
   const title = `${prefix}: ${what}`.slice(0, 120);
   const body = [
+    `**What to do:** open the run link below and send it to your builder. It is urgent only if it names the Money Hub or the Bin; otherwise it can wait for the working day. You do not need to fix anything yourself.`, '',
     `The robot found a problem on ${new Date().toISOString().slice(0, 10)}.`, '',
     `**Where:** ${what}`, note ? `**Note:** ${note}` : '', '',
     ...lines, '',
