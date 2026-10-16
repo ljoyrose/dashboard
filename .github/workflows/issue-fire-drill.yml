@@ -22,7 +22,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GITHUB_REPOSITORY: ${{ github.repository }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: 1. Red -> a test issue is opened
         run: node tests/support/report-issue.js --state red --label fire-drill --title-prefix "FIRE DRILL (a test of the alarm, please ignore)" --results none --note "This is only a drill."
       - name: 2. Red again -> the SAME issue is reused (never a second one)
