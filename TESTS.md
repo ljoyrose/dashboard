@@ -46,8 +46,9 @@ If any of these breaks, the tick turns red and says which page.
 | Header contract (column names) | list of expected columns | 12 |
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
+| Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
 
-That is 183 checks that must pass.
+That is 193 checks that must pass.
 
 **Main dashboard**
 - Opens and shows only a sign-in button until you sign in.
@@ -128,7 +129,7 @@ Because Drive is pretend, a green tick does **not** prove your real Drive folder
 
 Each run writes a short table at the top of its page in the Actions tab: one line per page, with passed and failed counts.
 
-There is also a small **optional** check of the three live web addresses. It opens them signed out and confirms they are up. It runs **a minute or so after every publish to the live site** (so a bad merge is noticed in minutes), on Mondays, and on the button. It never blocks anything, because GitHub Pages can have a slow day. It starts working once this change is merged (GitHub only runs it from `main`).
+There is also a small **optional** check of the three live web addresses. It opens them signed out and confirms they are up. It runs **a minute or so after every publish to the live site** (so a bad merge is noticed in minutes), on Mondays, and on the button. It never blocks anything, because GitHub Pages can have a slow day. It also checks that **what is live is exactly the file that was merged** (compared byte for byte, waiting up to 90 seconds for GitHub Pages to finish). It has run after the last two publishes and passed.
 
 Every Tuesday a separate **"teeth check"** breaks things on purpose in a throw-away copy (a wrong link, a lost safety rule, a renamed column, a page too wide for a phone, and so on) and makes sure the tests go red each time. If one slips through, it turns red and opens an Issue. It cannot block a merge.
 
@@ -162,11 +163,11 @@ It takes about 90 seconds.
 3. Download **playwright-report** at the bottom. It has a screenshot and a replay of each failure.
 4. Send the link to your builder. It is not urgent unless it is the Money Hub or the Bin.
 
-**The Issue rule (one short paragraph).** When the Monday run (or any scheduled or hand-started run on `main`) goes red, the robot opens **one** GitHub Issue named "Dashboard tests are red: " plus the failing page, and GitHub emails you. If it is still red next time, it updates that same Issue (no second one). When a run on `main` is green again, it closes the Issue by itself. The live-site check has its own single Issue ("Live site check is red") and the teeth check has its own ("Teeth check failed"), so a Pages hiccup never hides a real test failure. Nothing here uses Slack, webhooks or any new secret.
+**The Issue rule (one short paragraph).** When the Monday run (or any scheduled or hand-started run on `main`) goes red, the robot opens **one** GitHub Issue named "Dashboard tests are red: " plus the failing page, and GitHub emails you. If it is still red next time, it updates that same Issue (no second one). When a run on `main` is green again, it closes the Issue by itself. The branch-protection watch ("Branch protection needs a look") also has its own single Issue. The live-site check has its own single Issue ("Live site check is red") and the teeth check has its own ("Teeth check failed"), so a Pages hiccup never hides a real test failure. To prove the alarm really works, press **Actions > Alarm fire drill > Run workflow** once: it opens, re-uses and closes a clearly-labelled TEST issue (expect about 3 emails headed "FIRE DRILL", all safe to ignore). Nothing here uses Slack, webhooks or any new secret.
 
 ## Make the tick compulsory (branch protection)
 
-This is what turns the tests from "advice" into "protection". It needs your admin rights on GitHub, so it is one thing for you to click (the robot that built this was not allowed to change repository settings). **If it is already done, there is nothing to do.**
+This is what turns the tests from "advice" into "protection". It needs your admin rights on GitHub, so it is one thing for you to click (the robot that built this was not allowed to change repository settings). **Status: it is ON (checked 16 Oct 2026 against GitHub itself).** If you ever need to redo it, the steps are below. A weekly "protection watch" re-checks it every Monday and opens one Issue if it is ever switched off.
 
 1. GitHub > the **dashboard** repository > **Settings** (top row).
 2. Left side: **Branches**. Click **Add branch protection rule** (or **Add classic branch protection rule**).
@@ -209,7 +210,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | Date | What went wrong | Test that now guards it |
 |---|---|---|
 | 8 Oct 2026 | CD Hub: the Litters page crashed, and occupancy was read from the wrong column (commit `4284758`) | "joined tables work: cabins show their dogs, litters show dam and sire…" (covers Litters and occupancy; the Animana record choice is **not** yet covered) |
-| 15 Oct 2026 | (found by the teeth check, not a live bug) a hidden marker in front of the "CURRENT" line made the row-count warning disappear; and the rules that stop a `ZZ_` folder holding an `RR_` item being binned had no test | "a BOM in front of the CURRENT line…", and the two Bin safety tests |
+| 15 Oct 2026 | (found by the teeth check, not a live bug) a hidden marker in front of the "CURRENT" line made the row-count warning disappear; and the rules that stop a `ZZ_` folder holding an `RR_` item being binned had no test | "a BOM in front of the…" (the "CURRENT: n rows held" line test), and the two Bin safety tests |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

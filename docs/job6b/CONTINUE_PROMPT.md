@@ -1,5 +1,7 @@
 # CONTINUE PROMPT (Job 6b)
 
+> **UPDATE 16 Oct 2026:** branch protection on `main` is now ON (verified against GitHub), and the `RR_` question is decided (keep renaming). Lines below that say "not switched on" or "still open" are history. Current facts: `docs/STATUS.md`.
+
 Paste everything below the line into a new Claude Code session.
 
 ---

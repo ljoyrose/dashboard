@@ -57,6 +57,7 @@ jobs:
         run: npx playwright test --project=live-smoke --retries=2
         env:
           LIVE_SMOKE: '1'
+          LIVE_MATCH_REPO: ${{ github.ref == 'refs/heads/main' && '1' || '' }}
       - name: Write the short summary
         if: always()
         run: node tests/support/summary.js test-results/results.json

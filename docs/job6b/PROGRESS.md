@@ -1,5 +1,7 @@
 # PROGRESS: Job 6b, turn the dashboard tests into protection for main
 
+> **UPDATE 16 Oct 2026:** branch protection on `main` is now ON (verified against GitHub), and the `RR_` question is decided (keep renaming). Lines below that say "not switched on" or "still open" are history. Current facts: `docs/STATUS.md`.
+
 *Updated 15 Oct 2026. Branch `claude/job6b-test-protection`. Base `main` (Job 6 merged).*
 
 ## Done (in risk order)

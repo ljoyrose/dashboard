@@ -1,6 +1,9 @@
 // OPTIONAL. Opens the three real web addresses, signed out, and checks they are up.
 // Never signs in. Skipped unless LIVE_SMOKE=1 (see TESTS.md). In CI this runs as a separate,
 // non-blocking job, so a GitHub Pages hiccup cannot turn the main result red.
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
 const { test, expect } = require('@playwright/test');
 
 test.skip(!process.env.LIVE_SMOKE, 'Live check is off. Run with LIVE_SMOKE=1 to turn it on.');
@@ -22,3 +25,24 @@ for (const [name, url, title, selector] of PAGES) {
     expect(errors).toEqual([]);
   });
 }
+
+// Is what is LIVE exactly what was merged? Compares the live files with the repo files, byte for byte.
+// Only the workflows on `main` turn this on (LIVE_MATCH_REPO=1); on a feature branch the live site is rightly different.
+// Waits up to 90 s for GitHub Pages to finish publishing (LIVE_MATCH_WAIT_MS to change).
+const FILES = [['index.html', ''], ['cdhub/index.html', 'cdhub/'], ['money/index.html', 'money/'], ['money/core.js', 'money/core.js']];
+const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
+test.describe('Live files match the repo', () => {
+  test.skip(!process.env.LIVE_MATCH_REPO, 'Only checked by the workflows on main (LIVE_MATCH_REPO=1).');
+  for (const [file, url] of FILES) {
+    test(`${file} is live exactly as merged`, async ({ request }) => {
+      test.setTimeout(Number(process.env.LIVE_MATCH_WAIT_MS || 90000) + 30000);
+      const want = sha(fs.readFileSync(path.resolve(__dirname, '..', '..', file)));
+      await expect
+        .poll(async () => {
+          const res = await request.get(url + (url.includes('?') ? '&' : '?') + 'cb=' + Date.now(), { headers: { 'Cache-Control': 'no-cache' } });
+          return res.ok() ? sha(await res.body()) : 'HTTP ' + res.status();
+        }, { timeout: Number(process.env.LIVE_MATCH_WAIT_MS || 90000), intervals: [5000], message: `${file}: the live file is not the merged file (stale deploy, or a different version is live)` })
+        .toBe(want);
+    });
+  }
+});
