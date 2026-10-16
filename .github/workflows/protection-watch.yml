@@ -1,0 +1,37 @@
+name: Protection watch (weekly)
+
+# Checks once a week that branch protection on main is still ON and still requires the check that really exists.
+# Read-only: it changes nothing and needs no admin key (a normal read token can see the rule).
+# If it is off, ONE issue ("Branch protection is off") is opened; it closes itself when protection is back.
+on:
+  schedule:
+    - cron: '5 7 * * 1' # Mondays 07:05 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    name: Protection watch (is main still protected?)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      issues: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_REPOSITORY: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Is main still protected?
+        id: check
+        run: node tests/support/check-protection.js
+      - name: Off? Open or update the one issue
+        if: ${{ failure() && steps.check.outcome == 'failure' && github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        run: node tests/support/report-issue.js --state red --label protection-off --title-prefix "Branch protection needs a look" --results none --note "Protection on main is off or no longer requires the test check. See the run summary."
+      - name: On? Close the issue
+        if: ${{ success() && github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        run: node tests/support/report-issue.js --state green --label protection-off

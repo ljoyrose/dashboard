@@ -43,6 +43,13 @@ out.push('', `**Regression tests** (each one guards a bug that was fixed): ${reg
 const drift = readDrift();
 out.push(drift === null ? '' : `**Pretend-Drive drift:** the pages made ${drift} Drive request${drift === 1 ? '' : 's'} the pretend Drive did not know how to answer.${drift ? ' Not a failure. If this number grows, the pages have started asking Drive something new, and the pretend Drive needs teaching.' : ''}`);
 
+// Docs check (a warning, never a failure): does TESTS.md quote the right total?
+if (tests.some((t) => /(^|\/)mocked\//.test(t.file))) {
+  const m = /That is (\d+) checks that must pass/.exec(fs.existsSync('TESTS.md') ? fs.readFileSync('TESTS.md', 'utf8') : '');
+  const counted = total.pass + total.fail;
+  if (m) out.push(Number(m[1]) === counted ? `**Docs check:** TESTS.md says ${m[1]} checks, this run counted ${counted}. ✅` : `**⚠ Docs check:** TESTS.md says ${m[1]} checks but this run counted ${counted}. Update the number in TESTS.md ("What is checked, page by page"). Not a failure.`);
+}
+
 const failed = tests.filter(isFailed);
 if (failed.length) {
   out.push('', '### What failed', '');

@@ -9,6 +9,7 @@ const GROUPS = [
   ['cdhub', 'CD Hub', '/dashboard/cdhub/'],
   ['money', 'Money Hub', '/dashboard/money/'],
   ['csv-parsing', 'Reading CSV files', 'both CSV readers'],
+  ['ci-guards', 'Learning loop and alarm wiring (docs and CI scripts)', 'TESTS.md, .github, tests/support'],
   ['header-contract', 'Header contract (column names)', 'expected-headers.json'],
   ['look-and-access', 'Dark mode, accessibility, text size', 'all three pages'],
   ['phone', 'Phone-sized screen', 'all three pages, 390 x 844'],
