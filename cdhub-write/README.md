@@ -9,10 +9,11 @@ Bloodline screens (BLDScreens)  ->  BLDSave (checks, sends ONE POST)  ->  Apps S
  Where is everyone? / Enter temperatures                                    |  staff code, allow-list, field checks, lock
                                                                              v
  approvals queue  BLD-_pending.csv --Lisa approves-->  BLD-occupancy.csv / BLD-area_reading.csv (one new line)
- (or straight in: temperatures by default; moves if Lisa sets MODE_occupancy=direct)
+ (or straight in: temperatures and the daily check log by default; moves after the 14-day queue period, or if Lisa sets MODE_occupancy=direct)
 
  Staff READ the lists they need with the same code:   screens -> BLDSave.read -> script read action -> only what BLD-field_visibility.csv allows
  Lisa only (her Google account, owner page):         Edit an entry -> overwrites ONE record in place, no record kept
+                                                      Staff codes -> switch a code off (kept in the list, refused at once)
 ```
 
 `drive.readonly` is only for Lisa's own sign-in. Staff never sign in to Google.
@@ -22,11 +23,12 @@ Bloodline screens (BLDScreens)  ->  BLDSave (checks, sends ONE POST)  ->  Apps S
 | Thing | State |
 |---|---|
 | Saving (`SAVE_ENABLED`) | **OFF** until Lisa sets it |
-| Allow-list | **three files only**: `BLD-area_reading.csv`, `BLD-occupancy.csv` (own switch `TABLE_ON_occupancy`, off), `BLD-_pending.csv` |
-| Daily check log (`BLD-occupancy_check.csv`), staff roster | **proposed only**, on a separate list in the code, refused until agreed |
+| Allow-list | **four files only**: `BLD-area_reading.csv`, `BLD-occupancy.csv` (own switch `TABLE_ON_occupancy`, off), `BLD-occupancy_check.csv` (own switch `TABLE_ON_occupancy_check`, off), `BLD-_pending.csv` |
+| Staff roster (`BLD-staff.csv`) | **proposed only**, on a separate list in the code, refused until agreed |
 | `round_event` | **retired** (kept in the code, refused) |
-| Temperature readings | straight in once saving is on; corrections always go to the approvals queue |
-| Dog moves | approvals queue unless `MODE_occupancy=direct` |
+| Temperature readings | straight in once saving is on; staff see no past entries and cannot correct; the owner fixes wrong ones (owner edit, or an owner correction row that waits in the approvals queue) |
+| Dog moves | approvals queue until `MOVES_QUEUE_UNTIL` (14 days from go-live: `adminStartMovesQueue`), then straight in; `MODE_occupancy` beats the date |
+| Daily check ("All the rest unmoved") | one row per tap in `BLD-occupancy_check.csv`, straight in once its switch is on |
 | Staff reading (`READ_ENABLED`) | **OFF**; default deny: no permission row means nothing is shown |
 | Owner edit (`OWNER_EDIT_ENABLED`) | **OFF**; owner page only; no record kept |
 | Script URL | **not set**; screens show "Saving is off" |
@@ -38,15 +40,14 @@ Bloodline screens (BLDScreens)  ->  BLDSave (checks, sends ONE POST)  ->  Apps S
 
 ## Folders
 
-- `code/apps-script/` the script files (ten `.gs`), `appsscript.json`, approvals page
-- `code/client/` `bld-save.js`, `bands.js`, `occupancy.js`, `drive-lookups.js`, standalone test page
-- `code/screens/` `screens.js`, `bld-save.css`
-- `code/wired/` the Bloodline patch and script (in use); `board-dropin.js` (parked, not used)
+- `apps-script/` the script files (ten `.gs`), `appsscript.json`, approvals page
+- `client/` `bld-save.js`, `bands.js`, `occupancy.js`, `drive-lookups.js`, standalone test page
+- `screens/` `screens.js`, `bld-save.css`
+- `wired/` the Bloodline patch and script (in use); `board-dropin.js` (parked, not used)
+- `tools/` `backfill-rooms.js` (one-off: new occupancy rows only, never edits)
 - `tests/` fake fixtures and the tests (run from this folder: `npm install && npm test`)
-- `docs/` SETUP.md (for Lisa), design note, MAP note, options note, Q&A rows, proposed permission rows (two `.csv` files)
+- `docs/` SETUP.md (for Lisa), PRACTICE-RUN.md (for the bot), design note, MAP note, options note, Q&A slips, proposed permission rows (two `.csv` files, CRLF)
 - `PROGRESS.md` what is done and what is next; `HANDOVER.md` state, decisions, ids
-
-(In the repo the same folders sit directly under `cdhub-write/` without the `code/` level.)
 
 ## Run the tests
 
@@ -60,8 +61,8 @@ Tests use made-up data only (tenant `ten-test`) and never touch Drive.
 
 ## Where these files live
 
-The repo copy is in PR #10 (`cdhub-write/`). The Drive copy (folder `JOB4_CDHUB-WRITEPATH_v2`) is this same package unzipped; see HANDOVER.md.
+The repo copy is in PR #10 (`cdhub-write/`). The Drive copy (folder `JOB4_CDHUB-WRITEPATH` > `v3`) is this same folder, put there by the bot from `AA_JOB4_v3_cdhub-write.zip`; see HANDOVER.md.
 
 ## Start here
 
-Lisa: `docs/SETUP.md`, then `AA_JOB4_SLIP_02.md`. Reviewers: `docs/AA_2026-10-15_JOB4-DESIGN-NOTE__claude-job4.md` (section 10 is the v2 follow-up).
+Lisa: `docs/SETUP.md`, then `AA_JOB4_SLIP_03.md`. The bot: `docs/PRACTICE-RUN.md`. Reviewers: `docs/AA_2026-10-15_JOB4-DESIGN-NOTE__claude-job4.md` (sections 10 and 11 are the v2 and v3 follow-ups).

@@ -22,4 +22,13 @@ UK time, newest last. (This is Job 4's file. Job 2 has its own PROGRESS.md in Dr
 | 16 Oct 02:40 | v2: owner-only edit in place (Lisa's change to item 5), off by default, lock + hash check kept | done |
 | 16 Oct 03:10 | v2: "Where is everyone?" screen in The Board's look; Bloodline patch (3 stages); screenshot check | done |
 | 16 Oct 03:40 | v2: SETUP, MAP, options, design note, README, HANDOVER, PROGRESS, slip AA_JOB4_SLIP_02; zip rebuilt | done |
-| next | Lisa answers AA_JOB4_SLIP_02; practice run on real Google; merge when happy | waiting on Lisa |
+| 16 Oct (v3) | Gate passed: go word is `qssend` (S6.2 + Shorthand-Command-System.md); Lisa's answers to slip 02 read (AA_JOB4_SLIP_02_ANSWERS.md) | done |
+| 16 Oct (v3) | Step 1: staff read rows fv-p018..p024 removed (42 of 49 kept), tp-p01 read = "owner (all)", staff correction path removed from the screens, CRLF kept; tests added | done |
+| 16 Oct (v3) | Steps 2, 2b: per-person override rows (audience person:<code id>), owner revoke of staff codes (appended note in the approvals queue file, never deletes) | done |
+| 16 Oct (v3) | Step 3: owner edit stays OFF by default (test) | done |
+| 16 Oct (v3) | Step 4: BLD-occupancy_check.csv on the allow-list behind its own OFF switch; screen = Moved per dog + ONE "All the rest unmoved"; tested with 150 dogs | done |
+| 16 Oct (v3) | Step 5: moves queue until MOVES_QUEUE_UNTIL (14 days from go-live), then straight in; tested both sides of the date | done |
+| 16 Oct (v3) | Step 6: deceased + permanent kinds dropped from the daily check; off_site_temp shown as Away, keeps its room | done |
+| 16 Oct (v3) | Step 7: tools/backfill-rooms.js (new rows only, never edits) + tests | done |
+| 16 Oct (v3) | Step 9: patch checked with `git apply --check` (test); package.json present | done |
+| next | Steps 8 and 10: PRACTICE-RUN.md, docs, slip AA_JOB4_SLIP_03.md, zip, PR description | in progress |

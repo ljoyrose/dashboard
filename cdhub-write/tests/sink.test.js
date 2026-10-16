@@ -138,14 +138,14 @@ test('a second append leaves the first row byte-for-byte alone', () => {
   assertAppendOnly(env);
 });
 
-test('same room again inside the window is a duplicate (use a correction instead)', () => {
+test('same room again inside the window is a duplicate (staff are told to tell the owner)', () => {
   const env = standardEnv({ props: { MODE_area_reading: 'direct' } });
   assert.equal(save(env, req(env)).ok, true);
   env.nowMs += 10 * 60000;
   const r = save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '21' } }));
   assert.equal(r.ok, false);
   assert.equal(r.code, 'DUPLICATE');
-  assert.match(r.message, /correction/);
+  assert.match(r.message, /tell the owner/);
   env.nowMs += 12 * 3600000; // the evening reading is fine
   assert.equal(save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '21' } })).ok, true);
 });
