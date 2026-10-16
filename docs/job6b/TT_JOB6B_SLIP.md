@@ -1,5 +1,7 @@
 # TT_JOB6B_SLIP: Job 6b done, dashboard tests now protect main
 
+> **UPDATE 16 Oct 2026:** branch protection on `main` is now ON (verified against GitHub), and the `RR_` question is decided (keep renaming). Lines below that say "not switched on" or "still open" are history. Current facts: `docs/STATUS.md`.
+
 **To:** Lisa Carson / AF6 coordinator  **Date:** 15 Oct 2026
 **Status:** Delivered as a pull request. Not merged. **One click-job for Lisa open (branch protection).**
 
