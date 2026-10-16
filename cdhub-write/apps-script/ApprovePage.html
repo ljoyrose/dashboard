@@ -4,7 +4,7 @@
 <base target="_top">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Waiting to approve</title>
+<title>Approvals queue</title>
 <style>
   :root{--bg:#f6f7f3;--card:#fff;--ink:#18201b;--mut:#5d6860;--line:#dde2da;--good:#2e7d4f;--bad:#c2402b;--warn:#b26a00}
   @media (prefers-color-scheme:dark){:root{--bg:#141a16;--card:#1c241f;--ink:#e8ede6;--mut:#9aa69d;--line:#2a342d;--good:#5fc28a;--bad:#ec7a63;--warn:#e7a43c}}
@@ -16,6 +16,7 @@
   .k{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mut)}
   dl{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:8px 0}
   dt{color:var(--mut)} dd{margin:0;word-break:break-word}
+  select{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;margin:6px 0}
   input[type=text]{width:100%;box-sizing:border-box;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;margin:6px 0}
   button{font:inherit;font-weight:700;border:0;border-radius:999px;padding:10px 16px;margin-right:8px;cursor:pointer;min-height:44px}
   .ok{background:var(--good);color:#fff}.no{background:transparent;color:var(--bad);border:1px solid var(--bad)}
@@ -25,9 +26,18 @@
 </head>
 <body>
 <main>
-  <h1>Waiting to approve</h1>
+  <h1>Approvals queue</h1>
   <p class="sub">Nothing here is in the real tables yet. Approve adds one new row. Reject leaves the tables as they are. Nothing is ever overwritten or deleted.</p>
   <div id="list"><div class="empty">Loading...</div></div>
+
+  <h1 style="margin-top:28px">Edit an entry (owner only)</h1>
+  <p class="sub">Overwrites a wrong entry <b>in place</b>. <b>No record of the old value is kept</b> by this system. Staff cannot do this: they can only add rows or send a correction to the queue above.</p>
+  <div class="card">
+    <select id="ed-table" aria-label="Which list"><option value="area_reading">Room temperatures</option><option value="occupancy">Where the dogs are</option></select>
+    <button class="ok" id="ed-show" type="button">Show newest entries</button>
+    <div class="msg" id="ed-msg"></div>
+  </div>
+  <div id="ed-list"></div>
 </main>
 <script>
   function el(tag, cls, text){ var e=document.createElement(tag); if(cls) e.className=cls; if(text!==undefined) e.textContent=text; return e; }
@@ -39,7 +49,7 @@
   function show(res){
     var l=document.getElementById('list'); l.textContent='';
     if(!res.ok){ l.appendChild(el('div','empty',res.message)); return; }
-    if(!res.items.length){ l.appendChild(el('div','empty','Nothing waiting. All clear.')); return; }
+    if(!res.items.length){ l.appendChild(el('div','empty','Nothing in the queue. All clear.')); return; }
     res.items.forEach(function(it){
       var c=el('div','card');
       c.appendChild(el('div','k',(it.kind==='correction'?'Correction':'New entry')+' for '+it.target_file));
@@ -66,6 +76,47 @@
     });
   }
   load();
+
+  /* ---- owner edit ---- */
+  var EDIT_FIELDS={}; 
+  function edMsg(t){ document.getElementById('ed-msg').textContent=t; }
+  document.getElementById('ed-show').onclick=function(){
+    edMsg('Loading...');
+    google.script.run.withSuccessHandler(function(res){
+      var box=document.getElementById('ed-list'); box.textContent='';
+      if(!res.ok){ edMsg(res.message); return; }
+      edMsg(res.result.rows.length ? 'Newest first. Press Edit on the entry to change.' : 'No entries yet.');
+      var r0=res.result;
+      r0.rows.forEach(function(row){
+        var c=el('div','card'); var dl=el('dl');
+        Object.keys(row).forEach(function(k){ if(row[k]!==''&&k!=='tenant_id'){ dl.appendChild(el('dt',null,k)); dl.appendChild(el('dd',null,row[k])); } });
+        c.appendChild(dl);
+        var b=el('button','ok','Edit'); b.type='button';
+        b.onclick=function(){ b.hidden=true; openEditor(c,r0,row); };
+        c.appendChild(b); box.appendChild(c);
+      });
+    }).withFailureHandler(function(e){ edMsg('Failed: '+e.message); }).ui_editList(document.getElementById('ed-table').value);
+  };
+  function openEditor(card,r0,row){
+    var inputs={}; var form=el('div');
+    r0.editable.forEach(function(k){
+      form.appendChild(el('div','k',k));
+      var i=el('input'); i.type='text'; i.value=row[k]||''; inputs[k]=i; form.appendChild(i);
+    });
+    var sure=el('label'); var cb=el('input'); cb.type='checkbox'; sure.appendChild(cb);
+    sure.appendChild(document.createTextNode(' I understand this overwrites the entry and no record of the old value is kept.'));
+    form.appendChild(sure);
+    var msg=el('div','msg'); var go=el('button','ok','Overwrite this entry'); go.type='button';
+    go.onclick=function(){
+      if(!cb.checked){ msg.textContent='Tick the box first.'; return; }
+      var f={}; Object.keys(inputs).forEach(function(k){ f[k]=inputs[k].value; });
+      msg.textContent='Working...';
+      google.script.run.withSuccessHandler(function(r){
+        msg.textContent = r.ok ? 'Done. Changed: '+r.result.changed.join(', ')+'.' : (r.message+(r.fields?' '+Object.keys(r.fields).map(function(k){return k+': '+r.fields[k];}).join(' '):''));
+      }).withFailureHandler(function(e){ msg.textContent='Failed: '+e.message; }).ui_edit(r0.table,row.id,f);
+    };
+    form.appendChild(go); form.appendChild(msg); card.appendChild(form);
+  }
 </script>
 </body>
 </html>

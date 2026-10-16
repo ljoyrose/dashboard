@@ -37,14 +37,19 @@
         mitigation_note: { type: 'text', label: 'What was done about it' }
       }
     },
-    round_event: {
-      label: 'Round: dogs in rooms', file: 'BLD-round_event.csv',
+    occupancy: {
+      label: 'Where the dogs are', file: 'BLD-occupancy.csv',
       fields: {
-        round_date: { type: 'date', required: true, label: 'Date' },
+        subject_id: { type: 'ref', lookup: 'subject', required: true, label: 'Dog' },
+        area_id: { type: 'ref', lookup: 'area', required: true, label: 'Room' }
+      }
+    },
+    occupancy_check: {
+      label: 'Daily location check', file: 'BLD-occupancy_check.csv',
+      fields: {
+        subject_id: { type: 'ref', lookup: 'subject', required: true, label: 'Dog' },
         area_id: { type: 'ref', lookup: 'area', required: true, label: 'Room' },
-        subject_id: { type: 'ref', lookup: 'subject', label: 'Dog' },
-        event_type: { type: 'enum', values: ['placed', 'removed', 'access_set'], required: true, label: 'What happened' },
-        access_type: { type: 'enum', values: ['free', 'limited'], label: 'Flap' }
+        result: { type: 'enum', values: ['same', 'moved'], required: true, label: 'Same or moved' }
       }
     },
     staff: {
@@ -70,7 +75,7 @@
     var local = opts.localStorage !== undefined ? opts.localStorage : safeStorage('localStorage');
     var session = opts.sessionStorage !== undefined ? opts.sessionStorage : safeStorage('sessionStorage');
     var lookups = {};
-    var status = { checked: false, reachable: null, saveEnabled: false, tables: {}, proposed: [], version: '' };
+    var status = { checked: false, reachable: null, saveEnabled: false, readEnabled: false, tables: {}, proposed: [], version: '' };
     var scriptUrl = '';
 
     function get(store, k) { try { return store ? (store.getItem(k) || '') : ''; } catch (e) { return ''; } }
@@ -106,7 +111,7 @@
         .then(function (j) {
           var t = {};
           (j.tables || []).forEach(function (x) { t[x.key] = { on: !!x.on, mode: x.mode, file: x.file }; });
-          status = { checked: true, reachable: true, saveEnabled: !!j.saveEnabled, tables: t, proposed: j.proposed || [], version: j.version || '' };
+          status = { checked: true, reachable: true, saveEnabled: !!j.saveEnabled, readEnabled: !!j.readEnabled, tables: t, proposed: j.proposed || [], version: j.version || '' };
           return status;
         })
         .catch(function () {
@@ -135,7 +140,7 @@
       if (tableKey && (!tb || !tb.on)) {
         return { kind: 'off', canSave: false, text: 'Saving to "' + ((TABLES[tableKey] || {}).label || tableKey) + '" is not switched on yet.' };
       }
-      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving is on. What you send waits for Lisa to approve it before it joins the records.' };
+      if (tb && tb.mode !== 'direct') return { kind: 'pending', canSave: true, text: 'Saving is on. What you send goes into the approvals queue until Lisa approves it; then it joins the records.' };
       return { kind: 'on', canSave: true, text: 'Saving is on. What you send is added to the records straight away. It cannot be edited afterwards, only corrected.' };
     }
 
@@ -210,7 +215,7 @@
           res.ok = true;
           res.requestId = body.request_id;
           res.message = res.status === 'queued'
-            ? 'Sent. It is waiting for Lisa to approve it before it joins the records.'
+            ? 'Sent. It is in the approvals queue until Lisa approves it; then it joins the records.'
             : 'Saved.';
           return res;
         }
@@ -221,6 +226,46 @@
           message: 'Could not reach the save service, so it is not confirmed as saved. Press save again: it will not save twice.'
         };
       });
+    }
+
+    /**
+     * Read one list through the script, as far as Lisa has allowed THIS staff code (no Google sign-in).
+     * Resolves (never rejects): {ok:true, table, fields, rows, count, scope} or {ok:false, code, message}.
+     * Nothing is cached or kept: the rows live only in the page.
+     */
+    function read(tableKey) {
+      if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. Lisa switches it on when it is ready.' });
+      if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
+      if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
+      if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
+      return withTimeout(doFetch(scriptUrl, {
+        method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ v: 1, action: 'read', code: getCode(), table: tableKey })
+      })).then(function (r) { return r.json(); }).then(function (j) {
+        if (j && j.ok && j.result) { var res = j.result; res.ok = true; return res; }
+        return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };
+      }).catch(function () { return { ok: false, code: 'NETWORK', message: 'Could not reach the records right now. Try again in a moment.' }; });
+    }
+
+    /**
+     * Read the lists the daily location check needs. area, subject and occupancy are required;
+     * subject_status is optional (the check still works without it). Resolves {ok, tables} or {ok:false, message}.
+     */
+    function readMany(keys, optional) {
+      var out = {}, optionalSet = {};
+      (optional || ['subject_status']).forEach(function (k) { optionalSet[k] = true; });
+      var chain = Promise.resolve({ ok: true });
+      keys.forEach(function (k) {
+        chain = chain.then(function (prev) {
+          if (!prev.ok) return prev;
+          return read(k).then(function (r) {
+            if (r.ok) { out[k] = r.rows; return { ok: true }; }
+            if (optionalSet[k] && (r.code === 'NOT_ALLOWED' || r.code === 'FILE_MISSING')) { out[k] = []; return { ok: true }; }
+            return r;
+          });
+        });
+      });
+      return chain.then(function (r) { return r.ok ? { ok: true, tables: out } : r; });
     }
 
     /**
@@ -256,7 +301,8 @@
       setLookups: setLookups, lookupSize: lookupSize,
       checkStatus: checkStatus, status: function () { return status; },
       banner: banner, validate: validate, submit: submit, newRequestId: newRequestId,
-      loadConfigFromDrive: loadConfigFromDrive
+      loadConfigFromDrive: loadConfigFromDrive,
+      read: read, readMany: readMany, canRead: function () { return !!scriptUrl && status.reachable === true && !!status.readEnabled; }
     };
   }
 

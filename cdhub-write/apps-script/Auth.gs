@@ -81,3 +81,13 @@ function isAdminSession_() {
 function adminEmail_() {
   try { return Session.getActiveUser().getEmail() || ''; } catch (e) { return ''; }
 }
+
+/**
+ * Which BLD audience (BLD-audience.csv) does a staff code belong to? Used only by the read action.
+ * Anything not listed here gets NO audience, so reads are refused (default deny).
+ */
+function audienceFor_(role) {
+  if (role === 'OWNER') return 'aud-admin';
+  if (role === 'STAFF') return 'aud-staff';
+  return '';
+}

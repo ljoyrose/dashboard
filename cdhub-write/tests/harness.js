@@ -13,7 +13,7 @@ const fx = require('./fixtures');
 // Works in the repo layout (cdhub-write/apps-script) and in the zip layout (code/apps-script).
 const CODE = fs.existsSync(path.join(__dirname, '..', 'code')) ? path.join(__dirname, '..', 'code') : path.join(__dirname, '..');
 const GS_DIR = path.join(CODE, 'apps-script');
-const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Sink', 'Web', 'Admin'];
+const ORDER = ['Config', 'Csv', 'Specs', 'Validate', 'Auth', 'Store', 'Sink', 'Read', 'Web', 'Admin'];
 
 // 2026-10-15 22:30:00 UTC = 23:30 BST (London is +01:00 until 25 Oct 2026)
 const DEFAULT_NOW = Date.UTC(2026, 9, 15, 22, 30, 0);
@@ -99,7 +99,7 @@ function makeEnv(opts = {}) {
       deleteTrigger: (t) => { env.triggers.splice(env.triggers.indexOf(t), 1); },
       newTrigger: (fn) => ({ timeBased() { return this; }, everyDays() { return this; }, atHour() { return this; }, create() { const t = { getHandlerFunction: () => fn }; env.triggers.push(t); return t; } })
     },
-    LockService: { getScriptLock: () => ({ waitLock() {}, releaseLock() {} }) },
+    LockService: { getScriptLock: () => ({ waitLock() { if (env.lockBusy) throw new Error('lock busy'); }, releaseLock() {} }) },
     Session: { getActiveUser: () => ({ getEmail: () => env.email }) },
     DriveApp: { getFolderById: (id) => { if (id !== 'FOLDER-TEST') throw new Error('no folder'); return folder; } },
     ContentService: {

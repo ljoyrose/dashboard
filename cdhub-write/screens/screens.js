@@ -1,5 +1,6 @@
 /*!
  * BLDScreens - the two staff screens for the write path:
+ *   locationConfirm(host, opts)   daily "is every dog where we think?" check (The Board's look)
  *   temperatureEntry(host, opts)  room min/max temperatures
  *   staffInput(host, opts)        staff roster (owner only)
  *
@@ -192,7 +193,7 @@
         save.submit('area_reading', { area_id: area.id, min_c: mn.value, max_c: mx.value }, { action: 'correct', correctsId: saved.id, reason: why.value, requestId: rid })
           .then(function (r) {
             send.disabled = false;
-            if (r.ok) { msg.className = 'bs-ok'; msg.textContent = 'Correction sent. It waits for Lisa to approve it; the first entry stays on record.'; send.hidden = true; }
+            if (r.ok) { msg.className = 'bs-ok'; msg.textContent = 'Correction sent. It goes into the approvals queue for Lisa to approve; the first entry stays on record.'; send.hidden = true; }
             else { msg.className = 'bs-err'; msg.textContent = r.message + (r.fields ? ' ' + Object.keys(r.fields).map(function (k) { return r.fields[k]; }).join(' ') : ''); if (r.code !== 'NETWORK') rid = null; }
           });
       });
@@ -214,7 +215,7 @@
     clear(host);
     host.classList.add('bs');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Staff roster' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Add a member of staff to the roster. Owner only. Every entry waits for approval and is never edited afterwards: a change is a new entry.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Add a member of staff to the roster. Owner only. Every entry goes into the approvals queue and is never edited afterwards: a change is a new entry.' }));
     var form = el(doc, 'div', { class: 'bs-card' });
     var header = mountHeader(doc, host, save, 'staff', refresh);
     host.appendChild(form);
@@ -258,5 +259,126 @@
     return { refresh: refresh };
   }
 
-  return { temperatureEntry: temperatureEntry, staffInput: staffInput };
+  /* ================================================================== daily location check */
+  /**
+   * One card per dog on site, with where it was last recorded. Two big taps: Same, or Moved (pick the new room).
+   * A move APPENDS a new occupancy row (it never edits one). "Same" is logged in the proposed occupancy_check
+   * list; while that list is only a proposal the tap is kept on this screen only, and the screen says so.
+   * @param {Object} o
+   *   save     BLDSave instance (required)
+   *   dogs     [{id, label, areaId, areaLabel, known}]   from BLDOccupancy.dailyList
+   *   areas    [{id, label, group}]                      the rooms to pick from
+   *   skipped  number of dogs left out because nothing says they are on site
+   *   loader   optional function() -> Promise<{ok, message?}>   "Load today's dogs" with the staff code (no Google sign-in)
+   *   document (tests only)
+   */
+  function locationConfirm(host, o) {
+    var doc = o.document || host.ownerDocument || document;
+    var save = o.save;
+    clear(host);
+    host.classList.add('bs'); host.classList.add('bs-board');
+    host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Where is everyone?' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Tap Same if the dog is where it says. If it has moved, tap Moved and pick the new room. A move is added as a new entry; nothing is overwritten.' }));
+    var header = mountHeader(doc, host, save, 'occupancy', refreshButtons);
+
+    var dogs = o.dogs || [], areas = o.areas || [];
+    var buttons = [], done = 0;
+    var progText = el(doc, 'div', { class: 'bs-prog-t', role: 'status', 'aria-live': 'polite' });
+    var progBar = el(doc, 'i');
+    host.appendChild(el(doc, 'div', { class: 'bs-prog' }, [progBar]));
+    host.appendChild(progText);
+    var loadMsg = el(doc, 'div', { class: 'bs-sub' });
+    if (o.loader) {
+      var loadBtn = el(doc, 'button', { class: 'bs-btn bs-big', type: 'button', text: dogs.length ? 'Reload the dogs' : 'Load the dogs' });
+      loadBtn.addEventListener('click', function () {
+        loadBtn.disabled = true; loadMsg.textContent = 'Loading...';
+        o.loader().then(function (r) { loadBtn.disabled = false; if (r && r.ok === false) loadMsg.textContent = r.message || 'Could not load the dogs.'; });
+      });
+      host.appendChild(loadBtn); host.appendChild(loadMsg);
+    }
+    var cards = el(doc, 'div', { class: 'bs-cards' });
+    host.appendChild(cards);
+
+    function paintProgress() {
+      progText.textContent = dogs.length ? done + ' of ' + dogs.length + ' confirmed' : '';
+      progBar.style.width = dogs.length ? Math.round(done / dogs.length * 100) + '%' : '0%';
+    }
+    function refreshButtons() {
+      var b = header.paint();
+      buttons.forEach(function (x) { x.btn.disabled = x.done || !b.canSave || (x.needsRoom && !x.btn.hasAttribute('data-moved')); x.btn.setAttribute('aria-disabled', String(x.btn.disabled)); });
+    }
+    if (!dogs.length) {
+      cards.appendChild(el(doc, 'div', { class: 'bs-empty', text: 'No dogs are loaded, so there is nothing to confirm. ' + (o.loader ? 'Enter your staff code and press the Load button.' : 'The list comes from BLD-occupancy.csv and BLD-subject.csv: sign in to Drive and reload.') }));
+      paintProgress();
+      return { refresh: refreshButtons };
+    }
+    if (o.skipped) host.insertBefore(el(doc, 'p', { class: 'bs-sub', text: o.skipped + ' dog(s) are not listed because nothing records them as on site.' }), cards);
+
+    dogs.forEach(function (d) {
+      var state = { done: false };
+      var result = el(doc, 'div', { class: 'bs-result', role: 'status', 'aria-live': 'polite' });
+      var was = el(doc, 'div', { class: 'bs-dog-was', text: d.known ? 'Last recorded: ' + d.areaLabel : 'Room not recorded yet. Pick where it is now.' });
+      var yes = el(doc, 'button', { class: 'bs-yes', type: 'button', text: 'Same \u2713' });
+      var no = el(doc, 'button', { class: 'bs-no', type: 'button', text: 'Moved \u2715' });
+      if (!d.known) yes.hidden = true;
+      var sel = el(doc, 'select', { class: 'bs-in', 'aria-label': d.label + ' new room' }, [el(doc, 'option', { value: '', text: 'Pick the new room' })]
+        .concat(areas.filter(function (a) { return a.id !== d.areaId; }).map(function (a) { return el(doc, 'option', { value: a.id, text: a.label + (a.group ? '  \u00b7  ' + a.group : '') }); })));
+      var err = el(doc, 'span', { class: 'bs-err' });
+      var go = el(doc, 'button', { class: 'bs-btn bs-big', type: 'button', text: 'Save move' });
+      var movePane = el(doc, 'div', { class: 'bs-move' }, [sel, err, go]);
+      movePane.hidden = !!d.known;               // an unknown room goes straight to "pick a room"
+      var card = el(doc, 'section', { class: 'bs-card bs-dog', 'data-dog': d.id }, [
+        el(doc, 'h3', { class: 'bs-dog-name', text: d.label }), was,
+        el(doc, 'div', { class: 'bs-yn' }, [yes, no]), movePane, result
+      ]);
+      cards.appendChild(card);
+
+      function finish(msg, cls) {
+        state.done = true; done++; paintProgress();
+        card.className += ' bs-done';
+        result.className = 'bs-result ' + (cls || 'bs-ok'); result.textContent = msg;
+        movePane.hidden = true; yes.disabled = true; no.disabled = true;
+        buttons.forEach(function (x) { if (x.card === card) x.done = true; });
+        refreshButtons();
+      }
+      buttons.push({ btn: yes, card: card, done: false }, { btn: no, card: card, done: false }, { btn: go, card: card, done: false, needsRoom: true });
+
+      no.addEventListener('click', function () { movePane.hidden = !movePane.hidden; if (!movePane.hidden) go.setAttribute('data-moved', '1'); refreshButtons(); });
+      sel.addEventListener('input', function () { if (sel.value) go.setAttribute('data-moved', '1'); else go.removeAttribute('data-moved'); refreshButtons(); });
+
+      var rid = null;
+      yes.addEventListener('click', function () {
+        result.textContent = ''; yes.disabled = true;
+        rid = rid || save.newRequestId();
+        save.submit('occupancy_check', { subject_id: d.id, area_id: d.areaId, result: 'same' }, { requestId: rid }).then(function (r) {
+          if (r.ok) finish('Confirmed in ' + d.areaLabel + '.');
+          else if (r.code === 'SAVE_OFF') finish('Ticked on this screen only. The daily check log is still a proposal, so this tap is not saved yet.', 'bs-warn');
+          else { yes.disabled = false; result.className = 'bs-result bs-bad'; result.textContent = r.message; if (r.code !== 'NETWORK') rid = null; }
+        });
+      });
+      var mrid = null;
+      go.addEventListener('click', function () {
+        err.textContent = ''; result.textContent = '';
+        if (!sel.value) { err.textContent = 'Pick the new room first.'; return; }
+        go.disabled = true;
+        mrid = mrid || save.newRequestId();
+        save.submit('occupancy', { subject_id: d.id, area_id: sel.value }, { requestId: mrid }).then(function (r) {
+          if (r.ok) {
+            var room = (areas.filter(function (a) { return a.id === sel.value; })[0] || {}).label || sel.value;
+            finish((r.status === 'queued' ? 'Move to ' + room + ' sent: ' + r.message : 'Moved to ' + room + '.'));
+            save.submit('occupancy_check', { subject_id: d.id, area_id: sel.value, result: 'moved' }, {}).then(function () { /* best effort: the log is only a proposal for now */ });
+          } else {
+            go.disabled = false; result.className = 'bs-result bs-bad'; result.textContent = r.message;
+            if (r.fields) Object.keys(r.fields).forEach(function (k) { err.textContent += r.fields[k] + ' '; });
+            if (r.code !== 'NETWORK') mrid = null;
+          }
+        });
+      });
+    });
+    paintProgress();
+    refreshButtons();
+    return { refresh: refreshButtons };
+  }
+
+  return { temperatureEntry: temperatureEntry, staffInput: staffInput, locationConfirm: locationConfirm };
 }));
