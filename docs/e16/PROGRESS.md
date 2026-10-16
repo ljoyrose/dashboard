@@ -10,3 +10,4 @@ Job: E16-GATE · 16 Oct 2026 · Claude Code · branch claude/e16-gate-mjs
 - [x] PR #17 opened (do not merge - Lisa)
 - [x] Conflicts report + slips _01 _02 in Drive; waiting on Lisa for Q1-Q5
 Not read: FACTORY-MACHINERY-INVENTORY.md lines 425/1102 (263 KB file; gate.mjs description) - UNVERIFIED.
+- [x] 16 Oct 2026 12:23 UK: Lisa ruled E16 Q1-Q5 (DE62). Leak is now one gate in three phases (DESIGN at 5->6, MONITOR + POST at 7->8); Base is the 13th gate; Slot blocks at 5->6; verdict words per gate; Return is not a gate. gate.mjs reads GATE:PHASE, skips required:false, FAILs invalid verdicts. C1-C10 RESOLVED. Names fold spaces and underscores ("Leak design" is Leak_design). Conflict impact lines match the rulings (RECYCLE at Merit FAILs). 70 tests (was 55). PR #17 still unmerged.

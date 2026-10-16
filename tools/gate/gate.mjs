@@ -9,6 +9,8 @@
 //
 // Exit code: 0 only when every required gate is PASS. Anything else (FAIL, WAITS-LISA, bad input) exits 1.
 // A gate with an OPEN conflict reports WAITS-LISA and is never auto-passed. Only data (a conflict's status) changes that.
+// A transition may require a whole gate ("LOCK") or one phase of a phased gate ("LEAK:DESIGN"). A gate with "required": false
+// is not a gate yet and is never evaluated. A verdict outside a gate's set, or in its invalid_verdicts, is FAIL.
 // The card is a JSON file with invented or real card data. Nothing here reads or writes any register.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -17,7 +19,8 @@ import { dirname, join } from 'node:path';
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_DATA = join(HERE, 'gates.unified.json');
 
-const norm = (s) => String(s).toLowerCase().replace(/→/g, '->').replace(/\s+/g, ' ').trim();
+// Underscores and spaces fold together, so "Leak design" and "Leak_design" are one name.
+const norm = (s) => String(s).toLowerCase().replace(/→/g, '->').replace(/[_\s]+/g, ' ').trim();
 
 export function loadData(path = DEFAULT_DATA) {
   return JSON.parse(readFileSync(path, 'utf8'));
@@ -36,6 +39,25 @@ export function normTransition(t) {
   return norm(t).replace(/\s*->\s*/g, '->');
 }
 
+// Card keys of phased gates (e.g. Leak_design) -> "GATE:PHASE" requirement id.
+function phaseKeyMap(data) {
+  const map = new Map();
+  for (const g of data.gates) for (const p of g.phases || []) map.set(norm(p.card_key), `${g.id}:${p.id}`);
+  return map;
+}
+
+// Resolve one entry of a transition's requires list into an evaluable gate, or null when it is not required.
+function resolveRequirement(req, data) {
+  const [gid, phaseId] = req.split(':');
+  const gate = data.gates.find((g) => g.id === gid);
+  if (!gate) return null;
+  if (gate.required === false) return null;
+  if (!phaseId) return gate.phases ? { ...gate, id: req, verdict_set: [], pass_verdicts: [], phased_error: true } : gate;
+  const phase = (gate.phases || []).find((p) => p.id === phaseId);
+  if (!phase) return { ...gate, id: req, verdict_set: [], pass_verdicts: [], phased_error: true };
+  return { ...gate, id: req, verdict_set: phase.verdict_set, pass_verdicts: phase.pass_verdicts, phases: undefined };
+}
+
 function openConflictsFor(gate, data) {
   const open = new Set(data.conflicts.filter((c) => c.status === 'OPEN').map((c) => c.id));
   return (gate.conflict_ids || []).filter((id) => open.has(id));
@@ -49,11 +71,15 @@ function isOpen(id, data) {
 // Evaluate one gate for one card. Returns { gate, status: PASS|FAIL|WAITS-LISA, reasons: [] }.
 export function evalGate(gate, entry, data) {
   const out = (status, ...reasons) => ({ gate: gate.id, status, reasons });
+  if (gate.phased_error) return out('FAIL', 'requirement names a phased gate without a valid phase');
   const open = openConflictsFor(gate, data);
   if (open.length) return out('WAITS-LISA', `open conflict ${open.join(', ')} - Lisa must rule before this gate can pass`);
   if (!entry || typeof entry !== 'object') return out('FAIL', 'no verdict recorded on the card for this gate');
   const verdict = typeof entry.verdict === 'string' ? entry.verdict.trim() : '';
   if (!verdict) return out('FAIL', 'verdict missing');
+  if ((gate.invalid_verdicts || []).some((v) => norm(v) === norm(verdict.split(':')[0]))) {
+    return out('FAIL', `verdict "${verdict}" is not allowed at ${gate.id}`);
+  }
   const waits = gate.waits_verdicts && Object.keys(gate.waits_verdicts).find((k) => norm(k) === norm(verdict));
   if (waits && gate.waits_verdicts[waits].some((id) => isOpen(id, data))) {
     return out('WAITS-LISA', `verdict "${verdict}" is outside the agreed set (conflict ${gate.waits_verdicts[waits].join(', ')})`);
@@ -91,12 +117,16 @@ export function evalCard(card, toRaw, data) {
     throw err;
   }
   const aliases = aliasMap(data);
+  const phaseKeys = phaseKeyMap(data);
   const entries = new Map();
   for (const [name, entry] of Object.entries(card.gates || {})) {
-    const id = aliases.get(norm(name));
+    const id = phaseKeys.get(norm(name)) || aliases.get(norm(name));
     if (id) entries.set(id, entry); // later alias for the same gate overwrites; last one wins
   }
-  const rows = t.requires.map((gid) => evalGate(data.gates.find((g) => g.id === gid), entries.get(gid), data));
+  const rows = t.requires
+    .map((req) => ({ req, gate: resolveRequirement(req, data) }))
+    .filter((x) => x.gate)
+    .map((x) => evalGate(x.gate, entries.get(x.req), data));
   const universal = data.universal_checks.map((u) => {
     const v = card[u.card_field];
     if (!Number.isInteger(v) || v < 0) return { gate: u.id, status: 'FAIL', reasons: [`card field ${u.card_field} missing or not a whole number`] };
@@ -126,6 +156,14 @@ export function formatList(data) {
   return lines.join('\n');
 }
 
+// A copy of the data with one synthetic OPEN conflict (CX) holding BASE. Used to keep the WAITS-LISA path tested.
+export function withOpenConflict(data) {
+  const d = structuredClone(data);
+  d.conflicts.push({ id: 'CX', status: 'OPEN', title: 'synthetic open conflict (test only)', blocks_gates: ['BASE'] });
+  d.gates.find((g) => g.id === 'BASE').conflict_ids = ['CX'];
+  return d;
+}
+
 // Control cases (rule: every check runs its own control). Returns [{name, ok, detail}].
 export function selftest(data) {
   const good = {
@@ -138,7 +176,9 @@ export function selftest(data) {
     ['dirty card (no verdict) FAILS', () => evalCard({ ...good, gates: {} }, '3->4', data).result === 'FAIL'],
     ['wrong stamper FAILS', () => evalCard({ ...good, gates: { Lock: { verdict: 'GO', stamped_by: 'claude' } } }, '3->4', data).result === 'FAIL'],
     ['outstanding CK45 FAILS', () => evalCard({ ...good, ck45_pending: 2 }, '3->4', data).result === 'FAIL'],
-    ['conflicted gate (BASE) WAITS, never passes', () => evalCard({ ...good, gates: { 'Base 2->3': { verdict: 'GO', stamped_by: 'lisa' } } }, '2->3', data).result === 'WAITS-LISA'],
+    ['open conflict WAITS, never passes (synthetic conflict on BASE)', () => evalCard({ ...good, gates: { 'Base 2->3': { verdict: 'GO', stamped_by: 'lisa' } } }, '2->3', withOpenConflict(data)).result === 'WAITS-LISA'],
+    ['leak POST FAIL stops 7->8', () => evalCard({ ...good, gates: { Leak_monitor: { verdict: 'CLEAR' }, Leak_post: { verdict: 'FAIL' }, Live: { verdict: 'PASS' } } }, '7->8', data).result === 'FAIL'],
+    ['all three leak phases + Live let 7->8 pass', () => evalCard({ ...good, gates: { Leak_monitor: { verdict: 'CLEAR' }, Leak_post: { verdict: 'PASS' }, Live: { verdict: 'PASS' } } }, '7->8', data).result === 'PASS'],
     ['unknown transition is rejected', () => { try { evalCard(good, '9->10', data); return false; } catch (e) { return e.code === 'BAD_TRANSITION'; } }],
   ];
   return cases.map(([name, fn]) => {
