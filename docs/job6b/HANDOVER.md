@@ -33,7 +33,7 @@ CI=true npx playwright test --project=mocked --project=phone && node tests/suppo
 | `tests/support/fake-drive.js` | Added: PATCH rename (`name`), `unhandled` list. `test.js` writes it to `test-results/unhandled-drive.jsonl`. |
 | `tests/contract/` | `expected-headers.json` (names only), `headers.js` (shared), `make-expected.js` (rebuild from samples; review the diff), `check-real-headers.js` (local). |
 | `tests/mocked/header-contract.spec.js` | 12 checks. |
-| `tests/mocked/personal-and-drive-check.spec.js` | PC-Personal rename/bin and Drive-check, in memory. One `test.fixme` (RR_ question). |
+| `tests/mocked/personal-and-drive-check.spec.js` | PC-Personal rename/bin and Drive-check, in memory. Includes a test that pins Lisa's decision that personal `RR_` matches ARE renamed and binned (do not "fix" this). |
 | `tests/mocked/bin-safety.spec.js` | RR_-inside-ZZ_-folder and ZZ_-inside-RR_-folder rules. |
 | `tests/mocked/look-and-access.spec.js` | Dark mode, axe ratchet (`KNOWN_AXE`), font floor (`MIN_FONT_PX`). |
 | `tests/phone/phone.spec.js`, project `phone` | 390 × 844, 3 checks. |

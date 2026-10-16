@@ -42,12 +42,12 @@ If any of these breaks, the tick turns red and says which page.
 | Reading CSV files | both readers | 17 |
 | Safety checks | the whole repo | 4 |
 | Bin safety (`RR_` archives never taken) | `#/bin` | 2 |
-| PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 8 (+1 waiting on your answer) |
+| PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 9 |
 | Header contract (column names) | list of expected columns | 12 |
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 
-That is 182 checks that must pass, plus 1 that is parked until you answer a question (see "Needs your answer").
+That is 183 checks that must pass.
 
 **Main dashboard**
 - Opens and shows only a sign-in button until you sign in.
@@ -191,9 +191,9 @@ The pretend Drive cannot tell us if a column was renamed in your real files. Thi
 
 GitHub does not run this one, on purpose: it would need a Google key stored in GitHub, and none is stored.
 
-## Needs your answer
+## Decisions you have made
 
-**PC-Personal renames `RR_` archive files too.** If a file in your personal drive starts `RR_` and is an exact copy of a shared-drive file, PC-Personal renames it to `ZZ_DELETE_DRIVE_RR_…` and step 3 then moves it to the bin. The Bin page promises "RR_ archive items are never included", so this may not be what you want. The test for the safer behaviour is written and parked (shown as "1 skipped"). If you say "leave RR_ alone", it is a one-line change to the page and the test is switched on. Nothing was changed in the page.
+**PC-Personal may rename and bin `RR_` files (decided 15 Oct 2026).** If a file in your personal drive starts `RR_` and is an exact copy of a shared-drive file, PC-Personal renames it to `ZZ_DELETE_DRIVE_RR_…` and step 3 later moves it to the bin. You decided to **keep this**: the shared drive is the right home and only one copy is needed. This is deliberate, not a bug, and the page is unchanged. (The Bin page is different: it never touches `RR_` items inside shared drives.) A test now pins this behaviour, so if anyone later changes PC-Personal to skip `RR_` files, the tick goes red and it has to be discussed first.
 
 ## Known gaps in looks and reading (not new, now written down)
 

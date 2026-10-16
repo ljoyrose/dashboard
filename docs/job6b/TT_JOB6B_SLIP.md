@@ -30,10 +30,10 @@ Result: nothing goes straight into `main`; Merge only lights up when the tests a
 8. Dark mode (3). 9. axe accessibility + smallest-text floor as a ratchet (15). 10. Pretend-Drive drift counter (0 today). 11. Dependabot weekly, grouped, no auto-merge. 12. Weekly teeth check (8 breaks).
 + Bin safety tests (2): the rules protecting `RR_` archives had no test.
 
-**Suite:** 182 pass + 1 parked (was 138).
+**Suite:** 183 pass (was 138).
 
-## Needs Lisa's answer
-PC-Personal renames `RR_` archive files too (then step 3 bins them); the Bin page says RR_ is never touched. Safer-behaviour test is parked (`test.fixme`). Reply "leave RR_ alone" and it is a one-line page change.
+## Decided by Lisa (15 Oct 2026)
+PC-Personal keeps renaming (then binning) personal `RR_` files that match a shared-drive copy. Shared is the right home; one copy is enough. Not a bug. A test pins it.
 
 ## Production code
 No page changed. `.gitignore` gained one allow-line.
