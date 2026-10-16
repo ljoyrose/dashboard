@@ -30,6 +30,12 @@ module.exports = defineConfig({
       use: { ...devices['Desktop Chrome'], baseURL: LOCAL },
     },
     {
+      // Small phone-sized check (about 390 x 844, like a Pixel). Same pretend Google and Drive. Not a copy of the desktop suite.
+      name: 'phone',
+      testDir: './tests/phone',
+      use: { ...devices['Pixel 5'], viewport: { width: 390, height: 844 }, baseURL: LOCAL },
+    },
+    {
       // Optional. Only opens the three real web addresses, signed out. Skipped unless LIVE_SMOKE=1.
       name: 'live-smoke',
       testDir: './tests/live',

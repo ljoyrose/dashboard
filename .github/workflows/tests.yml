@@ -2,6 +2,8 @@ name: Dashboard tests
 
 # Runs the browser tests on every push, once a week, and on demand (Actions tab > Dashboard tests > Run workflow).
 # Google sign-in and Google Drive are pretend in these tests. No secrets are used or needed.
+# The job called "Browser tests (pretend Google and Drive)" is the one branch protection requires on main.
+# Do not rename it without also changing the branch protection rule (see TESTS.md).
 on:
   push:
   schedule:
@@ -23,6 +25,9 @@ jobs:
     name: Browser tests (pretend Google and Drive)
     runs-on: ubuntu-24.04
     timeout-minutes: 15
+    permissions:
+      contents: read
+      issues: write # only used to open/close the one "tests are red" issue on scheduled runs
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
@@ -49,9 +54,9 @@ jobs:
         if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
-      - name: Run tests
+      - name: Run tests (desktop suite, then the small phone-sized set)
         id: run
-        run: npx playwright test --project=mocked
+        run: npx playwright test --project=mocked --project=phone
 
       - name: Write the short summary
         if: always()
@@ -68,6 +73,21 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+      # Failure surface. Scheduled (Monday) or hand-started runs on main only. No Slack, no webhooks, no new secrets:
+      # the run's own built-in token opens ONE GitHub Issue (GitHub emails the owner) and closes it when green again.
+      - name: Red on a scheduled run? Open or update the one issue
+        continue-on-error: true # bookkeeping must never change the result of the tests
+        if: ${{ failure() && (github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main' }}
+        run: node tests/support/report-issue.js --state red --label tests-red --title-prefix "Dashboard tests are red" --results test-results/results.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Green again? Close the issue
+        continue-on-error: true
+        if: ${{ success() && github.ref == 'refs/heads/main' }}
+        run: node tests/support/report-issue.js --state green --label tests-red
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   # Optional extra: opens the three real web addresses (signed out) to check the live site is up.
   # Weekly and on demand only. Never blocks anything: a red tick here is a hint, not a failure of the code.
   live-smoke:
@@ -76,6 +96,9 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     continue-on-error: true
+    permissions:
+      contents: read
+      issues: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
@@ -94,9 +117,23 @@ jobs:
       - if: steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
       - name: Check the live pages
-        run: npx playwright test --project=live-smoke
+        id: live
+        continue-on-error: true
+        run: npx playwright test --project=live-smoke --retries=2
         env:
           LIVE_SMOKE: '1'
       - name: Write the short summary
         if: always()
         run: node tests/support/summary.js test-results/results.json
+      - name: Live site red? Open or update the one live-site issue
+        continue-on-error: true
+        if: ${{ steps.live.outcome == 'failure' && github.ref == 'refs/heads/main' }}
+        run: node tests/support/report-issue.js --state red --label live-site-red --title-prefix "Live site check is red" --results test-results/results.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Live site fine? Close the issue
+        continue-on-error: true
+        if: ${{ steps.live.outcome == 'success' && github.ref == 'refs/heads/main' }}
+        run: node tests/support/report-issue.js --state green --label live-site-red
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

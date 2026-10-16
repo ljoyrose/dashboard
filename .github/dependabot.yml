@@ -1,0 +1,22 @@
+# Weekly nudges to update the pinned tools. Dependabot only OPENS pull requests. Nothing is merged automatically:
+# a person reads each one and the tests must be green before it can be merged.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      test-tools:
+        patterns: ['*']
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      github-actions:
+        patterns: ['*']

@@ -1,0 +1,176 @@
+{
+  "_about": "Column NAMES only (no values). What each page expects to find in the header line of each Drive file. Rebuild with tests/contract/make-expected.js, then review the diff.",
+  "money": {
+    "MON-REGISTER.csv": {
+      "key": "id",
+      "columns": ["id", "subject", "kind", "owner", "state", "priority", "trigger_or_event", "entity"],
+      "read": ["id", "subject", "kind", "owner", "state", "priority", "trigger_or_event", "entity"]
+    },
+    "MON-SUBJECTS.csv": {
+      "key": "id",
+      "columns": ["id", "kind", "entity", "name", "drive_id", "status"],
+      "read": ["id", "kind", "entity", "name", "drive_id", "status"]
+    },
+    "MON-INTAKE.csv": {
+      "key": "id",
+      "columns": ["id", "entity", "account", "cadence", "next_due", "last_received", "status"],
+      "read": ["id", "entity", "account", "cadence", "next_due", "last_received", "status"]
+    },
+    "MON-DATES.csv": {
+      "key": "id",
+      "columns": ["id", "filing", "entity", "due_on", "status", "owner"],
+      "read": ["id", "filing", "entity", "due_on", "status", "owner"]
+    },
+    "MON-REPORTS.csv": {
+      "key": "week_of",
+      "columns": ["week_of", "entity", "cash_bank", "cash_as_of", "month", "net_month", "income_vs_avg_pct", "expense_vs_avg_pct", "variance_flag", "runs_dry_on"],
+      "read": ["week_of", "entity", "cash_bank", "cash_as_of", "month", "net_month", "income_vs_avg_pct", "expense_vs_avg_pct", "variance_flag", "runs_dry_on"]
+    },
+    "CHECK-LOG.csv": {
+      "key": "check_id",
+      "columns": ["check_id", "run_on", "job", "result"],
+      "read": ["check_id", "run_on", "job", "result"]
+    },
+    "QUESTIONS-FOR-ACCOUNTANT.csv": {
+      "key": "id",
+      "columns": ["id", "entity", "question", "about_document", "asked_on", "status", "answer"],
+      "read": ["id", "entity", "question", "about_document", "asked_on", "status", "answer"]
+    },
+    "TRIGGERS.csv": {
+      "key": "trigger_id",
+      "columns": ["trigger_id", "hub", "name", "cadence_uk", "mechanism_id", "status"],
+      "read": ["trigger_id", "hub", "name", "cadence_uk", "mechanism_id", "status"]
+    },
+    "BALANCES.csv": {
+      "key": "account",
+      "columns": ["account", "balance", "as_of", "status"],
+      "read": ["account", "balance", "as_of", "status"]
+    },
+    "CASHFLOW.csv": {
+      "key": "expected_on",
+      "columns": ["expected_on", "amount", "label"],
+      "read": ["expected_on", "amount", "label"]
+    },
+    "FORECAST.csv": {
+      "key": "projected_balance",
+      "columns": ["date", "projected_balance"],
+      "read": ["date", "projected_balance"]
+    },
+    "MONTHLY.csv": {
+      "key": "month",
+      "columns": ["month", "category", "money_in", "money_out", "net"],
+      "read": ["month", "category", "money_in", "money_out", "net"]
+    },
+    "OUTGOINGS-NEXT.csv": {
+      "key": "expected_on",
+      "columns": ["expected_on", "amount", "counterparty"],
+      "read": ["expected_on", "amount", "counterparty"]
+    },
+    "RECURRING.csv": {
+      "key": "counterparty",
+      "columns": ["counterparty", "amount", "cadence"],
+      "read": ["counterparty", "amount", "cadence"]
+    },
+    "LIABILITIES.csv": {
+      "key": "creditor",
+      "columns": ["creditor", "amount", "due", "status"],
+      "read": ["creditor", "amount", "due", "status"]
+    },
+    "XERO-SNAPSHOT*.csv": {
+      "key": "metric",
+      "columns": ["metric"],
+      "note": "only the key column is pinned (no sample file)",
+      "read": ["metric"]
+    },
+    "XERO-RECEIVABLES*.csv": {
+      "key": "invoice_number",
+      "columns": ["invoice_number"],
+      "note": "only the key column is pinned (no sample file)",
+      "read": ["invoice_number"]
+    },
+    "XERO-PNL*.csv": {
+      "key": "fy",
+      "columns": ["fy"],
+      "note": "only the key column is pinned (no sample file)",
+      "read": ["fy"]
+    },
+    "XERO-INCOME-LINES*.csv": {
+      "key": "account",
+      "columns": ["account"],
+      "note": "only the key column is pinned (no sample file)",
+      "read": ["account"]
+    },
+    "XERO-UNRECONCILED*.csv": {
+      "key": "reference",
+      "columns": ["reference"],
+      "note": "only the key column is pinned (no sample file)",
+      "read": ["reference"]
+    },
+    "XERO-BANK-ACCOUNTS*.csv": {
+      "key": "xero_account_id",
+      "columns": ["xero_account_id"],
+      "note": "only the key column is pinned (no sample file)",
+      "read": ["xero_account_id"]
+    },
+    "XERO-BILLS-UNPAID-BY-SUPPLIER*.csv": {
+      "key": "supplier",
+      "columns": ["supplier"],
+      "note": "only the key column is pinned (no sample file)",
+      "read": ["supplier"]
+    }
+  },
+  "cdhub": {
+    "BLD-WORK.csv": {
+      "columns": ["id", "area", "item", "status", "owner", "blocked_on", "evidence", "note"],
+      "read": ["id", "area", "item", "status", "owner", "blocked_on", "evidence", "note"]
+    },
+    "BLD-_MANIFEST.csv": {
+      "columns": ["file", "rows", "note"],
+      "read": ["rows", "note"]
+    },
+    "BLD-area.csv": {
+      "columns": ["id", "code", "grouping", "group_sort", "area_value", "m2_confirmed", "m2_note"],
+      "read": ["id", "code", "grouping", "group_sort", "area_value", "m2_confirmed", "m2_note"]
+    },
+    "BLD-coat_colour.csv": {
+      "columns": ["id", "name", "base_family", "swatch_hex", "nose_pigment_applies"],
+      "read": ["id", "name", "base_family", "swatch_hex", "nose_pigment_applies"]
+    },
+    "BLD-coat_pattern.csv": {
+      "columns": ["id", "name"],
+      "read": ["id", "name"]
+    },
+    "BLD-litter.csv": {
+      "columns": ["id", "dam_subject_id", "sire_subject_id", "born_on", "notes"],
+      "read": ["id", "dam_subject_id", "sire_subject_id", "notes"]
+    },
+    "BLD-mating.csv": {
+      "columns": ["id", "dam_subject_id", "sire_subject_id", "mated_on", "mating_no", "method", "is_first_of_season", "due_from_this_mating", "litter_id", "produced_litter", "notes"],
+      "read": ["id", "dam_subject_id", "sire_subject_id", "mated_on", "mating_no", "method", "is_first_of_season", "due_from_this_mating", "litter_id", "produced_litter", "notes"]
+    },
+    "BLD-nose_pigment.csv": {
+      "columns": ["id", "name", "code", "swatch_hex"],
+      "read": ["id", "name", "code", "swatch_hex"]
+    },
+    "BLD-occupancy.csv": {
+      "columns": ["subject_id", "area_id", "classification", "off_site_kind"],
+      "read": ["subject_id", "area_id", "classification", "off_site_kind"]
+    },
+    "BLD-subject.csv": {
+      "columns": ["id", "name", "sex", "dob", "size_band", "coat_type", "kind", "neuter_status", "source", "species", "breed", "coat_colour_id", "coat_pattern_id", "nose_pigment_id", "birth_litter_id"],
+      "read": ["id", "name", "sex", "dob", "size_band", "coat_type", "kind", "neuter_status", "source", "species", "breed", "coat_colour_id", "coat_pattern_id", "nose_pigment_id", "birth_litter_id"]
+    },
+    "BLD-subject_status.csv": {
+      "columns": ["subject_id", "state"],
+      "read": ["subject_id", "state"]
+    },
+    "BLD-tenant.csv": {
+      "columns": ["id", "name"],
+      "read": ["id", "name"]
+    },
+    "BLD-weight.csv": {
+      "columns": ["subject_id", "performed_on", "weight_kg", "unit", "body_condition_score", "bcs_scale", "source"],
+      "read": ["subject_id", "performed_on", "weight_kg", "unit", "body_condition_score", "bcs_scale", "source"]
+    }
+  }
+}

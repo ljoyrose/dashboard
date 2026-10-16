@@ -7,9 +7,13 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed",
     "test:live": "LIVE_SMOKE=1 playwright test --project=live-smoke",
-    "report": "playwright show-report"
+    "report": "playwright show-report",
+    "test:phone": "playwright test --project=phone",
+    "check:headers": "node tests/contract/check-real-headers.js",
+    "teeth": "node tests/teeth/run-teeth.js"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
     "@playwright/test": "1.56.1"
   },
   "engines": {

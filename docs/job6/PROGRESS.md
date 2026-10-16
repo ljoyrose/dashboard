@@ -1,5 +1,7 @@
 # PROGRESS: Job 6, dashboard tests and GitHub Action
 
+> **Newer:** Job 6b added protection, phone, header and PC-Personal checks. Current notes: `docs/job6b/`.
+
 *Updated 15 Oct 2026.*
 
 ## Done

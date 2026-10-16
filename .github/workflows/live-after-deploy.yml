@@ -1,0 +1,74 @@
+name: Live check after deploy
+
+# Right after GitHub Pages finishes publishing main, open the three LIVE pages (signed out only) and check they are up.
+# A bad merge is then noticed within minutes, not at the next Monday run.
+# It never signs in, never blocks anything, and never touches the main test suite or branch protection.
+# No secrets: it uses only the run's own built-in token to open/close one issue.
+#
+# NOTE: GitHub only runs "workflow_run" workflows from the file on the main branch, so this starts working once merged.
+on:
+  workflow_run:
+    workflows: ['pages-build-deployment', 'pages build and deployment']
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: live-after-deploy
+  cancel-in-progress: true
+
+env:
+  CI: 'true'
+
+jobs:
+  live:
+    name: Live site check after deploy (never blocks)
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    continue-on-error: true
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Remember the test browser between runs
+        id: pw-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Give the web address a moment to show the new version
+        run: sleep 20
+      - name: Check the live pages (signed out only)
+        id: live
+        continue-on-error: true
+        run: npx playwright test --project=live-smoke --retries=2
+        env:
+          LIVE_SMOKE: '1'
+      - name: Write the short summary
+        if: always()
+        run: node tests/support/summary.js test-results/results.json
+      - name: Live site red? Open or update the one live-site issue
+        if: ${{ steps.live.outcome == 'failure' }}
+        continue-on-error: true
+        run: node tests/support/report-issue.js --state red --label live-site-red --title-prefix "Live site check is red" --results test-results/results.json --note "Found right after a deploy of main"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Live site fine? Close the issue
+        if: ${{ steps.live.outcome == 'success' }}
+        continue-on-error: true
+        run: node tests/support/report-issue.js --state green --label live-site-red
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
