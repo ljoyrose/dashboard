@@ -1,0 +1,56 @@
+name: Teeth check (weekly)
+
+# Proves the tests can still FAIL. Makes about eight deliberate breaks on a temporary copy of the site and
+# expects the tests to go red each time. If a break goes unnoticed, this run turns red and opens an issue.
+# Separate from the main suite: it can never block a merge. No secrets.
+on:
+  schedule:
+    - cron: '43 6 * * 2' # Tuesdays 06:43 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CI: 'true'
+
+jobs:
+  teeth:
+    name: Teeth check (can the tests still fail?)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Remember the test browser between runs
+        id: pw-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Break things on purpose and check the tests notice
+        id: teeth
+        run: node tests/teeth/run-teeth.js
+      - name: A break went unnoticed? Open or update the one issue
+        if: ${{ failure() && github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        run: node tests/support/report-issue.js --state red --label teeth-red --title-prefix "Teeth check failed" --results none --note "A deliberate break was not caught. See the run summary."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: All caught? Close the issue
+        if: ${{ success() && github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        run: node tests/support/report-issue.js --state green --label teeth-red
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -70,7 +70,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await expect(main).toContainText('3 of 3');
   });
 
-  test('joined tables work: cabins show their dogs, litters show dam and sire, weighings are counted', async ({ page }) => {
+  test('joined tables work: cabins show their dogs, litters show dam and sire, weighings are counted @regression', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     await page.locator('#nav button[data-go="round"]').click();

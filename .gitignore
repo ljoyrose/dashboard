@@ -12,3 +12,7 @@ playwright-report/
 !package.json
 !package-lock.json
 !tests/fixtures/**/*.json
+
+# Header contract (column names only: no values)
+!tests/contract/*.json
+!docs/job6b/branch-protection.json
