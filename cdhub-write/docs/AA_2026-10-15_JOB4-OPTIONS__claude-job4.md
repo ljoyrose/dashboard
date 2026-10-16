@@ -29,8 +29,8 @@ Files to create: `BLD-area_reading.csv`, `BLD-_pending.csv` (and later `BLD-roun
 
 | | Meaning | Consequence |
 |---|---|---|
-| A | **Pending** (`MODE_area_reading` unset) | Every reading waits for Lisa. Safest. But a reading sits unrecorded until approved, and an inspector asking "was it read at 08:00?" sees the approval time unless the app reads `taken_at` (it does: `taken_at` is stamped on receipt, not approval). Lisa must open the approval page daily |
-| B | **Direct** (`MODE_area_reading=direct`) | Readings land immediately, append-only. A mistake needs a correction, which still waits for Lisa |
+| A | **Pending** (`MODE_area_reading=pending`) | Every reading waits for Lisa. Safest. But a reading sits unrecorded until approved, and an inspector asking "was it read at 08:00?" sees the approval time unless the app reads `taken_at` (it does: `taken_at` is stamped on receipt, not approval). Lisa must open the approval page daily |
+| B | **Direct** (the default now: `MODE_area_reading` unset, or `=direct`) | Readings land immediately, append-only. A mistake needs a correction, which still waits for Lisa |
 | C | Direct for staff, pending for trainees | Not built: needs a per-role rule. Say if wanted |
 
 **Recommend A for the first two weeks, then B** once the screen has been trusted. **Built:** both. Corrections and roster entries are always pending. **v2 (Lisa, 16 Oct): temperature readings go straight in** (the table's own default is now direct; set `MODE_area_reading=pending` to hold them). Occupancy moves default to pending (see O14).

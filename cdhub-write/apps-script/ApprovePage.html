@@ -27,7 +27,7 @@
 <body>
 <main>
   <h1>Approvals queue</h1>
-  <p class="sub">Nothing here is in the real tables yet. Approve adds one new row. Reject leaves the tables as they are. Nothing is ever overwritten or deleted.</p>
+  <p class="sub">Nothing here is in the real tables yet. Approve adds one new row. Reject leaves the tables as they are. Approving never overwrites anything.</p>
   <div id="list"><div class="empty">Loading...</div></div>
 
   <h1 style="margin-top:28px">Edit an entry (owner only)</h1>
@@ -78,7 +78,6 @@
   load();
 
   /* ---- owner edit ---- */
-  var EDIT_FIELDS={}; 
   function edMsg(t){ document.getElementById('ed-msg').textContent=t; }
   document.getElementById('ed-show').onclick=function(){
     edMsg('Loading...');

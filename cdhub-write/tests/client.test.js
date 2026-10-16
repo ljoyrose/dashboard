@@ -697,3 +697,16 @@ domTest('Bloodline: staff load the dogs with their personal code, no Google sign
   assert.match(d.querySelector('[data-dog="sub-test-b"] .bs-dog-was').textContent, /Last recorded: T1/);
   assert.equal(d.querySelector('[data-dog="sub-test-a"] .bs-yes').disabled, false);   // occupancy is switched on in this fake script
 });
+
+test('rooms and bands: after a move the dog is in its NEW room only (the old row is never closed, so it must not count)', () => {
+  const T = fakeTables();
+  T['BLD-temperature_band.csv'] = [{ id: 'b1', band: 'four weeks and over', age_from_days: '29', age_to_days: '', min_temp: '10.00', max_temp: '26.00' }];
+  const before = BLDLook.fromTables(T, '2026-10-15');
+  assert.equal(before.bandForArea('area-t2').dogId, 'sub-test-a');                      // Test A is in T2 (latest row)
+  assert.equal(before.bandForArea('area-t1').dogId, 'sub-test-b');                      // T1 has Test B (undated legacy row)
+  T['BLD-occupancy.csv'] = T['BLD-occupancy.csv'].concat([{ id: 'occ-n', subject_id: 'sub-test-a', area_id: 'area-t3-1', moved_in: '2026-10-15', moved_out: '' }]);
+  const after = BLDLook.fromTables(T, '2026-10-15');
+  assert.equal(after.bandForArea('area-t3-1').dogId, 'sub-test-a');
+  assert.match(after.bandForArea('area-t2').reason, /room unknown/);                      // no longer counted in T2
+  assert.equal(after.roomsWithDogs, 2);                                                   // T1 (Test B) and T3.1 (Test A)
+});
