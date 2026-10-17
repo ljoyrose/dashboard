@@ -11,14 +11,15 @@ A single-page Google **shared drives** surface (read-only browsing, plus a Bin),
   Money rollback files are held, never ticked, and never restored, renamed or binned. The label is "Held: money rollback (E02), do not touch until FIX 6 is confirmed". Held anywhere: names matching `ZZ_SUPERSEDED_*_DO-NOT-USE__MON-*` or `ZZ_SUPERSEDED_*CHECK-LOG*`. Held by folder id only: anything in 0.1 - Index (`1wB3t6ScV6mnbKpXU6UBjnMvToUt_A7rj`) or in the 4 - Ops folder that holds CHECK-LOG (`115saDuLMClWZVfzIYTn2fN-BjPWijgBm`). A different folder with the same name is not held.
   "Move selected (N)" moves only ticked rows that are on screen. Every list has Show more and Show all. Per shared drive bin list (name, date binned, who).
   Moving a file to the bin is the only write. A shared-drive bin is never permanently deleted. Nothing runs automatically.
-  The section is in the URL (`#/changes/24h`), so back, reload and links all work. Browser storage is not used.
-- **Sign-in:** Google, Drive read-only scope. The full `drive` scope is asked for only when Bin actions are used. The access token is kept in memory and never saved.
+  The section is in the URL (`#/changes/24h`), so back, reload and links all work.
+- **Sign-in:** Google, Drive read-only scope. The full `drive` scope is asked for only when Bin actions are used. One sign-in is shared by the home page, Money Hub and CD Hub. The access token stays in this browser tab until it expires or you sign out.
 - **Every panel** shows where it read from and when it was read (UK time). It also shows whether the read
   is pending, failed, empty or capped.
 - **Look:** Lexend only, LJR7 palette (slot 0 for Read first and Drive, slot 2 Risks for the Bin, slot 7 for Cf overskill), light and dark modes.
 - **Money tile** (on Map, Lisa's account only): cash per entity (business and personal kept apart, never summed), stale and runs-dry flags, ready to-dos, and dates overdue or due in the next 14 days. It reads through `money/core.js` and links to `/money/`.
 - **Dropbox line** (on Bin, after sign-in only): reads `DROPBOX-TOTALS.json` (counts and GB only, no file names) from the Drive folder set in `DBX_FOLDER_ID`, so nothing about Dropbox is public. Shows how many `ZZ_DELETE_DROPBOX_` files are waiting. Two buttons: `DBX_JOB_URL` opens workflow 3 in the private repo (Dropbox only: empty box = dry run, type DELETE), `DBX_TRASH_URL` opens Dropbox Deleted files (cannot be automated on a personal account).
-- **Signed out:** only a sign-in button is shown (no tabs, labels or data). This is a display choice; the real protection is that all data is read from Drive with the viewer's own Google sign-in.
+- **Home screen:** Key projects & docs sits at the top. Big links for the MOVE workbook, Money Hub, CD Hub and the other sections. One tap each.
+- **Signed out:** a sign-in button and those links. No tabs and no private data. The real protection is that all data is read from Drive with the viewer's own Google sign-in.
 - **PC-Personal** (`#/personal`): finds files in the signed-in account's own personal Drive that already exist byte for byte (MD5 + size) in a shared drive; "Rename selected (N)" renames the ticked matches to `ZZ_DELETE_DRIVE_<name>`. "Move selected (N)" bins only ticked personal files that start `ZZ_DELETE_DRIVE_` and have a delete-ledger row. A name containing `RR_` cannot be ticked. Labelled PC-Personal for lisa@puppyclassroom.com and lisah Personal for lisahcarson@gmail.com. Runs in the browser with the viewer's own sign-in; the shared-drive copy is never changed.
 - **Writes:** only rename, and move-to-bin (`files.update` with `trashed=true`), from the ticked rows. Shared-drive bins are never emptied.
 
@@ -29,7 +30,7 @@ authorised origin `https://ljoyrose.github.io`.
 
 <https://ljoyrose.github.io/dashboard/cdhub/> is a read-only web copy of the CurlyCwtch Cobberdog Hub.
 After Google sign-in (same OAuth client, Drive read-only scope) it lists the `BLD-app-tables` folder and reads
-the `BLD-*.csv` tables live. No data is in the repo, nothing is kept in the browser, and saving (the round,
+the `BLD-*.csv` tables live. No data is in the repo. The sign-in is the same one as the rest of the site. Saving (the round,
 cabin access, flags) is switched off for now.
 
 ## Money Hub (`/money/`)

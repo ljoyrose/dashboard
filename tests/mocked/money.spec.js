@@ -76,12 +76,15 @@ test.describe('Money Hub: sign-in (mocked) and the Lisa gate', () => {
     await expect(page.locator('#readStamp')).toHaveText('Not signed in');
     await expect(page.locator('#view')).not.toContainText('£');
     expect(await page.evaluate(() => window.__GIS_CALLS.revoke)).toBe(1);
+    expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
   });
 
-  test('keeps nothing in the browser', async ({ page, context }) => {
+  test('keeps only the shared sign-in for this tab', async ({ page, context }) => {
     await page.goto('money/');
     await signIn(page);
-    expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
+    const stores = await page.evaluate(() => ({ local: localStorage.length, session: Object.keys(sessionStorage), key: window.DashAuth.KEY }));
+    expect(stores.local).toBe(0);
+    expect(stores.session).toEqual([stores.key]);
     expect(await context.cookies()).toEqual([]);
   });
 });

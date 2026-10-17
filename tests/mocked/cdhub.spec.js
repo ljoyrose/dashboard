@@ -22,12 +22,16 @@ test.describe('CD Hub: loads', () => {
     await expect(page.locator('#nav button')).toHaveCount(0);
   });
 
-  test('says it holds no data and keeps nothing in the browser', async ({ page, context }) => {
+  test('holds no table data; only the shared sign-in is kept in this tab', async ({ page, context }) => {
     await page.goto('cdhub/');
     await expect(page.locator('#main')).toContainText('This page holds no data of its own');
     await signIn(page);
-    expect(await page.evaluate(() => [localStorage.length, sessionStorage.length])).toEqual([0, 0]);
+    const stores = await page.evaluate(() => ({ local: localStorage.length, session: Object.keys(sessionStorage), key: window.DashAuth.KEY }));
+    expect(stores.local).toBe(0);
+    expect(stores.session).toEqual([stores.key]);
     expect(await context.cookies()).toEqual([]);
+    await page.locator('#nav button[data-signout]').click();
+    expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
   });
 });
 

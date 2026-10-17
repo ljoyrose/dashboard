@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="core.js"></script>
 <style>
@@ -200,7 +201,7 @@
       '<button class="btn" type="button" data-action="showall" data-list="' + esc(key) + '"><span>Show all</span></button></div>';
   }
 
-  var tokenClient = null, accessToken = null, tokenExpiresAt = 0, timer = null;
+  var accessToken = null, tokenExpiresAt = 0, timer = null;
   var signedIn = false, loading = false, R = null, err = null;
   var $ = function (id) { return document.getElementById(id); };
   var stampFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -290,7 +291,7 @@
     return '<ul class="items">' + items.slice(0, n).map(render1).join('') + '</ul>' + showBar(key || 'list', items.length, show);
   }
   function notReady() {
-    if (!signedIn) return '<div class="card c-ink now"><h3>Sign in to see your money</h3><p class="note">Read-only access to the Money Hub shared drive. Nothing is stored in this browser.</p><div><button class="btn main" type="button" data-action="signin"><svg class="icon"><use href="#i-in"/></svg><span>Sign in with Google</span></button></div></div>';
+    if (!signedIn) return '<div class="card c-ink now"><h3>Sign in to see your money</h3><p class="note">Read-only access to the Money Hub shared drive. The sign-in is shared with the rest of this site until you sign out or it expires.</p><div><button class="btn main" type="button" data-action="signin"><svg class="icon"><use href="#i-in"/></svg><span>Sign in with Google</span></button></div></div>';
     if (err) return '<div class="card c-risk pending"><h3>Could not read Drive</h3><p class="note">' + esc(err) + '</p><div><button class="btn" type="button" data-action="refresh">Try again</button></div></div>';
     if (R && R.gate === 'denied') return '<div class="card c-risk"><h3>This page is for Lisa only</h3><p class="note">Signed in as ' + esc(R.email) + '. Sign out and sign in with Lisa\'s account.</p></div>';
     return '<div class="card pending"><h3>Reading…</h3><p class="note">Reading the Money Hub files from Google Drive.</p></div>';
@@ -588,36 +589,58 @@
   function clearBanner() { $('banner').className = 'banner hidden'; $('banner').innerHTML = ''; }
   function startTimer() { stopTimer(); timer = setInterval(load, REFRESH_MS); }
   function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
-  function expired() { stopTimer(); accessToken = null; banner('Sign-in expired. Rereads paused.', false, true); }
+  function expired() {
+    stopTimer();
+    accessToken = null;
+    if (window.DashAuth) DashAuth.markExpired();
+    if (!auth.requestSilent()) banner('Sign-in expired. Sign in again.', false, true);
+  }
+  function onSilentFail(hadExpired) {
+    if (accessToken && Date.now() < tokenExpiresAt) return;
+    if (hadExpired) banner('Sign-in expired. Sign in again.', false, true);
+  }
   function onToken(resp) {
     if (resp.error) { banner('Sign-in did not complete.', false, true); return; }
     if (!google.accounts.oauth2.hasGrantedAllScopes(resp, SCOPE)) { banner('Drive read access was not granted.', false, true); return; }
     accessToken = resp.access_token;
-    tokenExpiresAt = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
+    tokenExpiresAt = DashAuth.expiryFrom(resp.expires_in);
+    DashAuth.save(accessToken, tokenExpiresAt, resp.scope || SCOPE);
     signedIn = true; clearBanner(); startTimer(); load();
   }
   function signOut() {
     stopTimer();
     var t = accessToken;
     accessToken = null; tokenExpiresAt = 0; signedIn = false; R = null; err = null; MORE = {};
+    if (window.DashAuth) DashAuth.clear();
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     banner('Signed out. Nothing kept.', true, false);
     render();
   }
   function initGoogle() {
-    if (!(window.google && google.accounts && google.accounts.oauth2)) return false;
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID, scope: SCOPE, callback: onToken,
-      error_callback: function (e) { var ty = e && e.type; banner(ty === 'popup_failed_to_open' ? 'Sign-in window blocked by the browser.' : ty === 'popup_closed' ? 'Sign-in window closed early.' : 'Sign-in did not complete.', false, true); }
-    });
+    if (!auth.init()) return false;
     var b = $('signInBtn'); b.disabled = false; b.querySelector('span').textContent = 'Sign in with Google';
+    return true;
+  }
+  var auth = DashAuth.bind({
+    clientId: CLIENT_ID,
+    scope: SCOPE,
+    onToken: onToken,
+    onError: function (e) { var ty = e && e.type; banner(ty === 'popup_failed_to_open' ? 'Sign-in window blocked by the browser.' : ty === 'popup_closed' ? 'Sign-in window closed early.' : 'Sign-in did not complete.', false, true); },
+    onSilentFail: onSilentFail
+  });
+  function restoreShared() {
+    var saved = DashAuth.valid();
+    if (!saved || !DashAuth.hasScope(saved, SCOPE)) return false;
+    accessToken = saved.access_token;
+    tokenExpiresAt = saved.expires_at;
+    signedIn = true;
     return true;
   }
   document.addEventListener('click', function (e) {
     var t = e.target.closest('[data-action]');
     if (!t || t.disabled) return;
     var a = t.getAttribute('data-action');
-    if (a === 'signin' && tokenClient) tokenClient.requestAccessToken({ prompt: 'select_account', login_hint: M.CFG.owner });
+    if (a === 'signin') auth.requestInteractive({ login_hint: M.CFG.owner });
     else if (a === 'signout') signOut();
     else if (a === 'refresh') load();
     else if (a === 'showmore') {
@@ -631,7 +654,9 @@
     }
     else if (a === 'showall') { MORE[t.getAttribute('data-list')] = 'all'; render(); }
   });
+  var restored = restoreShared();
   render();
+  if (restored) { startTimer(); load(); }
   var tries = 0;
   (function wait() {
     if (initGoogle()) return;

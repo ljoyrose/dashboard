@@ -6,6 +6,9 @@
 //   'error'         Google reports an error in the sign-in answer
 //   'popup-closed'  the person closed the sign-in window
 //   'popup-blocked' the browser blocked the sign-in window
+//   'silent-ok'     a silent refresh (prompt:'' with no extra scope) also succeeds.
+//                   By default that silent refresh fails, so a first visit still shows
+//                   the sign-in button. A write upgrade uses prompt:'' WITH a scope, and still succeeds.
 module.exports = `
 (function () {
   function mode() { return window.__GIS_MODE || 'ok'; }
@@ -20,6 +23,10 @@ module.exports = `
         var scope = (opts && opts.scope) || cfg.scope;
         setTimeout(function () {
           var m = mode();
+          if (opts && opts.prompt === '' && !opts.scope && m !== 'silent-ok') {
+            if (cfg.error_callback) cfg.error_callback({ type: 'silent_failed' });
+            return;
+          }
           if (m === 'popup-closed' || m === 'popup-blocked') {
             if (cfg.error_callback) cfg.error_callback({ type: m === 'popup-closed' ? 'popup_closed' : 'popup_failed_to_open' });
             return;

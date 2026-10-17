@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<script src="auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="money/core.js"></script>
 <style>
@@ -186,6 +187,17 @@
   .ment .sub { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
   .mgroup { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 0; text-align: left; }
   .hidden { display: none !important; }
+  /* Home screen shortcuts. One tap each, tall enough for a thumb. */
+  #key-projects h2 { margin: 0; font-size: 20px; font-weight: 700; text-align: left; hyphens: manual; }
+  #key-projects .lead { margin: 0; font-size: 16px; text-align: left; color: var(--ink); hyphens: manual; }
+  #key-projects .lead a { font-weight: 600; }
+  .keytiles { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  @media (min-width: 700px) { .keytiles { grid-template-columns: 1fr 1fr; } }
+  a.keytile { display: flex; align-items: center; min-height: 48px; padding: 12px 16px; border: 1px solid var(--line);
+    border-radius: 12px; background: var(--bg); color: var(--ink); text-decoration: none; font-size: 17px; font-weight: 600;
+    line-height: 1.3; text-align: left; hyphens: manual; }
+  a.keytile:hover { border-color: var(--ink); }
+  a.keytile:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
   footer p { margin: 0; color: var(--muted); font-size: 14px; }
@@ -270,9 +282,10 @@
   var API = 'https://www.googleapis.com/drive/v3/files';
   var FILE_FIELDS = 'id,name,mimeType,modifiedTime,webViewLink,parents,driveId,lastModifyingUser(displayName,emailAddress)';
   var DAY = 86400000;
+  var MOVE_URL = 'https://docs.google.com/spreadsheets/d/1AIgIefQMATEdWLtAkdvE7SvdnX8g2sTX87VnvOX5c-I/edit';
 
-  // ---- State: memory only. No browser storage anywhere. ----
-  var tokenClient = null, accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
+  // Page state stays in memory. The sign-in token is the one thing shared, via auth.js.
+  var accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   var S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank() };
@@ -821,9 +834,9 @@
 
   // ---- Bin actions: only from Lisa's own clicks, each behind a confirm ----
   function requestWrite() {
-    if (!tokenClient) return;
+    if (!auth.ready()) return;
     wantWrite = true;
-    tokenClient.requestAccessToken({ scope: SCOPE + ' ' + WRITE_SCOPE, include_granted_scopes: true, prompt: '' });
+    auth.requestWrite(SCOPE + ' ' + WRITE_SCOPE);
   }
   function itemKey(group, item) { return group === 'usb' ? item.path : item.id; }
   function listShown(key, total, step) {
@@ -1440,16 +1453,38 @@
     return h + foot + '</section>';
   }
 
-  // Signed out: nothing about the dashboard is shown, only the sign-in button.
+  // Big one-tap links for the home screen. Only links that already exist, plus the MOVE workbook.
+  function keyProjects() {
+    var tiles = [
+      ['MOVE', MOVE_URL, true],
+      ['Money Hub', 'money/', false],
+      ['CD Hub', 'cdhub/', false],
+      ['Map', '#/map', false],
+      ['Read first', '#/readfirst', false],
+      ['Drive', '#/drive', false],
+      ['PC-Personal', '#/personal', false],
+      ['Drive check', '#/usb', false],
+      ['Bin', '#/bin', false],
+      ['Changes', '#/changes', false]
+    ];
+    return '<section class="card" id="key-projects" aria-labelledby="key-projects-title">' +
+      '<h2 id="key-projects-title">Key projects & docs</h2>' +
+      '<p class="lead">Open the <a id="move-link" href="' + esc(MOVE_URL) + '" target="_blank" rel="noopener">MOVE workbook</a>.</p>' +
+      '<div class="keytiles">' + tiles.map(function (t) {
+        return '<a class="keytile" href="' + esc(t[1]) + '"' + (t[2] ? ' target="_blank" rel="noopener"' : '') + '>' + esc(t[0]) + '</a>';
+      }).join('') + '</div></section>';
+  }
+
+  // Signed out: the sign-in button, plus the key links. No private data.
   function viewGate() {
-    return '<div class="card vision pending"><div class="cardhead"><h3>Sign in</h3>' +
+    return keyProjects() + '<div class="card vision pending"><div class="cardhead"><h3>Sign in</h3>' +
       '<span class="state st-idle"><span class="shape"></span>Not signed in</span></div>' +
       '<p class="note">Sign in with Google to open the dashboard.</p>' +
       '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
   }
 
   function viewMap() {
-    var html = '';
+    var html = keyProjects();
     if (!signedIn) {
       html += '<div class="card vision pending"><div class="cardhead"><h3>Not signed in</h3>' +
         '<span class="state st-idle"><span class="shape"></span>No reads</span></div>' +
@@ -1741,8 +1776,15 @@
   }
   function clearBanner() { $('banner').className = 'banner hidden'; $('banner').innerHTML = ''; }
 
-  // ---- Auth (Google Identity Services token client) ----
-  function requestToken() { if (tokenClient) tokenClient.requestAccessToken({ prompt: 'select_account' }); }
+  // ---- Auth. The token itself is stored by auth.js so Money and CD Hub can reuse it. ----
+  function requestToken() { auth.requestInteractive(); }
+  function rememberToken(resp, hasWrite) {
+    accessToken = resp.access_token;
+    tokenExpiresAt = window.DashAuth.expiryFrom(resp.expires_in);
+    signedIn = true;
+    writeGranted = hasWrite;
+    DashAuth.save(accessToken, tokenExpiresAt, resp.scope || (hasWrite ? SCOPE + ' ' + WRITE_SCOPE : SCOPE));
+  }
   function onToken(resp) {
     var askedWrite = wantWrite; wantWrite = false;
     if (resp.error) { showBanner(askedWrite ? 'Bin access not granted. Browsing still works.' : 'Sign-in did not complete.', false, !askedWrite); return; }
@@ -1750,10 +1792,7 @@
     var hasWrite = g.hasGrantedAllScopes(resp, WRITE_SCOPE);
     if (!hasWrite && !g.hasGrantedAllScopes(resp, SCOPE)) { showBanner('Drive access not granted.', false, true); return; }
     var upgrade = askedWrite && signedIn;
-    accessToken = resp.access_token;
-    tokenExpiresAt = Date.now() + (Number(resp.expires_in) || 3600) * 1000 - 60000;
-    signedIn = true;
-    writeGranted = hasWrite;
+    rememberToken(resp, hasWrite);
     if (askedWrite && !hasWrite) showBanner('Bin access not granted. Browsing still works.', false, false); else clearBanner();
     startTimer();
     if (upgrade) { render(); ensureRoute(); } else loadAll();
@@ -1766,12 +1805,18 @@
   function handleExpired() {
     stopTimer();
     accessToken = null;
-    showBanner('Sign-in expired. Rereads paused.', false, true);
+    if (window.DashAuth) DashAuth.markExpired();
+    if (!auth.requestSilent()) showBanner('Sign-in expired. Sign in again.', false, true);
+  }
+  function onSilentFail(hadExpired) {
+    if (accessToken && Date.now() < tokenExpiresAt) return;
+    if (hadExpired) showBanner('Sign-in expired. Sign in again.', false, true);
   }
   function signOut() {
     stopTimer();
     var t = accessToken;
     accessToken = null; tokenExpiresAt = 0; signedIn = false; writeGranted = false; busy = false;
+    if (window.DashAuth) DashAuth.clear();
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank() };
     F = {}; R = { sweep: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++; P.binStatus = 'idle';
@@ -1779,15 +1824,27 @@
     render();
   }
   function initGoogle() {
-    if (!(window.google && google.accounts && google.accounts.oauth2)) return false;
-    tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID, scope: SCOPE, callback: onToken,
-      error_callback: function (e) {
-        var type = e && e.type ? e.type : '';
-        showBanner(type === 'popup_failed_to_open' ? 'Sign-in window blocked by browser.' : type === 'popup_closed' ? 'Sign-in window closed early.' : 'Sign-in did not complete.', false, true);
-      }
-    });
+    if (!auth.init()) return false;
     var b = $('signInBtn'); b.disabled = false; b.querySelector('span').textContent = 'Sign in with Google';
+    return true;
+  }
+  var auth = DashAuth.bind({
+    clientId: CLIENT_ID,
+    scope: SCOPE,
+    onToken: onToken,
+    onError: function (e) {
+      var type = e && e.type ? e.type : '';
+      showBanner(type === 'popup_failed_to_open' ? 'Sign-in window blocked by browser.' : type === 'popup_closed' ? 'Sign-in window closed early.' : 'Sign-in did not complete.', false, true);
+    },
+    onSilentFail: onSilentFail
+  });
+  function restoreShared() {
+    var saved = DashAuth.valid();
+    if (!saved || !DashAuth.hasScope(saved, SCOPE)) return false;
+    accessToken = saved.access_token;
+    tokenExpiresAt = saved.expires_at;
+    signedIn = true;
+    writeGranted = DashAuth.hasScope(saved, WRITE_SCOPE);
     return true;
   }
 
@@ -1848,7 +1905,9 @@
     if (t && t.id === 'drivePicker') location.hash = t.value ? '#/drive/' + t.value : '#/drive';
   });
   window.addEventListener('hashchange', function () { render(); ensureRoute(); });
+  var restored = restoreShared();
   render();
+  if (restored) { startTimer(); loadAll(); }
 
   var tries = 0;
   (function waitForGoogle() {

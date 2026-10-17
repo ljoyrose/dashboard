@@ -75,7 +75,7 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
     await assertClean(label + ' (rendered)');
   }
 
-  // Main dashboard. Sign-in lives in memory, so sections are opened without a reload.
+  // Main dashboard. Sections stay on this page, so they are opened without a reload.
   await open('./', 'Main dashboard');
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
@@ -94,10 +94,13 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
   await expect(page.locator('[data-fold="bin-drv-alpha1"]')).toHaveJSProperty('open', true);
   await assertClean('Main dashboard bin list');
 
-  // CD Hub, all ten sections.
+  // CD Hub, all ten sections. The home-page sign-in is already valid here.
   await open('cdhub/', 'CD Hub');
-  await expect(page.locator('#signinbtn')).toBeEnabled();
-  await page.locator('#signinbtn').click();
+  const cdSignIn = page.locator('#signinbtn');
+  if (await cdSignIn.count()) {
+    await expect(cdSignIn).toBeEnabled();
+    await cdSignIn.click();
+  }
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
   for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers']) {
     await page.locator(`#nav button[data-go="${id}"]`).click();
@@ -106,9 +109,13 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
   }
 
   // Money Hub, all six sections, plus an entity page and a to-do page.
+  // The same sign-in is still valid, so the button is not shown again.
   await open('money/', 'Money Hub');
-  await expect(page.locator('#signInBtn')).toBeEnabled();
-  await page.locator('#signInBtn').click();
+  const moneySignIn = page.locator('#signInBtn');
+  if (await moneySignIn.isVisible()) {
+    await expect(moneySignIn).toBeEnabled();
+    await moneySignIn.click();
+  }
   await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
   for (const hash of ['#/now', '#/money', '#/dates', '#/todo', '#/todo/others', '#/accountant', '#/control', '#/e/TESTCO', '#/register/R001']) {
     await page.evaluate((h) => { location.hash = h; }, hash);
