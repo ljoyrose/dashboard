@@ -5,6 +5,7 @@ const fs = require('fs');
 const GROUPS = [
   ['main-dashboard', 'Main dashboard', '/dashboard/'],
   ['bin-safety', 'Bin safety (RR_ archives never taken)', '/dashboard/#/bin'],
+  ['no-empty-trash', 'Never empty the bin', 'all three pages'],
   ['personal-and-drive-check', 'PC-Personal and Drive check (rename and bin)', '/dashboard/#/personal, #/usb'],
   ['cdhub', 'CD Hub', '/dashboard/cdhub/'],
   ['money', 'Money Hub', '/dashboard/money/'],

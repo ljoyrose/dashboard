@@ -6,8 +6,8 @@ A single-page Google **shared drives** surface (read-only browsing, plus a Bin),
 - **Sections** (one shared header, Map first): Map, Read first, Drive, Bin, Changes (Recent, Last 24h, Last 7 days, Totals).
 - **Drive** lists shared drives only (`drives.list`, `corpora=drive`), with a picker and folder browsing (`#/drive/<driveId>/<folderId>`). My Drive is never listed.
 - **Bin** (`#/bin`): ZZ_ sweep (names starting `ZZ_`; never `RR_`, nothing inside an `RR_` folder, no `ZZ_` folder that holds an `RR_` item),
-  then one "Move all to bin" button behind a confirm. Per shared drive bin list (name, date binned, who) and an "Empty bin" button
-  that needs `EMPTY` typed (Manager role). Nothing runs automatically.
+  then one "Move all to bin" button behind a confirm. Per shared drive bin list (name, date binned, who).
+  Moving a file to the bin is the only write. A shared-drive bin is never permanently deleted. Nothing runs automatically.
   The section is in the URL (`#/changes/24h`), so back, reload and links all work. Browser storage is not used.
 - **Sign-in:** Google, Drive read-only scope. The full `drive` scope is asked for only when Bin actions are used. The access token is kept in memory and never saved.
 - **Every panel** shows where it read from and when it was read (UK time). It also shows whether the read
@@ -17,7 +17,7 @@ A single-page Google **shared drives** surface (read-only browsing, plus a Bin),
 - **Dropbox line** (on Bin, after sign-in only): reads `DROPBOX-TOTALS.json` (counts and GB only, no file names) from the Drive folder set in `DBX_FOLDER_ID`, so nothing about Dropbox is public. Shows how many `ZZ_DELETE_DROPBOX_` files are waiting. Two buttons: `DBX_JOB_URL` opens workflow 3 in the private repo (Dropbox only: empty box = dry run, type DELETE), `DBX_TRASH_URL` opens Dropbox Deleted files (cannot be automated on a personal account).
 - **Signed out:** only a sign-in button is shown (no tabs, labels or data). This is a display choice; the real protection is that all data is read from Drive with the viewer's own Google sign-in.
 - **PC-Personal** (`#/personal`): finds files in the signed-in account's own personal Drive that already exist byte for byte (MD5 + size) in a shared drive; step 2 renames them `ZZ_DELETE_DRIVE_<name>`, step 3 moves those to the bin (30-day Drive bin). Labelled PC-Personal for lisa@puppyclassroom.com and lisah Personal for lisahcarson@gmail.com. Runs in the browser with the viewer's own sign-in; the shared-drive copy is never changed.
-- **Writes:** only from the Bin buttons (files.update trashed=true; files.emptyTrash per shared drive).
+- **Writes:** only from the Bin "Move all to bin" button (files.update trashed=true). Shared-drive bins are never emptied.
 
 The repo contains no secrets. The OAuth client ID in `index.html` is public by design and only works from the
 authorised origin `https://ljoyrose.github.io`.

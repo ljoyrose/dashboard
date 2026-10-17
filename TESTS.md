@@ -36,12 +36,13 @@ If any of these breaks, the tick turns red and says which page.
 
 | Page | Address | Checks |
 |---|---|---|
-| Main dashboard | `/dashboard/` | 47 |
+| Main dashboard | `/dashboard/` | 45 |
 | CD Hub | `/dashboard/cdhub/` | 30 |
 | Money Hub | `/dashboard/money/` | 41 |
 | Reading CSV files | both readers | 17 |
 | Safety checks | the whole repo | 4 |
 | Bin safety (`RR_` archives never taken) | `#/bin` | 2 |
+| Never empty the bin | all three pages | 2 |
 | PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 9 |
 | Header contract (column names) | list of expected columns | 12 |
 | Dark mode, accessibility, smallest text | all three pages | 18 |
@@ -56,8 +57,8 @@ That is 193 checks that must pass.
 - Links straight to a section work, like `#/changes/24h`, `#/bin` and `#/personal`.
 - The Back button works.
 - Drive lists the shared drives, opens a folder and has an "Up one level" link.
-- The Bin lists `ZZ_` files, never touches `RR_` files, and asks you to confirm.
-- "Empty bin" does nothing unless `EMPTY` is typed.
+- The Bin lists `ZZ_` files, never touches `RR_` files, and asks you to confirm before moving them to the bin.
+- Nothing permanently deletes a shared-drive bin. There is no button for that, and no page calls Drive to empty one.
 - The Dropbox line shows counts only.
 - The Money tile shows each entity on its own, never added together.
 - The Money tile links open `/money/`, a single entity, and a single to-do.
@@ -84,6 +85,12 @@ That is 193 checks that must pass.
 - A `ZZ_` folder with an `RR_` item anywhere inside is **left alone**, with a note saying why.
 - A `ZZ_` file inside an `RR_` folder is **left alone**.
 - Only `ZZ_` things with no `RR_` anywhere near them are moved to the bin.
+
+**Never empty the bin**
+- Each page is opened (main dashboard, CD Hub, Money Hub, and their sections).
+- The check fails if any request permanently deletes a bin (a DELETE to a trash address).
+- The check fails if a page's source contains the old empty-bin wording.
+- The same wording is also searched for in the page files themselves, without opening a browser.
 
 **PC-Personal and Drive check (these rename and bin real files, so they matter most)**
 - Every write goes to a pretend Drive or a pretend plugged-in drive that only exists in memory. Nothing real can be renamed or binned.

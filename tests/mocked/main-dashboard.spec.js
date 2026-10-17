@@ -278,30 +278,6 @@ test.describe('Main dashboard: Bin', () => {
     await expect(page.locator('#view')).toContainText('Moved to bin');
   });
 
-  test('"Empty bin" does nothing unless EMPTY is typed', async ({ page, guard }) => {
-    await page.goto('./#/bin');
-    await signIn(page);
-    await page.locator('[data-action="grantwrite"]').first().click();
-    await page.locator('[data-action="foldjump"][data-key="bin-drv-alpha1"]').click(); // opens that drive's folded bin list
-    await expect(page.locator('[data-action="empty"][data-drive="drv-alpha1"]')).toBeVisible();
-    page.once('dialog', (d) => d.accept('nope'));
-    await page.locator('[data-action="empty"][data-drive="drv-alpha1"]').click();
-    await expect(page.locator('#view')).toContainText('EMPTY was not typed');
-    expect(guard.world.calls.filter((c) => c.method === 'DELETE')).toEqual([]);
-    expect(guard.world.byId('bin-1')).toBeTruthy();
-  });
-
-  test('"Empty bin" with EMPTY typed empties that shared drive\'s bin (pretend Drive)', async ({ page, guard }) => {
-    await page.goto('./#/bin');
-    await signIn(page);
-    await page.locator('[data-action="grantwrite"]').first().click();
-    await page.locator('[data-action="foldjump"][data-key="bin-drv-alpha1"]').click();
-    page.once('dialog', (d) => d.accept('EMPTY'));
-    await page.locator('[data-action="empty"][data-drive="drv-alpha1"]').click();
-    await expect.poll(() => !!guard.world.byId('bin-1')).toBe(false);
-    await expect(page.locator('#view')).toContainText('Bin emptied');
-  });
-
   test('Dropbox line shows counts only (no file names) from DROPBOX-TOTALS.json, and its two buttons point to the right places', async ({ page, guard }) => {
     const { IDS, FIX } = require('../support/world');
     const totals = require('fs').readFileSync(require('path').join(FIX, 'dropbox/DROPBOX-TOTALS.json'), 'utf8');
