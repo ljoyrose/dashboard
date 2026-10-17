@@ -89,7 +89,7 @@ That is 207 checks that must pass.
 - If the delete ledger or a pending slip cannot be read, nothing is binned.
 - Move selected acts only on ticked rows that are on screen. On a list of 52 with 50 shown, Select all moves 50. Show all, then Select all, can reach all 52.
 - A personal `ZZ_DELETE_DRIVE_` file is binned only when it is ticked and has a ledger row. `RR_` in the name is left out.
-- A money rollback file is labelled "Held: money rollback (E02), do not touch until FIX 6 is confirmed" and is not ticked or binned, even with a ledger row and Select all. A normal `ZZ_DELETE_` file next to it still is.
+- A money rollback file is labelled "Held: money rollback (E02), do not touch until FIX 6 is confirmed" and is not ticked or binned, even with a ledger row and Select all. The two filename patterns are held anywhere. Files in 0.1 - Index or the CHECK-LOG 4 - Ops folder are held by those folder ids only. A ledger-backed `ZZ_DELETE_` file in another folder named 4 - Ops, or in a differently id'd folder named 0.1 - Index, is still binned.
 
 **Never empty the bin**
 - Each page is opened (main dashboard, CD Hub, Money Hub, and their sections).

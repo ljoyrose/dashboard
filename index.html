@@ -250,12 +250,12 @@
   var SLIP_PREFIX = 'AA_DELETE-LEDGER-ROWS_'; // pending ledger slips, same file_id column
   var LEDGER_FAIL = 'The delete ledger could not be read. Nothing will be binned.';
   // E02 money rollback (RR_MASTER v0.59). Wins over a tick, a ledger row, Select all and every other bin rule.
-  // Never restore, migrate or bin these. If the path cannot be read and the file is in one of these folders, hold it.
+  // Never restore, migrate or bin these. Folder holds use the two Drive ids below, never the folder name.
   var E02_LABEL = 'Held: money rollback (E02), do not touch until FIX 6 is confirmed';
-  // 4 - Ops. Same id the Money Hub uses. This repo has no Drive id named "0.1 - Index", so that folder is matched by name.
+  // 0.1 - Index. Its parent is Money 00 (1X6b7CJfpvPK5gfj0i1xi8mTYCmdPcwzQ); that parent is not excluded.
+  var INDEX_FOLDER_ID = (window.MoneyCore && window.MoneyCore.CFG && window.MoneyCore.CFG.folders && window.MoneyCore.CFG.folders.index) || '1wB3t6ScV6mnbKpXU6UBjnMvToUt_A7rj';
+  // 4 - Ops, the one that holds CHECK-LOG. Another folder also named "4 - Ops" is not this id and is not excluded.
   var OPS_FOLDER_ID = (window.MoneyCore && window.MoneyCore.CFG && window.MoneyCore.CFG.folders && window.MoneyCore.CFG.folders.ops) || '115saDuLMClWZVfzIYTn2fN-BjPWijgBm';
-  var INDEX_FOLDER_NAME = '0.1 - Index';
-  var OPS_FOLDER_NAME = '4 - Ops';
   var BIN_SHOW = 50;
   var CF_FOLDER_ID = '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A';
   var READ_FIRST_ID = '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L';
@@ -425,34 +425,20 @@
     name = String(name == null ? '' : name);
     return /^ZZ_SUPERSEDED_.*_DO-NOT-USE__MON-/.test(name) || /^ZZ_SUPERSEDED_.*CHECK-LOG/.test(name);
   }
-  function textHasMonEngine(s) {
-    s = String(s == null ? '' : s);
-    return s.indexOf('MON-ENGINE') !== -1 || s.indexOf('MON-') !== -1;
-  }
-  // A MON-ENGINE file: the name contains MON- or MON-ENGINE, or the path goes through a MON-ENGINE folder.
-  function isMonEngineFile(f, chain) {
-    if (textHasMonEngine(f && f.name) || textHasMonEngine(f && f._path) || textHasMonEngine(f && f.path)) return true;
-    var names = chain || [];
-    for (var i = 0; i < names.length; i++) if (String(names[i]).indexOf('MON-ENGINE') !== -1) return true;
-    return false;
-  }
-  function inHoldFolder(f, chain) {
-    var parents = (f && f.parents) || [];
-    if (parents.indexOf(OPS_FOLDER_ID) !== -1) return true;
-    if (f && f._fromHoldFolder && chain === null) return true;
-    var names = chain || [];
-    for (var i = 0; i < names.length; i++) {
-      if (names[i] === INDEX_FOLDER_NAME || names[i] === OPS_FOLDER_NAME) return true;
+  function e02FolderHit(f) {
+    var ids = ((f && f.parents) || []).concat((f && f._parentIds) || []);
+    for (var i = 0; i < ids.length; i++) {
+      if (ids[i] === INDEX_FOLDER_ID || ids[i] === OPS_FOLDER_ID) return true;
     }
     return false;
   }
-  // chain: folder names from the drive root down to the parent, or null when the path could not be read.
+  // Filename patterns are held anywhere. Folder holds are the two ids only, not a matching folder name.
   function isMoneyRollback(f, chain) {
     if (!f) return true;
-    if (e02NameHit(f.name) || e02NameHit(f._path) || e02NameHit(f.path)) return true;
-    if (!inHoldFolder(f, chain)) return false;
-    if (chain === null) return true;
-    return isMonEngineFile(f, chain);
+    if (e02NameHit(f.name)) return true;
+    if (e02FolderHit(f)) return true;
+    if (f._fromHoldFolder && chain === null) return true;
+    return false;
   }
   function holdMoney(f, chain) {
     if (!isMoneyRollback(f, chain)) return false;
@@ -461,7 +447,6 @@
     f._skip = E02_LABEL;
     return true;
   }
-  function pathFolders(path) { return String(path || '').split('/').filter(Boolean); }
   var metaCache = {};
   function getMeta(id) {
     if (!metaCache[id]) metaCache[id] = apiGet(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,parents,driveId');
@@ -469,10 +454,11 @@
   }
   // Folder names from the shared drive root down to the item. null if too deep to be sure.
   function ancestors(item, driveId) {
-    var chain = [], guard = 0;
+    var chain = [], ids = [], guard = 0;
     function step(pid) {
-      if (!pid || pid === driveId) return Promise.resolve(chain);
-      if (++guard > 25) return Promise.resolve(null);
+      if (!pid || pid === driveId) { item._parentIds = ids.slice(); return Promise.resolve(chain); }
+      if (++guard > 25) { item._parentIds = ids.slice(); return Promise.resolve(null); }
+      ids.unshift(pid);
       return getMeta(pid).then(function (m) { chain.unshift(m.name); return step((m.parents || [])[0]); });
     }
     return step((item.parents || [])[0]);
@@ -736,57 +722,24 @@
     f._block = '';
     return 'ready';
   }
-  // id -> folder name for 4 - Ops and any folder titled "0.1 - Index" or "4 - Ops".
-  function loadHoldFolderIds() {
-    var known = drives();
-    return (known ? Promise.resolve(known) : listDrives()).then(function (list) {
-      return mapLimit(list || [], 3, function (d) {
-        return listAll(inDrive(d.id, {
-          q: "(name = '" + INDEX_FOLDER_NAME + "' or name = '" + OPS_FOLDER_NAME + "') and mimeType = '" + FOLDER_MIME + "' and trashed = false",
-          pageSize: '100',
-          fields: 'nextPageToken,files(id,name,mimeType)'
-        }), 2);
-      }).then(function (pages) {
-        var ids = {};
-        ids[OPS_FOLDER_ID] = OPS_FOLDER_NAME;
-        (pages || []).forEach(function (p) {
-          ((p && p.files) || []).forEach(function (f) {
-            if (f.name === INDEX_FOLDER_NAME || f.name === OPS_FOLDER_NAME) ids[f.id] = f.name;
-          });
-        });
-        return ids;
-      });
-    });
-  }
-  // Files sitting in 4 - Ops (by id or by folder name) or in a folder named "0.1 - Index".
-  // The name match is how "0.1 - Index" is found: this repo does not store that folder's id.
+  // Direct children of 0.1 - Index and 4 - Ops, found by those two ids only.
   function listHoldFolderFiles(driveId) {
     var fields = 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,webViewLink)';
-    return listAll(inDrive(driveId, {
-      q: "(name = '" + INDEX_FOLDER_NAME + "' or name = '" + OPS_FOLDER_NAME + "') and mimeType = '" + FOLDER_MIME + "' and trashed = false",
-      pageSize: '100',
-      fields: 'nextPageToken,files(id,name,mimeType)'
-    }), 3).then(function (found) {
-      var ids = {};
-      ids[OPS_FOLDER_ID] = true;
-      (found.files || []).forEach(function (f) {
-        if (f.mimeType === FOLDER_MIME && (f.name === INDEX_FOLDER_NAME || f.name === OPS_FOLDER_NAME)) ids[f.id] = true;
+    var ids = [INDEX_FOLDER_ID, OPS_FOLDER_ID];
+    return mapLimit(ids, 2, function (id) {
+      return listAll(inDrive(driveId, {
+        q: "'" + String(id).replace(/'/g, "\\'") + "' in parents and trashed = false",
+        pageSize: '200',
+        fields: fields
+      }), 5);
+    }).then(function (pages) {
+      var files = [], more = false;
+      (pages || []).forEach(function (p) {
+        if (!p) return;
+        if (p.more) more = true;
+        (p.files || []).forEach(function (f) { files.push(f); });
       });
-      return mapLimit(Object.keys(ids), 3, function (id) {
-        return listAll(inDrive(driveId, {
-          q: "'" + String(id).replace(/'/g, "\\'") + "' in parents and trashed = false",
-          pageSize: '200',
-          fields: fields
-        }), 5);
-      }).then(function (pages) {
-        var files = [], more = !!found.more;
-        (pages || []).forEach(function (p) {
-          if (!p) return;
-          if (p.more) more = true;
-          (p.files || []).forEach(function (f) { files.push(f); });
-        });
-        return { files: files, more: more };
-      });
+      return { files: files, more: more };
     });
   }
   function loadBin() {
@@ -1048,20 +1001,13 @@
     render();
     var found = [];
     loadLedgerSet().then(function (led) {
-      return loadHoldFolderIds().then(function (holdIds) {
-        return pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "' and 'me' in owners and trashed = false", pageSize: '1000', fields: 'nextPageToken,files(id,name,parents)' }, function (files) {
-          files.forEach(function (f) {
-            if (String(f.name || '').indexOf(PCP_PREFIX) !== 0) return;
-            var parentName = holdIds[(f.parents || [])[0]];
-            if (parentName) f._chain = [parentName];
-            f._moneyHold = isMoneyRollback(f, f._chain || []);
-            found.push(f);
-          });
-        }).then(function () { return led; });
-      }, function () {
-        found.forEach(function (f) { f._moneyHold = true; });
-        return { ok: false, ids: {}, note: LEDGER_FAIL };
-      });
+      return pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "' and 'me' in owners and trashed = false", pageSize: '1000', fields: 'nextPageToken,files(id,name,parents)' }, function (files) {
+        files.forEach(function (f) {
+          if (String(f.name || '').indexOf(PCP_PREFIX) !== 0) return;
+          f._moneyHold = isMoneyRollback(f, []);
+          found.push(f);
+        });
+      }).then(function () { return led; });
     }).then(function (led) {
       if (gen !== pcpLoadGen) return;
       P.ledgerOk = !!led.ok;
@@ -1078,7 +1024,7 @@
   }
   function pcpMark() {
     if (busy) return;
-    var items = pickedItems('pcpmark').filter(function (f) { return !nameHasRr(f.name) && !isMoneyRollback(f, f._chain || pathFolders(f.path)); });
+    var items = pickedItems('pcpmark').filter(function (f) { return !nameHasRr(f.name) && !isMoneyRollback(f, f._chain || []); });
     if (!items.length) return;
     if (!writeGranted) { requestWrite(); return; }
     var ok = window.confirm('Rename ' + items.length + ' selected personal file' + (items.length === 1 ? '' : 's') + ' to start ' + PCP_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted yet. Names containing RR_ are not included.');
@@ -1086,7 +1032,7 @@
     busy = true; P.marked = { done: 0, failed: 0 }; render();
     var doneIds = {};
     mapLimit(items, 4, function (f) {
-      if (isMoneyRollback(f, f._chain || pathFolders(f.path))) { P.marked.failed++; return; }
+      if (isMoneyRollback(f, f._chain || [])) { P.marked.failed++; return; }
       return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: PCP_PREFIX + f.name }).then(function () { P.marked.done++; doneIds[f.id] = true; }, function () { P.marked.failed++; });
     }).then(function () {
       P.matches = P.matches.filter(function (f) { return !doneIds[f.id]; });
@@ -1143,7 +1089,7 @@
     if (P.status === 'done') {
       html += '<p class="note"><strong>' + num(P.matches.length) + '</strong> personal files (' + (P.matchBytes / 1e9).toFixed(2) + ' GB) already in a shared drive.</p>';
       if (P.matches.length) {
-        html += '<div data-bin-list="pcp-rename"><h4>Rename matches</h4>' + pickButtons('pcpmark', 'pcpmark', 'Rename') + tickList('pcpmark', P.matches, function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : (isMoneyRollback(f, f._chain || pathFolders(f.path)) ? E02_LABEL : ''); }, 'pcp-rename') + '</div>';
+        html += '<div data-bin-list="pcp-rename"><h4>Rename matches</h4>' + pickButtons('pcpmark', 'pcpmark', 'Rename') + tickList('pcpmark', P.matches, function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : (isMoneyRollback(f, f._chain || []) ? E02_LABEL : ''); }, 'pcp-rename') + '</div>';
       }
     }
     if (P.marked) html += '<p class="res ' + (P.marked.failed ? 'bad' : 'ok') + '">Renamed ' + num(P.marked.done) + ' to ' + esc(PCP_PREFIX) + '…' + (P.marked.failed ? ', ' + P.marked.failed + ' failed' : '') + '.</p>';
@@ -1214,8 +1160,7 @@
   var USB_PREFIX = 'ZZ_DELETE_LOCAL_';
   var USB_SKIP = /^(\.|\$RECYCLE\.BIN$|System Volume Information$)/;
   function usbBlock(m) {
-    var probe = { name: m.name, path: m.path, _path: m.path, parents: m.parents || [] };
-    if (isMoneyRollback(probe, pathFolders(m.path))) return E02_LABEL;
+    if (e02NameHit(m.name) || e02FolderHit({ parents: m.parents || [] })) return E02_LABEL;
     return nameHasRr(m.name) || nameHasRr(m.path) ? 'Name contains RR_, left out.' : '';
   }
   function usbBlank() { return { status: 'idle', log: '', root: '', files: 0, hashed: 0, bytes: 0, skipped: 0, matches: [], matchBytes: 0, only: [], onlyBytes: 0, stop: false, marked: null, error: '' }; }
@@ -1629,7 +1574,7 @@
     // ZZ_DELETE_ sweep. Only ticked ready items can move. Nothing moves until Lisa confirms.
     var listed = d ? d.ready.length + d.held.length + d.rename.length + d.leftout.length + d.blocked.length + (d.e02 ? d.e02.length : 0) : null;
     html += foldOpen('sweep', !!(d && listed), 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Google Drive: ZZ_DELETE_ files ready to bin</h3>' + stateBadge(p, listed) + '</summary><div class="fbody">';
-    html += '<p class="note">Only names that start ZZ_DELETE_ and have a row in the delete ledger can be ticked. Marked files with no ledger row are held and are not binned. Other ZZ_ names are listed under Rename needed and are never binned. ZZ_SUPERSEDED_ is retired and is not a valid state. Anything with RR_ in its name, inside an RR_ folder, or in a folder that holds an RR_ item, is left out. Money rollback files are held and are never ticked, restored, renamed or binned, even by Select all. Select all ticks only the allowed rows you can see. Show more and Show all bring the rest into view. A hidden row is never moved.</p>';
+    html += '<p class="note">Only names that start ZZ_DELETE_ and have a row in the delete ledger can be ticked. Marked files with no ledger row are held and are not binned. Other ZZ_ names are listed under Rename needed and are never binned. ZZ_SUPERSEDED_ is retired and is not a valid state. Anything with RR_ in its name, inside an RR_ folder, or in a folder that holds an RR_ item, is left out. Money rollback files are held and are never ticked, restored, renamed or binned, even by Select all. That hold uses two folder ids (0.1 - Index and 4 - Ops), not the folder name. Select all ticks only the allowed rows you can see. Show more and Show all bring the rest into view. A hidden row is never moved.</p>';
     html += failNote(p);
     if (d) {
       if (d.ledgerNote) html += '<p class="note fail">' + esc(d.ledgerNote) + '</p>';
