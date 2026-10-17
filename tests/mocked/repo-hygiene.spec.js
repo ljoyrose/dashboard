@@ -65,3 +65,12 @@ test('the pages pull in scripts, styles and images only from Google sign-in and 
   }
   expect(bad).toEqual([]);
 });
+
+test('no personal email addresses in the docs (this repo is public)', () => {
+  // The pages themselves name Lisa's business sign-in address on purpose. The docs must not carry personal ones.
+  const PERSONAL = /[\w.+-]+@(?:me\.com|icloud\.com|gmail\.com|googlemail\.com|outlook\.com|hotmail\.com|yahoo\.[a-z.]+)/gi;
+  const ALREADY_ON_THE_PAGES = ['lisahcarson@gmail.com']; // named in the main page's PC-Personal text by Lisa's choice
+  const bad = [];
+  files.filter((f) => /\.md$/.test(f)).forEach((f) => (read(f).match(PERSONAL) || []).filter((m) => !ALREADY_ON_THE_PAGES.includes(m.toLowerCase())).forEach((m) => bad.push(`${f}: ${m}`)));
+  expect(bad).toEqual([]);
+});
