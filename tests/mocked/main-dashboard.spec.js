@@ -164,6 +164,17 @@ test.describe('Main dashboard: reads Drive (mocked)', () => {
     await expect(page.locator('#view')).toContainText('Sample Docs');
   });
 
+  test('Show more reveals a file that the first page was hiding', async ({ page }) => {
+    await page.goto('./#/drive/drv-alpha1');
+    await signIn(page);
+    const view = page.locator('#view');
+    await expect(view).toContainText('Showing 7 of');
+    await expect(view).not.toContainText('ZZ_sample-old-copy.txt');
+    await view.locator('[data-action="showmore"]').click();
+    await expect(view).toContainText('ZZ_sample-old-copy.txt');
+    await expect(view.locator('[data-action="showall"]')).toHaveCount(0);
+  });
+
   test('opening a folder shows its files and an "Up one level" link that works', async ({ page }) => {
     await page.goto('./#/drive/drv-alpha1');
     await signIn(page);
@@ -239,41 +250,55 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
 });
 
 test.describe('Main dashboard: Bin', () => {
-  test('lists ZZ_ items to move, never lists RR_ archive items as movable', async ({ page }) => {
+  test('lists other ZZ_ names under Rename needed, and never lists an RR_ archive item', async ({ page }) => {
     await page.goto('./#/bin');
     await signIn(page);
     const view = page.locator('#view');
-    await expect(view).toContainText('ZZ_sample-old-copy.txt');
-    await expect(view).toContainText('ZZ_sample-dupe.txt');
-    await expect(view).toContainText('2 to move to the bin');
+    await expect(page.locator('#sweepCard h3')).toHaveText('Google Drive: ZZ_DELETE_ files ready to bin');
+    await expect(view.locator('[data-bin-list="rename"]')).toContainText('ZZ_sample-old-copy.txt');
+    await expect(view.locator('[data-bin-list="rename"]')).toContainText('ZZ_sample-dupe.txt');
+    await expect(view).toContainText('Ready (0)');
+    await expect(page.locator('[data-action="sweep"]')).toBeDisabled();
     // the archive file must not appear anywhere on the Bin page
     await expect(view).not.toContainText('RR_sample-archive.txt');
   });
 
-  test('moving to the bin needs a permission step first, then a confirm; Cancel changes nothing', async ({ page, guard }) => {
+  test('moving to the bin needs a ticked row, a permission step, then a confirm; Cancel changes nothing', async ({ page, guard }) => {
+    const { IDS } = require('../support/world');
+    guard.world.file('zz-del-1', 'ZZ_DELETE_sample-ready.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+    guard.world.byId(IDS.ledger).content = 'file_id\nzz-del-1\n';
     await page.goto('./#/bin');
     await signIn(page);
     const dialogs = [];
     page.on('dialog', async (d) => { dialogs.push(d.message()); await d.dismiss(); });
     const sweep = page.locator('[data-action="sweep"]');
+    await expect(sweep).toBeDisabled();
+    await page.locator('[data-action="selectall"][data-group="bin"]').click();
+    await expect(sweep).toContainText('Move selected (1)');
     await sweep.click(); // first click only asks for the extra (pretend) permission
-    await expect(page.locator('#view')).toContainText(/Full access|Bin actions allowed|Move all to bin/i);
+    await expect(page.locator('#view')).toContainText(/Bin actions on|Move selected \(1\)/);
     await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => dialogs.length).toBe(1);
-    expect(dialogs[0]).toMatch(/Move 2 items starting ZZ_ to the bin/);
-    expect(dialogs[0]).toMatch(/RR_ archive items are never included/);
+    expect(dialogs[0]).toMatch(/Move 1 selected item to the bin/);
+    expect(dialogs[0]).toMatch(/RR_ names are never included/);
     expect(guard.world.calls.filter((c) => c.method === 'PATCH')).toEqual([]);
+    expect(guard.world.byId('zz-del-1').trashed).toBe(false);
     expect(guard.world.byId('zz-1').trashed).toBe(false);
   });
 
-  test('confirming moves only the ZZ_ items to the bin (pretend Drive), never the RR_ item', async ({ page, guard }) => {
+  test('confirming moves only the ticked ZZ_DELETE_ item to the bin (pretend Drive)', async ({ page, guard }) => {
+    const { IDS } = require('../support/world');
+    guard.world.file('zz-del-1', 'ZZ_DELETE_sample-ready.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+    guard.world.byId(IDS.ledger).content = 'file_id\nzz-del-1\n';
     await page.goto('./#/bin');
     await signIn(page);
     page.on('dialog', (d) => d.accept());
+    await page.locator('[data-action="selectall"][data-group="bin"]').click();
     await page.locator('[data-action="sweep"]').click();
     await page.locator('[data-action="sweep"]').click();
-    await expect.poll(() => guard.world.byId('zz-1').trashed).toBe(true);
-    expect(guard.world.byId('zz-2').trashed).toBe(true);
+    await expect.poll(() => guard.world.byId('zz-del-1').trashed).toBe(true);
+    expect(guard.world.byId('zz-1').trashed).toBe(false);
+    expect(guard.world.byId('zz-2').trashed).toBe(false);
     expect(guard.world.byId('rr-1').trashed).toBe(false);
     await expect(page.locator('#view')).toContainText('Moved to bin');
   });

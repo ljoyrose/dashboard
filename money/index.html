@@ -185,7 +185,20 @@
   var CLIENT_ID = '135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com';
   var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
   var REFRESH_MS = 10 * 60 * 1000;
-  var NOW_SHOW = 6, TURN_SHOW = 5;
+  var NOW_SHOW = 6, TURN_SHOW = 5, MORE = {};
+  function listShown(key, total, step) {
+    if (MORE[key] === 'all') return total;
+    var n = typeof MORE[key] === 'number' ? MORE[key] : step;
+    if (n < step) n = step;
+    return Math.min(total, n);
+  }
+  function showBar(key, total, step) {
+    var n = listShown(key, total, step);
+    if (n >= total) return '';
+    return '<div class="actions" data-show-bar="' + esc(key) + '"><p class="note">Showing ' + n + ' of ' + total + '.</p>' +
+      '<button class="btn" type="button" data-action="showmore" data-list="' + esc(key) + '" data-step="' + step + '" data-total="' + total + '"><span>Show more</span></button>' +
+      '<button class="btn" type="button" data-action="showall" data-list="' + esc(key) + '"><span>Show all</span></button></div>';
+  }
 
   var tokenClient = null, accessToken = null, tokenExpiresAt = 0, timer = null;
   var signedIn = false, loading = false, R = null, err = null;
@@ -272,10 +285,9 @@
       '<div class="itext">' + esc(r.subject) + '</div><div class="meta">' + ents(r.entity) + '<span>' + esc(r.owner) + '</span><span>' + esc(r.state) + '</span></div>' +
       (body ? '<details><summary class="more">Details</summary>' + body + '</details>' : '') + '</li>';
   }
-  function listWithMore(items, show, render1, moreLabel) {
-    var h = '<ul class="items">' + items.slice(0, show).map(render1).join('') + '</ul>';
-    if (items.length > show) h += '<details><summary class="more">' + esc(moreLabel || ('Show ' + (items.length - show) + ' more')) + '</summary><ul class="items">' + items.slice(show).map(render1).join('') + '</ul></details>';
-    return h;
+  function listWithMore(items, show, render1, key) {
+    var n = listShown(key || 'list', items.length, show);
+    return '<ul class="items">' + items.slice(0, n).map(render1).join('') + '</ul>' + showBar(key || 'list', items.length, show);
   }
   function notReady() {
     if (!signedIn) return '<div class="card c-ink now"><h3>Sign in to see your money</h3><p class="note">Read-only access to the Money Hub shared drive. Nothing is stored in this browser.</p><div><button class="btn main" type="button" data-action="signin"><svg class="icon"><use href="#i-in"/></svg><span>Sign in with Google</span></button></div></div>';
@@ -290,15 +302,15 @@
     var risk = items.filter(function (i) { return i.level === 'risk'; }).length;
     var h = '<section class="card now ' + (risk ? 'c-risk' : 'c-ok') + '"><div class="cardhead"><h3>What needs you now</h3>' +
       (items.length ? tag(risk ? 'c-risk' : 'c-ops', items.length + (items.length === 1 ? ' thing' : ' things')) : tag('c-ok', 'All clear')) + '</div>';
-    h += items.length ? listWithMore(items, NOW_SHOW, itemLi) : '<p class="note">Nothing overdue, urgent or due in the next 14 days.</p>';
+    h += items.length ? listWithMore(items, NOW_SHOW, itemLi, 'now-needs') : '<p class="note">Nothing overdue, urgent or due in the next 14 days.</p>';
     h += src('MON-DATES, MON-REGISTER, MON-INTAKE and the ledgers', null) + '</section>';
     h += '<section class="card c-fin"><div class="cardhead"><h3>Money by entity</h3></div>' + entGroups(R.money) + src('BALANCES, OUTGOINGS-NEXT, FORECAST, LIABILITIES and XERO files per entity', null) + '</section>';
     var soon = M.overdueDates(R.data, R.today).concat(M.dueWithin(R.data, R.today, 14));
     h += '<section class="card c-ops"><div class="cardhead"><h3>Dates: overdue and next 14 days</h3>' + tag(soon.some(function (x) { return x.days < 0; }) ? 'c-risk' : 'c-ops', String(soon.length)) + '</div>' +
-      (soon.length ? listWithMore(soon, 6, dateLi) : '<p class="note">Nothing due in the next 14 days.</p>') + '<a href="#/dates">All dates</a>' + src('MON-DATES.csv', meta('dates')) + '</section>';
+      (soon.length ? listWithMore(soon, 6, dateLi, 'now-dates') : '<p class="note">Nothing due in the next 14 days.</p>') + '<a href="#/dates">All dates</a>' + src('MON-DATES.csv', meta('dates')) + '</section>';
     var turn = M.yourTurn(R.data), readyN = turn.filter(function (x) { return x.ready === 'ready'; }).length;
     h += '<section class="card c-ops"><div class="cardhead"><h3>Your turn</h3>' + tag('c-ops', readyN + ' ready · ' + turn.length + ' open') + '</div>' +
-      '<ul class="items">' + turn.slice(0, TURN_SHOW).map(turnLi).join('') + '</ul><a href="#/todo">All ' + turn.length + ' to-dos</a>' + src('MON-REGISTER.csv', meta('register')) + '</section>';
+      listWithMore(turn, TURN_SHOW, turnLi, 'now-turn') + '<a href="#/todo">All ' + turn.length + ' to-dos</a>' + src('MON-REGISTER.csv', meta('register')) + '</section>';
     return h;
   }
 
@@ -370,8 +382,9 @@
     if (rec && rec.table) {
       var rr = rec.table.rows.slice().sort(function (a, b) { return Math.abs(M.n(b.amount_expected) || 0) - Math.abs(M.n(a.amount_expected) || 0); });
       var trow = function (r) { return '<tr><td>' + esc(r.counterparty) + '<div class="lbl">' + esc(r.cadence) + ' · ' + esc(r.direction) + (r.status && r.status !== 'learned' ? ' · ' + esc(r.status) : '') + '</div></td><td class="r">' + gbp(M.n(r.amount_expected), 2) + '</td><td>' + d(r.next_expected) + '</td></tr>'; };
-      h += '<section class="card c-fin"><h3>Regular payments</h3><div class="scroll"><table><tr><th>Who</th><th class="r">Usual amount</th><th>Next</th></tr>' + rr.slice(0, 8).map(trow).join('') + '</table></div>' +
-        (rr.length > 8 ? '<details><summary class="more">Show ' + (rr.length - 8) + ' more</summary><div class="scroll"><table>' + rr.slice(8).map(trow).join('') + '</table></div></details>' : '') + src('RECURRING.csv · ' + code, rec) + '</section>';
+      var recN = listShown('rec-' + code, rr.length, 8);
+      h += '<section class="card c-fin"><h3>Regular payments</h3><div class="scroll"><table><tr><th>Who</th><th class="r">Usual amount</th><th>Next</th></tr>' + rr.slice(0, recN).map(trow).join('') + '</table></div>' +
+        showBar('rec-' + code, rr.length, 8) + src('RECURRING.csv · ' + code, rec) + '</section>';
     }
     if (m.liab) {
       var lf = efile(code, 'liabilities');
@@ -383,9 +396,9 @@
     }
     h += xeroCards(code, m);
     var dts = M.datesView(R.data, R.today).filter(function (x) { return !x.done && (x.r.entity || '').split(';').indexOf(code) >= 0; });
-    if (dts.length) h += '<section class="card c-ops"><h3>Dates for ' + esc(code) + '</h3>' + listWithMore(dts, 5, dateLi) + src('MON-DATES.csv', meta('dates')) + '</section>';
+    if (dts.length) h += '<section class="card c-ops"><h3>Dates for ' + esc(code) + '</h3>' + listWithMore(dts, 5, dateLi, 'ent-dates-' + code) + src('MON-DATES.csv', meta('dates')) + '</section>';
     var turn = M.yourTurn(R.data).filter(function (x) { return (x.r.entity || '').split(';').indexOf(code) >= 0; });
-    if (turn.length) h += '<section class="card c-ops"><h3>Your to-dos for ' + esc(code) + '</h3>' + listWithMore(turn, 5, turnLi) + src('MON-REGISTER.csv', meta('register')) + '</section>';
+    if (turn.length) h += '<section class="card c-ops"><h3>Your to-dos for ' + esc(code) + '</h3>' + listWithMore(turn, 5, turnLi, 'ent-turn-' + code) + src('MON-REGISTER.csv', meta('register')) + '</section>';
     return h;
   }
   function xeroCards(code, m) {
@@ -400,8 +413,9 @@
     if (pay && pay.table) {
       var pr = pay.table.rows.slice().sort(function (a, b) { return (M.n(b.amount_due) || 0) - (M.n(a.amount_due) || 0); });
       var prow = function (r) { return '<tr><td>' + esc(r.supplier) + '<div class="lbl">' + esc(r.unpaid_bills) + ' bill(s) · oldest ' + d(r.oldest_due) + '</div></td><td class="r">' + gbp(M.n(r.amount_due), 2) + '</td></tr>'; };
-      h += '<h4>Unpaid bills by supplier · ' + gbp(m.bills.total, 2) + ' across ' + m.bills.suppliers + '</h4><div class="scroll"><table>' + pr.slice(0, 6).map(prow).join('') + '</table></div>' +
-        (pr.length > 6 ? '<details><summary class="more">Show ' + (pr.length - 6) + ' more</summary><div class="scroll"><table>' + pr.slice(6).map(prow).join('') + '</table></div></details>' : '');
+      var payN = listShown('pay-' + code, pr.length, 6);
+      h += '<h4>Unpaid bills by supplier · ' + gbp(m.bills.total, 2) + ' across ' + m.bills.suppliers + '</h4><div class="scroll"><table>' + pr.slice(0, payN).map(prow).join('') + '</table></div>' +
+        showBar('pay-' + code, pr.length, 6);
     }
     if (recv && recv.table) h += '<h4>Owed to you</h4><ul class="items">' + recv.table.rows.map(function (r) { return '<li><div class="itext">' + gbp(M.n(r.amount_due), 2) + ' · ' + esc(r.customer) + '</div><div class="meta"><span>' + esc(r.invoice_number) + '</span><span>due ' + d(r.due_date) + '</span></div></li>'; }).join('') + '</ul>';
     if (inc && inc.table) {
@@ -426,7 +440,7 @@
       ['Date not known yet', 'c-mute', all.filter(function (x) { return x.gap; })]
     ];
     return groups.filter(function (g) { return g[2].length; }).map(function (g) {
-      return '<section class="card ' + g[1] + '"><div class="cardhead"><h3>' + esc(g[0]) + '</h3>' + tag(g[1], String(g[2].length)) + '</div>' + listWithMore(g[2], g[0] === 'Later' ? 5 : 8, dateLi) + '</section>';
+      return '<section class="card ' + g[1] + '"><div class="cardhead"><h3>' + esc(g[0]) + '</h3>' + tag(g[1], String(g[2].length)) + '</div>' + listWithMore(g[2], g[0] === 'Later' ? 5 : 8, dateLi, 'dates-' + g[0]) + '</section>';
     }).join('') + '<p class="note">Repeating dates roll to their next day. Done rows are hidden.</p>' + src('MON-DATES.csv', meta('dates'));
   }
 
@@ -439,7 +453,7 @@
     }
     sub = sub || 'yours';
     var h = '<nav class="subnav" aria-label="To-do views">' + TODO_SUBS.map(function (s) { return '<a class="c-ops" href="#/todo/' + s[0] + '"' + (s[0] === sub ? ' aria-current="page"' : '') + '>' + esc(s[1]) + '</a>'; }).join('') + '</nav>';
-    var wrap = function (title, cls, list, show) { return '<section class="card ' + cls + '"><div class="cardhead"><h3>' + esc(title) + '</h3>' + tag(cls, String(list.length)) + '</div>' + (list.length ? listWithMore(list, show || 10, turnLi) : '<p class="note">None.</p>') + '</section>'; };
+    var wrap = function (title, cls, list, show) { return '<section class="card ' + cls + '"><div class="cardhead"><h3>' + esc(title) + '</h3>' + tag(cls, String(list.length)) + '</div>' + (list.length ? listWithMore(list, show || 10, turnLi, 'todo-' + sub + '-' + title) : '<p class="note">None.</p>') + '</section>'; };
     var mk = function (rows) { return rows.map(function (r) { return { r: r, ready: M.ready(r, reg) }; }); };
     if (sub === 'yours') {
       var t = M.yourTurn(R.data);
@@ -585,7 +599,7 @@
   function signOut() {
     stopTimer();
     var t = accessToken;
-    accessToken = null; tokenExpiresAt = 0; signedIn = false; R = null; err = null;
+    accessToken = null; tokenExpiresAt = 0; signedIn = false; R = null; err = null; MORE = {};
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     banner('Signed out. Nothing kept.', true, false);
     render();
@@ -606,6 +620,16 @@
     if (a === 'signin' && tokenClient) tokenClient.requestAccessToken({ prompt: 'select_account', login_hint: M.CFG.owner });
     else if (a === 'signout') signOut();
     else if (a === 'refresh') load();
+    else if (a === 'showmore') {
+      var key = t.getAttribute('data-list');
+      var step = parseInt(t.getAttribute('data-step'), 10) || NOW_SHOW;
+      var total = parseInt(t.getAttribute('data-total'), 10) || step;
+      var cur = listShown(key, total, step);
+      var next = Math.min(total, cur + step);
+      MORE[key] = next >= total ? 'all' : next;
+      render();
+    }
+    else if (a === 'showall') { MORE[t.getAttribute('data-list')] = 'all'; render(); }
   });
   render();
   var tries = 0;

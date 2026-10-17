@@ -36,20 +36,20 @@ If any of these breaks, the tick turns red and says which page.
 
 | Page | Address | Checks |
 |---|---|---|
-| Main dashboard | `/dashboard/` | 45 |
+| Main dashboard | `/dashboard/` | 46 |
 | CD Hub | `/dashboard/cdhub/` | 30 |
 | Money Hub | `/dashboard/money/` | 41 |
 | Reading CSV files | both readers | 17 |
 | Safety checks | the whole repo | 4 |
-| Bin safety (`RR_` archives never taken) | `#/bin` | 2 |
+| Bin safety (`RR_` archives never taken) | `#/bin` | 9 |
 | Never empty the bin | all three pages | 2 |
-| PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 9 |
+| PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 14 |
 | Header contract (column names) | list of expected columns | 12 |
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
 
-That is 193 checks that must pass.
+That is 206 checks that must pass.
 
 **Main dashboard**
 - Opens and shows only a sign-in button until you sign in.
@@ -57,7 +57,7 @@ That is 193 checks that must pass.
 - Links straight to a section work, like `#/changes/24h`, `#/bin` and `#/personal`.
 - The Back button works.
 - Drive lists the shared drives, opens a folder and has an "Up one level" link.
-- The Bin lists `ZZ_` files, never touches `RR_` files, and asks you to confirm before moving them to the bin.
+- The Bin lists other `ZZ_` names under Rename needed. Only a ticked `ZZ_DELETE_` file with a ledger row can be moved, and only after you confirm. An `RR_` file is never listed as movable.
 - Nothing permanently deletes a shared-drive bin. There is no button for that, and no page calls Drive to empty one.
 - The Dropbox line shows counts only.
 - The Money tile shows each entity on its own, never added together.
@@ -82,9 +82,13 @@ That is 193 checks that must pass.
 - A missing, doubled or wrongly-shaped file shows as an error. It never quietly uses an old one.
 
 **Bin safety**
-- A `ZZ_` folder with an `RR_` item anywhere inside is **left alone**, with a note saying why.
-- A `ZZ_` file inside an `RR_` folder is **left alone**.
-- Only `ZZ_` things with no `RR_` anywhere near them are moved to the bin.
+- A folder with an `RR_` item anywhere inside is **left alone**, with a note saying why.
+- A file inside an `RR_` folder is **left alone**.
+- A name containing `RR_`, a `ZZ_DELETE_` file with no ledger row, and a retired `ZZ_SUPERSEDED_` name cannot be ticked.
+- A name that merely contains `ZZ_DELETE_` in the middle is not listed.
+- If the delete ledger or a pending slip cannot be read, nothing is binned.
+- Move selected acts only on ticked rows that are on screen. On a list of 52 with 50 shown, Select all moves 50. Show all, then Select all, can reach all 52.
+- A personal `ZZ_DELETE_DRIVE_` file is binned only when it is ticked and has a ledger row. `RR_` in the name is left out.
 
 **Never empty the bin**
 - Each page is opened (main dashboard, CD Hub, Money Hub, and their sections).
@@ -94,9 +98,9 @@ That is 193 checks that must pass.
 
 **PC-Personal and Drive check (these rename and bin real files, so they matter most)**
 - Every write goes to a pretend Drive or a pretend plugged-in drive that only exists in memory. Nothing real can be renamed or binned.
-- PC-Personal "Rename": asks for the extra permission, then asks you to confirm. Cancel changes nothing. Confirm renames **only** the files that match a shared-drive copy, adds `ZZ_DELETE_DRIVE_`, and never touches the shared copy or a file with no match.
-- PC-Personal "Bin": finds **only** files starting `ZZ_DELETE_DRIVE_`, asks first, and moves them to the bin (never deletes).
-- Drive check: finds the files already in a shared drive, ignores tiny and system files, asks first, and renames only the matches (`ZZ_DELETE_LOCAL_`). Deletes nothing.
+- PC-Personal "Rename selected": with nothing ticked, nothing happens. It asks for the extra permission, then asks you to confirm. Cancel changes nothing. Confirm renames **only** the ticked files that match a shared-drive copy, adds `ZZ_DELETE_DRIVE_`, and never touches the shared copy, a file with no match, or a name containing `RR_`.
+- PC-Personal "Move selected": finds files starting `ZZ_DELETE_DRIVE_`, and moves only the ticked ones that have a ledger row (never deletes). A name containing `RR_` cannot be ticked.
+- Drive check: finds the files already in a shared drive, ignores tiny and system files, and renames only the ticked matches (`ZZ_DELETE_LOCAL_`). A name containing `RR_` cannot be ticked. Deletes nothing.
 
 **Header contract**
 - The file `tests/contract/expected-headers.json` lists the **column names** (names only, no figures) each Drive file should have.
@@ -201,7 +205,7 @@ GitHub does not run this one, on purpose: it would need a Google key stored in G
 
 ## Decisions you have made
 
-**PC-Personal may rename and bin `RR_` files (decided 15 Oct 2026).** If a file in your personal drive starts `RR_` and is an exact copy of a shared-drive file, PC-Personal renames it to `ZZ_DELETE_DRIVE_RR_…` and step 3 later moves it to the bin. You decided to **keep this**: the shared drive is the right home and only one copy is needed. This is deliberate, not a bug, and the page is unchanged. (The Bin page is different: it never touches `RR_` items inside shared drives.) A test now pins this behaviour, so if anyone later changes PC-Personal to skip `RR_` files, the tick goes red and it has to be discussed first.
+**PC-Personal leaves `RR_` names alone (decided 17 Oct 2026).** A personal file whose name contains `RR_` is not renamed and is not binned, even when it is an exact copy of a shared-drive file and even when its id is in the delete ledger. The same rule applies on the Bin page and on Drive check. A test pins this, so a later change has to be discussed first.
 
 ## Known gaps in looks and reading (not new, now written down)
 
@@ -218,6 +222,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 |---|---|---|
 | 8 Oct 2026 | CD Hub: the Litters page crashed, and occupancy was read from the wrong column (commit `4284758`) | "joined tables work: cabins show their dogs, litters show dam and sire…" (covers Litters and occupancy; the Animana record choice is **not** yet covered) |
 | 15 Oct 2026 | (found by the teeth check, not a live bug) a hidden marker in front of the "CURRENT" line made the row-count warning disappear; and the rules that stop a `ZZ_` folder holding an `RR_` item being binned had no test | "a BOM in front of the…" (the "CURRENT: n rows held" line test), and the two Bin safety tests |
+| 17 Oct 2026 | A bulk move could still change rows hidden past Showing 50 of 52 | "Select all on a list of 52 with 50 shown" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

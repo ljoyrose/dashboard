@@ -826,6 +826,7 @@ function showTreats(id){
  var c=document.getElementById('mclose'); if(c) c.addEventListener('click',function(){ el.innerHTML=''; });
  if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
+var dogShown=300, unplacedShown=40;
 function drawDogs(){
  var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
  var q=v('q').toLowerCase(),fs=v('fs'),fn=v('fn'),fa=v('fa'),fst=v('fst'),fc=v('fc'),ft=v('ft');
@@ -840,8 +841,8 @@ function drawDogs(){
   if(ft&&!d.findings.some(function(f){return f.test===ft;})) return false;
   if(!q) return true;
   return ((d.name||'')+' '+(d.chip||'')).toLowerCase().indexOf(q)>=0; });
- var h='';
- list.slice(0,300).forEach(function(d){
+ var h='', dogN=dogShown==='all'?list.length:Math.min(list.length, Math.max(300, dogShown));
+ list.slice(0,dogN).forEach(function(d){
   var m=months(d.dob), st=statusOf(d);
   var cls=!d.sex?'u':((d.sex==='Male'?'m':'f')+(isEntire(d)?'e':'n'));
   var sym=!d.sex?'?':(d.sex==='Male'?'♂':'♀'); var nEd=!isEntire(d);
@@ -873,8 +874,11 @@ function drawDogs(){
    +(d.chip?'<div class="chipline"><span class="lb">chip</span><span class="vl">'+esc(d.chip)+'</span></div>'
           :'<div class="chipline"><span class="lb">chip</span><span class="none">none recorded</span></div>')
    +'</div></article>';});
+ if(dogN<list.length) h+='<div class="filt" data-show-bar="dogs"><p class="mut">Showing '+dogN+' of '+list.length+'.</p>'
+  +'<button type="button" class="cb" data-dogshow="more">Show more</button>'
+  +'<button type="button" class="cb" data-dogshow="all">Show all</button></div>';
  document.getElementById('rows').innerHTML=h;
- document.getElementById('cnt').textContent=list.length+' of '+CD.dogs.length+(list.length>300?' · first 300 shown':'');
+ document.getElementById('cnt').textContent=list.length+' of '+CD.dogs.length+(dogN<list.length?' · Showing '+dogN+' of '+list.length:'');
 }
 function familyOf(a){ return (a&&a.grouping)?a.grouping:'other'; }
 var FAMNAME={};
@@ -1177,8 +1181,10 @@ function pageRound(){
  else h+='<div class="card acc4"><h4>Where this saves</h4><p style="margin-bottom:0">'
   +'Into the page\u2019s own store, <b>not into the Drive tables</b>. It shows here and to anyone else with the page open. '
   +'I fold it into <code>BLD-occupancy.csv</code> <code>BLD-area_access.csv</code> and <code>BLD-area_reading.csv</code> when you ask. <b>Temperatures are kept exactly as typed, to two decimal places</b> \u2014 a rounded reading cannot be un-rounded.</p></div>';
+ var unN=unplacedShown==='all'?unplaced.length:Math.min(unplaced.length, Math.max(40, unplacedShown));
  h+='<div class="card '+(unplaced.length?'acc2':'acc5')+'"><h4>'+(unplaced.length?unplaced.length+' dogs not yet placed':'Every dog on the premises is placed')+'</h4>'
-  +(unplaced.length?'<p style="margin-bottom:0" class="mut">'+unplaced.slice(0,40).map(function(d){return esc(d.name);}).join(' \u00b7 ')+(unplaced.length>40?' \u2026':'')+'</p>':'')+'</div>';
+  +(unplaced.length?'<p style="margin-bottom:0" class="mut">'+unplaced.slice(0,unN).map(function(d){return esc(d.name);}).join(' \u00b7 ')+(unN<unplaced.length?' \u2026':'')+'</p>'
+    +(unN<unplaced.length?'<p class="mut">Showing '+unN+' of '+unplaced.length+'.</p><button type="button" class="cb" data-unshow="more">Show more</button> <button type="button" class="cb" data-unshow="all">Show all</button>':''):'')+'</div>';
  w.forEach(function(c){
   var a=c.area, aid=a.id;
   var k=roundKey(date,aid), r=ROUND[k]||{}, sel=r.subjects||[];
@@ -1561,6 +1567,18 @@ function go(id,push){
  window.scrollTo(0,0);
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b) go(b.dataset.go); });
+document.addEventListener('click',function(e){
+ var b=e.target.closest&&e.target.closest('[data-dogshow],[data-unshow]'); if(!b) return;
+ if(b.getAttribute('data-dogshow')){
+  if(b.getAttribute('data-dogshow')==='all') dogShown='all';
+  else if(dogShown!=='all') dogShown=(typeof dogShown==='number'?dogShown:300)+300;
+  drawDogs();
+ } else {
+  if(b.getAttribute('data-unshow')==='all') unplacedShown='all';
+  else if(unplacedShown!=='all') unplacedShown=(typeof unplacedShown==='number'?unplacedShown:40)+40;
+  if(document.getElementById('rdate')) go('round', false);
+ }
+});
 document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('[data-signin],[data-signout],[data-reload]'); if(!t||t.disabled) return;
  if(t.dataset.signin) signIn(); else if(t.dataset.signout) signOut();
  else if(t.dataset.reload){ if(TOKEN&&Date.now()<TOKEN_EXP) load(); else signIn(); } });

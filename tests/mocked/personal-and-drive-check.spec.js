@@ -6,6 +6,7 @@
 // Real Drive and real disks are never reachable: outside addresses are blocked and a test fails if one is tried.
 const crypto = require('crypto');
 const { test, expect } = require('../support/test');
+const { IDS } = require('../support/world');
 
 const PCP = 'ZZ_DELETE_DRIVE_';
 const USB = 'ZZ_DELETE_LOCAL_';
@@ -37,6 +38,8 @@ const askForWriteThen = async (page, action) => {
   await page.locator(`[data-action="${action}"]`).click(); // first click only asks for the extra (pretend) permission
   await expect.poll(() => page.evaluate(() => window.__GIS_CALLS.request)).toBeGreaterThan(1);
 };
+const allow = (world, ids) => { world.byId(IDS.ledger).content = 'file_id\n' + ids.join('\n') + '\n'; };
+const tickAll = (page, group) => page.locator(`[data-action="selectall"][data-group="${group}"]`).click();
 
 test.describe('PC-Personal: rename and bin (mocked, writes only reach the pretend Drive)', () => {
   test.beforeEach(({ guard }) => personalWorld(guard.world));
@@ -48,10 +51,12 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
     await signIn(page);
     await page.locator('[data-action="pcpscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished/);
+    await expect(page.locator('[data-action="pcpmark"]')).toBeDisabled();
+    await tickAll(page, 'pcpmark');
     await askForWriteThen(page, 'pcpmark');
     await page.locator('[data-action="pcpmark"]').click();
     await expect.poll(() => dialogs.length).toBe(1);
-    expect(dialogs[0]).toMatch(new RegExp('Rename 2 personal files to start ' + PCP));
+    expect(dialogs[0]).toMatch(new RegExp('Rename 2 selected personal files to start ' + PCP));
     expect(dialogs[0]).toMatch(/Nothing is deleted yet/);
     expect(writes(guard.world)).toEqual([]);
     expect(guard.world.byId('me-a').name).toBe('invoice-a.pdf');
@@ -63,6 +68,7 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
     await signIn(page);
     await page.locator('[data-action="pcpscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished/);
+    await tickAll(page, 'pcpmark');
     await askForWriteThen(page, 'pcpmark');
     await page.locator('[data-action="pcpmark"]').click();
     await expect(page.locator('#view')).toContainText('Renamed 2 to ' + PCP);
@@ -80,23 +86,30 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
   });
 
   test('Bin: finds only ZZ_DELETE_DRIVE_ files, asks first, and Cancel changes nothing', async ({ page, guard }) => {
+    allow(guard.world, ['me-marked']);
     const dialogs = [];
     page.on('dialog', async (d) => { dialogs.push(d.message()); await d.dismiss(); });
     await page.goto('./#/personal');
     await signIn(page);
+    await expect(page.locator('#view')).toContainText(PCP + 'older.pdf');
+    await expect(page.locator('[data-action="pcpbin"]')).toBeDisabled();
+    await tickAll(page, 'pcpbin');
     await askForWriteThen(page, 'pcpbin');
     await page.locator('[data-action="pcpbin"]').click();
     await expect.poll(() => dialogs.length).toBe(1);
-    expect(dialogs[0]).toMatch(new RegExp('Move 1 personal files starting ' + PCP + ' to the bin'));
+    expect(dialogs[0]).toMatch(new RegExp('Move 1 selected personal file to the bin'));
     await expect(page.locator('#view')).toContainText('Cancelled. Nothing binned.');
     expect(writes(guard.world)).toEqual([]);
     expect(guard.world.byId('me-marked').trashed).toBeFalsy();
   });
 
   test('Bin: confirming moves only the ZZ_DELETE_DRIVE_ file to the bin; ordinary files stay', async ({ page, guard }) => {
+    allow(guard.world, ['me-marked']);
     page.on('dialog', (d) => d.accept());
     await page.goto('./#/personal');
     await signIn(page);
+    await expect(page.locator('#view')).toContainText(PCP + 'older.pdf');
+    await tickAll(page, 'pcpbin');
     await askForWriteThen(page, 'pcpbin');
     await page.locator('[data-action="pcpbin"]').click();
     await expect(page.locator('#view')).toContainText('Found 1, moved 1 to the bin');
@@ -115,26 +128,72 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
     expect(writes(guard.world)).toEqual([]);
   });
 
-  // DECIDED by Lisa (15 Oct 2026): keep this behaviour. Shared drives are the correct home and only one copy is needed,
-  // so a personal RR_ file that is an exact copy of a shared-drive file IS renamed ZZ_DELETE_DRIVE_RR_... and later binned.
-  // (This differs from the Bin page, which leaves RR_ items in shared drives alone. That is intended.)
-  // This test pins the decision: if someone later makes PC-Personal skip RR_ files, it goes red and must be discussed first.
-  test('Rename and bin: a personal RR_ file that matches a shared-drive copy IS renamed and then binned (decided, not a bug)', async ({ page, guard }) => {
+  // DECIDED by Lisa (17 Oct 2026): a personal name containing RR_ is left alone.
+  // It is not renamed to ZZ_DELETE_DRIVE_ and it is not binned, even when it matches a shared-drive copy.
+  test('a personal name containing RR_ cannot be ticked, renamed, or binned', async ({ page, guard }) => {
     guard.world.file('me-rr', 'RR_archive.pdf', 'x', { parents: ['my-root'], driveId: null, mimeType: 'application/pdf', md5Checksum: 'md5-aaa', size: 100 });
+    guard.world.file('me-rr-marked', PCP + 'RR_copy.pdf', 'x', { parents: ['my-root'], driveId: null, mimeType: 'application/pdf' });
+    allow(guard.world, ['me-marked', 'me-rr-marked', 'me-a', 'me-b']);
     page.on('dialog', (d) => d.accept());
     await page.goto('./#/personal');
     await signIn(page);
     await page.locator('[data-action="pcpscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished/);
+    const rrRow = page.locator('li', { hasText: 'RR_archive.pdf' });
+    await expect(rrRow).toContainText('Name contains RR_, left out.');
+    await expect(rrRow.locator('input')).toBeDisabled();
+    await tickAll(page, 'pcpmark');
+    await expect(rrRow.locator('input')).not.toBeChecked();
+    await expect(page.locator('[data-action="pcpmark"]')).toContainText('Rename selected (2)');
     await askForWriteThen(page, 'pcpmark');
     await page.locator('[data-action="pcpmark"]').click();
-    await expect(page.locator('#view')).toContainText('Renamed 3 to ' + PCP);
-    expect(guard.world.byId('me-rr').name).toBe(PCP + 'RR_archive.pdf');
-    expect(guard.world.byId('sh-a').name).toBe('invoice-a.pdf'); // the shared copy it matched is untouched
+    await expect(page.locator('#view')).toContainText('Renamed 2 to ' + PCP);
+    expect(guard.world.byId('me-rr').name).toBe('RR_archive.pdf');
+    expect(guard.world.byId('sh-a').name).toBe('invoice-a.pdf');
+    const markedRr = page.locator('li', { hasText: PCP + 'RR_copy.pdf' });
+    await expect(markedRr.locator('input')).toBeDisabled();
+    await tickAll(page, 'pcpbin');
+    await expect(markedRr.locator('input')).not.toBeChecked();
+    await expect(page.locator('[data-action="pcpbin"]')).toContainText('Move selected (3)');
     await page.locator('[data-action="pcpbin"]').click();
-    await expect(page.locator('#view')).toContainText('moved 4 to the bin'); // 3 just renamed + the one already marked
-    expect(guard.world.byId('me-rr').trashed).toBe(true);
+    await expect(page.locator('#view')).toContainText('moved 3 to the bin');
+    expect(guard.world.byId('me-marked').trashed).toBe(true);
+    expect(guard.world.byId('me-a').trashed).toBe(true);
+    expect(guard.world.byId('me-b').trashed).toBe(true);
+    expect(guard.world.byId('me-rr').trashed).toBeFalsy();
+    expect(guard.world.byId('me-rr-marked').trashed).toBeFalsy();
     expect(guard.world.byId('sh-a').trashed).toBeFalsy();
+  });
+
+  test('Rename does nothing with zero ticked, and Clear puts the count back to zero', async ({ page, guard }) => {
+    await page.goto('./#/personal');
+    await signIn(page);
+    await page.locator('[data-action="pcpscan"]').click();
+    await expect(page.locator('#view')).toContainText(/Finished/);
+    const mark = page.locator('[data-action="pcpmark"]');
+    await expect(mark).toBeDisabled();
+    await expect(mark).toContainText('Rename selected (0)');
+    await tickAll(page, 'pcpmark');
+    await expect(mark).toContainText('Rename selected (2)');
+    await page.locator('[data-action="clearpick"][data-group="pcpmark"]').click();
+    await expect(mark).toContainText('Rename selected (0)');
+    await expect(mark).toBeDisabled();
+    expect(writes(guard.world)).toEqual([]);
+  });
+
+  test('Rename changes only the match that was ticked', async ({ page, guard }) => {
+    page.on('dialog', (d) => d.accept());
+    await page.goto('./#/personal');
+    await signIn(page);
+    await page.locator('[data-action="pcpscan"]').click();
+    await expect(page.locator('#view')).toContainText(/Finished/);
+    await page.locator('li', { hasText: 'invoice-a.pdf' }).locator('input').check();
+    await expect(page.locator('[data-action="pcpmark"]')).toContainText('Rename selected (1)');
+    await askForWriteThen(page, 'pcpmark');
+    await page.locator('[data-action="pcpmark"]').click();
+    await expect(page.locator('#view')).toContainText('Renamed 1 to ' + PCP);
+    expect(guard.world.byId('me-a').name).toBe(PCP + 'invoice-a.pdf');
+    expect(guard.world.byId('me-b').name).toBe('invoice-b.pdf');
   });
 });
 
@@ -207,9 +266,11 @@ test.describe('Drive check: rename on a plugged-in drive (pretend drive in memor
     const dialogs = [];
     page.on('dialog', async (d) => { dialogs.push(d.message()); await d.dismiss(); });
     await scan(page);
+    await expect(page.locator('[data-action="usbmark"]')).toBeDisabled();
+    await tickAll(page, 'usb');
     await page.locator('[data-action="usbmark"]').click();
     await expect.poll(() => dialogs.length).toBe(1);
-    expect(dialogs[0]).toMatch(new RegExp('Rename 2 files on "PRETEND-STICK" to start ' + USB));
+    expect(dialogs[0]).toMatch(new RegExp('Rename 2 selected files on "PRETEND-STICK" to start ' + USB));
     expect(dialogs[0]).toMatch(/Nothing is deleted/);
     expect(await page.evaluate(() => window.__USB_MOVES)).toEqual([]);
   });
@@ -217,6 +278,7 @@ test.describe('Drive check: rename on a plugged-in drive (pretend drive in memor
   test('Rename: confirming renames only the two matches, with the ZZ_DELETE_LOCAL_ prefix, and deletes nothing', async ({ page, guard }) => {
     page.on('dialog', (d) => d.accept());
     await scan(page);
+    await tickAll(page, 'usb');
     await page.locator('[data-action="usbmark"]').click();
     await expect(page.locator('#view')).toContainText('Renamed 2 to ' + USB);
     const moves = await page.evaluate(() => window.__USB_MOVES);
@@ -225,5 +287,42 @@ test.describe('Drive check: rename on a plugged-in drive (pretend drive in memor
       ['sub/match-two.bin', USB + 'match-two.bin'],
     ].sort());
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]); // Drive was only read
+  });
+
+  test('Rename does nothing with zero ticked, and Clear puts the count back to zero', async ({ page }) => {
+    await scan(page);
+    const mark = page.locator('[data-action="usbmark"]');
+    await expect(mark).toBeDisabled();
+    await expect(mark).toContainText('Rename selected (0)');
+    await tickAll(page, 'usb');
+    await expect(mark).toContainText('Rename selected (2)');
+    await page.locator('[data-action="clearpick"][data-group="usb"]').click();
+    await expect(mark).toContainText('Rename selected (0)');
+    await expect(mark).toBeDisabled();
+    expect(await page.evaluate(() => window.__USB_MOVES)).toEqual([]);
+  });
+
+  test('Rename changes only the match that was ticked', async ({ page }) => {
+    page.on('dialog', (d) => d.accept());
+    await scan(page);
+    await page.locator('li', { hasText: 'match-one.bin' }).locator('input').check();
+    await expect(page.locator('[data-action="usbmark"]')).toContainText('Rename selected (1)');
+    await page.locator('[data-action="usbmark"]').click();
+    await expect(page.locator('#view')).toContainText('Renamed 1 to ' + USB);
+    expect(await page.evaluate(() => window.__USB_MOVES)).toEqual([['match-one.bin', USB + 'match-one.bin']]);
+  });
+
+  test('a match whose name contains RR_ cannot be ticked', async ({ page, guard }) => {
+    const extra = Object.assign({}, FILES, { 'RR_keep.bin': bytes('f', 2048) });
+    const text = extra['RR_keep.bin'];
+    guard.world.file('usb-rr', 'copy-of-RR_keep.bin', 'x', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', md5Checksum: md5(text), size: text.length, mimeType: 'application/octet-stream' });
+    await installPretendDrive(page, extra);
+    await scan(page);
+    const row = page.locator('li', { hasText: 'RR_keep.bin' });
+    await expect(row).toContainText('Name contains RR_, left out.');
+    await expect(row.locator('input')).toBeDisabled();
+    await tickAll(page, 'usb');
+    await expect(row.locator('input')).not.toBeChecked();
+    await expect(page.locator('[data-action="usbmark"]')).toContainText('Rename selected (2)');
   });
 });
