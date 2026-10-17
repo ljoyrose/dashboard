@@ -1,0 +1,42 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-people.html · 2026-10-15 · STATUS: ON · people, roles, households, sales. PERSONAL DATA: these tables hold real contact details; the Inspector screen hides them. -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · People &amp; sales</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1>People &amp; sales</h1><span class="hubcode">BLD</span><span class="sub">BLD-person, person_role, household, household_member, sale, role, audience</span></div>
+<div id="nav"></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-people.html');
+BLD.load(['BLD-person.csv','BLD-person_role.csv','BLD-household.csv','BLD-household_member.csv','BLD-sale.csv','BLD-subject.csv','BLD-role.csv','BLD-audience.csv']).then(function(T){if(!T)return;
+  var S=BLD.by(T.subject,'id'),E=BLD.esc,P=BLD.by(T.person,'id');
+  function rowsOf(key,cols){
+    var why=BLD.whyNot(T,key,cols);
+    if(why)return BLD.nodata(why);
+    if(!T[key].length)return BLD.nodata('no data yet — BLD-'+key+'.csv has no rows');
+    return null;
+  }
+  var h='<div class="card risk"><p style="margin:0"><b>Personal data.</b> Names, phone numbers, emails and addresses are read live from Drive after you sign in. Nothing is kept in this page. The Inspector screen does not show these fields.</p></div>';
+  var peopleGap=rowsOf('person',['full_name']);
+  h+='<h2>People'+(peopleGap?'':' ('+T.person.length+')')+'</h2>'+(peopleGap||BLD.table(T.person,[['Name',function(r){return '<b>'+E(r.full_name)+'</b>'+(r.known_as?' <span class="muted">('+E(r.known_as)+')</span>':'');}],['Kind','party_kind'],['Vet',function(r){return r.is_vet==='true'?BLD.pill('vet','own'):'';}],['Email','email'],['Phone','phone'],['Preferred','preferred_contact'],['Town',function(r){return E(r.address_locality)+' '+E(r.address_postal_code);}],['Consent',function(r){return E(r.marketing_consent)+(r.consent_basis?' · '+E(r.consent_basis):'');}],['Do not contact',function(r){return r.do_not_contact==='true'?BLD.pill('DNC','no'):'';}],['Retention review',function(r){return BLD.dmy(r.retention_review_on);}],['Notes','notes']]));
+  var roleGap=rowsOf('person_role',['person_id','role_code']);
+  h+='<h2>Roles granted</h2>'+(roleGap||BLD.table(T.person_role,[['Person',function(r){var p=P[r.person_id];return p?E(p.full_name):E(r.person_id);}],['Role','role_code'],['Scope',function(r){return E(r.scope_table)+' '+E(r.scope_id);}],['Audience','audience_id'],['From',function(r){return BLD.dmy(r.started_on);}],['To',function(r){return BLD.dmy(r.ended_on);}],['Granted by','granted_by']]));
+  h+='<h2>Households</h2>'+(rowsOf('household')||BLD.table(T.household,Object.keys(T.household[0]).map(function(k){return [k,k];})));
+  h+='<h2>Household members</h2>'+(rowsOf('household_member')||BLD.table(T.household_member,Object.keys(T.household_member[0]).map(function(k){return [k,k];})));
+  var saleGap=rowsOf('sale',['subject_id']);
+  h+='<h2>Sales</h2>'+(saleGap||BLD.table(T.sale,[['Dog',function(r){return BLD.link(r.subject_id,S);}],['To',function(r){var p=P[r.person_id];return p?E(p.full_name):E(r.person_id);}],['Sold',function(r){return BLD.dmy(r.sold_on);}],['Age (days)','age_at_sale_days'],['Chip at sale','microchip_number_at_sale'],['Seen with dam','seen_with_dam'],['Vet record given','vet_record_given'],['Price','price'],['Deposit',function(r){return E(r.deposit)+(r.deposit_date?' · '+BLD.dmy(r.deposit_date):'');}],['Contract doc','contract_document_id'],['Notes','notes']]));
+  var roleList=rowsOf('role',['code']);
+  var audList=rowsOf('audience',['code']);
+  h+='<div class="grid2"><div><h2>Roles</h2>'+(roleList||BLD.table(T.role,[['Code','code'],['Name','name'],['Can sign off','can_sign_off'],['Notes','notes']]))+'</div><div><h2>Audiences</h2>'+(audList||BLD.table(T.audience,[['Code','code'],['Name','name'],['Signed in','is_signed_in'],['Rank','rank'],['Description','description']]))+'</div></div>';
+  document.getElementById('main').innerHTML=h;document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>

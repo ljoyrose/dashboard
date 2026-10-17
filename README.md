@@ -29,6 +29,10 @@ After Google sign-in (same OAuth client, Drive read-only scope) it lists the `BL
 the `BLD-*.csv` tables live. No data is in the repo, nothing is kept in the browser, and saving (the round,
 cabin access, flags) is switched off for now.
 
+## Bloodline (`/bloodline/`)
+
+<https://ljoyrose.github.io/dashboard/bloodline/> is the Bloodline screens (dogs, litters, matings, health, areas, stock, people, prospects, the inspector view, rules, work, the build brief and the rivals note). After the same Google sign-in as CD Hub, read-only, it reads `BLD-*.csv` live from the same Drive folder, by exact file name. A repeated file name stops the read. A table or column that is not there yet is shown as "no data yet" rather than a zero. Nothing is written to Drive. Save and edit controls say "Saving switches on with the write path (PR #10)". The repo holds no CSV, sample rows or personal details for these screens. Type is Bricolage Grotesque and Figtree.
+
 ## Money Hub (`/money/`)
 
 <https://ljoyrose.github.io/dashboard/money/> is the Money Hub, read-only. After Google sign-in (same OAuth client,

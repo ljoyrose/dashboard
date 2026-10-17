@@ -18,15 +18,29 @@ module.exports = `
         window.__GIS_CALLS.request++;
         window.__GIS_LAST_REQUEST = opts || {};
         var scope = (opts && opts.scope) || cfg.scope;
-        setTimeout(function () {
+        var prompt = opts && opts.prompt;
+        // prompt:'' is a quiet resume. The harness remembers that this tab already
+        // signed in (not a cookie, not storage). A fresh tab stays signed out.
+        var allowed = (prompt !== '' || !window.__gisGranted)
+          ? Promise.resolve(true)
+          : Promise.resolve(window.__gisGranted()).then(function (v) { return !!v; }, function () { return false; });
+        allowed.then(function (ok) {
           var m = mode();
           if (m === 'popup-closed' || m === 'popup-blocked') {
             if (cfg.error_callback) cfg.error_callback({ type: m === 'popup-closed' ? 'popup_closed' : 'popup_failed_to_open' });
             return;
           }
           if (m === 'error') { cfg.callback({ error: 'access_denied' }); return; }
-          cfg.callback({ access_token: 'FAKE-TEST-TOKEN', expires_in: 3600, scope: m === 'denied-scope' ? 'openid' : scope, token_type: 'Bearer' });
-        }, 0);
+          if (!ok) {
+            if (cfg.error_callback) cfg.error_callback({ type: 'silent' });
+            return;
+          }
+          var send = function () {
+            cfg.callback({ access_token: 'FAKE-TEST-TOKEN', expires_in: 3600, scope: m === 'denied-scope' ? 'openid' : scope, token_type: 'Bearer' });
+          };
+          if (m === 'ok' && window.__gisRemember) Promise.resolve(window.__gisRemember()).then(send, send);
+          else send();
+        });
       } };
     },
     hasGrantedAllScopes: function (resp, s) {
@@ -34,7 +48,11 @@ module.exports = `
       var have = String(resp && resp.scope || '').split(' ');
       return String(s).split(' ').every(function (x) { return have.indexOf(x) >= 0; });
     },
-    revoke: function (token, done) { window.__GIS_CALLS.revoke++; if (done) setTimeout(done, 0); }
+    revoke: function (token, done) {
+      window.__GIS_CALLS.revoke++;
+      var forget = window.__gisForget ? Promise.resolve(window.__gisForget()) : Promise.resolve();
+      forget.then(function () { if (done) done(); }, function () { if (done) done(); });
+    }
   } } };
 })();
 `;

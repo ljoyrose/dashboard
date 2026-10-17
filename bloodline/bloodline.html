@@ -1,0 +1,1105 @@
+<!-- Bloodline build brief. Read-only. Saving is off until the write path. -->
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Bloodline · Build brief</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{
+ --p0:#B8B1A5;--p1:#FFFEFB;--p2:#BE6A5D;--p3:#C07D59;--p4:#B3A74D;--p5:#89AF6A;--p6:#4098BE;--p7:#8D6B9C;--p8:#2C2C2A;
+ --ground:#f6f5f2;--surface:#ffffff;--sunk:#efede8;--ink:#1a1c1e;--muted:#5c6066;--line:#e4e2dc;--edge:#d8d5cd;
+ --accent:var(--p4);--shadow:0 1px 2px rgba(0,0,0,.05),0 2px 8px rgba(0,0,0,.04);color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --ground:#161719;--surface:#1f2123;--sunk:#26282b;--ink:#eceef0;--muted:#9aa0a6;--line:#33363a;--edge:#43474c;
+ --p1:#3a3730;--shadow:0 1px 2px rgba(0,0,0,.3),0 2px 10px rgba(0,0,0,.3);color-scheme:dark}}
+:root[data-theme="dark"]{--ground:#161719;--surface:#1f2123;--sunk:#26282b;--ink:#eceef0;--muted:#9aa0a6;--line:#33363a;--edge:#43474c;
+ --p1:#3a3730;--shadow:0 1px 2px rgba(0,0,0,.3),0 2px 10px rgba(0,0,0,.3);color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--ground);color:var(--ink);font-family:Figtree,ui-sans-serif,system-ui,sans-serif;font-size:14px;line-height:1.5;margin:0;padding-inline:18px;padding-block:24px 72px;-webkit-font-smoothing:antialiased}
+.wrap{max-width:900px;margin:0 auto}
+h1{font-size:1.7rem;font-weight:800;letter-spacing:-.02em;margin:0 0 2px;text-wrap:balance}
+h2{font-size:1.15rem;font-weight:700;letter-spacing:-.01em;margin:26px 0 8px}
+h3{font-size:.74rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:22px 0 8px}
+p{margin:0 0 10px;max-width:70ch;text-align:justify;hyphens:auto;-webkit-hyphens:auto}
+.sub{color:var(--muted);font-size:.9rem;text-align:left;margin:0 0 14px;max-width:66ch}
+h1,h2,h3,.hubcode{font-family:"Bricolage Grotesque",Figtree,sans-serif}code{font-family:Figtree,sans-serif;font-weight:700;font-size:.93em;color:var(--accent);white-space:normal;overflow-wrap:anywhere}
+a{color:var(--p6)}
+
+.hdr{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;border-bottom:2px solid var(--edge);padding-bottom:12px;margin-bottom:6px}
+.hubcode{font-weight:800;font-size:.76rem;letter-spacing:.09em;color:#fff;background:var(--p4);border-radius:999px;padding:4px 12px}
+.src{display:flex;gap:10px;align-items:flex-start;background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--p0);border-radius:12px;padding:11px 14px;margin:14px 0;box-shadow:var(--shadow);font-size:.86rem}
+.src b{color:var(--ink)}
+
+nav{position:sticky;top:0;z-index:9;background:var(--ground);display:flex;gap:6px;overflow-x:auto;padding-block:10px;border-bottom:1px solid var(--line);margin-bottom:14px}
+nav{max-width:100%}nav button{font-family:inherit;font-size:.95rem;font-weight:600;white-space:nowrap;min-height:44px;padding:10px 14px;border:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer;border-radius:999px;box-shadow:var(--shadow)}
+nav button[aria-current="true"]{background:var(--p4);color:#fff;border-color:var(--p4)}
+nav button:focus-visible{outline:2px solid var(--p6);outline-offset:2px}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px;margin:10px 0}
+.card.est{border-left:5px solid var(--p5)}
+.card.open{border-left:5px dashed var(--p2);border-left-width:5px;border-left-style:dashed}
+.card.risk{border-left:5px solid var(--p2)}
+.card.money{border-left:5px solid var(--p3)}
+.card.ops{border-left:5px solid var(--p4)}
+.card h4{margin:0 0 6px;font-size:1rem;font-weight:700}
+.scroll{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:4px 6px;margin:10px 0}
+table{width:100%;border-collapse:collapse;font-size:.86rem}
+th,td{text-align:left;padding:8px 11px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:700}
+.pill{display:inline-flex;align-items:center;font-size:.68rem;font-weight:700;letter-spacing:.04em;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface);white-space:nowrap}
+.pill.ok{color:#fff;background:var(--p5);border-color:var(--p5)}
+.pill.no{color:#fff;background:var(--p2);border-color:var(--p2)}
+.pill.warn{color:#3a2c12;background:var(--p4);border-color:var(--p4)}
+.pill.own{color:#fff;background:var(--p6);border-color:var(--p6)}
+.bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0 12px}
+
+.map{display:grid;gap:8px}
+@media(min-width:720px){.map{grid-template-columns:repeat(3,1fr)}}
+.mstep{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:12px 14px;text-align:left;font-family:inherit;color:var(--ink);cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.mstep:hover{border-color:var(--p4)}
+.mstep:focus-visible{outline:2px solid var(--p6);outline-offset:2px}
+.mstep .n{font-size:.7rem;font-weight:800;letter-spacing:.08em;color:var(--muted)}
+.mstep .t{font-weight:700;font-size:.98rem}
+.mstep .d{font-size:.8rem;color:var(--muted)}
+.mstep .st{margin-top:4px}
+
+.q{background:var(--surface);border:1px solid var(--line);border-left:5px dashed var(--p2);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px;margin:12px 0}
+.q.done{border-left:5px solid var(--p5)}
+.qh{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap;margin-bottom:4px}
+.qid{font-weight:800;color:var(--accent);font-size:.8rem;letter-spacing:.04em}
+.qt{font-weight:700;font-size:1rem;flex:1;min-width:0}
+.qwhy{font-size:.84rem;color:var(--muted);margin:4px 0 10px;text-align:justify;hyphens:auto}
+.opts{display:grid;gap:6px;margin:8px 0}
+.opt{display:flex;gap:9px;align-items:flex-start;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);cursor:pointer;font-size:.86rem}
+.opt:hover{border-color:var(--p4)}
+.opt input{margin:3px 0 0;accent-color:var(--p4);flex:none}
+.opt .ol{flex:1}
+.opt .ol b{display:block;font-weight:700}
+.opt .ol s{text-decoration:none;display:block;color:var(--muted);font-size:.8rem;margin-top:1px}
+.opt.rec{border-color:var(--p5);background:color-mix(in srgb,var(--p5) 10%,var(--surface))}
+.rectag{font-size:.64rem;font-weight:800;letter-spacing:.05em;color:#fff;background:var(--p5);border-radius:999px;padding:2px 8px;margin-left:6px}
+textarea{width:100%;font-family:inherit;font-size:.86rem;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);color:var(--ink);resize:vertical;min-height:54px}
+textarea:focus{outline:2px solid var(--p6);outline-offset:1px}
+.saverow{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.btn{font-family:inherit;font-size:.95rem;font-weight:700;min-height:44px;padding:10px 16px;border:1px solid var(--p4);border-radius:999px;background:var(--p4);color:#3a2c12;cursor:pointer;box-shadow:var(--shadow)}
+.btn:hover{filter:brightness(1.05)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sec{background:var(--surface);color:var(--muted);border-color:var(--line)}
+.stat{font-size:.8rem;font-weight:600}
+.stat.ok{color:var(--p5)}.stat.err{color:var(--p2)}.stat.busy{color:var(--muted)}
+.ro{font-size:.8rem;color:var(--p2);font-weight:600}
+
+.next{display:flex;gap:10px;flex-wrap:wrap;margin-top:24px;padding-top:14px;border-top:2px solid var(--edge)}
+.next button{font-family:inherit;font-size:.82rem;font-weight:700;padding:8px 15px;border:1px solid var(--p6);border-radius:999px;background:var(--surface);color:var(--p6);cursor:pointer}
+.next button:hover{background:color-mix(in srgb,var(--p6) 10%,var(--surface))}
+footer{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);font-size:.76rem;color:var(--muted);text-align:left}
+ul{margin:6px 0 0;padding-left:20px}li{margin:5px 0;font-size:.88rem;max-width:68ch}
+.prog{font-size:.8rem;color:var(--muted);font-weight:600}
+
+/* --- dashboard mockup --- */
+.mock{background:var(--sunk);border:1px solid var(--edge);border-radius:18px;padding:14px;margin:12px 0;box-shadow:var(--shadow)}
+.mockbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.mockbar .logo{font-weight:800;font-size:1rem;letter-spacing:-.02em}
+.mockbar .chip{font-size:.68rem;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.mockgrid{display:grid;gap:10px}
+@media(min-width:680px){.mockgrid{grid-template-columns:repeat(2,1fr)}.mockgrid .wide{grid-column:1/-1}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 14px;box-shadow:var(--shadow)}
+.tile h5{margin:0 0 8px;font-size:.7rem;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);display:flex;align-items:center;gap:8px}
+.tile h5 .ct{margin-left:auto;font-weight:800;font-size:.9rem;color:var(--ink)}
+.row{display:flex;gap:9px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line);font-size:.84rem}
+.row:last-child{border-bottom:0}
+.row .nm{font-weight:600;flex:1;min-width:0}
+.row .mt{color:var(--muted);font-size:.76rem}
+.dot{width:8px;height:8px;border-radius:50%;flex:none}
+.d-red{background:var(--p2)}.d-amb{background:var(--p4)}.d-grn{background:var(--p5)}.d-blu{background:var(--p6)}.d-gry{background:var(--p0)}
+.bars{display:flex;flex-direction:column;gap:6px}
+.bar{display:grid;grid-template-columns:minmax(0,4.5rem) minmax(0,1fr) auto;gap:8px;align-items:center;font-size:.78rem;min-width:0}
+.bar .track{height:14px;border-radius:7px;background:var(--sunk);border:1px solid var(--line);overflow:hidden;display:flex}
+.bar .fill{height:100%}
+.bar .cap{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+.big{font-size:1.9rem;font-weight:800;letter-spacing:-.02em;line-height:1}
+.bigsub{font-size:.76rem;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+@media(max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px;text-align:center}
+.kpi b{display:block;font-size:1.4rem;font-weight:800;line-height:1.1}
+.kpi s{display:block;text-decoration:none;font-size:.66rem;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-top:2px}
+.mockcap{font-size:.78rem;color:var(--muted);text-align:left;margin:6px 0 0}
+/* --- table map --- */
+.domains{display:grid;gap:10px}
+@media(min-width:680px){.domains{grid-template-columns:repeat(2,1fr)}}
+@media(min-width:1000px){.domains{grid-template-columns:repeat(3,1fr)}}
+.dom{background:var(--surface);border:1px solid var(--line);border-left:5px solid var(--dc,var(--p0));border-radius:14px;padding:12px 14px;box-shadow:var(--shadow)}
+.dom h5{margin:0 0 3px;font-size:.95rem;font-weight:700;display:flex;align-items:baseline;gap:8px}
+.dom h5 em{font-style:normal;margin-left:auto;font-size:.72rem;font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
+.dom .ds{font-size:.76rem;color:var(--muted);margin-bottom:7px;line-height:1.35}
+.dom .tl{display:flex;flex-wrap:wrap;gap:4px}
+.dom .tl span{font-size:.68rem;font-weight:600;padding:2px 7px;border-radius:999px;background:var(--sunk);border:1px solid var(--line);white-space:nowrap}
+.dom .tl span.bad{background:var(--p2);color:#fff;border-color:var(--p2);font-weight:800}
+.dom .tl span.hub{background:var(--dc,var(--p0));color:#fff;border-color:var(--dc,var(--p0));font-weight:800}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 10px;font-size:.76rem;color:var(--muted)}
+.lg{display:inline-flex;align-items:center;gap:5px}
+.sw{width:13px;height:13px;border-radius:4px;border:1px solid var(--line);display:inline-block}
+.sw.g1,td.g1{background:#d1fae5}.sw.g2,td.g2{background:#a7f3d0}.sw.g3,td.g3{background:#fde68a}
+.sw.g4,td.g4{background:#fdba74}.sw.g5,td.g5{background:#fca5a5}
+.sw.no,td.no{background:var(--sunk);color:var(--muted)}.sw.na,td.na{background:transparent}
+:root:not([data-theme="light"]) .sw.g1,:root:not([data-theme="light"]) td.g1{background:#064e3b}
+:root:not([data-theme="light"]) .sw.g2,:root:not([data-theme="light"]) td.g2{background:#065f46}
+:root:not([data-theme="light"]) .sw.g3,:root:not([data-theme="light"]) td.g3{background:#78350f}
+:root:not([data-theme="light"]) .sw.g4,:root:not([data-theme="light"]) td.g4{background:#7c2d12}
+:root:not([data-theme="light"]) .sw.g5,:root:not([data-theme="light"]) td.g5{background:#7f1d1d}
+.gridwrap{max-height:70vh;overflow:auto}
+table.coigrid{border-collapse:separate;border-spacing:0;font-size:.72rem;white-space:nowrap}
+table.coigrid th,table.coigrid td{border:1px solid var(--line);padding:3px 6px;text-align:center}
+table.coigrid thead th{position:sticky;top:0;z-index:2;background:var(--surface);font-weight:700;vertical-align:bottom;max-width:64px;white-space:normal;line-height:1.15}
+table.coigrid thead th.semen{color:var(--p6)}
+table.coigrid thead th.cross{color:var(--p7);font-style:italic}
+table.coigrid th.rh{position:sticky;left:0;z-index:1;background:var(--surface);text-align:left;font-weight:600;max-width:140px;white-space:normal}
+table.coigrid th.cnr{position:sticky;left:0;top:0;z-index:3;background:var(--surface)}
+table.coigrid td{font-variant-numeric:tabular-nums;color:#0b1220}
+:root:not([data-theme="light"]) table.coigrid td{color:#e8eef7}
+[hidden]{display:none!important}
+
+table.rel{width:100%;border-collapse:collapse;font-size:13px}
+table.rel th{text-align:left;padding:7px 9px;border-bottom:2px solid var(--ln);font-weight:600;white-space:nowrap}
+table.rel td{padding:7px 9px;border-bottom:1px solid var(--ln);vertical-align:top}
+table.rel td.wd{max-width:290px}
+table.rel code{font-size:12.5px}
+.fc{display:block;font-size:11px;opacity:.55;margin-top:2px}
+.rl{display:inline-block;padding:1px 6px;margin:1px 2px 1px 0;border:1px solid var(--ln);border-radius:4px;font-size:11.5px;font-family:ui-monospace,Menlo,monospace}
+.rl.in{border-color:currentColor;opacity:.95;font-weight:600}
+.mut{opacity:.55;font-size:11.5px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px;vertical-align:middle}
+html,body{overflow-x:clip;max-width:100%}
+.wrap{width:100%;min-width:0}
+.scroll,.mock,.mockgrid,.tile,.card,.q{max-width:100%;min-width:0}
+.scroll{overflow-x:auto}
+th,td,.row .nm{overflow-wrap:anywhere;min-width:0}
+#screens{max-width:100%}
+#screens nav{overflow-x:auto;max-width:100%}
+table.rel th,th{white-space:normal}
+body:not(.ready) #nav,body:not(.ready) #foot,body:not(.ready) p.sub,body:not(.ready) #dbstate{display:none}
+.savenote{font-weight:700;color:var(--p2)}
+</style>
+
+<div class="wrap" lang="en-GB">
+<div class="hdr">
+  <h1>Bloodline</h1>
+  <span class="hubcode">BLD</span>
+  <span class="sub" style="margin:0 0 0 auto" id="dbstate">store: checking…</span>
+</div>
+<p class="sub">The breeder app, taken through the factory stage by stage. <b>One tenant — you — as the test.</b> The questions are here to read. Saving switches on with the write path (PR #10).</p>
+
+<div id="screens"></div>
+<nav id="nav" aria-label="Stages"></nav>
+<main id="main"></main>
+
+<footer id="foot"></footer>
+</div>
+
+<script src="drive.js"></script>
+<script src="bld-schema.js"></script>
+<script>
+/* ---------------- BLD hub. Hub code BLD. Base files would be BLD-*.csv. ----------------
+   STORE: collection "answers", one doc per question id. Named reader: Claude, when Lisa
+   says the questions are done. Nothing here is written to any other hub's files. */
+
+var DB=null, CANWRITE=null, ANS={}, READY=false;
+
+/* ---- evidence: every figure carries where it came from ---- */
+var SRC={
+ pdf:'breed-guide.pdf, pasted by Lisa 23 Sep 2026',
+ kits:'BRICK-KITS.csv K00/K01/K06, read in full 23 Sep 2026',
+ fd:'The Front Door, version read 23 Sep 2026',
+ live:'live check 23 Sep 2026'
+};
+
+/* ---- what is already settled. Read-only. Each row carries its source. ---- */
+var SETTLED=[
+ ['PR100','We build on our own multi-tenant kit','Flowers 18473/jWmBqe and Links 17421/NbQkAe are the kit. <b>A template is never adopted as a base.</b> So "worth looking at" means whose table shapes we copy, never what we remix onto.','SETTLED'],
+ ['FI16','There is no breeder or pedigree app to clone','All <b>363 leaking schemas, 9,447 columns</b> searched for breeder / pet / pedigree / litter vocabulary. None exists. Columbary <code>19331/JZGMVe</code> has <b>zero tables</b> — hardcoded constants. Pedigree Pulse <code>NaAZaN</code> has 8 tables and <b>no tenant_id on any of them</b>.','RULED-OUT'],
+ ['K06','The kit for this app already exists','<code>BRICK-KITS.csv K06</code> "Breeding and livestock record" is this app, industry-neutral. Built on, never rivalled. Anchors <code>BR-PEDIGREE</code> › <code>BR-CLINICAL</code> › <code>BR-BREEDING-CYCLE</code>.','SETTLED'],
+ ['COST','v1 costs zero credits','28 tables, <b>zero paid prompts in v1</b>. Schema is hand-built and free. A paid prompt is only ever for application code.','SETTLED'],
+ ['SPEC','A spec already exists','<code>claude/SPEC-BREEDER-APP.md</code>, written on <code>K06</code> rather than as a rival to it. <b>Owed to Drive <code>7 - Ideas</code> and not yet filed</b> — Drive was unreachable when it was written.','PARTIAL']
+];
+
+/* ---- donors. owned vs template vs leak-signal ---- */
+var DONORS=[
+ ['HerdTrack','20427/NXXKRN','own','OWNED — free to lift','animals, health_records, breeding_events','<b>The dog core.</b> Pedigree (sire/dam), clinical, breeding cycle. All three K06 anchors in one app you own.','star'],
+ ['Satchel','preview-edadrn','tpl','Template — names only','portals, portal_step, freelancer_setting','Client portal for pup families.','star'],
+ ['Archive','preview-nexlze','leak','Template — <b>LEAK SIGNAL</b>','firm_client (10), client_message (5), document_request (10), monthly_report (9)','Fullest firm→client portal, and the <b>only one that hands over real columns</b>. Schema is sound to copy; <b>never copy its access mode</b>.',''],
+ ['CareCircle','—','rx','RX — remix, schema','care_recipient, care_task, checkin','Litters / offspring cohort + care-task engine.',''],
+ ['Pedigree Pulse','NaAZaN','hollow','OWNED but <b>hollow</b>','8 tables, no tenant_id, 0 rows','Column-vocabulary checklist only — <b>not a base</b>. Cost 2,514 credits.',''],
+ ['Grandcentral','—','tpl','Schema only','subject, milestone, memory, photo','Puppy-update / milestone feed for buyers.',''],
+ ['Groomery','preview-jyewkj','tpl','Template — names only','pets, appointments, memberships, groom_sessions','Pet profiles (breed + coat), booking, live status.',''],
+ ['Dream Haven','NBWXnj','own','OWNED — code in hand','waitlist_signups, applications, deposits','Puppy waitlist + deposits + gamification.',''],
+ ['Cakes by James','JvanKj','own','OWNED','products, variants, cart, orders','Breeder shop — pups, stud, merch.',''],
+ ['BuildTrack','20420/eVXBaj','own','OWNED','directory, inventory, deliveries, time_entries, estimates, reports','Kennel ops, if you go that wide.',''],
+ ['Testimonial app','LJR7','own','OWNED','testimonials, reviews, media_approvals','Verified reviews / trust.','']
+];
+
+var PETTPL=[
+ ['Groomery','preview-jyewkj','pets, appointments, memberships, groom_sessions'],
+ ['Kennel','preview-ewqorj','dogs, bookings, report_cards, <b>vaccinations</b>'],
+ ['Fetch','preview-nvpkvj','dogs, bookings, report_cards'],
+ ['Pawcabin','preview-nadyae','bookings, pets, daily_updates'],
+ ['Pawgress','preview-jgqkan','pets, appointments, treatments'],
+ ['Vetted','preview-nbqlke','pets, appointments, vaccinations, prescriptions']
+];
+
+/* ---- the schema, brick by brick ---- */
+var SCHEMA=[
+ ['K00','The floor','BR-BASICS','platform','login, navigation, base CRUD','FREE'],
+ ['K00','The floor','BR-TENANCY','owned-shape','tenants, tenant_users, roles, permissions','FREE'],
+ ['K00','The floor','BR-LEGAL','owned-shape','consents, usage_channels, events <b>(consent/audit — never calendar)</b>','FREE'],
+ ['K06','Dog core','BR-PEDIGREE','owned-shape','<b>subject</b> — one table, sire_id + dam_id, sex, status, birth_date','FREE'],
+ ['K06','Dog core','BR-CLINICAL','owned-shape','health_records — record_type, event_date, product_name, dose, next_due_date','FREE'],
+ ['K06','Dog core','BR-BREEDING-CYCLE','owned-shape','breeding_events — dam_id, sire_id, breeding_date, method, expected_date, outcome','FREE'],
+ ['K06','Dog core','BR-LITTERS','owned-shape','litters, offspring, weights','FREE'],
+ ['K01','Buyer portal','BR-CLIENT-PORTAL','free-shape','portal_users, portals, portal_steps, clients, shared_record_links','FREE'],
+ ['K01','Buyer portal','BR-DOCS','free-shape','documents — released per row via shared_record_links','FREE'],
+ ['K01','Buyer portal','BR-FORMS','free-shape','forms, form_fields, submissions','FREE'],
+ ['+','Extras','BR-BRAND-THEME','owned-shape','tenant_branding, tenant_assets — your logo on the buyer portal','FREE*'],
+ ['+','Extras','BR-WAITLIST','free-shape','waitlist_signups, applications, deposits','FREE*'],
+ ['v2','Paid engines','BR-COI','bespoke','Henderson tabular recursion — <b>never the path method</b>. Depth must be stated','PAID'],
+ ['v2','Paid engines','BR-PREDICTION','bespoke','—','PAID'],
+ ['v2','Paid engines','BR-REGISTRY-RELABEL','bespoke','—','PAID']
+];
+
+var TRAPS=[
+ ['<code>subject</code> is ONE table','sire_id and dam_id on the one table. <b>Never three tables.</b> A separate dogs / sires / dams split is the failure this kit exists to stop.'],
+ ['Puppies are NOT a new table','An offspring <b>becomes</b> a <code>subject</code> once registered. A puppies table is the same mistake wearing a different name.'],
+ ['<code>events</code> in the floor is consent/audit','It collides by NAME with a calendar events table. <b>Never merge them.</b> BR-LEGAL is in every app, so this reaches everything.'],
+ ['Species is a relabel, never a new table','Dogs, cats, horses and poultry are <b>one shape</b>. If the build asks for a <code>dogs</code> table, the factory has failed its own rule.']
+];
+
+/* ---- THE QUESTIONS. This is the point of the hub. ---- */
+var Q=[
+ {id:'Q1',g:'tenancy',t:'Tenant row #1, or genuinely single-tenant?',tok:'TEN',
+  why:'<code>BR-TENANCY</code> is forced onto every app anyway — you are building <code>tenants</code> and <code>tenant_users</code> either way. The whole difference is <b>one tenant_id column per table</b>. Pedigree Pulse <code>NaAZaN</code> cost 2,514 credits and has no tenant_id on any table, which is exactly why <code>FI16</code> ruled it out as a base. Retrofitting tenancy onto live rows is a data migration.',
+  o:[['a','You are tenant row #1','<code>TEN1</code> today, and the wall is already there the day a second breeder signs. Same work now, no cliff later.',1],
+     ['b','Genuinely single-tenant, no tenant_id','Slightly less to type. <b>Becomes a rebuild, not a rename, if you ever sell it.</b>',0]]},
+
+ {id:'Q2',g:'tenancy',t:'How far into the puppy buyers does it go?',tok:'CUS',
+  why:'This is the token that <b>decides your tables</b>, and the first jump cannot be undone at any price — you cannot retro-fit a lawful basis onto records already taken. The data-protection line is <code>CUS1</code>, not <code>CUS2</code>: it starts when you write a buyer’s name down, not when they get a login.',
+  o:[['0','Staff only — just me','No buyer records at all. <code>BR-LEGAL</code> still mandatory: you are controller of your own account data.',0],
+     ['1','Records about buyers, no login','You hold who bought which puppy. <b>Consent capture becomes mandatory.</b>',0],
+     ['2','They log in and read','Buyer sees their own dog’s record. Adds <code>K01</code>, <code>portal_users</code>, credentials.',0],
+     ['3','They log in and write','They upload a photo, log a weight, submit a form. Adds <code>author_user_id</code> and their own correction/deletion rights.',1],
+     ['4','They transact','Deposits paid inside the app. Payment records must survive account deletion.',0]]},
+
+ {id:'Q3',g:'tenancy',t:'A dog held by two businesses — decide before the pedigree tables exist',tok:'SID',
+  why:'<b><code>PR307</code>, still CONFLICT, and the least-retrofittable question on the whole build.</b> A dog bred by you, sold to a family, bred again by them, seen by a vet — three holders of one animal. The parent pointer aims at a row another business owns. Once rows exist in separate businesses with pointers between them and both copies have been edited, <b>no rule says which is right</b>.',
+  o:[['0','Never — a dog belongs to one business, full stop','Simplest. An outside sire is a text name, not a link.',0],
+     ['1','Shared record, with a written field split','Name, DOB, sire and dam cross. Sale price, buyer details and private notes do not. <b>Unstated means not shared.</b> The leak test becomes field-level.',1],
+     ['2','Decide later','<b>Not actually available.</b> Choosing this is choosing 0 by default, because the tables get built either way.',0]]},
+
+ {id:'Q4',g:'tenancy',t:'Can a stranger read without signing in?',tok:'PUR',
+  why:'A public stud page or a shareable pedigree is a real thing breeders want. The middle value is the trap: a link you email a buyer is neither a stranger nor a login, and if the token is guessable or never expires it <b>silently becomes "anyone can read"</b>.',
+  o:[['0','Nothing is public','',0],
+     ['1','Link-holders only','A one-time link to a dog’s record. Needs an expiry and an unguessable token.',1],
+     ['2','Anyone — a public stud directory','',0]]},
+
+ {id:'Q5',g:'tenancy',t:'Can a stranger put data in without signing in?',tok:'PUW',
+  why:'An enquiry form or a puppy-waitlist signup. <b><code>PUW2</code> is the exact shape of the live cross-tenant write leak found on Flowers.</b> Every anonymous path must resolve its tenant server-side and have its access mode set by hand.',
+  o:[['0','Nothing — enquiries come by email','',0],
+     ['1','Link-holders only','',0],
+     ['2','Anyone — an open enquiry or waitlist form','Deliberate and workable, but it is the highest-risk door in the app.',1]]},
+
+ {id:'Q6',g:'tenancy',t:'Does anyone outside get a scoped view?',tok:'DEL',
+  why:'Your vet, a co-owner of a stud dog, a registry inspector. Not staff, not a customer, not a stranger. <b>Cannot be retrofitted</b> — a scoped invitation changes who every single read has to check.',
+  o:[['0','No outsiders, ever','',0],
+     ['1','Yes — a scoped invitation','Vet sees clinical only; co-owner sees one dog.',1]]},
+
+ {id:'Q7',g:'tenancy',t:'What happens to the rows if a tenant leaves?',tok:'EXI',
+  why:'Only matters the day there is a second breeder — but it decides whether <b>every row needs <code>valid_to</code> from the very first row written</b>, and that cannot be added later without rewriting every read.',
+  o:[['0','Deleted','',0],['1','Frozen — kept, readable by nobody','',0],
+     ['2','Exported to them, then deleted','',1],['3','They move with them','',0]]},
+
+ {id:'Q8',g:'scope',t:'Which kits are in v1?',tok:'—',
+  why:'Dog breeders map to three kits on the board. Each is free to build; each is more to get wrong. <code>K06</code> is not optional — it is the app.',
+  o:[['a','K06 only — the record','6 bricks, 3 tables beyond the floor. Just your dogs.',0],
+     ['b','K06 + K01 buyer portal','The puppy buyer logs in and sees their dog for life. <b>28 tables total.</b> This is what the spec assumes.',1],
+     ['c','K06 + K01 + K03 shop','Adds pups / stud / merch selling. Triggers the money rules.',0],
+     ['d','K06 + K01 + K03 + K05 community','A breeders’ room too. Widest and slowest.',0]]},
+
+ {id:'Q9',g:'scope',t:'How deep does the ancestry go, and what does "active" mean?',tok:'—',
+  why:'You wrote <i>"dogs with ancestors — infinite generations, mark active (or similar) if currently in"</i>. Two separate things live in that sentence and both need a ruling. <b>Infinite depth is free in the schema</b> (<code>sire_id</code> / <code>dam_id</code> recurse) but the COI engine must state its depth, because a COI figure without a depth and a completeness figure beside it is meaningless.',
+  o:[['a','Unlimited ancestry; "active" = currently in my kennel','Historical and outside dogs stay as records with no owner claim.',1],
+     ['b','Unlimited ancestry; "active" = alive','A different question from whether you hold it.',0],
+     ['c','Both, as two separate fields','<code>status</code> for alive/deceased and a separate <b>in-my-care</b> flag. More honest, one more column.',0]]},
+
+ {id:'Q10',g:'scope',t:'What does the buyer actually see?',tok:'CUS grid',
+  why:'A level says how deep the buyer comes; it does not say <b>which slices</b>. And the platform has <b>no column-level visibility</b> — every line you draw becomes a table boundary. Pick what a puppy buyer sees of their own dog.',
+  o:[['a','Record + released documents only','Pedigree, photos, and documents you release one at a time. Clinical hidden.',1],
+     ['b','Record + documents + they can add','They add photos and weights to their own dog.',0],
+     ['c','Everything except your private notes','<b>Not buildable as stated</b> — hiding a field on a shared row needs a column-level rule the platform does not have.',0]]}
+];
+
+var STAGES=[
+ ['map','Map','Where this build is'],
+ ['dash','The dashboard','What you see when you open it'],
+ ['tablemap','The table map','every table, grouped so they fit in your head'],
+ ['relations','How the tables join up','which table points at which \u2014 derived, not typed'],
+ ['guidance','Guidance in, rules out','The white-label mechanism \u2014 and what Wales actually says'],
+ ['planner','The mating planner','Your COI grid, and why it is not one number per male'],
+ ['licensing','1 · Licensing','What the licence demands — Rules.csv already has it'],
+ ['juris','1b · Three jurisdictions','Wales, England, Scotland — read from source today'],
+ ['dogrecord','2 · The dog record','Every event, never the last one'],
+ ['vet','2b · Vet history','The shape a real clinical file already uses'],
+ ['pipeline','3 · The pipeline','Lead → offer → adoption → post-adoption'],
+ ['inspector','3b · The inspector view','DEL — a scoped view for a third party'],
+ ['settled','4 · Settled','Already ruled — do not re-ask'],
+ ['donors','5 · Donors','What we own; shape only, never code'],
+ ['questions','6 · Questions','The answers the build needs from you'],
+ ['fields','7 · Every field','35 tables, 198 fields, provenance on each'],
+ ['schema','8 · Bricks','Brick by brick'],
+ ['blocked','9 · Blocked','What is waiting, and on whom'],
+ ['cost','10 · Cost','What is free and what is not']
+];
+
+/* ---------------- store ---------------- */
+function stamp(t){ if(!t) return ''; try{ return new Date(t).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}catch(e){return String(t);} }
+
+async function boot(){
+  render();
+  var u=null;
+  try{ u=await window.claude.use('user'); }catch(e){}
+  try{ CANWRITE = u ? (u.can ? u.can('data.write') : null) : null; }catch(e){ CANWRITE=null; }
+  var db=null;
+  try{ db=await window.claude.use('db'); }catch(e){ db=null; }
+  if(!db){ DB=null; READY=true; setState('store unavailable — answers cannot be kept on this view'); render(); return; }
+  DB=db;
+  try{
+    DB.collection('answers').onSnapshot(function(snap){
+      var next={};
+      (snap && snap.docs ? snap.docs : []).forEach(function(d){
+        var v = d.data ? (typeof d.data==='function'? d.data() : d.data) : null;
+        if(v) next[d.id]=v;
+      });
+      ANS=next; READY=true;
+      setState(Object.keys(ANS).length+' of '+Q.length+' answered · read back from the store');
+      grabDrafts();
+      if(typingNow()){ setTimeout(function(){ if(!typingNow()) render(); }, 4000); }
+      else render();
+    }, function(){ READY=true; setState('store read failed — answers shown may be incomplete'); render(); });
+  }catch(e){ READY=true; setState('store read failed'); render(); }
+}
+var DRAFTS={};
+function grabDrafts(){}
+function restoreDrafts(){}
+function typingNow(){ var a=document.activeElement; return !!(a&&(a.tagName==='TEXTAREA'||a.tagName==='INPUT')); }
+function setState(s){ var el=document.getElementById('dbstate'); if(el) el.textContent=s; }
+
+async function saveAnswer(qid){
+  var box=document.getElementById('st-'+qid); if(!box) return;
+  box.className='stat';
+  box.textContent='Saving switches on with the write path (PR #10)';
+}
+
+/* ---------------- render ---------------- */
+function go(k,push){
+  if(push!==false){ try{ history.pushState({k:k},'', '#/'+k); }catch(e){ location.hash='#/'+k; } }
+  CUR=k; render(); window.scrollTo(0,0);
+}
+var CUR=(location.hash||'').replace('#/','')||'map';
+if(!STAGES.some(function(s){return s[0]===CUR;})) CUR='map';
+window.addEventListener('popstate',function(e){ CUR=(location.hash||'').replace('#/','')||'map'; render(); });
+
+function navHTML(){
+  return STAGES.map(function(s){
+    return '<button data-go="'+s[0]+'"'+(CUR===s[0]?' aria-current="true"':'')+'>'+s[1]+'</button>';
+  }).join('');
+}
+function answered(){ return Q.filter(function(q){return ANS[q.id];}).length; }
+
+function pageMap(){
+  var done=answered();
+  var h='<h2>The route</h2><p class="sub">Nine stages. Stage 6 is the one that needs you — the rest are already measured or already ruled.</p>';
+  h+='<div class="map">';
+  STAGES.slice(1).forEach(function(s,i){
+    var st = s[0]==='questions' ? '<span class="pill '+(done===Q.length?'ok':'warn')+'">'+done+' of '+Q.length+' answered</span>'
+      : s[0]==='inspector' ? '<span class="pill no">DEL1 \u2014 now v1</span>'
+      : s[0]==='settled' ? '<span class="pill ok">5 rulings</span>'
+      : s[0]==='donors' ? '<span class="pill own">4 owned · 1 leak-signal</span>'
+      : s[0]==='schema' ? '<span class="pill ok">28 tables · free</span>'
+      : s[0]==='dash' ? '<span class="pill warn">mockup</span>'
+      : s[0]==='licensing' ? '<span class="pill ok">Rules.csv = the register</span>'
+      : s[0]==='juris' ? '<span class="pill ok">3 regimes \u2014 4 numbers differ</span>'
+      : s[0]==='dogrecord' ? '<span class="pill warn">214 cols \u2192 ~40 + 6 tables</span>'
+      : s[0]==='vet' ? '<span class="pill ok">visits + visit_items</span>'
+      : s[0]==='pipeline' ? '<span class="pill warn">7 stages · 2 new tables</span>'
+      : s[0]==='fields' ? '<span class="pill warn">'+schemaCount()+'</span>'
+      : s[0]==='tablemap' ? '<span class="pill own">'+DOMAINS.length+' domains</span>'
+      : s[0]==='relations' ? '<span class="pill own">'+relGraph().links.length+' joins</span>'
+      : s[0]==='guidance' ? '<span class="pill law">Wales 2014</span>'
+      : s[0]==='planner' ? '<span class="pill risk">your grid</span>'
+      : s[0]==='blocked' ? '<span class="pill no">4 blocked</span>'
+      : '<span class="pill ok">£0 for v1</span>';
+    h+='<button class="mstep" data-go="'+s[0]+'"><span class="n">STAGE '+(i+1)+'</span><span class="t">'+s[1].replace(/^\d+ · /,'')+'</span><span class="d">'+s[2]+'</span><span class="st">'+st+'</span></button>';
+  });
+  h+='</div>';
+  h+='<div class="src"><span>&#9432;</span><span><b>Where this page’s facts come from.</b> Donors and templates: '+SRC.pdf+'. Bricks, kits and table counts: '+SRC.kits+'. Kit-to-audience mapping: '+SRC.fd+'. <b>Nothing on this page is read live</b> — it is a build brief, and every figure is stamped with the reading it came from. Your answers in stage 3 <b>are</b> live: they are written to this hub’s own store and read back on load.</span></div>';
+  h+='<div class="card risk"><h4>One thing is already wrong upstream</h4><p style="margin:0">The Front Door still classifies <code>K06</code> as <code>T1·E1</code> — <b>the retired numbering</b>. Under the current ladder that is <code>TEN1·CUS1</code>, and <code>T1</code> now means the opposite of what it meant when that line was written. <b>Logged, not worked around.</b></p></div>';
+  return h;
+}
+
+function pageInspector(){
+  var SEE=[
+   ['Licence conditions, and evidence against each','<span class="pill ok">SHOW</span>','the whole point of the view'],
+   ['Every dog on the licence — identity, chip, DOB, parentage','<span class="pill ok">SHOW</span>',''],
+   ['Vaccination, worming, parasiticide — <b>every dose</b>','<span class="pill ok">SHOW</span>','not “last”'],
+   ['Daily health checks, by dog, by date','<span class="pill ok">SHOW</span>',''],
+   ['<b>Socialisation and enrichment log, per dog</b>','<span class="pill ok">SHOW</span>','<b>Wales requires the programme.</b> The log is the proof it happened'],
+   ['Area temperatures and environmental readings','<span class="pill ok">SHOW</span>',''],
+   ['Occupancy — which dog was in which room, on any date','<span class="pill ok">SHOW</span>','this is what proves you were never over capacity'],
+   ['Matings, litters, caesareans, lifetime counts','<span class="pill ok">SHOW</span>','with the rule check beside each'],
+   ['Fit-to-breed assessments and health certificates','<span class="pill ok">SHOW</span>',''],
+   ['Staff list and the full-time / part-time split','<span class="pill ok">SHOW</span>','the Welsh ratio cannot be evidenced without it'],
+   ['Buyers’ names, addresses, phone numbers, emails','<span class="pill no">HIDE</span>','<b>third parties’ personal data.</b> Not the inspector’s business and not yours to disclose'],
+   ['Prices, deposits, invoices, margins','<span class="pill no">HIDE</span>','commercial, not welfare'],
+   ['Leads, enquiries, waiting list','<span class="pill no">HIDE</span>',''],
+   ['Private notes, family messages, portal chat','<span class="pill no">HIDE</span>','']];
+  var h='<h2>The inspector view</h2>';
+  h+='<div class="card est"><h4>This is <code>DEL</code>, and it is the fifth time one mechanism has appeared</h4><p style="margin:0 0 8px">You spotted it: the same shape as letting an accountant in. <b>The grantor is what defines it.</b> <code>CUS</code> is a customer coming in from outside. <code>SUP</code> is us signing in as you. <b><code>DEL</code> is the business granting a named outsider a named slice</b> — different consent, different audit trail, different legal footing.</p><p style="margin:0">“A named party gets a named field list” has now turned up in <code>PAR1</code>, <code>SID1</code>, <code>DEL</code>, the <code>CUS</code> portal grid, and here. <b>Five times. It should be built once.</b></p></div>';
+  h+='<div class="card risk"><h4><code>DEL1</code> cannot be retrofitted</h4><p style="margin:0">A scoped invitation changes <b>who every single read has to check</b>. Bolted on later it means revisiting every query in the app. Decided now it costs one column and one join. <b>This moves <code>DEL</code> from “your accountant, one day” to a v1 requirement</b>, because the inspector is coming whether or not the app is ready.</p></div>';
+  h+='<h3>What the inspector sees — and what they must not</h3><div class="scroll"><table><tr><th>Evidence</th><th></th><th>Why</th></tr>';
+  SEE.forEach(function(r){h+='<tr><td>'+r[0]+'</td><td>'+r[1]+'</td><td style="font-size:.82rem">'+r[2]+'</td></tr>';});
+  h+='</table></div>';
+  h+='<div class="card ops"><h4>Four properties the grant needs</h4><ul style="margin:0">'
+   +'<li><b>Read-only.</b> No inspector ever writes to your records.</li>'
+   +'<li><b>Time-boxed.</b> <code>valid_from</code> and <code>valid_to</code> on the grant — it expires by itself, so nobody has to remember to revoke it.</li>'
+   +'<li><b>Scoped by a named list</b>, never “everything except”. A whitelist stays correct when you add a field; a blocklist silently widens.</li>'
+   +'<li><b>Audited.</b> Every view logged — who, when, what. <b>That log is itself evidence of good practice</b>, so the audit works in your favour rather than against it.</li></ul></div>';
+  h+='<div class="card est"><h4>And it is the same door for everyone who is not a customer</h4><p style="margin:0">Your vet, a co-owner of a stud dog, a registry inspector, your accountant, a local authority officer — <b>one mechanism, different named lists</b>. Build it once for the inspector and the rest are rows.</p></div>';
+  h+='<div class="card risk"><h4>One thing to decide before it is built</h4><p style="margin:0"><b>Does the inspector get a login, or a link?</b> A login means they are a <code>portal_user</code> with a password you now hold. A time-boxed link means <code>PUR1</code> — and if the token is guessable or never expires, it silently becomes <b>anyone can read your entire licence file</b>. Both are workable. <b>They are not equally safe and they are not the same build.</b></p></div>';
+  return h;
+}
+function pageSettled(){
+  var h='<h2>Already ruled — do not re-ask these</h2><p class="sub">Five rulings this build inherits. Solid edge means established.</p>';
+  SETTLED.forEach(function(r){
+    var cls = r[3]==='PARTIAL' ? 'card open' : 'card est';
+    h+='<div class="'+cls+'"><div class="bar"><span class="pill '+(r[3]==='SETTLED'?'ok':r[3]==='RULED-OUT'?'no':'warn')+'">'+r[3]+'</span><b>'+r[0]+'</b></div><h4>'+r[1]+'</h4><p style="margin:0">'+r[2]+'</p></div>';
+  });
+  return h;
+}
+
+function pageDonors(){
+  var h='<h2>Donors — shape only, never code</h2>';
+  h+='<div class="card risk"><p style="margin:0"><b>A template is never a base.</b> Tenancy and row-ownership are never in a template, template gating is front-end only with nothing enforced server-side, and retrofitting tenancy into someone else’s structure is <b>what produced the cross-tenant write leak on Flowers</b>. A donor supplies tables, columns and screens. Never code.</p></div>';
+  h+='<div class="scroll"><table><tr><th>Source</th><th>Id</th><th>Class</th><th>Tables</th><th>What it gives</th></tr>';
+  DONORS.forEach(function(d){
+    var pill = d[2]==='own'?'<span class="pill own">OWNED</span>' : d[2]==='leak'?'<span class="pill no">LEAK SIGNAL</span>' : d[2]==='hollow'?'<span class="pill warn">HOLLOW</span>' : '<span class="pill">TEMPLATE</span>';
+    h+='<tr><td><b>'+d[0]+'</b>'+(d[6]==='star'?' ★':'')+'</td><td><code>'+d[1]+'</code></td><td>'+pill+'<br><span style="font-size:.78rem;color:var(--muted)">'+d[3]+'</span></td><td style="font-size:.8rem">'+d[4]+'</td><td>'+d[5]+'</td></tr>';
+  });
+  h+='</table></div>';
+  h+='<h3>The six pet/dog templates — verified live 21 Sep</h3><div class="scroll"><table><tr><th>Template</th><th>Preview</th><th>Tables</th></tr>';
+  PETTPL.forEach(function(p){ h+='<tr><td><b>'+p[0]+'</b></td><td><code>'+p[1]+'</code></td><td>'+p[2]+'</td></tr>'; });
+  h+='</table></div>';
+  h+='<div class="card open"><h4>All six are correctly private</h4><p style="margin:0">You have table <b>names</b>, not columns. Columns need <b>your signed-in editor Tables view</b> — free, and the single highest-value hour available on this build. <b>This is blocker B1.</b></p></div>';
+  h+='<div class="card est"><h4>Owned and confirmed working, '+SRC.live+'</h4><p style="margin:0">Pawgress <code>ePmMMN</code> · Pawcabin <code>jWnKZN</code> · Vetted <code>NDREwJ</code> · HerdTrack <code>NXXKRN</code>. <b>Kennel returned nothing</b> — the connector only sees working apps, so that means <i>not working</i>, <b>not</b> <i>not owned</i>. It could be archived; unresolved.</p></div>';
+  return h;
+}
+
+function pageQuestions(){
+  var done=answered();
+  var h='<h2>The questions</h2><p class="sub">Ten. Three of them cannot be changed later at any price — they are marked. <span class="prog">'+done+' of '+Q.length+' answered.</span></p>';
+  h+='<p class="savenote" id="savenote">Saving switches on with the write path (PR #10)</p>';
+  var groups={tenancy:'Tenancy — decides the tables',scope:'Scope and shape'};
+  ['tenancy','scope'].forEach(function(g){
+    h+='<h3>'+groups[g]+'</h3>';
+    Q.filter(function(q){return q.g===g;}).forEach(function(q){
+      var a=ANS[q.id]||null;
+      var hard = (q.id==='Q2'||q.id==='Q3'||q.id==='Q6');
+      h+='<div class="q'+(a?' done':'')+'" id="q-'+q.id+'">';
+      h+='<div class="qh"><span class="qid">'+q.id+'</span><span class="qt">'+q.t+'</span>'
+        +(q.tok!=='—'?'<span class="pill">'+q.tok+'</span>':'')
+        +(hard?'<span class="pill no">CANNOT RETROFIT</span>':'')
+        +(a?'<span class="pill ok">ANSWERED</span>':'')+'</div>';
+      h+='<div class="qwhy">'+q.why+'</div>';
+      h+='<div class="opts">';
+      q.o.forEach(function(o){
+        var chk = a && a.choice===o[0] ? ' checked' : '';
+        h+='<label class="opt'+(o[3]?' rec':'')+'"><input type="radio" name="'+q.id+'" value="'+o[0]+'"'+chk+'><span class="ol"><b>'+o[1]+(o[3]?'<span class="rectag">SUGGESTED</span>':'')+'</b>'+(o[2]?'<s>'+o[2]+'</s>':'')+'</span></label>';
+      });
+      h+='</div>';
+      h+='<textarea id="note-'+q.id+'" placeholder="Anything that changes the answer — in your own words">'+(a&&a.note?String(a.note).replace(/</g,'&lt;'):'')+'</textarea>';
+      h+='<div class="saverow"><button class="btn" data-save="'+q.id+'">Save this answer</button><span class="stat '+(a?'ok':'')+'" id="st-'+q.id+'">'+(a?'Saved '+stamp(a.at):'')+'</span></div>';
+      h+='</div>';
+    });
+  });
+  return h;
+}
+
+function pageSchema(){
+  var free=SCHEMA.filter(function(r){return r[5].indexOf('FREE')===0;}).length;
+  var h='<h2>The schema</h2><p class="sub">'+SCHEMA.length+' bricks. <b>'+free+' free, 3 paid and all three deferred to v2.</b> Source: '+SRC.kits+'.</p>';
+  h+='<div class="scroll"><table><tr><th>Kit</th><th>Brick</th><th>Class</th><th>Tables</th><th>Cost</th></tr>';
+  SCHEMA.forEach(function(r){
+    h+='<tr><td><code>'+r[0]+'</code><br><span style="font-size:.74rem;color:var(--muted)">'+r[1]+'</span></td><td><code>'+r[2]+'</code></td><td style="font-size:.78rem">'+r[3]+'</td><td style="font-size:.82rem">'+r[4]+'</td><td>'+(r[5]==='PAID'?'<span class="pill no">PAID</span>':'<span class="pill ok">'+r[5]+'</span>')+'</td></tr>';
+  });
+  h+='</table></div>';
+  h+='<div class="card open"><p style="margin:0"><b>FREE*</b> — <code>BR-BRAND-THEME</code> and <code>BR-WAITLIST</code> table lists come from <b>kit text, not the registry’s own column</b>. Their registry rows were never opened. Stated rather than hidden.</p></div>';
+  h+='<h3>Four traps the kit file warns about</h3>';
+  TRAPS.forEach(function(t){ h+='<div class="card risk"><h4>'+t[0]+'</h4><p style="margin:0">'+t[1]+'</p></div>'; });
+  return h;
+}
+
+function pageBlocked(){
+  var B=[
+   ['B1','Columns for the six pet templates','You have table <b>names</b> only. Needs <b>your</b> signed-in editor Tables view — nobody else can reach it. Free, and the highest-value hour on this build.','LISA'],
+   ['B2','<code>PR307</code> — a dog crossing businesses','Still CONFLICT. <b>The least-retrofittable question here</b>, and it must be settled before the pedigree tables are built. It is question <b>Q3</b>.','LISA'],
+   ['B3','<code>SPEC-BREEDER-APP.md</code> not filed to Drive','Written to the project only, because Drive was unreachable. Owed to <code>7 - Ideas</code>. <b>Owed, not done.</b>','CLAUDE'],
+   ['B4','Kennel <code>preview-ewqorj</code> returns nothing','Means <i>not working</i>, not <i>not owned</i>. Unresolved without the API key.','OPEN']
+  ];
+  var h='<h2>Blocked, and on whom</h2><p class="sub">Named rather than left implicit. Two of these are yours and nobody else can clear them.</p>';
+  B.forEach(function(b){
+    h+='<div class="card open"><div class="bar"><span class="pill '+(b[3]==='LISA'?'no':b[3]==='CLAUDE'?'warn':'')+'">'+b[3]+'</span><b>'+b[0]+'</b></div><h4>'+b[1]+'</h4><p style="margin:0">'+b[2]+'</p></div>';
+  });
+  return h;
+}
+
+function pageCost(){
+  var h='<h2>Cost</h2>';
+  h+='<div class="card est"><h4>v1 is £0 in credits</h4><p style="margin:0"><b>28 tables, zero paid prompts.</b> Schema — tables, columns, seed rows, access modes — is hand-built in the dashboard and free. A paid prompt is <b>only ever</b> for application code, and <code>qssend</code> gates it.</p></div>';
+  h+='<div class="card money"><h4>The only three things that ever cost credits</h4><p style="margin:0"><code>BR-COI</code>, <code>BR-PREDICTION</code>, <code>BR-REGISTRY-RELABEL</code> — the only real engines in the whole kit file, <b>all deferred to v2</b>. The COI maths is already settled (<code>FI17</code>): Henderson tabular recursion, never the path method, and <b>always show depth and completeness beside the number</b>.</p></div>';
+  h+='<div class="card risk"><h4>The access-mode trap, which does cost money</h4><p style="margin:0">Every table made through the dashboard form gets <code>user_scoped</code> by default (<code>PR243</code>) — and a <b>business-owned</b> table set <code>user_scoped</code> returns <b>zero rows to everyone, including you</b>. Each correction afterwards is a <b>billed Builder turn</b>. So the access mode is named <b>per table, inside the build prompt</b>, before anything is created.</p></div>';
+  h+='<div class="card money"><h4>What no template covers, at any price</h4><p style="margin:0">COI / inbreeding maths (<code>FI17</code>), whelping arithmetic, UK Kennel Club Reg <b>B22c</b> litter limits (<code>FI18</code>), and licensing thresholds. <b>That is the genuinely bespoke part of a breeder app</b> — and none of it is in v1.</p></div>';
+  return h;
+}
+
+
+/* ---- data measured from export.ops.zip, 23 Sep 2026 ---- */
+var EXPORTS=[['Dog',672,214,'10 views — Males, Female, Puppies, Collected, Retired, Not-on-Licence…'],
+ ['Client',328,51,'5 views — LD.B, LD.C, LD.D, LD.X are a STATUS, not four tables'],
+ ['Litters',102,26,'1'],['Rules / areas',39,14,'1 — the licence register'],
+ ['Adult photos',35,10,'1'],['Vaccines',9,10,'1'],['Contract returns',4,57,'2'],['Current tasks',6,18,'1']];
+
+var EVENTS=[
+ ['Last L2 · Next L2 · Last DHP · Next DHP · Last KC · Next KC · Rabies Date · Rabies Due','8 columns','<b><code>vaccinations</code></b> — one row per dose: product, batch, date, vet, next due','Vetted <code>NDREwJ</code> — owned'],
+ ['Last Advocate · Last Wormer','2 columns','<b><code>treatments</code></b> — one row per application: product, dose, weight at dose, date','Pawgress <code>ePmMMN</code> — owned'],
+ ['Last Dental · Dental Due/Grade','2 columns','<code>treatments</code>, same table, different type','Pawgress — owned'],
+ ['Weight (kg)','1 column','<b><code>weights</code></b> — one row per weighing','BR-LITTERS — owned shape'],
+ ['WHERE?','1 column','<b><code>occupancy</code></b> — subject, area, moved_in, moved_out','<b>nothing — new</b>'],
+ ['45 hereditary-condition columns','45 columns','<b><code>dna_results</code></b> — subject, condition, result, lab, date','<b>nothing — new</b>'],
+ ['L1–L6 date and number','12 columns','rows in <code>breeding_events</code>','HerdTrack <code>NXXKRN</code> — owned'],
+ ['George % · Stefan % · Larry % · Dawson % · Cooper %','5 columns','<b><code>relatedness</code></b> — subject, stud, pct. <b>A new stud is a row, not a column</b>','<b>nothing — this is BR-COI</b>']];
+
+var CALCS=['Ideal Mate CALC 302','Monitor CALC 270','RETIRE CALC','8W GUESS','REAL DUE - calc litter','If Mate today +8w','G2 CALC','AGE Years','Wks Old','TODAY','Age (weeks)','DOB GUESS Next Litter'];
+
+var PIPE=[
+ ['1','Lead','A stranger fills in the public form','<code>leads</code>','<b>Anonymous write.</b> This is <code>PUW</code> and it is the highest-risk door in the app — the tenant must be resolved server-side.','Nothing yet — public pages only'],
+ ['2','Enquiry answered','You reply, qualify, log the call','<code>leads</code> + <code>activity</code>','BR-LEAD-CRM','Breed guides, what to expect'],
+ ['3','Waitlist','They want one from a future litter','<code>waitlist_signups</code>, <code>applications</code>','Dream Haven <code>NBWXnj</code> — owned, code in hand','Preparing for a puppy'],
+ ['4','Offered','A specific pup is offered to a specific family','<b><code>offers</code></b> — pup, family, offered_on, expires, state','<b>Nothing — new table.</b> The spreadsheet does this in the head','That pup: photos, weekly updates'],
+ ['5','Reserved','Deposit taken','<code>deposits</code>','Dream Haven — owned','Contract, collection plan'],
+ ['6','Adoption','Collection day, and the checklist runs','<b><code>handover_checklist</code></b> — microchip transfer, contract, insurance, passport','<b>Partly new.</b> The columns exist on the dog table; the checklist as rows does not','Everything for week one'],
+ ['7','Post-adoption','They keep the login for life','<code>portal_users</code>, <code>portal_steps</code>','Satchel <code>preview-edadrn</code> — the staged portal','Health record, training, the lot']];
+
+function pageLicensing(){
+  var h='<h2>Licensing — you already built it</h2>';
+  h+='<div class="card est"><h4><code>Rules.csv</code> is the licence conditions register</h4><p style="margin:0 0 8px">I said the registry had no brick for this and it would have to be built. <b>Wrong — it exists, as 39 rows of your own data.</b></p><p style="margin:0"><code>Area</code> · <code>M2</code> · <code>-10kg</code> <code>10-25kg</code> <code>25kg+</code> · <code>SML+P</code> <code>Med+P</code> <code>Lge+P</code> · <code>Whelp?</code> · <code>Litter/No Mum</code> · <code>Mums In Area</code> <code>Studs In Area</code> <code>Litters In Area</code><br><br>That is <b>maximum dogs per size band per area</b>, a separate allowance when pups are present, and whether whelping is permitted there. <b>It does not need designing. It needs lifting.</b></p></div>';
+  h+='<div class="card ops"><h4>The SLA categories, from your own rows</h4><ul style="margin:0"><li>Babies with mum, under 8wks</li><li>Litters without mum, 8wks+</li><li>Males — entire, 6mths+, stud</li><li>Females — entire, 6mths+, breeding bitch</li><li>Training — 3mths+, no KC required</li></ul><p style="margin:8px 0 0">The dog table already carries <code>Licence Size Classification</code>, and <b>26 dogs sit in <code>Not_on_Licence_26</code></b>. Licensing is threaded through the data you already keep.</p></div>';
+  h+='<div class="card risk"><h4>The one thing capacity rules force that a spreadsheet cannot do</h4><p style="margin:0"><code>WHERE?</code> is a single field — <b>where the dog is now</b>. To prove to an inspector that an area was never over its limit, you need <b>where every dog was on any given date</b>. That is an <code>occupancy</code> history, not a field, and <b>it cannot be reconstructed afterwards</b>. Same class as <code>valid_to</code>: decide before the first row.</p></div>';
+  h+='<div class="card open"><h4>Still not answered: England or Wales</h4><p style="margin:0">The thresholds and the staffing requirements differ. <b>I have not verified either this session</b> and will read the current regulations from the primary source rather than from memory. It is the only thing blocking the conditions half.</p></div>';
+  return h;
+}
+
+function pageJuris(){
+  var R=[
+  ['Licence trigger','<b>3 or more breeding bitches</b> + breeding, selling, supplying or advertising','3+ litters a year, or the business test','Local authority sets a <b>maximum number of breeding bitches</b> on the licence'],
+  ['Minimum age at mating','not stated in the briefing','<b>12 months</b>','<b>12 months</b>'],
+  ['Maximum age at mating','not stated in the briefing','<b>not in Schedule 6</b>','<b>8 years</b> — no mating at 8 or over'],
+  ['Litters per 12 months','not stated in the briefing','<b>1</b>','<b>1</b>'],
+  ['Lifetime litters','not stated in the briefing','<b>6</b>','<b>6</b>'],
+  ['Caesarean bar','not stated in the briefing','after <b>2</b> caesareans','after <b>2</b> — <b>or 1</b> if the need was due to conformation'],
+  ['Litters on the premises','—','—','must not exceed the licensed maximum number of breeding bitches'],
+  ['Staff ratio','<b>1 full-time : 20 adult dogs</b>, or <b>1 part-time : 10</b>','not in Schedule 6','not in Schedule 6'],
+  ['Socialisation / enrichment','<b>programmes required</b>','—','—']];
+  var h='<h2>Three jurisdictions — and why that is good news</h2>';
+  h+='<div class="card est"><h4>The rules differ on four numbers. That makes them data, not code.</h4><p style="margin:0">You are in Wales and want it to keep working in England or Scotland. <b>Do not branch the code.</b> Put the rules in a <code>jurisdiction_rules</code> table, set <code>jurisdiction</code> on the tenant, and the same app obeys whichever regime it is under. That is the factory’s own principle — <b>naming machinery after a place is the same mistake as naming it after an industry</b>. It also makes the app sellable to English and Scottish breeders without a rebuild.</p></div>';
+  h+='<div class="scroll"><table><tr><th>Rule</th><th>Wales 2014</th><th>England 2018</th><th>Scotland 2021</th></tr>';
+  R.forEach(function(r){h+='<tr><td><b>'+r[0]+'</b></td><td>'+r[1]+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td></tr>';});
+  h+='</table></div>';
+  h+='<div class="card risk"><h4>What would change the day you moved to Scotland</h4><ul style="margin:0"><li><b>A bitch of 8 or over could not be mated at all.</b> England has no upper age in Schedule 6; Scotland does.</li><li><b>One caesarean can bar her</b>, not two, if the need was down to conformation — so the <i>reason</i> for a caesarean has to be recorded, not just the fact of it.</li><li>Your <code>Rules.csv</code> capacity figures are <b>Welsh</b>. They would need a second set.</li></ul></div>';
+  h+='<div class="card ops"><h4>Records the law actually names — England Sch 6, verbatim</h4><ul style="margin:0">'
+   +'<li><b>Birth:</b> "the date and time of birth of each puppy, each puppy’s sex, colour and weight, placentae passed, the number of puppies in the litter, and any other significant events" <span style="color:var(--muted)">(6(7))</span></li>'
+   +'<li><b>Sale:</b> "the microchip number of the puppy, the date of the sale, and the age of the puppy on that date" <span style="color:var(--muted)">(6(8))</span></li>'
+   +'<li><b>Each breeding dog:</b> name, sex, microchip and database details, date of birth, <b>the postal address where it normally resides</b>, breed or type, description, <b>the date or dates of any matings, whether or not successful</b>, biological mother and father, veterinary treatment received, and <b>the date and cause of its death</b> <span style="color:var(--muted)">(6(9))</span></li>'
+   +'<li><b>Each breeding bitch:</b> number of matings, age at each mating, number of litters, dates of birth, and number of caesarean sections <span style="color:var(--muted)">(6(10))</span></li>'
+   +'<li><b>All dogs:</b> "any preventative or curative healthcare (or both) given to each dog" <span style="color:var(--muted)">(6(13))</span></li>'
+   +'<li><b>To the purchaser:</b> "the age, sex and veterinary record of the dog being sold" <span style="color:var(--muted)">(1(4))</span></li></ul></div>';
+  h+='<div class="card risk"><h4>Four things the law names that your sheet does not carry</h4><ul style="margin:0"><li><b>Time of birth</b>, not just date — and <b>placentae passed</b>.</li><li><b>Unsuccessful matings.</b> Your sheet records mating dates that led somewhere; the law wants every mating "whether or not successful".</li><li><b>Where the dog normally resides</b> — a postal address per dog, which matters for dogs living with guardians.</li><li><b>Date and cause of death.</b> You have <code>Dead?</code> as a flag. The law wants the date and the cause.</li></ul></div>';
+  h+='<div class="card open"><h4>What I could not read, stated rather than hidden</h4><p style="margin:0">The <b>Welsh 2014 regulations themselves</b> refused two fetches (<code>robots.txt</code>). The Welsh figures above come from the <b>Senedd research briefing</b>, not the statutory instrument — so the threshold, staff ratio and enrichment duty are sound, but <b>the Welsh record-keeping list has not been read</b> and the blanks in the table are unknowns, not absences. It needs the SI opened directly.</p></div>';
+  return h;
+}
+function pageDogrecord(){
+  var h='<h2>The dog record</h2>';
+  h+='<div class="card risk"><h4>The rule that reshapes the whole app</h4><p style="margin:0"><b>Your sheet records the LAST vaccine. An inspection needs EVERY vaccine.</b> A last-value column cannot answer "show me the course" — the history was overwritten each time. So every <code>Last …</code> column becomes <b>a table of events</b>, and "last" and "next due" become <b>computed from the rows</b>, never stored.</p></div>';
+  h+='<div class="scroll"><table><tr><th>In your sheet today</th><th>Now</th><th>Becomes</th><th>Shape from</th></tr>';
+  EVENTS.forEach(function(e){ h+='<tr><td style="font-size:.8rem">'+e[0]+'</td><td><span class="pill">'+e[1]+'</span></td><td>'+e[2]+'</td><td style="font-size:.8rem">'+e[3]+'</td></tr>'; });
+  h+='</table></div>';
+  h+='<div class="card ops"><h4>Columns that stop existing entirely</h4><p style="margin:0 0 6px">These are spreadsheet formulas, not facts. In an app they are <b>computed on read</b> from date of birth and the mating date — storing them is how they go stale.</p><p style="margin:0">'+CALCS.map(function(c){return '<code>'+c+'</code>';}).join(' · ')+'</p></div>';
+  h+='<div class="card est"><h4>What this does to 214 columns</h4><p style="margin:0">45 condition columns become <b>one</b> table. 12 litter columns become rows. 5 stud-percentage columns become rows — and <b>a new stud stops being a schema change</b>. 12 formula columns disappear. <b>What is left is roughly 40 real columns on <code>subject</code>, plus six proper tables.</b></p></div>';
+  h+='<h3>What your 22 exports actually are</h3><div class="scroll"><table><tr><th>Real table</th><th>Rows</th><th>Cols</th><th>Exported as</th></tr>';
+  EXPORTS.forEach(function(x){ h+='<tr><td><b>'+x[0]+'</b></td><td class="num">'+x[1]+'</td><td class="num">'+x[2]+'</td><td style="font-size:.8rem">'+x[3]+'</td></tr>'; });
+  h+='</table></div><p class="sub">1,195 rows across 22 files, measured from <code>export.ops.zip</code> on 23 Sep 2026. <b>22 files, 8 tables.</b></p>';
+  return h;
+}
+
+function pageVet(){
+  var ITEMS=[
+   ['product','<code>2.0 tablet &lt;WORMER&gt; (box 104)</code>','qty, unit, product, strength/weight band, instruction','<code>treatments</code>'],
+   ['vaccine','<code>1.0 vial &lt;LEPTO VACCINE&gt;</code>','qty, unit, product, batch','<code>vaccinations</code>'],
+   ['measurement','<code>weight - 15.3 kg   Size Classification: Medium</code>','value, unit, derived band','<code>weights</code> — and the band is <b>computed</b>'],
+   ['appointment','<code>appointment : annual vaccine — needs DHP and L2 (&lt;vet&gt;)</code>','reason, clinician','<code>visits</code>'],
+   ['attachment','<code>attachment - &lt;chip&gt; Xrays — appendix 3</code>','label, chip, appendix ref','<code>documents</code> + <code>shared_record_links</code>'],
+   ['treatment','<code>1.0 treatment GA &amp; Dental — Scale and Polish</code>','procedure, anaesthetic','<code>procedures</code>'],
+   ['note','free clinical text','the findings','<code>clinical_notes</code>']];
+  var FIND=['BCS (body condition) n/9','Dental grade n/5','Chest auscultation','Abdominal palpation','Lymph nodes','Heart rate, rhythm, murmur','Patellas — luxation','OFA hips and elbows','Eyes, ears, nose','Temperament','Microchip scanned and confirmed'];
+  var h='<h2>Vet history — the shape is already right</h2>';
+  h+='<div class="card est"><h4>A real clinical file uses the event model, not last-value columns</h4><p style="margin:0">The example is a <b>27-page patient file</b>, and its structure is <b>a header, then visits in reverse date order, each holding typed line-items</b>. That is exactly the model the dog record needs — arrived at independently by a working veterinary system. <b>Strong confirmation, and it is free to copy.</b> <span style="color:var(--muted)">Read for structure only; none of the content is kept.</span></p></div>';
+  h+='<h3>The seven line-item types</h3><div class="scroll"><table><tr><th>Type</th><th>Shape in the file</th><th>Fields</th><th>Our table</th></tr>';
+  ITEMS.forEach(function(r){h+='<tr><td><b>'+r[0]+'</b></td><td style="font-size:.8rem">'+r[1]+'</td><td style="font-size:.8rem">'+r[2]+'</td><td>'+r[3]+'</td></tr>';});
+  h+='</table></div>';
+  h+='<div class="card ops"><h4>So the model is two tables, not seven</h4><p style="margin:0"><b><code>visits</code></b> — date, practice, clinician, reason. <b><code>visit_items</code></b> — visit_id, <b>type</b>, product, qty, unit, value, instruction. Seven types, one table, and a new type is a value rather than a migration. The specialised views (<code>vaccinations</code>, <code>treatments</code>, <code>weights</code>) are <b>reads over it</b>, not separate stores.</p></div>';
+  h+='<div class="card risk"><h4>“Fit to breed” is a record, not a flag</h4><p style="margin:0">It recurs in the file <b>annually, dated, and attributed to a named vet</b>, alongside <i>“no conditions that can affect breeding potential noticed”</i>. Your sheet has breeding status as a column. <b>It has to be an assessment with a date, an author and an expiry</b> — because the licence turns on it, and “fit to breed” with no date proves nothing to an inspector.</p></div>';
+  h+='<div class="card risk"><h4>The vet is already recording the licence rule</h4><p style="margin:0">One whelp note reads, in substance, <i>first litter, bitch over 12 months at mating, interval correct</i>. That is <b>England Sch 6 6(3) being verified in a clinical note</b> — minimum age and one litter per 12 months. So the compliance check already happens; it is just trapped in free text. <b>The app turns it into a rule the record can be tested against.</b></p></div>';
+  h+='<h3>Findings that repeat every visit — candidates for structured fields</h3><div class="card"><p style="margin:0">'+FIND.map(function(f){return '<span class="pill">'+f+'</span>';}).join(' ')+'</p><p style="margin:8px 0 0;font-size:.84rem;color:var(--muted)">Each appears in visit after visit in the same order. Structured, they become trend lines and an inspector-ready summary; left as prose they are unsearchable. <b>Not all of them need to be fields — which ones matter is your call.</b></p></div>';
+  h+='<div class="card est"><h4>And this file IS the deliverable</h4><p style="margin:0">England Sch 6 1(4) requires the purchaser be given <i>“the age, sex and veterinary record of the dog being sold”</i>. <b>That is this document.</b> So the buyer portal’s job at adoption is to produce exactly this pack — which means the record has to be complete enough to generate it, not just complete enough to look at.</p></div>';
+  return h;
+}
+function pagePipeline(){
+  var h='<h2>The pipeline — lead to post-adoption</h2><p class="sub">Seven stages. What the family can see is decided by <b>which stage they are at</b>, and that mechanism already exists.</p>';
+  h+='<div class="scroll"><table><tr><th>#</th><th>Stage</th><th>What happens</th><th>Table</th><th>Shape from</th><th>Resource centre unlocks</th></tr>';
+  PIPE.forEach(function(r){ h+='<tr><td><b>'+r[0]+'</b></td><td><b>'+r[1]+'</b></td><td style="font-size:.82rem">'+r[2]+'</td><td>'+r[3]+'</td><td style="font-size:.8rem">'+r[4]+'</td><td style="font-size:.82rem">'+r[5]+'</td></tr>'; });
+  h+='</table></div>';
+  h+='<div class="card est"><h4>Staged release is already a solved shape</h4><p style="margin:0">Satchel carries <code>portals</code> + <code>portal_steps</code>, and <code>K01</code> carries <code>shared_record_links</code>. <b><code>portal_steps</code> is the pipeline stage</b>, and <b><code>shared_record_links</code> releases one document at a time</b>. Between them you get "they see this much, now" without inventing anything.</p></div>';
+  h+='<div class="card risk"><h4>Two new tables, and one of them is the risky one</h4><p style="margin:0 0 6px"><b><code>offers</code></b> — a pup offered to a family, with an expiry and a state. Nothing in the registry has it, and today it lives in your head. Without it two families can be offered the same pup.</p><p style="margin:0"><b><code>handover_checklist</code></b> — microchip transfer, contract, insurance, passport. The <i>columns</i> exist on the dog table today; <b>as a checklist with a done-date and who did it, it does not</b>.</p></div>';
+  h+='<div class="card risk"><h4>The public lead form is the highest-risk door in the app</h4><p style="margin:0">A stranger writing without signing in is <code>PUW2</code> — <b>the exact shape of the live cross-tenant write leak found on Flowers</b>. It is workable and deliberate, but the tenant must be resolved <b>server-side</b> and the access mode set by hand, never inherited.</p></div>';
+  h+='<div class="card ops"><h4>Booking calls</h4><p style="margin:0">That is <code>K02</code> — <code>bookings</code>, <code>availability_slots</code>, <code>resources</code>. <b>59 of 215 templates carry the shape</b>, so it is the best-evidenced brick in the registry and free to build. It was not in the original scope; it is now.</p></div>';
+  return h;
+}
+
+var PFILT='ALL';
+var PROVDESC={
+ LAW:['LAW','named in legislation now in force','ok'],
+ SOON:['SOON','Act passed — commencement pending','warn'],
+ PROPOSED:['PROPOSED','live consultation, <b>not law</b>','warn'],
+ OPS:['OPS','your own operation — from export.ops and the vet file','own'],
+ JUDGE:['JUDGE','<b>Claude’s judgement.</b> Required by nothing; argued for','']};
+function pageFields(){
+  if(typeof SCHEMA_FULL==='undefined') return '<div class="card risk"><h4>Schema file did not load</h4><p style="margin:0">The field list lives in <code>bld-schema.js</code> beside this page and it has not arrived. Nothing here is a fallback — that is deliberate, so a missing file cannot read as an empty schema.</p></div>';
+  var tot=0,byp={}; SCHEMA_FULL.forEach(function(t){t[3].forEach(function(f){tot++;byp[f[2]]=(byp[f[2]]||0)+1;});});
+  var h='<h2>Every field, with provenance</h2><p class="sub"><b>'+SCHEMA_FULL.length+' tables, '+tot+' fields.</b> Each field says <i>why it exists</i> — so nothing of mine can be mistaken for something the law demands.</p>';
+  h+='<div class="card"><div class="bar">';
+  h+='<button class="pill'+(PFILT==='ALL'?' warn':'')+'" data-prov="ALL" style="cursor:pointer;font-family:inherit">ALL '+tot+'</button>';
+  ['LAW','SOON','PROPOSED','OPS','JUDGE'].forEach(function(k){
+    var d=PROVDESC[k];
+    h+='<button class="pill'+(PFILT===k?' '+(d[2]||'warn'):'')+'" data-prov="'+k+'" style="cursor:pointer;font-family:inherit">'+k+' '+(byp[k]||0)+'</button>';
+  });
+  h+='</div><div style="font-size:.82rem;color:var(--muted)">';
+  ['LAW','SOON','PROPOSED','OPS','JUDGE'].forEach(function(k){var d=PROVDESC[k];h+='<div style="margin:3px 0"><b>'+d[0]+'</b> — '+d[1]+'</div>';});
+  h+='</div></div>';
+  h+='<div class="card est"><p style="margin:0"><b>Filter to LAW and you have the compliance minimum</b> — the fields you cannot ship without. Filter to JUDGE and you have every decision that is mine rather than the law’s, in one place, for you to overrule.</p></div>';
+  SCHEMA_FULL.forEach(function(t){
+    var rows=t[3].filter(function(f){return PFILT==='ALL'||f[2]===PFILT||f[2].indexOf(PFILT)===0;});
+    if(!rows.length) return;
+    h+='<h3>'+t[0]+' — <span style="text-transform:none;letter-spacing:0;font-weight:400">'+t[1]+'</span></h3>';
+    h+='<div class="scroll"><table><tr><th style="width:26%">Field</th><th style="width:13%">Type</th><th style="width:10%">Why</th><th>Note</th></tr>';
+    rows.forEach(function(f){
+      var cls=({LAW:'ok',SOON:'warn',PROPOSED:'warn',OPS:'own',JUDGE:''})[f[2]]||'';
+      h+='<tr><td><code>'+f[0]+'</code></td><td style="font-size:.78rem;color:var(--muted)">'+f[1]+'</td><td><span class="pill '+cls+'">'+f[2]+'</span></td><td style="font-size:.82rem">'+(f[3]||'')+'</td></tr>';
+    });
+    h+='</table></div>';
+  });
+  return h;
+}
+function pageDash(){
+  var h='<h2>The dashboard — what you see when you open it</h2><p class="sub">A mockup, not a screenshot. <b>Every figure here is computed</b> from the event tables and the rules — nothing on this screen is typed or stored.</p>';
+  h+='<div class="mock">';
+  h+='<div class="mockbar"><span class="logo">Bloodline</span><span class="chip">Dynamic Dogs Ltd</span><span class="chip">Wales · licence to 12/26</span><span class="chip" style="margin-left:auto">Mon 23 Sep</span></div>';
+  h+='<div class="kpis"><div class="kpi"><b>38</b><s>dogs on licence</s></div><div class="kpi"><b>3</b><s>litters</s></div><div class="kpi"><b style="color:var(--p2)">7</b><s>overdue</s></div><div class="kpi"><b>2</b><s>collections</s></div></div>';
+  h+='<div class="mockgrid" style="margin-top:10px">';
+
+  h+='<div class="tile"><h5>Needs you today<span class="ct" style="color:var(--p2)">7</span></h5>'
+   +'<div class="row"><span class="dot d-red"></span><span class="nm">3B.5F — no PM temperature</span><span class="mt">due 19:00</span></div>'
+   +'<div class="row"><span class="dot d-red"></span><span class="nm">Asia — fit-to-breed expired</span><span class="mt">blocks mating</span></div>'
+   +'<div class="row"><span class="dot d-red"></span><span class="nm">L2 vaccine · 4 dogs</span><span class="mt">14–31 days over</span></div>'
+   +'<div class="row"><span class="dot d-amb"></span><span class="nm">Insurance certificate</span><span class="mt">expires in 21 days</span></div>'
+   +'<div class="row"><span class="dot d-amb"></span><span class="nm">Week 38 check sheet</span><span class="mt">printed, not returned</span></div></div>';
+
+  h+='<div class="tile"><h5>Areas — capacity now<span class="ct">4 tight</span></h5><div class="bars">'
+   +'<div class="bar"><span>H1</span><span class="track"><span class="fill" style="width:25%;background:var(--p5)"></span></span><span class="cap">1/4</span></div>'
+   +'<div class="bar"><span>H3</span><span class="track"><span class="fill" style="width:100%;background:var(--p2)"></span></span><span class="cap">3/3</span></div>'
+   +'<div class="bar"><span>3B.5F</span><span class="track"><span class="fill" style="width:67%;background:var(--p4)"></span></span><span class="cap">2/3</span></div>'
+   +'<div class="bar"><span>3A.1L</span><span class="track"><span class="fill" style="width:50%;background:var(--p5)"></span></span><span class="cap">1/2</span></div>'
+   +'<div class="bar"><span>3S.2 ISO</span><span class="track"><span class="fill" style="width:0%"></span></span><span class="cap">0/2</span></div>'
+   +'</div><p class="mockcap" style="margin-top:8px"><b>H3 is full for medium.</b> Headroom by size band, from <code>occupancy</code> × <code>area_capacity</code>.</p></div>';
+
+  h+='<div class="tile"><h5>Litters<span class="ct">3</span></h5>'
+   +'<div class="row"><span class="dot d-blu"></span><span class="nm">H1 · 9 pups · day 26</span><span class="mt">weaning from d28</span></div>'
+   +'<div class="row"><span class="dot d-amb"></span><span class="nm">H2 · 6 pups · day 12</span><span class="mt">band 26–28°C (under 4wk)</span></div>'
+   +'<div class="row"><span class="dot d-grn"></span><span class="nm">3B.7 · whelp due</span><span class="mt">in 4 days</span></div>'
+   +'<div class="row"><span class="dot d-gry"></span><span class="nm">Panacur · 1 bitch</span><span class="mt">daily from d40</span></div></div>';
+
+  h+='<div class="tile"><h5>Temperature — today<span class="ct">14/17</span></h5>'
+   +'<div class="row"><span class="dot d-grn"></span><span class="nm">AM readings</span><span class="mt">17 of 17 · all in band</span></div>'
+   +'<div class="row"><span class="dot d-amb"></span><span class="nm">PM readings</span><span class="mt">11 of 17 · window closes 21:00</span></div>'
+   +'<div class="row"><span class="dot d-red"></span><span class="nm">H2 min 25.80°C</span><span class="mt">band 26.00–28.00 · pups d12</span></div>'
+   +'<p class="mockcap"><b>Two readings, ≥11h apart, 2dp.</b> Judged on <code>performed_on</code>, not entry time.</p></div>';
+
+  h+='<div class="tile"><h5>On site now<span class="ct">38 + 17</span></h5>'
+   +'<div class="row"><span class="dot d-blu"></span><span class="nm">Breeding Female</span><span class="mt">11</span></div>'
+   +'<div class="row"><span class="dot d-blu"></span><span class="nm">Breeding Female</span><span class="mt">9</span></div>'
+   +'<div class="row"><span class="dot d-gry"></span><span class="nm">Retired Female</span><span class="mt">6</span></div>'
+   +'<div class="row"><span class="dot d-grn"></span><span class="nm">Stud Male</span><span class="mt">5</span></div>'
+   +'<div class="row"><span class="dot d-amb"></span><span class="nm">In Training</span><span class="mt">7 · not breeding</span></div>'
+   +'<div class="row"><span class="dot d-blu"></span><span class="nm">Pups with mum</span><span class="mt">15 · 2 litters</span></div>'
+   +'<div class="row"><span class="dot d-amb"></span><span class="nm">Pups without mum</span><span class="mt">2 · weaned</span></div>'
+   +'<p class="mockcap"><b>38 adults counts against the licence; the 17 pups do not, until 6 months.</b> Every figure derived from <code>occupancy</code> — mark one Collected and they all move at once.</p></div>';
+
+  h+='<div class="tile"><h5>Post-adoption<span class="ct" style="color:var(--p2)">4 open</span></h5>'
+   +'<div class="row"><span class="dot d-red"></span><span class="nm">Transfer microchip keepership</span><span class="mt">statutory · Fri</span></div>'
+   +'<div class="row"><span class="dot d-amb"></span><span class="nm">Enter licence records</span><span class="mt">Benji · collected Sat</span></div>'
+   +'<div class="row"><span class="dot d-gry"></span><span class="nm">Release post-adoption pack</span><span class="mt">auto on collection</span></div>'
+   +'<div class="row"><span class="dot d-gry"></span><span class="nm">48-hour check-in call</span><span class="mt">Mon</span></div>'
+   +'<p class="mockcap"><b>Created by the collection, not by anyone remembering.</b> The red one is statutory and takes its deadline from the rules, not the template.</p></div>';
+
+  h+='<div class="tile"><h5>Families<span class="ct">5 live</span></h5>'
+   +'<div class="row"><span class="dot d-amb"></span><span class="nm">2 offers out</span><span class="mt">expire Thu</span></div>'
+   +'<div class="row"><span class="dot d-blu"></span><span class="nm">H1 litter · 9 pups</span><span class="mt">7 families match</span></div>'
+   +'<div class="row"><span class="dot d-grn"></span><span class="nm">2 collections</span><span class="mt">Sat · checklists ready</span></div>'
+   +'<div class="row"><span class="dot d-gry"></span><span class="nm">1 not opened guide</span><span class="mt">collects in 2 days</span></div></div>';
+
+  h+='<div class="tile"><h5>Licence<span class="ct" style="color:var(--p5)">OK</span></h5>'
+   +'<div class="row"><span class="dot d-grn"></span><span class="nm">33 conditions evidenced</span><span class="mt">of 35</span></div>'
+   +'<div class="row"><span class="dot d-amb"></span><span class="nm">2 need evidence</span><span class="mt">staff CPD · fire drill</span></div>'
+   +'<div class="row"><span class="dot d-grn"></span><span class="nm">Staff ratio</span><span class="mt">2 FT : 38 — needs 2</span></div>'
+   +'<div class="row"><span class="dot d-blu"></span><span class="nm">Inspector pack</span><span class="mt">ready · last built Fri</span></div></div>';
+
+  h+='</div></div>';
+
+  h+='<div class="card est"><h4>Seven things this screen is doing that a spreadsheet cannot</h4><ul style="margin:0">'
+   +'<li><b>Nothing on it is stored.</b> Every count derives from the event tables, so it cannot disagree with the records.</li>'
+   +'<li><b>It knows what blocks what.</b> “Fit-to-breed expired” is flagged as <i>blocks mating</i>; a dental is not.</li>'
+   +'<li><b>It warns inside the window.</b> 11 of 17 PM readings at 18:00 is actionable; the same fact tomorrow is a failed record.</li>'
+   +'<li><b>It reads the band from the occupants.</b> H2 is under-temperature <i>because there are 12-day-old pups in it</i>. 25.80°C passes in an adult room (10–26°C) and fails in this one (26–28°C, under four weeks). <b>Same number, opposite verdict.</b></li>'
+   +'<li><b>It counts the ratio.</b> Welsh maximum <b>20 adult dogs per full-time attendant, 10 per part-time</b> — against who is actually employed, and adult means ≥ 6 months.</li>'
+   +'<li><b>Marking one puppy Collected moves nine numbers.</b> On-site count, adults-against-licence, area headroom, staff ratio, the litter’s remaining pups — and it creates the post-adoption checklist. <i>One tap, on a phone, on the day.</i></li>'
+   +'<li><b>It notices absence.</b> A printed sheet that never came back; a family who has not opened the collection guide.</li>'
+   +'<li><b>It is the inspector view, from the inside.</b> Same figures, different audience.</li></ul></div>';
+  return h;
+}
+
+function schemaCount(){
+  var r=(typeof SCHEMA_FULL!=='undefined'?SCHEMA_FULL:[]).filter(function(t){return t[0]!==t[0].toUpperCase();});
+  return r.length+' tables \u00b7 '+r.reduce(function(a,t){return a+t[3].length;},0)+' fields';
+}
+var DOMAINS=[
+ ['The dog','--p4',['subject','subject_status','coat_colour','coat_pattern','nose_pigment','microchip','microchip_registration','registration','occupancy','weight','media','media_purpose','document_library','ancestor_evidence'],'Identity, parentage, where it is, what it weighs. <b>One subject table</b> \u2014 a puppy becomes a subject, it never gets a table of its own.'],
+ ['Health','--p2',['visit','visit_item','vaccination','treatment','health_screen','screening_scheme_stage','screening_plan','dna_result','dna_test_batch','sample','test_catalogue','certificate','fit_to_breed'],'Every dose, every screening, every certificate \u2014 as rows. <b>Nothing here is a \u201clast\u201d column.</b>'],
+ ['Medicines','--p3',['medicinal_product','product_dose_band','prescription','dispense','administration','medicine_register'],'The formulary, the weight bands, and the chain from the vet\u2019s authority to the dog\u2019s mouth.'],
+ ['Breeding','--p7',['mating','litter','puppy_birth','puppy_milestone','care_protocol','season','fertility_reading'],'Matings <i>including the ones that did not take</i>, whelps with times, and the age-banded care schedule.'],
+ ['Premises','--p5',['area','area_capacity','environment_limit','applicable_limit','area_reading','reading_requirement','device','occupancy_board','placement_check','board_scenario','exercise_rota','biosecurity_rule','waste_stream'],'Rooms and cabins, who fits in them, what temperature they must hold, and <b>may this dog go there.</b>'],
+ ['Compliance','--p2',['chemical','safety_data_sheet','coshh_assessment','rule_scope','jurisdiction_rule','licence_condition','condition_evidence','inspection','tenant_document','plan_document','emergency_protocol'],'Three levels of rule \u2014 country, council, your own licence \u2014 and a piece of evidence against each condition.'],
+ ['Procedures','--p0',['sop','sop_version','sop_acknowledgement','governed_by','checklist_template','checklist_template_item','checklist_instance','checklist_item','checklist_from_request','checklist_trigger','reference_card','reference_card_view','display_requirement'],'Versioned SOPs, the checklists they generate, and the signs that must be on the wall.'],
+ ['People','--p6',['person','name_alias','role','role_permission','staff','staff_training','staff_duty','staff_competency','transport_journey'],'Staff write the record and see no CRM. Permissions as a <b>grid</b>, not a switch.'],
+ ['Families','--p6',['enquiry','pipeline_stage','programme','requirement','requirement_preference','match_score','offer_reason','sale','document','consent'],'Lead to post-adoption, with ranked preferences and <b>a written reason why that family got that puppy.</b>'],
+ ['Grooming','--p4',['grooming_task_type','grooming_plan','grooming_session'],'Bath, clip, nails, teeth, ears, paws \u2014 per-task clocks, and <b>the most reliable health check you have.</b>'],
+ ['Resources','--p7',['resource','resource_release','resource_view'],'What you release at lead, at reservation, pre-collection and after \u2014 and whether they opened it.'],
+ ['Capture','--p4',['record_sheet','sheet_upload','sheet_cell_read','batch_entry','daily_check','health_check_point','daily_check_result','physical_record','audit_run','audit_gap','enrichment_log','incident'],'The app prints the sheet, the sheet is filled in by hand, the photo comes back in. <b>Like a Xero receipt.</b>'],
+ ['Shop & stock','--p3',['product','product_kit','product_supplier','supplier','stock_movement','purchase_order','purchase_order_line','goods_order','goods_order_line'],'Goods and services in one list, <b>many suppliers per item</b>, and stock on hand derived from movements rather than stored.'],
+ ['Breeding plan','--p7',['coi_calculation','mating_exclusion','stud_resource','pedigree_import','ancestor','registry_number','registry_attribute','pedigree_line_finding'],'COI computed per <i>pairing</i>, the \u201cNo\u201d decisions that must survive a recalculation, and semen as stock.'],
+ ['Outside conditions','--p5',['weather_observation','weather_trigger','external_risk_factor','mitigation_measure','area_exposure_declaration','reading_mitigation'],'The weather, what it obliges you to do, and the vet form\u2019s own risk list \u2014 pest, waterway, wildlife, local disease.'],
+ ['Feeding','--p3',['feed_product','feeding_plan','feeding_plan_line','feeding_event','feeding_routine'],'The foods, what each dog is on <i>as a dated row</i>, what actually went in the bowl \u2014 and <b>whether it was eaten</b>. The daily round is derived, never typed.'],
+ ['Contracts & handover','--p6',['contract_template','contract','contract_party','contract_signature','subject_owner','subject_insurance','handover_pack','care_advice','retention_rule'],'Versioned paper, <b>more than one signatory</b>, ownership as a dated row, and the puppy logbook as a generated pack with a statutory retention date.'],
+ ['The business','--p3',['tenant','dashboard_item','audit_log','client_classification','required_vaccination','evidence_kind'],'Jurisdiction and licence on the tenant; everything due, derived.']
+];
+var COI={"dams": ["Cookie", "Dahlia-Pumpkin", "Dee dee", "Delia (Penny) (IC/BH)", "Diva (IC)", "Dolly (Jasmine)", "Duchess", "Elsa (IC/BH)", "Freya", "Gabby (IC)", "Harley Quinn", "Ivy (Heather)", "Holly", "Jessy", "Kali", "Kendra (Kara)", "Lara", "Maddie", "Maggy", "Mali (IC)", "Marmite", "Matilda", "Megan", "Molly", "Nightingale", "Nutella", "Peach", "Penelope", "Peppas Peppa", "Peru - 28/04/19", "Piper", "Purdie", "Sweetpea", "Tulip (BH)", "Zara (IC)", "Zenna (IC/BH)", "Zuzu (IC/BH)"], "studs": ["George", "Buddy(IC/BH)", "Larry (IC/BH)", "Zenna X George Male", "Stefan (BH)", "HarleyXGeorge", "MarmitexGeorge", "Simba", "Dawson", "Spike", "DeeDeexLarry", "CookiexGeorge merle M", "Lover (Semen)", "Teddy (Semen)", "Jasper (Semen)", "Ronnie (Semen)", "Master"], "grid": [[3.4, 7.3, 0.0, 2.5, 4.7, "No", 2.7, 0.9, "No", null, "No", "No", 3.1, "No", 0.2, 2.7, "No"], [2.3, "No", 1.0, 2.1, 7.3, 3.1, 1.9, 0.9, 6.0, null, 5.4, 3.0, 2.7, "No", 0.2, 0.7, 0.3], [1.7, 6.9, 0.5, 1.5, 3.9, "No", 1.3, 0.9, "No", null, "No", "No", 1.7, 7.4, 0.1, 1.4, "No"], [2.3, "No", 1.0, 2.1, 7.3, 3.1, 1.9, 0.9, 6.0, null, 5.4, 3.0, 2.7, "No", 0.2, 2.7, 0.3], [1.7, 6.9, 0.5, 1.5, 3.9, "No", 1.3, 0.9, "No", null, "No", "No", 1.7, 7.4, 0.1, 1.4, "No"], [2.3, "No", 1.0, 2.1, 7.3, 3.1, 1.9, 0.9, 6.0, null, 5.4, 3.0, 2.7, "No", 0.2, 2.7, 0.3], [4.5, 6.9, 0.4, 3.7, null, null, 4.2, null, null, null, null, null, 4.4, "No", 6.8, 1.8, 0.3], ["No", 7.3, 0.0, 6.6, 5.3, 7.8, 7.0, 6.9, 6.9, null, 1.5, 8.0, 4.5, "No", 0.3, "No", 2.3], ["No", 7.0, 0.1, 6.0, 5.1, 7.2, 6.5, 7.2, 6.3, null, 1.4, 7.2, 3.7, "No", 2.5, "No", 2.0], ["No", "No", 0.0, 7.3, "No", "No", 7.6, 4.8, 7.9, null, 2.2, "No", 5.7, "No", 1.6, "No", 1.6], [3.0, 7.1, 0.0, 5.5, 4.4, "No", 2.3, 0.9, "No", null, "No", "No", 3.1, "No", 0.4, 1.9, "No"], [2.3, "No", 1.0, 2.1, 7.3, 3.1, 1.9, null, null, null, null, 3.0, 2.7, "No", 0.2, 2.7, 0.3], [1.7, 6.9, 0.5, null, 3.2, null, null, 0.9, "No", null, "No", null, null, null, null, null, null], [6.3, 7.4, 0.0, null, 4.7, "No", 4.2, 2.9, "No", null, "No", "No", null, null, null, null, null], [2.6, 6.8, 0.4, 2.3, 4.3, 3.2, 2.2, 0.6, 5.4, null, 4.2, 3.1, 2.6, "No", 1.7, 0.7, 0.3], [2.6, 6.8, 0.4, 2.3, 4.3, null, 2.2, 3.8, null, null, null, 3.1, 2.6, "No", 1.7, 0.7, 0.3], [7.7, 0.7, 0.0, 4.1, 1.4, 4.5, 4.9, 6.6, 4.4, null, 0.6, 7.7, 1.0, 1.5, 0.2, "No", 1.9], ["No", 7.0, 0.0, 6.2, 5.6, 7.7, 7.5, 6.9, 6.8, null, 1.4, "No", 3.0, "No", 6.7, "No", 2.0], ["No", 7.0, 0.0, 6.2, 5.6, 7.7, 7.5, 6.9, 6.8, null, 1.4, "No", 3.0, "No", 6.7, "No", 2.0], [7.6, "No", 0.6, 4.9, "No", 6.7, 5.5, 4.1, 6.2, null, 2.7, 7.2, 3.8, "No", 3.6, 7.9, null], [5.9, 2.5, 0.1, "No", "No", 3.8, "No", 4.2, 3.4, null, 0.5, 4.0, "No", 4.8, "No", 2.7, 0.4], [3.6, 1.6, 0.0, 5.3, "No", "No", "No", 4.6, "No", null, "No", "No", "No", 3.0, 7.5, 2.4, "No"], [3.6, 1.6, 0.0, 5.3, "No", "No", "No", 4.6, "No", null, "No", "No", "No", 3.0, 7.5, 2.4, "No"], ["No", 0.5, 0.0, 5.8, 2.9, 5.9, 8.0, 6.9, 5.9, null, 0.5, 7.6, 1.6, 0.9, "No", "No", 1.8], [7.9, 1.0, 0.0, 4.2, 1.5, 4.7, 4.9, 6.8, 4.5, null, 0.5, 4.7, 0.6, 2.0, 0.4, "No", 1.7], [3.0, 7.1, 0.0, 5.5, 4.4, "No", 2.3, 0.9, "No", null, "No", "No", 3.1, "No", 0.4, 1.9, "No"], [4.5, 0.7, 0.0, 2.5, 1.0, "No", 2.9, 3.7, "No", null, "No", "No", 0.9, 1.3, 0.1, "No", "No"], [2.1, 4.8, 0.4, 5.0, 6.1, 2.5, 4.8, 2.1, 4.9, null, 4.1, 2.4, "No", "No", 1.2, 1.0, 0.3], ["No", 1.4, 0.0, "No", 4.8, 5.7, "No", "No", 5.5, null, 0.7, 5.8, "No", 2.6, 3.5, "No", 1.9], ["No", 1.4, 0.0, "No", 4.8, 5.7, "No", "No", 5.5, null, 0.7, 5.8, "No", 2.6, 3.5, "No", 1.9], [7.7, 0.7, 0.0, 4.1, 1.4, 4.5, 4.9, 6.6, 4.4, null, 0.6, 7.7, 0.1, 1.5, 0.2, "No", 1.9], [4.1, "No", 0.1, "No", "No", 4.6, "No", 3.8, 3.5, null, 1.5, 4.7, "No", "No", 2.5, 2.1, 1.9], [8.0, "No", 0.1, 8.0, 5.0, 5.2, "No", "No", 4.9, null, 0.7, 5.2, "No", 2.7, 3.4, "No", 0.7], [6.9, "No", 0.6, 4.4, "No", 6.4, null, 4.0, 5.9, null, 2.7, "No", 3.7, "No", 0.4, 7.9, null], [1.7, 1.6, 0.1, "No", 4.3, "No", 4.4, 2.2, "No", null, "No", "No", "No", 3.0, 1.3, 1.8, "No"], [2.2, 2.5, 0.1, "No", "No", 5.1, 7.9, 3.6, 1.7, null, 0.6, 1.9, "No", 4.8, 2.5, 1.5, 0.4], [1.7, 1.6, 0.1, "No", 4.3, "No", 4.4, 2.2, "No", null, "No", "No", "No", 3.0, 1.3, 1.8, "No"]]};
+
+function coiClass(v){
+  if(v===null||v===undefined) return ['na','not assessed'];
+  if(v==='No') return ['no','ruled out'];
+  if(v<=1.0) return ['g1','very low'];
+  if(v<=3.0) return ['g2','low'];
+  if(v<=5.0) return ['g3','moderate'];
+  if(v<7.0)  return ['g4','high'];
+  return ['g5','very high'];
+}
+function pagePlanner(){
+  var nums=[],no=0,na=0;
+  COI.grid.forEach(function(r){r.forEach(function(v){ if(v===null)na++; else if(v==='No')no++; else nums.push(v); });});
+  var h='<h2>The mating planner</h2><p class="sub">Your own grid, read from the CSV: <b>'+COI.dams.length+' bitches × '+COI.studs.length+' studs = '+(COI.dams.length*COI.studs.length)+' cells</b> — '+nums.length+' calculated, '+no+' ruled out, '+na+' not assessed.</p>';
+
+  h+='<div class="card risk"><h4>Your question: is COI in the app, or do we just record a percentage against the male?</h4>'
+   +'<p><b>It is in the app, and there is no percentage to record against a male.</b> Your grid proves it: Larry is <b>0.0</b> against Cookie and <b>1.0</b> against Dahlia-Pumpkin. Buddy is <b>7.3</b> against Cookie and <b>0.5</b> against Molly. <b>COI is a property of the pairing</b> — there are '+COI.dams.length+' numbers for each stud, not one.</p>'
+   +'<p style="margin-bottom:0">It is also <b>pure arithmetic</b> — Wright’s coefficient over <code>sire_id</code> and <code>dam_id</code>, which you already store. No AI, no external service, and it recalculates itself the moment a dog is added. A number typed in by hand is one nobody can reproduce and that silently goes out of date.</p></div>';
+
+  h+='<div class="card est"><h4>But keep the published figure as well — they are two different facts</h4><p style="margin:0"><b>Yours</b> is computed over the dogs you hold and is what you plan with. <b>The registry’s</b> is computed over its whole database, will be higher, and is what a buyer or inspector is asking for. <code>coi_calculation</code> stores <code>generations_used</code>, <code>method</code> and <code>pedigree_source</code> on every row for exactly this reason — <b>6.25% over five generations and 6.25% over ten are not the same number.</b> Never average them and never overwrite one with the other.</p></div>';
+
+  h+='<h3>Your grid, colour-coded</h3>';
+  h+='<div class="card warn" style="margin:0 0 10px"><h4>The colour key is a guess — please correct it</h4><p style="margin:0">I have banded it <b>≤1.0 · ≤3.0 · ≤5.0 · &lt;7.0 · ≥7.0</b> because that is what the spread in your data suggests, not because you told me. <b>Tell me your actual thresholds and what each one means to you</b> and I will set them as <code>jurisdiction_rule</code> rows — scoped, dated, and changeable without touching the app.</p></div>';
+  h+='<div class="legend">';
+  [['g1','≤ 1.0 very low'],['g2','≤ 3.0 low'],['g3','≤ 5.0 moderate'],['g4','< 7.0 high'],['g5','≥ 7.0 very high'],['no','“No” — a decision, not a number'],['na','blank — not assessed']].forEach(function(x){
+    h+='<span class="lg"><i class="sw '+x[0]+'"></i>'+x[1]+'</span>';});
+  h+='</div>';
+
+  h+='<div class="scroll gridwrap"><table class="coigrid"><thead><tr><th class="cnr">bitch \\ stud</th>';
+  COI.studs.forEach(function(st){
+    var semen=/Semen/.test(st), cross=/[Xx]/.test(st)&&!semen;
+    h+='<th'+(semen?' class="semen"':(cross?' class="cross"':''))+'><span>'+st.replace(' (Semen)','')+'</span></th>';});
+  h+='</tr></thead><tbody>';
+  COI.dams.forEach(function(d,i){
+    h+='<tr><th class="rh">'+d+'</th>';
+    COI.grid[i].forEach(function(v){
+      var c=coiClass(v);
+      h+='<td class="'+c[0]+'" title="'+String(d).replace(/"/g,'')+' × '+c[1]+'">'+(v===null?'':(v==='No'?'✕':v.toFixed(1)))+'</td>';});
+    h+='</tr>';});
+  h+='</tbody></table></div>';
+
+  h+='<div class="card risk"><h4>Three things in this file that the app has to model and a spreadsheet cannot</h4><ul style="margin:0">'
+   +'<li><b>“No” is doing two jobs.</b> '+no+' cells say No, and a cell cannot tell you whether that is <i>COI too high</i>, <i>he is sold</i>, <i>wrong colour</i> or <i>conformation</i>. Only the first one changes when you recalculate — so <code>mating_exclusion</code> carries a reason, and the other '+(no)+' decisions survive the recalculation that wipes every number on this page.</li>'
+   +'<li><b>Four of your studs are semen, not dogs.</b> Lover, Teddy, Jasper and Ronnie. That is stock in a tank with a straw count, a collection date and paperwork — <code>stud_resource</code>, not <code>subject</code>.</li>'
+   +'<li><b>Five columns are a cross, not a dog.</b> “Zenna X George Male”, “HarleyXGeorge”, “MarmitexGeorge”, “DeeDeexLarry”, “CookiexGeorge merle M”. A planned or unnamed dog still gets a <code>subject</code> row with its parents set — <b>which is what lets you compute its COI before it is born</b>, exactly as you have done here by hand.</li></ul></div>';
+
+  h+='<div class="card warn"><h4>And the flags hiding inside your dog names</h4><p style="margin:0"><b>Buddy(IC/BH) · Delia (Penny) (IC/BH) · Stefan (BH) · CookiexGeorge merle M · Dolly (Jasmine) · Kendra (Kara) · Ivy (Heather)</b> — your names are carrying a status code, a second code, a coat genotype and an alternative name. None of those can be filtered, counted or checked while they live inside a string. <b>IC and BH I still cannot decode and will not guess</b> — same open list as the area codes and the 33 flag columns on your working list.</p></div>';
+  return h;
+}
+function pageGuidance(){
+  var h='<h2>Guidance in, rules out</h2><p class="sub">Lisa: <i>“if we were making this for someone else they would upload their model conditions and applications.”</i> <b>That is the resale mechanism, and it changes what we are building.</b></p>';
+
+  h+='<div class="card risk"><h4>The version of this app that does not sell</h4><p style="margin:0">One where <b>we</b> read the Welsh guidance, <b>we</b> type the numbers into the code, and every new jurisdiction is a paid prompt. That app serves Wales. It serves England and Scotland only after we do the work again, and it serves <b>Ireland, or a private assurance scheme, or a council with a local condition, never</b> — because the rules live in code we own rather than in rows the tenant owns.</p></div>';
+
+  h+='<div class="card est"><h4>The version that does</h4><p>The tenant uploads <b>their</b> model licence conditions and <b>their</b> application form. Those become rows in <code>jurisdiction_rule</code> and <code>licence_condition</code>, scoped by <code>rule_scope</code>. Nothing about Wales is compiled in. <b>Wales becomes the first row in a table, not the shape of the software.</b></p>'
+   +'<div class="scroll"><table><tr><th>They upload</th><th>It becomes</th><th>Which drives</th></tr>'
+   +'<tr><td>Model licence conditions</td><td><code>licence_condition</code> rows</td><td>the evidence checklist and the inspector pack</td></tr>'
+   +'<tr><td>Statutory guidance</td><td><code>jurisdiction_rule</code> rows</td><td>capacity, temperature bands, ratios, intervals</td></tr>'
+   +'<tr><td>The application form</td><td>a <code>record_sheet</code> template</td><td>renewal, pre-filled from the records</td></tr>'
+   +'<tr><td>Their own house standard</td><td><code>rule_scope</code> = this licence</td><td>strictest-wins over the statutory floor</td></tr>'
+   +'</table></div>'
+   +'<p style="margin-bottom:0"><b>The app already has the tables for this.</b> What it did not have was the recognition that they get <i>filled by the customer</i>, not by us. That is the difference between a breeder app and a breeder-app factory.</p></div>';
+
+  h+='<div class="card warn"><h4>This is the fourth AI touchpoint — and it is the honest one</h4><p style="margin:0">Turning an uploaded guidance PDF into candidate rule rows is genuinely a language problem; nothing deterministic reads “in no case will it exceed 20 adult dogs per full time attendant” and emits a ratio rule. <b>But it is an admin-time task, run once when a tenant is onboarded, with a human approving every row before it binds.</b> It is not a per-use inference bill, and it does not change the answer on the AI page: <b>the running app still needs none.</b> A wrong rule row is a compliance failure, so the output is a <i>proposal</i>, never a rule.</p></div>';
+
+  h+='<h3>What the Welsh guidance actually says</h3><p class="sub">Read 23 Sep 2026 from the PDF Lisa uploaded — <b>Animal Welfare (Breeding of Dogs) (Wales) Regulations 2014</b>, guidance for local authorities, 16pp. These are the numbers, verbatim.</p>';
+
+  h+='<div class="card est"><h4>Size of quarters — and it settles the access-type question</h4><p>The statutory table is keyed on <b>size band × number of dogs × free or limited access to exercise</b>. Free = unrestricted daily access to an exercise area; limited = restricted. <b>This is exactly the “Single with Free” / “Single with Limited” split in your own cabin spreadsheet</b> — the column was never a local convention, it is the statutory axis.</p>'
+   +'<div class="scroll"><table><tr><th>Dogs</th><th>Small · free</th><th>Small · limited</th><th>Medium · free</th><th>Medium · limited</th><th>Large · free</th><th>Large · limited</th></tr>'
+   +'<tr><td><b>1</b></td><td>2.5</td><td>4.5</td><td>2.5</td><td>4.5</td><td>4.5</td><td>6.5</td></tr>'
+   +'<tr><td><b>2</b></td><td>2.5</td><td>4.5</td><td>4.5</td><td>6.5</td><td>6.0</td><td>8.5</td></tr>'
+   +'<tr><td><b>3</b></td><td>4.5</td><td>6.5</td><td>6.0</td><td>8.5</td><td>—</td><td>—</td></tr>'
+   +'<tr><td><b>4</b></td><td>6.0</td><td>8.5</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>'
+   +'</table></div>'
+   +'<p style="margin-bottom:0">All m². <b>Not linear and not divisible</b> — two small dogs need the same 2.5 m² as one, and the table simply stops rather than extending. The guidance gives <i>required area for N dogs</i>; the app needs the inverse, <i>how many fit in this area</i>, which is what your <code>Rules.csv</code> already computes. Both directions come off one <code>area_capacity</code> table.</p></div>';
+
+  h+='<div class="card est"><h4>Temperature — and it settles the band question too</h4><p style="margin:0"><b>10°C to 26°C</b> for most dogs, breed-dependent (Huskies called out). <b>26°C to 28°C for puppies under four weeks of age.</b> So the band is a property of <i>who is in the room</i>, exactly as you said — and the two ranges <b>overlap at a single degree</b>. A reading of 25.8°C passes in an adult room and fails in a room with three-week-old pups. No per-area setting can express that; only a join to occupancy can.</p></div>';
+
+  h+='<div class="card est"><h4>The other hard numbers</h4><div class="scroll"><table><tr><th>Rule</th><th>Figure</th><th>Where it lands</th></tr>'
+   +'<tr><td>Staff : adult dog ratio</td><td><b>max 20 per full-time attendant, 10 per part-time</b> — and the guidance says explicitly this is a ceiling, <i>not</i> a benchmark</td><td><code>staff</code> × <code>licence_condition</code></td></tr>'
+   +'<tr><td>Adult vs puppy</td><td><b>adult = 6 months or over; puppy = under 6 months</b></td><td>a derived age band, not a stored flag</td></tr>'
+   +'<tr><td>Crate confinement</td><td><b>not more than 9 hours total in any 24</b></td><td><code>occupancy</code> — durations, not just placements</td></tr>'
+   +'<tr><td>Mesh</td><td>wire <b>≥ 2.0 mm</b> (BS 14 gauge welded); aperture <b>≤ 50 mm</b> any direction</td><td><code>area</code> construction attributes</td></tr>'
+   +'<tr><td>Transport under 8 weeks</td><td><b>must be accompanied by the mother</b> (Reg (EC) 1/2005 Annex I)</td><td><code>transport_journey</code> — a blocking check</td></tr>'
+   +'<tr><td>Daily inspection</td><td>every animal, every day, <b>recorded — with abnormal observations particularly noted</b></td><td><code>daily_check</code></td></tr>'
+   +'<tr><td>Annual health exam</td><td>all breeding animals, <b>recorded including microchip number</b></td><td><code>health_screen</code></td></tr>'
+   +'<tr><td>Pre-sale puppy exam</td><td>before sale, <b>recorded including microchip number</b></td><td><code>visit</code> → <code>sale</code> gate</td></tr>'
+   +'<tr><td>Evacuation plan</td><td>documented <b>and posted where staff can see it</b></td><td><code>display_requirement</code> — the table exists for exactly this</td></tr>'
+   +'<tr><td>Cleansing schedule</td><td>documented, with a suitable disinfectant</td><td><code>sop</code> + <code>checklist_template</code></td></tr>'
+   +'<tr><td>Retirement strategy</td><td>including <b>neutering before re-homing</b></td><td><code>plan_document</code> + <code>subject.neuter_status</code></td></tr>'
+   +'<tr><td>Vet conflict of interest</td><td>a veterinary inspector <b>must not inspect their own clients’ premises</b></td><td><code>inspection</code> — a recordable fact about the inspector</td></tr>'
+   +'</table></div></div>';
+
+  h+='<div class="card risk"><h4>What this PDF does NOT contain — stated rather than glossed</h4><p><b>Schedule 1 (Dog Breeding Record) and Schedule 2 (Puppy Log Book) are named in the contents page and are not in the document.</b> The body runs to section 4.8 Transport and stops. Those two schedules are the statutory record-keeping lists — the single most directly schema-relevant part of the whole regime — and they remain <b>unread</b>.</p>'
+   +'<p style="margin-bottom:0">What changed: this was previously <i>unknown</i>, blocked because legislation.gov.uk refused two fetches on <code>robots.txt</code>. It is now <b>specifically identified</b> — two named schedules to the 2014 Regulations. That is a smaller and much more closeable gap, but it is still a gap, and the field list in <code>daily_check</code> and <code>puppy_milestone</code> is <b>our judgement until those two schedules are read</b>.</p></div>';
+  return h;
+}
+function pageTablemap(){
+  // live: everything below is counted from SCHEMA_FULL, never typed
+  var real=(typeof SCHEMA_FULL!=='undefined'?SCHEMA_FULL:[]).filter(function(t){return t[0]!==t[0].toUpperCase();});
+  var byName={}; real.forEach(function(t){byName[t[0]]=t;});
+  var mapped=[]; DOMAINS.forEach(function(d){mapped=mapped.concat(d[2]);});
+  var unmapped=real.map(function(t){return t[0];}).filter(function(n){return mapped.indexOf(n)<0;});
+  var ghosts=mapped.filter(function(n){return !byName[n];});
+  var dupes=mapped.filter(function(n,i){return mapped.indexOf(n)!==i;});
+  var totalF=real.reduce(function(a,t){return a+t[3].length;},0);
+
+  var h='<h2>The table map</h2><p class="sub">'+real.length+' tables is unreadable as a list. <b>Twelve domains is not.</b> The first chip in each is the hub — the table the rest of that group points at. Counts below are <b>read from the schema as this page loads</b>, so they cannot drift from it.</p>';
+
+  var ok=(!unmapped.length&&!ghosts.length&&!dupes.length);
+  h+='<div class="card '+(ok?'est':'risk')+'" style="margin:0 0 12px"><h4>'+(ok?'Map agrees with the schema':'MAP AND SCHEMA DISAGREE')+'</h4><p style="margin:0">'
+    +real.length+' tables · '+totalF+' fields · '+mapped.length+' placed'
+    +(unmapped.length?' · <b>'+unmapped.length+' in the schema but not on the map: '+unmapped.join(', ')+'</b>':'')
+    +(ghosts.length?' · <b>'+ghosts.length+' on the map but not in the schema: '+ghosts.join(', ')+'</b>':'')
+    +(dupes.length?' · <b>placed twice: '+dupes.join(', ')+'</b>':'')
+    +(ok?' · every table placed exactly once, nothing invented.':'')+'</p></div>';
+
+  h+='<div class="domains">';
+  DOMAINS.forEach(function(d){
+    var fc=d[2].reduce(function(a,n){return a+(byName[n]?byName[n][3].length:0);},0);
+    h+='<div class="dom" style="--dc:var('+d[1]+')"><h5>'+d[0]+'<em>'+d[2].length+' tbl · '+fc+' fld</em></h5><div class="ds">'+d[3]+'</div><div class="tl">';
+    d[2].forEach(function(t,i){
+      var e=byName[t];
+      h+='<span'+(i===0?' class="hub"':(e?'':' class="bad"'))+' title="'+(e?String(e[1]).replace(/"/g,'')+' — '+e[3].length+' fields':'NOT IN SCHEMA')+'">'+t+(e?'':' ?')+'</span>';
+    });
+    h+='</div></div>';
+  });
+  h+='</div>';
+
+  h+='<div class="card est" style="margin-top:14px"><h4>The four joins that carry the whole thing</h4>'
+   +'<div class="scroll"><table><tr><th>Join</th><th>What hangs off it</th></tr>'
+   +'<tr><td><code>subject.sire_id / dam_id</code></td><td>the pedigree, the ancestor certificate library, relatedness and COI — <b>all of it out of two columns on one table</b></td></tr>'
+   +'<tr><td><code>occupancy</code></td><td><b>capacity and temperature at once.</b> It proves the room was never over its limit, <i>and</i> it decides which temperature band applied that day</td></tr>'
+   +'<tr><td><code>sop_version</code></td><td>every checklist, reference card and operational record points at the version <b>in force when it happened</b>, not the current one</td></tr>'
+   +'<tr><td><code>rule_scope</code></td><td>country → council → your licence. <b>Move to England and the Welsh rules stop applying by themselves</b></td></tr>'
+   +'</table></div></div>';
+  h+='<div class="card risk"><h4>And the five that cannot be bolted on later</h4><p style="margin:0"><code>occupancy</code> kept as history · <code>consent</code> lawful basis · <code>valid_to</code> on the rule tables · <code>tenant_id</code> everywhere · <b>temperature stored at 2 decimal places.</b> Add any of the first four late and it is a data migration. Add the last late and it is <b>not recoverable at all</b> — rounded is rounded.</p></div>';
+  return h;
+}
+/* ---- relationships: derived from SCHEMA_FULL at render time, never typed ---- */
+var REL_ALIAS={
+  instance_id:'checklist_instance', promoted_from_instance_id:'checklist_instance',
+  action_checklist_template_id:'checklist_template', card_id:'reference_card',
+  condition_id:'licence_condition', actor_id:'person', author:'person', owner_id:'person',
+  assigned_to:'staff', escalated_to:'staff', by:'staff', driver_id:'staff', owner:'staff',
+  administered_to_subject_id:'subject', puppy_subject_id:'subject', row_subject_id:'subject',
+  dam_id:'subject', sire_id:'subject', subject_ids:'subject',
+  parent_area_id:'area', destination_area_id:'area',
+  applied_limit_id:'environment_limit', reading_id:'area_reading',
+  follow_up_reading_id:'area_reading', import_id:'pedigree_import',
+  matched_sop_version_id:'sop_version', escalated_to_visit_id:'visit',
+  purchase_order_line_id:'purchase_order_line', measure_id:'mitigation_measure',
+  promote_to_health_screen_id:'health_screen', supersedes_id:'coshh_assessment',
+  previous_season_id:'season', previous_stage_id:'pipeline_stage',
+  requires_competency:'staff_competency', products_used:'product',
+  template_id:'checklist_template', based_on:'board_scenario', superseded_by:'media', default_vet_practice:'person'
+};
+var REL_EXTERNAL={stored_blob_id:'file storage, not a table'};
+var REL_POLY={entity_id:1,record_id:1,subject_or_area:1};
+function relGraph(){
+  var real=(typeof SCHEMA_FULL!=='undefined'?SCHEMA_FULL:[]).filter(function(t){return t[0]!==t[0].toUpperCase();});
+  var names={}; real.forEach(function(t){names[t[0]]=t;});
+  var links=[],alias=[],ext=[],poly=[],unknown=[];
+  real.forEach(function(t){
+    t[3].forEach(function(f){
+      if(f[0]===f[0].toUpperCase()) return;
+      var ns=f[0].split('·').map(function(x){return x.trim();});
+      var ts=f[1].split('·').map(function(x){return x.trim();});
+      ns.forEach(function(n,i){
+        var ty=(ns.length===ts.length)?ts[i]:f[1];
+        if(!/\bref\b/.test(ty)) return;
+        if(/ or /.test(n)){ poly.push({from:t[0],field:n,why:'one of several kinds'}); return; }
+        if(REL_POLY[n]){ poly.push({from:t[0],field:n,why:'one of several kinds'}); return; }
+        if(REL_EXTERNAL[n]){ ext.push({from:t[0],field:n,why:REL_EXTERNAL[n]}); return; }
+        var ex=/\bref\s+([a-z_]+)/.exec(ty), tgt=null, viaAlias=false;
+        if(ex&&names[ex[1]]) tgt=ex[1];
+        if(!tgt){ var b=n.replace(/_ids$/,'').replace(/_id$/,''); if(names[b]) tgt=b; }
+        if(!tgt&&REL_ALIAS[n]&&names[REL_ALIAS[n]]){ tgt=REL_ALIAS[n]; viaAlias=true; }
+        if(!tgt&&/_by$/.test(n)&&names.staff){ tgt='staff'; viaAlias=true; }
+        if(!tgt&&/_person_id$/.test(n)&&names.person){ tgt='person'; viaAlias=true; }
+        if(!tgt&&/_media_id$/.test(n)&&names.media){ tgt='media'; viaAlias=true; }
+        if(!tgt&&/_document_id$/.test(n)&&names.document){ tgt='document'; viaAlias=true; }
+        if(!tgt&&/_version_id$/.test(n)&&names.sop_version){ tgt='sop_version'; viaAlias=true; }
+        if(tgt){ links.push({from:t[0],field:n,to:tgt,alias:viaAlias}); if(viaAlias) alias.push({from:t[0],field:n,to:tgt}); }
+        else unknown.push({from:t[0],field:n,type:ty});
+      });
+    });
+  });
+  var inb={}; links.forEach(function(l){ if(l.from!==l.to) inb[l.to]=(inb[l.to]||0)+1; });
+  return {real:real,names:names,links:links,alias:alias,ext:ext,poly:poly,unknown:unknown,inbound:inb};
+}
+function pageRelations(){
+  if(typeof SCHEMA_FULL==='undefined') return '<div class="card risk"><h4>Schema file did not load</h4><p style="margin:0"><code>bld-schema.js</code> has not arrived, so nothing can be derived. That is deliberate — a missing file must not read as an empty schema.</p></div>';
+  var g=relGraph(), dom={}, domOf={};
+  DOMAINS.forEach(function(d){ dom[d[0]]=d; d[2].forEach(function(n){domOf[n]=d[0];}); });
+  var ok=(g.unknown.length===0);
+  var h='<h2>How the tables join up</h2><p class="sub">Every arrow below is <b>read out of the schema as this page loads</b> — nothing on this page is typed. '+g.links.length+' joins across '+g.real.length+' tables.</p>';
+
+  h+='<div class="card '+(ok?'ok':'risk')+'"><h4>'+(ok?'Every reference points at a table that exists':g.unknown.length+' reference'+(g.unknown.length===1?'':'s')+' point'+(g.unknown.length===1?'s':'')+' at nothing')+'</h4>';
+  if(!ok){ h+='<p>A dangling reference looks fine in a schema document and fails on the first build. These need a decision:</p><ul style="margin:0">';
+    g.unknown.forEach(function(u){ h+='<li><code>'+u.from+'.'+u.field+'</code> — no table of that name <span class="mut">['+u.type+']</span></li>'; }); h+='</ul>'; }
+  else h+='<p style="margin:0">Checked at render time, so it cannot go stale. If a table is renamed or removed, this box goes red by itself.</p>';
+  h+='</div>';
+
+  h+='<div class="card est"><h4>The seven tables almost everything hangs off</h4><p>Count of other tables pointing <i>at</i> each one — this is what "related" actually means in practice:</p><div class="legend">';
+  Object.keys(g.inbound).sort(function(a,b){return g.inbound[b]-g.inbound[a];}).slice(0,7).forEach(function(k){
+    h+='<span class="lg"><b>'+k+'</b>&nbsp;<span class="pill own">'+g.inbound[k]+' in</span></span>'; });
+  h+='</div><p style="margin:8px 0 0"><b>Read it as a sentence.</b> Everything clinical, physical and commercial hangs off <code>subject</code> — the dog. Everything at all hangs off <code>tenant</code> — the business. If those two are right, the rest follows.</p></div>';
+
+  DOMAINS.forEach(function(d){
+    var tabs=d[2].filter(function(n){return g.names[n];});
+    if(!tabs.length) return;
+    h+='<h3><span class="dot" style="background:var('+d[1]+')"></span>'+d[0]+'</h3>';
+    h+='<div class="scroll"><table class="rel"><thead><tr><th>table</th><th>what it is</th><th>points at</th><th>pointed at by</th></tr></thead><tbody>';
+    tabs.forEach(function(n){
+      var t=g.names[n];
+      var out=g.links.filter(function(l){return l.from===n&&l.to!==n;});
+      var seen={},outs=[];
+      out.forEach(function(l){ if(seen[l.to])return; seen[l.to]=1;
+        outs.push('<span class="rl'+(domOf[l.to]===d[0]?' in':'')+'" title="via '+l.field+'">'+l.to+'</span>'); });
+      var ins={};
+      g.links.forEach(function(l){ if(l.to===n&&l.from!==n) ins[l.from]=1; });
+      var insArr=Object.keys(ins);
+      h+='<tr><td><code>'+n+'</code><span class="fc">'+t[3].filter(function(f){return f[0]!==f[0].toUpperCase();}).length+' fields</span></td>'
+       +'<td class="wd">'+t[1]+'</td>'
+       +'<td>'+(outs.length?outs.join(' '):'<span class="mut">— stands alone</span>')+'</td>'
+       +'<td>'+(insArr.length?'<b>'+insArr.length+'</b> <span class="mut">'+insArr.slice(0,6).join(', ')+(insArr.length>6?'…':'')+'</span>':'<span class="mut">—</span>')+'</td></tr>';
+    });
+    h+='</tbody></table></div>';
+  });
+
+  h+='<h3>Three kinds of join that are not a simple arrow</h3>';
+  h+='<div class="card risk"><h4>'+g.poly.length+' fields point at more than one kind of thing</h4><p>A photo belongs to a dog <i>or</i> a litter <i>or</i> a room. With no foreign keys on the platform this is fine — but the <b>kind</b> must be stored next to the id, or nothing can read it back.</p><ul style="margin:0">';
+  g.poly.forEach(function(p){ h+='<li><code>'+p.from+'.'+p.field+'</code></li>'; }); h+='</ul></div>';
+  h+='<div class="card est"><h4>'+g.alias.length+' joins are named by their job, not by their table</h4><p style="margin:0"><code>taken_by</code>, <code>escalated_to</code>, <code>dam_id</code>, <code>sire_id</code> — all point at a table whose name they do not carry. <b>That is correct and should stay</b>: <code>dam_id</code> and <code>sire_id</code> both point at <code>subject</code>, and calling them both <code>subject_id</code> would lose the only thing that matters about them.</p></div>';
+  h+='<div class="card est"><h4>'+g.ext.length+' point outside the database entirely</h4><p style="margin:0">'+(g.ext.length?g.ext.map(function(e){return '<code>'+e.from+'.'+e.field+'</code> — '+e.why;}).join('<br>'):'none')+'</p></div>';
+  return h;
+}
+
+var PAGES={relations:pageRelations,map:pageMap,planner:pagePlanner,guidance:pageGuidance,dash:pageDash,tablemap:pageTablemap,fields:pageFields,licensing:pageLicensing,juris:pageJuris,dogrecord:pageDogrecord,vet:pageVet,pipeline:pagePipeline,inspector:pageInspector,settled:pageSettled,donors:pageDonors,questions:pageQuestions,schema:pageSchema,blocked:pageBlocked,cost:pageCost};
+
+function nextSteps(){
+  var order=STAGES.map(function(s){return s[0];});
+  var i=order.indexOf(CUR);
+  var out=[];
+  if(CUR!=='questions') out.push(['questions','Answer the ten questions →']);
+  if(i<order.length-1) out.push([order[i+1],STAGES[i+1][1].replace(/^\d+ · /,'')+' →']);
+  if(CUR!=='map') out.push(['map','← Back to the map']);
+  return out.slice(0,3);
+}
+
+function render(){
+  grabDrafts();
+  document.getElementById('nav').innerHTML=navHTML();
+  var m=document.getElementById('main');
+  m.innerHTML=(PAGES[CUR]||pageMap)();
+  var ns=nextSteps();
+  m.innerHTML+='<div class="next">'+ns.map(function(n){return '<button data-go="'+n[0]+'">'+n[1]+'</button>';}).join('')+'</div>';
+  document.getElementById('foot').innerHTML='<b>Hub code BLD.</b> Build brief, read-only. Saving switches on with the write path (PR #10).';
+  document.querySelectorAll('[data-go]').forEach(function(b){ b.onclick=function(){ go(b.dataset.go); }; });
+  document.querySelectorAll('[data-prov]').forEach(function(b){ b.onclick=function(){ PFILT=b.dataset.prov; render(); }; });
+  document.querySelectorAll('[data-save], textarea, .opts input, input[type="radio"]').forEach(function(el){ el.disabled=true; });
+  if(!document.getElementById('savenote')){
+    var note=document.createElement('p');
+    note.id='savenote';
+    note.className='savenote';
+    note.textContent='Saving switches on with the write path (PR #10)';
+    m.insertBefore(note, m.firstChild);
+  }
+  var screens=document.getElementById('screens');
+  if(screens && !screens.innerHTML) screens.innerHTML=DriveTables.nav('bloodline.html');
+}
+
+CANWRITE=false;
+DriveTables.ensure().then(function(){
+  document.body.classList.add('ready');
+  READY=true;
+  setState('Saving switches on with the write path (PR #10)');
+  render();
+});
+</script>
+
+</body></html>

@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-stock.html · 2026-10-15 · STATUS: ON · stock levels and the medicines register -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Stock</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1>Stock &amp; medicines</h1><span class="hubcode">BLD</span><span class="sub">BLD-stock_level and BLD-medicinal_product</span></div>
+<div id="nav"></div>
+<div class="bar"><input type="search" id="q" placeholder="Search product…" aria-label="Search"> <label><input type="checkbox" id="low"> below minimum only</label></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-stock.html');
+BLD.load(['BLD-stock_level.csv','BLD-medicinal_product.csv']).then(function(T){if(!T)return;
+  var E=BLD.esc;
+  var stockOk=BLD.have(T,'stock_level',['product_name','in_stock']);
+  var medOk=BLD.have(T,'medicinal_product',['name']);
+  function render(){
+    var q=document.getElementById('q').value.toLowerCase(),low=document.getElementById('low').checked;
+    var st=stockOk?T.stock_level.filter(function(r){if(low&&!(r.min!==''&&Number(r.in_stock)<Number(r.min)))return false;return !q||((r.product_name||'')+' '+(r.location||'')).toLowerCase().indexOf(q)>=0;}):[];
+    var h='<h2>Stock levels'+(stockOk?' ('+st.length+')':'')+'</h2>'+(stockOk?BLD.table(st,[['Product','product_name'],['In stock',function(r){var lowq=r.min!==''&&Number(r.in_stock)<Number(r.min);return (lowq?'<span class="bad">':'')+E(r.in_stock)+(lowq?'</span>':'');}],['Min','min'],['Max','max'],['Location','location'],['Counted',function(r){return BLD.dmy(r.counted_on);}],['Source','source'],['Notes','notes']]):BLD.nodata(BLD.whyNot(T,'stock_level',['product_name','in_stock'])));
+    var mp=medOk?T.medicinal_product.filter(function(r){return !q||((r.name||'')+' '+(r.active_ingredients||'')+' '+(r.product_group||'')).toLowerCase().indexOf(q)>=0;}):[];
+    h+='<h2>Medicines register'+(medOk?' ('+mp.length+')':'')+'</h2>'+(medOk?BLD.table(mp,[['Name',function(r){return '<b>'+E(r.name)+'</b>'+(r.active==='false'?' '+BLD.pill('inactive',''):'');}],['Group','product_group'],['Form','pharmaceutical_form'],['Active ingredients','active_ingredients'],['Dosage','dosage'],['Indication','indication'],['Controlled',function(r){return r.is_controlled_drug==='true'?BLD.pill('CD','no'):'';}],['Human med',function(r){return r.is_human_medicine==='true'?BLD.pill('human','warn'):'';}],['Supplier','supplier'],['Warning','warning'],['Excluded reason','excluded_reason']]):BLD.nodata(BLD.whyNot(T,'medicinal_product',['name'])));
+    document.getElementById('main').innerHTML=h;
+  }
+  document.getElementById('q').addEventListener('input',render);document.getElementById('low').addEventListener('change',render);render();document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>

@@ -1,0 +1,64 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-matings.html · 2026-10-15 · STATUS: ON · matings list + mating planner (relationship by Henderson's tabular method, never the path method — BLD rule BR-COI) -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Matings</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css">
+<style>table.coigrid td{text-align:center;font-variant-numeric:tabular-nums}td.g1{background:#d1fae5}td.g2{background:#a7f3d0}td.g3{background:#fde68a}td.g4{background:#fdba74}td.g5{background:#fca5a5}
+:root:not([data-theme="light"]) td.g1{background:#064e3b}:root:not([data-theme="light"]) td.g2{background:#065f46}:root:not([data-theme="light"]) td.g3{background:#78350f}:root:not([data-theme="light"]) td.g4{background:#7c2d12}:root:not([data-theme="light"]) td.g5{background:#7f1d1d}
+.gridwrap{max-height:70vh;overflow:auto}table.coigrid th.rh{position:sticky;left:0;background:var(--surface);text-align:left}</style></head>
+<body><div class="wrap">
+<div class="hdr"><h1>Matings</h1><span class="hubcode">BLD</span><span class="sub">BLD-mating.csv, and the planner computed from BLD-subject.csv parent links</span></div>
+<div id="nav"></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-matings.html');
+BLD.load(['BLD-mating.csv','BLD-subject.csv','BLD-subject_status.csv','BLD-litter.csv']).then(function(T){if(!T)return;
+  if(!BLD.have(T,'subject',['id'])){document.getElementById('main').innerHTML=BLD.nodata(BLD.whyNot(T,'subject',['id']));document.getElementById('stamp').innerHTML=BLD.stamp(T);return;}
+  BLD.noteGap(T,'subject',['dam_id','sire_id','sex']);
+  var mateOk=BLD.have(T,'mating',['dam_subject_id','sire_subject_id','mated_on']);
+  var S=BLD.by(T.subject,'id'),E=BLD.esc,today=new Date().toISOString().slice(0,10);
+  var st={};T.subject_status.forEach(function(r){var cur=st[r.subject_id];if(!cur||(!r.to_date&&cur.to_date)||(r.from_date>cur.from_date))st[r.subject_id]=r;});
+  /* ---- Henderson tabular method over the whole subject table ----
+     Order the dogs so that every parent comes before its child (parents not on file count as unrelated founders).
+     A[i][i] = 1 + F_i, where F_i = ½·A[sire][dam]; A[i][j] = ½·(A[j][sire_i] + A[j][dam_i]). COI of a planned pup = ½·A[dam][sire]. */
+  var ids=T.subject.map(function(s){return s.id;}),idx={},order=[],done={},guard=0;
+  while(order.length<ids.length&&guard++<ids.length+5){ids.forEach(function(id){if(done[id])return;var s=S[id]||{};var ps=s.sire_id&&S[s.sire_id]?s.sire_id:null,pd=s.dam_id&&S[s.dam_id]?s.dam_id:null;if((!ps||done[ps])&&(!pd||done[pd])){done[id]=true;order.push(id);}});}
+  ids.forEach(function(id){if(!done[id]){order.push(id);done[id]=true;}}); /* a loop in the data (dog listed as its own ancestor) — still placed, treated as founder */
+  order.forEach(function(id,i){idx[id]=i;});
+  var n=order.length,A=new Array(n);for(var i=0;i<n;i++){A[i]=new Float32Array(n);}
+  var depth={};
+  for(var i=0;i<n;i++){var s=S[order[i]]||{};var si=s.sire_id&&idx[s.sire_id]<i?idx[s.sire_id]:-1,di=s.dam_id&&idx[s.dam_id]<i?idx[s.dam_id]:-1;
+    depth[order[i]]=1+Math.max(si>=0?depth[order[si]]:0,di>=0?depth[order[di]]:0);
+    for(var j=0;j<i;j++){var v=0.5*((si>=0?A[j][si]:0)+(di>=0?A[j][di]:0));A[i][j]=v;A[j][i]=v;}
+    A[i][i]=1+(si>=0&&di>=0?0.5*A[si][di]:0);}
+  function rel(a,b){var x=idx[a],y=idx[b];if(x==null||y==null)return null;return A[x][y];}
+  function F(id){var x=idx[id];return x==null?null:A[x][x]-1;}
+  function gcls(c){return c<0.0625?'g1':c<0.125?'g2':c<0.1875?'g3':c<0.25?'g4':'g5';}
+  var h='';
+  /* list */
+  var rows=mateOk?T.mating.slice().sort(function(a,b){return a.mated_on<b.mated_on?1:-1;}):[];
+  h+='<h2>Recorded matings'+(mateOk?' ('+rows.length+')':'')+'</h2>'+(mateOk?BLD.table(rows,[['Mated',function(r){return BLD.dmy(r.mated_on)+(r.mating_no?' <span class="muted">#'+E(r.mating_no)+'</span>':'');}],['Dam',function(r){return BLD.link(r.dam_subject_id,S);}],['Sire',function(r){return BLD.link(r.sire_subject_id,S);}],['Method',function(r){return E(r.method)+(r.semen_source?' · '+E(r.semen_source):'');}],['Due',function(r){return BLD.dmy(r.due_from_this_mating)+(r.due_from_this_mating>=today&&r.produced_litter!=='true'?' '+BLD.pill('ahead','warn'):'');}],['Litter',function(r){return r.produced_litter==='true'?'<a href="bld-litters.html#'+E(r.litter_id)+'">'+E(r.litter_id)+'</a>':BLD.pill('none','');}],['Pup COI',function(r){var v=rel(r.dam_subject_id,r.sire_subject_id);return v==null?'<span class="muted">?</span>':'<span class="pill '+gcls(v/2)+'">'+(100*v/2).toFixed(1)+'%</span>';}],['Notes','notes']]):BLD.nodata(BLD.whyNot(T,'mating',['dam_subject_id','sire_subject_id','mated_on'])));
+  /* planner */
+  var females=T.subject.filter(function(s){return sexOf(s,'F')&&BLD.isActive((st[s.id]||{}).state)&&/breed/i.test(s.kind||'');}),males=T.subject.filter(function(s){return sexOf(s,'M')&&/breed|stud|sire/i.test(s.kind||'');});
+  if(!females.length)females=T.subject.filter(function(s){return sexOf(s,'F')&&BLD.isActive((st[s.id]||{}).state);});
+  if(!males.length)males=T.subject.filter(function(s){return sexOf(s,'M')&&BLD.isActive((st[s.id]||{}).state);});
+  var depths=Object.keys(depth).map(function(k){return depth[k];});
+  var deepest=depths.length?Math.max.apply(null,depths):0;
+  function sexOf(s,want){return want==='F'?/^(f|female)$/i.test(s.sex||''):/^(m|male)$/i.test(s.sex||'');}
+  h+='<h2>Mating planner — coefficient of inbreeding of the planned pup</h2>'+(BLD.have(T,'subject',['id','sex'])?'':'')+'<div class="card info"><p><b>Method:</b> Henderson tabular (additive relationship matrix over all '+n+' dogs in BLD-subject.csv; parents not on file are treated as unrelated founders). <b>Depth:</b> whatever the table holds — the deepest line here is '+deepest+' generations; a figure is only as complete as the pedigree behind it. Green under 6.25 % · amber 12.5–18.75 % · red 25 % and over. Rows = active breeding females, columns = males.</p></div>';
+  function pct(id){var f=F(id);return f==null?'—':(f*100).toFixed(1)+'%';}
+  h+='<div class="gridwrap scroll"><table class="coigrid"><thead><tr><th class="rh">dam \\ sire</th>'+males.map(function(m){return '<th>'+BLD.link(m.id,S)+'<br><span class="muted">F '+pct(m.id)+'</span></th>';}).join('')+'</tr></thead><tbody>';
+  females.forEach(function(f){h+='<tr><th class="rh">'+BLD.link(f.id,S)+'<br><span class="muted">F '+pct(f.id)+'</span></th>'+males.map(function(m){var v=rel(f.id,m.id);var c=v==null?null:v/2;return '<td class="'+(c==null?'':gcls(c))+'" title="'+E(f.name)+' × '+E(m.name)+'">'+(c==null?'—':(100*c).toFixed(1))+'</td>';}).join('')+'</tr>';});
+  h+='</tbody></table></div>';
+  h+='<h3>Individual inbreeding (F) — every dog with both parents on file</h3>'+BLD.table(T.subject.filter(function(s){return S[s.sire_id]&&S[s.dam_id];}).map(function(s){return {id:s.id,name:s.name,F:F(s.id),d:depth[s.id]};}).sort(function(a,b){return b.F-a.F;}).slice(0,60),[['Dog',function(r){return BLD.link(r.id,S);}],['F',function(r){return '<span class="pill '+gcls(r.F)+'">'+(r.F*100).toFixed(2)+'%</span>';}],['Generations on file',function(r){return String(r.d-1);}]]);
+  document.getElementById('main').innerHTML=h;document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>

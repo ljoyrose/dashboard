@@ -32,10 +32,19 @@ test('no passwords, secret keys or access tokens are committed', () => {
   expect(hits).toEqual([]);
 });
 
-test('the only OAuth client id in the pages is the public one, and it is the same on all three pages', () => {
-  const ids = ['index.html', 'cdhub/index.html', 'money/index.html'].map((f) => (read(f).match(/[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com/g) || [])[0]);
+test('the only OAuth client id in the pages is the public one, and it is the same everywhere', () => {
+  const pages = ['index.html', 'cdhub/index.html', 'money/index.html', 'bloodline/drive.js'];
+  const ids = pages.map((f) => (read(f).match(/[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com/g) || [])[0]);
   expect(ids[0]).toBeTruthy();
   expect(new Set(ids).size).toBe(1);
+  const extra = [];
+  for (const name of fs.readdirSync(path.join(ROOT, 'bloodline'))) {
+    if (!name.endsWith('.html') && name !== 'bld.js') continue;
+    for (const id of read(path.join('bloodline', name)).match(/[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com/g) || []) {
+      if (id !== ids[0]) extra.push(`bloodline/${name}: ${id}`);
+    }
+  }
+  expect(extra).toEqual([]);
 });
 
 test('sample CSVs are invented: only example.test addresses and no real-looking data', () => {
@@ -56,7 +65,10 @@ test('the pages pull in scripts, styles and images only from Google sign-in and 
   //  Every browser test also fails if a page calls an address that is not mocked.)
   const ok = /^https:\/\/(accounts\.google\.com\/gsi\/client|fonts\.googleapis\.com|fonts\.gstatic\.com)(\/|$)/;
   const bad = [];
-  for (const f of ['index.html', 'cdhub/index.html', 'money/index.html']) {
+  const pages = ['index.html', 'cdhub/index.html', 'money/index.html'].concat(
+    fs.readdirSync(path.join(ROOT, 'bloodline')).filter((n) => n.endsWith('.html')).map((n) => path.posix.join('bloodline', n))
+  );
+  for (const f of pages) {
     const html = read(f);
     for (const m of html.matchAll(/<(?:script|img|iframe)\b[^>]*\bsrc=["']([^"']+)["']|<link\b[^>]*\bhref=["']([^"']+)["']/gi)) {
       const u = m[1] || m[2];

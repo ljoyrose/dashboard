@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-home.html · 2026-10-15 · STATUS: ON · reads BLD-*.csv from ../data (existing column names only) -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1>Bloodline</h1><span class="hubcode">BLD</span><span class="sub">today, from the live tables</span></div>
+<div id="nav"></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<footer>Every figure is counted from the live Drive tables when this page opens. Nothing is typed in. Read-only. Saving switches on with the write path (PR #10).</footer>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-home.html');
+BLD.load(['BLD-subject.csv','BLD-subject_status.csv','BLD-litter.csv','BLD-mating.csv','BLD-vaccination.csv','BLD-weight.csv','BLD-stock_level.csv','BLD-WORK.csv','BLD-reminder.csv','BLD-outdoor_temp.csv','BLD-occupancy.csv','BLD-area.csv','BLD-visit.csv','BLD-tenant.csv','BLD-authority.csv']).then(function(T){if(!T)return;
+  var today=new Date().toISOString().slice(0,10);
+  function kpi(ok,n,label,cls){if(!ok)return '<div class="kpi"><b>—</b><s>'+label+'</s><span class="muted">no data yet</span></div>';return '<div class="kpi '+(cls||'')+'"><b>'+n+'</b><s>'+label+'</s></div>';}
+  function part(ok,key,cols,title,inner){return '<div><h2>'+title+'</h2>'+(ok?inner:BLD.nodata(BLD.whyNot(T,key,cols)))+'</div>';}
+  var subOk=BLD.have(T,'subject',['id']);
+  var stOk=BLD.have(T,'subject_status',['subject_id','state']);
+  var litOk=BLD.have(T,'litter',['id']);
+  var mateOk=BLD.have(T,'mating',['due_from_this_mating','produced_litter','dam_subject_id','sire_subject_id','mated_on']);
+  var vacOk=BLD.have(T,'vaccination',['subject_id','next_due_on_card','given_on']);
+  var stockOk=BLD.have(T,'stock_level',['in_stock','min','product_name']);
+  var workOk=BLD.have(T,'WORK',['id','status','item']);
+  var visitOk=BLD.have(T,'visit',['performed_on','subject_id']);
+  var remOk=BLD.have(T,'reminder',['due_on']);
+  var occOk=BLD.have(T,'occupancy',['area_id','moved_out']);
+  var tempOk=BLD.have(T,'outdoor_temp',['on_date']);
+  var tenOk=BLD.have(T,'tenant',['trading_name'])&&T.tenant.length;
+  var authOk=BLD.have(T,'authority',['licence_number'])&&T.authority.length;
+  var S=BLD.by(subOk?T.subject:[],'id'),st={};
+  if(stOk)T.subject_status.forEach(function(r){var cur=st[r.subject_id];if(!cur||(!r.to_date&&cur.to_date)||((r.from_date||'')>(cur.from_date||'')))st[r.subject_id]=r;});
+  var active=subOk&&stOk?T.subject.filter(function(s){return BLD.isActive((st[s.id]||{}).state);}):[];
+  var dueLitters=mateOk?T.mating.filter(function(m){return m.due_from_this_mating>=today&&m.produced_litter!=='true';}):[];
+  var vacDue=vacOk?T.vaccination.filter(function(v){return v.next_due_on_card&&v.next_due_on_card>=today&&BLD.days(today,v.next_due_on_card)<=30;}):[];
+  var vacOver=vacOk?T.vaccination.filter(function(v){return v.next_due_on_card&&v.next_due_on_card<today;}):[];
+  var stockLow=stockOk?T.stock_level.filter(function(s){return s.min!==''&&Number(s.in_stock)<Number(s.min);}):[];
+  var workOpen=workOk?T.WORK.filter(function(w){return !/done|closed/i.test(w.status||'');}):[];
+  var visitsAhead=visitOk?T.visit.filter(function(v){return v.performed_on>=today&&!/done/i.test(v.status||'');}).sort(function(a,b){return a.performed_on<b.performed_on?-1:1;}):[];
+  var inHouse=occOk?T.occupancy.filter(function(o){return o.area_id&&!o.moved_out;}):[];
+  var temps=tempOk?T.outdoor_temp.slice().sort(function(a,b){return a.on_date<b.on_date?1:-1;}):[];
+  var ten=tenOk?T.tenant[0]:{},auth=authOk?T.authority[0]:{};
+  var h='<div class="kpis">'
+   +kpi(subOk&&stOk,active.length,'active dogs')
+   +kpi(subOk,subOk?T.subject.length:0,'dogs on record')
+   +kpi(litOk,litOk?T.litter.length:0,'litters')
+   +kpi(mateOk,dueLitters.length,'litters due',dueLitters.length?'warn':'')
+   +kpi(vacOk,vacOver.length,'vaccines overdue (card)',vacOver.length?'bad':'ok')
+   +kpi(vacOk,vacDue.length,'vaccines due ≤30 days',vacDue.length?'warn':'')
+   +kpi(stockOk,stockLow.length,'stock below min',stockLow.length?'bad':'ok')
+   +kpi(workOk,workOpen.length,'open work items',workOpen.length?'warn':'ok')
+   +'</div>';
+  h+='<div class="card info"><h4>'+(tenOk?BLD.esc(ten.trading_name||'tenant not named'):'no data yet')+'</h4><dl class="kv"><dt>Licence</dt><dd>'+(authOk?BLD.esc(auth.licence_number||'—')+' · '+BLD.esc(auth.name||'')+' · expires '+BLD.dmy(auth.licence_expires_on)+(auth.licence_expires_on?' ('+BLD.days(today,auth.licence_expires_on)+' days)':''):'no data yet — '+BLD.esc(BLD.whyNot(T,'authority',['licence_number']).replace(/^no data yet\s*[—-]\s*/,'')))+'</dd><dt>Dogs in an area now</dt><dd>'+(occOk?inHouse.length+' occupancy rows with a location and no move-out date':'no data yet — '+BLD.esc(BLD.whyNot(T,'occupancy',['area_id','moved_out']).replace(/^no data yet\s*[—-]\s*/,'')))+'</dd><dt>Latest outdoor reading</dt><dd>'+(tempOk?(temps[0]?BLD.dmy(temps[0].on_date)+' · '+BLD.esc(temps[0].location)+' · min '+BLD.esc(temps[0].min_temp)+' / max '+BLD.esc(temps[0].max_temp)+' · '+BLD.esc(temps[0].phrase):'none'):'no data yet')+'</dd></dl></div>';
+  h+='<div class="grid2">';
+  h+=part(mateOk,'mating',['due_from_this_mating','produced_litter','dam_subject_id','sire_subject_id','mated_on'],'Litters due',BLD.table(dueLitters.sort(function(a,b){return a.due_from_this_mating<b.due_from_this_mating?-1:1;}),[['Due',function(r){return BLD.dmy(r.due_from_this_mating);}],['Dam',function(r){return BLD.link(r.dam_subject_id,S);}],['Sire',function(r){return BLD.link(r.sire_subject_id,S);}],['Mated',function(r){return BLD.dmy(r.mated_on);}]],{empty:'No mating with a future due date and no litter yet.'}));
+  h+=part(vacOk,'vaccination',['subject_id','next_due_on_card','given_on'],'Vaccines overdue (per the card)',BLD.table(vacOver.sort(function(a,b){return a.next_due_on_card<b.next_due_on_card?-1:1;}).slice(0,40),[['Dog',function(r){return BLD.link(r.subject_id,S);}],['Product',function(r){return BLD.esc(r.product_shorthand||r.product);}],['Was due',function(r){return '<span class="bad">'+BLD.dmy(r.next_due_on_card)+'</span>';}],['Last given',function(r){return BLD.dmy(r.given_on);}]],{empty:'Nothing overdue on the card.'})+'<p class="muted">next_due_on_card is copied from the vaccine card, never computed (BLD rule).</p>');
+  h+=part(visitOk,'visit',['performed_on','subject_id'],'Vet visits ahead',BLD.table(visitsAhead.slice(0,20),[['When',function(r){return BLD.dmy(r.performed_on)+' '+BLD.esc(r.start_time);}],['Dog',function(r){return BLD.link(r.subject_id,S);}],['Kind',function(r){return BLD.esc(r.kind);}],['Reason',function(r){return BLD.esc(r.reason);}]],{empty:'No future visits.'}));
+  h+=part(remOk,'reminder',['due_on'],'Reminders',BLD.table(T.reminder.slice().sort(function(a,b){return a.due_on<b.due_on?-1:1;}),[['Due',function(r){return BLD.dmy(r.due_on);}],['Dog',function(r){return BLD.link(r.subject_id,S);}],['Kind','kind'],['Text','text']],{empty:'No reminders.'}));
+  h+=part(stockOk,'stock_level',['in_stock','min','product_name'],'Stock below minimum',BLD.table(stockLow,[['Product','product_name'],['In stock','in_stock'],['Min','min'],['Location','location'],['Counted',function(r){return BLD.dmy(r.counted_on);}]],{empty:'All stock at or above minimum.'}));
+  h+=part(workOk,'WORK',['id','status','item'],'Open work (BLD-WORK)',BLD.table(workOpen.slice(0,25),[['Id','id'],['Area','area'],['Item','item'],['Status',function(r){return BLD.pill(r.status,'warn');}],['Owner','owner']],{empty:'No open work.'}));
+  h+='</div>'+BLD.stamp(T);
+  document.getElementById('main').innerHTML=h;
+});
+</script></body></html>

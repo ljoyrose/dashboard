@@ -38,6 +38,7 @@ If any of these breaks, the tick turns red and says which page.
 |---|---|---|
 | Main dashboard | `/dashboard/` | 45 |
 | CD Hub | `/dashboard/cdhub/` | 30 |
+| Bloodline | `/dashboard/bloodline/` | 9 |
 | Money Hub | `/dashboard/money/` | 41 |
 | Reading CSV files | both readers | 17 |
 | Safety checks | the whole repo | 4 |
@@ -46,10 +47,10 @@ If any of these breaks, the tick turns red and says which page.
 | PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 9 |
 | Header contract (column names) | list of expected columns | 12 |
 | Dark mode, accessibility, smallest text | all three pages | 18 |
-| Phone-sized screen (390 × 844) | all three pages | 3 |
+| Phone-sized screen (390 × 844) | each page | 4 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
 
-That is 193 checks that must pass.
+That is 203 checks that must pass.
 
 **Main dashboard**
 - Opens and shows only a sign-in button until you sign in.
@@ -72,6 +73,16 @@ That is 193 checks that must pass.
 - Missing files are reported, not hidden.
 - Saving stays switched off.
 - Sign out forgets everything.
+
+**Bloodline**
+- Opens at `/bloodline/`, asks for the same Google sign-in as CD Hub, and shows no dog until you sign in.
+- After a pretend sign-in, dogs from the sample `BLD-subject.csv` are listed.
+- A table that is not in the folder says "no data yet" instead of a zero.
+- Two files with the same name are refused, not guessed.
+- A COUNT note on the first line of a file is not used as the column headings.
+- Save and edit on the build brief stay switched off, and the page names the write path.
+- Sign out forgets the tables. Nothing is stored in the browser.
+- On a phone-sized screen the screens stay within the width.
 
 **Money Hub**
 - Opens, then needs a sign-in.
