@@ -220,7 +220,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 
 | Date | What went wrong | Test that now guards it |
 |---|---|---|
-| 8 Oct 2026 | CD Hub: the Litters page crashed, and occupancy was read from the wrong column (commit `4284758`) | "joined tables work: cabins show their dogs, litters show dam and sire…" (covers Litters and occupancy; the Animana record choice is **not** yet covered) |
+| 8 Oct 2026 | CD Hub: the Litters page crashed, and occupancy was read from the wrong column (commit `2242bac`) | "joined tables work: cabins show their dogs, litters show dam and sire…" (covers Litters and occupancy; the Animana record choice is **not** yet covered) |
 | 15 Oct 2026 | (found by the teeth check, not a live bug) a hidden marker in front of the "CURRENT" line made the row-count warning disappear; and the rules that stop a `ZZ_` folder holding an `RR_` item being binned had no test | "a BOM in front of the…" (the "CURRENT: n rows held" line test), and the two Bin safety tests |
 | 17 Oct 2026 | A bulk move could still change rows hidden past Showing 50 of 52 | "Select all on a list of 52 with 50 shown" |
 
