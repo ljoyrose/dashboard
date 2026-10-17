@@ -263,7 +263,7 @@
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   var S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank() };
   var F = {};                       // folder listings, key driveId/folderId
-  var R = { sweep: null, empty: {} }; // results of Bin actions, kept until sign-out
+  var R = { sweep: null }; // results of Bin actions, kept until sign-out
 
   var $ = function (id) { return document.getElementById(id); };
   var timeFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -630,19 +630,6 @@
       busy = false; S.bin = blank(); metaCache = {};
       render(); ensureRoute();
     });
-  }
-  function emptyBin(driveId) {
-    if (busy) return;
-    var d = driveById(driveId); if (!d) return;
-    if (!writeGranted) { requestWrite(); return; }
-    var typed = window.prompt('Permanently delete everything in the bin of "' + d.name + '"?\nThis cannot be undone.\n\nType EMPTY to confirm.');
-    if (typed !== 'EMPTY') { R.empty[driveId] = { ok: false, text: typed === null ? 'Cancelled. Nothing deleted.' : 'Not emptied: EMPTY was not typed.' }; render(); return; }
-    busy = true; render();
-    apiCall('DELETE', API + '/trash?driveId=' + encodeURIComponent(driveId)).then(function () {
-      R.empty[driveId] = { ok: true, text: 'Bin emptied ' + stamp(Date.now()) + '.' };
-    }, function (err) {
-      R.empty[driveId] = { ok: false, text: 'Not emptied: ' + (err && err.status === 403 && !isScopeError(err) ? 'needs Manager role on this shared drive.' : friendlyError(err).text) };
-    }).then(function () { busy = false; S.bin = blank(); render(); ensureRoute(); });
   }
 
   // ---- PC-Personal / lisah Personal: files in MY Drive that already exist, byte for byte (MD5 + size), in a shared drive ----
@@ -1227,21 +1214,16 @@
       }).join('') + '</div>';
       else html += '<p class="note">Every shared drive has an empty bin.</p>';
       full.forEach(function (x) {
-        var res = R.empty[x.drive.id], can = !x.drive.capabilities || x.drive.capabilities.canDeleteChildren !== false;
         html += foldOpen('bin-' + x.drive.id, false, 'binsec subfold') .replace('<details ', '<details data-drive="' + esc(x.drive.id) + '" data-name="' + esc(x.drive.name.toLowerCase()) + '" ') +
           '<summary><h4>' + esc(x.drive.name) + '</h4><span class="state">' + num(x.trash.length) + (x.trashMore ? '+' : '') + ' in bin</span></summary><div class="fbody">';
-        html += '<div class="actions"><button class="btn danger" type="button" data-action="empty" data-drive="' + esc(x.drive.id) + '"' + (busy || !can ? ' disabled' : '') + '>' +
-          icon('bin') + '<span>Empty bin</span></button>' + (can ? '' : '<span class="note">Needs Manager role.</span>') + '</div>';
         html += binList(x.trash, function (f) {
           var who = f.trashingUser ? (f.trashingUser.displayName || f.trashingUser.emailAddress) : 'Unknown';
           return '<li><div class="fname">' + esc(f.name) + '</div><div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' +
             '<span>Binned ' + esc(fmtTime(f.trashedTime) || 'date unknown') + '</span><span>by ' + esc(who) + '</span></div></li>';
         });
         if (x.inside) html += '<p class="note">Plus ' + num(x.inside) + (x.inside === 1 ? ' item' : ' items') + ' inside binned folders.</p>';
-        if (res) html += '<p class="res ' + (res.ok ? 'ok' : 'bad') + '">' + esc(res.text) + '</p>';
         html += '</div></details>';
       });
-      empty.forEach(function (x) { if (R.empty[x.drive.id]) html += '<p class="res ' + (R.empty[x.drive.id].ok ? 'ok' : 'bad') + '" data-name="' + esc(x.drive.name.toLowerCase()) + '">' + esc(x.drive.name) + ': ' + esc(R.empty[x.drive.id].text) + '</p>'; });
       if (empty.length) html += foldOpen('emptybins', false, 'subfold') + '<summary><h4>' + num(empty.length) + (empty.length === 1 ? ' shared drive has' : ' shared drives have') + ' an empty bin</h4></summary><div class="fbody"><ul class="files">' +
         empty.map(function (x) { return '<li data-name="' + esc(x.drive.name.toLowerCase()) + '"><div class="fname">' + esc(x.drive.name) + '</div></li>'; }).join('') + '</ul></div></details>';
     }
@@ -1382,7 +1364,7 @@
     accessToken = null; tokenExpiresAt = 0; signedIn = false; writeGranted = false; busy = false;
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank() };
-    F = {}; R = { sweep: null, empty: {} }; metaCache = {};
+    F = {}; R = { sweep: null }; metaCache = {};
     showBanner('Signed out. Nothing kept.', true, false);
     render();
   }
@@ -1408,7 +1390,6 @@
     else if (a === 'refresh') loadAll();
     else if (a === 'grantwrite') requestWrite();
     else if (a === 'sweep') sweep();
-    else if (a === 'empty') emptyBin(t.getAttribute('data-drive'));
     else if (a === 'foldjump') {
       var key = t.getAttribute('data-key');
       FOLD[key] = true;
