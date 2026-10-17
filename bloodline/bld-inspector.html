@@ -1,0 +1,58 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-inspector.html · 2026-10-15 · STATUS: ON · the DEL view: what a licensing inspector sees, driven by BLD-field_visibility and BLD-table_policy; buyers' personal data never shown -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Inspector view</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1>Inspector view</h1><span class="hubcode">BLD</span><span class="sub">read-only · scoped by a named list (BLD-field_visibility) · evidence against the licence</span></div>
+<div id="nav"></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-inspector.html');
+BLD.load(['BLD-field_visibility.csv','BLD-table_policy.csv','BLD-audience.csv','BLD-tenant.csv','BLD-authority.csv','BLD-jurisdiction.csv','BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-vaccination.csv','BLD-litter.csv','BLD-mating.csv','BLD-occupancy.csv','BLD-area.csv','BLD-health_screen.csv','BLD-declaration.csv','BLD-outcome.csv']).then(function(T){if(!T)return;
+  var S=BLD.by(T.subject,'id'),E=BLD.esc,A=BLD.by(T.area,'id'),J=BLD.by(T.jurisdiction,'id');
+  var tenOk=BLD.have(T,'tenant',['trading_name'])&&T.tenant.length;
+  var authOk=BLD.have(T,'authority',['licence_number'])&&T.authority.length;
+  var subOk=BLD.have(T,'subject',['id','name']);
+  var ten=tenOk?T.tenant[0]:{},auth=authOk?T.authority[0]:{};
+  var st={};T.subject_status.forEach(function(r){var cur=st[r.subject_id];if(!cur||(!r.to_date&&cur.to_date)||(r.from_date>cur.from_date))st[r.subject_id]=r;});
+  var onLicence=subOk?T.subject.filter(function(s){return BLD.isActive((st[s.id]||{}).state);}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'');}):[];
+  var chip={};T.microchip.forEach(function(m){if(!m.failed_on)chip[m.subject_id]=m.chip_number;});
+  /* which fields does the inspector audience get? */
+  var audOk=BLD.have(T,'audience',['code']);
+  var visOk=BLD.have(T,'field_visibility',['table_name','field_name']);
+  var insp=audOk?T.audience.filter(function(a){return /inspect|authority|council/i.test((a.code||'')+' '+(a.name||''));})[0]:null;
+  var vis=visOk?T.field_visibility.filter(function(f){return insp?f.audience_id===insp.id:/inspect/i.test(f.audience_id||'');}):[];
+  var h='<div class="card info"><h4>'+(tenOk?E(ten.trading_name||'tenant not named'):'no data yet')+' · licence '+(authOk?E(auth.licence_number||'—'):'no data yet')+'</h4><dl class="kv"><dt>Authority</dt><dd>'+(authOk?E(auth.name||'')+' ('+E(auth.kind_as_tenant_names_it||'')+')':'no data yet')+'</dd><dt>Jurisdiction</dt><dd>'+(tenOk?E((J[ten.jurisdiction_id]||{}).subdivision_name||(J[ten.jurisdiction_id]||{}).country_name||ten.jurisdiction_id||'—'):'no data yet')+'</dd><dt>Licence expires</dt><dd>'+(authOk?BLD.dmy(auth.licence_expires_on)||'—':'no data yet')+'</dd><dt>Register</dt><dd>'+(authOk&&auth.register_url?'<a href="'+E(auth.register_url)+'" target="_blank" rel="noopener">'+E(auth.register_url)+'</a>':'no data yet')+'</dd></dl></div>';
+  h+='<div class="card ops"><h4>What this view is allowed to show</h4><p>'+(visOk?(insp?'Audience <b>'+E(insp.code)+'</b> ("'+E(insp.name)+'"): '+vis.length+' field rules in BLD-field_visibility.':'No inspector audience row found in BLD-audience.csv — this view falls back to the evidence list from the build brief and hides every person field.'):'no data yet')+' Personal data of buyers, prices and leads are never shown here.</p>'+(visOk?BLD.table(vis,[['Table','table_name'],['Field','field_name'],['Visible','visible'],['Condition','condition'],['Redaction','redaction'],['Reason','reason'],['Set by',function(r){return E(r.set_by)+' '+BLD.dmy(r.set_on);}]],{empty:'No rows for this audience.'}):BLD.nodata(BLD.whyNot(T,'field_visibility',['table_name','field_name'])))+'</div>';
+  h+='<h2>Every dog on the licence'+(subOk?' ('+onLicence.length+')':'')+'</h2>'+(subOk?BLD.table(onLicence,[['Name',function(r){return BLD.link(r.id,S);}],['Sex','sex'],['DOB',function(r){return BLD.dmy(r.dob);}],['Chip',function(r){return E(chip[r.id]||'');}],['Breed','breed'],['Dam',function(r){return BLD.link(r.dam_id,S);}],['Sire',function(r){return BLD.link(r.sire_id,S);}],['Neuter','neuter_status'],['Kind','kind']]):BLD.nodata(BLD.whyNot(T,'subject',['id','name'])));
+  /* lifetime counts per bitch: litters, caesareans, matings */
+  var litOk=BLD.have(T,'litter',['dam_subject_id','delivery_method']);
+  var matOk=BLD.have(T,'mating',['dam_subject_id']);
+  var lits=litOk?BLD.group(T.litter,'dam_subject_id'):{},mats=matOk?BLD.group(T.mating,'dam_subject_id'):{};
+  var bitches=onLicence.filter(function(s){return /^(f|female)$/i.test(s.sex||'');});
+  h+='<h2>Breeding bitches — lifetime litters and caesareans</h2>'+(litOk?'<p class="muted">Counted from BLD-litter rows; the licence conditions and KC rule B22c (two caesareans bars further breeding) read against these numbers. delivery_method "NOT RECORDED" means the old sheet never captured it.</p>'+BLD.table(bitches,[['Bitch',function(r){return BLD.link(r.id,S);}],['DOB',function(r){return BLD.dmy(r.dob)+' ('+BLD.age(r.dob)+')';}],['Litters',function(r){return String((lits[r.id]||[]).length);}],['Caesareans',function(r){var c=(lits[r.id]||[]).filter(function(l){return /caesar/i.test(l.delivery_method);}).length;return c>=2?'<span class="bad">'+c+'</span>':String(c);}],['Not recorded',function(r){return String((lits[r.id]||[]).filter(function(l){return /not recorded/i.test(l.delivery_method||'');}).length);}],['Last whelped',function(r){var l=(lits[r.id]||[]).slice().sort(function(a,b){return (a.dob||'')<(b.dob||'')?1:-1;})[0];return l?BLD.dmy(l.dob):'';}],['Matings on file',function(r){return matOk?String((mats[r.id]||[]).length):'no data yet';}]]):BLD.nodata(BLD.whyNot(T,'litter',['dam_subject_id','delivery_method'])));
+  var occOk=BLD.have(T,'occupancy',['area_id','subject_id']);
+  BLD.noteGap(T,'occupancy',['moved_in','moved_out']);
+  var occ=occOk?T.occupancy.filter(function(o){return o.area_id;}).sort(function(a,b){return (a.moved_in||'')<(b.moved_in||'')?1:-1;}):[];
+  h+='<h2>Occupancy history — which dog was in which area, with dates'+(occOk?' ('+occ.length+')':'')+'</h2>'+(occOk?BLD.table(occ.slice(0,300),[['Dog',function(r){return BLD.link(r.subject_id,S);}],['Area',function(r){var a=A[r.area_id];return a?E(a.code):E(r.area_id);}],['In',function(r){return BLD.dmy(r.moved_in);}],['Out',function(r){return BLD.dmy(r.moved_out);}],['Classification','classification']]):BLD.nodata(BLD.whyNot(T,'occupancy',['area_id','subject_id'])));
+  var vacOk=BLD.have(T,'vaccination',['subject_id','given_on']);
+  var vac=vacOk?T.vaccination.filter(function(v){return BLD.isActive((st[v.subject_id]||{}).state);}).sort(function(a,b){return a.given_on<b.given_on?1:-1;}):[];
+  h+='<h2>Vaccination, worming, parasiticide — every dose for dogs on the licence'+(vacOk?' ('+vac.length+')':'')+'</h2>'+(vacOk?BLD.table(vac.slice(0,400),[['Dog',function(r){return BLD.link(r.subject_id,S);}],['Given',function(r){return BLD.dmy(r.given_on);}],['Kind','event_kind'],['Product',function(r){return E(r.product_shorthand||r.product);}],['Batch','batch'],['Next due (card)',function(r){return BLD.dmy(r.next_due_on_card);}],['Practice','practice']]):BLD.nodata(BLD.whyNot(T,'vaccination',['subject_id','given_on'])));
+  var scrOk=BLD.have(T,'health_screen',['subject_id','test']);
+  h+='<h2>Fit-to-breed: health screens for dogs on the licence</h2>'+(scrOk?BLD.table(T.health_screen.filter(function(x){return BLD.isActive((st[x.subject_id]||{}).state);}),[['Dog',function(r){return BLD.link(r.subject_id,S);}],['Test','test'],['Grade','grade'],['Certainty','certainty'],['Tested',function(r){return BLD.dmy(r.tested_on);}]]):BLD.nodata(BLD.whyNot(T,'health_screen',['subject_id','test'])));
+  var outOk=BLD.have(T,'outcome',['code'])&&T.outcome.length;
+  var decOk=BLD.have(T,'declaration',['declaration_key'])&&T.declaration.length;
+  h+='<h2>Declared practices (BLD-declaration) against licence outcomes (BLD-outcome)</h2>'+(outOk?BLD.table(T.outcome,[['Code','code'],['Outcome','text'],['Domain','domain'],['Law',function(r){return r.is_law==='true'?BLD.pill('law','law'):'';}],['Source','source_hint']]):BLD.nodata(BLD.whyNot(T,'outcome',['code'])||'no data yet — BLD-outcome.csv has no rows'))+(decOk?BLD.table(T.declaration,[['Key','declaration_key'],['What we do','what_we_do'],['How often',function(r){return E(r.how_often)+(r.times_per_period?' × '+E(r.times_per_period):'');}],['What good looks like','what_good_looks_like'],['Evidence kept','evidence_kept'],['Status','status']]):BLD.nodata(BLD.whyNot(T,'declaration',['declaration_key'])||'no data yet — BLD-declaration.csv has no rows'));
+  h+='<div class="card risk"><h4>Four properties this grant needs (from the build brief)</h4><ul><li><b>Read-only.</b> No inspector ever writes to the records.</li><li><b>Time-boxed.</b> valid_from and valid_to on the grant (BLD-person_role started_on / ended_on).</li><li><b>Scoped by a named list</b>, never "everything except" (BLD-field_visibility).</li><li><b>Audited.</b> Every view logged — not yet implemented on this static copy.</li></ul></div>';
+  document.getElementById('main').innerHTML=h;document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>

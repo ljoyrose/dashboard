@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-areas.html · 2026-10-15 · STATUS: ON · rooms, capacity by size band and access type, who is where now, temperatures -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Areas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1>Areas &amp; occupancy</h1><span class="hubcode">BLD</span><span class="sub">BLD-area, area_capacity, area_access, occupancy, outdoor_temp, temperature_band, temperature_action</span></div>
+<div id="nav"></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-areas.html');
+BLD.load(['BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-occupancy.csv','BLD-subject.csv','BLD-outdoor_temp.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-unit.csv']).then(function(T){if(!T)return;
+  var S=BLD.by(T.subject,'id'),E=BLD.esc,U=BLD.by(T.unit,'id');
+  var areaOk=BLD.have(T,'area',['id','code']);
+  var occOk=BLD.have(T,'occupancy',['area_id','moved_out','subject_id']);
+  var capOk=BLD.have(T,'area_capacity',['area_id','max_dogs']);
+  var bandOk=BLD.have(T,'temperature_band',['band']);
+  var actOk=BLD.have(T,'temperature_action',['action']);
+  var tempOk=BLD.have(T,'outdoor_temp',['on_date']);
+  var cap=capOk?BLD.group(T.area_capacity,'area_id'):{},acc=BLD.group(T.area_access,'area_id'),occ=occOk?BLD.group(T.occupancy.filter(function(o){return o.area_id&&!o.moved_out;}),'area_id'):{};
+  var h='<h2>Rooms and cabins</h2><p class="muted">Capacity is not a function of floor area alone: the statutory table gives dogs permitted per size band AND per access type (free / limited). Current access comes from BLD-area_access (latest row without a to_date).</p>';
+  var areas=areaOk?T.area.slice().sort(function(a,b){return ((a.grouping||'')+(a.group_sort||'')).localeCompare((b.grouping||'')+(b.group_sort||''));}):[];
+  h+=areaOk?BLD.table(areas,[
+    ['Code',function(r){return '<b>'+E(r.code)+'</b><br><span class="muted">'+E(r.grouping)+'</span>';}],
+    ['Floor area',function(r){return E(r.area_value)+' '+E((U[r.area_unit_id]||{}).symbol||r.area_unit_id)+(r.m2_confirmed?'<br><span class="muted">'+E(r.m2_confirmed)+'</span>':'');}],
+    ['Access now',function(r){var a=(acc[r.id]||[]).filter(function(x){return !x.to_date;}).sort(function(x,y){return x.from_date<y.from_date?1:-1;})[0];return a?E(a.access_type)+(a.reason?'<br><span class="muted">'+E(a.reason)+'</span>':''):'<span class="muted">not set</span>';}],
+    ['Permitted (band · access · max)',function(r){if(!capOk)return '<span class="muted">no data yet</span>';return (cap[r.id]||[]).map(function(c){return E(c.size_band)+' · '+E(c.access_type)+' · <b>'+E(c.max_dogs)+'</b>';}).join('<br>')||'<span class="muted">no capacity rows</span>';}],
+    ['In it now',function(r){if(!occOk)return '<span class="muted">no data yet</span>';var o=occ[r.id]||[];return o.length?o.map(function(x){return BLD.link(x.subject_id,S);}).join(', ')+' <span class="muted">('+o.length+')</span>':'<span class="muted">empty</span>';}],
+    ['Notes','m2_note']
+  ]):BLD.nodata(BLD.whyNot(T,'area',['id','code']));
+  var noLoc=occOk?T.occupancy.filter(function(o){return !o.area_id&&!o.moved_out;}):[];
+  h+='<h2>Occupancy rows with no location'+(occOk?' ('+noLoc.length+')':'')+'</h2>'+(occOk?'<p class="muted">These carry a licence-schedule classification but no area_id — the location was never recorded. They are listed, not hidden.</p>'+BLD.table(noLoc.slice(0,200),[['Dog',function(r){return BLD.link(r.subject_id,S);}],['Classification','classification'],['Off-site kind','off_site_kind'],['Note','classification_note']]):BLD.nodata(BLD.whyNot(T,'occupancy',['area_id','moved_out','subject_id'])));
+  h+='<h2>Temperature rules</h2>'+(bandOk?BLD.table(T.temperature_band,[['Band','band'],['Age from (days)','age_from_days'],['Age to (days)','age_to_days'],['Min','min_temp'],['Max','max_temp'],['Basis','basis'],['Ruling needed','ruling_needed'],['Note','note']]):BLD.nodata(BLD.whyNot(T,'temperature_band',['band'])))+(actOk?BLD.table(T.temperature_action,[['Direction','direction'],['Threshold °C','threshold_c'],['Action','action'],['Source','source']]):BLD.nodata(BLD.whyNot(T,'temperature_action',['action'])));
+  h+='<h2>Outdoor readings (latest 40)</h2>'+(tempOk?BLD.table(T.outdoor_temp.slice().sort(function(a,b){return a.on_date<b.on_date?1:-1;}).slice(0,40),[['Date',function(r){return BLD.dmy(r.on_date);}],['Location','location'],['Kind','reading_kind'],['Min','min_temp'],['Max','max_temp'],['RealFeel max','realfeel_max_temp'],['Cloud %','cloud_cover_pct'],['Wind km/h','wind_kmh'],['Rain','rain_value'],['Phrase','phrase'],['Captured',function(r){return E(r.captured_at);}],['Source','source']]):BLD.nodata(BLD.whyNot(T,'outdoor_temp',['on_date'])));
+  document.getElementById('main').innerHTML=h;document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>

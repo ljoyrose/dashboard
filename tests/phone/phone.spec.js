@@ -43,6 +43,34 @@ test.describe('Phone: CD Hub', () => {
   });
 });
 
+test.describe('Phone: Bloodline', () => {
+  test('loads, signs in, screens fit the width', async ({ page }) => {
+    expect((await page.goto('bloodline/bld-home.html')).status()).toBe(200);
+    await noSidewaysScroll(page, 'signed out');
+    await expect(page.locator('#signinbtn')).toBeEnabled();
+    await page.locator('#signinbtn').click();
+    await expect(page.locator('#main')).toContainText('Read live from Drive');
+    await noSidewaysScroll(page, 'Home');
+    for (const [href, where] of [
+      ['bld-dogs.html', 'Dogs'],
+      ['bld-health.html', 'Health'],
+      ['bld-matings.html', 'Matings'],
+      ['bld-people.html', 'People'],
+      ['bld-work.html', 'Work'],
+      ['bloodline.html', 'Build brief'],
+      ['bloodline-rivals.html', 'Rivals'],
+    ]) {
+      await page.locator(`nav a[href="${href}"]`).click();
+      await expect(page).toHaveURL(new RegExp(href.replace('.', '\\.')));
+      await expect(page.locator('body')).toHaveClass(/ready/);
+      if (href !== 'bloodline.html' && href !== 'bloodline-rivals.html') {
+        await expect(page.locator('#main')).not.toContainText('Sign in to see the tables');
+      }
+      await noSidewaysScroll(page, where);
+    }
+  });
+});
+
 test.describe('Phone: Money Hub', () => {
   test('loads, signs in, menu works, no sideways scroll', async ({ page }) => {
     expect((await page.goto('money/')).status()).toBe(200);

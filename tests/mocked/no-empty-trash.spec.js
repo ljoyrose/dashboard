@@ -14,7 +14,7 @@ const PHRASES = ['emptyTrash', 'Empty bin'];
 
 function pageSources() {
   const out = fs.readdirSync(ROOT).filter((name) => name.endsWith('.html'));
-  for (const dir of ['cdhub', 'money']) {
+  for (const dir of ['bloodline', 'cdhub', 'money']) {
     const abs = path.join(ROOT, dir);
     if (!fs.existsSync(abs)) continue;
     for (const child of fs.readdirSync(abs)) {
@@ -44,7 +44,31 @@ function isTrashDelete(method, urlOrPath) {
 
 fileTest('source files have no empty-bin wording and no DELETE to a /trash endpoint', () => {
   const files = pageSources();
-  expect(files).toEqual(['cdhub/index.html', 'index.html', 'money/core.js', 'money/index.html']);
+  expect(files).toEqual([
+    'bloodline/bld-areas.html',
+    'bloodline/bld-dog.html',
+    'bloodline/bld-dogs.html',
+    'bloodline/bld-health.html',
+    'bloodline/bld-home.html',
+    'bloodline/bld-inspector.html',
+    'bloodline/bld-litters.html',
+    'bloodline/bld-matings.html',
+    'bloodline/bld-people.html',
+    'bloodline/bld-prospects.html',
+    'bloodline/bld-rules.html',
+    'bloodline/bld-schema.js',
+    'bloodline/bld-stock.html',
+    'bloodline/bld-work.html',
+    'bloodline/bld.js',
+    'bloodline/bloodline-rivals.html',
+    'bloodline/bloodline.html',
+    'bloodline/drive.js',
+    'bloodline/index.html',
+    'cdhub/index.html',
+    'index.html',
+    'money/core.js',
+    'money/index.html',
+  ]);
   const bad = [];
   for (const file of files) {
     const hits = sourceHits(fs.readFileSync(path.join(ROOT, file), 'utf8'));
@@ -104,6 +128,22 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
     await expect(page).toHaveURL(new RegExp(`#/${id}$`));
     await assertClean('CD Hub ' + id);
   }
+
+  // Bloodline, signed in, on a page that reads the tables.
+  // This tab already signed in above, so the quiet resume may skip the button.
+  await open('bloodline/bld-home.html', 'Bloodline');
+  await expect.poll(async () => {
+    const main = await page.locator('#main').innerText();
+    if (main.includes('Read live from Drive')) return 'in';
+    const btn = page.locator('#signinbtn');
+    if (await btn.count() && await btn.isEnabled()) {
+      await btn.click();
+      return 'clicked';
+    }
+    return 'wait';
+  }).not.toBe('wait');
+  await expect(page.locator('#main')).toContainText('Read live from Drive');
+  await assertClean('Bloodline home');
 
   // Money Hub, all six sections, plus an entity page and a to-do page.
   await open('money/', 'Money Hub');

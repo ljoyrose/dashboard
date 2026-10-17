@@ -1,0 +1,47 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-litters.html · 2026-10-15 · STATUS: ON · reads BLD-litter, BLD-subject, BLD-mating -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Litters</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1>Litters</h1><span class="hubcode">BLD</span><span class="sub">BLD-litter.csv, with each dam's lifetime count beside it</span></div>
+<div id="nav"></div>
+<div class="bar"><input type="search" id="q" placeholder="Search pairing, dam, sire, year…" aria-label="Search"> <span id="count" class="muted"></span></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-litters.html');
+BLD.load(['BLD-litter.csv','BLD-subject.csv','BLD-mating.csv']).then(function(T){if(!T)return;
+  if(!BLD.have(T,'litter',['id'])){document.getElementById('main').innerHTML=BLD.nodata(BLD.whyNot(T,'litter',['id']));document.getElementById('stamp').innerHTML=BLD.stamp(T);return;}
+  BLD.noteGap(T,'litter',['dob','delivery_method','total_pups','males','females','stillborn','pairing','weaned_on','all_pups_collected','status','dam_subject_id','sire_subject_id']);
+  var S=BLD.by(T.subject,'id'),E=BLD.esc;
+  var pupsIn=BLD.group(T.subject,'birth_litter_id');
+  var perDam={};T.litter.forEach(function(l){perDam[l.dam_subject_id]=(perDam[l.dam_subject_id]||0)+1;});
+  var caesPerDam={};T.litter.forEach(function(l){if(/caesar/i.test(l.delivery_method))caesPerDam[l.dam_subject_id]=(caesPerDam[l.dam_subject_id]||0)+1;});
+  var mat=BLD.group(T.mating,'litter_id');
+  function render(){
+    var q=document.getElementById('q').value.toLowerCase();
+    var rows=T.litter.filter(function(l){if(!q)return true;return [l.pairing,l.raw_name,BLD.subjectName(S,l.dam_subject_id),BLD.subjectName(S,l.sire_subject_id),l.dob,l.id].join(' ').toLowerCase().indexOf(q)>=0;}).sort(function(a,b){return a.dob<b.dob?1:-1;});
+    document.getElementById('count').textContent=rows.length+' of '+T.litter.length;
+    document.getElementById('main').innerHTML=BLD.table(rows,[
+      ['Litter',function(r){return '<span id="'+E(r.id)+'">'+E(r.pairing||r.raw_name)+'</span><br><span class="muted">'+E(r.id)+'</span>';}],
+      ['Whelped',function(r){return BLD.dmy(r.dob);}],
+      ['Dam',function(r){return BLD.link(r.dam_subject_id,S)+'<br><span class="muted">litter '+(perDam[r.dam_subject_id]||0)+' on file'+(caesPerDam[r.dam_subject_id]?' · '+caesPerDam[r.dam_subject_id]+' caesarean':'')+'</span>';}],
+      ['Sire',function(r){return BLD.link(r.sire_subject_id,S);}],
+      ['Pups',function(r){var p=(pupsIn[r.id]||[]).length;return E(r.total_pups||'')+(r.males||r.females?' <span class="muted">('+E(r.males)+'m/'+E(r.females)+'f'+(r.stillborn?', '+E(r.stillborn)+' stillborn':'')+')</span>':'')+'<br><span class="muted">'+p+' on file as dogs</span>';}],
+      ['Delivery',function(r){return E(r.delivery_method)+(r.caesarean_reason?'<br><span class="muted">'+E(r.caesarean_reason)+'</span>':'');}],
+      ['Mating',function(r){var m=mat[r.id]||[];return m.length?m.map(function(x){return BLD.dmy(x.mated_on);}).join(', '):'<span class="muted">none linked</span>';}],
+      ['Status','status'],['Collected','all_pups_collected'],['Weaned',function(r){return BLD.dmy(r.weaned_on);}],['Source','delivery_source']
+    ]);
+    if(location.hash){var el=document.getElementById(location.hash.slice(1));if(el)el.scrollIntoView();}
+  }
+  document.getElementById('q').addEventListener('input',render);render();document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>

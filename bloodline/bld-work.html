@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-work.html · 2026-10-15 · STATUS: ON · BLD-WORK, BLD-FIELD-TRIAGE, BLD-_MANIFEST -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Work</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1>Work</h1><span class="hubcode">BLD</span><span class="sub">what is owed on the data (BLD-WORK), the field triage, and the manifest</span></div>
+<div id="nav"></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-work.html');
+BLD.load(['BLD-WORK.csv','BLD-FIELD-TRIAGE.csv','BLD-_MANIFEST.csv']).then(function(T){if(!T)return;
+  var E=BLD.esc;
+  var workOk=BLD.have(T,'WORK',['id','status','item']);
+  BLD.noteGap(T,'WORK',['raised_on','raised_by']);
+  var byStatus=workOk?BLD.group(T.WORK,'status'):{};
+  var h='<div class="kpis">'+(workOk?Object.keys(byStatus).sort().map(function(s){return '<div class="kpi '+(/done|closed/i.test(s)?'ok':'warn')+'"><b>'+byStatus[s].length+'</b><s>'+E(s)+'</s></div>';}).join(''):'<div class="kpi"><b>—</b><s>work items</s><span class="muted">no data yet</span></div>')+'</div>';
+  h+='<h2>Work items'+(workOk?' ('+T.WORK.length+')':'')+'</h2>'+(workOk?BLD.table(T.WORK.slice().sort(function(a,b){return (/done|closed/i.test(a.status)?1:0)-(/done|closed/i.test(b.status)?1:0)||((a.raised_on||'')<(b.raised_on||'')?1:-1);}),[['Id','id'],['Raised',function(r){return BLD.dmy(r.raised_on)+' <span class="muted">'+E(r.raised_by)+'</span>';}],['Area','area'],['Item','item'],['Status',function(r){return BLD.pill(r.status,/done|closed/i.test(r.status)?'ok':'warn');}],['Blocked on','blocked_on'],['Owner','owner'],['Evidence','evidence'],['Note','note']]):BLD.nodata(BLD.whyNot(T,'WORK',['id','status','item'])));
+  var ftWhy=BLD.whyNot(T,'FIELD-TRIAGE');
+  var ft=T['FIELD-TRIAGE']||[];
+  h+='<h2>Field triage'+(ftWhy||!ft.length?'':' ('+ft.length+')')+'</h2>'+(ftWhy?BLD.nodata(ftWhy):(!ft.length?BLD.nodata('no data yet — BLD-FIELD-TRIAGE.csv has no rows'):BLD.table(ft,Object.keys(ft[0]).map(function(k){return [k,k];}))));
+  BLD.noteGap(T,'_MANIFEST',['file','table','rows']);
+  var manWhy=BLD.whyNot(T,'_MANIFEST',['file']);
+  h+='<h2>Manifest</h2>'+(manWhy?BLD.nodata(manWhy):(T._MANIFEST.length?BLD.table(T._MANIFEST,(T._MANIFEST.__cols||Object.keys(T._MANIFEST[0])).map(function(k){return [k,k];})):BLD.nodata('no data yet — BLD-_MANIFEST.csv has no rows')));
+  document.getElementById('main').innerHTML=h;document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>

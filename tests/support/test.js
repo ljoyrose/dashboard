@@ -31,6 +31,12 @@ const test = base.test.extend({
         ({ mode, today }) => { window.__GIS_MODE = mode; window.__MONEY_TODAY = today; },
         { mode: gisMode, today: moneyToday }
       );
+      // Remembers "this tab already signed in" for a quiet resume on the next page.
+      // Lives in the test harness, not in a cookie or in page storage.
+      let gisGranted = false;
+      await context.exposeBinding('__gisGranted', () => gisGranted);
+      await context.exposeBinding('__gisRemember', () => { gisGranted = true; });
+      await context.exposeBinding('__gisForget', () => { gisGranted = false; });
       // Google sign-in stand-in
       await context.route('https://accounts.google.com/gsi/client', (route) =>
         route.fulfill({ status: 200, contentType: 'text/javascript', body: gisStub })

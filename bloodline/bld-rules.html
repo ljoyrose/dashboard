@@ -1,0 +1,47 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-rules.html · 2026-10-15 · STATUS: ON · the control-plane tables: tenant, jurisdiction, authority, species, checklists, SOPs, declarations, outcomes, KPIs, policies, derived rules -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Rules &amp; policies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1>Rules &amp; policies</h1><span class="hubcode">BLD</span><span class="sub">rules as data — every table that governs the others</span></div>
+<div id="nav"></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-rules.html');
+BLD.load(['BLD-tenant.csv','BLD-jurisdiction.csv','BLD-authority.csv','BLD-locale.csv','BLD-species.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv','BLD-checklist_trigger.csv','BLD-sop.csv','BLD-declaration.csv','BLD-outcome.csv','BLD-kpi.csv','BLD-tenant_kpi.csv','BLD-table_policy.csv','BLD-DERIVED-RULES.csv','BLD-doc_type.csv','BLD-document_shelf.csv','BLD-frequency.csv','BLD-unit.csv','BLD-question.csv']).then(function(T){if(!T)return;
+  var E=BLD.esc;
+  function all(key){
+    var why=BLD.whyNot(T,key);
+    if(why)return BLD.nodata(why);
+    var rows=T[key];
+    if(!rows.length)return BLD.nodata('no data yet — BLD-'+key+'.csv has no rows');
+    return BLD.table(rows,Object.keys(rows[0]).map(function(k){return [k,k];}));
+  }
+  var tplOk=BLD.have(T,'checklist_template',['id','name']);
+  var items=tplOk?BLD.group(T.checklist_template_item,'template_id'):{},trig=tplOk?BLD.group(T.checklist_trigger,'template_id'):{};
+  var h='<h2>Tenant, jurisdiction, authority, locale</h2>'+all('tenant')+all('jurisdiction')+all('authority')+all('locale');
+  h+='<h2>Species vocabulary (a relabel, never a new table)</h2>'+all('species');
+  h+='<h2>Checklists — template, items, triggers</h2>';
+  if(!tplOk)h+=BLD.nodata(BLD.whyNot(T,'checklist_template',['id','name']));
+  else if(!T.checklist_template.length)h+=BLD.nodata('no data yet — BLD-checklist_template.csv has no rows');
+  else T.checklist_template.forEach(function(t){h+='<div class="card ops"><h4>'+E(t.name)+' <span class="muted">v'+E(t.version)+' · '+E(t.recurrence)+' '+E(t.frequency)+(t.times_per_period?' ×'+E(t.times_per_period):'')+' · '+E(t.applies_to)+'</span></h4><p class="muted">origin '+E(t.origin)+' · frequency set by '+E(t.frequency_set_by)+' ('+E(t.frequency_authority)+') · active '+E(t.active)+(t.notes?' · '+E(t.notes):'')+'</p>'+BLD.table((items[t.id]||[]).sort(function(a,b){return Number(a.sort_order)-Number(b.sort_order);}),[['#','sort_order'],['Item','text'],['Role','default_assignee_role'],['Evidence','evidence_required'],['Blocking',function(r){return r.blocking==='true'?BLD.pill('blocking','no'):'';}],['Statutory',function(r){return r.statutory==='true'?BLD.pill('statutory','law'):'';}],['Basis','basis_cited'],['Guidance','guidance']],{empty:'No items.'})+(trig[t.id]?BLD.table(trig[t.id],[['Trigger','trigger_kind'],['On event','on_event'],['Condition','on_condition'],['Schedule','schedule'],['Creates for','creates_for'],['Assign to','assign_to_role'],['Active','active']]):'')+'</div>';});
+  h+='<h2>SOPs</h2>'+all('sop');
+  h+='<h2>Licence outcomes and declarations</h2>'+all('outcome')+all('declaration');
+  h+='<h2>KPIs</h2>'+all('kpi')+all('tenant_kpi');
+  var polOk=BLD.have(T,'table_policy',['table_name'])&&T.table_policy.length;
+  h+='<h2>Table policy — who may read and write each table'+(polOk?' ('+T.table_policy.length+')':'')+'</h2>'+(polOk?BLD.table(T.table_policy,[['Table','table_name'],['Kind','table_kind'],['Default row visibility','default_row_visibility'],['Rows carry own visibility','rows_carry_own_visibility'],['Read by default','who_may_read_by_default'],['Write by default','who_may_write_by_default'],['OverSkill access mode','overskill_access_mode'],['Reason','reason'],['Set',function(r){return E(r.set_by)+' '+BLD.dmy(r.set_on);}] ]):BLD.nodata(BLD.whyNot(T,'table_policy',['table_name'])||'no data yet — BLD-table_policy.csv has no rows'));
+  h+='<h2>Derived rules (BLD-DERIVED-RULES)</h2>'+all('DERIVED-RULES');
+  h+='<h2>Document types and shelves</h2>'+all('doc_type')+all('document_shelf');
+  h+='<h2>Frequencies, units, questions</h2>'+all('frequency')+all('unit')+all('question');
+  document.getElementById('main').innerHTML=h;document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>

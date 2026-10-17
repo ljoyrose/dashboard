@@ -1,0 +1,37 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-prospects.html · 2026-10-15 · STATUS: ON · breeder prospects, associations, export routes, categories -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Prospects</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1>Prospects</h1><span class="hubcode">BLD</span><span class="sub">BLD-prospect, prospect_set, association, breeder_category, export_route, ccp_avatar</span></div>
+<div id="nav"></div>
+<div class="bar"><input type="search" id="q" placeholder="Search kennel, country, contact…" aria-label="Search"> <select id="stage" aria-label="Stage"><option value="">Any stage</option></select> <select id="country" aria-label="Country"><option value="">Any country</option></select> <span id="count" class="muted"></span></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-prospects.html');
+BLD.load(['BLD-prospect.csv','BLD-prospect_set.csv','BLD-association.csv','BLD-breeder_category.csv','BLD-export_route.csv','BLD-ccp_avatar.csv']).then(function(T){if(!T)return;
+  var E=BLD.esc;
+  if(!BLD.have(T,'prospect',['kennel_name'])){var bits=BLD.nodata(BLD.whyNot(T,'prospect',['kennel_name']));['association','prospect_set','breeder_category','export_route','ccp_avatar'].forEach(function(k){var w=BLD.whyNot(T,k);if(w)bits+=BLD.nodata(w);});document.getElementById('main').innerHTML=bits+BLD.stamp(T);return;}
+  function opts(id,field){var set={};T.prospect.forEach(function(r){if(r[field])set[r[field]]=1;});var sel=document.getElementById(id);Object.keys(set).sort().forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}
+  opts('stage','stage');opts('country','country');
+  function render(){
+    var q=document.getElementById('q').value.toLowerCase(),stg=document.getElementById('stage').value,c=document.getElementById('country').value;
+    var rows=T.prospect.filter(function(r){if(stg&&r.stage!==stg)return false;if(c&&r.country!==c)return false;return !q||[r.kennel_name,r.contact_name,r.country,r.region,r.associations,r.notes].join(' ').toLowerCase().indexOf(q)>=0;}).sort(function(a,b){return (a.kennel_name||'').localeCompare(b.kennel_name||'');});
+    document.getElementById('count').textContent=rows.length+' of '+T.prospect.length;
+    var h=BLD.table(rows,[['Kennel',function(r){return '<b>'+E(r.kennel_name)+'</b>'+(r.website?'<br><a href="'+E(/^https?:/.test(r.website)?r.website:'https://'+r.website)+'" target="_blank" rel="noopener">'+E(r.website)+'</a>':'');}],['Contact','contact_name'],['Where',function(r){return E(r.country)+(r.region?' · '+E(r.region):'');}],['Tier',function(r){return E(r.tier)+(r.star_rating?' · '+E(r.star_rating)+'★':'');}],['Cobberdog capable','cobberdog_capable'],['Upgrade appetite','upgrade_appetite'],['Buyer signal','buyer_signal'],['Stage',function(r){return r.stage?BLD.pill(r.stage,'own'):'';}],['Interest','interest'],['Last contact',function(r){return BLD.dmy(r.last_contacted);}],['Next action','next_action'],['Owner','owner'],['Verified',function(r){return BLD.dmy(r.verified_on);}]]);
+    h+='<div class="grid2"><div><h2>Associations</h2>'+BLD.table(T.association,[['Acronym','acronym'],['Name','name'],['Country','country'],['Registry',function(r){return r.is_registry==='true'?BLD.pill('registry','own'):'';}],['Recognises Cobberdog','recognises_cobberdog'],['Listed breeders','listed_breeders'],['Transfer rule','transfer_rule'],['Pedigree depth','pedigree_depth_needed'],['Barrier','barrier_to_entry'],['Status','status']])+'</div>';
+    h+='<div><h2>Breeder categories</h2>'+BLD.table(T.breeder_category,[['Code','code'],['Label','label'],['Tier','tier'],['Definition','definition'],['Upgrade appetite','upgrade_appetite']])+'<h2>Export routes</h2>'+BLD.table(T.export_route,[['Country','country'],['Official link',function(r){return r.official_authority_link?'<a href="'+E(r.official_authority_link)+'" target="_blank" rel="noopener">link</a>':'';}],['Checked',function(r){return BLD.dmy(r.link_checked_on);}],['Note','note']])+'<h2>Prospect sets (pick-lists)</h2>'+BLD.table(T.prospect_set,[['Field','field'],['Value','value'],['Sort','sort']])+'<h2>CCP avatars</h2>'+BLD.table(T.ccp_avatar,[['Code','code'],['Name','name'],['Traits','traits'],['Stars','stars'],['Typical roles','typical_roles'],['Not ideal for','not_ideal_for'],['Ruling needed','ruling_needed']])+'</div></div>';
+    document.getElementById('main').innerHTML=h;
+  }
+  ['q','stage','country'].forEach(function(id){document.getElementById(id).addEventListener('input',render);});render();document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>

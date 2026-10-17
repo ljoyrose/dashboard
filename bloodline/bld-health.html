@@ -1,0 +1,52 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-health.html · 2026-10-15 · STATUS: ON · vaccination board, screens, DNA, dispensing, visits -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Health</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1>Health</h1><span class="hubcode">BLD</span><span class="sub">every dose, never the last one — BLD-vaccination, health_screen, dna_result, dispense, visit</span></div>
+<div id="nav"></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-health.html');
+BLD.load(['BLD-subject.csv','BLD-subject_status.csv','BLD-vaccination.csv','BLD-health_screen.csv','BLD-dna_result.csv','BLD-dna_marker.csv','BLD-dispense.csv','BLD-visit.csv','BLD-clinical_note.csv']).then(function(T){if(!T)return;
+  var S=BLD.by(T.subject,'id'),E=BLD.esc,today=new Date().toISOString().slice(0,10),MK=BLD.by(T.dna_marker,'code');
+  function kpi(ok,n,label,cls){if(!ok)return '<div class="kpi"><b>—</b><s>'+label+'</s><span class="muted">no data yet</span></div>';return '<div class="kpi '+(cls||'')+'"><b>'+n+'</b><s>'+label+'</s></div>';}
+  function block(ok,key,cols,title,inner){return '<h2>'+title+'</h2>'+(ok?inner:BLD.nodata(BLD.whyNot(T,key,cols)));}
+  var stOk=BLD.have(T,'subject_status',['subject_id','state']);
+  var vacOk=BLD.have(T,'vaccination',['subject_id','given_on','next_due_on_card']);
+  var scrOk=BLD.have(T,'health_screen',['subject_id','test']);
+  var dnaOk=BLD.have(T,'dna_result',['subject_id','marker_code']);
+  var markOk=BLD.have(T,'dna_marker',['code']);
+  var dispOk=BLD.have(T,'dispense',['subject_id','given_on']);
+  var visOk=BLD.have(T,'visit',['subject_id','performed_on']);
+  var st={};if(stOk)T.subject_status.forEach(function(r){var cur=st[r.subject_id];if(!cur||(!r.to_date&&cur.to_date)||((r.from_date||'')>(cur.from_date||'')))st[r.subject_id]=r;});
+  var active=function(id){return stOk&&BLD.isActive((st[id]||{}).state);};
+  var latest={};if(vacOk)T.vaccination.forEach(function(v){var k=v.subject_id+'|'+(v.product_shorthand||v.product);if(!latest[k]||v.given_on>latest[k].given_on)latest[k]=v;});
+  var L=Object.keys(latest).map(function(k){return latest[k];});
+  var over=L.filter(function(v){return v.next_due_on_card&&v.next_due_on_card<today&&active(v.subject_id);}).sort(function(a,b){return a.next_due_on_card<b.next_due_on_card?-1:1;});
+  var soon=L.filter(function(v){return v.next_due_on_card&&v.next_due_on_card>=today&&BLD.days(today,v.next_due_on_card)<=60&&active(v.subject_id);}).sort(function(a,b){return a.next_due_on_card<b.next_due_on_card?-1:1;});
+  var noCard=L.filter(function(v){return !v.next_due_on_card&&active(v.subject_id)&&v.event_kind==='vaccination';});
+  var vacCountOk=vacOk&&stOk;
+  var h='<div class="kpis">'+kpi(vacCountOk,over.length,'overdue (active dogs)',over.length?'bad':'ok')+kpi(vacCountOk,soon.length,'due ≤60 days',soon.length?'warn':'')+kpi(vacCountOk,noCard.length,'latest dose with no next-due on card')+kpi(vacOk,vacOk?T.vaccination.length:0,'doses on file')+kpi(scrOk,scrOk?T.health_screen.length:0,'health screens')+kpi(dnaOk,dnaOk?T.dna_result.length:0,'DNA results')+'</div>';
+  h+='<div class="card risk"><p style="margin:0"><b>Rule carried from the tables:</b> next_due_on_card is "not entered — copy from the vaccine card. NEVER computed: interval is per product, and a miss of &gt;3 months restarts the course." This screen only reads what is on the card.</p></div>';
+  var vcols=[['Dog',function(r){return BLD.link(r.subject_id,S);}],['Product',function(r){return E(r.product_shorthand||r.product);}],['Covers','diseases_covered'],['Last given',function(r){return BLD.dmy(r.given_on);}],['Next due (card)',function(r){return BLD.dmy(r.next_due_on_card);}],['Batch','batch'],['Practice','practice']];
+  h+=block(vacCountOk,'vaccination',['subject_id','given_on','next_due_on_card'],'Overdue on the card',BLD.table(over,vcols,{empty:'Nothing overdue.'}));
+  h+=block(vacCountOk,'vaccination',['subject_id','given_on','next_due_on_card'],'Due in the next 60 days',BLD.table(soon,vcols,{empty:'Nothing due.'}));
+  h+=block(vacCountOk,'vaccination',['subject_id','given_on','next_due_on_card'],'Active dogs whose latest dose has no next-due date on the card',BLD.table(noCard.sort(function(a,b){return BLD.subjectName(S,a.subject_id).localeCompare(BLD.subjectName(S,b.subject_id));}),vcols,{empty:'None.'}));
+  h+=block(scrOk,'health_screen',['subject_id','test'],'Health screens (all)',BLD.table(T.health_screen.slice().sort(function(a,b){return BLD.subjectName(S,a.subject_id).localeCompare(BLD.subjectName(S,b.subject_id));}),[['Dog',function(r){return BLD.link(r.subject_id,S);}],['Test','test'],['Grade','grade'],['Certainty','certainty'],['Attributed to','attributed_to'],['Tested',function(r){return BLD.dmy(r.tested_on);}],['Source text','source_text']]));
+  h+=block(markOk,'dna_marker',['code'],'DNA markers and results',BLD.table(T.dna_marker,[['Code','code'],['Name','name'],['Locus','gene_locus'],['Inheritance','inheritance_mode'],['0 copies','copies_0'],['1 copy','copies_1'],['2 copies','copies_2'],['Breeding rule','breeding_rule']]));
+  h+=block(dnaOk,'dna_result',['subject_id','marker_code'],'DNA results',BLD.table(T.dna_result,[['Dog',function(r){return BLD.link(r.subject_id,S);}],['Marker',function(r){var m=MK[r.marker_code];return E(r.marker_code)+(m?' · '+E(m.name):'');}],['Result','result_as_reported'],['Copies','copies'],['Interpretation','interpretation'],['Tested',function(r){return BLD.dmy(r.tested_on);}],['Lab','lab'],['Ruling needed','ruling_needed']]));
+  h+=block(dispOk,'dispense',['subject_id','given_on'],'Medicines dispensed (latest 100)',BLD.table(T.dispense.slice().sort(function(a,b){return a.given_on<b.given_on?1:-1;}).slice(0,100),[['Given',function(r){return BLD.dmy(r.given_on);}],['Dog',function(r){return BLD.link(r.subject_id,S);}],['Product','product'],['Dose','dose_volume'],['Weight used','weight_kg_used'],['Route','route'],['Batch',function(r){return E(r.batch)+(r.batch_use_by?' <span class="muted">use by '+BLD.dmy(r.batch_use_by)+'</span>':'');}],['By','given_by'],['Reason','reason'],['Withdrawal','withdrawal_period']]));
+  h+=block(visOk,'visit',['subject_id','performed_on'],'Vet visits (latest 100)',BLD.table(T.visit.slice().sort(function(a,b){return a.performed_on<b.performed_on?1:-1;}).slice(0,100),[['Date',function(r){return BLD.dmy(r.performed_on)+' '+E(r.start_time);}],['Dog',function(r){return BLD.link(r.subject_id,S);}],['Kind','kind'],['Status','status'],['Reason','reason'],['Source','source']]));
+  document.getElementById('main').innerHTML=h;document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>

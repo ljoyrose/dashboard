@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-dog.html · 2026-10-15 · STATUS: ON · one dog's whole record, every event never the last one -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Dog record</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1 id="h1">Dog record</h1><span class="hubcode">BLD</span><span class="sub" id="sub"></span></div>
+<div id="nav"></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-dogs.html');
+var ID=BLD.qs('id');
+BLD.load(['BLD-subject.csv','BLD-subject_status.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv','BLD-dna_result.csv','BLD-dna_marker.csv','BLD-vaccination.csv','BLD-weight.csv','BLD-microchip.csv','BLD-visit.csv','BLD-dispense.csv','BLD-clinical_note.csv','BLD-occupancy.csv','BLD-area.csv','BLD-sale.csv','BLD-person.csv','BLD-reminder.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv']).then(function(T){if(!T)return;
+  if(!BLD.have(T,'subject',['id','name'])){document.getElementById('main').innerHTML=BLD.nodata(BLD.whyNot(T,'subject',['id','name']));document.getElementById('stamp').innerHTML=BLD.stamp(T);return;}
+  var S=BLD.by(T.subject,'id'),A=BLD.by(T.area,'id'),MK=BLD.by(T.dna_marker,'code'),P=BLD.by(T.person,'id');
+  var s=S[ID];var E=BLD.esc;
+  if(!s){document.getElementById('main').innerHTML='<div class="card risk"><h4>No dog with id "'+E(ID)+'"</h4><p>Open a dog from the <a href="bld-dogs.html">Dogs</a> list.</p></div>'+BLD.stamp(T);document.getElementById('stamp').innerHTML='';return;}
+  document.getElementById('h1').textContent=s.name;document.title='Bloodline · '+s.name;
+  document.getElementById('sub').textContent=[s.sex,s.breed,s.dob?'born '+BLD.dmy(s.dob)+' ('+BLD.age(s.dob)+')':'',s.kind].filter(Boolean).join(' · ');
+  function rowsFor(tbl,field){return (T[tbl]||[]).filter(function(r){return r[field||'subject_id']===ID;});}
+  var col=BLD.by(T.coat_colour,'id')[s.coat_colour_id],pat=BLD.by(T.coat_pattern,'id')[s.coat_pattern_id],pig=BLD.by(T.nose_pigment,'id')[s.nose_pigment_id];
+  var h='';
+  /* identity: every column of the subject row, in the table's own order */
+  h+='<div class="grid2"><div class="card ops"><h4>Identity (BLD-subject row '+E(s.id)+')</h4><dl class="kv">';
+  Object.keys(s).forEach(function(k){if(s[k]==='')return;var v=E(s[k]);if(k==='dam_id'||k==='sire_id'||k==='birth_litter_id'){v=k==='birth_litter_id'?'<a href="bld-litters.html#'+E(s[k])+'">'+E(s[k])+'</a>':BLD.link(s[k],S)+' <span class="muted">'+E(s[k])+'</span>';}if(k==='coat_colour_id'&&col)v+=' · '+E(col.name);if(k==='coat_pattern_id'&&pat)v+=' · '+E(pat.name);if(k==='nose_pigment_id'&&pig)v+=' · '+E(pig.name);h+='<dt>'+E(k)+'</dt><dd>'+v+'</dd>';});
+  h+='</dl></div>';
+  /* status history */
+  var sts=rowsFor('subject_status').sort(function(a,b){return (a.from_date||'')<(b.from_date||'')?1:-1;});
+  var stWhy=BLD.whyNot(T,'subject_status',['subject_id','state']);
+  h+='<div><div class="card"><h4>Status history</h4>'+(stWhy?BLD.nodata(stWhy):BLD.table(sts,[['State',function(r){return BLD.pill(r.state,BLD.isActive(r.state)?'ok':'');}],['From',function(r){return BLD.dmy(r.from_date);}],['To',function(r){return BLD.dmy(r.to_date);}],['Reason','reason']],{empty:'No status rows.'}))+'</div>';
+  /* microchip */
+  var chipWhy=BLD.whyNot(T,'microchip',['subject_id','chip_number']);
+  h+='<div class="card"><h4>Microchip</h4>'+(chipWhy?BLD.nodata(chipWhy):BLD.table(rowsFor('microchip'),[['Chip','chip_number'],['Implanted',function(r){return BLD.dmy(r.implanted_on);}],['By','implanted_by'],['Site','implant_site'],['Import chip','is_import_chip'],['Failed',function(r){return BLD.dmy(r.failed_on)+(r.failure_reason?' · '+E(r.failure_reason):'');}]],{empty:'No chip recorded.'}))+'</div></div></div>';
+  /* pedigree 3 generations */
+  function cellOf(id,g){var d=S[id];return '<div class="g'+g+'">'+(d?BLD.link(id,S)+'<br><span class="muted">'+E(d.sex)+' · '+BLD.dmy(d.dob)+'</span>':'<span class="muted">'+(id?E(id)+' (not on file)':'unknown')+'</span>')+'</div>';}
+  function par(id){var d=S[id]||{};return [d.sire_id,d.dam_id];}
+  var g1=par(ID),g2=g1.map(par).flat(),g3=g2.map(par).flat();
+  h+='<h2>Pedigree · 3 generations from the subject table (sire above dam)</h2><div class="ped">';
+  h+=cellOf(ID,0);
+  /* render column-wise: g1 (2) g2 (4) g3 (8) using grid rows spans */
+  var pedCells=[];for(var i=0;i<2;i++){pedCells.push(cellOf(g1[i],1));for(var j=0;j<2;j++){pedCells.push(cellOf(g2[i*2+j],2));for(var k=0;k<2;k++){pedCells.push(cellOf(g3[i*4+j*2+k],3));}}}
+  h+=pedCells.join('')+'</div><p class="muted">A pedigree that is longer than three generations is still in the table — the Matings screen computes relationship over the whole available depth.</p>';
+  /* offspring and litters */
+  var kids=T.subject.filter(function(x){return x.dam_id===ID||x.sire_id===ID;});
+  var litWhy=BLD.whyNot(T,'litter',['id']);
+  var matWhy=BLD.whyNot(T,'mating',['id']);
+  var lits=litWhy?[]:T.litter.filter(function(l){return l.dam_subject_id===ID||l.sire_subject_id===ID;}).sort(function(a,b){return (a.dob||'')<(b.dob||'')?1:-1;});
+  var mats=matWhy?[]:T.mating.filter(function(m){return m.dam_subject_id===ID||m.sire_subject_id===ID;}).sort(function(a,b){return (a.mated_on||'')<(b.mated_on||'')?1:-1;});
+  var caesOk=!litWhy&&BLD.have(T,'litter',['delivery_method']);
+  var caes=caesOk?lits.filter(function(l){return /caesar/i.test(l.delivery_method);}).length:null;
+  h+='<div class="grid2"><div><h2>Litters'+(litWhy?'':' ('+lits.length+(/^(f|female)$/i.test(s.sex||'')?' as dam'+(caesOk?' · caesareans recorded: '+caes:''):'')+')')+'</h2>'+(litWhy?BLD.nodata(litWhy):BLD.table(lits,[['Pairing',function(r){return '<a href="bld-litters.html#'+E(r.id)+'">'+E(r.pairing)+'</a>';}],['Whelped',function(r){return BLD.dmy(r.dob);}],['Pups',function(r){return E(r.total_pups)+(r.males||r.females?' ('+E(r.males)+'m/'+E(r.females)+'f)':'');}],['Delivery','delivery_method'],['Status','status']],{empty:'No litters.'}))+'</div>';
+  h+='<div><h2>Matings'+(matWhy?'':' ('+mats.length+')')+'</h2>'+(matWhy?BLD.nodata(matWhy):BLD.table(mats,[['Mated',function(r){return BLD.dmy(r.mated_on);}],['With',function(r){return BLD.link(r.dam_subject_id===ID?r.sire_subject_id:r.dam_subject_id,S);}],['Method','method'],['Due',function(r){return BLD.dmy(r.due_from_this_mating);}],['Litter',function(r){return r.produced_litter==='true'?BLD.pill('yes','ok'):BLD.pill('no','');}]],{empty:'No matings.'}))+'</div></div>';
+  h+='<h2>Offspring on file ('+kids.length+')</h2>'+BLD.table(kids.sort(function(a,b){return a.dob<b.dob?1:-1;}),[['Name',function(r){return BLD.link(r.id,S);}],['Sex','sex'],['Born',function(r){return BLD.dmy(r.dob);}],['Other parent',function(r){return BLD.link(r.dam_id===ID?r.sire_id:r.dam_id,S);}],['Kind','kind']],{empty:'None recorded as dam or sire.'});
+  /* health */
+  var hsWhy=BLD.whyNot(T,'health_screen',['subject_id']);
+  var dnaWhy=BLD.whyNot(T,'dna_result',['subject_id']);
+  h+='<div class="grid2"><div><h2>Health screens</h2>'+(hsWhy?BLD.nodata(hsWhy):BLD.table(rowsFor('health_screen'),[['Test','test'],['Grade','grade'],['Certainty','certainty'],['Tested',function(r){return BLD.dmy(r.tested_on);}],['Source text','source_text']],{empty:'None.'}))+'</div>';
+  h+='<div><h2>DNA results</h2>'+(dnaWhy?BLD.nodata(dnaWhy):BLD.table(rowsFor('dna_result'),[['Marker',function(r){var m=MK[r.marker_code];return E(r.marker_code)+(m?' · '+E(m.name):'');}],['Result','result_as_reported'],['Copies','copies'],['Interpretation','interpretation'],['Tested',function(r){return BLD.dmy(r.tested_on);}],['Lab','lab'],['Ruling needed','ruling_needed']],{empty:'None.'}))+'</div></div>';
+  var vacWhy=BLD.whyNot(T,'vaccination',['subject_id']);
+  var vac=vacWhy?[]:rowsFor('vaccination').sort(function(a,b){return (a.given_on||'')<(b.given_on||'')?1:-1;});
+  h+='<h2>Vaccinations and titres — every dose'+(vacWhy?'':' ('+vac.length+')')+'</h2>'+(vacWhy?BLD.nodata(vacWhy):BLD.table(vac,[['Given',function(r){return BLD.dmy(r.given_on);}],['Kind','event_kind'],['Product',function(r){return E(r.product)+(r.product_shorthand?' <span class="muted">'+E(r.product_shorthand)+'</span>':'');}],['Covers','diseases_covered'],['Batch',function(r){return E(r.batch)+(r.batch_use_by?' <span class="muted">use by '+BLD.dmy(r.batch_use_by)+'</span>':'');}],['Next due (card)',function(r){return r.next_due_on_card?BLD.dmy(r.next_due_on_card):'<span class="muted">not on card</span>';}],['Titre','titre_result'],['By','administered_by'],['Source','source']],{empty:'No vaccination rows.'}));
+  var wts=rowsFor('weight').sort(function(a,b){return a.performed_on<b.performed_on?-1:1;});
+  if(wts.length){var W=wts.map(function(w){return Number(w.weight_kg);}),mx=Math.max.apply(null,W),mn=Math.min.apply(null,W);var pts=W.map(function(w,i){return (i/(W.length-1||1)*300).toFixed(1)+','+(60-((w-mn)/((mx-mn)||1))*50).toFixed(1);}).join(' ');h+='<h2>Weights ('+wts.length+')</h2><div class="card"><svg viewBox="0 0 300 64" width="100%" height="64" role="img" aria-label="weight over time"><polyline fill="none" stroke="var(--p6)" stroke-width="2" points="'+pts+'"/></svg><span class="muted">'+mn+' – '+mx+' kg, '+BLD.dmy(wts[0].performed_on)+' → '+BLD.dmy(wts[wts.length-1].performed_on)+'</span></div>';}
+  var wtWhy=BLD.whyNot(T,'weight',['subject_id','weight_kg']);
+  h+=wtWhy?BLD.nodata(wtWhy):BLD.table(wts.slice().reverse(),[['Date',function(r){return BLD.dmy(r.performed_on);}],['kg','weight_kg'],['BCS',function(r){return E(r.body_condition_score)+(r.bcs_scale?'/'+E(r.bcs_scale):'');}],['Source','source'],['By','recorded_by']],{empty:'No weights.'});
+  var visWhy=BLD.whyNot(T,'visit',['subject_id']);
+  var dispWhy=BLD.whyNot(T,'dispense',['subject_id']);
+  var noteWhy=BLD.whyNot(T,'clinical_note',['subject_id']);
+  var occWhy=BLD.whyNot(T,'occupancy',['subject_id']);
+  h+='<div class="grid2"><div><h2>Vet visits</h2>'+(visWhy?BLD.nodata(visWhy):BLD.table(rowsFor('visit').sort(function(a,b){return (a.performed_on||'')<(b.performed_on||'')?1:-1;}),[['Date',function(r){return BLD.dmy(r.performed_on)+' '+E(r.start_time);}],['Kind','kind'],['Status','status'],['Reason','reason']],{empty:'None.'}))+'</div>';
+  h+='<div><h2>Medicines dispensed</h2>'+(dispWhy?BLD.nodata(dispWhy):BLD.table(rowsFor('dispense').sort(function(a,b){return (a.given_on||'')<(b.given_on||'')?1:-1;}),[['Given',function(r){return BLD.dmy(r.given_on);}],['Product','product'],['Dose','dose_volume'],['Route','route'],['Batch','batch'],['Reason','reason']],{empty:'None.'}))+'</div></div>';
+  h+='<div class="grid2"><div><h2>Clinical notes</h2>'+(noteWhy?BLD.nodata(noteWhy):BLD.table(rowsFor('clinical_note'),[['Date',function(r){return BLD.dmy(r.recorded_on);}],['Note','text'],['By','recorded_by']],{empty:'None.'}))+'</div>';
+  h+='<div><h2>Where it has lived (occupancy)</h2>'+(occWhy?BLD.nodata(occWhy):BLD.table(rowsFor('occupancy'),[['Area',function(r){var a=A[r.area_id];return a?E(a.code)+' <span class="muted">'+E(a.grouping)+'</span>':'<span class="muted">'+E(r.off_site_kind||'no location')+'</span>';}],['In',function(r){return BLD.dmy(r.moved_in);}],['Out',function(r){return BLD.dmy(r.moved_out);}],['Classification','classification']],{empty:'None.'}))+'</div></div>';
+  var saleWhy=BLD.whyNot(T,'sale',['subject_id']);
+  var sale=saleWhy?[]:rowsFor('sale');
+  if(saleWhy)h+='<h2>Sale</h2>'+BLD.nodata(saleWhy);
+  else if(sale.length)h+='<h2>Sale</h2>'+BLD.table(sale,[['Sold',function(r){return BLD.dmy(r.sold_on);}],['To',function(r){var p=P[r.person_id];return p?E(p.full_name):E(r.person_id);}],['Age (days)','age_at_sale_days'],['Chip at sale','microchip_number_at_sale'],['Seen with dam','seen_with_dam'],['Vet record given','vet_record_given'],['Price','price'],['Deposit',function(r){return E(r.deposit)+(r.deposit_date?' on '+BLD.dmy(r.deposit_date):'');}]]);
+  var remWhy=BLD.whyNot(T,'reminder',['subject_id']);
+  var rem=remWhy?[]:rowsFor('reminder');
+  if(remWhy)h+='<h2>Reminders</h2>'+BLD.nodata(remWhy);
+  else if(rem.length)h+='<h2>Reminders</h2>'+BLD.table(rem,[['Due',function(r){return BLD.dmy(r.due_on);}],['Kind','kind'],['Text','text']]);
+  document.getElementById('main').innerHTML=h;document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>

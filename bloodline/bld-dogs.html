@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- BLOODLINE v1 · bld-dogs.html · 2026-10-15 · STATUS: ON · reads BLD-subject, BLD-subject_status, BLD-microchip, BLD-coat_colour, BLD-coat_pattern -->
+<html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<title>Bloodline · Dogs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="bld.css"></head>
+<body><div class="wrap">
+<div class="hdr"><h1>Dogs</h1><span class="hubcode">BLD</span><span class="sub">every row of BLD-subject.csv — one table, sire_id and dam_id on the same row</span></div>
+<div id="nav"></div>
+<div class="bar"><input type="search" id="q" placeholder="Search name, breed, colour, chip…" aria-label="Search"> <select id="sex" aria-label="Sex"><option value="">Any sex</option></select> <select id="kind" aria-label="Kind"><option value="">Any kind</option></select> <select id="state" aria-label="Status"><option value="">Any status</option></select> <span id="count" class="muted"></span></div>
+<main id="main"><p class="muted">Reading the tables…</p></main>
+<div id="stamp"></div>
+</div>
+<script src="drive.js"></script>
+<script src="bld.js"></script>
+<script>
+document.getElementById('nav').innerHTML=BLD.nav('bld-dogs.html');
+BLD.load(['BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv']).then(function(T){if(!T)return;
+  if(!BLD.have(T,'subject',['id','name'])){document.getElementById('main').innerHTML=BLD.nodata(BLD.whyNot(T,'subject',['id','name']));document.getElementById('stamp').innerHTML=BLD.stamp(T);return;}
+  BLD.noteGap(T,'subject',['dam_id','sire_id','sex','dob','breed','kind','size_band','neuter_status']);
+  var S=BLD.by(T.subject,'id'),COL=BLD.by(T.coat_colour,'id'),PAT=BLD.by(T.coat_pattern,'id');
+  var st={};T.subject_status.forEach(function(r){var cur=st[r.subject_id];if(!cur||(!r.to_date&&cur.to_date)||(r.from_date>cur.from_date))st[r.subject_id]=r;});
+  var chip={};T.microchip.forEach(function(m){if(!m.failed_on)chip[m.subject_id]=m.chip_number;});
+  function opts(id,field,src){var set={};src.forEach(function(r){var v=field(r);if(v)set[v]=1;});var sel=document.getElementById(id);Object.keys(set).sort().forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}
+  opts('sex',function(r){return r.sex;},T.subject);opts('kind',function(r){return r.kind;},T.subject);opts('state',function(r){return (st[r.id]||{}).state;},T.subject);
+  function render(){
+    var q=document.getElementById('q').value.toLowerCase(),sex=document.getElementById('sex').value,kind=document.getElementById('kind').value,state=document.getElementById('state').value;
+    var rows=T.subject.filter(function(s){
+      if(sex&&s.sex!==sex)return false;if(kind&&s.kind!==kind)return false;if(state&&(st[s.id]||{}).state!==state)return false;
+      if(q){var hay=[s.name,s.breed,s.name_as_imported,(COL[s.coat_colour_id]||{}).name,s.colour_as_stated,chip[s.id],s.id].join(' ').toLowerCase();if(hay.indexOf(q)<0)return false;}
+      return true;}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
+    document.getElementById('count').textContent=rows.length+' of '+T.subject.length;
+    document.getElementById('main').innerHTML=BLD.table(rows,[
+      ['Name',function(r){return BLD.link(r.id,S);}],['Sex','sex'],['Born',function(r){return BLD.dmy(r.dob)+(r.dob?' <span class="muted">('+BLD.age(r.dob)+')</span>':'');}],
+      ['Breed','breed'],['Colour',function(r){var c=COL[r.coat_colour_id];return BLD.esc(c?c.name:r.colour_as_stated)+(PAT[r.coat_pattern_id]?' · '+BLD.esc(PAT[r.coat_pattern_id].name):'');}],
+      ['Size band','size_band'],['Kind','kind'],['Status',function(r){var s=st[r.id];return s?BLD.pill(s.state,BLD.isActive(s.state)?'ok':''):'<span class="muted">none</span>';}],
+      ['Dam',function(r){return BLD.link(r.dam_id,S);}],['Sire',function(r){return BLD.link(r.sire_id,S);}],['Chip',function(r){return BLD.esc(chip[r.id]||'');}],['Neuter','neuter_status']
+    ]);
+  }
+  ['q','sex','kind','state'].forEach(function(id){document.getElementById(id).addEventListener('input',render);});
+  render();document.getElementById('stamp').innerHTML=BLD.stamp(T);
+});
+</script></body></html>
