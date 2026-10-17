@@ -249,6 +249,13 @@
   var LEDGER_FILE_ID = '1oIQz2HR86iL8ZuJQdKaUeEplNj0mG9GY'; // RR_DELETE-LEDGER, file_id column
   var SLIP_PREFIX = 'AA_DELETE-LEDGER-ROWS_'; // pending ledger slips, same file_id column
   var LEDGER_FAIL = 'The delete ledger could not be read. Nothing will be binned.';
+  // E02 money rollback (RR_MASTER v0.59). Wins over a tick, a ledger row, Select all and every other bin rule.
+  // Never restore, migrate or bin these. If the path cannot be read and the file is in one of these folders, hold it.
+  var E02_LABEL = 'Held: money rollback (E02), do not touch until FIX 6 is confirmed';
+  // 4 - Ops. Same id the Money Hub uses. This repo has no Drive id named "0.1 - Index", so that folder is matched by name.
+  var OPS_FOLDER_ID = (window.MoneyCore && window.MoneyCore.CFG && window.MoneyCore.CFG.folders && window.MoneyCore.CFG.folders.ops) || '115saDuLMClWZVfzIYTn2fN-BjPWijgBm';
+  var INDEX_FOLDER_NAME = '0.1 - Index';
+  var OPS_FOLDER_NAME = '4 - Ops';
   var BIN_SHOW = 50;
   var CF_FOLDER_ID = '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A';
   var READ_FIRST_ID = '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L';
@@ -414,6 +421,47 @@
   }
   function nameHasRr(name) { return String(name == null ? '' : name).indexOf(ARCHIVE_PREFIX) !== -1; }
   function isArchiveName(name) { return String(name == null ? '' : name).indexOf(ARCHIVE_PREFIX) === 0; }
+  function e02NameHit(name) {
+    name = String(name == null ? '' : name);
+    return /^ZZ_SUPERSEDED_.*_DO-NOT-USE__MON-/.test(name) || /^ZZ_SUPERSEDED_.*CHECK-LOG/.test(name);
+  }
+  function textHasMonEngine(s) {
+    s = String(s == null ? '' : s);
+    return s.indexOf('MON-ENGINE') !== -1 || s.indexOf('MON-') !== -1;
+  }
+  // A MON-ENGINE file: the name contains MON- or MON-ENGINE, or the path goes through a MON-ENGINE folder.
+  function isMonEngineFile(f, chain) {
+    if (textHasMonEngine(f && f.name) || textHasMonEngine(f && f._path) || textHasMonEngine(f && f.path)) return true;
+    var names = chain || [];
+    for (var i = 0; i < names.length; i++) if (String(names[i]).indexOf('MON-ENGINE') !== -1) return true;
+    return false;
+  }
+  function inHoldFolder(f, chain) {
+    var parents = (f && f.parents) || [];
+    if (parents.indexOf(OPS_FOLDER_ID) !== -1) return true;
+    if (f && f._fromHoldFolder && chain === null) return true;
+    var names = chain || [];
+    for (var i = 0; i < names.length; i++) {
+      if (names[i] === INDEX_FOLDER_NAME || names[i] === OPS_FOLDER_NAME) return true;
+    }
+    return false;
+  }
+  // chain: folder names from the drive root down to the parent, or null when the path could not be read.
+  function isMoneyRollback(f, chain) {
+    if (!f) return true;
+    if (e02NameHit(f.name) || e02NameHit(f._path) || e02NameHit(f.path)) return true;
+    if (!inHoldFolder(f, chain)) return false;
+    if (chain === null) return true;
+    return isMonEngineFile(f, chain);
+  }
+  function holdMoney(f, chain) {
+    if (!isMoneyRollback(f, chain)) return false;
+    f._moneyHold = true;
+    f._block = E02_LABEL;
+    f._skip = E02_LABEL;
+    return true;
+  }
+  function pathFolders(path) { return String(path || '').split('/').filter(Boolean); }
   var metaCache = {};
   function getMeta(id) {
     if (!metaCache[id]) metaCache[id] = apiGet(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,parents,driveId');
@@ -676,6 +724,7 @@
   }
   function classifyBinItem(f, led) {
     var name = String(f.name || '');
+    if (f._moneyHold || isMoneyRollback(f, f._chain)) { holdMoney(f, f._chain); return 'e02'; }
     if (nameHasRr(name)) { f._block = 'Name contains RR_, left out.'; return 'leftout'; }
     if (!isDeleteName(name)) {
       f._block = f._skip || 'Rename needed. ZZ_SUPERSEDED_ is retired and is never binned.';
@@ -687,27 +736,91 @@
     f._block = '';
     return 'ready';
   }
+  // id -> folder name for 4 - Ops and any folder titled "0.1 - Index" or "4 - Ops".
+  function loadHoldFolderIds() {
+    var known = drives();
+    return (known ? Promise.resolve(known) : listDrives()).then(function (list) {
+      return mapLimit(list || [], 3, function (d) {
+        return listAll(inDrive(d.id, {
+          q: "(name = '" + INDEX_FOLDER_NAME + "' or name = '" + OPS_FOLDER_NAME + "') and mimeType = '" + FOLDER_MIME + "' and trashed = false",
+          pageSize: '100',
+          fields: 'nextPageToken,files(id,name,mimeType)'
+        }), 2);
+      }).then(function (pages) {
+        var ids = {};
+        ids[OPS_FOLDER_ID] = OPS_FOLDER_NAME;
+        (pages || []).forEach(function (p) {
+          ((p && p.files) || []).forEach(function (f) {
+            if (f.name === INDEX_FOLDER_NAME || f.name === OPS_FOLDER_NAME) ids[f.id] = f.name;
+          });
+        });
+        return ids;
+      });
+    });
+  }
+  // Files sitting in 4 - Ops (by id or by folder name) or in a folder named "0.1 - Index".
+  // The name match is how "0.1 - Index" is found: this repo does not store that folder's id.
+  function listHoldFolderFiles(driveId) {
+    var fields = 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,webViewLink)';
+    return listAll(inDrive(driveId, {
+      q: "(name = '" + INDEX_FOLDER_NAME + "' or name = '" + OPS_FOLDER_NAME + "') and mimeType = '" + FOLDER_MIME + "' and trashed = false",
+      pageSize: '100',
+      fields: 'nextPageToken,files(id,name,mimeType)'
+    }), 3).then(function (found) {
+      var ids = {};
+      ids[OPS_FOLDER_ID] = true;
+      (found.files || []).forEach(function (f) {
+        if (f.mimeType === FOLDER_MIME && (f.name === INDEX_FOLDER_NAME || f.name === OPS_FOLDER_NAME)) ids[f.id] = true;
+      });
+      return mapLimit(Object.keys(ids), 3, function (id) {
+        return listAll(inDrive(driveId, {
+          q: "'" + String(id).replace(/'/g, "\\'") + "' in parents and trashed = false",
+          pageSize: '200',
+          fields: fields
+        }), 5);
+      }).then(function (pages) {
+        var files = [], more = !!found.more;
+        (pages || []).forEach(function (p) {
+          if (!p) return;
+          if (p.more) more = true;
+          (p.files || []).forEach(function (f) { files.push(f); });
+        });
+        return { files: files, more: more };
+      });
+    });
+  }
   function loadBin() {
     var list = drives();
     run('bin', Promise.all([
       loadLedgerSet(),
       mapLimit(list, 3, function (d) {
+        var fileFields = 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,webViewLink)';
         return Promise.all([
-          listAll(inDrive(d.id, { q: "name contains '" + DELETE_PREFIX + "' and trashed = false", pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,webViewLink)' }), 5),
-          listAll(inDrive(d.id, { q: "name contains '" + SWEEP_PREFIX + "' and trashed = false", pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,webViewLink)' }), 5),
-          listAll(inDrive(d.id, { q: 'trashed = true', pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,driveId,trashedTime,explicitlyTrashed,webViewLink,trashingUser(displayName,emailAddress))' }), 5)
+          listAll(inDrive(d.id, { q: "name contains '" + DELETE_PREFIX + "' and trashed = false", pageSize: '200', fields: fileFields }), 5),
+          listAll(inDrive(d.id, { q: "name contains '" + SWEEP_PREFIX + "' and trashed = false", pageSize: '200', fields: fileFields }), 5),
+          listAll(inDrive(d.id, { q: 'trashed = true', pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,driveId,trashedTime,explicitlyTrashed,webViewLink,trashingUser(displayName,emailAddress))' }), 5),
+          listHoldFolderFiles(d.id)
         ]).then(function (x) {
           var byId = {};
           x[0].files.concat(x[1].files).forEach(function (f) {
             if (String(f.name || '').indexOf(SWEEP_PREFIX) === 0) byId[f.id] = f;
           });
+          (x[3].files || []).forEach(function (f) {
+            if (byId[f.id]) byId[f.id]._fromHoldFolder = true;
+            else { f._fromHoldFolder = true; byId[f.id] = f; }
+          });
           var zz = Object.keys(byId).map(function (id) { return byId[id]; });
           return mapLimit(zz, 4, function (f) {
             f._drive = d.name;
             return ancestors(f, d.id).then(function (chain) {
-              if (chain === null) { f._path = d.name; f._skip = 'Folder path too deep to check, left alone.'; return; }
-              f._path = [d.name].concat(chain).join(' / ');
-              f._folder = chain.length ? chain[chain.length - 1] : d.name;
+              f._chain = chain;
+              if (chain === null) f._path = d.name;
+              else {
+                f._path = [d.name].concat(chain).join(' / ');
+                f._folder = chain.length ? chain[chain.length - 1] : d.name;
+              }
+              if (holdMoney(f, chain)) return;
+              if (chain === null) { f._skip = 'Folder path too deep to check, left alone.'; return; }
               if (chain.some(isArchiveName)) { f._skip = 'Inside an RR_ archive folder, left alone.'; return; }
               if (chain.some(nameHasRr)) { f._skip = 'Inside an RR_ archive folder, left alone.'; return; }
               if (f.mimeType === FOLDER_MIME) {
@@ -718,26 +831,35 @@
               }
             });
           }).then(function () {
+            zz = zz.filter(function (f) {
+              return f._moneyHold || String(f.name || '').indexOf(SWEEP_PREFIX) === 0;
+            });
             var trash = x[2].files.filter(function (f) { return f.explicitlyTrashed !== false; });
             trash.sort(function (a, b) { return (b.trashedTime || '').localeCompare(a.trashedTime || ''); });
-            return { drive: d, trash: trash, inside: x[2].files.length - trash.length, trashMore: x[2].more, zzMore: !!(x[0].more || x[1].more), zz: zz };
+            return { drive: d, trash: trash, inside: x[2].files.length - trash.length, trashMore: x[2].more, zzMore: !!(x[0].more || x[1].more || x[3].more), zz: zz };
           });
         });
       })
     ]).then(function (pair) {
-      var led = pair[0], per = pair[1], ready = [], held = [], rename = [], leftout = [], blocked = [];
+      var led = pair[0], per = pair[1], ready = [], held = [], rename = [], leftout = [], blocked = [], e02 = [];
       per.forEach(function (p) {
         p.zz.forEach(function (f) {
           var bucket = classifyBinItem(f, led);
-          if (bucket === 'ready') ready.push(f);
+          if (bucket === 'e02') e02.push(f);
+          else if (bucket === 'ready') ready.push(f);
           else if (bucket === 'held') held.push(f);
           else if (bucket === 'rename') rename.push(f);
           else if (bucket === 'leftout') leftout.push(f);
           else blocked.push(f);
         });
       });
+      var safeReady = [];
+      ready.forEach(function (f) {
+        if (holdMoney(f, f._chain)) e02.push(f);
+        else safeReady.push(f);
+      });
       return {
-        per: per, ready: ready, held: held, rename: rename, leftout: leftout, blocked: blocked,
+        per: per, ready: safeReady, held: held, rename: rename, leftout: leftout, blocked: blocked, e02: e02,
         ledgerOk: led.ok, ledgerNote: led.note || '',
         zzMore: per.some(function (p) { return p.zzMore; })
       };
@@ -780,10 +902,12 @@
     return [];
   }
   function rowAllowed(group, it) {
+    if (!it) return false;
+    if (group === 'usb') return !usbBlock(it);
+    if (it._moneyHold || isMoneyRollback(it, it._chain || [])) return false;
     if (group === 'bin') return !!(S.bin.data && S.bin.data.ledgerOk && isDeleteName(it.name) && !nameHasRr(it.name) && !it._skip);
     if (group === 'pcpmark') return !nameHasRr(it.name);
     if (group === 'pcpbin') return !it.blocked && String(it.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(it.name);
-    if (group === 'usb') return !usbBlock(it);
     return false;
   }
   function visibleRows(group) {
@@ -821,16 +945,17 @@
     if (busy) return;
     var d = S.bin.data; if (!d || !d.ledgerOk) return;
     var items = pickedItems('bin').filter(function (f) {
-      return isDeleteName(f.name) && !nameHasRr(f.name) && !f._skip && d.ledgerOk && d.ready.indexOf(f) !== -1;
+      return !isMoneyRollback(f, f._chain) && isDeleteName(f.name) && !nameHasRr(f.name) && !f._skip && d.ledgerOk && d.ready.indexOf(f) !== -1;
     });
     if (!items.length) return;
     if (!writeGranted) { requestWrite(); return; }
     var ok = window.confirm('Move ' + items.length + ' selected item' + (items.length === 1 ? '' : 's') + ' to the bin?\n\n' +
-      'Only ticked names that start ZZ_DELETE_ and have a delete-ledger row are included. RR_ names are never included. Folders go with their contents. Shared-drive bins delete items for good after 30 days.');
+      'Only ticked names that start ZZ_DELETE_ and have a delete-ledger row are included. RR_ names are never included. Money rollback files are never included. Folders go with their contents. Shared-drive bins delete items for good after 30 days.');
     if (!ok) { R.sweep = { at: Date.now(), cancelled: true, items: [] }; render(); return; }
     busy = true; render();
     mapLimit(items, 3, function (f) {
       var row = { name: f.name, path: f._path };
+      if (isMoneyRollback(f, f._chain)) { row.ok = false; row.text = 'Not moved'; return row; }
       return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }).then(function (res) {
         row.ok = res.trashed === true; row.text = row.ok ? 'Moved to bin' : 'Not moved'; return row;
       }, function (err) {
@@ -908,11 +1033,12 @@
   }
   function classifyPcp(f, led) {
     var reason = '';
-    if (String(f.name || '').indexOf(PCP_PREFIX) !== 0) reason = 'Name does not start with ZZ_DELETE_DRIVE_.';
+    if (f._moneyHold || isMoneyRollback(f, f._chain || [])) reason = E02_LABEL;
+    else if (String(f.name || '').indexOf(PCP_PREFIX) !== 0) reason = 'Name does not start with ZZ_DELETE_DRIVE_.';
     else if (nameHasRr(f.name)) reason = 'Name contains RR_, left out.';
     else if (!led.ok) reason = 'Ledger could not be read.';
     else if (!led.ids[f.id]) reason = 'No ledger row.';
-    return { id: f.id, name: f.name, blocked: !!reason, reason: reason };
+    return { id: f.id, name: f.name, parents: f.parents || [], _chain: f._chain || [], _moneyHold: !!f._moneyHold || reason === E02_LABEL, blocked: !!reason, reason: reason };
   }
   function loadPcpCandidates() {
     if (!signedIn || !accessToken) return;
@@ -922,9 +1048,20 @@
     render();
     var found = [];
     loadLedgerSet().then(function (led) {
-      return pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "' and 'me' in owners and trashed = false", pageSize: '1000', fields: 'nextPageToken,files(id,name)' }, function (files) {
-        files.forEach(function (f) { if (String(f.name || '').indexOf(PCP_PREFIX) === 0) found.push(f); });
-      }).then(function () { return led; });
+      return loadHoldFolderIds().then(function (holdIds) {
+        return pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "' and 'me' in owners and trashed = false", pageSize: '1000', fields: 'nextPageToken,files(id,name,parents)' }, function (files) {
+          files.forEach(function (f) {
+            if (String(f.name || '').indexOf(PCP_PREFIX) !== 0) return;
+            var parentName = holdIds[(f.parents || [])[0]];
+            if (parentName) f._chain = [parentName];
+            f._moneyHold = isMoneyRollback(f, f._chain || []);
+            found.push(f);
+          });
+        }).then(function () { return led; });
+      }, function () {
+        found.forEach(function (f) { f._moneyHold = true; });
+        return { ok: false, ids: {}, note: LEDGER_FAIL };
+      });
     }).then(function (led) {
       if (gen !== pcpLoadGen) return;
       P.ledgerOk = !!led.ok;
@@ -941,7 +1078,7 @@
   }
   function pcpMark() {
     if (busy) return;
-    var items = pickedItems('pcpmark').filter(function (f) { return !nameHasRr(f.name); });
+    var items = pickedItems('pcpmark').filter(function (f) { return !nameHasRr(f.name) && !isMoneyRollback(f, f._chain || pathFolders(f.path)); });
     if (!items.length) return;
     if (!writeGranted) { requestWrite(); return; }
     var ok = window.confirm('Rename ' + items.length + ' selected personal file' + (items.length === 1 ? '' : 's') + ' to start ' + PCP_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted yet. Names containing RR_ are not included.');
@@ -949,6 +1086,7 @@
     busy = true; P.marked = { done: 0, failed: 0 }; render();
     var doneIds = {};
     mapLimit(items, 4, function (f) {
+      if (isMoneyRollback(f, f._chain || pathFolders(f.path))) { P.marked.failed++; return; }
       return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: PCP_PREFIX + f.name }).then(function () { P.marked.done++; doneIds[f.id] = true; }, function () { P.marked.failed++; });
     }).then(function () {
       P.matches = P.matches.filter(function (f) { return !doneIds[f.id]; });
@@ -964,7 +1102,7 @@
   function pcpBin() {
     if (busy || !P.ledgerOk) return;
     var items = pickedItems('pcpbin').filter(function (f) {
-      return !f.blocked && String(f.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(f.name);
+      return !f.blocked && !f._moneyHold && !isMoneyRollback(f, f._chain || []) && String(f.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(f.name);
     });
     if (!items.length) return;
     if (!writeGranted) { requestWrite(); return; }
@@ -975,6 +1113,7 @@
     }
     busy = true; P.binned = { done: 0, failed: 0, found: items.length }; render();
     mapLimit(items, 4, function (f) {
+      if (f._moneyHold || isMoneyRollback(f, f._chain || [])) { P.binned.failed++; return; }
       return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }).then(function () { P.binned.done++; }, function () { P.binned.failed++; });
     }).then(function () {
       busy = false; PICK.pcpbin = {}; P.binStatus = 'idle'; pcpLoadGen++; render(); loadPcpCandidates();
@@ -1004,7 +1143,7 @@
     if (P.status === 'done') {
       html += '<p class="note"><strong>' + num(P.matches.length) + '</strong> personal files (' + (P.matchBytes / 1e9).toFixed(2) + ' GB) already in a shared drive.</p>';
       if (P.matches.length) {
-        html += '<div data-bin-list="pcp-rename"><h4>Rename matches</h4>' + pickButtons('pcpmark', 'pcpmark', 'Rename') + tickList('pcpmark', P.matches, function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : ''; }, 'pcp-rename') + '</div>';
+        html += '<div data-bin-list="pcp-rename"><h4>Rename matches</h4>' + pickButtons('pcpmark', 'pcpmark', 'Rename') + tickList('pcpmark', P.matches, function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : (isMoneyRollback(f, f._chain || pathFolders(f.path)) ? E02_LABEL : ''); }, 'pcp-rename') + '</div>';
       }
     }
     if (P.marked) html += '<p class="res ' + (P.marked.failed ? 'bad' : 'ok') + '">Renamed ' + num(P.marked.done) + ' to ' + esc(PCP_PREFIX) + '…' + (P.marked.failed ? ', ' + P.marked.failed + ' failed' : '') + '.</p>';
@@ -1074,7 +1213,11 @@
   // ---- Drive check: a USB stick, external drive or Mac folder vs the shared drives. Files are read on this computer only. ----
   var USB_PREFIX = 'ZZ_DELETE_LOCAL_';
   var USB_SKIP = /^(\.|\$RECYCLE\.BIN$|System Volume Information$)/;
-  function usbBlock(m) { return nameHasRr(m.name) || nameHasRr(m.path) ? 'Name contains RR_, left out.' : ''; }
+  function usbBlock(m) {
+    var probe = { name: m.name, path: m.path, _path: m.path, parents: m.parents || [] };
+    if (isMoneyRollback(probe, pathFolders(m.path))) return E02_LABEL;
+    return nameHasRr(m.name) || nameHasRr(m.path) ? 'Name contains RR_, left out.' : '';
+  }
   function usbBlank() { return { status: 'idle', log: '', root: '', files: 0, hashed: 0, bytes: 0, skipped: 0, matches: [], matchBytes: 0, only: [], onlyBytes: 0, stop: false, marked: null, error: '' }; }
   var U = usbBlank();
   var usbLast = 0;
@@ -1158,6 +1301,7 @@
     for (var i = 0; i < items.length; i++) {
       var m = items[i];
       try {
+        if (usbBlock(m)) { U.marked.failed++; continue; }
         if (typeof m.handle.move !== 'function') { U.marked.unsupported = true; break; }
         var f = await m.handle.getFile();
         if (f.size !== m.size || f.lastModified !== m.mtime) { U.marked.failed++; continue; }
@@ -1483,13 +1627,14 @@
       (signedIn && !writeGranted ? '<div class="actions"><button class="btn danger" type="button" data-action="grantwrite">' + icon('in') + '<span>Allow Bin actions</span></button></div>' : '') +
       '</div></details>';
     // ZZ_DELETE_ sweep. Only ticked ready items can move. Nothing moves until Lisa confirms.
-    var listed = d ? d.ready.length + d.held.length + d.rename.length + d.leftout.length + d.blocked.length : null;
+    var listed = d ? d.ready.length + d.held.length + d.rename.length + d.leftout.length + d.blocked.length + (d.e02 ? d.e02.length : 0) : null;
     html += foldOpen('sweep', !!(d && listed), 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Google Drive: ZZ_DELETE_ files ready to bin</h3>' + stateBadge(p, listed) + '</summary><div class="fbody">';
-    html += '<p class="note">Only names that start ZZ_DELETE_ and have a row in the delete ledger can be ticked. Marked files with no ledger row are held and are not binned. Other ZZ_ names are listed under Rename needed and are never binned. ZZ_SUPERSEDED_ is retired and is not a valid state. Anything with RR_ in its name, inside an RR_ folder, or in a folder that holds an RR_ item, is left out. Select all ticks only the allowed rows you can see. Show more and Show all bring the rest into view. A hidden row is never moved.</p>';
+    html += '<p class="note">Only names that start ZZ_DELETE_ and have a row in the delete ledger can be ticked. Marked files with no ledger row are held and are not binned. Other ZZ_ names are listed under Rename needed and are never binned. ZZ_SUPERSEDED_ is retired and is not a valid state. Anything with RR_ in its name, inside an RR_ folder, or in a folder that holds an RR_ item, is left out. Money rollback files are held and are never ticked, restored, renamed or binned, even by Select all. Select all ticks only the allowed rows you can see. Show more and Show all bring the rest into view. A hidden row is never moved.</p>';
     html += failNote(p);
     if (d) {
       if (d.ledgerNote) html += '<p class="note fail">' + esc(d.ledgerNote) + '</p>';
       html += pickButtons('bin', 'sweep', 'Move');
+      if (d.e02 && d.e02.length) html += '<div data-bin-list="e02"><h4>' + esc(E02_LABEL) + ' (' + num(d.e02.length) + ')</h4>' + binTickItems('bin-e02', d.e02) + '</div>';
       html += '<div data-bin-list="ready"><h4>Ready (' + num(d.ready.length) + ')</h4>' + binTickItems('bin-ready', d.ready) + '</div>';
       html += '<div data-bin-list="held"><h4>Held: no ledger row (' + num(d.held.length) + ')</h4>' + binTickItems('bin-held', d.held) + '</div>';
       html += '<div data-bin-list="rename"><h4>Rename needed (' + num(d.rename.length) + ')</h4>' + binTickItems('bin-rename', d.rename) + '</div>';

@@ -41,7 +41,7 @@ If any of these breaks, the tick turns red and says which page.
 | Money Hub | `/dashboard/money/` | 41 |
 | Reading CSV files | both readers | 17 |
 | Safety checks | the whole repo | 4 |
-| Bin safety (`RR_` archives never taken) | `#/bin` | 9 |
+| Bin safety (`RR_` archives never taken) | `#/bin` | 10 |
 | Never empty the bin | all three pages | 2 |
 | PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 14 |
 | Header contract (column names) | list of expected columns | 12 |
@@ -49,7 +49,7 @@ If any of these breaks, the tick turns red and says which page.
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
 
-That is 206 checks that must pass.
+That is 207 checks that must pass.
 
 **Main dashboard**
 - Opens and shows only a sign-in button until you sign in.
@@ -89,6 +89,7 @@ That is 206 checks that must pass.
 - If the delete ledger or a pending slip cannot be read, nothing is binned.
 - Move selected acts only on ticked rows that are on screen. On a list of 52 with 50 shown, Select all moves 50. Show all, then Select all, can reach all 52.
 - A personal `ZZ_DELETE_DRIVE_` file is binned only when it is ticked and has a ledger row. `RR_` in the name is left out.
+- A money rollback file is labelled "Held: money rollback (E02), do not touch until FIX 6 is confirmed" and is not ticked or binned, even with a ledger row and Select all. A normal `ZZ_DELETE_` file next to it still is.
 
 **Never empty the bin**
 - Each page is opened (main dashboard, CD Hub, Money Hub, and their sections).
