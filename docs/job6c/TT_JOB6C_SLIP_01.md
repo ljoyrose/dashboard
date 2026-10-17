@@ -1,6 +1,6 @@
 JOB 6c IMPROVE — review delivered, awaiting Lisa
 
-**From:** Claude Code (cloud) · **To:** Lisa Carson ([email removed]), AF6 Dashboard Tests · **Date:** 16 Oct 2026 (UK)
+**From:** Claude Code (cloud) · **To:** Lisa Carson, AF6 Dashboard Tests · **Date:** 16 Oct 2026 (UK)
 **PR:** https://github.com/ljoyrose/dashboard/pull/16 · **Branch:** `claude/job6c-improve` · **Not merged. Not pushed to `main`.**
 `credits_estimated: 0 · credits_actual: 0 · credits_variance: 0`
 
@@ -41,14 +41,14 @@ JOB 6c IMPROVE — review delivered, awaiting Lisa
 (AF6's own questions E1–E4 in `TT_JOB6-LEARNING-LOOP_01.md` still stand; my recommendations on them are in `_02`.)
 
 ## Handoffs for AF6 (grep-able: lines starting `BOT:`)
-BOT: **BOT-1 (after this PR is merged)** In GitHub, Actions tab, press **Run workflow** on: "Alarm fire drill (manual)", "Teeth check (weekly)", "Protection watch (weekly)". Success: all three runs green; `gh issue list --label fire-drill --state open` is empty; the teeth summary shows 8 of 8 caught; the watch summary says protection is on (note which of "details visible" or "only is-on checked" it printed). Then ask Lisa one question: "Did about 3 emails headed FIRE DRILL reach [email removed]?" Record the answer in `docs/STATUS.md` and change these lines to BOT-DONE.
+BOT: **BOT-1 (after this PR is merged)** In GitHub, Actions tab, press **Run workflow** on: "Alarm fire drill (manual)", "Teeth check (weekly)", "Protection watch (weekly)". Success: all three runs green; `gh issue list --label fire-drill --state open` is empty; the teeth summary shows 8 of 8 caught; the watch summary says protection is on (note which of "details visible" or "only is-on checked" it printed). Then ask Lisa one question: "Did about 3 emails headed FIRE DRILL reach Lisa's email inbox?" Record the answer in `docs/STATUS.md` and change these lines to BOT-DONE.
 BOT: **BOT-2** Header check on real files without moving data: for each file in the Money index and `BLD-app-tables` folders, read only the first 8 KB (Drive API `Range: bytes=0-8191`) into a temp folder, run `node tests/contract/check-real-headers.js <temp folder>`, paste only the `ok` / `PROBLEM` lines (no values), delete the temp folder. Success: every file `ok`, or the exact renamed column named. Only when Lisa says `run headers later` has become `run headers now`.
 BOT: **BOT-3** Relocate `TT_JOB6B_SLIP.md` (file id `1VOgslTB2oGwD78YZ6IhnOL1_R7Z21n8X`) out of "Claude artefacts" (`1tsjx6AZsXVLP7XUx_N6jwV7LoIIhvaT5`): upload the same text to 00 AI Commons (`1gNHYWXObTrioLv6gbDhvMqqin1nfIrTh`) as `TT_JOB6B_SLIP.md`, verify size and checksum, write the ledger row, then apply the `ZZ_DELETE_` marker to the old copy per RR_MASTER K-01. Claude did not move or rename it.
 BOT: **BOT-4** Upload `docs/job6c/TT_JOB6-LEARNING-LOOP_02.md` (download from the PR branch) to 00 AI Commons (`1gNHYWXObTrioLv6gbDhvMqqin1nfIrTh`), verify size and checksum against the sha256 in the PR comment, and confirm in chat.
 BOT: **BOT-5 (skill)** Add to `claude-code-job-prompt`: the six environment quirks in IMPROVE item 13; the pre-send Drive folder title check; "state the read-back command that proves any Settings click".
 
 ## Could NOT check (UNVERIFIED)
-Pages source and whether Pages is gated · whether the workflow's own token can read the protection details · whether Issue emails reach [email removed] · real Drive column names · teeth and fire drill on GitHub (they only run from `main`) · Lisa's exact readable-text rules · the multitenant skill and the `links-tests` plan (not read).
+Pages source and whether Pages is gated · whether the workflow's own token can read the protection details · whether Issue emails reach Lisa's email inbox · real Drive column names · teeth and fire drill on GitHub (they only run from `main`) · Lisa's exact readable-text rules · the multitenant skill and the `links-tests` plan (not read).
 
 ## Job 6c stubs from `docs/job6b/PROGRESS.md`
 Real-Drive headers in CI: **DROP** (needs a stored credential; BOT-2 does it locally). Fork-PR trigger: **DROP**. Fix contrast and small text: **PROMOTE** to a later "page polish" job, only on Lisa's `start a11y job`.

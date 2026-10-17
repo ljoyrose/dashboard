@@ -40,7 +40,7 @@ If any of these breaks, the tick turns red and says which page.
 | CD Hub | `/dashboard/cdhub/` | 30 |
 | Money Hub | `/dashboard/money/` | 41 |
 | Reading CSV files | both readers | 17 |
-| Safety checks | the whole repo | 4 |
+| Safety checks | the whole repo | 5 |
 | Bin safety (`RR_` archives never taken) | `#/bin` | 2 |
 | PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 9 |
 | Header contract (column names) | list of expected columns | 12 |
@@ -48,7 +48,7 @@ If any of these breaks, the tick turns red and says which page.
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop, alarm wiring and publish gate (the safety net checks itself) | this file, `.github`, `tests/` | 17 |
 
-That is 200 checks that must pass.
+That is 201 checks that must pass.
 
 **Main dashboard**
 - Opens and shows only a sign-in button until you sign in.
@@ -105,6 +105,7 @@ That is 200 checks that must pass.
 **Safety checks**
 - No passwords, keys or tokens in the files.
 - The sample CSVs are invented (only `example.test` email addresses).
+- No personal email addresses in the written docs (the repo is public).
 - The pages only load Google sign-in and Google Fonts by themselves.
 
 ## What is pretend and what is real

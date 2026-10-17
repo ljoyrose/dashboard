@@ -24,8 +24,8 @@
 2. **WHY:** if the built-in token, the label step or the email route fails, the first real red would be silent, which is the exact situation the alarm exists for.
 3. **OWNER:** DO NOW (the test) + BOT CAN DO (press it)
 4. **Files:** new `.github/workflows/issue-fire-drill.yml` (manual only): opens a clearly-labelled TEST issue, reuses it on a second red, checks exactly one is open, closes it, checks none is left. Only runs from `main`, so it exists after merge.
-5. **BOT handoff:** see `TT_JOB6C_SLIP_01.md`, BOT-1. Success: the run is green and `gh issue list --label fire-drill --state open` is empty. Ask Lisa: did about 3 emails headed FIRE DRILL reach [email removed]? That proves delivery, not only creation.
-7. UNVERIFIED: that GitHub emails the address Lisa reads (it uses the GitHub account's notification settings, not necessarily [email removed]).
+5. **BOT handoff:** see `TT_JOB6C_SLIP_01.md`, BOT-1. Success: the run is green and `gh issue list --label fire-drill --state open` is empty. Ask Lisa: did about 3 emails headed FIRE DRILL reach Lisa's email inbox? That proves delivery, not only creation.
+7. UNVERIFIED: that GitHub emails the address Lisa reads (it uses the GitHub account's notification settings, not necessarily Lisa's email address).
 
 ### 4. Branch protection could be switched off, or the check renamed, and nobody would know
 1. **WHAT:** a weekly "protection watch" reads the rule from GitHub and opens one Issue if protection is off, no longer requires the test check, lets admins bypass, or the required job name no longer exists in `tests.yml`.
@@ -103,7 +103,7 @@
 ## What I could NOT check
 - Pages source setting, and whether Pages is gated: API blocked.
 - Whether the built-in token can read the protection details; the first watch run shows it.
-- Whether Issue emails reach [email removed].
+- Whether Issue emails reach Lisa's email inbox.
 - Real Drive column names; teeth and fire-drill on GitHub (they only run from `main`).
 - Lisa's exact readable-text rules; the multitenant skill (`RR_SKILL_overskill-multitenant-security.md`); the `links-tests` plan.
 

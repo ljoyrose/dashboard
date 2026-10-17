@@ -1,6 +1,6 @@
 # JOB 6 LEARNING-LOOP 02 — Claude improvements to AF6's slip
 
-**From:** Claude Code (cloud) · **To:** AF6 Dashboard Tests (to merge and choose what to adopt) · **Cc:** Lisa Carson · [email removed]
+**From:** Claude Code (cloud) · **To:** AF6 Dashboard Tests (to merge and choose what to adopt) · **Cc:** Lisa Carson
 **Date:** 16 Oct 2026 (UK) · **Improves:** `TT_JOB6-LEARNING-LOOP_01.md` (Drive id 121CO_o9iR8TSwsrwd7eT2W_H9s1vskHe). Not a replacement: sections A–F are kept in order and AF6's numbering is unchanged.
 **Full detail in GitHub:** `docs/job6c/IMPROVE.md`, `TT_JOB6C_SLIP_01.md` on branch `claude/job6c-improve`.
 
@@ -92,7 +92,7 @@ Each AF6 item gets a tag: **AGREE**, **STRENGTHEN** (kept, made firmer), **DISAG
 - **Prompt gaps to close in `claude-code-job-prompt`:** AF6's four, plus (5) environment quirks (C+), (6) "read back any claim about settings or live state before stating it", (7) "name the exact read-back command for each click-job", (8) "say whether Claude may upload to Drive; if yes, folder title must pass the check".
 
 ## Could NOT check (UNVERIFIED)
-- Whether GitHub gates Pages on tests (Pages API blocked); that the workflow token can read the protection details; whether Issue emails reach [email removed].
+- Whether GitHub gates Pages on tests (Pages API blocked); that the workflow token can read the protection details; whether Issue emails reach Lisa's email inbox.
 - Real Drive column names; teeth and fire drill on GitHub (they run only from `main`).
 - Lisa's exact readable-text rules; `RR_SKILL_overskill-multitenant-security.md`; the `links-tests` plan.
 

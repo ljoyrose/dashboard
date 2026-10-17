@@ -4,7 +4,7 @@
 
 | Thing | State | How it was checked |
 |---|---|---|
-| Suite | 200 checks must pass, 0 skipped | `CI=true npx playwright test --project=mocked --project=phone` |
+| Suite | 201 checks must pass, 0 skipped | `CI=true npx playwright test --project=mocked --project=phone` |
 | Branch protection on `main` | ON: pull request + check "Browser tests (pretend Google and Drive)" + admins included + no force-push | GitHub `GET /branches/main` (also re-checked every Monday by "Protection watch") |
 | Live site matches repo | Yes, byte for byte (4 files) | curl + sha256, 16 Oct; now a weekly and post-deploy test |
 | Live check after deploy | Ran and passed after the last two publishes, including the 4-file byte match (14:19Z run: 7 passed) | Actions run log |
