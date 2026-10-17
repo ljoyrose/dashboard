@@ -81,8 +81,8 @@ That is 205 checks that must pass.
 - Two files with the same name are refused, not guessed.
 - A COUNT note on the first line of a file is not used as the column headings.
 - Save and edit on the build brief stay switched off, and the page names the write path.
-- With no `BLD-ref_dog.csv` in the folder, Matings says "no reference dogs yet". A male who is entire and active, but has no `neuter_basis` column, is listed under unconfirmed entire, not as a usable sire.
-- A usable sire is male, entire, with neuter basis stated or vet, latest status Active, alive and ours. Neutered, sold, dead and no-status males are excluded with a reason. A reference dog can be picked as the dam and does not appear on the dog list.
+- A usable sire is male, neuter status entire, latest status Active, alive and ours. Neutered, sold, dead, not-ours and no-status males are excluded with a reason.
+- Ours means no current owner row (that counts as Lisa's), the current owner is Lisa, or the dog is family-owned. The dam and sire pickers list every dog, and a dog can show as here.
 - Sign out forgets the tables. Nothing is stored in the browser.
 - On a phone-sized screen the screens stay within the width.
 

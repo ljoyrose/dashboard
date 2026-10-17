@@ -18,17 +18,21 @@
 <script src="bld.js"></script>
 <script>
 document.getElementById('nav').innerHTML=BLD.nav('bld-dogs.html');
-BLD.load(['BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv']).then(function(T){if(!T)return;
+BLD.load(['BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-subject_owner.csv','BLD-person.csv','BLD-occupancy.csv']).then(function(T){if(!T)return;
   if(!BLD.have(T,'subject',['id','name'])){document.getElementById('main').innerHTML=BLD.nodata(BLD.whyNot(T,'subject',['id','name']));document.getElementById('stamp').innerHTML=BLD.stamp(T);return;}
   BLD.noteGap(T,'subject',['dam_id','sire_id','sex','dob','breed','kind','size_band','neuter_status']);
+  BLD.noteGap(T,'subject_owner',['subject_id','person_id','to_date']);
+  BLD.noteGap(T,'occupancy',['subject_id','area_id','moved_out']);
+  BLD.noteGap(T,'person',['id','full_name']);
   var S=BLD.by(T.subject,'id'),COL=BLD.by(T.coat_colour,'id'),PAT=BLD.by(T.coat_pattern,'id');
+  var own=BLD.ownershipPack(T);
   var st={};T.subject_status.forEach(function(r){var cur=st[r.subject_id];if(!cur||(!r.to_date&&cur.to_date)||(r.from_date>cur.from_date))st[r.subject_id]=r;});
   var chip={};T.microchip.forEach(function(m){if(!m.failed_on)chip[m.subject_id]=m.chip_number;});
   function opts(id,field,src){var set={};src.forEach(function(r){var v=field(r);if(v)set[v]=1;});var sel=document.getElementById(id);Object.keys(set).sort().forEach(function(v){var o=document.createElement('option');o.value=v;o.textContent=v;sel.appendChild(o);});}
   opts('sex',function(r){return r.sex;},T.subject);opts('kind',function(r){return r.kind;},T.subject);opts('state',function(r){return (st[r.id]||{}).state;},T.subject);
   function render(){
     var q=document.getElementById('q').value.toLowerCase(),sex=document.getElementById('sex').value,kind=document.getElementById('kind').value,state=document.getElementById('state').value;
-    var rows=T.subject.filter(function(s){if(String(s.id||'').indexOf('ref-')===0)return false;
+    var rows=T.subject.filter(function(s){
       if(sex&&s.sex!==sex)return false;if(kind&&s.kind!==kind)return false;if(state&&(st[s.id]||{}).state!==state)return false;
       if(q){var hay=[s.name,s.breed,s.name_as_imported,(COL[s.coat_colour_id]||{}).name,s.colour_as_stated,chip[s.id],s.id].join(' ').toLowerCase();if(hay.indexOf(q)<0)return false;}
       return true;}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});
@@ -37,6 +41,7 @@ BLD.load(['BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-co
       ['Name',function(r){return BLD.link(r.id,S);}],['Sex','sex'],['Born',function(r){return BLD.dmy(r.dob)+(r.dob?' <span class="muted">('+BLD.age(r.dob)+')</span>':'');}],
       ['Breed','breed'],['Colour',function(r){var c=COL[r.coat_colour_id];return BLD.esc(c?c.name:r.colour_as_stated)+(PAT[r.coat_pattern_id]?' · '+BLD.esc(PAT[r.coat_pattern_id].name):'');}],
       ['Size band','size_band'],['Kind','kind'],['Status',function(r){var s=st[r.id];return s?BLD.pill(s.state,BLD.isActive(s.state)?'ok':''):'<span class="muted">none</span>';}],
+      ['Here',function(r){return BLD.isHere(r.id,(st[r.id]||{}).state,own)?'here':'';}],
       ['Dam',function(r){return BLD.link(r.dam_id,S);}],['Sire',function(r){return BLD.link(r.sire_id,S);}],['Chip',function(r){return BLD.esc(chip[r.id]||'');}],['Neuter','neuter_status']
     ]);
   }

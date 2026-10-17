@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- BLOODLINE v1 · bld-matings.html · 2026-10-15 · STATUS: ON · matings list + mating planner (relationship by Henderson's tabular method, never the path method — BLD rule BR-COI) -->
+<!-- BLOODLINE v1 · bld-matings.html · mating list + planner (Henderson tabular method, never the path method — BLD rule BR-COI) -->
 <html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
 <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -10,9 +10,9 @@
 <style>table.coigrid td{text-align:center;font-variant-numeric:tabular-nums}td.g1{background:#d1fae5}td.g2{background:#a7f3d0}td.g3{background:#fde68a}td.g4{background:#fdba74}td.g5{background:#fca5a5}
 :root:not([data-theme="light"]) td.g1{background:#064e3b}:root:not([data-theme="light"]) td.g2{background:#065f46}:root:not([data-theme="light"]) td.g3{background:#78350f}:root:not([data-theme="light"]) td.g4{background:#7c2d12}:root:not([data-theme="light"]) td.g5{background:#7f1d1d}
 .gridwrap{max-height:70vh;overflow:auto}table.coigrid th.rh{position:sticky;left:0;background:var(--surface);text-align:left}
-label.damlabel{display:block;min-height:0;margin-bottom:8px}#dam,#dogfind{width:100%;min-width:0}</style></head>
+label.damlabel{display:block;min-height:0;margin-bottom:8px}#dam,#sire,#damfind,#sirefind{width:100%;min-width:0}</style></head>
 <body><div class="wrap">
-<div class="hdr"><h1>Matings</h1><span class="hubcode">BLD</span><span class="sub">BLD-mating.csv, and a planner over our dogs plus any reference dogs on file</span></div>
+<div class="hdr"><h1>Matings</h1><span class="hubcode">BLD</span><span class="sub">BLD-mating.csv, and a planner over every dog on BLD-subject</span></div>
 <div id="nav"></div>
 <main id="main"><p class="muted">Reading the tables…</p></main>
 <div id="stamp"></div>
@@ -21,31 +21,27 @@ label.damlabel{display:block;min-height:0;margin-bottom:8px}#dam,#dogfind{width:
 <script src="bld.js"></script>
 <script>
 document.getElementById('nav').innerHTML=BLD.nav('bld-matings.html');
-BLD.load(['BLD-mating.csv','BLD-subject.csv','BLD-subject_status.csv','BLD-litter.csv','BLD-MAP-animana.csv','BLD-ref_dog.csv','BLD-microchip.csv']).then(function(T){if(!T)return;
+BLD.load(['BLD-mating.csv','BLD-subject.csv','BLD-subject_status.csv','BLD-litter.csv','BLD-MAP-animana.csv','BLD-microchip.csv','BLD-subject_owner.csv','BLD-person.csv','BLD-occupancy.csv']).then(function(T){if(!T)return;
   if(!BLD.have(T,'subject',['id'])){document.getElementById('main').innerHTML=BLD.nodata(BLD.whyNot(T,'subject',['id']));document.getElementById('stamp').innerHTML=BLD.stamp(T);return;}
-  BLD.noteGap(T,'subject',['dam_id','sire_id','sex','neuter_status','neuter_basis']);
+  BLD.noteGap(T,'subject',['dam_id','sire_id','sex','neuter_status']);
+  BLD.noteGap(T,'subject_owner',['subject_id','person_id','to_date']);
+  BLD.noteGap(T,'occupancy',['subject_id','area_id','moved_out','off_site_kind','classification']);
+  BLD.noteGap(T,'person',['id','full_name']);
   var mateOk=BLD.have(T,'mating',['dam_subject_id','sire_subject_id','mated_on']);
   var S=BLD.by(T.subject,'id'),E=BLD.esc,today=new Date().toISOString().slice(0,10);
+  var own=BLD.ownershipPack(T,today);
   var st={};
   (T.subject_status||[]).forEach(function(r){
     var cur=st[r.subject_id];
     if(!cur||(!r.to_date&&cur.to_date)||((r.from_date||'')>=(cur.from_date||'')))st[r.subject_id]=r;
   });
-  /* Reference dogs are pedigree only. A matched_subject_id means the subject row is the dog. */
-  var alias={},nodes={},chips={};
+  var chips={};
   (T.microchip||[]).forEach(function(m){if(m.subject_id&&m.chip_number&&!m.failed_on)chips[m.subject_id]=m.chip_number;});
+  var nodes={};
   T.subject.forEach(function(s){
-    nodes[s.id]={id:s.id,name:s.name||s.id,sire:s.sire_id||'',dam:s.dam_id||'',ref:false,chip:chips[s.id]||'',sex:s.sex||'',kind:s.kind||''};
+    nodes[s.id]={id:s.id,name:s.name||s.id,sire:s.sire_id||'',dam:s.dam_id||''};
   });
-  var refWhy=BLD.whyNot(T,'ref_dog',['id']);
-  var refRows=refWhy?[]:T.ref_dog;
-  refRows.forEach(function(r){
-    if(!r.id)return;
-    if(r.matched_subject_id&&nodes[r.matched_subject_id]){alias[r.id]=r.matched_subject_id;return;}
-    if(nodes[r.id])return;
-    nodes[r.id]={id:r.id,name:r.call_name||r.registered_name||r.id,registered:r.registered_name||'',call:r.call_name||'',aliases:r.aliases||'',sire:r.sire_ref||'',dam:r.dam_ref||'',ref:true,chip:r.chip_number||'',sex:r.sex||'',kind:''};
-  });
-  function parentId(raw){if(!raw)return null;var id=alias[raw]||raw;return nodes[id]?id:null;}
+  function parentId(raw){return raw&&nodes[raw]?raw:null;}
   var ids=Object.keys(nodes),idx={},order=[],done={},guard=0;
   while(order.length<ids.length&&guard++<ids.length+5){ids.forEach(function(id){if(done[id])return;var n=nodes[id];var ps=parentId(n.sire),pd=parentId(n.dam);if((!ps||done[ps])&&(!pd||done[pd])){done[id]=true;order.push(id);}});}
   ids.forEach(function(id){if(!done[id]){order.push(id);done[id]=true;}});
@@ -56,11 +52,11 @@ BLD.load(['BLD-mating.csv','BLD-subject.csv','BLD-subject_status.csv','BLD-litte
     depth[order[i]]=1+Math.max(si>=0?depth[order[si]]:0,di>=0?depth[order[di]]:0);
     for(var j=0;j<i;j++){var v=0.5*((si>=0?A[j][si]:0)+(di>=0?A[j][di]:0));A[i][j]=v;A[j][i]=v;}
     A[i][i]=1+(si>=0&&di>=0?0.5*A[si][di]:0);}
-  function rel(a,b){a=alias[a]||a;b=alias[b]||b;var x=idx[a],y=idx[b];if(x==null||y==null)return null;return A[x][y];}
-  function F(id){id=alias[id]||id;var x=idx[id];return x==null?null:A[x][x]-1;}
+  function rel(a,b){var x=idx[a],y=idx[b];if(x==null||y==null)return null;return A[x][y];}
+  function F(id){var x=idx[id];return x==null?null:A[x][x]-1;}
   function gcls(c){return c<0.0625?'g1':c<0.125?'g2':c<0.1875?'g3':c<0.25?'g4':'g5';}
   function pairNote(damId,sireId){
-    var layer=[alias[damId]||damId,alias[sireId]||sireId],bits=[],deep=0,g;
+    var layer=[damId,sireId],bits=[],deep=0,g;
     for(g=1;g<=5;g++){var filled=0,next=[],k;for(k=0;k<layer.length;k++){if(layer[k]&&nodes[layer[k]])filled++;}
       if(!filled)break;deep=g;bits.push('gen '+g+' '+Math.round(100*filled/layer.length)+'%');
       for(k=0;k<layer.length;k++){var dog=nodes[layer[k]];next.push(dog?parentId(dog.sire)||'':'');next.push(dog?parentId(dog.dam)||'':'');}
@@ -70,36 +66,28 @@ BLD.load(['BLD-mating.csv','BLD-subject.csv','BLD-subject_status.csv','BLD-litte
   var h='',deathWhy=BLD.whyNot(T,'MAP-animana',['subject_id','date_of_death']);
   var animana={};if(!deathWhy)T['MAP-animana'].forEach(function(r){(animana[r.subject_id]=animana[r.subject_id]||[]).push(r);});
   function deathOf(id){var rows=animana[id]||[],i;for(i=0;i<rows.length;i++){if(String(rows[i].date_of_death||'').trim())return rows[i].date_of_death;}return '';}
-  function isOurs(id){var state=(st[id]||{}).state||'';if(/^(active|in training)$/i.test(state))return true;var rows=animana[id]||[],i;for(i=0;i<rows.length;i++){if(/^true$/i.test(rows[i].vet_active||'')&&/carson|dynamic dogs/i.test(rows[i].vet_client||''))return true;}return false;}
   function isMale(s){return /^(m|male)$/i.test(s.sex||'');}
-  function isFemale(s){return /^(f|female)$/i.test(s.sex||'');}
-  function basisOk(s){return /^(stated|vet)$/i.test(s.neuter_basis||'');}
-  var basisCol=BLD.col(T.subject,'neuter_basis');
+  function stateOf(id){return (st[id]||{}).state||'';}
   var sireWhy=!BLD.have(T,'subject',['id','sex','neuter_status'])?BLD.whyNot(T,'subject',['id','sex','neuter_status']):BLD.whyNot(T,'subject_status',['subject_id','state']);
-  var usable=[],unconfirmed=[],excluded=[];
+  var usable=[],excluded=[];
   if(!sireWhy)T.subject.forEach(function(s){
-    if(String(s.id||'').indexOf('ref-')===0)return;
     if(!isMale(s))return;
     var why=[];
     if(!/^entire$/i.test(s.neuter_status||''))why.push(s.neuter_status?'neuter status is '+s.neuter_status:'neuter status is blank');
-    var state=(st[s.id]||{}).state||'';
+    var state=stateOf(s.id);
     if(!BLD.isActive(state))why.push(state?'latest status is '+state:'no status row');
     var died=deathWhy?'':deathOf(s.id);
     if(died)why.push('date of death '+died);
-    if(!isOurs(s.id))why.push('not ours');
-    var hard=why.length;
-    if(!basisOk(s))why.push(!basisCol?'neuter basis column is missing':(s.neuter_basis?'neuter basis is '+s.neuter_basis:'neuter basis is missing'));
+    if(!BLD.isOurs(s.id,own))why.push('not ours');
     s._why=why;
-    if(hard)excluded.push(s);
-    else if(!basisOk(s))unconfirmed.push(s);
-    else usable.push(s);
+    if(why.length)excluded.push(s);else usable.push(s);
   });
   function byName(a,b){return (a.name||'').localeCompare(b.name||'');}
-  usable.sort(byName);unconfirmed.sort(byName);excluded.sort(byName);
-  function pct(id){var f=F(id);return f==null?'—':(f*100).toFixed(1)+'%';}
+  usable.sort(byName);excluded.sort(byName);
+  function hereWord(id){return BLD.isHere(id,stateOf(id),own)?'here':'';}
   function sireTable(list,withWhy){
     if(!list.length)return '<p class="muted">None under this rule.</p>';
-    var cols=[['Sire',function(r){return BLD.link(r.id,S);}],['Neuter','neuter_status'],['Basis',function(r){return E(r.neuter_basis||'missing');}],['Status',function(r){return E((st[r.id]||{}).state||'none');}]];
+    var cols=[['Sire',function(r){return BLD.link(r.id,S);}],['Neuter','neuter_status'],['Status',function(r){return E(stateOf(r.id)||'none');}],['Here',function(r){return E(hereWord(r.id));}]];
     if(withWhy)cols.push(['Why excluded',function(r){return E((r._why||[]).join('; '));}]);
     else cols.push(['Pup COI',function(r){return '<span data-coi="'+E(r.id)+'"></span>';}]);
     return BLD.table(list,cols);
@@ -108,50 +96,54 @@ BLD.load(['BLD-mating.csv','BLD-subject.csv','BLD-subject_status.csv','BLD-litte
   h+='<h2>Recorded matings'+(mateOk?' ('+rows.length+')':'')+'</h2>'+(mateOk?BLD.table(rows,[['Mated',function(r){return BLD.dmy(r.mated_on)+(r.mating_no?' <span class="muted">#'+E(r.mating_no)+'</span>':'');}],['Dam',function(r){return BLD.link(r.dam_subject_id,S);}],['Sire',function(r){return BLD.link(r.sire_subject_id,S);}],['Method',function(r){return E(r.method)+(r.semen_source?' · '+E(r.semen_source):'');}],['Due',function(r){return BLD.dmy(r.due_from_this_mating)+(r.due_from_this_mating>=today&&r.produced_litter!=='true'?' '+BLD.pill('ahead','warn'):'');}],['Litter',function(r){return r.produced_litter==='true'?'<a href="bld-litters.html#'+E(r.litter_id)+'">'+E(r.litter_id)+'</a>':BLD.pill('none','');}],['Pup COI',function(r){var v=rel(r.dam_subject_id,r.sire_subject_id);return v==null?'<span class="muted">?</span>':'<span class="pill '+gcls(v/2)+'">'+(100*v/2).toFixed(1)+'%</span>';}],['Notes','notes']]):BLD.nodata(BLD.whyNot(T,'mating',['dam_subject_id','sire_subject_id','mated_on'])));
   var depths=Object.keys(depth).map(function(k){return depth[k];});
   var deepest=depths.length?Math.max.apply(null,depths):0;
-  var refCount=refRows.filter(function(r){return r.id&&!(r.matched_subject_id&&nodes[r.matched_subject_id]);}).length;
+  var currentOwners=(own.owners||[]).filter(function(r){return !String(r.to_date||'').trim()||String(r.to_date).slice(0,10)>=today;}).length;
   h+='<h2>Mating planner — coefficient of inbreeding of the planned pup</h2>';
-  h+='<div class="card info"><p><b>Method:</b> Henderson tabular, over '+T.subject.length+' dogs on BLD-subject'+(refCount?' and '+refCount+' reference dogs':'')+'. A parent that is on neither table is an unrelated founder. Deepest line on file: '+deepest+' generations. Green under 6.25% · amber 12.5–18.75% · red 25% and over. Each pair also shows how complete each generation is.</p>';
-  h+='<p style="margin-bottom:0"><b>Usable sire:</b> male, neuter status entire, neuter basis stated or vet, latest status Active, alive, and ours. Kind is not used. <b>Unconfirmed entire</b> meets every other test, but neuter basis is missing, blank, or default — including while the column is not in the file yet. Those males are listed apart and are not mixed into the usable list. Reference dogs are not sires and are not on the dog list.</p></div>';
-  if(refWhy||!refCount)h+='<div class="nodata" role="status" id="ref-note"><b>no reference dogs yet</b><p>'+(refWhy?E(refWhy.replace(/^no data yet\s*[—-]\s*/,''))+'. ':'')+'Outside dogs and paper-pedigree ancestors cannot be used until BLD-ref_dog.csv is in the folder. This page does not create that table.</p></div>';
-  if(!basisCol)h+='<div class="nodata" role="status"><b>no data yet</b><p>BLD-subject.csv has no column neuter_basis. Entire is unconfirmed until that column says stated or vet. This page does not add the column.</p></div>';
+  h+='<div class="card info"><p><b>Method:</b> Henderson tabular, over '+T.subject.length+' dogs on BLD-subject. A parent that is not on that table is an unrelated founder. Deepest line on file: '+deepest+' generations. Green under 6.25% · amber 12.5–18.75% · red 25% and over. Each pair also shows how complete each generation is.</p>';
+  h+='<p><b>Usable sire:</b> male, neuter status entire, latest status Active, alive, and ours. Kind is not used. Males who fail are listed under Excluded males with the reason. The dam and sire pickers accept any dog on BLD-subject, whatever the status, and search by name or chip.</p>';
+  h+='<p><b>Ours:</b> no current owner row on BLD-subject_owner (that counts as Lisa’s), or the current owner is Lisa, or the dog is family-owned. Family-owned means a current owner row for Grace Carson or Cerys Carson, or a current occupancy row marked owned_by_family or “Owned by GC/CC”.</p>';
+  h+='<p style="margin-bottom:0"><b>Here:</b> owned by Lisa and not Sold or Deceased, or on premises (a current occupancy row with an area). '+(currentOwners?'':'No current owner rows, so each dog with no owner counts as Lisa’s.')+'</p></div>';
   if(deathWhy)h+='<div class="nodata" role="status"><b>no data yet</b><p>'+E(deathWhy.replace(/^no data yet\s*[—-]\s*/,''))+'. A date of death cannot be checked, so no sire is excluded for death until BLD-MAP-animana.csv can be read.</p></div>';
-  h+=sireWhy?BLD.nodata(sireWhy):'<h3>Usable sires ('+usable.length+')</h3><div id="sires-usable">'+sireTable(usable,false)+'</div><h3>Unconfirmed entire ('+unconfirmed.length+')</h3><div id="sires-unconfirmed">'+sireTable(unconfirmed,false)+'</div><h3>Excluded males ('+excluded.length+')</h3><div id="sires-excluded">'+sireTable(excluded,true)+'</div>';
-  var pool=[];
-  T.subject.forEach(function(s){if(String(s.id||'').indexOf('ref-')===0)return;pool.push({id:s.id,name:s.name||s.id,ref:false,chip:chips[s.id]||'',sex:s.sex||'',kind:s.kind||'',active:BLD.isActive((st[s.id]||{}).state)});} );
-  refRows.forEach(function(r){if(!r.id||alias[r.id])return;var node=nodes[r.id];if(!node||!node.ref)return;pool.push({id:r.id,name:node.name,registered:node.registered||'',call:node.call||'',aliases:node.aliases||'',ref:true,chip:node.chip||'',sex:node.sex||'',kind:'',active:false});});
-  pool.sort(byName);
-  var shortlist=pool.filter(function(p){return !p.ref&&p.active&&isFemale({sex:p.sex})&&/breed/i.test(p.kind||'');});
-  function option(p){var label=p.name;if(p.ref)label+=' (reference dog)';else if(!p.active)label+=' (not active)';return '<option value="'+E(p.id)+'">'+E(label)+'</option>';}
-  h+='<h3>Dam for this calculation</h3><div class="card"><label class="damlabel" for="dogfind">Search any dog by name or chip</label><input type="search" id="dogfind" placeholder="Name, chip, or reference dog" aria-label="Search any dog by name or chip">';
+  h+=sireWhy?BLD.nodata(sireWhy):'<h3>Usable sires ('+usable.length+')</h3><div id="sires-usable">'+sireTable(usable,false)+'</div><h3>Excluded males ('+excluded.length+')</h3><div id="sires-excluded">'+sireTable(excluded,true)+'</div>';
+  var pool=T.subject.map(function(s){return {id:s.id,name:s.name||s.id,chip:chips[s.id]||'',sex:s.sex||'',here:hereWord(s.id)};}).sort(byName);
+  function option(p){var label=p.name+(p.sex?' · '+p.sex:'')+(p.here?' · here':'');return '<option value="'+E(p.id)+'">'+E(label)+'</option>';}
+  h+='<h3>Dam and sire for this calculation</h3><div class="card">';
+  h+='<label class="damlabel" for="damfind">Search the dam by name or chip</label><input type="search" id="damfind" placeholder="Any dog, any status" aria-label="Search the dam by name or chip">';
   h+='<label class="damlabel" for="dam">Dam</label><select id="dam"></select>';
-  h+='<p class="muted" style="margin:8px 0 0">With the box empty, the list is the active breeding females. Type to pick any dog on BLD-subject, including one who is not active, or a reference dog when that table has rows.</p></div>';
+  h+='<label class="damlabel" for="sirefind">Search the sire by name or chip</label><input type="search" id="sirefind" placeholder="Any dog, any status" aria-label="Search the sire by name or chip">';
+  h+='<label class="damlabel" for="sire">Sire</label><select id="sire"></select>';
+  h+='<p class="muted" style="margin:8px 0 0">Both lists are every dog on BLD-subject. Status does not hide a dog. A dog shows as here when the rule above matches.</p></div>';
   h+='<p id="coi" class="muted"></p>';
-  h+='<h3>Individual inbreeding (F) — our dogs with both parents on file</h3>'+BLD.table(T.subject.filter(function(s){return String(s.id||'').indexOf('ref-')!==0&&parentId(s.sire_id)&&parentId(s.dam_id);}).map(function(s){return {id:s.id,name:s.name,F:F(s.id),d:depth[s.id]};}).sort(function(a,b){return b.F-a.F;}).slice(0,60),[['Dog',function(r){return BLD.link(r.id,S);}],['F',function(r){return '<span class="pill '+gcls(r.F)+'">'+(r.F*100).toFixed(2)+'%</span>';}],['Generations on file',function(r){return String((r.d||1)-1);}]]);
+  h+='<h3>Individual inbreeding (F) — dogs with both parents on file</h3>'+BLD.table(T.subject.filter(function(s){return parentId(s.sire_id)&&parentId(s.dam_id);}).map(function(s){return {id:s.id,name:s.name,F:F(s.id),d:depth[s.id]};}).sort(function(a,b){return b.F-a.F;}).slice(0,60),[['Dog',function(r){return BLD.link(r.id,S);}],['F',function(r){return '<span class="pill '+gcls(r.F)+'">'+(r.F*100).toFixed(2)+'%</span>';}],['Generations on file',function(r){return String((r.d||1)-1);}]]);
   document.getElementById('main').innerHTML=h;document.getElementById('stamp').innerHTML=BLD.stamp(T);
-  var damSel=document.getElementById('dam'),find=document.getElementById('dogfind');
-  function hay(p){return [p.name,p.registered,p.call,p.aliases,p.chip,p.id].join(' ').toLowerCase();}
-  function fillDams(){
-    if(!damSel)return;
+  var damSel=document.getElementById('dam'),sireSel=document.getElementById('sire'),damFind=document.getElementById('damfind'),sireFind=document.getElementById('sirefind');
+  function hay(p){return [p.name,p.chip,p.id].join(' ').toLowerCase();}
+  function fill(sel,find){
+    if(!sel)return;
     var q=(find&&find.value||'').trim().toLowerCase();
-    var list=!q?shortlist:pool.filter(function(p){return hay(p).indexOf(q)>=0;});
-    var prev=damSel.value;
-    damSel.innerHTML=list.length?list.map(option).join(''):'<option value="">No match</option>';
-    if(list.some(function(p){return p.id===prev;}))damSel.value=prev;
-    showCoi();
+    var list=!q?pool:pool.filter(function(p){return hay(p).indexOf(q)>=0;});
+    var prev=sel.value;
+    sel.innerHTML=list.length?list.map(option).join(''):'<option value="">No match</option>';
+    if(list.some(function(p){return p.id===prev;}))sel.value=prev;
   }
   function showCoi(){
-    if(!damSel)return;
-    var damId=damSel.value,dog=nodes[alias[damId]||damId];
+    var damId=damSel?damSel.value:'',sireId=sireSel?sireSel.value:'';
     document.querySelectorAll('[data-coi]').forEach(function(el){
-      var sireId=el.getAttribute('data-coi');
-      var v=rel(damId,sireId),c=v==null?null:v/2;
-      el.innerHTML=(c==null?'—':(100*c).toFixed(1)+'%')+'<br><span class="muted">'+E(pairNote(damId,sireId))+'</span>';
+      var id=el.getAttribute('data-coi');
+      var v=rel(damId,id),c=v==null?null:v/2;
+      el.innerHTML=(c==null?'—':(100*c).toFixed(1)+'%')+'<br><span class="muted">'+E(pairNote(damId,id))+'</span>';
     });
     var line=document.getElementById('coi');
-    if(line)line.textContent=dog?(dog.name||dog.id)+(dog.ref?' (reference dog)':'')+' as dam. The figure is the coefficient of the planned pup, with pedigree depth and how complete each generation is.':'';
+    var dam=nodes[damId],sire=nodes[sireId];
+    if(!line)return;
+    if(!dam||!sire){line.textContent='';return;}
+    var v=rel(damId,sireId),c=v==null?null:v/2;
+    line.textContent=(dam.name||dam.id)+' × '+(sire.name||sire.id)+'. '+(c==null?'No coefficient — one of them is not on BLD-subject.':(100*c).toFixed(1)+'% for the planned pup. '+pairNote(damId,sireId)+'.');
   }
-  if(find)find.addEventListener('input',fillDams);
+  function refresh(){fill(damSel,damFind);fill(sireSel,sireFind);showCoi();}
+  if(damFind)damFind.addEventListener('input',refresh);
+  if(sireFind)sireFind.addEventListener('input',refresh);
   if(damSel)damSel.addEventListener('change',showCoi);
-  fillDams();
+  if(sireSel)sireSel.addEventListener('change',showCoi);
+  refresh();
 });
 </script></body></html>

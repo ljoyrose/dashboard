@@ -99,6 +99,76 @@
   function col(rows, name) {
     return rows && rows.__cols && rows.__cols.indexOf(name) >= 0;
   }
+  function todayIso() { return new Date().toISOString().slice(0, 10); }
+  function isCurrentTo(toDate, today) {
+    var t = String(toDate || '').trim();
+    if (!t) return true;
+    return t.slice(0, 10) >= today;
+  }
+  function personText(p) {
+    if (!p) return '';
+    return [p.full_name, p.known_as, p.first_name, p.last_name].join(' ');
+  }
+  function isLisaPerson(p) {
+    var n = personText(p);
+    return /lisa/i.test(n) && /carson/i.test(n);
+  }
+  function isFamilyPerson(p) {
+    var n = personText(p);
+    return /carson/i.test(n) && (/grace/i.test(n) || /cerys/i.test(n));
+  }
+  function ownershipPack(T, today) {
+    return {
+      today: today || todayIso(),
+      owners: (T && T.subject_owner) || [],
+      people: by(T && T.person, 'id'),
+      occupancy: (T && T.occupancy) || []
+    };
+  }
+  function currentOwnerRows(subjectId, pack) {
+    return (pack.owners || []).filter(function (r) {
+      return r.subject_id === subjectId && isCurrentTo(r.to_date, pack.today);
+    });
+  }
+  function currentOccupancy(subjectId, pack) {
+    return (pack.occupancy || []).filter(function (r) {
+      return r.subject_id === subjectId && isCurrentTo(r.moved_out, pack.today);
+    });
+  }
+  /* Owned by Lisa: no current subject_owner row, or a current row whose person is Lisa. */
+  function isOwnedByLisa(subjectId, pack) {
+    var rows = currentOwnerRows(subjectId, pack);
+    if (!rows.length) return true;
+    var people = pack.people || {};
+    return rows.some(function (r) { return isLisaPerson(people[r.person_id]); });
+  }
+  function isFamilyMarked(subjectId, pack) {
+    return currentOccupancy(subjectId, pack).some(function (r) {
+      var kind = String(r.off_site_kind || '').trim();
+      var text = kind + ' ' + String(r.classification || '');
+      return /^owned_by_family$/i.test(kind) || /owned by gc\s*\/\s*cc|gc\s*\/\s*cc/i.test(text);
+    });
+  }
+  /* The only definition of "ours" for studs.
+     No current subject_owner row (counts as Lisa's), or the current owner is Lisa,
+     or the dog is family-owned: a current owner is Grace Carson or Cerys Carson,
+     or a current occupancy row says owned_by_family or "Owned by GC/CC". */
+  function isOurs(subjectId, pack) {
+    if (isOwnedByLisa(subjectId, pack)) return true;
+    var people = pack.people || {};
+    if (currentOwnerRows(subjectId, pack).some(function (r) { return isFamilyPerson(people[r.person_id]); })) return true;
+    if (isFamilyMarked(subjectId, pack)) return true;
+    return false;
+  }
+  function isOnPremises(subjectId, pack) {
+    return currentOccupancy(subjectId, pack).some(function (r) { return String(r.area_id || '').trim(); });
+  }
+  /* Here: owned by Lisa and not Sold or Deceased, or on premises with an area. */
+  function isHere(subjectId, state, pack) {
+    var gone = /^(sold|deceased)$/i.test(String(state || '').trim());
+    if (isOwnedByLisa(subjectId, pack) && !gone) return true;
+    return isOnPremises(subjectId, pack);
+  }
   function addHubLink() {
     var hdr = document.querySelector('.hdr');
     if (!hdr || document.getElementById('hubback')) return;
@@ -113,6 +183,7 @@
   window.BLD = {
     load: load, by: by, group: group, esc: esc, dmy: dmy, days: days, age: age, qs: qs,
     isActive: isActive, whyNot: whyNot, have: have, noteGap: noteGap, nodata: nodata, banner: banner,
-    table: table, pill: pill, stamp: stamp, nav: nav, link: link, subjectName: subjectName, col: col
+    table: table, pill: pill, stamp: stamp, nav: nav, link: link, subjectName: subjectName, col: col,
+    ownershipPack: ownershipPack, isOurs: isOurs, isHere: isHere
   };
 })();
