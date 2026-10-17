@@ -167,6 +167,9 @@
   .res.ok { color: var(--muted); }
   .res.bad { color: var(--fail); font-weight: 600; }
   .skip { color: var(--fail); font-size: 14px; }
+  label.tick { display: flex; align-items: flex-start; gap: 8px; text-align: left; font-weight: 600; }
+  label.tick input { width: 18px; height: 18px; margin: 4px 0 0; flex: none; }
+  label.tick span { overflow-wrap: anywhere; min-width: 0; }
   /* Money tile: Finances copper for money, Operations for to-dos and dates, Risks for overdue, Connections for on track. */
   .slotfin { --slot: var(--fin); --tint: var(--fin-tint); }
   nav.main a.slotfin { border-left-color: var(--fin); }
@@ -240,8 +243,12 @@
   // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
   var WRITE_SCOPE = 'https://www.googleapis.com/auth/drive';
   var DRIVES_API = 'https://www.googleapis.com/drive/v3/drives';
-  var SWEEP_PREFIX = 'ZZ_';   // ZZ_delete, ZZ_dupe, ZZ_SUPERSEDED_... go to the bin
-  var ARCHIVE_PREFIX = 'RR_'; // archive: never touched
+  var SWEEP_PREFIX = 'ZZ_';   // wide search only. Other ZZ_ names are listed under Rename needed and never binned.
+  var DELETE_PREFIX = 'ZZ_DELETE_'; // the only name that can be binned, and only with a ledger row
+  var ARCHIVE_PREFIX = 'RR_'; // archive: never touched, including anywhere in a name
+  var LEDGER_FILE_ID = '1oIQz2HR86iL8ZuJQdKaUeEplNj0mG9GY'; // RR_DELETE-LEDGER, file_id column
+  var SLIP_PREFIX = 'AA_DELETE-LEDGER-ROWS_'; // pending ledger slips, same file_id column
+  var LEDGER_FAIL = 'The delete ledger could not be read. Nothing will be binned.';
   var BIN_SHOW = 50;
   var CF_FOLDER_ID = '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A';
   var READ_FIRST_ID = '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L';
@@ -264,6 +271,10 @@
   var S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank() };
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null }; // results of Bin actions, kept until sign-out
+  var ledgerCache = null;           // promise of the delete-ledger id set, cleared on refresh and sign-out
+  var PICK = {};                    // ticked ids per bulk action, memory only
+  var SHOW = {};                    // how many rows of each list are on screen; 'all' means every row
+  var pcpLoadGen = 0;
 
   var $ = function (id) { return document.getElementById(id); };
   var timeFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
@@ -326,6 +337,17 @@
     });
   }
   function apiGet(url) { return apiCall('GET', url); }
+  function apiText(url) {
+    if (!accessToken || Date.now() > tokenExpiresAt) return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
+    return fetch(url, { method: 'GET', headers: { Authorization: 'Bearer ' + accessToken } }).then(function (res) {
+      if (res.ok) return res.text();
+      return res.json().catch(function () { return {}; }).then(function (body) {
+        var e = body && body.error ? body.error : {};
+        var reason = (e.errors && e.errors[0] && e.errors[0].reason) || e.status || '';
+        throw new ApiError(res.status, e.message || res.statusText, reason);
+      });
+    });
+  }
   function driveList(params) {
     var q = new URLSearchParams(params);
     q.set('supportsAllDrives', 'true');
@@ -381,12 +403,16 @@
   function driveName(id) { var d = driveById(id); return d ? d.name : 'Shared drive'; }
 
   // ---- Bin rules ----
-  // Sweep only names that START with ZZ_ (case as written). Never RR_. Drive's "contains" is token-based,
-  // so the search is wide and this check is the real filter.
-  function isSweepName(name) {
+  // Drive's "contains" is only a wide net. A file can be binned only when its name starts exactly
+  // ZZ_DELETE_ (case-sensitive), its id is in the delete ledger or a pending slip, and RR_ is nowhere
+  // in the name or in a parent folder. ZZ_SUPERSEDED_ is retired: those names are listed for renaming
+  // and are never a reason to bin anything.
+  function isDeleteName(name) { return String(name == null ? '' : name).indexOf(DELETE_PREFIX) === 0; }
+  function isOtherZzName(name) {
     name = String(name == null ? '' : name);
-    return name.indexOf(SWEEP_PREFIX) === 0 && name.indexOf(ARCHIVE_PREFIX) !== 0;
+    return name.indexOf(SWEEP_PREFIX) === 0 && !isDeleteName(name);
   }
+  function nameHasRr(name) { return String(name == null ? '' : name).indexOf(ARCHIVE_PREFIX) !== -1; }
   function isArchiveName(name) { return String(name == null ? '' : name).indexOf(ARCHIVE_PREFIX) === 0; }
   var metaCache = {};
   function getMeta(id) {
@@ -415,6 +441,7 @@
         if (r.more) return null;
         for (var i = 0; i < r.files.length; i++) {
           if (isArchiveName(r.files[i].name)) return true;
+          if (nameHasRr(r.files[i].name)) return true;
           if (r.files[i].mimeType === FOLDER_MIME) level.push(r.files[i].id);
         }
         return next();
@@ -511,7 +538,7 @@
     loading = true;
     var b = $('refreshBtn'); b.disabled = true; b.querySelector('span').textContent = 'Reading…';
     clearBanner();
-    F = {}; S.bin = blank(); metaCache = {};
+    F = {}; S.bin = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {};
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
@@ -551,6 +578,7 @@
     var r = parseRoute();
     if (r.view === 'drive' && r.driveId && driveById(r.driveId) && !F[folderKey(r)]) loadFolder(r);
     if (r.view === 'bin' && S.bin.status === 'idle' && drives()) loadBin();
+    if (r.view === 'personal') loadPcpCandidates();
   }
   function folderKey(r) { return r.driveId + '/' + (r.folderId || ''); }
   function loadFolder(r) {
@@ -567,38 +595,152 @@
       F[key] = { status: 'failed', readAt: Date.now(), error: err, data: null };
     }).then(render);
   }
-  function loadBin() {
-    var list = drives();
-    run('bin', mapLimit(list, 3, function (d) {
-      return Promise.all([
-        listAll(inDrive(d.id, { q: "name contains '" + SWEEP_PREFIX + "' and trashed = false", pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,webViewLink)' }), 5),
-        listAll(inDrive(d.id, { q: 'trashed = true', pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,driveId,trashedTime,explicitlyTrashed,webViewLink,trashingUser(displayName,emailAddress))' }), 5)
-      ]).then(function (x) {
-        var zz = x[0].files.filter(function (f) { return isSweepName(f.name); });
-        return mapLimit(zz, 4, function (f) {
-          f._drive = d.name;
-          return ancestors(f, d.id).then(function (chain) {
-            if (chain === null) { f._path = d.name; f._skip = 'Folder path too deep to check, left alone.'; return; }
-            f._path = [d.name].concat(chain).join(' / ');
-            f._folder = chain.length ? chain[chain.length - 1] : d.name;
-            if (chain.some(isArchiveName)) { f._skip = 'Inside an RR_ archive folder, left alone.'; return; }
-            if (f.mimeType === FOLDER_MIME) {
-              return archiveInside(f.id, d.id).then(function (has) {
-                if (has === true) f._skip = 'Folder holds an RR_ item, left alone.';
-                else if (has === null) f._skip = 'Folder too big to check for RR_ items, left alone.';
-              });
-            }
+  function parseCsv(text) {
+    var rows = [], row = [], cell = '', q = false;
+    text = String(text || '').replace(/^\uFEFF/, '').replace(/\r/g, '');
+    for (var i = 0; i < text.length; i++) {
+      var c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+      else if (c === '"') q = true;
+      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += c;
+    }
+    if (cell.length || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); });
+  }
+  function idsFromLedgerCsv(text) {
+    var rows = parseCsv(text);
+    if (!rows.length) return null;
+    var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
+    var col = head.indexOf('file_id');
+    if (col < 0) return null;
+    var ids = {};
+    for (var i = 1; i < rows.length; i++) {
+      var id = String(rows[i][col] || '').trim();
+      if (id) ids[id] = true;
+    }
+    return ids;
+  }
+  function readDriveText(id) {
+    return apiGet(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,mimeType,name').then(function (meta) {
+      var sheet = meta.mimeType === 'application/vnd.google-apps.spreadsheet';
+      var url = sheet
+        ? API + '/' + encodeURIComponent(id) + '/export?mimeType=' + encodeURIComponent('text/csv') + '&supportsAllDrives=true'
+        : API + '/' + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true';
+      return apiText(url);
+    });
+  }
+  function findSlipIds() {
+    var known = drives();
+    return (known ? Promise.resolve(known) : listDrives()).then(function (list) {
+      return mapLimit(list, 3, function (d) {
+        return listAll(inDrive(d.id, {
+          q: "name contains '" + SLIP_PREFIX + "' and trashed = false",
+          pageSize: '100',
+          fields: 'nextPageToken,files(id,name,mimeType)'
+        }), 3);
+      }).then(function (pages) {
+        var files = [];
+        pages.forEach(function (p) {
+          (p.files || []).forEach(function (f) {
+            if (String(f.name || '').indexOf(SLIP_PREFIX) === 0) files.push(f);
           });
-        }).then(function () {
-          var trash = x[1].files.filter(function (f) { return f.explicitlyTrashed !== false; });
-          trash.sort(function (a, b) { return (b.trashedTime || '').localeCompare(a.trashedTime || ''); });
-          return { drive: d, zz: zz, zzMore: x[0].more, trash: trash, inside: x[1].files.length - trash.length, trashMore: x[1].more };
+        });
+        return mapLimit(files, 3, function (f) {
+          return readDriveText(f.id).then(function (text) {
+            var ids = idsFromLedgerCsv(text);
+            if (!ids) throw new Error('slip');
+            return ids;
+          });
+        }).then(function (sets) {
+          var ids = {};
+          sets.forEach(function (s) { Object.keys(s).forEach(function (id) { ids[id] = true; }); });
+          return { ok: true, ids: ids };
         });
       });
-    }).then(function (per) {
-      var zz = [];
-      per.forEach(function (p) { zz = zz.concat(p.zz); });
-      return { per: per, zz: zz, sweepable: zz.filter(function (f) { return !f._skip; }), zzMore: per.some(function (p) { return p.zzMore; }) };
+    }).catch(function () { return { ok: false, ids: {} }; });
+  }
+  function loadLedgerSet() {
+    if (ledgerCache) return ledgerCache;
+    ledgerCache = readDriveText(LEDGER_FILE_ID).then(function (text) {
+      var ids = idsFromLedgerCsv(text);
+      if (!ids) return { ok: false, ids: {}, note: LEDGER_FAIL };
+      return findSlipIds().then(function (extra) {
+        if (!extra.ok) return { ok: false, ids: {}, note: LEDGER_FAIL };
+        Object.keys(extra.ids).forEach(function (id) { ids[id] = true; });
+        return { ok: true, ids: ids, note: '' };
+      });
+    }, function () { return { ok: false, ids: {}, note: LEDGER_FAIL }; });
+    return ledgerCache;
+  }
+  function classifyBinItem(f, led) {
+    var name = String(f.name || '');
+    if (nameHasRr(name)) { f._block = 'Name contains RR_, left out.'; return 'leftout'; }
+    if (!isDeleteName(name)) {
+      f._block = f._skip || 'Rename needed. ZZ_SUPERSEDED_ is retired and is never binned.';
+      return 'rename';
+    }
+    if (f._skip) { f._block = f._skip; return 'blocked'; }
+    if (!led.ok) { f._block = 'Ledger could not be read.'; return 'blocked'; }
+    if (!led.ids[f.id]) { f._block = 'No ledger row.'; return 'held'; }
+    f._block = '';
+    return 'ready';
+  }
+  function loadBin() {
+    var list = drives();
+    run('bin', Promise.all([
+      loadLedgerSet(),
+      mapLimit(list, 3, function (d) {
+        return Promise.all([
+          listAll(inDrive(d.id, { q: "name contains '" + DELETE_PREFIX + "' and trashed = false", pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,webViewLink)' }), 5),
+          listAll(inDrive(d.id, { q: "name contains '" + SWEEP_PREFIX + "' and trashed = false", pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,webViewLink)' }), 5),
+          listAll(inDrive(d.id, { q: 'trashed = true', pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,driveId,trashedTime,explicitlyTrashed,webViewLink,trashingUser(displayName,emailAddress))' }), 5)
+        ]).then(function (x) {
+          var byId = {};
+          x[0].files.concat(x[1].files).forEach(function (f) {
+            if (String(f.name || '').indexOf(SWEEP_PREFIX) === 0) byId[f.id] = f;
+          });
+          var zz = Object.keys(byId).map(function (id) { return byId[id]; });
+          return mapLimit(zz, 4, function (f) {
+            f._drive = d.name;
+            return ancestors(f, d.id).then(function (chain) {
+              if (chain === null) { f._path = d.name; f._skip = 'Folder path too deep to check, left alone.'; return; }
+              f._path = [d.name].concat(chain).join(' / ');
+              f._folder = chain.length ? chain[chain.length - 1] : d.name;
+              if (chain.some(isArchiveName)) { f._skip = 'Inside an RR_ archive folder, left alone.'; return; }
+              if (chain.some(nameHasRr)) { f._skip = 'Inside an RR_ archive folder, left alone.'; return; }
+              if (f.mimeType === FOLDER_MIME) {
+                return archiveInside(f.id, d.id).then(function (has) {
+                  if (has === true) f._skip = 'Folder holds an RR_ item, left alone.';
+                  else if (has === null) f._skip = 'Folder too big to check for RR_ items, left alone.';
+                });
+              }
+            });
+          }).then(function () {
+            var trash = x[2].files.filter(function (f) { return f.explicitlyTrashed !== false; });
+            trash.sort(function (a, b) { return (b.trashedTime || '').localeCompare(a.trashedTime || ''); });
+            return { drive: d, trash: trash, inside: x[2].files.length - trash.length, trashMore: x[2].more, zzMore: !!(x[0].more || x[1].more), zz: zz };
+          });
+        });
+      })
+    ]).then(function (pair) {
+      var led = pair[0], per = pair[1], ready = [], held = [], rename = [], leftout = [], blocked = [];
+      per.forEach(function (p) {
+        p.zz.forEach(function (f) {
+          var bucket = classifyBinItem(f, led);
+          if (bucket === 'ready') ready.push(f);
+          else if (bucket === 'held') held.push(f);
+          else if (bucket === 'rename') rename.push(f);
+          else if (bucket === 'leftout') leftout.push(f);
+          else blocked.push(f);
+        });
+      });
+      return {
+        per: per, ready: ready, held: held, rename: rename, leftout: leftout, blocked: blocked,
+        ledgerOk: led.ok, ledgerNote: led.note || '',
+        zzMore: per.some(function (p) { return p.zzMore; })
+      };
     }));
   }
 
@@ -608,14 +750,83 @@
     wantWrite = true;
     tokenClient.requestAccessToken({ scope: SCOPE + ' ' + WRITE_SCOPE, include_granted_scopes: true, prompt: '' });
   }
+  function itemKey(group, item) { return group === 'usb' ? item.path : item.id; }
+  function listShown(key, total, step) {
+    if (SHOW[key] === 'all') return total;
+    var n = typeof SHOW[key] === 'number' ? SHOW[key] : step;
+    if (n < step) n = step;
+    return Math.min(total, n);
+  }
+  function showBar(key, total, step) {
+    var n = listShown(key, total, step);
+    if (n >= total) return '';
+    return '<div class="actions" data-show-bar="' + esc(key) + '"><p class="note">Showing ' + n + ' of ' + num(total) + '.</p>' +
+      '<button class="btn" type="button" data-action="showmore" data-list="' + esc(key) + '" data-step="' + step + '" data-total="' + total + '"><span>Show more</span></button>' +
+      '<button class="btn" type="button" data-action="showall" data-list="' + esc(key) + '"><span>Show all</span></button></div>';
+  }
+  function showKey(group) {
+    if (group === 'bin') return 'bin-ready';
+    if (group === 'pcpmark') return 'pcp-rename';
+    if (group === 'pcpbin') return 'pcp-ready';
+    if (group === 'usb') return 'usb-matches';
+    return group;
+  }
+  function showStep(group) { return group === 'bin' ? BIN_SHOW : 30; }
+  function listForGroup(group) {
+    if (group === 'bin') return (S.bin.data && S.bin.data.ledgerOk && S.bin.data.ready) || [];
+    if (group === 'pcpmark') return P.matches || [];
+    if (group === 'pcpbin') return (P.candidates || []).filter(function (f) { return !f.blocked; });
+    if (group === 'usb') return U.matches || [];
+    return [];
+  }
+  function rowAllowed(group, it) {
+    if (group === 'bin') return !!(S.bin.data && S.bin.data.ledgerOk && isDeleteName(it.name) && !nameHasRr(it.name) && !it._skip);
+    if (group === 'pcpmark') return !nameHasRr(it.name);
+    if (group === 'pcpbin') return !it.blocked && String(it.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(it.name);
+    if (group === 'usb') return !usbBlock(it);
+    return false;
+  }
+  function visibleRows(group) {
+    var all = listForGroup(group);
+    return all.slice(0, listShown(showKey(group), all.length, showStep(group)));
+  }
+  function visibleAllowed(group) { return visibleRows(group).filter(function (it) { return rowAllowed(group, it); }); }
+  function allowedItems(group) { return listForGroup(group).filter(function (it) { return rowAllowed(group, it); }); }
+  function pickedItems(group) {
+    var bag = PICK[group] || {};
+    return visibleAllowed(group).filter(function (it) { return bag[itemKey(group, it)]; });
+  }
+  function pickCount(group) { return pickedItems(group).length; }
+  function selectAll(group) {
+    var bag = {};
+    visibleAllowed(group).forEach(function (it) { bag[itemKey(group, it)] = true; });
+    PICK[group] = bag;
+  }
+  function clearPick(group) { PICK[group] = {}; }
+  function tickBox(group, id, blocked, labelHtml) {
+    var attrs = ' data-pick-group="' + esc(group) + '" data-pick-id="' + esc(id) + '"';
+    if (blocked) return '<label class="tick"><input type="checkbox" disabled' + attrs + ' data-blocked="1"><span>' + labelHtml + '</span></label>';
+    var on = PICK[group] && PICK[group][id];
+    return '<label class="tick"><input type="checkbox"' + attrs + (on ? ' checked' : '') + '><span>' + labelHtml + '</span></label>';
+  }
+  function pickButtons(group, action, verb) {
+    var n = pickCount(group);
+    return '<div class="actions" data-pick-bar="' + esc(group) + '">' +
+      '<button class="btn" type="button" data-action="selectall" data-group="' + esc(group) + '"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
+      '<button class="btn" type="button" data-action="clearpick" data-group="' + esc(group) + '"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
+      '<button class="btn danger solid" type="button" data-action="' + action + '"' + (n && !busy ? '' : ' disabled') + '>' + icon('bin') +
+      '<span>' + verb + ' selected (' + n + ')</span></button></div>';
+  }
   function sweep() {
     if (busy) return;
-    if (!writeGranted) { requestWrite(); return; }
-    var d = S.bin.data; if (!d) return;
-    var items = d.sweepable.filter(function (f) { return isSweepName(f.name) && !f._skip; });
+    var d = S.bin.data; if (!d || !d.ledgerOk) return;
+    var items = pickedItems('bin').filter(function (f) {
+      return isDeleteName(f.name) && !nameHasRr(f.name) && !f._skip && d.ledgerOk && d.ready.indexOf(f) !== -1;
+    });
     if (!items.length) return;
-    var ok = window.confirm('Move ' + items.length + ' item' + (items.length === 1 ? '' : 's') + ' starting ZZ_ to the bin?\n\n' +
-      'RR_ archive items are never included. Folders go with their contents. Shared-drive bins delete items for good after 30 days.');
+    if (!writeGranted) { requestWrite(); return; }
+    var ok = window.confirm('Move ' + items.length + ' selected item' + (items.length === 1 ? '' : 's') + ' to the bin?\n\n' +
+      'Only ticked names that start ZZ_DELETE_ and have a delete-ledger row are included. RR_ names are never included. Folders go with their contents. Shared-drive bins delete items for good after 30 days.');
     if (!ok) { R.sweep = { at: Date.now(), cancelled: true, items: [] }; render(); return; }
     busy = true; render();
     mapLimit(items, 3, function (f) {
@@ -627,14 +838,17 @@
       });
     }).then(function (rows) {
       R.sweep = { at: Date.now(), items: rows };
-      busy = false; S.bin = blank(); metaCache = {};
+      busy = false; S.bin = blank(); metaCache = {}; ledgerCache = null; PICK.bin = {};
       render(); ensureRoute();
     });
   }
 
   // ---- PC-Personal / lisah Personal: files in MY Drive that already exist, byte for byte (MD5 + size), in a shared drive ----
   var PCP_PREFIX = 'ZZ_DELETE_DRIVE_';
-  var P = { status: 'idle', log: '', email: '', mine: 0, matches: [], matchBytes: 0, marked: null, binned: null, error: '' };
+  var P = { status: 'idle', log: '', email: '', mine: 0, matches: [], matchBytes: 0, marked: null, binned: null, error: '', candidates: [], binStatus: 'idle', ledgerOk: true, ledgerNote: '' };
+  function pcpFresh(status, log) {
+    return { status: status, log: log, email: '', mine: 0, matches: [], matchBytes: 0, marked: null, binned: null, error: '', candidates: [], binStatus: 'idle', ledgerOk: true, ledgerNote: '' };
+  }
   function pcpLabel() {
     return P.email === 'lisa@puppyclassroom.com' ? 'PC-Personal' : P.email === 'lisahcarson@gmail.com' ? 'lisah Personal' : (P.email || 'Personal drive');
   }
@@ -653,7 +867,8 @@
   function pcpScan() {
     if (busy) return;
     busy = true;
-    P = { status: 'running', log: 'Starting…', email: '', mine: 0, matches: [], matchBytes: 0, marked: null, binned: null, error: '' };
+    pcpLoadGen++;
+    P = pcpFresh('running', 'Starting…');
     render();
     var seen = Object.create(null), shared = 0;
     apiGet('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (a) {
@@ -677,7 +892,11 @@
           if (!f.md5Checksum) return;
           P.mine++;
           if (f.name.indexOf('ZZ_') === 0) return;
-          if (seen[f.md5Checksum + ':' + f.size]) { P.matches.push({ id: f.id, name: f.name }); P.matchBytes += parseInt(f.size || '0', 10); }
+          if (seen[f.md5Checksum + ':' + f.size]) {
+            var sz = parseInt(f.size || '0', 10);
+            P.matches.push({ id: f.id, name: f.name, size: sz });
+            P.matchBytes += sz;
+          }
         });
         if (n % 5 === 1) { P.log = 'Reading your personal drive: ' + num(P.mine) + ' files so far'; render(); }
       });
@@ -685,33 +904,94 @@
       P.status = 'done'; P.log = 'Finished ' + stamp(Date.now()) + '. Compared ' + num(shared) + ' shared-drive files with ' + num(P.mine) + ' personal files.';
     }, function (err) {
       P.status = 'failed'; P.error = friendlyError(err).text;
-    }).then(function () { busy = false; render(); });
+    }).then(function () { busy = false; P.binStatus = 'idle'; render(); loadPcpCandidates(); });
+  }
+  function classifyPcp(f, led) {
+    var reason = '';
+    if (String(f.name || '').indexOf(PCP_PREFIX) !== 0) reason = 'Name does not start with ZZ_DELETE_DRIVE_.';
+    else if (nameHasRr(f.name)) reason = 'Name contains RR_, left out.';
+    else if (!led.ok) reason = 'Ledger could not be read.';
+    else if (!led.ids[f.id]) reason = 'No ledger row.';
+    return { id: f.id, name: f.name, blocked: !!reason, reason: reason };
+  }
+  function loadPcpCandidates() {
+    if (!signedIn || !accessToken) return;
+    if (P.binStatus === 'loading' || P.binStatus === 'ok') return;
+    var gen = ++pcpLoadGen;
+    P.binStatus = 'loading';
+    render();
+    var found = [];
+    loadLedgerSet().then(function (led) {
+      return pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "' and 'me' in owners and trashed = false", pageSize: '1000', fields: 'nextPageToken,files(id,name)' }, function (files) {
+        files.forEach(function (f) { if (String(f.name || '').indexOf(PCP_PREFIX) === 0) found.push(f); });
+      }).then(function () { return led; });
+    }).then(function (led) {
+      if (gen !== pcpLoadGen) return;
+      P.ledgerOk = !!led.ok;
+      P.ledgerNote = led.note || '';
+      P.candidates = found.map(function (f) { return classifyPcp(f, led); });
+      P.binStatus = 'ok';
+    }, function () {
+      if (gen !== pcpLoadGen) return;
+      P.ledgerOk = false;
+      P.ledgerNote = LEDGER_FAIL;
+      P.candidates = found.map(function (f) { return classifyPcp(f, { ok: false, ids: {} }); });
+      P.binStatus = 'ok';
+    }).then(function () { if (gen === pcpLoadGen) render(); });
   }
   function pcpMark() {
-    if (busy || !P.matches.length) return;
+    if (busy) return;
+    var items = pickedItems('pcpmark').filter(function (f) { return !nameHasRr(f.name); });
+    if (!items.length) return;
     if (!writeGranted) { requestWrite(); return; }
-    var ok = window.confirm('Rename ' + P.matches.length + ' personal files to start ' + PCP_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted yet.');
+    var ok = window.confirm('Rename ' + items.length + ' selected personal file' + (items.length === 1 ? '' : 's') + ' to start ' + PCP_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted yet. Names containing RR_ are not included.');
     if (!ok) return;
     busy = true; P.marked = { done: 0, failed: 0 }; render();
-    mapLimit(P.matches, 4, function (f) {
-      return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: PCP_PREFIX + f.name }).then(function () { P.marked.done++; }, function () { P.marked.failed++; });
-    }).then(function () { P.matches = []; busy = false; render(); });
+    var doneIds = {};
+    mapLimit(items, 4, function (f) {
+      return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: PCP_PREFIX + f.name }).then(function () { P.marked.done++; doneIds[f.id] = true; }, function () { P.marked.failed++; });
+    }).then(function () {
+      P.matches = P.matches.filter(function (f) { return !doneIds[f.id]; });
+      P.matchBytes = P.matches.reduce(function (t, f) { return t + (f.size || 0); }, 0);
+      PICK.pcpmark = {};
+      busy = false;
+      P.binStatus = 'idle';
+      pcpLoadGen++;
+      render();
+      loadPcpCandidates();
+    });
   }
   function pcpBin() {
-    if (busy) return;
+    if (busy || !P.ledgerOk) return;
+    var items = pickedItems('pcpbin').filter(function (f) {
+      return !f.blocked && String(f.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(f.name);
+    });
+    if (!items.length) return;
     if (!writeGranted) { requestWrite(); return; }
-    busy = true; P.binned = { done: 0, failed: 0, found: 0 }; render();
-    var found = [];
-    pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "' and 'me' in owners and trashed = false", pageSize: '1000', fields: 'nextPageToken,files(id,name)' }, function (files) {
-      files.forEach(function (f) { if (f.name.indexOf(PCP_PREFIX) === 0) found.push(f); });
+    if (!window.confirm('Move ' + items.length + ' selected personal file' + (items.length === 1 ? '' : 's') + ' to the bin?\n\nOnly ticked files that start ' + PCP_PREFIX + ' and have a delete-ledger row are included. Names containing RR_ are never included. Drive keeps binned items for 30 days.')) {
+      P.binned = { done: 0, failed: 0, found: items.length, cancelled: true };
+      render();
+      return;
+    }
+    busy = true; P.binned = { done: 0, failed: 0, found: items.length }; render();
+    mapLimit(items, 4, function (f) {
+      return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }).then(function () { P.binned.done++; }, function () { P.binned.failed++; });
     }).then(function () {
-      P.binned.found = found.length;
-      if (!found.length) return null;
-      if (!window.confirm('Move ' + found.length + ' personal files starting ' + PCP_PREFIX + ' to the bin? Drive keeps binned items for 30 days.')) { P.binned.cancelled = true; return null; }
-      return mapLimit(found, 4, function (f) {
-        return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }).then(function () { P.binned.done++; }, function () { P.binned.failed++; });
-      });
-    }).then(function () { busy = false; render(); }, function (err) { P.binned.error = friendlyError(err).text; busy = false; render(); });
+      busy = false; PICK.pcpbin = {}; P.binStatus = 'idle'; pcpLoadGen++; render(); loadPcpCandidates();
+    }, function (err) { P.binned.error = friendlyError(err).text; busy = false; render(); });
+  }
+  function tickList(group, items, reasonOf, listKey) {
+    var step = 30;
+    var n = listShown(listKey, items.length, step);
+    var shown = items.slice(0, n);
+    if (!shown.length) return '<p class="note">None.</p>';
+    return '<ul class="files">' + shown.map(function (f) {
+      var reason = reasonOf(f);
+      var id = itemKey(group, f);
+      return '<li data-id="' + esc(id) + '"' + (reason ? ' data-blocked="1"' : '') + '>' +
+        tickBox(group, id, !!reason, esc(group === 'usb' ? f.path : (f.name || f.path))) +
+        (reason ? '<div class="skip">' + esc(reason) + '</div>' : '') + '</li>';
+    }).join('') + '</ul>' + showBar(listKey, items.length, step);
   }
   function viewPersonal() {
     var running = P.status === 'running';
@@ -723,15 +1003,28 @@
     if (P.error) html += '<p class="note fail">Stopped: ' + esc(P.error) + '</p>';
     if (P.status === 'done') {
       html += '<p class="note"><strong>' + num(P.matches.length) + '</strong> personal files (' + (P.matchBytes / 1e9).toFixed(2) + ' GB) already in a shared drive.</p>';
-      if (P.matches.length) html += '<ul class="files">' + P.matches.slice(0, 30).map(function (f) { return '<li><div class="fname">' + esc(f.name) + '</div></li>'; }).join('') + '</ul>' + (P.matches.length > 30 ? '<p class="note">Showing 30 of ' + num(P.matches.length) + '.</p>' : '');
+      if (P.matches.length) {
+        html += '<div data-bin-list="pcp-rename"><h4>Rename matches</h4>' + pickButtons('pcpmark', 'pcpmark', 'Rename') + tickList('pcpmark', P.matches, function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : ''; }, 'pcp-rename') + '</div>';
+      }
     }
     if (P.marked) html += '<p class="res ' + (P.marked.failed ? 'bad' : 'ok') + '">Renamed ' + num(P.marked.done) + ' to ' + esc(PCP_PREFIX) + '…' + (P.marked.failed ? ', ' + P.marked.failed + ' failed' : '') + '.</p>';
     if (P.binned) html += '<p class="res ' + (P.binned.failed || P.binned.error ? 'bad' : 'ok') + '">' + (P.binned.cancelled ? 'Cancelled. Nothing binned.' : P.binned.error ? esc(P.binned.error) : 'Found ' + num(P.binned.found) + ', moved ' + num(P.binned.done) + ' to the bin' + (P.binned.failed ? ', ' + P.binned.failed + ' failed' : '') + '.') + '</p>';
-    html += '<div class="actions">' +
-      '<button class="btn" type="button" data-action="pcpscan"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>1. Scan this account vs shared drives</span></button>' +
-      '<button class="btn danger" type="button" data-action="pcpmark"' + (busy || !P.matches.length ? ' disabled' : '') + '>' + icon('bin') + '<span>2. Rename matches ' + esc(PCP_PREFIX) + '</span></button>' +
-      '<button class="btn danger solid" type="button" data-action="pcpbin"' + (busy ? ' disabled' : '') + '>' + icon('bin') + '<span>3. Move renamed files to the bin</span></button></div>' +
-      '<p class="note">Steps 2 and 3 ask for full Drive access (once) and a confirm each. Only files you own in your personal drive are touched. The shared-drive copy is never changed.</p></section>';
+    html += '<div class="actions"><button class="btn" type="button" data-action="pcpscan"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>1. Scan this account vs shared drives</span></button></div>';
+    html += '<div data-bin-list="pcp-bin"><h4>Personal files starting ZZ_DELETE_DRIVE_</h4>';
+    if (P.ledgerNote) html += '<p class="note fail">' + esc(P.ledgerNote) + '</p>';
+    if (P.binStatus !== 'ok') html += '<p class="note">Reading marked personal files…</p>';
+    else {
+      var heldP = P.candidates.filter(function (f) { return f.reason === 'No ledger row.'; });
+      var leftP = P.candidates.filter(function (f) { return nameHasRr(f.name); });
+      var otherP = P.candidates.filter(function (f) { return f.blocked && f.reason !== 'No ledger row.' && !nameHasRr(f.name); });
+      html += pickButtons('pcpbin', 'pcpbin', 'Move');
+      html += '<h4>Ready to bin (' + num(allowedItems('pcpbin').length) + ')</h4>' + tickList('pcpbin', allowedItems('pcpbin'), function () { return ''; }, 'pcp-ready');
+      html += '<h4>Held: no ledger row (' + num(heldP.length) + ')</h4>' + tickList('pcpbin', heldP, function (f) { return f.reason; }, 'pcp-held');
+      if (leftP.length) html += '<h4>Left out (name contains RR_) (' + num(leftP.length) + ')</h4>' + tickList('pcpbin', leftP, function (f) { return f.reason; }, 'pcp-left');
+      if (otherP.length) html += '<h4>Not ready (' + num(otherP.length) + ')</h4>' + tickList('pcpbin', otherP, function (f) { return f.reason; }, 'pcp-other');
+      if (!P.candidates.length) html += '<p class="note">No personal files starting ZZ_DELETE_DRIVE_.</p>';
+    }
+    html += '</div><p class="note">Tick the files, then press the button. Nothing is renamed or moved until you confirm. Select all ticks only the allowed files you can see. Show more and Show all bring the rest into view. A hidden file is never renamed or moved. A name containing RR_ cannot be ticked. A personal file is moved to the bin only when its name starts ZZ_DELETE_DRIVE_ and its id is in the delete ledger. The shared-drive copy is never changed.</p></section>';
     return html + nextSteps([NX.drive, NX.bin, NX.map]);
   }
 
@@ -781,6 +1074,7 @@
   // ---- Drive check: a USB stick, external drive or Mac folder vs the shared drives. Files are read on this computer only. ----
   var USB_PREFIX = 'ZZ_DELETE_LOCAL_';
   var USB_SKIP = /^(\.|\$RECYCLE\.BIN$|System Volume Information$)/;
+  function usbBlock(m) { return nameHasRr(m.name) || nameHasRr(m.path) ? 'Name contains RR_, left out.' : ''; }
   function usbBlank() { return { status: 'idle', log: '', root: '', files: 0, hashed: 0, bytes: 0, skipped: 0, matches: [], matchBytes: 0, only: [], onlyBytes: 0, stop: false, marked: null, error: '' }; }
   var U = usbBlank();
   var usbLast = 0;
@@ -856,24 +1150,30 @@
     });
   }
   async function usbMark() {
-    if (busy || !U.matches.length) return;
-    if (!window.confirm('Rename ' + U.matches.length + ' files on "' + U.root + '" to start ' + USB_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted.')) return;
+    var items = pickedItems('usb').filter(function (m) { return !usbBlock(m); });
+    if (busy || !items.length) return;
+    if (!window.confirm('Rename ' + items.length + ' selected file' + (items.length === 1 ? '' : 's') + ' on "' + U.root + '" to start ' + USB_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted. Names containing RR_ are not included.')) return;
     busy = true; U.marked = { done: 0, failed: 0, unsupported: false }; render();
-    for (var i = 0; i < U.matches.length; i++) {
-      var m = U.matches[i];
+    var donePaths = {};
+    for (var i = 0; i < items.length; i++) {
+      var m = items[i];
       try {
         if (typeof m.handle.move !== 'function') { U.marked.unsupported = true; break; }
         var f = await m.handle.getFile();
         if (f.size !== m.size || f.lastModified !== m.mtime) { U.marked.failed++; continue; }
         await m.handle.move(USB_PREFIX + m.name);
         U.marked.done++;
+        donePaths[m.path] = true;
       } catch (e) {
         if (e && e.name === 'TypeError' && i === 0) { U.marked.unsupported = true; break; }
         U.marked.failed++;
       }
       await usbTick();
     }
-    if (!U.marked.unsupported) U.matches = [];
+    if (!U.marked.unsupported) {
+      U.matches = U.matches.filter(function (m) { return !donePaths[m.path]; });
+      PICK.usb = {};
+    }
     busy = false; render();
   }
   function usbCsv(which) {
@@ -896,7 +1196,7 @@
       html += '<p class="note"><strong>' + num(U.matches.length + (U.marked ? U.marked.done : 0)) + '</strong> files (' + (U.matchBytes / 1e9).toFixed(2) + ' GB) are already in a shared drive.</p>' +
         '<p class="note"><strong>' + num(U.only.length) + '</strong> files (' + (U.onlyBytes / 1e9).toFixed(2) + ' GB) are NOT in a shared drive. Copy them there before you clear this drive.</p>';
       if (U.skipped) html += '<p class="note">' + num(U.skipped) + ' files could not be read and were skipped.</p>';
-      if (U.matches.length) html += '<ul class="files">' + U.matches.slice(0, 30).map(function (f) { return '<li><div class="fname">' + esc(f.path) + '</div></li>'; }).join('') + '</ul>' + (U.matches.length > 30 ? '<p class="note">Showing 30 of ' + num(U.matches.length) + '. Download the full list below.</p>' : '');
+      if (U.matches.length) html += '<div data-bin-list="usb"><h4>Already in a shared drive</h4>' + pickButtons('usb', 'usbmark', 'Rename') + tickList('usb', U.matches, usbBlock, 'usb-matches') + '</div>';
     }
     if (U.marked) {
       html += '<p class="res ' + (U.marked.failed || U.marked.unsupported ? 'bad' : 'ok') + '">' + (U.marked.unsupported ? 'This Chrome cannot rename files on a drive. Download the list and rename them another way.' :
@@ -905,7 +1205,6 @@
     html += '<div class="actions">' +
       '<button class="btn" type="button" data-action="usbscan"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>1. Choose a drive or folder and check it</span></button>' +
       (running ? '<button class="btn" type="button" data-action="usbstop"><span>Stop</span></button>' : '') +
-      '<button class="btn danger" type="button" data-action="usbmark"' + (busy || !U.matches.length ? ' disabled' : '') + '>' + icon('bin') + '<span>2. Rename matches ' + esc(USB_PREFIX) + '</span></button>' +
       '<button class="btn" type="button" data-action="usbcsv" data-which="match"' + (U.matches.length ? '' : ' disabled') + '><span>Download list: already in shared</span></button>' +
       '<button class="btn" type="button" data-action="usbcsv" data-which="only"' + (U.only.length ? '' : ' disabled') + '><span>Download list: only on this drive</span></button></div>' +
       '<p class="note">Renaming never deletes anything. The files stay on the drive until you move them to the Bin in Finder. If Chrome refuses the top of a drive, pick a folder inside it.</p></section>';
@@ -950,6 +1249,12 @@
   }
   function pagedList(items, page, baseHash, opts, emptyText) {
     if (!items.length) return '<p class="note">' + esc(emptyText) + '</p>';
+    var key = 'paged-' + baseHash;
+    var step = PAGE_SIZE;
+    if (SHOW[key]) {
+      var expanded = items.slice(0, listShown(key, items.length, step));
+      return '<ul class="files">' + expanded.map(function (f) { return fileRow(f, opts); }).join('') + '</ul>' + showBar(key, items.length, step);
+    }
     var pages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
     page = Math.min(Math.max(1, page), pages);
     var slice = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
@@ -959,7 +1264,7 @@
         (page > 1 ? '<a class="btn" href="#/' + baseHash + '/p' + (page - 1) + '">‹ Page ' + (page - 1) + '</a>' : '<span class="gap"></span>') +
         '<span class="count">Page ' + page + ' of ' + pages + ' · ' + items.length + ' items</span>' +
         (page < pages ? '<a class="btn" href="#/' + baseHash + '/p' + (page + 1) + '">Page ' + (page + 1) + ' ›</a>' : '<span class="gap"></span>') +
-        '</div>';
+        '</div>' + showBar(key, items.length, step);
     }
     return html;
   }
@@ -1033,14 +1338,16 @@
     if (ppl.length) h += '<p class="mgroup">Personal</p><div class="ments">' + ppl.map(ent).join('') + '</div>';
     h += '<p class="note">Each entity on its own. Business and personal are never added together.</p>';
     var turn = MC.yourTurn(d.data), ready = turn.filter(function (x) { return x.ready === 'ready'; });
+    var todoN = listShown('money-todos', ready.length, 3);
     h += '<div class="cardhead"><h4>To-dos</h4><span class="mtag ops">' + ready.length + ' ready · ' + turn.length + ' open</span></div><ul class="files">' +
-      ready.slice(0, 3).map(function (x) { return '<li><div class="fname"><a href="money/#/register/' + encodeURIComponent(x.r.id) + '">' + esc(x.r.subject) + '</a></div><div class="meta">' + (/urgent/i.test(x.r.priority) ? '<span class="mtag risk">urgent</span>' : /high/i.test(x.r.priority) ? '<span class="mtag ops">high</span>' : '') + '<span>' + esc(x.r.id) + '</span></div></li>'; }).join('') + '</ul>';
+      ready.slice(0, todoN).map(function (x) { return '<li><div class="fname"><a href="money/#/register/' + encodeURIComponent(x.r.id) + '">' + esc(x.r.subject) + '</a></div><div class="meta">' + (/urgent/i.test(x.r.priority) ? '<span class="mtag risk">urgent</span>' : /high/i.test(x.r.priority) ? '<span class="mtag ops">high</span>' : '') + '<span>' + esc(x.r.id) + '</span></div></li>'; }).join('') + '</ul>' + showBar('money-todos', ready.length, 3);
     var dates = MC.overdueDates(d.data, d.today).concat(MC.dueWithin(d.data, d.today, 14));
+    var dateN = listShown('money-dates', dates.length, 6);
     h += '<div class="cardhead"><h4>Dates · overdue and next 14 days</h4><span class="mtag ' + (dates.some(function (x) { return x.days < 0; }) ? 'risk' : 'ops') + '">' + dates.length + '</span></div>';
-    h += dates.length ? '<ul class="files">' + dates.slice(0, 6).map(function (x) {
+    h += dates.length ? '<ul class="files">' + dates.slice(0, dateN).map(function (x) {
       var late = x.days < 0;
       return '<li><div class="fname">' + esc(x.r.filing) + '</div><div class="meta"><span class="mtag ' + (late ? 'risk' : 'ops') + '">' + (late ? 'Overdue ' + (-x.days) + 'd' : x.days === 0 ? 'Today' : 'In ' + x.days + 'd') + '</span><span>' + fd(x.due) + '</span><span>' + esc(x.r.entity) + '</span></div></li>';
-    }).join('') + '</ul>' + (dates.length > 6 ? '<p class="note">' + (dates.length - 6) + ' more in the Money Hub.</p>' : '') : '<p class="note">Nothing due in the next 14 days.</p>';
+    }).join('') + '</ul>' + showBar('money-dates', dates.length, 6) : '<p class="note">Nothing due in the next 14 days.</p>';
     return h + foot + '</section>';
   }
 
@@ -1140,43 +1447,55 @@
       el.classList.toggle('hidden-by-filter', !!q && el.getAttribute('data-name').indexOf(q) < 0);
     });
   }
-  function binList(items, render1) {
-    var shown = items.slice(0, BIN_SHOW);
+  function binList(items, render1, listKey) {
+    var key = listKey || 'bin-list';
+    var n = listShown(key, items.length, BIN_SHOW);
+    var shown = items.slice(0, n);
     return '<div class="scrollbox"><ul class="files">' + shown.map(render1).join('') + '</ul></div>' +
-      (items.length > BIN_SHOW ? '<p class="note">Showing ' + BIN_SHOW + ' of ' + num(items.length) + '.</p>' : '');
+      showBar(key, items.length, BIN_SHOW);
+  }
+  function binTickItems(listKey, items) {
+    if (!items.length) return '<p class="note">None.</p>';
+    return binList(items, function (f) {
+      var blocked = !!f._block;
+      var nameHtml = f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name);
+      return '<li data-id="' + esc(f.id) + '"' + (blocked ? ' data-blocked="1"' : '') + '>' +
+        tickBox('bin', f.id, blocked, nameHtml) +
+        '<div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' +
+        '<span class="chip" title="' + esc(f._path || '') + '">' + esc(f._path || '') + '</span></div>' +
+        (f._block ? '<div class="skip">' + esc(f._block) + '</div>' : '') + '</li>';
+    }, listKey);
   }
   function viewBin() {
     var p = S.bin, d = p.data, html = '';
     // Index: every section on one line, with its count
-    var zzN = d ? d.zz.length : null, dxd = S.dbx.data, binsN = d ? d.per.reduce(function (t, x) { return t + x.trash.length; }, 0) : null;
+    var readyN = d ? d.ready.length : null, dxd = S.dbx.data, binsN = d ? d.per.reduce(function (t, x) { return t + x.trash.length; }, 0) : null;
     var cnt = function (n, word) { return n == null ? 'reading…' : num(n) + ' ' + word; };
     html += '<nav class="card slot2" aria-label="Bin index"><div class="index top">' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="sweep"><b>Google Drive: ZZ_ files</b><span class="n">' + cnt(zzN, 'to move to the bin') + '</span></button>' +
+      '<button class="btn" type="button" data-action="foldjump" data-key="sweep"><b>Google Drive: ZZ_DELETE_ files</b><span class="n">' + cnt(readyN, 'ready to bin') + '</span></button>' +
       '<button class="btn" type="button" data-action="foldjump" data-key="dropbox"><b>Dropbox: marked files</b><span class="n">' + (dxd && dxd.marked_files != null ? num(dxd.marked_files) + ' at last scan' : 'delete, then empty trash') + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="bins"><b>Google Drive: bins</b><span class="n">' + cnt(binsN, 'items to empty') + '</span></button>' +
+      '<button class="btn" type="button" data-action="foldjump" data-key="bins"><b>Google Drive: bins</b><span class="n">' + cnt(binsN, 'in the bin') + '</span></button>' +
       '<button class="btn" type="button" data-action="foldjump" data-key="access"><b>Permission</b><span class="n">' + (writeGranted ? 'bin actions on' : 'allow bin actions') + '</span></button></div></nav>';
     // Access card
     html += foldOpen('access', !writeGranted, 'card slot2' + (signedIn && writeGranted ? '' : ' pending')) + '<summary><h3>Permission to use the bin</h3>' +
       (writeGranted ? '<span class="state st-ok"><span class="shape"></span>Bin actions on</span>' : '<span class="state st-idle"><span class="shape"></span>Read-only</span>') + '</summary><div class="fbody">' +
-      '<p class="note">Lists below are read-only. Moving ZZ_ items to the bin and emptying a bin need full Drive access, asked for only here and kept in memory until you sign out.</p>' +
+      '<p class="note">Lists below are read-only until you tick a file. Moving ticked ZZ_DELETE_ items to the bin needs full Drive access, asked for only here and kept in memory until you sign out. A shared-drive bin is never permanently deleted.</p>' +
       (signedIn && !writeGranted ? '<div class="actions"><button class="btn danger" type="button" data-action="grantwrite">' + icon('in') + '<span>Allow Bin actions</span></button></div>' : '') +
       '</div></details>';
-    // ZZ_ sweep
-    var zz = d ? d.zz : [];
-    html += foldOpen('sweep', zz.length > 0, 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Google Drive: ZZ_ files to bin</h3>' + stateBadge(p, d ? zz.length : null) + '</summary><div class="fbody">';
-    html += '<p class="note">Names starting ZZ_ (ZZ_delete, ZZ_dupe, ZZ_SUPERSEDED…) in every shared drive. RR_ archive items, and anything inside an RR_ folder, are never included.</p>';
+    // ZZ_DELETE_ sweep. Only ticked ready items can move. Nothing moves until Lisa confirms.
+    var listed = d ? d.ready.length + d.held.length + d.rename.length + d.leftout.length + d.blocked.length : null;
+    html += foldOpen('sweep', !!(d && listed), 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Google Drive: ZZ_DELETE_ files ready to bin</h3>' + stateBadge(p, listed) + '</summary><div class="fbody">';
+    html += '<p class="note">Only names that start ZZ_DELETE_ and have a row in the delete ledger can be ticked. Marked files with no ledger row are held and are not binned. Other ZZ_ names are listed under Rename needed and are never binned. ZZ_SUPERSEDED_ is retired and is not a valid state. Anything with RR_ in its name, inside an RR_ folder, or in a folder that holds an RR_ item, is left out. Select all ticks only the allowed rows you can see. Show more and Show all bring the rest into view. A hidden row is never moved.</p>';
     html += failNote(p);
     if (d) {
-      var n = d.sweepable.length;
-      html += '<div class="actions"><button class="btn danger solid" type="button" data-action="sweep"' + (n && !busy ? '' : ' disabled') + '>' + icon('bin') +
-        '<span>' + (writeGranted ? 'Move all to bin (' + n + ')' : 'Allow, then move all to bin (' + n + ')') + '</span></button></div>';
-      html += zz.length ? binList(zz, function (f) {
-        return '<li data-zz="' + esc(f.id) + '"><div class="fname">' + (f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name)) + '</div>' +
-          '<div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' +
-          '<span class="chip" title="' + esc(f._path) + '">' + esc(f._path) + '</span></div>' +
-          (f._skip ? '<div class="skip">' + esc(f._skip) + '</div>' : '') + '</li>';
-      }) : '<p class="note">Nothing named ZZ_ found. All clear.</p>';
-      if (d.zzMore) html += '<p class="note fail">Partial: some drives have more matches than one read can hold.</p>';
+      if (d.ledgerNote) html += '<p class="note fail">' + esc(d.ledgerNote) + '</p>';
+      html += pickButtons('bin', 'sweep', 'Move');
+      html += '<div data-bin-list="ready"><h4>Ready (' + num(d.ready.length) + ')</h4>' + binTickItems('bin-ready', d.ready) + '</div>';
+      html += '<div data-bin-list="held"><h4>Held: no ledger row (' + num(d.held.length) + ')</h4>' + binTickItems('bin-held', d.held) + '</div>';
+      html += '<div data-bin-list="rename"><h4>Rename needed (' + num(d.rename.length) + ')</h4>' + binTickItems('bin-rename', d.rename) + '</div>';
+      if (d.leftout.length) html += '<div data-bin-list="leftout"><h4>Left out (name contains RR_) (' + num(d.leftout.length) + ')</h4>' + binTickItems('bin-leftout', d.leftout) + '</div>';
+      if (d.blocked.length) html += '<div data-bin-list="blocked"><h4>Left alone (' + num(d.blocked.length) + ')</h4>' + binTickItems('bin-blocked', d.blocked) + '</div>';
+      if (d.zzMore) html += '<p class="note fail">Partial: some drives have more matches than one read can hold. Nothing extra is binned from an unread page.</p>';
     }
     if (R.sweep) {
       html += '<div id="sweepResults"><h4>Last sweep · ' + esc(stamp(R.sweep.at)) + '</h4>' + (R.sweep.cancelled ? '<p class="res ok">Cancelled. Nothing moved.</p>' :
@@ -1220,7 +1539,7 @@
           var who = f.trashingUser ? (f.trashingUser.displayName || f.trashingUser.emailAddress) : 'Unknown';
           return '<li><div class="fname">' + esc(f.name) + '</div><div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' +
             '<span>Binned ' + esc(fmtTime(f.trashedTime) || 'date unknown') + '</span><span>by ' + esc(who) + '</span></div></li>';
-        });
+        }, 'trash-' + x.drive.id);
         if (x.inside) html += '<p class="note">Plus ' + num(x.inside) + (x.inside === 1 ? ' item' : ' items') + ' inside binned folders.</p>';
         html += '</div></details>';
       });
@@ -1245,7 +1564,7 @@
     var title = SUBS.filter(function (s) { return s.key === sub; })[0].label;
     var items = null;
     if (d) {
-      if (sub === 'recent') items = d.files.slice(0, CF_RECENT_COUNT);
+      if (sub === 'recent') items = d.files.slice(0, listShown('changes-recent', d.files.length, CF_RECENT_COUNT));
       if (sub === '24h') items = cfWithin(DAY);
       if (sub === '7d') items = cfWithin(7 * DAY);
     }
@@ -1261,6 +1580,7 @@
     } else if (items) {
       var empty = sub === 'recent' ? 'No files in this folder.' : sub === '24h' ? 'No changes in last 24h.' : 'No changes in last 7 days.';
       html += pagedList(items, r.page, 'changes/' + sub, { folder: true }, empty);
+      if (sub === 'recent') html += showBar('changes-recent', d.files.length, CF_RECENT_COUNT);
     }
     html += cappedNote();
     html += sourceLine(cfName(), cfUrl(), p) + '</section>';
@@ -1364,7 +1684,7 @@
     accessToken = null; tokenExpiresAt = 0; signedIn = false; writeGranted = false; busy = false;
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank() };
-    F = {}; R = { sweep: null }; metaCache = {};
+    F = {}; R = { sweep: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++; P.binStatus = 'idle';
     showBanner('Signed out. Nothing kept.', true, false);
     render();
   }
@@ -1389,6 +1709,18 @@
     else if (a === 'signout') signOut();
     else if (a === 'refresh') loadAll();
     else if (a === 'grantwrite') requestWrite();
+    else if (a === 'selectall') { selectAll(t.getAttribute('data-group')); render(); }
+    else if (a === 'clearpick') { clearPick(t.getAttribute('data-group')); render(); }
+    else if (a === 'showmore') {
+      var listKey = t.getAttribute('data-list');
+      var step = parseInt(t.getAttribute('data-step'), 10) || BIN_SHOW;
+      var total = parseInt(t.getAttribute('data-total'), 10) || step;
+      var cur = listShown(listKey, total, step);
+      var next = Math.min(total, cur + step);
+      SHOW[listKey] = next >= total ? 'all' : next;
+      render();
+    }
+    else if (a === 'showall') { SHOW[t.getAttribute('data-list')] = 'all'; render(); }
     else if (a === 'sweep') sweep();
     else if (a === 'foldjump') {
       var key = t.getAttribute('data-key');
@@ -1414,7 +1746,16 @@
     if (e.target && e.target.id === 'binFilter') { BF = e.target.value; applyBinFilter(); }
   });
   document.addEventListener('change', function (e) {
-    if (e.target && e.target.id === 'drivePicker') location.hash = e.target.value ? '#/drive/' + e.target.value : '#/drive';
+    var t = e.target;
+    if (t && t.matches && t.matches('input[data-pick-group]')) {
+      if (t.disabled) return;
+      var group = t.getAttribute('data-pick-group'), id = t.getAttribute('data-pick-id');
+      if (!PICK[group]) PICK[group] = {};
+      if (t.checked) PICK[group][id] = true; else delete PICK[group][id];
+      render();
+      return;
+    }
+    if (t && t.id === 'drivePicker') location.hash = t.value ? '#/drive/' + t.value : '#/drive';
   });
   window.addEventListener('hashchange', function () { render(); ensureRoute(); });
   render();

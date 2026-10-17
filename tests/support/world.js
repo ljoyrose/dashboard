@@ -34,6 +34,7 @@ const IDS = {
   moneyOwner: MC.CFG.owner,
   moneyFolders: MC.CFG.folders,
   clientId: grab(mainHtml, /CLIENT_ID\s*=\s*'([^']+)'/, 'CLIENT_ID'),
+  ledger: grab(mainHtml, /LEDGER_FILE_ID\s*=\s*'([^']+)'/, 'LEDGER_FILE_ID'),
 };
 const WANT_BLD = (() => {
   const m = /var WANT=\[([\s\S]*?)\];/.exec(cdHtml);
@@ -61,7 +62,9 @@ function addMainDashboard(d) {
   d.file('alpha-f2', 'sample-old.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain', modifiedTime: iso(-20 * DAY) });
   // Bravo drive
   d.file('bravo-f1', 'bravo-sample.txt', 'invented', { parents: ['drv-bravo2'], driveId: 'drv-bravo2', mimeType: 'text/plain', modifiedTime: iso(-5 * DAY) });
-  // Bin candidates: two ZZ_ items, one RR_ item that must never be touched, one binned already
+  // Delete ledger (invented rows). The page reads this id from the code. Tests add fake file ids to the file_id column.
+  d.file(IDS.ledger, 'RR_DELETE-LEDGER.csv', 'file_id\n', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/csv' });
+  // Bin candidates: two ZZ_ items that need renaming, one RR_ item that must never be touched, one binned already
   d.file('zz-1', 'ZZ_sample-old-copy.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
   d.file('zz-2', 'ZZ_sample-dupe.txt', 'invented', { parents: ['fld-alpha-docs'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
   d.file('rr-1', 'RR_sample-archive.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
