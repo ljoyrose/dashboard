@@ -195,54 +195,67 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     expect(patched(w).filter((id) => id.indexOf('cap-') === 0)).toHaveLength(52);
   });
 
-  test('money rollback files (E02) are held and labelled, and Select all does not bin them', async ({ page, guard }) => {
+  test('money rollback files (E02) are held by folder id, and a same-named folder is still binned', async ({ page, guard }) => {
     const w = guard.world;
     const LABEL = 'Held: money rollback (E02), do not touch until FIX 6 is confirmed';
+    // The other folder that is also titled "4 - Ops". This id is not excluded.
+    const OTHER_OPS = '1M7sJssW6ZGsNk2IbDLAffmYD6sSOEloz';
     const ops = { parents: [IDS.moneyFolders.ops], driveId: IDS.moneyDrive, mimeType: 'text/plain' };
+    const index = { parents: [IDS.moneyFolders.index], driveId: IDS.moneyDrive, mimeType: 'text/plain' };
     w.file('e02-sup', 'ZZ_SUPERSEDED_2026-01_DO-NOT-USE__MON-REGISTER.csv', 'invented', A);
     w.file('e02-log', 'ZZ_SUPERSEDED_oldCHECK-LOG.csv', 'invented', A);
     w.file('e02-ops', 'MON-ENGINE-ops-hold.csv', 'invented', ops);
-    w.folder('e02-moneng', 'MON-ENGINE', A);
-    w.folder('e02-index', '0.1 - Index', { parents: ['e02-moneng'], driveId: 'drv-alpha1' });
-    w.file('e02-idx', 'rollback-note.txt', 'invented', { parents: ['e02-index'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+    w.file('e02-index-file', 'MON-ENGINE-index-hold.csv', 'invented', index);
     w.file('e02-ledger', 'ZZ_DELETE_MON-ENGINE-ledger.txt', 'invented', ops);
+    w.folder(OTHER_OPS, '4 - Ops', A);
+    w.file('zz-other-ops', 'ZZ_DELETE_other-ops.txt', 'invented', { parents: [OTHER_OPS], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+    w.folder('fake-index', '0.1 - Index', A);
+    w.file('zz-fake-index', 'ZZ_DELETE_fake-index.txt', 'invented', { parents: ['fake-index'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
     w.file('zz-ok', 'ZZ_DELETE_ordinary.txt', 'invented', A);
-    ledger(w, ['e02-sup', 'e02-log', 'e02-ops', 'e02-idx', 'e02-ledger', 'zz-ok']);
+    ledger(w, ['e02-sup', 'e02-log', 'e02-ops', 'e02-index-file', 'e02-ledger', 'zz-other-ops', 'zz-fake-index', 'zz-ok']);
     page.on('dialog', (d) => d.accept());
     await page.goto('./#/bin');
     await signIn(page);
     const view = page.locator('#view');
     const held = view.locator('[data-bin-list="e02"]');
+    const ready = view.locator('[data-bin-list="ready"]');
     await expect(held).toContainText(LABEL);
     for (const name of [
       'ZZ_SUPERSEDED_2026-01_DO-NOT-USE__MON-REGISTER.csv',
       'ZZ_SUPERSEDED_oldCHECK-LOG.csv',
       'MON-ENGINE-ops-hold.csv',
-      'rollback-note.txt',
+      'MON-ENGINE-index-hold.csv',
       'ZZ_DELETE_MON-ENGINE-ledger.txt',
     ]) {
       const row = held.locator('li', { hasText: name });
       await expect(row).toContainText(LABEL);
       await expect(row.locator('input')).toBeDisabled();
     }
+    await expect(held.getByText('CHECK-LOG.csv', { exact: true })).toBeVisible();
+    await expect(held).not.toContainText('ZZ_DELETE_other-ops.txt');
+    await expect(held).not.toContainText('ZZ_DELETE_fake-index.txt');
     await expect(view.locator('[data-bin-list="rename"]')).not.toContainText('ZZ_SUPERSEDED_2026-01_DO-NOT-USE__MON-REGISTER.csv');
     await expect(view.locator('[data-bin-list="rename"]')).not.toContainText('ZZ_SUPERSEDED_oldCHECK-LOG.csv');
-    await expect(view.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_ordinary.txt');
-    await expect(view.locator('[data-bin-list="ready"]')).not.toContainText('ZZ_DELETE_MON-ENGINE-ledger.txt');
+    for (const name of ['ZZ_DELETE_ordinary.txt', 'ZZ_DELETE_other-ops.txt', 'ZZ_DELETE_fake-index.txt']) {
+      await expect(ready).toContainText(name);
+    }
+    await expect(ready).not.toContainText('ZZ_DELETE_MON-ENGINE-ledger.txt');
     await page.locator('[data-action="selectall"][data-group="bin"]').click();
-    await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (1)');
-    for (const name of ['MON-ENGINE-ops-hold.csv', 'rollback-note.txt', 'ZZ_DELETE_MON-ENGINE-ledger.txt']) {
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (3)');
+    for (const name of ['MON-ENGINE-ops-hold.csv', 'MON-ENGINE-index-hold.csv', 'ZZ_DELETE_MON-ENGINE-ledger.txt']) {
       await expect(held.locator('li', { hasText: name }).locator('input')).not.toBeChecked();
     }
     await page.locator('[data-action="sweep"]').click();
     await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => w.byId('zz-ok').trashed).toBe(true);
-    for (const id of ['e02-sup', 'e02-log', 'e02-ops', 'e02-idx', 'e02-ledger']) {
+    expect(w.byId('zz-other-ops').trashed).toBe(true);
+    expect(w.byId('zz-fake-index').trashed).toBe(true);
+    for (const id of ['e02-sup', 'e02-log', 'e02-ops', 'e02-index-file', 'e02-ledger']) {
       expect(w.byId(id).trashed, id + ' must stay put').toBeFalsy();
     }
     const moved = patched(w);
-    expect(moved).toContain('zz-ok');
-    for (const id of ['e02-sup', 'e02-log', 'e02-ops', 'e02-idx', 'e02-ledger']) {
+    for (const id of ['zz-ok', 'zz-other-ops', 'zz-fake-index']) expect(moved).toContain(id);
+    for (const id of ['e02-sup', 'e02-log', 'e02-ops', 'e02-index-file', 'e02-ledger']) {
       expect(moved, id + ' must not be trashed').not.toContain(id);
     }
   });
