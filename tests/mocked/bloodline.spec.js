@@ -102,6 +102,84 @@ test.describe('Bloodline: live tables (mocked Drive)', () => {
   });
 });
 
+test.describe('Bloodline: usable sires', () => {
+  test('says no reference dogs yet when that table is not in the folder', async ({ page }) => {
+    await page.goto('bloodline/bld-matings.html');
+    await signIn(page);
+    await expect(page.locator('#ref-note')).toContainText('no reference dogs yet');
+    await expect(page.locator('#sires-usable')).not.toContainText('Test Dog Two');
+    await expect(page.locator('#sires-unconfirmed')).toContainText('Test Dog Two');
+    await expect(page.locator('#main')).toContainText('neuter_basis');
+  });
+
+  test('a usable sire is male, entire, stated or vet, active, alive and ours', async ({ page, guard }) => {
+    const sub = guard.world.files.find((f) => f.name === 'BLD-subject.csv');
+    const status = guard.world.files.find((f) => f.name === 'BLD-subject_status.csv');
+    sub.content = [
+      'id,name,sex,neuter_status,neuter_basis,kind',
+      'sub-ok,Confirmed Stud,Male,entire,stated,',
+      'sub-neu,Neutered Stud,Male,neutered,vet,Stud Male',
+      'sub-sold,Sold Stud,Male,entire,stated,Stud Male',
+      'sub-none,No Status Male,Male,entire,stated,Stud Male',
+      'sub-def,Default Entire,Male,entire,default,Stud Male',
+      'sub-miss,Missing Basis,Male,entire,,Stud Male',
+      'sub-dead,Dead Male,Male,entire,stated,Stud Male',
+      'sub-bitch,Active Bitch,Female,entire,stated,Breeding Female',
+    ].join('\n');
+    status.content = [
+      'subject_id,state',
+      'sub-ok,Active',
+      'sub-neu,Active',
+      'sub-sold,Sold',
+      'sub-def,Active',
+      'sub-miss,Active',
+      'sub-dead,Active',
+      'sub-bitch,Active',
+    ].join('\n');
+    guard.world.file('bld-animana-extra', 'BLD-MAP-animana.csv', [
+      'system,subject_id,date_of_death,vet_active,vet_client',
+      'animana,sub-dead,2024-05-30,false,Dynamic Dogs Limited',
+      'animana,sub-ok,,true,Dynamic Dogs Limited',
+    ].join('\n'), { parents: sub.parents, driveId: sub.driveId });
+    guard.world.file('bld-ref-extra', 'BLD-ref_dog.csv', [
+      'id,call_name,registered_name,sex,sire_ref,dam_ref,chip_number',
+      'ref-out,Outside Dam,Outside Dam Registered,Female,sub-ok,,000111',
+    ].join('\n'), { parents: sub.parents, driveId: sub.driveId });
+
+    await page.goto('bloodline/bld-matings.html');
+    await signIn(page);
+    const usable = page.locator('#sires-usable');
+    const unconfirmed = page.locator('#sires-unconfirmed');
+    const excluded = page.locator('#sires-excluded');
+    await expect(usable).toContainText('Confirmed Stud');
+    await expect(usable).not.toContainText('Default Entire');
+    await expect(usable).not.toContainText('Neutered Stud');
+    await expect(usable).not.toContainText('Sold Stud');
+    await expect(usable).not.toContainText('No Status Male');
+    await expect(usable).not.toContainText('Dead Male');
+    await expect(usable).not.toContainText('Outside Dam');
+    await expect(unconfirmed).toContainText('Default Entire');
+    await expect(unconfirmed).toContainText('Missing Basis');
+    await expect(unconfirmed).not.toContainText('Confirmed Stud');
+    await expect(excluded).toContainText('Neutered Stud');
+    await expect(excluded).toContainText('Sold Stud');
+    await expect(excluded).toContainText('No Status Male');
+    await expect(excluded).toContainText('Dead Male');
+    await expect(excluded).toContainText('no status row');
+    await expect(page.locator('#main')).not.toContainText('no reference dogs yet');
+    await expect(page.locator('#dam option')).toHaveCount(1);
+    await expect(page.locator('#dam option')).toContainText('Active Bitch');
+    await page.locator('#dogfind').fill('Outside');
+    await expect(page.locator('#dam option', { hasText: 'Outside Dam' })).toHaveCount(1);
+    await page.locator('#dam').selectOption('ref-out');
+    await expect(page.locator('#coi')).toContainText('Outside Dam');
+    await expect(page.locator('#coi')).toContainText('reference dog');
+    await page.goto('bloodline/bld-dogs.html');
+    await expect(page.locator('#main')).not.toContainText('Outside Dam');
+    await expect(page.locator('#count')).toContainText('8 of 8');
+  });
+});
+
 test.describe('Bloodline: saving stays off', () => {
   test('the build brief disables save and edit and names the write path', async ({ page }) => {
     await page.goto('bloodline/bloodline.html#/questions');

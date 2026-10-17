@@ -9,9 +9,10 @@
 <link rel="stylesheet" href="bld.css">
 <style>table.coigrid td{text-align:center;font-variant-numeric:tabular-nums}td.g1{background:#d1fae5}td.g2{background:#a7f3d0}td.g3{background:#fde68a}td.g4{background:#fdba74}td.g5{background:#fca5a5}
 :root:not([data-theme="light"]) td.g1{background:#064e3b}:root:not([data-theme="light"]) td.g2{background:#065f46}:root:not([data-theme="light"]) td.g3{background:#78350f}:root:not([data-theme="light"]) td.g4{background:#7c2d12}:root:not([data-theme="light"]) td.g5{background:#7f1d1d}
-.gridwrap{max-height:70vh;overflow:auto}table.coigrid th.rh{position:sticky;left:0;background:var(--surface);text-align:left}</style></head>
+.gridwrap{max-height:70vh;overflow:auto}table.coigrid th.rh{position:sticky;left:0;background:var(--surface);text-align:left}
+label.damlabel{display:block;min-height:0;margin-bottom:8px}#dam,#dogfind{width:100%;min-width:0}</style></head>
 <body><div class="wrap">
-<div class="hdr"><h1>Matings</h1><span class="hubcode">BLD</span><span class="sub">BLD-mating.csv, and the planner computed from BLD-subject.csv parent links</span></div>
+<div class="hdr"><h1>Matings</h1><span class="hubcode">BLD</span><span class="sub">BLD-mating.csv, and a planner over our dogs plus any reference dogs on file</span></div>
 <div id="nav"></div>
 <main id="main"><p class="muted">Reading the tables…</p></main>
 <div id="stamp"></div>
@@ -20,45 +21,137 @@
 <script src="bld.js"></script>
 <script>
 document.getElementById('nav').innerHTML=BLD.nav('bld-matings.html');
-BLD.load(['BLD-mating.csv','BLD-subject.csv','BLD-subject_status.csv','BLD-litter.csv']).then(function(T){if(!T)return;
+BLD.load(['BLD-mating.csv','BLD-subject.csv','BLD-subject_status.csv','BLD-litter.csv','BLD-MAP-animana.csv','BLD-ref_dog.csv','BLD-microchip.csv']).then(function(T){if(!T)return;
   if(!BLD.have(T,'subject',['id'])){document.getElementById('main').innerHTML=BLD.nodata(BLD.whyNot(T,'subject',['id']));document.getElementById('stamp').innerHTML=BLD.stamp(T);return;}
-  BLD.noteGap(T,'subject',['dam_id','sire_id','sex']);
+  BLD.noteGap(T,'subject',['dam_id','sire_id','sex','neuter_status','neuter_basis']);
   var mateOk=BLD.have(T,'mating',['dam_subject_id','sire_subject_id','mated_on']);
   var S=BLD.by(T.subject,'id'),E=BLD.esc,today=new Date().toISOString().slice(0,10);
-  var st={};T.subject_status.forEach(function(r){var cur=st[r.subject_id];if(!cur||(!r.to_date&&cur.to_date)||(r.from_date>cur.from_date))st[r.subject_id]=r;});
-  /* ---- Henderson tabular method over the whole subject table ----
-     Order the dogs so that every parent comes before its child (parents not on file count as unrelated founders).
-     A[i][i] = 1 + F_i, where F_i = ½·A[sire][dam]; A[i][j] = ½·(A[j][sire_i] + A[j][dam_i]). COI of a planned pup = ½·A[dam][sire]. */
-  var ids=T.subject.map(function(s){return s.id;}),idx={},order=[],done={},guard=0;
-  while(order.length<ids.length&&guard++<ids.length+5){ids.forEach(function(id){if(done[id])return;var s=S[id]||{};var ps=s.sire_id&&S[s.sire_id]?s.sire_id:null,pd=s.dam_id&&S[s.dam_id]?s.dam_id:null;if((!ps||done[ps])&&(!pd||done[pd])){done[id]=true;order.push(id);}});}
-  ids.forEach(function(id){if(!done[id]){order.push(id);done[id]=true;}}); /* a loop in the data (dog listed as its own ancestor) — still placed, treated as founder */
+  var st={};
+  (T.subject_status||[]).forEach(function(r){
+    var cur=st[r.subject_id];
+    if(!cur||(!r.to_date&&cur.to_date)||((r.from_date||'')>=(cur.from_date||'')))st[r.subject_id]=r;
+  });
+  /* Reference dogs are pedigree only. A matched_subject_id means the subject row is the dog. */
+  var alias={},nodes={},chips={};
+  (T.microchip||[]).forEach(function(m){if(m.subject_id&&m.chip_number&&!m.failed_on)chips[m.subject_id]=m.chip_number;});
+  T.subject.forEach(function(s){
+    nodes[s.id]={id:s.id,name:s.name||s.id,sire:s.sire_id||'',dam:s.dam_id||'',ref:false,chip:chips[s.id]||'',sex:s.sex||'',kind:s.kind||''};
+  });
+  var refWhy=BLD.whyNot(T,'ref_dog',['id']);
+  var refRows=refWhy?[]:T.ref_dog;
+  refRows.forEach(function(r){
+    if(!r.id)return;
+    if(r.matched_subject_id&&nodes[r.matched_subject_id]){alias[r.id]=r.matched_subject_id;return;}
+    if(nodes[r.id])return;
+    nodes[r.id]={id:r.id,name:r.call_name||r.registered_name||r.id,registered:r.registered_name||'',call:r.call_name||'',aliases:r.aliases||'',sire:r.sire_ref||'',dam:r.dam_ref||'',ref:true,chip:r.chip_number||'',sex:r.sex||'',kind:''};
+  });
+  function parentId(raw){if(!raw)return null;var id=alias[raw]||raw;return nodes[id]?id:null;}
+  var ids=Object.keys(nodes),idx={},order=[],done={},guard=0;
+  while(order.length<ids.length&&guard++<ids.length+5){ids.forEach(function(id){if(done[id])return;var n=nodes[id];var ps=parentId(n.sire),pd=parentId(n.dam);if((!ps||done[ps])&&(!pd||done[pd])){done[id]=true;order.push(id);}});}
+  ids.forEach(function(id){if(!done[id]){order.push(id);done[id]=true;}});
   order.forEach(function(id,i){idx[id]=i;});
-  var n=order.length,A=new Array(n);for(var i=0;i<n;i++){A[i]=new Float32Array(n);}
+  var n=order.length,A=new Array(n);for(var i=0;i<n;i++)A[i]=new Float32Array(n);
   var depth={};
-  for(var i=0;i<n;i++){var s=S[order[i]]||{};var si=s.sire_id&&idx[s.sire_id]<i?idx[s.sire_id]:-1,di=s.dam_id&&idx[s.dam_id]<i?idx[s.dam_id]:-1;
+  for(var i=0;i<n;i++){var node=nodes[order[i]];var si=parentId(node.sire),di=parentId(node.dam);si=si!=null&&idx[si]<i?idx[si]:-1;di=di!=null&&idx[di]<i?idx[di]:-1;
     depth[order[i]]=1+Math.max(si>=0?depth[order[si]]:0,di>=0?depth[order[di]]:0);
     for(var j=0;j<i;j++){var v=0.5*((si>=0?A[j][si]:0)+(di>=0?A[j][di]:0));A[i][j]=v;A[j][i]=v;}
     A[i][i]=1+(si>=0&&di>=0?0.5*A[si][di]:0);}
-  function rel(a,b){var x=idx[a],y=idx[b];if(x==null||y==null)return null;return A[x][y];}
-  function F(id){var x=idx[id];return x==null?null:A[x][x]-1;}
+  function rel(a,b){a=alias[a]||a;b=alias[b]||b;var x=idx[a],y=idx[b];if(x==null||y==null)return null;return A[x][y];}
+  function F(id){id=alias[id]||id;var x=idx[id];return x==null?null:A[x][x]-1;}
   function gcls(c){return c<0.0625?'g1':c<0.125?'g2':c<0.1875?'g3':c<0.25?'g4':'g5';}
-  var h='';
-  /* list */
+  function pairNote(damId,sireId){
+    var layer=[alias[damId]||damId,alias[sireId]||sireId],bits=[],deep=0,g;
+    for(g=1;g<=5;g++){var filled=0,next=[],k;for(k=0;k<layer.length;k++){if(layer[k]&&nodes[layer[k]])filled++;}
+      if(!filled)break;deep=g;bits.push('gen '+g+' '+Math.round(100*filled/layer.length)+'%');
+      for(k=0;k<layer.length;k++){var dog=nodes[layer[k]];next.push(dog?parentId(dog.sire)||'':'');next.push(dog?parentId(dog.dam)||'':'');}
+      layer=next;}
+    return deep+' gen'+(bits.length?' · '+bits.join(' · '):'');
+  }
+  var h='',deathWhy=BLD.whyNot(T,'MAP-animana',['subject_id','date_of_death']);
+  var animana={};if(!deathWhy)T['MAP-animana'].forEach(function(r){(animana[r.subject_id]=animana[r.subject_id]||[]).push(r);});
+  function deathOf(id){var rows=animana[id]||[],i;for(i=0;i<rows.length;i++){if(String(rows[i].date_of_death||'').trim())return rows[i].date_of_death;}return '';}
+  function isOurs(id){var state=(st[id]||{}).state||'';if(/^(active|in training)$/i.test(state))return true;var rows=animana[id]||[],i;for(i=0;i<rows.length;i++){if(/^true$/i.test(rows[i].vet_active||'')&&/carson|dynamic dogs/i.test(rows[i].vet_client||''))return true;}return false;}
+  function isMale(s){return /^(m|male)$/i.test(s.sex||'');}
+  function isFemale(s){return /^(f|female)$/i.test(s.sex||'');}
+  function basisOk(s){return /^(stated|vet)$/i.test(s.neuter_basis||'');}
+  var basisCol=BLD.col(T.subject,'neuter_basis');
+  var sireWhy=!BLD.have(T,'subject',['id','sex','neuter_status'])?BLD.whyNot(T,'subject',['id','sex','neuter_status']):BLD.whyNot(T,'subject_status',['subject_id','state']);
+  var usable=[],unconfirmed=[],excluded=[];
+  if(!sireWhy)T.subject.forEach(function(s){
+    if(String(s.id||'').indexOf('ref-')===0)return;
+    if(!isMale(s))return;
+    var why=[];
+    if(!/^entire$/i.test(s.neuter_status||''))why.push(s.neuter_status?'neuter status is '+s.neuter_status:'neuter status is blank');
+    var state=(st[s.id]||{}).state||'';
+    if(!BLD.isActive(state))why.push(state?'latest status is '+state:'no status row');
+    var died=deathWhy?'':deathOf(s.id);
+    if(died)why.push('date of death '+died);
+    if(!isOurs(s.id))why.push('not ours');
+    var hard=why.length;
+    if(!basisOk(s))why.push(!basisCol?'neuter basis column is missing':(s.neuter_basis?'neuter basis is '+s.neuter_basis:'neuter basis is missing'));
+    s._why=why;
+    if(hard)excluded.push(s);
+    else if(!basisOk(s))unconfirmed.push(s);
+    else usable.push(s);
+  });
+  function byName(a,b){return (a.name||'').localeCompare(b.name||'');}
+  usable.sort(byName);unconfirmed.sort(byName);excluded.sort(byName);
+  function pct(id){var f=F(id);return f==null?'—':(f*100).toFixed(1)+'%';}
+  function sireTable(list,withWhy){
+    if(!list.length)return '<p class="muted">None under this rule.</p>';
+    var cols=[['Sire',function(r){return BLD.link(r.id,S);}],['Neuter','neuter_status'],['Basis',function(r){return E(r.neuter_basis||'missing');}],['Status',function(r){return E((st[r.id]||{}).state||'none');}]];
+    if(withWhy)cols.push(['Why excluded',function(r){return E((r._why||[]).join('; '));}]);
+    else cols.push(['Pup COI',function(r){return '<span data-coi="'+E(r.id)+'"></span>';}]);
+    return BLD.table(list,cols);
+  }
   var rows=mateOk?T.mating.slice().sort(function(a,b){return a.mated_on<b.mated_on?1:-1;}):[];
   h+='<h2>Recorded matings'+(mateOk?' ('+rows.length+')':'')+'</h2>'+(mateOk?BLD.table(rows,[['Mated',function(r){return BLD.dmy(r.mated_on)+(r.mating_no?' <span class="muted">#'+E(r.mating_no)+'</span>':'');}],['Dam',function(r){return BLD.link(r.dam_subject_id,S);}],['Sire',function(r){return BLD.link(r.sire_subject_id,S);}],['Method',function(r){return E(r.method)+(r.semen_source?' · '+E(r.semen_source):'');}],['Due',function(r){return BLD.dmy(r.due_from_this_mating)+(r.due_from_this_mating>=today&&r.produced_litter!=='true'?' '+BLD.pill('ahead','warn'):'');}],['Litter',function(r){return r.produced_litter==='true'?'<a href="bld-litters.html#'+E(r.litter_id)+'">'+E(r.litter_id)+'</a>':BLD.pill('none','');}],['Pup COI',function(r){var v=rel(r.dam_subject_id,r.sire_subject_id);return v==null?'<span class="muted">?</span>':'<span class="pill '+gcls(v/2)+'">'+(100*v/2).toFixed(1)+'%</span>';}],['Notes','notes']]):BLD.nodata(BLD.whyNot(T,'mating',['dam_subject_id','sire_subject_id','mated_on'])));
-  /* planner */
-  var females=T.subject.filter(function(s){return sexOf(s,'F')&&BLD.isActive((st[s.id]||{}).state)&&/breed/i.test(s.kind||'');}),males=T.subject.filter(function(s){return sexOf(s,'M')&&/breed|stud|sire/i.test(s.kind||'');});
-  if(!females.length)females=T.subject.filter(function(s){return sexOf(s,'F')&&BLD.isActive((st[s.id]||{}).state);});
-  if(!males.length)males=T.subject.filter(function(s){return sexOf(s,'M')&&BLD.isActive((st[s.id]||{}).state);});
   var depths=Object.keys(depth).map(function(k){return depth[k];});
   var deepest=depths.length?Math.max.apply(null,depths):0;
-  function sexOf(s,want){return want==='F'?/^(f|female)$/i.test(s.sex||''):/^(m|male)$/i.test(s.sex||'');}
-  h+='<h2>Mating planner — coefficient of inbreeding of the planned pup</h2>'+(BLD.have(T,'subject',['id','sex'])?'':'')+'<div class="card info"><p><b>Method:</b> Henderson tabular (additive relationship matrix over all '+n+' dogs in BLD-subject.csv; parents not on file are treated as unrelated founders). <b>Depth:</b> whatever the table holds — the deepest line here is '+deepest+' generations; a figure is only as complete as the pedigree behind it. Green under 6.25 % · amber 12.5–18.75 % · red 25 % and over. Rows = active breeding females, columns = males.</p></div>';
-  function pct(id){var f=F(id);return f==null?'—':(f*100).toFixed(1)+'%';}
-  h+='<div class="gridwrap scroll"><table class="coigrid"><thead><tr><th class="rh">dam \\ sire</th>'+males.map(function(m){return '<th>'+BLD.link(m.id,S)+'<br><span class="muted">F '+pct(m.id)+'</span></th>';}).join('')+'</tr></thead><tbody>';
-  females.forEach(function(f){h+='<tr><th class="rh">'+BLD.link(f.id,S)+'<br><span class="muted">F '+pct(f.id)+'</span></th>'+males.map(function(m){var v=rel(f.id,m.id);var c=v==null?null:v/2;return '<td class="'+(c==null?'':gcls(c))+'" title="'+E(f.name)+' × '+E(m.name)+'">'+(c==null?'—':(100*c).toFixed(1))+'</td>';}).join('')+'</tr>';});
-  h+='</tbody></table></div>';
-  h+='<h3>Individual inbreeding (F) — every dog with both parents on file</h3>'+BLD.table(T.subject.filter(function(s){return S[s.sire_id]&&S[s.dam_id];}).map(function(s){return {id:s.id,name:s.name,F:F(s.id),d:depth[s.id]};}).sort(function(a,b){return b.F-a.F;}).slice(0,60),[['Dog',function(r){return BLD.link(r.id,S);}],['F',function(r){return '<span class="pill '+gcls(r.F)+'">'+(r.F*100).toFixed(2)+'%</span>';}],['Generations on file',function(r){return String(r.d-1);}]]);
+  var refCount=refRows.filter(function(r){return r.id&&!(r.matched_subject_id&&nodes[r.matched_subject_id]);}).length;
+  h+='<h2>Mating planner — coefficient of inbreeding of the planned pup</h2>';
+  h+='<div class="card info"><p><b>Method:</b> Henderson tabular, over '+T.subject.length+' dogs on BLD-subject'+(refCount?' and '+refCount+' reference dogs':'')+'. A parent that is on neither table is an unrelated founder. Deepest line on file: '+deepest+' generations. Green under 6.25% · amber 12.5–18.75% · red 25% and over. Each pair also shows how complete each generation is.</p>';
+  h+='<p style="margin-bottom:0"><b>Usable sire:</b> male, neuter status entire, neuter basis stated or vet, latest status Active, alive, and ours. Kind is not used. <b>Unconfirmed entire</b> meets every other test, but neuter basis is missing, blank, or default — including while the column is not in the file yet. Those males are listed apart and are not mixed into the usable list. Reference dogs are not sires and are not on the dog list.</p></div>';
+  if(refWhy||!refCount)h+='<div class="nodata" role="status" id="ref-note"><b>no reference dogs yet</b><p>'+(refWhy?E(refWhy.replace(/^no data yet\s*[—-]\s*/,''))+'. ':'')+'Outside dogs and paper-pedigree ancestors cannot be used until BLD-ref_dog.csv is in the folder. This page does not create that table.</p></div>';
+  if(!basisCol)h+='<div class="nodata" role="status"><b>no data yet</b><p>BLD-subject.csv has no column neuter_basis. Entire is unconfirmed until that column says stated or vet. This page does not add the column.</p></div>';
+  if(deathWhy)h+='<div class="nodata" role="status"><b>no data yet</b><p>'+E(deathWhy.replace(/^no data yet\s*[—-]\s*/,''))+'. A date of death cannot be checked, so no sire is excluded for death until BLD-MAP-animana.csv can be read.</p></div>';
+  h+=sireWhy?BLD.nodata(sireWhy):'<h3>Usable sires ('+usable.length+')</h3><div id="sires-usable">'+sireTable(usable,false)+'</div><h3>Unconfirmed entire ('+unconfirmed.length+')</h3><div id="sires-unconfirmed">'+sireTable(unconfirmed,false)+'</div><h3>Excluded males ('+excluded.length+')</h3><div id="sires-excluded">'+sireTable(excluded,true)+'</div>';
+  var pool=[];
+  T.subject.forEach(function(s){if(String(s.id||'').indexOf('ref-')===0)return;pool.push({id:s.id,name:s.name||s.id,ref:false,chip:chips[s.id]||'',sex:s.sex||'',kind:s.kind||'',active:BLD.isActive((st[s.id]||{}).state)});} );
+  refRows.forEach(function(r){if(!r.id||alias[r.id])return;var node=nodes[r.id];if(!node||!node.ref)return;pool.push({id:r.id,name:node.name,registered:node.registered||'',call:node.call||'',aliases:node.aliases||'',ref:true,chip:node.chip||'',sex:node.sex||'',kind:'',active:false});});
+  pool.sort(byName);
+  var shortlist=pool.filter(function(p){return !p.ref&&p.active&&isFemale({sex:p.sex})&&/breed/i.test(p.kind||'');});
+  function option(p){var label=p.name;if(p.ref)label+=' (reference dog)';else if(!p.active)label+=' (not active)';return '<option value="'+E(p.id)+'">'+E(label)+'</option>';}
+  h+='<h3>Dam for this calculation</h3><div class="card"><label class="damlabel" for="dogfind">Search any dog by name or chip</label><input type="search" id="dogfind" placeholder="Name, chip, or reference dog" aria-label="Search any dog by name or chip">';
+  h+='<label class="damlabel" for="dam">Dam</label><select id="dam"></select>';
+  h+='<p class="muted" style="margin:8px 0 0">With the box empty, the list is the active breeding females. Type to pick any dog on BLD-subject, including one who is not active, or a reference dog when that table has rows.</p></div>';
+  h+='<p id="coi" class="muted"></p>';
+  h+='<h3>Individual inbreeding (F) — our dogs with both parents on file</h3>'+BLD.table(T.subject.filter(function(s){return String(s.id||'').indexOf('ref-')!==0&&parentId(s.sire_id)&&parentId(s.dam_id);}).map(function(s){return {id:s.id,name:s.name,F:F(s.id),d:depth[s.id]};}).sort(function(a,b){return b.F-a.F;}).slice(0,60),[['Dog',function(r){return BLD.link(r.id,S);}],['F',function(r){return '<span class="pill '+gcls(r.F)+'">'+(r.F*100).toFixed(2)+'%</span>';}],['Generations on file',function(r){return String((r.d||1)-1);}]]);
   document.getElementById('main').innerHTML=h;document.getElementById('stamp').innerHTML=BLD.stamp(T);
+  var damSel=document.getElementById('dam'),find=document.getElementById('dogfind');
+  function hay(p){return [p.name,p.registered,p.call,p.aliases,p.chip,p.id].join(' ').toLowerCase();}
+  function fillDams(){
+    if(!damSel)return;
+    var q=(find&&find.value||'').trim().toLowerCase();
+    var list=!q?shortlist:pool.filter(function(p){return hay(p).indexOf(q)>=0;});
+    var prev=damSel.value;
+    damSel.innerHTML=list.length?list.map(option).join(''):'<option value="">No match</option>';
+    if(list.some(function(p){return p.id===prev;}))damSel.value=prev;
+    showCoi();
+  }
+  function showCoi(){
+    if(!damSel)return;
+    var damId=damSel.value,dog=nodes[alias[damId]||damId];
+    document.querySelectorAll('[data-coi]').forEach(function(el){
+      var sireId=el.getAttribute('data-coi');
+      var v=rel(damId,sireId),c=v==null?null:v/2;
+      el.innerHTML=(c==null?'—':(100*c).toFixed(1)+'%')+'<br><span class="muted">'+E(pairNote(damId,sireId))+'</span>';
+    });
+    var line=document.getElementById('coi');
+    if(line)line.textContent=dog?(dog.name||dog.id)+(dog.ref?' (reference dog)':'')+' as dam. The figure is the coefficient of the planned pup, with pedigree depth and how complete each generation is.':'';
+  }
+  if(find)find.addEventListener('input',fillDams);
+  if(damSel)damSel.addEventListener('change',showCoi);
+  fillDams();
 });
 </script></body></html>

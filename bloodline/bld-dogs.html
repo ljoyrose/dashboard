@@ -28,7 +28,7 @@ BLD.load(['BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-co
   opts('sex',function(r){return r.sex;},T.subject);opts('kind',function(r){return r.kind;},T.subject);opts('state',function(r){return (st[r.id]||{}).state;},T.subject);
   function render(){
     var q=document.getElementById('q').value.toLowerCase(),sex=document.getElementById('sex').value,kind=document.getElementById('kind').value,state=document.getElementById('state').value;
-    var rows=T.subject.filter(function(s){
+    var rows=T.subject.filter(function(s){if(String(s.id||'').indexOf('ref-')===0)return false;
       if(sex&&s.sex!==sex)return false;if(kind&&s.kind!==kind)return false;if(state&&(st[s.id]||{}).state!==state)return false;
       if(q){var hay=[s.name,s.breed,s.name_as_imported,(COL[s.coat_colour_id]||{}).name,s.colour_as_stated,chip[s.id],s.id].join(' ').toLowerCase();if(hay.indexOf(q)<0)return false;}
       return true;}).sort(function(a,b){return (a.name||'').localeCompare(b.name||'');});

@@ -38,7 +38,7 @@ If any of these breaks, the tick turns red and says which page.
 |---|---|---|
 | Main dashboard | `/dashboard/` | 45 |
 | CD Hub | `/dashboard/cdhub/` | 30 |
-| Bloodline | `/dashboard/bloodline/` | 9 |
+| Bloodline | `/dashboard/bloodline/` | 11 |
 | Money Hub | `/dashboard/money/` | 41 |
 | Reading CSV files | both readers | 17 |
 | Safety checks | the whole repo | 4 |
@@ -50,7 +50,7 @@ If any of these breaks, the tick turns red and says which page.
 | Phone-sized screen (390 × 844) | each page | 4 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
 
-That is 203 checks that must pass.
+That is 205 checks that must pass.
 
 **Main dashboard**
 - Opens and shows only a sign-in button until you sign in.
@@ -81,6 +81,8 @@ That is 203 checks that must pass.
 - Two files with the same name are refused, not guessed.
 - A COUNT note on the first line of a file is not used as the column headings.
 - Save and edit on the build brief stay switched off, and the page names the write path.
+- With no `BLD-ref_dog.csv` in the folder, Matings says "no reference dogs yet". A male who is entire and active, but has no `neuter_basis` column, is listed under unconfirmed entire, not as a usable sire.
+- A usable sire is male, entire, with neuter basis stated or vet, latest status Active, alive and ours. Neutered, sold, dead and no-status males are excluded with a reason. A reference dog can be picked as the dam and does not appear on the dog list.
 - Sign out forgets the tables. Nothing is stored in the browser.
 - On a phone-sized screen the screens stay within the width.
 
