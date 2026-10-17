@@ -25,7 +25,7 @@ Green means all of these are true on all three pages:
 5. The sample spreadsheets (CSV files) are read and shown correctly.
 6. The browser shows **no unexpected errors** in its hidden error log.
 7. The page never tries to contact any address we did not plan for.
-8. Nothing is saved in the browser.
+8. Only the shared sign-in for this browser tab is saved. Sign-out clears it.
 9. On a phone-sized screen, each page opens, the menu works and nothing scrolls sideways.
 10. The column names the pages expect in your Drive files are still the ones on our list.
 11. Dark mode still works, and accessibility and the smallest text size have not got worse.
@@ -52,7 +52,7 @@ If any of these breaks, the tick turns red and says which page.
 That is 207 checks that must pass.
 
 **Main dashboard**
-- Opens and shows only a sign-in button until you sign in.
+- Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
 - Every menu tab works: Map, Read first, Drive, PC-Personal, Drive check, Bin, Changes.
 - Links straight to a section work, like `#/changes/24h`, `#/bin` and `#/personal`.
 - The Back button works.
@@ -224,6 +224,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 8 Oct 2026 | CD Hub: the Litters page crashed, and occupancy was read from the wrong column (commit `2242bac`) | "joined tables work: cabins show their dogs, litters show dam and sire…" (covers Litters and occupancy; the Animana record choice is **not** yet covered) |
 | 15 Oct 2026 | (found by the teeth check, not a live bug) a hidden marker in front of the "CURRENT" line made the row-count warning disappear; and the rules that stop a `ZZ_` folder holding an `RR_` item being binned had no test | "a BOM in front of the…" (the "CURRENT: n rows held" line test), and the two Bin safety tests |
 | 17 Oct 2026 | A bulk move could still change rows hidden past Showing 50 of 52 | "Select all on a list of 52 with 50 shown" |
+| 17 Oct 2026 | Signing in on one page asked again on Money and again on the way back | "one sign-in is shared, and an expired token does ask again" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

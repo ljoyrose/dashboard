@@ -49,11 +49,12 @@ test.describe('Main dashboard: sign-in (mocked)', () => {
     await expect(page.locator('#pageFoot')).toBeVisible();
   });
 
-  test('keeps nothing in the browser (no local storage, session storage or cookies)', async ({ page, context }) => {
+  test('keeps only the shared sign-in for this tab (no local storage or cookies)', async ({ page, context }) => {
     await page.goto('./');
     await signIn(page);
-    const stores = await page.evaluate(() => ({ local: localStorage.length, session: sessionStorage.length }));
-    expect(stores).toEqual({ local: 0, session: 0 });
+    const stores = await page.evaluate(() => ({ local: localStorage.length, session: Object.keys(sessionStorage), key: window.DashAuth.KEY }));
+    expect(stores.local).toBe(0);
+    expect(stores.session).toEqual([stores.key]);
     expect(await context.cookies()).toEqual([]);
   });
 
@@ -65,6 +66,7 @@ test.describe('Main dashboard: sign-in (mocked)', () => {
     await expect(page.locator('#mainNav')).toBeHidden();
     await expect(page.locator('#signInBtn')).toBeVisible();
     expect(await page.evaluate(() => window.__GIS_CALLS.revoke)).toBe(1);
+    expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
   });
 });
 

@@ -3,6 +3,7 @@
 <title>CD Hub</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -200,7 +201,7 @@ function setBoot(msg,rows){
 var CLIENT_ID='135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com';
 var SCOPE='https://www.googleapis.com/auth/drive.readonly';
 var DRIVE='https://www.googleapis.com/drive/v3/files';
-var TOKEN=null, TOKEN_EXP=0, TOKENCLIENT=null;
+var TOKEN=null, TOKEN_EXP=0;
 var SAVE_OFF='Saving is turned off on this web version for now. The round, cabin access and flags are read-only here, and nothing is written to Drive or kept in this browser. Saving comes later.';
 LOAD.state='signin'; DBERR=SAVE_OFF;
 function DriveErr(status,msg){ var e=new Error(msg); e.status=status;
@@ -229,27 +230,43 @@ function readDriveFile(f){
     return gget(DRIVE+'/'+encodeURIComponent(f.id)+'/export?mimeType=text%2Fcsv',true);
   return gget(DRIVE+'/'+encodeURIComponent(f.id)+'?alt=media&supportsAllDrives=true',true);
 }
-function signIn(){ if(TOKENCLIENT) TOKENCLIENT.requestAccessToken({prompt:TOKEN?'':'select_account'}); }
+function onCdToken(resp){
+  if(resp.error){ LOAD.state='signin'; LOAD.err='Sign-in did not complete.'; render(); return; }
+  if(!google.accounts.oauth2.hasGrantedAllScopes(resp,SCOPE)){ LOAD.state='signin'; LOAD.err='Drive read access was not granted, so the tables cannot be read.'; render(); return; }
+  TOKEN=resp.access_token; TOKEN_EXP=DashAuth.expiryFrom(resp.expires_in);
+  DashAuth.save(TOKEN, TOKEN_EXP, resp.scope||SCOPE);
+  load();
+}
+function onCdError(e){ var t=(e&&e.type)||'';
+  LOAD.err=t==='popup_failed_to_open'?'The browser blocked the sign-in window. Allow pop-ups for this page and try again.':t==='popup_closed'?'The sign-in window was closed before it finished.':'Sign-in did not complete.';
+  if(LOAD.state!=='ok') LOAD.state='signin'; render();
+}
+function onCdSilentFail(hadExpired){
+  if(TOKEN&&Date.now()<TOKEN_EXP) return;
+  if(!hadExpired) return;
+  LOAD.state='signin'; LOAD.err='Sign-in expired. Sign in again.'; render();
+}
+var auth=DashAuth.bind({clientId:CLIENT_ID,scope:SCOPE,onToken:onCdToken,onError:onCdError,onSilentFail:onCdSilentFail});
+function signIn(){ auth.requestInteractive(); }
 function signOut(){
   var t=TOKEN; TOKEN=null; TOKEN_EXP=0;
+  if(window.DashAuth) DashAuth.clear();
   if(t&&window.google&&google.accounts&&google.accounts.oauth2) google.accounts.oauth2.revoke(t,function(){});
   T={}; CD={}; LOAD={state:'signin',err:null,storedAt:null,notes:[]}; render();
 }
 function initGoogle(){
-  if(!(window.google&&google.accounts&&google.accounts.oauth2)) return false;
-  TOKENCLIENT=google.accounts.oauth2.initTokenClient({client_id:CLIENT_ID,scope:SCOPE,
-    callback:function(resp){
-      if(resp.error){ LOAD.state='signin'; LOAD.err='Sign-in did not complete.'; render(); return; }
-      if(!google.accounts.oauth2.hasGrantedAllScopes(resp,SCOPE)){ LOAD.state='signin'; LOAD.err='Drive read access was not granted, so the tables cannot be read.'; render(); return; }
-      TOKEN=resp.access_token; TOKEN_EXP=Date.now()+(Number(resp.expires_in)||3600)*1000-60000;
-      load(); },
-    error_callback:function(e){ var t=(e&&e.type)||'';
-      LOAD.err=t==='popup_failed_to_open'?'The browser blocked the sign-in window. Allow pop-ups for this page and try again.':t==='popup_closed'?'The sign-in window was closed before it finished.':'Sign-in did not complete.';
-      if(LOAD.state!=='ok') LOAD.state='signin'; render(); } });
+  if(!auth.init()) return false;
   render(); return true;
 }
+function restoreShared(){
+  var saved=window.DashAuth&&DashAuth.valid();
+  if(!saved||!DashAuth.hasScope(saved,SCOPE)) return;
+  TOKEN=saved.access_token; TOKEN_EXP=saved.expires_at;
+  load();
+}
+restoreShared();
 (function waitGoogle(n){ if(!initGoogle() && n<100) setTimeout(function(){ waitGoogle(n+1); },100);
-  else if(!TOKENCLIENT){ LOAD.err='Google sign-in could not load. Check the connection and reload the page.'; render(); } })(0);
+  else if(!auth.ready()){ LOAD.err='Google sign-in could not load. Check the connection and reload the page.'; render(); } })(0);
 async function load(){
   T={}; LOAD={state:'loading',err:null,storedAt:null,notes:[]};
   document.getElementById('nav').innerHTML=''; pill();
@@ -1452,9 +1469,9 @@ function go(id,push){
  var main=document.getElementById('main');
  if(LOAD.state==='signin'){
   main.innerHTML='<div class="card acc4" style="margin-top:24px"><h4>Sign in to see the tables</h4>'
-   +'<p>This page holds no data of its own. Once you sign in with Google it reads the tables live from '+esc(FOLDER_NAME)+', with read-only access. Nothing is saved on this page or in this browser, and signing out forgets everything.</p>'
+   +'<p>This page holds no data of its own. Once you sign in with Google it reads the tables live from '+esc(FOLDER_NAME)+', with read-only access. The sign-in is shared with the rest of this site until you sign out or it expires.</p>'
    +(LOAD.err?'<p class="mut">'+esc(LOAD.err)+'</p>':'')
-   +'<p style="margin-bottom:0"><button id="signinbtn" data-signin="1"'+(TOKENCLIENT?'':' disabled')+'>'+(TOKENCLIENT?'Sign in with Google':'Loading Google sign-in\u2026')+'</button></p></div>';
+   +'<p style="margin-bottom:0"><button id="signinbtn" data-signin="1"'+(auth.ready()?'':' disabled')+'>'+(auth.ready()?'Sign in with Google':'Loading Google sign-in\u2026')+'</button></p></div>';
   document.getElementById('nav').innerHTML=''; return;
  }
  if(LOAD.state==='loading'){ return; }
@@ -1581,7 +1598,7 @@ document.addEventListener('click',function(e){
 });
 document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('[data-signin],[data-signout],[data-reload]'); if(!t||t.disabled) return;
  if(t.dataset.signin) signIn(); else if(t.dataset.signout) signOut();
- else if(t.dataset.reload){ if(TOKEN&&Date.now()<TOKEN_EXP) load(); else signIn(); } });
+ else if(t.dataset.reload){ if(TOKEN&&Date.now()<TOKEN_EXP) load(); else auth.requestSilent(); } });
 window.addEventListener('popstate',function(){ if(LOAD.state==='ok') go((location.hash||'#/map').replace('#/',''),false); });
 render();
 </script></body></html>
