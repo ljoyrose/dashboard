@@ -8,6 +8,7 @@ A single-page Google **shared drives** surface (read-only browsing, plus a Bin),
 - **Bin** (`#/bin`): lists names starting `ZZ_`. Only a ticked name that starts `ZZ_DELETE_` and has a row in the delete ledger can be moved.
   No ledger row: held, not ticked. Other `ZZ_` names, including retired `ZZ_SUPERSEDED_`, are Rename needed and are never binned.
   `RR_` anywhere in the name, inside an `RR_` folder, or a folder that holds an `RR_` item, is left out. If the ledger cannot be read, nothing is binned.
+  Money rollback files are held, never ticked, and never restored, renamed or binned: a name matching `ZZ_SUPERSEDED_*_DO-NOT-USE__MON-*` or `ZZ_SUPERSEDED_*CHECK-LOG*`, and a MON-ENGINE file in the 4 - Ops folder or in a folder named `0.1 - Index`. The label is "Held: money rollback (E02), do not touch until FIX 6 is confirmed".
   "Move selected (N)" moves only ticked rows that are on screen. Every list has Show more and Show all. Per shared drive bin list (name, date binned, who).
   Moving a file to the bin is the only write. A shared-drive bin is never permanently deleted. Nothing runs automatically.
   The section is in the URL (`#/changes/24h`), so back, reload and links all work. Browser storage is not used.

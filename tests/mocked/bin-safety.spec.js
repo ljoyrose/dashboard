@@ -2,6 +2,7 @@
 // A row can be ticked and moved only when its name starts ZZ_DELETE_, its id is in the
 // delete ledger (or a pending AA_DELETE-LEDGER-ROWS_ slip), and nothing about it is RR_.
 // Select all and Move act only on rows that are both on screen and allowed.
+// E02 money rollback files are held even when ticked, visible, or on a ledger row.
 const { test, expect } = require('../support/test');
 const { IDS } = require('../support/world');
 
@@ -192,6 +193,58 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     await expect.poll(() => w.byId('cap-052').trashed).toBe(true);
     expect(w.byId('cap-001').trashed).toBe(true);
     expect(patched(w).filter((id) => id.indexOf('cap-') === 0)).toHaveLength(52);
+  });
+
+  test('money rollback files (E02) are held and labelled, and Select all does not bin them', async ({ page, guard }) => {
+    const w = guard.world;
+    const LABEL = 'Held: money rollback (E02), do not touch until FIX 6 is confirmed';
+    const ops = { parents: [IDS.moneyFolders.ops], driveId: IDS.moneyDrive, mimeType: 'text/plain' };
+    w.file('e02-sup', 'ZZ_SUPERSEDED_2026-01_DO-NOT-USE__MON-REGISTER.csv', 'invented', A);
+    w.file('e02-log', 'ZZ_SUPERSEDED_oldCHECK-LOG.csv', 'invented', A);
+    w.file('e02-ops', 'MON-ENGINE-ops-hold.csv', 'invented', ops);
+    w.folder('e02-moneng', 'MON-ENGINE', A);
+    w.folder('e02-index', '0.1 - Index', { parents: ['e02-moneng'], driveId: 'drv-alpha1' });
+    w.file('e02-idx', 'rollback-note.txt', 'invented', { parents: ['e02-index'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+    w.file('e02-ledger', 'ZZ_DELETE_MON-ENGINE-ledger.txt', 'invented', ops);
+    w.file('zz-ok', 'ZZ_DELETE_ordinary.txt', 'invented', A);
+    ledger(w, ['e02-sup', 'e02-log', 'e02-ops', 'e02-idx', 'e02-ledger', 'zz-ok']);
+    page.on('dialog', (d) => d.accept());
+    await page.goto('./#/bin');
+    await signIn(page);
+    const view = page.locator('#view');
+    const held = view.locator('[data-bin-list="e02"]');
+    await expect(held).toContainText(LABEL);
+    for (const name of [
+      'ZZ_SUPERSEDED_2026-01_DO-NOT-USE__MON-REGISTER.csv',
+      'ZZ_SUPERSEDED_oldCHECK-LOG.csv',
+      'MON-ENGINE-ops-hold.csv',
+      'rollback-note.txt',
+      'ZZ_DELETE_MON-ENGINE-ledger.txt',
+    ]) {
+      const row = held.locator('li', { hasText: name });
+      await expect(row).toContainText(LABEL);
+      await expect(row.locator('input')).toBeDisabled();
+    }
+    await expect(view.locator('[data-bin-list="rename"]')).not.toContainText('ZZ_SUPERSEDED_2026-01_DO-NOT-USE__MON-REGISTER.csv');
+    await expect(view.locator('[data-bin-list="rename"]')).not.toContainText('ZZ_SUPERSEDED_oldCHECK-LOG.csv');
+    await expect(view.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_ordinary.txt');
+    await expect(view.locator('[data-bin-list="ready"]')).not.toContainText('ZZ_DELETE_MON-ENGINE-ledger.txt');
+    await page.locator('[data-action="selectall"][data-group="bin"]').click();
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (1)');
+    for (const name of ['MON-ENGINE-ops-hold.csv', 'rollback-note.txt', 'ZZ_DELETE_MON-ENGINE-ledger.txt']) {
+      await expect(held.locator('li', { hasText: name }).locator('input')).not.toBeChecked();
+    }
+    await page.locator('[data-action="sweep"]').click();
+    await page.locator('[data-action="sweep"]').click();
+    await expect.poll(() => w.byId('zz-ok').trashed).toBe(true);
+    for (const id of ['e02-sup', 'e02-log', 'e02-ops', 'e02-idx', 'e02-ledger']) {
+      expect(w.byId(id).trashed, id + ' must stay put').toBeFalsy();
+    }
+    const moved = patched(w);
+    expect(moved).toContain('zz-ok');
+    for (const id of ['e02-sup', 'e02-log', 'e02-ops', 'e02-idx', 'e02-ledger']) {
+      expect(moved, id + ' must not be trashed').not.toContain(id);
+    }
   });
 });
 
