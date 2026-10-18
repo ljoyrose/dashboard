@@ -225,6 +225,10 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 15 Oct 2026 | (found by the teeth check, not a live bug) a hidden marker in front of the "CURRENT" line made the row-count warning disappear; and the rules that stop a `ZZ_` folder holding an `RR_` item being binned had no test | "a BOM in front of the…" (the "CURRENT: n rows held" line test), and the two Bin safety tests |
 | 17 Oct 2026 | A bulk move could still change rows hidden past Showing 50 of 52 | "Select all on a list of 52 with 50 shown" |
 | 17 Oct 2026 | Signing in on one page asked again on Money and again on the way back | "one sign-in is shared, and an expired token does ask again" |
+| 18 Oct 2026 | (found in review) CD Hub did not clean quote marks and let any link through, so a table cell could run code in the signed-in page | "CD Hub cleans quote marks and refuses javascript: links from the tables" |
+| 18 Oct 2026 | (found in review) Signing out while on the Bin and signing back in broke the Bin (the Dropbox slot was forgotten) | "signing out on the Bin and back in draws the Bin with no errors" |
+| 18 Oct 2026 | (found in review) The 5-minute refresh silently unticked everything you had ticked | "the 5-minute refresh keeps your ticks and waits while you have any" |
+| 18 Oct 2026 | Live Bin said "The delete ledger could not be read" because the ledger now starts with a "COUNT: n rows" note line above the header | "a ledger that starts with a COUNT note line above the header is still read" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

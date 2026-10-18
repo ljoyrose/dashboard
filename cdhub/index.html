@@ -13,7 +13,7 @@
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16161A;--fg:#EFEDE8;--ln:#33322E;--sub:#A7A197;--card:#1D1D21;--soft:#212126;}}
 :root[data-theme="dark"]{--bg:#16161A;--fg:#EFEDE8;--ln:#33322E;--sub:#A7A197;--card:#1D1D21;--soft:#212126;}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.55 Lexend,system-ui,sans-serif;-webkit-text-size-adjust:100%;hyphens:auto}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.55 Lexend,system-ui,sans-serif;-webkit-text-size-adjust:100%;hyphens:manual}
 .wrap{max-width:1180px;margin:0 auto;padding:0 16px 80px}
 header.top{border-bottom:1px solid var(--ln);background:var(--card);position:sticky;top:0;z-index:20}
 .hin{max-width:1180px;margin:0 auto;padding:12px 16px}
@@ -184,7 +184,9 @@ var WANT=['BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_p
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
 
-function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+// Links that come from the tables: only plain web addresses are allowed (never javascript:, data: etc.).
+function safeUrl(u){ u=String(u==null?'':u).trim(); return /^https?:\/\/[^\s"'<>]+$/i.test(u)?u:''; }
 function unesc(s){ return String(s||''); }
 function parseCSV(text){
   text=unesc(text).replace(/[ \t]+\n/g,'\n').replace(/\r/g,'');
@@ -1090,7 +1092,7 @@ function pageBuyers(){
    +'<td>'+(a.recognises_cobberdog==='true'?'<span class="pill ok">yes</span>':'<span class="mut">Labradoodle only</span>')+'</td>'
    +'<td>'+(a.is_registry==='true'?'<span class="pill i">registry</span>':'<span class="mut">club</span>')+'</td>'
    +'<td class="mut">'+esc(a.listed_breeders)+'</td>'
-   +'<td>'+(a.directory_url?'<a href="'+esc(a.directory_url)+'" target="_blank" rel="noopener">open \u2197</a>':'<span class="mut">none</span>')+'</td></tr>'
+   +'<td>'+(safeUrl(a.directory_url)?'<a href="'+esc(safeUrl(a.directory_url))+'" target="_blank" rel="noopener">open \u2197</a>':'<span class="mut">none</span>')+'</td></tr>'
    +(a.note?'<tr><td colspan="6" class="mut" style="padding-top:0">'+esc(a.note)+'</td></tr>':'');});
  h+='</tbody></table></div>';
  var dead=CD.assoc.filter(function(a){return a.status==='DEFUNCT';});
@@ -1136,9 +1138,9 @@ function contactLinks(p){
  if(ok(p.whatsapp)) o.push('<a class="cb wa" href="https://wa.me/'+esc(p.whatsapp.replace(/[^0-9]/g,''))+'" target="_blank" rel="noopener">WhatsApp</a>');
  if(ok(p.phone)) o.push('<a class="cb" href="tel:'+esc(p.phone.replace(/[^0-9+]/g,''))+'">Call</a>');
  if(ok(p.email)) o.push('<a class="cb" href="mailto:'+esc(p.email)+'">Email</a>');
- if(ok(p.facebook)) o.push('<a class="cb" href="'+esc(p.facebook)+'" target="_blank" rel="noopener">Facebook</a>');
- if(ok(p.instagram)) o.push('<a class="cb" href="'+esc(p.instagram)+'" target="_blank" rel="noopener">Instagram</a>');
- if(ok(p.linkedin)) o.push('<a class="cb" href="'+esc(p.linkedin)+'" target="_blank" rel="noopener">LinkedIn</a>');
+ if(safeUrl(p.facebook)) o.push('<a class="cb" href="'+esc(safeUrl(p.facebook))+'" target="_blank" rel="noopener">Facebook</a>');
+ if(safeUrl(p.instagram)) o.push('<a class="cb" href="'+esc(safeUrl(p.instagram))+'" target="_blank" rel="noopener">Instagram</a>');
+ if(safeUrl(p.linkedin)) o.push('<a class="cb" href="'+esc(safeUrl(p.linkedin))+'" target="_blank" rel="noopener">LinkedIn</a>');
  if(!o.length && ok(p.website) && p.website.indexOf('SITE')<0)
    o.push('<a class="cb" href="https://'+esc(p.website.replace(/^https?:\/\//,''))+'" target="_blank" rel="noopener">Website form</a>');
  var det='';
