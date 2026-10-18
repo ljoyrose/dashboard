@@ -17,7 +17,7 @@ test.describe('Money: forecast chart', () => {
     const svg = page.locator('svg[data-chart="forecast"]');
     await expect(svg).toBeVisible();
     await expect(svg).toHaveAttribute('role', 'img');
-    await expect(svg).toHaveAttribute('aria-label', /Forecast for TESTCO: £12,000 on 10 Mar, lowest £6,000 on 10 May, .*Stays above zero/);
+    await expect(svg).toHaveAttribute('aria-label', /Forecast for TESTCO: £12,000 on 10 Mar, lowest £6,000 on 10 May \(the last day shown\)\. Stays above zero/);
     await expect(svg.locator('.zero')).toHaveCount(1);
     await expect(svg.locator('circle.dry')).toHaveCount(0);
   });
