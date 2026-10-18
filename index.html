@@ -658,6 +658,9 @@
   }
   function idsFromLedgerCsv(text) {
     var rows = parseCsv(text);
+    // The ledger may start with one note line such as "COUNT: 232 rows. …" (or "CURRENT: …") above the header.
+    // Only that one note line is skipped; anything else without a file_id header still fails safe (nothing binned).
+    if (rows.length && rows[0].length === 1 && /^\s*(COUNT|CURRENT)\s*:/i.test(rows[0][0])) rows = rows.slice(1);
     if (!rows.length) return null;
     var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
     var col = head.indexOf('file_id');
