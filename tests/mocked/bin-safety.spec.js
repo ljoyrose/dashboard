@@ -136,6 +136,26 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     expect(w.byId('zz-ready').trashed).toBeFalsy();
   });
 
+  test('a ledger that starts with a COUNT note line above the header is still read @regression', async ({ page, guard }) => {
+    const w = guard.world;
+    w.file('zz-ready', 'ZZ_DELETE_ready.txt', 'invented', A);
+    w.byId(IDS.ledger).content = '"COUNT: 1 rows. 2026-10-18-1228 sample note, with a comma"\ndate,old_name,file_id,merged_into,agent\n2026-10-18-1200,ready.txt,zz-ready,,sample\n';
+    await page.goto('./#/bin');
+    await signIn(page);
+    await expect(page.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_ready.txt');
+    await expect(page.locator('#view')).not.toContainText('The delete ledger could not be read');
+  });
+
+  test('a ledger whose first lines are not a note plus a file_id header still bins nothing', async ({ page, guard }) => {
+    const w = guard.world;
+    w.file('zz-ready', 'ZZ_DELETE_ready.txt', 'invented', A);
+    w.byId(IDS.ledger).content = 'some other note\nsecond note\nfile_id\nzz-ready\n';
+    await page.goto('./#/bin');
+    await signIn(page);
+    await expect(page.locator('#view')).toContainText('The delete ledger could not be read. Nothing will be binned.');
+    await expect(page.locator('[data-action="sweep"]')).toBeDisabled();
+  });
+
   test('Select all on a list of 52 with 50 shown moves only those 50 @regression', async ({ page, guard }) => {
     const w = guard.world;
     const ids = [];

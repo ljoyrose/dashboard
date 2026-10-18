@@ -37,9 +37,19 @@ test.describe('Phone: CD Hub', () => {
     await noSidewaysScroll(page, 'first section');
     for (const id of ['dogs', 'litters', 'work', 'map']) {
       await page.locator(`#nav button[data-go="${id}"]`).click();
-      await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'true');
+      await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
       await noSidewaysScroll(page, id);
     }
+  });
+});
+
+test.describe('Phone: CD Hub menu', () => {
+  test('every CD Hub section can be seen in the menu without scrolling sideways', async ({ page }) => {
+    await page.goto('cdhub/');
+    await page.locator('#signinbtn').click();
+    await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
+    const off = await page.evaluate(() => Array.from(document.querySelectorAll('#nav button')).filter((b) => { const r = b.getBoundingClientRect(); return r.right > window.innerWidth + 1 || r.left < -1; }).map((b) => b.textContent));
+    expect(off, 'menu buttons off the side of the screen').toEqual([]);
   });
 });
 
