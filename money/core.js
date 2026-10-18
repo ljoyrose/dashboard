@@ -139,6 +139,64 @@
       return String(a.r.id).localeCompare(String(b.r.id), 'en-GB', { numeric: true });
     });
   }
+  // ---- Deadlines worked out from UK rules (F6). NOT tax advice: every row says "check with accountant". ----
+  // Self Assessment for personal entities needs no extra data. Company and VAT dates need two optional
+  // MON-SUBJECTS columns: year_end (MM-DD, or a full date) and vat_quarter_end (MM-DD of any one quarter end).
+  function lastDay(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); } // m is 1-12
+  function addMonths(iso, n) {
+    var p = iso.split('-'), y = +p[0], m = +p[1], d = +p[2], end = d === lastDay(y, m);
+    m += n; y += Math.floor((m - 1) / 12); m = ((m - 1) % 12 + 12) % 12 + 1;
+    var day = end ? lastDay(y, m) : Math.min(d, lastDay(y, m));
+    return y + '-' + pad(m) + '-' + pad(day);
+  }
+  function mmdd(v) { var m = /^(?:\d{4}-)?(\d{2})-(\d{2})$/.exec(String(v || '').trim()); return m && +m[1] >= 1 && +m[1] <= 12 && +m[2] >= 1 && +m[2] <= 31 ? m[1] + '-' + m[2] : null; }
+  function ruleDeadlines(data, today) {
+    today = today || todayISO();
+    var out = [], horizon = addDays(today, 400), y0 = +today.slice(0, 4);
+    var dates = data.dates || [];
+    function have(ent, due) { // MON-DATES already holds a row for this entity within 5 days: do not add a second
+      return dates.some(function (r) { return (r.entity || '').split(';').indexOf(ent) >= 0 && isISO(r.due_on) && Math.abs(daysBetween(r.due_on, due)) <= 5; });
+    }
+    function add(ent, due, what, rule) {
+      if (!isISO(due) || due < today || due > horizon || have(ent, due)) return;
+      out.push({ ent: ent, due: due, days: daysBetween(today, due), what: what, rule: rule });
+    }
+    (data.subjects || []).filter(function (r) { return r.kind === 'entity' && !/retired|template/i.test(r.status || ''); }).forEach(function (r) {
+      var ent = r.entity, company = isCompany(r.name);
+      for (var y = y0 - 1; y <= y0 + 1; y++) {
+        if (!company) {
+          add(ent, (y + 1) + '-01-31', 'Self Assessment: online return and balancing payment for the ' + (y - 1) + '-' + String(y).slice(2) + ' tax year, plus 1st payment on account', '31 January after the tax year ends (5 April)');
+          add(ent, y + '-07-31', 'Self Assessment: 2nd payment on account', '31 July');
+        } else {
+          var ye = mmdd(r.year_end);
+          if (ye) {
+            var yed = y + '-' + ye;
+            add(ent, addMonths(yed, 9), 'Company accounts to Companies House (year to ' + yed + ')', '9 months after the year end');
+            add(ent, addDays(addMonths(yed, 9), 1), 'Corporation Tax payment (year to ' + yed + ')', '9 months and 1 day after the year end');
+            add(ent, addMonths(yed, 12), 'Corporation Tax return CT600 (year to ' + yed + ')', '12 months after the year end');
+          }
+        }
+        var vq = mmdd(r.vat_quarter_end);
+        if (vq) {
+          for (var q = 0; q < 4; q++) {
+            var qe = addMonths(y + '-' + vq, 3 * q);
+            add(ent, addDays(addMonths(qe, 1), 7), 'VAT return and payment (quarter to ' + qe + ')', '1 month and 7 days after the quarter ends');
+          }
+        }
+      }
+    });
+    var seen = {};
+    return out.filter(function (x) { var k = x.ent + x.due + x.what; if (seen[k]) return false; seen[k] = 1; return true; })
+      .sort(function (a, b) { return a.due.localeCompare(b.due) || a.ent.localeCompare(b.ent); });
+  }
+  // Projected balance points for the chart, oldest first. [] when there is no forecast file.
+  function forecastPoints(files) {
+    var fc = files && files.forecast && files.forecast.table;
+    if (!fc) return [];
+    return fc.rows.map(function (r) { return { date: r.date, v: n(r.projected_balance) }; })
+      .filter(function (p) { return isISO(p.date) && p.v !== null; })
+      .sort(function (a, b) { return a.date.localeCompare(b.date); });
+  }
   function isCompany(name) { return /\b(limited|ltd|cic|llp|plc)\b/i.test(name || ''); }
   function entities(data) {
     var list = (data.subjects || []).filter(function (r) { return r.kind === 'entity' && !/retired|template/i.test(r.status || ''); }).map(function (r) {
@@ -473,6 +531,7 @@
     isOpen: isOpen, isLisa: isLisa, isTask: isTask, ready: ready, yourTurn: yourTurn,
     entities: entities, entityMoney: entityMoney, monthRows: monthRows, n: n, sum: sum,
     datesView: datesView, overdueDates: overdueDates, dueWithin: dueWithin, intakeOverdue: intakeOverdue, needsNow: needsNow,
+    ruleDeadlines: ruleDeadlines, addMonths: addMonths, forecastPoints: forecastPoints,
     loadAll: loadAll, clearCache: clearCache, fileChecks: fileChecks, gbp: gbp, fmtDate: fmtDate
   };
 })(window);

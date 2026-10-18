@@ -119,6 +119,13 @@
   .line { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; border-top: 1px solid var(--line); padding-top: 6px; }
   .line span:first-child { white-space: nowrap; }
   .line b { font-weight: 600; text-align: right; }
+  .chart svg { display: block; width: 100%; height: auto; max-height: 260px; }
+  .chart .ln { fill: none; stroke: var(--fin); stroke-width: 2.5; }
+  .chart .zero { stroke: var(--risk-text); stroke-width: 1.5; stroke-dasharray: 5 4; }
+  .chart .grid { stroke: var(--line); stroke-width: 1; }
+  .chart text { fill: var(--muted); font-size: 13px; font-family: inherit; }
+  .chart .dry { fill: var(--risk-text); }
+  .chart .now { fill: var(--fin); }
   .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
   .stat { background: var(--t, var(--s0-t)); border-radius: 12px; padding: 10px 12px; border-left: 4px solid var(--c, var(--s0)); }
   .stat .num { font-size: 24px; font-weight: 700; line-height: 1.2; }
@@ -370,6 +377,7 @@
         return '<tr><td>' + esc(a.account) + (a.status === 'nil' ? ' ' + chip('closed / nil') : '') + '</td><td class="r">' + (a.balance !== '' ? gbp(+a.balance, 2) : '?') + '</td><td>' + d(a.as_of) + '</td></tr>';
       }).join('') + '</table></div>' + src('BALANCES.csv · ' + code, bal) + '</section>';
     }
+    h += forecastChart(m, M.forecastPoints(R.files[code]));
     var cf = efile(code, 'cashflow');
     if (cf && cf.table) {
       var end = M.addDays(R.today, 30);
@@ -403,6 +411,8 @@
     h += xeroCards(code, m);
     var dts = M.datesView(R.data, R.today).filter(function (x) { return !x.done && (x.r.entity || '').split(';').indexOf(code) >= 0; });
     if (dts.length) h += '<section class="card c-ops"><h3>Dates for ' + esc(code) + '</h3>' + listWithMore(dts, 5, dateLi, 'ent-dates-' + code) + src('MON-DATES.csv', meta('dates')) + '</section>';
+    var rules = M.ruleDeadlines(R.data, R.today).filter(function (x) { return x.ent === code; });
+    if (rules.length) h += ruleCard(rules, code);
     var turn = M.yourTurn(R.data).filter(function (x) { return (x.r.entity || '').split(';').indexOf(code) >= 0; });
     if (turn.length) h += '<section class="card c-ops"><h3>Your to-dos for ' + esc(code) + '</h3>' + listWithMore(turn, 5, turnLi, 'ent-turn-' + code) + src('MON-REGISTER.csv', meta('register')) + '</section>';
     return h;
@@ -435,6 +445,40 @@
     return h + '</section>';
   }
 
+  // Forecast line chart (F5): projected balance from FORECAST.csv, zero line in Risk, "runs dry" marked.
+  // Plain SVG, no library. The numbers are also in the label, and the table stays in the file.
+  function forecastChart(m, pts) {
+    if (pts.length < 2) return '';
+    var W = 640, H = 220, L = 64, Rm = 16, T = 16, B = 34;
+    var t0 = Date.parse(pts[0].date), t1 = Date.parse(pts[pts.length - 1].date);
+    var vs = pts.map(function (p) { return p.v; }), lo = Math.min(0, Math.min.apply(null, vs)), hi = Math.max(0, Math.max.apply(null, vs));
+    if (hi === lo) hi = lo + 1;
+    var x = function (iso) { return L + (W - L - Rm) * ((Date.parse(iso) - t0) / Math.max(1, t1 - t0)); };
+    var y = function (v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); };
+    var path = pts.map(function (p, i) { return (i ? 'L' : 'M') + x(p.date).toFixed(1) + ' ' + y(p.v).toFixed(1); }).join(' ');
+    var dry = m.dryState === 'dry' && m.dry ? pts.filter(function (p) { return p.date === m.dry; })[0] : null;
+    var minP = pts.reduce(function (a, p) { return p.v < a.v ? p : a; }, pts[0]);
+    var label = 'Forecast for ' + m.code + ': ' + gbp(pts[0].v) + ' on ' + M.fmtDate(pts[0].date, R.today) + ', lowest ' + gbp(minP.v) + ' on ' + M.fmtDate(minP.date, R.today) +
+      (minP === pts[pts.length - 1] ? ' (the last day shown)' : ', ' + gbp(pts[pts.length - 1].v) + ' on ' + M.fmtDate(pts[pts.length - 1].date, R.today)) + (dry ? '. Goes below zero on ' + M.fmtDate(dry.date, R.today) : '. Stays above zero') + '.';
+    var s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(label) + '" data-chart="forecast">';
+    [hi, lo].forEach(function (v) { s += '<line class="grid" x1="' + L + '" x2="' + (W - Rm) + '" y1="' + y(v).toFixed(1) + '" y2="' + y(v).toFixed(1) + '"/><text x="' + (L - 6) + '" y="' + (y(v) + 4).toFixed(1) + '" text-anchor="end">' + esc(gbp(v)) + '</text>'; });
+    s += '<line class="zero" x1="' + L + '" x2="' + (W - Rm) + '" y1="' + y(0).toFixed(1) + '" y2="' + y(0).toFixed(1) + '"/><text x="' + (L - 6) + '" y="' + (y(0) + 4).toFixed(1) + '" text-anchor="end">£0</text>';
+    s += '<text x="' + L + '" y="' + (H - 10) + '">' + esc(M.fmtDate(pts[0].date, R.today)) + '</text><text x="' + (W - Rm) + '" y="' + (H - 10) + '" text-anchor="end">' + esc(M.fmtDate(pts[pts.length - 1].date, R.today)) + '</text>';
+    s += '<path class="ln" d="' + path + '"/><circle class="now" cx="' + x(pts[0].date).toFixed(1) + '" cy="' + y(pts[0].v).toFixed(1) + '" r="4"/>';
+    if (dry) s += '<circle class="dry" data-dry="' + esc(dry.date) + '" cx="' + x(dry.date).toFixed(1) + '" cy="' + y(dry.v).toFixed(1) + '" r="6"/><text class="dry" x="' + Math.min(W - Rm - 4, x(dry.date) + 8).toFixed(1) + '" y="' + Math.max(T + 12, y(dry.v) - 8).toFixed(1) + '" text-anchor="' + (x(dry.date) > W - 160 ? 'end' : 'start') + '">Runs dry ' + esc(M.fmtDate(dry.date, R.today)) + '</text>';
+    return '<section class="card ' + (dry ? 'c-risk' : 'c-fin') + ' chart"><h3>Forecast balance</h3>' + s + '</svg><p class="note">' + esc(label) + ' Dashed line is £0.</p>' + src('FORECAST.csv · ' + m.code, efile(m.code, 'forecast')) + '</section>';
+  }
+  // Deadlines worked out from rules (F6). Every row says "check with accountant". Not tax advice.
+  function ruleLi(x) {
+    return '<li><div class="meta">' + tag(x.days <= 14 ? 'c-risk' : x.days <= 45 ? 'c-ops' : 'c-ok', x.days === 0 ? 'Today' : 'In ' + x.days + 'd') + '<span>' + d(x.due) + '</span>' + chip('check with accountant') + '</div>' +
+      '<div class="itext">' + esc(x.what) + '</div><div class="meta">' + ents(x.ent) + '<span>Rule: ' + esc(x.rule) + '</span></div></li>';
+  }
+  function ruleCard(list, key) {
+    var h = '<section class="card c-fin" data-rules="' + esc(key) + '"><div class="cardhead"><h3>Worked out from the rules</h3>' + tag('c-fin', String(list.length)) + '</div>';
+    h += list.length ? listWithMore(list, 6, ruleLi, 'rules-' + key) : '<p class="note">Nothing worked out for this yet.</p>';
+    return h + '<p class="note">Worked out from the usual UK deadlines, not from HMRC or Companies House. Check every one with your accountant; this is not tax advice. A date already in MON-DATES (same entity, within 5 days) is not repeated here. Company and VAT dates appear once MON-SUBJECTS has a <code>year_end</code> and a <code>vat_quarter_end</code> column (MM-DD).</p></section>';
+  }
+
   function viewDates() {
     var all = M.datesView(R.data, R.today).filter(function (x) { return !x.done; });
     var groups = [
@@ -447,7 +491,7 @@
     ];
     return groups.filter(function (g) { return g[2].length; }).map(function (g) {
       return '<section class="card ' + g[1] + '"><div class="cardhead"><h3>' + esc(g[0]) + '</h3>' + tag(g[1], String(g[2].length)) + '</div>' + listWithMore(g[2], g[0] === 'Later' ? 5 : 8, dateLi, 'dates-' + g[0]) + '</section>';
-    }).join('') + '<p class="note">Repeating dates roll to their next day. Done rows are hidden.</p>' + src('MON-DATES.csv', meta('dates'));
+    }).join('') + '<p class="note">Repeating dates roll to their next day. Done rows are hidden.</p>' + src('MON-DATES.csv', meta('dates')) + ruleCard(M.ruleDeadlines(R.data, R.today), 'all');
   }
 
   var TODO_SUBS = [['yours', 'Yours'], ['others', 'Waiting on others'], ['watch', 'Watching'], ['closed', 'Closed']];
