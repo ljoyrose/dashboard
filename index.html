@@ -185,6 +185,14 @@
   .mtag.risk { --mc: var(--s2); --mt: var(--s2-tint); } .mtag.risk::before { border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 10px; height: 10px; }
   .mtag.ops { --mc: var(--ops); --mt: var(--ops-tint); } .mtag.ops::before { border-radius: 2px; }
   .mtag.ok { --mc: var(--ok); --mt: var(--ok-tint); }
+  .mtag.fin { --mc: var(--fin); --mt: var(--fin-tint); }
+  .mtag.bin { --mc: var(--s8); --mt: var(--s8-tint); } .mtag.bin::before { border-radius: 0; }
+  /* Needs you today: one short list, at most 7 rows, each in its LJR7 colour. */
+  .needs ol { list-style: none; margin: 8px 0 0; padding: 0; }
+  .needs li { display: flex; gap: 10px; align-items: baseline; padding: 8px 0 8px 10px; border-top: 1px solid var(--line, rgba(0,0,0,.08)); border-left: 4px solid var(--nc, var(--s0)); }
+  .needs li:first-child { border-top: 0; }
+  .needs li.n-risk { --nc: var(--s2); } .needs li.n-fin { --nc: var(--fin); } .needs li.n-ops { --nc: var(--ops); } .needs li.n-bin { --nc: var(--s8); }
+  .needs .nt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .ments { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
   .ment { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--fin); border-radius: 12px; padding: 8px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
   .ment.bad { background: var(--s2-tint); border-left-color: var(--s2); }
@@ -1498,8 +1506,49 @@
       '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
   }
 
+  // ---- Needs you today (at most 7 rows). Read-only: built from what this page has already read. ----
+  var NEEDS_MAX = 7;
+  function withEnt(ent, text) { text = String(text || ''); ent = String(ent || '').split(';')[0]; return ent && text.indexOf(ent + ':') !== 0 ? ent + ': ' + text : text; }
+  function needsToday() {
+    var MC = window.MoneyCore, out = [], d = S.money.data;
+    if (MC && d && d.gate === 'ok') {
+      MC.needsNow(d.data, d.money, d.today).forEach(function (x) {
+        var soon = /^In (\d+)/.exec(x.tag || '');
+        if (x.level !== 'risk' && soon && +soon[1] > 7) return; // "today" means this week at most
+        out.push({ kind: x.level === 'risk' ? 'risk' : /^(Today|In \d)/.test(x.tag || '') ? 'fin' : 'ops', tag: x.tag || '', text: withEnt(x.ent, x.text), href: 'money/' + (x.href || ''), src: x.src || '' });
+      });
+      MC.yourTurn(d.data).filter(function (x) { return x.ready === 'ready' && !/urgent/i.test(x.r.priority || ''); }).forEach(function (x) {
+        out.push({ kind: 'ops', tag: 'Your turn', text: x.r.subject, href: 'money/#/register/' + encodeURIComponent(x.r.id), src: 'MON-REGISTER ' + x.r.id });
+      });
+    }
+    var b = S.bin.data;
+    if (b && b.ready && b.ready.length) out.push({ kind: 'bin', tag: 'Bin', text: b.ready.length + (b.ready.length === 1 ? ' file is' : ' files are') + ' ready to bin (each has a ledger row)', href: '#/bin', src: 'Bin' });
+    if (b && b.ledgerOk === false) out.push({ kind: 'risk', tag: 'Bin', text: LEDGER_FAIL, href: '#/bin', src: 'RR_DELETE-LEDGER' });
+    ['readfirst', 'drive', 'cf', 'money'].forEach(function (k) {
+      if (S[k].status === 'failed') out.push({ kind: 'risk', tag: 'Read failed', text: ({ readfirst: 'Read first', drive: 'Shared drives', cf: 'Cf project', money: 'Money Hub files' })[k] + ': ' + friendlyError(S[k].error).text, href: k === 'money' ? 'money/' : '#/' + (k === 'cf' ? 'changes' : k), src: '' });
+    });
+    var rank = { risk: 0, fin: 1, ops: 2, bin: 3 };
+    out.sort(function (a, b2) { return rank[a.kind] - rank[b2.kind]; });
+    return out;
+  }
+  function needsCount() { return signedIn ? needsToday().length : 0; }
+  function needsPanel() {
+    if (!signedIn) return '';
+    var all = needsToday(), items = all.slice(0, NEEDS_MAX), reading = S.money.status === 'loading' && !S.money.data;
+    var label = { risk: 'risk', fin: 'fin', ops: 'ops', bin: 'bin' };
+    var h = '<section class="card slot4 needs" id="needsToday" aria-labelledby="needsTitle"><div class="cardhead"><h3 id="needsTitle">Needs you today</h3>' +
+      '<span class="mtag ' + (all.some(function (x) { return x.kind === 'risk'; }) ? 'risk' : all.length ? 'ops' : 'ok') + '">' + (reading ? 'Reading…' : all.length + (all.length === 1 ? ' thing' : ' things')) + '</span></div>';
+    if (!all.length) return h + '<p class="note">' + (reading ? 'Reading from Google Drive…' : 'Nothing needs you today.') + '</p></section>';
+    h += '<ol>' + items.map(function (x) {
+      return '<li class="n-' + x.kind + '"><span class="mtag ' + label[x.kind] + '">' + esc(x.tag) + '</span><span class="nt"><a href="' + esc(x.href) + '">' + esc(x.text) + '</a></span></li>';
+    }).join('') + '</ol>';
+    if (all.length > items.length) h += '<p class="note">And ' + (all.length - items.length) + ' more. <a href="money/#/now">See them all in Money Hub</a>.</p>';
+    return h + '</section>';
+  }
+
   function viewMap() {
-    var html = keyProjects();
+    // Key projects stays first (a phone test keeps it near the top); Needs you today comes straight after it.
+    var html = keyProjects() + needsPanel();
     if (!signedIn) {
       html += '<div class="card vision pending"><div class="cardhead"><h3>Not signed in</h3>' +
         '<span class="state st-idle"><span class="shape"></span>No reads</span></div>' +
@@ -1755,7 +1804,8 @@
     el.setAttribute('data-route', routeKey);
     $('hereTitle').textContent = VIEWS[r.view] + (r.view === 'changes' ? ' · ' + SUBS.filter(function (s) { return s.key === r.sub; })[0].label : '') +
       (r.view === 'drive' && r.driveId ? ' · ' + driveName(r.driveId) : '');
-    document.title = VIEWS[r.view] + ' · Lisa Dashboard';
+    var nNeeds = needsCount();
+    document.title = (nNeeds ? '(' + nNeeds + ') ' : '') + VIEWS[r.view] + ' · Lisa Dashboard';
     Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
       if (a.getAttribute('data-nav') === r.view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });

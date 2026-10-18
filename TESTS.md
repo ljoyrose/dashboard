@@ -246,6 +246,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | The teeth check showed the "RR_ item inside a ZZ_ folder" guard could be removed without any test noticing (a second, wider check hid it) | "an RR_ item deep inside a ZZ_DELETE_ folder keeps the whole folder out of the bin, even with Select all" |
 | 18 Oct 2026 | Same for the "ZZ_ item inside an RR_ folder" guard | "a ZZ_DELETE_ item anywhere below an RR_ folder is left alone, even with a ledger row" |
 | 18 Oct 2026 | Changing screen left keyboard focus on the old menu item, so screen readers did not say where you were | "home: clicking a menu item puts focus on the screen title" |
+| 18 Oct 2026 | The Map led with links and counts, so what needed Lisa today was spread over several cards | "shows at most 7 rows, overdue (red) first, each row a link, and the tab title carries the count" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
