@@ -242,6 +242,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | (found in review) The 5-minute refresh silently unticked everything you had ticked | "the 5-minute refresh keeps your ticks and waits while you have any" |
 | 18 Oct 2026 | Live Bin said "The delete ledger could not be read" because the ledger now starts with a "COUNT: n rows" note line above the header | "a ledger that starts with a COUNT note line above the header is still read" |
 | 18 Oct 2026 | A Google "too many requests" (429) answer failed the read straight away instead of trying again | "home: two 429 answers in a row are retried and the page still reads normally" |
+| 18 Oct 2026 | Every Money reread downloaded every file again (27 Drive calls each time), even when nothing had changed | "Reread with nothing changed downloads no file at all, and stays inside the Drive call budget" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
@@ -263,6 +264,10 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 All ids and addresses (the public sign-in id, the Drive folder and file ids, the Google addresses) are written once, in `config.js`. The three pages and the tests read them from there. A test fails if the sign-in id is copied anywhere else.
 
 `toolkit.js` holds the shared Google reader. When Google says "too many requests" (429 or a rate-limit 403) or has a hiccup (5xx), a read tries again by itself: up to 4 tries, about 1, 2 and 4 seconds apart, plus a little random extra. A plain refusal (no access, folder not found) is not retried, and a change to Drive (the Bin buttons) is never retried. If all 4 tries fail, each page says: "Google is busy right now (too many requests). The dashboard tried 4 times. Wait a minute, then try again." Tests: `tests/mocked/google-retries.spec.js`.
+
+## Money reads only what changed
+
+Money keeps a copy of each file **in memory only** (never in the browser's storage), with the "last changed" time Drive gave for it. On Reread, and on the 10-minute timed reread, it still asks Drive for the folder listings, but it downloads a file again only if its "last changed" time is different. Sign-out forgets the copy. A test caps the Drive calls: a first read of the sample drive may use at most 40 (today 27), and a reread with nothing changed at most 8 (today 6) with no downloads. Tests: `tests/mocked/money-cache.spec.js`.
 
 ## Where things live
 
