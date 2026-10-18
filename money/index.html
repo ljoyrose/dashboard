@@ -11,6 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="core.js"></script>
@@ -186,8 +188,8 @@
 (function () {
   'use strict';
   var M = window.MoneyCore;
-  var CLIENT_ID = '135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com';
-  var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+  var CLIENT_ID = window.DASH_CONFIG.clientId;
+  var SCOPE = window.DASH_CONFIG.scopes.read;
   var REFRESH_MS = 10 * 60 * 1000;
   var NOW_SHOW = 6, TURN_SHOW = 5, MORE = {};
   function listShown(key, total, step) {
@@ -579,7 +581,7 @@
       render();
     }, function (e) {
       loading = false;
-      err = e && e.status === 401 ? 'Sign-in expired. Sign in again.' : e && e.status === 403 ? 'Google Drive refused access (' + (e.reason || 'forbidden') + ').' : (e && e.message) || 'Unknown error';
+      err = e && DashKit.isBusy(e.status, e.reason) ? DashKit.BUSY_TEXT : e && e.status === 401 ? 'Sign-in expired. Sign in again.' : e && e.status === 403 ? 'Google Drive refused access (' + (e.reason || 'forbidden') + ').' : (e && e.message) || 'Unknown error';
       if (e && e.status === 401) expired();
       render();
     });

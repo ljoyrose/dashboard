@@ -1,17 +1,8 @@
 (function (root) {
   'use strict';
 
-  var CFG = {
-    owner: 'lisa@puppyclassroom.com',
-    driveId: '0AE4lOsGSf-cXUk9PVA',
-    folders: {
-      index: '1wB3t6ScV6mnbKpXU6UBjnMvToUt_A7rj',
-      ops: '115saDuLMClWZVfzIYTn2fN-BjPWijgBm',
-      accountant: '1yBTSQKXDue6gRkfLD3g6FVOIHfFnt7kQ',
-      factory: '1GkoMTMmH7B_zQvq5-DY_7KUYJzTAJKB1',
-      drop: '10-HE-oa3eY9cHMAn5_gWHK9GFnNcqdKe'
-    }
-  };
+  // Owner, shared drive and folder ids live in config.js (loaded first).
+  var CFG = (root.DASH_CONFIG && root.DASH_CONFIG.money) || { folders: {} };
   var INDEX = [
     { key: 'register', name: 'MON-REGISTER.csv', folder: 'index', head: 'id' },
     { key: 'subjects', name: 'MON-SUBJECTS.csv', folder: 'index', head: 'id' },
@@ -41,7 +32,7 @@
     banks: { base: 'XERO-BANK-ACCOUNTS', head: 'xero_account_id' },
     pay: { base: 'XERO-BILLS-UNPAID-BY-SUPPLIER', head: 'supplier' }
   };
-  var API = 'https://www.googleapis.com/drive/v3';
+  var API = (root.DASH_CONFIG && root.DASH_CONFIG.urls.driveApi) || 'https://www.googleapis.com/drive/v3';
   var FOLDER_MIME = 'application/vnd.google-apps.folder';
   var FILE_FIELDS = 'id,name,mimeType,modifiedTime,webViewLink,parents,size';
   var STALE_DAYS = 8;
@@ -291,7 +282,8 @@
   function Reader(getToken) { this.getToken = getToken; this.meta = {}; }
   Reader.prototype.get = function (url, asText) {
     var token = this.getToken();
-    return fetch(url, { headers: { Authorization: 'Bearer ' + token } }).then(function (res) {
+    var get = root.DashKit ? root.DashKit.googleFetch : root.fetch.bind(root);
+    return get(url, { headers: { Authorization: 'Bearer ' + token } }).then(function (res) {
       if (res.ok) return asText ? res.text() : res.json();
       return res.json().catch(function () { return {}; }).then(function (b) {
         var e = new Error((b.error && b.error.message) || ('HTTP ' + res.status));

@@ -198,7 +198,7 @@ Do not rename the job "Browser tests (pretend Google and Drive)" in `tests.yml`.
 
 **The problem it fixes:** GitHub Pages publishes every merge to `main` straight away, at the same time as the tests run, and it publishes the whole repo (`docs/`, zips, `TESTS.md`, test fixtures, gate rules), so they can all be read on the web.
 
-**What was built** (finishing the Job 6d branch): a workflow called "Publish site (after tests)". On every merge to `main` it runs the same tests as the required check first. It publishes only if they all pass, and it publishes only `index.html`, `auth.js`, `cdhub/` and `money/`. Tests check this, including deliberate breaks that prove they would catch a publish that skips the tests or includes too much. A test also fails if a page refers to a file that would not be published.
+**What was built** (finishing the Job 6d branch): a workflow called "Publish site (after tests)". On every merge to `main` it runs the same tests as the required check first. It publishes only if they all pass, and it publishes only `index.html`, `auth.js`, `config.js`, `toolkit.js`, `tokens.css`, `cdhub/` and `money/`. Tests check this, including deliberate breaks that prove they would catch a publish that skips the tests or includes too much. A test also fails if a page refers to a file that would not be published.
 
 **Lisa: one click, once.** GitHub > **dashboard** > **Settings** > **Pages** > **Build and deployment** > **Source** = **GitHub Actions**. Then press **Actions > Publish site (after tests) > Run workflow** once. Until you click, the workflow does nothing harmful: its summary says "Waiting for Lisa's one click", and the old branch publishing carries on.
 
@@ -241,6 +241,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | (found in review) Signing out while on the Bin and signing back in broke the Bin (the Dropbox slot was forgotten) | "signing out on the Bin and back in draws the Bin with no errors" |
 | 18 Oct 2026 | (found in review) The 5-minute refresh silently unticked everything you had ticked | "the 5-minute refresh keeps your ticks and waits while you have any" |
 | 18 Oct 2026 | Live Bin said "The delete ledger could not be read" because the ledger now starts with a "COUNT: n rows" note line above the header | "a ledger that starts with a COUNT note line above the header is still read" |
+| 18 Oct 2026 | A Google "too many requests" (429) answer failed the read straight away instead of trying again | "home: two 429 answers in a row are retried and the page still reads normally" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
@@ -256,6 +257,12 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 - Your real column names in CI (use the local script above).
 - Phone sizes beyond one Pixel-sized screen, and only a short list of checks on it.
 - A real USB stick or real renaming on a disk (the Drive check is tested against a pretend plugged-in drive).
+
+## Settings file and Google retries
+
+All ids and addresses (the public sign-in id, the Drive folder and file ids, the Google addresses) are written once, in `config.js`. The three pages and the tests read them from there. A test fails if the sign-in id is copied anywhere else.
+
+`toolkit.js` holds the shared Google reader. When Google says "too many requests" (429 or a rate-limit 403) or has a hiccup (5xx), a read tries again by itself: up to 4 tries, about 1, 2 and 4 seconds apart, plus a little random extra. A plain refusal (no access, folder not found) is not retried, and a change to Drive (the Bin buttons) is never retried. If all 4 tries fail, each page says: "Google is busy right now (too many requests). The dashboard tried 4 times. Wait a minute, then try again." Tests: `tests/mocked/google-retries.spec.js`.
 
 ## Where things live
 

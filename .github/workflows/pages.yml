@@ -92,7 +92,7 @@ jobs:
         if: steps.ready.outputs.ready == 'true'
         run: |
           mkdir _site
-          cp -r index.html auth.js tokens.css cdhub money _site/
+          cp -r index.html auth.js config.js toolkit.js tokens.css cdhub money _site/
           ls -R _site
           test -f _site/index.html && test -f _site/cdhub/index.html && test -f _site/money/index.html && test -f _site/money/core.js && test -f _site/auth.js && test -f _site/tokens.css
       - name: Package the site

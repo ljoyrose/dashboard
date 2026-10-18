@@ -3,6 +3,8 @@
 <title>CD Hub</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -169,8 +171,8 @@ header.top{position:static}}
 <div class="next" id="next"></div></div>
 <script>
 
-var FOLDER='10m8HauOLAdj2QStgNJ2T3b3W599VXWro';   
-var FOLDER_NAME='*01 SLA Inspections / BLD-app-tables';
+var FOLDER=window.DASH_CONFIG.cdhub.folderId;   
+var FOLDER_NAME=window.DASH_CONFIG.cdhub.folderName;
 var WANT=['BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
  'BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-microchip_registration.csv','BLD-weight.csv',
  'BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-association.csv','BLD-prospect.csv','BLD-export_route.csv','BLD-breeder_category.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv',
@@ -208,20 +210,20 @@ function setBoot(msg,rows){
   b.firstChild.nodeValue=msg;
   if(rows!=null) document.getElementById('bootrows').innerHTML=rows;
 }
-var CLIENT_ID='135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com';
-var SCOPE='https://www.googleapis.com/auth/drive.readonly';
-var DRIVE='https://www.googleapis.com/drive/v3/files';
+var CLIENT_ID=window.DASH_CONFIG.clientId;
+var SCOPE=window.DASH_CONFIG.scopes.read;
+var DRIVE=window.DASH_CONFIG.urls.files;
 var TOKEN=null, TOKEN_EXP=0;
 var SAVE_OFF='Saving is turned off on this web version for now. The round, cabin access and flags are read-only here, and nothing is written to Drive or kept in this browser. Saving comes later.';
 LOAD.state='signin'; DBERR=SAVE_OFF;
 function DriveErr(status,msg){ var e=new Error(msg); e.status=status;
-  e.code=status===401?'Sign-in expired':status===403?('Google refused access'+(msg?' ('+msg+')':'')):status===404?'Folder not found, or this account cannot see it':('Drive error '+status+(msg?' ('+msg+')':''));
+  e.code=status===429?DashKit.BUSY_TEXT:status===401?'Sign-in expired':status===403?('Google refused access'+(msg?' ('+msg+')':'')):status===404?'Folder not found, or this account cannot see it':('Drive error '+status+(msg?' ('+msg+')':''));
   return e; }
 function gget(url,asText){
   if(!TOKEN||Date.now()>TOKEN_EXP) return Promise.reject(DriveErr(401,''));
-  return fetch(url,{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
+  return DashKit.googleFetch(url,{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
     if(res.ok) return asText?res.text():res.json();
-    return res.text().then(function(b){ var m=''; try{ var j=JSON.parse(b); m=(j.error&&j.error.message)||''; }catch(x){} throw DriveErr(res.status,m); }); });
+    return res.text().then(function(b){ var m='',why=''; try{ var j=JSON.parse(b); m=(j.error&&j.error.message)||''; why=(j.error&&j.error.errors&&j.error.errors[0]&&j.error.errors[0].reason)||''; }catch(x){} throw DriveErr(DashKit.isBusy(res.status,why)?429:res.status,m); }); });
 }
 async function listFolder(){
   var files=[], pt='';
