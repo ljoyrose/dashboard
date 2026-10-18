@@ -108,7 +108,7 @@ test.describe('CD Hub: navigation', () => {
       await page.goto('cdhub/');
       await signIn(page);
       await page.locator(`#nav button[data-go="${id}"]`).click();
-      await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'true');
+      await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
       await expect(page.locator('#main')).not.toBeEmpty();
       await expect(page.locator('#main')).not.toContainText('Sign in to see the tables');
     });
@@ -129,7 +129,7 @@ test.describe('CD Hub: navigation', () => {
     const next = page.locator('#next button[data-go]').first();
     const target = await next.getAttribute('data-go');
     await next.click();
-    await expect(page.locator(`#nav button[data-go="${target}"]`)).toHaveAttribute('aria-current', 'true');
+    await expect(page.locator(`#nav button[data-go="${target}"]`)).toHaveAttribute('aria-current', 'page');
   });
 
   test('Reread reads the folder again', async ({ page, guard }) => {

@@ -17,14 +17,14 @@ const PAGES = [
 const KNOWN_AXE = {
   'main/light/out': { 'heading-order': 1 },
   'main/dark/out': { 'heading-order': 1 },
-  'main/light/in': { 'color-contrast': 7 },
-  'cdhub/light/out': { 'color-contrast': 1, 'heading-order': 1 },
-  'cdhub/dark/out': { 'color-contrast': 1, 'heading-order': 1 },
-  'cdhub/light/in': { 'color-contrast': 8, 'heading-order': 1 },
-  'cdhub/dark/in': { 'color-contrast': 5, 'heading-order': 1 },
+  'cdhub/light/out': { 'heading-order': 1 },
+  'cdhub/dark/out': { 'heading-order': 1 },
+  'cdhub/light/in': { 'color-contrast': 4, 'heading-order': 1 },
+  'cdhub/dark/in': { 'color-contrast': 4, 'heading-order': 1 },
 };
+// Every other view (Bin, Drive, Money entity pages, all CD Hub sections) is checked in every-view-access.spec.js.
 // Smallest text allowed, in pixels, per page (today's smallest). Raise when text is made bigger.
-const MIN_FONT_PX = { main: 13, cdhub: 10.5, money: 13 };
+const MIN_FONT_PX = { main: 13, cdhub: 13, money: 13 };
 
 async function open(page, p, signedIn) {
   await page.goto(p.url);

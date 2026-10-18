@@ -17,7 +17,7 @@
 <style>
   /* LJR7 palette. Slot 0 Prefix, 1 Vision, 2 Risks (Bin), 7 Ideas. Failed reads also use slot 2. */
   :root {
-    --bg: #FAF7F2; --surface: #FFFEFB; --ink: #2C2C2A; --muted: #756E65; --line: #DED5C8;
+    --bg: #FAF7F2; --surface: #FFFEFB; --ink: #2C2C2A; --muted: #6B645C; --line: #DED5C8;
     --s0: #B8B1A5; --s1: #FFFEFB; --s1-edge: #2C2C2A; --s1-stripe: #FFFEFB; --s7: #8D6B9C; --fail: #BE6A5D; --s2: #BE6A5D;
     --s0-tint: #F0ECE5; --s7-tint: #F1EAF4; --fail-tint: #F8E9E6; --s2-tint: #F8E9E6;
     --shadow: 0 4px 12px rgba(44, 44, 42, 0.06);
@@ -33,6 +33,8 @@
     }
   }
   * { box-sizing: border-box; }
+  .skip { position: absolute; left: -999px; top: 8px; z-index: 50; background: var(--surface); color: var(--ink); padding: 8px 14px; border-radius: 8px; border: 2px solid var(--ink); }
+  .skip:focus { left: 8px; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
@@ -204,6 +206,7 @@
 </style>
 </head>
 <body>
+<a class="skip" href="#content" data-skip="content">Skip to content</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
   <symbol id="i-read" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5z"/><path d="M4 19a2 2 0 0 1 2-2h13"/></symbol>
@@ -237,7 +240,7 @@
   </nav>
 </header>
 
-<main class="wrap">
+<main id="content" class="wrap">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="hereBox" class="here hidden"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Map</h2></div>
   <div id="view" data-view="map"></div>
@@ -1866,6 +1869,14 @@
     return true;
   }
 
+  // Skip link: jump to the content without changing the #/ address.
+  document.addEventListener('click', function (e) {
+    var k = e.target.closest && e.target.closest('[data-skip]');
+    if (!k) return;
+    e.preventDefault();
+    var m = document.getElementById(k.getAttribute('data-skip'));
+    if (m) { m.setAttribute('tabindex', '-1'); m.focus(); }
+  });
   document.addEventListener('click', function (e) {
     var t = e.target.closest('[data-action]');
     if (!t || t.disabled) return;
