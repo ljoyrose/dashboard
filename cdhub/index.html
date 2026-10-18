@@ -28,6 +28,7 @@ header.top{border-bottom:1px solid var(--ln);background:var(--card);position:sti
 .brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .brand h1{font-size:19px;margin:0;font-weight:600;letter-spacing:-.01em}
 .brand .sl{font-size:13px;color:var(--sub)}
+.srchbtn{margin-top:6px;font:500 13px Lexend,sans-serif;padding:5px 12px;border:1px solid var(--ln);border-radius:999px;background:var(--card);color:var(--fg);cursor:pointer}
 .live{font-size:13px;font-weight:600;border:1px solid var(--ln);border-radius:999px;padding:2px 9px;color:var(--sub);white-space:nowrap}
 .live.ok{border-color:var(--ljr-5);color:var(--ljr-5-text)}
 .live.bad{border-color:var(--ljr-2);color:var(--ljr-2-text)}
@@ -173,7 +174,7 @@ header.top{position:static}}
 <div class="brand"><h1>Cobberdog Hub</h1>
 <span class="sl">CurlyCwtch Australian Cobberdogs</span>
 <span class="live" id="livepill">connecting&hellip;</span></div>
-<nav id="nav"></nav></div></header>
+<nav id="nav"></nav><button type="button" class="srchbtn" data-search-open aria-keyshortcuts="/" title="Search (press /)">Search</button></div></header>
 <div class="wrap"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
 <div class="next" id="next"></div></div>
 <script>
@@ -1659,6 +1660,21 @@ document.addEventListener('click',function(e){
 document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('[data-signin],[data-signout],[data-reload]'); if(!t||t.disabled) return;
  if(t.dataset.signin) signIn(); else if(t.dataset.signout) signOut();
  else if(t.dataset.reload){ if(TOKEN&&Date.now()<TOKEN_EXP) load(); else auth.requestSilent(); } });
+// Search (press /): dogs (name, chip, id) and litters (id, dam, sire, born) from the tables already read.
+DashKit.search.register(function(q){
+ if(LOAD.state!=='ok') return [];
+ var hit=DashKit.search.matches(q), out=[], byId=CD._byId||{};
+ (CD.dogs||[]).filter(function(d){ return hit([d.name,d.id,d.chip,d.breed].join(' ')); }).slice(0,12).forEach(function(d){
+  out.push({group:'CD Hub dogs',slot:5,title:d.name||d.id,sub:[d.sex,d.dob,d.chip?'chip '+d.chip:''].filter(Boolean).join(' · '),
+   act:function(){ go('dogs'); var b=document.getElementById('q'); if(b){ b.value=d.name||d.id; b.dispatchEvent(new Event('input')); } focusView(); }});
+ });
+ (CD.litters||[]).filter(function(l){ var dam=byId[l.dam_subject_id], sire=byId[l.sire_subject_id];
+   return hit([l.id,l.born_on,dam&&dam.name,sire&&sire.name].join(' ')); }).slice(0,8).forEach(function(l){
+  var dam=byId[l.dam_subject_id];
+  out.push({group:'CD Hub litters',slot:5,title:'Litter '+(l.born_on||l.id)+(dam?' · '+dam.name:''),sub:l.id,act:function(){ go('litters'); focusView(); }});
+ });
+ return out;
+});
 window.addEventListener('popstate',function(){ if(LOAD.state==='ok'){ go((location.hash||'#/map').replace('#/',''),false); focusView(); } });
 render();
 </script></body></html>

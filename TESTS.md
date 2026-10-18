@@ -249,6 +249,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | The Map led with links and counts, so what needed Lisa today was spread over several cards | "shows at most 7 rows, overdue (red) first, each row a link, and the tab title carries the count" |
 | 18 Oct 2026 | Money only said "runs dry on X" in words, so a forecast dip was easy to miss | "a forecast that goes below zero marks the runs-dry date in red" |
 | 18 Oct 2026 | Phone install needs a kept copy of the site, and it must never hold Drive data or the sign-in | "after signing in and reading, the kept copy holds only the page files" |
+| 18 Oct 2026 | There was no way to find a file, to-do or dog without opening each page and scrolling | "home: / opens search; it finds Drive file names per shared drive and Money to-dos, each a link" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
@@ -284,6 +285,15 @@ Each entity page draws its `FORECAST.csv` as a line, with a dashed £0 line, the
 `manifest.webmanifest`, the icon in `icons/` and `sw.js` let you add the dashboard to your phone's home screen. It opens full screen. The service worker keeps **only the site's own page files**, so the pages open fast and still open offline (they then say a read failed, because nothing from Drive is kept). It never touches Google addresses, never keeps a request that carries a sign-in, and keeps no Drive data or token. A test signs in, reads, and then checks every kept file is a page file. The rest of the suite runs with service workers switched off, so every test starts clean.
 
 Keyboard keys on all three pages (from `toolkit.js`): `g` then `m` Map, `d` Drive, `b` Bin, `c` Changes, `f` Money Hub, `h` CD Hub; `r` read again; `/` search; `?` shows the list. Keys do nothing while you type in a box. Tests: `tests/mocked/pwa-and-keys.spec.js`.
+
+## Search
+
+Press `/` (or the Search button) on any page. One box, results grouped by where they came from, each group in its colour:
+- **Home:** Drive file names in each shared drive (one read-only name search per shared drive, at most 12 drives, never My Drive), plus the Money to-dos and dates the page has already read.
+- **Money Hub:** to-dos, dates and accountant questions already read (no extra Drive calls).
+- **CD Hub:** dogs (name, chip, id) and litters already read. Picking a dog opens Dogs filtered to it.
+
+A quote in the words is escaped before it reaches Drive. Signed out, nothing is searched. Tests: `tests/mocked/search.spec.js`.
 
 ## Where things live
 

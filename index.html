@@ -239,6 +239,7 @@
   <div class="wrap top">
     <h1>Lisa Dashboard</h1>
     <span id="readStamp" class="readstamp">Not read</span>
+    <button class="btn" type="button" data-search-open aria-keyshortcuts="/" title="Search (press /)"><svg class="icon" aria-hidden="true" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Search</span></button>
     <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh"><svg class="icon"><use href="#i-refresh"/></svg><span>Refresh</span></button>
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout"><svg class="icon"><use href="#i-out"/></svg><span>Sign out</span></button>
     <button id="signInBtn" class="btn vision" type="button" data-action="signin" disabled><svg class="icon"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
@@ -1997,6 +1998,28 @@
   });
   var restored = restoreShared();
   render();
+  // ---- Search (press /): Drive file names in each shared drive, plus Money to-dos and dates already read ----
+  function driveQuote(q) { return String(q).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
+  KIT.search.register(function (q) {
+    var list = signedIn ? (drives() || []).slice(0, 12) : [];
+    return mapLimit(list, 4, function (d) {
+      return driveList(inDrive(d.id, { q: "name contains '" + driveQuote(q) + "' and trashed = false", pageSize: '8', fields: 'files(id,name,mimeType,webViewLink)' })).then(function (r) {
+        return (r.files || []).map(function (f) { return { group: 'Drive · ' + d.name, slot: 0, title: f.name, sub: typeWord(f.mimeType), href: f.webViewLink || folderUrl(f.id) }; });
+      });
+    }).then(function (lists) { return [].concat.apply([], lists); });
+  });
+  KIT.search.register(function (q) {
+    var d = S.money.data, hit = KIT.search.matches(q), out = [];
+    if (!d || d.gate !== 'ok') return out;
+    (d.data.register || []).filter(function (r) { return hit([r.subject, r.id, r.entity, r.owner].join(' ')); }).slice(0, 10).forEach(function (r) {
+      out.push({ group: 'Money to-dos', slot: 3, title: r.subject, sub: [r.entity, r.owner, r.status].filter(Boolean).join(' · '), href: 'money/#/register/' + encodeURIComponent(r.id) });
+    });
+    (d.data.dates || []).filter(function (r) { return hit([r.filing, r.entity, r.id].join(' ')); }).slice(0, 10).forEach(function (r) {
+      out.push({ group: 'Money dates', slot: 3, title: r.filing, sub: [r.entity, r.due_on].filter(Boolean).join(' · '), href: 'money/#/dates' });
+    });
+    return out;
+  });
+
   if (restored) { startTimer(); loadAll(); }
 
   var tries = 0;
