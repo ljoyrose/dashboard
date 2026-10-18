@@ -128,7 +128,7 @@ test.describe('Teeth list stays in step with the pages @ci-guard', () => {
 
 test.describe('Publishing waits for the tests @ci-guard', () => {
   const pages = () => read('.github/workflows/pages.yml');
-  const LIVE_FILES = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'cdhub/index.html', 'money/index.html', 'money/core.js'];
+  const LIVE_FILES = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'manifest.webmanifest', 'sw.js', 'icons/icon.svg', 'cdhub/index.html', 'money/index.html', 'money/core.js'];
 
   test('the publish job needs the gate job, and the gate runs the same suite as the required check', () => {
     const wf = pages();
@@ -149,7 +149,7 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     const m = /cp -r ([^\n]+) _site\//.exec(pages());
     expect(m, 'the copy line').toBeTruthy();
     const copied = m[1].trim().split(/\s+/);
-    expect(copied.sort()).toEqual(['auth.js', 'cdhub', 'config.js', 'index.html', 'money', 'tokens.css', 'toolkit.js']);
+    expect(copied.sort()).toEqual(['auth.js', 'cdhub', 'config.js', 'icons', 'index.html', 'manifest.webmanifest', 'money', 'sw.js', 'tokens.css', 'toolkit.js']);
     LIVE_FILES.forEach((f) => expect(copied.some((c) => f === c || f.startsWith(c + '/')), f + ' must be published').toBe(true));
     // and the live-match test compares exactly these files
     LIVE_FILES.forEach((f) => expect(read('tests/live/live-smoke.spec.js')).toContain(`'${f}'`));
@@ -170,7 +170,7 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     ['index.html', 'cdhub/index.html', 'money/index.html'].forEach((f) => {
       [...read(f).matchAll(/\b(?:src|href)="([^"#:?]+)"/g)].map((m) => m[1]).filter((u) => !/^(https?|mailto|tel|data)/.test(u) && !/^['"+\s]/.test(u)).forEach((u) => {
         const target = path.posix.normalize(path.posix.join(path.posix.dirname(f), u)).replace(/^\.\/$/, '.');
-        const published = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'cdhub/', 'money/'].some((p) => target === p || target.startsWith(p) || target === '.' || target === '');
+        const published = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'manifest.webmanifest', 'sw.js', 'icons/', 'cdhub/', 'money/'].some((p) => target === p || target.startsWith(p) || target === '.' || target === '');
         if (!published) bad.push(`${f} refers to ${u}`);
       });
     });

@@ -63,7 +63,8 @@ const test = base.test.extend({
         } catch (e) { /* never let bookkeeping fail a test */ }
       }
 
-      const unexpected = consoleSeen.filter((t) => !allowedConsole.some((re) => re.test(t)));
+      // The suite blocks service workers on purpose (playwright.config.js), and Chrome says so. Not a page problem.
+      const unexpected = consoleSeen.filter((t) => !/Service Worker registration blocked by Playwright/.test(t) && !allowedConsole.some((re) => re.test(t)));
       base.expect(problems, 'Uncaught errors on the page').toEqual([]);
       base.expect(unexpected, 'Unexpected console errors or warnings').toEqual([]);
       base.expect(outside, 'The page tried to call an outside address that is not mocked').toEqual([]);

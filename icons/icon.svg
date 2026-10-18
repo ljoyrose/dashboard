@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#FAF7F2"/>
+  <g>
+    <rect x="96" y="96" width="46" height="320" rx="12" fill="#E6443D"/>
+    <rect x="142" y="96" width="46" height="320" fill="#E78615"/>
+    <rect x="188" y="96" width="46" height="320" fill="#F3D84E"/>
+    <rect x="234" y="96" width="46" height="320" fill="#51AD57"/>
+    <rect x="280" y="96" width="46" height="320" fill="#129FE7"/>
+    <rect x="326" y="96" width="46" height="320" fill="#A570D1"/>
+    <rect x="372" y="96" width="44" height="320" rx="12" fill="#141413"/>
+  </g>
+  <rect x="140" y="196" width="232" height="120" rx="24" fill="#FAF7F2"/>
+  <text x="256" y="284" font-family="Lexend, Arial, sans-serif" font-size="92" font-weight="700" text-anchor="middle" fill="#2C2C2A">LJR</text>
+</svg>
