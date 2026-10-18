@@ -194,6 +194,18 @@ What changes for you: nothing can go straight into `main`; every change comes as
 
 Do not rename the job "Browser tests (pretend Google and Drive)" in `tests.yml`. If it is renamed, merges stick on "Expected, waiting for status" and the rule must be edited to the new name.
 
+## Publishing waits for the tests
+
+**The problem it fixes:** GitHub Pages publishes every merge to `main` straight away, at the same time as the tests run, and it publishes the whole repo (`docs/`, zips, `TESTS.md`, test fixtures, gate rules), so they can all be read on the web.
+
+**What was built** (finishing the Job 6d branch): a workflow called "Publish site (after tests)". On every merge to `main` it runs the same tests as the required check first. It publishes only if they all pass, and it publishes only `index.html`, `auth.js`, `cdhub/` and `money/`. Tests check this, including deliberate breaks that prove they would catch a publish that skips the tests or includes too much. A test also fails if a page refers to a file that would not be published.
+
+**Lisa: one click, once.** GitHub > **dashboard** > **Settings** > **Pages** > **Build and deployment** > **Source** = **GitHub Actions**. Then press **Actions > Publish site (after tests) > Run workflow** once. Until you click, the workflow does nothing harmful: its summary says "Waiting for Lisa's one click", and the old branch publishing carries on.
+
+**To undo it:** Settings > Pages > Source > **Deploy from a branch** > `main` > `/ (root)` > Save.
+
+**Also needs one click:** GitHub Issues are switched off on this repo (checked 18 Oct 2026), so the alarm can't open an Issue. Settings > General > Features > tick **Issues**. The Monday protection watch reports it until then.
+
 ## Check your real column names (optional, on your computer only)
 
 The pretend Drive cannot tell us if a column was renamed in your real files. This little script can, without any sign-in:

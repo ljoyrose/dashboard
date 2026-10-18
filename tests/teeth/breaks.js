@@ -18,6 +18,10 @@ const BREAKS = [
     find: "income_vs_avg_pct", replace: "income_vs_avg", project: 'mocked', spec: 'header-contract' },
   { id: 'sideways-scroll', what: 'Money Hub becomes wider than a phone screen', file: 'money/index.html',
     find: '</head>', replace: '<style>body{min-width:700px}</style></head>', project: 'phone', spec: 'phone' },
+  { id: 'publish-ungated', what: 'The publish job stops waiting for the tests (the live site would go out untested)', file: '.github/workflows/pages.yml',
+    find: 'needs: gate', replace: 'needs: []', project: 'mocked', spec: 'ci-guards' },
+  { id: 'publish-too-much', what: 'The publish copies the tests folder onto the live site', file: '.github/workflows/pages.yml',
+    find: 'cp -r index.html auth.js cdhub money _site/', replace: 'cp -r index.html auth.js cdhub money tests _site/', project: 'mocked', spec: 'ci-guards' },
 ];
 
 module.exports = { BREAKS };

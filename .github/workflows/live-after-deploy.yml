@@ -1,6 +1,6 @@
 name: Live check after deploy
 
-# Right after GitHub Pages finishes publishing main, open the three LIVE pages (signed out only) and check they are up.
+# Right after the site is published (by "Publish site (after tests)", or by the old branch publishing until Lisa switches it), open the three LIVE pages (signed out only) and check they are up.
 # A bad merge is then noticed within minutes, not at the next Monday run.
 # It never signs in, never blocks anything, and never touches the main test suite or branch protection.
 # No secrets: it uses only the run's own built-in token to open/close one issue.
@@ -8,7 +8,7 @@ name: Live check after deploy
 # NOTE: GitHub only runs "workflow_run" workflows from the file on the main branch, so this starts working once merged.
 on:
   workflow_run:
-    workflows: ['pages-build-deployment', 'pages build and deployment']
+    workflows: ['Publish site (after tests)', 'pages-build-deployment', 'pages build and deployment']
     types: [completed]
   workflow_dispatch:
 
