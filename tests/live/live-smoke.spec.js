@@ -29,7 +29,7 @@ for (const [name, url, title, selector] of PAGES) {
 // Is what is LIVE exactly what was merged? Compares the live files with the repo files, byte for byte.
 // Only the workflows on `main` turn this on (LIVE_MATCH_REPO=1); on a feature branch the live site is rightly different.
 // Waits up to 90 s for GitHub Pages to finish publishing (LIVE_MATCH_WAIT_MS to change).
-const FILES = [['index.html', ''], ['cdhub/index.html', 'cdhub/'], ['money/index.html', 'money/'], ['money/core.js', 'money/core.js'], ['auth.js', 'auth.js']];
+const FILES = [['index.html', ''], ['cdhub/index.html', 'cdhub/'], ['money/index.html', 'money/'], ['money/core.js', 'money/core.js'], ['auth.js', 'auth.js'], ['tokens.css', 'tokens.css']];
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 test.describe('Live files match the repo', () => {
   test.skip(!process.env.LIVE_MATCH_REPO, 'Only checked by the workflows on main (LIVE_MATCH_REPO=1).');

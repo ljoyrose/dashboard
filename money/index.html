@@ -14,20 +14,19 @@
 <script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="core.js"></script>
+<link rel="stylesheet" href="../tokens.css">
 <style>
+  /* Colours come from ../tokens.css (one shared LJR7 file). These short names only point at it.
+     Now 1 Vision (ink) · Money 3 · Dates/To-do 4 Ops · Accountant 5 Connection · Control 0 · problems 2 Risk. */
   :root {
-    --bg: #FAF7F2; --surface: #FFFEFB; --ink: #2C2C2A; --muted: #756E65; --line: #DED5C8;
-    --risk: #BE6A5D; --fin: #C07D59; --ops: #B3A74D; --ok: #89AF6A; --sales: #4098BE; --ideas: #8D6B9C; --s0: #B8B1A5;
-    --risk-t: #F8E9E6; --fin-t: #F7EDE6; --ops-t: #F4F1DF; --ok-t: #EDF3E7; --sales-t: #E6F1F7; --ideas-t: #F1EAF4; --s0-t: #F0ECE5;
+    --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted); --line: #DED5C8;
+    --risk: var(--ljr-2); --fin: var(--ljr-3); --ops: var(--ljr-4); --ok: var(--ljr-5); --sales: var(--ljr-6); --ideas: var(--ljr-7); --s0: var(--ljr-0);
+    --risk-text: var(--ljr-2-text);
+    --risk-t: var(--ljr-2-tint); --fin-t: var(--ljr-3-tint); --ops-t: var(--ljr-4-tint); --ok-t: var(--ljr-5-tint); --sales-t: var(--ljr-6-tint); --ideas-t: var(--ljr-7-tint); --s0-t: var(--ljr-0-tint);
     --shadow: 0 4px 12px rgba(44, 44, 42, 0.06);
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #191714; --surface: #232019; --ink: #F3EEE5; --muted: #B4AB9E; --line: #3D372F;
-      --risk: #D98B7E; --fin: #D49A7A; --ops: #CBBF68; --ok: #A3C788; --sales: #6AB3D6; --ideas: #B08FC0; --s0: #8E877B;
-      --risk-t: #3A2723; --fin-t: #3A2B22; --ops-t: #33301F; --ok-t: #26301F; --sales-t: #1F2E36; --ideas-t: #35293B; --s0-t: #2F2B25;
-      --shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
-    }
+    :root { --line: #3D372F; --shadow: 0 4px 12px rgba(0, 0, 0, 0.32); }
   }
   * { box-sizing: border-box; }
   html { -webkit-text-size-adjust: 100%; }
@@ -110,7 +109,7 @@
   .ent .code { font-size: 18px; font-weight: 700; }
   .ent .full { font-size: 13px; color: var(--muted); text-align: right; overflow-wrap: anywhere; }
   .big { font-size: 34px; font-weight: 700; line-height: 1.15; }
-  .big.neg { color: var(--risk); }
+  .big.neg { color: var(--risk-text); }
   .lbl { font-size: 14px; color: var(--muted); }
   .line { display: flex; justify-content: space-between; gap: 10px; font-size: 15px; border-top: 1px solid var(--line); padding-top: 6px; }
   .line span:first-child { white-space: nowrap; }
@@ -168,7 +167,7 @@
     <a href="#/money" data-nav="money" class="c-fin">Money</a>
     <a href="#/dates" data-nav="dates" class="c-ops">Dates</a>
     <a href="#/todo" data-nav="todo" class="c-ops">To-do</a>
-    <a href="#/accountant" data-nav="accountant" class="c-sales">Accountant</a>
+    <a href="#/accountant" data-nav="accountant" class="c-ok">Accountant</a>
     <a href="#/control" data-nav="control" class="c-mute">Control</a>
   </nav>
 </header>
@@ -338,7 +337,7 @@
     var partial = m.bankAsOf ? m.bankAsOf.slice(0, 7) : '';
     return '<div class="scroll"><table><tr><th>Month</th><th class="r">In</th><th class="r">Out</th><th class="r">Net</th><th style="width:30%"></th></tr>' + rows.map(function (r) {
       var i = M.n(r.money_in) || 0, o = -(M.n(r.money_out) || 0), nn = M.n(r.net) || 0;
-      return '<tr><td>' + esc(r.month) + (r.month === partial ? ' ' + chip('part month') : '') + '</td><td class="r">' + gbp(i) + '</td><td class="r">' + gbp(o) + '</td><td class="r"' + (nn < 0 ? ' style="color:var(--risk)"' : '') + '>' + gbp(nn) + '</td>' +
+      return '<tr><td>' + esc(r.month) + (r.month === partial ? ' ' + chip('part month') : '') + '</td><td class="r">' + gbp(i) + '</td><td class="r">' + gbp(o) + '</td><td class="r"' + (nn < 0 ? ' style="color:var(--risk-text)"' : '') + '>' + gbp(nn) + '</td>' +
         '<td><span class="bar in" style="width:' + Math.round(i / max * 100) + '%"></span><br><span class="bar out" style="width:' + Math.round(o / max * 100) + '%"></span></td></tr>';
     }).join('') + '</table></div>';
   }
@@ -405,10 +404,10 @@
   function xeroCards(code, m) {
     var h = '', pay = efile(code, 'pay'), recv = efile(code, 'recv'), pnl = efile(code, 'pnl'), inc = efile(code, 'income'), un = efile(code, 'unrec');
     if (!pay && !recv && !pnl) return '';
-    h += '<section class="card c-sales"><div class="cardhead"><h3>Xero</h3>' + chip('connector not configured here') + '</div><p class="note">From the Xero export files in Drive. Xero bills and cash only match the bank once Xero is reconciled.</p>';
+    h += '<section class="card c-fin"><div class="cardhead"><h3>Xero</h3>' + chip('connector not configured here') + '</div><p class="note">From the Xero export files in Drive. Xero bills and cash only match the bank once Xero is reconciled.</p>';
     if (pnl && pnl.table) {
       h += '<h4>Profit and loss by year</h4><div class="scroll"><table><tr><th>Year</th><th class="r">Income</th><th class="r">Expenses</th><th class="r">Net profit</th></tr>' + pnl.table.rows.map(function (r) {
-        return '<tr><td>' + esc(r.fy) + '</td><td class="r">' + gbp(M.n(r.income)) + '</td><td class="r">' + gbp(M.n(r.expenses)) + '</td><td class="r"' + (M.n(r.net_profit) < 0 ? ' style="color:var(--risk)"' : '') + '>' + gbp(M.n(r.net_profit)) + '</td></tr>';
+        return '<tr><td>' + esc(r.fy) + '</td><td class="r">' + gbp(M.n(r.income)) + '</td><td class="r">' + gbp(M.n(r.expenses)) + '</td><td class="r"' + (M.n(r.net_profit) < 0 ? ' style="color:var(--risk-text)"' : '') + '>' + gbp(M.n(r.net_profit)) + '</td></tr>';
       }).join('') + '</table></div>';
     }
     if (pay && pay.table) {
@@ -460,7 +459,7 @@
       var t = M.yourTurn(R.data);
       h += wrap('Ready now', 'c-ops', t.filter(function (x) { return x.ready === 'ready'; }), 8) + wrap('Waiting on something first', 'c-mute', t.filter(function (x) { return x.ready !== 'ready'; }), 5);
     } else if (sub === 'others') {
-      h += wrap('Waiting on others', 'c-sales', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isLisa(r) && M.isTask(r); })));
+      h += wrap('Waiting on others', 'c-ok', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isLisa(r) && M.isTask(r); })));
     } else if (sub === 'watch') {
       h += wrap('Conditions and checks being watched', 'c-ideas', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isTask(r); })));
     } else {
@@ -474,7 +473,7 @@
     var open = rows.filter(function (r) { return !r.answer; }), done = rows.filter(function (r) { return r.answer; });
     var li = function (r) { return '<li><div class="meta">' + tag(r.answer ? 'c-ok' : /not yet/i.test(r.status) ? 'c-ops' : 'c-sales', r.answer ? 'Answered' : r.status) + '<span>' + esc(r.id) + '</span>' + ents(r.entity) + '</div><div class="itext">' + esc(r.question) + '</div>' +
       '<div class="meta"><span>About: ' + esc(r.about_document) + '</span><span>Asked ' + d(r.asked_on) + '</span></div>' + (r.answer ? '<div>' + esc(r.answer) + '</div>' : '') + '</li>'; };
-    return '<section class="card c-sales"><div class="cardhead"><h3>Questions waiting on the accountant</h3>' + tag('c-sales', String(open.length)) + '</div><ul class="items">' + open.map(li).join('') + '</ul>' + src('QUESTIONS-FOR-ACCOUNTANT.csv', meta('accountant')) + '</section>' +
+    return '<section class="card c-ok"><div class="cardhead"><h3>Questions waiting on the accountant</h3>' + tag('c-ok', String(open.length)) + '</div><ul class="items">' + open.map(li).join('') + '</ul>' + src('QUESTIONS-FOR-ACCOUNTANT.csv', meta('accountant')) + '</section>' +
       (done.length ? '<section class="card c-ok"><h3>Answered</h3><ul class="items">' + done.map(li).join('') + '</ul></section>' : '') +
       '<p class="note">Chasing by email stays a manual step. Nothing is sent from this page.</p>';
   }

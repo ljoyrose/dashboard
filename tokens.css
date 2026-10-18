@@ -1,0 +1,38 @@
+/* LJR7 colours for the whole dashboard (home, Money Hub, CD Hub). ONE file: change a colour here and every page follows.
+   Palette A "Clear" (chosen by Lisa, 18 Oct 2026). Colour = meaning (LJR7 spine):
+     0 Basics / AI / read first   1 White Vision   2 Red Security, legal, risk   3 Orange Financial
+     4 Yellow Action, operations  5 Green Connection   6 Blue Sales, marketing   7 Purple Creative, ideas   8 Black Superseded, bin
+   For each slot:
+     --ljr-N        the fill: stripes, dots, borders, bars
+     --ljr-N-text   the same colour dark enough to READ as text (4.5:1 or better on white, the cream page and the tinted cards)
+     --ljr-N-tint   a pale background for cards and chips of that slot
+     --ljr-N-solid  the fill to use BEHIND text (red and purple use their darker text colour so white text passes)
+     --ljr-N-on     the text colour to put on --ljr-N-solid (ink on orange, yellow, green and blue; white on red and purple)
+   To try another palette, change only the --ljr-N lines (and their -text/-tint) below. */
+:root {
+  --ljr-ink: #2C2C2A; --ljr-paper: #FFFEFB; --ljr-cream: #FAF7F2; --ljr-muted: #6B645C;
+  --ljr-0: #C7C0B4; --ljr-0-text: #6B645C; --ljr-0-tint: #F0ECE5; --ljr-0-solid: #C7C0B4; --ljr-0-on: #2C2C2A;
+  --ljr-1: #FFFEFB; --ljr-1-text: #2C2C2A; --ljr-1-tint: #FFFEFB; --ljr-1-edge: #2C2C2A; --ljr-1-solid: #FFFEFB; --ljr-1-on: #2C2C2A;
+  --ljr-2: #E6443D; --ljr-2-text: #C32924; --ljr-2-tint: #FCE4E0; --ljr-2-solid: #C32924; --ljr-2-on: #FFFFFF; /* 2 Risk */
+  --ljr-3: #E78615; --ljr-3-text: #9E5802; --ljr-3-tint: #FCEDDB; --ljr-3-solid: #E78615; --ljr-3-on: #2C2C2A; /* 3 Money */
+  --ljr-4: #F3D84E; --ljr-4-text: #817002; --ljr-4-tint: #FDF9E3; --ljr-4-solid: #F3D84E; --ljr-4-on: #2C2C2A; /* 4 Ops */
+  --ljr-5: #51AD57; --ljr-5-text: #217A2D; --ljr-5-tint: #E7F3E4; --ljr-5-solid: #51AD57; --ljr-5-on: #2C2C2A; /* 5 Connect */
+  --ljr-6: #129FE7; --ljr-6-text: #0271A4; --ljr-6-tint: #DEF1F8; --ljr-6-solid: #129FE7; --ljr-6-on: #2C2C2A; /* 6 Sales */
+  --ljr-7: #A570D1; --ljr-7-text: #8850B6; --ljr-7-tint: #F2EAF5; --ljr-7-solid: #8850B6; --ljr-7-on: #FFFFFF; /* 7 Ideas */
+  --ljr-8: #141413; --ljr-8-text: #141413; --ljr-8-tint: #ECEAE6; --ljr-8-solid: #141413; --ljr-8-on: #FFFEFB;
+}
+/* Dark mode (follows the device). Fills stay the same; text and tints change so they still read on a dark page. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ljr-ink: #F3EEE5; --ljr-paper: #232019; --ljr-cream: #191714; --ljr-muted: #B4AB9E;
+    --ljr-0: #8E877B; --ljr-0-text: #B4AB9E; --ljr-0-tint: #2F2B25; --ljr-0-on: #F3EEE5; --ljr-0-solid: #5A554D;
+    --ljr-1: #232019; --ljr-1-text: #F3EEE5; --ljr-1-tint: #232019; --ljr-1-edge: #F3EEE5; --ljr-1-solid: #232019; --ljr-1-on: #F3EEE5;
+    --ljr-2-text: #EF7D79; --ljr-2-tint: #3C251E;
+    --ljr-3-text: #EC942E; --ljr-3-tint: #3C2D18;
+    --ljr-4-text: #F3D84E; --ljr-4-tint: #3E3820;
+    --ljr-5-text: #65B769; --ljr-5-tint: #293221;
+    --ljr-6-text: #32AEF0; --ljr-6-tint: #213134;
+    --ljr-7-text: #BB93DD; --ljr-7-tint: #342A31;
+    --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
+  }
+}
