@@ -243,6 +243,8 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | Live Bin said "The delete ledger could not be read" because the ledger now starts with a "COUNT: n rows" note line above the header | "a ledger that starts with a COUNT note line above the header is still read" |
 | 18 Oct 2026 | A Google "too many requests" (429) answer failed the read straight away instead of trying again | "home: two 429 answers in a row are retried and the page still reads normally" |
 | 18 Oct 2026 | Every Money reread downloaded every file again (27 Drive calls each time), even when nothing had changed | "Reread with nothing changed downloads no file at all, and stays inside the Drive call budget" |
+| 18 Oct 2026 | The teeth check showed the "RR_ item inside a ZZ_ folder" guard could be removed without any test noticing (a second, wider check hid it) | "an RR_ item deep inside a ZZ_DELETE_ folder keeps the whole folder out of the bin, even with Select all" |
+| 18 Oct 2026 | Same for the "ZZ_ item inside an RR_ folder" guard | "a ZZ_DELETE_ item anywhere below an RR_ folder is left alone, even with a ledger row" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

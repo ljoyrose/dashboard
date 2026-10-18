@@ -50,6 +50,60 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     }
   });
 
+  test('an RR_ item deep inside a ZZ_DELETE_ folder keeps the whole folder out of the bin, even with Select all @regression', async ({ page, guard }) => {
+    const w = guard.world;
+    w.folder('zzd-outer', 'ZZ_DELETE_outer-folder', A);
+    w.folder('zzd-mid', 'middle', { parents: ['zzd-outer'], driveId: 'drv-alpha1' });
+    w.folder('zzd-deep', 'deeper', { parents: ['zzd-mid'], driveId: 'drv-alpha1' });
+    w.file('rr-deep', 'RR_keep-forever.txt', 'invented', { parents: ['zzd-deep'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+    w.folder('zzd-outer2', 'ZZ_DELETE_second-folder', A);
+    w.file('rr-mid-name', 'notes RR_v2.txt', 'invented', { parents: ['zzd-outer2'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+    w.file('zz-ok', 'ZZ_DELETE_fine.txt', 'invented', A);
+    ledger(w, ['zzd-outer', 'zzd-outer2', 'zz-ok']);
+    page.on('dialog', (d) => d.accept());
+    await page.goto('./#/bin');
+    await signIn(page);
+    const view = page.locator('#view');
+    for (const name of ['ZZ_DELETE_outer-folder', 'ZZ_DELETE_second-folder']) {
+      const row = view.locator('li', { hasText: name });
+      await expect(row).toContainText('Folder holds an RR_ item, left alone.');
+      await expect(row.locator('input')).toBeDisabled();
+    }
+    await expect(view.locator('[data-bin-list="ready"]')).not.toContainText('ZZ_DELETE_outer-folder');
+    await page.locator('[data-action="selectall"][data-group="bin"]').click();
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (1)');
+    await page.locator('[data-action="sweep"]').click();
+    await page.locator('[data-action="sweep"]').click();
+    await expect.poll(() => w.byId('zz-ok').trashed).toBe(true);
+    expect(patched(w)).toEqual(['zz-ok']);
+    for (const id of ['zzd-outer', 'zzd-outer2', 'rr-deep', 'rr-mid-name']) expect(w.byId(id).trashed, id).toBeFalsy();
+  });
+
+  test('a ZZ_DELETE_ item anywhere below an RR_ folder is left alone, even with a ledger row @regression', async ({ page, guard }) => {
+    const w = guard.world;
+    w.folder('rr-top', 'RR_top-archive', A);
+    w.folder('rr-top-sub', 'plain-sub', { parents: ['rr-top'], driveId: 'drv-alpha1' });
+    w.file('zz-two-down', 'ZZ_DELETE_two-levels-down.txt', 'invented', { parents: ['rr-top-sub'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+    w.folder('rr-midname', 'Old RR_photos', A);
+    w.folder('zz-fold-in-rr', 'ZZ_DELETE_folder-in-archive', { parents: ['rr-midname'], driveId: 'drv-alpha1' });
+    w.file('zz-ok', 'ZZ_DELETE_fine.txt', 'invented', A);
+    ledger(w, ['zz-two-down', 'zz-fold-in-rr', 'zz-ok']);
+    page.on('dialog', (d) => d.accept());
+    await page.goto('./#/bin');
+    await signIn(page);
+    const view = page.locator('#view');
+    for (const name of ['ZZ_DELETE_two-levels-down.txt', 'ZZ_DELETE_folder-in-archive']) {
+      const row = view.locator('li', { hasText: name });
+      await expect(row).toContainText('Inside an RR_ archive folder, left alone.');
+      await expect(row.locator('input')).toBeDisabled();
+    }
+    await page.locator('li', { hasText: 'ZZ_DELETE_fine.txt' }).locator('input').check();
+    await page.locator('[data-action="sweep"]').click();
+    await page.locator('[data-action="sweep"]').click();
+    await expect.poll(() => w.byId('zz-ok').trashed).toBe(true);
+    expect(patched(w)).toEqual(['zz-ok']);
+  });
+
   test('sweeping moves only a ticked ZZ_DELETE_ item that has a ledger row and no RR_ nearby', async ({ page, guard }) => {
     const w = guard.world;
     w.folder('zz-fold-bad', 'ZZ_DELETE_folder-with-archive', A);
