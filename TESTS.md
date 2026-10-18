@@ -247,6 +247,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | Same for the "ZZ_ item inside an RR_ folder" guard | "a ZZ_DELETE_ item anywhere below an RR_ folder is left alone, even with a ledger row" |
 | 18 Oct 2026 | Changing screen left keyboard focus on the old menu item, so screen readers did not say where you were | "home: clicking a menu item puts focus on the screen title" |
 | 18 Oct 2026 | The Map led with links and counts, so what needed Lisa today was spread over several cards | "shows at most 7 rows, overdue (red) first, each row a link, and the tab title carries the count" |
+| 18 Oct 2026 | Money only said "runs dry on X" in words, so a forecast dip was easy to miss | "a forecast that goes below zero marks the runs-dry date in red" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
@@ -272,6 +273,10 @@ All ids and addresses (the public sign-in id, the Drive folder and file ids, the
 ## Money reads only what changed
 
 Money keeps a copy of each file **in memory only** (never in the browser's storage), with the "last changed" time Drive gave for it. On Reread, and on the 10-minute timed reread, it still asks Drive for the folder listings, but it downloads a file again only if its "last changed" time is different. Sign-out forgets the copy. A test caps the Drive calls: a first read of the sample drive may use at most 40 (today 27), and a reread with nothing changed at most 8 (today 6) with no downloads. Tests: `tests/mocked/money-cache.spec.js`.
+
+## Money chart and worked-out deadlines
+
+Each entity page draws its `FORECAST.csv` as a line, with a dashed £0 line, the start point and, if the forecast goes below zero, a red dot labelled "Runs dry". The same facts are in the chart's spoken label and in a note under it. The Dates page and each entity page also list **deadlines worked out from the usual UK rules**: Self Assessment (31 January and 31 July) for personal entities; Companies House accounts (9 months), Corporation Tax payment (9 months and 1 day) and CT600 (12 months) for companies with a `year_end`; VAT (1 month and 7 days after each quarter) where `vat_quarter_end` is set. Every row says **check with accountant**; it is not tax advice. A date already in MON-DATES for the same entity (within 5 days) is not repeated. Tests: `tests/mocked/money-forecast-deadlines.spec.js`.
 
 ## Where things live
 
