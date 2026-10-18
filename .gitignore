@@ -19,3 +19,6 @@ playwright-report/
 
 # The gate checker's rules file (gate names, transitions, conflicts: no personal data)
 !tools/gate/gates.unified.json
+
+# The accessibility ratchet numbers (rule names and counts only: no personal data)
+!tests/mocked/*.known.json

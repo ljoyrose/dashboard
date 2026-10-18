@@ -1,0 +1,58 @@
+{
+ "cdhub:areas:dark": {
+  "heading-order": 1
+ },
+ "cdhub:areas:light": {
+  "heading-order": 1
+ },
+ "cdhub:buyers:dark": {
+  "heading-order": 1
+ },
+ "cdhub:buyers:light": {
+  "heading-order": 1
+ },
+ "cdhub:dogs:dark": {
+  "color-contrast": 23
+ },
+ "cdhub:dogs:light": {
+  "color-contrast": 25
+ },
+ "cdhub:map:dark": {
+  "color-contrast": 4,
+  "heading-order": 1
+ },
+ "cdhub:map:light": {
+  "color-contrast": 4,
+  "heading-order": 1
+ },
+ "cdhub:round:dark": {
+  "heading-order": 1
+ },
+ "cdhub:round:light": {
+  "heading-order": 1
+ },
+ "cdhub:shape:dark": {
+  "heading-order": 1
+ },
+ "cdhub:shape:light": {
+  "heading-order": 1
+ },
+ "cdhub:today:dark": {
+  "color-contrast": 2
+ },
+ "cdhub:vet:dark": {
+  "heading-order": 1
+ },
+ "cdhub:vet:light": {
+  "heading-order": 1
+ },
+ "cdhub:work:dark": {
+  "heading-order": 1
+ },
+ "cdhub:work:light": {
+  "heading-order": 1
+ },
+ "main:bin:light": {
+  "color-contrast": 3
+ }
+}
