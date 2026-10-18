@@ -4,6 +4,7 @@ A single-page Google **shared drives** surface (read-only browsing, plus a Bin),
 <https://ljoyrose.github.io/dashboard/>. It reads Drive live each time it opens. Nothing is baked in.
 
 - **Sections** (one shared header, Map first): Map, Read first, Drive, Bin, Changes (Recent, Last 24h, Last 7 days, Totals).
+- **Excluded drive (hard rule 14):** Karen - SHARED (`0AEf6v2sKb4FrUk9PVA`, `excludedDrives` in `config.js`) is never queried, listed, searched or binned.
 - **Drive** lists shared drives only (`drives.list`, `corpora=drive`), with a picker and folder browsing (`#/drive/<driveId>/<folderId>`). My Drive is never listed.
 - **Bin** (`#/bin`): lists names starting `ZZ_`. Only a ticked name that starts `ZZ_DELETE_` and has a row in the delete ledger can be moved.
   No ledger row: held, not ticked. Other `ZZ_` names, including retired `ZZ_SUPERSEDED_`, are Rename needed and are never binned.

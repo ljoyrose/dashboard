@@ -10,6 +10,9 @@
       // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
       write: 'https://www.googleapis.com/auth/drive'
     },
+    // Hard rule 14: never list, read, search or bin these shared drives on any page. Checked before any query.
+    // 0AEf6v2sKb4FrUk9PVA = Karen - SHARED.
+    excludedDrives: ['0AEf6v2sKb4FrUk9PVA'],
     urls: {
       files: 'https://www.googleapis.com/drive/v3/files',
       drives: 'https://www.googleapis.com/drive/v3/drives',
