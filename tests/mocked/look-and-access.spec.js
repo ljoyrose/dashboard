@@ -19,8 +19,8 @@ const KNOWN_AXE = {
   'main/dark/out': { 'heading-order': 1 },
   'cdhub/light/out': { 'heading-order': 1 },
   'cdhub/dark/out': { 'heading-order': 1 },
-  'cdhub/light/in': { 'color-contrast': 4, 'heading-order': 1 },
-  'cdhub/dark/in': { 'color-contrast': 4, 'heading-order': 1 },
+  'cdhub/light/in': { 'heading-order': 1 },
+  'cdhub/dark/in': { 'heading-order': 1 },
 };
 // Every other view (Bin, Drive, Money entity pages, all CD Hub sections) is checked in every-view-access.spec.js.
 // Smallest text allowed, in pixels, per page (today's smallest). Raise when text is made bigger.

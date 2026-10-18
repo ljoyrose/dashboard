@@ -14,23 +14,21 @@
 <script src="auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="money/core.js"></script>
+<link rel="stylesheet" href="tokens.css">
 <style>
-  /* LJR7 palette. Slot 0 Prefix, 1 Vision, 2 Risks (Bin), 7 Ideas. Failed reads also use slot 2. */
+  /* Colours come from ../tokens.css (one shared LJR7 file). These short names only point at it.
+     Map 1 Vision · Read first/Drive 0 · PC-Personal/Drive check 4 Ops · Bin 8 · Changes/Cf 7 · Money 3. Failed reads and delete actions use 2 Risk. */
   :root {
-    --bg: #FAF7F2; --surface: #FFFEFB; --ink: #2C2C2A; --muted: #6B645C; --line: #DED5C8;
-    --s0: #B8B1A5; --s1: #FFFEFB; --s1-edge: #2C2C2A; --s1-stripe: #FFFEFB; --s7: #8D6B9C; --fail: #BE6A5D; --s2: #BE6A5D;
-    --s0-tint: #F0ECE5; --s7-tint: #F1EAF4; --fail-tint: #F8E9E6; --s2-tint: #F8E9E6;
+    --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted); --line: #DED5C8;
+    --s0: var(--ljr-0); --s1: var(--ljr-1); --s1-edge: var(--ljr-1-edge); --s1-stripe: #FFFEFB;
+    --s2: var(--ljr-2); --s4: var(--ljr-4); --s7: var(--ljr-7); --s8: var(--ljr-8);
+    --fail: var(--ljr-2-text); --risk-text: var(--ljr-2-text);
+    --s0-tint: var(--ljr-0-tint); --s2-tint: var(--ljr-2-tint); --s4-tint: var(--ljr-4-tint); --s7-tint: var(--ljr-7-tint); --s8-tint: var(--ljr-8-tint); --fail-tint: var(--ljr-2-tint);
     --shadow: 0 4px 12px rgba(44, 44, 42, 0.06);
-    --fin: #C07D59; --ops: #B3A74D; --ok: #89AF6A; --fin-tint: #F7EDE6; --ops-tint: #F4F1DF; --ok-tint: #EDF3E7;
+    --fin: var(--ljr-3); --ops: var(--ljr-4); --ok: var(--ljr-5); --fin-tint: var(--ljr-3-tint); --ops-tint: var(--ljr-4-tint); --ok-tint: var(--ljr-5-tint);
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #191714; --surface: #232019; --ink: #F3EEE5; --muted: #B4AB9E; --line: #3D372F;
-      --s0: #8E877B; --s1: #232019; --s1-edge: #F3EEE5; --s1-stripe: #F3EEE5; --s7: #B08FC0; --fail: #D98B7E; --s2: #D98B7E;
-      --s0-tint: #2F2B25; --s7-tint: #35293B; --fail-tint: #3A2723; --s2-tint: #3A2723;
-      --shadow: 0 4px 12px rgba(0, 0, 0, 0.32);
-      --fin: #D49A7A; --ops: #CBBF68; --ok: #A3C788; --fin-tint: #3A2B22; --ops-tint: #33301F; --ok-tint: #26301F;
-    }
+    :root { --line: #3D372F; --s1-stripe: #F3EEE5; --shadow: 0 4px 12px rgba(0, 0, 0, 0.32); }
   }
   * { box-sizing: border-box; }
   .skip { position: absolute; left: -999px; top: 8px; z-index: 50; background: var(--surface); color: var(--ink); padding: 8px 14px; border-radius: 8px; border: 2px solid var(--ink); }
@@ -83,9 +81,13 @@
   nav.main a.slot0 { border-left-color: var(--s0); }
   nav.main a.slot7 { border-left-color: var(--s7); }
   nav.main a.slot2 { border-left-color: var(--s2); }
+  nav.main a.slot4 { border-left-color: var(--s4); }
+  nav.main a.slot8 { border-left-color: var(--s8); }
   .slot0 { --slot: var(--s0); --tint: var(--s0-tint); }
   .slot7 { --slot: var(--s7); --tint: var(--s7-tint); }
   .slot2 { --slot: var(--s2); --tint: var(--s2-tint); }
+  .slot4 { --slot: var(--s4); --tint: var(--s4-tint); }
+  .slot8 { --slot: var(--s8); --tint: var(--s8-tint); }
   .card h3 { margin: 0; font-size: 18px; font-weight: 600; text-align: left; }
   .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
   .note { margin: 0; color: var(--muted); font-size: 14px; text-align: left; }
@@ -145,8 +147,8 @@
                    background: var(--surface); color: var(--ink); width: 100%; max-width: 100%; }
   .crumbs { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; color: var(--muted); text-align: left; overflow-wrap: anywhere; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .btn.danger { border-color: var(--s2); color: var(--s2); font-weight: 600; }
-  .btn.danger.solid { background: var(--s2); color: #FFFEFB; }
+  .btn.danger { border-color: var(--risk-text); color: var(--risk-text); font-weight: 600; }
+  .btn.danger.solid { background: var(--ljr-2-solid); color: var(--ljr-2-on); }
   /* Folded cards: summary always shows title + count; body opens on click and stays open across redraws. */
   details.fold > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 32px; }
   details.fold > summary::-webkit-details-marker { display: none; }
@@ -232,9 +234,9 @@
     <a href="#/map" data-nav="map" class="vision"><svg class="icon"><use href="#i-map"/></svg>Map</a>
     <a href="#/readfirst" data-nav="readfirst" class="slot0"><svg class="icon"><use href="#i-read"/></svg>Read first</a>
     <a href="#/drive" data-nav="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive</a>
-    <a href="#/personal" data-nav="personal" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>PC-Personal</a>
-    <a href="#/usb" data-nav="usb" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive check</a>
-    <a href="#/bin" data-nav="bin" class="slot2"><svg class="icon"><use href="#i-bin"/></svg>Bin</a>
+    <a href="#/personal" data-nav="personal" class="slot4"><svg class="icon"><use href="#i-drive"/></svg>PC-Personal</a>
+    <a href="#/usb" data-nav="usb" class="slot4"><svg class="icon"><use href="#i-drive"/></svg>Drive check</a>
+    <a href="#/bin" data-nav="bin" class="slot8"><svg class="icon"><use href="#i-bin"/></svg>Bin</a>
     <a href="#/changes" data-nav="changes" class="slot7"><svg class="icon"><use href="#i-changes"/></svg>Changes</a>
     <a href="money/" class="slotfin"><svg class="icon"><use href="#i-money"/></svg>Money</a>
   </nav>
@@ -1104,7 +1106,7 @@
   }
   function viewPersonal() {
     var running = P.status === 'running';
-    var html = '<section class="card slot0' + (P.status === 'done' ? '' : P.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + esc(P.email ? pcpLabel() : 'PC-Personal') + '</h3>' +
+    var html = '<section class="card slot4' + (P.status === 'done' ? '' : P.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + esc(P.email ? pcpLabel() : 'PC-Personal') + '</h3>' +
       '<span class="state ' + (P.status === 'done' ? 'st-ok' : P.status === 'failed' ? 'st-failed' : running ? 'st-loading' : 'st-idle') + '"><span class="shape"></span>' +
       (P.status === 'done' ? 'Scanned' : P.status === 'failed' ? 'Failed' : running ? 'Reading…' : 'Not scanned') + '</span></div>' +
       '<p class="note">Finds files in your own personal Google Drive that already exist, byte for byte, in a shared drive. PC-Personal is lisa@puppyclassroom.com; lisah Personal is lisahcarson@gmail.com (sign in with that account, and it only matches shared drives it can read). Nothing changes until you click Rename.</p>';
@@ -1299,7 +1301,7 @@
   }
   function viewUsb() {
     var running = U.status === 'running';
-    var html = '<section class="card slot0' + (U.status === 'done' ? '' : U.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + esc(U.root ? 'Drive: ' + U.root : 'Drive check') + '</h3>' +
+    var html = '<section class="card slot4' + (U.status === 'done' ? '' : U.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + esc(U.root ? 'Drive: ' + U.root : 'Drive check') + '</h3>' +
       '<span class="state ' + (U.status === 'done' ? 'st-ok' : U.status === 'failed' ? 'st-failed' : running ? 'st-loading' : 'st-idle') + '"><span class="shape"></span>' +
       (U.status === 'done' ? 'Checked' : U.status === 'failed' ? 'Failed' : running ? 'Checking…' : 'Not checked') + '</span></div>' +
       '<p class="note">Plug in the USB stick or drive, click the button, and pick it. Every file on it is compared with the shared drives. Files are read on this computer only; nothing is uploaded. Works in Chrome or Edge.</p>';
@@ -1392,7 +1394,7 @@
     readfirst: { to: 'readfirst', label: 'Read first', icon: 'read', slot: 'slot0' },
     drive: { to: 'drive', label: 'Drive', icon: 'drive', slot: 'slot0' },
     changes: { to: 'changes', label: 'Changes', icon: 'changes', slot: 'slot7' },
-    bin: { to: 'bin', label: 'Bin', icon: 'bin', slot: 'slot2' }
+    bin: { to: 'bin', label: 'Bin', icon: 'bin', slot: 'slot8' }
   };
   function cfName() { return S.cf.data && S.cf.data.folder ? S.cf.data.folder.name : 'Cf overskill'; }
   function cfUrl() { return S.cf.data && S.cf.data.folder && S.cf.data.folder.webViewLink || folderUrl(CF_FOLDER_ID); }
@@ -1607,7 +1609,7 @@
     // Index: every section on one line, with its count
     var readyN = d ? d.ready.length : null, dxd = S.dbx.data, binsN = d ? d.per.reduce(function (t, x) { return t + x.trash.length; }, 0) : null;
     var cnt = function (n, word) { return n == null ? 'reading…' : num(n) + ' ' + word; };
-    html += '<nav class="card slot2" aria-label="Bin index"><div class="index top">' +
+    html += '<nav class="card slot8" aria-label="Bin index"><div class="index top">' +
       '<button class="btn" type="button" data-action="foldjump" data-key="sweep"><b>Google Drive: ZZ_DELETE_ files</b><span class="n">' + cnt(readyN, 'ready to bin') + '</span></button>' +
       '<button class="btn" type="button" data-action="foldjump" data-key="dropbox"><b>Dropbox: marked files</b><span class="n">' + (dxd && dxd.marked_files != null ? num(dxd.marked_files) + ' at last scan' : 'delete, then empty trash') + '</span></button>' +
       '<button class="btn" type="button" data-action="foldjump" data-key="bins"><b>Google Drive: bins</b><span class="n">' + cnt(binsN, 'in the bin') + '</span></button>' +

@@ -6,9 +6,11 @@
 <script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
 <style>
-:root{--p0:#B8B1A5;--p2:#BE6A5D;--p3:#C07D59;--p4:#B3A74D;--p5:#89AF6A;--p6:#4098BE;--p7:#8D6B9C;--p8:#2C2C2A;
- --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:#B8B1A5;
+/* LJR7 slot colours come from ../tokens.css (one shared file). --pN is slot N. Sex colours (--male/--female) are not LJR7 slots. */
+:root{--p0:var(--ljr-0);--p2:var(--ljr-2);--p3:var(--ljr-3);--p4:var(--ljr-4);--p5:var(--ljr-5);--p6:var(--ljr-6);--p7:var(--ljr-7);--p8:var(--ljr-8);
+ --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:var(--ljr-0);
  --bg:#FFFEFB;--fg:#22211F;--ln:#E1DCD2;--sub:#6C665C;--card:#FFFFFF;--soft:#F7F5F0;}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16161A;--fg:#EFEDE8;--ln:#33322E;--sub:#A7A197;--card:#1D1D21;--soft:#212126;}}
 :root[data-theme="dark"]{--bg:#16161A;--fg:#EFEDE8;--ln:#33322E;--sub:#A7A197;--card:#1D1D21;--soft:#212126;}
@@ -21,12 +23,8 @@ header.top{border-bottom:1px solid var(--ln);background:var(--card);position:sti
 .brand h1{font-size:19px;margin:0;font-weight:600;letter-spacing:-.01em}
 .brand .sl{font-size:13px;color:var(--sub)}
 .live{font-size:13px;font-weight:600;border:1px solid var(--ln);border-radius:999px;padding:2px 9px;color:var(--sub);white-space:nowrap}
-.live.ok{border-color:rgba(137,175,106,.6);color:#4A7631}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .live.ok{color:#9CC67F}}
-:root[data-theme="dark"] .live.ok{color:#9CC67F}
-.live.bad{border-color:rgba(190,106,93,.6);color:#9E4E43}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .live.bad{color:#E0998E}}
-:root[data-theme="dark"] .live.bad{color:#E0998E}
+.live.ok{border-color:var(--ljr-5);color:var(--ljr-5-text)}
+.live.bad{border-color:var(--ljr-2);color:var(--ljr-2-text)}
 nav{display:flex;gap:4px;overflow-x:auto;margin-top:9px;padding-bottom:2px}
 nav button{flex:0 0 auto;background:transparent;border:1px solid transparent;border-radius:999px;padding:5px 12px;font:500 13px Lexend,sans-serif;color:var(--sub);cursor:pointer;white-space:nowrap}
 nav button:hover{background:var(--soft);color:var(--fg)}
@@ -55,10 +53,10 @@ td{padding:7px 10px;border-bottom:1px solid var(--ln);vertical-align:top}
 tr:last-child td{border-bottom:none}
 code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--soft);padding:1px 5px;border-radius:4px}
 .pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:13px;font-weight:600;border:1px solid var(--ln);white-space:nowrap}
-.pill.ok{background:rgba(137,175,106,.16);border-color:rgba(137,175,106,.5)}
-.pill.no{background:rgba(190,106,93,.16);border-color:rgba(190,106,93,.5)}
-.pill.w{background:rgba(179,167,77,.18);border-color:rgba(179,167,77,.5)}
-.pill.i{background:rgba(64,152,190,.16);border-color:rgba(64,152,190,.5)}
+.pill.ok{background:var(--ljr-5-tint);border-color:var(--ljr-5)}
+.pill.no{background:var(--ljr-2-tint);border-color:var(--ljr-2)}
+.pill.w{background:var(--ljr-4-tint);border-color:var(--ljr-4)}
+.pill.i{background:var(--ljr-6-tint);border-color:var(--ljr-6)}
 .mut{color:var(--sub);font-size:13px}
 .filt{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
 .filt input,.filt select{font:400 13px Lexend,sans-serif;padding:6px 10px;border:1px solid var(--ln);border-radius:8px;background:var(--card);color:var(--fg)}
@@ -93,13 +91,13 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--so
 /* status colour follows the sex it implies: BB = female pink, ST = male blue */
 .st-bi{background:var(--female)}.st-bi b{color:#7A2F4C}
 .st-st{background:var(--male);color:#FFF}.st-st b{color:#10465F}
-.st-tr{background:#C07D59}.st-gr{background:#89AF6A}
+.st-tr{background:var(--ljr-3)}.st-gr{background:var(--ljr-5)}
 .st-ce{background:#7FB8C9}.st-ce b{color:#1F4C58}
-.st-ln{background:#B3A74D}.st-ln b{color:#4A4318}
+.st-ln{background:var(--ljr-4)}.st-ln b{color:#4A4318}
 .st-pu{background:#C9B2DB}.st-pu b{color:#5B4270}
 .st-de{background:transparent;border-color:var(--p8);color:var(--sub)}.st-de b{background:var(--soft)}
 .st-cl{background:transparent;border-color:var(--ln);color:var(--sub)}.st-cl b{background:var(--soft)}
-.st-un{background:transparent;border-color:var(--p2);color:var(--p2)}.st-un b{background:transparent;border:1px solid var(--p2)}
+.st-un{background:transparent;border-color:var(--p2);color:var(--ljr-2-text)}.st-un b{background:transparent;border:1px solid var(--p2)}
 .swwrap{position:relative;display:inline-block;flex:0 0 auto;line-height:0;vertical-align:-3px}
 .sw{display:block;width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.25)}
 .sw-none{background:repeating-linear-gradient(45deg,var(--soft) 0 3px,var(--ln) 3px 6px)}
@@ -108,18 +106,18 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--so
 .wt{display:flex;align-items:baseline;gap:6px;font-size:13px;color:var(--sub);flex-wrap:wrap}
 .wt .lb,.chipline .lb{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--sub)}
 .wt b{color:var(--fg);font-size:13px}
-.wt .up{color:var(--p5);font-weight:600}.wt .dn{color:var(--p2);font-weight:600}
+.wt .up{color:var(--ljr-5-text);font-weight:600}.wt .dn{color:var(--ljr-2-text);font-weight:600}
 .wt.none{color:var(--sub);font-style:italic}
 .tmp{display:grid;grid-template-columns:auto repeat(2,minmax(0,1fr)) auto;gap:6px 8px;align-items:center;border-top:1px dashed var(--ln);padding-top:8px;margin-top:4px}
 .tmp .sl{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--sub);font-weight:600}
 .tmp input{width:100%;font:400 13px ui-monospace,Menlo,monospace;padding:5px 8px;border:1px solid var(--ln);border-radius:8px;background:var(--card);color:var(--fg);text-align:right}
-.tmp input.bad{border-color:var(--p2);background:rgba(190,106,93,.08)}
+.tmp input.bad{border-color:var(--p2);background:var(--ljr-2-tint)}
 .tmp .hd2{font-size:13px;letter-spacing:.07em;text-transform:uppercase;color:var(--sub);text-align:right}
 .tmp .msg{font-size:13px;color:var(--sub);min-width:54px}
-.spk{color:var(--p6);opacity:.85;overflow:visible}
+.spk{color:var(--ljr-6-text);opacity:.85;overflow:visible}
 .chipline{display:flex;align-items:baseline;gap:7px;font-size:13px;color:var(--sub);border-top:1px dashed var(--ln);padding-top:6px}
 .chipline .vl{font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--fg)}
-.chipline .none{color:var(--p2);font-style:italic;font-family:inherit}
+.chipline .none{color:var(--ljr-2-text);font-style:italic;font-family:inherit}
 .key{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:13px;color:var(--sub);margin:0 0 10px}
 .key i{display:inline-block;width:4px;height:15px;border-radius:2px;margin-right:6px;vertical-align:-3px}
 .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px}
@@ -131,7 +129,7 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--so
 .chk{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
 .ci{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;border:1px solid var(--ln);background:var(--card);color:var(--sub);font:600 13px Lexend,sans-serif;cursor:pointer}
 .ci i{width:8px;height:8px;border-radius:50%;background:var(--p5);flex:0 0 auto}
-.ci.bad{border-color:rgba(190,106,93,.65);color:var(--p2)}
+.ci.bad{border-color:var(--ljr-2);color:var(--ljr-2-text)}
 .ci.bad i{background:var(--p2)}
 .ci:hover{border-color:var(--fg)}
 .tl{cursor:pointer;text-align:left;font:inherit;width:100%}
@@ -1404,7 +1402,7 @@ function pageShape(){
   var h=40+Math.min(34,Math.round(N[t].rows/12));
   spineY[t]=sy+h/2;
   g+=box(colS,sy,215,h,t,N[t].rows+' rows · '+N[t].in+' tables point here',
-     'fill="none" stroke="#BE6A5D" stroke-width="2.2"');
+     'fill="none" stroke="#E6443D" stroke-width="2.2"');
   sy+=h+30;
  });
  // lookups left
@@ -1414,7 +1412,7 @@ function pageShape(){
  // events right
  var evY={};
  ev.forEach(function(t,i){ var y=86+i*44; evY[t]=y+15;
-  g+=box(colE,y,230,30,t,N[t].rows+' rows','fill="none" stroke="#89AF6A" stroke-width="1.4"'); });
+  g+=box(colE,y,230,30,t,N[t].rows+' rows','fill="none" stroke="#51AD57" stroke-width="1.4"'); });
 
  function yOf(t){ return spineY[t]!==undefined?spineY[t]:(lookY[t]!==undefined?lookY[t]:evY[t]); }
  function xOut(t){ return evY[t]!==undefined?colE:(lookY[t]!==undefined?colL+190:colS); }
@@ -1428,7 +1426,7 @@ function pageShape(){
   else if(spineY[e.from]!==undefined && lookY[e.to]!==undefined){ x1=colS; x2=colL+190; }
   else { x1=colS; x2=colS+215; }
   var thin=e.pct<25, mid=e.pct<75;
-  var col=thin?'#BE6A5D':(mid?'#C07D59':'#89AF6A');
+  var col=thin?'#E6443D':(mid?'#E78615':'#51AD57');
   var mx=(x1+x2)/2;
   g+='<path d="M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2+'" fill="none" stroke="'+col+'"'
     +' stroke-width="'+(thin?1:(mid?1.8:2.6))+'"'+(thin?' stroke-dasharray="3 3"':'')+' opacity="'+(thin?.95:.7)+'"/>'
@@ -1438,8 +1436,8 @@ function pageShape(){
   +(N.subject?N.subject.in:0)+' tables pointing at it; arrow weight shows how much of each join is actually filled." '
   +'viewBox="0 0 '+W+' '+H+'" style="max-width:100%;height:auto">'
   +'<text x="'+colL+'" y="42" font-size="11" font-weight="700" fill="currentColor" opacity=".6">LOOKED UP</text>'
-  +'<text x="'+colS+'" y="42" font-size="11" font-weight="700" fill="#BE6A5D">THE SPINE</text>'
-  +'<text x="'+colE+'" y="42" font-size="11" font-weight="700" fill="#89AF6A">WHAT HAPPENS TO A DOG</text>'
+  +'<text x="'+colS+'" y="42" font-size="11" font-weight="700" fill="#C32924">THE SPINE</text>'
+  +'<text x="'+colE+'" y="42" font-size="11" font-weight="700" fill="#217A2D">WHAT HAPPENS TO A DOG</text>'
   +'<text x="'+colL+'" y="62" font-size="10" fill="currentColor" opacity=".5">colour, markers, products</text>'
   +'<text x="'+colS+'" y="62" font-size="10" fill="currentColor" opacity=".5">what a thing IS</text>'
   +'<text x="'+colE+'" y="62" font-size="10" fill="currentColor" opacity=".5">one row per event, never a column</text>'
