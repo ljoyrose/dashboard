@@ -12,17 +12,15 @@
   "heading-order": 1
  },
  "cdhub:dogs:dark": {
-  "color-contrast": 23
+  "color-contrast": 18
  },
  "cdhub:dogs:light": {
-  "color-contrast": 25
+  "color-contrast": 21
  },
  "cdhub:map:dark": {
-  "color-contrast": 4,
   "heading-order": 1
  },
  "cdhub:map:light": {
-  "color-contrast": 4,
   "heading-order": 1
  },
  "cdhub:round:dark": {
@@ -51,8 +49,5 @@
  },
  "cdhub:work:light": {
   "heading-order": 1
- },
- "main:bin:light": {
-  "color-contrast": 3
  }
 }
