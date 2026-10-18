@@ -5,7 +5,7 @@ const BREAKS = [
   { id: 'back-link', what: 'Money Hub "← Dashboard" link goes to the wrong place', file: 'money/index.html',
     find: '<a class="back" href="../">', replace: '<a class="back" href="../nowhere/">', project: 'mocked', spec: 'main-dashboard' },
   { id: 'write-scope', what: 'Main dashboard asks Google for more than read-only access', file: 'index.html',
-    find: "var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';", replace: "var SCOPE = 'https://www.googleapis.com/auth/drive';", project: 'mocked', spec: 'main-dashboard' },
+    find: "var SCOPE = CFG.scopes.read;", replace: "var SCOPE = CFG.scopes.write;", project: 'mocked', spec: 'main-dashboard' },
   { id: 'rr-inside-folder', what: 'Bin stops noticing an RR_ item inside a ZZ_ folder', file: 'index.html',
     find: "if (isArchiveName(r.files[i].name)) return true;", replace: "", project: 'mocked', spec: 'bin-safety' },
   { id: 'rr-folder-chain', what: 'Bin stops protecting ZZ_ items that sit inside an RR_ folder', file: 'index.html',
@@ -21,7 +21,7 @@ const BREAKS = [
   { id: 'publish-ungated', what: 'The publish job stops waiting for the tests (the live site would go out untested)', file: '.github/workflows/pages.yml',
     find: 'needs: gate', replace: 'needs: []', project: 'mocked', spec: 'ci-guards' },
   { id: 'publish-too-much', what: 'The publish copies the tests folder onto the live site', file: '.github/workflows/pages.yml',
-    find: 'cp -r index.html auth.js tokens.css cdhub money _site/', replace: 'cp -r index.html auth.js tokens.css cdhub money tests _site/', project: 'mocked', spec: 'ci-guards' },
+    find: 'cp -r index.html auth.js config.js toolkit.js tokens.css cdhub money _site/', replace: 'cp -r index.html auth.js config.js toolkit.js tokens.css cdhub money tests _site/', project: 'mocked', spec: 'ci-guards' },
 ];
 
 module.exports = { BREAKS };

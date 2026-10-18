@@ -1,5 +1,5 @@
 // Builds the pretend Drive contents the three pages read.
-// Folder ids and file names are NOT copied here: they are read out of the page code itself,
+// Folder ids and file names are NOT copied here: they are read out of config.js and the page code,
 // so if a folder id changes in the dashboard, the tests follow it automatically.
 const fs = require('fs');
 const path = require('path');
@@ -21,20 +21,22 @@ const mainHtml = src('index.html');
 const cdHtml = src('cdhub/index.html');
 const ctx = { window: {} };
 vm.createContext(ctx);
+vm.runInContext(src('config.js'), ctx); // defines window.DASH_CONFIG
 vm.runInContext(src('money/core.js'), ctx); // defines window.MoneyCore.CFG etc.
+const CONF = ctx.window.DASH_CONFIG;
 const MC = ctx.window.MoneyCore;
 
 const IDS = {
-  readFirst: grab(mainHtml, /READ_FIRST_ID\s*=\s*'([^']+)'/, 'READ_FIRST_ID'),
-  cf: grab(mainHtml, /CF_FOLDER_ID\s*=\s*'([^']+)'/, 'CF_FOLDER_ID'),
-  dbx: grab(mainHtml, /DBX_FOLDER_ID\s*=\s*'([^']+)'/, 'DBX_FOLDER_ID'),
-  dbxName: grab(mainHtml, /DBX_TOTALS_NAME\s*=\s*'([^']+)'/, 'DBX_TOTALS_NAME'),
-  bld: grab(cdHtml, /var FOLDER='([^']+)'/, 'CD Hub FOLDER'),
+  readFirst: CONF.home.readFirstId,
+  cf: CONF.home.cfFolderId,
+  dbx: CONF.home.dbxFolderId,
+  dbxName: CONF.home.dbxTotalsName,
+  bld: CONF.cdhub.folderId,
   moneyDrive: MC.CFG.driveId,
   moneyOwner: MC.CFG.owner,
   moneyFolders: MC.CFG.folders,
-  clientId: grab(mainHtml, /CLIENT_ID\s*=\s*'([^']+)'/, 'CLIENT_ID'),
-  ledger: grab(mainHtml, /LEDGER_FILE_ID\s*=\s*'([^']+)'/, 'LEDGER_FILE_ID'),
+  clientId: CONF.clientId,
+  ledger: CONF.home.ledgerFileId,
 };
 const WANT_BLD = (() => {
   const m = /var WANT=\[([\s\S]*?)\];/.exec(cdHtml);

@@ -11,6 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<script src="config.js"></script>
+<script src="toolkit.js"></script>
 <script src="auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="money/core.js"></script>
@@ -254,28 +256,29 @@
 (function () {
   'use strict';
 
-  // ---- Settings (none of these are secrets) ----
-  var CLIENT_ID = '135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com';
-  var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+  // ---- Settings (none of these are secrets). Ids and addresses live in config.js. ----
+  var CFG = window.DASH_CONFIG, KIT = window.DashKit;
+  var CLIENT_ID = CFG.clientId;
+  var SCOPE = CFG.scopes.read;
   // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
-  var WRITE_SCOPE = 'https://www.googleapis.com/auth/drive';
-  var DRIVES_API = 'https://www.googleapis.com/drive/v3/drives';
+  var WRITE_SCOPE = CFG.scopes.write;
+  var DRIVES_API = CFG.urls.drives;
   var SWEEP_PREFIX = 'ZZ_';   // wide search only. Other ZZ_ names are listed under Rename needed and never binned.
   var DELETE_PREFIX = 'ZZ_DELETE_'; // the only name that can be binned, and only with a ledger row
   var ARCHIVE_PREFIX = 'RR_'; // archive: never touched, including anywhere in a name
-  var LEDGER_FILE_ID = '1oIQz2HR86iL8ZuJQdKaUeEplNj0mG9GY'; // RR_DELETE-LEDGER, file_id column
+  var LEDGER_FILE_ID = CFG.home.ledgerFileId; // RR_DELETE-LEDGER, file_id column
   var SLIP_PREFIX = 'AA_DELETE-LEDGER-ROWS_'; // pending ledger slips, same file_id column
   var LEDGER_FAIL = 'The delete ledger could not be read. Nothing will be binned.';
   // E02 money rollback (RR_MASTER v0.59). Wins over a tick, a ledger row, Select all and every other bin rule.
   // Never restore, migrate or bin these. Folder holds use the two Drive ids below, never the folder name.
   var E02_LABEL = 'Held: money rollback (E02), do not touch until FIX 6 is confirmed';
   // 0.1 - Index. Its parent is Money 00 (1X6b7CJfpvPK5gfj0i1xi8mTYCmdPcwzQ); that parent is not excluded.
-  var INDEX_FOLDER_ID = (window.MoneyCore && window.MoneyCore.CFG && window.MoneyCore.CFG.folders && window.MoneyCore.CFG.folders.index) || '1wB3t6ScV6mnbKpXU6UBjnMvToUt_A7rj';
+  var INDEX_FOLDER_ID = CFG.money.folders.index;
   // 4 - Ops, the one that holds CHECK-LOG. Another folder also named "4 - Ops" is not this id and is not excluded.
-  var OPS_FOLDER_ID = (window.MoneyCore && window.MoneyCore.CFG && window.MoneyCore.CFG.folders && window.MoneyCore.CFG.folders.ops) || '115saDuLMClWZVfzIYTn2fN-BjPWijgBm';
+  var OPS_FOLDER_ID = CFG.money.folders.ops;
   var BIN_SHOW = 50;
-  var CF_FOLDER_ID = '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A';
-  var READ_FIRST_ID = '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L';
+  var CF_FOLDER_ID = CFG.home.cfFolderId;
+  var READ_FIRST_ID = CFG.home.readFirstId;
   var REFRESH_MS = 5 * 60 * 1000;
   var refreshPending = false;
   var PAGE_SIZE = 7;
@@ -285,10 +288,10 @@
   var MAX_REQUESTS = 150;
   var PARENTS_PER_QUERY = 25;
   var FOLDER_MIME = 'application/vnd.google-apps.folder';
-  var API = 'https://www.googleapis.com/drive/v3/files';
+  var API = CFG.urls.files;
   var FILE_FIELDS = 'id,name,mimeType,modifiedTime,webViewLink,parents,driveId,lastModifyingUser(displayName,emailAddress)';
   var DAY = 86400000;
-  var MOVE_URL = 'https://docs.google.com/spreadsheets/d/1AIgIefQMATEdWLtAkdvE7SvdnX8g2sTX87VnvOX5c-I/edit';
+  var MOVE_URL = CFG.urls.moveSheet;
 
   // Page state stays in memory. The sign-in token is the one thing shared, via auth.js.
   var accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
@@ -339,9 +342,10 @@
       if (err.status === 403) {
         if (/accessNotConfigured|SERVICE_DISABLED/i.test(r)) return { text: 'Drive API turned off.' };
         if (isScopeError(err)) return { expired: true, text: 'Drive access not granted.' };
-        if (/rateLimit|quota/i.test(r)) return { text: 'Google rate limit. Retrying soon.' };
+        if (/rateLimit|quota/i.test(r)) return { text: KIT.BUSY_TEXT };
         return { text: 'Access refused by Google.' };
       }
+      if (err.status === 429) return { text: KIT.BUSY_TEXT };
       if (err.status === 404) return { text: 'Folder not found or no access.' };
       if (err.status >= 500) return { text: 'Google error ' + err.status + '.' };
       return { text: 'Drive error ' + err.status + '.' };
@@ -355,7 +359,7 @@
     if (!accessToken || Date.now() > tokenExpiresAt) return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
     var opt = { method: method, headers: { Authorization: 'Bearer ' + accessToken } };
     if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
-    return fetch(url, opt).then(function (res) {
+    return KIT.googleFetch(url, opt).then(function (res) {
       if (res.ok) return res.status === 204 ? {} : res.json().catch(function () { return {}; });
       return res.json().catch(function () { return {}; }).then(function (body) {
         var e = body && body.error ? body.error : {};
@@ -367,7 +371,7 @@
   function apiGet(url) { return apiCall('GET', url); }
   function apiText(url) {
     if (!accessToken || Date.now() > tokenExpiresAt) return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
-    return fetch(url, { method: 'GET', headers: { Authorization: 'Bearer ' + accessToken } }).then(function (res) {
+    return KIT.googleFetch(url, { method: 'GET', headers: { Authorization: 'Bearer ' + accessToken } }).then(function (res) {
       if (res.ok) return res.text();
       return res.json().catch(function () { return {}; }).then(function (body) {
         var e = body && body.error ? body.error : {};
@@ -571,8 +575,8 @@
   }
 
   // ---- Dropbox line (counts only). Read from a Drive folder after sign-in, so nothing about Dropbox is public. ----
-  var DBX_FOLDER_ID = '0AEqV6Ky2jpmDUk9PVA';                       // Drive folder holding DROPBOX-TOTALS.json (set once the folder exists)
-  var DBX_TOTALS_NAME = 'DROPBOX-TOTALS.json';  // written by the private Dropbox scan job
+  var DBX_FOLDER_ID = CFG.home.dbxFolderId;                       // Drive folder holding DROPBOX-TOTALS.json (set once the folder exists)
+  var DBX_TOTALS_NAME = CFG.home.dbxTotalsName;  // written by the private Dropbox scan job
   var DBX_JOB_URL = 'https://github.com/ljoyrose/dropbox-cleanup/actions/workflows/dropbox-delete.yml';   // workflow 3 (press Run workflow there)
   var DBX_TRASH_URL = 'https://www.dropbox.com/deleted_files';   // Dropbox cannot empty this by API on a personal account
   function loadDbx() {
@@ -975,7 +979,7 @@
     P = pcpFresh('running', 'Starting…');
     render();
     var seen = Object.create(null), shared = 0;
-    apiGet('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (a) {
+    apiGet(CFG.urls.driveApi + '/about?fields=user(emailAddress)').then(function (a) {
       P.email = a && a.user ? a.user.emailAddress : '';
       return listDrives();
     }).then(function (ds) {

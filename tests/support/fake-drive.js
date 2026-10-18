@@ -12,7 +12,7 @@ class FakeDrive {
     this.files = []; // {id,name,mimeType,parents,driveId,modifiedTime,content,trashed,...}
     this.calls = []; // every request seen, for assertions
     this.unhandled = []; // Drive calls the pretend Drive did not know how to answer (drift check, see summary.js)
-    this.failWith = null; // {status, reason, message} makes every files call fail (error-path tests)
+    this.failWith = null; // {status, reason, message, times?} makes every files call fail (error-path tests); times = only the first N
     this.failFor = null; // optional: only fail when the URL contains this text
     this._n = 0;
   }
@@ -103,7 +103,11 @@ class FakeDrive {
       const json = (status, body) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
       const auth = req.headers()['authorization'];
       if (auth !== 'Bearer FAKE-TEST-TOKEN') return json(401, { error: { code: 401, message: 'Invalid Credentials', errors: [{ reason: 'authError' }] } });
-      if (this.failWith && (p !== '/about' || this.failWith.includeAbout) && (!this.failFor || req.url().includes(this.failFor))) {
+      let failNow = this.failWith && (p !== '/about' || this.failWith.includeAbout) && (!this.failFor || req.url().includes(this.failFor));
+      if (failNow && typeof this.failWith.times === 'number') { // fail only the first N matching calls, then answer normally
+        if (this.failWith.times <= 0) failNow = false; else this.failWith.times--;
+      }
+      if (failNow) {
         const f = this.failWith;
         return json(f.status, { error: { code: f.status, message: f.message || 'Sample failure', errors: [{ reason: f.reason || 'backendError' }] } });
       }
