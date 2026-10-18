@@ -738,7 +738,7 @@ function pageToday(){
  var ft=Math.ceil(c.adults.length/20), pt=Math.ceil(c.adults.length/10);
  var h='<h2>Today</h2><p class="sub">'+esc(dmy(date))+'</p>'
  +'<div class="tiles">'
- +tileC('b'+(temps.length>=cabins?'5':'2'),temps.length+' of '+cabins,'cabins with a temperature','','')
+ +tileGo('b'+(temps.length>=cabins?'5':'2'),temps.length+' of '+cabins,'cabins with a temperature','enter on The round','round')
  +tileC('b'+(unplaced.length?'2':'5'),unplaced.length,'dogs not yet placed','','unplaced')
  +tileC('b6',c.here.length,'dogs here','tap for the list','here')
  +tileC('b4',ft+' FT',(pt+' PT')+' \u2014 staffing','1 per 20 adults, or 1 per 10','adults')+'</div>'
@@ -769,6 +769,11 @@ function pageToday(){
    :'They part the moment a bitch is retired and kept entire. Both are shown; never reconcile them into one figure.'))+'</p></div>'
  +'<div class="mut">Tap any number to see the dogs behind it. If one is wrong, tap the dog and flag it \u2014 I pick the flags up and correct the tables.</div>';
  return h;
+}
+// A tile that opens another section (e.g. the temperature tile opens The round, where temperatures are entered).
+function tileGo(c,n,k,s,to){
+ return '<button type="button" class="tile tl '+c+'" data-go="'+to+'"><div class="n">'+n+'</div>'
+  +'<div class="k">'+k+'</div>'+(s?'<div class="src">'+s+'</div>':'')+'</button>';
 }
 function tileC(c,n,k,s,list){
  return '<button class="tile tl '+c+'"'+(list?' data-list="'+list+'"':'')+'><div class="n">'+n+'</div>'
