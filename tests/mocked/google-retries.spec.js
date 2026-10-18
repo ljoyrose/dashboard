@@ -19,7 +19,7 @@ test.describe('Google retries and the plain too-many-requests message', () => {
     test.setTimeout(60_000);
     allowedConsole.push(/status of 429/);
     guard.world.failWith = { status: 429, reason: 'rateLimitExceeded', message: 'Sample busy' };
-    await page.goto('./');
+    await page.goto('./#/drive');
     await page.locator('#signInBtn').click();
     await expect(page.locator('#view')).toContainText(BUSY, { timeout: 30_000 });
     const drives = guard.world.calls.filter((c) => c.path === '/drives');
