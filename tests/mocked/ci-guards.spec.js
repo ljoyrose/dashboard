@@ -89,6 +89,14 @@ test.describe('Alarm wiring @ci-guard', () => {
     expect(evaluate({ protected: true }, wf).problems).toEqual([]); // token can't see details: only "is on" is checked
   });
 
+  test('protection watch also reports GitHub Issues switched off (the alarm cannot open an Issue then)', () => {
+    const wf = read('.github/workflows/tests.yml');
+    const on = { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB], enforcement_level: 'everyone' } };
+    expect(evaluate({ protected: true, protection: on }, wf, { has_issues: false }).problems.join()).toMatch(/Issues are switched OFF/);
+    expect(evaluate({ protected: true, protection: on }, wf, { has_issues: true }).problems).toEqual([]);
+    expect(evaluate({ protected: true, protection: on }, wf, null).problems).toEqual([]); // could not read: no false alarm
+  });
+
   test('the alarm message starts with a plain "What to do" line', () => {
     const out = execFileSync('node', ['tests/support/report-issue.js', '--state', 'red', '--label', 'x', '--results', 'none', '--note', 'drill', '--dry-run'], {
       cwd: REPO, encoding: 'utf8', env: { ...process.env, GITHUB_REPOSITORY: 'o/r', GITHUB_RUN_ID: '1' },
@@ -115,5 +123,57 @@ test.describe('Teeth list stays in step with the pages @ci-guard', () => {
     });
     expect(BREAKS.length).toBeGreaterThanOrEqual(8);
     expect(stale).toEqual([]);
+  });
+});
+
+test.describe('Publishing waits for the tests @ci-guard', () => {
+  const pages = () => read('.github/workflows/pages.yml');
+  const LIVE_FILES = ['index.html', 'auth.js', 'cdhub/index.html', 'money/index.html', 'money/core.js'];
+
+  test('the publish job needs the gate job, and the gate runs the same suite as the required check', () => {
+    const wf = pages();
+    expect(wf).toMatch(/publish:[\s\S]*?needs:\s*gate/);
+    expect(wf).toMatch(/npx playwright test --project=mocked --project=phone/);
+    expect(read('.github/workflows/tests.yml')).toMatch(/npx playwright test --project=mocked --project=phone/);
+  });
+
+  test('nothing can bypass the gate: no always(), no continue-on-error, only push to main or a manual run', () => {
+    const wf = pages();
+    expect(wf).not.toMatch(/if:\s*\$?\{?\{?\s*always\(\)[^\n]*\n[^\n]*uses:\s*actions\/deploy-pages/);
+    expect(wf).not.toMatch(/continue-on-error/);
+    expect(wf).not.toMatch(/workflow_run/);
+    expect(wf).toMatch(/on:\s*\n\s*push:\s*\n\s*branches:\s*\[main\]\s*\n\s*workflow_dispatch:/);
+  });
+
+  test('only the three pages and the shared sign-in are published (never tests, docs or .github) and all four live files are in it', () => {
+    const m = /cp -r ([^\n]+) _site\//.exec(pages());
+    expect(m, 'the copy line').toBeTruthy();
+    const copied = m[1].trim().split(/\s+/);
+    expect(copied.sort()).toEqual(['auth.js', 'cdhub', 'index.html', 'money']);
+    LIVE_FILES.forEach((f) => expect(copied.some((c) => f === c || f.startsWith(c + '/')), f + ' must be published').toBe(true));
+    // and the live-match test compares exactly these files
+    LIVE_FILES.forEach((f) => expect(read('tests/live/live-smoke.spec.js')).toContain(`'${f}'`));
+  });
+
+  test('every action in pages.yml is pinned to a full commit id', () => {
+    const loose = [...pages().matchAll(/uses:\s*([^\s#]+)/g)].map((x) => x[1]).filter((u) => !/@[0-9a-f]{40}$/.test(u));
+    expect(loose).toEqual([]);
+  });
+
+  test('the live check after deploy listens for the new publish workflow by its exact name', () => {
+    const name = /^name:\s*(.+)$/m.exec(pages())[1].trim();
+    expect(read('.github/workflows/live-after-deploy.yml')).toContain(`'${name}'`);
+  });
+
+  test('no page references a file that is not published', () => {
+    const bad = [];
+    ['index.html', 'cdhub/index.html', 'money/index.html'].forEach((f) => {
+      [...read(f).matchAll(/\b(?:src|href)="([^"#:?]+)"/g)].map((m) => m[1]).filter((u) => !/^(https?|mailto|tel|data)/.test(u) && !/^['"+\s]/.test(u)).forEach((u) => {
+        const target = path.posix.normalize(path.posix.join(path.posix.dirname(f), u)).replace(/^\.\/$/, '.');
+        const published = ['index.html', 'auth.js', 'cdhub/', 'money/'].some((p) => target === p || target.startsWith(p) || target === '.' || target === '');
+        if (!published) bad.push(`${f} refers to ${u}`);
+      });
+    });
+    expect(bad).toEqual([]);
   });
 });
