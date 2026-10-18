@@ -445,7 +445,6 @@
     return name.indexOf(SWEEP_PREFIX) === 0 && !isDeleteName(name);
   }
   function nameHasRr(name) { return String(name == null ? '' : name).indexOf(ARCHIVE_PREFIX) !== -1; }
-  function isArchiveName(name) { return String(name == null ? '' : name).indexOf(ARCHIVE_PREFIX) === 0; }
   function e02NameHit(name) {
     name = String(name == null ? '' : name);
     return /^ZZ_SUPERSEDED_.*_DO-NOT-USE__MON-/.test(name) || /^ZZ_SUPERSEDED_.*CHECK-LOG/.test(name);
@@ -499,8 +498,7 @@
       return listAll(inDrive(driveId, { q: q, pageSize: '1000', fields: 'nextPageToken,files(id,name,mimeType)' }), 3).then(function (r) {
         if (r.more) return null;
         for (var i = 0; i < r.files.length; i++) {
-          if (isArchiveName(r.files[i].name)) return true;
-          if (nameHasRr(r.files[i].name)) return true;
+          if (nameHasRr(r.files[i].name)) return true; // RR_ at the start or anywhere in the name
           if (r.files[i].mimeType === FOLDER_MIME) level.push(r.files[i].id);
         }
         return next();
@@ -804,8 +802,7 @@
               }
               if (holdMoney(f, chain)) return;
               if (chain === null) { f._skip = 'Folder path too deep to check, left alone.'; return; }
-              if (chain.some(isArchiveName)) { f._skip = 'Inside an RR_ archive folder, left alone.'; return; }
-              if (chain.some(nameHasRr)) { f._skip = 'Inside an RR_ archive folder, left alone.'; return; }
+              if (chain.some(nameHasRr)) { f._skip = 'Inside an RR_ archive folder, left alone.'; return; } // any folder above, any position in its name
               if (f.mimeType === FOLDER_MIME) {
                 return archiveInside(f.id, d.id).then(function (has) {
                   if (has === true) f._skip = 'Folder holds an RR_ item, left alone.';
