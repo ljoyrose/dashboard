@@ -63,7 +63,7 @@
     ['g f', 'Money Hub', function () { go('money/'); }],
     ['g h', 'CD Hub', function () { go('cdhub/'); }],
     ['r', 'Read again from Drive', function () { var b = root.document.querySelector('[data-action="refresh"]:not(.hidden):not([disabled]), [data-reload]'); if (b) b.click(); }],
-    ['/', 'Search', function () { var b = root.document.querySelector('[data-search-open]'); if (b) b.click(); }],
+    ['/', 'Search', function () { openSearch(); }],
     ['?', 'Show these keys', function () { help(); }]
   ];
   function go(rel) { var u = new URL(rel, SITE); if (u.href !== root.location.href) root.location.href = u.href; }
@@ -83,7 +83,7 @@
   var pending = null, pendingAt = 0;
   if (root.document) root.document.addEventListener('keydown', function (e) {
     if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey || typing(e.target)) return;
-    var dlg = root.document.getElementById('dashKeys'); if (dlg && dlg.open) return;
+    var dlg = root.document.getElementById('dashKeys'), sdl = root.document.getElementById('dashSearch'); if ((dlg && dlg.open) || (sdl && sdl.open)) return;
     var k = e.key, now = Date.now();
     var combo = pending && now - pendingAt < 1500 ? pending + ' ' + k.toLowerCase() : k;
     pending = null;
@@ -94,5 +94,57 @@
     hit[2]();
   });
 
-  root.DashKit = { googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help };
+  // ---- One search box (press /). Each page registers what it can search; results are grouped. ----
+  // A provider is function (query) -> Promise of [{ group, slot (0-8), title, sub, href | act }].
+  // Read-only: providers only read (Drive file names on home, tables already in memory elsewhere).
+  var PROVIDERS = [], searchGen = 0, searchTimer = null;
+  function registerSearch(fn) { PROVIDERS.push(fn); }
+  function escHtml(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function searchDialog() {
+    var doc = root.document, d = doc.getElementById('dashSearch');
+    if (d) return d;
+    d = doc.createElement('dialog'); d.id = 'dashSearch'; d.setAttribute('aria-labelledby', 'dashSearchTitle');
+    d.style.cssText = 'width:min(640px,94vw);max-height:80vh;border:2px solid currentColor;border-radius:12px;padding:14px 16px;background:Canvas;color:CanvasText;font:inherit';
+    d.innerHTML = '<h2 id="dashSearchTitle" style="margin:0 0 8px;font-size:18px">Search</h2>' +
+      '<label for="dashSearchBox" style="display:block;font-size:14px">Drive file names, Money to-dos and dates, CD Hub dogs and litters (what this page has read)</label>' +
+      '<input id="dashSearchBox" type="search" autocomplete="off" style="width:100%;font:inherit;padding:8px 10px;margin:6px 0;border:1px solid currentColor;border-radius:8px">' +
+      '<p id="dashSearchStatus" role="status" style="margin:4px 0;font-size:14px">Type at least 2 letters.</p>' +
+      '<div id="dashSearchResults"></div><form method="dialog" style="margin-top:8px"><button type="submit">Close</button></form>';
+    doc.body.appendChild(d);
+    var box = d.querySelector('#dashSearchBox');
+    box.addEventListener('input', function () { clearTimeout(searchTimer); searchTimer = setTimeout(function () { runSearch(box.value); }, 300); });
+    d.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-search-act]');
+      if (b && b._act) { e.preventDefault(); d.close(); b._act(); }
+      else if (e.target.closest && e.target.closest('a[href]')) d.close();
+    });
+    return d;
+  }
+  var SLOT = ['#C7C0B4', '#2C2C2A', '#E6443D', '#E78615', '#F3D84E', '#51AD57', '#129FE7', '#A570D1', '#141413'];
+  function runSearch(q) {
+    var d = searchDialog(), st = d.querySelector('#dashSearchStatus'), out = d.querySelector('#dashSearchResults');
+    q = String(q || '').trim();
+    var gen = ++searchGen;
+    if (q.length < 2) { st.textContent = 'Type at least 2 letters.'; out.innerHTML = ''; return Promise.resolve([]); }
+    st.textContent = 'Searching…';
+    return Promise.all(PROVIDERS.map(function (p) { return Promise.resolve().then(function () { return p(q); }).then(function (r) { return r || []; }, function () { return [{ group: 'Could not search', slot: 2, title: 'One source could not be searched. Try again.', sub: '' }]; }); }))
+      .then(function (lists) {
+        if (gen !== searchGen) return [];
+        var all = [].concat.apply([], lists), groups = {}, order = [], acts = [];
+        all.forEach(function (x) { if (!groups[x.group]) { groups[x.group] = []; order.push(x.group); } groups[x.group].push(x); });
+        st.textContent = all.length ? all.length + (all.length === 1 ? ' result' : ' results') + ' for "' + q + '".' : 'Nothing found for "' + q + '".';
+        out.innerHTML = order.map(function (g) {
+          var items = groups[g];
+          return '<section data-search-group="' + escHtml(g) + '" style="margin-top:10px;border-left:4px solid ' + SLOT[items[0].slot || 0] + ';padding-left:10px"><h3 style="margin:0 0 4px;font-size:15px">' + escHtml(g) + ' (' + items.length + ')</h3><ul style="margin:0;padding-left:18px">' +
+            items.map(function (x) { return '<li>' + (x.href ? '<a href="' + escHtml(x.href) + '"' + (/^https?:/.test(x.href) ? ' target="_blank" rel="noopener"' : '') + '>' + escHtml(x.title) + '</a>' : '<a href="#" data-search-act="' + (acts.push(x.act) - 1) + '">' + escHtml(x.title) + '</a>') + (x.sub ? ' <span style="font-size:14px">· ' + escHtml(x.sub) + '</span>' : '') + '</li>'; }).join('') + '</ul></section>';
+        }).join('');
+        Array.prototype.forEach.call(out.querySelectorAll('[data-search-act]'), function (a) { a._act = acts[+a.getAttribute('data-search-act')]; });
+        return all;
+      });
+  }
+  function openSearch() { var d = searchDialog(); if (!d.open) d.showModal(); var b = d.querySelector('#dashSearchBox'); b.focus(); b.select(); }
+  if (root.document) root.document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-search-open]'); if (b) { e.preventDefault(); openSearch(); } });
+  function matches(q) { var words = String(q).toLowerCase().split(/\s+/).filter(Boolean); return function (text) { text = String(text || '').toLowerCase(); return words.every(function (w) { return text.indexOf(w) >= 0; }); }; }
+
+  root.DashKit = { search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help };
 })(typeof window !== 'undefined' ? window : this);

@@ -174,6 +174,7 @@
     <a class="back" href="../">← Dashboard</a>
     <h1><a href="#/now">Money Hub</a></h1>
     <span id="readStamp" class="readstamp">Not signed in</span>
+    <button class="btn" type="button" data-search-open aria-keyshortcuts="/" title="Search (press /)"><svg class="icon" aria-hidden="true" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Search</span></button>
     <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh"><svg class="icon"><use href="#i-refresh"/></svg><span>Reread</span></button>
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout"><svg class="icon"><use href="#i-out"/></svg><span>Sign out</span></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="icon"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
@@ -669,6 +670,21 @@
     banner('Signed out. Nothing kept.', true, false);
     render();
   }
+  // Search (press /): to-dos, dates and accountant questions already read on this page.
+  DashKit.search.register(function (q) {
+    var hit = DashKit.search.matches(q), out = [];
+    if (!R || R.gate !== 'ok') return out;
+    (R.data.register || []).filter(function (r) { return hit([r.subject, r.id, r.entity, r.owner].join(' ')); }).slice(0, 12).forEach(function (r) {
+      out.push({ group: 'To-dos', slot: 4, title: r.subject, sub: [r.entity, r.owner, r.status].filter(Boolean).join(' · '), href: '#/register/' + encodeURIComponent(r.id) });
+    });
+    (R.data.dates || []).filter(function (r) { return hit([r.filing, r.entity, r.id].join(' ')); }).slice(0, 12).forEach(function (r) {
+      out.push({ group: 'Dates', slot: 4, title: r.filing, sub: [r.entity, r.due_on].filter(Boolean).join(' · '), href: '#/dates' });
+    });
+    (R.data.accountant || []).filter(function (r) { return hit(Object.keys(r).map(function (k) { return r[k]; }).join(' ')); }).slice(0, 8).forEach(function (r) {
+      out.push({ group: 'Accountant questions', slot: 5, title: r.question || r.id, sub: r.id, href: '#/accountant' });
+    });
+    return out;
+  });
   function initGoogle() {
     if (!auth.init()) return false;
     var b = $('signInBtn'); b.disabled = false; b.querySelector('span').textContent = 'Sign in with Google';
