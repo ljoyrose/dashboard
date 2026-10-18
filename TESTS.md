@@ -248,6 +248,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | Changing screen left keyboard focus on the old menu item, so screen readers did not say where you were | "home: clicking a menu item puts focus on the screen title" |
 | 18 Oct 2026 | The Map led with links and counts, so what needed Lisa today was spread over several cards | "shows at most 7 rows, overdue (red) first, each row a link, and the tab title carries the count" |
 | 18 Oct 2026 | Money only said "runs dry on X" in words, so a forecast dip was easy to miss | "a forecast that goes below zero marks the runs-dry date in red" |
+| 18 Oct 2026 | Phone install needs a kept copy of the site, and it must never hold Drive data or the sign-in | "after signing in and reading, the kept copy holds only the page files" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
@@ -277,6 +278,12 @@ Money keeps a copy of each file **in memory only** (never in the browser's stora
 ## Money chart and worked-out deadlines
 
 Each entity page draws its `FORECAST.csv` as a line, with a dashed £0 line, the start point and, if the forecast goes below zero, a red dot labelled "Runs dry". The same facts are in the chart's spoken label and in a note under it. The Dates page and each entity page also list **deadlines worked out from the usual UK rules**: Self Assessment (31 January and 31 July) for personal entities; Companies House accounts (9 months), Corporation Tax payment (9 months and 1 day) and CT600 (12 months) for companies with a `year_end`; VAT (1 month and 7 days after each quarter) where `vat_quarter_end` is set. Every row says **check with accountant**; it is not tax advice. A date already in MON-DATES for the same entity (within 5 days) is not repeated. Tests: `tests/mocked/money-forecast-deadlines.spec.js`.
+
+## Phone install and keyboard keys
+
+`manifest.webmanifest`, the icon in `icons/` and `sw.js` let you add the dashboard to your phone's home screen. It opens full screen. The service worker keeps **only the site's own page files**, so the pages open fast and still open offline (they then say a read failed, because nothing from Drive is kept). It never touches Google addresses, never keeps a request that carries a sign-in, and keeps no Drive data or token. A test signs in, reads, and then checks every kept file is a page file. The rest of the suite runs with service workers switched off, so every test starts clean.
+
+Keyboard keys on all three pages (from `toolkit.js`): `g` then `m` Map, `d` Drive, `b` Bin, `c` Changes, `f` Money Hub, `h` CD Hub; `r` read again; `/` search; `?` shows the list. Keys do nothing while you type in a box. Tests: `tests/mocked/pwa-and-keys.spec.js`.
 
 ## Where things live
 
