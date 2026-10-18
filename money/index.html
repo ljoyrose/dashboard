@@ -616,6 +616,7 @@
     stopTimer();
     var t = accessToken;
     accessToken = null; tokenExpiresAt = 0; signedIn = false; R = null; err = null; MORE = {};
+    M.clearCache(); // the memory copy of the Money files goes too
     if (window.DashAuth) DashAuth.clear();
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     banner('Signed out. Nothing kept.', true, false);

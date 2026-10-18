@@ -279,7 +279,13 @@
     });
     return items;
   }
-  function Reader(getToken) { this.getToken = getToken; this.meta = {}; }
+  // Memory-only cache (never written to the browser's storage): file id -> { modifiedTime, text }, and
+  // folder id -> parent id. A file is downloaded again only when Drive says its modifiedTime changed.
+  // A cached copy is used only for a file id that this read's own folder listing just returned,
+  // so the signed-in account has just been shown to see it. Cleared on sign-out (clearCache).
+  var CACHE = { content: {}, parent: {} };
+  function clearCache() { CACHE = { content: {}, parent: {} }; }
+  function Reader(getToken) { this.getToken = getToken; this.meta = CACHE.parent; this.downloads = 0; this.reused = 0; }
   Reader.prototype.get = function (url, asText) {
     var token = this.getToken();
     var get = root.DashKit ? root.DashKit.googleFetch : root.fetch.bind(root);
@@ -314,7 +320,9 @@
   Reader.prototype.parent = function (id) {
     var self = this;
     if (this.meta[id]) return this.meta[id];
-    this.meta[id] = this.get(API + '/files/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,parents').then(function (m) { return (m.parents || [])[0] || null; });
+    var store = this.meta;
+    store[id] = this.get(API + '/files/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,parents').then(function (m) { return (m.parents || [])[0] || null; });
+    store[id].catch(function () { if (store[id]) delete store[id]; }); // a failed lookup is asked again next time
     return this.meta[id];
   };
   Reader.prototype.owningEntity = function (file, stopIds) {
@@ -327,8 +335,15 @@
     }
     return step((file.parents || [])[0]);
   };
-  Reader.prototype.content = function (id) {
-    return this.get(API + '/files/' + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true', true);
+  Reader.prototype.content = function (id, modifiedTime) {
+    var self = this, hit = CACHE.content[id];
+    if (hit && modifiedTime && hit.modifiedTime === modifiedTime) { this.reused++; return Promise.resolve(hit.text); }
+    var store = CACHE.content;
+    return this.get(API + '/files/' + encodeURIComponent(id) + '?alt=media&supportsAllDrives=true', true).then(function (t) {
+      self.downloads++;
+      if (modifiedTime && store === CACHE.content) store[id] = { modifiedTime: modifiedTime, text: t };
+      return t;
+    });
   };
   function mapLimit(items, limit, fn) {
     var i = 0, results = new Array(items.length);
@@ -364,7 +379,7 @@
           var p = pick(l, d.name);
           if (p.error) { m.error = p.error; return; }
           m.file = p.file;
-          return rd.content(p.file.id).then(function (t) {
+          return rd.content(p.file.id, p.file.modifiedTime).then(function (t) {
             var tb = parseTable(t, d.head);
             m.table = tb; m.asOf = provDate(tb.prov);
             res.data[d.key] = tb.rows;
@@ -403,7 +418,7 @@
             if (list.length > 1) { m.error = 'duplicate ×' + list.length; return; }
             m.file = list[0];
             jobs.push(function () {
-              return rd.content(m.file.id).then(function (t) { m.table = parseTable(t, spec.head); m.asOf = provDate(m.table.prov); }, function (e) { m.error = e.message || 'read failed'; });
+              return rd.content(m.file.id, m.file.modifiedTime).then(function (t) { m.table = parseTable(t, spec.head); m.asOf = provDate(m.table.prov); }, function (e) { m.error = e.message || 'read failed'; });
             });
           });
           var have = Object.keys(groups[ent]);
@@ -419,6 +434,7 @@
     }).then(function () {
       if (res.gate !== 'ok') return res;
       res.money = res.ents.map(function (e) { return entityMoney(e, res.files[e.code], today); });
+      res.downloads = rd.downloads; res.reused = rd.reused;
       return res;
     });
   }
@@ -457,6 +473,6 @@
     isOpen: isOpen, isLisa: isLisa, isTask: isTask, ready: ready, yourTurn: yourTurn,
     entities: entities, entityMoney: entityMoney, monthRows: monthRows, n: n, sum: sum,
     datesView: datesView, overdueDates: overdueDates, dueWithin: dueWithin, intakeOverdue: intakeOverdue, needsNow: needsNow,
-    loadAll: loadAll, fileChecks: fileChecks, gbp: gbp, fmtDate: fmtDate
+    loadAll: loadAll, clearCache: clearCache, fileChecks: fileChecks, gbp: gbp, fmtDate: fmtDate
   };
 })(window);

@@ -1847,6 +1847,7 @@
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     S = freshState();
     F = {}; R = { sweep: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++; P.binStatus = 'idle';
+    if (window.MoneyCore) window.MoneyCore.clearCache();
     showBanner('Signed out. Nothing kept.', true, false);
     render();
   }
