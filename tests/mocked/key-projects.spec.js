@@ -29,10 +29,21 @@ function pageFile(href) {
 test.describe('Home: Key projects & docs', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('the block is on the home screen, every tile has a working link, and each is tap-sized', async ({ page }) => {
+  test('the block is hidden until sign-in, then every tile has a working link and is tap-sized', async ({ page }) => {
     const res = await page.goto('./');
     expect(res.status()).toBe(200);
-    const block = page.locator('#key-projects');
+
+    // Signed out: the links are not drawn at all, only the sign-in card.
+    await expect(page.locator('#key-projects')).toHaveCount(0);
+    await expect(page.locator('#move-link')).toHaveCount(0);
+    await expect(page.locator('a.keytile')).toHaveCount(0);
+    await expect(page.locator('#signInBtn')).toBeEnabled();
+    await page.locator('#signInBtn').click();
+    await expect(page.locator('#mainNav')).toBeVisible();
+    await expect(page.locator('#hereTitle')).toHaveText('Map');
+    await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
+
+    const block = page.locator('#view > #key-projects');
     await expect(block).toBeVisible();
     await expect(block.locator('h2')).toHaveText('Key projects & docs');
     const top = await block.boundingBox();
@@ -70,11 +81,8 @@ test.describe('Home: Key projects & docs', () => {
       }
     }
 
-    await expect(page.locator('#signInBtn')).toBeEnabled();
-    await page.locator('#signInBtn').click();
-    await expect(page.locator('#mainNav')).toBeVisible();
-    await expect(page.locator('#hereTitle')).toHaveText('Map');
-    await expect(page.locator('#view > #key-projects')).toBeVisible();
-    await expect(page.locator('#move-link')).toHaveAttribute('href', MOVE);
+    // Signing out removes the links again.
+    await page.locator('#signOutBtn').click();
+    await expect(page.locator('#key-projects')).toHaveCount(0);
   });
 });
