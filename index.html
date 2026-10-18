@@ -31,11 +31,13 @@
     :root { --line: #3D372F; --s1-stripe: #F3EEE5; --shadow: 0 4px 12px rgba(0, 0, 0, 0.32); }
   }
   * { box-sizing: border-box; }
+  .skip { position: absolute; left: -999px; top: 8px; z-index: 50; background: var(--surface); color: var(--ink); padding: 8px 14px; border-radius: 8px; border: 2px solid var(--ink); }
+  .skip:focus { left: 8px; }
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
     font-family: 'Lexend', sans-serif; font-size: 16px; line-height: 1.6;
-    text-align: justify; hyphens: auto; -webkit-hyphens: auto;
+    text-align: left; hyphens: manual; -webkit-hyphens: manual;
     font-variant-numeric: tabular-nums;
   }
   button, input { font: inherit; color: inherit; }
@@ -206,6 +208,7 @@
 </style>
 </head>
 <body>
+<a class="skip" href="#content" data-skip="content">Skip to content</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
   <symbol id="i-read" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5z"/><path d="M4 19a2 2 0 0 1 2-2h13"/></symbol>
@@ -239,7 +242,7 @@
   </nav>
 </header>
 
-<main class="wrap">
+<main id="content" class="wrap">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="hereBox" class="here hidden"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Map</h2></div>
   <div id="view" data-view="map"></div>
@@ -274,6 +277,7 @@
   var CF_FOLDER_ID = '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A';
   var READ_FIRST_ID = '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L';
   var REFRESH_MS = 5 * 60 * 1000;
+  var refreshPending = false;
   var PAGE_SIZE = 7;
   var CF_RECENT_COUNT = 25;
   var DRIVE_RECENT_COUNT = 15;
@@ -290,7 +294,9 @@
   var accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
-  var S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank() };
+  // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank() }; }
+  var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null }; // results of Bin actions, kept until sign-out
   var ledgerCache = null;           // promise of the delete-ledger id set, cleared on refresh and sign-out
@@ -581,13 +587,15 @@
     }));
   }
 
-  function loadAll() {
+  // timed = the 5-minute refresh. It keeps your ticks, Show-more choices and Bin results;
+  // only the Refresh button (or signing in) starts from clean.
+  function loadAll(timed) {
     if (loading) return;
     if (!accessToken || Date.now() > tokenExpiresAt) { handleExpired(); return; }
     loading = true;
     var b = $('refreshBtn'); b.disabled = true; b.querySelector('span').textContent = 'Reading…';
     clearBanner();
-    F = {}; S.bin = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {};
+    if (!timed) { F = {}; S.bin = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
@@ -660,6 +668,9 @@
   }
   function idsFromLedgerCsv(text) {
     var rows = parseCsv(text);
+    // The ledger may start with one note line such as "COUNT: 232 rows. …" (or "CURRENT: …") above the header.
+    // Only that one note line is skipped; anything else without a file_id header still fails safe (nothing binned).
+    if (rows.length && rows[0].length === 1 && /^\s*(COUNT|CURRENT)\s*:/i.test(rows[0][0])) rows = rows.slice(1);
     if (!rows.length) return null;
     var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
     var col = head.indexOf('file_id');
@@ -1802,8 +1813,17 @@
   }
   function startTimer() {
     stopTimer();
-    refreshTimer = setInterval(function () { if (Date.now() > tokenExpiresAt) { handleExpired(); return; } loadAll(); }, REFRESH_MS);
+    refreshTimer = setInterval(timedRefresh, REFRESH_MS);
   }
+  function hasTicks() { return Object.keys(PICK).some(function (k) { return PICK[k] && Object.keys(PICK[k]).some(function (id) { return PICK[k][id]; }); }); }
+  // The 5-minute refresh waits while the tab is hidden, while something is being moved, or while you have ticks.
+  function timedRefresh() {
+    if (Date.now() > tokenExpiresAt) { handleExpired(); return; }
+    if (document.hidden || busy || hasTicks()) { refreshPending = true; return; }
+    refreshPending = false;
+    loadAll(true);
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && refreshPending && refreshTimer) timedRefresh(); });
   function stopTimer() { if (refreshTimer) { clearInterval(refreshTimer); refreshTimer = null; } }
   function handleExpired() {
     stopTimer();
@@ -1821,7 +1841,7 @@
     accessToken = null; tokenExpiresAt = 0; signedIn = false; writeGranted = false; busy = false;
     if (window.DashAuth) DashAuth.clear();
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
-    S = { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank() };
+    S = freshState();
     F = {}; R = { sweep: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++; P.binStatus = 'idle';
     showBanner('Signed out. Nothing kept.', true, false);
     render();
@@ -1851,13 +1871,21 @@
     return true;
   }
 
+  // Skip link: jump to the content without changing the #/ address.
+  document.addEventListener('click', function (e) {
+    var k = e.target.closest && e.target.closest('[data-skip]');
+    if (!k) return;
+    e.preventDefault();
+    var m = document.getElementById(k.getAttribute('data-skip'));
+    if (m) { m.setAttribute('tabindex', '-1'); m.focus(); }
+  });
   document.addEventListener('click', function (e) {
     var t = e.target.closest('[data-action]');
     if (!t || t.disabled) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') requestToken();
     else if (a === 'signout') signOut();
-    else if (a === 'refresh') loadAll();
+    else if (a === 'refresh') loadAll(false);
     else if (a === 'grantwrite') requestWrite();
     else if (a === 'selectall') { selectAll(t.getAttribute('data-group')); render(); }
     else if (a === 'clearpick') { clearPick(t.getAttribute('data-group')); render(); }
