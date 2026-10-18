@@ -36,7 +36,8 @@ h3{font-size:16px;font-weight:600;margin:26px 0 8px;display:flex;align-items:cen
 .sub{color:var(--sub);font-size:13.5px;margin:0 0 16px;max-width:74ch}
 .card{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px 16px;margin:0 0 12px}
 .card.dash{border-style:dashed}
-.card h4{margin:0 0 6px;font-size:14.5px;font-weight:600}
+.card h4,.card .hx4{margin:0 0 6px;font-size:14.5px;font-weight:600}
+.card h3.hx4,.card h2.hx4{display:block;letter-spacing:0}
 .card p{margin:0 0 8px;font-size:13.5px}.card p:last-child{margin-bottom:0}
 .acc2{border-left:3px solid var(--p2)}.acc3{border-left:3px solid var(--p3)}.acc4{border-left:3px solid var(--p4)}
 .acc5{border-left:3px solid var(--p5)}.acc6{border-left:3px solid var(--p6)}.acc7{border-left:3px solid var(--p7)}
@@ -91,8 +92,8 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--so
 .st{display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:700;letter-spacing:.04em;border-radius:999px;padding:2px 9px 2px 3px;border:1px solid transparent;color:#1B1B19}
 .st b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 3px;border-radius:999px;background:rgba(255,255,255,.65);font-size:13px;letter-spacing:0}
 /* status colour follows the sex it implies: BB = female pink, ST = male blue */
-.st-bi{background:var(--female)}.st-bi b{color:#7A2F4C}
-.st-st{background:var(--male);color:#FFF}.st-st b{color:#10465F}
+.st-bi{background:#DB7FA2}.st-bi b{color:#7A2F4C}
+.st-st{background:#1F6F96;color:#FFF}.st-st b{color:#10465F}
 .st-tr{background:var(--ljr-3)}.st-gr{background:var(--ljr-5)}
 .st-ce{background:#7FB8C9}.st-ce b{color:#1F4C58}
 .st-ln{background:var(--ljr-4)}.st-ln b{color:#4A4318}
@@ -134,15 +135,17 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--so
 .ci.bad{border-color:var(--ljr-2);color:var(--ljr-2-text)}
 .ci.bad i{background:var(--p2)}
 .ci:hover{border-color:var(--fg)}
-.tl{cursor:pointer;text-align:left;font:inherit;width:100%}
+.tl{cursor:pointer;text-align:left;font:inherit;width:100%;color:var(--fg)}
 .tl:hover{border-color:var(--fg)}
 .srch{position:relative;display:inline-flex;align-items:center}
 .srch svg{position:absolute;left:10px;color:var(--sub);pointer-events:none}
 .srch input{padding-left:30px}
 .stf{gap:6px}
-.sfb{cursor:pointer;font-family:inherit;border:1px solid transparent;opacity:.55;transition:opacity .12s}
-.sfb:hover{opacity:.85}
-.sfb[aria-pressed="true"]{opacity:1;outline:2px solid var(--fg);outline-offset:1px}
+/* Filter chips keep their full colour (fading them made the text unreadable). The chosen one gets a thick outline and a tick. */
+.sfb{cursor:pointer;font-family:inherit;border:1px solid transparent}
+.sfb:hover{outline:1px solid var(--fg);outline-offset:1px}
+.sfb[aria-pressed="true"]{outline:3px solid var(--fg);outline-offset:1px}
+.sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
 .st-all{background:var(--soft);color:var(--sub)}
 .wtc{cursor:pointer;border-radius:6px;padding:2px 3px;margin:-2px -3px}
 .wtc:hover{background:var(--soft)}
@@ -1483,17 +1486,41 @@ function labelControls(root){
   if(el.type==='hidden'||el.type==='checkbox'||el.type==='radio') return;
   var t=el.tagName==='SELECT'?((el.options[0]&&el.options[0].value==='')?el.options[0].textContent:''):(el.placeholder||'');
   t=(t||el.name||el.id||'choose').replace(/\u2026|\.\.\.$/g,'').trim();
-  var card=el.dataset.area&&el.closest('.card,section,li,tr'), h=card&&card.querySelector('h4,b,strong');
+  var card=el.dataset.area&&el.closest('.card,section,li,tr'), h=card&&card.querySelector('h4,.hx4,b,strong');
   if(h&&h.textContent.trim()) t+=' \u2013 '+h.textContent.trim();
   el.setAttribute('aria-label',t);
  });
 }
 function render(){ go((location.hash||'#/map').replace('#/',''),false); }
+// Headings must not skip a level (h2 then h4). A card heading (h4) with no h3 above it since the last h2
+// becomes an h3 that looks the same, so screen-reader heading lists make sense on every screen.
+function levelHeadings(root){
+ var seen3=false;
+ Array.prototype.slice.call(root.querySelectorAll('h1,h2,h3,h4')).forEach(function(h){
+  var t=h.tagName;
+  if(t==='H1'||t==='H2'){ seen3=false; return; }
+  if(t==='H3'){ seen3=true; return; }
+  if(seen3) return;
+  var n=document.createElement('h3');
+  Array.prototype.forEach.call(h.attributes,function(a){ n.setAttribute(a.name,a.value); });
+  n.classList.add('hx4');
+  while(h.firstChild) n.appendChild(h.firstChild);
+  h.parentNode.replaceChild(n,h);
+ });
+}
+// After a screen change, move keyboard focus to the new screen's title (without scrolling),
+// so a screen reader announces where you are and Tab carries on from the top of the new screen.
+function focusView(){
+ var h=document.querySelector('#main h2')||document.querySelector('#main h3,#main h4');
+ if(!h) return;
+ h.setAttribute('tabindex','-1');
+ h.focus({preventScroll:true});
+}
 function go(id,push){
  pill();
  var main=document.getElementById('main');
  if(LOAD.state==='signin'){
-  main.innerHTML='<div class="card acc4" style="margin-top:24px"><h4>Sign in to see the tables</h4>'
+  main.innerHTML='<div class="card acc4" style="margin-top:24px"><h2 class="hx4">Sign in to see the tables</h2>'
    +'<p>This page holds no data of its own. Once you sign in with Google it reads the tables live from '+esc(FOLDER_NAME)+', with read-only access. The sign-in is shared with the rest of this site until you sign out or it expires.</p>'
    +(LOAD.err?'<p class="mut">'+esc(LOAD.err)+'</p>':'')
    +'<p style="margin-bottom:0"><button id="signinbtn" data-signin="1"'+(auth.ready()?'':' disabled')+'>'+(auth.ready()?'Sign in with Google':'Loading Google sign-in\u2026')+'</button></p></div>';
@@ -1501,9 +1528,9 @@ function go(id,push){
  }
  if(LOAD.state==='loading'){ return; }
  if(LOAD.state!=='ok'){
-  main.innerHTML='<div class="card acc2" style="margin-top:24px"><h4>'+
+  main.innerHTML='<div class="card acc2" style="margin-top:24px"><h2 class="hx4">'+
    (LOAD.state==='ambiguous'?'More than one file shares a title'
-    :LOAD.state==='err'?'The folder could not be read':'Loading…')+'</h4>'
+    :LOAD.state==='err'?'The folder could not be read':'Loading…')+'</h2>'
    +'<p>'+(LOAD.state==='ambiguous'
      ?'Refusing to guess which is current: '+esc(LOAD.err)
      :LOAD.state==='err'?esc(LOAD.err||'')+'. The tables live in '+esc(FOLDER_NAME)+'.'
@@ -1516,6 +1543,7 @@ function go(id,push){
  main.innerHTML=PAGES[id]();
  Array.prototype.forEach.call(document.querySelectorAll('#nav button'),function(b){ if(b.dataset.go===id) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
  labelControls(main);
+ levelHeadings(main);
  document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
  if(id==='dogs'){
   var fst=document.getElementById('fst');
@@ -1609,7 +1637,7 @@ function go(id,push){
  if(push!==false && location.hash!=='#/'+id) history.pushState({id:id},'','#/'+id);
  window.scrollTo(0,0);
 }
-document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b) go(b.dataset.go); });
+document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
 // Skip link: jump to the content without touching the #/section address.
 document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus(); } });
 document.addEventListener('click',function(e){
@@ -1627,6 +1655,6 @@ document.addEventListener('click',function(e){
 document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('[data-signin],[data-signout],[data-reload]'); if(!t||t.disabled) return;
  if(t.dataset.signin) signIn(); else if(t.dataset.signout) signOut();
  else if(t.dataset.reload){ if(TOKEN&&Date.now()<TOKEN_EXP) load(); else auth.requestSilent(); } });
-window.addEventListener('popstate',function(){ if(LOAD.state==='ok') go((location.hash||'#/map').replace('#/',''),false); });
+window.addEventListener('popstate',function(){ if(LOAD.state==='ok'){ go((location.hash||'#/map').replace('#/',''),false); focusView(); } });
 render();
 </script></body></html>

@@ -90,7 +90,7 @@
   .slot2 { --slot: var(--s2); --tint: var(--s2-tint); }
   .slot4 { --slot: var(--s4); --tint: var(--s4-tint); }
   .slot8 { --slot: var(--s8); --tint: var(--s8-tint); }
-  .card h3 { margin: 0; font-size: 18px; font-weight: 600; text-align: left; }
+  .card h3, .card h2.h3 { margin: 0; font-size: 18px; font-weight: 600; text-align: left; }
   .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
   .note { margin: 0; color: var(--muted); font-size: 14px; text-align: left; }
   .note.fail { color: var(--fail); font-weight: 600; }
@@ -1492,7 +1492,7 @@
   // Signed out: nothing about the dashboard is shown, only the sign-in button.
   // The key links are drawn by viewMap, which only runs after sign-in.
   function viewGate() {
-    return '<div class="card vision pending"><div class="cardhead"><h3>Sign in</h3>' +
+    return '<div class="card vision pending"><div class="cardhead"><h2 class="h3">Sign in</h2>' +
       '<span class="state st-idle"><span class="shape"></span>Not signed in</span></div>' +
       '<p class="note">Sign in with Google to open the dashboard.</p>' +
       '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
@@ -1937,7 +1937,11 @@
     }
     if (t && t.id === 'drivePicker') location.hash = t.value ? '#/drive/' + t.value : '#/drive';
   });
-  window.addEventListener('hashchange', function () { render(); ensureRoute(); });
+  // A screen change moves keyboard focus to the screen title (no scroll), so screen readers say where you are.
+  window.addEventListener('hashchange', function () {
+    render(); ensureRoute();
+    if (signedIn && !$('hereBox').classList.contains('hidden')) $('hereTitle').focus({ preventScroll: true });
+  });
   var restored = restoreShared();
   render();
   if (restored) { startTimer(); loadAll(); }
