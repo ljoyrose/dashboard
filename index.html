@@ -252,7 +252,7 @@
     <a href="#/usb" data-nav="usb" class="slot4"><svg class="icon"><use href="#i-drive"/></svg>Drive check</a>
     <a href="#/bin" data-nav="bin" class="slot8"><svg class="icon"><use href="#i-bin"/></svg>Bin</a>
     <a href="#/changes" data-nav="changes" class="slot7"><svg class="icon"><use href="#i-changes"/></svg>Changes</a>
-    <a href="money/" class="slotfin"><svg class="icon"><use href="#i-money"/></svg>Money</a>
+    <a href="money/" target="_blank" rel="opener" class="slotfin"><svg class="icon"><use href="#i-money"/></svg>Money</a>
   </nav>
 </header>
 
@@ -314,6 +314,9 @@
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null }; // results of Bin actions, kept until sign-out
+  // Money Hub and CD Hub open in a new tab so the dashboard stays put (the sign-in is shared, auth.js).
+  // rel="opener" (same site only) lets the hub's "Dashboard" button bring this tab back and close itself.
+  var HUB_TAB = ' target="_blank" rel="opener"';
   var ledgerCache = null;           // promise of the delete-ledger id set, cleared on refresh and sign-out
   var PICK = {};                    // ticked ids per bulk action, memory only
   var SHOW = {};                    // how many rows of each list are on screen; 'all' means every row
@@ -1441,7 +1444,7 @@
   function moneyTile() {
     var MC = window.MoneyCore, p = S.money, d = p.data;
     var head = '<div class="cardhead"><h3>Money</h3>' + stateBadge(p, d ? 1 : null) + '</div>';
-    var foot = '<div class="source"><span>From the Money Hub shared drive</span><span><a href="money/">Open Money Hub</a></span></div>';
+    var foot = '<div class="source"><span>From the Money Hub shared drive</span><span><a href="money/" target="_blank" rel="opener">Open Money Hub</a></span></div>';
     if (!MC) return '<section class="card slotfin pending">' + head + '<p class="note fail">Money Hub code did not load.</p>' + foot + '</section>';
     if (!d) return '<section class="card slotfin' + cardClass(p) + '" id="moneyTile">' + head + failNote(p) + foot + '</section>';
     if (d.gate !== 'ok') return '<section class="card slotfin pending" id="moneyTile">' + head + '<p class="note">Money is shown only for Lisa\'s account.</p>' + foot + '</section>';
@@ -1456,7 +1459,7 @@
       if (m.liab && m.liab.overdue.length) sub.push('<span class="mtag risk">' + gbpf(m.liab.overdueTotal, 2) + ' overdue</span>');
       else if (m.liab && m.liab.checkTotal >= 5) sub.push('<span class="mtag ops">' + gbpf(m.liab.checkTotal) + ' paid?</span>');
       else if (m.liab) sub.push('<span class="mtag ok">Tax: nothing overdue</span>');
-      return '<a class="ment' + (bad ? ' bad' : '') + '" href="money/#/e/' + encodeURIComponent(m.code) + '" style="text-decoration:none"><span class="who">' + esc(m.code) + '</span>' +
+      return '<a class="ment' + (bad ? ' bad' : '') + '" href="money/#/e/' + encodeURIComponent(m.code) + '"' + HUB_TAB + ' style="text-decoration:none"><span class="who">' + esc(m.code) + '</span>' +
         '<span class="num">' + (m.bank != null ? gbpf(m.bank) : '–') + '</span><span class="sub">' + (sub.join('') || (m.bank == null ? '<span>no bank statement yet</span>' : '')) + '</span></a>';
     }
     var shown = d.money.filter(function (m) { return !m.noData; });
@@ -1468,7 +1471,7 @@
     var turn = MC.yourTurn(d.data), ready = turn.filter(function (x) { return x.ready === 'ready'; });
     var todoN = listShown('money-todos', ready.length, 3);
     h += '<div class="cardhead"><h4>To-dos</h4><span class="mtag ops">' + ready.length + ' ready · ' + turn.length + ' open</span></div><ul class="files">' +
-      ready.slice(0, todoN).map(function (x) { return '<li><div class="fname"><a href="money/#/register/' + encodeURIComponent(x.r.id) + '">' + esc(x.r.subject) + '</a></div><div class="meta">' + (/urgent/i.test(x.r.priority) ? '<span class="mtag risk">urgent</span>' : /high/i.test(x.r.priority) ? '<span class="mtag ops">high</span>' : '') + '<span>' + esc(x.r.id) + '</span></div></li>'; }).join('') + '</ul>' + showBar('money-todos', ready.length, 3);
+      ready.slice(0, todoN).map(function (x) { return '<li><div class="fname"><a href="money/#/register/' + encodeURIComponent(x.r.id) + '"' + HUB_TAB + '>' + esc(x.r.subject) + '</a></div><div class="meta">' + (/urgent/i.test(x.r.priority) ? '<span class="mtag risk">urgent</span>' : /high/i.test(x.r.priority) ? '<span class="mtag ops">high</span>' : '') + '<span>' + esc(x.r.id) + '</span></div></li>'; }).join('') + '</ul>' + showBar('money-todos', ready.length, 3);
     var dates = MC.overdueDates(d.data, d.today).concat(MC.dueWithin(d.data, d.today, 14));
     var dateN = listShown('money-dates', dates.length, 6);
     h += '<div class="cardhead"><h4>Dates · overdue and next 14 days</h4><span class="mtag ' + (dates.some(function (x) { return x.days < 0; }) ? 'risk' : 'ops') + '">' + dates.length + '</span></div>';
@@ -1483,8 +1486,8 @@
   function keyProjects() {
     var tiles = [
       ['MOVE', MOVE_URL, true],
-      ['Money Hub', 'money/', false],
-      ['CD Hub', 'cdhub/', false],
+      ['Money Hub', 'money/', true],
+      ['CD Hub', 'cdhub/', true],
       ['Map', '#/map', false],
       ['Read first', '#/readfirst', false],
       ['Drive', '#/drive', false],
@@ -1495,9 +1498,8 @@
     ];
     return '<section class="card" id="key-projects" aria-labelledby="key-projects-title">' +
       '<h2 id="key-projects-title">Key projects & docs</h2>' +
-      '<p class="lead">Open the <a id="move-link" href="' + esc(MOVE_URL) + '" target="_blank" rel="noopener">MOVE workbook</a>.</p>' +
       '<div class="keytiles">' + tiles.map(function (t) {
-        return '<a class="keytile" href="' + esc(t[1]) + '"' + (t[2] ? ' target="_blank" rel="noopener"' : '') + '>' + esc(t[0]) + '</a>';
+        return '<a class="keytile"' + (t[1] === MOVE_URL ? ' id="move-link"' : '') + ' href="' + esc(t[1]) + '"' + (t[2] ? (hubLink(t[1]) ? HUB_TAB : ' target="_blank" rel="noopener"') : '') + '>' + esc(t[0]) + '</a>';
       }).join('') + '</div></section>';
   }
 
@@ -1535,6 +1537,7 @@
     out.sort(function (a, b2) { return rank[a.kind] - rank[b2.kind]; });
     return out;
   }
+  function hubLink(href) { return /^(money|cdhub)\//.test(String(href || '')); }
   function needsCount() { return signedIn ? needsToday().length : 0; }
   function needsPanel() {
     if (!signedIn) return '';
@@ -1544,9 +1547,9 @@
       '<span class="mtag ' + (all.some(function (x) { return x.kind === 'risk'; }) ? 'risk' : all.length ? 'ops' : 'ok') + '">' + (reading ? 'Reading…' : all.length + (all.length === 1 ? ' thing' : ' things')) + '</span></div>';
     if (!all.length) return h + '<p class="note">' + (reading ? 'Reading from Google Drive…' : 'Nothing needs you today.') + '</p></section>';
     h += '<ol>' + items.map(function (x) {
-      return '<li class="n-' + x.kind + '"><span class="mtag ' + label[x.kind] + '">' + esc(x.tag) + '</span><span class="nt"><a href="' + esc(x.href) + '">' + esc(x.text) + '</a></span></li>';
+      return '<li class="n-' + x.kind + '"><span class="mtag ' + label[x.kind] + '">' + esc(x.tag) + '</span><span class="nt"><a href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>' + esc(x.text) + '</a></span></li>';
     }).join('') + '</ol>';
-    if (all.length > items.length) h += '<p class="note">And ' + (all.length - items.length) + ' more. <a href="money/#/now">See them all in Money Hub</a>.</p>';
+    if (all.length > items.length) h += '<p class="note">And ' + (all.length - items.length) + ' more. <a href="money/#/now"' + HUB_TAB + '>See them all in Money Hub</a>.</p>';
     return h + '</section>';
   }
 
@@ -1890,16 +1893,17 @@
     if (accessToken && Date.now() < tokenExpiresAt) return;
     if (hadExpired) showBanner('Sign-in expired. Sign in again.', false, true);
   }
-  function signOut() {
+  // otherTab: another tab already signed out (and revoked), so just forget everything here.
+  function signOut(otherTab) {
     stopTimer();
-    var t = accessToken;
+    var t = otherTab === true ? null : accessToken;
     accessToken = null; tokenExpiresAt = 0; signedIn = false; writeGranted = false; busy = false;
-    if (window.DashAuth) DashAuth.clear();
+    if (window.DashAuth && otherTab !== true) DashAuth.clear();
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     S = freshState();
     F = {}; R = { sweep: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++; P.binStatus = 'idle';
     if (window.MoneyCore) window.MoneyCore.clearCache();
-    showBanner('Signed out. Nothing kept.', true, false);
+    showBanner(otherTab === true ? 'Signed out in another tab. Nothing kept.' : 'Signed out. Nothing kept.', true, false);
     render();
   }
   function initGoogle() {
@@ -1998,6 +2002,14 @@
   });
   var restored = restoreShared();
   render();
+  // Another tab signed in, refreshed the token, or signed out.
+  DashAuth.onChange(function (saved) {
+    if (!saved || !DashAuth.hasScope(saved, SCOPE)) { if (signedIn) signOut(true); return; }
+    var wasIn = signedIn && accessToken;
+    restoreShared();
+    clearBanner();
+    if (!wasIn) { startTimer(); loadAll(); }
+  });
   // ---- Search (press /): Drive file names in each shared drive, plus Money to-dos and dates already read ----
   function driveQuote(q) { return String(q).replace(/\\/g, '\\\\').replace(/'/g, "\\'"); }
   KIT.search.register(function (q) {

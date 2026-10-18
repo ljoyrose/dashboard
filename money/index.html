@@ -51,7 +51,8 @@
   .top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-top: 12px; padding-bottom: 8px; }
   .top h1 { font-size: 20px; font-weight: 700; margin: 0; flex: 1 1 auto; }
   .top h1 a { text-decoration: none; }
-  .back { font-size: 14px; color: var(--muted); }
+  /* Design rule: every page except home has "Dashboard" at the top right of the header, always shown. */
+  .back { margin-left: auto; order: 99; }
   .readstamp { color: var(--muted); font-size: 14px; }
   .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border-radius: 12px;
          border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 15px; text-decoration: none; }
@@ -171,13 +172,13 @@
 </svg>
 <header>
   <div class="wrap wide top">
-    <a class="back" href="../">← Dashboard</a>
     <h1><a href="#/now">Money Hub</a></h1>
     <span id="readStamp" class="readstamp">Not signed in</span>
     <button class="btn" type="button" data-search-open aria-keyshortcuts="/" title="Search (press /)"><svg class="icon" aria-hidden="true" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Search</span></button>
     <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh"><svg class="icon"><use href="#i-refresh"/></svg><span>Reread</span></button>
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout"><svg class="icon"><use href="#i-out"/></svg><span>Sign out</span></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="icon"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
+    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
   </div>
   <nav class="wrap wide main" aria-label="Sections">
     <a href="#/now" data-nav="now" class="c-ink">Now</a>
@@ -660,14 +661,15 @@
     DashAuth.save(accessToken, tokenExpiresAt, resp.scope || SCOPE);
     signedIn = true; clearBanner(); startTimer(); load();
   }
-  function signOut() {
+  // otherTab: another tab already signed out (and revoked), so just forget everything here.
+  function signOut(otherTab) {
     stopTimer();
-    var t = accessToken;
+    var t = otherTab === true ? null : accessToken;
     accessToken = null; tokenExpiresAt = 0; signedIn = false; R = null; err = null; MORE = {};
     M.clearCache(); // the memory copy of the Money files goes too
-    if (window.DashAuth) DashAuth.clear();
+    if (window.DashAuth && otherTab !== true) DashAuth.clear();
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
-    banner('Signed out. Nothing kept.', true, false);
+    banner(otherTab === true ? 'Signed out in another tab. Nothing kept.' : 'Signed out. Nothing kept.', true, false);
     render();
   }
   // Search (press /): to-dos, dates and accountant questions already read on this page.
@@ -734,6 +736,14 @@
   var restored = restoreShared();
   render();
   if (restored) { startTimer(); load(); }
+  // Another tab signed in, refreshed the token, or signed out.
+  DashAuth.onChange(function (saved) {
+    if (!saved || !DashAuth.hasScope(saved, SCOPE)) { if (signedIn) signOut(true); return; }
+    var wasIn = signedIn && accessToken;
+    restoreShared();
+    clearBanner();
+    if (!wasIn) { startTimer(); load(); } else render();
+  });
   var tries = 0;
   (function wait() {
     if (initGoogle()) return;
