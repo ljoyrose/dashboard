@@ -306,6 +306,12 @@ Press `/` (or the Search button) on any page. One box, results grouped by where 
 
 A quote in the words is escaped before it reaches Drive. Signed out, nothing is searched. Tests: `tests/mocked/search.spec.js`.
 
+## Bin guard: 00 CHECK on the Bin page
+
+A Google Apps Script owned by lisa@puppyclassroom.com (the "bin guard", code kept in Drive, not in this public repo) looks in the bins every day at about 8am UK. Anything whose name does not start `ZZ_DELETE_` or `ZZ_SUPERSEDED_` is taken back out and put in **LD > *00 Current > 00 CHECK**. It never deletes for good and never empties a bin.
+
+The Bin page shows 00 CHECK with ticks, **Select all**, **Clear**, **ZZ_DELETE** and **Refer to AI**. The page only **reads** 00 CHECK. The two buttons open the guard's own Google page (a web app that only puppyclassroom.com accounts can open, and only Lisa can use) with the ticked ids; nothing changes until Lisa presses the button there. RR_ names are never ticked. The buttons stay off until the web app exists: it writes its address into `BIN-GUARD-WEBAPP.json` in *00 Current the first time Lisa opens it, or you can put the address in `config.js` (`binGuard.webAppUrl`). Only a `https://script.google.com/.../exec` address is accepted. Tests: `tests/mocked/bin-guard.spec.js`.
+
 ## Where things live
 
 | What | Where |

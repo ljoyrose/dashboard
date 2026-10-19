@@ -154,6 +154,7 @@
   .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .btn.danger { border-color: var(--risk-text); color: var(--risk-text); font-weight: 600; }
   .btn.danger.solid { background: var(--ljr-2-solid); color: var(--ljr-2-on); }
+  .btn.ai { border-color: var(--ljr-7-solid); background: var(--ljr-7-solid); color: var(--ljr-7-on); font-weight: 600; }
   /* Folded cards: summary always shows title + count; body opens on click and stays open across redraws. */
   details.fold > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 32px; }
   details.fold > summary::-webkit-details-marker { display: none; }
@@ -304,16 +305,21 @@
   var FILE_FIELDS = 'id,name,mimeType,modifiedTime,webViewLink,parents,driveId,lastModifyingUser(displayName,emailAddress)';
   var DAY = 86400000;
   var MOVE_URL = CFG.urls.moveSheet;
+  // Bin guard: 00 CHECK holds what the guard took back out of a bin. This page only READS it; the changes
+  // (ZZ_DELETE, Refer to AI) happen on the guard's own Google page, signed in as Lisa, after she presses its button.
+  var BG_CFG = CFG.binGuard || {};
+  var CHECK_FOLDER_ID = BG_CFG.checkFolderId;
+  var BG_URL_RE = /^https:\/\/script\.google\.com\/(a\/macros\/puppyclassroom\.com\/|macros\/)s\/[A-Za-z0-9_-]+\/exec$/;
 
   // Page state stays in memory. The sign-in token is the one thing shared, via auth.js.
   var accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
-  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank() }; }
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
-  var R = { sweep: null }; // results of Bin actions, kept until sign-out
+  var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
   // Money Hub and CD Hub open in a new tab so the dashboard stays put (the sign-in is shared, auth.js).
   // rel="opener" (same site only) lets the hub's "Dashboard" button bring this tab back and close itself.
   var HUB_TAB = ' target="_blank" rel="opener"';
@@ -612,7 +618,7 @@
     loading = true;
     var b = $('refreshBtn'); b.disabled = true; b.querySelector('span').textContent = 'Reading…';
     clearBanner();
-    if (!timed) { F = {}; S.bin = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
+    if (!timed) { F = {}; S.bin = blank(); S.check = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
@@ -652,6 +658,7 @@
     var r = parseRoute();
     if (r.view === 'drive' && r.driveId && driveById(r.driveId) && !F[folderKey(r)]) loadFolder(r);
     if (r.view === 'bin' && S.bin.status === 'idle' && drives()) loadBin();
+    if (r.view === 'bin' && S.check.status === 'idle' && CHECK_FOLDER_ID) loadCheck();
     if (r.view === 'personal') loadPcpCandidates();
   }
   function folderKey(r) { return r.driveId + '/' + (r.folderId || ''); }
@@ -785,6 +792,76 @@
       return { files: files, more: more };
     });
   }
+  // ---- 00 CHECK (Bin guard). Read-only here. ----
+  function bgUrlOk(u) { return BG_URL_RE.test(String(u || '')); }
+  function loadBgUrl() {
+    if (BG_CFG.webAppUrl) return Promise.resolve(bgUrlOk(BG_CFG.webAppUrl) ? BG_CFG.webAppUrl : '');
+    if (!BG_CFG.homeFolderId || !BG_CFG.webAppFile) return Promise.resolve('');
+    return driveList({
+      q: "'" + BG_CFG.homeFolderId + "' in parents and name = '" + BG_CFG.webAppFile + "' and trashed = false",
+      corpora: 'allDrives', pageSize: '1', fields: 'files(id)'
+    }).then(function (r) {
+      if (!r.files || !r.files.length) return '';
+      return apiGet(API + '/' + encodeURIComponent(r.files[0].id) + '?alt=media&supportsAllDrives=true')
+        .then(function (j) { return j && bgUrlOk(j.url) ? j.url : ''; });
+    }).catch(function () { return ''; });
+  }
+  function loadCheck() {
+    run('check', Promise.all([
+      listAll({ q: "'" + CHECK_FOLDER_ID + "' in parents and trashed = false", corpora: 'allDrives', orderBy: 'folder,name', pageSize: '200',
+        fields: 'nextPageToken,files(id,name,mimeType,webViewLink,modifiedTime,parents,properties)' }, 5),
+      loadBgUrl()
+    ]).then(function (x) {
+      var items = x[0].files.map(function (f) {
+        if (nameHasRr(f.name)) f._block = 'Name contains RR_, left alone.';
+        else if (e02NameHit(f.name)) f._block = E02_LABEL;
+        return f;
+      });
+      return { items: items, more: x[0].more, url: x[1] };
+    }));
+  }
+  function checkAllowed(it) { return !!it && !nameHasRr(it.name) && !e02NameHit(it.name); }
+  function openGuard(action) {
+    var d = S.check.data;
+    if (!d || !d.url) return;
+    var ids = pickedItems('check').map(function (f) { return f.id; });
+    if (!ids.length) return;
+    window.open(d.url + '?action=' + encodeURIComponent(action) + '&ids=' + encodeURIComponent(ids.join(',')), '_blank', 'noopener');
+    R.check = { at: Date.now(), n: ids.length, action: action };
+    render();
+  }
+  function viewCheck() {
+    var p = S.check, d = p.data, html = '';
+    var n = d ? d.items.length : null, picked = pickCount('check'), busyOrNoUrl = busy || !(d && d.url);
+    html += foldOpen('check', !!(d && n), 'card slot8' + cardClass(p), 'checkCard') + '<summary><h3>00 CHECK: taken back out of a bin</h3>' + stateBadge(p, n) + '</summary><div class="fbody">';
+    html += '<p class="note">Every day at about 8am the bin guard looks in the bins. Anything whose name does not start ZZ_DELETE_ or ZZ_SUPERSEDED_ is taken back out and put here. ' +
+      'Tick what you have checked. ZZ_DELETE renames it ZZ_DELETE_…, adds a tidy-ledger row and moves it to the bin (30-day recovery). Refer to AI marks it and wakes lcme-grok. ' +
+      'Both open the bin guard\'s own Google page with your ticks; nothing changes until you press the button there. RR_ names are never ticked.</p>';
+    html += failNote(p);
+    if (d) {
+      if (!d.url) html += '<p class="note fail" data-check-nourl>The bin guard web app is not set up yet, so ZZ_DELETE and Refer to AI are off. It switches on by itself once Lisa deploys the web app and opens it once.</p>';
+      html += '<div class="actions" data-pick-bar="check">' +
+        '<button class="btn" type="button" data-action="selectall" data-group="check"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
+        '<button class="btn" type="button" data-action="clearpick" data-group="check"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
+        '<button class="btn danger solid" type="button" data-action="checkzz"' + (picked && !busyOrNoUrl ? '' : ' disabled') + '>' + icon('bin') + '<span>ZZ_DELETE selected (' + picked + ')</span></button>' +
+        '<button class="btn ai" type="button" data-action="checkai"' + (picked && !busyOrNoUrl ? '' : ' disabled') + '><span>Refer to AI selected (' + picked + ')</span></button>' +
+        (d.url ? '<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener"><span>Open the bin guard page</span></a>' : '') + '</div>';
+      if (!d.items.length) html += '<p class="note">00 CHECK is empty.</p>';
+      else html += '<div data-bin-list="check">' + binList(d.items, function (f) {
+        var blocked = !!f._block;
+        var nameHtml = f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name);
+        var refer = f.properties && f.properties.REFER_TO_AI;
+        return '<li data-id="' + esc(f.id) + '"' + (blocked ? ' data-blocked="1"' : '') + '>' + tickBox('check', f.id, blocked, nameHtml) +
+          '<div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' + (refer ? '<span class="chip" data-refer>Referred to AI</span>' : '') +
+          '<span>Changed ' + esc(fmtTime(f.modifiedTime) || 'date unknown') + '</span></div>' +
+          (f._block ? '<div class="skip">' + esc(f._block) + '</div>' : '') + '</li>';
+      }, 'check-list') + '</div>';
+      if (d.more) html += '<p class="note fail">Partial: 00 CHECK holds more than one read can show.</p>';
+      if (R.check) html += '<p class="note" data-check-sent>' + esc(stamp(R.check.at)) + ': opened the bin guard page for ' + num(R.check.n) + ' item' + (R.check.n === 1 ? '' : 's') + ' (' + (R.check.action === 'zzdelete' ? 'ZZ_DELETE' : 'Refer to AI') + '). Finish there, then press Refresh.</p>';
+    }
+    html += sourceLine('00 CHECK', 'https://drive.google.com/drive/folders/' + CHECK_FOLDER_ID, p) + '</div></details>';
+    return html;
+  }
   function loadBin() {
     var list = drives();
     run('bin', Promise.all([
@@ -883,14 +960,16 @@
   }
   function showKey(group) {
     if (group === 'bin') return 'bin-ready';
+    if (group === 'check') return 'check-list';
     if (group === 'pcpmark') return 'pcp-rename';
     if (group === 'pcpbin') return 'pcp-ready';
     if (group === 'usb') return 'usb-matches';
     return group;
   }
-  function showStep(group) { return group === 'bin' ? BIN_SHOW : 30; }
+  function showStep(group) { return group === 'bin' || group === 'check' ? BIN_SHOW : 30; }
   function listForGroup(group) {
     if (group === 'bin') return (S.bin.data && S.bin.data.ledgerOk && S.bin.data.ready) || [];
+    if (group === 'check') return (S.check.data && S.check.data.items) || [];
     if (group === 'pcpmark') return P.matches || [];
     if (group === 'pcpbin') return (P.candidates || []).filter(function (f) { return !f.blocked; });
     if (group === 'usb') return U.matches || [];
@@ -900,6 +979,7 @@
     if (!it) return false;
     if (group === 'usb') return !usbBlock(it);
     if (it._moneyHold || isMoneyRollback(it, it._chain || [])) return false;
+    if (group === 'check') return checkAllowed(it);
     if (group === 'bin') return !!(S.bin.data && S.bin.data.ledgerOk && isDeleteName(it.name) && !nameHasRr(it.name) && !it._skip);
     if (group === 'pcpmark') return !nameHasRr(it.name);
     if (group === 'pcpbin') return !it.blocked && String(it.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(it.name);
@@ -1667,6 +1747,7 @@
     var readyN = d ? d.ready.length : null, dxd = S.dbx.data, binsN = d ? d.per.reduce(function (t, x) { return t + x.trash.length; }, 0) : null;
     var cnt = function (n, word) { return n == null ? 'reading…' : num(n) + ' ' + word; };
     html += '<nav class="card slot8" aria-label="Bin index"><div class="index top">' +
+      '<button class="btn" type="button" data-action="foldjump" data-key="check"><b>00 CHECK</b><span class="n">' + cnt(S.check.data ? S.check.data.items.length : null, 'to check') + '</span></button>' +
       '<button class="btn" type="button" data-action="foldjump" data-key="sweep"><b>Google Drive: ZZ_DELETE_ files</b><span class="n">' + cnt(readyN, 'ready to bin') + '</span></button>' +
       '<button class="btn" type="button" data-action="foldjump" data-key="dropbox"><b>Dropbox: marked files</b><span class="n">' + (dxd && dxd.marked_files != null ? num(dxd.marked_files) + ' at last scan' : 'delete, then empty trash') + '</span></button>' +
       '<button class="btn" type="button" data-action="foldjump" data-key="bins"><b>Google Drive: bins</b><span class="n">' + cnt(binsN, 'in the bin') + '</span></button>' +
@@ -1677,6 +1758,7 @@
       '<p class="note">Lists below are read-only until you tick a file. Moving ticked ZZ_DELETE_ items to the bin needs full Drive access, asked for only here and kept in memory until you sign out. A shared-drive bin is never permanently deleted.</p>' +
       (signedIn && !writeGranted ? '<div class="actions"><button class="btn danger" type="button" data-action="grantwrite">' + icon('in') + '<span>Allow Bin actions</span></button></div>' : '') +
       '</div></details>';
+    html += viewCheck();
     // ZZ_DELETE_ sweep. Only ticked ready items can move. Nothing moves until Lisa confirms.
     var listed = d ? d.ready.length + d.held.length + d.rename.length + d.leftout.length + d.blocked.length + (d.e02 ? d.e02.length : 0) : null;
     html += foldOpen('sweep', !!(d && listed), 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Google Drive: ZZ_DELETE_ files ready to bin</h3>' + stateBadge(p, listed) + '</summary><div class="fbody">';
@@ -1901,7 +1983,7 @@
     if (window.DashAuth && otherTab !== true) DashAuth.clear();
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     S = freshState();
-    F = {}; R = { sweep: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++; P.binStatus = 'idle';
+    F = {}; R = { sweep: null, check: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++; P.binStatus = 'idle';
     if (window.MoneyCore) window.MoneyCore.clearCache();
     showBanner(otherTab === true ? 'Signed out in another tab. Nothing kept.' : 'Signed out. Nothing kept.', true, false);
     render();
@@ -1960,6 +2042,8 @@
     }
     else if (a === 'showall') { SHOW[t.getAttribute('data-list')] = 'all'; render(); }
     else if (a === 'sweep') sweep();
+    else if (a === 'checkzz') openGuard('zzdelete');
+    else if (a === 'checkai') openGuard('refer');
     else if (a === 'foldjump') {
       var key = t.getAttribute('data-key');
       FOLD[key] = true;
