@@ -85,6 +85,10 @@
   .row .why { font-size: 13px; color: var(--muted); margin-top: 2px; }
   .row .why a { font-weight: 400; text-decoration: underline; }
   .row .meta { margin-left: auto; font-size: 13px; color: var(--muted); text-align: right; }
+  .grp { font-size: 15px; font-weight: 700; margin: 14px 0 2px; display: flex; gap: 8px; align-items: center; }
+  .grp:first-child { margin-top: 0; }
+  .grp .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .grp .st { font-size: 12px; font-weight: 600; color: var(--muted); }
   .acts { display: flex; gap: 6px; flex: none; }
   .acts .btn { padding: 5px 12px; }
   .acts .yes { border-color: var(--ljr-5); }
@@ -132,7 +136,7 @@
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
 </main>
-<footer class="wrap">Live from ClickUp + Drive (via AF-ENGINE) · stage changes are decisions, never automatic · UK time</footer>
+<footer class="wrap">Live from ClickUp + Drive (via AF-ENGINE) · stages move only on your Yes (or when a no-stamp gate's lines are all done) · UK time</footer>
 <script>
 (function () {
   'use strict';
@@ -190,7 +194,7 @@
   function load() {
     if (!accessToken) return;
     findFile(F.logs, F.state).then(function (f) { return media(f.id).then(function (r) { return r.json(); }); })
-      .then(function (j) { S = j; err = null; $('stamp').textContent = 'Read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · data ' + new Date(j.generated_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + (String(j.mode).toUpperCase() === 'LIVE' ? '' : ' · TEST'); render(); })
+      .then(function (j) { S = j; err = null; var nf = 0; (j.failed || []).forEach(function (f) { if (sent[f.taskId]) { delete sent[f.taskId]; nf++; } }); if (nf) { saveSent(); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); } $('stamp').textContent = 'Read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · data ' + new Date(j.generated_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + (String(j.mode).toUpperCase() === 'LIVE' ? '' : ' · TEST'); render(); })
       .catch(function (e) { err = e.message; render(); });
   }
   function cardFor(t) {
@@ -230,7 +234,7 @@
     var t = apps().filter(function (x) { return x.id === id; })[0];
     if (!t) return '<div class="card">Not found. <a href="#/rooms">Rooms</a></div>';
     var n = stageNo(t.status), slot = n === null ? 0 : (n <= 3 ? 7 : n <= 5 ? 4 : n === 6 ? 3 : n === 7 ? 6 : 5);
-    var subs = (S.lists.apps || []).filter(function (x) { return x.parent === t.id; });
+    var subs = (S.lists.work || []).filter(function (x) { return x.tags.indexOf('app-' + t.id) >= 0 && x.tags.indexOf('line') >= 0; });
     var tpl = (S.lists.template || []).filter(function (x) { return x.parent; });
     var html = '<div class="card"><div class="hero" style="--c:' + col(slot) + '"><div class="disc">' + (n === null ? '–' : n) + '</div><div><h2>' + esc(t.name) + '</h2><p>' + esc(t.status) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
       '<div class="pills" style="margin-top:10px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '<a class="pill" href="' + esc(t.url) + '" target="_blank" rel="noopener">ClickUp</a></div>' +
@@ -247,7 +251,7 @@
       if (isOpenRow) {
         html += '<ul class="lines">' + lines.map(function (x) {
           var who = (x.tags.filter(function (g) { return /^who-/.test(g); })[0] || '').replace('who-', '');
-          return '<li>' + ic(isOpen(x) ? 'dot' : 'tick') + esc(x.name.replace(/^\d\s·\s/, '')) + '<span class="who">' + esc(who) + '</span></li>';
+          return '<li>' + ic(isOpen(x) ? 'dot' : 'tick') + esc(x.name.replace(/^(TEST-)?[^·]+ · /, '').replace(/^\d\s·\s/, '')) + '<span class="who">' + esc(who) + '</span></li>';
         }).join('') + (!mineLines.length && lines.length ? '<li class="muted">template lines · not yet applied to this app</li>' : '') +
         (i === 6 ? sendsFor(t) : '') + '</ul>';
       }
@@ -272,26 +276,40 @@
     return sends.map(function (x) { return '<li>' + ic('send') + '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><span class="who">' + esc(x.status) + '</span></li>'; }).join('');
   }
   // Decide rows get Yes / No, Do rows get Done. A click drops a request file; the engine updates ClickUp.
+  // Rows are grouped by app (the name before the first " · "), app by app, so stages never mix.
+  function appOf(t) { var n = String(t.name).replace(/^TEST-/, ''); return n.indexOf(' · ') > 0 ? n.split(' · ')[0] : 'Factory'; }
   function list(items, slot, empty, kind) {
     if (!items.length) return '<div class="card muted">' + empty + '</div>';
+    var last = null;
+    items = items.slice().sort(function (a, b) { var x = appOf(a), y = appOf(b); return x === y ? String(a.name).localeCompare(String(b.name)) : x === 'Factory' ? 1 : y === 'Factory' ? -1 : x.localeCompare(y); });
     return '<div class="card">' + items.map(function (t) {
+      var g = appOf(t), head = g !== last ? '<div class="grp"><span class="dot" style="background:' + col(slot) + '"></span>' + esc(g) + '</div>' : '';
+      last = g;
+      var label = g === 'Factory' ? t.name : String(t.name).replace(/^TEST-/, '').slice(g.length + 3);
       var acts = sent[t.id] ? '<span class="sent">' + ic('tick') + 'sent</span>' : kind === 'decide' ?
         '<span class="acts"><button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '">Yes</button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '">No</button></span>' :
         '<span class="acts"><button class="btn" type="button" data-act="done" data-id="' + esc(t.id) + '">' + ic('tick') + 'Done</button></span>';
-      return '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><div class="txt"><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(t.name) + '</a>' + why(t) + '</div><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span>' + acts + '</div>';
+      return head + '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><div class="txt"><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(label) + '</a>' + why(t) + '</div><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span>' + acts + '</div>';
     }).join('') + '</div>';
   }
   // The plain What / Yes = / No = lines written on each task, shown under its title. Links become "open".
   function why(t) {
     var d = String(t.desc || '').trim();
     if (!d) return '';
-    return '<div class="why">' + d.split('\n').filter(Boolean).slice(0, 4).map(function (l) {
+    return '<div class="why">' + d.split('\n').filter(function (l) { return l && !/^(GATE|NO|APP|App):/.test(l); }).slice(0, 4).map(function (l) {
       return esc(l).replace(/https?:\/\/[^\s<]+/g, function (u) { return '<a href="' + u + '" target="_blank" rel="noopener">open</a>'; });
     }).join('<br>') + '</div>';
   }
+  // Green only when every job ran OK within its window and the data is fresh. OFF / never ran / late = red.
+  var WINDOW_H = { syncState: 0.75, dailyDigest: 74, staleCheck: 26, leakProbe: 26, weeklyBackup: 170 };
   function enginePill() {
-    var bad = (S.health || []).filter(function (h) { return h.result === 'FAILED'; });
-    return bad.length ? '<span class="pill" style="border-color:var(--ljr-2);color:var(--ljr-2-text)">' + ic('warn') + 'engine: ' + esc(bad.map(function (h) { return h.job; }).join(', ')) + '</span>' :
+    var now = Date.now(), bad = (S.health || []).filter(function (h) {
+      if (!WINDOW_H[h.job]) return h.result === 'FAILED';
+      var last = Date.parse(h.last);
+      return h.result !== 'OK' || !(now - last < WINDOW_H[h.job] * 36e5);
+    }).map(function (h) { return h.job + (h.result === 'OK' ? ' late' : ' ' + String(h.result).toLowerCase()); });
+    if (now - Date.parse(S.generated_at) > 45 * 6e4) bad.unshift('data old');
+    return bad.length ? '<span class="pill" style="border-color:var(--ljr-2);color:var(--ljr-2-text)">' + ic('warn') + esc(bad.join(' · ')) + '</span>' :
       '<span class="pill" style="border-color:var(--ljr-5)">' + ic('tick') + 'engine ok</span>';
   }
   // Clicks already sent stay marked "sent" for a day, so a row never asks twice before the engine catches up.
