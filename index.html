@@ -278,6 +278,9 @@
   // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
   var WRITE_SCOPE = CFG.scopes.write;
   var DRIVES_API = CFG.urls.drives;
+  // Hard rule 14: excluded shared drives (Karen - SHARED) are never queried, listed, searched or binned.
+  var EXCLUDED_DRIVES = (CFG.excludedDrives || []).slice();
+  function excludedDrive(id) { return !!id && EXCLUDED_DRIVES.indexOf(id) !== -1; }
   var SWEEP_PREFIX = 'ZZ_';   // wide search only. Other ZZ_ names are listed under Rename needed and never binned.
   var DELETE_PREFIX = 'ZZ_DELETE_'; // the only name that can be binned, and only with a ledger row
   var ARCHIVE_PREFIX = 'RR_'; // archive: never touched, including anywhere in a name
@@ -404,10 +407,14 @@
     });
   }
   function driveList(params) {
+    if (excludedDrive(params.driveId)) return Promise.resolve({ files: [] }); // never asked
     var q = new URLSearchParams(params);
     q.set('supportsAllDrives', 'true');
     q.set('includeItemsFromAllDrives', 'true');
-    return apiGet(API + '?' + q.toString());
+    return apiGet(API + '?' + q.toString()).then(function (r) {
+      if (r && r.files) r.files = r.files.filter(function (f) { return !excludedDrive(f.driveId); });
+      return r;
+    });
   }
   function getFolder(id) {
     return apiGet(API + '/' + encodeURIComponent(id) + '?supportsAllDrives=true&fields=id,name,webViewLink,parents,driveId');
@@ -437,7 +444,7 @@
       var q = new URLSearchParams({ pageSize: '100', fields: 'nextPageToken,drives(id,name,capabilities(canTrashChildren,canDeleteChildren))' });
       if (tok) q.set('pageToken', tok);
       return apiGet(DRIVES_API + '?' + q.toString()).then(function (r) {
-        out = out.concat(r.drives || []);
+        out = out.concat((r.drives || []).filter(function (d) { return !excludedDrive(d.id); }));
         return r.nextPageToken ? page(r.nextPageToken) : out;
       });
     }
