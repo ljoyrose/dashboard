@@ -33,7 +33,7 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     await signIn(page);
     const view = page.locator('#view');
     await expect(page.locator('#sweepCard h3')).toHaveText('Google Drive: ZZ_DELETE_ files ready to bin');
-    await expect(view).toContainText('ZZ_SUPERSEDED_ is retired and is not a valid state');
+    await expect(view).toContainText('retired ZZ_SUPERSEDED_');
     await expect(view).toContainText('ZZ_old-folder-with-archive');
     await expect(view).toContainText('Folder holds an RR_ item, left alone.');
     await expect(view).toContainText('ZZ_DELETE_in-archive.txt');

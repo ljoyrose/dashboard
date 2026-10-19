@@ -251,6 +251,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | Phone install needs a kept copy of the site, and it must never hold Drive data or the sign-in | "after signing in and reading, the kept copy holds only the page files" |
 | 18 Oct 2026 | There was no way to find a file, to-do or dog without opening each page and scrolling | "home: / opens search; it finds Drive file names per shared drive and Money to-dos, each a link" |
 | 19 Oct 2026 | Lisa still signed in twice: the sign-in lived in one tab only, so Money in a new tab or window, or the installed app, asked again | "sign in on home, open Money Hub and CD Hub: each opens in a new tab already signed in, no prompt" |
+| 19 Oct 2026 | CD Hub Today: "0 of 23 cabins with a temperature" did nothing when clicked (a button with no action) | "CD Hub Today: the temperature tile opens The round, where temperatures are entered" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
@@ -290,6 +291,13 @@ Each entity page draws its `FORECAST.csv` as a line, with a dashed £0 line, the
 - Every page except home has a **Dashboard** button, top right. Opened from the dashboard: it brings that tab back and closes itself. Otherwise it goes home.
 - Home links the MOVE workbook once (the tile).
 - Tests: `tests/mocked/one-sign-in-tabs.spec.js`.
+
+## Every click works
+
+- `tests/mocked/every-click.spec.js` opens every screen of home (11), Money Hub (8) and CD Hub (10) with pretend data.
+- Every visible button, tile and link: has a label; internal links answer 200; outside links are https and open a new tab.
+- Each one is clicked on a fresh copy of the screen. It must go somewhere, open a tab, change the page or ask a question. A dead click fails.
+- Not clicked: Sign out and the skip link (own tests). Outside links are checked, not opened.
 
 ## Phone install and keyboard keys
 

@@ -97,6 +97,8 @@
   .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
   .note { margin: 0; color: var(--muted); font-size: 14px; text-align: left; }
   .note.fail { color: var(--fail); font-weight: 600; }
+  ul.notes { margin: 4px 0 8px; padding-left: 20px; color: var(--muted); font-size: 14px; }
+  ul.notes li { margin: 2px 0; }
   .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 8px; text-align: left; }
   .source a { color: var(--muted); }
 
@@ -1125,7 +1127,7 @@
     var html = '<section class="card slot4' + (P.status === 'done' ? '' : P.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + esc(P.email ? pcpLabel() : 'PC-Personal') + '</h3>' +
       '<span class="state ' + (P.status === 'done' ? 'st-ok' : P.status === 'failed' ? 'st-failed' : running ? 'st-loading' : 'st-idle') + '"><span class="shape"></span>' +
       (P.status === 'done' ? 'Scanned' : P.status === 'failed' ? 'Failed' : running ? 'Reading…' : 'Not scanned') + '</span></div>' +
-      '<p class="note">Finds files in your own personal Google Drive that already exist, byte for byte, in a shared drive. PC-Personal is lisa@puppyclassroom.com; lisah Personal is lisahcarson@gmail.com (sign in with that account, and it only matches shared drives it can read). Nothing changes until you click Rename.</p>';
+      '<ul class="notes"><li>Finds personal files already in a shared drive (exact copy).</li><li>PC-Personal = lisa@puppyclassroom.com. lisah Personal = lisahcarson@gmail.com.</li><li>Nothing changes until you click Rename.</li></ul>';
     if (P.log) html += '<p class="note">' + esc(P.log) + '</p>';
     if (P.error) html += '<p class="note fail">Stopped: ' + esc(P.error) + '</p>';
     if (P.status === 'done') {
@@ -1151,7 +1153,7 @@
       if (otherP.length) html += '<h4>Not ready (' + num(otherP.length) + ')</h4>' + tickList('pcpbin', otherP, function (f) { return f.reason; }, 'pcp-other');
       if (!P.candidates.length) html += '<p class="note">No personal files starting ZZ_DELETE_DRIVE_.</p>';
     }
-    html += '</div><p class="note">Tick the files, then press the button. Nothing is renamed or moved until you confirm. Select all ticks only the allowed files you can see. Show more and Show all bring the rest into view. A hidden file is never renamed or moved. A name containing RR_ cannot be ticked. A personal file is moved to the bin only when its name starts ZZ_DELETE_DRIVE_ and its id is in the delete ledger. The shared-drive copy is never changed.</p></section>';
+    html += '</div><ul class="notes"><li>Tick, press, confirm. Nothing changes before.</li><li>Select all = only the files you can see.</li><li>RR_ names: never ticked.</li><li>Bin only: ZZ_DELETE_DRIVE_ + ledger row.</li><li>Shared-drive copy: never changed.</li></ul></section>';
     return html + nextSteps([NX.drive, NX.bin, NX.map]);
   }
 
@@ -1320,7 +1322,7 @@
     var html = '<section class="card slot4' + (U.status === 'done' ? '' : U.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + esc(U.root ? 'Drive: ' + U.root : 'Drive check') + '</h3>' +
       '<span class="state ' + (U.status === 'done' ? 'st-ok' : U.status === 'failed' ? 'st-failed' : running ? 'st-loading' : 'st-idle') + '"><span class="shape"></span>' +
       (U.status === 'done' ? 'Checked' : U.status === 'failed' ? 'Failed' : running ? 'Checking…' : 'Not checked') + '</span></div>' +
-      '<p class="note">Plug in the USB stick or drive, click the button, and pick it. Every file on it is compared with the shared drives. Files are read on this computer only; nothing is uploaded. Works in Chrome or Edge.</p>';
+      '<ul class="notes"><li>Plug in, click, pick the drive.</li><li>Compared with the shared drives.</li><li>Read on this computer only. Nothing uploaded.</li><li>Chrome or Edge.</li></ul>';
     if (U.log) html += '<p class="note">' + esc(U.log) + '</p>';
     if (U.error) html += '<p class="note fail">Stopped: ' + esc(U.error) + '</p>';
     if (U.status === 'done') {
@@ -1338,7 +1340,7 @@
       (running ? '<button class="btn" type="button" data-action="usbstop"><span>Stop</span></button>' : '') +
       '<button class="btn" type="button" data-action="usbcsv" data-which="match"' + (U.matches.length ? '' : ' disabled') + '><span>Download list: already in shared</span></button>' +
       '<button class="btn" type="button" data-action="usbcsv" data-which="only"' + (U.only.length ? '' : ' disabled') + '><span>Download list: only on this drive</span></button></div>' +
-      '<p class="note">Renaming never deletes anything. The files stay on the drive until you move them to the Bin in Finder. If Chrome refuses the top of a drive, pick a folder inside it.</p></section>';
+      '<ul class="notes"><li>Rename never deletes.</li><li>Delete later in Finder.</li><li>Chrome refuses the top of a drive? Pick a folder inside.</li></ul></section>';
     return html + nextSteps([NX.drive, NX.bin, NX.map]);
   }
   // ==USB-END==
@@ -1447,7 +1449,7 @@
     var foot = '<div class="source"><span>From the Money Hub shared drive</span><span><a href="money/" target="_blank" rel="opener">Open Money Hub</a></span></div>';
     if (!MC) return '<section class="card slotfin pending">' + head + '<p class="note fail">Money Hub code did not load.</p>' + foot + '</section>';
     if (!d) return '<section class="card slotfin' + cardClass(p) + '" id="moneyTile">' + head + failNote(p) + foot + '</section>';
-    if (d.gate !== 'ok') return '<section class="card slotfin pending" id="moneyTile">' + head + '<p class="note">Money is shown only for Lisa\'s account.</p>' + foot + '</section>';
+    if (d.gate !== 'ok') return '<section class="card slotfin pending" id="moneyTile">' + head + '<p class="note">Lisa only.</p>' + foot + '</section>';
     var gbpf = MC.gbp, fd = function (x) { return esc(MC.fmtDate(x, d.today)); };
     function ent(m) {
       var bad = (m.liab && m.liab.overdue.length) || (m.dryState === 'dry' && m.dryDays <= 30);
@@ -1467,7 +1469,7 @@
     var h = '<section class="card slotfin" id="moneyTile">' + head;
     if (biz.length) h += '<p class="mgroup">Business</p><div class="ments">' + biz.map(ent).join('') + '</div>';
     if (ppl.length) h += '<p class="mgroup">Personal</p><div class="ments">' + ppl.map(ent).join('') + '</div>';
-    h += '<p class="note">Each entity on its own. Business and personal are never added together.</p>';
+    h += '<p class="note">Per entity. Business and personal never added together.</p>';
     var turn = MC.yourTurn(d.data), ready = turn.filter(function (x) { return x.ready === 'ready'; });
     var todoN = listShown('money-todos', ready.length, 3);
     h += '<div class="cardhead"><h4>To-dos</h4><span class="mtag ops">' + ready.length + ' ready · ' + turn.length + ' open</span></div><ul class="files">' +
@@ -1508,7 +1510,7 @@
   function viewGate() {
     return '<div class="card vision pending"><div class="cardhead"><h2 class="h3">Sign in</h2>' +
       '<span class="state st-idle"><span class="shape"></span>Not signed in</span></div>' +
-      '<p class="note">Sign in with Google to open the dashboard.</p>' +
+      '<p class="note">Sign in to open.</p>' +
       '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
   }
 
@@ -1559,7 +1561,7 @@
     if (!signedIn) {
       html += '<div class="card vision pending"><div class="cardhead"><h3>Not signed in</h3>' +
         '<span class="state st-idle"><span class="shape"></span>No reads</span></div>' +
-        '<p class="note">Read-only access to your shared drives. The Bin asks for more only when you use it.</p>' +
+        '<p class="note">Read-only. The Bin asks for more only when used.</p>' +
         '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
     }
     html += moneyTile();
@@ -1674,13 +1676,13 @@
     // Access card
     html += foldOpen('access', !writeGranted, 'card slot2' + (signedIn && writeGranted ? '' : ' pending')) + '<summary><h3>Permission to use the bin</h3>' +
       (writeGranted ? '<span class="state st-ok"><span class="shape"></span>Bin actions on</span>' : '<span class="state st-idle"><span class="shape"></span>Read-only</span>') + '</summary><div class="fbody">' +
-      '<p class="note">Lists below are read-only until you tick a file. Moving ticked ZZ_DELETE_ items to the bin needs full Drive access, asked for only here and kept in memory until you sign out. A shared-drive bin is never permanently deleted.</p>' +
+      '<ul class="notes"><li>Read-only until you tick.</li><li>Moving needs full Drive access: asked here only, kept until sign-out.</li><li>Shared-drive bins: never emptied.</li></ul>' +
       (signedIn && !writeGranted ? '<div class="actions"><button class="btn danger" type="button" data-action="grantwrite">' + icon('in') + '<span>Allow Bin actions</span></button></div>' : '') +
       '</div></details>';
     // ZZ_DELETE_ sweep. Only ticked ready items can move. Nothing moves until Lisa confirms.
     var listed = d ? d.ready.length + d.held.length + d.rename.length + d.leftout.length + d.blocked.length + (d.e02 ? d.e02.length : 0) : null;
     html += foldOpen('sweep', !!(d && listed), 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Google Drive: ZZ_DELETE_ files ready to bin</h3>' + stateBadge(p, listed) + '</summary><div class="fbody">';
-    html += '<p class="note">Only names that start ZZ_DELETE_ and have a row in the delete ledger can be ticked. Marked files with no ledger row are held and are not binned. Other ZZ_ names are listed under Rename needed and are never binned. ZZ_SUPERSEDED_ is retired and is not a valid state. Anything with RR_ in its name, inside an RR_ folder, or in a folder that holds an RR_ item, is left out. Money rollback files are held and are never ticked, restored, renamed or binned, even by Select all. That hold uses two folder ids (0.1 - Index and 4 - Ops), not the folder name. Select all ticks only the allowed rows you can see. Show more and Show all bring the rest into view. A hidden row is never moved.</p>';
+    html += '<ul class="notes"><li>Tickable: ZZ_DELETE_ + ledger row.</li><li>No ledger row: held.</li><li>Other ZZ_ (incl. retired ZZ_SUPERSEDED_): Rename needed, never binned.</li><li>RR_ (name, folder, or inside): left out.</li><li>Money rollback (0.1 - Index, 4 - Ops by id): held, never touched.</li><li>Select all = only rows you can see.</li></ul>';
     html += failNote(p);
     if (d) {
       if (d.ledgerNote) html += '<p class="note fail">' + esc(d.ledgerNote) + '</p>';
@@ -1713,8 +1715,8 @@
     }
     html += '<div class="actions"><a class="btn danger" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>1. Delete marked files from DROPBOX only</span></a>' +
       '<a class="btn danger" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>2. Empty DROPBOX trash</span></a></div>' +
-      '<p class="note">1 opens GitHub, workflow 3. Leave the box empty for a dry run, or type DELETE and press Run workflow. Only Dropbox files named ZZ_DELETE_DROPBOX_ move to Dropbox Deleted files, recoverable for a time. Google Drive is never changed.</p>' +
-      '<p class="note">2 opens Dropbox Deleted files: select all, then Permanently delete. Dropbox only. Dropbox does not allow this to be automated for a personal account.</p>';
+      '<ul class="notes"><li>1: GitHub workflow 3. Empty box = dry run. Type DELETE to run.</li><li>Moves only ZZ_DELETE_DROPBOX_ files (recoverable for a while). Drive never changed.</li></ul>' +
+      '<ul class="notes"><li>2: Dropbox Deleted files. Select all, Permanently delete.</li><li>Dropbox only. Cannot be automated (personal account).</li></ul>';
     html += sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</div></details>';
     // Bin per shared drive: indexed, drives with items first, each folded; empty bins grouped.
     html += foldOpen('bins', true, 'card slot2' + cardClass(p), 'binCard') + '<summary><h3>Google Drive: shared-drive bins</h3>' + stateBadge(p, d ? d.per.length : null) + '</summary><div class="fbody">';
