@@ -170,7 +170,7 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     ['index.html', 'cdhub/index.html', 'money/index.html'].forEach((f) => {
       [...read(f).matchAll(/\b(?:src|href)="([^"#:?]+)"/g)].map((m) => m[1]).filter((u) => !/^(https?|mailto|tel|data)/.test(u) && !/^['"+\s]/.test(u)).forEach((u) => {
         const target = path.posix.normalize(path.posix.join(path.posix.dirname(f), u)).replace(/^\.\/$/, '.');
-        const published = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'manifest.webmanifest', 'sw.js', 'icons/', 'cdhub/', 'money/'].some((p) => target === p || target.startsWith(p) || target === '.' || target === '');
+        const published = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'manifest.webmanifest', 'sw.js', 'icons/', 'cdhub/', 'money/', 'factory/'].some((p) => target === p || target.startsWith(p) || target === '.' || target === '');
         if (!published) bad.push(`${f} refers to ${u}`);
       });
     });
