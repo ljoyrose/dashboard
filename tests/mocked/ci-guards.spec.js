@@ -128,7 +128,7 @@ test.describe('Teeth list stays in step with the pages @ci-guard', () => {
 
 test.describe('Publishing waits for the tests @ci-guard', () => {
   const pages = () => read('.github/workflows/pages.yml');
-  const LIVE_FILES = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'manifest.webmanifest', 'sw.js', 'icons/icon.svg', 'cdhub/index.html', 'money/index.html', 'money/core.js'];
+  const LIVE_FILES = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'manifest.webmanifest', 'sw.js', 'icons/icon.svg', 'cdhub/index.html', 'money/index.html', 'money/core.js', 'factory/index.html'];
 
   test('the publish job needs the gate job, and the gate runs the same suite as the required check', () => {
     const wf = pages();
@@ -145,11 +145,11 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(wf).toMatch(/on:\s*\n\s*push:\s*\n\s*branches:\s*\[main\]\s*\n\s*workflow_dispatch:/);
   });
 
-  test('only the three pages and the shared sign-in are published (never tests, docs or .github) and all four live files are in it', () => {
+  test('only the four pages and the shared sign-in are published (never tests, docs or .github) and all four live files are in it', () => {
     const m = /cp -r ([^\n]+) _site\//.exec(pages());
     expect(m, 'the copy line').toBeTruthy();
     const copied = m[1].trim().split(/\s+/);
-    expect(copied.sort()).toEqual(['auth.js', 'cdhub', 'config.js', 'icons', 'index.html', 'manifest.webmanifest', 'money', 'sw.js', 'tokens.css', 'toolkit.js']);
+    expect(copied.sort()).toEqual(['auth.js', 'cdhub', 'config.js', 'factory', 'icons', 'index.html', 'manifest.webmanifest', 'money', 'sw.js', 'tokens.css', 'toolkit.js']);
     LIVE_FILES.forEach((f) => expect(copied.some((c) => f === c || f.startsWith(c + '/')), f + ' must be published').toBe(true));
     // and the live-match test compares exactly these files
     LIVE_FILES.forEach((f) => expect(read('tests/live/live-smoke.spec.js')).toContain(`'${f}'`));
