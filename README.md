@@ -13,19 +13,27 @@ A single-page Google **shared drives** surface (read-only browsing, plus a Bin),
   "Move selected (N)" moves only ticked rows that are on screen. Every list has Show more and Show all. Per shared drive bin list (name, date binned, who).
   Moving a file to the bin is the only write. A shared-drive bin is never permanently deleted. Nothing runs automatically.
   The section is in the URL (`#/changes/24h`), so back, reload and links all work.
-- **Sign-in:** Google, Drive read-only scope. The full `drive` scope is asked for only when Bin actions are used. One sign-in is shared by the home page, Money Hub and CD Hub. The access token stays in this browser tab until it expires or you sign out.
+- **Sign-in:** Google, Drive read-only scope. The full `drive` scope is asked for only when Bin actions are used. One sign-in is shared by the home page, Money Hub and CD Hub, in every tab and the installed app. Only the short-lived access token is kept (localStorage, one key), until it expires or you sign out; signing out in one tab signs out all. No refresh token, no secret.
 - **Every panel** shows where it read from and when it was read (UK time). It also shows whether the read
   is pending, failed, empty or capped.
 - **Look:** Lexend only, LJR7 palette (slot 0 for Read first and Drive, slot 2 Risks for the Bin, slot 7 for Cf overskill), light and dark modes.
 - **Money tile** (on Map, Lisa's account only): cash per entity (business and personal kept apart, never summed), stale and runs-dry flags, ready to-dos, and dates overdue or due in the next 14 days. It reads through `money/core.js` and links to `/money/`.
 - **Dropbox line** (on Bin, after sign-in only): reads `DROPBOX-TOTALS.json` (counts and GB only, no file names) from the Drive folder set in `DBX_FOLDER_ID`, so nothing about Dropbox is public. Shows how many `ZZ_DELETE_DROPBOX_` files are waiting. Two buttons: `DBX_JOB_URL` opens workflow 3 in the private repo (Dropbox only: empty box = dry run, type DELETE), `DBX_TRASH_URL` opens Dropbox Deleted files (cannot be automated on a personal account).
-- **Home screen:** Key projects & docs sits at the top. Big links for the MOVE workbook, Money Hub, CD Hub and the other sections. One tap each.
+- **Home screen:** Key projects & docs sits at the top. Big links for the MOVE workbook, Money Hub, CD Hub and the other sections. One tap each. Money Hub and CD Hub open in a new tab.
 - **Signed out:** a sign-in button and those links. No tabs and no private data. The real protection is that all data is read from Drive with the viewer's own Google sign-in.
 - **PC-Personal** (`#/personal`): finds files in the signed-in account's own personal Drive that already exist byte for byte (MD5 + size) in a shared drive; "Rename selected (N)" renames the ticked matches to `ZZ_DELETE_DRIVE_<name>`. "Move selected (N)" bins only ticked personal files that start `ZZ_DELETE_DRIVE_` and have a delete-ledger row. A name containing `RR_` cannot be ticked. Labelled PC-Personal for lisa@puppyclassroom.com and lisah Personal for lisahcarson@gmail.com. Runs in the browser with the viewer's own sign-in; the shared-drive copy is never changed.
 - **Writes:** only rename, and move-to-bin (`files.update` with `trashed=true`), from the ticked rows. Shared-drive bins are never emptied.
 
 The repo contains no secrets. The OAuth client ID in `index.html` is public by design and only works from the
 authorised origin `https://ljoyrose.github.io`.
+
+## Design rules (every page, now and future)
+
+- **Dashboard button.** Every page except home has a **Dashboard** button at the top right of the header. Always shown (signed in or out), keyboard reachable, `aria-label`, existing button style. Opened from the dashboard: it brings that tab back and closes itself. Otherwise it goes to the site root.
+- **Hub links open a new tab.** Home links to Money Hub, CD Hub (and any future hub) use `target="_blank" rel="opener"` (same site only), so the dashboard is never replaced.
+- **One sign-in.** Every page uses `auth.js` (`DashAuth`). Never add a second token store.
+- **Wording.** Minimal, concise, direct. Short labels. Bullets, not paragraphs, unless essential. ADHD-friendly. Safety notes stay, in a few words (e.g. "Read-only", "Lisa only").
+- Also binding: ADHD-Layout-Standards.md on Drive (spacing scale, Lexend only, LJR7 colour order, S1–S7).
 
 ## CD Hub (`/cdhub/`)
 

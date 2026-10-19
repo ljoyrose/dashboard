@@ -54,6 +54,27 @@
     root.addEventListener('load', function () { root.navigator.serviceWorker.register(SITE + 'sw.js').catch(function () { /* install is optional */ }); });
   }
 
+  // ---- "Dashboard" button (top right of every page that is not the home page) ----
+  // Hub pages open in their own tab. If this tab was opened from the dashboard (same site), bring that tab
+  // to the front and close this one. Otherwise just go to the dashboard in this tab.
+  function backHome(e) {
+    var o = null;
+    try { o = root.opener; } catch (x) { o = null; }
+    try {
+      if (o && !o.closed && o.location.origin === root.location.origin && o.location.pathname === new URL(SITE).pathname) {
+        if (e) e.preventDefault();
+        o.focus();
+        root.close();
+        return true;
+      }
+    } catch (x) { /* another site or closed: fall through to the link */ }
+    return false;
+  }
+  if (root.document) root.document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('[data-back-home]');
+    if (b && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) backHome(e);
+  });
+
   // ---- Keyboard keys: g then a letter to go somewhere, r reread, / search, ? the list ----
   var KEYS = [
     ['g m', 'Map (home)', function () { go('./#/map'); }],
@@ -136,7 +157,7 @@
         out.innerHTML = order.map(function (g) {
           var items = groups[g];
           return '<section data-search-group="' + escHtml(g) + '" style="margin-top:10px;border-left:4px solid ' + SLOT[items[0].slot || 0] + ';padding-left:10px"><h3 style="margin:0 0 4px;font-size:15px">' + escHtml(g) + ' (' + items.length + ')</h3><ul style="margin:0;padding-left:18px">' +
-            items.map(function (x) { return '<li>' + (x.href ? '<a href="' + escHtml(x.href) + '"' + (/^https?:/.test(x.href) ? ' target="_blank" rel="noopener"' : '') + '>' + escHtml(x.title) + '</a>' : '<a href="#" data-search-act="' + (acts.push(x.act) - 1) + '">' + escHtml(x.title) + '</a>') + (x.sub ? ' <span style="font-size:14px">· ' + escHtml(x.sub) + '</span>' : '') + '</li>'; }).join('') + '</ul></section>';
+            items.map(function (x) { return '<li>' + (x.href ? '<a href="' + escHtml(x.href) + '"' + (/^https?:/.test(x.href) ? ' target="_blank" rel="noopener"' : /^(money|cdhub)\//.test(x.href) ? ' target="_blank" rel="opener"' : '') + '>' + escHtml(x.title) + '</a>' : '<a href="#" data-search-act="' + (acts.push(x.act) - 1) + '">' + escHtml(x.title) + '</a>') + (x.sub ? ' <span style="font-size:14px">· ' + escHtml(x.sub) + '</span>' : '') + '</li>'; }).join('') + '</ul></section>';
         }).join('');
         Array.prototype.forEach.call(out.querySelectorAll('[data-search-act]'), function (a) { a._act = acts[+a.getAttribute('data-search-act')]; });
         return all;

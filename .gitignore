@@ -4,7 +4,7 @@ data/
 shots/
 
 # Test tooling
-node_modules/
+node_modules
 test-results/
 playwright-report/
 # Allow the invented sample files and the test tooling files (the rules above hide all csv/json)

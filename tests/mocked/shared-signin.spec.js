@@ -30,9 +30,9 @@ test.describe('Shared sign-in', () => {
     expect(await page.evaluate(() => window.__GIS_CALLS.request)).toBe(0);
 
     await page.evaluate(() => {
-      const data = JSON.parse(sessionStorage.getItem(window.DashAuth.KEY));
+      const data = JSON.parse(localStorage.getItem(window.DashAuth.KEY));
       data.expires_at = Date.now() - 1000;
-      sessionStorage.setItem(window.DashAuth.KEY, JSON.stringify(data));
+      localStorage.setItem(window.DashAuth.KEY, JSON.stringify(data));
     });
 
     await page.goto('money/');

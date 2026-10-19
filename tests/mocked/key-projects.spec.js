@@ -7,8 +7,8 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const MOVE = 'https://docs.google.com/spreadsheets/d/1AIgIefQMATEdWLtAkdvE7SvdnX8g2sTX87VnvOX5c-I/edit';
 const TILES = [
   ['MOVE', MOVE, true],
-  ['Money Hub', 'money/', false],
-  ['CD Hub', 'cdhub/', false],
+  ['Money Hub', 'money/', true],
+  ['CD Hub', 'cdhub/', true],
   ['Map', '#/map', false],
   ['Read first', '#/readfirst', false],
   ['Drive', '#/drive', false],

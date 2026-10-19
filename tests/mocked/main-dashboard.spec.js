@@ -49,12 +49,13 @@ test.describe('Main dashboard: sign-in (mocked)', () => {
     await expect(page.locator('#pageFoot')).toBeVisible();
   });
 
-  test('keeps only the shared sign-in for this tab (no local storage or cookies)', async ({ page, context }) => {
+  test('keeps only the shared sign-in, one key in this browser (no cookies, no refresh token)', async ({ page, context }) => {
     await page.goto('./');
     await signIn(page);
-    const stores = await page.evaluate(() => ({ local: localStorage.length, session: Object.keys(sessionStorage), key: window.DashAuth.KEY }));
-    expect(stores.local).toBe(0);
-    expect(stores.session).toEqual([stores.key]);
+    const stores = await page.evaluate(() => ({ local: Object.keys(localStorage), session: sessionStorage.length, key: window.DashAuth.KEY, saved: JSON.parse(localStorage.getItem(window.DashAuth.KEY)) }));
+    expect(stores.local).toEqual([stores.key]);
+    expect(stores.session).toBe(0);
+    expect(Object.keys(stores.saved).sort()).toEqual(['access_token', 'expires_at', 'scope']); // no refresh token, no secret
     expect(await context.cookies()).toEqual([]);
   });
 
@@ -66,7 +67,7 @@ test.describe('Main dashboard: sign-in (mocked)', () => {
     await expect(page.locator('#mainNav')).toBeHidden();
     await expect(page.locator('#signInBtn')).toBeVisible();
     expect(await page.evaluate(() => window.__GIS_CALLS.revoke)).toBe(1);
-    expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
+    expect(await page.evaluate(() => sessionStorage.length + localStorage.length)).toBe(0);
   });
 });
 
@@ -216,31 +217,31 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
   test('"Open Money Hub" link goes to /money/ and that page loads', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await page.locator('#view a', { hasText: 'Open Money Hub' }).click();
-    await expect(page).toHaveURL(/\/dashboard\/money\/$/);
-    await expect(page.locator('h1')).toContainText('Money Hub');
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a', { hasText: 'Open Money Hub' }).click()]); // opens in a new tab
+    await expect(tab).toHaveURL(/\/dashboard\/money\/$/);
+    await expect(tab.locator('h1')).toContainText('Money Hub');
   });
 
   test('top-nav "Money" link goes to /money/', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await page.locator('#mainNav a[href="money/"]').click();
-    await expect(page).toHaveURL(/\/dashboard\/money\/$/);
-    await expect(page).toHaveTitle(/Money Hub/);
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#mainNav a[href="money/"]').click()]); // opens in a new tab
+    await expect(tab).toHaveURL(/\/dashboard\/money\/$/);
+    await expect(tab).toHaveTitle(/Money Hub/);
   });
 
   test('clicking an entity on the tile opens that entity in the Money Hub', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await page.locator('#view a.ment', { hasText: 'TESTCO' }).click();
-    await expect(page).toHaveURL(/\/money\/#\/e\/TESTCO$/);
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a.ment', { hasText: 'TESTCO' }).click()]); // opens in a new tab
+    await expect(tab).toHaveURL(/\/money\/#\/e\/TESTCO$/);
   });
 
   test('a to-do on the tile links to that row in the Money Hub', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await page.locator('#view a[href^="money/#/register/"]').first().click();
-    await expect(page).toHaveURL(/\/money\/#\/register\/R001$/);
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a[href^="money/#/register/"]').first().click()]); // opens in a new tab
+    await expect(tab).toHaveURL(/\/money\/#\/register\/R001$/);
   });
 
   test('the Money Hub back link returns to the dashboard', async ({ page }) => {

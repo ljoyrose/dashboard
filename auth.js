@@ -1,24 +1,36 @@
 // One Google sign-in for the home page, Money Hub and CD Hub.
-// The access token and its expiry live in this browser tab only, under one key.
-// A valid token is reused. When it is missing or expired, the page asks again
-// with a silent prompt first. Nothing here is a client secret or a refresh token.
+// The access token and its expiry are kept in this browser (localStorage) under one key, so every tab,
+// window and the installed app window share one sign-in. It is only ever the short-lived access token
+// (about an hour): never a client secret, never a refresh token. An expired token is not reused.
+// Signing out in one tab clears it for every tab, and a new sign-in in one tab is seen by the others.
 (function (global) {
   'use strict';
   var KEY = 'ljr-dash-auth';
+  var store = (function () { try { return global.localStorage; } catch (e) { return null; } })();
+
+  // One-time move: older versions kept the token in this tab's sessionStorage.
+  try {
+    var old = global.sessionStorage && global.sessionStorage.getItem(KEY);
+    if (old) {
+      if (store && !store.getItem(KEY)) store.setItem(KEY, old);
+      global.sessionStorage.removeItem(KEY);
+    }
+  } catch (e) {}
 
   function read() {
     try {
-      var raw = sessionStorage.getItem(KEY);
+      if (!store) return null;
+      var raw = store.getItem(KEY);
       if (!raw) return null;
       var data = JSON.parse(raw);
       if (!data || typeof data.access_token !== 'string' || !data.access_token || typeof data.expires_at !== 'number' || !isFinite(data.expires_at)) {
-        sessionStorage.removeItem(KEY);
+        store.removeItem(KEY);
         return null;
       }
       data.scope = typeof data.scope === 'string' ? data.scope : '';
       return data;
     } catch (e) {
-      try { sessionStorage.removeItem(KEY); } catch (e2) {}
+      try { store.removeItem(KEY); } catch (e2) {}
       return null;
     }
   }
@@ -44,7 +56,7 @@
 
   function save(token, expiresAt, scope) {
     try {
-      sessionStorage.setItem(KEY, JSON.stringify({
+      store.setItem(KEY, JSON.stringify({
         access_token: token,
         expires_at: expiresAt,
         scope: scope || ''
@@ -53,7 +65,16 @@
   }
 
   function clear() {
-    try { sessionStorage.removeItem(KEY); } catch (e) {}
+    try { store.removeItem(KEY); } catch (e) {}
+  }
+
+  // Another tab signed in, refreshed or signed out. fn(data) gets the new saved sign-in, or null when it was cleared.
+  // The browser only fires 'storage' in the OTHER tabs, never in the tab that made the change.
+  function onChange(fn) {
+    global.addEventListener('storage', function (e) {
+      if (e.key !== KEY && e.key !== null) return;
+      fn(valid());
+    });
   }
 
   function hasScope(data, scope) {
@@ -144,6 +165,7 @@
     save: save,
     clear: clear,
     hasScope: hasScope,
+    onChange: onChange,
     expiryFrom: expiryFrom,
     bind: bind
   };

@@ -25,7 +25,7 @@ Green means all of these are true on all three pages:
 5. The sample spreadsheets (CSV files) are read and shown correctly.
 6. The browser shows **no unexpected errors** in its hidden error log.
 7. The page never tries to contact any address we did not plan for.
-8. Only the shared sign-in for this browser tab is saved. Sign-out clears it.
+8. Only the shared sign-in is saved (one key, this browser, every tab). Sign-out clears it in every tab.
 9. On a phone-sized screen, each page opens, the menu works and nothing scrolls sideways.
 10. The column names the pages expect in your Drive files are still the ones on our list.
 11. Dark mode still works, and accessibility and the smallest text size have not got worse.
@@ -250,6 +250,8 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | Money only said "runs dry on X" in words, so a forecast dip was easy to miss | "a forecast that goes below zero marks the runs-dry date in red" |
 | 18 Oct 2026 | Phone install needs a kept copy of the site, and it must never hold Drive data or the sign-in | "after signing in and reading, the kept copy holds only the page files" |
 | 18 Oct 2026 | There was no way to find a file, to-do or dog without opening each page and scrolling | "home: / opens search; it finds Drive file names per shared drive and Money to-dos, each a link" |
+| 19 Oct 2026 | Lisa still signed in twice: the sign-in lived in one tab only, so Money in a new tab or window, or the installed app, asked again | "sign in on home, open Money Hub and CD Hub: each opens in a new tab already signed in, no prompt" |
+| 19 Oct 2026 | CD Hub Today: "0 of 23 cabins with a temperature" did nothing when clicked (a button with no action) | "CD Hub Today: the temperature tile opens The round, where temperatures are entered" |
 | 19 Oct 2026 | Hard rule 14: the Bin (and Drive, Changes, search) listed Karen - SHARED | "is in config, never queried and never shown on Map, Drive, Bin, Changes, PC-Personal or search" |
 
 **Recipe when a bug is fixed:**
@@ -280,6 +282,23 @@ Money keeps a copy of each file **in memory only** (never in the browser's stora
 ## Money chart and worked-out deadlines
 
 Each entity page draws its `FORECAST.csv` as a line, with a dashed £0 line, the start point and, if the forecast goes below zero, a red dot labelled "Runs dry". The same facts are in the chart's spoken label and in a note under it. The Dates page and each entity page also list **deadlines worked out from the usual UK rules**: Self Assessment (31 January and 31 July) for personal entities; Companies House accounts (9 months), Corporation Tax payment (9 months and 1 day) and CT600 (12 months) for companies with a `year_end`; VAT (1 month and 7 days after each quarter) where `vat_quarter_end` is set. Every row says **check with accountant**; it is not tax advice. A date already in MON-DATES for the same entity (within 5 days) is not repeated. Tests: `tests/mocked/money-forecast-deadlines.spec.js`.
+
+## One sign-in for every tab, and the Dashboard button
+
+- One sign-in covers home, Money Hub and CD Hub in every tab, window and the installed app (one key, `ljr-dash-auth`, in this browser).
+- Only the short-lived access token and its expiry. No refresh token, no secret. Expired = not reused.
+- Sign out in one tab = signed out in all. Sign in in one tab = the others pick it up.
+- Money Hub and CD Hub links on home open in a new tab.
+- Every page except home has a **Dashboard** button, top right. Opened from the dashboard: it brings that tab back and closes itself. Otherwise it goes home.
+- Home links the MOVE workbook once (the tile).
+- Tests: `tests/mocked/one-sign-in-tabs.spec.js`.
+
+## Every click works
+
+- `tests/mocked/every-click.spec.js` opens every screen of home (11), Money Hub (8) and CD Hub (10) with pretend data.
+- Every visible button, tile and link: has a label; internal links answer 200; outside links are https and open a new tab.
+- Each one is clicked on a fresh copy of the screen. It must go somewhere, open a tab, change the page or ask a question. A dead click fails.
+- Not clicked: Sign out and the skip link (own tests). Outside links are checked, not opened.
 
 ## Phone install and keyboard keys
 

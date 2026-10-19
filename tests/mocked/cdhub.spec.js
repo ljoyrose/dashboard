@@ -22,16 +22,17 @@ test.describe('CD Hub: loads', () => {
     await expect(page.locator('#nav button')).toHaveCount(0);
   });
 
-  test('holds no table data; only the shared sign-in is kept in this tab', async ({ page, context }) => {
+  test('holds no table data; only the shared sign-in is kept, one key in this browser', async ({ page, context }) => {
     await page.goto('cdhub/');
-    await expect(page.locator('#main')).toContainText('This page holds no data of its own');
+    await expect(page.locator('#main')).toContainText('No data of its own');
     await signIn(page);
-    const stores = await page.evaluate(() => ({ local: localStorage.length, session: Object.keys(sessionStorage), key: window.DashAuth.KEY }));
-    expect(stores.local).toBe(0);
-    expect(stores.session).toEqual([stores.key]);
+    const stores = await page.evaluate(() => ({ local: Object.keys(localStorage), session: sessionStorage.length, key: window.DashAuth.KEY, saved: JSON.parse(localStorage.getItem(window.DashAuth.KEY)) }));
+    expect(stores.local).toEqual([stores.key]);
+    expect(stores.session).toBe(0);
+    expect(Object.keys(stores.saved).sort()).toEqual(['access_token', 'expires_at', 'scope']); // no refresh token, no secret
     expect(await context.cookies()).toEqual([]);
     await page.locator('#nav button[data-signout]').click();
-    expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
+    expect(await page.evaluate(() => sessionStorage.length + localStorage.length)).toBe(0);
   });
 });
 
@@ -155,7 +156,7 @@ test.describe('CD Hub: navigation', () => {
     await page.goto('cdhub/');
     await signIn(page);
     await page.locator('#nav button[data-go="round"]').click();
-    await expect(page.locator('#main')).toContainText('Saving is off in this web version');
+    await expect(page.locator('#main')).toContainText('Saving off');
   });
 });
 
