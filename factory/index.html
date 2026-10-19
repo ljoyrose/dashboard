@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="build" content="ljr-factory-v1-2026-10-19">
+<title>Factory</title>
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#2C2C2A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
+<script src="../auth.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  /* Colours: ../tokens.css only (LJR7 spine). 0 system · 1 vision · 2 risk · 3 money · 4 ops · 5 connect · 6 sales · 7 ideas · 8 bin. */
+  :root { --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted); --line: #DED5C8; }
+  @media (prefers-color-scheme: dark) { :root { --line: #3D372F; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 16px; }
+  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
+  .top h1 a { color: inherit; text-decoration: none; }
+  .stamp { font-size: 13px; color: var(--muted); }
+  .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
+  .btn.main { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .hidden { display: none !important; }
+  nav.tabs { display: flex; gap: 6px; overflow-x: auto; padding: 0 16px 10px; scrollbar-width: none; }
+  nav.tabs a { flex: none; text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); display: inline-flex; gap: 6px; align-items: center; }
+  nav.tabs a[aria-current="page"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-4); color: #2C2C2A; border-radius: 999px; padding: 0 7px; }
+  main { padding: 16px 0 48px; display: flex; flex-direction: column; gap: 14px; }
+  .banner { border: 1.5px solid var(--ljr-2); border-radius: 12px; padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
+  .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pill { font-size: 13px; font-weight: 600; border-radius: 999px; padding: 3px 10px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; }
+  .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .room { border: 2px solid var(--c); border-radius: 14px; background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; }
+  .room h2 { font-size: 15px; margin: 0; display: flex; gap: 8px; align-items: center; }
+  .room h2 .ct { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
+  .chip { display: flex; gap: 6px; align-items: center; text-decoration: none; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; font-size: 14px; }
+  .chip .st { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .chip.stuck { border-color: var(--ljr-2); }
+  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .hero { display: flex; gap: 12px; align-items: center; }
+  .disc { width: 42px; height: 42px; border-radius: 50%; background: var(--c); color: #2C2C2A; display: flex; align-items: center; justify-content: center; font-weight: 700; flex: none; }
+  .hero h2 { margin: 0; font-size: 20px; }
+  .hero p { margin: 0; color: var(--muted); font-size: 14px; }
+  .strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; margin: 10px 0 2px; }
+  .strip i { height: 10px; border-radius: 3px; background: var(--line); }
+  .strip i.d { background: var(--ljr-5); } .strip i.c { background: var(--ljr-6); }
+  .stage { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); cursor: pointer; }
+  .stage .n { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--bg); border: 1px solid var(--line); flex: none; }
+  .stage.d .n { background: var(--ljr-5); border-color: var(--ljr-5); color: #2C2C2A; }
+  .stage.c .n { background: var(--ljr-6); border-color: var(--ljr-6); color: #2C2C2A; }
+  .stage.c { font-weight: 600; }
+  .stage .r { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .lines { list-style: none; margin: 0 0 6px; padding: 0 0 0 34px; }
+  .lines li { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 3px 0; }
+  .lines li .who { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .codes { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
+  .codes span { font-size: 12px; font-weight: 600; border: 1.5px solid var(--line); border-radius: 6px; padding: 1px 7px; }
+  .codes span.q { color: var(--muted); }
+  .ask { display: flex; gap: 8px; margin-top: 10px; }
+  .ask input { flex: 1; font: inherit; font-size: 15px; padding: 8px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+  .ask select { font: inherit; font-size: 14px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+  .row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+  .row a { color: var(--ink); text-decoration: none; font-weight: 600; }
+  .row .meta { margin-left: auto; font-size: 13px; color: var(--muted); text-align: right; }
+  .bar { width: 6px; align-self: stretch; border-radius: 0; background: var(--c); flex: none; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .tile { border: 2px solid var(--c); border-radius: 14px; padding: 12px; background: var(--surface); }
+  .tile b { display: block; font-size: 28px; line-height: 1.1; }
+  .tile span { font-size: 13px; color: var(--muted); }
+  .muted { color: var(--muted); font-size: 14px; }
+  svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  footer { color: var(--muted); font-size: 13px; padding: 0 16px 24px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M11 8l4 4-4 4M15 12H4"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6"/><path d="M20 4v7h-7"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3Z"/><path d="M12 10v4M12 17v.1"/></symbol>
+  <symbol id="i-tick" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></symbol>
+  <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-6Z"/></symbol>
+  <symbol id="i-stamp" viewBox="0 0 24 24"><path d="M9 4h6v6l3 3v3H6v-3l3-3Z"/><path d="M5 20h14"/></symbol>
+</svg>
+<header>
+  <div class="top">
+    <h1><a href="#/rooms">Factory</a></h1>
+    <span id="stamp" class="stamp">Not signed in</span>
+    <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
+    <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
+    <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
+    <a class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
+  </div>
+  <nav class="tabs" aria-label="Sections">
+    <a href="#/rooms" data-nav="rooms">Rooms</a>
+    <a href="#/decide" data-nav="decide"><svg class="i"><use href="#i-stamp"/></svg>Decide <span class="n" id="nDecide">0</span></a>
+    <a href="#/do" data-nav="do">Do <span class="n" id="nDo">0</span></a>
+    <a href="#/pulse" data-nav="pulse">Pulse</a>
+    <a href="#/how" data-nav="how">How</a>
+  </nav>
+</header>
+<main class="wrap" id="content">
+  <div id="banner" class="banner hidden" role="status"></div>
+  <div id="view"></div>
+</main>
+<footer class="wrap">Live from ClickUp + Drive (via AF-ENGINE) · stage changes are decisions, never automatic · UK time</footer>
+<script>
+(function () {
+  'use strict';
+  var CFG = window.DASH_CONFIG, CLIENT_ID = CFG.clientId, SCOPE = CFG.scopes.read, WRITE = CFG.scopes.write;
+  var F = { logs: '1e04LM9qA2lXpy63Qfcd7x9HEEjhsMj9k', requests: '1Z1Iuc_rRFq7cy12ELM0seZ-onpCSfDQ2', state: 'af-state.json' };
+  var REFRESH_MS = 5 * 60 * 1000;
+  var accessToken = null, tokenExpiresAt = 0, signedIn = false, S = null, err = null, timer = null, open = {}, cardCache = {};
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function ic(n) { return '<svg class="i"><use href="#i-' + n + '"/></svg>'; }
+
+  /* stage → room (Atlas floor plan) */
+  var ROOMS = [
+    { key: 'reception', name: 'Reception', slot: 7, st: ['0 idea'] },
+    { key: 'research', name: 'Research', slot: 7, st: ['1 research', '2 base', '3 features'] },
+    { key: 'rig', name: 'Rig', slot: 4, st: ['4 schema', '5 data'] },
+    { key: 'reactor', name: 'Reactor', slot: 3, st: ['6 prompts'], paid: true },
+    { key: 'runway', name: 'Runway', slot: 6, st: ['7 launch'] },
+    { key: 'radar', name: 'Radar', slot: 5, st: ['8 operate'] },
+    { key: 'rescue', name: 'Rescue', slot: 2, st: ['rescue'] },
+    { key: 'recovery', name: 'Recovery', slot: 0, st: ['hold', 'killed'] },
+    { key: 'recycle', name: 'Recycle', slot: 8, st: ['retired'] }
+  ];
+  var STAGES = ['Idea', 'Research', 'Base', 'Features', 'Schema', 'Data', 'Prompts', 'Launch', 'Operate'];
+  function stageNo(status) { var m = String(status || '').match(/^(\d)/); return m ? +m[1] : null; }
+  function col(slot) { return 'var(--ljr-' + slot + ')'; }
+  function stuck(t) { return !/^(killed|retired|hold)$/i.test(t.status) && Date.now() - t.updated > 14 * 864e5; }
+  function apps() { return (S && S.lists.apps || []).filter(function (t) { return !t.parent; }); }
+  function isOpen(t) { return !/^(done|closed|complete|retired|killed|decided|verified|proved live|to decide done)$/i.test(t.status); }
+  function mine() {
+    var all = [].concat(S.lists.work || [], S.lists.sends || [], S.lists.incidents || [], S.lists.apps || []);
+    return all.filter(function (t) { return isOpen(t) && t.tags.indexOf('who-lisa') >= 0; });
+  }
+  function decisions() { return (S.lists.decisions || []).filter(isOpen); }
+
+  /* Drive */
+  function drive(url, init) {
+    init = init || {}; init.headers = Object.assign({ Authorization: 'Bearer ' + accessToken }, init.headers || {});
+    return DashKit.googleFetch(url, init).then(function (r) {
+      if (r.status === 401) { expired(); throw new Error('Sign-in expired.'); }
+      if (!r.ok) throw new Error('Drive said ' + r.status);
+      return r;
+    });
+  }
+  function findFile(folder, name) {
+    var q = encodeURIComponent("'" + folder + "' in parents and name = '" + name + "' and trashed = false");
+    return drive(CFG.urls.files + '?q=' + q + '&fields=files(id,name,modifiedTime)&supportsAllDrives=true&includeItemsFromAllDrives=true')
+      .then(function (r) { return r.json(); }).then(function (j) {
+        if (!j.files.length) throw new Error('af-state.json not found yet. AF-ENGINE writes it every 15 min once installed.');
+        if (j.files.length > 1) throw new Error('Two af-state.json files. One must go.');
+        return j.files[0];
+      });
+  }
+  function media(id) { return drive(CFG.urls.files + '/' + id + '?alt=media&supportsAllDrives=true'); }
+  function load() {
+    if (!accessToken) return;
+    findFile(F.logs, F.state).then(function (f) { return media(f.id).then(function (r) { return r.json(); }); })
+      .then(function (j) { S = j; err = null; $('stamp').textContent = 'Read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · data ' + new Date(j.generated_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + (String(j.mode).toUpperCase() === 'LIVE' ? '' : ' · TEST'); render(); })
+      .catch(function (e) { err = e.message; render(); });
+  }
+  function cardFor(t) {
+    var m = String(t.desc || '').match(/\/d\/([A-Za-z0-9_-]{20,})/);
+    if (!m) return Promise.resolve(null);
+    if (cardCache[m[1]]) return Promise.resolve(cardCache[m[1]]);
+    return media(m[1]).then(function (r) { return r.text(); }).then(function (md) { cardCache[m[1]] = { id: m[1], md: md }; return cardCache[m[1]]; }, function () { return null; });
+  }
+  function codesOf(md) {
+    var out = [];
+    String(md || '').split('\n').forEach(function (l) {
+      var c = l.split('|').map(function (x) { return x.trim(); });
+      if (c.length > 5 && /^\d+$/.test(c[1]) && /^[A-Z]{3,7}/.test(c[2])) {
+        var code = c[2].replace(/\s*★/, ''), now = c[3].length < 14 ? c[3] : c[4];
+        var v = /^[A-Z]+\d/.test(now) ? now : (now.match(/^(\d)/) ? code + now.match(/^(\d)/)[1] : code + '?');
+        out.push(v);
+      }
+    });
+    return out;
+  }
+
+  /* views */
+  function vRooms() {
+    var A = apps(), html = '<div class="pills">' +
+      '<span class="pill">' + A.length + ' apps &amp; ideas</span>' +
+      '<span class="pill" style="border-color:var(--ljr-2)">' + ic('warn') + A.filter(stuck).length + ' stuck</span>' +
+      '<span class="pill" style="border-color:var(--ljr-3)">' + ic('coin') + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + ' of 3 build slots free</span>' +
+      '<span class="pill">' + (String(S.factory).toUpperCase() === 'ON' ? '● ON' : '○ OFF') + '</span></div><div class="rooms">';
+    ROOMS.forEach(function (r) {
+      var inRoom = A.filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
+      html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '<span class="ct">' + inRoom.length + '</span></h2>' +
+        inRoom.map(function (t) { return '<a class="chip' + (stuck(t) ? ' stuck' : '') + '" href="#/card/' + t.id + '">' + esc(t.name) + '<span class="st">' + (stuck(t) ? ic('warn') : '') + esc(t.status) + '</span></a>'; }).join('') + '</section>';
+    });
+    return html + '</div>';
+  }
+  function vCard(id) {
+    var t = apps().filter(function (x) { return x.id === id; })[0];
+    if (!t) return '<div class="card">Not found. <a href="#/rooms">Rooms</a></div>';
+    var n = stageNo(t.status), slot = n === null ? 0 : (n <= 3 ? 7 : n <= 5 ? 4 : n === 6 ? 3 : n === 7 ? 6 : 5);
+    var subs = (S.lists.apps || []).filter(function (x) { return x.parent === t.id; });
+    var tpl = (S.lists.template || []).filter(function (x) { return x.parent; });
+    var html = '<div class="card"><div class="hero" style="--c:' + col(slot) + '"><div class="disc">' + (n === null ? '–' : n) + '</div><div><h2>' + esc(t.name) + '</h2><p>' + esc(t.status) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
+      '<div class="pills" style="margin-top:10px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '<a class="pill" href="' + esc(t.url) + '" target="_blank" rel="noopener">ClickUp</a></div>' +
+      '<div id="codes" class="codes"><span class="q">reading card…</span></div>' +
+      '<div class="strip">' + STAGES.map(function (_, i) { return '<i class="' + (n !== null && i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>';
+    STAGES.forEach(function (name, i) {
+      var cls = n !== null && i < n ? 'd' : i === n ? 'c' : '';
+      var mineLines = subs.filter(function (x) { return x.tags.indexOf('st-' + i) >= 0; });
+      var lines = mineLines.length ? mineLines : tpl.filter(function (x) { return x.tags.indexOf('st-' + i) >= 0; });
+      var done = lines.filter(function (x) { return !isOpen(x); }).length;
+      var isOpenRow = open[i] === undefined ? i === n : open[i];
+      html += '<div class="stage ' + cls + '" data-stage="' + i + '"><span class="n">' + i + '</span>' + name + (i === 6 ? ' ' + ic('coin') : '') +
+        '<span class="r">' + (mineLines.length ? done + ' / ' + lines.length : lines.length ? lines.length + ' lines' : '') + '</span></div>';
+      if (isOpenRow) {
+        html += '<ul class="lines">' + lines.map(function (x) {
+          var who = (x.tags.filter(function (g) { return /^who-/.test(g); })[0] || '').replace('who-', '');
+          return '<li>' + ic(isOpen(x) ? 'dot' : 'tick') + esc(x.name.replace(/^\d\s·\s/, '')) + '<span class="who">' + esc(who) + '</span></li>';
+        }).join('') + (!mineLines.length && lines.length ? '<li class="muted">template lines · not yet applied to this app</li>' : '') +
+        (i === 6 ? sendsFor(t) : '') + '</ul>';
+      }
+    });
+    html += '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" placeholder="Ask or change" aria-label="Ask or change" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn main" type="submit" aria-label="Send">' + ic('send') + '</button></form>' +
+      '<div id="askNote" class="muted"></div></div>';
+    setTimeout(function () {
+      cardFor(t).then(function (c) {
+        var box = $('codes'); if (!box) return;
+        if (!c) { box.innerHTML = '<span class="q">no card file linked</span>'; return; }
+        var codes = codesOf(c.md);
+        box.innerHTML = codes.map(function (x) { return '<span' + (/\?$/.test(x) ? ' class="q"' : '') + '>' + esc(x) + '</span>'; }).join('') +
+          '<a class="pill" href="https://drive.google.com/file/d/' + c.id + '/view" target="_blank" rel="noopener">' + ic('doc') + 'Card</a>';
+      });
+    }, 0);
+    return html;
+  }
+  function sendsFor(t) {
+    var key = t.tags.filter(function (g) { return /^app-/.test(g); })[0];
+    var sends = (S.lists.sends || []).filter(function (x) { return key && x.tags.indexOf(key) >= 0; });
+    if (!sends.length) return '<li class="muted">no sends yet</li>';
+    return sends.map(function (x) { return '<li>' + ic('send') + '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><span class="who">' + esc(x.status) + '</span></li>'; }).join('');
+  }
+  function list(items, slot, empty) {
+    if (!items.length) return '<div class="card muted">' + empty + '</div>';
+    return '<div class="card">' + items.map(function (t) {
+      return '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(t.name) + '</a><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span></div>';
+    }).join('') + '</div>';
+  }
+  function vPulse() {
+    var A = apps(), live = A.filter(function (t) { return /^8 /.test(t.status); }).length;
+    var credits = (S.spend || []).reduce(function (a, r) { return a + r.credits; }, 0);
+    var health = (S.health || []);
+    return '<div class="tiles">' +
+      '<div class="tile" style="--c:var(--ljr-5)"><b>' + live + '</b><span>apps live</span></div>' +
+      '<div class="tile" style="--c:var(--ljr-3)"><b>' + (live ? Math.round(credits / live).toLocaleString('en-GB') : '–') + '</b><span>credits per live app</span></div>' +
+      '<div class="tile" style="--c:var(--ljr-7)"><b>' + A.filter(function (t) { return t.status === '0 idea'; }).length + '</b><span>ideas waiting</span></div>' +
+      '<div class="tile" style="--c:var(--ljr-2)"><b>' + A.filter(stuck).length + '</b><span>stuck 14+ days</span></div></div>' +
+      '<div class="card">' + (health.length ? health.map(function (h) {
+        return '<div class="row"><span class="bar" style="--c:' + (h.result === 'FAILED' ? 'var(--ljr-2)' : h.result === 'OK' ? 'var(--ljr-5)' : 'var(--ljr-0)') + '"></span>' + esc(h.job) + '<span class="meta">' + esc(h.result) + '<br>' + esc(h.last) + '</span></div>';
+      }).join('') : '<span class="muted">No jobs have run yet.</span>') + '</div>';
+  }
+  function vHow() {
+    return '<div class="card"><div class="rooms">' + ROOMS.map(function (r) { return '<div class="room" style="--c:' + col(r.slot) + '"><h2><span class="dot"></span>' + r.name + '</h2><span class="muted">' + r.st.join(' · ') + '</span></div>'; }).join('') + '</div>' +
+      '<p class="muted">Gates: Screen · Merit ' + ic('stamp') + ' · Base · Lock ' + ic('stamp') + ' · Schema · Slot · Invest ' + ic('stamp') + ' · Send ' + ic('stamp') + ' · Launch ' + ic('stamp') + '. ' + ic('stamp') + ' = yours. Checklists: ClickUp › Per-app template. A mistake = one checklist line, never a new doc.</p></div>';
+  }
+  function render() {
+    var route = (location.hash || '#/rooms').replace('#/', '').split('/');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (route[0] === 'card' && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
+    $('signInBtn').classList.toggle('hidden', signedIn);
+    $('signOutBtn').classList.toggle('hidden', !signedIn);
+    $('refreshBtn').classList.toggle('hidden', !signedIn);
+    var v = $('view');
+    if (!signedIn) { v.innerHTML = '<div class="card"><b>Sign in to see the factory</b><p class="muted">Read-only, plus the Ask box. One sign-in for the whole site.</p><button class="btn main" type="button" data-action="signin">' + ic('in') + 'Sign in with Google</button></div>'; return; }
+    if (err) { v.innerHTML = '<div class="banner">' + esc(err) + '</div>'; return; }
+    if (!S) { v.innerHTML = '<div class="card muted">Reading…</div>'; return; }
+    $('nDecide').textContent = decisions().length; $('nDo').textContent = mine().length;
+    v.innerHTML = route[0] === 'card' ? vCard(route[1]) : route[0] === 'decide' ? list(decisions(), 4, 'Nothing to decide.') :
+      route[0] === 'do' ? list(mine(), 4, 'Nothing waiting on you.') : route[0] === 'pulse' ? vPulse() : route[0] === 'how' ? vHow() : vRooms();
+  }
+
+  /* Ask box → AF › requests (the engine turns it into a ClickUp task) */
+  function sendAsk(form) {
+    var text = form.text.value.trim(), to = form.to.value, id = form.getAttribute('data-ask');
+    var t = apps().filter(function (x) { return x.id === id; })[0] || {};
+    var go = function () {
+      var body = { at: new Date().toISOString(), to: to, text: text, taskId: id, taskUrl: t.url, app: t.name, appTag: (t.tags || []).filter(function (g) { return /^app-/.test(g); })[0] || '' };
+      var meta = { name: 'ask-' + Date.now() + '.json', parents: [F.requests], mimeType: 'application/json' };
+      var b = 'af' + Date.now();
+      var payload = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(body) + '\r\n--' + b + '--';
+      return drive('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: payload })
+        .then(function () { form.text.value = ''; $('askNote').textContent = 'Sent · becomes a ClickUp task within 15 min.'; })
+        .catch(function (e) { $('askNote').textContent = 'Not sent: ' + e.message; });
+    };
+    var saved = DashAuth.valid();
+    if (saved && DashAuth.hasScope(saved, WRITE)) return go();
+    pendingAsk = go; auth.requestWrite(WRITE);
+  }
+  var pendingAsk = null;
+
+  /* sign-in (same pattern as Money Hub; one sign-in shared by the site) */
+  function startTimer() { stopTimer(); timer = setInterval(load, REFRESH_MS); }
+  function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
+  function expired() { stopTimer(); accessToken = null; DashAuth.markExpired(); if (!auth.requestSilent()) banner('Sign-in expired. Sign in again.'); }
+  function banner(t) { $('banner').className = 'banner'; $('banner').textContent = t; }
+  function onToken(resp) {
+    if (resp.error) { banner('Sign-in did not complete.'); return; }
+    accessToken = resp.access_token; tokenExpiresAt = DashAuth.expiryFrom(resp.expires_in);
+    DashAuth.save(accessToken, tokenExpiresAt, resp.scope || SCOPE);
+    signedIn = true; $('banner').className = 'banner hidden';
+    if (pendingAsk && DashAuth.hasScope(DashAuth.valid(), WRITE)) { var p = pendingAsk; pendingAsk = null; p(); }
+    startTimer(); load();
+  }
+  function signOut() {
+    stopTimer(); var t = accessToken; accessToken = null; signedIn = false; S = null; DashAuth.clear();
+    if (t && window.google && google.accounts) google.accounts.oauth2.revoke(t, function () {});
+    render();
+  }
+  var auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE, onToken: onToken, onError: function () { banner('Sign-in did not complete.'); }, onSilentFail: function (h) { if (h) banner('Sign-in expired. Sign in again.'); } });
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-action]'); if (a && !a.disabled) {
+      var k = a.getAttribute('data-action');
+      if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
+      return;
+    }
+    var s = e.target.closest('[data-stage]'); if (s) { var i = +s.getAttribute('data-stage'); var cur = open[i] === undefined ? (s.classList.contains('c')) : open[i]; open[i] = !cur; render(); }
+  });
+  document.addEventListener('submit', function (e) { var f = e.target.closest('[data-ask]'); if (f) { e.preventDefault(); sendAsk(f); } });
+  window.addEventListener('hashchange', function () { open = {}; render(); window.scrollTo(0, 0); });
+  var saved = DashAuth.valid();
+  if (saved && DashAuth.hasScope(saved, SCOPE)) { accessToken = saved.access_token; tokenExpiresAt = saved.expires_at; signedIn = true; }
+  render(); if (signedIn) { startTimer(); load(); }
+  DashAuth.onChange(function (sv) { if (!sv) { if (signedIn) signOut(); return; } accessToken = sv.access_token; if (!signedIn) { signedIn = true; startTimer(); load(); } });
+  var tries = 0;
+  (function wait() {
+    if (auth.init()) { var b = $('signInBtn'); b.disabled = false; b.querySelector('span').textContent = 'Sign in'; return; }
+    if (++tries > 100) { banner('Google sign-in did not load.'); return; }
+    setTimeout(wait, 100);
+  })();
+})();
+</script>
+</body>
+</html>
