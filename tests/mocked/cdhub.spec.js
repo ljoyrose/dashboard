@@ -24,7 +24,7 @@ test.describe('CD Hub: loads', () => {
 
   test('holds no table data; only the shared sign-in is kept, one key in this browser', async ({ page, context }) => {
     await page.goto('cdhub/');
-    await expect(page.locator('#main')).toContainText('This page holds no data of its own');
+    await expect(page.locator('#main')).toContainText('No data of its own');
     await signIn(page);
     const stores = await page.evaluate(() => ({ local: Object.keys(localStorage), session: sessionStorage.length, key: window.DashAuth.KEY, saved: JSON.parse(localStorage.getItem(window.DashAuth.KEY)) }));
     expect(stores.local).toEqual([stores.key]);
@@ -156,7 +156,7 @@ test.describe('CD Hub: navigation', () => {
     await page.goto('cdhub/');
     await signIn(page);
     await page.locator('#nav button[data-go="round"]').click();
-    await expect(page.locator('#main')).toContainText('Saving is off in this web version');
+    await expect(page.locator('#main')).toContainText('Saving off');
   });
 });
 

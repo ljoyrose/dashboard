@@ -43,8 +43,8 @@ test.describe('Money: deadlines worked out from rules', () => {
     await expect(card).toContainText('31 Jul');
     // 31 Jan 2027 is the deadline for the 2025-26 tax year (ended 5 Apr 2026)
     await expect(card).toContainText('Self Assessment: online return and balancing payment for the 2025-26 tax year');
-    await expect(card).toContainText('not tax advice');
-    const rows = card.locator('li');
+    await expect(card).toContainText(/not tax advice/i);
+    const rows = card.locator('li:not(.notes li)');
     const n = await rows.count();
     expect(n).toBeGreaterThan(0);
     for (let i = 0; i < n; i++) await expect(rows.nth(i)).toContainText('check with accountant');

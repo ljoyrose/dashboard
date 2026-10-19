@@ -88,6 +88,8 @@
   .card h4 { margin: 0; font-size: 16px; font-weight: 600; }
   .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
   .note { margin: 0; color: var(--muted); font-size: 15px; }
+  ul.notes { margin: 4px 0 8px; padding-left: 20px; color: var(--muted); font-size: 15px; }
+  ul.notes li { margin: 2px 0; }
   .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 8px; }
   .source a { color: var(--muted); }
   .sec-h { margin: 8px 0 -4px; font-size: 15px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
@@ -194,7 +196,7 @@
   <div class="here"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Now</h2></div>
   <div id="view"></div>
 </main>
-<footer class="wrap wide"><p>Read-only. Figures come straight from the CSV files in the Money Hub shared drive each time you sign in or press Reread. Each entity stands alone: business and personal money are never added together. Not tax advice. UK time.</p></footer>
+<footer class="wrap wide"><p>Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time</p></footer>
 
 <script>
 (function () {
@@ -280,7 +282,7 @@
     if (biz.length) h += '<h3 class="sec-h">Businesses</h3><div class="grid">' + biz.map(entCard).join('') + '</div>';
     if (ppl.length) h += '<h3 class="sec-h">Personal · private to you</h3><div class="grid">' + ppl.map(entCard).join('') + '</div>';
     if (none.length) h += '<p class="quiet">No statements yet: ' + none.map(function (m) { return '<a href="#/e/' + esc(m.code) + '">' + esc(m.code) + '</a>'; }).join(', ') + '.</p>';
-    h += '<p class="note">Each card stands alone. There is no grand total: business and personal money are separate.</p>';
+    h += '<p class="note">No grand total. Business and personal kept apart.</p>';
     return h;
   }
   function itemLi(i) {
@@ -308,7 +310,7 @@
     return '<ul class="items">' + items.slice(0, n).map(render1).join('') + '</ul>' + showBar(key || 'list', items.length, show);
   }
   function notReady() {
-    if (!signedIn) return '<div class="card c-ink now"><h3>Sign in to see your money</h3><p class="note">Read-only access to the Money Hub shared drive. The sign-in is shared with the rest of this site until you sign out or it expires.</p><div><button class="btn main" type="button" data-action="signin"><svg class="icon"><use href="#i-in"/></svg><span>Sign in with Google</span></button></div></div>';
+    if (!signedIn) return '<div class="card c-ink now"><h3>Sign in to see your money</h3><p class="note">Read-only. One sign-in for the whole site.</p><div><button class="btn main" type="button" data-action="signin"><svg class="icon"><use href="#i-in"/></svg><span>Sign in with Google</span></button></div></div>';
     if (err) return '<div class="card c-risk pending"><h3>Could not read Drive</h3><p class="note">' + esc(err) + '</p><div><button class="btn" type="button" data-action="refresh">Try again</button></div></div>';
     if (R && R.gate === 'denied') return '<div class="card c-risk"><h3>This page is for Lisa only</h3><p class="note">Signed in as ' + esc(R.email) + '. Sign out and sign in with Lisa\'s account.</p></div>';
     return '<div class="card pending"><h3>Reading…</h3><p class="note">Reading the Money Hub files from Google Drive.</p></div>';
@@ -343,7 +345,7 @@
           var pct = function (v) { return v === '' || isNaN(+v) ? '–' : (+v >= 0 ? '+' : '') + Math.round(+v) + '%'; };
           return '<tr><td><b>' + esc(r.entity) + '</b></td><td class="r">' + (r.cash_bank ? gbp(+r.cash_bank) + '<div class="lbl">' + d(r.cash_as_of) + '</div>' : '–') + '</td><td class="r">' + (r.net_month ? gbp(+r.net_month) + '<div class="lbl">' + esc(r.month) + '</div>' : '–') + '</td><td>' +
             (r.variance_flag ? tag('c-ops', r.variance_flag) : r.month ? 'in ' + pct(r.income_vs_avg_pct) + ' · out ' + pct(r.expense_vs_avg_pct) : '–') + '</td><td>' + (r.runs_dry_on ? (r.runs_dry_on < R.today ? tag('c-ops', 'Stale') + ' ' : '') + d(r.runs_dry_on) : r.month ? 'not in 90 days' : '–') + '</td></tr>';
-        }).join('') + '</table></div><p class="note">Written by the Monday weekly-pack job, which is paused. The cards above are worked out from the ledgers each time you read.</p>' + src('MON-REPORTS.csv', meta('reports')) + '</section>';
+        }).join('') + '</table></div><p class="note">From the Monday pack job (paused). Cards above: live from the ledgers.</p>' + src('MON-REPORTS.csv', meta('reports')) + '</section>';
     }
     return h;
   }
@@ -394,9 +396,9 @@
         (due.length ? '<details><summary class="more">' + due.length + ' expected items</summary><div class="scroll"><table><tr><th>Date</th><th>Who</th><th class="r">Amount</th><th>Sure?</th></tr>' + due.map(function (r) {
           return '<tr><td>' + d(r.expected_on) + '</td><td>' + esc(r.counterparty) + '</td><td class="r">' + gbp(M.n(r.amount) * (r.direction === 'out' && M.n(r.amount) > 0 ? -1 : 1), 2) + '</td><td>' + esc(r.confidence) + '</td></tr>';
         }).join('') + '</table></div></details>' : '<p class="note">Nothing expected in this window.</p>') +
-        '<p class="note">Learned regular items only, low-confidence ones left out. The plan was made ' + d(M.provDate(cf.table.prov)) + ', so some of these may already have happened.</p>' + src('CASHFLOW.csv · ' + code, cf) + '</section>';
+        '<p class="note">Regular items only. Plan made ' + d(M.provDate(cf.table.prov)) + ': some may have happened.</p>' + src('CASHFLOW.csv · ' + code, cf) + '</section>';
     }
-    if (m.months && m.months.length) h += '<section class="card c-fin"><h3>Month by month</h3>' + monthTable(m) + '<p class="note">Bank movements, cash basis, from the TOTAL rows. Green bar money in, copper bar money out.</p>' + src('MONTHLY.csv · ' + code, efile(code, 'monthly')) + '</section>';
+    if (m.months && m.months.length) h += '<section class="card c-fin"><h3>Month by month</h3>' + monthTable(m) + '<p class="note">Bank, cash basis. Green = in. Copper = out.</p>' + src('MONTHLY.csv · ' + code, efile(code, 'monthly')) + '</section>';
     var rec = efile(code, 'recurring');
     if (rec && rec.table) {
       var rr = rec.table.rows.slice().sort(function (a, b) { return Math.abs(M.n(b.amount_expected) || 0) - Math.abs(M.n(a.amount_expected) || 0); });
@@ -411,7 +413,7 @@
         var cls = r.status === 'overdue' ? 'c-risk' : r.status === 'check' ? 'c-ops' : r.status === 'plan' ? 'c-mute' : 'c-fin';
         return '<li><div class="meta">' + tag(cls, r.status) + '<span>' + esc(r.creditor) + '</span><span>' + (M.isISO(r.due) ? 'due ' + d(r.due) : esc(r.due)) + '</span></div><div class="itext">' + gbp(M.n(r.amount), 2) + ' · ' + esc(r.item) + '</div>' +
           (r.note || r.plan ? '<div class="meta">' + esc([r.plan, r.note].filter(Boolean).join(' · ')) + '</div>' : '') + '</li>';
-      }).join('') + '</ul><p class="note">Plan rows repeat and are not added up. This lists what the files say; it is not tax advice.</p>' + src('LIABILITIES.csv · ' + code, lf) + '</section>';
+      }).join('') + '</ul><p class="note">Plan rows repeat, not added up. Not tax advice.</p>' + src('LIABILITIES.csv · ' + code, lf) + '</section>';
     }
     h += xeroCards(code, m);
     var dts = M.datesView(R.data, R.today).filter(function (x) { return !x.done && (x.r.entity || '').split(';').indexOf(code) >= 0; });
@@ -425,7 +427,7 @@
   function xeroCards(code, m) {
     var h = '', pay = efile(code, 'pay'), recv = efile(code, 'recv'), pnl = efile(code, 'pnl'), inc = efile(code, 'income'), un = efile(code, 'unrec');
     if (!pay && !recv && !pnl) return '';
-    h += '<section class="card c-fin"><div class="cardhead"><h3>Xero</h3>' + chip('connector not configured here') + '</div><p class="note">From the Xero export files in Drive. Xero bills and cash only match the bank once Xero is reconciled.</p>';
+    h += '<section class="card c-fin"><div class="cardhead"><h3>Xero</h3>' + chip('connector not configured here') + '</div><p class="note">From Xero exports. Matches the bank only once reconciled.</p>';
     if (pnl && pnl.table) {
       h += '<h4>Profit and loss by year</h4><div class="scroll"><table><tr><th>Year</th><th class="r">Income</th><th class="r">Expenses</th><th class="r">Net profit</th></tr>' + pnl.table.rows.map(function (r) {
         return '<tr><td>' + esc(r.fy) + '</td><td class="r">' + gbp(M.n(r.income)) + '</td><td class="r">' + gbp(M.n(r.expenses)) + '</td><td class="r"' + (M.n(r.net_profit) < 0 ? ' style="color:var(--risk-text)"' : '') + '>' + gbp(M.n(r.net_profit)) + '</td></tr>';
@@ -481,7 +483,7 @@
   function ruleCard(list, key) {
     var h = '<section class="card c-fin" data-rules="' + esc(key) + '"><div class="cardhead"><h3>Worked out from the rules</h3>' + tag('c-fin', String(list.length)) + '</div>';
     h += list.length ? listWithMore(list, 6, ruleLi, 'rules-' + key) : '<p class="note">Nothing worked out for this yet.</p>';
-    return h + '<p class="note">Worked out from the usual UK deadlines, not from HMRC or Companies House. Check every one with your accountant; this is not tax advice. A date already in MON-DATES (same entity, within 5 days) is not repeated here. Company and VAT dates appear once MON-SUBJECTS has a <code>year_end</code> and a <code>vat_quarter_end</code> column (MM-DD).</p></section>';
+    return h + '<ul class="notes"><li>Usual UK deadlines, not from HMRC or Companies House. Check with your accountant. Not tax advice.</li><li>Already in MON-DATES (same entity, within 5 days): not repeated.</li><li>Company and VAT dates need <code>year_end</code> and <code>vat_quarter_end</code> (MM-DD) in MON-SUBJECTS.</li></ul></section>';
   }
 
   function viewDates() {
@@ -520,7 +522,7 @@
     } else {
       h += wrap('Closed', 'c-ok', mk(reg.filter(function (r) { return !M.isOpen(r); }).reverse()), 10);
     }
-    return h + '<p class="note">Answering and closing rows from this page is off for now. Rows change in MON-REGISTER.csv.</p>' + src('MON-REGISTER.csv', meta('register'));
+    return h + '<p class="note">Answering here: off. Change rows in MON-REGISTER.csv.</p>' + src('MON-REGISTER.csv', meta('register'));
   }
 
   function viewAccountant() {
@@ -530,7 +532,7 @@
       '<div class="meta"><span>About: ' + esc(r.about_document) + '</span><span>Asked ' + d(r.asked_on) + '</span></div>' + (r.answer ? '<div>' + esc(r.answer) + '</div>' : '') + '</li>'; };
     return '<section class="card c-ok"><div class="cardhead"><h3>Questions waiting on the accountant</h3>' + tag('c-ok', String(open.length)) + '</div><ul class="items">' + open.map(li).join('') + '</ul>' + src('QUESTIONS-FOR-ACCOUNTANT.csv', meta('accountant')) + '</section>' +
       (done.length ? '<section class="card c-ok"><h3>Answered</h3><ul class="items">' + done.map(li).join('') + '</ul></section>' : '') +
-      '<p class="note">Chasing by email stays a manual step. Nothing is sent from this page.</p>';
+      '<p class="note">Chasing: manual. Nothing is sent from here.</p>';
   }
 
   function viewControl() {
@@ -538,7 +540,7 @@
     var bad = fc.filter(function (f) { return f.state === 'fail'; }), warn = fc.filter(function (f) { return f.state === 'warn'; });
     var h = '<section class="card ' + (bad.length ? 'c-risk' : warn.length ? 'c-ops' : 'c-ok') + '"><div class="cardhead"><h3>Files</h3>' +
       tag(bad.length ? 'c-risk' : 'c-ok', (fc.length - bad.length) + ' of ' + fc.length + ' found once') + '</div>' +
-      '<p class="note">Each file is found by folder and exact title. Two live copies, or none, is an error: the page never falls back to an old file id.</p>' +
+      '<p class="note">Found by folder + exact title. Two copies or none = error. Never an old file id.</p>' +
       (bad.length || warn.length ? '' : '<details><summary class="more">Show all ' + fc.length + ' files</summary>') +
       '<div class="scroll"><table><tr><th>Where</th><th>File</th><th>State</th><th>Data as of</th></tr>' + fc.slice().sort(function (a, b) { var o = { fail: 0, warn: 1, wait: 2, ok: 3 }; return o[a.state] - o[b.state]; }).map(function (f) {
         return '<tr><td>' + esc(f.scope) + '</td><td>' + (f.link ? '<a href="' + esc(f.link) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name)) + '</td><td>' +
@@ -549,7 +551,7 @@
     var ks = Object.keys(latest).sort(function (a, b) { return a.localeCompare(b, 'en-GB', { numeric: true }); }).map(function (k) { return latest[k]; });
     var failing = ks.filter(function (c) { return !/^(PASS|INFO)/i.test(c.result || ''); });
     h += '<section class="card ' + (failing.length ? 'c-risk' : 'c-ok') + '"><div class="cardhead"><h3>Checks</h3>' + tag(failing.length ? 'c-risk' : 'c-ok', failing.length ? failing.length + ' failing' : 'None failing') + '</div>' +
-      '<p class="note">Latest run of each check. Results starting PASS or INFO are not failures.</p><ul class="items">' + ks.map(function (c) {
+      '<p class="note">Latest run. PASS / INFO = not a failure.</p><ul class="items">' + ks.map(function (c) {
         var ok = /^(PASS|INFO)/i.test(c.result || '');
         return '<li><div class="meta">' + tag(ok ? 'c-ok' : 'c-risk', ok ? (/^INFO/i.test(c.result) ? 'Info' : 'Pass') : 'Fail') + '<b>' + esc(c.check_id) + '</b><span>' + esc(whenOf(c.run_on)) + '</span><span>' + esc(c.job) + '</span></div><div>' + esc(c.result) + '</div></li>';
       }).join('') + '</ul>' + src('CHECK-LOG.csv', meta('checks')) + '</section>';

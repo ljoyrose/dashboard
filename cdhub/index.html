@@ -144,6 +144,8 @@ code{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--so
 .ci.bad{border-color:var(--ljr-2);color:var(--ljr-2-text)}
 .ci.bad i{background:var(--p2)}
 .ci:hover{border-color:var(--fg)}
+.ci-s{cursor:default}
+ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--sub);font-size:14px}ul.notes li{margin:2px 0}.ci-s:hover{border-color:var(--ln)}
 .tl{cursor:pointer;text-align:left;font:inherit;width:100%;color:var(--fg)}
 .tl:hover{border-color:var(--fg)}
 .srch{position:relative;display:inline-flex;align-items:center}
@@ -227,7 +229,7 @@ var CLIENT_ID=window.DASH_CONFIG.clientId;
 var SCOPE=window.DASH_CONFIG.scopes.read;
 var DRIVE=window.DASH_CONFIG.urls.files;
 var TOKEN=null, TOKEN_EXP=0;
-var SAVE_OFF='Saving is turned off on this web version for now. The round, cabin access and flags are read-only here, and nothing is written to Drive or kept in this browser. Saving comes later.';
+var SAVE_OFF='Saving off for now. Round, cabin access and flags are read-only. Nothing written to Drive or kept in this browser.';
 LOAD.state='signin'; DBERR=SAVE_OFF;
 function DriveErr(status,msg){ var e=new Error(msg); e.status=status;
   e.code=status===429?DashKit.BUSY_TEXT:status===401?'Sign-in expired':status===403?('Google refused access'+(msg?' ('+msg+')':'')):status===404?'Folder not found, or this account cannot see it':('Drive error '+status+(msg?' ('+msg+')':''));
@@ -707,7 +709,9 @@ function checks(){
 }
 function strip(){
  return '<div class="chk">'+checks().map(function(x){
-  return '<button class="ci'+(x.ok?' ok':' bad')+'" data-list="'+(x.list||'')+'" title="'+esc(x.msg)+'">'
+  // Only a check with a list to open is a button. The others are status chips (the reason is in the title and the card below).
+  if(!x.list) return '<span class="ci ci-s'+(x.ok?' ok':' bad')+'" title="'+esc(x.msg)+'"><i></i>'+esc(x.k)+'</span>';
+  return '<button type="button" class="ci'+(x.ok?' ok':' bad')+'" data-list="'+x.list+'" title="'+esc(x.msg)+'">'
    +'<i></i>'+esc(x.k)+'</button>'; }).join('')+'</div>';
 }
 
@@ -715,11 +719,11 @@ function strip(){
 function pageMap(){
  var c=counts(), bad=checks().filter(function(x){return !x.ok;});
  return '<h2>Live from Drive</h2>'
- +'<p class="sub">Read fresh from <code>'+esc(FOLDER_NAME)+'</code> every time you open it.</p>'
+ +'<p class="sub">Live from <code>'+esc(FOLDER_NAME)+'</code>.</p>'
  +strip()
  +(bad.length?'<div class="card acc2"><h4>'+bad.length+' need looking at</h4><p style="margin-bottom:0">'
     +bad.map(function(x){return '<b>'+esc(x.k)+'</b> \u2014 '+esc(x.msg);}).join('<br>')+'</p></div>'
-   :'<div class="card acc5"><h4>Everything checks out</h4><p style="margin-bottom:0">Every dot is green. Counts agree, tables match the manifest, nothing is missing a date of birth, a chip or a cabin.</p></div>')
+   :'<div class="card acc5"><h4>Everything checks out</h4><p style="margin-bottom:0">All green. Counts agree. Nothing missing a birth date, chip or cabin.</p></div>')
  +'<div class="tiles">'
  +tile('b5',c.here.length,'dogs here','on the premises today')
  +tile('b6',c.adults.length,'adults','6 months and over')
@@ -754,7 +758,7 @@ function pageToday(){
        +'<td class="mut">'+esc(dmy(x.from))+' \u2013 '+esc(dmy(x.to))+'</td>'
        +'<td class="mut">'+esc((x.sires||[]).join(', '))+' \u00b7 '+esc((x.methods||[]).join(', '))+'</td></tr>'; }).join('')
     +'</tbody></table></div>'
-    +'<p class="note" style="margin-bottom:0">In whelp is <b>derived from the mating rows</b>, never a stored flag \u2014 a flag would still say pregnant the day after she whelps. <b>Two sources disagree on the window and both are shown:</b> Lisa gives first mating + 63 days, which is the working date; register FI18 gives 63\u00b11 from <i>ovulation</i> and <b>57\u201372 from first mating, stated as poor confidence</b>. A single date off a mating would claim a precision the source denies.</p></div>'; })()
+    +'<ul class="notes" style="margin-bottom:0"><li>From the mating rows, never a stored flag.</li><li>Working due: first mating + 63 days (Lisa).</li><li>Window 57\u201372 from first mating (FI18, poor confidence). Both shown.</li></ul></div>'; })()
  +'<div id="tpanel"></div>'
  +'<h3>The licence counts</h3><div class="tiles">'
  +tileC('b2',c.adults.length,'adult dogs here','6 months or over','adults')
@@ -873,7 +877,7 @@ function showTreats(id){
    +'<td class="mut">'+(r.kg?esc(r.kg)+' kg on the day'+(r.band?', band '+esc(r.band):''):(r.need?esc(r.need):''))+'</td>'
    +'<td class="mut">'+esc(r.src||'')+'</td></tr>'; }
  h+='</tbody></table></div>'
-  +'<p class="note" style="margin-bottom:0">Every dose here is worked out from the weight recorded on the same date, never from today\u2019s weight. Moxiclear does not treat tapeworm \u2014 the SPC names no cestode at all \u2014 so a tapeworm wormer is always a second row.</p>'
+  +'<ul class="notes" style="margin-bottom:0"><li>Dose from the weight on the same date, never today\u2019s.</li><li>Moxiclear: no tapeworm cover. Tapeworm wormer = separate row.</li></ul>'
   +'<button id="mclose" class="cb" style="margin-top:8px">close</button></div>';
  el.innerHTML=h;
  var c=document.getElementById('mclose'); if(c) c.addEventListener('click',function(){ el.innerHTML=''; });
@@ -973,7 +977,7 @@ function pageAreas(){
  +tile('b3',CD.areas.filter(function(a){return inCabin(a.id,date).length;}).length,'occupied today','from the round, else BLD-occupancy')+'</div>'
  +'<div class="card acc6"><h4>Free access and limited are the same cabin run two ways</h4>'
  +'<div class="card acc6"><h4>Free access or limited \u2014 one or the other</h4>'
- +'<p style="margin-bottom:0">The same cabin run two ways, each with its own floor area and its own permitted numbers. Pick one and the capacity check runs.</p></div>'
+ +'<p style="margin-bottom:0">One cabin, two ways to run it. Pick one to check capacity.</p></div>'
  +'<p style="margin-bottom:0"><b>Every number below is a headcount \u2014 how many dogs, not square metres.</b> '
  +'All of them come from the Welsh Government guidance s1.2 Size of Quarters. A cabin has ONE floor area; the flap only decides which minimum it must meet, because a confined dog needs more room than one that can come and go. '
  +'The three <b>+ pups</b> columns are a yes/no: can one bitch whelp and raise a litter here? That minimum is double the one-adult figure, per the SRS conditions.</p></div>';
@@ -1005,7 +1009,7 @@ function pageAreas(){
             return '<td'+(v==='0'?' class="mut"':'')+'>'+(v==null?'<span class="pill no">no figure</span>':(v==='0'?'0':'<b>'+esc(v)+'</b>'))+'</td>';}).join('')
          +'</tr>'; }).join('')
      +'</tbody></table></div>'
-     +(cur?'':'<p class="mut" style="margin:6px 0 0">Both modes shown because the flap has not been set for this cabin. Choose above to pin one.</p>')
+     +(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')
      +'<div class="mut" style="margin-top:6px">in here on '+esc(date)+': '
      +(who.length?who.map(function(sid){var d=CD._byId[sid];return '<span class="pill i">'+esc(d?d.name:sid)+'</span>';}).join(' ')
        :'<span class="mut">empty</span>')
@@ -1094,7 +1098,7 @@ function flag(iso){ iso=(iso||'').toUpperCase();
 function pageBuyers(){
  var live=CD.assoc.filter(function(a){return a.status!=='DEFUNCT';});
  var cob=live.filter(function(a){return a.recognises_cobberdog==='true';});
- var h='<h2>Buyers</h2><p class="sub">Who could take the lines on. Associations first \u2014 their directories are where the breeders are.</p>'
+ var h='<h2>Buyers</h2><p class="sub">Who could take the lines on. Associations first.</p>'
  +'<div class="tiles">'+tile('b6',CD.prospects.length,'prospects logged','BLD-prospect.csv')
  +tile('b5',live.length,'live associations','BLD-association.csv')
  +tile('b2',cob.length,'recognise the Cobberdog','of '+live.length)
@@ -1105,7 +1109,7 @@ function pageBuyers(){
  +'The big Labradoodle directories hold far more breeders, but <b>ALAA Rule 15 requires a 6-generation AKC/CKC-traceable pedigree</b>, '
  +'which an MDBA Cobberdog pedigree is not. Volume and eligibility point in opposite directions.</p></div>';
  if(!CD.prospects.length) h+='<div class="card dash acc4"><h4>No prospects harvested yet</h4>'
-  +'<p style="margin-bottom:0">The sheet exists and is empty on purpose. Pass 2 walks each directory below and fills it \u2014 kennel, country, website, contact, association, directory entry. Nothing is invented.</p></div>';
+  +'<p style="margin-bottom:0">Empty on purpose. Pass 2 fills it from the directories below. Nothing invented.</p></div>';
  h+='<h3><span class="dot" style="background:var(--p2)"></span>Associations</h3>'
  +'<div class="scroll"><table><thead><tr><th>body</th><th>country</th><th>Cobberdog</th><th>registry</th>'
  +'<th>breeders listed</th><th>directory</th></tr></thead><tbody>';
@@ -1226,11 +1230,11 @@ function pageRound(){
  var placed={}; Object.keys(ROUND).forEach(function(k){ if(k.indexOf(date+'__')===0)
    (ROUND[k].subjects||[]).forEach(function(sid){ placed[sid]=ROUND[k].areaId; }); });
  var unplaced=dogs.filter(function(d){ return !placed[d.id]; });
- var h='<h2>The round</h2><p class="sub">Walk the cabins in order. Say who is in each, and how it is being run.</p>'
+ var h='<h2>The round</h2><p class="sub">Cabins in order: who is in, how it is run, temperatures.</p>'
  +'<div class="filt"><label class="mut" for="rdate">date</label><input id="rdate" type="date" value="'+date+'">'
  +'<span class="mut" id="rstat">'+(DB?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'read-only \u2014 saving is off for now')+'</span></div>';
- if(!DB) h+='<div class="card acc2"><h4>Saving is off in this web version</h4><p style="margin-bottom:0">'
-  +esc(DBERR||'The page has no store, so a tick would look identical whether or not it landed.')+'</p></div>';
+ if(!DB) h+='<div class="card acc2"><h4>Saving off</h4><p style="margin-bottom:0">'
+  +esc(DBERR||'No store: a tick could not be trusted.')+'</p></div>';
  else h+='<div class="card acc4"><h4>Where this saves</h4><p style="margin-bottom:0">'
   +'Into the page\u2019s own store, <b>not into the Drive tables</b>. It shows here and to anyone else with the page open. '
   +'I fold it into <code>BLD-occupancy.csv</code> <code>BLD-area_access.csv</code> and <code>BLD-area_reading.csv</code> when you ask. <b>Temperatures are kept exactly as typed, to two decimal places</b> \u2014 a rounded reading cannot be un-rounded.</p></div>';
@@ -1351,7 +1355,7 @@ async function roundSave(areaId,patch,msgEl){
 }
 function pageWork(){
  var W=CD.work||[];
- if(!W.length) return '<h2>Outstanding</h2><div class="card acc2"><h4>BLD-WORK.csv did not load</h4><p style="margin-bottom:0">The outstanding list is a live file, not a list kept in a reply. If this card is showing, the file is missing or unreadable.</p></div>';
+ if(!W.length) return '<h2>Outstanding</h2><div class="card acc2"><h4>BLD-WORK.csv did not load</h4><p style="margin-bottom:0">Live file. Missing or unreadable.</p></div>';
  var by={}; W.forEach(function(r){ (by[r.status]=by[r.status]||[]).push(r); });
  var mine=W.filter(function(r){return r.status!=='DONE' && r.owner==='Claude';}).length;
  var hers=W.filter(function(r){return r.status!=='DONE' && r.owner==='Lisa';}).length;
@@ -1471,7 +1475,7 @@ function pageShape(){
 
  var thin=E.filter(function(e){return e.pct<25;}).sort(function(a,b){return a.pct-b.pct;});
  var h='<h2>Table map</h2>'
-  +'<p class="note">A normal entity diagram shows only which tables are joined. That hides the thing that actually matters — <b>a join can exist and be almost empty</b>. This one draws all three dimensions: who points at whom, how many rows, and how much of each link is filled.</p>'
+  +'<p class="note">Who points at whom · rows · <b>how full each link is</b> (a join can be almost empty).</p>'
   +'<div class="card acc6">'+svg+'</div>'
   +'<div class="card acc2"><h4>Joins that exist but are nearly empty — '+thin.length+'</h4>'
   +'<p>These are the ones a flat diagram would draw the same as a full one.</p><div class="scroll"><table><thead><tr><th>from</th><th>column</th><th>to</th><th>filled</th></tr></thead><tbody>'
@@ -1542,7 +1546,7 @@ function go(id,push){
  var main=document.getElementById('main');
  if(LOAD.state==='signin'){
   main.innerHTML='<div class="card acc4" style="margin-top:24px"><h2 class="hx4">Sign in to see the tables</h2>'
-   +'<p>This page holds no data of its own. Once you sign in with Google it reads the tables live from '+esc(FOLDER_NAME)+', with read-only access. The sign-in is shared with the rest of this site until you sign out or it expires.</p>'
+   +'<ul class="notes"><li>No data of its own. Read-only, live from '+esc(FOLDER_NAME)+'.</li><li>One sign-in for the whole site.</li></ul>'
    +(LOAD.err?'<p class="mut">'+esc(LOAD.err)+'</p>':'')
    +'<p style="margin-bottom:0"><button id="signinbtn" data-signin="1"'+(auth.ready()?'':' disabled')+'>'+(auth.ready()?'Sign in with Google':'Loading Google sign-in\u2026')+'</button></p></div>';
   document.getElementById('nav').innerHTML=''; return;

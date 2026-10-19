@@ -167,7 +167,7 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     await expect(v).toContainText('TESTPERS');
     await expect(v).toContainText('£12,000'); // BALANCES.csv, the account with a balance
     await expect(v).toContainText('£3,000');
-    await expect(v).toContainText('There is no grand total');
+    await expect(v).toContainText('No grand total');
     await expect(v).not.toContainText('OLDCO'); // retired in MON-SUBJECTS.csv
     await expect(v).not.toContainText('£15,000'); // never summed across entities
   });
