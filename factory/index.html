@@ -39,6 +39,7 @@
   nav.tabs a[aria-current="page"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
   nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-4); color: #2C2C2A; border-radius: 999px; padding: 0 7px; }
   main { padding: 16px 0 48px; display: flex; flex-direction: column; gap: 14px; }
+  main.wrap { padding: 16px 16px 48px; }
   .banner { border: 1.5px solid var(--ljr-2); border-radius: 12px; padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
   .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
   #view { display: flex; flex-direction: column; gap: 14px; }
@@ -79,6 +80,10 @@
   .ask select { font: inherit; font-size: 14px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
   .row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
   .row a { color: var(--ink); text-decoration: none; font-weight: 600; }
+  .card > .row:first-child { border-top: 0; padding-top: 0; }
+  .row .txt { flex: 1; min-width: 0; }
+  .row .why { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .row .why a { font-weight: 400; text-decoration: underline; }
   .row .meta { margin-left: auto; font-size: 13px; color: var(--muted); text-align: right; }
   .acts { display: flex; gap: 6px; flex: none; }
   .acts .btn { padding: 5px 12px; }
@@ -273,8 +278,16 @@
       var acts = sent[t.id] ? '<span class="sent">' + ic('tick') + 'sent</span>' : kind === 'decide' ?
         '<span class="acts"><button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '">Yes</button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '">No</button></span>' :
         '<span class="acts"><button class="btn" type="button" data-act="done" data-id="' + esc(t.id) + '">' + ic('tick') + 'Done</button></span>';
-      return '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(t.name) + '</a><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span>' + acts + '</div>';
+      return '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><div class="txt"><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(t.name) + '</a>' + why(t) + '</div><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span>' + acts + '</div>';
     }).join('') + '</div>';
+  }
+  // The plain What / Yes = / No = lines written on each task, shown under its title. Links become "open".
+  function why(t) {
+    var d = String(t.desc || '').trim();
+    if (!d) return '';
+    return '<div class="why">' + d.split('\n').filter(Boolean).slice(0, 4).map(function (l) {
+      return esc(l).replace(/https?:\/\/[^\s<]+/g, function (u) { return '<a href="' + u + '" target="_blank" rel="noopener">open</a>'; });
+    }).join('<br>') + '</div>';
   }
   function enginePill() {
     var bad = (S.health || []).filter(function (h) { return h.result === 'FAILED'; });
