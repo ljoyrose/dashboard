@@ -46,6 +46,7 @@
   .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
   .room { border: 2px solid var(--c); border-radius: 14px; background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; }
   .room h2 { font-size: 15px; margin: 0; display: flex; gap: 8px; align-items: center; }
+  .room .stn { font-size: 12px; color: var(--muted); margin-top: -6px; }
   .room h2 .ct { margin-left: auto; font-size: 13px; color: var(--muted); }
   .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
   .chip { display: flex; gap: 6px; align-items: center; text-decoration: none; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; font-size: 14px; }
@@ -77,6 +78,11 @@
   .row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
   .row a { color: var(--ink); text-decoration: none; font-weight: 600; }
   .row .meta { margin-left: auto; font-size: 13px; color: var(--muted); text-align: right; }
+  .acts { display: flex; gap: 6px; flex: none; }
+  .acts .btn { padding: 5px 12px; }
+  .acts .yes { border-color: var(--ljr-5); }
+  .acts .no { border-color: var(--ljr-2); }
+  .sent { font-size: 13px; color: var(--muted); flex: none; }
   .bar { width: 6px; align-self: stretch; border-radius: 0; background: var(--c); flex: none; }
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
   .tile { border: 2px solid var(--c); border-radius: 14px; padding: 12px; background: var(--surface); }
@@ -113,8 +119,6 @@
     <a href="#/rooms" data-nav="rooms">Rooms</a>
     <a href="#/decide" data-nav="decide"><svg class="i"><use href="#i-stamp"/></svg>Decide <span class="n" id="nDecide">0</span></a>
     <a href="#/do" data-nav="do">Do <span class="n" id="nDo">0</span></a>
-    <a href="#/pulse" data-nav="pulse">Pulse</a>
-    <a href="#/how" data-nav="how">How</a>
   </nav>
 </header>
 <main class="wrap" id="content">
@@ -128,7 +132,7 @@
   var CFG = window.DASH_CONFIG, CLIENT_ID = CFG.clientId, SCOPE = CFG.scopes.read, WRITE = CFG.scopes.write;
   var F = { logs: '1e04LM9qA2lXpy63Qfcd7x9HEEjhsMj9k', requests: '1Z1Iuc_rRFq7cy12ELM0seZ-onpCSfDQ2', state: 'af-state.json' };
   var REFRESH_MS = 5 * 60 * 1000;
-  var accessToken = null, tokenExpiresAt = 0, signedIn = false, S = null, err = null, timer = null, open = {}, cardCache = {};
+  var accessToken = null, tokenExpiresAt = 0, signedIn = false, S = null, err = null, timer = null, open = {}, cardCache = {}, sent = loadSent();
   var $ = function (id) { return document.getElementById(id); };
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function ic(n) { return '<svg class="i"><use href="#i-' + n + '"/></svg>'; }
@@ -153,7 +157,7 @@
   function isOpen(t) { return !/^(done|closed|complete|retired|killed|decided|verified|proved live|to decide done)$/i.test(t.status); }
   function mine() {
     var all = [].concat(S.lists.work || [], S.lists.sends || [], S.lists.incidents || [], S.lists.apps || []);
-    return all.filter(function (t) { return isOpen(t) && t.tags.indexOf('who-lisa') >= 0; });
+    return all.filter(function (t) { return isOpen(t) && t.tags.indexOf('who-lisa') >= 0 && t.tags.indexOf('lisa-done') < 0; });
   }
   function decisions() { return (S.lists.decisions || []).filter(isOpen); }
 
@@ -207,13 +211,13 @@
       '<span class="pill">' + A.length + ' apps &amp; ideas</span>' +
       '<span class="pill" style="border-color:var(--ljr-2)">' + ic('warn') + A.filter(stuck).length + ' stuck</span>' +
       '<span class="pill" style="border-color:var(--ljr-3)">' + ic('coin') + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + ' of 3 build slots free</span>' +
-      '<span class="pill">' + (String(S.factory).toUpperCase() === 'ON' ? '● ON' : '○ OFF') + '</span></div><div class="rooms">';
+      '<span class="pill">' + (String(S.factory).toUpperCase() === 'ON' ? '● ON' : '○ OFF') + '</span>' + enginePill() + '</div><div class="rooms">';
     ROOMS.forEach(function (r) {
       var inRoom = A.filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
-      html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '<span class="ct">' + inRoom.length + '</span></h2>' +
+      html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '<span class="ct">' + inRoom.length + '</span></h2><span class="stn">' + esc(r.st.join(' · ')) + '</span>' +
         inRoom.map(function (t) { return '<a class="chip' + (stuck(t) ? ' stuck' : '') + '" href="#/card/' + t.id + '">' + esc(t.name) + '<span class="st">' + (stuck(t) ? ic('warn') : '') + esc(t.status) + '</span></a>'; }).join('') + '</section>';
     });
-    return html + '</div>';
+    return html + '</div><p class="muted">Gates: Screen · Merit ' + ic('stamp') + ' · Base · Lock ' + ic('stamp') + ' · Schema · Slot · Invest ' + ic('stamp') + ' · Send ' + ic('stamp') + ' · Launch ' + ic('stamp') + ' &nbsp;' + ic('stamp') + ' = yours · a mistake = one checklist line</p>';
   }
   function vCard(id) {
     var t = apps().filter(function (x) { return x.id === id; })[0];
@@ -260,29 +264,26 @@
     if (!sends.length) return '<li class="muted">no sends yet</li>';
     return sends.map(function (x) { return '<li>' + ic('send') + '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><span class="who">' + esc(x.status) + '</span></li>'; }).join('');
   }
-  function list(items, slot, empty) {
+  // Decide rows get Yes / No, Do rows get Done. A click drops a request file; the engine updates ClickUp.
+  function list(items, slot, empty, kind) {
     if (!items.length) return '<div class="card muted">' + empty + '</div>';
     return '<div class="card">' + items.map(function (t) {
-      return '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(t.name) + '</a><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span></div>';
+      var acts = sent[t.id] ? '<span class="sent">' + ic('tick') + 'sent</span>' : kind === 'decide' ?
+        '<span class="acts"><button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '">Yes</button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '">No</button></span>' :
+        '<span class="acts"><button class="btn" type="button" data-act="done" data-id="' + esc(t.id) + '">' + ic('tick') + 'Done</button></span>';
+      return '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(t.name) + '</a><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span>' + acts + '</div>';
     }).join('') + '</div>';
   }
-  function vPulse() {
-    var A = apps(), live = A.filter(function (t) { return /^8 /.test(t.status); }).length;
-    var credits = (S.spend || []).reduce(function (a, r) { return a + r.credits; }, 0);
-    var health = (S.health || []);
-    return '<div class="tiles">' +
-      '<div class="tile" style="--c:var(--ljr-5)"><b>' + live + '</b><span>apps live</span></div>' +
-      '<div class="tile" style="--c:var(--ljr-3)"><b>' + (live ? Math.round(credits / live).toLocaleString('en-GB') : '–') + '</b><span>credits per live app</span></div>' +
-      '<div class="tile" style="--c:var(--ljr-7)"><b>' + A.filter(function (t) { return t.status === '0 idea'; }).length + '</b><span>ideas waiting</span></div>' +
-      '<div class="tile" style="--c:var(--ljr-2)"><b>' + A.filter(stuck).length + '</b><span>stuck 14+ days</span></div></div>' +
-      '<div class="card">' + (health.length ? health.map(function (h) {
-        return '<div class="row"><span class="bar" style="--c:' + (h.result === 'FAILED' ? 'var(--ljr-2)' : h.result === 'OK' ? 'var(--ljr-5)' : 'var(--ljr-0)') + '"></span>' + esc(h.job) + '<span class="meta">' + esc(h.result) + '<br>' + esc(h.last) + '</span></div>';
-      }).join('') : '<span class="muted">No jobs have run yet.</span>') + '</div>';
+  function enginePill() {
+    var bad = (S.health || []).filter(function (h) { return h.result === 'FAILED'; });
+    return bad.length ? '<span class="pill" style="border-color:var(--ljr-2);color:var(--ljr-2-text)">' + ic('warn') + 'engine: ' + esc(bad.map(function (h) { return h.job; }).join(', ')) + '</span>' :
+      '<span class="pill" style="border-color:var(--ljr-5)">' + ic('tick') + 'engine ok</span>';
   }
-  function vHow() {
-    return '<div class="card"><div class="rooms">' + ROOMS.map(function (r) { return '<div class="room" style="--c:' + col(r.slot) + '"><h2><span class="dot"></span>' + r.name + '</h2><span class="muted">' + r.st.join(' · ') + '</span></div>'; }).join('') + '</div>' +
-      '<p class="muted">Gates: Screen · Merit ' + ic('stamp') + ' · Base · Lock ' + ic('stamp') + ' · Schema · Slot · Invest ' + ic('stamp') + ' · Send ' + ic('stamp') + ' · Launch ' + ic('stamp') + '. ' + ic('stamp') + ' = yours. Checklists: ClickUp › Per-app template. A mistake = one checklist line, never a new doc.</p></div>';
+  // Clicks already sent stay marked "sent" for a day, so a row never asks twice before the engine catches up.
+  function loadSent() {
+    try { var o = JSON.parse(localStorage.getItem('af-sent') || '{}'), now = Date.now(); Object.keys(o).forEach(function (k) { if (now - o[k] > 864e5) delete o[k]; }); return o; } catch (e) { return {}; }
   }
+  function saveSent() { try { localStorage.setItem('af-sent', JSON.stringify(sent)); } catch (e) {} }
   function render() {
     var route = (location.hash || '#/rooms').replace('#/', '').split('/');
     Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (route[0] === 'card' && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
@@ -293,24 +294,39 @@
     if (!signedIn) { v.innerHTML = '<div class="card"><b>Sign in to see the factory</b><p class="muted">Read-only, plus the Ask box. One sign-in for the whole site.</p><button class="btn main" type="button" data-action="signin">' + ic('in') + 'Sign in with Google</button></div>'; return; }
     if (err) { v.innerHTML = '<div class="banner">' + esc(err) + '</div>'; return; }
     if (!S) { v.innerHTML = '<div class="card muted">Reading…</div>'; return; }
-    $('nDecide').textContent = decisions().length; $('nDo').textContent = mine().length;
-    v.innerHTML = route[0] === 'card' ? vCard(route[1]) : route[0] === 'decide' ? list(decisions(), 4, 'Nothing to decide.') :
-      route[0] === 'do' ? list(mine(), 4, 'Nothing waiting on you.') : route[0] === 'pulse' ? vPulse() : route[0] === 'how' ? vHow() : vRooms();
+    var unsent = function (t) { return !sent[t.id]; };
+    $('nDecide').textContent = decisions().filter(unsent).length; $('nDo').textContent = mine().filter(unsent).length;
+    v.innerHTML = route[0] === 'card' ? vCard(route[1]) : route[0] === 'decide' ? list(decisions(), 4, 'Nothing to decide.', 'decide') :
+      route[0] === 'do' ? list(mine(), 4, 'Nothing waiting on you.', 'do') : vRooms();
   }
 
   /* Ask box → AF › requests (the engine turns it into a ClickUp task) */
   function sendAsk(form) {
     var text = form.text.value.trim(), to = form.to.value, id = form.getAttribute('data-ask');
     var t = apps().filter(function (x) { return x.id === id; })[0] || {};
-    var go = function () {
-      var body = { at: new Date().toISOString(), to: to, text: text, taskId: id, taskUrl: t.url, app: t.name, appTag: (t.tags || []).filter(function (g) { return /^app-/.test(g); })[0] || '' };
-      var meta = { name: 'ask-' + Date.now() + '.json', parents: [F.requests], mimeType: 'application/json' };
-      var b = 'af' + Date.now();
-      var payload = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(body) + '\r\n--' + b + '--';
-      return drive('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: payload })
+    var body = { at: new Date().toISOString(), to: to, text: text, taskId: id, taskUrl: t.url, app: t.name, appTag: (t.tags || []).filter(function (g) { return /^app-/.test(g); })[0] || '' };
+    withWrite(function () {
+      return putRequest('ask', body)
         .then(function () { form.text.value = ''; $('askNote').textContent = 'Sent · becomes a ClickUp task within 15 min.'; })
         .catch(function (e) { $('askNote').textContent = 'Not sent: ' + e.message; });
-    };
+    });
+  }
+  function sendAct(btn) {
+    var id = btn.getAttribute('data-id'), act = btn.getAttribute('data-act');
+    btn.parentNode.innerHTML = '<span class="sent">sending…</span>';
+    withWrite(function () {
+      return putRequest('act', { kind: 'act', action: act, taskId: id, at: new Date().toISOString() })
+        .then(function () { sent[id] = Date.now(); saveSent(); render(); })
+        .catch(function (e) { banner('Not sent: ' + e.message); render(); });
+    });
+  }
+  function putRequest(prefix, body) {
+    var meta = { name: prefix + '-' + Date.now() + '.json', parents: [F.requests], mimeType: 'application/json' };
+    var b = 'af' + Date.now();
+    var payload = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(body) + '\r\n--' + b + '--';
+    return drive('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: payload });
+  }
+  function withWrite(go) {
     var saved = DashAuth.valid();
     if (saved && DashAuth.hasScope(saved, WRITE)) return go();
     pendingAsk = go; auth.requestWrite(WRITE);
@@ -342,6 +358,7 @@
       if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       return;
     }
+    var b = e.target.closest('[data-act]'); if (b) { sendAct(b); return; }
     var s = e.target.closest('[data-stage]'); if (s) { var i = +s.getAttribute('data-stage'); var cur = open[i] === undefined ? (s.classList.contains('c')) : open[i]; open[i] = !cur; render(); }
   });
   document.addEventListener('submit', function (e) { var f = e.target.closest('[data-ask]'); if (f) { e.preventDefault(); sendAsk(f); } });
