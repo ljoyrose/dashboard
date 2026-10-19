@@ -250,6 +250,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | Money only said "runs dry on X" in words, so a forecast dip was easy to miss | "a forecast that goes below zero marks the runs-dry date in red" |
 | 18 Oct 2026 | Phone install needs a kept copy of the site, and it must never hold Drive data or the sign-in | "after signing in and reading, the kept copy holds only the page files" |
 | 18 Oct 2026 | There was no way to find a file, to-do or dog without opening each page and scrolling | "home: / opens search; it finds Drive file names per shared drive and Money to-dos, each a link" |
+| 19 Oct 2026 | Hard rule 14: the Bin (and Drive, Changes, search) listed Karen - SHARED | "is in config, never queried and never shown on Map, Drive, Bin, Changes, PC-Personal or search" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
