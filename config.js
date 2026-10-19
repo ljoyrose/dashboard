@@ -30,6 +30,14 @@
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
       folderName: '*01 SLA Inspections / BLD-app-tables'
     },
+    // Bin guard (Apps Script, owned by lisa@puppyclassroom.com). Restores binned items that are not ZZ_DELETE_/ZZ_SUPERSEDED_
+    // into 00 CHECK. The web app is domain-only, so its address is not needed by anyone outside puppyclassroom.com.
+    binGuard: {
+      checkFolderId: '1o7ag4AndYA20h7aOmPsm0x69q3f2PqaZ', // LD > *00 Current > 00 CHECK
+      homeFolderId: '1HKAMkAER7ft-xMJYUQGzi_v6jV-3vQwk', // LD > *00 Current: the web app writes its address file here when first opened
+      webAppFile: 'BIN-GUARD-WEBAPP.json',
+      webAppUrl: '' // optional: paste the /exec address here instead. Left empty, the page reads it from webAppFile.
+    },
     money: {
       owner: 'lisa@puppyclassroom.com',
       driveId: '0AE4lOsGSf-cXUk9PVA',
