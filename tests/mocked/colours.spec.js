@@ -31,11 +31,12 @@ for (const [name, url] of [['Main dashboard', './'], ['Money Hub', 'money/'], ['
   });
 }
 
+// Calm layer (Lisa, 20 Oct 2026): the slot colour shows on hover (faint line at rest), so the check hovers first.
 test('the colour carries meaning on the dashboard menu: Bin is slot 8, Money slot 3, PC-Personal slot 4', async ({ page }) => {
   await page.goto('./');
   await page.locator('#signInBtn').click();
   await expect(page.locator('#mainNav')).toBeVisible();
-  const col = (sel) => page.locator(sel).evaluate((e) => getComputedStyle(e).borderLeftColor);
+  const col = async (sel) => { await page.locator(sel).hover(); return page.locator(sel).evaluate((e) => getComputedStyle(e).borderLeftColor); };
   expect(await col('#mainNav a[data-nav="bin"]')).toBe('rgb(20, 20, 19)');
   expect(await col('#mainNav a.slotfin')).toBe('rgb(231, 134, 21)');
   expect(await col('#mainNav a[data-nav="personal"]')).toBe('rgb(243, 216, 78)');
