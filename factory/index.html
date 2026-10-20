@@ -454,7 +454,7 @@
     var stat = t._k === 'apps' ? '' : '<button class="stat" type="button" data-panel="status" data-id="' + esc(t.id) + '" style="--sc:' + esc(t.color || '#b8b2aa') + '">' + esc(t.status) + '</button>';
     var icons = iconsOf(t, kind).map(function (x) { return '<button class="ico' + (openPanel && openPanel.id === t.id && openPanel.k === x[0] ? ' on' : '') + '" type="button" data-panel="' + x[0] + '" data-id="' + esc(t.id) + '" aria-label="' + x[2] + '">' + x[1] + (x[3] ? '<i class="new"></i>' : '') + '</button>'; }).join('');
     var mineQ = asked[t.id] ? '<div class="why q">✎ ' + esc(asked[t.id].text) + ' · ✓ ' + hm(asked[t.id].at) + '</div>' : '';
-    var date = '<label class="date' + (overdue(t) ? ' over' : '') + '">' + (t.due ? (overdue(t) ? '⚠ ' : '') + dmy(t.due) : '📅') + '<input type="date" data-due="' + esc(t.id) + '" value="' + (t.due ? iso(t.due) : '') + '" aria-label="Due date"></label>';
+    var date = '<label class="date' + (overdue(t) ? ' over' : '') + '">' + (t.due ? dmy(t.due) : '📅') + '<input type="date" data-due="' + esc(t.id) + '" value="' + (t.due ? iso(t.due) : '') + '" aria-label="Due date"></label>';
     return '<div class="crow" data-row="' + esc(t.id) + '"><div class="l1"><span class="type" aria-hidden="true">' + typeIcon(t) + '</span><a class="ttl" href="' + esc(t.url) + '" target="_blank" rel="noopener">' + title + '</a>' +
       '<button class="flagb" type="button" data-panel="flag" data-id="' + esc(t.id) + '" aria-label="Flag ' + (p ? p.p : 'none') + '">' + flagIcon(p) + '</button></div>' +
       (kind === 'decide' ? why(t) : '') + mineQ +
