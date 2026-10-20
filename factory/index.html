@@ -179,11 +179,12 @@
   svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   footer { color: var(--muted); font-size: 13px; padding: 0 16px 24px; }
 
-  /* One page width everywhere (Lisa, 20 Oct): up to 1040px, centred; phones get the full width with a 16px edge. */
-  .wrap, .wrap.wide, .wide, .hin { max-width: 1040px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
-  @media (max-width: 1072px) { .wrap, .wide, .hin { padding-left: 16px; padding-right: 16px; } }
-  header .top, header nav.tabs { max-width: 1040px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
-  @media (min-width: 1073px) { header .top, header nav.tabs { padding-left: 0; padding-right: 0; } }
+  /* One page width everywhere (Lisa, 20 Oct): the full window up to 1600px, 24px edge; phones 16px. No wasted space. */
+  .wrap, .wrap.wide, .wide, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
+  main.wrap { padding-left: 24px; padding-right: 24px; }
+  @media (max-width: 600px) { .wrap, .wide, .hin, main.wrap { padding-left: 16px; padding-right: 16px; } }
+  header .top, header nav.tabs { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
+  @media (max-width: 600px) { header .top, header nav.tabs { padding-left: 16px; padding-right: 16px; } }
 </style>
 </head>
 <body>
