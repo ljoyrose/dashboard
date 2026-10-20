@@ -465,34 +465,29 @@
   function filtered(items) {
     return items.filter(function (t) {
       if (prefs.unanswered && sent[t.id]) return false;
-      if (prefs.pri && prefs.pri.length && prefs.pri.indexOf(t.pri && t.pri.p ? t.pri.p : 'none') < 0) return false;
-      if (prefs.who && prefs.who.length && !whoOf(t).some(function (w) { return prefs.who.indexOf(w) >= 0; })) return false;
+      if (prefs.urgent && !(t.pri && t.pri.p === 'urgent')) return false;
+      if (prefs.unflagged && t.pri && t.pri.p) return false;
+      if (prefs.me && whoOf(t).indexOf('Lisa') < 0) return false;
       if (prefs.overdue && !overdue(t)) return false;
-      if (prefs.dated && !t.due) return false;
-      if (prefs.tag && prefs.tag.length && !t.tags.some(function (g) { return prefs.tag.indexOf(g) >= 0; })) return false;
-      if (prefs.app && appOf(t) !== prefs.app) return false;
       return true;
     }).sort(function (a, b) {
       var ra = a.pri && PRI[a.pri.p] ? PRI[a.pri.p][0] : 5, rb = b.pri && PRI[b.pri.p] ? PRI[b.pri.p][0] : 5;
-      return (prefs.group ? appOf(a).localeCompare(appOf(b)) : 0) || ra - rb || (a.due || 9e15) - (b.due || 9e15) || a.created - b.created;
+      var flag = ra - rb, date = (a.due || 9e15) - (b.due || 9e15), age = a.created - b.created, by = prefs.sort || 'flag';
+      return (prefs.group ? appOf(a).localeCompare(appOf(b)) : 0) || (by === 'date' ? date || flag || age : by === 'age' ? age || flag : flag || date || age);
     });
   }
-  function onCount() { return ['unanswered', 'overdue', 'dated', 'group'].filter(function (k) { return prefs[k]; }).length + ['pri', 'who', 'tag'].filter(function (k) { return prefs[k] && prefs[k].length; }).length + (prefs.app ? 1 : 0); }
+  function onCount() { return ['unanswered', 'overdue', 'urgent', 'unflagged', 'me', 'group'].filter(function (k) { return prefs[k]; }).length + (prefs.sort && prefs.sort !== 'flag' ? 1 : 0); }
   function chip(key, val, label) {
-    var on = Array.isArray(prefs[key]) ? prefs[key].indexOf(val) >= 0 : val === undefined ? !!prefs[key] : prefs[key] === val;
+    var on = key === 'sort' ? (prefs.sort || 'flag') === val : Array.isArray(prefs[key]) ? prefs[key].indexOf(val) >= 0 : val === undefined ? !!prefs[key] : prefs[key] === val;
     return '<button class="pill' + (on ? ' on' : '') + '" type="button" data-pref="' + key + '"' + (val !== undefined ? ' data-val="' + esc(val) + '"' : '') + '>' + label + '</button>';
   }
   function filterBar(items) {
     var n = onCount(), html = '<div class="fbar"><button class="btn" type="button" data-action="filters" aria-label="Sort and filter">☰' + (n ? '<span class="n">' + n + '</span>' : '') + '</button></div>';
     if (!filtersOpen) return html;
-    var appsSeen = items.map(appOf).filter(function (a, i, x) { return x.indexOf(a) === i; }).sort();
-    var tagsSeen = [].concat.apply([], items.map(function (t) { return t.tags.filter(function (g) { return MEANING.test(g); }); })).filter(function (a, i, x) { return x.indexOf(a) === i; });
+    // Two lines only (Lisa, 20 Oct): Filter · Sort.
     return html + '<div class="card fpanel">' +
-      '<div class="pills">' + chip('unanswered', undefined, '⏳') + chip('overdue', undefined, '⚠') + chip('dated', undefined, '📅') + chip('group', undefined, '▤') + '</div>' +
-      '<div class="pills">' + ['urgent', 'high', 'normal', 'low', 'none'].map(function (p) { return chip('pri', p, flagIcon(p === 'none' ? null : { p: p })); }).join('') + '</div>' +
-      '<div class="pills">' + ['Lisa', 'Claude', 'Grok'].map(function (w) { return chip('who', w, '👤 ' + w); }).join('') + '</div>' +
-      (tagsSeen.length ? '<div class="pills">' + tagsSeen.map(function (g) { return chip('tag', g, '🏷 ' + esc(g)); }).join('') + '</div>' : '') +
-      '<div class="pills">' + chip('app', '', '◆ all') + appsSeen.map(function (a) { return chip('app', a, '◆ ' + esc(a)); }).join('') + '</div></div>';
+      '<div class="pills">' + chip('unanswered', undefined, '⏳ Unanswered') + chip('overdue', undefined, '⚠ Overdue') + chip('urgent', undefined, flagIcon({ p: 'urgent' }) + ' Urgent') + chip('unflagged', undefined, flagIcon(null) + ' Unflagged') + chip('me', undefined, '👤 Me') + '</div>' +
+      '<div class="pills">' + chip('sort', 'flag', flagIcon({ p: 'urgent' }) + ' Flag') + chip('sort', 'date', '📅 Date') + chip('sort', 'age', '🕑 Oldest') + chip('group', undefined, '▤ By app') + '</div></div>';
   }
   function list(items, slot, empty, kind) {
     var show = filtered(items), last = null;
@@ -664,7 +659,8 @@
     var st = e.target.closest('[data-set]'); if (st) { sendSet(st.getAttribute('data-id'), st.getAttribute('data-set'), st.getAttribute('data-val')); return; }
     var ck = e.target.closest('[data-check]'); if (ck) { sendCheck(ck.getAttribute('data-id'), ck.getAttribute('data-check'), ck.getAttribute('data-item'), ck.getAttribute('data-ok') !== '1'); return; }
     var pf = e.target.closest('[data-pref]'); if (pf) { var key = pf.getAttribute('data-pref'), val = pf.getAttribute('data-val');
-      if (key === 'app') prefs.app = prefs.app === val ? '' : val;
+      if (key === 'sort') prefs.sort = val;
+      else if (key === 'app') prefs.app = prefs.app === val ? '' : val;
       else if (val === null) prefs[key] = !prefs[key];
       else { prefs[key] = prefs[key] || []; var at = prefs[key].indexOf(val); if (at >= 0) prefs[key].splice(at, 1); else prefs[key].push(val); }
       savePrefs(); render(); return; }
