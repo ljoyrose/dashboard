@@ -221,6 +221,27 @@
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
   footer p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  /* ---- Calm layer (Lisa, 20 Oct 2026): one corner, faint lines, no fills on selected, colour only on hover or for attention, nothing moves. ---- */
+  :root { --radius: 12px; }
+  .btn, .card, .pill, .chip, .tile, .note, input, select, textarea, details, summary, .panel, .keytile { border-radius: var(--radius); }
+  nav.main a, .subnav a { border-radius: 999px; }
+  nav.main a, nav.main a[aria-current="page"], .subnav a, .subnav a[aria-current="page"] { font-weight: 600; background: transparent; border-width: 1px; border-color: var(--line); }
+  nav.main a:hover, nav.main a[aria-current="page"], .subnav a:hover, .subnav a[aria-current="page"], .btn:hover, a.keytile:hover { border-color: var(--muted); background: transparent; }
+  .card, .card[class], nav.main a, nav.main a[class] { border-left-color: var(--line); box-shadow: none; }
+  .card[class]:hover, nav.main a[class]:hover, nav.main a[class][aria-current="page"] { border-left-color: var(--slot, var(--c, var(--muted))); }
+  .card.vision[class], nav.main a.vision[class] { background: var(--surface); }
+  a { color: inherit; }
+  .btn:active, nav.main a:active { transform: none; }
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 12px; font-weight: 700; color: var(--muted); cursor: help; vertical-align: middle; }
+  .info:hover { border-color: var(--muted); }
+
+  /* One page width everywhere (Lisa, 20 Oct): the full window up to 1600px, 24px edge; phones 16px. No wasted space. */
+  .wrap, .wrap.wide, .wide, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
+  @media (max-width: 600px) { .wrap, .wide, .hin { padding-left: 16px; padding-right: 16px; } }
+
+  /* Fewer scrolls: on wide screens file lists use 2-3 columns. */
+  @media (min-width: 900px) { ul.files { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 8px 12px; } ul.files > li { margin: 0; } }
 </style>
 </head>
 <body>
@@ -263,11 +284,11 @@
 
 <main id="content" class="wrap">
   <div id="banner" class="banner hidden" role="status"></div>
-  <div id="hereBox" class="here hidden"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Map</h2></div>
+  <div id="hereBox" class="here hidden"><span></span><h2 id="hereTitle" tabindex="-1">Map</h2></div>
   <div id="view" data-view="map"></div>
 </main>
 
-<footer id="pageFoot" class="wrap hidden"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
+<footer id="pageFoot" class="wrap hidden"><span class="info" title="Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.">i</span></footer>
 
 <script>
 (function () {
@@ -845,12 +866,10 @@
     var p = S.check, d = p.data, html = '';
     var n = d ? d.items.length : null, picked = pickCount('check'), busyOrNoUrl = busy || !(d && d.url);
     html += foldOpen('check', !!(d && n), 'card slot8' + cardClass(p), 'checkCard') + '<summary><h3>00 CHECK: taken back out of a bin</h3>' + stateBadge(p, n) + '</summary><div class="fbody">';
-    html += '<p class="note">Every day at about 8am the bin guard looks in the bins. Anything whose name does not start ZZ_DELETE_ or ZZ_SUPERSEDED_ is taken back out and put here. ' +
-      'Tick what you have checked. ZZ_DELETE renames it ZZ_DELETE_…, adds a tidy-ledger row and moves it to the bin (30-day recovery). Refer to AI marks it and wakes lcme-grok. ' +
-      'Both open the bin guard\'s own Google page with your ticks; nothing changes until you press the button there. RR_ names are never ticked.</p>';
+    html += '<p class="note"><span class="info" title="Every day at about 8am the bin guard looks in the bins. Anything whose name does not start ZZ_DELETE_ or ZZ_SUPERSEDED_ is taken back out and put here. Tick what you have checked. ZZ_DELETE renames it ZZ_DELETE_…, adds a tidy-ledger row and moves it to the bin (30-day recovery). Refer to AI marks it and wakes lcme-grok. Both open the bin guard\'s own Google page with your ticks; nothing changes until you press the button there. RR_ names are never ticked.">i</span></p>';
     html += failNote(p);
     if (d) {
-      if (!d.url) html += '<p class="note fail" data-check-nourl>The bin guard web app is not set up yet, so ZZ_DELETE and Refer to AI are off. It switches on by itself once Lisa deploys the web app and opens it once.</p>';
+      if (!d.url) html += '<p class="note fail" data-check-nourl>Bin guard off <span class="info" title="The bin guard web app is not set up yet, so ZZ_DELETE and Refer to AI are off. It switches on by itself once Lisa deploys the web app and opens it once.">i</span></p>';
       html += '<div class="actions" data-pick-bar="check">' +
         '<button class="btn" type="button" data-action="selectall" data-group="check"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
         '<button class="btn" type="button" data-action="clearpick" data-group="check"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
@@ -1416,7 +1435,7 @@
     if (U.error) html += '<p class="note fail">Stopped: ' + esc(U.error) + '</p>';
     if (U.status === 'done') {
       html += '<p class="note"><strong>' + num(U.matches.length + (U.marked ? U.marked.done : 0)) + '</strong> files (' + (U.matchBytes / 1e9).toFixed(2) + ' GB) are already in a shared drive.</p>' +
-        '<p class="note"><strong>' + num(U.only.length) + '</strong> files (' + (U.onlyBytes / 1e9).toFixed(2) + ' GB) are NOT in a shared drive. Copy them there before you clear this drive.</p>';
+        '<p class="note"><strong>' + num(U.only.length) + '</strong> files (' + (U.onlyBytes / 1e9).toFixed(2) + ' GB) not in a shared drive · copy before clearing</p>';
       if (U.skipped) html += '<p class="note">' + num(U.skipped) + ' files could not be read and were skipped.</p>';
       if (U.matches.length) html += '<div data-bin-list="usb"><h4>Already in a shared drive</h4>' + pickButtons('usb', 'usbmark', 'Rename') + tickList('usb', U.matches, usbBlock, 'usb-matches') + '</div>';
     }
@@ -1558,7 +1577,7 @@
     var h = '<section class="card slotfin" id="moneyTile">' + head;
     if (biz.length) h += '<p class="mgroup">Business</p><div class="ments">' + biz.map(ent).join('') + '</div>';
     if (ppl.length) h += '<p class="mgroup">Personal</p><div class="ments">' + ppl.map(ent).join('') + '</div>';
-    h += '<p class="note">Per entity. Business and personal never added together.</p>';
+    h += '<p class="note"><span class="info" title="Per entity. Business and personal never added together.">i</span></p>';
     var turn = MC.yourTurn(d.data), ready = turn.filter(function (x) { return x.ready === 'ready'; });
     var todoN = listShown('money-todos', ready.length, 3);
     h += '<div class="cardhead"><h4>To-dos</h4><span class="mtag ops">' + ready.length + ' ready · ' + turn.length + ' open</span></div><ul class="files">' +
@@ -1636,7 +1655,7 @@
     var label = { risk: 'risk', fin: 'fin', ops: 'ops', bin: 'bin' };
     var h = '<section class="card slot4 needs" id="needsToday" aria-labelledby="needsTitle"><div class="cardhead"><h3 id="needsTitle">Needs you today</h3>' +
       '<span class="mtag ' + (all.some(function (x) { return x.kind === 'risk'; }) ? 'risk' : all.length ? 'ops' : 'ok') + '">' + (reading ? 'Reading…' : all.length + (all.length === 1 ? ' thing' : ' things')) + '</span></div>';
-    if (!all.length) return h + '<p class="note">' + (reading ? 'Reading from Google Drive…' : 'Nothing needs you today.') + '</p></section>';
+    if (!all.length) return h + '<p class="note">' + (reading ? 'Reading from Google Drive…' : '—') + '</p></section>';
     h += '<ol>' + items.map(function (x) {
       return '<li class="n-' + x.kind + '"><span class="mtag ' + label[x.kind] + '">' + esc(x.tag) + '</span><span class="nt"><a href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>' + esc(x.text) + '</a></span></li>';
     }).join('') + '</ol>';
@@ -1650,7 +1669,7 @@
     if (!signedIn) {
       html += '<div class="card vision pending"><div class="cardhead"><h3>Not signed in</h3>' +
         '<span class="state st-idle"><span class="shape"></span>No reads</span></div>' +
-        '<p class="note">Read-only. The Bin asks for more only when used.</p>' +
+        '' +
         '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
     }
     html += moneyTile();
@@ -1816,7 +1835,7 @@
       if (!d.per.length) html += '<p class="note">No shared drives found for this account.</p>';
       var full = d.per.filter(function (x) { return x.trash.length; }).sort(function (a, b) { return b.trash.length - a.trash.length; });
       var empty = d.per.filter(function (x) { return !x.trash.length; });
-      if (d.per.length > 6) html += '<input class="find" id="binFilter" type="search" placeholder="Find a shared drive (' + d.per.length + ')" value="' + esc(BF) + '" aria-label="Find a shared drive">';
+      if (d.per.length > 6) html += '<input class="find" id="binFilter" type="search" aria-label="Find a shared drive" value="' + esc(BF) + '" aria-label="Find a shared drive">';
       if (full.length) html += '<div class="index" aria-label="Drives with items in the bin">' + full.map(function (x) {
         return '<button class="btn" type="button" data-action="foldjump" data-key="bin-' + esc(x.drive.id) + '" data-name="' + esc(x.drive.name.toLowerCase()) + '">' + esc(x.drive.name) + ' <span class="n">' + num(x.trash.length) + (x.trashMore ? '+' : '') + '</span></button>';
       }).join('') + '</div>';
@@ -2139,6 +2158,21 @@
     }
     setTimeout(waitForGoogle, 100);
   })();
+})();
+</script>
+
+<script>
+/* Calm: every help bullet list (ul.notes) becomes one (i); its words show on hover or tap. */
+(function () {
+  function calm() {
+    document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
+      var t = Array.prototype.map.call(ul.querySelectorAll('li'), function (li) { return li.textContent.trim(); }).join(' · ');
+      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('aria-label', t); s.setAttribute('tabindex', '0'); s.textContent = 'i';
+      ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
+    });
+  }
+  new MutationObserver(calm).observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', calm); calm();
 })();
 </script>
 </body>
