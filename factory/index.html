@@ -80,6 +80,7 @@
   .ask { display: flex; gap: 8px; margin-top: 10px; }
   .ask input { flex: 1; font: inherit; font-size: 15px; padding: 8px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
   .rowask { margin-top: 6px; }
+  .by { font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; margin-left: 6px; }
   .rowask input { font-size: 14px; padding: 6px 10px; }
   .why.q { color: var(--ljr-3-text); }
   .ask select { font: inherit; font-size: 14px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
@@ -342,9 +343,11 @@
         '<span class="acts"><button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '">Yes</button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '">No</button></span>' :
         '<span class="acts"><button class="btn" type="button" data-act="done" data-id="' + esc(t.id) + '">' + ic('tick') + 'Done</button></span>';
       // Decide rows also get a reply box: Ask sends a question to Claude; typed text also rides along with Yes / No.
-      var q = t.tags.indexOf('question') >= 0 ? '<div class="why q">' + ic('warn') + 'Question sent · Claude answers here</div>' : '';
-      var box = kind === 'decide' && !sent[t.id] ? '<form class="ask rowask" data-ask="' + esc(t.id) + '"><input name="text" id="note-' + esc(t.id) + '" placeholder="Question or note…" aria-label="Question or note"><input type="hidden" name="to" value="claude"><button class="btn" type="submit">Ask</button></form><div class="asknote muted"></div>' : '';
-      return head + '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><div class="txt"><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(label) + '</a>' + why(t) + q + box + '</div><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span>' + acts + '</div>';
+      var mine = asked[t.id], q = mine ? '<div class="why q">' + ic('send') + 'You: ' + esc(mine.text) + ' · sent ' + new Date(mine.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · Claude answers here</div>' :
+        t.tags.indexOf('question') >= 0 ? '<div class="why q">' + ic('warn') + 'Question sent · Claude answers here</div>' : '';
+      var box = kind === 'decide' && !sent[t.id] ? '<form class="ask rowask" data-ask="' + esc(t.id) + '"><input name="text" id="note-' + esc(t.id) + '" data-draft="' + esc(t.id) + '" value="' + esc(drafts[t.id] || '') + '" placeholder="Question or note…" aria-label="Question or note"><input type="hidden" name="to" value="claude"><button class="btn" type="submit">Ask</button></form><div class="asknote muted"></div>' : '';
+      var by = kind === 'decide' ? '<span class="by">' + (t.tags.indexOf('gate') >= 0 ? 'engine' : 'Claude') + '</span>' : '';
+      return head + '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><div class="txt"><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(label) + '</a>' + by + why(t) + q + box + '</div><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span>' + acts + '</div>';
     }).join('') + '</div>';
   }
   // The plain What / Yes = / No = lines written on each task, shown under its title. Links become "open".
@@ -390,6 +393,11 @@
   function loadSent() {
     try { var o = JSON.parse(localStorage.getItem('af-sent') || '{}'), now = Date.now(); Object.keys(o).forEach(function (k) { if (now - o[k] > 864e5) delete o[k]; }); return o; } catch (e) { return {}; }
   }
+  function loadLocal(k) { try { var o = JSON.parse(localStorage.getItem(k) || '{}'), now = Date.now(); Object.keys(o).forEach(function (x) { if (o[x] && o[x].at && now - o[x].at > 2 * 864e5) delete o[x]; }); return o; } catch (e) { return {}; } }
+  function saveLocal(k, o) { try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} }
+  var drafts = loadLocal('af-drafts'), asked = loadLocal('af-asked');
+  // Typing is kept as you go, so a refresh never wipes a half-written answer.
+  document.addEventListener('input', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('af-drafts', drafts); } });
   function saveSent() { try { localStorage.setItem('af-sent', JSON.stringify(sent)); } catch (e) {} }
   function render() {
     var route = (location.hash || '#/rooms').replace('#/', '').split('/');
@@ -413,10 +421,15 @@
     var lists = S.lists || {}, t = [].concat(lists.apps || [], lists.decisions || [], lists.work || [], lists.sends || [], lists.incidents || []).filter(function (x) { return x.id === id; })[0] || {};
     var note = form.nextElementSibling && form.nextElementSibling.classList.contains('asknote') ? form.nextElementSibling : $('askNote');
     var body = { at: new Date().toISOString(), to: to, text: text, taskId: id, taskUrl: t.url, app: t.name, appTag: (t.tags || []).filter(function (g) { return /^app-/.test(g); })[0] || '' };
+    if (!text) return;
+    drafts[id] = text; saveLocal('af-drafts', drafts);
+    note.textContent = 'Saving… (Google may ask you to allow saving)';
+    var done = false;
+    setTimeout(function () { if (!done) note.textContent = 'Not sent yet: allow Google saving, then press Ask again. Your text is kept.'; }, 20000);
     withWrite(function () {
       return putRequest('ask', body)
-        .then(function () { form.text.value = ''; note.textContent = 'Sent to Claude · ClickUp task by ' + appliesBy(Date.now()) + '. The row stays open.'; })
-        .catch(function (e) { note.textContent = 'Not sent: ' + e.message; });
+        .then(function () { done = true; delete drafts[id]; saveLocal('af-drafts', drafts); asked[id] = { text: text, at: Date.now() }; saveLocal('af-asked', asked); render(); })
+        .catch(function (e) { done = true; note.textContent = 'Not sent: ' + e.message + '. Your text is kept; press Ask again.'; });
     });
   }
   function sendAct(btn) {
@@ -452,6 +465,7 @@
     DashAuth.save(accessToken, tokenExpiresAt, resp.scope || SCOPE);
     signedIn = true; $('banner').className = 'banner hidden';
     if (pendingAsk && DashAuth.hasScope(DashAuth.valid(), WRITE)) { var p = pendingAsk; pendingAsk = null; p(); }
+    else if (pendingAsk) { pendingAsk = null; banner('Saving was not allowed by Google. Click again and choose Allow.'); }
     startTimer(); load();
   }
   function signOut() {
