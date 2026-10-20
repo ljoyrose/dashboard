@@ -702,7 +702,8 @@
   var appMenu = false;
   function fdef(tab) { return { q: '', app: [], kind: [], who: [], st: [], f: /^(rooms|docs)$/.test(tab) ? [] : ['unanswered'], sort: tab === 'me' ? 'new' : 'flag', test: false }; }
   var fs = (function () { try { return JSON.parse(localStorage.getItem('af-fs') || '') || {}; } catch (e) { return {}; } })();
-  function fsOf(tab) { var d = fdef(tab), s = fs[tab] = Object.assign(d, fs[tab] || {}); ['app', 'kind', 'who', 'st', 'f'].forEach(function (k) { if (!Array.isArray(s[k])) s[k] = []; }); return s; }
+  // Always the same object for a tab (filled with defaults in place), so a change made through it is kept.
+  function fsOf(tab) { var d = fdef(tab), s = fs[tab] = fs[tab] || {}; Object.keys(d).forEach(function (k) { if (s[k] === undefined || (Array.isArray(d[k]) && !Array.isArray(s[k]))) s[k] = d[k]; }); return s; }
   function saveFs() { try { localStorage.setItem('af-fs', JSON.stringify(fs)); } catch (e) {} }
   function slugify(x) { return String(x).toLowerCase().replace(/^test-/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
   // An app's short name in links: its own key tag (app-links), else its name (kennel-book). Items with no app: factory.
@@ -1445,11 +1446,11 @@
   document.addEventListener('submit', function (e) { var lf = e.target.closest('[data-addlink]'); if (lf) { e.preventDefault(); sendLink(lf); return; } var f = e.target.closest('[data-ask]'); if (f) { e.preventDefault(); sendAsk(f); } });
   function onRoute() { fromUrl(); var r = hashParts().path; if (r[0] === 'item' && r[1]) openPanel = { id: r[1], k: 'all' }; }
   window.addEventListener('hashchange', function () { open = {}; openPanel = null; filtersOpen = false; appMenu = false; cardAsk = false; addLink = null; formErr = {}; formNote = ''; docsAll = false; onRoute(); render(); window.scrollTo(0, 0); });
-  // "/" puts the cursor in the search box.
-  document.addEventListener('keydown', function (e) {
+  // "/" puts the cursor in this page's search box. Runs before toolkit.js's own "/" (its search dialog), which still opens where there is no box.
+  window.addEventListener('keydown', function (e) {
     if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
-    var b = document.querySelector('[data-f="fq"]'); if (b) { e.preventDefault(); b.focus(); }
-  });
+    var b = document.querySelector('[data-f="fq"]'); if (b) { e.preventDefault(); e.stopPropagation(); b.focus(); }
+  }, true);
   onRoute();
   var saved = DashAuth.valid();
   if (saved && DashAuth.hasScope(saved, SCOPE)) { accessToken = saved.access_token; tokenExpiresAt = saved.expires_at; signedIn = true; }
