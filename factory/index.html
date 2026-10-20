@@ -281,6 +281,12 @@
   /* ★ = must answer: red, always at the far right of its line, so it never moves (Lisa, 20 Oct). */
   .fq .qt { position: relative; padding-right: 22px; }
   .fq .req, .fq .qt .req { position: absolute; right: 0; top: 0; color: var(--ljr-2); font-size: 15px; font-weight: 700; }
+
+  /* Codes (The Codes key): ink letters, state in the ring. */
+  .codes .cgrp { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+  .codes .csep { color: var(--muted); padding: 0 4px; align-self: center; }
+  .codes .cd { font-size: 12px; font-weight: 600; border: 1.5px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--ink); }
+  .codes .cd.set { border-color: var(--ljr-5); } .codes .cd.open { border-color: var(--ljr-3); } .codes .cd.bad { border-color: var(--ljr-2); }
 </style>
 </head>
 <body>
@@ -397,6 +403,19 @@
   }
   // A code reads "TEN:4" on screen. Typed or stored as TEN4, TEN 4, TEN:4, TEN-4, TEN=4 or TEN·4, it is understood the same.
   function codeParts(x) { var m = String(x).trim().match(/^([A-Z]{2,8})\s*[:=·\-]?\s*([0-9?]+|L\?)$/); return m ? [m[0], m[1], m[2]] : [x, x, '']; }
+  // The Codes (Lisa's key): codes in groups split by " / ", Leak outside the groups. State in the ring only:
+  // settled = green ring, open (?) = amber ring; Leak: no = green, yes = red, not tested = amber. Words stay ink.
+  var CODE_GROUPS = [['Who owns what', ['TEN', 'PARENTS', 'DOWN', 'MEET', 'POOL', 'EXIT']], ['People', ['ROLE', 'BELONG', 'GUEST', 'HELP', 'JOIN']], ['Customers and money', ['CUST', 'PRICE', 'SHARE', 'PAY']], ['Public and data', ['SEN', 'VIEW', 'POST', 'BRAND', 'SEND']]];
+  function codeGroups(codes, md) {
+    var by = {}; codes.forEach(function (x) { var m = codeParts(x); by[m[1]] = m[2]; });
+    var ring = function (k, v, title) { return '<span class="cd ' + (v === '?' || v === '' ? 'open' : 'set') + '" title="' + esc(title || '') + '">' + esc(k) + ':<b>' + esc(v === '' ? '?' : v) + '</b></span>'; };
+    var html = CODE_GROUPS.map(function (g) {
+      var have = g[1].filter(function (k) { return k in by; }); if (!have.length) return '';
+      return '<span class="cgrp" title="' + g[0] + '">' + have.map(function (k) { var p = PARTS.filter(function (x) { return x[0] === k; })[0]; return ring(k, by[k], p ? p[2] : ''); }).join('') + '</span>';
+    }).filter(Boolean).join('<span class="csep">/</span>');
+    var lk = (String(md || '').match(/\bL\s*[:=]?\s*(y|n|\?)/i) || [])[1] || '?';
+    return html + '<span class="csep"></span><span class="cd ' + (lk === 'n' ? 'set' : lk === 'y' ? 'bad' : 'open') + '" title="Leak test: y = leaks, n = none, ? = not tested">L:<b>' + esc(lk) + '</b></span>';
+  }
   function codesOf(md) {
     var out = [];
     String(md || '').split('\n').forEach(function (l) {
@@ -481,7 +500,7 @@
         if (!c) { box.innerHTML = '<span class="q">No card</span>'; return; }
         var codes = codesOf(c.md);
         // "POOL 0": name, a space, the value in bold, so codes never run together.
-        box.innerHTML = codes.map(function (x) { var m = codeParts(x); return '<span' + (m[2] === '?' ? ' class="q"' : '') + '>' + esc(m[1]) + ':<b>' + esc(m[2]) + '</b></span>'; }).join('') +
+        box.innerHTML = codeGroups(codes, c.md);
           '';
         var m = $('cardMarks') && $('cardMarks').querySelector('.mark'); if (m) m.insertAdjacentHTML('afterend', '<a class="mark" href="https://drive.google.com/file/d/' + c.id + '/view" target="_blank" rel="noopener" aria-label="Open card in Drive" title="Drive">' + DRIVE_MARK + '</a>');
       });
