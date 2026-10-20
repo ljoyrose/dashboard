@@ -188,16 +188,18 @@ nav button:hover,nav button[aria-current="page"]{background:transparent;color:va
 .acc2,.acc3,.acc4,.acc5,.acc6,.acc7{border-left-color:var(--ln);border-left-width:1px}
 .acc2:hover{border-left-color:var(--p2)}.acc3:hover{border-left-color:var(--p3)}.acc4:hover{border-left-color:var(--p4)}.acc5:hover{border-left-color:var(--p5)}.acc6:hover{border-left-color:var(--p6)}.acc7:hover{border-left-color:var(--p7)}
 a{color:inherit}
-.info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--ln);border-radius:50%;font-size:12px;font-weight:700;color:var(--sub);cursor:help;vertical-align:middle}
+.info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--ln);border-radius:50%;font-size:13px;font-weight:700;color:var(--sub);cursor:help;vertical-align:middle}
 
 /* Status chips: no solid fills. Faint outline; the status colour only on the small count circle. Tiles: colour top edge on hover only. */
 .st[class]{background:transparent;border-color:var(--ln);color:var(--fg)}
-.st-bi b{background:#DB7FA2}.st-st b{background:#1F6F96;color:#FFF}.st-tr b{background:var(--ljr-3)}.st-gr b{background:var(--ljr-5)}.st-ce b{background:#7FB8C9}.st-ln b{background:var(--ljr-4)}.st-pu b{background:#C9B2DB}.st-un b{background:var(--ljr-2-tint);color:var(--ljr-2-text)}
+/* Status code: ink letters in a ring of the status colour (no fill, no coloured words). */
+.st[class] b{background:transparent!important;color:var(--fg)!important;border:2px solid var(--ln);border-radius:999px;padding:0 5px}
+.st-bi b{border-color:#DB7FA2!important}.st-st b{border-color:#1F6F96!important}.st-tr b{border-color:var(--ljr-3)!important}.st-gr b{border-color:var(--ljr-5)!important}.st-ce b{border-color:#7FB8C9!important}.st-ln b{border-color:var(--ljr-4)!important}.st-pu b{border-color:#C9B2DB!important}.st-un b{border-color:var(--p2)!important}
+.st[class]{color:var(--fg)!important}
 .st[class]:hover,.st[class][aria-pressed="true"],.st[class].on{border-color:var(--sub)}
 .b0,.b2,.b3,.b4,.b5,.b6,.b7{border-top-color:var(--ln)}
 .b0:hover{border-top-color:var(--p0)}.b2:hover{border-top-color:var(--p2)}.b3:hover{border-top-color:var(--p3)}.b4:hover{border-top-color:var(--p4)}.b5:hover{border-top-color:var(--p5)}.b6:hover{border-top-color:var(--p6)}.b7:hover{border-top-color:var(--p7)}
 .sfb[class]:hover,.sfb[class][aria-pressed="true"]{outline:none;border-color:var(--sub)}
-.sfb[aria-pressed="true"]::after{content:none}
 
   /* One page width everywhere (Lisa, 20 Oct): the full window up to 1600px, 24px edge; phones 16px. No wasted space. */
   .wrap, .wrap.wide, .wide, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
@@ -1533,7 +1535,7 @@ function pill(){
   p.title=w+' · '+FOLDER_NAME; p.innerHTML='<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">'+esc(w)+'</span>\u2713'; }
  else if(LOAD.state==='signin'){ p.className='live bad'; p.textContent='signed out'; }
  else if(LOAD.state==='loading'){ p.className='live'; p.textContent='\u2026'; }
- else if(LOAD.state==='ambiguous'){ p.className='live bad'; p.textContent='Duplicate files'; }
+ else if(LOAD.state==='ambiguous'){ p.className='live bad'; p.textContent='duplicate file titles'; }
  else if(LOAD.state==='err'){ p.className='live bad'; p.textContent='read failed'; }
 }
 // Every dropdown and box gets a name a screen reader can say: its first "choose…" option or its placeholder,
