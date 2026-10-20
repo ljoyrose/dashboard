@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-factory-find-bar-2026-10-20">
+<meta name="build" content="ljr-factory-send-gate-2026-10-20">
 <title>Factory</title>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
@@ -307,6 +307,8 @@
   .appmenu { max-width: 1600px; margin: 0 auto; padding: 0 24px 12px; }
   @media (max-width: 600px) { .appmenu { padding: 0 16px 12px; } }
   .appmenu .pills { gap: 8px; }
+  .gate { font-size: 13px; padding: 4px 10px; border: 1px solid var(--ljr-3); border-radius: 999px; color: var(--ink); display: inline-flex; gap: 4px; align-items: center; }
+  .gate .ti { color: var(--muted); }
   .sect { font-size: 13px; font-weight: 700; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 4px 0 0; }
 </style>
 </head>
@@ -666,7 +668,7 @@
     var rest = !known ? label : label.indexOf(app + ' · ') === 0 ? label.slice(app.length + 3) : label.replace(/^[^·]+?\s·\s/, '');
     var title = inCard ? esc(rest) : '<b class="app">' + esc(known ? app : 'Factory') + '</b> ' + esc(rest);
     if (kind === 'decide' && !line(t, /^Deciding:\s*/i)) title += info(line(t, /^What:\s*/i));
-    var blocked = /^blocked$/i.test(t.status), isSend = t._k === 'sends' && isOpen(t);
+    var blocked = /^blocked$/i.test(t.status), isSend = t._k === 'sends' && isOpen(t), gate = isSend ? sendGate(t) : null;
     var acts = sentAt ? sentLine(t.id) : blocked && kind !== 'decide' ? '<span class="lock" title="Blocked' + (line(t, /^Waits on:\s*/i) ? ': waits on ' + esc(line(t, /^Waits on:\s*/i)) : '') + '"><i class="ti ti-lock"></i></span>' :
       kind === 'decide' ? '<button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '" aria-label="Yes"><i class="ti ti-check"></i></button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '" aria-label="No"><i class="ti ti-x"></i></button>' :
       kind === 'do' ? '<button class="btn yes" type="button" data-act="done" data-id="' + esc(t.id) + '" aria-label="Done"><i class="ti ti-check"></i></button>' : '';
@@ -682,8 +684,8 @@
     var detail = openPanel && openPanel.id === t.id && openPanel.k === 'all';
     return '<div class="crow" data-row="' + esc(t.id) + '"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(t.id) + '">' + title + '</button>' +
       '<button class="flagb" type="button" data-panel="flag" data-id="' + esc(t.id) + '" aria-label="Flag ' + (p ? p.p : 'none') + '">' + flagIcon(p) + '</button></div>' +
-      (detail ? why(t, true) : kind === 'decide' ? outcomes(t) : isSend || line(t, /^(Then|After):\s*/i) || blocked ? doLines(t, blocked) : '') + mineQ +
-      '<div class="l2"><span class="icons">' + (isSend ? '<button class="copy" type="button" data-copy="' + esc(t.id) + '"><i class="ti ti-copy"></i> Copy</button>' : '') + stat + icons + proofs(t, kind) +
+      (detail ? why(t, true) : kind === 'decide' ? outcomes(t) : isSend || line(t, /^(Then|After):\s*/i) || blocked ? doLines(t, blocked) : '') + (gate ? sendInfo(t, gate) : '') + mineQ +
+      '<div class="l2"><span class="icons">' + (gate ? gate.ok ? '<button class="copy" type="button" data-copy="' + esc(t.id) + '"><i class="ti ti-copy"></i> Copy</button>' : '<span class="gate" data-gate="' + esc(t.id) + '" title="Missing before a send"><i class="ti ti-lock"></i> ' + gate.miss.join(' · ') + '</span>' : '') + stat + icons + proofs(t, kind) +
       (kind === 'decide' && !sentAt ? '<span class="age' + (Date.now() - t.created > 3 * 864e5 ? ' old' : '') + '" title="Waiting since ' + dmy(t.created) + '"><i class="ti ti-hourglass"></i>' + ago(t.created) + '</span>' : '') + (ch ? '<span class="sent">✓ ' + hm(ch.at) + '</span>' : '') + '</span><span class="acts">' + acts + '</span></div>' +
       (openPanel && openPanel.id === t.id && !detail ? panelOf(t, openPanel.k) : '') +
       (detail ? iconsOf(t, kind).filter(function (x) { return x[0] !== 'reply'; }).map(function (x) { return panelOf(t, x[0]); }).join('') : '') +
@@ -987,8 +989,48 @@
       .catch(function (e) { banner('Not undone: ' + e.message); });
   }
   // Copy a prompt: its section (P1, P2 …) from the prompt doc on Drive, ready to paste into OverSkill.
+  /* ---------- Send gate (APPFACT E11 E14 E15 E16, 20 Oct 2026): Copy shows only when the checks before a paid send are on the task ----------
+   * Read from the description and the comments (the engine can't edit descriptions yet). Missing lines are named instead of Copy.
+   *   Last turn: T<nn> = live chat … checked <today>        (YYYY-MM-DD or "20 Oct", Europe/London)
+   *   Prediction: <link> · Simulation: <link> · inputs-gate: PASS <date>
+   *   Happy Hour: active, <n> min left, read <HH:MM> · …   (read 15 minutes ago or less)
+   *   AFTER SEND YOU MUST: …                                (shown on the card, with Lisa's Do lines for the same app)
+   *   Lisa available: <HH:MM–HH:MM>                         (only for tasks tagged security or leak…)
+   */
+  var MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  function londonDay(ts) { return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); }
+  function londonMin(ts) { var p = new Date(ts).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).split(':'); return +p[0] * 60 + +p[1]; }
+  function dayOf(x) {
+    var m = String(x || '').match(/(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0];
+    m = String(x || '').match(/\b(\d{1,2})\s+([A-Za-z]{3})/i); var mo = m && MON[m[2].toLowerCase()];
+    return mo ? londonDay(Date.now()).slice(0, 4) + '-' + ('0' + mo).slice(-2) + '-' + ('0' + m[1]).slice(-2) : '';
+  }
+  function gateLines(t) { var out = lines(t); (t.cm || []).forEach(function (c) { String(c.text || '').split(/\r?\n/).forEach(function (l) { if (l.trim()) out.push(l.trim()); }); }); return out; }
+  function sendGate(t) {
+    var L = gateLines(t), all = function (re) { return L.filter(function (l) { return re.test(l); }); }, today = londonDay(Date.now()), now = londonMin(Date.now()), miss = [];
+    if (!all(/^Last turn:\s*T\d+\s*=\s*live chat/i).some(function (l) { return dayOf((l.match(/checked\s+(.*)$/i) || [])[1]) === today; })) miss.push('Last turn');
+    if (!all(/^Prediction:\s*https?:\/\//i).some(function (l) { return /Simulation:\s*https?:\/\//i.test(l) && /inputs-gate:\s*PASS/i.test(l); })) miss.push('Prediction');
+    var hh = all(/^Happy Hour:\s*active/i).filter(function (l) { var m = l.match(/read\s+(\d{1,2}):(\d{2})/i); return m && (now - (+m[1] * 60 + +m[2]) + 1440) % 1440 <= 15; })[0] || '';
+    if (!hh) miss.push('Happy Hour');
+    var after = [], k = -1;
+    for (var i = 0; i < L.length; i++) if (/^AFTER SEND YOU MUST/i.test(L[i])) { k = i; break; }
+    if (k < 0) miss.push('After send'); else { after.push(L[k]); for (var j = k + 1; j < L.length && /^[-•*\d]/.test(L[j]); j++) after.push(L[j]); }
+    var avail = all(/^Lisa available:\s*\d{1,2}:\d{2}\s*[–-]\s*\d{1,2}:\d{2}/i)[0] || '';
+    if (t.tags.some(function (g) { return /^(security|leak)/.test(g); }) && !avail) miss.push('Lisa available');
+    return { ok: !miss.length, miss: miss, hh: hh, after: after, avail: avail };
+  }
+  // On the Sends card: the Happy Hour reading, what Lisa must do after the send (with her Do lines for the same app), when she is free.
+  function sendInfo(t, g) {
+    var mineTags = t.tags.filter(function (x) { return /^app-/.test(x); });
+    var dos = mineTags.length ? (S.lists.work || []).filter(function (x) { return isOpen(x) && x.tags.indexOf('who-lisa') >= 0 && x.tags.some(function (y) { return mineTags.indexOf(y) >= 0; }); }) : [];
+    var out = (g.hh ? '<i class="ti ti-clock"></i><span>' + esc(g.hh) + '</span>' : '') + g.after.map(function (l) { return '<i class="ti ti-alert-circle"></i><span>' + esc(l) + '</span>'; }).join('') +
+      dos.map(function (x) { return '<i class="ti ti-user-check"></i><span><a href="#/item/' + esc(x.id) + '">' + esc(x.name.replace(/^TEST-/, '')) + '</a></span>'; }).join('') +
+      (g.avail ? '<i class="ti ti-user"></i><span>' + esc(g.avail) + '</span>' : '');
+    return out ? '<div class="outs" data-sendinfo="' + esc(t.id) + '">' + out + '</div>' : '';
+  }
   function copyPrompt(btn) {
     var t = byId(btn.getAttribute('data-copy')); if (!t) return;
+    if (!sendGate(t).ok) { render(); return; }
     var doc = (urls(t).filter(function (u) { return /drive\.google\.com\/file\/d\//.test(u); })[0] || '').match(/\/d\/([\w-]+)/);
     var sec = (t.name.match(/·\s*(P\d+)\s*·/) || [])[1];
     if (!doc) { banner('No prompt doc on this task.'); return; }
