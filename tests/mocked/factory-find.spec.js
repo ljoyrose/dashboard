@@ -250,6 +250,13 @@ test.describe('Factory send gate', () => {
     await expect(info).toContainText('Happy Hour: active');
     await expect(info).toContainText('AFTER SEND YOU MUST');
     await expect(info).toContainText('Lisa available: 16:00');
+    await expect(info).toContainText('Class: CURRENT TEN:1');
+  });
+
+  test('no "Class: CURRENT … · DATA … · TARGET … (register id)" line locks Copy (E19)', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => { const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/\nClass:[^\n]*/, '\nClass: CURRENT TEN:1 · TARGET TEN:3'); } });
+    await expect(page.locator('[data-copy="869fk9d1r"]')).toHaveCount(0);
+    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Class/);
   });
 
   test('a send with none of the lines names each missing one instead of Copy', async ({ page, guard }) => {

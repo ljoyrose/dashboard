@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-factory-single-lines-2026-10-20">
+<meta name="build" content="ljr-factory-send-class-2026-10-20">
 <title>Factory</title>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
@@ -995,6 +995,7 @@
    *   Happy Hour: active, <n> min left, read <HH:MM> · …   (read 15 minutes ago or less)
    *   AFTER SEND YOU MUST: …                                (shown on the card, with Lisa's Do lines for the same app)
    *   Lisa available: <HH:MM–HH:MM>                         (only for tasks tagged security or leak…)
+   *   Class: CURRENT <codes> · DATA <codes> · TARGET <codes> (<register id>)   (E19, shown on the card)
    */
   var MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
   function londonDay(ts) { return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); }
@@ -1016,13 +1017,15 @@
     if (k < 0) miss.push('After send'); else { after.push(L[k]); for (var j = k + 1; j < L.length && /^[-•*\d]/.test(L[j]); j++) after.push(L[j]); }
     var avail = all(/^Lisa available:\s*\d{1,2}:\d{2}\s*[–-]\s*\d{1,2}:\d{2}/i)[0] || '';
     if (t.tags.some(function (g) { return /^(security|leak)/.test(g); }) && !avail) miss.push('Lisa available');
-    return { ok: !miss.length, miss: miss, hh: hh, after: after, avail: avail };
+    var cls = all(/^Class:\s*CURRENT\s+\S.*·\s*DATA\s+\S.*·\s*TARGET\s+\S.*\(\s*\S+.*\)/i)[0] || '';
+    if (!cls) miss.push('Class');
+    return { ok: !miss.length, miss: miss, hh: hh, after: after, avail: avail, cls: cls };
   }
   // On the Sends card: the Happy Hour reading, what Lisa must do after the send (with her Do lines for the same app), when she is free.
   function sendInfo(t, g) {
     var mineTags = t.tags.filter(function (x) { return /^app-/.test(x); });
     var dos = mineTags.length ? (S.lists.work || []).filter(function (x) { return isOpen(x) && x.tags.indexOf('who-lisa') >= 0 && x.tags.some(function (y) { return mineTags.indexOf(y) >= 0; }); }) : [];
-    var out = (g.hh ? '<i class="ti ti-clock"></i><span>' + esc(g.hh) + '</span>' : '') + g.after.map(function (l) { return '<i class="ti ti-alert-circle"></i><span>' + esc(l) + '</span>'; }).join('') +
+    var out = (g.cls ? '<i class="ti ti-tags"></i><span>' + esc(g.cls) + '</span>' : '') + (g.hh ? '<i class="ti ti-clock"></i><span>' + esc(g.hh) + '</span>' : '') + g.after.map(function (l) { return '<i class="ti ti-alert-circle"></i><span>' + esc(l) + '</span>'; }).join('') +
       dos.map(function (x) { return '<i class="ti ti-user-check"></i><span><a href="#/item/' + esc(x.id) + '">' + esc(x.name.replace(/^TEST-/, '')) + '</a></span>'; }).join('') +
       (g.avail ? '<i class="ti ti-user"></i><span>' + esc(g.avail) + '</span>' : '');
     return out ? '<div class="outs" data-sendinfo="' + esc(t.id) + '">' + out + '</div>' : '';
