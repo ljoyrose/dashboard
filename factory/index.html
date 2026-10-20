@@ -1205,11 +1205,23 @@
         .catch(function (e) { banner('Not sent: ' + e.message); render(); });
     });
   }
+  // Every click file says who clicked (email + device): a YES on 20 Oct could not be traced.
+  var whoAmI = null;
+  function device() { var u = navigator.userAgent; return /iPhone|iPad/.test(u) ? 'iPhone/iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'other'; }
+  function who() {
+    if (whoAmI) return Promise.resolve(whoAmI);
+    return drive('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (r) { return r.json(); })
+      .then(function (j) { return (whoAmI = ((j.user && j.user.emailAddress) || '?') + ' · ' + device()); })
+      .catch(function () { return '? · ' + device(); });
+  }
   function putRequest(prefix, body) {
-    var meta = { name: prefix + '-' + Date.now() + '.json', parents: [F.requests], mimeType: 'application/json' };
-    var b = 'af' + Date.now();
-    var payload = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(body) + '\r\n--' + b + '--';
-    return drive('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: payload });
+    return who().then(function (by) {
+      body.by = by;
+      var meta = { name: prefix + '-' + Date.now() + '.json', parents: [F.requests], mimeType: 'application/json' };
+      var b = 'af' + Date.now();
+      var payload = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(body) + '\r\n--' + b + '--';
+      return drive('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: payload });
+    });
   }
   function withWrite(go) {
     var saved = DashAuth.valid();
