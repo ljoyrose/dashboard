@@ -395,6 +395,8 @@
     if (cardCache[m[1]]) return Promise.resolve(cardCache[m[1]]);
     return media(m[1]).then(function (r) { return r.text(); }).then(function (md) { cardCache[m[1]] = { id: m[1], md: md }; return cardCache[m[1]]; }, function () { return null; });
   }
+  // A code reads "TEN:4" on screen. Typed or stored as TEN4, TEN 4, TEN:4, TEN-4, TEN=4 or TEN·4, it is understood the same.
+  function codeParts(x) { var m = String(x).trim().match(/^([A-Z]{2,8})\s*[:=·\-]?\s*([0-9?]+|L\?)$/); return m ? [m[0], m[1], m[2]] : [x, x, '']; }
   function codesOf(md) {
     var out = [];
     String(md || '').split('\n').forEach(function (l) {
@@ -479,7 +481,7 @@
         if (!c) { box.innerHTML = '<span class="q">No card</span>'; return; }
         var codes = codesOf(c.md);
         // "POOL 0": name, a space, the value in bold, so codes never run together.
-        box.innerHTML = codes.map(function (x) { var m = x.match(/^([A-Z]+)(.*)$/) || [x, x, '']; return '<span' + (/\?$/.test(x) ? ' class="q"' : '') + '>' + esc(m[1]) + ' <b>' + esc(m[2]) + '</b></span>'; }).join('') +
+        box.innerHTML = codes.map(function (x) { var m = codeParts(x); return '<span' + (m[2] === '?' ? ' class="q"' : '') + '>' + esc(m[1]) + ':<b>' + esc(m[2]) + '</b></span>'; }).join('') +
           '';
         var m = $('cardMarks') && $('cardMarks').querySelector('.mark'); if (m) m.insertAdjacentHTML('afterend', '<a class="mark" href="https://drive.google.com/file/d/' + c.id + '/view" target="_blank" rel="noopener" aria-label="Open card in Drive" title="Drive">' + DRIVE_MARK + '</a>');
       });
@@ -855,7 +857,12 @@
     ['doubt', 'What would stop them buying?', 'Their doubts about it, about themselves, or about time and money. e.g. "I\'m not techy", "my data is in 6 places", "another subscription"', null, 0],
     ['rivals', 'What do they use now?', 'Apps, sheets, paper, people. Names let research find the 1–2★ reviews.', null, 0],
     ['where', 'Where do they gather?', 'Facebook groups, forums, shows, associations, hashtags: where research reads complaints and marketing finds them.', null, 0],
-    ['pays', 'Who pays, and what is it worth to them a month?', 'Who signs up and pays, a price guess, and what it saves or earns them each month.', null, 0]
+    ['pays', 'Who pays, and what is it worth to them a month?', 'Who signs up and pays, a price guess, and what it saves or earns them each month.', null, 0],
+    // Same choices as OverSkill's AI Prompt Builder, so the build prompt fills it 1:1.
+    ['btype', 'Business type', 'OverSkill: Business Model › Business Type.', ['B2C', 'B2B', 'Marketplace', 'Internal tool'], 0],
+    ['revenue', 'How it makes money', 'OverSkill: Business Model › Revenue Model.', ['Free', 'Freemium', 'Subscription', 'One-time', 'Transaction fee'], 0],
+    ['market', 'Size of customer', 'OverSkill: Business Model › Target Market.', ['Individuals', 'Small teams', 'SMB', 'Enterprise'], 0],
+    ['look', 'Apps whose look to follow', 'OverSkill: Design Inspiration. Our base layout is The Board; add any rival or app whose screens you like.', null, 0]
   ];
   var KILLS = [['FRAGILE', 'Could it give wrong answers that look right?'], ['ONESHOT', 'Would people use it once and stop?'], ['NOHOOK', 'Is there no reason to come back?']];
   var idea = (function () { try { return JSON.parse(localStorage.getItem('af-idea') || '') || {}; } catch (e) { return {}; } })();
@@ -863,8 +870,8 @@
   var formErr = {}, formNote = '';
   function chipsFor(key, opts, q) {
     return '<div class="chips">' + opts.map(function (o) {
-      var m = o.match(/^(\S+)\s+(.*)$/) || [o, o, ''];
-      return '<button class="ch' + ((idea.a || {})[key] === o ? ' on' : '') + '" type="button" data-pick="' + esc(key) + '" data-val="' + esc(o) + '"><b>' + esc(/\d/.test(m[1]) ? m[1] : cap(m[1])) + '</b>' + esc(cap(m[2])) + '</button>';
+      var m = o.match(/^(\S+)\s+(.*)$/) || [o, o, ''], isCode = /^[0-9?]$/.test(m[1]) && PARTS.some(function (p) { return p[0] === key; });
+      return '<button class="ch' + ((idea.a || {})[key] === o ? ' on' : '') + '" type="button" data-pick="' + esc(key) + '" data-val="' + esc(o) + '"><b>' + esc(isCode ? key + ':' + m[1] : /\d/.test(m[1]) ? m[1] : cap(m[1])) + '</b>' + esc(cap(m[2])) + '</button>';
     }).join('') + '</div>';
   }
   function vNew() {
