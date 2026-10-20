@@ -19,7 +19,9 @@
 <script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
+  :root { --radius: 12px; }
   /* Colours: ../tokens.css only (LJR7 spine). 0 system · 1 vision · 2 risk · 3 money · 4 ops · 5 connect · 6 sales · 7 ideas · 8 bin. */
   :root { --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted); --line: #DED5C8; }
   @media (prefers-color-scheme: dark) { :root { --line: #3D372F; } }
@@ -30,41 +32,60 @@
   .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 16px; }
   .top h1 { font-size: 22px; margin: 0 auto 0 0; }
   .top h1 a { color: inherit; text-decoration: none; }
-  .stamp { font-size: 13px; color: var(--muted); }
-  .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
+  .stamp { font-size: 11px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 5px; }
+  .stamp:empty { display: none; }
+  .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 7px 14px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
   .btn.main { border-color: var(--ink); color: var(--ink); }
   .hidden { display: none !important; }
   nav.tabs { display: flex; gap: 6px; overflow-x: auto; padding: 0 16px 10px; scrollbar-width: none; }
-  nav.tabs a { flex: none; text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); display: inline-flex; gap: 6px; align-items: center; }
-  nav.tabs a[aria-current="page"], nav.tabs a:hover, .pill:hover, .btn:hover { border-color: var(--ink); border-width: 2.5px; }
-  nav.tabs a, .pill, .btn { border-width: 1.5px; }
-  nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-4); color: #2C2C2A; border-radius: 999px; padding: 0 7px; }
+  nav.tabs a { --radius: 999px; flex: none; text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); display: inline-flex; gap: 6px; align-items: center; }
+  /* Hover / selected never change size (no jumping): hover darkens the border, selected adds a thin inner line. */
+  /* One state only: hover = selected = a slightly heavier faint line. Same size always, so nothing moves. */
+  nav.tabs a, .pill, .btn, .ico, .flagb, .opt, .mark, .plus { transition: none; }
+  nav.tabs a:hover, nav.tabs a[aria-current="page"], .pill:hover, .pill.on, .btn:hover, .ico:hover, .ico.on, .flagb:hover, .mark:hover, .plus:hover { border-color: var(--muted); }
+  nav.tabs a:active, .pill:active, .btn:active { transform: none; }
+  nav.tabs .cal { margin-left: auto; }
+  .ti { font-size: 18px; line-height: 1; }
+  /* Grey at rest; an icon's own colour on hover / when open. Logos grey until hover. */
+  .ico:hover, .ico.on { color: var(--hc, var(--ink)); }
+  .mark svg { filter: grayscale(1); opacity: .55; } .mark:hover svg { filter: none; opacity: 1; }
+  .pill .ti { color: var(--muted); } .pill.alert.has:hover .ti { color: var(--ljr-2-text); }
+  .hot { color: var(--ljr-2-text); font-weight: 700; }
+  .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-weight: 500; }
+  .crow .l3 { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
+  .crow .l3 .grow { flex: 1; }
+  .crow .type { color: var(--muted); width: 28px; display: inline-flex; justify-content: center; }
+  .mark { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid transparent; border-radius: var(--radius); }
+  .plus { margin-left: auto; display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 50%; color: var(--ink); text-decoration: none; }
+  .acts .btn.yes { color: var(--ljr-5-text); border-color: var(--ljr-5); }
+  .acts .btn.no { color: var(--ljr-2-text); border-color: var(--ljr-2); }
+  nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-4); color: #2C2C2A; border-radius: var(--radius); padding: 0 7px; }
   main { padding: 16px 0 48px; display: flex; flex-direction: column; gap: 14px; }
   main.wrap { padding: 16px 16px 48px; }
-  .banner { border: 1.5px solid var(--ljr-2); border-radius: 12px; padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
+  .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
   .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
   #view { display: flex; flex-direction: column; gap: 14px; }
   #view > p { margin: 0; }
   .pills { display: flex; gap: 8px; flex-wrap: wrap; }
-  .pill { font-size: 13px; font-weight: 600; border-radius: 999px; padding: 3px 10px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; }
+  .pill { font-size: 13px; font-weight: 600; border-radius: var(--radius); padding: 3px 10px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; }
   .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-  .room { border: 2px solid var(--c); border-radius: 14px; background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; }
+  .room { border: 2px solid var(--c); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; }
   .room h2 { font-size: 15px; margin: 0; display: flex; gap: 8px; align-items: center; }
   .room .stn { font-size: 12px; color: var(--muted); margin-top: -6px; }
   .room h2 .ct { margin-left: auto; font-size: 13px; color: var(--muted); }
   .room h2 .rlink { color: var(--ink); text-decoration: none; display: flex; gap: 8px; align-items: center; }
   .room h2 .rlink:hover { text-decoration: underline; }
   .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
-  .chip { display: flex; gap: 6px; align-items: center; text-decoration: none; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 6px 8px; font-size: 14px; }
+  .chip { display: flex; gap: 6px; align-items: center; text-decoration: none; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; font-size: 14px; }
   .chip .st { margin-left: auto; font-size: 12px; color: var(--muted); }
   .chip.stuck { border-color: var(--ljr-2); }
-  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
   .hero { display: flex; gap: 12px; align-items: center; }
   .disc { width: 42px; height: 42px; border-radius: 50%; background: var(--c); color: #2C2C2A; display: flex; align-items: center; justify-content: center; font-weight: 700; flex: none; }
   .hero h2 { margin: 0; font-size: 20px; }
   .hero p { margin: 0; color: var(--muted); font-size: 14px; }
   .strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; margin: 10px 0 2px; }
-  .strip i { height: 10px; border-radius: 3px; background: var(--line); }
+  .strip i { height: 10px; border-radius: var(--radius); background: var(--line); }
   .strip i.d { background: var(--ljr-5); } .strip i.c { background: var(--ljr-6); }
   .stage { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); cursor: pointer; }
   .stage .n { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--bg); border: 1px solid var(--line); flex: none; }
@@ -76,15 +97,15 @@
   .lines li { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 3px 0; }
   .lines li .who { margin-left: auto; font-size: 12px; color: var(--muted); }
   .codes { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-  .codes span { font-size: 12px; font-weight: 600; border: 1.5px solid var(--line); border-radius: 6px; padding: 1px 7px; }
+  .codes span { font-size: 12px; font-weight: 600; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 1px 7px; }
   .codes span.q { color: var(--muted); }
   .ask { display: flex; gap: 8px; margin-top: 10px; }
-  .ask input { flex: 1; font: inherit; font-size: 15px; padding: 8px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+  .ask input { flex: 1; font: inherit; font-size: 15px; padding: 8px 12px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
   .rowask { margin-top: 6px; }
-  .by { font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; margin-left: 6px; }
+  .by { font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; margin-left: 6px; }
   .rowask input { font-size: 14px; padding: 6px 10px; }
   .why.q { color: var(--ljr-3-text); }
-  .ask select { font: inherit; font-size: 14px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+  .ask select { font: inherit; font-size: 14px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
   .row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
   .row a { color: var(--ink); text-decoration: none; font-weight: 600; }
   .card > .row:first-child { border-top: 0; padding-top: 0; }
@@ -101,8 +122,8 @@
   /* Links: normal text colour, underlined. Pills, chips, buttons and tabs look clickable already: no underline. */
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   a.pill, a.chip, a.btn, nav.tabs a, .room h2 .rlink { text-decoration: none; color: inherit; }
-  .pill.on { border-color: var(--ink); border-width: 2.5px; }
-  .sw { display: inline-block; width: 28px; height: 16px; border-radius: 999px; border: 1.5px solid var(--muted); position: relative; vertical-align: middle; }
+
+  .sw { display: inline-block; width: 28px; height: 16px; border-radius: var(--radius); border: 1.5px solid var(--muted); position: relative; vertical-align: middle; }
   .sw i { position: absolute; top: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); transition: left .15s; }
   .sw.on { border-color: var(--ljr-5); } .sw.on i { left: 14px; background: var(--ljr-5); }
   .crow { padding: 10px 0; border-top: 1px solid var(--line); }
@@ -111,21 +132,21 @@
   .crow .type { flex: none; width: 22px; text-align: center; }
   .crow .ttl { flex: 1; min-width: 0; font-weight: 500; }
   .crow .ttl .app { font-weight: 800; margin-right: 4px; }
-  .crow .why { font-size: 13px; color: var(--muted); margin: 3px 0 0 30px; }
-  .crow .l2 { display: flex; gap: 8px; align-items: center; margin: 6px 0 0 30px; }
+  .crow .why { font-size: 13px; color: var(--muted); margin: 3px 0 0; }
+  .crow .l2 { display: flex; gap: 8px; align-items: center; margin: 6px 0 0; }
   .crow .l3 { display: flex; justify-content: flex-end; margin-top: 4px; }
   .crow .icons { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; flex: 1; }
   .crow .acts { display: flex; gap: 6px; }
   .crow .acts .btn { padding: 4px 14px; font-size: 16px; }
-  .ico, .flagb, .opt { position: relative; background: none; border: 1px solid transparent; border-radius: 8px; padding: 2px 5px; cursor: pointer; font-size: 15px; color: var(--ink); }
-  .ico.on { border-color: var(--line); background: var(--bg); }
+  .ico, .flagb, .opt { position: relative; background: none; border: 1px solid transparent; border-radius: var(--radius); width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); }
+
   .ico .new { position: absolute; top: 1px; right: 1px; width: 7px; height: 7px; border-radius: 50%; background: var(--ljr-2); }
   .flag { width: 18px; height: 18px; display: block; color: var(--muted); }
-  .stat { font: inherit; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #fff; background: var(--sc); border: 0; border-radius: 6px; padding: 2px 7px; cursor: pointer; }
+  .stat { font: inherit; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #fff; background: var(--sc); border: 0; border-radius: var(--radius); padding: 2px 7px; cursor: pointer; }
   .date { position: relative; font-size: 13px; color: var(--muted); white-space: nowrap; cursor: pointer; }
   .date.over { color: var(--ljr-2-text); font-weight: 700; }
   .date input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .panel { margin: 8px 0 0 30px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px; flex-direction: column; }
+  .panel { margin: 8px 0 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px; flex-direction: column; }
   .panel p { margin: 0; }
   .tick { font: inherit; text-align: left; background: none; border: 0; cursor: pointer; color: var(--ink); padding: 2px 0; }
   .tick.ok { color: var(--muted); text-decoration: line-through; }
@@ -138,9 +159,9 @@
   .acts .yes { border-color: var(--ljr-5); }
   .acts .no { border-color: var(--ljr-2); }
   .sent { font-size: 13px; color: var(--muted); flex: none; }
-  .bar { width: 6px; align-self: stretch; border-radius: 0; background: var(--c); flex: none; }
+  .bar { width: 6px; align-self: stretch; border-radius: var(--radius); background: var(--c); flex: none; }
   .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-  .tile { border: 2px solid var(--c); border-radius: 14px; padding: 12px; background: var(--surface); }
+  .tile { border: 2px solid var(--c); border-radius: var(--radius); padding: 12px; background: var(--surface); }
   .tile b { display: block; font-size: 28px; line-height: 1.1; }
   .tile span { font-size: 13px; color: var(--muted); }
   .muted { color: var(--muted); font-size: 14px; }
@@ -164,7 +185,7 @@
 <header>
   <div class="top">
     <h1><a href="#/rooms">Factory</a></h1>
-    <span id="stamp" class="stamp">Not signed in</span>
+    <span id="stamp" class="stamp"></span>
     <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
@@ -174,7 +195,7 @@
     <a href="#/rooms" data-nav="rooms">Rooms</a>
     <a href="#/decide" data-nav="decide"><svg class="i"><use href="#i-stamp"/></svg>Decide <span class="n" id="nDecide">0</span></a>
     <a href="#/do" data-nav="do">Do <span class="n" id="nDo">0</span></a>
-    <a href="#/today" data-nav="today" aria-label="Today">📅</a>
+    <a href="#/today" data-nav="today" aria-label="Today" class="cal"><i class="ti ti-calendar"></i></a>
   </nav>
 </header>
 <main class="wrap" id="content">
@@ -240,7 +261,7 @@
   function load() {
     if (!accessToken) return;
     findFile(F.logs, F.state).then(function (f) { return media(f.id).then(function (r) { return r.json(); }); })
-      .then(function (j) { S = j; err = null; allTasks(); applyPend(); var nf = 0; (j.failed || []).forEach(function (f) { if (sent[f.taskId]) { delete sent[f.taskId]; nf++; } }); if (nf) { saveSent(); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); } $('stamp').textContent = 'Read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · data ' + new Date(j.generated_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + (String(j.mode).toUpperCase() === 'LIVE' ? '' : ' · TEST'); render(); })
+      .then(function (j) { S = j; err = null; allTasks(); applyPend(); var nf = 0; (j.failed || []).forEach(function (f) { if (sent[f.taskId]) { delete sent[f.taskId]; nf++; } }); if (nf) { saveSent(); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); } $('stamp').textContent = String(j.mode).toUpperCase() === 'LIVE' ? '' : 'TEST'; render(); })
       .catch(function (e) { err = e.message; render(); });
   }
   function cardFor(t) {
@@ -266,11 +287,11 @@
   function vRooms() {
     var A = apps(), html = '<div class="pills">' +
       // Every count is a link: it opens the list it counts.
-      '<a class="pill" href="#/all" title="Apps">◆ ' + A.length + '</a>' +
-      '<a class="pill" href="#/stuck" title="Stuck" style="border-color:var(--ljr-2)">⏳ ' + A.filter(stuck).length + '</a>' +
-      '<a class="pill" href="#/room/reactor" title="Build slots" style="border-color:var(--ljr-3)">🔨 ' + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + '/3</a>' +
-      '<a class="pill" href="#/queue/claude" style="border-color:var(--ljr-5)">Claude ' + queue('claude').length + '</a><a class="pill" href="#/queue/grok" style="border-color:var(--ljr-5)">Grok ' + queue('grok').length + '</a>' +
-      '<a class="pill" href="#/health" title="Factory"><span class="sw' + (String(S.factory).toUpperCase() === 'ON' ? ' on' : '') + '"><i></i></span></a>' + enginePill() + '</div><div class="rooms">';
+      '<a class="pill" href="#/all" title="Apps"><i class="ti ti-apps"></i> ' + A.length + '</a>' +
+      '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> <span' + (A.filter(stuck).length >= 1 ? ' class="hot"' : '') + '>' + A.filter(stuck).length + '</span></a>' +
+      '<a class="pill" href="#/room/reactor" title="Build slots"><i class="ti ti-hammer"></i> ' + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + '/3</a>' +
+      '<a class="pill" href="#/queue/claude">Claude ' + queue('claude').length + '</a><a class="pill" href="#/queue/grok">Grok ' + queue('grok').length + '</a>' +
+      '<button class="pill" type="button" data-action="factory" aria-label="Factory on or off" title="Factory"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span></button>' + enginePill() + '</div><div class="rooms">';
     ROOMS.forEach(function (r) {
       var inRoom = A.filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
       html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><a class="rlink" href="#/room/' + r.key + '"><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '</a><span class="ct">' + inRoom.length + '</span></h2><span class="stn">' + esc(r.st.join(' · ')) + '</span>' +
@@ -281,7 +302,7 @@
   function chipOf(t) { return '<a class="chip' + (stuck(t) ? ' stuck' : '') + '" href="#/card/' + t.id + '">' + esc(t.name) + '<span class="st">' + (stuck(t) ? ic('warn') : '') + esc(t.status) + '</span></a>'; }
   // The front door: the Idea Form (AF-ENGINE writes the card and the ClickUp task, even with the factory OFF).
   var FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSfzzTnlyNWeXzFEz9NfYxNXsCFN6KwV8RxFyIRTJZ-WrH15nw/viewform';
-  function newIdea() { return '<a class="btn main" href="' + FORM + '" target="_blank" rel="noopener">＋ New idea</a>'; }
+  function newIdea() { return '<a class="plus" href="' + FORM + '" target="_blank" rel="noopener" aria-label="New idea"><i class="ti ti-plus"></i></a>'; }
   var ROOM_DO = { reception: 'New ideas. You say Yes at Screen.', research: 'Grok researches. You judge Merit, then Lock the features.',
     rig: 'Schema and data set up (Claude + Grok). No-stamp gates.', reactor: 'Prompts in OverSkill: you send, Happy Hour each time. Costs credits.',
     runway: 'Launch checks. You say go live.', radar: 'Live. Checked every day.', rescue: 'Something broke. Fix, then back to Radar.',
@@ -305,8 +326,10 @@
     var subs = (S.lists.work || []).filter(function (x) { return x.tags.indexOf('app-' + t.id) >= 0 && x.tags.indexOf('line') >= 0; });
     var tpl = (S.lists.template || []).filter(function (x) { return x.parent; });
     var html = '<div class="card"><div class="hero" style="--c:' + col(slot) + '"><div class="disc">' + (n === null ? '–' : n) + '</div><div><h2>' + esc(t.name) + '</h2><p>' + esc(t.status) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
-      '<div class="pills" style="margin-top:10px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '<a class="pill" href="' + esc(t.url) + '" target="_blank" rel="noopener">ClickUp</a></div>' +
-      '<div id="codes" class="codes"><span class="q">…</span></div>' + waiting(t) +
+      '<div class="pills" style="margin-top:10px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
+      '<div id="codes" class="codes"><span class="q">…</span></div>' +
+      '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span><button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
+      (cardAsk ? '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn" type="submit" aria-label="Send"><i class="ti ti-send"></i></button></form><div id="askNote" class="muted"></div>' : '') + waiting(t) +
       '<div class="strip">' + STAGES.map(function (_, i) { return '<i class="' + (n !== null && i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>';
     STAGES.forEach(function (name, i) {
       var cls = n !== null && i < n ? 'd' : i === n ? 'c' : '';
@@ -324,8 +347,7 @@
         (i === 6 ? sendsFor(t) : '') + '</ul>';
       }
     });
-    html += '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask or change" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn main" type="submit" aria-label="Send">' + ic('send') + '</button></form>' +
-      '<div id="askNote" class="muted"></div></div>';
+    html += '</div>';
     setTimeout(function () {
       cardFor(t).then(function (c) {
         var box = $('codes'); if (!box) return;
@@ -333,7 +355,8 @@
         var codes = codesOf(c.md);
         // "POOL 0": name, a space, the value in bold, so codes never run together.
         box.innerHTML = codes.map(function (x) { var m = x.match(/^([A-Z]+)(.*)$/) || [x, x, '']; return '<span' + (/\?$/.test(x) ? ' class="q"' : '') + '>' + esc(m[1]) + ' <b>' + esc(m[2]) + '</b></span>'; }).join('') +
-          '<a class="pill" href="https://drive.google.com/file/d/' + c.id + '/view" target="_blank" rel="noopener">' + ic('doc') + 'Card</a>';
+          '';
+        var m = $('cardMarks') && $('cardMarks').querySelector('.mark'); if (m) m.insertAdjacentHTML('afterend', '<a class="mark" href="https://drive.google.com/file/d/' + c.id + '/view" target="_blank" rel="noopener" aria-label="Open card in Drive" title="Drive">' + DRIVE_MARK + '</a>');
       });
     }, 0);
     return html;
@@ -377,7 +400,7 @@
    */
   var PRI = { urgent: [1, '#f50000'], high: [2, '#ffcc00'], normal: [3, '#6fddff'], low: [4, '#d8d8d8'] };
   var MEANING = /^(paid|sen-check|kill-suggested|leak|question)/;
-  var openPanel = null, filtersOpen = false, weekView = false;
+  var openPanel = null, filtersOpen = false, weekView = false, cardAsk = false;
   var prefs = (function () { try { return JSON.parse(localStorage.getItem('af-prefs') || '') || {}; } catch (e) { return { unanswered: true }; } })();
   if (prefs.unanswered === undefined) prefs.unanswered = true;
   var pend = loadLocal('af-pend'), seen = loadLocal('af-seen');
@@ -388,6 +411,7 @@
   function applyPend() {
     var now = Date.now();
     Object.keys(pend).forEach(function (id) {
+      if (id === 'factory') return;
       var p = pend[id], t = byId(id);
       if (!t || t.updated >= p.at || now - p.at > 36e5) { delete pend[id]; return; }
       if (p.priority !== undefined) t.pri = p.priority === 'none' ? null : { p: p.priority, c: PRI[p.priority][1] };
@@ -408,9 +432,9 @@
   }
   function typeIcon(t) {
     var k = t._k;
-    if (k === 'decisions') return t.tags.indexOf('gate') >= 0 ? '🚦' : '🔖';
-    if (t.tags.indexOf('ask') >= 0) return '✎';
-    return { sends: '➤', incidents: '⚠', apps: '◆' }[k] || (t.tags.indexOf('line') >= 0 ? '☑' : '•');
+    var n = k === 'decisions' ? (t.tags.indexOf('gate') >= 0 ? 'traffic-lights' : 'bookmark') : t.tags.indexOf('ask') >= 0 ? 'help-circle' :
+      ({ sends: 'send', incidents: 'alert-triangle', apps: 'diamond' }[k] || (t.tags.indexOf('line') >= 0 ? 'square-check' : 'point'));
+    return '<i class="ti ti-' + n + '" title="' + ({ 'traffic-lights': 'Gate', bookmark: 'Decision', 'help-circle': 'Question', send: 'Prompt', 'alert-triangle': 'Incident', diamond: 'App', 'square-check': 'Line', point: 'Task' }[n]) + '"></i>';
   }
   function flagIcon(p) {
     var c = p ? (PRI[p.p] ? PRI[p.p][1] : p.c) : 'none';
@@ -418,13 +442,14 @@
   }
   function iconsOf(t, kind) {
     var out = [], mt = t.tags.filter(function (g) { return MEANING.test(g); }), items = [].concat.apply([], (t.chk || []).map(function (c) { return c.items; }));
-    if (kind === 'decide') out.push(['reply', '✎', 'Reply', !!drafts[t.id]]);
-    if (t.cm && t.cm.length) out.push(['cm', '💬', 'Comments', t.cm[0].at > (seen[t.id] || 0)]);
-    if (items.length) out.push(['chk', '☑', 'Checklist', false]);
-    if (t.files && t.files.length) out.push(['files', '📎', 'Files', false]);
-    if (t.est || t.spent) out.push(['time', '⏱', 'Time', false]);
-    if (whoOf(t).length) out.push(['who', '👤', 'Who', false]);
-    if (mt.length) out.push(['tags', '🏷', 'Tags', false]);
+    var I = function (n) { return '<i class="ti ti-' + n + '"></i>'; };
+    if (t.cm && t.cm.length) out.push(['cm', I('message-circle'), 'Comments', t.cm[0].at > (seen[t.id] || 0), 5]);
+    if (items.length) out.push(['chk', I('list-check'), 'Checklist', false, 4]);
+    if (t.files && t.files.length) out.push(['files', I('paperclip'), 'Files', false, 6]);
+    if (t.est || t.spent) out.push(['time', I('clock'), 'Time', false, 3]);
+    if (whoOf(t).length) out.push(['who', I('user'), 'Who', false, 5]);
+    if (mt.length) out.push(['tags', I('tag'), 'Tags', false, 7]);
+    if (kind === 'decide') out.push(['reply', I('pencil'), 'Reply', !!drafts[t.id], 7]);
     return out;
   }
   function dur(ms) { var m = Math.round(ms / 6e4); return m >= 60 ? Math.floor(m / 60) + 'h' + (m % 60 ? ' ' + m % 60 + 'm' : '') : m + 'm'; }
@@ -449,17 +474,25 @@
     var rest = known ? label.slice(app.length).replace(/^ · /, '') : label;
     var title = '<b class="app">' + esc(known ? app : 'Factory') + '</b> ' + esc(rest);
     var acts = sentAt ? '<span class="sent">✓ ' + hm(sentAt) + '</span>' :
-      kind === 'decide' ? '<button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '" aria-label="Yes">✓</button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '" aria-label="No">✗</button>' :
-      kind === 'do' ? '<button class="btn yes" type="button" data-act="done" data-id="' + esc(t.id) + '" aria-label="Done">✓</button>' : '';
-    var stat = t._k === 'apps' ? '' : '<button class="stat" type="button" data-panel="status" data-id="' + esc(t.id) + '" style="--sc:' + esc(t.color || '#b8b2aa') + '">' + esc(t.status) + '</button>';
-    var icons = iconsOf(t, kind).map(function (x) { return '<button class="ico' + (openPanel && openPanel.id === t.id && openPanel.k === x[0] ? ' on' : '') + '" type="button" data-panel="' + x[0] + '" data-id="' + esc(t.id) + '" aria-label="' + x[2] + '">' + x[1] + (x[3] ? '<i class="new"></i>' : '') + '</button>'; }).join('');
+      kind === 'decide' ? '<button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '" aria-label="Yes"><i class="ti ti-check"></i></button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '" aria-label="No"><i class="ti ti-x"></i></button>' :
+      kind === 'do' ? '<button class="btn yes" type="button" data-act="done" data-id="' + esc(t.id) + '" aria-label="Done"><i class="ti ti-check"></i></button>' : '';
+    // Status: an icon in ClickUp's colour, shown only when it isn't plain "to do".
+    var SI = { 'to do': 'circle-dashed', doing: 'progress', 'waiting lisa': 'player-pause', blocked: 'hand-stop', done: 'circle-check', cancelled: 'circle-x' };
+    var stat = t._k === 'apps' || /^to do$/i.test(t.status) ? '' : '<button class="ico" type="button" data-panel="status" data-id="' + esc(t.id) + '" aria-label="Status ' + esc(t.status) + '" title="' + esc(t.status) + '" style="color:' + esc(t.color || 'inherit') + '"><i class="ti ti-' + (SI[String(t.status).toLowerCase()] || 'circle') + '"></i></button>';
+    var icons = iconsOf(t, kind).map(function (x) { return '<button class="ico' + (openPanel && openPanel.id === t.id && openPanel.k === x[0] ? ' on' : '') + '" type="button" data-panel="' + x[0] + '" data-id="' + esc(t.id) + '" aria-label="' + x[2] + '" style="--hc:var(--ljr-' + x[4] + '-text)">' + x[1] + (x[3] ? '<i class="new"></i>' : '') + '</button>'; }).join('');
     var mineQ = asked[t.id] ? '<div class="why q">✎ ' + esc(asked[t.id].text) + ' · ✓ ' + hm(asked[t.id].at) + '</div>' : '';
-    var date = '<label class="date' + (overdue(t) ? ' over' : '') + '">' + (t.due ? dmy(t.due) : '📅') + '<input type="date" data-due="' + esc(t.id) + '" value="' + (t.due ? iso(t.due) : '') + '" aria-label="Due date"></label>';
-    return '<div class="crow" data-row="' + esc(t.id) + '"><div class="l1"><span class="type" aria-hidden="true">' + typeIcon(t) + '</span><a class="ttl" href="' + esc(t.url) + '" target="_blank" rel="noopener">' + title + '</a>' +
+    var date = '<label class="date' + (overdue(t) ? ' over' : '') + '">' + (t.due ? dmy(t.due) : '<i class="ti ti-calendar"></i>') + '<input type="date" data-due="' + esc(t.id) + '" value="' + (t.due ? iso(t.due) : '') + '" aria-label="Due date"></label>';
+    var drive = (String(t.desc).match(/https:\/\/drive\.google\.com\/file\/d\/[\w-]+/) || [])[0];
+    var out = '<a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a>' +
+      (drive ? '<a class="mark" href="' + esc(drive) + '/view" target="_blank" rel="noopener" aria-label="Open card in Drive" title="Drive">' + DRIVE_MARK + '</a>' : '');
+    var detail = openPanel && openPanel.id === t.id && openPanel.k === 'all';
+    return '<div class="crow" data-row="' + esc(t.id) + '"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(t.id) + '">' + title + '</button>' +
       '<button class="flagb" type="button" data-panel="flag" data-id="' + esc(t.id) + '" aria-label="Flag ' + (p ? p.p : 'none') + '">' + flagIcon(p) + '</button></div>' +
-      (kind === 'decide' ? why(t) : '') + mineQ +
-      '<div class="l2"><span class="icons">' + stat + icons + (ch ? '<span class="sent">✓ ' + hm(ch.at) + '</span>' : '') + '</span><span class="acts">' + acts + '</span></div><div class="l3">' + date + '</div>' +
-      (openPanel && openPanel.id === t.id ? panelOf(t, openPanel.k) : '') + '</div>';
+      (kind === 'decide' || detail ? why(t, detail) : '') + mineQ +
+      '<div class="l2"><span class="icons">' + stat + icons + (ch ? '<span class="sent">✓ ' + hm(ch.at) + '</span>' : '') + '</span><span class="acts">' + acts + '</span></div>' +
+      (openPanel && openPanel.id === t.id && !detail ? panelOf(t, openPanel.k) : '') +
+      (detail ? iconsOf(t, kind).filter(function (x) { return x[0] !== 'reply'; }).map(function (x) { return panelOf(t, x[0]); }).join('') : '') +
+      '<div class="l3"><span class="type" aria-hidden="true">' + typeIcon(t) + '</span>' + out + '<span class="grow"></span>' + date + '</div></div>';
   }
   // Sort & filter: one button, closed by default; the badge counts filters that are on.
   function filtered(items) {
@@ -509,14 +542,23 @@
       list(items, 4, '—', 'mixed');
   }
   // The plain What / Yes = / No = lines on a decision. Links become an underlined "open".
-  function why(t) {
+  var CU_MARK = '<svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 11l3-2.3c1.6 2 3.2 2 4.8 0L13 11c-2.7 3.3-8.3 3.3-11 0z" fill="#7B68EE"/><path d="M8 3.5L3.6 7.3 5.3 9.2 8 6.9l2.7 2.3 1.7-1.9z" fill="#FF02F0"/></svg>';
+  var DRIVE_MARK = '<svg width="18" height="16" viewBox="0 0 16 14" aria-hidden="true"><path d="M5.5 0h5l5 8.7h-5z" fill="#FFBA00"/><path d="M0 8.7L2.5 13l5-8.7L5 0z" fill="#0F9D58"/><path d="M2.5 13h10.5l2.5-4.3H5z" fill="#4285F4"/></svg>';
+  // full = the whole description (title tapped); otherwise the first 4 lines plus Claude's answers.
+  function why(t, full) {
     var d = String(t.desc || '').trim();
     if (!d) return '';
     var ls = d.split('\n').filter(function (l) { return l && !/^(GATE|NO|APP|App):/.test(l); });
-    ls = ls.slice(0, 4).concat(ls.slice(4).filter(function (l) { return /^(Claude|Answer):/.test(l); }));
+    if (!full) ls = ls.slice(0, 4).concat(ls.slice(4).filter(function (l) { return /^(Claude|Answer):/.test(l); }));
     return '<div class="why">' + ls.map(function (l) {
       return esc(l).replace(/https?:\/\/[^\s<]+/g, function (u) { return '<a href="' + u + '" target="_blank" rel="noopener">open</a>'; });
     }).join('<br>') + '</div>';
+  }
+  // Factory switch: flips at once on screen; AF-ENGINE writes SETTINGS › FACTORY at its next run.
+  function factoryOn() { var p = pend.factory; return p && Date.now() - p.at < 36e5 && String(S.factory).toUpperCase() !== (p.on ? 'ON' : 'OFF') ? p.on : String(S.factory).toUpperCase() === 'ON'; }
+  function sendFactory() {
+    var on = !factoryOn(); pend.factory = { on: on, at: Date.now() }; saveLocal('af-pend', pend); render();
+    withWrite(function () { return putRequest('factory', { kind: 'factory', on: on, at: new Date().toISOString() }).catch(function (e) { delete pend.factory; saveLocal('af-pend', pend); banner('Not sent: ' + e.message); render(); }); });
   }
   function sendSet(id, field, val) {
     var t = byId(id); if (!t) return;
@@ -533,21 +575,24 @@
   // Green only when every job ran OK within its window and the data is fresh. OFF / never ran / late = red.
   var WINDOW_H = { syncState: 0.75, dailyDigest: 74, staleCheck: 26, leakProbe: 26, weeklyBackup: 170 };
   function enginePill() {
+    // Real problems only: a watch-job that is off (or never ran) because the Factory is OFF is expected, not a fault.
+    var off = String(S.factory).toUpperCase() !== 'ON';
     var now = Date.now(), bad = (S.health || []).filter(function (h) {
       if (!WINDOW_H[h.job]) return h.result === 'FAILED';
+      if (off && h.job !== 'syncState' && /^(OFF|INSTALLED)$/i.test(h.result)) return false;
       var last = Date.parse(h.last);
       return h.result !== 'OK' || !(now - last < WINDOW_H[h.job] * 36e5);
     }).map(function (h) { return (JOB[h.job] || h.job) + ' ' + word(h); });
     if (now - Date.parse(S.generated_at) > 45 * 6e4) bad.unshift('Data old');
-    return bad.length ? '<a class="pill" href="#/health" title="' + esc(bad.join(' · ')) + '" style="border-color:var(--ljr-2);color:var(--ljr-2-text)">⚠ ' + bad.length + '</a>' :
-      '<a class="pill" href="#/health" title="Engine" style="border-color:var(--ljr-5)">' + ic('tick') + '</a>';
+    return bad.length ? '<a class="pill alert has" href="#/health" title="' + esc(bad.join(' · ')) + '"><i class="ti ti-alert-triangle"></i> <span class="hot">' + bad.length + '</span></a>' :
+      '<a class="pill" href="#/health" title="Engine"><i class="ti ti-check"></i></a>';
   }
   var JOB = { syncState: 'Screen sync', dailyDigest: 'Daily email', staleCheck: 'Stuck check', weeklyBackup: 'Backup', leakProbe: 'Live-app check', onIdeaSubmit: 'Idea Form' };
   function word(h) { var r = String(h.result).toUpperCase(); return r === 'INSTALLED' ? 'Never' : r === 'OFF' ? 'Off' : r === 'OK' ? 'Late' : r.charAt(0) + r.slice(1).toLowerCase(); }
   // Jobs page: what each job is, when it last ran, and whether that is OK. Plain words.
   function vHealth() {
     var now = Date.now(), on = String(S.factory).toUpperCase() === 'ON';
-    return '<div class="card"><b>Factory <span class="sw' + (on ? ' on' : '') + '"><i></i></span> ' + esc(String(S.mode)) + '</b><p class="muted">' +
+    return '<div class="card"><b>Factory <button class="pill" type="button" data-action="factory" aria-label="Factory on or off"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span></button> ' + esc(String(S.mode)) + '</b><p class="muted">' +
       (on ? '' : '') + '</p>' +
       (S.health || []).map(function (h) {
         var last = Date.parse(h.last), okNow = h.result === 'OK' && (!WINDOW_H[h.job] || now - last < WINDOW_H[h.job] * 36e5);
@@ -648,7 +693,8 @@
     var a = e.target.closest('[data-action]'); if (a && !a.disabled) {
       var k = a.getAttribute('data-action');
       if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
-      else if (k === 'filters') { filtersOpen = !filtersOpen; render(); } else if (k === 'today' || k === 'week') { weekView = k === 'week'; render(); }
+      else if (k === 'cardask') { cardAsk = !cardAsk; render(); var ai = document.querySelector('form.ask[data-ask] input[name=text]'); if (cardAsk && ai) ai.focus(); }
+      else if (k === 'filters') { filtersOpen = !filtersOpen; render(); } else if (k === 'factory') sendFactory(); else if (k === 'today' || k === 'week') { weekView = k === 'week'; render(); }
       return;
     }
     var b = e.target.closest('[data-act]'); if (b) { sendAct(b); return; }
@@ -668,7 +714,7 @@
   });
   document.addEventListener('change', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-due'); if (d) sendSet(d, 'due', e.target.value || ''); });
   document.addEventListener('submit', function (e) { var f = e.target.closest('[data-ask]'); if (f) { e.preventDefault(); sendAsk(f); } });
-  window.addEventListener('hashchange', function () { open = {}; openPanel = null; filtersOpen = false; render(); window.scrollTo(0, 0); });
+  window.addEventListener('hashchange', function () { open = {}; openPanel = null; filtersOpen = false; cardAsk = false; render(); window.scrollTo(0, 0); });
   var saved = DashAuth.valid();
   if (saved && DashAuth.hasScope(saved, SCOPE)) { accessToken = saved.access_token; tokenExpiresAt = saved.expires_at; signedIn = true; }
   render(); if (signedIn) { startTimer(); load(); }
