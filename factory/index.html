@@ -208,6 +208,32 @@
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
   .lock { color: var(--ljr-3-text); font-size: 16px; display: inline-flex; align-items: center; gap: 4px; }
+
+  /* Forms in the dashboard's own style (Lisa ✓ 20 Oct): chips, (i) on hover, no placeholder words, draft kept. */
+  .fq { padding: 10px 0; border-top: 1px solid var(--line); }
+  .fq:first-of-type { border-top: 0; }
+  .fq .qt { font-size: 15px; margin: 0 0 6px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+  .fq .code { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
+  .fq .req { color: var(--ljr-2-text); font-size: 12px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ch { font: inherit; font-size: 14px; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; }
+  .ch:hover, .ch.on { border-color: var(--muted); }
+  .ch.on { box-shadow: inset 0 0 0 1px var(--muted); }
+  .ch b { font-weight: 700; margin-right: 4px; }
+  .fin { width: 100%; font: inherit; font-size: 15px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); }
+  textarea.fin { min-height: 72px; resize: vertical; }
+  .ferr { color: var(--ljr-2-text); font-size: 13px; margin-top: 4px; }
+  .frow { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; }
+  .grpt { font-size: 13px; font-weight: 700; color: var(--muted); margin: 10px 0 6px; display: flex; gap: 6px; align-items: center; }
+  .grpt:first-child { margin-top: 0; }
+  details.arch > summary { cursor: pointer; list-style: none; }
+  .search { width: 100%; max-width: 320px; }
+  .addlink { display: flex; gap: 6px; margin-top: 6px; }
+  .ico, .ico:hover, .ico.on, .flagb, .flagb:hover, .mark, .mark:hover, .lk:not(.no):not(.off), .lk:not(.no):not(.off):hover { border-color: transparent; }
+  .acts .btn.yes, .acts .btn.no, .acts .yes, .acts .no, .btn.yes { border-color: var(--line); }
+  .acts .btn.yes:hover, .btn.yes:hover { border-color: var(--ljr-5); } .acts .btn.no:hover { border-color: var(--ljr-2); }
+  .flab { font-size: 13px; font-weight: 700; color: var(--muted); min-width: 44px; align-self: center; }
+  .fpanel .pills + .pills { margin-top: 8px; }
 </style>
 </head>
 <body>
@@ -351,7 +377,7 @@
   function chipOf(t) { return '<a class="chip' + (stuck(t) ? ' stuck' : '') + '" href="#/card/' + t.id + '">' + esc(t.name) + '<span class="st">' + (stuck(t) ? ic('warn') : '') + esc(t.status) + '</span></a>'; }
   // The front door: the Idea Form (AF-ENGINE writes the card and the ClickUp task, even with the factory OFF).
   var FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSfzzTnlyNWeXzFEz9NfYxNXsCFN6KwV8RxFyIRTJZ-WrH15nw/viewform';
-  function newIdea() { return '<a class="plus" href="' + FORM + '" target="_blank" rel="noopener" aria-label="New idea"><i class="ti ti-plus"></i></a>'; }
+  function newIdea() { return '<a class="plus" href="#/new" aria-label="New idea"><i class="ti ti-plus"></i></a>'; }
   var ROOM_DO = { reception: 'New ideas. You say Yes at Screen.', research: 'Grok researches. You judge Merit, then Lock the features.',
     rig: 'Schema and data set up (Claude + Grok). No-stamp gates.', reactor: 'Prompts in OverSkill: you send, Happy Hour each time. Costs credits.',
     runway: 'Launch checks. You say go live.', radar: 'Live. Checked every day.', rescue: 'Something broke. Fix, then back to Radar.',
@@ -378,7 +404,7 @@
       '<div class="pills" style="margin-top:10px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<div id="codes" class="codes"><span class="q">…</span></div>' +
       '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span>' + linkStrip(t) + '<button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
-      (cardAsk ? '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn" type="submit" aria-label="Send"><i class="ti ti-send"></i></button></form><div id="askNote" class="muted"></div>' : '') + waiting(t) +
+      (addLink && addLink.id === t.id ? linkForm() : '') + (cardAsk ? '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn" type="submit" aria-label="Send"><i class="ti ti-send"></i></button></form><div id="askNote" class="muted"></div>' : '') + waiting(t) +
       '<div class="strip">' + STAGES.map(function (_, i) { return '<i class="' + (n !== null && i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>';
     STAGES.forEach(function (name, i) {
       var cls = n !== null && i < n ? 'd' : i === n ? 'c' : '';
@@ -438,7 +464,7 @@
     var room = app ? ROOMS.filter(function (r) { return r.st.indexOf(String(app.status).toLowerCase()) >= 0; })[0] : null;
     var c = room ? col(room.slot) : col(slot);
     return '<div class="grp"><span class="dot" style="background:' + c + '"></span>' + (app ? '<a href="#/card/' + esc(app.id) + '">' + esc(g) + '</a>' : 'Factory') +
-      (app ? '<span class="st">' + esc((room ? room.name + ' · ' : '') + app.status) + '</span>' : '') + (isTest(t) ? '<span class="pill">TEST</span>' : '') + linkStrip(app) + '</div>';
+      (app ? '<span class="st">' + esc((room ? room.name + ' · ' : '') + app.status) + '</span>' : '') + (isTest(t) ? '<span class="pill">TEST</span>' : '') + linkStrip(app) + '</div>' + (app && addLink && addLink.id === app.id ? linkForm() : '');
   }
   // When the engine will apply a click: its next 15-minute run (:03 :18 :33 :48) plus a minute.
   function appliesBy(ts) { var d = new Date(ts), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next + 1); return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
@@ -589,8 +615,9 @@
     if (!filtersOpen) return html;
     // Two lines only (Lisa, 20 Oct): Filter · Sort.
     return html + '<div class="card fpanel">' +
-      '<div class="pills">' + chip('unanswered', undefined, '<i class="ti ti-hourglass"></i> Unanswered') + chip('overdue', undefined, '<i class="ti ti-alert-triangle"></i> Overdue') + chip('urgent', undefined, flagIcon({ p: 'urgent' }) + ' Urgent') + chip('unflagged', undefined, flagIcon(null) + ' Unflagged') + chip('me', undefined, '<i class="ti ti-user"></i> Me') + '</div>' +
-      '<div class="pills">' + chip('sort', 'flag', flagIcon({ p: 'urgent' }) + ' Flag') + chip('sort', 'date', '<i class="ti ti-calendar"></i> Date') + chip('sort', 'age', '<i class="ti ti-clock"></i> Oldest') + '</div></div>';
+      '<div class="pills"><span class="flab">Filter</span>' + chip('unanswered', undefined, '<i class="ti ti-hourglass"></i> Unanswered') + chip('overdue', undefined, '<i class="ti ti-alert-triangle"></i> Overdue') + chip('urgent', undefined, flagIcon({ p: 'urgent' }) + ' Urgent') + chip('unflagged', undefined, flagIcon(null) + ' Unflagged') + chip('me', undefined, '<i class="ti ti-user"></i> Me') +
+      (onCount() ? '<button class="pill" type="button" data-action="clearf" aria-label="Clear filters" title="Clear filters"><i class="ti ti-filter-off"></i></button>' : '') + '</div>' +
+      '<div class="pills"><span class="flab">Sort</span>' + chip('sort', 'flag', flagIcon({ p: 'urgent' }) + ' Flag') + chip('sort', 'date', '<i class="ti ti-calendar"></i> Date') + chip('sort', 'age', '<i class="ti ti-clock"></i> Oldest') + '</div></div>';
   }
   // One card per app (Lisa, 20 Oct): the app's name once in the header, its items inside split by a thin line.
   // Cards are ordered by their most urgent item; each shows its top 3, "+N" opens the rest (remembered).
@@ -639,6 +666,7 @@
       var k = m[1].toLowerCase(); k = LINK_ALIAS[k] || k;
       if (LINKS.some(function (x) { return x[0] === k; })) o[k] = m[2];
     });
+    Object.keys((app && app.links) || {}).forEach(function (k) { o[k] = app.links[k]; });
     return o;
   }
   // Stage an app has reached: its number, or 8 while live (rescue counts as live).
@@ -658,8 +686,9 @@
       '<span class="lk off no" title="OverSkill link not recorded: unpublish from OverSkill"><i class="ti ti-power"></i> Off</span>';
     LINKS.forEach(function (x) {
       if (L[x[0]]) out += '<a class="lk" href="' + esc(L[x[0]]) + '" target="_blank" rel="noopener" title="' + x[2] + '"><i class="ti ti-' + x[1] + '"></i></a>';
-      else if (st >= x[3] && st >= 0) out += '<span class="lk no" title="' + x[2] + ': not recorded"><i class="ti ti-' + x[1] + '"></i></span>';
+      else if (st >= x[3] && st >= 0) out += '<button class="lk no" type="button" data-addlink-open="' + esc(app.id) + '" data-key="' + x[0] + '" title="' + x[2] + ': add"><i class="ti ti-' + x[1] + '"></i></button>';
     });
+    if (st >= 7) out += '<a class="lk" href="#/problem/' + esc(app.id) + '" title="Report a problem"><i class="ti ti-alert-triangle"></i></a>';
     return out ? '<span class="links">' + out + '</span>' : '';
   }
   function lines(t) { return String(t.desc || '').split(/\r?\n|\\n/).map(function (l) { return l.trim(); }).filter(Boolean); }
@@ -706,6 +735,129 @@
     try {
       navigator.clipboard.write([new ClipboardItem({ 'text/plain': text.then(function (x) { return new Blob([x], { type: 'text/plain' }); }) })]).then(ok, no);
     } catch (e) { text.then(function (x) { return navigator.clipboard.writeText(x); }).then(ok, no); }
+  }
+
+  /* ---------- Forms (Lisa ✓ 20 Oct): New idea · Problem · Link. Each writes one request file; AF-ENGINE does the rest. ---------- */
+  // The 20 frozen parts, same order and words as the Google Form. ★ = must answer; the rest start at "?".
+  var PARTS = [
+    ['TEN', 1, 'How many businesses, and who sits above them?', ['0 no data stored', '1 one business', '2 several, flat', '3 one reseller above', '4 several resellers', '5 one body above resellers', '6 several bodies'], 'e.g. 1 = a single kennel; 3 = a breed club above its kennels'],
+    ['PARENTS', 0, 'How many parties can one business sit under?', ['0 none', '1 one', '2 home plus claims', '3 several real owners'], 'e.g. 2 = a groomer under its own brand plus a franchise it claims'],
+    ['DOWN', 0, 'What may a party above do to the layers below?', ['0 nothing', '1 read the layer below', '2 read all the way down', '3 read and write by explicit grant'], 'e.g. 3 = a vet group edits a clinic only when the clinic grants it'],
+    ['MEET', 0, "Do businesses that don't own each other meet?", ['0 never', '1 share a record', '2 common marketplace', '3 money between unrelated businesses (STOP)'], 'e.g. 1 = two breeders on one litter record'],
+    ['POOL', 0, 'Is anything computed across businesses?', ['0 nothing', '1 only when enough contribute to hide individuals', '2 regardless', "3 one business's content surfaces to another"], 'e.g. 1 = a breed-wide health average'],
+    ['EXIT', 0, "What happens to a business's data when it leaves?", ['0 deleted', '1 frozen', '2 handed to them', '3 moves with them'], 'e.g. 2 = they get an export ZIP'],
+    ['ROLE', 0, 'Do all its people have the same access?', ['0 no sign-in', '1 everyone the same', '2 roles with different access'], 'e.g. 2 = owner and staff see different things'],
+    ['BELONG', 0, 'How many businesses can one person belong to?', ['0 none', '1 one', '2 many'], 'e.g. 2 = a handler working for several kennels'],
+    ['GUEST', 0, 'Can a business let an outside person in?', ['0 no', '1 a scoped view (e.g. accountant)'], 'e.g. 1 = an inspector sees the licence pages only'],
+    ['HELP', 0, 'Can someone see the app as another person sees it?', ['0 nobody', '1 Lisa, view only, logged', '2 brand admins too, if switched on', '3 can act as the person'], 'For support: who may look through a user\'s eyes'],
+    ['JOIN', 0, 'Who can create an account?', ['0 invite only', "1 only through a brand's address or join link", '2 anyone signed in'], 'e.g. 1 = sign up only from a kennel\'s link'],
+    ['CUST', 1, "How far into the business's customers does it go?", ['0 staff only', '1 records only', '2 customers read', '3 customers write', '4 customers pay in the app'], 'e.g. 2 = puppy buyers read their pack'],
+    ['PRICE', 0, 'Same price for everyone?', ['0 no pricing', '1 one list', '2 plus a trade list', '3 a price per customer'], 'Prices the business charges its customers'],
+    ['SHARE', 0, 'Can members share with each other?', ['0 no', '1 yes, as its own share record'], 'e.g. 1 = send a pedigree to another breeder'],
+    ['SEN', 1, 'How sensitive is the data?', ['0 ordinary', '1 personal', '2 health or clinical', '3 children'], '2 or 3 = held until a DPIA'],
+    ['VIEW', 1, 'Can a stranger read without signing in?', ['0 nothing', '1 link-holders only', '2 anyone'], 'e.g. 1 = a private buyer-pack link'],
+    ['POST', 1, 'Can a stranger put data in without signing in?', ['0 nothing', '1 link-holders only', '2 anyone'], 'e.g. 2 = a public enquiry form'],
+    ['BRAND', 0, 'Whose name is on the screen?', ['0 none', '1 one brand', '2 a brand per business'], 'e.g. 2 = each kennel\'s own name and logo'],
+    ['SEND', 0, "What does the app send out to systems we don't control?", ['0 nothing', '1 users download their own data', '2 pushed out automatically'], 'e.g. 2 = posts results to a registry'],
+    ['PAY', 1, 'Does money move between parties in one chain?', ['0 none', '1 Lisa bills the business', '2 payouts within one chain (reseller or parent body)'], 'e.g. 1 = monthly subscription to you']
+  ];
+  var KILLS = [['FRAGILE', 'Could it give wrong answers that look right?'], ['ONESHOT', 'Would people use it once and stop?'], ['NOHOOK', 'Is there no reason to come back?']];
+  var idea = (function () { try { return JSON.parse(localStorage.getItem('af-idea') || '') || {}; } catch (e) { return {}; } })();
+  function saveIdea() { idea.at = Date.now(); try { localStorage.setItem('af-idea', JSON.stringify(idea)); } catch (e) {} }
+  var formErr = {}, formNote = '';
+  function chipsFor(key, opts, q) {
+    return '<div class="chips">' + opts.map(function (o) {
+      var m = o.match(/^(\S+)\s+(.*)$/) || [o, o, ''];
+      return '<button class="ch' + ((idea.a || {})[key] === o ? ' on' : '') + '" type="button" data-pick="' + esc(key) + '" data-val="' + esc(o) + '"><b>' + esc(m[1]) + '</b>' + esc(m[2]) + '</button>';
+    }).join('') + '</div>';
+  }
+  function vNew() {
+    idea.a = idea.a || {};
+    PARTS.forEach(function (p) { if (!p[1] && !idea.a[p[0]]) idea.a[p[0]] = '? not yet known'; });
+    KILLS.forEach(function (k) { if (!idea.a[k[0]]) idea.a[k[0]] = 'no'; });
+    var er = function (k) { return formErr[k] ? '<div class="ferr">' + esc(formErr[k]) + '</div>' : ''; };
+    return '<div class="card"><div class="grp" style="margin:0 0 6px"><span class="dot" style="background:var(--ljr-7)"></span>New idea</div>' +
+      '<div class="fq"><p class="qt">Name <span class="req">★</span></p><input class="fin" data-f="name" value="' + esc(idea.name || '') + '" aria-label="Name" maxlength="60">' + er('name') + '</div>' +
+      '<div class="fq"><p class="qt">What · who pays · pain <span class="req">★</span></p><textarea class="fin" data-f="brief" aria-label="Brief">' + esc(idea.brief || '') + '</textarea>' + er('brief') + '</div>' +
+      PARTS.map(function (p) {
+        var opts = p[3].slice(); if (!p[1]) opts.push('? not yet known');
+        return '<div class="fq" id="q-' + p[0] + '"><p class="qt"><span class="code">' + p[0] + '</span>' + esc(p[2]) + (p[1] ? ' <span class="req">★</span>' : '') + info(p[4]) + '</p>' + chipsFor(p[0], opts) + er(p[0]) + '</div>';
+      }).join('') +
+      KILLS.map(function (k) { return '<div class="fq"><p class="qt"><span class="code">' + k[0] + '</span>' + esc(k[1]) + '</p>' + chipsFor(k[0], ['no', 'yes']) + '</div>'; }).join('') +
+      '<div class="fq"><p class="qt"><i class="ti ti-pencil" aria-hidden="true"></i></p><textarea class="fin" data-f="note" aria-label="Note">' + esc(idea.note || '') + '</textarea></div>' +
+      '<div class="frow"><span class="muted">' + esc(formNote) + '</span><button class="btn yes" type="button" data-action="sendidea" aria-label="Send"><i class="ti ti-check"></i></button></div></div>';
+  }
+  function sendIdea() {
+    formErr = {};
+    if (!(idea.name || '').trim()) formErr.name = 'Add a name';
+    if (!(idea.brief || '').trim()) formErr.brief = 'Add what it is, who pays and the pain';
+    PARTS.forEach(function (p) { if (p[1] && !(idea.a || {})[p[0]]) formErr[p[0]] = 'Pick one'; });
+    if (Object.keys(formErr).length) { render(); var first = document.querySelector('.ferr'); if (first) first.scrollIntoView({ block: 'center' }); return; }
+    formNote = 'Sending…'; render();
+    var body = { kind: 'idea', at: new Date().toISOString(), name: idea.name.trim(), brief: idea.brief.trim(), note: (idea.note || '').trim(), answers: idea.a };
+    withWrite(function () {
+      return putRequest('idea', body).then(function () {
+        try { localStorage.removeItem('af-idea'); } catch (e) {}
+        idea = {}; formNote = ''; banner('✓ ' + hm(Date.now()) + ' · card by ' + appliesBy(Date.now())); $('banner').className = 'banner info';
+        location.hash = '#/rooms';
+      }).catch(function (e) { formNote = 'Not sent: ' + e.message + '. Your answers are kept.'; render(); });
+    });
+  }
+  // Problem: from any live app's card. A leak or outage opens an incident; the engine moves the app to Rescue.
+  var PROB = [['leak', 'shield-x', 'Leak'], ['down', 'plug-x', 'Down'], ['wrong', 'alert-triangle', 'Wrong'], ['other', 'dots', 'Other']];
+  var prob = {};
+  function vProblem(id) {
+    var app = apps().filter(function (a) { return a.id === id; })[0];
+    if (!app) return '<div class="card">Not found. <a href="#/rooms">Rooms</a></div>';
+    var L = linksOf(app);
+    return '<div class="card"><div class="grp" style="margin:0 0 6px"><span class="dot" style="background:var(--ljr-2)"></span>' + esc(app.name.replace(/^TEST-/, '')) + ' · problem' + (isTest(app) ? '<span class="pill">TEST</span>' : '') + '</div>' +
+      '<div class="fq"><div class="chips">' + PROB.map(function (p) { return '<button class="ch' + (prob.k === p[0] ? ' on' : '') + '" type="button" data-prob="' + p[0] + '"><i class="ti ti-' + p[1] + '"></i> ' + p[2] + '</button>'; }).join('') + '</div>' + (formErr.k ? '<div class="ferr">' + esc(formErr.k) + '</div>' : '') + '</div>' +
+      '<div class="fq"><textarea class="fin" data-f="pwhat" aria-label="What happened">' + esc(prob.what || '') + '</textarea>' + (formErr.what ? '<div class="ferr">' + esc(formErr.what) + '</div>' : '') + '</div>' +
+      (prob.k === 'leak' ? '<div class="fq"><p class="qt"><i class="ti ti-power"></i> Off first' + info('Unpublish in OverSkill now; the ICO clock (72 hours) starts when you know.') + '</p>' + linkStrip(app) + '</div>' : '') +
+      '<div class="frow"><span class="muted">' + esc(formNote) + '</span><button class="btn yes" type="button" data-action="sendprob" data-id="' + esc(id) + '" aria-label="Send"><i class="ti ti-check"></i></button></div></div>';
+  }
+  function sendProblem(id) {
+    formErr = {};
+    if (!prob.k) formErr.k = 'Pick one'; if (!(prob.what || '').trim()) formErr.what = 'Say what happened';
+    if (Object.keys(formErr).length) { render(); return; }
+    formNote = 'Sending…'; render();
+    withWrite(function () {
+      return putRequest('problem', { kind: 'problem', at: new Date().toISOString(), taskId: id, problem: prob.k, what: prob.what.trim() })
+        .then(function () { prob = {}; formNote = ''; banner('✓ ' + hm(Date.now()) + ' · incident by ' + appliesBy(Date.now())); $('banner').className = 'banner info'; location.hash = '#/card/' + id; })
+        .catch(function (e) { formNote = 'Not sent: ' + e.message; render(); });
+    });
+  }
+  // Link: tap a dashed icon, paste the address, ✓. The engine writes "key: URL" on the ClickUp app task.
+  var addLink = null;
+  function sendLink(form) {
+    var url = form.url.value.trim(), id = form.getAttribute('data-app'), key = form.getAttribute('data-key');
+    if (!/^https:\/\/\S+$/.test(url)) { form.querySelector('.ferr').textContent = 'Paste a full https:// address'; return; }
+    form.querySelector('.ferr').textContent = 'Sending…';
+    withWrite(function () {
+      return putRequest('link', { kind: 'link', at: new Date().toISOString(), taskId: id, key: key, url: url })
+        .then(function () { var a = apps().filter(function (x) { return x.id === id; })[0]; if (a) a.desc = String(a.desc || '') + '\n' + key + ': ' + url; addLink = null; render(); })
+        .catch(function (e) { form.querySelector('.ferr').textContent = 'Not sent: ' + e.message; });
+    });
+  }
+  function linkForm() {
+    if (!addLink) return '';
+    var x = LINKS.filter(function (l) { return l[0] === addLink.key; })[0];
+    return '<form class="addlink" data-addlink data-app="' + esc(addLink.id) + '" data-key="' + esc(addLink.key) + '"><i class="ti ti-' + x[1] + '" title="' + x[2] + '" style="align-self:center"></i><input class="fin" name="url" aria-label="' + x[2] + ' address" type="text" inputmode="url" autocomplete="off"><button class="btn" type="submit" aria-label="Save"><i class="ti ti-check"></i></button><span class="ferr" style="align-self:center"></span></form>';
+  }
+  // Apps & ideas at any size: Needs you · Building · Ideas · Archive (folded), with a search box.
+  var appQ = '';
+  function vAllApps() {
+    var q = appQ.toLowerCase(), list = apps().filter(function (a) { return !q || (a.name + ' ' + a.status).toLowerCase().indexOf(q) >= 0; });
+    var arch = function (a) { return /^(killed|retired|hold|cancelled)$/i.test(a.status); };
+    var G = [['Needs you', 'alert-triangle', list.filter(function (a) { return !arch(a) && (alarm(a) || stuck(a)); })],
+      ['Live', 'world', list.filter(function (a) { return !arch(a) && !alarm(a) && !stuck(a) && reached(a) >= 8; })],
+      ['Building', 'hammer', list.filter(function (a) { return !arch(a) && !alarm(a) && !stuck(a) && reached(a) >= 4 && reached(a) < 8; })],
+      ['Ideas', 'bulb', list.filter(function (a) { return !arch(a) && !alarm(a) && !stuck(a) && reached(a) < 4; })]];
+    var a8 = list.filter(arch);
+    return '<div class="card"><input class="fin search" data-f="appq" value="' + esc(appQ) + '" aria-label="Search apps" type="search"><div style="margin-top:10px">' +
+      G.filter(function (g) { return g[2].length; }).map(function (g) { return '<div class="grpt"><i class="ti ti-' + g[1] + '"></i>' + g[0] + ' · ' + g[2].length + '</div><div class="pills">' + g[2].map(chipOf).join('') + '</div>'; }).join('') +
+      (a8.length ? '<details class="arch"><summary class="grpt"><i class="ti ti-archive"></i>Archive · ' + a8.length + '</summary><div class="pills">' + a8.map(chipOf).join('') + '</div></details>' : '') +
+      '</div></div>';
   }
   // full = the whole description (title tapped); otherwise the first 4 lines plus Claude's answers.
   function why(t, full) {
@@ -774,11 +926,17 @@
   function saveLocal(k, o) { try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} }
   var drafts = loadLocal('af-drafts'), asked = loadLocal('af-asked'), sentF = loadLocal('af-sentf');
   // Typing is kept as you go, so a refresh never wipes a half-written answer.
+  document.addEventListener('input', function (e) {
+    var f = e.target.getAttribute && e.target.getAttribute('data-f'); if (!f) return;
+    if (f === 'name' || f === 'brief' || f === 'note') { idea[f] = e.target.value; delete formErr[f]; saveIdea(); }
+    else if (f === 'pwhat') prob.what = e.target.value;
+    else if (f === 'appq') { appQ = e.target.value; var pos = e.target.selectionStart; render(); var b = document.querySelector('[data-f="appq"]'); if (b) { b.focus(); b.setSelectionRange(pos, pos); } }
+  });
   document.addEventListener('input', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('af-drafts', drafts); } });
   function saveSent() { try { localStorage.setItem('af-sent', JSON.stringify(sent)); } catch (e) {} }
   function render() {
     var route = (location.hash || '#/rooms').replace('#/', '').split('/');
-    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (/^(card|room|health|stuck|all|queue)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (/^(card|room|health|stuck|all|queue|new|problem)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
     $('signInBtn').classList.toggle('hidden', signedIn);
     $('signOutBtn').classList.toggle('hidden', !signedIn);
     $('refreshBtn').classList.toggle('hidden', !signedIn);
@@ -791,7 +949,7 @@
     allTasks();
     var listView = /^(decide|do|today|queue)$/.test(route[0]), nf = onCount();
     $('filtersBtn').classList.toggle('hidden', !listView); $('filtersBtn').classList.toggle('on', filtersOpen); $('nFilters').textContent = nf ? nf : '';
-    v.innerHTML = route[0] === 'today' ? vToday() : route[0] === 'queue' ? list(queue(route[1]), 5, '—', 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'all' ? vApps('Apps & ideas', apps()) : route[0] === 'decide' ? list(decisions(), 4, '—', 'decide') :
+    v.innerHTML = route[0] === 'today' ? vToday() : route[0] === 'queue' ? list(queue(route[1]), 5, '—', 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'all' ? vAllApps() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list(decisions(), 4, '—', 'decide') :
       route[0] === 'do' ? list(mine(), 4, '—', 'do') : vRooms();
   }
 
@@ -862,10 +1020,15 @@
       if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'cardask') { cardAsk = !cardAsk; render(); var ai = document.querySelector('form.ask[data-ask] input[name=text]'); if (cardAsk && ai) ai.focus(); }
       else if (k === 'more') { var ga = a.getAttribute('data-app'); shownAll[ga] = { on: !(shownAll[ga] && shownAll[ga].on), at: Date.now() }; saveLocal('af-open', shownAll); render(); }
+      else if (k === 'clearf') { prefs = { unanswered: false, sort: 'flag' }; savePrefs(); render(); }
+      else if (k === 'sendidea') sendIdea(); else if (k === 'sendprob') sendProblem(a.getAttribute('data-id'));
       else if (k === 'filters') { filtersOpen = !filtersOpen; render(); } else if (k === 'factory') sendFactory(); else if (k === 'today' || k === 'week') { weekView = k === 'week'; render(); }
       return;
     }
     var b = e.target.closest('[data-act]'); if (b) { sendAct(b); return; }
+    var pk2 = e.target.closest('[data-pick]'); if (pk2) { idea.a = idea.a || {}; idea.a[pk2.getAttribute('data-pick')] = pk2.getAttribute('data-val'); delete formErr[pk2.getAttribute('data-pick')]; saveIdea(); render(); return; }
+    var pr = e.target.closest('[data-prob]'); if (pr) { prob.k = pr.getAttribute('data-prob'); delete formErr.k; render(); return; }
+    var al = e.target.closest('[data-addlink-open]'); if (al) { var aid = al.getAttribute('data-addlink-open'), ak = al.getAttribute('data-key'); addLink = addLink && addLink.id === aid && addLink.key === ak ? null : { id: aid, key: ak }; render(); var inp2 = document.querySelector('form[data-addlink] input'); if (inp2) inp2.focus(); return; }
     var ud = e.target.closest('[data-undo]'); if (ud) { ud.disabled = true; undo(ud.getAttribute('data-undo')); return; }
     var cp = e.target.closest('[data-copy]'); if (cp) { copyPrompt(cp); return; }
     var pn = e.target.closest('[data-panel]'); if (pn) { var pid = pn.getAttribute('data-id'), pk = pn.getAttribute('data-panel');
@@ -883,8 +1046,8 @@
     var s = e.target.closest('[data-stage]'); if (s) { var i = +s.getAttribute('data-stage'); var cur = open[i] === undefined ? (s.classList.contains('c')) : open[i]; open[i] = !cur; render(); }
   });
   document.addEventListener('change', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-due'); if (d) sendSet(d, 'due', e.target.value || ''); });
-  document.addEventListener('submit', function (e) { var f = e.target.closest('[data-ask]'); if (f) { e.preventDefault(); sendAsk(f); } });
-  window.addEventListener('hashchange', function () { open = {}; openPanel = null; filtersOpen = false; cardAsk = false; render(); window.scrollTo(0, 0); });
+  document.addEventListener('submit', function (e) { var lf = e.target.closest('[data-addlink]'); if (lf) { e.preventDefault(); sendLink(lf); return; } var f = e.target.closest('[data-ask]'); if (f) { e.preventDefault(); sendAsk(f); } });
+  window.addEventListener('hashchange', function () { open = {}; openPanel = null; filtersOpen = false; cardAsk = false; addLink = null; formErr = {}; formNote = ''; render(); window.scrollTo(0, 0); });
   var saved = DashAuth.valid();
   if (saved && DashAuth.hasScope(saved, SCOPE)) { accessToken = saved.access_token; tokenExpiresAt = saved.expires_at; signedIn = true; }
   render(); if (signedIn) { startTimer(); load(); }
