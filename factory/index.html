@@ -58,6 +58,11 @@
   .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-weight: 500; }
   .crow .l3 { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
   .crow .l3 .grow { flex: 1; }
+  .appcard { padding-top: 10px; }
+  .appcard .grp { margin: 0 0 4px; padding-bottom: 6px; }
+  .appcard > .crow:first-of-type { border-top: 0; }
+  .more { font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 4px 10px; margin-top: 4px; cursor: pointer; }
+  .more:hover { border-color: var(--muted); }
   .crow .type { color: var(--muted); width: 28px; display: inline-flex; justify-content: center; }
   .mark { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid transparent; border-radius: var(--radius); }
   .plus { margin-left: auto; display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 50%; color: var(--ink); text-decoration: none; }
@@ -385,7 +390,7 @@
   }
   // Decide rows get Yes / No, Do rows get Done. A click drops a request file; the engine updates ClickUp.
   // Rows are grouped by app (the name before the first " · "), app by app, so stages never mix.
-  function appOf(t) { var n = String(t.name).replace(/^TEST-/, ''); return n.indexOf(' · ') > 0 ? n.split(' · ')[0] : 'Factory rules'; }
+  function appOf(t) { var n = String(t.name).replace(/^TEST-/, ''), a = n.indexOf(' · ') > 0 ? n.split(' · ')[0] : ''; return a && apps().some(function (x) { return x.name.replace(/^TEST-/, '') === a; }) ? a : 'Factory'; }
   function isTest(t) { return /^TEST-/.test(t.name); }
   // Group order: real apps, then Factory rules, then TEST apps. Heading = app · room · stage.
   function rank(t) { return isTest(t) ? 2 : appOf(t) === 'Factory rules' ? 1 : 0; }
@@ -393,7 +398,7 @@
     var g = appOf(t), app = apps().filter(function (a) { return a.name.replace(/^TEST-/, '') === g; })[0];
     var room = app ? ROOMS.filter(function (r) { return r.st.indexOf(String(app.status).toLowerCase()) >= 0; })[0] : null;
     var c = room ? col(room.slot) : col(slot);
-    return '<div class="grp"><span class="dot" style="background:' + c + '"></span>' + (app ? '<a href="#/card/' + esc(app.id) + '">' + esc(g) + '</a>' : esc(g)) +
+    return '<div class="grp"><span class="dot" style="background:' + c + '"></span>' + (app ? '<a href="#/card/' + esc(app.id) + '">' + esc(g) + '</a>' : 'Factory') +
       (app ? '<span class="st">' + esc((room ? room.name + ' · ' : '') + app.status) + '</span>' : '') + (isTest(t) ? '<span class="pill">TEST</span>' : '') + '</div>';
   }
   // When the engine will apply a click: its next 15-minute run (:03 :18 :33 :48) plus a minute.
@@ -471,13 +476,13 @@
     if (k === 'status') body = ((S.statuses || {})[t._k] || []).map(function (x) { return '<button class="stat" type="button" data-set="status" data-val="' + esc(x.s) + '" data-id="' + esc(t.id) + '" style="--sc:' + esc(x.c) + '">' + esc(x.s) + '</button>'; }).join(' ');
     return '<div class="panel">' + body + '</div>';
   }
-  function row(t, kind) {
+  function row(t, kind, inCard) {
     if (!t._k) allTasks();
     var p = t.pri && t.pri.p ? t.pri : null, sentAt = sent[t.id], ch = pend[t.id];
     // The app's name always leads, bold; anything not tied to an app says Factory.
     var label = String(t.name).replace(/^TEST-/, ''), app = appOf(t), known = apps().some(function (a) { return a.name.replace(/^TEST-/, '') === app; });
     var rest = known ? label.slice(app.length).replace(/^ · /, '') : label;
-    var title = '<b class="app">' + esc(known ? app : 'Factory') + '</b> ' + esc(rest);
+    var title = inCard ? esc(rest) : '<b class="app">' + esc(known ? app : 'Factory') + '</b> ' + esc(rest);
     var acts = sentAt ? '<span class="sent">✓ ' + hm(sentAt) + '</span>' :
       kind === 'decide' ? '<button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '" aria-label="Yes"><i class="ti ti-check"></i></button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '" aria-label="No"><i class="ti ti-x"></i></button>' :
       kind === 'do' ? '<button class="btn yes" type="button" data-act="done" data-id="' + esc(t.id) + '" aria-label="Done"><i class="ti ti-check"></i></button>' : '';
@@ -511,10 +516,10 @@
     }).sort(function (a, b) {
       var ra = a.pri && PRI[a.pri.p] ? PRI[a.pri.p][0] : 5, rb = b.pri && PRI[b.pri.p] ? PRI[b.pri.p][0] : 5;
       var flag = ra - rb, date = (a.due || 9e15) - (b.due || 9e15), age = a.created - b.created, by = prefs.sort || 'flag';
-      return (prefs.group ? appOf(a).localeCompare(appOf(b)) : 0) || (by === 'date' ? date || flag || age : by === 'age' ? age || flag : flag || date || age);
+      return (by === 'date' ? date || flag || age : by === 'age' ? age || flag : flag || date || age);
     });
   }
-  function onCount() { return ['unanswered', 'overdue', 'urgent', 'unflagged', 'me', 'group'].filter(function (k) { return prefs[k]; }).length + (prefs.sort && prefs.sort !== 'flag' ? 1 : 0); }
+  function onCount() { return ['unanswered', 'overdue', 'urgent', 'unflagged', 'me'].filter(function (k) { return prefs[k]; }).length + (prefs.sort && prefs.sort !== 'flag' ? 1 : 0); }
   function chip(key, val, label) {
     var on = key === 'sort' ? (prefs.sort || 'flag') === val : Array.isArray(prefs[key]) ? prefs[key].indexOf(val) >= 0 : val === undefined ? !!prefs[key] : prefs[key] === val;
     return '<button class="pill' + (on ? ' on' : '') + '" type="button" data-pref="' + key + '"' + (val !== undefined ? ' data-val="' + esc(val) + '"' : '') + '>' + label + '</button>';
@@ -525,15 +530,21 @@
     // Two lines only (Lisa, 20 Oct): Filter · Sort.
     return html + '<div class="card fpanel">' +
       '<div class="pills">' + chip('unanswered', undefined, '<i class="ti ti-hourglass"></i> Unanswered') + chip('overdue', undefined, '<i class="ti ti-alert-triangle"></i> Overdue') + chip('urgent', undefined, flagIcon({ p: 'urgent' }) + ' Urgent') + chip('unflagged', undefined, flagIcon(null) + ' Unflagged') + chip('me', undefined, '<i class="ti ti-user"></i> Me') + '</div>' +
-      '<div class="pills">' + chip('sort', 'flag', flagIcon({ p: 'urgent' }) + ' Flag') + chip('sort', 'date', '<i class="ti ti-calendar"></i> Date') + chip('sort', 'age', '<i class="ti ti-clock"></i> Oldest') + chip('group', undefined, '<i class="ti ti-layout-list"></i> By app') + '</div></div>';
+      '<div class="pills">' + chip('sort', 'flag', flagIcon({ p: 'urgent' }) + ' Flag') + chip('sort', 'date', '<i class="ti ti-calendar"></i> Date') + chip('sort', 'age', '<i class="ti ti-clock"></i> Oldest') + '</div></div>';
   }
+  // One card per app (Lisa, 20 Oct): the app's name once in the header, its items inside split by a thin line.
+  // Cards are ordered by their most urgent item; each shows its top 3, "+N" opens the rest (remembered).
+  var shownAll = loadLocal('af-open');
   function list(items, slot, empty, kind) {
-    var show = filtered(items), last = null;
-    var body = show.length ? show.map(function (t) {
-      var head = prefs.group && appOf(t) !== last ? headOf(t, slot) : ''; last = appOf(t);
-      return head + row(t, kind === 'mixed' ? (t._k === 'decisions' ? 'decide' : t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view') : kind);
-    }).join('') : '<p class="muted">' + empty + '</p>';
-    return filterBar(items) + '<div class="card">' + body + '</div>';
+    var show = filtered(items), groups = [], by = {};
+    show.forEach(function (t) { var g = appOf(t); if (!by[g]) { by[g] = []; groups.push(g); } by[g].push(t); });
+    if (!groups.length) return filterBar(items) + '<div class="card"><p class="muted">' + empty + '</p></div>';
+    return filterBar(items) + groups.map(function (g) {
+      var rows = by[g], all = !!(shownAll[g] && shownAll[g].on), top = all ? rows : rows.slice(0, 3);
+      return '<div class="card appcard">' + headOf(rows[0], slot) + top.map(function (t) {
+        return row(t, kind === 'mixed' ? (t._k === 'decisions' ? 'decide' : t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view') : kind, true);
+      }).join('') + (rows.length > 3 ? '<button class="more" type="button" data-action="more" data-app="' + esc(g) + '">' + (all ? '<i class="ti ti-chevron-up"></i>' : '+' + (rows.length - 3)) + '</button>' : '') + '</div>';
+    }).join('');
   }
   function queue(who) {
     var w = who === 'claude' ? 'Claude' : 'Grok';
@@ -701,6 +712,7 @@
       var k = a.getAttribute('data-action');
       if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'cardask') { cardAsk = !cardAsk; render(); var ai = document.querySelector('form.ask[data-ask] input[name=text]'); if (cardAsk && ai) ai.focus(); }
+      else if (k === 'more') { var ga = a.getAttribute('data-app'); shownAll[ga] = { on: !(shownAll[ga] && shownAll[ga].on), at: Date.now() }; saveLocal('af-open', shownAll); render(); }
       else if (k === 'filters') { filtersOpen = !filtersOpen; render(); } else if (k === 'factory') sendFactory(); else if (k === 'today' || k === 'week') { weekView = k === 'week'; render(); }
       return;
     }
