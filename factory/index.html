@@ -244,6 +244,43 @@
   @media (max-width: 600px) { .ptab:not(.dtab) th:nth-child(2), .ptab:not(.dtab) td:nth-child(2), .ptab:not(.dtab) th:nth-child(5), .ptab:not(.dtab) td:nth-child(5), .dtab td:nth-child(4) { display: none; } }
   .lgrid { display: grid; grid-template-columns: 72px 1fr; gap: 4px 8px; align-items: center; margin-top: 10px; }
   .lgrid .lg { font-size: 12px; font-weight: 700; color: var(--muted); }
+
+  /* Colour rule (Lisa, 20 Oct): icons grey at rest, their own colour on hover, so each one is told apart without shouting.
+     Colour at rest only for what needs you: the red Off, overdue dates, the new-comment dot, Decide / Do tags on docs. */
+  .lk[data-g="Build"]:hover { color: var(--ljr-7-text); } .lk[data-g="Run"]:hover { color: var(--ljr-4-text); }
+  .lk[data-g="Sell"]:hover, .lk[data-g="Social"]:hover { color: var(--ljr-6-text); } .lk[data-g="Support"]:hover { color: var(--ljr-5-text); }
+  .dti { color: var(--muted); }
+  tr:hover .dti[data-t="card"], .pill:hover .dti[data-t="card"], tr:hover .dti[data-t="mockup"], .pill:hover .dti[data-t="mockup"] { color: var(--ljr-7-text); }
+  tr:hover .dti[data-t="prompt"], .pill:hover .dti[data-t="prompt"] { color: var(--ljr-3-text); }
+  tr:hover .dti[data-t="research"], .pill:hover .dti[data-t="research"] { color: var(--ljr-6-text); }
+  tr:hover .dti[data-t="report"], .pill:hover .dti[data-t="report"] { color: var(--ljr-5-text); }
+  tr:hover .dti[data-t="rules"], .pill:hover .dti[data-t="rules"] { color: var(--ljr-4-text); }
+  .need { font-size: 12px; font-weight: 700; text-decoration: none; padding: 2px 10px; border-radius: 999px; border: 1px solid; }
+  .need.n4 { color: var(--ljr-4-text); border-color: var(--ljr-4); } .need.n5 { color: var(--ljr-5-text); border-color: var(--ljr-5); }
+  .dgrp td { border-top: 1px solid var(--line); padding-top: 12px; font-weight: 700; }
+  .dgrp:first-child td { border-top: 0; padding-top: 4px; }
+  .dgrp a { color: var(--ink); text-decoration: none; } .dgrp .muted { font-weight: 400; font-size: 12px; }
+  .dtab td { border-top: 0; }
+
+  /* Counts (Lisa, 20 Oct): a faint circle round every number that counts something; menu counts the same, no solid fill. */
+  .cnt { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1; color: var(--ink); box-sizing: border-box; vertical-align: middle; }
+  nav.tabs .n, .fbtn .n { background: transparent !important; color: var(--ink) !important; border: 1px solid var(--line); border-radius: 999px; min-width: 22px; height: 22px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 12px; }
+
+  /* No coloured words (Lisa, 20 Oct): text is always ink. Colour lives only in lines and icons: a coloured outline, ring or icon says "look". */
+  .hot, .why.q, .ferr, .fq .req, .need, .need.n4, .need.n5, .lk.off, .age.old, .date.over, .lock, .banner, .acts .btn.yes, .acts .btn.no { color: var(--ink); }
+  .acts .btn.yes .ti { color: var(--ljr-5-text); } .acts .btn.no .ti { color: var(--ljr-2-text); }
+  .lk.off .ti { color: var(--ljr-2-text); }
+  .lock .ti { color: var(--ljr-3-text); }
+  .banner { background: transparent; }
+  .date.over { border: 1px solid var(--ljr-2); border-radius: 999px; padding: 0 8px; font-weight: 600; }
+  .age.old { border: 1px solid var(--ljr-2); border-radius: 999px; }
+  .hot { border: 1px solid var(--ljr-2); border-radius: 999px; padding: 0 6px; font-weight: 600; }
+  .ferr::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ljr-2); margin-right: 6px; vertical-align: 0; }
+  .fq .req { font-weight: 700; }
+
+  /* ★ = must answer: red, always at the far right of its line, so it never moves (Lisa, 20 Oct). */
+  .fq .qt { position: relative; padding-right: 22px; }
+  .fq .req, .fq .qt .req { position: absolute; right: 0; top: 0; color: var(--ljr-2); font-size: 15px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -382,12 +419,12 @@
       '<button class="pill" type="button" data-action="factory" aria-label="Factory on or off" title="Factory"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span></button>' + enginePill() + '</div><div class="rooms">';
     ROOMS.forEach(function (r) {
       var inRoom = A.filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
-      html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><a class="rlink" href="#/room/' + r.key + '"><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '</a><span class="ct">' + inRoom.length + '</span></h2><span class="stn">' + esc(r.st.join(' · ')) + '</span>' +
+      html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><a class="rlink" href="#/room/' + r.key + '"><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '</a><span class="ct">' + cnt(inRoom.length) + '</span></h2><span class="stn">' + esc(r.st.join(' · ')) + '</span>' +
         inRoom.map(chipOf).join('') + (r.key === 'reception' ? newIdea() : '') + '</section>';
     });
     return html + '</div>';
   }
-  function chipOf(t) { return '<a class="chip' + (stuck(t) ? ' stuck' : '') + '" href="#/card/' + t.id + '">' + esc(t.name) + '<span class="st">' + (stuck(t) ? ic('warn') : '') + esc(t.status) + '</span></a>'; }
+  function chipOf(t) { return '<a class="chip' + (stuck(t) ? ' stuck' : '') + '" href="#/card/' + t.id + '">' + esc(t.name) + '<span class="st">' + (stuck(t) ? ic('warn') : '') + esc(cap(t.status)) + '</span></a>'; }
   // The front door: the Idea Form (AF-ENGINE writes the card and the ClickUp task, even with the factory OFF).
   var FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSfzzTnlyNWeXzFEz9NfYxNXsCFN6KwV8RxFyIRTJZ-WrH15nw/viewform';
   function newIdea() { return '<a class="plus" href="#/new" aria-label="New idea"><i class="ti ti-plus"></i></a>'; }
@@ -413,7 +450,7 @@
     var n = stageNo(t.status), slot = n === null ? 0 : (n <= 3 ? 7 : n <= 5 ? 4 : n === 6 ? 3 : n === 7 ? 6 : 5);
     var subs = (S.lists.work || []).filter(function (x) { return x.tags.indexOf('app-' + t.id) >= 0 && x.tags.indexOf('line') >= 0; });
     var tpl = (S.lists.template || []).filter(function (x) { return x.parent; });
-    var html = '<div class="card"><div class="hero" style="--c:' + col(slot) + '"><div class="disc">' + (n === null ? '–' : n) + '</div><div><h2>' + esc(t.name) + '</h2><p>' + esc(t.status) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
+    var html = '<div class="card"><div class="hero" style="--c:' + col(slot) + '"><div class="disc">' + (n === null ? '–' : n) + '</div><div><h2>' + esc(t.name) + '</h2><p>' + esc(cap(t.status)) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
       '<div class="pills" style="margin-top:10px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<div id="codes" class="codes"><span class="q">…</span></div>' +
       '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span>' + linkStrip(t, false) + '<button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
@@ -456,15 +493,15 @@
     var ds = decisions().filter(function (d) { return String(d.desc).indexOf('GATE: ' + t.id + ' ') >= 0 || (word && word.test(d.name)); });
     var ss = (S.lists.sends || []).filter(function (x) { return key && x.tags.indexOf('app-' + key) >= 0 && isOpen(x); });
     if (!ds.length && !ss.length) return '';
-    return '<div class="stage c"><span class="n">' + ic('stamp') + '</span>Waiting on you<span class="r">' + (ds.length + ss.length) + '</span></div><ul class="lines">' +
+    return '<div class="stage c"><span class="n">' + ic('stamp') + '</span>Waiting on you<span class="r">' + cnt(ds.length + ss.length) + '</span></div><ul class="lines">' +
       ds.map(function (d) { return '<li>' + ic('stamp') + '<a href="#/decide">' + esc(d.name.replace(/^TEST-/, '')) + '</a></li>'; }).join('') +
-      ss.map(function (x) { return '<li>' + ic('send') + '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">Prompt · ' + esc(x.name) + '</a><span class="who">' + esc(x.status) + '</span></li>'; }).join('') + '</ul>';
+      ss.map(function (x) { return '<li>' + ic('send') + '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">Prompt · ' + esc(x.name) + '</a><span class="who">' + esc(cap(x.status)) + '</span></li>'; }).join('') + '</ul>';
   }
   function sendsFor(t) {
     var key = t.tags.filter(function (g) { return /^app-/.test(g); })[0];
     var sends = (S.lists.sends || []).filter(function (x) { return key && x.tags.indexOf(key) >= 0; });
     if (!sends.length) return '';
-    return sends.map(function (x) { return '<li>' + ic('send') + '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><span class="who">' + esc(x.status) + '</span></li>'; }).join('');
+    return sends.map(function (x) { return '<li>' + ic('send') + '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><span class="who">' + esc(cap(x.status)) + '</span></li>'; }).join('');
   }
   // Decide rows get Yes / No, Do rows get Done. A click drops a request file; the engine updates ClickUp.
   // Rows are grouped by app (the name before the first " · "), app by app, so stages never mix.
@@ -477,7 +514,7 @@
     var room = app ? ROOMS.filter(function (r) { return r.st.indexOf(String(app.status).toLowerCase()) >= 0; })[0] : null;
     var c = room ? col(room.slot) : col(slot);
     return '<div class="grp"><span class="dot" style="background:' + c + '"></span>' + (app ? '<a href="#/card/' + esc(app.id) + '">' + esc(g) + '</a>' : 'Factory') +
-      (app ? '<span class="st">' + esc((room ? room.name + ' · ' : '') + app.status) + '</span>' : '') + (isTest(t) ? '<span class="pill">TEST</span>' : '') + linkStrip(app) + '</div>' + (app && addLink && addLink.id === app.id ? linkForm() : '');
+      (app ? '<span class="st">' + esc((room ? room.name + ' · ' : '') + cap(app.status)) + '</span>' : '') + (isTest(t) ? '<span class="pill">TEST</span>' : '') + linkStrip(app) + '</div>' + (app && addLink && addLink.id === app.id ? linkForm() : '');
   }
   // When the engine will apply a click: its next 15-minute run (:03 :18 :33 :48) plus a minute.
   function appliesBy(ts) { var d = new Date(ts), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next + 1); return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
@@ -585,7 +622,7 @@
       kind === 'do' ? '<button class="btn yes" type="button" data-act="done" data-id="' + esc(t.id) + '" aria-label="Done"><i class="ti ti-check"></i></button>' : '';
     // Status: an icon in ClickUp's colour, shown only when it isn't plain "to do".
     var SI = { 'to do': 'circle-dashed', doing: 'progress', 'waiting lisa': 'player-pause', blocked: 'hand-stop', done: 'circle-check', cancelled: 'circle-x' };
-    var stat = t._k === 'apps' || /^to do$/i.test(t.status) ? '' : '<button class="ico" type="button" data-panel="status" data-id="' + esc(t.id) + '" aria-label="Status ' + esc(t.status) + '" title="' + esc(t.status) + '" style="color:' + esc(t.color || 'inherit') + '"><i class="ti ti-' + (SI[String(t.status).toLowerCase()] || 'circle') + '"></i></button>';
+    var stat = t._k === 'apps' || /^to do$/i.test(t.status) ? '' : '<button class="ico" type="button" data-panel="status" data-id="' + esc(t.id) + '" aria-label="Status ' + esc(cap(t.status)) + '" title="' + esc(cap(t.status)) + '" style="color:' + esc(t.color || 'inherit') + '"><i class="ti ti-' + (SI[String(t.status).toLowerCase()] || 'circle') + '"></i></button>';
     var icons = iconsOf(t, kind).map(function (x) { return '<button class="ico' + (openPanel && openPanel.id === t.id && openPanel.k === x[0] ? ' on' : '') + '" type="button" data-panel="' + x[0] + '" data-id="' + esc(t.id) + '" aria-label="' + x[2] + '" style="--hc:var(--ljr-' + x[4] + '-text)">' + x[1] + (x[3] ? '<i class="new"></i>' : '') + '</button>'; }).join('');
     var mineQ = asked[t.id] ? '<div class="why q">✎ ' + esc(asked[t.id].text) + ' · ✓ ' + hm(asked[t.id].at) + '</div>' : '';
     var date = '<label class="date' + (overdue(t) ? ' over' : '') + '">' + (t.due ? dmy(t.due) : '<i class="ti ti-calendar"></i>') + '<input type="date" data-due="' + esc(t.id) + '" value="' + (t.due ? iso(t.due) : '') + '" aria-label="Due date"></label>';
@@ -643,7 +680,7 @@
       var rows = by[g], all = !!(shownAll[g] && shownAll[g].on), top = all ? rows : rows.slice(0, 3);
       return '<div class="card appcard' + (alarm(appTask(rows[0])) ? ' alarm' : '') + '">' + headOf(rows[0], slot) + top.map(function (t) {
         return row(t, kind === 'mixed' ? (t._k === 'decisions' ? 'decide' : t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view') : kind, true);
-      }).join('') + (rows.length > 3 ? '<button class="more" type="button" data-action="more" data-app="' + esc(g) + '">' + (all ? '<i class="ti ti-chevron-up"></i>' : '+' + (rows.length - 3)) + '</button>' : '') + '</div>';
+      }).join('') + (rows.length > 3 ? '<button class="more" type="button" data-action="more" data-app="' + esc(g) + '">' + (all ? '<i class="ti ti-chevron-up"></i>' : cnt('+' + (rows.length - 3))) + '</button>' : '') + '</div>';
     }).join('');
   }
   // Everyone who has open work (assigned or tagged in ClickUp), except Lisa: a new person gets a pill by themselves.
@@ -709,7 +746,7 @@
     if (alarm(app)) out += L.overskill ? '<a class="lk off" href="' + esc(L.overskill) + '" target="_blank" rel="noopener" title="Unpublish in OverSkill"><i class="ti ti-power"></i> Off</a>' :
       '<span class="lk off no" title="OverSkill link not recorded: unpublish from OverSkill"><i class="ti ti-power"></i> Off</span>';
     LINKS.filter(function (x) { return full || ['overskill', 'live', 'mockup'].indexOf(x[0]) >= 0; }).forEach(function (x) {
-      if (L[x[0]]) out += '<a class="lk" href="' + esc(L[x[0]]) + '" target="_blank" rel="noopener" title="' + x[2] + (L['_from_' + x[0]] ? ' · ' + esc(L['_from_' + x[0]]) : '') + '"><i class="ti ti-' + x[1] + '"></i></a>';
+      if (L[x[0]]) out += '<a class="lk" data-g="' + x[4] + '" href="' + esc(L[x[0]]) + '" target="_blank" rel="noopener" title="' + x[2] + (L['_from_' + x[0]] ? ' · ' + esc(L['_from_' + x[0]]) : '') + '"><i class="ti ti-' + x[1] + '"></i></a>';
       else if (st >= x[3] && st >= 0) out += '<button class="lk no" type="button" data-addlink-open="' + esc(app.id) + '" data-key="' + x[0] + '" title="' + x[2] + ': add"><i class="ti ti-' + x[1] + '"></i></button>';
     });
     if (st >= 7) out += '<a class="lk" href="#/problem/' + esc(app.id) + '" title="Report a problem"><i class="ti ti-alert-triangle"></i></a>';
@@ -721,8 +758,8 @@
     var L = linksOf(app), st = reached(app);
     return '<div class="lgrid">' + LINK_GROUPS.map(function (g) {
       var cells = LINKS.filter(function (x) { return x[4] === g; }).map(function (x) {
-        if (L[x[0]]) return '<a class="lk" href="' + esc(L[x[0]]) + '" target="_blank" rel="noopener" title="' + x[2] + (L['_from_' + x[0]] ? ' · ' + esc(L['_from_' + x[0]]) : '') + '"><i class="ti ti-' + x[1] + '"></i></a>';
-        return '<button class="lk no" type="button" data-addlink-open="' + esc(app.id) + '" data-key="' + x[0] + '" title="' + x[2] + ': add"' + (st >= x[3] ? '' : ' style="opacity:.35"') + '><i class="ti ti-' + x[1] + '"></i></button>';
+        if (L[x[0]]) return '<a class="lk" data-g="' + x[4] + '" href="' + esc(L[x[0]]) + '" target="_blank" rel="noopener" title="' + x[2] + (L['_from_' + x[0]] ? ' · ' + esc(L['_from_' + x[0]]) : '') + '"><i class="ti ti-' + x[1] + '"></i></a>';
+        return '<button class="lk no" data-g="' + x[4] + '" type="button" data-addlink-open="' + esc(app.id) + '" data-key="' + x[0] + '" title="' + x[2] + ': add"' + (st >= x[3] ? '' : ' style="opacity:.35"') + '><i class="ti ti-' + x[1] + '"></i></button>';
       }).join('');
       return '<span class="lg">' + g + '</span><span>' + cells + '</span>';
     }).join('') + (famName(app) ? '<span class="lg">Family</span><span class="muted">' + esc(famName(app)) + '</span>' : '') + '</div>';
@@ -730,8 +767,12 @@
   // Under Decide: what the factory did without you, and what waits behind your cap of 10.
   function decideFoot() {
     var a = autoToday(), q = queuedN();
-    return a || q ? '<p class="muted" style="margin:0">' + (a ? '<i class="ti ti-circle-check"></i> ' + a + ' passed on their own today' : '') + (a && q ? ' · ' : '') + (q ? '<i class="ti ti-hourglass"></i> ' + q + ' waiting behind these' : '') + '</p>' : '';
+    return a || q ? '<p class="muted" style="margin:0">' + (a ? '<i class="ti ti-circle-check"></i> ' + cnt(a) + ' passed on their own today' : '') + (a && q ? ' · ' : '') + (q ? '<i class="ti ti-hourglass"></i> ' + cnt(q) + ' waiting behind these' : '') + '</p>' : '';
   }
+  // A count sits in a faint circle, so it reads as "how many", never as part of the words (Lisa, 20 Oct).
+  function cnt(n) { return '<span class="cnt">' + n + '</span>'; }
+  // Words on screen start with a capital, after any code number: "8 Operate", "To do", "0 No data stored" (Lisa, 20 Oct).
+  function cap(t) { return String(t == null ? '' : t).replace(/^(\S*\d\S*\s+|[?]\s+)?([a-z])/, function (m, d, c) { return (d || '') + c.toUpperCase(); }); }
   function lines(t) { return String(t.desc || '').split(/\r?\n|\\n/).map(function (l) { return l.trim(); }).filter(Boolean); }
   function line(t, re) { var l = lines(t).filter(function (x) { return re.test(x); })[0]; return l ? l.replace(re, '').trim() : ''; }
   function urls(t) { return (String(t.desc || '').match(/https?:\/\/[^\s<)\\]+/g) || []).filter(function (u, i, a) { return a.indexOf(u) === i; }); }
@@ -743,8 +784,8 @@
     if (!y && !n) return why(t, false);
     if (n && t.tags.indexOf('gate') >= 0 && !/again/i.test(n)) n += ' · asked again in 7 days';
     var lk = function (x) { return esc(x).replace(/https?:\/\/[^\s<]+/g, function (u) { return '<a href="' + u + '" target="_blank" rel="noopener">open</a>'; }); };
-    return (q ? '<div class="q1">' + lk(q) + info(what) + '</div>' : '') +
-      '<div class="outs">' + (y ? '<i class="ti ti-check y"></i><span>' + lk(y) + '</span>' : '') + (n ? '<i class="ti ti-x n"></i><span>' + lk(n) + '</span>' : '') +
+    return (q ? '<div class="q1">' + lk(cap(q)) + info(cap(what)) + '</div>' : '') +
+      '<div class="outs">' + (y ? '<i class="ti ti-check y"></i><span>' + lk(cap(y)) + '</span>' : '') + (n ? '<i class="ti ti-x n"></i><span>' + lk(cap(n)) + '</span>' : '') +
       extra.map(function (l) { return '<i class="ti ti-message-circle"></i><span>' + lk(l) + '</span>'; }).join('') + '</div>';
   }
   function ago(ts) { var h = (Date.now() - ts) / 36e5; return h < 1 ? Math.max(1, Math.round(h * 60)) + 'm' : h < 48 ? Math.round(h) + 'h' : Math.round(h / 24) + 'd'; }
@@ -802,6 +843,20 @@
     ['SEND', 0, "What does the app send out to systems we don't control?", ['0 nothing', '1 users download their own data', '2 pushed out automatically'], 'e.g. 2 = posts results to a registry'],
     ['PAY', 1, 'Does money move between parties in one chain?', ['0 none', '1 Lisa bills the business', '2 payouts within one chain (reseller or parent body)'], 'e.g. 1 = monthly subscription to you']
   ];
+  // [field, question, (i) example, chips or null, must answer]
+  var BRIEF = [
+    // Brunson: dream customer · their "before" and "after" · new opportunity beats improvement · false beliefs that stop the sale.
+    // Hormozi: value = dream outcome × likelihood ÷ (time × effort). JTBD: the moment that makes them look. Schwartz: their own words.
+    ['who', 'Who is the dream customer?', 'One person you can picture: role, size, place. e.g. "a 1–3 person UK dog breeder with 2–6 litters a year"', null, 1],
+    ['now', 'What are they stuck with today?', 'Their "before", in their words: the workaround, the hours, the money, the worry. e.g. "paper and Excel; KC forms take an evening; buyers want health proof I can\'t find"', null, 1],
+    ['after', 'What changes for them once it works?', 'Their "after": the result they would pay for, and how fast. e.g. "every litter and buyer pack in one place; KC paperwork in 10 minutes"', null, 1],
+    ['moment', 'What makes them go looking for help?', 'The moment it hurts enough to act. e.g. "a buyer asks for health papers on the day of collection"', null, 0],
+    ['kind', 'New, better, or a replacement?', 'New = a new way of doing it (sells easiest) · Better = an improvement on what they use · Replacement = they switch from a named tool.', ['New', 'Better', 'Replacement'], 1],
+    ['doubt', 'What would stop them buying?', 'Their doubts about it, about themselves, or about time and money. e.g. "I\'m not techy", "my data is in 6 places", "another subscription"', null, 0],
+    ['rivals', 'What do they use now?', 'Apps, sheets, paper, people. Names let research find the 1–2★ reviews.', null, 0],
+    ['where', 'Where do they gather?', 'Facebook groups, forums, shows, associations, hashtags: where research reads complaints and marketing finds them.', null, 0],
+    ['pays', 'Who pays, and what is it worth to them a month?', 'Who signs up and pays, a price guess, and what it saves or earns them each month.', null, 0]
+  ];
   var KILLS = [['FRAGILE', 'Could it give wrong answers that look right?'], ['ONESHOT', 'Would people use it once and stop?'], ['NOHOOK', 'Is there no reason to come back?']];
   var idea = (function () { try { return JSON.parse(localStorage.getItem('af-idea') || '') || {}; } catch (e) { return {}; } })();
   function saveIdea() { idea.at = Date.now(); try { localStorage.setItem('af-idea', JSON.stringify(idea)); } catch (e) {} }
@@ -809,7 +864,7 @@
   function chipsFor(key, opts, q) {
     return '<div class="chips">' + opts.map(function (o) {
       var m = o.match(/^(\S+)\s+(.*)$/) || [o, o, ''];
-      return '<button class="ch' + ((idea.a || {})[key] === o ? ' on' : '') + '" type="button" data-pick="' + esc(key) + '" data-val="' + esc(o) + '"><b>' + esc(m[1]) + '</b>' + esc(m[2]) + '</button>';
+      return '<button class="ch' + ((idea.a || {})[key] === o ? ' on' : '') + '" type="button" data-pick="' + esc(key) + '" data-val="' + esc(o) + '"><b>' + esc(/\d/.test(m[1]) ? m[1] : cap(m[1])) + '</b>' + esc(cap(m[2])) + '</button>';
     }).join('') + '</div>';
   }
   function vNew() {
@@ -818,11 +873,14 @@
     KILLS.forEach(function (k) { if (!idea.a[k[0]]) idea.a[k[0]] = 'no'; });
     var er = function (k) { return formErr[k] ? '<div class="ferr">' + esc(formErr[k]) + '</div>' : ''; };
     return '<div class="card"><div class="grp" style="margin:0 0 6px"><span class="dot" style="background:var(--ljr-7)"></span>New idea</div>' +
-      '<div class="fq"><p class="qt">Name <span class="req">★</span></p><input class="fin" data-f="name" value="' + esc(idea.name || '') + '" aria-label="Name" maxlength="60">' + er('name') + '</div>' +
-      '<div class="fq"><p class="qt">What · who pays · pain <span class="req">★</span></p><textarea class="fin" data-f="brief" aria-label="Brief">' + esc(idea.brief || '') + '</textarea>' + er('brief') + '</div>' +
+      '<div class="fq"><p class="qt">Name<span class="req" title="Must answer">★</span></p><input class="fin" data-f="name" value="' + esc(idea.name || '') + '" aria-label="Name" maxlength="60">' + er('name') + '</div>' +
+      BRIEF.map(function (b) {
+        var input = b[3] ? chipsFor(b[0], b[3]) : '<textarea class="fin" data-f="' + b[0] + '" aria-label="' + esc(b[1]) + '" rows="2">' + esc(idea[b[0]] || '') + '</textarea>';
+        return '<div class="fq"><p class="qt">' + esc(b[1]) + info(b[2]) + (b[4] ? '<span class="req" title="Must answer">★</span>' : '') + '</p>' + input + er(b[0]) + '</div>';
+      }).join('') +
       PARTS.map(function (p) {
         var opts = p[3].slice(); if (!p[1]) opts.push('? not yet known');
-        return '<div class="fq" id="q-' + p[0] + '"><p class="qt"><span class="code">' + p[0] + '</span>' + esc(p[2]) + (p[1] ? ' <span class="req">★</span>' : '') + info(p[4]) + '</p>' + chipsFor(p[0], opts) + er(p[0]) + '</div>';
+        return '<div class="fq" id="q-' + p[0] + '"><p class="qt"><span class="code">' + p[0] + '</span>' + esc(p[2]) + info(p[4]) + (p[1] ? '<span class="req" title="Must answer">★</span>' : '') + '</p>' + chipsFor(p[0], opts) + er(p[0]) + '</div>';
       }).join('') +
       KILLS.map(function (k) { return '<div class="fq"><p class="qt"><span class="code">' + k[0] + '</span>' + esc(k[1]) + '</p>' + chipsFor(k[0], ['no', 'yes']) + '</div>'; }).join('') +
       '<div class="fq"><p class="qt"><i class="ti ti-pencil" aria-hidden="true"></i></p><textarea class="fin" data-f="note" aria-label="Note">' + esc(idea.note || '') + '</textarea></div>' +
@@ -831,11 +889,12 @@
   function sendIdea() {
     formErr = {};
     if (!(idea.name || '').trim()) formErr.name = 'Add a name';
-    if (!(idea.brief || '').trim()) formErr.brief = 'Add what it is, who pays and the pain';
+    BRIEF.forEach(function (b) { if (b[4] && !(b[3] ? (idea.a || {})[b[0]] : (idea[b[0]] || '').trim())) formErr[b[0]] = b[3] ? 'Pick one' : 'Add a few words'; });
     PARTS.forEach(function (p) { if (p[1] && !(idea.a || {})[p[0]]) formErr[p[0]] = 'Pick one'; });
     if (Object.keys(formErr).length) { render(); var first = document.querySelector('.ferr'); if (first) first.scrollIntoView({ block: 'center' }); return; }
     formNote = 'Sending…'; render();
-    var body = { kind: 'idea', at: new Date().toISOString(), name: idea.name.trim(), brief: idea.brief.trim(), note: (idea.note || '').trim(), answers: idea.a };
+    var brief = BRIEF.map(function (b) { var v = b[3] ? ((idea.a || {})[b[0]] || '') : (idea[b[0]] || '').trim(); return v ? b[1].replace(/\?$/, '') + ': ' + v : ''; }).filter(Boolean).join('\n');
+    var body = { kind: 'idea', at: new Date().toISOString(), name: idea.name.trim(), brief: brief, note: (idea.note || '').trim(), answers: idea.a, brief_parts: BRIEF.reduce(function (o, b) { o[b[0]] = b[3] ? ((idea.a || {})[b[0]] || '') : (idea[b[0]] || '').trim(); return o; }, {}) };
     withWrite(function () {
       return putRequest('idea', body).then(function () {
         try { localStorage.removeItem('af-idea'); } catch (e) {}
@@ -900,19 +959,19 @@
       return true;
     }).sort(function (a, b) { var o = ['alarm', 'stuck', 'live', 'building', 'idea', 'archive']; return o.indexOf(health(a)) - o.indexOf(health(b)) || reached(b) - reached(a) || b.updated - a.updated; });
     var chip = function (k, v, label) { return '<button class="pill' + (pfo[k] === v ? ' on' : '') + '" type="button" data-pf="' + k + '" data-val="' + esc(v) + '">' + label + '</button>'; };
-    var cnt = function (h) { return all.filter(function (a) { return health(a) === h; }).length; };
+    var cntH = function (h) { return all.filter(function (a) { return health(a) === h; }).length; };
     return '<div class="card"><div class="pills"><span class="flab">Filter</span>' +
-      Object.keys(HW).map(function (h) { return cnt(h) ? chip('h', h, '<i class="ti ti-' + HW[h][1] + '"></i> ' + HW[h][0] + ' ' + cnt(h)) : ''; }).join('') +
+      Object.keys(HW).map(function (h) { return cntH(h) ? chip('h', h, '<i class="ti ti-' + HW[h][1] + '"></i> ' + HW[h][0] + ' ' + cnt(cntH(h))) : ''; }).join('') +
       (fams.length > 1 ? fams.map(function (f) { return chip('fam', f, esc(f)); }).join('') : '') +
       ((pfo.h || pfo.fam || pfo.q) ? '<button class="pill" type="button" data-action="pfclear" aria-label="Clear filters" title="Clear filters"><i class="ti ti-filter-off"></i></button>' : '') + '</div>' +
       '<div style="margin:8px 0"><input class="fin search" data-f="pfq" value="' + esc(pfo.q || '') + '" aria-label="Search apps" type="search"></div>' +
       '<table class="ptab"><thead><tr><th>App</th><th>Family</th><th>Stage</th><th></th><th>Changed</th></tr></thead><tbody>' +
       list.slice(0, pfo.all ? 2000 : 50).map(function (a) {
         var h = HW[health(a)];
-        return '<tr><td><a href="#/card/' + esc(a.id) + '"><span class="dot" style="background:var(--ljr-' + h[2] + ');display:inline-block;width:9px;height:9px;margin-right:6px"></span>' + esc(a.name.replace(/^TEST-/, '')) + '</a>' + (isTest(a) ? ' <span class="pill">TEST</span>' : '') + '</td><td class="muted">' + esc(famName(a) || '—') + '</td><td>' + esc(a.status) + '</td><td title="' + h[0] + '"><i class="ti ti-' + h[1] + '"></i></td><td class="muted">' + ago(a.updated) + '</td></tr>';
+        return '<tr><td><a href="#/card/' + esc(a.id) + '"><span class="dot" style="background:var(--ljr-' + h[2] + ');display:inline-block;width:9px;height:9px;margin-right:6px"></span>' + esc(a.name.replace(/^TEST-/, '')) + '</a>' + (isTest(a) ? ' <span class="pill">TEST</span>' : '') + '</td><td class="muted">' + esc(famName(a) || '—') + '</td><td>' + esc(cap(a.status)) + '</td><td title="' + h[0] + '"><i class="ti ti-' + h[1] + '"></i></td><td class="muted">' + ago(a.updated) + '</td></tr>';
       }).join('') + '</tbody></table>' +
       (list.length > 50 && !pfo.all ? '<button class="more" type="button" data-action="pfall">+' + (list.length - 50) + '</button>' : '') +
-      (!pfo.h && !pfo.arch && cnt('archive') ? '<button class="more" type="button" data-action="pfarch"><i class="ti ti-archive"></i> ' + cnt('archive') + '</button>' : '') + '</div>';
+      (!pfo.h && !pfo.arch && cntH('archive') ? '<button class="more" type="button" data-action="pfarch"><i class="ti ti-archive"></i> ' + cnt('archive') + '</button>' : '') + '</div>';
   }
   // Apps & ideas at any size: Needs you · Building · Ideas · Archive (folded), with a search box.
   var appQ = '';
@@ -925,7 +984,7 @@
       ['Ideas', 'bulb', list.filter(function (a) { return !arch(a) && !alarm(a) && !stuck(a) && reached(a) < 4; })]];
     var a8 = list.filter(arch);
     return '<div class="card"><input class="fin search" data-f="appq" value="' + esc(appQ) + '" aria-label="Search apps" type="search"><div style="margin-top:10px">' +
-      G.filter(function (g) { return g[2].length; }).map(function (g) { return '<div class="grpt"><i class="ti ti-' + g[1] + '"></i>' + g[0] + ' · ' + g[2].length + '</div><div class="pills">' + g[2].map(chipOf).join('') + '</div>'; }).join('') +
+      G.filter(function (g) { return g[2].length; }).map(function (g) { return '<div class="grpt"><i class="ti ti-' + g[1] + '"></i>' + g[0] + ' ' + cnt(g[2].length) + '</div><div class="pills">' + g[2].map(chipOf).join('') + '</div>'; }).join('') +
       (a8.length ? '<details class="arch"><summary class="grpt"><i class="ti ti-archive"></i>Archive · ' + a8.length + '</summary><div class="pills">' + a8.map(chipOf).join('') + '</div></details>' : '') +
       '</div></div>';
   }
@@ -958,27 +1017,44 @@
     });
     return Object.keys(by).map(function (k) { return by[k]; });
   }
+  // Docs (Lisa, 20 Oct): search first. Without a search: each app in progress (idea → launch) with its own docs, plus any doc a
+  // waiting Decide / Do item needs (coloured tag = needs you). Search finds every doc, live and old.
   function vDocs() {
-    var docs = allDocs(), q = (dq.q || '').toLowerCase(), appsIn = [];
-    docs.forEach(function (d) { if (appsIn.indexOf(d.app) < 0) appsIn.push(d.app); });
-    var openIds = decisions().concat(mine()).map(function (t) { return t.name; });
+    var docs = allDocs(), q = (dq.q || '').toLowerCase();
+    var need = {}; decisions().forEach(function (t) { need[t.name] = 'decide'; }); mine().forEach(function (t) { if (!need[t.name]) need[t.name] = 'do'; });
+    var inPlay = {}; apps().forEach(function (a) { var h = health(a); if (h !== 'archive' && h !== 'live') inPlay[a.name.replace(/^TEST-/, '')] = a; });
+    var tagOf = function (d) { var k = ''; d.from.forEach(function (n) { if (need[n] === 'decide') k = 'decide'; else if (need[n] === 'do' && !k) k = 'do'; }); return k; };
     var list = docs.filter(function (d) {
-      if (!q && !dq.app && !dq.type && !d.from.some(function (n) { return openIds.indexOf(n) >= 0; })) return false;
-      if (dq.app && d.app !== dq.app) return false;
       if (dq.type && d.type[0] !== dq.type) return false;
-      return !q || (d.title + ' ' + d.app + ' ' + d.from.join(' ')).toLowerCase().indexOf(q) >= 0;
-    }).sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+      if (dq.app && d.app !== dq.app) return false;
+      if (q) return (d.title + ' ' + d.app + ' ' + d.from.join(' ')).toLowerCase().indexOf(q) >= 0;
+      return !!tagOf(d) || !!inPlay[d.app] || dq.app || dq.type;
+    });
+    var groups = [], by = {};
+    list.forEach(function (d) { if (!by[d.app]) { by[d.app] = []; groups.push(d.app); } by[d.app].push(d); });
+    groups.sort(function (a, b) { var na = by[a].some(tagOf) ? 0 : 1, nb = by[b].some(tagOf) ? 0 : 1; return na - nb || a.localeCompare(b); });
     var chip = function (k, v, label) { return '<button class="pill' + (dq[k] === v ? ' on' : '') + '" type="button" data-dq="' + k + '" data-val="' + esc(v) + '">' + label + '</button>'; };
-    var active = docs.filter(function (d) { return d.from.some(function (n) { return openIds.indexOf(n) >= 0; }); });
-    appsIn = []; active.forEach(function (d) { if (appsIn.indexOf(d.app) < 0) appsIn.push(d.app); });
+    var TAG = { decide: ['Decide', '#/decide', 4], do: ['Do', '#/do', 5] };
+    var row = function (d) {
+      var k = tagOf(d);
+      return '<tr><td style="width:28px"><i class="ti ti-' + d.type[1] + ' dti" data-t="' + d.type[0] + '" title="' + d.type[2] + '"></i></td>' +
+        '<td><a href="' + esc(d.url) + '" target="_blank" rel="noopener" title="Opens in Drive (new tab)">' + esc(d.title) + '</a></td>' +
+        '<td style="width:72px">' + (k ? '<a class="need n' + TAG[k][2] + '" href="' + TAG[k][1] + '">' + TAG[k][0] + '</a>' : '') + '</td>' +
+        '<td style="width:30px"><a class="mark" href="' + esc(d.url) + '" target="_blank" rel="noopener" aria-label="Open in Drive (new tab)" title="Opens in Drive (new tab)">' + DRIVE_MARK + '</a></td></tr>';
+    };
+    var head = function (g) {
+      var a = inPlay[g] || apps().filter(function (x) { return x.name.replace(/^TEST-/, '') === g; })[0];
+      var h = a ? HW[health(a)] : null;
+      return '<tr class="dgrp"><td colspan="4"><span class="dot" style="background:var(--ljr-' + (h ? h[2] : 0) + ');display:inline-block;width:9px;height:9px;margin-right:6px"></span>' +
+        (a ? '<a href="#/card/' + esc(a.id) + '">' + esc(g) + '</a> <span class="muted">' + esc(cap(a.status)) + '</span>' : esc(g)) + '</td></tr>';
+    };
+    var shown = 0, body = groups.map(function (g) { var rows = by[g].slice(0, dq.all ? 999 : 8); shown += rows.length; return head(g) + rows.map(row).join('') + (by[g].length > rows.length ? '<tr><td></td><td colspan="3">' + cnt('+' + (by[g].length - rows.length)) + '</td></tr>' : ''); }).join('');
+    var typesHere = DT.filter(function (t) { return docs.some(function (x) { return x.type[0] === t[0]; }); });
     return '<div class="card"><input class="fin search" data-f="dqq" value="' + esc(dq.q || '') + '" aria-label="Search all docs" type="search" style="max-width:none">' +
-      '<div class="pills" style="margin-top:10px"><span class="flab">App</span>' + appsIn.sort().map(function (a) { return chip('app', a, esc(a)); }).join('') + '</div>' +
-      '<div class="pills" style="margin-top:8px"><span class="flab">Type</span>' + DT.filter(function (d) { return docs.some(function (x) { return x.type[0] === d[0]; }); }).map(function (d) { return chip('type', d[0], '<i class="ti ti-' + d[1] + '"></i> ' + d[2]); }).join('') +
+      '<div class="pills" style="margin-top:10px"><span class="flab">Type</span>' + typesHere.map(function (t) { return chip('type', t[0], '<i class="ti ti-' + t[1] + ' dti" data-t="' + t[0] + '"></i> ' + t[2]); }).join('') +
       ((dq.app || dq.type || dq.q) ? '<button class="pill" type="button" data-action="dqclear" aria-label="Clear filters" title="Clear filters"><i class="ti ti-filter-off"></i></button>' : '') + '</div>' +
-      '<table class="ptab dtab" style="margin-top:8px"><tbody>' + list.slice(0, dq.all ? 3000 : 60).map(function (d) {
-        return '<tr><td style="width:28px"><i class="ti ti-' + d.type[1] + '" title="' + d.type[2] + '"></i></td><td><a href="' + esc(d.url) + '" target="_blank" rel="noopener" title="Opens in Drive (new tab)">' + esc(d.title) + '</a></td><td style="width:30px"><a class="mark" href="' + esc(d.url) + '" target="_blank" rel="noopener" aria-label="Open in Drive (new tab)" title="Opens in Drive (new tab)">' + DRIVE_MARK + '</a></td><td class="muted">' + esc(d.app) + '</td><td class="muted" title="' + esc(d.from.join(' · ')) + '">' + (d.from.length ? d.from.length : '') + '</td></tr>';
-      }).join('') + '</tbody></table>' + (list.length > 60 && !dq.all ? '<button class="more" type="button" data-action="dqall">+' + (list.length - 60) + '</button>' : '') +
-      (list.length ? '' : '<p class="muted">—</p>') + '</div>';
+      '<table class="ptab dtab" style="margin-top:8px"><tbody>' + body + '</tbody></table>' +
+      (shown ? '' : '<p class="muted">—</p>') + (!dq.all && list.length > shown ? '<button class="more" type="button" data-action="dqall"><i class="ti ti-chevron-down"></i></button>' : '') + '</div>';
   }
   // full = the whole description (title tapped); otherwise the first 4 lines plus Claude's answers.
   function why(t, full) {
@@ -1049,7 +1125,7 @@
   // Typing is kept as you go, so a refresh never wipes a half-written answer.
   document.addEventListener('input', function (e) {
     var f = e.target.getAttribute && e.target.getAttribute('data-f'); if (!f) return;
-    if (f === 'name' || f === 'brief' || f === 'note') { idea[f] = e.target.value; delete formErr[f]; saveIdea(); }
+    if (f === 'name' || f === 'note' || BRIEF.some(function (b) { return b[0] === f; })) { idea[f] = e.target.value; delete formErr[f]; saveIdea(); }
     else if (f === 'pwhat') prob.what = e.target.value;
     else if (f === 'dqq') { dq.q = e.target.value; saveDq(); var p4 = e.target.selectionStart; render(); var b4 = document.querySelector('[data-f="dqq"]'); if (b4) { b4.focus(); b4.setSelectionRange(p4, p4); } }
     else if (f === 'pfq') { pfo.q = e.target.value; savePf(); var p2 = e.target.selectionStart; render(); var b2 = document.querySelector('[data-f="pfq"]'); if (b2) { b2.focus(); b2.setSelectionRange(p2, p2); } }
