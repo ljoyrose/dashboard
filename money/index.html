@@ -221,7 +221,7 @@
   <div class="here"><span></span><h2 id="hereTitle" tabindex="-1">Now</h2></div>
   <div id="view"></div>
 </main>
-<footer class="wrap wide"><span class="info" title="Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time">i</span></footer>
+<footer class="wrap wide"><span class="info" tabindex="0" title="Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time">i<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"> Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time</span></span></footer>
 
 <script>
 (function () {
@@ -786,7 +786,8 @@
   function calm() {
     document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
       var t = Array.prototype.map.call(ul.querySelectorAll('li'), function (li) { return li.textContent.trim(); }).join(' · ');
-      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('aria-label', t); s.setAttribute('tabindex', '0'); s.textContent = 'i';
+      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.textContent = 'i';
+      var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h); // screen readers (and tests) still get the words
       ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
     });
   }
