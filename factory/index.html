@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-factory-v1-2026-10-19">
+<meta name="build" content="ljr-factory-find-bar-2026-10-20">
 <title>Factory</title>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
@@ -287,6 +287,27 @@
   .codes .csep { color: var(--muted); padding: 0 4px; align-self: center; }
   .codes .cd { font-size: 12px; font-weight: 600; border: 1.5px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--ink); }
   .codes .cd.set { border-color: var(--ljr-5); } .codes .cd.open { border-color: var(--ljr-3); } .codes .cd.bad { border-color: var(--ljr-2); }
+
+  /* Find bar (Lisa, 20 Oct): one bar, same place on every list tab. Search · App · Kind always; Who · Stage · Flags · Sort · TEST behind the Filter button. */
+  nav.tabs .cal { margin-left: auto; }
+  .fbar2 { display: flex; flex-direction: column; gap: 8px; }
+  .srow { display: flex; gap: 8px; align-items: center; }
+  .sbox { flex: 1; display: flex; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 0 12px; background: var(--surface); }
+  .sbox:focus-within { border-color: var(--muted); }
+  .sbox .ti { color: var(--muted); font-size: 16px; }
+  .sbox input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 15px; padding: 8px 0; }
+  .sbox input::-webkit-search-cancel-button { cursor: pointer; }
+  .fbar2 .pills { gap: 8px; }
+  .pill { cursor: pointer; font-family: inherit; color: var(--ink); }
+  .pill .cnt { min-width: 20px; height: 20px; font-size: 11px; }
+  .pill.stg { border-color: var(--c); min-width: 32px; justify-content: center; }
+  .pill.stg.on { box-shadow: inset 0 0 0 1px var(--c); }
+  .pill.on { box-shadow: inset 0 0 0 1px var(--muted); }
+  .empty { display: flex; gap: 12px; align-items: center; }
+  .appmenu { max-width: 1600px; margin: 0 auto; padding: 0 24px 12px; }
+  @media (max-width: 600px) { .appmenu { padding: 0 16px 12px; } }
+  .appmenu .pills { gap: 8px; }
+  .sect { font-size: 13px; font-weight: 700; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 4px 0 0; }
 </style>
 </head>
 <body>
@@ -305,6 +326,7 @@
 <header>
   <div class="top">
     <h1><a href="#/rooms">Factory</a></h1>
+    <button id="appPick" class="btn hidden" type="button" data-action="apppick" aria-label="Apps" aria-expanded="false"><i class="ti ti-apps"></i></button>
     <span id="stamp" class="stamp"></span>
     <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
@@ -312,13 +334,14 @@
     <a class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
   </div>
   <nav class="tabs" aria-label="Sections">
+    <a href="#/me" data-nav="me">Me <span class="n" id="nMe">0</span></a>
     <a href="#/rooms" data-nav="rooms">Rooms</a>
     <a href="#/decide" data-nav="decide">Decide <span class="n" id="nDecide">0</span></a>
     <a href="#/do" data-nav="do">Do <span class="n" id="nDo">0</span></a>
     <a href="#/docs" data-nav="docs">Docs</a>
-    <button id="filtersBtn" class="fbtn hidden" type="button" data-action="filters" aria-label="Sort and filter"><i class="ti ti-adjustments-horizontal"></i><span class="n" id="nFilters"></span></button>
     <a href="#/today" data-nav="today" aria-label="Today" class="cal"><i class="ti ti-calendar"></i></a>
   </nav>
+  <div id="appMenu" class="appmenu hidden"></div>
 </header>
 <main class="wrap" id="content">
   <div id="banner" class="banner hidden" role="status"></div>
@@ -431,7 +454,7 @@
 
   /* views */
   function vRooms() {
-    var A = apps(), html = '<div class="pills">' +
+    var all = apps(), fsR = fsOf('rooms'), A = all.filter(function (a) { return hit(a, fsR, APP); }), html = findBar('rooms', all, APP, []) + (A.length ? '' : emptyBox()) + '<div class="pills">' +
       // Every count is a link: it opens the list it counts.
       '<a class="pill" href="#/all" title="Apps"><i class="ti ti-apps"></i> ' + A.length + '</a>' +
       '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> <span' + (A.filter(stuck).length >= 1 ? ' class="hot"' : '') + '>' + A.filter(stuck).length + '</span></a>' +
@@ -526,7 +549,16 @@
   }
   // Decide rows get Yes / No, Do rows get Done. A click drops a request file; the engine updates ClickUp.
   // Rows are grouped by app (the name before the first " · "), app by app, so stages never mix.
-  function appOf(t) { var n = String(t.name).replace(/^TEST-/, ''), a = n.indexOf(' · ') > 0 ? n.split(' · ')[0] : ''; return a && apps().some(function (x) { return x.name.replace(/^TEST-/, '') === a; }) ? a : 'Factory'; }
+  // The name before " · " first; else the task's app- tag, by app id or the app's own key ("Links · …" belongs to "LJR7 Links").
+  function bare(x) { return String(x.name).replace(/^TEST-/, ''); }
+  function appOf(t) {
+    var A = apps(), n = String(t.name).replace(/^TEST-/, ''), a = n.indexOf(' · ') > 0 ? n.split(' · ')[0] : '';
+    if (A.indexOf(t) >= 0) return bare(t);
+    if (a && A.some(function (x) { return bare(x) === a; })) return a;
+    var tags = (t.tags || []).filter(function (g) { return /^app-/.test(g); });
+    for (var i = 0; i < tags.length; i++) { var hit = A.filter(function (x) { return x !== t && ('app-' + x.id === tags[i] || x.tags.indexOf(tags[i]) >= 0); })[0]; if (hit) return bare(hit); }
+    return 'Factory';
+  }
   function isTest(t) { return /^TEST-/.test(t.name); }
   // Group order: real apps, then Factory rules, then TEST apps. Heading = app · room · stage.
   function rank(t) { return isTest(t) ? 2 : appOf(t) === 'Factory rules' ? 1 : 0; }
@@ -547,10 +579,7 @@
   var PRI = { urgent: [1, '#f50000'], high: [2, '#ffcc00'], normal: [3, '#6fddff'], low: [4, '#d8d8d8'] };
   var MEANING = /^(paid|sen-check|kill-suggested|leak|question)/;
   var openPanel = null, filtersOpen = false, weekView = false, cardAsk = false;
-  var prefs = (function () { try { return JSON.parse(localStorage.getItem('af-prefs') || '') || {}; } catch (e) { return { unanswered: true }; } })();
-  if (prefs.unanswered === undefined) prefs.unanswered = true;
   var pend = loadLocal('af-pend'), seen = loadLocal('af-seen');
-  function savePrefs() { try { localStorage.setItem('af-prefs', JSON.stringify(prefs)); } catch (e) {} }
   function allTasks() { var L = S.lists, out = []; Object.keys(L).forEach(function (k) { if (k !== 'template') (L[k] || []).forEach(function (t) { t._k = k; out.push(t); }); }); return out; }
   function byId(id) { return allTasks().filter(function (t) { return t.id === id; })[0]; }
   // A change waits in the browser until ClickUp shows it (the task's "updated" moves past the click).
@@ -634,7 +663,7 @@
     var p = t.pri && t.pri.p ? t.pri : null, sentAt = sent[t.id], ch = pend[t.id];
     // The app's name always leads, bold; anything not tied to an app says Factory.
     var label = String(t.name).replace(/^TEST-/, ''), app = appOf(t), known = apps().some(function (a) { return a.name.replace(/^TEST-/, '') === app; });
-    var rest = known ? label.slice(app.length).replace(/^ · /, '') : label;
+    var rest = !known ? label : label.indexOf(app + ' · ') === 0 ? label.slice(app.length + 3) : label.replace(/^[^·]+?\s·\s/, '');
     var title = inCard ? esc(rest) : '<b class="app">' + esc(known ? app : 'Factory') + '</b> ' + esc(rest);
     if (kind === 'decide' && !line(t, /^Deciding:\s*/i)) title += info(line(t, /^What:\s*/i));
     var blocked = /^blocked$/i.test(t.status), isSend = t._k === 'sends' && isOpen(t);
@@ -660,49 +689,183 @@
       (detail ? iconsOf(t, kind).filter(function (x) { return x[0] !== 'reply'; }).map(function (x) { return panelOf(t, x[0]); }).join('') : '') +
       '<div class="l3"><span class="type" aria-hidden="true">' + typeIcon(t) + '</span>' + out + '<span class="grow"></span>' + date + '</div></div>';
   }
-  // Sort & filter: one button, closed by default; the badge counts filters that are on.
-  function filtered(items) {
-    return items.filter(function (t) {
-      if (prefs.unanswered && sent[t.id] && !(sentF[t.id] && Date.now() < undoUntil(sent[t.id]))) return false;
-      if (prefs.urgent && !(t.pri && t.pri.p === 'urgent')) return false;
-      if (prefs.unflagged && t.pri && t.pri.p) return false;
-      if (prefs.me && whoOf(t).indexOf('Lisa') < 0) return false;
-      if (prefs.overdue && !overdue(t)) return false;
-      return true;
-    }).sort(function (a, b) {
+  /* ---------- Find bar (Lisa, 20 Oct 2026): the Docs model on every list tab ----------
+   * Search · App chips · Kind chips always; Who · Stage · Flags · Sort · TEST behind the Filter button.
+   * Each tab remembers its own filters (af-fs), and the address carries them, so a bot can send a 1-click link:
+   *   #/do?app=links&kind=send   #/me   #/app/links   #/item/<ClickUp task id>
+   */
+  var KINDS = [['send', 'send', 'Send'], ['decide', 'scale', 'Decide'], ['do', 'square-check', 'Do'], ['test', 'flask', 'Test'], ['research', 'search', 'Research'], ['fix', 'tool', 'Fix']];
+  var WHO = [['me', 'Lisa', 'Me'], ['claude', 'Claude', 'Claude'], ['grok', 'Grok', 'Grok']];
+  var FLAGS = [['unanswered', '<i class="ti ti-hourglass"></i> Unanswered'], ['overdue', '<i class="ti ti-alert-triangle"></i> Overdue'], ['urgent', 'URGENT Urgent'], ['unflagged', 'NOFLAG Unflagged']];
+  var SORTS = [['flag', 'URGENT Flag'], ['date', '<i class="ti ti-calendar"></i> Date'], ['age', '<i class="ti ti-clock"></i> Oldest'], ['new', '<i class="ti ti-sparkles"></i> Newest']];
+  var BAR_TABS = /^(me|rooms|decide|do|docs|today|queue)$/;
+  var appMenu = false;
+  function fdef(tab) { return { q: '', app: [], kind: [], who: [], st: [], f: /^(rooms|docs)$/.test(tab) ? [] : ['unanswered'], sort: tab === 'me' ? 'new' : 'flag', test: false }; }
+  var fs = (function () { try { return JSON.parse(localStorage.getItem('af-fs') || '') || {}; } catch (e) { return {}; } })();
+  function fsOf(tab) { var d = fdef(tab), s = fs[tab] = Object.assign(d, fs[tab] || {}); ['app', 'kind', 'who', 'st', 'f'].forEach(function (k) { if (!Array.isArray(s[k])) s[k] = []; }); return s; }
+  function saveFs() { try { localStorage.setItem('af-fs', JSON.stringify(fs)); } catch (e) {} }
+  function slugify(x) { return String(x).toLowerCase().replace(/^test-/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+  // An app's short name in links: its own key tag (app-links), else its name (kennel-book). Items with no app: factory.
+  function slugOf(g) {
+    var A = apps(), mine = A.filter(function (a) { return bare(a) === g; }), key = '';
+    mine.forEach(function (a) { a.tags.forEach(function (x) { var k = x.slice(4); if (!key && /^app-/.test(x) && k !== a.id && !A.some(function (b) { return b.id === k; })) key = k; }); });
+    return key || slugify(g);
+  }
+  function groupOfSlug(v) {
+    v = String(v || '').toLowerCase(); if (v === 'factory') return 'Factory';
+    var names = []; apps().forEach(function (a) { if (names.indexOf(bare(a)) < 0) names.push(bare(a)); });
+    return names.filter(function (g) { return slugOf(g) === v || slugify(g) === v; })[0] || names.filter(function (g) { return apps().some(function (a) { return bare(a) === g && a.id === v; }); })[0] || '';
+  }
+  // Kind: what the item asks for. Sends and incidents by list; the rest by the words in the name.
+  function kindOf(t) {
+    var n = String(t.name).replace(/^TEST-/, '');
+    if (t._k === 'sends') return 'send';
+    if (t._k === 'incidents' || /\b(fix|bug|broken|repair)/i.test(n)) return 'fix';
+    if (/\b(test|verif|probe|proof|check)/i.test(n)) return 'test';
+    if (/\b(research|rivals|merit)/i.test(n)) return 'research';
+    return t._k === 'decisions' ? 'decide' : 'do';
+  }
+  // Stage 0–8: the task's st- tag, prompts are 6, else the stage its app has reached.
+  function stOf(t) {
+    var g = (t.tags || []).filter(function (x) { return /^st-\d$/.test(x); })[0];
+    if (g) return +g.slice(3);
+    if (t._k === 'sends') return 6;
+    var a = t._k === 'apps' ? t : appTask(t), n = a ? reached(a) : -1;
+    return n >= 0 && n <= 8 ? n : null;
+  }
+  function stSlot(n) { return n === null ? 0 : n <= 3 ? 7 : n <= 5 ? 4 : n === 6 ? 3 : n === 7 ? 6 : 5; }
+  function roomOf(n) { return n === null ? null : ROOMS.filter(function (r) { return r.st.some(function (s) { return +s[0] === n; }); })[0]; }
+  function testT(t) { var a = t._k === 'apps' ? t : appTask(t); return isTest(t) || !!(a && isTest(a)); }
+  // What each tab lists, read the same way: app · kind · who · stage · TEST · words to search.
+  var TASK = { app: appOf, kind: kindOf, who: whoOf, st: stOf, test: testT, flags: true,
+    text: function (t) { var n = stOf(t), r = roomOf(n); return [appOf(t), t.name, t.tags.join(' '), r ? r.name : '', n === null ? '' : n + ' ' + STAGES[n], cap(t.status), KINDS.filter(function (k) { return k[0] === kindOf(t); })[0][2]].join(' '); } };
+  var APP = { app: bare, kind: function () { return null; }, who: whoOf, st: stOf, test: isTest,
+    text: function (a) { var n = stOf(a), r = roomOf(n); return [a.name, a.status, a.tags.join(' '), r ? r.name : '', n === null ? '' : STAGES[n]].join(' '); } };
+  var DOC = { app: function (d) { return d.app; }, kind: function (d) { return d.type[0]; }, who: function () { return []; }, test: function (d) { var a = apps().filter(function (x) { return bare(x) === d.app; }); return !!a.length && a.every(isTest); },
+    st: function (d) { var a = apps().filter(function (x) { return bare(x) === d.app; })[0]; return a ? stOf(a) : null; },
+    text: function (d) { return [d.title, d.app, d.from.join(' '), d.type[2]].join(' '); } };
+  function hit(x, s, F, skip) {
+    if (!s.test && F.test(x)) return false;
+    if (skip !== 'app' && s.app.length && s.app.indexOf(slugOf(F.app(x))) < 0) return false;
+    if (skip !== 'kind' && s.kind.length && s.kind.indexOf(F.kind(x)) < 0) return false;
+    if (skip !== 'who' && s.who.length && !WHO.some(function (w) { return s.who.indexOf(w[0]) >= 0 && F.who(x).indexOf(w[1]) >= 0; })) return false;
+    if (skip !== 'st' && s.st.length && s.st.indexOf(String(F.st(x))) < 0) return false;
+    if (s.q) { var hay = F.text(x).toLowerCase(); if (!s.q.toLowerCase().split(/\s+/).filter(Boolean).every(function (w) { return hay.indexOf(w) >= 0; })) return false; }
+    if (F.flags) {
+      var f = s.f;
+      if (f.indexOf('unanswered') >= 0 && sent[x.id] && !(sentF[x.id] && Date.now() < undoUntil(sent[x.id]))) return false;
+      if (f.indexOf('urgent') >= 0 && !(x.pri && x.pri.p === 'urgent')) return false;
+      if (f.indexOf('unflagged') >= 0 && x.pri && x.pri.p) return false;
+      if (f.indexOf('overdue') >= 0 && !overdue(x)) return false;
+    }
+    return true;
+  }
+  function sortT(items, by) {
+    return items.slice().sort(function (a, b) {
       var ra = a.pri && PRI[a.pri.p] ? PRI[a.pri.p][0] : 5, rb = b.pri && PRI[b.pri.p] ? PRI[b.pri.p][0] : 5;
-      var flag = ra - rb, date = (a.due || 9e15) - (b.due || 9e15), age = a.created - b.created, by = prefs.sort || 'flag';
+      var flag = ra - rb, date = (a.due || 9e15) - (b.due || 9e15), age = a.created - b.created;
       var lockd = (/^blocked$/i.test(a.status) ? 1 : 0) - (/^blocked$/i.test(b.status) ? 1 : 0);
-      return lockd || (by === 'date' ? date || flag || age : by === 'age' ? age || flag : flag || date || age);
+      return lockd || (by === 'new' ? -age : by === 'date' ? date || flag || age : by === 'age' ? age || flag : flag || date || age);
     });
   }
-  function onCount() { return ['unanswered', 'overdue', 'urgent', 'unflagged', 'me'].filter(function (k) { return prefs[k]; }).length + (prefs.sort && prefs.sort !== 'flag' ? 1 : 0); }
-  function chip(key, val, label) {
-    var on = key === 'sort' ? (prefs.sort || 'flag') === val : Array.isArray(prefs[key]) ? prefs[key].indexOf(val) >= 0 : val === undefined ? !!prefs[key] : prefs[key] === val;
-    return '<button class="pill' + (on ? ' on' : '') + '" type="button" data-pref="' + key + '"' + (val !== undefined ? ' data-val="' + esc(val) + '"' : '') + '>' + label + '</button>';
+  function onCount(tab) {
+    var s = fsOf(tab), d = fdef(tab);
+    return s.app.length + s.kind.length + s.who.length + s.st.length + (s.test ? 1 : 0) + (s.sort !== d.sort ? 1 : 0) +
+      FLAGS.filter(function (x) { return (s.f.indexOf(x[0]) >= 0) !== (d.f.indexOf(x[0]) >= 0); }).length;
   }
-  function filterBar(items) {
-    var html = '';
-    if (!filtersOpen) return html;
-    // Two lines only (Lisa, 20 Oct): Filter · Sort.
-    return html + '<div class="card fpanel">' +
-      '<div class="pills"><span class="flab">Filter</span>' + chip('unanswered', undefined, '<i class="ti ti-hourglass"></i> Unanswered') + chip('overdue', undefined, '<i class="ti ti-alert-triangle"></i> Overdue') + chip('urgent', undefined, flagIcon({ p: 'urgent' }) + ' Urgent') + chip('unflagged', undefined, flagIcon(null) + ' Unflagged') + chip('me', undefined, '<i class="ti ti-user"></i> Me') +
-      (onCount() ? '<button class="pill" type="button" data-action="clearf" aria-label="Clear filters" title="Clear filters"><i class="ti ti-filter-off"></i></button>' : '') + '</div>' +
-      '<div class="pills"><span class="flab">Sort</span>' + chip('sort', 'flag', flagIcon({ p: 'urgent' }) + ' Flag') + chip('sort', 'date', '<i class="ti ti-calendar"></i> Date') + chip('sort', 'age', '<i class="ti ti-clock"></i> Oldest') + '</div></div>';
+  function fchip(key, val, label, on, extra) { return '<button class="pill' + (on ? ' on' : '') + (extra || '') + '" type="button" data-fx="' + key + '" data-val="' + esc(val) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + label + '</button>'; }
+  function flagWords(h) { return h.replace('URGENT', flagIcon({ p: 'urgent' })).replace('NOFLAG', flagIcon(null)); }
+  // The bar. Chips show only what is on this tab (count in a faint circle); a row with one choice is left out.
+  function findBar(tab, items, F, kinds) {
+    var s = fsOf(tab), n = onCount(tab), html = '<div class="fbar2" data-bar="' + tab + '"><div class="srow"><label class="sbox"><i class="ti ti-search" aria-hidden="true"></i><input type="search" data-f="fq" value="' + esc(s.q) + '" aria-label="Search" autocomplete="off"></label>' +
+      '<button id="filtersBtn" class="fbtn' + (filtersOpen ? ' on' : '') + '" type="button" data-action="filters" aria-label="Filter" aria-expanded="' + filtersOpen + '"><i class="ti ti-adjustments-horizontal"></i><span class="n" id="nFilters">' + (n || '') + '</span></button></div>';
+    var by = {}, order = [];
+    items.filter(function (x) { return hit(x, s, F, 'app'); }).forEach(function (x) { var g = F.app(x); if (!by[g]) { by[g] = 0; order.push(g); } by[g]++; });
+    order.sort(function (a, b) { return (a === 'Factory') - (b === 'Factory') || a.localeCompare(b); });
+    if (order.length > 1 || s.app.length) html += '<div class="pills" data-frow="app">' + fchip('app', '', 'All', !s.app.length) + order.map(function (g) { return fchip('app', slugOf(g), esc(g) + ' ' + cnt(by[g]), s.app.indexOf(slugOf(g)) >= 0); }).join('') +
+      s.app.filter(function (v) { return !order.some(function (g) { return slugOf(g) === v; }); }).map(function (v) { return fchip('app', v, esc(groupOfSlug(v) || v) + ' ' + cnt(0), true); }).join('') + '</div>';
+    var kc = {}; items.filter(function (x) { return hit(x, s, F, 'kind'); }).forEach(function (x) { var k = F.kind(x); if (k) kc[k] = (kc[k] || 0) + 1; });
+    var kh = kinds.filter(function (k) { return kc[k[0]] || s.kind.indexOf(k[0]) >= 0; });
+    if (kh.length > 1 || s.kind.length) html += '<div class="pills" data-frow="kind">' + kh.map(function (k) { return fchip('kind', k[0], '<i class="ti ti-' + k[1] + (tab === 'docs' ? ' dti" data-t="' + k[0] : '') + '"></i> ' + k[2] + ' ' + cnt(kc[k[0]] || 0), s.kind.indexOf(k[0]) >= 0); }).join('') + '</div>';
+    if (filtersOpen) {
+      var wc = {}; items.filter(function (x) { return hit(x, s, F, 'who'); }).forEach(function (x) { F.who(x).forEach(function (w) { wc[w] = (wc[w] || 0) + 1; }); });
+      var sc = {}; items.filter(function (x) { return hit(x, s, F, 'st'); }).forEach(function (x) { var v = F.st(x); if (v !== null) sc[v] = (sc[v] || 0) + 1; });
+      var tests = items.filter(function (x) { return F.test(x); }).length;
+      html += '<div class="card fpanel">' +
+        (WHO.some(function (w) { return wc[w[1]]; }) ? '<div class="pills" data-frow="who">' + WHO.filter(function (w) { return wc[w[1]] || s.who.indexOf(w[0]) >= 0; }).map(function (w) { return fchip('who', w[0], '<i class="ti ti-user"></i> ' + w[2] + ' ' + cnt(wc[w[1]] || 0), s.who.indexOf(w[0]) >= 0); }).join('') + '</div>' : '') +
+        '<div class="pills" data-frow="st">' + STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), String(i), s.st.indexOf(String(i)) >= 0, ' stg" style="--c:' + col(stSlot(i)) + '" title="' + name) : ''; }).join('') + '</div>' +
+        (F.flags ? '<div class="pills" data-frow="f">' + FLAGS.map(function (x) { return fchip('f', x[0], flagWords(x[1]), s.f.indexOf(x[0]) >= 0); }).join('') + '</div>' +
+          '<div class="pills" data-frow="sort">' + SORTS.map(function (x) { return fchip('sort', x[0], flagWords(x[1]), s.sort === x[0]); }).join('') + '</div>' : '') +
+        '<div class="pills"><button class="pill" type="button" data-action="ftest" aria-pressed="' + s.test + '" title="TEST">TEST <span class="sw' + (s.test ? ' on' : '') + '"><i></i></span> ' + cnt(tests) + '</button>' +
+        '<button class="pill" type="button" data-action="clearf"><i class="ti ti-filter-off"></i> Clear</button></div></div>';
+    }
+    return html + '</div>';
   }
+  function emptyBox() { return '<div class="card empty" data-empty>' + cnt(0) + '<button class="pill" type="button" data-action="clearf"><i class="ti ti-filter-off"></i> Clear</button></div>'; }
   // One card per app (Lisa, 20 Oct): the app's name once in the header, its items inside split by a thin line.
-  // Cards are ordered by their most urgent item; each shows its top 3, "+N" opens the rest (remembered).
+  // Cards follow the sorted items; each shows its top 3, "+N" opens the rest (remembered).
   var shownAll = loadLocal('af-open');
-  function list(items, slot, empty, kind) {
-    var show = filtered(items), groups = [], by = {};
+  function rowKind(t, kind) { return kind === 'me' ? (t._k === 'decisions' ? 'decide' : 'do') : kind === 'mixed' ? (t._k === 'decisions' ? 'decide' : t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view') : kind; }
+  function cards(show, slot, kind) {
+    var groups = [], by = {};
     show.forEach(function (t) { var g = appOf(t); if (!by[g]) { by[g] = []; groups.push(g); } by[g].push(t); });
-    if (!groups.length) return filterBar(items) + '<div class="card"><p class="muted">' + empty + '</p></div>';
-    return filterBar(items) + groups.map(function (g) {
+    return groups.map(function (g) {
       var rows = by[g], all = !!(shownAll[g] && shownAll[g].on), top = all ? rows : rows.slice(0, 3);
-      return '<div class="card appcard' + (alarm(appTask(rows[0])) ? ' alarm' : '') + '">' + headOf(rows[0], slot) + top.map(function (t) {
-        return row(t, kind === 'mixed' ? (t._k === 'decisions' ? 'decide' : t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view') : kind, true);
-      }).join('') + (rows.length > 3 ? '<button class="more" type="button" data-action="more" data-app="' + esc(g) + '">' + (all ? '<i class="ti ti-chevron-up"></i>' : cnt('+' + (rows.length - 3))) + '</button>' : '') + '</div>';
+      return '<div class="card appcard' + (alarm(appTask(rows[0])) ? ' alarm' : '') + '" data-app="' + esc(slugOf(g)) + '">' + headOf(rows[0], slot) + top.map(function (t) { return row(t, rowKind(t, kind), true); }).join('') +
+        (rows.length > 3 ? '<button class="more" type="button" data-action="more" data-app="' + esc(g) + '">' + (all ? '<i class="ti ti-chevron-up"></i>' : cnt('+' + (rows.length - 3))) + '</button>' : '') + '</div>';
     }).join('');
+  }
+  function list(tab, items, slot, kind) {
+    var s = fsOf(tab), show = sortT(items.filter(function (t) { return hit(t, s, TASK); }), s.sort);
+    return findBar(tab, items, TASK, KINDS) + (show.length ? cards(show, slot, kind) : emptyBox());
+  }
+  // Me: everything waiting on Lisa (Decide + Do), newest first, by app.
+  function meItems() { var out = decisions().slice(); mine().forEach(function (t) { if (out.indexOf(t) < 0) out.push(t); }); return out; }
+  // One app on one screen: its Decide, Do and Docs. TEST and filters do not hide anything here.
+  function vApp(slug) {
+    var g = groupOfSlug(slug); if (!g) return emptyBox();
+    var mineG = function (t) { return appOf(t) === g; };
+    var ds = sortT(decisions().filter(mineG), 'flag'), dos = sortT(mine().filter(function (t) { return mineG(t) && ds.indexOf(t) < 0; }), 'flag'), docs = allDocs().filter(function (d) { return d.app === g; });
+    var app = apps().filter(function (a) { return bare(a) === g && !isTest(a); })[0] || apps().filter(function (a) { return bare(a) === g; })[0];
+    var sect = function (icon, word, n, href) { return '<div class="sect"><i class="ti ti-' + icon + '"></i><a href="' + href + '">' + word + '</a> ' + cnt(n) + '</div>'; };
+    return '<div class="card appcard" data-app="' + esc(slugOf(g)) + '">' + (app ? headOf(app, 0) : '<div class="grp">' + esc(g) + '</div>') +
+      sect('scale', 'Decide', ds.length, '#/decide?app=' + encodeURIComponent(slugOf(g))) + ds.map(function (t) { return row(t, 'decide', true); }).join('') +
+      sect('square-check', 'Do', dos.length, '#/do?app=' + encodeURIComponent(slugOf(g))) + dos.map(function (t) { return row(t, 'do', true); }).join('') +
+      sect('file', 'Docs', docs.length, '#/docs?app=' + encodeURIComponent(slugOf(g))) + (docs.length ? '<table class="ptab dtab"><tbody>' + docs.map(function (d) { return docRow(d); }).join('') + '</tbody></table>' : '') + '</div>';
+  }
+  // One item, opened: the link a bot sends Lisa (#/item/<ClickUp id>).
+  function vItem(id) {
+    var t = byId(id); if (!t) return emptyBox();
+    var kind = t._k === 'decisions' ? 'decide' : mine().indexOf(t) >= 0 || t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view';
+    return '<div class="card appcard" data-item="' + esc(id) + '">' + headOf(t, 4) + row(t, kind, true) + '</div>';
+  }
+  function vAppMenu() {
+    var names = [], n = {};
+    apps().forEach(function (a) { var g = bare(a); if (names.indexOf(g) < 0 && !/^ZZ_/.test(a.name) && (!/^(killed|retired)$/i.test(a.status) || apps().some(function (b) { return bare(b) === g && !/^(killed|retired)$/i.test(b.status); }))) names.push(g); });
+    meItems().forEach(function (t) { var g = appOf(t); n[g] = (n[g] || 0) + 1; if (names.indexOf(g) < 0) names.push(g); });
+    names.sort(function (a, b) { return (n[b] ? 1 : 0) - (n[a] ? 1 : 0) || (a === 'Factory') - (b === 'Factory') || a.localeCompare(b); });
+    return '<div class="pills">' + names.map(function (g) { return '<a class="pill" href="#/app/' + esc(slugOf(g)) + '">' + esc(g) + (n[g] ? ' ' + cnt(n[g]) : '') + '</a>'; }).join('') + '</div>';
+  }
+  // The address and the filters stay in step: opening a link sets the tab's filters; changing a filter rewrites the link.
+  var LIST_KEYS = ['app', 'kind', 'who', 'st', 'f'];
+  function hashParts() { var h = (location.hash || '#/rooms').slice(2), i = h.indexOf('?'); return { path: (i < 0 ? h : h.slice(0, i)).split('/'), q: new URLSearchParams(i < 0 ? '' : h.slice(i + 1)) }; }
+  function fromUrl() {
+    var p = hashParts(), tab = p.path[0];
+    if (!BAR_TABS.test(tab) || !Array.from(p.q.keys()).length) return;
+    var s = fdef(tab);
+    if (p.q.get('q')) s.q = p.q.get('q');
+    LIST_KEYS.forEach(function (k) { if (p.q.has(k)) s[k] = p.q.get(k).split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean); });
+    if (p.q.has('sort')) s.sort = p.q.get('sort'); if (p.q.get('test') === '1') s.test = true;
+    s.app = s.app.map(function (v) { var g = groupOfSlug(v); return g ? slugOf(g) : v; });
+    fs[tab] = s; saveFs();
+  }
+  function toUrl(tab) {
+    var s = fsOf(tab), d = fdef(tab), q = [];
+    if (s.q) q.push('q=' + encodeURIComponent(s.q));
+    LIST_KEYS.forEach(function (k) { if (s[k].join(',') !== d[k].join(',')) q.push(k + '=' + s[k].map(encodeURIComponent).join(',')); });
+    if (s.sort !== d.sort) q.push('sort=' + s.sort); if (s.test) q.push('test=1');
+    var p = hashParts(), h = '#/' + p.path.join('/') + (q.length ? '?' + q.join('&') : '');
+    if (h !== location.hash) history.replaceState(null, '', h);
   }
   // Everyone who has open work (assigned or tagged in ClickUp), except Lisa: a new person gets a pill by themselves.
   function people() {
@@ -719,7 +882,7 @@
     var end = weekView ? dayStart(7) : dayStart(1);
     var items = allTasks().filter(function (t) { return isOpen(t) && t.due && t.due < end && t._k !== 'apps'; });
     return '<div class="pills"><button class="pill' + (weekView ? '' : ' on') + '" type="button" data-action="today">Today</button><button class="pill' + (weekView ? ' on' : '') + '" type="button" data-action="week">Week</button></div>' +
-      list(items, 4, '—', 'mixed');
+      list('today', items, 4, 'mixed');
   }
   // The plain What / Yes = / No = lines on a decision. Links become an underlined "open".
   var CU_MARK = '<svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 11l3-2.3c1.6 2 3.2 2 4.8 0L13 11c-2.7 3.3-8.3 3.3-11 0z" fill="#7B68EE"/><path d="M8 3.5L3.6 7.3 5.3 9.2 8 6.9l2.7 2.3 1.7-1.9z" fill="#FF02F0"/></svg>';
@@ -1016,8 +1179,7 @@
   }
 
   /* ---------- Docs (Lisa, 20 Oct): every doc the factory knows, by app and type, with search. Opens in Drive (new tab). ---------- */
-  var dq = (function () { try { return JSON.parse(localStorage.getItem('af-dq') || '') || {}; } catch (e) { return {}; } })();
-  function saveDq() { try { localStorage.setItem('af-dq', JSON.stringify(dq)); } catch (e) {} }
+  var docsAll = false;
   var DT = [['card', 'id-badge-2', 'Card', /CARD|card \d|Card \d/], ['prompt', 'message-2-code', 'Prompt', /prompt|· P\d/i], ['mockup', 'layout-dashboard', 'Mockup', /mockup|board/i],
     ['research', 'search', 'Research', /research|rivals|base/i], ['report', 'file-check', 'Report', /report|test|proof|audit/i], ['rules', 'book', 'Rules', /rule|protocol|scheme|template|standard/i], ['other', 'file', 'Other', /.*/]];
   function docType(text) { return DT.filter(function (d) { return d[3].test(text); })[0]; }
@@ -1045,42 +1207,33 @@
   }
   // Docs (Lisa, 20 Oct): search first. Without a search: each app in progress (idea → launch) with its own docs, plus any doc a
   // waiting Decide / Do item needs (coloured tag = needs you). Search finds every doc, live and old.
+  function needs() { var need = {}; decisions().forEach(function (t) { need[t.name] = 'decide'; }); mine().forEach(function (t) { if (!need[t.name]) need[t.name] = 'do'; }); return need; }
+  function tagOf(d, need) { var k = ''; need = need || needs(); d.from.forEach(function (n) { if (need[n] === 'decide') k = 'decide'; else if (need[n] === 'do' && !k) k = 'do'; }); return k; }
+  var TAG = { decide: ['Decide', '#/decide', 4], do: ['Do', '#/do', 5] };
+  function docRow(d, need) {
+    var k = tagOf(d, need);
+    return '<tr><td style="width:28px"><i class="ti ti-' + d.type[1] + ' dti" data-t="' + d.type[0] + '" title="' + d.type[2] + '"></i></td>' +
+      '<td><a href="' + esc(d.url) + '" target="_blank" rel="noopener" title="Opens in Drive (new tab)">' + esc(d.title) + '</a></td>' +
+      '<td style="width:72px">' + (k ? '<a class="need n' + TAG[k][2] + '" href="' + TAG[k][1] + '">' + TAG[k][0] + '</a>' : '') + '</td>' +
+      '<td style="width:30px"><a class="mark" href="' + esc(d.url) + '" target="_blank" rel="noopener" aria-label="Open in Drive (new tab)" title="Opens in Drive (new tab)">' + DRIVE_MARK + '</a></td></tr>';
+  }
   function vDocs() {
-    var docs = allDocs(), q = (dq.q || '').toLowerCase();
-    var need = {}; decisions().forEach(function (t) { need[t.name] = 'decide'; }); mine().forEach(function (t) { if (!need[t.name]) need[t.name] = 'do'; });
-    var inPlay = {}; apps().forEach(function (a) { var h = health(a); if (h !== 'archive' && h !== 'live') inPlay[a.name.replace(/^TEST-/, '')] = a; });
-    var tagOf = function (d) { var k = ''; d.from.forEach(function (n) { if (need[n] === 'decide') k = 'decide'; else if (need[n] === 'do' && !k) k = 'do'; }); return k; };
-    var list = docs.filter(function (d) {
-      if (dq.type && d.type[0] !== dq.type) return false;
-      if (dq.app && d.app !== dq.app) return false;
-      if (q) return (d.title + ' ' + d.app + ' ' + d.from.join(' ')).toLowerCase().indexOf(q) >= 0;
-      return !!tagOf(d) || !!inPlay[d.app] || dq.app || dq.type;
-    });
+    var docs = allDocs(), s = fsOf('docs'), need = needs(), any = s.q || onCount('docs');
+    var inPlay = {}; apps().forEach(function (a) { var h = health(a); if (h !== 'archive' && h !== 'live') inPlay[bare(a)] = a; });
+    var list = docs.filter(function (d) { return hit(d, s, DOC) && (any || !!tagOf(d, need) || !!inPlay[d.app]); });
     var groups = [], by = {};
     list.forEach(function (d) { if (!by[d.app]) { by[d.app] = []; groups.push(d.app); } by[d.app].push(d); });
-    groups.sort(function (a, b) { var na = by[a].some(tagOf) ? 0 : 1, nb = by[b].some(tagOf) ? 0 : 1; return na - nb || a.localeCompare(b); });
-    var chip = function (k, v, label) { return '<button class="pill' + (dq[k] === v ? ' on' : '') + '" type="button" data-dq="' + k + '" data-val="' + esc(v) + '">' + label + '</button>'; };
-    var TAG = { decide: ['Decide', '#/decide', 4], do: ['Do', '#/do', 5] };
-    var row = function (d) {
-      var k = tagOf(d);
-      return '<tr><td style="width:28px"><i class="ti ti-' + d.type[1] + ' dti" data-t="' + d.type[0] + '" title="' + d.type[2] + '"></i></td>' +
-        '<td><a href="' + esc(d.url) + '" target="_blank" rel="noopener" title="Opens in Drive (new tab)">' + esc(d.title) + '</a></td>' +
-        '<td style="width:72px">' + (k ? '<a class="need n' + TAG[k][2] + '" href="' + TAG[k][1] + '">' + TAG[k][0] + '</a>' : '') + '</td>' +
-        '<td style="width:30px"><a class="mark" href="' + esc(d.url) + '" target="_blank" rel="noopener" aria-label="Open in Drive (new tab)" title="Opens in Drive (new tab)">' + DRIVE_MARK + '</a></td></tr>';
-    };
+    groups.sort(function (a, b) { var na = by[a].some(function (d) { return tagOf(d, need); }) ? 0 : 1, nb = by[b].some(function (d) { return tagOf(d, need); }) ? 0 : 1; return na - nb || a.localeCompare(b); });
     var head = function (g) {
-      var a = inPlay[g] || apps().filter(function (x) { return x.name.replace(/^TEST-/, '') === g; })[0];
+      var a = inPlay[g] || apps().filter(function (x) { return bare(x) === g; })[0];
       var h = a ? HW[health(a)] : null;
       return '<tr class="dgrp"><td colspan="4"><span class="dot" style="background:var(--ljr-' + (h ? h[2] : 0) + ');display:inline-block;width:9px;height:9px;margin-right:6px"></span>' +
-        (a ? '<a href="#/card/' + esc(a.id) + '">' + esc(g) + '</a> <span class="muted">' + esc(cap(a.status)) + '</span>' : esc(g)) + '</td></tr>';
+        (a ? '<a href="#/app/' + esc(slugOf(g)) + '">' + esc(g) + '</a> <span class="muted">' + esc(cap(a.status)) + '</span>' : esc(g)) + '</td></tr>';
     };
-    var shown = 0, body = groups.map(function (g) { var rows = by[g].slice(0, dq.all ? 999 : 8); shown += rows.length; return head(g) + rows.map(row).join('') + (by[g].length > rows.length ? '<tr><td></td><td colspan="3">' + cnt('+' + (by[g].length - rows.length)) + '</td></tr>' : ''); }).join('');
+    var shown = 0, body = groups.map(function (g) { var rows = by[g].slice(0, docsAll ? 999 : 8); shown += rows.length; return head(g) + rows.map(function (d) { return docRow(d, need); }).join('') + (by[g].length > rows.length ? '<tr><td></td><td colspan="3">' + cnt('+' + (by[g].length - rows.length)) + '</td></tr>' : ''); }).join('');
     var typesHere = DT.filter(function (t) { return docs.some(function (x) { return x.type[0] === t[0]; }); });
-    return '<div class="card"><input class="fin search" data-f="dqq" value="' + esc(dq.q || '') + '" aria-label="Search all docs" type="search" style="max-width:none">' +
-      '<div class="pills" style="margin-top:10px"><span class="flab">Type</span>' + typesHere.map(function (t) { return chip('type', t[0], '<i class="ti ti-' + t[1] + ' dti" data-t="' + t[0] + '"></i> ' + t[2]); }).join('') +
-      ((dq.app || dq.type || dq.q) ? '<button class="pill" type="button" data-action="dqclear" aria-label="Clear filters" title="Clear filters"><i class="ti ti-filter-off"></i></button>' : '') + '</div>' +
-      '<table class="ptab dtab" style="margin-top:8px"><tbody>' + body + '</tbody></table>' +
-      (shown ? '' : '<p class="muted">—</p>') + (!dq.all && list.length > shown ? '<button class="more" type="button" data-action="dqall"><i class="ti ti-chevron-down"></i></button>' : '') + '</div>';
+    return findBar('docs', docs, DOC, typesHere) + (shown ? '<div class="card"><table class="ptab dtab"><tbody>' + body + '</tbody></table>' +
+      (!docsAll && list.length > shown ? '<button class="more" type="button" data-action="dqall"><i class="ti ti-chevron-down"></i></button>' : '') + '</div>' : emptyBox());
   }
   // full = the whole description (title tapped); otherwise the first 4 lines plus Claude's answers.
   function why(t, full) {
@@ -1153,15 +1306,18 @@
     var f = e.target.getAttribute && e.target.getAttribute('data-f'); if (!f) return;
     if (f === 'name' || f === 'note' || BRIEF.some(function (b) { return b[0] === f; })) { idea[f] = e.target.value; delete formErr[f]; saveIdea(); }
     else if (f === 'pwhat') prob.what = e.target.value;
-    else if (f === 'dqq') { dq.q = e.target.value; saveDq(); var p4 = e.target.selectionStart; render(); var b4 = document.querySelector('[data-f="dqq"]'); if (b4) { b4.focus(); b4.setSelectionRange(p4, p4); } }
+    else if (f === 'fq') { var tb = barTab(); if (!tb) return; fsOf(tb).q = e.target.value; saveFs(); var p4 = e.target.selectionStart; render(); var b4 = document.querySelector('[data-f="fq"]'); if (b4) { b4.focus(); try { b4.setSelectionRange(p4, p4); } catch (x) {} } }
     else if (f === 'pfq') { pfo.q = e.target.value; savePf(); var p2 = e.target.selectionStart; render(); var b2 = document.querySelector('[data-f="pfq"]'); if (b2) { b2.focus(); b2.setSelectionRange(p2, p2); } }
     else if (f === 'appq') { appQ = e.target.value; var pos = e.target.selectionStart; render(); var b = document.querySelector('[data-f="appq"]'); if (b) { b.focus(); b.setSelectionRange(pos, pos); } }
   });
   document.addEventListener('input', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('af-drafts', drafts); } });
+  function barTab() { var r = hashParts().path[0] || 'rooms'; return BAR_TABS.test(r) ? r : null; }
   function saveSent() { try { localStorage.setItem('af-sent', JSON.stringify(sent)); } catch (e) {} }
   function render() {
-    var route = (location.hash || '#/rooms').replace('#/', '').split('/');
+    var route = hashParts().path;
     Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (/^(card|room|health|stuck|all|queue|new|problem)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
+    $('appPick').classList.toggle('hidden', !signedIn || !S); $('appPick').setAttribute('aria-expanded', appMenu ? 'true' : 'false');
+    $('appMenu').classList.toggle('hidden', !appMenu || !S); if (appMenu && S) $('appMenu').innerHTML = vAppMenu();
     $('signInBtn').classList.toggle('hidden', signedIn);
     $('signOutBtn').classList.toggle('hidden', !signedIn);
     $('refreshBtn').classList.toggle('hidden', !signedIn);
@@ -1169,13 +1325,14 @@
     if (!signedIn) { v.innerHTML = '<div class="card"><b>Factory</b><button class="btn main" type="button" data-action="signin">' + ic('in') + 'Sign in with Google</button></div>'; return; }
     if (err) { v.innerHTML = '<div class="banner">' + esc(err) + '</div>'; return; }
     if (!S) { v.innerHTML = '<div class="card muted">Reading…</div>'; return; }
-    var unsent = function (t) { return !sent[t.id]; };
-    $('nDecide').textContent = decisions().filter(unsent).length; $('nDo').textContent = mine().filter(unsent).length;
     allTasks();
-    var listView = /^(decide|do|today|queue)$/.test(route[0]), nf = onCount();
-    $('filtersBtn').classList.toggle('hidden', !listView); $('filtersBtn').classList.toggle('on', filtersOpen); $('nFilters').textContent = nf ? nf : '';
-    v.innerHTML = route[0] === 'today' ? vToday() : route[0] === 'queue' ? list(queue(route[1]), 5, '—', 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? vPortfolio() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list(decisions(), 4, '—', 'decide') + decideFoot() :
-      route[0] === 'do' ? list(mine(), 4, '—', 'do') : vRooms();
+    // Menu counts: unanswered, and TEST only when that tab shows TEST.
+    var waiting = function (tab) { return function (t) { return !sent[t.id] && (fsOf(tab).test || !testT(t)); }; };
+    $('nMe').textContent = meItems().filter(waiting('me')).length; $('nDecide').textContent = decisions().filter(waiting('decide')).length; $('nDo').textContent = mine().filter(waiting('do')).length;
+    var tb = barTab(); if (tb) toUrl(tb);
+    v.innerHTML = route[0] === 'me' ? list('me', meItems(), 4, 'me') : route[0] === 'item' ? vItem(route[1]) : route[0] === 'app' ? vApp(route[1]) :
+      route[0] === 'today' ? vToday() : route[0] === 'queue' ? list('queue', queue(route[1]), 5, 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? vPortfolio() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list('decide', decisions(), 4, 'decide') + decideFoot() :
+      route[0] === 'do' ? list('do', mine(), 4, 'do') : vRooms();
   }
 
   /* Ask box → AF › requests (the engine turns it into a ClickUp task) */
@@ -1257,15 +1414,19 @@
       if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'cardask') { cardAsk = !cardAsk; render(); var ai = document.querySelector('form.ask[data-ask] input[name=text]'); if (cardAsk && ai) ai.focus(); }
       else if (k === 'more') { var ga = a.getAttribute('data-app'); shownAll[ga] = { on: !(shownAll[ga] && shownAll[ga].on), at: Date.now() }; saveLocal('af-open', shownAll); render(); }
-      else if (k === 'dqclear') { dq = {}; saveDq(); render(); } else if (k === 'dqall') { dq.all = true; render(); }
+      else if (k === 'dqall') { docsAll = true; render(); }
+      else if (k === 'apppick') { appMenu = !appMenu; render(); }
+      else if (k === 'ftest') { var t1 = barTab(); if (t1) { fsOf(t1).test = !fsOf(t1).test; saveFs(); render(); } }
       else if (k === 'pfclear') { pfo = {}; savePf(); render(); } else if (k === 'pfall') { pfo.all = true; render(); } else if (k === 'pfarch') { pfo.arch = true; render(); }
-      else if (k === 'clearf') { prefs = { unanswered: false, sort: 'flag' }; savePrefs(); render(); }
+      else if (k === 'clearf') { var t2 = barTab(); if (t2) { fs[t2] = fdef(t2); saveFs(); } render(); }
       else if (k === 'sendidea') sendIdea(); else if (k === 'sendprob') sendProblem(a.getAttribute('data-id'));
       else if (k === 'filters') { filtersOpen = !filtersOpen; render(); } else if (k === 'factory') sendFactory(); else if (k === 'today' || k === 'week') { weekView = k === 'week'; render(); }
       return;
     }
     var b = e.target.closest('[data-act]'); if (b) { sendAct(b); return; }
-    var dqb = e.target.closest('[data-dq]'); if (dqb) { var dk = dqb.getAttribute('data-dq'), dv = dqb.getAttribute('data-val'); dq[dk] = dq[dk] === dv ? '' : dv; saveDq(); render(); return; }
+    var fx = e.target.closest('[data-fx]'); if (fx) { var t3 = barTab(); if (!t3) return; var sx = fsOf(t3), fk = fx.getAttribute('data-fx'), fv = fx.getAttribute('data-val');
+      if (fk === 'sort') sx.sort = fv; else if (fk === 'app' && !fv) sx.app = []; else { var ai = sx[fk].indexOf(fv); if (ai >= 0) sx[fk].splice(ai, 1); else sx[fk].push(fv); }
+      saveFs(); render(); return; }
     var pfb = e.target.closest('[data-pf]'); if (pfb) { var pk3 = pfb.getAttribute('data-pf'), pv = pfb.getAttribute('data-val'); pfo[pk3] = pfo[pk3] === pv ? '' : pv; savePf(); render(); return; }
     var pk2 = e.target.closest('[data-pick]'); if (pk2) { idea.a = idea.a || {}; idea.a[pk2.getAttribute('data-pick')] = pk2.getAttribute('data-val'); delete formErr[pk2.getAttribute('data-pick')]; saveIdea(); render(); return; }
     var pr = e.target.closest('[data-prob]'); if (pr) { prob.k = pr.getAttribute('data-prob'); delete formErr.k; render(); return; }
@@ -1278,17 +1439,18 @@
       render(); if (openPanel && pk === 'reply') { var inp = $('note-' + pid); if (inp) inp.focus(); } return; }
     var st = e.target.closest('[data-set]'); if (st) { sendSet(st.getAttribute('data-id'), st.getAttribute('data-set'), st.getAttribute('data-val')); return; }
     var ck = e.target.closest('[data-check]'); if (ck) { sendCheck(ck.getAttribute('data-id'), ck.getAttribute('data-check'), ck.getAttribute('data-item'), ck.getAttribute('data-ok') !== '1'); return; }
-    var pf = e.target.closest('[data-pref]'); if (pf) { var key = pf.getAttribute('data-pref'), val = pf.getAttribute('data-val');
-      if (key === 'sort') prefs.sort = val;
-      else if (key === 'app') prefs.app = prefs.app === val ? '' : val;
-      else if (val === null) prefs[key] = !prefs[key];
-      else { prefs[key] = prefs[key] || []; var at = prefs[key].indexOf(val); if (at >= 0) prefs[key].splice(at, 1); else prefs[key].push(val); }
-      savePrefs(); render(); return; }
     var s = e.target.closest('[data-stage]'); if (s) { var i = +s.getAttribute('data-stage'); var cur = open[i] === undefined ? (s.classList.contains('c')) : open[i]; open[i] = !cur; render(); }
   });
   document.addEventListener('change', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-due'); if (d) sendSet(d, 'due', e.target.value || ''); });
   document.addEventListener('submit', function (e) { var lf = e.target.closest('[data-addlink]'); if (lf) { e.preventDefault(); sendLink(lf); return; } var f = e.target.closest('[data-ask]'); if (f) { e.preventDefault(); sendAsk(f); } });
-  window.addEventListener('hashchange', function () { open = {}; openPanel = null; filtersOpen = false; cardAsk = false; addLink = null; formErr = {}; formNote = ''; render(); window.scrollTo(0, 0); });
+  function onRoute() { fromUrl(); var r = hashParts().path; if (r[0] === 'item' && r[1]) openPanel = { id: r[1], k: 'all' }; }
+  window.addEventListener('hashchange', function () { open = {}; openPanel = null; filtersOpen = false; appMenu = false; cardAsk = false; addLink = null; formErr = {}; formNote = ''; docsAll = false; onRoute(); render(); window.scrollTo(0, 0); });
+  // "/" puts the cursor in the search box.
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+    var b = document.querySelector('[data-f="fq"]'); if (b) { e.preventDefault(); b.focus(); }
+  });
+  onRoute();
   var saved = DashAuth.valid();
   if (saved && DashAuth.hasScope(saved, SCOPE)) { accessToken = saved.access_token; tokenExpiresAt = saved.expires_at; signedIn = true; }
   render(); if (signedIn) { startTimer(); load(); }
