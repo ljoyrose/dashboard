@@ -254,6 +254,10 @@
 /* Calm: one line width all round; colour edge only on hover. */
 .card[class], details.card[class], nav.card[class], .needs li[class] { border-left-width: 1px; }
 .card[class]:hover, details.card[class]:hover, .needs li[class]:hover { border-left-color: var(--slot, var(--nc, var(--line))); }
+
+  /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
 </style>
 </head>
 <body>
