@@ -25,7 +25,8 @@
           'Prediction: https://drive.google.com/file/d/1SAMPLEpredictionDoc0000000/view · Simulation: https://drive.google.com/file/d/1SAMPLEsimulationDoc0000000/view · inputs-gate: PASS ' + day(now) + '\n' +
           'Happy Hour: active, 40 min left, read ' + hm(now - 5 * 60e3) + ' · next press due ' + hm(now + 35 * 60e3) + ' · presses today 2/5\n' +
           'AFTER SEND YOU MUST: run the leak tests (~15 min after send, ~20 min)\n' +
-          'Lisa available: 16:00–18:00' }),
+          'Lisa available: 16:00–18:00\n' +
+          'Class: CURRENT TEN:1 SEN:1 · DATA POOL:0 · TARGET TEN:3 SEN:1 (REG-0001)' }),
       task({ id: '869fk9d1n', name: 'Links · P5-READ-v13 (read-only check) · send 1 of 2', tags: ['app-869fjxpc2', 'app-links'], created: now - 3 * H, status: 'done' }),
       task({ id: '869fk6k00', name: 'Kennel Book · P2 · Dogs list', tags: ['app-869fk9834'], created: now - 5 * H }),
       task({ id: '869fk6jzc', name: 'TEST-Kennel Book · P1 · Tenant roles', tags: ['app-869fk8geg'], created: now - 6 * H })
