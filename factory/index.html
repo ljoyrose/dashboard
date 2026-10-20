@@ -44,7 +44,11 @@
   nav.tabs a, .pill, .btn, .ico, .flagb, .opt, .mark, .plus { transition: none; }
   nav.tabs a:hover, nav.tabs a[aria-current="page"], .pill:hover, .pill.on, .btn:hover, .ico:hover, .ico.on, .flagb:hover, .mark:hover, .plus:hover { border-color: var(--muted); }
   nav.tabs a:active, .pill:active, .btn:active { transform: none; }
-  nav.tabs .cal { margin-left: auto; }
+  nav.tabs .fbtn { margin-left: auto; }
+  nav.tabs .fbtn.hidden + .cal { margin-left: auto; }
+  .fbtn { --radius: 999px; font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; padding: 7px 12px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .fbtn:hover, .fbtn.on { border-color: var(--muted); }
+  .fbtn .n:empty { display: none; }
   .ti { font-size: 18px; line-height: 1; }
   /* Grey at rest; an icon's own colour on hover / when open. Logos grey until hover. */
   .ico:hover, .ico.on { color: var(--hc, var(--ink)); }
@@ -193,8 +197,9 @@
   </div>
   <nav class="tabs" aria-label="Sections">
     <a href="#/rooms" data-nav="rooms">Rooms</a>
-    <a href="#/decide" data-nav="decide"><svg class="i"><use href="#i-stamp"/></svg>Decide <span class="n" id="nDecide">0</span></a>
+    <a href="#/decide" data-nav="decide">Decide <span class="n" id="nDecide">0</span></a>
     <a href="#/do" data-nav="do">Do <span class="n" id="nDo">0</span></a>
+    <button id="filtersBtn" class="fbtn hidden" type="button" data-action="filters" aria-label="Sort and filter"><i class="ti ti-adjustments-horizontal"></i><span class="n" id="nFilters"></span></button>
     <a href="#/today" data-nav="today" aria-label="Today" class="cal"><i class="ti ti-calendar"></i></a>
   </nav>
 </header>
@@ -515,12 +520,12 @@
     return '<button class="pill' + (on ? ' on' : '') + '" type="button" data-pref="' + key + '"' + (val !== undefined ? ' data-val="' + esc(val) + '"' : '') + '>' + label + '</button>';
   }
   function filterBar(items) {
-    var n = onCount(), html = '<div class="fbar"><button class="btn" type="button" data-action="filters" aria-label="Sort and filter">☰' + (n ? '<span class="n">' + n + '</span>' : '') + '</button></div>';
+    var html = '';
     if (!filtersOpen) return html;
     // Two lines only (Lisa, 20 Oct): Filter · Sort.
     return html + '<div class="card fpanel">' +
-      '<div class="pills">' + chip('unanswered', undefined, '⏳ Unanswered') + chip('overdue', undefined, '⚠ Overdue') + chip('urgent', undefined, flagIcon({ p: 'urgent' }) + ' Urgent') + chip('unflagged', undefined, flagIcon(null) + ' Unflagged') + chip('me', undefined, '👤 Me') + '</div>' +
-      '<div class="pills">' + chip('sort', 'flag', flagIcon({ p: 'urgent' }) + ' Flag') + chip('sort', 'date', '📅 Date') + chip('sort', 'age', '🕑 Oldest') + chip('group', undefined, '▤ By app') + '</div></div>';
+      '<div class="pills">' + chip('unanswered', undefined, '<i class="ti ti-hourglass"></i> Unanswered') + chip('overdue', undefined, '<i class="ti ti-alert-triangle"></i> Overdue') + chip('urgent', undefined, flagIcon({ p: 'urgent' }) + ' Urgent') + chip('unflagged', undefined, flagIcon(null) + ' Unflagged') + chip('me', undefined, '<i class="ti ti-user"></i> Me') + '</div>' +
+      '<div class="pills">' + chip('sort', 'flag', flagIcon({ p: 'urgent' }) + ' Flag') + chip('sort', 'date', '<i class="ti ti-calendar"></i> Date') + chip('sort', 'age', '<i class="ti ti-clock"></i> Oldest') + chip('group', undefined, '<i class="ti ti-layout-list"></i> By app') + '</div></div>';
   }
   function list(items, slot, empty, kind) {
     var show = filtered(items), last = null;
@@ -626,6 +631,8 @@
     var unsent = function (t) { return !sent[t.id]; };
     $('nDecide').textContent = decisions().filter(unsent).length; $('nDo').textContent = mine().filter(unsent).length;
     allTasks();
+    var listView = /^(decide|do|today|queue)$/.test(route[0]), nf = onCount();
+    $('filtersBtn').classList.toggle('hidden', !listView); $('filtersBtn').classList.toggle('on', filtersOpen); $('nFilters').textContent = nf ? nf : '';
     v.innerHTML = route[0] === 'today' ? vToday() : route[0] === 'queue' ? list(queue(route[1]), 5, '—', 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'all' ? vApps('Apps & ideas', apps()) : route[0] === 'decide' ? list(decisions(), 4, '—', 'decide') :
       route[0] === 'do' ? list(mine(), 4, '—', 'do') : vRooms();
   }
