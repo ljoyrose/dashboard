@@ -234,6 +234,16 @@
   .acts .btn.yes:hover, .btn.yes:hover { border-color: var(--ljr-5); } .acts .btn.no:hover { border-color: var(--ljr-2); }
   .flab { font-size: 13px; font-weight: 700; color: var(--muted); min-width: 44px; align-self: center; }
   .fpanel .pills + .pills { margin-top: 8px; }
+
+  /* Year 3 (Lisa ✓ 20 Oct): portfolio table and grouped links. */
+  .ptab { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .ptab th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 4px 6px; }
+  .ptab td { padding: 6px; border-top: 1px solid var(--line); vertical-align: middle; }
+  .ptab a { color: var(--ink); text-decoration: none; }
+  .ptab a:hover { text-decoration: underline; }
+  @media (max-width: 600px) { .ptab:not(.dtab) th:nth-child(2), .ptab:not(.dtab) td:nth-child(2), .ptab:not(.dtab) th:nth-child(5), .ptab:not(.dtab) td:nth-child(5), .dtab td:nth-child(4) { display: none; } }
+  .lgrid { display: grid; grid-template-columns: 72px 1fr; gap: 4px 8px; align-items: center; margin-top: 10px; }
+  .lgrid .lg { font-size: 12px; font-weight: 700; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -262,6 +272,7 @@
     <a href="#/rooms" data-nav="rooms">Rooms</a>
     <a href="#/decide" data-nav="decide">Decide <span class="n" id="nDecide">0</span></a>
     <a href="#/do" data-nav="do">Do <span class="n" id="nDo">0</span></a>
+    <a href="#/docs" data-nav="docs">Docs</a>
     <button id="filtersBtn" class="fbtn hidden" type="button" data-action="filters" aria-label="Sort and filter"><i class="ti ti-adjustments-horizontal"></i><span class="n" id="nFilters"></span></button>
     <a href="#/today" data-nav="today" aria-label="Today" class="cal"><i class="ti ti-calendar"></i></a>
   </nav>
@@ -403,8 +414,8 @@
     var html = '<div class="card"><div class="hero" style="--c:' + col(slot) + '"><div class="disc">' + (n === null ? '–' : n) + '</div><div><h2>' + esc(t.name) + '</h2><p>' + esc(t.status) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
       '<div class="pills" style="margin-top:10px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<div id="codes" class="codes"><span class="q">…</span></div>' +
-      '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span>' + linkStrip(t) + '<button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
-      (addLink && addLink.id === t.id ? linkForm() : '') + (cardAsk ? '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn" type="submit" aria-label="Send"><i class="ti ti-send"></i></button></form><div id="askNote" class="muted"></div>' : '') + waiting(t) +
+      '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span>' + linkStrip(t, false) + '<button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
+      linkGroups(t) + (addLink && addLink.id === t.id ? linkForm() : '') + (cardAsk ? '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn" type="submit" aria-label="Send"><i class="ti ti-send"></i></button></form><div id="askNote" class="muted"></div>' : '') + waiting(t) +
       '<div class="strip">' + STAGES.map(function (_, i) { return '<i class="' + (n !== null && i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>';
     STAGES.forEach(function (name, i) {
       var cls = n !== null && i < n ? 'd' : i === n ? 'c' : '';
@@ -656,9 +667,14 @@
 
   /* ---------- Links: each app task's description holds "key: URL" lines (Lisa ✓ 20 Oct) ----------
    * A stage line records each link as it is made; an expected link that is missing shows dashed. */
-  var LINKS = [['mockup', 'layout-dashboard', 'Mockup', 3], ['domain', 'world-www', 'Domain', 4], ['pay', 'credit-card', 'Payments', 4],
-    ['overskill', 'code', 'OverSkill', 6], ['db', 'database', 'Database', 6], ['live', 'world', 'Live app', 7], ['backup', 'file-zip', 'Backup', 8]];
-  var LINK_ALIAS = { payments: 'pay', database: 'db', site: 'live', app: 'live', publish: 'overskill' };
+  var LINKS = [
+    ['mockup', 'layout-dashboard', 'Mockup', 3, 'Build'], ['overskill', 'code', 'OverSkill', 6, 'Build'], ['code', 'brand-github', 'Code', 6, 'Build'], ['db', 'database', 'Database', 6, 'Build'],
+    ['live', 'world', 'Live app', 7, 'Run'], ['domain', 'world-www', 'Domain', 4, 'Run'], ['dns', 'cloud', 'DNS', 7, 'Run'], ['uptime', 'activity', 'Uptime', 8, 'Run'], ['backup', 'file-zip', 'Backup', 8, 'Run'],
+    ['funnel', 'filter', 'ClickFunnels', 7, 'Sell'], ['pay', 'credit-card', 'Payments', 4, 'Sell'], ['email', 'mail', 'Email list', 7, 'Sell'], ['analytics', 'chart-line', 'Analytics', 7, 'Sell'], ['ads', 'speakerphone', 'Ads', 9, 'Sell'],
+    ['facebook', 'brand-facebook', 'Facebook', 7, 'Social'], ['instagram', 'brand-instagram', 'Instagram', 7, 'Social'], ['tiktok', 'brand-tiktok', 'TikTok', 9, 'Social'], ['calendar', 'calendar-event', 'Social calendar', 7, 'Social'],
+    ['support', 'inbox', 'Support inbox', 8, 'Support'], ['reviews', 'star', 'Reviews', 9, 'Support']];
+  var LINK_GROUPS = ['Build', 'Run', 'Sell', 'Social', 'Support'];
+  var LINK_ALIAS = { payments: 'pay', database: 'db', site: 'live', app: 'live', publish: 'overskill', clickfunnels: 'funnel', github: 'code', fb: 'facebook', ig: 'instagram', social: 'calendar', inbox: 'support', cloudflare: 'dns' };
   function linksOf(app) {
     var o = {};
     String(app && app.desc || '').split(/\r?\n|\\n/).forEach(function (l) {
@@ -667,8 +683,14 @@
       if (LINKS.some(function (x) { return x[0] === k; })) o[k] = m[2];
     });
     Object.keys((app && app.links) || {}).forEach(function (k) { o[k] = app.links[k]; });
+    var fam = famOf(app);
+    if (fam && fam !== app) { var F2 = linksOf(fam); Object.keys(F2).forEach(function (k) { if (!o[k]) { o[k] = F2[k]; o['_from_' + k] = fam.name; } }); }
     return o;
   }
+  // Family: the Families list task that shares the app's fam- tag.
+  function famTag(t) { return ((t && t.tags) || []).filter(function (g) { return /^fam-/.test(g); })[0] || ''; }
+  function famOf(app) { var g = famTag(app); if (!g || !S || !S.lists.families) return null; return S.lists.families.filter(function (f) { return f.tags.indexOf(g) >= 0; })[0] || null; }
+  function famName(app) { var f = famOf(app); return f ? f.name.replace(/^TEST-/, '') : (famTag(app) ? famTag(app).slice(4) : ''); }
   // Stage an app has reached: its number, or 8 while live (rescue counts as live).
   function reached(app) { var n = stageNo(app.status); return n !== null ? n : /^(rescue|operate)$/i.test(app.status) ? 8 : -1; }
   function appTask(t) { var g = appOf(t); return apps().filter(function (a) { return a.name.replace(/^TEST-/, '') === g; })[0]; }
@@ -679,17 +701,29 @@
     return (probe && probe.result === 'FAILED') || app.tags.indexOf('leak') >= 0 || app.status === 'rescue' ||
       (S.lists.incidents || []).some(function (x) { return isOpen(x) && x.tags.indexOf('app-' + app.id) >= 0; });
   }
-  function linkStrip(app) {
+  function linkStrip(app, full) {
     if (!app) return '';
     var L = linksOf(app), st = reached(app), out = '';
     if (alarm(app)) out += L.overskill ? '<a class="lk off" href="' + esc(L.overskill) + '" target="_blank" rel="noopener" title="Unpublish in OverSkill"><i class="ti ti-power"></i> Off</a>' :
       '<span class="lk off no" title="OverSkill link not recorded: unpublish from OverSkill"><i class="ti ti-power"></i> Off</span>';
-    LINKS.forEach(function (x) {
-      if (L[x[0]]) out += '<a class="lk" href="' + esc(L[x[0]]) + '" target="_blank" rel="noopener" title="' + x[2] + '"><i class="ti ti-' + x[1] + '"></i></a>';
+    LINKS.filter(function (x) { return full || ['overskill', 'live', 'mockup'].indexOf(x[0]) >= 0; }).forEach(function (x) {
+      if (L[x[0]]) out += '<a class="lk" href="' + esc(L[x[0]]) + '" target="_blank" rel="noopener" title="' + x[2] + (L['_from_' + x[0]] ? ' · ' + esc(L['_from_' + x[0]]) : '') + '"><i class="ti ti-' + x[1] + '"></i></a>';
       else if (st >= x[3] && st >= 0) out += '<button class="lk no" type="button" data-addlink-open="' + esc(app.id) + '" data-key="' + x[0] + '" title="' + x[2] + ': add"><i class="ti ti-' + x[1] + '"></i></button>';
     });
     if (st >= 7) out += '<a class="lk" href="#/problem/' + esc(app.id) + '" title="Report a problem"><i class="ti ti-alert-triangle"></i></a>';
+    if (!full) { var n = LINKS.filter(function (x) { return L[x[0]]; }).length; out += '<a class="lk" href="#/card/' + esc(app.id) + '" title="All links"><span style="font-size:12px">' + n + '</span></a>'; }
     return out ? '<span class="links">' + out + '</span>' : '';
+  }
+  // App card: every link, grouped by job (Build · Run · Sell · Social · Support); dashed = expected by now, tap to add.
+  function linkGroups(app) {
+    var L = linksOf(app), st = reached(app);
+    return '<div class="lgrid">' + LINK_GROUPS.map(function (g) {
+      var cells = LINKS.filter(function (x) { return x[4] === g; }).map(function (x) {
+        if (L[x[0]]) return '<a class="lk" href="' + esc(L[x[0]]) + '" target="_blank" rel="noopener" title="' + x[2] + (L['_from_' + x[0]] ? ' · ' + esc(L['_from_' + x[0]]) : '') + '"><i class="ti ti-' + x[1] + '"></i></a>';
+        return '<button class="lk no" type="button" data-addlink-open="' + esc(app.id) + '" data-key="' + x[0] + '" title="' + x[2] + ': add"' + (st >= x[3] ? '' : ' style="opacity:.35"') + '><i class="ti ti-' + x[1] + '"></i></button>';
+      }).join('');
+      return '<span class="lg">' + g + '</span><span>' + cells + '</span>';
+    }).join('') + (famName(app) ? '<span class="lg">Family</span><span class="muted">' + esc(famName(app)) + '</span>' : '') + '</div>';
   }
   function lines(t) { return String(t.desc || '').split(/\r?\n|\\n/).map(function (l) { return l.trim(); }).filter(Boolean); }
   function line(t, re) { var l = lines(t).filter(function (x) { return re.test(x); })[0]; return l ? l.replace(re, '').trim() : ''; }
@@ -844,6 +878,35 @@
     var x = LINKS.filter(function (l) { return l[0] === addLink.key; })[0];
     return '<form class="addlink" data-addlink data-app="' + esc(addLink.id) + '" data-key="' + esc(addLink.key) + '"><i class="ti ti-' + x[1] + '" title="' + x[2] + '" style="align-self:center"></i><input class="fin" name="url" aria-label="' + x[2] + ' address" type="text" inputmode="url" autocomplete="off"><button class="btn" type="submit" aria-label="Save"><i class="ti ti-check"></i></button><span class="ferr" style="align-self:center"></span></form>';
   }
+  var pfo = (function () { try { return JSON.parse(localStorage.getItem('af-pf') || '') || {}; } catch (e) { return {}; } })();
+  function savePf() { try { localStorage.setItem('af-pf', JSON.stringify(pfo)); } catch (e) {} }
+  function health(a) { return alarm(a) ? 'alarm' : stuck(a) ? 'stuck' : /^(killed|retired|hold|cancelled)$/i.test(a.status) ? 'archive' : reached(a) >= 8 ? 'live' : reached(a) >= 4 ? 'building' : 'idea'; }
+  var HW = { alarm: ['Needs you', 'alert-triangle', 2], stuck: ['Stuck', 'clock-pause', 3], live: ['Live', 'world', 5], building: ['Building', 'hammer', 4], idea: ['Idea', 'bulb', 7], archive: ['Archive', 'archive', 8] };
+  function vPortfolio() {
+    var all = apps(), fams = [], q = (pfo.q || '').toLowerCase();
+    all.forEach(function (a) { var f = famName(a) || '—'; if (fams.indexOf(f) < 0) fams.push(f); });
+    var list = all.filter(function (a) {
+      if (q && (a.name + ' ' + a.status + ' ' + famName(a)).toLowerCase().indexOf(q) < 0) return false;
+      if (pfo.fam && (famName(a) || '—') !== pfo.fam) return false;
+      if (pfo.h && health(a) !== pfo.h) return false;
+      if (!pfo.h && !pfo.arch && health(a) === 'archive') return false;
+      return true;
+    }).sort(function (a, b) { var o = ['alarm', 'stuck', 'live', 'building', 'idea', 'archive']; return o.indexOf(health(a)) - o.indexOf(health(b)) || reached(b) - reached(a) || b.updated - a.updated; });
+    var chip = function (k, v, label) { return '<button class="pill' + (pfo[k] === v ? ' on' : '') + '" type="button" data-pf="' + k + '" data-val="' + esc(v) + '">' + label + '</button>'; };
+    var cnt = function (h) { return all.filter(function (a) { return health(a) === h; }).length; };
+    return '<div class="card"><div class="pills"><span class="flab">Filter</span>' +
+      Object.keys(HW).map(function (h) { return cnt(h) ? chip('h', h, '<i class="ti ti-' + HW[h][1] + '"></i> ' + HW[h][0] + ' ' + cnt(h)) : ''; }).join('') +
+      (fams.length > 1 ? fams.map(function (f) { return chip('fam', f, esc(f)); }).join('') : '') +
+      ((pfo.h || pfo.fam || pfo.q) ? '<button class="pill" type="button" data-action="pfclear" aria-label="Clear filters" title="Clear filters"><i class="ti ti-filter-off"></i></button>' : '') + '</div>' +
+      '<div style="margin:8px 0"><input class="fin search" data-f="pfq" value="' + esc(pfo.q || '') + '" aria-label="Search apps" type="search"></div>' +
+      '<table class="ptab"><thead><tr><th>App</th><th>Family</th><th>Stage</th><th></th><th>Changed</th></tr></thead><tbody>' +
+      list.slice(0, pfo.all ? 2000 : 50).map(function (a) {
+        var h = HW[health(a)];
+        return '<tr><td><a href="#/card/' + esc(a.id) + '"><span class="dot" style="background:var(--ljr-' + h[2] + ');display:inline-block;width:9px;height:9px;margin-right:6px"></span>' + esc(a.name.replace(/^TEST-/, '')) + '</a>' + (isTest(a) ? ' <span class="pill">TEST</span>' : '') + '</td><td class="muted">' + esc(famName(a) || '—') + '</td><td>' + esc(a.status) + '</td><td title="' + h[0] + '"><i class="ti ti-' + h[1] + '"></i></td><td class="muted">' + ago(a.updated) + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      (list.length > 50 && !pfo.all ? '<button class="more" type="button" data-action="pfall">+' + (list.length - 50) + '</button>' : '') +
+      (!pfo.h && !pfo.arch && cnt('archive') ? '<button class="more" type="button" data-action="pfarch"><i class="ti ti-archive"></i> ' + cnt('archive') + '</button>' : '') + '</div>';
+  }
   // Apps & ideas at any size: Needs you · Building · Ideas · Archive (folded), with a search box.
   var appQ = '';
   function vAllApps() {
@@ -858,6 +921,56 @@
       G.filter(function (g) { return g[2].length; }).map(function (g) { return '<div class="grpt"><i class="ti ti-' + g[1] + '"></i>' + g[0] + ' · ' + g[2].length + '</div><div class="pills">' + g[2].map(chipOf).join('') + '</div>'; }).join('') +
       (a8.length ? '<details class="arch"><summary class="grpt"><i class="ti ti-archive"></i>Archive · ' + a8.length + '</summary><div class="pills">' + a8.map(chipOf).join('') + '</div></details>' : '') +
       '</div></div>';
+  }
+
+  /* ---------- Docs (Lisa, 20 Oct): every doc the factory knows, by app and type, with search. Opens in Drive (new tab). ---------- */
+  var dq = (function () { try { return JSON.parse(localStorage.getItem('af-dq') || '') || {}; } catch (e) { return {}; } })();
+  function saveDq() { try { localStorage.setItem('af-dq', JSON.stringify(dq)); } catch (e) {} }
+  var DT = [['card', 'id-badge-2', 'Card', /CARD|card \d|Card \d/], ['prompt', 'message-2-code', 'Prompt', /prompt|· P\d/i], ['mockup', 'layout-dashboard', 'Mockup', /mockup|board/i],
+    ['research', 'search', 'Research', /research|rivals|base/i], ['report', 'file-check', 'Report', /report|test|proof|audit/i], ['rules', 'book', 'Rules', /rule|protocol|scheme|template|standard/i], ['other', 'file', 'Other', /.*/]];
+  function docType(text) { return DT.filter(function (d) { return d[3].test(text); })[0]; }
+  function allDocs() {
+    var by = {}, add = function (id, url, title, t) {
+      if (by[id]) { if (t && by[id].from.indexOf(t.name) < 0) by[id].from.push(t.name); return; }
+      var app = t ? (t._k === 'apps' ? t.name.replace(/^TEST-/, '') : appOf(t)) : 'Factory';
+      by[id] = { id: id, url: url, title: title, app: app, type: docType(title + ' ' + (t ? t.name : '')), from: t ? [t.name] : [], at: t ? t.updated : 0 };
+    };
+    (S.cards || []).forEach(function (c) {
+      var owner = apps().filter(function (a) { return String(a.desc).indexOf(c.id) >= 0; })[0];
+      add(c.id, 'https://drive.google.com/file/d/' + c.id + '/view', c.name, owner || null);
+      if (by[c.id]) { by[c.id].type = DT[0]; by[c.id].at = c.updated; }
+    });
+    allTasks().concat(apps()).forEach(function (t) {
+      (String(t.desc || '').match(/https:\/\/(?:drive|docs)\.google\.com\/[^\s<)\\"]+/g) || []).forEach(function (u) {
+        var id = (u.match(/\/d\/([\w-]{20,})/) || u.match(/id=([\w-]{20,})/) || [])[1]; if (!id) return;
+        var line = String(t.desc).split(/\r?\n|\\n/).filter(function (l) { return l.indexOf(u) >= 0; })[0] || '';
+        var label = line.replace(u, '').replace(/^[\s\-•·:]+|[\s\-•·:(]+$/g, '').replace(/\(section\s*/i, '').slice(0, 70) || t.name.replace(/^TEST-/, '');
+        add(id, u, label, t);
+      });
+    });
+    return Object.keys(by).map(function (k) { return by[k]; });
+  }
+  function vDocs() {
+    var docs = allDocs(), q = (dq.q || '').toLowerCase(), appsIn = [];
+    docs.forEach(function (d) { if (appsIn.indexOf(d.app) < 0) appsIn.push(d.app); });
+    var openIds = decisions().concat(mine()).map(function (t) { return t.name; });
+    var list = docs.filter(function (d) {
+      if (!q && !dq.app && !dq.type && !d.from.some(function (n) { return openIds.indexOf(n) >= 0; })) return false;
+      if (dq.app && d.app !== dq.app) return false;
+      if (dq.type && d.type[0] !== dq.type) return false;
+      return !q || (d.title + ' ' + d.app + ' ' + d.from.join(' ')).toLowerCase().indexOf(q) >= 0;
+    }).sort(function (a, b) { return (b.at || 0) - (a.at || 0); });
+    var chip = function (k, v, label) { return '<button class="pill' + (dq[k] === v ? ' on' : '') + '" type="button" data-dq="' + k + '" data-val="' + esc(v) + '">' + label + '</button>'; };
+    var active = docs.filter(function (d) { return d.from.some(function (n) { return openIds.indexOf(n) >= 0; }); });
+    appsIn = []; active.forEach(function (d) { if (appsIn.indexOf(d.app) < 0) appsIn.push(d.app); });
+    return '<div class="card"><input class="fin search" data-f="dqq" value="' + esc(dq.q || '') + '" aria-label="Search all docs" type="search" style="max-width:none">' +
+      '<div class="pills" style="margin-top:10px"><span class="flab">App</span>' + appsIn.sort().map(function (a) { return chip('app', a, esc(a)); }).join('') + '</div>' +
+      '<div class="pills" style="margin-top:8px"><span class="flab">Type</span>' + DT.filter(function (d) { return docs.some(function (x) { return x.type[0] === d[0]; }); }).map(function (d) { return chip('type', d[0], '<i class="ti ti-' + d[1] + '"></i> ' + d[2]); }).join('') +
+      ((dq.app || dq.type || dq.q) ? '<button class="pill" type="button" data-action="dqclear" aria-label="Clear filters" title="Clear filters"><i class="ti ti-filter-off"></i></button>' : '') + '</div>' +
+      '<table class="ptab dtab" style="margin-top:8px"><tbody>' + list.slice(0, dq.all ? 3000 : 60).map(function (d) {
+        return '<tr><td style="width:28px"><i class="ti ti-' + d.type[1] + '" title="' + d.type[2] + '"></i></td><td><a href="' + esc(d.url) + '" target="_blank" rel="noopener">' + esc(d.title) + '</a></td><td class="muted">' + esc(d.app) + '</td><td class="muted" title="' + esc(d.from.join(' · ')) + '">' + (d.from.length ? d.from.length : '') + '</td></tr>';
+      }).join('') + '</tbody></table>' + (list.length > 60 && !dq.all ? '<button class="more" type="button" data-action="dqall">+' + (list.length - 60) + '</button>' : '') +
+      (list.length ? '' : '<p class="muted">—</p>') + '</div>';
   }
   // full = the whole description (title tapped); otherwise the first 4 lines plus Claude's answers.
   function why(t, full) {
@@ -930,6 +1043,8 @@
     var f = e.target.getAttribute && e.target.getAttribute('data-f'); if (!f) return;
     if (f === 'name' || f === 'brief' || f === 'note') { idea[f] = e.target.value; delete formErr[f]; saveIdea(); }
     else if (f === 'pwhat') prob.what = e.target.value;
+    else if (f === 'dqq') { dq.q = e.target.value; saveDq(); var p4 = e.target.selectionStart; render(); var b4 = document.querySelector('[data-f="dqq"]'); if (b4) { b4.focus(); b4.setSelectionRange(p4, p4); } }
+    else if (f === 'pfq') { pfo.q = e.target.value; savePf(); var p2 = e.target.selectionStart; render(); var b2 = document.querySelector('[data-f="pfq"]'); if (b2) { b2.focus(); b2.setSelectionRange(p2, p2); } }
     else if (f === 'appq') { appQ = e.target.value; var pos = e.target.selectionStart; render(); var b = document.querySelector('[data-f="appq"]'); if (b) { b.focus(); b.setSelectionRange(pos, pos); } }
   });
   document.addEventListener('input', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('af-drafts', drafts); } });
@@ -949,7 +1064,7 @@
     allTasks();
     var listView = /^(decide|do|today|queue)$/.test(route[0]), nf = onCount();
     $('filtersBtn').classList.toggle('hidden', !listView); $('filtersBtn').classList.toggle('on', filtersOpen); $('nFilters').textContent = nf ? nf : '';
-    v.innerHTML = route[0] === 'today' ? vToday() : route[0] === 'queue' ? list(queue(route[1]), 5, '—', 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'all' ? vAllApps() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list(decisions(), 4, '—', 'decide') :
+    v.innerHTML = route[0] === 'today' ? vToday() : route[0] === 'queue' ? list(queue(route[1]), 5, '—', 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? vPortfolio() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list(decisions(), 4, '—', 'decide') :
       route[0] === 'do' ? list(mine(), 4, '—', 'do') : vRooms();
   }
 
@@ -1020,12 +1135,16 @@
       if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'cardask') { cardAsk = !cardAsk; render(); var ai = document.querySelector('form.ask[data-ask] input[name=text]'); if (cardAsk && ai) ai.focus(); }
       else if (k === 'more') { var ga = a.getAttribute('data-app'); shownAll[ga] = { on: !(shownAll[ga] && shownAll[ga].on), at: Date.now() }; saveLocal('af-open', shownAll); render(); }
+      else if (k === 'dqclear') { dq = {}; saveDq(); render(); } else if (k === 'dqall') { dq.all = true; render(); }
+      else if (k === 'pfclear') { pfo = {}; savePf(); render(); } else if (k === 'pfall') { pfo.all = true; render(); } else if (k === 'pfarch') { pfo.arch = true; render(); }
       else if (k === 'clearf') { prefs = { unanswered: false, sort: 'flag' }; savePrefs(); render(); }
       else if (k === 'sendidea') sendIdea(); else if (k === 'sendprob') sendProblem(a.getAttribute('data-id'));
       else if (k === 'filters') { filtersOpen = !filtersOpen; render(); } else if (k === 'factory') sendFactory(); else if (k === 'today' || k === 'week') { weekView = k === 'week'; render(); }
       return;
     }
     var b = e.target.closest('[data-act]'); if (b) { sendAct(b); return; }
+    var dqb = e.target.closest('[data-dq]'); if (dqb) { var dk = dqb.getAttribute('data-dq'), dv = dqb.getAttribute('data-val'); dq[dk] = dq[dk] === dv ? '' : dv; saveDq(); render(); return; }
+    var pfb = e.target.closest('[data-pf]'); if (pfb) { var pk3 = pfb.getAttribute('data-pf'), pv = pfb.getAttribute('data-val'); pfo[pk3] = pfo[pk3] === pv ? '' : pv; savePf(); render(); return; }
     var pk2 = e.target.closest('[data-pick]'); if (pk2) { idea.a = idea.a || {}; idea.a[pk2.getAttribute('data-pick')] = pk2.getAttribute('data-val'); delete formErr[pk2.getAttribute('data-pick')]; saveIdea(); render(); return; }
     var pr = e.target.closest('[data-prob]'); if (pr) { prob.k = pr.getAttribute('data-prob'); delete formErr.k; render(); return; }
     var al = e.target.closest('[data-addlink-open]'); if (al) { var aid = al.getAttribute('data-addlink-open'), ak = al.getAttribute('data-key'); addLink = addLink && addLink.id === aid && addLink.key === ak ? null : { id: aid, key: ak }; render(); var inp2 = document.querySelector('form[data-addlink] input'); if (inp2) inp2.focus(); return; }
