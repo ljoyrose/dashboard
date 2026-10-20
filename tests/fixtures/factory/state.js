@@ -5,6 +5,9 @@
   function build(now) {
     now = now || Date.now();
     var H = 36e5, D = 864e5;
+    // London date and time, as the bots write them on a Sends task (the Copy gate reads these).
+    var day = function (ts) { return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); };
+    var hm = function (ts) { return new Date(ts).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }); };
     var task = function (o) {
       return Object.assign({ status: 'to do', color: '#87909e', tags: [], url: 'https://app.clickup.com/t/' + o.id, updated: now - H, created: now - D, parent: null, desc: '', links: {}, pri: null, due: null, who: [], chk: [], est: 0, spent: 0, cm: [], files: [] }, o);
     };
@@ -16,8 +19,13 @@
       task({ id: '869fka369', name: 'TEST-Door Check', status: '1 research', tags: ['st-1', 'app-869fka369'] })
     ];
     var sends = [
-      task({ id: '869fk9d1r', name: 'Links · P5-GATE-v11 (lock 38 tables) · send 2 of 2', tags: ['app-869fjxpc2', 'app-links'], created: now - 2 * H,
-        desc: 'Send 2 of 2.\nPrompt text: https://drive.google.com/file/d/1SAMPLEpromptDocId00000000000/view\nApp: Sample Links.' }),
+      task({ id: '869fk9d1r', name: 'Links · P5-GATE-v11 (lock 38 tables) · send 2 of 2', tags: ['app-869fjxpc2', 'app-links', 'leak-open'], created: now - 2 * H,
+        desc: 'Send 2 of 2.\nPrompt text: https://drive.google.com/file/d/1SAMPLEpromptDocId00000000000/view\nApp: Sample Links.\n' +
+          'Last turn: T56 = live chat, 682 credits, checked ' + day(now) + '\n' +
+          'Prediction: https://drive.google.com/file/d/1SAMPLEpredictionDoc0000000/view · Simulation: https://drive.google.com/file/d/1SAMPLEsimulationDoc0000000/view · inputs-gate: PASS ' + day(now) + '\n' +
+          'Happy Hour: active, 40 min left, read ' + hm(now - 5 * 60e3) + ' · next press due ' + hm(now + 35 * 60e3) + ' · presses today 2/5\n' +
+          'AFTER SEND YOU MUST: run the leak tests (~15 min after send, ~20 min)\n' +
+          'Lisa available: 16:00–18:00' }),
       task({ id: '869fk9d1n', name: 'Links · P5-READ-v13 (read-only check) · send 1 of 2', tags: ['app-869fjxpc2', 'app-links'], created: now - 3 * H, status: 'done' }),
       task({ id: '869fk6k00', name: 'Kennel Book · P2 · Dogs list', tags: ['app-869fk9834'], created: now - 5 * H }),
       task({ id: '869fk6jzc', name: 'TEST-Kennel Book · P1 · Tenant roles', tags: ['app-869fk8geg'], created: now - 6 * H })
