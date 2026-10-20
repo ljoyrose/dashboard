@@ -284,3 +284,35 @@ test.describe('Factory send gate', () => {
     await expect(page.locator('[data-sendinfo="869fk9d1r"] a[href="#/item/wrk000009"]')).toBeVisible();
   });
 });
+
+// Single lines (Lisa, 20 Oct): a selected or focused tab, pill or chip is ONE line, a shade darker. No ring, no inner shadow.
+test.describe('Factory single lines', () => {
+  const lines = (loc) => loc.evaluateAll((els) => els.map((e) => { const c = getComputedStyle(e); return { ring: c.outlineStyle !== 'none' && parseFloat(c.outlineWidth) > 0, shadow: c.boxShadow }; }));
+  const single = async (loc) => { const all = await lines(loc); expect(all.length).toBeGreaterThan(0); all.forEach((x) => { expect(x.ring).toBe(false); expect(x.shadow).toBe('none'); }); };
+
+  test('after clicking a tab and a chip, and with keyboard focus, selected tabs and chips have one line @regression', async ({ page, guard }) => {
+    await open(page, guard, '#/do');
+    await page.locator('nav.tabs a[data-nav="me"]').click();
+    await expect(page.locator('nav.tabs a[data-nav="me"]')).toHaveAttribute('aria-current', 'page');
+    await chip(page, 'app', 'kennel-book').click();
+    await chip(page, 'app', '').click();
+    await expect(chip(page, 'app', '')).toHaveClass(/\bon\b/);
+    await single(page.locator('nav.tabs a[aria-current="page"]'));
+    await single(page.locator('#view .pill.on'));
+    // Keyboard focus is the same single line, never a second ring.
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+    await single(page.locator(':focus'));
+    await chip(page, 'app', '').focus();
+    await single(page.locator(':focus'));
+    // Stage pills in the Filter panel and chips on the New idea form.
+    await panel(page);
+    const stg = page.locator('.fpanel .pill.stg').first();
+    await stg.click();
+    await single(page.locator('.fpanel .pill.on'));
+    await page.goto('factory/#/new');
+    const ch = page.locator('#view .ch').first();
+    await ch.click();
+    await single(page.locator('#view .ch.on'));
+  });
+});

@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-factory-send-gate-2026-10-20">
+<meta name="build" content="ljr-factory-single-lines-2026-10-20">
 <title>Factory</title>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
@@ -39,7 +39,6 @@
   .hidden { display: none !important; }
   nav.tabs { display: flex; gap: 6px; overflow-x: auto; padding: 0 16px 10px; scrollbar-width: none; }
   nav.tabs a { --radius: 999px; flex: none; text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); display: inline-flex; gap: 6px; align-items: center; }
-  /* Hover / selected never change size (no jumping): hover darkens the border, selected adds a thin inner line. */
   /* One state only: hover = selected = a slightly heavier faint line. Same size always, so nothing moves. */
   nav.tabs a, .pill, .btn, .ico, .flagb, .opt, .mark, .plus { transition: none; }
   nav.tabs a:hover, nav.tabs a[aria-current="page"], .pill:hover, .pill.on, .btn:hover, .ico:hover, .ico.on, .flagb:hover, .mark:hover, .plus:hover { border-color: var(--muted); }
@@ -204,9 +203,11 @@
   .undo:hover { border-color: var(--muted); color: var(--ink); }
   .copy { font-size: 13px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
   .copy:hover { border-color: var(--muted); }
-  /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
+  /* Calm focus (Lisa, 20 Oct: no double lines): never a second ring. Focus = the same one line, a shade darker. Plain text links get a thicker underline. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
-  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+  a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: none; border-color: var(--ink) !important; }
+  #view a:not([class]):focus-visible, summary:focus-visible { text-decoration: underline; text-decoration-thickness: 2px; }
   .lock { color: var(--ljr-3-text); font-size: 16px; display: inline-flex; align-items: center; gap: 4px; }
 
   /* Forms in the dashboard's own style (Lisa ✓ 20 Oct): chips, (i) on hover, no placeholder words, draft kept. */
@@ -218,7 +219,6 @@
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .ch { font: inherit; font-size: 14px; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; }
   .ch:hover, .ch.on { border-color: var(--muted); }
-  .ch.on { box-shadow: inset 0 0 0 1px var(--muted); }
   .ch b { font-weight: 700; margin-right: 4px; }
   .fin { width: 100%; font: inherit; font-size: 15px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); }
   textarea.fin { min-height: 72px; resize: vertical; }
@@ -301,8 +301,7 @@
   .pill { cursor: pointer; font-family: inherit; color: var(--ink); }
   .pill .cnt { min-width: 20px; height: 20px; font-size: 11px; }
   .pill.stg { border-color: var(--c); min-width: 32px; justify-content: center; }
-  .pill.stg.on { box-shadow: inset 0 0 0 1px var(--c); }
-  .pill.on { box-shadow: inset 0 0 0 1px var(--muted); }
+  .pill.stg.on { border-color: var(--ink); }
   .empty { display: flex; gap: 12px; align-items: center; }
   .appmenu { max-width: 1600px; margin: 0 auto; padding: 0 24px 12px; }
   @media (max-width: 600px) { .appmenu { padding: 0 16px 12px; } }
