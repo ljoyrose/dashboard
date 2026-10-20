@@ -9,9 +9,11 @@ const { build } = require('../fixtures/factory/state');
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'factory', 'index.html'), 'utf8');
 const LOGS = /logs: '([^']+)'/.exec(SRC)[1]; // the Drive folder the page reads af-state.json from
 
-async function open(page, guard, hash, { sent } = {}) {
+async function open(page, guard, hash, { sent, change } = {}) {
+  const state = build(Date.now());
+  if (change) change(state);
   guard.world.folder(LOGS, 'AF logs (sample)');
-  guard.world.file('af-state-sample', 'af-state.json', JSON.stringify(build(Date.now())), { parents: [LOGS], mimeType: 'application/json' });
+  guard.world.file('af-state-sample', 'af-state.json', JSON.stringify(state), { parents: [LOGS], mimeType: 'application/json' });
   if (sent) await page.addInitScript((ids) => { const o = {}; ids.forEach((id) => { o[id] = Date.now(); }); localStorage.setItem('af-sent', JSON.stringify(o)); }, sent);
   await page.goto('factory/' + hash);
   await expect(page.locator('#signInBtn')).toBeEnabled();
@@ -233,5 +235,52 @@ test.describe('Factory find bar', () => {
     await expect(card.locator('[data-copy="869fk9d1r"]')).toBeVisible();
     await page.goto('factory/#/item/nosuchid0');
     await expect(page.locator('[data-empty] .cnt')).toHaveText('0');
+  });
+});
+
+// Copy on a Sends card only when the checks before a paid send are written on the task (APPFACT E11, E14, E15, E16).
+test.describe('Factory send gate', () => {
+  const send = (st, id) => st.lists.sends.find((t) => t.id === id);
+  const hm = (ts) => new Date(ts).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false });
+
+  test('all five lines present: Copy shows, with the Happy Hour reading, the after-send block and when Lisa is free', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk9d1r');
+    await expect(page.locator('[data-copy="869fk9d1r"]')).toBeVisible();
+    const info = page.locator('[data-sendinfo="869fk9d1r"]');
+    await expect(info).toContainText('Happy Hour: active');
+    await expect(info).toContainText('AFTER SEND YOU MUST');
+    await expect(info).toContainText('Lisa available: 16:00');
+  });
+
+  test('a send with none of the lines names each missing one instead of Copy', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk6k00');
+    await expect(page.locator('[data-copy="869fk6k00"]')).toHaveCount(0);
+    await expect(page.locator('[data-gate="869fk6k00"]')).toHaveText(/Last turn · Prediction · Happy Hour · After send/);
+  });
+
+  test('Last turn checked yesterday, or no simulation link, hides Copy', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => { const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/checked \S+/, 'checked 2020-01-01').replace(/ · Simulation: \S+/, ''); } });
+    await expect(page.locator('[data-copy="869fk9d1r"]')).toHaveCount(0);
+    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Last turn · Prediction/);
+  });
+
+  test('the Last turn line is also read from a comment ("checked 20 Oct" style)', async ({ page, guard }) => {
+    const d = new Date().toLocaleDateString('en-GB', { timeZone: 'Europe/London', day: 'numeric', month: 'short' });
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => { const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/\nLast turn:[^\n]*/, ''); t.cm = [{ by: 'Claude', at: Date.now(), text: 'Last turn: T56 = live chat, 682 credits, checked ' + d + ' ' + hm(Date.now()) + ' UK' }]; } });
+    await expect(page.locator('[data-copy="869fk9d1r"]')).toBeVisible();
+  });
+
+  test('a Happy Hour reading older than 15 minutes hides Copy', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => { const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/read \d{2}:\d{2}/, 'read ' + hm(Date.now() - 20 * 60e3)); } });
+    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Happy Hour/);
+  });
+
+  test('a leak or security send needs "Lisa available"; Lisa\'s Do lines for the app are linked', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => {
+      const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/\nLisa available:[^\n]*/, '');
+      st.lists.work.push({ ...st.lists.work[0], id: 'wrk000009', name: 'Sample Links · Be there for the leak tests', tags: ['who-lisa', 'app-869fjxpc2'], due: null });
+    } });
+    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Lisa available/);
+    await expect(page.locator('[data-sendinfo="869fk9d1r"] a[href="#/item/wrk000009"]')).toBeVisible();
   });
 });
