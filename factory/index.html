@@ -944,8 +944,9 @@
       (String(t.desc || '').match(/https:\/\/(?:drive|docs)\.google\.com\/[^\s<)\\"]+/g) || []).forEach(function (u) {
         var id = (u.match(/\/d\/([\w-]{20,})/) || u.match(/id=([\w-]{20,})/) || [])[1]; if (!id) return;
         var line = String(t.desc).split(/\r?\n|\\n/).filter(function (l) { return l.indexOf(u) >= 0; })[0] || '';
-        var label = line.replace(u, '').replace(/^[\s\-•·:]+|[\s\-•·:(]+$/g, '').replace(/\(section\s*/i, '').slice(0, 70) || t.name.replace(/^TEST-/, '');
-        add(id, u, label, t);
+        var label = line.replace(u, '').replace(/\(section\s*/i, '').replace(/[()]/g, '').replace(/^[\s\-•·:]+|[\s\-•·:]+$/g, '').replace(/^(Prompt text|Look|Source|Card \d+|open)\s*:?\s*/i, '').slice(0, 50);
+        var task = t.name.replace(/^TEST-/, '').replace(/^[^·]+·\s*/, '');
+        add(id, u, (t._k === 'apps' ? (label.length < 12 ? 'App notes' + (label ? ' · ' + label : '') : label) : task + (label && task.indexOf(label) < 0 ? ' · ' + label : '')).slice(0, 80), t);
       });
     });
     return Object.keys(by).map(function (k) { return by[k]; });
@@ -968,7 +969,7 @@
       '<div class="pills" style="margin-top:8px"><span class="flab">Type</span>' + DT.filter(function (d) { return docs.some(function (x) { return x.type[0] === d[0]; }); }).map(function (d) { return chip('type', d[0], '<i class="ti ti-' + d[1] + '"></i> ' + d[2]); }).join('') +
       ((dq.app || dq.type || dq.q) ? '<button class="pill" type="button" data-action="dqclear" aria-label="Clear filters" title="Clear filters"><i class="ti ti-filter-off"></i></button>' : '') + '</div>' +
       '<table class="ptab dtab" style="margin-top:8px"><tbody>' + list.slice(0, dq.all ? 3000 : 60).map(function (d) {
-        return '<tr><td style="width:28px"><i class="ti ti-' + d.type[1] + '" title="' + d.type[2] + '"></i></td><td><a href="' + esc(d.url) + '" target="_blank" rel="noopener">' + esc(d.title) + '</a></td><td class="muted">' + esc(d.app) + '</td><td class="muted" title="' + esc(d.from.join(' · ')) + '">' + (d.from.length ? d.from.length : '') + '</td></tr>';
+        return '<tr><td style="width:28px"><i class="ti ti-' + d.type[1] + '" title="' + d.type[2] + '"></i></td><td><a href="' + esc(d.url) + '" target="_blank" rel="noopener" title="Opens in Drive (new tab)">' + esc(d.title) + '</a></td><td style="width:30px"><a class="mark" href="' + esc(d.url) + '" target="_blank" rel="noopener" aria-label="Open in Drive (new tab)" title="Opens in Drive (new tab)">' + DRIVE_MARK + '</a></td><td class="muted">' + esc(d.app) + '</td><td class="muted" title="' + esc(d.from.join(' · ')) + '">' + (d.from.length ? d.from.length : '') + '</td></tr>';
       }).join('') + '</tbody></table>' + (list.length > 60 && !dq.all ? '<button class="more" type="button" data-action="dqall">+' + (list.length - 60) + '</button>' : '') +
       (list.length ? '' : '<p class="muted">—</p>') + '</div>';
   }
