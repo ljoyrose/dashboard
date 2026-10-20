@@ -248,6 +248,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | Changing screen left keyboard focus on the old menu item, so screen readers did not say where you were | "home: clicking a menu item puts focus on the screen title" |
 | 18 Oct 2026 | The Map led with links and counts, so what needed Lisa today was spread over several cards | "shows at most 7 rows, overdue (red) first, each row a link, and the tab title carries the count" |
 | 18 Oct 2026 | Money only said "runs dry on X" in words, so a forecast dip was easy to miss | "a forecast that goes below zero marks the runs-dry date in red" |
+| 20 Oct 2026 | Factory: a send named "Links · …" for the app "LJR7 Links" was filed under "Factory", so Lisa could not find it in Do | "a send named Links · P5 sits under its app Sample Links…" |
 | 18 Oct 2026 | Phone install needs a kept copy of the site, and it must never hold Drive data or the sign-in | "after signing in and reading, the kept copy holds only the page files" |
 | 18 Oct 2026 | There was no way to find a file, to-do or dog without opening each page and scrolling | "home: / opens search; it finds Drive file names per shared drive and Money to-dos, each a link" |
 | 19 Oct 2026 | Lisa still signed in twice: the sign-in lived in one tab only, so Money in a new tab or window, or the installed app, asked again | "sign in on home, open Money Hub and CD Hub: each opens in a new tab already signed in, no prompt" |
