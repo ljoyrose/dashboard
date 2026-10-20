@@ -178,6 +178,12 @@
   .muted { color: var(--muted); font-size: 14px; }
   svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   footer { color: var(--muted); font-size: 13px; padding: 0 16px 24px; }
+
+  /* One page width everywhere (Lisa, 20 Oct): up to 1040px, centred; phones get the full width with a 16px edge. */
+  .wrap, .wrap.wide, .wide, .hin { max-width: 1040px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+  @media (max-width: 1072px) { .wrap, .wide, .hin { padding-left: 16px; padding-right: 16px; } }
+  header .top, header nav.tabs { max-width: 1040px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+  @media (min-width: 1073px) { header .top, header nav.tabs { padding-left: 0; padding-right: 0; } }
 </style>
 </head>
 <body>
@@ -302,7 +308,7 @@
       '<a class="pill" href="#/all" title="Apps"><i class="ti ti-apps"></i> ' + A.length + '</a>' +
       '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> <span' + (A.filter(stuck).length >= 1 ? ' class="hot"' : '') + '>' + A.filter(stuck).length + '</span></a>' +
       '<a class="pill" href="#/room/reactor" title="Build slots"><i class="ti ti-hammer"></i> ' + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + '/3</a>' +
-      '<a class="pill" href="#/queue/claude">Claude ' + queue('claude').length + '</a><a class="pill" href="#/queue/grok">Grok ' + queue('grok').length + '</a>' +
+      people().map(function (w) { return '<a class="pill" href="#/queue/' + encodeURIComponent(w) + '">' + esc(w) + ' ' + queue(w).length + '</a>'; }).join('') +
       '<button class="pill" type="button" data-action="factory" aria-label="Factory on or off" title="Factory"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span></button>' + enginePill() + '</div><div class="rooms">';
     ROOMS.forEach(function (r) {
       var inRoom = A.filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
@@ -548,9 +554,15 @@
       }).join('') + (rows.length > 3 ? '<button class="more" type="button" data-action="more" data-app="' + esc(g) + '">' + (all ? '<i class="ti ti-chevron-up"></i>' : '+' + (rows.length - 3)) + '</button>' : '') + '</div>';
     }).join('');
   }
+  // Everyone who has open work (assigned or tagged in ClickUp), except Lisa: a new person gets a pill by themselves.
+  function people() {
+    var seen = ['Claude', 'Grok'];
+    allTasks().forEach(function (t) { if (isOpen(t) && t._k !== 'apps') whoOf(t).forEach(function (w) { if (w && w !== 'Lisa' && seen.indexOf(w) < 0) seen.push(w); }); });
+    return seen;
+  }
   function queue(who) {
-    var w = who === 'claude' ? 'Claude' : 'Grok';
-    return allTasks().filter(function (t) { return isOpen(t) && t._k !== 'apps' && (whoOf(t).indexOf(w) >= 0 || (who === 'claude' && t._k === 'claude')); });
+    var w = decodeURIComponent(who); w = { claude: 'Claude', grok: 'Grok' }[w] || w;
+    return allTasks().filter(function (t) { return isOpen(t) && t._k !== 'apps' && (whoOf(t).indexOf(w) >= 0 || (w === 'Claude' && t._k === 'claude')); });
   }
   // 📅: Today (due today + overdue) by default; one tap for the week.
   function vToday() {
