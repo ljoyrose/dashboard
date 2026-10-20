@@ -36,3 +36,6 @@
     --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
   }
 }
+
+/* Links (Lisa, 20 Oct 2026): normal text colour, underlined; never default blue. */
+a { color: inherit; }
