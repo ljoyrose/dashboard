@@ -79,6 +79,9 @@
   .codes span.q { color: var(--muted); }
   .ask { display: flex; gap: 8px; margin-top: 10px; }
   .ask input { flex: 1; font: inherit; font-size: 15px; padding: 8px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+  .rowask { margin-top: 6px; }
+  .rowask input { font-size: 14px; padding: 6px 10px; }
+  .why.q { color: var(--ljr-3-text); }
   .ask select { font: inherit; font-size: 14px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
   .row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
   .row a { color: var(--ink); text-decoration: none; font-weight: 600; }
@@ -338,14 +341,20 @@
       var acts = sent[t.id] ? '<span class="sent">' + ic('tick') + 'sent · applies by ' + appliesBy(sent[t.id]) + '</span>' : kind === 'decide' ?
         '<span class="acts"><button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '">Yes</button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '">No</button></span>' :
         '<span class="acts"><button class="btn" type="button" data-act="done" data-id="' + esc(t.id) + '">' + ic('tick') + 'Done</button></span>';
-      return head + '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><div class="txt"><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(label) + '</a>' + why(t) + '</div><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span>' + acts + '</div>';
+      // Decide rows also get a reply box: Ask sends a question to Claude; typed text also rides along with Yes / No.
+      var q = t.tags.indexOf('question') >= 0 ? '<div class="why q">' + ic('warn') + 'Question sent · Claude answers here</div>' : '';
+      var box = kind === 'decide' && !sent[t.id] ? '<form class="ask rowask" data-ask="' + esc(t.id) + '"><input name="text" id="note-' + esc(t.id) + '" placeholder="Question or note…" aria-label="Question or note"><input type="hidden" name="to" value="claude"><button class="btn" type="submit">Ask</button></form><div class="asknote muted"></div>' : '';
+      return head + '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><div class="txt"><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(label) + '</a>' + why(t) + q + box + '</div><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span>' + acts + '</div>';
     }).join('') + '</div>';
   }
   // The plain What / Yes = / No = lines written on each task, shown under its title. Links become "open".
   function why(t) {
     var d = String(t.desc || '').trim();
     if (!d) return '';
-    return '<div class="why">' + d.split('\n').filter(function (l) { return l && !/^(GATE|NO|APP|App):/.test(l); }).slice(0, 4).map(function (l) {
+    // First 4 lines, plus every answer line ("Claude: …") written back after a question.
+    var ls = d.split('\n').filter(function (l) { return l && !/^(GATE|NO|APP|App):/.test(l); });
+    ls = ls.slice(0, 4).concat(ls.slice(4).filter(function (l) { return /^(Claude|Answer):/.test(l); }));
+    return '<div class="why">' + ls.map(function (l) {
       return esc(l).replace(/https?:\/\/[^\s<]+/g, function (u) { return '<a href="' + u + '" target="_blank" rel="noopener">open</a>'; });
     }).join('<br>') + '</div>';
   }
@@ -401,19 +410,20 @@
   /* Ask box → AF › requests (the engine turns it into a ClickUp task) */
   function sendAsk(form) {
     var text = form.text.value.trim(), to = form.to.value, id = form.getAttribute('data-ask');
-    var t = apps().filter(function (x) { return x.id === id; })[0] || {};
+    var lists = S.lists || {}, t = [].concat(lists.apps || [], lists.decisions || [], lists.work || [], lists.sends || [], lists.incidents || []).filter(function (x) { return x.id === id; })[0] || {};
+    var note = form.nextElementSibling && form.nextElementSibling.classList.contains('asknote') ? form.nextElementSibling : $('askNote');
     var body = { at: new Date().toISOString(), to: to, text: text, taskId: id, taskUrl: t.url, app: t.name, appTag: (t.tags || []).filter(function (g) { return /^app-/.test(g); })[0] || '' };
     withWrite(function () {
       return putRequest('ask', body)
-        .then(function () { form.text.value = ''; $('askNote').textContent = 'Sent · becomes a ClickUp task within 15 min.'; })
-        .catch(function (e) { $('askNote').textContent = 'Not sent: ' + e.message; });
+        .then(function () { form.text.value = ''; note.textContent = 'Sent to Claude · ClickUp task by ' + appliesBy(Date.now()) + '. The row stays open.'; })
+        .catch(function (e) { note.textContent = 'Not sent: ' + e.message; });
     });
   }
   function sendAct(btn) {
-    var id = btn.getAttribute('data-id'), act = btn.getAttribute('data-act');
+    var id = btn.getAttribute('data-id'), act = btn.getAttribute('data-act'), n = document.getElementById('note-' + id), note = n ? n.value.trim() : '';
     btn.parentNode.innerHTML = '<span class="sent">sending…</span>';
     withWrite(function () {
-      return putRequest('act', { kind: 'act', action: act, taskId: id, at: new Date().toISOString() })
+      return putRequest('act', { kind: 'act', action: act, taskId: id, note: note, at: new Date().toISOString() })
         .then(function () { sent[id] = Date.now(); saveSent(); render(); })
         .catch(function (e) { banner('Not sent: ' + e.message); render(); });
     });
