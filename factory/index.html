@@ -322,7 +322,9 @@
     return all.filter(function (t) { return isOpen(t) && t.tags.indexOf('lisa-done') < 0 && (t.tags.indexOf('who-lisa') >= 0 || sendIds.indexOf(t.id) >= 0); })
       .sort(function (a, b) { return (/^blocked$/i.test(a.status) ? 1 : 0) - (/^blocked$/i.test(b.status) ? 1 : 0); });
   }
-  function decisions() { return (S.lists.decisions || []).filter(isOpen); }
+  function decisions() { return (S.lists.decisions || []).filter(function (t) { return isOpen(t) && t.tags.indexOf('queued') < 0; }); }
+  function queuedN() { return (S.lists.decisions || []).filter(function (t) { return isOpen(t) && t.tags.indexOf('queued') >= 0; }).length; }
+  function autoToday() { var d0 = dayStart(0); return (S.lists.decisions || []).filter(function (t) { return t.tags.indexOf('auto') >= 0 && t.updated >= d0; }).length; }
 
   /* Drive */
   function drive(url, init) {
@@ -688,7 +690,7 @@
     return o;
   }
   // Family: the Families list task that shares the app's fam- tag.
-  function famTag(t) { return ((t && t.tags) || []).filter(function (g) { return /^fam-/.test(g); })[0] || ''; }
+  function famTag(t) { return t && t.family ? 'fam-' + t.family : ((t && t.tags) || []).filter(function (g) { return /^fam-/.test(g) && g !== 'fam-alert'; })[0] || ''; }
   function famOf(app) { var g = famTag(app); if (!g || !S || !S.lists.families) return null; return S.lists.families.filter(function (f) { return f.tags.indexOf(g) >= 0; })[0] || null; }
   function famName(app) { var f = famOf(app); return f ? f.name.replace(/^TEST-/, '') : (famTag(app) ? famTag(app).slice(4) : ''); }
   // Stage an app has reached: its number, or 8 while live (rescue counts as live).
@@ -724,6 +726,11 @@
       }).join('');
       return '<span class="lg">' + g + '</span><span>' + cells + '</span>';
     }).join('') + (famName(app) ? '<span class="lg">Family</span><span class="muted">' + esc(famName(app)) + '</span>' : '') + '</div>';
+  }
+  // Under Decide: what the factory did without you, and what waits behind your cap of 10.
+  function decideFoot() {
+    var a = autoToday(), q = queuedN();
+    return a || q ? '<p class="muted" style="margin:0">' + (a ? '<i class="ti ti-circle-check"></i> ' + a + ' passed on their own today' : '') + (a && q ? ' · ' : '') + (q ? '<i class="ti ti-hourglass"></i> ' + q + ' waiting behind these' : '') + '</p>' : '';
   }
   function lines(t) { return String(t.desc || '').split(/\r?\n|\\n/).map(function (l) { return l.trim(); }).filter(Boolean); }
   function line(t, re) { var l = lines(t).filter(function (x) { return re.test(x); })[0]; return l ? l.replace(re, '').trim() : ''; }
@@ -880,7 +887,7 @@
   }
   var pfo = (function () { try { return JSON.parse(localStorage.getItem('af-pf') || '') || {}; } catch (e) { return {}; } })();
   function savePf() { try { localStorage.setItem('af-pf', JSON.stringify(pfo)); } catch (e) {} }
-  function health(a) { return alarm(a) ? 'alarm' : stuck(a) ? 'stuck' : /^(killed|retired|hold|cancelled)$/i.test(a.status) ? 'archive' : reached(a) >= 8 ? 'live' : reached(a) >= 4 ? 'building' : 'idea'; }
+  function health(a) { return alarm(a) || a.losing || a.tags.indexOf('fam-alert') >= 0 ? 'alarm' : stuck(a) ? 'stuck' : /^(killed|retired|hold|cancelled)$/i.test(a.status) ? 'archive' : reached(a) >= 8 ? 'live' : reached(a) >= 4 ? 'building' : 'idea'; }
   var HW = { alarm: ['Needs you', 'alert-triangle', 2], stuck: ['Stuck', 'clock-pause', 3], live: ['Live', 'world', 5], building: ['Building', 'hammer', 4], idea: ['Idea', 'bulb', 7], archive: ['Archive', 'archive', 8] };
   function vPortfolio() {
     var all = apps(), fams = [], q = (pfo.q || '').toLowerCase();
@@ -1065,7 +1072,7 @@
     allTasks();
     var listView = /^(decide|do|today|queue)$/.test(route[0]), nf = onCount();
     $('filtersBtn').classList.toggle('hidden', !listView); $('filtersBtn').classList.toggle('on', filtersOpen); $('nFilters').textContent = nf ? nf : '';
-    v.innerHTML = route[0] === 'today' ? vToday() : route[0] === 'queue' ? list(queue(route[1]), 5, '—', 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? vPortfolio() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list(decisions(), 4, '—', 'decide') :
+    v.innerHTML = route[0] === 'today' ? vToday() : route[0] === 'queue' ? list(queue(route[1]), 5, '—', 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? vPortfolio() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list(decisions(), 4, '—', 'decide') + decideFoot() :
       route[0] === 'do' ? list(mine(), 4, '—', 'do') : vRooms();
   }
 
