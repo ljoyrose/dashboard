@@ -234,7 +234,7 @@
   nav.main a.vision[class]:not([aria-current]):not(:hover), .card.vision[class]:not(:hover) { border-color: var(--line); }
   a { color: inherit; }
   .btn:active, nav.main a:active { transform: none; }
-  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 12px; font-weight: 700; color: var(--muted); cursor: help; vertical-align: middle; }
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; font-weight: 700; color: var(--muted); cursor: help; vertical-align: middle; }
   .info:hover { border-color: var(--muted); }
 
   /* One page width everywhere (Lisa, 20 Oct): the full window up to 1600px, 24px edge; phones 16px. No wasted space. */
@@ -2121,6 +2121,11 @@
     if (t && t.id === 'drivePicker') location.hash = t.value ? '#/drive/' + t.value : '#/drive';
   });
   // A screen change moves keyboard focus to the screen title (no scroll), so screen readers say where you are.
+  // Tapping the link to the screen you are already on reads it again and goes back to its top (never a dead click).
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#/"]');
+    if (a && a.getAttribute('href') === location.hash && !e.defaultPrevented) { e.preventDefault(); render(); window.scrollTo(0, 0); }
+  });
   window.addEventListener('hashchange', function () {
     render(); ensureRoute();
     if (signedIn && !$('hereBox').classList.contains('hidden')) $('hereTitle').focus({ preventScroll: true });
