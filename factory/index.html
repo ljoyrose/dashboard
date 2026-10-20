@@ -185,6 +185,29 @@
   @media (max-width: 600px) { .wrap, .wide, .hin, main.wrap { padding-left: 16px; padding-right: 16px; } }
   header .top, header nav.tabs { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
   @media (max-width: 600px) { header .top, header nav.tabs { padding-left: 16px; padding-right: 16px; } }
+
+  /* One card frame (Lisa ✓ 20 Oct): link icons bottom left, dashed = not recorded yet; colour only when something needs you. */
+  .links { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
+  .lk { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: var(--radius); color: var(--muted); text-decoration: none; font-size: 16px; }
+  .lk:hover { border-color: var(--muted); color: var(--ink); }
+  .lk.no { border-style: dashed; opacity: .7; }
+  .lk.off { width: auto; padding: 0 10px; gap: 4px; font-size: 13px; color: var(--ljr-2-text); border-color: var(--ljr-2); }
+  .appcard.alarm { border-color: var(--ljr-2); }
+  .outs { display: grid; grid-template-columns: 18px 1fr; gap: 2px 6px; font-size: 14px; color: var(--muted); margin: 2px 0 4px; }
+  .outs i.ti { font-size: 15px; margin-top: 3px; }
+  .outs .y { color: var(--ljr-5-text); } .outs .n { color: var(--ljr-2-text); }
+  .q1 { font-size: 15px; margin: 2px 0; }
+  .age { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 2px; padding: 0 4px; }
+  .age.old { color: var(--ljr-2-text); }
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border: 1px solid var(--line); border-radius: 50%; font-size: 11px; color: var(--muted); cursor: help; margin-left: 4px; vertical-align: 1px; }
+  .undo { font-size: 13px; padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; margin-left: 6px; }
+  .undo:hover { border-color: var(--muted); color: var(--ink); }
+  .copy { font-size: 13px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+  .copy:hover { border-color: var(--muted); }
+  /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+  .lock { color: var(--ljr-3-text); font-size: 16px; display: inline-flex; align-items: center; gap: 4px; }
 </style>
 </head>
 <body>
@@ -253,7 +276,14 @@
   function isOpen(t) { return !/^(done|closed|complete|cancelled|retired|killed|decided|verified|proved live|to decide done)$/i.test(t.status); }
   function mine() {
     var all = [].concat(S.lists.work || [], S.lists.sends || [], S.lists.incidents || []); // never app cards: an app asks through its gate row
-    return all.filter(function (t) { return isOpen(t) && t.tags.indexOf('who-lisa') >= 0 && t.tags.indexOf('lisa-done') < 0; });
+    var next = {};
+    (S.lists.sends || []).filter(isOpen).forEach(function (t) {
+      var k = (t.tags.filter(function (g) { return /^app-/.test(g); })[0]) || t.id, n = +((t.name.match(/·\s*P(\d+)\s*·/) || [])[1] || 99);
+      if (!next[k] || n < next[k].n) next[k] = { n: n, t: t };
+    });
+    var sendIds = Object.keys(next).map(function (k) { return next[k].t.id; });
+    return all.filter(function (t) { return isOpen(t) && t.tags.indexOf('lisa-done') < 0 && (t.tags.indexOf('who-lisa') >= 0 || sendIds.indexOf(t.id) >= 0); })
+      .sort(function (a, b) { return (/^blocked$/i.test(a.status) ? 1 : 0) - (/^blocked$/i.test(b.status) ? 1 : 0); });
   }
   function decisions() { return (S.lists.decisions || []).filter(isOpen); }
 
@@ -347,7 +377,7 @@
     var html = '<div class="card"><div class="hero" style="--c:' + col(slot) + '"><div class="disc">' + (n === null ? '–' : n) + '</div><div><h2>' + esc(t.name) + '</h2><p>' + esc(t.status) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
       '<div class="pills" style="margin-top:10px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<div id="codes" class="codes"><span class="q">…</span></div>' +
-      '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span><button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
+      '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span>' + linkStrip(t) + '<button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
       (cardAsk ? '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn" type="submit" aria-label="Send"><i class="ti ti-send"></i></button></form><div id="askNote" class="muted"></div>' : '') + waiting(t) +
       '<div class="strip">' + STAGES.map(function (_, i) { return '<i class="' + (n !== null && i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>';
     STAGES.forEach(function (name, i) {
@@ -408,7 +438,7 @@
     var room = app ? ROOMS.filter(function (r) { return r.st.indexOf(String(app.status).toLowerCase()) >= 0; })[0] : null;
     var c = room ? col(room.slot) : col(slot);
     return '<div class="grp"><span class="dot" style="background:' + c + '"></span>' + (app ? '<a href="#/card/' + esc(app.id) + '">' + esc(g) + '</a>' : 'Factory') +
-      (app ? '<span class="st">' + esc((room ? room.name + ' · ' : '') + app.status) + '</span>' : '') + (isTest(t) ? '<span class="pill">TEST</span>' : '') + '</div>';
+      (app ? '<span class="st">' + esc((room ? room.name + ' · ' : '') + app.status) + '</span>' : '') + (isTest(t) ? '<span class="pill">TEST</span>' : '') + linkStrip(app) + '</div>';
   }
   // When the engine will apply a click: its next 15-minute run (:03 :18 :33 :48) plus a minute.
   function appliesBy(ts) { var d = new Date(ts), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next + 1); return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
@@ -485,6 +515,23 @@
     if (k === 'status') body = ((S.statuses || {})[t._k] || []).map(function (x) { return '<button class="stat" type="button" data-set="status" data-val="' + esc(x.s) + '" data-id="' + esc(t.id) + '" style="--sc:' + esc(x.c) + '">' + esc(x.s) + '</button>'; }).join(' ');
     return '<div class="panel">' + body + '</div>';
   }
+  // Do: what comes next, and what it waits on; prompts link straight to OverSkill.
+  function doLines(t, blocked) {
+    var then = line(t, /^(Then|After):\s*/i), waits = line(t, /^Waits on:\s*/i), before = line(t, /^Before:\s*/i);
+    var out = (blocked ? '<i class="ti ti-lock"></i><span>' + esc(waits ? 'Waits on: ' + waits : 'Blocked') + '</span>' : '') +
+      (then ? '<i class="ti ti-arrow-right"></i><span>Then: ' + esc(then) + '</span>' : '');
+    return out || before ? '<div class="outs">' + (before ? '<i class="ti ti-player-play"></i><span>Before: ' + esc(before) + '</span>' : '') + out + '</div>' : '';
+  }
+  // Proof and places to go: each link in the task becomes one icon (the doc, the test report, OverSkill).
+  function proofs(t, kind) {
+    var app = appTask(t), L = app ? linksOf(app) : {}, out = '';
+    if (t._k === 'sends') out += L.overskill ? '<a class="lk" href="' + esc(L.overskill) + '" target="_blank" rel="noopener" title="Open OverSkill project"><i class="ti ti-code"></i></a>' : '<span class="lk no" title="OverSkill: not recorded"><i class="ti ti-code"></i></span>';
+    var mk = (String(t.desc).match(/drive\.google\.com\/file\/d\/([\w-]+)/) || [])[1];
+    if (kind === 'decide' || t._k === 'sends') urls(t).filter(function (u) { return !/app\.clickup\.com/.test(u) && !(mk && u.indexOf(mk) >= 0); }).slice(0, 3).forEach(function (u) {
+      out += '<a class="lk" href="' + esc(u) + '" target="_blank" rel="noopener" title="' + (/drive\.google/.test(u) ? 'Open doc' : 'Open') + '"><i class="ti ti-' + (/drive\.google/.test(u) ? 'file-check' : 'external-link') + '"></i></a>';
+    });
+    return out;
+  }
   function row(t, kind, inCard) {
     if (!t._k) allTasks();
     var p = t.pri && t.pri.p ? t.pri : null, sentAt = sent[t.id], ch = pend[t.id];
@@ -492,7 +539,9 @@
     var label = String(t.name).replace(/^TEST-/, ''), app = appOf(t), known = apps().some(function (a) { return a.name.replace(/^TEST-/, '') === app; });
     var rest = known ? label.slice(app.length).replace(/^ · /, '') : label;
     var title = inCard ? esc(rest) : '<b class="app">' + esc(known ? app : 'Factory') + '</b> ' + esc(rest);
-    var acts = sentAt ? '<span class="sent">✓ ' + hm(sentAt) + '</span>' :
+    if (kind === 'decide' && !line(t, /^Deciding:\s*/i)) title += info(line(t, /^What:\s*/i));
+    var blocked = /^blocked$/i.test(t.status), isSend = t._k === 'sends' && isOpen(t);
+    var acts = sentAt ? sentLine(t.id) : blocked && kind !== 'decide' ? '<span class="lock" title="Blocked' + (line(t, /^Waits on:\s*/i) ? ': waits on ' + esc(line(t, /^Waits on:\s*/i)) : '') + '"><i class="ti ti-lock"></i></span>' :
       kind === 'decide' ? '<button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '" aria-label="Yes"><i class="ti ti-check"></i></button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '" aria-label="No"><i class="ti ti-x"></i></button>' :
       kind === 'do' ? '<button class="btn yes" type="button" data-act="done" data-id="' + esc(t.id) + '" aria-label="Done"><i class="ti ti-check"></i></button>' : '';
     // Status: an icon in ClickUp's colour, shown only when it isn't plain "to do".
@@ -507,8 +556,9 @@
     var detail = openPanel && openPanel.id === t.id && openPanel.k === 'all';
     return '<div class="crow" data-row="' + esc(t.id) + '"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(t.id) + '">' + title + '</button>' +
       '<button class="flagb" type="button" data-panel="flag" data-id="' + esc(t.id) + '" aria-label="Flag ' + (p ? p.p : 'none') + '">' + flagIcon(p) + '</button></div>' +
-      (kind === 'decide' || detail ? why(t, detail) : '') + mineQ +
-      '<div class="l2"><span class="icons">' + stat + icons + (ch ? '<span class="sent">✓ ' + hm(ch.at) + '</span>' : '') + '</span><span class="acts">' + acts + '</span></div>' +
+      (detail ? why(t, true) : kind === 'decide' ? outcomes(t) : isSend || line(t, /^(Then|After):\s*/i) || blocked ? doLines(t, blocked) : '') + mineQ +
+      '<div class="l2"><span class="icons">' + (isSend ? '<button class="copy" type="button" data-copy="' + esc(t.id) + '"><i class="ti ti-copy"></i> Copy</button>' : '') + stat + icons + proofs(t, kind) +
+      (kind === 'decide' && !sentAt ? '<span class="age' + (Date.now() - t.created > 3 * 864e5 ? ' old' : '') + '" title="Waiting since ' + dmy(t.created) + '"><i class="ti ti-hourglass"></i>' + ago(t.created) + '</span>' : '') + (ch ? '<span class="sent">✓ ' + hm(ch.at) + '</span>' : '') + '</span><span class="acts">' + acts + '</span></div>' +
       (openPanel && openPanel.id === t.id && !detail ? panelOf(t, openPanel.k) : '') +
       (detail ? iconsOf(t, kind).filter(function (x) { return x[0] !== 'reply'; }).map(function (x) { return panelOf(t, x[0]); }).join('') : '') +
       '<div class="l3"><span class="type" aria-hidden="true">' + typeIcon(t) + '</span>' + out + '<span class="grow"></span>' + date + '</div></div>';
@@ -516,7 +566,7 @@
   // Sort & filter: one button, closed by default; the badge counts filters that are on.
   function filtered(items) {
     return items.filter(function (t) {
-      if (prefs.unanswered && sent[t.id]) return false;
+      if (prefs.unanswered && sent[t.id] && !(sentF[t.id] && Date.now() < undoUntil(sent[t.id]))) return false;
       if (prefs.urgent && !(t.pri && t.pri.p === 'urgent')) return false;
       if (prefs.unflagged && t.pri && t.pri.p) return false;
       if (prefs.me && whoOf(t).indexOf('Lisa') < 0) return false;
@@ -525,7 +575,8 @@
     }).sort(function (a, b) {
       var ra = a.pri && PRI[a.pri.p] ? PRI[a.pri.p][0] : 5, rb = b.pri && PRI[b.pri.p] ? PRI[b.pri.p][0] : 5;
       var flag = ra - rb, date = (a.due || 9e15) - (b.due || 9e15), age = a.created - b.created, by = prefs.sort || 'flag';
-      return (by === 'date' ? date || flag || age : by === 'age' ? age || flag : flag || date || age);
+      var lockd = (/^blocked$/i.test(a.status) ? 1 : 0) - (/^blocked$/i.test(b.status) ? 1 : 0);
+      return lockd || (by === 'date' ? date || flag || age : by === 'age' ? age || flag : flag || date || age);
     });
   }
   function onCount() { return ['unanswered', 'overdue', 'urgent', 'unflagged', 'me'].filter(function (k) { return prefs[k]; }).length + (prefs.sort && prefs.sort !== 'flag' ? 1 : 0); }
@@ -550,7 +601,7 @@
     if (!groups.length) return filterBar(items) + '<div class="card"><p class="muted">' + empty + '</p></div>';
     return filterBar(items) + groups.map(function (g) {
       var rows = by[g], all = !!(shownAll[g] && shownAll[g].on), top = all ? rows : rows.slice(0, 3);
-      return '<div class="card appcard">' + headOf(rows[0], slot) + top.map(function (t) {
+      return '<div class="card appcard' + (alarm(appTask(rows[0])) ? ' alarm' : '') + '">' + headOf(rows[0], slot) + top.map(function (t) {
         return row(t, kind === 'mixed' ? (t._k === 'decisions' ? 'decide' : t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view') : kind, true);
       }).join('') + (rows.length > 3 ? '<button class="more" type="button" data-action="more" data-app="' + esc(g) + '">' + (all ? '<i class="ti ti-chevron-up"></i>' : '+' + (rows.length - 3)) + '</button>' : '') + '</div>';
     }).join('');
@@ -575,6 +626,87 @@
   // The plain What / Yes = / No = lines on a decision. Links become an underlined "open".
   var CU_MARK = '<svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 11l3-2.3c1.6 2 3.2 2 4.8 0L13 11c-2.7 3.3-8.3 3.3-11 0z" fill="#7B68EE"/><path d="M8 3.5L3.6 7.3 5.3 9.2 8 6.9l2.7 2.3 1.7-1.9z" fill="#FF02F0"/></svg>';
   var DRIVE_MARK = '<svg width="18" height="16" viewBox="0 0 16 14" aria-hidden="true"><path d="M5.5 0h5l5 8.7h-5z" fill="#FFBA00"/><path d="M0 8.7L2.5 13l5-8.7L5 0z" fill="#0F9D58"/><path d="M2.5 13h10.5l2.5-4.3H5z" fill="#4285F4"/></svg>';
+
+  /* ---------- Links: each app task's description holds "key: URL" lines (Lisa ✓ 20 Oct) ----------
+   * A stage line records each link as it is made; an expected link that is missing shows dashed. */
+  var LINKS = [['mockup', 'layout-dashboard', 'Mockup', 3], ['domain', 'world-www', 'Domain', 4], ['pay', 'credit-card', 'Payments', 4],
+    ['overskill', 'code', 'OverSkill', 6], ['db', 'database', 'Database', 6], ['live', 'world', 'Live app', 7], ['backup', 'file-zip', 'Backup', 8]];
+  var LINK_ALIAS = { payments: 'pay', database: 'db', site: 'live', app: 'live', publish: 'overskill' };
+  function linksOf(app) {
+    var o = {};
+    String(app && app.desc || '').split(/\r?\n|\\n/).forEach(function (l) {
+      var m = l.match(/^\s*(?:🔗\s*)?([a-z]+)\s*[:=]\s*(https?:\/\/\S+)/i); if (!m) return;
+      var k = m[1].toLowerCase(); k = LINK_ALIAS[k] || k;
+      if (LINKS.some(function (x) { return x[0] === k; })) o[k] = m[2];
+    });
+    return o;
+  }
+  // Stage an app has reached: its number, or 8 while live (rescue counts as live).
+  function reached(app) { var n = stageNo(app.status); return n !== null ? n : /^(rescue|operate)$/i.test(app.status) ? 8 : -1; }
+  function appTask(t) { var g = appOf(t); return apps().filter(function (a) { return a.name.replace(/^TEST-/, '') === g; })[0]; }
+  // Live and in trouble: a failed live-app check, a leak tag, or an open incident for this app.
+  function alarm(app) {
+    if (!app || reached(app) < 7) return false;
+    var probe = (S.health || []).filter(function (h) { return h.job === 'leakProbe'; })[0];
+    return (probe && probe.result === 'FAILED') || app.tags.indexOf('leak') >= 0 || app.status === 'rescue' ||
+      (S.lists.incidents || []).some(function (x) { return isOpen(x) && x.tags.indexOf('app-' + app.id) >= 0; });
+  }
+  function linkStrip(app) {
+    if (!app) return '';
+    var L = linksOf(app), st = reached(app), out = '';
+    if (alarm(app)) out += L.overskill ? '<a class="lk off" href="' + esc(L.overskill) + '" target="_blank" rel="noopener" title="Unpublish in OverSkill"><i class="ti ti-power"></i> Off</a>' :
+      '<span class="lk off no" title="OverSkill link not recorded: unpublish from OverSkill"><i class="ti ti-power"></i> Off</span>';
+    LINKS.forEach(function (x) {
+      if (L[x[0]]) out += '<a class="lk" href="' + esc(L[x[0]]) + '" target="_blank" rel="noopener" title="' + x[2] + '"><i class="ti ti-' + x[1] + '"></i></a>';
+      else if (st >= x[3] && st >= 0) out += '<span class="lk no" title="' + x[2] + ': not recorded"><i class="ti ti-' + x[1] + '"></i></span>';
+    });
+    return out ? '<span class="links">' + out + '</span>' : '';
+  }
+  function lines(t) { return String(t.desc || '').split(/\r?\n|\\n/).map(function (l) { return l.trim(); }).filter(Boolean); }
+  function line(t, re) { var l = lines(t).filter(function (x) { return re.test(x); })[0]; return l ? l.replace(re, '').trim() : ''; }
+  function urls(t) { return (String(t.desc || '').match(/https?:\/\/[^\s<)\\]+/g) || []).filter(function (u, i, a) { return a.indexOf(u) === i; }); }
+  function info(text) { return text ? '<span class="info" tabindex="0" title="' + esc(text) + '" aria-label="' + esc(text) + '">i</span>' : ''; }
+  // Decide: the question, then ✓ and ✗ with what each does; the background sits behind (i).
+  function outcomes(t) {
+    var what = line(t, /^What:\s*/i), q = line(t, /^Deciding:\s*/i), y = line(t, /^Yes\s*=\s*/i), n = line(t, /^No\s*=\s*/i);
+    var extra = lines(t).filter(function (l) { return /^(Claude|Answer):/.test(l); });
+    if (!y && !n) return why(t, false);
+    if (n && t.tags.indexOf('gate') >= 0 && !/again/i.test(n)) n += ' · asked again in 7 days';
+    var lk = function (x) { return esc(x).replace(/https?:\/\/[^\s<]+/g, function (u) { return '<a href="' + u + '" target="_blank" rel="noopener">open</a>'; }); };
+    return (q ? '<div class="q1">' + lk(q) + info(what) + '</div>' : '') +
+      '<div class="outs">' + (y ? '<i class="ti ti-check y"></i><span>' + lk(y) + '</span>' : '') + (n ? '<i class="ti ti-x n"></i><span>' + lk(n) + '</span>' : '') +
+      extra.map(function (l) { return '<i class="ti ti-message-circle"></i><span>' + lk(l) + '</span>'; }).join('') + '</div>';
+  }
+  function ago(ts) { var h = (Date.now() - ts) / 36e5; return h < 1 ? Math.max(1, Math.round(h * 60)) + 'm' : h < 48 ? Math.round(h) + 'h' : Math.round(h / 24) + 'd'; }
+  // Undo: the request file goes to Drive Trash before the engine's next run reads it.
+  function undoUntil(at) { var d = new Date(at), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next - 1, 0, 0); return d.getTime(); }
+  function sentLine(id) {
+    var at = sent[id], f = sentF[id], live = f && Date.now() < undoUntil(at);
+    return '<span class="sent">✓ ' + hm(at) + ' · by ' + appliesBy(at) + '</span>' + (live ? '<button class="undo" type="button" data-undo="' + esc(id) + '"><i class="ti ti-arrow-back-up"></i> Undo</button>' : '');
+  }
+  function undo(id) {
+    var f = sentF[id]; if (!f) return;
+    drive(CFG.urls.files + '/' + f.fid + '?supportsAllDrives=true', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) })
+      .then(function () { delete sent[id]; delete sentF[id]; saveSent(); saveLocal('af-sentf', sentF); render(); })
+      .catch(function (e) { banner('Not undone: ' + e.message); });
+  }
+  // Copy a prompt: its section (P1, P2 …) from the prompt doc on Drive, ready to paste into OverSkill.
+  function copyPrompt(btn) {
+    var t = byId(btn.getAttribute('data-copy')); if (!t) return;
+    var doc = (urls(t).filter(function (u) { return /drive\.google\.com\/file\/d\//.test(u); })[0] || '').match(/\/d\/([\w-]+)/);
+    var sec = (t.name.match(/·\s*(P\d+)\s*·/) || [])[1];
+    if (!doc) { banner('No prompt doc on this task.'); return; }
+    var text = media(doc[1]).then(function (r) { return r.text(); }).then(function (md) {
+      if (!sec) return md;
+      var re = new RegExp('(^|\\n)([#*\\s]*' + sec + '\\b[\\s\\S]*?)(?=\\n[#*\\s]*P\\d+\\b|$)'), m = md.match(re);
+      if (!m) throw new Error(sec + ' not found in the prompt doc');
+      return m[2].trim();
+    });
+    var ok = function () { btn.innerHTML = '<i class="ti ti-check"></i> Copied'; }, no = function (e) { banner('Not copied: ' + e.message); };
+    try {
+      navigator.clipboard.write([new ClipboardItem({ 'text/plain': text.then(function (x) { return new Blob([x], { type: 'text/plain' }); }) })]).then(ok, no);
+    } catch (e) { text.then(function (x) { return navigator.clipboard.writeText(x); }).then(ok, no); }
+  }
   // full = the whole description (title tapped); otherwise the first 4 lines plus Claude's answers.
   function why(t, full) {
     var d = String(t.desc || '').trim();
@@ -640,7 +772,7 @@
   }
   function loadLocal(k) { try { var o = JSON.parse(localStorage.getItem(k) || '{}'), now = Date.now(); Object.keys(o).forEach(function (x) { if (o[x] && o[x].at && now - o[x].at > 2 * 864e5) delete o[x]; }); return o; } catch (e) { return {}; } }
   function saveLocal(k, o) { try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} }
-  var drafts = loadLocal('af-drafts'), asked = loadLocal('af-asked');
+  var drafts = loadLocal('af-drafts'), asked = loadLocal('af-asked'), sentF = loadLocal('af-sentf');
   // Typing is kept as you go, so a refresh never wipes a half-written answer.
   document.addEventListener('input', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('af-drafts', drafts); } });
   function saveSent() { try { localStorage.setItem('af-sent', JSON.stringify(sent)); } catch (e) {} }
@@ -685,7 +817,8 @@
     btn.parentNode.innerHTML = '<span class="sent">sending…</span>';
     withWrite(function () {
       return putRequest('act', { kind: 'act', action: act, taskId: id, note: note, at: new Date().toISOString() })
-        .then(function () { sent[id] = Date.now(); saveSent(); render(); })
+        .then(function (r) { sent[id] = Date.now(); saveSent(); return r.json().then(function (j) { sentF[id] = { fid: j.id, at: Date.now() }; saveLocal('af-sentf', sentF); }, function () {}); })
+        .then(function () { render(); })
         .catch(function (e) { banner('Not sent: ' + e.message); render(); });
     });
   }
@@ -704,6 +837,7 @@
 
   /* sign-in (same pattern as Money Hub; one sign-in shared by the site) */
   function startTimer() { stopTimer(); timer = setInterval(load, REFRESH_MS); }
+  setInterval(function () { if (Object.keys(sentF).length && S) render(); }, 6e4);
   function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
   function expired() { stopTimer(); accessToken = null; DashAuth.markExpired(); if (!auth.requestSilent()) banner('Sign-in expired. Sign in again.'); }
   function banner(t) { $('banner').className = 'banner'; $('banner').textContent = t; }
@@ -732,6 +866,8 @@
       return;
     }
     var b = e.target.closest('[data-act]'); if (b) { sendAct(b); return; }
+    var ud = e.target.closest('[data-undo]'); if (ud) { ud.disabled = true; undo(ud.getAttribute('data-undo')); return; }
+    var cp = e.target.closest('[data-copy]'); if (cp) { copyPrompt(cp); return; }
     var pn = e.target.closest('[data-panel]'); if (pn) { var pid = pn.getAttribute('data-id'), pk = pn.getAttribute('data-panel');
       openPanel = openPanel && openPanel.id === pid && openPanel.k === pk ? null : { id: pid, k: pk };
       if (pk === 'cm') { seen[pid] = Date.now(); saveLocal('af-seen', seen); }
