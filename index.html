@@ -231,6 +231,7 @@
   .card, .card[class], nav.main a, nav.main a[class] { border-left-color: var(--line); box-shadow: none; }
   .card[class]:hover, nav.main a[class]:hover, nav.main a[class][aria-current="page"] { border-left-color: var(--slot, var(--c, var(--muted))); }
   .card.vision[class], nav.main a.vision[class] { background: var(--surface); }
+  nav.main a.vision[class]:not([aria-current]):not(:hover), .card.vision[class]:not(:hover) { border-color: var(--line); }
   a { color: inherit; }
   .btn:active, nav.main a:active { transform: none; }
   .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 12px; font-weight: 700; color: var(--muted); cursor: help; vertical-align: middle; }
@@ -240,6 +241,13 @@
   .wrap, .wrap.wide, .wide, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
   @media (max-width: 600px) { .wrap, .wide, .hin { padding-left: 16px; padding-right: 16px; } }
 
+  /* Drive sub-menu + in-page chips: quiet, same pill shape, same one-state rule. */
+  #driveNav { display: flex; gap: 6px; flex-wrap: wrap; padding-top: 4px; padding-bottom: 8px; }
+  #driveNav.hidden { display: none; }
+  #driveNav a { font-size: 13px; padding: 4px 12px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin: 0 0 10px; }
+  .chipx { font-size: 13px; font-weight: 600; text-decoration: none; padding: 3px 11px; border: 1px solid var(--line); border-radius: 999px; color: inherit; }
+  .chipx:hover, .chipx[aria-current="page"] { border-color: var(--muted); }
   /* Fewer scrolls: on wide screens file lists use 2-3 columns. */
   @media (min-width: 900px) { ul.files { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 8px 12px; } ul.files > li { margin: 0; } }
 </style>
@@ -271,14 +279,19 @@
   </div>
   <nav id="mainNav" class="wrap main hidden" aria-label="Sections">
     <a href="#/map" data-nav="map" class="vision"><svg class="icon"><use href="#i-map"/></svg>Map</a>
-    <a href="#/readfirst" data-nav="readfirst" class="slot0"><svg class="icon"><use href="#i-read"/></svg>Read first</a>
-    <a href="#/drive" data-nav="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive</a>
-    <a href="#/personal" data-nav="personal" class="slot4"><svg class="icon"><use href="#i-drive"/></svg>PC-Personal</a>
-    <a href="#/usb" data-nav="usb" class="slot4"><svg class="icon"><use href="#i-drive"/></svg>Drive check</a>
-    <a href="#/bin" data-nav="bin" class="slot8"><svg class="icon"><use href="#i-bin"/></svg>Bin</a>
-    <a href="#/changes" data-nav="changes" class="slot7"><svg class="icon"><use href="#i-changes"/></svg>Changes</a>
+    <a href="#/drive" data-nav="drive" data-group="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive</a>
     <a href="money/" target="_blank" rel="opener" class="slotfin"><svg class="icon"><use href="#i-money"/></svg>Money</a>
     <a href="factory/" target="_blank" rel="opener" class="slot7"><svg class="icon"><use href="#i-factory"/></svg>Factory</a>
+    <a href="cdhub/" target="_blank" rel="opener" class="slot5"><svg class="icon"><use href="#i-folder"/></svg>CD Hub</a>
+  </nav>
+  <!-- Drive sub-menu: everything that is a view of Drive lives under Drive (Lisa, 20 Oct). -->
+  <nav id="driveNav" class="wrap subnav hidden" aria-label="Drive">
+    <a href="#/drive" data-sub="drive">Shared</a>
+    <a href="#/readfirst" data-sub="readfirst" title="The docs AI reads first">AI docs</a>
+    <a href="#/changes" data-sub="changes">Changes</a>
+    <a href="#/personal" data-sub="personal">PC-Personal</a>
+    <a href="#/usb" data-sub="usb">Drive check</a>
+    <a href="#/bin" data-sub="bin">Bin</a>
   </nav>
 </header>
 
@@ -1510,14 +1523,15 @@
     return html;
   }
   function num(n, more) { return n == null ? '–' : n.toLocaleString('en-GB') + (more ? '+' : ''); }
-  function nextSteps(list) {
+  function nextSteps(list) { return ''; }
+  function nextStepsOld(list) {
     return '<nav class="next" aria-label="Next steps">' + list.map(function (s) {
       return '<a class="card sec ' + s.slot + '" href="#/' + s.to + '">' + icon(s.icon) + '<span><span class="k">Next:</span> ' + esc(s.label) + '</span></a>';
     }).join('') + '</nav>';
   }
   var NX = {
     map: { to: 'map', label: 'Map', icon: 'map', slot: 'vision' },
-    readfirst: { to: 'readfirst', label: 'Read first', icon: 'read', slot: 'slot0' },
+    readfirst: { to: 'readfirst', label: 'AI docs', icon: 'read', slot: 'slot0' },
     drive: { to: 'drive', label: 'Drive', icon: 'drive', slot: 'slot0' },
     changes: { to: 'changes', label: 'Changes', icon: 'changes', slot: 'slot7' },
     bin: { to: 'bin', label: 'Bin', icon: 'bin', slot: 'slot8' }
@@ -1598,16 +1612,10 @@
       ['MOVE', MOVE_URL, true],
       ['Money Hub', 'money/', true],
       ['CD Hub', 'cdhub/', true],
-      ['Map', '#/map', false],
-      ['Read first', '#/readfirst', false],
-      ['Drive', '#/drive', false],
-      ['PC-Personal', '#/personal', false],
-      ['Drive check', '#/usb', false],
-      ['Bin', '#/bin', false],
-      ['Changes', '#/changes', false]
+      ['Factory', 'factory/', true]
     ];
     return '<section class="card" id="key-projects" aria-labelledby="key-projects-title">' +
-      '<h2 id="key-projects-title">Key projects & docs</h2>' +
+      '<h2 id="key-projects-title">Projects</h2>' +
       '<div class="keytiles">' + tiles.map(function (t) {
         return '<a class="keytile"' + (t[1] === MOVE_URL ? ' id="move-link"' : '') + ' href="' + esc(t[1]) + '"' + (t[2] ? (hubLink(t[1]) ? HUB_TAB : ' target="_blank" rel="noopener"') : '') + '>' + esc(t[0]) + '</a>';
       }).join('') + '</div></section>';
@@ -1641,7 +1649,7 @@
     if (b && b.ready && b.ready.length) out.push({ kind: 'bin', tag: 'Bin', text: b.ready.length + (b.ready.length === 1 ? ' file is' : ' files are') + ' ready to bin (each has a ledger row)', href: '#/bin', src: 'Bin' });
     if (b && b.ledgerOk === false) out.push({ kind: 'risk', tag: 'Bin', text: LEDGER_FAIL, href: '#/bin', src: 'RR_DELETE-LEDGER' });
     ['readfirst', 'drive', 'cf', 'money'].forEach(function (k) {
-      if (S[k].status === 'failed') out.push({ kind: 'risk', tag: 'Read failed', text: ({ readfirst: 'Read first', drive: 'Shared drives', cf: 'Cf project', money: 'Money Hub files' })[k] + ': ' + friendlyError(S[k].error).text, href: k === 'money' ? 'money/' : '#/' + (k === 'cf' ? 'changes' : k), src: '' });
+      if (S[k].status === 'failed') out.push({ kind: 'risk', tag: 'Read failed', text: ({ readfirst: 'AI docs', drive: 'Shared drives', cf: 'Cf project', money: 'Money Hub files' })[k] + ': ' + friendlyError(S[k].error).text, href: k === 'money' ? 'money/' : '#/' + (k === 'cf' ? 'changes' : k), src: '' });
     });
     var rank = { risk: 0, fin: 1, ops: 2, bin: 3 };
     out.sort(function (a, b2) { return rank[a.kind] - rank[b2.kind]; });
@@ -1676,7 +1684,7 @@
     var rf = S.readfirst, dr = S.drive, cf = S.cf;
     var day = cfWithin(DAY), week = cfWithin(7 * DAY), partial = cf.data && cf.data.capped;
     html += '<div class="figs">' +
-      figure('slot0', 'Read first items', rf.data ? num(rf.data.files.length) : '–', rf, 'Read first', rfUrl(), 'readfirst', 'Open Read first') +
+      figure('slot0', 'AI docs', rf.data ? num(rf.data.files.length) : '–', rf, 'AI docs', rfUrl(), 'readfirst', 'Open AI docs') +
       figure('slot0', 'Shared drives last 24h', dr.data ? num(dr.data.day, dr.data.dayMore) : '–', dr, 'Shared drives', 'https://drive.google.com/drive/shared-drives', 'drive', 'Open Drive') +
       figure('slot7', 'Cf files', cf.data ? num(cf.data.files.length) : '–', cf, cfName(), cfUrl(), 'changes/totals', 'Open totals', partial) +
       figure('slot7', 'Cf folders', cf.data ? num(cf.data.folderCount) : '–', cf, cfName(), cfUrl(), 'changes/totals', 'Open totals', partial) +
@@ -1689,7 +1697,7 @@
 
   function viewReadFirst(r) {
     var p = S.readfirst, items = p.data ? p.data.files : [];
-    var html = '<section class="card slot0' + cardClass(p) + '"><div class="cardhead"><h3>Read first</h3>' + stateBadge(p, p.data ? items.length : null) + '</div>';
+    var html = '<section class="card slot0' + cardClass(p) + '"><div class="cardhead"><h3>AI docs</h3>' + stateBadge(p, p.data ? items.length : null) + '</div>';
     html += failNote(p);
     if (p.data) html += '<p class="note">' + num(items.length) + ' items in folder.</p>' + pagedList(items, r.page, 'readfirst', { who: false, time: false }, 'Folder is empty.');
     html += sourceLine(rfName(), rfUrl(), p) + '</section>';
@@ -1860,15 +1868,15 @@
 
   var SUBS = [
     { key: 'recent', label: 'Recent' },
-    { key: '24h', label: 'Last 24h' },
-    { key: '7d', label: 'Last 7 days' },
+    { key: '24h', label: '24h' },
+    { key: '7d', label: '7 days' },
     { key: 'totals', label: 'Totals' }
   ];
   function viewChanges(r) {
     var p = S.cf, d = p.data, sub = r.sub;
-    var html = '<nav class="subnav" aria-label="Changes views">' + SUBS.map(function (s) {
-      return '<a href="#/changes/' + s.key + '"' + (s.key === sub ? ' aria-current="page"' : '') + '>' + esc(s.label) + '</a>';
-    }).join('') + '</nav>';
+    var html = '<div class="chips" aria-label="Changes views">' + SUBS.map(function (s) {
+      return '<a class="chipx" href="#/changes/' + s.key + '"' + (s.key === sub ? ' aria-current="page"' : '') + '>' + esc(s.label) + '</a>';
+    }).join('') + '</div>';
     var title = SUBS.filter(function (s) { return s.key === sub; })[0].label;
     var items = null;
     if (d) {
@@ -1898,7 +1906,7 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Map', readfirst: 'Read first', drive: 'Drive', personal: 'PC-Personal', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
+  var VIEWS = { map: 'Map', readfirst: 'AI docs', drive: 'Drive', personal: 'PC-Personal', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
   function parseRoute() {
     var parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
     var view = parts[0] && VIEWS[parts[0]] ? parts[0] : null;
@@ -1912,9 +1920,16 @@
     return r;
   }
   var lastView = null;
+  function syncDriveNav(r) {
+    var dn = $('driveNav'); if (!dn) return;
+    var DG = ['drive', 'readfirst', 'changes', 'personal', 'usb', 'bin'];
+    dn.classList.toggle('hidden', !signedIn || DG.indexOf(r.view) < 0);
+    Array.prototype.forEach.call(dn.querySelectorAll('a'), function (a) { if (a.getAttribute('data-sub') === r.view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  }
   function render() {
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
+    syncDriveNav(r);
     var el = $('view');
     var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal() : r.view === 'usb' ? viewUsb() : viewChanges(r);
     var routeKey = location.hash;
@@ -1926,7 +1941,8 @@
     var nNeeds = needsCount();
     document.title = (nNeeds ? '(' + nNeeds + ') ' : '') + VIEWS[r.view] + ' · Lisa Dashboard';
     Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
-      if (a.getAttribute('data-nav') === r.view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      var DG = ['drive', 'readfirst', 'changes', 'personal', 'usb', 'bin'], on = a.getAttribute('data-nav') === r.view || (a.getAttribute('data-group') === 'drive' && DG.indexOf(r.view) >= 0);
+      if (on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
     if (changed && lastView !== null) {
       el.classList.add('fade');
