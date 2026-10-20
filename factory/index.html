@@ -113,6 +113,7 @@
   .crow .ttl .app { font-weight: 800; margin-right: 4px; }
   .crow .why { font-size: 13px; color: var(--muted); margin: 3px 0 0 30px; }
   .crow .l2 { display: flex; gap: 8px; align-items: center; margin: 6px 0 0 30px; }
+  .crow .l3 { display: flex; justify-content: flex-end; margin-top: 4px; }
   .crow .icons { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; flex: 1; }
   .crow .acts { display: flex; gap: 6px; }
   .crow .acts .btn { padding: 4px 14px; font-size: 16px; }
@@ -457,7 +458,7 @@
     return '<div class="crow" data-row="' + esc(t.id) + '"><div class="l1"><span class="type" aria-hidden="true">' + typeIcon(t) + '</span><a class="ttl" href="' + esc(t.url) + '" target="_blank" rel="noopener">' + title + '</a>' +
       '<button class="flagb" type="button" data-panel="flag" data-id="' + esc(t.id) + '" aria-label="Flag ' + (p ? p.p : 'none') + '">' + flagIcon(p) + '</button></div>' +
       (kind === 'decide' ? why(t) : '') + mineQ +
-      '<div class="l2"><span class="icons">' + stat + icons + (ch ? '<span class="sent">✓ ' + hm(ch.at) + '</span>' : '') + '</span><span class="acts">' + acts + '</span>' + date + '</div>' +
+      '<div class="l2"><span class="icons">' + stat + icons + (ch ? '<span class="sent">✓ ' + hm(ch.at) + '</span>' : '') + '</span><span class="acts">' + acts + '</span></div><div class="l3">' + date + '</div>' +
       (openPanel && openPanel.id === t.id ? panelOf(t, openPanel.k) : '') + '</div>';
   }
   // Sort & filter: one button, closed by default; the badge counts filters that are on.
