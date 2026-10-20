@@ -10,7 +10,8 @@ const gisStub = require('./gis-stub');
 const { buildWorld } = require('./world');
 
 // Outside addresses the pages use for looks only. Answered with empty files so they never hit the internet.
-const LOOKS_ONLY = [/^https:\/\/fonts\.googleapis\.com\//, /^https:\/\/fonts\.gstatic\.com\//];
+// Looks only (fonts and the Factory page's icon font): answered empty, never a data call.
+const LOOKS_ONLY = [/^https:\/\/fonts\.googleapis\.com\//, /^https:\/\/fonts\.gstatic\.com\//, /^https:\/\/cdn\.jsdelivr\.net\/npm\/@tabler\/icons-webfont@[\d.]+\/dist\//];
 
 const test = base.test.extend({
   // Which person the pretend Google account is, and what the pretend Drive holds. Tests may override.
@@ -41,7 +42,7 @@ const test = base.test.extend({
         const url = route.request().url();
         if (/^https:\/\/(accounts\.google\.com\/gsi\/client|www\.googleapis\.com\/drive\/v3\/)/.test(url)) return route.fallback();
         if (LOOKS_ONLY.some((re) => re.test(url))) {
-          return route.fulfill({ status: 200, contentType: url.includes('fonts.googleapis') ? 'text/css' : 'font/woff2', body: '' });
+          return route.fulfill({ status: 200, contentType: url.includes('fonts.googleapis') || /\.css(\?|$)/.test(url) ? 'text/css' : 'font/woff2', body: '' });
         }
         outside.push(url);
         return route.fulfill({ status: 200, contentType: 'text/plain', body: '' });

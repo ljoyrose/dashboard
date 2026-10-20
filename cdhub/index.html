@@ -174,6 +174,40 @@ header.top{position:static}}
 .skip:focus{left:8px}
 .boot{padding:40px 0;text-align:center;color:var(--sub);font-size:14px}
 .boot .rows{margin-top:14px;font-size:13px;line-height:1.9;font-family:ui-monospace,Menlo,monospace}
+
+/* ---- Calm layer (Lisa, 20 Oct 2026): one corner, faint lines, no solid fill on selected, colour only for attention, nothing moves. ---- */
+:root{--radius:12px}
+.card,.pill,.ci,.tl,input,select,textarea,.filt button,.next button,.backhome,.srchbtn{border-radius:var(--radius)}
+nav button{border:1px solid var(--ln);border-radius:999px}
+nav button:hover,nav button[aria-current="page"]{background:transparent;color:var(--fg);border-color:var(--sub)}
+.filt button:hover,.next button:hover,.ci:hover,.tl:hover,.backhome:hover{border-color:var(--sub)}
+.pill.ok,.pill.i,.pill.w,.pill.no{background:transparent;border-color:var(--ln)}
+.pill.ok,.pill.i{color:inherit}
+.live.ok{border-color:var(--ln);color:inherit}
+.live.bad,.ci.bad{border-color:var(--ln)}
+.acc2,.acc3,.acc4,.acc5,.acc6,.acc7{border-left-color:var(--ln);border-left-width:1px}
+.acc2:hover{border-left-color:var(--p2)}.acc3:hover{border-left-color:var(--p3)}.acc4:hover{border-left-color:var(--p4)}.acc5:hover{border-left-color:var(--p5)}.acc6:hover{border-left-color:var(--p6)}.acc7:hover{border-left-color:var(--p7)}
+a{color:inherit}
+.info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--ln);border-radius:50%;font-size:13px;font-weight:700;color:var(--sub);cursor:help;vertical-align:middle}
+
+/* Status chips: no solid fills. Faint outline; the status colour only on the small count circle. Tiles: colour top edge on hover only. */
+.st[class]{background:transparent;border-color:var(--ln);color:var(--fg)}
+/* Status code: ink letters in a ring of the status colour (no fill, no coloured words). */
+.st[class] b{background:transparent!important;color:var(--fg)!important;border:2px solid var(--ln);border-radius:999px;padding:0 5px}
+.st-bi b{border-color:#DB7FA2!important}.st-st b{border-color:#1F6F96!important}.st-tr b{border-color:var(--ljr-3)!important}.st-gr b{border-color:var(--ljr-5)!important}.st-ce b{border-color:#7FB8C9!important}.st-ln b{border-color:var(--ljr-4)!important}.st-pu b{border-color:#C9B2DB!important}.st-un b{border-color:var(--p2)!important}
+.st[class]{color:var(--fg)!important}
+.st[class]:hover,.st[class][aria-pressed="true"],.st[class].on{border-color:var(--sub)}
+.b0,.b2,.b3,.b4,.b5,.b6,.b7{border-top-color:var(--ln)}
+.b0:hover{border-top-color:var(--p0)}.b2:hover{border-top-color:var(--p2)}.b3:hover{border-top-color:var(--p3)}.b4:hover{border-top-color:var(--p4)}.b5:hover{border-top-color:var(--p5)}.b6:hover{border-top-color:var(--p6)}.b7:hover{border-top-color:var(--p7)}
+.sfb[class]:hover,.sfb[class][aria-pressed="true"]{outline:none;border-color:var(--sub)}
+
+  /* One page width everywhere (Lisa, 20 Oct): the full window up to 1600px, 24px edge; phones 16px. No wasted space. */
+  .wrap, .wrap.wide, .wide, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
+  @media (max-width: 600px) { .wrap, .wide, .hin { padding-left: 16px; padding-right: 16px; } }
+
+  /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
 </style></head><body>
 <a class="skip" href="#main" data-skip="main">Skip to content</a>
 <header class="top"><div class="hin">
@@ -718,12 +752,11 @@ function strip(){
 
 function pageMap(){
  var c=counts(), bad=checks().filter(function(x){return !x.ok;});
- return '<h2>Live from Drive</h2>'
- +'<p class="sub">Live from <code>'+esc(FOLDER_NAME)+'</code>.</p>'
+ return '<h2>Live</h2>'
  +strip()
  +(bad.length?'<div class="card acc2"><h4>'+bad.length+' need looking at</h4><p style="margin-bottom:0">'
     +bad.map(function(x){return '<b>'+esc(x.k)+'</b> \u2014 '+esc(x.msg);}).join('<br>')+'</p></div>'
-   :'<div class="card acc5"><h4>Everything checks out</h4><p style="margin-bottom:0">All green. Counts agree. Nothing missing a birth date, chip or cabin.</p></div>')
+   :'<div class="card acc5"><h4>✓ <span class="info" title="All green. Counts agree. Nothing missing a birth date, chip or cabin.">i</span></h4></div>')
  +'<div class="tiles">'
  +tile('b5',c.here.length,'dogs here','on the premises today')
  +tile('b6',c.adults.length,'adults','6 months and over')
@@ -826,7 +859,7 @@ function pageDogs(){
  var missVis=missAll.filter(function(d){var c=statusOf(d).code; return c!=='CL'&&c!=='DE';});
  var miss=missVis.length, missGone=missAll.length-missVis.length;
  return '<h2>Dogs</h2>'
- +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="q" placeholder="name, chip…"></span>'
+ +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="q" ></span>'
  +'<select id="fs"><option value="">sex</option><option>Female</option><option>Male</option><option value="__none">not recorded</option></select>'
  +'<select id="fn"><option value="">neuter</option><option value="e">entire</option><option value="n">neutered</option></select>'
  +'<select id="fa"><option value="">age</option><option value="p">under 6m</option><option value="j">6m–12m</option><option value="a">1–7y</option><option value="o">7y+</option><option value="__none">no DOB</option></select>'
@@ -840,7 +873,7 @@ function pageDogs(){
  +'<span><i style="background:var(--female-n)"></i>neutered female</span>'
  +'<span><i style="background:var(--unk)"></i>sex missing</span></div>'
  +'<div class="key stf">'+STATUS.map(function(x){return '<button class="st sfb '+x[2]+'" data-code="'+x[0]+'"><b>'+x[0]+'</b>'+x[1]+'</button>';}).join('')+'<button class="st sfb st-all" data-code="">ALL</button></div>'
- +'<div class="note" style="margin:-4px 0 10px"><b>Left edge of each card = sex.</b> Blue male, pink female, grey not recorded. An entire dog shows nothing extra. A dog that has been done carries the word SPAYED or NEUTERED beside its status, a struck-through sex symbol, and a dotted edge. The coloured buttons above are the status \u2014 tap one to filter, tap ALL to clear. Collected and deceased are hidden until you tap them.</div>'
+ +'<div class="note" style="margin:-4px 0 10px"><span class="info" title="Left edge of each card = sex. Blue male, pink female, grey not recorded. An entire dog shows nothing extra. A dog that has been done carries the word SPAYED or NEUTERED beside its status, a struck-through sex symbol, and a dotted edge. The coloured buttons above are the status \u2014 tap one to filter, tap ALL to clear. Collected and deceased are hidden until you tap them.">i</span></div>'
  +(miss?'<div class="card acc2"><h4>'+miss+' here carry no sex</h4><p style="margin-bottom:0">A blank sex drops a dog out of the breeding-bitch count silently.'+(missGone?' A further <b>'+missGone+'</b> have no sex but have been collected or have died — nothing to fix there.':'')+'</p></div>':(missGone?'<div class="card acc5"><h4>Every dog still here has a sex recorded</h4><p style="margin-bottom:0">'+missGone+' subjects carry no sex, and <b>all of them have been collected or have died</b>. Nothing to chase.</p></div>':''))
  +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
 }
@@ -1027,7 +1060,7 @@ function pageLitters(){
  +'<div class="tiles">'+tile('b7',CD.litters.length,'litters','')
  +tile('b5',withDob,'born','')+tile('b2',CD.litters.length-withDob,'no DOB','planned, in progress, or did not take')
  +tile('b6',CD.matings.length,'matings recorded','including those that did not take')+'</div>'
- +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="lq" placeholder="dam, sire, litter name…"></span>'
+ +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="lq" ></span>'
  +'<select id="ld"><option value="">date of birth</option><option value="y">has a DOB</option><option value="n">missing a DOB</option></select>'
  +'<select id="ly"><option value="">year</option></select>'
  +'<select id="ls"><option value="">status</option></select>'
@@ -1141,7 +1174,7 @@ function pageBuyers(){
   var cats=CD.categories.filter(function(c){return c.code!=='Not yet categorised';});
   var ctry={}; CD.prospects.forEach(function(p){ if(p.country_iso&&p.country_iso!=='unknown') ctry[p.country_iso]=p.country; });
   h+='<h3><span class="dot" style="background:var(--p6)"></span>Prospects</h3>'
-   +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="bq" placeholder="kennel, person, MDBA number\u2026"></span>'
+   +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="bq" ></span>'
    +'<select id="bcat"><option value="">breeder type</option>'
    +cats.map(function(c){return '<option value="'+esc(c.code)+'">'+esc(c.code)+'</option>';}).join('')+'</select>'
    +'<select id="bctry"><option value="">country</option>'
@@ -1286,8 +1319,8 @@ function pageRound(){
         return ' <span class="pill no" title="'+esc(act)+'">'+(v==='low'?'below band':'above band')+'</span>'
           +(act?' <span class="mut">'+esc(act)+'</span>':''); };
       return '<span class="sl">'+slot+'</span>'
-       +'<input class="tmin'+(vmin&&vmin!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal" placeholder="00.00" value="'+esc(t.min||'')+'">'
-       +'<input class="tmax'+(vmax&&vmax!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal" placeholder="00.00" value="'+esc(t.max||'')+'">'
+       +'<input class="tmin'+(vmin&&vmin!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal"  value="'+esc(t.min||'')+'">'
+       +'<input class="tmax'+(vmax&&vmax!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal"  value="'+esc(t.max||'')+'">'
        +'<span class="msg tmsg" data-area="'+aid+'" data-slot="'+slot+'">'+(t.at?'saved':'')+flag(vmin,t.min)+flag(vmax,t.max)+'</span>'; }).join('')
    +'</div>'
    +'<div class="mut">'+(acc?('permitted in '+acc+' mode, 10\u201325 kg: '+(cap==null?'not recorded':cap)+' \u00b7 in here: '+sel.length)
@@ -1497,9 +1530,11 @@ function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) r
 function pill(){
  var p=document.getElementById('livepill');
  if(LOAD.state==='ok'){ p.className='live ok';
-  p.textContent='live · read-only · '+(CD.counts?Object.keys(CD.counts).length:0)+' tables'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):''); }
+  var w='live · read-only · '+(CD.counts?Object.keys(CD.counts).length:0)+' tables'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):'');
+  // ✓ on screen; the words stay for screen readers (and the tests), and on hover.
+  p.title=w+' · '+FOLDER_NAME; p.innerHTML='<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">'+esc(w)+'</span>\u2713'; }
  else if(LOAD.state==='signin'){ p.className='live bad'; p.textContent='signed out'; }
- else if(LOAD.state==='loading'){ p.className='live'; p.textContent='reading Drive\u2026'; }
+ else if(LOAD.state==='loading'){ p.className='live'; p.textContent='\u2026'; }
  else if(LOAD.state==='ambiguous'){ p.className='live bad'; p.textContent='duplicate file titles'; }
  else if(LOAD.state==='err'){ p.className='live bad'; p.textContent='read failed'; }
 }
@@ -1697,4 +1732,20 @@ DashKit.search.register(function(q){
 });
 window.addEventListener('popstate',function(){ if(LOAD.state==='ok'){ go((location.hash||'#/map').replace('#/',''),false); focusView(); } });
 render();
-</script></body></html>
+</script>
+<script>
+/* Calm: every help bullet list (ul.notes) becomes one (i); its words show on hover or tap. */
+(function () {
+  function calm() {
+    document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
+      var t = Array.prototype.map.call(ul.querySelectorAll('li'), function (li) { return li.textContent.trim(); }).join(' · ');
+      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.textContent = 'i';
+      var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h); // screen readers (and tests) still get the words
+      ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
+    });
+  }
+  new MutationObserver(calm).observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', calm); calm();
+})();
+</script>
+</body></html>

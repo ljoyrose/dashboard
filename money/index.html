@@ -163,6 +163,31 @@
     .card { padding: 12px 14px; }
     th, td { padding: 6px 4px; font-size: 14px; }
   }
+
+  /* ---- Calm layer (Lisa, 20 Oct 2026): one corner, faint lines, no fills on selected, colour only on hover or for attention, nothing moves. ---- */
+  :root { --radius: 12px; }
+  .btn, .card, .pill, .chip, .tile, .note, input, select, textarea, details, summary, .panel, .keytile { border-radius: var(--radius); }
+  nav.main a, .subnav a { border-radius: 999px; }
+  nav.main a, nav.main a[aria-current="page"], .subnav a, .subnav a[aria-current="page"] { font-weight: 600; background: transparent; border-width: 1px; border-color: var(--line); }
+  nav.main a:hover, nav.main a[aria-current="page"], .subnav a:hover, .subnav a[aria-current="page"], .btn:hover, a.keytile:hover { border-color: var(--muted); background: transparent; }
+  .card, .card[class], nav.main a, nav.main a[class] { border-left-color: var(--line); box-shadow: none; }
+  .card[class]:hover, nav.main a[class]:hover, nav.main a[class][aria-current="page"] { border-left-color: var(--slot, var(--c, var(--muted))); }
+  .card.vision[class], nav.main a.vision[class] { background: var(--surface); }
+  a { color: inherit; }
+  .btn:active, nav.main a:active { transform: none; }
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; font-weight: 700; color: var(--muted); cursor: help; vertical-align: middle; }
+  .info:hover { border-color: var(--muted); }
+
+  /* One page width everywhere (Lisa, 20 Oct): the full window up to 1600px, 24px edge; phones 16px. No wasted space. */
+  .wrap, .wrap.wide, .wide, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
+  @media (max-width: 600px) { .wrap, .wide, .hin { padding-left: 16px; padding-right: 16px; } }
+
+  /* Fewer scrolls: on wide screens file lists use 2-3 columns. */
+  @media (min-width: 900px) { ul.files { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 8px 12px; } ul.files > li { margin: 0; } }
+
+  /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
 </style>
 </head>
 <body>
@@ -193,10 +218,10 @@
 </header>
 <main id="content" class="wrap wide">
   <div id="banner" class="banner hidden" role="status"></div>
-  <div class="here"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Now</h2></div>
+  <div class="here"><span></span><h2 id="hereTitle" tabindex="-1">Now</h2></div>
   <div id="view"></div>
 </main>
-<footer class="wrap wide"><p>Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time</p></footer>
+<footer class="wrap wide"><span class="info" tabindex="0" title="Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time">i<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"> Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time</span></span></footer>
 
 <script>
 (function () {
@@ -752,6 +777,22 @@
     if (++tries > 100) { $('signInBtn').querySelector('span').textContent = 'Sign-in unavailable'; banner('Google sign-in did not load.', false, false); return; }
     setTimeout(wait, 100);
   })();
+})();
+</script>
+
+<script>
+/* Calm: every help bullet list (ul.notes) becomes one (i); its words show on hover or tap. */
+(function () {
+  function calm() {
+    document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
+      var t = Array.prototype.map.call(ul.querySelectorAll('li'), function (li) { return li.textContent.trim(); }).join(' · ');
+      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.textContent = 'i';
+      var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h); // screen readers (and tests) still get the words
+      ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
+    });
+  }
+  new MutationObserver(calm).observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', calm); calm();
 })();
 </script>
 </body>
