@@ -32,11 +32,12 @@
   .top h1 a { color: inherit; text-decoration: none; }
   .stamp { font-size: 13px; color: var(--muted); }
   .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 999px; padding: 7px 14px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
-  .btn.main { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  .btn.main { border-color: var(--ink); color: var(--ink); }
   .hidden { display: none !important; }
   nav.tabs { display: flex; gap: 6px; overflow-x: auto; padding: 0 16px 10px; scrollbar-width: none; }
   nav.tabs a { flex: none; text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); display: inline-flex; gap: 6px; align-items: center; }
-  nav.tabs a[aria-current="page"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  nav.tabs a[aria-current="page"], nav.tabs a:hover, .pill:hover, .btn:hover { border-color: var(--ink); border-width: 2.5px; }
+  nav.tabs a, .pill, .btn { border-width: 1.5px; }
   nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-4); color: #2C2C2A; border-radius: 999px; padding: 0 7px; }
   main { padding: 16px 0 48px; display: flex; flex-direction: column; gap: 14px; }
   main.wrap { padding: 16px 16px 48px; }
@@ -97,6 +98,40 @@
   .grp .st { font-size: 12px; font-weight: 600; color: var(--muted); }
   .grp a { color: var(--ink); text-decoration: none; }
   .grp .pill { font-size: 11px; padding: 1px 8px; }
+  /* Links: normal text colour, underlined. Pills, chips, buttons and tabs look clickable already: no underline. */
+  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  a.pill, a.chip, a.btn, nav.tabs a, .room h2 .rlink { text-decoration: none; color: inherit; }
+  .pill.on { border-color: var(--ink); border-width: 2.5px; }
+  .sw { display: inline-block; width: 28px; height: 16px; border-radius: 999px; border: 1.5px solid var(--muted); position: relative; vertical-align: middle; }
+  .sw i { position: absolute; top: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); transition: left .15s; }
+  .sw.on { border-color: var(--ljr-5); } .sw.on i { left: 14px; background: var(--ljr-5); }
+  .crow { padding: 10px 0; border-top: 1px solid var(--line); }
+  .card > .crow:first-child, .clines > .crow:first-child { border-top: 0; }
+  .crow .l1 { display: flex; gap: 8px; align-items: flex-start; }
+  .crow .type { flex: none; width: 22px; text-align: center; }
+  .crow .ttl { flex: 1; min-width: 0; font-weight: 500; }
+  .crow .ttl .app { font-weight: 800; margin-right: 4px; }
+  .crow .why { font-size: 13px; color: var(--muted); margin: 3px 0 0 30px; }
+  .crow .l2 { display: flex; gap: 8px; align-items: center; margin: 6px 0 0 30px; }
+  .crow .icons { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; flex: 1; }
+  .crow .acts { display: flex; gap: 6px; }
+  .crow .acts .btn { padding: 4px 14px; font-size: 16px; }
+  .ico, .flagb, .opt { position: relative; background: none; border: 1px solid transparent; border-radius: 8px; padding: 2px 5px; cursor: pointer; font-size: 15px; color: var(--ink); }
+  .ico.on { border-color: var(--line); background: var(--bg); }
+  .ico .new { position: absolute; top: 1px; right: 1px; width: 7px; height: 7px; border-radius: 50%; background: var(--ljr-2); }
+  .flag { width: 18px; height: 18px; display: block; color: var(--muted); }
+  .stat { font: inherit; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #fff; background: var(--sc); border: 0; border-radius: 6px; padding: 2px 7px; cursor: pointer; }
+  .date { position: relative; font-size: 13px; color: var(--muted); white-space: nowrap; cursor: pointer; }
+  .date.over { color: var(--ljr-2-text); font-weight: 700; }
+  .date input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .panel { margin: 8px 0 0 30px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px; flex-direction: column; }
+  .panel p { margin: 0; }
+  .tick { font: inherit; text-align: left; background: none; border: 0; cursor: pointer; color: var(--ink); padding: 2px 0; }
+  .tick.ok { color: var(--muted); text-decoration: line-through; }
+  .fbar { display: flex; justify-content: flex-end; }
+  .fbar .n { margin-left: 4px; }
+  .fpanel { display: flex; flex-direction: column; gap: 8px; }
+  .fpanel .pills { margin: 0; }
   .acts { display: flex; gap: 6px; flex: none; }
   .acts .btn { padding: 5px 12px; }
   .acts .yes { border-color: var(--ljr-5); }
@@ -138,13 +173,14 @@
     <a href="#/rooms" data-nav="rooms">Rooms</a>
     <a href="#/decide" data-nav="decide"><svg class="i"><use href="#i-stamp"/></svg>Decide <span class="n" id="nDecide">0</span></a>
     <a href="#/do" data-nav="do">Do <span class="n" id="nDo">0</span></a>
+    <a href="#/today" data-nav="today" aria-label="Today">📅</a>
   </nav>
 </header>
 <main class="wrap" id="content">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
 </main>
-<footer class="wrap">Live from ClickUp + Drive (via AF-ENGINE) · stages move only on your Yes (or when a no-stamp gate's lines are all done) · UK time</footer>
+
 <script>
 (function () {
   'use strict';
@@ -173,7 +209,7 @@
   function col(slot) { return 'var(--ljr-' + slot + ')'; }
   function stuck(t) { return !/^(killed|retired|hold)$/i.test(t.status) && Date.now() - t.updated > 14 * 864e5; }
   function apps() { return (S && S.lists.apps || []).filter(function (t) { return !t.parent; }); }
-  function isOpen(t) { return !/^(done|closed|complete|retired|killed|decided|verified|proved live|to decide done)$/i.test(t.status); }
+  function isOpen(t) { return !/^(done|closed|complete|cancelled|retired|killed|decided|verified|proved live|to decide done)$/i.test(t.status); }
   function mine() {
     var all = [].concat(S.lists.work || [], S.lists.sends || [], S.lists.incidents || []); // never app cards: an app asks through its gate row
     return all.filter(function (t) { return isOpen(t) && t.tags.indexOf('who-lisa') >= 0 && t.tags.indexOf('lisa-done') < 0; });
@@ -198,11 +234,12 @@
         return j.files[0];
       });
   }
-  function media(id) { return drive(CFG.urls.files + '/' + id + '?alt=media&supportsAllDrives=true'); }
+  // no-store: the browser must never show an old af-state.json (it did on 20 Oct: "data 22:48" the next morning).
+  function media(id) { return drive(CFG.urls.files + '/' + id + '?alt=media&supportsAllDrives=true', { cache: 'no-store' }); }
   function load() {
     if (!accessToken) return;
     findFile(F.logs, F.state).then(function (f) { return media(f.id).then(function (r) { return r.json(); }); })
-      .then(function (j) { S = j; err = null; var nf = 0; (j.failed || []).forEach(function (f) { if (sent[f.taskId]) { delete sent[f.taskId]; nf++; } }); if (nf) { saveSent(); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); } $('stamp').textContent = 'Read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · data ' + new Date(j.generated_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + (String(j.mode).toUpperCase() === 'LIVE' ? '' : ' · TEST'); render(); })
+      .then(function (j) { S = j; err = null; allTasks(); applyPend(); var nf = 0; (j.failed || []).forEach(function (f) { if (sent[f.taskId]) { delete sent[f.taskId]; nf++; } }); if (nf) { saveSent(); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); } $('stamp').textContent = 'Read ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · data ' + new Date(j.generated_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + (String(j.mode).toUpperCase() === 'LIVE' ? '' : ' · TEST'); render(); })
       .catch(function (e) { err = e.message; render(); });
   }
   function cardFor(t) {
@@ -228,16 +265,17 @@
   function vRooms() {
     var A = apps(), html = '<div class="pills">' +
       // Every count is a link: it opens the list it counts.
-      '<a class="pill" href="#/all">' + A.length + ' apps &amp; ideas</a>' +
-      '<a class="pill" href="#/stuck" style="border-color:var(--ljr-2)">' + ic('warn') + A.filter(stuck).length + ' stuck</a>' +
-      '<a class="pill" href="#/room/reactor" style="border-color:var(--ljr-3)">' + ic('coin') + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + ' of 3 build slots free</a>' +
-      '<a class="pill" href="#/health">' + (String(S.factory).toUpperCase() === 'ON' ? '● ON' : '○ OFF') + '</a>' + enginePill() + '</div><div class="rooms">';
+      '<a class="pill" href="#/all" title="Apps">◆ ' + A.length + '</a>' +
+      '<a class="pill" href="#/stuck" title="Stuck" style="border-color:var(--ljr-2)">⏳ ' + A.filter(stuck).length + '</a>' +
+      '<a class="pill" href="#/room/reactor" title="Build slots" style="border-color:var(--ljr-3)">🔨 ' + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + '/3</a>' +
+      '<a class="pill" href="#/queue/claude" style="border-color:var(--ljr-5)">Claude ' + queue('claude').length + '</a><a class="pill" href="#/queue/grok" style="border-color:var(--ljr-5)">Grok ' + queue('grok').length + '</a>' +
+      '<a class="pill" href="#/health" title="Factory"><span class="sw' + (String(S.factory).toUpperCase() === 'ON' ? ' on' : '') + '"><i></i></span></a>' + enginePill() + '</div><div class="rooms">';
     ROOMS.forEach(function (r) {
       var inRoom = A.filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
       html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><a class="rlink" href="#/room/' + r.key + '"><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '</a><span class="ct">' + inRoom.length + '</span></h2><span class="stn">' + esc(r.st.join(' · ')) + '</span>' +
         inRoom.map(chipOf).join('') + (r.key === 'reception' ? newIdea() : '') + '</section>';
     });
-    return html + '</div><p class="muted">Gates: Screen · Merit ' + ic('stamp') + ' · Base · Lock ' + ic('stamp') + ' · Schema · Slot · Invest ' + ic('stamp') + ' · Send ' + ic('stamp') + ' · Launch ' + ic('stamp') + ' &nbsp;' + ic('stamp') + ' = yours · a mistake = one checklist line</p>';
+    return html + '</div>';
   }
   function chipOf(t) { return '<a class="chip' + (stuck(t) ? ' stuck' : '') + '" href="#/card/' + t.id + '">' + esc(t.name) + '<span class="st">' + (stuck(t) ? ic('warn') : '') + esc(t.status) + '</span></a>'; }
   // The front door: the Idea Form (AF-ENGINE writes the card and the ClickUp task, even with the factory OFF).
@@ -255,7 +293,7 @@
     var asks = decisions().filter(function (d) { return ids.some(function (id) { return String(d.desc).indexOf('GATE: ' + id + ' ') >= 0; }); });
     return '<div class="card"><div class="hero" style="--c:' + col(r.slot) + '"><div class="disc">' + inRoom.length + '</div><div><h2>' + esc(r.name) + (r.paid ? ' ' + ic('coin') : '') + '</h2><p>' + esc(ROOM_DO[key] || '') + '</p></div></div>' +
       '<p class="muted">' + esc(r.st.join(' · ')) + '</p>' + (key === 'reception' ? '<p>' + newIdea() + '</p>' : '') +
-      '<div class="pills">' + (inRoom.length ? inRoom.map(chipOf).join('') : '<span class="muted">Empty.</span>') + '</div>' +
+      '<div class="pills">' + (inRoom.length ? inRoom.map(chipOf).join('') : '<span class="muted">—</span>') + '</div>' +
       (asks.length ? '<p><a class="btn" href="#/decide">' + ic('stamp') + asks.length + ' to decide here</a></p>' : '') +
       '<p><a href="#/rooms">← Rooms</a></p></div>';
   }
@@ -267,7 +305,7 @@
     var tpl = (S.lists.template || []).filter(function (x) { return x.parent; });
     var html = '<div class="card"><div class="hero" style="--c:' + col(slot) + '"><div class="disc">' + (n === null ? '–' : n) + '</div><div><h2>' + esc(t.name) + '</h2><p>' + esc(t.status) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
       '<div class="pills" style="margin-top:10px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '<a class="pill" href="' + esc(t.url) + '" target="_blank" rel="noopener">ClickUp</a></div>' +
-      '<div id="codes" class="codes"><span class="q">reading card…</span></div>' + waiting(t) +
+      '<div id="codes" class="codes"><span class="q">…</span></div>' + waiting(t) +
       '<div class="strip">' + STAGES.map(function (_, i) { return '<i class="' + (n !== null && i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>';
     STAGES.forEach(function (name, i) {
       var cls = n !== null && i < n ? 'd' : i === n ? 'c' : '';
@@ -278,19 +316,19 @@
       html += '<div class="stage ' + cls + '" data-stage="' + i + '"><span class="n">' + i + '</span>' + name + (i === 6 ? ' ' + ic('coin') : '') +
         '<span class="r">' + (mineLines.length ? done + ' / ' + lines.length : lines.length ? lines.length + ' lines' : '') + '</span></div>';
       if (isOpenRow) {
-        html += '<ul class="lines">' + lines.map(function (x) {
+        html += mineLines.length ? '<div class="clines">' + lines.map(function (x) { return row(x, x.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view'); }).join('') + (i === 6 ? '<ul class="lines">' + sendsFor(t) + '</ul>' : '') + '</div>' : '<ul class="lines">' + lines.map(function (x) {
           var who = (x.tags.filter(function (g) { return /^who-/.test(g); })[0] || '').replace('who-', '');
           return '<li>' + ic(isOpen(x) ? 'dot' : 'tick') + esc(x.name.replace(/^(TEST-)?[^·]+ · /, '').replace(/^\d\s·\s/, '')) + '<span class="who">' + esc(who) + '</span></li>';
-        }).join('') + (!mineLines.length && lines.length ? '<li class="muted">template lines · not yet applied to this app</li>' : '') +
+        }).join('') + (!mineLines.length && lines.length ? '<li class="muted">Template</li>' : '') +
         (i === 6 ? sendsFor(t) : '') + '</ul>';
       }
     });
-    html += '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" placeholder="Ask or change" aria-label="Ask or change" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn main" type="submit" aria-label="Send">' + ic('send') + '</button></form>' +
+    html += '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask or change" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn main" type="submit" aria-label="Send">' + ic('send') + '</button></form>' +
       '<div id="askNote" class="muted"></div></div>';
     setTimeout(function () {
       cardFor(t).then(function (c) {
         var box = $('codes'); if (!box) return;
-        if (!c) { box.innerHTML = '<span class="q">no card file linked</span>'; return; }
+        if (!c) { box.innerHTML = '<span class="q">No card</span>'; return; }
         var codes = codesOf(c.md);
         // "POOL 0": name, a space, the value in bold, so codes never run together.
         box.innerHTML = codes.map(function (x) { var m = x.match(/^([A-Z]+)(.*)$/) || [x, x, '']; return '<span' + (/\?$/.test(x) ? ' class="q"' : '') + '>' + esc(m[1]) + ' <b>' + esc(m[2]) + '</b></span>'; }).join('') +
@@ -313,7 +351,7 @@
   function sendsFor(t) {
     var key = t.tags.filter(function (g) { return /^app-/.test(g); })[0];
     var sends = (S.lists.sends || []).filter(function (x) { return key && x.tags.indexOf(key) >= 0; });
-    if (!sends.length) return '<li class="muted">no sends yet</li>';
+    if (!sends.length) return '';
     return sends.map(function (x) { return '<li>' + ic('send') + '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><span class="who">' + esc(x.status) + '</span></li>'; }).join('');
   }
   // Decide rows get Yes / No, Do rows get Done. A click drops a request file; the engine updates ClickUp.
@@ -331,35 +369,170 @@
   }
   // When the engine will apply a click: its next 15-minute run (:03 :18 :33 :48) plus a minute.
   function appliesBy(ts) { var d = new Date(ts), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next + 1); return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
-  function list(items, slot, empty, kind) {
-    if (!items.length) return '<div class="card muted">' + empty + '</div>';
-    var last = null;
-    items = items.slice().sort(function (a, b) { var x = appOf(a), y = appOf(b); return rank(a) - rank(b) || x.localeCompare(y) || String(a.name).localeCompare(String(b.name)); });
-    return '<div class="card">' + items.map(function (t) {
-      var g = appOf(t), head = g !== last ? headOf(t, slot) : '';
-      last = g;
-      var label = g === 'Factory rules' ? t.name : String(t.name).replace(/^TEST-/, '').slice(g.length + 3);
-      var acts = sent[t.id] ? '<span class="sent">' + ic('tick') + 'sent · applies by ' + appliesBy(sent[t.id]) + '</span>' : kind === 'decide' ?
-        '<span class="acts"><button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '">Yes</button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '">No</button></span>' :
-        '<span class="acts"><button class="btn" type="button" data-act="done" data-id="' + esc(t.id) + '">' + ic('tick') + 'Done</button></span>';
-      // Decide rows also get a reply box: Ask sends a question to Claude; typed text also rides along with Yes / No.
-      var mine = asked[t.id], q = mine ? '<div class="why q">' + ic('send') + 'You: ' + esc(mine.text) + ' · sent ' + new Date(mine.at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' · Claude answers here</div>' :
-        t.tags.indexOf('question') >= 0 ? '<div class="why q">' + ic('warn') + 'Question sent · Claude answers here</div>' : '';
-      var box = kind === 'decide' && !sent[t.id] ? '<form class="ask rowask" data-ask="' + esc(t.id) + '"><input name="text" id="note-' + esc(t.id) + '" data-draft="' + esc(t.id) + '" value="' + esc(drafts[t.id] || '') + '" placeholder="Question or note…" aria-label="Question or note"><input type="hidden" name="to" value="claude"><button class="btn" type="submit">Ask</button></form><div class="asknote muted"></div>' : '';
-      var by = kind === 'decide' ? '<span class="by">' + (t.tags.indexOf('gate') >= 0 ? 'engine' : 'Claude') + '</span>' : '';
-      return head + '<div class="row"><span class="bar" style="--c:' + col(slot) + '"></span><div class="txt"><a href="' + esc(t.url) + '" target="_blank" rel="noopener">' + esc(label) + '</a>' + by + why(t) + q + box + '</div><span class="meta">' + esc(t.status) + '<br>' + Math.round((Date.now() - t.updated) / 864e5) + 'd</span>' + acts + '</div>';
-    }).join('') + '</div>';
+  /* ---------- Calm rows: one look on every screen (Lisa, 20 Oct 2026) ----------
+   * Always: type icon · title · flag (top right) · ✓ / ✗ · date DD/MM/YY (bottom right).
+   * Everything else is an icon, shown only when there is something; tap opens it under the row, one at a time.
+   * Every value is read from its ClickUp field; every change goes to AF › requests and AF-ENGINE writes it to that field.
+   */
+  var PRI = { urgent: [1, '#f50000'], high: [2, '#ffcc00'], normal: [3, '#6fddff'], low: [4, '#d8d8d8'] };
+  var MEANING = /^(paid|sen-check|kill-suggested|leak|question)/;
+  var openPanel = null, filtersOpen = false, weekView = false;
+  var prefs = (function () { try { return JSON.parse(localStorage.getItem('af-prefs') || '') || {}; } catch (e) { return { unanswered: true }; } })();
+  if (prefs.unanswered === undefined) prefs.unanswered = true;
+  var pend = loadLocal('af-pend'), seen = loadLocal('af-seen');
+  function savePrefs() { try { localStorage.setItem('af-prefs', JSON.stringify(prefs)); } catch (e) {} }
+  function allTasks() { var L = S.lists, out = []; Object.keys(L).forEach(function (k) { if (k !== 'template') (L[k] || []).forEach(function (t) { t._k = k; out.push(t); }); }); return out; }
+  function byId(id) { return allTasks().filter(function (t) { return t.id === id; })[0]; }
+  // A change waits in the browser until ClickUp shows it (the task's "updated" moves past the click).
+  function applyPend() {
+    var now = Date.now();
+    Object.keys(pend).forEach(function (id) {
+      var p = pend[id], t = byId(id);
+      if (!t || t.updated >= p.at || now - p.at > 36e5) { delete pend[id]; return; }
+      if (p.priority !== undefined) t.pri = p.priority === 'none' ? null : { p: p.priority, c: PRI[p.priority][1] };
+      if (p.due !== undefined) t.due = p.due ? Date.parse(p.due + 'T17:00:00Z') : null;
+      if (p.status !== undefined) t.status = p.status;
+    });
+    saveLocal('af-pend', pend);
   }
-  // The plain What / Yes = / No = lines written on each task, shown under its title. Links become "open".
+  function hm(ts) { return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+  function dmy(ts) { return new Date(ts).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }); }
+  function iso(ts) { var d = new Date(ts); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function dayStart(off) { var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() + (off || 0) * 864e5; }
+  function overdue(t) { return t.due && t.due < dayStart(0) && isOpen(t); }
+  function whoOf(t) {
+    var w = t.tags.filter(function (g) { return /^who-/.test(g); }).map(function (g) { return { lisa: 'Lisa', grok: 'Grok', claude: 'Claude' }[g.slice(4)] || g.slice(4); });
+    (t.who || []).forEach(function (u) { var n = /grok/i.test(u) ? 'Grok' : /lisa|joyaa/i.test(u) ? 'Lisa' : /ukdoodles|claude/i.test(u) ? 'Claude' : u; if (w.indexOf(n) < 0) w.push(n); });
+    return w;
+  }
+  function typeIcon(t) {
+    var k = t._k;
+    if (k === 'decisions') return t.tags.indexOf('gate') >= 0 ? '🚦' : '🔖';
+    if (t.tags.indexOf('ask') >= 0) return '✎';
+    return { sends: '➤', incidents: '⚠', apps: '◆' }[k] || (t.tags.indexOf('line') >= 0 ? '☑' : '•');
+  }
+  function flagIcon(p) {
+    var c = p ? (PRI[p.p] ? PRI[p.p][1] : p.c) : 'none';
+    return '<svg class="flag" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 1.5v13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M3.5 2.5h9l-2 3 2 3h-9z" fill="' + c + '" stroke="' + (p ? c : 'currentColor') + '" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+  }
+  function iconsOf(t, kind) {
+    var out = [], mt = t.tags.filter(function (g) { return MEANING.test(g); }), items = [].concat.apply([], (t.chk || []).map(function (c) { return c.items; }));
+    if (kind === 'decide') out.push(['reply', '✎', 'Reply', !!drafts[t.id]]);
+    if (t.cm && t.cm.length) out.push(['cm', '💬', 'Comments', t.cm[0].at > (seen[t.id] || 0)]);
+    if (items.length) out.push(['chk', '☑', 'Checklist', false]);
+    if (t.files && t.files.length) out.push(['files', '📎', 'Files', false]);
+    if (t.est || t.spent) out.push(['time', '⏱', 'Time', false]);
+    if (whoOf(t).length) out.push(['who', '👤', 'Who', false]);
+    if (mt.length) out.push(['tags', '🏷', 'Tags', false]);
+    return out;
+  }
+  function dur(ms) { var m = Math.round(ms / 6e4); return m >= 60 ? Math.floor(m / 60) + 'h' + (m % 60 ? ' ' + m % 60 + 'm' : '') : m + 'm'; }
+  function panelOf(t, k) {
+    var body = '';
+    if (k === 'reply') body = '<form class="ask rowask" data-ask="' + esc(t.id) + '"><input name="text" id="note-' + esc(t.id) + '" data-draft="' + esc(t.id) + '" value="' + esc(drafts[t.id] || '') + '" aria-label="Reply"><input type="hidden" name="to" value="claude"><button class="btn" type="submit" aria-label="Send">➤</button></form><div class="asknote muted"></div>';
+    if (k === 'cm') body = t.cm.map(function (c) { return '<p><b>' + esc(c.by) + '</b> <span class="muted">' + dmy(c.at) + ' ' + hm(c.at) + '</span><br>' + esc(c.text) + '</p>'; }).join('');
+    if (k === 'chk') body = (t.chk || []).map(function (c) { return '<p class="muted">' + esc(c.name) + '</p>' + c.items.map(function (i) { return '<button class="tick' + (i.ok ? ' ok' : '') + '" type="button" data-check="' + esc(c.id) + '" data-item="' + esc(i.id) + '" data-id="' + esc(t.id) + '" data-ok="' + (i.ok ? 1 : 0) + '">' + (i.ok ? '☑' : '☐') + ' ' + esc(i.name) + '</button>'; }).join(''); }).join('');
+    if (k === 'files') body = t.files.map(function (f) { return '<a href="' + esc(f.url) + '" target="_blank" rel="noopener">📎 ' + esc(f.title) + '</a>'; }).join('<br>');
+    if (k === 'time') body = (t.est ? '⏱ ' + dur(t.est) : '') + (t.spent ? ' · ' + dur(t.spent) + ' spent' : '');
+    if (k === 'who') body = whoOf(t).map(esc).join(' · ');
+    if (k === 'tags') body = t.tags.filter(function (g) { return MEANING.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join(' ');
+    if (k === 'flag') body = ['urgent', 'high', 'normal', 'low', 'none'].map(function (p) { return '<button class="opt" type="button" data-set="priority" data-val="' + p + '" data-id="' + esc(t.id) + '" aria-label="' + p + '">' + flagIcon(p === 'none' ? null : { p: p }) + '</button>'; }).join('');
+    if (k === 'status') body = ((S.statuses || {})[t._k] || []).map(function (x) { return '<button class="stat" type="button" data-set="status" data-val="' + esc(x.s) + '" data-id="' + esc(t.id) + '" style="--sc:' + esc(x.c) + '">' + esc(x.s) + '</button>'; }).join(' ');
+    return '<div class="panel">' + body + '</div>';
+  }
+  function row(t, kind) {
+    if (!t._k) allTasks();
+    var p = t.pri && t.pri.p ? t.pri : null, sentAt = sent[t.id], ch = pend[t.id];
+    // The app's name always leads, bold; anything not tied to an app says Factory.
+    var label = String(t.name).replace(/^TEST-/, ''), app = appOf(t), known = apps().some(function (a) { return a.name.replace(/^TEST-/, '') === app; });
+    var rest = known ? label.slice(app.length).replace(/^ · /, '') : label;
+    var title = '<b class="app">' + esc(known ? app : 'Factory') + '</b> ' + esc(rest);
+    var acts = sentAt ? '<span class="sent">✓ ' + hm(sentAt) + '</span>' :
+      kind === 'decide' ? '<button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '" aria-label="Yes">✓</button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '" aria-label="No">✗</button>' :
+      kind === 'do' ? '<button class="btn yes" type="button" data-act="done" data-id="' + esc(t.id) + '" aria-label="Done">✓</button>' : '';
+    var stat = t._k === 'apps' ? '' : '<button class="stat" type="button" data-panel="status" data-id="' + esc(t.id) + '" style="--sc:' + esc(t.color || '#b8b2aa') + '">' + esc(t.status) + '</button>';
+    var icons = iconsOf(t, kind).map(function (x) { return '<button class="ico' + (openPanel && openPanel.id === t.id && openPanel.k === x[0] ? ' on' : '') + '" type="button" data-panel="' + x[0] + '" data-id="' + esc(t.id) + '" aria-label="' + x[2] + '">' + x[1] + (x[3] ? '<i class="new"></i>' : '') + '</button>'; }).join('');
+    var mineQ = asked[t.id] ? '<div class="why q">✎ ' + esc(asked[t.id].text) + ' · ✓ ' + hm(asked[t.id].at) + '</div>' : '';
+    var date = '<label class="date' + (overdue(t) ? ' over' : '') + '">' + (t.due ? (overdue(t) ? '⚠ ' : '') + dmy(t.due) : '📅') + '<input type="date" data-due="' + esc(t.id) + '" value="' + (t.due ? iso(t.due) : '') + '" aria-label="Due date"></label>';
+    return '<div class="crow" data-row="' + esc(t.id) + '"><div class="l1"><span class="type" aria-hidden="true">' + typeIcon(t) + '</span><a class="ttl" href="' + esc(t.url) + '" target="_blank" rel="noopener">' + title + '</a>' +
+      '<button class="flagb" type="button" data-panel="flag" data-id="' + esc(t.id) + '" aria-label="Flag ' + (p ? p.p : 'none') + '">' + flagIcon(p) + '</button></div>' +
+      (kind === 'decide' ? why(t) : '') + mineQ +
+      '<div class="l2"><span class="icons">' + stat + icons + (ch ? '<span class="sent">✓ ' + hm(ch.at) + '</span>' : '') + '</span><span class="acts">' + acts + '</span>' + date + '</div>' +
+      (openPanel && openPanel.id === t.id ? panelOf(t, openPanel.k) : '') + '</div>';
+  }
+  // Sort & filter: one button, closed by default; the badge counts filters that are on.
+  function filtered(items) {
+    return items.filter(function (t) {
+      if (prefs.unanswered && sent[t.id]) return false;
+      if (prefs.pri && prefs.pri.length && prefs.pri.indexOf(t.pri && t.pri.p ? t.pri.p : 'none') < 0) return false;
+      if (prefs.who && prefs.who.length && !whoOf(t).some(function (w) { return prefs.who.indexOf(w) >= 0; })) return false;
+      if (prefs.overdue && !overdue(t)) return false;
+      if (prefs.dated && !t.due) return false;
+      if (prefs.tag && prefs.tag.length && !t.tags.some(function (g) { return prefs.tag.indexOf(g) >= 0; })) return false;
+      if (prefs.app && appOf(t) !== prefs.app) return false;
+      return true;
+    }).sort(function (a, b) {
+      var ra = a.pri && PRI[a.pri.p] ? PRI[a.pri.p][0] : 5, rb = b.pri && PRI[b.pri.p] ? PRI[b.pri.p][0] : 5;
+      return (prefs.group ? appOf(a).localeCompare(appOf(b)) : 0) || ra - rb || (a.due || 9e15) - (b.due || 9e15) || a.created - b.created;
+    });
+  }
+  function onCount() { return ['unanswered', 'overdue', 'dated', 'group'].filter(function (k) { return prefs[k]; }).length + ['pri', 'who', 'tag'].filter(function (k) { return prefs[k] && prefs[k].length; }).length + (prefs.app ? 1 : 0); }
+  function chip(key, val, label) {
+    var on = Array.isArray(prefs[key]) ? prefs[key].indexOf(val) >= 0 : val === undefined ? !!prefs[key] : prefs[key] === val;
+    return '<button class="pill' + (on ? ' on' : '') + '" type="button" data-pref="' + key + '"' + (val !== undefined ? ' data-val="' + esc(val) + '"' : '') + '>' + label + '</button>';
+  }
+  function filterBar(items) {
+    var n = onCount(), html = '<div class="fbar"><button class="btn" type="button" data-action="filters" aria-label="Sort and filter">☰' + (n ? '<span class="n">' + n + '</span>' : '') + '</button></div>';
+    if (!filtersOpen) return html;
+    var appsSeen = items.map(appOf).filter(function (a, i, x) { return x.indexOf(a) === i; }).sort();
+    var tagsSeen = [].concat.apply([], items.map(function (t) { return t.tags.filter(function (g) { return MEANING.test(g); }); })).filter(function (a, i, x) { return x.indexOf(a) === i; });
+    return html + '<div class="card fpanel">' +
+      '<div class="pills">' + chip('unanswered', undefined, '⏳') + chip('overdue', undefined, '⚠') + chip('dated', undefined, '📅') + chip('group', undefined, '▤') + '</div>' +
+      '<div class="pills">' + ['urgent', 'high', 'normal', 'low', 'none'].map(function (p) { return chip('pri', p, flagIcon(p === 'none' ? null : { p: p })); }).join('') + '</div>' +
+      '<div class="pills">' + ['Lisa', 'Claude', 'Grok'].map(function (w) { return chip('who', w, '👤 ' + w); }).join('') + '</div>' +
+      (tagsSeen.length ? '<div class="pills">' + tagsSeen.map(function (g) { return chip('tag', g, '🏷 ' + esc(g)); }).join('') + '</div>' : '') +
+      '<div class="pills">' + chip('app', '', '◆ all') + appsSeen.map(function (a) { return chip('app', a, '◆ ' + esc(a)); }).join('') + '</div></div>';
+  }
+  function list(items, slot, empty, kind) {
+    var show = filtered(items), last = null;
+    var body = show.length ? show.map(function (t) {
+      var head = prefs.group && appOf(t) !== last ? headOf(t, slot) : ''; last = appOf(t);
+      return head + row(t, kind === 'mixed' ? (t._k === 'decisions' ? 'decide' : t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view') : kind);
+    }).join('') : '<p class="muted">' + empty + '</p>';
+    return filterBar(items) + '<div class="card">' + body + '</div>';
+  }
+  function queue(who) {
+    var w = who === 'claude' ? 'Claude' : 'Grok';
+    return allTasks().filter(function (t) { return isOpen(t) && t._k !== 'apps' && (whoOf(t).indexOf(w) >= 0 || (who === 'claude' && t._k === 'claude')); });
+  }
+  // 📅: Today (due today + overdue) by default; one tap for the week.
+  function vToday() {
+    var end = weekView ? dayStart(7) : dayStart(1);
+    var items = allTasks().filter(function (t) { return isOpen(t) && t.due && t.due < end && t._k !== 'apps'; });
+    return '<div class="pills"><button class="pill' + (weekView ? '' : ' on') + '" type="button" data-action="today">Today</button><button class="pill' + (weekView ? ' on' : '') + '" type="button" data-action="week">Week</button></div>' +
+      list(items, 4, '—', 'mixed');
+  }
+  // The plain What / Yes = / No = lines on a decision. Links become an underlined "open".
   function why(t) {
     var d = String(t.desc || '').trim();
     if (!d) return '';
-    // First 4 lines, plus every answer line ("Claude: …") written back after a question.
     var ls = d.split('\n').filter(function (l) { return l && !/^(GATE|NO|APP|App):/.test(l); });
     ls = ls.slice(0, 4).concat(ls.slice(4).filter(function (l) { return /^(Claude|Answer):/.test(l); }));
     return '<div class="why">' + ls.map(function (l) {
       return esc(l).replace(/https?:\/\/[^\s<]+/g, function (u) { return '<a href="' + u + '" target="_blank" rel="noopener">open</a>'; });
     }).join('<br>') + '</div>';
+  }
+  function sendSet(id, field, val) {
+    var t = byId(id); if (!t) return;
+    var body = { kind: 'set', taskId: id, at: new Date().toISOString() }; body[field] = val;
+    pend[id] = Object.assign(pend[id] || {}, body, { at: Date.now() }); saveLocal('af-pend', pend);
+    applyPend(); openPanel = null; render();
+    withWrite(function () { return putRequest('set', body).catch(function (e) { delete pend[id]; saveLocal('af-pend', pend); banner('Not sent: ' + e.message); load(); }); });
+  }
+  function sendCheck(id, checklist, item, resolved) {
+    var t = byId(id); if (!t) return;
+    (t.chk || []).forEach(function (c) { c.items.forEach(function (i) { if (i.id === item) i.ok = resolved; }); }); render();
+    withWrite(function () { return putRequest('check', { kind: 'check', taskId: id, checklist: checklist, item: item, resolved: resolved, at: new Date().toISOString() }).catch(function (e) { banner('Not sent: ' + e.message); load(); }); });
   }
   // Green only when every job ran OK within its window and the data is fresh. OFF / never ran / late = red.
   var WINDOW_H = { syncState: 0.75, dailyDigest: 74, staleCheck: 26, leakProbe: 26, weeklyBackup: 170 };
@@ -369,17 +542,17 @@
       var last = Date.parse(h.last);
       return h.result !== 'OK' || !(now - last < WINDOW_H[h.job] * 36e5);
     }).map(function (h) { return (JOB[h.job] || h.job) + ' ' + word(h); });
-    if (now - Date.parse(S.generated_at) > 45 * 6e4) bad.unshift('data old');
-    return bad.length ? '<a class="pill" href="#/health" style="border-color:var(--ljr-2);color:var(--ljr-2-text)">' + ic('warn') + esc(bad.join(' · ')) + '</a>' :
-      '<a class="pill" href="#/health" style="border-color:var(--ljr-5)">' + ic('tick') + 'engine ok</a>';
+    if (now - Date.parse(S.generated_at) > 45 * 6e4) bad.unshift('Data old');
+    return bad.length ? '<a class="pill" href="#/health" title="' + esc(bad.join(' · ')) + '" style="border-color:var(--ljr-2);color:var(--ljr-2-text)">⚠ ' + bad.length + '</a>' :
+      '<a class="pill" href="#/health" title="Engine" style="border-color:var(--ljr-5)">' + ic('tick') + '</a>';
   }
   var JOB = { syncState: 'Screen sync', dailyDigest: 'Daily email', staleCheck: 'Stuck check', weeklyBackup: 'Backup', leakProbe: 'Live-app check', onIdeaSubmit: 'Idea Form' };
-  function word(h) { var r = String(h.result).toUpperCase(); return r === 'INSTALLED' ? 'never ran' : r === 'OFF' ? 'off' : r === 'OK' ? 'late' : r.toLowerCase(); }
+  function word(h) { var r = String(h.result).toUpperCase(); return r === 'INSTALLED' ? 'Never' : r === 'OFF' ? 'Off' : r === 'OK' ? 'Late' : r.charAt(0) + r.slice(1).toLowerCase(); }
   // Jobs page: what each job is, when it last ran, and whether that is OK. Plain words.
   function vHealth() {
     var now = Date.now(), on = String(S.factory).toUpperCase() === 'ON';
-    return '<div class="card"><b>Factory ' + (on ? '● ON' : '○ OFF') + ' · ' + esc(String(S.mode)) + '</b><p class="muted">' +
-      (on ? 'All jobs run.' : 'OFF: no building and no spend. Ideas, your clicks and the screen still work.') + '</p>' +
+    return '<div class="card"><b>Factory <span class="sw' + (on ? ' on' : '') + '"><i></i></span> ' + esc(String(S.mode)) + '</b><p class="muted">' +
+      (on ? '' : '') + '</p>' +
       (S.health || []).map(function (h) {
         var last = Date.parse(h.last), okNow = h.result === 'OK' && (!WINDOW_H[h.job] || now - last < WINDOW_H[h.job] * 36e5);
         return '<div class="row"><span class="bar" style="--c:var(--ljr-' + (okNow ? 5 : 2) + ')"></span><div class="txt"><b>' + esc(JOB[h.job] || h.job) + '</b><div class="why">' + esc(h.schedule) + (h.note ? ' · ' + esc(String(h.note).slice(0, 80)) : '') + '</div></div><span class="meta">' +
@@ -401,18 +574,19 @@
   function saveSent() { try { localStorage.setItem('af-sent', JSON.stringify(sent)); } catch (e) {} }
   function render() {
     var route = (location.hash || '#/rooms').replace('#/', '').split('/');
-    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (/^(card|room|health|stuck|all)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (/^(card|room|health|stuck|all|queue)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
     $('signInBtn').classList.toggle('hidden', signedIn);
     $('signOutBtn').classList.toggle('hidden', !signedIn);
     $('refreshBtn').classList.toggle('hidden', !signedIn);
     var v = $('view');
-    if (!signedIn) { v.innerHTML = '<div class="card"><b>Sign in to see the factory</b><p class="muted">Read-only, plus the Ask box. One sign-in for the whole site.</p><button class="btn main" type="button" data-action="signin">' + ic('in') + 'Sign in with Google</button></div>'; return; }
+    if (!signedIn) { v.innerHTML = '<div class="card"><b>Factory</b><button class="btn main" type="button" data-action="signin">' + ic('in') + 'Sign in with Google</button></div>'; return; }
     if (err) { v.innerHTML = '<div class="banner">' + esc(err) + '</div>'; return; }
     if (!S) { v.innerHTML = '<div class="card muted">Reading…</div>'; return; }
     var unsent = function (t) { return !sent[t.id]; };
     $('nDecide').textContent = decisions().filter(unsent).length; $('nDo').textContent = mine().filter(unsent).length;
-    v.innerHTML = route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'all' ? vApps('Apps & ideas', apps()) : route[0] === 'decide' ? list(decisions(), 4, 'Nothing to decide.', 'decide') :
-      route[0] === 'do' ? list(mine(), 4, 'Nothing waiting on you.', 'do') : vRooms();
+    allTasks();
+    v.innerHTML = route[0] === 'today' ? vToday() : route[0] === 'queue' ? list(queue(route[1]), 5, '—', 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'all' ? vApps('Apps & ideas', apps()) : route[0] === 'decide' ? list(decisions(), 4, '—', 'decide') :
+      route[0] === 'do' ? list(mine(), 4, '—', 'do') : vRooms();
   }
 
   /* Ask box → AF › requests (the engine turns it into a ClickUp task) */
@@ -428,7 +602,7 @@
     setTimeout(function () { if (!done) note.textContent = 'Not sent yet: allow Google saving, then press Ask again. Your text is kept.'; }, 20000);
     withWrite(function () {
       return putRequest('ask', body)
-        .then(function () { done = true; delete drafts[id]; saveLocal('af-drafts', drafts); asked[id] = { text: text, at: Date.now() }; saveLocal('af-asked', asked); render(); })
+        .then(function () { done = true; delete drafts[id]; saveLocal('af-drafts', drafts); asked[id] = { text: text, at: Date.now() }; saveLocal('af-asked', asked); openPanel = null; render(); })
         .catch(function (e) { done = true; note.textContent = 'Not sent: ' + e.message + '. Your text is kept; press Ask again.'; });
     });
   }
@@ -478,13 +652,26 @@
     var a = e.target.closest('[data-action]'); if (a && !a.disabled) {
       var k = a.getAttribute('data-action');
       if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
+      else if (k === 'filters') { filtersOpen = !filtersOpen; render(); } else if (k === 'today' || k === 'week') { weekView = k === 'week'; render(); }
       return;
     }
     var b = e.target.closest('[data-act]'); if (b) { sendAct(b); return; }
+    var pn = e.target.closest('[data-panel]'); if (pn) { var pid = pn.getAttribute('data-id'), pk = pn.getAttribute('data-panel');
+      openPanel = openPanel && openPanel.id === pid && openPanel.k === pk ? null : { id: pid, k: pk };
+      if (pk === 'cm') { seen[pid] = Date.now(); saveLocal('af-seen', seen); }
+      render(); if (openPanel && pk === 'reply') { var inp = $('note-' + pid); if (inp) inp.focus(); } return; }
+    var st = e.target.closest('[data-set]'); if (st) { sendSet(st.getAttribute('data-id'), st.getAttribute('data-set'), st.getAttribute('data-val')); return; }
+    var ck = e.target.closest('[data-check]'); if (ck) { sendCheck(ck.getAttribute('data-id'), ck.getAttribute('data-check'), ck.getAttribute('data-item'), ck.getAttribute('data-ok') !== '1'); return; }
+    var pf = e.target.closest('[data-pref]'); if (pf) { var key = pf.getAttribute('data-pref'), val = pf.getAttribute('data-val');
+      if (key === 'app') prefs.app = prefs.app === val ? '' : val;
+      else if (val === null) prefs[key] = !prefs[key];
+      else { prefs[key] = prefs[key] || []; var at = prefs[key].indexOf(val); if (at >= 0) prefs[key].splice(at, 1); else prefs[key].push(val); }
+      savePrefs(); render(); return; }
     var s = e.target.closest('[data-stage]'); if (s) { var i = +s.getAttribute('data-stage'); var cur = open[i] === undefined ? (s.classList.contains('c')) : open[i]; open[i] = !cur; render(); }
   });
+  document.addEventListener('change', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-due'); if (d) sendSet(d, 'due', e.target.value || ''); });
   document.addEventListener('submit', function (e) { var f = e.target.closest('[data-ask]'); if (f) { e.preventDefault(); sendAsk(f); } });
-  window.addEventListener('hashchange', function () { open = {}; render(); window.scrollTo(0, 0); });
+  window.addEventListener('hashchange', function () { open = {}; openPanel = null; filtersOpen = false; render(); window.scrollTo(0, 0); });
   var saved = DashAuth.valid();
   if (saved && DashAuth.hasScope(saved, SCOPE)) { accessToken = saved.access_token; tokenExpiresAt = saved.expires_at; signedIn = true; }
   render(); if (signedIn) { startTimer(); load(); }
