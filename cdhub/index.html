@@ -10,7 +10,7 @@
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
-
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../tokens.css">
 <style>
@@ -1528,8 +1528,10 @@ function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) r
 function pill(){
  var p=document.getElementById('livepill');
  if(LOAD.state==='ok'){ p.className='live ok';
-  p.textContent='\u2713'; p.title='Live · read-only · '+(CD.counts?Object.keys(CD.counts).length:0)+' tables'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):'')+' · '+FOLDER_NAME; }
- else if(LOAD.state==='signin'){ p.className='live bad'; p.textContent='Signed out'; }
+  var w='live · read-only · '+(CD.counts?Object.keys(CD.counts).length:0)+' tables'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):'');
+  // ✓ on screen; the words stay for screen readers (and the tests), and on hover.
+  p.title=w+' · '+FOLDER_NAME; p.innerHTML='<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">'+esc(w)+'</span>\u2713'; }
+ else if(LOAD.state==='signin'){ p.className='live bad'; p.textContent='signed out'; }
  else if(LOAD.state==='loading'){ p.className='live'; p.textContent='\u2026'; }
  else if(LOAD.state==='ambiguous'){ p.className='live bad'; p.textContent='Duplicate files'; }
  else if(LOAD.state==='err'){ p.className='live bad'; p.textContent='read failed'; }
@@ -1735,7 +1737,8 @@ render();
   function calm() {
     document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
       var t = Array.prototype.map.call(ul.querySelectorAll('li'), function (li) { return li.textContent.trim(); }).join(' · ');
-      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('aria-label', t); s.setAttribute('tabindex', '0'); s.textContent = 'i';
+      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.textContent = 'i';
+      var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h); // screen readers (and tests) still get the words
       ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
     });
   }
