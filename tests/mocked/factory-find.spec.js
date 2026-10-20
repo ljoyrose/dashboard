@@ -158,6 +158,16 @@ test.describe('Factory find bar', () => {
     await expect(page).toHaveURL(/test=1/);
   });
 
+  test('ZZ_DELETE_ apps count as TEST: no chip, no room card, no docs until TEST is on', async ({ page, guard }) => {
+    await open(page, guard, '#/docs?test=0');
+    await expect(page.locator('#view [data-fx="app"]', { hasText: 'ZZ_DELETE_' })).toHaveCount(0);
+    await page.goto('factory/#/rooms');
+    await expect(page.locator('.rooms .chip', { hasText: 'ZZ_DELETE_' })).toHaveCount(0);
+    await panel(page);
+    await page.locator('[data-action="ftest"]').click();
+    await expect(page.locator('.rooms .chip', { hasText: 'ZZ_DELETE_' })).toHaveCount(1);
+  });
+
   test('Filter button counts what is on; Clear resets; each tab remembers its own', async ({ page, guard }) => {
     await open(page, guard, '#/do');
     await expect(page.locator('#nFilters')).toHaveText('');

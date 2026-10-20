@@ -16,7 +16,8 @@
       task({ id: '869fk9834', name: 'Kennel Book', status: '4 schema', tags: ['fam-breeder'] }),
       task({ id: '869fk8geg', name: 'TEST-Kennel Book', status: '2 base', tags: ['app-869fk8geg', 'st-2', 'fam-breeder'] }),
       task({ id: '869fjxpc9', name: 'Vet Converter', status: '0 idea', tags: ['st-0', 'who-lisa'] }),
-      task({ id: '869fka369', name: 'TEST-Door Check', status: '1 research', tags: ['st-1', 'app-869fka369'] })
+      task({ id: '869fka369', name: 'TEST-Door Check', status: '1 research', tags: ['st-1', 'app-869fka369'] }),
+      task({ id: '869fk9j6h', name: 'ZZ_DELETE_TEST-APPFACT door check', status: '1 research', tags: ['st-1', 'app-869fk9j6h'], desc: 'card: https://drive.google.com/file/d/1SAMPLEzzDeleteCard000000000/view' })
     ];
     var sends = [
       task({ id: '869fk9d1r', name: 'Links · P5-GATE-v11 (lock 38 tables) · send 2 of 2', tags: ['app-869fjxpc2', 'app-links', 'leak-open'], created: now - 2 * H,

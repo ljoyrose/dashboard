@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-factory-send-class-2026-10-20">
+<meta name="build" content="ljr-factory-zz-test-2026-10-20">
 <title>Factory</title>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
@@ -560,7 +560,8 @@
     for (var i = 0; i < tags.length; i++) { var hit = A.filter(function (x) { return x !== t && ('app-' + x.id === tags[i] || x.tags.indexOf(tags[i]) >= 0); })[0]; if (hit) return bare(hit); }
     return 'Factory';
   }
-  function isTest(t) { return /^TEST-/.test(t.name); }
+  // Test data: TEST- names, and anything marked ZZ_DELETE_ (Lisa, 20 Oct: hidden from chips, lists and counts unless TEST is on).
+  function isTest(t) { return /^(TEST-|ZZ_DELETE_)/i.test(t.name); }
   // Group order: real apps, then Factory rules, then TEST apps. Heading = app · room · stage.
   function rank(t) { return isTest(t) ? 2 : appOf(t) === 'Factory rules' ? 1 : 0; }
   function headOf(t, slot) {
