@@ -75,6 +75,7 @@
   #view { display: flex; flex-direction: column; gap: 14px; }
   #view > p { margin: 0; }
   .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pills.docs { margin-top: 8px; }
   .pill { font-size: 13px; font-weight: 600; border-radius: var(--radius); padding: 3px 10px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; }
   .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
   .room { border: 2px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; }
@@ -461,7 +462,7 @@
       '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> <span' + (A.filter(stuck).length >= 1 ? ' class="hot"' : '') + '>' + A.filter(stuck).length + '</span></a>' +
       '<a class="pill" href="#/room/reactor" title="Build slots"><i class="ti ti-hammer"></i> ' + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + '/3</a>' +
       people().map(function (w) { return '<a class="pill" href="#/queue/' + encodeURIComponent(w) + '">' + esc(w) + ' ' + queue(w).length + '</a>'; }).join('') +
-      '<button class="pill" type="button" data-action="factory" aria-label="Factory on or off" title="Factory"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span></button>' + enginePill() + '</div><div class="rooms">';
+      '<button class="pill" type="button" data-action="factory" aria-label="Factory on or off" title="Factory"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span></button>' + enginePill() + ckPill() + '</div>' + docsStrip() + '<div class="rooms">';
     ROOMS.forEach(function (r) {
       var inRoom = A.filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
       html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><a class="rlink" href="#/room/' + r.key + '"><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '</a><span class="ct">' + cnt(inRoom.length) + '</span></h2><span class="stn">' + esc(r.st.join(' · ')) + '</span>' +
@@ -898,8 +899,9 @@
     ['live', 'world', 'Live app', 7, 'Run'], ['domain', 'world-www', 'Domain', 4, 'Run'], ['dns', 'cloud', 'DNS', 7, 'Run'], ['uptime', 'activity', 'Uptime', 8, 'Run'], ['backup', 'file-zip', 'Backup', 8, 'Run'],
     ['funnel', 'filter', 'ClickFunnels', 7, 'Sell'], ['pay', 'credit-card', 'Payments', 4, 'Sell'], ['email', 'mail', 'Email list', 7, 'Sell'], ['analytics', 'chart-line', 'Analytics', 7, 'Sell'], ['ads', 'speakerphone', 'Ads', 9, 'Sell'],
     ['facebook', 'brand-facebook', 'Facebook', 7, 'Social'], ['instagram', 'brand-instagram', 'Instagram', 7, 'Social'], ['tiktok', 'brand-tiktok', 'TikTok', 9, 'Social'], ['calendar', 'calendar-event', 'Social calendar', 7, 'Social'],
-    ['support', 'inbox', 'Support inbox', 8, 'Support'], ['reviews', 'star', 'Reviews', 9, 'Support']];
-  var LINK_GROUPS = ['Build', 'Run', 'Sell', 'Social', 'Support'];
+    ['support', 'inbox', 'Support inbox', 8, 'Support'], ['reviews', 'star', 'Reviews', 9, 'Support'],
+    ['card', 'id', 'Card', 0, 'Docs'], ['research', 'books', 'Research', 1, 'Docs'], ['brief', 'file-text', 'Brief', 9, 'Docs']]; // engine v2.5l doc keys
+  var LINK_GROUPS = ['Build', 'Run', 'Sell', 'Social', 'Support', 'Docs'];
   var LINK_ALIAS = { payments: 'pay', database: 'db', site: 'live', app: 'live', publish: 'overskill', clickfunnels: 'funnel', github: 'code', fb: 'facebook', ig: 'instagram', social: 'calendar', inbox: 'support', cloudflare: 'dns' };
   function linksOf(app) {
     var o = {};
@@ -1311,6 +1313,23 @@
   }
   // Green only when every job ran OK within its window and the data is fresh. OFF / never ran / late = red.
   var WINDOW_H = { syncState: 0.75, dailyDigest: 74, staleCheck: 26, leakProbe: 26, weeklyBackup: 170 };
+  // Factory checklist score (engine v2.5l): PASS counts only with a proof link. Tap = the checklist in ClickUp.
+  function docsTask() { return ((S.lists || {}).checklist || []).filter(function (t) { return t.tags.indexOf('docs') >= 0; })[0] || null; }
+  function docLinks(t) {
+    var o = [];
+    String(t && (t.full || t.desc) || '').split(/\r?\n|\\n/).forEach(function (l) { var m = l.match(/^\s*([a-z][a-z0-9 ]{0,20}?)\s*:\s*(https:\/\/\S+)/i); if (m) o.push([m[1], m[2]]); });
+    return o;
+  }
+  function ckPill() {
+    var c = S.checklist; if (!c || !c.total) return '';
+    var url = (docLinks(docsTask()).filter(function (x) { return x[0] === 'checklist'; })[0] || [])[1];
+    var tip = 'Checklist: ' + c.pass + ' pass · ' + c.fail + ' fail · ' + c.open + ' open', txt = '<i class="ti ti-list-check"></i> ' + c.pass + '/' + c.total;
+    return url ? '<a class="pill" href="' + esc(url) + '" target="_blank" rel="noopener" title="' + tip + '">' + txt + '</a>' : '<span class="pill" title="' + tip + '">' + txt + '</span>';
+  }
+  function docsStrip() {
+    var L = docLinks(docsTask()); if (!L.length) return '';
+    return '<div class="pills docs"><span class="pill" title="Factory docs"><i class="ti ti-folder"></i></span>' + L.map(function (x) { return '<a class="pill" href="' + esc(x[1]) + '" target="_blank" rel="noopener">' + esc(x[0]) + '</a>'; }).join('') + '</div>';
+  }
   function enginePill() {
     // Real problems only: a watch-job that is off (or never ran) because the Factory is OFF is expected, not a fault.
     var off = String(S.factory).toUpperCase() !== 'ON';
