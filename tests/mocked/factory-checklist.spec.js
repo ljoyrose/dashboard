@@ -19,7 +19,7 @@ async function open(page, guard, change) {
 }
 
 test.describe('Factory checklist', () => {
-  test('rooms show the checklist score and one-click factory docs @regression', async ({ page, guard }) => {
+  test('rooms show the checklist score and one-click factory docs', async ({ page, guard }) => {
     await open(page, guard, (s) => {
       s.checklist = { pass: 27, fail: 46, open: 129, total: 202, pct: 13.4 };
       s.lists.checklist = [{ id: 'ck1', name: 'Factory docs', status: 'to do', tags: ['docs'], desc: 'Factory docs\ngoal: https://drive.google.com/file/d/G/view\nchecklist: https://app.clickup.com/1/v/li/2\nlessons3: https://drive.google.com/file/d/L3/view', links: {} }];
