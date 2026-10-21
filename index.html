@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-dash-v4-money-tile-2026-10-09">
+<meta name="build" content="ljr-dash-v5-single-lines-2026-10-21">
 <title>Lisa Dashboard</title>
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -217,7 +217,6 @@
     border-radius: 12px; background: var(--bg); color: var(--ink); text-decoration: none; font-size: 17px; font-weight: 600;
     line-height: 1.3; text-align: left; hyphens: manual; }
   a.keytile:hover { border-color: var(--ink); }
-  a.keytile:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
   footer p { margin: 0; color: var(--muted); font-size: 14px; }
@@ -230,7 +229,8 @@
   nav.main a:hover, nav.main a[aria-current="page"], .subnav a:hover, .subnav a[aria-current="page"], .btn:hover, a.keytile:hover { border-color: var(--muted); background: transparent; }
   .card, .card[class], nav.main a, nav.main a[class] { border-left-color: var(--line); box-shadow: none; }
   .card[class]:hover, nav.main a[class]:hover, nav.main a[class][aria-current="page"] { border-left-color: var(--slot, var(--c, var(--muted))); }
-  .card.vision[class], nav.main a.vision[class] { background: var(--surface); }
+  .card.vision[class], nav.main a.vision[class] { --slot: var(--muted); background: transparent; }
+  .card.vision[class] { background: var(--surface); }
   nav.main a.vision[class]:not([aria-current]):not(:hover), .card.vision[class]:not(:hover) { border-color: var(--line); }
   a { color: inherit; }
   .btn:active, nav.main a:active { transform: none; }
@@ -248,9 +248,11 @@
 .card[class], details.card[class], nav.card[class], .needs li[class] { border-left-width: 1px; }
 .card[class]:hover, details.card[class]:hover, .needs li[class]:hover { border-left-color: var(--slot, var(--nc, var(--line))); }
 
-  /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
+  /* Calm focus (Lisa, 20 Oct: no double lines): never a second ring. Focus = the same one line, a shade darker. Plain text links get a thicker underline. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
-  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+  a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: none; border-color: var(--ink) !important; }
+  a:not([class]):focus-visible, summary:focus-visible { text-decoration: underline; text-decoration-thickness: 2px; }
 </style>
 </head>
 <body>

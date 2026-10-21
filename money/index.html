@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-money-v1-2026-10-09">
+<meta name="build" content="ljr-money-v2-single-lines-2026-10-21">
 <title>Money Hub</title>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
@@ -185,9 +185,11 @@
   /* Fewer scrolls: on wide screens file lists use 2-3 columns. */
   @media (min-width: 900px) { ul.files { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 8px 12px; } ul.files > li { margin: 0; } }
 
-  /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
+  /* Calm focus (Lisa, 20 Oct: no double lines): never a second ring. Focus = the same one line, a shade darker. Plain text links get a thicker underline. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
-  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+  a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: none; border-color: var(--ink) !important; }
+  a:not([class]):focus-visible, summary:focus-visible { text-decoration: underline; text-decoration-thickness: 2px; }
 </style>
 </head>
 <body>

@@ -17,8 +17,8 @@
 /* LJR7 slot colours come from ../tokens.css (one shared file). --pN is slot N. Sex colours (--male/--female) are not LJR7 slots. */
 :root{--p0:var(--ljr-0);--p2:var(--ljr-2);--p3:var(--ljr-3);--p4:var(--ljr-4);--p5:var(--ljr-5);--p6:var(--ljr-6);--p7:var(--ljr-7);--p8:var(--ljr-8);
  --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:var(--ljr-0);
- --bg:#FFFEFB;--fg:#22211F;--ln:#E1DCD2;--sub:#6C665C;--card:#FFFFFF;--soft:#F7F5F0;}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16161A;--fg:#EFEDE8;--ln:#33322E;--sub:#A7A197;--card:#1D1D21;--soft:#212126;}}
+ --bg:var(--ljr-paper);--fg:var(--ljr-ink);--ln:#DED5C8;--sub:var(--ljr-muted);--card:var(--ljr-paper);--soft:var(--ljr-cream);}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--ln:#3D372F;}}
 :root[data-theme="dark"]{--bg:#16161A;--fg:#EFEDE8;--ln:#33322E;--sub:#A7A197;--card:#1D1D21;--soft:#212126;}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.55 Lexend,system-ui,sans-serif;-webkit-text-size-adjust:100%;hyphens:manual}
@@ -31,7 +31,7 @@ header.top{border-bottom:1px solid var(--ln);background:var(--card);position:sti
 /* Design rule: every page except home has "Dashboard" at the top right of the header, always shown. */
 .backhome{margin-left:auto;align-self:center;display:inline-flex;align-items:center;min-height:44px;font:500 13px Lexend,sans-serif;padding:5px 14px;border:1px solid var(--ln);border-radius:999px;background:var(--card);color:var(--fg);text-decoration:none;white-space:nowrap}
 .backhome:hover{border-color:var(--sub)}
-.backhome:focus-visible{outline:2px solid var(--fg);outline-offset:2px}
+.backhome:focus-visible{outline:none;border-color:var(--fg)}
 .srchbtn{margin-top:6px;font:500 13px Lexend,sans-serif;padding:5px 12px;border:1px solid var(--ln);border-radius:999px;background:var(--card);color:var(--fg);cursor:pointer}
 .live{font-size:13px;font-weight:600;border:1px solid var(--ln);border-radius:999px;padding:2px 9px;color:var(--sub);white-space:nowrap}
 .live.ok{border-color:var(--ljr-5);color:var(--ljr-5-text)}
@@ -205,9 +205,11 @@ a{color:inherit}
   .wrap, .wrap.wide, .wide, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
   @media (max-width: 600px) { .wrap, .wide, .hin { padding-left: 16px; padding-right: 16px; } }
 
-  /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
-  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
-  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+  /* Calm focus (Lisa, 20 Oct: no double lines): never a second ring. Focus = the same one line, a shade darker. Plain text links get a thicker underline. */
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--sub); }
+  a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: none; border-color: var(--fg) !important; }
+  a:not([class]):focus-visible, summary:focus-visible { text-decoration: underline; text-decoration-thickness: 2px; }
 </style></head><body>
 <a class="skip" href="#main" data-skip="main">Skip to content</a>
 <header class="top"><div class="hin">
