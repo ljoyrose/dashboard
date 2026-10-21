@@ -387,7 +387,7 @@
       if (!next[k] || n < next[k].n) next[k] = { n: n, t: t };
     });
     var sendIds = Object.keys(next).map(function (k) { return next[k].t.id; });
-    return all.filter(function (t) { return isOpen(t) && t.tags.indexOf('lisa-done') < 0 && (t.tags.indexOf('who-lisa') >= 0 || sendIds.indexOf(t.id) >= 0); })
+    return all.filter(function (t) { return isOpen(t) && t.tags.indexOf('lisa-done') < 0 && t.tags.indexOf('queued') < 0 && (t.tags.indexOf('who-lisa') >= 0 || sendIds.indexOf(t.id) >= 0); })
       .sort(function (a, b) { return (/^blocked$/i.test(a.status) ? 1 : 0) - (/^blocked$/i.test(b.status) ? 1 : 0); });
   }
   function decisions() { return (S.lists.decisions || []).filter(function (t) { return isOpen(t) && t.tags.indexOf('queued') < 0; }); }
