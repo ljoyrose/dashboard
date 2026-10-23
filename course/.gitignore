@@ -1,0 +1,8 @@
+# The repo root ignores every .json and .csv (private data rule). The course's own files are invented
+# or rule data only (no personal data), so they are allowed back in here.
+!*.json
+!*.csv
+!**/*.json
+!**/*.csv
+video/node_modules/
+video/out/tmp/

@@ -1,0 +1,18 @@
+{
+  "name": "af-course-video",
+  "private": true,
+  "version": "1.0.0",
+  "description": "App Factory course videos. Renders from ../glossary.json and the scripts. See README.md.",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "node render.mjs"
+  },
+  "dependencies": {
+    "@remotion/bundler": "4.0.200",
+    "@remotion/cli": "4.0.200",
+    "@remotion/renderer": "4.0.200",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.200"
+  }
+}
