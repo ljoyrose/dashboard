@@ -19,31 +19,33 @@
       "name": "LJR7",
       "long_name": "LJR7 App Factory",
       "accent": "#2C2C2A",
-      "accent_layer": "BASICS",
       "join_link": "TO CONFIRM",
       "free_plan_allowed": true,
-      "footer_owner": "LJR7"
+      "footer_owner": "LJR7",
+      "initials": "L7"
     },
     "ppp": {
       "name": "Puppy Classroom",
       "long_name": "Puppy Classroom App Studio",
       "short": "PPP",
-      "accent": "#4098BE",
-      "accent_layer": "Boost",
+      "accent": "#0271A4",
       "join_link": "/join/ppp",
       "plan_link_example": "/join/ppp?plan=plus-yearly",
       "free_plan_allowed": false,
-      "footer_owner": "Puppy Classroom (reseller of LJR7)"
+      "footer_owner": "Puppy Classroom (reseller of LJR7)",
+      "accent_note": "Palette A slot 6 text blue as a placeholder. TO CHECK against the Puppy Classroom Canva brand kit.",
+      "initials": "PC"
     },
     "yours": {
       "name": "Your Brand Here",
       "long_name": "Your Brand App Studio",
       "short": "YOU",
-      "accent": "#7A6BA8",
-      "accent_layer": "Brains",
+      "accent": "#8850B6",
       "join_link": "/join/your-brand",
       "free_plan_allowed": false,
-      "footer_owner": "Your Brand (reseller of LJR7)"
+      "footer_owner": "Your Brand (reseller of LJR7)",
+      "accent_note": "Palette A slot 7 text purple as a placeholder for any reseller.",
+      "initials": "YB"
     }
   },
   "colours": {

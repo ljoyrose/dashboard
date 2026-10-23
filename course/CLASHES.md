@@ -56,3 +56,4 @@ Anything in the Vision 2029 screens that extends an existing panel is listed her
 | 31 | walls_render.py and RUN-PROGRESS-WALLS.md: not found on Drive (23 Oct 03:00) | AF-WALLS v5 not available; codes cards drawn with the ported renderer |
 | 32 | The plan-from-landing-page rule (SLIP-2026-10-04-0630) is still PENDING-CONFIRM | Taught as the decision on record |
 | 33 | Domain and DNS: the template buys the domain and sets DNS in Stages 3-4; Stage 7 only checks them from outside | Lessons say so; the Launch Kit graphic groups them for the learner |
+| 34 | Puppy Classroom accent colour in app screens is a placeholder (#0271A4, Palette A slot 6 text) | TO CHECK against the Puppy Classroom Canva brand kit |

@@ -1,0 +1,3 @@
+Footer date on every PNG here: 23 Oct 2026
+Editable source: course/apps/screens.py (+ glossary.json sample_apps and brands). Re-run, then shoot each HTML with build/shoot.mjs --html.
+Vision 2029 · Illustrative · All names and figures are fictional.
