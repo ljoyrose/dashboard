@@ -13,3 +13,4 @@ Codes cards x3 (ported renderer),Stage 3,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS
 New graphics G02 G04-G10 G12-G16,Stage 3,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,All numbers checked against glossary.json and BRICK-REGISTRY v0.16
 Hero animation + loop + still (LJR7 + PPP),Stage 7,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Silent with captions; Vision label on every frame
 Intro pilot video M00-intro (103 s),Stage 7,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Hero then 10 scenes; .srt beside the MP4
+Track F decks x11 (PPTX + PDF),Track F,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Built from module JSON by build/modules.py + deck.py; sample M05 slides reviewed
