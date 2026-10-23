@@ -190,6 +190,8 @@ def attention(x, y, w, label, action, risk, size=28):
 def header(W, title, sub, gutter, title_size, sub_size, vision=False, top=None):
     """Dark text on page background, title + one muted line, thin dark rule (rule 2)."""
     top = top or gutter
+    if vision:
+        title_size = fit(title, title_size, W - 2 * gutter - 440, 700, 40)
     out = text(gutter, top + title_size, title, title_size, 700)
     out += text(gutter, top + title_size + sub_size * 1.6, sub, sub_size, 400, C["muted"])
     rule_y = top + title_size + sub_size * 1.6 + sub_size * 0.9
@@ -232,15 +234,15 @@ def key_block(W, y, items, gutter, size=24, title="Key"):
 
 
 def footer(W, H, date, module, source, height=None, size=26):
-    """Solid dark band: date (bold), module/version, small source line (rule 3)."""
-    height = height or int(size * 3.6)
+    """Solid dark band: date (bold), module/version, small source line (rule 3). Source wraps to 2 lines."""
+    g = 48 if W <= 1080 else 96
+    src_rows = wrap(source, 22, W - 2 * g)[:2]
+    height = height or int(size * 3.6 + (len(src_rows) - 1) * 30)
     y = H - height
     out = f'<rect x="0" y="{y}" width="{W}" height="{height}" fill="{C["ink"]}"/>'
-    g = 48 if W <= 1080 else 96
-    out += text(g, y + height * 0.44, date, size + 2, 700, C["footer_text"])
-    out += text(g + tw(date, size + 2, 700) + 28, y + height * 0.44, module, size, 400, C["footer_text"])
-    src = source if tw(source, size - 4) < W - 2 * g else source[: int(len(source) * (W - 2 * g) / tw(source, size - 4)) - 2] + "…"
-    out += text(g, y + height * 0.80, src, size - 4, 400, C["border"])
+    out += text(g, y + size * 1.6, date, size + 2, 700, C["footer_text"])
+    out += text(g + tw(date, size + 2, 700) + 28, y + size * 1.6, module, size, 400, C["footer_text"])
+    out += lines(g, y + size * 2.9, src_rows, 22, 400, C["border"], lh=30)
     return out, height
 
 

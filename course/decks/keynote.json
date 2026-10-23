@@ -388,33 +388,11 @@
       "notes": "Here's how they're tested. Every time the builder does paid work, six things happen, in this order, every single time. First we record what was done. Second we check what it cost, and whether anything should be refunded. Third we publish. Fourth we re-probe every table, to make sure nothing has opened up. Fifth we test as real members: an existing member and a brand-new member of each brand do the app's main job from start to finish. Then a member of brand A deliberately tries to read brand B's records, and that test must fail. Sixth, and only then, the step is marked done. If anything leaks at any point, the build stops until it's fixed and proved."
     },
     {
-      "layout": "cards",
+      "layout": "image",
       "title": "The Factory In 2029",
       "sub": "About One New App A Day",
       "vision": true,
       "beat": "Future Pacing",
-      "cards": [
-        {
-          "title": "1,004 Live Apps",
-          "line": "Watched Every Day On The Radar",
-          "icon": "radar"
-        },
-        {
-          "title": "1 New App A Day",
-          "line": "Through The Same Nine Stages",
-          "icon": "rocket"
-        },
-        {
-          "title": "Leak Probe: All Clear",
-          "line": "Every Table, Every Morning At 06:40",
-          "icon": "shield-check"
-        },
-        {
-          "title": "Decide Queue: 7 Of 10",
-          "line": "Only Real Choices Reach A Person",
-          "icon": "user"
-        }
-      ],
       "key": [
         [
           "sparkles",
@@ -422,7 +400,26 @@
         ]
       ],
       "source": "Source: glossary.json vision2029 (illustrative) · AF-UNDERSTANDING-2026-10-22.md (APPFACT target: 1 app a day for 3 years)",
-      "notes": "Now let me show you where this is heading. These are vision figures for 2029, clearly illustrative, not today's numbers. The target set for the factory is one new app a day, for three years. That adds up to roughly a thousand live apps. Every one of them is probed for leaks every morning at twenty to seven, on every table. Every one is watched on the radar for problems and for money: is it earning more than it costs? And the person running the factory only sees real decisions. The decide queue is capped at ten, so nothing important gets buried under noise. That's what a factory buys you: scale without losing care."
+      "notes": "Now let me show you where this is heading. These are vision figures for 2029, clearly illustrative, not today's numbers. The target set for the factory is one new app a day, for three years. That adds up to roughly a thousand live apps. Every one of them is probed for leaks every morning at twenty to seven, on every table. Every one is watched on the radar for problems and for money: is it earning more than it costs? And the person running the factory only sees real decisions. The decide queue is capped at ten, so nothing important gets buried under noise. That's what a factory buys you: scale without losing care.",
+      "image": "vision2029/pages/pulse-desktop.png",
+      "points": [
+        {
+          "icon": "radar",
+          "text": "1,004 Live Apps"
+        },
+        {
+          "icon": "rocket",
+          "text": "1 New App A Day"
+        },
+        {
+          "icon": "shield-check",
+          "text": "Leak Probe All Clear At 06:40"
+        },
+        {
+          "icon": "user",
+          "text": "Decide Queue 7 Of 10"
+        }
+      ]
     },
     {
       "layout": "steps",

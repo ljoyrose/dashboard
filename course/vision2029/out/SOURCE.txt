@@ -1,0 +1,6 @@
+Vision 2029 · Illustrative · All names and figures are fictional
+Footer date on every PNG here: 23 Oct 2026
+Editable sources:
+  real-page shots (out/):  node course/vision2029/shoot-dashboard.cjs   (real factory/index.html + state-2029.js)
+  mock pages (pages/):     python course/vision2029/pages.py, then node course/build/shoot.mjs --html <page>.html --width 1440 --out <page>-desktop.png
+Numbers: course/glossary.json "vision2029" and "sample_apps". Change them there and re-run.

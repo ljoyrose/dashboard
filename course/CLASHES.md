@@ -38,3 +38,12 @@ Anything in the Vision 2029 screens that extends an existing panel is listed her
 | 21 | Stockroom (16 Sep snapshot) shows 55 bricks with 17 Bots; BRICK-REGISTRY v0.16 has 101 bricks and folds Bots into Body | Registry v0.16 counts |
 | 22 | The 7 P-documents (Passport, Pitch, Proposal, Parts, Promote, Progress, Payoff) in Atlas were replaced by one document organised by stage (PR1167) | One document by stage |
 | 23 | Factory Cockpit uses its own vivid palette and other fonts (Bricolage, Atkinson) | Not used as a style reference |
+
+## Vision 2029 screens: NEW - TO CHECK (D11)
+| # | Item | Built from | Status |
+|---|---|---|---|
+| 24 | **Pulse tab** on the factory page: number strip (live apps, decide queue, leak probe, rescue), credits bar, money line, rooms with app counts, engine jobs | Extends the Factory Cockpit 4-number strip (decide, steps, credits, routines) and Atlas rooms; engine job names and times from AF-UNDERSTANDING | NEW - TO CHECK |
+| 25 | **App Detail page** (vision, pain, verdict, 20 codes, kits and bricks, keywords, market, gates passed, competitor table) | The one document organised by stage (THE-DOCUMENT) shown as a page | NEW - TO CHECK |
+| 26 | **Automated launch and operate** page (domain, sales page, funnels, brand jackets, boosts, leak monitor, launch checks) | Stage 7 and 8 template lines (TEMPLATE-MIRROR.md) and OBLIGATIONS OB-P14, OB-P22 | NEW - TO CHECK |
+| 27 | **Scaling gap found:** the real Rooms tab lists every app as a chip; at about 1,300 apps it becomes a 57,000 px wall | Real factory/index.html with the 2029 state | Needs a grouped view before scale |
+| 28 | Card language: the live ADHD standard says 4 px LEFT stripe and 16 px corners; LC-VISUAL-STANDARD and paste rule 1 say thin TOP band | Graphics and slides follow the paste (top band, 16 pt corners); dashboard mockups follow the live page (no band, 12 px corners, 1.5 px line) | Follows both by job |

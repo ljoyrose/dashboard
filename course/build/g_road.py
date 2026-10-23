@@ -40,7 +40,7 @@ def build(out_dir):
                              ("icon", "coin", "Paid Stage"), ("chip", "Gate", "Check Between Stages")], GUT)
     body += k
     y += kh + 30
-    H = int(y + 90)
+    H = int(y + 110)
     f, fh = footer(W, H, G["brand"]["course_date"], "Module M0 · Graphic G01 · v1",
                    "Source: AF-UNDERSTANDING-2026-10-22.md Part 1 · glossary.json")
     body += f
