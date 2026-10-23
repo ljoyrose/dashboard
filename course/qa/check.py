@@ -19,7 +19,7 @@ import zipfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 G = json.load(open(os.path.join(ROOT, "glossary.json"), encoding="utf-8"))
-SKIP_DIRS = {"node_modules", ".git", "__pycache__", "out-tmp"}
+SKIP_DIRS = {"node_modules", ".git", "__pycache__", "out-tmp", ".iconcache"}
 # Files that DISCUSS old values on purpose (the clash list, the proposal, questions, this checker).
 META = {"CLASHES.md", "STAGE0-PROPOSAL.md", "QUESTIONS.md", "check.py", "README.md", "scorecard.csv", "glossary.json"}
 TEXT_EXT = {".md", ".txt", ".srt", ".json", ".csv", ".html", ".svg", ".tsx", ".ts", ".mjs", ".js", ".py", ".css"}

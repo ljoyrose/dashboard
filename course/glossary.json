@@ -969,5 +969,133 @@
   "footer": {
     "source_prefix": "Source:",
     "course_line": "LJR7 App Factory Course"
+  },
+  "sample_apps": {
+    "_rule": "D5: invented names only. Each app is DRAWN FROM a real idea in IDEAS.csv / AA_FRONT-DOOR-EXPORT / REGULATION-WATCH.csv, then disguised. The real names never appear in the course.",
+    "litterline": {
+      "name": "Litterline",
+      "what": "Licence And Records Hub For Dog Breeders",
+      "who_pays": "Breeders; Clubs Resell It Under Their Own Name",
+      "pain": "Licence Renewals Mean Weeks Of Paper Hunting",
+      "rule_hook": "Dog Breeding Licence (England 2018 Regulations; Wales 2014 Regulations)",
+      "kit": "K06",
+      "kits": [
+        "K00",
+        "K06",
+        "K08",
+        "K01"
+      ],
+      "brands": [
+        "ljr7",
+        "ppp"
+      ],
+      "codes": {
+        "TEN": 3,
+        "PARENTS": 1,
+        "DOWN": 1,
+        "MEET": 0,
+        "POOL": 1,
+        "EXIT": 2,
+        "ROLE": 2,
+        "BELONG": 1,
+        "GUEST": 1,
+        "HELP": 1,
+        "JOIN": 1,
+        "CUST": 3,
+        "PRICE": 1,
+        "SHARE": 0,
+        "SEN": 1,
+        "VIEW": 1,
+        "POST": 0,
+        "BRAND": 2,
+        "SEND": 1,
+        "PAY": 2
+      },
+      "reseller_example": "Northvale Canine Society"
+    },
+    "stayproof": {
+      "name": "Stayproof",
+      "what": "Inspection Pack For Boarding Kennels And Day Care",
+      "who_pays": "Kennels, Catteries, Home Boarders",
+      "pain": "Inspection Day Panic: Logs Scattered Everywhere",
+      "rule_hook": "Boarding Licence (England 2018 Regulations; Wales 1963 Act)",
+      "kit": "K08",
+      "kits": [
+        "K00",
+        "K08",
+        "K02"
+      ],
+      "brands": [
+        "ljr7"
+      ],
+      "codes": {
+        "TEN": 2,
+        "PARENTS": 0,
+        "DOWN": 0,
+        "MEET": 0,
+        "POOL": 1,
+        "EXIT": 2,
+        "ROLE": 2,
+        "BELONG": 1,
+        "GUEST": 1,
+        "HELP": 1,
+        "JOIN": 1,
+        "CUST": 2,
+        "PRICE": 1,
+        "SHARE": 0,
+        "SEN": 1,
+        "VIEW": 1,
+        "POST": 1,
+        "BRAND": 1,
+        "SEND": 1,
+        "PAY": 1
+      }
+    },
+    "trimtable": {
+      "name": "Trimtable",
+      "what": "Booking And Client Desk For Dog Groomers",
+      "who_pays": "Grooming Salons",
+      "pain": "No-Shows, Paper Cards, Lost Dog Notes",
+      "rule_hook": "Grooming Licence Planned In Wales (Consultation Response, June 2025)",
+      "kit": "K02",
+      "kits": [
+        "K00",
+        "K02",
+        "K01",
+        "K03"
+      ],
+      "brands": [
+        "ljr7"
+      ],
+      "codes": {
+        "TEN": 2,
+        "PARENTS": 0,
+        "DOWN": 0,
+        "MEET": 0,
+        "POOL": 0,
+        "EXIT": 2,
+        "ROLE": 2,
+        "BELONG": 1,
+        "GUEST": 0,
+        "HELP": 1,
+        "JOIN": 1,
+        "CUST": 4,
+        "PRICE": 2,
+        "SHARE": 0,
+        "SEN": 1,
+        "VIEW": 1,
+        "POST": 1,
+        "BRAND": 1,
+        "SEND": 1,
+        "PAY": 1
+      }
+    },
+    "people": {
+      "breeder": "Mara Quill",
+      "club": "Northvale Canine Society",
+      "kennel": "Hollin Lane Kennels",
+      "groomer": "Juno Platt",
+      "salon": "The Tidy Paw"
+    }
   }
 }

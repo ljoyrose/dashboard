@@ -60,8 +60,10 @@ class Parts(list):
 # ---------- frame ----------
 def frame(p, s, meta):
     top = 64
-    p.text(GUT, top, W - 2 * GUT - 420, [s["title"]], T["title"] if len(s["title"]) < 34 else 64, 700)
-    th = (T["title"] if len(s["title"]) < 34 else 64) * LH
+    has_chip = s.get("vision") or meta.get("vision") or s.get("chip")
+    tsize = lj.fit(s["title"], T["title"], W - 2 * GUT - (560 if has_chip else 0), 700, 48)
+    p.text(GUT, top, W - 2 * GUT, [s["title"]], tsize, 700)
+    th = tsize * LH
     if s.get("sub"):
         p.text(GUT, top + th + 2, W - 2 * GUT, [s["sub"]], 32, 400, C["muted"])
     rule_y = top + th + 2 + (32 * LH if s.get("sub") else 0) + 16
@@ -120,13 +122,28 @@ def L_title(p, s, top, bottom):
 
 
 def L_statement(p, s, top, bottom):
-    if s.get("icon"):
-        p.icon(s["icon"], GUT, top + 110, 160, s.get("icon_colour"))
     x = GUT + (230 if s.get("icon") else 0)
-    y = top + 100
-    y += p.text(x, y, W - x - GUT, s["statement"], T["statement"], 700)
-    if s.get("line"):
-        p.text(x, y + 30, W - x - GUT, s["line"], 40, 400, C["muted"])
+    rows = wrap(s["statement"], T["statement"], W - x - GUT, 700)
+    line_rows = wrap(s["line"], 40, W - x - GUT) if s.get("line") else []
+    h = len(rows) * T["statement"] * LH + (30 + len(line_rows) * 40 * LH if line_rows else 0)
+    y = top + max(60, (bottom - top - h) / 2 - 20)
+    if s.get("icon"):
+        p.icon(s["icon"], GUT, y + 6, 160, s.get("icon_colour"))
+    p.text(x, y, W - x - GUT, rows, T["statement"], 700)
+    if line_rows:
+        p.text(x, y + len(rows) * T["statement"] * LH + 30, W - x - GUT, line_rows, 40, 400, C["muted"])
+
+
+def card_content_h(c, cw, small):
+    h = 36
+    if c.get("icon"):
+        h += (44 if small else 56) + 22
+    tsz = 40 if cw > 500 else 34
+    h += len(wrap(c["title"], tsz, cw - 64, 700)) * tsz * LH + 6
+    if c.get("line"):
+        lsz = 28 if cw > 380 else 26
+        h += len(wrap(c["line"], lsz, cw - 64)) * lsz * LH
+    return h + 40
 
 
 def L_cards(p, s, top, bottom):
@@ -137,8 +154,10 @@ def L_cards(p, s, top, bottom):
     gap = 32
     cw = (W - 2 * GUT - gap * (cols - 1)) / cols
     avail = bottom - top - 60
-    ch = min(380, (avail - gap * (rows - 1)) / rows)
-    y0 = top + 40
+    small = rows > 1 and avail / rows < 300
+    need = max(card_content_h(c, cw, small) for c in cards)
+    ch = min(max(need, 200), (avail - gap * (rows - 1)) / rows)
+    y0 = top + 48
     for i, c in enumerate(cards):
         r, k = divmod(i, cols)
         x, y = GUT + k * (cw + gap), y0 + r * (ch + gap)
@@ -146,39 +165,48 @@ def L_cards(p, s, top, bottom):
         p.card(x, y, cw, ch, acc)
         iy = y + 36
         if c.get("icon"):
-            p.icon(c["icon"], x + 32, iy, 56 if ch > 250 else 44)
-            iy += (56 if ch > 250 else 44) + 22
+            isz = 44 if small else 56
+            p.icon(c["icon"], x + 32, iy, isz)
+            iy += isz + 22
         tsz = 40 if cw > 500 else 34
         iy += p.text(x + 32, iy, cw - 64, c["title"], tsz, 700) + 6
         if c.get("line"):
             p.text(x + 32, iy, cw - 64, c["line"], 28 if cw > 380 else 26, 400, C["muted"])
+    if s.get("line"):
+        p.text(GUT, y0 + rows * (ch + gap) + 16, W - 2 * GUT, s["line"], 34, 400, C["muted"])
 
 
 def L_steps(p, s, top, bottom):
     steps = s["steps"]
     n = len(steps)
-    gap = 18
+    gap = 24
     cw = (W - 2 * GUT - gap * (n - 1)) / n
-    y = top + 70
-    ch = 300 if n <= 6 else 280
+    isz = 80 if cw > 240 else (64 if cw > 180 else 48)
+    tsz = 32 if cw > 240 else (28 if cw > 180 else 24)
+    lab = [wrap(st["label"], tsz, cw - 32, 700) for st in steps]
+    ch = 48 + isz + 28 + max(len(l) for l in lab) * tsz * LH + 40
+    has_gate = any(st.get("gate") for st in steps)
+    line_rows = wrap(s["line"], 34, W - 2 * GUT) if s.get("line") else []
+    block = ch + (72 if has_gate else 0) + (48 + len(line_rows) * 34 * LH if line_rows else 0)
+    y = top + max(48, (bottom - top - block) / 2 - 24)
     for i, st in enumerate(steps):
         x = GUT + i * (cw + gap)
         acc = lj.layer(st["layer"]) if st.get("layer") else None
         p.card(x, y, cw, ch, acc)
-        isz = 64 if cw > 200 else 48
-        p.icon(st["icon"], x + (cw - isz) / 2, y + 36, isz)
+        p.icon(st["icon"], x + (cw - isz) / 2, y + 48, isz)
         if st.get("n") is not None:
-            p.text(x + 14, y + 16, 60, [str(st["n"])], 28, 700, C["muted"])
-        tsz = 30 if cw > 200 else 24
-        p.text(x + 12, y + 36 + isz + 24, cw - 24, wrap(st["label"], tsz, cw - 24, 700), tsz, 700, None, "c")
+            p.text(x + 20, y + 20, 60, [str(st["n"])], 28, 700, C["muted"])
+        p.text(x + 16, y + 48 + isz + 28, cw - 32, lab[i], tsz, 700, None, "c")
         if st.get("gate"):
             g = st["gate"]
             gy = y + ch + 24
             human = g.get("human")
-            p.icon("user" if human else "robot", x + 14, gy + 4, 28, C["ink"] if human else C["muted"])
-            p.text(x + 50, gy + 2, cw - 50, [g["name"]], 26, 600, C["ink"] if human else C["muted"])
-    if s.get("line"):
-        p.text(GUT, y + ch + (110 if any(st.get("gate") for st in steps) else 60), W - 2 * GUT, s["line"], 34, 400, C["muted"])
+            gw = 36 + 12 + tw(g["name"], 28, 600)
+            gx = x + (cw - gw) / 2
+            p.icon("user" if human else "robot", gx, gy + 4, 32, C["ink"] if human else C["muted"])
+            p.text(gx + 44, gy + 2, cw, [g["name"]], 28, 600, C["ink"] if human else C["muted"])
+    if line_rows:
+        p.text(GUT, y + ch + (72 if has_gate else 0) + 48, W - 2 * GUT, line_rows, 34, 400, C["muted"])
 
 
 def L_image(p, s, top, bottom):
@@ -308,7 +336,10 @@ def to_svg(parts):
             body.append(lj.icon(name, x, y, size, colour))
         elif k == "image":
             _, path, x, y, w, h = pt
-            body.append(f'<image href="{esc(os.path.abspath(path))}" x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h:.1f}" preserveAspectRatio="xMidYMid meet"/>')
+            import base64
+            mime = "image/png" if path.lower().endswith(".png") else "image/jpeg"
+            data = base64.b64encode(open(path, "rb").read()).decode()
+            body.append(f'<image href="data:{mime};base64,{data}" x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h:.1f}" preserveAspectRatio="xMidYMid meet"/>')
     return lj.svg_doc(W, H, "".join(body))
 
 
@@ -425,6 +456,8 @@ def render_deck(spec_path, brand_key=None, out_dir=None, pdf=True):
         s = dict(s)
         s["_n"] = i
         s = brandify(s, meta["brand"])
+        if s.get("image") and not os.path.isabs(s["image"]):
+            s["image"] = os.path.join(lj.ROOT, s["image"])
         parts = build_parts(s, meta)
         all_parts.append(parts)
         notes.append(s.get("notes", "") + (f"\n\nFramework beat: {s['beat']}" if s.get("beat") else ""))
