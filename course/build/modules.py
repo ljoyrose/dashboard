@@ -70,7 +70,9 @@ def recap_card(m, L):
 
 
 def first_sentence(t):
-    s = re.split(r"(?<=[.?])\s", t.strip())[0]
+    """First sentence that carries the idea (8+ words, not a question), kept short for a slide line."""
+    sents = re.split(r"(?<=[.?])\s", t.strip())
+    s = next((x for x in sents if len(x.split()) >= 8 and not x.endswith("?")), sents[0])
     return s if len(s) < 140 else s[:137].rsplit(" ", 1)[0] + "..."
 
 

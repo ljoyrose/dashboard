@@ -15,3 +15,6 @@ Hero animation + loop + still (LJR7 + PPP),Stage 7,PASS,PASS,PASS,PASS,PASS,PASS
 Intro pilot video M00-intro (103 s),Stage 7,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Hero then 10 scenes; .srt beside the MP4
 Track F decks x11 (PPTX + PDF),Track F,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Built from module JSON by build/modules.py + deck.py; sample M05 slides reviewed
 Sample apps x3 + white-label (Litterline in LJR7, PPP, Your Brand),Stage 5,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,PPP accent is a placeholder TO CHECK against the Puppy Classroom Canva brand kit
+Workbook (PDF + DOCX + EPUB; LJR7 + PPP),Stage 8,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Dated footer on every PDF page; EPUB for Kindle (test in Kindle Previewer)
+ClickFunnels lesson pack (24 lessons),Stage 8,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Video slot = provider + id + type only; ids TO CONFIRM
+Reseller re-skin (PPP keynote, partner cut, M00 deck, workbook, videos, app screens),Stage 8,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Tokens only; founder story slides marked TO CHECK for other resellers
