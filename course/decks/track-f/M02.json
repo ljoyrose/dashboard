@@ -47,7 +47,7 @@
    "sub": "M02-L1",
    "icon": "target",
    "statement": "The Competitor Sweep: 3-5 Rivals",
-   "line": "Next comes the competitor sweep.",
+   "line": "A competitor, or rival, is any product people already use to solve the same problem.",
    "notes": "Next comes the competitor sweep. A competitor, or rival, is any product people already use to solve the same problem. The sweep picks 3 to 5 rivals and records their prices and their reviews. The most useful reviews are the 1 and 2 star ones, because they show exactly what breaks and what annoys people. Every source is dated, so anyone can see how fresh it is. For Stayproof, the rivals might be general kennel software, paper record books and spreadsheets. Even a paper notebook counts as a rival, if that is what owners use today.",
    "vision": false
   },
@@ -57,7 +57,7 @@
    "sub": "M02-L1",
    "icon": "message-code",
    "statement": "Customer Words, Exactly As Written",
-   "line": "The sweep then collects customer words.",
+   "line": "This means 10 exact phrases people use for the pain, and 10 for the result they want, copied from reviews and groups word for word.",
    "notes": "The sweep then collects customer words. This means 10 exact phrases people use for the pain, and 10 for the result they want, copied from reviews and groups word for word. Their words, not ours. These phrases are used later for headlines, the sales page and the first screens a new user sees. Alongside them comes review mining: every complaint and feature request is quoted with its link and date, then counted by theme. The top ten themes come first. If forty reviews mention lost logs, that matters more than one clever idea of our own.",
    "vision": false
   },
@@ -77,7 +77,7 @@
    "sub": "M02-L1",
    "icon": "chart-line",
    "statement": "Market Size, Trend And Lawful Data",
-   "line": "Next, the market.",
+   "line": "Market size means roughly how many possible customers there are, and the trend means whether that number is growing or shrinking.",
    "notes": "Next, the market. Market size means roughly how many possible customers there are, and the trend means whether that number is growing or shrinking. Both must come with sources, never guesses. The audience data must also be lawful. That means using public counts, trade bodies, official company records and search trends, and never scraping people's personal details. Scraping means using a program to copy information off web pages in bulk. A factory that broke data rules while researching an app that must follow data rules would be building on sand.",
    "vision": false
   },
@@ -162,7 +162,7 @@
    "sub": "M02-L2",
    "icon": "user",
    "statement": "Why A Person Decides At Merit",
-   "line": "Why does a person decide here, and not a tool?",
+   "line": "Because Merit is the regulatory and data protection kill.",
    "notes": "Why does a person decide here, and not a tool? Because Merit is the regulatory and data protection kill. It asks whether the law, or the way the app handles people's data, makes the idea unsafe or unwise to build. In this factory the person at Merit is trained in law, and the rule books say plainly that no tool substitutes. For an app used by service businesses, the key question is whose data it holds. The engine has a setting that could let Merit pass on its own, but the rule books treat it as a person's decision.",
    "vision": false
   },
@@ -192,7 +192,7 @@
    "sub": "M02-L2",
    "icon": "archive",
    "statement": "KILL At Merit Goes To Recovery",
-   "line": "KILL means the idea stops.",
+   "line": "It burns the id, which means that number is never handed to another idea.",
    "notes": "KILL means the idea stops. It burns the id, which means that number is never handed to another idea. At Merit, no parts have been built yet, so a killed idea goes to the room called Recovery, with its reason kept as evidence. It can be looked at again later if something changes. There is another verdict, called RECYCLE, used when an app's parts go back on the shelves, but RECYCLE never applies at Merit. There are no parts to recycle yet. That is part of why stopping here costs so little.",
    "vision": false
   },

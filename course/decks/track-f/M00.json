@@ -37,7 +37,7 @@
    "sub": "M00-L1",
    "icon": "layout-dashboard",
    "statement": "Screens Are What People See",
-   "line": "Start with screens.",
+   "line": "A screen is one page of an app that a person looks at and touches, such as a calendar, a form or a list.",
    "notes": "Start with screens. A screen is one page of an app that a person looks at and touches, such as a calendar, a form or a list. For Juno's salon, one screen might show today's bookings. Another might let a client pick a time. A screen does not store anything on its own. It only shows information and collects it. That matters, because a lot of people think the screens are the app. They are only the front window. Behind every screen sits the part that remembers things, and that is where we go next.",
    "vision": false
   },
@@ -47,7 +47,7 @@
    "sub": "M00-L1",
    "icon": "table",
    "statement": "Tables Hold The Data In Rows",
-   "line": "Behind the screens sit tables.",
+   "line": "A table is where an app stores its data, laid out in rows and columns, rather like a spreadsheet.",
    "notes": "Behind the screens sit tables. A table is where an app stores its data, laid out in rows and columns, rather like a spreadsheet. Each row is one thing, such as one booking. Each column is one fact about it, such as the date, the time or the dog's name. Juno's salon would need a table of bookings, a table of clients and a table of free time slots. The plan of all the tables an app needs is called a schema. Get the tables right and the screens are easy to change later. Get them wrong and everything wobbles.",
    "vision": false
   },
@@ -57,7 +57,7 @@
    "sub": "M00-L1",
    "icon": "shield-check",
    "statement": "Rules Decide Who Sees What",
-   "line": "Next come rules.",
+   "line": "A rule decides who may see something and who may change it.",
    "notes": "Next come rules. A rule decides who may see something and who may change it. Juno should see all her own clients. A client should see only their own bookings, never anyone else's. If a second salon used the same app, neither salon should ever see the other's data. In this course, a rule that keeps one group's data apart from another's is called a wall. When a wall fails and someone sees data that is not theirs, that is called a leak. A leak is the most serious mistake an app can make, so the factory tests for leaks again and again.",
    "vision": false
   },
@@ -67,7 +67,7 @@
    "sub": "M00-L1",
    "icon": "users",
    "statement": "People: Who Uses The App",
-   "line": "The fourth thing is people.",
+   "line": "Every app has different kinds of people using it, and each kind needs different screens and different rules.",
    "notes": "The fourth thing is people. Every app has different kinds of people using it, and each kind needs different screens and different rules. There is the owner who runs the app. There are the businesses that use it, like Juno's salon. There are those businesses' customers, like the dog owners who book a trim. And there is the public: strangers who have not signed in at all. These ideas come back in the four groups of codes you will meet in Stage 0. Knowing exactly who signs in, and who does not, shapes every table and every rule.",
    "vision": false
   },
@@ -77,7 +77,7 @@
    "sub": "M00-L1",
    "icon": "clock",
    "statement": "Most Apps Are Built By Hand",
-   "line": "So why does this matter?",
+   "line": "Someone starts from a blank page, invents the screens, the tables and the rules from nothing, and makes hundreds of choices along the way.",
    "notes": "So why does this matter? Most apps today are made by hand. Someone starts from a blank page, invents the screens, the tables and the rules from nothing, and makes hundreds of choices along the way. The next app starts from a blank page again. The same mistakes get made twice, and the same safety checks get forgotten twice. Nothing learned on one app is carried to the next. That can work for a single app. It does not work if you want many apps that are all safe, all tested and all built the same careful way.",
    "vision": false
   },
@@ -87,7 +87,7 @@
    "sub": "M00-L1",
    "icon": "building-factory-2",
    "statement": "A Factory Reuses Tested Parts",
-   "line": "An app factory takes a different route.",
+   "line": "Every idea travels the same road, in the same order, with the same checklist at each step.",
    "notes": "An app factory takes a different route. Every idea travels the same road, in the same order, with the same checklist at each step. Instead of inventing parts from nothing, the factory reuses tested parts called bricks. There are 101 bricks, kept on 8 shelves, and they are grouped into 9 ready-made bundles called kits, numbered K00-K08. Kit K00 is the floor that every app gets: the basics, the walls between businesses, and the legal and consent parts. When a problem is found on one app, the fix becomes a checklist line, so the next app does not repeat it.",
    "vision": false
   },
@@ -97,7 +97,7 @@
    "sub": "M00-L1",
    "icon": "checklist",
    "statement": "Ava's Plan Before Building",
-   "line": "Let us put it together.",
+   "line": "Ava now has a plan before she builds anything.",
    "notes": "Let us put it together. Ava now has a plan before she builds anything. For Juno's salon she can list the screens: today's bookings and a booking page. She can list the tables: bookings, clients and time slots. She can write the rules: each client sees only their own bookings, and each salon sees only its own clients. And she can name the people: Juno, her clients and the public. That list is the start of every app the factory makes. Next you will see the road an idea travels, its rooms and its gates. First, a recap.",
    "vision": false
   },
@@ -142,7 +142,7 @@
    "sub": "M00-L2",
    "icon": "hourglass",
    "statement": "Sam Wanted It Done By Sunday",
-   "line": "Sam is fifteen.",
+   "line": "One weekend he had an idea for a small app to help his gran keep track of her dog's walks and feeding times, and he wanted it finished...",
    "notes": "Sam is fifteen. One weekend he had an idea for a small app to help his gran keep track of her dog's walks and feeding times, and he wanted it finished by Sunday night. So he skipped straight to building. By Sunday it worked, until his cousin signed in and could read his gran's private notes. Sam had wanted speed. What stopped him was a mistake he never checked for. The lesson he took away was simple: an app is safer when it travels a fixed road, with gates where it must stop and prove itself before it moves on.",
    "vision": false
   },
@@ -172,7 +172,7 @@
    "sub": "M00-L2",
    "icon": "home-2",
    "statement": "Six Rooms On The Main Road",
-   "line": "The road runs through rooms.",
+   "line": "A room is simply where an app sits while it is at a certain stage, so anyone can see at a glance what is happening.",
    "notes": "The road runs through rooms. A room is simply where an app sits while it is at a certain stage, so anyone can see at a glance what is happening. There are 11 rooms in all. Six sit on the main road. Reception holds new ideas at Stage 0. Research holds Stages 1, 2 and 3. The Rig holds Stages 4 and 5, where tables and test data are set up. The Reactor holds Stage 6, the paid build. The Runway holds Stage 7, launch. And Radar holds Stage 8, where live apps are watched.",
    "vision": false
   },
@@ -192,7 +192,7 @@
    "sub": "M00-L2",
    "icon": "filter",
    "statement": "Eight Gates On The Main Road",
-   "line": "Between the stages sit gates.",
+   "line": "A gate is a stop point where the app must prove its stage is finished before it may move on.",
    "notes": "Between the stages sit gates. A gate is a stop point where the app must prove its stage is finished before it may move on. There are 8 gates on the main road. Screen sits between Stages 0 and 1. Merit sits between 1 and 2. Base sits between 2 and 3. Lock sits between 3 and 4. Schema sits between 4 and 5. Invest sits between 5 and 6. Send sits between 6 and 7. Launch sits between 7 and 8. A gate cannot open while any checklist line for its stage is still not done.",
    "vision": false
   },
@@ -212,7 +212,7 @@
    "sub": "M00-L2",
    "icon": "recycle",
    "statement": "After Launch, Three Lap Gates",
-   "line": "Launch is not the end.",
+   "line": "A live app goes round a lap, and three lap gates watch it.",
    "notes": "Launch is not the end. A live app goes round a lap, and three lap gates watch it. Trouble is automatic: if an incident is opened on a live app, the app moves to Rescue. Back to Operate is a person's decision, and the question is whether the fix is proved live. Retire is also a person's decision: should the app be switched off and archived? So that is the whole map. Nine stages, 11 rooms, 8 road gates and 3 lap gates, with a person deciding at the moments that matter most. Let us recap before Stage 0.",
    "vision": false
   },

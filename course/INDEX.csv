@@ -1,0 +1,130 @@
+asset,track,module,type,final_file,EDITABLE_LINK_OR_PATH,status
+Stage 0 Proposal,All,-,proposal,STAGE0-PROPOSAL.md,STAGE0-PROPOSAL.md,Done
+Questions For Lisa,All,-,decision list,QUESTIONS.md,QUESTIONS.md,Done
+Clashes For Lisa,All,-,decision list,CLASHES.md,CLASHES.md,Done
+"Glossary (all names, hexes, numbers)",All,-,design system,glossary.json,glossary.json,Done
+"Design System (kit, tokens, icons)",All,-,design system,design/DESIGN-SYSTEM.md,build/lj.py;build/deck.py;build/tokens.py;design/tokens.css;design/icons,Done
+Sample Slide,All,Design System,slide,slides/SAMPLE-SLIDE/SAMPLE-SLIDE-v1.pdf,slides/SAMPLE-SLIDE/SAMPLE-SLIDE-v1.pptx;decks/sample.json,Done
+Syllabus,All,-,course map,SYLLABUS.md,build/syllabus.py;scripts/modules,Done
+Framework Map,B,-,script,scripts/FRAMEWORK-MAP.md,scripts/FRAMEWORK-MAP.md,Done
+Keynote (22 slides),B,Keynote,keynote,slides/AF-KEYNOTE/AF-KEYNOTE-v1.pdf,slides/AF-KEYNOTE/AF-KEYNOTE-v1.pptx;decks/keynote.json,Done
+Keynote Speaker Script,B,Keynote,script,scripts/AF-KEYNOTE-SCRIPT.md,decks/keynote.json;build/export_script.py,Done
+Keynote · Puppy Classroom Jacket,R,Keynote,reseller deck,slides/AF-KEYNOTE/AF-KEYNOTE-PPP-v1.pdf,slides/AF-KEYNOTE/AF-KEYNOTE-PPP-v1.pptx;decks/keynote.json,Done
+Partner Webinar Cut,B,Partner,deck,slides/AF-PARTNER-WEBINAR/AF-PARTNER-WEBINAR-v1.pdf,slides/AF-PARTNER-WEBINAR/AF-PARTNER-WEBINAR-v1.pptx;decks/partner-webinar.json,Done
+Partner Webinar · Puppy Classroom,R,Partner,reseller deck,slides/AF-PARTNER-WEBINAR/AF-PARTNER-WEBINAR-PPP-v1.pdf,slides/AF-PARTNER-WEBINAR/AF-PARTNER-WEBINAR-PPP-v1.pptx;decks/partner-webinar.json,Done
+Partner Webinar Script,B,Partner,script,scripts/AF-PARTNER-WEBINAR-SCRIPT.md,decks/partner-webinar.json,Done
+Partner Email (Epiphany Bridge),B,Partner,script,scripts/PARTNER-EMAIL-EPIPHANY-BRIDGE.md,scripts/PARTNER-EMAIL-EPIPHANY-BRIDGE.md,Done
+M00 · What Is An App Factory · Script,F,M00,module script,scripts/modules/M00-SCRIPT.md,scripts/modules/M00.json,Done
+M00 · Deck,F,M00,deck,slides/AF-TRACKF-M00/AF-TRACKF-M00-v1.pdf,slides/AF-TRACKF-M00/AF-TRACKF-M00-v1.pptx;decks/track-f/M00.json,Done
+M00-L1 · Recap Card,F,M00,recap card,graphics/recap/RECAP-M00-L1-v1.png,graphics/recap/RECAP-M00-L1-v1.svg;build/modules.py,Done
+M00-L1 · Storyboard And Voice-Over,F,M00,storyboard,video/storyboards/M00-L1.md,video/voiceover/M00-L1.txt;scripts/modules/M00.json,Done
+M00-L2 · Recap Card,F,M00,recap card,graphics/recap/RECAP-M00-L2-v1.png,graphics/recap/RECAP-M00-L2-v1.svg;build/modules.py,Done
+M00-L2 · Storyboard And Voice-Over,F,M00,storyboard,video/storyboards/M00-L2.md,video/voiceover/M00-L2.txt;scripts/modules/M00.json,Storyboard (video TO RENDER)
+M01 · Stage 0 · Idea · Script,F,M01,module script,scripts/modules/M01-SCRIPT.md,scripts/modules/M01.json,Done
+M01 · Deck,F,M01,deck,slides/AF-TRACKF-M01/AF-TRACKF-M01-v1.pdf,slides/AF-TRACKF-M01/AF-TRACKF-M01-v1.pptx;decks/track-f/M01.json,Done
+M01-L1 · Recap Card,F,M01,recap card,graphics/recap/RECAP-M01-L1-v1.png,graphics/recap/RECAP-M01-L1-v1.svg;build/modules.py,Done
+M01-L1 · Storyboard And Voice-Over,F,M01,storyboard,video/storyboards/M01-L1.md,video/voiceover/M01-L1.txt;scripts/modules/M01.json,Storyboard (video TO RENDER)
+M01-L2 · Recap Card,F,M01,recap card,graphics/recap/RECAP-M01-L2-v1.png,graphics/recap/RECAP-M01-L2-v1.svg;build/modules.py,Done
+M01-L2 · Storyboard And Voice-Over,F,M01,storyboard,video/storyboards/M01-L2.md,video/voiceover/M01-L2.txt;scripts/modules/M01.json,Storyboard (video TO RENDER)
+M01-L3 · Recap Card,F,M01,recap card,graphics/recap/RECAP-M01-L3-v1.png,graphics/recap/RECAP-M01-L3-v1.svg;build/modules.py,Done
+M01-L3 · Storyboard And Voice-Over,F,M01,storyboard,video/storyboards/M01-L3.md,video/voiceover/M01-L3.txt;scripts/modules/M01.json,Storyboard (video TO RENDER)
+M02 · Stage 1 · Research · Script,F,M02,module script,scripts/modules/M02-SCRIPT.md,scripts/modules/M02.json,Done
+M02 · Deck,F,M02,deck,slides/AF-TRACKF-M02/AF-TRACKF-M02-v1.pdf,slides/AF-TRACKF-M02/AF-TRACKF-M02-v1.pptx;decks/track-f/M02.json,Done
+M02-L1 · Recap Card,F,M02,recap card,graphics/recap/RECAP-M02-L1-v1.png,graphics/recap/RECAP-M02-L1-v1.svg;build/modules.py,Done
+M02-L1 · Storyboard And Voice-Over,F,M02,storyboard,video/storyboards/M02-L1.md,video/voiceover/M02-L1.txt;scripts/modules/M02.json,Storyboard (video TO RENDER)
+M02-L2 · Recap Card,F,M02,recap card,graphics/recap/RECAP-M02-L2-v1.png,graphics/recap/RECAP-M02-L2-v1.svg;build/modules.py,Done
+M02-L2 · Storyboard And Voice-Over,F,M02,storyboard,video/storyboards/M02-L2.md,video/voiceover/M02-L2.txt;scripts/modules/M02.json,Storyboard (video TO RENDER)
+M03 · Stage 2 · Base · Script,F,M03,module script,scripts/modules/M03-SCRIPT.md,scripts/modules/M03.json,Done
+M03 · Deck,F,M03,deck,slides/AF-TRACKF-M03/AF-TRACKF-M03-v1.pdf,slides/AF-TRACKF-M03/AF-TRACKF-M03-v1.pptx;decks/track-f/M03.json,Done
+M03-L1 · Recap Card,F,M03,recap card,graphics/recap/RECAP-M03-L1-v1.png,graphics/recap/RECAP-M03-L1-v1.svg;build/modules.py,Done
+M03-L1 · Storyboard And Voice-Over,F,M03,storyboard,video/storyboards/M03-L1.md,video/voiceover/M03-L1.txt;scripts/modules/M03.json,Storyboard (video TO RENDER)
+M03-L2 · Recap Card,F,M03,recap card,graphics/recap/RECAP-M03-L2-v1.png,graphics/recap/RECAP-M03-L2-v1.svg;build/modules.py,Done
+M03-L2 · Storyboard And Voice-Over,F,M03,storyboard,video/storyboards/M03-L2.md,video/voiceover/M03-L2.txt;scripts/modules/M03.json,Storyboard (video TO RENDER)
+M04 · Stage 3 · Features · Script,F,M04,module script,scripts/modules/M04-SCRIPT.md,scripts/modules/M04.json,Done
+M04 · Deck,F,M04,deck,slides/AF-TRACKF-M04/AF-TRACKF-M04-v1.pdf,slides/AF-TRACKF-M04/AF-TRACKF-M04-v1.pptx;decks/track-f/M04.json,Done
+M04-L1 · Recap Card,F,M04,recap card,graphics/recap/RECAP-M04-L1-v1.png,graphics/recap/RECAP-M04-L1-v1.svg;build/modules.py,Done
+M04-L1 · Storyboard And Voice-Over,F,M04,storyboard,video/storyboards/M04-L1.md,video/voiceover/M04-L1.txt;scripts/modules/M04.json,Storyboard (video TO RENDER)
+M04-L2 · Recap Card,F,M04,recap card,graphics/recap/RECAP-M04-L2-v1.png,graphics/recap/RECAP-M04-L2-v1.svg;build/modules.py,Done
+M04-L2 · Storyboard And Voice-Over,F,M04,storyboard,video/storyboards/M04-L2.md,video/voiceover/M04-L2.txt;scripts/modules/M04.json,Storyboard (video TO RENDER)
+M05 · Stage 4 · Schema · Script,F,M05,module script,scripts/modules/M05-SCRIPT.md,scripts/modules/M05.json,Done
+M05 · Deck,F,M05,deck,slides/AF-TRACKF-M05/AF-TRACKF-M05-v1.pdf,slides/AF-TRACKF-M05/AF-TRACKF-M05-v1.pptx;decks/track-f/M05.json,Done
+M05-L1 · Recap Card,F,M05,recap card,graphics/recap/RECAP-M05-L1-v1.png,graphics/recap/RECAP-M05-L1-v1.svg;build/modules.py,Done
+M05-L1 · Storyboard And Voice-Over,F,M05,storyboard,video/storyboards/M05-L1.md,video/voiceover/M05-L1.txt;scripts/modules/M05.json,Storyboard (video TO RENDER)
+M05-L2 · Recap Card,F,M05,recap card,graphics/recap/RECAP-M05-L2-v1.png,graphics/recap/RECAP-M05-L2-v1.svg;build/modules.py,Done
+M05-L2 · Storyboard And Voice-Over,F,M05,storyboard,video/storyboards/M05-L2.md,video/voiceover/M05-L2.txt;scripts/modules/M05.json,Storyboard (video TO RENDER)
+M06 · Stage 5 · Data · Script,F,M06,module script,scripts/modules/M06-SCRIPT.md,scripts/modules/M06.json,Done
+M06 · Deck,F,M06,deck,slides/AF-TRACKF-M06/AF-TRACKF-M06-v1.pdf,slides/AF-TRACKF-M06/AF-TRACKF-M06-v1.pptx;decks/track-f/M06.json,Done
+M06-L1 · Recap Card,F,M06,recap card,graphics/recap/RECAP-M06-L1-v1.png,graphics/recap/RECAP-M06-L1-v1.svg;build/modules.py,Done
+M06-L1 · Storyboard And Voice-Over,F,M06,storyboard,video/storyboards/M06-L1.md,video/voiceover/M06-L1.txt;scripts/modules/M06.json,Storyboard (video TO RENDER)
+M06-L2 · Recap Card,F,M06,recap card,graphics/recap/RECAP-M06-L2-v1.png,graphics/recap/RECAP-M06-L2-v1.svg;build/modules.py,Done
+M06-L2 · Storyboard And Voice-Over,F,M06,storyboard,video/storyboards/M06-L2.md,video/voiceover/M06-L2.txt;scripts/modules/M06.json,Storyboard (video TO RENDER)
+M07 · Stage 6 · Prompts · Script,F,M07,module script,scripts/modules/M07-SCRIPT.md,scripts/modules/M07.json,Done
+M07 · Deck,F,M07,deck,slides/AF-TRACKF-M07/AF-TRACKF-M07-v1.pdf,slides/AF-TRACKF-M07/AF-TRACKF-M07-v1.pptx;decks/track-f/M07.json,Done
+M07-L1 · Recap Card,F,M07,recap card,graphics/recap/RECAP-M07-L1-v1.png,graphics/recap/RECAP-M07-L1-v1.svg;build/modules.py,Done
+M07-L1 · Storyboard And Voice-Over,F,M07,storyboard,video/storyboards/M07-L1.md,video/voiceover/M07-L1.txt;scripts/modules/M07.json,Storyboard (video TO RENDER)
+M07-L2 · Recap Card,F,M07,recap card,graphics/recap/RECAP-M07-L2-v1.png,graphics/recap/RECAP-M07-L2-v1.svg;build/modules.py,Done
+M07-L2 · Storyboard And Voice-Over,F,M07,storyboard,video/storyboards/M07-L2.md,video/voiceover/M07-L2.txt;scripts/modules/M07.json,Storyboard (video TO RENDER)
+M08 · Stage 7 · Launch · Script,F,M08,module script,scripts/modules/M08-SCRIPT.md,scripts/modules/M08.json,Done
+M08 · Deck,F,M08,deck,slides/AF-TRACKF-M08/AF-TRACKF-M08-v1.pdf,slides/AF-TRACKF-M08/AF-TRACKF-M08-v1.pptx;decks/track-f/M08.json,Done
+M08-L1 · Recap Card,F,M08,recap card,graphics/recap/RECAP-M08-L1-v1.png,graphics/recap/RECAP-M08-L1-v1.svg;build/modules.py,Done
+M08-L1 · Storyboard And Voice-Over,F,M08,storyboard,video/storyboards/M08-L1.md,video/voiceover/M08-L1.txt;scripts/modules/M08.json,Storyboard (video TO RENDER)
+M08-L2 · Recap Card,F,M08,recap card,graphics/recap/RECAP-M08-L2-v1.png,graphics/recap/RECAP-M08-L2-v1.svg;build/modules.py,Done
+M08-L2 · Storyboard And Voice-Over,F,M08,storyboard,video/storyboards/M08-L2.md,video/voiceover/M08-L2.txt;scripts/modules/M08.json,Storyboard (video TO RENDER)
+M09 · Stage 8 · Operate · Script,F,M09,module script,scripts/modules/M09-SCRIPT.md,scripts/modules/M09.json,Done
+M09 · Deck,F,M09,deck,slides/AF-TRACKF-M09/AF-TRACKF-M09-v1.pdf,slides/AF-TRACKF-M09/AF-TRACKF-M09-v1.pptx;decks/track-f/M09.json,Done
+M09-L1 · Recap Card,F,M09,recap card,graphics/recap/RECAP-M09-L1-v1.png,graphics/recap/RECAP-M09-L1-v1.svg;build/modules.py,Done
+M09-L1 · Storyboard And Voice-Over,F,M09,storyboard,video/storyboards/M09-L1.md,video/voiceover/M09-L1.txt;scripts/modules/M09.json,Storyboard (video TO RENDER)
+M09-L2 · Recap Card,F,M09,recap card,graphics/recap/RECAP-M09-L2-v1.png,graphics/recap/RECAP-M09-L2-v1.svg;build/modules.py,Done
+M09-L2 · Storyboard And Voice-Over,F,M09,storyboard,video/storyboards/M09-L2.md,video/voiceover/M09-L2.txt;scripts/modules/M09.json,Storyboard (video TO RENDER)
+M09-L3 · Recap Card,F,M09,recap card,graphics/recap/RECAP-M09-L3-v1.png,graphics/recap/RECAP-M09-L3-v1.svg;build/modules.py,Done
+M09-L3 · Storyboard And Voice-Over,F,M09,storyboard,video/storyboards/M09-L3.md,video/voiceover/M09-L3.txt;scripts/modules/M09.json,Storyboard (video TO RENDER)
+M10 · Your First Idea · Script,F,M10,module script,scripts/modules/M10-SCRIPT.md,scripts/modules/M10.json,Done
+M10 · Deck,F,M10,deck,slides/AF-TRACKF-M10/AF-TRACKF-M10-v1.pdf,slides/AF-TRACKF-M10/AF-TRACKF-M10-v1.pptx;decks/track-f/M10.json,Done
+M10-L1 · Recap Card,F,M10,recap card,graphics/recap/RECAP-M10-L1-v1.png,graphics/recap/RECAP-M10-L1-v1.svg;build/modules.py,Done
+M10-L1 · Storyboard And Voice-Over,F,M10,storyboard,video/storyboards/M10-L1.md,video/voiceover/M10-L1.txt;scripts/modules/M10.json,Storyboard (video TO RENDER)
+M10-L2 · Recap Card,F,M10,recap card,graphics/recap/RECAP-M10-L2-v1.png,graphics/recap/RECAP-M10-L2-v1.svg;build/modules.py,Done
+M10-L2 · Storyboard And Voice-Over,F,M10,storyboard,video/storyboards/M10-L2.md,video/voiceover/M10-L2.txt;scripts/modules/M10.json,Storyboard (video TO RENDER)
+M00 Deck · Puppy Classroom,R,M00,reseller deck,slides/AF-TRACKF-M00/AF-TRACKF-M00-PPP-v1.pdf,slides/AF-TRACKF-M00/AF-TRACKF-M00-PPP-v1.pptx;decks/track-f/M00.json,Done
+Quizzes (all lessons),F,All,quiz,quizzes.json,scripts/modules;build/modules.py,Done
+G14 · The Factory Map,All,Module M0,graphic,graphics/AF-FACTORY-MAP-11-ROOMS-v1.png,graphics/AF-FACTORY-MAP-11-ROOMS-v1.svg;data/graphics.json;build/g_set.py,Done
+G15 · The Front Door,All,Module M1,graphic,graphics/AF-FRONT-DOOR-4-DOORS-v1.png,graphics/AF-FRONT-DOOR-4-DOORS-v1.svg;data/graphics.json;build/g_set.py,Done
+G02 · The Idea Form,All,Module M1,graphic,graphics/AF-IDEA-FORM-FLOW-v1.png,graphics/AF-IDEA-FORM-FLOW-v1.svg;data/graphics.json;build/g_set.py,Done
+G04 · Verdict And Data Role,All,Module M1,graphic,graphics/AF-VERDICT-DATA-ROLE-v1.png,graphics/AF-VERDICT-DATA-ROLE-v1.svg;data/graphics.json;build/g_set.py,Done
+G05 · Shelves And Kits,All,Module M3,graphic,graphics/AF-SHELVES-AND-KITS-v1.png,graphics/AF-SHELVES-AND-KITS-v1.svg;data/graphics.json;build/g_set.py,Done
+G06 · How Tables Are Made,All,Module M5,graphic,graphics/AF-TABLES-ASSEMBLE-v1.png,graphics/AF-TABLES-ASSEMBLE-v1.svg;data/graphics.json;build/g_set.py,Done
+G08 · W1-W8 Walls,All,Module M5,graphic,graphics/AF-WALLS-W1-W8-v1.png,graphics/AF-WALLS-W1-W8-v1.svg;data/graphics.json;build/g_set.py,Done
+G07 · Test People And Tests,All,Module M6,graphic,graphics/AF-TEST-IDENTITIES-MATRIX-v1.png,graphics/AF-TEST-IDENTITIES-MATRIX-v1.svg;data/graphics.json;build/g_set.py,Done
+G09 · After Every Paid Turn,All,Module M7,graphic,graphics/AF-AFTER-EVERY-PAID-TURN-v1.png,graphics/AF-AFTER-EVERY-PAID-TURN-v1.svg;data/graphics.json;build/g_set.py,Done
+G10 · The Launch Kit,All,Module M8,graphic,graphics/AF-LAUNCH-KIT-v1.png,graphics/AF-LAUNCH-KIT-v1.svg;data/graphics.json;build/g_set.py,Done
+G16 · Reseller Rule,All,Module M8,graphic,graphics/AF-RESELLER-NEVER-FREE-v1.png,graphics/AF-RESELLER-NEVER-FREE-v1.svg;data/graphics.json;build/g_set.py,Done
+G12 · The Operate Lap,All,Module M9,graphic,graphics/AF-OPERATE-LAP-v1.png,graphics/AF-OPERATE-LAP-v1.svg;data/graphics.json;build/g_set.py,Done
+G13 · Where To Go Next,All,Module M10,graphic,graphics/AF-VALUE-LADDER-v1.png,graphics/AF-VALUE-LADDER-v1.svg;data/graphics.json;build/g_set.py,Done
+G01 · The Factory Road,All,Module M0,graphic,graphics/AF-ROAD-9-STAGES-v1.png,graphics/AF-ROAD-9-STAGES-v1.svg;build/g_road.py,Done
+G11 · Fully Automated Flow (Vision 2029),All,Module M10,graphic,graphics/AF-VISION2029-AUTOMATED-FLOW-v1.png,graphics/AF-VISION2029-AUTOMATED-FLOW-v1.svg;build/g_flow.py,Done
+20 Codes Card W · Litterline,All,Module M1,graphic,graphics/AF-CODES-W-LITTERLINE-v1.png,graphics/AF-CODES-W-LITTERLINE-v1.svg;data/apps/litterline.json;build/g_codes_card.py,Done
+20 Codes Card W · Stayproof,All,Module M1,graphic,graphics/AF-CODES-W-STAYPROOF-v1.png,graphics/AF-CODES-W-STAYPROOF-v1.svg;data/apps/stayproof.json;build/g_codes_card.py,Done
+20 Codes Card W · Trimtable,All,Module M1,graphic,graphics/AF-CODES-W-TRIMTABLE-v1.png,graphics/AF-CODES-W-TRIMTABLE-v1.svg;data/apps/trimtable.json;build/g_codes_card.py,Done
+"Vision 2029 Factory Dashboard (real page, 5 tabs x 2 sizes)",All,Stage 4,dashboard mockup,vision2029/out/dashboard-2029-me-desktop.png,vision2029/shoot-dashboard.cjs;vision2029/state-2029.js,Done
+Vision 2029 Pulse Tab (NEW - TO CHECK),All,Stage 4,dashboard mockup,vision2029/pages/pulse-desktop.png,vision2029/pages/pulse.html;vision2029/pages.py,Done · NEW - TO CHECK
+Vision 2029 App Detail · Litterline,All,Stage 4,app detail,vision2029/pages/app-litterline-desktop.png,vision2029/pages/app-litterline.html;vision2029/pages.py,Done · NEW - TO CHECK
+Vision 2029 App Detail · Stayproof,All,Stage 4,app detail,vision2029/pages/app-stayproof-desktop.png,vision2029/pages/app-stayproof.html;vision2029/pages.py,Done · NEW - TO CHECK
+Vision 2029 App Detail · Trimtable,All,Stage 4,app detail,vision2029/pages/app-trimtable-desktop.png,vision2029/pages/app-trimtable.html;vision2029/pages.py,Done · NEW - TO CHECK
+Vision 2029 Automated Launch And Operate,All,Stage 4,dashboard mockup,vision2029/pages/launch-operate-desktop.png,vision2029/pages/launch-operate.html;vision2029/pages.py,Done · NEW - TO CHECK
+Sample App · Litterline,All,Stage 5,sample app,apps/out/app-litterline.png,apps/out/app-litterline.html;apps/screens.py,Done
+Sample App · Stayproof,All,Stage 5,sample app,apps/out/app-stayproof.png,apps/out/app-stayproof.html;apps/screens.py,Done
+Sample App · Trimtable,All,Stage 5,sample app,apps/out/app-trimtable.png,apps/out/app-trimtable.html;apps/screens.py,Done
+"White-Label: One App, Three Jackets",R,Stage 5,sample app,apps/out/white-label-litterline.png,apps/out/white-label-litterline.html;apps/screens.py,Done
+Hero Animation (30 s),All,Shared,video,video/out/Shared/AF-HERO-LJR7-v1.mp4,video/src/index.tsx;video/render.mjs;glossary.json,Done
+Hero Animation · Puppy Classroom,R,Shared,video,video/out/Shared/AF-HERO-PPP-v1.mp4,video/src/index.tsx;video/render.mjs,Done
+Hero Loop (8 s),All,Shared,video,video/out/Shared/AF-HERO-LOOP-LJR7-v1.mp4,video/src/index.tsx;video/render.mjs,Done
+Hero Still (thumbnail),All,Shared,video still,video/out/Shared/AF-HERO-STILL-LJR7-v1.png,video/src/index.tsx;video/render.mjs,Done
+Intro Pilot Video M00 (103 s),F,M00,pilot video,video/out/Track F/M00-intro-LJR7-v1.mp4,video/scripts/M00-intro.json;video/src/index.tsx;video/render.mjs;video/out/Track F/M00-intro-LJR7-v1.srt,Done
+Intro Pilot Video · Puppy Classroom,R,M00,video,video/out/Track F/M00-intro-PPP-v1.mp4,video/scripts/M00-intro.json;video/src/index.tsx,Done
+"Video README (one command, RoseQuest checklist)",All,-,guide,video/README.md,video/README.md,Done
+Workbook (PDF),F,All,workbook,workbook/WORKBOOK-LJR7-v1.pdf,workbook/WORKBOOK-LJR7.md;build/workbook.py,Done
+"Ebook (EPUB, Kindle)",F,All,ebook,workbook/WORKBOOK-LJR7-v1.epub,workbook/WORKBOOK-LJR7.md;workbook/WORKBOOK-LJR7-v1.docx,Done
+Workbook · Puppy Classroom,R,All,workbook,workbook/WORKBOOK-PPP-v1.pdf,workbook/WORKBOOK-PPP.md;build/workbook.py,Done
+ClickFunnels Lesson Pack,F,All,cf lesson pack,cf-pack/lessons.csv,cf-pack/lessons.json;cf-pack/lessons;build/cf_pack.py,Done
+Reseller Guide,R,-,guide,reseller/README.md,reseller/README.md,Done
+QA Checker,All,-,qa,qa/check.py,qa/check.py,Done
+Scorecard,All,-,qa,qa/scorecard.csv,qa/scorecard.csv;qa/module-checks.csv,Done

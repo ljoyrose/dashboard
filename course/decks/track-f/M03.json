@@ -27,7 +27,7 @@
    "sub": "M03-L1",
    "icon": "hourglass",
    "statement": "Starting From Nothing Is Slow",
-   "line": "Meet Rory.",
+   "line": "He had an idea for a booking desk for dog groomers, a bit like our sample app Trimtable, and it had just passed the Merit gate.",
    "notes": "Meet Rory. He had an idea for a booking desk for dog groomers, a bit like our sample app Trimtable, and it had just passed the Merit gate. He wanted the first screens working by the weekend, so he opened a blank project and started typing. By Sunday he had rebuilt a sign-in page, a menu and a cookie notice, all things he had built before, and not one part that was new. Then it clicked. If you start from a base that already works, you only build the parts that make your app different. That is Stage 2.",
    "vision": false
   },
@@ -47,7 +47,7 @@
    "sub": "M03-L1",
    "icon": "recycle",
    "statement": "Remix Or Rebuild",
-   "line": "The first choice is remix or rebuild.",
+   "line": "To remix means to start from an existing base app that the factory already owns, kept on a shelf of bases, and change it.",
    "notes": "The first choice is remix or rebuild. To remix means to start from an existing base app that the factory already owns, kept on a shelf of bases, and change it. To rebuild means to start fresh, because no base fits. The factory records a fresh start as BESPOKE, which means made to order. A rebuild is never chosen on a whim. It has to come with the result of a dedup check that proved nothing suitable already exists. Most of the time a remix wins, because the floor of the app, meaning sign-in, menus and legal pages, is already built and tested.",
    "vision": false
   },
@@ -77,7 +77,7 @@
    "sub": "M03-L1",
    "icon": "list-check",
    "statement": "Bricks, Kits And Colours Listed Once",
-   "line": "Then comes the brick list.",
+   "line": "A brick is one reusable part, such as booking or invoices, and a kit is a named bundle of bricks that ship together.",
    "notes": "Then comes the brick list. A brick is one reusable part, such as booking or invoices, and a kit is a named bundle of bricks that ship together. The list includes the kits, by their ids, and every brick's status is quoted word for word, never guessed. One rule from the checklist is worth remembering: never say there are no bricks for something until you have searched the kits and the design notes. The colours are settled here too. They live in one place only, as rows in the app's palette table, never typed into the code. You will meet bricks properly in the next lesson.",
    "vision": false
   },
@@ -97,7 +97,7 @@
    "sub": "M03-L1",
    "icon": "stack-2",
    "statement": "The Base Gate Opens By Itself",
-   "line": "Now the gate.",
+   "line": "It is an auto gate, which means no person has to click yes.",
    "notes": "Now the gate. The Base gate sits between Stage 2 and Stage 3, and it asks one question: is the base named, and has the vet passed? It is an auto gate, which means no person has to click yes. When every Stage 2 checklist line is ticked, the engine moves the app on by itself. Compare that with Screen and Merit, where a person decides. Base can be automatic because its questions have plain answers: a name is written or it is not, and a test passed or it did not. Let us recap what makes a good base.",
    "vision": false
   },
@@ -192,7 +192,7 @@
    "sub": "M03-L2",
    "icon": "home-2",
    "statement": "K00 Is The Floor Under Every App",
-   "line": "K00 is different.",
+   "line": "It is called the floor, and it is forced onto every app.",
    "notes": "K00 is different. It is called the floor, and it is forced onto every app. You cannot pick it and you cannot remove it. It holds three bricks: BR-BASICS for sign-in, menus and simple records, BR-TENANCY for keeping each business's data apart, and BR-LEGAL for consent and data protection. Between them they bring seven tables, including tenants, roles, permissions and consents. Because every kit sits on the floor, those three bricks are counted inside every kit, never added on top. K02, for example, has four bricks: the floor's three plus BR-BOOKING.",
    "vision": false
   },
@@ -202,7 +202,7 @@
    "sub": "M03-L2",
    "icon": "dog",
    "statement": "Litterline Picks Four Kits",
-   "line": "Here is how it looks for Litterline.",
+   "line": "It uses K00, the floor, like every app.",
    "notes": "Here is how it looks for Litterline. It uses K00, the floor, like every app. Its main kit is K06, breeding and livestock record, which brings pedigree, clinical record and breeding events. A pedigree is the record of an animal's parents and ancestors. It adds K08, own rules and checklists, so a breeder can track licence conditions as rows. And it adds K01, the client portal, so puppy buyers can see their own records. Four kits, and a clear list. Trimtable, the grooming desk, picks K00, K02, K01 and K03 instead.",
    "vision": false
   },

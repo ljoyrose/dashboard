@@ -47,7 +47,7 @@
    "sub": "M01-L1",
    "icon": "login",
    "statement": "Four Doors Bring Ideas In",
-   "line": "Ideas can arrive through four doors.",
+   "line": "The first is the Idea Form, filled in by a person with an idea.",
    "notes": "Ideas can arrive through four doors. The first is the Idea Form, filled in by a person with an idea. The second is called the flip farm: ideas that arrive already attached to an existing template, so they start with a ready-made shape. The third is the AI door, for ideas suggested by an AI tool. The fourth is the client door, for ideas sent in by outside customers, and it is not built yet. The door an idea came through is recorded on its record, so anyone can later see where it started.",
    "vision": false
   },
@@ -57,7 +57,7 @@
    "sub": "M01-L1",
    "icon": "eye",
    "statement": "Vision: What The App Is",
-   "line": "Now the form itself.",
+   "line": "It opens with a short name and a vision.",
    "notes": "Now the form itself. It opens with a short name and a vision. The vision is one line that says what the app is and what it does, with no list of features. Isla rewrote hers: Litterline, a licence and records hub for dog breeders. That is the whole vision. It is short on purpose. A short line can be checked, argued with and changed. Two pages of features cannot. If you cannot say what your app is in one line, the idea is not ready yet, and that is useful to know before any work starts.",
    "vision": false
   },
@@ -67,7 +67,7 @@
    "sub": "M01-L1",
    "icon": "cash",
    "statement": "Who Pays: Name The Payer",
-   "line": "Next, the form asks who pays.",
+   "line": "This means the person or business whose money keeps the app running, not just who uses it.",
    "notes": "Next, the form asks who pays. This means the person or business whose money keeps the app running, not just who uses it. For Litterline, breeders pay. But there is a second answer: dog clubs can resell it under their own name. A reseller is a business that sells the app to its own members with its own name and colours on it. In our example, the fictional club Northvale Canine Society resells Litterline to its breeders. Naming the payer early matters, because a later gate, Lock, will not let an app move on without one.",
    "vision": false
   },
@@ -77,7 +77,7 @@
    "sub": "M01-L1",
    "icon": "alert-triangle",
    "statement": "Pain: The Problem In Plain Words",
-   "line": "The third question is pain.",
+   "line": "The pain is the problem the app removes, written the way the customer would say it.",
    "notes": "The third question is pain. The pain is the problem the app removes, written the way the customer would say it. For Litterline, the pain is that licence renewals mean weeks of paper hunting. Notice that this is not a feature. It does not say reminders or charts. It names something that hurts, and that a breeder would recognise straight away. Good pain lines are plain and specific. A vague pain, such as making life easier, cannot be tested. A specific pain can be checked against real customers in Stage 1, Research.",
    "vision": false
   },
@@ -152,7 +152,7 @@
    "sub": "M01-L2",
    "icon": "layout-list",
    "statement": "Twenty Codes In Four Groups",
-   "line": "These questions are called the 20 codes.",
+   "line": "A code is a short name for one question about how the app handles businesses, people and data.",
    "notes": "These questions are called the 20 codes. A code is a short name for one question about how the app handles businesses, people and data. The full set was frozen on 19 Oct 2026, which means it is fixed and every new idea answers the same 20. They sit in 4 groups. Group 1, Businesses, has 6 codes. Group 2, Who Signs In, has 5. Group 3, Customers, has 4. Group 4, Public, has 5. The groups move from the inside of the app outwards: from the businesses at the core to strangers on the internet.",
    "vision": false
   },
@@ -172,7 +172,7 @@
    "sub": "M01-L2",
    "icon": "building-store",
    "statement": "Group 1: Businesses",
-   "line": "Group 1 is Businesses.",
+   "line": "TEN (0-6) asks how many businesses use the app and who sits above them.",
    "notes": "Group 1 is Businesses. TEN (0-6) asks how many businesses use the app and who sits above them. Litterline is TEN 3: breeders, with one reseller, Northvale Canine Society, above them. PARENTS (0-3) asks how many parties one business can sit under. DOWN (0-3) asks what a party above may do to the layers below, such as read them. MEET (0-3) asks whether businesses that do not own each other ever meet. POOL (0-3) asks whether anything is worked out across businesses. EXIT (0-3) asks what happens to a business's data when it leaves.",
    "vision": false
   },
@@ -182,7 +182,7 @@
    "sub": "M01-L2",
    "icon": "login",
    "statement": "Group 2: Who Signs In",
-   "line": "Group 2 is Who Signs In.",
+   "line": "ROLE (0-2) asks whether all of a business's staff have the same access, or different roles with different access.",
    "notes": "Group 2 is Who Signs In. ROLE (0-2) asks whether all of a business's staff have the same access, or different roles with different access. BELONG (0-2) asks how many businesses one person can belong to. GUEST (0-1) asks whether a business can let an outside person in with a limited view. HELP (0-3) asks whether someone can see the app as another person sees it, for example to give support, and whether that is logged. JOIN (0-2) asks who can create an account: invite only, people with a join link, or anyone who signs in.",
    "vision": false
   },
@@ -192,7 +192,7 @@
    "sub": "M01-L2",
    "icon": "users",
    "statement": "Group 3: Customers",
-   "line": "Group 3 is Customers.",
+   "line": "CUST (0-5) asks how far into a business's own customers the app goes.",
    "notes": "Group 3 is Customers. CUST (0-5) asks how far into a business's own customers the app goes. At 0 only staff use it. At 3, customers can write their own data, and at 5 customers sell to each other. Litterline is CUST 3. PRICE (0-3) asks whether everyone pays the same price. SHARE (0-1) asks whether members can share things with each other. SEN (0-3) asks how sensitive the data is: 0 is ordinary, 1 is personal, 2 is health or clinical, and 3 is children. SEN matters a great deal, as the next lesson shows.",
    "vision": false
   },
@@ -202,7 +202,7 @@
    "sub": "M01-L2",
    "icon": "world",
    "statement": "Group 4: Public",
-   "line": "Group 4 is Public.",
+   "line": "VIEW (0-2) asks whether a stranger can read anything without signing in.",
    "notes": "Group 4 is Public. VIEW (0-2) asks whether a stranger can read anything without signing in. POST (0-2) asks whether a stranger can put data in without signing in, such as through a contact form. BRAND (0-2) asks whose name is on the screen: none, one brand, or a brand per business. Litterline is BRAND 2, because each reselling club shows its own name. SEND (0-2) asks what the app sends to outside systems the factory does not control. PAY (0-2) asks whether money moves between parties in one chain, such as payouts within that chain.",
    "vision": false
   },
@@ -212,7 +212,7 @@
    "sub": "M01-L2",
    "icon": "list-check",
    "statement": "Six Required, Fourteen Can Wait",
-   "line": "Do you need all 20 answers on day one?",
+   "line": "Six codes are required, because the factory cannot judge an idea without them: TEN, CUST, SEN, VIEW, POST and PAY.",
    "notes": "Do you need all 20 answers on day one? No. Six codes are required, because the factory cannot judge an idea without them: TEN, CUST, SEN, VIEW, POST and PAY. The other 14 may be answered with a question mark, meaning not yet known. That keeps the form honest. A guess dressed up as a fact is worse than an open question, because nobody goes back to check it. The answers go straight onto the card, which is their only home. Rory filled in the six, marked three others as not yet known, and finished. Let us recap.",
    "vision": false
   },
@@ -287,7 +287,7 @@
    "sub": "M01-L3",
    "icon": "hourglass",
    "statement": "High SEN (0-3) Means HOLD",
-   "line": "The second possible verdict is HOLD.",
+   "line": "The engine suggests HOLD when SEN, the sensitivity code, is 2 or 3.",
    "notes": "The second possible verdict is HOLD. The engine suggests HOLD when SEN, the sensitivity code, is 2 or 3. That means the app would hold health or clinical data, or data about children. These need extra care under data protection law. Before such an idea may move on, a DPIA must be done. A DPIA, or Data Protection Impact Assessment, is a written check of the risks to the people whose data the app will hold, and of how those risks will be reduced. Until it is signed, the idea waits. It is not killed, only paused.",
    "vision": false
   },
@@ -297,7 +297,7 @@
    "sub": "M01-L3",
    "icon": "circle-check",
    "statement": "PASS: No Kill, SEN Below 2",
-   "line": "The third verdict is PASS.",
+   "line": "An idea passes when no kill answer is yes and SEN is below 2, meaning the data is ordinary or personal, but not health and not children.",
    "notes": "The third verdict is PASS. An idea passes when no kill answer is yes and SEN is below 2, meaning the data is ordinary or personal, but not health and not children. Trimtable, the booking desk for groomers, is a good example. Salons use it every day to book and check appointments, so ONESHOT and NOHOOK are both no. Its records come from what the groomer types in, so FRAGILE is no. Its SEN is 1, because it holds clients' names and contact details. So the engine suggests PASS, and Trimtable moves towards the Screen gate.",
    "vision": false
   },
@@ -317,7 +317,7 @@
    "sub": "M01-L3",
    "icon": "clipboard-check",
    "statement": "The Role Picks The Duty Lines",
-   "line": "Why does the role matter so early?",
+   "line": "Each role brings its own pack of checklist lines that the app must complete later.",
    "notes": "Why does the role matter so early? Because it picks the duties. Each role brings its own pack of checklist lines that the app must complete later. A controller has duties such as a privacy notice and a route for people to ask for a copy of their data. A processor needs a written agreement with each business whose data it handles. An app marked BOTH gets both packs. Choosing the wrong role at Stage 0 means the wrong duty lines follow the app all the way to launch, so it is checked here, at the very start.",
    "vision": false
   },

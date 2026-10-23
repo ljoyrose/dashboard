@@ -37,7 +37,7 @@
    "sub": "M05-L1",
    "icon": "table-options",
    "statement": "A Schema Is The Plan Of Tables",
-   "line": "Stage 4 is called Schema.",
+   "line": "A schema is the plan of the tables that hold the data: which tables exist, which columns each one has, and who may read or write them.",
    "notes": "Stage 4 is called Schema. A schema is the plan of the tables that hold the data: which tables exist, which columns each one has, and who may read or write them. A column is one field in a table, like a dog's name or a booking date. Stage 4 sits in the Rig room, together with Stage 5, and it is free. Nothing here is built by the paid builder. The tables are built by hand, then proved by reading them back, which is called a re-read. Free work now saves paid work later.",
    "vision": false
   },
@@ -47,7 +47,7 @@
    "sub": "M05-L1",
    "icon": "puzzle",
    "statement": "Codes And Kits Decide The Tables",
-   "line": "Where does the list of tables come from?",
+   "line": "The kits chosen earlier each bring their own tables.",
    "notes": "Where does the list of tables come from? Not from guessing. The kits chosen earlier each bring their own tables. K00, the floor, brings seven: tenants, tenant users, roles, permissions, consents, usage channels and events. K02, booking, adds bookings, availability slots and resources. The codes on the idea card then shape the columns. If TEN (0-6) is 2 or more, several businesses share the app, so every table holding a business's data needs a tenant id column, which says which business owns each row. A tenant is one business using the app.",
    "vision": false
   },
@@ -142,7 +142,7 @@
    "sub": "M05-L2",
    "icon": "alert-triangle",
    "statement": "Seeing Someone Else's Clients",
-   "line": "Theo's cousin works at a grooming salon.",
+   "line": "One morning, the booking app the salon used showed her another salon's client list, names and phone numbers included.",
    "notes": "Theo's cousin works at a grooming salon. One morning, the booking app the salon used showed her another salon's client list, names and phone numbers included. It was fixed within a day, but the trust was gone. When Theo started helping to plan Trimtable, he wanted to be sure it could never do that. At first he wrote, the data is private, in his notes. Then he realised that sentence proved nothing. What he needed was a test for each table that could actually fail, run from outside, with a date beside the result.",
    "vision": false
   },
@@ -192,7 +192,7 @@
    "sub": "M05-L2",
    "icon": "filter",
    "statement": "Shared Tables Need Field-Level Tests",
-   "line": "Some tables are shared on purpose.",
+   "line": "Imagine one dog's record that two breeders both hold a claim on, with each allowed to see different fields.",
    "notes": "Some tables are shared on purpose. Imagine one dog's record that two breeders both hold a claim on, with each allowed to see different fields. A field is one column in one row. A shared row carries no tenant id, so a normal row-level test looks for a tenant tag, finds none, and reports all clear, while the wrong fields leak. That is why the rule says a row-level test passes while leaking. On a shared table the leak test must be field-level: check that each claim sees only the fields it is allowed to see.",
    "vision": false
   },
@@ -212,7 +212,7 @@
    "sub": "M05-L2",
    "icon": "table-options",
    "statement": "The Schema Gate Passes By Itself",
-   "line": "Then comes the Schema gate.",
+   "line": "When every Stage 4 checklist line is done, and no section of the document still says pending, the engine moves the app on without anyone...",
    "notes": "Then comes the Schema gate. It sits between Stage 4 and Stage 5 and asks: tables probed, names re-read? Like the Base gate, it is automatic. When every Stage 4 checklist line is done, and no section of the document still says pending, the engine moves the app on without anyone clicking yes. That only works because the tests are plain. A probe returned 401 or it did not. A name matches the spec or it does not. Next comes Stage 5, where test businesses and test people are set up. First, the recap.",
    "vision": false
   },

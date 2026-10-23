@@ -47,7 +47,7 @@
    "sub": "M09-L1",
    "icon": "clock",
    "statement": "The Engine Refreshes Every 15 Minutes",
-   "line": "Behind the factory sits the engine.",
+   "line": "The engine is a script, which means a small program that runs on a timer and does the same job the same way each time.",
    "notes": "Behind the factory sits the engine. The engine is a script, which means a small program that runs on a timer and does the same job the same way each time. Every 15 minutes it reads the task board, where each app has one card showing its stage, and writes a state file. A state file is a plain record of where every app is right now. The factory dashboard reads that file, so the picture on screen is never more than about 15 minutes old. Nobody has to update it by hand, and nobody can quietly forget.",
    "vision": false
   },
@@ -87,7 +87,7 @@
    "sub": "M09-L1",
    "icon": "chart-line",
    "statement": "Monthly Numbers And New Parts",
-   "line": "Some checks run once a month.",
+   "line": "The app's KPIs, short for key performance indicators, are compared with the targets set for it.",
    "notes": "Some checks run once a month. The app's KPIs, short for key performance indicators, are compared with the targets set for it. A KPI is simply a number you agreed to watch, such as how many breeders signed in this month. There is also a quieter job called new parts back to bricks, which is rule R14. If building the app created a useful new part, that part goes back into the brick registry, the factory's list of reusable parts. The next app can then start from it, instead of building the same thing twice.",
    "vision": false
   },
@@ -97,7 +97,7 @@
    "sub": "M09-L1",
    "icon": "users",
    "statement": "Scripts Watch, People Decide",
-   "line": "Notice who does the watching.",
+   "line": "Scripts and AI helpers run the probes, the backups and the counts, and they record every result so it can be proved later.",
    "notes": "Notice who does the watching. Scripts and AI helpers run the probes, the backups and the counts, and they record every result so it can be proved later. They never change who can see what. That decision stays with a person. One more weekly job is marked PROPOSED, which means it has been suggested but is not switched on yet: a weekly boost proposal, an idea for one small change to help people find the app. So the lap is watched by machines and steered by people. Let's recap what watches a live app, and when.",
    "vision": false
   },
@@ -152,7 +152,7 @@
    "sub": "M09-L2",
    "icon": "currency-pound",
    "statement": "One Line Each Month",
-   "line": "This is called the money line.",
+   "line": "It is written on the app's card, which is the one home of the app's facts, and it follows a fixed pattern.",
    "notes": "This is called the money line. It is written on the app's card, which is the one home of the app's facts, and it follows a fixed pattern. It starts with the word money, then the year and the month, then the word in followed by the pounds that came in, then the word out followed by the pounds that went out. For example: money, September 2026, in X, out Y. Because the pattern never changes, a script can read it without guessing. Many months of lines, one under another, become a simple history of the app.",
    "vision": false
   },
@@ -162,7 +162,7 @@
    "sub": "M09-L2",
    "icon": "user",
    "statement": "A Person Writes The Line",
-   "line": "Who writes the money line?",
+   "line": "Not a script and not an AI helper.",
    "notes": "Who writes the money line? Not a script and not an AI helper. On the factory's stage 8 checklist it is tagged as the owner's own work, so a person writes it each month. That makes sense. Money facts live in bank statements, platform bills and payment reports, and a person who can see all of them is best placed to sum them honestly. The scripts then do what scripts are good at: they read the line, compare it with earlier months and raise a flag when a pattern appears. The person supplies the truth, the machine watches it.",
    "vision": false
   },
@@ -172,7 +172,7 @@
    "sub": "M09-L2",
    "icon": "scale",
    "statement": "Reading A Losing Month",
-   "line": "Let's read one.",
+   "line": "Suppose Trimtable's line says in 90, out 140.",
    "notes": "Let's read one. These numbers are invented for teaching. Suppose Trimtable's line says in 90, out 140. More went out than came in, so that is a losing month. On its own, one losing month is information, not a verdict. Perhaps a yearly platform bill landed that month, or bookings dipped during a holiday. Nothing happens automatically after one losing month. The line simply sits on the card for anyone to see. The factory is not asking whether a single month was good. It is watching for a pattern that keeps going.",
    "vision": false
   },
@@ -182,7 +182,7 @@
    "sub": "M09-L2",
    "icon": "bell",
    "statement": "Two Losing Months Running",
-   "line": "Here is the pattern it watches for.",
+   "line": "If the money line shows two losing months running, the engine asks the Retire question.",
    "notes": "Here is the pattern it watches for. If the money line shows two losing months running, the engine asks the Retire question. Retire is a gate, and its question is: switch it off and archive it? The question appears as one row on the decide list, which is the short list of things waiting for a person's yes or no. The question can also be raised by hand, if someone tags the app with retire-ask. Asking is not deciding. A person reads the facts and chooses. This two-month rule was added on 20 Oct 2026.",
    "vision": false
   },
@@ -202,7 +202,7 @@
    "sub": "M09-L2",
    "icon": "checklist",
    "statement": "Return Is Still A Manual Check",
-   "line": "Return is not automated yet.",
+   "line": "It is a line on the stage 8 checklist, done by an AI helper and answered with a dated note in the app's document, in the part about payoff.",
    "notes": "Return is not automated yet. It is a line on the stage 8 checklist, done by an AI helper and answered with a dated note in the app's document, in the part about payoff. The rule books also tie the lap to Return, while the engine uses the two losing months rule for Retire. The course teaches both, because they do different jobs. Two losing months raises the question of switching off. Return decides whether more credits may be spent. Where the files differ, the course follows what the engine does today.",
    "vision": false
   },
@@ -212,7 +212,7 @@
    "sub": "M09-L2",
    "icon": "alert-triangle",
    "statement": "A Record, Not A Promise",
-   "line": "One last point matters a great deal.",
+   "line": "The money line is a record of what happened, never a forecast of what will happen.",
    "notes": "One last point matters a great deal. The money line is a record of what happened, never a forecast of what will happen. Nothing in this course promises that any app will make money, and every figure in this lesson is invented. Some apps earn back their cost and some do not, and the factory is built to notice either outcome early and honestly. That is why the line is short, monthly and written by a person. It keeps the decision clear and keeps hope out of the sums. Let's recap the money line.",
    "vision": false
   },
@@ -287,7 +287,7 @@
    "sub": "M09-L3",
    "icon": "shield-check",
    "statement": "Fast, But Still Approved",
-   "line": "Fast does not mean unchecked.",
+   "line": "A person still approves the sending of every paid build prompt, exactly as in Stage 6.",
    "notes": "Fast does not mean unchecked. A person still approves the sending of every paid build prompt, exactly as in Stage 6. The speed comes from the empty lane, never from going round the person. After the fix is sent, the result has to be proved live from outside, with the cache defeated. A cache is a saved older copy of a page that a browser or server may show instead of the newest one. Defeating it means making sure you are testing the real, current app, not a memory of yesterday's.",
    "vision": false
   },
@@ -297,7 +297,7 @@
    "sub": "M09-L3",
    "icon": "arrow-back-up",
    "statement": "Back To Operate",
-   "line": "Once no incident is open, the engine puts one question to a person, and this is the Back to Operate gate: is the fix proved live?",
+   "line": "A yes moves Stayproof out of Rescue and back to Radar, where the daily checks carry on as before.",
    "notes": "Once no incident is open, the engine puts one question to a person, and this is the Back to Operate gate: is the fix proved live? A yes moves Stayproof out of Rescue and back to Radar, where the daily checks carry on as before. One detail is worth knowing. A ruling says rescue should be possible from any stage, not just for live apps. That rule is still only PROPOSED. Today the engine rescues stage 8 apps only, and the course teaches what the engine does today.",
    "vision": false
   },
@@ -317,7 +317,7 @@
    "sub": "M09-L3",
    "icon": "recycle",
    "statement": "Recycle Sends Parts To Reserve",
-   "line": "Retiring is not throwing away.",
+   "line": "Next comes Recycle, whose room is tagged Parts Back.",
    "notes": "Retiring is not throwing away. Next comes Recycle, whose room is tagged Parts Back. The retired app's bricks, its kits and any proved formation go back to the Reserve room, where parts wait to be used again. A formation is a group of bricks that has been proved to work well together. The app's id, its row and its card are kept for ever. An app is never renamed or wiped from the record. Years later, someone can still see what it was, what it was built from and why it stopped.",
    "vision": false
   },
@@ -327,7 +327,7 @@
    "sub": "M09-L3",
    "icon": "building-warehouse",
    "statement": "Recovery Holds Killed Ideas",
-   "line": "Not every idea reaches the lap.",
+   "line": "If an idea is killed before any parts exist, for example at the Screen gate, it goes to the Recovery room, tagged Killed Or Held.",
    "notes": "Not every idea reaches the lap. If an idea is killed before any parts exist, for example at the Screen gate, it goes to the Recovery room, tagged Killed Or Held. Its id is called burnt, which means it is used up, yet the idea can still be brought back out later if things change. Recycle never applies at the Merit gate, because at that point there are no built parts to give back. Recovery keeps the idea and the reasons it stopped, so nobody pays to research the same dead end twice.",
    "vision": false
   },
@@ -337,7 +337,7 @@
    "sub": "M09-L3",
    "icon": "sparkles",
    "statement": "Re-imagine Starts A New Journey",
-   "line": "There is one more move, called Re-imagine.",
+   "line": "It is a door, not a stamp, meaning nobody has to approve a gate to open it.",
    "notes": "There is one more move, called Re-imagine. It is a door, not a stamp, meaning nobody has to approve a gate to open it. Re-imagine keeps an app's assembly, the way its parts fit together, and points it at a new audience under a new id. Stayproof's inspection pack, for instance, could be re-imagined for a different kind of animal business. A clone like that is paid work, so it goes through the Invest gate like any build. Nothing is wasted and nothing is skipped. Let's recap the lap.",
    "vision": false
   },

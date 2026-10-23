@@ -27,7 +27,7 @@
    "sub": "M08-L1",
    "icon": "user",
    "statement": "A Free Button That Was Refused",
-   "line": "Theo is seventeen.",
+   "line": "He was helping to put together a page for Northvale Canine Society, the club that resells Litterline to its members under its own name.",
    "notes": "Theo is seventeen. He was helping to put together a page for Northvale Canine Society, the club that resells Litterline to its members under its own name. He wanted more club members to try it, so he planned a big button that said free plan. It seemed generous and harmless. But the free plan was refused. Northvale is a reseller, and the factory has a firm rule: a reseller's brand is never on a free plan. That made Theo look much harder at how a button on a page turns into a real, recorded choice.",
    "vision": false
   },
@@ -37,7 +37,7 @@
    "sub": "M08-L1",
    "icon": "rocket",
    "statement": "Stage 7 Happens On The Runway",
-   "line": "This is Stage 7, called Launch.",
+   "line": "It happens in the room called Runway, which is tagged Brand, because this is where the app meets the outside world under each brand's name.",
    "notes": "This is Stage 7, called Launch. It happens in the room called Runway, which is tagged Brand, because this is where the app meets the outside world under each brand's name. The jobs include a sales page, set-up for each brand, the domain, the funnels, and a careful set of launch tests. This lesson covers the outside pieces: the page people land on, the web address they type, and the path that leads them from a first look to signing up. The next lesson covers the launch tests and the Launch gate.",
    "vision": false
   },
@@ -77,7 +77,7 @@
    "sub": "M08-L1",
    "icon": "shield-check",
    "statement": "ClickFunnels Holds Contacts, Not The Keys",
-   "line": "How does ClickFunnels talk to the app?",
+   "line": "The simplest route is a built-in connection that sends sign-ups and tags across.",
    "notes": "How does ClickFunnels talk to the app? The simplest route is a built-in connection that sends sign-ups and tags across. A tag is a label on a contact, such as trial started. One security rule matters a lot: never unlock paid content using a tag that public code can apply, because any visitor could apply it. Another rule: never store a ClickFunnels key or password in the app's database. The app stores only which brand links to which workspace. Paid access is decided by the app itself, never by a label.",
    "vision": false
   },
@@ -87,7 +87,7 @@
    "sub": "M08-L1",
    "icon": "link",
    "statement": "The Plan Travels With The Click",
-   "line": "Now the plan.",
+   "line": "Each button on a landing page carries both the brand and the plan inside its link.",
    "notes": "Now the plan. Each button on a landing page carries both the brand and the plan inside its link. The plan travels through sign-in the same way the brand does. The rule is sign in first, pay second. When the person comes back, the server checks the plan really is one of that brand's offers, records the chosen plan against the member even if they abandon checkout, and opens that plan's checkout. The price is never taken from the web address, because anyone can edit a web address. Each payment is stamped with the buyer's brand.",
    "vision": false
   },
@@ -142,7 +142,7 @@
    "sub": "M08-L2",
    "icon": "user",
    "statement": "It Worked On The Laptop",
-   "line": "Maya is twelve.",
+   "line": "She tried the new Stayproof site on her laptop, signing up as a brand-new kennel worker, and everything worked.",
    "notes": "Maya is twelve. She tried the new Stayproof site on her laptop, signing up as a brand-new kennel worker, and everything worked. She was ready to say it could launch. Then she tried again on her phone. The sign-up email arrived, she tapped the link, and the page that opened had forgotten who she was. On the laptop, she had opened the email link in the same browser. On the phone, it opened somewhere new. Launch tests have to walk the whole journey, as a brand-new person, on desktop and on phone.",
    "vision": false
   },
@@ -162,7 +162,7 @@
    "sub": "M08-L2",
    "icon": "player-play",
    "statement": "The Launch Walk, Desktop And Phone",
-   "line": "Next comes the launch walk.",
+   "line": "Before the gate, a brand-new account for each brand walks the whole journey on the live site, on desktop and on phone, including email...",
    "notes": "Next comes the launch walk. Before the gate, a brand-new account for each brand walks the whole journey on the live site, on desktop and on phone, including email links opened on the phone. The journey map is the list of every step a person takes, from the first page to the app's core action, and it includes steps the factory does not build itself, like the sign-up email. Maya's phone problem is exactly what this walk is there to catch. An onboarding walk for each type of user follows the same idea.",
    "vision": false
   },
@@ -182,7 +182,7 @@
    "sub": "M08-L2",
    "icon": "cash",
    "statement": "Checkout Tested On The Live Link",
-   "line": "Money is tested for real.",
+   "line": "Checkout is tested on the live link with a 100 percent off test code: buy, sign in, and get access.",
    "notes": "Money is tested for real. Checkout is tested on the live link with a 100 percent off test code: buy, sign in, and get access. Checkout never works in preview, so it has to be the live link. A real payment and a refund are also run from start to finish. Around this sit other duties due before launch: legal and consent pages live, with the marketing box left unticked, a security review before publishing, and proof that a user can delete their account and export their data, and that both actually work.",
    "vision": false
   },
@@ -202,7 +202,7 @@
    "sub": "M08-L2",
    "icon": "trending-up",
    "statement": "Weekly Boost: Proposed, Not A Rule",
-   "line": "What about growing the app after launch?",
+   "line": "The factory's template has a weekly boost line: a weekly proposal of ways to help the app get found, using parts from the Boost shelf,...",
    "notes": "What about growing the app after launch? The factory's template has a weekly boost line: a weekly proposal of ways to help the app get found, using parts from the Boost shelf, such as public pages, reviews, search visibility and funnels. But be clear about its status. The weekly boost is marked PROPOSED. It sits in the template as an idea that has not been ruled on, so this course teaches it as a proposal, not as a rule. In the factory, a proposal counts for nothing until the live system actually does it.",
    "vision": false
   },

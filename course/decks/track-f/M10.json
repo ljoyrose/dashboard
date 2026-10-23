@@ -57,7 +57,7 @@
    "sub": "M10-L1",
    "icon": "building-store",
    "statement": "Group 1: Businesses, Six Codes",
-   "line": "Now the 20 codes, in four groups.",
+   "line": "Each code is a word plus a number.",
    "notes": "Now the 20 codes, in four groups. Each code is a word plus a number. Six are required: TEN, CUST, SEN, VIEW, POST and PAY. The other 14 may say not yet known. Group 1 is Businesses. TEN (0-6) is 3, one reseller above, because the club sits above its breeders. PARENTS (0-3) is 1, so each breeder sits under one party. DOWN (0-3) is 1: the club can read the layer below. MEET (0-3) is 0, so breeders never meet each other. POOL (0-3) is 1, only when enough contribute. EXIT (0-3) is 2: a leaving breeder's data is handed to them.",
    "vision": false
   },
@@ -67,7 +67,7 @@
    "sub": "M10-L1",
    "icon": "users",
    "statement": "Group 2: Who Signs In",
-   "line": "Group 2 is Who Signs In.",
+   "line": "ROLE (0-2) is 2, roles with different access, so a breeder and their helper need not see the same things.",
    "notes": "Group 2 is Who Signs In. ROLE (0-2) is 2, roles with different access, so a breeder and their helper need not see the same things. BELONG (0-2) is 1: each person belongs to one business. GUEST (0-1) is 1, which means a business can let an outside person in with a scoped view, a narrow window onto only what they need. HELP (0-3) is 1: the owner can view the app as another person sees it, view only, and every look is logged. JOIN (0-2) is 1, so accounts are created through a brand address or a join link, not by anyone at all.",
    "vision": false
   },
@@ -77,7 +77,7 @@
    "sub": "M10-L1",
    "icon": "world",
    "statement": "Groups 3 And 4: Customers, Public",
-   "line": "Group 3 is Customers.",
+   "line": "CUST (0-5) is 3, customers write, so puppy buyers can add to their records.",
    "notes": "Group 3 is Customers. CUST (0-5) is 3, customers write, so puppy buyers can add to their records. PRICE (0-3) is 1, one price list. SHARE (0-1) is 0: members do not share with each other. SEN (0-3) is 1, personal data, but nothing health-related or about children. Group 4 is Public. VIEW (0-2) is 1, so only people holding a link can read while signed out. POST (0-2) is 0: strangers cannot put data in. BRAND (0-2) is 2, a brand per business. SEND (0-2) is 1, users download their own data. PAY (0-2) is 2: payouts within one chain.",
    "vision": false
   },
@@ -87,7 +87,7 @@
    "sub": "M10-L1",
    "icon": "gavel",
    "statement": "Kill Check, Verdict, Data Role",
-   "line": "Next come the three kill questions.",
+   "line": "In our worked example all three are answered no, partly because licences renew, which brings breeders back.",
    "notes": "Next come the three kill questions. FRAGILE: could it give wrong answers that look right? ONESHOT: would people use it once and stop? NOHOOK: is there no reason to come back? In our worked example all three are answered no, partly because licences renew, which brings breeders back. With no kill answer and SEN below 2, the engine suggests the verdict PASS. It also suggests a data role, such as CONTROLLER, PROCESSOR, BOTH or NONE, and a person confirms it. Then the Screen gate asks a person one question: start work on this idea?",
    "vision": false
   },
@@ -97,7 +97,7 @@
    "sub": "M10-L1",
    "icon": "clipboard-check",
    "statement": "Now Fill In Your Own",
-   "line": "Your turn.",
+   "line": "Take your own idea and write a short name, then the three-part brief: what it is, who pays, and the pain it removes.",
    "notes": "Your turn. Take your own idea and write a short name, then the three-part brief: what it is, who pays, and the pain it removes. Answer the six required codes first, TEN, CUST, SEN, VIEW, POST and PAY, and write not yet known wherever you honestly are not sure. That is allowed, and it is better than a guess. Your answers become the app's card, its one home, which is never overwritten; changes become a new version. The link to a client idea form is marked TO CONFIRM, because that door is still being built. Let's recap.",
    "vision": false
   },
@@ -152,7 +152,7 @@
    "sub": "M10-L2",
    "icon": "sparkles",
    "statement": "Vision 2029, Illustrative",
-   "line": "First, the future.",
+   "line": "Everything in the next two parts is Vision 2029, illustrative.",
    "notes": "First, the future. Everything in the next two parts is Vision 2029, illustrative. That means it is a picture of what the factory aims to look like, drawn to show scale. It is not today's numbers and it is not a forecast. In this picture there are about 1,000 live apps, and one new app arrives each day. Every figure you hear is invented to make the idea concrete. Holding a clear picture helps the factory build the right checks now, because a check that works for one app has to work for a thousand.",
    "vision": true
   },
@@ -162,7 +162,7 @@
    "sub": "M10-L2",
    "icon": "radar",
    "statement": "A Morning In The 2029 Picture",
-   "line": "Still Vision 2029, illustrative.",
+   "line": "The leak probe reports All Clear across 18,240 tables.",
    "notes": "Still Vision 2029, illustrative. Imagine 06:40 UK time. The leak probe reports All Clear across 18,240 tables. Three apps sit in the Rescue room, each with one capped fix moving through the lane kept empty for trouble. Two hundred and twelve apps have been retired, with their parts back in Reserve. The decide list, where a person answers yes or no, is capped at 10 rows, and 7 are open. Notice what scale does not change. The same probe, the same money line and the same gates you learned in this course run for every app.",
    "vision": true
   },
@@ -182,7 +182,7 @@
    "sub": "M10-L2",
    "icon": "layout-list",
    "statement": "What A Value Ladder Is",
-   "line": "Now the next steps.",
+   "line": "A value ladder is a set of steps, where each step offers a little more help for the people who want it, and nobody has to climb higher...",
    "notes": "Now the next steps. A value ladder is a set of steps, where each step offers a little more help for the people who want it, and nobody has to climb higher than suits them. The App Factory ladder has five steps. One, this course, which teaches the road. Two, the idea form, where you send in your own idea. Three, an app built for you through the stages. Four, a reseller plan, where a business puts its own name on an app. Five, a partner link. Let's take them in pairs.",
    "vision": true
   },
@@ -192,7 +192,7 @@
    "sub": "M10-L2",
    "icon": "school",
    "statement": "Learn, Then Send An Idea",
-   "line": "Step one is where you are now.",
+   "line": "The course explains how an idea becomes a live app: stages, rooms, gates, codes, bricks, walls and tests, in plain words.",
    "notes": "Step one is where you are now. The course explains how an idea becomes a live app: stages, rooms, gates, codes, bricks, walls and tests, in plain words. Step two is the idea form. A client door into the factory is being built, so the link is marked TO CONFIRM until it exists. When it opens, you would answer the same plain questions you practised with Litterline: what it is, who pays, the pain, and the required codes. A person then decides at the Screen gate whether work starts, exactly as you learned.",
    "vision": true
   },

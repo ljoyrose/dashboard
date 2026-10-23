@@ -27,7 +27,7 @@
    "sub": "M06-L1",
    "icon": "user",
    "statement": "One Salon Cannot Prove A Wall",
-   "line": "Meet Sam.",
+   "line": "He is fourteen, and he was helping to test Trimtable, the booking and client desk for dog groomers.",
    "notes": "Meet Sam. He is fourteen, and he was helping to test Trimtable, the booking and client desk for dog groomers. He signed in with his own family account and clicked through every screen. Bookings worked. Client notes saved. He wanted to prove that one grooming salon could never see another salon's clients. But there was a problem he could not get past. There was only one salon in the app, and only one person signed in. Everything looked perfect. Then it clicked. A leak can only show up when there is a second, different business for the data to leak into.",
    "vision": false
   },
@@ -37,7 +37,7 @@
    "sub": "M06-L1",
    "icon": "database",
    "statement": "Stage 5 Is The Last Free Stage",
-   "line": "This is Stage 5, called Data.",
+   "line": "It happens in the room called Rig, the same room where the tables were built by hand in Stage 4.",
    "notes": "This is Stage 5, called Data. It happens in the room called Rig, the same room where the tables were built by hand in Stage 4. Nothing here costs build credits. Credits are the units the build platform charges each time its AI builder does a piece of work. Stage 5 is the last free stage before the paid one, so it is the place to get ready properly. The job is simple to say: put believable test data into the app, set up test people who can sign in, and write down exactly how the app will be tested before anyone pays for a build.",
    "vision": false
   },
@@ -47,7 +47,7 @@
    "sub": "M06-L1",
    "icon": "users-group",
    "statement": "Two Test Tenants, Never Just One",
-   "line": "First, the test tenants.",
+   "line": "A tenant is one business that uses the app, with its own name and its own data.",
    "notes": "First, the test tenants. A tenant is one business that uses the app, with its own name and its own data. In this course we also call a tenant a brand. The rule is at least two test tenants, because one tenant cannot prove isolation. Isolation means each brand's data stays behind its own wall. With only one brand, there is nobody for data to leak to, so every test passes and proves nothing. Litterline is sold under the factory's own brand and resold by Northvale Canine Society, so its two test brands mirror that shape.",
    "vision": false
   },
@@ -57,7 +57,7 @@
    "sub": "M06-L1",
    "icon": "palette",
    "statement": "Make The Two Brands Look Different",
-   "line": "The two test tenants must be contrasting.",
+   "line": "That word comes straight from the duty list: the second tenant gets different names, different lanes and different colours, so that a...",
    "notes": "The two test tenants must be contrasting. That word comes straight from the duty list: the second tenant gets different names, different lanes and different colours, so that a leak is visible. Picture Brand A with green buttons and dogs called Bramble and Pip, and Brand B with orange buttons and dogs called Juniper and Moss. If a Brand B member ever sees the name Bramble, you know at a glance that data has crossed a wall. Seed rows go in at this point too: the starting plans, roles and lists the app needs before anyone signs in.",
    "vision": false
   },
@@ -67,7 +67,7 @@
    "sub": "M06-L1",
    "icon": "search",
    "statement": "Test Rows Must Be Easy To Find",
-   "line": "There is a trap here worth knowing.",
+   "line": "On the build platform, the preview version of the app and the live version share one database.",
    "notes": "There is a trap here worth knowing. On the build platform, the preview version of the app and the live version share one database. A database is the store that holds all the tables. So test data is not tucked away in a safe sandbox. It sits right next to real data. The duty list says test rows must be marked and removable, so nobody mistakes them for real customers and they can be cleared before launch. Totals are reconciled as well, and an empty count is written as zero, so nothing is left silently blank.",
    "vision": false
   },
@@ -77,7 +77,7 @@
    "sub": "M06-L1",
    "icon": "id-badge-2",
    "statement": "Two Test Members For Every Brand",
-   "line": "Next come the test identities.",
+   "line": "A test identity is a pretend person with a real sign-in, used only for testing.",
    "notes": "Next come the test identities. A test identity is a pretend person with a real sign-in, used only for testing. Each brand gets two test members, and each one has its own mailbox. They sign in with an email and password, or with a magic link, which is a one-time sign-in link sent by email. The owner account is kept separate from the test members. All of them are listed in a test identities register in the app's folder: brand, role, email, login type and user id. Passwords are never written in the register.",
    "vision": false
   },
@@ -87,7 +87,7 @@
    "sub": "M06-L1",
    "icon": "key",
    "statement": "No Google Sign-In, No Agent Accounts",
-   "line": "Two rules sit on top of this.",
+   "line": "First, no Google single sign-on for test members.",
    "notes": "Two rules sit on top of this. First, no Google single sign-on for test members. Single sign-on is the button that says sign in with Google. It was ruled out after real tests kept signing in the wrong account by itself and signing the editor out. Second, agents never create accounts. The AI helpers in the factory can run tests, but the factory owner sets up the test identities once per app, by hand. Logins live only in the owner's password manager. That way no tool can quietly invent a person or borrow someone's real account.",
    "vision": false
   },
@@ -142,7 +142,7 @@
    "sub": "M06-L2",
    "icon": "clipboard-check",
    "statement": "Her Checklist Only Tested Success",
-   "line": "Isla is sixteen.",
+   "line": "She wrote a checklist to test Stayproof, the inspection pack for boarding kennels, using Hollin Lane Kennels as her example.",
    "notes": "Isla is sixteen. She wrote a checklist to test Stayproof, the inspection pack for boarding kennels, using Hollin Lane Kennels as her example. She wanted proof that each kennel's inspection logs stayed private. Her checklist said things like: a kennel worker can open the daily log, can add a cleaning note, can print the pack. Every line passed. She felt good, until someone asked a simple question. Did you test whether a different kennel can open Hollin Lane's logs? She had not. Her list only tested what should work. The tests that matter most check what must never happen.",
    "vision": false
   },
@@ -182,7 +182,7 @@
    "sub": "M06-L2",
    "icon": "file-text",
    "statement": "Tests Are Written Before The Prompts",
-   "line": "Here is the clever part.",
+   "line": "The leak tests are written now, in Stage 5, together with the build prompts, before a single credit is spent.",
    "notes": "Here is the clever part. The leak tests are written now, in Stage 5, together with the build prompts, before a single credit is spent. A prompt is the written instruction given to the AI builder. The factory also writes scenario tests in plain prose, which describe a real person's journey step by step, and splits the full prompt sequence into parts. When the paid stage starts, each prompt already has its tests waiting. Nobody has to invent a test after seeing the result, when it is tempting to test only what looks right.",
    "vision": false
   },
@@ -192,7 +192,7 @@
    "sub": "M06-L2",
    "icon": "coin",
    "statement": "The Credit Estimate And The Stop Rule",
-   "line": "Next, money.",
+   "line": "The factory estimates how many credits the build will take and writes it on the app's card as the word credits, then a number.",
    "notes": "Next, money. The factory estimates how many credits the build will take and writes it on the app's card as the word credits, then a number. The factory owner also sets a credit ceiling, the most this app may spend, and a stop rule. The template gives a default ceiling of 10,000 credits, and says stop at one and a half times the estimate, after two failures, or at 80 percent of the ceiling. A rollback point is saved too: an export ZIP, which is a packed copy of the app's files, with any gaps noted.",
    "vision": false
   },

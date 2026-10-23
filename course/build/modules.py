@@ -21,7 +21,7 @@ from lj import G, C, svg_doc, header, text, lines, icon, attention, key_block, f
 MOD_DIR = os.path.join(ROOT, "scripts", "modules")
 ICONS = {os.path.basename(p)[:-4] for p in glob.glob(os.path.join(ROOT, "design", "icons", "*.svg"))}
 STALE = re.compile(r"\b1[37]\s*(codes|tokens)\b|K00\s*-\s*K07|\b55\s*bricks\b|\b12\s*checkpoints\b|Passport\W+Pitch", re.I)
-EMOJI = re.compile("[\U0001F000-\U0001FAFF\U00002600-\U000027BF⭐↔-⇿]")
+EMOJI = re.compile("[\U0001F000-\U0001FAFF\U00002600-\U000027BF\u2B50\u2194-\u21FF]")
 
 
 def words(lesson):

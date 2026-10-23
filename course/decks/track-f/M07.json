@@ -27,7 +27,7 @@
    "sub": "M07-L1",
    "icon": "user",
    "statement": "One Request, Two Jobs, Big Risk",
-   "line": "Rory is thirteen.",
+   "line": "He was watching his dad plan a change to Trimtable for Juno Platt's salon, The Tidy Paw.",
    "notes": "Rory is thirteen. He was watching his dad plan a change to Trimtable for Juno Platt's salon, The Tidy Paw. Rory had an idea to save time: ask the AI builder to add appointment reminders and a new price list in one request. One message, two jobs, done. His dad shook his head. In this stage every request costs credits, he said, and if a two-job request goes wrong, nobody can tell which half broke, or how to undo just that half. That was the moment it made sense. One prompt, one job, one test, one way back.",
    "vision": false
   },
@@ -37,7 +37,7 @@
    "sub": "M07-L1",
    "icon": "coin",
    "statement": "Stage 6 Is The Only Paid Stage",
-   "line": "This is Stage 6, called Prompts.",
+   "line": "It happens in the room called Reactor, and it is the only paid stage in the whole factory.",
    "notes": "This is Stage 6, called Prompts. It happens in the room called Reactor, and it is the only paid stage in the whole factory. Every earlier stage is free planning and free building by hand. Here, the factory sends written instructions, called prompts, to the build platform's AI builder, and each answer, called a turn, spends credits. Because money is spent, the rules get stricter. Every prompt is prepared, checked and tested on paper first, and the factory owner gives the go word before each one is sent. Nothing is sent on a hunch.",
    "vision": false
   },
@@ -57,7 +57,7 @@
    "sub": "M07-L1",
    "icon": "stack-2",
    "statement": "The Blocks Every Prompt Carries",
-   "line": "Every prompt is built from fixed blocks.",
+   "line": "A context block lists exactly which files the builder may read, and nothing else.",
    "notes": "Every prompt is built from fixed blocks. A context block lists exactly which files the builder may read, and nothing else. A tables block says the tables were made by hand and must not be changed. And for any app with more than one brand, a walls block goes into every prompt for the life of the app. It states the app's classification, how a row belongs to a tenant, that the app must fail closed, and one line: if a change would weaken this, stop. Fail closed means that when in doubt, the app refuses access.",
    "vision": false
   },
@@ -67,7 +67,7 @@
    "sub": "M07-L1",
    "icon": "test-pipe",
    "statement": "Each Prompt Carries Its Own Test",
-   "line": "Each prompt also carries its own test.",
+   "line": "Where the app has brands, the test covers both walls: the brand wall, where Brand B cannot see Brand A, and the member wall, where one...",
    "notes": "Each prompt also carries its own test. Where the app has brands, the test covers both walls: the brand wall, where Brand B cannot see Brand A, and the member wall, where one member cannot see another member's rows. The tests are run from outside the app by the factory's agents. The builder is never asked to build test panels or check its own work inside its turn. That would be a bit like marking your own homework. An outside test, run by someone else after the turn, is the only result that counts.",
    "vision": false
   },
@@ -142,7 +142,7 @@
    "sub": "M07-L2",
    "icon": "user",
    "statement": "Done On Screen Is Not Done",
-   "line": "Ava is fifteen.",
+   "line": "The builder's screen said the new litter page was done, and Ava wanted to message Mara Quill, the breeder waiting for it, straight away.",
    "notes": "Ava is fifteen. She watched a Litterline build turn finish. The builder's screen said the new litter page was done, and Ava wanted to message Mara Quill, the breeder waiting for it, straight away. Her mum asked her to wait and run one test first, as a brand-new test member, on the live site. The old page was still showing. The new code had not reached the live app yet. Nothing was broken, but nothing was proved either. Done on the builder's screen is not done. Proved live, from outside, is done.",
    "vision": false
   },
@@ -192,7 +192,7 @@
    "sub": "M07-L2",
    "icon": "users",
    "statement": "Step Five: Member Tests On Both Brands",
-   "line": "Step five is the member tests.",
+   "line": "After every paid turn, an existing member and a brand-new member of each brand do the app's core action from start to finish.",
    "notes": "Step five is the member tests. After every paid turn, an existing member and a brand-new member of each brand do the app's core action from start to finish. For Litterline, that could mean a breeder adding a litter record. Only the test identities from the register are used, never anyone's own account. After any turn that touched tables or security, the full test matrix runs too: every table, for a signed-out visitor, a Brand A member, a Brand B member and the owner. If a leak appears, the build stops.",
    "vision": false
   },
