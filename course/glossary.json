@@ -1,0 +1,915 @@
+{
+  "_about": "THE one file for every name, colour and number in the App Factory course. Every slide, graphic, video and page reads this file. A rename is one edit here, then run course/build.sh. Sources are quoted per block. UK English.",
+  "_version": "1.0 · 23 Oct 2026",
+  "brand": {
+    "house": "LJR7",
+    "course_title": "The App Factory",
+    "course_subtitle": "How An Idea Becomes A Live App",
+    "founder": "Lisa",
+    "vision_label": "Vision 2029 · Illustrative",
+    "fiction_label": "All Names And Figures Are Fictional",
+    "date_format": "23 Oct 2026",
+    "time_zone_label": "UK time",
+    "course_date": "23 Oct 2026",
+    "module_version": "v1"
+  },
+  "brands": {
+    "_rule": "A brand jacket = these tokens only. Swapping the jacket never changes layout or wording, only name, logo text, accent and links (D8).",
+    "ljr7": {
+      "name": "LJR7",
+      "long_name": "LJR7 App Factory",
+      "accent": "#2C2C2A",
+      "accent_layer": "BASICS",
+      "join_link": "TO CONFIRM",
+      "free_plan_allowed": true,
+      "footer_owner": "LJR7"
+    },
+    "ppp": {
+      "name": "Puppy Classroom",
+      "long_name": "Puppy Classroom App Studio",
+      "short": "PPP",
+      "accent": "#4098BE",
+      "accent_layer": "Boost",
+      "join_link": "/join/ppp",
+      "plan_link_example": "/join/ppp?plan=plus-yearly",
+      "free_plan_allowed": false,
+      "footer_owner": "Puppy Classroom (reseller of LJR7)"
+    },
+    "yours": {
+      "name": "Your Brand Here",
+      "long_name": "Your Brand App Studio",
+      "short": "YOU",
+      "accent": "#7A6BA8",
+      "accent_layer": "Brains",
+      "join_link": "/join/your-brand",
+      "free_plan_allowed": false,
+      "footer_owner": "Your Brand (reseller of LJR7)"
+    }
+  },
+  "colours": {
+    "_source": "LC-VISUAL-STANDARD.md v4 §5 (layer hexes ruled by Lisa 19 Sep 2026) and the paste rules 1-15. Invent no new hex.",
+    "page": "#FAF7F2",
+    "card": "#FFFFFF",
+    "border": "#E5E0D8",
+    "ink": "#2C2C2A",
+    "muted": "#756E65",
+    "sunk": "#F2ECE3",
+    "footer_text": "#FAF7F2",
+    "shadow": "#2C2C2A",
+    "layers": {
+      "BASICS": "#2C2C2A",
+      "Boundaries": "#BE6A5D",
+      "Bucks": "#C07D59",
+      "Body": "#B3A74D",
+      "Brand": "#89AF6A",
+      "Boost": "#4098BE",
+      "Brains": "#7A6BA8",
+      "Bots": "#8D6B9C"
+    },
+    "rings": {
+      "_source": "LC-VISUAL-STANDARD.md §5.15: Boundaries red, dark (Ring 1, inside) to light (Ring 4, public). PENDING Lisa's choice.",
+      "1": "#7E3A30",
+      "2": "#A04D41",
+      "3": "#BE6A5D",
+      "4": "#D99C92"
+    },
+    "status": {
+      "_source": "PROPOSED in STAGE0 (no status hex is locked). Taken from the live dashboard tokens.css (--ljr-5-text, --ljr-3-text), not invented.",
+      "solid": "#217A2D",
+      "fragile": "#9E5802",
+      "not_built": "#2C2C2A",
+      "not_needed": "#756E65"
+    },
+    "risk_word": {
+      "_source": "LC-VISUAL-STANDARD.md §4.10.9: only the risk word is coloured. Red from tokens.css --ljr-2-text (PROPOSED).",
+      "High": "#C32924",
+      "Medium": "#9E5802",
+      "Low": "#217A2D",
+      "None": "#756E65"
+    },
+    "palette_a": {
+      "_use": "Lisa 23 Oct 2026: 'Both, by job'. Palette A Clear = dashboard mockups, Vision 2029 screens and sample app screens ONLY. Brick-layer hexes = bricks, shelves, walls, codes graphics. Source: dashboard tokens.css (live, Palette A chosen 18 Oct 2026). Text hexes from tokens.css (AA on white); Lisa's 23 Oct image shows slightly different text hexes, see CLASHES.md.",
+      "paper": "#FFFEFB",
+      "cream": "#FAF7F2",
+      "ink": "#2C2C2A",
+      "muted": "#6B645C",
+      "line": "#DED5C8",
+      "slots": {
+        "0": {
+          "name": "Basics",
+          "fill": "#C7C0B4",
+          "text": "#6B645C",
+          "tint": "#F0ECE5"
+        },
+        "2": {
+          "name": "Risk",
+          "fill": "#E6443D",
+          "text": "#C32924",
+          "tint": "#FCE4E0"
+        },
+        "3": {
+          "name": "Money",
+          "fill": "#E78615",
+          "text": "#9E5802",
+          "tint": "#FCEDDB"
+        },
+        "4": {
+          "name": "Ops",
+          "fill": "#F3D84E",
+          "text": "#817002",
+          "tint": "#FDF9E3"
+        },
+        "5": {
+          "name": "Connect",
+          "fill": "#51AD57",
+          "text": "#217A2D",
+          "tint": "#E7F3E4"
+        },
+        "6": {
+          "name": "Sales",
+          "fill": "#129FE7",
+          "text": "#0271A4",
+          "tint": "#DEF1F8"
+        },
+        "7": {
+          "name": "Ideas",
+          "fill": "#A570D1",
+          "text": "#8850B6",
+          "tint": "#F2EAF5"
+        },
+        "8": {
+          "name": "Bin",
+          "fill": "#141413",
+          "text": "#141413",
+          "tint": "#ECEAE6"
+        }
+      }
+    }
+  },
+  "type": {
+    "_source": "LC-VISUAL-STANDARD.md §2.4 (sizes on the 1080 canvas) and paste rule 12.",
+    "family": "Lexend",
+    "weights": {
+      "regular": 400,
+      "semibold": 600,
+      "bold": 700
+    },
+    "graphic_1080": {
+      "title": 72,
+      "group": 48,
+      "name": 46,
+      "body": 30,
+      "small": 24,
+      "min": 22
+    },
+    "slide_1920": {
+      "title": 84,
+      "statement": 72,
+      "body": 40,
+      "label": 30,
+      "min": 24
+    },
+    "line_height": 1.3
+  },
+  "space": {
+    "_source": "ADHD-Layout-Standards.md locked spacing scale (see build note if TO CHECK).",
+    "scale": [
+      4,
+      8,
+      12,
+      16,
+      24,
+      32,
+      48,
+      64,
+      96
+    ],
+    "radius": 12,
+    "border_px": 1,
+    "gutter_1080": 48,
+    "gutter_1920": 96,
+    "band": 6,
+    "status": "TO CHECK"
+  },
+  "stages": [
+    {
+      "n": 0,
+      "name": "Idea",
+      "room": "Reception",
+      "icon": "bulb",
+      "gate_out": "Screen",
+      "does": "Card, One-Line Brief, Kill Check, 20 Codes, Data Role"
+    },
+    {
+      "n": 1,
+      "name": "Research",
+      "room": "Research",
+      "icon": "search",
+      "gate_out": "Merit",
+      "does": "Competitors, Customer Words, Gaps, Market Size, Rules Flag"
+    },
+    {
+      "n": 2,
+      "name": "Base",
+      "room": "Research",
+      "icon": "stack-2",
+      "gate_out": "Base",
+      "does": "Pick A Base, Clone The Template, Brick List"
+    },
+    {
+      "n": 3,
+      "name": "Features",
+      "room": "Research",
+      "icon": "puzzle",
+      "gate_out": "Lock",
+      "does": "Bricks And Kits, Who Sees What, Duties, Launch Scope"
+    },
+    {
+      "n": 4,
+      "name": "Schema",
+      "room": "Rig",
+      "icon": "table",
+      "gate_out": "Schema",
+      "does": "Tables, Columns, Access Modes, Table Tests"
+    },
+    {
+      "n": 5,
+      "name": "Data",
+      "room": "Rig",
+      "icon": "database",
+      "gate_out": "Invest",
+      "does": "Test Tenants, Test Identities, Test Plan, Credit Estimate"
+    },
+    {
+      "n": 6,
+      "name": "Prompts",
+      "room": "Reactor",
+      "icon": "message-code",
+      "gate_out": "Send",
+      "does": "One Surface Per Prompt, Tests After Every Paid Turn"
+    },
+    {
+      "n": 7,
+      "name": "Launch",
+      "room": "Runway",
+      "icon": "rocket",
+      "gate_out": "Launch",
+      "does": "Sales Page, Domain, Funnels, Leak Test, Launch Walk"
+    },
+    {
+      "n": 8,
+      "name": "Operate",
+      "room": "Radar",
+      "icon": "radar",
+      "gate_out": "",
+      "does": "Daily Leak Probe, Monitoring, Money Line, Rescue, Retire"
+    }
+  ],
+  "_stages_source": "AF-UNDERSTANDING-2026-10-22.md Part 1 table (engine v2.5h/t). Stage names 0-8 stable everywhere (paste).",
+  "rooms": {
+    "_source": "AF-UNDERSTANDING-2026-10-22.md Part 1 and Part 4.10.",
+    "list": [
+      "Reception",
+      "Research",
+      "Rig",
+      "Reactor",
+      "Runway",
+      "Radar"
+    ],
+    "extra": {
+      "Reserve": "Where A Retired App's Parts Go",
+      "Recovery": "Where A Killed Idea Waits",
+      "Ready Room": "Locked Jobs Waiting For A Lane (Not Used By Engine)"
+    }
+  },
+  "gates": [
+    {
+      "name": "Screen",
+      "from": 0,
+      "to": 1,
+      "icon": "filter",
+      "human": true,
+      "who": "Lisa (Auto-Pass Possible)",
+      "question": "Start Work On This Idea?"
+    },
+    {
+      "name": "Merit",
+      "from": 1,
+      "to": 2,
+      "icon": "scale",
+      "human": true,
+      "who": "Lisa (Auto-Pass Possible)",
+      "question": "Is It Worth Building?"
+    },
+    {
+      "name": "Base",
+      "from": 2,
+      "to": 3,
+      "icon": "stack-2",
+      "human": false,
+      "who": "Auto",
+      "question": "Base Named And Vet Passed?"
+    },
+    {
+      "name": "Lock",
+      "from": 3,
+      "to": 4,
+      "icon": "lock",
+      "human": true,
+      "who": "Lisa, Always",
+      "question": "Freeze The Feature List?"
+    },
+    {
+      "name": "Schema",
+      "from": 4,
+      "to": 5,
+      "icon": "table-options",
+      "human": false,
+      "who": "Auto",
+      "question": "Tables Probed, Names Re-Read?"
+    },
+    {
+      "name": "Invest",
+      "from": 5,
+      "to": 6,
+      "icon": "coin",
+      "human": true,
+      "who": "Lisa (Auto At 1,500 Credits Or Less)",
+      "question": "Spend Build Credits?"
+    },
+    {
+      "name": "Send",
+      "from": 6,
+      "to": 7,
+      "icon": "send",
+      "human": true,
+      "who": "Lisa",
+      "question": "Prompts Sent And Proved Live?"
+    },
+    {
+      "name": "Launch",
+      "from": 7,
+      "to": 8,
+      "icon": "flag",
+      "human": true,
+      "who": "Lisa, Always",
+      "question": "Open It To Real Users?"
+    }
+  ],
+  "lap_gates": [
+    {
+      "name": "Trouble",
+      "icon": "lifebuoy",
+      "human": false,
+      "who": "Auto",
+      "question": "Open Incident Moves App To Rescue"
+    },
+    {
+      "name": "Back to Operate",
+      "icon": "arrow-back-up",
+      "human": true,
+      "who": "Lisa",
+      "question": "Is The Fix Proved Live?"
+    },
+    {
+      "name": "Retire",
+      "icon": "archive",
+      "human": true,
+      "who": "Lisa",
+      "question": "Switch It Off And Archive It?"
+    }
+  ],
+  "checks_inside_gates": [
+    {
+      "name": "Slot",
+      "inside": "Invest",
+      "icon": "layout-list",
+      "what": "At Most 3 Builds, 1 Lane Kept For Rescue"
+    },
+    {
+      "name": "Leak",
+      "inside": "Launch",
+      "icon": "droplet",
+      "what": "Leak Test On Every Table, Negative Cases, 2 Accounts"
+    },
+    {
+      "name": "Live",
+      "inside": "Launch",
+      "icon": "broadcast",
+      "what": "First Real Sign-In Proved Live"
+    }
+  ],
+  "_gates_source": "Live engine set per paste and AF-UNDERSTANDING-2026-10-22.md Part 1 and Part 3. Rule-book names differ: see CLASHES.md.",
+  "kill_questions": [
+    {
+      "code": "FRAGILE",
+      "q": "Could It Give Wrong Answers That Look Right?"
+    },
+    {
+      "code": "ONESHOT",
+      "q": "Would People Use It Once And Stop?"
+    },
+    {
+      "code": "NOHOOK",
+      "q": "Is There No Reason To Come Back?"
+    }
+  ],
+  "verdicts": {
+    "PASS": "No Kill Answer, SEN Below 2",
+    "HOLD": "SEN 2-3, Wait For A DPIA",
+    "KILL": "Any Kill Answer Is Yes (Lisa Decides)"
+  },
+  "data_roles": {
+    "CONTROLLER": "Decides Why Data Is Used",
+    "PROCESSOR": "Handles Data For A Business",
+    "BOTH": "Both, Per Data Set",
+    "NONE": "No Personal Data"
+  },
+  "_kill_source": "AF-CARD-TEMPLATE.md (frozen 19 Oct 2026) and AF-UNDERSTANDING-2026-10-22.md onIdeaSubmit.",
+  "code_groups": [
+    {
+      "n": 1,
+      "name": "Businesses",
+      "icon": "building-store",
+      "ring": 1
+    },
+    {
+      "n": 2,
+      "name": "Who Signs In",
+      "icon": "login",
+      "ring": 2
+    },
+    {
+      "n": 3,
+      "name": "Customers",
+      "icon": "users",
+      "ring": 3
+    },
+    {
+      "n": 4,
+      "name": "Public",
+      "icon": "world",
+      "ring": 4
+    }
+  ],
+  "walls": {
+    "W1": "Brand Wall",
+    "W2": "Member Wall",
+    "W3": "Layer-Above Wall",
+    "W4": "Staff Wall",
+    "W5": "Membership Wall",
+    "W6": "Public Wall",
+    "W7": "Data-Out Wall",
+    "W8": "Sensitivity Hold"
+  },
+  "codes": [
+    {
+      "code": "TEN",
+      "group": 1,
+      "max": 6,
+      "what": "Business Layers",
+      "wall": "W1",
+      "required": true,
+      "q": "How Many Businesses, And Who Sits Above Them?",
+      "levels": [
+        "No Data Stored",
+        "One Business",
+        "Several, Flat",
+        "One Reseller Above",
+        "Several Resellers",
+        "One Body Above Resellers",
+        "Several Bodies"
+      ]
+    },
+    {
+      "code": "PARENTS",
+      "group": 1,
+      "max": 3,
+      "what": "Parents Per Business",
+      "wall": "W3",
+      "required": false,
+      "q": "How Many Parties Can One Business Sit Under?",
+      "levels": [
+        "None",
+        "One",
+        "Home Plus Claims",
+        "Several Real Owners"
+      ]
+    },
+    {
+      "code": "DOWN",
+      "group": 1,
+      "max": 3,
+      "what": "Reach Into Layers Below",
+      "wall": "W3",
+      "required": false,
+      "q": "What May A Party Above Do To The Layers Below?",
+      "levels": [
+        "Nothing",
+        "Read The Layer Below",
+        "Read All The Way Down",
+        "Read And Write By Grant"
+      ]
+    },
+    {
+      "code": "MEET",
+      "group": 1,
+      "max": 3,
+      "what": "Contact Between Businesses",
+      "wall": "W1",
+      "required": false,
+      "q": "Do Businesses That Don't Own Each Other Meet?",
+      "levels": [
+        "Never",
+        "Share A Record",
+        "Common Marketplace",
+        "Money Between Unrelated = STOP"
+      ]
+    },
+    {
+      "code": "POOL",
+      "group": 1,
+      "max": 3,
+      "what": "Cross-Business Calculations",
+      "wall": "W1",
+      "required": false,
+      "q": "Is Anything Computed Across Businesses?",
+      "levels": [
+        "Nothing",
+        "Only When Enough Contribute",
+        "Regardless",
+        "One Business's Content Surfaces To Another"
+      ]
+    },
+    {
+      "code": "EXIT",
+      "group": 1,
+      "max": 3,
+      "what": "Data When Business Leaves",
+      "wall": "W7",
+      "required": false,
+      "q": "What Happens To A Business's Data When It Leaves?",
+      "levels": [
+        "Deleted",
+        "Frozen",
+        "Handed To Them",
+        "Moves With Them"
+      ]
+    },
+    {
+      "code": "ROLE",
+      "group": 2,
+      "max": 2,
+      "what": "Staff Access Levels",
+      "wall": "W4",
+      "required": false,
+      "q": "Do All Its People Have The Same Access?",
+      "levels": [
+        "No Sign-In",
+        "Everyone The Same",
+        "Roles With Different Access"
+      ]
+    },
+    {
+      "code": "BELONG",
+      "group": 2,
+      "max": 2,
+      "what": "Businesses Per Person",
+      "wall": "W5",
+      "required": false,
+      "q": "How Many Businesses Can One Person Belong To?",
+      "levels": [
+        "None",
+        "One",
+        "Many"
+      ]
+    },
+    {
+      "code": "GUEST",
+      "group": 2,
+      "max": 1,
+      "what": "Outsider Access",
+      "wall": "W4",
+      "required": false,
+      "q": "Can A Business Let An Outside Person In?",
+      "levels": [
+        "No",
+        "A Scoped View"
+      ]
+    },
+    {
+      "code": "HELP",
+      "group": 2,
+      "max": 3,
+      "what": "View-As Access",
+      "wall": "W4",
+      "required": false,
+      "q": "Can Someone See The App As Another Person Sees It?",
+      "levels": [
+        "Nobody",
+        "Owner, View Only, Logged",
+        "Brand Admins Too, If On",
+        "Can Act As The Person"
+      ]
+    },
+    {
+      "code": "JOIN",
+      "group": 2,
+      "max": 2,
+      "what": "Account Creation Route",
+      "wall": "W5",
+      "required": false,
+      "q": "Who Can Create An Account?",
+      "levels": [
+        "Invite Only",
+        "Brand Address Or Join Link",
+        "Anyone Signed In"
+      ]
+    },
+    {
+      "code": "CUST",
+      "group": 3,
+      "max": 5,
+      "what": "Customer Depth",
+      "wall": "W2",
+      "required": true,
+      "q": "How Far Into The Business's Customers Does It Go?",
+      "levels": [
+        "Staff Only",
+        "Records Only",
+        "Customers Read",
+        "Customers Write",
+        "Customers Pay In The App",
+        "Customers Sell To Each Other"
+      ]
+    },
+    {
+      "code": "PRICE",
+      "group": 3,
+      "max": 3,
+      "what": "Pricing Model",
+      "wall": "",
+      "required": false,
+      "q": "Same Price For Everyone?",
+      "levels": [
+        "No Pricing",
+        "One List",
+        "Plus A Trade List",
+        "A Price Per Customer"
+      ]
+    },
+    {
+      "code": "SHARE",
+      "group": 3,
+      "max": 1,
+      "what": "Member Sharing",
+      "wall": "W2",
+      "required": false,
+      "q": "Can Members Share With Each Other?",
+      "levels": [
+        "No",
+        "Yes, As A Share Record"
+      ]
+    },
+    {
+      "code": "SEN",
+      "group": 3,
+      "max": 3,
+      "what": "Data Sensitivity",
+      "wall": "W8",
+      "required": true,
+      "q": "How Sensitive Is The Data?",
+      "levels": [
+        "Ordinary",
+        "Personal",
+        "Health Or Clinical",
+        "Children"
+      ]
+    },
+    {
+      "code": "VIEW",
+      "group": 4,
+      "max": 2,
+      "what": "Signed-Out Reading",
+      "wall": "W6",
+      "required": true,
+      "q": "Can A Stranger Read Without Signing In?",
+      "levels": [
+        "Nothing",
+        "Link-Holders Only",
+        "Anyone"
+      ]
+    },
+    {
+      "code": "POST",
+      "group": 4,
+      "max": 2,
+      "what": "Signed-Out Submitting",
+      "wall": "W6",
+      "required": true,
+      "q": "Can A Stranger Put Data In Without Signing In?",
+      "levels": [
+        "Nothing",
+        "Link-Holders Only",
+        "Anyone"
+      ]
+    },
+    {
+      "code": "BRAND",
+      "group": 4,
+      "max": 2,
+      "what": "Name On Screen",
+      "wall": "W5",
+      "required": false,
+      "q": "Whose Name Is On The Screen?",
+      "levels": [
+        "None",
+        "One Brand",
+        "A Brand Per Business"
+      ]
+    },
+    {
+      "code": "SEND",
+      "group": 4,
+      "max": 2,
+      "what": "Data Sent Outside",
+      "wall": "W7",
+      "required": false,
+      "q": "What Does The App Send To Systems We Don't Control?",
+      "levels": [
+        "Nothing",
+        "Users Download Their Own",
+        "Pushed Out Automatically"
+      ]
+    },
+    {
+      "code": "PAY",
+      "group": 4,
+      "max": 2,
+      "what": "Money In A Chain",
+      "wall": "",
+      "required": true,
+      "q": "Does Money Move Between Parties In One Chain?",
+      "levels": [
+        "None",
+        "Owner Bills The Business",
+        "Payouts Within One Chain"
+      ]
+    }
+  ],
+  "_codes_source": "AF-CARD-TEMPLATE.md (frozen 19 Oct 2026) and codes-catalogue.json (walls from AF-WALLS-AUDIT-2026-10-22 §5). Level words shortened to Title Case; meaning unchanged.",
+  "leak_status": {
+    "L?": "Not Tested",
+    "Ln": "Tested, No Leak",
+    "Ly": "Leak Found"
+  },
+  "statuses": [
+    {
+      "key": "solid",
+      "word": "Solid",
+      "icon": "circle-check"
+    },
+    {
+      "key": "fragile",
+      "word": "Fragile",
+      "icon": "alert-triangle"
+    },
+    {
+      "key": "not_built",
+      "word": "Not Built",
+      "icon": "circle-x"
+    },
+    {
+      "key": "not_needed",
+      "word": "Not Needed",
+      "icon": "circle-minus"
+    }
+  ],
+  "shelves": [
+    {
+      "name": "BASICS",
+      "icon": "box",
+      "means": "The Floor: Sign-In, Menus, Basic Records",
+      "spine": 1,
+      "tag": "Always"
+    },
+    {
+      "name": "Boundaries",
+      "icon": "wall",
+      "means": "Walls, Roles, Security, Legal",
+      "spine": 2,
+      "tag": "Allowed"
+    },
+    {
+      "name": "Bucks",
+      "icon": "cash",
+      "means": "Plans, Invoices, Payment Rails",
+      "spine": 3,
+      "tag": "Money"
+    },
+    {
+      "name": "Body",
+      "icon": "layout-dashboard",
+      "means": "The Parts You See: Booking, Records, Docs",
+      "spine": 4,
+      "tag": "The Rest"
+    },
+    {
+      "name": "Brand",
+      "icon": "palette",
+      "means": "Name, Colours, Logo, Domain Per Brand",
+      "spine": 5,
+      "tag": "Swaps"
+    },
+    {
+      "name": "Boost",
+      "icon": "trending-up",
+      "means": "Public Pages, Reviews, SEO, Funnels",
+      "spine": 6,
+      "tag": "Found"
+    },
+    {
+      "name": "Brains",
+      "icon": "brain",
+      "means": "Scoring, Matching, Reports, AI Assist",
+      "spine": 7,
+      "tag": "Works It Out"
+    },
+    {
+      "name": "Bots",
+      "icon": "robot",
+      "means": "Reminders, Sequences, Imports, Engines",
+      "spine": 8,
+      "tag": "Alone"
+    }
+  ],
+  "_shelves_source": "BRICK-LAYERS-AND-COLOUR-SPINE-2026-09-19.md (23 Sep status: eight shelves ruled by Lisa 19 Sep 2026; owner BRICK-SHELF-LADDER.md §0). Hexes LC-VISUAL-STANDARD.md §5.13. Registry stores Body as the literal 'Bricks'.",
+  "vision2029": {
+    "_label": "Every figure here is Vision 2029 · Illustrative and fictional.",
+    "live_apps": 1004,
+    "new_per_day": 1,
+    "per_stage": {
+      "0": 41,
+      "1": 18,
+      "2": 9,
+      "3": 7,
+      "4": 5,
+      "5": 4,
+      "6": 3,
+      "7": 2,
+      "8": 1004
+    },
+    "rescue": 3,
+    "retired": 212,
+    "decide_cap": 10,
+    "decide_open": 7,
+    "leak_probe": "All Clear",
+    "leak_probe_time": "06:40",
+    "tables_probed": 18240,
+    "credits_month": 41200,
+    "credits_stop_line": 60000,
+    "money_in_month": 182400,
+    "money_out_month": 61300,
+    "currency": "GBP"
+  },
+  "tracks": {
+    "F": {
+      "name": "Family Learners",
+      "icon": "users-group",
+      "length": "5-8 Min Per Lesson"
+    },
+    "B": {
+      "name": "Business Talk",
+      "icon": "building-store",
+      "length": "20-25 Min Keynote"
+    },
+    "R": {
+      "name": "Reseller Version",
+      "icon": "palette",
+      "length": "Same Course, New Jacket"
+    }
+  },
+  "cta": {
+    "idea_form": "AF · New Idea Form",
+    "idea_form_link": "TO CONFIRM",
+    "partner_link": "TO CONFIRM (OverSkill partner link)",
+    "partner_note": "No income promises. Results depend on your own work.",
+    "reseller_rule": "A Reseller Brand Is Never On A Free Plan"
+  },
+  "video": {
+    "fps": 30,
+    "width": 1920,
+    "height": 1080,
+    "host": "RoseQuest",
+    "host_folder": "Video Drive > App Factory > Course",
+    "slot_fields": [
+      "provider",
+      "video_id",
+      "type"
+    ]
+  },
+  "footer": {
+    "source_prefix": "Source:",
+    "course_line": "LJR7 App Factory Course"
+  }
+}
