@@ -1,0 +1,362 @@
+{
+  "id": "M09",
+  "stage": 8,
+  "title": "Stage 8 · Operate",
+  "subtitle": "Watching Every Day, The Money Line, Rescue, Retire And Recycle",
+  "summary": "How a live app is watched every day, judged by one money line each month, and rescued, retired or recycled when the time comes.",
+  "lessons": [
+    {
+      "id": "M09-L1",
+      "title": "Watching A Live App Daily",
+      "outcome": "You can explain the daily, weekly and monthly checks that watch a live app, and when each one runs.",
+      "minutes": 6,
+      "opener": {
+        "framework": "Epiphany Bridge (light)",
+        "backstory": "Isla helped launch Litterline, the licence and records hub for dog breeders, and thought the hard part was over.",
+        "desire": "She wanted to move on to the next idea, knowing the live app was safe.",
+        "wall": "She could not stop wondering who would notice if one breeder could suddenly see another breeder's records overnight.",
+        "epiphany": "The next morning she saw the factory had already checked every table by itself: launch is the start of a lap, not the end."
+      },
+      "beats": [
+        {
+          "screen": "A Live App Is Not Finished",
+          "icon": "eye",
+          "say": "Isla spent weeks helping a team launch Litterline, the licence and records hub for dog breeders. On launch day she thought the hard part was over and she could move on to the next idea. Then one question kept nagging at her. If a change went wrong overnight, and one breeder could suddenly see another breeder's puppy buyers, who would notice? Nobody was sitting up watching. Her answer arrived the next morning, at twenty to seven. The factory had already checked every table by itself. Launch is not the end of the road. It is the start of a lap."
+        },
+        {
+          "screen": "Stage 8 Is Called Operate",
+          "icon": "radar",
+          "say": "Stage 8 is Operate, and its room is called Radar. A room is simply a place on the factory floor where apps at one stage sit. Radar's tag is Watching, because watching is the main job here. A live app is serving real people, so it cannot be pulled back to an earlier stage like a draft. Instead it goes round a lap. Every fix and every new feature re-enters the road part-way, and the only way out is a gate called Retire. So Stage 8 has no gate out. It has a set of checks that run again and again."
+        },
+        {
+          "screen": "The Engine Refreshes Every 15 Minutes",
+          "icon": "clock",
+          "say": "Behind the factory sits the engine. The engine is a script, which means a small program that runs on a timer and does the same job the same way each time. Every 15 minutes it reads the task board, where each app has one card showing its stage, and writes a state file. A state file is a plain record of where every app is right now. The factory dashboard reads that file, so the picture on screen is never more than about 15 minutes old. Nobody has to update it by hand, and nobody can quietly forget."
+        },
+        {
+          "screen": "The Daily Leak Probe At 06:40",
+          "icon": "droplet",
+          "say": "The most important morning job is the leak probe, at 06:40 UK time. A leak is when data crosses a wall it should never cross, such as one breeder seeing another breeder's records, or a stranger reading something without signing in. A table is one list of records, like a single tab in a spreadsheet. The probe asks each live table for data while signed out, and checks what comes back. For private data the right answer is a refusal. If anything comes back that should not, the probe raises an incident, which is a recorded problem, dated and tagged to the app."
+        },
+        {
+          "screen": "More Jobs On The Clock",
+          "icon": "calendar",
+          "say": "The leak probe has neighbours on the clock. At 06:10 UK time a stale check looks for tasks that have stopped moving. At 07:30 on weekdays a daily digest gathers what changed into one short summary for the owner. Every Monday at 05:20 a weekly backup runs, and the same job runs a change watch, which looks for changes on the platform the apps are built on. There is also a credit watch. Credits are the units the building platform charges for paid work, so the factory keeps a running eye on how many are being spent."
+        },
+        {
+          "screen": "The Weekly Security Check",
+          "icon": "shield-check",
+          "say": "When an app goes live, it joins the weekly security check. That check covers three things for each app: its live links, its sign-in and its leak probe. A dead link, or a sign-in page that no longer works, is just as real a problem as a leak, because people cannot use the app. Each week the app also gets an export, which is a full copy of the app saved as a file, plus a backup of its records. The link to the backup folder is written on the app's card, so a restore never starts with a search."
+        },
+        {
+          "screen": "Monthly Numbers And New Parts",
+          "icon": "chart-line",
+          "say": "Some checks run once a month. The app's KPIs, short for key performance indicators, are compared with the targets set for it. A KPI is simply a number you agreed to watch, such as how many breeders signed in this month. There is also a quieter job called new parts back to bricks, which is rule R14. If building the app created a useful new part, that part goes back into the brick registry, the factory's list of reusable parts. The next app can then start from it, instead of building the same thing twice."
+        },
+        {
+          "screen": "Scripts Watch, People Decide",
+          "icon": "users",
+          "say": "Notice who does the watching. Scripts and AI helpers run the probes, the backups and the counts, and they record every result so it can be proved later. They never change who can see what. That decision stays with a person. One more weekly job is marked PROPOSED, which means it has been suggested but is not switched on yet: a weekly boost proposal, an idea for one small change to help people find the app. So the lap is watched by machines and steered by people. Let's recap what watches a live app, and when."
+        }
+      ],
+      "recap": {
+        "points": [
+          "Leak Probe Runs Daily At 06:40 UK Time",
+          "Weekly Security Check: Live Pages, Sign-In, Leak Probe",
+          "Engine Refreshes The Picture Every 15 Minutes"
+        ],
+        "why": "A Live App Serves Real People Every Single Day"
+      },
+      "quiz": [
+        {
+          "q": "At what time does the daily leak probe run?",
+          "options": [
+            "05:20 UK time",
+            "06:10 UK time",
+            "06:40 UK time",
+            "07:30 UK time"
+          ],
+          "answer": 2,
+          "why": "The leak probe runs every morning at 06:40 UK time, after the stale check at 06:10."
+        },
+        {
+          "q": "What does the weekly security check cover for each live app?",
+          "options": [
+            "Prices, logos and fonts",
+            "Live links, sign-in and the leak probe",
+            "Only the sales page",
+            "New feature ideas"
+          ],
+          "answer": 1,
+          "why": "A live app joins the weekly security check for its links, its sign-in and its leak probe."
+        },
+        {
+          "q": "When the probe asks a private table for data while signed out, what is the right answer?",
+          "options": [
+            "A refusal",
+            "A full list of records",
+            "The newest record only",
+            "A copy of the app"
+          ],
+          "answer": 0,
+          "why": "Private data must refuse a signed-out request; anything else is a leak and raises an incident."
+        },
+        {
+          "q": "What does rule R14 ask for after an app ships?",
+          "options": [
+            "Delete the old tables",
+            "Raise all prices",
+            "Retire the app",
+            "New parts go back to the brick registry"
+          ],
+          "answer": 3,
+          "why": "R14 sends useful new parts back to the bricks so the next app can reuse them."
+        }
+      ],
+      "sources": [
+        "AF-UNDERSTANDING-2026-10-22.md",
+        "TEMPLATE-MIRROR.md",
+        "THE-STAGE-TRANSITIONS.md",
+        "OBLIGATIONS.csv"
+      ],
+      "vision": false
+    },
+    {
+      "id": "M09-L2",
+      "title": "The Money Line",
+      "outcome": "You can read a monthly money line and explain when the Return rule and the Retire question come in.",
+      "minutes": 6,
+      "opener": {
+        "framework": "Epiphany Bridge (light)",
+        "backstory": "Sam looked after the numbers for Trimtable, the booking and client desk built for groomer Juno Platt.",
+        "desire": "He wanted to know, plainly, whether the app was worth keeping.",
+        "wall": "He had pages of reports and charts, and still could not give a straight answer.",
+        "epiphany": "The factory asks for one line a month, money in and money out, and lets that line raise the right question."
+      },
+      "beats": [
+        {
+          "screen": "Pages Of Reports, No Answer",
+          "icon": "file-text",
+          "say": "Sam looked after the numbers for Trimtable, the booking and client desk built for groomer Juno Platt at The Tidy Paw. Juno asked him a simple question: is the app worth keeping? Sam had pages of reports, charts of sign-ins and lists of bookings, and he still could not give her a straight answer. Every chart told a slightly different story. Then he saw how the factory does it. It asks for one line a month: what came in and what went out. That single line, written the same way every month, is enough to raise the right question at the right time."
+        },
+        {
+          "screen": "One Line Each Month",
+          "icon": "currency-pound",
+          "say": "This is called the money line. It is written on the app's card, which is the one home of the app's facts, and it follows a fixed pattern. It starts with the word money, then the year and the month, then the word in followed by the pounds that came in, then the word out followed by the pounds that went out. For example: money, September 2026, in X, out Y. Because the pattern never changes, a script can read it without guessing. Many months of lines, one under another, become a simple history of the app."
+        },
+        {
+          "screen": "A Person Writes The Line",
+          "icon": "user",
+          "say": "Who writes the money line? Not a script and not an AI helper. On the factory's stage 8 checklist it is tagged as the owner's own work, so a person writes it each month. That makes sense. Money facts live in bank statements, platform bills and payment reports, and a person who can see all of them is best placed to sum them honestly. The scripts then do what scripts are good at: they read the line, compare it with earlier months and raise a flag when a pattern appears. The person supplies the truth, the machine watches it."
+        },
+        {
+          "screen": "Reading A Losing Month",
+          "icon": "scale",
+          "say": "Let's read one. These numbers are invented for teaching. Suppose Trimtable's line says in 90, out 140. More went out than came in, so that is a losing month. On its own, one losing month is information, not a verdict. Perhaps a yearly platform bill landed that month, or bookings dipped during a holiday. Nothing happens automatically after one losing month. The line simply sits on the card for anyone to see. The factory is not asking whether a single month was good. It is watching for a pattern that keeps going."
+        },
+        {
+          "screen": "Two Losing Months Running",
+          "icon": "bell",
+          "say": "Here is the pattern it watches for. If the money line shows two losing months running, the engine asks the Retire question. Retire is a gate, and its question is: switch it off and archive it? The question appears as one row on the decide list, which is the short list of things waiting for a person's yes or no. The question can also be raised by hand, if someone tags the app with retire-ask. Asking is not deciding. A person reads the facts and chooses. This two-month rule was added on 20 Oct 2026."
+        },
+        {
+          "screen": "The Return Rule, R02",
+          "icon": "coin",
+          "say": "There is a second money rule, called Return, ruling R02. Remember the Invest gate, where build credits are spent on paid work. Return says: no new Invest for an app until it has earned back its credits, or 90 days of use show it will. So if Juno wants a new feature for Trimtable, the factory first asks whether the app has paid back what it already cost to build. Return does not switch anything off. It guards the next spend, so money is not poured into an app that has not yet shown it can stand up."
+        },
+        {
+          "screen": "Return Is Still A Manual Check",
+          "icon": "checklist",
+          "say": "Return is not automated yet. It is a line on the stage 8 checklist, done by an AI helper and answered with a dated note in the app's document, in the part about payoff. The rule books also tie the lap to Return, while the engine uses the two losing months rule for Retire. The course teaches both, because they do different jobs. Two losing months raises the question of switching off. Return decides whether more credits may be spent. Where the files differ, the course follows what the engine does today."
+        },
+        {
+          "screen": "A Record, Not A Promise",
+          "icon": "alert-triangle",
+          "say": "One last point matters a great deal. The money line is a record of what happened, never a forecast of what will happen. Nothing in this course promises that any app will make money, and every figure in this lesson is invented. Some apps earn back their cost and some do not, and the factory is built to notice either outcome early and honestly. That is why the line is short, monthly and written by a person. It keeps the decision clear and keeps hope out of the sums. Let's recap the money line."
+        }
+      ],
+      "recap": {
+        "points": [
+          "Money Line Each Month: In X Out Y",
+          "Two Losing Months Running Asks The Retire Question",
+          "Return R02 Guards The Next Invest"
+        ],
+        "why": "One Honest Line Beats A Pile Of Charts"
+      },
+      "quiz": [
+        {
+          "q": "What does the monthly money line record?",
+          "options": [
+            "Sign-ins and page views",
+            "Money in and money out",
+            "The number of tables",
+            "Leak probe results"
+          ],
+          "answer": 1,
+          "why": "The money line records the pounds that came in and went out that month, on the app's card."
+        },
+        {
+          "q": "What happens after two losing months running?",
+          "options": [
+            "The app is deleted at once",
+            "Prices go up by themselves",
+            "A person is asked the Retire question",
+            "The app moves to Research"
+          ],
+          "answer": 2,
+          "why": "The engine asks a person whether to switch the app off and archive it; asking is not deciding."
+        },
+        {
+          "q": "What does the Return rule R02 say?",
+          "options": [
+            "No new Invest until the app earns back its credits, or 90 days of use show it will",
+            "Every app must make money in its first week",
+            "Apps return to stage 0 each year",
+            "Refunds are never given"
+          ],
+          "answer": 0,
+          "why": "Return guards the next spend: no new Invest until the credits are earned back or 90 days show they will be."
+        },
+        {
+          "q": "Who writes the monthly money line?",
+          "options": [
+            "The leak probe",
+            "A visitor to the sales page",
+            "The building platform",
+            "A person, as named work on the checklist"
+          ],
+          "answer": 3,
+          "why": "The money line is tagged as the owner's own work, so a person writes it and scripts read it."
+        }
+      ],
+      "sources": [
+        "AF-UNDERSTANDING-2026-10-22.md",
+        "TEMPLATE-MIRROR.md",
+        "THE-STAGE-TRANSITIONS.md",
+        "GATES.csv"
+      ],
+      "vision": false
+    },
+    {
+      "id": "M09-L3",
+      "title": "Rescue, Retire And Recycle",
+      "outcome": "You can follow a live app through Rescue, Back to Operate, Retire, Recycle, Recovery and Re-imagine.",
+      "minutes": 7,
+      "opener": {
+        "framework": "Epiphany Bridge (light)",
+        "backstory": "Rory kept an eye on Stayproof, the inspection pack used by Hollin Lane Kennels, and one morning the leak probe raised an incident.",
+        "desire": "He wanted the problem fixed as fast as possible.",
+        "wall": "He worried that rushing a fix would skip the checks and break something else.",
+        "epiphany": "The factory keeps one build lane empty for rescue, so the fix is fast because the way is ready, not because steps are skipped."
+      },
+      "beats": [
+        {
+          "screen": "An Incident Before Breakfast",
+          "icon": "alert-triangle",
+          "say": "Rory kept an eye on Stayproof, the inspection pack used by Hollin Lane Kennels. One morning the leak probe raised an incident against it. Rory's first thought was speed: fix it now, before anyone notices. His second thought was worry. Rushing a fix felt like the surest way to skip a check and break something else. Then he learned how the factory handles trouble. It keeps one build lane empty, just for rescues. The fix is fast because the way is already clear, not because any step is skipped. Let's follow Stayproof round the rescue lap."
+        },
+        {
+          "screen": "The Trouble Gate Is Automatic",
+          "icon": "lifebuoy",
+          "say": "Three gates belong to the lap rather than the road: Trouble, Back to Operate and Retire. Trouble comes first, and it is automatic. When an open incident is tagged to a stage 8 app, the engine moves that app to the Rescue room at its next refresh, within about 15 minutes. Rescue's tag is Urgent. The rule books call this a detection, not a judgement. Nobody votes on whether a leak is serious enough. The app simply leaves the healthy list, and the person who owns the factory is told straight away."
+        },
+        {
+          "screen": "A Fix Capped To The Break",
+          "icon": "target",
+          "say": "The fix re-enters the road at the Slot check, which sits inside the Invest gate. Slot allows at most 3 builds at once, with 1 lane always kept for rescue, so a rescue never waits in a queue. The fix is capped to the break. That means it repairs only what broke. Anything else the fix might touch becomes a roadmap item, a planned change for later, which comes back through the Lock gate as a small pack of its own. A rescue skips Merit and Lock, because the live app has already proved it is worth having."
+        },
+        {
+          "screen": "Fast, But Still Approved",
+          "icon": "shield-check",
+          "say": "Fast does not mean unchecked. A person still approves the sending of every paid build prompt, exactly as in Stage 6. The speed comes from the empty lane, never from going round the person. After the fix is sent, the result has to be proved live from outside, with the cache defeated. A cache is a saved older copy of a page that a browser or server may show instead of the newest one. Defeating it means making sure you are testing the real, current app, not a memory of yesterday's."
+        },
+        {
+          "screen": "Back To Operate",
+          "icon": "arrow-back-up",
+          "say": "Once no incident is open, the engine puts one question to a person, and this is the Back to Operate gate: is the fix proved live? A yes moves Stayproof out of Rescue and back to Radar, where the daily checks carry on as before. One detail is worth knowing. A ruling says rescue should be possible from any stage, not just for live apps. That rule is still only PROPOSED. Today the engine rescues stage 8 apps only, and the course teaches what the engine does today."
+        },
+        {
+          "screen": "Retire Is The Only Way Out",
+          "icon": "archive",
+          "say": "Retire is the last lap gate, and the only way an app ever leaves the factory. It is asked after two losing months running, or when someone tags the app retire-ask. The person deciding looks at the app's own row: what it costs to keep, who still uses it, and when it was last opened. A yes sets the app's status to RETIRED. Customers are told and the hosting is switched off. Whether retiring also exports or erases the app's data is a ruling that has not been settled yet."
+        },
+        {
+          "screen": "Recycle Sends Parts To Reserve",
+          "icon": "recycle",
+          "say": "Retiring is not throwing away. Next comes Recycle, whose room is tagged Parts Back. The retired app's bricks, its kits and any proved formation go back to the Reserve room, where parts wait to be used again. A formation is a group of bricks that has been proved to work well together. The app's id, its row and its card are kept for ever. An app is never renamed or wiped from the record. Years later, someone can still see what it was, what it was built from and why it stopped."
+        },
+        {
+          "screen": "Recovery Holds Killed Ideas",
+          "icon": "building-warehouse",
+          "say": "Not every idea reaches the lap. If an idea is killed before any parts exist, for example at the Screen gate, it goes to the Recovery room, tagged Killed Or Held. Its id is called burnt, which means it is used up, yet the idea can still be brought back out later if things change. Recycle never applies at the Merit gate, because at that point there are no built parts to give back. Recovery keeps the idea and the reasons it stopped, so nobody pays to research the same dead end twice."
+        },
+        {
+          "screen": "Re-imagine Starts A New Journey",
+          "icon": "sparkles",
+          "say": "There is one more move, called Re-imagine. It is a door, not a stamp, meaning nobody has to approve a gate to open it. Re-imagine keeps an app's assembly, the way its parts fit together, and points it at a new audience under a new id. Stayproof's inspection pack, for instance, could be re-imagined for a different kind of animal business. A clone like that is paid work, so it goes through the Invest gate like any build. Nothing is wasted and nothing is skipped. Let's recap the lap."
+        }
+      ],
+      "recap": {
+        "points": [
+          "Trouble Gate Moves A Broken App To Rescue",
+          "Retire Is The Only Way Out; A Person Decides",
+          "Parts Go To Reserve; Killed Ideas Go To Recovery"
+        ],
+        "why": "Fast Fixes And Clean Endings Keep The Factory Honest"
+      },
+      "quiz": [
+        {
+          "q": "What moves a live app into Rescue?",
+          "options": [
+            "A person's vote each Friday",
+            "Two losing months running",
+            "A new feature idea",
+            "An open incident tagged to the app"
+          ],
+          "answer": 3,
+          "why": "The Trouble gate is automatic: an open incident on a stage 8 app moves it to Rescue at the next refresh."
+        },
+        {
+          "q": "Why can a rescue fix move quickly?",
+          "options": [
+            "One build lane is always kept empty for rescue",
+            "It skips the send approval",
+            "It skips every test",
+            "It uses a free platform"
+          ],
+          "answer": 0,
+          "why": "Slot keeps 1 of its 3 lanes for rescue, so the fix never queues; the approvals and tests still happen."
+        },
+        {
+          "q": "Where do a retired app's bricks, kits and proved formations go?",
+          "options": [
+            "Reception",
+            "Recovery",
+            "Reserve",
+            "Runway"
+          ],
+          "answer": 2,
+          "why": "Recycle sends the parts of a retired app back to the Reserve room to be used again."
+        },
+        {
+          "q": "What does Re-imagine do?",
+          "options": [
+            "Deletes the app and its row",
+            "Points the same assembly at a new audience under a new id",
+            "Renames the old app",
+            "Moves the app back to stage 0"
+          ],
+          "answer": 1,
+          "why": "Re-imagine keeps the assembly, gives it a new id and audience, and the paid clone goes through Invest."
+        }
+      ],
+      "sources": [
+        "AF-UNDERSTANDING-2026-10-22.md",
+        "THE-STAGE-TRANSITIONS.md",
+        "TEMPLATE-MIRROR.md",
+        "GATES.csv"
+      ],
+      "vision": false
+    }
+  ]
+}

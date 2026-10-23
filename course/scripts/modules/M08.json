@@ -1,0 +1,244 @@
+{
+  "id": "M08",
+  "stage": 7,
+  "title": "Stage 7 · Launch",
+  "subtitle": "Sales Page, Domain, Funnels, The Launch Walk, The Launch Gate",
+  "summary": "How an app meets the outside world: a sales page, a domain, ClickFunnels funnels, a plan carried safely from the landing page, the launch tests and the Launch gate.",
+  "lessons": [
+    {
+      "id": "M08-L1",
+      "title": "Sales Page, Domain And Funnels",
+      "outcome": "You can explain what a domain, DNS and a funnel are, and why a reseller's brand is never on a free plan.",
+      "minutes": 6,
+      "opener": {
+        "framework": "Epiphany Bridge (light)",
+        "backstory": "Theo, 17, helped put together a page for Northvale Canine Society to offer Litterline to its members.",
+        "desire": "He wanted a big free plan button so more club members would try it.",
+        "wall": "The free plan was refused, because Northvale is a reseller.",
+        "epiphany": "A reseller's brand is never on a free plan, and the chosen plan must travel safely from the page to the checkout."
+      },
+      "beats": [
+        {
+          "screen": "A Free Button That Was Refused",
+          "icon": "user",
+          "say": "Theo is seventeen. He was helping to put together a page for Northvale Canine Society, the club that resells Litterline to its members under its own name. He wanted more club members to try it, so he planned a big button that said free plan. It seemed generous and harmless. But the free plan was refused. Northvale is a reseller, and the factory has a firm rule: a reseller's brand is never on a free plan. That made Theo look much harder at how a button on a page turns into a real, recorded choice."
+        },
+        {
+          "screen": "Stage 7 Happens On The Runway",
+          "icon": "rocket",
+          "say": "This is Stage 7, called Launch. It happens in the room called Runway, which is tagged Brand, because this is where the app meets the outside world under each brand's name. The jobs include a sales page, set-up for each brand, the domain, the funnels, and a careful set of launch tests. This lesson covers the outside pieces: the page people land on, the web address they type, and the path that leads them from a first look to signing up. The next lesson covers the launch tests and the Launch gate."
+        },
+        {
+          "screen": "The Sales Page And Launch Price",
+          "icon": "building-store",
+          "say": "The sales page explains what the app does, who it is for and what it costs. The template line asks for three things: the sales page, a rival line and a launch price. A rival line is a short, honest statement of how this app differs from what people use now. The factory drafts the page, and the factory owner approves it. Much of the wording comes from the research in Stage 1, where customers' own words about their problem were collected. People trust words that sound like their own experience."
+        },
+        {
+          "screen": "Domain And DNS In Plain Words",
+          "icon": "world-www",
+          "say": "A domain is the name of a website, the words people type to find it. Computers find each other by number, so the internet keeps an address book called DNS, the Domain Name System. DNS records point the name at the server where the app lives. The factory picks the domain name in Stage 3, then buys it and sets the records in Stage 4: one for the bare name and one for the www version. SSL, the padlock in the browser that keeps traffic private, is set up too. In Stage 7, all three are verified from outside."
+        },
+        {
+          "screen": "Funnels Lead People Step By Step",
+          "icon": "chart-funnel",
+          "say": "A funnel is a short series of pages that leads a visitor from a first look to signing up or paying. It is wide at the top, where many people arrive, and narrow at the bottom, where fewer people act. The factory builds its landing page and funnel in ClickFunnels, a tool for making sales pages and funnels. The offer was first drafted back in Stage 1 in a funnel shape: who the customer is, the hook, which is their problem in their own words, and the offer itself. That same page is used again here."
+        },
+        {
+          "screen": "ClickFunnels Holds Contacts, Not The Keys",
+          "icon": "shield-check",
+          "say": "How does ClickFunnels talk to the app? The simplest route is a built-in connection that sends sign-ups and tags across. A tag is a label on a contact, such as trial started. One security rule matters a lot: never unlock paid content using a tag that public code can apply, because any visitor could apply it. Another rule: never store a ClickFunnels key or password in the app's database. The app stores only which brand links to which workspace. Paid access is decided by the app itself, never by a label."
+        },
+        {
+          "screen": "The Plan Travels With The Click",
+          "icon": "link",
+          "say": "Now the plan. Each button on a landing page carries both the brand and the plan inside its link. The plan travels through sign-in the same way the brand does. The rule is sign in first, pay second. When the person comes back, the server checks the plan really is one of that brand's offers, records the chosen plan against the member even if they abandon checkout, and opens that plan's checkout. The price is never taken from the web address, because anyone can edit a web address. Each payment is stamped with the buyer's brand."
+        },
+        {
+          "screen": "A Reseller Brand Is Never Free",
+          "icon": "license",
+          "say": "Free is decided per brand offer, never for the whole app. The factory owner's own brands may offer a free plan. A reseller's brand never has a free offer. So when Theo's button asked for a free plan on Northvale's brand, the server refused it, exactly as designed. Northvale's members go from sign-in straight to the pay page, then on to their dashboard. To sum up: a sales page the owner approves, a domain proved from outside, funnels in ClickFunnels, and a plan that travels safely with every click."
+        }
+      ],
+      "recap": {
+        "points": [
+          "DNS Points The Domain At The App",
+          "The Link Carries Brand And Plan, Never Price",
+          "A Reseller Brand Is Never On A Free Plan"
+        ],
+        "why": "Every Click Must Land On A Recorded, Checked Plan"
+      },
+      "quiz": [
+        {
+          "q": "What does DNS do?",
+          "options": [
+            "It designs the sales page",
+            "It takes payments at checkout",
+            "It points a domain name at the server where the app lives",
+            "It tests every table for leaks"
+          ],
+          "answer": 2,
+          "why": "DNS is the internet's address book: its records point a name people can type at the server that holds the app."
+        },
+        {
+          "q": "What does a landing page button carry inside its link?",
+          "options": [
+            "The brand and the plan",
+            "The price and a discount",
+            "The member's password",
+            "A ClickFunnels key"
+          ],
+          "answer": 0,
+          "why": "The link carries brand and plan; the server then checks the plan is one of that brand's offers."
+        },
+        {
+          "q": "Why is the price never taken from the web address?",
+          "options": [
+            "Web addresses are too short",
+            "Prices change every day",
+            "ClickFunnels does not allow it",
+            "Anyone can edit a web address"
+          ],
+          "answer": 3,
+          "why": "A visitor could change the address, so the server looks up the real price from the brand's own offers."
+        },
+        {
+          "q": "Which brands may offer a free plan?",
+          "options": [
+            "Every brand, including resellers",
+            "The factory owner's own brands, never a reseller's",
+            "Only reseller brands",
+            "No brand, ever"
+          ],
+          "answer": 1,
+          "why": "Free is set per brand offer; the owner's brands may offer it, but a reseller brand is never on a free plan."
+        }
+      ],
+      "sources": [
+        "TEMPLATE-MIRROR.md",
+        "AF-UNDERSTANDING-2026-10-22.md",
+        "SLIP-2026-10-04-0630-DECISION-plan-carried-from-landing-page-reseller-never-free.md",
+        "ClickFunnels-Platform-Reference.md",
+        "ClickFunnels - OverSkill - Integration (CURRENT 13 Sep 2026).md",
+        "glossary.json"
+      ],
+      "vision": false
+    },
+    {
+      "id": "M08-L2",
+      "title": "The Launch Walk And Boosts",
+      "outcome": "You can name the checks that come before the Launch gate and explain why the weekly boost is still only proposed.",
+      "minutes": 6,
+      "opener": {
+        "framework": "Epiphany Bridge (light)",
+        "backstory": "Maya, 12, signed up to the new Stayproof site on her laptop as a brand-new kennel worker, and it worked.",
+        "desire": "She wanted to say it was ready to launch.",
+        "wall": "On her phone, the sign-up email link opened a page that had forgotten who she was.",
+        "epiphany": "Launch tests walk the whole journey, as a brand-new person, on desktop and on phone."
+      },
+      "beats": [
+        {
+          "screen": "It Worked On The Laptop",
+          "icon": "user",
+          "say": "Maya is twelve. She tried the new Stayproof site on her laptop, signing up as a brand-new kennel worker, and everything worked. She was ready to say it could launch. Then she tried again on her phone. The sign-up email arrived, she tapped the link, and the page that opened had forgotten who she was. On the laptop, she had opened the email link in the same browser. On the phone, it opened somewhere new. Launch tests have to walk the whole journey, as a brand-new person, on desktop and on phone."
+        },
+        {
+          "screen": "Leak Test Every Table, Two Accounts",
+          "icon": "droplet",
+          "say": "Before launch, the leak check runs one last time, and it is strict. Every table is tested, with negative cases, using two accounts. Not only the tables a screen happens to use, but every one, including old and forgotten ones. A negative case, as you know, checks that something forbidden really fails. The result sets the app's leak status: Ln for tested with no leak, or Ly for a leak found. An app showing Ly does not launch. In the factory's gate set, Leak is a check inside the Launch gate, not a separate gate."
+        },
+        {
+          "screen": "The Launch Walk, Desktop And Phone",
+          "icon": "player-play",
+          "say": "Next comes the launch walk. Before the gate, a brand-new account for each brand walks the whole journey on the live site, on desktop and on phone, including email links opened on the phone. The journey map is the list of every step a person takes, from the first page to the app's core action, and it includes steps the factory does not build itself, like the sign-up email. Maya's phone problem is exactly what this walk is there to catch. An onboarding walk for each type of user follows the same idea."
+        },
+        {
+          "screen": "The User-Switch Test",
+          "icon": "users",
+          "say": "Then comes the user-switch test, a standard check on every app. In one browser, sign in as user A and set a display name. Sign out. Sign in as user B. User B must see none of user A's name, footer text or settings. This catches a sneaky kind of leak, where the browser remembers something from the last person. On a shared family computer, or a laptop on a kennel's front desk, that really matters. It sounds simple, and it is, but real apps have failed this test more than once."
+        },
+        {
+          "screen": "Checkout Tested On The Live Link",
+          "icon": "cash",
+          "say": "Money is tested for real. Checkout is tested on the live link with a 100 percent off test code: buy, sign in, and get access. Checkout never works in preview, so it has to be the live link. A real payment and a refund are also run from start to finish. Around this sit other duties due before launch: legal and consent pages live, with the marketing box left unticked, a security review before publishing, and proof that a user can delete their account and export their data, and that both actually work."
+        },
+        {
+          "screen": "Support Route, Then The Launch Gate (7-8)",
+          "icon": "flag",
+          "say": "The support route is tested too, so a real person with a problem can actually reach help. Then comes the Launch gate, from 7 to 8. Its question is: open it to real users? The factory owner always decides this one. There is no auto-pass here. The engine describes it as Leak, Launch and Live in one move: the leak check passed, the launch walk done, and the first real user proved from start to finish. After a yes, the app leaves the build board and appears only in Operate."
+        },
+        {
+          "screen": "Weekly Boost: Proposed, Not A Rule",
+          "icon": "trending-up",
+          "say": "What about growing the app after launch? The factory's template has a weekly boost line: a weekly proposal of ways to help the app get found, using parts from the Boost shelf, such as public pages, reviews, search visibility and funnels. But be clear about its status. The weekly boost is marked PROPOSED. It sits in the template as an idea that has not been ruled on, so this course teaches it as a proposal, not as a rule. In the factory, a proposal counts for nothing until the live system actually does it."
+        },
+        {
+          "screen": "Ready For Real Users",
+          "icon": "rocket",
+          "say": "So before an app opens to real users, it passes a leak test on every table with two accounts, a launch walk on desktop and phone, a user-switch test, a live checkout test, legal and consent checks and a tested support route. Then the factory owner says yes at the Launch gate. Scheduled jobs switch on: the leak probe, the backup and the credit watch. Maya's phone found a real gap, and now the walk finds that kind of gap every time. Next module: how a live app is watched every single day."
+        }
+      ],
+      "recap": {
+        "points": [
+          "Leak Test Every Table With Two Accounts",
+          "Walk The Journey New, On Desktop And Phone",
+          "The Owner Always Decides The Launch Gate (7-8)"
+        ],
+        "why": "Real Users Deserve An App Proved On Every Path"
+      },
+      "quiz": [
+        {
+          "q": "Why does the launch walk include a phone?",
+          "options": [
+            "Phones are faster to test on",
+            "The sales page is only shown on phones",
+            "Phones never need a sign-in",
+            "Email links opened on a phone can break a journey that works on desktop"
+          ],
+          "answer": 3,
+          "why": "The walk covers desktop and phone, including email links opened on the phone, because journeys can break between devices."
+        },
+        {
+          "q": "What does the user-switch test check?",
+          "options": [
+            "That two users can share one account",
+            "That user B sees none of user A's name or settings in the same browser",
+            "That users can switch brands freely",
+            "That the owner can sign in as anyone"
+          ],
+          "answer": 1,
+          "why": "Signing in as A, then out, then in as B in one browser shows whether anything of A's is left behind."
+        },
+        {
+          "q": "Why is checkout tested on the live link?",
+          "options": [
+            "Checkout never works in preview",
+            "The live link is free to use",
+            "Preview has no buttons",
+            "The test code only works on phones"
+          ],
+          "answer": 0,
+          "why": "Checkout does not work in preview, so the 100 percent off test code is used on the live link."
+        },
+        {
+          "q": "What is the status of the weekly boost?",
+          "options": [
+            "A gate the owner must pass",
+            "A rule that runs every day",
+            "Proposed, not yet a rule",
+            "Retired and no longer used"
+          ],
+          "answer": 2,
+          "why": "The weekly boost line is marked PROPOSED, so it is taught as an idea, not a rule."
+        }
+      ],
+      "sources": [
+        "AF-UNDERSTANDING-2026-10-22.md",
+        "TEMPLATE-MIRROR.md",
+        "THE-STAGE-TRANSITIONS.md",
+        "OBLIGATIONS.csv",
+        "glossary.json"
+      ],
+      "vision": false
+    }
+  ]
+}

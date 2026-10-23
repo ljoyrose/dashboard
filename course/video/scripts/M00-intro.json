@@ -1,0 +1,21 @@
+{
+  "id": "M00-intro",
+  "module": "M00",
+  "title": "What Is An App Factory",
+  "track": "F",
+  "fps": 30,
+  "hero_first": true,
+  "_note": "Pilot explainer for Module M00. Captions are the narration (silent now, D3). Each scene: seconds, caption, screen words, icon, visual. Edit words here and run: npm run video -- M00-intro",
+  "scenes": [
+    {"s": 6, "visual": "title", "screen": "What Is An App Factory", "icon": "building-factory-2", "caption": "This is the App Factory. It turns one idea into a live, safe app."},
+    {"s": 7, "visual": "parts", "screen": "Screens · Tables · Rules · People", "icon": "layout-dashboard", "caption": "Every app has the same four parts: screens you see, tables that hold data, rules, and people."},
+    {"s": 7, "visual": "handmade", "screen": "Most Apps Are Hand-Made", "icon": "hourglass", "caption": "Most apps are hand-made from nothing. Each one has its own gaps."},
+    {"s": 8, "visual": "road", "screen": "One Road · 9 Stages", "icon": "map-2", "caption": "A factory uses one road for every idea: nine stages, from Idea to Operate."},
+    {"s": 8, "visual": "rooms", "screen": "11 Rooms", "icon": "building-warehouse", "caption": "The stages happen in rooms, like Reception, Research, Rig, Reactor, Runway and Radar."},
+    {"s": 8, "visual": "gates", "screen": "Gates Between Stages", "icon": "scale", "caption": "Between stages sit gates. Work moves on only when its checks pass."},
+    {"s": 7, "visual": "person", "screen": "A Person Decides At Six Gates", "icon": "user", "caption": "At six gates a person says yes or no. The rest open by themselves."},
+    {"s": 8, "visual": "bricks", "screen": "101 Bricks · 8 Shelves · 9 Kits", "icon": "box", "caption": "Apps are built from proven parts called bricks, sorted on eight shelves and grouped into kits."},
+    {"s": 7, "visual": "walls", "screen": "Walls Keep Data Apart", "icon": "wall", "caption": "Walls keep each business and each customer apart. They are tested again and again."},
+    {"s": 7, "visual": "recap", "screen": "Recap", "icon": "list-check", "caption": "Same road, same checks, same parts. That is what makes a factory app safe."}
+  ]
+}

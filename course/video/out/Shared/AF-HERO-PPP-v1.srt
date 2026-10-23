@@ -1,0 +1,23 @@
+1
+00:00:00,000 --> 00:00:05,000
+Twenty answers light up: the app's code.
+
+2
+00:00:05,000 --> 00:00:11,000
+Proven bricks fly in by shelf and snap into kits.
+
+3
+00:00:11,000 --> 00:00:17,000
+The tables build themselves, column by column.
+
+4
+00:00:17,000 --> 00:00:22,000
+The build prompts write themselves.
+
+5
+00:00:22,000 --> 00:00:26,000
+Every test ticks green.
+
+6
+00:00:26,000 --> 00:00:30,000
+The app goes live on the dashboard. Vision 2029, illustrative.

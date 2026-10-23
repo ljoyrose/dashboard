@@ -47,3 +47,12 @@ Anything in the Vision 2029 screens that extends an existing panel is listed her
 | 26 | **Automated launch and operate** page (domain, sales page, funnels, brand jackets, boosts, leak monitor, launch checks) | Stage 7 and 8 template lines (TEMPLATE-MIRROR.md) and OBLIGATIONS OB-P14, OB-P22 | NEW - TO CHECK |
 | 27 | **Scaling gap found:** the real Rooms tab lists every app as a chip; at about 1,300 apps it becomes a 57,000 px wall | Real factory/index.html with the 2029 state | Needs a grouped view before scale |
 | 28 | Card language: the live ADHD standard says 4 px LEFT stripe and 16 px corners; LC-VISUAL-STANDARD and paste rule 1 say thin TOP band | Graphics and slides follow the paste (top band, 16 pt corners); dashboard mockups follow the live page (no band, 12 px corners, 1.5 px line) | Follows both by job |
+
+## Renderer and sources (23 Oct)
+| # | Clash | Course uses |
+|---|---|---|
+| 29 | SRC_render_codes_card.py draws status as text glyphs (tick, warning, cross) in DejaVu Sans and uses its own hexes (#1F1D1B, #2E7D46, #95661B) | Same layout and row order ported to SVG with Lexend, line icons and glossary hexes (build/g_codes_card.py) |
+| 30 | AF-WALLS v4 shows the real Links app with a BLD (Bloodline) comparison row | Not reused; re-rendered for invented apps (Litterline, Stayproof, Trimtable) |
+| 31 | walls_render.py and RUN-PROGRESS-WALLS.md: not found on Drive (23 Oct 03:00) | AF-WALLS v5 not available; codes cards drawn with the ported renderer |
+| 32 | The plan-from-landing-page rule (SLIP-2026-10-04-0630) is still PENDING-CONFIRM | Taught as the decision on record |
+| 33 | Domain and DNS: the template buys the domain and sets DNS in Stages 3-4; Stage 7 only checks them from outside | Lessons say so; the Launch Kit graphic groups them for the learner |

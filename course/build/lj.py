@@ -178,7 +178,7 @@ def attention(x, y, w, label, action, risk, size=28):
     """Tinted panel, dark left edge, only the risk word coloured (rule 9). Returns (svg, height)."""
     rows = wrap(action, size, w - 64, 700)
     h = int(40 + 30 + len(rows) * size * 1.3 + 20 + size * 1.3 + 10)
-    out = sunk(x, y, w, h) + f'<rect x="{x}" y="{y}" width="6" height="{h}" rx="3" fill="{C["ink"]}"/>'
+    out = sunk(x, y, w, h, G["space"]["radius_small"]) + f'<rect x="{x}" y="{y}" width="12" height="{h}" rx="6" fill="{C["ink"]}"/>'
     out += text(x + 32, y + 44, label.upper(), 22, 700, C["muted"], extra='letter-spacing="2"')
     out += lines(x + 32, y + 44 + 46, rows, size, 700)
     ry = y + 44 + 46 + len(rows) * size * 1.3 + 8

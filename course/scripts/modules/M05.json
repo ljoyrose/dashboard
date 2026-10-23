@@ -1,0 +1,243 @@
+{
+  "id": "M05",
+  "stage": 4,
+  "title": "Stage 4 · Schema",
+  "subtitle": "Tables And Columns, Access Modes, Walls, Table Tests",
+  "summary": "How the codes and kits decide an app's tables, how each table is built, set and recorded, and how the walls are tested before the Schema gate.",
+  "lessons": [
+    {
+      "id": "M05-L1",
+      "title": "How The System Makes The Tables",
+      "outcome": "You can explain how codes and kits decide the tables, and how each table is built, set and recorded.",
+      "minutes": 6,
+      "opener": {
+        "framework": "Epiphany Bridge (light)",
+        "backstory": "Nia keeps a spreadsheet for her family's walking group and thought tables would be easy.",
+        "desire": "She planned to add and rename columns as she went.",
+        "wall": "On the build platform a rename destroys every row, and changing who can read a table later costs a paid turn.",
+        "epiphany": "Plan every table first, set it right when it is created, and write down why it exists."
+      },
+      "beats": [
+        {
+          "screen": "Nia Thought Tables Were Easy",
+          "icon": "user",
+          "say": "Nia keeps the spreadsheet for her family's walking group, so when she heard Stage 4 was about tables, she thought it would be easy. She planned to add columns as she went, and rename them whenever better names came to mind. Then she learned two facts about the build platform. Renaming a table or column destroys every row in it, and still reports success. And changing who can read a table after it is made costs a paid building turn. So she changed her approach. Plan every table first, set it right at birth, and write down why it exists."
+        },
+        {
+          "screen": "A Schema Is The Plan Of Tables",
+          "icon": "table-options",
+          "say": "Stage 4 is called Schema. A schema is the plan of the tables that hold the data: which tables exist, which columns each one has, and who may read or write them. A column is one field in a table, like a dog's name or a booking date. Stage 4 sits in the Rig room, together with Stage 5, and it is free. Nothing here is built by the paid builder. The tables are built by hand, then proved by reading them back, which is called a re-read. Free work now saves paid work later."
+        },
+        {
+          "screen": "Codes And Kits Decide The Tables",
+          "icon": "puzzle",
+          "say": "Where does the list of tables come from? Not from guessing. The kits chosen earlier each bring their own tables. K00, the floor, brings seven: tenants, tenant users, roles, permissions, consents, usage channels and events. K02, booking, adds bookings, availability slots and resources. The codes on the idea card then shape the columns. If TEN (0-6) is 2 or more, several businesses share the app, so every table holding a business's data needs a tenant id column, which says which business owns each row. A tenant is one business using the app."
+        },
+        {
+          "screen": "A Spec First, Then Built By Hand",
+          "icon": "file-text",
+          "say": "Before anything is created, the tables and columns are written out as a spec, short for specification, saved as a CSV file. A CSV is a plain file of rows and columns that any program can open. The spec is never left as loose prose, because nobody can test a paragraph. Every name is checked against the naming standard, so one idea always has one name. Then the tables are built by hand, for free, and each one is read back to prove it exists exactly as written. A copied base is also swept for ghost columns, ones it inherited but does not use."
+        },
+        {
+          "screen": "Access Modes Say Who Can Read",
+          "icon": "key",
+          "say": "Every table has an access mode, a setting that says who may read and write its rows. Here are some examples. Public means anyone can read, even when signed out. User scoped means each row belongs to the signed-in person who made it. Anonymous writable means a stranger can add rows without signing in. A role gate limits a table to people with a given role, such as staff. The access mode is set when the table is created, which is free. Changing it afterwards is a billed builder turn. So the mode is decided on paper first."
+        },
+        {
+          "screen": "Probe Every Table While Signed Out",
+          "icon": "search",
+          "say": "Deciding a mode is not the same as having it. So each table gets an anonymous probe. A probe is a test request, and anonymous means it is sent with nobody signed in, the way a stranger on the internet would arrive. If a table is meant to be private and the probe gets rows back, something is wrong, and it is fixed before going further. The codes set what is allowed. Litterline has POST (0-2) at 0, so no table should take writes from a stranger. VIEW (0-2) at 1 means only link-holders may read anything signed out."
+        },
+        {
+          "screen": "Every Table Gets A Register Row",
+          "icon": "layout-list",
+          "say": "The last piece is the table register, section 4.0 of the app's document. Every table gets one row in it, with the reason the table exists, its role gate and who may write to it. This sounds like paperwork, but it prevents a costly mistake. A table is never removed just because no code seems to read it. Removing a table needs a person's dated ruling. Without a register, a table that looks unused might hold the one record a business needs on inspection day, and deleting it would be very hard to undo."
+        },
+        {
+          "screen": "Never Rename, Add And Migrate Instead",
+          "icon": "recycle",
+          "say": "One rule from the duties file is worth learning by heart. Never rename a table or column. A rename destroys every row and still returns a success message, so nobody notices until the data is gone. If a name must change, the safe way is to add the new column, copy the data across, which is called migrating, and leave the old one unread. Plan, spec, build by hand, set the mode, probe, record. That is how Stage 4 makes its tables. Now a short recap before we meet the walls."
+        }
+      ],
+      "recap": {
+        "points": [
+          "Kits Bring The Tables, Codes Shape The Columns",
+          "Set Access Mode At Creation, Then Probe Signed Out",
+          "Every Table Gets A 4.0 Register Row And Reason"
+        ],
+        "why": "Tables Planned Once Are Cheap, Fixed Later Are Not"
+      },
+      "quiz": [
+        {
+          "q": "What is a schema?",
+          "options": [
+            "The sales plan",
+            "The plan of the tables that hold the data",
+            "A type of brick",
+            "The launch checklist"
+          ],
+          "answer": 1,
+          "why": "A schema is the plan of the tables, their columns and who may read or write them."
+        },
+        {
+          "q": "Why is the access mode set when a table is created?",
+          "options": [
+            "Because it looks tidier",
+            "Because the customer asks for it",
+            "Because only resellers can change it",
+            "Because setting it then is free and changing it later is a billed turn"
+          ],
+          "answer": 3,
+          "why": "Setting the mode at creation is free; changing it afterwards costs a builder turn."
+        },
+        {
+          "q": "What does an anonymous probe do?",
+          "options": [
+            "Sends a test request with nobody signed in",
+            "Deletes old tables",
+            "Renames columns",
+            "Sends emails to customers"
+          ],
+          "answer": 0,
+          "why": "It checks a table the way a signed-out stranger would reach it."
+        },
+        {
+          "q": "What is the safe way to change a column name?",
+          "options": [
+            "Rename it directly",
+            "Delete the table",
+            "Add a new column, migrate the data, leave the old one unread",
+            "Ask customers to type the data again"
+          ],
+          "answer": 2,
+          "why": "A rename destroys every row, so the factory adds, migrates and leaves the old column unread."
+        }
+      ],
+      "sources": [
+        "TEMPLATE-MIRROR.md",
+        "THE-STAGE-TRANSITIONS.md",
+        "APP-FACTORY-FRAMEWORK.md",
+        "OBLIGATIONS.csv",
+        "BRICK-KITS.csv"
+      ],
+      "vision": false
+    },
+    {
+      "id": "M05-L2",
+      "title": "Walls And Table Tests",
+      "outcome": "You can name the eight walls and describe the table tests that must pass before the Schema gate.",
+      "minutes": 6,
+      "opener": {
+        "framework": "Epiphany Bridge (light)",
+        "backstory": "Theo's cousin once saw another salon's client list inside the booking app her salon used.",
+        "desire": "Theo wanted to be sure Trimtable could never do that.",
+        "wall": "Writing that the data is private proved nothing.",
+        "epiphany": "Each table needs a test aimed at its wall, run from outside, that could fail, with a dated result."
+      },
+      "beats": [
+        {
+          "screen": "Seeing Someone Else's Clients",
+          "icon": "alert-triangle",
+          "say": "Theo's cousin works at a grooming salon. One morning, the booking app the salon used showed her another salon's client list, names and phone numbers included. It was fixed within a day, but the trust was gone. When Theo started helping to plan Trimtable, he wanted to be sure it could never do that. At first he wrote, the data is private, in his notes. Then he realised that sentence proved nothing. What he needed was a test for each table that could actually fail, run from outside, with a date beside the result."
+        },
+        {
+          "screen": "A Wall Keeps Two Parties Apart",
+          "icon": "wall",
+          "say": "In the factory, a wall is a rule that keeps two parties' data apart. The simplest picture has three walls. Owner from owner keeps one reseller's businesses away from another reseller's. Business from business keeps one salon's records away from the next salon's. Customer from customer keeps one customer's details private inside a single business. The third wall always sits inside the second, never instead of it: check the business first, then the customer. Trimtable has no reseller above it, so the first wall has nobody on the other side yet."
+        },
+        {
+          "screen": "The Eight Walls W1-W8",
+          "icon": "shield-check",
+          "say": "The full set has eight walls, numbered W1-W8, and most codes on the idea card point to one. W1 is the brand wall, between businesses. W2 is the member wall, between customers. W3 is the layer-above wall, for parties sitting above a business. W4 is the staff wall, for roles, guests and view-as access. W5 is the membership wall, about who can join and belong, and whose name is shown. W6 is the public wall, for strangers who are signed out. W7 is the data-out wall, for data leaving the app. W8 is the sensitivity hold, for health or children's data."
+        },
+        {
+          "screen": "Each Table Gets The Right Test",
+          "icon": "test-pipe",
+          "say": "Stage 4 ends with table tests, section 4.4 of the document. The test depends on the kind of table. Application tables hold a business's own records, like bookings. Each one gets a brand-wall read: sign in as tenant A and try to read tenant B's rows. Tenant A must see none. User tables hold one person's own things. Each one gets a user-wall read: one user must not see another user's rows. Control tables hold the app's own settings, and each gets an anonymous read, sent signed out, which has to return 401."
+        },
+        {
+          "screen": "A 401 Means Not Allowed In",
+          "icon": "lock",
+          "say": "401 is a status code, a number a web server sends back with every answer. 401 means the request was refused because nobody is signed in. For a control table, that is exactly the answer you want a stranger to get. If the anonymous read returns 200 instead, which means success, and hands back rows, the table is open to the whole internet. That is a stop. The fix comes before anything else, and then the test is run again until it returns 401. A pass is only a pass when the stranger gets nothing."
+        },
+        {
+          "screen": "Shared Tables Need Field-Level Tests",
+          "icon": "filter",
+          "say": "Some tables are shared on purpose. Imagine one dog's record that two breeders both hold a claim on, with each allowed to see different fields. A field is one column in one row. A shared row carries no tenant id, so a normal row-level test looks for a tenant tag, finds none, and reports all clear, while the wrong fields leak. That is why the rule says a row-level test passes while leaking. On a shared table the leak test must be field-level: check that each claim sees only the fields it is allowed to see."
+        },
+        {
+          "screen": "Every Test Has A Dated Result",
+          "icon": "calendar",
+          "say": "A test without a result is just a hope. So the stage is finished only when every Launch table and every Base table has at least one test with a dated result. Launch tables are the ones the first version uses. Base tables are the ones that come with the base the app started from. The tests are run from outside, as a real visitor would, not by asking the builder whether it worked. A sentence in the notes, such as the data is private, never counts. Only a test that could fail, and did not, counts."
+        },
+        {
+          "screen": "The Schema Gate Passes By Itself",
+          "icon": "table-options",
+          "say": "Then comes the Schema gate. It sits between Stage 4 and Stage 5 and asks: tables probed, names re-read? Like the Base gate, it is automatic. When every Stage 4 checklist line is done, and no section of the document still says pending, the engine moves the app on without anyone clicking yes. That only works because the tests are plain. A probe returned 401 or it did not. A name matches the spec or it does not. Next comes Stage 5, where test businesses and test people are set up. First, the recap."
+        }
+      ],
+      "recap": {
+        "points": [
+          "Eight Walls W1-W8 Keep Parties Apart",
+          "Brand-Wall, User-Wall And Anonymous 401 Table Tests",
+          "Shared Tables Need Field-Level Tests, Then Auto Schema Gate"
+        ],
+        "why": "A Test That Can Fail Is The Only Proof"
+      },
+      "quiz": [
+        {
+          "q": "Which wall keeps one business's data away from another business?",
+          "options": [
+            "W1 Brand Wall",
+            "W6 Public Wall",
+            "W7 Data-Out Wall",
+            "W8 Sensitivity Hold"
+          ],
+          "answer": 0,
+          "why": "W1, the brand wall, sits between businesses."
+        },
+        {
+          "q": "What should an anonymous read of a control table return?",
+          "options": [
+            "200 with rows",
+            "A list of tenants",
+            "401",
+            "The sales page"
+          ],
+          "answer": 2,
+          "why": "401 means the signed-out request was refused, which is the pass."
+        },
+        {
+          "q": "Why is a row-level test not enough on a shared table?",
+          "options": [
+            "Shared tables have no rows",
+            "It is too slow",
+            "Shared tables are always public",
+            "A shared row has no tenant id, so the test can pass while fields leak"
+          ],
+          "answer": 3,
+          "why": "On a shared table the leak test must be field-level, because a row-level test passes while leaking."
+        },
+        {
+          "q": "Who moves the app through the Schema gate?",
+          "options": [
+            "A person always clicks yes",
+            "The engine, automatically, when every line is done",
+            "The customer",
+            "The reseller club"
+          ],
+          "answer": 1,
+          "why": "Schema is an auto gate: tables probed and names re-read, then the engine moves the app on."
+        }
+      ],
+      "sources": [
+        "TENANCY-CLASSIFICATION-AND-ISOLATION-RULES.md",
+        "codes-catalogue.json",
+        "AF-UNDERSTANDING-2026-10-22.md",
+        "TEMPLATE-MIRROR.md",
+        "APP-FACTORY-FRAMEWORK.md"
+      ],
+      "vision": false
+    }
+  ]
+}

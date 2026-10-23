@@ -964,6 +964,49 @@
       "provider",
       "video_id",
       "type"
+    ],
+    "hero_seconds": 30,
+    "loop_seconds": 8,
+    "hero_captions": [
+      {
+        "from": 0,
+        "to": 5,
+        "text": "Twenty answers light up: the app's code."
+      },
+      {
+        "from": 5,
+        "to": 11,
+        "text": "Proven bricks fly in by shelf and snap into kits."
+      },
+      {
+        "from": 11,
+        "to": 17,
+        "text": "The tables build themselves, column by column."
+      },
+      {
+        "from": 17,
+        "to": 22,
+        "text": "The build prompts write themselves."
+      },
+      {
+        "from": 22,
+        "to": 26,
+        "text": "Every test ticks green."
+      },
+      {
+        "from": 26,
+        "to": 30,
+        "text": "The app goes live on the dashboard. Vision 2029, illustrative."
+      }
+    ],
+    "rosequest_checklist": [
+      "Branding OFF on each video's own player (it is ON by default)",
+      "No lead capture, email gate, share gate or quiz",
+      "Accent colour per brand (the app sets data-skin-color); never change the colour on a live video",
+      "Comments off, all controls on, subtitles uploaded (.srt) and checked",
+      "Autoplay on, start with sound if possible, end resets to thumbnail",
+      "Save, then re-read the player in a fresh tab",
+      "Store only provider + video id + type (v or f) in course pages; never a URL or embed code"
     ]
   },
   "footer": {
