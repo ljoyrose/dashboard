@@ -1,0 +1,361 @@
+{
+ "name": "AF-TRACKF-M01",
+ "module": "Track F · M01 · v1",
+ "source": "Source: scripts/modules/M01.json · AF-CARD-TEMPLATE.md, AF-UNDERSTANDING-2026-10-22.md, APP-FACTORY-FRAMEWORK.md",
+ "slides": [
+  {
+   "layout": "title",
+   "title": "Stage 0 · Idea",
+   "sub": "Track F · Family Learners",
+   "big": "The Idea Form, The 20 Codes, The Kill Check",
+   "line": "How an idea enters the factory through the Idea Form, how the 20 codes describe it, and how the kill check, verdict, data role and Screen gate decide whether work starts.",
+   "icon": "bulb",
+   "notes": "How an idea enters the factory through the Idea Form, how the 20 codes describe it, and how the kill check, verdict, data role and Screen gate decide whether work starts."
+  },
+  {
+   "layout": "statement",
+   "title": "The Idea Form",
+   "sub": "M01-L1 · About 6 Minutes",
+   "icon": "target",
+   "statement": "You can write an idea as a one-line vision, a named payer and a clear pain, and name the four doors ideas come through.",
+   "vision": false,
+   "notes": "Lesson outcome."
+  },
+  {
+   "layout": "statement",
+   "title": "The Idea Form",
+   "sub": "M01-L1",
+   "icon": "bulb",
+   "statement": "Two Pages Nobody Could Follow",
+   "line": "Isla's aunt, Mara Quill, breeds dogs and holds a dog breeding licence from her local council.",
+   "notes": "Isla's aunt, Mara Quill, breeds dogs and holds a dog breeding licence from her local council. Every time the licence comes up for renewal, Mara spends weeks hunting through folders for paperwork. Isla wanted to turn that headache into an app idea. She wrote two full pages of features: reminders, charts, a shop, a chat room. When she showed it to her aunt, Mara could not tell what the app was actually for. Then Isla learned how the factory starts every idea. Not with features, but with three short answers: what it is, who pays, and what hurts.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The Idea Form",
+   "sub": "M01-L1",
+   "icon": "home-2",
+   "statement": "Stage 0 Starts In Reception",
+   "line": "Every idea begins at Stage 0, called Idea, in a room called Reception.",
+   "notes": "Every idea begins at Stage 0, called Idea, in a room called Reception. Reception is free: nothing here costs a single build credit. By the end of Stage 0, the idea will have five things. A card, which is its record. A one-line brief. A kill check, which asks whether the idea should stop now. A set of 20 codes that describe how the app handles businesses, people and data. And a data role, which says who is responsible for the personal data. This lesson covers the first part: the Idea Form, and the doors ideas come through.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The Idea Form",
+   "sub": "M01-L1",
+   "icon": "login",
+   "statement": "Four Doors Bring Ideas In",
+   "line": "Ideas can arrive through four doors.",
+   "notes": "Ideas can arrive through four doors. The first is the Idea Form, filled in by a person with an idea. The second is called the flip farm: ideas that arrive already attached to an existing template, so they start with a ready-made shape. The third is the AI door, for ideas suggested by an AI tool. The fourth is the client door, for ideas sent in by outside customers, and it is not built yet. The door an idea came through is recorded on its record, so anyone can later see where it started.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The Idea Form",
+   "sub": "M01-L1",
+   "icon": "eye",
+   "statement": "Vision: What The App Is",
+   "line": "Now the form itself.",
+   "notes": "Now the form itself. It opens with a short name and a vision. The vision is one line that says what the app is and what it does, with no list of features. Isla rewrote hers: Litterline, a licence and records hub for dog breeders. That is the whole vision. It is short on purpose. A short line can be checked, argued with and changed. Two pages of features cannot. If you cannot say what your app is in one line, the idea is not ready yet, and that is useful to know before any work starts.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The Idea Form",
+   "sub": "M01-L1",
+   "icon": "cash",
+   "statement": "Who Pays: Name The Payer",
+   "line": "Next, the form asks who pays.",
+   "notes": "Next, the form asks who pays. This means the person or business whose money keeps the app running, not just who uses it. For Litterline, breeders pay. But there is a second answer: dog clubs can resell it under their own name. A reseller is a business that sells the app to its own members with its own name and colours on it. In our example, the fictional club Northvale Canine Society resells Litterline to its breeders. Naming the payer early matters, because a later gate, Lock, will not let an app move on without one.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The Idea Form",
+   "sub": "M01-L1",
+   "icon": "alert-triangle",
+   "statement": "Pain: The Problem In Plain Words",
+   "line": "The third question is pain.",
+   "notes": "The third question is pain. The pain is the problem the app removes, written the way the customer would say it. For Litterline, the pain is that licence renewals mean weeks of paper hunting. Notice that this is not a feature. It does not say reminders or charts. It names something that hurts, and that a breeder would recognise straight away. Good pain lines are plain and specific. A vague pain, such as making life easier, cannot be tested. A specific pain can be checked against real customers in Stage 1, Research.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The Idea Form",
+   "sub": "M01-L1",
+   "icon": "send",
+   "statement": "What Happens When You Submit",
+   "line": "When the form is sent, the factory engine does five things at once.",
+   "notes": "When the form is sent, the factory engine does five things at once. The engine is the script that moves apps along the road. It writes the idea's card. It creates the app's task at Stage 0, or on hold if the data is sensitive. It adds a row to the list of ideas. It suggests a verdict, which is pass, hold or kill. And it suggests a data role. It also checks whether the factory has seen this idea before, and flags it if so. If a form is ever lost, a safety net writes the card on the next check.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The Idea Form",
+   "sub": "M01-L1",
+   "icon": "id-badge-2",
+   "statement": "The Card Is Never Overwritten",
+   "line": "The card is the single home of the idea's classification.",
+   "notes": "The card is the single home of the idea's classification. It is never overwritten. If something changes, a new version is saved beside it, marked v2, then v3, so the history is always there. There is also an optional extra: a one-screen sketch of the idea, using made-up data and no tables, so a person can picture it. It costs nothing. Isla now has a one-line vision, a named payer and a clear pain, instead of two pages of features. Next, the form asks its biggest question: the 20 codes. First, a recap.",
+   "vision": false
+  },
+  {
+   "layout": "recap",
+   "title": "Recap",
+   "sub": "The Idea Form",
+   "points": [
+    "Start With Vision, Who Pays And Pain",
+    "Ideas Arrive Through Four Doors",
+    "The Card Is Kept, Never Overwritten"
+   ],
+   "why": "Three Short Answers Beat Two Pages Of Features",
+   "vision": false,
+   "notes": "Recap."
+  },
+  {
+   "layout": "quiz",
+   "title": "Quick Check",
+   "sub": "The Idea Form",
+   "q": "What three things does the brief on the Idea Form ask for?",
+   "options": [
+    "Colours, logo and name",
+    "What it is, who pays and the pain",
+    "Price, launch date and domain",
+    "Screens, tables and rules"
+   ],
+   "notes": "Answer: B. The one-line brief covers the vision, who pays and the pain."
+  },
+  {
+   "layout": "statement",
+   "title": "The 20 Codes",
+   "sub": "M01-L2 · About 6 Minutes",
+   "icon": "target",
+   "statement": "You can name the 4 code groups, read a code as a word plus a number and say which 6 codes are required.",
+   "vision": false,
+   "notes": "Lesson outcome."
+  },
+  {
+   "layout": "statement",
+   "title": "The 20 Codes",
+   "sub": "M01-L2",
+   "icon": "help-circle",
+   "statement": "Rory Meets TEN, CUST And SEN",
+   "line": "Rory is twelve and was helping his sister fill in the Idea Form for Litterline.",
+   "notes": "Rory is twelve and was helping his sister fill in the Idea Form for Litterline. Everything went smoothly until he reached a list of 20 short questions with odd capital-letter names like TEN, CUST and SEN. He wanted to answer them quickly and move on. But one question asked how many businesses there are and who sits above them, and he had no idea what it meant. Then it clicked. Each code is just one question, answered with a word and a number. And the number tells the factory which walls the app will need.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The 20 Codes",
+   "sub": "M01-L2",
+   "icon": "layout-list",
+   "statement": "Twenty Codes In Four Groups",
+   "line": "These questions are called the 20 codes.",
+   "notes": "These questions are called the 20 codes. A code is a short name for one question about how the app handles businesses, people and data. The full set was frozen on 19 Oct 2026, which means it is fixed and every new idea answers the same 20. They sit in 4 groups. Group 1, Businesses, has 6 codes. Group 2, Who Signs In, has 5. Group 3, Customers, has 4. Group 4, Public, has 5. The groups move from the inside of the app outwards: from the businesses at the core to strangers on the internet.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The 20 Codes",
+   "sub": "M01-L2",
+   "icon": "key",
+   "statement": "Each Answer Is A Word Plus Number",
+   "line": "Every answer is a word plus a number.",
+   "notes": "Every answer is a word plus a number. The word is the code, written in capitals. The number is the level, and each code has its own range. For example, TEN (0-6) counts the layers of businesses. A low number means simple. A high number means more layers, and so more care. The answers are written together, like TEN 3 or SEN 1. Most codes also point to a wall, numbered W1 to W8, that will keep data apart. So by answering the codes, you are already deciding which walls the app will need.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The 20 Codes",
+   "sub": "M01-L2",
+   "icon": "building-store",
+   "statement": "Group 1: Businesses",
+   "line": "Group 1 is Businesses.",
+   "notes": "Group 1 is Businesses. TEN (0-6) asks how many businesses use the app and who sits above them. Litterline is TEN 3: breeders, with one reseller, Northvale Canine Society, above them. PARENTS (0-3) asks how many parties one business can sit under. DOWN (0-3) asks what a party above may do to the layers below, such as read them. MEET (0-3) asks whether businesses that do not own each other ever meet. POOL (0-3) asks whether anything is worked out across businesses. EXIT (0-3) asks what happens to a business's data when it leaves.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The 20 Codes",
+   "sub": "M01-L2",
+   "icon": "login",
+   "statement": "Group 2: Who Signs In",
+   "line": "Group 2 is Who Signs In.",
+   "notes": "Group 2 is Who Signs In. ROLE (0-2) asks whether all of a business's staff have the same access, or different roles with different access. BELONG (0-2) asks how many businesses one person can belong to. GUEST (0-1) asks whether a business can let an outside person in with a limited view. HELP (0-3) asks whether someone can see the app as another person sees it, for example to give support, and whether that is logged. JOIN (0-2) asks who can create an account: invite only, people with a join link, or anyone who signs in.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The 20 Codes",
+   "sub": "M01-L2",
+   "icon": "users",
+   "statement": "Group 3: Customers",
+   "line": "Group 3 is Customers.",
+   "notes": "Group 3 is Customers. CUST (0-5) asks how far into a business's own customers the app goes. At 0 only staff use it. At 3, customers can write their own data, and at 5 customers sell to each other. Litterline is CUST 3. PRICE (0-3) asks whether everyone pays the same price. SHARE (0-1) asks whether members can share things with each other. SEN (0-3) asks how sensitive the data is: 0 is ordinary, 1 is personal, 2 is health or clinical, and 3 is children. SEN matters a great deal, as the next lesson shows.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The 20 Codes",
+   "sub": "M01-L2",
+   "icon": "world",
+   "statement": "Group 4: Public",
+   "line": "Group 4 is Public.",
+   "notes": "Group 4 is Public. VIEW (0-2) asks whether a stranger can read anything without signing in. POST (0-2) asks whether a stranger can put data in without signing in, such as through a contact form. BRAND (0-2) asks whose name is on the screen: none, one brand, or a brand per business. Litterline is BRAND 2, because each reselling club shows its own name. SEND (0-2) asks what the app sends to outside systems the factory does not control. PAY (0-2) asks whether money moves between parties in one chain, such as payouts within that chain.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "The 20 Codes",
+   "sub": "M01-L2",
+   "icon": "list-check",
+   "statement": "Six Required, Fourteen Can Wait",
+   "line": "Do you need all 20 answers on day one?",
+   "notes": "Do you need all 20 answers on day one? No. Six codes are required, because the factory cannot judge an idea without them: TEN, CUST, SEN, VIEW, POST and PAY. The other 14 may be answered with a question mark, meaning not yet known. That keeps the form honest. A guess dressed up as a fact is worse than an open question, because nobody goes back to check it. The answers go straight onto the card, which is their only home. Rory filled in the six, marked three others as not yet known, and finished. Let us recap.",
+   "vision": false
+  },
+  {
+   "layout": "recap",
+   "title": "Recap",
+   "sub": "The 20 Codes",
+   "points": [
+    "20 Codes Sit In 4 Groups",
+    "Each Answer Is A Word Plus A Number",
+    "Six Required, Fourteen May Be Not Yet Known"
+   ],
+   "why": "The Codes Decide Which Walls The App Needs",
+   "vision": false,
+   "notes": "Recap."
+  },
+  {
+   "layout": "quiz",
+   "title": "Quick Check",
+   "sub": "The 20 Codes",
+   "q": "How many groups are the 20 codes sorted into?",
+   "options": [
+    "2",
+    "3",
+    "4",
+    "5"
+   ],
+   "notes": "Answer: C. The codes sit in 4 groups: Businesses, Who Signs In, Customers and Public."
+  },
+  {
+   "layout": "statement",
+   "title": "Kill Check, Verdict And Data Role",
+   "sub": "M01-L3 · About 6 Minutes",
+   "icon": "target",
+   "statement": "You can apply the three kill questions, work out the suggested verdict, name the four data roles and explain the Screen gate.",
+   "vision": false,
+   "notes": "Lesson outcome."
+  },
+  {
+   "layout": "statement",
+   "title": "Kill Check, Verdict And Data Role",
+   "sub": "M01-L3",
+   "icon": "circle-x",
+   "statement": "Leo's Idea Stopped At Stage 0",
+   "line": "Leo had an idea he loved: a version of Trimtable that would make one neat printed price list for a grooming salon.",
+   "notes": "Leo had an idea he loved: a version of Trimtable that would make one neat printed price list for a grooming salon. He wanted it built straight away. Then it went through the kill check, and one question stopped it. Would people use it once and stop? Honestly, yes. A salon prints its price list once a year and never opens the app again. Leo was disappointed for about a minute. Then he saw the point. The idea had stopped at Stage 0, for free, before a single hour of research or a single credit was spent.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Kill Check, Verdict And Data Role",
+   "sub": "M01-L3",
+   "icon": "help-circle",
+   "statement": "Three Kill Questions",
+   "line": "The kill check is three questions, each with a code name.",
+   "notes": "The kill check is three questions, each with a code name. FRAGILE asks: could the app give wrong answers that look right? An app that quietly misreads a record and shows it as fact is dangerous, because nobody notices. ONESHOT asks: would people use it once and stop? NOHOOK asks: is there no reason to come back? An app that nobody returns to cannot stay alive. These three can all be answered from the description alone, which is why they come first. They need no research, no tables and no money at all.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Kill Check, Verdict And Data Role",
+   "sub": "M01-L3",
+   "icon": "archive",
+   "statement": "Any Yes Suggests KILL",
+   "line": "If any one of the three answers is yes, the suggested verdict is KILL.",
+   "notes": "If any one of the three answers is yes, the suggested verdict is KILL. A verdict is the decision recorded for an idea at a check. A killed idea is not deleted. It is kept as evidence, with its reason and the date, and moved to the room called Recovery. That way, if someone suggests the same idea again next year, the factory finds the old record and does not repeat the work. A person still confirms a kill; the engine only suggests it. Stopping a weak idea early is one of the cheapest wins in the whole factory.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Kill Check, Verdict And Data Role",
+   "sub": "M01-L3",
+   "icon": "hourglass",
+   "statement": "High SEN (0-3) Means HOLD",
+   "line": "The second possible verdict is HOLD.",
+   "notes": "The second possible verdict is HOLD. The engine suggests HOLD when SEN, the sensitivity code, is 2 or 3. That means the app would hold health or clinical data, or data about children. These need extra care under data protection law. Before such an idea may move on, a DPIA must be done. A DPIA, or Data Protection Impact Assessment, is a written check of the risks to the people whose data the app will hold, and of how those risks will be reduced. Until it is signed, the idea waits. It is not killed, only paused.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Kill Check, Verdict And Data Role",
+   "sub": "M01-L3",
+   "icon": "circle-check",
+   "statement": "PASS: No Kill, SEN Below 2",
+   "line": "The third verdict is PASS.",
+   "notes": "The third verdict is PASS. An idea passes when no kill answer is yes and SEN is below 2, meaning the data is ordinary or personal, but not health and not children. Trimtable, the booking desk for groomers, is a good example. Salons use it every day to book and check appointments, so ONESHOT and NOHOOK are both no. Its records come from what the groomer types in, so FRAGILE is no. Its SEN is 1, because it holds clients' names and contact details. So the engine suggests PASS, and Trimtable moves towards the Screen gate.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Kill Check, Verdict And Data Role",
+   "sub": "M01-L3",
+   "icon": "scale",
+   "statement": "Data Roles: Who Is Responsible",
+   "line": "Alongside the verdict, the engine suggests a data role.",
+   "notes": "Alongside the verdict, the engine suggests a data role. This comes from data protection law and says who is responsible for personal data. A CONTROLLER decides why personal data is used and how. A PROCESSOR handles personal data on behalf of another business, following its instructions. BOTH means the app is a controller for some data and a processor for other data, decided set by set. NONE means the app holds no personal data at all. The role belongs to each relationship, not the whole company, so one app can play different roles for different data.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Kill Check, Verdict And Data Role",
+   "sub": "M01-L3",
+   "icon": "clipboard-check",
+   "statement": "The Role Picks The Duty Lines",
+   "line": "Why does the role matter so early?",
+   "notes": "Why does the role matter so early? Because it picks the duties. Each role brings its own pack of checklist lines that the app must complete later. A controller has duties such as a privacy notice and a route for people to ask for a copy of their data. A processor needs a written agreement with each business whose data it handles. An app marked BOTH gets both packs. Choosing the wrong role at Stage 0 means the wrong duty lines follow the app all the way to launch, so it is checked here, at the very start.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Kill Check, Verdict And Data Role",
+   "sub": "M01-L3",
+   "icon": "filter",
+   "statement": "The Screen Gate: Start Work",
+   "line": "Now the idea reaches its first gate: Screen, between Stage 0 and Stage 1.",
+   "notes": "Now the idea reaches its first gate: Screen, between Stage 0 and Stage 1. The question is simple: start work on this idea? A person decides, and their yes also confirms the data role. The factory can let some ideas pass Screen automatically, but never an idea with a kill suggested, an idea seen before, or an idea from the AI or client doors. Those always wait for a person. Once Screen says yes, the idea leaves Reception and enters Research. You now know the whole of Stage 0. Let us recap the three checks.",
+   "vision": false
+  },
+  {
+   "layout": "recap",
+   "title": "Recap",
+   "sub": "Kill Check, Verdict And Data Role",
+   "points": [
+    "Three Kill Questions: FRAGILE, ONESHOT, NOHOOK",
+    "HOLD When SEN (0-3) Is 2 Or More",
+    "Data Role: CONTROLLER, PROCESSOR, BOTH Or NONE"
+   ],
+   "why": "Stopping A Weak Idea At Stage 0 Costs Nothing",
+   "vision": false,
+   "notes": "Recap."
+  },
+  {
+   "layout": "quiz",
+   "title": "Quick Check",
+   "sub": "Kill Check, Verdict And Data Role",
+   "q": "Which kill question asks whether people would use the app once and stop?",
+   "options": [
+    "FRAGILE",
+    "NOHOOK",
+    "ONESHOT",
+    "SEN"
+   ],
+   "notes": "Answer: C. ONESHOT asks whether people would use it once and stop."
+  }
+ ]
+}

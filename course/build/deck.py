@@ -442,7 +442,7 @@ def jacket(brand_key):
     return G["brands"][brand_key]
 
 
-def render_deck(spec_path, brand_key=None, out_dir=None, pdf=True):
+def render_deck(spec_path, brand_key=None, out_dir=None, pdf=True, png=True):
     spec = json.load(open(spec_path, encoding="utf-8"))
     brand_key = brand_key or spec.get("brand", "ljr7")
     meta = {"module": spec["module"], "brand": jacket(brand_key), "source": spec.get("source", ""),
@@ -470,7 +470,8 @@ def render_deck(spec_path, brand_key=None, out_dir=None, pdf=True):
     to_pptx(all_parts, notes, pptx, cache)
     if pdf:
         subprocess.run(["node", os.path.join(lj.HERE, "shoot.mjs"), "--pdf", os.path.join(out_dir, f"{name}-{G['brand']['module_version']}.pdf")] + svgs, check=True, stdout=subprocess.DEVNULL)
-        subprocess.run(["node", os.path.join(lj.HERE, "shoot.mjs")] + svgs, check=True, stdout=subprocess.DEVNULL)
+        if png:
+            subprocess.run(["node", os.path.join(lj.HERE, "shoot.mjs")] + svgs, check=True, stdout=subprocess.DEVNULL)
     return pptx, svgs
 
 
@@ -491,8 +492,10 @@ def brandify(s, brand):
 if __name__ == "__main__":
     args = sys.argv[1:]
     brand = None
+    png = "--no-png" not in args
+    args = [a for a in args if a != "--no-png"]
     if "--brand" in args:
         brand = args[args.index("--brand") + 1]
         args = [a for a in args if a not in ("--brand", brand)]
     for a in args:
-        print(render_deck(a, brand)[0])
+        print(render_deck(a, brand, png=png)[0])

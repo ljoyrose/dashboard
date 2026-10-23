@@ -1,0 +1,246 @@
+{
+ "name": "AF-TRACKF-M10",
+ "module": "Track F · M10 · v1",
+ "source": "Source: scripts/modules/M10.json · AF-CARD-TEMPLATE.md, AF-UNDERSTANDING-2026-10-22.md, GATES.csv",
+ "slides": [
+  {
+   "layout": "title",
+   "title": "Your First Idea",
+   "sub": "Track F · Family Learners",
+   "big": "Filling In The Idea Form, Where To Go Next",
+   "line": "A worked walk through the Litterline idea form, then your own idea, the Vision 2029 picture and the honest next steps.",
+   "icon": "building-factory-2",
+   "notes": "A worked walk through the Litterline idea form, then your own idea, the Vision 2029 picture and the honest next steps."
+  },
+  {
+   "layout": "statement",
+   "title": "Filling In Your First Idea Form",
+   "sub": "M10-L1 · About 7 Minutes",
+   "icon": "target",
+   "statement": "You can fill in an idea form, using the fictional Litterline as a worked example.",
+   "vision": false,
+   "notes": "Lesson outcome."
+  },
+  {
+   "layout": "statement",
+   "title": "Filling In Your First Idea Form",
+   "sub": "M10-L1",
+   "icon": "bulb",
+   "statement": "A Sticky Note And A Blank Form",
+   "line": "Ava had followed the whole course, and she had an app idea of her own written on a sticky note by her desk.",
+   "notes": "Ava had followed the whole course, and she had an app idea of her own written on a sticky note by her desk. She wanted to send it into the factory properly, the way a real idea goes in. Then she opened the form, saw the 20 codes and froze. It felt like a test she might fail. What helped was watching someone fill in a finished example first. The codes turned out to be plain questions about who signs in and what they see, and most of them allow the answer not yet known. So let's fill one in together.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Filling In Your First Idea Form",
+   "sub": "M10-L1",
+   "icon": "login",
+   "statement": "Four Doors Into The Factory",
+   "line": "Every idea enters the factory through one of four doors.",
+   "notes": "Every idea enters the factory through one of four doors. The first is the owner's own idea form. Two more are internal doors for ideas the factory finds by itself, including ideas suggested by AI. The fourth is a door for clients, meaning people outside the factory, and that door is not built yet. Whichever door an idea uses, it lands in the same place: Reception, the room for Stage 0, tagged Free, because nothing is spent here. Our worked example is Litterline, a fictional app, so every name and number you hear is invented.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Filling In Your First Idea Form",
+   "sub": "M10-L1",
+   "icon": "forms",
+   "statement": "Name First, Then The Brief",
+   "line": "The form starts with a short name: Litterline.",
+   "notes": "The form starts with a short name: Litterline. Then comes the brief, which is three plain answers. What is it? A licence and records hub for dog breeders. Who pays? Breeders, and clubs that resell it under their own name, such as the fictional Northvale Canine Society. What is the pain? Licence renewals mean weeks of hunting through paper. The form also notes the rule behind the idea, here the dog breeding licence rules in England and Wales. A good brief is short enough to say in one breath, and specific enough that a stranger could picture the customer.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Filling In Your First Idea Form",
+   "sub": "M10-L1",
+   "icon": "building-store",
+   "statement": "Group 1: Businesses, Six Codes",
+   "line": "Now the 20 codes, in four groups.",
+   "notes": "Now the 20 codes, in four groups. Each code is a word plus a number. Six are required: TEN, CUST, SEN, VIEW, POST and PAY. The other 14 may say not yet known. Group 1 is Businesses. TEN (0-6) is 3, one reseller above, because the club sits above its breeders. PARENTS (0-3) is 1, so each breeder sits under one party. DOWN (0-3) is 1: the club can read the layer below. MEET (0-3) is 0, so breeders never meet each other. POOL (0-3) is 1, only when enough contribute. EXIT (0-3) is 2: a leaving breeder's data is handed to them.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Filling In Your First Idea Form",
+   "sub": "M10-L1",
+   "icon": "users",
+   "statement": "Group 2: Who Signs In",
+   "line": "Group 2 is Who Signs In.",
+   "notes": "Group 2 is Who Signs In. ROLE (0-2) is 2, roles with different access, so a breeder and their helper need not see the same things. BELONG (0-2) is 1: each person belongs to one business. GUEST (0-1) is 1, which means a business can let an outside person in with a scoped view, a narrow window onto only what they need. HELP (0-3) is 1: the owner can view the app as another person sees it, view only, and every look is logged. JOIN (0-2) is 1, so accounts are created through a brand address or a join link, not by anyone at all.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Filling In Your First Idea Form",
+   "sub": "M10-L1",
+   "icon": "world",
+   "statement": "Groups 3 And 4: Customers, Public",
+   "line": "Group 3 is Customers.",
+   "notes": "Group 3 is Customers. CUST (0-5) is 3, customers write, so puppy buyers can add to their records. PRICE (0-3) is 1, one price list. SHARE (0-1) is 0: members do not share with each other. SEN (0-3) is 1, personal data, but nothing health-related or about children. Group 4 is Public. VIEW (0-2) is 1, so only people holding a link can read while signed out. POST (0-2) is 0: strangers cannot put data in. BRAND (0-2) is 2, a brand per business. SEND (0-2) is 1, users download their own data. PAY (0-2) is 2: payouts within one chain.",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Filling In Your First Idea Form",
+   "sub": "M10-L1",
+   "icon": "gavel",
+   "statement": "Kill Check, Verdict, Data Role",
+   "line": "Next come the three kill questions.",
+   "notes": "Next come the three kill questions. FRAGILE: could it give wrong answers that look right? ONESHOT: would people use it once and stop? NOHOOK: is there no reason to come back? In our worked example all three are answered no, partly because licences renew, which brings breeders back. With no kill answer and SEN below 2, the engine suggests the verdict PASS. It also suggests a data role, such as CONTROLLER, PROCESSOR, BOTH or NONE, and a person confirms it. Then the Screen gate asks a person one question: start work on this idea?",
+   "vision": false
+  },
+  {
+   "layout": "statement",
+   "title": "Filling In Your First Idea Form",
+   "sub": "M10-L1",
+   "icon": "clipboard-check",
+   "statement": "Now Fill In Your Own",
+   "line": "Your turn.",
+   "notes": "Your turn. Take your own idea and write a short name, then the three-part brief: what it is, who pays, and the pain it removes. Answer the six required codes first, TEN, CUST, SEN, VIEW, POST and PAY, and write not yet known wherever you honestly are not sure. That is allowed, and it is better than a guess. Your answers become the app's card, its one home, which is never overwritten; changes become a new version. The link to a client idea form is marked TO CONFIRM, because that door is still being built. Let's recap.",
+   "vision": false
+  },
+  {
+   "layout": "recap",
+   "title": "Recap",
+   "sub": "Filling In Your First Idea Form",
+   "points": [
+    "Brief Is Three Answers: What, Who Pays, Pain",
+    "Six Codes Required, Fourteen May Say Not Yet Known",
+    "No Kill Answer And SEN Below 2 Means PASS"
+   ],
+   "why": "A Clear Form Gives Your Idea A Fair Hearing",
+   "vision": false,
+   "notes": "Recap."
+  },
+  {
+   "layout": "quiz",
+   "title": "Quick Check",
+   "sub": "Filling In Your First Idea Form",
+   "q": "Which three answers make up the brief?",
+   "options": [
+    "Name, logo and colour",
+    "What it is, who pays, and the pain",
+    "Price, domain and funnel",
+    "Tables, walls and tests"
+   ],
+   "notes": "Answer: B. The brief is what it is, who pays, and the pain it removes, said in plain words."
+  },
+  {
+   "layout": "statement",
+   "title": "Where To Go Next",
+   "sub": "M10-L2 · About 6 Minutes",
+   "icon": "target",
+   "statement": "You can describe the Vision 2029 picture and the honest next steps on the value ladder.",
+   "vision": true,
+   "notes": "Lesson outcome."
+  },
+  {
+   "layout": "statement",
+   "title": "Where To Go Next",
+   "sub": "M10-L2",
+   "icon": "flag",
+   "statement": "After The First Idea",
+   "line": "Leah finished the course with one idea form filled in, and she wanted to know what could come after a single idea.",
+   "notes": "Leah finished the course with one idea form filled in, and she wanted to know what could come after a single idea. So she searched online, and everything she found promised apps that make money while you sleep. She trusted none of it, and she was right not to. What she needed was an honest picture: where the factory is heading, what the next steps are, and what nobody can promise. That picture turned out to be calmer and more useful. It is a road of clear steps, with a person deciding at the gates.",
+   "vision": true
+  },
+  {
+   "layout": "statement",
+   "title": "Where To Go Next",
+   "sub": "M10-L2",
+   "icon": "sparkles",
+   "statement": "Vision 2029, Illustrative",
+   "line": "First, the future.",
+   "notes": "First, the future. Everything in the next two parts is Vision 2029, illustrative. That means it is a picture of what the factory aims to look like, drawn to show scale. It is not today's numbers and it is not a forecast. In this picture there are about 1,000 live apps, and one new app arrives each day. Every figure you hear is invented to make the idea concrete. Holding a clear picture helps the factory build the right checks now, because a check that works for one app has to work for a thousand.",
+   "vision": true
+  },
+  {
+   "layout": "statement",
+   "title": "Where To Go Next",
+   "sub": "M10-L2",
+   "icon": "radar",
+   "statement": "A Morning In The 2029 Picture",
+   "line": "Still Vision 2029, illustrative.",
+   "notes": "Still Vision 2029, illustrative. Imagine 06:40 UK time. The leak probe reports All Clear across 18,240 tables. Three apps sit in the Rescue room, each with one capped fix moving through the lane kept empty for trouble. Two hundred and twelve apps have been retired, with their parts back in Reserve. The decide list, where a person answers yes or no, is capped at 10 rows, and 7 are open. Notice what scale does not change. The same probe, the same money line and the same gates you learned in this course run for every app.",
+   "vision": true
+  },
+  {
+   "layout": "statement",
+   "title": "Where To Go Next",
+   "sub": "M10-L2",
+   "icon": "users",
+   "statement": "People Still Decide At Gates",
+   "line": "Even in the vision, automation does the checking and the carrying between gates, and a person still decides at the human gates.",
+   "notes": "Even in the vision, automation does the checking and the carrying between gates, and a person still decides at the human gates. Those are Screen, Merit, Lock, Invest unless it passes automatically at 1,500 credits or less, Send, Launch, Back to Operate and Retire. On the full flow map of the future factory, a person appears only at those points. That is the design, not a weakness. Machines are good at doing the same check a thousand times. People are needed where judgement, money and law meet, and that does not change with scale.",
+   "vision": true
+  },
+  {
+   "layout": "statement",
+   "title": "Where To Go Next",
+   "sub": "M10-L2",
+   "icon": "layout-list",
+   "statement": "What A Value Ladder Is",
+   "line": "Now the next steps.",
+   "notes": "Now the next steps. A value ladder is a set of steps, where each step offers a little more help for the people who want it, and nobody has to climb higher than suits them. The App Factory ladder has five steps. One, this course, which teaches the road. Two, the idea form, where you send in your own idea. Three, an app built for you through the stages. Four, a reseller plan, where a business puts its own name on an app. Five, a partner link. Let's take them in pairs.",
+   "vision": true
+  },
+  {
+   "layout": "statement",
+   "title": "Where To Go Next",
+   "sub": "M10-L2",
+   "icon": "school",
+   "statement": "Learn, Then Send An Idea",
+   "line": "Step one is where you are now.",
+   "notes": "Step one is where you are now. The course explains how an idea becomes a live app: stages, rooms, gates, codes, bricks, walls and tests, in plain words. Step two is the idea form. A client door into the factory is being built, so the link is marked TO CONFIRM until it exists. When it opens, you would answer the same plain questions you practised with Litterline: what it is, who pays, the pain, and the required codes. A person then decides at the Screen gate whether work starts, exactly as you learned.",
+   "vision": true
+  },
+  {
+   "layout": "statement",
+   "title": "Where To Go Next",
+   "sub": "M10-L2",
+   "icon": "building-store",
+   "statement": "Built, Then Resold Under A Brand",
+   "line": "Step three is an app built for you, through the same stages and gates.",
+   "notes": "Step three is an app built for you, through the same stages and gates. Step four is a reseller plan. A reseller is a business that sells an app under its own name, the way the fictional Northvale Canine Society could offer Litterline to its breeders. One rule is firm: a reseller brand is never on a free plan. Members sign in first and pay second. The plan they chose on the landing page travels with them, is recorded, and is checked against that brand's offers. The price is never taken from the web address.",
+   "vision": true
+  },
+  {
+   "layout": "statement",
+   "title": "Where To Go Next",
+   "sub": "M10-L2",
+   "icon": "link",
+   "statement": "Partner Link And No Promises",
+   "line": "Step five is a partner link for the platform the factory builds on.",
+   "notes": "Step five is a partner link for the platform the factory builds on. That link is marked TO CONFIRM, because it is not set yet. And here is the most important line in this lesson. There are no income promises anywhere in this course. Results depend on your own work, and nothing here says that any app, plan or link will make money. What the course can promise is understanding: how real apps are planned, checked and run, and the questions to ask before any money is spent. Let's recap where to go next.",
+   "vision": true
+  },
+  {
+   "layout": "recap",
+   "title": "Recap",
+   "sub": "Where To Go Next",
+   "points": [
+    "Future Figures Are Always Vision 2029, Illustrative",
+    "People Still Decide At The Human Gates",
+    "A Reseller Brand Is Never On A Free Plan"
+   ],
+   "why": "Honest Steps Matter More Than Big Promises",
+   "vision": true,
+   "notes": "Recap."
+  },
+  {
+   "layout": "quiz",
+   "title": "Quick Check",
+   "sub": "Where To Go Next",
+   "q": "What must every figure about the future carry in this course?",
+   "options": [
+    "A price",
+    "The words Vision 2029, illustrative",
+    "A leak test result",
+    "A partner link"
+   ],
+   "notes": "Answer: B. Future figures, such as about 1,000 apps or one a day, are always marked Vision 2029, illustrative."
+  }
+ ]
+}

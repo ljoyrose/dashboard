@@ -1,0 +1,97 @@
+# M01 · Stage 0 · Idea
+The Idea Form, The 20 Codes, The Kill Check · Track F · v1 · 23 Oct 2026
+
+How an idea enters the factory through the Idea Form, how the 20 codes describe it, and how the kill check, verdict, data role and Screen gate decide whether work starts.
+
+## M01-L1 · The Idea Form
+**Outcome:** You can write an idea as a one-line vision, a named payer and a clear pain, and name the four doors ideas come through.  
+**Length:** 770 words · about 5.9 min · Today
+
+**Opener (Epiphany Bridge (light)):** Backstory: Isla's aunt, the breeder Mara Quill, loses weeks to paperwork every time her breeding licence is renewed. · Desire: Isla wanted to turn that headache into an app idea. · Wall: She wrote two pages of features, and her aunt could not tell what the app was for. · Epiphany: The factory starts every idea with three short answers: what it is, who pays and what hurts.
+
+| # | On Screen | Narration |
+|---|---|---|
+| 1 | Two Pages Nobody Could Follow | Isla's aunt, Mara Quill, breeds dogs and holds a dog breeding licence from her local council. Every time the licence comes up for renewal, Mara spends weeks hunting through folders for paperwork. Isla wanted to turn that headache into an app idea. She wrote two full pages of features: reminders, charts, a shop, a chat room. When she showed it to her aunt, Mara could not tell what the app was actually for. Then Isla learned how the factory starts every idea. Not with features, but with three short answers: what it is, who pays, and what hurts. |
+| 2 | Stage 0 Starts In Reception | Every idea begins at Stage 0, called Idea, in a room called Reception. Reception is free: nothing here costs a single build credit. By the end of Stage 0, the idea will have five things. A card, which is its record. A one-line brief. A kill check, which asks whether the idea should stop now. A set of 20 codes that describe how the app handles businesses, people and data. And a data role, which says who is responsible for the personal data. This lesson covers the first part: the Idea Form, and the doors ideas come through. |
+| 3 | Four Doors Bring Ideas In | Ideas can arrive through four doors. The first is the Idea Form, filled in by a person with an idea. The second is called the flip farm: ideas that arrive already attached to an existing template, so they start with a ready-made shape. The third is the AI door, for ideas suggested by an AI tool. The fourth is the client door, for ideas sent in by outside customers, and it is not built yet. The door an idea came through is recorded on its record, so anyone can later see where it started. |
+| 4 | Vision: What The App Is | Now the form itself. It opens with a short name and a vision. The vision is one line that says what the app is and what it does, with no list of features. Isla rewrote hers: Litterline, a licence and records hub for dog breeders. That is the whole vision. It is short on purpose. A short line can be checked, argued with and changed. Two pages of features cannot. If you cannot say what your app is in one line, the idea is not ready yet, and that is useful to know before any work starts. |
+| 5 | Who Pays: Name The Payer | Next, the form asks who pays. This means the person or business whose money keeps the app running, not just who uses it. For Litterline, breeders pay. But there is a second answer: dog clubs can resell it under their own name. A reseller is a business that sells the app to its own members with its own name and colours on it. In our example, the fictional club Northvale Canine Society resells Litterline to its breeders. Naming the payer early matters, because a later gate, Lock, will not let an app move on without one. |
+| 6 | Pain: The Problem In Plain Words | The third question is pain. The pain is the problem the app removes, written the way the customer would say it. For Litterline, the pain is that licence renewals mean weeks of paper hunting. Notice that this is not a feature. It does not say reminders or charts. It names something that hurts, and that a breeder would recognise straight away. Good pain lines are plain and specific. A vague pain, such as making life easier, cannot be tested. A specific pain can be checked against real customers in Stage 1, Research. |
+| 7 | What Happens When You Submit | When the form is sent, the factory engine does five things at once. The engine is the script that moves apps along the road. It writes the idea's card. It creates the app's task at Stage 0, or on hold if the data is sensitive. It adds a row to the list of ideas. It suggests a verdict, which is pass, hold or kill. And it suggests a data role. It also checks whether the factory has seen this idea before, and flags it if so. If a form is ever lost, a safety net writes the card on the next check. |
+| 8 | The Card Is Never Overwritten | The card is the single home of the idea's classification. It is never overwritten. If something changes, a new version is saved beside it, marked v2, then v3, so the history is always there. There is also an optional extra: a one-screen sketch of the idea, using made-up data and no tables, so a person can picture it. It costs nothing. Isla now has a one-line vision, a named payer and a clear pain, instead of two pages of features. Next, the form asks its biggest question: the 20 codes. First, a recap. |
+
+**Recap**
+- Start With Vision, Who Pays And Pain
+- Ideas Arrive Through Four Doors
+- The Card Is Kept, Never Overwritten
+- Why it matters: Three Short Answers Beat Two Pages Of Features
+
+**Quiz**
+1. What three things does the brief on the Idea Form ask for? A) Colours, logo and name · B) What it is, who pays and the pain · C) Price, launch date and domain · D) Screens, tables and rules · **Answer B**: The one-line brief covers the vision, who pays and the pain.
+2. Which of the four idea doors is not built yet? A) The Idea Form · B) The flip farm · C) The AI door · D) The client door · **Answer D**: The client door, for ideas from outside customers, is not built yet.
+3. What is a reseller? A) A business that sells the app to its members under its own name · B) A person who tests the app · C) A rival product · D) A kind of table · **Answer A**: A reseller, like Northvale Canine Society, sells the app to its own members with its own name on it.
+4. What happens when a card needs to change? A) The old card is deleted · B) The card is overwritten · C) A new version, such as v2, is saved beside it · D) The idea starts again with a new name · **Answer C**: The card is never overwritten, so changes are saved as new versions and the history is kept.
+
+Sources: AF-UNDERSTANDING-2026-10-22.md, TEMPLATE-MIRROR.md, AF-CARD-TEMPLATE.md, THE-STAGE-TRANSITIONS.md, IDEAS.csv
+
+## M01-L2 · The 20 Codes
+**Outcome:** You can name the 4 code groups, read a code as a word plus a number and say which 6 codes are required.  
+**Length:** 765 words · about 5.9 min · Today
+
+**Opener (Epiphany Bridge (light)):** Backstory: Rory was helping his sister fill in the Idea Form for Litterline. · Desire: He wanted to answer the list of 20 coded questions quickly. · Wall: A question about how many businesses there are and who sits above them made no sense to him. · Epiphany: Each code is one question answered with a word and a number, and the number tells the factory which walls to build.
+
+| # | On Screen | Narration |
+|---|---|---|
+| 1 | Rory Meets TEN, CUST And SEN | Rory is twelve and was helping his sister fill in the Idea Form for Litterline. Everything went smoothly until he reached a list of 20 short questions with odd capital-letter names like TEN, CUST and SEN. He wanted to answer them quickly and move on. But one question asked how many businesses there are and who sits above them, and he had no idea what it meant. Then it clicked. Each code is just one question, answered with a word and a number. And the number tells the factory which walls the app will need. |
+| 2 | Twenty Codes In Four Groups | These questions are called the 20 codes. A code is a short name for one question about how the app handles businesses, people and data. The full set was frozen on 19 Oct 2026, which means it is fixed and every new idea answers the same 20. They sit in 4 groups. Group 1, Businesses, has 6 codes. Group 2, Who Signs In, has 5. Group 3, Customers, has 4. Group 4, Public, has 5. The groups move from the inside of the app outwards: from the businesses at the core to strangers on the internet. |
+| 3 | Each Answer Is A Word Plus Number | Every answer is a word plus a number. The word is the code, written in capitals. The number is the level, and each code has its own range. For example, TEN (0-6) counts the layers of businesses. A low number means simple. A high number means more layers, and so more care. The answers are written together, like TEN 3 or SEN 1. Most codes also point to a wall, numbered W1 to W8, that will keep data apart. So by answering the codes, you are already deciding which walls the app will need. |
+| 4 | Group 1: Businesses | Group 1 is Businesses. TEN (0-6) asks how many businesses use the app and who sits above them. Litterline is TEN 3: breeders, with one reseller, Northvale Canine Society, above them. PARENTS (0-3) asks how many parties one business can sit under. DOWN (0-3) asks what a party above may do to the layers below, such as read them. MEET (0-3) asks whether businesses that do not own each other ever meet. POOL (0-3) asks whether anything is worked out across businesses. EXIT (0-3) asks what happens to a business's data when it leaves. |
+| 5 | Group 2: Who Signs In | Group 2 is Who Signs In. ROLE (0-2) asks whether all of a business's staff have the same access, or different roles with different access. BELONG (0-2) asks how many businesses one person can belong to. GUEST (0-1) asks whether a business can let an outside person in with a limited view. HELP (0-3) asks whether someone can see the app as another person sees it, for example to give support, and whether that is logged. JOIN (0-2) asks who can create an account: invite only, people with a join link, or anyone who signs in. |
+| 6 | Group 3: Customers | Group 3 is Customers. CUST (0-5) asks how far into a business's own customers the app goes. At 0 only staff use it. At 3, customers can write their own data, and at 5 customers sell to each other. Litterline is CUST 3. PRICE (0-3) asks whether everyone pays the same price. SHARE (0-1) asks whether members can share things with each other. SEN (0-3) asks how sensitive the data is: 0 is ordinary, 1 is personal, 2 is health or clinical, and 3 is children. SEN matters a great deal, as the next lesson shows. |
+| 7 | Group 4: Public | Group 4 is Public. VIEW (0-2) asks whether a stranger can read anything without signing in. POST (0-2) asks whether a stranger can put data in without signing in, such as through a contact form. BRAND (0-2) asks whose name is on the screen: none, one brand, or a brand per business. Litterline is BRAND 2, because each reselling club shows its own name. SEND (0-2) asks what the app sends to outside systems the factory does not control. PAY (0-2) asks whether money moves between parties in one chain, such as payouts within that chain. |
+| 8 | Six Required, Fourteen Can Wait | Do you need all 20 answers on day one? No. Six codes are required, because the factory cannot judge an idea without them: TEN, CUST, SEN, VIEW, POST and PAY. The other 14 may be answered with a question mark, meaning not yet known. That keeps the form honest. A guess dressed up as a fact is worse than an open question, because nobody goes back to check it. The answers go straight onto the card, which is their only home. Rory filled in the six, marked three others as not yet known, and finished. Let us recap. |
+
+**Recap**
+- 20 Codes Sit In 4 Groups
+- Each Answer Is A Word Plus A Number
+- Six Required, Fourteen May Be Not Yet Known
+- Why it matters: The Codes Decide Which Walls The App Needs
+
+**Quiz**
+1. How many groups are the 20 codes sorted into? A) 2 · B) 3 · C) 4 · D) 5 · **Answer C**: The codes sit in 4 groups: Businesses, Who Signs In, Customers and Public.
+2. Which six codes must always be answered? A) TEN, CUST, SEN, VIEW, POST and PAY · B) ROLE, JOIN, HELP, GUEST, BELONG and SHARE · C) PRICE, BRAND, SEND, EXIT, POOL and MEET · D) Any six you choose · **Answer A**: The factory cannot judge an idea without TEN, CUST, SEN, VIEW, POST and PAY.
+3. What does SEN 3 mean? A) Ordinary data · B) Personal data · C) Health or clinical data · D) Data about children · **Answer D**: SEN (0-3) runs from ordinary to children, so 3 means the app holds children's data.
+4. What does a question mark mean as an answer to one of the 14 optional codes? A) The answer is zero · B) Not yet known · C) The code does not apply · D) The idea is killed · **Answer B**: A question mark honestly records that the answer is not yet known.
+
+Sources: AF-CARD-TEMPLATE.md, codes-catalogue.json, AF-UNDERSTANDING-2026-10-22.md, TEMPLATE-MIRROR.md
+
+## M01-L3 · Kill Check, Verdict And Data Role
+**Outcome:** You can apply the three kill questions, work out the suggested verdict, name the four data roles and explain the Screen gate.  
+**Length:** 771 words · about 5.9 min · Today
+
+**Opener (Epiphany Bridge (light)):** Backstory: Leo loved his idea for a version of Trimtable that printed one neat price list for a salon. · Desire: He wanted it built straight away. · Wall: The kill check asked whether people would use it once and stop, and the honest answer was yes. · Epiphany: Stopping a weak idea at Stage 0 costs nothing, which makes it a win, not a loss.
+
+| # | On Screen | Narration |
+|---|---|---|
+| 1 | Leo's Idea Stopped At Stage 0 | Leo had an idea he loved: a version of Trimtable that would make one neat printed price list for a grooming salon. He wanted it built straight away. Then it went through the kill check, and one question stopped it. Would people use it once and stop? Honestly, yes. A salon prints its price list once a year and never opens the app again. Leo was disappointed for about a minute. Then he saw the point. The idea had stopped at Stage 0, for free, before a single hour of research or a single credit was spent. |
+| 2 | Three Kill Questions | The kill check is three questions, each with a code name. FRAGILE asks: could the app give wrong answers that look right? An app that quietly misreads a record and shows it as fact is dangerous, because nobody notices. ONESHOT asks: would people use it once and stop? NOHOOK asks: is there no reason to come back? An app that nobody returns to cannot stay alive. These three can all be answered from the description alone, which is why they come first. They need no research, no tables and no money at all. |
+| 3 | Any Yes Suggests KILL | If any one of the three answers is yes, the suggested verdict is KILL. A verdict is the decision recorded for an idea at a check. A killed idea is not deleted. It is kept as evidence, with its reason and the date, and moved to the room called Recovery. That way, if someone suggests the same idea again next year, the factory finds the old record and does not repeat the work. A person still confirms a kill; the engine only suggests it. Stopping a weak idea early is one of the cheapest wins in the whole factory. |
+| 4 | High SEN (0-3) Means HOLD | The second possible verdict is HOLD. The engine suggests HOLD when SEN, the sensitivity code, is 2 or 3. That means the app would hold health or clinical data, or data about children. These need extra care under data protection law. Before such an idea may move on, a DPIA must be done. A DPIA, or Data Protection Impact Assessment, is a written check of the risks to the people whose data the app will hold, and of how those risks will be reduced. Until it is signed, the idea waits. It is not killed, only paused. |
+| 5 | PASS: No Kill, SEN Below 2 | The third verdict is PASS. An idea passes when no kill answer is yes and SEN is below 2, meaning the data is ordinary or personal, but not health and not children. Trimtable, the booking desk for groomers, is a good example. Salons use it every day to book and check appointments, so ONESHOT and NOHOOK are both no. Its records come from what the groomer types in, so FRAGILE is no. Its SEN is 1, because it holds clients' names and contact details. So the engine suggests PASS, and Trimtable moves towards the Screen gate. |
+| 6 | Data Roles: Who Is Responsible | Alongside the verdict, the engine suggests a data role. This comes from data protection law and says who is responsible for personal data. A CONTROLLER decides why personal data is used and how. A PROCESSOR handles personal data on behalf of another business, following its instructions. BOTH means the app is a controller for some data and a processor for other data, decided set by set. NONE means the app holds no personal data at all. The role belongs to each relationship, not the whole company, so one app can play different roles for different data. |
+| 7 | The Role Picks The Duty Lines | Why does the role matter so early? Because it picks the duties. Each role brings its own pack of checklist lines that the app must complete later. A controller has duties such as a privacy notice and a route for people to ask for a copy of their data. A processor needs a written agreement with each business whose data it handles. An app marked BOTH gets both packs. Choosing the wrong role at Stage 0 means the wrong duty lines follow the app all the way to launch, so it is checked here, at the very start. |
+| 8 | The Screen Gate: Start Work | Now the idea reaches its first gate: Screen, between Stage 0 and Stage 1. The question is simple: start work on this idea? A person decides, and their yes also confirms the data role. The factory can let some ideas pass Screen automatically, but never an idea with a kill suggested, an idea seen before, or an idea from the AI or client doors. Those always wait for a person. Once Screen says yes, the idea leaves Reception and enters Research. You now know the whole of Stage 0. Let us recap the three checks. |
+
+**Recap**
+- Three Kill Questions: FRAGILE, ONESHOT, NOHOOK
+- HOLD When SEN (0-3) Is 2 Or More
+- Data Role: CONTROLLER, PROCESSOR, BOTH Or NONE
+- Why it matters: Stopping A Weak Idea At Stage 0 Costs Nothing
+
+**Quiz**
+1. Which kill question asks whether people would use the app once and stop? A) FRAGILE · B) NOHOOK · C) ONESHOT · D) SEN · **Answer C**: ONESHOT asks whether people would use it once and stop.
+2. No kill answer is yes, but SEN is 3. Which verdict does the engine suggest? A) PASS · B) HOLD · C) KILL · D) GO · **Answer B**: SEN 2 or 3 means HOLD until a DPIA is done and signed.
+3. What does a PROCESSOR do? A) Decides why personal data is used · B) Holds no personal data · C) Sells the app under its own name · D) Handles personal data on behalf of another business · **Answer D**: A processor follows another business's instructions when it handles personal data.
+4. Which idea can never pass the Screen gate automatically? A) An idea where a kill is suggested · B) An idea with SEN 1 · C) An idea from the Idea Form with no flags · D) An idea with a short name · **Answer A**: Kill-suggested, seen-before, AI and client ideas always wait for a person at Screen.
+
+Sources: AF-CARD-TEMPLATE.md, AF-UNDERSTANDING-2026-10-22.md, TEMPLATE-MIRROR.md, GATES.csv, APP-FACTORY-FRAMEWORK.md, IDEAS.csv

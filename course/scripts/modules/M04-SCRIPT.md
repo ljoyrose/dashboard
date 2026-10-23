@@ -1,0 +1,66 @@
+# M04 · Stage 3 · Features
+Kits And Bricks, Who Sees What, Duties, The Lock Gate · Track F · v1 · 23 Oct 2026
+
+How the first version of an app is scoped, mapped and mocked up, how its duties are listed, and how the Lock gate freezes the feature list.
+
+## M04-L1 · Choosing Kits And Bricks
+**Outcome:** You can describe how the first version of an app is scoped, mapped and mocked up before Lock.  
+**Length:** 756 words · about 5.8 min · Today
+
+**Opener (Epiphany Bridge (light)):** Backstory: Sam was helping to plan Stayproof, the inspection pack for boarding kennels. · Desire: He wanted the first version to do everything a kennel could ever need. · Wall: The list kept growing, and nothing on it could be built or tested. · Epiphany: The first version only needs the fewest screens a first customer would pay for and use; the rest goes on a roadmap.
+
+| # | On Screen | Narration |
+|---|---|---|
+| 1 | Sam Wanted Everything In Version One | Sam was helping to plan Stayproof, our sample inspection pack for boarding kennels. He wanted the first version to do everything a kennel could ever need: daily logs, staff rotas, feeding charts, a shop, reviews, a chat room. Every day the list grew longer, and nothing on it could be built or tested, because nothing was finished. Then someone asked him a different question. What is the smallest app a first customer would pay for and actually use? Everything else could wait on a roadmap. That question is the heart of Stage 3, called Features. |
+| 2 | Stage 3 Picks What Goes In | Stage 3 is where the bricks and kits from Stage 2 become a real feature list. It sits in the Research room and it is free. The work is written into a build pack, a set of short notes kept in the app's one document organised by stage, before anything is built. The pack answers five things. Who sees and does what. Which words, labels and colours are data. How payment works. Which tenancy level the app has, using the TEN (0-6) code. And the launch-minimum scope. We will take them one at a time. |
+| 3 | Who Sees And Does What | The first note is a who-sees-and-does-what map. It has one line for each role and each action. A role is a type of person using the app, such as owner, staff member or customer. A line might say: kennel staff can add a daily log, and only for their own kennel. Each line also names where the check happens on the server side, which means on the computer that holds the data, not just on the screen. A rule that lives only on the screen can be dodged. A rule on the server cannot. |
+| 4 | Every Word And Colour Is Data | The second note is content as data. Every word, label, colour and category the app shows is listed and stored as rows in a table, never typed into the code. Why bother? Because a reseller app like Litterline wears different brand names. When Northvale Canine Society offers the app to its breeders, the name, colours and wording change, but the layout stays the same. If the words are rows, that swap is an edit to a few rows. If the words are baked into the code, every change becomes a paid building turn. |
+| 5 | Payment Route And Tenancy Level | The third and fourth notes are about money and businesses. The payment route says who takes the money, who is the merchant of record, meaning the business named on the customer's receipt, and how VAT is handled. The PAY (0-2) code helps decide this. The tenancy level uses TEN (0-6), which counts how many businesses share the app and who sits above them. Stayproof is TEN 2: several kennels side by side, none above another. Litterline is TEN 3, because one reseller club sits above its breeders. A higher level needs more walls. |
+| 6 | The Launch-Minimum Scope | The fifth note is the launch-minimum scope. It is the fewest tables and screens that let a first customer pay and use the app. Everything else goes on the roadmap, which is the list of things to add later. Alongside it sits an in and out list, so everyone can see what was left out on purpose. One checklist rule keeps the scope honest: the first build must fix the three complaints customers mentioned most in research, and include at least one thing no rival has. Small, but already better than what is out there. |
+| 7 | A Clickable Mockup, Phone First | Before anything is built, the app gets a clickable mockup. A mockup is a pretend version of the screens you can tap through, with no real data behind it. It is designed phone first, then checked at laptop width, and it follows the house style rules. The mockup also has to use everything in the research: the tables, the rivals, the price range. A mockup made only from colours and calm layouts tends to look nice and say nothing. The person who decides at Lock clicks through it at both widths and says yes. |
+| 8 | Journeys Are Part Of The Design | One more thing goes into Stage 3: a journey map. A journey is one path a person takes through the app, such as signing up, checking an email on another device, signing in, resetting a password or signing out. Each journey is listed and questioned at design time. What does a signed-out visitor see on each page? Does it still work in a new tab? Thinking this through now is free. Finding a broken journey after a paid build is not. Next lesson covers the duties list and the gate that freezes all this. First, a recap. |
+
+**Recap**
+- Five Notes Go In The Build Pack Before Lock
+- Launch-Minimum Means Fewest Screens A Customer Pays For
+- Clickable Mockup Phone First, Built From The Research
+- Why it matters: Small And Clear Beats Big And Untested
+
+**Quiz**
+1. What is the launch-minimum scope? A) Every feature a customer could ever want · B) The fewest tables and screens that let a first customer pay and use it · C) The sales page · D) The list of rivals · **Answer B**: Launch-minimum is the smallest version a first customer would pay for and use; the rest is roadmap.
+2. Why are words, labels and colours stored as data? A) So a brand swap is an edit to rows, not a paid build turn · B) To make the app slower · C) Because code cannot hold words · D) So customers can change the code · **Answer A**: Rows can be changed per brand without paying for a new building turn.
+3. Where should a who-sees-and-does-what check happen? A) Only on the screen · B) In the sales page · C) In the customer's email · D) On the server side, where the data is held · **Answer D**: A rule on the server cannot be dodged the way a screen-only rule can.
+4. What must the first build include, by the checklist rule? A) A chat room · B) Every rival feature · C) The top three complaints fixed and one thing no rival has · D) A shop · **Answer C**: The feature lock keeps the three most-counted complaints fixed plus one thing no rival has.
+
+Sources: THE-STAGE-TRANSITIONS.md, TEMPLATE-MIRROR.md, APP-FACTORY-FRAMEWORK.md, AF-UNDERSTANDING-2026-10-22.md
+
+## M04-L2 · Duties And The Lock Gate
+**Outcome:** You can explain the obligations ledger and what must be true before the Lock gate freezes the feature list.  
+**Length:** 782 words · about 6.0 min · Today
+
+**Opener (Epiphany Bridge (light)):** Backstory: Ava and her mum had a short feature list for Trimtable that everyone liked. · Desire: They wanted to start building the next morning. · Wall: Nobody could say who was paying, what the law asked of them, or what the minimum age was. · Epiphany: A written list of duties and one firm decision to freeze the plan stop surprises later.
+
+| # | On Screen | Narration |
+|---|---|---|
+| 1 | A List Everyone Liked | Ava and her mum were planning Trimtable, our sample booking desk for dog groomers, with a salon called The Tidy Paw in mind. The feature list was short and everyone liked it. They wanted to start building the next morning. Then Ava asked three awkward questions. Who exactly is paying? What does the law ask of an app that stores customers' details? And what is the minimum age to sign up? Nobody knew. The answer was not more features. It was a written list of duties, and one firm decision to freeze the plan. |
+| 2 | Duties Come From A Shared Ledger | A duty, or obligation, is something that must exist or be done before a stage or a paid build can go ahead. The factory keeps every known duty in one shared file called OBLIGATIONS.csv. The version in use, v0.6, has 107 rows. Each row says what causes the duty. It might be the build platform itself, which affects every app. It might be one of the codes on the idea card. It might be a brick, or it might be a payment provider, the company that takes card payments. A kit inherits the duties of its bricks. |
+| 3 | The App Gets Its Own Ledger | At Stage 3 the app gets its own obligations ledger, section 3.7 of its document. A ledger is simply a list you keep track of. It is built from the shared file: every platform row, plus the rows for each of the app's codes, plus the rows for each brick it uses, plus the rows for each payment provider it chose. Each row then gets an owner, the gate or prompt it is due by, and a status. When a new duty is learned, from an incident or a refund, a row is added to the shared file in the same turn, so the next app inherits it. |
+| 4 | Some Duties Belong To One Person | Some rows can only be done by a person, not an agent. Here are examples from the file. Deciding the minimum age and how it is captured, which comes from the BR-LEGAL brick and is due at Lock. Deciding whether one person may hold more than one membership. Ruling on plans and prices before any plan is created. These rows are listed to the person who decides once, as one list with due points. Each then becomes a work item that blocks the gate or prompt it is due at. Agents can draft, but the decision stays with a person. |
+| 5 | Open Duties Block The Gate | Here is the rule that gives the ledger its teeth. A gate cannot pass while a ledger row due at that gate is still open or only part done. The same goes for a paid prompt: it cannot even be presented while a row due at it is open. Two automatic checks, called CK50 and CK51, enforce this. So a duty cannot quietly slip past. If the age rule is not decided, Lock does not pass, however good the mockup looks. It sounds strict, and it is. Fixing a missed legal duty after launch costs far more. |
+| 6 | Named Payer And A Legal Check | The Lock gate sits between Stage 3 and Stage 4, and it has two firm conditions. The first is a named payer: who will pay is written down by name, not assumed. The second is a legal check for this exact scope, because a different scope can bring different law. Trimtable stores customers' names and notes about their dogs, so its SEN (0-3) code is 1, personal data. That brings data protection duties with it. The legal check reads the in and out list and the ledger together, and says whether this version can be built as planned. |
+| 7 | A Person Always Decides At Lock | Lock is always decided by a person. It never passes automatically. The engine shows one decide row with a plain question: freeze the feature list? There is a reason it is always a person. Lock includes the mockup review, and judging whether a mockup is right is not something a checklist can do. A yes freezes the list. The out list is closed, and anything on it can only come back through a new gate, never by drift. Drift is when extra features creep in a little at a time without anyone deciding. |
+| 8 | After Lock, The App Becomes Real | Lock is also the moment the app is created on the build platform, with its own number and a short web name called a slug. Until now the app was a folder of notes. A live app that wants a new feature later comes back in at Lock too, as a small pack of its own, so every change gets the same check. With the feature list frozen and every duty owned, the next stage can design the tables safely. That is Stage 4, Schema. First, a quick recap of duties and the Lock gate. |
+
+**Recap**
+- Every App Gets Its Own Obligations Ledger
+- Open Duties Due At A Gate Block It
+- Lock Needs A Named Payer, Legal Check And Yes
+- Why it matters: Freezing The List Stops Drift And Surprise Costs
+
+**Quiz**
+1. What is OBLIGATIONS.csv? A) A list of rival apps · B) The app's price list · C) A shared file of duties keyed to what causes them · D) The sales page · **Answer C**: It is the shared file of duties, each caused by the platform, a code, a brick or a provider.
+2. What happens when a ledger row due at a gate is still open? A) The gate cannot pass · B) The gate passes with a warning · C) The row is deleted · D) The app is retired · **Answer A**: CK50 stops a gate while any row due at it is open or only part done.
+3. Which two conditions does the Lock gate need? A) A sales page and a domain · B) Two test accounts · C) A paid prompt and a refund · D) A named payer and a legal check · **Answer D**: Lock needs a named payer and a legal check for the scope.
+4. What happens to the out list after Lock? A) Its items join automatically next week · B) It is closed, and items return only through a new gate · C) It is sent to customers · D) It becomes the sales page · **Answer B**: The out list closes at Lock; nothing returns by drift.
+
+Sources: OBLIGATIONS.csv, THE-STAGE-TRANSITIONS.md, TEMPLATE-MIRROR.md, AF-UNDERSTANDING-2026-10-22.md

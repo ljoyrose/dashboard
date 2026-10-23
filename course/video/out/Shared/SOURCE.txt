@@ -1,0 +1,3 @@
+Footer date on every frame and still: 23 Oct 2026
+Editable source: course/video/src/index.tsx + course/glossary.json + course/video/scripts/*.json
+Re-render: node course/video/render.mjs [id] [--brand ljr7|ppp|yours]

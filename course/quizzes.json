@@ -1,0 +1,1205 @@
+{
+ "_about": "Every quiz in the course, keyed by lesson id. answer = index 0-3. Built from scripts/modules by build/modules.py.",
+ "lessons": {
+  "M00-L1": {
+   "module": "M00",
+   "lesson": "What An App Is Made Of",
+   "questions": [
+    {
+     "q": "What is a table in an app?",
+     "options": [
+      "A page that people tap",
+      "Where data is stored in rows and columns",
+      "A rule about prices",
+      "A kind of screen for staff"
+     ],
+     "answer": 1,
+     "why": "A table stores the app's data, with one row per thing and one column per fact."
+    },
+    {
+     "q": "In this course, what is a leak?",
+     "options": [
+      "A slow screen",
+      "A missing booking",
+      "Someone seeing data that is not theirs",
+      "A spelling mistake on a page"
+     ],
+     "answer": 2,
+     "why": "A leak happens when a wall fails and a person sees data that belongs to someone else."
+    },
+    {
+     "q": "What is kit K00?",
+     "options": [
+      "The floor that every app gets",
+      "A kit for selling products",
+      "A kit only for big apps",
+      "The last kit to be added"
+     ],
+     "answer": 0,
+     "why": "K00 is the floor: the basics, the walls between businesses and the legal parts, on every app."
+    },
+    {
+     "q": "Why is building every app by hand a problem when you want many apps?",
+     "options": [
+      "Hand-made apps cannot have screens",
+      "Hand-made apps have no tables",
+      "Hand-made apps are always free",
+      "Lessons from one app are not carried to the next"
+     ],
+     "answer": 3,
+     "why": "Each hand-made app starts from a blank page, so the same mistakes and missed checks repeat."
+    }
+   ]
+  },
+  "M00-L2": {
+   "module": "M00",
+   "lesson": "The Road, Rooms And Gates",
+   "questions": [
+    {
+     "q": "How many stages are on the factory road?",
+     "options": [
+      "Seven",
+      "Eight",
+      "Nine, numbered 0 to 8",
+      "Eleven"
+     ],
+     "answer": 2,
+     "why": "The road has nine stages, from 0 Idea to 8 Operate."
+    },
+    {
+     "q": "Which is the only stage that spends build credits?",
+     "options": [
+      "Stage 1, Research",
+      "Stage 6, Prompts",
+      "Stage 4, Schema",
+      "Stage 8, Operate"
+     ],
+     "answer": 1,
+     "why": "Stage 6 is where the app is built, and it is the only stage that spends build credits."
+    },
+    {
+     "q": "Which of these gates opens by itself when every check passes?",
+     "options": [
+      "Lock",
+      "Launch",
+      "Merit",
+      "Schema"
+     ],
+     "answer": 3,
+     "why": "Schema is an automatic gate, like Base; Lock and Launch always need a person."
+    },
+    {
+     "q": "What does the Slot check inside Invest make sure of?",
+     "options": [
+      "No more than 3 builds at once, with 1 lane kept for rescues",
+      "The app has a logo",
+      "The price is set",
+      "Every screen has a colour"
+     ],
+     "answer": 0,
+     "why": "Slot limits building to 3 apps at once and keeps 1 lane free for rescues."
+    }
+   ]
+  },
+  "M01-L1": {
+   "module": "M01",
+   "lesson": "The Idea Form",
+   "questions": [
+    {
+     "q": "What three things does the brief on the Idea Form ask for?",
+     "options": [
+      "Colours, logo and name",
+      "What it is, who pays and the pain",
+      "Price, launch date and domain",
+      "Screens, tables and rules"
+     ],
+     "answer": 1,
+     "why": "The one-line brief covers the vision, who pays and the pain."
+    },
+    {
+     "q": "Which of the four idea doors is not built yet?",
+     "options": [
+      "The Idea Form",
+      "The flip farm",
+      "The AI door",
+      "The client door"
+     ],
+     "answer": 3,
+     "why": "The client door, for ideas from outside customers, is not built yet."
+    },
+    {
+     "q": "What is a reseller?",
+     "options": [
+      "A business that sells the app to its members under its own name",
+      "A person who tests the app",
+      "A rival product",
+      "A kind of table"
+     ],
+     "answer": 0,
+     "why": "A reseller, like Northvale Canine Society, sells the app to its own members with its own name on it."
+    },
+    {
+     "q": "What happens when a card needs to change?",
+     "options": [
+      "The old card is deleted",
+      "The card is overwritten",
+      "A new version, such as v2, is saved beside it",
+      "The idea starts again with a new name"
+     ],
+     "answer": 2,
+     "why": "The card is never overwritten, so changes are saved as new versions and the history is kept."
+    }
+   ]
+  },
+  "M01-L2": {
+   "module": "M01",
+   "lesson": "The 20 Codes",
+   "questions": [
+    {
+     "q": "How many groups are the 20 codes sorted into?",
+     "options": [
+      "2",
+      "3",
+      "4",
+      "5"
+     ],
+     "answer": 2,
+     "why": "The codes sit in 4 groups: Businesses, Who Signs In, Customers and Public."
+    },
+    {
+     "q": "Which six codes must always be answered?",
+     "options": [
+      "TEN, CUST, SEN, VIEW, POST and PAY",
+      "ROLE, JOIN, HELP, GUEST, BELONG and SHARE",
+      "PRICE, BRAND, SEND, EXIT, POOL and MEET",
+      "Any six you choose"
+     ],
+     "answer": 0,
+     "why": "The factory cannot judge an idea without TEN, CUST, SEN, VIEW, POST and PAY."
+    },
+    {
+     "q": "What does SEN 3 mean?",
+     "options": [
+      "Ordinary data",
+      "Personal data",
+      "Health or clinical data",
+      "Data about children"
+     ],
+     "answer": 3,
+     "why": "SEN (0-3) runs from ordinary to children, so 3 means the app holds children's data."
+    },
+    {
+     "q": "What does a question mark mean as an answer to one of the 14 optional codes?",
+     "options": [
+      "The answer is zero",
+      "Not yet known",
+      "The code does not apply",
+      "The idea is killed"
+     ],
+     "answer": 1,
+     "why": "A question mark honestly records that the answer is not yet known."
+    }
+   ]
+  },
+  "M01-L3": {
+   "module": "M01",
+   "lesson": "Kill Check, Verdict And Data Role",
+   "questions": [
+    {
+     "q": "Which kill question asks whether people would use the app once and stop?",
+     "options": [
+      "FRAGILE",
+      "NOHOOK",
+      "ONESHOT",
+      "SEN"
+     ],
+     "answer": 2,
+     "why": "ONESHOT asks whether people would use it once and stop."
+    },
+    {
+     "q": "No kill answer is yes, but SEN is 3. Which verdict does the engine suggest?",
+     "options": [
+      "PASS",
+      "HOLD",
+      "KILL",
+      "GO"
+     ],
+     "answer": 1,
+     "why": "SEN 2 or 3 means HOLD until a DPIA is done and signed."
+    },
+    {
+     "q": "What does a PROCESSOR do?",
+     "options": [
+      "Decides why personal data is used",
+      "Holds no personal data",
+      "Sells the app under its own name",
+      "Handles personal data on behalf of another business"
+     ],
+     "answer": 3,
+     "why": "A processor follows another business's instructions when it handles personal data."
+    },
+    {
+     "q": "Which idea can never pass the Screen gate automatically?",
+     "options": [
+      "An idea where a kill is suggested",
+      "An idea with SEN 1",
+      "An idea from the Idea Form with no flags",
+      "An idea with a short name"
+     ],
+     "answer": 0,
+     "why": "Kill-suggested, seen-before, AI and client ideas always wait for a person at Screen."
+    }
+   ]
+  },
+  "M02-L1": {
+   "module": "M02",
+   "lesson": "The Research Sweep",
+   "questions": [
+    {
+     "q": "Which reviews does the competitor sweep look at most closely?",
+     "options": [
+      "5 star reviews",
+      "4 star reviews",
+      "3 star reviews",
+      "1 and 2 star reviews"
+     ],
+     "answer": 3,
+     "why": "Low-star reviews show what breaks and what annoys people, which is where the gaps are."
+    },
+    {
+     "q": "How many exact customer phrases are collected for the pain?",
+     "options": [
+      "3",
+      "5",
+      "10",
+      "20"
+     ],
+     "answer": 2,
+     "why": "The sweep collects 10 phrases for the pain and 10 for the result, word for word."
+    },
+    {
+     "q": "What does the gap matrix end with?",
+     "options": [
+      "The 3 strongest gaps",
+      "A finished app",
+      "A price list",
+      "A list of test accounts"
+     ],
+     "answer": 0,
+     "why": "The matrix ends with the 3 strongest gaps, which become the app's edge."
+    },
+    {
+     "q": "Who completes the rules flag?",
+     "options": [
+      "An AI tool on its own",
+      "A person, because judging the law needs a human",
+      "The first customer",
+      "Nobody, it is optional"
+     ],
+     "answer": 1,
+     "why": "The regulatory flag is a person's line, because no tool can judge the law."
+    }
+   ]
+  },
+  "M02-L2": {
+   "module": "M02",
+   "lesson": "The Merit Gate",
+   "questions": [
+    {
+     "q": "What question does the Merit gate ask?",
+     "options": [
+      "Start work on this idea?",
+      "Freeze the feature list?",
+      "Is it worth building?",
+      "Open it to real users?"
+     ],
+     "answer": 2,
+     "why": "Merit asks whether the idea is worth building, after the research is done."
+    },
+    {
+     "q": "At Merit you can name exactly what must change. Which verdict fits?",
+     "options": [
+      "GO",
+      "KILL",
+      "HOLD",
+      "RESHAPE"
+     ],
+     "answer": 3,
+     "why": "If you can name what to change, the verdict is RESHAPE and the idea goes back to Reception."
+    },
+    {
+     "q": "Why does RECYCLE never apply at Merit?",
+     "options": [
+      "No parts have been built yet",
+      "Merit is automatic",
+      "RECYCLE costs too much",
+      "The card is deleted at Merit"
+     ],
+     "answer": 0,
+     "why": "RECYCLE returns parts to the shelves, and at Merit no parts exist yet."
+    },
+    {
+     "q": "What does the rule \"a move writes, or it did not happen\" mean?",
+     "options": [
+      "Every app needs a writer",
+      "The verdict must be written to the card and register in the same session",
+      "The idea must be written twice",
+      "Only written ideas can enter Reception"
+     ],
+     "answer": 1,
+     "why": "A verdict only counts once it is written into the card and the app register in the same session."
+    }
+   ]
+  },
+  "M03-L1": {
+   "module": "M03",
+   "lesson": "Picking A Base",
+   "questions": [
+    {
+     "q": "What does it mean to remix at Stage 2?",
+     "options": [
+      "Start fresh with a blank project",
+      "Start from an existing base the factory owns",
+      "Copy another company's app",
+      "Skip the Base stage"
+     ],
+     "answer": 1,
+     "why": "To remix is to start from a base app the factory already owns and change it."
+    },
+    {
+     "q": "What must come with a decision to rebuild as BESPOKE?",
+     "options": [
+      "A dedup check that proved nothing suitable exists",
+      "A paid build prompt",
+      "A finished sales page",
+      "A signed letter from the club"
+     ],
+     "answer": 0,
+     "why": "A fresh start is only recorded with the dedup run that proved no base fits."
+    },
+    {
+     "q": "Who moves the app through the Base gate?",
+     "options": [
+      "A person always clicks yes",
+      "The customer",
+      "The engine, automatically, when every line is done",
+      "The reseller club"
+     ],
+     "answer": 2,
+     "why": "Base is an auto gate: when every Stage 2 line is done, the engine moves the app on."
+    },
+    {
+     "q": "Why is an Export ZIP taken as soon as the base is chosen?",
+     "options": [
+      "To send it to customers",
+      "To make the app faster",
+      "To publish the app",
+      "To keep a safe copy to go back to"
+     ],
+     "answer": 3,
+     "why": "The Export ZIP is a full packed copy, so there is always a safe point to return to."
+    }
+   ]
+  },
+  "M03-L2": {
+   "module": "M03",
+   "lesson": "Bricks, Shelves And Kits",
+   "questions": [
+    {
+     "q": "How many bricks are in BRICK-REGISTRY v0.16?",
+     "options": [
+      "88",
+      "101",
+      "63",
+      "20"
+     ],
+     "answer": 1,
+     "why": "The registry in use, v0.16, holds 101 bricks."
+    },
+    {
+     "q": "What is K00?",
+     "options": [
+      "An optional booking kit",
+      "A kit only for resellers",
+      "A retired kit",
+      "The floor, forced onto every app"
+     ],
+     "answer": 3,
+     "why": "K00 is the floor: it cannot be picked or removed and sits under every app."
+    },
+    {
+     "q": "Which three bricks make up K00?",
+     "options": [
+      "BR-BASICS, BR-TENANCY and BR-LEGAL",
+      "BR-BOOKING, BR-FORMS and BR-DOCS",
+      "BR-PEDIGREE, BR-CLINICAL and BR-LITTERS",
+      "BR-REVIEWS, BR-GALLERY and BR-CHAT"
+     ],
+     "answer": 0,
+     "why": "The floor is BR-BASICS, BR-TENANCY and BR-LEGAL, counted inside every kit."
+    },
+    {
+     "q": "Why does the Body shelf hold the most bricks?",
+     "options": [
+      "Body bricks are cheaper",
+      "Body is the only free shelf",
+      "The registry files bot bricks under Body",
+      "Every kit lives on Body"
+     ],
+     "answer": 2,
+     "why": "The registry folds Bots into Body, so bot bricks are counted there."
+    }
+   ]
+  },
+  "M04-L1": {
+   "module": "M04",
+   "lesson": "Choosing Kits And Bricks",
+   "questions": [
+    {
+     "q": "What is the launch-minimum scope?",
+     "options": [
+      "Every feature a customer could ever want",
+      "The fewest tables and screens that let a first customer pay and use it",
+      "The sales page",
+      "The list of rivals"
+     ],
+     "answer": 1,
+     "why": "Launch-minimum is the smallest version a first customer would pay for and use; the rest is roadmap."
+    },
+    {
+     "q": "Why are words, labels and colours stored as data?",
+     "options": [
+      "So a brand swap is an edit to rows, not a paid build turn",
+      "To make the app slower",
+      "Because code cannot hold words",
+      "So customers can change the code"
+     ],
+     "answer": 0,
+     "why": "Rows can be changed per brand without paying for a new building turn."
+    },
+    {
+     "q": "Where should a who-sees-and-does-what check happen?",
+     "options": [
+      "Only on the screen",
+      "In the sales page",
+      "In the customer's email",
+      "On the server side, where the data is held"
+     ],
+     "answer": 3,
+     "why": "A rule on the server cannot be dodged the way a screen-only rule can."
+    },
+    {
+     "q": "What must the first build include, by the checklist rule?",
+     "options": [
+      "A chat room",
+      "Every rival feature",
+      "The top three complaints fixed and one thing no rival has",
+      "A shop"
+     ],
+     "answer": 2,
+     "why": "The feature lock keeps the three most-counted complaints fixed plus one thing no rival has."
+    }
+   ]
+  },
+  "M04-L2": {
+   "module": "M04",
+   "lesson": "Duties And The Lock Gate",
+   "questions": [
+    {
+     "q": "What is OBLIGATIONS.csv?",
+     "options": [
+      "A list of rival apps",
+      "The app's price list",
+      "A shared file of duties keyed to what causes them",
+      "The sales page"
+     ],
+     "answer": 2,
+     "why": "It is the shared file of duties, each caused by the platform, a code, a brick or a provider."
+    },
+    {
+     "q": "What happens when a ledger row due at a gate is still open?",
+     "options": [
+      "The gate cannot pass",
+      "The gate passes with a warning",
+      "The row is deleted",
+      "The app is retired"
+     ],
+     "answer": 0,
+     "why": "CK50 stops a gate while any row due at it is open or only part done."
+    },
+    {
+     "q": "Which two conditions does the Lock gate need?",
+     "options": [
+      "A sales page and a domain",
+      "Two test accounts",
+      "A paid prompt and a refund",
+      "A named payer and a legal check"
+     ],
+     "answer": 3,
+     "why": "Lock needs a named payer and a legal check for the scope."
+    },
+    {
+     "q": "What happens to the out list after Lock?",
+     "options": [
+      "Its items join automatically next week",
+      "It is closed, and items return only through a new gate",
+      "It is sent to customers",
+      "It becomes the sales page"
+     ],
+     "answer": 1,
+     "why": "The out list closes at Lock; nothing returns by drift."
+    }
+   ]
+  },
+  "M05-L1": {
+   "module": "M05",
+   "lesson": "How The System Makes The Tables",
+   "questions": [
+    {
+     "q": "What is a schema?",
+     "options": [
+      "The sales plan",
+      "The plan of the tables that hold the data",
+      "A type of brick",
+      "The launch checklist"
+     ],
+     "answer": 1,
+     "why": "A schema is the plan of the tables, their columns and who may read or write them."
+    },
+    {
+     "q": "Why is the access mode set when a table is created?",
+     "options": [
+      "Because it looks tidier",
+      "Because the customer asks for it",
+      "Because only resellers can change it",
+      "Because setting it then is free and changing it later is a billed turn"
+     ],
+     "answer": 3,
+     "why": "Setting the mode at creation is free; changing it afterwards costs a builder turn."
+    },
+    {
+     "q": "What does an anonymous probe do?",
+     "options": [
+      "Sends a test request with nobody signed in",
+      "Deletes old tables",
+      "Renames columns",
+      "Sends emails to customers"
+     ],
+     "answer": 0,
+     "why": "It checks a table the way a signed-out stranger would reach it."
+    },
+    {
+     "q": "What is the safe way to change a column name?",
+     "options": [
+      "Rename it directly",
+      "Delete the table",
+      "Add a new column, migrate the data, leave the old one unread",
+      "Ask customers to type the data again"
+     ],
+     "answer": 2,
+     "why": "A rename destroys every row, so the factory adds, migrates and leaves the old column unread."
+    }
+   ]
+  },
+  "M05-L2": {
+   "module": "M05",
+   "lesson": "Walls And Table Tests",
+   "questions": [
+    {
+     "q": "Which wall keeps one business's data away from another business?",
+     "options": [
+      "W1 Brand Wall",
+      "W6 Public Wall",
+      "W7 Data-Out Wall",
+      "W8 Sensitivity Hold"
+     ],
+     "answer": 0,
+     "why": "W1, the brand wall, sits between businesses."
+    },
+    {
+     "q": "What should an anonymous read of a control table return?",
+     "options": [
+      "200 with rows",
+      "A list of tenants",
+      "401",
+      "The sales page"
+     ],
+     "answer": 2,
+     "why": "401 means the signed-out request was refused, which is the pass."
+    },
+    {
+     "q": "Why is a row-level test not enough on a shared table?",
+     "options": [
+      "Shared tables have no rows",
+      "It is too slow",
+      "Shared tables are always public",
+      "A shared row has no tenant id, so the test can pass while fields leak"
+     ],
+     "answer": 3,
+     "why": "On a shared table the leak test must be field-level, because a row-level test passes while leaking."
+    },
+    {
+     "q": "Who moves the app through the Schema gate?",
+     "options": [
+      "A person always clicks yes",
+      "The engine, automatically, when every line is done",
+      "The customer",
+      "The reseller club"
+     ],
+     "answer": 1,
+     "why": "Schema is an auto gate: tables probed and names re-read, then the engine moves the app on."
+    }
+   ]
+  },
+  "M06-L1": {
+   "module": "M06",
+   "lesson": "Test Identities And Test Tenants",
+   "questions": [
+    {
+     "q": "Why does Stage 5 need at least two test tenants?",
+     "options": [
+      "Two tenants make the app load faster",
+      "One tenant cannot prove that data stays behind its wall",
+      "The build platform charges less for two tenants",
+      "The sales page needs two brand names"
+     ],
+     "answer": 1,
+     "why": "With only one brand there is nobody for data to leak to, so every test passes and proves nothing."
+    },
+    {
+     "q": "What makes the two test tenants contrasting?",
+     "options": [
+      "They use the same colours so tests are fair",
+      "They share one owner account",
+      "They use the same dog names",
+      "Different names, lanes and colours"
+     ],
+     "answer": 3,
+     "why": "The duty list asks for different names, lanes and colours so that a leak is visible at a glance."
+    },
+    {
+     "q": "How do test members sign in?",
+     "options": [
+      "With an email and password or a magic link, each with their own mailbox",
+      "With the owner's Google account",
+      "With single sign-on through any account",
+      "With one shared team login"
+     ],
+     "answer": 0,
+     "why": "Test members have their own mailboxes and never use Google single sign-on, which signed in the wrong account in real tests."
+    },
+    {
+     "q": "Who sets up the test identities?",
+     "options": [
+      "An AI agent, during the build",
+      "Any test member who needs one",
+      "The factory owner, once per app, by hand",
+      "The first paying customer"
+     ],
+     "answer": 2,
+     "why": "Agents never create accounts; the factory owner sets them up once per app and keeps the logins in a password manager."
+    }
+   ]
+  },
+  "M06-L2": {
+   "module": "M06",
+   "lesson": "The Leak And Tenant Tests",
+   "questions": [
+    {
+     "q": "What is a negative case?",
+     "options": [
+      "A test that always passes",
+      "A test of the sales page wording",
+      "A test that checks something forbidden really fails",
+      "A test that is only run on a phone"
+     ],
+     "answer": 2,
+     "why": "A negative case proves that something which must never happen, such as Brand B reading Brand A's rows, really does fail."
+    },
+    {
+     "q": "Which four kinds of visitor does the test matrix cover?",
+     "options": [
+      "Owner, reseller, customer and builder",
+      "Signed out, Brand A member, Brand B member and owner",
+      "Desktop, phone, tablet and laptop",
+      "Breeder, groomer, kennel and club"
+     ],
+     "answer": 1,
+     "why": "Every table is checked for a signed-out visitor, a member of each test brand and the owner."
+    },
+    {
+     "q": "What happens when a leak is found during the build?",
+     "options": [
+      "It is noted for a later version",
+      "Only the owner is told",
+      "The leak status stays as not tested",
+      "The build stops"
+     ],
+     "answer": 3,
+     "why": "The gate rules say leaks are watched throughout the build and any leak stops the build."
+    },
+    {
+     "q": "When does the Invest gate pass by itself?",
+     "options": [
+      "When the estimate is 1,500 credits or less and the month's stop line is not passed",
+      "Whenever the test plan is written",
+      "When two test members exist",
+      "Never, the owner always decides"
+     ],
+     "answer": 0,
+     "why": "Invest auto-passes at 1,500 credits or less within the month's stop line; above that, the factory owner decides."
+    }
+   ]
+  },
+  "M07-L1": {
+   "module": "M07",
+   "lesson": "How Build Prompts Are Written",
+   "questions": [
+    {
+     "q": "Why is Stage 6 different from every other stage?",
+     "options": [
+      "It is the only stage with a gate",
+      "It is the only stage that uses tables",
+      "It is the only stage run by the customer",
+      "It is the only stage that spends credits"
+     ],
+     "answer": 3,
+     "why": "Stage 6 is the only paid stage; every turn of the AI builder spends credits."
+    },
+    {
+     "q": "What does the rule 'an and means two prompts' mean?",
+     "options": [
+      "A request with two jobs is split into two prompts",
+      "Every prompt must be sent twice",
+      "Two people must write each prompt",
+      "Each prompt must name two brands"
+     ],
+     "answer": 0,
+     "why": "One goal, one surface: if a request needs the word and, it becomes two separate prompts."
+    },
+    {
+     "q": "What does fail closed mean in the walls block?",
+     "options": [
+      "The app shuts down at night",
+      "Failed prompts are deleted",
+      "When in doubt, the app refuses access",
+      "The builder closes every file it opens"
+     ],
+     "answer": 2,
+     "why": "Failing closed means the safe answer, no access, is the default whenever the app is unsure."
+    },
+    {
+     "q": "Who runs the tests a prompt carries?",
+     "options": [
+      "The AI builder, inside its own turn",
+      "The factory's agents, from outside the app, after the turn",
+      "The first real customer",
+      "Nobody, the builder's screen is enough"
+     ],
+     "answer": 1,
+     "why": "Acceptance tests are run from outside; the builder never builds test panels or checks itself inside its turn."
+    }
+   ]
+  },
+  "M07-L2": {
+   "module": "M07",
+   "lesson": "After Every Paid Turn",
+   "questions": [
+    {
+     "q": "What is the first step after every paid turn?",
+     "options": [
+      "Publish the new version",
+      "Record the prompt and reply word for word",
+      "Run the member tests",
+      "Tell the customer it is ready"
+     ],
+     "answer": 1,
+     "why": "Record on landing comes before any check, test or reply, so nothing is lost."
+    },
+    {
+     "q": "A file the prompt named did not change after the turn. What does the rule say?",
+     "options": [
+      "Send the same prompt again at once",
+      "Ignore it if the screen looks fine",
+      "Change the file by hand and move on",
+      "The turn failed, so raise a refund ticket and do not resend blind"
+     ],
+     "answer": 3,
+     "why": "A named file with no change means the turn failed; the factory raises a refund ticket instead of re-prompting blind."
+    },
+    {
+     "q": "Why does the factory check the live code before testing?",
+     "options": [
+      "A cache can still be showing the old version",
+      "The builder asks it to",
+      "Live code is cheaper to test",
+      "Testing before publishing is not allowed by law"
+     ],
+     "answer": 0,
+     "why": "A cache keeps saved copies, so tests must confirm the new code is really being served first."
+    },
+    {
+     "q": "What does the Send gate need before the app moves to Launch?",
+     "options": [
+      "A finished sales page",
+      "A full month of real users",
+      "Proved live, with two fresh sign-ins",
+      "A new domain name"
+     ],
+     "answer": 2,
+     "why": "The Send gate rule is proved live, two fresh sign-ins, and the factory owner decides."
+    }
+   ]
+  },
+  "M08-L1": {
+   "module": "M08",
+   "lesson": "Sales Page, Domain And Funnels",
+   "questions": [
+    {
+     "q": "What does DNS do?",
+     "options": [
+      "It designs the sales page",
+      "It takes payments at checkout",
+      "It points a domain name at the server where the app lives",
+      "It tests every table for leaks"
+     ],
+     "answer": 2,
+     "why": "DNS is the internet's address book: its records point a name people can type at the server that holds the app."
+    },
+    {
+     "q": "What does a landing page button carry inside its link?",
+     "options": [
+      "The brand and the plan",
+      "The price and a discount",
+      "The member's password",
+      "A ClickFunnels key"
+     ],
+     "answer": 0,
+     "why": "The link carries brand and plan; the server then checks the plan is one of that brand's offers."
+    },
+    {
+     "q": "Why is the price never taken from the web address?",
+     "options": [
+      "Web addresses are too short",
+      "Prices change every day",
+      "ClickFunnels does not allow it",
+      "Anyone can edit a web address"
+     ],
+     "answer": 3,
+     "why": "A visitor could change the address, so the server looks up the real price from the brand's own offers."
+    },
+    {
+     "q": "Which brands may offer a free plan?",
+     "options": [
+      "Every brand, including resellers",
+      "The factory owner's own brands, never a reseller's",
+      "Only reseller brands",
+      "No brand, ever"
+     ],
+     "answer": 1,
+     "why": "Free is set per brand offer; the owner's brands may offer it, but a reseller brand is never on a free plan."
+    }
+   ]
+  },
+  "M08-L2": {
+   "module": "M08",
+   "lesson": "The Launch Walk And Boosts",
+   "questions": [
+    {
+     "q": "Why does the launch walk include a phone?",
+     "options": [
+      "Phones are faster to test on",
+      "The sales page is only shown on phones",
+      "Phones never need a sign-in",
+      "Email links opened on a phone can break a journey that works on desktop"
+     ],
+     "answer": 3,
+     "why": "The walk covers desktop and phone, including email links opened on the phone, because journeys can break between devices."
+    },
+    {
+     "q": "What does the user-switch test check?",
+     "options": [
+      "That two users can share one account",
+      "That user B sees none of user A's name or settings in the same browser",
+      "That users can switch brands freely",
+      "That the owner can sign in as anyone"
+     ],
+     "answer": 1,
+     "why": "Signing in as A, then out, then in as B in one browser shows whether anything of A's is left behind."
+    },
+    {
+     "q": "Why is checkout tested on the live link?",
+     "options": [
+      "Checkout never works in preview",
+      "The live link is free to use",
+      "Preview has no buttons",
+      "The test code only works on phones"
+     ],
+     "answer": 0,
+     "why": "Checkout does not work in preview, so the 100 percent off test code is used on the live link."
+    },
+    {
+     "q": "What is the status of the weekly boost?",
+     "options": [
+      "A gate the owner must pass",
+      "A rule that runs every day",
+      "Proposed, not yet a rule",
+      "Retired and no longer used"
+     ],
+     "answer": 2,
+     "why": "The weekly boost line is marked PROPOSED, so it is taught as an idea, not a rule."
+    }
+   ]
+  },
+  "M09-L1": {
+   "module": "M09",
+   "lesson": "Watching A Live App Daily",
+   "questions": [
+    {
+     "q": "At what time does the daily leak probe run?",
+     "options": [
+      "05:20 UK time",
+      "06:10 UK time",
+      "06:40 UK time",
+      "07:30 UK time"
+     ],
+     "answer": 2,
+     "why": "The leak probe runs every morning at 06:40 UK time, after the stale check at 06:10."
+    },
+    {
+     "q": "What does the weekly security check cover for each live app?",
+     "options": [
+      "Prices, logos and fonts",
+      "Live links, sign-in and the leak probe",
+      "Only the sales page",
+      "New feature ideas"
+     ],
+     "answer": 1,
+     "why": "A live app joins the weekly security check for its links, its sign-in and its leak probe."
+    },
+    {
+     "q": "When the probe asks a private table for data while signed out, what is the right answer?",
+     "options": [
+      "A refusal",
+      "A full list of records",
+      "The newest record only",
+      "A copy of the app"
+     ],
+     "answer": 0,
+     "why": "Private data must refuse a signed-out request; anything else is a leak and raises an incident."
+    },
+    {
+     "q": "What does rule R14 ask for after an app ships?",
+     "options": [
+      "Delete the old tables",
+      "Raise all prices",
+      "Retire the app",
+      "New parts go back to the brick registry"
+     ],
+     "answer": 3,
+     "why": "R14 sends useful new parts back to the bricks so the next app can reuse them."
+    }
+   ]
+  },
+  "M09-L2": {
+   "module": "M09",
+   "lesson": "The Money Line",
+   "questions": [
+    {
+     "q": "What does the monthly money line record?",
+     "options": [
+      "Sign-ins and page views",
+      "Money in and money out",
+      "The number of tables",
+      "Leak probe results"
+     ],
+     "answer": 1,
+     "why": "The money line records the pounds that came in and went out that month, on the app's card."
+    },
+    {
+     "q": "What happens after two losing months running?",
+     "options": [
+      "The app is deleted at once",
+      "Prices go up by themselves",
+      "A person is asked the Retire question",
+      "The app moves to Research"
+     ],
+     "answer": 2,
+     "why": "The engine asks a person whether to switch the app off and archive it; asking is not deciding."
+    },
+    {
+     "q": "What does the Return rule R02 say?",
+     "options": [
+      "No new Invest until the app earns back its credits, or 90 days of use show it will",
+      "Every app must make money in its first week",
+      "Apps return to stage 0 each year",
+      "Refunds are never given"
+     ],
+     "answer": 0,
+     "why": "Return guards the next spend: no new Invest until the credits are earned back or 90 days show they will be."
+    },
+    {
+     "q": "Who writes the monthly money line?",
+     "options": [
+      "The leak probe",
+      "A visitor to the sales page",
+      "The building platform",
+      "A person, as named work on the checklist"
+     ],
+     "answer": 3,
+     "why": "The money line is tagged as the owner's own work, so a person writes it and scripts read it."
+    }
+   ]
+  },
+  "M09-L3": {
+   "module": "M09",
+   "lesson": "Rescue, Retire And Recycle",
+   "questions": [
+    {
+     "q": "What moves a live app into Rescue?",
+     "options": [
+      "A person's vote each Friday",
+      "Two losing months running",
+      "A new feature idea",
+      "An open incident tagged to the app"
+     ],
+     "answer": 3,
+     "why": "The Trouble gate is automatic: an open incident on a stage 8 app moves it to Rescue at the next refresh."
+    },
+    {
+     "q": "Why can a rescue fix move quickly?",
+     "options": [
+      "One build lane is always kept empty for rescue",
+      "It skips the send approval",
+      "It skips every test",
+      "It uses a free platform"
+     ],
+     "answer": 0,
+     "why": "Slot keeps 1 of its 3 lanes for rescue, so the fix never queues; the approvals and tests still happen."
+    },
+    {
+     "q": "Where do a retired app's bricks, kits and proved formations go?",
+     "options": [
+      "Reception",
+      "Recovery",
+      "Reserve",
+      "Runway"
+     ],
+     "answer": 2,
+     "why": "Recycle sends the parts of a retired app back to the Reserve room to be used again."
+    },
+    {
+     "q": "What does Re-imagine do?",
+     "options": [
+      "Deletes the app and its row",
+      "Points the same assembly at a new audience under a new id",
+      "Renames the old app",
+      "Moves the app back to stage 0"
+     ],
+     "answer": 1,
+     "why": "Re-imagine keeps the assembly, gives it a new id and audience, and the paid clone goes through Invest."
+    }
+   ]
+  },
+  "M10-L1": {
+   "module": "M10",
+   "lesson": "Filling In Your First Idea Form",
+   "questions": [
+    {
+     "q": "Which three answers make up the brief?",
+     "options": [
+      "Name, logo and colour",
+      "What it is, who pays, and the pain",
+      "Price, domain and funnel",
+      "Tables, walls and tests"
+     ],
+     "answer": 1,
+     "why": "The brief is what it is, who pays, and the pain it removes, said in plain words."
+    },
+    {
+     "q": "Litterline is TEN 3. What does level 3 mean?",
+     "options": [
+      "One business",
+      "No data stored",
+      "Several bodies",
+      "One reseller above"
+     ],
+     "answer": 3,
+     "why": "TEN (0-6) level 3 means one reseller above the businesses, like a club above its breeders."
+    },
+    {
+     "q": "How many of the 20 codes are required?",
+     "options": [
+      "Six",
+      "Four",
+      "Fourteen",
+      "All 20"
+     ],
+     "answer": 0,
+     "why": "TEN, CUST, SEN, VIEW, POST and PAY are required; the other 14 may say not yet known."
+    },
+    {
+     "q": "Litterline has no kill answers and SEN 1. Which verdict does the engine suggest?",
+     "options": [
+      "KILL",
+      "HOLD",
+      "PASS",
+      "RESHAPE"
+     ],
+     "answer": 2,
+     "why": "No kill answer and SEN below 2 gives PASS; SEN 2-3 would give HOLD."
+    }
+   ]
+  },
+  "M10-L2": {
+   "module": "M10",
+   "lesson": "Where To Go Next",
+   "questions": [
+    {
+     "q": "What must every figure about the future carry in this course?",
+     "options": [
+      "A price",
+      "The words Vision 2029, illustrative",
+      "A leak test result",
+      "A partner link"
+     ],
+     "answer": 1,
+     "why": "Future figures, such as about 1,000 apps or one a day, are always marked Vision 2029, illustrative."
+    },
+    {
+     "q": "In the Vision 2029 picture, who decides at the human gates?",
+     "options": [
+      "Nobody, it is all automatic",
+      "The building platform",
+      "The first customer",
+      "A person"
+     ],
+     "answer": 3,
+     "why": "Automation checks and carries between gates, but a person still decides at the human gates."
+    },
+    {
+     "q": "Which plan can a reseller brand be on?",
+     "options": [
+      "Never a free plan",
+      "Only the free plan",
+      "Any plan typed into the web address",
+      "No plan at all"
+     ],
+     "answer": 0,
+     "why": "A reseller brand is never on a free plan, and the price is never taken from the web address."
+    },
+    {
+     "q": "What does the course promise about income?",
+     "options": [
+      "A fixed monthly amount",
+      "Double your money in 90 days",
+      "Nothing; results depend on your own work",
+      "Earnings once you join"
+     ],
+     "answer": 2,
+     "why": "There are no income promises; results depend on your own work."
+    }
+   ]
+  }
+ }
+}

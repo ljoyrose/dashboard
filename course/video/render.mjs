@@ -62,6 +62,7 @@ for (const j of jobs) {
     for (const s of j.script.scenes) { cues.push([t, t + s.s, s.caption]); t += s.s; }
   } else cues = (j.captions || []).map((c) => [c.from, c.to, c.text]);
   if (cues.length) fs.writeFileSync(out.replace('.mp4', '.srt'), cues.map((c, i) => `${i + 1}\n${srtTime(c[0])} --> ${srtTime(c[1])}\n${c[2]}\n`).join('\n'));
+  fs.writeFileSync(path.join(dir, 'SOURCE.txt'), `Footer date on every frame and still: ${G.brand.course_date}\nEditable source: course/video/src/index.tsx + course/glossary.json + course/video/scripts/*.json\nRe-render: node course/video/render.mjs [id] [--brand ljr7|ppp|yours]\n`);
   console.log('video', out);
   if (j.comp === 'Hero') {
     const still = path.join(dir, `AF-HERO-STILL-${brand.toUpperCase()}-v1.png`);

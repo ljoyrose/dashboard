@@ -8,3 +8,8 @@ Vision 2029 dashboard (real page x5 tabs x2 sizes + Pulse),Stage 4,PASS,PASS,PAS
 App detail pages x3 (Litterline Stayproof Trimtable),Stage 4,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Competitors named Rival A-C to avoid real brands; market figures illustrative
 Automated flow map G11,Stage 4,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Person icon only at gates
 Launch and operate screen,Stage 4,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Dates shown as 2029 days
+Modules M00-M10 (24 lessons; scripts + recap cards + quizzes + storyboards),Track F,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Automatic checks per lesson in qa/module-checks.csv (0 FAIL); content spot-checked M06-L2
+Codes cards x3 (ported renderer),Stage 3,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Layout from SRC_render_codes_card.py; glyphs replaced with line icons
+New graphics G02 G04-G10 G12-G16,Stage 3,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,All numbers checked against glossary.json and BRICK-REGISTRY v0.16
+Hero animation + loop + still (LJR7 + PPP),Stage 7,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Silent with captions; Vision label on every frame
+Intro pilot video M00-intro (103 s),Stage 7,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,PASS,10/10,Hero then 10 scenes; .srt beside the MP4
