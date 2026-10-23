@@ -29,3 +29,12 @@
 
 ## New items (D11)
 Anything in the Vision 2029 screens that extends an existing panel is listed here as **NEW - TO CHECK** (added as built).
+
+## Found in the artefacts (23 Oct)
+| # | Clash | Course uses |
+|---|---|---|
+| 19 | Atlas teaches 12 gates (Screen, Merit, Lock, Schema, Slot, Invest, Leak, Launch, Live, Trouble, Return, Retire) and 11 rooms; Atlas tiles say "12 checkpoints" | Live engine gate set; all 11 rooms |
+| 20 | Atlas lists 17 tenancy tokens ("13 + 4 proposed") and kits K00-K07; the frozen card has 20 codes and BRICK-KITS has K08 | 20 codes, K00-K08 |
+| 21 | Stockroom (16 Sep snapshot) shows 55 bricks with 17 Bots; BRICK-REGISTRY v0.16 has 101 bricks and folds Bots into Body | Registry v0.16 counts |
+| 22 | The 7 P-documents (Passport, Pitch, Proposal, Parts, Promote, Progress, Payoff) in Atlas were replaced by one document organised by stage (PR1167) | One document by stage |
+| 23 | Factory Cockpit uses its own vivid palette and other fonts (Bricolage, Atkinson) | Not used as a style reference |

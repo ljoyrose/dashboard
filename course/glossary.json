@@ -267,20 +267,79 @@
   ],
   "_stages_source": "AF-UNDERSTANDING-2026-10-22.md Part 1 table (engine v2.5h/t). Stage names 0-8 stable everywhere (paste).",
   "rooms": {
-    "_source": "AF-UNDERSTANDING-2026-10-22.md Part 1 and Part 4.10.",
+    "_source": "Atlas artefact floor plan (rooms) + AF-UNDERSTANDING-2026-10-22.md (engine room per stage).",
     "list": [
-      "Reception",
-      "Research",
-      "Rig",
-      "Reactor",
-      "Runway",
-      "Radar"
-    ],
-    "extra": {
-      "Reserve": "Where A Retired App's Parts Go",
-      "Recovery": "Where A Killed Idea Waits",
-      "Ready Room": "Locked Jobs Waiting For A Lane (Not Used By Engine)"
-    }
+      {
+        "name": "Reception",
+        "tag": "Free",
+        "stages": [
+          0
+        ]
+      },
+      {
+        "name": "Recovery",
+        "tag": "Killed Or Held",
+        "stages": []
+      },
+      {
+        "name": "Reserve",
+        "tag": "Parts",
+        "stages": []
+      },
+      {
+        "name": "Research",
+        "tag": "Free",
+        "stages": [
+          1,
+          2,
+          3
+        ]
+      },
+      {
+        "name": "Ready Room",
+        "tag": "Waiting",
+        "stages": []
+      },
+      {
+        "name": "Rig",
+        "tag": "Free",
+        "stages": [
+          4,
+          5
+        ]
+      },
+      {
+        "name": "Reactor",
+        "tag": "Paid",
+        "stages": [
+          6
+        ]
+      },
+      {
+        "name": "Runway",
+        "tag": "Brand",
+        "stages": [
+          7
+        ]
+      },
+      {
+        "name": "Rescue",
+        "tag": "Urgent",
+        "stages": []
+      },
+      {
+        "name": "Radar",
+        "tag": "Watching",
+        "stages": [
+          8
+        ]
+      },
+      {
+        "name": "Recycle",
+        "tag": "Parts Back",
+        "stages": []
+      }
+    ]
   },
   "gates": [
     {
