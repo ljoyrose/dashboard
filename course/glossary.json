@@ -172,24 +172,23 @@
     "line_height": 1.3
   },
   "space": {
-    "_source": "ADHD-Layout-Standards.md locked spacing scale (see build note if TO CHECK).",
+    "_source": "ADHD-Layout-Standards.md: spacing scale 4/8/12/16/24/32 px only; card radius 16, secondary 12; live card stripe 4 px. Canvases are drawn at 3x (1080 px graphic = 360 pt phone; 1920 px slide), so every value used = scale x 3.",
     "scale": [
       4,
       8,
       12,
       16,
       24,
-      32,
-      48,
-      64,
-      96
+      32
     ],
-    "radius": 12,
+    "factor": 3,
+    "radius": 48,
+    "radius_small": 36,
+    "band": 12,
     "border_px": 1,
     "gutter_1080": 48,
     "gutter_1920": 96,
-    "band": 6,
-    "status": "TO CHECK"
+    "status": "Applied"
   },
   "stages": [
     {

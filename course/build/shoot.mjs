@@ -25,7 +25,9 @@ function findChrome() {
   return undefined; // playwright default
 }
 
-const args = process.argv.slice(2);
+const raw = process.argv.slice(2);
+const transparent = raw.includes('--transparent');
+const args = raw.filter((a) => a !== '--transparent');
 const browser = await chromium.launch({ executablePath: findChrome() });
 const page = await browser.newPage({ deviceScaleFactor: 1 });
 
@@ -64,7 +66,7 @@ if (args[0] === '--pdf') {
   for (const f of args) {
     await svgPage(f);
     const out = f.replace(/\.svg$/, '.png');
-    await page.screenshot({ path: out, omitBackground: false });
+    await page.screenshot({ path: out, omitBackground: transparent });
     console.log('png', out);
   }
 }

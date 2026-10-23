@@ -1,0 +1,19 @@
+{
+  "name": "SAMPLE-SLIDE",
+  "module": "Design System · Sample",
+  "source": "Source: glossary.json · AF-UNDERSTANDING-2026-10-22.md Part 1",
+  "slides": [
+    {"layout": "cards", "title": "Eight Shelves Of Bricks", "sub": "Every App Is Built From The Same Shelves", "beat": "Secret 1 · Vehicle",
+     "cards": [
+       {"title": "BASICS", "line": "Always: Sign-In, Menus", "icon": "box", "layer": "BASICS"},
+       {"title": "Boundaries", "line": "Allowed: Walls, Roles", "icon": "wall", "layer": "Boundaries"},
+       {"title": "Bucks", "line": "Money: Plans, Payments", "icon": "cash", "layer": "Bucks"},
+       {"title": "Body", "line": "The Rest: Screens, Records", "icon": "layout-dashboard", "layer": "Body"},
+       {"title": "Brand", "line": "Swaps: Name, Colours", "icon": "palette", "layer": "Brand"},
+       {"title": "Boost", "line": "Found: Pages, Reviews", "icon": "trending-up", "layer": "Boost"},
+       {"title": "Brains", "line": "Works It Out: Scoring", "icon": "brain", "layer": "Brains"},
+       {"title": "Bots", "line": "Alone: Reminders, Imports", "icon": "robot", "layer": "Bots"}],
+     "key": [["#BE6A5D", "Top Band = Shelf Colour"], ["box", "Each Shelf Has Its Own Icon"]],
+     "notes": "Sample slide for the design system."}
+  ]
+}

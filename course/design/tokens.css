@@ -1,0 +1,46 @@
+/* GENERATED from glossary.json by build/tokens.py. Do not edit. */
+:root {
+  --af-page: #FAF7F2;
+  --af-card: #FFFFFF;
+  --af-border: #E5E0D8;
+  --af-ink: #2C2C2A;
+  --af-muted: #756E65;
+  --af-sunk: #F2ECE3;
+  --af-layer-basics: #2C2C2A;
+  --af-layer-boundaries: #BE6A5D;
+  --af-layer-bucks: #C07D59;
+  --af-layer-body: #B3A74D;
+  --af-layer-brand: #89AF6A;
+  --af-layer-boost: #4098BE;
+  --af-layer-brains: #7A6BA8;
+  --af-layer-bots: #8D6B9C;
+  --af-ring-1: #7E3A30;
+  --af-ring-2: #A04D41;
+  --af-ring-3: #BE6A5D;
+  --af-ring-4: #D99C92;
+  --af-status-solid: #217A2D;
+  --af-status-fragile: #9E5802;
+  --af-status-not-built: #2C2C2A;
+  --af-status-not-needed: #756E65;
+  --pa-paper: #FFFEFB;
+  --pa-cream: #FAF7F2;
+  --pa-ink: #2C2C2A;
+  --pa-muted: #6B645C;
+  --pa-line: #DED5C8;
+  --pa-0: #C7C0B4; --pa-0-text: #6B645C; --pa-0-tint: #F0ECE5;
+  --pa-2: #E6443D; --pa-2-text: #C32924; --pa-2-tint: #FCE4E0;
+  --pa-3: #E78615; --pa-3-text: #9E5802; --pa-3-tint: #FCEDDB;
+  --pa-4: #F3D84E; --pa-4-text: #817002; --pa-4-tint: #FDF9E3;
+  --pa-5: #51AD57; --pa-5-text: #217A2D; --pa-5-tint: #E7F3E4;
+  --pa-6: #129FE7; --pa-6-text: #0271A4; --pa-6-tint: #DEF1F8;
+  --pa-7: #A570D1; --pa-7-text: #8850B6; --pa-7-tint: #F2EAF5;
+  --pa-8: #141413; --pa-8-text: #141413; --pa-8-tint: #ECEAE6;
+  --af-space-1: 4px;
+  --af-space-2: 8px;
+  --af-space-3: 12px;
+  --af-space-4: 16px;
+  --af-space-5: 24px;
+  --af-space-6: 32px;
+  --af-radius: 16px; --af-radius-small: 12px; --af-band: 4px;
+  --af-font: Lexend, system-ui, sans-serif;
+}

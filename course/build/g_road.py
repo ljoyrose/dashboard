@@ -16,7 +16,7 @@ def build(out_dir):
     gates = {g["from"]: g for g in G["gates"]}
     cw, ch = W - 2 * GUT, 118
     for s in G["stages"]:
-        body += card(GUT, y, cw, ch, accent=C["ink"] if s["n"] in (6,) else None)
+        body += card(GUT, y, cw, ch)
         body += text(GUT + 28, y + 72, str(s["n"]), 56, 700, C["muted"])
         body += icon(s["icon"], GUT + 100, y + 32, 52)
         body += text(GUT + 176, y + 56, s["name"], 40, 700)

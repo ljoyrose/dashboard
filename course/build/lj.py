@@ -116,6 +116,17 @@ DEFS = (f'<defs><filter id="soft" x="-10%" y="-10%" width="120%" height="130%">'
         f'<feDropShadow dx="0" dy="3" stdDeviation="6" flood-color="{C["shadow"]}" flood-opacity="0.08"/></filter></defs>')
 
 
+_clip = [0]
+
+
+def band_svg(x, y, w, h, colour, band, r):
+    """Thin top band clipped to the card's rounded corners."""
+    _clip[0] += 1
+    cid = f"c{_clip[0]}"
+    return (f'<clipPath id="{cid}"><rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h:.1f}" rx="{r}"/></clipPath>'
+            f'<rect x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{band}" fill="{colour}" clip-path="url(#{cid})"/>')
+
+
 def card(x, y, w, h, accent=None, band=None, r=None):
     """White card, 1 px light border, rounded, soft shadow. Colour only as a thin top band (rule 1)."""
     r = r or G["space"]["radius"]
@@ -123,8 +134,7 @@ def card(x, y, w, h, accent=None, band=None, r=None):
     out = (f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{r}" fill="{C["card"]}" '
            f'stroke="{C["border"]}" stroke-width="1" filter="url(#soft)"/>')
     if accent:
-        out += (f'<path d="M{x + r},{y} H{x + w - r} A{r},{r} 0 0 1 {x + w},{y + r} V{y + band} H{x} V{y + r} '
-                f'A{r},{r} 0 0 1 {x + r},{y} Z" fill="{accent}"/>')
+        out += band_svg(x, y, w, h, accent, band, r)
     return out
 
 
@@ -221,7 +231,7 @@ def key_block(W, y, items, gutter, size=24, title="Key"):
     return out, (cy + row_h) - y
 
 
-def footer(W, H, date, module, source, height=None, size=24):
+def footer(W, H, date, module, source, height=None, size=26):
     """Solid dark band: date (bold), module/version, small source line (rule 3)."""
     height = height or int(size * 3.6)
     y = H - height
