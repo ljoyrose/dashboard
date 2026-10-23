@@ -269,6 +269,33 @@ test.describe('Factory send gate', () => {
     await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Class/);
   });
 
+  test('the typed "inputs-gate: PASS" is no longer enough: Copy needs the checker stamp, READY and dated today (23 Oct 2026)', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => { const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/\npresend:[^\n]*/, '\ninputs-gate: PASS today'); } });
+    await expect(page.locator('[data-copy="869fk9d1r"]')).toHaveCount(0);
+    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Presend/);
+  });
+
+  test('a NOT READY stamp (the latest stamp wins, here a comment) locks Copy', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => { const t = send(st, '869fk9d1r'); t.cm = [{ by: 'Claude', at: Date.now(), text: 'presend: NOT READY (3 FAIL, 1 NOT RUN) sha256:' + 'cd'.repeat(32) }]; } });
+    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Presend NOT READY/);
+  });
+
+  test('a READY stamp from another day locks Copy', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => { const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/(presend: READY sha256:\S+) \S+/, '$1 2020-01-01'); } });
+    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Presend not today/);
+  });
+
+  test('Prompts: the next prompt per app on top with READY / NOT READY, then waiting; sent and rules folded away', async ({ page, guard }) => {
+    await open(page, guard, '#/prompts');
+    const v = page.locator('#view [data-prompts]');
+    await expect(v.locator('[data-ps="869fk9d1r"]')).toHaveText(/READY/);
+    await expect(v.locator('[data-ps="869fk6k00"]')).toHaveText(/NOT READY · not checked/);
+    await expect(v.locator('details[data-sec="sent"]')).not.toHaveAttribute('open', '');
+    await expect(v.locator('details[data-sec="rules"]')).not.toHaveAttribute('open', '');
+    await expect(v.locator('details[data-sec="sent"] .crow[data-row="869fk9d1n"]')).toHaveCount(1);
+    await expect(v.locator('.pitem').first().locator('[data-ps]')).toHaveText(/^\s*READY/);
+  });
+
   test('a send with none of the lines names each missing one instead of Copy', async ({ page, guard }) => {
     await open(page, guard, '#/item/869fk6k00');
     await expect(page.locator('[data-copy="869fk6k00"]')).toHaveCount(0);
