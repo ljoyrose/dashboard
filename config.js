@@ -3,6 +3,11 @@
 // Change an id here and all three pages (and the tests) follow it.
 (function (root) {
   'use strict';
+  // One list for shared drives the dashboard must never read, list, search or bin.
+  // Match by id or by the drive's name. The name is the shared-drive title.
+  var EXCLUDED = [
+    { id: '0AEf6v2sKb4FrUk9PVA', name: 'Karen - SHARED' }
+  ];
   root.DASH_CONFIG = {
     clientId: '135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com',
     scopes: {
@@ -10,9 +15,14 @@
       // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
       write: 'https://www.googleapis.com/auth/drive'
     },
-    // Hard rule 14: never list, read, search or bin these shared drives on any page. Checked before any query.
-    // 0AEf6v2sKb4FrUk9PVA = Karen - SHARED.
-    excludedDrives: ['0AEf6v2sKb4FrUk9PVA'],
+    // Ids only, derived from cleanup.excludedDrives. Kept so older checks still find them.
+    excludedDrives: EXCLUDED.map(function (d) { return d.id; }),
+    // Allow-list and excluded drives live together. An empty allow-list means every
+    // shared drive except the excluded list. My Drive bins only what the signed-in person owns.
+    cleanup: {
+      excludedDrives: EXCLUDED,
+      sharedDriveAllowIds: []
+    },
     urls: {
       files: 'https://www.googleapis.com/drive/v3/files',
       drives: 'https://www.googleapis.com/drive/v3/drives',

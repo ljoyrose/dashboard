@@ -120,7 +120,9 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     await signIn(page);
     const view = page.locator('#view');
     await expect(view.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_ready.txt');
-    await expect(view.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_clean-folder');
+    await expect(view.locator('[data-bin-list="ready"]')).not.toContainText('ZZ_DELETE_clean-folder');
+    await expect(view.locator('[data-bin-list="blocked"]')).toContainText('ZZ_DELETE_clean-folder');
+    await expect(view.locator('li', { hasText: 'ZZ_DELETE_clean-folder' })).toContainText('not verified or junk');
     await page.locator('li', { hasText: 'ZZ_DELETE_ready.txt' }).locator('input').check();
     await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (1)');
     await page.locator('[data-action="sweep"]').click();
