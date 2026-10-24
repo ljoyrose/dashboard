@@ -40,6 +40,16 @@
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
       folderName: '*01 SLA Inspections / BLD-app-tables'
     },
+    // Marketplace page: the "Marketplace" tab of RR_OPEN-WORK (filled by the RR_MKT-ENGINE Apps Script). Taps write only the
+    // answer cells. wakeFolderId/wakeFile: optional Drive file holding the engine's web-app address (empty = the engine's
+    // 15-minute timer picks taps up). live: false shows the TEST stamp until Lisa switches the engine to LIVE.
+    marketplace: {
+      openWorkId: '1ShYbYmY8W-MEWqm9kHFsIcS5uR4b2SG00uXle_yL76U', // RR_OPEN-WORK (00 AI Commons)
+      tab: 'Marketplace',
+      wakeFolderId: '',
+      wakeFile: 'MKT-WAKE-WEBAPP.json',
+      live: false
+    },
     // Bin guard (Apps Script, owned by lisa@puppyclassroom.com). Restores binned items that are not ZZ_DELETE_/ZZ_SUPERSEDED_
     // into 00 CHECK. The web app is domain-only, so its address is not needed by anyone outside puppyclassroom.com.
     binGuard: {
