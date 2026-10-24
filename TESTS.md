@@ -44,12 +44,15 @@ If any of these breaks, the tick turns red and says which page.
 | Bin safety (`RR_` archives never taken) | `#/bin` | 10 |
 | Never empty the bin | all three pages | 2 |
 | PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 14 |
+| Clean-up safety (keepers, folders, resume) | `#/bin`, `#/personal`, `#/usb`, `#/changes` | 13 |
 | Header contract (column names) | list of expected columns | 12 |
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
 
-That is 207 checks that must pass.
+The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
+
+That is 367 checks that must pass.
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
@@ -83,7 +86,10 @@ That is 207 checks that must pass.
 
 **Bin safety**
 - A folder with an `RR_` item anywhere inside is **left alone**, with a note saying why.
+- A `ZZ_DELETE_` folder is binned only when every item inside is junk or itself marked (exact prefix plus a ledger row). Anything else, including an ordinary file, is left alone and the note says why.
 - A file inside an `RR_` folder is **left alone**.
+- A zero-byte file is **UNSURE** and is never ticked or binned. An odd prefix spelling (different case, spaces or hyphens) is listed under Rename needed and is never binned.
+- The bin button shows a dry-run count and asks you to confirm. Trash only. Before anything is binned, the page reads it again and skips it if it changed, is already in the bin, or (on My Drive) is owned by someone else.
 - A name containing `RR_`, a `ZZ_DELETE_` file with no ledger row, and a retired `ZZ_SUPERSEDED_` name cannot be ticked.
 - A name that merely contains `ZZ_DELETE_` in the middle is not listed.
 - If the delete ledger or a pending slip cannot be read, nothing is binned.
@@ -99,9 +105,10 @@ That is 207 checks that must pass.
 
 **PC-Personal and Drive check (these rename and bin real files, so they matter most)**
 - Every write goes to a pretend Drive or a pretend plugged-in drive that only exists in memory. Nothing real can be renamed or binned.
-- PC-Personal "Rename selected": with nothing ticked, nothing happens. It asks for the extra permission, then asks you to confirm. Cancel changes nothing. Confirm renames **only** the ticked files that match a shared-drive copy, adds `ZZ_DELETE_DRIVE_`, and never touches the shared copy, a file with no match, or a name containing `RR_`.
-- PC-Personal "Move selected": finds files starting `ZZ_DELETE_DRIVE_`, and moves only the ticked ones that have a ledger row (never deletes). A name containing `RR_` cannot be ticked.
-- Drive check: finds the files already in a shared drive, ignores tiny and system files, and renames only the ticked matches (`ZZ_DELETE_LOCAL_`). A name containing `RR_` cannot be ticked. Deletes nothing.
+- PC-Personal "Rename selected": with nothing ticked, nothing happens. It asks for the extra permission, then asks you to confirm. Cancel changes nothing. Confirm renames **only** the ticked files that match a live kept copy in a shared drive, adds `ZZ_DELETE_DRIVE_`, and never touches the shared copy, a file with no match, a zero-byte file, or a name containing `RR_`. A shared copy does not count when its name is a `ZZ_` variant, when a `ZZ_` or `AA_HOLD_` folder sits above it, when it is a shortcut or a Google file with no checksum, or when it is on an excluded drive (matched by id or by the drive's name).
+- PC-Personal "Move selected": finds files starting `ZZ_DELETE_DRIVE_`, and moves only the ticked ones that have a ledger row (never deletes). A folder is included only when every item inside is verified or junk. A name containing `RR_` cannot be ticked. A file owned by someone else is skipped.
+- If a shared drive cannot be read, the scan finishes, says that drive was not used as proof, and Continue reads just that drive again.
+- Drive check uses the same kept-copy rules. It ignores tiny and system files, counts zero-byte files as UNSURE, lists odd prefix spellings, and renames only the ticked matches (`ZZ_DELETE_LOCAL_`). A name containing `RR_` cannot be ticked. Deletes nothing. If the shared-drive read was incomplete, the "only on this drive" line says so, and Continue tries the missed drives again.
 
 **Header contract**
 - The file `tests/contract/expected-headers.json` lists the **column names** (names only, no figures) each Drive file should have.

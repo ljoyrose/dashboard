@@ -310,9 +310,36 @@
   // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
   var WRITE_SCOPE = CFG.scopes.write;
   var DRIVES_API = CFG.urls.drives;
-  // Hard rule 14: excluded shared drives (Karen - SHARED) are never queried, listed, searched or binned.
-  var EXCLUDED_DRIVES = (CFG.excludedDrives || []).slice();
+  // Hard rule 14: excluded shared drives are never queried, listed, searched or binned.
+  // Ids and names come from config (cleanup.excludedDrives). An empty allow-list means every other shared drive.
+  var EXCLUDED_DRIVES = (CFG.excludedDrives || []).filter(function (id) { return typeof id === 'string'; }).slice();
+  var EXCLUDED_NAMES = [];
+  var ALLOW_DRIVES = (CFG.cleanup && CFG.cleanup.sharedDriveAllowIds) || [];
+  ((CFG.cleanup && CFG.cleanup.excludedDrives) || []).forEach(function (d) {
+    if (!d) return;
+    if (typeof d === 'string') { if (EXCLUDED_DRIVES.indexOf(d) === -1) EXCLUDED_DRIVES.push(d); return; }
+    if (d.id && EXCLUDED_DRIVES.indexOf(d.id) === -1) EXCLUDED_DRIVES.push(d.id);
+    if (d.name) EXCLUDED_NAMES.push(String(d.name).trim().toLowerCase());
+  });
   function excludedDrive(id) { return !!id && EXCLUDED_DRIVES.indexOf(id) !== -1; }
+  function excludedDriveName(name) {
+    var n = String(name || '').trim().toLowerCase();
+    return !!n && EXCLUDED_NAMES.indexOf(n) !== -1;
+  }
+  function rememberSkippedDrive(d) {
+    if (!d || !d.id) return false;
+    if (excludedDrive(d.id) || excludedDriveName(d.name)) {
+      if (EXCLUDED_DRIVES.indexOf(d.id) === -1) EXCLUDED_DRIVES.push(d.id);
+      return true;
+    }
+    return false;
+  }
+  function driveSkipped(d) {
+    if (!d) return true;
+    if (rememberSkippedDrive(d)) return true;
+    if (ALLOW_DRIVES.length && ALLOW_DRIVES.indexOf(d.id) === -1) return true;
+    return false;
+  }
   var SWEEP_PREFIX = 'ZZ_';   // wide search only. Other ZZ_ names are listed under Rename needed and never binned.
   var DELETE_PREFIX = 'ZZ_DELETE_'; // the only name that can be binned, and only with a ledger row
   var ARCHIVE_PREFIX = 'RR_'; // archive: never touched, including anywhere in a name
@@ -380,6 +407,7 @@
   function icon(name) { return '<svg class="icon" aria-hidden="true"><use href="#i-' + name + '"/></svg>'; }
   function typeWord(mime) {
     if (mime === FOLDER_MIME) return 'Folder';
+    if (mime === 'application/vnd.google-apps.shortcut') return 'Shortcut';
     if (/google-apps\.document|wordprocessing|msword/.test(mime)) return 'Doc';
     if (/spreadsheet|excel|csv/.test(mime)) return 'Sheet';
     if (/presentation|powerpoint/.test(mime)) return 'Slides';
@@ -476,7 +504,7 @@
       var q = new URLSearchParams({ pageSize: '100', fields: 'nextPageToken,drives(id,name,capabilities(canTrashChildren,canDeleteChildren))' });
       if (tok) q.set('pageToken', tok);
       return apiGet(DRIVES_API + '?' + q.toString()).then(function (r) {
-        out = out.concat((r.drives || []).filter(function (d) { return !excludedDrive(d.id); }));
+        out = out.concat((r.drives || []).filter(function (d) { return !driveSkipped(d); }));
         return r.nextPageToken ? page(r.nextPageToken) : out;
       });
     }
@@ -501,7 +529,49 @@
   // ZZ_DELETE_ (case-sensitive), its id is in the delete ledger or a pending slip, and RR_ is nowhere
   // in the name or in a parent folder. ZZ_SUPERSEDED_ is retired: those names are listed for renaming
   // and are never a reason to bin anything.
-  function isDeleteName(name) { return String(name == null ? '' : name).indexOf(DELETE_PREFIX) === 0; }
+  function normName(name) { return String(name == null ? '' : name).trim(); }
+  function compactPrefix(s) { return String(s || '').toLowerCase().replace(/[\s_-]+/g, ''); }
+  // exact = starts with the prefix as written. odd = same prefix with different case, spaces or hyphens.
+  function spellingOf(name, exactPrefix) {
+    var n = normName(name);
+    if (!n || !exactPrefix) return '';
+    if (n.indexOf(exactPrefix) === 0) return 'exact';
+    var c = compactPrefix(n), e = compactPrefix(exactPrefix);
+    if (e && c.indexOf(e) === 0) return 'odd';
+    return '';
+  }
+  function isZzFamilyName(name) { return /^zz[\s_-]/i.test(normName(name)); }
+  function isHoldFolderName(name) { return /^aa[\s_-]*hold[\s_-]/i.test(normName(name)); }
+  function isDeleteName(name) { return spellingOf(name, DELETE_PREFIX) === 'exact'; }
+  function isZeroByte(f) {
+    if (!f || f.mimeType === FOLDER_MIME) return false;
+    if (f.size == null || f.size === '') return false;
+    return Number(f.size) === 0;
+  }
+  function isShortcut(f) { return !!f && f.mimeType === 'application/vnd.google-apps.shortcut'; }
+  function isGoogleNative(f) {
+    return !!f && /^application\/vnd\.google-apps\./.test(f.mimeType || '') && f.mimeType !== FOLDER_MIME && !isShortcut(f);
+  }
+  function isJunkName(name) {
+    var base = normName(name).split('/').pop();
+    if (/^~\$/.test(base)) return true;
+    if (/\.lock$/i.test(base) || /\.pyc$/i.test(base)) return true;
+    if (base === '.DS_Store' || /^thumbs\.db$/i.test(base) || /^desktop\.ini$/i.test(base)) return true;
+    return false;
+  }
+  function fileStamp(f) {
+    return [
+      f.id || '',
+      f.name || '',
+      f.mimeType || '',
+      f.size == null ? '' : String(f.size),
+      f.md5Checksum || '',
+      f.modifiedTime || '',
+      (f.parents || []).slice().sort().join('|'),
+      f.driveId || ''
+    ].join('\u0001');
+  }
+  function emptyKeeperStats() { return { keepers: 0, unsure: 0, noChecksum: 0, notKeeper: 0, shortcuts: 0, native: 0 }; }
   function isOtherZzName(name) {
     name = String(name == null ? '' : name);
     return name.indexOf(SWEEP_PREFIX) === 0 && !isDeleteName(name);
@@ -569,9 +639,124 @@
     return next();
   }
 
+  // A marked folder can be binned only when every item inside is junk or itself marked
+  // (exact delete prefix + ledger row). Anything else is reported and the folder is skipped.
+  // driveId null = My Drive. Shared drives pass the drive id (owner is the drive, not a person).
+  function contentsVerdict(folderId, driveId, led, prefix) {
+    var level = [folderId], req = 0, unsure = 0, unproven = 0, other = 0, holdName = '', e02 = false, tooBig = false;
+    function result() {
+      if (tooBig) return { ok: false, reason: 'Folder too big to check every item inside, left alone.' };
+      if (e02) return { ok: false, reason: E02_LABEL };
+      if (holdName) return { ok: false, reason: holdName };
+      if (other) return { ok: false, reason: 'Held: folder holds ' + other + ' item' + (other === 1 ? '' : 's') + ' owned by someone else.' };
+      if (unsure) return { ok: false, reason: 'UNSURE: folder holds ' + unsure + ' zero-byte file' + (unsure === 1 ? '' : 's') + '. Left alone.' };
+      var noun = unproven === 1 ? 'item that is not' : 'items that are not';
+      if (unproven) return { ok: false, reason: 'Held: folder holds ' + unproven + ' ' + noun + ' verified or junk.' };
+      return { ok: true, reason: '' };
+    }
+    function classifyChild(f) {
+      if (nameHasRr(f.name)) return 'rr';
+      if (isHoldFolderName(f.name)) return 'hold';
+      if (e02NameHit(f.name)) return 'e02';
+      if (!driveId && f.ownedByMe === false) return 'other';
+      if (isJunkName(f.name)) return 'junk';
+      if (f.mimeType === FOLDER_MIME) return 'folder';
+      if (isZeroByte(f)) return 'unsure';
+      var marked = spellingOf(f.name, prefix) === 'exact' || spellingOf(f.name, DELETE_PREFIX) === 'exact';
+      if (marked && led && led.ok && led.ids && led.ids[f.id]) return 'marked';
+      return 'unproven';
+    }
+    function next() {
+      if (holdName || e02 || tooBig) return Promise.resolve(result());
+      if (!level.length) return Promise.resolve(result());
+      if (req >= 30) { tooBig = true; return Promise.resolve(result()); }
+      var chunk = level.splice(0, PARENTS_PER_QUERY); req++;
+      var q = '(' + chunk.map(function (id) { return "'" + id + "' in parents"; }).join(' or ') + ') and trashed = false';
+      var params = driveId
+        ? inDrive(driveId, { q: q, pageSize: '1000', fields: 'nextPageToken,files(id,name,mimeType,size,md5Checksum,ownedByMe)' })
+        : { corpora: 'user', q: q, pageSize: '1000', fields: 'nextPageToken,files(id,name,mimeType,size,md5Checksum,ownedByMe)' };
+      return listAll(params, 3).then(function (r) {
+        if (!r || r.more) { tooBig = true; return result(); }
+        for (var i = 0; i < r.files.length; i++) {
+          var kind = classifyChild(r.files[i]);
+          if (kind === 'rr') { holdName = 'Folder holds an RR_ item, left alone.'; return result(); }
+          if (kind === 'hold') { holdName = 'Folder holds an AA_HOLD_ item, left alone.'; return result(); }
+          if (kind === 'e02') { e02 = true; return result(); }
+          if (kind === 'other') other++;
+          else if (kind === 'unsure') unsure++;
+          else if (kind === 'unproven') unproven++;
+          else if (kind === 'folder') level.push(r.files[i].id);
+        }
+        return next();
+      });
+    }
+    return next();
+  }
+
+  // Live kept copies only: not trashed, not zero-byte, not a shortcut or Google-native file,
+  // name does not start with a ZZ_ variant, and no ZZ_ or AA_HOLD_ folder sits above it.
+  function keeperBlocked(file, folders, driveId) {
+    if (isZzFamilyName(file.name) || isHoldFolderName(file.name)) return true;
+    var pid = (file.parents || [])[0], guard = 0, seen = {};
+    while (pid && pid !== driveId && guard++ < 40) {
+      if (seen[pid]) return true;
+      seen[pid] = 1;
+      var folder = folders[pid];
+      if (!folder) return true;
+      if (isZzFamilyName(folder.name) || isHoldFolderName(folder.name)) return true;
+      pid = (folder.parents || [])[0];
+    }
+    return false;
+  }
+  function indexSharedDrive(d, seen, bySize, stats, onPage) {
+    var folders = {}, files = [];
+    return pcpAllPages({
+      corpora: 'drive', driveId: d.id, q: 'trashed = false', pageSize: '1000',
+      fields: 'nextPageToken,files(id,name,mimeType,parents,md5Checksum,size)'
+    }, function (batch, n) {
+      batch.forEach(function (f) {
+        if (f.trashed) return;
+        if (f.mimeType === FOLDER_MIME) { folders[f.id] = f; return; }
+        files.push(f);
+      });
+      if (onPage) onPage(n);
+    }).then(function () {
+      files.forEach(function (f) {
+        if (isShortcut(f)) { stats.shortcuts++; return; }
+        if (isGoogleNative(f)) { stats.native++; return; }
+        if (isZeroByte(f)) { stats.unsure++; return; }
+        if (!f.md5Checksum) { stats.noChecksum++; return; }
+        if (keeperBlocked(f, folders, d.id)) { stats.notKeeper++; return; }
+        seen[f.md5Checksum + ':' + String(f.size)] = 1;
+        var s = parseInt(f.size, 10);
+        if (!isNaN(s) && s > 0) {
+          var set = bySize.get(s);
+          if (!set) { set = new Set(); bySize.set(s, set); }
+          set.add(f.md5Checksum);
+        }
+        stats.keepers++;
+      });
+    });
+  }
+  function collectKeepers(ds, onDrive) {
+    var seen = Object.create(null), bySize = new Map(), stats = emptyKeeperStats(), failed = [], i = 0;
+    function next() {
+      if (i >= ds.length) return Promise.resolve({ seen: seen, bySize: bySize, stats: stats, failed: failed });
+      var d = ds[i++], idx = i;
+      if (onDrive) onDrive(d, idx, ds.length, stats.keepers);
+      return indexSharedDrive(d, seen, bySize, stats).then(next, function (err) {
+        var fr = friendlyError(err);
+        if (fr.expired) return Promise.reject(err);
+        failed.push({ id: d.id, name: d.name, text: fr.text });
+        return next();
+      });
+    }
+    return next();
+  }
+
   // Breadth-first walk, several parents per query, capped.
   function walkTree(rootId, rootName) {
-    var files = [], folderInfo = {}, level = [rootId], depth = 0, requests = 0, capped = false, folderCount = 0, maxDepthSeen = 0, depthCapped = false;
+    var files = [], folderInfo = {}, level = [rootId], depth = 0, requests = 0, capped = false, folderCount = 0, maxDepthSeen = 0, depthCapped = false, shortcuts = 0, native = 0;
     folderInfo[rootId] = { name: rootName, path: rootName, depth: 0 };
     function listChildren(parentIds) {
       var q = '(' + parentIds.map(function (id) { return "'" + id + "' in parents"; }).join(' or ') + ') and trashed = false';
@@ -607,7 +792,11 @@
                   if (parent.depth + 1 > maxDepthSeen) maxDepthSeen = parent.depth + 1;
                   nextIds.push(f.id);
                 }
-              } else { files.push(f); }
+              } else {
+                if (isShortcut(f)) shortcuts++;
+                else if (isGoogleNative(f)) native++;
+                files.push(f);
+              }
             });
           });
         });
@@ -619,7 +808,7 @@
     }
     return nextLevel().then(function () {
       files.sort(function (a, b) { return (b.modifiedTime || '').localeCompare(a.modifiedTime || ''); });
-      return { files: files, folderCount: folderCount, maxDepth: maxDepthSeen, capped: capped, depthCapped: depthCapped, requests: requests };
+      return { files: files, folderCount: folderCount, maxDepth: maxDepthSeen, capped: capped, depthCapped: depthCapped, requests: requests, shortcuts: shortcuts, native: native };
     });
   }
 
@@ -803,11 +992,16 @@
     var name = String(f.name || '');
     if (f._moneyHold || isMoneyRollback(f, f._chain)) { holdMoney(f, f._chain); return 'e02'; }
     if (nameHasRr(name)) { f._block = 'Name contains RR_, left out.'; return 'leftout'; }
+    if (spellingOf(name, DELETE_PREFIX) === 'odd') {
+      f._block = 'Rename needed. Odd prefix spelling, not binned.';
+      return 'rename';
+    }
     if (!isDeleteName(name)) {
       f._block = f._skip || 'Rename needed. ZZ_SUPERSEDED_ is retired and is never binned.';
       return 'rename';
     }
     if (f._skip) { f._block = f._skip; return 'blocked'; }
+    if (isZeroByte(f)) { f._block = 'UNSURE: zero-byte file, left alone.'; return 'unsure'; }
     if (!led.ok) { f._block = 'Ledger could not be read.'; return 'blocked'; }
     if (!led.ids[f.id]) { f._block = 'No ledger row.'; return 'held'; }
     f._block = '';
@@ -908,16 +1102,19 @@
     run('bin', Promise.all([
       loadLedgerSet(),
       mapLimit(list, 3, function (d) {
-        var fileFields = 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,webViewLink)';
+        var fileFields = 'nextPageToken,files(id,name,mimeType,parents,driveId,modifiedTime,size,md5Checksum,webViewLink,ownedByMe)';
         return Promise.all([
           listAll(inDrive(d.id, { q: "name contains '" + DELETE_PREFIX + "' and trashed = false", pageSize: '200', fields: fileFields }), 5),
           listAll(inDrive(d.id, { q: "name contains '" + SWEEP_PREFIX + "' and trashed = false", pageSize: '200', fields: fileFields }), 5),
           listAll(inDrive(d.id, { q: 'trashed = true', pageSize: '200', fields: 'nextPageToken,files(id,name,mimeType,driveId,trashedTime,explicitlyTrashed,webViewLink,trashingUser(displayName,emailAddress))' }), 5),
-          listHoldFolderFiles(d.id)
+          listHoldFolderFiles(d.id),
+          listAll(inDrive(d.id, { q: "name contains 'ZZ-' and trashed = false", pageSize: '200', fields: fileFields }), 5),
+          listAll(inDrive(d.id, { q: "name contains 'ZZ DELETE' and trashed = false", pageSize: '200', fields: fileFields }), 5)
         ]).then(function (x) {
           var byId = {};
-          x[0].files.concat(x[1].files).forEach(function (f) {
-            if (String(f.name || '').indexOf(SWEEP_PREFIX) === 0) byId[f.id] = f;
+          x[0].files.concat(x[1].files, x[4].files, x[5].files).forEach(function (f) {
+            if (f.trashed) return;
+            if (String(f.name || '').indexOf(SWEEP_PREFIX) === 0 || spellingOf(f.name, DELETE_PREFIX) === 'odd') byId[f.id] = f;
           });
           (x[3].files || []).forEach(function (f) {
             if (byId[f.id]) byId[f.id]._fromHoldFolder = true;
@@ -940,12 +1137,18 @@
                 return archiveInside(f.id, d.id).then(function (has) {
                   if (has === true) f._skip = 'Folder holds an RR_ item, left alone.';
                   else if (has === null) f._skip = 'Folder too big to check for RR_ items, left alone.';
-                });
+                  else if (isDeleteName(f.name)) return loadLedgerSet().then(function (led) {
+                    return contentsVerdict(f.id, d.id, led, DELETE_PREFIX);
+                  }).then(function (v) {
+                    f._inside = v;
+                    if (!v.ok) f._skip = v.reason;
+                  });
+                }).catch(function () { f._skip = 'Folder could not be checked, left alone.'; });
               }
             });
           }).then(function () {
             zz = zz.filter(function (f) {
-              return f._moneyHold || String(f.name || '').indexOf(SWEEP_PREFIX) === 0;
+              return f._moneyHold || String(f.name || '').indexOf(SWEEP_PREFIX) === 0 || spellingOf(f.name, DELETE_PREFIX) === 'odd';
             });
             var trash = x[2].files.filter(function (f) { return f.explicitlyTrashed !== false; });
             trash.sort(function (a, b) { return (b.trashedTime || '').localeCompare(a.trashedTime || ''); });
@@ -954,7 +1157,7 @@
         });
       })
     ]).then(function (pair) {
-      var led = pair[0], per = pair[1], ready = [], held = [], rename = [], leftout = [], blocked = [], e02 = [];
+      var led = pair[0], per = pair[1], ready = [], held = [], rename = [], leftout = [], blocked = [], e02 = [], unsure = [];
       per.forEach(function (p) {
         p.zz.forEach(function (f) {
           var bucket = classifyBinItem(f, led);
@@ -963,6 +1166,7 @@
           else if (bucket === 'held') held.push(f);
           else if (bucket === 'rename') rename.push(f);
           else if (bucket === 'leftout') leftout.push(f);
+          else if (bucket === 'unsure') unsure.push(f);
           else blocked.push(f);
         });
       });
@@ -972,7 +1176,7 @@
         else safeReady.push(f);
       });
       return {
-        per: per, ready: safeReady, held: held, rename: rename, leftout: leftout, blocked: blocked, e02: e02,
+        per: per, ready: safeReady, held: held, rename: rename, leftout: leftout, blocked: blocked, e02: e02, unsure: unsure,
         ledgerOk: led.ok, ledgerNote: led.note || '',
         zzMore: per.some(function (p) { return p.zzMore; })
       };
@@ -1021,9 +1225,9 @@
     if (group === 'usb') return !usbBlock(it);
     if (it._moneyHold || isMoneyRollback(it, it._chain || [])) return false;
     if (group === 'check') return checkAllowed(it);
-    if (group === 'bin') return !!(S.bin.data && S.bin.data.ledgerOk && isDeleteName(it.name) && !nameHasRr(it.name) && !it._skip);
-    if (group === 'pcpmark') return !nameHasRr(it.name);
-    if (group === 'pcpbin') return !it.blocked && String(it.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(it.name);
+    if (group === 'bin') return !!(S.bin.data && S.bin.data.ledgerOk && isDeleteName(it.name) && !nameHasRr(it.name) && !it._skip && !isZeroByte(it));
+    if (group === 'pcpmark') return !nameHasRr(it.name) && !isZeroByte(it) && !isZzFamilyName(it.name);
+    if (group === 'pcpbin') return !it.blocked && String(it.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(it.name) && !isZeroByte(it);
     return false;
   }
   function visibleRows(group) {
@@ -1057,28 +1261,85 @@
       '<button class="btn danger solid" type="button" data-action="' + action + '"' + (n && !busy ? '' : ' disabled') + '>' + icon('bin') +
       '<span>' + verb + ' selected (' + n + ')</span></button></div>';
   }
+  var LIVE_FIELDS = 'id,name,mimeType,parents,driveId,modifiedTime,size,md5Checksum,trashed,ownedByMe';
+  function countBinRow(row, bag) {
+    if (row.ok) bag.moved++;
+    else if (/^UNSURE/.test(row.text || '')) bag.unsure++;
+    else if (/^Skipped/.test(row.text || '')) bag.skipped++;
+    else bag.failed++;
+  }
+  function recheckForBin(f, opt) {
+    opt = opt || {};
+    return apiGet(API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=' + LIVE_FIELDS).then(function (live) {
+      if (!live || live.id !== f.id) return { ok: false, text: 'Skipped: could not re-read the item.' };
+      if (live.trashed) return { ok: false, text: 'Skipped: already in the bin.' };
+      if (excludedDrive(live.driveId)) return { ok: false, text: 'Skipped: excluded shared drive.' };
+      if (opt.requireOwned && live.ownedByMe === false) return { ok: false, text: 'Skipped: owned by someone else.' };
+      if (opt.requireDrive && !live.driveId) return { ok: false, text: 'Skipped: not in a shared drive.' };
+      if (isZeroByte(live)) return { ok: false, text: 'UNSURE: zero-byte file, left alone.' };
+      if (fileStamp(live) !== fileStamp(f)) return { ok: false, text: 'Skipped: changed since it was listed.' };
+      if (opt.prefix && String(live.name || '').indexOf(opt.prefix) !== 0) return { ok: false, text: 'Skipped: name changed.' };
+      if (nameHasRr(live.name)) return { ok: false, text: 'Not moved' };
+      if (live.mimeType === FOLDER_MIME) {
+        var driveId = opt.personal ? null : (live.driveId || null);
+        var rr = driveId ? archiveInside(live.id, driveId) : Promise.resolve(false);
+        return rr.then(function (has) {
+          if (has === true) return { ok: false, text: 'Folder holds an RR_ item, left alone.' };
+          if (has === null) return { ok: false, text: 'Folder too big to check for RR_ items, left alone.' };
+          return loadLedgerSet().then(function (led) {
+            return contentsVerdict(live.id, driveId, led, opt.prefix || DELETE_PREFIX);
+          }).then(function (v) { return v.ok ? { ok: true, live: live } : { ok: false, text: v.reason }; });
+        });
+      }
+      return { ok: true, live: live };
+    }, function (err) {
+      var fr = friendlyError(err);
+      if (fr.expired) return { ok: false, expired: true, text: fr.text };
+      return { ok: false, text: 'Not moved: ' + fr.text };
+    });
+  }
+  function trashOnly(f) {
+    return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }).then(function (res) {
+      return { ok: res.trashed === true, text: res.trashed === true ? 'Moved to bin' : 'Not moved' };
+    }, function (err) {
+      var fr = friendlyError(err);
+      if (fr.expired) return { ok: false, expired: true, text: fr.text };
+      return { ok: false, text: 'Not moved: ' + (err && err.status === 403 && !isScopeError(err) ? 'no permission to bin this.' : fr.text) };
+    });
+  }
   function sweep() {
     if (busy) return;
     var d = S.bin.data; if (!d || !d.ledgerOk) return;
     var items = pickedItems('bin').filter(function (f) {
-      return !isMoneyRollback(f, f._chain) && isDeleteName(f.name) && !nameHasRr(f.name) && !f._skip && d.ledgerOk && d.ready.indexOf(f) !== -1;
+      return !isMoneyRollback(f, f._chain) && isDeleteName(f.name) && !nameHasRr(f.name) && !f._skip && !isZeroByte(f) && d.ledgerOk && d.ready.indexOf(f) !== -1;
     });
     if (!items.length) return;
     if (!writeGranted) { requestWrite(); return; }
-    var ok = window.confirm('Move ' + items.length + ' selected item' + (items.length === 1 ? '' : 's') + ' to the bin?\n\n' +
-      'Only ticked names that start ZZ_DELETE_ and have a delete-ledger row are included. RR_ names are never included. Money rollback files are never included. Folders go with their contents. Shared-drive bins delete items for good after 30 days.');
-    if (!ok) { R.sweep = { at: Date.now(), cancelled: true, items: [] }; render(); return; }
+    var noun = items.length === 1 ? 'item' : 'items';
+    var ok = window.confirm('Dry run: ' + items.length + ' selected ' + noun + ' will move to the bin.\n\n' +
+      'Move ' + items.length + ' selected ' + noun + ' to the bin?\n\n' +
+      'Trash only. Nothing is deleted for good. Shared-drive bins keep items for 30 days.\n\n' +
+      'Only ticked names that start ZZ_DELETE_ and have a delete-ledger row are included. Zero-byte files are left as UNSURE. Odd prefix spellings are not binned. A folder is included only when every item inside is verified or junk. RR_ names are never included. Money rollback files are never included.\n\n' +
+      'Press OK to confirm. Cancel changes nothing.');
+    if (!ok) { R.sweep = { at: Date.now(), cancelled: true, items: [], moved: 0, skipped: 0, unsure: 0, failed: 0 }; render(); return; }
     busy = true; render();
+    var halted = false, counts = { moved: 0, skipped: 0, unsure: 0, failed: 0 };
     mapLimit(items, 3, function (f) {
       var row = { name: f.name, path: f._path };
-      if (isMoneyRollback(f, f._chain)) { row.ok = false; row.text = 'Not moved'; return row; }
-      return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }).then(function (res) {
-        row.ok = res.trashed === true; row.text = row.ok ? 'Moved to bin' : 'Not moved'; return row;
-      }, function (err) {
-        row.ok = false; row.text = 'Not moved: ' + (err && err.status === 403 && !isScopeError(err) ? 'no permission to bin this.' : friendlyError(err).text); return row;
+      if (halted) { row.ok = false; row.text = 'Skipped: sign-in expired.'; counts.skipped++; return row; }
+      if (isMoneyRollback(f, f._chain) || isZeroByte(f) || f._skip || !isDeleteName(f.name) || nameHasRr(f.name)) {
+        row.ok = false; row.text = 'Not moved'; counts.failed++; return row;
+      }
+      return recheckForBin(f, { prefix: DELETE_PREFIX, requireDrive: true }).then(function (chk) {
+        if (chk.expired) { halted = true; handleExpired(); row.ok = false; row.text = chk.text; counts.skipped++; return row; }
+        if (!chk.ok) { row.ok = false; row.text = chk.text; countBinRow(row, counts); return row; }
+        return trashOnly(f).then(function (res) {
+          if (res.expired) { halted = true; handleExpired(); }
+          row.ok = res.ok; row.text = res.text; countBinRow(row, counts); return row;
+        });
       });
     }).then(function (rows) {
-      R.sweep = { at: Date.now(), items: rows };
+      R.sweep = { at: Date.now(), items: rows, moved: counts.moved, skipped: counts.skipped, unsure: counts.unsure, failed: counts.failed };
       busy = false; S.bin = blank(); metaCache = {}; ledgerCache = null; PICK.bin = {};
       render(); ensureRoute();
     });
@@ -1086,10 +1347,10 @@
 
   // ---- PC-Personal / lisah Personal: files in MY Drive that already exist, byte for byte (MD5 + size), in a shared drive ----
   var PCP_PREFIX = 'ZZ_DELETE_DRIVE_';
-  var P = { status: 'idle', log: '', email: '', mine: 0, matches: [], matchBytes: 0, marked: null, binned: null, error: '', candidates: [], binStatus: 'idle', ledgerOk: true, ledgerNote: '' };
   function pcpFresh(status, log) {
-    return { status: status, log: log, email: '', mine: 0, matches: [], matchBytes: 0, marked: null, binned: null, error: '', candidates: [], binStatus: 'idle', ledgerOk: true, ledgerNote: '' };
+    return { status: status, log: log, email: '', mine: 0, matches: [], matchBytes: 0, marked: null, binned: null, error: '', candidates: [], binStatus: 'idle', ledgerOk: true, ledgerNote: '', stats: emptyKeeperStats(), failedDrives: [], keeper: null, skippedMarked: 0, personalUnsure: 0, personalNoChecksum: 0 };
   }
+  var P = pcpFresh('idle', '');
   function pcpLabel() {
     return P.email === 'lisa@puppyclassroom.com' ? 'PC-Personal' : P.email === 'lisahcarson@gmail.com' ? 'lisah Personal' : (P.email || 'Personal drive');
   }
@@ -1105,56 +1366,99 @@
     }
     return page(null);
   }
-  function pcpScan() {
+  function readPersonal(seen) {
+    P.mine = 0; P.matches = []; P.matchBytes = 0; P.skippedMarked = 0; P.personalUnsure = 0; P.personalNoChecksum = 0;
+    P.log = 'Reading your personal drive…'; render();
+    return pcpAllPages({ corpora: 'user', q: "'me' in owners and trashed = false and mimeType != '" + FOLDER_MIME + "'", pageSize: '1000', fields: 'nextPageToken,files(id,name,size,md5Checksum,mimeType,modifiedTime,ownedByMe)' }, function (files, n) {
+      files.forEach(function (f) {
+        if (f.trashed || f.ownedByMe === false) return;
+        if (isShortcut(f) || isGoogleNative(f) || !f.md5Checksum) { P.personalNoChecksum++; return; }
+        if (isZeroByte(f)) { P.personalUnsure++; return; }
+        P.mine++;
+        if (isZzFamilyName(f.name) || isHoldFolderName(f.name)) { P.skippedMarked++; return; }
+        if (seen[f.md5Checksum + ':' + String(f.size)]) {
+          var sz = parseInt(f.size || '0', 10);
+          if (!sz) { P.personalUnsure++; return; }
+          P.matches.push({ id: f.id, name: f.name, size: sz, md5Checksum: f.md5Checksum, modifiedTime: f.modifiedTime || '', mimeType: f.mimeType || '' });
+          P.matchBytes += sz;
+        }
+      });
+      if (n % 5 === 1) { P.log = 'Reading your personal drive: ' + num(P.mine) + ' files so far'; render(); }
+    });
+  }
+  function pcpScan(mode) {
     if (busy) return;
     busy = true;
     pcpLoadGen++;
-    P = pcpFresh('running', 'Starting…');
+    var continuing = mode === 'continue' && P.keeper;
+    if (!continuing) P = pcpFresh('running', 'Starting…');
+    else { P.status = 'running'; P.error = ''; P.log = 'Continuing…'; }
     render();
-    var seen = Object.create(null), shared = 0;
-    apiGet(CFG.urls.driveApi + '/about?fields=user(emailAddress)').then(function (a) {
+    var start = continuing ? Promise.resolve() : apiGet(CFG.urls.driveApi + '/about?fields=user(emailAddress)').then(function (a) {
       P.email = a && a.user ? a.user.emailAddress : '';
-      return listDrives();
-    }).then(function (ds) {
-      var i = 0;
-      function nextDrive() {
-        if (i >= ds.length) return Promise.resolve();
-        var d = ds[i++], idx = i;
-        return pcpAllPages({ corpora: 'drive', driveId: d.id, q: "trashed = false and mimeType != '" + FOLDER_MIME + "'", pageSize: '1000', fields: 'nextPageToken,files(md5Checksum,size)' }, function (files, n) {
-          files.forEach(function (f) { if (f.md5Checksum) { seen[f.md5Checksum + ':' + f.size] = 1; shared++; } });
-          if (n % 5 === 1) { P.log = 'Reading shared drive ' + idx + ' of ' + ds.length + ' (' + d.name + '): ' + num(shared) + ' files read so far'; render(); }
-        }).then(nextDrive);
+    });
+    start.then(function () { return listDrives(); }).then(function (ds) {
+      var todo = ds;
+      if (continuing && P.failedDrives && P.failedDrives.length) {
+        var ids = {};
+        P.failedDrives.forEach(function (d) { ids[d.id] = 1; });
+        todo = ds.filter(function (d) { return ids[d.id]; });
       }
-      return nextDrive();
-    }).then(function () {
-      P.log = 'Reading your personal drive…'; render();
-      return pcpAllPages({ corpora: 'user', q: "'me' in owners and trashed = false and mimeType != '" + FOLDER_MIME + "'", pageSize: '1000', fields: 'nextPageToken,files(id,name,size,md5Checksum)' }, function (files, n) {
-        files.forEach(function (f) {
-          if (!f.md5Checksum) return;
-          P.mine++;
-          if (f.name.indexOf('ZZ_') === 0) return;
-          if (seen[f.md5Checksum + ':' + f.size]) {
-            var sz = parseInt(f.size || '0', 10);
-            P.matches.push({ id: f.id, name: f.name, size: sz });
-            P.matchBytes += sz;
-          }
-        });
-        if (n % 5 === 1) { P.log = 'Reading your personal drive: ' + num(P.mine) + ' files so far'; render(); }
+      return collectKeepers(todo, function (d, idx, total, n) {
+        P.log = 'Reading shared drive ' + idx + ' of ' + total + ' (' + d.name + '): ' + num(n) + ' kept copies so far';
+        render();
+      }).then(function (pack) {
+        if (continuing && P.keeper) {
+          Object.keys(pack.seen).forEach(function (k) { P.keeper.seen[k] = 1; });
+          pack.bySize.forEach(function (set, size) {
+            var cur = P.keeper.bySize.get(size);
+            if (!cur) P.keeper.bySize.set(size, set);
+            else set.forEach(function (md5) { cur.add(md5); });
+          });
+          Object.keys(pack.stats).forEach(function (k) { P.keeper.stats[k] = (P.keeper.stats[k] || 0) + pack.stats[k]; });
+          P.stats = P.keeper.stats;
+          P.failedDrives = pack.failed;
+          P.keeper.failed = pack.failed;
+        } else {
+          P.keeper = pack;
+          P.stats = pack.stats;
+          P.failedDrives = pack.failed;
+        }
+        return readPersonal(P.keeper.seen);
       });
     }).then(function () {
-      P.status = 'done'; P.log = 'Finished ' + stamp(Date.now()) + '. Compared ' + num(shared) + ' shared-drive files with ' + num(P.mine) + ' personal files.';
+      var missed = P.failedDrives.length ? ' ' + P.failedDrives.length + ' shared drive' + (P.failedDrives.length === 1 ? '' : 's') + ' could not be read and were not used as proof.' : '';
+      P.status = 'done';
+      P.log = 'Finished ' + stamp(Date.now()) + '. Compared ' + num(P.stats.keepers) + ' live kept copies with ' + num(P.mine) + ' personal files.' + missed;
     }, function (err) {
-      P.status = 'failed'; P.error = friendlyError(err).text;
+      var fr = friendlyError(err);
+      P.status = 'failed'; P.error = fr.text;
+      if (fr.expired) { P.keeper = null; P.failedDrives = []; handleExpired(); }
     }).then(function () { busy = false; P.binStatus = 'idle'; render(); loadPcpCandidates(); });
   }
   function classifyPcp(f, led) {
-    var reason = '';
+    var reason = '', spell = spellingOf(f.name, PCP_PREFIX);
     if (f._moneyHold || isMoneyRollback(f, f._chain || [])) reason = E02_LABEL;
-    else if (String(f.name || '').indexOf(PCP_PREFIX) !== 0) reason = 'Name does not start with ZZ_DELETE_DRIVE_.';
+    else if (f._folderHold) reason = f._folderHold;
+    else if (isZeroByte(f)) reason = 'UNSURE: zero-byte file, left alone.';
+    else if (spell === 'odd') reason = 'Rename needed. Odd prefix spelling, not binned.';
+    else if (spell !== 'exact') reason = 'Name does not start with ZZ_DELETE_DRIVE_.';
     else if (nameHasRr(f.name)) reason = 'Name contains RR_, left out.';
+    else if (f.ownedByMe === false) reason = 'Owned by someone else, left alone.';
     else if (!led.ok) reason = 'Ledger could not be read.';
     else if (!led.ids[f.id]) reason = 'No ledger row.';
-    return { id: f.id, name: f.name, parents: f.parents || [], _chain: f._chain || [], _moneyHold: !!f._moneyHold || reason === E02_LABEL, blocked: !!reason, reason: reason };
+    return {
+      id: f.id, name: f.name, parents: f.parents || [], mimeType: f.mimeType || '',
+      size: f.size == null ? '' : String(f.size), md5Checksum: f.md5Checksum || '',
+      modifiedTime: f.modifiedTime || '', driveId: f.driveId || '',
+      _chain: f._chain || [], _moneyHold: !!f._moneyHold || reason === E02_LABEL,
+      blocked: !!reason, reason: reason
+    };
+  }
+  function keepPersonalCandidate(f) {
+    if (!f || f.trashed || f.ownedByMe === false) return false;
+    var spell = spellingOf(f.name, PCP_PREFIX);
+    return spell === 'exact' || spell === 'odd';
   }
   function loadPcpCandidates() {
     if (!signedIn || !accessToken) return;
@@ -1162,15 +1466,28 @@
     var gen = ++pcpLoadGen;
     P.binStatus = 'loading';
     render();
-    var found = [];
+    var found = [], seen = {};
+    function take(files) {
+      files.forEach(function (f) {
+        if (!keepPersonalCandidate(f) || seen[f.id]) return;
+        seen[f.id] = 1;
+        f._moneyHold = isMoneyRollback(f, []);
+        found.push(f);
+      });
+    }
+    var candFields = 'nextPageToken,files(id,name,parents,mimeType,size,md5Checksum,modifiedTime,ownedByMe)';
     loadLedgerSet().then(function (led) {
-      return pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "' and 'me' in owners and trashed = false", pageSize: '1000', fields: 'nextPageToken,files(id,name,parents)' }, function (files) {
-        files.forEach(function (f) {
-          if (String(f.name || '').indexOf(PCP_PREFIX) !== 0) return;
-          f._moneyHold = isMoneyRollback(f, []);
-          found.push(f);
-        });
-      }).then(function () { return led; });
+      return pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "' and 'me' in owners and trashed = false", pageSize: '1000', fields: candFields }, take)
+        .then(function () { return pcpAllPages({ corpora: 'user', q: "name contains 'ZZ-DELETE' and 'me' in owners and trashed = false", pageSize: '200', fields: candFields }, take); })
+        .then(function () { return pcpAllPages({ corpora: 'user', q: "name contains 'ZZ DELETE' and 'me' in owners and trashed = false", pageSize: '200', fields: candFields }, take); })
+        .then(function () {
+          return mapLimit(found.filter(function (f) { return f.mimeType === FOLDER_MIME && spellingOf(f.name, PCP_PREFIX) === 'exact'; }), 3, function (f) {
+            return contentsVerdict(f.id, null, led, PCP_PREFIX).then(function (v) {
+              f._inside = v;
+              if (!v.ok) f._folderHold = v.reason;
+            }, function () { f._folderHold = 'Folder could not be checked, left alone.'; });
+          });
+        }).then(function () { return led; });
     }).then(function (led) {
       if (gen !== pcpLoadGen) return;
       P.ledgerOk = !!led.ok;
@@ -1187,16 +1504,24 @@
   }
   function pcpMark() {
     if (busy) return;
-    var items = pickedItems('pcpmark').filter(function (f) { return !nameHasRr(f.name) && !isMoneyRollback(f, f._chain || []); });
+    var items = pickedItems('pcpmark').filter(function (f) { return !nameHasRr(f.name) && !isMoneyRollback(f, f._chain || []) && !isZeroByte(f) && !isZzFamilyName(f.name); });
     if (!items.length) return;
     if (!writeGranted) { requestWrite(); return; }
-    var ok = window.confirm('Rename ' + items.length + ' selected personal file' + (items.length === 1 ? '' : 's') + ' to start ' + PCP_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted yet. Names containing RR_ are not included.');
+    var ok = window.confirm('Rename ' + items.length + ' selected personal file' + (items.length === 1 ? '' : 's') + ' to start ' + PCP_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted yet. Names containing RR_ are not included. Zero-byte files are not included.');
     if (!ok) return;
-    busy = true; P.marked = { done: 0, failed: 0 }; render();
+    busy = true; P.marked = { done: 0, failed: 0, skipped: 0 }; render();
     var doneIds = {};
     mapLimit(items, 4, function (f) {
-      if (isMoneyRollback(f, f._chain || [])) { P.marked.failed++; return; }
-      return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: PCP_PREFIX + f.name }).then(function () { P.marked.done++; doneIds[f.id] = true; }, function () { P.marked.failed++; });
+      if (isMoneyRollback(f, f._chain || []) || isZeroByte(f)) { P.marked.failed++; return; }
+      return apiGet(API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=' + LIVE_FIELDS).then(function (live) {
+        if (!live || live.trashed || live.ownedByMe === false || isZeroByte(live) || nameHasRr(live.name) || isZzFamilyName(live.name) || live.name !== f.name) { P.marked.skipped++; return; }
+        if (String(live.size) !== String(f.size) || (live.md5Checksum || '') !== (f.md5Checksum || '')) { P.marked.skipped++; return; }
+        return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: PCP_PREFIX + f.name }).then(function () { P.marked.done++; doneIds[f.id] = true; }, function () { P.marked.failed++; });
+      }, function (err) {
+        var fr = friendlyError(err);
+        if (fr.expired) handleExpired();
+        P.marked.failed++;
+      });
     }).then(function () {
       P.matches = P.matches.filter(function (f) { return !doneIds[f.id]; });
       P.matchBytes = P.matches.reduce(function (t, f) { return t + (f.size || 0); }, 0);
@@ -1211,22 +1536,44 @@
   function pcpBin() {
     if (busy || !P.ledgerOk) return;
     var items = pickedItems('pcpbin').filter(function (f) {
-      return !f.blocked && !f._moneyHold && !isMoneyRollback(f, f._chain || []) && String(f.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(f.name);
+      return !f.blocked && !f._moneyHold && !isMoneyRollback(f, f._chain || []) && spellingOf(f.name, PCP_PREFIX) === 'exact' && !nameHasRr(f.name) && !isZeroByte(f);
     });
     if (!items.length) return;
     if (!writeGranted) { requestWrite(); return; }
-    if (!window.confirm('Move ' + items.length + ' selected personal file' + (items.length === 1 ? '' : 's') + ' to the bin?\n\nOnly ticked files that start ' + PCP_PREFIX + ' and have a delete-ledger row are included. Names containing RR_ are never included. Drive keeps binned items for 30 days.')) {
-      P.binned = { done: 0, failed: 0, found: items.length, cancelled: true };
+    var noun = items.every(function (f) { return f.mimeType !== FOLDER_MIME; }) ? 'file' : 'item';
+    var plural = items.length === 1 ? noun : noun + 's';
+    if (!window.confirm('Dry run: ' + items.length + ' selected personal ' + plural + ' will move to the bin.\n\nMove ' + items.length + ' selected personal ' + plural + ' to the bin?\n\nTrash only. Nothing is deleted for good. Drive keeps binned items for 30 days.\n\nOnly ticked files that start ' + PCP_PREFIX + ' and have a delete-ledger row are included. Zero-byte files are left as UNSURE. A folder is included only when every item inside is verified or junk. Names containing RR_ are never included.\n\nPress OK to confirm. Cancel changes nothing.')) {
+      P.binned = { done: 0, failed: 0, skipped: 0, unsure: 0, found: items.length, cancelled: true, notes: [] };
       render();
       return;
     }
-    busy = true; P.binned = { done: 0, failed: 0, found: items.length }; render();
+    busy = true; P.binned = { done: 0, failed: 0, skipped: 0, unsure: 0, found: items.length, notes: [] }; render();
+    var halted = false;
     mapLimit(items, 4, function (f) {
-      if (f._moneyHold || isMoneyRollback(f, f._chain || [])) { P.binned.failed++; return; }
-      return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }).then(function () { P.binned.done++; }, function () { P.binned.failed++; });
+      if (halted) { P.binned.skipped++; return; }
+      if (f._moneyHold || isMoneyRollback(f, f._chain || []) || isZeroByte(f) || spellingOf(f.name, PCP_PREFIX) !== 'exact') { P.binned.failed++; P.binned.notes.push({ name: f.name, text: 'Not moved' }); return; }
+      return recheckForBin(f, { prefix: PCP_PREFIX, requireOwned: true, personal: true }).then(function (chk) {
+        if (chk.expired) { halted = true; handleExpired(); P.binned.skipped++; P.binned.notes.push({ name: f.name, text: chk.text }); return; }
+        if (!chk.ok) {
+          P.binned.notes.push({ name: f.name, text: chk.text });
+          if (/^UNSURE/.test(chk.text || '')) P.binned.unsure++;
+          else if (/^Skipped/.test(chk.text || '')) P.binned.skipped++;
+          else P.binned.failed++;
+          return;
+        }
+        return trashOnly(f).then(function (res) {
+          if (res.expired) { halted = true; handleExpired(); P.binned.skipped++; return; }
+          if (res.ok) P.binned.done++; else P.binned.failed++;
+        });
+      });
     }).then(function () {
       busy = false; PICK.pcpbin = {}; P.binStatus = 'idle'; pcpLoadGen++; render(); loadPcpCandidates();
-    }, function (err) { P.binned.error = friendlyError(err).text; busy = false; render(); });
+    }, function (err) {
+      var fr = friendlyError(err);
+      P.binned.error = fr.text;
+      if (fr.expired) handleExpired();
+      busy = false; render();
+    });
   }
   function tickList(group, items, reasonOf, listKey) {
     var step = 30;
@@ -1250,29 +1597,43 @@
     if (P.log) html += '<p class="note">' + esc(P.log) + '</p>';
     if (P.error) html += '<p class="note fail">Stopped: ' + esc(P.error) + '</p>';
     if (P.status === 'done') {
+      var st = P.stats || emptyKeeperStats();
       html += '<p class="note"><strong>' + num(P.matches.length) + '</strong> personal files (' + (P.matchBytes / 1e9).toFixed(2) + ' GB) already in a shared drive.</p>';
+      html += '<p class="note" data-pcp-counts>Counts: ' + num(P.matches.length) + ' to rename, ' + num(P.skippedMarked) + ' already marked, ' + num(P.personalUnsure) + ' UNSURE (zero-byte), ' + num(P.personalNoChecksum) + ' with no checksum (shortcuts and Google files), ' + num(st.notKeeper) + ' shared copies ignored (marked, or inside a ZZ_ or AA_HOLD_ folder), ' + num(st.shortcuts) + ' shortcuts and ' + num(st.native) + ' Google files not used as proof.</p>';
+      if (P.failedDrives && P.failedDrives.length) html += '<p class="note fail">Not used as proof: ' + esc(P.failedDrives.map(function (d) { return d.name; }).join(', ')) + '. Press Continue to read them again.</p>';
       if (P.matches.length) {
-        html += '<div data-bin-list="pcp-rename"><h4>Rename matches</h4>' + pickButtons('pcpmark', 'pcpmark', 'Rename') + tickList('pcpmark', P.matches, function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : (isMoneyRollback(f, f._chain || []) ? E02_LABEL : ''); }, 'pcp-rename') + '</div>';
+        html += '<div data-bin-list="pcp-rename"><h4>Rename matches</h4>' + pickButtons('pcpmark', 'pcpmark', 'Rename') + tickList('pcpmark', P.matches, function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : (isZeroByte(f) ? 'UNSURE: zero-byte file, left alone.' : (isMoneyRollback(f, f._chain || []) ? E02_LABEL : '')); }, 'pcp-rename') + '</div>';
       }
     }
-    if (P.marked) html += '<p class="res ' + (P.marked.failed ? 'bad' : 'ok') + '">Renamed ' + num(P.marked.done) + ' to ' + esc(PCP_PREFIX) + '…' + (P.marked.failed ? ', ' + P.marked.failed + ' failed' : '') + '.</p>';
-    if (P.binned) html += '<p class="res ' + (P.binned.failed || P.binned.error ? 'bad' : 'ok') + '">' + (P.binned.cancelled ? 'Cancelled. Nothing binned.' : P.binned.error ? esc(P.binned.error) : 'Found ' + num(P.binned.found) + ', moved ' + num(P.binned.done) + ' to the bin' + (P.binned.failed ? ', ' + P.binned.failed + ' failed' : '') + '.') + '</p>';
-    html += '<div class="actions"><button class="btn" type="button" data-action="pcpscan"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>1. Scan this account vs shared drives</span></button></div>';
+    if (P.marked) html += '<p class="res ' + (P.marked.failed ? 'bad' : 'ok') + '">Renamed ' + num(P.marked.done) + ' to ' + esc(PCP_PREFIX) + '…' + (P.marked.failed ? ', ' + P.marked.failed + ' failed' : '') + (P.marked.skipped ? ', ' + P.marked.skipped + ' skipped' : '') + '.</p>';
+    if (P.binned) {
+      html += '<p class="res ' + (P.binned.failed || P.binned.error ? 'bad' : 'ok') + '">' + (P.binned.cancelled ? 'Cancelled. Nothing binned.' : P.binned.error ? esc(P.binned.error) : 'Found ' + num(P.binned.found) + ', moved ' + num(P.binned.done) + ' to the bin' + (P.binned.failed ? ', ' + P.binned.failed + ' failed' : '') + (P.binned.skipped ? ', ' + P.binned.skipped + ' skipped' : '') + (P.binned.unsure ? ', ' + P.binned.unsure + ' UNSURE' : '') + '.') + '</p>';
+      if (P.binned.notes && P.binned.notes.length) html += '<ul class="files">' + P.binned.notes.map(function (n) {
+        return '<li><div class="fname">' + esc(n.name) + '</div><p class="res bad">' + esc(n.text) + '</p></li>';
+      }).join('') + '</ul>';
+    }
+    html += '<div class="actions"><button class="btn" type="button" data-action="pcpscan"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>1. Scan this account vs shared drives</span></button>' +
+      (P.failedDrives && P.failedDrives.length && !busy ? '<button class="btn" type="button" data-action="pcpresume"><span>Continue: read the missed shared drives</span></button>' : '') + '</div>';
     html += '<div data-bin-list="pcp-bin"><h4>Personal files starting ZZ_DELETE_DRIVE_</h4>';
     if (P.ledgerNote) html += '<p class="note fail">' + esc(P.ledgerNote) + '</p>';
     if (P.binStatus !== 'ok') html += '<p class="note">Reading marked personal files…</p>';
     else {
       var heldP = P.candidates.filter(function (f) { return f.reason === 'No ledger row.'; });
       var leftP = P.candidates.filter(function (f) { return nameHasRr(f.name); });
-      var otherP = P.candidates.filter(function (f) { return f.blocked && f.reason !== 'No ledger row.' && !nameHasRr(f.name); });
+      var unsureP = P.candidates.filter(function (f) { return /^UNSURE/.test(f.reason || ''); });
+      var oddP = P.candidates.filter(function (f) { return /Odd prefix/.test(f.reason || ''); });
+      var otherP = P.candidates.filter(function (f) { return f.blocked && f.reason !== 'No ledger row.' && !nameHasRr(f.name) && unsureP.indexOf(f) === -1 && oddP.indexOf(f) === -1; });
+      html += '<p class="note" data-pcp-dry>Dry run: ' + num(allowedItems('pcpbin').length) + ' ready to bin, ' + num(heldP.length) + ' held, ' + num(unsureP.length) + ' UNSURE, ' + num(oddP.length) + ' odd prefix, ' + num(otherP.length) + ' not ready. Trash only, after you confirm.</p>';
       html += pickButtons('pcpbin', 'pcpbin', 'Move');
       html += '<h4>Ready to bin (' + num(allowedItems('pcpbin').length) + ')</h4>' + tickList('pcpbin', allowedItems('pcpbin'), function () { return ''; }, 'pcp-ready');
       html += '<h4>Held: no ledger row (' + num(heldP.length) + ')</h4>' + tickList('pcpbin', heldP, function (f) { return f.reason; }, 'pcp-held');
+      if (unsureP.length) html += '<h4>UNSURE: zero-byte (' + num(unsureP.length) + ')</h4>' + tickList('pcpbin', unsureP, function (f) { return f.reason; }, 'pcp-unsure');
+      if (oddP.length) html += '<h4>Rename needed: odd prefix (' + num(oddP.length) + ')</h4>' + tickList('pcpbin', oddP, function (f) { return f.reason; }, 'pcp-odd');
       if (leftP.length) html += '<h4>Left out (name contains RR_) (' + num(leftP.length) + ')</h4>' + tickList('pcpbin', leftP, function (f) { return f.reason; }, 'pcp-left');
       if (otherP.length) html += '<h4>Not ready (' + num(otherP.length) + ')</h4>' + tickList('pcpbin', otherP, function (f) { return f.reason; }, 'pcp-other');
       if (!P.candidates.length) html += '<p class="note">No personal files starting ZZ_DELETE_DRIVE_.</p>';
     }
-    html += '</div><ul class="notes"><li>Tick, press, confirm. Nothing changes before.</li><li>Select all = only the files you can see.</li><li>RR_ names: never ticked.</li><li>Bin only: ZZ_DELETE_DRIVE_ + ledger row.</li><li>Shared-drive copy: never changed.</li></ul></section>';
+    html += '</div><ul class="notes"><li>Tick, press, confirm. Nothing changes before.</li><li>Select all = only the files you can see.</li><li>RR_ names: never ticked.</li><li>Bin only: ZZ_DELETE_DRIVE_ + ledger row.</li><li>A folder is binned only when every item inside is verified or junk.</li><li>Zero-byte files are UNSURE and are never marked or binned.</li><li>Trash only. Nothing is deleted for good.</li><li>Shared-drive copy: never changed.</li></ul></section>';
     return html + nextSteps([NX.drive, NX.bin, NX.map]);
   }
 
@@ -1324,9 +1685,17 @@
   var USB_SKIP = /^(\.|\$RECYCLE\.BIN$|System Volume Information$)/;
   function usbBlock(m) {
     if (e02NameHit(m.name) || e02FolderHit({ parents: m.parents || [] })) return E02_LABEL;
+    if (m.size === 0) return 'UNSURE: zero-byte file, left alone.';
+    if (spellingOf(m.name, USB_PREFIX) === 'odd') return 'Rename needed. Odd prefix spelling, not marked.';
     return nameHasRr(m.name) || nameHasRr(m.path) ? 'Name contains RR_, left out.' : '';
   }
-  function usbBlank() { return { status: 'idle', log: '', root: '', files: 0, hashed: 0, bytes: 0, skipped: 0, matches: [], matchBytes: 0, only: [], onlyBytes: 0, stop: false, marked: null, error: '' }; }
+  function usbBlank() {
+    return {
+      status: 'idle', log: '', root: '', files: 0, hashed: 0, bytes: 0, skipped: 0,
+      matches: [], matchBytes: 0, only: [], onlyBytes: 0, stop: false, marked: null, error: '',
+      shared: 0, unsure: 0, small: 0, already: 0, odd: [], failedDrives: [], incomplete: false, handle: null, stats: null
+    };
+  }
   var U = usbBlank();
   var usbLast = 0;
   function usbTick(msg) {
@@ -1336,20 +1705,16 @@
     return new Promise(function (r) { setTimeout(r, 0); });
   }
   async function usbSharedIndex() {
-    var idx = new Map(), n = 0, ds = await listDrives();
-    for (var i = 0; i < ds.length; i++) {
-      await pcpAllPages({ corpora: 'drive', driveId: ds[i].id, q: "trashed = false and mimeType != '" + FOLDER_MIME + "'", pageSize: '1000', fields: 'nextPageToken,files(md5Checksum,size)' }, function (files) {
-        files.forEach(function (f) {
-          if (!f.md5Checksum || !f.size) return;
-          var s = parseInt(f.size, 10), set = idx.get(s);
-          if (!set) { set = new Set(); idx.set(s, set); }
-          set.add(f.md5Checksum); n++;
-        });
-        U.log = 'Reading shared drive ' + (i + 1) + ' of ' + ds.length + ': ' + num(n) + ' files read so far'; usbTick();
-      });
-    }
-    U.shared = n;
-    return idx;
+    var ds = await listDrives();
+    var pack = await collectKeepers(ds, function (d, idx, total, n) {
+      U.log = 'Reading shared drive ' + idx + ' of ' + total + ': ' + num(n) + ' kept copies so far';
+      usbTick();
+    });
+    U.shared = pack.stats.keepers;
+    U.stats = pack.stats;
+    U.failedDrives = pack.failed;
+    U.incomplete = pack.failed.length > 0;
+    return pack.bySize;
   }
   async function usbHash(file) {
     var m = new Md5(), CH = 8 * 1024 * 1024;
@@ -1368,10 +1733,12 @@
       if (USB_SKIP.test(name)) continue;
       if (h.kind === 'directory') { await usbWalk(h, path + name + '/', idx); continue; }
       U.files++;
-      if (name.indexOf(USB_PREFIX) === 0) continue;
+      if (name.indexOf(USB_PREFIX) === 0) { U.already++; continue; }
+      if (spellingOf(name, USB_PREFIX) === 'odd') { U.odd.push(path + name); continue; }
       var file;
       try { file = await h.getFile(); } catch (e) { U.skipped++; continue; }
-      if (file.size < 1024) continue;
+      if (file.size === 0) { U.unsure++; continue; }
+      if (file.size < 1024) { U.small++; continue; }
       var set = idx.get(file.size), hit = false;
       if (set) {
         U.log = 'Checking ' + path + name;
@@ -1386,24 +1753,47 @@
       await usbTick('Looked at ' + num(U.files) + ' files, ' + num(U.matches.length) + ' already in a shared drive');
     }
   }
+  function runUsb(dir) {
+    if (busy || !dir) return;
+    var handle = dir;
+    busy = true;
+    U = usbBlank();
+    U.status = 'running';
+    U.root = dir.name || '';
+    U.handle = handle;
+    U.log = 'Reading the shared drives…';
+    render();
+    usbSharedIndex().then(function (idx) { return usbWalk(dir, '', idx); }).then(function () {
+      U.status = 'done';
+      U.handle = handle;
+      var missed = U.failedDrives.length ? ' ' + U.failedDrives.length + ' shared drive' + (U.failedDrives.length === 1 ? '' : 's') + ' could not be read and were not used as proof.' : '';
+      U.log = (U.stop ? 'Stopped ' : 'Finished ') + stamp(Date.now()) + '. Looked at ' + num(U.files) + ' files, compared with ' + num(U.shared || 0) + ' kept copies.' + missed;
+    }, function (err) {
+      U.status = 'failed';
+      U.handle = handle;
+      if (err instanceof ApiError) {
+        var fr = friendlyError(err);
+        U.error = fr.text;
+        if (fr.expired) handleExpired();
+      } else U.error = 'Could not read the drive (' + (err && err.name || 'error') + ').';
+    }).then(function () { busy = false; render(); });
+  }
   function usbScan() {
     if (busy) return;
     if (typeof window.showDirectoryPicker !== 'function') { U = usbBlank(); U.status = 'failed'; U.error = 'This browser cannot open a drive. Use Chrome or Edge.'; render(); return; }
-    window.showDirectoryPicker({ mode: 'readwrite' }).then(function (dir) {
-      busy = true; U = usbBlank(); U.status = 'running'; U.root = dir.name; U.log = 'Reading the shared drives…'; render();
-      return usbSharedIndex().then(function (idx) { return usbWalk(dir, '', idx); }).then(function () {
-        U.status = 'done'; U.log = (U.stop ? 'Stopped ' : 'Finished ') + stamp(Date.now()) + '. Looked at ' + num(U.files) + ' files, compared with ' + num(U.shared || 0) + ' shared-drive files.';
-      }, function (err) {
-        U.status = 'failed'; U.error = err instanceof ApiError ? friendlyError(err).text : 'Could not read the drive (' + (err && err.name || 'error') + ').';
-      }).then(function () { busy = false; render(); });
-    }, function (err) {
+    window.showDirectoryPicker({ mode: 'readwrite' }).then(function (dir) { runUsb(dir); }, function (err) {
       if (!err || err.name !== 'AbortError') { U = usbBlank(); U.status = 'failed'; U.error = 'Chrome refused that folder. Pick a folder inside the drive instead of the top of it.'; render(); }
     });
+  }
+  function usbContinue() {
+    if (busy) return;
+    if (U.handle) runUsb(U.handle);
+    else usbScan();
   }
   async function usbMark() {
     var items = pickedItems('usb').filter(function (m) { return !usbBlock(m); });
     if (busy || !items.length) return;
-    if (!window.confirm('Rename ' + items.length + ' selected file' + (items.length === 1 ? '' : 's') + ' on "' + U.root + '" to start ' + USB_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted. Names containing RR_ are not included.')) return;
+    if (!window.confirm('Rename ' + items.length + ' selected file' + (items.length === 1 ? '' : 's') + ' on "' + U.root + '" to start ' + USB_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted. Names containing RR_ are not included. Zero-byte files are not included.')) return;
     busy = true; U.marked = { done: 0, failed: 0, unsupported: false }; render();
     var donePaths = {};
     for (var i = 0; i < items.length; i++) {
@@ -1412,7 +1802,7 @@
         if (usbBlock(m)) { U.marked.failed++; continue; }
         if (typeof m.handle.move !== 'function') { U.marked.unsupported = true; break; }
         var f = await m.handle.getFile();
-        if (f.size !== m.size || f.lastModified !== m.mtime) { U.marked.failed++; continue; }
+        if (f.size === 0 || f.size !== m.size || f.lastModified !== m.mtime) { U.marked.failed++; continue; }
         await m.handle.move(USB_PREFIX + m.name);
         U.marked.done++;
         donePaths[m.path] = true;
@@ -1445,9 +1835,14 @@
     if (U.log) html += '<p class="note">' + esc(U.log) + '</p>';
     if (U.error) html += '<p class="note fail">Stopped: ' + esc(U.error) + '</p>';
     if (U.status === 'done') {
-      html += '<p class="note"><strong>' + num(U.matches.length + (U.marked ? U.marked.done : 0)) + '</strong> files (' + (U.matchBytes / 1e9).toFixed(2) + ' GB) are already in a shared drive.</p>' +
-        '<p class="note"><strong>' + num(U.only.length) + '</strong> files (' + (U.onlyBytes / 1e9).toFixed(2) + ' GB) are NOT in a shared drive. Copy them there before you clear this drive.</p>';
-      if (U.skipped) html += '<p class="note">' + num(U.skipped) + ' files could not be read and were skipped.</p>';
+      html += '<p class="note"><strong>' + num(U.matches.length + (U.marked ? U.marked.done : 0)) + '</strong> files (' + (U.matchBytes / 1e9).toFixed(2) + ' GB) are already in a shared drive.</p>';
+      if (U.incomplete) html += '<p class="note"><strong>' + num(U.only.length) + '</strong> files (' + (U.onlyBytes / 1e9).toFixed(2) + ' GB) were not found in the shared drives that could be read. They might still exist on a drive that failed.</p>';
+      else html += '<p class="note"><strong>' + num(U.only.length) + '</strong> files (' + (U.onlyBytes / 1e9).toFixed(2) + ' GB) are NOT in a shared drive. Copy them there before you clear this drive.</p>';
+      html += '<p class="note" data-usb-counts>Counts: ' + num(U.matches.length) + ' matched, ' + num(U.only.length) + ' only here, ' + num(U.unsure) + ' UNSURE (zero-byte), ' + num(U.small) + ' under 1 KB, ' + num(U.skipped) + ' unreadable, ' + num(U.already) + ' already marked.</p>';
+      if (U.failedDrives && U.failedDrives.length) html += '<p class="note fail">Not used as proof: ' + esc(U.failedDrives.map(function (d) { return d.name; }).join(', ')) + '. Press Continue to read them again.</p>';
+      if (U.odd && U.odd.length) html += '<div data-bin-list="usb-odd"><h4>Rename needed: odd prefix</h4><ul class="files">' + U.odd.map(function (p) {
+        return '<li><div class="fname">' + esc(p) + '</div><div class="skip">Rename needed. Odd prefix spelling, not marked.</div></li>';
+      }).join('') + '</ul></div>';
       if (U.matches.length) html += '<div data-bin-list="usb"><h4>Already in a shared drive</h4>' + pickButtons('usb', 'usbmark', 'Rename') + tickList('usb', U.matches, usbBlock, 'usb-matches') + '</div>';
     }
     if (U.marked) {
@@ -1456,10 +1851,11 @@
     }
     html += '<div class="actions">' +
       '<button class="btn" type="button" data-action="usbscan"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>1. Choose a drive or folder and check it</span></button>' +
+      (U.failedDrives && U.failedDrives.length && !busy ? '<button class="btn" type="button" data-action="usbcontinue"><span>Continue: read the missed shared drives</span></button>' : '') +
       (running ? '<button class="btn" type="button" data-action="usbstop"><span>Stop</span></button>' : '') +
       '<button class="btn" type="button" data-action="usbcsv" data-which="match"' + (U.matches.length ? '' : ' disabled') + '><span>Download list: already in shared</span></button>' +
       '<button class="btn" type="button" data-action="usbcsv" data-which="only"' + (U.only.length ? '' : ' disabled') + '><span>Download list: only on this drive</span></button></div>' +
-      '<ul class="notes"><li>Rename never deletes.</li><li>Delete later in Finder.</li><li>Chrome refuses the top of a drive? Pick a folder inside.</li></ul></section>';
+      '<ul class="notes"><li>Rename never deletes.</li><li>Delete later in Finder.</li><li>Zero-byte files are UNSURE and are not renamed.</li><li>Odd prefix spellings are listed and not renamed.</li><li>Chrome refuses the top of a drive? Pick a folder inside.</li></ul></section>';
     return html + nextSteps([NX.drive, NX.bin, NX.map]);
   }
   // ==USB-END==
@@ -1477,7 +1873,11 @@
     return p.status === 'ok' ? '' : p.status === 'failed' ? ' failed' : ' pending';
   }
   function failNote(p) {
-    if (p.status === 'failed') return '<p class="note fail">Read failed: ' + esc(friendlyError(p.error).text) + '</p>';
+    if (p.status === 'failed') {
+      var fr = friendlyError(p.error);
+      var extra = fr.text === KIT.BUSY_TEXT ? ' Press Refresh to try again.' : '';
+      return '<p class="note fail">Read failed: ' + esc(fr.text + extra) + '</p>';
+    }
     if (p.status === 'idle') return '<p class="note">' + (signedIn ? 'Not read yet.' : 'Not read: not signed in.') + '</p>';
     if (p.status === 'loading' && !p.data) return '<p class="note">Reading from Google Drive…</p>';
     return '';
@@ -1801,15 +2201,17 @@
       '</div></details>';
     html += viewCheck();
     // ZZ_DELETE_ sweep. Only ticked ready items can move. Nothing moves until Lisa confirms.
-    var listed = d ? d.ready.length + d.held.length + d.rename.length + d.leftout.length + d.blocked.length + (d.e02 ? d.e02.length : 0) : null;
+    var listed = d ? d.ready.length + d.held.length + d.rename.length + d.leftout.length + d.blocked.length + (d.e02 ? d.e02.length : 0) + (d.unsure ? d.unsure.length : 0) : null;
     html += foldOpen('sweep', !!(d && listed), 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Google Drive: ZZ_DELETE_ files ready to bin</h3>' + stateBadge(p, listed) + '</summary><div class="fbody">';
-    html += '<ul class="notes"><li>Tickable: ZZ_DELETE_ + ledger row.</li><li>No ledger row: held.</li><li>Other ZZ_ (incl. retired ZZ_SUPERSEDED_): Rename needed, never binned.</li><li>RR_ (name, folder, or inside): left out.</li><li>Money rollback (0.1 - Index, 4 - Ops by id): held, never touched.</li><li>Select all = only rows you can see.</li></ul>';
+    html += '<ul class="notes"><li>Tickable: ZZ_DELETE_ + ledger row.</li><li>No ledger row: held.</li><li>Other ZZ_ (incl. retired ZZ_SUPERSEDED_): Rename needed, never binned.</li><li>Odd prefix spellings (case, spaces, hyphens): Rename needed, never binned.</li><li>Zero-byte files: UNSURE, never binned.</li><li>A folder is binned only when every item inside is verified or junk.</li><li>RR_ (name, folder, or inside): left out.</li><li>Money rollback (0.1 - Index, 4 - Ops by id): held, never touched.</li><li>Trash only, after a confirm. Nothing is deleted for good.</li><li>Select all = only rows you can see.</li></ul>';
     html += failNote(p);
     if (d) {
       if (d.ledgerNote) html += '<p class="note fail">' + esc(d.ledgerNote) + '</p>';
+      html += '<p class="note" data-bin-dry>Dry run: ' + num(d.ready.length) + ' ready to bin, ' + num(d.held.length) + ' held, ' + num(d.unsure ? d.unsure.length : 0) + ' UNSURE, ' + num(d.rename.length) + ' rename needed, ' + num(d.blocked.length) + ' left alone. Trash only, after you confirm.</p>';
       html += pickButtons('bin', 'sweep', 'Move');
       if (d.e02 && d.e02.length) html += '<div data-bin-list="e02"><h4>' + esc(E02_LABEL) + ' (' + num(d.e02.length) + ')</h4>' + binTickItems('bin-e02', d.e02) + '</div>';
       html += '<div data-bin-list="ready"><h4>Ready (' + num(d.ready.length) + ')</h4>' + binTickItems('bin-ready', d.ready) + '</div>';
+      if (d.unsure && d.unsure.length) html += '<div data-bin-list="unsure"><h4>UNSURE: zero-byte (' + num(d.unsure.length) + ')</h4>' + binTickItems('bin-unsure', d.unsure) + '</div>';
       html += '<div data-bin-list="held"><h4>Held: no ledger row (' + num(d.held.length) + ')</h4>' + binTickItems('bin-held', d.held) + '</div>';
       html += '<div data-bin-list="rename"><h4>Rename needed (' + num(d.rename.length) + ')</h4>' + binTickItems('bin-rename', d.rename) + '</div>';
       if (d.leftout.length) html += '<div data-bin-list="leftout"><h4>Left out (name contains RR_) (' + num(d.leftout.length) + ')</h4>' + binTickItems('bin-leftout', d.leftout) + '</div>';
@@ -1818,6 +2220,7 @@
     }
     if (R.sweep) {
       html += '<div id="sweepResults"><h4>Last sweep · ' + esc(stamp(R.sweep.at)) + '</h4>' + (R.sweep.cancelled ? '<p class="res ok">Cancelled. Nothing moved.</p>' :
+        '<p class="res ' + (R.sweep.failed ? 'bad' : 'ok') + '">Moved ' + num(R.sweep.moved) + ' to the bin. Skipped ' + num(R.sweep.skipped) + '. UNSURE ' + num(R.sweep.unsure) + '. Failed ' + num(R.sweep.failed) + '.</p>' +
         '<ul class="files">' + R.sweep.items.map(function (x) {
           return '<li><div class="fname">' + esc(x.name) + '</div><p class="res ' + (x.ok ? 'ok' : 'bad') + '">' + esc(x.text) + ' · ' + esc(x.path) + '</p></li>';
         }).join('') + '</ul>') + '</div>';
@@ -1895,7 +2298,10 @@
         '<div class="stat"><div class="num">' + num(d.files.length) + '</div><div class="label">Files</div></div>' +
         '<div class="stat"><div class="num">' + num(d.folderCount) + '</div><div class="label">Folders</div></div>' +
         '<div class="stat"><div class="num">' + num(d.maxDepth) + '</div><div class="label">Levels deep</div></div>' +
-        '<div class="stat"><div class="num">' + num(d.requests) + '</div><div class="label">Drive requests</div></div></div>';
+        '<div class="stat"><div class="num">' + num(d.requests) + '</div><div class="label">Drive requests</div></div>' +
+        (d.shortcuts ? '<div class="stat" data-cf-shortcuts><div class="num">' + num(d.shortcuts) + '</div><div class="label">Shortcuts</div></div>' : '') +
+        (d.native ? '<div class="stat" data-cf-native><div class="num">' + num(d.native) + '</div><div class="label">Google files</div></div>' : '') +
+        '</div>';
     } else if (items) {
       var empty = sub === 'recent' ? 'No files in this folder.' : sub === '24h' ? 'No changes in last 24h.' : 'No changes in last 7 days.';
       html += pagedList(items, r.page, 'changes/' + sub, { folder: true }, empty);
@@ -2024,7 +2430,8 @@
     if (window.DashAuth && otherTab !== true) DashAuth.clear();
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     S = freshState();
-    F = {}; R = { sweep: null, check: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++; P.binStatus = 'idle';
+    F = {}; R = { sweep: null, check: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++;
+    P = pcpFresh('idle', ''); U = usbBlank();
     if (window.MoneyCore) window.MoneyCore.clearCache();
     showBanner(otherTab === true ? 'Signed out in another tab. Nothing kept.' : 'Signed out. Nothing kept.', true, false);
     render();
@@ -2094,9 +2501,11 @@
       if (el) { el.scrollIntoView({ block: 'start' }); var sm = el.querySelector('summary'); if (sm) sm.focus(); }
     }
     else if (a === 'pcpscan') pcpScan();
+    else if (a === 'pcpresume') pcpScan('continue');
     else if (a === 'pcpmark') pcpMark();
     else if (a === 'pcpbin') pcpBin();
     else if (a === 'usbscan') usbScan();
+    else if (a === 'usbcontinue') usbContinue();
     else if (a === 'usbstop') { U.stop = true; }
     else if (a === 'usbmark') usbMark();
     else if (a === 'usbcsv') usbCsv(t.getAttribute('data-which'));
