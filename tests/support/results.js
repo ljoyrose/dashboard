@@ -7,6 +7,7 @@ const GROUPS = [
   ['bin-safety', 'Bin safety (RR_ archives never taken)', '/dashboard/#/bin'],
   ['no-empty-trash', 'Never empty the bin', 'all three pages'],
   ['personal-and-drive-check', 'PC-Personal and Drive check (rename and bin)', '/dashboard/#/personal, #/usb'],
+  ['cleanup-safety', 'Clean-up safety (keepers, folders, resume)', '/dashboard/#/bin, #/personal, #/usb, #/changes'],
   ['cdhub', 'CD Hub', '/dashboard/cdhub/'],
   ['money', 'Money Hub', '/dashboard/money/'],
   ['csv-parsing', 'Reading CSV files', 'both CSV readers'],

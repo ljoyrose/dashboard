@@ -78,7 +78,15 @@ class FakeDrive {
     return parseOr();
   }
 
-  _list(params) {
+    _present(f) {
+      const meta = Object.assign({}, f);
+      delete meta.content;
+      meta.ownedByMe = f.mine !== false;
+      if (meta.size != null) meta.size = String(meta.size);
+      return meta;
+    }
+
+    _list(params) {
     let out = this.files.filter((f) => this._match(f, params.get('q')));
     if (params.get('corpora') === 'drive' && params.get('driveId')) out = out.filter((f) => f.driveId === params.get('driveId'));
     const order = params.get('orderBy') || '';
@@ -87,7 +95,7 @@ class FakeDrive {
     const size = Number(params.get('pageSize') || 100);
     const start = Number(params.get('pageToken') || 0);
     const page = out.slice(start, start + size);
-    const body = { files: page.map(({ content, ...meta }) => meta) };
+    const body = { files: page.map((f) => this._present(f)) };
     if (start + size < out.length) body.nextPageToken = String(start + size);
     return body;
   }
@@ -135,8 +143,7 @@ class FakeDrive {
           return json(200, { id: f.id, name: f.name, trashed: !!f.trashed });
         }
         if (params.get('alt') === 'media') return route.fulfill({ status: 200, contentType: f.mimeType === 'application/json' ? 'application/json' : 'text/plain', body: f.content || '' });
-        const { content, ...meta } = f;
-        return json(200, meta);
+        return json(200, this._present(f));
       }
       this.unhandled.push(req.method() + ' ' + p);
       return json(404, { error: { code: 404, message: 'Not handled by the pretend Drive: ' + p } });
