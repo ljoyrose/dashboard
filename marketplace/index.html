@@ -28,7 +28,7 @@
           --line: color-mix(in srgb, var(--ljr-0) 55%, var(--ljr-paper)); }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 17px; line-height: 1.5; }
-  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }   /* same width as Factory and the main dashboard */
   header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
   .top { display: flex; gap: 8px; align-items: center; padding: 10px 16px; }
   .top h1 { font-size: 22px; margin: 0 auto 0 0; }
@@ -91,9 +91,9 @@
 <body>
 <header>
   <div class="top"><h1><a href="#/me">Marketplace</a></h1><span class="stamp" id="stamp">TEST</span>
-    <button class="btn" type="button" data-action="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button>
+    <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh"><i class="ti ti-refresh"></i></button>
     <button class="btn" type="button" data-action="signin" id="signin">Sign in</button></div>
-  <nav class="tabs" aria-label="Marketplace sections">
+  <nav class="tabs hidden" id="tabs" aria-label="Marketplace sections">
     <a href="#/me" data-nav="me">Me</a>
     <a href="#/remove" data-nav="remove">Remove <span class="n" id="n-remove"></span></a>
     <a href="#/post" data-nav="post">Post <span class="n" id="n-post"></span></a>
@@ -139,7 +139,18 @@
   /* ---------- Google: Sheets (data) and Drive (who am I, wake address) ---------- */
   function api(url, init) {
     init = init || {}; init.headers = Object.assign({ Authorization: 'Bearer ' + token }, init.headers || {});
-    return fetch(url, init).then(function (r) { if (r.status === 401) { token = null; render(); throw new Error('Sign-in expired. Sign in again.'); } if (!r.ok) throw new Error('Google said ' + r.status); return r.json(); });
+    return fetch(url, init).then(function (r) {
+      if (r.status === 401) { token = null; render(); throw new Error('Sign-in expired. Sign in again.'); }
+      if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error(why(r.status, (j.error && j.error.message) || '')); });
+      return r.json();
+    });
+  }
+  // Google's reason in plain words, so a refusal says what to do (not just a number).
+  function why(status, msg) {
+    if (/has not been used|is disabled|SERVICE_DISABLED/i.test(msg)) return 'the Google Sheets switch is off for the dashboard\'s Google project. Turn on "Google Sheets API" for it (one click), then reload.';
+    if (/insufficient|scope/i.test(msg)) return 'Google did not give this page spreadsheet access. Sign out, sign in again and tick every box Google shows.';
+    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the Open work sheet. Sign in as lisa@puppyclassroom.com.';
+    return 'Google said ' + status + (msg ? ': ' + msg : '');
   }
   function sheetUrl(range) { return 'https://sheets.googleapis.com/v4/spreadsheets/' + M.openWorkId + '/values/' + encodeURIComponent(range); }
   function load() {
@@ -258,6 +269,7 @@
   }
   function render() {
     $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
+    $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);   // menu only after sign-in
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     ORDER.forEach(function (s) { var el = $('n-' + s); if (el) el.textContent = waiting(s).length || ''; });
     $('stamp').textContent = M && M.live ? '' : 'TEST';
@@ -308,7 +320,11 @@
 
   /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */
   var auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE,
-    onToken: function (resp) { if (resp.error) return banner('Sign-in did not complete.'); token = resp.access_token; DashAuth.save(token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE); load(); },
+    onToken: function (resp) {
+      if (resp.error) return banner('Sign-in did not complete.');
+      if (window.google && google.accounts && !google.accounts.oauth2.hasGrantedAllScopes(resp, SHEETS)) { banner('Google did not give this page spreadsheet access. Tap Sign in again and tick every box Google shows.'); return; }
+      token = resp.access_token; DashAuth.save(token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE); load();
+    },
     onError: function () { banner('Sign-in did not complete.'); }, onSilentFail: function () {} });
   var saved = DashAuth.valid(); if (saved && DashAuth.hasScope(saved, SCOPE)) { token = saved.access_token; }
   route(); load(); setInterval(function () { if (token) load(); }, 5 * 60000);

@@ -45,7 +45,9 @@ test.describe('Marketplace page', () => {
     await page.goto('marketplace/');
     await expect(page.locator('#view')).toContainText('Sign in to see what needs you');
     await expect(page.locator('#view .needs')).toHaveCount(0);
+    await expect(page.locator('#tabs')).toBeHidden();          // the menu stays behind the sign-in
     await page.locator('#view [data-action="signin"]').click();
+    await expect(page.locator('#tabs')).toBeVisible();
     await expect(page.locator('#view .needs')).toHaveText('Needs you: 2');
     await expect(page.locator('#view > .card')).toHaveCount(1);
     await expect(page.locator('#view > .card h2')).toHaveText('Remove from Vinted');
@@ -121,5 +123,14 @@ test.describe('Marketplace page', () => {
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const box = await page.locator('[data-ans="MKT-1"]').boundingBox();
     expect(box.height).toBeGreaterThanOrEqual(44);
+  });
+
+  test('a Google refusal says what to do in plain words (Sheets switch off, missing tick-box)', async ({ page, allowedConsole }) => {
+    allowedConsole.push(/status of 403/); // the browser logs the refused request itself; that is the point of this test
+    await page.route(SHEETS, (route) => route.fulfill({ status: 403, contentType: 'application/json',
+      body: JSON.stringify({ error: { code: 403, message: 'Google Sheets API has not been used in project 123 before or it is disabled.', status: 'PERMISSION_DENIED' } }) }));
+    await page.goto('marketplace/');
+    await page.locator('#view [data-action="signin"]').click();
+    await expect(page.locator('#banner')).toContainText('Google Sheets switch is off');
   });
 });
