@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="build" content="ljr-marketplace-2026-10-24">
+<title>Marketplace</title>
+<!-- Marketplace (24 Oct 2026). PUBLIC repo: no data, no secrets. Ids come from ../config.js (DASH_CONFIG.marketplace);
+     everything else is read at run time with Lisa's Google sign-in from the "Marketplace" tab of RR_OPEN-WORK, which the
+     RR_MKT-ENGINE Apps Script fills. A tap writes ONLY the 4 answer cells (G:J) of one row; the engine applies it after 10 minutes. -->
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
+<script src="../auth.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  /* Colours: ../tokens.css only (LJR7 spine), same shapes as factory/ and cdhub/. No colour is written here. */
+  :root { --radius: 12px; --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
+          --line: color-mix(in srgb, var(--ljr-0) 55%, var(--ljr-paper)); }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 17px; line-height: 1.5; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .top { display: flex; gap: 8px; align-items: center; padding: 10px 16px; }
+  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
+  .top h1 a { color: inherit; text-decoration: none; }
+  .stamp { font-size: 11px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 5px; }
+  .btn { font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 8px 14px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; min-height: 44px; }
+  .btn:hover { border-color: var(--muted); }
+  .btn.main { border-color: var(--ink); }
+  .btn.big { width: 100%; justify-content: center; font-size: 19px; min-height: 60px; }
+  .btn.yes { color: var(--ljr-5-text); border-color: var(--ljr-5); }
+  .btn.no { color: var(--ljr-2-text); border-color: var(--ljr-2); }
+  .hidden { display: none !important; }
+  nav.tabs { display: flex; gap: 6px; overflow-x: auto; padding: 0 16px 10px; scrollbar-width: none; }
+  nav.tabs a { --radius: 999px; flex: none; text-decoration: none; font-size: 14px; font-weight: 600; padding: 8px 14px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); display: inline-flex; gap: 6px; align-items: center; min-height: 40px; }
+  nav.tabs a:hover, nav.tabs a[aria-current="page"] { border-color: var(--muted); }
+  nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-4); color: var(--ljr-4-on); border-radius: var(--radius); padding: 0 7px; }
+  nav.tabs .n:empty { display: none; }
+  main { padding: 16px 16px 64px; display: flex; flex-direction: column; gap: 14px; }
+  .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
+  .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
+  .needs { font-size: 26px; font-weight: 700; margin: 0; }
+  .needs .zero { color: var(--ljr-5-text); }
+  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .card.acc2 { border-left: 4px solid var(--ljr-2); } .card.acc5 { border-left: 4px solid var(--ljr-5); } .card.acc4 { border-left: 4px solid var(--ljr-4); }
+  .card h2 { font-size: 19px; margin: 0; }
+  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
+  .item { display: flex; gap: 12px; align-items: center; }
+  .item img { width: 64px; height: 64px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); flex: none; background: var(--bg); }
+  .item .t { flex: 1; min-width: 0; font-weight: 600; }
+  .item .m { font-size: 14px; color: var(--muted); font-weight: 400; }
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acts .btn { flex: 1; justify-content: center; }
+  .grp { font-size: 15px; font-weight: 700; margin: 6px 0 0; color: var(--muted); }
+  .row { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .card > .row:first-of-type { border-top: 0; }
+  .row .txt { flex: 1; min-width: 0; }
+  .row .why { font-size: 14px; color: var(--muted); }
+  .red { color: var(--ljr-2-text); font-weight: 700; }
+  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 6px 10px; cursor: pointer; align-self: flex-start; }
+  .more:hover { border-color: var(--muted); }
+  .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .tile { font: inherit; text-align: left; background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; color: var(--ink); }
+  .tile:hover { border-color: var(--muted); }
+  .tile .k { font-size: 13px; color: var(--muted); } .tile .v { font-size: 20px; font-weight: 700; }
+  .tile .up { color: var(--ljr-5-text); } .tile .down { color: var(--ljr-2-text); } .tile .flat { color: var(--muted); }
+  input.num, input.txtin { font: inherit; font-size: 18px; padding: 8px 10px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
+  input.num { width: 72px; text-align: center; }
+  input.txtin { width: 100%; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font: inherit; font-size: 15px; font-weight: 600; border-radius: 999px; padding: 6px 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 40px; }
+  .chip.on { border-color: var(--ink); }
+  .qr { position: fixed; inset: 0; background: var(--ljr-paper); color: var(--ljr-ink); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
+  .qr .code { font-size: 44px; font-weight: 700; letter-spacing: 3px; word-break: break-all; }
+  .qr img { max-width: 90vw; max-height: 60vh; }
+  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  a.btn, nav.tabs a { text-decoration: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><h1><a href="#/me">Marketplace</a></h1><span class="stamp" id="stamp">TEST</span>
+    <button class="btn" type="button" data-action="refresh" aria-label="Refresh"><i class="ti ti-refresh"></i></button>
+    <button class="btn" type="button" data-action="signin" id="signin">Sign in</button></div>
+  <nav class="tabs" aria-label="Marketplace sections">
+    <a href="#/me" data-nav="me">Me</a>
+    <a href="#/remove" data-nav="remove">Remove <span class="n" id="n-remove"></span></a>
+    <a href="#/post" data-nav="post">Post <span class="n" id="n-post"></span></a>
+    <a href="#/go" data-nav="go">Go <span class="n" id="n-go"></span></a>
+    <a href="#/vinted" data-nav="vinted">Vinted <span class="n" id="n-vinted"></span></a>
+    <a href="#/restock" data-nav="restock">Restock <span class="n" id="n-restock"></span></a>
+    <a href="#/temu" data-nav="temu">Temu <span class="n" id="n-temu"></span></a>
+    <a href="#/round" data-nav="round">Stock round</a>
+    <a href="#/numbers" data-nav="numbers">Numbers</a>
+  </nav>
+</header>
+<main class="wrap">
+  <div id="banner" class="banner hidden" role="status"></div>
+  <div id="view"></div>
+</main>
+<div id="qr" class="qr hidden" role="dialog" aria-label="Drop-off code"></div>
+<script>
+(function () {
+  'use strict';
+  var CFG = window.DASH_CONFIG || {}, M = CFG.marketplace || null;
+  var CLIENT_ID = CFG.clientId, READ = (CFG.scopes || {}).read, SHEETS = 'https://www.googleapis.com/auth/spreadsheets';
+  var SCOPE = READ + ' ' + SHEETS;
+  var COLS = ['key', 'section', 'category', 'title', 'detail', 'created_at', 'answer', 'note', 'answered_at', 'answered_by', 'applied_at', 'applied_by'];
+  var CATS = ['Clothes', 'Blades & grooming', 'Health & supplements', 'Treats', 'Crates & beds', 'Towels & textiles', 'Collars & accessories', 'Electronics & media', 'Other'];
+  var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
+  var SECTIONS = {
+    remove: { name: 'Remove from Vinted', urgent: true, verb: 'Done', what: 'It sold elsewhere. Take it off Vinted.' },
+    post: { name: 'Post', urgent: true, verb: 'Posted', what: 'Find it, pack it, post it.' },
+    go: { name: 'Go', verb: 'Go', no: 'Not this one', what: 'List this item.' },
+    vinted: { name: 'Post to Vinted', verb: 'Done', what: 'Drag the photos into Vinted, paste the text, then tap Done.' },
+    restock: { name: 'Restock', quiet: true, what: 'Low on stock. Buy on Temu when it suits you.' },
+    temu: { name: 'Temu claims', quiet: true, what: 'Price dropped. Claim in Temu if you like.' }
+  };
+  var ORDER = ['remove', 'post', 'go', 'vinted', 'restock', 'temu'];
+  var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
+  function hm(ms) { return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+  function detail(r) { try { return JSON.parse(r.detail || '{}'); } catch (e) { return {}; } }
+  function thumb(id) { return id ? '<img alt="" loading="lazy" src="https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w200">' : ''; }
+
+  /* ---------- Google: Sheets (data) and Drive (who am I, wake address) ---------- */
+  function api(url, init) {
+    init = init || {}; init.headers = Object.assign({ Authorization: 'Bearer ' + token }, init.headers || {});
+    return fetch(url, init).then(function (r) { if (r.status === 401) { token = null; render(); throw new Error('Sign-in expired. Sign in again.'); } if (!r.ok) throw new Error('Google said ' + r.status); return r.json(); });
+  }
+  function sheetUrl(range) { return 'https://sheets.googleapis.com/v4/spreadsheets/' + M.openWorkId + '/values/' + encodeURIComponent(range); }
+  function load() {
+    if (!M || !M.openWorkId) { banner('Not set up yet: the Marketplace settings are not in config.js.', true); return; }
+    if (!token) { render(); return; }
+    api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
+      rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
+      $('banner').className = 'banner hidden'; render();
+    }).catch(function (e) { banner('Could not load: ' + e.message); });
+    if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
+  }
+  // Write the 4 answer cells of the row with this key; check the key before and after, put the old values back if it moved.
+  function answer(r, value, note) {
+    var rng = M.tab + '!A' + r._row + ':L' + r._row, at = value === '' ? '' : new Date().toISOString(), who = value === '' ? '' : me;
+    return api(sheetUrl(rng)).then(function (j) {
+      var cur = (j.values || [[]])[0];
+      if (cur[0] !== r.key) throw new Error('the list changed: refresh and tap again');
+      var old = [cur[6] || '', cur[7] || '', cur[8] || '', cur[9] || ''];
+      var w = M.tab + '!G' + r._row + ':J' + r._row;
+      return api(sheetUrl(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [[value, note || '', at, who]] }) })
+        .then(function () { return api(sheetUrl(M.tab + '!A' + r._row)); })
+        .then(function (k) { if (((k.values || [[]])[0] || [])[0] !== r.key) return api(sheetUrl(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [old] }) }).then(function () { throw new Error('the list changed: refresh and tap again'); }); })
+        .then(function () { r.answer = value; r.note = note || ''; r.answered_at = at; r.answered_by = who; wake(); render(); });
+    }).catch(function (e) { banner('Not saved: ' + e.message); });
+  }
+  // Wake the engine (no data sent). The address is read from a Drive file, never kept in this public page.
+  var wakeUrl = null;
+  function wake() {
+    if (!M.wakeFolderId || !M.wakeFile) return;
+    var go = function (u) { if (u) fetch(u, { method: 'POST', mode: 'no-cors', body: 'ping' }).catch(function () {}); };
+    if (wakeUrl !== null) return go(wakeUrl);
+    api('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent("'" + M.wakeFolderId + "' in parents and name = '" + M.wakeFile + "' and trashed = false") + '&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true')
+      .then(function (j) { var f = (j.files || [])[0]; if (!f) { wakeUrl = ''; return; }
+        return fetch('https://www.googleapis.com/drive/v3/files/' + f.id + '?alt=media&supportsAllDrives=true', { headers: { Authorization: 'Bearer ' + token } }).then(function (r) { return r.json(); }).then(function (x) { wakeUrl = x.url || ''; go(wakeUrl); }); })
+      .catch(function () { wakeUrl = ''; });
+  }
+
+  /* ---------- what needs Lisa ---------- */
+  function waiting(sec) { return rows.filter(function (r) { return r.section === sec && !r.answer && !r.applied_at; }); }
+  function needsCount() { return ORDER.filter(function (s) { return !SECTIONS[s].quiet; }).reduce(function (n, s) { return n + waiting(s).length; }, 0); }
+  function byCat(list) { return list.slice().sort(function (a, b) { var x = CATS.indexOf(a.category), y = CATS.indexOf(b.category); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || a.title.localeCompare(b.title); }); }
+  function sentLine(r) {
+    var at = Date.parse(r.answered_at), live = Date.now() < at + UNDO_MS;
+    return '<div class="sent">✓ ' + hm(at) + ' · applies by ' + hm(at + APPLY_MS) + (live ? ' <button class="btn" type="button" data-undo="' + esc(r.key) + '"><i class="ti ti-arrow-back-up"></i> Undo</button>' : '') + '</div>';
+  }
+  function itemCard(r, opts) {
+    var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red;
+    var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
+      '<div class="item">' + thumb(d.photo) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, d.platform, d.shelf ? 'shelf ' + d.shelf : '', d.courier].filter(Boolean).join(' · ')) + '</div>' +
+      (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>';
+    if (r.answer) return h + sentLine(r) + '</div>';
+    var acts = [];
+    if (r.section === 'remove') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on Vinted</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
+    else if (r.section === 'post') {
+      if (!d.found) acts.push('<button class="btn main" type="button" data-ans="' + esc(r.key) + '" data-v="Found">Found</button>');
+      else { if (d.qr) acts.push('<button class="btn" type="button" data-qr="' + esc(r.key) + '">Show QR</button>'); else if (d.qr_missing) acts.push('<span class="why red">QR not found</span>');
+        acts.push('<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'); }
+    } else if (r.section === 'go') { acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Go</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Not this one</button>'); }
+    else if (r.section === 'vinted') {
+      if (d.folder) acts.push('<a class="btn" href="https://drive.google.com/drive/folders/' + esc(d.folder) + '" target="_blank" rel="noopener">Open folder</a>');
+      acts.push('<button class="btn" type="button" data-copy="' + esc(r.key) + '">Copy text</button><a class="btn" href="https://www.vinted.co.uk/items/new" target="_blank" rel="noopener">Open Vinted</a>');
+      h += '<input class="txtin" type="url" placeholder="Paste the Vinted link (or leave blank)" data-link="' + esc(r.key) + '">';
+      acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>');
+    } else if (r.section === 'restock') { if (d.url) acts.push('<a class="btn main" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on Temu</a>');
+      acts.push('<input class="num" inputmode="numeric" aria-label="How many arrived" data-arrived="' + esc(r.key) + '"><button class="btn yes" type="button" data-arrive="' + esc(r.key) + '">Arrived</button>'); h += '<p class="what">' + esc([d.cheaper_now, 'last cost ' + d.last_cost, d.sell_through_30 + ' sold in 30 days', 'profit ' + d.profit_per_unit + ' each', 'buy ' + d.qty_to_target + ' to reach target'].filter(Boolean).join(' · ')) + '</p>'; }
+    else if (r.section === 'temu') { h += '<p class="what">' + esc([d.days_left + ' days left', d.drop ? 'dropped ' + d.drop : ''].filter(Boolean).join(' · ')) + '</p>'; acts.push('<button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Claimed</button>'); }
+    return h + '<div class="acts">' + acts.join('') + '</div></div>';
+  }
+
+  /* ---------- screens ---------- */
+  function pageMe() {
+    var n = needsCount(), h = '<p class="needs">Needs you: ' + (n ? n : '<span class="zero">0</span>') + '</p>';
+    var first = null; ORDER.some(function (s) { if (SECTIONS[s].quiet) return false; var w = byCat(waiting(s)); if (w.length) { first = w[0]; return true; } return false; });
+    if (first) h += itemCard(first, { head: true }); else h += '<div class="card acc5"><h2>All done</h2><p class="what">Nothing needs you right now.</p></div>';
+    var rest = ORDER.filter(function (s) { return waiting(s).length; }).map(function (s) { return '<a class="btn" href="#/' + s + '">' + esc(SECTIONS[s].name) + ' · ' + waiting(s).length + '</a>'; });
+    if (rest.length) h += '<div class="acts">' + rest.join('') + '</div>';
+    var just = rows.filter(function (r) { return r.answer && !r.applied_at && Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
+    if (just.length) h += '<p class="grp">Just done</p>' + just.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '</div>' + sentLine(r) + '</div>'; }).join('');
+    return h;
+  }
+  function pageList(sec) {
+    var s = SECTIONS[sec], list = byCat(rows.filter(function (r) { return r.section === sec && !r.applied_at; }));
+    var h = '<p class="needs">' + esc(s.name) + ': ' + waiting(sec).length + '</p>';
+    if (sec === 'post') { var hd = rows.filter(function (r) { return r.section === 'post-head'; })[0]; if (hd) h += '<p class="what">' + esc(hd.title) + '</p>'; }
+    if (!list.length) return h + '<div class="card acc5"><h2>Nothing here</h2></div>';
+    var cat = null, shown = showAll ? list : list.slice(0, 1);
+    shown.forEach(function (r) { var c = sec === 'post' ? (detail(r).courier || '') : r.category; if (c !== cat) { cat = c; h += '<p class="grp">' + esc(c || 'Other') + '</p>'; } h += itemCard(r); });
+    if (list.length > 1) h += '<button class="more" type="button" data-action="all">' + (showAll ? 'Show one at a time' : 'Show all ' + list.length) + '</button>';
+    return h;
+  }
+  function pageRound() {
+    var items = byCat(rows.filter(function (r) { return r.section === 'round' && !r.applied_at; }));
+    if (!items.length) return '<p class="needs">Stock round</p><div class="card acc5"><h2>No round open</h2><p class="what">The monthly round starts on the first Monday.</p></div>';
+    var shelves = []; items.forEach(function (r) { var s = detail(r).shelf || '?'; if (shelves.indexOf(s) < 0) shelves.push(s); });
+    var at = Math.min(round.i || 0, shelves.length - 1), shelf = shelves[at];
+    var h = '<p class="needs">Shelf ' + esc(shelf) + '</p><p class="what">' + (at + 1) + ' of ' + shelves.length + ' shelves. Tick if right, or type what is there.</p>';
+    items.filter(function (r) { return (detail(r).shelf || '?') === shelf; }).forEach(function (r) {
+      var d = detail(r), v = round[r.key] || {}, bad = v.n !== undefined && v.n !== '' && Number(v.n) !== Number(d.expected);
+      h += '<div class="card ' + (bad ? 'acc2' : (v.ok || r.answer ? 'acc5' : '')) + '"><div class="item">' + thumb(d.photo) + '<div class="t">' + esc(r.title) + '<div class="m">expect ' + esc(d.expected) + '</div></div>' +
+        (r.answer ? '' : '<button class="btn yes" type="button" data-tick="' + esc(r.key) + '" aria-label="Right">✓</button><input class="num" inputmode="numeric" data-count="' + esc(r.key) + '" value="' + esc(v.n === undefined ? '' : v.n) + '" aria-label="Counted">') + '</div>' +
+        (bad ? '<div class="chips">' + ['sold', 'lost', 'found', 'damaged'].map(function (x) { return '<button class="chip' + (v.reason === x ? ' on' : '') + '" type="button" data-reason="' + esc(r.key) + '" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>' : '') +
+        (r.answer ? sentLine(r) : '') + '</div>';
+    });
+    h += '<div class="acts">' + (at > 0 ? '<button class="btn" type="button" data-shelf="-1">◂ Back</button>' : '') + (at < shelves.length - 1 ? '<button class="btn main" type="button" data-shelf="1">Next shelf ▸</button>' : '<button class="btn main big" type="button" data-action="finish">Finish round</button>') + '</div>';
+    return h + '<p class="what">Where this saves: the Marketplace tab of the Open work sheet. The engine applies it after 10 minutes.</p>';
+  }
+  function pageNumbers() {
+    var k = rows.filter(function (r) { return r.section === 'kpi'; })[0];
+    if (!k) return '<p class="needs">Numbers</p><div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
+    var d = detail(k), ar = { up: '▲', down: '▼', flat: '–' };
+    function show(t) { return /_p$/.test(t.key) ? '£' + (Number(t.value) / 100).toFixed(2) : t.value; }
+    var h = '<p class="needs">Numbers</p><div class="tiles">' + (d.tiles || []).map(function (t) { return '<button class="tile" type="button" data-tile="' + esc(t.key) + '"><div class="k">' + esc(t.label) + '</div><div class="v">' + esc(show(t)) + ' <span class="' + esc(t.arrow) + '">' + ar[t.arrow] + '</span></div></button>'; }).join('') + '</div>';
+    if (open.tile) h += '<div class="card">' + (d.byCategory || []).map(function (c) { return '<div class="row"><div class="txt">' + esc(c.category) + '</div><div>' + esc(open.tile === 'sold' ? c.sold : '£' + (c.profit_p / 100).toFixed(2)) + '</div></div>'; }).join('') + '</div>';
+    if (d.health) h += '<p class="what">' + esc(d.health) + '</p>';
+    return h;
+  }
+  function render() {
+    $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
+    document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    ORDER.forEach(function (s) { var el = $('n-' + s); if (el) el.textContent = waiting(s).length || ''; });
+    $('stamp').textContent = M && M.live ? '' : 'TEST';
+    var ready = typeof auth !== 'undefined' && auth.ready();
+    $('signin').disabled = !token && !ready;
+    if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see what needs you</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
+    $('view').innerHTML = view === 'me' ? pageMe() : view === 'round' ? pageRound() : view === 'numbers' ? pageNumbers() : pageList(view);
+  }
+
+  /* ---------- taps ---------- */
+  function find(key) { return rows.filter(function (r) { return r.key === key; })[0]; }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button, a'); if (!t) return;
+    var a = t.getAttribute('data-action');
+    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
+    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; return render(); }
+    if (a === 'refresh') return load();
+    if (a === 'all') { showAll = !showAll; return render(); }
+    if (t.hasAttribute('data-ans')) {
+      var r = find(t.getAttribute('data-ans')), v = t.getAttribute('data-v'), note = '';
+      if (r.section === 'vinted') { var inp = document.querySelector('[data-link="' + r.key + '"]'); note = inp ? inp.value.trim() : ''; }
+      t.disabled = true; return answer(r, v, note);
+    }
+    if (t.hasAttribute('data-arrive')) { var ar = find(t.getAttribute('data-arrive')), box = document.querySelector('[data-arrived="' + ar.key + '"]'), n = box ? parseInt(box.value, 10) : NaN;
+      if (!(n >= 0)) return banner('Type how many arrived, then tap Arrived.'); t.disabled = true; return answer(ar, 'Arrived ' + n, ''); }
+    if (t.hasAttribute('data-undo')) { var u = find(t.getAttribute('data-undo')); if (Date.now() < Date.parse(u.answered_at) + UNDO_MS) answer(u, '', ''); return; }
+    if (t.hasAttribute('data-copy')) { var c = find(t.getAttribute('data-copy')); navigator.clipboard.writeText(detail(c).text || '').then(function () { t.textContent = 'Copied'; }); return; }
+    if (t.hasAttribute('data-qr')) { var q = detail(find(t.getAttribute('data-qr'))); $('qr').innerHTML = (q.qr_image ? '<img alt="QR code" src="' + esc(q.qr_image) + '">' : '') + '<div class="code">' + esc(q.qr) + '</div><button class="btn big" type="button" data-action="closeqr">Close</button>'; $('qr').className = 'qr'; return; }
+    if (a === 'closeqr') { $('qr').className = 'qr hidden'; return; }
+    if (t.hasAttribute('data-tile')) { open.tile = open.tile === t.getAttribute('data-tile') ? null : t.getAttribute('data-tile'); return render(); }
+    if (t.hasAttribute('data-tick')) { var k = t.getAttribute('data-tick'); round[k] = { ok: true, n: '' }; return render(); }
+    if (t.hasAttribute('data-reason')) { var kk = t.getAttribute('data-reason'); round[kk] = Object.assign(round[kk] || {}, { reason: t.getAttribute('data-v') }); return render(); }
+    if (t.hasAttribute('data-shelf')) { round.i = (round.i || 0) + Number(t.getAttribute('data-shelf')); showAll = false; return render(); }
+    if (a === 'finish') return finishRound();
+  });
+  document.addEventListener('input', function (e) { var k = e.target.getAttribute('data-count'); if (k) { round[k] = Object.assign(round[k] || {}, { n: e.target.value, ok: false }); } });
+  document.addEventListener('change', function () { if (view === 'round') render(); });
+  // No reason, no save (CD Hub round rule). Each item row gets "ok" or "<count> <reason>".
+  function finishRound() {
+    var todo = rows.filter(function (r) { return r.section === 'round' && !r.answer && round[r.key]; }), missing = [];
+    todo.forEach(function (r) { var v = round[r.key], d = detail(r); if (v.n !== '' && v.n !== undefined && Number(v.n) !== Number(d.expected) && !v.reason) missing.push(r.title); });
+    if (missing.length) return banner('Pick a reason for: ' + missing.join(', '));
+    todo.reduce(function (p, r) { var v = round[r.key]; return p.then(function () { return answer(r, v.ok || v.n === '' || v.n === undefined ? 'ok' : String(Number(v.n)) + ' ' + v.reason, ''); }); }, Promise.resolve())
+      .then(function () { banner('Round saved. The engine applies it after 10 minutes.', true); });
+  }
+  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'me'; showAll = false; render(); }
+  window.addEventListener('hashchange', route);
+
+  /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */
+  var auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE,
+    onToken: function (resp) { if (resp.error) return banner('Sign-in did not complete.'); token = resp.access_token; DashAuth.save(token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE); load(); },
+    onError: function () { banner('Sign-in did not complete.'); }, onSilentFail: function () {} });
+  var saved = DashAuth.valid(); if (saved && DashAuth.hasScope(saved, SCOPE)) { token = saved.access_token; }
+  route(); load(); setInterval(function () { if (token) load(); }, 5 * 60000);
+  // Google's sign-in script loads after this one: start the shared sign-in as soon as it is there (same as Factory).
+  var tries = 0;
+  (function wait() { if (auth.init()) { render(); return; } if (++tries > 100) { banner('Google sign-in did not load.'); return; } setTimeout(wait, 100); })();
+})();
+</script>
+</body>
+</html>

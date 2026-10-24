@@ -29,7 +29,7 @@ for (const [name, url, title, selector] of PAGES) {
 // Is what is LIVE exactly what was merged? Compares the live files with the repo files, byte for byte.
 // Only the workflows on `main` turn this on (LIVE_MATCH_REPO=1); on a feature branch the live site is rightly different.
 // Waits up to 90 s for GitHub Pages to finish publishing (LIVE_MATCH_WAIT_MS to change).
-const FILES = [['index.html', ''], ['cdhub/index.html', 'cdhub/'], ['money/index.html', 'money/'], ['money/core.js', 'money/core.js'], ['factory/index.html', 'factory/'], ['auth.js', 'auth.js'], ['config.js', 'config.js'], ['toolkit.js', 'toolkit.js'], ['tokens.css', 'tokens.css'], ['manifest.webmanifest', 'manifest.webmanifest'], ['sw.js', 'sw.js'], ['icons/icon.svg', 'icons/icon.svg']];
+const FILES = [['index.html', ''], ['cdhub/index.html', 'cdhub/'], ['money/index.html', 'money/'], ['money/core.js', 'money/core.js'], ['factory/index.html', 'factory/'], ['marketplace/index.html', 'marketplace/'], ['auth.js', 'auth.js'], ['config.js', 'config.js'], ['toolkit.js', 'toolkit.js'], ['tokens.css', 'tokens.css'], ['manifest.webmanifest', 'manifest.webmanifest'], ['sw.js', 'sw.js'], ['icons/icon.svg', 'icons/icon.svg']];
 const sha = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 test.describe('Live files match the repo', () => {
   test.skip(!process.env.LIVE_MATCH_REPO, 'Only checked by the workflows on main (LIVE_MATCH_REPO=1).');
