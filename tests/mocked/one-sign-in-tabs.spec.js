@@ -122,7 +122,7 @@ test.describe('One sign-in for every tab', () => {
 });
 
 test.describe('Dashboard button (every page except home)', () => {
-  for (const [url, ready] of [['money/', '#signInBtn'], ['cdhub/', '#main']]) {
+  for (const [url, ready] of [['money/', '#signInBtn'], ['cdhub/', '#main'], ['marketplace/', '#signin']]) {
     test(`${url}: top-right "Dashboard" button is always shown, keyboard reachable, and goes home`, async ({ page }) => {
       await page.goto(url);
       await expect(page.locator(ready)).toBeVisible();
@@ -146,7 +146,7 @@ test.describe('Dashboard button (every page except home)', () => {
     test(`${url}: opened from the dashboard, "Dashboard" brings the dashboard tab back and closes this one`, async ({ page, context }) => {
       await page.goto('./');
       await signIn(page);
-      const link = url === 'money/' ? 'a.keytile[href="money/"]' : 'a.keytile[href="cdhub/"]';
+      const link = 'a.keytile[href="' + url + '"]';
       const [tab] = await Promise.all([context.waitForEvent('page'), page.locator(link).click()]);
       await expect(tab.locator('#backHome')).toBeVisible();
       await Promise.all([tab.waitForEvent('close'), tab.locator('#backHome').click()]);
