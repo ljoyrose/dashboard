@@ -184,4 +184,18 @@ test.describe('Marketplace page', () => {
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0][0]).toBe('Yes');
   });
+  test('every card can show the item photo: an eBay picture or a Drive photo; any other address is ignored', async ({ page }) => {
+    await page.route(/i\.ebayimg\.com|drive\.google\.com\/thumbnail/, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>' }));
+    const rows = [
+      ['RM|L1', 'remove', 'Clothes', 'Sample jumper', JSON.stringify({ platform: 'eBay', photo: 'https://i.ebayimg.com/images/g/ABC/s-l300.jpg' }), ago(5)],
+      ['RM|L2', 'remove', 'Clothes', 'Sample coat', JSON.stringify({ platform: 'Vinted', photo: '1AbCdEfGhIjKlMnOpQrStUvWxYz' }), ago(5)],
+      ['RM|L3', 'remove', 'Clothes', 'Sample hat', JSON.stringify({ platform: 'Vinted', photo: 'https://evil.example/x.jpg' }), ago(5)],
+    ];
+    await sheets(page, rows);
+    await open(page, '#/remove');
+    await page.locator('[data-action="all"]').click();
+    await expect(page.locator('#view .item img[src^="https://i.ebayimg.com/images/g/ABC/"]')).toHaveCount(1);
+    await expect(page.locator('#view .item img[src*="drive.google.com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvWxYz"]')).toHaveCount(1);
+    await expect(page.locator('#view img[src*="evil.example"]')).toHaveCount(0);
+  });
 });
