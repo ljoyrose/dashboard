@@ -280,7 +280,7 @@ test.describe('Marketplace page', () => {
   });
   test('"Same item?" card shows both photos side by side, big, each opening full size; the eBay photo comes from the listings file', async ({ page }) => {
     await page.route(/i\.ebayimg\.com|drive\.google\.com\/thumbnail/, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>' }));
-    const csv = 'COUNT: 2 rows held\nlisting_id,item_sku,platform,title,image_url\nL0020,,Vinted,"Rascal watch, green case",\nL0156,,eBay,"Linus and Lucy watch, green case",https://i.ebayimg.com/images/g/LpsA/s-l300.jpg\n';
+    const csv = 'COUNT: 2 rows held\nlisting_id,item_sku,platform,platform_item_id,url,title,image_url\nL0020,,Vinted,7001,https://www.vinted.co.uk/items/7001,"Rascal watch, green case",\nL0156,,eBay,226000000156,,"Linus and Lucy watch, green case",https://i.ebayimg.com/images/g/LpsA/s-l300.jpg\n';
     const rows = [['LINK|L0020|L0156', 'check', 'Other', 'Rascal watch', JSON.stringify({ kind: 'link', platform: 'Vinted', photo: '1AbCdEfGhIjKlMnOpQrStUvWxYz', why: 'Same item as on eBay?' }), ago(5)]];
     await sheets(page, rows);
     await page.route(/googleapis\.com\/drive\/v3\/files\/1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW\?alt=media/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: csv }));
@@ -289,7 +289,10 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#view .pair figcaption')).toHaveText(['Vinted · L0020', 'eBay · L0156']);
     await expect(page.locator('#view .pair img[src*="drive.google.com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvWxYz&sz=w600"]')).toHaveCount(1);
     await expect(page.locator('#view .pair img[src="https://i.ebayimg.com/images/g/LpsA/s-l500.jpg"]')).toHaveCount(1);
-    await expect(page.locator('#view .pair a').nth(1)).toHaveAttribute('href', 'https://i.ebayimg.com/images/g/LpsA/s-l1600.jpg');
+    await expect(page.locator('#view .pair figure').nth(1).locator('a').first()).toHaveAttribute('href', 'https://i.ebayimg.com/images/g/LpsA/s-l1600.jpg');
+    await expect(page.locator('#view .pair a.btn')).toHaveText(['Open on Vinted', 'Open on eBay']);                 // the listings themselves, not the pictures
+    await expect(page.locator('#view .pair a.btn').nth(0)).toHaveAttribute('href', 'https://www.vinted.co.uk/items/7001');
+    await expect(page.locator('#view .pair a.btn').nth(1)).toHaveAttribute('href', 'https://www.ebay.co.uk/itm/226000000156');
     await page.setViewportSize({ width: 390, height: 844 });
     const box = await page.locator('#view .pair img').first().boundingBox();
     expect(box.width).toBeGreaterThan(140);                                     // big enough to read "7F" against "10"
