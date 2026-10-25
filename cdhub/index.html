@@ -208,6 +208,34 @@ a{color:inherit}
   /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+
+/* Hub V2 (25 Oct 2026, same layout as Marketplace): five tabs in a bar at the bottom (Home, Today, The round, Dogs, More).
+   The full menu stays at the top too. Red number = checks that need a look. Nothing hides under the bar. */
+html{scroll-padding-bottom:96px}
+body{padding-bottom:96px}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:25;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px;margin:0;padding:6px 8px 10px;overflow:visible;flex-wrap:nowrap;background:var(--card);border-top:1px solid var(--ln)}
+nav.tabs button{position:relative;min-height:54px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:4px 2px;font:700 13px Lexend,sans-serif;color:var(--fg);background:transparent;border:1.5px solid transparent;border-radius:var(--radius);white-space:normal;text-align:center;cursor:pointer}
+nav.tabs button:hover{border-color:var(--ln);background:transparent}
+nav.tabs button[aria-current="page"]{border:1.5px solid var(--fg);background:var(--soft);color:var(--fg)}
+nav.tabs .n{font-size:13px;font-weight:700;line-height:18px;background:var(--ljr-2-solid);color:var(--ljr-2-on);border-radius:999px;padding:0 7px;min-width:20px}
+nav.tabs .n:empty{visibility:hidden}
+nav.tabs[hidden]{display:none}
+#main h2:focus,#main h2:focus-visible{outline:none}
+.needsline{font-size:26px;font-weight:700;margin:22px 0 10px}
+.needsline .zero{color:var(--ljr-5-text)}
+.hometiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:0 0 12px}
+button.htile{min-height:88px;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:10px 12px;text-align:left;font:inherit;color:var(--fg);background:var(--card);border:1.5px solid var(--ln);border-radius:var(--radius);cursor:pointer;min-width:0}
+button.htile:hover{border-color:var(--sub)}
+button.htile .v{font-size:28px;font-weight:700;line-height:1.2}
+button.htile .k{font-size:13px;color:var(--sub);overflow-wrap:anywhere}
+.urgent .what{font-size:17px;font-weight:600;margin:0 0 8px;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.bigbtn{min-height:52px;width:100%;font:600 16px Lexend,sans-serif;color:var(--fg);background:var(--card);border:1.5px solid var(--fg);border-radius:var(--radius);cursor:pointer}
+.hint{font-size:14px;color:var(--sub);margin:8px 0 0}
+.morelist{display:grid;grid-template-columns:1fr;gap:8px}
+@media(min-width:700px){.morelist{grid-template-columns:1fr 1fr}}
+button.morelink{min-height:60px;display:flex;flex-direction:column;justify-content:center;padding:10px 16px;text-align:left;font:600 17px Lexend,sans-serif;color:var(--fg);background:var(--card);border:1.5px solid var(--ln);border-radius:var(--radius);cursor:pointer}
+button.morelink:hover{border-color:var(--sub)}
+button.morelink small{font-size:14px;font-weight:400;color:var(--sub)}
 </style></head><body>
 <a class="skip" href="#main" data-skip="main">Skip to content</a>
 <header class="top"><div class="hin">
@@ -218,6 +246,7 @@ a{color:inherit}
 <nav id="nav"></nav><button type="button" class="srchbtn" data-search-open aria-keyshortcuts="/" title="Search (press /)">Search</button></div></header>
 <div class="wrap"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
 <div class="next" id="next"></div></div>
+<nav class="tabs" id="tabs" aria-label="Main sections" hidden></nav>
 <script>
 
 var FOLDER=window.DASH_CONFIG.cdhub.folderId;   
@@ -750,9 +779,43 @@ function strip(){
 }
 
 
+// Hub V2 Home: Needs you: N, three big tiles that open a tab, then the ONE check that most needs a look.
+function todayCounts(){
+ var c=counts(), date=CD._roundDate||todayISO(), placed={};
+ Object.keys(ROUND).forEach(function(k){ if(k.indexOf(date+'__')===0) (ROUND[k].subjects||[]).forEach(function(sid){ placed[sid]=1; }); });
+ var temps=Object.keys(ROUND).filter(function(k){ return k.indexOf(date+'__')===0 && (ROUND[k].t_am||ROUND[k].t_pm); }).length;
+ return {here:c.here.length, cabins:CD.areas.length, temps:temps, unplaced:c.here.filter(function(d){ return !placed[d.id] && !d.area_id; }).length};
+}
+function homeTop(bad){
+ var t=todayCounts();
+ var h='<p class="needsline" id="needsLine">Needs you: '+(bad.length?bad.length:'<span class="zero">0</span>')+'</p><div class="hometiles" id="homeTiles">'
+  +[['today',t.unplaced,'Today: dogs not placed'],['round',t.temps+' of '+t.cabins,'The round: temperatures'],['dogs',t.here,'Dogs: here today']].map(function(x){
+    return '<button type="button" class="htile" data-go="'+x[0]+'"><span class="v">'+esc(String(x[1]))+'</span><span class="k">'+esc(x[2])+'</span></button>'; }).join('')+'</div>';
+ if(bad.length){ var x=bad[0];
+  h+='<div class="card acc2 urgent" id="urgentOne"><h3 class="hx4">First thing: '+esc(x.k)+'</h3><p class="what">'+esc(x.msg)+'</p>'
+   +(x.list?'<button type="button" class="bigbtn" data-list="'+x.list+'">Show the dogs</button>':'')
+   +(bad.length>1?'<p class="hint">'+(bad.length-1)+' more below.</p>':'')+'</div>'; }
+ return h;
+}
+function pageMore(){
+ var more=[['work','What is still to do'],['shape','How the tables join'],['areas','Cabins and areas'],['litters','Litters and pups'],['vet','The vet link'],['buyers','Buyers']];
+ return '<h2>More</h2><div class="morelist" id="moreList">'+more.map(function(m){
+  return '<button type="button" class="morelink" data-go="'+m[0]+'">'+esc(label(m[0]))+'<small>'+esc(m[1])+'</small></button>'; }).join('')+'</div>';
+}
+var TABS=[['map','Home'],['today','Today'],['round','The round'],['dogs','Dogs'],['more','More']];
+var TAB_OF={work:'more',shape:'more',areas:'more',litters:'more',vet:'more',buyers:'more'};
+function drawTabs(id,show){
+ var bar=document.getElementById('tabs'); if(!bar) return;
+ bar.hidden=!show; if(!show){ bar.innerHTML=''; return; }
+ var nb=checks().filter(function(x){return !x.ok;}).length, on=TAB_OF[id]||id;
+ bar.innerHTML=TABS.map(function(t){
+  var n=t[0]==='map'?nb:0;
+  return '<button type="button" data-go="'+t[0]+'"'+(t[0]===on?' aria-current="page"':'')+' aria-label="'+t[1]+(n?', '+n+' to look at':'')+'"><span>'+t[1]+'</span><span class="n">'+(n||'')+'</span></button>'; }).join('');
+}
 function pageMap(){
  var c=counts(), bad=checks().filter(function(x){return !x.ok;});
  return '<h2>Live</h2>'
+ +homeTop(bad)
  +strip()
  +(bad.length?'<div class="card acc2"><h4>'+bad.length+' need looking at</h4><p style="margin-bottom:0">'
     +bad.map(function(x){return '<b>'+esc(x.k)+'</b> \u2014 '+esc(x.msg);}).join('<br>')+'</p></div>'
@@ -1523,7 +1586,7 @@ function pageShape(){
  return h;
 }
 
-var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,vet:pageVet,buyers:pageBuyers};
+var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,vet:pageVet,buyers:pageBuyers,more:pageMore};
 var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Buyers']];
 var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','vet'],areas:['today','litters'],litters:['dogs','vet'],vet:['dogs','buyers'],buyers:['dogs','map']};
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
@@ -1584,7 +1647,7 @@ function go(id,push){
    +'<ul class="notes"><li>No data of its own. Read-only, live from '+esc(FOLDER_NAME)+'.</li><li>One sign-in for the whole site.</li></ul>'
    +(LOAD.err?'<p class="mut">'+esc(LOAD.err)+'</p>':'')
    +'<p style="margin-bottom:0"><button id="signinbtn" data-signin="1"'+(auth.ready()?'':' disabled')+'>'+(auth.ready()?'Sign in with Google':'Loading Google sign-in\u2026')+'</button></p></div>';
-  document.getElementById('nav').innerHTML=''; return;
+  document.getElementById('nav').innerHTML=''; drawTabs(id,false); return;
  }
  if(LOAD.state==='loading'){ return; }
  if(LOAD.state!=='ok'){
@@ -1596,12 +1659,13 @@ function go(id,push){
      :LOAD.state==='err'?esc(LOAD.err||'')+'. The tables live in '+esc(FOLDER_NAME)+'.'
      :'The tables live in '+esc(FOLDER_NAME)+'. Nothing is stored in this page, so there is nothing to show without them.')+'</p>'
    +'<p style="margin-bottom:0"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
-  document.getElementById('nav').innerHTML=''; return;
+  document.getElementById('nav').innerHTML=''; drawTabs(id,false); return;
  }
  if(!PAGES[id]) id='map';
  document.getElementById('nav').innerHTML=SECTIONS.map(function(s){return '<button data-go="'+s[0]+'">'+s[1]+'</button>';}).join('')+'<button data-reload="1" title="Read the tables from Drive again">Reread</button><button data-signout="1">Sign out</button>';
  main.innerHTML=PAGES[id]();
  Array.prototype.forEach.call(document.querySelectorAll('#nav button'),function(b){ if(b.dataset.go===id) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+ drawTabs(id,true);
  labelControls(main);
  levelHeadings(main);
  document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
@@ -1650,7 +1714,7 @@ function go(id,push){
    b.addEventListener('click',function(){ showList(b.dataset.list); }); });
  }
  if(id==='map'){
-  Array.prototype.forEach.call(document.querySelectorAll('.ci'),function(b){
+  Array.prototype.forEach.call(document.querySelectorAll('.ci,.bigbtn[data-list]'),function(b){
    b.addEventListener('click',function(){ if(b.dataset.list){ go('today',true); setTimeout(function(){showList(b.dataset.list);},60);} }); });
  }
  if(id==='buyers'){

@@ -70,6 +70,7 @@ That is 367 checks that must pass.
 **CD Hub**
 - Opens, asks for sign-in, then reads the sample `BLD-*` tables.
 - All ten sections open (Live feed, Outstanding, Table map, Today, The round, Dogs, Areas, Litters, Vet link, Buyers).
+- A bar at the bottom (Home, Today, The round, Dogs, More) routes to each section; the full menu stays at the top. Live starts with "Needs you: N", three big tiles and the one check that most needs a look (`tests/mocked/hub-v2-cdhub.spec.js`).
 - Dogs, cabins, litters and weights from the sample files join up correctly.
 - Two files with the same name are refused, not guessed.
 - Missing files are reported, not hidden.
