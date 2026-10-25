@@ -188,8 +188,8 @@
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
       .then(function (t) { var t2 = csvRows(t), h = -1;
         for (var i = 0; i < Math.min(t2.length, 5); i++) if (t2[i].indexOf('listing_id') >= 0) { h = i; break; }
-        if (h < 0) return; var hd = t2[h], li = hd.indexOf('listing_id'), im = hd.indexOf('image_url'), ti = hd.indexOf('title'), pl = hd.indexOf('platform');
-        t2.slice(h + 1).forEach(function (r) { pics[r[li]] = { photo: r[im] || '', title: r[ti] || '', platform: r[pl] || '' }; });
+        if (h < 0) return; var hd = t2[h], li = hd.indexOf('listing_id'), im = hd.indexOf('image_url'), ti = hd.indexOf('title'), pl = hd.indexOf('platform'), ur = hd.indexOf('url'), pi = hd.indexOf('platform_item_id');
+        t2.slice(h + 1).forEach(function (r) { pics[r[li]] = { photo: r[im] || '', title: r[ti] || '', platform: r[pl] || '', url: listingUrl(r[pl], r[ur], r[pi]) }; });
         render(); })
       .catch(function () {});   // no second photo is not an error: the card still works
   }
@@ -202,11 +202,20 @@
     if (cell.length || row.length) { row.push(cell); out.push(row); }
     return out;
   }
+  // The listing itself (not its picture): the file's url, else the eBay item page from the item number. Marketplace hosts only.
+  var LISTING_HOSTS = /^https:\/\/(www\.)?(ebay\.co\.uk|ebay\.com|vinted\.co\.uk|etsy\.com|depop\.com)\//;
+  function listingUrl(platform, url, itemId) {
+    if (url && LISTING_HOSTS.test(url)) return url;
+    return String(platform).toLowerCase() === 'ebay' && /^\d{6,}$/.test(itemId || '') ? 'https://www.ebay.co.uk/itm/' + itemId : '';
+  }
   function pair(r, d) {
     var ids = r.key.split('|'), b = (pics || {})[ids[2]] || {};
-    function side(id, label) { var big = photoSrc(id, 1600), sm = photoSrc(id, 600);
-      return '<figure>' + (sm ? '<a href="' + esc(big) + '" target="_blank" rel="noopener" aria-label="Open the ' + esc(label) + ' photo full size"><img alt="' + esc(label) + ' photo" loading="lazy" referrerpolicy="no-referrer" src="' + esc(sm) + '"></a>' : '<div class="nopic">No photo</div>') + '<figcaption>' + esc(label) + '</figcaption></figure>'; }
-    return '<div class="pair">' + side(d.photo, (d.platform || 'This one') + ' · ' + ids[1]) + side(b.photo, (b.platform || 'eBay') + ' · ' + ids[2]) + '</div>';
+    function side(id, label, link, site) { var big = photoSrc(id, 1600), sm = photoSrc(id, 600);
+      return '<figure>' + (sm ? '<a href="' + esc(big) + '" target="_blank" rel="noopener" aria-label="Open the ' + esc(label) + ' photo full size"><img alt="' + esc(label) + ' photo" loading="lazy" referrerpolicy="no-referrer" src="' + esc(sm) + '"></a>' : '<div class="nopic">No photo</div>') + '<figcaption>' + esc(label) + '</figcaption>' +
+        (link ? '<a class="btn" href="' + esc(link) + '" target="_blank" rel="noopener">Open on ' + esc(site) + '</a>' : '') + '</figure>'; }
+    var a = (pics || {})[ids[1]] || {};
+    return '<div class="pair">' + side(d.photo, (d.platform || 'This one') + ' · ' + ids[1], (d.url && LISTING_HOSTS.test(d.url) ? d.url : a.url), d.platform || a.platform || 'the site') +
+      side(b.photo, (b.platform || 'eBay') + ' · ' + ids[2], b.url, b.platform || 'eBay') + '</div>';
   }
 
   /* ---------- Google: Sheets (data) and Drive (who am I, wake address) ---------- */
@@ -295,7 +304,7 @@
       else { if (d.qr) acts.push('<button class="btn" type="button" data-qr="' + esc(r.key) + '">Show QR</button>'); else if (d.qr_missing) acts.push('<span class="why red">QR not found</span>');
         acts.push('<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'); }
     } else if (r.section === 'go') { acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Go</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Not this one</button>'); }
-    else if (r.section === 'check') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');
+    else if (r.section === 'check') { if (d.url && !isPair) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');   // pairs: one button under each photo
       if (isPair) h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Leave blank if you are not sure. Yes then keeps one count for both sites.</p>';
       acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">No</button>'); }
     else if (r.section === 'vinted') {
