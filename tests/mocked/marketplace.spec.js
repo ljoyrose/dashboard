@@ -20,6 +20,8 @@ function sampleRows() {
 // Pretend Sheets: answers reads from `rows`, records every write, and can swap a row's key to mimic a moved row.
 async function sheets(page, rows, opts = {}) {
   const writes = [];
+  // The listings file (second photo on "Same item?" cards): empty unless a test gives one.
+  await page.route(/googleapis\.com\/drive\/v3\/files\/[\w-]+\?alt=media/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: 'listing_id,image_url\n' }));
   await page.route(SHEETS, async (route) => {
     const req = route.request(), url = decodeURIComponent(req.url());
     if (req.method() === 'PUT') {
@@ -274,6 +276,23 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#view .grp')).toHaveText(['Evri · 2 parcels', 'InPost · 1 parcel']);
     await expect(page.locator('#view .card .parcel')).toHaveText(['#2', '#3', '#1']);
     await expect(page.locator('#view')).toContainText('The printable PDF is not made yet');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+  test('"Same item?" card shows both photos side by side, big, each opening full size; the eBay photo comes from the listings file', async ({ page }) => {
+    await page.route(/i\.ebayimg\.com|drive\.google\.com\/thumbnail/, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>' }));
+    const csv = 'COUNT: 2 rows held\nlisting_id,item_sku,platform,title,image_url\nL0020,,Vinted,"Rascal watch, green case",\nL0156,,eBay,"Linus and Lucy watch, green case",https://i.ebayimg.com/images/g/LpsA/s-l300.jpg\n';
+    const rows = [['LINK|L0020|L0156', 'check', 'Other', 'Rascal watch', JSON.stringify({ kind: 'link', platform: 'Vinted', photo: '1AbCdEfGhIjKlMnOpQrStUvWxYz', why: 'Same item as on eBay?' }), ago(5)]];
+    await sheets(page, rows);
+    await page.route(/googleapis\.com\/drive\/v3\/files\/1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW\?alt=media/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: csv }));
+    await open(page, '#/decide');
+    await expect(page.locator('#view .pair figure')).toHaveCount(2);
+    await expect(page.locator('#view .pair figcaption')).toHaveText(['Vinted · L0020', 'eBay · L0156']);
+    await expect(page.locator('#view .pair img[src*="drive.google.com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvWxYz&sz=w600"]')).toHaveCount(1);
+    await expect(page.locator('#view .pair img[src="https://i.ebayimg.com/images/g/LpsA/s-l500.jpg"]')).toHaveCount(1);
+    await expect(page.locator('#view .pair a').nth(1)).toHaveAttribute('href', 'https://i.ebayimg.com/images/g/LpsA/s-l1600.jpg');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const box = await page.locator('#view .pair img').first().boundingBox();
+    expect(box.width).toBeGreaterThan(140);                                     // big enough to read "7F" against "10"
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 });

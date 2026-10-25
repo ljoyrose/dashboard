@@ -27,6 +27,7 @@
   :root { --radius: 12px; --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
           --line: color-mix(in srgb, var(--ljr-0) 55%, var(--ljr-paper)); }
   * { box-sizing: border-box; }
+  html { scroll-padding-bottom: 96px; }   /* a button scrolled into view never hides under the tab bar */
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 17px; line-height: 1.5; }
   .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }   /* same width as Factory and the main dashboard */
   header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
@@ -61,6 +62,11 @@
   .parcel { font-size: 34px; font-weight: 700; }
   .dropcode { border: 2px dashed var(--line); border-radius: var(--radius); padding: 12px; text-align: center; }
   .dropcode .code { display: block; font-size: 22px; font-weight: 700; letter-spacing: 2px; overflow-wrap: anywhere; }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-width: 520px; }
+  .pair figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+  .pair img, .pair .nopic { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg); display: block; }
+  .pair .nopic { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
+  .pair figcaption { font-size: 13px; color: var(--muted); font-weight: 600; }
   .packbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
   .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
   .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
@@ -159,10 +165,41 @@
   function detail(r) { try { return JSON.parse(r.detail || '{}'); } catch (e) { return {}; } }
   // A card's photo: an eBay/Etsy/Vinted picture address (those hosts only), or the Drive id of a photo in the item's folder.
   var PHOTO_HOSTS = /^https:\/\/(i\.ebayimg\.com|i\.etsystatic\.com|images\d*\.vinted\.net)\//;
-  function thumb(id) {
+  function photoSrc(id, w) {
     if (!id) return '';
-    var src = PHOTO_HOSTS.test(id) ? id : /^[\w-]{20,}$/.test(id) ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w200' : '';
-    return src ? '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(src) + '">' : '';
+    if (PHOTO_HOSTS.test(id)) return w > 300 ? id.replace(/\/s-l\d+\./, w >= 1000 ? '/s-l1600.' : '/s-l500.') : id;
+    return /^[\w-]{20,}$/.test(id) ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w' + w : '';
+  }
+  function thumb(id) { var src = photoSrc(id, 200); return src ? '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(src) + '">' : ''; }
+  // "Same item?" cards (key LINK|<other>|<eBay>): both photos side by side, big; tap one to open it full size.
+  // The second photo comes from RR_LISTINGS.csv (image_url), read once with Lisa's sign-in; nothing is written to it.
+  var pics = null;
+  function loadPics() {
+    if (pics !== null || !M.listingsFileId || !rows.some(function (r) { return /^LINK\|/.test(r.key); })) return;
+    pics = {};
+    fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(M.listingsFileId) + '?alt=media&supportsAllDrives=true', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (t) { var t2 = csvRows(t), h = -1;
+        for (var i = 0; i < Math.min(t2.length, 5); i++) if (t2[i].indexOf('listing_id') >= 0) { h = i; break; }
+        if (h < 0) return; var hd = t2[h], li = hd.indexOf('listing_id'), im = hd.indexOf('image_url'), ti = hd.indexOf('title'), pl = hd.indexOf('platform');
+        t2.slice(h + 1).forEach(function (r) { pics[r[li]] = { photo: r[im] || '', title: r[ti] || '', platform: r[pl] || '' }; });
+        render(); })
+      .catch(function () {});   // no second photo is not an error: the card still works
+  }
+  function csvRows(text) {
+    var out = [], row = [], cell = '', q = false; text = String(text || '').replace(/^\uFEFF/, '').replace(/\r/g, '');
+    for (var i = 0; i < text.length; i++) { var c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+      else if (c === '"') q = true; else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n') { row.push(cell); out.push(row); row = []; cell = ''; } else cell += c; }
+    if (cell.length || row.length) { row.push(cell); out.push(row); }
+    return out;
+  }
+  function pair(r, d) {
+    var ids = r.key.split('|'), b = (pics || {})[ids[2]] || {};
+    function side(id, label) { var big = photoSrc(id, 1600), sm = photoSrc(id, 600);
+      return '<figure>' + (sm ? '<a href="' + esc(big) + '" target="_blank" rel="noopener" aria-label="Open the ' + esc(label) + ' photo full size"><img alt="' + esc(label) + ' photo" loading="lazy" referrerpolicy="no-referrer" src="' + esc(sm) + '"></a>' : '<div class="nopic">No photo</div>') + '<figcaption>' + esc(label) + '</figcaption></figure>'; }
+    return '<div class="pair">' + side(d.photo, (d.platform || 'This one') + ' · ' + ids[1]) + side(b.photo, (b.platform || 'eBay') + ' · ' + ids[2]) + '</div>';
   }
 
   /* ---------- Google: Sheets (data) and Drive (who am I, wake address) ---------- */
@@ -187,7 +224,7 @@
     if (!token) { render(); return; }
     api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
       rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
-      $('banner').className = 'banner hidden'; render();
+      $('banner').className = 'banner hidden'; render(); loadPics();
     }).catch(function (e) { banner('Could not load: ' + e.message); });
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
   }
@@ -237,11 +274,11 @@
     return '<div class="sent">✓ ' + hm(at) + ' · applies by ' + hm(at + APPLY_MS) + (live ? ' <button class="btn" type="button" data-undo="' + esc(r.key) + '"><i class="ti ti-arrow-back-up"></i> Undo</button>' : '') + '</div>';
   }
   function itemCard(r, opts) {
-    var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red;
+    var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
     var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
-      '<div class="item">' + thumb(d.photo) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, d.platform, d.shelf ? 'shelf ' + d.shelf : '', d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
+      '<div class="item">' + (isPair ? '' : thumb(d.photo)) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, d.platform, d.shelf ? 'shelf ' + d.shelf : '', d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
       (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
-      (d.why ? '<p class="what">' + esc(d.why) + '</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
+      (isPair ? pair(r, d) : '') + (d.why ? '<p class="what">' + esc(d.why) + '</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
     var acts = [];
     if (r.section === 'remove') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
@@ -389,7 +426,7 @@
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
-    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; return render(); }
+    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; pics = null; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }
     if (t.hasAttribute('data-who')) { who = t.getAttribute('data-who'); try { localStorage.setItem('mkt.who', who); } catch (x) {} return render(); }

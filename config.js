@@ -46,6 +46,7 @@
     marketplace: {
       openWorkId: '1ShYbYmY8W-MEWqm9kHFsIcS5uR4b2SG00uXle_yL76U', // RR_OPEN-WORK (00 AI Commons)
       tab: 'Marketplace',
+      listingsFileId: '1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW', // RR_LISTINGS.csv: read only, for the second photo on "Same item?" cards
       wakeFolderId: '',
       wakeFile: 'MKT-WAKE-WEBAPP.json',
       live: false
