@@ -27,6 +27,7 @@
   :root { --radius: 12px; --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
           --line: color-mix(in srgb, var(--ljr-0) 55%, var(--ljr-paper)); }
   * { box-sizing: border-box; }
+  html { scroll-padding-bottom: 96px; }   /* a button scrolled into view never hides under the tab bar */
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 17px; line-height: 1.5; }
   .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }   /* same width as Factory and the main dashboard */
   header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
@@ -50,7 +51,7 @@
   nav.tabs .n:empty { visibility: hidden; }
   .chips.people { padding: 0 16px 10px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
-  main { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  main, main.wrap { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 14px; }   /* .wrap alone would drop the room for the tab bar */
   .tiles.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tile.big { min-height: 88px; display: flex; flex-direction: column; justify-content: center; text-decoration: none; }
   .tile.big .v { font-size: 28px; }
@@ -61,6 +62,17 @@
   .parcel { font-size: 34px; font-weight: 700; }
   .dropcode { border: 2px dashed var(--line); border-radius: var(--radius); padding: 12px; text-align: center; }
   .dropcode .code { display: block; font-size: 22px; font-weight: 700; letter-spacing: 2px; overflow-wrap: anywhere; }
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-width: 520px; }
+  .pair figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
+  .pair img, .pair .nopic { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg); display: block; }
+  .pair .nopic { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
+  .pair figcaption { font-size: 13px; color: var(--muted); font-weight: 600; }
+  .verdict { margin: 0; font-weight: 700; font-size: 15px; }
+  .verdict.go { color: var(--ljr-5-text); } .verdict.wait { color: var(--ljr-2-text); }
+  .opbox { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  label.qty { font-weight: 600; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
+  details .txtin { margin: 6px 0; }
   .packbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
   .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
   .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
@@ -142,14 +154,15 @@
     vinted: { name: 'Post to Vinted', verb: 'Done', what: 'Drag the photos into Vinted, paste the text, then tap Done.' },
     restock: { name: 'Restock', quiet: true, what: 'Low on stock. Buy on Temu when it suits you.' },
     temu: { name: 'Temu claims', quiet: true, what: 'Price dropped. Claim in Temu if you like.' },
+    stock: { name: 'Stock', quiet: true, what: 'What you have, what is on order, and when to buy.' },
     check: { name: 'Check your list', verb: 'Yes', no: 'No', what: 'Keeps your list right. Changes only your list, never eBay or Vinted.' }
   };
   var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'check', 'restock', 'temu'];
   // V2 tabs: each groups engine sections. Old links (#/remove, #/check, #/numbers ...) still open and light up their tab.
   var TABS = { do: ['remove', 'post', 'vinted'], decide: ['go', 'check'], reply: ['message'], insights: ['restock', 'temu'] };
-  var TAB_OF = { numbers: 'insights', round: 'insights' }; Object.keys(TABS).forEach(function (t) { TABS[t].forEach(function (s) { TAB_OF[s] = t; }); });
+  var TAB_OF = { numbers: 'insights', round: 'insights', stock: 'insights' }; Object.keys(TABS).forEach(function (t) { TABS[t].forEach(function (s) { TAB_OF[s] = t; }); });
   var PEOPLE = ['All', 'Lisa', 'CY', 'G', 'H', 'CN'];   // a card with no owner is Lisa's
-  var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false;
+  var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false, stockFilter = 'all';
   var who = 'All', site = 'All';
   try { who = localStorage.getItem('mkt.who') || 'All'; if (PEOPLE.indexOf(who) < 0) who = 'All'; } catch (e) {}
   function $(id) { return document.getElementById(id); }
@@ -159,10 +172,41 @@
   function detail(r) { try { return JSON.parse(r.detail || '{}'); } catch (e) { return {}; } }
   // A card's photo: an eBay/Etsy/Vinted picture address (those hosts only), or the Drive id of a photo in the item's folder.
   var PHOTO_HOSTS = /^https:\/\/(i\.ebayimg\.com|i\.etsystatic\.com|images\d*\.vinted\.net)\//;
-  function thumb(id) {
+  function photoSrc(id, w) {
     if (!id) return '';
-    var src = PHOTO_HOSTS.test(id) ? id : /^[\w-]{20,}$/.test(id) ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w200' : '';
-    return src ? '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(src) + '">' : '';
+    if (PHOTO_HOSTS.test(id)) return w > 300 ? id.replace(/\/s-l\d+\./, w >= 1000 ? '/s-l1600.' : '/s-l500.') : id;
+    return /^[\w-]{20,}$/.test(id) ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w' + w : '';
+  }
+  function thumb(id) { var src = photoSrc(id, 200); return src ? '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(src) + '">' : ''; }
+  // "Same item?" cards (key LINK|<other>|<eBay>): both photos side by side, big; tap one to open it full size.
+  // The second photo comes from RR_LISTINGS.csv (image_url), read once with Lisa's sign-in; nothing is written to it.
+  var pics = null;
+  function loadPics() {
+    if (pics !== null || !M.listingsFileId || !rows.some(function (r) { return /^LINK\|/.test(r.key); })) return;
+    pics = {};
+    fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(M.listingsFileId) + '?alt=media&supportsAllDrives=true', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (t) { var t2 = csvRows(t), h = -1;
+        for (var i = 0; i < Math.min(t2.length, 5); i++) if (t2[i].indexOf('listing_id') >= 0) { h = i; break; }
+        if (h < 0) return; var hd = t2[h], li = hd.indexOf('listing_id'), im = hd.indexOf('image_url'), ti = hd.indexOf('title'), pl = hd.indexOf('platform');
+        t2.slice(h + 1).forEach(function (r) { pics[r[li]] = { photo: r[im] || '', title: r[ti] || '', platform: r[pl] || '' }; });
+        render(); })
+      .catch(function () {});   // no second photo is not an error: the card still works
+  }
+  function csvRows(text) {
+    var out = [], row = [], cell = '', q = false; text = String(text || '').replace(/^\uFEFF/, '').replace(/\r/g, '');
+    for (var i = 0; i < text.length; i++) { var c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+      else if (c === '"') q = true; else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n') { row.push(cell); out.push(row); row = []; cell = ''; } else cell += c; }
+    if (cell.length || row.length) { row.push(cell); out.push(row); }
+    return out;
+  }
+  function pair(r, d) {
+    var ids = r.key.split('|'), b = (pics || {})[ids[2]] || {};
+    function side(id, label) { var big = photoSrc(id, 1600), sm = photoSrc(id, 600);
+      return '<figure>' + (sm ? '<a href="' + esc(big) + '" target="_blank" rel="noopener" aria-label="Open the ' + esc(label) + ' photo full size"><img alt="' + esc(label) + ' photo" loading="lazy" referrerpolicy="no-referrer" src="' + esc(sm) + '"></a>' : '<div class="nopic">No photo</div>') + '<figcaption>' + esc(label) + '</figcaption></figure>'; }
+    return '<div class="pair">' + side(d.photo, (d.platform || 'This one') + ' · ' + ids[1]) + side(b.photo, (b.platform || 'eBay') + ' · ' + ids[2]) + '</div>';
   }
 
   /* ---------- Google: Sheets (data) and Drive (who am I, wake address) ---------- */
@@ -187,7 +231,7 @@
     if (!token) { render(); return; }
     api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
       rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
-      $('banner').className = 'banner hidden'; render();
+      $('banner').className = 'banner hidden'; render(); loadPics();
     }).catch(function (e) { banner('Could not load: ' + e.message); });
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
   }
@@ -237,11 +281,11 @@
     return '<div class="sent">✓ ' + hm(at) + ' · applies by ' + hm(at + APPLY_MS) + (live ? ' <button class="btn" type="button" data-undo="' + esc(r.key) + '"><i class="ti ti-arrow-back-up"></i> Undo</button>' : '') + '</div>';
   }
   function itemCard(r, opts) {
-    var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red;
+    var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
     var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
-      '<div class="item">' + thumb(d.photo) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, d.platform, d.shelf ? 'shelf ' + d.shelf : '', d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
+      '<div class="item">' + (isPair ? '' : thumb(d.photo)) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, d.platform, d.shelf ? 'shelf ' + d.shelf : '', d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
       (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
-      (d.why ? '<p class="what">' + esc(d.why) + '</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
+      (isPair ? pair(r, d) : '') + (d.why ? '<p class="what">' + esc(d.why) + '</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
     var acts = [];
     if (r.section === 'remove') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
@@ -252,18 +296,76 @@
         acts.push('<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'); }
     } else if (r.section === 'go') { acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Go</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Not this one</button>'); }
     else if (r.section === 'check') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');
+      if (isPair) h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Leave blank if you are not sure. Yes then keeps one count for both sites.</p>';
       acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">No</button>'); }
     else if (r.section === 'vinted') {
       if (d.folder) acts.push('<a class="btn" href="https://drive.google.com/drive/folders/' + esc(d.folder) + '" target="_blank" rel="noopener">Open folder</a>');
       acts.push('<button class="btn" type="button" data-copy="' + esc(r.key) + '">Copy text</button><a class="btn" href="https://www.vinted.co.uk/items/new" target="_blank" rel="noopener">Open Vinted</a>');
       h += '<input class="txtin" type="url" placeholder="Paste the Vinted link (or leave blank)" data-link="' + esc(r.key) + '">';
       acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>');
+    } else if (r.section === 'restock' && d.have !== undefined) {
+      h += '<p class="what">' + esc(['have ' + d.have, d.on_order ? d.on_order + ' on order' : '', 'min ' + d.min_stock, 'buy ' + d.buy].filter(Boolean).join(' · ')) + '</p>' + priceLine(d);
+      if (d.url) acts.push('<a class="btn main" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on Temu</a>'); else if (d.url_flag) acts.push('<span class="why red">' + esc(d.url_flag) + '</span>');
+      acts.push(opBox(r.key, ['Ordered', 'Arrived'], d.buy));
     } else if (r.section === 'restock') { if (d.url) acts.push('<a class="btn main" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on Temu</a>');
       acts.push('<input class="num" inputmode="numeric" aria-label="How many arrived" data-arrived="' + esc(r.key) + '"><button class="btn yes" type="button" data-arrive="' + esc(r.key) + '">Arrived</button>'); h += '<p class="what">' + esc([d.cheaper_now, 'last cost ' + d.last_cost, d.sell_through_30 + ' sold in 30 days', 'profit ' + d.profit_per_unit + ' each', 'buy ' + d.qty_to_target + ' to reach target'].filter(Boolean).join(' · ')) + '</p>'; }
+    else if (r.section === 'temu' && d.kind === 'coupon') {
+      h += '<p class="what">' + esc([d.min_spend ? 'orders over ' + d.min_spend : '', d.expires ? 'ends ' + d.expires : ''].filter(Boolean).join(' · ') || d.from) + '</p>';
+      if (d.code) acts.push('<button class="btn" type="button" data-copycode="' + esc(d.code) + '">Copy code ' + esc(d.code) + '</button>');
+      acts.push('<button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Used or not needed</button>');
+    }
     else if (r.section === 'temu') { h += '<p class="what">' + esc([d.days_left + ' days left', d.drop ? 'dropped ' + d.drop : ''].filter(Boolean).join(' · ')) + '</p>'; acts.push('<button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Claimed</button>'); }
     return h + '<div class="acts">' + acts.join('') + '</div></div>';
   }
 
+  // Price line on restock and stock cards: last price, Lisa's buy-at price, the last Temu price seen, and buy now / wait.
+  function priceLine(d) {
+    var verdict = d.buy_now === true ? (d.buy_at ? 'Buy now: at or below your ' + d.buy_at : '') : d.buy_now === false ? 'Wait: ' + d.price_now + ' is above your ' + d.buy_at : d.buy_at ? 'Price not seen yet' : '';
+    var bits = [d.last_cost ? 'last paid ' + d.last_cost : '', d.buy_at ? 'buy at ' + d.buy_at : '', d.price_now ? 'Temu now ' + d.price_now + (d.price_seen_at ? ' (' + d.price_seen_at + ')' : '') : ''].filter(Boolean);
+    return (bits.length ? '<p class="what">' + esc(bits.join(' · ')) + '</p>' : '') + (verdict ? '<p class="verdict ' + (d.buy_now === true ? 'go' : 'wait') + '">' + esc(verdict) + '</p>' : '');
+  }
+  // A number box with one button per action ("Count 4", "Ordered 6", "Arrived 6"): one answer on that code's row.
+  function opBox(key, ops, hint) {
+    return '<span class="opbox"><input class="num" inputmode="numeric" aria-label="How many" placeholder="' + esc(hint || '') + '" data-opin="' + esc(key) + '">' +
+      ops.map(function (o) { return '<button class="btn" type="button" data-op="' + o + '" data-opkey="' + esc(key) + '">' + o + '</button>'; }).join('') + '</span>';
+  }
+  // Stock: one row per product code. Search, and chips for Low / No count. Count, Ordered, Arrived and settings write one answer each.
+  function pageStock() {
+    var list = byCat(rows.filter(function (r) { return r.section === 'stock' && !r.applied_at && shown(r); }));
+    var low = list.filter(function (r) { return detail(r).low; }).length, unknown = list.filter(function (r) { return detail(r).unknown; }).length;
+    var h = '<p class="needs">Stock</p><p class="hint">What you have, what is on order, and when to buy. Counts change only your stock list until you go live.</p>';
+    if (!list.length) return h + '<div class="card"><p class="what">The stock list appears after the engine update is pasted and set up.</p></div>';
+    h += '<input class="txtin" type="search" placeholder="Find an item or code" aria-label="Find an item or code" data-find>';
+    h += '<div class="chips" role="group" aria-label="Show">' + [['all', 'All ' + list.length], ['low', 'Low ' + low], ['unknown', 'No count ' + unknown]].map(function (c) {
+      return '<button class="chip" type="button" data-sfilter="' + c[0] + '" aria-pressed="' + (stockFilter === c[0]) + '">' + c[1] + '</button>'; }).join('') + '</div>';
+    list.filter(function (r) { var d = detail(r); return stockFilter === 'all' || (stockFilter === 'low' && d.low) || (stockFilter === 'unknown' && d.unknown); }).forEach(function (r) {
+      var d = detail(r);
+      h += '<div class="card stockrow' + (d.low ? ' acc2' : '') + '" data-text="' + esc((r.title + ' ' + d.item_sku + ' ' + (d.shelf || '')).toLowerCase()) + '"><div class="item">' + thumb(d.photo) + '<div class="t">' + esc(r.title) +
+        '<div class="m">' + esc([d.item_sku, d.shelf ? 'shelf ' + d.shelf : '', d.owner && d.owner !== 'Lisa' ? d.owner : '', d.listings + (d.listings === 1 ? ' listing' : ' listings')].filter(Boolean).join(' · ')) + '</div></div></div>' +
+        '<div class="facts"><div class="fact"><span class="k">Have</span><span class="v' + (d.unknown ? ' red' : '') + '">' + (d.unknown ? '?' : esc(d.have)) + '</span></div><div class="fact"><span class="k">On order</span><span class="v">' + esc(d.on_order || 0) + '</span></div><div class="fact"><span class="k">Min</span><span class="v">' + (d.min === '' ? '–' : esc(d.min)) + '</span></div></div>' +
+        priceLine(d);
+      if (r.answer) { h += '<div class="sent">✓ ' + esc(r.answer) + ' · saved, the engine applies it after 10 minutes</div></div>'; return; }
+      h += '<div class="acts">' + opBox(r.key, ['Count', 'Ordered', 'Arrived']) + (d.url ? '<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on Temu</a>' : '') + '</div>' +
+        '<details><summary>Settings</summary><input class="txtin" type="text" data-setin="' + esc(r.key) + '" placeholder="min 2, reorder 6, buy at 1.20, shelf B2, link https://www.temu.com/..." aria-label="Settings">' +
+        '<button class="btn" type="button" data-set="' + esc(r.key) + '">Save settings</button><p class="hint">Now: ' + esc(['min ' + (d.min === '' ? 'not set' : d.min), 'reorder ' + (d.reorder || 'not set'), 'buy at ' + (d.buy_at || 'not set'), d.url ? 'Temu link set' : 'no Temu link'].join(' · ')) + '</p></details></div>';
+    });
+    return h;
+  }
+  // Temu order list: what to buy, best first (price at or below your buy-at price), with the exact link; coupons; claims.
+  function pageTemu() {
+    var buys = rows.filter(function (r) { return r.section === 'restock' && !r.applied_at && shown(r); });
+    var rank = function (r) { var b = detail(r).buy_now; return b === true ? 0 : b === 'unknown' ? 1 : 2; };
+    buys.sort(function (a, b) { return rank(a) - rank(b) || a.title.localeCompare(b.title); });
+    var total = buys.reduce(function (n, r) { var d = detail(r), c = parseFloat(String(d.price_now || d.last_cost || '').replace(/[^\d.]/g, '')); return n + (isNaN(c) || !d.buy ? 0 : c * d.buy); }, 0);
+    var h = '<p class="needs">Temu order list: ' + buys.length + '</p><p class="hint">Temu cannot take orders from the system: tap Open on Temu, buy, then type how many and tap Ordered. Tap Arrived when it lands.</p>';
+    if (total) h += '<p class="what">About £' + total.toFixed(2) + ' for everything below (last prices).</p>';
+    h += buys.length ? buys.map(function (r) { return itemCard(r); }).join('') : '<div class="card acc5"><h2>Nothing to buy</h2><p class="what">Items appear here when they reach their minimum.</p></div>';
+    var cps = rows.filter(function (r) { return r.section === 'temu' && !r.applied_at && !r.answer && detail(r).kind === 'coupon'; });
+    if (cps.length) h += '<p class="grp">Coupons and offers · ' + cps.length + '</p>' + cps.map(function (r) { return itemCard(r); }).join('');
+    var cl = rows.filter(function (r) { return r.section === 'temu' && !r.applied_at && detail(r).kind !== 'coupon'; });
+    if (cl.length) h += '<p class="grp">Price drops to claim · ' + cl.length + '</p>' + cl.map(function (r) { return itemCard(r); }).join('');
+    return h;
+  }
   /* ---------- screens ---------- */
   function siteChips() {
     var have = []; rows.forEach(function (r) { var s = siteOf(r); if (s && have.indexOf(s) < 0) have.push(s); });
@@ -326,7 +428,10 @@
     return h;
   }
   function pageInsights() {
-    var h = pageNumbers();
+    var st = rows.filter(function (r) { return r.section === 'stock' && !r.applied_at; }), low = st.filter(function (r) { return detail(r).low; }).length;
+    var buy = rows.filter(function (r) { return r.section === 'restock' && !r.applied_at; }).length;
+    var h = '<div class="tiles three"><a class="tile big" href="#/stock"><span class="v">' + low + '</span><span class="k">Stock low</span></a><a class="tile big" href="#/temu"><span class="v">' + buy + '</span><span class="k">Temu to buy</span></a><a class="tile big" href="#/round"><span class="v">' + st.length + '</span><span class="k">Stock round</span></a></div>';
+    h += pageNumbers();
     ['restock', 'temu'].forEach(function (s) { var l = byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); }));
       if (l.length) h += '<p class="grp">' + esc(SECTIONS[s].name) + ' · ' + l.length + '</p>' + l.map(function (r) { return itemCard(r); }).join(''); });
     return h + '<div class="acts"><a class="btn" href="#/round">Stock round</a></div>';
@@ -343,7 +448,7 @@
   }
   function pageRound() {
     var items = byCat(rows.filter(function (r) { return r.section === 'round' && !r.applied_at; }));
-    if (!items.length) return '<p class="needs">Stock round</p><div class="card acc5"><h2>No round open</h2><p class="what">The monthly round starts on the first Monday.</p></div>';
+    if (!items.length) return '<p class="needs">Stock round</p><div class="card acc5"><h2>No round open</h2><p class="what">The monthly round starts on the first Monday. Until then, check or correct any count on the Stock page.</p><div class="acts"><a class="btn main" href="#/stock">Open Stock</a><a class="btn" href="#/insights">← Insights</a></div></div>';
     var shelves = []; items.forEach(function (r) { var s = detail(r).shelf || '?'; if (shelves.indexOf(s) < 0) shelves.push(s); });
     var at = Math.min(round.i || 0, shelves.length - 1), shelf = shelves[at];
     var h = '<p class="needs">Shelf ' + esc(shelf) + '</p><p class="what">' + (at + 1) + ' of ' + shelves.length + ' shelves. Tick if right, or type what is there.</p>';
@@ -380,7 +485,7 @@
     $('signin').disabled = !token && !ready;
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see what needs you</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
     $('view').innerHTML = pack && view === 'do' ? pagePack() : sheet && view === 'do' ? pageSheet() : view === 'me' ? pageMe() : view === 'round' ? pageRound() : view === 'numbers' ? pageNumbers()
-      : view === 'insights' ? pageInsights() : TABS[view] ? pageTab(view) : SECTIONS[view] ? pageList(view) : pageMe();
+      : view === 'insights' ? pageInsights() : view === 'stock' ? pageStock() : view === 'temu' ? pageTemu() : TABS[view] ? pageTab(view) : SECTIONS[view] ? pageList(view) : pageMe();
   }
 
   /* ---------- taps ---------- */
@@ -389,7 +494,7 @@
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
-    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; return render(); }
+    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; pics = null; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }
     if (t.hasAttribute('data-who')) { who = t.getAttribute('data-who'); try { localStorage.setItem('mkt.who', who); } catch (x) {} return render(); }
@@ -402,8 +507,16 @@
     if (t.hasAttribute('data-ans')) {
       var r = find(t.getAttribute('data-ans')), v = t.getAttribute('data-v'), note = '';
       if (r.section === 'vinted') { var inp = document.querySelector('[data-link="' + r.key + '"]'); note = inp ? inp.value.trim() : ''; }
+      var qb = document.querySelector('[data-qty="' + r.key + '"]');
+      if (qb && v === 'Yes' && qb.value.trim()) { var qn = parseInt(qb.value, 10); if (!(qn >= 0)) return banner('Type a number for how many you have, or leave it blank.'); note = 'qty ' + qn; }
       t.disabled = true; return answer(r, v, note);
     }
+    if (t.hasAttribute('data-op')) { var ok = find(t.getAttribute('data-opkey')), ib = document.querySelector('[data-opin="' + ok.key + '"]'), on = ib ? parseInt(ib.value, 10) : NaN;
+      if (!(on >= 0)) return banner('Type how many first, then tap ' + t.getAttribute('data-op') + '.'); t.disabled = true; return answer(ok, t.getAttribute('data-op') + ' ' + on, ''); }
+    if (t.hasAttribute('data-set')) { var sr = find(t.getAttribute('data-set')), si = document.querySelector('[data-setin="' + sr.key + '"]'), sv = si ? si.value.trim() : '';
+      if (!sv) return banner('Type what to change, for example: min 2, reorder 6, buy at 1.20'); t.disabled = true; return answer(sr, 'Set', sv); }
+    if (t.hasAttribute('data-sfilter')) { stockFilter = t.getAttribute('data-sfilter'); return render(); }
+    if (t.hasAttribute('data-copycode')) { navigator.clipboard.writeText(t.getAttribute('data-copycode')).then(function () { t.textContent = 'Copied'; }); return; }
     if (t.hasAttribute('data-arrive')) { var ar = find(t.getAttribute('data-arrive')), box = document.querySelector('[data-arrived="' + ar.key + '"]'), n = box ? parseInt(box.value, 10) : NaN;
       if (!(n >= 0)) return banner('Type how many arrived, then tap Arrived.'); t.disabled = true; return answer(ar, 'Arrived ' + n, ''); }
     if (t.hasAttribute('data-undo')) { var u = find(t.getAttribute('data-undo')); if (Date.now() < Date.parse(u.answered_at) + UNDO_MS) answer(u, '', ''); return; }
@@ -416,7 +529,8 @@
     if (t.hasAttribute('data-shelf')) { round.i = (round.i || 0) + Number(t.getAttribute('data-shelf')); showAll = false; return render(); }
     if (a === 'finish') return finishRound();
   });
-  document.addEventListener('input', function (e) { var k = e.target.getAttribute('data-count'); if (k) { round[k] = Object.assign(round[k] || {}, { n: e.target.value, ok: false }); } });
+  document.addEventListener('input', function (e) {
+    if (e.target.hasAttribute('data-find')) { var q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.stockrow').forEach(function (c) { c.classList.toggle('hidden', !!q && c.getAttribute('data-text').indexOf(q) < 0); }); return; } var k = e.target.getAttribute('data-count'); if (k) { round[k] = Object.assign(round[k] || {}, { n: e.target.value, ok: false }); } });
   document.addEventListener('change', function () { if (view === 'round') render(); });
   // No reason, no save (CD Hub round rule). Each item row gets "ok" or "<count> <reason>".
   function finishRound() {

@@ -20,6 +20,8 @@ function sampleRows() {
 // Pretend Sheets: answers reads from `rows`, records every write, and can swap a row's key to mimic a moved row.
 async function sheets(page, rows, opts = {}) {
   const writes = [];
+  // The listings file (second photo on "Same item?" cards): empty unless a test gives one.
+  await page.route(/googleapis\.com\/drive\/v3\/files\/[\w-]+\?alt=media/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: 'listing_id,image_url\n' }));
   await page.route(SHEETS, async (route) => {
     const req = route.request(), url = decodeURIComponent(req.url());
     if (req.method() === 'PUT') {
@@ -275,5 +277,103 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#view .card .parcel')).toHaveText(['#2', '#3', '#1']);
     await expect(page.locator('#view')).toContainText('The printable PDF is not made yet');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+  test('"Same item?" card shows both photos side by side, big, each opening full size; the eBay photo comes from the listings file', async ({ page }) => {
+    await page.route(/i\.ebayimg\.com|drive\.google\.com\/thumbnail/, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>' }));
+    const csv = 'COUNT: 2 rows held\nlisting_id,item_sku,platform,title,image_url\nL0020,,Vinted,"Rascal watch, green case",\nL0156,,eBay,"Linus and Lucy watch, green case",https://i.ebayimg.com/images/g/LpsA/s-l300.jpg\n';
+    const rows = [['LINK|L0020|L0156', 'check', 'Other', 'Rascal watch', JSON.stringify({ kind: 'link', platform: 'Vinted', photo: '1AbCdEfGhIjKlMnOpQrStUvWxYz', why: 'Same item as on eBay?' }), ago(5)]];
+    await sheets(page, rows);
+    await page.route(/googleapis\.com\/drive\/v3\/files\/1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW\?alt=media/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: csv }));
+    await open(page, '#/decide');
+    await expect(page.locator('#view .pair figure')).toHaveCount(2);
+    await expect(page.locator('#view .pair figcaption')).toHaveText(['Vinted · L0020', 'eBay · L0156']);
+    await expect(page.locator('#view .pair img[src*="drive.google.com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvWxYz&sz=w600"]')).toHaveCount(1);
+    await expect(page.locator('#view .pair img[src="https://i.ebayimg.com/images/g/LpsA/s-l500.jpg"]')).toHaveCount(1);
+    await expect(page.locator('#view .pair a').nth(1)).toHaveAttribute('href', 'https://i.ebayimg.com/images/g/LpsA/s-l1600.jpg');
+    await page.setViewportSize({ width: 390, height: 844 });
+    const box = await page.locator('#view .pair img').first().boundingBox();
+    expect(box.width).toBeGreaterThan(140);                                     // big enough to read "7F" against "10"
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+  test('"Same item?" Yes with a total: the quantity goes in the note as "qty 4"; blank stays blank; not a number is refused', async ({ page }) => {
+    const rows = [['LINK|L0018|L0155', 'check', 'Other', 'Olaf watch', JSON.stringify({ kind: 'link', platform: 'Vinted', why: 'Same item as on eBay?' }), ago(5)],
+                  ['LINK|L0020|L0156', 'check', 'Other', 'Rascal watch', JSON.stringify({ kind: 'link', platform: 'Vinted', why: 'Same item?' }), ago(5)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/check');
+    await page.locator('[data-action="all"]').click();
+    await page.locator('[data-qty="LINK|L0018|L0155"]').fill('two');
+    await page.locator('[data-ans="LINK|L0018|L0155"][data-v="Yes"]').click();
+    await expect(page.locator('#banner')).toContainText('Type a number');
+    await page.locator('[data-qty="LINK|L0018|L0155"]').fill('4');
+    await page.locator('[data-ans="LINK|L0018|L0155"][data-v="Yes"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Yes', 'qty 4']);
+    await page.locator('[data-ans="LINK|L0020|L0156"][data-v="No"]').click();
+    await expect.poll(() => writes.length).toBe(2);
+    expect(writes[1].body.values[0].slice(0, 2)).toEqual(['No', '']);
+  });
+
+  test('Stock page: have / on order / min per code; Low and No-count chips; search; Count, Ordered and Settings each write one answer', async ({ page }) => {
+    const rows = [
+      ['ST|CASE-BLUE', 'stock', 'Other', 'Blue roll case', JSON.stringify({ item_sku: 'CASE-BLUE', have: 1, on_order: 0, min: 2, reorder: 6, low: true, url: 'https://www.temu.com/blue-roll-case-g-123.html', buy_at: '£1.00', price_now: '£0.95', buy_now: true, listings: 1 }), ago(5)],
+      ['ST|SKU-0050', 'stock', 'Other', 'Olaf reverse watch', JSON.stringify({ item_sku: 'SKU-0050', have: '', unknown: true, on_order: 0, min: '', listings: 2 }), ago(5)],
+      ['ST|SKU-0060', 'stock', 'Clothes', 'Grey jumper', JSON.stringify({ item_sku: 'SKU-0060', have: 3, on_order: 0, min: '', listings: 1 }), ago(5)],
+    ];
+    const writes = await sheets(page, rows);
+    await open(page, '#/insights');
+    await expect(page.locator('#view a.tile[href="#/stock"]')).toContainText('1');
+    await page.locator('#view a.tile[href="#/stock"]').click();
+    await expect(page.locator('#view .stockrow')).toHaveCount(3);
+    await expect(page.locator('#tabs a[data-nav="insights"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#view .verdict.go')).toHaveText('Buy now: at or below your £1.00');
+    await page.locator('[data-sfilter="unknown"]').click();
+    await expect(page.locator('#view .stockrow')).toHaveCount(1);
+    await page.locator('[data-sfilter="all"]').click();
+    await page.locator('[data-find]').fill('jumper');
+    await expect(page.locator('#view .stockrow:visible')).toHaveCount(1);
+    await page.locator('[data-find]').fill('');
+    await page.locator('[data-op="Count"][data-opkey="ST|SKU-0050"]').click();
+    await expect(page.locator('#banner')).toContainText('Type how many first');
+    await page.locator('[data-opin="ST|SKU-0050"]').fill('4');
+    await page.locator('[data-op="Count"][data-opkey="ST|SKU-0050"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Marketplace!G3:J3'); expect(writes[0].body.values[0][0]).toBe('Count 4');
+    await page.locator('.stockrow', { hasText: 'Blue roll case' }).locator('summary').click();
+    await page.locator('[data-setin="ST|CASE-BLUE"]').fill('min 2, reorder 6, buy at 1.20');
+    await page.locator('[data-set="ST|CASE-BLUE"]').click();
+    await expect.poll(() => writes.length).toBe(2);
+    expect(writes[1].body.values[0].slice(0, 2)).toEqual(['Set', 'min 2, reorder 6, buy at 1.20']);
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
+  test('Temu order list: buy-now items first with the exact link and price; Wait when above the buy-at price; coupons with Copy code; Ordered writes "Ordered 6"', async ({ page }) => {
+    const rows = [
+      ['RS|SKU-1', 'restock', 'Other', 'Wait item', JSON.stringify({ item_sku: 'SKU-1', have: 0, on_order: 0, min_stock: 2, buy: 4, last_cost: '£1.10', buy_at: '£1.00', price_now: '£1.25', buy_now: false, url: 'https://www.temu.com/a-g-1.html' }), ago(5)],
+      ['RS|SKU-2', 'restock', 'Other', 'Buy item', JSON.stringify({ item_sku: 'SKU-2', have: 1, on_order: 0, min_stock: 2, buy: 6, last_cost: '£1.05', buy_at: '£1.00', price_now: '£0.95', buy_now: true, url: 'https://www.temu.com/b-g-2.html' }), ago(5)],
+      ['CP|30% off|SAVE30|2026-10-25', 'temu', 'Other', 'Temu 30% off · code SAVE30', JSON.stringify({ kind: 'coupon', off: '30% off', code: 'SAVE30', min_spend: '£20.00', expires: '2026-11-02' }), ago(5)],
+    ];
+    const writes = await sheets(page, rows);
+    await open(page, '#/temu');
+    await expect(page.locator('#view .needs')).toHaveText('Temu order list: 2');
+    await expect(page.locator('#view .card .item .t').first()).toContainText('Buy item');
+    await expect(page.locator('#view .verdict.go')).toHaveText('Buy now: at or below your £1.00');
+    await expect(page.locator('#view .verdict.wait')).toHaveText('Wait: £1.25 is above your £1.00');
+    await expect(page.locator('#view a', { hasText: 'Open on Temu' }).first()).toHaveAttribute('href', 'https://www.temu.com/b-g-2.html');
+    await expect(page.locator('#view')).toContainText('About £10.70');
+    await expect(page.locator('[data-copycode="SAVE30"]')).toBeVisible();
+    await expect(page.locator('#view')).toContainText('orders over £20.00 · ends 2026-11-02');
+    await page.locator('[data-opin="RS|SKU-2"]').fill('6');
+    await page.locator('[data-op="Ordered"][data-opkey="RS|SKU-2"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Marketplace!G3:J3'); expect(writes[0].body.values[0][0]).toBe('Ordered 6');
+  });
+  test('the last button on a long page can always be scrolled clear of the bottom tab bar @regression', async ({ page }) => {
+    const rows = Array.from({ length: 12 }, (_, i) => ['RM|L' + i, 'remove', 'Clothes', 'Sample item ' + i, JSON.stringify({ platform: 'Vinted' }), ago(5)]);
+    await sheets(page, rows);
+    await open(page, '#/do');
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const last = await page.locator('#view .card').last().boundingBox(), bar = await page.locator('#tabs').boundingBox();
+    expect(last.y + last.height).toBeLessThanOrEqual(bar.y);
   });
 });
