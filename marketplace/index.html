@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-marketplace-2026-10-24">
+<meta name="build" content="ljr-marketplace-2026-10-25-v2">
 <title>Marketplace</title>
-<!-- Marketplace (24 Oct 2026). PUBLIC repo: no data, no secrets. Ids come from ../config.js (DASH_CONFIG.marketplace);
+<!-- Marketplace V2 (25 Oct 2026): tabs Home / Do now / Decide / Reply / Insights, person chips, packing mode, label sheet. PUBLIC repo: no data, no secrets. Ids come from ../config.js (DASH_CONFIG.marketplace);
      everything else is read at run time with Lisa's Google sign-in from the "Marketplace" tab of RR_OPEN-WORK, which the
      RR_MKT-ENGINE Apps Script fills. A tap writes ONLY the 4 answer cells (G:J) of one row; the engine applies it after 10 minutes. -->
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
@@ -41,12 +41,27 @@
   .btn.yes { color: var(--ljr-5-text); border-color: var(--ljr-5); }
   .btn.no { color: var(--ljr-2-text); border-color: var(--ljr-2); }
   .hidden { display: none !important; }
-  nav.tabs { display: flex; gap: 6px; overflow-x: auto; padding: 0 16px 10px; scrollbar-width: none; }
-  nav.tabs a { --radius: 999px; flex: none; text-decoration: none; font-size: 14px; font-weight: 600; padding: 8px 14px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); display: inline-flex; gap: 6px; align-items: center; min-height: 40px; }
-  nav.tabs a:hover, nav.tabs a[aria-current="page"] { border-color: var(--muted); }
-  nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-4); color: var(--ljr-4-on); border-radius: var(--radius); padding: 0 7px; }
-  nav.tabs .n:empty { display: none; }
-  main { padding: 16px 16px 64px; display: flex; flex-direction: column; gap: 14px; }
+  /* V2: five tabs in a bar at the bottom (thumb reach on the phone), person chips under the title. */
+  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px 8px 10px; background: var(--surface); border-top: 1px solid var(--line); }
+  nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; }
+  nav.tabs a:hover { border-color: var(--line); }
+  nav.tabs a[aria-current="page"] { border-color: var(--ink); background: var(--bg); }
+  nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-2-solid); color: var(--ljr-2-on); border-radius: 999px; padding: 0 7px; min-width: 20px; }
+  nav.tabs .n:empty { visibility: hidden; }
+  .chips.people { padding: 0 16px 10px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  main { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  .tiles.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tile.big { min-height: 88px; display: flex; flex-direction: column; justify-content: center; text-decoration: none; }
+  .tile.big .v { font-size: 28px; }
+  .hint { font-size: 14px; color: var(--muted); margin: 0; }
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .fact { background: var(--bg); border-radius: var(--radius); padding: 8px 10px; }
+  .fact .k { display: block; font-size: 12px; color: var(--muted); } .fact .v { font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }
+  .parcel { font-size: 34px; font-weight: 700; }
+  .dropcode { border: 2px dashed var(--line); border-radius: var(--radius); padding: 12px; text-align: center; }
+  .dropcode .code { display: block; font-size: 22px; font-weight: 700; letter-spacing: 2px; overflow-wrap: anywhere; }
+  .packbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
   .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
   .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
   .needs { font-size: 26px; font-weight: 700; margin: 0; }
@@ -87,7 +102,7 @@
   .qr .code { font-size: 44px; font-weight: 700; letter-spacing: 3px; word-break: break-all; }
   .qr img { max-width: 90vw; max-height: 60vh; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-  a.btn, nav.tabs a { text-decoration: none; }
+  a.btn, nav.tabs a, a.tile { text-decoration: none; }
 </style>
 </head>
 <body>
@@ -96,24 +111,19 @@
     <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh"><i class="ti ti-refresh"></i></button>
     <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
     <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
-  <nav class="tabs hidden" id="tabs" aria-label="Marketplace sections">
-    <a href="#/me" data-nav="me">Me</a>
-    <a href="#/remove" data-nav="remove">Remove <span class="n" id="n-remove"></span></a>
-    <a href="#/message" data-nav="message">Messages <span class="n" id="n-message"></span></a>
-    <a href="#/post" data-nav="post">Post <span class="n" id="n-post"></span></a>
-    <a href="#/go" data-nav="go">Go <span class="n" id="n-go"></span></a>
-    <a href="#/vinted" data-nav="vinted">Vinted <span class="n" id="n-vinted"></span></a>
-    <a href="#/check" data-nav="check">Check list <span class="n" id="n-check"></span></a>
-    <a href="#/restock" data-nav="restock">Restock <span class="n" id="n-restock"></span></a>
-    <a href="#/temu" data-nav="temu">Temu <span class="n" id="n-temu"></span></a>
-    <a href="#/round" data-nav="round">Stock round</a>
-    <a href="#/numbers" data-nav="numbers">Numbers</a>
-  </nav>
+  <div class="chips people hidden" id="people" role="group" aria-label="Whose items"></div>
 </header>
 <main class="wrap">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
 </main>
+<nav class="tabs hidden" id="tabs" aria-label="Marketplace sections">
+  <a href="#/me" data-nav="me"><span>Home</span><span class="n"></span></a>
+  <a href="#/do" data-nav="do"><span>Do now</span><span class="n" id="n-do"></span></a>
+  <a href="#/decide" data-nav="decide"><span>Decide</span><span class="n" id="n-decide"></span></a>
+  <a href="#/reply" data-nav="reply"><span>Reply</span><span class="n" id="n-reply"></span></a>
+  <a href="#/insights" data-nav="insights"><span>Insights</span><span class="n"></span></a>
+</nav>
 <div id="qr" class="qr hidden" role="dialog" aria-label="Drop-off code"></div>
 <script>
 (function () {
@@ -135,7 +145,13 @@
     check: { name: 'Check your list', verb: 'Yes', no: 'No', what: 'Keeps your list right. Changes only your list, never eBay or Vinted.' }
   };
   var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'check', 'restock', 'temu'];
-  var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false;
+  // V2 tabs: each groups engine sections. Old links (#/remove, #/check, #/numbers ...) still open and light up their tab.
+  var TABS = { do: ['remove', 'post', 'vinted'], decide: ['go', 'check'], reply: ['message'], insights: ['restock', 'temu'] };
+  var TAB_OF = { numbers: 'insights', round: 'insights' }; Object.keys(TABS).forEach(function (t) { TABS[t].forEach(function (s) { TAB_OF[s] = t; }); });
+  var PEOPLE = ['All', 'Lisa', 'CY', 'G', 'H', 'CN'];   // a card with no owner is Lisa's
+  var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false;
+  var who = 'All', site = 'All';
+  try { who = localStorage.getItem('mkt.who') || 'All'; if (PEOPLE.indexOf(who) < 0) who = 'All'; } catch (e) {}
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
@@ -202,8 +218,19 @@
   }
 
   /* ---------- what needs Lisa ---------- */
-  function waiting(sec) { return rows.filter(function (r) { return r.section === sec && !r.answer && !r.applied_at; }); }
+  function owner(r) { return detail(r).owner || 'Lisa'; }
+  var SITE_NAMES = { ebay: 'eBay', vinted: 'Vinted', etsy: 'Etsy', depop: 'Depop', temu: 'Temu', facebook: 'Facebook' };
+  function siteOf(r) { var p = String(detail(r).platform || '').toLowerCase(); return SITE_NAMES[p] || (p ? p.charAt(0).toUpperCase() + p.slice(1) : ''); }
+  function shown(r) { return (who === 'All' || owner(r) === who) && (site === 'All' || siteOf(r).toLowerCase() === site.toLowerCase()); }
+  function waiting(sec) { return rows.filter(function (r) { return r.section === sec && !r.answer && !r.applied_at && shown(r); }); }
+  function tabCount(t) { return TABS[t].filter(function (s) { return !SECTIONS[s].quiet; }).reduce(function (n, s) { return n + waiting(s).length; }, 0); }
   function needsCount() { return ORDER.filter(function (s) { return !SECTIONS[s].quiet; }).reduce(function (n, s) { return n + waiting(s).length; }, 0); }
+  // Posts in packing order: shelf, then title. The parcel number is the engine's when it sends one, else the place in this list.
+  function posts() {
+    return rows.filter(function (r) { return r.section === 'post' && !r.applied_at && shown(r); })
+      .sort(function (a, b) { var x = detail(a).shelf || '~', y = detail(b).shelf || '~'; return x < y ? -1 : x > y ? 1 : a.title.localeCompare(b.title); })
+      .map(function (r, i) { r._no = detail(r).parcel_no || (i + 1); return r; });
+  }
   function byCat(list) { return list.slice().sort(function (a, b) { var x = CATS.indexOf(a.category), y = CATS.indexOf(b.category); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || a.title.localeCompare(b.title); }); }
   function sentLine(r) {
     var at = Date.parse(r.answered_at), live = Date.now() < at + UNDO_MS;
@@ -212,7 +239,7 @@
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red;
     var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
-      '<div class="item">' + thumb(d.photo) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, d.platform, d.shelf ? 'shelf ' + d.shelf : '', d.courier].filter(Boolean).join(' · ')) + '</div>' +
+      '<div class="item">' + thumb(d.photo) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, d.platform, d.shelf ? 'shelf ' + d.shelf : '', d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
       (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
       (d.why ? '<p class="what">' + esc(d.why) + '</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
@@ -238,15 +265,71 @@
   }
 
   /* ---------- screens ---------- */
+  function siteChips() {
+    var have = []; rows.forEach(function (r) { var s = siteOf(r); if (s && have.indexOf(s) < 0) have.push(s); });
+    if (have.length < 2) return '';
+    return '<div class="chips" role="group" aria-label="Which site">' + ['All'].concat(have.sort()).map(function (s) {
+      return '<button class="chip" type="button" data-site="' + esc(s) + '" aria-pressed="' + (site === s) + '">' + esc(s) + '</button>'; }).join('') + '</div>';
+  }
   function pageMe() {
     var n = needsCount(), h = '<p class="needs">Needs you: ' + (n ? n : '<span class="zero">0</span>') + '</p>';
+    h += '<div class="tiles three">' + [['do', 'Do now'], ['decide', 'Decide'], ['reply', 'Reply']].map(function (t) {
+      return '<a class="tile big" href="#/' + t[0] + '"><span class="v">' + tabCount(t[0]) + '</span><span class="k">' + t[1] + '</span></a>'; }).join('') + '</div>';
     var first = null; ORDER.some(function (s) { if (SECTIONS[s].quiet) return false; var w = byCat(waiting(s)); if (w.length) { first = w[0]; return true; } return false; });
     if (first) h += itemCard(first, { head: true }); else h += '<div class="card acc5"><h2>All done</h2><p class="what">Nothing needs you right now.</p></div>';
-    var rest = ORDER.filter(function (s) { return waiting(s).length; }).map(function (s) { return '<a class="btn" href="#/' + s + '">' + esc(SECTIONS[s].name) + ' · ' + waiting(s).length + '</a>'; });
-    if (rest.length) h += '<div class="acts">' + rest.join('') + '</div>';
     var just = rows.filter(function (r) { return r.answer && !r.applied_at && Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
     if (just.length) h += '<p class="grp">Just done</p>' + just.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '</div>' + sentLine(r) + '</div>'; }).join('');
+    h += '<p class="hint"><i class="ti ti-camera"></i> New item? Put photos in <b>DROP › ' + esc(who === 'All' ? 'Lisa' : who) + ' › NEW to list</b>.</p>';
     return h;
+  }
+  // A tab: its sections one after another. Do now and Reply show every job; Decide shows one question at a time.
+  function pageTab(t) {
+    var names = { do: 'Do now', decide: 'Decide', reply: 'Reply' }, intro = { do: 'Jobs with your hands. Remove first, then post in shelf order.', decide: 'One question at a time. Undo for 10 minutes.', reply: 'Buyers who wrote. Reply on the site, then tap Done.' };
+    var h = '<p class="needs">' + names[t] + ': ' + tabCount(t) + '</p><p class="hint">' + intro[t] + '</p>' + siteChips();
+    if (t === 'do') { var p = posts().filter(function (r) { return !r.answer; }).length;
+      if (p) h += '<div class="acts"><button class="btn main" type="button" data-action="pack">Start packing (' + p + ')</button><button class="btn" type="button" data-action="sheet">Label sheet (' + p + ')</button></div>'; }
+    var list = []; TABS[t].forEach(function (s) { list = list.concat(byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); }))); });
+    if (!list.length) return h + '<div class="card acc5"><h2>Nothing here</h2></div>';
+    var one = t === 'decide' && !showAll, sec = null;
+    (one ? list.slice(0, 1) : list).forEach(function (r) { if (r.section !== sec) { sec = r.section; h += '<p class="grp">' + esc(SECTIONS[sec].name) + '</p>'; } h += itemCard(r); });
+    if (t === 'decide' && list.length > 1) h += '<button class="more" type="button" data-action="all">' + (showAll ? 'Show one at a time' : '1 of ' + list.length + ' · show all') + '</button>';
+    return h;
+  }
+  // Packing mode: one parcel at a time in shelf order. Found → the drop-off code shows once the engine has it → Posted.
+  function pagePack() {
+    var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found' || Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
+    if (!list.length) { pack = null; return '<p class="needs">Packing</p><div class="card acc5"><h2>All packed</h2><button class="btn main big" type="button" data-action="stoppack">Back to Do now</button></div>'; }
+    var i = Math.min(pack.i, list.length - 1), r = list[i], d = detail(r);
+    var h = '<div class="packbar"><span>Packing · ' + (i + 1) + ' of ' + list.length + '</span><button class="btn" type="button" data-action="stoppack">Stop</button></div>';
+    h += '<div class="card acc4"><div class="item">' + thumb(d.photo) + '<div class="t"><span class="parcel">#' + esc(r._no) + '</span><div>' + esc(r.title) + '</div><div class="m">' + esc([owner(r), d.platform ? 'sold on ' + d.platform : ''].filter(Boolean).join(' · ')) + '</div></div></div>';
+    h += '<div class="facts"><div class="fact"><span class="k">Shelf</span><span class="v">' + esc(d.shelf || '?') + '</span></div><div class="fact"><span class="k">Courier</span><span class="v">' + esc(d.courier || '?') + '</span></div><div class="fact"><span class="k">Post by</span><span class="v' + (d.red ? ' red' : '') + '">' + esc(d.post_by || '?') + '</span></div></div>';
+    if (d.found && d.qr) h += '<div class="dropcode"><span class="hint">Write #' + esc(r._no) + ' on the parcel. Drop-off code:</span><span class="code">' + esc(d.qr) + '</span></div>';
+    if (r.answer) h += sentLine(r);
+    else if (!d.found) h += '<button class="btn main big" type="button" data-ans="' + esc(r.key) + '" data-v="Found">Found it</button>';
+    else { if (d.qr) h += '<button class="btn" type="button" data-qr="' + esc(r.key) + '">Show QR</button>'; else if (d.qr_missing) h += '<span class="why red">QR not found</span>';
+      h += '<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'; }
+    if (r.answer === 'Found' && !d.found) h += '<p class="hint">The drop-off code shows here after the engine’s next run.</p>';
+    return h + (list.length > 1 ? '<button class="btn" type="button" data-action="nextpack">' + (r.answer ? 'Next parcel' : 'Skip for now') + '</button>' : '') + '</div>';
+  }
+  // Today's label sheet, grouped by courier, in parcel-number order. The PDF link appears when the engine makes one.
+  function pageSheet() {
+    var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; }), by = {};
+    list.forEach(function (r) { var c = detail(r).courier || 'Courier not set'; (by[c] = by[c] || []).push(r); });
+    var pdf = (rows.filter(function (r) { return r.section === 'post-head'; })[0] || {}), pd = detail(pdf).label_pdf;
+    var h = '<div class="packbar"><span class="needs">Label sheet</span><button class="btn" type="button" data-action="closesheet">Close</button></div>';
+    h += pd ? '<a class="btn main" href="https://drive.google.com/file/d/' + esc(pd) + '/view" target="_blank" rel="noopener">Open today’s PDF to print</a>' : '<p class="hint">The printable PDF is not made yet. Write each number on its parcel.</p>';
+    if (!list.length) return h + '<div class="card acc5"><h2>Nothing to post</h2></div>';
+    Object.keys(by).sort().forEach(function (c) {
+      h += '<p class="grp">' + esc(c) + ' · ' + by[c].length + (by[c].length === 1 ? ' parcel' : ' parcels') + '</p><div class="card">' + by[c].map(function (r) { var d = detail(r);
+        return '<div class="row"><span class="parcel">#' + esc(r._no) + '</span>' + thumb(d.photo) + '<div class="txt">' + esc(r.title) + '<div class="why">' + esc(['shelf ' + (d.shelf || '?'), owner(r), d.platform].filter(Boolean).join(' · ')) + '</div></div></div>'; }).join('') + '</div>';
+    });
+    return h;
+  }
+  function pageInsights() {
+    var h = pageNumbers();
+    ['restock', 'temu'].forEach(function (s) { var l = byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); }));
+      if (l.length) h += '<p class="grp">' + esc(SECTIONS[s].name) + ' · ' + l.length + '</p>' + l.map(function (r) { return itemCard(r); }).join(''); });
+    return h + '<div class="acts"><a class="btn" href="#/round">Stock round</a></div>';
   }
   function pageList(sec) {
     var s = SECTIONS[sec], list = byCat(rows.filter(function (r) { return r.section === sec && !r.applied_at; }));
@@ -287,13 +370,17 @@
   function render() {
     $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);   // menu only after sign-in
-    document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    ORDER.forEach(function (s) { var el = $('n-' + s); if (el) el.textContent = waiting(s).length || ''; });
+    var on = TAB_OF[view] || view;
+    document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    ['do', 'decide', 'reply'].forEach(function (t) { var n = tabCount(t); $('n-' + t).textContent = n || ''; $('n-' + t).parentNode.setAttribute('aria-label', $('n-' + t).previousSibling.textContent + (n ? ', ' + n + ' waiting' : '')); });
+    $('people').classList.toggle('hidden', !token || !rows.some(function (r) { return detail(r).owner && detail(r).owner !== 'Lisa'; }));
+    $('people').innerHTML = PEOPLE.map(function (p) { return '<button class="chip" type="button" data-who="' + p + '" aria-pressed="' + (who === p) + '">' + p + '</button>'; }).join('');
     $('stamp').textContent = M && M.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
     $('signin').disabled = !token && !ready;
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see what needs you</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
-    $('view').innerHTML = view === 'me' ? pageMe() : view === 'round' ? pageRound() : view === 'numbers' ? pageNumbers() : pageList(view);
+    $('view').innerHTML = pack && view === 'do' ? pagePack() : sheet && view === 'do' ? pageSheet() : view === 'me' ? pageMe() : view === 'round' ? pageRound() : view === 'numbers' ? pageNumbers()
+      : view === 'insights' ? pageInsights() : TABS[view] ? pageTab(view) : SECTIONS[view] ? pageList(view) : pageMe();
   }
 
   /* ---------- taps ---------- */
@@ -305,6 +392,13 @@
     if (a === 'signout') { token = null; DashAuth.clear(); rows = []; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }
+    if (t.hasAttribute('data-who')) { who = t.getAttribute('data-who'); try { localStorage.setItem('mkt.who', who); } catch (x) {} return render(); }
+    if (t.hasAttribute('data-site')) { site = t.getAttribute('data-site'); return render(); }
+    if (a === 'pack') { pack = { i: 0 }; sheet = false; return render(); }
+    if (a === 'nextpack') { pack.i += 1; if (pack.i >= posts().length) pack.i = 0; return render(); }
+    if (a === 'stoppack') { pack = null; return render(); }
+    if (a === 'sheet') { sheet = true; pack = null; return render(); }
+    if (a === 'closesheet') { sheet = false; return render(); }
     if (t.hasAttribute('data-ans')) {
       var r = find(t.getAttribute('data-ans')), v = t.getAttribute('data-v'), note = '';
       if (r.section === 'vinted') { var inp = document.querySelector('[data-link="' + r.key + '"]'); note = inp ? inp.value.trim() : ''; }
@@ -332,7 +426,7 @@
     todo.reduce(function (p, r) { var v = round[r.key]; return p.then(function () { return answer(r, v.ok || v.n === '' || v.n === undefined ? 'ok' : String(Number(v.n)) + ' ' + v.reason, ''); }); }, Promise.resolve())
       .then(function () { banner('Round saved. The engine applies it after 10 minutes.', true); });
   }
-  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'me'; showAll = false; render(); }
+  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'me'; showAll = false; pack = null; sheet = false; render(); }
   window.addEventListener('hashchange', route);
 
   /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */
