@@ -103,6 +103,7 @@
     <a href="#/post" data-nav="post">Post <span class="n" id="n-post"></span></a>
     <a href="#/go" data-nav="go">Go <span class="n" id="n-go"></span></a>
     <a href="#/vinted" data-nav="vinted">Vinted <span class="n" id="n-vinted"></span></a>
+    <a href="#/check" data-nav="check">Check list <span class="n" id="n-check"></span></a>
     <a href="#/restock" data-nav="restock">Restock <span class="n" id="n-restock"></span></a>
     <a href="#/temu" data-nav="temu">Temu <span class="n" id="n-temu"></span></a>
     <a href="#/round" data-nav="round">Stock round</a>
@@ -130,9 +131,10 @@
     go: { name: 'Go', verb: 'Go', no: 'Not this one', what: 'List this item.' },
     vinted: { name: 'Post to Vinted', verb: 'Done', what: 'Drag the photos into Vinted, paste the text, then tap Done.' },
     restock: { name: 'Restock', quiet: true, what: 'Low on stock. Buy on Temu when it suits you.' },
-    temu: { name: 'Temu claims', quiet: true, what: 'Price dropped. Claim in Temu if you like.' }
+    temu: { name: 'Temu claims', quiet: true, what: 'Price dropped. Claim in Temu if you like.' },
+    check: { name: 'Check your list', verb: 'Yes', no: 'No', what: 'Keeps your list right. Changes only your list, never eBay or Vinted.' }
   };
-  var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'restock', 'temu'];
+  var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'check', 'restock', 'temu'];
   var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false;
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -216,6 +218,8 @@
       else { if (d.qr) acts.push('<button class="btn" type="button" data-qr="' + esc(r.key) + '">Show QR</button>'); else if (d.qr_missing) acts.push('<span class="why red">QR not found</span>');
         acts.push('<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'); }
     } else if (r.section === 'go') { acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Go</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Not this one</button>'); }
+    else if (r.section === 'check') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');
+      acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">No</button>'); }
     else if (r.section === 'vinted') {
       if (d.folder) acts.push('<a class="btn" href="https://drive.google.com/drive/folders/' + esc(d.folder) + '" target="_blank" rel="noopener">Open folder</a>');
       acts.push('<button class="btn" type="button" data-copy="' + esc(r.key) + '">Copy text</button><a class="btn" href="https://www.vinted.co.uk/items/new" target="_blank" rel="noopener">Open Vinted</a>');

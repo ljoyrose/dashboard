@@ -172,4 +172,16 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('main')).toContainText('does not store buyer names');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
+  test('Check your list: one Yes/No question per card, says it changes only the list, Yes writes the 4 answer cells', async ({ page }) => {
+    const rows = [['LINK|L9|L7', 'check', 'Health & supplements', 'Sample bottle on Vinted', JSON.stringify({ kind: 'link', platform: 'Vinted', url: 'https://www.vinted.co.uk/items/1', why: 'Same item as on eBay: "Sample bottle"? Yes links them, so a sale on one clears the other.' }), ago(5)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/check');
+    await expect(page.locator('#view .needs')).toHaveText('Check your list: 1');
+    await expect(page.locator('#view')).toContainText('Same item as on eBay: "Sample bottle"?');
+    await expect(page.locator('#n-check')).toHaveText('1');
+    await expect(page.locator('#view a', { hasText: 'Open on Vinted' })).toHaveAttribute('href', 'https://www.vinted.co.uk/items/1');
+    await page.locator('[data-ans="LINK|L9|L7"][data-v="Yes"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0][0]).toBe('Yes');
+  });
 });
