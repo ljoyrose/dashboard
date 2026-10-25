@@ -141,7 +141,13 @@
   function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
   function hm(ms) { return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
   function detail(r) { try { return JSON.parse(r.detail || '{}'); } catch (e) { return {}; } }
-  function thumb(id) { return id ? '<img alt="" loading="lazy" src="https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w200">' : ''; }
+  // A card's photo: an eBay/Etsy/Vinted picture address (those hosts only), or the Drive id of a photo in the item's folder.
+  var PHOTO_HOSTS = /^https:\/\/(i\.ebayimg\.com|i\.etsystatic\.com|images\d*\.vinted\.net)\//;
+  function thumb(id) {
+    if (!id) return '';
+    var src = PHOTO_HOSTS.test(id) ? id : /^[\w-]{20,}$/.test(id) ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w200' : '';
+    return src ? '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(src) + '">' : '';
+  }
 
   /* ---------- Google: Sheets (data) and Drive (who am I, wake address) ---------- */
   function api(url, init) {
