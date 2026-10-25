@@ -133,4 +133,16 @@ test.describe('Marketplace page', () => {
     await page.locator('#view [data-action="signin"]').click();
     await expect(page.locator('#banner')).toContainText('Google Sheets switch is off');
   });
+
+  test('a buyer message is a ticket: counted in Needs you, opens the messages link, Done writes the answer cells', async ({ page }) => {
+    const rows = [['MSG|ebay|m1', 'message', 'Blades & grooming', 'eBay message: Sample blade', JSON.stringify({ platform: 'eBay', url: 'https://www.ebay.co.uk/cnt/ViewMessage' }), ago(5)]];
+    const writes = await sheets(page, rows);
+    await open(page);
+    await expect(page.locator('#view .needs')).toHaveText('Needs you: 1');
+    await expect(page.locator('#view > .card h2')).toHaveText('Messages');
+    await expect(page.locator('#view a', { hasText: 'Open messages' })).toHaveAttribute('href', 'https://www.ebay.co.uk/cnt/ViewMessage');
+    await page.locator('[data-ans="MSG|ebay|m1"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0][0]).toBe('Done');
+  });
 });
