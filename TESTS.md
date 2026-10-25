@@ -262,6 +262,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 19 Oct 2026 | Lisa still signed in twice: the sign-in lived in one tab only, so Money in a new tab or window, or the installed app, asked again | "sign in on home, open Money Hub and CD Hub: each opens in a new tab already signed in, no prompt" |
 | 19 Oct 2026 | CD Hub Today: "0 of 23 cabins with a temperature" did nothing when clicked (a button with no action) | "CD Hub Today: the temperature tile opens The round, where temperatures are entered" |
 | 19 Oct 2026 | Hard rule 14: the Bin (and Drive, Changes, search) listed Karen - SHARED | "is in config, never queried and never shown on Map, Drive, Bin, Changes, PC-Personal or search" |
+| 25 Oct 2026 | Marketplace V2: the bottom tab bar covered the last button on long pages (the page's bottom space was lost to the `.wrap` rule) | "the last button on a long page can always be scrolled clear of the bottom tab bar @regression" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
