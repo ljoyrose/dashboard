@@ -161,4 +161,15 @@ test.describe('Marketplace page', () => {
     await page.goto('marketplace/#/go');
     await expect(page.locator('#view')).toContainText('relist on Depop by hand, then tap Go');
   });
+  test('privacy policy page: public (no sign-in, no scripts), names the contact, says buyer details are not stored, tokens.css colours only', async ({ page }) => {
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'marketplace', 'privacy.html'), 'utf8');
+    expect(src).not.toMatch(/<script/i);
+    expect(src).toContain('<meta name="robots" content="noindex, nofollow">');   // opens by link, never listed by search engines
+    expect(src.replace(/<!--[\s\S]*?-->/g, '')).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(|hsl\(/i);
+    await page.goto('marketplace/privacy.html');
+    await expect(page.locator('h1')).toHaveText('Privacy policy');
+    await expect(page.locator('a[href="mailto:lisa@puppyclassroom.com"]').first()).toBeVisible();
+    await expect(page.locator('main')).toContainText('does not store buyer names');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
 });
