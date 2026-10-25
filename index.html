@@ -62,11 +62,6 @@
   .btn:hover { border-color: var(--muted); }
   .btn:disabled { opacity: .6; cursor: default; }
   .btn.vision { border: 1px solid var(--s1-edge); background: var(--s1); font-weight: 600; }
-  nav.main { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; }
-  nav.main a { display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; text-decoration: none;
-               font-size: 14px; border: 1px solid var(--line); border-left-width: 4px; background: var(--surface); }
-  @media (max-width: 479px) { nav.main { display: grid; grid-template-columns: 1fr 1fr; } }
-  nav.main a[aria-current="page"] { font-weight: 700; background: var(--s0-tint); border-color: var(--ink); }
 
   main { padding-top: 16px; padding-bottom: 32px; }
   .here { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; text-align: left; }
@@ -82,19 +77,13 @@
   .card.sec { border-radius: 12px; }
   .card.pending { border-style: dashed; }
   .card.failed { border-style: dashed; border-color: var(--fail); }
-  .card.vision, nav.main a.vision { --slot: var(--s1-stripe); border-color: var(--s1-edge); border-left-color: var(--s1-stripe); background: var(--s1); box-shadow: var(--shadow), -1px 0 0 0 var(--s1-edge); }
-  nav.main a.slot0 { border-left-color: var(--s0); }
-  nav.main a.slot7 { border-left-color: var(--s7); }
-  nav.main a.slot2 { border-left-color: var(--s2); }
-  nav.main a.slot4 { border-left-color: var(--s4); }
-  nav.main a.slot8 { border-left-color: var(--s8); }
+  .card.vision { --slot: var(--s1-stripe); border-color: var(--s1-edge); border-left-color: var(--s1-stripe); background: var(--s1); box-shadow: var(--shadow), -1px 0 0 0 var(--s1-edge); }
   .slot0 { --slot: var(--s0); --tint: var(--s0-tint); }
   .slot7 { --slot: var(--s7); --tint: var(--s7-tint); }
   .slot2 { --slot: var(--s2); --tint: var(--s2-tint); }
   .slot4 { --slot: var(--s4); --tint: var(--s4-tint); }
   .slot8 { --slot: var(--s8); --tint: var(--s8-tint); }
   .slotsales { --slot: var(--ljr-6); --tint: var(--ljr-6-tint); }
-  nav.main a.slotsales { border-left-color: var(--ljr-6); }
   .card h3, .card h2.h3 { margin: 0; font-size: 18px; font-weight: 600; text-align: left; }
   .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
   .note { margin: 0; color: var(--muted); font-size: 14px; text-align: left; }
@@ -187,7 +176,6 @@
   label.tick span { overflow-wrap: anywhere; min-width: 0; }
   /* Money tile: Finances copper for money, Operations for to-dos and dates, Risks for overdue, Connections for on track. */
   .slotfin { --slot: var(--fin); --tint: var(--fin-tint); }
-  nav.main a.slotfin { border-left-color: var(--fin); }
   .mtag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; background: var(--mt, var(--s0-tint)); border-radius: 8px; padding: 0 8px; white-space: nowrap; }
   .mtag::before { content: ''; width: 9px; height: 9px; background: var(--mc, var(--s0)); border-radius: 50%; flex: none; }
   .mtag.risk { --mc: var(--s2); --mt: var(--s2-tint); } .mtag.risk::before { border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 10px; height: 10px; }
@@ -227,13 +215,13 @@
   /* ---- Calm layer (Lisa, 20 Oct 2026): one corner, faint lines, no fills on selected, colour only on hover or for attention, nothing moves. ---- */
   :root { --radius: 12px; }
   .btn, .card, .pill, .chip, .tile, .note, input, select, textarea, details, summary, .panel, .keytile { border-radius: var(--radius); }
-  nav.main a, .subnav a { border-radius: 999px; }
-  nav.main a, nav.main a[aria-current="page"], .subnav a, .subnav a[aria-current="page"] { font-weight: 600; background: transparent; border-width: 1px; border-color: var(--line); }
-  nav.main a:hover, nav.main a[aria-current="page"], .subnav a:hover, .subnav a[aria-current="page"], .btn:hover, a.keytile:hover { border-color: var(--muted); background: transparent; }
-  .card, .card[class], nav.main a, nav.main a[class] { border-left-color: var(--line); box-shadow: none; }
-  .card[class]:hover, nav.main a[class]:hover, nav.main a[class][aria-current="page"] { border-left-color: var(--slot, var(--c, var(--muted))); }
-  .card.vision[class], nav.main a.vision[class] { background: var(--surface); }
-  nav.main a.vision[class]:not([aria-current]):not(:hover), .card.vision[class]:not(:hover) { border-color: var(--line); }
+  .subnav a { border-radius: 999px; }
+  .subnav a, .subnav a[aria-current="page"] { font-weight: 600; background: transparent; border-width: 1px; border-color: var(--line); }
+  .subnav a:hover, .subnav a[aria-current="page"], .btn:hover, a.keytile:hover { border-color: var(--muted); background: transparent; }
+  .card, .card[class] { border-left-color: var(--line); box-shadow: none; }
+  .card[class]:hover { border-left-color: var(--slot, var(--c, var(--muted))); }
+  .card.vision[class] { background: var(--surface); }
+  .card.vision[class]:not(:hover) { border-color: var(--line); }
   a { color: inherit; }
   .btn:active, nav.main a:active { transform: none; }
   .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; font-weight: 700; color: var(--muted); cursor: help; vertical-align: middle; }
@@ -253,6 +241,43 @@
   /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+
+  /* Hub V2 (25 Oct 2026, same layout as Marketplace): five sections in a bar at the bottom, in thumb reach on the phone.
+     Home (the Map), Drive, Bin, Changes, More. Red number = things that need you. Nothing hides under the bar. */
+  html { scroll-padding-bottom: 96px; }
+  body { padding-bottom: 96px; }
+  nav.main { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
+             padding: 6px 8px 10px; margin: 0; background: var(--surface); border-top: 1px solid var(--line); }
+  nav.main a { position: relative; text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column;
+               align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; background: transparent; }
+  nav.main a .icon { width: 20px; height: 20px; }
+  nav.main a:hover { border-color: var(--slot, var(--line)); }
+  /* Selected tab: one clean border all round plus its LJR7 tint fill (Lisa, 25 Oct: the selected pill had lost its colour). */
+  nav.main a[aria-current="page"] { border: 1.5px solid var(--ink); background: var(--tint, var(--s0-tint)); }
+  /* "You are here" title: focus moves here on every screen change for screen readers; it must not draw a box. */
+  #hereTitle, #hereTitle:focus, #hereTitle:focus-visible { outline: none; border: 0; box-shadow: none; }
+  nav.main .n { position: absolute; top: 2px; right: calc(50% - 28px); font-size: 13px; font-weight: 700; line-height: 18px; background: var(--ljr-2-solid); color: var(--ljr-2-on); border-radius: 999px; padding: 0 6px; min-width: 18px; }
+  nav.main .n:empty { display: none; }
+  /* Home: Needs you: N, three big count tiles that open a tab, then the one most urgent thing. */
+  .needsline { font-size: 26px; font-weight: 700; margin: 0; }
+  .needsline .zero { color: var(--ljr-5-text); }
+  #homeTop { display: flex; flex-direction: column; gap: 12px; }
+  .hometiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  a.hometile { min-height: 88px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 10px 12px; text-decoration: none; color: var(--ink);
+               background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); min-width: 0; }
+  a.hometile:hover { border-color: var(--slot, var(--muted)); }
+  a.hometile .v { font-size: 28px; font-weight: 700; line-height: 1.2; }
+  a.hometile .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .urgent { display: flex; flex-direction: column; gap: 8px; }
+  .urgent .what { margin: 0; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+  .urgent .btn { min-height: 52px; justify-content: center; font-size: 16px; font-weight: 600; }
+  .hint { margin: 0; font-size: 14px; color: var(--muted); }
+  /* More: the other sections and hubs, one big button each. */
+  .morelist { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  @media (min-width: 700px) { .morelist { grid-template-columns: 1fr 1fr; } }
+  a.morelink { display: flex; flex-direction: row; align-items: center; gap: 10px; min-height: 56px; padding: 10px 16px; font-size: 17px; font-weight: 600; text-decoration: none; }
+  a.morelink .icon { width: 20px; height: 20px; }
+  a.morelink small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -269,6 +294,7 @@
   <symbol id="i-money" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M7 9v.01M17 15v.01"/></symbol>
   <symbol id="i-shop" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
   <symbol id="i-factory" viewBox="0 0 24 24"><path d="M3 20V10l5 3V10l5 3V10l5 3V4h3v16z"/><path d="M7 17h2M12 17h2"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></symbol>
   <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M11 8l4 4-4 4M15 12H4"/></symbol>
 </svg>
 
@@ -281,18 +307,6 @@
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout"><svg class="icon"><use href="#i-out"/></svg><span>Sign out</span></button>
     <button id="signInBtn" class="btn vision" type="button" data-action="signin" disabled><svg class="icon"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
   </div>
-  <nav id="mainNav" class="wrap main hidden" aria-label="Sections">
-    <a href="#/map" data-nav="map" class="vision"><svg class="icon"><use href="#i-map"/></svg>Map</a>
-    <a href="#/readfirst" data-nav="readfirst" class="slot0"><svg class="icon"><use href="#i-read"/></svg>Read first</a>
-    <a href="#/drive" data-nav="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg>Drive</a>
-    <a href="#/personal" data-nav="personal" class="slot4"><svg class="icon"><use href="#i-drive"/></svg>PC-Personal</a>
-    <a href="#/usb" data-nav="usb" class="slot4"><svg class="icon"><use href="#i-drive"/></svg>Drive check</a>
-    <a href="#/bin" data-nav="bin" class="slot8"><svg class="icon"><use href="#i-bin"/></svg>Bin</a>
-    <a href="#/changes" data-nav="changes" class="slot7"><svg class="icon"><use href="#i-changes"/></svg>Changes</a>
-    <a href="money/" target="_blank" rel="opener" class="slotfin"><svg class="icon"><use href="#i-money"/></svg>Money</a>
-    <a href="factory/" target="_blank" rel="opener" class="slot7"><svg class="icon"><use href="#i-factory"/></svg>Factory</a>
-    <a href="marketplace/" target="_blank" rel="opener" class="slotsales"><svg class="icon"><use href="#i-shop"/></svg>Marketplace</a>
-  </nav>
 </header>
 
 <main id="content" class="wrap">
@@ -300,6 +314,14 @@
   <div id="hereBox" class="here hidden"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Map</h2></div>
   <div id="view" data-view="map"></div>
 </main>
+
+<nav id="mainNav" class="main hidden" aria-label="Sections">
+  <a href="#/map" data-nav="map" class="vision"><svg class="icon"><use href="#i-map"/></svg><span>Home</span><span class="n" id="n-map"></span></a>
+  <a href="#/drive" data-nav="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg><span>Drive</span></a>
+  <a href="#/bin" data-nav="bin" class="slot8"><svg class="icon"><use href="#i-bin"/></svg><span>Bin</span><span class="n" id="n-bin"></span></a>
+  <a href="#/changes" data-nav="changes" class="slot7"><svg class="icon"><use href="#i-changes"/></svg><span>Changes</span></a>
+  <a href="#/more" data-nav="more" class="slot4"><svg class="icon"><use href="#i-more"/></svg><span>More</span></a>
+</nav>
 
 <footer id="pageFoot" class="wrap hidden"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
 
@@ -2079,9 +2101,55 @@
     return h + '</section>';
   }
 
+  // Home opens with what needs you: the count, three big tiles (each opens a tab), then the ONE most urgent thing.
+  function homeTop() {
+    if (!signedIn) return '';
+    var all = needsToday(), n = all.length, reading = S.money.status === 'loading' && !S.money.data;
+    var dr = S.drive.data, day = cfWithin(DAY), b = S.bin.data;
+    var tiles = [
+      ['drive', 'slot0', dr ? num(dr.day, dr.dayMore) : '–', 'Drive: changed 24h'],
+      ['bin', 'slot8', b && b.ready ? num(b.ready.length) : '–', b && b.ready ? 'Bin: ready to bin' : 'Bin: tap to check'],
+      ['changes/24h', 'slot7', day ? num(day.length) : '–', 'Changes: last 24h']
+    ];
+    var h = '<section id="homeTop" aria-label="Needs you"><p class="needsline">Needs you: ' + (n ? n : reading ? '…' : '<span class="zero">0</span>') + '</p>' +
+      '<div class="hometiles">' + tiles.map(function (t) {
+        return '<a class="hometile ' + t[1] + '" href="#/' + t[0] + '"><span class="v">' + t[2] + '</span><span class="k">' + esc(t[3]) + '</span></a>';
+      }).join('') + '</div>';
+    if (n) {
+      var x = all[0];
+      h += '<div class="card urgent slot4" id="urgentOne"><div class="cardhead"><h3>First thing</h3><span class="mtag ' + x.kind + '">' + esc(x.tag) + '</span></div>' +
+        '<p class="what">' + esc(x.text) + '</p>' +
+        '<a class="btn" href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>Open it</a>' +
+        (n > 1 ? '<p class="hint">' + (n - 1) + ' more in Needs you today, below.</p>' : '') + '</div>';
+    } else if (!reading) {
+      h += '<div class="card urgent" id="urgentOne"><h3>All done</h3><p class="hint">Nothing needs you right now.</p></div>';
+    }
+    return h + '</section>';
+  }
+  function viewMore() {
+    var drv = [
+      ['readfirst', '#/readfirst', 'slot0', 'read', 'Read first', 'The AI read-first folder'],
+      ['personal', '#/personal', 'slot4', 'drive', 'PC-Personal', 'Personal copies to tidy'],
+      ['usb', '#/usb', 'slot4', 'drive', 'Drive check', 'Check a plugged-in drive']
+    ];
+    var hubs = [
+      ['money', 'money/', 'slotfin', 'money', 'Money Hub', 'Cash, dates and to-dos'],
+      ['cdhub', 'cdhub/', 'slot7', 'map', 'CD Hub', 'Dogs, cabins and litters'],
+      ['factory', 'factory/', 'slot7', 'factory', 'Factory', 'The app factory'],
+      ['marketplace', 'marketplace/', 'slotsales', 'shop', 'Marketplace', 'Selling and posting']
+    ];
+    function link(t) {
+      var hub = t[1].charAt(0) !== '#';
+      return '<a class="card sec morelink ' + t[2] + '" href="' + t[1] + '" data-nav="' + t[0] + '"' + (hub ? HUB_TAB : '') + '>' + icon(t[3]) +
+        '<span>' + esc(t[4]) + '<small>' + esc(t[5]) + '</small></span></a>';
+    }
+    return '<section class="card" id="moreDrive" aria-labelledby="moreDriveT"><h3 id="moreDriveT">Drive tools</h3><div class="morelist">' + drv.map(link).join('') + '</div></section>' +
+      '<section class="card" id="moreHubs" aria-labelledby="moreHubsT"><h3 id="moreHubsT">Other hubs</h3><p class="hint">Each opens in its own tab.</p><div class="morelist">' + hubs.map(link).join('') + '</div></section>';
+  }
+
   function viewMap() {
-    // Key projects stays first (a phone test keeps it near the top); Needs you today comes straight after it.
-    var html = keyProjects() + needsPanel();
+    // Home: what needs you first (homeTop), then Key projects, then the full Needs you today list.
+    var html = homeTop() + keyProjects() + needsPanel();
     if (!signedIn) {
       html += '<div class="card vision pending"><div class="cardhead"><h3>Not signed in</h3>' +
         '<span class="state st-idle"><span class="shape"></span>No reads</span></div>' +
@@ -2320,7 +2388,9 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Map', readfirst: 'Read first', drive: 'Drive', personal: 'PC-Personal', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
+  var VIEWS = { map: 'Map', readfirst: 'Read first', drive: 'Drive', personal: 'PC-Personal', usb: 'Drive check', bin: 'Bin', changes: 'Changes', more: 'More' };
+  // Sections not in the bottom bar light up its More tab.
+  var TAB_OF = { readfirst: 'more', personal: 'more', usb: 'more' };
   function parseRoute() {
     var parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
     var view = parts[0] && VIEWS[parts[0]] ? parts[0] : null;
@@ -2338,7 +2408,7 @@
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal() : r.view === 'usb' ? viewUsb() : viewChanges(r);
+    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal() : r.view === 'usb' ? viewUsb() : r.view === 'more' ? viewMore() : viewChanges(r);
     var routeKey = location.hash;
     var changed = routeKey !== lastView;
     el.setAttribute('data-view', r.view);
@@ -2347,9 +2417,12 @@
       (r.view === 'drive' && r.driveId ? ' · ' + driveName(r.driveId) : '');
     var nNeeds = needsCount();
     document.title = (nNeeds ? '(' + nNeeds + ') ' : '') + VIEWS[r.view] + ' · Lisa Dashboard';
+    var tab = TAB_OF[r.view] || r.view;
     Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
-      if (a.getAttribute('data-nav') === r.view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+      if (a.getAttribute('data-nav') === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
+    tabBadge('map', nNeeds, 'Home');
+    tabBadge('bin', S.bin.data && S.bin.data.ready ? S.bin.data.ready.length : 0, 'Bin');
     if (changed && lastView !== null) {
       el.classList.add('fade');
       el.innerHTML = html;
@@ -2362,6 +2435,11 @@
     applyBinFilter();
     updateHeader();
     if (r.view === 'bin' && S.dbx.status === 'idle') loadDbx();
+  }
+  function tabBadge(key, n, label) {
+    var b = $('n-' + key); if (!b) return;
+    b.textContent = n ? String(n) : '';
+    b.parentNode.setAttribute('aria-label', label + (n ? ', ' + n + ' waiting' : ''));
   }
   function updateHeader() {
     var times = ['readfirst', 'drive', 'cf'].map(function (k) { return S[k].status === 'ok' ? S[k].readAt : null; }).filter(Boolean);

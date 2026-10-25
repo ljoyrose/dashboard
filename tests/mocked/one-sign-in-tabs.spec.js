@@ -16,7 +16,8 @@ test.describe('One sign-in for every tab', () => {
     await page.goto('./');
     await signIn(page);
 
-    for (const [sel, url] of [['a.keytile[href="money/"]', /\/money\/$/], ['header a[href="money/"]', /\/money\/$/]]) {
+    for (const [sel, url] of [['a.keytile[href="money/"]', /\/money\/$/], ['a.morelink[href="money/"]', /\/money\/$/]]) {
+      if (sel.startsWith('a.morelink')) await page.locator('#mainNav a[data-nav="more"]').click(); // Hub V2: More tab
       const [tab] = await Promise.all([context.waitForEvent('page'), page.locator(sel).click()]);
       await expect(tab).toHaveURL(url);
       await expect(tab.locator('#readStamp')).toContainText(/^Read \d/);
@@ -24,6 +25,7 @@ test.describe('One sign-in for every tab', () => {
       expect(await gisRequests(tab)).toBe(0);
       await tab.close();
     }
+    await page.locator('#mainNav a[data-nav="map"]').click();
     const [cd] = await Promise.all([context.waitForEvent('page'), page.locator('a.keytile[href="cdhub/"]').click()]);
     await expect(cd).toHaveURL(/\/cdhub\/$/);
     await expect(cd.locator('#nav button[data-go]').first()).toBeVisible();

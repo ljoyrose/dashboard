@@ -81,15 +81,23 @@ test.describe('Main dashboard: navigation', () => {
     ['Bin', 'bin', 'Bin'],
     ['Changes', 'changes', 'Changes · Recent'],
   ];
+  // Hub V2: the bottom bar holds Home (map), Drive, Bin, Changes and More; the rest open from the More tab.
+  const IN_MORE = ['readfirst', 'personal', 'usb'];
   for (const [label, key, title] of tabs) {
     test(`nav tab "${label}" opens #/${key}`, async ({ page }) => {
       await page.goto('./');
       await signIn(page);
-      await page.locator(`#mainNav a[data-nav="${key}"]`).click();
+      if (IN_MORE.includes(key)) {
+        await page.locator('#mainNav a[data-nav="more"]').click();
+        await expect(page.locator('#hereTitle')).toHaveText('More');
+        await page.locator(`#view a[data-nav="${key}"]`).click();
+      } else {
+        await page.locator(`#mainNav a[data-nav="${key}"]`).click();
+      }
       await expect(page).toHaveURL(new RegExp(`#/${key}`));
       await expect(page.locator('#view')).toHaveAttribute('data-view', key);
       await expect(page.locator('#hereTitle')).toHaveText(title);
-      await expect(page.locator(`#mainNav a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
+      await expect(page.locator(`#mainNav a[data-nav="${IN_MORE.includes(key) ? 'more' : key}"]`)).toHaveAttribute('aria-current', 'page');
     });
   }
 
@@ -222,10 +230,11 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
     await expect(tab.locator('h1')).toContainText('Money Hub');
   });
 
-  test('top-nav "Money" link goes to /money/', async ({ page }) => {
+  test('More tab "Money Hub" link goes to /money/', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#mainNav a[href="money/"]').click()]); // opens in a new tab
+    await page.locator('#mainNav a[data-nav="more"]').click(); // Hub V2: hub links live in the More tab
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a.morelink[href="money/"]').click()]); // opens in a new tab
     await expect(tab).toHaveURL(/\/dashboard\/money\/$/);
     await expect(tab).toHaveTitle(/Money Hub/);
   });

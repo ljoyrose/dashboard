@@ -9,7 +9,7 @@ const signIn = async (page) => {
 };
 
 test.describe('Needs you today', () => {
-  test('signed out there is no panel; signed in it comes straight after Key projects on the Map', async ({ page }) => {
+  test('signed out there is no panel; signed in it comes straight after Needs you and Key projects on the Map', async ({ page }) => {
     await page.goto('./');
     await expect(page.locator('#needsToday')).toHaveCount(0);
     await signIn(page);
@@ -17,7 +17,7 @@ test.describe('Needs you today', () => {
     await expect(panel).toBeVisible();
     await expect(panel.locator('h3')).toHaveText('Needs you today');
     const order = await page.locator('#view > *').evaluateAll((els) => els.map((e) => e.id));
-    expect(order.slice(0, 2)).toEqual(['key-projects', 'needsToday']);
+    expect(order.slice(0, 3)).toEqual(['homeTop', 'key-projects', 'needsToday']);
   });
 
   test('shows at most 7 rows, overdue (red) first, each row a link, and the tab title carries the count @regression', async ({ page }) => {
