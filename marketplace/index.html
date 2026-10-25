@@ -96,6 +96,7 @@
   <nav class="tabs hidden" id="tabs" aria-label="Marketplace sections">
     <a href="#/me" data-nav="me">Me</a>
     <a href="#/remove" data-nav="remove">Remove <span class="n" id="n-remove"></span></a>
+    <a href="#/message" data-nav="message">Messages <span class="n" id="n-message"></span></a>
     <a href="#/post" data-nav="post">Post <span class="n" id="n-post"></span></a>
     <a href="#/go" data-nav="go">Go <span class="n" id="n-go"></span></a>
     <a href="#/vinted" data-nav="vinted">Vinted <span class="n" id="n-vinted"></span></a>
@@ -121,13 +122,14 @@
   var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
   var SECTIONS = {
     remove: { name: 'Remove from Vinted', urgent: true, verb: 'Done', what: 'It sold elsewhere. Take it off Vinted.' },
+    message: { name: 'Messages', urgent: true, verb: 'Done', what: 'A buyer wrote. Open your messages, answer there, then tap Done.' },
     post: { name: 'Post', urgent: true, verb: 'Posted', what: 'Find it, pack it, post it.' },
     go: { name: 'Go', verb: 'Go', no: 'Not this one', what: 'List this item.' },
     vinted: { name: 'Post to Vinted', verb: 'Done', what: 'Drag the photos into Vinted, paste the text, then tap Done.' },
     restock: { name: 'Restock', quiet: true, what: 'Low on stock. Buy on Temu when it suits you.' },
     temu: { name: 'Temu claims', quiet: true, what: 'Price dropped. Claim in Temu if you like.' }
   };
-  var ORDER = ['remove', 'post', 'go', 'vinted', 'restock', 'temu'];
+  var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'restock', 'temu'];
   var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false;
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -204,6 +206,7 @@
     if (r.answer) return h + sentLine(r) + '</div>';
     var acts = [];
     if (r.section === 'remove') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on Vinted</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
+    else if (r.section === 'message') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open messages</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
     else if (r.section === 'post') {
       if (!d.found) acts.push('<button class="btn main" type="button" data-ans="' + esc(r.key) + '" data-v="Found">Found</button>');
       else { if (d.qr) acts.push('<button class="btn" type="button" data-qr="' + esc(r.key) + '">Show QR</button>'); else if (d.qr_missing) acts.push('<span class="why red">QR not found</span>');
