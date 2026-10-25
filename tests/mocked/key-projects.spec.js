@@ -47,8 +47,9 @@ test.describe('Home: Key projects & docs', () => {
     const block = page.locator('#view > #key-projects');
     await expect(block).toBeVisible();
     await expect(block.locator('h2')).toHaveText('Key projects & docs');
+    // Hub V2: "Needs you" and its tiles come first; Key projects still starts on the first screen, above the bottom bar.
     const top = await block.boundingBox();
-    expect(top.y).toBeLessThan(420);
+    expect(top.y).toBeLessThan(844 - 96);
 
     const move = page.locator('#move-link');
     await expect(move).toHaveAttribute('href', MOVE);

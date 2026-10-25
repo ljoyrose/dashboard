@@ -38,6 +38,8 @@ test('the colour carries meaning on the dashboard menu: Bin is slot 8, Money slo
   await expect(page.locator('#mainNav')).toBeVisible();
   const col = async (sel) => { await page.locator(sel).hover(); return page.locator(sel).evaluate((e) => getComputedStyle(e).borderLeftColor); };
   expect(await col('#mainNav a[data-nav="bin"]')).toBe('rgb(20, 20, 19)');
-  expect(await col('#mainNav a.slotfin')).toBe('rgb(231, 134, 21)');
-  expect(await col('#mainNav a[data-nav="personal"]')).toBe('rgb(243, 216, 78)');
+  // Hub V2: Money and PC-Personal moved from the top menu to the More tab (bottom bar).
+  await page.locator('#mainNav a[data-nav="more"]').click();
+  expect(await col('#view a.slotfin')).toBe('rgb(231, 134, 21)');
+  expect(await col('#view a[data-nav="personal"]')).toBe('rgb(243, 216, 78)');
 });

@@ -56,7 +56,7 @@ That is 367 checks that must pass.
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
-- Every menu tab works: Map, Read first, Drive, PC-Personal, Drive check, Bin, Changes.
+- Every menu tab works. The menu is a bar at the bottom (Home, Drive, Bin, Changes, More); Read first, PC-Personal, Drive check and the other hubs open from More. Home starts with "Needs you: N", three big tiles and the one most urgent thing (`tests/mocked/hub-v2-main.spec.js`).
 - Links straight to a section work, like `#/changes/24h`, `#/bin` and `#/personal`.
 - The Back button works.
 - Drive lists the shared drives, opens a folder and has an "Up one level" link.
@@ -262,6 +262,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 19 Oct 2026 | Lisa still signed in twice: the sign-in lived in one tab only, so Money in a new tab or window, or the installed app, asked again | "sign in on home, open Money Hub and CD Hub: each opens in a new tab already signed in, no prompt" |
 | 19 Oct 2026 | CD Hub Today: "0 of 23 cabins with a temperature" did nothing when clicked (a button with no action) | "CD Hub Today: the temperature tile opens The round, where temperatures are entered" |
 | 19 Oct 2026 | Hard rule 14: the Bin (and Drive, Changes, search) listed Karen - SHARED | "is in config, never queried and never shown on Map, Drive, Bin, Changes, PC-Personal or search" |
+| 25 Oct 2026 | Main dashboard: the selected menu pill had lost its colour fill and showed an odd left edge, and the "You are here" title showed a square focus box after each screen change | "the selected tab has one clean border and a colour fill; the "You are here" title has no box" |
 | 25 Oct 2026 | Marketplace V2: the bottom tab bar covered the last button on long pages (the page's bottom space was lost to the `.wrap` rule) | "the last button on a long page can always be scrolled clear of the bottom tab bar @regression" |
 
 **Recipe when a bug is fixed:**
