@@ -30,7 +30,7 @@
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 17px; line-height: 1.5; }
   .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }   /* same width as Factory and the main dashboard */
   header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
-  .top { display: flex; gap: 8px; align-items: center; padding: 10px 16px; }
+  .top { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; padding: 10px 16px; }
   .top h1 { font-size: 22px; margin: 0 auto 0 0; }
   .top h1 a { color: inherit; text-decoration: none; }
   .stamp { font-size: 11px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 5px; }
@@ -94,7 +94,8 @@
 <header>
   <div class="top"><h1><a href="#/me">Marketplace</a></h1><span class="stamp" id="stamp">TEST</span>
     <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh"><i class="ti ti-refresh"></i></button>
-    <button class="btn" type="button" data-action="signin" id="signin">Sign in</button></div>
+    <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
+    <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
   <nav class="tabs hidden" id="tabs" aria-label="Marketplace sections">
     <a href="#/me" data-nav="me">Me</a>
     <a href="#/remove" data-nav="remove">Remove <span class="n" id="n-remove"></span></a>
