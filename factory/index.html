@@ -310,6 +310,34 @@
   .gate { font-size: 13px; padding: 4px 10px; border: 1px solid var(--ljr-3); border-radius: 999px; color: var(--ink); display: inline-flex; gap: 4px; align-items: center; }
   .gate .ti { color: var(--muted); }
   .sect { font-size: 13px; font-weight: 700; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 4px 0 0; }
+
+  /* Hub V2 (25 Oct 2026, same layout as Marketplace): five tabs in a bar at the bottom (Me, Decide, Do, Rooms, More).
+     Docs and Today open from More. Red number = waiting on you. Nothing hides under the bar. */
+  html { scroll-padding-bottom: 96px; }
+  body { padding-bottom: 96px; }
+  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
+             margin: 0; padding: 6px 8px 10px; max-width: none; overflow: visible; background: var(--surface); border-top: 1px solid var(--line); }
+  nav.tabs a { --radius: 12px; min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 2px;
+               font-size: 13px; font-weight: 700; text-align: center; border: 1.5px solid transparent; border-radius: 12px; background: transparent; }
+  nav.tabs a:hover { border-color: var(--line); }
+  nav.tabs a[aria-current="page"] { border-color: var(--ink); background: var(--bg); }
+  #tabs .n { background: var(--ljr-2-solid) !important; color: var(--ljr-2-on) !important; border: 0; height: 20px; min-width: 22px; font-size: 13px; padding: 0 7px; }
+  #tabs .n.zero { visibility: hidden; }
+  /* Me: Needs you: N and three big tiles that open a tab, above the list. */
+  .needsline { font-size: 26px; font-weight: 700; margin: 0; }
+  .hometiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  a.hometile { min-height: 88px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 10px 12px; text-decoration: none; color: var(--ink);
+               background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); min-width: 0; }
+  a.hometile:hover { border-color: var(--muted); }
+  a.hometile .v { font-size: 28px; font-weight: 700; line-height: 1.2; }
+  a.hometile .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .hint { margin: 0; font-size: 14px; color: var(--muted); }
+  .morelist { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  @media (min-width: 700px) { .morelist { grid-template-columns: 1fr 1fr; } }
+  a.morelink { display: flex; align-items: center; gap: 10px; min-height: 60px; padding: 10px 16px; font-size: 17px; font-weight: 600; text-decoration: none; color: var(--ink);
+               background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); }
+  a.morelink:hover { border-color: var(--muted); }
+  a.morelink small { display: block; font-size: 14px; font-weight: 400; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -335,20 +363,19 @@
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
     <a class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
   </div>
-  <nav class="tabs" aria-label="Sections">
-    <a href="#/me" data-nav="me">Me <span class="n" id="nMe">0</span></a>
-    <a href="#/rooms" data-nav="rooms">Rooms</a>
-    <a href="#/decide" data-nav="decide">Decide <span class="n" id="nDecide">0</span></a>
-    <a href="#/do" data-nav="do">Do <span class="n" id="nDo">0</span></a>
-    <a href="#/docs" data-nav="docs">Docs</a>
-    <a href="#/today" data-nav="today" aria-label="Today" class="cal"><i class="ti ti-calendar"></i></a>
-  </nav>
   <div id="appMenu" class="appmenu hidden"></div>
 </header>
 <main class="wrap" id="content">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
 </main>
+<nav class="tabs" id="tabs" aria-label="Sections">
+  <a href="#/me" data-nav="me"><span>Me</span><span class="n" id="nMe">0</span></a>
+  <a href="#/decide" data-nav="decide"><span>Decide</span><span class="n" id="nDecide">0</span></a>
+  <a href="#/do" data-nav="do"><span>Do</span><span class="n" id="nDo">0</span></a>
+  <a href="#/rooms" data-nav="rooms"><span>Rooms</span></a>
+  <a href="#/more" data-nav="more"><span>More</span></a>
+</nav>
 
 <script>
 (function () {
@@ -702,6 +729,21 @@
   var FLAGS = [['unanswered', '<i class="ti ti-hourglass"></i> Unanswered'], ['overdue', '<i class="ti ti-alert-triangle"></i> Overdue'], ['urgent', 'URGENT Urgent'], ['unflagged', 'NOFLAG Unflagged']];
   var SORTS = [['flag', 'URGENT Flag'], ['date', '<i class="ti ti-calendar"></i> Date'], ['age', '<i class="ti ti-clock"></i> Oldest'], ['new', '<i class="ti ti-sparkles"></i> Newest']];
   var BAR_TABS = /^(me|rooms|decide|do|docs|today|queue)$/;
+  // Hub V2: which bottom tab lights up for each screen. Docs and Today live under More.
+  function tabOf(r) { return /^(card|room|health|stuck|all|queue|new|problem)$/.test(r) ? 'rooms' : /^(docs|today|more)$/.test(r) ? 'more' : r; }
+  function homeTop(nMe, nDecide, nDo) {
+    return '<section id="homeTop" aria-label="Needs you"><p class="needsline">Needs you: ' + nMe + '</p><div class="hometiles">' +
+      [['decide', nDecide, 'Decide: questions'], ['do', nDo, 'Do: jobs for you'], ['rooms', apps().filter(stuck).length, 'Rooms: stuck 14+ days']].map(function (t) {
+        return '<a class="hometile" href="#/' + t[0] + '"><span class="v">' + t[1] + '</span><span class="k">' + esc(t[2]) + '</span></a>';
+      }).join('') + '</div>' + (nMe ? '<p class="hint">Newest first. Answer the top one.</p>' : '') + '</section>';
+  }
+  function vMore() {
+    return '<section class="card"><b>More</b><div class="morelist" id="moreList">' +
+      '<a class="morelink" href="#/docs"><i class="ti ti-file-text"></i><span>Docs<small>The factory documents</small></span></a>' +
+      '<a class="morelink" href="#/today"><i class="ti ti-calendar"></i><span>Today<small>What happened today</small></span></a>' +
+      '<a class="morelink" href="#/all"><i class="ti ti-apps"></i><span>All apps<small>Every app, every stage</small></span></a>' +
+      '</div></section>';
+  }
   var appMenu = false;
   function fdef(tab) { return { q: '', app: [], kind: [], who: [], st: [], f: /^(rooms|docs)$/.test(tab) ? [] : ['unanswered'], sort: tab === 'me' ? 'new' : 'flag', test: false }; }
   var fs = (function () { try { return JSON.parse(localStorage.getItem('af-fs') || '') || {}; } catch (e) { return {}; } })();
@@ -1380,11 +1422,13 @@
   function saveSent() { try { localStorage.setItem('af-sent', JSON.stringify(sent)); } catch (e) {} }
   function render() {
     var route = hashParts().path;
-    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (/^(card|room|health|stuck|all|queue|new|problem)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
+    var onTab = tabOf(route[0]);
+    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === onTab ? 'page' : 'false'); });
     $('appPick').classList.toggle('hidden', !signedIn || !S); $('appPick').setAttribute('aria-expanded', appMenu ? 'true' : 'false');
     $('appMenu').classList.toggle('hidden', !appMenu || !S); if (appMenu && S) $('appMenu').innerHTML = vAppMenu();
     $('signInBtn').classList.toggle('hidden', signedIn);
     $('signOutBtn').classList.toggle('hidden', !signedIn);
+    $('tabs').classList.toggle('hidden', !signedIn);
     $('refreshBtn').classList.toggle('hidden', !signedIn);
     var v = $('view');
     if (!signedIn) { v.innerHTML = '<div class="card"><b>Factory</b><button class="btn main" type="button" data-action="signin">' + ic('in') + 'Sign in with Google</button></div>'; return; }
@@ -1394,8 +1438,9 @@
     // Menu counts: unanswered, and TEST only when that tab shows TEST.
     var waiting = function (tab) { return function (t) { return !sent[t.id] && (fsOf(tab).test || !testT(t)); }; };
     $('nMe').textContent = meItems().filter(waiting('me')).length; $('nDecide').textContent = decisions().filter(waiting('decide')).length; $('nDo').textContent = mine().filter(waiting('do')).length;
+    ['nMe', 'nDecide', 'nDo'].forEach(function (id) { var b = $(id); b.classList.toggle('zero', b.textContent === '0'); });
     var tb = barTab(); if (tb) toUrl(tb);
-    v.innerHTML = route[0] === 'me' ? list('me', meItems(), 4, 'me') : route[0] === 'item' ? vItem(route[1]) : route[0] === 'app' ? vApp(route[1]) :
+    v.innerHTML = route[0] === 'me' ? homeTop($('nMe').textContent, $('nDecide').textContent, $('nDo').textContent) + list('me', meItems(), 4, 'me') : route[0] === 'more' ? vMore() : route[0] === 'item' ? vItem(route[1]) : route[0] === 'app' ? vApp(route[1]) :
       route[0] === 'today' ? vToday() : route[0] === 'queue' ? list('queue', queue(route[1]), 5, 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? vPortfolio() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list('decide', decisions(), 4, 'decide') + decideFoot() :
       route[0] === 'do' ? list('do', mine(), 4, 'do') : vRooms();
   }
