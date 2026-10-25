@@ -52,7 +52,7 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#view > .card')).toHaveCount(1);
     await expect(page.locator('#view > .card h2')).toHaveText('Remove from other sites');
     await expect(page.locator('#view > .card a.btn')).toHaveText('Open on Vinted');
-    await expect(page.locator('#n-remove')).toHaveText('1');
+    await expect(page.locator('#n-do')).toHaveText('2');   // Do now = remove + post
     await expect(page.locator('#stamp')).toHaveText('TEST');
   });
 
@@ -178,7 +178,7 @@ test.describe('Marketplace page', () => {
     await open(page, '#/check');
     await expect(page.locator('#view .needs')).toHaveText('Check your list: 1');
     await expect(page.locator('#view')).toContainText('Same item as on eBay: "Sample bottle"?');
-    await expect(page.locator('#n-check')).toHaveText('1');
+    await expect(page.locator('#n-decide')).toHaveText('1');
     await expect(page.locator('#view a', { hasText: 'Open on Vinted' })).toHaveAttribute('href', 'https://www.vinted.co.uk/items/1');
     await page.locator('[data-ans="LINK|L9|L7"][data-v="Yes"]').click();
     await expect.poll(() => writes.length).toBe(1);
@@ -197,5 +197,83 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#view .item img[src^="https://i.ebayimg.com/images/g/ABC/"]')).toHaveCount(1);
     await expect(page.locator('#view .item img[src*="drive.google.com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvWxYz"]')).toHaveCount(1);
     await expect(page.locator('#view img[src*="evil.example"]')).toHaveCount(0);
+  });
+  test('V2 tabs: Home shows Do now / Decide / Reply counts; old links still open and light up their tab', async ({ page }) => {
+    const rows = [
+      ['RM|L1', 'remove', 'Clothes', 'Sample jumper', JSON.stringify({ platform: 'eBay' }), ago(5)],
+      ['LINK|L2|L3', 'check', 'Clothes', 'Sample coat', JSON.stringify({ platform: 'Vinted', why: 'Same item?' }), ago(5)],
+      ['GO|L4', 'go', 'Clothes', 'Sample hat', JSON.stringify({ platform: 'eBay' }), ago(5)],
+      ['MSG|ebay|m1', 'message', 'Clothes', 'eBay message: Sample jumper', JSON.stringify({ platform: 'eBay' }), ago(5)],
+    ];
+    await sheets(page, rows);
+    await open(page);
+    await expect(page.locator('#tabs a')).toHaveText([/Home/, /Do now/, /Decide/, /Reply/, /Insights/]);
+    await expect(page.locator('#view a.tile')).toHaveText([/1\s*Do now/, /2\s*Decide/, /1\s*Reply/]);
+    await expect(page.locator('#n-decide')).toHaveText('2');
+    await page.locator('#tabs a[data-nav="decide"]').click();
+    await expect(page.locator('#view .needs')).toHaveText('Decide: 2');
+    await expect(page.locator('#view > .card')).toHaveCount(1);               // one question at a time
+    await expect(page.locator('#view .more')).toHaveText('1 of 2 · show all');
+    await page.goto('marketplace/#/check');
+    await expect(page.locator('#tabs a[data-nav="decide"]')).toHaveAttribute('aria-current', 'page');
+    await page.goto('marketplace/#/numbers');
+    await expect(page.locator('#tabs a[data-nav="insights"]')).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('person chips: hidden until a card has another owner; picking CY shows only CY\'s cards and is remembered', async ({ page }) => {
+    const rows = [
+      ['RM|L1', 'remove', 'Clothes', 'Lisa jumper', JSON.stringify({ platform: 'eBay' }), ago(5)],
+      ['RM|L2', 'remove', 'Clothes', 'CY dress', JSON.stringify({ platform: 'Vinted', owner: 'CY' }), ago(5)],
+    ];
+    await sheets(page, rows);
+    await open(page, '#/do');
+    await expect(page.locator('#people')).toBeVisible();
+    await expect(page.locator('#view .needs')).toHaveText('Do now: 2');
+    await page.locator('[data-who="CY"]').click();
+    await expect(page.locator('[data-who="CY"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('#view .needs')).toHaveText('Do now: 1');
+    await expect(page.locator('#view')).toContainText('CY dress');
+    await expect(page.locator('#view')).not.toContainText('Lisa jumper');
+    await page.reload();
+    await expect(page.locator('[data-who="CY"]')).toHaveAttribute('aria-pressed', 'true');
+    await page.locator('[data-site="eBay"]').click();                         // site chips narrow it further
+    await expect(page.locator('#view .needs')).toHaveText('Do now: 0');
+  });
+
+  test('packing mode: parcels in shelf order with parcel numbers; Found writes "Found", a found parcel shows its drop-off code and Posted', async ({ page }) => {
+    const rows = [
+      ['POST|2', 'post', 'Clothes', 'Sample coat', JSON.stringify({ shelf: 'C3', courier: 'Evri', post_by: 'Tue' }), ago(5)],
+      ['POST|1', 'post', 'Clothes', 'Sample lead', JSON.stringify({ shelf: 'A1', courier: 'InPost', post_by: 'Mon', found: true, qr: 'VN-55210' }), ago(5)],
+    ];
+    const writes = await sheets(page, rows);
+    await open(page, '#/do');
+    await page.locator('[data-action="pack"]').click();
+    await expect(page.locator('#view .packbar')).toContainText('Packing · 1 of 2');
+    await expect(page.locator('#view .parcel')).toHaveText('#1');
+    await expect(page.locator('#view')).toContainText('Sample lead');          // shelf A1 before C3
+    await expect(page.locator('#view .dropcode .code')).toHaveText('VN-55210');
+    await expect(page.locator('#view [data-v="Posted"]')).toBeVisible();
+    await page.locator('[data-action="nextpack"]').click();
+    await expect(page.locator('#view .parcel')).toHaveText('#2');
+    await page.locator('[data-ans="POST|2"][data-v="Found"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0][0]).toBe('Found');
+    await page.locator('[data-action="stoppack"]').click();
+    await expect(page.locator('#view .needs')).toContainText('Do now');
+  });
+
+  test('label sheet: parcels grouped by courier with their numbers; says plainly when the PDF is not made yet', async ({ page }) => {
+    const rows = [
+      ['POST|1', 'post', 'Clothes', 'Sample lead', JSON.stringify({ shelf: 'A1', courier: 'InPost' }), ago(5)],
+      ['POST|2', 'post', 'Clothes', 'Sample coat', JSON.stringify({ shelf: 'B2', courier: 'Evri' }), ago(5)],
+      ['POST|3', 'post', 'Clothes', 'Sample boots', JSON.stringify({ shelf: 'C3', courier: 'Evri' }), ago(5)],
+    ];
+    await sheets(page, rows);
+    await open(page, '#/do');
+    await page.locator('[data-action="sheet"]').click();
+    await expect(page.locator('#view .grp')).toHaveText(['Evri · 2 parcels', 'InPost · 1 parcel']);
+    await expect(page.locator('#view .card .parcel')).toHaveText(['#2', '#3', '#1']);
+    await expect(page.locator('#view')).toContainText('The printable PDF is not made yet');
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 });
