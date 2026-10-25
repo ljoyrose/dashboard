@@ -50,7 +50,8 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#tabs')).toBeVisible();
     await expect(page.locator('#view .needs')).toHaveText('Needs you: 2');
     await expect(page.locator('#view > .card')).toHaveCount(1);
-    await expect(page.locator('#view > .card h2')).toHaveText('Remove from Vinted');
+    await expect(page.locator('#view > .card h2')).toHaveText('Remove from other sites');
+    await expect(page.locator('#view > .card a.btn')).toHaveText('Open on Vinted');
     await expect(page.locator('#n-remove')).toHaveText('1');
     await expect(page.locator('#stamp')).toHaveText('TEST');
   });
@@ -144,5 +145,20 @@ test.describe('Marketplace page', () => {
     await page.locator('[data-ans="MSG|ebay|m1"]').click();
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0][0]).toBe('Done');
+  });
+
+  test('any marketplace: Remove names the site, a Go card says why, a double sale lists the steps in order', async ({ page }) => {
+    const rows = [
+      ['RM|L1', 'remove', 'Blades & grooming', 'Sample blade on eBay', JSON.stringify({ price: '£24.00', platform: 'eBay', url: 'https://www.ebay.co.uk/itm/1', sold: 'sold on etsy 16:42' }), ago(5)],
+      ['RACE|S1', 'remove', 'Blades & grooming', 'Double sale: Sample blade', JSON.stringify({ sold: 'Sold twice. Keep the Etsy sale.', steps: ['1. Message the Vinted buyer first: "Sorry"', '2. Then cancel the Vinted order V-1 in the Vinted app (in the chat).'] }), ago(5)],
+      ['GO|L8|2026-10-25', 'go', 'Blades & grooming', 'Sample blade on Depop', JSON.stringify({ why: 'back in stock after cancel: relist on Depop by hand, then tap Go', listing_id: 'L8', platform: 'depop' }), ago(5)],
+    ];
+    await sheets(page, rows);
+    await open(page, '#/remove');
+    await page.locator('[data-action="all"]').click();
+    await expect(page.locator('#view a', { hasText: 'Open on eBay' })).toHaveAttribute('href', 'https://www.ebay.co.uk/itm/1');
+    await expect(page.locator('#view ol.steps li')).toHaveText(['Message the Vinted buyer first: "Sorry"', 'Then cancel the Vinted order V-1 in the Vinted app (in the chat).']);
+    await page.goto('marketplace/#/go');
+    await expect(page.locator('#view')).toContainText('relist on Depop by hand, then tap Go');
   });
 });

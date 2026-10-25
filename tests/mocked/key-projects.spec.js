@@ -9,6 +9,7 @@ const TILES = [
   ['MOVE', MOVE, true],
   ['Money Hub', 'money/', true],
   ['CD Hub', 'cdhub/', true],
+  ['Marketplace', 'marketplace/', true],
   ['Map', '#/map', false],
   ['Read first', '#/readfirst', false],
   ['Drive', '#/drive', false],

@@ -2013,6 +2013,7 @@
       ['MOVE', MOVE_URL, true],
       ['Money Hub', 'money/', true],
       ['CD Hub', 'cdhub/', true],
+      ['Marketplace', 'marketplace/', true],
       ['Map', '#/map', false],
       ['Read first', '#/readfirst', false],
       ['Drive', '#/drive', false],
@@ -2062,7 +2063,7 @@
     out.sort(function (a, b2) { return rank[a.kind] - rank[b2.kind]; });
     return out;
   }
-  function hubLink(href) { return /^(money|cdhub)\//.test(String(href || '')); }
+  function hubLink(href) { return /^(money|cdhub|marketplace)\//.test(String(href || '')); }
   function needsCount() { return signedIn ? needsToday().length : 0; }
   function needsPanel() {
     if (!signedIn) return '';

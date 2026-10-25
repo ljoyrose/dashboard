@@ -66,6 +66,8 @@
   .card > .row:first-of-type { border-top: 0; }
   .row .txt { flex: 1; min-width: 0; }
   .row .why { font-size: 14px; color: var(--muted); }
+  .steps { margin: 8px 0 0; padding-left: 22px; font-size: 15px; }
+  .steps li { margin: 4px 0; }
   .red { color: var(--ljr-2-text); font-weight: 700; }
   .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 6px 10px; cursor: pointer; align-self: flex-start; }
@@ -121,7 +123,7 @@
   var CATS = ['Clothes', 'Blades & grooming', 'Health & supplements', 'Treats', 'Crates & beds', 'Towels & textiles', 'Collars & accessories', 'Electronics & media', 'Other'];
   var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
   var SECTIONS = {
-    remove: { name: 'Remove from Vinted', urgent: true, verb: 'Done', what: 'It sold elsewhere. Take it off Vinted.' },
+    remove: { name: 'Remove from other sites', urgent: true, verb: 'Done', what: 'It sold. Take it off the site named on the card.' },
     message: { name: 'Messages', urgent: true, verb: 'Done', what: 'A buyer wrote. Open your messages, answer there, then tap Done.' },
     post: { name: 'Post', urgent: true, verb: 'Posted', what: 'Find it, pack it, post it.' },
     go: { name: 'Go', verb: 'Go', no: 'Not this one', what: 'List this item.' },
@@ -202,10 +204,11 @@
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red;
     var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
       '<div class="item">' + thumb(d.photo) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, d.platform, d.shelf ? 'shelf ' + d.shelf : '', d.courier].filter(Boolean).join(' · ')) + '</div>' +
-      (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>';
+      (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
+      (d.why ? '<p class="what">' + esc(d.why) + '</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
     var acts = [];
-    if (r.section === 'remove') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on Vinted</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
+    if (r.section === 'remove') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
     else if (r.section === 'message') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open messages</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
     else if (r.section === 'post') {
       if (!d.found) acts.push('<button class="btn main" type="button" data-ans="' + esc(r.key) + '" data-v="Found">Found</button>');
