@@ -61,7 +61,7 @@ test.describe('Phone: Money Hub', () => {
     await page.locator('#signInBtn').click();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
     await noSidewaysScroll(page, 'Now');
-    for (const [key, title] of [['money', 'Money'], ['dates', 'Dates'], ['todo', 'To-do'], ['control', 'Control'], ['now', 'Now']]) {
+    for (const [key, title] of [['money', 'Money'], ['dates', 'Dates'], ['todo', 'To-do'], ['more', 'More'], ['now', 'Now']]) { // Hub V2: Control is under More
       await page.locator(`nav.main a[data-nav="${key}"]`).click();
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await noSidewaysScroll(page, title);

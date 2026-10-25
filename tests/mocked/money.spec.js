@@ -95,11 +95,14 @@ test.describe('Money Hub: navigation', () => {
     test(`nav "${title}" opens #/${key}`, async ({ page }) => {
       await page.goto('money/');
       await signIn(page);
-      await page.locator(`nav.main a[data-nav="${key}"]`).click();
+      // Hub V2: Accountant and Control open from the More tab in the bottom bar.
+      const inMore = ['accountant', 'control'].includes(key);
+      if (inMore) await page.locator('nav.main a[data-nav="more"]').click();
+      await page.locator(inMore ? `#view a[data-nav="${key}"]` : `nav.main a[data-nav="${key}"]`).click();
       await expect(page).toHaveURL(new RegExp(`#/${key}$`));
       await expect(page.locator('#view')).toHaveAttribute('data-view', key);
       await expect(page.locator('#hereTitle')).toHaveText(title);
-      await expect(page.locator(`nav.main a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
+      await expect(page.locator(`nav.main a[data-nav="${inMore ? 'more' : key}"]`)).toHaveAttribute('aria-current', 'page');
     });
   }
 

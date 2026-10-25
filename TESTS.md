@@ -79,7 +79,7 @@ That is 367 checks that must pass.
 **Money Hub**
 - Opens, then needs a sign-in.
 - Only Lisa's account gets in. Any other account is turned away and **no figures are read**.
-- All six sections open (Now, Money, Dates, To-do, Accountant, Control).
+- All six sections open (Now, Money, Dates, To-do, Accountant, Control). The menu is a bar at the bottom (Home, Money, Dates, To-do, More); Accountant and Control open from More. Home starts with "Needs you: N", three big tiles and the one most urgent thing (`tests/mocked/hub-v2-money.spec.js`).
 - "← Dashboard" goes back to the main dashboard.
 - Sample ledgers show the right cash, overdue items, dates and to-dos.
 - A missing, doubled or wrongly-shaped file shows as an error. It never quietly uses an old one.

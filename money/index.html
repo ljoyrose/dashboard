@@ -59,11 +59,6 @@
   .btn:hover { border-color: var(--muted); }
   .btn:disabled { opacity: .6; cursor: default; }
   .btn.main { border-color: var(--ink); font-weight: 600; }
-  nav.main { display: flex; flex-wrap: wrap; gap: 8px; padding-bottom: 12px; }
-  nav.main a { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 12px; text-decoration: none;
-               font-size: 15px; border: 1px solid var(--line); border-left: 4px solid var(--c, var(--s0)); background: var(--surface); min-height: 44px; }
-  nav.main a[aria-current="page"] { font-weight: 700; background: var(--t, var(--s0-t)); border-color: var(--ink); border-left-color: var(--c, var(--s0)); }
-  @media (max-width: 520px) { nav.main { display: grid; grid-template-columns: 1fr 1fr 1fr; } nav.main a { justify-content: center; padding: 8px 6px; font-size: 14px; } }
 
   .c-risk { --c: var(--risk); --t: var(--risk-t); }
   .c-fin { --c: var(--fin); --t: var(--fin-t); }
@@ -167,12 +162,12 @@
   /* ---- Calm layer (Lisa, 20 Oct 2026): one corner, faint lines, no fills on selected, colour only on hover or for attention, nothing moves. ---- */
   :root { --radius: 12px; }
   .btn, .card, .pill, .chip, .tile, .note, input, select, textarea, details, summary, .panel, .keytile { border-radius: var(--radius); }
-  nav.main a, .subnav a { border-radius: 999px; }
-  nav.main a, nav.main a[aria-current="page"], .subnav a, .subnav a[aria-current="page"] { font-weight: 600; background: transparent; border-width: 1px; border-color: var(--line); }
-  nav.main a:hover, nav.main a[aria-current="page"], .subnav a:hover, .subnav a[aria-current="page"], .btn:hover, a.keytile:hover { border-color: var(--muted); background: transparent; }
-  .card, .card[class], nav.main a, nav.main a[class] { border-left-color: var(--line); box-shadow: none; }
-  .card[class]:hover, nav.main a[class]:hover, nav.main a[class][aria-current="page"] { border-left-color: var(--slot, var(--c, var(--muted))); }
-  .card.vision[class], nav.main a.vision[class] { background: var(--surface); }
+  .subnav a { border-radius: 999px; }
+  .subnav a, .subnav a[aria-current="page"] { font-weight: 600; background: transparent; border-width: 1px; border-color: var(--line); }
+  .subnav a:hover, .subnav a[aria-current="page"], .btn:hover, a.keytile:hover { border-color: var(--muted); background: transparent; }
+  .card, .card[class] { border-left-color: var(--line); box-shadow: none; }
+  .card[class]:hover { border-left-color: var(--slot, var(--c, var(--muted))); }
+  .card.vision[class] { background: var(--surface); }
   a { color: inherit; }
   .btn:active, nav.main a:active { transform: none; }
   .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; font-weight: 700; color: var(--muted); cursor: help; vertical-align: middle; }
@@ -188,6 +183,36 @@
   /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+
+  /* Hub V2 (25 Oct 2026, same layout as Marketplace): five tabs in a bar at the bottom (Home, Money, Dates, To-do, More).
+     Red number = things waiting. Nothing hides under the bar. */
+  html { scroll-padding-bottom: 96px; }
+  body { padding-bottom: 96px; }
+  nav.main { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
+             padding: 6px 8px 10px; margin: 0; max-width: none; background: var(--surface); border-top: 1px solid var(--line); }
+  nav.main a { position: relative; text-decoration: none; font-size: 14px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column;
+               align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; background: transparent; }
+  nav.main a:hover { border-color: var(--c, var(--line)); }
+  nav.main a[aria-current="page"] { border: 1.5px solid var(--ink); background: var(--t, var(--s0-t)); }
+  nav.main .n { font-size: 13px; font-weight: 700; line-height: 18px; background: var(--ljr-2-solid); color: var(--ljr-2-on); border-radius: 999px; padding: 0 7px; min-width: 20px; }
+  nav.main .n:empty { visibility: hidden; }
+  #hereTitle, #hereTitle:focus, #hereTitle:focus-visible { outline: none; }
+  /* Home: Needs you: N, three big tiles that open a tab, then the one most urgent thing. */
+  .needsline { font-size: 26px; font-weight: 700; margin: 0; }
+  .needsline .zero { color: var(--ljr-5-text); }
+  .hometiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  a.hometile { min-height: 88px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 10px 12px; text-decoration: none; color: var(--ink);
+               background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); min-width: 0; }
+  a.hometile:hover { border-color: var(--c, var(--muted)); }
+  a.hometile .v { font-size: 28px; font-weight: 700; line-height: 1.2; }
+  a.hometile .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
+  .urgent .what { margin: 0; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
+  .btn.big { min-height: 52px; justify-content: center; font-weight: 600; }
+  .hint { margin: 0; font-size: 14px; color: var(--muted); }
+  .morelist { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  @media (min-width: 700px) { .morelist { grid-template-columns: 1fr 1fr; } }
+  a.morelink { display: flex; flex-direction: column; justify-content: center; min-height: 60px; padding: 10px 16px; font-size: 18px; font-weight: 600; text-decoration: none; }
+  a.morelink small { font-size: 14px; font-weight: 400; color: var(--muted); }
 </style>
 </head>
 <body>
@@ -207,20 +232,19 @@
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="icon"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
     <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
   </div>
-  <nav class="wrap wide main" aria-label="Sections">
-    <a href="#/now" data-nav="now" class="c-ink">Now</a>
-    <a href="#/money" data-nav="money" class="c-fin">Money</a>
-    <a href="#/dates" data-nav="dates" class="c-ops">Dates</a>
-    <a href="#/todo" data-nav="todo" class="c-ops">To-do</a>
-    <a href="#/accountant" data-nav="accountant" class="c-ok">Accountant</a>
-    <a href="#/control" data-nav="control" class="c-mute">Control</a>
-  </nav>
 </header>
 <main id="content" class="wrap wide">
   <div id="banner" class="banner hidden" role="status"></div>
   <div class="here"><span></span><h2 id="hereTitle" tabindex="-1">Now</h2></div>
   <div id="view"></div>
 </main>
+<nav id="tabs" class="main hidden" aria-label="Sections">
+  <a href="#/now" data-nav="now" class="c-ink"><span>Home</span><span class="n" id="n-now"></span></a>
+  <a href="#/money" data-nav="money" class="c-fin"><span>Money</span><span class="n"></span></a>
+  <a href="#/dates" data-nav="dates" class="c-ops"><span>Dates</span><span class="n" id="n-dates"></span></a>
+  <a href="#/todo" data-nav="todo" class="c-ops"><span>To-do</span><span class="n" id="n-todo"></span></a>
+  <a href="#/more" data-nav="more" class="c-mute"><span>More</span><span class="n"></span></a>
+</nav>
 <footer class="wrap wide"><span class="info" tabindex="0" title="Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time">i<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"> Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time</span></span></footer>
 
 <script>
@@ -342,10 +366,39 @@
   }
 
   // ---- Views ----
+  // Hub V2 counts for the Home tiles and the tab badges (read from what is already loaded; nothing extra is read).
+  function counts() {
+    if (!R || R.gate !== 'ok') return null;
+    var items = M.needsNow(R.data, R.money, R.today);
+    var soon = M.overdueDates(R.data, R.today).concat(M.dueWithin(R.data, R.today, 14));
+    var ready = M.yourTurn(R.data).filter(function (x) { return x.ready === 'ready'; }).length;
+    var look = R.money.filter(function (m) { return (m.liab && m.liab.overdue.length) || (m.dryState === 'dry' && m.dryDays <= 30) || (m.bank != null && m.bank < 0); }).length;
+    return { items: items, needs: items.length, dates: soon.length, late: M.overdueDates(R.data, R.today).length, ready: ready, look: look };
+  }
+  function homeTop(c) {
+    var h = '<section id="homeTop" aria-label="Needs you"><p class="needsline">Needs you: ' + (c.needs ? c.needs : '<span class="zero">0</span>') + '</p>' +
+      '<div class="hometiles">' + [['money', 'c-fin', c.look, 'Money: to look at'], ['dates', 'c-ops', c.dates, 'Dates: next 14 days'], ['todo', 'c-ops', c.ready, 'To-do: ready']].map(function (t) {
+        return '<a class="hometile ' + t[1] + '" href="#/' + t[0] + '"><span class="v">' + t[2] + '</span><span class="k">' + esc(t[3]) + '</span></a>';
+      }).join('') + '</div>';
+    if (c.needs) {
+      var x = c.items[0];
+      h += '<section class="card urgent ' + levelCls(x.level) + '" id="urgentOne"><div class="cardhead"><h3>First thing</h3>' + tag(levelCls(x.level), x.tag) + '</div>' +
+        '<p class="what">' + esc(x.ent && String(x.text).indexOf(String(x.ent).split(';')[0] + ':') !== 0 ? String(x.ent).split(';')[0] + ': ' + x.text : x.text) + '</p>' +
+        (x.href ? '<a class="btn big" href="' + esc(x.href) + '">Open it</a>' : '') +
+        (c.needs > 1 ? '<p class="hint">' + (c.needs - 1) + ' more in What needs you now, below.</p>' : '') + '</section>';
+    } else h += '<section class="card urgent c-ok" id="urgentOne"><h3>All done</h3><p class="hint">Nothing needs you right now.</p></section>';
+    return h + '</section>';
+  }
+  function viewMore() {
+    return '<section class="card c-mute"><h3>More</h3><div class="morelist">' +
+      '<a class="card morelink c-ok" href="#/accountant" data-nav="accountant">Accountant<small>Questions for the accountant</small></a>' +
+      '<a class="card morelink c-mute" href="#/control" data-nav="control">Control<small>Checks that the files are right</small></a>' +
+      '</div></section>';
+  }
   function viewNow() {
     var items = M.needsNow(R.data, R.money, R.today);
     var risk = items.filter(function (i) { return i.level === 'risk'; }).length;
-    var h = '<section class="card now ' + (risk ? 'c-risk' : 'c-ok') + '"><div class="cardhead"><h3>What needs you now</h3>' +
+    var h = homeTop(counts()) + '<section class="card now ' + (risk ? 'c-risk' : 'c-ok') + '"><div class="cardhead"><h3>What needs you now</h3>' +
       (items.length ? tag(risk ? 'c-risk' : 'c-ops', items.length + (items.length === 1 ? ' thing' : ' things')) : tag('c-ok', 'All clear')) + '</div>';
     h += items.length ? listWithMore(items, NOW_SHOW, itemLi, 'now-needs') : '<p class="note">Nothing overdue, urgent or due in the next 14 days.</p>';
     h += src('MON-DATES, MON-REGISTER, MON-INTAKE and the ledgers', null) + '</section>';
@@ -607,7 +660,7 @@
   function whenOf(s) { var t = new Date(s); return s && !isNaN(t) ? whenFmt.format(t) : String(s || ''); }
 
   // ---- Router ----
-  var TITLES = { now: 'Now', money: 'Money', e: 'Entity', dates: 'Dates', todo: 'To-do', register: 'To-do', accountant: 'Accountant', control: 'Control' };
+  var TITLES = { now: 'Now', money: 'Money', e: 'Entity', dates: 'Dates', todo: 'To-do', register: 'To-do', accountant: 'Accountant', control: 'Control', more: 'More' };
   function route() {
     var p = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
     return { view: TITLES[p[0]] ? p[0] : 'now', a: p[1] || null };
@@ -622,6 +675,7 @@
     else if (r.view === 'register') html = viewTodo(null, r.a);
     else if (r.view === 'accountant') html = viewAccountant();
     else if (r.view === 'control') html = viewControl();
+    else if (r.view === 'more') html = viewMore();
     else html = viewNow();
     var v = $('view');
     v.innerHTML = html;
@@ -629,7 +683,13 @@
     var title = r.view === 'e' ? (r.a || 'Entity') : TITLES[r.view];
     $('hereTitle').textContent = title;
     document.title = title + ' · Money Hub';
-    var nav = r.view === 'e' ? 'money' : r.view === 'register' ? 'todo' : r.view;
+    var nav = r.view === 'e' ? 'money' : r.view === 'register' ? 'todo' : r.view === 'accountant' || r.view === 'control' ? 'more' : r.view;
+    $('tabs').classList.toggle('hidden', !signedIn);
+    var c = signedIn ? counts() : null;
+    [['now', c && c.needs, 'Home'], ['dates', c && c.late, 'Dates'], ['todo', c && c.ready, 'To-do']].forEach(function (b) {
+      $('n-' + b[0]).textContent = b[1] ? String(b[1]) : '';
+      $('n-' + b[0]).parentNode.setAttribute('aria-label', b[2] + (b[1] ? ', ' + b[1] + ' waiting' : ''));
+    });
     Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
       if (a.getAttribute('data-nav') === nav) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
