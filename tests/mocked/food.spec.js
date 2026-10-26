@@ -16,9 +16,11 @@ function book() {
       ['PL-1', 'pricelist', 'Products', 'New GA price list: sample', JSON.stringify({ files: ['FILE123456789012345678901'] }), ago(10)],
       ['DONE-1', 'check', 'Invoices', 'Already handled', '{}', ago(90), 'Done', '', ago(80), 'sample@example.test', ago(60), 'engine'],
     ],
-    orders: [['order_no', 'source', 'brand', 'supplier', 'status', 's_no', 'si_no', 'boxes', 'ga_goods', 'ga_delivery', 'ga_vat', 'ga_total', 'sale_ex_vat_est', 'profit_est', 'shipped_date', 'invoice_date', 'due_date', 'paid', 'notes', 'updated_at', 'tracking', 'order_type', 'sale_inc_vat', 'customer_orders'],
-      ['9001', 'Shopify', 'DDF', 'GA', 'Invoiced', 'S1000001', 'SI-1000001', '1', '31.20', '10.82', '8.40', '50.42', '52.50', '8.17', '', '', '', '', '', '', 'https://www.dpd.co.uk/service/tracking?postcode=AA11AA&sendersRef=S1000001', 'Subscription (PayWhirl)', '63.00', '22'],
-      ['9002', 'Shopify', 'DDF', 'GA', 'Invoiced', 'S1000002', 'SI-1000002', '2', '111.06', '19.61', '26.14', '156.81', '183.34', '47.22']],
+    orders: [['order_no', 'source', 'brand', 'supplier', 'status', 's_no', 'si_no', 'boxes', 'ga_goods', 'ga_delivery', 'ga_vat', 'ga_total', 'sale_ex_vat_est', 'profit_est', 'shipped_date', 'invoice_date', 'due_date', 'paid', 'notes', 'updated_at', 'tracking', 'order_type', 'sale_inc_vat', 'customer_orders', 'placed_at', 'shop_lines', 'check'],
+      ['9001', 'Shopify', 'DDF', 'GA', 'Invoiced', 'S1000001', 'SI-1000001', '1', '31.20', '10.82', '8.40', '50.42', '52.50', '8.17', '', '', '', '', '', '', 'https://www.dpd.co.uk/service/tracking?postcode=AA11AA&sendersRef=S1000001', 'Subscription (PayWhirl)', '63.00', '22', '2026-10-22T09:00:00Z', '[]', 'Matched'],
+      ['9002', 'Shopify', 'DDF', 'GA', 'Invoiced', 'S1000002', 'SI-1000002', '2', '111.06', '19.61', '26.14', '156.81', '183.34', '47.22', '', '', '', '', '', '', '', '', '', '', '', '', 'Items differ'],
+      ['9003', 'Shopify', 'DDF', 'GA', 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '70.00', '3', '2026-10-20T09:00:00Z', '[]', 'Not at GA'],
+      ['9004', 'Shopify', 'DDF', 'GA', 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '55.00', '1', '2026-10-26T09:00:00Z', '[]', 'Waiting for GA']],
     invoices: [['si_no', 'invoice_date', 's_no', 'order_no', 'goods', 'delivery', 'vat', 'total', 'due_date', 'paid_date', 'fy', 'vat_quarter', 'file_id'],
       ['SI-1000001', '2026-10-25', 'S1000001', '9001', '31.20', '10.82', '8.40', '50.42', '2026-12-06', '', 'FY2026-27', '2026-Q4', 'FILE000000000000000000001'],
       ['SI-1000002', '2026-10-25', 'S1000002', '9002', '130.67', '0', '26.14', '156.81', '2026-12-06', '2026-12-06', 'FY2026-27', '2026-Q4', '']],
@@ -94,8 +96,8 @@ test.describe('GA Hub page', () => {
   test('Orders shows each order with its profit, red when under the minimum', async ({ page }) => {
     await sheets(page, book());
     await open(page, '#/orders');
-    await expect(page.locator('#view .row')).toHaveCount(2);
-    await expect(page.locator('#view .row').first()).toContainText('#9002');
+    await expect(page.locator('#view .row')).toHaveCount(4);
+    await expect(page.locator('#view .row').first()).toContainText('#9004');
     await expect(page.locator('#view .row .amt.red')).toHaveText('£8.17');
     await expect(page.locator('nav.tabs a[data-nav="orders"]')).toHaveAttribute('aria-current', 'page');
   });
@@ -167,12 +169,34 @@ test.describe('GA Hub page', () => {
     expect(gap).toBeGreaterThanOrEqual(12);
   });
 
+  test('order check: every order shows if it reached GA; Home counts the ones not at GA (late in red); filters; a missing order card has a Portal button', async ({ page }) => {
+    const b = book(); b.cards.push(['MISSING-9003', 'check', 'Orders', 'Order #9003: not shipped by GA', JSON.stringify({ red: true }), ago(5)]);
+    await sheets(page, b);
+    await open(page);
+    await expect(page.locator('#view a.tile[href="#/orders?check"]')).toContainText('2 (1 late)');
+    await expect(page.locator('#view a.tile[href="#/orders?check"] .v')).toHaveClass(/red/);
+    await page.locator('#view .more').click();
+    const card = page.locator('#view .card', { hasText: 'Order #9003' });
+    await expect(card.locator('a', { hasText: 'GA Portal' })).toHaveAttribute('href', 'https://partners.example.test');
+    await page.goto('food/#/orders');
+    await expect(page.locator('#view .row', { hasText: '#9001' }).locator('.badge')).toHaveText('✅ Matched with GA');
+    await expect(page.locator('#view .row', { hasText: '#9002' }).locator('.badge.no')).toHaveText('⚠️ GA sent different items');
+    await expect(page.locator('#view .row', { hasText: '#9003' }).locator('.badge.no')).toHaveText('❌ Not at GA: check the Portal');
+    await page.locator('[data-ofilter="check"]').click();
+    await expect(page.locator('#view .row')).toHaveCount(2);   // the two red ones
+    await page.locator('[data-ofilter="ga"]').click();
+    await expect(page.locator('#view .row')).toHaveCount(2);   // waiting + late
+    await page.locator('[data-ofilter="sub"]').click();
+    await expect(page.locator('#view .row')).toHaveCount(1);
+  });
+
   test('Invoices: the newest GA direct debit from the bank shows as a tile (with its date)', async ({ page }) => {
     const b = book(); b.dds = [['date', 'amount', 'bank_ref', 'invoices_paid'], ['2026-10-07', '529.37', 'GA PETFOOD DDL', ''], ['2026-10-14', '512.46', 'GA PETFOOD DDL', 'SI-1000001']];
     await sheets(page, b);
     await open(page, '#/invoices');
     await expect(page.locator('#view .tiles')).toContainText('Last GA direct debit 14/10/2026');
     await expect(page.locator('#view .tiles')).toContainText('£512.46');
+    await expect(page.locator('#view .tiles')).toContainText('£1041.83');   // both are in this financial year
   });
 
   test('GA tab: account code has Copy, phone numbers are tap-to-call', async ({ page }) => {

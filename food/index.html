@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-food-2026-10-26-v2">
+<meta name="build" content="ljr-food-2026-10-26-v3">
 <title>GA Hub</title>
 <!-- GA Hub v1 (26 Oct 2026): Designer Dog Foods orders, GA invoices, products and GA details. PUBLIC repo: no data, no secrets.
      The workbook id comes from ../config.js (DASH_CONFIG.food); everything else is read at run time with Lisa's Google sign-in
@@ -114,7 +114,7 @@
   var CLIENT_ID = CFG.clientId, READ = (CFG.scopes || {}).read, SHEETS = 'https://www.googleapis.com/auth/spreadsheets';
   var SCOPE = READ + ' ' + SHEETS;
   var CARD_COLS = ['key', 'section', 'category', 'title', 'detail', 'created_at', 'answer', 'note', 'answered_at', 'answered_by', 'applied_at', 'applied_by'];
-  var RANGES = ['Cards!A2:L', 'Orders!A1:X', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E', 'DirectDebits!A1:G'];
+  var RANGES = ['Cards!A2:L', 'Orders!A1:AB', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E', 'DirectDebits!A1:G'];
   var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
   var SECTIONS = {
     price: { name: 'GA price changed', yes: 'Apply', no: 'Not now', what: 'Apply updates your product list and the suggested shop and subscription prices. Shops are not changed.' },
@@ -129,6 +129,7 @@
   function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
   function hm(ms) { return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
   function num(v) { var n = Number(String(v === undefined ? '' : v).replace(/[£,]/g, '')); return isFinite(n) ? n : 0; }
+  function fyStartYmd() { var m = num(setting('FY_START_MONTH')) || 4, d = new Date(), y = d.getMonth() + 1 >= m ? d.getFullYear() : d.getFullYear() - 1; return y + '-' + String(m).padStart(2, '0') + '-01'; }
   function money(v) { return v === '' || v === undefined || v === null ? '' : '£' + num(v).toFixed(2); }
   function ukDate(s) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(s || ''); }
   function detail(r) { try { return JSON.parse(r.detail || '{}'); } catch (e) { return {}; } }
@@ -198,8 +199,8 @@
   function cardHtml(r) {
     var s = SECTIONS[r.section] || SECTIONS.check, d = detail(r);
     var h = '<div class="card ' + (d.red ? 'acc2' : 'acc4') + '"><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.why || s.what) + '</p>';
-    var on = /^LOWPROFIT-(.+)$/.exec(r.key), o = on && data.orders.filter(function (x) { return String(x.order_no) === on[1]; })[0];
-    if (o) { var ol = orderLinks(o); h += (orderFacts(o) ? '<p class="what"><b>' + esc(orderFacts(o)) + '</b></p>' : '') + (ol ? '<div class="acts">' + ol + '</div>' : ''); }
+    var on = /^(?:LOWPROFIT|MISSING|MISMATCH|UNKNOWN)-(.+)$/.exec(r.key), o = on && data.orders.filter(function (x) { return String(x.order_no) === on[1]; })[0];
+    if (o) { var ol = orderLinks(o); h += (orderFacts(o) ? '<p class="what"><b>' + esc(orderFacts(o)) + '</b></p>' : '') + (ol || /^MISSING|^UNKNOWN/.test(r.key) ? '<div class="acts">' + ol + (/^MISSING|^UNKNOWN/.test(r.key) && /^https:/.test(setting('GA_PORTAL')) ? '<a class="btn" href="' + esc(setting('GA_PORTAL')) + '" target="_blank" rel="noopener">GA Portal</a>' : '') + '</div>' : ''); }
     if (d.file) h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(d.file) + '/view" target="_blank" rel="noopener">Open the PDF</a></div>';
     (d.files || []).forEach(function (f) { h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(f) + '/view" target="_blank" rel="noopener">Open the price list</a></div>'; });
     if (r.answer) { var at = Date.parse(r.answered_at), live = Date.now() < at + UNDO_MS;
@@ -211,27 +212,36 @@
     // Answered cards stay on screen until the engine applies them (Undo for 10 minutes), then drop off.
     var w = data.cards.filter(function (r) { return !r.applied_at && (!r.answer || Date.now() < Date.parse(r.answered_at) + APPLY_MS); }).sort(byUrgency), need = waiting().length, owed = unpaid().reduce(function (n, i) { return n + num(i.total); }, 0);
     var due = unpaid().map(function (i) { return i.due_date; }).filter(Boolean).sort()[0];
+    var notAtGa = data.orders.filter(function (o) { return /^(Waiting for GA|Not at GA)$/.test(o.check); }).length, late = data.orders.filter(function (o) { return o.check === 'Not at GA'; }).length;
     var min = num(setting('MIN_PROFIT')) || 15, low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
     var h = '<p class="needs">Needs you: ' + (need ? need : '<span class="zero">0</span>') + '</p>';
     var st = data.statements[0];   // GA's own weekly statement beats our sum of the invoices we have seen
     h += '<div class="tiles"><a class="tile" href="#/invoices"><span class="k">Owed to GA' + (st ? ' (statement ' + esc(ukDate(st.statement_date)) + ')' : '') + '</span><span class="v">' + money(st ? st.total_outstanding : owed) + '</span></a>' +
       '<a class="tile" href="#/invoices"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span></a>' +
-      '<a class="tile" href="#/orders"><span class="k">Orders on record</span><span class="v">' + data.orders.length + '</span></a>' +
+      '<a class="tile" href="#/orders?check"><span class="k">Not at GA yet</span><span class="v' + (late ? ' red' : '') + '">' + notAtGa + (late ? ' (' + late + ' late)' : '') + '</span></a>' +
       '<a class="tile" href="#/orders"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a></div>';
     if (!w.length) return h + '<div class="card acc5"><h2>All clear</h2><p class="what">Nothing from GA needs you. The engine checks GA\'s emails every 15 minutes.</p></div>';
     h += cardHtml(w[0]);
     if (w.length > 1) h += showAll ? w.slice(1).map(cardHtml).join('') : '<button class="more" type="button" data-action="all">Show ' + (w.length - 1) + ' more</button>';
     return h;
   }
+  // The order check: did every shop order reach GA, and did GA send the same items?
+  var CHECK = { 'Matched': ['✅ Matched with GA', ''], 'Shipped': ['🚚 Shipped by GA', ''], 'Waiting for GA': ['⏳ Waiting for GA', ''], 'Not at GA': ['❌ Not at GA: check the Portal', 'no'],
+    'Items differ': ['⚠️ GA sent different items', 'no'], 'Not in Shopify': ['❓ Not in Shopify: check the reference', 'no'], 'No GA items': ['🏠 Packed at home (no GA items)', ''], 'Cancelled': ['✖ Cancelled', ''] };
+  function checkBadge(o) { var c = CHECK[o.check]; return c ? '<div class="badges"><span class="badge' + (c[1] ? ' ' + c[1] : '') + '">' + esc(c[0]) + '</span></div>' : ''; }
+  var OFILTERS = [['all', 'All'], ['check', 'Needs a look'], ['ga', 'Not at GA yet'], ['sub', 'Subscriptions'], ['low', 'Low profit']], ofilter = 'all';
   function pageOrders() {
-    var min = num(setting('MIN_PROFIT')) || 15, list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); });
-    var h = '<p class="needs">Orders</p><p class="hint">From GA\'s shipping reports and invoices. 📦 Track opens DPD; 🛍 Shopify opens the order (customer details stay in Shopify).</p>';
-    if (!list.length) return h + '<div class="card"><p class="what">No orders yet. They appear after GA\'s next shipping report or invoice.</p></div>';
+    var min = num(setting('MIN_PROFIT')) || 15, list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); }).filter(function (o) {
+      return ofilter === 'all' || (ofilter === 'check' && CHECK[o.check] && CHECK[o.check][1]) || (ofilter === 'ga' && /^(Waiting for GA|Not at GA)$/.test(o.check))
+        || (ofilter === 'sub' && /^sub/i.test(o.order_type)) || (ofilter === 'low' && o.profit_est !== '' && num(o.profit_est) < min); });
+    var chips = '<div class="chips" role="group" aria-label="Which orders">' + OFILTERS.map(function (f) { return '<button class="chip" type="button" data-ofilter="' + f[0] + '" aria-pressed="' + (ofilter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div>';
+    var h = '<p class="needs">Orders</p><p class="hint">From GA\'s shipping reports and invoices. 📦 Track opens DPD; 🛍 Shopify opens the order (customer details stay in Shopify). Each order is checked: paid in the shop → shipped by GA → same items on GA\'s invoice.</p>' + chips;
+    if (!list.length) return h + '<div class="card"><p class="what">' + (ofilter === 'all' ? 'No orders yet. They appear after GA\'s next shipping report or invoice.' : 'None.') + '</p></div>';
     var shown = showAll ? list : list.slice(0, 30);
     h += '<div class="card">' + shown.map(function (o) { var p = o.profit_est === '' ? '' : num(o.profit_est);
       var links = orderLinks(o);
       return '<div class="row"><div class="txt"><b>#' + esc(o.order_no) + '</b> · ' + esc(o.status) + (orderFacts(o) ? '<div class="m">' + esc(orderFacts(o)) + '</div>' : '') + '<div class="m">' + esc([o.s_no, o.boxes ? o.boxes + ' box' + (num(o.boxes) > 1 ? 'es' : '') : '', o.shipped_date ? 'shipped ' + ukDate(o.shipped_date) : '', o.ga_total ? 'GA ' + money(o.ga_total) : ''].filter(Boolean).join(' · ')) + '</div>' +
-        (links ? '<div class="links">' + links + '</div>' : '') + '</div>' +
+        checkBadge(o) + (links ? '<div class="links">' + links + '</div>' : '') + '</div>' +
         '<div class="amt ' + (p === '' ? '' : p < min ? 'red' : 'good') + '">' + (p === '' ? '' : money(p)) + '</div></div>'; }).join('') + '</div>';
     if (list.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
     return h + '<p class="hint">Profit is ex VAT, after GA food, delivery, card fee and running cost: from the Shopify price paid where known, otherwise estimated at shop prices.</p>';
@@ -240,7 +250,7 @@
     var inv = data.invoices.slice().sort(function (a, b) { return String(b.invoice_date).localeCompare(String(a.invoice_date)); });
     var fy = inv.length ? inv[0].fy : '', thisFy = inv.filter(function (i) { return i.fy === fy; });
     var sum = function (list, k) { return list.reduce(function (n, i) { return n + num(i[k]); }, 0); }, open = unpaid();
-    var st = data.statements[0], dd = data.dds[0];   // newest GA direct debit out of the Starling account
+    var st = data.statements[0], dd = data.dds[0], fyStart = fyStartYmd(), paidFy = data.dds.filter(function (d) { return String(d.date) >= fyStart; }).reduce(function (n, d) { return n + num(d.amount); }, 0);   // newest GA direct debit out of the Starling account
     var h = '<p class="needs">Invoices</p><div class="tiles">' +
       (st ? '<div class="tile"><span class="k">GA statement ' + esc(ukDate(st.statement_date)) + '</span><span class="v">' + money(st.total_outstanding) + '</span></div>' : '') +
       '<div class="tile"><span class="k">Owed to GA</span><span class="v">' + money(sum(open, 'total')) + '</span></div>' +
@@ -249,7 +259,8 @@
       '<div class="tile"><span class="k">' + esc(fy || 'This year') + ' delivery</span><span class="v">' + money(sum(thisFy, 'delivery')) + '</span></div>' +
       '<div class="tile"><span class="k">VAT to reclaim (' + esc(fy || 'year') + ')</span><span class="v">' + money(sum(thisFy, 'vat')) + '</span></div>' +
       (dd ? '<div class="tile"><span class="k">Last GA direct debit ' + esc(ukDate(dd.date)) + '</span><span class="v">' + money(dd.amount) + '</span></div>'
-        : '<div class="tile"><span class="k">Paid by</span><span class="v">' + esc(setting('GA_PAYMENT') || 'Not set') + '</span></div>') + '</div>' +
+        : '<div class="tile"><span class="k">Paid by</span><span class="v">' + esc(setting('GA_PAYMENT') || 'Not set') + '</span></div>') +
+      (dd ? '<div class="tile"><span class="k">Paid to GA since ' + esc(ukDate(fyStart)) + ' (bank)</span><span class="v">' + money(paidFy) + '</span></div>' : '') + '</div>' +
       (dd || setting('BANK_FOLDER_ID') || setting('BANK_LEDGER_FILE_ID') ? '' : '<p class="hint">Paid dates fill in once the bank is linked (BANK_FOLDER_ID on the Settings tab).</p>');
     if (!inv.length) return h + '<div class="card"><p class="what">No GA invoices read yet. They are saved here when the next one arrives by email.</p></div>';
     var shown = showAll ? inv : inv.slice(0, 30);
@@ -323,6 +334,7 @@
     if (a === 'signout') { token = null; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [] }; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }
+    if (t.hasAttribute('data-ofilter')) { ofilter = t.getAttribute('data-ofilter'); showAll = false; return render(); }
     if (t.hasAttribute('data-filter')) { filter = t.getAttribute('data-filter'); showAll = false; return render(); }
     if (t.hasAttribute('data-ans')) { var r = find(t.getAttribute('data-ans')); t.disabled = true; return answer(r, t.getAttribute('data-v')); }
     if (t.hasAttribute('data-undo')) { var u = find(t.getAttribute('data-undo')); if (Date.now() < Date.parse(u.answered_at) + UNDO_MS) answer(u, ''); return; }
@@ -333,7 +345,7 @@
     q = e.target.value.trim().toLowerCase(); var pos = e.target.selectionStart; render();
     var box = document.querySelector('[data-find]'); if (box) { box.focus(); try { box.setSelectionRange(pos, pos); } catch (x) {} }
   });
-  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'home'; if (['home', 'orders', 'invoices', 'products', 'ga'].indexOf(view) < 0) view = 'home'; showAll = false; render(); }
+  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'home'; if (/\?check$/.test(location.hash)) ofilter = 'ga'; if (['home', 'orders', 'invoices', 'products', 'ga'].indexOf(view) < 0) view = 'home'; showAll = false; render(); }
   window.addEventListener('hashchange', route);
 
   /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */
