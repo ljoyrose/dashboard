@@ -39,7 +39,7 @@ async function sheets(page, b, opts = {}) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     }
     if (/:batchGet/.test(url)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valueRanges: [
-      { values: b.cards }, { values: b.orders }, { values: b.invoices }, { values: [['COUNT: sample']].concat(b.products).slice(1) }, { values: b.settings }] }) });
+      { values: b.cards }, { values: b.orders }, { values: b.invoices }, { values: [['COUNT: sample']].concat(b.products).slice(1) }, { values: b.settings }, { values: b.statements || [['statement_date', 'total_outstanding']] }] }) });
     const n = Number(/Cards!A(\d+)/.exec(url)[1]), row = (b.cards[n - 2] || []).slice();
     if (opts.moved) row[0] = 'SOMETHING-ELSE';
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: [row] }) });
@@ -98,6 +98,16 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view .row').first()).toContainText('#9002');
     await expect(page.locator('#view .row .amt.red')).toHaveText('£8.17');
     await expect(page.locator('nav.tabs a[data-nav="orders"]')).toHaveAttribute('aria-current', 'page');
+  });
+
+  test('a GA statement on file: its balance is the Owed figure on Home and the first tile on Invoices', async ({ page }) => {
+    const b = book(); b.statements = [['statement_date', 'total_outstanding', 'file_id'], ['2026-10-19', '1234.56', '']];
+    await sheets(page, b);
+    await open(page);
+    await expect(page.locator('#view .tile').first()).toContainText('£1234.56');
+    await expect(page.locator('#view .tile').first()).toContainText('statement 19/10/2026');
+    await page.goto('food/#/invoices');
+    await expect(page.locator('#view .tile').first()).toContainText('GA statement 19/10/2026');
   });
 
   test('Invoices: owed, unpaid count, the year totals, and a PDF link to Drive', async ({ page }) => {

@@ -107,7 +107,7 @@
   var CLIENT_ID = CFG.clientId, READ = (CFG.scopes || {}).read, SHEETS = 'https://www.googleapis.com/auth/spreadsheets';
   var SCOPE = READ + ' ' + SHEETS;
   var CARD_COLS = ['key', 'section', 'category', 'title', 'detail', 'created_at', 'answer', 'note', 'answered_at', 'answered_by', 'applied_at', 'applied_by'];
-  var RANGES = ['Cards!A2:L', 'Orders!A1:R', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C'];
+  var RANGES = ['Cards!A2:L', 'Orders!A1:T', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E'];
   var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
   var SECTIONS = {
     price: { name: 'GA price changed', yes: 'Apply', no: 'Not now', what: 'Apply updates your product list and the suggested shop and subscription prices. Shops are not changed.' },
@@ -116,7 +116,7 @@
     check: { name: 'Check', yes: 'Done', what: 'Something the engine could not finish on its own.' },
     alert: { name: 'Engine problem', yes: 'Seen', what: 'The food engine hit a problem. It keeps trying every 15 minutes.' }
   };
-  var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {} }, view = 'home', filter = 'sale', q = '', showAll = false;
+  var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [] }, view = 'home', filter = 'sale', q = '', showAll = false;
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
@@ -154,6 +154,7 @@
       data.cards = (vr[0] || []).map(function (v, i) { var o = { _row: i + 2 }; CARD_COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
       data.orders = table(vr[1]); data.invoices = table(vr[2]); data.products = table(vr[3]);
       data.settings = {}; table(vr[4]).forEach(function (s) { data.settings[s.key] = s; });
+      data.statements = table(vr[5]).sort(function (a, b) { return String(b.statement_date).localeCompare(String(a.statement_date)); });
       $('banner').className = 'banner hidden'; render();
     }).catch(function (e) { banner('Could not load: ' + e.message); });
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
@@ -193,7 +194,8 @@
     var due = unpaid().map(function (i) { return i.due_date; }).filter(Boolean).sort()[0];
     var min = num(setting('MIN_PROFIT')) || 15, low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
     var h = '<p class="needs">Needs you: ' + (need ? need : '<span class="zero">0</span>') + '</p>';
-    h += '<div class="tiles"><a class="tile" href="#/invoices"><span class="k">Owed to GA</span><span class="v">' + money(owed) + '</span></a>' +
+    var st = data.statements[0];   // GA's own weekly statement beats our sum of the invoices we have seen
+    h += '<div class="tiles"><a class="tile" href="#/invoices"><span class="k">Owed to GA' + (st ? ' (statement ' + esc(ukDate(st.statement_date)) + ')' : '') + '</span><span class="v">' + money(st ? st.total_outstanding : owed) + '</span></a>' +
       '<a class="tile" href="#/invoices"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span></a>' +
       '<a class="tile" href="#/orders"><span class="k">Orders on record</span><span class="v">' + data.orders.length + '</span></a>' +
       '<a class="tile" href="#/orders"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a></div>';
@@ -217,7 +219,9 @@
     var inv = data.invoices.slice().sort(function (a, b) { return String(b.invoice_date).localeCompare(String(a.invoice_date)); });
     var fy = inv.length ? inv[0].fy : '', thisFy = inv.filter(function (i) { return i.fy === fy; });
     var sum = function (list, k) { return list.reduce(function (n, i) { return n + num(i[k]); }, 0); }, open = unpaid();
+    var st = data.statements[0];
     var h = '<p class="needs">Invoices</p><div class="tiles">' +
+      (st ? '<div class="tile"><span class="k">GA statement ' + esc(ukDate(st.statement_date)) + '</span><span class="v">' + money(st.total_outstanding) + '</span></div>' : '') +
       '<div class="tile"><span class="k">Owed to GA</span><span class="v">' + money(sum(open, 'total')) + '</span></div>' +
       '<div class="tile"><span class="k">Unpaid invoices</span><span class="v">' + open.length + '</span></div>' +
       '<div class="tile"><span class="k">' + esc(fy || 'This year') + ' food</span><span class="v">' + money(sum(thisFy, 'goods')) + '</span></div>' +
@@ -280,7 +284,7 @@
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
-    if (a === 'signout') { token = null; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {} }; return render(); }
+    if (a === 'signout') { token = null; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [] }; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }
     if (t.hasAttribute('data-filter')) { filter = t.getAttribute('data-filter'); showAll = false; return render(); }
