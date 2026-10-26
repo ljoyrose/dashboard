@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-food-2026-10-26-v1">
+<meta name="build" content="ljr-food-2026-10-26-v2">
 <title>GA Hub</title>
 <!-- GA Hub v1 (26 Oct 2026): Designer Dog Foods orders, GA invoices, products and GA details. PUBLIC repo: no data, no secrets.
      The workbook id comes from ../config.js (DASH_CONFIG.food); everything else is read at run time with Lisa's Google sign-in
@@ -107,7 +107,7 @@
   var CLIENT_ID = CFG.clientId, READ = (CFG.scopes || {}).read, SHEETS = 'https://www.googleapis.com/auth/spreadsheets';
   var SCOPE = READ + ' ' + SHEETS;
   var CARD_COLS = ['key', 'section', 'category', 'title', 'detail', 'created_at', 'answer', 'note', 'answered_at', 'answered_by', 'applied_at', 'applied_by'];
-  var RANGES = ['Cards!A2:L', 'Orders!A1:T', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E'];
+  var RANGES = ['Cards!A2:L', 'Orders!A1:T', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E', 'DirectDebits!A1:G'];
   var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
   var SECTIONS = {
     price: { name: 'GA price changed', yes: 'Apply', no: 'Not now', what: 'Apply updates your product list and the suggested shop and subscription prices. Shops are not changed.' },
@@ -116,7 +116,7 @@
     check: { name: 'Check', yes: 'Done', what: 'Something the engine could not finish on its own.' },
     alert: { name: 'Engine problem', yes: 'Seen', what: 'The food engine hit a problem. It keeps trying every 15 minutes.' }
   };
-  var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [] }, view = 'home', filter = 'sale', q = '', showAll = false;
+  var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [] }, view = 'home', filter = 'sale', q = '', showAll = false;
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
@@ -155,6 +155,7 @@
       data.orders = table(vr[1]); data.invoices = table(vr[2]); data.products = table(vr[3]);
       data.settings = {}; table(vr[4]).forEach(function (s) { data.settings[s.key] = s; });
       data.statements = table(vr[5]).sort(function (a, b) { return String(b.statement_date).localeCompare(String(a.statement_date)); });
+      data.dds = table(vr[6]).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
       $('banner').className = 'banner hidden'; render();
     }).catch(function (e) { banner('Could not load: ' + e.message); });
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
@@ -219,7 +220,7 @@
     var inv = data.invoices.slice().sort(function (a, b) { return String(b.invoice_date).localeCompare(String(a.invoice_date)); });
     var fy = inv.length ? inv[0].fy : '', thisFy = inv.filter(function (i) { return i.fy === fy; });
     var sum = function (list, k) { return list.reduce(function (n, i) { return n + num(i[k]); }, 0); }, open = unpaid();
-    var st = data.statements[0];
+    var st = data.statements[0], dd = data.dds[0];   // newest GA direct debit out of the Starling account
     var h = '<p class="needs">Invoices</p><div class="tiles">' +
       (st ? '<div class="tile"><span class="k">GA statement ' + esc(ukDate(st.statement_date)) + '</span><span class="v">' + money(st.total_outstanding) + '</span></div>' : '') +
       '<div class="tile"><span class="k">Owed to GA</span><span class="v">' + money(sum(open, 'total')) + '</span></div>' +
@@ -227,8 +228,9 @@
       '<div class="tile"><span class="k">' + esc(fy || 'This year') + ' food</span><span class="v">' + money(sum(thisFy, 'goods')) + '</span></div>' +
       '<div class="tile"><span class="k">' + esc(fy || 'This year') + ' delivery</span><span class="v">' + money(sum(thisFy, 'delivery')) + '</span></div>' +
       '<div class="tile"><span class="k">VAT to reclaim (' + esc(fy || 'year') + ')</span><span class="v">' + money(sum(thisFy, 'vat')) + '</span></div>' +
-      '<div class="tile"><span class="k">Paid by</span><span class="v">' + esc(setting('GA_PAYMENT') || 'Not set') + '</span></div></div>' +
-      (setting('BANK_LEDGER_FILE_ID') ? '' : '<p class="hint">Paid dates fill in once the bank ledger is linked (BANK_LEDGER_FILE_ID on the Settings tab).</p>');
+      (dd ? '<div class="tile"><span class="k">Last GA direct debit ' + esc(ukDate(dd.date)) + '</span><span class="v">' + money(dd.amount) + '</span></div>'
+        : '<div class="tile"><span class="k">Paid by</span><span class="v">' + esc(setting('GA_PAYMENT') || 'Not set') + '</span></div>') + '</div>' +
+      (dd || setting('BANK_FOLDER_ID') || setting('BANK_LEDGER_FILE_ID') ? '' : '<p class="hint">Paid dates fill in once the bank is linked (BANK_FOLDER_ID on the Settings tab).</p>');
     if (!inv.length) return h + '<div class="card"><p class="what">No GA invoices read yet. They are saved here when the next one arrives by email.</p></div>';
     var shown = showAll ? inv : inv.slice(0, 30);
     h += '<div class="card">' + shown.map(function (i) {
@@ -284,7 +286,7 @@
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
-    if (a === 'signout') { token = null; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [] }; return render(); }
+    if (a === 'signout') { token = null; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [] }; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }
     if (t.hasAttribute('data-filter')) { filter = t.getAttribute('data-filter'); showAll = false; return render(); }

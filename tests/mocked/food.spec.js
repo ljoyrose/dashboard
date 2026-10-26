@@ -39,7 +39,7 @@ async function sheets(page, b, opts = {}) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     }
     if (/:batchGet/.test(url)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valueRanges: [
-      { values: b.cards }, { values: b.orders }, { values: b.invoices }, { values: [['COUNT: sample']].concat(b.products).slice(1) }, { values: b.settings }, { values: b.statements || [['statement_date', 'total_outstanding']] }] }) });
+      { values: b.cards }, { values: b.orders }, { values: b.invoices }, { values: [['COUNT: sample']].concat(b.products).slice(1) }, { values: b.settings }, { values: b.statements || [['statement_date', 'total_outstanding']] }, { values: b.dds || [['date', 'amount']] }] }) });
     const n = Number(/Cards!A(\d+)/.exec(url)[1]), row = (b.cards[n - 2] || []).slice();
     if (opts.moved) row[0] = 'SOMETHING-ELSE';
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: [row] }) });
@@ -131,6 +131,14 @@ test.describe('GA Hub page', () => {
     await page.locator('[data-find]').fill('cat');
     await expect(page.locator('#view .row')).toHaveCount(1);
     await expect(page.locator('[data-find]')).toBeFocused();
+  });
+
+  test('Invoices: the newest GA direct debit from the bank shows as a tile (with its date)', async ({ page }) => {
+    const b = book(); b.dds = [['date', 'amount', 'bank_ref', 'invoices_paid'], ['2026-10-07', '529.37', 'GA PETFOOD DDL', ''], ['2026-10-14', '512.46', 'GA PETFOOD DDL', 'SI-1000001']];
+    await sheets(page, b);
+    await open(page, '#/invoices');
+    await expect(page.locator('#view .tiles')).toContainText('Last GA direct debit 14/10/2026');
+    await expect(page.locator('#view .tiles')).toContainText('£512.46');
   });
 
   test('GA tab: account code has Copy, phone numbers are tap-to-call', async ({ page }) => {
