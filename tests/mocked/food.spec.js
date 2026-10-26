@@ -20,6 +20,7 @@ function book() {
       ['9001', 'Shopify', 'DDF', 'GA', 'Invoiced', 'S1000001', 'SI-1000001', '1', '31.20', '10.82', '8.40', '50.42', '52.50', '8.17', '', '', '', '', '', '', 'https://www.dpd.co.uk/service/tracking?postcode=AA11AA&sendersRef=S1000001', 'Subscription (PayWhirl)', '63.00', '22', '2026-10-22T09:00:00Z', '[]', 'Matched'],
       ['9002', 'Shopify', 'DDF', 'GA', 'Invoiced', 'S1000002', 'SI-1000002', '2', '111.06', '19.61', '26.14', '156.81', '183.34', '47.22', '', '', '', '', '', '', '', '', '', '', '', '', 'Items differ'],
       ['9003', 'Shopify', 'DDF', 'GA', 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '70.00', '3', '2026-10-20T09:00:00Z', '[]', 'Not at GA'],
+      ['9005', 'Shopify', 'DDF', 'GA', 'At GA', 'S1000005', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '70.00', '2', '2026-10-26T08:00:00Z', '[]', 'At GA'],
       ['9004', 'Shopify', 'DDF', 'GA', 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '55.00', '1', '2026-10-26T09:00:00Z', '[]', 'Waiting for GA']],
     invoices: [['si_no', 'invoice_date', 's_no', 'order_no', 'goods', 'delivery', 'vat', 'total', 'due_date', 'paid_date', 'fy', 'vat_quarter', 'file_id'],
       ['SI-1000001', '2026-10-25', 'S1000001', '9001', '31.20', '10.82', '8.40', '50.42', '2026-12-06', '', 'FY2026-27', '2026-Q4', 'FILE000000000000000000001'],
@@ -96,8 +97,8 @@ test.describe('GA Hub page', () => {
   test('Orders shows each order with its profit, red when under the minimum', async ({ page }) => {
     await sheets(page, book());
     await open(page, '#/orders');
-    await expect(page.locator('#view .row')).toHaveCount(4);
-    await expect(page.locator('#view .row').first()).toContainText('#9004');
+    await expect(page.locator('#view .row')).toHaveCount(5);
+    await expect(page.locator('#view .row').first()).toContainText('#9005');
     await expect(page.locator('#view .row .amt.red')).toHaveText('£8.17');
     await expect(page.locator('nav.tabs a[data-nav="orders"]')).toHaveAttribute('aria-current', 'page');
   });
@@ -182,6 +183,7 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view .row', { hasText: '#9001' }).locator('.badge')).toHaveText('✅ Matched with GA');
     await expect(page.locator('#view .row', { hasText: '#9002' }).locator('.badge.no')).toHaveText('⚠️ GA sent different items');
     await expect(page.locator('#view .row', { hasText: '#9003' }).locator('.badge.no')).toHaveText('❌ Not at GA: check the Portal');
+    await expect(page.locator('#view .row', { hasText: '#9005' }).locator('.badge')).toHaveText('📥 At GA (confirmed)');
     await page.locator('[data-ofilter="check"]').click();
     await expect(page.locator('#view .row')).toHaveCount(2);   // the two red ones
     await page.locator('[data-ofilter="ga"]').click();
