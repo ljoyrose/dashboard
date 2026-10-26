@@ -49,6 +49,7 @@
   nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-2-solid); color: var(--ljr-2-on); border-radius: 999px; padding: 0 7px; min-width: 20px; }
   nav.tabs .n:empty { visibility: hidden; }
   main, main.wrap { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  #view { display: flex; flex-direction: column; gap: 14px; }   /* tiles, cards and lists never touch */
   .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
   .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
   .needs { font-size: 26px; font-weight: 700; margin: 0; }
@@ -69,6 +70,12 @@
   .row .txt { flex: 1; min-width: 0; }
   .row .m { font-size: 14px; color: var(--muted); }
   .row .amt { font-weight: 700; text-align: right; white-space: nowrap; }
+  .row .links { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+  .row .links .btn { min-height: 40px; padding: 6px 12px; font-size: 14px; }
+  .badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .badge { font-size: 13px; font-weight: 600; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; background: var(--bg); white-space: nowrap; }
+  .badge.no { color: var(--ljr-2-text); border-color: var(--ljr-2); }
+  .grp { font-size: 15px; font-weight: 700; margin: 0; color: var(--muted); }
   .red { color: var(--ljr-2-text); font-weight: 700; }
   .good { color: var(--ljr-5-text); font-weight: 700; }
   .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -107,7 +114,7 @@
   var CLIENT_ID = CFG.clientId, READ = (CFG.scopes || {}).read, SHEETS = 'https://www.googleapis.com/auth/spreadsheets';
   var SCOPE = READ + ' ' + SHEETS;
   var CARD_COLS = ['key', 'section', 'category', 'title', 'detail', 'created_at', 'answer', 'note', 'answered_at', 'answered_by', 'applied_at', 'applied_by'];
-  var RANGES = ['Cards!A2:L', 'Orders!A1:T', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E', 'DirectDebits!A1:G'];
+  var RANGES = ['Cards!A2:L', 'Orders!A1:X', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E', 'DirectDebits!A1:G'];
   var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
   var SECTIONS = {
     price: { name: 'GA price changed', yes: 'Apply', no: 'Not now', what: 'Apply updates your product list and the suggested shop and subscription prices. Shops are not changed.' },
@@ -179,9 +186,20 @@
   var ORDER = ['alert', 'price', 'profit', 'check', 'pricelist'];
   function byUrgency(a, b) { return ORDER.indexOf(a.section) - ORDER.indexOf(b.section) || String(a.created_at).localeCompare(String(b.created_at)); }
   function unpaid() { return data.invoices.filter(function (i) { return !i.paid_date && num(i.total) > 0; }); }
+  function orderFacts(o) {
+    var t = String(o.order_type || ''), n = num(o.customer_orders), nth = function (k) { var v = k % 100; return k + (v > 10 && v < 14 ? 'th' : ['th', 'st', 'nd', 'rd'][k % 10] || 'th'); };
+    return [(/^sub/i.test(t) ? '🔁 ' : t ? '🛒 ' : '') + t, o.source, o.brand, n ? 'customer\'s ' + nth(n) + ' order' : ''].filter(Boolean).join(' · ');
+  }
+  function orderLinks(o) {
+    var shop = setting('SHOPIFY_STORE');
+    return (/^https:\/\/(www\.)?dpd\.co\.uk\//.test(o.tracking) ? '<a class="btn" href="' + esc(o.tracking) + '" target="_blank" rel="noopener" aria-label="Track order ' + esc(o.order_no) + ' with DPD">📦 Track</a>' : '') +
+      (shop && o.source === 'Shopify' ? '<a class="btn" href="https://admin.shopify.com/store/' + encodeURIComponent(shop) + '/orders?query=' + encodeURIComponent(o.order_no) + '" target="_blank" rel="noopener" aria-label="Open order ' + esc(o.order_no) + ' in Shopify">🛍 Shopify</a>' : '');
+  }
   function cardHtml(r) {
     var s = SECTIONS[r.section] || SECTIONS.check, d = detail(r);
     var h = '<div class="card ' + (d.red ? 'acc2' : 'acc4') + '"><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.why || s.what) + '</p>';
+    var on = /^LOWPROFIT-(.+)$/.exec(r.key), o = on && data.orders.filter(function (x) { return String(x.order_no) === on[1]; })[0];
+    if (o) { var ol = orderLinks(o); h += (orderFacts(o) ? '<p class="what"><b>' + esc(orderFacts(o)) + '</b></p>' : '') + (ol ? '<div class="acts">' + ol + '</div>' : ''); }
     if (d.file) h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(d.file) + '/view" target="_blank" rel="noopener">Open the PDF</a></div>';
     (d.files || []).forEach(function (f) { h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(f) + '/view" target="_blank" rel="noopener">Open the price list</a></div>'; });
     if (r.answer) { var at = Date.parse(r.answered_at), live = Date.now() < at + UNDO_MS;
@@ -207,14 +225,16 @@
   }
   function pageOrders() {
     var min = num(setting('MIN_PROFIT')) || 15, list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); });
-    var h = '<p class="needs">Orders</p><p class="hint">From GA\'s shipping reports and invoices. Order numbers only, never customer details.</p>';
+    var h = '<p class="needs">Orders</p><p class="hint">From GA\'s shipping reports and invoices. 📦 Track opens DPD; 🛍 Shopify opens the order (customer details stay in Shopify).</p>';
     if (!list.length) return h + '<div class="card"><p class="what">No orders yet. They appear after GA\'s next shipping report or invoice.</p></div>';
     var shown = showAll ? list : list.slice(0, 30);
     h += '<div class="card">' + shown.map(function (o) { var p = o.profit_est === '' ? '' : num(o.profit_est);
-      return '<div class="row"><div class="txt"><b>#' + esc(o.order_no) + '</b> · ' + esc(o.status) + '<div class="m">' + esc([o.s_no, o.boxes ? o.boxes + ' box' + (num(o.boxes) > 1 ? 'es' : '') : '', o.shipped_date ? 'shipped ' + ukDate(o.shipped_date) : '', o.ga_total ? 'GA ' + money(o.ga_total) : ''].filter(Boolean).join(' · ')) + '</div></div>' +
+      var links = orderLinks(o);
+      return '<div class="row"><div class="txt"><b>#' + esc(o.order_no) + '</b> · ' + esc(o.status) + (orderFacts(o) ? '<div class="m">' + esc(orderFacts(o)) + '</div>' : '') + '<div class="m">' + esc([o.s_no, o.boxes ? o.boxes + ' box' + (num(o.boxes) > 1 ? 'es' : '') : '', o.shipped_date ? 'shipped ' + ukDate(o.shipped_date) : '', o.ga_total ? 'GA ' + money(o.ga_total) : ''].filter(Boolean).join(' · ')) + '</div>' +
+        (links ? '<div class="links">' + links + '</div>' : '') + '</div>' +
         '<div class="amt ' + (p === '' ? '' : p < min ? 'red' : 'good') + '">' + (p === '' ? '' : money(p)) + '</div></div>'; }).join('') + '</div>';
     if (list.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
-    return h + '<p class="hint">Profit is an estimate at shop prices, ex VAT, after GA food, delivery, card fee and running cost.</p>';
+    return h + '<p class="hint">Profit is ex VAT, after GA food, delivery, card fee and running cost: from the Shopify price paid where known, otherwise estimated at shop prices.</p>';
   }
   function pageInvoices() {
     var inv = data.invoices.slice().sort(function (a, b) { return String(b.invoice_date).localeCompare(String(a.invoice_date)); });
@@ -242,17 +262,31 @@
   var FILTERS = [['sale', 'On sale'], ['eligible', 'Could add'], ['cat', 'Cat'], ['not', 'Not DDF'], ['all', 'All']];
   function inFilter(p) { var s = String(p.ddf_status || '');
     return filter === 'all' || (filter === 'sale' && /^ON SALE/.test(s)) || (filter === 'eligible' && /ELIGIBLE/.test(s)) || (filter === 'cat' && /^CAT/.test(s)) || (filter === 'not' && /^Not DDF|^CHECK/.test(s)); }
+  // Picture badges: who it is for, grain, chicken, and the key facts from the GA data sheet.
+  function badges(p) {
+    var b = [], g = String(p.grain || ''), pct = function (v) { var n = num(v); return n ? Math.round(n <= 1 ? n * 100 : n) + '%' : ''; };
+    b.push([(p.species === 'Cat' ? '🐱 ' : '🐶 ') + (p.life_stage || p.species || ''), '']);
+    b.push(/^grain free/i.test(g) ? ['🌾🚫 Grain free', ''] : /grain|rice/i.test(g) ? ['🌾 Has grain', 'no'] : ['🌾 Grain: check', 'no']);
+    if (p.chicken_in_name === 'Y') b.push(['🐔 Chicken', 'no']);
+    if (pct(p.fresh_meat_pct)) b.push(['🥩 ' + pct(p.fresh_meat_pct) + ' meat', '']);
+    if (pct(p.protein_pct)) b.push(['💪 ' + pct(p.protein_pct) + ' protein', '']);
+    if (p.kibble) b.push(['⚪ ' + p.kibble, '']);
+    return '<div class="badges">' + b.map(function (x) { return '<span class="badge' + (x[1] ? ' ' + x[1] : '') + '">' + esc(x[0]) + '</span>'; }).join('') + '</div>';
+  }
   function pageProducts() {
     var list = data.products.filter(inFilter).filter(function (p) { return !q || [p.ddf_name, p.recipe, p.tla, p.full_ga_code, p.range].join(' ').toLowerCase().indexOf(q) >= 0; });
-    var h = '<p class="needs">Products</p><p class="hint">One list for every GA recipe and size: GA cost, your price and profit for one bag in one box.</p>' +
+    var h = '<p class="needs">Products</p><p class="hint">Every GA recipe and size, by range: GA cost, your price and profit for one bag in one box. Red badges show why one can\'t be DDF.</p>' +
       '<div class="chips" role="group" aria-label="Which products">' + FILTERS.map(function (f) { return '<button class="chip" type="button" data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div>' +
       '<input class="txtin" type="search" placeholder="Find a recipe, name or code" aria-label="Find a product" data-find value="' + esc(q) + '">';
     if (!list.length) return h + '<div class="card"><p class="what">Nothing here.</p></div>';
-    var shown = showAll ? list : list.slice(0, 40);
-    h += '<div class="card">' + shown.map(function (p) { var pr = p.profit_ex_vat_1bag_1box;
-      return '<div class="row"><div class="txt"><b>' + esc(p.ddf_name || p.recipe) + '</b> · ' + esc(p.pack) + '<div class="m">' + esc([p.ddf_name ? p.recipe : '', p.full_ga_code || p.tla, 'GA ' + money(p.ga_price_ex_vat_portal_oct26 || p.ga_price_ex_vat_list_aug25), p.shopify_price_inc_vat ? 'shop ' + money(p.shopify_price_inc_vat) : '', p.subscription_price_inc_vat ? 'sub ' + money(p.subscription_price_inc_vat) : ''].filter(Boolean).join(' · ')) + '</div>' +
-        (/ELIGIBLE|CHECK/.test(p.ddf_status) ? '<div class="m">' + esc(p.ddf_status) + '</div>' : '') + '</div>' +
-        '<div class="amt ' + (pr === '' ? '' : num(pr) < (num(setting('MIN_PROFIT')) || 15) ? 'red' : 'good') + '">' + (pr === '' ? '' : money(pr)) + '</div></div>'; }).join('') + '</div>';
+    var shown = showAll ? list : list.slice(0, 40), min = num(setting('MIN_PROFIT')) || 15, groups = [], by = {};
+    shown.forEach(function (p) { var r = p.range && p.range !== '(price list only)' ? p.range : 'Price list only (not on the Portal)'; if (!by[r]) { by[r] = []; groups.push(r); } by[r].push(p); });
+    groups.forEach(function (g) {
+      h += '<p class="grp">' + esc(g) + ' · ' + by[g].length + '</p><div class="card">' + by[g].map(function (p) { var pr = p.profit_ex_vat_1bag_1box;
+        return '<div class="row"><div class="txt"><b>' + esc(p.ddf_name || p.recipe) + '</b> · ' + esc(p.pack) + '<div class="m">' + esc([p.ddf_name ? p.recipe : '', p.full_ga_code || p.tla, 'GA ' + money(p.ga_price_ex_vat_portal_oct26 || p.ga_price_ex_vat_list_aug25), p.shopify_price_inc_vat ? 'shop ' + money(p.shopify_price_inc_vat) : '', p.subscription_price_inc_vat ? 'sub ' + money(p.subscription_price_inc_vat) : ''].filter(Boolean).join(' · ')) + '</div>' +
+          badges(p) + (/ELIGIBLE|CHECK/.test(p.ddf_status) ? '<div class="m">' + esc(p.ddf_status) + '</div>' : '') +
+          (/^https:\/\//.test(p.data_sheet_url) ? '<div class="links"><a class="btn" href="' + esc(p.data_sheet_url) + '" target="_blank" rel="noopener">📄 Data sheet</a></div>' : '') + '</div>' +
+          '<div class="amt ' + (pr === '' ? '' : num(pr) < min ? 'red' : 'good') + '">' + (pr === '' ? '' : money(pr)) + '</div></div>'; }).join('') + '</div>'; });
     if (list.length > 40 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
     return h;
   }
