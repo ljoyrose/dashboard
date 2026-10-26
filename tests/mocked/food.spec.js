@@ -28,7 +28,7 @@ function book() {
       ['AAA', 'AAA0012KZPSXZZZ', 'Grain Free', 'Dog', 'Adult', 'GF Sample Fish', '12kg', '12', '31.20', '31.20', '', 'WD*', 'Y', 'Y', 'N', 'Grain free', 'ON SALE (Shopify)', 'Sample Doodle', '', '', '', '', 'Y', '65', '63', '', '', '8.17'],
       ['BBB', '', 'Grain Free', 'Dog', 'Adult', 'GF Sample Rabbit', '6kg', '6', '21.97', '21.97', '', 'WD*', 'Y', 'Y', 'N', 'Grain free', 'DDF-ELIGIBLE: check data sheet, then list', '', '', '', '', '', 'N', '', '', '', '', ''],
       ['CCC', '', 'Connoisseur Cat', 'Cat', 'Adult', 'Sample Cat Fish', '5kg', '5', '22.55', '', '', '', 'Y', 'N', 'N', 'CHECK', 'CAT range', '', '', '', '', '', 'N', '', '', '', '', '']],
-    settings: [['key', 'value', 'note'], ['MIN_PROFIT', '15', ''], ['GA_ACCOUNT_CODE', 'XYZ', ''], ['GA_PHONE_ORDERS', '01234 567890', ''], ['GA_PORTAL', 'https://partners.example.test', ''], ['GA_PAYMENT', 'Direct debit', ''], ['SHOPIFY_STORE', 'samplestore', '']],
+    settings: [['key', 'value', 'note'], ['MIN_PROFIT', '15', ''], ['GA_ACCOUNT_CODE', 'XYZ', ''], ['GA_PHONE_ORDERS', '01234 567890', ''], ['GA_PORTAL', 'https://partners.example.test', ''], ['GA_PAYMENT', 'Direct debit', ''], ['SHOPIFY_STORE', 'samplestore', ''], ['GA_ORDER_TO', 'orders@example.test', ''], ['GA_XML_CONTACT', 'Sample Person, sample.person@example.test', '']],
   };
 }
 // Pretend Sheets: batchGet returns the five tabs, single-row reads return the card row, every PUT is recorded.
@@ -201,8 +201,9 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view .row', { hasText: '#9001 ' }).first()).toContainText('🤝 Breeder or breeder club 07');
     await expect(page.locator('#view .row', { hasText: '#9001-R1' }).locator('.badge')).toHaveText('🔁 Replacement, sent again');
     await page.goto('food/#/ga');
-    const codes = page.locator('#view .card', { hasText: 'BRAND-WHERE-NUMBER' });
+    const codes = page.locator('#view .card', { hasText: 'BRAND-CODE-NUMBER' });
     await expect(codes).toContainText('DDF Designer Dog Foods');
+    await expect(codes).toContainText('Customers see this reference');
     await expect(codes).toContainText('R01 Sample Pet Shop');
     await expect(codes).not.toContainText('Old shop');   // inactive codes are hidden
   });
@@ -221,6 +222,8 @@ test.describe('GA Hub page', () => {
     await open(page, '#/ga');
     await expect(page.locator('#view button[data-copy="XYZ"]')).toBeVisible();
     await expect(page.locator('#view a[href="tel:01234567890"]')).toBeVisible();
+    await expect(page.locator('#view a[href="mailto:orders@example.test"]')).toBeVisible();
+    await expect(page.locator('#view .row', { hasText: 'XML contact' }).locator('a[href="mailto:sample.person@example.test"]')).toBeVisible();
   });
 
   test('colours come only from tokens.css, and the page fits a phone with no sideways scroll', async ({ page }) => {
