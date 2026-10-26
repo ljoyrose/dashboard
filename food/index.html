@@ -310,15 +310,18 @@
     if (list.length > 40 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
     return h;
   }
+  function mailLink(s) { return String(s).replace(/([\w.+-]+@[\w-]+(?:\.[\w-]+)+)/g, function (m) { return '<a href="mailto:' + m + '">' + m + '</a>'; }); }
   function telLink(s) { return String(s).replace(/(\+?\d[\d ]{8,}\d)/g, function (n) { return '<a href="tel:' + n.replace(/\s/g, '') + '">' + n + '</a>'; }); }
   function pageGa() {
     var rows = [['Account code', 'GA_ACCOUNT_CODE', 'copy'], ['Partner portal', 'GA_PORTAL', 'link'], ['Order enquiries', 'GA_PHONE_ORDERS', 'tel'], ['Accounts', 'GA_PHONE_ACCOUNTS', 'tel'],
       ['Partner manager', 'GA_PARTNER_MANAGER', 'tel'], ['Field manager', 'GA_FIELD_MANAGER', 'tel'], ['Payment terms', 'GA_TERMS'], ['Order cut-off', 'GA_CUTOFF'],
       ['Delivery, first box', 'DELIVERY_FIRST_BOX', 'money'], ['Delivery, each extra box', 'DELIVERY_NEXT_BOX', 'money'], ['Highlands, islands, Jersey', 'GA_DELIVERY_ZONE_C'], ['Pallet', 'GA_PALLET'],
+      ['XML orders go to', 'GA_ORDER_TO', 'mail'], ['XML contact', 'GA_XML_CONTACT', 'mail'], ['We send XML orders from', 'GA_ORDER_FROM', 'mail'],
+      ['Shipping reports come from', 'GA_SHIP_FROM', 'mail'], ['Invoices come from', 'GA_INVOICE_FROM', 'mail'], ['Commercial invoices (Jersey) to', 'COMMERCIAL_INVOICE_TO', 'mail'],
       ['Minimum profit per order', 'MIN_PROFIT', 'money'], ['Subscription discount', 'SUB_DISCOUNT', 'money']];
     var h = '<p class="needs">GA</p><p class="hint">GA Pet Food Partners: makes and ships the food. Change these on the Settings tab of RR_FOOD.</p><div class="card">';
     rows.forEach(function (r) { var v = setting(r[1]); if (!v) return;
-      var shown = r[2] === 'link' ? '<a href="' + esc(v) + '" target="_blank" rel="noopener">' + esc(v.replace(/^https?:\/\//, '')) + '</a>' : r[2] === 'tel' ? telLink(esc(v)) : r[2] === 'money' ? money(v) : esc(v);
+      var shown = r[2] === 'link' ? '<a href="' + esc(v) + '" target="_blank" rel="noopener">' + esc(v.replace(/^https?:\/\//, '')) + '</a>' : r[2] === 'tel' ? telLink(mailLink(esc(v))) : r[2] === 'mail' ? mailLink(esc(v)) : r[2] === 'money' ? money(v) : esc(v);
       h += '<div class="row"><div class="txt"><div class="m">' + esc(r[0]) + '</div>' + shown + '</div>' + (r[2] === 'copy' ? '<button class="btn" type="button" data-copy="' + esc(v) + '">Copy</button>' : '') + '</div>'; });
     h += '</div>';
     if (data.codes.length) {
