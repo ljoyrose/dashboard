@@ -462,6 +462,25 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#view a', { hasText: 'Open file' })).toHaveAttribute('href', 'https://drive.google.com/file/d/FILEID12345678901234567/view');
   });
 
+  test('engine v11 Send offer: price, price after the % off and profit left; the % box refuses under 5; Send writes the % in the note', async ({ page }) => {
+    const od = { kind: 'offer', listing_id: '110000000007', pct: 10, price: '£12.99', after: '£11.69', profit_left: '£4.20', url: 'https://www.ebay.co.uk/itm/110000000007', why: 'Buyers are watching this. Send them 10% off (£11.69)?' };
+    const rows = [['OFFER|110000000007|2026-10-26', 'offer', 'Health & supplements', 'Sample shampoo 500ml', JSON.stringify(od), ago(5)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/decide');
+    await expect(page.locator('#view .grp').first()).toHaveText('Send offer');
+    await expect(page.locator('#view .fact', { hasText: 'After 10% off' })).toContainText('£11.69');
+    await expect(page.locator('#view .fact', { hasText: 'Profit left' })).toContainText('£4.20');
+    await expect(page.locator('#view a', { hasText: 'Open on eBay' })).toHaveAttribute('href', 'https://www.ebay.co.uk/itm/110000000007');
+    await page.locator('[data-note="OFFER|110000000007|2026-10-26"]').fill('3');
+    await page.locator('[data-v="Send"]').click();
+    await expect(page.locator('#banner')).toContainText('between 5 and 90');
+    expect(writes).toEqual([]);
+    await page.locator('[data-note="OFFER|110000000007|2026-10-26"]').fill('15');
+    await page.locator('[data-v="Send"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Send', '15']);
+  });
+
   test('the last button on a long page can always be scrolled clear of the bottom tab bar @regression', async ({ page }) => {
     const rows = Array.from({ length: 12 }, (_, i) => ['RM|L' + i, 'remove', 'Clothes', 'Sample item ' + i, JSON.stringify({ platform: 'Vinted' }), ago(5)]);
     await sheets(page, rows);

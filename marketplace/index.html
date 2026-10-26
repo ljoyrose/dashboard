@@ -167,11 +167,12 @@
     learn: { name: 'Brands to source', what: 'Brands that sell with no trade price on file.' },
     job: { name: 'Do by hand', what: 'No AI could read this one. Do it by hand, then tap Done.' },
     vat: { name: 'VAT', what: 'Sales against the VAT registration threshold.' },
+    offer: { name: 'Send offer', what: 'Buyers are watching these on eBay. Send them a discount?' },
     suppliers: { name: 'Supplier details', quiet: true, what: 'Contacts, terms and the order list per supplier.' }
   };
-  var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'check', 'receipt', 'newprod', 'supplier', 'learn', 'job', 'vat', 'restock', 'temu'];
+  var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'check', 'receipt', 'newprod', 'offer', 'supplier', 'learn', 'job', 'vat', 'restock', 'temu'];
   // V2 tabs: each groups engine sections. Old links (#/remove, #/check, #/numbers ...) still open and light up their tab.
-  var TABS = { do: ['remove', 'post', 'vinted', 'job'], decide: ['go', 'check', 'receipt', 'newprod', 'supplier', 'learn', 'vat'], reply: ['message'], insights: ['restock', 'temu'] };
+  var TABS = { do: ['remove', 'post', 'vinted', 'job'], decide: ['go', 'check', 'offer', 'receipt', 'newprod', 'supplier', 'learn', 'vat'], reply: ['message'], insights: ['restock', 'temu'] };
   var TAB_OF = { numbers: 'insights', round: 'insights', stock: 'insights', suppliers: 'insights' }; Object.keys(TABS).forEach(function (t) { TABS[t].forEach(function (s) { TAB_OF[s] = t; }); });
   var PEOPLE = ['All', 'Lisa', 'CY', 'G', 'H', 'CN'];   // a card with no owner is Lisa's
   var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false, stockFilter = 'all';
@@ -375,6 +376,11 @@
       return { h: h + '<p class="hint">Find: the AI looks up their trade contact (a card for you if AI is off). Ask: write to them yourself.</p>', acts: [ansBtn(r, 'Find', 'Find a supplier', true), mailBtn(d.ask && d.ask.mailto, 'Write the email'), ansBtn(r, 'No', 'Not this one')] };
     },
     job: function (r, d) { return { h: String(d.file_ids || '').split(',').filter(Boolean).map(function (id) { return /^[\w-]{20,}$/.test(id) ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(id) + '/view" target="_blank" rel="noopener">Open file</a>' : ''; }).join('') + noteBox(r, 'What it says (optional)', 'What it says'), acts: [ansBtn(r, 'Done', 'Done', true)] }; },
+    offer: function (r, d) {
+      var h = factsOf([['Price', d.price], ['After ' + d.pct + '% off', d.after], ['Profit left', d.profit_left || '–']]) +
+        '<label class="qty">% off (at least 5) <input class="num" inputmode="numeric" data-note="' + esc(r.key) + '" placeholder="' + esc(d.pct) + '" aria-label="Percent off"></label>';
+      return { h: h, acts: [linkBtn(d.url, 'Open on eBay'), ansBtn(r, 'Send', 'Send offer', true), ansBtn(r, 'No', 'Not this one')] };
+    },
     vat: function (r, d) { return { h: '<p class="verdict wait">' + esc(d.line) + '</p>', acts: [ansBtn(r, 'OK', 'Told my accountant', true)] }; }
   };
   // Suppliers: one card per supplier. Account number copies, phone calls, terms, what is on the order list and the gap.
@@ -594,6 +600,7 @@
       var nb = document.querySelector('[data-note="' + r.key + '"]');                      // v11 cards: a note box (terms, quantity)
       if (nb && nb.value.trim()) note = nb.value.trim();
       if (v === 'Set' && !note) return banner('Type what to change first, for example: min 100, free over 300, delivery 15');
+      if (r.section === 'offer' && v === 'Send' && note && !(Number(note) >= 5 && Number(note) <= 90)) return banner('Type a % between 5 and 90, or leave it blank for ' + detail(r).pct + '%.');
       var qb = document.querySelector('[data-qty="' + r.key + '"]');
       if (qb && v === 'Yes' && qb.value.trim()) { var qn = parseInt(qb.value, 10); if (!(qn >= 0)) return banner('Type a number for how many you have, or leave it blank.'); note = 'qty ' + qn; }
       t.disabled = true; return answer(r, v, note);
