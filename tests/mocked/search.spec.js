@@ -62,11 +62,10 @@ test.describe('Search', () => {
     await expect(page.locator('#q')).toHaveValue(dog);
   });
 
-  test('signed out, search says nothing was found and asks Drive nothing', async ({ page, guard }) => {
+  test('signed out, search stays hidden behind the sign-in and asks Drive nothing', async ({ page, guard }) => {
     await page.goto('./');
     await page.keyboard.press('/');
-    await page.locator('#dashSearchBox').fill('anything');
-    await expect(page.locator('#dashSearchStatus')).toContainText('Nothing found for "anything"');
+    await expect(page.locator('#dashSearchBox')).not.toBeVisible();
     expect(guard.world.calls.filter((c) => /name contains/.test(c.query))).toEqual([]);
   });
 });
