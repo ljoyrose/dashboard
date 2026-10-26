@@ -2036,6 +2036,7 @@
       ['Money Hub', 'money/', true],
       ['CD Hub', 'cdhub/', true],
       ['Marketplace', 'marketplace/', true],
+      ['GA Hub', 'food/', true],
       ['Map', '#/map', false],
       ['Read first', '#/readfirst', false],
       ['Drive', '#/drive', false],
@@ -2085,7 +2086,7 @@
     out.sort(function (a, b2) { return rank[a.kind] - rank[b2.kind]; });
     return out;
   }
-  function hubLink(href) { return /^(money|cdhub|marketplace)\//.test(String(href || '')); }
+  function hubLink(href) { return /^(money|cdhub|marketplace|food)\//.test(String(href || '')); }
   function needsCount() { return signedIn ? needsToday().length : 0; }
   function needsPanel() {
     if (!signedIn) return '';
@@ -2136,7 +2137,8 @@
       ['money', 'money/', 'slotfin', 'money', 'Money Hub', 'Cash, dates and to-dos'],
       ['cdhub', 'cdhub/', 'slot7', 'map', 'CD Hub', 'Dogs, cabins and litters'],
       ['factory', 'factory/', 'slot7', 'factory', 'Factory', 'The app factory'],
-      ['marketplace', 'marketplace/', 'slotsales', 'shop', 'Marketplace', 'Selling and posting']
+      ['marketplace', 'marketplace/', 'slotsales', 'shop', 'Marketplace', 'Selling and posting'],
+      ['food', 'food/', 'slotsales', 'shop', 'GA Hub', 'Dog food orders, GA invoices, products']
     ];
     function link(t) {
       var hub = t[1].charAt(0) !== '#';
