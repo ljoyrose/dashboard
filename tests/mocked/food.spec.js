@@ -16,8 +16,8 @@ function book() {
       ['PL-1', 'pricelist', 'Products', 'New GA price list: sample', JSON.stringify({ files: ['FILE123456789012345678901'] }), ago(10)],
       ['DONE-1', 'check', 'Invoices', 'Already handled', '{}', ago(90), 'Done', '', ago(80), 'sample@example.test', ago(60), 'engine'],
     ],
-    orders: [['order_no', 'source', 'brand', 'supplier', 'status', 's_no', 'si_no', 'boxes', 'ga_goods', 'ga_delivery', 'ga_vat', 'ga_total', 'sale_ex_vat_est', 'profit_est'],
-      ['9001', 'Shopify', 'DDF', 'GA', 'Invoiced', 'S1000001', 'SI-1000001', '1', '31.20', '10.82', '8.40', '50.42', '52.50', '8.17'],
+    orders: [['order_no', 'source', 'brand', 'supplier', 'status', 's_no', 'si_no', 'boxes', 'ga_goods', 'ga_delivery', 'ga_vat', 'ga_total', 'sale_ex_vat_est', 'profit_est', 'shipped_date', 'invoice_date', 'due_date', 'paid', 'notes', 'updated_at', 'tracking', 'order_type', 'sale_inc_vat', 'customer_orders'],
+      ['9001', 'Shopify', 'DDF', 'GA', 'Invoiced', 'S1000001', 'SI-1000001', '1', '31.20', '10.82', '8.40', '50.42', '52.50', '8.17', '', '', '', '', '', '', 'https://www.dpd.co.uk/service/tracking?postcode=AA11AA&sendersRef=S1000001', 'Subscription (PayWhirl)', '63.00', '22'],
       ['9002', 'Shopify', 'DDF', 'GA', 'Invoiced', 'S1000002', 'SI-1000002', '2', '111.06', '19.61', '26.14', '156.81', '183.34', '47.22']],
     invoices: [['si_no', 'invoice_date', 's_no', 'order_no', 'goods', 'delivery', 'vat', 'total', 'due_date', 'paid_date', 'fy', 'vat_quarter', 'file_id'],
       ['SI-1000001', '2026-10-25', 'S1000001', '9001', '31.20', '10.82', '8.40', '50.42', '2026-12-06', '', 'FY2026-27', '2026-Q4', 'FILE000000000000000000001'],
@@ -26,7 +26,7 @@ function book() {
       ['AAA', 'AAA0012KZPSXZZZ', 'Grain Free', 'Dog', 'Adult', 'GF Sample Fish', '12kg', '12', '31.20', '31.20', '', 'WD*', 'Y', 'Y', 'N', 'Grain free', 'ON SALE (Shopify)', 'Sample Doodle', '', '', '', '', 'Y', '65', '63', '', '', '8.17'],
       ['BBB', '', 'Grain Free', 'Dog', 'Adult', 'GF Sample Rabbit', '6kg', '6', '21.97', '21.97', '', 'WD*', 'Y', 'Y', 'N', 'Grain free', 'DDF-ELIGIBLE: check data sheet, then list', '', '', '', '', '', 'N', '', '', '', '', ''],
       ['CCC', '', 'Connoisseur Cat', 'Cat', 'Adult', 'Sample Cat Fish', '5kg', '5', '22.55', '', '', '', 'Y', 'N', 'N', 'CHECK', 'CAT range', '', '', '', '', '', 'N', '', '', '', '', '']],
-    settings: [['key', 'value', 'note'], ['MIN_PROFIT', '15', ''], ['GA_ACCOUNT_CODE', 'XYZ', ''], ['GA_PHONE_ORDERS', '01234 567890', ''], ['GA_PORTAL', 'https://partners.example.test', ''], ['GA_PAYMENT', 'Direct debit', '']],
+    settings: [['key', 'value', 'note'], ['MIN_PROFIT', '15', ''], ['GA_ACCOUNT_CODE', 'XYZ', ''], ['GA_PHONE_ORDERS', '01234 567890', ''], ['GA_PORTAL', 'https://partners.example.test', ''], ['GA_PAYMENT', 'Direct debit', ''], ['SHOPIFY_STORE', 'samplestore', '']],
   };
 }
 // Pretend Sheets: batchGet returns the five tabs, single-row reads return the card row, every PUT is recorded.
@@ -39,7 +39,7 @@ async function sheets(page, b, opts = {}) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     }
     if (/:batchGet/.test(url)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valueRanges: [
-      { values: b.cards }, { values: b.orders }, { values: b.invoices }, { values: [['COUNT: sample']].concat(b.products).slice(1) }, { values: b.settings }, { values: b.statements || [['statement_date', 'total_outstanding']] }] }) });
+      { values: b.cards }, { values: b.orders }, { values: b.invoices }, { values: [['COUNT: sample']].concat(b.products).slice(1) }, { values: b.settings }, { values: b.statements || [['statement_date', 'total_outstanding']] }, { values: b.dds || [['date', 'amount']] }] }) });
     const n = Number(/Cards!A(\d+)/.exec(url)[1]), row = (b.cards[n - 2] || []).slice();
     if (opts.moved) row[0] = 'SOMETHING-ELSE';
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: [row] }) });
@@ -131,6 +131,48 @@ test.describe('GA Hub page', () => {
     await page.locator('[data-find]').fill('cat');
     await expect(page.locator('#view .row')).toHaveCount(1);
     await expect(page.locator('[data-find]')).toBeFocused();
+  });
+
+  test('Orders: subscription or one-off, where from, and Track (DPD) / Shopify buttons; the low-profit card shows the same', async ({ page }) => {
+    await sheets(page, book());
+    await open(page, '#/orders');
+    const row = page.locator('#view .row', { hasText: '#9001' });
+    await expect(row).toContainText('🔁 Subscription (PayWhirl) · Shopify · DDF · customer\'s 22nd order');
+    await expect(row.locator('a', { hasText: 'Track' })).toHaveAttribute('href', 'https://www.dpd.co.uk/service/tracking?postcode=AA11AA&sendersRef=S1000001');
+    await expect(row.locator('a', { hasText: 'Shopify' })).toHaveAttribute('href', 'https://admin.shopify.com/store/samplestore/orders?query=9001');
+    await expect(page.locator('#view .row', { hasText: '#9002' }).locator('a', { hasText: 'Track' })).toHaveCount(0);   // no tracking link yet
+    await page.goto('food/#/home');
+    await page.locator('#view .more').click();
+    await expect(page.locator('#view .card', { hasText: 'Order #9001' })).toContainText('Subscription (PayWhirl)');
+  });
+
+  test('Products: grouped by range with a count, picture badges (who for, grain, chicken, meat, protein), a data sheet link when there is one', async ({ page }) => {
+    const b = book(); b.products[0].push('margin_pct_of_net', 'data_sheet_url'); b.products[1].push('', 'https://example.test/sheet.pdf');
+    b.products[2][14] = 'Y'; b.products[2][20] = '0.28'; b.products[2][21] = '60';
+    await sheets(page, b);
+    await open(page, '#/products');
+    await page.locator('[data-filter="all"]').click();
+    await expect(page.locator('#view .grp')).toHaveText(['Grain Free · 2', 'Connoisseur Cat · 1']);
+    const rabbit = page.locator('#view .row', { hasText: 'GF Sample Rabbit' });
+    await expect(rabbit.locator('.badge')).toHaveText(['🐶 Adult', '🌾🚫 Grain free', '🐔 Chicken', '🥩 60% meat', '💪 28% protein']);
+    await expect(rabbit.locator('.badge.no')).toHaveText('🐔 Chicken');
+    await expect(page.locator('#view .row', { hasText: 'Sample Cat Fish' }).locator('.badge')).toHaveText(['🐱 Adult', '🌾 Grain: check']);
+    await expect(page.locator('#view .row', { hasText: 'Sample Doodle' }).locator('a', { hasText: 'Data sheet' })).toHaveAttribute('href', 'https://example.test/sheet.pdf');
+  });
+
+  test('spacing: tiles, cards and headings in the view never touch (same 14px gap as the main column)', async ({ page }) => {
+    await sheets(page, book());
+    await open(page);
+    const gap = await page.evaluate(() => { const t = document.querySelector('#view .tiles').getBoundingClientRect(), c = document.querySelector('#view > .card').getBoundingClientRect(); return c.top - t.bottom; });
+    expect(gap).toBeGreaterThanOrEqual(12);
+  });
+
+  test('Invoices: the newest GA direct debit from the bank shows as a tile (with its date)', async ({ page }) => {
+    const b = book(); b.dds = [['date', 'amount', 'bank_ref', 'invoices_paid'], ['2026-10-07', '529.37', 'GA PETFOOD DDL', ''], ['2026-10-14', '512.46', 'GA PETFOOD DDL', 'SI-1000001']];
+    await sheets(page, b);
+    await open(page, '#/invoices');
+    await expect(page.locator('#view .tiles')).toContainText('Last GA direct debit 14/10/2026');
+    await expect(page.locator('#view .tiles')).toContainText('£512.46');
   });
 
   test('GA tab: account code has Copy, phone numbers are tap-to-call', async ({ page }) => {
