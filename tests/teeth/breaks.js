@@ -23,7 +23,7 @@ const BREAKS = [
   { id: 'publish-ungated', what: 'The publish job stops waiting for the tests (the live site would go out untested)', file: '.github/workflows/pages.yml',
     find: 'needs: gate', replace: 'needs: []', project: 'mocked', spec: 'ci-guards' },
   { id: 'publish-too-much', what: 'The publish copies the tests folder onto the live site', file: '.github/workflows/pages.yml',
-    find: 'cp -r index.html auth.js config.js toolkit.js tokens.css manifest.webmanifest sw.js icons cdhub money factory marketplace _site/', replace: 'cp -r index.html auth.js config.js toolkit.js tokens.css manifest.webmanifest sw.js icons cdhub money factory marketplace tests _site/', project: 'mocked', spec: 'ci-guards' },
+    find: 'cp -r index.html auth.js config.js toolkit.js tokens.css manifest.webmanifest sw.js icons cdhub money factory marketplace food _site/', replace: 'cp -r index.html auth.js config.js toolkit.js tokens.css manifest.webmanifest sw.js icons cdhub money factory marketplace food tests _site/', project: 'mocked', spec: 'ci-guards' },
 ];
 
 module.exports = { BREAKS };

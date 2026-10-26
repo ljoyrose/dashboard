@@ -10,6 +10,7 @@ const TILES = [
   ['Money Hub', 'money/', true],
   ['CD Hub', 'cdhub/', true],
   ['Marketplace', 'marketplace/', true],
+  ['GA Hub', 'food/', true],
   ['Map', '#/map', false],
   ['Read first', '#/readfirst', false],
   ['Drive', '#/drive', false],

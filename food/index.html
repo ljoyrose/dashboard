@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="build" content="ljr-food-2026-10-26-v1">
+<title>GA Hub</title>
+<!-- GA Hub v1 (26 Oct 2026): Designer Dog Foods orders, GA invoices, products and GA details. PUBLIC repo: no data, no secrets.
+     The workbook id comes from ../config.js (DASH_CONFIG.food); everything else is read at run time with Lisa's Google sign-in
+     from the RR_FOOD workbook, which the RR_FOOD-ENGINE Apps Script fills. A tap writes ONLY the 4 answer cells (G:J) of one
+     Cards row; the engine applies it after 10 minutes. Same shapes and tabs bar as Marketplace. -->
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
+<script src="../auth.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  /* Colours: ../tokens.css only (LJR7 spine), same shapes as marketplace/. No colour is written here. */
+  :root { --radius: 12px; --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
+          --line: color-mix(in srgb, var(--ljr-0) 55%, var(--ljr-paper)); }
+  * { box-sizing: border-box; }
+  html { scroll-padding-bottom: 96px; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 17px; line-height: 1.5; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .top { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; padding: 10px 16px; }
+  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
+  .top h1 a { color: inherit; text-decoration: none; }
+  .stamp { font-size: 11px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 5px; }
+  .btn { font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 8px 14px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; min-height: 44px; }
+  .btn:hover { border-color: var(--muted); }
+  .btn.main { border-color: var(--ink); }
+  .btn.big { width: 100%; justify-content: center; font-size: 19px; min-height: 60px; }
+  .btn.yes { color: var(--ljr-5-text); border-color: var(--ljr-5); }
+  .btn.no { color: var(--ljr-2-text); border-color: var(--ljr-2); }
+  .hidden { display: none !important; }
+  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px 8px 10px; background: var(--surface); border-top: 1px solid var(--line); }
+  nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; }
+  nav.tabs a:hover { border-color: var(--line); }
+  nav.tabs a[aria-current="page"] { border-color: var(--ink); background: var(--bg); }
+  nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-2-solid); color: var(--ljr-2-on); border-radius: 999px; padding: 0 7px; min-width: 20px; }
+  nav.tabs .n:empty { visibility: hidden; }
+  main, main.wrap { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
+  .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
+  .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
+  .needs { font-size: 26px; font-weight: 700; margin: 0; }
+  .needs .zero { color: var(--ljr-5-text); }
+  .hint { font-size: 14px; color: var(--muted); margin: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .tile { font: inherit; text-align: left; background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 10px 12px; color: var(--ink); text-decoration: none; min-height: 72px; display: flex; flex-direction: column; justify-content: center; }
+  a.tile:hover { border-color: var(--muted); }
+  .tile .k { font-size: 13px; color: var(--muted); } .tile .v { font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
+  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .card.acc2 { border-left: 4px solid var(--ljr-2); } .card.acc5 { border-left: 4px solid var(--ljr-5); } .card.acc4 { border-left: 4px solid var(--ljr-4); }
+  .card h2 { font-size: 19px; margin: 0; }
+  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acts .btn { flex: 1; justify-content: center; }
+  .row { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .card > .row:first-of-type { border-top: 0; }
+  .row .txt { flex: 1; min-width: 0; }
+  .row .m { font-size: 14px; color: var(--muted); }
+  .row .amt { font-weight: 700; text-align: right; white-space: nowrap; }
+  .red { color: var(--ljr-2-text); font-weight: 700; }
+  .good { color: var(--ljr-5-text); font-weight: 700; }
+  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip { font: inherit; font-size: 15px; font-weight: 600; border-radius: 999px; padding: 6px 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 40px; }
+  .chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+  input.txtin { font: inherit; font-size: 18px; padding: 8px 10px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
+  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 6px 10px; cursor: pointer; align-self: flex-start; min-height: 44px; }
+  .more:hover { border-color: var(--muted); }
+  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  a.btn, nav.tabs a, a.tile { text-decoration: none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><h1><a href="#/home">GA Hub</a></h1><span class="stamp" id="stamp">TEST</span>
+    <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh">↻</button>
+    <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
+    <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
+</header>
+<main class="wrap">
+  <div id="banner" class="banner hidden" role="status"></div>
+  <div id="view"></div>
+</main>
+<nav class="tabs hidden" id="tabs" aria-label="GA Hub sections">
+  <a href="#/home" data-nav="home"><span>Home</span><span class="n" id="n-home"></span></a>
+  <a href="#/orders" data-nav="orders"><span>Orders</span><span class="n"></span></a>
+  <a href="#/invoices" data-nav="invoices"><span>Invoices</span><span class="n"></span></a>
+  <a href="#/products" data-nav="products"><span>Products</span><span class="n"></span></a>
+  <a href="#/ga" data-nav="ga"><span>GA</span><span class="n"></span></a>
+</nav>
+<script>
+(function () {
+  'use strict';
+  var CFG = window.DASH_CONFIG || {}, F = CFG.food || null;
+  var CLIENT_ID = CFG.clientId, READ = (CFG.scopes || {}).read, SHEETS = 'https://www.googleapis.com/auth/spreadsheets';
+  var SCOPE = READ + ' ' + SHEETS;
+  var CARD_COLS = ['key', 'section', 'category', 'title', 'detail', 'created_at', 'answer', 'note', 'answered_at', 'answered_by', 'applied_at', 'applied_by'];
+  var RANGES = ['Cards!A2:L', 'Orders!A1:T', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E'];
+  var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
+  var SECTIONS = {
+    price: { name: 'GA price changed', yes: 'Apply', no: 'Not now', what: 'Apply updates your product list and the suggested shop and subscription prices. Shops are not changed.' },
+    profit: { name: 'Low profit', yes: 'Seen', what: 'This order made less than your minimum. Usually a single bag in one box.' },
+    pricelist: { name: 'New GA price list', yes: 'Seen', what: 'Saved to Drive. Rises are also caught from the next GA invoice.' },
+    check: { name: 'Check', yes: 'Done', what: 'Something the engine could not finish on its own.' },
+    alert: { name: 'Engine problem', yes: 'Seen', what: 'The food engine hit a problem. It keeps trying every 15 minutes.' }
+  };
+  var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [] }, view = 'home', filter = 'sale', q = '', showAll = false;
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
+  function hm(ms) { return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+  function num(v) { var n = Number(String(v === undefined ? '' : v).replace(/[£,]/g, '')); return isFinite(n) ? n : 0; }
+  function money(v) { return v === '' || v === undefined || v === null ? '' : '£' + num(v).toFixed(2); }
+  function ukDate(s) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || '')); return m ? m[3] + '/' + m[2] + '/' + m[1] : String(s || ''); }
+  function detail(r) { try { return JSON.parse(r.detail || '{}'); } catch (e) { return {}; } }
+  // A tab read with its header row: values[0] is the header, the rest become objects keyed by it.
+  function table(values, skip) { var v = (values || []).slice(skip || 0), h = (v[0] || []).map(String);
+    return v.slice(1).filter(function (r) { return r.some(String); }).map(function (r) { var o = {}; h.forEach(function (c, i) { o[c] = r[i] === undefined ? '' : r[i]; }); return o; }); }
+  function setting(k) { return (data.settings[k] || {}).value || ''; }
+
+  /* ---------- Google Sheets ---------- */
+  function api(url, init) {
+    init = init || {}; init.headers = Object.assign({ Authorization: 'Bearer ' + token }, init.headers || {});
+    return fetch(url, init).then(function (r) {
+      if (r.status === 401) { token = null; render(); throw new Error('Sign-in expired. Sign in again.'); }
+      if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error(why(r.status, (j.error && j.error.message) || '')); });
+      return r.json();
+    });
+  }
+  function why(status, msg) {
+    if (/insufficient|scope/i.test(msg)) return 'Google did not give this page spreadsheet access. Sign out, sign in again and tick every box Google shows.';
+    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the RR_FOOD workbook. Sign in as lisa@puppyclassroom.com.';
+    if (/Unable to parse range/i.test(msg)) return 'the RR_FOOD workbook is missing a tab. Run "setup" once in the food engine.';
+    return 'Google said ' + status + (msg ? ': ' + msg : '');
+  }
+  function base() { return 'https://sheets.googleapis.com/v4/spreadsheets/' + F.bookId + '/values'; }
+  function load() {
+    if (!F || !F.bookId) { banner('Not set up yet: the GA Hub settings are not in config.js.', true); return; }
+    if (!token) { render(); return; }
+    api(base() + ':batchGet?' + RANGES.map(function (r) { return 'ranges=' + encodeURIComponent(r); }).join('&')).then(function (j) {
+      var vr = (j.valueRanges || []).map(function (x) { return x.values || []; });
+      data.cards = (vr[0] || []).map(function (v, i) { var o = { _row: i + 2 }; CARD_COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
+      data.orders = table(vr[1]); data.invoices = table(vr[2]); data.products = table(vr[3]);
+      data.settings = {}; table(vr[4]).forEach(function (s) { data.settings[s.key] = s; });
+      data.statements = table(vr[5]).sort(function (a, b) { return String(b.statement_date).localeCompare(String(a.statement_date)); });
+      $('banner').className = 'banner hidden'; render();
+    }).catch(function (e) { banner('Could not load: ' + e.message); });
+    if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
+  }
+  // Write the 4 answer cells of the card with this key; check the key before and after, put the old values back if it moved.
+  function answer(r, value) {
+    var url = function (rng) { return base() + '/' + encodeURIComponent(rng); }, at = value === '' ? '' : new Date().toISOString(), who = value === '' ? '' : me;
+    var put = function (vals) { return api(url('Cards!G' + r._row + ':J' + r._row) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [vals] }) }); };
+    return api(url('Cards!A' + r._row + ':L' + r._row)).then(function (j) {
+      var cur = (j.values || [[]])[0];
+      if (cur[0] !== r.key) throw new Error('the list changed: refresh and tap again');
+      var old = [cur[6] || '', cur[7] || '', cur[8] || '', cur[9] || ''];
+      return put([value, '', at, who]).then(function () { return api(url('Cards!A' + r._row)); })
+        .then(function (k) { if (((k.values || [[]])[0] || [])[0] !== r.key) return put(old).then(function () { throw new Error('the list changed: refresh and tap again'); }); })
+        .then(function () { r.answer = value; r.answered_at = at; r.answered_by = who; render(); });
+    }).catch(function (e) { banner('Not saved: ' + e.message); });
+  }
+
+  /* ---------- views ---------- */
+  function waiting() { return data.cards.filter(function (r) { return !r.answer && !r.applied_at; }); }
+  var ORDER = ['alert', 'price', 'profit', 'check', 'pricelist'];
+  function byUrgency(a, b) { return ORDER.indexOf(a.section) - ORDER.indexOf(b.section) || String(a.created_at).localeCompare(String(b.created_at)); }
+  function unpaid() { return data.invoices.filter(function (i) { return !i.paid_date && num(i.total) > 0; }); }
+  function cardHtml(r) {
+    var s = SECTIONS[r.section] || SECTIONS.check, d = detail(r);
+    var h = '<div class="card ' + (d.red ? 'acc2' : 'acc4') + '"><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.why || s.what) + '</p>';
+    if (d.file) h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(d.file) + '/view" target="_blank" rel="noopener">Open the PDF</a></div>';
+    (d.files || []).forEach(function (f) { h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(f) + '/view" target="_blank" rel="noopener">Open the price list</a></div>'; });
+    if (r.answer) { var at = Date.parse(r.answered_at), live = Date.now() < at + UNDO_MS;
+      return h + '<div class="sent">✓ ' + esc(r.answer) + ' · ' + hm(at) + ' · applies by ' + hm(at + APPLY_MS) + (live ? ' <button class="btn" type="button" data-undo="' + esc(r.key) + '">Undo</button>' : '') + '</div></div>'; }
+    return h + '<div class="acts"><button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="' + esc(s.yes) + '">' + esc(s.yes) + '</button>' +
+      (s.no ? '<button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="' + esc(s.no) + '">' + esc(s.no) + '</button>' : '') + '</div></div>';
+  }
+  function pageHome() {
+    // Answered cards stay on screen until the engine applies them (Undo for 10 minutes), then drop off.
+    var w = data.cards.filter(function (r) { return !r.applied_at && (!r.answer || Date.now() < Date.parse(r.answered_at) + APPLY_MS); }).sort(byUrgency), need = waiting().length, owed = unpaid().reduce(function (n, i) { return n + num(i.total); }, 0);
+    var due = unpaid().map(function (i) { return i.due_date; }).filter(Boolean).sort()[0];
+    var min = num(setting('MIN_PROFIT')) || 15, low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
+    var h = '<p class="needs">Needs you: ' + (need ? need : '<span class="zero">0</span>') + '</p>';
+    var st = data.statements[0];   // GA's own weekly statement beats our sum of the invoices we have seen
+    h += '<div class="tiles"><a class="tile" href="#/invoices"><span class="k">Owed to GA' + (st ? ' (statement ' + esc(ukDate(st.statement_date)) + ')' : '') + '</span><span class="v">' + money(st ? st.total_outstanding : owed) + '</span></a>' +
+      '<a class="tile" href="#/invoices"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span></a>' +
+      '<a class="tile" href="#/orders"><span class="k">Orders on record</span><span class="v">' + data.orders.length + '</span></a>' +
+      '<a class="tile" href="#/orders"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a></div>';
+    if (!w.length) return h + '<div class="card acc5"><h2>All clear</h2><p class="what">Nothing from GA needs you. The engine checks GA\'s emails every 15 minutes.</p></div>';
+    h += cardHtml(w[0]);
+    if (w.length > 1) h += showAll ? w.slice(1).map(cardHtml).join('') : '<button class="more" type="button" data-action="all">Show ' + (w.length - 1) + ' more</button>';
+    return h;
+  }
+  function pageOrders() {
+    var min = num(setting('MIN_PROFIT')) || 15, list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); });
+    var h = '<p class="needs">Orders</p><p class="hint">From GA\'s shipping reports and invoices. Order numbers only, never customer details.</p>';
+    if (!list.length) return h + '<div class="card"><p class="what">No orders yet. They appear after GA\'s next shipping report or invoice.</p></div>';
+    var shown = showAll ? list : list.slice(0, 30);
+    h += '<div class="card">' + shown.map(function (o) { var p = o.profit_est === '' ? '' : num(o.profit_est);
+      return '<div class="row"><div class="txt"><b>#' + esc(o.order_no) + '</b> · ' + esc(o.status) + '<div class="m">' + esc([o.s_no, o.boxes ? o.boxes + ' box' + (num(o.boxes) > 1 ? 'es' : '') : '', o.shipped_date ? 'shipped ' + ukDate(o.shipped_date) : '', o.ga_total ? 'GA ' + money(o.ga_total) : ''].filter(Boolean).join(' · ')) + '</div></div>' +
+        '<div class="amt ' + (p === '' ? '' : p < min ? 'red' : 'good') + '">' + (p === '' ? '' : money(p)) + '</div></div>'; }).join('') + '</div>';
+    if (list.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
+    return h + '<p class="hint">Profit is an estimate at shop prices, ex VAT, after GA food, delivery, card fee and running cost.</p>';
+  }
+  function pageInvoices() {
+    var inv = data.invoices.slice().sort(function (a, b) { return String(b.invoice_date).localeCompare(String(a.invoice_date)); });
+    var fy = inv.length ? inv[0].fy : '', thisFy = inv.filter(function (i) { return i.fy === fy; });
+    var sum = function (list, k) { return list.reduce(function (n, i) { return n + num(i[k]); }, 0); }, open = unpaid();
+    var st = data.statements[0];
+    var h = '<p class="needs">Invoices</p><div class="tiles">' +
+      (st ? '<div class="tile"><span class="k">GA statement ' + esc(ukDate(st.statement_date)) + '</span><span class="v">' + money(st.total_outstanding) + '</span></div>' : '') +
+      '<div class="tile"><span class="k">Owed to GA</span><span class="v">' + money(sum(open, 'total')) + '</span></div>' +
+      '<div class="tile"><span class="k">Unpaid invoices</span><span class="v">' + open.length + '</span></div>' +
+      '<div class="tile"><span class="k">' + esc(fy || 'This year') + ' food</span><span class="v">' + money(sum(thisFy, 'goods')) + '</span></div>' +
+      '<div class="tile"><span class="k">' + esc(fy || 'This year') + ' delivery</span><span class="v">' + money(sum(thisFy, 'delivery')) + '</span></div>' +
+      '<div class="tile"><span class="k">VAT to reclaim (' + esc(fy || 'year') + ')</span><span class="v">' + money(sum(thisFy, 'vat')) + '</span></div>' +
+      '<div class="tile"><span class="k">Paid by</span><span class="v">' + esc(setting('GA_PAYMENT') || 'Not set') + '</span></div></div>' +
+      (setting('BANK_LEDGER_FILE_ID') ? '' : '<p class="hint">Paid dates fill in once the bank ledger is linked (BANK_LEDGER_FILE_ID on the Settings tab).</p>');
+    if (!inv.length) return h + '<div class="card"><p class="what">No GA invoices read yet. They are saved here when the next one arrives by email.</p></div>';
+    var shown = showAll ? inv : inv.slice(0, 30);
+    h += '<div class="card">' + shown.map(function (i) {
+      return '<div class="row"><div class="txt"><b>' + esc(i.si_no) + '</b> · order #' + esc(i.order_no) + '<div class="m">' + esc([ukDate(i.invoice_date), i.due_date ? 'due ' + ukDate(i.due_date) : '', i.paid_date ? 'paid ' + ukDate(i.paid_date) : 'unpaid'].filter(Boolean).join(' · ')) + '</div></div>' +
+        '<div class="amt">' + money(i.total) + '</div>' + (i.file_id ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(i.file_id) + '/view" target="_blank" rel="noopener" aria-label="Open ' + esc(i.si_no) + '">PDF</a>' : '') + '</div>'; }).join('') + '</div>';
+    if (inv.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + inv.length + '</button>';
+    return h + '<p class="hint">Saved in Drive by financial year. Paid dates come later from the bank (Money Hub).</p>';
+  }
+  var FILTERS = [['sale', 'On sale'], ['eligible', 'Could add'], ['cat', 'Cat'], ['not', 'Not DDF'], ['all', 'All']];
+  function inFilter(p) { var s = String(p.ddf_status || '');
+    return filter === 'all' || (filter === 'sale' && /^ON SALE/.test(s)) || (filter === 'eligible' && /ELIGIBLE/.test(s)) || (filter === 'cat' && /^CAT/.test(s)) || (filter === 'not' && /^Not DDF|^CHECK/.test(s)); }
+  function pageProducts() {
+    var list = data.products.filter(inFilter).filter(function (p) { return !q || [p.ddf_name, p.recipe, p.tla, p.full_ga_code, p.range].join(' ').toLowerCase().indexOf(q) >= 0; });
+    var h = '<p class="needs">Products</p><p class="hint">One list for every GA recipe and size: GA cost, your price and profit for one bag in one box.</p>' +
+      '<div class="chips" role="group" aria-label="Which products">' + FILTERS.map(function (f) { return '<button class="chip" type="button" data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div>' +
+      '<input class="txtin" type="search" placeholder="Find a recipe, name or code" aria-label="Find a product" data-find value="' + esc(q) + '">';
+    if (!list.length) return h + '<div class="card"><p class="what">Nothing here.</p></div>';
+    var shown = showAll ? list : list.slice(0, 40);
+    h += '<div class="card">' + shown.map(function (p) { var pr = p.profit_ex_vat_1bag_1box;
+      return '<div class="row"><div class="txt"><b>' + esc(p.ddf_name || p.recipe) + '</b> · ' + esc(p.pack) + '<div class="m">' + esc([p.ddf_name ? p.recipe : '', p.full_ga_code || p.tla, 'GA ' + money(p.ga_price_ex_vat_portal_oct26 || p.ga_price_ex_vat_list_aug25), p.shopify_price_inc_vat ? 'shop ' + money(p.shopify_price_inc_vat) : '', p.subscription_price_inc_vat ? 'sub ' + money(p.subscription_price_inc_vat) : ''].filter(Boolean).join(' · ')) + '</div>' +
+        (/ELIGIBLE|CHECK/.test(p.ddf_status) ? '<div class="m">' + esc(p.ddf_status) + '</div>' : '') + '</div>' +
+        '<div class="amt ' + (pr === '' ? '' : num(pr) < (num(setting('MIN_PROFIT')) || 15) ? 'red' : 'good') + '">' + (pr === '' ? '' : money(pr)) + '</div></div>'; }).join('') + '</div>';
+    if (list.length > 40 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
+    return h;
+  }
+  function telLink(s) { return String(s).replace(/(\+?\d[\d ]{8,}\d)/g, function (n) { return '<a href="tel:' + n.replace(/\s/g, '') + '">' + n + '</a>'; }); }
+  function pageGa() {
+    var rows = [['Account code', 'GA_ACCOUNT_CODE', 'copy'], ['Partner portal', 'GA_PORTAL', 'link'], ['Order enquiries', 'GA_PHONE_ORDERS', 'tel'], ['Accounts', 'GA_PHONE_ACCOUNTS', 'tel'],
+      ['Partner manager', 'GA_PARTNER_MANAGER', 'tel'], ['Field manager', 'GA_FIELD_MANAGER', 'tel'], ['Payment terms', 'GA_TERMS'], ['Order cut-off', 'GA_CUTOFF'],
+      ['Delivery, first box', 'DELIVERY_FIRST_BOX', 'money'], ['Delivery, each extra box', 'DELIVERY_NEXT_BOX', 'money'], ['Highlands, islands, Jersey', 'GA_DELIVERY_ZONE_C'], ['Pallet', 'GA_PALLET'],
+      ['Minimum profit per order', 'MIN_PROFIT', 'money'], ['Subscription discount', 'SUB_DISCOUNT', 'money']];
+    var h = '<p class="needs">GA</p><p class="hint">GA Pet Food Partners: makes and ships the food. Change these on the Settings tab of RR_FOOD.</p><div class="card">';
+    rows.forEach(function (r) { var v = setting(r[1]); if (!v) return;
+      var shown = r[2] === 'link' ? '<a href="' + esc(v) + '" target="_blank" rel="noopener">' + esc(v.replace(/^https?:\/\//, '')) + '</a>' : r[2] === 'tel' ? telLink(esc(v)) : r[2] === 'money' ? money(v) : esc(v);
+      h += '<div class="row"><div class="txt"><div class="m">' + esc(r[0]) + '</div>' + shown + '</div>' + (r[2] === 'copy' ? '<button class="btn" type="button" data-copy="' + esc(v) + '">Copy</button>' : '') + '</div>'; });
+    return h + '</div>';
+  }
+  function render() {
+    $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
+    $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);
+    document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    var n = waiting().length; $('n-home').textContent = n || '';
+    $('stamp').textContent = F && F.live ? '' : 'TEST';
+    var ready = typeof auth !== 'undefined' && auth.ready();
+    $('signin').disabled = !token && !ready;
+    if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the GA Hub</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
+    $('view').innerHTML = view === 'orders' ? pageOrders() : view === 'invoices' ? pageInvoices() : view === 'products' ? pageProducts() : view === 'ga' ? pageGa() : pageHome();
+  }
+
+  /* ---------- taps ---------- */
+  function find(key) { return data.cards.filter(function (r) { return r.key === key; })[0]; }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button, a'); if (!t) return;
+    var a = t.getAttribute('data-action');
+    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
+    if (a === 'signout') { token = null; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [] }; return render(); }
+    if (a === 'refresh') return load();
+    if (a === 'all') { showAll = !showAll; return render(); }
+    if (t.hasAttribute('data-filter')) { filter = t.getAttribute('data-filter'); showAll = false; return render(); }
+    if (t.hasAttribute('data-ans')) { var r = find(t.getAttribute('data-ans')); t.disabled = true; return answer(r, t.getAttribute('data-v')); }
+    if (t.hasAttribute('data-undo')) { var u = find(t.getAttribute('data-undo')); if (Date.now() < Date.parse(u.answered_at) + UNDO_MS) answer(u, ''); return; }
+    if (t.hasAttribute('data-copy')) { navigator.clipboard.writeText(t.getAttribute('data-copy')).then(function () { t.textContent = 'Copied'; }); return; }
+  });
+  document.addEventListener('input', function (e) {
+    if (!e.target.hasAttribute('data-find')) return;
+    q = e.target.value.trim().toLowerCase(); var pos = e.target.selectionStart; render();
+    var box = document.querySelector('[data-find]'); if (box) { box.focus(); try { box.setSelectionRange(pos, pos); } catch (x) {} }
+  });
+  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'home'; if (['home', 'orders', 'invoices', 'products', 'ga'].indexOf(view) < 0) view = 'home'; showAll = false; render(); }
+  window.addEventListener('hashchange', route);
+
+  /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */
+  var auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE,
+    onToken: function (resp) {
+      if (resp.error) return banner('Sign-in did not complete.');
+      if (window.google && google.accounts && !google.accounts.oauth2.hasGrantedAllScopes(resp, SHEETS)) { banner('Google did not give this page spreadsheet access. Tap Sign in again and tick every box Google shows.'); return; }
+      token = resp.access_token; DashAuth.save(token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE); load();
+    },
+    onError: function () { banner('Sign-in did not complete.'); }, onSilentFail: function () {} });
+  var saved = DashAuth.valid(); if (saved && DashAuth.hasScope(saved, SCOPE)) { token = saved.access_token; }
+  route(); load(); setInterval(function () { if (token) load(); }, 5 * 60000);
+  var tries = 0;
+  (function wait() { if (auth.init()) { render(); return; } if (++tries > 100) { banner('Google sign-in did not load.'); return; } setTimeout(wait, 100); })();
+})();
+</script>
+</body>
+</html>
