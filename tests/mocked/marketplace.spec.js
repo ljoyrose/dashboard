@@ -371,6 +371,97 @@ test.describe('Marketplace page', () => {
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].range).toBe('Marketplace!G3:J3'); expect(writes[0].body.values[0][0]).toBe('Ordered 6');
   });
+  test('engine v11 New product? card: both VAT profit lines (headline bold, warning red), best and runner-up, the order gap; Yes writes the quantity', async ({ page }) => {
+    const np = { kind: 'newprod', code: 'H1', supplier: 'Sample Supplier', lines: ['Buy £10.00 + VAT £2.00 (20%) = £12.00 from Sample Supplier (delivered)', 'Sell £24.99 (VAT inside £4.17) · after fees and postage £18.24',
+      '▶ Not VAT-registered: profit £6.24 (input VAT £2.00 is a cost)', 'VAT-registered: profit £4.07 (pay £4.17 output VAT, reclaim £2.00)', '⚠ Loses money if VAT-registered'],
+      best: 'Sample Supplier £12.00 inc VAT', runner_up: 'Other £12.50', moq: '1', case_cost: '£72.00 for 6', gap: 'Below the £100.00 minimum: add £88.00', sell_basis: 'RRP (not yet checked against eBay sold prices)' };
+    const rows = [['NP|Sample Supplier|h1', 'newprod', 'Other', 'Sample harness (4 sizes/colours)', JSON.stringify(np), ago(5)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/decide');
+    await expect(page.locator('#view .grp').first()).toHaveText('New product?');
+    await expect(page.locator('#view ul.money li.head')).toHaveText('▶ Not VAT-registered: profit £6.24 (input VAT £2.00 is a cost)');
+    await expect(page.locator('#view ul.money li.red')).toHaveText('⚠ Loses money if VAT-registered');
+    await expect(page.locator('#view ul.money li')).toHaveCount(5);
+    await expect(page.locator('#view')).toContainText('Below the £100.00 minimum: add £88.00');
+    await expect(page.locator('#view .fact', { hasText: 'Runner-up' })).toContainText('Other £12.50');
+    await page.locator('[data-note="NP|Sample Supplier|h1"]').fill('6');
+    await page.locator('[data-ans="NP|Sample Supplier|h1"][data-v="Yes"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Yes', '6']);
+  });
+
+  test('engine v11 supplier cards: terms questions need text before Save; a price list behind a link opens it and the 6 TRADE folder; a receipt shows unmatched lines in red', async ({ page }) => {
+    const rows = [
+      ['SUP|Sample Wholesale|min_order,phone', 'supplier', '', 'Sample Wholesale: 2 things to fill in', JSON.stringify({ kind: 'terms', supplier: 'Sample Wholesale', asks: [{ field: 'min_order', ask: 'Minimum order £ (ex VAT)? 0 if none' }, { field: 'phone', ask: 'Their phone number?' }], example: 'min 100, phone 01234 567890' }), ago(5)],
+      ['LINK|m8', 'supplier', '', 'New Sample Supplier price list: download it', JSON.stringify({ kind: 'link', url: 'https://files.example/s/abc', folder: 'https://drive.google.com/drive/folders/TRADEFOLDERID', why: 'Open the link, download the file, then drop it in 6 TRADE.' }), ago(5)],
+      ['RC|J1', 'receipt', '', 'Add to stock? Sample Wholesale 2026-10-25', JSON.stringify({ kind: 'receipt', lines: [{ title: 'Sample ball', qty: '6', unit_cost: '2.10', sku: 'SKU-9' }, { title: 'Mystery line', qty: '2', unit_cost: '1.00', sku: '' }] }), ago(5)],
+      ['javascript-link', 'supplier', '', 'Bad link', JSON.stringify({ kind: 'link', url: 'javascript:alert(1)' }), ago(5)],
+    ];
+    const writes = await sheets(page, rows);
+    await open(page, '#/decide');
+    await page.locator('[data-action="all"]').click();
+    const terms = page.locator('.card', { hasText: '2 things to fill in' });
+    await expect(terms.locator('ul.asks li')).toHaveCount(2);
+    await terms.locator('[data-v="Set"]').click();
+    await expect(page.locator('#banner')).toContainText('Type what to change first');
+    expect(writes).toEqual([]);
+    await terms.locator('[data-note]').fill('min 50, phone 0113 000 0000');
+    await terms.locator('[data-v="Set"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Set', 'min 50, phone 0113 000 0000']);
+    const link = page.locator('.card', { hasText: 'download it' });
+    await expect(link.locator('a', { hasText: 'Open the link' })).toHaveAttribute('href', 'https://files.example/s/abc');
+    await expect(link.locator('a', { hasText: 'Open 6 TRADE' })).toHaveAttribute('href', 'https://drive.google.com/drive/folders/TRADEFOLDERID');
+    await expect(page.locator('.card', { hasText: 'Bad link' }).locator('a', { hasText: 'Open the link' })).toHaveCount(0);   // only https links
+    const rc = page.locator('.card', { hasText: 'Add to stock?' });
+    await expect(rc.locator('.why.red')).toHaveText('2 × £1.00 · not matched to a product');
+    await expect(rc.locator('.why:not(.red)')).toHaveText('6 × £2.10 · SKU-9');
+  });
+
+  test('engine v11 Suppliers page: account number copies, phone calls, terms, order list with the gap, missing terms in red; Settings writes Set + note', async ({ page }) => {
+    const sd = { kind: 'supplier', supplier: 'Sample Supplier', account_no: 'AB-123', phone: '01234 567890', order_email: 'orders@supplier.example', min_order: '100', free_over: '300', delivery: '15',
+      prices: 386, list_date: '2026-02-01', stale: true, order: [{ code: 'H1', title: 'Sample harness', qty: '4' }], basket: '£46.00', gap: 'Below the £100.00 minimum: add £54.00', missing: ['Their phone number?'] };
+    const rows = [['SUPP|Sample Supplier', 'suppliers', '', 'Sample Supplier', JSON.stringify(sd), ago(5)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/insights');
+    await page.locator('#view a', { hasText: 'Suppliers (1)' }).click();
+    await expect(page.locator('#view .needs')).toHaveText('Suppliers');
+    await expect(page.locator('#tabs a[data-nav="insights"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('[data-copycode="AB-123"]')).toHaveText('Account AB-123');
+    await expect(page.locator('#view a', { hasText: 'Call 01234 567890' })).toHaveAttribute('href', 'tel:01234567890');
+    await expect(page.locator('#view a', { hasText: 'Email orders' })).toHaveAttribute('href', 'mailto:orders@supplier.example');
+    await expect(page.locator('#view .fact', { hasText: 'Free from' })).toContainText('£300');
+    await expect(page.locator('#view .verdict.wait')).toContainText('over 60 days old');
+    await expect(page.locator('#view')).toContainText('Below the £100.00 minimum: add £54.00');
+    await expect(page.locator('#view .what.red')).toHaveText('Missing: Their phone number?');
+    await page.locator('#view summary').click();
+    await page.locator('[data-note="SUPP|Sample Supplier"]').fill('free over 250');
+    await page.locator('[data-ans="SUPP|Sample Supplier"][data-v="Set"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Set', 'free over 250']);
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  });
+
+  test('engine v11: Brands to source offers Find and a ready email; VAT card shows the line; a job the AI could not do is in Do now', async ({ page }) => {
+    const rows = [
+      ['LEARN|puppystim', 'learn', '', 'Puppystim: get a trade price?', JSON.stringify({ kind: 'find', brand: 'Puppystim', titles: ['Calming spray'], ask: { mailto: 'mailto:?subject=Trade%20account%20enquiry%3A%20Puppystim&body=Hello' } }), ago(5)],
+      ['VAT|75', 'vat', '', 'VAT: 77% of the £90,000 threshold', JSON.stringify({ kind: 'vat', line: 'Sales last 12 months: £70000.00 of £90000.00 (77%)', why: 'Tell your accountant.' }), ago(5)],
+      ['JOB|J2', 'job', '', 'Receipt: type the lines (code, qty, cost)', JSON.stringify({ kind: 'job', file_ids: 'FILEID12345678901234567' }), ago(5)],
+    ];
+    const writes = await sheets(page, rows);
+    await open(page, '#/decide');
+    await page.locator('[data-action="all"]').click();
+    await expect(page.locator('#view a', { hasText: 'Write the email' })).toHaveAttribute('href', /^mailto:\?subject=Trade%20account%20enquiry/);
+    await expect(page.locator('#view .verdict.wait')).toHaveText('Sales last 12 months: £70000.00 of £90000.00 (77%)');
+    await page.locator('[data-ans="LEARN|puppystim"][data-v="Find"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0][0]).toBe('Find');
+    await page.goto('marketplace/#/do');
+    await expect(page.locator('#view')).toContainText('Receipt: type the lines');
+    await expect(page.locator('#view a', { hasText: 'Open file' })).toHaveAttribute('href', 'https://drive.google.com/file/d/FILEID12345678901234567/view');
+  });
+
   test('the last button on a long page can always be scrolled clear of the bottom tab bar @regression', async ({ page }) => {
     const rows = Array.from({ length: 12 }, (_, i) => ['RM|L' + i, 'remove', 'Clothes', 'Sample item ' + i, JSON.stringify({ platform: 'Vinted' }), ago(5)]);
     await sheets(page, rows);
