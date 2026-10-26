@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-food-2026-10-26-v5">
+<meta name="build" content="ljr-food-2026-10-26-v6">
 <title>GA Hub</title>
 <!-- GA Hub v1 (26 Oct 2026): Designer Dog Foods orders, GA invoices, products and GA details. PUBLIC repo: no data, no secrets.
      The workbook id comes from ../config.js (DASH_CONFIG.food); everything else is read at run time with Lisa's Google sign-in
@@ -234,7 +234,7 @@
     return h;
   }
   // The order check: did every shop order reach GA, and did GA send the same items?
-  var CHECK = { 'Matched': ['✅ Matched with GA', ''], 'Shipped': ['🚚 Shipped by GA', ''], 'Waiting for GA': ['⏳ Waiting for GA', ''], 'Not at GA': ['❌ Not at GA: check the Portal', 'no'],
+  var CHECK = { 'Matched': ['✅ Matched with GA', ''], 'Shipped': ['🚚 Shipped by GA', ''], 'Waiting for GA': ['⏳ Waiting for GA', ''], 'At GA': ['📥 At GA (confirmed)', ''], 'At GA, not shipped': ['⚠️ At GA but not shipped', 'no'], 'Not at GA': ['❌ Not at GA: check the Portal', 'no'],
     'Items differ': ['⚠️ GA sent different items', 'no'], 'Not in Shopify': ['❓ Not in Shopify: check the reference', 'no'], 'No GA items': ['🏠 Packed at home (no GA items)', ''], 'Cancelled': ['✖ Cancelled', ''],
     'Replacement': ['🔁 Replacement, sent again', ''], 'Split box': ['📦 Extra box of the same order', ''] };
   function checkBadge(o) { var c = CHECK[o.check]; return c ? '<div class="badges"><span class="badge' + (c[1] ? ' ' + c[1] : '') + '">' + esc(c[0]) + '</span></div>' : ''; }
