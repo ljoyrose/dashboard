@@ -41,7 +41,7 @@ async function sheets(page, b, opts = {}) {
       return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' });
     }
     if (/:batchGet/.test(url)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valueRanges: [
-      { values: b.cards }, { values: b.orders }, { values: b.invoices }, { values: [['COUNT: sample']].concat(b.products).slice(1) }, { values: b.settings }, { values: b.statements || [['statement_date', 'total_outstanding']] }, { values: b.dds || [['date', 'amount']] }] }) });
+      { values: b.cards }, { values: b.orders }, { values: b.invoices }, { values: [['COUNT: sample']].concat(b.products).slice(1) }, { values: b.settings }, { values: b.statements || [['statement_date', 'total_outstanding']] }, { values: b.dds || [['date', 'amount']] }, { values: b.codes || [['kind', 'code', 'name']] }] }) });
     const n = Number(/Cards!A(\d+)/.exec(url)[1]), row = (b.cards[n - 2] || []).slice();
     if (opts.moved) row[0] = 'SOMETHING-ELSE';
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: [row] }) });
@@ -188,6 +188,23 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view .row')).toHaveCount(2);   // waiting + late
     await page.locator('[data-ofilter="sub"]').click();
     await expect(page.locator('#view .row')).toHaveCount(1);
+  });
+
+  test('order codes: a partner shows by name (or its type), a resend shows as a replacement, and the GA tab lists the codes to type on the Portal', async ({ page }) => {
+    const b = book();
+    b.orders[0].push('tracking_sent', 'partner'); b.orders[1].push('', 'B07');
+    b.orders.push(['9001-R1', 'Shopify', 'DDF', 'GA', 'Shipped', 'S1000009', '', '1', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'Replacement']);
+    b.codes = [['kind', 'code', 'name', 'discount_codes', 'notes', 'active'], ['brand', 'DDF', 'Designer Dog Foods', '', '', 'Y'], ['channel', 'CF', 'ClickFunnels', '', '', 'Y'],
+      ['partner_type', 'B', 'Breeder or breeder club', '', '', 'Y'], ['partner_type', 'R', 'Reseller', '', '', 'Y'], ['partner', 'R01', 'Sample Pet Shop', '', '', 'Y'], ['channel', 'ZZ', 'Old shop', '', '', 'N']];
+    await sheets(page, b);
+    await open(page, '#/orders');
+    await expect(page.locator('#view .row', { hasText: '#9001 ' }).first()).toContainText('🤝 Breeder or breeder club 07');
+    await expect(page.locator('#view .row', { hasText: '#9001-R1' }).locator('.badge')).toHaveText('🔁 Replacement, sent again');
+    await page.goto('food/#/ga');
+    const codes = page.locator('#view .card', { hasText: 'BRAND-WHERE-NUMBER' });
+    await expect(codes).toContainText('DDF Designer Dog Foods');
+    await expect(codes).toContainText('R01 Sample Pet Shop');
+    await expect(codes).not.toContainText('Old shop');   // inactive codes are hidden
   });
 
   test('Invoices: the newest GA direct debit from the bank shows as a tile (with its date)', async ({ page }) => {
