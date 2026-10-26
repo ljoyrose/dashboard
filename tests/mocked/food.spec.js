@@ -201,8 +201,9 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view .row', { hasText: '#9001 ' }).first()).toContainText('🤝 Breeder or breeder club 07');
     await expect(page.locator('#view .row', { hasText: '#9001-R1' }).locator('.badge')).toHaveText('🔁 Replacement, sent again');
     await page.goto('food/#/ga');
-    const codes = page.locator('#view .card', { hasText: 'BRAND-WHERE-NUMBER' });
+    const codes = page.locator('#view .card', { hasText: 'BRAND-CODE-NUMBER' });
     await expect(codes).toContainText('DDF Designer Dog Foods');
+    await expect(codes).toContainText('Customers see this reference');
     await expect(codes).toContainText('R01 Sample Pet Shop');
     await expect(codes).not.toContainText('Old shop');   // inactive codes are hidden
   });
