@@ -81,6 +81,10 @@
   label.qty { font-weight: 600; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
   details .txtin { margin: 6px 0; }
+  .ava { float: right; margin: 0 0 6px 10px; width: 36px; height: 36px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: var(--ava); color: #fff; font-size: 13px; font-weight: 800; letter-spacing: .02em; border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--ava); }
+  .ava img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; display: block; }
+  .buyfrom { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; font-weight: 600; } .buyfrom .k { color: var(--muted); font-weight: 600; }
+  details.madeof { display: block; } details.madeof[open] > *:not(summary) { margin-top: 10px; } details.madeof label.qty { margin-top: 12px; }
   .packbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
   .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
   .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
@@ -88,8 +92,8 @@
   .needs .zero { color: var(--ljr-5-text); }
   .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
   /* Lisa 27 Oct: "no gaps between, very cramped": cards, groups and buttons get room to breathe. */
-  #view { display: flex; flex-direction: column; gap: 16px; }
-  #view > .grp { margin-top: 10px; }
+  #view { display: flex; flex-direction: column; gap: 32px; }   /* Lisa 27 Oct: 16px still read as cramped on the phone */
+  #view > .grp { margin-top: 12px; margin-bottom: -18px; }   /* a heading sits close to its own cards, far from the last group */
   .card .acts { margin-top: 4px; }
   /* Courier band on post cards (Lisa 26 Oct): brand colour + name + where to take it. Name always in text, never colour alone. */
   .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: -16px -18px 2px; padding: 12px 18px; border-radius: var(--radius) var(--radius) 0 0; font-weight: 800; font-size: 17px; letter-spacing: .02em; }
@@ -210,6 +214,24 @@
   function thumb(id) { var src = photoSrc(id, 200); return src ? '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(src) + '">' : ''; }
   // "Same item?" cards (key LINK|<other>|<eBay>): both photos side by side, big; tap one to open it full size.
   // The second photo comes from RR_LISTINGS.csv (image_url), read once with Lisa's sign-in; nothing is written to it.
+  // Who a card belongs to: a round photo per person (a Drive image named AVATAR_<name>, e.g. AVATAR_Lisa.jpg, read with Lisa's
+  // sign-in, never stored in this public site), else the person's initials in their own colour. The photo is cropped to a
+  // circle on screen (centred, a little above the middle where faces usually are), so any photo size works.
+  var AVA_COL = { Lisa: '#7a3e9d', CY: '#0f7b6c', G: '#b4540a', H: '#2b5fb4', CN: '#a3324a' }, avatars = null;
+  function loadAvatars() {
+    if (avatars !== null) return; avatars = {};
+    var q = "name contains 'AVATAR_' and mimeType contains 'image/' and trashed = false";
+    fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=files(id,name)&pageSize=50&supportsAllDrives=true&includeItemsFromAllDrives=true', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (j) { (j.files || []).forEach(function (f) { var who = (f.name.match(/^AVATAR_([A-Za-z]+)/) || [])[1]; if (!who) return;
+        fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(f.id) + '?alt=media&supportsAllDrives=true', { headers: { Authorization: 'Bearer ' + token } })
+          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(function (b) { avatars[who.toLowerCase()] = URL.createObjectURL(b); render(); }).catch(function () {}); }); })
+      .catch(function () {});   // no photo is fine: initials show instead
+  }
+  function avatar(owner) {
+    var who = String(owner || 'Lisa'), pic = avatars && avatars[who.toLowerCase()], col = AVA_COL[who] || '#555';
+    return '<span class="ava" title="' + esc(who) + '" aria-label="' + esc(who) + '\'s" style="--ava:' + col + '">' + (pic ? '<img alt="" src="' + esc(pic) + '">' : esc(/^[A-Z]{1,3}$/.test(who) ? who : who.charAt(0).toUpperCase())) + '</span>';
+  }
   var pics = null;
   function loadPics() {
     if (pics !== null || !M.listingsFileId || !rows.some(function (r) { return /^LINK\|/.test(r.key); })) return;
@@ -270,7 +292,7 @@
     if (!token) { render(); return; }
     api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
       rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
-      $('banner').className = 'banner hidden'; render(); loadPics();
+      $('banner').className = 'banner hidden'; render(); loadPics(); loadAvatars();
     }).catch(function (e) { banner('Could not load: ' + e.message); });
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
   }
@@ -319,12 +341,34 @@
     var at = Date.parse(r.answered_at), live = Date.now() < at + UNDO_MS;
     return '<div class="sent">✓ ' + hm(at) + ' · applies by ' + hm(at + APPLY_MS) + (live ? ' <button class="btn" type="button" data-undo="' + esc(r.key) + '"><i class="ti ti-arrow-back-up"></i> Undo</button>' : '') + '</div>';
   }
+  // Every parcel card says what it is and what to do, with links that open in a new tab (Lisa 27 Oct: the dashboard is the
+  // one place to work from; never leave her guessing what a card is about).
+  var MAIL = 'https://mail.google.com/mail/u/?authuser=lisa%40puppyclassroom.com#all/';
+  function ukDay(s) { var t = Date.parse(String(s || '').slice(0, 10)); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  function postGuide(r, d) {
+    var eb = /ebay/i.test(d.platform), site = eb ? 'eBay' : /vinted/i.test(d.platform) ? 'Vinted' : (d.platform || 'the site');
+    var order = eb && d.order_id ? 'https://www.ebay.co.uk/mesh/ord/details?orderid=' + encodeURIComponent(d.order_id) : '';
+    var mail = d.email_url || (d.label_email ? MAIL + encodeURIComponent(d.label_email) : '');
+    if (d.kind === 'which_parcel') return '<p class="what"><b>Not a new sale.</b> A ' + esc(d.courier || 'courier') + ' label or QR came by email and the engine could not tell which sale it is for.</p>' +
+      factsOf([['Parcel number', d.tracking || ''], ['Code', d.qr || ''], ['Email came', ukDay(d.email_at)]]) +
+      (d.could_be && d.could_be.length ? '<p class="hint">It could be: ' + esc(d.could_be.join(' · ')) + '</p>' : '') +
+      '<ol class="steps"><li>' + (mail ? 'Open the email (button below) to see the item.' : 'Search your email for the parcel number above to see the item.') + '</li><li>If that parcel is already posted, just tap Sorted it.</li><li>If not, pack that item and post it, then tap Sorted it.</li></ol>' +
+      (mail ? '<div class="acts">' + linkBtn(mail, 'Open the email') + '</div>' : '');
+    var steps = [d.found ? 'Found ✓' : 'Find it' + (d.shelf ? ' on shelf ' + d.shelf : '') + ', then tap Found.'];
+    if (eb && !d.courier_known && !courierOf(d)) steps.push('Buy postage on the eBay order (button below) and print the label.');
+    else if (d.qr) steps.push('At the ' + (courierOf(d) ? courierOf(d).to : 'drop-off') + ', tap Show QR.');
+    else if (mail) steps.push('Print the label from the email (button below).');
+    steps.push('Pack it, write ' + (d.parcel_id || 'the parcel number') + ' on the parcel, post it, then tap Posted.');
+    return '<p class="what"><b>Sold on ' + esc(site) + (d.sold_at ? ' ' + esc(ukDay(d.sold_at)) : '') + '.</b> ' + (d.post_by ? '<span class="' + (d.red ? 'red' : '') + '">Post by ' + esc(ukDay(d.post_by)) + (d.red ? ' (late)' : '') + '.</span>' : eb ? 'Post as soon as you can (eBay shows the date on the order).' : '') + '</p>' +
+      '<ol class="steps">' + steps.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>' +
+      ((order || mail) ? '<div class="acts">' + (order ? linkBtn(order, 'Open the order on eBay') : '') + (mail ? linkBtn(mail, 'Open the label email') : '') + '</div>' : '');
+  }
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
     var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
-      '<div class="item">' + (isPair ? '' : thumb(d.photo)) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, siteOf(r), d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
-      postLine(d) + (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
-      (isPair ? pair(r, d) : '') + (d.why ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
+      '<div class="item">' + (isPair ? '' : thumb(d.photo)) + '<div class="t">' + avatar(d.owner) + esc(r.title) + '<div class="m">' + esc([d.price, siteOf(r), d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
+      postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
+      (isPair ? pair(r, d) : '') + (r.section === 'post' ? postGuide(r, d) : '') + (d.why && d.kind !== 'which_parcel' ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
     var acts = [];
     if (r.section === 'remove') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
@@ -337,6 +381,14 @@
     } else if (r.section === 'go') { acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Go</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Not this one</button>'); }
     else if (r.section === 'check' && /^postage_/.test(d.kind || '')) { acts.push(linkBtn(d.revise, 'Fix on eBay', true), linkBtn(d.url, 'Open on eBay'));
       acts.push('<button class="btn yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">I fixed it</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Leave it</button>'); }
+    else if (r.section === 'check' && d.kind === 'new') {   // v11.5: say what eBay shows, and offer the item she probably already has
+      h += factsOf([['eBay says for sale', d.qty === '' || d.qty === undefined ? '?' : String(d.qty)], ['Price', d.price || '']]);
+      if (d.maybe_sku) h += '<div class="item">' + thumb(d.maybe_photo) + '<div class="t">Looks like: ' + esc(d.maybe_title) + '<div class="m">' + esc(d.maybe_sku + ' · ' + d.maybe_where) + '</div></div></div>';
+      h += '<label class="qty">How many do you have? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have"></label><p class="hint">Leave blank if you are not sure.' + (d.maybe_sku ? ' Same item keeps one count for both adverts, so a sale on one updates the other.' : '') + '</p>';
+      acts.push(linkBtn(d.url, 'Open on eBay'));
+      if (d.maybe_sku) acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Same">Same item</button><button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">No, a new item</button>');
+      else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Add it</button>');
+      acts.push('<button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Leave it off</button>'); }
     else if (r.section === 'check') { if (d.url && !isPair) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');   // pairs: one button under each photo
       if (isPair) h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Leave blank if you are not sure. Yes then keeps one count for both sites.</p>';
       acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">No</button>'); }
@@ -387,7 +439,7 @@
     var c = courierOf(d), pid = d.parcel_id || '';
     if (!c && !d.qr && !d.tracking && !pid) return '';
     return '<div class="cband ' + (c ? c.cls : 'cb-none') + '">' + (pid ? '<span class="pid">' + esc(pid) + '</span>' : '') +
-      '<span>' + esc(c ? c.name : 'COURIER NOT KNOWN') + '</span><span class="to">' + esc(c ? 'Take to: ' + c.to + (c.full && c.full.toUpperCase() !== c.name ? ' · ' + c.full : '') : 'Check the label before packing') + '</span></div>';
+      '<span>' + esc(c ? c.name : /ebay/i.test(d.platform) ? 'POSTAGE NOT BOUGHT YET' : 'COURIER ON THE LABEL') + '</span><span class="to">' + esc(c ? 'Take to: ' + c.to + (c.full && c.full.toUpperCase() !== c.name ? ' · ' + c.full : '') : /ebay/i.test(d.platform) ? 'Buy it on the eBay order' : 'Open the label email to see it') + '</span></div>';
   }
   var V11 = {
     newprod: function (r, d) {
@@ -458,6 +510,18 @@
       ops.map(function (o) { return '<button class="btn" type="button" data-op="' + o + '" data-opkey="' + esc(key) + '">' + o + '</button>'; }).join('') + '</span>';
   }
   // Stock: one row per product code. Search, and chips for Low / No count. Count, Ordered, Arrived and settings write one answer each.
+  // "Made of": the parts one sale uses (a watch + its case). Pick a code from the list, or add a new part with its count.
+  function madeOf(r, d) {
+    var codes = rows.filter(function (x) { return x.section === 'stock' && !x.applied_at && detail(x).item_sku !== d.item_sku; }).map(function (x) { return detail(x); });
+    var name = {}; codes.forEach(function (c) { name[c.item_sku] = c.item_sku + ' ' + (rows.filter(function (x) { return x.key === 'ST|' + c.item_sku; })[0] || {}).title; });
+    var parts = d.made_of ? d.made_of.split('+').map(function (p) { return p.trim(); }) : [];
+    var now = parts.length ? parts.map(function (p) { var c = p.split(/\s+x/i)[0]; return esc(name[c] ? name[c].slice(0, 60) : p) + (/\sx\d+$/i.test(p) ? ' ' + esc(p.match(/x\d+$/i)[0]) : ''); }).join('<br>') : 'Just itself (1 of ' + esc(d.item_sku) + ')';
+    return '<details class="madeof"><summary>Made of' + (parts.length ? ' (' + parts.length + ' parts)' : '') + '</summary><p class="hint">' + now + '</p>' +
+      '<label class="qty">Add a part <select data-partpick="' + esc(r.key) + '"><option value="">Choose…</option>' + codes.map(function (c) { return '<option value="' + esc(c.item_sku) + '">' + esc((name[c.item_sku] || c.item_sku).slice(0, 70)) + '</option>'; }).join('') + '</select></label>' +
+      '<button class="btn" type="button" data-partadd="' + esc(r.key) + '" data-base="' + esc(d.made_of || d.item_sku) + '">Add part</button>' +
+      '<label class="qty">Or a new part <input class="txtin" type="text" data-newpart="' + esc(r.key) + '" placeholder="green watch case" aria-label="New part name"> <input class="txtin" type="number" min="0" inputmode="numeric" data-newqty="' + esc(r.key) + '" placeholder="how many" aria-label="How many of the new part"></label>' +
+      '<button class="btn" type="button" data-partnew="' + esc(r.key) + '">Add new part</button>' + (parts.length ? '<button class="btn" type="button" data-partclear="' + esc(r.key) + '">Just itself</button>' : '') + '</details>';
+  }
   function pageStock() {
     var list = byCat(rows.filter(function (r) { return r.section === 'stock' && !r.applied_at && shown(r); }));
     var low = list.filter(function (r) { return detail(r).low; }).length, unknown = list.filter(function (r) { return detail(r).unknown; }).length;
@@ -473,9 +537,14 @@
         '<div class="facts"><div class="fact"><span class="k">Have</span><span class="v' + (d.unknown ? ' red' : '') + '">' + (d.unknown ? '?' : esc(d.have)) + '</span></div><div class="fact"><span class="k">On order</span><span class="v">' + esc(d.on_order || 0) + '</span></div><div class="fact"><span class="k">Min</span><span class="v">' + (d.min === '' ? '–' : esc(d.min)) + '</span></div></div>' +
         priceLine(d);
       if (r.answer) { h += '<div class="sent">✓ ' + esc(r.answer) + ' · saved, the engine applies it after 10 minutes</div></div>'; return; }
-      h += '<div class="acts">' + opBox(r.key, ['Count', 'Ordered', 'Arrived']) + (d.url ? '<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on Temu</a>' : '') + '</div>' +
-        '<details><summary>Settings</summary><input class="txtin" type="text" data-setin="' + esc(r.key) + '" placeholder="min 2, reorder 6, buy at 1.20, shelf B2, link https://www.temu.com/..." aria-label="Settings">' +
-        '<button class="btn" type="button" data-set="' + esc(r.key) + '">Save settings</button><p class="hint">Now: ' + esc(['min ' + (d.min === '' ? 'not set' : d.min), 'reorder ' + (d.reorder || 'not set'), 'buy at ' + (d.buy_at || 'not set'), d.url ? 'Temu link set' : 'no Temu link'].join(' · ')) + '</p></details></div>';
+      var supName = d.supplier || 'the supplier';
+      h += '<div class="acts">' + opBox(r.key, ['Count', 'Ordered', 'Arrived']) + '</div>' +
+        // Where to buy more: always on the card (Lisa 27 Oct: "how do you know where the item comes from if I replenish it?")
+        '<div class="buyfrom"><span class="k">Buy more from</span> ' + (d.url ? '<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(supName) + '</a>'
+          : '<span class="red">not set yet</span><span class="opbox"><input class="txtin" type="url" data-supin="' + esc(r.key) + '" placeholder="Paste the supplier\'s product link" aria-label="Supplier link"><button class="btn" type="button" data-sup="' + esc(r.key) + '">Save link</button></span>') + '</div>' +
+        madeOf(r, d) +
+        '<details><summary>Settings</summary><input class="txtin" type="text" data-setin="' + esc(r.key) + '" placeholder="min 2, reorder 6, buy at 1.20, shelf B2, link https://..." aria-label="Settings">' +
+        '<button class="btn" type="button" data-set="' + esc(r.key) + '">Save settings</button><p class="hint">Now: ' + esc(['min ' + (d.min === '' ? 'not set' : d.min), 'reorder ' + (d.reorder || 'not set'), 'buy at ' + (d.buy_at || 'not set'), d.url ? supName + ' link set' : 'no supplier link'].join(' · ')) + '</p></details></div>';
     });
     return h;
   }
@@ -501,11 +570,28 @@
     return '<div class="chips" role="group" aria-label="Which site">' + ['All'].concat(have.sort()).map(function (s) {
       return '<button class="chip" type="button" data-site="' + esc(s) + '" aria-pressed="' + (site === s) + '">' + esc(s) + '</button>'; }).join('') + '</div>';
   }
+  // Orders at a glance (Lisa 27 Oct: "where am I supposed to know there was an order?"), for the person picked above (All = everyone).
+  // Counted from the parcel cards: one card per order. Money shows once the engine puts the sale price on the card.
+  function ordersStrip() {
+    var po = rows.filter(function (r) { return r.section === 'post' && detail(r).kind !== 'which_parcel' && shown(r); });
+    var day = function (r) { return String(detail(r).sold_at || r.created_at || '').slice(0, 10); }, today = new Date().toISOString().slice(0, 10);
+    var wk = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10);
+    var nToday = po.filter(function (r) { return day(r) === today; }), nWeek = po.filter(function (r) { return day(r) >= wk; });
+    var open = po.filter(function (r) { return !r.applied_at; }), late = open.filter(function (r) { return detail(r).red; });
+    var money = nWeek.reduce(function (t, r) { var v = parseFloat(String(detail(r).price || '').replace(/[^\d.]/g, '')); return isNaN(v) ? t : t + v; }, 0);
+    var latest = po.slice().sort(function (a, b) { return day(b).localeCompare(day(a)); })[0];
+    return '<p class="grp">Orders' + (who === 'All' ? '' : ' · ' + esc(who)) + '</p><div class="tiles three">' +
+      '<a class="tile big" href="#/do"><span class="v">' + nToday.length + '</span><span class="k">New today</span></a>' +
+      '<a class="tile big" href="#/do"><span class="v">' + nWeek.length + '</span><span class="k">Last 7 days' + (money ? ' · £' + money.toFixed(2) : '') + '</span></a>' +
+      '<a class="tile big" href="#/do"><span class="v' + (late.length ? ' red' : '') + '">' + open.length + '</span><span class="k">To post' + (late.length ? ' · ' + late.length + ' late' : '') + '</span></a></div>' +
+      (latest ? '<p class="hint">Latest: <a href="#/do">' + esc(latest.title.slice(0, 60)) + '</a> · ' + esc(siteOf(latest) || detail(latest).platform || '') + ' · ' + esc(ukDay(day(latest))) + '</p>' : '');
+  }
   function pageMe() {
     var n = needsCount(), h = '<p class="needs">Needs you: ' + (n ? n : '<span class="zero">0</span>') + '</p>';
     h += '<div class="tiles three">' + [['do', 'Do now'], ['decide', 'Decide'], ['reply', 'Reply']].map(function (t) {
       return '<a class="tile big" href="#/' + t[0] + '"><span class="v">' + tabCount(t[0]) + '</span><span class="k">' + t[1] + '</span></a>'; }).join('') + '</div>';
     var first = null; ORDER.some(function (s) { if (SECTIONS[s].quiet) return false; var w = byCat(waiting(s)); if (w.length) { first = w[0]; return true; } return false; });
+    h += ordersStrip();
     if (first) h += itemCard(first, { head: true }); else h += '<div class="card acc5"><h2>All done</h2><p class="what">Nothing needs you right now.</p></div>';
     var just = rows.filter(function (r) { return r.answer && !r.applied_at && Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
     if (just.length) h += '<p class="grp">Just done</p>' + just.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '</div>' + sentLine(r) + '</div>'; }).join('');
@@ -629,7 +715,7 @@
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
-    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; pics = null; return render(); }
+    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; pics = null; avatars = null; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }
     if (t.hasAttribute('data-who')) { who = t.getAttribute('data-who'); try { localStorage.setItem('mkt.who', who); } catch (x) {} return render(); }
@@ -656,13 +742,22 @@
         if (pv !== String(detail(r).parcel_id).toUpperCase()) return banner('Type the parcel number written on the parcel (' + detail(r).parcel_id + ') before tapping Posted. If it does not match, stop: it may be the wrong parcel.');
       }
       var qb = document.querySelector('[data-qty="' + r.key + '"]');
-      if (qb && v === 'Yes' && qb.value.trim()) { var qn = parseInt(qb.value, 10); if (!(qn >= 0)) return banner('Type a number for how many you have, or leave it blank.'); note = 'qty ' + qn; }
+      if (qb && (v === 'Yes' || v === 'Same') && qb.value.trim()) { var qn = parseInt(qb.value, 10); if (!(qn >= 0)) return banner('Type a number for how many you have, or leave it blank.'); note = 'qty ' + qn; }
       t.disabled = true; t.classList.add('saving'); t.textContent = 'Saving…'; return answer(r, v, note);
     }
     if (t.hasAttribute('data-op')) { var ok = find(t.getAttribute('data-opkey')), ib = document.querySelector('[data-opin="' + ok.key + '"]'), on = ib ? parseInt(ib.value, 10) : NaN;
       if (!(on >= 0)) return banner('Type how many first, then tap ' + t.getAttribute('data-op') + '.'); t.disabled = true; return answer(ok, t.getAttribute('data-op') + ' ' + on, ''); }
     if (t.hasAttribute('data-set')) { var sr = find(t.getAttribute('data-set')), si = document.querySelector('[data-setin="' + sr.key + '"]'), sv = si ? si.value.trim() : '';
       if (!sv) return banner('Type what to change, for example: min 2, reorder 6, buy at 1.20'); t.disabled = true; return answer(sr, 'Set', sv); }
+    if (t.hasAttribute('data-sup')) { var su = find(t.getAttribute('data-sup')), sb = document.querySelector('[data-supin="' + su.key + '"]'), sl = sb ? sb.value.trim() : '';
+      if (!/^https?:\/\/\S+$/i.test(sl)) return banner('Paste the full product link, starting https://'); t.disabled = true; return answer(su, 'Set', 'link ' + sl); }
+    if (t.hasAttribute('data-partadd')) { var pa = find(t.getAttribute('data-partadd')), ps = document.querySelector('[data-partpick="' + pa.key + '"]'), pv2 = ps ? ps.value : '';
+      if (!pv2) return banner('Choose a part from the list first.'); t.disabled = true; return answer(pa, 'Set', 'made of ' + t.getAttribute('data-base') + ' + ' + pv2); }
+    if (t.hasAttribute('data-partnew')) { var pn = find(t.getAttribute('data-partnew')), nb2 = document.querySelector('[data-newpart="' + pn.key + '"]'), nq = document.querySelector('[data-newqty="' + pn.key + '"]');
+      var nm = nb2 ? nb2.value.trim().replace(/[,;]/g, ' ') : '', qn2 = nq && nq.value.trim() !== '' ? parseInt(nq.value, 10) : null;
+      if (!nm) return banner('Type the new part\'s name, for example: green watch case'); if (qn2 !== null && !(qn2 >= 0)) return banner('How many: type a number, or leave it blank.');
+      t.disabled = true; return answer(pn, 'Set', 'new part: ' + nm + (qn2 !== null ? ', ' + qn2 : '')); }
+    if (t.hasAttribute('data-partclear')) { t.disabled = true; return answer(find(t.getAttribute('data-partclear')), 'Set', 'made of none'); }
     if (t.hasAttribute('data-sfilter')) { stockFilter = t.getAttribute('data-sfilter'); return render(); }
     if (t.hasAttribute('data-copycode')) { navigator.clipboard.writeText(t.getAttribute('data-copycode')).then(function () { t.textContent = 'Copied'; }); return; }
     if (t.hasAttribute('data-arrive')) { var ar = find(t.getAttribute('data-arrive')), box = document.querySelector('[data-arrived="' + ar.key + '"]'), n = box ? parseInt(box.value, 10) : NaN;
