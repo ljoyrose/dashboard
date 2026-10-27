@@ -36,7 +36,15 @@
   .top h1 a { color: inherit; text-decoration: none; }
   .stamp { font-size: 11px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 5px; }
   .btn { font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 8px 14px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; min-height: 44px; }
-  .btn:hover { border-color: var(--muted); }
+  /* Lisa 27 Oct: outline at rest; filled on hover/press so a tap clearly lands (black; Yes green, No red); "Saving…" while it writes. */
+  .btn:hover, .btn:active { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+  .btn.yes:hover, .btn.yes:active { background: var(--ljr-5-text); border-color: var(--ljr-5-text); color: var(--surface); }
+  .btn.no:hover, .btn.no:active { background: var(--ljr-2-text); border-color: var(--ljr-2-text); color: var(--surface); }
+  .btn:active { transform: scale(.97); }
+  .btn:focus-visible { outline: 3px solid var(--ljr-6); outline-offset: 2px; }
+  .m.post { font-weight: 700; } .m.post.seller { color: var(--ljr-2-text); } .m.post.buyer { color: var(--ljr-5-text); }
+  .btn.saving, .btn.saving:hover { background: var(--muted); border-color: var(--muted); color: var(--surface); cursor: progress; }
+  .btn:disabled:not(.saving) { opacity: .5; cursor: default; }
   .btn.main { border-color: var(--ink); }
   .btn.big { width: 100%; justify-content: center; font-size: 19px; min-height: 60px; }
   .btn.yes { color: var(--ljr-5-text); border-color: var(--ljr-5); }
@@ -274,7 +282,7 @@
         .then(function () { return api(sheetUrl(M.tab + '!A' + r._row)); })
         .then(function (k) { if (((k.values || [[]])[0] || [])[0] !== r.key) return api(sheetUrl(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [old] }) }).then(function () { throw new Error('the list changed: refresh and tap again'); }); })
         .then(function () { r.answer = value; r.note = note || ''; r.answered_at = at; r.answered_by = who; wake(); render(); });
-    }).catch(function (e) { banner('Not saved: ' + e.message); });
+    }).catch(function (e) { banner('Not saved: ' + e.message); render(); });   // render puts the button back (no stuck "Saving…")
   }
   // Wake the engine (no data sent). The address is read from a Drive file, never kept in this public page.
   var wakeUrl = null;
@@ -311,7 +319,7 @@
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
     var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
       '<div class="item">' + (isPair ? '' : thumb(d.photo)) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, d.platform, d.shelf ? 'shelf ' + d.shelf : '', d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
-      (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
+      postLine(d) + (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
       (isPair ? pair(r, d) : '') + (d.why ? '<p class="what">' + esc(d.why) + '</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
     var acts = [];
@@ -323,6 +331,8 @@
       else { if (d.qr) acts.push('<button class="btn" type="button" data-qr="' + esc(r.key) + '">Show QR</button>'); else if (d.qr_missing) acts.push('<span class="why red">QR not found</span>');
         acts.push(pidCheck(r, d) + '<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'); }
     } else if (r.section === 'go') { acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Go</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Not this one</button>'); }
+    else if (r.section === 'check' && /^postage_/.test(d.kind || '')) { acts.push(linkBtn(d.revise, 'Fix on eBay', true), linkBtn(d.url, 'Open on eBay'));
+      acts.push('<button class="btn yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">I fixed it</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Leave it</button>'); }
     else if (r.section === 'check') { if (d.url && !isPair) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');   // pairs: one button under each photo
       if (isPair) h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Leave blank if you are not sure. Yes then keeps one count for both sites.</p>';
       acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">No</button>'); }
@@ -347,6 +357,12 @@
     return h + '<div class="acts">' + acts.join('') + '</div></div>';
   }
   /* ---------- engine v11 cards ---------- */
+  // Who pays postage, in words and an icon (Lisa 27 Oct): "Buyer pays postage £2.89" or "FREE postage: you pay".
+  function postLine(d) {
+    if (d.postage === 'buyer') return '<div class="m post buyer"><i class="ti ti-truck-delivery" aria-hidden="true"></i> Buyer pays postage' + (d.buyer_post ? ' ' + esc(d.buyer_post) : '') + '</div>';
+    if (d.postage === 'seller') return '<div class="m post seller"><i class="ti ti-gift" aria-hidden="true"></i> FREE postage: you pay' + (d.post_est ? ' about ' + esc(d.post_est) : '') + '</div>';
+    return '';
+  }
   // Posted needs the parcel number written on the parcel (no mix-ups): the box must match the card's number.
   function pidCheck(r, d) { return d.parcel_id ? '<input class="num pidin" type="text" autocapitalize="characters" data-pid="' + esc(r.key) + '" placeholder="Number on parcel" aria-label="Parcel number written on the parcel">' : ''; }
   function ansBtn(r, v, label, main) { return '<button class="btn' + (main ? ' main yes' : '') + '" type="button" data-ans="' + esc(r.key) + '" data-v="' + esc(v) + '">' + esc(label || v) + '</button>'; }
@@ -637,7 +653,7 @@
       }
       var qb = document.querySelector('[data-qty="' + r.key + '"]');
       if (qb && v === 'Yes' && qb.value.trim()) { var qn = parseInt(qb.value, 10); if (!(qn >= 0)) return banner('Type a number for how many you have, or leave it blank.'); note = 'qty ' + qn; }
-      t.disabled = true; return answer(r, v, note);
+      t.disabled = true; t.classList.add('saving'); t.textContent = 'Saving…'; return answer(r, v, note);
     }
     if (t.hasAttribute('data-op')) { var ok = find(t.getAttribute('data-opkey')), ib = document.querySelector('[data-opin="' + ok.key + '"]'), on = ib ? parseInt(ib.value, 10) : NaN;
       if (!(on >= 0)) return banner('Type how many first, then tap ' + t.getAttribute('data-op') + '.'); t.disabled = true; return answer(ok, t.getAttribute('data-op') + ' ' + on, ''); }

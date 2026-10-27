@@ -518,6 +518,21 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('.justdone [data-undo="LINK|L1|L2"]')).toBeVisible();
   });
 
+  test('engine v11.1 postage: cards say who pays in words; a free-postage loss card has Fix on eBay / I fixed it / Leave it; a tapped button shows Saving…', async ({ page }) => {
+    const ld = { kind: 'postage_loss', item_id: '318329017011', price: '£2.50', postage: 'seller', post_est: '£3.20', left: '-£1.02', platform: 'eBay', url: 'https://www.ebay.co.uk/itm/318329017011', revise: 'https://www.ebay.co.uk/sl/list?mode=ReviseItem&itemId=318329017011', why: 'FREE postage: you pay about £3.20. At £2.50 you keep -£1.02: a LOSS.' };
+    const td = { kind: 'postage_title', item_id: '318237542881', price: '£2.00', postage: 'buyer', buyer_post: '£2.89', platform: 'eBay', url: 'https://www.ebay.co.uk/itm/318237542881', revise: 'https://www.ebay.co.uk/sl/list?mode=ReviseItem&itemId=318237542881', why: 'The title says FREE postage but the buyer is charged £2.89.' };
+    const rows = [['PCHK|318329017011|loss|2026-10', 'check', 'Books', 'Sample fairy book - FREE Shipping', JSON.stringify(ld), ago(5)], ['PCHK|318237542881|title|2026-10', 'check', 'Books', 'Sample animals book Free Post', JSON.stringify(td), ago(4)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/decide');
+    await page.locator('[data-action="all"]').click();
+    await expect(page.locator('.m.post.seller')).toHaveText('FREE postage: you pay about £3.20');
+    await expect(page.locator('.m.post.buyer')).toHaveText('Buyer pays postage £2.89');
+    await expect(page.locator('a[href*="itemId=318329017011"]', { hasText: 'Fix on eBay' })).toHaveCount(1);
+    await page.locator('[data-ans="PCHK|318329017011|loss|2026-10"][data-v="Done"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0][0]).toBe('Done');
+  });
+
   test('engine v11.1 post cards: courier band with parcel number and where to take it; Posted needs the number on the parcel; Which parcel? cards stay out of packing', async ({ page }) => {
     const rows = [['PO|vinted|vt-1', 'post', 'Blades & grooming', 'Sample blade', JSON.stringify({ platform: 'vinted', parcel_id: 'L-07', courier: 'Evri', found: true, qr: 'H00IAA0000000001', label_expiry: '2026-11-02 09:00', post_by: '2026-10-29' }), ago(5)],
       ['PO|ebay|11-1', 'post', 'Books', 'Sample CD', JSON.stringify({ platform: 'ebay', parcel_id: 'L-08', courier: '', post_by: '2026-10-23' }), ago(5)],
