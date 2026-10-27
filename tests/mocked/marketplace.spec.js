@@ -506,6 +506,18 @@ test.describe('Marketplace page', () => {
     expect(writes[1].body.values[0].slice(0, 2)).toEqual(['Always', 'min=£20']);
   });
 
+  test('answered cards leave the list at once and wait in "Just done" (with Undo) at the bottom', async ({ page }) => {
+    const rows = [['LINK|L1|L2', 'check', 'Other', 'Sample golf balls', JSON.stringify({ kind: 'missing', platform: 'eBay', why: 'Live on eBay but missing from your list. Add it?' }), ago(5)],
+      ['LINK|L3|L4', 'check', 'Other', 'Sample watch', JSON.stringify({ kind: 'missing', platform: 'eBay', why: 'Live on eBay but missing from your list. Add it?' }), ago(4)]];
+    rows[0].push('Yes', '', new Date().toISOString(), 'lisa@puppyclassroom.com');
+    await sheets(page, rows);
+    await open(page, '#/decide');
+    await expect(page.locator('#view .card .t').first()).toContainText('Sample watch');
+    await expect(page.locator('.justdone summary')).toHaveText('Just done · 1 (Undo for 10 minutes)');
+    await page.locator('.justdone summary').click();
+    await expect(page.locator('.justdone [data-undo="LINK|L1|L2"]')).toBeVisible();
+  });
+
   test('engine v11.1 post cards: courier band with parcel number and where to take it; Posted needs the number on the parcel; Which parcel? cards stay out of packing', async ({ page }) => {
     const rows = [['PO|vinted|vt-1', 'post', 'Blades & grooming', 'Sample blade', JSON.stringify({ platform: 'vinted', parcel_id: 'L-07', courier: 'Evri', found: true, qr: 'H00IAA0000000001', label_expiry: '2026-11-02 09:00', post_by: '2026-10-29' }), ago(5)],
       ['PO|ebay|11-1', 'post', 'Books', 'Sample CD', JSON.stringify({ platform: 'ebay', parcel_id: 'L-08', courier: '', post_by: '2026-10-23' }), ago(5)],

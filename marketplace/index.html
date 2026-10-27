@@ -498,12 +498,16 @@
     var h = '<p class="needs">' + names[t] + ': ' + tabCount(t) + '</p><p class="hint">' + intro[t] + '</p>' + siteChips();
     if (t === 'do') { var p = posts().filter(function (r) { return !r.answer; }).length;
       if (p) h += '<div class="acts"><button class="btn main" type="button" data-action="pack">Start packing (' + p + ')</button><button class="btn" type="button" data-action="sheet">Label sheet (' + p + ')</button></div>'; }
-    var list = []; TABS[t].forEach(function (s) { list = list.concat(byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); }))); });
-    if (!list.length) return h + '<div class="card acc5"><h2>Nothing here</h2></div>';
+    // Answered cards leave the list at once (Lisa 27 Oct: "once decided then still at top of list"); they wait in "Just done" at the
+    // bottom while Undo is possible, then disappear. Found parcels stay: they still need posting.
+    var list = [], done = []; TABS[t].forEach(function (s) { byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); })).forEach(function (r) {
+      if (!r.answer || (r.section === 'post' && r.answer === 'Found')) list.push(r); else if (Date.now() < Date.parse(r.answered_at) + UNDO_MS) done.push(r); }); });
+    var tail = done.length ? '<details class="justdone"><summary>Just done · ' + done.length + ' (Undo for 10 minutes)</summary>' + done.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '<div class="why">' + esc(r.answer) + '</div></div>' + sentLine(r) + '</div>'; }).join('') + '</details>' : '';
+    if (!list.length) return h + '<div class="card acc5"><h2>Nothing here</h2></div>' + tail;
     var one = t === 'decide' && !showAll, sec = null;
     (one ? list.slice(0, 1) : list).forEach(function (r) { if (r.section !== sec) { sec = r.section; h += '<p class="grp">' + esc(SECTIONS[sec].name) + '</p>'; } h += itemCard(r); });
     if (t === 'decide' && list.length > 1) h += '<button class="more" type="button" data-action="all">' + (showAll ? 'Show one at a time' : '1 of ' + list.length + ' · show all') + '</button>';
-    return h;
+    return h + tail;
   }
   // Packing mode: one parcel at a time in shelf order. Found → the drop-off code shows once the engine has it → Posted.
   function pagePack() {
