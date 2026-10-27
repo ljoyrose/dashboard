@@ -86,9 +86,13 @@
   .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
   .needs { font-size: 26px; font-weight: 700; margin: 0; }
   .needs .zero { color: var(--ljr-5-text); }
-  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
+  /* Lisa 27 Oct: "no gaps between, very cramped": cards, groups and buttons get room to breathe. */
+  #view { display: flex; flex-direction: column; gap: 16px; }
+  #view > .grp { margin-top: 10px; }
+  .card .acts { margin-top: 4px; }
   /* Courier band on post cards (Lisa 26 Oct): brand colour + name + where to take it. Name always in text, never colour alone. */
-  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: -14px -16px 0; padding: 10px 16px; border-radius: var(--radius) var(--radius) 0 0; font-weight: 800; font-size: 17px; letter-spacing: .02em; }
+  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: -16px -18px 2px; padding: 12px 18px; border-radius: var(--radius) var(--radius) 0 0; font-weight: 800; font-size: 17px; letter-spacing: .02em; }
   .cband .pid { font-size: 22px; } .cband .to { font-weight: 600; font-size: 15px; }
   .cb-inpost { background: var(--ljr-cb-inpost); color: var(--ljr-cb-inpost-on); } .cb-evri { background: var(--ljr-cb-evri); color: var(--ljr-cb-on); } .cb-rm { background: var(--ljr-cb-rm); color: var(--ljr-cb-on); }
   .cb-dpd { background: var(--ljr-cb-dpd); color: var(--ljr-cb-on); } .cb-yodel { background: var(--ljr-cb-yodel); color: var(--ljr-cb-on); } .cb-pf { background: var(--ljr-cb-pf); color: var(--ljr-cb-on); } .cb-none { background: var(--ljr-cb-none); color: var(--ljr-cb-on); }
@@ -98,8 +102,8 @@
   .item { display: flex; gap: 12px; align-items: center; }
   .item img { width: 64px; height: 64px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); flex: none; background: var(--bg); }
   .item .t { flex: 1; min-width: 0; font-weight: 600; }
-  .item .m { font-size: 14px; color: var(--muted); font-weight: 400; }
-  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .item .m { font-size: 14px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .acts { display: flex; gap: 10px; flex-wrap: wrap; }
   .acts .btn { flex: 1; justify-content: center; }
   .grp { font-size: 15px; font-weight: 700; margin: 6px 0 0; color: var(--muted); }
   .row { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
@@ -318,7 +322,7 @@
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
     var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
-      '<div class="item">' + (isPair ? '' : thumb(d.photo)) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, d.platform, d.shelf ? 'shelf ' + d.shelf : '', d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
+      '<div class="item">' + (isPair ? '' : thumb(d.photo)) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, siteOf(r), d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
       postLine(d) + (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
       (isPair ? pair(r, d) : '') + (d.why ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
