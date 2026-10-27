@@ -210,6 +210,17 @@ test.describe('GA Hub page', () => {
     await expect(codes).not.toContainText('Old shop');   // inactive codes are hidden
   });
 
+  test('a "Send to GA?" card: Send writes only the 4 answer cells with the answer "Send"', async ({ page }) => {
+    const b = book(); b.cards = [['SEND-9100', 'send', 'Orders', 'Send order #9100 to GA?', JSON.stringify({ why: '1 x AAA0012KZPSXZZZ' }), ago(5)]];
+    const writes = await sheets(page, b);
+    await open(page);
+    await expect(page.locator('#view > .card h2')).toHaveText('Send order #9100 to GA?');
+    await page.locator('#view > .card button[data-v="Send"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Cards!G2:J2');
+    expect(writes[0].body.values[0][0]).toBe('Send');
+  });
+
   test('Invoices: the newest GA direct debit from the bank shows as a tile (with its date)', async ({ page }) => {
     const b = book(); b.dds = [['date', 'amount', 'bank_ref', 'invoices_paid'], ['2026-10-07', '529.37', 'GA PETFOOD DDL', ''], ['2026-10-14', '512.46', 'GA PETFOOD DDL', 'SI-1000001']];
     await sheets(page, b);

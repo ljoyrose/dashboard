@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-food-2026-10-26-v6">
+<meta name="build" content="ljr-food-2026-10-27-v7">
 <title>GA Hub</title>
 <!-- GA Hub v1 (26 Oct 2026): Designer Dog Foods orders, GA invoices, products and GA details. PUBLIC repo: no data, no secrets.
      The workbook id comes from ../config.js (DASH_CONFIG.food); everything else is read at run time with Lisa's Google sign-in
@@ -121,6 +121,8 @@
     profit: { name: 'Low profit', yes: 'Seen', what: 'This order made less than your minimum. Usually a single bag in one box.' },
     pricelist: { name: 'New GA price list', yes: 'Seen', what: 'Saved to Drive. Rises are also caught from the next GA invoice.' },
     check: { name: 'Check', yes: 'Done', what: 'Something the engine could not finish on its own.' },
+    send: { name: 'Send to GA?', yes: 'Send', no: 'Not now', what: 'Send sends this order to GA by XML within about 10 minutes. Not now leaves it for you to enter on the Portal.' },
+    pack: { name: 'Pack at home', yes: 'Packed', what: 'Fish Treats you send yourself: Parcel2Go for 1-2 units, InPost for 3-4.' },
     alert: { name: 'Engine problem', yes: 'Seen', what: 'The food engine hit a problem. It keeps trying every 15 minutes.' }
   };
   var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }, view = 'home', filter = 'sale', q = '', showAll = false;
