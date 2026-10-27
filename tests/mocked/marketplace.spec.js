@@ -210,7 +210,7 @@ test.describe('Marketplace page', () => {
     await sheets(page, rows);
     await open(page);
     await expect(page.locator('#tabs a')).toHaveText([/Home/, /Do now/, /Decide/, /Reply/, /Insights/]);
-    await expect(page.locator('#view a.tile')).toHaveText([/1\s*Do now/, /2\s*Decide/, /1\s*Reply/]);
+    await expect(page.locator('#view .needs3 a.tile')).toHaveText([/1\s*Do now/, /2\s*Decide/, /1\s*Reply/]);
     await expect(page.locator('#n-decide')).toHaveText('2');
     await page.locator('#tabs a[data-nav="decide"]').click();
     await expect(page.locator('#view .needs')).toHaveText('Decide: 2');
@@ -341,7 +341,7 @@ test.describe('Marketplace page', () => {
     await page.locator('[data-op="Count"][data-opkey="ST|SKU-0050"]').click();
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].range).toBe('Marketplace!G3:J3'); expect(writes[0].body.values[0][0]).toBe('Count 4');
-    await page.locator('.stockrow', { hasText: 'Blue roll case' }).locator('summary').click();
+    await page.locator('.stockrow', { hasText: 'Blue roll case' }).locator('details:not(.madeof) > summary').click();
     await page.locator('[data-setin="ST|CASE-BLUE"]').fill('min 2, reorder 6, buy at 1.20');
     await page.locator('[data-set="ST|CASE-BLUE"]').click();
     await expect.poll(() => writes.length).toBe(2);
@@ -542,7 +542,7 @@ test.describe('Marketplace page', () => {
     const band = page.locator('.cband').first();
     await expect(band).toContainText('L-07'); await expect(band).toContainText('EVRI'); await expect(band).toContainText('Take to: Evri ParcelShop');
     await expect(page.locator('#view')).toContainText('Label valid until 2026-11-02 09:00');
-    await expect(page.locator('.cband', { hasText: 'L-08' })).toContainText('COURIER NOT KNOWN');
+    await expect(page.locator('.cband', { hasText: 'L-08' })).toContainText('POSTAGE NOT BOUGHT YET');
     await page.locator('[data-pid="PO|vinted|vt-1"]').fill('L-08');
     await page.locator('[data-ans="PO|vinted|vt-1"][data-v="Posted"]').click();
     await expect(page.locator('#banner')).toContainText('wrong parcel');
@@ -553,6 +553,68 @@ test.describe('Marketplace page', () => {
     expect(writes[0].body.values[0][0]).toBe('Posted');
     await expect(page.locator('[data-ans="WP|vinted|JJD1"][data-v="Done"]')).toHaveText('Sorted it');
     await expect(page.locator('[data-action="pack"]')).toHaveText('Start packing (1)');
+  });
+
+  test('Stock "Made of": add an existing part, add a new part with a count, and paste a supplier link; each writes one Set answer', async ({ page }) => {
+    const rows = [
+      ['ST|SKU-0050', 'stock', 'Other', 'Olaf reverse watch', JSON.stringify({ item_sku: 'SKU-0050', have: 2, on_order: 0, min: '', listings: 2 }), ago(5)],
+      ['ST|CASE-BLUE', 'stock', 'Other', 'Blue roll case', JSON.stringify({ item_sku: 'CASE-BLUE', have: 3, on_order: 0, min: '', listings: 0, url: 'https://www.temu.com/x.html', supplier: 'Temu' }), ago(5)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/stock');
+    const watch = page.locator('.stockrow[data-text*="olaf"]');
+    await expect(watch).toContainText('Buy more from'); await expect(watch).toContainText('not set yet');
+    await expect(page.locator('.stockrow[data-text*="blue roll"] a', { hasText: 'Open on Temu' })).toHaveAttribute('target', '_blank');
+    await watch.locator('summary', { hasText: 'Made of' }).click();
+    await expect(watch.locator('.madeof')).toContainText('Just itself (1 of SKU-0050)');
+    await watch.locator('[data-partpick]').fill('CASE-BLUE');
+    await watch.locator('[data-partadd]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Set', 'made of SKU-0050 + CASE-BLUE']);
+  });
+  test('Stock "Made of": a new part and a supplier link each write one Set answer; a bad code is refused', async ({ page }) => {
+    const writes = await sheets(page, [['ST|SKU-0050', 'stock', 'Other', 'Olaf reverse watch', JSON.stringify({ item_sku: 'SKU-0050', have: 2, on_order: 0, min: '', listings: 2 }), ago(5)]]);
+    await open(page, '#/stock');
+    const watch = page.locator('.stockrow');
+    await watch.locator('summary', { hasText: 'Made of' }).click();
+    await watch.locator('[data-partpick]').fill('NOPE-1'); await watch.locator('[data-partadd]').click();
+    await expect(page.locator('#banner')).toContainText('pick a code'); expect(writes.length).toBe(0);
+    await watch.locator('[data-newpart]').fill('green watch case'); await watch.locator('[data-newqty]').fill('3');
+    await watch.locator('[data-partnew]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Set', 'new part: green watch case, 3']);
+  });
+  test('Stock "Buy more from": pasting a supplier link writes Set + link', async ({ page }) => {
+    const writes = await sheets(page, [['ST|SKU-0050', 'stock', 'Other', 'Olaf reverse watch', JSON.stringify({ item_sku: 'SKU-0050', have: 2, on_order: 0, min: '', listings: 2 }), ago(5)]]);
+    await open(page, '#/stock');
+    await page.locator('[data-supin]').fill('https://www.amazon.co.uk/dp/B01');
+    await page.locator('[data-sup]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Set', 'link https://www.amazon.co.uk/dp/B01']);
+  });
+  test('v11.5 cards explain themselves: sold where and when with steps and the eBay order link; Which parcel? says it is not a sale; Add it shows eBay count, the likely match and Same item; Home shows Orders; every card has its owner badge', async ({ page }) => {
+    const today = new Date().toISOString().slice(0, 10);
+    const rows = [['PO|ebay|12-9', 'post', 'Blades & grooming', 'Sample case', JSON.stringify({ platform: 'ebay', order_id: '12-9', parcel_id: 'L-02', courier: 'Unknown', owner: 'CY', sold_at: today, price: '£9.99' }), ago(5)],
+      ['WP|vinted|JJD9', 'post', 'Other', 'Which parcel? InPost label', JSON.stringify({ kind: 'which_parcel', courier: 'InPost', tracking: 'JJD9', qr: '123', email_url: 'https://mail.google.com/mail/u/#all/abc' }), ago(5)],
+      ['NEW|ebay|999', 'check', 'Other', 'Sample bottle', JSON.stringify({ kind: 'new', item_id: '999', qty: 3, price: '£23.37', url: 'https://www.ebay.co.uk/itm/999', maybe_sku: 'SKU-0049', maybe_title: 'Sample crate bottle', maybe_where: 'Vinted · L0049', why: 'It looks like an item you already have' }), ago(5)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/me');
+    await expect(page.locator('#view')).toContainText('Orders');
+    await expect(page.locator('#view .tiles:not(.needs3) a.tile').first()).toContainText('1');
+    await page.evaluate(() => { location.hash = '#/do'; });
+    const card = page.locator('.card', { hasText: 'Sample case' });
+    await expect(card).toContainText('Sold on eBay'); await expect(card).toContainText('Buy postage on the eBay order');
+    await expect(card.locator('a', { hasText: 'Open the order on eBay' })).toHaveAttribute('href', /orderid=12-9/);
+    await expect(card.locator('a', { hasText: 'Open the order on eBay' })).toHaveAttribute('target', '_blank');
+    await expect(card.locator('.ava')).toHaveText('CY');
+    const wp = page.locator('.card', { hasText: 'Which parcel?' });
+    await expect(wp).toContainText('Not a new sale'); await expect(wp.locator('a', { hasText: 'Open the email' })).toHaveAttribute('target', '_blank');
+    await page.evaluate(() => { location.hash = '#/decide'; });
+    const nw = page.locator('.card', { hasText: 'Sample bottle' });
+    await expect(nw).toContainText('eBay says for sale'); await expect(nw).toContainText('Looks like: Sample crate bottle');
+    await nw.locator('[data-qty]').fill('9');
+    await nw.locator('[data-v="Same"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0][0]).toBe('Same'); expect(writes[0].body.values[0][1]).toBe('qty 9');
   });
 
   test('the last button on a long page can always be scrolled clear of the bottom tab bar @regression', async ({ page }) => {

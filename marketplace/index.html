@@ -81,7 +81,7 @@
   label.qty { font-weight: 600; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
   details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
   details .txtin { margin: 6px 0; }
-  .ava { float: right; margin: 0 0 6px 10px; width: 36px; height: 36px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: var(--ava); color: #fff; font-size: 13px; font-weight: 800; letter-spacing: .02em; border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--ava); }
+  .ava { --ava: var(--ljr-ava-other); float: right; margin: 0 0 6px 10px; width: 36px; height: 36px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: var(--ava); color: var(--ljr-ava-on); font-size: 13px; font-weight: 800; letter-spacing: .02em; border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--ava); }
   .ava img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; display: block; }
   .buyfrom { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; font-weight: 600; } .buyfrom .k { color: var(--muted); font-weight: 600; }
   details.madeof { display: block; } details.madeof[open] > *:not(summary) { margin-top: 10px; } details.madeof label.qty { margin-top: 12px; }
@@ -217,7 +217,7 @@
   // Who a card belongs to: a round photo per person (a Drive image named AVATAR_<name>, e.g. AVATAR_Lisa.jpg, read with Lisa's
   // sign-in, never stored in this public site), else the person's initials in their own colour. The photo is cropped to a
   // circle on screen (centred, a little above the middle where faces usually are), so any photo size works.
-  var AVA_COL = { Lisa: '#7a3e9d', CY: '#0f7b6c', G: '#b4540a', H: '#2b5fb4', CN: '#a3324a' }, avatars = null;
+  var AVA_COL = { lisa: 1, cy: 1, g: 1, h: 1, cn: 1 }, avatars = null;   // colours: --ljr-ava-<name> in tokens.css
   function loadAvatars() {
     if (avatars !== null) return; avatars = {};
     var q = "name contains 'AVATAR_' and mimeType contains 'image/' and trashed = false";
@@ -229,7 +229,7 @@
       .catch(function () {});   // no photo is fine: initials show instead
   }
   function avatar(owner) {
-    var who = String(owner || 'Lisa'), pic = avatars && avatars[who.toLowerCase()], col = AVA_COL[who] || '#555';
+    var who = String(owner || 'Lisa'), pic = avatars && avatars[who.toLowerCase()], col = 'var(--ljr-ava-' + (AVA_COL[who.toLowerCase()] ? who.toLowerCase() : 'other') + ')';
     return '<span class="ava" title="' + esc(who) + '" aria-label="' + esc(who) + '\'s" style="--ava:' + col + '">' + (pic ? '<img alt="" src="' + esc(pic) + '">' : esc(/^[A-Z]{1,3}$/.test(who) ? who : who.charAt(0).toUpperCase())) + '</span>';
   }
   var pics = null;
@@ -512,22 +512,23 @@
   // Stock: one row per product code. Search, and chips for Low / No count. Count, Ordered, Arrived and settings write one answer each.
   // "Made of": the parts one sale uses (a watch + its case). Pick a code from the list, or add a new part with its count.
   function madeOf(r, d) {
-    var codes = rows.filter(function (x) { return x.section === 'stock' && !x.applied_at && detail(x).item_sku !== d.item_sku; }).map(function (x) { return detail(x); });
-    var name = {}; codes.forEach(function (c) { name[c.item_sku] = c.item_sku + ' ' + (rows.filter(function (x) { return x.key === 'ST|' + c.item_sku; })[0] || {}).title; });
     var parts = d.made_of ? d.made_of.split('+').map(function (p) { return p.trim(); }) : [];
-    var now = parts.length ? parts.map(function (p) { var c = p.split(/\s+x/i)[0]; return esc(name[c] ? name[c].slice(0, 60) : p) + (/\sx\d+$/i.test(p) ? ' ' + esc(p.match(/x\d+$/i)[0]) : ''); }).join('<br>') : 'Just itself (1 of ' + esc(d.item_sku) + ')';
+    var now = parts.length ? parts.map(function (p) { var c = p.split(/\s+x/i)[0], t = codeTitle[c]; return esc(c + (t ? ' ' + t.slice(0, 50) : '')) + (/\sx\d+$/i.test(p) ? ' ' + esc(p.match(/x\d+$/i)[0]) : ''); }).join('<br>') : 'Just itself (1 of ' + esc(d.item_sku) + ')';
     return '<details class="madeof"><summary>Made of' + (parts.length ? ' (' + parts.length + ' parts)' : '') + '</summary><p class="hint">' + now + '</p>' +
-      '<label class="qty">Add a part <select data-partpick="' + esc(r.key) + '"><option value="">Choose…</option>' + codes.map(function (c) { return '<option value="' + esc(c.item_sku) + '">' + esc((name[c.item_sku] || c.item_sku).slice(0, 70)) + '</option>'; }).join('') + '</select></label>' +
+      '<label class="qty">Add a part <input class="txtin" type="text" list="stockcodes" data-partpick="' + esc(r.key) + '" placeholder="Type a code or name" aria-label="Part code"></label>' +
       '<button class="btn" type="button" data-partadd="' + esc(r.key) + '" data-base="' + esc(d.made_of || d.item_sku) + '">Add part</button>' +
       '<label class="qty">Or a new part <input class="txtin" type="text" data-newpart="' + esc(r.key) + '" placeholder="green watch case" aria-label="New part name"> <input class="txtin" type="number" min="0" inputmode="numeric" data-newqty="' + esc(r.key) + '" placeholder="how many" aria-label="How many of the new part"></label>' +
       '<button class="btn" type="button" data-partnew="' + esc(r.key) + '">Add new part</button>' + (parts.length ? '<button class="btn" type="button" data-partclear="' + esc(r.key) + '">Just itself</button>' : '') + '</details>';
   }
+  var codeTitle = {};
   function pageStock() {
     var list = byCat(rows.filter(function (r) { return r.section === 'stock' && !r.applied_at && shown(r); }));
     var low = list.filter(function (r) { return detail(r).low; }).length, unknown = list.filter(function (r) { return detail(r).unknown; }).length;
     var h = '<p class="needs">Stock</p><p class="hint">What you have, what is on order, and when to buy. Counts change only your stock list until you go live.</p>';
     if (!list.length) return h + '<div class="card"><p class="what">The stock list appears after the engine update is pasted and set up.</p></div>';
     h += '<input class="txtin" type="search" placeholder="Find an item or code" aria-label="Find an item or code" data-find>';
+    codeTitle = {}; list.forEach(function (r) { codeTitle[detail(r).item_sku] = r.title; });   // one shared list for every "Add a part" box
+    h += '<datalist id="stockcodes">' + list.map(function (r) { var c = detail(r).item_sku; return '<option value="' + esc(c) + '">' + esc(r.title.slice(0, 60)) + '</option>'; }).join('') + '</datalist>';
     h += '<div class="chips" role="group" aria-label="Show">' + [['all', 'All ' + list.length], ['low', 'Low ' + low], ['unknown', 'No count ' + unknown]].map(function (c) {
       return '<button class="chip" type="button" data-sfilter="' + c[0] + '" aria-pressed="' + (stockFilter === c[0]) + '">' + c[1] + '</button>'; }).join('') + '</div>';
     list.filter(function (r) { var d = detail(r); return stockFilter === 'all' || (stockFilter === 'low' && d.low) || (stockFilter === 'unknown' && d.unknown); }).forEach(function (r) {
@@ -588,7 +589,7 @@
   }
   function pageMe() {
     var n = needsCount(), h = '<p class="needs">Needs you: ' + (n ? n : '<span class="zero">0</span>') + '</p>';
-    h += '<div class="tiles three">' + [['do', 'Do now'], ['decide', 'Decide'], ['reply', 'Reply']].map(function (t) {
+    h += '<div class="tiles three needs3">' + [['do', 'Do now'], ['decide', 'Decide'], ['reply', 'Reply']].map(function (t) {
       return '<a class="tile big" href="#/' + t[0] + '"><span class="v">' + tabCount(t[0]) + '</span><span class="k">' + t[1] + '</span></a>'; }).join('') + '</div>';
     var first = null; ORDER.some(function (s) { if (SECTIONS[s].quiet) return false; var w = byCat(waiting(s)); if (w.length) { first = w[0]; return true; } return false; });
     h += ordersStrip();
@@ -752,7 +753,7 @@
     if (t.hasAttribute('data-sup')) { var su = find(t.getAttribute('data-sup')), sb = document.querySelector('[data-supin="' + su.key + '"]'), sl = sb ? sb.value.trim() : '';
       if (!/^https?:\/\/\S+$/i.test(sl)) return banner('Paste the full product link, starting https://'); t.disabled = true; return answer(su, 'Set', 'link ' + sl); }
     if (t.hasAttribute('data-partadd')) { var pa = find(t.getAttribute('data-partadd')), ps = document.querySelector('[data-partpick="' + pa.key + '"]'), pv2 = ps ? ps.value : '';
-      if (!pv2) return banner('Choose a part from the list first.'); t.disabled = true; return answer(pa, 'Set', 'made of ' + t.getAttribute('data-base') + ' + ' + pv2); }
+      pv2 = pv2.trim().split(/\s+/)[0]; if (!pv2 || !codeTitle[pv2]) return banner('Type or pick a code from the list (for example SKU-0141).'); t.disabled = true; return answer(pa, 'Set', 'made of ' + t.getAttribute('data-base') + ' + ' + pv2); }
     if (t.hasAttribute('data-partnew')) { var pn = find(t.getAttribute('data-partnew')), nb2 = document.querySelector('[data-newpart="' + pn.key + '"]'), nq = document.querySelector('[data-newqty="' + pn.key + '"]');
       var nm = nb2 ? nb2.value.trim().replace(/[,;]/g, ' ') : '', qn2 = nq && nq.value.trim() !== '' ? parseInt(nq.value, 10) : null;
       if (!nm) return banner('Type the new part\'s name, for example: green watch case'); if (qn2 !== null && !(qn2 >= 0)) return banner('How many: type a number, or leave it blank.');
