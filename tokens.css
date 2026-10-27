@@ -20,6 +20,8 @@
   --ljr-6: #129FE7; --ljr-6-text: #0271A4; --ljr-6-tint: #DEF1F8; --ljr-6-solid: #129FE7; --ljr-6-on: #2C2C2A; /* 6 Sales */
   --ljr-7: #A570D1; --ljr-7-text: #8850B6; --ljr-7-tint: #F2EAF5; --ljr-7-solid: #8850B6; --ljr-7-on: #FFFFFF; /* 7 Ideas */
   --ljr-8: #141413; --ljr-8-text: #141413; --ljr-8-tint: #ECEAE6; --ljr-8-solid: #141413; --ljr-8-on: #FFFEFB;
+  /* Courier bands on Marketplace post cards (approximate brand colours, the same in dark mode; name always written too). */
+  --ljr-cb-inpost: #FFCD00; --ljr-cb-inpost-on: #111111; --ljr-cb-evri: #00539F; --ljr-cb-rm: #DA202A; --ljr-cb-dpd: #A50034; --ljr-cb-yodel: #1E6B32; --ljr-cb-pf: #B5121B; --ljr-cb-none: #595959; --ljr-cb-on: #FFFFFF;
 }
 /* Dark mode (follows the device). Fills stay the same; text and tints change so they still read on a dark page. */
 @media (prefers-color-scheme: dark) {

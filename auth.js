@@ -54,6 +54,31 @@
     return true;
   }
 
+  // Signed-out gate: until there is a sign-in, the page shows only its sign-in buttons, sign-in cards and the
+  // message banner. Everything else (title, menus, search, names, footer) stays invisible and unclickable.
+  // auth.js loads in <head>, so the page is locked before anything is drawn. Looks only: the data itself is
+  // protected by Google sign-in, and the page code is public.
+  var KEEP = 'a.skip,#backHome,[data-action="signin"],[data-signin],#signin,#signInBtn,#signinbtn,#banner,.banner,.card:has([data-action="signin"],[data-signin])';
+  (function () {
+    try {
+      var css = global.document.createElement('style');
+      css.id = 'dash-gate-css';
+      css.textContent = 'html.dash-locked body *{visibility:hidden}' +
+        // Screen readers keep the main area and the page headings; on screen the headings take no space and show nothing.
+        'html.dash-locked main{visibility:visible}' +
+        'html.dash-locked :is(h1,h2):not(:is(' + KEEP + ') *),html.dash-locked :is(h1,h2):not(:is(' + KEEP + ') *) *{visibility:visible}' +
+        'html.dash-locked :is(h1,h2):not(:is(' + KEEP + ') *){position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;margin:0;padding:0}' +
+        'html.dash-locked :is(' + KEEP + '),html.dash-locked :is(' + KEEP + ') *{visibility:visible}' +
+        'html.dash-locked :is(.gate-hide,.info),html.dash-locked :is(.gate-hide,.info) *{visibility:hidden!important}';
+      global.document.head.appendChild(css);
+    } catch (e) {}
+  })();
+  function gate() {
+    try {
+      global.document.documentElement.classList.toggle('dash-locked', !valid());
+    } catch (e) {}
+  }
+
   function save(token, expiresAt, scope) {
     try {
       store.setItem(KEY, JSON.stringify({
@@ -62,10 +87,12 @@
         scope: scope || ''
       }));
     } catch (e) {}
+    gate();
   }
 
   function clear() {
     try { store.removeItem(KEY); } catch (e) {}
+    gate();
   }
 
   // Another tab signed in, refreshed or signed out. fn(data) gets the new saved sign-in, or null when it was cleared.
@@ -155,6 +182,10 @@
       requestWrite: requestWrite
     };
   }
+
+  gate();
+  // Another tab signed in or out: lock or unlock this one too.
+  global.addEventListener('storage', function (e) { if (e.key === KEY || e.key === null) gate(); });
 
   global.DashAuth = {
     KEY: KEY,
