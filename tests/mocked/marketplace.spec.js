@@ -186,6 +186,15 @@ test.describe('Marketplace page', () => {
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0][0]).toBe('Yes');
   });
+  test('every card says when it was last updated: the engine\'s updated_at, else when the card was made (UK time)', async ({ page }) => {
+    const rows = [['NEW|ebay|1', 'check', '', 'Sample fairy book', JSON.stringify({ kind: 'new', platform: 'eBay', url: 'https://www.ebay.co.uk/itm/1', price: '£2.75', qty: 1, updated_at: '2026-10-28T09:05:00Z' }), '2026-10-27T11:12:59Z'],
+      ['NEW|ebay|2', 'check', '', 'Sample socks', JSON.stringify({ kind: 'new', platform: 'eBay', url: 'https://www.ebay.co.uk/itm/2', price: '£9.25', qty: 1 }), '2026-10-27T11:12:59Z']];
+    await sheets(page, rows);
+    await open(page, '#/check');
+    await page.locator('#view', { hasText: 'show all' }).getByText('show all').click().catch(() => {});
+    await expect(page.locator('#view')).toContainText('Updated Wed 28 Oct, 09:05');
+    await expect(page.locator('#view')).toContainText('Updated Tue 27 Oct, 11:12');
+  });
   test('every card can show the item photo: an eBay picture or a Drive photo; any other address is ignored', async ({ page }) => {
     await page.route(/i\.ebayimg\.com|drive\.google\.com\/thumbnail/, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>' }));
     const rows = [
