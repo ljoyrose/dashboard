@@ -478,7 +478,54 @@ test.describe('Marketplace page', () => {
     await page.locator('[data-note="OFFER|110000000007|2026-10-26"]').fill('15');
     await page.locator('[data-v="Send"]').click();
     await expect.poll(() => writes.length).toBe(1);
-    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Send', '15']);
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Send', 'pct=15']);
+  });
+
+  test('engine v11.1 offers: "always for this item" saves the % and min profit; min profit takes £ or %; Offer terms card agrees once', async ({ page }) => {
+    const od = { kind: 'offer', listing_id: '110000000007', pct: 5, price: '£12.99', after: '£12.34', profit_left: '£4.20', min_profit: '£3', rule: 'Default 5%', url: 'https://www.ebay.co.uk/itm/110000000007' };
+    const td = { kind: 'terms', listing_id: '110000000009', pct: 5, price: '£80.00', url: 'https://www.ebay.co.uk/itm/110000000009' };
+    const rows = [['OFFER|110000000007|2026-10-27', 'offer', 'Health & supplements', 'Sample shampoo 500ml', JSON.stringify(od), ago(5)],
+      ['TERMS|110000000009', 'offer', 'Books', 'Offer terms: Sample first edition', JSON.stringify(td), ago(4)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/decide');
+    await page.locator('[data-action="all"]').click();
+    await expect(page.locator('#view')).toContainText('Default 5%');
+    await page.locator('[data-min="OFFER|110000000007|2026-10-27"]').fill('lots');
+    await page.locator('[data-ans="OFFER|110000000007|2026-10-27"][data-v="Always"]').click();
+    await expect(page.locator('#banner')).toContainText('£20');
+    expect(writes).toEqual([]);
+    await page.locator('[data-note="OFFER|110000000007|2026-10-27"]').fill('8');
+    await page.locator('[data-min="OFFER|110000000007|2026-10-27"]').fill('25%');
+    await page.locator('[data-ans="OFFER|110000000007|2026-10-27"][data-v="Always"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Always', 'pct=8;min=25%']);
+    await expect(page.locator('[data-ans="TERMS|110000000009"][data-v="Always"]')).toHaveText('Agree: automatic');
+    await page.locator('[data-min="TERMS|110000000009"]').fill('£20');
+    await page.locator('[data-ans="TERMS|110000000009"][data-v="Always"]').click();
+    await expect.poll(() => writes.length).toBe(2);
+    expect(writes[1].body.values[0].slice(0, 2)).toEqual(['Always', 'min=£20']);
+  });
+
+  test('engine v11.1 post cards: courier band with parcel number and where to take it; Posted needs the number on the parcel; Which parcel? cards stay out of packing', async ({ page }) => {
+    const rows = [['PO|vinted|vt-1', 'post', 'Blades & grooming', 'Sample blade', JSON.stringify({ platform: 'vinted', parcel_id: 'L-07', courier: 'Evri', found: true, qr: 'H00IAA0000000001', label_expiry: '2026-11-02 09:00', post_by: '2026-10-29' }), ago(5)],
+      ['PO|ebay|11-1', 'post', 'Books', 'Sample CD', JSON.stringify({ platform: 'ebay', parcel_id: 'L-08', courier: '', post_by: '2026-10-23' }), ago(5)],
+      ['WP|vinted|JJD1', 'post', 'Other', 'Which parcel? InPost label', JSON.stringify({ kind: 'which_parcel', courier: 'InPost', tracking: 'JJD1', why: 'A label or QR arrived that matches no parcel card.' }), ago(5)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/do');
+    const band = page.locator('.cband').first();
+    await expect(band).toContainText('L-07'); await expect(band).toContainText('EVRI'); await expect(band).toContainText('Take to: Evri ParcelShop');
+    await expect(page.locator('#view')).toContainText('Label valid until 2026-11-02 09:00');
+    await expect(page.locator('.cband', { hasText: 'L-08' })).toContainText('COURIER NOT KNOWN');
+    await page.locator('[data-pid="PO|vinted|vt-1"]').fill('L-08');
+    await page.locator('[data-ans="PO|vinted|vt-1"][data-v="Posted"]').click();
+    await expect(page.locator('#banner')).toContainText('wrong parcel');
+    expect(writes).toEqual([]);
+    await page.locator('[data-pid="PO|vinted|vt-1"]').fill('l-07');
+    await page.locator('[data-ans="PO|vinted|vt-1"][data-v="Posted"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0][0]).toBe('Posted');
+    await expect(page.locator('[data-ans="WP|vinted|JJD1"][data-v="Done"]')).toHaveText('Sorted it');
+    await expect(page.locator('[data-action="pack"]')).toHaveText('Start packing (1)');
   });
 
   test('the last button on a long page can always be scrolled clear of the bottom tab bar @regression', async ({ page }) => {

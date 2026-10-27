@@ -79,6 +79,11 @@
   .needs { font-size: 26px; font-weight: 700; margin: 0; }
   .needs .zero { color: var(--ljr-5-text); }
   .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+  /* Courier band on post cards (Lisa 26 Oct): brand colour + name + where to take it. Name always in text, never colour alone. */
+  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: -14px -16px 0; padding: 10px 16px; border-radius: var(--radius) var(--radius) 0 0; font-weight: 800; font-size: 17px; letter-spacing: .02em; }
+  .cband .pid { font-size: 22px; } .cband .to { font-weight: 600; font-size: 15px; }
+  .cb-inpost { background: var(--ljr-cb-inpost); color: var(--ljr-cb-inpost-on); } .cb-evri { background: var(--ljr-cb-evri); color: var(--ljr-cb-on); } .cb-rm { background: var(--ljr-cb-rm); color: var(--ljr-cb-on); }
+  .cb-dpd { background: var(--ljr-cb-dpd); color: var(--ljr-cb-on); } .cb-yodel { background: var(--ljr-cb-yodel); color: var(--ljr-cb-on); } .cb-pf { background: var(--ljr-cb-pf); color: var(--ljr-cb-on); } .cb-none { background: var(--ljr-cb-none); color: var(--ljr-cb-on); }
   .card.acc2 { border-left: 4px solid var(--ljr-2); } .card.acc5 { border-left: 4px solid var(--ljr-5); } .card.acc4 { border-left: 4px solid var(--ljr-4); }
   .card h2 { font-size: 19px; margin: 0; }
   .card .what { color: var(--muted); font-size: 15px; margin: 0; }
@@ -293,9 +298,9 @@
   function needsCount() { return ORDER.filter(function (s) { return !SECTIONS[s].quiet; }).reduce(function (n, s) { return n + waiting(s).length; }, 0); }
   // Posts in packing order: shelf, then title. The parcel number is the engine's when it sends one, else the place in this list.
   function posts() {
-    return rows.filter(function (r) { return r.section === 'post' && !r.applied_at && shown(r); })
+    return rows.filter(function (r) { return r.section === 'post' && detail(r).kind !== 'which_parcel' && !r.applied_at && shown(r); })
       .sort(function (a, b) { var x = detail(a).shelf || '~', y = detail(b).shelf || '~'; return x < y ? -1 : x > y ? 1 : a.title.localeCompare(b.title); })
-      .map(function (r, i) { r._no = detail(r).parcel_no || (i + 1); return r; });
+      .map(function (r, i) { r._no = detail(r).parcel_id || detail(r).parcel_no || (i + 1); return r; });
   }
   function byCat(list) { return list.slice().sort(function (a, b) { var x = CATS.indexOf(a.category), y = CATS.indexOf(b.category); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || a.title.localeCompare(b.title); }); }
   function sentLine(r) {
@@ -304,18 +309,19 @@
   }
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
-    var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
+    var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
       '<div class="item">' + (isPair ? '' : thumb(d.photo)) + '<div class="t">' + esc(r.title) + '<div class="m">' + esc([d.price, d.platform, d.shelf ? 'shelf ' + d.shelf : '', d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
-      (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
+      (d.post_by ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
       (isPair ? pair(r, d) : '') + (d.why ? '<p class="what">' + esc(d.why) + '</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
     var acts = [];
     if (r.section === 'remove') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
     else if (r.section === 'message') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open messages</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
+    else if (r.section === 'post' && d.kind === 'which_parcel') acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Sorted it</button>');
     else if (r.section === 'post') {
       if (!d.found) acts.push('<button class="btn main" type="button" data-ans="' + esc(r.key) + '" data-v="Found">Found</button>');
       else { if (d.qr) acts.push('<button class="btn" type="button" data-qr="' + esc(r.key) + '">Show QR</button>'); else if (d.qr_missing) acts.push('<span class="why red">QR not found</span>');
-        acts.push('<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'); }
+        acts.push(pidCheck(r, d) + '<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'); }
     } else if (r.section === 'go') { acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Go</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Not this one</button>'); }
     else if (r.section === 'check') { if (d.url && !isPair) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');   // pairs: one button under each photo
       if (isPair) h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Leave blank if you are not sure. Yes then keeps one count for both sites.</p>';
@@ -341,6 +347,8 @@
     return h + '<div class="acts">' + acts.join('') + '</div></div>';
   }
   /* ---------- engine v11 cards ---------- */
+  // Posted needs the parcel number written on the parcel (no mix-ups): the box must match the card's number.
+  function pidCheck(r, d) { return d.parcel_id ? '<input class="num pidin" type="text" autocapitalize="characters" data-pid="' + esc(r.key) + '" placeholder="Number on parcel" aria-label="Parcel number written on the parcel">' : ''; }
   function ansBtn(r, v, label, main) { return '<button class="btn' + (main ? ' main yes' : '') + '" type="button" data-ans="' + esc(r.key) + '" data-v="' + esc(v) + '">' + esc(label || v) + '</button>'; }
   function noteBox(r, ph, label) { return '<input class="txtin" type="text" data-note="' + esc(r.key) + '" placeholder="' + esc(ph) + '" aria-label="' + esc(label || ph) + '">'; }
   function safeUrl(u) { return /^https:\/\//.test(String(u || '')) ? String(u) : ''; }
@@ -351,6 +359,16 @@
     return (lines || []).length ? '<ul class="money">' + lines.map(function (l) { l = String(l); return '<li class="' + (/^▶/.test(l) ? 'head' : /^⚠/.test(l) ? 'red' : '') + '">' + esc(l) + '</li>'; }).join('') + '</ul>' : '';
   }
   function factsOf(pairs) { pairs = pairs.filter(function (p) { return p[1] !== '' && p[1] !== undefined && p[1] !== null; }); return pairs.length ? '<div class="facts">' + pairs.map(function (p) { return '<div class="fact"><span class="k">' + esc(p[0]) + '</span><span class="v">' + esc(p[1]) + '</span></div>'; }).join('') + '</div>' : ''; }
+  // Courier from the card ("Royal Mail 2nd Class", "InPost"...) -> band colour, short name and where to take it.
+  var COURIERS = [[/inpost/i, 'cb-inpost', 'INPOST', 'InPost locker or shop'], [/evri|hermes/i, 'cb-evri', 'EVRI', 'Evri ParcelShop'], [/parcelforce/i, 'cb-pf', 'PARCELFORCE', 'Post Office'],
+    [/royal ?mail/i, 'cb-rm', 'ROYAL MAIL', 'Post Office'], [/dpd/i, 'cb-dpd', 'DPD', 'DPD Pickup shop'], [/yodel/i, 'cb-yodel', 'YODEL', 'Yodel Store'], [/collect/i, 'cb-none', 'COLLECTION', 'Buyer collects: no post']];
+  function courierOf(d) { var c = String(d.courier || ''); for (var i = 0; i < COURIERS.length; i++) if (COURIERS[i][0].test(c)) return { cls: COURIERS[i][1], name: COURIERS[i][2], to: COURIERS[i][3], full: c }; return null; }
+  function courierBand(r, d) {
+    var c = courierOf(d), pid = d.parcel_id || '';
+    if (!c && !d.qr && !d.tracking && !pid) return '';
+    return '<div class="cband ' + (c ? c.cls : 'cb-none') + '">' + (pid ? '<span class="pid">' + esc(pid) + '</span>' : '') +
+      '<span>' + esc(c ? c.name : 'COURIER NOT KNOWN') + '</span><span class="to">' + esc(c ? 'Take to: ' + c.to + (c.full && c.full.toUpperCase() !== c.name ? ' · ' + c.full : '') : 'Check the label before packing') + '</span></div>';
+  }
   var V11 = {
     newprod: function (r, d) {
       var h = moneyLines(d.lines) + factsOf([['Best', d.best], ['Runner-up', d.runner_up || '–'], ['Min qty', d.moq], ['Case', d.case_cost || d.case_size]]) +
@@ -377,9 +395,12 @@
     },
     job: function (r, d) { return { h: String(d.file_ids || '').split(',').filter(Boolean).map(function (id) { return /^[\w-]{20,}$/.test(id) ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(id) + '/view" target="_blank" rel="noopener">Open file</a>' : ''; }).join('') + noteBox(r, 'What it says (optional)', 'What it says'), acts: [ansBtn(r, 'Done', 'Done', true)] }; },
     offer: function (r, d) {
-      var h = factsOf([['Price', d.price], ['After ' + d.pct + '% off', d.after], ['Profit left', d.profit_left || '–']]) +
-        '<label class="qty">% off (at least 5) <input class="num" inputmode="numeric" data-note="' + esc(r.key) + '" placeholder="' + esc(d.pct) + '" aria-label="Percent off"></label>';
-      return { h: h, acts: [linkBtn(d.url, 'Open on eBay'), ansBtn(r, 'Send', 'Send offer', true), ansBtn(r, 'No', 'Not this one')] };
+      var boxes = '<label class="qty">% off (at least 5) <input class="num" inputmode="numeric" data-note="' + esc(r.key) + '" placeholder="' + esc(d.pct) + '" aria-label="Percent off"></label>' +
+        '<label class="qty">Min profit (£ or %) <input class="num" type="text" data-min="' + esc(r.key) + '" placeholder="' + esc(d.min_profit || '£3') + '" aria-label="Least profit to keep, pounds or percent of the price"></label>';
+      if (d.kind === 'terms') return { h: factsOf([['Price', d.price], ['Watchers', 'yes']]) + boxes + '<p class="hint">Agree once: offers then go automatically for this item.</p>',
+        acts: [linkBtn(d.url, 'Open on eBay'), ansBtn(r, 'Always', 'Agree: automatic', true), ansBtn(r, 'Never', 'Never offer'), ansBtn(r, 'No', 'Not now')] };
+      var h = factsOf([['Price', d.price], ['After ' + d.pct + '% off', d.after], ['Profit left', d.profit_left || '–']]) + (d.rule ? '<p class="hint">' + esc(d.rule) + '</p>' : '') + boxes;
+      return { h: h, acts: [linkBtn(d.url, 'Open on eBay'), ansBtn(r, 'Send', 'Send offer', true), ansBtn(r, 'Always', 'Send + always for this item'), ansBtn(r, 'Never', 'Never offer'), ansBtn(r, 'No', 'Not now')] };
     },
     vat: function (r, d) { return { h: '<p class="verdict wait">' + esc(d.line) + '</p>', acts: [ansBtn(r, 'OK', 'Told my accountant', true)] }; }
   };
@@ -490,13 +511,13 @@
     if (!list.length) { pack = null; return '<p class="needs">Packing</p><div class="card acc5"><h2>All packed</h2><button class="btn main big" type="button" data-action="stoppack">Back to Do now</button></div>'; }
     var i = Math.min(pack.i, list.length - 1), r = list[i], d = detail(r);
     var h = '<div class="packbar"><span>Packing · ' + (i + 1) + ' of ' + list.length + '</span><button class="btn" type="button" data-action="stoppack">Stop</button></div>';
-    h += '<div class="card acc4"><div class="item">' + thumb(d.photo) + '<div class="t"><span class="parcel">#' + esc(r._no) + '</span><div>' + esc(r.title) + '</div><div class="m">' + esc([owner(r), d.platform ? 'sold on ' + d.platform : ''].filter(Boolean).join(' · ')) + '</div></div></div>';
+    h += '<div class="card acc4">' + courierBand(r, d) + '<div class="item">' + thumb(d.photo) + '<div class="t"><span class="parcel">#' + esc(r._no) + '</span><div>' + esc(r.title) + '</div><div class="m">' + esc([owner(r), d.platform ? 'sold on ' + d.platform : ''].filter(Boolean).join(' · ')) + '</div></div></div>';
     h += '<div class="facts"><div class="fact"><span class="k">Shelf</span><span class="v">' + esc(d.shelf || '?') + '</span></div><div class="fact"><span class="k">Courier</span><span class="v">' + esc(d.courier || '?') + '</span></div><div class="fact"><span class="k">Post by</span><span class="v' + (d.red ? ' red' : '') + '">' + esc(d.post_by || '?') + '</span></div></div>';
     if (d.found && d.qr) h += '<div class="dropcode"><span class="hint">Write #' + esc(r._no) + ' on the parcel. Drop-off code:</span><span class="code">' + esc(d.qr) + '</span></div>';
     if (r.answer) h += sentLine(r);
     else if (!d.found) h += '<button class="btn main big" type="button" data-ans="' + esc(r.key) + '" data-v="Found">Found it</button>';
     else { if (d.qr) h += '<button class="btn" type="button" data-qr="' + esc(r.key) + '">Show QR</button>'; else if (d.qr_missing) h += '<span class="why red">QR not found</span>';
-      h += '<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'; }
+      h += pidCheck(r, d) + '<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'; }
     if (r.answer === 'Found' && !d.found) h += '<p class="hint">The drop-off code shows here after the engine’s next run.</p>';
     return h + (list.length > 1 ? '<button class="btn" type="button" data-action="nextpack">' + (r.answer ? 'Next parcel' : 'Skip for now') + '</button>' : '') + '</div>';
   }
@@ -600,7 +621,16 @@
       var nb = document.querySelector('[data-note="' + r.key + '"]');                      // v11 cards: a note box (terms, quantity)
       if (nb && nb.value.trim()) note = nb.value.trim();
       if (v === 'Set' && !note) return banner('Type what to change first, for example: min 100, free over 300, delivery 15');
-      if (r.section === 'offer' && v === 'Send' && note && !(Number(note) >= 5 && Number(note) <= 90)) return banner('Type a % between 5 and 90, or leave it blank for ' + detail(r).pct + '%.');
+      if (r.section === 'offer') {                                                           // % box (data-note) + min profit box (data-min)
+        var pc = note, mb = document.querySelector('[data-min="' + r.key + '"]'), mn = mb ? mb.value.trim() : '';
+        if (pc && !(Number(pc) >= 5 && Number(pc) <= 90)) return banner('Type a % between 5 and 90, or leave it blank for ' + detail(r).pct + '%.');
+        if (mn && !/^(£?\s*\d+(\.\d{1,2})?|\d+(\.\d+)?\s*%)$/.test(mn)) return banner('Min profit: type pounds like £20, or a % of the price like 25%.');
+        note = (pc ? 'pct=' + pc : '') + (mn ? (pc ? ';' : '') + 'min=' + mn.replace(/\s+/g, '') : '');
+      }
+      if (v === 'Posted' && detail(r).parcel_id) {                                           // no mix-ups: the number on the parcel must match
+        var pb = document.querySelector('[data-pid="' + r.key + '"]'), pv = pb ? pb.value.trim().toUpperCase() : '';
+        if (pv !== String(detail(r).parcel_id).toUpperCase()) return banner('Type the parcel number written on the parcel (' + detail(r).parcel_id + ') before tapping Posted. If it does not match, stop: it may be the wrong parcel.');
+      }
       var qb = document.querySelector('[data-qty="' + r.key + '"]');
       if (qb && v === 'Yes' && qb.value.trim()) { var qn = parseInt(qb.value, 10); if (!(qn >= 0)) return banner('Type a number for how many you have, or leave it blank.'); note = 'qty ' + qn; }
       t.disabled = true; return answer(r, v, note);
