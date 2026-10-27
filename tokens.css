@@ -22,6 +22,8 @@
   --ljr-8: #141413; --ljr-8-text: #141413; --ljr-8-tint: #ECEAE6; --ljr-8-solid: #141413; --ljr-8-on: #FFFEFB;
   /* Courier bands on Marketplace post cards (approximate brand colours, the same in dark mode; name always written too). */
   --ljr-cb-inpost: #FFCD00; --ljr-cb-inpost-on: #111111; --ljr-cb-evri: #00539F; --ljr-cb-rm: #DA202A; --ljr-cb-dpd: #A50034; --ljr-cb-yodel: #1E6B32; --ljr-cb-pf: #B5121B; --ljr-cb-none: #595959; --ljr-cb-on: #FFFFFF;
+  /* Person badges on Marketplace cards (white initials on each; all pass 4.5:1). */
+  --ljr-ava-lisa: #7A3E9D; --ljr-ava-cy: #0F7B6C; --ljr-ava-g: #B4540A; --ljr-ava-h: #2B5FB4; --ljr-ava-cn: #A3324A; --ljr-ava-other: #555555; --ljr-ava-on: #FFFFFF;
 }
 /* Dark mode (follows the device). Fills stay the same; text and tints change so they still read on a dark page. */
 @media (prefers-color-scheme: dark) {
