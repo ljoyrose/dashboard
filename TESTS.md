@@ -49,10 +49,11 @@ If any of these breaks, the tick turns red and says which page.
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
+| Studio (example data, real data, accounts, tabs, find bar, Review write-back and Undo, Tools warnings, phone, dark, text size) | `/dashboard/studio/` | 13 |
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 367 checks that must pass.
+That is 451 checks that must pass (mocked + phone, 28 Oct 2026).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
@@ -66,6 +67,15 @@ That is 367 checks that must pass.
 - The Money tile shows each entity on its own, never added together.
 - The Money tile links open `/money/`, a single entity, and a single to-do.
 - Sign-in problems show a clear message (permission refused, window closed, window blocked).
+
+**Studio** (`tests/mocked/studio.spec.js`, data in `tests/fixtures/studio/state.js`)
+- No `studio-state.json` on Drive: the example banner shows, example brands show, every write button is off, and nothing is written.
+- The real state: TEST stamp, engine On with its last run, budget pill, and Me lists Review, Gates and Hand jobs. TEST items show only with the TEST switch.
+- Every tab opens its own view and lights its tab. A brand chip filters Assets, the address carries it and a reload keeps it.
+- Approve writes one `approve` request into the requests folder and shows "✓ HH:MM · applies by HH:MM"; Undo trashes the file. Redo sends its note. A gate verdict and a new idea each write one file.
+- Accounts: owner and client stay apart. Account chips filter (hidden with one account); requests carry `accountId`; an idea cannot mix two accounts. The example shows one owner and one client.
+- Tools: a meter at 85% shows its warning and the Tools tab counts it.
+- 390px: no sideways scroll on any tab. Dark mode: dark page, every word at least 4.5:1. No text under 13px.
 
 **CD Hub**
 - Opens, asks for sign-in, then reads the sample `BLD-*` tables.

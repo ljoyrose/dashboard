@@ -1,11 +1,11 @@
 // Phone install support. Keeps ONLY the site's own page files so the dashboard opens fast and opens at all
 // when offline. It never stores Google Drive data, the sign-in token, or anything from another address:
 // Google requests are not touched (no respondWith), so they go straight to the network as before.
-var CACHE = 'ljr-shell-v2'; // v2: new auth.js (one sign-in for every tab). Bump this when the page files change.
+var CACHE = 'ljr-shell-v3'; // v3: Studio page added. Bump this when the page files change.
 var SHELL = [
   './', 'index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png',
-  'money/', 'money/index.html', 'money/core.js', 'cdhub/', 'cdhub/index.html'
+  'money/', 'money/index.html', 'money/core.js', 'cdhub/', 'cdhub/index.html', 'studio/', 'studio/index.html'
 ];
 var BASE = self.registration ? new URL(self.registration.scope) : new URL('./', self.location);
 var ALLOWED = SHELL.map(function (p) { return new URL(p, BASE).pathname; });

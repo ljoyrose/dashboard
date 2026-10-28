@@ -60,7 +60,7 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     await signIn(page);
     await page.locator('#mainNav a[data-nav="more"]').click();
     for (const key of ['readfirst', 'personal', 'usb']) await expect(page.locator(`#view a[data-nav="${key}"]`)).toHaveAttribute('href', '#/' + key);
-    for (const href of ['money/', 'cdhub/', 'factory/', 'marketplace/']) {
+    for (const href of ['money/', 'cdhub/', 'factory/', 'marketplace/', 'food/', 'studio/']) {
       const a = page.locator(`#view a.morelink[href="${href}"]`);
       await expect(a).toHaveAttribute('target', '_blank');
       expect((await a.boundingBox()).height).toBeGreaterThanOrEqual(52);
