@@ -52,7 +52,7 @@ test.describe('Studio page', () => {
   test('no studio-state.json yet: the example banner, example brands, and every write switched off', async ({ page, guard }) => {
     await open(page, guard, '#/me', { state: false });
     await expect(page.locator('#exBanner')).toBeVisible();
-    await expect(page.locator('#exBanner')).toHaveText('Example data. The Studio engine is not running yet.');
+    await expect(page.locator('#exBanner')).toHaveText('Example data · engine off');
     await expect(page.locator('#stamp')).toHaveText('TEST');
     await expect(page.locator('#enginePill')).toContainText('Off');
     await page.locator('nav.tabs a[data-nav="brands"]').click();
@@ -67,7 +67,7 @@ test.describe('Studio page', () => {
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
-  test('the real state renders: TEST stamp, engine on with its last run, budget, and Me lists Review, Gates and Hand jobs', async ({ page, guard }) => {
+  test('the real state renders: TEST stamp, engine on with its last run, budget, and Me lists Review, Gates and Tasks', async ({ page, guard }) => {
     await open(page, guard, '#/me');
     await expect(page.locator('#exBanner')).toBeHidden();
     await expect(page.locator('#stamp')).toHaveText('TEST');
@@ -426,7 +426,7 @@ test.describe('Studio page', () => {
     await expect(page.locator('#nTools')).toHaveText('1');
   });
 
-  test('Me: Done on a Hand job writes done with creditsUsed (tool + units); Undo is offered', async ({ page, guard }) => {
+  test('Me: Done on a Task writes done with creditsUsed (tool + units); Undo is offered', async ({ page, guard }) => {
     const got = await uploads(page, guard);
     await open(page, guard, '#/me');
     const r = page.locator('[data-sect="hand"] .crow[data-row="sa-hand"]');

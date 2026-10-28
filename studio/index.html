@@ -229,7 +229,7 @@
 </header>
 <main class="wrap" id="content">
   <div id="banner" class="banner hidden" role="status"></div>
-  <div id="exBanner" class="banner ex hidden" role="status"><i class="ti ti-flask" aria-hidden="true"></i><span>Example data. The Studio engine is not running yet.</span></div>
+  <div id="exBanner" class="banner ex hidden" role="status"><i class="ti ti-flask" aria-hidden="true"></i><span>Example data · engine off</span></div>
   <div id="view"></div>
 </main>
 
@@ -281,7 +281,7 @@
  *   gaps:   [{ capability, format|null, ratio|null, reason, assetIds: [id] }]   (no owned tool can do a kit's need: buy or approve one)
  *   failed: [{ assetId, kind }]   (requests the engine could not apply; the page clears their ✓)
  * }
- * Lists: Me = Review (stage 7) + Gates + Hand jobs (fit HAND, who lisa). Ideas = stage 0. Assets = 1-7. Library = 8.
+ * Lists: Me = Review (stage 7) + Gates + Tasks (fit HAND, who lisa). Ideas = stage 0. Assets = 1-7. Library = 8.
  * Account: an item's accountId, else its first brand's. Account chips show only when there is more than one account.
  * Group: an item's groupId, else its first brand's. Group chips show only when more than one group has items.
  * Test items: title starting TEST- or ZZ_DELETE_, or flag 'test': hidden unless the TEST switch is on.
@@ -316,7 +316,7 @@
   var RIGHTS = [['inspiration', 'Inspiration only', 'bulb'], ['own', 'Own', 'user'], ['licensed', 'Licensed', 'certificate'], ['client', 'Client', 'briefcase']];
   var SRC_KINDS = [['link', 'Link', 'link'], ['upload', 'Upload', 'inbox'], ['note', 'Note', 'pencil']];
   var LANGS = [['en-GB', 'English UK'], ['en-US', 'English US'], ['cy', 'Welsh'], ['es', 'Spanish'], ['fr', 'French'], ['de', 'German']];
-  var FITS = [['AUTO', 'Auto', 'robot'], ['HAND', 'Hand', 'hand-finger'], ['BANNED:client', 'Not for clients', 'ban'], ['NOT_OWNED', 'Not owned', 'shopping-cart']];
+  var FITS = [['AUTO', 'Auto', 'robot'], ['HAND', 'Manual', 'hand-finger'], ['BANNED:client', 'Not for clients', 'ban'], ['NOT_OWNED', 'Not owned', 'shopping-cart']];
   var PERIODS = [['month', 'Month'], ['year', 'Year'], ['week', 'Week'], ['day', 'Day'], ['once', 'Once']];
   var CAPS = [['text-write', 'Write', 'pencil'], ['slides-fill', 'Slides', 'presentation'], ['doc-fill', 'Docs', 'file-text'], ['pdf-export', 'PDF', 'file-type-pdf'],
     ['image-generate', 'Images', 'photo'], ['logo-generate', 'Logos', 'badge'], ['background-remove', 'Cut-out', 'scissors'], ['video-template', 'Video', 'video'],
@@ -538,7 +538,7 @@
       html += '<div class="card fpanel">' +
         row('st', 'Stage', STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), String(i), s.st.indexOf(String(i)) >= 0, ' stg', ' style="--c:' + col(stSlot(i)) + '" title="' + name + '"') : ''; }).join('')) +
         row('who', 'Who', WHO.filter(function (w) { return wc[w[0]] || s.who.indexOf(w[0]) >= 0; }).map(function (w) { return fchip('who', w[0], I(w[2]) + ' ' + w[1] + ' ' + cnt(wc[w[0]] || 0), s.who.indexOf(w[0]) >= 0); }).join('')) +
-        row('fit', 'Fit', [['auto', 'Auto', 'robot'], ['hand', 'Hand', 'hand-finger']].filter(function (x) { return fc[x[0]] || s.fit.indexOf(x[0]) >= 0; }).map(function (x) { return fchip('fit', x[0], I(x[2]) + ' ' + x[1] + ' ' + cnt(fc[x[0]] || 0), s.fit.indexOf(x[0]) >= 0); }).join('')) +
+        row('fit', 'Fit', [['auto', 'Auto', 'robot'], ['hand', 'Manual', 'hand-finger']].filter(function (x) { return fc[x[0]] || s.fit.indexOf(x[0]) >= 0; }).map(function (x) { return fchip('fit', x[0], I(x[2]) + ' ' + x[1] + ' ' + cnt(fc[x[0]] || 0), s.fit.indexOf(x[0]) >= 0); }).join('')) +
         row('ev', 'Timing', [['evergreen', 'Evergreen', 'leaf'], ['dated', 'Dated', 'calendar-event']].filter(function (x) { return ec[x[0]] || s.ev.indexOf(x[0]) >= 0; }).map(function (x) { return fchip('ev', x[0], I(x[2]) + ' ' + x[1] + ' ' + cnt(ec[x[0]] || 0), s.ev.indexOf(x[0]) >= 0); }).join('')) +
         row('f', 'Flags', Object.keys(gc).concat(s.f.filter(function (f) { return !gc[f]; })).map(function (f) { return fchip('f', f, I('flag') + ' ' + esc(FLAG_W[f] || f) + ' ' + cnt(gc[f] || 0), s.f.indexOf(f) >= 0); }).join('')) +
         row('sort', 'Sort', SORTS.map(function (x) { return fchip('sort', x[0], I(x[1]) + ' ' + x[2], s.sort === x[0]); }).join('')) +
@@ -576,7 +576,7 @@
   function rowIcons(a) {
     var t = typeOf(a.type), w = whoOf(a.who), out = '';
     out += '<button class="ico" type="button" data-panel="who" data-id="' + esc(a.id) + '" aria-label="Who: ' + esc(w[1]) + '" title="Who" style="--hc:var(--ljr-5-text)">' + I(w[2]) + '<span>' + esc(w[1]) + '</span></button>';
-    out += '<span class="tag" title="' + (a.fit === 'HAND' ? 'By hand' : 'Automatic') + '">' + I(a.fit === 'HAND' ? 'hand-finger' : 'robot') + (a.fit === 'HAND' ? 'Hand' : 'Auto') + '</span>';
+    out += '<span class="tag" title="' + (a.fit === 'HAND' ? 'You do it in the tool' : 'Automatic') + '">' + I(a.fit === 'HAND' ? 'hand-finger' : 'robot') + (a.fit === 'HAND' ? 'Manual' : 'Auto') + '</span>';
     if (a.size) out += '<span class="tag" title="Size">' + esc(a.size) + '</span>';
     if (a.dated && a.eventDate) { var d = daysTo(a.eventDate); out += '<span class="tag' + (d !== null && d < 0 ? ' over' : '') + '" title="Dated">' + I('calendar-event') + dmy(Date.parse(a.eventDate)) + '</span>'; }
     else out += '<span class="tag" title="Evergreen">' + I('leaf') + '</span>';
@@ -658,7 +658,7 @@
     var s = fsOf('me'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
     var R = keep(reviews()), G = keep(gates()), H = keep(hands());
     var sect = function (icon, word, href, l, kind) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + '<a href="' + href + '">' + word + '</a> ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : '<p class="muted">' + I('circle-check') + ' Nothing waiting.</p>') + '</div>'; };
-    return findBar('me', meItems()) + sect('eye-check', 'Review', '#/review', R, 'review') + sect('traffic-lights', 'Gates', '#/assets', G, 'gate') + sect('hand-finger', 'Hand jobs', '#/assets?fit=hand', H, 'hand');
+    return findBar('me', meItems()) + sect('eye-check', 'Review', '#/review', R, 'review') + sect('traffic-lights', 'Gates', '#/assets', G, 'gate') + sect('hand-finger', 'Tasks', '#/assets?fit=hand', H, 'hand');
   }
   function vIdeas() {
     var inbox = ST.inboxFolderId ? '<a class="pill" href="https://drive.google.com/drive/folders/' + esc(ST.inboxFolderId) + '" target="_blank" rel="noopener" title="Inbox: drop files here" style="--hc:var(--ljr-7-text)">' + I('inbox') + 'Inbox</a>' : '';
@@ -687,7 +687,7 @@
   }
   function vTools() {
     var T = S.tools || [], G = S.gaps || [];
-    var gaps = '<div class="card" data-gaps><div class="sect">' + I('alert-triangle') + 'Gaps ' + cnt(G.length) + info('Jobs no owned tool can do. Buy or approve one.') + '</div>' +
+    var gaps = '<div class="card" data-gaps><div class="sect">' + I('alert-triangle') + 'Gaps ' + cnt(G.length) + info('No tool for these yet') + '</div>' +
       (G.length ? G.map(function (g) {
         var c = capOf(g.capability), first = g.assetIds && g.assetIds[0];
         return '<div class="row" data-gap="' + esc(g.capability + '|' + (g.format || '')) + '" style="--c:var(--ljr-3)"><span class="bar"></span><div class="txt">' + I(c[2]) + ' <b>' + esc(c[1]) + '</b>' + (g.format ? ' · ' + esc(g.ratio || fmtLabel(g.format)) : '') + info(g.reason) + '</div>' +
@@ -701,7 +701,7 @@
         '<div class="pills" style="margin-top:6px">' + fitTag(m) + caps(m) + '</div></div></div>';
       var st = meterOf(m), pct = Math.min(100, Math.round(st.pct * 100)), d = daysTo(m.resetsOn);
       return '<div class="meter" data-meter="' + st.k + '" data-tool="' + esc(m.product) + '" style="--c:var(--ljr-' + st.slot + ')"><span class="bar"></span><div class="txt"><b>' + esc(m.product) + '</b>' + (m.thing ? ' · ' + esc(m.thing) : '') +
-        info([m.period ? 'Per ' + m.period : '', m.carriesOver ? 'Carries over' : 'Does not carry over', m.fit === 'HAND' ? 'Used by hand' : 'Used by the engine', m.costPerUnit ? money(m.costPerUnit) + ' each' : '', m.accountNotes || ''].filter(Boolean).join(' · ')) +
+        info([m.period ? 'Per ' + m.period : '', m.carriesOver ? 'Carries over' : 'Does not carry over', m.fit === 'HAND' ? 'Used manually' : 'Used by the engine', m.costPerUnit ? money(m.costPerUnit) + ' each' : '', m.accountNotes || ''].filter(Boolean).join(' · ')) +
         (m.allowance ? '<div class="track" role="img" aria-label="' + pct + '% used"><i style="width:' + pct + '%"></i></div>' +
         '<div class="nums"><span>' + esc(m.used) + ' / ' + esc(m.allowance) + ' ' + esc(m.unit || '') + '</span>' + (m.resetsOn ? '<span>' + I('refresh') + ' ' + dmy(Date.parse(m.resetsOn)) + (d !== null && d >= 0 ? ' · ' + d + 'd' : '') + '</span>' : '') + '</div>' : '') +
         (st.text ? '<div class="why">' + I(st.icon) + '<span>' + esc(st.text) + '</span></div>' : '') +
@@ -871,7 +871,7 @@
         fq('Length', 0, input('length', 'Length, e.g. 30s or 1 page'), 'length') +
         fq('Variant of', 0, '<select class="fin" data-f="n-master" aria-label="Master asset"><option value="">None</option>' + masters.map(function (a) { return '<option value="' + esc(a.id) + '"' + (draft.master === a.id ? ' selected' : '') + '>' + esc(bare(a)) + '</option>'; }).join('') + '</select>' +
           '<div style="margin-top:8px">' + pick('purpose', PURPOSES) + '</div>', 'master') +
-        fq('Sources', 0, vSources(), 'sources', 'Links, Inbox files or notes. Inspiration only = never copy.') : '';
+        fq('Sources', 0, vSources(), 'sources', 'Links, files, notes · inspiration only') : '';
     return '<div class="card"><div class="grp"><span class="dot" style="--c:var(--ljr-7)"></span>New idea' + (draft.fromId ? '<span class="st">' + I('recycle') + 'Reuse</span>' : '') + '</div>' +
       fq('Name', 1, input('name', 'Name'), 'name') +
       (grps.length > 1 ? fq('Group', 0, pick('group', grps.map(function (g) { return [g.id, g.name, GROUP_ICON[g.id] || 'folder']; })), 'group') : '') +
@@ -1135,7 +1135,7 @@
     DashAuth.save(accessToken, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE);
     var first = !signedIn; signedIn = true; $('banner').className = 'banner hidden';
     if (pendingWrite && DashAuth.hasScope(DashAuth.valid(), WRITE)) { var p = pendingWrite; pendingWrite = null; p(); return; }
-    else if (pendingWrite) { pendingWrite = null; banner('Saving was not allowed by Google. Click again and choose Allow.'); }
+    else if (pendingWrite) { pendingWrite = null; banner('Google blocked saving. Click again, choose Allow.'); }
     if (first || !S) { startTimer(); load(); }
   }
   function signOut() {
