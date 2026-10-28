@@ -1358,19 +1358,21 @@
    * by the engine), and a Suggest box anyone on the team can use (lands as a pending suggestion for Lisa to accept).
    * Writes { kind: 'library', table, op: new|edit, id?, fields } (owner) and { kind: 'libsuggest', table, id?, text }. ---------- */
   var LIB = {
-    playbooks: { one: 'playbook', fields: [['name', 'Name', 'text', 1, 120], ['outcome', 'Outcome', 'pick', 1, function () { return OUTCOMES.map(function (o) { return [o[0], o[1]]; }); }],
-      ['steps', 'Steps (one per line; "kit:<id>" or "pack:<id>" links one)', 'lines', 0, 40], ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 500]] },
-    packs: { one: 'pack', fields: [['name', 'Name', 'text', 1, 120], ['kind', 'Kind', 'text', 0, 40], ['kitIds', 'Kits', 'multi', 0, function () { return S.kits.map(function (k) { return [k.id, k.name]; }); }],
-      ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 500]] },
-    kits: { one: 'kit', fields: [['name', 'Name', 'text', 1, 120], ['type', 'Type', 'pick', 1, function () { return TYPES.map(function (t) { return [t[0], t[2]]; }); }],
+    playbooks: { one: 'playbook', fields: [['name', 'Name', 'text', 1, 200], ['outcome', 'Outcome', 'pick', 1, function () { return OUTCOMES.map(function (o) { return [o[0], o[1]]; }); }],
+      ['steps', 'Steps (one per line; "kit:<id>" or "pack:<id>" links one)', 'lines', 0, 30], ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
+    packs: { one: 'pack', fields: [['name', 'Name', 'text', 1, 200], ['kind', 'Kind (lowercase, e.g. launch-pack)', 'slug', 0, 40], ['kitIds', 'Kits', 'multi', 0, function () { return S.kits.map(function (k) { return [k.id, k.name]; }); }],
+      ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
+    kits: { one: 'kit', fields: [['name', 'Name', 'text', 1, 200], ['type', 'Type', 'pick', 1, function () { return TYPES.map(function (t) { return [t[0], t[2]]; }); }],
       ['brickIds', 'Bricks', 'multi', 0, function () { return S.bricks.map(function (b) { return [b.id, b.name]; }); }], ['needs', 'Needs', 'multi', 0, function () { return CAPS.map(function (c) { return [c[0], c[1]]; }); }],
       ['frameworkId', 'Framework', 'pick', 0, function () { return S.frameworks.map(function (x) { return [x.id, x.name]; }); }], ['voiceId', 'Voice', 'pick', 0, function () { return S.voices.map(function (x) { return [x.id, x.name]; }); }],
       ['lookId', 'Look', 'pick', 0, function () { return S.looks.map(function (x) { return [x.id, x.name]; }); }], ['formatIds', 'Formats', 'multi', 0, function () { return S.formats.map(function (x) { return [x.id, fmtLabel(x.id)]; }); }],
       ['makePromptId', 'Make prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
       ['checkPromptId', 'Check prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
-      ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 500]] },
-    bricks: { one: 'brick', fields: [['name', 'Name', 'text', 1, 120], ['kind', 'Kind (e.g. hook, prompt, cta)', 'text', 1, 40], ['text', 'Text', 'area', 1, 4000], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 500]] }
+      ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
+    bricks: { one: 'brick', fields: [['name', 'Name', 'text', 1, 200], ['kind', 'Kind (lowercase, e.g. hook, prompt, cta)', 'slug', 1, 40], ['text', 'Text', 'area', 1, 5000], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] }
   };
+  var LIB_STATUS = [['live', 'Live'], ['archived', 'Archived'], ['retired', 'Retired']];
+  Object.keys(LIB).forEach(function (t) { LIB[t].fields.push(['status', 'Status', 'pick', 0, function () { return LIB_STATUS; }, 'edit']); });
   var libDraft = loadLocal('st-lib'), libErr = {}, libSent = {};
   function libEditBtn(table, id) { return '<button class="btn" type="button" data-libedit="' + table + '" data-id="' + esc(id) + '" aria-label="Edit"' + dis() + '>' + I('pencil') + 'Edit</button>'; }
   function libFrom(table, id) {
@@ -1386,36 +1388,41 @@
     var d = libDraft.t === table ? libDraft : null; if (!d) return '';
     var L = LIB[table], f = d.f || {}, opt = function (fd) { return typeof fd[4] === 'function' ? fd[4]() : []; };
     return '<div class="card libform" data-libform="' + table + '"><div class="grp">' + (d.op === 'edit' ? 'Edit ' + L.one : 'New ' + L.one) + '</div>' +
-      L.fields.map(function (fd) {
+      (table === 'bricks' && d.op === 'edit' && String(f.kind) === 'prompt' ? '<p class="muted" data-libnote>Changing a prompt\u2019s text sends it back for approval.</p>' : '') +
+      libFields(table, d.op).map(function (fd) {
         var k = fd[0], lab = fd[1] + (fd[3] ? ' <span class="req" aria-hidden="true">*</span>' : ''), err = libErr[k] ? '<div class="ferr">' + esc(libErr[k]) + '</div>' : '', v = f[k];
-        var input = fd[2] === 'text' || fd[2] === 'url' ? '<input class="fin" data-lf="' + k + '" value="' + esc(v || '') + '"' + (fd[4] && fd[2] === 'text' ? ' maxlength="' + fd[4] + '"' : '') + (fd[2] === 'url' ? ' inputmode="url" placeholder="https://"' : '') + ' aria-label="' + esc(fd[1]) + '">' :
+        var input = fd[2] === 'text' || fd[2] === 'url' || fd[2] === 'slug' ? '<input class="fin" data-lf="' + k + '" value="' + esc(v || '') + '"' + (fd[4] && fd[2] === 'text' ? ' maxlength="' + fd[4] + '"' : '') + (fd[2] === 'url' ? ' inputmode="url" placeholder="https://"' : '') + ' aria-label="' + esc(fd[1]) + '">' :
           fd[2] === 'area' || fd[2] === 'lines' ? '<textarea class="fin" data-lf="' + k + '" rows="' + (fd[2] === 'lines' ? 4 : 3) + '" aria-label="' + esc(fd[1]) + '">' + esc(v || '') + '</textarea>' :
           '<div class="chips">' + opt(fd).map(function (o) { var on = fd[2] === 'multi' ? (v || []).indexOf(o[0]) >= 0 : v === o[0]; return '<button class="ch' + (on ? ' on' : '') + '" type="button" data-lfx="' + k + '" data-multi-lf="' + (fd[2] === 'multi' ? 1 : 0) + '" data-val="' + esc(o[0]) + '" aria-pressed="' + on + '">' + esc(o[1]) + '</button>'; }).join('') + (opt(fd).length ? '' : '<span class="muted">None yet.</span>') + '</div>';
         return '<div class="fq" data-lfq="' + k + '"><p class="qt">' + lab + '</p>' + input + err + '</div>';
       }).join('') +
       '<div class="frow"><button class="btn" type="button" data-action="libcancel">Cancel</button><button class="btn yes" type="button" data-action="libsend"' + dis() + '>' + I('send') + (d.op === 'edit' ? 'Save' : 'Add') + '</button></div></div>';
   }
-  function libCheck(table, f) {
+  // The Sheet's rules, as engine v0.2.17 checks them: name 200, notes 2000, text 5000, steps 30 x 200 (no ';'), lists 30.
+  function libFields(table, op) { return LIB[table].fields.filter(function (fd) { return fd[5] !== 'edit' || op === 'edit'; }); }
+  function libCheck(table, f, op) {
     var e = {};
-    LIB[table].fields.forEach(function (fd) {
+    libFields(table, op).forEach(function (fd) {
       var k = fd[0], v = f[k], opts = typeof fd[4] === 'function' ? fd[4]().map(function (o) { return o[0]; }) : null;
-      if (fd[2] === 'multi') { if ((v || []).some(function (x) { return opts.indexOf(x) < 0; })) e[k] = 'Pick from the list'; return; }
+      if (fd[2] === 'multi') { if ((v || []).some(function (x) { return opts.indexOf(x) < 0; })) e[k] = 'Pick from the list'; else if ((v || []).length > 30) e[k] = 'At most 30'; return; }
       v = String(v || '').trim();
       if (fd[3] && !v) { e[k] = 'Needed'; return; }
       if (!v) return;
-      if (fd[2] === 'url' && !/^https:\/\/\S+$/.test(v)) e[k] = 'A link starting https://';
+      if (fd[2] === 'url' && !/^https:\/\/[^\s"'<>]+$/.test(v)) e[k] = 'A link starting https://';
+      else if (fd[2] === 'url' && v.length > 500) e[k] = 'At most 500 characters';
+      else if (fd[2] === 'slug' && !/^[a-z0-9][a-z0-9-]{0,39}$/.test(v)) e[k] = 'Lowercase letters, numbers and dashes';
       else if (fd[2] === 'pick' && opts.indexOf(v) < 0) e[k] = 'Pick from the list';
       else if ((fd[2] === 'text' || fd[2] === 'area') && fd[4] && v.length > fd[4]) e[k] = 'At most ' + fd[4] + ' characters';
       else if (fd[2] === 'lines') { var ls = v.split('\n').map(function (x) { return x.trim(); }).filter(Boolean); if (ls.length > fd[4]) e[k] = 'At most ' + fd[4] + ' steps';
-        ls.forEach(function (x) { var m = x.match(/^(kit|pack)\s*:\s*(\S+)$/i); if (m && !byIdIn(m[1].toLowerCase() === 'kit' ? 'kits' : 'packs', m[2])) e[k] = 'No ' + m[1].toLowerCase() + ' called ' + m[2]; }); }
+        ls.forEach(function (x) { if (x.length > 200) e[k] = 'Each step at most 200 characters'; if (/;/.test(x)) e[k] = 'No ; in a step (one step per line)'; var m = x.match(/^(kit|pack)\s*:\s*(\S+)$/i); if (m && !byIdIn(m[1].toLowerCase() === 'kit' ? 'kits' : 'packs', m[2])) e[k] = 'No ' + m[1].toLowerCase() + ' called ' + m[2]; }); }
     });
     return e;
   }
   function sendLib() {
     if (EX || !libDraft.t) return;
-    var t = libDraft.t, f = libDraft.f || {}; libErr = libCheck(t, f);
+    var t = libDraft.t, f = libDraft.f || {}; libErr = libCheck(t, f, libDraft.op);
     if (Object.keys(libErr).length) { render(); var first = document.querySelector('[data-libform] .ferr'); if (first) first.scrollIntoView({ block: 'center' }); return; }
-    var fields = {}; LIB[t].fields.forEach(function (fd) { var v = f[fd[0]]; fields[fd[0]] = fd[2] === 'multi' ? (v || []).slice() : fd[2] === 'lines' ? String(v || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean) : String(v || '').trim(); });
+    var fields = {}; libFields(t, libDraft.op).forEach(function (fd) { var v = f[fd[0]]; if (fd[0] === 'status' && !v) return; fields[fd[0]] = fd[2] === 'multi' ? (v || []).slice() : fd[2] === 'lines' ? String(v || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean) : String(v || '').trim(); });
     var body = { kind: 'library', accountId: ownerId(), table: t, op: libDraft.op, fields: fields, at: new Date().toISOString() }; if (libDraft.op === 'edit') body.id = libDraft.id;
     var keep = libDraft; libDraft = {}; saveLocal('st-lib', libDraft); libSent[t] = 'Sent · applies at the engine’s next run'; render();
     withWrite(function () { return putRequest('library', body).catch(function (e) { libDraft = keep; saveLocal('st-lib', libDraft); delete libSent[t]; banner('Not sent: ' + e.message); render(); }); }, function () { libDraft = keep; delete libSent[t]; render(); });

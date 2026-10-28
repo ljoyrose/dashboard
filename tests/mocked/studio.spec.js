@@ -1373,6 +1373,10 @@ test.describe('Studio page', () => {
     await ef.locator('[data-lf="steps"]').fill('Draft the hook\nkit:no-such-kit');
     await ef.locator('[data-action="libsend"]').click();
     await expect(ef.locator('[data-lfq="steps"] .ferr')).toHaveText('No kit called no-such-kit');
+    await ef.locator('[data-lf="steps"]').fill('Draft the hook; then the offer');
+    await ef.locator('[data-action="libsend"]').click();
+    await expect(ef.locator('[data-lfq="steps"] .ferr')).toHaveText('No ; in a step (one step per line)');
+    await expect(ef.locator('[data-lfq="status"]')).toBeVisible(); // status (live / archived / retired) on edit only
     await ef.locator('[data-lf="steps"]').fill('Draft the hook');
     await ef.locator('[data-lf="name"]').fill(name0 + ' v2');
     await ef.locator('[data-action="libsend"]').click();
@@ -1381,11 +1385,25 @@ test.describe('Studio page', () => {
     // Bricks have their own tab; the Suggest box sends a pending suggestion.
     await go(page, 'kits/bricks');
     await expect(page.locator('[data-brick="br-hook"]')).toContainText('Sample hook line');
+    await page.locator('[data-libnew="bricks"]').click();
+    const bf = page.locator('[data-libform="bricks"]');
+    await expect(bf.locator('[data-lfq="status"]')).toHaveCount(0);
+    await bf.locator('[data-lf="name"]').fill('Sample CTA');
+    await bf.locator('[data-lf="kind"]').fill('Call To Action');
+    await bf.locator('[data-lf="text"]').fill('Book a call today.');
+    await bf.locator('[data-action="libsend"]').click();
+    await expect(bf.locator('[data-lfq="kind"] .ferr')).toHaveText('Lowercase letters, numbers and dashes');
+    await bf.locator('[data-lf="kind"]').fill('cta');
+    await bf.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(3);
+    expect(got[2].body).toMatchObject({ kind: 'library', table: 'bricks', op: 'new', fields: { name: 'Sample CTA', kind: 'cta', text: 'Book a call today.' } });
+    expect(Object.keys(got[2].body.fields)).not.toContain('id');
+    expect(Object.keys(got[2].body.fields)).not.toContain('status');
     const sg = page.locator('[data-libsuggest="bricks"]');
     await sg.locator('textarea').fill('Add a short call-to-action brick for emails.');
     await sg.locator('button[type="submit"]').click();
-    await expect.poll(() => got.length).toBe(3);
-    expect(got[2].body).toMatchObject({ kind: 'libsuggest', accountId: 'acc-owner', table: 'bricks', text: 'Add a short call-to-action brick for emails.' });
+    await expect.poll(() => got.length).toBe(4);
+    expect(got[3].body).toMatchObject({ kind: 'libsuggest', accountId: 'acc-owner', table: 'bricks', text: 'Add a short call-to-action brick for emails.' });
     await expect(sg.locator('[data-libsent]')).toHaveText('Suggested · waiting for Lisa');
   });
 
