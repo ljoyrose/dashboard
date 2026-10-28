@@ -1407,6 +1407,52 @@ test.describe('Studio page', () => {
     await expect(sg.locator('[data-libsent]')).toHaveText('Suggested · waiting for Lisa');
   });
 
+  test('library: Kit and Pack prices switch between ex and inc VAT; the form works out the other figure; VAT rates are listed', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/kits/kits');
+    const line = page.locator('[data-kit="kit-lead"] [data-price]');
+    await expect(line).toHaveText('£100 ex VAT · 3 days'); // the state's default (priceShow: ex)
+    await page.locator('[data-pshow="inc"]').click();
+    await expect(line).toHaveText('£120 inc VAT · 3 days');
+    await page.locator('[data-pshow="both"]').click();
+    await expect(line).toHaveText('£100 ex · £120 inc VAT · 3 days');
+    expect(await page.evaluate(() => localStorage.getItem('st-pshow'))).toBe('both'); // this viewer's choice, kept in the browser
+    await page.reload();
+    await expect(page.locator('[data-kit="kit-lead"] [data-price]')).toHaveText('£100 ex · £120 inc VAT · 3 days');
+    // The form: price, ex / inc, and a live line with the other figure at the home rate.
+    await page.locator('[data-kit="kit-lead"] [data-libedit]').click();
+    const f = page.locator('[data-libform="kits"]');
+    await expect(f.locator('[data-lf="price"]')).toHaveValue('100');
+    await expect(f.locator('[data-vatline]')).toHaveText('= £120.00 inc VAT at 20%');
+    await f.locator('[data-lf="price"]').fill('150');
+    await expect(f.locator('[data-vatline]')).toHaveText('= £180.00 inc VAT at 20%');
+    await f.locator('[data-lbasis="inc"]').click();
+    await expect(f.locator('[data-vatline]')).toHaveText('= £125.00 ex VAT at 20%');
+    await f.locator('[data-lf="price"]').fill('12.345');
+    await f.locator('[data-lf="readyDays"]').fill('400');
+    await f.locator('[data-action="libsend"]').click();
+    await expect(f.locator('[data-lfq="price"] .ferr')).toHaveText('A price from 0 to 100000, up to 2 decimals');
+    await expect(f.locator('[data-lfq="readyDays"] .ferr')).toHaveText('Whole days from 0 to 365');
+    await f.locator('[data-lf="price"]').fill('99.50');
+    await f.locator('[data-lf="readyDays"]').fill('5');
+    await f.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'library', table: 'kits', op: 'edit', id: 'kit-lead', fields: { price: 99.5, priceBasis: 'inc', readyDays: 5 } });
+    await go(page, 'kits/packs');
+    await page.locator('[data-libnew="packs"]').click();
+    await page.locator('[data-libform="packs"] [data-lf="name"]').fill('Sample pack');
+    await page.locator('[data-libform="packs"] [data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(Object.keys(got[1].body.fields)).not.toContain('price'); // optional: left out when empty
+    expect(Object.keys(got[1].body.fields)).not.toContain('priceBasis');
+    // VAT rates: read-only, under Kits › Brands.
+    await go(page, 'brands');
+    await expect(page.locator('[data-vatrates]')).toContainText('United Kingdom · home');
+    await expect(page.locator('[data-vatrates]')).toContainText('20%');
+    await expect(page.locator('[data-vatrates]')).toContainText('Ireland');
+    await expect(page.locator('[data-vatrates] input, [data-vatrates] button')).toHaveCount(0);
+  });
+
   test('library: example data has the buttons switched off and sends nothing', async ({ page, guard }) => {
     await open(page, guard, '#/kits/packs', { state: false });
     await expect(page.locator('[data-libnew="packs"]')).toBeDisabled();

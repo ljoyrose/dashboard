@@ -460,6 +460,7 @@
   .pbh { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
   .libform .req { color: var(--ink); }
   .libsug .ask { align-items: flex-end; }
+  .pline { font-size: 13px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -1248,6 +1249,12 @@
   var lq = {}, toolSort = 'name';
   function qbox(key, extra) { return '<div class="srow"><label class="sbox">' + I('search') + '<input type="search" data-lq="' + key + '" value="' + esc(lq[key] || '') + '" aria-label="Search" autocomplete="off"></label></div>' + (extra || ''); }
   function lqHit(key, text) { var q = (lq[key] || '').toLowerCase().trim(); return !q || q.split(/\s+/).every(function (w) { return String(text).toLowerCase().indexOf(w) >= 0; }); }
+  // VAT rates (engine v0.2.18, read-only; edited in the Sheet): country, rate, the date it was checked.
+  function vatRatesCard() {
+    var V = S.vatRates || []; if (!V.length) return '';
+    return '<div class="card" data-vatrates><div class="sect">' + I('receipt-tax') + 'VAT rates <span class="muted">(edited in the Sheet)</span></div><dl class="kv">' +
+      V.map(function (v) { return '<dt>' + esc(v.name || v.country) + (v.home ? ' \u00b7 home' : '') + '</dt><dd>' + esc(String(v.rate)) + '%' + (v.checked ? ' \u00b7 checked ' + esc(dmy(Date.parse(v.checked))) : '') + '</dd>'; }).join('') + '</dl></div>';
+  }
   function vBrands() {
     var A = all().filter(function (a) { return !isTest(a); });
     if (!S.brands.length) return '<div class="card muted">No brands yet.</div>';
@@ -1260,7 +1267,7 @@
         '<div class="strip b6">' + BSTAGES.map(function (_, i) { return '<i class="' + (i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>' +
         '<div class="blab" title="' + BSTAGES.join(' · ') + '">' + (n >= 0 ? (n + 1) + '/6 · ' + esc(b.stage) : '') + '</div>' + kitStrip(b) +
         (ck.length ? '<div class="sect">' + I('list-check') + 'Set-up ' + cnt(done + '/' + ck.length) + '</div><ul class="chk">' + ck.map(function (x) { return '<li class="' + (x.ok ? 'ok' : '') + '"><button type="button" data-check="' + esc(b.id) + '" data-item="' + esc(x.name) + '" aria-pressed="' + !!x.ok + '"' + dis() + '>' + I(x.ok ? 'circle-check' : 'circle-dashed') + esc(x.name) + '</button></li>'; }).join('') + '</ul>' : '') + '</section>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' + vatRatesCard();
   }
   function vTools() {
     var T = S.tools || [], G = S.gaps || [];
@@ -1361,12 +1368,14 @@
     playbooks: { one: 'playbook', fields: [['name', 'Name', 'text', 1, 200], ['outcome', 'Outcome', 'pick', 1, function () { return OUTCOMES.map(function (o) { return [o[0], o[1]]; }); }],
       ['steps', 'Steps (one per line; "kit:<id>" or "pack:<id>" links one)', 'lines', 0, 30], ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
     packs: { one: 'pack', fields: [['name', 'Name', 'text', 1, 200], ['kind', 'Kind (lowercase, e.g. launch-pack)', 'slug', 0, 40], ['kitIds', 'Kits', 'multi', 0, function () { return S.kits.map(function (k) { return [k.id, k.name]; }); }],
+      ['price', 'Price \u00a3', 'money', 0, 100000], ['priceBasis', 'Price is', 'basis', 0, null], ['readyDays', 'Ready in (days)', 'int', 0, 365],
       ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
     kits: { one: 'kit', fields: [['name', 'Name', 'text', 1, 200], ['type', 'Type', 'pick', 1, function () { return TYPES.map(function (t) { return [t[0], t[2]]; }); }],
       ['brickIds', 'Bricks', 'multi', 0, function () { return S.bricks.map(function (b) { return [b.id, b.name]; }); }], ['needs', 'Needs', 'multi', 0, function () { return CAPS.map(function (c) { return [c[0], c[1]]; }); }],
       ['frameworkId', 'Framework', 'pick', 0, function () { return S.frameworks.map(function (x) { return [x.id, x.name]; }); }], ['voiceId', 'Voice', 'pick', 0, function () { return S.voices.map(function (x) { return [x.id, x.name]; }); }],
       ['lookId', 'Look', 'pick', 0, function () { return S.looks.map(function (x) { return [x.id, x.name]; }); }], ['formatIds', 'Formats', 'multi', 0, function () { return S.formats.map(function (x) { return [x.id, fmtLabel(x.id)]; }); }],
       ['makePromptId', 'Make prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
+      ['price', 'Price \u00a3', 'money', 0, 100000], ['priceBasis', 'Price is', 'basis', 0, null], ['readyDays', 'Ready in (days)', 'int', 0, 365],
       ['checkPromptId', 'Check prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
       ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
     bricks: { one: 'brick', fields: [['name', 'Name', 'text', 1, 200], ['kind', 'Kind (lowercase, e.g. hook, prompt, cta)', 'slug', 1, 40], ['text', 'Text', 'area', 1, 5000], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] }
@@ -1374,6 +1383,30 @@
   var LIB_STATUS = [['live', 'Live'], ['archived', 'Archived'], ['retired', 'Retired']];
   Object.keys(LIB).forEach(function (t) { LIB[t].fields.push(['status', 'Status', 'pick', 0, function () { return LIB_STATUS; }, 'edit']); });
   var libDraft = loadLocal('st-lib'), libErr = {}, libSent = {};
+  // VAT (engine v0.2.18, all optional): state.vatRates [{country, name?, rate, checked, home?}], state.priceShow ex|inc|both,
+  // kits[] / packs[] price, priceBasis ex|inc, priceEx, priceInc. The viewer's own ex / inc / both choice is kept in this browser.
+  function homeRate() { var v = (S.vatRates || []).filter(function (x) { return x.home; })[0] || (S.vatRates || []).filter(function (x) { return /^(GB|UK)$/i.test(x.country); })[0]; var r = v ? Number(v.rate) : 20; return isFinite(r) && r >= 0 ? r : 20; }
+  function gbp(n) { return '\u00a3' + (Math.round(n * 100) % 100 ? n.toFixed(2) : String(Math.round(n))); }
+  function vatLine(price, basis) {
+    var p = Number(price); if (String(price == null ? '' : price).trim() === '' || !isFinite(p)) return '';
+    var r = homeRate(), other = basis === 'inc' ? p / (1 + r / 100) : p * (1 + r / 100);
+    return '= \u00a3' + other.toFixed(2) + (basis === 'inc' ? ' ex' : ' inc') + ' VAT at ' + r + '%';
+  }
+  var pshowLocal = (function () { try { return localStorage.getItem('st-pshow') || ''; } catch (e) { return ''; } })();
+  function priceShow() { var v = pshowLocal || S.priceShow; return v === 'inc' || v === 'both' ? v : 'ex'; }
+  function exInc(x) {
+    var p = x && x.price != null && x.price !== '' && isFinite(Number(x.price)) ? Number(x.price) : null, r = homeRate();
+    var ex = x && x.priceEx != null && isFinite(Number(x.priceEx)) ? Number(x.priceEx) : p === null ? null : x.priceBasis === 'inc' ? p / (1 + r / 100) : p;
+    var inc = x && x.priceInc != null && isFinite(Number(x.priceInc)) ? Number(x.priceInc) : p === null ? null : x.priceBasis === 'inc' ? p : p * (1 + r / 100);
+    return ex === null ? null : { ex: ex, inc: inc };
+  }
+  function pshowSwitch() { var v = priceShow(); return '<div class="seg pshow" role="group" aria-label="Show prices">' + [['ex', 'ex VAT'], ['inc', 'inc VAT'], ['both', 'Both']].map(function (o) { return '<button type="button" data-pshow="' + o[0] + '" aria-pressed="' + (v === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>'; }
+  // Owner view only (this page): price and lead time on Kit and Pack cards, as one quiet line. Never in anything a client sees.
+  function priceLine(x) {
+    var pr = exInc(x), d = x && x.readyDays != null && x.readyDays !== '' && isFinite(Number(x.readyDays)) ? Number(x.readyDays) : null, sh = priceShow();
+    var bits = []; if (pr) bits.push(sh === 'both' ? gbp(pr.ex) + ' ex \u00b7 ' + gbp(pr.inc) + ' inc VAT' : sh === 'inc' ? gbp(pr.inc) + ' inc VAT' : gbp(pr.ex) + ' ex VAT'); if (d !== null) bits.push(d + (d === 1 ? ' day' : ' days'));
+    return bits.length ? '<div class="pline" data-price>' + bits.join(' \u00b7 ') + '</div>' : '';
+  }
   function libEditBtn(table, id) { return '<button class="btn" type="button" data-libedit="' + table + '" data-id="' + esc(id) + '" aria-label="Edit"' + dis() + '>' + I('pencil') + 'Edit</button>'; }
   function libFrom(table, id) {
     var x = byIdIn(table, id) || {}, f = {};
@@ -1391,7 +1424,9 @@
       (table === 'bricks' && d.op === 'edit' && String(f.kind) === 'prompt' ? '<p class="muted" data-libnote>Changing a prompt\u2019s text sends it back for approval.</p>' : '') +
       libFields(table, d.op).map(function (fd) {
         var k = fd[0], lab = fd[1] + (fd[3] ? ' <span class="req" aria-hidden="true">*</span>' : ''), err = libErr[k] ? '<div class="ferr">' + esc(libErr[k]) + '</div>' : '', v = f[k];
-        var input = fd[2] === 'text' || fd[2] === 'url' || fd[2] === 'slug' ? '<input class="fin" data-lf="' + k + '" value="' + esc(v || '') + '"' + (fd[4] && fd[2] === 'text' ? ' maxlength="' + fd[4] + '"' : '') + (fd[2] === 'url' ? ' inputmode="url" placeholder="https://"' : '') + ' aria-label="' + esc(fd[1]) + '">' :
+        if (fd[2] === 'basis') return '<div class="fq" data-lfq="' + k + '"><div class="seg" role="group" aria-label="Price is">' + [['ex', 'ex VAT'], ['inc', 'inc VAT']].map(function (o) { var on = (v || 'ex') === o[0]; return '<button type="button" data-lbasis="' + o[0] + '" aria-pressed="' + on + '">' + o[1] + '</button>'; }).join('') + '</div><p class="pline" data-vatline>' + esc(vatLine(f.price, v || 'ex')) + '</p></div>';
+        var input = fd[2] === 'money' || fd[2] === 'int' ? '<input class="fin" data-lf="' + k + '" value="' + esc(v == null ? '' : v) + '" type="number" min="0" max="' + fd[4] + '" step="' + (fd[2] === 'money' ? '0.01' : '1') + '" inputmode="' + (fd[2] === 'money' ? 'decimal' : 'numeric') + '" aria-label="' + esc(fd[1]) + '">' :
+          fd[2] === 'text' || fd[2] === 'url' || fd[2] === 'slug' ? '<input class="fin" data-lf="' + k + '" value="' + esc(v || '') + '"' + (fd[4] && fd[2] === 'text' ? ' maxlength="' + fd[4] + '"' : '') + (fd[2] === 'url' ? ' inputmode="url" placeholder="https://"' : '') + ' aria-label="' + esc(fd[1]) + '">' :
           fd[2] === 'area' || fd[2] === 'lines' ? '<textarea class="fin" data-lf="' + k + '" rows="' + (fd[2] === 'lines' ? 4 : 3) + '" aria-label="' + esc(fd[1]) + '">' + esc(v || '') + '</textarea>' :
           '<div class="chips">' + opt(fd).map(function (o) { var on = fd[2] === 'multi' ? (v || []).indexOf(o[0]) >= 0 : v === o[0]; return '<button class="ch' + (on ? ' on' : '') + '" type="button" data-lfx="' + k + '" data-multi-lf="' + (fd[2] === 'multi' ? 1 : 0) + '" data-val="' + esc(o[0]) + '" aria-pressed="' + on + '">' + esc(o[1]) + '</button>'; }).join('') + (opt(fd).length ? '' : '<span class="muted">None yet.</span>') + '</div>';
         return '<div class="fq" data-lfq="' + k + '"><p class="qt">' + lab + '</p>' + input + err + '</div>';
@@ -1411,6 +1446,8 @@
       if (fd[2] === 'url' && !/^https:\/\/[^\s"'<>]+$/.test(v)) e[k] = 'A link starting https://';
       else if (fd[2] === 'url' && v.length > 500) e[k] = 'At most 500 characters';
       else if (fd[2] === 'slug' && !/^[a-z0-9][a-z0-9-]{0,39}$/.test(v)) e[k] = 'Lowercase letters, numbers and dashes';
+      else if (fd[2] === 'money' && (!/^\d+(\.\d{1,2})?$/.test(v) || Number(v) > fd[4])) e[k] = 'A price from 0 to ' + fd[4] + ', up to 2 decimals';
+      else if (fd[2] === 'int' && (!/^\d+$/.test(v) || Number(v) > fd[4])) e[k] = 'Whole days from 0 to ' + fd[4];
       else if (fd[2] === 'pick' && opts.indexOf(v) < 0) e[k] = 'Pick from the list';
       else if ((fd[2] === 'text' || fd[2] === 'area') && fd[4] && v.length > fd[4]) e[k] = 'At most ' + fd[4] + ' characters';
       else if (fd[2] === 'lines') { var ls = v.split('\n').map(function (x) { return x.trim(); }).filter(Boolean); if (ls.length > fd[4]) e[k] = 'At most ' + fd[4] + ' steps';
@@ -1422,7 +1459,11 @@
     if (EX || !libDraft.t) return;
     var t = libDraft.t, f = libDraft.f || {}; libErr = libCheck(t, f, libDraft.op);
     if (Object.keys(libErr).length) { render(); var first = document.querySelector('[data-libform] .ferr'); if (first) first.scrollIntoView({ block: 'center' }); return; }
-    var fields = {}; libFields(t, libDraft.op).forEach(function (fd) { var v = f[fd[0]]; if (fd[0] === 'status' && !v) return; fields[fd[0]] = fd[2] === 'multi' ? (v || []).slice() : fd[2] === 'lines' ? String(v || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean) : String(v || '').trim(); });
+    var fields = {}; libFields(t, libDraft.op).forEach(function (fd) { var v = f[fd[0]]; if (fd[0] === 'status' && !v) return;
+      // optional numbers: sent only when filled
+      if (fd[2] === 'money' || fd[2] === 'int') { if (String(v == null ? '' : v).trim() !== '') fields[fd[0]] = Number(v); return; }
+      if (fd[2] === 'basis') { if (String(f.price == null ? '' : f.price).trim() !== '') fields[fd[0]] = v === 'inc' ? 'inc' : 'ex'; return; }
+ fields[fd[0]] = fd[2] === 'multi' ? (v || []).slice() : fd[2] === 'lines' ? String(v || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean) : String(v || '').trim(); });
     var body = { kind: 'library', accountId: ownerId(), table: t, op: libDraft.op, fields: fields, at: new Date().toISOString() }; if (libDraft.op === 'edit') body.id = libDraft.id;
     var keep = libDraft; libDraft = {}; saveLocal('st-lib', libDraft); libSent[t] = 'Sent · applies at the engine’s next run'; render();
     withWrite(function () { return putRequest('library', body).catch(function (e) { libDraft = keep; saveLocal('st-lib', libDraft); delete libSent[t]; banner('Not sent: ' + e.message); render(); }); }, function () { libDraft = keep; delete libSent[t]; render(); });
@@ -1468,7 +1509,7 @@
       body = '<div class="card">' + (PK.length ? PK.map(function (p) {
         return '<div class="crow" data-pack="' + esc(p.id) + '"><div class="l1"><span class="type">' + I('package') + '</span><span class="ttl">' + esc(p.name) + '</span><span title="Kits">' + cnt(p.kitIds.length) + '</span>' + libEditBtn('packs', p.id) + '</div>' +
           '<div class="l2"><span class="icons">' + (p.kind ? '<span class="tag" title="Kind">' + esc(p.kind) + '</span>' : '') + p.kitIds.map(function (k) { return '<span class="tag" title="Kit">' + I('box') + esc(name('kits', k)) + '</span>'; }).join('') + '</span></div>' +
-          (p.notes ? '<div class="when">' + esc(p.notes) + '</div>' : '') + '</div>';
+          priceLine(p) + (p.notes ? '<div class="when">' + esc(p.notes) + '</div>' : '') + '</div>';
       }).join('') : empty) + '</div>';
     } else if (sub === 'kits') {
       var used = {}; all().forEach(function (a) { if (a.kitId) used[a.kitId] = (used[a.kitId] || 0) + 1; });
@@ -1476,7 +1517,7 @@
       body = '<div class="card">' + (KT.length ? KT.map(function (k) {
         var t = typeOf(k.type);
         return '<div class="crow" data-kit="' + esc(k.id) + '"><div class="l1"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span><span class="ttl">' + esc(k.name) + '</span><span title="Assets using it">' + cnt(used[k.id] || 0) + '</span>' + libEditBtn('kits', k.id) + '</div>' +
-          '<div class="l2"><span class="icons">' + kitTags(k) + (k.brickIds.length ? '<span class="tag" title="Bricks: ' + esc(k.brickIds.map(function (b) { return name('bricks', b); }).join(' · ')) + '">' + I('puzzle') + k.brickIds.length + '</span>' : '') + '</span></div></div>';
+          '<div class="l2"><span class="icons">' + kitTags(k) + (k.brickIds.length ? '<span class="tag" title="Bricks: ' + esc(k.brickIds.map(function (b) { return name('bricks', b); }).join(' · ')) + '">' + I('puzzle') + k.brickIds.length + '</span>' : '') + '</span></div>' + priceLine(k) + '</div>';
       }).join('') : empty) + '</div>';
     } else if (sub === 'bricks') {
       var BR = S.bricks.filter(function (b) { return lqHit('kits', [b.name, b.kind, b.text, b.notes].join(' ')); });
@@ -1505,7 +1546,7 @@
       }).join('') : empty) + '</div>';
     }
     var lib = LIB[sub] ? sub : null;
-    return nav + (lib ? '<div class="libbar">' + qbox('kits') + '<button class="btn" type="button" data-libnew="' + sub + '"' + dis() + '>' + I('plus') + 'New</button></div>' + libForm(sub) : '') +
+    return nav + (lib ? '<div class="libbar">' + qbox('kits') + (sub === 'kits' || sub === 'packs' ? pshowSwitch() : '') + '<button class="btn" type="button" data-libnew="' + sub + '"' + dis() + '>' + I('plus') + 'New</button></div>' + libForm(sub) : '') +
       '<div data-kits="' + sub + '" style="display:flex;flex-direction:column;gap:14px">' + body + '</div>' + (lib ? libSuggest(sub) : '');
   }
   function vEngine() {
@@ -1785,7 +1826,7 @@
   document.addEventListener('input', function (e) {
     var lk = e.target.getAttribute && e.target.getAttribute('data-lq'); if (lk) { lq[lk] = e.target.value; var lp = e.target.selectionStart; render(); var lb = document.querySelector('[data-lq="' + lk + '"]'); if (lb) { lb.focus(); try { lb.setSelectionRange(lp, lp); } catch (x) {} } return; }
     var f = e.target.getAttribute && e.target.getAttribute('data-f');
-    var lf = e.target.getAttribute && e.target.getAttribute('data-lf'); if (lf && libDraft.t) { libDraft.f = libDraft.f || {}; libDraft.f[lf] = e.target.value; delete libErr[lf]; saveLocal('st-lib', libDraft); return; }
+    var lf = e.target.getAttribute && e.target.getAttribute('data-lf'); if (lf && libDraft.t) { libDraft.f = libDraft.f || {}; libDraft.f[lf] = e.target.value; delete libErr[lf]; saveLocal('st-lib', libDraft); if (lf === 'price') { var vl = document.querySelector('[data-libform] [data-vatline]'); if (vl) vl.textContent = vatLine(e.target.value, libDraft.f.priceBasis || 'ex'); } return; }
     var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('st-drafts', drafts); return; }
     var rf = e.target.getAttribute && e.target.getAttribute('data-rf'); if (rf) { var ri = e.target.getAttribute('data-id'); (resDraft[ri] = resDraft[ri] || {})[rf] = e.target.value; return; }
     var un = e.target.getAttribute && e.target.getAttribute('data-units'); if (un) { doneUnits[un] = e.target.value; return; }
@@ -1803,6 +1844,8 @@
     var fo = e.target.closest('[data-fxoff]'); if (fo) { var t4 = barTab(); if (t4) { var s4 = fsOf(t4), k4 = fo.getAttribute('data-fxoff'), i4 = s4[k4].indexOf(fo.getAttribute('data-val')); if (i4 >= 0) s4[k4].splice(i4, 1); saveFs(); } render(); var fb = $('filtersBtn'); if (fb) fb.focus(); return; }
     var ln = e.target.closest('[data-libnew]'); if (ln && !ln.disabled) { var lt = ln.getAttribute('data-libnew'); libDraft = { t: lt, op: 'new', f: {}, at: Date.now() }; libErr = {}; delete libSent[lt]; saveLocal('st-lib', libDraft); render(); var lf0 = document.querySelector('[data-libform] [data-lf]'); if (lf0) lf0.focus(); return; }
     var le = e.target.closest('[data-libedit]'); if (le && !le.disabled) { var et = le.getAttribute('data-libedit'), eid = le.getAttribute('data-id'); libDraft = { t: et, op: 'edit', id: eid, f: libFrom(et, eid), at: Date.now() }; libErr = {}; delete libSent[et]; saveLocal('st-lib', libDraft); render(); var lf1 = document.querySelector('[data-libform] [data-lf]'); if (lf1) { lf1.focus(); lf1.scrollIntoView({ block: 'center' }); } return; }
+    var lb = e.target.closest('[data-lbasis]'); if (lb && libDraft.t) { libDraft.f = libDraft.f || {}; libDraft.f.priceBasis = lb.getAttribute('data-lbasis'); saveLocal('st-lib', libDraft); render(); return; }
+    var ps = e.target.closest('[data-pshow]'); if (ps) { pshowLocal = ps.getAttribute('data-pshow'); try { localStorage.setItem('st-pshow', pshowLocal); } catch (x) {} render(); return; }
     var lx = e.target.closest('[data-lfx]'); if (lx && libDraft.t) { var lk = lx.getAttribute('data-lfx'), lv = lx.getAttribute('data-val'); libDraft.f = libDraft.f || {};
       if (lx.getAttribute('data-multi-lf') === '1') { var la = libDraft.f[lk] = (libDraft.f[lk] || []).slice(), li = la.indexOf(lv); if (li >= 0) la.splice(li, 1); else la.push(lv); } else libDraft.f[lk] = libDraft.f[lk] === lv ? '' : lv;
       delete libErr[lk]; saveLocal('st-lib', libDraft); render(); return; }

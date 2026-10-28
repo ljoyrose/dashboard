@@ -54,7 +54,7 @@
         { id: 'pk-funnel', name: 'Sample webclass funnel', kind: 'funnel', kitIds: ['kit-webclass', 'kit-email'], notes: 'Pages and emails' }
       ],
       kits: [
-        { id: 'kit-lead', name: 'Sample lead magnet kit', type: 'lead', brickIds: ['br-hook'], needs: ['doc-fill', 'pdf-export'], frameworkId: 'fw-pas', voiceId: null, lookId: null, formatIds: ['fmt-a4'], notes: '' },
+        { id: 'kit-lead', name: 'Sample lead magnet kit', type: 'lead', price: 100, priceBasis: 'ex', priceEx: 100, priceInc: 120, readyDays: 3, brickIds: ['br-hook'], needs: ['doc-fill', 'pdf-export'], frameworkId: 'fw-pas', voiceId: null, lookId: null, formatIds: ['fmt-a4'], notes: '' },
         { id: 'kit-email', name: 'Sample email kit', type: 'email', brickIds: [], needs: ['email-draft'], frameworkId: 'fw-hso', voiceId: null, lookId: null, formatIds: ['fmt-email-header'], notes: '' },
         { id: 'kit-webclass', name: 'Sample webclass kit', type: 'slides', brickIds: ['br-hook'], needs: ['slides-fill', 'video-reformat'], frameworkId: 'fw-webinar', voiceId: null, lookId: null, formatIds: ['fmt-youtube', 'fmt-reel'], notes: '' },
         { id: 'kit-social', name: 'Sample social post kit', type: 'social', brickIds: [], needs: ['image-generate'], frameworkId: null, voiceId: null, lookId: null, formatIds: ['fmt-fb-feed'], notes: '' }
@@ -96,6 +96,9 @@
         { capability: 'video-reformat', format: 'fmt-youtube', ratio: '16:9', reason: 'no owned tool can do video-reformat at 16:9', assetIds: ['sa-make'] },
         { capability: 'video-reformat', format: 'fmt-reel', ratio: '9:16', reason: 'no owned tool can do video-reformat at 9:16', assetIds: ['sa-make'] }
       ],
+      // VAT (engine v0.2.18): rates edited in the Sheet; how prices show by default.
+      vatRates: [{ country: 'GB', name: 'United Kingdom', rate: 20, checked: day(-28), home: true }, { country: 'IE', name: 'Ireland', rate: 23, checked: day(-28) }],
+      priceShow: 'ex',
       failed: []
     };
   }
