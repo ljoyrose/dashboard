@@ -380,7 +380,8 @@
   .crow .l1 { display: flex; gap: 6px; align-items: flex-start; }
   .crow .l1 .ttl { flex: 0 1 auto; }
   .selmark { font-weight: 600; color: var(--ink); flex: none; } /* the selected tick sits right after the title text */
-  .whor { margin-left: auto; flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--ctl); display: grid; place-items: center; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .cfoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 26px; margin-top: 6px; }
+  .whor { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--ctl); display: grid; place-items: center; font-size: 13px; font-weight: 600; color: var(--muted); }
   .whor.me { border-color: var(--ink); color: var(--ink); }
   .pthumb { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); }
   .pthumb { width: 56px; }
@@ -1004,20 +1005,23 @@
     var on = openPanel && openPanel.id === a.id, bo = brandOf(a), need = needOf(a), dp = datePill(a);
     return '<div class="crow' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '">' +
       (withBrand || dp ? '<div class="bline">' + (withBrand ? '<span class="dot" style="--c:' + col(bo.colour) + '"></span><span class="bn">' + esc(bo.name) + '</span>' : '') + dp + '</div>' : '') +
-      '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + whoRing(a) + '</div>' +
+      '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') +
-      (need ? '<div class="needl"><span class="tag need" data-chip="need">' + esc(need) + '</span></div>' : '') + '</div></div>' +
+      '</div></div><div class="cfoot">' + (need ? '<span class="tag need" data-chip="need">' + esc(need) + '</span>' : '<span></span>') + whoRing(a) + '</div>' +
       (function (x) { return x ? '<div class="l2"><span class="acts">' + x + '</span></div>' : ''; })(actsFor(a, kind) + (a.parts && a.parts.total && a.parts.approved === a.parts.total && a.stage < 7 && !sent[a.id] ? '<button class="btn yes" type="button" data-act="assemble" data-id="' + esc(a.id) + '" aria-label="Assemble"' + dis() + '>' + I('books') + 'Assemble</button>' : '')) +
       (on && !(sideOn && openPanel.k === 'all') ? panelOf(a, openPanel.k) : '') + '</div>';
   }
   // Who has it now: L = waiting on Lisa (ink ring), C = Claude / the engine is on it, a client's initial = waiting on the client (grey).
   function waitingOn(a) {
-    if (isClient(a) && (a.flags.indexOf('client-review') >= 0 || (a.ask && a.ask.status === 'sent'))) return { k: 'client', l: (account(a.accountId).name || 'C').trim().charAt(0).toUpperCase(), t: 'Waiting on the client', w: 'Client' };
+    if (isClient(a) && (a.flags.indexOf('client-review') >= 0 || (a.ask && a.ask.status === 'sent'))) return { k: 'client', l: (account(a.accountId).name || 'Client').trim().split(/\s+/).slice(0, 2).map(function (x) { return x.charAt(0).toUpperCase(); }).join(''), t: 'Waiting on the client', w: 'Client' };
     var n = needOf(a);
     if (a.who === 'lisa' || n === 'Gate' || n === 'Approve' || n === 'Your task' || n === 'Needs input') return { k: 'you', l: 'L', t: 'Waiting on you', w: 'You' };
     return { k: 'claude', l: 'C', t: 'Claude is on it', w: 'Claude' };
   }
-  function whoRing(a) { var w = waitingOn(a); return '<span class="whor' + (w.k === 'you' ? ' me' : '') + '" data-who="' + w.k + '" title="' + w.t + '" aria-label="' + w.t + '" role="img">' + esc(w.l) + '</span>'; }
+  // Who has it, as an icon at the card's bottom-right (like Trello / Asana / Jira): you = person, Claude = spark, client = initials.
+  var WHO_SVG = { you: '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M4 20c1.5-4 4.5-6 8-6s6.5 2 8 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+    claude: '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M12 3 L13.8 10.2 L21 12 L13.8 13.8 L12 21 L10.2 13.8 L3 12 L10.2 10.2 Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>' };
+  function whoRing(a) { var w = waitingOn(a); return '<span class="whor' + (w.k === 'you' ? ' me' : '') + '" data-who="' + w.k + '" title="' + w.t + '" aria-label="' + w.t + '" role="img">' + (WHO_SVG[w.k] || '<span class="ini">' + esc(w.l) + '</span>') + '</span>'; }
   // Preview thumbnail left of the title: the real image when there is one, else a line drawing of the format (muted, never coloured).
   var THUMB_SHORT = { social: 'Social', lead: 'Lead magnet', tree: 'Family tree', pack: 'Pack', page: 'Page', email: 'Email' };
   function pthumb(a) {

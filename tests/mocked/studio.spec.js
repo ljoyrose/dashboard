@@ -1146,7 +1146,7 @@ test.describe('Studio page', () => {
     } });
     const rowsAll = page.locator('#view .crow');
     for (const r of await rowsAll.all()) {
-      await expect(r.locator(':scope > .tb .tag, :scope > .needl .tag, :scope > .tb .needl .tag')).toHaveCount(await r.locator('[data-chip="need"]').count());
+      await expect(r.locator(':scope > .cfoot .tag')).toHaveCount(await r.locator('[data-chip="need"]').count());
       expect(await r.locator('[data-chip="need"]').count()).toBeLessThanOrEqual(1);
       for (const gone of ['.strip', '.icons', 'a.lk', '.lk.no', '[data-chip="format"]', '[data-panel="who"]']) await expect(r.locator(gone), gone + ' is in the details, not the card').toHaveCount(0);
     }
@@ -1195,13 +1195,16 @@ test.describe('Studio page', () => {
       b.stageSince = new Date(NOW.getTime() - 5 * 864e5).toISOString();
       const c = s.assets.filter((a) => a.id === 'sa-client')[0]; c.ask = { question: 'Which cover?', status: 'sent', at: s.generated_at };
     } });
-    for (const r of await page.locator('#view .crow').all()) await expect(r.locator('.l1 .whor')).toHaveCount(1);
+    for (const r of await page.locator('#view .crow').all()) await expect(r.locator('.cfoot .whor')).toHaveCount(1); // bottom-right, in the footer row
     const you = page.locator('.crow[data-row="sa-gate"] .whor');
-    await expect(you).toHaveText('L');
+    await expect(you.locator('svg')).toHaveCount(1); // a person icon
+    await expect(page.locator('.crow[data-row="sa-make"] .whor')).toHaveAttribute('aria-label', 'Claude is on it');
+    const card = await page.locator('.crow[data-row="sa-gate"]').boundingBox(), wb = await you.boundingBox();
+    expect(wb.x + wb.width).toBeGreaterThan(card.x + card.width - 40);
     await expect(you).toHaveAttribute('aria-label', 'Waiting on you');
     await expect(you).toHaveCSS('border-top-color', await page.evaluate(() => getComputedStyle(document.body).color));
     await expect(page.locator('.crow[data-row="sa-client"] .whor')).toHaveAttribute('aria-label', 'Waiting on the client');
-    await expect(page.locator('.crow[data-row="sa-client"] .whor')).toHaveText('S'); // "Sample client"
+    await expect(page.locator('.crow[data-row="sa-client"] .whor')).toHaveText('SC'); // "Sample client"
     await expect(page.locator('.crow[data-row="sa-make"] [data-parts]')).toHaveText('3/12');
     const d = await details(page, 'sa-make');
     const panel = page.locator('.side .kv');
