@@ -53,7 +53,7 @@ If any of these breaks, the tick turns red and says which page.
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 489 checks that must pass (mocked + phone, 28 Oct 2026, Studio clear board).
+That is 490 checks that must pass (mocked + phone, 28 Oct 2026, Studio clear board).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
