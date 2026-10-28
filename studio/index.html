@@ -119,7 +119,8 @@
   .sect a { color: var(--ink); text-decoration: none; }
   /* Rows (the Factory calm row): type icon · title · flag; icons; actions; stage strip. */
   .crow { padding: 10px 0; border-top: 1px solid var(--line); }
-  .grp + .crow, .sect + .crow { border-top: 0; }
+  .grp + .crow, .sect + .crow { border-top: 0; padding-top: 12px; } /* room under the group header line */
+  .card > .crow:last-child { padding-bottom: 16px; }
   .crow .l1 { display: flex; gap: 8px; align-items: flex-start; }
   .crow .type { flex: none; width: 28px; display: inline-flex; justify-content: center; }
   .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-weight: 500; overflow-wrap: anywhere; }
@@ -267,8 +268,8 @@
   .col-head .num .ti { font-size: 15px; color: var(--ink); }
   .col-head .lab { color: var(--ink); min-width: 0; overflow-wrap: anywhere; } /* colour only in the ring and the top line */
   .col-head .cnt { margin-left: auto; }
-  .col-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; }
-  .col-list .crow, .col-list .row { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 10px 12px; box-shadow: var(--shadow); position: relative; }
+  .col-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 8px 8px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; }
+  .col-list .crow, .col-list .row { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); position: relative; }
   .col-list .crow .ttl { font-weight: 600; font-size: 16px; }
   .col-list .crow.sel { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: linear-gradient(var(--sel-fill), var(--sel-fill)) var(--card); }
   .col-list .crow.sel::after { content: "\2713"; position: absolute; top: -8px; right: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--card); color: var(--ink); border: 2px solid var(--sel-bd); }
