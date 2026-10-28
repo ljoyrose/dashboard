@@ -249,3 +249,270 @@ test.describe('GA Hub page', () => {
     expect(over).toBeLessThanOrEqual(0);
   });
 });
+
+
+// A computed colour as [r, g, b, a] (0-255), from rgb()/rgba() or color(srgb ...).
+function rgbOf(s) { const m = /\(srgb ([^)]+)\)|\(([^)]+)\)/.exec(s), v = (m[1] || m[2]).split(/[ ,/]+/).filter(Boolean).map(Number), k = m[1] ? 255 : 1; return [v[0] * k, v[1] * k, v[2] * k, v[3] === undefined ? 1 : v[3]]; }
+// A pale tint: opaque, not plain white/black, light in light mode and dark in dark mode (mixed into the card), never a solid colour.
+function isTint(s, scheme) { const c = rgbOf(s), avg = (c[0] + c[1] + c[2]) / 3; if (c[3] < 0.5) return false;
+  if (Math.min(c[0], c[1], c[2]) >= 252) return false;   // white
+  return scheme === 'dark' ? avg > 20 && avg < 110 : avg > 200 && avg < 252; }
+// House look (LINKS-COMFORT-BRIEF v3 + Lisa's control rules, 28 Oct 2026), checked by computed style in the browser.
+// audit() walks every visible element and returns plain-English problems; each test below asserts its own kind.
+const TABS = ['home', 'orders', 'invoices', 'products', 'ga'];
+function audit() {
+  const rgb = (s) => { let m = /^rgba?\(([^)]+)\)/.exec(s); if (m) { const p = m[1].split(/[ ,/]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p[3] === undefined ? 1 : p[3]]; }
+    m = /^color\(srgb ([^)]+)\)/.exec(s); if (m) { const p = m[1].split(/[ /]+/).filter(Boolean).map(Number); return [p[0] * 255, p[1] * 255, p[2] * 255, p[3] === undefined ? 1 : p[3]]; } return null; };
+  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const bgOf = (el) => { for (let a = el; a; a = a.parentElement) { const c = rgb(getComputedStyle(a).backgroundColor); if (c && c[3] > 0.5) return c; } return [255, 255, 255, 1]; };
+  const name = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (el.className && el.className.baseVal === undefined ? '.' + String(el.className).trim().split(/\s+/).join('.') : '') + ' "' + (el.textContent || '').trim().slice(0, 24) + '"';
+  const seen = (el) => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); if (r.width <= 1 || r.height <= 1 || s.visibility !== 'visible' || s.display === 'none') return false; for (let a = el; a && a !== document.body; a = a.parentElement) { const ar = a.getBoundingClientRect(); if (ar.width <= 1 || ar.height <= 1) return false; } return true; };
+  const out = { small: [], weight: [], upper: [], colour: [], radius: [], line: [], text: [], ring: [] };
+  for (const el of document.querySelectorAll('body *')) {
+    if (el.closest('svg') || /^(SCRIPT|STYLE)$/.test(el.tagName) || !seen(el)) continue;
+    const s = getComputedStyle(el), own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+    if (own) {
+      if (parseFloat(s.fontSize) < 13) out.small.push(name(el) + ' ' + s.fontSize);
+      if (!['400', '600'].includes(s.fontWeight)) out.weight.push(name(el) + ' ' + s.fontWeight);
+      if (s.textTransform === 'uppercase') out.upper.push(name(el));
+      const c = rgb(s.color); if (c && Math.max(c[0], c[1], c[2]) - Math.min(c[0], c[1], c[2]) > 40) out.colour.push(name(el) + ' ' + s.color);
+      const btn = el.closest('button, .btn'); if (!(btn && btn.disabled)) { const r = ratio(c, bgOf(el)); if (r < 4.5) out.text.push(name(el) + ' ' + r.toFixed(2)); }
+    }
+    const bw = ['Top', 'Right', 'Bottom', 'Left'].map((k) => parseFloat(s['border' + k + 'Width']) || 0);
+    if (Math.max(...bw) > 1) out.line.push(name(el) + ' ' + bw.join('/'));
+    const rad = s.borderTopLeftRadius;
+    const pill = el.matches('.cnt, nav.tabs .n');   // count pills: 22px high with full round ends (11px)
+    if (rad !== '0px' && !(rad === '12px' && !pill) && !(rad === '11px' && pill) && !(rad === '50%' && el.classList.contains('dot'))) out.radius.push(name(el) + ' ' + rad);
+    // Rings on things you press or read as a pill: 3:1 against what they sit on.
+    if (el.matches('button:not([disabled]), .btn, .chip, .more, a.tile, input, .badge, .datep, .cnt, nav.tabs .n, .stamp, .row .amt.red, .row .amt.good') && bw[0] === 1) {
+      const r = ratio(rgb(s.borderTopColor), bgOf(el.parentElement)); if (r < 3) out.ring.push(name(el) + ' ' + r.toFixed(2));
+    }
+  }
+  return out;
+}
+
+test.describe('GA Hub house look', () => {
+  for (const look of ['warm', 'cool']) for (const scheme of ['light', 'dark']) {
+    test(`${look} ${scheme}: nothing under 13px, weights 400/600 only, one 12px radius (circles only for dots), 1px lines, no uppercase, no coloured words, text 4.5:1 and rings 3:1`, async ({ page }) => {
+      await page.addInitScript((bg) => localStorage.setItem('dash-look', JSON.stringify({ bg })), look);
+      await page.emulateMedia({ colorScheme: scheme });
+      await sheets(page, book());
+      await open(page);
+      await expect(page.locator('html')).toHaveClass(look === 'cool' ? /look-cool/ : /^(?!.*look-cool)/);
+      for (const tab of TABS) {
+        await page.goto('food/#/' + tab);
+        await expect(page.locator(`nav.tabs a[data-nav="${tab}"]`)).toHaveAttribute('aria-current', 'page');
+        if (tab === 'products') await page.locator('[data-filter="all"]').click();
+        const a = await page.evaluate(audit);
+        for (const k of Object.keys(a)) expect(a[k], `${look} ${scheme} #/${tab}: ${k}`).toEqual([]);
+      }
+    });
+  }
+
+  test('Cool clear: the page and the frame take the cool family; Warm clear is the default', async ({ page }) => {
+    await sheets(page, book());
+    await open(page);
+    const warm = await page.evaluate(() => [getComputedStyle(document.body).backgroundColor, getComputedStyle(document.querySelector('header')).backgroundColor]);
+    await page.evaluate(() => localStorage.setItem('dash-look', JSON.stringify({ bg: 'cool' })));
+    await page.reload();
+    await expect(page.locator('html')).toHaveClass(/look-cool/);
+    const cool = await page.evaluate(() => [getComputedStyle(document.body).backgroundColor, getComputedStyle(document.querySelector('header')).backgroundColor]);
+    const blue = (s) => { const p = /\(srgb ([^)]+)\)|\(([^)]+)\)/.exec(s); const v = (p[1] || p[2]).split(/[ ,]+/).map(Number); return v[2] - v[0]; };
+    expect(blue(warm[0])).toBeLessThan(0); expect(blue(warm[1])).toBeLessThan(0.0001);   // warm: red over blue
+    expect(blue(cool[0])).toBeGreaterThan(0); expect(blue(cool[1])).toBeGreaterThan(0);  // cool: blue over red
+  });
+
+  test('controls: every one rests on the same clear 1px line (never ink), 12px corners, 14px/600, 36px tall; hover = 1px line inside + a pale tint (ink + muted tint when neutral) and nothing moves', async ({ page }) => {
+    await sheets(page, book());
+    await open(page);
+    for (const tab of ['home', 'orders', 'products', 'ga']) {
+      await page.goto('food/#/' + tab);
+      await expect(page.locator(`nav.tabs a[data-nav="${tab}"]`)).toHaveAttribute('aria-current', 'page');
+      const ctls = page.locator('#view button:visible, #view a.btn:visible, #view .chip:visible, #view a.tile:visible');
+      const n = await ctls.count();
+      expect(n).toBeGreaterThan(0);
+      const ink = await page.evaluate(() => getComputedStyle(document.body).color);
+      const lines = new Set();
+      for (let i = 0; i < n; i++) {
+        const el = ctls.nth(i);
+        const st = await el.evaluate((e) => { const s = getComputedStyle(e); return { w: s.borderTopWidth, c: s.borderTopColor, r: s.borderTopLeftRadius, fs: s.fontSize, fw: s.fontWeight, h: e.getBoundingClientRect().height, tile: e.classList.contains('tile'), pressed: e.getAttribute('aria-pressed') === 'true' }; });
+        expect(st.w).toBe('1px'); expect(st.r).toBe('12px'); expect(st.c).not.toBe(ink); expect(st.h).toBeGreaterThanOrEqual(36);
+        if (!st.tile) { expect(st.fs).toBe('14px'); expect(st.fw).toBe('600'); }
+        lines.add(st.c);
+        await el.scrollIntoViewIfNeeded();
+        const before = await el.boundingBox();
+        await el.hover();
+        const hv = await el.evaluate((e) => { const s = getComputedStyle(e); return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, bw: s.borderTopWidth, coloured: e.matches('.yes, .no'), bg: s.backgroundColor, card: getComputedStyle(e.closest('.card, #view')).backgroundColor }; });
+        expect({ ow: hv.ow, os: hv.os, oo: hv.oo, bw: hv.bw }).toEqual({ ow: '1px', os: 'solid', oo: '-1px', bw: '1px' });
+        if (hv.coloured) expect(hv.oc).not.toBe(ink); else expect(hv.oc).toBe(ink);
+        expect(isTint(hv.bg, 'light'), `${tab}: hover fill ${hv.bg}`).toBe(true);
+        const after = await el.boundingBox();
+        expect(after).toEqual(before);
+      }
+      expect([...lines], `#/${tab}: one control line`).toHaveLength(1);
+    }
+  });
+
+  test('read-only pills (counts, badges, date pills, amounts) have no hover; the bottom tabs have no ring, only the colour bar widens', async ({ page }) => {
+    const b = book(); b.invoices[1][8] = '2026-01-01';   // an unpaid invoice that is long overdue
+    await sheets(page, b);
+    await open(page, '#/invoices');
+    const pill = page.locator('#view .datep').first();
+    await expect(pill).toHaveClass(/late/);
+    await pill.hover();
+    expect(await pill.evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
+    await page.goto('food/#/orders');
+    for (const sel of ['#view .badge', '#view .amt.red', 'nav.tabs .n.need']) {
+      const el = page.locator(sel).first();
+      await el.hover();
+      expect(await el.evaluate((e) => getComputedStyle(e).outlineStyle), sel).toBe('none');
+    }
+    const tab = page.locator('nav.tabs a[data-nav="invoices"]');
+    const before = await tab.boundingBox();
+    await tab.hover();
+    await expect.poll(() => tab.locator('.bar').evaluate((e) => e.getBoundingClientRect().width)).toBe(40);
+    expect(await tab.evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
+    expect(await page.locator('nav.tabs a[aria-current="page"]').evaluate((e) => getComputedStyle(e).outlineStyle), 'current tab').toBe('none');
+    expect(await tab.boundingBox()).toEqual(before);
+  });
+
+  for (const scheme of ['light', 'dark']) {
+    test(`${scheme}: meaning-coloured controls (Apply, Not now) keep their OWN colour on hover: own-colour 1px line inside + a pale tint, never ink (tabs are exempt)`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await sheets(page, book());
+      await open(page);
+      const ink = await page.evaluate(() => getComputedStyle(document.body).color);
+      const look = (el) => el.evaluate((e) => { const s = getComputedStyle(e), own = s.getPropertyValue('--mc').trim();
+        const probe = document.createElement('i'); probe.style.color = own; e.appendChild(probe); const oc = getComputedStyle(probe).color; probe.remove();
+        return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, own: oc, bg: s.backgroundColor }; });
+      const check = (l, what) => {
+        expect({ ow: l.ow, os: l.os, oo: l.oo }, what).toEqual({ ow: '1px', os: 'solid', oo: '-1px' });
+        expect(l.oc, what + ': line is not ink').not.toBe(ink);
+        expect(l.oc, what + ': line is its own colour').toBe(l.own);
+        expect(l.bg, what + ': not a solid fill of its colour').not.toBe(l.oc);
+        expect(isTint(l.bg, scheme), `${what}: fill ${l.bg} is a pale tint`).toBe(true);
+      };
+      for (const v of ['Apply', 'Not now']) {
+        const b = page.locator(`#view > .card button[data-v="${v}"]`);
+        await b.hover(); check(await look(b), v);
+      }
+    });
+  }
+
+  test('count pills are one fixed size: 30 x 22px for 1 and 2 digits, centred, round ends', async ({ page }) => {
+    const b = book(); for (let i = 0; i < 10; i++) b.cards.push(['CHK-' + i, 'check', 'Orders', 'Sample check ' + i, '{}', ago(1)]);
+    await sheets(page, b);
+    await open(page, '#/products');
+    await page.locator('[data-filter="all"]').click();
+    const measure = () => page.evaluate(() => [...document.querySelectorAll('.cnt, nav.tabs .n')].filter((e) => e.getBoundingClientRect().width > 1).map((e) => {
+      const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.justifyContent, s.lineHeight, e.scrollWidth <= e.clientWidth]; }));
+    let sizes = await measure();
+    expect(sizes.map((x) => x[0]).sort()).toEqual(['1', '13', '2', '2']);   // product groups 2 and 1, Home 13 (two digits), Orders 2
+    for (const x of sizes) expect(x.slice(1), 'count ' + x[0]).toEqual([30, 22, '11px', 'center', '20px', true]);
+    // The same with a wider fallback font (as on a machine without Lexend): the box stays exactly 30 x 22 and two digits still fit.
+    await page.addStyleTag({ content: '.cnt, nav.tabs .n { font-family: "DejaVu Sans", Verdana, sans-serif !important; }' });
+    sizes = await measure();
+    for (const x of sizes) expect(x.slice(1), 'wide font, count ' + x[0]).toEqual([30, 22, '11px', 'center', '20px', true]);
+  });
+
+  for (const look of ['warm', 'cool']) {
+    test(`${look} clear: the control line is 3:1 or better on the page and on a card (light mode, where it is faintest)`, async ({ page }) => {
+      await page.addInitScript((bg) => localStorage.setItem('dash-look', JSON.stringify({ bg })), look);
+      await page.emulateMedia({ colorScheme: 'light' });
+      await sheets(page, book());
+      await open(page);
+      const r = await page.evaluate(() => {
+        const probe = (v) => { const d = document.createElement('i'); d.style.color = 'var(' + v + ')'; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
+        const rgb = (s) => { const m = /\(srgb ([^)]+)\)|\(([^)]+)\)/.exec(s), v = (m[1] || m[2]).split(/[ ,/]+/).filter(Boolean).map(Number), k = m[1] ? 255 : 1; return [v[0] * k, v[1] * k, v[2] * k]; };
+        const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+        const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+        const ctl = rgb(probe('--ctl'));
+        return { page: ratio(ctl, rgb(probe('--bg'))), card: ratio(ctl, rgb(probe('--surface'))), btn: getComputedStyle(document.querySelector('#view .btn')).borderTopColor === probe('--ctl') };
+      });
+      expect(r.page).toBeGreaterThanOrEqual(3);
+      expect(r.card).toBeGreaterThanOrEqual(3);
+      expect(r.btn).toBe(true);
+    });
+  }
+
+  test('count pills: only 3+ digits grow past 30px', async ({ page }) => {
+    const b = book(); for (let i = 0; i < 120; i++) b.cards.push(['CHK-' + i, 'check', 'Orders', 'Sample check ' + i, '{}', ago(1)]);
+    await sheets(page, b);
+    await open(page);
+    await expect(page.locator('#n-home')).toHaveText('123');
+    await expect(page.locator('#n-home')).toHaveClass(/wide/);
+    await expect(page.locator('#n-orders')).not.toHaveClass(/wide/);
+    const w = await page.locator('#n-home').evaluate((e) => [e.getBoundingClientRect().width, e.scrollWidth <= e.clientWidth]);
+    expect(w[0]).toBeGreaterThan(30); expect(w[1]).toBe(true);
+  });
+
+  test('no solid colour fills: counts, badges, date pills, amounts and the chosen filter are rings or light tints', async ({ page }) => {
+    const b = book(); b.invoices[1][8] = '2026-01-01';
+    await sheets(page, b);
+    await open(page, '#/orders');
+    await page.locator('[data-ofilter="check"]').click();
+    const fills = async () => page.evaluate(() => [...document.querySelectorAll('.cnt, nav.tabs .n, .badge, .datep, .amt, .chip[aria-pressed="true"], .tile .v, .stamp')].filter((e) => e.getBoundingClientRect().width > 1).map((e) => {
+      const s = getComputedStyle(e).backgroundColor, m = /\(srgb ([^)]+)\)|\(([^)]+)\)/.exec(s), v = (m[1] || m[2]).split(/[ ,/]+/).filter(Boolean).map(Number), k = m[1] ? 255 : 1;
+      const [r, g, bl] = [v[0] * k, v[1] * k, v[2] * k], a = v[3] === undefined ? 1 : v[3];
+      return { el: e.className + ' ' + e.textContent.trim().slice(0, 20), a, light: (r + g + bl) / 3 };
+    }).filter((x) => x.a > 0 && x.light < 200));   // a fill that is not a light tint
+    expect(await fills()).toEqual([]);
+    await page.goto('food/#/invoices');
+    expect(await fills()).toEqual([]);
+    await page.goto('food/#/home');
+    expect(await fills()).toEqual([]);
+  });
+
+  test('Home: the first card is the Next card (1px ink edge, "Next:" name line), tab counts are rose rings, the payment date pill shows how close it is', async ({ page }) => {
+    const b = book(); const soon = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10); b.invoices[1][8] = soon;
+    await sheets(page, b);
+    await open(page);
+    const next = page.locator('#view > .card.next');
+    await expect(next).toHaveCount(1);
+    await expect(next.locator('.bline')).toHaveText('Next: GA price changed');
+    expect(await next.evaluate((e) => getComputedStyle(e).borderTopColor)).toBe(await page.evaluate(() => getComputedStyle(document.body).color));
+    await expect(page.locator('#view .needs .cnt.need')).toHaveText('3');
+    await expect(page.locator('#n-orders')).toHaveText('2');   // Items differ + Not at GA
+    const tile = page.locator('#view a.tile', { hasText: 'Next GA payment due' });
+    await expect(tile.locator('.datep')).toHaveText('in 3 days');
+    await expect(tile.locator('.datep')).toHaveClass(/soon/);
+  });
+
+  test('friendly empty states: nothing to answer shows a green-ring tick, unless an order never reached GA (then that is the Next card)', async ({ page }) => {
+    const b = book(); b.cards = [];
+    await sheets(page, b);
+    await open(page);
+    await expect(page.locator('#view .needs .cnt.ok')).toHaveText('0');
+    await expect(page.locator('#view > .card.next')).toContainText('1 order is not at GA');
+    await expect(page.locator('#view > .card.next a.btn')).toHaveAttribute('href', '#/orders?check');
+    const c = book(); c.cards = []; c.orders = c.orders.filter((o, i) => i === 0 || o[26] !== 'Not at GA');
+    await page.unroute(SHEETS);
+    await sheets(page, c);
+    await page.locator('#refresh').click();
+    await expect(page.locator('#view .empty')).toContainText('Nothing needs you');
+    await page.goto('food/#/orders');
+    await page.locator('[data-ofilter="low"]').click();
+    await page.locator('[data-ofilter="sub"]').click();
+    await page.locator('[data-ofilter="ga"]').click();
+    await expect(page.locator('#view .row')).toHaveCount(1);   // only the one waiting
+    await page.goto('food/#/products');
+    await page.locator('[data-find]').fill('nothing like this');
+    await expect(page.locator('#view .empty')).toContainText('No products match');
+  });
+
+  test('a phone (390px): no sideways scroll on any tab, every control is 44px tall, tab counts sit beside the icon', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await sheets(page, book());
+    await open(page);
+    for (const tab of TABS) {
+      await page.goto('food/#/' + tab);
+      await expect(page.locator(`nav.tabs a[data-nav="${tab}"]`)).toHaveAttribute('aria-current', 'page');
+      const over = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+      expect(over, '#/' + tab).toBeLessThanOrEqual(0);
+      const short = await page.evaluate(() => [...document.querySelectorAll('#view button, #view a.btn, #view .chip, header .btn')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
+      expect(short, '#/' + tab).toEqual([]);
+    }
+    expect(await page.locator('#n-home').evaluate((e) => getComputedStyle(e).position)).toBe('static');
+  });
+});
