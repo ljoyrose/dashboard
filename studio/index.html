@@ -25,12 +25,12 @@
      "Warm clear" (default) or "Cool clear" from the Look menu, each with a dark version. No solid fills: selected = an outline. */
   :root { --radius: 12px; --me: var(--ljr-7);
     --paper: #EEE8DF; --canvas: #E3DBCF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --soft: #DED5C7;
-    --bd: var(--line); --band: var(--card); --chip: transparent; --ctl: var(--line); --press: #9C9080;
+    --bd: var(--line); --band: var(--card); --chip: transparent; --ctl: var(--line); --press: #8A7F70;
     --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
     --bg: var(--paper); --surface: var(--card); --sel-bd: var(--ink); --sel-fill: transparent;
     --w2: #C32924; --w3: #9E5802; --w4: #766602; --w5: #217A2D; --w6: #0271A4; --w7: #8850B6;
     --frame: #3A3632; --frame-foot: #46413B; --frame-ink: #F6F1E8; --frame-line: #9C9285; --frame-ok: #8BCF8F; --frame-bad: #F28B85; --frame-warn: #F2A65A; }
-  :root.look-cool { --frame: #33475B; --frame-foot: #405569; --frame-ink: #FFFFFF; --frame-line: #9FB0C0; --press: #8A939D; }
+  :root.look-cool { --frame: #33475B; --frame-foot: #405569; --frame-ink: #FFFFFF; --frame-line: #9FB0C0; --press: #7A8692; }
   :root.look-cool { --paper: #F2F4F6; --canvas: #E4E9EE; --card: #FFFFFF; --ink: #2B3035; --muted: #5B646D; --line: #B9C3CC; --soft: #D9E0E6;
     --bd: #C3CCD4; --band: #FFFFFF; --chip: #F5F7F9; --shadow: 0 1px 2px rgba(20,30,40,.12), 0 1px 8px rgba(20,30,40,.10); }
   @media (prefers-color-scheme: light) { :root.words-light:not([data-theme="dark"]) { --w2: #D93732; --w3: #AD6202; --w4: #877402; --w5: #258631; --w6: #027BB5; --w7: #915CBC; } }
@@ -434,7 +434,8 @@
   @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover, #moreMenu > *:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   span.pill:hover, span.tag:hover, .cnt:hover, .dpill:hover, .stamp:hover { outline: none; }
   /* Counts: one fixed size so 1 and 2 digits match; only 3+ digits grow. */
-  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 6px; border-radius: 11px; }
+  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { box-sizing: border-box; width: 30px; min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 3px; border-radius: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .cnt.wide, nav.tabs .n.wide, .fbtn .n.wide { width: auto; padding: 0 6px; }
   @media (max-width: 544px) { nav.tabs .n { min-width: 30px; height: 24px; min-height: 24px; line-height: 22px; border-radius: 12px; } }
   .pthumb svg, .pthumb .pimg { border-radius: var(--radius); }
 </style>
@@ -544,7 +545,7 @@
   // Links from the sheet: only http(s) opens; anything else becomes a dead '#'.
   function safeUrl(u) { u = String(u == null ? '' : u).trim(); return /^https?:\/\//i.test(u) ? esc(u) : '#'; }
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function cnt(n) { return '<span class="cnt">' + n + '</span>'; }
+  function cnt(n) { return '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + '">' + n + '</span>'; } // 1-2 characters: one exact box; 3+ grow
   function info(t) { return t ? '<span class="info" tabindex="0" title="' + esc(t) + '" aria-label="' + esc(t) + '">i</span>' : ''; }
   function I(n) { return '<i class="ti ti-' + n + '" aria-hidden="true"></i>'; }
   function hm(ts) { return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
@@ -824,7 +825,7 @@
     var s = fsOf(tab), n = fOnCount(tab), srt = pickOf(SORTS, s.sort) || SORTS[0];
     var html = '<div class="fbar" data-bar="' + tab + '"><div class="srow">' +
       '<label class="sbox">' + I('search') + '<input type="search" data-f="fq" value="' + esc(s.q) + '" placeholder="Search" aria-label="Search" autocomplete="off"></label>' +
-      '<button id="filtersBtn" class="fbtn' + (filtersOpen ? ' on' : '') + '" type="button" data-action="filters" aria-expanded="' + filtersOpen + '" aria-controls="fpanel">' + I('adjustments-horizontal') + 'Filter<span class="n">' + (n || '') + '</span></button>' +
+      '<button id="filtersBtn" class="fbtn' + (filtersOpen ? ' on' : '') + '" type="button" data-action="filters" aria-expanded="' + filtersOpen + '" aria-controls="fpanel">' + I('adjustments-horizontal') + 'Filter<span class="n' + (String(n).length > 2 ? ' wide' : '') + '">' + (n || '') + '</span></button>' +
       '<button id="sortBtn" class="fbtn' + (sortOpen ? ' on' : '') + '" type="button" data-action="sort" aria-expanded="' + sortOpen + '" aria-controls="sortpanel" title="Sort: ' + srt[2] + '">' + I('arrows-sort') + 'Sort' + (s.sort !== 'date' ? ': ' + srt[2] : '') + '</button>' +
       LIST_KEYS.map(function (k) { return s[k].map(function (v) { return '<button class="achip" type="button" data-fxoff="' + k + '" data-val="' + esc(v) + '" aria-label="Remove ' + FLAB[k] + ': ' + esc(fName(k, v)) + '">' + FLAB[k] + ': ' + esc(fName(k, v)) + ' <span aria-hidden="true">×</span></button>'; }).join(''); }).join('') +
       (s.test ? '<button class="achip" type="button" data-action="ftest" aria-label="Remove TEST">TEST <span aria-hidden="true">×</span></button>' : '') + '</div>';
@@ -1107,7 +1108,7 @@
   // Board: one column per stage (Line) or per decision (Decide). Head and foot stay put; the list scrolls inside the column.
   // On a desktop the details of the picked card open on the right; on the phone they open under the card.
   var sideOn = false;
-  function icnt(n) { return '<span class="cnt" aria-label="' + n + ' items">' + n + '</span>'; }
+  function icnt(n) { return '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + '" aria-label="' + n + ' items">' + n + '</span>'; }
   function needsYou(a) { var k = kindFor(a); return k === 'gate' || k === 'review' || k === 'hand' || a.flags.indexOf('needs-input') >= 0; }
   function column(o) {
     var need = o.need != null ? o.need : o.items.filter(needsYou).length, ai = o.items.reduce(function (t, a) { return t + (Number(a.cost) || 0); }, 0);
@@ -1630,6 +1631,7 @@
     $('nDo').textContent = doItems().filter(waiting('me')).length || '';
     $('nLine').textContent = inProgress().filter(waiting('assets')).length || '';
     $('nKits').textContent = toolWarnings() || '';
+    ['nMe', 'nDecide', 'nDo', 'nLine', 'nKits'].forEach(function (k) { $(k).classList.toggle('wide', $(k).textContent.length > 2); });
     var tb = barTab(); if (tb) toUrl(tb);
     v.setAttribute('data-view', route[0] || 'me');
     var keep = boardScroll(), bt = route[0] === 'line' || route[0] === 'decide' ? route[0] : null;

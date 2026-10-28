@@ -1247,6 +1247,17 @@ test.describe('Studio page', () => {
       });
       expect(bad, key).toEqual([]);
     }
+    // The resting line on pressables is at least 3:1 against the page, warm and cool.
+    const pressContrast = () => page.evaluate(() => {
+      const rgb = (c) => { if (c.startsWith('#')) return c.slice(1).match(/../g).map((x) => parseInt(x, 16)); return c.match(/[\d.]+/g).slice(0, 3).map(Number); };
+      const lum = ([r, g, b]) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const a = lum(rgb(getComputedStyle(document.documentElement).getPropertyValue('--press').trim())), b = lum(rgb(getComputedStyle(document.body).backgroundColor));
+      return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    });
+    expect(await pressContrast(), 'warm').toBeGreaterThanOrEqual(3);
+    await page.evaluate(() => document.documentElement.classList.add('look-cool'));
+    expect(await pressContrast(), 'cool').toBeGreaterThanOrEqual(3);
+    await page.evaluate(() => document.documentElement.classList.remove('look-cool'));
     // Read-only things never hover; pressables always do.
     await go(page, 'line');
     for (const sel of ['.col-head .cnt', '.crow .dpill', '.crow [data-chip="need"]']) {
