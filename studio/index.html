@@ -522,7 +522,8 @@
  *        masterId, purpose, sources: [{ kind: link|upload|note, url, fileName, note, rights }]} · set {who | priority} · studio {on} ·
  *        tool {product, thing, unit, capabilities, inputs, outputs, fit, costPerUnit, allowance, period, resetsOn, carriesOver,
  *        accountNotes, audit} · done {assetId, creditsUsed?: {product, units}} · check {brandId, item, ok} ·
- *        source {assetId, source} · library {table: playbooks|packs|kits|bricks, op: new|edit, id?, fields} · libsuggest {table, text} · rights {assetId, clientMaterial: yes|no, sourceRights: kept|sold} · paid {assetId, paid: yes|no};
+ *        source {assetId, source} · library {table: playbooks|packs|kits|bricks, op: new|edit, id?, fields} · libsuggest {table, text} · rights {assetId, clientMaterial: yes|no, sourceRights: kept|sold} · paid {assetId, paid: yes|no} · protect {target: account|project, id, protect: ''|yes|no};
+ *        rights may instead carry disclose (yes|no) or protect (''|yes|no, '' = inherit) on its own;
  *        library may carry fromAssetId (refused by the engine for client material).   Undo = the request file goes to Drive Trash
  *        before the engine's next run (every 15 min at :03 :18 :33 :48).
  *
@@ -1256,6 +1257,13 @@
   function qbox(key, extra) { return '<div class="srow"><label class="sbox">' + I('search') + '<input type="search" data-lq="' + key + '" value="' + esc(lq[key] || '') + '" aria-label="Search" autocomplete="off"></label></div>' + (extra || ''); }
   function lqHit(key, text) { var q = (lq[key] || '').toLowerCase().trim(); return !q || q.split(/\s+/).every(function (w) { return String(text).toLowerCase().indexOf(w) >= 0; }); }
   // VAT rates (engine v0.2.18, read-only; edited in the Sheet): country, rate, the date it was checked.
+  function accountsCard() {
+    var A = S.accounts || []; if (!A.length) return '';
+    return '<div class="card" data-accounts><div class="sect">' + I('users') + 'Accounts</div>' + A.map(function (x) {
+      var cur = protOf('account', x), eff = cur || x.protectEffective || (x.kind === 'client' ? 'yes' : 'no');
+      return '<div class="rrow" data-account="' + esc(x.id) + '"><span class="rlab">' + esc(x.name) + '</span><span class="muted">Protection default: ' + (eff === 'yes' ? 'Protected' : 'Off') + '</span>' + protSeg('data-aprot="' + esc(x.id) + '"', cur, 'Default') + '</div>';
+    }).join('') + '</div>';
+  }
   function vatRatesCard() {
     var V = S.vatRates || []; if (!V.length) return '';
     return '<div class="card" data-vatrates><div class="sect">' + I('receipt-tax') + 'VAT rates <span class="muted">(edited in the Sheet)</span></div><dl class="kv">' +
@@ -1273,7 +1281,7 @@
         '<div class="strip b6">' + BSTAGES.map(function (_, i) { return '<i class="' + (i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>' +
         '<div class="blab" title="' + BSTAGES.join(' · ') + '">' + (n >= 0 ? (n + 1) + '/6 · ' + esc(b.stage) : '') + '</div>' + kitStrip(b) +
         (ck.length ? '<div class="sect">' + I('list-check') + 'Set-up ' + cnt(done + '/' + ck.length) + '</div><ul class="chk">' + ck.map(function (x) { return '<li class="' + (x.ok ? 'ok' : '') + '"><button type="button" data-check="' + esc(b.id) + '" data-item="' + esc(x.name) + '" aria-pressed="' + !!x.ok + '"' + dis() + '>' + I(x.ok ? 'circle-check' : 'circle-dashed') + esc(x.name) + '</button></li>'; }).join('') + '</ul>' : '') + '</section>';
-    }).join('') + '</div>' + vatRatesCard();
+    }).join('') + '</div>' + accountsCard() + vatRatesCard();
   }
   function vTools() {
     var T = S.tools || [], G = S.gaps || [];
@@ -1707,6 +1715,7 @@
     var now = Date.now();
     Object.keys(pend).forEach(function (id) {
       var p = pend[id];
+      if (id.indexOf('prot|') === 0) { var pb = id.split('|'), px = ((pb[1] === 'account' ? S.accounts : S.products) || []).filter(function (x) { return x.id === pb[2]; })[0]; if (now - p.at > 36e5 || !px || (px.protect || '') === p.protect) delete pend[id]; return; }
       if (id.indexOf('sug|') === 0) { if (now - p.at > 36e5 || !S.suggestions.some(function (g) { return 'sug|' + g.id === id; })) delete pend[id]; return; }
       if (id === 'studio') { if (now - p.at > 36e5 || !!S.studio.on === p.on) delete pend[id]; return; }
       if (id.indexOf('chk|') === 0) { var bits = id.split('|'), it = (brand(bits[1]).setupChecklist || []).filter(function (x) { return x.name === bits.slice(2).join('|'); })[0]; if (!it || now - p.at > 36e5 || !!it.ok === p.ok) delete pend[id]; return; }
@@ -1719,6 +1728,8 @@
       if (p.clientMaterial !== undefined) a.clientMaterial = p.clientMaterial;
       if (p.sourceRights !== undefined) a.sourceRights = p.sourceRights;
       if (p.paid !== undefined) a.paid = p.paid;
+      if (p.disclose !== undefined) a.disclose = p.disclose;
+      if (p.protectOwn !== undefined) { if (p.protectOwn) { a.protect = p.protectOwn; a.protectSource = 'item'; } else if (a.protectSource === 'item') a.protectSource = ''; }
     });
     saveLocal('st-pend', pend);
   }
@@ -1734,8 +1745,15 @@
   function sendRights(id, patch) {
     if (EX) return;
     var x = byId(id); if (!x) return;
-    var body = { kind: 'rights', accountId: ownerId(), assetId: id, clientMaterial: patch.clientMaterial !== undefined ? (patch.clientMaterial ? 'yes' : 'no') : isCM(x) ? 'yes' : 'no', sourceRights: patch.sourceRights || (x.sourceRights === 'sold' ? 'sold' : 'kept'), at: new Date().toISOString() };
-    pend[id] = Object.assign(pend[id] || {}, { clientMaterial: body.clientMaterial, sourceRights: body.sourceRights }, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); render();
+    var body = { kind: 'rights', accountId: ownerId(), assetId: id, at: new Date().toISOString() }, show = {};
+    if (patch.disclose !== undefined || patch.protect !== undefined) { // engine v0.2.19: one of these on its own; protect '' = inherit
+      if (patch.disclose !== undefined) body.disclose = show.disclose = patch.disclose;
+      if (patch.protect !== undefined) { body.protect = patch.protect; show.protectOwn = patch.protect; }
+    } else {
+      body.clientMaterial = show.clientMaterial = patch.clientMaterial !== undefined ? (patch.clientMaterial ? 'yes' : 'no') : isCM(x) ? 'yes' : 'no';
+      body.sourceRights = show.sourceRights = patch.sourceRights || (x.sourceRights === 'sold' ? 'sold' : 'kept');
+    }
+    pend[id] = Object.assign(pend[id] || {}, show, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); render();
     var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
     withWrite(function () { return putRequest('rights', body).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
@@ -1749,10 +1767,26 @@
     var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
     withWrite(function () { return putRequest('paid', { kind: 'paid', accountId: ownerId(), assetId: id, paid: val, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
+  // Account default and project protection: one owner-side 'protect' request {target: account|project, id, protect: ''|yes|no}.
+  function sendProtect(target, id, val) {
+    if (EX) return;
+    var key = 'prot|' + target + '|' + id; pend[key] = { protect: val, at: Date.now() }; saveLocal('st-pend', pend); render();
+    var back = function () { delete pend[key]; saveLocal('st-pend', pend); render(); };
+    withWrite(function () { return putRequest('protect', { kind: 'protect', accountId: ownerId(), target: target, id: id, protect: val, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+  }
+  function protOf(target, x) { var p = pend['prot|' + target + '|' + x.id]; return p ? p.protect : (x.protect || ''); }
+  var PROT_SRC = { item: 'set here', project: 'from project', account: 'from account', kind: 'by account kind' };
+  function protSeg(attrs, cur, inheritWord) {
+    return '<div class="seg" role="group" aria-label="Protection">' + [['', inheritWord], ['yes', 'On'], ['no', 'Off']].map(function (o) { return '<button type="button" ' + attrs + ' data-val="' + o[0] + '" aria-pressed="' + (cur === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div>';
+  }
   function deliveryRows(a) {
     var prot = a.protect === 'yes', paid = a.paid === 'yes', approved = a.stage >= 8, tick = function (ok, w) { return '<span class="tick' + (ok ? ' ok' : '') + '" data-tick="' + w + '">' + w + ' ' + (ok ? '\u2713' : '\u2717') + '</span>'; };
-    var rows = '<div class="rrow" data-protect="' + (prot ? 'yes' : 'no') + '"><span class="rlab">Protection</span><span>' + (prot ? 'Protected' : 'Off') + ' \u00b7 ' + (isClient(a) ? 'client account' : 'own brand') + '</span></div>' +
-      '<div class="rrow"><span class="rlab">AI note on delivery</span><span data-disclose>' + (a.disclose === 'no' ? 'Off' : 'On') + '</span></div>' +
+    var src = a.protectSource ? PROT_SRC[a.protectSource] || a.protectSource : isClient(a) ? 'client account' : 'own brand', pr = a.productId ? (S.products || []).filter(function (x) { return x.id === a.productId; })[0] : null;
+    var rows = '<div class="rrow" data-protect="' + (prot ? 'yes' : 'no') + '"><span class="rlab">Protection</span><span data-protect-eff>' + (prot ? 'Protected' : 'Off') + ' \u00b7 ' + esc(src) + '</span>' +
+      protSeg('data-iprot="' + esc(a.id) + '"', a.protectSource === 'item' ? (prot ? 'yes' : 'no') : '', 'Inherit') + '</div>' +
+      (pr ? '<div class="rrow" data-projprot="' + esc(pr.id) + '"><span class="rlab">Project ' + esc(pr.name) + '</span>' + protSeg('data-pprot="' + esc(pr.id) + '"', protOf('project', pr), 'Inherit') +
+        '<span class="muted">account default: ' + ((account(pr.accountId || a.accountId).protectEffective || (isClient(a) ? 'yes' : 'no')) === 'yes' ? 'Protected' : 'Off') + '</span></div>' : '') +
+      '<div class="rrow"><span class="rlab">AI note on delivery</span><div class="seg" role="group" aria-label="AI note on delivery">' + [['yes', 'On'], ['no', 'Off']].map(function (o) { return '<button type="button" data-disc="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + ((a.disclose === 'no' ? 'no' : 'yes') === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div>' +
       '<div class="rrow"><span class="rlab">Paid</span><div class="seg" role="group" aria-label="Paid">' + [['yes', 'Yes'], ['no', 'No']].map(function (o) { return '<button type="button" data-paid="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + ((paid ? 'yes' : 'no') === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div>';
     if (a.hasProof) rows += '<div class="rrow"><span class="rlab">Proof (low-res)</span>' + (a.reviewLink ? '<a href="' + safeUrl(a.reviewLink) + '" target="_blank" rel="noopener" data-proof>Open the proof</a>' : '<span>Shared</span>') + '</div>';
     if (prot) rows += '<div class="rrow" data-fullsize><span class="rlab">Full size</span><span>' + (approved && paid ? 'Released' : 'Held until approved + paid') + '</span>' + tick(approved, 'Approved') + tick(paid, 'Paid') + '</div>';
@@ -1898,6 +1932,10 @@
     var ln = e.target.closest('[data-libnew]'); if (ln && !ln.disabled) { var lt = ln.getAttribute('data-libnew'); libDraft = { t: lt, op: 'new', f: {}, at: Date.now() }; libErr = {}; delete libSent[lt]; saveLocal('st-lib', libDraft); render(); var lf0 = document.querySelector('[data-libform] [data-lf]'); if (lf0) lf0.focus(); return; }
     var le = e.target.closest('[data-libedit]'); if (le && !le.disabled) { var et = le.getAttribute('data-libedit'), eid = le.getAttribute('data-id'); libDraft = { t: et, op: 'edit', id: eid, f: libFrom(et, eid), at: Date.now() }; libErr = {}; delete libSent[et]; saveLocal('st-lib', libDraft); render(); var lf1 = document.querySelector('[data-libform] [data-lf]'); if (lf1) { lf1.focus(); lf1.scrollIntoView({ block: 'center' }); } return; }
     var rs = e.target.closest('[data-rset]'); if (rs && !rs.disabled) { var rk = rs.getAttribute('data-rset'), rv = rs.getAttribute('data-val'), rp = {}; rp[rk] = rk === 'clientMaterial' ? rv === 'true' : rv; sendRights(rs.getAttribute('data-id'), rp); return; }
+    var ip = e.target.closest('[data-iprot]'); if (ip && !ip.disabled) { sendRights(ip.getAttribute('data-iprot'), { protect: ip.getAttribute('data-val') }); return; }
+    var dc = e.target.closest('[data-disc]'); if (dc && !dc.disabled) { sendRights(dc.getAttribute('data-id'), { disclose: dc.getAttribute('data-disc') }); return; }
+    var pp = e.target.closest('[data-pprot]'); if (pp && !pp.disabled) { sendProtect('project', pp.getAttribute('data-pprot'), pp.getAttribute('data-val')); return; }
+    var ap = e.target.closest('[data-aprot]'); if (ap && !ap.disabled) { sendProtect('account', ap.getAttribute('data-aprot'), ap.getAttribute('data-val')); return; }
     var pd = e.target.closest('[data-paid]'); if (pd && !pd.disabled) { sendPaid(pd.getAttribute('data-id'), pd.getAttribute('data-paid')); return; }
     var sk = e.target.closest('[data-savekit]'); if (sk && !sk.disabled) { var sa = byId(sk.getAttribute('data-savekit')); if (sa && !isCM(sa)) { libDraft = { t: 'kits', op: 'new', from: sa.id, f: { name: bare(sa), type: sa.type, formatIds: (sa.formatIds || []).slice(), frameworkId: sa.frameworkId || '', voiceId: sa.voiceId || '', lookId: sa.lookId || '' }, at: Date.now() }; libErr = {}; saveLocal('st-lib', libDraft); location.hash = '#/kits/kits'; } return; }
     var lb = e.target.closest('[data-lbasis]'); if (lb && libDraft.t) { libDraft.f = libDraft.f || {}; libDraft.f.priceBasis = lb.getAttribute('data-lbasis'); saveLocal('st-lib', libDraft); render(); return; }

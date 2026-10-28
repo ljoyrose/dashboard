@@ -1504,7 +1504,7 @@ test.describe('Studio page', () => {
     await expect(box.locator('[data-fullsize]')).toContainText('Held until approved + paid');
     await expect(box.locator('[data-tick="Approved"]')).toHaveText('Approved ✓');
     await expect(box.locator('[data-tick="Paid"]')).toHaveText('Paid ✗');
-    await expect(box.locator('[data-disclose]')).toHaveText('On');
+    await expect(box.locator('[data-disc="yes"]')).toHaveAttribute('aria-pressed', 'true'); // AI note on by default
     await expect(page.locator('#view')).not.toContainText('SHOULD-NEVER-SHOW'); // the final file's link never shows before release
     await box.locator('[data-paid="yes"]').click();
     await expect.poll(() => got.length).toBe(1);
@@ -1516,6 +1516,27 @@ test.describe('Studio page', () => {
     await details(page, 'sa-client');
     await expect(page.locator('[data-delivery="sa-client"] [data-chip="lowres"]')).toHaveText('Low-res + watermark');
     await expect(page.locator('[data-delivery="sa-client"] [data-watermark]')).toHaveText('Add Studio watermark layer');
+    // Switches (engine v0.2.19): AI note and item protection go in a rights request on their own; project and account in a protect request.
+    const box2 = page.locator('[data-delivery="sa-client"]');
+    await box2.locator('[data-disc="no"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(got[1].body).toEqual(expect.objectContaining({ kind: 'rights', assetId: 'sa-client', disclose: 'no' }));
+    expect(got[1].body.clientMaterial).toBeUndefined();
+    await page.locator('[data-delivery="sa-client"] [data-iprot="sa-client"][data-val="no"]').click();
+    await expect.poll(() => got.length).toBe(3);
+    expect(got[2].body).toMatchObject({ kind: 'rights', assetId: 'sa-client', protect: 'no' });
+    await expect(page.locator('[data-delivery="sa-client"] [data-protect-eff]')).toHaveText('Off · set here');
+    await page.locator('[data-delivery="sa-client"] [data-pprot="sp-client"][data-val="yes"]').click();
+    await expect.poll(() => got.length).toBe(4);
+    expect(got[3].body).toMatchObject({ kind: 'protect', accountId: 'acc-owner', target: 'project', id: 'sp-client', protect: 'yes' });
+    await expect(page.locator('[data-projprot="sp-client"]')).toContainText('account default: Protected');
+    await go(page, 'brands');
+    const acc = page.locator('[data-accounts] [data-account="acc-client"]');
+    await expect(acc).toContainText('Protection default: Protected');
+    await acc.locator('[data-aprot="acc-client"][data-val="no"]').click();
+    await expect.poll(() => got.length).toBe(5);
+    expect(got[4].body).toMatchObject({ kind: 'protect', target: 'account', id: 'acc-client', protect: 'no' });
+    await expect(page.locator('[data-accounts] [data-account="acc-client"]')).toContainText('Protection default: Off');
     void dd;
   });
 

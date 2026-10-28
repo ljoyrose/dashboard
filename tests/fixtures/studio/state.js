@@ -18,11 +18,11 @@
       generated_at: iso(-60e3),
       studio: { on: true, mode: 'TEST', budgetMonth: 50, spentMonth: 20 },
       health: { lastRun: iso(-10 * 60e3), jobs: [{ job: 'syncState', result: 'OK', last: iso(-10 * 60e3), note: 'sample' }] },
-      accounts: [{ id: 'acc-owner', name: 'Sample owner', kind: 'owner' }, { id: 'acc-client', name: 'Sample client', kind: 'client' }],
+      accounts: [{ id: 'acc-owner', name: 'Sample owner', kind: 'owner', protect: '', protectEffective: 'no' }, { id: 'acc-client', name: 'Sample client', kind: 'client', protect: '', protectEffective: 'yes' }],
       groups: [{ id: 'grp-dogs', name: 'Dogs' }, { id: 'grp-apps', name: 'Apps' }, { id: 'grp-services', name: 'Client services' }, { id: 'grp-lisa', name: 'Lisa' }],
       products: [
-        { id: 'sp-course', accountId: 'acc-owner', brandId: 'sb-north', name: 'Sample course', type: 'course' },
-        { id: 'sp-client', accountId: 'acc-client', brandId: 'sb-client', name: 'Sample client book', type: 'book' }
+        { id: 'sp-course', accountId: 'acc-owner', brandId: 'sb-north', name: 'Sample course', type: 'course', protect: '', protectEffective: 'no' },
+        { id: 'sp-client', accountId: 'acc-client', brandId: 'sb-client', name: 'Sample client book', type: 'book', protect: '', protectEffective: 'yes' }
       ],
       brands: [
         { id: 'sb-north', accountId: 'acc-owner', name: 'Sample Brand North', colour: 7, stage: 'Running', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }, { name: 'Email list', ok: false }], groupId: 'grp-dogs', voiceId: 'vo-warm', lookId: 'look-combination', kit: { canvaKitId: null, canvaKitUrl: null, font: null, colours: ['#A570D1'], fontHeading: 'Lexend', fontBody: null, logoIds: [], logo: 'https://www.example.com/north-logo.png', voice: null, designRoute: null, website: 'https://www.example.com/north' } },
