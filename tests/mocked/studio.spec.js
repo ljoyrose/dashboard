@@ -1324,7 +1324,7 @@ test.describe('Studio page', () => {
     await c.locator('textarea').fill('Use the second photo.');
     await c.locator('button[type="submit"]').click();
     await expect.poll(() => got.length).toBe(1);
-    expect(got[0].body).toMatchObject({ kind: 'comment', assetId: 'sa-client', thread: 'team', text: 'Use the second photo.', accountId: 'acc-client' });
+    expect(got[0].body).toMatchObject({ kind: 'comment', assetId: 'sa-client', thread: 'team', text: 'Use the second photo.', accountId: 'acc-owner' }); // the owner's account, even on a client item
     await expect(c.locator('.cthread .cm.pend')).toContainText('Use the second photo.');
     // The client thread: every comment labelled, the warning above the box, and the team's own note is not there.
     await c.locator('[data-ctab="client"]').click();

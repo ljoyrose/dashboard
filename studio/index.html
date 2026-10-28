@@ -1096,7 +1096,8 @@
   /* ---------- Comments: two threads per item, never mixed (Lisa, 28 Oct 2026) ----------
    * Team (default) is internal and never shown to a client. Client is what the client sees: every comment there carries a
    * "Client" label with a people icon, and "Client can see this" sits above its box. Writes one `comment` request
-   * { kind, assetId, thread: team|client, text }; the engine keeps them (COMMENTS tab) and returns state.comments. */
+   * { kind, accountId (always the OWNER: this page is the team's; a client accountId would be stored as a client comment),
+   * assetId, thread: team|client, text (1-2000) } (engine v0.2.16: COMMENTS tab; state.comments, optional until it runs). */
   var ctab = {}, cpend = loadLocal('st-cpend');
   function cthreads(a) { return isClient(a) ? ['team', 'client'] : ['team']; }
   function comments(a) {
@@ -1126,7 +1127,7 @@
     cpend[id] = cpend[id] || { list: [], at: Date.now() }; cpend[id].list.push(c); cpend[id].at = Date.now(); saveLocal('st-cpend', cpend);
     delete drafts[key]; saveLocal('st-drafts', drafts); render();
     var back = function () { cpend[id].list = cpend[id].list.filter(function (x) { return x !== c; }); drafts[key] = text; saveLocal('st-cpend', cpend); saveLocal('st-drafts', drafts); render(); };
-    withWrite(function () { return putRequest('comment', { kind: 'comment', accountId: a.accountId, assetId: id, thread: thread, text: text, at: c.at }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+    withWrite(function () { return putRequest('comment', { kind: 'comment', accountId: ownerId(), assetId: id, thread: thread, text: text, at: c.at }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
   // A sent comment shows at once ("Sending…" until the engine returns it in state.comments; dropped after a day).
   function applyCpend() { Object.keys(cpend).forEach(function (id) { var p = cpend[id]; p.list = (p.list || []).filter(function (c) { return !S.comments.some(function (x) { return x.assetId === id && x.text === c.text && (x.thread || 'team') === c.thread; }) && Date.now() - Date.parse(c.at) < 864e5; }); if (!p.list.length) delete cpend[id]; }); saveLocal('st-cpend', cpend); }
