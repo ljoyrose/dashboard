@@ -1022,11 +1022,13 @@ test.describe('Studio page', () => {
     await open(page, guard, '#/line');
     await openFilters(page);
     const h = (sel) => page.locator(sel).first().evaluate((e) => Math.round(e.getBoundingClientRect().height));
-    for (const sel of ['.col-head .cnt', '.subnav .cnt', '.crow .tag', '#stamp', 'nav.tabs #nLine']) expect(await h(sel), sel).toBe(24);
+    for (const sel of ['.crow .tag', '#stamp']) expect(await h(sel), sel).toBe(24);
+    for (const sel of ['.col-head .cnt', '.subnav .cnt', 'nav.tabs #nLine']) expect(await h(sel), sel).toBe(22); // counts: one fixed size
     for (const sel of ['#newBtn', '#fpanel [data-fx]', '#filtersBtn', '#sortBtn', '.subnav a', '[data-vmode="list"]', '.crow .ico', '.crow .btn', '#enginePill']) expect(await h(sel), sel).toBe(36);
     // One corner radius (12px) on everything; circles only for status dots.
     const r = (sel) => page.locator(sel).first().evaluate((e) => getComputedStyle(e).borderTopLeftRadius);
-    for (const sel of ['.col', '.col-list .crow', '#fpanel', '#newBtn', '#fpanel [data-fx]', '.subnav a', 'nav.tabs a', '.col-head .cnt', '.fbar .sbox', '.crow .tag']) expect(await r(sel), sel).toBe('12px');
+    for (const sel of ['.col', '.col-list .crow', '#fpanel', '#newBtn', '#fpanel [data-fx]', '.subnav a', 'nav.tabs a', '.fbar .sbox', '.crow .tag', '.pthumb svg']) expect(await r(sel), sel).toBe('12px');
+    expect(await r('.col-head .cnt')).toBe('11px');
     await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 390, height: 844 });
     for (const sel of ['#moreBtn', '#filtersBtn', '.subnav a', '.crow .ico']) expect(await h(sel), sel + ' on the phone').toBe(44);
@@ -1182,7 +1184,8 @@ test.describe('Studio page', () => {
     await expect(page.locator('.hello h2')).toHaveCSS('font-size', '22px');
     const ys = await sums.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
     expect(new Set(ys).size, 'the three fit in one row').toBe(1);
-    expect((await page.locator('[data-needs]').boundingBox()).y).toBeLessThan((await n.boundingBox()).y);
+    // Read both positions in one go: the page redraws when it crosses into phone width.
+    await expect.poll(() => page.evaluate(() => { const a = document.querySelector('[data-needs]'), b = document.querySelector('[data-next]'); return !!(a && b) && a.getBoundingClientRect().top < b.getBoundingClientRect().top; })).toBe(true);
     await noSidewaysScroll(page, 'Me on the phone');
   });
 
@@ -1209,6 +1212,47 @@ test.describe('Studio page', () => {
     const tt = await page.locator('.crow[data-row="sa-make"] .ttl').boundingBox(), mk = await page.locator('.crow[data-row="sa-make"] .selmark').boundingBox();
     expect(mk.x - (tt.x + tt.width)).toBeLessThan(12); // the tick sits right after the title text
     void d;
+  });
+
+  test('consistency: every pressable on every tab rests on one clear 1px line, 12px, 36px, 14px/600; read-only things never hover; counts are one size', async ({ page, guard }) => {
+    await open(page, guard, '#/me');
+    const ink = await page.evaluate(() => getComputedStyle(document.body).color);
+    for (const key of TABS.concat(['engine', 'asset/sa-make'], KIT_SUBS)) {
+      await go(page, key);
+      if (key === 'line') { await page.locator('.crow .ttl').first().click(); await openFilters(page); }
+      const bad = await page.evaluate(() => {
+        const press = getComputedStyle(document.documentElement).getPropertyValue('--press').trim();
+        const hex = (h) => { const m = h.replace('#', '').match(/../g).map((x) => parseInt(x, 16)); return 'rgb(' + m.join(', ') + ')'; };
+        const ok = [hex(press), getComputedStyle(document.querySelector('nav.tabs')).getPropertyValue('--ljr-5').trim(), getComputedStyle(document.documentElement).getPropertyValue('--ljr-2').trim()].map((c) => c.startsWith('#') ? hex(c) : c);
+        const out = [];
+        document.querySelectorAll('#view button, #view a.btn, #view a.pill, #view a.tag, #view .lk, .fbar .sbox').forEach((e) => {
+          if (!e.offsetParent || e.matches('.ttl, .subnav a, .mrow, [data-kitnav]') || e.closest('.subnav, #moreMenu, .kv, .chk')) return;
+          const c = getComputedStyle(e), h = Math.round(e.getBoundingClientRect().height);
+          const why = [];
+          if (c.borderTopWidth !== '1px' || c.borderTopStyle !== 'solid') why.push('border ' + c.borderTopWidth + ' ' + c.borderTopStyle);
+          if (ok.indexOf(c.borderTopColor) < 0) why.push('line ' + c.borderTopColor);
+          if (c.borderTopLeftRadius !== '12px') why.push('radius ' + c.borderTopLeftRadius);
+          if (h !== 36) why.push('height ' + h);
+          if (!e.matches('.sbox') && (c.fontSize !== '14px' || c.fontWeight !== '600')) why.push('font ' + c.fontSize + '/' + c.fontWeight);
+          if (why.length) out.push((e.className || e.tagName) + ' "' + e.textContent.trim().slice(0, 14) + '": ' + why.join(', '));
+        });
+        document.querySelectorAll('.cnt').forEach((e) => {
+          if (!e.offsetParent) return; const b = e.getBoundingClientRect(), c = getComputedStyle(e);
+          if (Math.round(b.height) !== 22 || c.borderTopLeftRadius !== '11px' || (e.textContent.trim().length <= 2 && Math.round(b.width) !== 30)) out.push('count "' + e.textContent + '" ' + Math.round(b.width) + 'x' + Math.round(b.height) + ' r' + c.borderTopLeftRadius);
+        });
+        return out.slice(0, 6);
+      });
+      expect(bad, key).toEqual([]);
+    }
+    // Read-only things never hover; pressables always do.
+    await go(page, 'line');
+    for (const sel of ['.col-head .cnt', '.crow .dpill', '.crow [data-chip="need"]']) {
+      const el = page.locator(sel).first(); if (!(await el.count())) continue;
+      await el.hover();
+      await expect(el, sel + ' is read-only').toHaveCSS('outline-style', 'none');
+    }
+    const b = page.locator('#filtersBtn'); await b.hover();
+    await expect(b).toHaveCSS('outline-color', ink);
   });
 
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {

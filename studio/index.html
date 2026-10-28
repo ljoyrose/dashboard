@@ -25,12 +25,12 @@
      "Warm clear" (default) or "Cool clear" from the Look menu, each with a dark version. No solid fills: selected = an outline. */
   :root { --radius: 12px; --me: var(--ljr-7);
     --paper: #EEE8DF; --canvas: #E3DBCF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --soft: #DED5C7;
-    --bd: var(--line); --band: var(--card); --chip: transparent; --ctl: var(--line);
+    --bd: var(--line); --band: var(--card); --chip: transparent; --ctl: var(--line); --press: #9C9080;
     --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
     --bg: var(--paper); --surface: var(--card); --sel-bd: var(--ink); --sel-fill: transparent;
     --w2: #C32924; --w3: #9E5802; --w4: #766602; --w5: #217A2D; --w6: #0271A4; --w7: #8850B6;
     --frame: #3A3632; --frame-foot: #46413B; --frame-ink: #F6F1E8; --frame-line: #9C9285; --frame-ok: #8BCF8F; --frame-bad: #F28B85; --frame-warn: #F2A65A; }
-  :root.look-cool { --frame: #33475B; --frame-foot: #405569; --frame-ink: #FFFFFF; --frame-line: #9FB0C0; }
+  :root.look-cool { --frame: #33475B; --frame-foot: #405569; --frame-ink: #FFFFFF; --frame-line: #9FB0C0; --press: #8A939D; }
   :root.look-cool { --paper: #F2F4F6; --canvas: #E4E9EE; --card: #FFFFFF; --ink: #2B3035; --muted: #5B646D; --line: #B9C3CC; --soft: #D9E0E6;
     --bd: #C3CCD4; --band: #FFFFFF; --chip: #F5F7F9; --shadow: 0 1px 2px rgba(20,30,40,.12), 0 1px 8px rgba(20,30,40,.10); }
   @media (prefers-color-scheme: light) { :root.words-light:not([data-theme="dark"]) { --w2: #D93732; --w3: #AD6202; --w4: #877402; --w5: #258631; --w6: #027BB5; --w7: #915CBC; } }
@@ -38,8 +38,8 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --paper: #181613; --canvas: #1F1C18; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --soft: #2F2A24;
       --bd: var(--line); --band: var(--card); --chip: transparent; --shadow: 0 1px 3px rgba(0,0,0,.4);
-      --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; --ctl: #7D7366; }
-    :root.look-cool:not([data-theme="light"]) { --frame: #24323F; --frame-foot: #2D3D4C; --ctl: #6F7A85; }
+      --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; --ctl: #7D7366; --press: #857B6E; }
+    :root.look-cool:not([data-theme="light"]) { --frame: #24323F; --frame-foot: #2D3D4C; --ctl: #6F7A85; --press: #7A8691; }
     :root.look-cool:not([data-theme="light"]) { --paper: #16191C; --canvas: #1C2024; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --soft: #2B3137; --bd: var(--line); --band: var(--card); --chip: var(--card); }
   }
   /* Mode = Dark from the Look menu: tokens.css only darkens with the device, so its dark spine is repeated here. */
@@ -50,8 +50,8 @@
     --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
     --paper: #181613; --canvas: #1F1C18; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --soft: #2F2A24;
     --bd: var(--line); --band: var(--card); --chip: transparent; --shadow: 0 1px 3px rgba(0,0,0,.4);
-    --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; --ctl: #7D7366; }
-  :root.look-cool[data-theme="dark"] { --frame: #24323F; --frame-foot: #2D3D4C; --ctl: #6F7A85; }
+    --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; --ctl: #7D7366; --press: #857B6E; }
+  :root.look-cool[data-theme="dark"] { --frame: #24323F; --frame-foot: #2D3D4C; --ctl: #6F7A85; --press: #7A8691; }
   :root.look-cool[data-theme="dark"] { --paper: #16191C; --canvas: #1C2024; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --soft: #2B3137; --bd: var(--line); --band: var(--card); --chip: var(--card); }
   /* Coloured words are the darker set (Look › Coloured words › Lighter swaps it). */
   :root, :root[data-theme] { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); }
@@ -75,7 +75,6 @@
   .stamp { font-size: 13px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; }
   .stamp:empty { display: none; }
   .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 14px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
-  .btn.main { border-color: var(--ink); }
   #backHome { min-height: 44px; }
   html.dash-locked #backHome { margin-left: auto; } /* signed out the title is hidden, so the button keeps its top-right place */
   .btn[disabled] { cursor: not-allowed; opacity: .55; }
@@ -421,6 +420,22 @@
     .three { flex-wrap: nowrap; gap: 6px; } .three .sum { padding: 4px 8px 4px 4px; gap: 6px; font-size: 13px; flex: 1; min-width: 0; } .three .sum .big { font-size: 17px; min-width: 30px; height: 30px; padding: 0 6px; }
     .mecards .need-card { order: -1; }
   }
+  /* Consistency (Lisa, 28 Oct): everything you can press rests on ONE clear line (--press, 3:1 on the card), 1px, 12px radius,
+     36px (44px phone), 14px/600, and hovers with the same 1px ink line. Yes = green line, destructive = rose line. Nothing starts ink.
+     Read-only things (status, counts, dates, label chips) never hover. Containers keep the softer --line. */
+  .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { border: 1px solid var(--press); display: inline-flex; align-items: center; border-radius: var(--radius); font-size: 14px; font-weight: 600; min-height: 36px; box-sizing: border-box; }
+  .ico, .lk { min-width: 36px; height: 36px; justify-content: center; }
+  .chk li button, button.tag, a.tag { padding: 0 12px; height: auto; }
+  .more { color: var(--ink); }
+  .btn.yes, .acts .btn.yes { border-color: var(--ljr-5); } .btn.no, .acts .btn.no { border-color: var(--ljr-2); }
+  .fbar .sbox { font-weight: 400; }
+  @media (max-width: 544px) { .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { min-height: 44px; } .ico, .lk { min-width: 44px; height: 44px; } }
+  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover, #moreMenu > *:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  span.pill:hover, span.tag:hover, .cnt:hover, .dpill:hover, .stamp:hover { outline: none; }
+  /* Counts: one fixed size so 1 and 2 digits match; only 3+ digits grow. */
+  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 6px; border-radius: 11px; }
+  @media (max-width: 544px) { nav.tabs .n { min-width: 30px; height: 24px; min-height: 24px; line-height: 22px; border-radius: 12px; } }
+  .pthumb svg, .pthumb .pimg { border-radius: var(--radius); }
 </style>
 </head>
 <body>
