@@ -21,7 +21,6 @@
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../tokens.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
 /* ==== House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio).
    Lexend 400/600, nothing under 13px, line height 1.5, no uppercase. 1px lines. Hover AND selected = the same 1px edge
@@ -65,7 +64,7 @@ a{color:inherit;text-underline-offset:2px}
 .wrap,.hin{max-width:1600px;margin:0 auto;padding-left:24px;padding-right:24px}
 .wrap{padding-bottom:140px}
 @media (max-width:600px){.wrap,.hin{padding-left:16px;padding-right:16px}}
-.ti{font-size:18px;line-height:1;display:inline-block;min-width:1em;min-height:1em}   /* keeps its place even before the icon font loads */
+.ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}   /* line icons drawn in the page (no icon font) */
 
 /* ---- Frame: dark top bar ---- */
 header.top{background:var(--frame);color:var(--frame-ink);position:sticky;top:0;z-index:20}
@@ -80,6 +79,8 @@ header .btn{color:var(--frame-ink);background:transparent;border-color:var(--fra
 @media (hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
 header .btn:focus-visible{outline:2px solid var(--frame-ink);outline-offset:2px}
 .backhome{min-height:44px!important;text-decoration:none}
+/* Signed out, the frame is hidden by the sign-in gate and only Dashboard shows, on the page colour: use page ink. */
+html.dash-locked header .backhome{color:var(--ink);border-color:var(--press);margin-left:auto}
 .morewrap{position:relative;display:none}
 #moreMenu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:220px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow),0 8px 24px rgba(0,0,0,.18);padding:8px;display:flex;flex-direction:column;gap:4px}
 #moreMenu.hidden{display:none}
@@ -203,7 +204,7 @@ tr:last-child td{border-bottom:none}
 .fgrp{display:flex;flex-direction:column;gap:4px;min-width:150px}
 .flab{font-size:13px;font-weight:600;color:var(--muted)}
 .achips{display:contents}
-.achip .ti{font-size:14px}
+.achip .ti{width:14px;height:14px}
 
 /* ---- Calm rows (Needs you today, checklists, cards on Live feed) ---- */
 .three{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
@@ -246,7 +247,7 @@ tr:last-child td{border-bottom:none}
 .dc .bd{padding:12px;display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
 .dc .hd{display:flex;align-items:flex-start;gap:12px;min-width:0}
 .ph{position:relative;flex:0 0 auto;width:44px;height:44px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted)}
-.ph .ti{font-size:22px}
+.ph .ti{width:24px;height:24px}
 .dc .tbr{flex:1;min-width:0}
 .dc .nl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--muted);min-width:0;overflow-wrap:anywhere}
 .dc .nm{font-weight:600;font-size:17px;line-height:1.35;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
@@ -259,7 +260,7 @@ tr:last-child td{border-bottom:none}
 .dc .chips{display:flex;flex-wrap:wrap;gap:4px}
 .cfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px;margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
 .whor{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--press);display:grid;place-items:center;font-size:13px;color:var(--muted)}
-.whor .ti{font-size:15px}
+.whor .ti{width:15px;height:15px}
 /* status (kit: animal): a status-colour dot + code + word, ink text, no fill */
 .st{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--radius);height:24px;padding:0 8px;white-space:nowrap}
 .st b{font-weight:600}
@@ -320,15 +321,16 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:14px}ul
 @media (max-width:544px){header.top{position:static}}
 </style>
 </head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3 8l4-16l3 8h4"/></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5-2.5M3.5 11.5l1.5 1.5l2.5-2.5M3.5 17.5l1.5 1.5l2.5-2.5M11 6h9M11 12h9M11 18h9"/></symbol><symbol id="i-sitemap" viewBox="0 0 24 24"><path d="M3 15h6v6H3zM15 15h6v6h-6zM9 3h6v6H9zM6 15v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1M12 9v3"/></symbol><symbol id="i-calendar-event" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM16 3v4M8 3v4M4 11h16M8 15h2v2H8z"/></symbol><symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-8a3.5 3.5 0 0 1 0-7H12"/></symbol><symbol id="i-paw" viewBox="0 0 24 24"><path d="M14.7 13.5c-1.1-2-1.4-2.5-2.7-2.5s-1.6.5-2.7 2.5c-1.1 2-3 2.1-3 4c0 1.5 1.2 2.5 2.7 2.5c1.2 0 2-.5 3-.5s1.8.5 3 .5c1.5 0 2.7-1 2.7-2.5c0-1.9-1.9-2-3-4z"/><circle cx="5" cy="10" r="1.6"/><circle cx="9" cy="5.5" r="1.6"/><circle cx="15" cy="5.5" r="1.6"/><circle cx="19" cy="10" r="1.6"/></symbol><symbol id="i-building-cottage" viewBox="0 0 24 24"><path d="M3 21h18M4 21V10l8-6l8 6v11M9 21v-6h6v6"/></symbol><symbol id="i-baby-carriage" viewBox="0 0 24 24"><circle cx="8" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M2 5h2.5l1.7 4H20a6 6 0 0 1-6 6H8.7M11 9V3a7 7 0 0 1 7 6"/></symbol><symbol id="i-stethoscope" viewBox="0 0 24 24"><path d="M6 4H5a1 1 0 0 0-1 1v3.5a5.5 5.5 0 0 0 11 0V5a1 1 0 0 0-1-1h-1M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></symbol><symbol id="i-world" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4l4 4M6 12h10"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7"/><path d="M21 21l-6-6"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M5 12H3l9-9l9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol><symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0zM10 9h4"/></symbol><symbol id="i-adjustments-horizontal" viewBox="0 0 24 24"><circle cx="14" cy="6" r="2"/><path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h11M19 18h1"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol></svg>
 <a class="skip" href="#main" data-skip="main">Skip to content</a>
 <header class="top"><div class="hin">
 <div class="brand"><h1><span class="dot" aria-hidden="true"></span>Cobberdog Hub</h1>
 <span class="sl">CurlyCwtch Australian Cobberdogs</span></div>
 <span class="live" id="livepill">connecting&hellip;</span>
-<button type="button" class="btn srchbtn" data-search-open aria-keyshortcuts="/" title="Search (press /)"><i class="ti ti-search" aria-hidden="true"></i>Search</button>
+<button type="button" class="btn srchbtn" data-search-open aria-keyshortcuts="/" title="Search (press /)"><svg class="ti" aria-hidden="true"><use href="#i-search"/></svg>Search</button>
 <a id="backHome" class="btn backhome" href="../" data-back-home aria-label="Dashboard home">&larr; Dashboard</a>
-<span class="morewrap" id="moreWrap"><button type="button" class="btn" id="moreBtn" data-more="toggle" aria-expanded="false" aria-controls="moreMenu">More<i class="ti ti-dots" aria-hidden="true"></i></button>
-<div id="moreMenu" class="hidden" role="menu" aria-label="More"><button type="button" role="menuitem" data-more="search"><i class="ti ti-search" aria-hidden="true"></i>Search</button><button type="button" role="menuitem" data-reload="1"><i class="ti ti-refresh" aria-hidden="true"></i>Reread</button><button type="button" role="menuitem" data-signout="1"><i class="ti ti-logout" aria-hidden="true"></i>Sign out</button><a role="menuitem" href="../" data-back-home><i class="ti ti-home" aria-hidden="true"></i>Dashboard</a></div></span>
+<span class="morewrap" id="moreWrap"><button type="button" class="btn" id="moreBtn" data-more="toggle" aria-expanded="false" aria-controls="moreMenu">More<svg class="ti" aria-hidden="true"><use href="#i-dots"/></svg></button>
+<div id="moreMenu" class="hidden" role="menu" aria-label="More"><button type="button" role="menuitem" data-more="search"><svg class="ti" aria-hidden="true"><use href="#i-search"/></svg>Search</button><button type="button" role="menuitem" data-reload="1"><svg class="ti" aria-hidden="true"><use href="#i-refresh"/></svg>Reread</button><button type="button" role="menuitem" data-signout="1"><svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg>Sign out</button><a role="menuitem" href="../" data-back-home><svg class="ti" aria-hidden="true"><use href="#i-home"/></svg>Dashboard</a></div></span>
 </div></header>
 <div class="wrap"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
 <div class="next" id="next"></div></div>
@@ -883,7 +885,7 @@ function needsToday(){
  var out=[];
  /* foundation: check (a data check that fails) */
  checks().forEach(function(x){ if(x.ok||x.k==='saving off') return;
-  out.push({title:(CHECKNAME[x.k]||capFirst(x.k))+' needs a look',sub:x.msg,go:x.list?'today':'map',list:x.list||'',tone:'',kind:'check'}); });
+  out.push({title:(CHECKNAME[x.k]||capFirst(x.k))+' needs a look',sub:x.msg,go:x.list?'today':(x.k==='law vs yours'?'today':'shape'),list:x.list||'',tone:'',kind:'check'}); });
  /* kit: animal (a pregnancy getting close to its whelping window, from the mating rows) */
  inWhelp(date).forEach(function(x){
   if(x.unknown){ out.push({title:x.dog.name+': mating date not recorded',sub:'No due date can be worked out',go:'today',tone:'',kind:'kit'}); return; }
@@ -929,7 +931,7 @@ function nextCard(){
 }
 function needsCard(){
  var n=needsToday();
- var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2)"><h3><i class="ti ti-list-check" aria-hidden="true"></i>Needs you today'+cntPill(n.length,n.length?'need':'ok')+'</h3>';
+ var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Needs you today'+cntPill(n.length,n.length?'need':'ok')+'</h3>';
  if(!n.length) return h+'<p class="okempty">Nothing needs you</p></section>';
  h+=n.map(function(x,i){ return needRow(x,i>=7); }).join('');
  if(n.length>7) h+='<div class="mfoot"><span class="mut">Showing 7 of '+n.length+'</span><button type="button" class="btn" data-needall="1">Show all</button></div>';
@@ -939,7 +941,7 @@ function needsCard(){
 function onSiteCard(){
  var c=counts();
  var row=function(t,v,s){ return '<div class="mrow"><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
- return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5)"><h3><i class="ti ti-paw" aria-hidden="true"></i>On site</h3>'
+ return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
   +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><span class="big">'+c.here.length+'</span><span class="mut">dogs on the premises today</span></div>'
   +row('Adults',c.adults.length,'6 months and over')+row('Under 6 months',c.pups.length,'')
   +row('Breeding bitches in law',c.bitches.length,'female, entire, 6 months and over')+row('Stud males',c.studs.length,'')
@@ -952,7 +954,7 @@ function littersCard(){
  var recent=(CD.litters||[]).filter(function(l){ var b=l.dob||l.born_on; var d=b?daysBetween(b,date):null; return d!==null&&d>=0&&d<=84; })
   .sort(function(a,b){ return (b.dob||b.born_on||'').localeCompare(a.dob||a.born_on||''); });
  var pups=litterPups(), n=w.length+recent.length;
- var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7)"><h3><i class="ti ti-baby-carriage" aria-hidden="true"></i>Litters'+cntPill(n)+'</h3>';
+ var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>Litters'+cntPill(n)+'</h3>';
  h+=w.map(function(x){ var tone=x.day>63?'late':(x.day>=57?'soon':'');
    return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' of 57–72 · working due</small></span>'+dpill(x.due,tone)+'</div>'; }).join('');
  h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
@@ -968,7 +970,7 @@ function tempsCard(){
  var am=has('am'), pm=has('pm');
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
  var row=function(t,v,s,done){ return '<div class="mrow"><span class="ic'+(done?' ok':'')+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
- return '<section class="mcard" id="tempsCard" style="--hc:var(--ljr-4)"><h3><i class="ti ti-thermometer" aria-hidden="true"></i>Temperatures today</h3>'
+ return '<section class="mcard" id="tempsCard" style="--hc:var(--ljr-4)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning readings',am+' of '+N,'cabins with a reading',N&&am===N)+row('Evening readings',pm+' of '+N,'cabins with a reading',N&&pm===N)
   +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||out.kind||''),false)
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No outdoor reading on file for today</small></span></div>')
@@ -977,7 +979,7 @@ function tempsCard(){
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 function checksCard(){
  var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
- return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6)"><h3><i class="ti ti-check" aria-hidden="true"></i>Data checks'+cntPill(bad,bad?'need':'ok')+'</h3>'
+ return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'need':'ok')+'</h3>'
   +all.map(function(x){
    return '<div class="mrow ckrow'+(x.ok?' ok':' bad')+'"><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.ok?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
@@ -1051,7 +1053,7 @@ function todayChecklist(date,unplacedN){
   [!over,'No cabin over its headcount',over?over+' over':'all within'],
   [c.bitches.length===c.active.length,'Licence counts agree','law '+c.bitches.length+', your list '+c.active.length]];
  var done=L.filter(function(x){return x[0];}).length;
- return '<section class="mcard" id="todayChecklist" style="--hc:var(--ljr-4);margin-bottom:12px"><h3><i class="ti ti-list-check" aria-hidden="true"></i>Today checklist<span class="mut" style="margin-left:auto;font-weight:400">'+done+' of '+L.length+' done</span></h3>'
+ return '<section class="mcard" id="todayChecklist" style="--hc:var(--ljr-4);margin-bottom:12px"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Today checklist<span class="mut" style="margin-left:auto;font-weight:400">'+done+' of '+L.length+' done</span></h3>'
   +L.map(function(x){ return '<div class="mrow ckrow"><span class="mk'+(x[0]?'':' bad')+'" aria-hidden="true">'+(x[0]?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(x[1])+'<span class="sr">'+(x[0]?' done':' not done')+'</span><small>'+esc(x[2])+'</small></span></div>'; }).join('')
   +'<div class="mfoot"><span class="mut">'+(DB?'From the round.':'Saving is off, so the round shows the tables, not today’s ticks.')+'</span><button type="button" class="btn" data-go="round">Open The round</button></div></section>';
@@ -1107,8 +1109,8 @@ async function flagDog(id,btn){
 /* foundation: list view filter row (one row: Search, Filter panel, Sort, removable chips). Used by Dogs, Litters and Buyers. */
 function fbar(o){
  return '<div class="fbar" id="fb-'+o.id+'"><div class="srow">'
-  +'<label class="sbox"><i class="ti ti-search" aria-hidden="true"></i><input id="'+o.q+'" type="search" aria-label="Search '+esc(o.what)+'" placeholder="Search '+esc(o.what)+'"></label>'
-  +'<button type="button" class="btn fbtn" data-fpanel="fp-'+o.id+'" aria-expanded="false" aria-controls="fp-'+o.id+'"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>Filter<span class="fcount"></span></button>'
+  +'<label class="sbox srch"><svg class="ti" aria-hidden="true"><use href="#i-search"/></svg><input id="'+o.q+'" type="search" aria-label="Search '+esc(o.what)+'" placeholder="Search '+esc(o.what)+'"></label>'
+  +'<button type="button" class="btn fbtn" data-fpanel="fp-'+o.id+'" aria-expanded="false" aria-controls="fp-'+o.id+'"><svg class="ti" aria-hidden="true"><use href="#i-adjustments-horizontal"/></svg>Filter<span class="fcount"></span></button>'
   +'<select id="'+o.sort[0]+'" class="sortsel" aria-label="Sort">'+o.sort[1].map(function(x){return '<option value="'+x[0]+'">Sort: '+esc(x[1])+'</option>';}).join('')+'</select>'
   +'<span class="achips" id="ach-'+o.id+'"></span><span class="mut" id="'+o.count+'"></span></div>'
   +'<div class="fpanel hidden" id="fp-'+o.id+'">'+o.groups.map(function(g){ return '<div class="fgrp"><span class="flab" aria-hidden="true">'+esc(g[0])+'</span>'+g[1]+'</div>'; }).join('')
@@ -1219,7 +1221,7 @@ function drawDogs(){
   var away=!!d.off||st.code==='CL'||st.code==='DE';
   var who=st.code==='DE'?'Deceased':(st.code==='CL'?'Collected, with a new owner':(d.off?'Off site: '+d.off:(d.where?'On site, '+d.where:'On site, cabin not recorded')));
   h+='<article class="dc '+cls+'"><div class="bd">'
-   +'<div class="hd"><div class="ph" aria-hidden="true"><i class="ti ti-paw"></i></div>'
+   +'<div class="hd"><div class="ph" aria-hidden="true"><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg></div>'
    +'<div class="tbr"><div class="nl"><span class="st '+st.cls+'" title="'+esc(d.where||'location not recorded')+'"><b>'+st.code+'</b>'+esc(st.label)+'</span></div>'
    +'<div class="nm">'+esc(d.name||'—')+'</div>'
    +'<div class="meta"><i class="sexdot '+cls+'" title="'+esc((d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered'))+'"></i>'
@@ -1243,7 +1245,7 @@ function drawDogs(){
    +(d.chip?'<div class="chipline"><span class="lb">Chip</span><span class="vl">'+esc(d.chip)+'</span></div>'
           :'<div class="chipline"><span class="lb">Chip</span><span class="none">none recorded</span></div>')
    +'<div class="cfoot"><span class="mut">'+esc(d.where||(d.off?'off site':'cabin not recorded'))+'</span>'
-   +'<span class="whor" role="img" aria-label="'+esc(who)+'" title="'+esc(who)+'"><i class="ti ti-'+(away?'user':'home')+'" aria-hidden="true"></i></span></div>'
+   +'<span class="whor" role="img" aria-label="'+esc(who)+'" title="'+esc(who)+'"><svg class="ti" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span></div>'
    +'</div></article>';});
  if(dogN<list.length) h+='<div class="filt" data-show-bar="dogs"><p class="mut">Showing '+dogN+' of '+list.length+'.</p>'
   +'<button type="button" class="cb" data-dogshow="more">Show more</button>'
@@ -1817,10 +1819,10 @@ function navHtml(){
  var counts={map:nd,work:wait};
  return SECTIONS.map(function(s){ var m=TABMETA[s[0]]||['point',s[1],0], n=counts[s[0]];
    return '<button type="button" data-go="'+s[0]+'" style="--tc:var(--ljr-'+m[2]+')"><span class="tbar" aria-hidden="true"></span>'
-    +'<i class="ti ti-'+m[0]+'" aria-hidden="true"></i>'+(n?cntPill(n,'need'):'')
+    +'<svg class="ti" aria-hidden="true"><use href="#i-'+m[0]+'"/></svg>'+(n?cntPill(n,'need'):'')
     +'<span class="lab"><span class="lf">'+esc(s[1])+'</span><span class="ls" aria-hidden="true">'+esc(m[1])+'</span></span></button>'; }).join('')
-  +'<button type="button" class="util" data-reload="1" title="Read the tables from Drive again"><span class="tbar" aria-hidden="true"></span><i class="ti ti-refresh" aria-hidden="true"></i><span class="lab">Reread</span></button>'
-  +'<button type="button" class="util" data-signout="1"><span class="tbar" aria-hidden="true"></span><i class="ti ti-logout" aria-hidden="true"></i><span class="lab">Sign out</span></button>';
+  +'<button type="button" class="util" data-reload="1" title="Read the tables from Drive again"><span class="tbar" aria-hidden="true"></span><svg class="ti" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lab">Reread</span></button>'
+  +'<button type="button" class="util" data-signout="1"><span class="tbar" aria-hidden="true"></span><svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg><span class="lab">Sign out</span></button>';
 }
 function pill(){
  var p=document.getElementById('livepill');
