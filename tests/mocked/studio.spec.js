@@ -518,6 +518,29 @@ test.describe('Studio page', () => {
     expect(got[0].body.clicks).toBeUndefined();
   });
 
+  test('spec: an early item with no legal set shows Legal?; the Where panel sets destination and legal set (same company only) with one set request each', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/me', { change: (s) => {
+      s.legalSets = [{ id: 'LS-N', name: 'North website', kind: 'brand website', entity: 'Sample Ltd', brandIds: ['sb-north'], status: 'live' },
+        { id: 'LS-APP', name: 'Sample app', kind: 'app', entity: 'Sample Ltd', brandIds: [], status: 'live' },
+        { id: 'LS-X', name: 'Other company', kind: 'brand website', entity: 'Other Ltd', brandIds: ['sb-other'], status: 'live' }];
+      const g = s.assets.filter((a) => a.id === 'sa-gate')[0]; g.brandIds = ['sb-north']; g.legal = { entity: 'Sample Ltd', setId: null };
+    } });
+    const r = page.locator('[data-sect="gate"] .crow[data-row="sa-gate"]');
+    await expect(r.locator('[data-chip="legal-missing"]')).toBeVisible();
+    await r.locator('[data-panel="where"]').click();
+    await expect(r.locator('[data-set="legalSetId"]')).toHaveCount(2);
+    await r.locator('[data-set="destination"][data-val="funnel"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'set', assetId: 'sa-gate', destination: 'funnel' });
+    await expect(r.locator('[data-chip="dest"]')).toContainText('Funnel');
+    await r.locator('[data-panel="where"]').click();
+    await r.locator('[data-set="legalSetId"][data-val="LS-APP"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(got[1].body).toMatchObject({ kind: 'set', assetId: 'sa-gate', legalSetId: 'LS-APP' });
+    await expect(r.locator('[data-chip="legal"]')).toContainText('Sample app');
+  });
+
   test('example data has groups, kits, styles, formats, a variant and a gap (fictional), and sends nothing', async ({ page, guard }) => {
     await open(page, guard, '#/kits', { state: false });
     await expect(page.locator('[data-playbook="ex-pb1"]')).toBeVisible();

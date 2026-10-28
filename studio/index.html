@@ -316,6 +316,7 @@
     ['appstore', 'device-mobile', 'App store'], ['funnel', 'filter', 'Funnel'], ['course', 'school', 'Course'], ['podcast', 'microphone', 'Podcast'], ['other', 'dots', 'Other']];
   // How a finished item reaches a client (engine DELIVERY_MODE): a copied file, a copied Doc, or a link.
   var DMODE = { script: 'text', social: 'text', email: 'text', page: 'link', funnel: 'link', listing: 'link', podcast: 'link' };
+  var DESTS = [['main-site', 'world-www', 'Main site'], ['app', 'apps', 'App'], ['funnel', 'filter', 'Funnel'], ['shop', 'building-store', 'Shop'], ['social', 'share', 'Social'], ['client-site', 'user-share', 'Client site'], ['email', 'mail', 'Email'], ['print', 'printer', 'Print'], ['other', 'dots', 'Other']];
   var CHANNELS = ['facebook', 'instagram', 'tiktok', 'youtube', 'pinterest', 'linkedin', 'email', 'website', 'etsy', 'amazon', 'other'];
   var RKEYS = [['views', 'eye', 'Views'], ['clicks', 'click', 'Clicks'], ['leads', 'user-plus', 'Leads'], ['sales', 'shopping-cart', 'Sales'], ['revenue', 'currency-pound', '\u00a3']];
   var DSTAT = { 'ready (not sent)': ['package', 'Ready', 4], sent: ['send', 'Sent', 5], 'no file': ['alert-triangle', 'No file', 2] };
@@ -457,7 +458,7 @@
   function prep() {
     S.accounts = S.accounts || []; S.products = S.products || []; S.brands = S.brands || []; S.assets = S.assets || []; S.ideas = S.ideas || []; S.tools = S.tools || [];
     S.studio = S.studio || {}; S.health = S.health || {};
-    ['groups', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'gaps'].forEach(function (k) { S[k] = S[k] || []; });
+    ['groups', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'gaps', 'legalSets'].forEach(function (k) { S[k] = S[k] || []; });
     S.tools.forEach(function (t) { t.capabilities = t.capabilities || []; t.outputs = t.outputs || []; t.inputs = t.inputs || []; t.fit = t.fit || 'AUTO'; });
     all().forEach(function (a) { a.flags = a.flags || []; a.brandIds = a.brandIds || []; a.formatIds = a.formatIds || []; a.sourceIds = a.sourceIds || []; if (a.stage == null) a.stage = 0; a._t = Date.parse(a.updated) || 0; if (!a.accountId) a.accountId = brandOf(a).accountId || ownerId(); });
     applyPend();
@@ -601,6 +602,9 @@
     var pu = pickOf(PURPOSES, a.purpose); if (pu) out += '<span class="tag" data-chip="purpose" title="Variant">' + I(pu[2]) + pu[1] + '</span>';
     if (a.masterId) { var m = byId(a.masterId); out += '<a class="tag" data-chip="master" href="#/asset/' + encodeURIComponent(a.masterId) + '" title="Master: ' + esc(m ? bare(m) : a.masterId) + '">' + I('link') + 'Master</a>'; }
     if (a.sourceIds.length) out += '<span class="tag" title="Sources">' + I('paperclip') + a.sourceIds.length + '</span>';
+    var dz0 = pickOf(DESTS, a.destination); if (dz0) out += '<span class="tag" data-chip="dest" title="Where">' + I(dz0[1]) + dz0[2] + '</span>';
+    if (a.legal && a.legal.setId) out += '<span class="tag" data-chip="legal" title="' + esc((a.legal.entity || '') + ' \u00b7 ' + (a.legal.setName || a.legal.setId)) + '">' + I('shield-check') + esc(a.legal.setName || a.legal.setId) + '</span>';
+    else if (a.stage <= 3) out += '<span class="tag" data-chip="legal-missing" title="Company and legal set needed before Lock" style="--hc:var(--ljr-2-text)">' + I('shield-x') + 'Legal?</span>';
     if (a.results && (a.results.views || a.results.clicks || a.results.sales)) out += '<span class="tag" data-chip="results" title="Results · last ' + esc(a.results.last || '') + '">' + I('chart-bar') + esc(String(a.results.views || 0)) + ' · ' + esc(String(a.results.sales || 0)) + I('shopping-cart') + '</span>';
     if (a.ask && a.ask.question) out += '<span class="tag" data-chip="ask" title="Asked: ' + esc(a.ask.question) + '">' + I('message-question') + (a.ask.status === 'sent' ? 'Asked' : 'Ask ready') + '</span>';
     if (a.delivery && a.delivery.status) { var dz = DSTAT[a.delivery.status] || ['package', a.delivery.status, 0]; out += (a.delivery.link ? '<a class="tag" href="' + safeUrl(a.delivery.link) + '" target="_blank" rel="noopener"' : '<span class="tag"') + ' data-chip="delivery" title="Delivery" style="--hc:var(--ljr-' + dz[2] + '-text)">' + I(dz[0]) + esc(dz[1]) + (a.delivery.link ? '</a>' : '</span>'); }
@@ -623,6 +627,10 @@
   function panelOf(a, k) {
     var body = '';
     if (k === 'redo') body = '<form class="ask" data-redo="' + esc(a.id) + '"><input class="fin" id="note-' + esc(a.id) + '" data-draft="' + esc(a.id) + '" value="' + esc(drafts[a.id] || '') + '" aria-label="What to change" required><button class="btn" type="submit" aria-label="Send redo"' + dis() + '>' + I('send') + '</button></form>';
+    if (k === 'where') { var ls = S.legalSets.filter(function (x) { return !a.legal || !a.legal.entity || x.entity === a.legal.entity || (x.brandIds || []).some(function (b) { return a.brandIds.indexOf(b) >= 0; }); });
+      body = '<div class="fsub">' + I('building') + esc((a.legal && a.legal.entity) || 'Company not recorded') + '</div>' +
+        '<div class="fsub">' + I('map-pin') + 'Where</div><div class="chips">' + DESTS.map(function (d) { return '<button class="ch' + (a.destination === d[0] ? ' on' : '') + '" type="button" data-set="destination" data-val="' + d[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (a.destination === d[0]) + '"' + dis() + '>' + I(d[1]) + d[2] + '</button>'; }).join('') + '</div>' +
+        '<div class="fsub">' + I('shield-check') + 'Legal set</div><div class="chips">' + (ls.length ? ls.map(function (x) { var on = a.legal && a.legal.setId === x.id; return '<button class="ch' + (on ? ' on' : '') + '" type="button" data-set="legalSetId" data-val="' + esc(x.id) + '" data-id="' + esc(a.id) + '" aria-pressed="' + !!on + '"' + dis() + '>' + esc(x.name || x.id) + '</button>'; }).join('') : '<span class="muted">None on the BRANDS Sheet yet</span>') + '</div>'; }
     if (k === 'result') { var rc = resDraft[a.id] = resDraft[a.id] || { channel: '', date: new Date().toISOString().slice(0, 10) };
       body = '<div class="chips">' + CHANNELS.map(function (c) { return '<button class="ch' + (rc.channel === c ? ' on' : '') + '" type="button" data-rch="' + c + '" data-id="' + esc(a.id) + '" aria-pressed="' + (rc.channel === c) + '">' + c.charAt(0).toUpperCase() + c.slice(1) + '</button>'; }).join('') + '</div>' +
         '<form class="rform" data-result="' + esc(a.id) + '"><input class="fin" type="date" data-rf="date" data-id="' + esc(a.id) + '" value="' + esc(rc.date) + '" aria-label="Date">' +
@@ -645,6 +653,7 @@
         ['Playbook', pb ? esc(pb.name) : ''], ['Kit', kit ? esc(kit.name) : ''], ['Outcome', oc ? oc[1] : ''], ['Voice', vo ? esc(vo.name) : ''], ['Look', lo ? esc(lo.name) : ''], ['Language', ln ? ln[1] : esc(a.language)], ['Length', esc(a.length)],
         ['A/B', a.test ? esc(a.test) + (a.result ? ' · ' + esc(a.result) : '') : ''],
         ['Sources', srcs.map(function (x) { var r = pickOf(RIGHTS, x.rights); return (x.url ? '<a href="' + safeUrl(x.url) + '" target="_blank" rel="noopener">' + esc(x.note || x.url.replace(/^https?:\/\//, '').slice(0, 40)) + '</a>' : esc(x.fileName || x.note)) + ' · ' + (r ? r[1] : esc(x.rights)); }).join('<br>')],
+        ['Company', a.legal ? esc(a.legal.entity) : ''], ['Legal set', a.legal ? esc(a.legal.setName || a.legal.setId) : ''], ['Where', (pickOf(DESTS, a.destination) || [])[2] || ''],
         ['Stage', esc(+a.stage) + ' ' + esc(STAGES[a.stage])], ['AI', esc(a.provider)], ['Cost', a.cost != null && a.cost !== '' ? money(a.cost) : ''], ['Rating', a.rating != null ? esc(a.rating) + ' / 5' : ''],
         ['Version', a.stage === 8 ? 'v' + esc(a.version || 1) : ''], ['Changed', a._t ? dmy(a._t) : ''],
         ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
@@ -660,7 +669,7 @@
       '<button class="ico" type="button" data-panel="flag" data-id="' + esc(a.id) + '" aria-label="Priority ' + (p || 'none') + '" style="--hc:var(--ljr-2-text)">' + flagIcon(p) + '</button></div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + info('Stage ' + a.stage + ' ' + STAGES[a.stage]) + '</div>' : '') +
       (a.stage >= 1 ? strip(a.stage) : '') +
-      '<div class="l2"><span class="icons">' + rowIcons(a) + '</span><span class="acts">' + actsFor(a, kind) + (isClient(a) && a.stage >= 1 && a.stage <= 7 && !sent[a.id] ? '<button class="ico" type="button" data-panel="ask" data-id="' + esc(a.id) + '" aria-label="Ask client" title="Ask client"' + dis() + '>' + I('message-question') + '</button>' : '') + '</span></div>' +
+      '<div class="l2"><span class="icons">' + rowIcons(a) + '</span><span class="acts">' + actsFor(a, kind) + (a.stage <= 3 && !sent[a.id] ? '<button class="ico" type="button" data-panel="where" data-id="' + esc(a.id) + '" aria-label="Company, legal set and where" title="Company, legal set and where"' + dis() + '>' + I('map-pin') + '</button>' : '') + (isClient(a) && a.stage >= 1 && a.stage <= 7 && !sent[a.id] ? '<button class="ico" type="button" data-panel="ask" data-id="' + esc(a.id) + '" aria-label="Ask client" title="Ask client"' + dis() + '>' + I('message-question') + '</button>' : '') + '</span></div>' +
       (openPanel && openPanel.id === a.id ? panelOf(a, openPanel.k) : '') +
       '<div class="l3"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span>' +
       (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="Preview" style="--hc:var(--ljr-6-text)">' + I('eye') + '</a>' : '<span class="lk no" title="No preview yet">' + I('eye') + '</span>') +
@@ -1005,6 +1014,8 @@
       var a = byId(id);
       if (!a || a._t >= p.at || now - p.at > 36e5) { delete pend[id]; return; }
       if (p.who !== undefined) a.who = p.who;
+      if (p.destination !== undefined) a.destination = p.destination;
+      if (p.legalSetId !== undefined) { var lsx = byIdIn('legalSets', p.legalSetId); a.legal = Object.assign({}, a.legal || {}, { setId: p.legalSetId, setName: lsx ? lsx.name : p.legalSetId }); }
       if (p.priority !== undefined) a.priority = p.priority === 'none' ? null : p.priority;
     });
     saveLocal('st-pend', pend);
