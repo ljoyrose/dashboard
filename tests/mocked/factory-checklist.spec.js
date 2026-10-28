@@ -60,3 +60,15 @@ test.describe('Factory steps', () => {
     expect(solid).toEqual([]);
   });
 });
+
+// Factory tab counts match Studio's needs-you counts (Lisa, 28 Oct 2026); the unread dot and switch knob stay solid on purpose.
+test.describe('Factory tab counts', () => {
+  test('tab counts are an exact 30x22 amber ring with a tint and an ink number, never solid', async ({ page, guard }) => {
+    await open(page, guard);
+    const n = page.locator('#nMe');
+    const st = await n.evaluate((e) => { const c = getComputedStyle(e), b = e.getBoundingClientRect(); return { w: Math.round(b.width * 100) / 100, h: Math.round(b.height), bw: c.borderTopWidth, bc: c.borderTopColor, bg: c.backgroundColor, col: c.color, ink: getComputedStyle(document.body).color }; });
+    expect([st.w, st.h, st.bw]).toEqual([30, 22, '1px']);
+    expect(st.bg).not.toBe(st.bc); // a tint, not a solid fill of the ring colour
+    expect(st.col).toBe(st.ink);
+  });
+});
