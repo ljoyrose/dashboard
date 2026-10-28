@@ -86,6 +86,14 @@ for (const [base, hashes, signBtn] of ROUTES) {
         const before = page.url();
         await page.evaluate(() => { window.__mut = 0; window.__obs && window.__obs.disconnect(); window.__obs = new MutationObserver((m) => { window.__mut += m.length; }); window.__obs.observe(document, { subtree: true, childList: true, attributes: true, characterData: true }); });
         const dialogs = page.__dialog || 0;
+        // A link that opens a new tab (target="_blank", like "Sample task ready now" -> Money Hub) MUST open one: wait for that
+        // tab's own event for as long as it takes (with 4 workers it can take well over a second), never a guessed short window.
+        const opensTab = await el.evaluate((e) => { const a = e.closest('a[href]'); return !!a && a.getAttribute('target') === '_blank'; });
+        if (opensTab) {
+          const [p] = await Promise.all([context.waitForEvent('page', { timeout: 15_000 }), el.click({ timeout: 3000 })]);
+          await p.close();
+          continue;
+        }
         const popup = context.waitForEvent('page', { timeout: 700 }).catch(() => null);
         const nav = page.waitForEvent('framenavigated', { timeout: 700 }).catch(() => null);
         let failed = false;

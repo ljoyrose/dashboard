@@ -383,7 +383,7 @@ test.describe('GA Hub house look', () => {
       await sheets(page, book());
       await open(page);
       const ink = await page.evaluate(() => getComputedStyle(document.body).color);
-      const look = (el) => el.evaluate((e) => { const s = getComputedStyle(e), own = s.getPropertyValue('--mc').trim();
+      const look = (el) => el.evaluate((e) => { const s = getComputedStyle(e), own = s.getPropertyValue('--hmc').trim(); // the house meaning colour (house.css)
         const probe = document.createElement('i'); probe.style.color = own; e.appendChild(probe); const oc = getComputedStyle(probe).color; probe.remove();
         return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, own: oc, bg: s.backgroundColor }; });
       const check = (l, what) => {

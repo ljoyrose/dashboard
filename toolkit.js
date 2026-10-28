@@ -43,6 +43,49 @@
     return status === 429 || (status === 403 && /rateLimit|userRateLimit/i.test(String(reason || '')));
   }
 
+  // ---- House look: follow the Look saved in Studio (localStorage 'dash-look', read only here; Studio's Look menu writes it) ----
+  // { bg: warm|cool, sel: line|soft, mode: device|light|dark } -> html.look-cool, html.sel-soft, [data-theme]. tokens.css and
+  // house.css do the rest, so every hub follows one setting. Runs at once (this file loads in <head>) and when another tab changes it.
+  function applyLook() {
+    var doc = root.document; if (!doc) return;
+    var o = {}; try { o = JSON.parse(root.localStorage.getItem('dash-look') || '{}') || {}; } catch (e) { o = {}; }
+    var r = doc.documentElement;
+    r.classList.toggle('look-cool', o.bg === 'cool');
+    r.classList.toggle('sel-soft', o.sel === 'soft');
+    if (o.mode === 'light' || o.mode === 'dark') r.setAttribute('data-theme', o.mode); else r.removeAttribute('data-theme');
+  }
+  applyLook();
+  if (root.addEventListener) root.addEventListener('storage', function (e) { if (e.key === 'dash-look') applyLook(); });
+
+  // ---- Phone filters: one calm row. Filter groups (.house-filters, each with an id) fold behind ONE Filter button
+  // (.house-fbtn, data-house-filter="<id> [<id>...]") on a phone; on a desktop the button is hidden and the chips show inline (house.css).
+  // The open / shut state survives the page redrawing its chips (pages redraw on every tap).
+  var openFilters = {};
+  function syncFilters() {
+    var doc = root.document; if (!doc) return;
+    Array.prototype.forEach.call(doc.querySelectorAll('[data-house-filter]'), function (b) {
+      var key = b.getAttribute('data-house-filter'), on = !!openFilters[key];
+      if (b.getAttribute('aria-expanded') !== String(on)) b.setAttribute('aria-expanded', String(on));
+      key.split(/\s+/).forEach(function (id) { var g = doc.getElementById(id); if (g && g.classList.contains('open') !== on) g.classList.toggle('open', on); });
+    });
+  }
+  if (root.document) {
+    root.document.addEventListener('click', function (e) {
+      var b = e.target.closest && e.target.closest('[data-house-filter]');
+      if (!b) return;
+      var id = b.getAttribute('data-house-filter');
+      openFilters[id] = !openFilters[id];
+      syncFilters();
+    });
+    if (root.MutationObserver) root.document.addEventListener('DOMContentLoaded', function () {
+      new root.MutationObserver(syncFilters).observe(root.document.body, { childList: true, subtree: true });
+    });
+  }
+  // The Filter button's own HTML: the word, and how many filters are on (a count pill; none when 0).
+  function filterButton(id, on) {
+    return '<button class="btn house-fbtn" type="button" data-house-filter="' + id + '" aria-controls="' + id + '" aria-expanded="' + !!openFilters[id] + '">Filter' + (on ? '<span class="cnt">' + on + '</span>' : '') + '</button>';
+  }
+
   // ---- Site root (where toolkit.js lives), so the same keys and install code work on all three pages ----
   var SITE = (function () {
     var s = root.document && root.document.currentScript;
@@ -96,7 +139,7 @@
       d.innerHTML = '<h2 id="dashKeysTitle" style="margin:0 0 8px;font-size:18px">Keyboard keys</h2><table style="border-collapse:collapse">' +
         KEYS.map(function (k) { return '<tr><td style="padding:3px 14px 3px 0"><kbd>' + k[0].replace(' ', '</kbd> then <kbd>') + '</kbd></td><td>' + k[1] + '</td></tr>'; }).join('') +
         '</table><p style="margin:10px 0 0">Keys do nothing while you are typing in a box. Esc closes this.</p><form method="dialog" style="margin-top:10px"><button type="submit">Close</button></form>';
-      d.style.cssText = 'max-width:420px;border:2px solid currentColor;border-radius:12px;padding:16px 18px;background:Canvas;color:CanvasText;font:inherit';
+      d.style.cssText = 'max-width:420px;border:1px solid currentColor;border-radius:12px;padding:16px 18px;background:Canvas;color:CanvasText;font:inherit';
       doc.body.appendChild(d);
     }
     if (!d.open) d.showModal();
@@ -125,10 +168,10 @@
     var doc = root.document, d = doc.getElementById('dashSearch');
     if (d) return d;
     d = doc.createElement('dialog'); d.id = 'dashSearch'; d.setAttribute('aria-labelledby', 'dashSearchTitle');
-    d.style.cssText = 'width:min(640px,94vw);max-height:80vh;border:2px solid currentColor;border-radius:12px;padding:14px 16px;background:Canvas;color:CanvasText;font:inherit';
+    d.style.cssText = 'width:min(640px,94vw);max-height:80vh;border:1px solid currentColor;border-radius:12px;padding:14px 16px;background:Canvas;color:CanvasText;font:inherit';
     d.innerHTML = '<h2 id="dashSearchTitle" style="margin:0 0 8px;font-size:18px">Search</h2>' +
       '<label for="dashSearchBox" style="display:block;font-size:14px">Drive file names, Money to-dos and dates, CD Hub dogs and litters (what this page has read)</label>' +
-      '<input id="dashSearchBox" type="search" autocomplete="off" style="width:100%;font:inherit;padding:8px 10px;margin:6px 0;border:1px solid currentColor;border-radius:8px">' +
+      '<input id="dashSearchBox" type="search" autocomplete="off" style="width:100%;font:inherit;padding:8px 10px;margin:6px 0;border:1px solid currentColor;border-radius:12px">' +
       '<p id="dashSearchStatus" role="status" style="margin:4px 0;font-size:14px">Type at least 2 letters.</p>' +
       '<div id="dashSearchResults"></div><form method="dialog" style="margin-top:8px"><button type="submit">Close</button></form>';
     doc.body.appendChild(d);
@@ -141,7 +184,7 @@
     });
     return d;
   }
-  var SLOT = ['#C7C0B4', '#2C2C2A', '#E6443D', '#E78615', '#F3D84E', '#51AD57', '#129FE7', '#A570D1', '#141413'];
+  var SLOT = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(function (n) { return 'var(--ljr-' + (n === 1 ? '1-edge' : n) + ')'; }); // slot colours from tokens.css
   function runSearch(q) {
     var d = searchDialog(), st = d.querySelector('#dashSearchStatus'), out = d.querySelector('#dashSearchResults');
     q = String(q || '').trim();
@@ -156,7 +199,7 @@
         st.textContent = all.length ? all.length + (all.length === 1 ? ' result' : ' results') + ' for "' + q + '".' : 'Nothing found for "' + q + '".';
         out.innerHTML = order.map(function (g) {
           var items = groups[g];
-          return '<section data-search-group="' + escHtml(g) + '" style="margin-top:10px;border-left:4px solid ' + SLOT[items[0].slot || 0] + ';padding-left:10px"><h3 style="margin:0 0 4px;font-size:15px">' + escHtml(g) + ' (' + items.length + ')</h3><ul style="margin:0;padding-left:18px">' +
+          return '<section data-search-group="' + escHtml(g) + '" style="margin-top:10px;border-left:3px solid ' + SLOT[items[0].slot || 0] + ';padding-left:10px"><h3 style="margin:0 0 4px;font-size:15px">' + escHtml(g) + ' (' + items.length + ')</h3><ul style="margin:0;padding-left:18px">' +
             items.map(function (x) { return '<li>' + (x.href ? '<a href="' + escHtml(x.href) + '"' + (/^https?:/.test(x.href) ? ' target="_blank" rel="noopener"' : /^(money|cdhub)\//.test(x.href) ? ' target="_blank" rel="opener"' : '') + '>' + escHtml(x.title) + '</a>' : '<a href="#" data-search-act="' + (acts.push(x.act) - 1) + '">' + escHtml(x.title) + '</a>') + (x.sub ? ' <span style="font-size:14px">· ' + escHtml(x.sub) + '</span>' : '') + '</li>'; }).join('') + '</ul></section>';
         }).join('');
         Array.prototype.forEach.call(out.querySelectorAll('[data-search-act]'), function (a) { a._act = acts[+a.getAttribute('data-search-act')]; });
@@ -167,5 +210,5 @@
   if (root.document) root.document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-search-open]'); if (b) { e.preventDefault(); openSearch(); } });
   function matches(q) { var words = String(q).toLowerCase().split(/\s+/).filter(Boolean); return function (text) { text = String(text || '').toLowerCase(); return words.every(function (w) { return text.indexOf(w) >= 0; }); }; }
 
-  root.DashKit = { search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help };
+  root.DashKit = { applyLook: applyLook, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help };
 })(typeof window !== 'undefined' ? window : this);

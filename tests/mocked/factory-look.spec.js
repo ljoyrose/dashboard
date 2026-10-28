@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
+const { settle } = require('../support/settle');
 const { build } = require('../fixtures/factory/state');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'factory', 'index.html'), 'utf8');
@@ -14,7 +15,8 @@ const LOGS = /logs: '([^']+)'/.exec(SRC)[1];
 const VIEWS = ['rooms', 'me', 'decide', 'do', 'docs', 'today', 'card/869fjxpc2', 'room/rig', 'item/869fk9d1r', 'app/links', 'health', 'all', 'stuck', 'new'];
 const PRESS = '#view .btn, #view button.pill, #view a.pill, #view .fbtn, #view .ch, #view .more, #view .copy, #view .undo, #view label.date, #view a.chip, #view a.need, ' +
   '#view .ico, #view .flagb, #view .mark, #view .plus, #view a.lk, #view button.lk, #view .sbox, #appMenu a.pill';
-const MEANING = '.btn.yes, .btn.no, .lk.off, a.need, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat';
+// Status pills that are also links rest on their status ring; Yes / No / Off rest on the one control line (house rule) and show their colour on hover.
+const MEANING = 'a.need, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat';
 
 // A comment newer than "seen" (the unread dot), a due date tomorrow (amber) and one overdue (rose) are added to the sample data.
 async function open(page, guard, hash, { scheme, change } = {}) {
@@ -89,7 +91,7 @@ test.describe('Factory look: rules by computed style on every view', () => {
             const ok = r === '12px' || (r === '50%' && e.matches('.dot, .info, .new, .stage .n, .sw > i, .req')) || (r === '11px' && e.matches('.cnt, .n')) || (r === '2px' && e.matches('.bar'));
             if (!ok) out.push('radius ' + r + ': ' + F.what(e));
           });
-          // 3 + 12: pressables rest on ONE clear 1px line (the control line, or their own meaning colour), 12px, 36px.
+          // 3 + 12: pressables rest on ONE clear 1px line (the control line, or a status pill's own ring), 12px, 36px.
           document.querySelectorAll(PRESS).forEach((e) => {
             if (!F.seen(e)) return;
             const cs = getComputedStyle(e), b = e.getBoundingClientRect();
@@ -242,7 +244,9 @@ test.describe('Factory look: hover = a 1px line inside + a pale tint; nothing mo
       await open(page, guard, '#/me', { scheme });
       await page.evaluate(HELP);
       const ink = await page.evaluate(() => getComputedStyle(document.body).color);
-      const look = (el) => el.evaluate((e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e), i = e.querySelector('.ti'); return { box: [r.x, r.y, r.width, r.height], ow: c.outlineWidth, os: c.outlineStyle, oo: c.outlineOffset, oc: c.outlineColor, bc: c.borderTopColor, bg: c.backgroundColor, icon: i ? getComputedStyle(i).color : '' }; });
+      const look = (el) => el.evaluate((e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e), i = e.querySelector('.ti');
+        const p = document.createElement('i'); p.style.color = c.getPropertyValue('--mc').trim(); e.appendChild(p); const mc = getComputedStyle(p).color; p.remove();
+        return { box: [r.x, r.y, r.width, r.height], ow: c.outlineWidth, os: c.outlineStyle, oo: c.outlineOffset, oc: c.outlineColor, bc: c.borderTopColor, bg: c.backgroundColor, mc, icon: i ? getComputedStyle(i).color : '' }; });
       const neutral = { chip: '#view [data-fx="app"]:not(.on)', filter: '#filtersBtn', icon: '#view .crow .ico', flag: '#view .crow .flagb', mark: '#view .crow .mark', date: '#view label.date:not(.over):not(.soon)', search: '#view .sbox' };
       const meaning = { yes: '#view .btn.yes', no: '#view .btn.no', late: '#view label.date.over', soon: '#view label.date.soon' };
       for (const [k, sel] of Object.entries({ ...neutral, ...meaning })) {
@@ -256,19 +260,21 @@ test.describe('Factory look: hover = a 1px line inside + a pale tint; nothing mo
         await page.mouse.move(0, 0);
         const a2 = await look(el);
         await page.mouse.move(a2.box[0] + a2.box[2] / 2, a2.box[1] + a2.box[3] / 2); // a plain mouse move: nothing scrolls
-        await page.waitForTimeout(200);
+        await settle(el);
         const b = await look(el);
         a.box = a2.box;
         expect(b.box, `${k} must not move`).toEqual(a.box);
         expect([b.ow, b.os, b.oo], `${k} hover line`).toEqual(['1px', 'solid', '-1px']);
         expect(b.bg, `${k} hover adds a tint`).not.toBe(a.bg);
         if (k in meaning) {
-          expect(b.oc, `${k} keeps its own colour`).toBe(a.bc);
+          expect(b.oc, `${k} keeps its own colour`).toBe(a.mc); // yes / no rest on the control line; dates rest on their own ring
+          if (k === 'late' || k === 'soon') expect(a.bc, `${k} rests on its own ring`).toBe(a.mc);
           expect(b.oc, `${k} never turns ink`).not.toBe(ink);
           expect(b.icon, `${k} icon keeps its colour`).toBe(a.icon);
           // The tint is that colour mixed into the card: lighter than the line in light mode, darker in dark mode.
           const [tl, ll] = await page.evaluate(([bg, line]) => [window.__fx.L(bg), window.__fx.L(line)], [b.bg, b.bc]);
-          if (scheme === 'light') expect(tl, `${k} pale tint`).toBeGreaterThan(ll); else expect(tl, `${k} dark tint`).toBeLessThan(ll);
+          const ml = await page.evaluate((c) => window.__fx.L(c), b.oc);
+          if (scheme === 'light') expect(tl, `${k} pale tint`).toBeGreaterThan(ml); else expect(tl, `${k} dark tint`).toBeLessThan(ml);
         } else {
           expect(b.oc, `${k} hover line is ink`).toBe(ink);
         }

@@ -113,9 +113,12 @@ test.describe('Marketplace page', () => {
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
     expect(css).not.toMatch(/\b(rgba?|hsla?)\(/i);
     expect(css).not.toMatch(/:\s*(white|black|red|green|blue|grey|gray|orange|yellow|purple)\b/i);
+    // Every colour name used comes from the page itself or from the two shared files (tokens.css numbers, house.css names).
+    const shared = fs.readFileSync(path.join(__dirname, '..', '..', 'tokens.css'), 'utf8') + fs.readFileSync(path.join(__dirname, '..', '..', 'house.css'), 'utf8');
+    expect(SRC).toContain('<link rel="stylesheet" href="../house.css">');
     for (const v of css.match(/var\(--[\w-]+/g) || []) {
       const name = v.slice(4);
-      expect(/^--ljr-/.test(name) || new RegExp(name + '\\s*:').test(css), name).toBe(true);
+      expect(/^--ljr-/.test(name) || new RegExp(name + '\\s*:').test(css) || new RegExp(name + '\\s*:').test(shared), name).toBe(true);
     }
   });
 

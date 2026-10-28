@@ -21,6 +21,7 @@
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../house.css">
 <style>
 /* ==== House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio).
    Lexend 400/600, nothing under 13px, line height 1.5, no uppercase. 1px lines. Hover AND selected = the same 1px edge
@@ -29,30 +30,14 @@
    Dark frame top and bottom. Greys follow Warm clear (default) or Cool clear, read from Studio's Look ('dash-look', read only).
    Screens are built on generic Bloodline foundation concepts (record, round, check, rule, place, person, document);
    animal-only parts are marked "kit: animal". ==== */
-:root{--radius:12px;
- --paper:#EEE8DF;--card:#FFFEFB;--ink:#3A3632;--muted:#57504A;--line:#BFB4A3;--soft:#E6DFD3;--press:#8A7F70;
- --frame:#3A3632;--frame-foot:#46413B;--frame-ink:#F6F1E8;--frame-line:#9C9285;
- --shadow:0 1px 3px rgba(60,48,32,.14),0 2px 10px rgba(60,48,32,.08);--sel-bd:var(--ink);--sel-fill:transparent;
- --hov-fill:color-mix(in srgb,var(--muted) 12%,var(--card));
+/* Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule: ../tokens.css through ../house.css,
+   the same on every hub. CD Hub's own names below: the LJR7 slots, the kit (sex) colours and the old short names. */
+:root{--sel-fill:transparent;--hov-fill:var(--hov);
  /* LJR7 slots (tokens.css). --male/--female are kit colours (sex), shown only as dots. */
  --p0:var(--ljr-0);--p2:var(--ljr-2);--p3:var(--ljr-3);--p4:var(--ljr-4);--p5:var(--ljr-5);--p6:var(--ljr-6);--p7:var(--ljr-7);--p8:var(--ljr-8);
  --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:var(--ljr-0);
  /* old names kept so every rule below reads one set of tokens */
- --bg:var(--paper);--fg:var(--ink);--ln:var(--line);--sub:var(--muted);}
-:root.look-cool{--paper:#F2F4F6;--card:#FFFFFF;--ink:#33475B;--muted:#5B646D;--line:#B9C3CC;--soft:#E1E6EB;--press:#7A8692;
- --frame:#33475B;--frame-foot:#405569;--frame-ink:#FFFFFF;--frame-line:#9FB0C0;--shadow:0 1px 2px rgba(20,30,40,.12),0 1px 8px rgba(20,30,40,.10);}
-@media (prefers-color-scheme:dark){
- :root:not([data-theme="light"]){--paper:#181613;--card:#27231E;--ink:#F3EEE5;--muted:#B3AA9D;--line:#3E372F;--soft:#2F2A24;--press:#857B6E;
-  --frame:#2A2622;--frame-foot:#34302B;--shadow:0 1px 3px rgba(0,0,0,.4);color-scheme:dark;}
- :root.look-cool:not([data-theme="light"]){--paper:#16191C;--card:#23282D;--ink:#EEF2F5;--muted:#A9B3BC;--line:#39414A;--soft:#2B3137;--press:#7A8691;--frame:#24323F;--frame-foot:#2D3D4C;}
-}
-/* Mode = Dark from Studio's Look: tokens.css only darkens with the device, so its dark spine is repeated here. */
-:root[data-theme="dark"]{--ljr-ink:#F3EEE5;--ljr-paper:#232019;--ljr-cream:#191714;--ljr-muted:#B4AB9E;
- --ljr-0:#8E877B;--ljr-0-text:#B4AB9E;--ljr-0-tint:#2F2B25;--ljr-2-tint:#3C251E;--ljr-3-tint:#3C2D18;--ljr-4-tint:#3E3820;--ljr-5-tint:#293221;--ljr-6-tint:#213134;--ljr-7-tint:#342A31;
- --ljr-8:#8E8A84;--ljr-8-tint:#2A2825;--ljr-2-text:#EF7D79;--ljr-3-text:#EC942E;--ljr-5-text:#65B769;
- --paper:#181613;--card:#27231E;--ink:#F3EEE5;--muted:#B3AA9D;--line:#3E372F;--soft:#2F2A24;--press:#857B6E;
- --frame:#2A2622;--frame-foot:#34302B;--shadow:0 1px 3px rgba(0,0,0,.4);color-scheme:dark;}
-:root.look-cool[data-theme="dark"]{--paper:#16191C;--card:#23282D;--ink:#EEF2F5;--muted:#A9B3BC;--line:#39414A;--soft:#2B3137;--press:#7A8691;--frame:#24323F;--frame-foot:#2D3D4C;}
+ --fg:var(--ink);--ln:var(--line);--sub:var(--muted);}
 :root.sel-soft{--sel-fill:var(--soft);}
 html.text-lg body{zoom:1.12}html.text-xl body{zoom:1.25}html.space-roomy body{line-height:1.75}
 *{box-sizing:border-box}
@@ -88,17 +73,14 @@ html.dash-locked header .backhome{color:var(--ink);border-color:var(--press);mar
 @media (hover:hover){#moreMenu>*:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}}
 
 /* ---- Frame: dark bottom tab bar. Light buttons, no ring; hover/selected = the small colour bar above the label widens. ---- */
-nav#nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--frame-foot);display:grid;grid-template-columns:repeat(10,minmax(0,1fr)) repeat(2,minmax(0,.75fr));gap:8px;padding:8px 24px calc(10px + env(safe-area-inset-bottom,0px))}
+nav#nav{z-index:20;display:grid;grid-template-columns:repeat(10,minmax(0,1fr)) repeat(2,minmax(0,.75fr));gap:8px;padding:8px 24px calc(10px + env(safe-area-inset-bottom,0px))}
 nav#nav:empty{display:none}
-nav#nav button{position:relative;font:inherit;font-size:13px;font-weight:600;color:var(--ink);background:var(--card);border:1px solid transparent;border-radius:var(--radius);min-height:54px;padding:4px 2px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;text-align:center;min-width:0}
-nav#nav button .tbar{width:18px;height:4px;border-radius:2px;background:var(--tc,var(--ljr-0));opacity:.55;transition:width .15s ease-out,opacity .15s ease-out}
-nav#nav button[aria-current="page"] .tbar{width:40px;opacity:1}
-@media (hover:hover){nav#nav button:hover .tbar{width:40px;opacity:1}}
-@media (prefers-reduced-motion:reduce){nav#nav button .tbar{transition:none}}
+/* The tab buttons and their widening colour bar: ../house.css (.house-tabs). */
+nav#nav button{font:inherit;font-size:13px}
 nav#nav button .ti{color:var(--muted)}
 nav#nav button .lab{line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 nav#nav button .ls{display:none}
-nav#nav button.util .tbar{visibility:hidden}
+nav#nav button.util .bar{visibility:hidden}
 nav#nav button:focus-visible{outline:2px solid var(--frame-ink);outline-offset:2px}
 nav#nav .cnt{position:absolute;top:6px;right:8px}
 @media (max-width:1180px){nav#nav{grid-template-columns:repeat(6,minmax(0,1fr))}}
@@ -107,7 +89,6 @@ nav#nav .cnt{position:absolute;top:6px;right:8px}
  nav#nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px))}
  nav#nav button.util{display:none}
  nav#nav button{min-height:56px;flex-direction:row;flex-wrap:wrap;align-content:center;gap:2px 4px;padding:4px 2px}
- nav#nav button .tbar{margin:0 calc(50% - 9px)}nav#nav button[aria-current="page"] .tbar{width:26px;margin:0 calc(50% - 13px)}
  nav#nav button .ti{order:1}nav#nav .cnt{position:static;order:2}nav#nav button .lab{order:3;flex:0 0 100%}
  html.cd-in .morewrap{display:inline-flex}
  html.cd-in header .srchbtn,html.cd-in header #backHome{display:none!important}
@@ -115,7 +96,6 @@ nav#nav .cnt{position:absolute;top:6px;right:8px}
  .brand h1{font-size:20px;margin-right:auto}
  .wrap{padding-bottom:170px}
 }
-@media (max-width:544px) and (hover:hover){nav#nav button:hover .tbar{width:26px;margin:0 calc(50% - 13px)}}
 
 /* ---- Type ladder ---- */
 h2{font-size:26px;margin:24px 0 4px;line-height:1.3}
@@ -126,7 +106,7 @@ h3{font-size:17px;margin:24px 0 12px;display:flex;align-items:center;gap:8px}
 code{font-family:inherit;font-size:14px;font-variant-numeric:tabular-nums;background:transparent;padding:0}
 
 /* ---- Cards: one white panel, 1px line, 12px step; read-only, so nothing happens on hover. ---- */
-.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:0 0 12px;box-shadow:var(--shadow);min-width:0}
+.card{margin:0 0 12px;box-shadow:var(--shadow)} /* the house card (../house.css): 1px line, 12px inside */
 .card.dash{border-style:dashed}
 .card h4,.card .hx4{margin:0 0 12px;font-size:17px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:0;line-height:1.4}
 .card p{margin:0 0 8px;font-size:15px}.card p:last-child{margin-bottom:0}
@@ -147,8 +127,8 @@ code{font-family:inherit;font-size:14px;font-variant-numeric:tabular-nums;backgr
 .sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
 /* Buttons with a meaning colour keep it on hover and when chosen: the same 1px line in that colour inside, plus a pale tint of it. Never ink. */
-.btn.yes{border-color:var(--ljr-5)}.btn.no{border-color:var(--ljr-2)}
-@media (hover:hover){.btn.yes:hover{outline-color:var(--ljr-5);background:color-mix(in srgb,var(--ljr-5) 14%,var(--card))}.btn.no:hover{outline-color:var(--ljr-2);background:color-mix(in srgb,var(--ljr-2) 14%,var(--card))}}
+/* They rest on the same control line as every pressable (house rule); the colour shows on hover. */
+@media (hover:hover){.btn.yes:hover{outline-color:var(--house-ok);background:color-mix(in srgb,var(--house-ok) 14%,var(--card))}.btn.no:hover{outline-color:var(--house-risk);background:color-mix(in srgb,var(--house-risk) 14%,var(--card))}}
 .dc .nl .st{border:0;padding:0;height:auto;font-size:13px}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :focus-visible{outline:2px solid var(--ink)!important;outline-offset:2px}
@@ -334,7 +314,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:14px}ul
 </div></header>
 <div class="wrap"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
 <div class="next" id="next"></div></div>
-<nav id="nav" aria-label="Sections"></nav>
+<nav id="nav" class="house-tabs" aria-label="Sections"></nav>
 <script>
 
 var FOLDER=window.DASH_CONFIG.cdhub.folderId;   
@@ -1813,16 +1793,16 @@ function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) r
 var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sitemap','Tables',0],today:['calendar-event','Today',4],
  round:['route','Round',4],dogs:['paw','Dogs',5],areas:['building-cottage','Areas',3],litters:['baby-carriage','Litters',7],
  vet:['stethoscope','Vet',5],buyers:['world','Buyers',6]};
-function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+n+'</span>'; }
+function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; } // 0 shows no ring
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
  var counts={map:nd,work:wait};
  return SECTIONS.map(function(s){ var m=TABMETA[s[0]]||['point',s[1],0], n=counts[s[0]];
-   return '<button type="button" data-go="'+s[0]+'" style="--tc:var(--ljr-'+m[2]+')"><span class="tbar" aria-hidden="true"></span>'
+   return '<button type="button" data-go="'+s[0]+'" style="--tc:var(--ljr-'+m[2]+')"><span class="bar" aria-hidden="true"></span>'
     +'<svg class="ti" aria-hidden="true"><use href="#i-'+m[0]+'"/></svg>'+(n?cntPill(n,'need'):'')
     +'<span class="lab"><span class="lf">'+esc(s[1])+'</span><span class="ls" aria-hidden="true">'+esc(m[1])+'</span></span></button>'; }).join('')
-  +'<button type="button" class="util" data-reload="1" title="Read the tables from Drive again"><span class="tbar" aria-hidden="true"></span><svg class="ti" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lab">Reread</span></button>'
-  +'<button type="button" class="util" data-signout="1"><span class="tbar" aria-hidden="true"></span><svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg><span class="lab">Sign out</span></button>';
+  +'<button type="button" class="util" data-reload="1" title="Read the tables from Drive again"><span class="bar" aria-hidden="true"></span><svg class="ti" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lab">Reread</span></button>'
+  +'<button type="button" class="util" data-signout="1"><span class="bar" aria-hidden="true"></span><svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg><span class="lab">Sign out</span></button>';
 }
 function pill(){
  var p=document.getElementById('livepill');

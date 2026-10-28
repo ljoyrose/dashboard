@@ -19,43 +19,19 @@
 <script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../house.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
-  /* House look (Lisa, 28 Oct 2026; the same rules as Money, Studio and Marketplace). Colours: ../tokens.css only. The Warm clear
-     and Cool clear greys and the dark frame are MIXED here from tokens.css colours, so no colour is written in this page; their exact
-     values (warm line 8A7F70, cool 7A8692, frame 3A3632 / 46413B) belong in tokens.css once every hub uses them. The background follows
-     Studio's Look menu (localStorage 'dash-look', read only). Lexend 400/600, nothing under 13px, line height 1.5, ONE radius 12px
-     (only dots and rings are round), 1px lines. No solid colour fills and no coloured words: colour sits in dots, bars, 1px rings,
-     tints and icons. Two allowed solid markers: the new-comment dot and the on/off switch knob (outlined they are too faint). */
-  :root { --radius: 12px;
-    --bg: color-mix(in srgb, var(--ljr-0) 25%, var(--ljr-cream)); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
-    --line: color-mix(in srgb, var(--ljr-0) 85%, var(--ljr-muted));          /* containers: the softer line */
-    --ctl: color-mix(in srgb, var(--ljr-muted) 70%, var(--ljr-0));            /* the ONE clear line every pressable rests on (warm 8A7F70), 3:1 */
-    --frame: color-mix(in srgb, var(--ljr-ink) 81%, var(--ljr-muted));        /* warm charcoal top bar (3A3632), never black */
-    --frame-foot: color-mix(in srgb, var(--ljr-ink) 62%, var(--ljr-muted));   /* bottom bar one step lighter (46413B) */
-    --frame-ink: var(--ljr-cream); --frame-line: color-mix(in srgb, var(--ljr-0) 70%, var(--ljr-muted));
+  /* House look (Lisa, 28 Oct 2026; the same rules on every hub). The Warm clear and Cool clear greys, the control line
+     (warm 8A7F70, cool 7A8692), the frame (3A3632 / 46413B), radius, counts, date pills, tabs and the hover rule now live once:
+     the numbers in ../tokens.css, the shared parts in ../house.css. The Look (Studio's Look menu, 'dash-look') is applied by
+     ../toolkit.js. Lexend 400/600, nothing under 13px, line height 1.5, ONE radius 12px (only dots and rings are round), 1px lines.
+     No solid colour fills and no coloured words: colour sits in dots, bars, 1px rings, tints and icons. Two allowed solid markers:
+     the new-comment dot and the on/off switch knob (outlined they are too faint). Factory's own names: the meaning lines. */
+  :root {
     /* Meaning lines (3:1 or better on a card) and their tints. Words stay ink. */
-    --r-risk: var(--ljr-2); --r-warn: var(--ljr-3-text); --r-ops: var(--ljr-4-text); --r-ok: var(--ljr-5-text); --r-sales: var(--ljr-6-text); --r-ideas: var(--ljr-7-text);
-    --t-risk: var(--ljr-2-tint); --t-warn: var(--ljr-3-tint); --t-ok: var(--ljr-5-tint);
-    --hov: color-mix(in srgb, var(--muted) 14%, var(--surface)); }
-  :root.look-cool { --cmuted: color-mix(in srgb, var(--ljr-muted) 80%, var(--ljr-6-text));
-    --bg: color-mix(in srgb, var(--ljr-6-text) 6%, var(--ljr-paper)); --surface: color-mix(in srgb, var(--ljr-6-text) 3%, var(--ljr-paper)); --ink: color-mix(in srgb, var(--ljr-ink) 90%, var(--ljr-6-text)); --muted: var(--cmuted);
-    --line: color-mix(in srgb, var(--cmuted) 45%, var(--ljr-paper)); --ctl: color-mix(in srgb, var(--cmuted) 78%, var(--ljr-paper));   /* cool 7A8692 */
-    --frame: color-mix(in srgb, color-mix(in srgb, var(--ljr-ink) 60%, var(--ljr-muted)) 80%, var(--ljr-6-text));
-    --frame-foot: color-mix(in srgb, color-mix(in srgb, var(--ljr-ink) 45%, var(--ljr-muted)) 78%, var(--ljr-6-text));
-    --frame-ink: var(--ljr-paper); --frame-line: color-mix(in srgb, var(--cmuted) 45%, var(--ljr-paper)); }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
-      --line: color-mix(in srgb, var(--ljr-0) 35%, var(--ljr-paper)); --ctl: color-mix(in srgb, var(--ljr-0) 85%, var(--ljr-paper));
-      --frame: color-mix(in srgb, var(--ljr-0) 7%, var(--ljr-paper)); --frame-foot: color-mix(in srgb, var(--ljr-0) 14%, var(--ljr-paper));
-      --frame-ink: var(--ljr-ink); --frame-line: var(--ljr-0); --r-warn: var(--ljr-3-text); color-scheme: dark; }
-    :root.look-cool:not([data-theme="light"]) { --cmuted: color-mix(in srgb, var(--ljr-muted) 85%, var(--ljr-6-text));
-      --bg: color-mix(in srgb, var(--ljr-6-text) 6%, var(--ljr-cream)); --surface: color-mix(in srgb, var(--ljr-6-text) 8%, var(--ljr-paper));
-      --ink: color-mix(in srgb, var(--ljr-ink) 92%, var(--ljr-6-text)); --muted: var(--cmuted);
-      --line: color-mix(in srgb, var(--cmuted) 25%, var(--ljr-paper)); --ctl: color-mix(in srgb, var(--cmuted) 70%, var(--ljr-paper));
-      --frame: color-mix(in srgb, var(--ljr-6-text) 14%, var(--ljr-paper)); --frame-foot: color-mix(in srgb, var(--ljr-6-text) 20%, var(--ljr-paper));
-      --frame-ink: var(--ljr-ink); --frame-line: var(--cmuted); }
-  }
+    --r-risk: var(--house-late); --r-warn: var(--house-soon); --r-ops: var(--ljr-4-text); --r-ok: var(--house-ok); --r-sales: var(--ljr-6-text); --r-ideas: var(--ljr-7-text);
+    --t-risk: var(--ljr-2-tint); --t-warn: var(--ljr-3-tint); --t-ok: var(--ljr-5-tint); }
   * { box-sizing: border-box; }
   h1, h2, h3, h4, b, strong, th, summary { font-weight: 600; }   /* two weights only: 400 and 600 */
   html { scroll-padding-bottom: 120px; }   /* a control scrolled into view never hides under the tab bar */
@@ -111,7 +87,9 @@
   a.chip.stuck { --mc: var(--r-risk); } a.pill.alert.has { --mc: var(--r-risk); }
   label.date.over { --mc: var(--r-risk); } label.date.soon { --mc: var(--r-warn); }
   .stat { --mc: var(--sc); }
-  .btn.yes, .btn.no, .lk.off, a.need.n4, a.need.n5, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat { border-color: var(--mc); }
+  /* Status pills that are also links (needs, stuck, alert, dates, stats) wear their status ring: the ring is the information.
+     Yes / No / Off rest on the one control line like every pressable; their colour shows on hover (below) and in the icon. */
+  a.need.n4, a.need.n5, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat { border-color: var(--mc); }
   .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .lk.off .ti, a.pill.alert.has .ti { color: var(--ljr-2-text); }
   label.date.over, label.date.soon { background: color-mix(in srgb, var(--mc) 10%, var(--surface)); }
 
@@ -138,22 +116,21 @@
   .sbox:focus-within { border-color: var(--ink); }
 
   /* Frame: dark bottom tab bar, light tab buttons with no rings. Hover and selected = the small colour bar above the label widens. */
-  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(6, minmax(0, 200px)); justify-content: center; gap: 8px;
-    padding: 8px 24px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--frame-foot); }
-  nav.tabs a { --tc: var(--ljr-0); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; padding: 4px 2px;
-    border-radius: var(--radius); background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 600; text-align: center; }
-  nav.tabs a .bar { width: 18px; height: 4px; border-radius: 2px; background: var(--tc); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
-  nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
-  @media (hover: hover) { nav.tabs a:hover .bar { width: 40px; opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { nav.tabs a .bar { transition: none; } }
+  /* The frame, light tab buttons, no ring, the widening colour bar: ../house.css (.house-tabs). Six across here. */
+  nav.tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 200px)); justify-content: center; gap: 8px;
+    padding: 8px 24px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  nav.tabs a { --tc: var(--ljr-0); font-size: 14px; }
+  @media (min-width: 601px) { nav.tabs a { min-height: 56px; } }
   nav.tabs a > .ti { font-size: 18px; color: var(--muted); }
-  nav.tabs .n { position: absolute; top: 6px; right: 10px; }
+  nav.tabs .n { top: 6px; right: 10px; }
 
   /* Counts: ONE fixed box so 1 and 2 digits match (30 x 22, radius 11); only 3+ digits grow (.wide). Read-only: no hover.
      Tab counts are an amber ring only (no fill); "needs you" counts in the page are a rose ring + tint. A count of 0 shows no pill. */
-  .cnt, nav.tabs .n, .fbtn .n, .fdet > summary .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 30px; height: 22px; padding: 0 3px; flex: none;
-    border: 1px solid var(--ctl); border-radius: 11px; font-size: 13px; font-weight: 600; line-height: 20px; color: var(--ink); background: transparent; white-space: nowrap; font-variant-numeric: tabular-nums; vertical-align: middle; }
-  .cnt.wide, nav.tabs .n.wide, .fbtn .n.wide { width: auto; min-width: 30px; padding: 0 6px; }
+  /* The count pill itself: ../house.css; the counts inside Filter and the fold titles use the same box. */
+  .fbtn .n, .fdet > summary .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: var(--house-count-w); height: var(--house-count-h); padding: 0 var(--house-count-pad);
+    border: 1px solid var(--ctl); border-radius: var(--house-count-r); font-size: 13px; font-weight: 600; line-height: var(--house-count-lh); color: var(--ink); background: transparent; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .cnt, nav.tabs .n, .fbtn .n, .fdet > summary .n { flex: none; vertical-align: middle; }
+  .fbtn .n.wide { width: auto; min-width: 30px; padding: 0 6px; }
   nav.tabs .n { border-color: var(--r-warn); }
   .cnt.need { border-color: var(--r-risk); background: var(--t-risk); }
   .cnt:empty, nav.tabs .n:empty, .fbtn .n:empty, .fdet > summary .n:empty { display: none; }
@@ -164,13 +141,12 @@
     /* Phone: two rows of three tabs; the count sits in flow beside the label, never over it. */
     nav.tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px)); }
     nav.tabs a { min-height: 44px; flex-direction: row; flex-wrap: wrap; align-content: center; gap: 2px 6px; }
-    nav.tabs a .bar { flex: 0 0 auto; margin: 0 calc(50% - 9px); }
-    nav.tabs a[aria-current="page"] .bar { width: 26px; margin: 0 calc(50% - 13px); }
+    nav.tabs a .bar { flex: 0 0 auto; }
     nav.tabs a > .ti { display: none; }
+    nav.tabs a > .tl { order: 1; flex: 0 1 auto; }   /* room here: the count sits in the flow beside the label */
     nav.tabs .n { position: static; }
     html { scroll-padding-bottom: 150px; }
   }
-  @media (max-width: 600px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
 
   /* Work area: 12px steps, 16px under the header. */
   main.wrap { padding-top: 16px; padding-bottom: 120px; display: flex; flex-direction: column; gap: 12px; }
@@ -393,7 +369,7 @@
     <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
   </div>
 </header>
-<nav class="tabs" aria-label="Sections">
+<nav class="tabs house-tabs" aria-label="Sections">
   <a href="#/me" data-nav="me" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-user" aria-hidden="true"></i><span class="tl">Me</span><span class="n" id="nMe"></span></a>
   <a href="#/rooms" data-nav="rooms" style="--tc:var(--ljr-0)"><span class="bar" aria-hidden="true"></span><i class="ti ti-building-factory-2" aria-hidden="true"></i><span class="tl">Rooms</span></a>
   <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-scale" aria-hidden="true"></i><span class="tl">Decide</span><span class="n" id="nDecide"></span></a>
@@ -408,9 +384,7 @@
 </main>
 
 <script>
-/* Studio's Look setting (localStorage 'dash-look': bg warm|cool) is read here, never written. Warm clear is the default. */
-(function () { function look() { try { var o = JSON.parse(localStorage.getItem('dash-look') || '{}') || {}; document.documentElement.classList.toggle('look-cool', o.bg === 'cool'); } catch (e) {} }
-  look(); window.addEventListener('storage', function (e) { if (e.key === 'dash-look') look(); }); })();
+/* Studio's Look setting ('dash-look') is applied by ../toolkit.js (Warm clear by default), never written here. */
 </script>
 <script>
 (function () {
