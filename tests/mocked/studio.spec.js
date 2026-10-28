@@ -500,6 +500,24 @@ test.describe('Studio page', () => {
     expect(got[1].body).toMatchObject({ kind: 'deliver', assetId: 'sa-client-done', accountId: 'acc-owner' });
   });
 
+  test('results: Add results on a library item checks channel and numbers, then writes one result request; the results chip shows totals', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/library', { change: (s) => { const l = s.assets.filter((a) => a.stage === 8)[0]; l.results = { views: 1200, clicks: 40, leads: 6, sales: 2, revenue: 90, last: '2026-10-27', channels: ['facebook'] }; } });
+    const r = page.locator('#view .crow').first();
+    await expect(r.locator('[data-chip="results"]')).toContainText('1200');
+    await r.locator('[data-panel="result"]').click();
+    await r.locator('.rform [type="submit"]').click();
+    await expect(r.locator('.rform .ferr')).toHaveText('Pick a channel');
+    await r.locator('[data-rch="facebook"]').click();
+    await r.locator('[data-rf="views"]').fill('350');
+    await r.locator('[data-rf="sales"]').fill('1');
+    await r.locator('.rform [type="submit"]').click();
+    await expect(r.locator('[data-sent]')).toBeVisible();
+    expect(got).toHaveLength(1);
+    expect(got[0].body).toMatchObject({ kind: 'result', accountId: 'acc-owner', channel: 'facebook', date: '2026-10-28', views: 350, sales: 1 });
+    expect(got[0].body.clicks).toBeUndefined();
+  });
+
   test('example data has groups, kits, styles, formats, a variant and a gap (fictional), and sends nothing', async ({ page, guard }) => {
     await open(page, guard, '#/kits', { state: false });
     await expect(page.locator('[data-playbook="ex-pb1"]')).toBeVisible();
