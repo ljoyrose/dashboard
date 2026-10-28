@@ -232,17 +232,22 @@
     var who = String(owner || 'Lisa'), pic = avatars && avatars[who.toLowerCase()], col = 'var(--ljr-ava-' + (AVA_COL[who.toLowerCase()] ? who.toLowerCase() : 'other') + ')';
     return '<span class="ava" title="' + esc(who) + '" aria-label="' + esc(who) + '\'s" style="--ava:' + col + '">' + (pic ? '<img alt="" src="' + esc(pic) + '">' : esc(/^[A-Z]{1,3}$/.test(who) ? who : who.charAt(0).toUpperCase())) + '</span>';
   }
-  var pics = null;
+  var pics = null, picsAt = 0;
+  // Lisa 28 Oct: a card named a listing added after the page had read the list (L0225), so it showed "No photo" with no eBay
+  // button. Read again (at most once a minute) whenever a "Same item?" card names a listing the last read did not have.
   function loadPics() {
-    if (pics !== null || !M.listingsFileId || !rows.some(function (r) { return /^LINK\|/.test(r.key); })) return;
-    pics = {};
+    var link = rows.filter(function (r) { return /^LINK\|/.test(r.key); });
+    if (!M.listingsFileId || !link.length) return;
+    var missing = pics === null || link.some(function (r) { var ids = r.key.split('|'); return !pics[ids[1]] || !pics[ids[2]]; });
+    if (!missing || Date.now() - picsAt < 60000) return;
+    picsAt = Date.now(); var next = {};
     fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(M.listingsFileId) + '?alt=media&supportsAllDrives=true', { headers: { Authorization: 'Bearer ' + token } })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
       .then(function (t) { var t2 = csvRows(t), h = -1;
         for (var i = 0; i < Math.min(t2.length, 5); i++) if (t2[i].indexOf('listing_id') >= 0) { h = i; break; }
         if (h < 0) return; var hd = t2[h], li = hd.indexOf('listing_id'), im = hd.indexOf('image_url'), ti = hd.indexOf('title'), pl = hd.indexOf('platform'), ur = hd.indexOf('url'), pi = hd.indexOf('platform_item_id');
-        t2.slice(h + 1).forEach(function (r) { pics[r[li]] = { photo: r[im] || '', title: r[ti] || '', platform: r[pl] || '', url: listingUrl(r[pl], r[ur], r[pi]) }; });
-        render(); })
+        t2.slice(h + 1).forEach(function (r) { next[r[li]] = { photo: r[im] || '', title: r[ti] || '', platform: r[pl] || '', url: listingUrl(r[pl], r[ur], r[pi]) }; });
+        pics = next; render(); })
       .catch(function () {});   // no second photo is not an error: the card still works
   }
   function csvRows(text) {
@@ -344,6 +349,8 @@
   // Every parcel card says what it is and what to do, with links that open in a new tab (Lisa 27 Oct: the dashboard is the
   // one place to work from; never leave her guessing what a card is about).
   var MAIL = 'https://mail.google.com/mail/u/?authuser=lisa%40puppyclassroom.com#all/';
+  // Lisa 27 Oct: every card says when it was last updated (the engine's updated_at when it refreshed the card, else when it was made).
+  function stamp(r, d) { var t = Date.parse(d.updated_at || r.created_at || ''); return isNaN(t) ? '' : '<div class="m">Updated ' + esc(new Date(t).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</div>'; }
   function ukDay(s) { var t = Date.parse(String(s || '').slice(0, 10)); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
   function postGuide(r, d) {
     var eb = /ebay/i.test(d.platform), site = eb ? 'eBay' : /vinted/i.test(d.platform) ? 'Vinted' : (d.platform || 'the site');
@@ -367,7 +374,7 @@
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
     var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
       '<div class="item">' + (isPair ? '' : thumb(d.photo)) + '<div class="t">' + avatar(d.owner) + esc(r.title) + '<div class="m">' + esc([d.price, siteOf(r), d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
-      postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + '</div></div>' +
+      postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
       (isPair ? pair(r, d) : '') + (r.section === 'post' ? postGuide(r, d) : '') + (d.why && d.kind !== 'which_parcel' ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
     var acts = [];
@@ -687,7 +694,7 @@
     var k = rows.filter(function (r) { return r.section === 'kpi'; })[0];
     if (!k) return '<p class="needs">Numbers</p><div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
     var d = detail(k), ar = { up: '▲', down: '▼', flat: '–' };
-    function show(t) { return /_p$/.test(t.key) ? '£' + (Number(t.value) / 100).toFixed(2) : t.value; }
+    function show(t) { return typeof t.value === 'string' ? t.value : /_p$/.test(t.key) ? '£' + (Number(t.value) / 100).toFixed(2) : t.value; }   // v11.7: "£8.40 from 1 of 2 sales" or "?" come as text
     var h = '<p class="needs">Numbers</p><div class="tiles">' + (d.tiles || []).map(function (t) { return '<button class="tile" type="button" data-tile="' + esc(t.key) + '"><div class="k">' + esc(t.label) + '</div><div class="v">' + esc(show(t)) + ' <span class="' + esc(t.arrow) + '">' + ar[t.arrow] + '</span></div></button>'; }).join('') + '</div>';
     if (open.tile) h += '<div class="card">' + (d.byCategory || []).map(function (c) { return '<div class="row"><div class="txt">' + esc(c.category) + '</div><div>' + esc(open.tile === 'sold' ? c.sold : '£' + (c.profit_p / 100).toFixed(2)) + '</div></div>'; }).join('') + '</div>';
     if (d.vat) h += '<p class="what">' + esc(d.vat) + '</p>';
