@@ -53,6 +53,25 @@ test.describe('Phone: CD Hub menu', () => {
   });
 });
 
+test.describe('Phone: CD Hub house look', () => {
+  test('every section: no sideways scroll, controls 44px tall, bottom tabs in two rows on screen, header uses one More menu', async ({ page }) => {
+    await page.goto('cdhub/');
+    await page.locator('#signinbtn').click();
+    await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
+    for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers']) {
+      await page.locator(`#nav button[data-go="${id}"]`).click();
+      await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
+      await noSidewaysScroll(page, id);
+      const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #next button, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
+      expect(short, id + ': controls under 44px').toEqual([]);
+    }
+    const rows = await page.evaluate(() => new Set([...document.querySelectorAll('#nav button[data-go]')].map((b) => Math.round(b.getBoundingClientRect().top))).size);
+    expect(rows, 'bottom tabs: two rows').toBe(2);
+    await expect(page.locator('#moreBtn')).toBeVisible();
+    await expect(page.locator('#backHome')).toBeHidden();
+  });
+});
+
 test.describe('Phone: Money Hub', () => {
   test('loads, signs in, menu works, no sideways scroll', async ({ page }) => {
     expect((await page.goto('money/')).status()).toBe(200);
