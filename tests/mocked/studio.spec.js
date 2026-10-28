@@ -1012,6 +1012,15 @@ test.describe('Studio page', () => {
     }
   });
 
+  test('titles wrap to two lines, then end in …', async ({ page, guard }) => {
+    await open(page, guard, '#/line', { change: (s) => { s.assets.filter((a) => a.id === 'sa-make')[0].title = 'A very long sample title that goes on and on well past two lines of a 280px column card so it must stop with an ellipsis'; } });
+    const t = page.locator('.crow[data-row="sa-make"] .ttl');
+    await expect(t).toHaveCSS('-webkit-line-clamp', '2');
+    const lines = await t.evaluate((e) => Math.round(e.getBoundingClientRect().height / parseFloat(getComputedStyle(e).lineHeight)));
+    expect(lines).toBe(2);
+    expect(await t.evaluate((e) => e.scrollHeight > e.clientHeight)).toBe(true); // the rest is cut, not lost: the panel shows it
+  });
+
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
     await open(page, guard, '#/line');
     const html = page.locator('html');

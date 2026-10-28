@@ -124,7 +124,8 @@
   .card > .crow:last-child { padding-bottom: 16px; }
   .crow .l1 { display: flex; gap: 8px; align-items: flex-start; }
   .crow .type { flex: none; width: 28px; display: inline-flex; justify-content: center; }
-  .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+  .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-size: 16px; font-weight: 600; overflow-wrap: anywhere;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; } /* titles wrap to 2 lines, then … */
   /* Brand on its own small line above the title; never run together with it. */
   .crow .bline { display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; overflow-wrap: anywhere; }
   .crow .bline .dot { width: 8px; height: 8px; }
