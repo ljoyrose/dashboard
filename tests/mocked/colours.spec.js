@@ -31,15 +31,18 @@ for (const [name, url] of [['Main dashboard', './'], ['Money Hub', 'money/'], ['
   });
 }
 
-// Calm layer (Lisa, 20 Oct 2026): the slot colour shows on hover (faint line at rest), so the check hovers first.
+// Calm layer (Lisa, 20 Oct 2026), house look (28 Oct): the slot colour shows on hover, so the check hovers first.
+// Bottom tabs carry their colour in the small bar above the label (slot 8 = warm charcoal #3A3632, never black);
+// More's links show it on their icon ring when pointed at (the card edge itself only turns ink).
 test('the colour carries meaning on the dashboard menu: Bin is slot 8, Money slot 3, PC-Personal slot 4', async ({ page }) => {
   await page.goto('./');
   await page.locator('#signInBtn').click();
   await expect(page.locator('#mainNav')).toBeVisible();
-  const col = async (sel) => { await page.locator(sel).hover(); return page.locator(sel).evaluate((e) => getComputedStyle(e).borderLeftColor); };
-  expect(await col('#mainNav a[data-nav="bin"]')).toBe('rgb(20, 20, 19)');
+  await page.locator('#mainNav a[data-nav="bin"]').hover();
+  expect(await page.locator('#mainNav a[data-nav="bin"] .bar').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(58, 54, 50)');
+  const ring = async (sel) => { await page.locator(sel).hover(); return page.locator(sel + ' > .icon').evaluate((e) => getComputedStyle(e).borderLeftColor); };
   // Hub V2: Money and PC-Personal moved from the top menu to the More tab (bottom bar).
   await page.locator('#mainNav a[data-nav="more"]').click();
-  expect(await col('#view a.slotfin')).toBe('rgb(231, 134, 21)');
-  expect(await col('#view a[data-nav="personal"]')).toBe('rgb(243, 216, 78)');
+  expect(await ring('#view a.slotfin')).toBe('rgb(231, 134, 21)');
+  expect(await ring('#view a[data-nav="personal"]')).toBe('rgb(243, 216, 78)');
 });
