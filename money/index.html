@@ -90,15 +90,16 @@
   .btn:disabled { opacity: .6; cursor: default; }
   header .btn { background: transparent; color: var(--frame-ink); border-color: var(--frame-line); }
   /* House hover rule (Lisa, 28 Oct): hover = selected. Neutral controls: a 1px ink line drawn inside + a muted tint.
-     Meaning-coloured controls (the section tabs) keep their OWN colour: a 1px line in that colour inside + a pale tint of it,
-     never ink. Drawn as an outline at -1px, so nothing moves. Keyboard focus stays the 2px ink ring. */
+     Meaning-coloured controls keep their OWN colour: a 1px line in that colour inside + a pale tint of it, never ink.
+     The bottom tabs are exempt: only their colour bar widens. Drawn as an outline at -1px, so nothing moves. Keyboard focus stays the 2px ink ring. */
   :root { --hov-neutral: color-mix(in srgb, var(--muted) 14%, var(--card)); }
   @media (hover: hover) {
     .btn:hover, details > summary:hover, a.ent:hover, .subnav a:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--hov-neutral); }
     header .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); }
-    nav.main a:hover { outline: 1px solid var(--c); outline-offset: -1px; background: color-mix(in srgb, var(--c) 14%, var(--card)); }
   }
-  nav.main a[aria-current="page"] { outline: 1px solid var(--c); outline-offset: -1px; background: color-mix(in srgb, var(--c) 14%, var(--card)); }
+  /* Bottom tabs are exempt (Lisa's tab rule): no ring, no outline, no fill; only the colour bar above the label widens. */
+  nav.main a, nav.main a:hover, nav.main a[aria-current="page"] { outline: none; background: var(--card); }
+  nav.main a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   details > summary { list-style: none; width: max-content; max-width: 100%; }
   details > summary::-webkit-details-marker { display: none; }
   details > summary::after { content: "\25BE"; font-size: 13px; color: var(--muted); }

@@ -124,13 +124,14 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
 });
 
 test.describe('Money Hub look: house hover rule (hover = selected; nothing ever moves)', () => {
-  // Neutral controls: 1px ink line inside + muted tint. Coloured controls (the section tabs) keep their own colour:
-  // 1px line in that colour inside + a pale tint of it, never ink. Header buttons sit on the dark frame: its ink + its tint.
+  // Neutral controls: 1px ink line inside + muted tint. Header buttons sit on the dark frame: its ink + its tint.
+  // (Meaning-coloured controls would keep their own colour + tint; this page has none today.)
+  // The bottom tabs are EXEMPT (Lisa's tab rule): no ring, no outline, no fill; only the colour bar above the label widens.
   const CASES = [
     ['light', 'now', 'main .btn', 'neutral'], ['light', 'now', 'main details > summary', 'neutral'], ['light', 'now', 'a.ent', 'neutral'],
     ['light', 'todo', '.subnav a:not([aria-current])', 'neutral'], ['light', 'now', 'header .btn', 'frame'],
-    ['light', 'now', 'nav.main a[data-nav="dates"]', 'own'], ['light', 'now', 'nav.main a[data-nav="accountant"]', 'own'],
-    ['dark', 'now', 'main .btn', 'neutral'], ['dark', 'now', 'nav.main a[data-nav="todo"]', 'own'],
+    ['light', 'now', 'nav.main a[data-nav="dates"]', 'tab'], ['light', 'now', 'nav.main a[data-nav="accountant"]', 'tab'],
+    ['dark', 'now', 'main .btn', 'neutral'], ['dark', 'now', 'nav.main a[data-nav="todo"]', 'tab'],
   ];
   for (const scheme of ['light', 'dark']) {
     test(`${scheme}: buttons, Details, entity cards, sub-tabs, header buttons and section tabs`, async ({ page }) => {
@@ -146,8 +147,8 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
           const r = e.getBoundingClientRect(), cs = getComputedStyle(e), root = getComputedStyle(document.documentElement);
           // Expected colours, resolved by the browser itself through a probe element.
           const probe = (prop, val, host) => { const d = document.createElement('i'); d.style[prop] = val; (host || document.body).appendChild(d); const out = getComputedStyle(d)[prop]; d.remove(); return out; };
-          const want = kind === 'own'
-            ? { line: probe('color', 'var(--c)', e), fill: probe('backgroundColor', 'color-mix(in srgb, var(--c) 14%, var(--card))', e) }
+          const want = kind === 'tab'
+            ? { line: null, fill: probe('backgroundColor', 'var(--card)') }
             : kind === 'frame'
               ? { line: probe('color', 'var(--frame-ink)'), fill: probe('backgroundColor', 'color-mix(in srgb, var(--frame-ink) 14%, var(--frame))') }
               : { line: probe('color', 'var(--ink)'), fill: probe('backgroundColor', 'color-mix(in srgb, var(--muted) 14%, var(--card))') };
@@ -155,29 +156,37 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
         }, kind);
         const where = `${sel} (${scheme})`;
         expect(got.box, `${where} moved or resized on hover`).toEqual(before);
+        if (kind === 'tab') {
+          expect(got.os, `${where} tabs get no ring or outline`).toBe('none');
+          expect(got.bg, `${where} tabs get no fill`).toBe(got.want.fill);
+          expect(await el.locator('.bar').evaluate((e) => getComputedStyle(e).width), where).toBe('40px'); // only the colour bar widens
+          continue;
+        }
         expect([got.os, got.ow, got.oo], `${where} hover line`).toEqual(['solid', '1px', '-1px']);
         expect(got.oc, `${where} hover line colour`).toBe(got.want.line);
         expect(got.bg, `${where} hover tint`).toBe(got.want.fill);
-        if (kind === 'own') {
-          expect(got.oc, `${where} a coloured control never turns ink`).not.toBe(got.ink);
-          expect(await el.locator('.bar').evaluate((e) => getComputedStyle(e).width), where).toBe('40px'); // its colour bar widens too
-        }
       }
     });
   }
 
-  test('selected = the same look as hover (section tab in its own colour, sub-tab in ink + muted tint)', async ({ page }) => {
+  test('selected: sub-tab looks like hover (ink + muted tint); the selected bottom tab only widens its colour bar', async ({ page }) => {
     await open(page, 'light');
     await go(page, 'todo');
     const look = (sel) => page.locator(sel).evaluate((e) => { const cs = getComputedStyle(e); return [cs.outlineStyle, cs.outlineWidth, cs.outlineOffset, cs.outlineColor, cs.backgroundColor]; });
-    const tab = await look('nav.main a[aria-current="page"]');
     const sub = await look('.subnav a[aria-current="page"]');
-    const want = await page.locator('nav.main a[aria-current="page"]').evaluate((e) => {
-      const p = (prop, val) => { const d = document.createElement('i'); d.style[prop] = val; e.appendChild(d); const o = getComputedStyle(d)[prop]; d.remove(); return o; };
-      return { tab: [p('color', 'var(--c)'), p('backgroundColor', 'color-mix(in srgb, var(--c) 14%, var(--card))')], sub: [p('color', 'var(--ink)'), p('backgroundColor', 'color-mix(in srgb, var(--muted) 14%, var(--card))')] };
+    const tab = await page.locator('nav.main a[aria-current="page"]').evaluate((e) => {
+      const d = document.createElement('i'); d.style.backgroundColor = 'var(--card)'; e.appendChild(d); const card = getComputedStyle(d).backgroundColor; d.remove();
+      const cs = getComputedStyle(e);
+      return { os: cs.outlineStyle, bg: cs.backgroundColor, card, bar: getComputedStyle(e.querySelector('.bar')).width };
     });
-    expect(tab).toEqual(['solid', '1px', '-1px', ...want.tab]);
-    expect(sub).toEqual(['solid', '1px', '-1px', ...want.sub]);
+    const want = await page.evaluate(() => {
+      const p = (prop, val) => { const d = document.createElement('i'); d.style[prop] = val; document.body.appendChild(d); const o = getComputedStyle(d)[prop]; d.remove(); return o; };
+      return [p('color', 'var(--ink)'), p('backgroundColor', 'color-mix(in srgb, var(--muted) 14%, var(--card))')];
+    });
+    expect(sub).toEqual(['solid', '1px', '-1px', ...want]);
+    expect(tab.os).toBe('none');
+    expect(tab.bg).toBe(tab.card);
+    expect(tab.bar).toBe('40px');
   });
 
   test('read-only pills (flags, dates, counts, the read stamp) have no hover', async ({ page }) => {
