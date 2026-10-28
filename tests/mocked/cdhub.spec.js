@@ -554,3 +554,56 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#ach-litters .achip')).toHaveText(/Year: 2025/);
   });
 });
+
+test.describe('CD Hub: In whelp reads the parsed mating rows (the #111 fix), invented fixture data', () => {
+  test('build() keeps the parsed matings; the fixture mating that produced a litter is not a pregnancy', async ({ page }) => {
+    // The sample fixture's only mating (mat-test-1) produced lit-test-1, so nobody is in whelp.
+    await page.goto('cdhub/');
+    await signIn(page);
+    const before = await page.evaluate(() => ({ keys: Object.keys(CD.matings[0]), n: inWhelp().length }));
+    expect(before.keys).toContain('dam');                 // parsed shape...
+    expect(before.keys).not.toContain('dam_subject_id');  // ...not the raw rows
+    expect(before.n).toBe(0);
+  });
+
+  test('an open mating added to the fixture file is found, from the parsed rows and from raw rows alike', async ({ page, guard }) => {
+    const fixture = fs.readFileSync(path.join(FIX, 'bld', 'BLD-mating.csv'), 'utf8').trimEnd();
+    setFile(guard.world, 'BLD-mating.csv', fixture + `\nmat-test-2,sub-test-dog-1,sub-test-dog-2,${iso(-40)},1,natural,yes,,,,invented open mating\n`);
+    await page.goto('cdhub/');
+    await signIn(page);
+    const r = await page.evaluate(() => {
+      const parsed = inWhelp().map((x) => [x.dam, x.day, x.matings]);
+      const keep = CD.matings;
+      CD.matings = T['BLD-mating.csv'];                 // raw column names are still read
+      const raw = inWhelp().map((x) => [x.dam, x.day, x.matings]);
+      CD.matings = keep;
+      return { parsed, raw };
+    });
+    expect(r.parsed).toEqual([['sub-test-dog-1', 40, 1]]);
+    expect(r.raw).toEqual(r.parsed);
+    await openTab(page, 'today');
+    await expect(page.locator('#main')).toContainText('In whelp');
+    await expect(page.locator('#main')).toContainText('day 40');
+  });
+});
+
+test.describe('CD Hub: screens that need data CD Hub does not hold say which Bloodline table will feed them', () => {
+  const WANT = [
+    ['dogs', 'media', 'Photos', 'media', 'media'], ['dogs', 'person', 'Who has it, by name', 'person', 'person'],
+    ['work', 'due', 'Due dates on Outstanding', 'work item', 'work_item'], ['round', 'reading', 'Temperatures that are kept', 'reading', 'reading'],
+    ['litters', 'stage', 'Litter stage', 'litter stage', 'birth_group_stage']];
+  test('each empty state names its Bloodline table, in words, on its own tab', async ({ page }) => {
+    await page.goto('cdhub/');
+    await signIn(page);
+    for (const [tab, k, title, words, table] of WANT) {
+      await openTab(page, tab);
+      const card = page.locator(`#arrive-${k}`);
+      await expect(card).toBeVisible();
+      await expect(card.locator('h3')).toHaveText(title);
+      await expect(card.locator('.arrives')).toHaveText(`Arrives with Bloodline: ${words}`);
+      await expect(card).toHaveAttribute('data-arrives', table);
+      const smallest = await card.evaluate((e) => Math.min(...[e, ...e.querySelectorAll('*')].map((x) => parseFloat(getComputedStyle(x).fontSize))));
+      expect(smallest).toBeGreaterThanOrEqual(13);
+    }
+  });
+});
