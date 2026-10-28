@@ -52,7 +52,7 @@ test.describe('Studio page', () => {
   test('no studio-state.json yet: the example banner, example brands, and every write switched off', async ({ page, guard }) => {
     await open(page, guard, '#/me', { state: false });
     await expect(page.locator('#exBanner')).toBeVisible();
-    await expect(page.locator('#exBanner')).toHaveText('Example data. The Studio engine is not running yet.');
+    await expect(page.locator('#exBanner')).toHaveText('Example data · engine off');
     await expect(page.locator('#stamp')).toHaveText('TEST');
     await expect(page.locator('#enginePill')).toContainText('Off');
     await page.locator('nav.tabs a[data-nav="brands"]').click();

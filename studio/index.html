@@ -229,7 +229,7 @@
 </header>
 <main class="wrap" id="content">
   <div id="banner" class="banner hidden" role="status"></div>
-  <div id="exBanner" class="banner ex hidden" role="status"><i class="ti ti-flask" aria-hidden="true"></i><span>Example data. The Studio engine is not running yet.</span></div>
+  <div id="exBanner" class="banner ex hidden" role="status"><i class="ti ti-flask" aria-hidden="true"></i><span>Example data · engine off</span></div>
   <div id="view"></div>
 </main>
 
@@ -687,7 +687,7 @@
   }
   function vTools() {
     var T = S.tools || [], G = S.gaps || [];
-    var gaps = '<div class="card" data-gaps><div class="sect">' + I('alert-triangle') + 'Gaps ' + cnt(G.length) + info('Jobs no owned tool can do. Buy or approve one.') + '</div>' +
+    var gaps = '<div class="card" data-gaps><div class="sect">' + I('alert-triangle') + 'Gaps ' + cnt(G.length) + info('No tool for these yet') + '</div>' +
       (G.length ? G.map(function (g) {
         var c = capOf(g.capability), first = g.assetIds && g.assetIds[0];
         return '<div class="row" data-gap="' + esc(g.capability + '|' + (g.format || '')) + '" style="--c:var(--ljr-3)"><span class="bar"></span><div class="txt">' + I(c[2]) + ' <b>' + esc(c[1]) + '</b>' + (g.format ? ' · ' + esc(g.ratio || fmtLabel(g.format)) : '') + info(g.reason) + '</div>' +
@@ -871,7 +871,7 @@
         fq('Length', 0, input('length', 'Length, e.g. 30s or 1 page'), 'length') +
         fq('Variant of', 0, '<select class="fin" data-f="n-master" aria-label="Master asset"><option value="">None</option>' + masters.map(function (a) { return '<option value="' + esc(a.id) + '"' + (draft.master === a.id ? ' selected' : '') + '>' + esc(bare(a)) + '</option>'; }).join('') + '</select>' +
           '<div style="margin-top:8px">' + pick('purpose', PURPOSES) + '</div>', 'master') +
-        fq('Sources', 0, vSources(), 'sources', 'Links, Inbox files or notes. Inspiration only = never copy.') : '';
+        fq('Sources', 0, vSources(), 'sources', 'Links, files, notes · inspiration only') : '';
     return '<div class="card"><div class="grp"><span class="dot" style="--c:var(--ljr-7)"></span>New idea' + (draft.fromId ? '<span class="st">' + I('recycle') + 'Reuse</span>' : '') + '</div>' +
       fq('Name', 1, input('name', 'Name'), 'name') +
       (grps.length > 1 ? fq('Group', 0, pick('group', grps.map(function (g) { return [g.id, g.name, GROUP_ICON[g.id] || 'folder']; })), 'group') : '') +
@@ -1135,7 +1135,7 @@
     DashAuth.save(accessToken, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE);
     var first = !signedIn; signedIn = true; $('banner').className = 'banner hidden';
     if (pendingWrite && DashAuth.hasScope(DashAuth.valid(), WRITE)) { var p = pendingWrite; pendingWrite = null; p(); return; }
-    else if (pendingWrite) { pendingWrite = null; banner('Saving was not allowed by Google. Click again and choose Allow.'); }
+    else if (pendingWrite) { pendingWrite = null; banner('Google blocked saving. Click again, choose Allow.'); }
     if (first || !S) { startTimer(); load(); }
   }
   function signOut() {
