@@ -262,8 +262,8 @@
   html.board-on main.wrap { padding-bottom: 0; }
   .bwrap { display: flex; gap: 12px; min-height: 0; }
   .board { flex: 1 1 auto; min-width: 0; display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; scrollbar-width: thin; }
-  .col { flex: 0 0 280px; display: flex; flex-direction: column; min-height: 0; background: var(--canvas); border: 1px solid var(--bd); border-radius: var(--radius); scroll-snap-align: start; }
-  .col-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px; min-height: 40px; font-weight: 600; background: var(--band); border-bottom: 1px solid var(--bd); box-shadow: inset 0 3px 0 var(--sc); border-radius: var(--radius) var(--radius) 0 0; }
+  .col { flex: 0 0 280px; display: flex; flex-direction: column; min-height: 0; background: var(--canvas); border: 1px solid var(--bd); border-top: 3px solid var(--sc); border-radius: var(--radius); overflow: hidden; scroll-snap-align: start; }
+  .col-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px; min-height: 40px; font-weight: 600; background: var(--band); border-bottom: 1px solid var(--bd); }
   .col-head .num { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 13px; border: 1.5px solid var(--sc); flex: none; }
   .col-head .num .ti { font-size: 15px; color: var(--ink); }
   .col-head .lab { color: var(--ink); min-width: 0; overflow-wrap: anywhere; } /* colour only in the ring and the top line */
@@ -274,7 +274,7 @@
   .col-list .crow.sel { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: linear-gradient(var(--sel-fill), var(--sel-fill)) var(--card); }
   .col-list .crow.sel::after { content: "\2713"; position: absolute; top: -8px; right: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--card); color: var(--ink); border: 2px solid var(--sel-bd); }
   .col-list > .muted { padding: 4px; margin: 0; }
-  .col-foot { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 45px; padding: 4px 12px; font-size: 14px; line-height: 18px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); border-radius: 0 0 var(--radius) var(--radius); }
+  .col-foot { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 45px; padding: 4px 12px; font-size: 14px; line-height: 18px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); }
   .col-foot b { color: var(--ink); }
   .side { flex: 0 0 380px; min-width: 0; overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
   .side .shead { display: flex; gap: 8px; align-items: flex-start; font-weight: 700; }

@@ -674,6 +674,10 @@ test.describe('Studio page', () => {
     await expect(page.locator('.col[data-stage="5"] .col-head')).toContainText('Make');
     await expect(rows(page)).toHaveCount(6);
     for (const c of await page.locator('.col-list').all()) await expect(c).toHaveCSS('overflow-y', 'auto');
+    // The column carries its own 3px stage line and clips its corners; the head has no radius or shadow of its own.
+    await expect(page.locator('.col[data-stage="5"]')).toHaveCSS('border-top-width', '3px');
+    await expect(page.locator('.col[data-stage="5"]')).toHaveCSS('overflow', 'hidden');
+    await expect(page.locator('.col[data-stage="5"] .col-head')).toHaveCSS('box-shadow', 'none');
     await expect(page.locator('.col[data-stage="1"] .col-foot')).toContainText('need you');
     await expect(page.locator('.col[data-stage="1"] .col-foot')).toContainText('AI');
     const h = await page.evaluate(() => ({ doc: document.documentElement.scrollHeight, screen: innerHeight }));
