@@ -27,7 +27,7 @@
      1px lines; hover = selected = the same 1px edge turns ink (outline, offset -1px), so nothing ever moves or resizes.
      No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints. */
   :root { --radius: 12px;
-    --paper: #EEE8DF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --soft: #DED5C7; --ctl: #9C9080;
+    --paper: #EEE8DF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --soft: #DED5C7; --ctl: #8A7F70;
     --bg: var(--paper); --surface: var(--card); --sel-bd: var(--ink);
     --shadow: 0 1px 3px rgba(60,48,32,.12), 0 2px 10px rgba(60,48,32,.06);
     --frame: #3A3632; --frame-foot: #46413B; --frame-ink: #F6F1E8; --frame-line: #9C9285;
@@ -35,7 +35,7 @@
     --r-risk: #D93732; --t-risk: var(--ljr-2-tint); --r-warn: #9E5802; --t-warn: var(--ljr-3-tint);
     --r-ok: #217A2D; --t-ok: var(--ljr-5-tint); --r-ops: #766602; --t-ops: var(--ljr-4-tint);
     --c-fin: var(--ljr-3); --c-ok: var(--ljr-5); --c-ops: var(--ljr-4); --c-risk: var(--ljr-2); --c-ideas: var(--ljr-7); --c-sales: var(--ljr-6); --c-mute: var(--ljr-0); }
-  :root.look-cool { --paper: #F2F4F6; --card: #FFFFFF; --ink: #2B3035; --muted: #5B646D; --line: #B9C3CC; --soft: #D9E0E6; --ctl: #8E9AA6;
+  :root.look-cool { --paper: #F2F4F6; --card: #FFFFFF; --ink: #2B3035; --muted: #5B646D; --line: #B9C3CC; --soft: #D9E0E6; --ctl: #7A8692;
     --frame: #33475B; --frame-foot: #405569; --frame-ink: #FFFFFF; --frame-line: #9FB0C0; --shadow: 0 1px 2px rgba(20,30,40,.12), 0 1px 8px rgba(20,30,40,.08); }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --paper: #181613; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #4A4238; --soft: #3A332B; --ctl: #7D7366;
@@ -76,6 +76,11 @@
   .readstamp { font-size: 13px; font-weight: 600; color: var(--frame-ink); border: 1px solid var(--frame-line); border-radius: var(--radius); height: 24px; padding: 0 8px; display: inline-flex; align-items: center; white-space: nowrap; }
   /* Design rule: every page except home has "Dashboard" at the top right of the header, always shown. */
   .back { order: 99; }
+  /* Signed out (auth.js hides the page): the dark bar itself stays, so the sign-in and Dashboard buttons keep their frame;
+     the title is hidden there, so Dashboard keeps its top-right place. */
+  html.dash-locked header { visibility: visible; }
+  html.dash-locked .back { margin-left: auto; }
+  #backHome { min-height: 44px; } /* the shared Dashboard button rule (one-sign-in-tabs): 44px on every page, as in Studio */
 
   /* Everything you press: the same clear line (--ctl), 1px, 12px corners, 36px desktop / 44px phone, 14px 600. Never starts out ink. */
   .btn, details > summary { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-radius: var(--radius);
@@ -118,8 +123,9 @@
 
   /* Counts: a grey 1px ring pill; "needs you" = the same ring in rose with a light rose tint. Read-only: no hover. */
   /* ONE fixed size so 1 and 2 digits match: 30 x 22, radius 11px; only 3+ digits grow. */
-  .cnt, nav.main .n:not(:empty) { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; height: 22px; min-width: 30px; padding: 0 6px; border: 1px solid var(--ctl);
-    border-radius: 11px; font-size: 13px; font-weight: 600; line-height: 20px; color: var(--ink); background: transparent; white-space: nowrap; flex: none; }
+  .cnt, nav.main .n:not(:empty) { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; height: 22px; width: 30px; min-width: 30px; padding: 0 3px; border: 1px solid var(--ctl);
+    border-radius: 11px; font-size: 13px; font-weight: 600; line-height: 20px; color: var(--ink); background: transparent; white-space: nowrap; flex: none; font-variant-numeric: tabular-nums; }
+  .cnt.wide, nav.main .n.wide:not(:empty) { width: auto; padding: 0 6px; } /* only 3+ digits grow */
   .cnt.need, nav.main .n.need:not(:empty) { border-color: var(--r-risk); background: var(--t-risk); }
   nav.main .n:empty { display: none; }
 
@@ -349,7 +355,7 @@
   // Every date wears a 1px ring; late = rose ring + tint, soon = amber ring + tint. The words stay ink or grey.
   function datePill(text, urg) { return '<span class="date' + (urg ? ' ' + urg : '') + '">' + esc(text) + '</span>'; }
   // Counts: a grey 1px ring; "needs you" counts add a rose ring and tint.
-  function cnt(n, need) { return '<span class="cnt' + (need && n ? ' need' : '') + '">' + esc(String(n)) + '</span>'; }
+  function cnt(n, need) { return '<span class="cnt' + (need && n ? ' need' : '') + (String(n).length > 2 ? ' wide' : '') + '">' + esc(String(n)) + '</span>'; }
   // Money: tabular figures; a negative keeps its minus sign and wears a rose ring marker, never red words.
   function cash(v, dp) { var t = esc(gbp(v, dp)); return v != null && !isNaN(v) && v < 0 ? '<span class="neg">' + t + '</span>' : t; }
   // Friendly empty state with a small green-ring check.
@@ -761,7 +767,7 @@
   }
   // Counts in the tab corners: what needs you (rose ring) and plain totals (grey ring). Empty = hidden.
   function tabCounts() {
-    var ok = signedIn && R && R.gate === 'ok', set = function (id, n, need) { var e = $(id); e.textContent = ok && n ? String(n) : ''; e.classList.toggle('need', !!need); };
+    var ok = signedIn && R && R.gate === 'ok', set = function (id, n, need) { var e = $(id); e.textContent = ok && n ? String(n) : ''; e.classList.toggle('need', !!need); e.classList.toggle('wide', String(n).length > 2); };
     if (!ok) { ['nNow', 'nMoney', 'nDates', 'nTodo', 'nAcct', 'nControl'].forEach(function (id) { set(id, 0); }); return; }
     var over = M.overdueDates(R.data, R.today).length, soon = M.dueWithin(R.data, R.today, 14).length;
     var fc = M.fileChecks(R), bad = fc.filter(function (f) { return f.state === 'fail'; }).length;

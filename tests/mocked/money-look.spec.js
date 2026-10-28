@@ -199,6 +199,44 @@ test.describe('Money Hub look: contrast (text 4.5:1, control lines 3:1)', () => 
   }
 });
 
+test.describe('Money Hub look: control line and count pills hold in every look', () => {
+  for (const [scheme, look] of [['light', 'warm'], ['dark', 'warm'], ['light', 'cool'], ['dark', 'cool']]) {
+    test(`${look} ${scheme}: the resting control line is 3:1 or better on the page and on a card`, async ({ page }) => {
+      await page.addInitScript((bg) => { try { localStorage.setItem('dash-look', JSON.stringify({ bg })); } catch (e) {} }, look);
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto('money/');
+      const r = await page.evaluate(() => {
+        const root = getComputedStyle(document.documentElement);
+        const norm = (c) => { const d = document.createElement('i'); d.style.color = c; document.body.appendChild(d); const v = getComputedStyle(d).color; d.remove(); return v; };
+        const L = (c) => { const [a, b, d] = c.match(/[\d.]+/g).map(Number).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * a + 0.7152 * b + 0.0722 * d; };
+        const ratio = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+        const ctl = norm(root.getPropertyValue('--ctl')), page = norm(root.getPropertyValue('--paper')), card = norm(root.getPropertyValue('--card'));
+        return { cool: document.documentElement.classList.contains('look-cool'), onPage: ratio(ctl, page), onCard: ratio(ctl, card) };
+      });
+      expect(r.cool).toBe(look === 'cool');
+      expect(r.onPage, 'line on the page').toBeGreaterThanOrEqual(3);
+      expect(r.onCard, 'line on a card').toBeGreaterThanOrEqual(3);
+    });
+  }
+
+  test('count pills are one fixed box for 1 and 2 digits, even with a much wider fallback font', async ({ page }) => {
+    await open(page, 'light');
+    await page.addStyleTag({ content: '* { font-family: "DejaVu Sans Mono", "Courier New", monospace !important; letter-spacing: .08em !important; }' });
+    const sizes = await page.evaluate(() => {
+      const probe = document.createElement('div');
+      probe.innerHTML = '<span class="cnt">7</span><span class="cnt need">88</span><span class="cnt wide">999</span>';
+      document.getElementById('view').appendChild(probe);
+      return Array.from(probe.children).concat(Array.from(document.querySelectorAll('#view .cnt, nav.main .n:not(:empty)'))).filter((e) => e.getClientRects().length)
+        .map((e) => ({ t: e.textContent, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height }));
+    });
+    for (const s of sizes) {
+      expect(s.h, `count "${s.t}" height`).toBe(22);
+      if (s.t.length <= 2) expect(s.w, `count "${s.t}" width`).toBe(30);
+    }
+    expect(sizes.find((s) => s.t === '999').w).toBeGreaterThan(30); // 3+ digits grow
+  });
+});
+
 test.describe('Money Hub: summary strip, Next card and friendly empty states', () => {
   test('Now opens with On track / Needs you / Overdue and one Next card with one button', async ({ page }) => {
     await open(page, 'light');
