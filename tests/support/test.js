@@ -4,6 +4,7 @@
 //  - Blocks every other outside address and remembers it, so a test fails if the page tries to call out.
 //  - Watches the browser console and fails the test on unexpected errors.
 const base = require('@playwright/test');
+const PNG1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
 const fs = require('fs');
 const path = require('path');
 const gisStub = require('./gis-stub');
@@ -44,6 +45,8 @@ const test = base.test.extend({
         if (LOOKS_ONLY.some((re) => re.test(url))) {
           return route.fulfill({ status: 200, contentType: url.includes('fonts.googleapis') || /\.css(\?|$)/.test(url) ? 'text/css' : 'font/woff2', body: '' });
         }
+        // Reserved example domains (RFC 2606) never resolve in real life: fixture images there (brand logos) get a 1px PNG.
+        if (/^https:\/\/(www\.)?example\.(com|org|net)\/[^?#]*\.(png|jpe?g|svg|webp|gif)(\?|$)/i.test(url)) return route.fulfill({ status: 200, contentType: 'image/png', body: PNG1 });
         outside.push(url);
         return route.fulfill({ status: 200, contentType: 'text/plain', body: '' });
       });
