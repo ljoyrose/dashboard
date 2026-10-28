@@ -49,11 +49,12 @@ If any of these breaks, the tick turns red and says which page.
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
+| Factory house look (dark frame, bottom tabs, 1px lines, one radius, fixed counts, hover rule, contrast light/dark/warm/cool, empty states, phone) | `/dashboard/factory/` | 22 |
 | Studio (example data, real data, accounts, groups, tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, phone, dark, text size) | `/dashboard/studio/` | 23 |
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 470 checks that must pass (mocked + phone, 28 Oct 2026, Studio v0.2).
+That is 500 checks that must pass (mocked + phone, 28 Oct 2026, Factory house look).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
@@ -274,7 +275,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | The Map led with links and counts, so what needed Lisa today was spread over several cards | "shows at most 7 rows, overdue (red) first, each row a link, and the tab title carries the count" |
 | 18 Oct 2026 | Money only said "runs dry on X" in words, so a forecast dip was easy to miss | "a forecast that goes below zero marks the runs-dry date in red" |
 | 20 Oct 2026 | Factory: a send named "Links · …" for the app "LJR7 Links" was filed under "Factory", so Lisa could not find it in Do | "a send named Links · P5 sits under its app Sample Links…" |
-| 20 Oct 2026 | Factory: the selected tab and chip showed a double line (a focus ring around the tab, an inner shadow inside the chip) | "after clicking a tab and a chip, and with keyboard focus, selected tabs and chips have one line" |
+| 20 Oct 2026 | Factory: the selected tab and chip showed a double line (a focus ring around the tab, an inner shadow inside the chip). House look, 28 Oct: a selected chip is the 1px line drawn inside, the tab only widens its bar, focus is a 2px ring | "after clicking a tab and a chip: selected chips wear the 1px inside line, the tab only its wider bar; focus is 2px" |
 | 18 Oct 2026 | Phone install needs a kept copy of the site, and it must never hold Drive data or the sign-in | "after signing in and reading, the kept copy holds only the page files" |
 | 18 Oct 2026 | There was no way to find a file, to-do or dog without opening each page and scrolling | "home: / opens search; it finds Drive file names per shared drive and Money to-dos, each a link" |
 | 19 Oct 2026 | Lisa still signed in twice: the sign-in lived in one tab only, so Money in a new tab or window, or the installed app, asked again | "sign in on home, open Money Hub and CD Hub: each opens in a new tab already signed in, no prompt" |
