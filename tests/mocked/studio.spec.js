@@ -909,6 +909,29 @@ test.describe('Studio page', () => {
     await expect(page.locator('.col-foot b').first()).toHaveCSS('border-top-style', 'none'); // inside a sentence: bold text
   });
 
+  test('no solid colour fills: asset-page steps are outlined (done ✓ green tint, current purple tint, future grey ring); small markers are tint + 1px ring', async ({ page, guard }) => {
+    await open(page, guard, '#/asset/sa-make');
+    const st = (sel) => page.locator(sel).first().evaluate((e) => { const c = getComputedStyle(e); return { bc: c.borderTopColor, bg: c.backgroundColor, color: c.color, w: c.borderTopWidth, text: e.textContent }; });
+    const ink = await page.evaluate(() => getComputedStyle(document.body).color);
+    const done = await st('.stage.d .n'), cur = await st('.stage.c .n'), fut = await st('.stage:not(.d):not(.c) .n');
+    expect(done).toMatchObject({ w: '1px', color: ink, text: '✓' });
+    expect(done.bg).not.toBe('rgba(0, 0, 0, 0)'); // light green tint
+    expect(cur).toMatchObject({ w: '1px', color: ink });
+    expect(fut).toMatchObject({ w: '1px', bg: 'rgba(0, 0, 0, 0)' });
+    await expect(page.locator('.stage.c')).toHaveCSS('font-weight', '700');
+    // Nothing small is a solid stage colour: every marker's fill is lighter than its own ring colour.
+    const solid = await page.evaluate(() => {
+      const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number), k = /^color\(/.test(c) ? 255 : 1; return (m[3] === 0) ? 999 : (m[0] + m[1] + m[2]) * k; };
+      const bad = [];
+      document.querySelectorAll('.stage .n, .disc, .strip i, .row .bar, .meter .bar, .meter .track i, .sw i').forEach((e) => {
+        const c = getComputedStyle(e), ring = c.borderTopWidth !== '0px' ? c.borderTopColor : (c.boxShadow.match(/rgba?\([^)]*\)/) || ['rgb(0,0,0)'])[0];
+        if (c.backgroundColor !== 'rgba(0, 0, 0, 0)' && ring && lum(c.backgroundColor) <= lum(ring)) bad.push(e.className + ' ' + c.backgroundColor + ' vs ' + ring);
+      });
+      return bad;
+    });
+    expect(solid).toEqual([]);
+  });
+
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
     await open(page, guard, '#/line');
     const html = page.locator('html');
