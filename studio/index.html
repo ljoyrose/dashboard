@@ -308,10 +308,10 @@
   /* Tab counts sit in the button's top-right corner, clear of the label. */
   nav.tabs .n { position: absolute; top: 8px; right: 18px; }
   @media (max-width: 544px) {
-    nav.tabs .n { top: 2px; right: auto; left: calc(50% + 12px); min-width: 17px; height: 18px; padding: 0 4px; } /* beside the icon, above the label: clear of it whatever the font */ /* 13px, not 10: nothing on the page goes under 13px */
+ /* beside the icon, above the label: clear of it whatever the font */ /* 13px, not 10: nothing on the page goes under 13px */
     nav.tabs a[aria-current="page"] .bar { width: 26px; }
   }
-  @media (max-width: 544px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; } }
+  @media (max-width: 544px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
   .subnav { gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
   .vtop .subnav { flex: 1 1 auto; }
   .subnav a, :root.look-cool .subnav a { border-color: transparent; background: transparent; }
@@ -359,8 +359,14 @@
   @media (max-width: 544px) {
     .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, #moreMenu > *, .fbar .sbox { min-height: 44px; }
     .lk, .ico { min-width: 44px; height: 44px; }
-    nav.tabs a { min-height: 62px; justify-content: flex-start; padding-top: 8px; gap: 4px; }
-    nav.tabs .n { top: 4px; left: calc(50% + 10px); min-width: 24px; height: 24px; padding: 0 6px; } /* beside the icon, above the label */
+    /* Phone tabs: the count is in normal flow, on the icon's line, and the label has a line of its own below,
+       so no label width (any font) can ever run into the count. Lines: colour bar · icon + count · label. */
+    nav.tabs a { min-height: 62px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; padding: 6px 2px; }
+    nav.tabs a .bar { margin: 0 calc(50% - 9px); }
+    nav.tabs a[aria-current="page"] .bar { margin: 0 calc(50% - 13px); }
+    nav.tabs a > .ti { order: 1; }
+    nav.tabs .n { position: static; order: 2; min-width: 24px; height: 24px; padding: 0 6px; }
+    nav.tabs a > span:not(.bar):not(.n) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }
   }
   /* Control edges (things you press or read as a chip) use --ctl: the line colour in light, a 3:1 line in dark so every ring shows. */
   .btn, .pill, .ch, .fbtn, .achip, .fbar .sbox, .tag, .seg button, .vsw button, .undo, .lk, .stage .n, .stamp { border-color: var(--ctl); }
