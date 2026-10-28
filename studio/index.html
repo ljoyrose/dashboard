@@ -321,6 +321,7 @@
   // How a finished item reaches a client (engine DELIVERY_MODE): a copied file, a copied Doc, or a link.
   var DMODE = { script: 'text', social: 'text', email: 'text', page: 'link', funnel: 'link', listing: 'link', podcast: 'link' };
   var DESTS = [['main-site', 'world-www', 'Main site'], ['app', 'apps', 'App'], ['funnel', 'filter', 'Funnel'], ['shop', 'building-store', 'Shop'], ['social', 'share', 'Social'], ['client-site', 'user-share', 'Client site'], ['email', 'mail', 'Email'], ['print', 'printer', 'Print'], ['other', 'dots', 'Other']];
+  var REASONS = [['tone', 'mood', 'Tone'], ['facts', 'checks', 'Facts'], ['design', 'palette', 'Design'], ['length', 'ruler-2', 'Length'], ['brand', 'brand-apple', 'Brand'], ['legal', 'scale', 'Legal'], ['format', 'aspect-ratio', 'Format'], ['slow', 'clock', 'Slow'], ['cost', 'coin', 'Cost'], ['great', 'star', 'Great']];
   var CHANNELS = ['facebook', 'instagram', 'tiktok', 'youtube', 'pinterest', 'linkedin', 'email', 'website', 'etsy', 'amazon', 'other'];
   var RKEYS = [['views', 'eye', 'Views'], ['clicks', 'click', 'Clicks'], ['leads', 'user-plus', 'Leads'], ['sales', 'shopping-cart', 'Sales'], ['revenue', 'currency-pound', '\u00a3']];
   var DSTAT = { 'ready (not sent)': ['package', 'Ready', 4], sent: ['send', 'Sent', 5], 'no file': ['alert-triangle', 'No file', 2] };
@@ -461,8 +462,8 @@
   }
   function prep() {
     S.accounts = S.accounts || []; S.products = S.products || []; S.brands = S.brands || []; S.assets = S.assets || []; S.ideas = S.ideas || []; S.tools = S.tools || [];
-    S.studio = S.studio || {}; S.health = S.health || {};
-    ['groups', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'gaps', 'legalSets'].forEach(function (k) { S[k] = S[k] || []; });
+    S.studio = S.studio || {}; S.health = S.health || {}; S.learning = S.learning || {};
+    ['groups', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'gaps', 'legalSets', 'styles', 'series', 'suggestions'].forEach(function (k) { S[k] = S[k] || []; });
     S.tools.forEach(function (t) { t.capabilities = t.capabilities || []; t.outputs = t.outputs || []; t.inputs = t.inputs || []; t.fit = t.fit || 'AUTO'; });
     all().forEach(function (a) { a.flags = a.flags || []; a.brandIds = a.brandIds || []; a.formatIds = a.formatIds || []; a.sourceIds = a.sourceIds || []; if (a.stage == null) a.stage = 0; a._t = Date.parse(a.updated) || 0; if (!a.accountId) a.accountId = brandOf(a).accountId || ownerId(); });
     applyPend();
@@ -606,6 +607,10 @@
     var pu = pickOf(PURPOSES, a.purpose); if (pu) out += '<span class="tag" data-chip="purpose" title="Variant">' + I(pu[2]) + pu[1] + '</span>';
     if (a.masterId) { var m = byId(a.masterId); out += '<a class="tag" data-chip="master" href="#/asset/' + encodeURIComponent(a.masterId) + '" title="Master: ' + esc(m ? bare(m) : a.masterId) + '">' + I('link') + 'Master</a>'; }
     if (a.sourceIds.length) out += '<span class="tag" title="Sources">' + I('paperclip') + a.sourceIds.length + '</span>';
+    if (a.parts && a.parts.total) out += '<span class="tag" data-chip="parts" title="Parts approved · words">' + I('book-2') + a.parts.approved + '/' + a.parts.total + (a.parts.targetWords ? ' · ' + Math.round((a.parts.words || 0) / 1000) + 'k/' + Math.round(a.parts.targetWords / 1000) + 'k' : '') + '</span>';
+    if (a.parentId) { var pa = byId(a.parentId); out += '<a class="tag" data-chip="part-of" href="#/asset/' + encodeURIComponent(a.parentId) + '" title="Part of ' + esc(pa ? bare(pa) : a.parentId) + '">' + I('bookmark') + (a.order ? '#' + esc(a.order) : 'Part') + '</a>'; }
+    if (a.seriesId) { var se = byIdIn('series', a.seriesId); out += '<span class="tag" data-chip="series" title="Series">' + I('stack') + esc(se ? se.name : a.seriesId) + (a.seriesNo ? ' #' + esc(a.seriesNo) : '') + '</span>'; }
+    if (a.flags.indexOf('prompt-unapproved') >= 0) out += '<span class="tag" data-chip="prompt" title="A prompt in its kit is not approved" style="--hc:var(--ljr-2-text)">' + I('message-off') + 'Prompt?</span>';
     var dz0 = pickOf(DESTS, a.destination); if (dz0) out += '<span class="tag" data-chip="dest" title="Where">' + I(dz0[1]) + dz0[2] + '</span>';
     if (a.legal && a.legal.setId) out += '<span class="tag" data-chip="legal" title="' + esc((a.legal.entity || '') + ' \u00b7 ' + (a.legal.setName || a.legal.setId)) + '">' + I('shield-check') + esc(a.legal.setName || a.legal.setId) + '</span>';
     else if (a.stage <= 3) out += '<span class="tag" data-chip="legal-missing" title="Company and legal set needed before Lock" style="--hc:var(--ljr-2-text)">' + I('shield-x') + 'Legal?</span>';
@@ -619,7 +624,8 @@
     if (kind === 'review' && a.flags.indexOf('client-review') >= 0) return '<span class="sent" data-with="client">' + I('user-check') + 'With client</span>';
     if (kind === 'review') return '<button class="btn yes" type="button" data-act="approve" data-id="' + esc(a.id) + '" aria-label="Approve"' + dis() + '>' + I('check') + 'Approve</button>' +
       '<button class="btn" type="button" data-panel="redo" data-id="' + esc(a.id) + '" aria-label="Redo"' + dis() + '>' + I('pencil') + 'Redo</button>' +
-      '<button class="btn no" type="button" data-act="bin" data-id="' + esc(a.id) + '" aria-label="Bin"' + dis() + '>' + I('trash') + '</button>';
+      '<button class="btn no" type="button" data-act="bin" data-id="' + esc(a.id) + '" aria-label="Bin"' + dis() + '>' + I('trash') + '</button>' +
+      '<button class="ico" type="button" data-panel="fb" data-id="' + esc(a.id) + '" aria-label="Stars and reasons" title="Stars and reasons"' + dis() + '>' + I(fbDraft[a.id] && (fbDraft[a.id].stars || fbDraft[a.id].reasons.length) ? 'star-filled' : 'star') + '</button>';
     if (kind === 'gate') return VERDICTS.map(function (v) { return '<button class="btn" type="button" data-act="gate" data-verdict="' + v[0] + '" data-id="' + esc(a.id) + '" aria-label="' + v[1] + '" style="--hc:var(--ljr-' + v[3] + '-text)"' + dis() + '>' + I(v[2]) + v[1] + '</button>'; }).join('');
     if (kind === 'lib') return '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>' +
       '<button class="btn" type="button" data-panel="result" data-id="' + esc(a.id) + '" aria-label="Add results"' + dis() + '>' + I('chart-bar') + 'Results</button>' +
@@ -628,12 +634,32 @@
     if (kind === 'hand' && a.stage >= 1) return '<button class="btn yes" type="button" data-panel="done" data-id="' + esc(a.id) + '" aria-label="Done"' + dis() + '>' + I('check') + 'Done</button>';
     return '';
   }
+  // One row of pick chips for a set field; hidden when there is nothing to pick.
+  // Learning score: first-time approval and stars, once there are 3 or more.
+  function scoreTag(list, id) {
+    var s = ((S.learning || {})[list] || []).filter(function (x) { return x.id === id; })[0];
+    if (!s || s.n < 3) return '';
+    var good = s.firstTimeRate >= 0.6, bad = s.firstTimeRate < 0.4;
+    return '<span class="tag" data-score="' + esc(id) + '" title="' + s.n + ' outputs \u00b7 first time ' + Math.round(s.firstTimeRate * 100) + '% \u00b7 redo ' + Math.round((s.redoRate || 0) * 100) + '%' + ((s.topReasons || [])[0] ? ' \u00b7 most: ' + esc(s.topReasons[0].reason) : '') + '" style="--hc:var(--ljr-' + (good ? 5 : bad ? 2 : 3) + '-text)">' + I('chart-dots') + Math.round(s.firstTimeRate * 100) + '%' + (s.avgStars ? ' \u00b7 ' + (Math.round(s.avgStars * 10) / 10) + I('star-filled') : '') + '</span>';
+  }
+  function pickRow(a, field, icon, label, list) {
+    if (!list.length) return '';
+    return '<div class="fsub">' + I(icon) + label + '</div><div class="chips">' + list.map(function (x) { var on = a[field] === x.id; return '<button class="ch' + (on ? ' on' : '') + '" type="button" data-set="' + field + '" data-val="' + esc(x.id) + '" data-id="' + esc(a.id) + '" aria-pressed="' + on + '"' + dis() + '>' + esc(x.name || x.id) + '</button>'; }).join('') + '</div>';
+  }
   function panelOf(a, k) {
     var body = '';
     if (k === 'redo') body = '<form class="ask" data-redo="' + esc(a.id) + '"><input class="fin" id="note-' + esc(a.id) + '" data-draft="' + esc(a.id) + '" value="' + esc(drafts[a.id] || '') + '" aria-label="What to change" required><button class="btn" type="submit" aria-label="Send redo"' + dis() + '>' + I('send') + '</button></form>';
+    if (k === 'fb') { var fd = fbDraft[a.id] = fbDraft[a.id] || { stars: 0, reasons: [] };
+      body = '<div class="chips" data-stars="' + esc(a.id) + '">' + [1, 2, 3, 4, 5].map(function (n) { return '<button class="ch' + (fd.stars >= n ? ' on' : '') + '" type="button" data-star="' + n + '" data-id="' + esc(a.id) + '" aria-label="' + n + ' stars" aria-pressed="' + (fd.stars === n) + '">' + I(fd.stars >= n ? 'star-filled' : 'star') + '</button>'; }).join('') + '</div>' +
+        '<div class="chips">' + REASONS.map(function (r) { var on = fd.reasons.indexOf(r[0]) >= 0; return '<button class="ch' + (on ? ' on' : '') + '" type="button" data-reason="' + r[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + on + '">' + I(r[1]) + r[2] + '</button>'; }).join('') + '</div><p class="muted">Goes with Approve, Redo or Bin.</p>'; }
+    if (k === 'part') body = '<form class="ask" data-part="' + esc(a.id) + '"><input class="fin" id="pname-' + esc(a.id) + '" maxlength="200" aria-label="Part name" placeholder="Chapter name" required><input class="fin" id="pwords-' + esc(a.id) + '" type="number" min="0" step="100" style="max-width:7.5em" aria-label="Target words" placeholder="Words"><button class="btn" type="submit" aria-label="Add part"' + dis() + '>' + I('plus') + '</button></form>';
     if (k === 'where') { var ls = S.legalSets.filter(function (x) { return !a.legal || !a.legal.entity || x.entity === a.legal.entity || (x.brandIds || []).some(function (b) { return a.brandIds.indexOf(b) >= 0; }); });
       body = '<div class="fsub">' + I('building') + esc((a.legal && a.legal.entity) || 'Company not recorded') + '</div>' +
         '<div class="fsub">' + I('map-pin') + 'Where</div><div class="chips">' + DESTS.map(function (d) { return '<button class="ch' + (a.destination === d[0] ? ' on' : '') + '" type="button" data-set="destination" data-val="' + d[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (a.destination === d[0]) + '"' + dis() + '>' + I(d[1]) + d[2] + '</button>'; }).join('') + '</div>' +
+        pickRow(a, 'styleId', 'brush', 'Style', S.styles.filter(function (x) { return a.brandIds.indexOf(x.brandId) >= 0; })) +
+        pickRow(a, 'seriesId', 'stack', 'Series', S.series.filter(function (x) { return a.brandIds.indexOf(x.brandId) >= 0; })) +
+        pickRow(a, 'audioVoiceId', 'microphone', 'Audio voice', S.voices.filter(function (x) { return x.kind === 'audio' && x.consent !== 'none'; })) +
+        pickRow(a, 'avatarId', 'user-circle', 'Avatar', S.voices.filter(function (x) { return x.kind === 'avatar' && x.consent !== 'none'; })) +
         '<div class="fsub">' + I('shield-check') + 'Legal set</div><div class="chips">' + (ls.length ? ls.map(function (x) { var on = a.legal && a.legal.setId === x.id; return '<button class="ch' + (on ? ' on' : '') + '" type="button" data-set="legalSetId" data-val="' + esc(x.id) + '" data-id="' + esc(a.id) + '" aria-pressed="' + !!on + '"' + dis() + '>' + esc(x.name || x.id) + '</button>'; }).join('') : '<span class="muted">None on the BRANDS Sheet yet</span>') + '</div>'; }
     if (k === 'result') { var rc = resDraft[a.id] = resDraft[a.id] || { channel: '', date: new Date().toISOString().slice(0, 10) };
       body = '<div class="chips">' + CHANNELS.map(function (c) { return '<button class="ch' + (rc.channel === c ? ' on' : '') + '" type="button" data-rch="' + c + '" data-id="' + esc(a.id) + '" aria-pressed="' + (rc.channel === c) + '">' + c.charAt(0).toUpperCase() + c.slice(1) + '</button>'; }).join('') + '</div>' +
@@ -673,7 +699,7 @@
       '<button class="ico" type="button" data-panel="flag" data-id="' + esc(a.id) + '" aria-label="Priority ' + (p || 'none') + '" style="--hc:var(--ljr-2-text)">' + flagIcon(p) + '</button></div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + info('Stage ' + a.stage + ' ' + STAGES[a.stage]) + '</div>' : '') +
       (a.stage >= 1 ? strip(a.stage) : '') +
-      '<div class="l2"><span class="icons">' + rowIcons(a) + '</span><span class="acts">' + actsFor(a, kind) + (a.stage <= 3 && !sent[a.id] ? '<button class="ico" type="button" data-panel="where" data-id="' + esc(a.id) + '" aria-label="Company, legal set and where" title="Company, legal set and where"' + dis() + '>' + I('map-pin') + '</button>' : '') + (isClient(a) && a.stage >= 1 && a.stage <= 7 && !sent[a.id] ? '<button class="ico" type="button" data-panel="ask" data-id="' + esc(a.id) + '" aria-label="Ask client" title="Ask client"' + dis() + '>' + I('message-question') + '</button>' : '') + '</span></div>' +
+      '<div class="l2"><span class="icons">' + rowIcons(a) + '</span><span class="acts">' + actsFor(a, kind) + (a.size === 'L' && a.stage >= 3 && a.stage <= 6 && !a.parentId && !sent[a.id] ? '<button class="ico" type="button" data-panel="part" data-id="' + esc(a.id) + '" aria-label="Add part" title="Add part (chapter)"' + dis() + '>' + I('file-plus') + '</button>' : '') + (a.parts && a.parts.total && a.parts.approved === a.parts.total && a.stage < 7 && !sent[a.id] ? '<button class="btn yes" type="button" data-act="assemble" data-id="' + esc(a.id) + '" aria-label="Assemble"' + dis() + '>' + I('books') + 'Assemble</button>' : '') + (a.stage <= 3 && !sent[a.id] ? '<button class="ico" type="button" data-panel="where" data-id="' + esc(a.id) + '" aria-label="Company, legal set and where" title="Company, legal set and where"' + dis() + '>' + I('map-pin') + '</button>' : '') + (isClient(a) && a.stage >= 1 && a.stage <= 7 && !sent[a.id] ? '<button class="ico" type="button" data-panel="ask" data-id="' + esc(a.id) + '" aria-label="Ask client" title="Ask client"' + dis() + '>' + I('message-question') + '</button>' : '') + '</span></div>' +
       (openPanel && openPanel.id === a.id ? panelOf(a, openPanel.k) : '') +
       '<div class="l3"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span>' +
       (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="' + ({ canva: 'Open in Canva', gdoc: 'Open the Google file', drive: 'Open in Drive', clickfunnels: 'Open in ClickFunnels' }[a.linkKind] || 'Preview') + '" style="--hc:var(--ljr-6-text)">' + I('eye') + '</a>' : '<span class="lk no" title="No preview yet">' + I('eye') + '</span>') +
@@ -699,7 +725,16 @@
     var s = fsOf('me'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
     var R = keep(reviews()), G = keep(gates()), H = keep(hands());
     var sect = function (icon, word, href, l, kind) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + '<a href="' + href + '">' + word + '</a> ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : '<p class="muted">' + I('circle-check') + ' Nothing waiting.</p>') + '</div>'; };
-    return findBar('me', meItems()) + sect('eye-check', 'Review', '#/review', R, 'review') + sect('traffic-lights', 'Gates', '#/assets', G, 'gate') + sect('hand-finger', 'Tasks', '#/assets?fit=hand', H, 'hand');
+    return findBar('me', meItems()) + sect('eye-check', 'Review', '#/review', R, 'review') + sect('traffic-lights', 'Gates', '#/assets', G, 'gate') + sect('hand-finger', 'Tasks', '#/assets?fit=hand', H, 'hand') + vSuggest();
+  }
+  // Studio's own suggestions from the learning loop: nothing changes until Lisa accepts.
+  function vSuggest() {
+    var L = S.suggestions.filter(function (g) { return !pend['sug|' + g.id]; });
+    if (!L.length) return '';
+    return '<div class="card" data-sect="suggest"><div class="sect">' + I('bulb') + 'Suggestions ' + cnt(L.length) + '</div>' + L.map(function (g) {
+      return '<div class="row" data-suggest="' + esc(g.id) + '" style="--c:var(--ljr-7)"><span class="bar"></span><div class="txt"><b>' + esc(g.proposal || g.reason) + '</b><div class="muted">' + esc([g.kind, g.targetId, g.reason].filter(Boolean).join(' \u00b7 ')) + '</div></div>' +
+        '<span class="acts"><button class="btn yes" type="button" data-sug="' + esc(g.id) + '" data-val="accepted" aria-label="Accept"' + dis() + '>' + I('check') + '</button><button class="btn no" type="button" data-sug="' + esc(g.id) + '" data-val="declined" aria-label="Decline"' + dis() + '>' + I('x') + '</button></span></div>';
+    }).join('') + '</div>';
   }
   function vIdeas() {
     var inbox = ST.inboxFolderId ? '<a class="pill" href="https://drive.google.com/drive/folders/' + esc(ST.inboxFolderId) + '" target="_blank" rel="noopener" title="Inbox: drop files here" style="--hc:var(--ljr-7-text)">' + I('inbox') + 'Inbox</a>' : '';
@@ -753,7 +788,7 @@
         (m.allowance ? '<div class="track" role="img" aria-label="' + pct + '% used"><i style="width:' + pct + '%"></i></div>' +
         '<div class="nums"><span>' + esc(m.used) + ' / ' + esc(m.allowance) + ' ' + esc(m.unit || '') + '</span>' + (m.resetsOn ? '<span>' + I('refresh') + ' ' + dmy(Date.parse(m.resetsOn)) + (d !== null && d >= 0 ? ' · ' + d + 'd' : '') + '</span>' : '') + '</div>' : '') +
         (st.text ? '<div class="why">' + I(st.icon) + '<span>' + esc(st.text) + '</span></div>' : '') +
-        '<div class="pills" style="margin-top:6px">' + fitTag(m) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
+        '<div class="pills" style="margin-top:6px">' + fitTag(m) + scoreTag('tools', m.product) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
         (m.audit ? '<a class="tag" href="' + safeUrl(m.audit) + '" target="_blank" rel="noopener" title="Audit">' + I('clipboard-check') + 'Audit</a>' : '') + '</div></div></div>';
     }).join('') + '</div>' : '<div class="card muted">No tools yet.</div>';
     return gaps + add + list;
@@ -822,7 +857,7 @@
         (k.frameworkId ? '<span class="tag" title="Framework">' + I('stack-2') + esc(name('frameworks', k.frameworkId)) + '</span>' : '') +
         (k.voiceId ? '<span class="tag" title="Voice">' + I('microphone') + esc(name('voices', k.voiceId)) + '</span>' : '') +
         (k.lookId ? '<span class="tag" title="Look">' + I('palette') + esc(name('looks', k.lookId)) + '</span>' : '') +
-        k.formatIds.map(function (f) { return '<span class="tag" title="' + esc(name('formats', f)) + '">' + I('aspect-ratio') + esc(fmtLabel(f)) + '</span>'; }).join('');
+        k.formatIds.map(function (f) { return '<span class="tag" title="' + esc(name('formats', f)) + '">' + I('aspect-ratio') + esc(fmtLabel(f)) + '</span>'; }).join('') + scoreTag('kits', k.id);
     };
     var empty = '<p class="muted">None yet.</p>', body = '';
     if (sub === 'playbooks') {
@@ -999,6 +1034,9 @@
     var x = byId(id), n = $('note-' + id), body = { kind: act, accountId: /^(ask|deliver|retire|refresh|result)$/.test(act) ? ownerId() : x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() };
     if (act === 'redo') { body.note = n ? n.value.trim() : ''; if (!body.note) { if (n) n.focus(); return; } }
     if (act === 'gate') body.verdict = verdict;
+    if (/^(approve|redo|bin)$/.test(act) && fbDraft[id]) { if (fbDraft[id].stars) body.stars = fbDraft[id].stars; if (fbDraft[id].reasons.length) body.reasons = fbDraft[id].reasons.slice(); }
+    if (act === 'part') { var pn0 = $('pname-' + id), pw = $('pwords-' + id); body = { kind: 'part', accountId: ownerId(), parentId: id, name: pn0 ? pn0.value.trim().slice(0, 200) : '', at: body.at }; if (!body.name) { if (pn0) pn0.focus(); return; } var parts = all().filter(function (c) { return c.parentId === id; }); body.order = parts.length + 1; if (pw && Number(pw.value) > 0) body.targetWords = Math.round(Number(pw.value)); }
+    if (act === 'assemble') { body = { kind: 'assemble', accountId: ownerId(), parentId: id, at: body.at }; }
     if (act === 'result') { var rd = resDraft[id] || {}; rd.err = !rd.channel ? 'Pick a channel' : !/^\d{4}-\d{2}-\d{2}$/.test(rd.date || '') ? 'Pick a date' : !RKEYS.some(function (r) { return rd[r[0]] !== undefined && rd[r[0]] !== ''; }) ? 'Add a number' : RKEYS.some(function (r) { return rd[r[0]] !== undefined && rd[r[0]] !== '' && !(Number(rd[r[0]]) >= 0); }) ? 'Numbers only' : '';
       if (rd.err) { render(); return; }
       body.channel = rd.channel; body.date = rd.date; RKEYS.forEach(function (r) { if (rd[r[0]] !== undefined && rd[r[0]] !== '') body[r[0]] = Number(rd[r[0]]); }); delete resDraft[id]; }
@@ -1009,7 +1047,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('[data-panelbox="' + CSS.escape(id) + '"] button'), function (x) { x.disabled = true; });
     withWrite(function () {
       return putRequest(act, body)
-        .then(function (r) { delete busy[id]; sent[id] = Date.now(); sentS[id] = { s: x ? x.stage : null, at: Date.now() }; saveLocal('st-sents', sentS); delete doneSel[id]; delete doneUnits[id]; saveLocal('st-sent', sent); delete drafts[id]; saveLocal('st-drafts', drafts); openPanel = null; return r.json().then(function (j) { sentF[id] = { fid: j.id, at: Date.now() }; saveLocal('st-sentf', sentF); }, function () {}); })
+        .then(function (r) { delete busy[id]; delete fbDraft[id]; sent[id] = Date.now(); sentS[id] = { s: x ? x.stage : null, at: Date.now() }; saveLocal('st-sents', sentS); delete doneSel[id]; delete doneUnits[id]; saveLocal('st-sent', sent); delete drafts[id]; saveLocal('st-drafts', drafts); openPanel = null; return r.json().then(function (j) { sentF[id] = { fid: j.id, at: Date.now() }; saveLocal('st-sentf', sentF); }, function () {}); })
         .then(function () { render(); })
         .catch(function (e) { delete busy[id]; banner('Not sent: ' + e.message); render(); });
     }, function () { delete busy[id]; render(); });
@@ -1020,6 +1058,7 @@
     var now = Date.now();
     Object.keys(pend).forEach(function (id) {
       var p = pend[id];
+      if (id.indexOf('sug|') === 0) { if (now - p.at > 36e5 || !S.suggestions.some(function (g) { return 'sug|' + g.id === id; })) delete pend[id]; return; }
       if (id === 'studio') { if (now - p.at > 36e5 || !!S.studio.on === p.on) delete pend[id]; return; }
       if (id.indexOf('chk|') === 0) { var bits = id.split('|'), it = (brand(bits[1]).setupChecklist || []).filter(function (x) { return x.name === bits.slice(2).join('|'); })[0]; if (!it || now - p.at > 36e5 || !!it.ok === p.ok) delete pend[id]; return; }
       var a = byId(id);
@@ -1048,6 +1087,12 @@
     withWrite(function () { return putRequest('check', body).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
   function studioOn() { var p = pend.studio; return p && Date.now() - p.at < 36e5 ? p.on : !!S.studio.on; }
+  function sendSuggestion(sid, status) {
+    if (EX) return;
+    var key = 'sug|' + sid, back = function () { delete pend[key]; saveLocal('st-pend', pend); render(); };
+    pend[key] = { status: status, at: Date.now() }; saveLocal('st-pend', pend); render();
+    withWrite(function () { return putRequest('suggestion', { kind: 'suggestion', accountId: ownerId(), id: sid, status: status, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+  }
   function sendStudio() {
     if (EX) return;
     var on = !studioOn(); pend.studio = { on: on, at: Date.now() }; saveLocal('st-pend', pend); render();
@@ -1084,7 +1129,7 @@
   function dropWrite(msg) { if (!pendingWrite) return; var b = pendingBack; pendingWrite = pendingBack = null; banner(msg); if (b) b(); }
   function loadLocal(k) { try { var o = JSON.parse(localStorage.getItem(k) || '{}'), now = Date.now(); Object.keys(o).forEach(function (x) { var t = o[x] && o[x].at || o[x]; if (typeof t === 'number' && now - t > 864e5) delete o[x]; }); return o; } catch (e) { return {}; } }
   function saveLocal(k, o) { try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} }
-  var sent = loadLocal('st-sent'), sentF = loadLocal('st-sentf'), sentS = loadLocal('st-sents'), lastRead = 0, needRender = false, drafts = loadLocal('st-drafts'), doneSel = {}, doneUnits = {}, resDraft = {};
+  var sent = loadLocal('st-sent'), sentF = loadLocal('st-sentf'), sentS = loadLocal('st-sents'), lastRead = 0, needRender = false, drafts = loadLocal('st-drafts'), doneSel = {}, doneUnits = {}, resDraft = {}, fbDraft = {};
 
   /* ---------- Header and render ---------- */
   function headerPills() {
@@ -1157,6 +1202,9 @@
       return;
     }
     var ck = e.target.closest('[data-check]'); if (ck && !ck.disabled) { sendCheck(ck.getAttribute('data-check'), ck.getAttribute('data-item')); return; }
+    var sr = e.target.closest('[data-star]'); if (sr) { var sid = sr.getAttribute('data-id'), sv = +sr.getAttribute('data-star'), sf = fbDraft[sid] = fbDraft[sid] || { stars: 0, reasons: [] }; sf.stars = sf.stars === sv ? 0 : sv; render(); return; }
+    var rn = e.target.closest('[data-reason]'); if (rn) { var rid0 = rn.getAttribute('data-id'), rv0 = rn.getAttribute('data-reason'), rf0 = fbDraft[rid0] = fbDraft[rid0] || { stars: 0, reasons: [] }, ri0 = rf0.reasons.indexOf(rv0); if (ri0 >= 0) rf0.reasons.splice(ri0, 1); else rf0.reasons.push(rv0); render(); return; }
+    var sug = e.target.closest('[data-sug]'); if (sug && !sug.disabled) { sendSuggestion(sug.getAttribute('data-sug'), sug.getAttribute('data-val')); return; }
     var rch = e.target.closest('[data-rch]'); if (rch) { var rid = rch.getAttribute('data-id'), rv = rch.getAttribute('data-rch'), rr = resDraft[rid] = resDraft[rid] || {}; rr.channel = rr.channel === rv ? '' : rv; rr.err = ''; render(); return; }
     var dt = e.target.closest('[data-dtool]'); if (dt) { var did = dt.getAttribute('data-id'), dv = dt.getAttribute('data-dtool'); doneSel[did] = doneSel[did] === dv ? '' : dv; render(); var ui = $('units-' + did); if (ui && doneSel[did]) ui.focus(); return; }
     var tp = e.target.closest('[data-tpick]'); if (tp) { var tk = tp.getAttribute('data-tpick'), tv = tp.getAttribute('data-val'); tdraft[tk] = tdraft[tk] === tv ? '' : tv; saveTool(); render(); return; }
@@ -1179,6 +1227,7 @@
       render(); if (openPanel && pkk === 'redo') { var inp = $('note-' + pid); if (inp) inp.focus(); } return; }
   });
   document.addEventListener('submit', function (e) {
+    var pf = e.target.closest('[data-part]'); if (pf) { e.preventDefault(); sendAct(pf.getAttribute('data-part'), 'part'); return; }
     var rs = e.target.closest('[data-result]'); if (rs) { e.preventDefault(); sendAct(rs.getAttribute('data-result'), 'result'); return; }
     var rt = e.target.closest('[data-retire]'); if (rt) { e.preventDefault(); sendAct(rt.getAttribute('data-retire'), 'retire'); return; }
     var ak = e.target.closest('[data-askc]'); if (ak) { e.preventDefault(); sendAct(ak.getAttribute('data-askc'), 'ask'); return; }
