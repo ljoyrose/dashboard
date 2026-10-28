@@ -449,6 +449,20 @@
   .cnt.wide, nav.tabs .n.wide, .fbtn .n.wide { width: auto; padding: 0 6px; }
   @media (max-width: 544px) { nav.tabs .n { min-width: 30px; height: 24px; min-height: 24px; line-height: 22px; border-radius: 12px; } }
   .pthumb svg, .pthumb .pimg { border-radius: var(--radius); }
+  /* Comments: two threads, Team (internal, default) and Client (client-visible, always labelled). */
+  .cmts { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .cmhd { font-weight: 600; }
+  .cmts .seg button .ti { color: var(--ink); }
+  .cthread { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .cm { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; background: var(--card); }
+  .cm.cl { border-color: var(--ctl); }
+  .cm.pend { opacity: .8; }
+  .cmh { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+  .cmh .cwhen { margin-left: auto; color: var(--muted); }
+  .cm p { margin: 4px 0 0; overflow-wrap: anywhere; font-size: 14px; }
+  .cvis { margin: 0; font-size: 13px; font-weight: 600; display: flex; gap: 6px; align-items: center; }
+  .cform { display: flex; gap: 8px; align-items: flex-end; }
+  .cform textarea { flex: 1; min-width: 0; min-height: 44px; resize: vertical; }
   /* List view: each row has a 3px bar in its stage colour down its left edge (the same colour as the column's bar); not on board cards. */
   .crow { position: relative; }
   .card .crow { padding-left: 14px; }
@@ -512,7 +526,7 @@
  *        masterId, purpose, sources: [{ kind: link|upload|note, url, fileName, note, rights }]} · set {who | priority} · studio {on} ·
  *        tool {product, thing, unit, capabilities, inputs, outputs, fit, costPerUnit, allowance, period, resetsOn, carriesOver,
  *        accountNotes, audit} · done {assetId, creditsUsed?: {product, units}} · check {brandId, item, ok} ·
- *        source {assetId, source}.   Undo = the request file goes to Drive Trash
+ *        source {assetId, source} · comment {assetId, thread: team|client, text}.   Undo = the request file goes to Drive Trash
  *        before the engine's next run (every 15 min at :03 :18 :33 :48).
  *
  * studio-state.json (written by the engine):
@@ -767,10 +781,10 @@
   function prep() {
     S.accounts = S.accounts || []; S.products = S.products || []; S.brands = S.brands || []; S.assets = S.assets || []; S.ideas = S.ideas || []; S.tools = S.tools || [];
     S.studio = S.studio || {}; S.health = S.health || {}; S.learning = S.learning || {};
-    ['groups', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'gaps', 'legalSets', 'styles', 'series', 'suggestions'].forEach(function (k) { S[k] = S[k] || []; });
+    ['groups', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'gaps', 'legalSets', 'styles', 'series', 'suggestions', 'comments'].forEach(function (k) { S[k] = S[k] || []; });
     S.tools.forEach(function (t) { t.capabilities = t.capabilities || []; t.outputs = t.outputs || []; t.inputs = t.inputs || []; t.fit = t.fit || 'AUTO'; });
     all().forEach(function (a) { a.flags = a.flags || []; a.brandIds = a.brandIds || []; a.formatIds = a.formatIds || []; a.sourceIds = a.sourceIds || []; if (a.stage == null) a.stage = 0; a._t = Date.parse(a.updated) || 0; if (!a.accountId) a.accountId = brandOf(a).accountId || ownerId(); });
-    applyPend();
+    applyPend(); applyCpend();
   }
   function byIdIn(list, id) { return id ? (S[list] || []).filter(function (x) { return x.id === id; })[0] || null : null; }
   function group(id) { return byIdIn('groups', id) || { id: id || 'none', name: id || 'No group' }; }
@@ -1017,7 +1031,7 @@
         ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
       var inStep = Math.max(0, Math.floor((Date.now() - (Date.parse(a.stageSince) || a._t || Date.now())) / 864e5)), wo = waitingOn(a), acc = account(a.accountId);
       kv.unshift(['With', wo.w], [isClient(a) ? 'Client' : 'Brand owner', isClient(a) ? esc(acc.name) : 'Own brand'], ['In this step', inStep + (inStep === 1 ? ' day' : ' days') + (inStep > 3 && a.stage < 8 ? ' \u00b7 stuck?' : '')]);
-      body = rowMore(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
+      body = rowMore(a) + comments(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
     }
     return '<div class="panel" data-panelbox="' + esc(a.id) + '">' + body + '</div>';
   }
@@ -1079,6 +1093,44 @@
     var box = a.thumbUrl ? '<img class="pimg" src="' + safeUrl(a.thumbUrl) + '" alt="" loading="lazy">' : '<svg viewBox="0 0 56 52" width="44" height="44">' + s + '</svg>';
     return '<span class="pthumb" data-thumb="' + (a.thumbUrl ? 'image' : esc(k)) + '" aria-hidden="true">' + box + '<span class="fmt">' + esc(word) + '</span>' + (a.parts && a.parts.total ? '<span class="fmt" data-parts>' + esc(a.parts.approved || 0) + '/' + esc(a.parts.total) + '</span>' : '') + '</span>';
   }
+  /* ---------- Comments: two threads per item, never mixed (Lisa, 28 Oct 2026) ----------
+   * Team (default) is internal and never shown to a client. Client is what the client sees: every comment there carries a
+   * "Client" label with a people icon, and "Client can see this" sits above its box. Writes one `comment` request
+   * { kind, accountId (always the OWNER: this page is the team's; a client accountId would be stored as a client comment),
+   * assetId, thread: team|client, text (1-2000) } (engine v0.2.16: COMMENTS tab; state.comments, optional until it runs). */
+  var ctab = {}, cpend = loadLocal('st-cpend');
+  function cthreads(a) { return isClient(a) ? ['team', 'client'] : ['team']; }
+  function comments(a) {
+    var th = ctab[a.id] && cthreads(a).indexOf(ctab[a.id]) >= 0 ? ctab[a.id] : 'team';
+    var mine = (cpend[a.id] && cpend[a.id].list) || [];
+    var list = function (t) { return S.comments.filter(function (c) { return c.assetId === a.id && (c.thread || 'team') === t; }).concat(mine.filter(function (c) { return c.thread === t; })).sort(function (x, y) { return Date.parse(x.at) - Date.parse(y.at); }); };
+    var tabs = cthreads(a).map(function (t) { var n = list(t).length; return '<button type="button" role="tab" data-ctab="' + t + '" data-id="' + esc(a.id) + '" aria-selected="' + (t === th) + '" aria-pressed="' + (t === th) + '">' + (t === 'client' ? I('users') + 'Client' : I('lock') + 'Team') + (n ? ' ' + cnt(n) : '') + '</button>'; }).join('');
+    var items = list(th).map(function (c) {
+      var cl = th === 'client';
+      return '<li class="cm' + (cl ? ' cl' : '') + (c.pending ? ' pend' : '') + '" data-cm="' + esc(c.id || '') + '"><div class="cmh"><b>' + esc(c.by || 'Team') + '</b>' +
+        (cl ? '<span class="tag cvis-tag" title="The client can see this">' + I('users') + 'Client</span>' : '') +
+        '<span class="cwhen">' + (c.pending ? 'Sending…' : esc(dmy(Date.parse(c.at)))) + '</span></div><p>' + esc(c.text) + '</p></li>';
+    }).join('');
+    var key = 'c|' + th + '|' + a.id;
+    return '<section class="cmts" data-comments="' + esc(a.id) + '" data-thread="' + th + '"><div class="cmhd">Comments</div>' +
+      '<div class="seg" role="tablist" aria-label="Comment thread">' + tabs + '</div>' +
+      (items ? '<ol class="cthread">' + items + '</ol>' : '<p class="muted cnone">No comments yet.</p>') +
+      (th === 'client' ? '<p class="cvis">' + I('users') + 'Client can see this</p>' : '') +
+      '<form class="cform" data-comment="' + esc(a.id) + '" data-thread="' + th + '"><textarea class="fin" id="cbox-' + esc(a.id) + '" data-draft="' + esc(key) + '" maxlength="2000" rows="2" aria-label="' + (th === 'client' ? 'Comment the client will see' : 'Comment for the team') + '" placeholder="' + (th === 'client' ? 'Comment the client will see' : 'Comment for the team') + '" required>' + esc(drafts[key] || '') + '</textarea>' +
+      '<button class="btn" type="submit"' + dis() + '>' + I('send') + 'Send</button></form></section>';
+  }
+  function sendComment(id, thread) {
+    if (EX) return;
+    var a = byId(id), key = 'c|' + thread + '|' + id, box = $('cbox-' + id), text = (box ? box.value : drafts[key] || '').trim().slice(0, 2000);
+    if (!a || !text) { if (box) box.focus(); return; }
+    var c = { thread: thread, text: text, by: 'You', at: new Date().toISOString(), pending: true };
+    cpend[id] = cpend[id] || { list: [], at: Date.now() }; cpend[id].list.push(c); cpend[id].at = Date.now(); saveLocal('st-cpend', cpend);
+    delete drafts[key]; saveLocal('st-drafts', drafts); render();
+    var back = function () { cpend[id].list = cpend[id].list.filter(function (x) { return x !== c; }); drafts[key] = text; saveLocal('st-cpend', cpend); saveLocal('st-drafts', drafts); render(); };
+    withWrite(function () { return putRequest('comment', { kind: 'comment', accountId: ownerId(), assetId: id, thread: thread, text: text, at: c.at }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+  }
+  // A sent comment shows at once ("Sending…" until the engine returns it in state.comments; dropped after a day).
+  function applyCpend() { Object.keys(cpend).forEach(function (id) { var p = cpend[id]; p.list = (p.list || []).filter(function (c) { return !S.comments.some(function (x) { return x.assetId === id && x.text === c.text && (x.thread || 'team') === c.thread; }) && Date.now() - Date.parse(c.at) < 864e5; }); if (!p.list.length) delete cpend[id]; }); saveLocal('st-cpend', cpend); }
   // The details panel starts with everything the calm row leaves out.
   function rowMore(a) {
     var t = typeOf(a.type), p = a.priority && PRI[a.priority] ? a.priority : null, link = a.reviewLink || a.docLink;
@@ -1700,6 +1752,7 @@
     var lk0 = e.target.closest('[data-look]'); if (lk0) { look[lk0.getAttribute('data-look')] = lk0.getAttribute('data-val'); try { localStorage.setItem('dash-look', JSON.stringify(look)); } catch (x) {} applyLook(); showLook(true); fitBoard(boardScroll()); return; }
     if ((filtersOpen || sortOpen) && !e.target.closest('.fpanel, #filtersBtn, #sortBtn, [data-fxoff]')) { closeF(true); }
     var fo = e.target.closest('[data-fxoff]'); if (fo) { var t4 = barTab(); if (t4) { var s4 = fsOf(t4), k4 = fo.getAttribute('data-fxoff'), i4 = s4[k4].indexOf(fo.getAttribute('data-val')); if (i4 >= 0) s4[k4].splice(i4, 1); saveFs(); } render(); var fb = $('filtersBtn'); if (fb) fb.focus(); return; }
+    var ct = e.target.closest('[data-ctab]'); if (ct) { ctab[ct.getAttribute('data-id')] = ct.getAttribute('data-ctab'); render(); var cb = $('cbox-' + ct.getAttribute('data-id')); if (cb) cb.focus(); return; }
     var vm = e.target.closest('[data-vmode]'); if (vm) { vmode[vm.getAttribute('data-tab')] = vm.getAttribute('data-vmode'); try { localStorage.setItem('st-view', JSON.stringify(vmode)); } catch (x) {} openPanel = null; render(); return; }
     var a = e.target.closest('[data-action]');
     if (a && !a.disabled) {
@@ -1756,6 +1809,7 @@
     var rs = e.target.closest('[data-result]'); if (rs) { e.preventDefault(); sendAct(rs.getAttribute('data-result'), 'result'); return; }
     var rt = e.target.closest('[data-retire]'); if (rt) { e.preventDefault(); sendAct(rt.getAttribute('data-retire'), 'retire'); return; }
     var ak = e.target.closest('[data-askc]'); if (ak) { e.preventDefault(); sendAct(ak.getAttribute('data-askc'), 'ask'); return; }
+    var cf = e.target.closest('[data-comment]'); if (cf) { e.preventDefault(); sendComment(cf.getAttribute('data-comment'), cf.getAttribute('data-thread')); return; }
     var f = e.target.closest('[data-redo]'); if (!f) return; e.preventDefault();
     sendAct(f.getAttribute('data-redo'), 'redo');
   });

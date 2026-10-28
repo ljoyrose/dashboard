@@ -1310,6 +1310,41 @@ test.describe('Studio page', () => {
     }
   });
 
+  test('comments: two threads, Team (default, internal) and Client (labelled, "Client can see this"); never mixed; Send writes one comment request', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/assets');
+    const d = await details(page, 'sa-client');
+    const c = page.locator('[data-comments="sa-client"]');
+    await expect(c).toHaveAttribute('data-thread', 'team'); // Team is the default
+    await expect(c.locator('[data-ctab="team"]')).toHaveAttribute('aria-selected', 'true');
+    await expect(c.locator('.cthread .cm')).toHaveCount(1);
+    await expect(c.locator('.cthread')).toContainText('Check the cover crop');
+    await expect(c.locator('.cthread')).not.toContainText('blue cover');
+    await expect(c.locator('.cvis')).toHaveCount(0);
+    await c.locator('textarea').fill('Use the second photo.');
+    await c.locator('button[type="submit"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'comment', assetId: 'sa-client', thread: 'team', text: 'Use the second photo.', accountId: 'acc-owner' }); // the owner's account, even on a client item
+    await expect(c.locator('.cthread .cm.pend')).toContainText('Use the second photo.');
+    // The client thread: every comment labelled, the warning above the box, and the team's own note is not there.
+    await c.locator('[data-ctab="client"]').click();
+    await expect(c).toHaveAttribute('data-thread', 'client');
+    await expect(c.locator('.cthread .cm')).toHaveCount(2);
+    for (const m of await c.locator('.cthread .cm').all()) await expect(m.locator('.cvis-tag')).toHaveText('Client');
+    await expect(c.locator('.cthread')).not.toContainText('Check the cover crop');
+    await expect(c.locator('.cthread')).not.toContainText('second photo');
+    await expect(c.locator('.cvis')).toHaveText('Client can see this');
+    await expect(c.locator('textarea')).toHaveAttribute('placeholder', 'Comment the client will see');
+    await c.locator('textarea').fill('Blue version attached.');
+    await c.locator('button[type="submit"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(got[1].body).toMatchObject({ kind: 'comment', thread: 'client' });
+    // An own-brand item has the Team thread only.
+    await details(page, 'sa-make');
+    await expect(page.locator('[data-comments="sa-make"] [data-ctab="client"]')).toHaveCount(0);
+    void d;
+  });
+
   test('brand mark: always a 20x20 slot; logo when there is one, initials avatar when not or when it fails; names line up', async ({ page, guard, allowedConsole }) => {
     allowedConsole.push(/Failed to load resource.*404/);
     await page.route('https://www.example.com/north-logo.png', (route) => route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64') }));
