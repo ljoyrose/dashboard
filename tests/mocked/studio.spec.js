@@ -814,6 +814,8 @@ test.describe('Studio page', () => {
     await r.locator('.ttl').click();
     await expect(r.locator('.panel .kv')).toContainText('Stage');
     await expect(page.locator('.side')).toHaveCount(0);
+    await expect(r.locator('.panel')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)'); // no grey box under the card either
+    await expect(page.locator('#moreBtn')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)'); // More sits on the dark frame like the other header buttons
     await noSidewaysScroll(page, 'line board with details open');
     // Tab counts sit in the top-right corner of the tab, clear of the label; the selected bar is 26px on the phone.
     const tab = page.locator('nav.tabs a[data-nav="me"]'), tb = await tab.boundingBox(), nb = await tab.locator('.n').boundingBox(), lb = await tab.locator('span:not(.n):not(.bar)').boundingBox();
