@@ -43,18 +43,25 @@
   #backHome { min-height: 44px; }
   html.dash-locked #backHome { margin-left: auto; } /* signed out the title is hidden, so the button keeps its top-right place */
   .btn[disabled] { cursor: not-allowed; opacity: .55; }
-  nav.tabs { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
-  nav.tabs a { flex: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; }
-  nav.tabs a.new { margin-left: auto; }
+  /* Five tabs in a bar at the bottom, like Marketplace (thumb reach on the phone); a sub-row of links inside Line, Decide and Kits. */
+  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
+  nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; position: relative; }
+  nav.tabs a[aria-current="page"] { border-color: var(--ink); background: var(--bg); }
+  nav.tabs .n { position: absolute; top: 2px; right: calc(50% - 30px); }
+  @media (min-width: 900px) { nav.tabs { max-width: 900px; margin: 0 auto; border-left: 1px solid var(--line); border-right: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; } }
+  html { scroll-padding-bottom: 96px; }
+  .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
+  .subnav a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
+  .subnav a[aria-current="page"], .subnav a:hover { border-color: var(--muted); }
   /* One state only: hover = selected = a slightly heavier faint line. Same width always, so nothing moves. */
-  nav.tabs a:hover, nav.tabs a[aria-current="page"], .pill:hover, .pill.on, .btn:hover, .ch:hover, .ch.on, .lk:hover, .more:hover, .undo:hover { border-color: var(--muted); }
+  .pill:hover, .pill.on, .btn:hover, .ch:hover, .ch.on, .lk:hover, .more:hover, .undo:hover { border-color: var(--muted); }
   .n:empty { display: none; }
   .cnt, nav.tabs .n { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 1; color: var(--ink); background: transparent; }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
   /* Icons grey at rest, their own colour on hover. */
   .ico:hover .ti, .pill:hover .ti, .lk:hover .ti, .btn:hover .ti, .ch:hover .ti, .ch.on .ti { color: var(--hc, var(--ink)); }
   svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-  main.wrap { padding-top: 16px; padding-bottom: 48px; display: flex; flex-direction: column; gap: 14px; }
+  main.wrap { padding-top: 16px; padding-bottom: 110px; display: flex; flex-direction: column; gap: 14px; }
   #view { display: flex; flex-direction: column; gap: 14px; }
   .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; color: var(--ink); display: flex; gap: 8px; align-items: center; }
   .banner.info { border-color: var(--line); }
@@ -218,27 +225,24 @@
     <a id="enginePill" class="pill hidden" href="#/engine"></a>
     <a id="budgetPill" class="pill hidden" href="#/tools"></a>
     <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again" title="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
+    <a class="btn" href="#/new" data-nav="new" id="newBtn" aria-label="New idea"><i class="ti ti-plus"></i>New</a>
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
     <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
   </div>
-  <nav class="tabs" aria-label="Sections">
-    <a href="#/me" data-nav="me">Me <span class="n" id="nMe"></span></a>
-    <a href="#/ideas" data-nav="ideas">Ideas <span class="n" id="nIdeas"></span></a>
-    <a href="#/assets" data-nav="assets">Assets <span class="n" id="nAssets"></span></a>
-    <a href="#/review" data-nav="review">Review <span class="n" id="nReview"></span></a>
-    <a href="#/brands" data-nav="brands">Brands</a>
-    <a href="#/library" data-nav="library">Library</a>
-    <a href="#/kits" data-nav="kits">Kits</a>
-    <a href="#/tools" data-nav="tools">Tools <span class="n" id="nTools"></span></a>
-    <a href="#/new" data-nav="new" class="new" aria-label="New idea"><i class="ti ti-plus"></i> New</a>
-  </nav>
 </header>
 <main class="wrap" id="content">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="exBanner" class="banner ex hidden" role="status"><i class="ti ti-flask" aria-hidden="true"></i><span>Example data · engine off</span></div>
   <div id="view"></div>
 </main>
+<nav class="tabs" id="tabs" aria-label="Sections">
+  <a href="#/me" data-nav="me"><i class="ti ti-user"></i><span>Me</span><span class="n" id="nMe"></span></a>
+  <a href="#/decide" data-nav="decide"><i class="ti ti-traffic-lights"></i><span>Decide</span><span class="n" id="nDecide"></span></a>
+  <a href="#/do" data-nav="do"><i class="ti ti-hand-finger"></i><span>Do</span><span class="n" id="nDo"></span></a>
+  <a href="#/line" data-nav="line"><i class="ti ti-timeline"></i><span>Line</span><span class="n" id="nLine"></span></a>
+  <a href="#/kits" data-nav="kits"><i class="ti ti-box"></i><span>Kits</span><span class="n" id="nKits"></span></a>
+</nav>
 
 <script>
 /* ============================================================================================
@@ -736,6 +740,30 @@
         '<span class="acts"><button class="btn yes" type="button" data-sug="' + esc(g.id) + '" data-val="accepted" aria-label="Accept"' + dis() + '>' + I('check') + '</button><button class="btn no" type="button" data-sug="' + esc(g.id) + '" data-val="declined" aria-label="Decline"' + dis() + '>' + I('x') + '</button></span></div>';
     }).join('') + '</div>';
   }
+  // Bottom tabs (Me, Decide, Do, Line, Kits): which tab each page sits under, and the sub-row of links inside it.
+  var NAV_OF = { me: 'me', decide: 'decide', review: 'decide', do: 'do', line: 'line', ideas: 'line', assets: 'line', library: 'line', asset: 'line', new: 'line', kits: 'kits', tools: 'kits', brands: 'kits', engine: 'kits' };
+  function wN(l) { return l.filter(function (a) { return !sent[a.id] && !isTest(a); }).length; }
+  function navGroup(r) { return NAV_OF[r || 'me'] || 'me'; }
+  var SUBS = { line: [['ideas', 'bulb', 'Ideas', function () { return wN(ideas()); }], ['assets', 'progress', 'In progress', function () { return wN(inProgress()); }], ['library', 'books', 'Library', function () { return library().length; }]],
+    decide: [['decide', 'traffic-lights', 'All', null], ['review', 'eye-check', 'Review', function () { return wN(reviews()); }]],
+    kits: [['kits', 'box', 'Kits', null], ['tools', 'tool', 'Tools', function () { return toolWarnings(); }], ['brands', 'building-store', 'Brands', function () { return S.brands.length; }]] };
+  function subNav(r) {
+    var g = navGroup(r), l = SUBS[g]; if (!l || r === 'asset' || r === 'new') return '';
+    var cur = r === 'line' ? 'assets' : r;
+    return '<nav class="subnav" aria-label="' + esc(g) + '">' + l.map(function (x) { var n = x[3] ? x[3]() : 0; return '<a href="#/' + x[0] + '" data-sub="' + x[0] + '" aria-current="' + (x[0] === cur || (cur === 'kits' && x[0] === 'kits') ? 'page' : 'false') + '">' + I(x[1]) + x[2] + (n ? ' ' + cnt(n) : '') + '</a>'; }).join('') + '</nav>';
+  }
+  // Decide: everything only Lisa can decide. Do: everything only Lisa can do.
+  function vDecide() {
+    var s = fsOf('me'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
+    var sect = function (icon, word, l, kind) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : '<p class="muted">' + I('circle-check') + ' Nothing waiting.</p>') + '</div>'; };
+    return sect('traffic-lights', 'Gates', keep(gates()), 'gate') + sect('eye-check', 'Review', keep(reviews()), 'review') + vSuggest();
+  }
+  function doItems() { var out = hands().slice(); all().forEach(function (a) { if (out.indexOf(a) < 0 && ((a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent') || (a.delivery && a.delivery.status === 'ready (not sent)'))) out.push(a); }); return out; }
+  function vDo() {
+    var H = hands(), A = all().filter(function (a) { return a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent'; }), D = all().filter(function (a) { return a.delivery && a.delivery.status === 'ready (not sent)'; }), Rz = library().filter(function (a) { return !a.results || !a.results.last; });
+    var sect = function (icon, word, l, kind, note) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + (note ? info(note) : '') + '</div>' + (l.length ? l.map(function (a) { return row(a, kind === 'hand' ? 'hand' : kindFor(a), true); }).join('') : '<p class="muted">' + I('circle-check') + ' Nothing waiting.</p>') + '</div>'; };
+    return sect('hand-finger', 'Tasks', H, 'hand') + sect('message-question', 'Questions to send', A, 'asks', 'Engine off or email off: send the link yourself') + sect('package-export', 'Ready to send', D, 'deliver', 'Email off: send the link yourself') + sect('chart-bar', 'Results to add', Rz, 'results');
+  }
   function vIdeas() {
     var inbox = ST.inboxFolderId ? '<a class="pill" href="https://drive.google.com/drive/folders/' + esc(ST.inboxFolderId) + '" target="_blank" rel="noopener" title="Inbox: drop files here" style="--hc:var(--ljr-7-text)">' + I('inbox') + 'Inbox</a>' : '';
     return '<div class="pills"><a class="pill" href="#/new" style="--hc:var(--ljr-7-text)">' + I('plus') + 'New idea</a>' + inbox + '</div>' + list('ideas', ideas(), kindFor);
@@ -1146,7 +1174,9 @@
   }
   function render() {
     var route = hashParts().path;
-    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (route[0] === 'asset' && a.getAttribute('data-nav') === 'assets') ? 'page' : 'false'); });
+    var grp = navGroup(route[0]);
+    Array.prototype.forEach.call(document.querySelectorAll('nav.tabs [data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === grp ? 'page' : 'false'); });
+    $('tabs').classList.toggle('hidden', !signedIn); $('newBtn').classList.toggle('hidden', !signedIn);
     $('signInBtn').classList.toggle('hidden', signedIn);
     $('signOutBtn').classList.toggle('hidden', !signedIn);
     $('refreshBtn').classList.toggle('hidden', !signedIn);
@@ -1160,15 +1190,16 @@
     headerPills();
     var waiting = function (tab) { return function (a) { return !sent[a.id] && (fsOf(tab).test || !isTest(a)); }; };
     $('nMe').textContent = meItems().filter(waiting('me')).length || '';
-    $('nIdeas').textContent = ideas().filter(waiting('ideas')).length || '';
-    $('nAssets').textContent = inProgress().filter(waiting('assets')).length || '';
-    $('nReview').textContent = reviews().filter(waiting('review')).length || '';
-    $('nTools').textContent = toolWarnings() || '';
+    $('nDecide').textContent = (reviews().concat(gates()).filter(waiting('me')).length + S.suggestions.filter(function (g) { return !pend['sug|' + g.id]; }).length) || '';
+    $('nDo').textContent = doItems().filter(waiting('me')).length || '';
+    $('nLine').textContent = inProgress().filter(waiting('assets')).length || '';
+    $('nKits').textContent = toolWarnings() || '';
     var tb = barTab(); if (tb) toUrl(tb);
     v.setAttribute('data-view', route[0] || 'me');
     v.innerHTML = route[0] === 'ideas' ? vIdeas() : route[0] === 'assets' ? list('assets', inProgress(), kindFor) : route[0] === 'review' ? list('review', reviews(), function () { return 'review'; }) :
       route[0] === 'brands' ? vBrands() : route[0] === 'library' ? list('library', library(), function () { return 'lib'; }) : route[0] === 'kits' ? vKits() : route[0] === 'tools' ? vTools() : route[0] === 'new' ? vNew() :
-      route[0] === 'asset' ? vAsset(decodeURIComponent(route[1] || '')) : route[0] === 'engine' ? vEngine() : vMe();
+      route[0] === 'asset' ? vAsset(decodeURIComponent(route[1] || '')) : route[0] === 'engine' ? vEngine() : route[0] === 'decide' ? vDecide() : route[0] === 'do' ? vDo() : route[0] === 'line' ? list('assets', inProgress(), kindFor) : vMe();
+    var sn = subNav(route[0]); if (sn) v.insertAdjacentHTML('afterbegin', sn);
   }
 
   /* ---------- Events ---------- */

@@ -12,7 +12,7 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8'), ctx);
 const ST = ctx.window.DASH_CONFIG.studio; // folder ids and file name come from config.js, so the tests follow a change there
 const NOW = new Date('2026-10-28T10:10:00'); // fixed clock: the Undo window (until the engine's next run) is then known
-const TABS = ['me', 'ideas', 'assets', 'review', 'brands', 'library', 'kits', 'tools', 'new'];
+const TABS = ['me', 'decide', 'do', 'line', 'ideas', 'assets', 'review', 'brands', 'library', 'kits', 'tools', 'new'];
 const KIT_SUBS = ['kits/playbooks', 'kits/packs', 'kits/kits', 'kits/styles', 'kits/formats'];
 const UPLOAD = /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files/;
 
@@ -42,6 +42,9 @@ async function uploads(page, guard) {
   return got;
 }
 const rows = (page) => page.locator('#view .crow');
+// Old tab names are now pages under the five bottom tabs (Me, Decide, Do, Line, Kits): open them by address.
+const go = async (page, key) => { await page.evaluate((k) => { location.hash = '#/' + k; }, key); await expect(page.locator('#view')).toHaveAttribute('data-view', key.split('/')[0]); };
+const NAV = { me: 'me', decide: 'decide', do: 'do', line: 'line', ideas: 'line', assets: 'line', review: 'decide', brands: 'kits', library: 'line', kits: 'kits', tools: 'kits', new: 'line' };
 const noSidewaysScroll = async (page, where) => {
   const w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, body: document.body.scrollWidth, screen: window.innerWidth }));
   expect(w.doc, `${where}: page is ${w.doc}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
@@ -55,12 +58,12 @@ test.describe('Studio page', () => {
     await expect(page.locator('#exBanner')).toHaveText('Example data · engine off');
     await expect(page.locator('#stamp')).toHaveText('TEST');
     await expect(page.locator('#enginePill')).toContainText('Off');
-    await page.locator('nav.tabs a[data-nav="brands"]').click();
+    await go(page, 'brands');
     await expect(page.locator('[data-brandcard]')).toHaveCount(3); // two owner brands, one client brand
     await expect(page.locator('[data-brandcard="ex-a"]')).toContainText('Example Brand A');
-    await page.locator('nav.tabs a[data-nav="review"]').click();
+    await go(page, 'review');
     await expect(page.locator('[data-act="approve"]').first()).toBeDisabled();
-    await page.locator('nav.tabs a[data-nav="new"]').click();
+    await go(page, 'new');
     await expect(page.locator('[data-action="sendidea"]')).toBeDisabled();
     // Read by folder + exact name, and never written to in example mode.
     expect(guard.world.calls.some((c) => c.query.includes(`'${ST.logsFolderId}' in parents`) && c.query.includes(`name = '${ST.stateFile}'`))).toBe(true);
@@ -79,24 +82,36 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-sect="hand"] .crow[data-row="sa-hand"]')).toBeVisible();
     await expect(page.locator('#nMe')).toHaveText('4');
     // TEST items stay out of lists and counts until the TEST switch is on.
-    await page.locator('nav.tabs a[data-nav="assets"]').click();
+    await go(page, 'assets');
     await expect(page.locator('.crow[data-row="sa-test"]')).toHaveCount(0);
     await page.locator('#filtersBtn').click();
     await page.locator('[data-action="ftest"]').click();
     await expect(page.locator('.crow[data-row="sa-test"]')).toBeVisible();
   });
 
-  test('tabs switch, light the right tab and land on their own view', async ({ page, guard }) => {
+  test('five bottom tabs (Me, Decide, Do, Line, Kits) light up; every old page opens under its tab with a sub-row', async ({ page, guard }) => {
     await open(page, guard, '#/me');
-    for (const key of TABS) {
+    await expect(page.locator('nav.tabs a')).toHaveCount(5);
+    for (const key of ['me', 'decide', 'do', 'line', 'kits']) {
       await page.locator(`nav.tabs a[data-nav="${key}"]`).click();
       await expect(page.locator('#view')).toHaveAttribute('data-view', key);
       await expect(page.locator('nav.tabs a[aria-current="page"]')).toHaveCount(1);
       await expect(page.locator(`nav.tabs a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
     }
+    for (const key of TABS) {
+      await go(page, key);
+      await expect(page.locator(`nav.tabs a[data-nav="${NAV[key]}"]`)).toHaveAttribute('aria-current', 'page');
+    }
     await expect(page.locator('[data-meter]')).toHaveCount(0); // New form, not Tools
-    await page.locator('nav.tabs a[data-nav="library"]').click();
+    await go(page, 'library');
+    await expect(page.locator('.subnav a[data-sub="library"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('.crow[data-row="sa-lib"] a[href="#/new?from=sa-lib"]')).toBeVisible();
+    await page.locator('.subnav a[data-sub="ideas"]').click();
+    await expect(page.locator('#view')).toHaveAttribute('data-view', 'ideas');
+    await page.locator('nav.tabs a[data-nav="decide"]').click();
+    await expect(page.locator('[data-sect="gate"] .crow[data-row="sa-gate"]')).toBeVisible();
+    await page.locator('nav.tabs a[data-nav="do"]').click();
+    await expect(page.locator('[data-sect="hand"] .crow[data-row="sa-hand"]')).toBeVisible();
   });
 
   test('find bar: a brand chip filters Assets, the address carries it, All clears it, and it is remembered', async ({ page, guard }) => {
@@ -129,7 +144,7 @@ test.describe('Studio page', () => {
     expect(got[0].meta.name).toMatch(/^approve-\d+\.json$/);
     expect(got[0].body).toMatchObject({ kind: 'approve', assetId: 'sa-rev1', accountId: 'acc-owner' });
     expect(got[0].body.by).toMatch(/@/);
-    await expect(page.locator('#nReview')).toHaveText('1');
+    await expect(page.locator('.subnav a[data-sub="review"] .cnt')).toHaveText('1');
     await r.locator('[data-undo]').click();
     await expect(r.locator('[data-act="approve"]')).toBeVisible();
     expect(guard.world.byId('req-1').trashed).toBe(true);
@@ -147,7 +162,7 @@ test.describe('Studio page', () => {
     await page.locator('.crow[data-row="sa-gate"] [data-act="gate"][data-verdict="RESHAPE"]').click();
     await expect(page.locator('.crow[data-row="sa-gate"] [data-sent]')).toBeVisible();
     expect(got[0].body).toMatchObject({ kind: 'gate', assetId: 'sa-gate', verdict: 'RESHAPE' });
-    await page.locator('nav.tabs a[data-nav="new"]').click();
+    await go(page, 'new');
     await page.locator('[data-action="sendidea"]').click();
     await expect(page.locator('.ferr')).toHaveCount(3); // name, brand, type
     await page.locator('[data-f="n-name"]').fill('Sample guide idea');
@@ -170,9 +185,9 @@ test.describe('Studio page', () => {
     await expect(page.locator('.crow[data-row="sa-client"] .tag[title="Product"]')).toHaveText('Sample client book');
     await acct('').click();
     await expect(rows(page)).toHaveCount(6);
-    await page.locator('nav.tabs a[data-nav="brands"]').click();
+    await go(page, 'brands');
     await expect(page.locator('[data-brandcard="sb-client"]')).toContainText('Sample client');
-    await page.locator('nav.tabs a[data-nav="new"]').click();
+    await go(page, 'new');
     await page.locator('[data-f="n-name"]').fill('Mixed idea');
     await page.locator('[data-multi="brands"][data-val="sb-north"]').click();
     await page.locator('[data-multi="brands"][data-val="sb-client"]').click();
@@ -199,7 +214,7 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-meter]')).toHaveCount(2);
     await expect(page.locator('[data-meter="high"]')).toContainText('85% used');
     await expect(page.locator('[data-meter="ok"]')).toBeVisible();
-    await expect(page.locator('#nTools')).toHaveText('1');
+    await expect(page.locator('#nKits')).toHaveText('1');
   });
 
   test('390px phone: every tab fits with no sideways scroll', async ({ page, guard }) => {
@@ -287,7 +302,7 @@ test.describe('Studio page', () => {
     await expect(page.locator('.crow[data-row="sa-client"]')).toBeVisible();
     await grp('').click();
     await expect(rows(page)).toHaveCount(6);
-    await page.locator('nav.tabs a[data-nav="brands"]').click();
+    await go(page, 'brands');
     await expect(page.locator('[data-brandcard="sb-client"] .stn')).toContainText('Client services');
     await expect(page.locator('[data-brandcard="sb-north"] .stn')).toContainText('Dogs');
   });
@@ -334,7 +349,7 @@ test.describe('Studio page', () => {
     await expect(v.locator('[data-chip="purpose"]')).toHaveText('Refresh');
     await expect(v.locator('a[data-chip="master"]')).toHaveAttribute('href', '#/asset/sa-lib');
     await expect(page.locator('.crow[data-row="sa-rev1"] a[data-chip="master"]')).toHaveCount(0);
-    await page.locator('nav.tabs a[data-nav="assets"]').click();
+    await go(page, 'assets');
     await expect(page.locator('.crow[data-row="sa-make"] [data-chip="format"]')).toHaveText(['16:9', '9:16']);
   });
 
@@ -423,7 +438,7 @@ test.describe('Studio page', () => {
     const nope = page.locator('[data-tool="Sample video tool"]');
     await expect(nope.locator('[data-fit="NOT_OWNED"]')).toHaveText('Not owned');
     await expect(nope).not.toHaveAttribute('data-meter', /.*/);
-    await expect(page.locator('#nTools')).toHaveText('1');
+    await expect(page.locator('#nKits')).toHaveText('1');
   });
 
   test('Me: Done on a Task writes done with creditsUsed (tool + units); Undo is offered', async ({ page, guard }) => {
@@ -491,7 +506,7 @@ test.describe('Studio page', () => {
     await r.locator('#askq-sa-client').press('Enter');
     await expect(r.locator('[data-sent]')).toBeVisible();
     expect(got[0].body).toMatchObject({ kind: 'ask', assetId: 'sa-client', accountId: 'acc-owner', question: 'Which cover photo do you prefer?' });
-    await page.locator('nav.tabs a[data-nav="library"]').click();
+    await go(page, 'library');
     const d = page.locator('.crow[data-row="sa-client-done"]');
     await expect(d.locator('[data-chip="delivery"]')).toContainText('Ready');
     await expect(d.locator('[data-chip="delivery"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/1SAMPLEout/view');
@@ -554,11 +569,46 @@ test.describe('Studio page', () => {
     await expect(c.locator('.kit')).toContainText('Lexend · Inter');
     await expect(c.locator('[data-kit="canva"]')).toHaveAttribute('href', 'https://www.canva.com/brand/sample');
     await expect(c.locator('[data-kit="sheet"]')).toHaveAttribute('href', /spreadsheets\/d\/1SAMPLEbrands/);
-    await page.locator('nav.tabs a[data-nav="review"]').click();
+    await go(page, 'review');
     const r = page.locator('.crow[data-row="sa-rev1"]');
     await expect(r.locator('a.lk')).toHaveAttribute('title', 'Open in Canva');
     await r.locator('.ttl').click();
     await expect(r.locator('img.thumb')).toHaveAttribute('src', /thumbnail\?id=1SAMPLEthumb/);
+  });
+
+  test('books: a Large item shows part progress, Add part writes part with order; Assemble appears when every part is approved', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/line', { change: (s) => {
+      const b = s.assets.filter((a) => a.id === 'sa-make')[0]; b.size = 'L'; b.stage = 5; b.parts = { total: 2, approved: 1, inProgress: 1, words: 9000, targetWords: 20000 };
+      s.assets.push(Object.assign({}, b, { id: 'sa-ch1', title: 'Sample chapter 1', size: 'M', stage: 8, parentId: 'sa-make', order: 1, parts: null }));
+    } });
+    const r = page.locator('.crow[data-row="sa-make"]');
+    await expect(r.locator('[data-chip="parts"]')).toContainText('1/2 · 9k/20k');
+    await r.locator('[data-panel="part"]').click();
+    await r.locator('#pname-sa-make').fill('Chapter 3: settling in');
+    await r.locator('#pwords-sa-make').fill('4000');
+    await r.locator('#pname-sa-make').press('Enter');
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'part', parentId: 'sa-make', accountId: 'acc-owner', name: 'Chapter 3: settling in', order: 2, targetWords: 4000 });
+    await expect(r.locator('[data-act="assemble"]')).toHaveCount(0);
+  });
+
+  test('feedback: stars and reasons go with Approve; suggestions on Decide accept with one suggestion request', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/decide', { change: (s) => { s.suggestions = [{ id: 'sg-1', kind: 'prompt', targetId: 'br-prompt-chapter', reason: 'length', proposal: 'Draft version 2 of the chapter prompt: shorter', at: s.generated_at }]; } });
+    const r = page.locator('[data-sect="review"] .crow[data-row="sa-rev1"]');
+    await r.locator('[data-panel="fb"]').click();
+    await r.locator('[data-star="4"]').click();
+    await r.locator('[data-reason="length"]').click();
+    await r.locator('[data-act="approve"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'approve', assetId: 'sa-rev1', stars: 4, reasons: ['length'] });
+    const g = page.locator('[data-suggest="sg-1"]');
+    await expect(g).toContainText('Draft version 2 of the chapter prompt');
+    await g.locator('[data-sug][data-val="accepted"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(got[1].body).toMatchObject({ kind: 'suggestion', id: 'sg-1', status: 'accepted', accountId: 'acc-owner' });
+    await expect(page.locator('[data-suggest="sg-1"]')).toHaveCount(0);
   });
 
   test('example data has groups, kits, styles, formats, a variant and a gap (fictional), and sends nothing', async ({ page, guard }) => {
@@ -566,13 +616,13 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-playbook="ex-pb1"]')).toBeVisible();
     await page.locator('[data-kitnav="styles"]').click();
     await expect(page.locator('[data-style="framework"]')).toHaveCount(3);
-    await page.locator('nav.tabs a[data-nav="tools"]').click();
+    await go(page, 'tools');
     await expect(page.locator('[data-gap]')).toHaveCount(1);
     await page.locator('[data-action="addtool"]').click();
     await expect(page.locator('[data-action="sendtool"]')).toBeDisabled();
-    await page.locator('nav.tabs a[data-nav="assets"]').click();
+    await go(page, 'assets');
     await expect(page.locator('.crow[data-row="ex-9"] a[data-chip="master"]')).toHaveAttribute('href', '#/asset/ex-5');
-    await page.locator('nav.tabs a[data-nav="brands"]').click();
+    await go(page, 'brands');
     await expect(page.locator('[data-check="ex-a"]').first()).toBeDisabled();
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
