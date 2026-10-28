@@ -1152,6 +1152,9 @@ test.describe('Studio page', () => {
     await expect(late).toHaveClass(/\blate\b/);
     await expect(late).toHaveCSS('border-top-color', 'rgb(230, 68, 61)');
     await expect(soon).toHaveClass(/\bsoon\b/);
+    for (const dp of await page.locator('#view .dpill').all()) await expect(dp).toHaveCSS('border-top-width', '1px'); // no ringless dates
+    const plain = page.locator('#view .dpill:not(.late):not(.soon)').first();
+    if (await plain.count()) await expect(plain).toHaveCSS('border-top-style', 'solid');
     await expect(page.locator('.crow[data-row="sa-make"] [data-chip="need"]')).toHaveText('Overdue');
     await expect(page.locator('.crow[data-row="sa-gate"] [data-chip="need"]')).toHaveText('Gate');
   });

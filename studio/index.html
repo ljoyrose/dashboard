@@ -370,9 +370,9 @@
   /* Control edges (things you press or read as a chip) use --ctl: the line colour in light, a 3:1 line in dark so every ring shows. */
   .btn, .pill, .ch, .fbtn, .achip, .fbar .sbox, .tag, .seg button, .vsw button, .undo, .lk, .stage .n, .stamp { border-color: var(--ctl); }
   .strip i { box-shadow: inset 0 0 0 1px var(--ctl); }
-  /* Calm rows: date pill (1px ring; rose + tint when late, amber + tint when due within 3 days, else plain muted), one need chip. */
+  /* Calm rows: date pill (plain 1px ring, muted text; rose ring + tint when late, amber ring + tint when due within 3 days), one need chip. */
   .crow .bline .bn { min-width: 0; overflow-wrap: anywhere; }
-  .dpill { margin-left: auto; font-size: 13px; font-weight: 400; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; height: 24px; display: inline-flex; align-items: center; padding: 0 8px; border: 1px solid transparent; border-radius: var(--radius); }
+  .dpill { margin-left: auto; font-size: 13px; font-weight: 400; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; height: 24px; display: inline-flex; align-items: center; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); } /* every date wears a plain 1px ring */
   .dpill.late { color: var(--ink); border-color: var(--ljr-2); background: var(--ljr-2-tint); }
   .dpill.soon { color: var(--ink); border-color: var(--ljr-3); background: var(--ljr-3-tint); }
   .needl { margin-top: 6px; }
