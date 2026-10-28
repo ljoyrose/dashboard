@@ -468,6 +468,16 @@
   .card .crow { padding-left: 14px; }
   .card .crow::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--sc); }
   .col-list .crow::before { content: none; }
+  /* Library: + New / Edit form and the Suggest box. */
+  .libbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .libbar .srow { flex: 1 1 260px; }
+  .pbh { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .libform .req { color: var(--ink); }
+  .libsug .ask { align-items: flex-end; }
+  .rights { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .tick { font-size: 13px; color: var(--muted); } .tick.ok { color: var(--ink); }
+  .rrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; } .rlab { min-width: 120px; color: var(--muted); font-size: 14px; }
+  .pline { font-size: 13px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -526,7 +536,12 @@
  *        masterId, purpose, sources: [{ kind: link|upload|note, url, fileName, note, rights }]} · set {who | priority} · studio {on} ·
  *        tool {product, thing, unit, capabilities, inputs, outputs, fit, costPerUnit, allowance, period, resetsOn, carriesOver,
  *        accountNotes, audit} · done {assetId, creditsUsed?: {product, units}} · check {brandId, item, ok} ·
- *        source {assetId, source} · comment {assetId, thread: team|client, text}.   Undo = the request file goes to Drive Trash
+ *        source {assetId, source} · comment {assetId, thread: team|client, text} · library {table: playbooks|packs|kits|bricks, op: new|edit, id?, fields} · libsuggest {table, text} · rights {assetId, clientMaterial: yes|no, sourceRights: kept|sold} · paid {assetId, paid: yes|no} · protect {target: account|project, id, protect: ''|yes|no};
+ *        rights may instead carry disclose (yes|no) or protect (''|yes|no, '' = inherit) on its own;
+ *        library may carry fromAssetId (refused by the engine for client material).
+ *        Every request carries the signed-in person's account: their Google email matched to accounts[].emails; the backup
+ *        person (role team) sends their own id and may only approve, redo, deliver, comment, library (no prices), rights
+ *        (client material / AI note), idea, libsuggest and ask; the rest shows "Owner only".   Undo = the request file goes to Drive Trash
  *        before the engine's next run (every 15 min at :03 :18 :33 :48).
  *
  * studio-state.json (written by the engine):
@@ -659,7 +674,7 @@
     ['video-reformat', 'Resize video', 'aspect-ratio'], ['video-captions', 'Captions', 'badge-cc'], ['voice-tts', 'Voice', 'microphone'], ['voice-clone', 'Voice clone', 'microphone'],
     ['page-build', 'Pages', 'layout'], ['email-draft', 'Email', 'mail'], ['transcribe', 'Transcribe', 'message-2'], ['research', 'Research', 'search'], ['translate', 'Translate', 'language']];
   var GROUP_ICON = { 'grp-dogs': 'dog', 'grp-apps': 'apps', 'grp-services': 'briefcase', 'grp-lisa': 'user' };
-  var KSUBS = [['playbooks', 'Playbooks', 'route'], ['packs', 'Packs', 'package'], ['kits', 'Kits', 'box'], ['styles', 'Styles', 'palette'], ['formats', 'Formats', 'aspect-ratio']];
+  var KSUBS = [['playbooks', 'Playbooks', 'route'], ['packs', 'Packs', 'package'], ['kits', 'Kits', 'box'], ['bricks', 'Bricks', 'puzzle'], ['styles', 'Styles', 'palette'], ['formats', 'Formats', 'aspect-ratio']];
   function pickOf(list, k) { return list.filter(function (x) { return x[0] === k; })[0] || null; }
   function capOf(k) { return pickOf(CAPS, k) || [k, k, 'tools']; }
   function typeOf(k) { return TYPES.filter(function (t) { return t[0] === k; })[0] || ['other', 'file', 'Other']; }
@@ -776,6 +791,7 @@
       var nf = 0; (S.failed || []).forEach(function (x) { if (sent[x.assetId]) { delete sent[x.assetId]; nf++; } });
       if (nf) { saveLocal('st-sent', sent); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); }
       if (typing()) needRender = true; else render();
+      if (!whoAmI) who().then(function () { if (isTeam()) { if (typing()) needRender = true; else render(); } });
     }).catch(function (e) { var m = /fetch|network/i.test(e.message) ? 'Offline' : e.message; if (S) { banner(m + ' · last read ' + hm(lastRead)); } else { err = m; render(); } });
   }
   function prep() {
@@ -796,6 +812,18 @@
   function brand(id) { return S.brands.filter(function (b) { return b.id === id; })[0] || { id: id || 'none', name: id ? id : 'No brand', colour: 0, stage: '', setupChecklist: [] }; }
   function brandOf(a) { return brand(a.brandIds[0]); }
   function account(id) { return S.accounts.filter(function (x) { return x.id === id; })[0] || { id: id || '', name: id || 'No account', kind: 'owner' }; }
+  // Who is signed in (engine v0.2.20): their Google email matched to accounts[].emails (lowercase). Role owner | team | client.
+  // No match keeps the old behaviour (everything as the owner).
+  function meAcct() {
+    var em = String(whoAmI || '').split(' \u00b7 ')[0].trim().toLowerCase(); if (!em || em === '?' || !S) return null;
+    var a = (S.accounts || []).filter(function (x) { return (x.emails || []).map(function (e) { return String(e).toLowerCase(); }).indexOf(em) >= 0; })[0];
+    return a ? { id: a.id, role: a.role || (a.kind === 'owner' ? 'owner' : a.kind === 'client' ? 'client' : 'team') } : null;
+  }
+  function bizAccts() { return (S.accounts || []).filter(function (x) { return x.role !== 'team'; }); } // the team (backup) account owns no work
+  function isTeam() { var m = meAcct(); return !!m && m.role === 'team'; }
+  // Owner-only controls for the backup person: switched off with the reason.
+  function own() { return isTeam() ? ' disabled title="Owner only" data-owneronly' : ''; }
+  function ownWhy() { return isTeam() ? '<span class="sent" data-owneronly-why>Owner only</span>' : ''; }
   function ownerId() { var o = S.accounts.filter(function (x) { return x.kind === 'owner'; })[0] || S.accounts[0]; return o ? o.id : null; }
   function product(id) { return S.products.filter(function (x) { return x.id === id; })[0] || null; }
   function brandAcct(id) { return brand(id).accountId || ownerId(); }
@@ -893,7 +921,7 @@
       var row = function (key, chips) { return chips ? '<div class="fgrp" role="group" aria-label="' + FLAB[key] + '"><span class="flab">' + FLAB[key] + '</span><div class="pills" data-frow="' + key + '">' + chips + '</div></div>' : ''; };
       html += '<div class="fpanel" id="fpanel" role="dialog" aria-label="Filter">' +
         (gids.length > 1 || s.grp.length ? row('grp', fchip('grp', '', 'All', !s.grp.length) + gids.map(function (id) { return fchip('grp', id, I(GROUP_ICON[id] || 'folder') + ' ' + esc(group(id).name) + ' ' + cnt(gc[id] || 0), s.grp.indexOf(id) >= 0); }).join('')) : '') +
-        (S.accounts.length > 1 ? row('acct', fchip('acct', '', 'All', !s.acct.length) + S.accounts.map(function (x) { return fchip('acct', x.id, I(x.kind === 'client' ? 'briefcase' : 'home') + ' ' + esc(x.name) + ' ' + cnt(ac[x.id] || 0), s.acct.indexOf(x.id) >= 0); }).join('')) : '') +
+        (bizAccts().length > 1 ? row('acct', fchip('acct', '', 'All', !s.acct.length) + bizAccts().map(function (x) { return fchip('acct', x.id, I(x.kind === 'client' ? 'briefcase' : 'home') + ' ' + esc(x.name) + ' ' + cnt(ac[x.id] || 0), s.acct.indexOf(x.id) >= 0); }).join('')) : '') +
         (bids.length > 1 || s.brand.length ? row('brand', fchip('brand', '', 'All', !s.brand.length) + bids.map(function (id) { var b = brand(id); return fchip('brand', id, '<span class="dot" style="--c:' + col(b.colour) + '"></span>' + esc(b.name) + ' ' + cnt(bc[id] || 0), s.brand.indexOf(id) >= 0); }).join('')) : '') +
         (th.length > 1 || s.type.length ? row('type', th.map(function (t) { return fchip('type', t[0], I(t[1]) + ' ' + t[2] + ' ' + cnt(tc[t[0]] || 0), s.type.indexOf(t[0]) >= 0); }).join('')) : '') +
         row('st', STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), '<span class="step">Step ' + i + ':</span> ' + name + ' ' + cnt(sc[i] || 0), s.st.indexOf(String(i)) >= 0) : ''; }).join('')) +
@@ -966,13 +994,13 @@
     if (kind === 'review' && a.flags.indexOf('client-review') >= 0) return '<span class="sent" data-with="client">' + I('user-check') + 'With client</span>';
     if (kind === 'review') return '<button class="btn yes" type="button" data-act="approve" data-id="' + esc(a.id) + '" aria-label="Approve"' + dis() + '>' + I('check') + 'Approve</button>' +
       '<button class="btn" type="button" data-panel="redo" data-id="' + esc(a.id) + '" aria-label="Redo"' + dis() + '>' + I('pencil') + 'Redo</button>' +
-      '<button class="btn no" type="button" data-act="bin" data-id="' + esc(a.id) + '" aria-label="Bin"' + dis() + '>' + I('trash') + '</button>' +
+      '<button class="btn no" type="button" data-act="bin" data-id="' + esc(a.id) + '" aria-label="Bin"' + dis() + own() + '>' + I('trash') + '</button>' +
       '<button class="ico" type="button" data-panel="fb" data-id="' + esc(a.id) + '" aria-label="Stars and reasons" title="Stars and reasons"' + dis() + '>' + I(fbDraft[a.id] && (fbDraft[a.id].stars || fbDraft[a.id].reasons.length) ? 'star-filled' : 'star') + '</button>';
-    if (kind === 'gate') return VERDICTS.map(function (v) { return '<button class="btn" type="button" data-act="gate" data-verdict="' + v[0] + '" data-id="' + esc(a.id) + '" aria-label="' + v[1] + '" style="--hc:var(--ljr-' + v[3] + '-text)"' + dis() + '>' + I(v[2]) + v[1] + '</button>'; }).join('');
-    if (kind === 'lib') return '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>' +
+    if (kind === 'gate') return VERDICTS.map(function (v) { return '<button class="btn" type="button" data-act="gate" data-verdict="' + v[0] + '" data-id="' + esc(a.id) + '" aria-label="' + v[1] + '" style="--hc:var(--ljr-' + v[3] + '-text)"' + dis() + own() + '>' + I(v[2]) + v[1] + '</button>'; }).join('') + ownWhy();
+    if (kind === 'lib') return (isCM(a) ? '<button class="btn" type="button" disabled data-noreuse title="Client material: the client owns it, so it is never reused">' + I('recycle') + 'Reuse</button><span class="sent" data-noreuse-why>Client material \u00b7 never reused</span>' : '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>') +
       '<button class="btn" type="button" data-panel="result" data-id="' + esc(a.id) + '" aria-label="Add results"' + dis() + '>' + I('chart-bar') + 'Results</button>' +
       '<button class="btn" type="button" data-act="refresh" data-id="' + esc(a.id) + '" aria-label="Refresh"' + dis() + '>' + I('refresh-dot') + 'Refresh</button>' +
-      '<button class="btn no" type="button" data-panel="retire" data-id="' + esc(a.id) + '" aria-label="Retire"' + dis() + '>' + I('archive') + '</button>' + (isClient(a) ? '<button class="btn" type="button" data-act="deliver" data-id="' + esc(a.id) + '" aria-label="Deliver"' + dis() + '>' + I('package-export') + 'Deliver</button>' : '');
+      '<button class="btn no" type="button" data-panel="retire" data-id="' + esc(a.id) + '" aria-label="Retire"' + dis() + '>' + I('archive') + '</button>' + (isClient(a) ? (a.protect === 'yes' && a.paid !== 'yes' ? '<button class="btn" type="button" disabled data-nodeliver title="Protected: the final files go out once it is paid">' + I('package-export') + 'Deliver</button><span class="sent" data-nodeliver-why>Final files wait for payment</span>' : '<button class="btn" type="button" data-act="deliver" data-id="' + esc(a.id) + '" aria-label="Deliver"' + dis() + '>' + I('package-export') + 'Deliver</button>') : '');
     if (kind === 'hand' && a.stage >= 1) return '<button class="btn yes" type="button" data-panel="done" data-id="' + esc(a.id) + '" aria-label="Done"' + dis() + '>' + I('check') + 'Done</button>';
     return '';
   }
@@ -1021,7 +1049,7 @@
     if (k === 'all') {
       var pr = product(a.productId), kit = byIdIn('kits', a.kitId), pb = byIdIn('playbooks', a.playbookId), oc = pickOf(OUTCOMES, a.outcome), vo = byIdIn('voices', a.voiceId), lo = byIdIn('looks', a.lookId), ln = pickOf(LANGS, a.language);
       var srcs = S.sources.filter(function (x) { return a.sourceIds.indexOf(x.id) >= 0 || x.targetId === a.id; });
-      var kv = [['Group', esc(group(grpOf(a)).name)], ['Account', S.accounts.length > 1 ? esc(account(a.accountId).name) : ''], ['Product', pr ? esc(pr.name) : ''], ['Brand', a.brandIds.map(function (b) { var x = brand(b), sl = siteLink(x); return esc(x.name) + (sl ? ' ' + sl : ''); }).join(' · ')], ['Project', esc(a.projectName)], ['Type', esc(typeOf(a.type)[2])], ['Recipe', esc(a.recipe)],
+      var kv = [['Group', esc(group(grpOf(a)).name)], ['Account', bizAccts().length > 1 ? esc(account(a.accountId).name) : ''], ['Product', pr ? esc(pr.name) : ''], ['Brand', a.brandIds.map(function (b) { var x = brand(b), sl = siteLink(x); return esc(x.name) + (sl ? ' ' + sl : ''); }).join(' · ')], ['Project', esc(a.projectName)], ['Type', esc(typeOf(a.type)[2])], ['Recipe', esc(a.recipe)],
         ['Playbook', pb ? esc(pb.name) : ''], ['Kit', kit ? esc(kit.name) : ''], ['Outcome', oc ? oc[1] : ''], ['Voice', vo ? esc(vo.name) : ''], ['Look', lo ? esc(lo.name) : ''], ['Language', ln ? ln[1] : esc(a.language)], ['Length', esc(a.length)],
         ['A/B', a.test ? esc(a.test) + (a.result ? ' · ' + esc(a.result) : '') : ''],
         ['Sources', srcs.map(function (x) { var r = pickOf(RIGHTS, x.rights); return (x.url ? '<a href="' + safeUrl(x.url) + '" target="_blank" rel="noopener">' + esc(x.note || x.url.replace(/^https?:\/\//, '').slice(0, 40)) + '</a>' : esc(x.fileName || x.note)) + ' · ' + (r ? r[1] : esc(x.rights)); }).join('<br>')],
@@ -1031,7 +1059,7 @@
         ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
       var inStep = Math.max(0, Math.floor((Date.now() - (Date.parse(a.stageSince) || a._t || Date.now())) / 864e5)), wo = waitingOn(a), acc = account(a.accountId);
       kv.unshift(['With', wo.w], [isClient(a) ? 'Client' : 'Brand owner', isClient(a) ? esc(acc.name) : 'Own brand'], ['In this step', inStep + (inStep === 1 ? ' day' : ' days') + (inStep > 3 && a.stage < 8 ? ' \u00b7 stuck?' : '')]);
-      body = rowMore(a) + comments(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
+      body = rowMore(a) + comments(a) + rightsRows(a) + deliveryRows(a) + saveAsKit(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
     }
     return '<div class="panel" data-panelbox="' + esc(a.id) + '">' + body + '</div>';
   }
@@ -1060,6 +1088,8 @@
       (withBrand || dp ? '<div class="bline">' + (withBrand ? brandMark(bo) + '<span class="bn">' + esc(bo.name) + '</span>' : '') + dp + '</div>' : '') +
       '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') +
+      (a.protect === 'yes' && a.stage < 8 ? '<div class="needl"><span class="tag" data-chip="proof" title="Clients see a view-only proof">Proof \u00b7 view only</span></div>' : '') +
+      (isCM(a) ? '<div class="needl"><span class="tag" data-chip="client-only" title="The client owns this; it is never reused">Client-only \u00b7 never reused</span></div>' : '') +
       '</div></div><div class="cfoot">' + (need ? '<span class="tag need" data-chip="need">' + esc(need) + '</span>' : '<span></span>') + whoRing(a) + '</div>' +
       (function (x) { return x ? '<div class="l2"><span class="acts">' + x + '</span></div>' : ''; })(actsFor(a, kind) + (a.parts && a.parts.total && a.parts.approved === a.parts.total && a.stage < 7 && !sent[a.id] ? '<button class="btn yes" type="button" data-act="assemble" data-id="' + esc(a.id) + '" aria-label="Assemble"' + dis() + '>' + I('books') + 'Assemble</button>' : '')) +
       (on && !(sideOn && openPanel.k === 'all') ? panelOf(a, openPanel.k) : '') + '</div>';
@@ -1294,6 +1324,19 @@
   var lq = {}, toolSort = 'name';
   function qbox(key, extra) { return '<div class="srow"><label class="sbox">' + I('search') + '<input type="search" data-lq="' + key + '" value="' + esc(lq[key] || '') + '" aria-label="Search" autocomplete="off"></label></div>' + (extra || ''); }
   function lqHit(key, text) { var q = (lq[key] || '').toLowerCase().trim(); return !q || q.split(/\s+/).every(function (w) { return String(text).toLowerCase().indexOf(w) >= 0; }); }
+  // VAT rates (engine v0.2.18, read-only; edited in the Sheet): country, rate, the date it was checked.
+  function accountsCard() {
+    var A = S.accounts || []; if (!A.length) return '';
+    return '<div class="card" data-accounts><div class="sect">' + I('users') + 'Accounts</div>' + A.map(function (x) {
+      var cur = protOf('account', x), eff = cur || x.protectEffective || (x.kind === 'client' ? 'yes' : 'no');
+      return '<div class="rrow" data-account="' + esc(x.id) + '"><span class="rlab">' + esc(x.name) + '</span><span class="muted">Protection default: ' + (eff === 'yes' ? 'Protected' : 'Off') + '</span>' + protSeg('data-aprot="' + esc(x.id) + '"', cur, 'Default') + '</div>';
+    }).join('') + '</div>';
+  }
+  function vatRatesCard() {
+    var V = S.vatRates || []; if (!V.length) return '';
+    return '<div class="card" data-vatrates><div class="sect">' + I('receipt-tax') + 'VAT rates <span class="muted">(edited in the Sheet)</span></div><dl class="kv">' +
+      V.map(function (v) { return '<dt>' + esc(v.name || v.country) + (v.home || /^(GB|UK)$/i.test(v.country) ? ' \u00b7 home' : '') + '</dt><dd>' + esc(String(v.rate)) + '%' + (v.checked ? ' \u00b7 checked ' + esc(dmy(Date.parse(v.checked))) : '') + '</dd>'; }).join('') + '</dl></div>';
+  }
   function vBrands() {
     var A = all().filter(function (a) { return !isTest(a); });
     if (!S.brands.length) return '<div class="card muted">No brands yet.</div>';
@@ -1301,12 +1344,12 @@
     return qbox('brands') + '<div class="bgrid">' + BL.map(function (b) {
       var n = BSTAGES.indexOf(b.stage), ck = (b.setupChecklist || []).map(function (x) { var p = pend['chk|' + b.id + '|' + x.name]; return p ? { name: x.name, ok: p.ok, pend: true } : x; });
       var done = ck.filter(function (x) { return x.ok; }).length, mine = A.filter(function (a) { return a.brandIds.indexOf(b.id) >= 0 && a.stage < 8; }).length;
-      var sub = [b.groupId ? I(GROUP_ICON[b.groupId] || 'folder') + esc(group(b.groupId).name) : '', S.accounts.length > 1 ? esc(account(brandAcct(b.id)).name) : ''].filter(Boolean).join(' · ');
+      var sub = [b.groupId ? I(GROUP_ICON[b.groupId] || 'folder') + esc(group(b.groupId).name) : '', bizAccts().length > 1 ? esc(account(brandAcct(b.id)).name) : ''].filter(Boolean).join(' · ');
       return '<section class="room" data-brandcard="' + esc(b.id) + '" style="--c:' + col(b.colour) + '"><h2 class="grp">' + brandMark(b) + '<span class="bn">' + esc(b.name) + '</span><a class="cnt" href="#/assets?brand=' + encodeURIComponent(b.id) + '" title="Assets in progress">' + mine + '</a></h2>' + (sub ? '<span class="stn" data-group="' + esc(b.groupId || '') + '">' + sub + '</span>' : '') +
         '<div class="strip b6">' + BSTAGES.map(function (_, i) { return '<i class="' + (i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>' +
         '<div class="blab" title="' + BSTAGES.join(' · ') + '">' + (n >= 0 ? (n + 1) + '/6 · ' + esc(b.stage) : '') + '</div>' + kitStrip(b) +
         (ck.length ? '<div class="sect">' + I('list-check') + 'Set-up ' + cnt(done + '/' + ck.length) + '</div><ul class="chk">' + ck.map(function (x) { return '<li class="' + (x.ok ? 'ok' : '') + '"><button type="button" data-check="' + esc(b.id) + '" data-item="' + esc(x.name) + '" aria-pressed="' + !!x.ok + '"' + dis() + '>' + I(x.ok ? 'circle-check' : 'circle-dashed') + esc(x.name) + '</button></li>'; }).join('') + '</ul>' : '') + '</section>';
-    }).join('') + '</div>';
+    }).join('') + '</div>' + accountsCard() + vatRatesCard();
   }
   function vTools() {
     var T = S.tools || [], G = S.gaps || [];
@@ -1371,6 +1414,7 @@
       '<div class="frow"><span class="muted">' + esc(toolNote) + '</span><button class="btn yes" type="button" data-action="sendtool" aria-label="Send tool"' + dis() + '>' + I('check') + 'Send</button></div></div>';
   }
   function sendTool() {
+    if (isTeam()) { banner('Owner only'); return; }
     if (EX) return;
     toolErr = {};
     if (!(tdraft.product || '').trim()) toolErr.product = 'Add a name';
@@ -1400,8 +1444,130 @@
   }
   /* Kits: the WHAT ladder (Playbook › Pack › Kit › Brick), styles and formats. */
   function kitSub() { var p = hashParts().path[1]; return pickOf(KSUBS, p) ? p : 'playbooks'; }
+  /* ---------- Library: + New and Edit on Playbooks, Packs, Kits and Bricks (same fields as the Sheet, checked here and again
+   * by the engine), and a Suggest box anyone on the team can use (lands as a pending suggestion for Lisa to accept).
+   * Writes { kind: 'library', table, op: new|edit, id?, fields } (owner) and { kind: 'libsuggest', table, id?, text }. ---------- */
+  var LIB = {
+    playbooks: { one: 'playbook', fields: [['name', 'Name', 'text', 1, 200], ['outcome', 'Outcome', 'pick', 1, function () { return OUTCOMES.map(function (o) { return [o[0], o[1]]; }); }],
+      ['steps', 'Steps (one per line; "kit:<id>" or "pack:<id>" links one)', 'lines', 0, 30], ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
+    packs: { one: 'pack', fields: [['name', 'Name', 'text', 1, 200], ['kind', 'Kind (lowercase, e.g. launch-pack)', 'slug', 0, 40], ['kitIds', 'Kits', 'multi', 0, function () { return S.kits.map(function (k) { return [k.id, k.name]; }); }],
+      ['price', 'Price \u00a3', 'money', 0, 100000], ['priceBasis', 'Price is', 'basis', 0, null], ['sourcePrice', 'Source files add-on \u00a3 (same ex / inc as the price)', 'money', 0, 100000], ['readyDays', 'Ready in (days)', 'int', 0, 365],
+      ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
+    kits: { one: 'kit', fields: [['name', 'Name', 'text', 1, 200], ['type', 'Type', 'pick', 1, function () { return TYPES.map(function (t) { return [t[0], t[2]]; }); }],
+      ['brickIds', 'Bricks', 'multi', 0, function () { return S.bricks.map(function (b) { return [b.id, b.name]; }); }], ['needs', 'Needs', 'multi', 0, function () { return CAPS.map(function (c) { return [c[0], c[1]]; }); }],
+      ['frameworkId', 'Framework', 'pick', 0, function () { return S.frameworks.map(function (x) { return [x.id, x.name]; }); }], ['voiceId', 'Voice', 'pick', 0, function () { return S.voices.map(function (x) { return [x.id, x.name]; }); }],
+      ['lookId', 'Look', 'pick', 0, function () { return S.looks.map(function (x) { return [x.id, x.name]; }); }], ['formatIds', 'Formats', 'multi', 0, function () { return S.formats.map(function (x) { return [x.id, fmtLabel(x.id)]; }); }],
+      ['makePromptId', 'Make prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
+      ['price', 'Price \u00a3', 'money', 0, 100000], ['priceBasis', 'Price is', 'basis', 0, null], ['sourcePrice', 'Source files add-on \u00a3 (same ex / inc as the price)', 'money', 0, 100000], ['readyDays', 'Ready in (days)', 'int', 0, 365],
+      ['checkPromptId', 'Check prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
+      ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
+    bricks: { one: 'brick', fields: [['name', 'Name', 'text', 1, 200], ['kind', 'Kind (lowercase, e.g. hook, prompt, cta)', 'slug', 1, 40], ['text', 'Text', 'area', 1, 5000], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] }
+  };
+  var LIB_STATUS = [['live', 'Live'], ['archived', 'Archived'], ['retired', 'Retired']];
+  Object.keys(LIB).forEach(function (t) { LIB[t].fields.push(['status', 'Status', 'pick', 0, function () { return LIB_STATUS; }, 'edit']); });
+  var libDraft = loadLocal('st-lib'), libErr = {}, libSent = {};
+  // VAT (engine v0.2.18, all optional): state.vatRates [{country, name?, rate, checked, home?}], state.priceShow ex|inc|both,
+  // kits[] / packs[] price, priceBasis ex|inc, priceEx, priceInc. The viewer's own ex / inc / both choice is kept in this browser.
+  function homeRate() { var v = (S.vatRates || []).filter(function (x) { return x.home; })[0] || (S.vatRates || []).filter(function (x) { return /^(GB|UK)$/i.test(x.country); })[0]; var r = v ? Number(v.rate) : 20; return isFinite(r) && r >= 0 ? r : 20; }
+  function gbp(n) { return '\u00a3' + (Math.round(n * 100) % 100 ? n.toFixed(2) : String(Math.round(n))); }
+  function vatLine(price, basis) {
+    var p = Number(price); if (String(price == null ? '' : price).trim() === '' || !isFinite(p)) return '';
+    var r = homeRate(), other = basis === 'inc' ? p / (1 + r / 100) : p * (1 + r / 100);
+    return '= \u00a3' + other.toFixed(2) + (basis === 'inc' ? ' ex' : ' inc') + ' VAT at ' + r + '%';
+  }
+  var pshowLocal = (function () { try { return localStorage.getItem('st-pshow') || ''; } catch (e) { return ''; } })();
+  function priceShow() { var v = pshowLocal || S.priceShow; return v === 'inc' || v === 'both' ? v : 'ex'; }
+  function exInc(x) {
+    var p = x && x.price != null && x.price !== '' && isFinite(Number(x.price)) ? Number(x.price) : null, r = homeRate();
+    var ex = x && x.priceEx != null && isFinite(Number(x.priceEx)) ? Number(x.priceEx) : p === null ? null : x.priceBasis === 'inc' ? p / (1 + r / 100) : p;
+    var inc = x && x.priceInc != null && isFinite(Number(x.priceInc)) ? Number(x.priceInc) : p === null ? null : x.priceBasis === 'inc' ? p : p * (1 + r / 100);
+    return ex === null ? null : { ex: ex, inc: inc };
+  }
+  function pshowSwitch() { var v = priceShow(); return '<div class="seg pshow" role="group" aria-label="Show prices">' + [['ex', 'ex VAT'], ['inc', 'inc VAT'], ['both', 'Both']].map(function (o) { return '<button type="button" data-pshow="' + o[0] + '" aria-pressed="' + (v === o[0]) + '">' + o[1] + '</button>'; }).join('') + '</div>'; }
+  // Owner view only (this page): price and lead time on Kit and Pack cards, as one quiet line. Never in anything a client sees.
+  function priceLine(x) {
+    var pr = exInc(x), d = x && x.readyDays != null && x.readyDays !== '' && isFinite(Number(x.readyDays)) ? Number(x.readyDays) : null, sh = priceShow();
+    var bits = []; if (pr) bits.push(sh === 'both' ? gbp(pr.ex) + ' ex \u00b7 ' + gbp(pr.inc) + ' inc VAT' : sh === 'inc' ? gbp(pr.inc) + ' inc VAT' : gbp(pr.ex) + ' ex VAT'); if (d !== null) bits.push(d + (d === 1 ? ' day' : ' days'));
+    return bits.length ? '<div class="pline" data-price>' + bits.join(' \u00b7 ') + '</div>' : '';
+  }
+  function libEditBtn(table, id) { return '<button class="btn" type="button" data-libedit="' + table + '" data-id="' + esc(id) + '" aria-label="Edit"' + dis() + '>' + I('pencil') + 'Edit</button>'; }
+  function libFrom(table, id) {
+    var x = byIdIn(table, id) || {}, f = {};
+    LIB[table].fields.forEach(function (d) {
+      var v = x[d[0]];
+      if (d[0] === 'steps') v = (x.steps || []).map(function (st) { return st.kind === 'kit' || st.kind === 'pack' ? st.kind + ':' + st.id : st.text; }).join('\n');
+      f[d[0]] = d[2] === 'multi' ? (v || []).slice() : v == null ? '' : String(v);
+    });
+    return f;
+  }
+  function libForm(table) {
+    var d = libDraft.t === table ? libDraft : null; if (!d) return '';
+    var L = LIB[table], f = d.f || {}, opt = function (fd) { return typeof fd[4] === 'function' ? fd[4]() : []; };
+    return '<div class="card libform" data-libform="' + table + '"><div class="grp">' + (d.op === 'edit' ? 'Edit ' + L.one : 'New ' + L.one) + '</div>' +
+      (table === 'bricks' && d.op === 'edit' && String(f.kind) === 'prompt' ? '<p class="muted" data-libnote>Changing a prompt\u2019s text sends it back for approval.</p>' : '') +
+      (isTeam() && (table === 'kits' || table === 'packs') ? '<p class="muted" data-owneronly-why>Prices: Owner only</p>' : '') +
+      libFields(table, d.op).map(function (fd) {
+        var k = fd[0], lab = fd[1] + (fd[3] ? ' <span class="req" aria-hidden="true">*</span>' : ''), err = libErr[k] ? '<div class="ferr">' + esc(libErr[k]) + '</div>' : '', v = f[k];
+        if (fd[2] === 'basis') return '<div class="fq" data-lfq="' + k + '"><div class="seg" role="group" aria-label="Price is">' + [['ex', 'ex VAT'], ['inc', 'inc VAT']].map(function (o) { var on = (v || 'ex') === o[0]; return '<button type="button" data-lbasis="' + o[0] + '" aria-pressed="' + on + '">' + o[1] + '</button>'; }).join('') + '</div><p class="pline" data-vatline>' + esc(vatLine(f.price, v || 'ex')) + '</p></div>';
+        var input = fd[2] === 'money' || fd[2] === 'int' ? '<input class="fin" data-lf="' + k + '" value="' + esc(v == null ? '' : v) + '" type="number" min="0" max="' + fd[4] + '" step="' + (fd[2] === 'money' ? '0.01' : '1') + '" inputmode="' + (fd[2] === 'money' ? 'decimal' : 'numeric') + '" aria-label="' + esc(fd[1]) + '">' :
+          fd[2] === 'text' || fd[2] === 'url' || fd[2] === 'slug' ? '<input class="fin" data-lf="' + k + '" value="' + esc(v || '') + '"' + (fd[4] && fd[2] === 'text' ? ' maxlength="' + fd[4] + '"' : '') + (fd[2] === 'url' ? ' inputmode="url" placeholder="https://"' : '') + ' aria-label="' + esc(fd[1]) + '">' :
+          fd[2] === 'area' || fd[2] === 'lines' ? '<textarea class="fin" data-lf="' + k + '" rows="' + (fd[2] === 'lines' ? 4 : 3) + '" aria-label="' + esc(fd[1]) + '">' + esc(v || '') + '</textarea>' :
+          '<div class="chips">' + opt(fd).map(function (o) { var on = fd[2] === 'multi' ? (v || []).indexOf(o[0]) >= 0 : v === o[0]; return '<button class="ch' + (on ? ' on' : '') + '" type="button" data-lfx="' + k + '" data-multi-lf="' + (fd[2] === 'multi' ? 1 : 0) + '" data-val="' + esc(o[0]) + '" aria-pressed="' + on + '">' + esc(o[1]) + '</button>'; }).join('') + (opt(fd).length ? '' : '<span class="muted">None yet.</span>') + '</div>';
+        return '<div class="fq" data-lfq="' + k + '"><p class="qt">' + lab + '</p>' + input + err + '</div>';
+      }).join('') +
+      '<div class="frow"><button class="btn" type="button" data-action="libcancel">Cancel</button><button class="btn yes" type="button" data-action="libsend"' + dis() + '>' + I('send') + (d.op === 'edit' ? 'Save' : 'Add') + '</button></div></div>';
+  }
+  // The Sheet's rules, as engine v0.2.17 checks them: name 200, notes 2000, text 5000, steps 30 x 200 (no ';'), lists 30.
+  var PRICE_FIELDS = ['price', 'priceBasis', 'sourcePrice'];
+  function libFields(table, op) { return LIB[table].fields.filter(function (fd) { return (fd[5] !== 'edit' || op === 'edit') && !(isTeam() && PRICE_FIELDS.indexOf(fd[0]) >= 0); }); } // prices: owner only
+  function libCheck(table, f, op) {
+    var e = {};
+    libFields(table, op).forEach(function (fd) {
+      var k = fd[0], v = f[k], opts = typeof fd[4] === 'function' ? fd[4]().map(function (o) { return o[0]; }) : null;
+      if (fd[2] === 'multi') { if ((v || []).some(function (x) { return opts.indexOf(x) < 0; })) e[k] = 'Pick from the list'; else if ((v || []).length > 30) e[k] = 'At most 30'; return; }
+      v = String(v || '').trim();
+      if (fd[3] && !v) { e[k] = 'Needed'; return; }
+      if (!v) return;
+      if (fd[2] === 'url' && !/^https:\/\/[^\s"'<>]+$/.test(v)) e[k] = 'A link starting https://';
+      else if (fd[2] === 'url' && v.length > 500) e[k] = 'At most 500 characters';
+      else if (fd[2] === 'slug' && !/^[a-z0-9][a-z0-9-]{0,39}$/.test(v)) e[k] = 'Lowercase letters, numbers and dashes';
+      else if (fd[2] === 'money' && (!/^\d+(\.\d{1,2})?$/.test(v) || Number(v) > fd[4])) e[k] = 'A price from 0 to ' + fd[4] + ', up to 2 decimals';
+      else if (fd[2] === 'int' && (!/^\d+$/.test(v) || Number(v) > fd[4])) e[k] = 'Whole days from 0 to ' + fd[4];
+      else if (fd[2] === 'pick' && opts.indexOf(v) < 0) e[k] = 'Pick from the list';
+      else if ((fd[2] === 'text' || fd[2] === 'area') && fd[4] && v.length > fd[4]) e[k] = 'At most ' + fd[4] + ' characters';
+      else if (fd[2] === 'lines') { var ls = v.split('\n').map(function (x) { return x.trim(); }).filter(Boolean); if (ls.length > fd[4]) e[k] = 'At most ' + fd[4] + ' steps';
+        ls.forEach(function (x) { if (x.length > 200) e[k] = 'Each step at most 200 characters'; if (/;/.test(x)) e[k] = 'No ; in a step (one step per line)'; var m = x.match(/^(kit|pack)\s*:\s*(\S+)$/i); if (m && !byIdIn(m[1].toLowerCase() === 'kit' ? 'kits' : 'packs', m[2])) e[k] = 'No ' + m[1].toLowerCase() + ' called ' + m[2]; }); }
+    });
+    return e;
+  }
+  function sendLib() {
+    if (EX || !libDraft.t) return;
+    var t = libDraft.t, f = libDraft.f || {}; libErr = libCheck(t, f, libDraft.op);
+    if (Object.keys(libErr).length) { render(); var first = document.querySelector('[data-libform] .ferr'); if (first) first.scrollIntoView({ block: 'center' }); return; }
+    var fields = {}; libFields(t, libDraft.op).forEach(function (fd) { var v = f[fd[0]]; if (fd[0] === 'status' && !v) return;
+      // optional numbers: sent only when filled
+      if (fd[2] === 'money' || fd[2] === 'int') { if (String(v == null ? '' : v).trim() !== '') fields[fd[0]] = Number(v); return; }
+      if (fd[2] === 'basis') { if (String(f.price == null ? '' : f.price).trim() !== '') fields[fd[0]] = v === 'inc' ? 'inc' : 'ex'; return; }
+ fields[fd[0]] = fd[2] === 'multi' ? (v || []).slice() : fd[2] === 'lines' ? String(v || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean) : String(v || '').trim(); });
+    var body = { kind: 'library', accountId: ownerId(), table: t, op: libDraft.op, fields: fields, at: new Date().toISOString() }; if (libDraft.op === 'edit') body.id = libDraft.id; if (libDraft.from) body.fromAssetId = libDraft.from;
+    var keep = libDraft; libDraft = {}; saveLocal('st-lib', libDraft); libSent[t] = 'Sent · applies at the engine’s next run'; render();
+    withWrite(function () { return putRequest('library', body).catch(function (e) { libDraft = keep; saveLocal('st-lib', libDraft); delete libSent[t]; banner('Not sent: ' + e.message); render(); }); }, function () { libDraft = keep; delete libSent[t]; render(); });
+  }
+  function libSuggest(table) {
+    var key = 'ls|' + table;
+    return '<div class="card libsug" data-libsuggest="' + table + '"><div class="sect">' + I('bulb') + 'Suggest a change</div><p class="muted">Anyone on the team can suggest. It waits for Lisa to accept.</p>' +
+      '<form class="ask" data-libsug="' + table + '"><textarea class="fin" id="lsbox-' + table + '" data-draft="' + key + '" maxlength="1000" rows="2" aria-label="Suggestion" placeholder="What should change, or what should we add?" required>' + esc(drafts[key] || '') + '</textarea><button class="btn" type="submit"' + dis() + '>' + I('send') + 'Suggest</button></form>' +
+      (libSent['s|' + table] ? '<p class="sent" data-libsent>' + esc(libSent['s|' + table]) + '</p>' : '') + '</div>';
+  }
+  function sendLibSuggest(table) {
+    if (EX) return;
+    var key = 'ls|' + table, box = $('lsbox-' + table), text = (box ? box.value : drafts[key] || '').trim().slice(0, 1000);
+    if (!text) { if (box) box.focus(); return; }
+    delete drafts[key]; saveLocal('st-drafts', drafts); libSent['s|' + table] = 'Suggested · waiting for Lisa'; render();
+    withWrite(function () { return putRequest('libsuggest', { kind: 'libsuggest', accountId: ownerId(), table: table, text: text, at: new Date().toISOString() }).catch(function (e) { drafts[key] = text; delete libSent['s|' + table]; banner('Not sent: ' + e.message); render(); }); }, function () { drafts[key] = text; delete libSent['s|' + table]; render(); });
+  }
   function vKits() {
-    var sub = kitSub(), n = { playbooks: S.playbooks.length, packs: S.packs.length, kits: S.kits.length, styles: S.frameworks.length + S.voices.length + S.looks.length, formats: S.formats.length };
+    var sub = kitSub(), n = { playbooks: S.playbooks.length, packs: S.packs.length, kits: S.kits.length, bricks: S.bricks.length, styles: S.frameworks.length + S.voices.length + S.looks.length, formats: S.formats.length };
     var nav = '<div class="pills" data-ksub>' + KSUBS.map(function (k) { return '<a class="pill' + (k[0] === sub ? ' on' : '') + '" href="#/kits/' + k[0] + '" data-kitnav="' + k[0] + '"' + (k[0] === sub ? ' aria-current="true"' : '') + '>' + I(k[2]) + k[1] + ' ' + cnt(n[k[0]]) + '</a>'; }).join('') + '</div>';
     var name = function (list, id) { var x = byIdIn(list, id); return x ? x.name : id; };
     var kitTags = function (k) {
@@ -1417,7 +1583,7 @@
         var pbs = S.playbooks.filter(function (p) { return p.outcome === o[0] && lqHit('kits', [p.name, (p.steps || []).map(function (x) { return x.text || x.id; }).join(' ')].join(' ')); });
         return '<section class="room" data-outcome="' + o[0] + '" style="--c:var(--ljr-' + o[3] + ')"><h2 class="grp">' + I(o[2]) + o[1] + cnt(pbs.length) + '</h2>' +
           pbs.map(function (p) {
-            return '<div class="pb" data-playbook="' + esc(p.id) + '"><b>' + esc(p.name) + '</b><ol class="steps">' + (p.steps || []).map(function (x) {
+            return '<div class="pb" data-playbook="' + esc(p.id) + '"><div class="pbh"><b>' + esc(p.name) + '</b>' + libEditBtn('playbooks', p.id) + '</div><ol class="steps">' + (p.steps || []).map(function (x) {
               var href = x.kind === 'kit' ? '#/kits/kits' : x.kind === 'pack' ? '#/kits/packs' : '';
               return '<li>' + I(x.kind === 'pack' ? 'package' : x.kind === 'kit' ? 'box' : 'hand-finger') + (href ? '<a href="' + href + '">' + esc(x.text || x.id) + '</a>' : esc(x.text)) + '</li>';
             }).join('') + '</ol></div>';
@@ -1426,17 +1592,23 @@
     } else if (sub === 'packs') {
       var PK = S.packs.filter(function (p) { return lqHit('kits', [p.name, p.kind, p.notes].join(' ')); });
       body = '<div class="card">' + (PK.length ? PK.map(function (p) {
-        return '<div class="crow" data-pack="' + esc(p.id) + '"><div class="l1"><span class="type">' + I('package') + '</span><span class="ttl">' + esc(p.name) + '</span><span title="Kits">' + cnt(p.kitIds.length) + '</span></div>' +
+        return '<div class="crow" data-pack="' + esc(p.id) + '"><div class="l1"><span class="type">' + I('package') + '</span><span class="ttl">' + esc(p.name) + '</span><span title="Kits">' + cnt(p.kitIds.length) + '</span>' + libEditBtn('packs', p.id) + '</div>' +
           '<div class="l2"><span class="icons">' + (p.kind ? '<span class="tag" title="Kind">' + esc(p.kind) + '</span>' : '') + p.kitIds.map(function (k) { return '<span class="tag" title="Kit">' + I('box') + esc(name('kits', k)) + '</span>'; }).join('') + '</span></div>' +
-          (p.notes ? '<div class="when">' + esc(p.notes) + '</div>' : '') + '</div>';
+          priceLine(p) + (p.notes ? '<div class="when">' + esc(p.notes) + '</div>' : '') + '</div>';
       }).join('') : empty) + '</div>';
     } else if (sub === 'kits') {
       var used = {}; all().forEach(function (a) { if (a.kitId) used[a.kitId] = (used[a.kitId] || 0) + 1; });
       var KT = S.kits.filter(function (k) { return lqHit('kits', [k.name, k.type, k.notes, (k.needs || []).join(' ')].join(' ')); });
       body = '<div class="card">' + (KT.length ? KT.map(function (k) {
         var t = typeOf(k.type);
-        return '<div class="crow" data-kit="' + esc(k.id) + '"><div class="l1"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span><span class="ttl">' + esc(k.name) + '</span><span title="Assets using it">' + cnt(used[k.id] || 0) + '</span></div>' +
-          '<div class="l2"><span class="icons">' + kitTags(k) + (k.brickIds.length ? '<span class="tag" title="Bricks: ' + esc(k.brickIds.map(function (b) { return name('bricks', b); }).join(' · ')) + '">' + I('puzzle') + k.brickIds.length + '</span>' : '') + '</span></div></div>';
+        return '<div class="crow" data-kit="' + esc(k.id) + '"><div class="l1"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span><span class="ttl">' + esc(k.name) + '</span><span title="Assets using it">' + cnt(used[k.id] || 0) + '</span>' + libEditBtn('kits', k.id) + '</div>' +
+          '<div class="l2"><span class="icons">' + kitTags(k) + (k.brickIds.length ? '<span class="tag" title="Bricks: ' + esc(k.brickIds.map(function (b) { return name('bricks', b); }).join(' · ')) + '">' + I('puzzle') + k.brickIds.length + '</span>' : '') + '</span></div>' + priceLine(k) + '</div>';
+      }).join('') : empty) + '</div>';
+    } else if (sub === 'bricks') {
+      var BR = S.bricks.filter(function (b) { return lqHit('kits', [b.name, b.kind, b.text, b.notes].join(' ')); });
+      body = '<div class="card">' + (BR.length ? BR.map(function (b) {
+        return '<div class="crow" data-brick="' + esc(b.id) + '"><div class="l1"><span class="type">' + I('puzzle') + '</span><span class="ttl">' + esc(b.name) + '</span>' + libEditBtn('bricks', b.id) + '</div>' +
+          '<div class="l2"><span class="icons">' + (b.kind ? '<span class="tag" title="Kind">' + esc(b.kind) + '</span>' : '') + '</span></div>' + (b.text ? '<div class="when">' + esc(String(b.text).slice(0, 160)) + '</div>' : '') + '</div>';
       }).join('') : empty) + '</div>';
     } else if (sub === 'styles') {
       var card = function (kind, x, extra) {
@@ -1458,11 +1630,13 @@
           (f.channel ? '<div class="when">' + esc(f.channel) + '</div>' : '') + '</div>';
       }).join('') : empty) + '</div>';
     }
-    return nav + (/^(playbooks|packs|kits)$/.test(sub) ? qbox('kits') : '') + '<div data-kits="' + sub + '" style="display:flex;flex-direction:column;gap:14px">' + body + '</div>';
+    var lib = LIB[sub] ? sub : null;
+    return nav + (lib ? '<div class="libbar">' + qbox('kits') + (sub === 'kits' || sub === 'packs' ? pshowSwitch() : '') + '<button class="btn" type="button" data-libnew="' + sub + '"' + dis() + '>' + I('plus') + 'New</button></div>' + libForm(sub) : '') +
+      '<div data-kits="' + sub + '" style="display:flex;flex-direction:column;gap:14px">' + body + '</div>' + (lib ? libSuggest(sub) : '');
   }
   function vEngine() {
     var on = studioOn(), h = S.health || {};
-    return '<div class="card"><div class="grp">' + I('engine') + 'Engine<button class="pill" type="button" data-action="studio" aria-label="Studio on or off" aria-pressed="' + on + '"' + dis() + '><span class="sw' + (on ? ' on' : '') + '"><i></i></span>' + (on ? 'On' : 'Off') + '</button></div>' +
+    return '<div class="card"><div class="grp">' + I('engine') + 'Engine<button class="pill" type="button" data-action="studio" aria-label="Studio on or off" aria-pressed="' + on + '"' + dis() + own() + '><span class="sw' + (on ? ' on' : '') + '"><i></i></span>' + (on ? 'On' : 'Off') + '</button></div>' +
       '<p class="muted">' + (h.lastRun ? 'Last run ' + dmy(Date.parse(h.lastRun)) + ' ' + hm(Date.parse(h.lastRun)) : 'Never run') + (S.generated_at ? ' · read ' + hm(Date.parse(S.generated_at)) : '') + '</p>' +
       (h.jobs || []).map(function (j) { var ok = j.result === 'OK'; return '<div class="row" style="--c:var(--ljr-' + (ok ? 5 : 2) + ')"><span class="bar"></span><div class="txt"><b>' + esc(j.job) + '</b>' + (j.note ? '<div class="muted">' + esc(String(j.note).slice(0, 80)) + '</div>' : '') + '</div><span class="meta">' + esc(ok ? 'OK' : j.result) + '<br>' + (Date.parse(j.last) ? hm(Date.parse(j.last)) : '') + '</span></div>'; }).join('') +
       (ST.rootFolderId ? '<p><a href="https://drive.google.com/drive/folders/' + esc(ST.rootFolderId) + '" target="_blank" rel="noopener">Studio folder</a></p>' : '') + '</div>';
@@ -1483,7 +1657,7 @@
     var q = hashParts().q; if (q.get('from')) prefill(q.get('from'));
     draft.brands = draft.brands || []; draft.formats = draft.formats || []; draft.sources = draft.sources || [];
     var prods = S.products.filter(function (x) { return draft.brands.indexOf(x.brandId) >= 0; });
-    var multi = S.accounts.length > 1, grps = brandGroups();
+    var multi = bizAccts().length > 1, grps = brandGroups();
     var shownBrands = S.brands.filter(function (b) { return !draft.group || b.groupId === draft.group || draft.brands.indexOf(b.id) >= 0; });
     var er = function (k) { return formErr[k] ? '<div class="ferr">' + esc(formErr[k]) + '</div>' : ''; };
     var fq = function (label, req, body, k, tip) { return '<div class="fq"><p class="qt">' + label + info(tip) + (req ? '<span class="req" title="Must answer">★</span>' : '') + '</p>' + body + er(k) + '</div>'; };
@@ -1585,6 +1759,7 @@
   }
   function sendAct(id, act, verdict) {
     if (EX || busy[id]) return;
+    if (isTeam() && !/^(approve|redo|deliver|ask)$/.test(act)) { banner('Owner only'); return; } // engine v0.2.20: what the backup person may do
     var x = byId(id), n = $('note-' + id), body = { kind: act, accountId: /^(ask|deliver|retire|refresh|result)$/.test(act) ? ownerId() : x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() };
     if (act === 'redo') { body.note = n ? n.value.trim() : ''; if (!body.note) { if (n) n.focus(); return; } }
     if (act === 'gate') body.verdict = verdict;
@@ -1612,6 +1787,7 @@
     var now = Date.now();
     Object.keys(pend).forEach(function (id) {
       var p = pend[id];
+      if (id.indexOf('prot|') === 0) { var pb = id.split('|'), px = ((pb[1] === 'account' ? S.accounts : S.products) || []).filter(function (x) { return x.id === pb[2]; })[0]; if (now - p.at > 36e5 || !px || (px.protect || '') === p.protect) delete pend[id]; return; }
       if (id.indexOf('sug|') === 0) { if (now - p.at > 36e5 || !S.suggestions.some(function (g) { return 'sug|' + g.id === id; })) delete pend[id]; return; }
       if (id === 'studio') { if (now - p.at > 36e5 || !!S.studio.on === p.on) delete pend[id]; return; }
       if (id.indexOf('chk|') === 0) { var bits = id.split('|'), it = (brand(bits[1]).setupChecklist || []).filter(function (x) { return x.name === bits.slice(2).join('|'); })[0]; if (!it || now - p.at > 36e5 || !!it.ok === p.ok) delete pend[id]; return; }
@@ -1621,18 +1797,91 @@
       if (p.destination !== undefined) a.destination = p.destination;
       if (p.legalSetId !== undefined) { var lsx = byIdIn('legalSets', p.legalSetId); a.legal = Object.assign({}, a.legal || {}, { setId: p.legalSetId, setName: lsx ? lsx.name : p.legalSetId }); }
       if (p.priority !== undefined) a.priority = p.priority === 'none' ? null : p.priority;
+      if (p.clientMaterial !== undefined) a.clientMaterial = p.clientMaterial;
+      if (p.sourceRights !== undefined) a.sourceRights = p.sourceRights;
+      if (p.paid !== undefined) a.paid = p.paid;
+      if (p.disclose !== undefined) a.disclose = p.disclose;
+      if (p.protectOwn !== undefined) { if (p.protectOwn) { a.protect = p.protectOwn; a.protectSource = 'item'; } else if (a.protectSource === 'item') a.protectSource = ''; }
     });
     saveLocal('st-pend', pend);
   }
   function sendSet(id, field, val) {
-    if (EX) return;
+    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
     var x = byId(id), body = { kind: 'set', accountId: x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() }; body[field] = val;
     pend[id] = Object.assign(pend[id] || {}, body, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); openPanel = null; render();
     var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
     withWrite(function () { return putRequest('set', body).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
+  // Ownership (Lisa, 28 Oct 2026): the client owns the finished file once paid; Lisa keeps the source files unless the client
+  // pays for them. One 'rights' request {assetId, clientMaterial, sourceRights: kept|sold} (owner); shows at once.
+  function sendRights(id, patch) {
+    if (EX) return; if (isTeam() && (patch.sourceRights !== undefined || patch.protect !== undefined)) { banner('Owner only'); return; }
+    var x = byId(id); if (!x) return;
+    var body = { kind: 'rights', accountId: ownerId(), assetId: id, at: new Date().toISOString() }, show = {};
+    if (patch.disclose !== undefined || patch.protect !== undefined) { // engine v0.2.19: one of these on its own; protect '' = inherit
+      if (patch.disclose !== undefined) body.disclose = show.disclose = patch.disclose;
+      if (patch.protect !== undefined) { body.protect = patch.protect; show.protectOwn = patch.protect; }
+    } else {
+      body.clientMaterial = show.clientMaterial = patch.clientMaterial !== undefined ? (patch.clientMaterial ? 'yes' : 'no') : isCM(x) ? 'yes' : 'no';
+      body.sourceRights = show.sourceRights = patch.sourceRights || (x.sourceRights === 'sold' ? 'sold' : 'kept');
+    }
+    pend[id] = Object.assign(pend[id] || {}, show, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); render();
+    var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
+    withWrite(function () { return putRequest('rights', body).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+  }
+  // Proof protection, payment and the AI note (engine v0.2.18 item fields, all optional): protect, paid, disclose, hasProof,
+  // hasFinal, needsWatermark, proofLowRes. The final file's link is never in the state, so it can never show here; full size is
+  // released at stage 8 + paid. Paid is the owner's switch: one 'paid' request {assetId, paid: yes|no}.
+  function sendPaid(id, val) {
+    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
+    var x = byId(id); if (!x) return;
+    pend[id] = Object.assign(pend[id] || {}, { paid: val }, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); render();
+    var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
+    withWrite(function () { return putRequest('paid', { kind: 'paid', accountId: ownerId(), assetId: id, paid: val, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+  }
+  // Account default and project protection: one owner-side 'protect' request {target: account|project, id, protect: ''|yes|no}.
+  function sendProtect(target, id, val) {
+    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
+    var key = 'prot|' + target + '|' + id; pend[key] = { protect: val, at: Date.now() }; saveLocal('st-pend', pend); render();
+    var back = function () { delete pend[key]; saveLocal('st-pend', pend); render(); };
+    withWrite(function () { return putRequest('protect', { kind: 'protect', accountId: ownerId(), target: target, id: id, protect: val, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+  }
+  function protOf(target, x) { var p = pend['prot|' + target + '|' + x.id]; return p ? p.protect : (x.protect || ''); }
+  var PROT_SRC = { item: 'set here', project: 'from project', account: 'from account', kind: 'by account kind' };
+  function protSeg(attrs, cur, inheritWord) {
+    return '<div class="seg" role="group" aria-label="Protection">' + [['', inheritWord], ['yes', 'On'], ['no', 'Off']].map(function (o) { return '<button type="button" ' + attrs + ' data-val="' + o[0] + '" aria-pressed="' + (cur === o[0]) + '"' + dis() + own() + '>' + o[1] + '</button>'; }).join('') + '</div>' + ownWhy();
+  }
+  function deliveryRows(a) {
+    var prot = a.protect === 'yes', paid = a.paid === 'yes', approved = a.stage >= 8, tick = function (ok, w) { return '<span class="tick' + (ok ? ' ok' : '') + '" data-tick="' + w + '">' + w + ' ' + (ok ? '\u2713' : '\u2717') + '</span>'; };
+    var src = a.protectSource ? PROT_SRC[a.protectSource] || a.protectSource : isClient(a) ? 'client account' : 'own brand', pr = a.productId ? (S.products || []).filter(function (x) { return x.id === a.productId; })[0] : null;
+    var rows = '<div class="rrow" data-protect="' + (prot ? 'yes' : 'no') + '"><span class="rlab">Protection</span><span data-protect-eff>' + (prot ? 'Protected' : 'Off') + ' \u00b7 ' + esc(src) + '</span>' +
+      protSeg('data-iprot="' + esc(a.id) + '"', a.protectSource === 'item' ? (prot ? 'yes' : 'no') : '', 'Inherit') + '</div>' +
+      (pr ? '<div class="rrow" data-projprot="' + esc(pr.id) + '"><span class="rlab">Project ' + esc(pr.name) + '</span>' + protSeg('data-pprot="' + esc(pr.id) + '"', protOf('project', pr), 'Inherit') +
+        '<span class="muted">account default: ' + ((account(pr.accountId || a.accountId).protectEffective || (isClient(a) ? 'yes' : 'no')) === 'yes' ? 'Protected' : 'Off') + '</span></div>' : '') +
+      '<div class="rrow"><span class="rlab">AI note on delivery</span><div class="seg" role="group" aria-label="AI note on delivery">' + [['yes', 'On'], ['no', 'Off']].map(function (o) { return '<button type="button" data-disc="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + ((a.disclose === 'no' ? 'no' : 'yes') === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div>' +
+      '<div class="rrow"><span class="rlab">Paid</span><div class="seg" role="group" aria-label="Paid">' + [['yes', 'Yes'], ['no', 'No']].map(function (o) { return '<button type="button" data-paid="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + ((paid ? 'yes' : 'no') === o[0]) + '"' + dis() + own() + '>' + o[1] + '</button>'; }).join('') + '</div>' + ownWhy() + '</div>';
+    if (a.hasProof) rows += '<div class="rrow"><span class="rlab">Proof (low-res)</span>' + (a.reviewLink ? '<a href="' + safeUrl(a.reviewLink) + '" target="_blank" rel="noopener" data-proof>Open the proof</a>' : '<span>Shared</span>') + '</div>';
+    if (prot) rows += '<div class="rrow" data-fullsize><span class="rlab">Full size</span><span>' + (approved && paid ? 'Released' : 'Held until approved + paid') + '</span>' + tick(approved, 'Approved') + tick(paid, 'Paid') + '</div>';
+    var remind = a.needsWatermark || a.proofLowRes ? '<div class="rrow"><span class="tag" data-chip="lowres" title="' + esc(a.proofLowRes || '') + '">Low-res + watermark</span><span class="muted" data-watermark>Add Studio watermark layer</span></div>' : '';
+    return '<div class="rights" data-delivery="' + esc(a.id) + '">' + rows + remind + '</div>';
+  }
+  // Save a finished item's set-up as a new kit: opens the kit form; the request carries fromAssetId. Never from client material.
+  function saveAsKit(a) {
+    if (a.stage < 8) return '';
+    return isCM(a) ? '<div class="rrow"><button class="btn" type="button" disabled data-noreuse title="Client material: the client owns it, so it is never reused">' + I('box') + 'Save as a kit</button><span class="sent">Client material \u00b7 never reused</span></div>'
+      : '<div class="rrow"><button class="btn" type="button" data-savekit="' + esc(a.id) + '"' + dis() + '>' + I('box') + 'Save as a kit</button></div>';
+  }
+  function isCM(a) { return !!a && (a.clientMaterial === 'yes' || a.clientMaterial === true); } // engine sends 'yes' / 'no'
+  function rightsRows(a) {
+    var cm = isCM(a), sr = a.sourceRights === 'sold' ? 'sold' : 'kept';
+    return '<div class="rights" data-rights="' + esc(a.id) + '"><div class="rrow"><span class="rlab">Client material</span><div class="seg" role="group" aria-label="Client material">' +
+      [[true, 'Yes'], [false, 'No']].map(function (o) { return '<button type="button" data-rset="clientMaterial" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (cm === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div>' +
+      '<div class="rrow"><span class="rlab">Source files</span><div class="seg" role="group" aria-label="Source files">' +
+      [['kept', 'Kept by you'], ['sold', 'Sold to client']].map(function (o) { return '<button type="button" data-rset="sourceRights" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (sr === o[0]) + '"' + dis() + own() + '>' + o[1] + '</button>'; }).join('') + '</div>' + ownWhy() + '</div></div>';
+  }
   // Brand set-up tick: shows at once, one 'check' request file; the engine writes it into BRANDS at its next run.
   function sendCheck(bid, item) {
+    if (isTeam()) { banner('Owner only'); return; }
     if (EX) return;
     var b = brand(bid), key = 'chk|' + bid + '|' + item, cur = pend[key] ? pend[key].ok : !!((b.setupChecklist || []).filter(function (x) { return x.name === item; })[0] || {}).ok;
     var body = { kind: 'check', accountId: brandAcct(bid), brandId: bid, item: item, ok: !cur, at: new Date().toISOString() };
@@ -1642,13 +1891,13 @@
   }
   function studioOn() { var p = pend.studio; return p && Date.now() - p.at < 36e5 ? p.on : !!S.studio.on; }
   function sendSuggestion(sid, status) {
-    if (EX) return;
+    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
     var key = 'sug|' + sid, back = function () { delete pend[key]; saveLocal('st-pend', pend); render(); };
     pend[key] = { status: status, at: Date.now() }; saveLocal('st-pend', pend); render();
     withWrite(function () { return putRequest('suggestion', { kind: 'suggestion', accountId: ownerId(), id: sid, status: status, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
   function sendStudio() {
-    if (EX) return;
+    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
     var on = !studioOn(); pend.studio = { on: on, at: Date.now() }; saveLocal('st-pend', pend); render();
     var back = function () { delete pend.studio; saveLocal('st-pend', pend); render(); };
     withWrite(function () { return putRequest('studio', { kind: 'studio', accountId: ownerId(), on: on, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
@@ -1666,6 +1915,7 @@
     if (EX) return Promise.reject(new Error('example data'));
     return who().then(function (by) {
       body.by = by;
+      var me = meAcct(); if (me && me.role === 'team') body.accountId = me.id; // the backup person signs as themselves (engine v0.2.20)
       var meta = { name: prefix + '-' + Date.now() + '.json', parents: [ST.requestsFolderId], mimeType: 'application/json' };
       var b = 'st' + Date.now();
       var payload = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(body) + '\r\n--' + b + '--';
@@ -1737,6 +1987,7 @@
   document.addEventListener('input', function (e) {
     var lk = e.target.getAttribute && e.target.getAttribute('data-lq'); if (lk) { lq[lk] = e.target.value; var lp = e.target.selectionStart; render(); var lb = document.querySelector('[data-lq="' + lk + '"]'); if (lb) { lb.focus(); try { lb.setSelectionRange(lp, lp); } catch (x) {} } return; }
     var f = e.target.getAttribute && e.target.getAttribute('data-f');
+    var lf = e.target.getAttribute && e.target.getAttribute('data-lf'); if (lf && libDraft.t) { libDraft.f = libDraft.f || {}; libDraft.f[lf] = e.target.value; delete libErr[lf]; saveLocal('st-lib', libDraft); if (lf === 'price') { var vl = document.querySelector('[data-libform] [data-vatline]'); if (vl) vl.textContent = vatLine(e.target.value, libDraft.f.priceBasis || 'ex'); } return; }
     var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('st-drafts', drafts); return; }
     var rf = e.target.getAttribute && e.target.getAttribute('data-rf'); if (rf) { var ri = e.target.getAttribute('data-id'); (resDraft[ri] = resDraft[ri] || {})[rf] = e.target.value; return; }
     var un = e.target.getAttribute && e.target.getAttribute('data-units'); if (un) { doneUnits[un] = e.target.value; return; }
@@ -1752,6 +2003,20 @@
     var lk0 = e.target.closest('[data-look]'); if (lk0) { look[lk0.getAttribute('data-look')] = lk0.getAttribute('data-val'); try { localStorage.setItem('dash-look', JSON.stringify(look)); } catch (x) {} applyLook(); showLook(true); fitBoard(boardScroll()); return; }
     if ((filtersOpen || sortOpen) && !e.target.closest('.fpanel, #filtersBtn, #sortBtn, [data-fxoff]')) { closeF(true); }
     var fo = e.target.closest('[data-fxoff]'); if (fo) { var t4 = barTab(); if (t4) { var s4 = fsOf(t4), k4 = fo.getAttribute('data-fxoff'), i4 = s4[k4].indexOf(fo.getAttribute('data-val')); if (i4 >= 0) s4[k4].splice(i4, 1); saveFs(); } render(); var fb = $('filtersBtn'); if (fb) fb.focus(); return; }
+    var ln = e.target.closest('[data-libnew]'); if (ln && !ln.disabled) { var lt = ln.getAttribute('data-libnew'); libDraft = { t: lt, op: 'new', f: {}, at: Date.now() }; libErr = {}; delete libSent[lt]; saveLocal('st-lib', libDraft); render(); var lf0 = document.querySelector('[data-libform] [data-lf]'); if (lf0) lf0.focus(); return; }
+    var le = e.target.closest('[data-libedit]'); if (le && !le.disabled) { var et = le.getAttribute('data-libedit'), eid = le.getAttribute('data-id'); libDraft = { t: et, op: 'edit', id: eid, f: libFrom(et, eid), at: Date.now() }; libErr = {}; delete libSent[et]; saveLocal('st-lib', libDraft); render(); var lf1 = document.querySelector('[data-libform] [data-lf]'); if (lf1) { lf1.focus(); lf1.scrollIntoView({ block: 'center' }); } return; }
+    var rs = e.target.closest('[data-rset]'); if (rs && !rs.disabled) { var rk = rs.getAttribute('data-rset'), rv = rs.getAttribute('data-val'), rp = {}; rp[rk] = rk === 'clientMaterial' ? rv === 'true' : rv; sendRights(rs.getAttribute('data-id'), rp); return; }
+    var ip = e.target.closest('[data-iprot]'); if (ip && !ip.disabled) { sendRights(ip.getAttribute('data-iprot'), { protect: ip.getAttribute('data-val') }); return; }
+    var dc = e.target.closest('[data-disc]'); if (dc && !dc.disabled) { sendRights(dc.getAttribute('data-id'), { disclose: dc.getAttribute('data-disc') }); return; }
+    var pp = e.target.closest('[data-pprot]'); if (pp && !pp.disabled) { sendProtect('project', pp.getAttribute('data-pprot'), pp.getAttribute('data-val')); return; }
+    var ap = e.target.closest('[data-aprot]'); if (ap && !ap.disabled) { sendProtect('account', ap.getAttribute('data-aprot'), ap.getAttribute('data-val')); return; }
+    var pd = e.target.closest('[data-paid]'); if (pd && !pd.disabled) { sendPaid(pd.getAttribute('data-id'), pd.getAttribute('data-paid')); return; }
+    var sk = e.target.closest('[data-savekit]'); if (sk && !sk.disabled) { var sa = byId(sk.getAttribute('data-savekit')); if (sa && !isCM(sa)) { libDraft = { t: 'kits', op: 'new', from: sa.id, f: { name: bare(sa), type: sa.type, formatIds: (sa.formatIds || []).slice(), frameworkId: sa.frameworkId || '', voiceId: sa.voiceId || '', lookId: sa.lookId || '' }, at: Date.now() }; libErr = {}; saveLocal('st-lib', libDraft); location.hash = '#/kits/kits'; } return; }
+    var lb = e.target.closest('[data-lbasis]'); if (lb && libDraft.t) { libDraft.f = libDraft.f || {}; libDraft.f.priceBasis = lb.getAttribute('data-lbasis'); saveLocal('st-lib', libDraft); render(); return; }
+    var ps = e.target.closest('[data-pshow]'); if (ps) { pshowLocal = ps.getAttribute('data-pshow'); try { localStorage.setItem('st-pshow', pshowLocal); } catch (x) {} render(); return; }
+    var lx = e.target.closest('[data-lfx]'); if (lx && libDraft.t) { var lk = lx.getAttribute('data-lfx'), lv = lx.getAttribute('data-val'); libDraft.f = libDraft.f || {};
+      if (lx.getAttribute('data-multi-lf') === '1') { var la = libDraft.f[lk] = (libDraft.f[lk] || []).slice(), li = la.indexOf(lv); if (li >= 0) la.splice(li, 1); else la.push(lv); } else libDraft.f[lk] = libDraft.f[lk] === lv ? '' : lv;
+      delete libErr[lk]; saveLocal('st-lib', libDraft); render(); return; }
     var ct = e.target.closest('[data-ctab]'); if (ct) { ctab[ct.getAttribute('data-id')] = ct.getAttribute('data-ctab'); render(); var cb = $('cbox-' + ct.getAttribute('data-id')); if (cb) cb.focus(); return; }
     var vm = e.target.closest('[data-vmode]'); if (vm) { vmode[vm.getAttribute('data-tab')] = vm.getAttribute('data-vmode'); try { localStorage.setItem('st-view', JSON.stringify(vmode)); } catch (x) {} openPanel = null; render(); return; }
     var a = e.target.closest('[data-action]');
@@ -1775,6 +2040,8 @@
       else if (k === 'addtool') { toolOpen = !toolOpen; render(); }
       else if (k === 'tmore') { tdraft.more = !tdraft.more; saveTool(); render(); }
       else if (k === 'sendtool') sendTool();
+      else if (k === 'libsend') sendLib();
+      else if (k === 'libcancel') { libDraft = {}; libErr = {}; saveLocal('st-lib', libDraft); render(); }
       return;
     }
     var ck = e.target.closest('[data-check]'); if (ck && !ck.disabled) { sendCheck(ck.getAttribute('data-check'), ck.getAttribute('data-item')); return; }
@@ -1809,6 +2076,7 @@
     var rs = e.target.closest('[data-result]'); if (rs) { e.preventDefault(); sendAct(rs.getAttribute('data-result'), 'result'); return; }
     var rt = e.target.closest('[data-retire]'); if (rt) { e.preventDefault(); sendAct(rt.getAttribute('data-retire'), 'retire'); return; }
     var ak = e.target.closest('[data-askc]'); if (ak) { e.preventDefault(); sendAct(ak.getAttribute('data-askc'), 'ask'); return; }
+    var lsg = e.target.closest('[data-libsug]'); if (lsg) { e.preventDefault(); sendLibSuggest(lsg.getAttribute('data-libsug')); return; }
     var cf = e.target.closest('[data-comment]'); if (cf) { e.preventDefault(); sendComment(cf.getAttribute('data-comment'), cf.getAttribute('data-thread')); return; }
     var f = e.target.closest('[data-redo]'); if (!f) return; e.preventDefault();
     sendAct(f.getAttribute('data-redo'), 'redo');
@@ -1849,7 +2117,7 @@
   }
   function signOut() {
     stopTimer(); var t = accessToken; accessToken = null; signedIn = false; S = null; EX = false; whoAmI = null; pendingWrite = pendingBack = null; DashAuth.clear();
-    ['st-idea', 'st-tool', 'st-drafts', 'st-pend', 'st-sent', 'st-sentf', 'st-sents'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+    ['st-idea', 'st-tool', 'st-lib', 'st-drafts', 'st-pend', 'st-sent', 'st-sentf', 'st-sents'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
     sent = {}; sentF = {}; sentS = {}; drafts = {}; pend = {}; draft = {}; tdraft = {};
     if (t && window.google && google.accounts) google.accounts.oauth2.revoke(t, function () {});
     render();

@@ -13,7 +13,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), '
 const ST = ctx.window.DASH_CONFIG.studio; // folder ids and file name come from config.js, so the tests follow a change there
 const NOW = new Date('2026-10-28T10:10:00'); // fixed clock: the Undo window (until the engine's next run) is then known
 const TABS = ['me', 'decide', 'do', 'line', 'ideas', 'assets', 'review', 'brands', 'library', 'kits', 'tools', 'new'];
-const KIT_SUBS = ['kits/playbooks', 'kits/packs', 'kits/kits', 'kits/styles', 'kits/formats'];
+const KIT_SUBS = ['kits/playbooks', 'kits/packs', 'kits/kits', 'kits/bricks', 'kits/styles', 'kits/formats'];
 const UPLOAD = /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files/;
 
 async function open(page, guard, hash, { state = true, change } = {}) {
@@ -1374,6 +1374,257 @@ test.describe('Studio page', () => {
     expect(bar).toEqual({ w: '3px', bg: colBar, l: '0px' });
     await page.locator('[data-vmode="board"]').click();
     expect(await page.locator('.crow[data-row="sa-make"]').evaluate((e) => getComputedStyle(e, '::before').content)).toBe('none'); // not on board cards
+  });
+
+  test('library: + New and Edit on Playbooks, Packs, Kits and Bricks (checked fields), and a Suggest box that waits for Lisa', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/kits/kits');
+    await page.locator('[data-libnew="kits"]').click();
+    const f = page.locator('[data-libform="kits"]');
+    await expect(f.locator('.grp')).toHaveText('New kit');
+    await f.locator('[data-action="libsend"]').click();
+    await expect(f.locator('[data-lfq="name"] .ferr')).toHaveText('Needed');
+    await expect(f.locator('[data-lfq="type"] .ferr')).toHaveText('Needed');
+    expect(got).toHaveLength(0);
+    await f.locator('[data-lf="name"]').fill('Sample launch kit');
+    await f.locator('[data-lfx="type"][data-val="email"]').click();
+    await f.locator('[data-lfx="brickIds"][data-val="br-hook"]').click();
+    await f.locator('[data-lf="link"]').fill('http://not-secure.example');
+    await f.locator('[data-action="libsend"]').click();
+    await expect(f.locator('[data-lfq="link"] .ferr')).toHaveText('A link starting https://');
+    await f.locator('[data-lf="link"]').fill('');
+    await f.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'library', accountId: 'acc-owner', table: 'kits', op: 'new', fields: { name: 'Sample launch kit', type: 'email', brickIds: ['br-hook'], link: '' } });
+    await expect(page.locator('[data-libform]')).toHaveCount(0);
+    // Edit a playbook: the form starts from what is there.
+    await go(page, 'kits/playbooks');
+    const pb = page.locator('[data-playbook]').first(), pid = await pb.getAttribute('data-playbook');
+    await pb.locator('[data-libedit]').click();
+    const ef = page.locator('[data-libform="playbooks"]');
+    await expect(ef.locator('.grp')).toHaveText('Edit playbook');
+    const name0 = await ef.locator('[data-lf="name"]').inputValue();
+    expect(name0.length).toBeGreaterThan(0);
+    await ef.locator('[data-lf="steps"]').fill('Draft the hook\nkit:no-such-kit');
+    await ef.locator('[data-action="libsend"]').click();
+    await expect(ef.locator('[data-lfq="steps"] .ferr')).toHaveText('No kit called no-such-kit');
+    await ef.locator('[data-lf="steps"]').fill('Draft the hook; then the offer');
+    await ef.locator('[data-action="libsend"]').click();
+    await expect(ef.locator('[data-lfq="steps"] .ferr')).toHaveText('No ; in a step (one step per line)');
+    await expect(ef.locator('[data-lfq="status"]')).toBeVisible(); // status (live / archived / retired) on edit only
+    await ef.locator('[data-lf="steps"]').fill('Draft the hook');
+    await ef.locator('[data-lf="name"]').fill(name0 + ' v2');
+    await ef.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(got[1].body).toMatchObject({ kind: 'library', table: 'playbooks', op: 'edit', id: pid, fields: { name: name0 + ' v2', steps: ['Draft the hook'] } });
+    // Bricks have their own tab; the Suggest box sends a pending suggestion.
+    await go(page, 'kits/bricks');
+    await expect(page.locator('[data-brick="br-hook"]')).toContainText('Sample hook line');
+    await page.locator('[data-libnew="bricks"]').click();
+    const bf = page.locator('[data-libform="bricks"]');
+    await expect(bf.locator('[data-lfq="status"]')).toHaveCount(0);
+    await bf.locator('[data-lf="name"]').fill('Sample CTA');
+    await bf.locator('[data-lf="kind"]').fill('Call To Action');
+    await bf.locator('[data-lf="text"]').fill('Book a call today.');
+    await bf.locator('[data-action="libsend"]').click();
+    await expect(bf.locator('[data-lfq="kind"] .ferr')).toHaveText('Lowercase letters, numbers and dashes');
+    await bf.locator('[data-lf="kind"]').fill('cta');
+    await bf.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(3);
+    expect(got[2].body).toMatchObject({ kind: 'library', table: 'bricks', op: 'new', fields: { name: 'Sample CTA', kind: 'cta', text: 'Book a call today.' } });
+    expect(Object.keys(got[2].body.fields)).not.toContain('id');
+    expect(Object.keys(got[2].body.fields)).not.toContain('status');
+    const sg = page.locator('[data-libsuggest="bricks"]');
+    await sg.locator('textarea').fill('Add a short call-to-action brick for emails.');
+    await sg.locator('button[type="submit"]').click();
+    await expect.poll(() => got.length).toBe(4);
+    expect(got[3].body).toMatchObject({ kind: 'libsuggest', accountId: 'acc-owner', table: 'bricks', text: 'Add a short call-to-action brick for emails.' });
+    await expect(sg.locator('[data-libsent]')).toHaveText('Suggested · waiting for Lisa');
+  });
+
+  test('library: Kit and Pack prices switch between ex and inc VAT; the form works out the other figure; VAT rates are listed', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/kits/kits');
+    const line = page.locator('[data-kit="kit-lead"] [data-price]');
+    await expect(line).toHaveText('£100 ex VAT · 3 days'); // the state's default (priceShow: ex)
+    await page.locator('[data-pshow="inc"]').click();
+    await expect(line).toHaveText('£120 inc VAT · 3 days');
+    await page.locator('[data-pshow="both"]').click();
+    await expect(line).toHaveText('£100 ex · £120 inc VAT · 3 days');
+    expect(await page.evaluate(() => localStorage.getItem('st-pshow'))).toBe('both'); // this viewer's choice, kept in the browser
+    await page.reload();
+    await expect(page.locator('[data-kit="kit-lead"] [data-price]')).toHaveText('£100 ex · £120 inc VAT · 3 days');
+    // The form: price, ex / inc, and a live line with the other figure at the home rate.
+    await page.locator('[data-kit="kit-lead"] [data-libedit]').click();
+    const f = page.locator('[data-libform="kits"]');
+    await expect(f.locator('[data-lf="price"]')).toHaveValue('100');
+    await expect(f.locator('[data-vatline]')).toHaveText('= £120.00 inc VAT at 20%');
+    await f.locator('[data-lf="price"]').fill('150');
+    await expect(f.locator('[data-vatline]')).toHaveText('= £180.00 inc VAT at 20%');
+    await f.locator('[data-lbasis="inc"]').click();
+    await expect(f.locator('[data-vatline]')).toHaveText('= £125.00 ex VAT at 20%');
+    await f.locator('[data-lf="price"]').fill('12.345');
+    await f.locator('[data-lf="readyDays"]').fill('400');
+    await f.locator('[data-action="libsend"]').click();
+    await expect(f.locator('[data-lfq="price"] .ferr')).toHaveText('A price from 0 to 100000, up to 2 decimals');
+    await expect(f.locator('[data-lfq="readyDays"] .ferr')).toHaveText('Whole days from 0 to 365');
+    await f.locator('[data-lf="price"]').fill('99.50');
+    await f.locator('[data-lf="readyDays"]').fill('5');
+    await f.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'library', table: 'kits', op: 'edit', id: 'kit-lead', fields: { price: 99.5, priceBasis: 'inc', readyDays: 5 } });
+    await go(page, 'kits/packs');
+    await page.locator('[data-libnew="packs"]').click();
+    await page.locator('[data-libform="packs"] [data-lf="name"]').fill('Sample pack');
+    await page.locator('[data-libform="packs"] [data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(Object.keys(got[1].body.fields)).not.toContain('price'); // optional: left out when empty
+    expect(Object.keys(got[1].body.fields)).not.toContain('priceBasis');
+    // VAT rates: read-only, under Kits › Brands.
+    await go(page, 'brands');
+    await expect(page.locator('[data-vatrates]')).toContainText('United Kingdom · home');
+    await expect(page.locator('[data-vatrates]')).toContainText('20%');
+    await expect(page.locator('[data-vatrates]')).toContainText('Ireland');
+    await expect(page.locator('[data-vatrates] input, [data-vatrates] button')).toHaveCount(0);
+  });
+
+  test('ownership: client material and source files in the details send one rights request; client material is never reused', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/assets', { change: (s) => { s.assets.filter((a) => a.stage === 8)[0].clientMaterial = 'yes'; } });
+    const d = await details(page, 'sa-client');
+    const r = page.locator('[data-rights="sa-client"]');
+    await expect(r.locator('[data-rset="clientMaterial"][data-val="false"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(r.locator('[data-rset="sourceRights"][data-val="kept"]')).toHaveAttribute('aria-pressed', 'true');
+    await r.locator('[data-rset="clientMaterial"][data-val="true"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'rights', accountId: 'acc-owner', assetId: 'sa-client', clientMaterial: 'yes', sourceRights: 'kept' });
+    await expect(page.locator('.crow[data-row="sa-client"] [data-chip="client-only"]')).toHaveText('Client-only · never reused');
+    await page.locator('[data-rights="sa-client"] [data-rset="sourceRights"][data-val="sold"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(got[1].body).toMatchObject({ kind: 'rights', assetId: 'sa-client', clientMaterial: 'yes', sourceRights: 'sold' });
+    // A library item marked as client material cannot be reused; the reason shows.
+    await go(page, 'library');
+    const lib = page.locator('#view .crow').first();
+    await expect(lib.locator('[data-noreuse]')).toBeDisabled();
+    await expect(lib.locator('[data-noreuse-why]')).toHaveText('Client material · never reused');
+    await expect(lib.locator('a[href^="#/new?from="]')).toHaveCount(0);
+    void d;
+  });
+
+  test('library: Kit and Pack forms take an optional source-files add-on price on the same ex / inc basis', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/kits/packs');
+    await page.locator('[data-libnew="packs"]').click();
+    const f = page.locator('[data-libform="packs"]');
+    await f.locator('[data-lf="name"]').fill('Sample pack with sources');
+    await f.locator('[data-lf="price"]').fill('200');
+    await f.locator('[data-lf="sourcePrice"]').fill('50');
+    await f.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body.fields).toMatchObject({ price: 200, priceBasis: 'ex', sourcePrice: 50 });
+  });
+
+  test('protection: proof view only, low-res + watermark reminder, full size held until approved + paid, Paid switch, delivery waits for payment', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/library', { change: (s) => {
+      const c = s.assets.filter((a) => a.id === 'sa-client')[0]; Object.assign(c, { protect: 'yes', paid: 'no', disclose: 'yes', hasProof: true, hasFinal: false, needsWatermark: true, proofLowRes: 'Proof: low-res (max 1200px wide) + watermark', finalLink: 'https://drive.google.com/file/d/SHOULD-NEVER-SHOW/view' });
+      s.assets.push(Object.assign({}, c, { id: 'sa-client-done', title: 'Sample client video', type: 'video', stage: 8, needsWatermark: false, proofLowRes: null, hasFinal: true, delivery: null, ask: null }));
+    } });
+    const d = page.locator('.crow[data-row="sa-client-done"]');
+    await expect(d.locator('[data-nodeliver]')).toBeDisabled();
+    await expect(d.locator('[data-nodeliver-why]')).toHaveText('Final files wait for payment');
+    const dd = await details(page, 'sa-client-done');
+    const box = page.locator('[data-delivery="sa-client-done"]');
+    await expect(box.locator('[data-protect]')).toContainText('Protected');
+    await expect(box.locator('[data-fullsize]')).toContainText('Held until approved + paid');
+    await expect(box.locator('[data-tick="Approved"]')).toHaveText('Approved ✓');
+    await expect(box.locator('[data-tick="Paid"]')).toHaveText('Paid ✗');
+    await expect(box.locator('[data-disc="yes"]')).toHaveAttribute('aria-pressed', 'true'); // AI note on by default
+    await expect(page.locator('#view')).not.toContainText('SHOULD-NEVER-SHOW'); // the final file's link never shows before release
+    await box.locator('[data-paid="yes"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'paid', accountId: 'acc-owner', assetId: 'sa-client-done', paid: 'yes' });
+    await expect(page.locator('.crow[data-row="sa-client-done"] [data-act="deliver"]')).toBeVisible(); // paid: delivery opens
+    // A protected proof still in progress: chip on the card, reminder in the details.
+    await go(page, 'assets');
+    await expect(page.locator('.crow[data-row="sa-client"] [data-chip="proof"]')).toHaveText('Proof · view only');
+    await details(page, 'sa-client');
+    await expect(page.locator('[data-delivery="sa-client"] [data-chip="lowres"]')).toHaveText('Low-res + watermark');
+    await expect(page.locator('[data-delivery="sa-client"] [data-watermark]')).toHaveText('Add Studio watermark layer');
+    // Switches (engine v0.2.19): AI note and item protection go in a rights request on their own; project and account in a protect request.
+    const box2 = page.locator('[data-delivery="sa-client"]');
+    await box2.locator('[data-disc="no"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(got[1].body).toEqual(expect.objectContaining({ kind: 'rights', assetId: 'sa-client', disclose: 'no' }));
+    expect(got[1].body.clientMaterial).toBeUndefined();
+    await page.locator('[data-delivery="sa-client"] [data-iprot="sa-client"][data-val="no"]').click();
+    await expect.poll(() => got.length).toBe(3);
+    expect(got[2].body).toMatchObject({ kind: 'rights', assetId: 'sa-client', protect: 'no' });
+    await expect(page.locator('[data-delivery="sa-client"] [data-protect-eff]')).toHaveText('Off · set here');
+    await page.locator('[data-delivery="sa-client"] [data-pprot="sp-client"][data-val="yes"]').click();
+    await expect.poll(() => got.length).toBe(4);
+    expect(got[3].body).toMatchObject({ kind: 'protect', accountId: 'acc-owner', target: 'project', id: 'sp-client', protect: 'yes' });
+    await expect(page.locator('[data-projprot="sp-client"]')).toContainText('account default: Protected');
+    await go(page, 'brands');
+    const acc = page.locator('[data-accounts] [data-account="acc-client"]');
+    await expect(acc).toContainText('Protection default: Protected');
+    await acc.locator('[data-aprot="acc-client"][data-val="no"]').click();
+    await expect.poll(() => got.length).toBe(5);
+    expect(got[4].body).toMatchObject({ kind: 'protect', target: 'account', id: 'acc-client', protect: 'no' });
+    await expect(page.locator('[data-accounts] [data-account="acc-client"]')).toContainText('Protection default: Off');
+    void dd;
+  });
+
+  test('save as a kit: a finished item opens the kit form filled in and sends fromAssetId; never from client material', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/library');
+    const id = await page.locator('#view .crow').first().getAttribute('data-row');
+    await details(page, id);
+    await page.locator('[data-savekit="' + id + '"]').click();
+    await expect(page.locator('#view')).toHaveAttribute('data-view', 'kits');
+    const f = page.locator('[data-libform="kits"]');
+    expect((await f.locator('[data-lf="name"]').inputValue()).length).toBeGreaterThan(0);
+    await f.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'library', table: 'kits', op: 'new', fromAssetId: id });
+  });
+
+  for (const role of ['team', 'owner']) test(`signed in as the ${role}: requests carry that account; ${role === 'team' ? 'owner-only controls are switched off with "Owner only"' : 'nothing is switched off'}`, async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    guard.world.email = role === 'team' ? 'Backup@Sample.test' : 'owner@sample.test'; // matched case-blind to accounts[].emails
+    await open(page, guard, '#/decide', { change: (s) => { s.accounts.push({ id: 'acc-team', name: 'Sample backup', kind: 'owner', role: 'team', emails: ['backup@sample.test'], protect: '', protectEffective: 'no' }); } });
+    const team = role === 'team';
+    const gate = page.locator('.crow[data-row="sa-gate"] [data-act="gate"]').first();
+    await expect.poll(() => gate.isDisabled()).toBe(team); // the role is known once the page has asked Drive who is signed in
+    if (team) {
+      await expect(gate).toHaveAttribute('title', 'Owner only');
+      await expect(page.locator('.crow[data-row="sa-gate"] [data-owneronly-why]')).toHaveText('Owner only');
+      await expect(page.locator('.crow[data-row="sa-rev1"] [data-act="bin"]')).toBeDisabled();
+    }
+    await expect(page.locator('#view [data-fx="acct"][data-val="acc-team"]')).toHaveCount(0); // the backup account owns no work
+    await page.locator('.crow[data-row="sa-rev1"] [data-act="approve"]').click(); // team may approve
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'approve', assetId: 'sa-rev1', accountId: team ? 'acc-team' : 'acc-owner' });
+    // Item details: Paid, Source files and Protection are the owner's; Client material and the AI note are not.
+    await go(page, 'assets');
+    await details(page, 'sa-client');
+    for (const sel of ['[data-paid="yes"]', '[data-rset="sourceRights"][data-val="sold"]', '[data-iprot="sa-client"][data-val="yes"]']) await expect(page.locator('[data-delivery="sa-client"] ' + sel + ', [data-rights="sa-client"] ' + sel).first()).toBeEnabled({ enabled: !team });
+    await expect(page.locator('[data-rights="sa-client"] [data-rset="clientMaterial"][data-val="true"]')).toBeEnabled();
+    await expect(page.locator('[data-delivery="sa-client"] [data-disc="no"]')).toBeEnabled();
+    // Library: prices are the owner's.
+    await go(page, 'kits/kits');
+    await page.locator('[data-libnew="kits"]').click();
+    await expect(page.locator('[data-libform="kits"] [data-lf="price"]')).toHaveCount(team ? 0 : 1);
+    if (team) await expect(page.locator('[data-libform="kits"] [data-owneronly-why]')).toHaveText('Prices: Owner only');
+    await go(page, 'engine');
+    await expect(page.locator('[data-action="studio"]')).toBeEnabled({ enabled: !team });
+  });
+
+  test('library: example data has the buttons switched off and sends nothing', async ({ page, guard }) => {
+    await open(page, guard, '#/kits/packs', { state: false });
+    await expect(page.locator('[data-libnew="packs"]')).toBeDisabled();
+    await expect(page.locator('[data-libsuggest="packs"] button[type="submit"]')).toBeDisabled();
+    expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
