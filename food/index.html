@@ -43,7 +43,7 @@
     --frame-ink: var(--ljr-paper); --frame-line: color-mix(in srgb, var(--ljr-paper) 55%, var(--ljr-muted));
     --rose: var(--ljr-2-text); --rose-tint: var(--ljr-2-tint); --amber: var(--ljr-3-text); --amber-tint: var(--ljr-3-tint);
     --green: var(--ljr-5-text); --green-tint: var(--ljr-5-tint);
-    --sel-bd: var(--ink); --sel-fill: transparent; }
+    --sel-bd: var(--ink); --sel-fill: color-mix(in srgb, var(--muted) 14%, var(--surface)); }   /* neutral hover = selected: ink line + muted tint */
   :root.look-cool {
     --bg: color-mix(in srgb, var(--ljr-paper) 94%, var(--ljr-ava-h)); --surface: color-mix(in srgb, var(--ljr-paper) 98%, var(--ljr-ava-h));
     --ink: color-mix(in srgb, var(--ljr-ink) 90%, var(--ljr-ava-h)); --muted: color-mix(in srgb, var(--ljr-muted) 82%, var(--ljr-ava-h));
@@ -87,7 +87,7 @@
   .stamp { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }   /* the frame's own clear line (3:1 on the dark bar) */
-  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); } }
+  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); } }
 
   /* Things you press: all rest on the same clear 1px line (--ctl), 12px corners, 14px/600, 36px on a desktop and 44px on a phone.
      None starts out ink, so hover (that edge turns ink) always shows. Read-only pills, counts and dates have no hover. */
@@ -97,7 +97,13 @@
   .chip { font: inherit; font-size: 14px; font-weight: 600; border-radius: var(--radius); padding: 0 14px; border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; }
   .chip[aria-pressed="true"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); }
   .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 14px; cursor: pointer; align-self: flex-start; min-height: 36px; }
-  @media (hover: hover) { .btn:hover, .chip:hover, .more:hover, a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  /* House hover rule (Lisa, 28 Oct): hover = selected = a 1px line drawn inside + a pale tint; nothing moves.
+     Neutral controls: ink line + muted tint. Meaning-coloured controls (green yes, rose no) keep their OWN colour: line + 14% tint. */
+  .btn.yes { --mc: var(--green); } .btn.no { --mc: var(--rose); }
+  @media (hover: hover) {
+    .btn:hover, .chip:hover, .more:hover, a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); }
+    .btn.yes:hover, .btn.no:hover { outline-color: var(--mc); background: color-mix(in srgb, var(--mc) 14%, var(--surface)); }
+  }
   input:focus { outline: none; }
   a:focus, button:focus { outline: none; }
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }   /* keyboard ring: 2px ink, never the browser blue */
@@ -110,6 +116,9 @@
   nav.tabs a .bar { width: 18px; height: 4px; border-radius: var(--radius); background: var(--tc); opacity: .6; transition: width .15s ease-out, opacity .15s ease-out; }
   nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
   @media (hover: hover) { nav.tabs a:hover .bar { width: 40px; opacity: 1; } }
+  /* Each tab keeps its own colour: hover and current = a 1px line in that colour inside + a 14% tint of it (and the bar widens). */
+  nav.tabs a[aria-current="page"] { outline: 1px solid var(--tl); outline-offset: -1px; background: color-mix(in srgb, var(--tc) 14%, var(--surface)); }
+  @media (hover: hover) { nav.tabs a:hover { outline: 1px solid var(--tl); outline-offset: -1px; background: color-mix(in srgb, var(--tc) 14%, var(--surface)); } }
   @media (prefers-reduced-motion: reduce) { nav.tabs a .bar { transition: none; } }
   nav.tabs a[aria-current="page"] { font-weight: 600; }
   nav.tabs .n { position: absolute; top: 6px; right: 10px; }
@@ -195,6 +204,9 @@
     nav.tabs a > span:not(.bar):not(.n) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }
   }
   @media (max-width: 544px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
+  /* Keyboard focus always stays the 2px ink ring, over any hover or selected line. */
+  #view :focus-visible, nav.tabs a:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  header :focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
 </style>
 </head>
 <body>
@@ -216,11 +228,11 @@
   <div id="view"></div>
 </main>
 <nav class="tabs hidden" id="tabs" aria-label="GA Hub sections">
-  <a href="#/home" data-nav="home" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-home"/></svg><span>Home</span><span class="n need" id="n-home"></span></a>
-  <a href="#/orders" data-nav="orders" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-box"/></svg><span>Orders</span><span class="n need" id="n-orders"></span></a>
-  <a href="#/invoices" data-nav="invoices" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bill"/></svg><span>Invoices</span><span class="n"></span></a>
-  <a href="#/products" data-nav="products" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Products</span><span class="n"></span></a>
-  <a href="#/ga" data-nav="ga" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span>GA</span><span class="n"></span></a>
+  <a href="#/home" data-nav="home" style="--tc:var(--ljr-4);--tl:var(--ljr-4-text)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-home"/></svg><span>Home</span><span class="n need" id="n-home"></span></a>
+  <a href="#/orders" data-nav="orders" style="--tc:var(--ljr-6);--tl:var(--ljr-6-text)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-box"/></svg><span>Orders</span><span class="n need" id="n-orders"></span></a>
+  <a href="#/invoices" data-nav="invoices" style="--tc:var(--ljr-3);--tl:var(--ljr-3-text)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bill"/></svg><span>Invoices</span><span class="n"></span></a>
+  <a href="#/products" data-nav="products" style="--tc:var(--ljr-5);--tl:var(--ljr-5-text)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Products</span><span class="n"></span></a>
+  <a href="#/ga" data-nav="ga" style="--tc:var(--ljr-7);--tl:var(--ljr-7-text)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span>GA</span><span class="n"></span></a>
 </nav>
 <script>
 (function () {
