@@ -15,8 +15,8 @@ const LOGS = /logs: '([^']+)'/.exec(SRC)[1];
 const VIEWS = ['rooms', 'me', 'decide', 'do', 'docs', 'today', 'card/869fjxpc2', 'room/rig', 'item/869fk9d1r', 'app/links', 'health', 'all', 'stuck', 'new'];
 const PRESS = '#view .btn, #view button.pill, #view a.pill, #view .fbtn, #view .ch, #view .more, #view .copy, #view .undo, #view label.date, #view a.chip, #view a.need, ' +
   '#view .ico, #view .flagb, #view .mark, #view .plus, #view a.lk, #view button.lk, #view .sbox, #appMenu a.pill';
-// Status pills that are also links rest on their status ring; Yes / No / Off rest on the one control line (house rule) and show their colour on hover.
-const MEANING = 'a.need, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat';
+// Meaning buttons (Yes / No / Off) and status pills that are links rest on their own colour line (Lisa's approved picture, 28 Oct).
+const MEANING = '.btn.yes, .btn.no, .lk.off, a.need, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat';
 
 // A comment newer than "seen" (the unread dot), a due date tomorrow (amber) and one overdue (rose) are added to the sample data.
 async function open(page, guard, hash, { scheme, change } = {}) {
@@ -91,7 +91,7 @@ test.describe('Factory look: rules by computed style on every view', () => {
             const ok = r === '12px' || (r === '50%' && e.matches('.dot, .info, .new, .stage .n, .sw > i, .req')) || (r === '11px' && e.matches('.cnt, .n')) || (r === '2px' && e.matches('.bar'));
             if (!ok) out.push('radius ' + r + ': ' + F.what(e));
           });
-          // 3 + 12: pressables rest on ONE clear 1px line (the control line, or a status pill's own ring), 12px, 36px.
+          // 3 + 12: pressables rest on ONE clear 1px line (the control line, or their own meaning colour), 12px, 36px.
           document.querySelectorAll(PRESS).forEach((e) => {
             if (!F.seen(e)) return;
             const cs = getComputedStyle(e), b = e.getBoundingClientRect();
@@ -267,8 +267,8 @@ test.describe('Factory look: hover = a 1px line inside + a pale tint; nothing mo
         expect([b.ow, b.os, b.oo], `${k} hover line`).toEqual(['1px', 'solid', '-1px']);
         expect(b.bg, `${k} hover adds a tint`).not.toBe(a.bg);
         if (k in meaning) {
-          expect(b.oc, `${k} keeps its own colour`).toBe(a.mc); // yes / no rest on the control line; dates rest on their own ring
-          if (k === 'late' || k === 'soon') expect(a.bc, `${k} rests on its own ring`).toBe(a.mc);
+          expect(b.oc, `${k} keeps its own colour`).toBe(a.mc);
+          expect(a.bc, `${k} rests on its own colour line`).toBe(a.mc);
           expect(b.oc, `${k} never turns ink`).not.toBe(ink);
           expect(b.icon, `${k} icon keeps its colour`).toBe(a.icon);
           // The tint is that colour mixed into the card: lighter than the line in light mode, darker in dark mode.

@@ -293,9 +293,10 @@
   div.skip { position: static; left: auto; top: auto; z-index: auto; background: none; padding: 0; border: 0; border-radius: 0; font-size: 14px; color: var(--ink); }
   .note.fail::before, .res.bad::before, div.skip::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; border: 1px solid var(--ljr-2); background: var(--ljr-2-tint); vertical-align: 1px; }
   /* No solid colour fills: the strong buttons are a light tint on the same clear line. */
-  .btn.danger { border-color: var(--ctl); } /* the same clear line as every button; the warning is the bin icon and the words */
-  .btn.danger.solid { background: var(--ljr-2-tint); color: var(--ink); border-color: var(--ctl); }
-  .btn.ai { background: var(--ljr-7-tint); color: var(--ink); border-color: var(--ctl); }
+  /* Meaning buttons rest on their own colour line (Lisa's approved picture, 28 Oct): delete rose, AI purple; hover keeps it. */
+  .btn.danger { border-color: var(--hl); }
+  .btn.danger.solid { background: var(--ljr-2-tint); color: var(--ink); border-color: var(--hl); }
+  .btn.ai { background: var(--ljr-7-tint); color: var(--ink); border-color: var(--hl); }
   .st-empty .shape, .st-idle .shape, .st-loading .shape { border-width: 1px; }
   .st-empty .shape { border-radius: 50%; }
   /* One radius on everything; only status dots are round. */
@@ -408,8 +409,8 @@
   /* House hover rule (Lisa, 28 Oct). Neutral controls: hover = 1px ink line inside + a pale muted tint. Meaning-coloured controls
      (rose delete/late, purple AI, copper money, a section's colour) keep THEIR colour: the same 1px line in that colour + a pale tint
      of it (about 14% into the card colour, dark card in dark mode). Never ink. Selected = the same look. Focus stays the 2px ink ring. */
-  .btn.danger { --hc: var(--ljr-2); --hl: var(--ljr-2); }
-  .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); }
+  .btn.danger { --hc: var(--ljr-2); --hl: var(--ljr-2); --hmc: var(--ljr-2); }
+  .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); --hmc: var(--ljr-7); }
   a.ment { --hc: var(--ljr-3); --hl: var(--ljr-3); }
   a.ment.bad { --hc: var(--ljr-2); --hl: var(--ljr-2); }
   a.morelink.slotfin { --hc: var(--ljr-3); --hl: var(--ljr-3); }

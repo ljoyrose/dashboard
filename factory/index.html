@@ -88,8 +88,8 @@
   label.date.over { --mc: var(--r-risk); } label.date.soon { --mc: var(--r-warn); }
   .stat { --mc: var(--sc); }
   /* Status pills that are also links (needs, stuck, alert, dates, stats) wear their status ring: the ring is the information.
-     Yes / No / Off rest on the one control line like every pressable; their colour shows on hover (below) and in the icon. */
-  a.need.n4, a.need.n5, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat { border-color: var(--mc); }
+     Yes / No / Off rest on their own colour line (Lisa's approved picture) and keep it on hover, adding the pale tint. */
+  .btn.yes, .btn.no, .lk.off, a.need.n4, a.need.n5, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat { border-color: var(--mc); }
   .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .lk.off .ti, a.pill.alert.has .ti { color: var(--ljr-2-text); }
   label.date.over, label.date.soon { background: color-mix(in srgb, var(--mc) 10%, var(--surface)); }
 

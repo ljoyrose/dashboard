@@ -69,6 +69,7 @@ async function hoverRule(page, phone) {
       if (p.kind === 'neutral' && after.os !== 'none' && !near(after.oc, p.ink)) add('hover line', 'neutral line not ink: ' + after.oc);
       if (p.kind === 'meaning' && after.os !== 'none' && near(after.oc, p.ink)) add('hover line', 'meaning control turned ink');
       if (p.kind === 'meaning' && after.os !== 'none' && !(chroma(after.oc) > 45)) add('hover line', 'meaning line ' + after.oc + ' is not a colour');
+      if (p.kind === 'meaning' && after.os !== 'none' && !near(after.oc, before.border)) add('hover line', 'meaning hover line ' + after.oc + ' is not its resting line ' + before.border);
       if (after.bg === before.bg) add('hover tint', 'no tint: ' + after.bg);
     }
     if (p.kind === 'readonly' && (after.os !== 'none' && after.ow !== '0px') && after.outline !== before.outline) add('read-only hover', after.outline);

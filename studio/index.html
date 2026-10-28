@@ -396,7 +396,7 @@
   .ico, .lk { min-width: 36px; height: 36px; justify-content: center; }
   .chk li button, button.tag, a.tag { padding: 0 12px; height: auto; }
   .more { color: var(--ink); }
-  .btn.yes, .acts .btn.yes { --hmc: var(--house-ok); } .btn.no, .acts .btn.no { --hmc: var(--house-risk); } /* rest on the control line; hover in their colour */
+  .btn.yes, .acts .btn.yes { --hmc: var(--house-ok); border-color: var(--hmc); } .btn.no, .acts .btn.no { --hmc: var(--house-risk); border-color: var(--hmc); } /* rest on their own colour line and keep it on hover */
   .fbar .sbox { font-weight: 400; }
   @media (max-width: 544px) { .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { min-height: 44px; } .ico, .lk { min-width: 44px; height: 44px; } }
   @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover, #moreMenu > *:hover { outline: 1px solid var(--hmc, var(--sel-bd)); outline-offset: -1px; background-color: color-mix(in srgb, var(--hmc, var(--muted)) var(--house-tint), var(--card)); } }

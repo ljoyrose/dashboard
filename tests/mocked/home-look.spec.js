@@ -78,7 +78,7 @@ test.describe('Home: house look', () => {
         const bad = await page.evaluate((line) => {
           const out = [];
           const ink = getComputedStyle(document.body).color;
-          const PRESS = 'main .btn:not([disabled]), header .btn:not([disabled]), .subnav a, input.find, .picker select, a.hometile, a.keytile, a.card, a.ment:not(.bad)';
+          const PRESS = 'main .btn:not([disabled]):not(.danger):not(.ai), header .btn:not([disabled]), .subnav a, input.find, .picker select, a.hometile, a.keytile, a.card, a.ment:not(.bad)';
           document.querySelectorAll(PRESS).forEach((e) => {
             if (e.offsetParent === null) return;
             const c = getComputedStyle(e), n = (e.className || e.tagName) + ' "' + e.textContent.trim().slice(0, 20) + '"';

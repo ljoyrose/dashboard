@@ -976,17 +976,14 @@ test.describe('Studio page', () => {
     const y0 = await yes.boundingBox();
     await yes.hover();
     const ys = await yes.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor, w: c.outlineWidth, bg: c.backgroundColor }; });
-    // House rule (28 Oct): it rests on the one control line like every pressable; on hover its own green line is drawn inside, never ink.
-    expect(ys.b).toBe(await page.evaluate(() => { const d = document.createElement('i'); d.style.color = getComputedStyle(document.documentElement).getPropertyValue('--house-press'); document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; }));
-    expect(ys.o).toBe(await page.evaluate(() => { const d = document.createElement('i'); d.style.color = getComputedStyle(document.documentElement).getPropertyValue('--house-ok'); document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; }));
+    expect(ys.o).toBe(ys.b); // rests on its green line and keeps it on hover (Lisa's approved picture), never ink
     expect(ys.o).not.toBe(ink);
     expect(ys.w).toBe('1px');
     expect(ys.bg).not.toBe('rgba(0, 0, 0, 0)');
     expect(await yes.boundingBox()).toEqual(y0);
     await no.hover();
     const ns = await no.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor }; });
-    expect(ns.o).not.toBe(ns.b); // its own rose line, drawn inside the control line
-    expect(ns.o).not.toBe(ink);
+    expect(ns.o).toBe(ns.b); // rose line kept
     await go(page, 'line');
     // Selected is the same line.
     const sel = await page.locator('.subnav a[aria-current="page"]').evaluate((e) => getComputedStyle(e).outlineWidth);
@@ -1246,7 +1243,9 @@ test.describe('Studio page', () => {
       const bad = await page.evaluate(() => {
         const press = getComputedStyle(document.documentElement).getPropertyValue('--press').trim();
         const hex = (h) => { const m = h.replace('#', '').match(/../g).map((x) => parseInt(x, 16)); return 'rgb(' + m.join(', ') + ')'; };
-        const ok = [hex(press), getComputedStyle(document.querySelector('nav.tabs')).getPropertyValue('--ljr-5').trim(), getComputedStyle(document.documentElement).getPropertyValue('--ljr-2').trim()].map((c) => c.startsWith('#') ? hex(c) : c);
+        // The control line, or a meaning button's own colour line (yes green, no rose: --house-ok / --house-risk, 3:1 on a card).
+        const col = (v) => { const d = document.createElement('i'); d.style.color = 'var(' + v + ')'; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
+        const ok = [hex(press), col('--house-ok'), col('--house-risk')];
         const out = [];
         document.querySelectorAll('#view button, #view a.btn, #view a.pill, #view a.tag, #view .lk, .fbar .sbox').forEach((e) => {
           if (!e.offsetParent || e.matches('.ttl, .subnav a, .mrow, [data-kitnav]') || e.closest('.subnav, #moreMenu, .kv, .chk')) return;

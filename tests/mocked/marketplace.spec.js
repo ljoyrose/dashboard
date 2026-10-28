@@ -760,7 +760,8 @@ function auditLook() {
     if (!el.closest('header') && !el.classList.contains('tile')) { if (s.fontSize !== '14px' || s.fontWeight !== '600') out.push(`pressable words ${s.fontSize}/${s.fontWeight}: ${name(el)}`); }
     if (box.height < (phone ? 44 : 36) - 0.5) out.push(`pressable ${box.height}px high: ${name(el)}`);
     const edge = rgb(s.borderTopColor);
-    if (!el.closest('header')) { lines.add(edge.slice(0, 3).map(Math.round).join(',')); if (same(edge, ink)) out.push(`pressable starts out ink: ${name(el)}`); }
+    // Yes / No rest on their own colour line (Lisa's approved picture, 28 Oct); everything else on the one control line.
+    if (!el.closest('header')) { if (!el.matches('.btn.yes, .btn.no')) lines.add(edge.slice(0, 3).map(Math.round).join(',')); if (same(edge, ink)) out.push(`pressable starts out ink: ${name(el)}`); }
     // The resting line is 3:1 on what is behind it AND on the page itself (the brief; Lisa's 8A7F70 warm / 7A8692 cool).
     const behind = [bgOf(el.parentElement)].concat(el.closest('header') ? [] : [rgb(getComputedStyle(document.body).backgroundColor)]);
     for (const b of behind) if (ratio(edge, b) < 3) out.push(`pressable edge ${ratio(edge, b).toFixed(2)}:1, under 3:1: ${name(el)}`);

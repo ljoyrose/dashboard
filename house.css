@@ -45,8 +45,12 @@ header .btn { color: var(--frame-ink); background: transparent; border-color: va
 @media (max-width: 600px) {
   .btn, button.pill, a.pill, button.chip, a.chip, .ch, .fbtn, .achip, .more, .undo, .lk, .ico, .copy, .flagb, .subnav a, .seg button, .vsw button { min-height: var(--house-btn-phone); }
 }
-/* Meaning colours (the control keeps them on hover; it rests on the same control line as everything else). */
+/* Meaning buttons (Lisa's approved picture, 28 Oct): they REST on their own colour line with their icon in that colour
+   (yes / approve / done green; no / redo / delete rose) and keep that line on hover, adding the pale tint. Neutral ones rest
+   on the one control line. --hmc is the meaning colour, set on the button itself. */
 .btn.yes { --hmc: var(--house-ok); } .btn.no, .btn.danger { --hmc: var(--house-risk); }
+.btn.yes, .btn.no, .btn.danger { border-color: var(--hmc); }
+.btn.yes > :is(.ti, svg, .icon) { color: var(--ljr-5-text); } .btn.no > :is(.ti, svg, .icon), .btn.danger > :is(.ti, svg, .icon) { color: var(--ljr-2-text); }
 
 /* 5 The hover rule. Hover = selected: a 1px line drawn inside (outline, offset -1px) plus a pale tint mixed into the card colour.
    Neutral: ink line + muted tint. Meaning colour (--hmc): its own line + a 14% tint of it, never ink. Nothing moves. */
@@ -115,7 +119,8 @@ header :focus-visible { outline-color: var(--frame-ink); }
 .house-lbar::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: var(--house-bar); border-radius: var(--radius); background: var(--sc, var(--ljr-0)); }
 .house-marker { width: var(--house-marker-w); height: var(--house-marker-h); border-radius: var(--radius); background: var(--sc, var(--ljr-0)); flex: none; }
 
-/* 11 Brand logo slot: 20 x 20, the logo or the brand's initials on a pale tint of its colour. */
+/* 11 Brand logo slot: 20 x 20, the logo or the brand's initials on a pale tint of its colour. The ONE radius exception:
+   a 20 x 20 logo keeps a 4px corner (12px would turn it into a circle and crop square logos). */
 .bmark { width: var(--house-logo); height: var(--house-logo); flex: none; border-radius: 4px; display: inline-grid; place-items: center; }
 .bav { border: var(--house-line) solid var(--c, var(--press)); background: color-mix(in srgb, var(--c, var(--press)) var(--house-tint), var(--card)); color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1; }
 

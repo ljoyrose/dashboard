@@ -41,6 +41,8 @@ function audit(o) {
   const press = hex(R.press[o.look]);
   // Status pills that are also links (dates, needs-you, stuck) keep their status ring: the ring is the information.
   const STATUS = '.date, .dpill, .datep, label.date, .need, .stuck, .alert, .stat, .late, .soon, .over, [data-house="status"]';
+  // Meaning buttons rest on their own colour line (Lisa's approved picture): yes green, no / delete rose (AI purple, off rose).
+  const MEANING = '.btn.yes, .btn.no, .btn.danger, .btn.ai, .lk.off';
   const lines = (e) => { const rg = document.createRange(); rg.selectNodeContents(e); const tops = [...rg.getClientRects()].filter((q) => q.height > 8 && q.width > 1).map((q) => q.top + q.height / 2).sort((a, b) => a - b);
     return tops.reduce((n, t, i) => n + (i && t - tops[i - 1] > 10 ? 1 : 0), tops.length ? 1 : 0); };
 
@@ -104,7 +106,8 @@ function audit(o) {
     if (inHead) continue; // frame buttons use the frame's own light line
     const bc = rgb(s.borderTopColor), bwid = s.borderTopStyle === 'none' ? 0 : px(s.borderTopWidth);
     if (!bwid || bc[3] < 0.3) { add('control line', e, 'no line'); continue; }
-    if (chroma(bc) > 45) { if (!e.matches(STATUS)) add('control line', e, 'rests on a meaning colour ' + hex6(bc) + ' (one control line; the colour shows on hover)'); continue; }
+    if (e.matches(MEANING)) { if (!(chroma(bc) > 45)) add('control line', e, 'meaning button rests on ' + hex6(bc) + ', not its own colour'); continue; }
+    if (chroma(bc) > 45) { if (!e.matches(STATUS)) add('control line', e, 'neutral control rests on a colour ' + hex6(bc)); continue; }
     if (!near(bc, press, 8)) add('control line', e, hex6(bc) + ' (want ' + hex6(press) + ')');
   }
   // 7 counts: a small ringed box holding only a number. 30 x 22, radius 11, line-height 20, padding 0 3px; .wide for 3+ digits.
