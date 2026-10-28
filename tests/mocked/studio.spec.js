@@ -750,6 +750,12 @@ test.describe('Studio page', () => {
     await expect(r.locator('.panel .kv')).toContainText('Stage');
     await expect(page.locator('.side')).toHaveCount(0);
     await noSidewaysScroll(page, 'line board with details open');
+    // Tab counts sit in the top-right corner of the tab, clear of the label; the selected bar is 26px on the phone.
+    const tab = page.locator('nav.tabs a[data-nav="me"]'), tb = await tab.boundingBox(), nb = await tab.locator('.n').boundingBox(), lb = await tab.locator('span:not(.n):not(.bar)').boundingBox();
+    expect(nb.x + nb.width).toBeLessThanOrEqual(tb.x + tb.width);
+    expect(nb.y).toBeGreaterThanOrEqual(tb.y);
+    expect(nb.x).toBeGreaterThanOrEqual(lb.x + lb.width);
+    await expect(page.locator('nav.tabs a[data-nav="line"] .bar')).toHaveCSS('width', '26px');
     await go(page, 'decide');
     await noSidewaysScroll(page, 'decide list');
     await page.locator('[data-vmode="board"]').click();
