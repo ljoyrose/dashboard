@@ -28,7 +28,9 @@
     --bd: var(--line); --band: var(--card); --chip: transparent;
     --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
     --bg: var(--paper); --surface: var(--card); --sel-bd: var(--ink); --sel-fill: transparent;
-    --w2: #C32924; --w3: #9E5802; --w4: #766602; --w5: #217A2D; --w6: #0271A4; --w7: #8850B6; }
+    --w2: #C32924; --w3: #9E5802; --w4: #766602; --w5: #217A2D; --w6: #0271A4; --w7: #8850B6;
+    --frame: #3A3632; --frame-foot: #46413B; --frame-ink: #F6F1E8; --frame-line: #9C9285; --frame-ok: #8BCF8F; --frame-bad: #F28B85; --frame-warn: #F2A65A; }
+  :root.look-cool { --frame: #33475B; --frame-foot: #405569; --frame-ink: #FFFFFF; --frame-line: #9FB0C0; }
   :root.look-cool { --paper: #F2F4F6; --canvas: #E4E9EE; --card: #FFFFFF; --ink: #2B3035; --muted: #5B646D; --line: #B9C3CC; --soft: #D9E0E6;
     --bd: #C3CCD4; --band: #FFFFFF; --chip: #F5F7F9; --shadow: 0 1px 2px rgba(20,30,40,.12), 0 1px 8px rgba(20,30,40,.10); }
   @media (prefers-color-scheme: light) { :root.words-light:not([data-theme="dark"]) { --w2: #D93732; --w3: #AD6202; --w4: #877402; --w5: #258631; --w6: #027BB5; --w7: #915CBC; } }
@@ -36,7 +38,8 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --paper: #181613; --canvas: #1F1C18; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --soft: #2F2A24;
       --bd: var(--line); --band: var(--card); --chip: transparent; --shadow: 0 1px 3px rgba(0,0,0,.4);
-      --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; }
+      --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; }
+    :root.look-cool:not([data-theme="light"]) { --frame: #24323F; --frame-foot: #2D3D4C; }
     :root.look-cool:not([data-theme="light"]) { --paper: #16191C; --canvas: #1C2024; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --soft: #2B3137; --bd: var(--line); --band: var(--card); --chip: var(--card); }
   }
   /* Mode = Dark from the Look menu: tokens.css only darkens with the device, so its dark spine is repeated here. */
@@ -47,7 +50,8 @@
     --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
     --paper: #181613; --canvas: #1F1C18; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --soft: #2F2A24;
     --bd: var(--line); --band: var(--card); --chip: transparent; --shadow: 0 1px 3px rgba(0,0,0,.4);
-    --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; }
+    --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; }
+  :root.look-cool[data-theme="dark"] { --frame: #24323F; --frame-foot: #2D3D4C; }
   :root.look-cool[data-theme="dark"] { --paper: #16191C; --canvas: #1C2024; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --soft: #2B3137; --bd: var(--line); --band: var(--card); --chip: var(--card); }
   /* Coloured words are the darker set (Look › Coloured words › Lighter swaps it). */
   :root, :root[data-theme] { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); }
@@ -284,12 +288,12 @@
   .btn, .vsw button, .lk, .ico { border-radius: 999px; }
   .pill { padding: 4px 12px; min-height: 28px; }
   nav.tabs a, .subnav a { border-radius: 6px; }
-  nav.tabs a, nav.tabs a:hover, nav.tabs a[aria-current="page"] { outline: none; box-shadow: none; border-color: transparent; background: transparent; }
+  nav.tabs a, nav.tabs a:hover, nav.tabs a[aria-current="page"] { outline: none; box-shadow: none; border-color: transparent; background: var(--card); }
   nav.tabs a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   /* Tab counts sit in the button's top-right corner, clear of the label. */
   nav.tabs .n { position: absolute; top: 8px; right: 18px; min-width: 20px; height: auto; line-height: 18px; text-align: center; }
   @media (max-width: 544px) {
-    nav.tabs .n { top: 4px; right: 6px; min-width: 17px; line-height: 16px; padding: 0 4px; } /* 13px, not 10: nothing on the page goes under 13px */
+    nav.tabs .n { top: 4px; right: 4px; min-width: 17px; line-height: 16px; padding: 0 4px; } /* 13px, not 10: nothing on the page goes under 13px */
     nav.tabs a[aria-current="page"] .bar { width: 26px; }
   }
   @media (max-width: 544px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; } }
@@ -299,6 +303,19 @@
   .btn { min-height: 36px; }
   @media (min-width: 545px) { .subnav a { min-height: 32px; padding: 0 12px; } }
   @media (max-width: 544px) { .btn, .subnav a { min-height: 44px; } }
+  /* Frame (Lisa's choice): dark top bar and dark bottom tab bar, never black. The footer is a step lighter on purpose:
+     thin strips between light buttons read darker than the solid top bar. Darker than the page in dark mode too. */
+  header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
+  header .top { padding-top: 12px; padding-bottom: 12px; }
+  header .top > h1 a, header .top > .stamp, header .top > .pill, header .top > .btn, header .lookwrap > .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
+  header .top > .pill .ti, header .top > .btn .ti, header .lookwrap > .btn .ti { color: var(--frame-ink); }
+  header .top > .btn.main { border-color: var(--frame-ink); }
+  header .top > .pill.ok { border-color: var(--frame-ok); } header .top > .pill.ok .ti { color: var(--frame-ok); }
+  header .top > .pill.warn { border-color: var(--frame-warn); } header .top > .pill.bad { border-color: var(--frame-bad); }
+  @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover { border-color: var(--frame-ink); outline-color: var(--frame-ink); } }
+  header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
+  nav.tabs { background: var(--frame-foot); border-top: 0; gap: 8px; padding-top: 8px; padding-left: 8px; padding-right: 8px; }
+  @media (min-width: 900px) { nav.tabs { border-left: 0; border-right: 0; } }
   @media (max-width: 760px) {
     .board { scroll-snap-type: x mandatory; }
     .col { flex-basis: calc(100vw - 48px); }

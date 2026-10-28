@@ -758,13 +758,44 @@ test.describe('Studio page', () => {
     const tab = page.locator('nav.tabs a[data-nav="me"]'), tb = await tab.boundingBox(), nb = await tab.locator('.n').boundingBox(), lb = await tab.locator('span:not(.n):not(.bar)').boundingBox();
     expect(nb.x + nb.width).toBeLessThanOrEqual(tb.x + tb.width);
     expect(nb.y).toBeGreaterThanOrEqual(tb.y);
-    expect(nb.x).toBeGreaterThanOrEqual(lb.x + lb.width);
+    const apart = nb.x >= lb.x + lb.width || nb.y + nb.height <= lb.y; // never on top of the label
+    expect(apart, 'the count should not sit on the label').toBe(true);
     await expect(page.locator('nav.tabs a[data-nav="line"] .bar')).toHaveCSS('width', '26px');
     await go(page, 'decide');
     await noSidewaysScroll(page, 'decide list');
     await page.locator('[data-vmode="board"]').click();
     await expect(page.locator('.bwrap[data-board="decide"]')).toBeVisible();
     await noSidewaysScroll(page, 'decide board');
+  });
+
+  test('frame: dark top bar and a step-lighter bottom bar (never black); light tab buttons; every word on the frame reads clearly', async ({ page, guard }) => {
+    await open(page, guard, '#/line');
+    const bg = (sel) => page.locator(sel).first().evaluate((e) => getComputedStyle(e).backgroundColor);
+    expect(await bg('header')).toBe('rgb(58, 54, 50)'); // #3A3632
+    expect(await bg('nav.tabs')).toBe('rgb(70, 65, 59)'); // #46413B
+    expect(await bg('nav.tabs a')).toBe('rgb(255, 254, 251)'); // card
+    const worst = await page.evaluate(() => {
+      const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
+      const lum = ([r, g, b]) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+      const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+      const frame = rgb(getComputedStyle(document.querySelector('header')).backgroundColor);
+      let min = 99, at = '';
+      document.querySelectorAll('header .top > *, header .top > * *').forEach((e) => {
+        if (!e.offsetParent || e.closest('#lookMenu') || !Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) return;
+        const r = ratio(rgb(getComputedStyle(e).color), frame); if (r < min) { min = r; at = e.textContent.trim().slice(0, 20); }
+      });
+      const ok = ratio(rgb(getComputedStyle(document.querySelector('#enginePill')).borderTopColor), frame);
+      return { min, at, ok, cls: document.querySelector('#enginePill').className };
+    });
+    expect(worst.min, `"${worst.at}" on the frame`).toBeGreaterThanOrEqual(4.5);
+    expect(worst.cls).toContain('ok');
+    expect(worst.ok, 'the green On outline on the frame').toBeGreaterThanOrEqual(3);
+    await page.locator('#lookBtn').click();
+    await page.locator('#lookMenu [data-look="bg"][data-val="cool"]').click();
+    expect(await bg('header')).toBe('rgb(51, 71, 91)'); // #33475B
+    expect(await bg('nav.tabs')).toBe('rgb(64, 85, 105)'); // #405569
+    await page.locator('#lookMenu [data-look="mode"][data-val="dark"]').click();
+    expect(await bg('header')).toBe('rgb(36, 50, 63)'); // #24323F, still a frame in dark mode
   });
 
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
