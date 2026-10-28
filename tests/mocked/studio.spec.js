@@ -821,6 +821,8 @@ test.describe('Studio page', () => {
     const band = await page.locator('nav.tabs').boundingBox();
     expect(band.x).toBe(0);
     expect(band.width).toBe(page.viewportSize().width); // edge to edge on a desktop, like the top bar
+    const gap = await page.evaluate(() => { const d = document.querySelector('.top h1 .dot').getBoundingClientRect(), a = document.querySelector('.top h1 a'), r = document.createRange(); r.selectNodeContents(a); const t = Array.from(r.getClientRects()).pop(); return Math.round(t.left - d.right); });
+    expect(gap, 'dot to "Studio"').toBe(8);
     const worst = await page.evaluate(() => {
       const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
       const lum = ([r, g, b]) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
