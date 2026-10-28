@@ -92,16 +92,19 @@
   .chip.stuck { border-color: var(--ljr-2); }
   .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
   .hero { display: flex; gap: 12px; align-items: center; }
-  .disc { width: 42px; height: 42px; border-radius: 50%; background: var(--c); color: #2C2C2A; display: flex; align-items: center; justify-content: center; font-weight: 700; flex: none; }
+  .disc { width: 42px; height: 42px; border-radius: 50%; background: color-mix(in srgb, var(--c) 16%, var(--surface)); border: 1px solid var(--c); color: var(--ink); display: flex; align-items: center; justify-content: center; font-weight: 700; flex: none; }
   .hero h2 { margin: 0; font-size: 20px; }
   .hero p { margin: 0; color: var(--muted); font-size: 14px; }
   .strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; margin: 10px 0 2px; }
-  .strip i { height: 10px; border-radius: var(--radius); background: var(--line); }
-  .strip i.d { background: var(--ljr-5); } .strip i.c { background: var(--ljr-6); }
+  /* No solid colour fills: tint + 1px ring (Lisa, 28 Oct 2026). */
+  .strip i { height: 10px; border-radius: var(--radius); background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+  .strip i.d { background: var(--ljr-5-tint); box-shadow: inset 0 0 0 1px var(--ljr-5); } .strip i.c { background: var(--ljr-6-tint); box-shadow: inset 0 0 0 1px var(--ljr-6); }
   .stage { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); cursor: pointer; }
-  .stage .n { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--bg); border: 1px solid var(--line); flex: none; }
-  .stage.d .n { background: var(--ljr-5); border-color: var(--ljr-5); color: #2C2C2A; }
-  .stage.c .n { background: var(--ljr-6); border-color: var(--ljr-6); color: #2C2C2A; }
+  /* Steps: a small status ring (done ✓ green tint, current ● blue tint, future empty grey) then "Step N:" in words. */
+  .stage .n { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: transparent; border: 1px solid var(--line); color: var(--ink); flex: none; }
+  .stage.d .n { background: var(--ljr-5-tint); border-color: var(--ljr-5); }
+  .stage.c .n { background: var(--ljr-6-tint); border-color: var(--ljr-6); }
+  .step { color: var(--muted); font-weight: 600; white-space: nowrap; }
   .stage.c { font-weight: 600; }
   .stage .r { margin-left: auto; font-size: 13px; color: var(--muted); }
   .lines { list-style: none; margin: 0 0 6px; padding: 0 0 0 34px; }
@@ -301,8 +304,6 @@
   .fbar2 .pills { gap: 8px; }
   .pill { cursor: pointer; font-family: inherit; color: var(--ink); }
   .pill .cnt { min-width: 20px; height: 20px; font-size: 11px; }
-  .pill.stg { border-color: var(--c); min-width: 32px; justify-content: center; }
-  .pill.stg.on { border-color: var(--ink); }
   .empty { display: flex; gap: 12px; align-items: center; }
   .appmenu { max-width: 1600px; margin: 0 auto; padding: 0 24px 12px; }
   @media (max-width: 600px) { .appmenu { padding: 0 16px 12px; } }
@@ -496,7 +497,7 @@
     var n = stageNo(t.status), slot = n === null ? 0 : (n <= 3 ? 7 : n <= 5 ? 4 : n === 6 ? 3 : n === 7 ? 6 : 5);
     var subs = (S.lists.work || []).filter(function (x) { return x.tags.indexOf('app-' + t.id) >= 0 && x.tags.indexOf('line') >= 0; });
     var tpl = (S.lists.template || []).filter(function (x) { return x.parent; });
-    var html = '<div class="card"><div class="hero" style="--c:' + col(slot) + '"><div class="disc">' + (n === null ? '–' : n) + '</div><div><h2>' + esc(t.name) + '</h2><p>' + esc(cap(t.status)) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
+    var html = '<div class="card"><div class="hero"><div><h2>' + esc(t.name) + '</h2><p>' + (n === null ? '' : '<span class="step">Step ' + n + ':</span> ' + esc(STAGES[n]) + ' · ') + esc(cap(t.status)) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
       '<div class="pills" style="margin-top:10px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<div id="codes" class="codes"><span class="q">…</span></div>' +
       '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span>' + linkStrip(t, false) + '<button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
@@ -508,7 +509,7 @@
       var lines = mineLines.length ? mineLines : tpl.filter(function (x) { return x.tags.indexOf('st-' + i) >= 0; });
       var done = lines.filter(function (x) { return !isOpen(x); }).length;
       var isOpenRow = open[i] === undefined ? i === n : open[i];
-      html += '<div class="stage ' + cls + '" data-stage="' + i + '"><span class="n">' + i + '</span>' + name + (i === 6 ? ' ' + ic('coin') : '') +
+      html += '<div class="stage ' + cls + '" data-stage="' + i + '"><span class="n" aria-hidden="true">' + (cls === 'd' ? '\u2713' : cls === 'c' ? '\u25cf' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i === 6 ? ' ' + ic('coin') : '') +
         '<span class="r">' + (mineLines.length ? done + ' / ' + lines.length : lines.length ? lines.length + ' lines' : '') + '</span></div>';
       if (isOpenRow) {
         html += mineLines.length ? '<div class="clines">' + lines.map(function (x) { return row(x, x.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view'); }).join('') + (i === 6 ? '<ul class="lines">' + sendsFor(t) + '</ul>' : '') + '</div>' : '<ul class="lines">' + lines.map(function (x) {
@@ -797,7 +798,7 @@
       var tests = items.filter(function (x) { return F.test(x); }).length;
       html += '<div class="card fpanel">' +
         (WHO.some(function (w) { return wc[w[1]]; }) ? '<div class="pills" data-frow="who">' + WHO.filter(function (w) { return wc[w[1]] || s.who.indexOf(w[0]) >= 0; }).map(function (w) { return fchip('who', w[0], '<i class="ti ti-user"></i> ' + w[2] + ' ' + cnt(wc[w[1]] || 0), s.who.indexOf(w[0]) >= 0); }).join('') + '</div>' : '') +
-        '<div class="pills" data-frow="st">' + STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), String(i), s.st.indexOf(String(i)) >= 0, ' stg" style="--c:' + col(stSlot(i)) + '" title="' + name) : ''; }).join('') + '</div>' +
+        '<div class="pills" data-frow="st">' + STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), '<span class="step">Step ' + i + ':</span> ' + name, s.st.indexOf(String(i)) >= 0, '" title="' + name) : ''; }).join('') + '</div>' +
         (F.flags ? '<div class="pills" data-frow="f">' + FLAGS.map(function (x) { return fchip('f', x[0], flagWords(x[1]), s.f.indexOf(x[0]) >= 0); }).join('') + '</div>' +
           '<div class="pills" data-frow="sort">' + SORTS.map(function (x) { return fchip('sort', x[0], flagWords(x[1]), s.sort === x[0]); }).join('') + '</div>' : '') +
         '<div class="pills"><button class="pill" type="button" data-action="ftest" aria-pressed="' + s.test + '" title="TEST">TEST <span class="sw' + (s.test ? ' on' : '') + '"><i></i></span> ' + cnt(tests) + '</button>' +
