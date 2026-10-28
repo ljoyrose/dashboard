@@ -161,8 +161,10 @@
   .strip i.d { background: var(--ljr-5-tint); box-shadow: inset 0 0 0 1px var(--ljr-5); } .strip i.c { background: var(--ljr-7-tint); box-shadow: inset 0 0 0 1px var(--ljr-7); }
   .strip.b6 { grid-template-columns: repeat(6, 1fr); }
   .panel { margin: 8px 0 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
-  .kv { display: grid; grid-template-columns: max-content 1fr; gap: 2px 12px; font-size: 14px; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; column-gap: 12px; font-size: 14px; margin: 0; }
   .kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
+  /* Key/value rows: a 1px divider between rows, none before the first or after the last. */
+  .kv dt, .kv dd { padding: 6px 0; border-top: 1px solid var(--line); } .kv dt:first-of-type, .kv dd:first-of-type { border-top: 0; }
   .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 4px 10px; margin-top: 4px; cursor: pointer; }
   .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; color: var(--muted); cursor: help; margin-left: 4px; vertical-align: 1px; }
   /* Find bar: Search · Brand · Type always; Stage · Who · Fit · Timing · Flags · Sort · TEST behind Filter. */
@@ -291,7 +293,7 @@
   .side { flex: 0 0 380px; min-width: 0; overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
   .side .shead { display: flex; gap: 8px; align-items: flex-start; font-weight: 700; }
   .side .shead span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  .side .panel { margin: 0; }
+  .side .panel { margin: 0; padding: 0; border: 0; background: transparent; } /* no grey box inside the white panel */
   /* HubSpot sizing (CRM UI spec, s3/4/6/7/15/16): containers 16 radius, things you press are pills, tabs are 6px rectangles. */
   .btn, .vsw button, .lk, .ico { border-radius: 999px; }
   .pill { padding: 4px 12px; min-height: 28px; }

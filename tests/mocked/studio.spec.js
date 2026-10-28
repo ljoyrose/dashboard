@@ -733,6 +733,11 @@ test.describe('Studio page', () => {
     expect((await r.locator('.bline').boundingBox()).y).toBeLessThan((await r.locator('.ttl').boundingBox()).y);
     await r.locator('.ttl').click();
     await expect(page.locator('.side[data-side="sa-make"] .kv')).toContainText('Stage');
+    // Details sit straight on the white panel: no grey box; rows split by a 1px line, none above the first.
+    const box = await page.locator('.side .panel').evaluate((e) => { const c = getComputedStyle(e); return [c.backgroundColor, c.borderTopStyle]; });
+    expect(box).toEqual(['rgba(0, 0, 0, 0)', 'none']);
+    await expect(page.locator('.side .kv dt').first()).toHaveCSS('border-top-style', 'none');
+    await expect(page.locator('.side .kv dt').nth(1)).toHaveCSS('border-top-width', '1px');
     await expect(r).toHaveClass(/\bsel\b/);
     await expect(r.locator('.panel')).toHaveCount(0); // not under the card on a desktop
     // Hover and selected never move or resize anything; stage names are ink (colour only in the ring and the top line).
