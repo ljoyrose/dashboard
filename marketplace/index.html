@@ -232,17 +232,22 @@
     var who = String(owner || 'Lisa'), pic = avatars && avatars[who.toLowerCase()], col = 'var(--ljr-ava-' + (AVA_COL[who.toLowerCase()] ? who.toLowerCase() : 'other') + ')';
     return '<span class="ava" title="' + esc(who) + '" aria-label="' + esc(who) + '\'s" style="--ava:' + col + '">' + (pic ? '<img alt="" src="' + esc(pic) + '">' : esc(/^[A-Z]{1,3}$/.test(who) ? who : who.charAt(0).toUpperCase())) + '</span>';
   }
-  var pics = null;
+  var pics = null, picsAt = 0;
+  // Lisa 28 Oct: a card named a listing added after the page had read the list (L0225), so it showed "No photo" with no eBay
+  // button. Read again (at most once a minute) whenever a "Same item?" card names a listing the last read did not have.
   function loadPics() {
-    if (pics !== null || !M.listingsFileId || !rows.some(function (r) { return /^LINK\|/.test(r.key); })) return;
-    pics = {};
+    var link = rows.filter(function (r) { return /^LINK\|/.test(r.key); });
+    if (!M.listingsFileId || !link.length) return;
+    var missing = pics === null || link.some(function (r) { var ids = r.key.split('|'); return !pics[ids[1]] || !pics[ids[2]]; });
+    if (!missing || Date.now() - picsAt < 60000) return;
+    picsAt = Date.now(); var next = {};
     fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(M.listingsFileId) + '?alt=media&supportsAllDrives=true', { headers: { Authorization: 'Bearer ' + token } })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
       .then(function (t) { var t2 = csvRows(t), h = -1;
         for (var i = 0; i < Math.min(t2.length, 5); i++) if (t2[i].indexOf('listing_id') >= 0) { h = i; break; }
         if (h < 0) return; var hd = t2[h], li = hd.indexOf('listing_id'), im = hd.indexOf('image_url'), ti = hd.indexOf('title'), pl = hd.indexOf('platform'), ur = hd.indexOf('url'), pi = hd.indexOf('platform_item_id');
-        t2.slice(h + 1).forEach(function (r) { pics[r[li]] = { photo: r[im] || '', title: r[ti] || '', platform: r[pl] || '', url: listingUrl(r[pl], r[ur], r[pi]) }; });
-        render(); })
+        t2.slice(h + 1).forEach(function (r) { next[r[li]] = { photo: r[im] || '', title: r[ti] || '', platform: r[pl] || '', url: listingUrl(r[pl], r[ur], r[pi]) }; });
+        pics = next; render(); })
       .catch(function () {});   // no second photo is not an error: the card still works
   }
   function csvRows(text) {

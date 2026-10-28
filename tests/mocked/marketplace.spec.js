@@ -317,6 +317,23 @@ test.describe('Marketplace page', () => {
     expect(box.width).toBeGreaterThan(140);                                     // big enough to read "7F" against "10"
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
+  test('"Same item?" card naming a listing added after the page read the list: Refresh reads the list again and the eBay photo and button appear', async ({ page }) => {
+    await page.clock.install();
+    await page.route(/i\.ebayimg\.com|drive\.google\.com\/thumbnail/, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>' }));
+    const head = 'COUNT: 2 rows held\nlisting_id,item_sku,platform,platform_item_id,url,title,image_url\nL0033,,Vinted,8960468971,https://www.vinted.co.uk/items/8960468971,Socks,\n';
+    let csv = head, reads = 0;
+    const rows = [['LINK|L0033|L0225', 'check', 'Clothes', 'Socks', JSON.stringify({ kind: 'link', platform: 'Vinted', why: 'Same item as on eBay?' }), ago(5)]];
+    await sheets(page, rows);
+    await page.route(/googleapis\.com\/drive\/v3\/files\/1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW\?alt=media/, (route) => { reads++; route.fulfill({ status: 200, contentType: 'text/csv', body: csv }); });
+    await open(page, '#/decide');
+    await expect(page.locator('#view .pair figure').nth(1)).toContainText('No photo');
+    csv = head + 'L0225,,ebay,318328514007,https://www.ebay.co.uk/itm/318328514007,5 Pairs Sheer Socks,https://i.ebayimg.com/images/g/BqQA/s-l300.jpg\n';
+    await page.clock.fastForward(61000);
+    await page.locator('#refresh').click();
+    await expect(page.locator('#view .pair img[src="https://i.ebayimg.com/images/g/BqQA/s-l500.jpg"]')).toHaveCount(1);
+    await expect(page.locator('#view .pair a.btn').nth(1)).toHaveAttribute('href', 'https://www.ebay.co.uk/itm/318328514007');
+    expect(reads).toBe(2);
+  });
   test('"Same item?" Yes with a total: the quantity goes in the note as "qty 4"; blank stays blank; not a number is refused', async ({ page }) => {
     const rows = [['LINK|L0018|L0155', 'check', 'Other', 'Olaf watch', JSON.stringify({ kind: 'link', platform: 'Vinted', why: 'Same item as on eBay?' }), ago(5)],
                   ['LINK|L0020|L0156', 'check', 'Other', 'Rascal watch', JSON.stringify({ kind: 'link', platform: 'Vinted', why: 'Same item?' }), ago(5)]];
