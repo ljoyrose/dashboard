@@ -730,10 +730,10 @@ test.describe('Studio page', () => {
     await expect(page.locator('.col[data-stage="5"]')).toHaveCSS('border-top-width', '1px');
     await expect(page.locator('.col[data-stage="5"]')).toHaveCSS('overflow', 'hidden');
     await expect(page.locator('.col[data-stage="5"] .col-head')).toHaveCSS('box-shadow', 'none');
-    // Stage colour: a small upright 4×18 bar left of "Step N:", no top tab.
+    // Stage colour: a small upright 3×18 bar left of "Step N:" (Links dashboard cards use 3px), no top tab.
     expect(await page.locator('.col[data-stage="5"] .col-head').evaluate((e) => getComputedStyle(e, '::before').content)).toBe('none');
     const sb = await page.locator('.col[data-stage="5"] .col-head .sbar').boundingBox(), slab = await page.locator('.col[data-stage="5"] .col-head .lab').boundingBox();
-    expect([Math.round(sb.width), Math.round(sb.height)]).toEqual([4, 18]);
+    expect([Math.round(sb.width), Math.round(sb.height)]).toEqual([3, 18]);
     expect(sb.x).toBeLessThan(slab.x);
     // One spacing step: 16px from the head line to the first card, 12px to the sides, between cards, between columns, and inside cards.
     const gaps = await page.evaluate(() => {
@@ -1048,7 +1048,7 @@ test.describe('Studio page', () => {
     expect(await r('.col-head .cnt')).toBe('11px');
     await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 390, height: 844 });
-    for (const sel of ['#moreBtn', '#filtersBtn', '.subnav a', '.crow .ico']) expect(await h(sel), sel + ' on the phone').toBe(44);
+    for (const sel of ['#moreBtn', '#filtersBtn', '.subnav a', '.crow .ico']) await expect.poll(() => h(sel), sel + ' on the phone').toBe(44); // the page redraws when it crosses into phone width
     expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(24);
   });
 
@@ -1308,6 +1308,37 @@ test.describe('Studio page', () => {
         expect(empty, key).toEqual([]);
       }
     }
+  });
+
+  test('brand mark: always a 20x20 slot; logo when there is one, initials avatar when not or when it fails; names line up', async ({ page, guard, allowedConsole }) => {
+    allowedConsole.push(/Failed to load resource.*404/);
+    await page.route('https://www.example.com/north-logo.png', (route) => route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64') }));
+    await page.route('https://www.example.com/broken.png', (route) => route.fulfill({ status: 404, body: '' }));
+    await open(page, guard, '#/brands', { change: (s) => { s.brands.filter((b) => b.id === 'sb-client')[0].kit.logo = 'https://www.example.com/broken.png'; } });
+    const card = (id) => page.locator(`[data-brandcard="${id}"]`);
+    await expect(card('sb-north').locator('img.bmark')).toHaveAttribute('src', 'https://www.example.com/north-logo.png');
+    await expect(card('sb-south').locator('.bmark.bav')).toHaveText('SS');
+    await expect(card('sb-client').locator('.bmark.bav')).toHaveText('SB'); // the broken logo swapped to initials
+    const xs = [];
+    for (const id of ['sb-north', 'sb-south', 'sb-client']) {
+      const m = await card(id).locator('.bmark').boundingBox(), n = await card(id).locator('.grp .bn').boundingBox(), c = await card(id).boundingBox();
+      expect([Math.round(m.width), Math.round(m.height)], id).toEqual([20, 20]);
+      xs.push(Math.round(n.x - c.x));
+    }
+    expect(new Set(xs).size, 'the name starts at the same x with a logo, no logo and a broken logo').toBe(1);
+    await expect(card('sb-south').locator('.bav')).toHaveCSS('border-top-left-radius', '4px');
+    await go(page, 'line');
+    await expect(page.locator('.crow[data-row="sa-make"] .bline .bmark')).toHaveCount(1);
+  });
+
+  test('list view: each row has a 3px stage-colour bar down its left edge, the same colour as the board column bar', async ({ page, guard }) => {
+    await open(page, guard, '#/line');
+    const colBar = await page.locator('.col[data-stage="5"] .col-head .sbar').evaluate((e) => getComputedStyle(e).backgroundColor);
+    await page.locator('[data-vmode="list"]').click();
+    const bar = await page.locator('.crow[data-row="sa-make"]').evaluate((e) => { const c = getComputedStyle(e, '::before'); return { w: c.width, bg: c.backgroundColor, l: c.left }; });
+    expect(bar).toEqual({ w: '3px', bg: colBar, l: '0px' });
+    await page.locator('[data-vmode="board"]').click();
+    expect(await page.locator('.crow[data-row="sa-make"]').evaluate((e) => getComputedStyle(e, '::before').content)).toBe('none'); // not on board cards
   });
 
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
