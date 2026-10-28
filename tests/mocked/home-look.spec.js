@@ -63,10 +63,10 @@ test.describe('Home: house look', () => {
     expect(await tab.evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
   });
 
-  // Lisa's extra rules (28 Oct): 1) every pressable rests on the same clear line (warm #9C9080 / cool #8E9AA6), 1px, 12px radius,
+  // Lisa's extra rules (28 Oct): 1) every pressable rests on the same clear line (warm #8A7F70 / cool #7A8692, 3:1 on the page and tints), 1px, 12px radius,
   // 36px desktop, 14px/600, never starts out ink, and hover = 1px ink outline offset -1px; read-only pills have no hover.
   // 2) date pills: plain 1px ring + muted words; late = rose ring + tint; soon = amber ring + tint. 3) 13px floor, 400/600. 4) one radius.
-  for (const [look, line] of [['warm', 'rgb(156, 144, 128)'], ['cool', 'rgb(142, 154, 166)']]) {
+  for (const [look, line] of [['warm', 'rgb(138, 127, 112)'], ['cool', 'rgb(122, 134, 146)']]) {
     test(`${look}: every pressable rests on the same clear line and hover turns it ink; read pills have no hover`, async ({ page }) => {
       if (look === 'cool') await page.addInitScript(() => localStorage.setItem('dash-look', JSON.stringify({ bg: 'cool' })));
       await page.goto('./');
@@ -150,16 +150,24 @@ test.describe('Home: house look', () => {
     }
   });
 
-  test('every count pill is one fixed size: 1 and 2 digits match (30 x 22, line 20px, radius 11px)', async ({ page }) => {
+  test('every count pill is one fixed size: 1 and 2 digits match exactly (30 x 22, line 20px, radius 11px), even in a wider font', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const sizes = await page.evaluate(() => {
-      const probe = (txt, cls) => { const s = document.createElement('span'); s.className = cls; s.textContent = txt; const box = document.createElement('div'); box.appendChild(s); (cls === 'n need' ? document.querySelector('#mainNav a') : document.getElementById('homeTop')).appendChild(cls === 'n need' ? s : box);
-        const r = s.getBoundingClientRect(), c = getComputedStyle(s); const o = [Math.round(r.width), Math.round(r.height), c.lineHeight, c.borderTopLeftRadius, c.paddingLeft, c.paddingRight]; s.remove(); box.remove(); return o; };
-      return { c1: probe('1', 'cnt'), c2: probe('12', 'cnt'), c3: probe('123', 'cnt'), n1: probe('1', 'n need'), n2: probe('12', 'n need') };
-    });
-    for (const k of ['c1', 'c2', 'n1', 'n2']) expect(sizes[k], k).toEqual([30, 22, '20px', '11px', '6px', '6px']);
-    expect(sizes.c3[0], '3 digits may grow').toBeGreaterThanOrEqual(30);
+    // Fonts are not loaded in tests, so CI's fallback can be wider than Lexend: probe in the page font AND in a forced wide font.
+    for (const font of ['', 'Verdana, "DejaVu Sans", sans-serif']) {
+      const sizes = await page.evaluate((font) => {
+        const probe = (txt, cls) => { const s = document.createElement('span'); s.className = cls; s.textContent = txt; if (font) { s.style.fontFamily = font; s.style.letterSpacing = '0.5px'; }
+          const box = document.createElement('div'); box.appendChild(s); (/\bn\b/.test(cls) ? document.querySelector('#mainNav a') : document.getElementById('homeTop')).appendChild(/\bn\b/.test(cls) ? s : box);
+          const r = s.getBoundingClientRect(), c = getComputedStyle(s); const o = [r.width, r.height, c.lineHeight, c.borderTopLeftRadius]; s.remove(); box.remove(); return o; };
+        return { c1: probe('1', 'cnt'), c2: probe('88', 'cnt'), n1: probe('1', 'n need'), n2: probe('88', 'n need'), c3: probe('888', 'cnt wide'), n3: probe('888', 'n need wide') };
+      }, font);
+      for (const k of ['c1', 'c2', 'n1', 'n2']) expect(sizes[k], (font || 'page font') + ' ' + k).toEqual([30, 22, '20px', '11px']);
+      expect(sizes.c3[0], '3 digits may grow').toBeGreaterThan(30);
+      expect(sizes.n3[0], '3 digits may grow').toBeGreaterThan(30);
+    }
+    // The real tab count gets .wide only at 3+ digits.
+    const n = page.locator('#n-map');
+    if ((await n.textContent()).trim().length <= 2) await expect(n).not.toHaveClass(/\bwide\b/);
   });
 
   test('every home view: nothing under 13px, only weights 400 and 600, no uppercase labels, line height 1.5', async ({ page }) => {
@@ -275,10 +283,8 @@ for (const scheme of ['light', 'dark']) {
             .filter((x) => x.r < 4.5).map((x) => x.r.toFixed(2) + ' "' + x.e.textContent.trim().slice(0, 30) + '"');
           const edges = Array.from(document.querySelectorAll('.btn:not([disabled]), .mtag, .cnt, nav.main .n:not(:empty), input.find, .picker select'))
             .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
-            .map((e) => { const bg = L.bgOf(e.parentElement); return { e, r: L.ratio(L.rgb(getComputedStyle(e).borderTopColor), bg), onCard: L.lum(bg) > 0.9 || L.lum(bg) < 0.05 }; })
-            // 3:1 on the white card and on dark surfaces. KNOWN (flagged to Lisa): her clear line #9C9080 is 2.57:1 on the warm paper
-            // and the light tints, so a pill or button sitting straight on those is held at 2.5:1 (a ratchet: it may never get fainter).
-            .filter((x) => x.r < (x.onCard ? 3 : 2.5)).map((x) => x.r.toFixed(2) + ' ' + x.e.className + ' "' + x.e.textContent.trim().slice(0, 20) + '"');
+            .map((e) => ({ e, r: L.ratio(L.rgb(getComputedStyle(e).borderTopColor), L.bgOf(e.parentElement)) }))
+            .filter((x) => x.r < 3).map((x) => x.r.toFixed(2) + ' ' + x.e.className + ' "' + x.e.textContent.trim().slice(0, 20) + '"');
           return { text: text.slice(0, 6), edges: edges.slice(0, 6) };
         });
         expect(res.text, `${title}: text below 4.5:1`).toEqual([]);

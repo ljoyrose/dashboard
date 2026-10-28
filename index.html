@@ -293,10 +293,10 @@
      1px lines; hover AND selected = the same 1px edge turns ink (outline over it), nothing moves; focus 2px ink. One radius, 12px.
      No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints. Dark frame top and bottom. ==== */
   :root { --radius: 12px;
-    --paper: #EEE8DF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --ctl: #9C9080;
+    --paper: #EEE8DF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --ctl: #8A7F70;
     --bg: var(--paper); --surface: var(--card); --tc8: #3A3632; --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
     --frame: #3A3632; --frame-foot: #46413B; --frame-ink: #F6F1E8; --frame-line: #9C9285; }
-  :root.look-cool { --paper: #F2F4F6; --card: #FFFFFF; --ink: #2B3035; --muted: #5B646D; --line: #B9C3CC; --ctl: #8E9AA6;
+  :root.look-cool { --paper: #F2F4F6; --card: #FFFFFF; --ink: #2B3035; --muted: #5B646D; --line: #B9C3CC; --ctl: #7A8692;
     --frame: #33475B; --frame-foot: #405569; --frame-ink: #FFFFFF; --frame-line: #9FB0C0; --shadow: 0 1px 2px rgba(20,30,40,.12), 0 1px 8px rgba(20,30,40,.10); }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --paper: #181613; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --ctl: #7D7366;
@@ -349,9 +349,11 @@
   .mtag { background: transparent; border: 1px solid var(--ctl); color: var(--muted); font-weight: 600; }
   .mtag.risk { border-color: var(--ljr-2); background: var(--ljr-2-tint); color: var(--ink); }
   .mtag.fin { border-color: var(--ljr-3-text); background: var(--ljr-3-tint); color: var(--ink); }
-  /* Count pills: ONE fixed size so 1 and 2 digits match (only 3+ digits grow): 30 x 22, line 20px, radius 11px. */
-  .cnt, nav.main .n { min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 6px; border-radius: 11px; box-sizing: border-box;
-    display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; }
+  /* Count pills: ONE exact box so 1 and 2 digits match in any font: 30 x 22, line 20px, radius 11px.
+     Only 3+ digits (and worded pills) get .wide and grow. */
+  .cnt, nav.main .n { width: 30px; min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 3px; border-radius: 11px; box-sizing: border-box;
+    display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; overflow: hidden; }
+  .cnt.wide, nav.main .n.wide { width: auto; padding: 0 6px; overflow: visible; }
   .cnt { border: 1px solid var(--ctl); font-weight: 600; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .cnt.k-risk { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
   .cnt.k-fin { border-color: var(--ljr-3-text); background: var(--ljr-3-tint); }
@@ -2269,7 +2271,7 @@
     // Split by urgency (read pills): urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
     var split = [['risk', 'urgent'], ['fin', 'due soon'], ['todo', 'to do']].map(function (k) {
       var c = all.filter(function (x) { return k[0] === 'todo' ? (x.kind === 'ops' || x.kind === 'bin') : x.kind === k[0]; }).length;
-      return c ? '<span class="cnt k-' + k[0] + '">' + c + ' ' + k[1] + '</span>' : '';
+      return c ? '<span class="cnt wide k-' + k[0] + '">' + c + ' ' + k[1] + '</span>' : '';
     }).join('');
     var h = '<section id="homeTop" aria-label="Needs you"><div class="needsrow"><p class="needsline">Needs you: ' + (n ? n : reading ? '…' : '<span class="zero">0</span>') + '</p>' +
       (split ? '<span class="hsplit" id="needsSplit">' + split + '</span>' : '') + '</div>' +
@@ -2603,6 +2605,7 @@
   function tabBadge(key, n, label) {
     var b = $('n-' + key); if (!b) return;
     b.textContent = n ? String(n) : '';
+    b.classList.toggle('wide', String(n).length > 2); // count pills: exact 30px box for 1-2 digits, only 3+ grow
     b.parentNode.setAttribute('aria-label', label + (n ? ', ' + n + ' waiting' : ''));
   }
   function updateHeader() {
