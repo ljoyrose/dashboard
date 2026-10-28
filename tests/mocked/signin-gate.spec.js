@@ -1,7 +1,7 @@
 // Signed out, every page shows only its sign-in: no title, menu, search, names or footer. Pretend Google and Drive.
 const { test, expect } = require('../support/test');
 
-const PAGES = [['Main dashboard', './'], ['Money Hub', 'money/'], ['CD Hub', 'cdhub/'], ['Factory', 'factory/'], ['Marketplace', 'marketplace/'], ['GA Hub', 'food/']];
+const PAGES = [['Main dashboard', './'], ['Money Hub', 'money/'], ['CD Hub', 'cdhub/'], ['Factory', 'factory/'], ['Marketplace', 'marketplace/'], ['GA Hub', 'food/'], ['Studio', 'studio/']];
 
 // Visible text, skipping anything hidden by CSS (visibility, display, or 1px screen-reader-only text).
 const shown = () => {
@@ -27,7 +27,7 @@ for (const [name, url] of PAGES) {
     await page.waitForTimeout(300);
     const text = await page.evaluate(shown);
     // Only sign-in wording is allowed through.
-    const left = text.replace(/Skip to content|← Dashboard|Sign in to see (your money|the tables|what needs you|the GA Hub)|Sign in to open\.|Sign in with Google|Sign in again|Sign in|Loading( Google)? sign-in…|Loading…|Read-only\. One sign-in for the whole site\.|Not signed in|Factory|Google sign-in is still loading\. Try again in a moment\./g, '').trim();
+    const left = text.replace(/Skip to content|← Dashboard|Sign in to see (your money|the tables|what needs you|the GA Hub)|Sign in to open\.|Sign in with Google|Sign in again|Sign in|Loading( Google)? sign-in…|Loading…|Read-only\. One sign-in for the whole site\.|Not signed in|Factory|Studio|Google sign-in is still loading\. Try again in a moment\./g, '').trim();
     expect(left, `${name} shows more than the sign-in: "${text}"`).toBe('');
     for (const sel of ['nav', 'footer', '[data-search-open]', '#tabs']) {
       for (const el of await page.locator(sel).all()) await expect(el).not.toBeVisible();

@@ -124,7 +124,7 @@ test.describe('One sign-in for every tab', () => {
 });
 
 test.describe('Dashboard button (every page except home)', () => {
-  for (const [url, ready] of [['money/', '#signInBtn'], ['cdhub/', '#main'], ['marketplace/', '#signin']]) {
+  for (const [url, ready] of [['money/', '#signInBtn'], ['cdhub/', '#main'], ['marketplace/', '#signin'], ['studio/', '#signInBtn']]) {
     test(`${url}: top-right "Dashboard" button is always shown, keyboard reachable, and goes home`, async ({ page }) => {
       await page.goto(url);
       await expect(page.locator(ready)).toBeVisible();

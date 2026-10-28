@@ -11,6 +11,7 @@ const TILES = [
   ['CD Hub', 'cdhub/', true],
   ['Marketplace', 'marketplace/', true],
   ['GA Hub', 'food/', true],
+  ['Studio', 'studio/', true],
   ['Map', '#/map', false],
   ['Read first', '#/readfirst', false],
   ['Drive', '#/drive', false],

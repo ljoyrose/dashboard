@@ -50,3 +50,16 @@ ledger CSVs in the Money Hub shared drive. Files are found by folder and exact t
 is shown as an error, and the page never falls back to an old file id. Entities come from `MON-SUBJECTS.csv` at read time.
 The repo holds no figures or names, only the folder ids it needs. `money/core.js` is shared with the dashboard Money tile.
 Business and personal entities are shown separately and are never added together. Saving and answers are off.
+
+## Studio (`/studio/`)
+
+<https://ljoyrose.github.io/dashboard/studio/> is the asset hub (slot 7): PDFs, ebooks, lead magnets, slides, scripts, logbooks,
+family trees, puppy packs, social graphics, page and email drafts, for every brand. Idea → approved → reused.
+- **Tabs:** Me (Review, Gates, Hand jobs) · Ideas · Assets · Review · Brands · Library · Tools (credit meters) · + New.
+- **Reads** `studio-state.json` from the Studio logs folder (`studio` in `config.js`), by folder and exact name, every 5 minutes.
+  Not there yet: built-in example data, a banner, and nothing is sent.
+- **Writes** one request file per click into the requests folder (approve, redo, bin, gate, idea, set, studio).
+  The STUDIO-ENGINE Apps Script applies it. Undo until the engine's next run.
+- **Client-ready:** accounts (owner or client) and products; every brand, product, asset, idea and request carries `accountId`.
+  Account chips show when there is more than one account. An idea cannot mix two accounts.
+- Same sign-in, find bar and rules as Factory. TEST stamp until `studio.live` and the state's mode are both LIVE.

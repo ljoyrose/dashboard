@@ -49,6 +49,16 @@
       bookId: '1Lags6XfdNhvxwxGNgEKwfoosHr6ci9rzG-QXulgCfxU', // RR_FOOD (RR_DDF folder)
       live: false
     },
+    // Studio page (studio/): asset hub. Reads studio-state.json from logsFolderId (written by the STUDIO-ENGINE Apps Script);
+    // until it exists the page shows built-in example data and sends nothing. Clicks drop one request file into requestsFolderId.
+    studio: {
+      rootFolderId: '1zY7WMtfw_w5GioaoQlyEKkew-0dYZLvQ', // RR_Studio (shared drive "7 - Purple - Assets Ideas")
+      logsFolderId: '1Yq9ELzfAE27sxD1k3_KYEDCSz5BzmcdI', // holds studio-state.json
+      requestsFolderId: '13KclIUhOej1bmoQznfbrUiHtoab-FnDV', // the page writes request JSON files here
+      inboxFolderId: '1poaewHMRwrOcXwXa0PrMZhnmhyn66BzL', // Ideas > Inbox - drop files here
+      stateFile: 'studio-state.json',
+      live: false
+    },
     marketplace: {
       openWorkId: '1ShYbYmY8W-MEWqm9kHFsIcS5uR4b2SG00uXle_yL76U', // RR_OPEN-WORK (00 AI Commons)
       tab: 'Marketplace',
