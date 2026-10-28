@@ -700,6 +700,17 @@ test.describe('Studio page', () => {
     expect(ring.w).toBe('2px');
     await page.locator('.side [aria-label="Close details"]').click();
     await expect(page.locator('.side')).toHaveCount(0);
+    // Bottom tabs: no ring; the colour bar above the label grows on the selected tab and on hover, and nothing moves.
+    const cur = page.locator('nav.tabs a[data-nav="line"]'), me = page.locator('nav.tabs a[data-nav="me"]');
+    await expect(cur).toHaveCSS('outline-style', 'none');
+    await expect(cur).toHaveCSS('box-shadow', 'none');
+    await expect(cur.locator('.bar')).toHaveCSS('width', '40px');
+    await expect(me.locator('.bar')).toHaveCSS('width', '18px');
+    const tb = await me.boundingBox();
+    await me.hover();
+    await expect(me.locator('.bar')).toHaveCSS('width', '40px');
+    await expect(me).toHaveCSS('outline-style', 'none');
+    expect(await me.boundingBox()).toEqual(tb);
     // Decide keeps its sections as columns.
     await go(page, 'decide');
     await expect(page.locator('.bwrap[data-board="decide"] .col[data-sect="gate"] .crow[data-row="sa-gate"]')).toBeVisible();

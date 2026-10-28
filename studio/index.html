@@ -77,7 +77,11 @@
   /* Five tabs in a bar at the bottom, like Marketplace (thumb reach on the phone); a sub-row of links inside Line, Decide and Kits. */
   nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
   nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; position: relative; }
-  nav.tabs a[aria-current="page"] { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: var(--sel-fill); }
+  /* Bottom tabs: no ring or inner line. Hover and selected = the small colour bar above the label grows (same height, so nothing moves). */
+  nav.tabs a .bar { width: 18px; height: 4px; border-radius: 2px; background: var(--tc); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
+  nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
+  @media (hover: hover) { nav.tabs a:hover .bar { width: 40px; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { nav.tabs a .bar { transition: none; } }
   nav.tabs .n { position: absolute; top: 2px; right: calc(50% - 30px); }
   @media (min-width: 900px) { nav.tabs { max-width: 900px; margin: 0 auto; border-left: 1px solid var(--line); border-right: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; } }
   html { scroll-padding-bottom: 96px; }
@@ -86,7 +90,7 @@
   .subnav a[aria-current="page"] { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: var(--sel-fill); }
   /* One state only: hover = selected = the border in ink plus a 1.5px outline drawn inside it; borders never change width, so nothing moves. Never a solid fill. */
   .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: var(--sel-fill); }
-  @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, nav.tabs a:hover, .vsw button:hover, .seg button:hover, .col-list .crow:hover { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; } }
+  @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .col-list .crow:hover { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; } }
   .n:empty { display: none; }
   .cnt, nav.tabs .n { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 1; color: var(--ink); background: transparent; }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
@@ -280,6 +284,8 @@
   .btn, .vsw button, .lk, .ico { border-radius: 999px; }
   .pill { padding: 4px 12px; min-height: 28px; }
   nav.tabs a, .subnav a { border-radius: 6px; }
+  nav.tabs a, nav.tabs a:hover, nav.tabs a[aria-current="page"] { outline: none; box-shadow: none; border-color: transparent; background: transparent; }
+  nav.tabs a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .subnav { gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
   .vtop .subnav { flex: 1 1 auto; }
   .subnav a { border-color: transparent; background: transparent; }
@@ -318,11 +324,11 @@
   <div id="view"></div>
 </main>
 <nav class="tabs" id="tabs" aria-label="Sections">
-  <a href="#/me" data-nav="me"><i class="ti ti-user"></i><span>Me</span><span class="n" id="nMe"></span></a>
-  <a href="#/decide" data-nav="decide"><i class="ti ti-traffic-lights"></i><span>Decide</span><span class="n" id="nDecide"></span></a>
-  <a href="#/do" data-nav="do"><i class="ti ti-hand-finger"></i><span>Do</span><span class="n" id="nDo"></span></a>
-  <a href="#/line" data-nav="line"><i class="ti ti-timeline"></i><span>Line</span><span class="n" id="nLine"></span></a>
-  <a href="#/kits" data-nav="kits"><i class="ti ti-box"></i><span>Kits</span><span class="n" id="nKits"></span></a>
+  <a href="#/me" data-nav="me" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-user"></i><span>Me</span><span class="n" id="nMe"></span></a>
+  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-traffic-lights"></i><span>Decide</span><span class="n" id="nDecide"></span></a>
+  <a href="#/do" data-nav="do" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-hand-finger"></i><span>Do</span><span class="n" id="nDo"></span></a>
+  <a href="#/line" data-nav="line" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-timeline"></i><span>Line</span><span class="n" id="nLine"></span></a>
+  <a href="#/kits" data-nav="kits" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-box"></i><span>Kits</span><span class="n" id="nKits"></span></a>
 </nav>
 
 <script>
