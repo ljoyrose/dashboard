@@ -123,26 +123,61 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
   });
 });
 
-test.describe('Money Hub look: hover = the same 1px edge turns ink; nothing ever moves', () => {
-  test('buttons, Details, entity cards, sub-tabs and bottom tabs keep their size and place on hover', async ({ page }) => {
-    await open(page, 'light');
-    for (const [v, sel] of [['now', 'main .btn'], ['now', 'main details > summary'], ['now', 'a.ent'], ['now', 'header .btn'], ['todo', '.subnav a:not([aria-current])'], ['now', 'nav.main a[data-nav="dates"]']]) {
-      await go(page, v);
-      const el = page.locator(sel).first();
-      await el.scrollIntoViewIfNeeded();
-      const before = await el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; });
-      await el.hover();
-      await page.waitForTimeout(250);
-      const after = await el.evaluate((e) => { const r = e.getBoundingClientRect(), cs = getComputedStyle(e); return { box: [r.x, r.y, r.width, r.height], ow: cs.outlineWidth, os: cs.outlineStyle, oo: cs.outlineOffset }; });
-      expect(after.box, `${sel} moved or resized on hover`).toEqual(before);
-      if (!sel.startsWith('nav.main')) {
-        expect(after.os, `${sel} hover outline`).toBe('solid');
-        expect(after.ow, `${sel} hover outline width`).toBe('1px');
-        expect(after.oo, `${sel} hover outline offset`).toBe('-1px');
-      } else {
-        expect(await el.locator('.bar').evaluate((e) => getComputedStyle(e).width)).toBe('40px'); // the colour bar widens instead
+test.describe('Money Hub look: house hover rule (hover = selected; nothing ever moves)', () => {
+  // Neutral controls: 1px ink line inside + muted tint. Coloured controls (the section tabs) keep their own colour:
+  // 1px line in that colour inside + a pale tint of it, never ink. Header buttons sit on the dark frame: its ink + its tint.
+  const CASES = [
+    ['light', 'now', 'main .btn', 'neutral'], ['light', 'now', 'main details > summary', 'neutral'], ['light', 'now', 'a.ent', 'neutral'],
+    ['light', 'todo', '.subnav a:not([aria-current])', 'neutral'], ['light', 'now', 'header .btn', 'frame'],
+    ['light', 'now', 'nav.main a[data-nav="dates"]', 'own'], ['light', 'now', 'nav.main a[data-nav="accountant"]', 'own'],
+    ['dark', 'now', 'main .btn', 'neutral'], ['dark', 'now', 'nav.main a[data-nav="todo"]', 'own'],
+  ];
+  for (const scheme of ['light', 'dark']) {
+    test(`${scheme}: buttons, Details, entity cards, sub-tabs, header buttons and section tabs`, async ({ page }) => {
+      await open(page, scheme);
+      for (const [sch, v, sel, kind] of CASES.filter((c) => c[0] === scheme)) {
+        await go(page, v);
+        const el = page.locator(sel).first();
+        await el.scrollIntoViewIfNeeded();
+        const before = await el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; });
+        await el.hover();
+        await page.waitForTimeout(250);
+        const got = await el.evaluate((e, kind) => {
+          const r = e.getBoundingClientRect(), cs = getComputedStyle(e), root = getComputedStyle(document.documentElement);
+          // Expected colours, resolved by the browser itself through a probe element.
+          const probe = (prop, val, host) => { const d = document.createElement('i'); d.style[prop] = val; (host || document.body).appendChild(d); const out = getComputedStyle(d)[prop]; d.remove(); return out; };
+          const want = kind === 'own'
+            ? { line: probe('color', 'var(--c)', e), fill: probe('backgroundColor', 'color-mix(in srgb, var(--c) 14%, var(--card))', e) }
+            : kind === 'frame'
+              ? { line: probe('color', 'var(--frame-ink)'), fill: probe('backgroundColor', 'color-mix(in srgb, var(--frame-ink) 14%, var(--frame))') }
+              : { line: probe('color', 'var(--ink)'), fill: probe('backgroundColor', 'color-mix(in srgb, var(--muted) 14%, var(--card))') };
+          return { box: [r.x, r.y, r.width, r.height], ow: cs.outlineWidth, os: cs.outlineStyle, oo: cs.outlineOffset, oc: cs.outlineColor, bg: cs.backgroundColor, want, ink: probe('color', 'var(--ink)') };
+        }, kind);
+        const where = `${sel} (${scheme})`;
+        expect(got.box, `${where} moved or resized on hover`).toEqual(before);
+        expect([got.os, got.ow, got.oo], `${where} hover line`).toEqual(['solid', '1px', '-1px']);
+        expect(got.oc, `${where} hover line colour`).toBe(got.want.line);
+        expect(got.bg, `${where} hover tint`).toBe(got.want.fill);
+        if (kind === 'own') {
+          expect(got.oc, `${where} a coloured control never turns ink`).not.toBe(got.ink);
+          expect(await el.locator('.bar').evaluate((e) => getComputedStyle(e).width), where).toBe('40px'); // its colour bar widens too
+        }
       }
-    }
+    });
+  }
+
+  test('selected = the same look as hover (section tab in its own colour, sub-tab in ink + muted tint)', async ({ page }) => {
+    await open(page, 'light');
+    await go(page, 'todo');
+    const look = (sel) => page.locator(sel).evaluate((e) => { const cs = getComputedStyle(e); return [cs.outlineStyle, cs.outlineWidth, cs.outlineOffset, cs.outlineColor, cs.backgroundColor]; });
+    const tab = await look('nav.main a[aria-current="page"]');
+    const sub = await look('.subnav a[aria-current="page"]');
+    const want = await page.locator('nav.main a[aria-current="page"]').evaluate((e) => {
+      const p = (prop, val) => { const d = document.createElement('i'); d.style[prop] = val; e.appendChild(d); const o = getComputedStyle(d)[prop]; d.remove(); return o; };
+      return { tab: [p('color', 'var(--c)'), p('backgroundColor', 'color-mix(in srgb, var(--c) 14%, var(--card))')], sub: [p('color', 'var(--ink)'), p('backgroundColor', 'color-mix(in srgb, var(--muted) 14%, var(--card))')] };
+    });
+    expect(tab).toEqual(['solid', '1px', '-1px', ...want.tab]);
+    expect(sub).toEqual(['solid', '1px', '-1px', ...want.sub]);
   });
 
   test('read-only pills (flags, dates, counts, the read stamp) have no hover', async ({ page }) => {
@@ -175,7 +210,7 @@ test.describe('Money Hub look: contrast (text 4.5:1, control lines 3:1)', () => 
       for (const v of ['now', 'e/TESTCO', 'control']) {
         await go(page, v);
         const bad = await page.evaluate(() => {
-          const rgb = (c) => c.match(/[\d.]+/g).map(Number);
+          const rgb = (c) => { const n = c.match(/[\d.]+/g).map(Number); return /^color\(srgb/.test(c) ? n.map((x, i) => (i < 3 ? x * 255 : x)) : n; }; // color-mix() tints come back as color(srgb 0-1)
           const L = (c) => { const [r, g, b] = rgb(c).map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4); }); return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
           const ratio = (a, b) => { const x = L(a), y = L(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
           const bgOf = (e, self) => { for (let n = self ? e : e.parentElement; n; n = n.parentElement) { const c = getComputedStyle(n).backgroundColor; const a = rgb(c); if (a.length < 4 || a[3] > 0.5) return c; } return getComputedStyle(document.body).backgroundColor; };

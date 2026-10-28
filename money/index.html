@@ -24,7 +24,8 @@
   /* House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026; reference: Studio PR #104). Colours: ../tokens.css for the LJR7 spine;
      the page is "Warm clear" (default) or "Cool clear", each with a dark version, read from Studio's Look setting ('dash-look')
      but never written here. Lexend 400/600, nothing under 13px, line height 1.5, ONE radius 12px (only status dots are round),
-     1px lines; hover = selected = the same 1px edge turns ink (outline, offset -1px), so nothing ever moves or resizes.
+     1px lines; hover = selected = a 1px line drawn inside (outline, offset -1px) plus a pale tint: ink + muted tint on neutral
+     controls, the control's own colour + its tint on coloured ones. Nothing ever moves or resizes.
      No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints. */
   :root { --radius: 12px;
     --paper: #EEE8DF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --soft: #DED5C7; --ctl: #8A7F70;
@@ -88,10 +89,16 @@
     border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); cursor: pointer; font-size: 14px; font-weight: 600; text-decoration: none; line-height: 1.2; }
   .btn:disabled { opacity: .6; cursor: default; }
   header .btn { background: transparent; color: var(--frame-ink); border-color: var(--frame-line); }
+  /* House hover rule (Lisa, 28 Oct): hover = selected. Neutral controls: a 1px ink line drawn inside + a muted tint.
+     Meaning-coloured controls (the section tabs) keep their OWN colour: a 1px line in that colour inside + a pale tint of it,
+     never ink. Drawn as an outline at -1px, so nothing moves. Keyboard focus stays the 2px ink ring. */
+  :root { --hov-neutral: color-mix(in srgb, var(--muted) 14%, var(--card)); }
   @media (hover: hover) {
-    .btn:hover, details > summary:hover, a.ent:hover, .subnav a:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; }
-    header .btn:hover { outline-color: var(--frame-ink); }
+    .btn:hover, details > summary:hover, a.ent:hover, .subnav a:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--hov-neutral); }
+    header .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); }
+    nav.main a:hover { outline: 1px solid var(--c); outline-offset: -1px; background: color-mix(in srgb, var(--c) 14%, var(--card)); }
   }
+  nav.main a[aria-current="page"] { outline: 1px solid var(--c); outline-offset: -1px; background: color-mix(in srgb, var(--c) 14%, var(--card)); }
   details > summary { list-style: none; width: max-content; max-width: 100%; }
   details > summary::-webkit-details-marker { display: none; }
   details > summary::after { content: "\25BE"; font-size: 13px; color: var(--muted); }
@@ -245,7 +252,7 @@
 
   .subnav { display: flex; flex-wrap: wrap; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
   .subnav a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); text-decoration: none; font-size: 14px; font-weight: 600; color: var(--ink); }
-  .subnav a[aria-current="page"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; }
+  .subnav a[aria-current="page"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--hov-neutral); }
 
   .banner { border-radius: var(--radius); padding: 8px 12px; border: 1px solid var(--r-risk); background: var(--t-risk); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
   .banner.info { border-color: var(--line); background: var(--surface); }
