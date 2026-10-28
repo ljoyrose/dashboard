@@ -389,6 +389,34 @@
   .more-d .l3 { display: flex; align-items: center; gap: 8px; }
   .more-d .type { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); }
   .more-d .lk { width: auto; padding: 0 10px; gap: 4px; font-size: 13px; text-decoration: none; }
+  /* Me: greeting, summary strip, Next, Needs you today; friendly empty states. */
+  .hello { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .hello h2 { margin: 0; font-size: 26px; font-weight: 600; } .hello .sub { margin: 0; color: var(--muted); }
+  .three { display: flex; gap: 8px; flex-wrap: wrap; }
+  .three .sum { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 8px 14px 8px 8px; font-weight: 600; }
+  .three .sum .big { font-size: 24px; min-width: 40px; height: 40px; display: inline-grid; place-items: center; border-radius: 999px; border: 1px solid var(--ink); padding: 0 8px; font-variant-numeric: tabular-nums; }
+  .three .sum.need .big { border-color: var(--ljr-3); background: var(--ljr-3-tint); }
+  .three .sum.over .big { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
+  .mecards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; align-items: start; }
+  .mcard { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); min-width: 0; }
+  .mcard h3 { margin: 0 0 8px; font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .mcard h3 .cnt { margin-left: auto; }
+  .mcard.next { border-color: var(--ink); }
+  .mcard.next .t { font-size: 20px; font-weight: 600; margin: 2px 0 4px; overflow-wrap: anywhere; }
+  .mcard.next .sub { margin: 0 0 12px; color: var(--muted); }
+  .mrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
+  .mrow:first-of-type { border-top: 0; }
+  .mrow .ic { width: 32px; height: 32px; flex: none; border-radius: 50%; border: 1px solid var(--ctl); }
+  .mrow .t { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; } .mrow .t small { display: block; color: var(--muted); font-size: 13px; font-weight: 400; }
+  .mrow .dpill { margin-left: 0; }
+  @media (hover: hover) { .mrow:hover .ic { border-color: var(--sc); background: var(--tint); } .mrow:hover .t { text-decoration: underline; text-underline-offset: 3px; } }
+  .okempty { margin: 0; color: var(--muted); font-size: 14px; display: flex; gap: 8px; align-items: center; }
+  .okempty::before { content: "\2713"; display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 50%; border: 1px solid var(--ljr-5); background: var(--ljr-5-tint); color: var(--ink); font-size: 13px; }
+  @media (max-width: 760px) {
+    .hello h2 { font-size: 22px; }
+    .three { flex-wrap: nowrap; gap: 6px; } .three .sum { padding: 4px 8px 4px 4px; gap: 6px; font-size: 13px; flex: 1; min-width: 0; } .three .sum .big { font-size: 17px; min-width: 30px; height: 30px; padding: 0 6px; }
+    .mecards .need-card { order: -1; }
+  }
 </style>
 </head>
 <body>
@@ -1007,11 +1035,28 @@
   }
 
   /* ---------- Views ---------- */
+  // Me (Bloodline + Marketplace): greeting, a three-number summary, the one Next item, what needs you today, then the decision lists.
+  function lateOf(a) { var d = a.dated && a.eventDate ? daysTo(a.eventDate) : null; return d !== null && d < 0 && a.stage < 8; }
+  function urgency(a) { var d = a.dated && a.eventDate ? daysTo(a.eventDate) : 9999; return (lateOf(a) ? -1e5 : 0) + d; }
   function vMe() {
     var s = fsOf('me'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
     var R = keep(reviews()), G = keep(gates()), H = keep(hands());
-    var sect = function (icon, word, href, l, kind) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + '<a href="' + href + '">' + word + '</a> ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : '<p class="muted">' + I('circle-check') + ' Nothing waiting.</p>') + '</div>'; };
-    return findBar('me', meItems()) + sect('eye-check', 'Review', '#/review', R, 'review') + sect('traffic-lights', 'Gates', '#/assets', G, 'gate') + sect('hand-finger', 'Tasks', '#/assets?fit=hand', H, 'hand') + vSuggest();
+    var live = all().filter(function (a) { return !isTest(a) && !sent[a.id] && a.stage < 8; });
+    var needs = live.filter(function (a) { return needOf(a); }).sort(function (a, b) { return urgency(a) - urgency(b); });
+    var over = live.filter(lateOf).length, onTrack = live.filter(function (a) { return a.stage >= 1 && !needOf(a); }).length;
+    var h = new Date().getHours(), hello = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    var today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+    var ok = function (t) { return '<p class="okempty">' + t + '</p>'; };
+    var sect = function (icon, word, href, l, kind, none) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + '<a href="' + href + '">' + word + '</a> ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : ok(none || 'Nothing waiting.')) + '</div>'; };
+    var mrow = function (a) { var sl = stSlot(a.stage); return '<a class="mrow" data-mrow="' + esc(a.id) + '" href="#/asset/' + encodeURIComponent(a.id) + '" style="--sc:var(--ljr-' + sl + ');--tint:var(--ljr-' + sl + '-tint)"><span class="ic" aria-hidden="true"></span><span class="t">' + esc(bare(a)) + '<small>' + esc(needOf(a)) + ' · Step ' + a.stage + ': ' + esc(STAGES[a.stage]) + '</small></span>' + datePill(a) + '</a>'; };
+    var nx = needs[0];
+    return '<div class="hello"><h2>' + hello + ', Lisa</h2><p class="sub">' + esc(today) + '</p></div>' +
+      '<div class="three" data-three><span class="sum" data-sum="ok"><span class="big">' + onTrack + '</span>On track</span><span class="sum need" data-sum="need"><span class="big">' + needs.length + '</span>Needs you</span><span class="sum over" data-sum="over"><span class="big">' + over + '</span>Overdue</span></div>' +
+      '<div class="mecards">' +
+      '<section class="mcard next" data-next>' + '<h3>Next</h3>' + (nx ? '<div class="t">' + esc(bare(nx)) + '</div><p class="sub">' + esc(needOf(nx)) + (nx.dated && nx.eventDate ? ' · due ' + dmy(Date.parse(nx.eventDate)) : '') + '</p><a class="btn" href="#/asset/' + encodeURIComponent(nx.id) + '">Open it</a>' : ok('Nothing needs you.')) + '</section>' +
+      '<section class="mcard need-card" data-needs><h3>Needs you today ' + icnt(needs.length) + '</h3>' + (needs.length ? needs.slice(0, 7).map(mrow).join('') : ok('Nothing needs you.')) + '</section>' +
+      '</div>' +
+      findBar('me', meItems()) + sect('eye-check', 'Approve', '#/review', R, 'review', 'All decided. Nothing waiting.') + sect('traffic-lights', 'Gates', '#/assets', G, 'gate') + sect('hand-finger', 'Tasks', '#/assets?fit=hand', H, 'hand') + vSuggest();
   }
   // Studio's own suggestions from the learning loop: nothing changes until Lisa accepts.
   function vSuggest() {

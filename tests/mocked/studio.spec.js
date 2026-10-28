@@ -1144,6 +1144,33 @@ test.describe('Studio page', () => {
     await expect(page.locator('.crow[data-row="sa-gate"] [data-chip="need"]')).toHaveText('Gate');
   });
 
+  test('Me: greeting, three-number summary, Next with one button, Needs you today (7 at most); phone puts Needs first and the three in one row', async ({ page, guard }) => {
+    await open(page, guard, '#/me');
+    await expect(page.locator('.hello h2')).toHaveText(/^Good (morning|afternoon|evening), Lisa$/);
+    await expect(page.locator('.hello h2')).toHaveCSS('font-size', '26px');
+    const sums = page.locator('[data-three] .sum');
+    await expect(sums).toHaveText([/On track/, /Needs you/, /Overdue/]);
+    expect(await page.locator('[data-sum="need"] .big').evaluate((e) => getComputedStyle(e).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)'); // amber tint
+    const n = page.locator('[data-next]');
+    await expect(n.locator('.btn')).toHaveCount(1);
+    await expect(n.locator('.btn')).toHaveText('Open it');
+    await expect(n).toHaveCSS('border-top-color', await page.evaluate(() => getComputedStyle(document.body).color));
+    expect(await n.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(255, 254, 251)'); // white card, no tint
+    const m = page.locator('[data-needs] .mrow');
+    expect(await m.count()).toBeGreaterThan(0);
+    expect(await m.count()).toBeLessThanOrEqual(7);
+    await expect(m.first().locator('small')).toContainText('Step ');
+    await expect(m.first().locator('.ic')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
+    await m.first().hover();
+    expect(await m.first().locator('.ic').evaluate((e) => getComputedStyle(e).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)'); // takes the stage tint on hover
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('.hello h2')).toHaveCSS('font-size', '22px');
+    const ys = await sums.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+    expect(new Set(ys).size, 'the three fit in one row').toBe(1);
+    expect((await page.locator('[data-needs]').boundingBox()).y).toBeLessThan((await n.boundingBox()).y);
+    await noSidewaysScroll(page, 'Me on the phone');
+  });
+
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
     await open(page, guard, '#/line');
     const html = page.locator('html');
