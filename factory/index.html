@@ -67,7 +67,8 @@
   .plus { margin-left: auto; display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 50%; color: var(--ink); text-decoration: none; }
   .acts .btn.yes { color: var(--ljr-5-text); border-color: var(--ljr-5); }
   .acts .btn.no { color: var(--ljr-2-text); border-color: var(--ljr-2); }
-  nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-4); color: #2C2C2A; border-radius: var(--radius); padding: 0 7px; }
+  /* Tab counts = Studio's needs-you count: an exact 30x22 box, 1px amber ring + amber tint, ink number; never a solid fill (Lisa, 28 Oct 2026). */
+  nav.tabs .n { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 22px; line-height: 20px; padding: 0 3px; border: 1px solid var(--ljr-3); background: var(--ljr-3-tint); color: var(--ink); border-radius: 11px; font-size: 13px; font-weight: 600; white-space: nowrap; font-variant-numeric: tabular-nums; }
   main { padding: 16px 0 48px; display: flex; flex-direction: column; gap: 14px; }
   main.wrap { padding: 16px 16px 48px; }
   .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
@@ -139,7 +140,7 @@
 
   .sw { display: inline-block; width: 28px; height: 16px; border-radius: var(--radius); border: 1.5px solid var(--muted); position: relative; vertical-align: middle; }
   .sw i { position: absolute; top: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); transition: left .15s; }
-  .sw.on { border-color: var(--ljr-5); } .sw.on i { left: 14px; background: var(--ljr-5); }
+  .sw.on { border-color: var(--ljr-5); } .sw.on i { left: 14px; background: var(--ljr-5); } /* Allowed exception to "no solid fills": the switch knob stays solid; outlined it is too faint to see (Lisa, 28 Oct 2026). */
   .crow { padding: 10px 0; border-top: 1px solid var(--line); }
   .card > .crow:first-child, .clines > .crow:first-child { border-top: 0; }
   .crow .l1 { display: flex; gap: 8px; align-items: flex-start; }
@@ -154,7 +155,7 @@
   .crow .acts .btn { padding: 4px 14px; font-size: 16px; }
   .ico, .flagb, .opt { position: relative; background: none; border: 1px solid transparent; border-radius: var(--radius); width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); }
 
-  .ico .new { position: absolute; top: 1px; right: 1px; width: 7px; height: 7px; border-radius: 50%; background: var(--ljr-2); }
+  .ico .new { position: absolute; top: 1px; right: 1px; width: 7px; height: 7px; border-radius: 50%; background: var(--ljr-2); } /* Allowed exception to "no solid fills": the unread dot stays solid; outlined it is too faint (Lisa, 28 Oct 2026). */
   .flag { width: 18px; height: 18px; display: block; color: var(--muted); }
   .stat { font: inherit; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #fff; background: var(--sc); border: 0; border-radius: var(--radius); padding: 2px 7px; cursor: pointer; }
   .date { position: relative; font-size: 13px; color: var(--muted); white-space: nowrap; cursor: pointer; }
