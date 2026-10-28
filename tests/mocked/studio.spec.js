@@ -456,6 +456,26 @@ test.describe('Studio page', () => {
     expect(got[0].body).toMatchObject({ kind: 'check', accountId: 'acc-owner', brandId: 'sb-north', item: 'Email list', ok: true });
   });
 
+  test('hardening: a javascript: link is made dead, and a double tap on Approve writes one file', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/review', { change: (s) => { s.assets.filter((a) => a.id === 'sa-rev1')[0].reviewLink = 'javascript:alert(1)'; } });
+    const r = page.locator('.crow[data-row="sa-rev1"]');
+    await expect(r.locator('a.lk[aria-label="Preview"]')).toHaveAttribute('href', '#');
+    await r.locator('[data-act="approve"]').dblclick();
+    await expect(r.locator('[data-sent]')).toBeVisible();
+    expect(got).toHaveLength(1);
+  });
+
+  test('hardening: an engine last run over an hour ago turns the pill red; a failed refresh keeps the page', async ({ page, guard, allowedConsole }) => {
+    allowedConsole.push(/Failed to load resource|ERR_FAILED|net::/);
+    await open(page, guard, '#/me', { change: (s) => { s.health.lastRun = new Date(NOW.getTime() - 3 * 36e5).toISOString(); } });
+    await expect(page.locator('#enginePill')).toHaveClass(/bad/);
+    await page.route(/googleapis\.com\/drive\/v3\/files\?/, (route) => route.abort());
+    await page.locator('#refreshBtn').click();
+    await expect(page.locator('#banner')).toContainText('Offline');
+    await expect(page.locator('[data-sect="review"] .crow')).toHaveCount(2);
+  });
+
   test('example data has groups, kits, styles, formats, a variant and a gap (fictional), and sends nothing', async ({ page, guard }) => {
     await open(page, guard, '#/kits', { state: false });
     await expect(page.locator('[data-playbook="ex-pb1"]')).toBeVisible();

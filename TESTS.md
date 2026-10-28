@@ -81,6 +81,8 @@ That is 470 checks that must pass (mocked + phone, 28 Oct 2026, Studio v0.2).
 - New brief: group filters brands; More holds playbook, kit, style, formats, language, length, variant and sources; Send writes them all. A variant needs a purpose.
 - Add tool writes one `tool` request. Gaps list what no owned tool can do. A tool we do not own has no meter.
 - Done on a Task writes `done` with the credits used. A set-up tick writes `check` and shows at once.
+- A `javascript:` link becomes a dead link, and a double tap on Approve writes only one file.
+- An engine that last ran over an hour ago shows a red pill. A failed refresh keeps the page and says "Offline".
 - 390px: no sideways scroll on any tab, Kits section, or open form. Dark mode: dark page, every word at least 4.5:1. No text under 13px.
 
 **CD Hub**
