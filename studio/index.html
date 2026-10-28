@@ -281,7 +281,7 @@
  *   gaps:   [{ capability, format|null, ratio|null, reason, assetIds: [id] }]   (no owned tool can do a kit's need: buy or approve one)
  *   failed: [{ assetId, kind }]   (requests the engine could not apply; the page clears their ✓)
  * }
- * Lists: Me = Review (stage 7) + Gates + Manual tasks (fit HAND, who lisa). Ideas = stage 0. Assets = 1-7. Library = 8.
+ * Lists: Me = Review (stage 7) + Gates + Tasks (fit HAND, who lisa). Ideas = stage 0. Assets = 1-7. Library = 8.
  * Account: an item's accountId, else its first brand's. Account chips show only when there is more than one account.
  * Group: an item's groupId, else its first brand's. Group chips show only when more than one group has items.
  * Test items: title starting TEST- or ZZ_DELETE_, or flag 'test': hidden unless the TEST switch is on.
@@ -658,7 +658,7 @@
     var s = fsOf('me'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
     var R = keep(reviews()), G = keep(gates()), H = keep(hands());
     var sect = function (icon, word, href, l, kind) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + '<a href="' + href + '">' + word + '</a> ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : '<p class="muted">' + I('circle-check') + ' Nothing waiting.</p>') + '</div>'; };
-    return findBar('me', meItems()) + sect('eye-check', 'Review', '#/review', R, 'review') + sect('traffic-lights', 'Gates', '#/assets', G, 'gate') + sect('hand-finger', 'Manual tasks', '#/assets?fit=hand', H, 'hand');
+    return findBar('me', meItems()) + sect('eye-check', 'Review', '#/review', R, 'review') + sect('traffic-lights', 'Gates', '#/assets', G, 'gate') + sect('hand-finger', 'Tasks', '#/assets?fit=hand', H, 'hand');
   }
   function vIdeas() {
     var inbox = ST.inboxFolderId ? '<a class="pill" href="https://drive.google.com/drive/folders/' + esc(ST.inboxFolderId) + '" target="_blank" rel="noopener" title="Inbox: drop files here" style="--hc:var(--ljr-7-text)">' + I('inbox') + 'Inbox</a>' : '';

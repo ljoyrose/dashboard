@@ -55,7 +55,7 @@ Business and personal entities are shown separately and are never added together
 
 <https://ljoyrose.github.io/dashboard/studio/> is the asset hub (slot 7): PDFs, ebooks, lead magnets, slides, scripts, logbooks,
 family trees, puppy packs, social graphics, page and email drafts, for every brand. Idea → approved → reused.
-- **Tabs:** Me (Review, Gates, Manual tasks with Done) · Ideas · Assets · Review · Brands (set-up ticks) · Library · Kits · Tools (credit meters, gaps, Add tool) · + New.
+- **Tabs:** Me (Review, Gates, Tasks with Done) · Ideas · Assets · Review · Brands (set-up ticks) · Library · Kits · Tools (credit meters, gaps, Add tool) · + New.
 - **Two ladders (v0.2):** WHERE = Group › Business (brand) › Product (Group chips on the find bar). WHAT = Brick › Kit › Pack › Playbook;
   a playbook aims at one outcome (Attract, Convert, Deliver, Keep, Reuse). Style = Framework + Voice + Look. Formats are presets.
   A variant points at its master (refresh, rebrand, reformat, translate, A/B test). Sources carry a rights flag.

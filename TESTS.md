@@ -70,7 +70,7 @@ That is 470 checks that must pass (mocked + phone, 28 Oct 2026, Studio v0.2).
 
 **Studio** (`tests/mocked/studio.spec.js`, data in `tests/fixtures/studio/state.js`)
 - No `studio-state.json` on Drive: the example banner shows, example brands show, every write button is off, and nothing is written.
-- The real state: TEST stamp, engine On with its last run, budget pill, and Me lists Review, Gates and Manual tasks. TEST items show only with the TEST switch.
+- The real state: TEST stamp, engine On with its last run, budget pill, and Me lists Review, Gates and Tasks. TEST items show only with the TEST switch.
 - Every tab opens its own view and lights its tab. A brand chip filters Assets, the address carries it and a reload keeps it.
 - Approve writes one `approve` request into the requests folder and shows "✓ HH:MM · applies by HH:MM"; Undo trashes the file. Redo sends its note. A gate verdict and a new idea each write one file.
 - Accounts: owner and client stay apart. Account chips filter (hidden with one account); requests carry `accountId`; an idea cannot mix two accounts. The example shows one owner and one client.
@@ -80,7 +80,7 @@ That is 470 checks that must pass (mocked + phone, 28 Oct 2026, Studio v0.2).
 - Asset rows show framework, format and variant chips, and a Master link on a variant.
 - New brief: group filters brands; More holds playbook, kit, style, formats, language, length, variant and sources; Send writes them all. A variant needs a purpose.
 - Add tool writes one `tool` request. Gaps list what no owned tool can do. A tool we do not own has no meter.
-- Done on a Manual task writes `done` with the credits used. A set-up tick writes `check` and shows at once.
+- Done on a Task writes `done` with the credits used. A set-up tick writes `check` and shows at once.
 - 390px: no sideways scroll on any tab, Kits section, or open form. Dark mode: dark page, every word at least 4.5:1. No text under 13px.
 
 **CD Hub**
