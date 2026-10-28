@@ -345,6 +345,18 @@
     .board { scroll-snap-type: x mandatory; }
     .col { flex-basis: calc(100vw - 48px); }
   }
+  /* Two pill sizes only. Small = things you read (counts, tags, the TEST stamp): 24px high, 13px text.
+     Button = anything you press (buttons, filter and pick chips, sub-tabs, switches, menu items, icon buttons): 36px, 44px on the phone. */
+  .cnt, nav.tabs .n, .fbtn .n:not(:empty), .tag, .stamp { height: 24px; min-height: 24px; min-width: 24px; font-size: 13px; line-height: 1; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
+  .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, #moreMenu > *, .fbar .sbox { min-height: 36px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; display: inline-flex; align-items: center; }
+  #moreMenu > * { display: flex; }
+  .lk, .ico { min-width: 36px; width: auto; height: 36px; }
+  @media (max-width: 544px) {
+    .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, #moreMenu > *, .fbar .sbox { min-height: 44px; }
+    .lk, .ico { min-width: 44px; height: 44px; }
+    nav.tabs a { min-height: 62px; justify-content: flex-start; padding-top: 8px; gap: 4px; }
+    nav.tabs .n { top: 4px; left: calc(50% + 10px); min-width: 24px; height: 24px; padding: 0 6px; } /* beside the icon, above the label */
+  }
 </style>
 </head>
 <body>

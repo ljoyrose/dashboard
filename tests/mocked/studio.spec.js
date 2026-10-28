@@ -973,6 +973,18 @@ test.describe('Studio page', () => {
     expect(solid).toEqual([]);
   });
 
+  test('two pill sizes only: things you read are 24px, things you press are 36px (44px on the phone)', async ({ page, guard }) => {
+    await open(page, guard, '#/line');
+    await openFilters(page);
+    const h = (sel) => page.locator(sel).first().evaluate((e) => Math.round(e.getBoundingClientRect().height));
+    for (const sel of ['.col-head .cnt', '.subnav .cnt', '.crow .tag', '#stamp', 'nav.tabs #nLine']) expect(await h(sel), sel).toBe(24);
+    for (const sel of ['#newBtn', '#fpanel [data-fx]', '#filtersBtn', '#sortBtn', '.subnav a', '[data-vmode="list"]', '.crow .ico', '.crow .btn', '#enginePill']) expect(await h(sel), sel).toBe(36);
+    await page.keyboard.press('Escape');
+    await page.setViewportSize({ width: 390, height: 844 });
+    for (const sel of ['#moreBtn', '#filtersBtn', '.subnav a', '.crow .ico']) expect(await h(sel), sel + ' on the phone').toBe(44);
+    expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(24);
+  });
+
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
     await open(page, guard, '#/line');
     const html = page.locator('html');
