@@ -1453,6 +1453,42 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-vatrates] input, [data-vatrates] button')).toHaveCount(0);
   });
 
+  test('ownership: client material and source files in the details send one rights request; client material is never reused', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/assets', { change: (s) => { s.assets.filter((a) => a.stage === 8)[0].clientMaterial = true; } });
+    const d = await details(page, 'sa-client');
+    const r = page.locator('[data-rights="sa-client"]');
+    await expect(r.locator('[data-rset="clientMaterial"][data-val="false"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(r.locator('[data-rset="sourceRights"][data-val="kept"]')).toHaveAttribute('aria-pressed', 'true');
+    await r.locator('[data-rset="clientMaterial"][data-val="true"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'rights', accountId: 'acc-owner', assetId: 'sa-client', clientMaterial: true, sourceRights: 'kept' });
+    await expect(page.locator('.crow[data-row="sa-client"] [data-chip="client-only"]')).toHaveText('Client-only · never reused');
+    await page.locator('[data-rights="sa-client"] [data-rset="sourceRights"][data-val="sold"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(got[1].body).toMatchObject({ kind: 'rights', assetId: 'sa-client', clientMaterial: true, sourceRights: 'sold' });
+    // A library item marked as client material cannot be reused; the reason shows.
+    await go(page, 'library');
+    const lib = page.locator('#view .crow').first();
+    await expect(lib.locator('[data-noreuse]')).toBeDisabled();
+    await expect(lib.locator('[data-noreuse-why]')).toHaveText('Client material · never reused');
+    await expect(lib.locator('a[href^="#/new?from="]')).toHaveCount(0);
+    void d;
+  });
+
+  test('library: Kit and Pack forms take an optional source-files add-on price on the same ex / inc basis', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/kits/packs');
+    await page.locator('[data-libnew="packs"]').click();
+    const f = page.locator('[data-libform="packs"]');
+    await f.locator('[data-lf="name"]').fill('Sample pack with sources');
+    await f.locator('[data-lf="price"]').fill('200');
+    await f.locator('[data-lf="sourcePrice"]').fill('50');
+    await f.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body.fields).toMatchObject({ price: 200, priceBasis: 'ex', sourcePrice: 50 });
+  });
+
   test('library: example data has the buttons switched off and sends nothing', async ({ page, guard }) => {
     await open(page, guard, '#/kits/packs', { state: false });
     await expect(page.locator('[data-libnew="packs"]')).toBeDisabled();

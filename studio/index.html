@@ -460,6 +460,8 @@
   .pbh { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
   .libform .req { color: var(--ink); }
   .libsug .ask { align-items: flex-end; }
+  .rights { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .rrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; } .rlab { min-width: 120px; color: var(--muted); font-size: 14px; }
   .pline { font-size: 13px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
 </style>
 </head>
@@ -519,7 +521,7 @@
  *        masterId, purpose, sources: [{ kind: link|upload|note, url, fileName, note, rights }]} · set {who | priority} · studio {on} ·
  *        tool {product, thing, unit, capabilities, inputs, outputs, fit, costPerUnit, allowance, period, resetsOn, carriesOver,
  *        accountNotes, audit} · done {assetId, creditsUsed?: {product, units}} · check {brandId, item, ok} ·
- *        source {assetId, source} · library {table: playbooks|packs|kits|bricks, op: new|edit, id?, fields} · libsuggest {table, text}.   Undo = the request file goes to Drive Trash
+ *        source {assetId, source} · library {table: playbooks|packs|kits|bricks, op: new|edit, id?, fields} · libsuggest {table, text} · rights {assetId, clientMaterial, sourceRights: kept|sold}.   Undo = the request file goes to Drive Trash
  *        before the engine's next run (every 15 min at :03 :18 :33 :48).
  *
  * studio-state.json (written by the engine):
@@ -962,7 +964,7 @@
       '<button class="btn no" type="button" data-act="bin" data-id="' + esc(a.id) + '" aria-label="Bin"' + dis() + '>' + I('trash') + '</button>' +
       '<button class="ico" type="button" data-panel="fb" data-id="' + esc(a.id) + '" aria-label="Stars and reasons" title="Stars and reasons"' + dis() + '>' + I(fbDraft[a.id] && (fbDraft[a.id].stars || fbDraft[a.id].reasons.length) ? 'star-filled' : 'star') + '</button>';
     if (kind === 'gate') return VERDICTS.map(function (v) { return '<button class="btn" type="button" data-act="gate" data-verdict="' + v[0] + '" data-id="' + esc(a.id) + '" aria-label="' + v[1] + '" style="--hc:var(--ljr-' + v[3] + '-text)"' + dis() + '>' + I(v[2]) + v[1] + '</button>'; }).join('');
-    if (kind === 'lib') return '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>' +
+    if (kind === 'lib') return (a.clientMaterial ? '<button class="btn" type="button" disabled data-noreuse title="Client material: the client owns it, so it is never reused">' + I('recycle') + 'Reuse</button><span class="sent" data-noreuse-why>Client material \u00b7 never reused</span>' : '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>') +
       '<button class="btn" type="button" data-panel="result" data-id="' + esc(a.id) + '" aria-label="Add results"' + dis() + '>' + I('chart-bar') + 'Results</button>' +
       '<button class="btn" type="button" data-act="refresh" data-id="' + esc(a.id) + '" aria-label="Refresh"' + dis() + '>' + I('refresh-dot') + 'Refresh</button>' +
       '<button class="btn no" type="button" data-panel="retire" data-id="' + esc(a.id) + '" aria-label="Retire"' + dis() + '>' + I('archive') + '</button>' + (isClient(a) ? '<button class="btn" type="button" data-act="deliver" data-id="' + esc(a.id) + '" aria-label="Deliver"' + dis() + '>' + I('package-export') + 'Deliver</button>' : '');
@@ -1024,7 +1026,7 @@
         ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
       var inStep = Math.max(0, Math.floor((Date.now() - (Date.parse(a.stageSince) || a._t || Date.now())) / 864e5)), wo = waitingOn(a), acc = account(a.accountId);
       kv.unshift(['With', wo.w], [isClient(a) ? 'Client' : 'Brand owner', isClient(a) ? esc(acc.name) : 'Own brand'], ['In this step', inStep + (inStep === 1 ? ' day' : ' days') + (inStep > 3 && a.stage < 8 ? ' \u00b7 stuck?' : '')]);
-      body = rowMore(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
+      body = rowMore(a) + rightsRows(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
     }
     return '<div class="panel" data-panelbox="' + esc(a.id) + '">' + body + '</div>';
   }
@@ -1053,6 +1055,7 @@
       (withBrand || dp ? '<div class="bline">' + (withBrand ? brandMark(bo) + '<span class="bn">' + esc(bo.name) + '</span>' : '') + dp + '</div>' : '') +
       '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') +
+      (a.clientMaterial ? '<div class="needl"><span class="tag" data-chip="client-only" title="The client owns this; it is never reused">Client-only \u00b7 never reused</span></div>' : '') +
       '</div></div><div class="cfoot">' + (need ? '<span class="tag need" data-chip="need">' + esc(need) + '</span>' : '<span></span>') + whoRing(a) + '</div>' +
       (function (x) { return x ? '<div class="l2"><span class="acts">' + x + '</span></div>' : ''; })(actsFor(a, kind) + (a.parts && a.parts.total && a.parts.approved === a.parts.total && a.stage < 7 && !sent[a.id] ? '<button class="btn yes" type="button" data-act="assemble" data-id="' + esc(a.id) + '" aria-label="Assemble"' + dis() + '>' + I('books') + 'Assemble</button>' : '')) +
       (on && !(sideOn && openPanel.k === 'all') ? panelOf(a, openPanel.k) : '') + '</div>';
@@ -1368,14 +1371,14 @@
     playbooks: { one: 'playbook', fields: [['name', 'Name', 'text', 1, 200], ['outcome', 'Outcome', 'pick', 1, function () { return OUTCOMES.map(function (o) { return [o[0], o[1]]; }); }],
       ['steps', 'Steps (one per line; "kit:<id>" or "pack:<id>" links one)', 'lines', 0, 30], ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
     packs: { one: 'pack', fields: [['name', 'Name', 'text', 1, 200], ['kind', 'Kind (lowercase, e.g. launch-pack)', 'slug', 0, 40], ['kitIds', 'Kits', 'multi', 0, function () { return S.kits.map(function (k) { return [k.id, k.name]; }); }],
-      ['price', 'Price \u00a3', 'money', 0, 100000], ['priceBasis', 'Price is', 'basis', 0, null], ['readyDays', 'Ready in (days)', 'int', 0, 365],
+      ['price', 'Price \u00a3', 'money', 0, 100000], ['priceBasis', 'Price is', 'basis', 0, null], ['sourcePrice', 'Source files add-on \u00a3 (same ex / inc as the price)', 'money', 0, 100000], ['readyDays', 'Ready in (days)', 'int', 0, 365],
       ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
     kits: { one: 'kit', fields: [['name', 'Name', 'text', 1, 200], ['type', 'Type', 'pick', 1, function () { return TYPES.map(function (t) { return [t[0], t[2]]; }); }],
       ['brickIds', 'Bricks', 'multi', 0, function () { return S.bricks.map(function (b) { return [b.id, b.name]; }); }], ['needs', 'Needs', 'multi', 0, function () { return CAPS.map(function (c) { return [c[0], c[1]]; }); }],
       ['frameworkId', 'Framework', 'pick', 0, function () { return S.frameworks.map(function (x) { return [x.id, x.name]; }); }], ['voiceId', 'Voice', 'pick', 0, function () { return S.voices.map(function (x) { return [x.id, x.name]; }); }],
       ['lookId', 'Look', 'pick', 0, function () { return S.looks.map(function (x) { return [x.id, x.name]; }); }], ['formatIds', 'Formats', 'multi', 0, function () { return S.formats.map(function (x) { return [x.id, fmtLabel(x.id)]; }); }],
       ['makePromptId', 'Make prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
-      ['price', 'Price \u00a3', 'money', 0, 100000], ['priceBasis', 'Price is', 'basis', 0, null], ['readyDays', 'Ready in (days)', 'int', 0, 365],
+      ['price', 'Price \u00a3', 'money', 0, 100000], ['priceBasis', 'Price is', 'basis', 0, null], ['sourcePrice', 'Source files add-on \u00a3 (same ex / inc as the price)', 'money', 0, 100000], ['readyDays', 'Ready in (days)', 'int', 0, 365],
       ['checkPromptId', 'Check prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
       ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
     bricks: { one: 'brick', fields: [['name', 'Name', 'text', 1, 200], ['kind', 'Kind (lowercase, e.g. hook, prompt, cta)', 'slug', 1, 40], ['text', 'Text', 'area', 1, 5000], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] }
@@ -1710,6 +1713,8 @@
       if (p.destination !== undefined) a.destination = p.destination;
       if (p.legalSetId !== undefined) { var lsx = byIdIn('legalSets', p.legalSetId); a.legal = Object.assign({}, a.legal || {}, { setId: p.legalSetId, setName: lsx ? lsx.name : p.legalSetId }); }
       if (p.priority !== undefined) a.priority = p.priority === 'none' ? null : p.priority;
+      if (p.clientMaterial !== undefined) a.clientMaterial = p.clientMaterial;
+      if (p.sourceRights !== undefined) a.sourceRights = p.sourceRights;
     });
     saveLocal('st-pend', pend);
   }
@@ -1719,6 +1724,23 @@
     pend[id] = Object.assign(pend[id] || {}, body, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); openPanel = null; render();
     var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
     withWrite(function () { return putRequest('set', body).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+  }
+  // Ownership (Lisa, 28 Oct 2026): the client owns the finished file once paid; Lisa keeps the source files unless the client
+  // pays for them. One 'rights' request {assetId, clientMaterial, sourceRights: kept|sold} (owner); shows at once.
+  function sendRights(id, patch) {
+    if (EX) return;
+    var x = byId(id); if (!x) return;
+    var body = { kind: 'rights', accountId: ownerId(), assetId: id, clientMaterial: patch.clientMaterial !== undefined ? patch.clientMaterial : !!x.clientMaterial, sourceRights: patch.sourceRights || (x.sourceRights === 'sold' ? 'sold' : 'kept'), at: new Date().toISOString() };
+    pend[id] = Object.assign(pend[id] || {}, { clientMaterial: body.clientMaterial, sourceRights: body.sourceRights }, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); render();
+    var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
+    withWrite(function () { return putRequest('rights', body).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+  }
+  function rightsRows(a) {
+    var cm = !!a.clientMaterial, sr = a.sourceRights === 'sold' ? 'sold' : 'kept';
+    return '<div class="rights" data-rights="' + esc(a.id) + '"><div class="rrow"><span class="rlab">Client material</span><div class="seg" role="group" aria-label="Client material">' +
+      [[true, 'Yes'], [false, 'No']].map(function (o) { return '<button type="button" data-rset="clientMaterial" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (cm === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div>' +
+      '<div class="rrow"><span class="rlab">Source files</span><div class="seg" role="group" aria-label="Source files">' +
+      [['kept', 'Kept by you'], ['sold', 'Sold to client']].map(function (o) { return '<button type="button" data-rset="sourceRights" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (sr === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div></div>';
   }
   // Brand set-up tick: shows at once, one 'check' request file; the engine writes it into BRANDS at its next run.
   function sendCheck(bid, item) {
@@ -1844,6 +1866,7 @@
     var fo = e.target.closest('[data-fxoff]'); if (fo) { var t4 = barTab(); if (t4) { var s4 = fsOf(t4), k4 = fo.getAttribute('data-fxoff'), i4 = s4[k4].indexOf(fo.getAttribute('data-val')); if (i4 >= 0) s4[k4].splice(i4, 1); saveFs(); } render(); var fb = $('filtersBtn'); if (fb) fb.focus(); return; }
     var ln = e.target.closest('[data-libnew]'); if (ln && !ln.disabled) { var lt = ln.getAttribute('data-libnew'); libDraft = { t: lt, op: 'new', f: {}, at: Date.now() }; libErr = {}; delete libSent[lt]; saveLocal('st-lib', libDraft); render(); var lf0 = document.querySelector('[data-libform] [data-lf]'); if (lf0) lf0.focus(); return; }
     var le = e.target.closest('[data-libedit]'); if (le && !le.disabled) { var et = le.getAttribute('data-libedit'), eid = le.getAttribute('data-id'); libDraft = { t: et, op: 'edit', id: eid, f: libFrom(et, eid), at: Date.now() }; libErr = {}; delete libSent[et]; saveLocal('st-lib', libDraft); render(); var lf1 = document.querySelector('[data-libform] [data-lf]'); if (lf1) { lf1.focus(); lf1.scrollIntoView({ block: 'center' }); } return; }
+    var rs = e.target.closest('[data-rset]'); if (rs && !rs.disabled) { var rk = rs.getAttribute('data-rset'), rv = rs.getAttribute('data-val'), rp = {}; rp[rk] = rk === 'clientMaterial' ? rv === 'true' : rv; sendRights(rs.getAttribute('data-id'), rp); return; }
     var lb = e.target.closest('[data-lbasis]'); if (lb && libDraft.t) { libDraft.f = libDraft.f || {}; libDraft.f.priceBasis = lb.getAttribute('data-lbasis'); saveLocal('st-lib', libDraft); render(); return; }
     var ps = e.target.closest('[data-pshow]'); if (ps) { pshowLocal = ps.getAttribute('data-pshow'); try { localStorage.setItem('st-pshow', pshowLocal); } catch (x) {} render(); return; }
     var lx = e.target.closest('[data-lfx]'); if (lx && libDraft.t) { var lk = lx.getAttribute('data-lfx'), lv = lx.getAttribute('data-val'); libDraft.f = libDraft.f || {};

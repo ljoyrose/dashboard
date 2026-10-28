@@ -77,4 +77,8 @@ family trees, puppy packs, social graphics, page and email drafts, for every bra
   (`--radius`); two pill sizes; two font weights. On the phone the header keeps the status pills and one More menu.
 - **Library** (Kits tab): Playbooks, Packs, Kits and Bricks each have + New and Edit (the Sheet's fields, checked before
   sending; one `library` request) and a Suggest box anyone on the team can use (one `libsuggest` request, waits for Lisa).
+  Kits and Packs carry an optional price (ex or inc VAT, shown ex / inc / both by the viewer's choice), a source-files
+  add-on and a lead time; VAT rates are listed read-only on Brands.
+- **Ownership** in an item's details: Client material (yes/no; client material is never reused) and Source files (kept
+  by you / sold to client); one `rights` request.
 - Same sign-in, find bar and rules as Factory. TEST stamp until `studio.live` and the state's mode are both LIVE.
