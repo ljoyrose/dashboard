@@ -611,6 +611,18 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-suggest="sg-1"]')).toHaveCount(0);
   });
 
+  test('Tools: Edit fills the form from the tool and Send writes one tool request for the same product', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/tools');
+    const name = await page.locator('[data-edittool]').first().getAttribute('data-edittool');
+    await page.locator('[data-edittool]').first().click();
+    await expect(page.locator('[data-toolform] .grp')).toContainText('Edit ' + name.split('|')[0]);
+    await expect(page.locator('[data-f="t-product"]')).toHaveValue(name.split('|')[0]);
+    await page.locator('[data-action="sendtool"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'tool', product: name.split('|')[0] });
+  });
+
   test('example data has groups, kits, styles, formats, a variant and a gap (fictional), and sends nothing', async ({ page, guard }) => {
     await open(page, guard, '#/kits', { state: false });
     await expect(page.locator('[data-playbook="ex-pb1"]')).toBeVisible();

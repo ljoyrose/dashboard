@@ -809,14 +809,14 @@
     var fitTag = function (m) { var f = pickOf(FITS, m.fit) || [m.fit, /^BANNED:/.test(m.fit) ? 'Not for ' + m.fit.slice(7) : m.fit, 'ban']; return '<span class="tag" data-fit="' + esc(m.fit) + '" title="Fit">' + I(f[2]) + esc(f[1]) + '</span>'; };
     var list = T.length ? '<div class="card">' + T.map(function (m) {
       if (!owned(m)) return '<div class="row" data-tool="' + esc(m.product) + '" style="--c:var(--ljr-0)"><span class="bar"></span><div class="txt"><b>' + esc(m.product) + '</b>' + (m.thing ? ' · ' + esc(m.thing) : '') + info(m.accountNotes) +
-        '<div class="pills" style="margin-top:6px">' + fitTag(m) + caps(m) + '</div></div></div>';
+        '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + caps(m) + '</div></div></div>';
       var st = meterOf(m), pct = Math.min(100, Math.round(st.pct * 100)), d = daysTo(m.resetsOn);
       return '<div class="meter" data-meter="' + st.k + '" data-tool="' + esc(m.product) + '" style="--c:var(--ljr-' + st.slot + ')"><span class="bar"></span><div class="txt"><b>' + esc(m.product) + '</b>' + (m.thing ? ' · ' + esc(m.thing) : '') +
         info([m.period ? 'Per ' + m.period : '', m.carriesOver ? 'Carries over' : 'Does not carry over', m.fit === 'HAND' ? 'Used manually' : 'Used by the engine', m.costPerUnit ? money(m.costPerUnit) + ' each' : '', m.accountNotes || ''].filter(Boolean).join(' · ')) +
         (m.allowance ? '<div class="track" role="img" aria-label="' + pct + '% used"><i style="width:' + pct + '%"></i></div>' +
         '<div class="nums"><span>' + esc(m.used) + ' / ' + esc(m.allowance) + ' ' + esc(m.unit || '') + '</span>' + (m.resetsOn ? '<span>' + I('refresh') + ' ' + dmy(Date.parse(m.resetsOn)) + (d !== null && d >= 0 ? ' · ' + d + 'd' : '') + '</span>' : '') + '</div>' : '') +
         (st.text ? '<div class="why">' + I(st.icon) + '<span>' + esc(st.text) + '</span></div>' : '') +
-        '<div class="pills" style="margin-top:6px">' + fitTag(m) + scoreTag('tools', m.product) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
+        '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + scoreTag('tools', m.product) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
         (m.audit ? '<a class="tag" href="' + safeUrl(m.audit) + '" target="_blank" rel="noopener" title="Audit">' + I('clipboard-check') + 'Audit</a>' : '') + '</div></div></div>';
     }).join('') + '</div>' : '<div class="card muted">No tools yet.</div>';
     return gaps + add + list;
@@ -824,13 +824,19 @@
   /* Add tool: one request file, kind 'tool'. Draft kept as you type. */
   var tdraft = (function () { try { return JSON.parse(localStorage.getItem('st-tool') || '') || {}; } catch (e) { return {}; } })(), toolOpen = false, toolErr = {}, toolNote = '';
   function saveTool() { try { localStorage.setItem('st-tool', JSON.stringify(tdraft)); } catch (e) {} }
+  // Edit = the Add tool form, filled from the tool; same product + thing updates that tool (a new name makes a new one).
+  function editTool(m) { return '<button class="tag" type="button" data-edittool="' + esc(m.product + '|' + (m.thing || '')) + '" title="Edit"' + dis() + '>' + I('pencil') + 'Edit</button>'; }
+  function toolToDraft(m) {
+    return { edit: true, more: true, product: m.product, thing: m.thing || '', unit: m.unit || '', fit: m.fit || '', notes: m.accountNotes || '', audit: m.audit || '', caps: (m.capabilities || []).slice(), outputs: (m.outputs || []).slice(),
+      inputs: (m.inputs || []).join(', '), cost: m.costPerUnit == null ? '' : String(m.costPerUnit), allowance: m.allowance == null ? '' : String(m.allowance), period: m.period || '', resetsOn: m.resetsOn || '', carry: m.carriesOver === true ? 'yes' : m.carriesOver === false ? 'no' : '' };
+  }
   function vToolForm() {
     var er = function (k) { return toolErr[k] ? '<div class="ferr">' + esc(toolErr[k]) + '</div>' : ''; };
     var fq = function (label, req, body, k) { return '<div class="fq"><p class="qt">' + label + (req ? '<span class="req" title="Must answer">★</span>' : '') + '</p>' + body + er(k) + '</div>'; };
     var inp = function (k, label, type) { return '<input class="fin" data-f="t-' + k + '" value="' + esc(tdraft[k] || '') + '" aria-label="' + label + '" autocomplete="off"' + (type ? ' type="' + type + '"' + (type === 'number' ? ' min="0" step="any"' : '') : '') + '>'; };
     var multi = function (k, opts) { var on = tdraft[k] || []; return '<div class="chips">' + opts.map(function (o) { var y = on.indexOf(o[0]) >= 0; return '<button class="ch' + (y ? ' on' : '') + '" type="button" data-tmulti="' + k + '" data-val="' + esc(o[0]) + '" aria-pressed="' + y + '">' + (o[2] ? I(o[2]) : '') + esc(o[1]) + '</button>'; }).join('') + '</div>'; };
     var pick = function (k, opts) { return '<div class="chips">' + opts.map(function (o) { return '<button class="ch' + (tdraft[k] === o[0] ? ' on' : '') + '" type="button" data-tpick="' + k + '" data-val="' + esc(o[0]) + '">' + (o[2] ? I(o[2]) : '') + esc(o[1]) + '</button>'; }).join('') + '</div>'; };
-    return '<div class="card" data-toolform><div class="grp">' + I('tools') + 'Add tool</div>' +
+    return '<div class="card" data-toolform><div class="grp">' + I(tdraft.edit ? 'pencil' : 'tools') + (tdraft.edit ? 'Edit ' + esc(tdraft.product || 'tool') : 'Add tool') + '</div>' +
       fq('Product', 1, inp('product', 'Product'), 'product') +
       fq('Can do', 1, multi('caps', CAPS), 'caps') +
       fq('Fit', 0, pick('fit', FITS), 'fit') +
@@ -1235,6 +1241,7 @@
     var ck = e.target.closest('[data-check]'); if (ck && !ck.disabled) { sendCheck(ck.getAttribute('data-check'), ck.getAttribute('data-item')); return; }
     var sr = e.target.closest('[data-star]'); if (sr) { var sid = sr.getAttribute('data-id'), sv = +sr.getAttribute('data-star'), sf = fbDraft[sid] = fbDraft[sid] || { stars: 0, reasons: [] }; sf.stars = sf.stars === sv ? 0 : sv; render(); return; }
     var rn = e.target.closest('[data-reason]'); if (rn) { var rid0 = rn.getAttribute('data-id'), rv0 = rn.getAttribute('data-reason'), rf0 = fbDraft[rid0] = fbDraft[rid0] || { stars: 0, reasons: [] }, ri0 = rf0.reasons.indexOf(rv0); if (ri0 >= 0) rf0.reasons.splice(ri0, 1); else rf0.reasons.push(rv0); render(); return; }
+    var et = e.target.closest('[data-edittool]'); if (et && !et.disabled) { var ek = et.getAttribute('data-edittool'), em = S.tools.filter(function (x) { return x.product + '|' + (x.thing || '') === ek; })[0]; if (em) { tdraft = toolToDraft(em); saveTool(); toolOpen = true; render(); var tf = document.querySelector('[data-toolform]'); if (tf) tf.scrollIntoView({ block: 'start' }); } return; }
     var sug = e.target.closest('[data-sug]'); if (sug && !sug.disabled) { sendSuggestion(sug.getAttribute('data-sug'), sug.getAttribute('data-val')); return; }
     var rch = e.target.closest('[data-rch]'); if (rch) { var rid = rch.getAttribute('data-id'), rv = rch.getAttribute('data-rch'), rr = resDraft[rid] = resDraft[rid] || {}; rr.channel = rr.channel === rv ? '' : rv; rr.err = ''; render(); return; }
     var dt = e.target.closest('[data-dtool]'); if (dt) { var did = dt.getAttribute('data-id'), dv = dt.getAttribute('data-dtool'); doneSel[did] = doneSel[did] === dv ? '' : dv; render(); var ui = $('units-' + did); if (ui && doneSel[did]) ui.focus(); return; }
