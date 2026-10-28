@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-studio-shell-2026-10-28">
+<meta name="build" content="ljr-studio-v02-2026-10-28">
 <title>Studio</title>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
@@ -179,6 +179,23 @@
   a:focus, button:focus { outline: none; }
   a:focus-visible, button:focus-visible { outline: none; border-color: var(--ink) !important; }
   footer { color: var(--muted); font-size: 13px; padding: 0 16px 24px; }
+  /* v0.2: Kits tab (playbooks by outcome, packs, kits, styles, formats), sources, gaps, tool form */
+  a.tag { text-decoration: none; }
+  a.tag:hover { border-color: var(--muted); }
+  .ogrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .steps { margin: 0; padding-left: 22px; font-size: 14px; }
+  .steps li { padding: 1px 0; }
+  .steps li .ti { font-size: 15px; vertical-align: -2px; margin-right: 3px; }
+  .pb { padding: 6px 0; border-top: 1px solid var(--line); }
+  .pb:first-of-type { border-top: 0; }
+  .pb b { display: block; font-size: 15px; }
+  .when { font-size: 14px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .src { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-top: 1px dashed var(--line); }
+  .src:first-child { border-top: 0; }
+  .src .ask .fin { font-size: 14px; }
+  .chk li button { all: unset; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius); padding: 0 4px; }
+  .chk li button:hover, .chk li button:focus-visible { border-color: var(--line); }
+  .fsub { font-size: 13px; font-weight: 700; color: var(--muted); margin: 6px 0 4px; }
 </style>
 </head>
 <body>
@@ -205,6 +222,7 @@
     <a href="#/review" data-nav="review">Review <span class="n" id="nReview"></span></a>
     <a href="#/brands" data-nav="brands">Brands</a>
     <a href="#/library" data-nav="library">Library</a>
+    <a href="#/kits" data-nav="kits">Kits</a>
     <a href="#/tools" data-nav="tools">Tools <span class="n" id="nTools"></span></a>
     <a href="#/new" data-nav="new" class="new" aria-label="New idea"><i class="ti ti-plus"></i> New</a>
   </nav>
@@ -224,7 +242,11 @@
  *        Not there yet → the built-in EXAMPLE state, a banner, and every write switched off.
  * Writes one JSON request file per click into studio.requestsFolderId (Lisa's own sign-in, drive scope):
  *        { kind, at, by, accountId, assetId?, ... }   kinds: approve · redo {note} · bin · gate {verdict} ·
- *        idea {brief} · set {who | priority} · studio {on}.   Undo = the request file goes to Drive Trash
+ *        idea {brief + groupId, playbookId, kitId, outcome, frameworkId, voiceId, lookId, formatIds, language, length,
+ *        masterId, purpose, sources: [{ kind: link|upload|note, url, fileName, note, rights }]} · set {who | priority} · studio {on} ·
+ *        tool {product, thing, unit, capabilities, inputs, outputs, fit, costPerUnit, allowance, period, resetsOn, carriesOver,
+ *        accountNotes, audit} · done {assetId, creditsUsed?: {product, units}} · check {brandId, item, ok} ·
+ *        source {assetId, source}.   Undo = the request file goes to Drive Trash
  *        before the engine's next run (every 15 min at :03 :18 :33 :48).
  *
  * studio-state.json (written by the engine):
@@ -235,19 +257,33 @@
  *   accounts: [{ id, name, kind: 'owner'|'client' }]   (client-ready: every record below carries accountId)
  *   products: [{ id, accountId, brandId, name, type: 'physical'|'digital'|'lead-magnet'|'low-ticket'|'book'|'course'|'app'|'service' }],
  *   brands: [{ id, accountId, name, colour: LJR7 slot 0-8, stage: 'Concept'|'Name check'|'Identity'|'Tech set-up'|'Launch'|'Running',
- *              setupChecklist: [{ name, ok: bool }] }],
+ *              setupChecklist: [{ name, ok: bool }], groupId|null, voiceId|null, lookId|null }],
+ *   groups: [{ id, name }]   (WHERE ladder: Group › Business (brand) › Product)
  *   assets: [{ id, accountId, title, brandIds: [id], productId, projectName, type (see TYPES), recipe, size: 'S'|'M'|'L',
  *              stage: 0-8 (0 Idea · 1 Research · 2 Recipe · 3 Spec lock · 4 Inputs · 5 Make · 6 Check · 7 Approve · 8 Operate),
  *              who: 'lisa'|'claude'|'grok'|'engine', fit: 'AUTO'|'HAND', evergreen: bool, dated: bool, eventDate: 'YYYY-MM-DD'|null,
  *              provider, cost (£), rating (0-5), reviewLink, docLink, version, priority: 'urgent'|'high'|'normal'|'low'|null,
  *              updated: ISO, flags: [string],
- *              gate: { question, at: ISO } | null   (a gate waiting on Lisa: GO · HOLD · RESHAPE · REFINE · KILL · RECYCLE) }],
+ *              gate: { question, at: ISO } | null   (a gate waiting on Lisa: GO · HOLD · RESHAPE · REFINE · KILL · RECYCLE),
+ *              kitId, groupId, playbookId, outcome: 'attract'|'convert'|'deliver'|'keep'|'reuse'|null, frameworkId, voiceId, lookId,
+ *              formatIds: [id], language, length, masterId (variant of), purpose: 'refresh'|'rebrand'|'reformat'|'translate'|'test'|null,
+ *              test (A/B group id), result, sourceIds: [id] }],   (ids are null when not set)
  *   ideas:  [same shape as assets, stage 0],
- *   tools:  [{ product, thing, unit, allowance, period, resetsOn: 'YYYY-MM-DD', used, left, carriesOver: bool, fit: 'AUTO'|'HAND' }],
+ *   playbooks: [{ id, name, outcome, steps: [{ kind: 'pack'|'kit'|'action', id|null, text }], notes }],   (WHAT ladder: Brick › Kit › Pack › Playbook)
+ *   packs:  [{ id, name, kind (e.g. funnel), kitIds: [id], notes }],
+ *   kits:   [{ id, name, type, brickIds, needs: [capability], frameworkId, voiceId, lookId, formatIds, notes }],
+ *   bricks: [{ id, name, kind, text, link, notes }],
+ *   frameworks / voices / looks (STYLE): [{ id, name, steps: [string], when, notes, + source (internal) | brandId | kind }],
+ *   formats: [{ id, name, channel, ratio, size, maxLength, safeZone, fileType, notes }],
+ *   sources: [{ id, targetId, kind: 'link'|'upload'|'note', url, fileName, note, rights: 'inspiration'|'own'|'licensed'|'client', by, at }],
+ *   tools:  [{ product, thing, unit, allowance, period, resetsOn: 'YYYY-MM-DD', used, left, carriesOver: bool,
+ *              fit: 'AUTO'|'HAND'|'BANNED:<use>'|'NOT_OWNED', capabilities: [string], inputs, outputs: [format id or ratio], accountNotes, costPerUnit, audit }],
+ *   gaps:   [{ capability, format|null, ratio|null, reason, assetIds: [id] }]   (no owned tool can do a kit's need: buy or approve one)
  *   failed: [{ assetId, kind }]   (requests the engine could not apply; the page clears their ✓)
  * }
  * Lists: Me = Review (stage 7) + Gates + Hand jobs (fit HAND, who lisa). Ideas = stage 0. Assets = 1-7. Library = 8.
  * Account: an item's accountId, else its first brand's. Account chips show only when there is more than one account.
+ * Group: an item's groupId, else its first brand's. Group chips show only when more than one group has items.
  * Test items: title starting TEST- or ZZ_DELETE_, or flag 'test': hidden unless the TEST switch is on.
  * ========================================================================================== */
 (function () {
@@ -275,6 +311,21 @@
   var VERDICTS = [['GO', 'Go', 'check', 5], ['HOLD', 'Hold', 'player-pause', 4], ['RESHAPE', 'Reshape', 'shape', 7], ['REFINE', 'Refine', 'adjustments', 6], ['KILL', 'Kill', 'x', 2], ['RECYCLE', 'Recycle', 'recycle', 0]];
   var PROVIDERS = ['Claude', 'Grok', 'ChatGPT', 'Gemini'];
   var PRI = { urgent: 1, high: 2, normal: 3, low: 4 };
+  var OUTCOMES = [['attract', 'Attract', 'magnet', 7], ['convert', 'Convert', 'shopping-cart', 3], ['deliver', 'Deliver', 'truck-delivery', 6], ['keep', 'Keep', 'heart', 5], ['reuse', 'Reuse', 'recycle', 4]];
+  var PURPOSES = [['refresh', 'Refresh', 'refresh'], ['rebrand', 'Rebrand', 'shirt'], ['reformat', 'Reformat', 'aspect-ratio'], ['translate', 'Translate', 'language'], ['test', 'A/B test', 'flask']];
+  var RIGHTS = [['inspiration', 'Inspiration only', 'bulb'], ['own', 'Own', 'user'], ['licensed', 'Licensed', 'certificate'], ['client', 'Client', 'briefcase']];
+  var SRC_KINDS = [['link', 'Link', 'link'], ['upload', 'Upload', 'inbox'], ['note', 'Note', 'pencil']];
+  var LANGS = [['en-GB', 'English UK'], ['en-US', 'English US'], ['cy', 'Welsh'], ['es', 'Spanish'], ['fr', 'French'], ['de', 'German']];
+  var FITS = [['AUTO', 'Auto', 'robot'], ['HAND', 'Hand', 'hand-finger'], ['BANNED:client', 'Not for clients', 'ban'], ['NOT_OWNED', 'Not owned', 'shopping-cart']];
+  var PERIODS = [['month', 'Month'], ['year', 'Year'], ['week', 'Week'], ['day', 'Day'], ['once', 'Once']];
+  var CAPS = [['text-write', 'Write', 'pencil'], ['slides-fill', 'Slides', 'presentation'], ['doc-fill', 'Docs', 'file-text'], ['pdf-export', 'PDF', 'file-type-pdf'],
+    ['image-generate', 'Images', 'photo'], ['logo-generate', 'Logos', 'badge'], ['background-remove', 'Cut-out', 'scissors'], ['video-template', 'Video', 'video'],
+    ['video-reformat', 'Resize video', 'aspect-ratio'], ['video-captions', 'Captions', 'badge-cc'], ['voice-tts', 'Voice', 'microphone'], ['voice-clone', 'Voice clone', 'microphone'],
+    ['page-build', 'Pages', 'layout'], ['email-draft', 'Email', 'mail'], ['transcribe', 'Transcribe', 'message-2'], ['research', 'Research', 'search'], ['translate', 'Translate', 'language']];
+  var GROUP_ICON = { 'grp-dogs': 'dog', 'grp-apps': 'apps', 'grp-services': 'briefcase', 'grp-lisa': 'user' };
+  var KSUBS = [['playbooks', 'Playbooks', 'route'], ['packs', 'Packs', 'package'], ['kits', 'Kits', 'box'], ['styles', 'Styles', 'palette'], ['formats', 'Formats', 'aspect-ratio']];
+  function pickOf(list, k) { return list.filter(function (x) { return x[0] === k; })[0] || null; }
+  function capOf(k) { return pickOf(CAPS, k) || [k, k, 'tools']; }
   function typeOf(k) { return TYPES.filter(function (t) { return t[0] === k; })[0] || ['other', 'file', 'Other']; }
   function whoOf(k) { return WHO.filter(function (w) { return w[0] === k; })[0] || [k || '', k ? k.charAt(0).toUpperCase() + k.slice(1) : '', 'user']; }
   function stSlot(n) { return n <= 2 ? 7 : n <= 4 ? 4 : n === 5 ? 3 : n <= 7 ? 6 : 5; }
@@ -283,29 +334,63 @@
   /* ---------- Built-in EXAMPLE state: generic and invented. Shown only when studio-state.json is not on Drive yet. ---------- */
   function example(now) {
     var D = 864e5, iso = function (o) { return new Date(now + o).toISOString(); }, day = function (o) { return new Date(now + o * D).toISOString().slice(0, 10); };
-    var a = function (o) { return Object.assign({ accountId: 'ex-owner', brandIds: ['ex-a'], productId: null, projectName: 'Example project', type: 'pdf', recipe: 'Example recipe', size: 'M', stage: 1, who: 'claude', fit: 'AUTO', evergreen: true, dated: false, eventDate: null, provider: 'Claude', cost: 0, rating: null, reviewLink: '', docLink: '', version: 1, priority: null, updated: iso(-D), flags: [], gate: null }, o); };
+    var a = function (o) { return Object.assign({ accountId: 'ex-owner', brandIds: ['ex-a'], productId: null, projectName: 'Example project', type: 'pdf', recipe: 'Example recipe', size: 'M', stage: 1, who: 'claude', fit: 'AUTO', evergreen: true, dated: false, eventDate: null, provider: 'Claude', cost: 0, rating: null, reviewLink: '', docLink: '', version: 1, priority: null, updated: iso(-D), flags: [], gate: null,
+      kitId: null, groupId: null, playbookId: null, outcome: null, frameworkId: null, voiceId: null, lookId: null, formatIds: [], language: '', length: '', masterId: null, purpose: null, test: null, result: null, sourceIds: [] }, o); };
+    var st = function (id, name, steps, when, extra) { return Object.assign({ id: id, name: name, steps: steps, when: when, notes: '' }, extra); };
+    var fm = function (id, name, channel, ratio, size, fileType, extra) { return Object.assign({ id: id, name: name, channel: channel, ratio: ratio, size: size, maxLength: '', safeZone: '', fileType: fileType, notes: '' }, extra); };
     return {
       generated_at: iso(0), example: true,
       studio: { on: false, mode: 'TEST', budgetMonth: 40, spentMonth: 12 },
       health: { lastRun: null, jobs: [] },
       accounts: [{ id: 'ex-owner', name: 'Example owner', kind: 'owner' }, { id: 'ex-client', name: 'Example client', kind: 'client' }],
+      groups: [{ id: 'grp-dogs', name: 'Dogs' }, { id: 'grp-apps', name: 'Apps' }, { id: 'grp-services', name: 'Client services' }, { id: 'grp-lisa', name: 'Lisa' }],
+      playbooks: [
+        { id: 'ex-pb1', name: 'Example list builder', outcome: 'attract', steps: [{ kind: 'kit', id: 'ex-k1', text: 'Example lead magnet kit' }, { kind: 'kit', id: 'ex-k3', text: 'Example social kit' }, { kind: 'action', id: null, text: 'Share in the group' }], notes: '' },
+        { id: 'ex-pb2', name: 'Example webclass launch', outcome: 'convert', steps: [{ kind: 'pack', id: 'ex-pk1', text: 'Example webclass funnel' }, { kind: 'action', id: null, text: 'Send the replay' }], notes: '' }
+      ],
+      packs: [{ id: 'ex-pk1', name: 'Example webclass funnel', kind: 'funnel', kitIds: ['ex-k2', 'ex-k4'], notes: 'Pages and emails' }],
+      kits: [
+        { id: 'ex-k1', name: 'Example lead magnet kit', type: 'lead', brickIds: ['ex-br1'], needs: ['doc-fill', 'pdf-export'], frameworkId: 'fw-pas', voiceId: null, lookId: null, formatIds: ['fmt-a4'], notes: '' },
+        { id: 'ex-k2', name: 'Example webclass kit', type: 'slides', brickIds: [], needs: ['slides-fill', 'video-reformat'], frameworkId: 'fw-webinar', voiceId: null, lookId: null, formatIds: ['fmt-youtube', 'fmt-reel'], notes: '' },
+        { id: 'ex-k3', name: 'Example social kit', type: 'social', brickIds: ['ex-br1'], needs: ['image-generate'], frameworkId: 'fw-hso', voiceId: null, lookId: null, formatIds: ['fmt-fb-feed'], notes: '' },
+        { id: 'ex-k4', name: 'Example email kit', type: 'email', brickIds: [], needs: ['email-draft'], frameworkId: 'fw-hso', voiceId: null, lookId: null, formatIds: ['fmt-email-header'], notes: '' }
+      ],
+      bricks: [{ id: 'ex-br1', name: 'Example hook line', kind: 'hook', text: 'Example hook', link: '', notes: '' }],
+      frameworks: [
+        st('fw-hso', 'Hook, story, offer', ['Hook', 'Story', 'Offer'], 'Posts, short emails, ads', { source: '' }),
+        st('fw-pas', 'Problem, agitate, solve', ['Problem', 'Agitate', 'Solve'], 'Short ads, lead magnets', { source: '' }),
+        st('fw-webinar', 'Webinar pitch', ['One big promise', 'Origin story', 'Three false beliefs', 'Stack the offer', 'Close'], 'Webclasses', { source: '' })
+      ],
+      voices: [st('ex-v1', 'Example warm expert', ['Short sentences', 'Kind and sure'], 'Example Brand A', { brandId: 'ex-a' })],
+      looks: [st('look-wordmark', 'Wordmark', ['The name in one typeface'], 'Short names', { kind: 'logo' }), st('look-mascot', 'Mascot', ['A drawn character'], 'Friendly brands', { kind: 'logo' })],
+      formats: [
+        fm('fmt-fb-feed', 'Facebook feed', 'Facebook', '4:5', '1080x1350', 'jpg, png, mp4'),
+        fm('fmt-reel', 'Reels, TikTok, Shorts', 'Instagram, Facebook, TikTok, YouTube', '9:16', '1080x1920', 'mp4', { safeZone: 'Keep the top and bottom clear' }),
+        fm('fmt-youtube', 'YouTube', 'YouTube', '16:9', '1920x1080', 'mp4'),
+        fm('fmt-email-header', 'Email header', 'Email', '', '600 wide', 'png, jpg'),
+        fm('fmt-a4', 'Print A4', 'Print', '1:1.41', '210x297mm + 3mm bleed', 'pdf', { notes: 'CMYK-safe colours' })
+      ],
+      sources: [{ id: 'ex-s1', targetId: 'ex-2', kind: 'link', url: 'https://example.com/', fileName: '', note: '', rights: 'inspiration', by: 'example', at: iso(-D) }],
+      gaps: [{ capability: 'video-reformat', format: 'fmt-reel', ratio: '9:16', reason: 'no owned tool can do video-reformat at 9:16', assetIds: ['ex-2'] }],
       products: [
         { id: 'ex-p1', accountId: 'ex-owner', brandId: 'ex-a', name: 'Example course', type: 'course' },
         { id: 'ex-p2', accountId: 'ex-owner', brandId: 'ex-b', name: 'Example starter guide', type: 'lead-magnet' },
         { id: 'ex-p3', accountId: 'ex-client', brandId: 'ex-c', name: 'Example client service', type: 'service' }
       ],
       brands: [
-        { id: 'ex-a', accountId: 'ex-owner', name: 'Example Brand A', colour: 7, stage: 'Running', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }, { name: 'Colours', ok: true }, { name: 'Domain', ok: true }, { name: 'Email list', ok: false }] },
-        { id: 'ex-b', accountId: 'ex-owner', name: 'Example Brand B', colour: 6, stage: 'Identity', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: false }, { name: 'Colours', ok: false }] },
-        { id: 'ex-c', accountId: 'ex-client', name: 'Example Client Brand', colour: 5, stage: 'Launch', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }] }
+        { id: 'ex-a', accountId: 'ex-owner', name: 'Example Brand A', colour: 7, stage: 'Running', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }, { name: 'Colours', ok: true }, { name: 'Domain', ok: true }, { name: 'Email list', ok: false }], groupId: 'grp-dogs', voiceId: 'ex-v1', lookId: 'look-mascot' },
+        { id: 'ex-b', accountId: 'ex-owner', name: 'Example Brand B', colour: 6, stage: 'Identity', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: false }, { name: 'Colours', ok: false }], groupId: 'grp-apps', voiceId: null, lookId: 'look-wordmark' },
+        { id: 'ex-c', accountId: 'ex-client', name: 'Example Client Brand', colour: 5, stage: 'Launch', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }], groupId: 'grp-services', voiceId: null, lookId: null }
       ],
       assets: [
-        a({ id: 'ex-1', title: 'Example lead magnet PDF', type: 'lead', productId: 'ex-p1', stage: 7, size: 'S', cost: 0.4, updated: iso(-2 * 36e5) }),
-        a({ id: 'ex-2', title: 'Example webclass script', brandIds: ['ex-a', 'ex-b'], type: 'script', stage: 5, size: 'L', provider: 'Grok', evergreen: false, dated: true, eventDate: day(20) }),
+        a({ id: 'ex-1', title: 'Example lead magnet PDF', type: 'lead', productId: 'ex-p1', stage: 7, size: 'S', cost: 0.4, updated: iso(-2 * 36e5), kitId: 'ex-k1', frameworkId: 'fw-pas', formatIds: ['fmt-a4'], outcome: 'attract' }),
+        a({ id: 'ex-2', title: 'Example webclass script', brandIds: ['ex-a', 'ex-b'], type: 'script', stage: 5, size: 'L', provider: 'Grok', evergreen: false, dated: true, eventDate: day(20),
+          kitId: 'ex-k2', playbookId: 'ex-pb2', outcome: 'convert', frameworkId: 'fw-webinar', formatIds: ['fmt-youtube', 'fmt-reel'], sourceIds: ['ex-s1'] }),
         a({ id: 'ex-3', title: 'Example email draft', brandIds: ['ex-b'], type: 'email', stage: 3, who: 'lisa', fit: 'HAND', gate: { question: 'Lock the spec?', at: iso(-36e5) } }),
         a({ id: 'ex-4', title: 'Example social graphic', type: 'social', stage: 4, who: 'lisa', fit: 'HAND', size: 'S', flags: ['needs-input'] }),
         a({ id: 'ex-5', title: 'Example puppy pack', brandIds: ['ex-b'], type: 'pack', stage: 8, version: 2, rating: 4, updated: iso(-9 * D) }),
         a({ id: 'ex-6', title: 'Example slides', type: 'slides', stage: 8, evergreen: false, dated: true, eventDate: day(-10), flags: ['refresh'], updated: iso(-30 * D) }),
+        a({ id: 'ex-9', title: 'Example puppy pack, square', brandIds: ['ex-b'], type: 'social', stage: 4, kitId: 'ex-k3', formatIds: ['fmt-fb-feed'], masterId: 'ex-5', purpose: 'reformat' }),
         a({ id: 'ex-7', title: 'TEST-Example logbook', brandIds: ['ex-b'], type: 'logbook', stage: 2, who: 'engine' }),
         a({ id: 'ex-8', accountId: 'ex-client', title: 'Example client flyer', brandIds: ['ex-c'], productId: 'ex-p3', type: 'pdf', stage: 6, size: 'S' })
       ],
@@ -314,9 +399,12 @@
         a({ id: 'ex-i2', title: 'Example family tree idea', brandIds: ['ex-b'], type: 'tree', stage: 0, who: 'lisa', updated: iso(-3 * D) })
       ],
       tools: [
-        { product: 'Example AI tool', thing: 'Image credits', unit: 'credits', allowance: 100, period: 'month', resetsOn: day(3), used: 40, left: 60, carriesOver: false, fit: 'AUTO' },
-        { product: 'Example design tool', thing: 'Exports', unit: 'exports', allowance: 50, period: 'month', resetsOn: day(20), used: 42, left: 8, carriesOver: false, fit: 'HAND' },
-        { product: 'Example video tool', thing: 'Minutes', unit: 'min', allowance: 30, period: 'month', resetsOn: day(12), used: 30, left: 0, carriesOver: false, fit: 'AUTO' }
+        { product: 'Example AI tool', thing: 'Image credits', unit: 'credits', allowance: 100, period: 'month', resetsOn: day(3), used: 40, left: 60, carriesOver: false, fit: 'AUTO',
+          capabilities: ['image-generate', 'background-remove'], inputs: ['text'], outputs: ['fmt-fb-feed'], accountNotes: '', costPerUnit: 0.1, audit: '' },
+        { product: 'Example design tool', thing: 'Exports', unit: 'exports', allowance: 50, period: 'month', resetsOn: day(20), used: 42, left: 8, carriesOver: false, fit: 'HAND',
+          capabilities: ['doc-fill', 'pdf-export', 'slides-fill'], inputs: [], outputs: [], accountNotes: '', costPerUnit: 0, audit: '' },
+        { product: 'Example video tool', thing: 'Minutes', unit: 'min', allowance: 30, period: 'month', resetsOn: day(12), used: 30, left: 0, carriesOver: false, fit: 'BANNED:client',
+          capabilities: ['video-template', 'video-captions'], inputs: ['mp4'], outputs: ['16:9'], accountNotes: 'Personal plan', costPerUnit: 0, audit: '' }
       ],
       failed: []
     };
@@ -356,9 +444,16 @@
   function prep() {
     S.accounts = S.accounts || []; S.products = S.products || []; S.brands = S.brands || []; S.assets = S.assets || []; S.ideas = S.ideas || []; S.tools = S.tools || [];
     S.studio = S.studio || {}; S.health = S.health || {};
-    all().forEach(function (a) { a.flags = a.flags || []; a.brandIds = a.brandIds || []; if (a.stage == null) a.stage = 0; a._t = Date.parse(a.updated) || 0; if (!a.accountId) a.accountId = brandOf(a).accountId || ownerId(); });
+    ['groups', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'gaps'].forEach(function (k) { S[k] = S[k] || []; });
+    S.tools.forEach(function (t) { t.capabilities = t.capabilities || []; t.outputs = t.outputs || []; t.inputs = t.inputs || []; t.fit = t.fit || 'AUTO'; });
+    all().forEach(function (a) { a.flags = a.flags || []; a.brandIds = a.brandIds || []; a.formatIds = a.formatIds || []; a.sourceIds = a.sourceIds || []; if (a.stage == null) a.stage = 0; a._t = Date.parse(a.updated) || 0; if (!a.accountId) a.accountId = brandOf(a).accountId || ownerId(); });
     applyPend();
   }
+  function byIdIn(list, id) { return id ? (S[list] || []).filter(function (x) { return x.id === id; })[0] || null : null; }
+  function group(id) { return byIdIn('groups', id) || { id: id || 'none', name: id || 'No group' }; }
+  function grpOf(a) { return a.groupId || brandOf(a).groupId || 'none'; }
+  function fmtLabel(id) { var f = byIdIn('formats', id); return f ? (f.ratio || f.name) : id; }
+  function owned(t) { return t.fit !== 'NOT_OWNED'; }
   function all() { var out = S.assets.slice(); S.ideas.forEach(function (x) { if (out.indexOf(x) < 0) { if (x.stage == null) x.stage = 0; out.push(x); } }); return out; }
   function byId(id) { return all().filter(function (a) { return a.id === id; })[0]; }
   function brand(id) { return S.brands.filter(function (b) { return b.id === id; })[0] || { id: id || 'none', name: id ? id : 'No brand', colour: 0, stage: '', setupChecklist: [] }; }
@@ -386,22 +481,24 @@
     if (d !== null && d >= 0 && d <= 7 && left > 0 && !m.carriesOver) return { k: 'use', slot: 4, icon: 'hourglass', text: 'Use it: ' + left + ' left, renews in ' + d + (d === 1 ? ' day' : ' days'), pct: pct };
     return { k: 'ok', slot: 5, icon: 'circle-check', text: '', pct: pct };
   }
-  function toolWarnings() { return (S.tools || []).filter(function (m) { return meterOf(m).k !== 'ok'; }).length; }
+  function toolWarnings() { return (S.tools || []).filter(function (m) { return owned(m) && meterOf(m).k !== 'ok'; }).length; }
 
   /* ---------- Find bar (the Factory model). Each tab keeps its own filters (st-fs), and the address carries them. ---------- */
   var BAR_TABS = /^(me|ideas|assets|review|library)$/;
   var FLAG_W = { 'needs-input': 'Needs input', refresh: 'Refresh', overdue: 'Overdue', blocked: 'Blocked', 'over-budget': 'Over budget', stale: 'Stale', test: 'Test' };
   var SORTS = [['date', 'calendar', 'Date'], ['stage', 'stairs', 'Stage'], ['brand', 'tag', 'Brand']];
-  var LIST_KEYS = ['acct', 'brand', 'type', 'st', 'who', 'fit', 'ev', 'f'];
+  var LIST_KEYS = ['grp', 'acct', 'brand', 'type', 'st', 'who', 'fit', 'ev', 'f'];
   var filtersOpen = false;
-  function fdef() { return { q: '', acct: [], brand: [], type: [], st: [], who: [], fit: [], ev: [], f: [], sort: 'date', test: false }; }
+  function fdef() { return { q: '', grp: [], acct: [], brand: [], type: [], st: [], who: [], fit: [], ev: [], f: [], sort: 'date', test: false }; }
   var fs = (function () { try { return JSON.parse(localStorage.getItem('st-fs') || '') || {}; } catch (e) { return {}; } })();
   function fsOf(tab) { var d = fdef(), s = fs[tab] = fs[tab] || {}; Object.keys(d).forEach(function (k) { if (s[k] === undefined || (Array.isArray(d[k]) && !Array.isArray(s[k]))) s[k] = d[k]; }); return s; }
   function saveFs() { try { localStorage.setItem('st-fs', JSON.stringify(fs)); } catch (e) {} }
   function evOf(a) { return a.dated && a.eventDate ? 'dated' : 'evergreen'; }
-  function hay(a) { var t = typeOf(a.type), pr = product(a.productId); return [a.title, pr ? pr.name : '', account(a.accountId).name, a.projectName, a.recipe, a.provider, t[2], STAGES[a.stage], whoOf(a.who)[1], a.flags.join(' '), a.brandIds.map(function (b) { return brand(b).name; }).join(' ')].join(' ').toLowerCase(); }
+  function hay(a) { var t = typeOf(a.type), pr = product(a.productId); return [a.title, pr ? pr.name : '', account(a.accountId).name, a.projectName, a.recipe, a.provider, t[2], STAGES[a.stage], whoOf(a.who)[1], a.flags.join(' '), a.brandIds.map(function (b) { return brand(b).name; }).join(' '), group(grpOf(a)).name,
+    (byIdIn('frameworks', a.frameworkId) || {}).name, (byIdIn('kits', a.kitId) || {}).name, a.purpose, a.formatIds.map(fmtLabel).join(' ')].join(' ').toLowerCase(); }
   function hit(a, s, skip) {
     if (!s.test && isTest(a)) return false;
+    if (skip !== 'grp' && s.grp.length && s.grp.indexOf(grpOf(a)) < 0) return false;
     if (skip !== 'acct' && s.acct.length && s.acct.indexOf(a.accountId) < 0) return false;
     if (skip !== 'brand' && s.brand.length && !a.brandIds.some(function (b) { return s.brand.indexOf(b) >= 0; })) return false;
     if (skip !== 'type' && s.type.length && s.type.indexOf(a.type) < 0) return false;
@@ -423,7 +520,10 @@
   function counts(items, s, key, val) { var c = {}; items.filter(function (a) { return hit(a, s, key); }).forEach(function (a) { [].concat(val(a)).forEach(function (v) { c[v] = (c[v] || 0) + 1; }); }); return c; }
   function findBar(tab, items) {
     var s = fsOf(tab), n = onCount(tab);
-    var html = '<div class="fbar" data-bar="' + tab + '"><div class="srow"><label class="sbox">' + I('search') + '<input type="search" data-f="fq" value="' + esc(s.q) + '" aria-label="Search" autocomplete="off"></label>' +
+    var gc = counts(items, s, 'grp', grpOf), gids = S.groups.map(function (g) { return g.id; }).concat(gc.none ? ['none'] : []).filter(function (id) { return gc[id] || s.grp.indexOf(id) >= 0; });
+    var html = '<div class="fbar" data-bar="' + tab + '">';
+    if (gids.length > 1 || s.grp.length) html += '<div class="pills" data-frow="grp">' + fchip('grp', '', 'All', !s.grp.length) + gids.map(function (id) { return fchip('grp', id, I(GROUP_ICON[id] || 'folder') + ' ' + esc(group(id).name) + ' ' + cnt(gc[id] || 0), s.grp.indexOf(id) >= 0); }).join('') + '</div>';
+    html += '<div class="srow"><label class="sbox">' + I('search') + '<input type="search" data-f="fq" value="' + esc(s.q) + '" aria-label="Search" autocomplete="off"></label>' +
       '<button id="filtersBtn" class="fbtn' + (filtersOpen ? ' on' : '') + '" type="button" data-action="filters" aria-label="Filter" aria-expanded="' + filtersOpen + '">' + I('adjustments-horizontal') + '<span class="n">' + (n || '') + '</span></button></div>';
     var ac = counts(items, s, 'acct', function (a) { return a.accountId; });
     if (S.accounts.length > 1) html += '<div class="pills" data-frow="acct">' + fchip('acct', '', 'All', !s.acct.length) + S.accounts.map(function (x) { return fchip('acct', x.id, I(x.kind === 'client' ? 'briefcase' : 'home') + ' ' + esc(x.name) + ' ' + cnt(ac[x.id] || 0), s.acct.indexOf(x.id) >= 0); }).join('') + '</div>';
@@ -482,6 +582,11 @@
     else out += '<span class="tag" title="Evergreen">' + I('leaf') + '</span>';
     a.flags.filter(function (f) { return f !== 'test'; }).forEach(function (f) { out += '<span class="tag" title="Flag">' + I('flag') + esc(FLAG_W[f] || f) + '</span>'; });
     var pr = product(a.productId); if (pr) out += '<span class="tag" title="Product">' + I('box') + esc(pr.name) + '</span>';
+    var fw = byIdIn('frameworks', a.frameworkId); if (fw) out += '<span class="tag" data-chip="framework" title="Framework">' + I('stack-2') + esc(fw.name) + '</span>';
+    a.formatIds.forEach(function (f) { var x = byIdIn('formats', f); out += '<span class="tag" data-chip="format" title="' + esc(x ? x.name : f) + '">' + I('aspect-ratio') + esc(fmtLabel(f)) + '</span>'; });
+    var pu = pickOf(PURPOSES, a.purpose); if (pu) out += '<span class="tag" data-chip="purpose" title="Variant">' + I(pu[2]) + pu[1] + '</span>';
+    if (a.masterId) { var m = byId(a.masterId); out += '<a class="tag" data-chip="master" href="#/asset/' + encodeURIComponent(a.masterId) + '" title="Master: ' + esc(m ? bare(m) : a.masterId) + '">' + I('link') + 'Master</a>'; }
+    if (a.sourceIds.length) out += '<span class="tag" title="Sources">' + I('paperclip') + a.sourceIds.length + '</span>';
     return out;
   }
   function actsFor(a, kind) {
@@ -491,6 +596,7 @@
       '<button class="btn no" type="button" data-act="bin" data-id="' + esc(a.id) + '" aria-label="Bin"' + dis() + '>' + I('trash') + '</button>';
     if (kind === 'gate') return VERDICTS.map(function (v) { return '<button class="btn" type="button" data-act="gate" data-verdict="' + v[0] + '" data-id="' + esc(a.id) + '" aria-label="' + v[1] + '" style="--hc:var(--ljr-' + v[3] + '-text)"' + dis() + '>' + I(v[2]) + v[1] + '</button>'; }).join('');
     if (kind === 'lib') return '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>';
+    if (kind === 'hand' && a.stage >= 1) return '<button class="btn yes" type="button" data-panel="done" data-id="' + esc(a.id) + '" aria-label="Done"' + dis() + '>' + I('check') + 'Done</button>';
     return '';
   }
   function panelOf(a, k) {
@@ -498,8 +604,19 @@
     if (k === 'redo') body = '<form class="ask" data-redo="' + esc(a.id) + '"><input class="fin" id="note-' + esc(a.id) + '" data-draft="' + esc(a.id) + '" value="' + esc(drafts[a.id] || '') + '" aria-label="What to change" required><button class="btn" type="submit" aria-label="Send redo"' + dis() + '>' + I('send') + '</button></form>';
     if (k === 'who') body = '<div class="chips">' + WHO.map(function (w) { return '<button class="ch' + (a.who === w[0] ? ' on' : '') + '" type="button" data-set="who" data-val="' + w[0] + '" data-id="' + esc(a.id) + '"' + dis() + '>' + I(w[2]) + w[1] + '</button>'; }).join('') + '</div>';
     if (k === 'flag') body = '<div class="chips">' + ['urgent', 'high', 'normal', 'low', 'none'].map(function (p) { return '<button class="ch' + ((a.priority || 'none') === p ? ' on' : '') + '" type="button" data-set="priority" data-val="' + p + '" data-id="' + esc(a.id) + '"' + dis() + '>' + flagIcon(p !== 'none') + p.charAt(0).toUpperCase() + p.slice(1) + '</button>'; }).join('') + '</div>';
+    if (k === 'done') {
+      var tl = S.tools.filter(owned), sel = doneSel[a.id] || '';
+      body = '<div class="fsub">' + I('coin') + 'Credits used</div><div class="chips">' + tl.map(function (t) { return '<button class="ch' + (sel === t.product ? ' on' : '') + '" type="button" data-dtool="' + esc(t.product) + '" data-id="' + esc(a.id) + '" aria-pressed="' + (sel === t.product) + '">' + esc(t.product) + '</button>'; }).join('') + '</div>' +
+        '<div class="ask"><input class="fin" id="units-' + esc(a.id) + '" data-units="' + esc(a.id) + '" type="number" min="0" step="any" value="' + esc(doneUnits[a.id] || '') + '" aria-label="Units used" placeholder="' + esc(sel ? ((S.tools.filter(function (t) { return t.product === sel; })[0] || {}).unit || 'units') : 'units') + '">' +
+        '<button class="btn yes" type="button" data-act="done" data-id="' + esc(a.id) + '" aria-label="Send done"' + dis() + '>' + I('send') + '</button></div>';
+    }
     if (k === 'all') {
-      var pr = product(a.productId), kv = [['Account', S.accounts.length > 1 ? esc(account(a.accountId).name) : ''], ['Product', pr ? esc(pr.name) : ''], ['Brand', a.brandIds.map(function (b) { return esc(brand(b).name); }).join(' · ')], ['Project', esc(a.projectName)], ['Type', esc(typeOf(a.type)[2])], ['Recipe', esc(a.recipe)],
+      var pr = product(a.productId), kit = byIdIn('kits', a.kitId), pb = byIdIn('playbooks', a.playbookId), oc = pickOf(OUTCOMES, a.outcome), vo = byIdIn('voices', a.voiceId), lo = byIdIn('looks', a.lookId), ln = pickOf(LANGS, a.language);
+      var srcs = S.sources.filter(function (x) { return a.sourceIds.indexOf(x.id) >= 0 || x.targetId === a.id; });
+      var kv = [['Group', esc(group(grpOf(a)).name)], ['Account', S.accounts.length > 1 ? esc(account(a.accountId).name) : ''], ['Product', pr ? esc(pr.name) : ''], ['Brand', a.brandIds.map(function (b) { return esc(brand(b).name); }).join(' · ')], ['Project', esc(a.projectName)], ['Type', esc(typeOf(a.type)[2])], ['Recipe', esc(a.recipe)],
+        ['Playbook', pb ? esc(pb.name) : ''], ['Kit', kit ? esc(kit.name) : ''], ['Outcome', oc ? oc[1] : ''], ['Voice', vo ? esc(vo.name) : ''], ['Look', lo ? esc(lo.name) : ''], ['Language', ln ? ln[1] : esc(a.language)], ['Length', esc(a.length)],
+        ['A/B', a.test ? esc(a.test) + (a.result ? ' · ' + esc(a.result) : '') : ''],
+        ['Sources', srcs.map(function (x) { var r = pickOf(RIGHTS, x.rights); return (x.url ? '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.note || x.url.replace(/^https?:\/\//, '').slice(0, 40)) + '</a>' : esc(x.fileName || x.note)) + ' · ' + (r ? r[1] : esc(x.rights)); }).join('<br>')],
         ['Stage', a.stage + ' ' + STAGES[a.stage]], ['AI', esc(a.provider)], ['Cost', a.cost != null && a.cost !== '' ? money(a.cost) : ''], ['Rating', a.rating != null ? esc(a.rating) + ' / 5' : ''],
         ['Version', a.stage === 8 ? 'v' + esc(a.version || 1) : ''], ['Changed', a._t ? dmy(a._t) : ''],
         ['Doc', a.docLink ? '<a href="' + esc(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
@@ -559,24 +676,152 @@
     var A = all().filter(function (a) { return !isTest(a); });
     if (!S.brands.length) return '<div class="card muted">No brands yet.</div>';
     return '<div class="bgrid">' + S.brands.map(function (b) {
-      var n = BSTAGES.indexOf(b.stage), ck = b.setupChecklist || [], done = ck.filter(function (x) { return x.ok; }).length, mine = A.filter(function (a) { return a.brandIds.indexOf(b.id) >= 0 && a.stage < 8; }).length;
-      return '<section class="room" data-brandcard="' + esc(b.id) + '" style="--c:' + col(b.colour) + '"><h2 class="grp"><span class="dot"></span>' + esc(b.name) + '<a class="cnt" href="#/assets?brand=' + encodeURIComponent(b.id) + '" title="Assets in progress">' + mine + '</a></h2>' + (S.accounts.length > 1 ? '<span class="stn">' + esc(account(brandAcct(b.id)).name) + '</span>' : '') +
+      var n = BSTAGES.indexOf(b.stage), ck = (b.setupChecklist || []).map(function (x) { var p = pend['chk|' + b.id + '|' + x.name]; return p ? { name: x.name, ok: p.ok, pend: true } : x; });
+      var done = ck.filter(function (x) { return x.ok; }).length, mine = A.filter(function (a) { return a.brandIds.indexOf(b.id) >= 0 && a.stage < 8; }).length;
+      var sub = [b.groupId ? I(GROUP_ICON[b.groupId] || 'folder') + esc(group(b.groupId).name) : '', S.accounts.length > 1 ? esc(account(brandAcct(b.id)).name) : ''].filter(Boolean).join(' · ');
+      return '<section class="room" data-brandcard="' + esc(b.id) + '" style="--c:' + col(b.colour) + '"><h2 class="grp"><span class="dot"></span>' + esc(b.name) + '<a class="cnt" href="#/assets?brand=' + encodeURIComponent(b.id) + '" title="Assets in progress">' + mine + '</a></h2>' + (sub ? '<span class="stn" data-group="' + esc(b.groupId || '') + '">' + sub + '</span>' : '') +
         '<div class="strip b6">' + BSTAGES.map(function (_, i) { return '<i class="' + (i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>' +
         '<div class="blab" title="' + BSTAGES.join(' · ') + '">' + (n >= 0 ? (n + 1) + '/6 · ' + esc(b.stage) : '') + '</div>' +
-        (ck.length ? '<div class="sect">' + I('list-check') + 'Set-up ' + cnt(done + '/' + ck.length) + '</div><ul class="chk">' + ck.map(function (x) { return '<li class="' + (x.ok ? 'ok' : '') + '">' + I(x.ok ? 'circle-check' : 'circle-dashed') + esc(x.name) + '</li>'; }).join('') + '</ul>' : '') + '</section>';
+        (ck.length ? '<div class="sect">' + I('list-check') + 'Set-up ' + cnt(done + '/' + ck.length) + '</div><ul class="chk">' + ck.map(function (x) { return '<li class="' + (x.ok ? 'ok' : '') + '"><button type="button" data-check="' + esc(b.id) + '" data-item="' + esc(x.name) + '" aria-pressed="' + !!x.ok + '"' + dis() + '>' + I(x.ok ? 'circle-check' : 'circle-dashed') + esc(x.name) + '</button></li>'; }).join('') + '</ul>' : '') + '</section>';
     }).join('') + '</div>';
   }
   function vTools() {
-    var T = S.tools || [];
-    if (!T.length) return '<div class="card muted">No tools yet.</div>';
-    return '<div class="card">' + T.map(function (m) {
+    var T = S.tools || [], G = S.gaps || [];
+    var gaps = '<div class="card" data-gaps><div class="sect">' + I('alert-triangle') + 'Gaps ' + cnt(G.length) + info('Jobs no owned tool can do. Buy or approve one.') + '</div>' +
+      (G.length ? G.map(function (g) {
+        var c = capOf(g.capability), first = g.assetIds && g.assetIds[0];
+        return '<div class="row" data-gap="' + esc(g.capability + '|' + (g.format || '')) + '" style="--c:var(--ljr-3)"><span class="bar"></span><div class="txt">' + I(c[2]) + ' <b>' + esc(c[1]) + '</b>' + (g.format ? ' · ' + esc(g.ratio || fmtLabel(g.format)) : '') + info(g.reason) + '</div>' +
+          (first ? '<a class="cnt" href="#/asset/' + encodeURIComponent(first) + '" title="' + esc(g.assetIds.map(function (x) { var a = byId(x); return a ? bare(a) : x; }).join(' · ')) + '">' + g.assetIds.length + '</a>' : '') + '</div>';
+      }).join('') : '<p class="muted">' + I('circle-check') + ' None.</p>') + '</div>';
+    var add = '<div class="pills"><button class="pill" type="button" data-action="addtool" aria-expanded="' + toolOpen + '" style="--hc:var(--ljr-7-text)">' + I(toolOpen ? 'chevron-up' : 'plus') + 'Add tool</button></div>' + (toolOpen ? vToolForm() : '');
+    var caps = function (m) { return m.capabilities.map(function (k) { var c = capOf(k); return '<span class="tag" data-cap="' + esc(k) + '" title="' + esc(k) + '">' + I(c[2]) + esc(c[1]) + '</span>'; }).join(''); };
+    var fitTag = function (m) { var f = pickOf(FITS, m.fit) || [m.fit, /^BANNED:/.test(m.fit) ? 'Not for ' + m.fit.slice(7) : m.fit, 'ban']; return '<span class="tag" data-fit="' + esc(m.fit) + '" title="Fit">' + I(f[2]) + esc(f[1]) + '</span>'; };
+    var list = T.length ? '<div class="card">' + T.map(function (m) {
+      if (!owned(m)) return '<div class="row" data-tool="' + esc(m.product) + '" style="--c:var(--ljr-0)"><span class="bar"></span><div class="txt"><b>' + esc(m.product) + '</b>' + (m.thing ? ' · ' + esc(m.thing) : '') + info(m.accountNotes) +
+        '<div class="pills" style="margin-top:6px">' + fitTag(m) + caps(m) + '</div></div></div>';
       var st = meterOf(m), pct = Math.min(100, Math.round(st.pct * 100)), d = daysTo(m.resetsOn);
-      return '<div class="meter" data-meter="' + st.k + '" style="--c:var(--ljr-' + st.slot + ')"><span class="bar"></span><div class="txt"><b>' + esc(m.product) + '</b> · ' + esc(m.thing) +
-        info([m.period ? 'Per ' + m.period : '', m.carriesOver ? 'Carries over' : 'Does not carry over', m.fit === 'HAND' ? 'Used by hand' : 'Used by the engine'].filter(Boolean).join(' · ')) +
-        '<div class="track" role="img" aria-label="' + pct + '% used"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="nums"><span>' + esc(m.used) + ' / ' + esc(m.allowance) + ' ' + esc(m.unit || '') + '</span>' + (m.resetsOn ? '<span>' + I('refresh') + ' ' + dmy(Date.parse(m.resetsOn)) + (d !== null && d >= 0 ? ' · ' + d + 'd' : '') + '</span>' : '') + '</div>' +
-        (st.text ? '<div class="why">' + I(st.icon) + '<span>' + esc(st.text) + '</span></div>' : '') + '</div></div>';
-    }).join('') + '</div>';
+      return '<div class="meter" data-meter="' + st.k + '" data-tool="' + esc(m.product) + '" style="--c:var(--ljr-' + st.slot + ')"><span class="bar"></span><div class="txt"><b>' + esc(m.product) + '</b>' + (m.thing ? ' · ' + esc(m.thing) : '') +
+        info([m.period ? 'Per ' + m.period : '', m.carriesOver ? 'Carries over' : 'Does not carry over', m.fit === 'HAND' ? 'Used by hand' : 'Used by the engine', m.costPerUnit ? money(m.costPerUnit) + ' each' : '', m.accountNotes || ''].filter(Boolean).join(' · ')) +
+        (m.allowance ? '<div class="track" role="img" aria-label="' + pct + '% used"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="nums"><span>' + esc(m.used) + ' / ' + esc(m.allowance) + ' ' + esc(m.unit || '') + '</span>' + (m.resetsOn ? '<span>' + I('refresh') + ' ' + dmy(Date.parse(m.resetsOn)) + (d !== null && d >= 0 ? ' · ' + d + 'd' : '') + '</span>' : '') + '</div>' : '') +
+        (st.text ? '<div class="why">' + I(st.icon) + '<span>' + esc(st.text) + '</span></div>' : '') +
+        '<div class="pills" style="margin-top:6px">' + fitTag(m) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
+        (m.audit ? '<a class="tag" href="' + esc(m.audit) + '" target="_blank" rel="noopener" title="Audit">' + I('clipboard-check') + 'Audit</a>' : '') + '</div></div></div>';
+    }).join('') + '</div>' : '<div class="card muted">No tools yet.</div>';
+    return gaps + add + list;
+  }
+  /* Add tool: one request file, kind 'tool'. Draft kept as you type. */
+  var tdraft = (function () { try { return JSON.parse(localStorage.getItem('st-tool') || '') || {}; } catch (e) { return {}; } })(), toolOpen = false, toolErr = {}, toolNote = '';
+  function saveTool() { try { localStorage.setItem('st-tool', JSON.stringify(tdraft)); } catch (e) {} }
+  function vToolForm() {
+    var er = function (k) { return toolErr[k] ? '<div class="ferr">' + esc(toolErr[k]) + '</div>' : ''; };
+    var fq = function (label, req, body, k) { return '<div class="fq"><p class="qt">' + label + (req ? '<span class="req" title="Must answer">★</span>' : '') + '</p>' + body + er(k) + '</div>'; };
+    var inp = function (k, label, type) { return '<input class="fin" data-f="t-' + k + '" value="' + esc(tdraft[k] || '') + '" aria-label="' + label + '" autocomplete="off"' + (type ? ' type="' + type + '"' + (type === 'number' ? ' min="0" step="any"' : '') : '') + '>'; };
+    var multi = function (k, opts) { var on = tdraft[k] || []; return '<div class="chips">' + opts.map(function (o) { var y = on.indexOf(o[0]) >= 0; return '<button class="ch' + (y ? ' on' : '') + '" type="button" data-tmulti="' + k + '" data-val="' + esc(o[0]) + '" aria-pressed="' + y + '">' + (o[2] ? I(o[2]) : '') + esc(o[1]) + '</button>'; }).join('') + '</div>'; };
+    var pick = function (k, opts) { return '<div class="chips">' + opts.map(function (o) { return '<button class="ch' + (tdraft[k] === o[0] ? ' on' : '') + '" type="button" data-tpick="' + k + '" data-val="' + esc(o[0]) + '">' + (o[2] ? I(o[2]) : '') + esc(o[1]) + '</button>'; }).join('') + '</div>'; };
+    return '<div class="card" data-toolform><div class="grp">' + I('tools') + 'Add tool</div>' +
+      fq('Product', 1, inp('product', 'Product'), 'product') +
+      fq('Can do', 1, multi('caps', CAPS), 'caps') +
+      fq('Fit', 0, pick('fit', FITS), 'fit') +
+      fq('Makes', 0, multi('outputs', S.formats.map(function (f) { return [f.id, f.ratio ? f.name + ' ' + f.ratio : f.name, 'aspect-ratio']; })), 'outputs') +
+      '<button class="more" type="button" data-action="tmore" aria-expanded="' + !!tdraft.more + '">' + I(tdraft.more ? 'chevron-up' : 'chevron-down') + 'More</button>' +
+      (tdraft.more ? fq('What is counted', 0, inp('thing', 'What is counted'), 'thing') +
+        fq('Allowance', 0, '<div class="ask">' + inp('allowance', 'Allowance', 'number') + inp('unit', 'Unit') + '</div>', 'allowance') +
+        fq('Period', 0, pick('period', PERIODS) + '<input class="fin" type="date" data-f="t-resetsOn" value="' + esc(tdraft.resetsOn || '') + '" aria-label="Resets on" style="margin-top:8px">', 'resetsOn') +
+        fq('Carries over', 0, pick('carry', [['yes', 'Yes', 'check'], ['no', 'No', 'x']]), 'carry') +
+        fq('Cost each (£)', 0, inp('cost', 'Cost per unit', 'number'), 'cost') +
+        fq('Takes in', 0, inp('inputs', 'Inputs, comma between'), 'inputs') +
+        fq('Account', 0, inp('notes', 'Account or licence notes'), 'notes') +
+        fq('Audit link', 0, inp('audit', 'Audit link', 'url'), 'audit') : '') +
+      '<div class="frow"><span class="muted">' + esc(toolNote) + '</span><button class="btn yes" type="button" data-action="sendtool" aria-label="Send tool"' + dis() + '>' + I('check') + 'Send</button></div></div>';
+  }
+  function sendTool() {
+    if (EX) return;
+    toolErr = {};
+    if (!(tdraft.product || '').trim()) toolErr.product = 'Add a name';
+    if (!(tdraft.caps || []).length) toolErr.caps = 'Pick one';
+    if (tdraft.audit && !/^https?:\/\/\S+$/.test(tdraft.audit.trim())) toolErr.audit = 'Starts http';
+    ['allowance', 'cost'].forEach(function (k) { if (tdraft[k] !== undefined && tdraft[k] !== '' && !(Number(tdraft[k]) >= 0)) toolErr[k] = 'A number'; });
+    if (Object.keys(toolErr).length) { if (toolErr.allowance || toolErr.cost || toolErr.audit) tdraft.more = true; render(); return; }
+    var num = function (k) { return tdraft[k] === undefined || tdraft[k] === '' ? undefined : Number(tdraft[k]); };
+    // Only what was filled in is sent: the engine leaves the rest of an existing tool (same product + thing) alone.
+    var body = { kind: 'tool', accountId: ownerId(), at: new Date().toISOString(), product: tdraft.product.trim(), capabilities: tdraft.caps.slice() };
+    var txt = { thing: tdraft.thing, unit: tdraft.unit, fit: tdraft.fit, accountNotes: tdraft.notes, audit: tdraft.audit };
+    Object.keys(txt).forEach(function (k) { if ((txt[k] || '').trim()) body[k] = txt[k].trim(); });
+    if ((tdraft.outputs || []).length) body.outputs = tdraft.outputs.slice();
+    var ins = (tdraft.inputs || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); if (ins.length) body.inputs = ins;
+    if (num('cost') !== undefined) body.costPerUnit = num('cost');
+    if (num('allowance') !== undefined) body.allowance = num('allowance');
+    if (tdraft.period) body.period = tdraft.period;
+    if (tdraft.resetsOn) body.resetsOn = tdraft.resetsOn;
+    if (tdraft.carry) body.carriesOver = tdraft.carry === 'yes';
+    toolNote = 'Sending…'; render();
+    withWrite(function () {
+      return putRequest('tool', body).then(function () {
+        try { localStorage.removeItem('st-tool'); } catch (e) {}
+        tdraft = {}; toolOpen = false; toolNote = ''; banner('✓ ' + hm(Date.now()) + ' · ' + body.product + ' · applies by ' + appliesBy(Date.now())); $('banner').className = 'banner info'; render();
+      }).catch(function (e) { toolNote = 'Not sent: ' + e.message + '. Kept.'; render(); });
+    });
+  }
+  /* Kits: the WHAT ladder (Playbook › Pack › Kit › Brick), styles and formats. */
+  function kitSub() { var p = hashParts().path[1]; return pickOf(KSUBS, p) ? p : 'playbooks'; }
+  function vKits() {
+    var sub = kitSub(), n = { playbooks: S.playbooks.length, packs: S.packs.length, kits: S.kits.length, styles: S.frameworks.length + S.voices.length + S.looks.length, formats: S.formats.length };
+    var nav = '<div class="pills" data-ksub>' + KSUBS.map(function (k) { return '<a class="pill' + (k[0] === sub ? ' on' : '') + '" href="#/kits/' + k[0] + '" data-kitnav="' + k[0] + '"' + (k[0] === sub ? ' aria-current="true"' : '') + '>' + I(k[2]) + k[1] + ' ' + cnt(n[k[0]]) + '</a>'; }).join('') + '</div>';
+    var name = function (list, id) { var x = byIdIn(list, id); return x ? x.name : id; };
+    var kitTags = function (k) {
+      return k.needs.map(function (c) { var x = capOf(c); return '<span class="tag" data-cap="' + esc(c) + '" title="Needs ' + esc(c) + '">' + I(x[2]) + esc(x[1]) + '</span>'; }).join('') +
+        (k.frameworkId ? '<span class="tag" title="Framework">' + I('stack-2') + esc(name('frameworks', k.frameworkId)) + '</span>' : '') +
+        (k.voiceId ? '<span class="tag" title="Voice">' + I('microphone') + esc(name('voices', k.voiceId)) + '</span>' : '') +
+        (k.lookId ? '<span class="tag" title="Look">' + I('palette') + esc(name('looks', k.lookId)) + '</span>' : '') +
+        k.formatIds.map(function (f) { return '<span class="tag" title="' + esc(name('formats', f)) + '">' + I('aspect-ratio') + esc(fmtLabel(f)) + '</span>'; }).join('');
+    };
+    var empty = '<p class="muted">None yet.</p>', body = '';
+    if (sub === 'playbooks') {
+      body = '<div class="ogrid">' + OUTCOMES.map(function (o) {
+        var pbs = S.playbooks.filter(function (p) { return p.outcome === o[0]; });
+        return '<section class="room" data-outcome="' + o[0] + '" style="--c:var(--ljr-' + o[3] + ')"><h2 class="grp">' + I(o[2]) + o[1] + cnt(pbs.length) + '</h2>' +
+          pbs.map(function (p) {
+            return '<div class="pb" data-playbook="' + esc(p.id) + '"><b>' + esc(p.name) + '</b><ol class="steps">' + (p.steps || []).map(function (x) {
+              var href = x.kind === 'kit' ? '#/kits/kits' : x.kind === 'pack' ? '#/kits/packs' : '';
+              return '<li>' + I(x.kind === 'pack' ? 'package' : x.kind === 'kit' ? 'box' : 'hand-finger') + (href ? '<a href="' + href + '">' + esc(x.text || x.id) + '</a>' : esc(x.text)) + '</li>';
+            }).join('') + '</ol></div>';
+          }).join('') + '</section>';
+      }).join('') + '</div>';
+    } else if (sub === 'packs') {
+      body = '<div class="card">' + (S.packs.length ? S.packs.map(function (p) {
+        return '<div class="crow" data-pack="' + esc(p.id) + '"><div class="l1"><span class="type">' + I('package') + '</span><span class="ttl">' + esc(p.name) + '</span><span title="Kits">' + cnt(p.kitIds.length) + '</span></div>' +
+          '<div class="l2"><span class="icons">' + (p.kind ? '<span class="tag" title="Kind">' + esc(p.kind) + '</span>' : '') + p.kitIds.map(function (k) { return '<span class="tag" title="Kit">' + I('box') + esc(name('kits', k)) + '</span>'; }).join('') + '</span></div>' +
+          (p.notes ? '<div class="when">' + esc(p.notes) + '</div>' : '') + '</div>';
+      }).join('') : empty) + '</div>';
+    } else if (sub === 'kits') {
+      var used = {}; all().forEach(function (a) { if (a.kitId) used[a.kitId] = (used[a.kitId] || 0) + 1; });
+      body = '<div class="card">' + (S.kits.length ? S.kits.map(function (k) {
+        var t = typeOf(k.type);
+        return '<div class="crow" data-kit="' + esc(k.id) + '"><div class="l1"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span><span class="ttl">' + esc(k.name) + '</span><span title="Assets using it">' + cnt(used[k.id] || 0) + '</span></div>' +
+          '<div class="l2"><span class="icons">' + kitTags(k) + (k.brickIds.length ? '<span class="tag" title="Bricks: ' + esc(k.brickIds.map(function (b) { return name('bricks', b); }).join(' · ')) + '">' + I('puzzle') + k.brickIds.length + '</span>' : '') + '</span></div></div>';
+      }).join('') : empty) + '</div>';
+    } else if (sub === 'styles') {
+      var card = function (kind, x, extra) {
+        return '<section class="room" data-style="' + kind + '" data-id="' + esc(x.id) + '"><h3 class="grp">' + esc(x.name) + info(extra) + '</h3>' +
+          (x.when ? '<div class="when">' + I('target-arrow') + esc(x.when) + '</div>' : '') +
+          (x.steps && x.steps.length ? '<ol class="steps">' + x.steps.map(function (s1) { return '<li>' + esc(s1) + '</li>'; }).join('') + '</ol>' : '') + '</section>';
+      };
+      var part = function (icon, word, kind, list, extra) {
+        return '<div class="card" data-styles="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(list.length) + '</div>' + (list.length ? '<div class="bgrid" style="margin-top:8px">' + list.map(function (x) { return card(kind, x, extra(x)); }).join('') + '</div>' : empty) + '</div>';
+      };
+      body = part('stack-2', 'Frameworks', 'framework', S.frameworks, function (x) { return x.source ? 'Source (internal): ' + x.source : ''; }) +
+        part('microphone', 'Voices', 'voice', S.voices, function (x) { return x.brandId ? brand(x.brandId).name : ''; }) +
+        part('palette', 'Looks', 'look', S.looks, function (x) { return x.kind || ''; });
+    } else {
+      body = '<div class="card">' + (S.formats.length ? S.formats.map(function (f) {
+        return '<div class="crow" data-format="' + esc(f.id) + '"><div class="l1"><span class="type">' + I('aspect-ratio') + '</span><span class="ttl">' + esc(f.name) + '</span>' + info([f.safeZone, f.notes].filter(Boolean).join(' · ')) + '</div>' +
+          '<div class="l2"><span class="icons">' + (f.ratio ? '<span class="tag" title="Ratio">' + esc(f.ratio) + '</span>' : '') + (f.size ? '<span class="tag" title="Size">' + esc(f.size) + '</span>' : '') +
+          (f.fileType ? '<span class="tag" title="File">' + I('file') + esc(f.fileType) + '</span>' : '') + (f.maxLength ? '<span class="tag" title="Max length">' + I('clock') + esc(f.maxLength) + '</span>' : '') + '</span></div>' +
+          (f.channel ? '<div class="when">' + esc(f.channel) + '</div>' : '') + '</div>';
+      }).join('') : empty) + '</div>';
+    }
+    return nav + '<div data-kits="' + sub + '" style="display:flex;flex-direction:column;gap:14px">' + body + '</div>';
   }
   function vEngine() {
     var on = studioOn(), h = S.health || {};
@@ -592,31 +837,64 @@
   function saveDraft() { try { localStorage.setItem('st-idea', JSON.stringify(draft)); } catch (e) {} }
   function prefill(id) {
     var a = byId(id); if (!a || draft.fromId === id) return;
-    draft = { fromId: id, name: bare(a) + ' (reuse)', brands: a.brandIds.slice(), product: a.productId || '', project: a.projectName || '', type: a.type, timing: a.dated ? 'dated' : 'evergreen', date: a.eventDate || '', size: a.size || '', provider: a.provider || '' };
+    draft = { fromId: id, name: bare(a) + ' (reuse)', brands: a.brandIds.slice(), product: a.productId || '', project: a.projectName || '', type: a.type, timing: a.dated ? 'dated' : 'evergreen', date: a.eventDate || '', size: a.size || '', provider: a.provider || '',
+      group: a.groupId || '', kit: a.kitId || '', playbook: a.playbookId || '', outcome: a.outcome || '', framework: a.frameworkId || '', voice: a.voiceId || '', look: a.lookId || '', formats: a.formatIds.slice(), language: a.language || '', length: a.length || '' };
     saveDraft();
   }
+  function brandGroups() { var g = {}; S.brands.forEach(function (b) { if (b.groupId) g[b.groupId] = 1; }); return S.groups.filter(function (x) { return g[x.id]; }); }
   function vNew() {
     var q = hashParts().q; if (q.get('from')) prefill(q.get('from'));
-    draft.brands = draft.brands || [];
+    draft.brands = draft.brands || []; draft.formats = draft.formats || []; draft.sources = draft.sources || [];
     var prods = S.products.filter(function (x) { return draft.brands.indexOf(x.brandId) >= 0; });
-    var multi = S.accounts.length > 1;
+    var multi = S.accounts.length > 1, grps = brandGroups();
+    var shownBrands = S.brands.filter(function (b) { return !draft.group || b.groupId === draft.group || draft.brands.indexOf(b.id) >= 0; });
     var er = function (k) { return formErr[k] ? '<div class="ferr">' + esc(formErr[k]) + '</div>' : ''; };
     var fq = function (label, req, body, k, tip) { return '<div class="fq"><p class="qt">' + label + info(tip) + (req ? '<span class="req" title="Must answer">★</span>' : '') + '</p>' + body + er(k) + '</div>'; };
     var pick = function (key, opts) { return '<div class="chips">' + opts.map(function (o) { return '<button class="ch' + (draft[key] === o[0] ? ' on' : '') + '" type="button" data-pick="' + key + '" data-val="' + esc(o[0]) + '">' + (o[2] ? I(o[2]) : '') + esc(o[1]) + '</button>'; }).join('') + '</div>'; };
+    var many = function (key, opts) { return '<div class="chips">' + opts.map(function (o) { var y = draft[key].indexOf(o[0]) >= 0; return '<button class="ch' + (y ? ' on' : '') + '" type="button" data-multi="' + key + '" data-val="' + esc(o[0]) + '" aria-pressed="' + y + '">' + (o[2] ? I(o[2]) : '') + esc(o[1]) + '</button>'; }).join('') + '</div>'; };
     var input = function (k, label) { return '<input class="fin" data-f="n-' + k + '" value="' + esc(draft[k] || '') + '" aria-label="' + label + '" autocomplete="off">'; };
+    var ids = function (list, icon) { return S[list].map(function (x) { return [x.id, x.name, icon]; }); };
+    var acct = draft.brands.length ? brandAcct(draft.brands[0]) : null;
+    var masters = all().filter(function (a) { return !isTest(a) && (!acct || a.accountId === acct) && (!draft.brands.length || a.brandIds.some(function (b) { return draft.brands.indexOf(b) >= 0; })); });
+    var voices = S.voices.filter(function (v) { return !v.brandId || !draft.brands.length || draft.brands.indexOf(v.brandId) >= 0; });
+    var more = draft.more ? fq('Project', 0, input('project', 'Project'), 'project') +
+        fq('Audience', 0, input('audience', 'Audience'), 'audience', 'Who it is for') +
+        fq('Offer', 0, input('offer', 'Offer'), 'offer', 'What it leads to') +
+        fq('Size', 0, pick('size', [['S', 'S'], ['M', 'M'], ['L', 'L']]), 'size', 'S = an hour · M = a day · L = more') +
+        (S.playbooks.length ? fq('Playbook', 0, pick('playbook', ids('playbooks', 'route')), 'playbook') : '') +
+        (S.kits.length ? fq('Kit', 0, pick('kit', ids('kits', 'box')), 'kit') : '') +
+        (S.frameworks.length ? fq('Framework', 0, pick('framework', ids('frameworks', 'stack-2')), 'framework', 'How the words are built') : '') +
+        (voices.length ? fq('Voice', 0, pick('voice', voices.map(function (v) { return [v.id, v.name, 'microphone']; })), 'voice') : '') +
+        (S.looks.length ? fq('Look', 0, pick('look', ids('looks', 'palette')), 'look') : '') +
+        (S.formats.length ? fq('Formats', 0, many('formats', S.formats.map(function (f) { return [f.id, f.ratio ? f.name + ' ' + f.ratio : f.name, 'aspect-ratio']; })), 'formats') : '') +
+        fq('Language', 0, pick('language', LANGS), 'language') +
+        fq('Length', 0, input('length', 'Length, e.g. 30s or 1 page'), 'length') +
+        fq('Variant of', 0, '<select class="fin" data-f="n-master" aria-label="Master asset"><option value="">None</option>' + masters.map(function (a) { return '<option value="' + esc(a.id) + '"' + (draft.master === a.id ? ' selected' : '') + '>' + esc(bare(a)) + '</option>'; }).join('') + '</select>' +
+          '<div style="margin-top:8px">' + pick('purpose', PURPOSES) + '</div>', 'master') +
+        fq('Sources', 0, vSources(), 'sources', 'Links, Inbox files or notes. Inspiration only = never copy.') : '';
     return '<div class="card"><div class="grp"><span class="dot" style="--c:var(--ljr-7)"></span>New idea' + (draft.fromId ? '<span class="st">' + I('recycle') + 'Reuse</span>' : '') + '</div>' +
       fq('Name', 1, input('name', 'Name'), 'name') +
-      fq('Brands', 1, '<div class="chips">' + S.brands.map(function (b) { return '<button class="ch' + (draft.brands.indexOf(b.id) >= 0 ? ' on' : '') + '" type="button" data-multi="brands" data-val="' + esc(b.id) + '" aria-pressed="' + (draft.brands.indexOf(b.id) >= 0) + '"><span class="dot" style="--c:' + col(b.colour) + '"></span>' + esc(b.name) + (multi ? ' · ' + esc(account(brandAcct(b.id)).name) : '') + '</button>'; }).join('') + '</div>', 'brands', 'One or more, from one account') +
+      (grps.length > 1 ? fq('Group', 0, pick('group', grps.map(function (g) { return [g.id, g.name, GROUP_ICON[g.id] || 'folder']; })), 'group') : '') +
+      fq('Brands', 1, '<div class="chips">' + shownBrands.map(function (b) { return '<button class="ch' + (draft.brands.indexOf(b.id) >= 0 ? ' on' : '') + '" type="button" data-multi="brands" data-val="' + esc(b.id) + '" aria-pressed="' + (draft.brands.indexOf(b.id) >= 0) + '"><span class="dot" style="--c:' + col(b.colour) + '"></span>' + esc(b.name) + (multi ? ' · ' + esc(account(brandAcct(b.id)).name) : '') + '</button>'; }).join('') + '</div>', 'brands', 'One or more, from one account') +
       (prods.length ? fq('Product', 0, pick('product', prods.map(function (x) { return [x.id, x.name, 'box']; })), 'product') : '') +
-      fq('Project', 0, input('project', 'Project'), 'project') +
       fq('Type', 1, pick('type', TYPES.map(function (t) { return [t[0], t[2], t[1]]; })), 'type') +
-      fq('Audience', 0, input('audience', 'Audience'), 'audience', 'Who it is for') +
-      fq('Offer', 0, input('offer', 'Offer'), 'offer', 'What it leads to') +
+      fq('Outcome', 0, pick('outcome', OUTCOMES), 'outcome') +
       fq('Timing', 0, pick('timing', [['evergreen', 'Evergreen', 'leaf'], ['dated', 'Dated', 'calendar-event']]) + (draft.timing === 'dated' ? '<input class="fin" type="date" data-f="n-date" value="' + esc(draft.date || '') + '" aria-label="Event date" style="margin-top:8px">' : ''), 'date') +
-      fq('Size', 0, pick('size', [['S', 'S'], ['M', 'M'], ['L', 'L']]), 'size', 'S = an hour · M = a day · L = more') +
       fq('AI', 0, pick('provider', PROVIDERS.map(function (p) { return [p, p]; })), 'provider') +
       fq(I('pencil'), 0, '<textarea class="fin" data-f="n-notes" aria-label="Notes">' + esc(draft.notes || '') + '</textarea>', 'notes') +
+      '<button class="more" type="button" data-action="nmore" aria-expanded="' + !!draft.more + '">' + I(draft.more ? 'chevron-up' : 'chevron-down') + 'More</button>' + more +
       '<div class="frow"><span class="muted" id="formNote">' + esc(formNote) + '</span><button class="btn yes" type="button" data-action="sendidea" aria-label="Send"' + dis() + '>' + I('check') + 'Send</button></div></div>';
+  }
+  // Sources on a brief: each is a link, a file dropped in the Inbox, or a note, with a rights flag.
+  function vSources() {
+    var inbox = ST.inboxFolderId ? '<a class="pill" href="https://drive.google.com/drive/folders/' + esc(ST.inboxFolderId) + '" target="_blank" rel="noopener" data-inbox title="Drop the file here first">' + I('inbox') + 'Inbox</a>' : '';
+    return draft.sources.map(function (x, i) {
+      var chips = function (key, opts) { return '<div class="chips">' + opts.map(function (o) { return '<button class="ch' + (x[key] === o[0] ? ' on' : '') + '" type="button" data-spick="' + i + '" data-key="' + key + '" data-val="' + o[0] + '">' + I(o[2]) + o[1] + '</button>'; }).join('') + '</div>'; };
+      var field = x.kind === 'upload' ? '<div class="ask">' + inbox + '<input class="fin" data-f="s-' + i + '-fileName" value="' + esc(x.fileName || '') + '" aria-label="File name in the Inbox" placeholder="File name" autocomplete="off"></div>'
+        : x.kind === 'note' ? '<input class="fin" data-f="s-' + i + '-note" value="' + esc(x.note || '') + '" aria-label="Source note" autocomplete="off">'
+        : '<input class="fin" type="url" data-f="s-' + i + '-url" value="' + esc(x.url || '') + '" aria-label="Source link" placeholder="https://" autocomplete="off">';
+      return '<div class="src" data-src="' + i + '"><div class="ask">' + chips('kind', SRC_KINDS) + '<button class="ico" type="button" data-action="delsrc" data-i="' + i + '" aria-label="Remove source">' + I('x') + '</button></div>' + field + chips('rights', RIGHTS) + '</div>';
+    }).join('') + '<button class="pill" type="button" data-action="addsrc">' + I('plus') + 'Source</button>';
   }
   function sendIdea() {
     if (EX) return;
@@ -626,10 +904,25 @@
     else if (draft.brands.map(brandAcct).some(function (x, i, l) { return x !== l[0]; })) formErr.brands = 'One account per idea';
     if (!draft.type) formErr.type = 'Pick one';
     if (draft.timing === 'dated' && !draft.date) formErr.date = 'Add the date';
+    if (draft.master && !draft.purpose) formErr.master = 'Pick why';
+    if (draft.purpose && !draft.master) formErr.master = 'Pick the master';
+    var srcs = (draft.sources || []).map(function (x) {
+      var o = { kind: x.kind || 'link', rights: x.rights || '' }, v = String(x.kind === 'upload' ? x.fileName || '' : x.kind === 'note' ? x.note || '' : x.url || '').trim();
+      if (o.kind === 'upload') o.fileName = v; else if (o.kind === 'note') o.note = v; else o.url = v;
+      return o;
+    }).filter(function (o) { return o.url || o.fileName || o.note; });
+    if (srcs.some(function (o) { return !o.rights; })) formErr.sources = 'Pick the rights';
+    else if (srcs.some(function (o) { return o.kind === 'link' && !/^https?:\/\/\S+$/.test(o.url); })) formErr.sources = 'A link starts http';
+    if ((formErr.master || formErr.sources) && !draft.more) draft.more = true;
     if (Object.keys(formErr).length) { render(); var first = document.querySelector('.ferr'); if (first) first.scrollIntoView({ block: 'center' }); return; }
     formNote = 'Sending…'; render();
     var body = { kind: 'idea', accountId: brandAcct(draft.brands[0]), at: new Date().toISOString(), name: draft.name.trim(), brandIds: draft.brands, productId: draft.product || null, projectName: (draft.project || '').trim(), type: draft.type, audience: (draft.audience || '').trim(), offer: (draft.offer || '').trim(),
       evergreen: draft.timing !== 'dated', dated: draft.timing === 'dated', eventDate: draft.timing === 'dated' ? draft.date : null, size: draft.size || '', provider: draft.provider || '', notes: (draft.notes || '').trim(), fromId: draft.fromId || null };
+    var opt = { groupId: draft.group, playbookId: draft.playbook, kitId: draft.kit, outcome: draft.outcome, frameworkId: draft.framework, voiceId: draft.voice, lookId: draft.look,
+      language: draft.language, length: (draft.length || '').trim(), masterId: draft.master, purpose: draft.purpose };
+    Object.keys(opt).forEach(function (k) { if (opt[k]) body[k] = opt[k]; });
+    if ((draft.formats || []).length) body.formatIds = draft.formats.slice();
+    if (srcs.length) body.sources = srcs;
     withWrite(function () {
       return putRequest('idea', body).then(function () {
         try { localStorage.removeItem('st-idea'); } catch (e) {}
@@ -657,6 +950,7 @@
     var x = byId(id), n = $('note-' + id), body = { kind: act, accountId: x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() };
     if (act === 'redo') { body.note = n ? n.value.trim() : ''; if (!body.note) { if (n) n.focus(); return; } }
     if (act === 'gate') body.verdict = verdict;
+    if (act === 'done') { var u = Number(doneUnits[id]); if (doneSel[id] && u > 0) body.creditsUsed = { product: doneSel[id], units: u }; delete doneSel[id]; delete doneUnits[id]; }
     var box = document.querySelector('.crow[data-row="' + id + '"] .acts'); if (box) box.innerHTML = '<span class="sent">Sending…</span>';
     withWrite(function () {
       return putRequest(act, body)
@@ -672,6 +966,7 @@
     Object.keys(pend).forEach(function (id) {
       var p = pend[id];
       if (id === 'studio') { if (now - p.at > 36e5 || !!S.studio.on === p.on) delete pend[id]; return; }
+      if (id.indexOf('chk|') === 0) { var bits = id.split('|'), it = (brand(bits[1]).setupChecklist || []).filter(function (x) { return x.name === bits.slice(2).join('|'); })[0]; if (!it || now - p.at > 36e5 || !!it.ok === p.ok) delete pend[id]; return; }
       var a = byId(id);
       if (!a || a._t >= p.at || now - p.at > 36e5) { delete pend[id]; return; }
       if (p.who !== undefined) a.who = p.who;
@@ -684,6 +979,14 @@
     var x = byId(id), body = { kind: 'set', accountId: x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() }; body[field] = val;
     pend[id] = Object.assign(pend[id] || {}, body, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); openPanel = null; render();
     withWrite(function () { return putRequest('set', body).catch(function (e) { delete pend[id]; saveLocal('st-pend', pend); banner('Not sent: ' + e.message); load(); }); });
+  }
+  // Brand set-up tick: shows at once, one 'check' request file; the engine writes it into BRANDS at its next run.
+  function sendCheck(bid, item) {
+    if (EX) return;
+    var b = brand(bid), key = 'chk|' + bid + '|' + item, cur = pend[key] ? pend[key].ok : !!((b.setupChecklist || []).filter(function (x) { return x.name === item; })[0] || {}).ok;
+    var body = { kind: 'check', accountId: brandAcct(bid), brandId: bid, item: item, ok: !cur, at: new Date().toISOString() };
+    pend[key] = { ok: !cur, at: Date.now() }; saveLocal('st-pend', pend); render();
+    withWrite(function () { return putRequest('check', body).catch(function (e) { delete pend[key]; saveLocal('st-pend', pend); banner('Not sent: ' + e.message); render(); }); });
   }
   function studioOn() { var p = pend.studio; return p && Date.now() - p.at < 36e5 ? p.on : !!S.studio.on; }
   function sendStudio() {
@@ -718,7 +1021,7 @@
   }
   function loadLocal(k) { try { var o = JSON.parse(localStorage.getItem(k) || '{}'), now = Date.now(); Object.keys(o).forEach(function (x) { var t = o[x] && o[x].at || o[x]; if (typeof t === 'number' && now - t > 864e5) delete o[x]; }); return o; } catch (e) { return {}; } }
   function saveLocal(k, o) { try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} }
-  var sent = loadLocal('st-sent'), sentF = loadLocal('st-sentf'), drafts = loadLocal('st-drafts');
+  var sent = loadLocal('st-sent'), sentF = loadLocal('st-sentf'), drafts = loadLocal('st-drafts'), doneSel = {}, doneUnits = {};
 
   /* ---------- Header and render ---------- */
   function headerPills() {
@@ -755,7 +1058,7 @@
     var tb = barTab(); if (tb) toUrl(tb);
     v.setAttribute('data-view', route[0] || 'me');
     v.innerHTML = route[0] === 'ideas' ? vIdeas() : route[0] === 'assets' ? list('assets', inProgress(), kindFor) : route[0] === 'review' ? list('review', reviews(), function () { return 'review'; }) :
-      route[0] === 'brands' ? vBrands() : route[0] === 'library' ? list('library', library(), function () { return 'lib'; }) : route[0] === 'tools' ? vTools() : route[0] === 'new' ? vNew() :
+      route[0] === 'brands' ? vBrands() : route[0] === 'library' ? list('library', library(), function () { return 'lib'; }) : route[0] === 'kits' ? vKits() : route[0] === 'tools' ? vTools() : route[0] === 'new' ? vNew() :
       route[0] === 'asset' ? vAsset(decodeURIComponent(route[1] || '')) : route[0] === 'engine' ? vEngine() : vMe();
   }
 
@@ -763,8 +1066,11 @@
   document.addEventListener('input', function (e) {
     var f = e.target.getAttribute && e.target.getAttribute('data-f');
     var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('st-drafts', drafts); return; }
+    var un = e.target.getAttribute && e.target.getAttribute('data-units'); if (un) { doneUnits[un] = e.target.value; return; }
     if (!f) return;
     if (/^n-/.test(f)) { draft[f.slice(2)] = e.target.value; delete formErr[f.slice(2)]; saveDraft(); return; }
+    if (/^t-/.test(f)) { tdraft[f.slice(2)] = e.target.value; delete toolErr[f.slice(2)]; saveTool(); return; }
+    var sm = f.match(/^s-(\d+)-(url|fileName|note)$/); if (sm) { var sx0 = (draft.sources || [])[+sm[1]]; if (sx0) { sx0[sm[2]] = e.target.value; delete formErr.sources; saveDraft(); } return; }
     if (f === 'fq') { var tb = barTab(); if (!tb) return; fsOf(tb).q = e.target.value; saveFs(); var p = e.target.selectionStart; render(); var b = document.querySelector('[data-f="fq"]'); if (b) { b.focus(); try { b.setSelectionRange(p, p); } catch (x) {} } }
   });
   document.addEventListener('click', function (e) {
@@ -777,15 +1083,30 @@
       else if (k === 'clearf') { var t2 = barTab(); if (t2) { fs[t2] = fdef(); saveFs(); } render(); }
       else if (k === 'more') { var g = a.getAttribute('data-brand'); shownAll[g] = { on: !(shownAll[g] && shownAll[g].on), at: Date.now() }; saveLocal('st-open', shownAll); render(); }
       else if (k === 'sendidea') sendIdea(); else if (k === 'studio') sendStudio();
+      else if (k === 'nmore') { draft.more = !draft.more; saveDraft(); render(); }
+      else if (k === 'addsrc') { draft.sources = draft.sources || []; draft.sources.push({ kind: 'link', url: '', rights: 'inspiration' }); draft.more = true; saveDraft(); render(); }
+      else if (k === 'delsrc') { (draft.sources || []).splice(+a.getAttribute('data-i'), 1); saveDraft(); render(); }
+      else if (k === 'addtool') { toolOpen = !toolOpen; render(); }
+      else if (k === 'tmore') { tdraft.more = !tdraft.more; saveTool(); render(); }
+      else if (k === 'sendtool') sendTool();
       return;
     }
+    var ck = e.target.closest('[data-check]'); if (ck && !ck.disabled) { sendCheck(ck.getAttribute('data-check'), ck.getAttribute('data-item')); return; }
+    var dt = e.target.closest('[data-dtool]'); if (dt) { var did = dt.getAttribute('data-id'), dv = dt.getAttribute('data-dtool'); doneSel[did] = doneSel[did] === dv ? '' : dv; render(); var ui = $('units-' + did); if (ui && doneSel[did]) ui.focus(); return; }
+    var tp = e.target.closest('[data-tpick]'); if (tp) { var tk = tp.getAttribute('data-tpick'), tv = tp.getAttribute('data-val'); tdraft[tk] = tdraft[tk] === tv ? '' : tv; saveTool(); render(); return; }
+    var tm = e.target.closest('[data-tmulti]'); if (tm) { var tmk = tm.getAttribute('data-tmulti'), tmv = tm.getAttribute('data-val'), tarr = tdraft[tmk] = tdraft[tmk] || [], ti = tarr.indexOf(tmv); if (ti >= 0) tarr.splice(ti, 1); else tarr.push(tmv); delete toolErr[tmk]; saveTool(); render(); return; }
+    var sp = e.target.closest('[data-spick]'); if (sp) { var sx1 = (draft.sources || [])[+sp.getAttribute('data-spick')]; if (sx1) { sx1[sp.getAttribute('data-key')] = sp.getAttribute('data-val'); delete formErr.sources; saveDraft(); render(); } return; }
     var b = e.target.closest('[data-act]'); if (b && !b.disabled) { sendAct(b.getAttribute('data-id'), b.getAttribute('data-act'), b.getAttribute('data-verdict')); return; }
     var fx = e.target.closest('[data-fx]'); if (fx) { var t3 = barTab(); if (!t3) return; var sx = fsOf(t3), fk = fx.getAttribute('data-fx'), fv = fx.getAttribute('data-val');
-      if (fk === 'sort') sx.sort = fv; else if ((fk === 'brand' || fk === 'acct') && !fv) sx[fk] = []; else { var i = sx[fk].indexOf(fv); if (i >= 0) sx[fk].splice(i, 1); else sx[fk].push(fv); }
+      if (fk === 'sort') sx.sort = fv; else if ((fk === 'brand' || fk === 'acct' || fk === 'grp') && !fv) sx[fk] = []; else { var i = sx[fk].indexOf(fv); if (i >= 0) sx[fk].splice(i, 1); else sx[fk].push(fv); }
       saveFs(); render(); return; }
     var ud = e.target.closest('[data-undo]'); if (ud) { ud.disabled = true; undo(ud.getAttribute('data-undo')); return; }
     var st = e.target.closest('[data-set]'); if (st && !st.disabled) { sendSet(st.getAttribute('data-id'), st.getAttribute('data-set'), st.getAttribute('data-val')); return; }
-    var pk = e.target.closest('[data-pick]'); if (pk) { var key = pk.getAttribute('data-pick'), val = pk.getAttribute('data-val'); draft[key] = draft[key] === val ? '' : val; delete formErr[key]; delete formErr.date; saveDraft(); render(); return; }
+    var pk = e.target.closest('[data-pick]'); if (pk) { var key = pk.getAttribute('data-pick'), val = pk.getAttribute('data-val'); draft[key] = draft[key] === val ? '' : val; delete formErr[key]; delete formErr.date;
+      if (key === 'purpose') delete formErr.master;
+      if (key === 'group' && draft.group) draft.brands = (draft.brands || []).filter(function (b) { var g = brand(b).groupId; return !g || g === draft.group; });
+      if (key === 'playbook' && draft.playbook && !draft.outcome) { var pbk = byIdIn('playbooks', draft.playbook); if (pbk) draft.outcome = pbk.outcome; }
+      saveDraft(); render(); return; }
     var mu = e.target.closest('[data-multi]'); if (mu) { var mk = mu.getAttribute('data-multi'), mv = mu.getAttribute('data-val'), arr = draft[mk] = draft[mk] || [], j = arr.indexOf(mv); if (j >= 0) arr.splice(j, 1); else arr.push(mv); delete formErr[mk]; saveDraft(); render(); return; }
     var pn = e.target.closest('[data-panel]'); if (pn && !pn.disabled) { var pid = pn.getAttribute('data-id'), pkk = pn.getAttribute('data-panel');
       openPanel = openPanel && openPanel.id === pid && openPanel.k === pkk ? null : { id: pid, k: pkk };

@@ -55,10 +55,14 @@ Business and personal entities are shown separately and are never added together
 
 <https://ljoyrose.github.io/dashboard/studio/> is the asset hub (slot 7): PDFs, ebooks, lead magnets, slides, scripts, logbooks,
 family trees, puppy packs, social graphics, page and email drafts, for every brand. Idea → approved → reused.
-- **Tabs:** Me (Review, Gates, Hand jobs) · Ideas · Assets · Review · Brands · Library · Tools (credit meters) · + New.
+- **Tabs:** Me (Review, Gates, Hand jobs with Done) · Ideas · Assets · Review · Brands (set-up ticks) · Library · Kits · Tools (credit meters, gaps, Add tool) · + New.
+- **Two ladders (v0.2):** WHERE = Group › Business (brand) › Product (Group chips on the find bar). WHAT = Brick › Kit › Pack › Playbook;
+  a playbook aims at one outcome (Attract, Convert, Deliver, Keep, Reuse). Style = Framework + Voice + Look. Formats are presets.
+  A variant points at its master (refresh, rebrand, reformat, translate, A/B test). Sources carry a rights flag.
+- **Tools by capability:** a kit lists what it needs; the engine finds the best owned tool. No tool = a gap on the Tools tab.
 - **Reads** `studio-state.json` from the Studio logs folder (`studio` in `config.js`), by folder and exact name, every 5 minutes.
   Not there yet: built-in example data, a banner, and nothing is sent.
-- **Writes** one request file per click into the requests folder (approve, redo, bin, gate, idea, set, studio).
+- **Writes** one request file per click into the requests folder (approve, redo, bin, gate, idea, set, studio, tool, source, done, check).
   The STUDIO-ENGINE Apps Script applies it. Undo until the engine's next run.
 - **Client-ready:** accounts (owner or client) and products; every brand, product, asset, idea and request carries `accountId`.
   Account chips show when there is more than one account. An idea cannot mix two accounts.

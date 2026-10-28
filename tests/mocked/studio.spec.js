@@ -12,7 +12,8 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8'), ctx);
 const ST = ctx.window.DASH_CONFIG.studio; // folder ids and file name come from config.js, so the tests follow a change there
 const NOW = new Date('2026-10-28T10:10:00'); // fixed clock: the Undo window (until the engine's next run) is then known
-const TABS = ['me', 'ideas', 'assets', 'review', 'brands', 'library', 'tools', 'new'];
+const TABS = ['me', 'ideas', 'assets', 'review', 'brands', 'library', 'kits', 'tools', 'new'];
+const KIT_SUBS = ['kits/playbooks', 'kits/packs', 'kits/kits', 'kits/styles', 'kits/formats'];
 const UPLOAD = /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files/;
 
 async function open(page, guard, hash, { state = true, change } = {}) {
@@ -209,6 +210,19 @@ test.describe('Studio page', () => {
       await expect(page.locator('#view')).toHaveAttribute('data-view', key);
       await noSidewaysScroll(page, key);
     }
+    for (const key of KIT_SUBS) {
+      await page.evaluate((h) => { location.hash = h; }, '#/' + key);
+      await expect(page.locator(`#view [data-kits="${key.split('/')[1]}"]`)).toBeVisible();
+      await noSidewaysScroll(page, key);
+    }
+    await page.evaluate(() => { location.hash = '#/tools'; });
+    await page.locator('[data-action="addtool"]').click();
+    await page.locator('[data-action="tmore"]').click();
+    await noSidewaysScroll(page, 'tools with Add tool and More open');
+    await page.evaluate(() => { location.hash = '#/new'; });
+    await page.locator('[data-action="nmore"]').click();
+    await page.locator('[data-action="addsrc"]').click();
+    await noSidewaysScroll(page, 'new brief with More and a source open');
     await page.evaluate(() => { location.hash = '#/assets'; });
     await page.locator('#filtersBtn').click();
     await noSidewaysScroll(page, 'assets with filters open');
@@ -241,7 +255,7 @@ test.describe('Studio page', () => {
 
   test('no text smaller than 13px on any tab', async ({ page, guard }) => {
     await open(page, guard, '#/me');
-    for (const key of TABS.concat(['engine', 'asset/sa-make'])) {
+    for (const key of TABS.concat(['engine', 'asset/sa-make'], KIT_SUBS)) {
       await page.evaluate((h) => { location.hash = h; }, '#/' + key);
       await expect(page.locator('#view')).toHaveAttribute('data-view', key.split('/')[0]);
       if (key === 'assets') await page.locator('#filtersBtn').click();
@@ -257,5 +271,204 @@ test.describe('Studio page', () => {
       });
       expect(small, `${key}: text smaller than 13px`).toEqual([]);
     }
+  });
+
+  /* ---------- v0.2: groups, kits, styles, formats, variants, sources, tools by capability, gaps, Done, set-up ticks ---------- */
+  test('group chips: Dogs and Client services filter Assets, the address carries it; Group shows on brand cards; hidden with one group', async ({ page, guard }) => {
+    await open(page, guard, '#/assets');
+    const grp = (v) => page.locator(`#view [data-fx="grp"][data-val="${v}"]`);
+    await expect(page.locator('#view .fbar > :first-child')).toHaveAttribute('data-frow', 'grp'); // top of the find bar
+    await expect(grp('grp-dogs').locator('.cnt')).toHaveText('5');
+    await expect(grp('grp-services').locator('.cnt')).toHaveText('1');
+    await expect(grp('grp-apps')).toHaveCount(0); // no items, no chip
+    await grp('grp-services').click();
+    await expect(page).toHaveURL(/grp=grp-services/);
+    await expect(rows(page)).toHaveCount(1);
+    await expect(page.locator('.crow[data-row="sa-client"]')).toBeVisible();
+    await grp('').click();
+    await expect(rows(page)).toHaveCount(6);
+    await page.locator('nav.tabs a[data-nav="brands"]').click();
+    await expect(page.locator('[data-brandcard="sb-client"] .stn')).toContainText('Client services');
+    await expect(page.locator('[data-brandcard="sb-north"] .stn')).toContainText('Dogs');
+  });
+
+  test('one group only: no Group chips', async ({ page, guard }) => {
+    await open(page, guard, '#/assets', { change: (s) => { s.brands.forEach((b) => { b.groupId = 'grp-dogs'; }); s.assets.forEach((a) => { a.groupId = null; }); } });
+    await expect(rows(page)).toHaveCount(6);
+    await expect(page.locator('#view [data-frow="grp"]')).toHaveCount(0);
+  });
+
+  test('Kits tab: playbooks by outcome, packs, kits with their needs, styles (frameworks, voices, looks), formats', async ({ page, guard }) => {
+    await open(page, guard, '#/kits');
+    await expect(page.locator('nav.tabs a[data-nav="kits"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#view [data-kits="playbooks"] [data-outcome]')).toHaveCount(5);
+    await expect(page.locator('[data-outcome]')).toHaveText([/Attract/, /Convert/, /Deliver/, /Keep/, /Reuse/]);
+    const launch = page.locator('[data-outcome="convert"] [data-playbook="pb-launch"]');
+    await expect(launch.locator('li')).toHaveText(['Sample webclass funnel', 'Sample email kit', 'Post the replay link']);
+    await expect(page.locator('[data-outcome="attract"] [data-playbook="pb-grow"]')).toBeVisible();
+    await expect(page.locator('[data-outcome="convert"] .grp .cnt')).toHaveText('1');
+    await expect(page.locator('[data-kitnav="kits"] .cnt')).toHaveText('4');
+    await page.locator('[data-kitnav="packs"]').click();
+    await expect(page.locator('[data-pack="pk-funnel"]')).toContainText('Sample webclass kit');
+    await page.locator('[data-kitnav="kits"]').click();
+    await expect(page.locator('[data-kit]')).toHaveCount(4);
+    await expect(page.locator('[data-kit="kit-webclass"] [data-cap="video-reformat"]')).toBeVisible();
+    await expect(page.locator('[data-kit="kit-webclass"]')).toContainText('9:16');
+    await page.locator('[data-kitnav="styles"]').click();
+    await expect(page.locator('[data-style="framework"]')).toHaveCount(3);
+    await expect(page.locator('[data-style="framework"][data-id="fw-hso"] li')).toHaveText(['Hook', 'Story', 'Offer']);
+    await expect(page.locator('[data-style="framework"][data-id="fw-hso"] .when')).toHaveText('Short posts and emails');
+    await expect(page.locator('[data-style="voice"]')).toHaveCount(1);
+    await expect(page.locator('[data-style="look"]')).toHaveCount(2);
+    await page.locator('[data-kitnav="formats"]').click();
+    await expect(page.locator('[data-format]')).toHaveCount(5);
+    await expect(page.locator('[data-format="fmt-reel"]')).toContainText('9:16');
+    await expect(page.locator('[data-format="fmt-reel"]')).toContainText('1080x1920');
+  });
+
+  test('asset rows show framework, format and variant chips, and a master link on a variant', async ({ page, guard }) => {
+    await open(page, guard, '#/review');
+    const v = page.locator('.crow[data-row="sa-rev2"]');
+    await expect(v.locator('[data-chip="framework"]')).toHaveText('Hook, story, offer');
+    await expect(v.locator('[data-chip="format"]')).toHaveText('Email header');
+    await expect(v.locator('[data-chip="purpose"]')).toHaveText('Refresh');
+    await expect(v.locator('a[data-chip="master"]')).toHaveAttribute('href', '#/asset/sa-lib');
+    await expect(page.locator('.crow[data-row="sa-rev1"] a[data-chip="master"]')).toHaveCount(0);
+    await page.locator('nav.tabs a[data-nav="assets"]').click();
+    await expect(page.locator('.crow[data-row="sa-make"] [data-chip="format"]')).toHaveText(['16:9', '9:16']);
+  });
+
+  test('New brief: group filters brands; More holds the style, formats, variant and sources; Send writes them all', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/new');
+    await expect(page.locator('[data-pick="playbook"]')).toHaveCount(0); // behind More
+    await page.locator('[data-f="n-name"]').fill('Sample reel brief');
+    await page.locator('[data-pick="group"][data-val="grp-dogs"]').click();
+    await expect(page.locator('[data-multi="brands"][data-val="sb-client"]')).toHaveCount(0);
+    await page.locator('[data-multi="brands"][data-val="sb-north"]').click();
+    await page.locator('[data-pick="type"][data-val="social"]').click();
+    await page.locator('[data-action="nmore"]').click();
+    await page.locator('[data-pick="playbook"][data-val="pb-grow"]').click();
+    await expect(page.locator('[data-pick="outcome"][data-val="attract"]')).toHaveClass(/\bon\b/); // the playbook's outcome
+    await page.locator('[data-pick="kit"][data-val="kit-social"]').click();
+    await page.locator('[data-pick="framework"][data-val="fw-hso"]').click();
+    await page.locator('[data-pick="voice"][data-val="vo-warm"]').click();
+    await page.locator('[data-pick="look"][data-val="look-wordmark"]').click();
+    await page.locator('[data-multi="formats"][data-val="fmt-reel"]').click();
+    await page.locator('[data-multi="formats"][data-val="fmt-fb-feed"]').click();
+    await page.locator('[data-pick="language"][data-val="en-GB"]').click();
+    await page.locator('[data-f="n-length"]').fill('30s');
+    await page.locator('[data-f="n-master"]').selectOption('sa-rev1');
+    await page.locator('[data-action="addsrc"]').click();
+    await page.locator('[data-f="s-0-url"]').fill('https://www.youtube.com/watch?v=sample');
+    await page.locator('[data-action="addsrc"]').click();
+    await page.locator('[data-src="1"] [data-key="kind"][data-val="upload"]').click();
+    await expect(page.locator('[data-src="1"] a[data-inbox]')).toHaveAttribute('href', 'https://drive.google.com/drive/folders/' + ST.inboxFolderId);
+    await page.locator('[data-f="s-1-fileName"]').fill('sketch.jpg');
+    await page.locator('[data-src="1"] [data-key="rights"][data-val="own"]').click();
+    await page.locator('[data-action="sendidea"]').click();
+    await expect(page.locator('.ferr')).toHaveText('Pick why'); // a variant needs a purpose
+    expect(got).toHaveLength(0);
+    await page.locator('[data-pick="purpose"][data-val="rebrand"]').click();
+    await page.locator('[data-action="sendidea"]').click();
+    await expect(page).toHaveURL(/#\/ideas$/);
+    expect(got).toHaveLength(1);
+    expect(got[0].meta.name).toMatch(/^idea-\d+\.json$/);
+    expect(got[0].body).toMatchObject({
+      kind: 'idea', accountId: 'acc-owner', name: 'Sample reel brief', brandIds: ['sb-north'], type: 'social',
+      groupId: 'grp-dogs', playbookId: 'pb-grow', outcome: 'attract', kitId: 'kit-social', frameworkId: 'fw-hso', voiceId: 'vo-warm', lookId: 'look-wordmark',
+      formatIds: ['fmt-reel', 'fmt-fb-feed'], language: 'en-GB', length: '30s', masterId: 'sa-rev1', purpose: 'rebrand',
+      sources: [{ kind: 'link', url: 'https://www.youtube.com/watch?v=sample', rights: 'inspiration' }, { kind: 'upload', fileName: 'sketch.jpg', rights: 'own' }]
+    });
+  });
+
+  test('Tools: Add tool writes one tool request with capabilities, fit, outputs and meter fields', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/tools');
+    await expect(page.locator('[data-toolform]')).toHaveCount(0);
+    await page.locator('[data-action="addtool"]').click();
+    await page.locator('[data-action="sendtool"]').click();
+    await expect(page.locator('[data-toolform] .ferr')).toHaveCount(2); // product, capability
+    await page.locator('[data-f="t-product"]').fill('Sample reel tool');
+    await page.locator('[data-tmulti="caps"][data-val="video-reformat"]').click();
+    await page.locator('[data-tmulti="caps"][data-val="video-captions"]').click();
+    await page.locator('[data-tpick="fit"][data-val="BANNED:client"]').click();
+    await page.locator('[data-tmulti="outputs"][data-val="fmt-reel"]').click();
+    await page.locator('[data-action="tmore"]').click();
+    await page.locator('[data-f="t-allowance"]').fill('30');
+    await page.locator('[data-f="t-unit"]').fill('min');
+    await page.locator('[data-tpick="period"][data-val="month"]').click();
+    await page.locator('[data-f="t-cost"]').fill('0.5');
+    await page.locator('[data-f="t-audit"]').fill('https://example.com/audit');
+    await page.locator('[data-action="sendtool"]').click();
+    await expect(page.locator('[data-toolform]')).toHaveCount(0);
+    expect(got).toHaveLength(1);
+    expect(got[0].meta.name).toMatch(/^tool-\d+\.json$/);
+    expect(got[0].meta.parents).toEqual([ST.requestsFolderId]);
+    expect(got[0].body).toMatchObject({ kind: 'tool', accountId: 'acc-owner', product: 'Sample reel tool', capabilities: ['video-reformat', 'video-captions'], fit: 'BANNED:client',
+      outputs: ['fmt-reel'], allowance: 30, unit: 'min', period: 'month', costPerUnit: 0.5, audit: 'https://example.com/audit' });
+    expect(got[0].body.by).toMatch(/@/);
+  });
+
+  test('Tools: gaps list what no owned tool can do; capability and fit chips; a tool we do not own has no meter', async ({ page, guard }) => {
+    await open(page, guard, '#/tools');
+    await expect(page.locator('[data-gaps] .sect .cnt')).toHaveText('2');
+    const g = page.locator('[data-gap="video-reformat|fmt-reel"]');
+    await expect(g).toContainText('Resize video');
+    await expect(g).toContainText('9:16');
+    await expect(g.locator('a.cnt')).toHaveAttribute('href', '#/asset/sa-make');
+    await expect(page.locator('[data-gap="video-reformat|fmt-youtube"]')).toContainText('16:9');
+    await expect(page.locator('[data-tool="Sample image tool"] [data-cap="image-generate"]')).toBeVisible();
+    await expect(page.locator('[data-tool="Sample writing tool"] [data-fit="HAND"]')).toBeVisible();
+    const nope = page.locator('[data-tool="Sample video tool"]');
+    await expect(nope.locator('[data-fit="NOT_OWNED"]')).toHaveText('Not owned');
+    await expect(nope).not.toHaveAttribute('data-meter', /.*/);
+    await expect(page.locator('#nTools')).toHaveText('1');
+  });
+
+  test('Me: Done on a Hand job writes done with creditsUsed (tool + units); Undo is offered', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/me');
+    const r = page.locator('[data-sect="hand"] .crow[data-row="sa-hand"]');
+    await r.locator('[data-panel="done"]').click();
+    await expect(r.locator('[data-dtool="Sample video tool"]')).toHaveCount(0); // not owned
+    await r.locator('[data-dtool="Sample image tool"]').click();
+    await r.locator('#units-sa-hand').fill('3');
+    await r.locator('[data-act="done"]').click();
+    await expect(r.locator('[data-sent]')).toHaveText('✓ 10:10 · applies by 10:19');
+    await expect(r.locator('[data-undo]')).toBeVisible();
+    expect(got).toHaveLength(1);
+    expect(got[0].meta.name).toMatch(/^done-\d+\.json$/);
+    expect(got[0].body).toMatchObject({ kind: 'done', assetId: 'sa-hand', accountId: 'acc-owner', creditsUsed: { product: 'Sample image tool', units: 3 } });
+  });
+
+  test('Brands: ticking a set-up item writes one check request and shows at once', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/brands');
+    const item = page.locator('[data-check="sb-north"][data-item="Email list"]');
+    await expect(item).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.locator('[data-brandcard="sb-north"] .sect .cnt')).toHaveText('2/3');
+    await item.click();
+    await expect(item).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('[data-brandcard="sb-north"] .sect .cnt')).toHaveText('3/3');
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].meta.name).toMatch(/^check-\d+\.json$/);
+    expect(got[0].body).toMatchObject({ kind: 'check', accountId: 'acc-owner', brandId: 'sb-north', item: 'Email list', ok: true });
+  });
+
+  test('example data has groups, kits, styles, formats, a variant and a gap (fictional), and sends nothing', async ({ page, guard }) => {
+    await open(page, guard, '#/kits', { state: false });
+    await expect(page.locator('[data-playbook="ex-pb1"]')).toBeVisible();
+    await page.locator('[data-kitnav="styles"]').click();
+    await expect(page.locator('[data-style="framework"]')).toHaveCount(3);
+    await page.locator('nav.tabs a[data-nav="tools"]').click();
+    await expect(page.locator('[data-gap]')).toHaveCount(1);
+    await page.locator('[data-action="addtool"]').click();
+    await expect(page.locator('[data-action="sendtool"]')).toBeDisabled();
+    await page.locator('nav.tabs a[data-nav="assets"]').click();
+    await expect(page.locator('.crow[data-row="ex-9"] a[data-chip="master"]')).toHaveAttribute('href', '#/asset/ex-5');
+    await page.locator('nav.tabs a[data-nav="brands"]').click();
+    await expect(page.locator('[data-check="ex-a"]').first()).toBeDisabled();
+    expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 });

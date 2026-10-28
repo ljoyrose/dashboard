@@ -49,11 +49,11 @@ If any of these breaks, the tick turns red and says which page.
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
-| Studio (example data, real data, accounts, tabs, find bar, Review write-back and Undo, Tools warnings, phone, dark, text size) | `/dashboard/studio/` | 13 |
+| Studio (example data, real data, accounts, groups, tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, phone, dark, text size) | `/dashboard/studio/` | 23 |
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 451 checks that must pass (mocked + phone, 28 Oct 2026).
+That is 470 checks that must pass (mocked + phone, 28 Oct 2026, Studio v0.2).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
@@ -75,7 +75,13 @@ That is 451 checks that must pass (mocked + phone, 28 Oct 2026).
 - Approve writes one `approve` request into the requests folder and shows "✓ HH:MM · applies by HH:MM"; Undo trashes the file. Redo sends its note. A gate verdict and a new idea each write one file.
 - Accounts: owner and client stay apart. Account chips filter (hidden with one account); requests carry `accountId`; an idea cannot mix two accounts. The example shows one owner and one client.
 - Tools: a meter at 85% shows its warning and the Tools tab counts it.
-- 390px: no sideways scroll on any tab. Dark mode: dark page, every word at least 4.5:1. No text under 13px.
+- Groups: Group chips sit at the top of the find bar and filter (hidden with one group). Brand cards show their group.
+- Kits: playbooks in outcome columns, packs, kits with their needs, styles (frameworks, voices, looks), formats.
+- Asset rows show framework, format and variant chips, and a Master link on a variant.
+- New brief: group filters brands; More holds playbook, kit, style, formats, language, length, variant and sources; Send writes them all. A variant needs a purpose.
+- Add tool writes one `tool` request. Gaps list what no owned tool can do. A tool we do not own has no meter.
+- Done on a Hand job writes `done` with the credits used. A set-up tick writes `check` and shows at once.
+- 390px: no sideways scroll on any tab, Kits section, or open form. Dark mode: dark page, every word at least 4.5:1. No text under 13px.
 
 **CD Hub**
 - Opens, asks for sign-in, then reads the sample `BLD-*` tables.
