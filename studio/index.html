@@ -291,6 +291,8 @@
   .col.col-empty { align-self: flex-start; }
   .col.col-empty .col-list { flex: none; }
   .cempty { font-size: 13px; }
+  .cnt:empty, .n:empty { display: none !important; } /* a count of 0 or unknown shows no ring at all */
+  a.site { font-size: 13px; color: var(--ink); white-space: nowrap; }
   .col-foot { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 45px; padding: 4px 12px; font-size: 14px; line-height: 18px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); }
   .col-foot b { color: var(--ink); }
   .side { flex: 0 0 380px; min-width: 0; overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -543,6 +545,13 @@
   var accessToken = null, signedIn = false, S = null, EX = false, err = null, timer = null;
   var $ = function (id) { return document.getElementById(id); };
   // Links from the sheet: only http(s) opens; anything else becomes a dead '#'.
+  // Brand website (engine v0.2.14: kit.website from the BRANDS Sheet, or null): a small "↗ host" link, new tab; hidden when missing or not http(s).
+  function siteLink(b) {
+    var u = b && b.kit && b.kit.website, h = '';
+    if (!u || safeUrl(u) === '#') return '';
+    try { h = new URL(u).hostname.replace(/^www\./, ''); } catch (e) { return ''; }
+    return '<a class="site" data-site="' + esc(b.id) + '" href="' + safeUrl(u) + '" target="_blank" rel="noopener" title="Open the website">\u2197 ' + esc(h) + '</a>';
+  }
   function safeUrl(u) { u = String(u == null ? '' : u).trim(); return /^https?:\/\//i.test(u) ? esc(u) : '#'; }
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function cnt(n) { return '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + '">' + n + '</span>'; } // 1-2 characters: one exact box; 3+ grow
@@ -969,7 +978,7 @@
     if (k === 'all') {
       var pr = product(a.productId), kit = byIdIn('kits', a.kitId), pb = byIdIn('playbooks', a.playbookId), oc = pickOf(OUTCOMES, a.outcome), vo = byIdIn('voices', a.voiceId), lo = byIdIn('looks', a.lookId), ln = pickOf(LANGS, a.language);
       var srcs = S.sources.filter(function (x) { return a.sourceIds.indexOf(x.id) >= 0 || x.targetId === a.id; });
-      var kv = [['Group', esc(group(grpOf(a)).name)], ['Account', S.accounts.length > 1 ? esc(account(a.accountId).name) : ''], ['Product', pr ? esc(pr.name) : ''], ['Brand', a.brandIds.map(function (b) { return esc(brand(b).name); }).join(' · ')], ['Project', esc(a.projectName)], ['Type', esc(typeOf(a.type)[2])], ['Recipe', esc(a.recipe)],
+      var kv = [['Group', esc(group(grpOf(a)).name)], ['Account', S.accounts.length > 1 ? esc(account(a.accountId).name) : ''], ['Product', pr ? esc(pr.name) : ''], ['Brand', a.brandIds.map(function (b) { var x = brand(b), sl = siteLink(x); return esc(x.name) + (sl ? ' ' + sl : ''); }).join(' · ')], ['Project', esc(a.projectName)], ['Type', esc(typeOf(a.type)[2])], ['Recipe', esc(a.recipe)],
         ['Playbook', pb ? esc(pb.name) : ''], ['Kit', kit ? esc(kit.name) : ''], ['Outcome', oc ? oc[1] : ''], ['Voice', vo ? esc(vo.name) : ''], ['Look', lo ? esc(lo.name) : ''], ['Language', ln ? ln[1] : esc(a.language)], ['Length', esc(a.length)],
         ['A/B', a.test ? esc(a.test) + (a.result ? ' · ' + esc(a.result) : '') : ''],
         ['Sources', srcs.map(function (x) { var r = pickOf(RIGHTS, x.rights); return (x.url ? '<a href="' + safeUrl(x.url) + '" target="_blank" rel="noopener">' + esc(x.note || x.url.replace(/^https?:\/\//, '').slice(0, 40)) + '</a>' : esc(x.fileName || x.note)) + ' · ' + (r ? r[1] : esc(x.rights)); }).join('<br>')],
@@ -1196,7 +1205,7 @@
   // Brand kit from the BRANDS Sheet: colour swatches, fonts, Canva kit and the Sheet row. Never a link built from an id.
   function kitStrip(b) {
     var k = b.kit || {}, sw = (k.colours || []).map(function (c) { return /^#[0-9a-fA-F]{6}$/.test(c) ? '<i class="sw" style="background:' + c + '" title="' + c + '"></i>' : ''; }).join('');
-    var links = (k.canvaKitUrl ? '<a class="tag" data-kit="canva" href="' + safeUrl(k.canvaKitUrl) + '" target="_blank" rel="noopener">' + I('palette') + 'Canva kit</a>' : '') + (b.sheetRowUrl ? '<a class="tag" data-kit="sheet" href="' + safeUrl(b.sheetRowUrl) + '" target="_blank" rel="noopener">' + I('table') + 'Brand sheet</a>' : '');
+    var links = siteLink(b) + (k.canvaKitUrl ? '<a class="tag" data-kit="canva" href="' + safeUrl(k.canvaKitUrl) + '" target="_blank" rel="noopener">' + I('palette') + 'Canva kit</a>' : '') + (b.sheetRowUrl ? '<a class="tag" data-kit="sheet" href="' + safeUrl(b.sheetRowUrl) + '" target="_blank" rel="noopener">' + I('table') + 'Brand sheet</a>' : '');
     var fonts = [k.fontHeading, k.fontBody].filter(Boolean).map(esc).join(' · ');
     return sw || links || fonts ? '<div class="kit">' + (sw ? '<span class="sws">' + sw + '</span>' : '') + (fonts ? '<span class="muted">' + I('typography') + fonts + '</span>' : '') + links + '</div>' : '';
   }

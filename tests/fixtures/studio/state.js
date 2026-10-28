@@ -25,8 +25,8 @@
         { id: 'sp-client', accountId: 'acc-client', brandId: 'sb-client', name: 'Sample client book', type: 'book' }
       ],
       brands: [
-        { id: 'sb-north', accountId: 'acc-owner', name: 'Sample Brand North', colour: 7, stage: 'Running', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }, { name: 'Email list', ok: false }], groupId: 'grp-dogs', voiceId: 'vo-warm', lookId: 'look-combination' },
-        { id: 'sb-south', accountId: 'acc-owner', name: 'Sample Brand South', colour: 6, stage: 'Tech set-up', setupChecklist: [{ name: 'Name checked', ok: true }], groupId: 'grp-dogs', voiceId: null, lookId: null },
+        { id: 'sb-north', accountId: 'acc-owner', name: 'Sample Brand North', colour: 7, stage: 'Running', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }, { name: 'Email list', ok: false }], groupId: 'grp-dogs', voiceId: 'vo-warm', lookId: 'look-combination', kit: { website: 'https://www.example.com/north' } },
+        { id: 'sb-south', accountId: 'acc-owner', name: 'Sample Brand South', colour: 6, stage: 'Tech set-up', setupChecklist: [{ name: 'Name checked', ok: true }], groupId: 'grp-dogs', voiceId: null, lookId: null, kit: { website: null } },
         { id: 'sb-client', accountId: 'acc-client', name: 'Sample Client Brand', colour: 5, stage: 'Launch', setupChecklist: [], groupId: 'grp-services', voiceId: null, lookId: null }
       ],
       assets: [

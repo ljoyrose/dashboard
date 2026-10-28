@@ -1269,6 +1269,30 @@ test.describe('Studio page', () => {
     await expect(b).toHaveCSS('outline-color', ink);
   });
 
+  test('brand website: a small "↗ host" link on the brand card and in item details, new tab; hidden when missing', async ({ page, guard }) => {
+    await open(page, guard, '#/brands');
+    const l = page.locator('[data-brandcard="sb-north"] a.site');
+    await expect(l).toHaveText('↗ example.com');
+    await expect(l).toHaveAttribute('href', 'https://www.example.com/north');
+    await expect(l).toHaveAttribute('target', '_blank');
+    await expect(l).toHaveAttribute('rel', /noopener/);
+    await expect(page.locator('[data-brandcard="sb-south"] a.site')).toHaveCount(0);
+    await go(page, 'assets');
+    await expect((await details(page, 'sa-make')).locator('xpath=..').locator('.kv a.site[data-site="sb-north"]')).toHaveText('↗ example.com');
+  });
+
+  for (const state of [true, false]) test('no empty count rings anywhere: a count of 0 or unknown shows no pill' + (state ? '' : ' (example data)'), async ({ page, guard }) => {
+    {
+      await open(page, guard, '#/me', { state });
+      for (const key of TABS.concat(['engine', 'asset/sa-make'], KIT_SUBS)) {
+        await page.evaluate((h) => { location.hash = h; }, '#/' + key);
+        await expect(page.locator('#view')).toHaveAttribute('data-view', key.split('/')[0]);
+        const empty = await page.evaluate(() => [...document.querySelectorAll('.cnt, .n, .fbtn .n, nav.tabs .n')].filter((e) => e.offsetParent && !e.textContent.trim()).map((e) => e.className + ' in ' + (e.parentElement.textContent || '').trim().slice(0, 20)));
+        expect(empty, key).toEqual([]);
+      }
+    }
+  });
+
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
     await open(page, guard, '#/line');
     const html = page.locator('html');
