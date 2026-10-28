@@ -45,6 +45,7 @@ const rows = (page) => page.locator('#view .crow');
 // Calm rows (28 Oct 2026): chips, preview and small tools sit in the item's details, opened from its title.
 const details = async (page, id) => {
   const d = page.locator(`[data-more="${id}"]`);
+  if (await page.locator('#fpanel').count()) await page.keyboard.press('Escape'); // the Filter panel would cover the rows
   if (!(await d.count())) await page.locator(`.crow[data-row="${id}"] .ttl`).first().click();
   await expect(d).toBeVisible();
   return d;
@@ -1180,6 +1181,31 @@ test.describe('Studio page', () => {
     expect(new Set(ys).size, 'the three fit in one row').toBe(1);
     expect((await page.locator('[data-needs]').boundingBox()).y).toBeLessThan((await n.boundingBox()).y);
     await noSidewaysScroll(page, 'Me on the phone');
+  });
+
+  test('who has it: a ring on every card (L ink = waiting on you, C grey = Claude, client initial = waiting on the client); parts under the thumb; details say how long in this step', async ({ page, guard }) => {
+    await open(page, guard, '#/line', { change: (s) => {
+      const b = s.assets.filter((a) => a.id === 'sa-make')[0]; b.size = 'L'; b.parts = { total: 12, approved: 3 };
+      b.stageSince = new Date(NOW.getTime() - 5 * 864e5).toISOString();
+      const c = s.assets.filter((a) => a.id === 'sa-client')[0]; c.ask = { question: 'Which cover?', status: 'sent', at: s.generated_at };
+    } });
+    for (const r of await page.locator('#view .crow').all()) await expect(r.locator('.l1 .whor')).toHaveCount(1);
+    const you = page.locator('.crow[data-row="sa-gate"] .whor');
+    await expect(you).toHaveText('L');
+    await expect(you).toHaveAttribute('aria-label', 'Waiting on you');
+    await expect(you).toHaveCSS('border-top-color', await page.evaluate(() => getComputedStyle(document.body).color));
+    await expect(page.locator('.crow[data-row="sa-client"] .whor')).toHaveAttribute('aria-label', 'Waiting on the client');
+    await expect(page.locator('.crow[data-row="sa-client"] .whor')).toHaveText('S'); // "Sample client"
+    await expect(page.locator('.crow[data-row="sa-make"] [data-parts]')).toHaveText('3/12');
+    const d = await details(page, 'sa-make');
+    const panel = page.locator('.side .kv');
+    await expect(panel).toContainText('In this step5 days · stuck?');
+    await expect(panel).toContainText('Brand ownerOwn brand');
+    await expect(panel).toContainText('With');
+    await expect(page.locator('.crow[data-row="sa-make"] .l1 .selmark')).toHaveText('✓');
+    const tt = await page.locator('.crow[data-row="sa-make"] .ttl').boundingBox(), mk = await page.locator('.crow[data-row="sa-make"] .selmark').boundingBox();
+    expect(mk.x - (tt.x + tt.width)).toBeLessThan(12); // the tick sits right after the title text
+    void d;
   });
 
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
