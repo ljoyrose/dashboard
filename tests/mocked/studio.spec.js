@@ -13,7 +13,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), '
 const ST = ctx.window.DASH_CONFIG.studio; // folder ids and file name come from config.js, so the tests follow a change there
 const NOW = new Date('2026-10-28T10:10:00'); // fixed clock: the Undo window (until the engine's next run) is then known
 const TABS = ['me', 'decide', 'do', 'line', 'ideas', 'assets', 'review', 'brands', 'library', 'kits', 'tools', 'new'];
-const KIT_SUBS = ['kits/playbooks', 'kits/packs', 'kits/kits', 'kits/styles', 'kits/formats'];
+const KIT_SUBS = ['kits/playbooks', 'kits/packs', 'kits/kits', 'kits/bricks', 'kits/styles', 'kits/formats'];
 const UPLOAD = /^https:\/\/www\.googleapis\.com\/upload\/drive\/v3\/files/;
 
 async function open(page, guard, hash, { state = true, change } = {}) {
@@ -1339,6 +1339,61 @@ test.describe('Studio page', () => {
     expect(bar).toEqual({ w: '3px', bg: colBar, l: '0px' });
     await page.locator('[data-vmode="board"]').click();
     expect(await page.locator('.crow[data-row="sa-make"]').evaluate((e) => getComputedStyle(e, '::before').content)).toBe('none'); // not on board cards
+  });
+
+  test('library: + New and Edit on Playbooks, Packs, Kits and Bricks (checked fields), and a Suggest box that waits for Lisa', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/kits/kits');
+    await page.locator('[data-libnew="kits"]').click();
+    const f = page.locator('[data-libform="kits"]');
+    await expect(f.locator('.grp')).toHaveText('New kit');
+    await f.locator('[data-action="libsend"]').click();
+    await expect(f.locator('[data-lfq="name"] .ferr')).toHaveText('Needed');
+    await expect(f.locator('[data-lfq="type"] .ferr')).toHaveText('Needed');
+    expect(got).toHaveLength(0);
+    await f.locator('[data-lf="name"]').fill('Sample launch kit');
+    await f.locator('[data-lfx="type"][data-val="email"]').click();
+    await f.locator('[data-lfx="brickIds"][data-val="br-hook"]').click();
+    await f.locator('[data-lf="link"]').fill('http://not-secure.example');
+    await f.locator('[data-action="libsend"]').click();
+    await expect(f.locator('[data-lfq="link"] .ferr')).toHaveText('A link starting https://');
+    await f.locator('[data-lf="link"]').fill('');
+    await f.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'library', accountId: 'acc-owner', table: 'kits', op: 'new', fields: { name: 'Sample launch kit', type: 'email', brickIds: ['br-hook'], link: '' } });
+    await expect(page.locator('[data-libform]')).toHaveCount(0);
+    // Edit a playbook: the form starts from what is there.
+    await go(page, 'kits/playbooks');
+    const pb = page.locator('[data-playbook]').first(), pid = await pb.getAttribute('data-playbook');
+    await pb.locator('[data-libedit]').click();
+    const ef = page.locator('[data-libform="playbooks"]');
+    await expect(ef.locator('.grp')).toHaveText('Edit playbook');
+    const name0 = await ef.locator('[data-lf="name"]').inputValue();
+    expect(name0.length).toBeGreaterThan(0);
+    await ef.locator('[data-lf="steps"]').fill('Draft the hook\nkit:no-such-kit');
+    await ef.locator('[data-action="libsend"]').click();
+    await expect(ef.locator('[data-lfq="steps"] .ferr')).toHaveText('No kit called no-such-kit');
+    await ef.locator('[data-lf="steps"]').fill('Draft the hook');
+    await ef.locator('[data-lf="name"]').fill(name0 + ' v2');
+    await ef.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(got[1].body).toMatchObject({ kind: 'library', table: 'playbooks', op: 'edit', id: pid, fields: { name: name0 + ' v2', steps: ['Draft the hook'] } });
+    // Bricks have their own tab; the Suggest box sends a pending suggestion.
+    await go(page, 'kits/bricks');
+    await expect(page.locator('[data-brick="br-hook"]')).toContainText('Sample hook line');
+    const sg = page.locator('[data-libsuggest="bricks"]');
+    await sg.locator('textarea').fill('Add a short call-to-action brick for emails.');
+    await sg.locator('button[type="submit"]').click();
+    await expect.poll(() => got.length).toBe(3);
+    expect(got[2].body).toMatchObject({ kind: 'libsuggest', accountId: 'acc-owner', table: 'bricks', text: 'Add a short call-to-action brick for emails.' });
+    await expect(sg.locator('[data-libsent]')).toHaveText('Suggested · waiting for Lisa');
+  });
+
+  test('library: example data has the buttons switched off and sends nothing', async ({ page, guard }) => {
+    await open(page, guard, '#/kits/packs', { state: false });
+    await expect(page.locator('[data-libnew="packs"]')).toBeDisabled();
+    await expect(page.locator('[data-libsuggest="packs"] button[type="submit"]')).toBeDisabled();
+    expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {

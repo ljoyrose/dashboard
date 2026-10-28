@@ -454,6 +454,12 @@
   .card .crow { padding-left: 14px; }
   .card .crow::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--sc); }
   .col-list .crow::before { content: none; }
+  /* Library: + New / Edit form and the Suggest box. */
+  .libbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .libbar .srow { flex: 1 1 260px; }
+  .pbh { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .libform .req { color: var(--ink); }
+  .libsug .ask { align-items: flex-end; }
 </style>
 </head>
 <body>
@@ -512,7 +518,7 @@
  *        masterId, purpose, sources: [{ kind: link|upload|note, url, fileName, note, rights }]} · set {who | priority} · studio {on} ·
  *        tool {product, thing, unit, capabilities, inputs, outputs, fit, costPerUnit, allowance, period, resetsOn, carriesOver,
  *        accountNotes, audit} · done {assetId, creditsUsed?: {product, units}} · check {brandId, item, ok} ·
- *        source {assetId, source}.   Undo = the request file goes to Drive Trash
+ *        source {assetId, source} · library {table: playbooks|packs|kits|bricks, op: new|edit, id?, fields} · libsuggest {table, text}.   Undo = the request file goes to Drive Trash
  *        before the engine's next run (every 15 min at :03 :18 :33 :48).
  *
  * studio-state.json (written by the engine):
@@ -645,7 +651,7 @@
     ['video-reformat', 'Resize video', 'aspect-ratio'], ['video-captions', 'Captions', 'badge-cc'], ['voice-tts', 'Voice', 'microphone'], ['voice-clone', 'Voice clone', 'microphone'],
     ['page-build', 'Pages', 'layout'], ['email-draft', 'Email', 'mail'], ['transcribe', 'Transcribe', 'message-2'], ['research', 'Research', 'search'], ['translate', 'Translate', 'language']];
   var GROUP_ICON = { 'grp-dogs': 'dog', 'grp-apps': 'apps', 'grp-services': 'briefcase', 'grp-lisa': 'user' };
-  var KSUBS = [['playbooks', 'Playbooks', 'route'], ['packs', 'Packs', 'package'], ['kits', 'Kits', 'box'], ['styles', 'Styles', 'palette'], ['formats', 'Formats', 'aspect-ratio']];
+  var KSUBS = [['playbooks', 'Playbooks', 'route'], ['packs', 'Packs', 'package'], ['kits', 'Kits', 'box'], ['bricks', 'Bricks', 'puzzle'], ['styles', 'Styles', 'palette'], ['formats', 'Formats', 'aspect-ratio']];
   function pickOf(list, k) { return list.filter(function (x) { return x[0] === k; })[0] || null; }
   function capOf(k) { return pickOf(CAPS, k) || [k, k, 'tools']; }
   function typeOf(k) { return TYPES.filter(function (t) { return t[0] === k; })[0] || ['other', 'file', 'Other']; }
@@ -1348,8 +1354,87 @@
   }
   /* Kits: the WHAT ladder (Playbook › Pack › Kit › Brick), styles and formats. */
   function kitSub() { var p = hashParts().path[1]; return pickOf(KSUBS, p) ? p : 'playbooks'; }
+  /* ---------- Library: + New and Edit on Playbooks, Packs, Kits and Bricks (same fields as the Sheet, checked here and again
+   * by the engine), and a Suggest box anyone on the team can use (lands as a pending suggestion for Lisa to accept).
+   * Writes { kind: 'library', table, op: new|edit, id?, fields } (owner) and { kind: 'libsuggest', table, id?, text }. ---------- */
+  var LIB = {
+    playbooks: { one: 'playbook', fields: [['name', 'Name', 'text', 1, 120], ['outcome', 'Outcome', 'pick', 1, function () { return OUTCOMES.map(function (o) { return [o[0], o[1]]; }); }],
+      ['steps', 'Steps (one per line; "kit:<id>" or "pack:<id>" links one)', 'lines', 0, 40], ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 500]] },
+    packs: { one: 'pack', fields: [['name', 'Name', 'text', 1, 120], ['kind', 'Kind', 'text', 0, 40], ['kitIds', 'Kits', 'multi', 0, function () { return S.kits.map(function (k) { return [k.id, k.name]; }); }],
+      ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 500]] },
+    kits: { one: 'kit', fields: [['name', 'Name', 'text', 1, 120], ['type', 'Type', 'pick', 1, function () { return TYPES.map(function (t) { return [t[0], t[2]]; }); }],
+      ['brickIds', 'Bricks', 'multi', 0, function () { return S.bricks.map(function (b) { return [b.id, b.name]; }); }], ['needs', 'Needs', 'multi', 0, function () { return CAPS.map(function (c) { return [c[0], c[1]]; }); }],
+      ['frameworkId', 'Framework', 'pick', 0, function () { return S.frameworks.map(function (x) { return [x.id, x.name]; }); }], ['voiceId', 'Voice', 'pick', 0, function () { return S.voices.map(function (x) { return [x.id, x.name]; }); }],
+      ['lookId', 'Look', 'pick', 0, function () { return S.looks.map(function (x) { return [x.id, x.name]; }); }], ['formatIds', 'Formats', 'multi', 0, function () { return S.formats.map(function (x) { return [x.id, fmtLabel(x.id)]; }); }],
+      ['makePromptId', 'Make prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
+      ['checkPromptId', 'Check prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
+      ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 500]] },
+    bricks: { one: 'brick', fields: [['name', 'Name', 'text', 1, 120], ['kind', 'Kind (e.g. hook, prompt, cta)', 'text', 1, 40], ['text', 'Text', 'area', 1, 4000], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 500]] }
+  };
+  var libDraft = loadLocal('st-lib'), libErr = {}, libSent = {};
+  function libEditBtn(table, id) { return '<button class="btn" type="button" data-libedit="' + table + '" data-id="' + esc(id) + '" aria-label="Edit"' + dis() + '>' + I('pencil') + 'Edit</button>'; }
+  function libFrom(table, id) {
+    var x = byIdIn(table, id) || {}, f = {};
+    LIB[table].fields.forEach(function (d) {
+      var v = x[d[0]];
+      if (d[0] === 'steps') v = (x.steps || []).map(function (st) { return st.kind === 'kit' || st.kind === 'pack' ? st.kind + ':' + st.id : st.text; }).join('\n');
+      f[d[0]] = d[2] === 'multi' ? (v || []).slice() : v == null ? '' : String(v);
+    });
+    return f;
+  }
+  function libForm(table) {
+    var d = libDraft.t === table ? libDraft : null; if (!d) return '';
+    var L = LIB[table], f = d.f || {}, opt = function (fd) { return typeof fd[4] === 'function' ? fd[4]() : []; };
+    return '<div class="card libform" data-libform="' + table + '"><div class="grp">' + (d.op === 'edit' ? 'Edit ' + L.one : 'New ' + L.one) + '</div>' +
+      L.fields.map(function (fd) {
+        var k = fd[0], lab = fd[1] + (fd[3] ? ' <span class="req" aria-hidden="true">*</span>' : ''), err = libErr[k] ? '<div class="ferr">' + esc(libErr[k]) + '</div>' : '', v = f[k];
+        var input = fd[2] === 'text' || fd[2] === 'url' ? '<input class="fin" data-lf="' + k + '" value="' + esc(v || '') + '"' + (fd[4] && fd[2] === 'text' ? ' maxlength="' + fd[4] + '"' : '') + (fd[2] === 'url' ? ' inputmode="url" placeholder="https://"' : '') + ' aria-label="' + esc(fd[1]) + '">' :
+          fd[2] === 'area' || fd[2] === 'lines' ? '<textarea class="fin" data-lf="' + k + '" rows="' + (fd[2] === 'lines' ? 4 : 3) + '" aria-label="' + esc(fd[1]) + '">' + esc(v || '') + '</textarea>' :
+          '<div class="chips">' + opt(fd).map(function (o) { var on = fd[2] === 'multi' ? (v || []).indexOf(o[0]) >= 0 : v === o[0]; return '<button class="ch' + (on ? ' on' : '') + '" type="button" data-lfx="' + k + '" data-multi-lf="' + (fd[2] === 'multi' ? 1 : 0) + '" data-val="' + esc(o[0]) + '" aria-pressed="' + on + '">' + esc(o[1]) + '</button>'; }).join('') + (opt(fd).length ? '' : '<span class="muted">None yet.</span>') + '</div>';
+        return '<div class="fq" data-lfq="' + k + '"><p class="qt">' + lab + '</p>' + input + err + '</div>';
+      }).join('') +
+      '<div class="frow"><button class="btn" type="button" data-action="libcancel">Cancel</button><button class="btn yes" type="button" data-action="libsend"' + dis() + '>' + I('send') + (d.op === 'edit' ? 'Save' : 'Add') + '</button></div></div>';
+  }
+  function libCheck(table, f) {
+    var e = {};
+    LIB[table].fields.forEach(function (fd) {
+      var k = fd[0], v = f[k], opts = typeof fd[4] === 'function' ? fd[4]().map(function (o) { return o[0]; }) : null;
+      if (fd[2] === 'multi') { if ((v || []).some(function (x) { return opts.indexOf(x) < 0; })) e[k] = 'Pick from the list'; return; }
+      v = String(v || '').trim();
+      if (fd[3] && !v) { e[k] = 'Needed'; return; }
+      if (!v) return;
+      if (fd[2] === 'url' && !/^https:\/\/\S+$/.test(v)) e[k] = 'A link starting https://';
+      else if (fd[2] === 'pick' && opts.indexOf(v) < 0) e[k] = 'Pick from the list';
+      else if ((fd[2] === 'text' || fd[2] === 'area') && fd[4] && v.length > fd[4]) e[k] = 'At most ' + fd[4] + ' characters';
+      else if (fd[2] === 'lines') { var ls = v.split('\n').map(function (x) { return x.trim(); }).filter(Boolean); if (ls.length > fd[4]) e[k] = 'At most ' + fd[4] + ' steps';
+        ls.forEach(function (x) { var m = x.match(/^(kit|pack)\s*:\s*(\S+)$/i); if (m && !byIdIn(m[1].toLowerCase() === 'kit' ? 'kits' : 'packs', m[2])) e[k] = 'No ' + m[1].toLowerCase() + ' called ' + m[2]; }); }
+    });
+    return e;
+  }
+  function sendLib() {
+    if (EX || !libDraft.t) return;
+    var t = libDraft.t, f = libDraft.f || {}; libErr = libCheck(t, f);
+    if (Object.keys(libErr).length) { render(); var first = document.querySelector('[data-libform] .ferr'); if (first) first.scrollIntoView({ block: 'center' }); return; }
+    var fields = {}; LIB[t].fields.forEach(function (fd) { var v = f[fd[0]]; fields[fd[0]] = fd[2] === 'multi' ? (v || []).slice() : fd[2] === 'lines' ? String(v || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean) : String(v || '').trim(); });
+    var body = { kind: 'library', accountId: ownerId(), table: t, op: libDraft.op, fields: fields, at: new Date().toISOString() }; if (libDraft.op === 'edit') body.id = libDraft.id;
+    var keep = libDraft; libDraft = {}; saveLocal('st-lib', libDraft); libSent[t] = 'Sent · applies at the engine’s next run'; render();
+    withWrite(function () { return putRequest('library', body).catch(function (e) { libDraft = keep; saveLocal('st-lib', libDraft); delete libSent[t]; banner('Not sent: ' + e.message); render(); }); }, function () { libDraft = keep; delete libSent[t]; render(); });
+  }
+  function libSuggest(table) {
+    var key = 'ls|' + table;
+    return '<div class="card libsug" data-libsuggest="' + table + '"><div class="sect">' + I('bulb') + 'Suggest a change</div><p class="muted">Anyone on the team can suggest. It waits for Lisa to accept.</p>' +
+      '<form class="ask" data-libsug="' + table + '"><textarea class="fin" id="lsbox-' + table + '" data-draft="' + key + '" maxlength="1000" rows="2" aria-label="Suggestion" placeholder="What should change, or what should we add?" required>' + esc(drafts[key] || '') + '</textarea><button class="btn" type="submit"' + dis() + '>' + I('send') + 'Suggest</button></form>' +
+      (libSent['s|' + table] ? '<p class="sent" data-libsent>' + esc(libSent['s|' + table]) + '</p>' : '') + '</div>';
+  }
+  function sendLibSuggest(table) {
+    if (EX) return;
+    var key = 'ls|' + table, box = $('lsbox-' + table), text = (box ? box.value : drafts[key] || '').trim().slice(0, 1000);
+    if (!text) { if (box) box.focus(); return; }
+    delete drafts[key]; saveLocal('st-drafts', drafts); libSent['s|' + table] = 'Suggested · waiting for Lisa'; render();
+    withWrite(function () { return putRequest('libsuggest', { kind: 'libsuggest', accountId: ownerId(), table: table, text: text, at: new Date().toISOString() }).catch(function (e) { drafts[key] = text; delete libSent['s|' + table]; banner('Not sent: ' + e.message); render(); }); }, function () { drafts[key] = text; delete libSent['s|' + table]; render(); });
+  }
   function vKits() {
-    var sub = kitSub(), n = { playbooks: S.playbooks.length, packs: S.packs.length, kits: S.kits.length, styles: S.frameworks.length + S.voices.length + S.looks.length, formats: S.formats.length };
+    var sub = kitSub(), n = { playbooks: S.playbooks.length, packs: S.packs.length, kits: S.kits.length, bricks: S.bricks.length, styles: S.frameworks.length + S.voices.length + S.looks.length, formats: S.formats.length };
     var nav = '<div class="pills" data-ksub>' + KSUBS.map(function (k) { return '<a class="pill' + (k[0] === sub ? ' on' : '') + '" href="#/kits/' + k[0] + '" data-kitnav="' + k[0] + '"' + (k[0] === sub ? ' aria-current="true"' : '') + '>' + I(k[2]) + k[1] + ' ' + cnt(n[k[0]]) + '</a>'; }).join('') + '</div>';
     var name = function (list, id) { var x = byIdIn(list, id); return x ? x.name : id; };
     var kitTags = function (k) {
@@ -1365,7 +1450,7 @@
         var pbs = S.playbooks.filter(function (p) { return p.outcome === o[0] && lqHit('kits', [p.name, (p.steps || []).map(function (x) { return x.text || x.id; }).join(' ')].join(' ')); });
         return '<section class="room" data-outcome="' + o[0] + '" style="--c:var(--ljr-' + o[3] + ')"><h2 class="grp">' + I(o[2]) + o[1] + cnt(pbs.length) + '</h2>' +
           pbs.map(function (p) {
-            return '<div class="pb" data-playbook="' + esc(p.id) + '"><b>' + esc(p.name) + '</b><ol class="steps">' + (p.steps || []).map(function (x) {
+            return '<div class="pb" data-playbook="' + esc(p.id) + '"><div class="pbh"><b>' + esc(p.name) + '</b>' + libEditBtn('playbooks', p.id) + '</div><ol class="steps">' + (p.steps || []).map(function (x) {
               var href = x.kind === 'kit' ? '#/kits/kits' : x.kind === 'pack' ? '#/kits/packs' : '';
               return '<li>' + I(x.kind === 'pack' ? 'package' : x.kind === 'kit' ? 'box' : 'hand-finger') + (href ? '<a href="' + href + '">' + esc(x.text || x.id) + '</a>' : esc(x.text)) + '</li>';
             }).join('') + '</ol></div>';
@@ -1374,7 +1459,7 @@
     } else if (sub === 'packs') {
       var PK = S.packs.filter(function (p) { return lqHit('kits', [p.name, p.kind, p.notes].join(' ')); });
       body = '<div class="card">' + (PK.length ? PK.map(function (p) {
-        return '<div class="crow" data-pack="' + esc(p.id) + '"><div class="l1"><span class="type">' + I('package') + '</span><span class="ttl">' + esc(p.name) + '</span><span title="Kits">' + cnt(p.kitIds.length) + '</span></div>' +
+        return '<div class="crow" data-pack="' + esc(p.id) + '"><div class="l1"><span class="type">' + I('package') + '</span><span class="ttl">' + esc(p.name) + '</span><span title="Kits">' + cnt(p.kitIds.length) + '</span>' + libEditBtn('packs', p.id) + '</div>' +
           '<div class="l2"><span class="icons">' + (p.kind ? '<span class="tag" title="Kind">' + esc(p.kind) + '</span>' : '') + p.kitIds.map(function (k) { return '<span class="tag" title="Kit">' + I('box') + esc(name('kits', k)) + '</span>'; }).join('') + '</span></div>' +
           (p.notes ? '<div class="when">' + esc(p.notes) + '</div>' : '') + '</div>';
       }).join('') : empty) + '</div>';
@@ -1383,8 +1468,14 @@
       var KT = S.kits.filter(function (k) { return lqHit('kits', [k.name, k.type, k.notes, (k.needs || []).join(' ')].join(' ')); });
       body = '<div class="card">' + (KT.length ? KT.map(function (k) {
         var t = typeOf(k.type);
-        return '<div class="crow" data-kit="' + esc(k.id) + '"><div class="l1"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span><span class="ttl">' + esc(k.name) + '</span><span title="Assets using it">' + cnt(used[k.id] || 0) + '</span></div>' +
+        return '<div class="crow" data-kit="' + esc(k.id) + '"><div class="l1"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span><span class="ttl">' + esc(k.name) + '</span><span title="Assets using it">' + cnt(used[k.id] || 0) + '</span>' + libEditBtn('kits', k.id) + '</div>' +
           '<div class="l2"><span class="icons">' + kitTags(k) + (k.brickIds.length ? '<span class="tag" title="Bricks: ' + esc(k.brickIds.map(function (b) { return name('bricks', b); }).join(' · ')) + '">' + I('puzzle') + k.brickIds.length + '</span>' : '') + '</span></div></div>';
+      }).join('') : empty) + '</div>';
+    } else if (sub === 'bricks') {
+      var BR = S.bricks.filter(function (b) { return lqHit('kits', [b.name, b.kind, b.text, b.notes].join(' ')); });
+      body = '<div class="card">' + (BR.length ? BR.map(function (b) {
+        return '<div class="crow" data-brick="' + esc(b.id) + '"><div class="l1"><span class="type">' + I('puzzle') + '</span><span class="ttl">' + esc(b.name) + '</span>' + libEditBtn('bricks', b.id) + '</div>' +
+          '<div class="l2"><span class="icons">' + (b.kind ? '<span class="tag" title="Kind">' + esc(b.kind) + '</span>' : '') + '</span></div>' + (b.text ? '<div class="when">' + esc(String(b.text).slice(0, 160)) + '</div>' : '') + '</div>';
       }).join('') : empty) + '</div>';
     } else if (sub === 'styles') {
       var card = function (kind, x, extra) {
@@ -1406,7 +1497,9 @@
           (f.channel ? '<div class="when">' + esc(f.channel) + '</div>' : '') + '</div>';
       }).join('') : empty) + '</div>';
     }
-    return nav + (/^(playbooks|packs|kits)$/.test(sub) ? qbox('kits') : '') + '<div data-kits="' + sub + '" style="display:flex;flex-direction:column;gap:14px">' + body + '</div>';
+    var lib = LIB[sub] ? sub : null;
+    return nav + (lib ? '<div class="libbar">' + qbox('kits') + '<button class="btn" type="button" data-libnew="' + sub + '"' + dis() + '>' + I('plus') + 'New</button></div>' + libForm(sub) : '') +
+      '<div data-kits="' + sub + '" style="display:flex;flex-direction:column;gap:14px">' + body + '</div>' + (lib ? libSuggest(sub) : '');
   }
   function vEngine() {
     var on = studioOn(), h = S.health || {};
@@ -1685,6 +1778,7 @@
   document.addEventListener('input', function (e) {
     var lk = e.target.getAttribute && e.target.getAttribute('data-lq'); if (lk) { lq[lk] = e.target.value; var lp = e.target.selectionStart; render(); var lb = document.querySelector('[data-lq="' + lk + '"]'); if (lb) { lb.focus(); try { lb.setSelectionRange(lp, lp); } catch (x) {} } return; }
     var f = e.target.getAttribute && e.target.getAttribute('data-f');
+    var lf = e.target.getAttribute && e.target.getAttribute('data-lf'); if (lf && libDraft.t) { libDraft.f = libDraft.f || {}; libDraft.f[lf] = e.target.value; delete libErr[lf]; saveLocal('st-lib', libDraft); return; }
     var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('st-drafts', drafts); return; }
     var rf = e.target.getAttribute && e.target.getAttribute('data-rf'); if (rf) { var ri = e.target.getAttribute('data-id'); (resDraft[ri] = resDraft[ri] || {})[rf] = e.target.value; return; }
     var un = e.target.getAttribute && e.target.getAttribute('data-units'); if (un) { doneUnits[un] = e.target.value; return; }
@@ -1700,6 +1794,11 @@
     var lk0 = e.target.closest('[data-look]'); if (lk0) { look[lk0.getAttribute('data-look')] = lk0.getAttribute('data-val'); try { localStorage.setItem('dash-look', JSON.stringify(look)); } catch (x) {} applyLook(); showLook(true); fitBoard(boardScroll()); return; }
     if ((filtersOpen || sortOpen) && !e.target.closest('.fpanel, #filtersBtn, #sortBtn, [data-fxoff]')) { closeF(true); }
     var fo = e.target.closest('[data-fxoff]'); if (fo) { var t4 = barTab(); if (t4) { var s4 = fsOf(t4), k4 = fo.getAttribute('data-fxoff'), i4 = s4[k4].indexOf(fo.getAttribute('data-val')); if (i4 >= 0) s4[k4].splice(i4, 1); saveFs(); } render(); var fb = $('filtersBtn'); if (fb) fb.focus(); return; }
+    var ln = e.target.closest('[data-libnew]'); if (ln && !ln.disabled) { var lt = ln.getAttribute('data-libnew'); libDraft = { t: lt, op: 'new', f: {}, at: Date.now() }; libErr = {}; delete libSent[lt]; saveLocal('st-lib', libDraft); render(); var lf0 = document.querySelector('[data-libform] [data-lf]'); if (lf0) lf0.focus(); return; }
+    var le = e.target.closest('[data-libedit]'); if (le && !le.disabled) { var et = le.getAttribute('data-libedit'), eid = le.getAttribute('data-id'); libDraft = { t: et, op: 'edit', id: eid, f: libFrom(et, eid), at: Date.now() }; libErr = {}; delete libSent[et]; saveLocal('st-lib', libDraft); render(); var lf1 = document.querySelector('[data-libform] [data-lf]'); if (lf1) { lf1.focus(); lf1.scrollIntoView({ block: 'center' }); } return; }
+    var lx = e.target.closest('[data-lfx]'); if (lx && libDraft.t) { var lk = lx.getAttribute('data-lfx'), lv = lx.getAttribute('data-val'); libDraft.f = libDraft.f || {};
+      if (lx.getAttribute('data-multi-lf') === '1') { var la = libDraft.f[lk] = (libDraft.f[lk] || []).slice(), li = la.indexOf(lv); if (li >= 0) la.splice(li, 1); else la.push(lv); } else libDraft.f[lk] = libDraft.f[lk] === lv ? '' : lv;
+      delete libErr[lk]; saveLocal('st-lib', libDraft); render(); return; }
     var vm = e.target.closest('[data-vmode]'); if (vm) { vmode[vm.getAttribute('data-tab')] = vm.getAttribute('data-vmode'); try { localStorage.setItem('st-view', JSON.stringify(vmode)); } catch (x) {} openPanel = null; render(); return; }
     var a = e.target.closest('[data-action]');
     if (a && !a.disabled) {
@@ -1722,6 +1821,8 @@
       else if (k === 'addtool') { toolOpen = !toolOpen; render(); }
       else if (k === 'tmore') { tdraft.more = !tdraft.more; saveTool(); render(); }
       else if (k === 'sendtool') sendTool();
+      else if (k === 'libsend') sendLib();
+      else if (k === 'libcancel') { libDraft = {}; libErr = {}; saveLocal('st-lib', libDraft); render(); }
       return;
     }
     var ck = e.target.closest('[data-check]'); if (ck && !ck.disabled) { sendCheck(ck.getAttribute('data-check'), ck.getAttribute('data-item')); return; }
@@ -1756,6 +1857,7 @@
     var rs = e.target.closest('[data-result]'); if (rs) { e.preventDefault(); sendAct(rs.getAttribute('data-result'), 'result'); return; }
     var rt = e.target.closest('[data-retire]'); if (rt) { e.preventDefault(); sendAct(rt.getAttribute('data-retire'), 'retire'); return; }
     var ak = e.target.closest('[data-askc]'); if (ak) { e.preventDefault(); sendAct(ak.getAttribute('data-askc'), 'ask'); return; }
+    var lsg = e.target.closest('[data-libsug]'); if (lsg) { e.preventDefault(); sendLibSuggest(lsg.getAttribute('data-libsug')); return; }
     var f = e.target.closest('[data-redo]'); if (!f) return; e.preventDefault();
     sendAct(f.getAttribute('data-redo'), 'redo');
   });
@@ -1795,7 +1897,7 @@
   }
   function signOut() {
     stopTimer(); var t = accessToken; accessToken = null; signedIn = false; S = null; EX = false; whoAmI = null; pendingWrite = pendingBack = null; DashAuth.clear();
-    ['st-idea', 'st-tool', 'st-drafts', 'st-pend', 'st-sent', 'st-sentf', 'st-sents'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+    ['st-idea', 'st-tool', 'st-lib', 'st-drafts', 'st-pend', 'st-sent', 'st-sentf', 'st-sents'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
     sent = {}; sentF = {}; sentS = {}; drafts = {}; pend = {}; draft = {}; tdraft = {};
     if (t && window.google && google.accounts) google.accounts.oauth2.revoke(t, function () {});
     render();
