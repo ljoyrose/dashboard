@@ -25,7 +25,7 @@
      "Warm clear" (default) or "Cool clear" from the Look menu, each with a dark version. No solid fills: selected = an outline. */
   :root { --radius: 12px; --me: var(--ljr-7);
     --paper: #EEE8DF; --canvas: #E3DBCF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --soft: #DED5C7;
-    --bd: var(--line); --band: var(--card); --chip: transparent;
+    --bd: var(--line); --band: var(--card); --chip: transparent; --ctl: var(--line);
     --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
     --bg: var(--paper); --surface: var(--card); --sel-bd: var(--ink); --sel-fill: transparent;
     --w2: #C32924; --w3: #9E5802; --w4: #766602; --w5: #217A2D; --w6: #0271A4; --w7: #8850B6;
@@ -38,8 +38,8 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) { --paper: #181613; --canvas: #1F1C18; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --soft: #2F2A24;
       --bd: var(--line); --band: var(--card); --chip: transparent; --shadow: 0 1px 3px rgba(0,0,0,.4);
-      --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; }
-    :root.look-cool:not([data-theme="light"]) { --frame: #24323F; --frame-foot: #2D3D4C; }
+      --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; --ctl: #7D7366; }
+    :root.look-cool:not([data-theme="light"]) { --frame: #24323F; --frame-foot: #2D3D4C; --ctl: #6F7A85; }
     :root.look-cool:not([data-theme="light"]) { --paper: #16191C; --canvas: #1C2024; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --soft: #2B3137; --bd: var(--line); --band: var(--card); --chip: var(--card); }
   }
   /* Mode = Dark from the Look menu: tokens.css only darkens with the device, so its dark spine is repeated here. */
@@ -50,8 +50,8 @@
     --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
     --paper: #181613; --canvas: #1F1C18; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --soft: #2F2A24;
     --bd: var(--line); --band: var(--card); --chip: transparent; --shadow: 0 1px 3px rgba(0,0,0,.4);
-    --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; }
-  :root.look-cool[data-theme="dark"] { --frame: #24323F; --frame-foot: #2D3D4C; }
+    --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; --ctl: #7D7366; }
+  :root.look-cool[data-theme="dark"] { --frame: #24323F; --frame-foot: #2D3D4C; --ctl: #6F7A85; }
   :root.look-cool[data-theme="dark"] { --paper: #16191C; --canvas: #1C2024; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --soft: #2B3137; --bd: var(--line); --band: var(--card); --chip: var(--card); }
   /* Coloured words are the darker set (Look › Coloured words › Lighter swaps it). */
   :root, :root[data-theme] { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); }
@@ -362,6 +362,9 @@
     nav.tabs a { min-height: 62px; justify-content: flex-start; padding-top: 8px; gap: 4px; }
     nav.tabs .n { top: 4px; left: calc(50% + 10px); min-width: 24px; height: 24px; padding: 0 6px; } /* beside the icon, above the label */
   }
+  /* Control edges (things you press or read as a chip) use --ctl: the line colour in light, a 3:1 line in dark so every ring shows. */
+  .btn, .pill, .ch, .fbtn, .achip, .fbar .sbox, .tag, .seg button, .vsw button, .undo, .lk, .stage .n, .stamp { border-color: var(--ctl); }
+  .strip i { box-shadow: inset 0 0 0 1px var(--ctl); }
 </style>
 </head>
 <body>

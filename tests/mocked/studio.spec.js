@@ -1021,6 +1021,57 @@ test.describe('Studio page', () => {
     expect(await t.evaluate((e) => e.scrollHeight > e.clientHeight)).toBe(true); // the rest is cut, not lost: the panel shows it
   });
 
+  test('dark mode (device and Look › Dark): today\'s board, frame, panels, counts, steps and menus read clearly; rings and lines show', async ({ page, guard }) => {
+    const check = async (where) => {
+      const r = await page.evaluate(() => {
+        const rgb = (c) => { const m = c.match(/[\d.]+/g).map(Number), k = /^color\(/.test(c) ? 255 : 1; return [m[0] * k, m[1] * k, m[2] * k, m[3] === undefined ? 1 : m[3]]; };
+        const lum = ([r, g, b]) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+        const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+        const bgOf = (e) => { for (let a = e; a; a = a.parentElement) { const c = rgb(getComputedStyle(a).backgroundColor); if (c[3] > 0.5) return c; } return [0, 0, 0, 1]; };
+        let text = { min: 99, at: '' }, ring = { min: 99, at: '' };
+        document.querySelectorAll('body *').forEach((e) => {
+          if (!e.offsetParent) return;
+          const c = getComputedStyle(e);
+          if (Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) { const v = ratio(rgb(c.color), bgOf(e)); if (v < text.min) text = { min: v, at: e.className + ' "' + e.textContent.trim().slice(0, 20) + '"' }; }
+          if (e.matches('.btn, .pill, .ch, .fbtn, .achip, .tag, .cnt, .seg button, .vsw button, .stage .n, nav.tabs .n') && c.borderTopStyle !== 'none' && rgb(c.borderTopColor)[3] > 0) {
+            const v = ratio(rgb(c.borderTopColor), bgOf(e.parentElement)); if (v < ring.min) ring = { min: v, at: e.className + ' "' + e.textContent.trim().slice(0, 20) + '"' };
+          }
+        });
+        return { text, ring, body: rgb(getComputedStyle(document.body).backgroundColor).slice(0, 3).reduce((a, b) => a + b, 0) };
+      });
+      expect(r.body, `${where}: dark page`).toBeLessThan(150);
+      expect(r.text.min, `${where}: text ${r.text.at}`).toBeGreaterThanOrEqual(4.5);
+      expect(r.ring.min, `${where}: ring ${r.ring.at}`).toBeGreaterThanOrEqual(3);
+    };
+    const tour = async (mode) => {
+      await go(page, 'line');
+      await page.locator('.crow[data-row="sa-make"] .ttl').click();
+      await check(mode + ' board + details');
+      await openFilters(page);
+      await check(mode + ' filter panel');
+      await page.keyboard.press('Escape');
+      await go(page, 'decide'); await check(mode + ' decide');
+      await go(page, 'asset/sa-make'); await check(mode + ' item page');
+      await page.locator('#lookBtn').click(); await check(mode + ' Look menu'); await page.keyboard.press('Escape');
+    };
+    await page.emulateMedia({ colorScheme: 'dark' });
+    await open(page, guard, '#/line');
+    await tour('device dark');
+    await page.locator('#lookBtn').click();
+    await page.locator('#lookMenu [data-look="bg"][data-val="cool"]').click();
+    await page.keyboard.press('Escape');
+    await tour('device dark, cool');
+    await page.emulateMedia({ colorScheme: 'light' });
+    await page.locator('#lookBtn').click();
+    await page.locator('#lookMenu [data-look="mode"][data-val="dark"]').click();
+    await page.locator('#lookMenu [data-look="bg"][data-val="warm"]').click();
+    await page.keyboard.press('Escape');
+    await tour('Look › Dark');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.locator('#moreBtn').click();
+    await check('Look › Dark, phone More menu');
+  });
+
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
     await open(page, guard, '#/line');
     const html = page.locator('html');
