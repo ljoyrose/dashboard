@@ -935,11 +935,11 @@ test.describe('Studio page', () => {
     const look = (sel) => page.locator(sel).first().evaluate((e) => { const c = getComputedStyle(e); return { b: c.borderTopWidth + ' ' + c.borderTopStyle, bc: c.borderTopColor, bg: c.backgroundColor, w: c.fontWeight, r: c.borderTopLeftRadius, num: c.fontVariantNumeric }; });
     for (const [k, sel] of Object.entries({ column: '.col-head .cnt', subnav: '.subnav .cnt', chip: '#fpanel [data-fx] .cnt', filter: '#filtersBtn .n', tab: 'nav.tabs #nLine' })) {
       const l = await look(sel);
-      expect(l, k).toMatchObject({ b: '1px solid', bc: ink, w: '700', num: 'tabular-nums' });
+      expect(l, k).toMatchObject({ b: '1px solid', bc: ink, w: '600', num: 'tabular-nums' });
       expect(parseFloat(l.r), `${k} is a pill`).toBeGreaterThan(9);
     }
     const need = await look('nav.tabs #nMe');
-    expect(need).toMatchObject({ b: '1px solid', bc: 'rgb(230, 68, 61)', bg: 'rgb(252, 228, 224)', w: '700' }); // rose edge (--ljr-2) and tint, never solid
+    expect(need).toMatchObject({ b: '1px solid', bc: 'rgb(230, 68, 61)', bg: 'rgb(252, 228, 224)', w: '600' }); // rose edge (--ljr-2) and tint, never solid
     // Steps are words, not ringed numbers: the only ringed number in a column head is its count.
     await expect(page.locator('.col[data-stage="5"] .col-head .step')).toHaveText('Step 5:');
     await expect(page.locator('.col[data-stage="5"] .col-head .cnt')).toHaveAttribute('aria-label', /^\d+ items$/);
@@ -959,7 +959,7 @@ test.describe('Studio page', () => {
     expect(done.bg).not.toBe('rgba(0, 0, 0, 0)'); // light green tint
     expect(cur).toMatchObject({ w: '1px', color: ink });
     expect(fut).toMatchObject({ w: '1px', bg: 'rgba(0, 0, 0, 0)' });
-    await expect(page.locator('.stage.c')).toHaveCSS('font-weight', '700');
+    await expect(page.locator('.stage.c')).toHaveCSS('font-weight', '600');
     // Nothing small is a solid stage colour: every marker's fill is lighter than its own ring colour.
     const solid = await page.evaluate(() => {
       const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number), k = /^color\(/.test(c) ? 255 : 1; return (m[3] === 0) ? 999 : (m[0] + m[1] + m[2]) * k; };
@@ -986,6 +986,23 @@ test.describe('Studio page', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     for (const sel of ['#moreBtn', '#filtersBtn', '.subnav a', '.crow .ico']) expect(await h(sel), sel + ' on the phone').toBe(44);
     expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(24);
+  });
+
+  test('two font weights only (400 and 600) on every tab', async ({ page, guard }) => {
+    await open(page, guard, '#/me');
+    for (const key of TABS.concat(['engine', 'asset/sa-make'], KIT_SUBS)) {
+      await page.evaluate((h) => { location.hash = h; }, '#/' + key);
+      await expect(page.locator('#view')).toHaveAttribute('data-view', key.split('/')[0]);
+      const odd = await page.evaluate(() => {
+        const bad = new Set();
+        document.querySelectorAll('body *').forEach((e) => {
+          if (!e.offsetParent || !Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) return;
+          const w = getComputedStyle(e).fontWeight; if (w !== '400' && w !== '600') bad.add(w + ' "' + e.textContent.trim().slice(0, 20) + '"');
+        });
+        return [...bad].slice(0, 5);
+      });
+      expect(odd, key).toEqual([]);
+    }
   });
 
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {

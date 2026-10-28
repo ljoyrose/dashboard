@@ -60,6 +60,7 @@
   html.text-lg body { zoom: 1.12; } html.text-xl body { zoom: 1.25; }
   html.space-roomy body { line-height: 1.75; } html.space-roomy .crow { padding-top: 14px; padding-bottom: 14px; } html.space-roomy .col-list { gap: 16px; }
   * { box-sizing: border-box; }
+  h1, h2, h3, h4, b, strong, th { font-weight: 600; } /* two weights only: 400 and 600 */
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
   .hidden { display: none !important; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
@@ -71,7 +72,7 @@
   .top h1 { font-size: 22px; margin: 0 auto 0 0; display: flex; gap: 8px; align-items: center; }
   .top h1 a { text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
   .top h1 .dot { background: var(--me); }
-  .stamp { font-size: 13px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; }
+  .stamp { font-size: 13px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; }
   .stamp:empty { display: none; }
   .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 14px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
   .btn.main { border-color: var(--ink); }
@@ -80,7 +81,7 @@
   .btn[disabled] { cursor: not-allowed; opacity: .55; }
   /* Five tabs in a bar at the bottom, like Marketplace (thumb reach on the phone); a sub-row of links inside Line, Decide and Kits. */
   nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
-  nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1px solid transparent; padding: 4px 2px; text-align: center; position: relative; }
+  nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 600; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1px solid transparent; padding: 4px 2px; text-align: center; position: relative; }
   /* Bottom tabs: no ring or inner line. Hover and selected = the small colour bar above the label grows (same height, so nothing moves). */
   nav.tabs a .bar { width: 18px; height: 4px; border-radius: 2px; background: var(--tc); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
   nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
@@ -95,7 +96,7 @@
   .n:empty { display: none; }
   /* Every standalone count wears the same ring: 1px ink, pill, 700, tabular. "Needs you" counts (Me, Decide, Do tabs) add a rose edge and tint,
      never a solid fill. Stage step numbers keep their stage circle; numbers inside a sentence stay bold text. 13px, the page's floor (not 12). */
-  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 7px; border: 1px solid var(--ink); border-radius: var(--radius); font-size: 13px; font-weight: 700; line-height: 1; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; }
+  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 7px; border: 1px solid var(--ink); border-radius: var(--radius); font-size: 13px; font-weight: 600; line-height: 1; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; }
   nav.tabs .n.need { border-color: var(--ljr-2); background: var(--ljr-2-tint); color: var(--ink); }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
   svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -111,10 +112,10 @@
   .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); border-radius: var(--radius); padding: 3px 10px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
   .pill.warn { border-color: var(--ljr-3); } .pill.bad { border-color: var(--ljr-2); } .pill.ok .ti { color: var(--ljr-5-text); }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; display: inline-block; }
-  .grp { font-size: 16px; font-weight: 700; margin: 0 0 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grp { font-size: 16px; font-weight: 600; margin: 0 0 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .grp .st { font-size: 13px; font-weight: 600; color: var(--muted); }
   .grp .cnt { margin-left: auto; }
-  .sect { font-size: 14px; font-weight: 700; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 10px 0 0; }
+  .sect { font-size: 14px; font-weight: 600; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 10px 0 0; }
   .sect:first-child { margin-top: 0; }
   .sect a { color: var(--ink); text-decoration: none; }
   /* Rows (the Factory calm row): type icon · title · flag; icons; actions; stage strip. */
@@ -144,10 +145,10 @@
   .hero p { margin: 0; color: var(--muted); font-size: 14px; }
   .stage { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
   /* Steps: outlined, never solid. Done = green ring + tint + ✓; current = purple ring + tint, label bold; future = grey ring, muted number. */
-  .stage .n { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: transparent; border: 1px solid var(--line); color: var(--muted); flex: none; }
+  .stage .n { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; background: transparent; border: 1px solid var(--line); color: var(--muted); flex: none; }
   .stage.d .n { background: var(--ljr-5-tint); border-color: var(--ljr-5); color: var(--ink); }
   .stage.c .n { background: var(--ljr-7-tint); border-color: var(--ljr-7); color: var(--ink); }
-  .stage.c { font-weight: 700; }
+  .stage.c { font-weight: 600; }
   .ico { position: relative; background: none; border: 1px solid transparent; border-radius: var(--radius); min-width: 32px; height: 32px; padding: 0 4px; display: inline-flex; gap: 3px; align-items: center; justify-content: center; cursor: pointer; color: var(--ink); font: inherit; font-size: 13px; }
   .tag { font-size: 13px; color: var(--ink); display: inline-flex; gap: 3px; align-items: center; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--radius); }
   .tag.over { border-color: var(--ljr-2); }
@@ -189,7 +190,7 @@
   .sbox input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 15px; padding: 8px 0; }
   .fbtn { font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; padding: 7px 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
   .fpanel { display: flex; flex-direction: column; gap: 8px; }
-  .flab { font-size: 13px; font-weight: 700; color: var(--muted); min-width: 52px; }
+  .flab { font-size: 13px; font-weight: 600; color: var(--muted); min-width: 52px; }
   .sw { display: inline-block; width: 28px; height: 16px; border-radius: var(--radius); border: 1px solid var(--muted); position: relative; vertical-align: middle; }
   .sw i { position: absolute; top: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
   .sw.on { border-color: var(--ljr-5); } .sw.on i { left: 14px; background: var(--ljr-5-tint); box-shadow: inset 0 0 0 1px var(--ljr-5); }
@@ -214,7 +215,7 @@
   .fq { padding: 10px 0; border-top: 1px solid var(--line); }
   .fq:first-of-type { border-top: 0; }
   .fq .qt { font-size: 15px; margin: 0 0 6px; position: relative; padding-right: 22px; }
-  .fq .req { position: absolute; right: 0; top: 0; color: var(--ljr-2-text); font-weight: 700; }
+  .fq .req { position: absolute; right: 0; top: 0; color: var(--ljr-2-text); font-weight: 600; }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .ch { font: inherit; font-size: 14px; padding: 5px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
   .ch .dot { width: 9px; height: 9px; }
@@ -257,7 +258,7 @@
   .src:first-child { border-top: 0; }
   .src .ask .fin { font-size: 14px; }
   .chk li button { all: unset; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius); padding: 0 4px; }
-  .fsub { font-size: 13px; font-weight: 700; color: var(--muted); margin: 6px 0 4px; }
+  .fsub { font-size: 13px; font-weight: 600; color: var(--muted); margin: 6px 0 4px; }
   /* Cool clear: neutral chips get a faint fill; the red and green outlines (needs you, On) stay as they are. */
   :root.look-cool .ch:not(.on), :root.look-cool .tag, :root.look-cool .fbtn:not(.on), :root.look-cool .pill:not(.on) { background: var(--chip); }
   /* Look menu (header palette button). Stored in localStorage 'dash-look' so other hubs can read it. */
@@ -286,12 +287,12 @@
   .col-list .crow, .col-list .row { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); position: relative; }
   .col-list .crow .ttl { font-weight: 600; font-size: 16px; }
   .col-list .crow.sel { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: linear-gradient(var(--sel-fill), var(--sel-fill)) var(--card); }
-  .col-list .crow.sel::after { content: "\2713"; position: absolute; top: -8px; right: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--card); color: var(--ink); border: 2px solid var(--sel-bd); }
+  .col-list .crow.sel::after { content: "\2713"; position: absolute; top: -8px; right: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; background: var(--card); color: var(--ink); border: 2px solid var(--sel-bd); }
   .col-list > .muted { padding: 4px; margin: 0; }
   .col-foot { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 45px; padding: 4px 12px; font-size: 14px; line-height: 18px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); }
   .col-foot b { color: var(--ink); }
   .side { flex: 0 0 380px; min-width: 0; overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
-  .side .shead { display: flex; gap: 8px; align-items: flex-start; font-weight: 700; }
+  .side .shead { display: flex; gap: 8px; align-items: flex-start; font-weight: 600; }
   .side .shead span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .side .panel { margin: 0; padding: 0; border: 0; background: transparent; } /* no grey box inside the white panel */
   /* HubSpot sizing (CRM UI spec, s3/4/6/7/15/16). Corners: ONE radius token, --radius (12px), on everything; circles only for status dots. */
