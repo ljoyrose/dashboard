@@ -168,6 +168,13 @@
   .ferr::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ljr-2); margin-right: 6px; }
   .frow { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
   .ask { display: flex; gap: 8px; }
+  .rform { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+  .rform .fin { width: 7.5em; }
+  .rk { display: inline-flex; gap: 4px; align-items: center; }
+  .kit { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+  .sws { display: inline-flex; gap: 3px; }
+  .sw { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); display: inline-block; }
+  img.thumb { display: block; max-width: 100%; max-height: 240px; border-radius: var(--radius); border: 1px solid var(--line); margin-bottom: 8px; }
   .ask .fin { flex: 1; min-width: 0; }
   .row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
   .row:first-of-type { border-top: 0; }
@@ -177,7 +184,7 @@
   /* Calm focus: one line, a shade darker. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus, button:focus { outline: none; }
-  a:focus-visible, button:focus-visible { outline: none; border-color: var(--ink) !important; }
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--muted); outline-offset: 2px; border-color: var(--ink) !important; }
   footer { color: var(--muted); font-size: 13px; padding: 0 16px 24px; }
   /* v0.2: Kits tab (playbooks by outcome, packs, kits, styles, formats), sources, gaps, tool form */
   a.tag { text-decoration: none; }
@@ -292,6 +299,8 @@
   var REFRESH_MS = 5 * 60 * 1000;
   var accessToken = null, signedIn = false, S = null, EX = false, err = null, timer = null;
   var $ = function (id) { return document.getElementById(id); };
+  // Links from the sheet: only http(s) opens; anything else becomes a dead '#'.
+  function safeUrl(u) { u = String(u == null ? '' : u).trim(); return /^https?:\/\//i.test(u) ? esc(u) : '#'; }
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function cnt(n) { return '<span class="cnt">' + n + '</span>'; }
   function info(t) { return t ? '<span class="info" tabindex="0" title="' + esc(t) + '" aria-label="' + esc(t) + '">i</span>' : ''; }
@@ -306,7 +315,15 @@
   var BSTAGES = ['Concept', 'Name check', 'Identity', 'Tech set-up', 'Launch', 'Running'];
   var TYPES = [['pdf', 'file-type-pdf', 'PDF'], ['ebook', 'book', 'Ebook'], ['lead', 'magnet', 'Lead magnet'], ['slides', 'presentation', 'Slides'],
     ['script', 'video', 'Script'], ['logbook', 'notebook', 'Logbook'], ['tree', 'binary-tree', 'Family tree'], ['pack', 'package', 'Puppy pack'],
-    ['social', 'photo', 'Social graphic'], ['page', 'layout', 'Page draft'], ['email', 'mail', 'Email draft']];
+    ['social', 'photo', 'Social graphic'], ['page', 'layout', 'Page draft'], ['email', 'mail', 'Email draft'],
+    ['video', 'movie', 'Video'], ['audio', 'headphones', 'Audio'], ['image', 'photo-scan', 'Image'], ['listing', 'tag', 'Listing'], ['book', 'book-2', 'Book'],
+    ['appstore', 'device-mobile', 'App store'], ['funnel', 'filter', 'Funnel'], ['course', 'school', 'Course'], ['podcast', 'microphone', 'Podcast'], ['other', 'dots', 'Other']];
+  // How a finished item reaches a client (engine DELIVERY_MODE): a copied file, a copied Doc, or a link.
+  var DMODE = { script: 'text', social: 'text', email: 'text', page: 'link', funnel: 'link', listing: 'link', podcast: 'link' };
+  var DESTS = [['main-site', 'world-www', 'Main site'], ['app', 'apps', 'App'], ['funnel', 'filter', 'Funnel'], ['shop', 'building-store', 'Shop'], ['social', 'share', 'Social'], ['client-site', 'user-share', 'Client site'], ['email', 'mail', 'Email'], ['print', 'printer', 'Print'], ['other', 'dots', 'Other']];
+  var CHANNELS = ['facebook', 'instagram', 'tiktok', 'youtube', 'pinterest', 'linkedin', 'email', 'website', 'etsy', 'amazon', 'other'];
+  var RKEYS = [['views', 'eye', 'Views'], ['clicks', 'click', 'Clicks'], ['leads', 'user-plus', 'Leads'], ['sales', 'shopping-cart', 'Sales'], ['revenue', 'currency-pound', '\u00a3']];
+  var DSTAT = { 'ready (not sent)': ['package', 'Ready', 4], sent: ['send', 'Sent', 5], 'no file': ['alert-triangle', 'No file', 2] };
   var WHO = [['lisa', 'Lisa', 'user'], ['claude', 'Claude', 'sparkles'], ['grok', 'Grok', 'bolt'], ['engine', 'Engine', 'settings']];
   var VERDICTS = [['GO', 'Go', 'check', 5], ['HOLD', 'Hold', 'player-pause', 4], ['RESHAPE', 'Reshape', 'shape', 7], ['REFINE', 'Refine', 'adjustments', 6], ['KILL', 'Kill', 'x', 2], ['RECYCLE', 'Recycle', 'recycle', 0]];
   var PROVIDERS = ['Claude', 'Grok', 'ChatGPT', 'Gemini'];
@@ -415,7 +432,7 @@
     init = init || {}; init.headers = Object.assign({ Authorization: 'Bearer ' + accessToken }, init.headers || {});
     return DashKit.googleFetch(url, init).then(function (r) {
       if (r.status === 401) { expired(); throw new Error('Sign-in expired.'); }
-      if (!r.ok) throw new Error('Drive said ' + r.status);
+      if (!r.ok) throw new Error(r.status === 403 || r.status === 404 ? 'No access' : 'Drive error ' + r.status);
       return r;
     });
   }
@@ -435,16 +452,17 @@
       if (!f) return null;
       return media(f.id).then(function (r) { return r.json(); });
     }).then(function (j) {
-      EX = !j; S = j || example(Date.now()); err = null; prep();
+      EX = !j; S = j || example(Date.now()); err = null; lastRead = Date.now(); prep();
+      Object.keys(sentS).forEach(function (id) { var a = byId(id); if (sent[id] && a && a.stage !== sentS[id].s) { delete sent[id]; delete sentF[id]; delete sentS[id]; } }); saveLocal('st-sent', sent); saveLocal('st-sentf', sentF); saveLocal('st-sents', sentS);
       var nf = 0; (S.failed || []).forEach(function (x) { if (sent[x.assetId]) { delete sent[x.assetId]; nf++; } });
       if (nf) { saveLocal('st-sent', sent); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); }
-      render();
-    }).catch(function (e) { err = e.message; render(); });
+      if (typing()) needRender = true; else render();
+    }).catch(function (e) { var m = /fetch|network/i.test(e.message) ? 'Offline' : e.message; if (S) { banner(m + ' · last read ' + hm(lastRead)); } else { err = m; render(); } });
   }
   function prep() {
     S.accounts = S.accounts || []; S.products = S.products || []; S.brands = S.brands || []; S.assets = S.assets || []; S.ideas = S.ideas || []; S.tools = S.tools || [];
     S.studio = S.studio || {}; S.health = S.health || {};
-    ['groups', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'gaps'].forEach(function (k) { S[k] = S[k] || []; });
+    ['groups', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'gaps', 'legalSets'].forEach(function (k) { S[k] = S[k] || []; });
     S.tools.forEach(function (t) { t.capabilities = t.capabilities || []; t.outputs = t.outputs || []; t.inputs = t.inputs || []; t.fit = t.fit || 'AUTO'; });
     all().forEach(function (a) { a.flags = a.flags || []; a.brandIds = a.brandIds || []; a.formatIds = a.formatIds || []; a.sourceIds = a.sourceIds || []; if (a.stage == null) a.stage = 0; a._t = Date.parse(a.updated) || 0; if (!a.accountId) a.accountId = brandOf(a).accountId || ownerId(); });
     applyPend();
@@ -462,13 +480,14 @@
   function ownerId() { var o = S.accounts.filter(function (x) { return x.kind === 'owner'; })[0] || S.accounts[0]; return o ? o.id : null; }
   function product(id) { return S.products.filter(function (x) { return x.id === id; })[0] || null; }
   function brandAcct(id) { return brand(id).accountId || ownerId(); }
+  function isClient(a) { return account(a.accountId).kind === 'client'; }
   function isTest(a) { return /^(TEST-|ZZ_DELETE_)/i.test(a.title) || a.flags.indexOf('test') >= 0; }
   function bare(a) { return String(a.title).replace(/^TEST-/, ''); }
   function ideas() { return all().filter(function (a) { return a.stage === 0; }); }
   function inProgress() { return all().filter(function (a) { return a.stage >= 1 && a.stage <= 7; }); }
   function reviews() { return all().filter(function (a) { return a.stage === 7; }); }
   function library() { return all().filter(function (a) { return a.stage === 8; }); }
-  function gates() { return all().filter(function (a) { return a.gate && a.gate.question && a.stage < 8; }); }
+  function gates() { return all().filter(function (a) { return a.gate && a.gate.question && a.stage < 7; }); }
   function hands() { return all().filter(function (a) { return a.fit === 'HAND' && a.who === 'lisa' && a.stage < 7 && !(a.gate && a.gate.question); }); }
   function meItems() { var out = reviews().slice(); gates().concat(hands()).forEach(function (a) { if (out.indexOf(a) < 0) out.push(a); }); return out; }
   function kindFor(a) { return a.stage === 7 ? 'review' : a.gate && a.gate.question && a.stage < 8 ? 'gate' : a.stage === 8 ? 'lib' : a.fit === 'HAND' && a.who === 'lisa' ? 'hand' : 'view'; }
@@ -587,21 +606,42 @@
     var pu = pickOf(PURPOSES, a.purpose); if (pu) out += '<span class="tag" data-chip="purpose" title="Variant">' + I(pu[2]) + pu[1] + '</span>';
     if (a.masterId) { var m = byId(a.masterId); out += '<a class="tag" data-chip="master" href="#/asset/' + encodeURIComponent(a.masterId) + '" title="Master: ' + esc(m ? bare(m) : a.masterId) + '">' + I('link') + 'Master</a>'; }
     if (a.sourceIds.length) out += '<span class="tag" title="Sources">' + I('paperclip') + a.sourceIds.length + '</span>';
+    var dz0 = pickOf(DESTS, a.destination); if (dz0) out += '<span class="tag" data-chip="dest" title="Where">' + I(dz0[1]) + dz0[2] + '</span>';
+    if (a.legal && a.legal.setId) out += '<span class="tag" data-chip="legal" title="' + esc((a.legal.entity || '') + ' \u00b7 ' + (a.legal.setName || a.legal.setId)) + '">' + I('shield-check') + esc(a.legal.setName || a.legal.setId) + '</span>';
+    else if (a.stage <= 3) out += '<span class="tag" data-chip="legal-missing" title="Company and legal set needed before Lock" style="--hc:var(--ljr-2-text)">' + I('shield-x') + 'Legal?</span>';
+    if (a.results && (a.results.views || a.results.clicks || a.results.sales)) out += '<span class="tag" data-chip="results" title="Results · last ' + esc(a.results.last || '') + '">' + I('chart-bar') + esc(String(a.results.views || 0)) + ' · ' + esc(String(a.results.sales || 0)) + I('shopping-cart') + '</span>';
+    if (a.ask && a.ask.question) out += '<span class="tag" data-chip="ask" title="Asked: ' + esc(a.ask.question) + '">' + I('message-question') + (a.ask.status === 'sent' ? 'Asked' : 'Ask ready') + '</span>';
+    if (a.delivery && a.delivery.status) { var dz = DSTAT[a.delivery.status] || ['package', a.delivery.status, 0]; out += (a.delivery.link ? '<a class="tag" href="' + safeUrl(a.delivery.link) + '" target="_blank" rel="noopener"' : '<span class="tag"') + ' data-chip="delivery" title="Delivery" style="--hc:var(--ljr-' + dz[2] + '-text)">' + I(dz[0]) + esc(dz[1]) + (a.delivery.link ? '</a>' : '</span>'); }
     return out;
   }
   function actsFor(a, kind) {
     if (sent[a.id]) return sentLine(a.id);
+    if (kind === 'review' && a.flags.indexOf('client-review') >= 0) return '<span class="sent" data-with="client">' + I('user-check') + 'With client</span>';
     if (kind === 'review') return '<button class="btn yes" type="button" data-act="approve" data-id="' + esc(a.id) + '" aria-label="Approve"' + dis() + '>' + I('check') + 'Approve</button>' +
       '<button class="btn" type="button" data-panel="redo" data-id="' + esc(a.id) + '" aria-label="Redo"' + dis() + '>' + I('pencil') + 'Redo</button>' +
       '<button class="btn no" type="button" data-act="bin" data-id="' + esc(a.id) + '" aria-label="Bin"' + dis() + '>' + I('trash') + '</button>';
     if (kind === 'gate') return VERDICTS.map(function (v) { return '<button class="btn" type="button" data-act="gate" data-verdict="' + v[0] + '" data-id="' + esc(a.id) + '" aria-label="' + v[1] + '" style="--hc:var(--ljr-' + v[3] + '-text)"' + dis() + '>' + I(v[2]) + v[1] + '</button>'; }).join('');
-    if (kind === 'lib') return '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>';
+    if (kind === 'lib') return '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>' +
+      '<button class="btn" type="button" data-panel="result" data-id="' + esc(a.id) + '" aria-label="Add results"' + dis() + '>' + I('chart-bar') + 'Results</button>' +
+      '<button class="btn" type="button" data-act="refresh" data-id="' + esc(a.id) + '" aria-label="Refresh"' + dis() + '>' + I('refresh-dot') + 'Refresh</button>' +
+      '<button class="btn no" type="button" data-panel="retire" data-id="' + esc(a.id) + '" aria-label="Retire"' + dis() + '>' + I('archive') + '</button>' + (isClient(a) ? '<button class="btn" type="button" data-act="deliver" data-id="' + esc(a.id) + '" aria-label="Deliver"' + dis() + '>' + I('package-export') + 'Deliver</button>' : '');
     if (kind === 'hand' && a.stage >= 1) return '<button class="btn yes" type="button" data-panel="done" data-id="' + esc(a.id) + '" aria-label="Done"' + dis() + '>' + I('check') + 'Done</button>';
     return '';
   }
   function panelOf(a, k) {
     var body = '';
     if (k === 'redo') body = '<form class="ask" data-redo="' + esc(a.id) + '"><input class="fin" id="note-' + esc(a.id) + '" data-draft="' + esc(a.id) + '" value="' + esc(drafts[a.id] || '') + '" aria-label="What to change" required><button class="btn" type="submit" aria-label="Send redo"' + dis() + '>' + I('send') + '</button></form>';
+    if (k === 'where') { var ls = S.legalSets.filter(function (x) { return !a.legal || !a.legal.entity || x.entity === a.legal.entity || (x.brandIds || []).some(function (b) { return a.brandIds.indexOf(b) >= 0; }); });
+      body = '<div class="fsub">' + I('building') + esc((a.legal && a.legal.entity) || 'Company not recorded') + '</div>' +
+        '<div class="fsub">' + I('map-pin') + 'Where</div><div class="chips">' + DESTS.map(function (d) { return '<button class="ch' + (a.destination === d[0] ? ' on' : '') + '" type="button" data-set="destination" data-val="' + d[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (a.destination === d[0]) + '"' + dis() + '>' + I(d[1]) + d[2] + '</button>'; }).join('') + '</div>' +
+        '<div class="fsub">' + I('shield-check') + 'Legal set</div><div class="chips">' + (ls.length ? ls.map(function (x) { var on = a.legal && a.legal.setId === x.id; return '<button class="ch' + (on ? ' on' : '') + '" type="button" data-set="legalSetId" data-val="' + esc(x.id) + '" data-id="' + esc(a.id) + '" aria-pressed="' + !!on + '"' + dis() + '>' + esc(x.name || x.id) + '</button>'; }).join('') : '<span class="muted">None on the BRANDS Sheet yet</span>') + '</div>'; }
+    if (k === 'result') { var rc = resDraft[a.id] = resDraft[a.id] || { channel: '', date: new Date().toISOString().slice(0, 10) };
+      body = '<div class="chips">' + CHANNELS.map(function (c) { return '<button class="ch' + (rc.channel === c ? ' on' : '') + '" type="button" data-rch="' + c + '" data-id="' + esc(a.id) + '" aria-pressed="' + (rc.channel === c) + '">' + c.charAt(0).toUpperCase() + c.slice(1) + '</button>'; }).join('') + '</div>' +
+        '<form class="rform" data-result="' + esc(a.id) + '"><input class="fin" type="date" data-rf="date" data-id="' + esc(a.id) + '" value="' + esc(rc.date) + '" aria-label="Date">' +
+        RKEYS.map(function (r) { return '<label class="rk">' + I(r[1]) + '<input class="fin" type="number" min="0" step="any" inputmode="decimal" data-rf="' + r[0] + '" data-id="' + esc(a.id) + '" value="' + esc(rc[r[0]] == null ? '' : rc[r[0]]) + '" aria-label="' + r[2] + '" placeholder="' + r[2] + '"></label>'; }).join('') +
+        '<button class="btn yes" type="submit" aria-label="Send results"' + dis() + '>' + I('send') + '</button><span class="ferr">' + esc(rc.err || '') + '</span></form>'; }
+    if (k === 'retire') body = '<form class="ask" data-retire="' + esc(a.id) + '"><input class="fin" id="why-' + esc(a.id) + '" maxlength="300" aria-label="Why retire" placeholder="Why" required><button class="btn no" type="submit" aria-label="Send retire"' + dis() + '>' + I('archive') + '</button></form>';
+    if (k === 'ask') body = '<form class="ask" data-askc="' + esc(a.id) + '"><input class="fin" id="askq-' + esc(a.id) + '" data-draft="q|' + esc(a.id) + '" value="' + esc(drafts['q|' + a.id] || '') + '" maxlength="500" aria-label="Question for the client" placeholder="Question for the client" required><button class="btn" type="submit" aria-label="Send question"' + dis() + '>' + I('send') + '</button></form>';
     if (k === 'who') body = '<div class="chips">' + WHO.map(function (w) { return '<button class="ch' + (a.who === w[0] ? ' on' : '') + '" type="button" data-set="who" data-val="' + w[0] + '" data-id="' + esc(a.id) + '"' + dis() + '>' + I(w[2]) + w[1] + '</button>'; }).join('') + '</div>';
     if (k === 'flag') body = '<div class="chips">' + ['urgent', 'high', 'normal', 'low', 'none'].map(function (p) { return '<button class="ch' + ((a.priority || 'none') === p ? ' on' : '') + '" type="button" data-set="priority" data-val="' + p + '" data-id="' + esc(a.id) + '"' + dis() + '>' + flagIcon(p !== 'none') + p.charAt(0).toUpperCase() + p.slice(1) + '</button>'; }).join('') + '</div>';
     if (k === 'done') {
@@ -616,11 +656,12 @@
       var kv = [['Group', esc(group(grpOf(a)).name)], ['Account', S.accounts.length > 1 ? esc(account(a.accountId).name) : ''], ['Product', pr ? esc(pr.name) : ''], ['Brand', a.brandIds.map(function (b) { return esc(brand(b).name); }).join(' · ')], ['Project', esc(a.projectName)], ['Type', esc(typeOf(a.type)[2])], ['Recipe', esc(a.recipe)],
         ['Playbook', pb ? esc(pb.name) : ''], ['Kit', kit ? esc(kit.name) : ''], ['Outcome', oc ? oc[1] : ''], ['Voice', vo ? esc(vo.name) : ''], ['Look', lo ? esc(lo.name) : ''], ['Language', ln ? ln[1] : esc(a.language)], ['Length', esc(a.length)],
         ['A/B', a.test ? esc(a.test) + (a.result ? ' · ' + esc(a.result) : '') : ''],
-        ['Sources', srcs.map(function (x) { var r = pickOf(RIGHTS, x.rights); return (x.url ? '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.note || x.url.replace(/^https?:\/\//, '').slice(0, 40)) + '</a>' : esc(x.fileName || x.note)) + ' · ' + (r ? r[1] : esc(x.rights)); }).join('<br>')],
-        ['Stage', a.stage + ' ' + STAGES[a.stage]], ['AI', esc(a.provider)], ['Cost', a.cost != null && a.cost !== '' ? money(a.cost) : ''], ['Rating', a.rating != null ? esc(a.rating) + ' / 5' : ''],
+        ['Sources', srcs.map(function (x) { var r = pickOf(RIGHTS, x.rights); return (x.url ? '<a href="' + safeUrl(x.url) + '" target="_blank" rel="noopener">' + esc(x.note || x.url.replace(/^https?:\/\//, '').slice(0, 40)) + '</a>' : esc(x.fileName || x.note)) + ' · ' + (r ? r[1] : esc(x.rights)); }).join('<br>')],
+        ['Company', a.legal ? esc(a.legal.entity) : ''], ['Legal set', a.legal ? esc(a.legal.setName || a.legal.setId) : ''], ['Where', (pickOf(DESTS, a.destination) || [])[2] || ''],
+        ['Stage', esc(+a.stage) + ' ' + esc(STAGES[a.stage])], ['AI', esc(a.provider)], ['Cost', a.cost != null && a.cost !== '' ? money(a.cost) : ''], ['Rating', a.rating != null ? esc(a.rating) + ' / 5' : ''],
         ['Version', a.stage === 8 ? 'v' + esc(a.version || 1) : ''], ['Changed', a._t ? dmy(a._t) : ''],
-        ['Doc', a.docLink ? '<a href="' + esc(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
-      body = '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
+        ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
+      body = (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
     }
     return '<div class="panel" data-panelbox="' + esc(a.id) + '">' + body + '</div>';
   }
@@ -632,10 +673,10 @@
       '<button class="ico" type="button" data-panel="flag" data-id="' + esc(a.id) + '" aria-label="Priority ' + (p || 'none') + '" style="--hc:var(--ljr-2-text)">' + flagIcon(p) + '</button></div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + info('Stage ' + a.stage + ' ' + STAGES[a.stage]) + '</div>' : '') +
       (a.stage >= 1 ? strip(a.stage) : '') +
-      '<div class="l2"><span class="icons">' + rowIcons(a) + '</span><span class="acts">' + actsFor(a, kind) + '</span></div>' +
+      '<div class="l2"><span class="icons">' + rowIcons(a) + '</span><span class="acts">' + actsFor(a, kind) + (a.stage <= 3 && !sent[a.id] ? '<button class="ico" type="button" data-panel="where" data-id="' + esc(a.id) + '" aria-label="Company, legal set and where" title="Company, legal set and where"' + dis() + '>' + I('map-pin') + '</button>' : '') + (isClient(a) && a.stage >= 1 && a.stage <= 7 && !sent[a.id] ? '<button class="ico" type="button" data-panel="ask" data-id="' + esc(a.id) + '" aria-label="Ask client" title="Ask client"' + dis() + '>' + I('message-question') + '</button>' : '') + '</span></div>' +
       (openPanel && openPanel.id === a.id ? panelOf(a, openPanel.k) : '') +
       '<div class="l3"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span>' +
-      (link ? '<a class="lk" href="' + esc(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="Preview" style="--hc:var(--ljr-6-text)">' + I('eye') + '</a>' : '<span class="lk no" title="No preview yet">' + I('eye') + '</span>') +
+      (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="' + ({ canva: 'Open in Canva', gdoc: 'Open the Google file', drive: 'Open in Drive', clickfunnels: 'Open in ClickFunnels' }[a.linkKind] || 'Preview') + '" style="--hc:var(--ljr-6-text)">' + I('eye') + '</a>' : '<span class="lk no" title="No preview yet">' + I('eye') + '</span>') +
       '<span class="grow"></span><span class="date" title="Changed">' + (a._t ? dmy(a._t) : '') + '</span></div></div>';
   }
   function cards(list, kindOf) {
@@ -667,10 +708,17 @@
   function vAsset(id) {
     var a = byId(id); if (!a) return '<div class="card">Not found. <a href="#/assets">Assets</a></div>';
     var b = brandOf(a);
-    return '<div class="card appcard"><div class="hero" style="--c:' + col(stSlot(a.stage)) + '"><div class="disc">' + a.stage + '</div><div><h2>' + esc(bare(a)) + '</h2><p>' + esc(b.name + ' · ' + STAGES[a.stage]) + '</p></div></div>' +
+    return '<div class="card appcard"><div class="hero" style="--c:' + col(stSlot(a.stage)) + '"><div class="disc">' + esc(+a.stage) + '</div><div><h2>' + esc(bare(a)) + '</h2><p>' + esc(b.name + ' · ' + STAGES[a.stage]) + '</p></div></div>' +
       row(a, kindFor(a)) +
       STAGES.map(function (name, i) { return '<div class="stage ' + (i < a.stage ? 'd' : i === a.stage ? 'c' : '') + '"><span class="n">' + i + '</span>' + name + '</div>'; }).join('') +
       '<p><a href="#/assets">← Assets</a></p></div>';
+  }
+  // Brand kit from the BRANDS Sheet: colour swatches, fonts, Canva kit and the Sheet row. Never a link built from an id.
+  function kitStrip(b) {
+    var k = b.kit || {}, sw = (k.colours || []).map(function (c) { return /^#[0-9a-fA-F]{6}$/.test(c) ? '<i class="sw" style="background:' + c + '" title="' + c + '"></i>' : ''; }).join('');
+    var links = (k.canvaKitUrl ? '<a class="tag" data-kit="canva" href="' + safeUrl(k.canvaKitUrl) + '" target="_blank" rel="noopener">' + I('palette') + 'Canva kit</a>' : '') + (b.sheetRowUrl ? '<a class="tag" data-kit="sheet" href="' + safeUrl(b.sheetRowUrl) + '" target="_blank" rel="noopener">' + I('table') + 'Brand sheet</a>' : '');
+    var fonts = [k.fontHeading, k.fontBody].filter(Boolean).map(esc).join(' · ');
+    return sw || links || fonts ? '<div class="kit">' + (sw ? '<span class="sws">' + sw + '</span>' : '') + (fonts ? '<span class="muted">' + I('typography') + fonts + '</span>' : '') + links + '</div>' : '';
   }
   function vBrands() {
     var A = all().filter(function (a) { return !isTest(a); });
@@ -681,7 +729,7 @@
       var sub = [b.groupId ? I(GROUP_ICON[b.groupId] || 'folder') + esc(group(b.groupId).name) : '', S.accounts.length > 1 ? esc(account(brandAcct(b.id)).name) : ''].filter(Boolean).join(' · ');
       return '<section class="room" data-brandcard="' + esc(b.id) + '" style="--c:' + col(b.colour) + '"><h2 class="grp"><span class="dot"></span>' + esc(b.name) + '<a class="cnt" href="#/assets?brand=' + encodeURIComponent(b.id) + '" title="Assets in progress">' + mine + '</a></h2>' + (sub ? '<span class="stn" data-group="' + esc(b.groupId || '') + '">' + sub + '</span>' : '') +
         '<div class="strip b6">' + BSTAGES.map(function (_, i) { return '<i class="' + (i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>' +
-        '<div class="blab" title="' + BSTAGES.join(' · ') + '">' + (n >= 0 ? (n + 1) + '/6 · ' + esc(b.stage) : '') + '</div>' +
+        '<div class="blab" title="' + BSTAGES.join(' · ') + '">' + (n >= 0 ? (n + 1) + '/6 · ' + esc(b.stage) : '') + '</div>' + kitStrip(b) +
         (ck.length ? '<div class="sect">' + I('list-check') + 'Set-up ' + cnt(done + '/' + ck.length) + '</div><ul class="chk">' + ck.map(function (x) { return '<li class="' + (x.ok ? 'ok' : '') + '"><button type="button" data-check="' + esc(b.id) + '" data-item="' + esc(x.name) + '" aria-pressed="' + !!x.ok + '"' + dis() + '>' + I(x.ok ? 'circle-check' : 'circle-dashed') + esc(x.name) + '</button></li>'; }).join('') + '</ul>' : '') + '</section>';
     }).join('') + '</div>';
   }
@@ -706,7 +754,7 @@
         '<div class="nums"><span>' + esc(m.used) + ' / ' + esc(m.allowance) + ' ' + esc(m.unit || '') + '</span>' + (m.resetsOn ? '<span>' + I('refresh') + ' ' + dmy(Date.parse(m.resetsOn)) + (d !== null && d >= 0 ? ' · ' + d + 'd' : '') + '</span>' : '') + '</div>' : '') +
         (st.text ? '<div class="why">' + I(st.icon) + '<span>' + esc(st.text) + '</span></div>' : '') +
         '<div class="pills" style="margin-top:6px">' + fitTag(m) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
-        (m.audit ? '<a class="tag" href="' + esc(m.audit) + '" target="_blank" rel="noopener" title="Audit">' + I('clipboard-check') + 'Audit</a>' : '') + '</div></div></div>';
+        (m.audit ? '<a class="tag" href="' + safeUrl(m.audit) + '" target="_blank" rel="noopener" title="Audit">' + I('clipboard-check') + 'Audit</a>' : '') + '</div></div></div>';
     }).join('') + '</div>' : '<div class="card muted">No tools yet.</div>';
     return gaps + add + list;
   }
@@ -755,13 +803,13 @@
     if (tdraft.period) body.period = tdraft.period;
     if (tdraft.resetsOn) body.resetsOn = tdraft.resetsOn;
     if (tdraft.carry) body.carriesOver = tdraft.carry === 'yes';
-    toolNote = 'Sending…'; render();
+    if (busy.tool) return; busy.tool = 1; toolNote = 'Sending…'; render();
     withWrite(function () {
       return putRequest('tool', body).then(function () {
         try { localStorage.removeItem('st-tool'); } catch (e) {}
-        tdraft = {}; toolOpen = false; toolNote = ''; banner('✓ ' + hm(Date.now()) + ' · ' + body.product + ' · applies by ' + appliesBy(Date.now())); $('banner').className = 'banner info'; render();
-      }).catch(function (e) { toolNote = 'Not sent: ' + e.message + '. Kept.'; render(); });
-    });
+        delete busy.tool; tdraft = {}; toolOpen = false; toolNote = ''; banner('✓ ' + hm(Date.now()) + ' · ' + body.product + ' · applies by ' + appliesBy(Date.now())); $('banner').className = 'banner info'; render();
+      }).catch(function (e) { delete busy.tool; toolNote = 'Not sent: ' + e.message; render(); });
+    }, function () { delete busy.tool; toolNote = ''; render(); });
   }
   /* Kits: the WHAT ladder (Playbook › Pack › Kit › Brick), styles and formats. */
   function kitSub() { var p = hashParts().path[1]; return pickOf(KSUBS, p) ? p : 'playbooks'; }
@@ -906,6 +954,7 @@
     if (draft.timing === 'dated' && !draft.date) formErr.date = 'Add the date';
     if (draft.master && !draft.purpose) formErr.master = 'Pick why';
     if (draft.purpose && !draft.master) formErr.master = 'Pick the master';
+    if (draft.master && (draft.brands || []).length && (byId(draft.master) || {}).accountId !== brandAcct(draft.brands[0])) formErr.master = 'Other account';
     var srcs = (draft.sources || []).map(function (x) {
       var o = { kind: x.kind || 'link', rights: x.rights || '' }, v = String(x.kind === 'upload' ? x.fileName || '' : x.kind === 'note' ? x.note || '' : x.url || '').trim();
       if (o.kind === 'upload') o.fileName = v; else if (o.kind === 'note') o.note = v; else o.url = v;
@@ -915,7 +964,7 @@
     else if (srcs.some(function (o) { return o.kind === 'link' && !/^https?:\/\/\S+$/.test(o.url); })) formErr.sources = 'A link starts http';
     if ((formErr.master || formErr.sources) && !draft.more) draft.more = true;
     if (Object.keys(formErr).length) { render(); var first = document.querySelector('.ferr'); if (first) first.scrollIntoView({ block: 'center' }); return; }
-    formNote = 'Sending…'; render();
+    if (busy.idea) return; busy.idea = 1; formNote = 'Sending…'; render();
     var body = { kind: 'idea', accountId: brandAcct(draft.brands[0]), at: new Date().toISOString(), name: draft.name.trim(), brandIds: draft.brands, productId: draft.product || null, projectName: (draft.project || '').trim(), type: draft.type, audience: (draft.audience || '').trim(), offer: (draft.offer || '').trim(),
       evergreen: draft.timing !== 'dated', dated: draft.timing === 'dated', eventDate: draft.timing === 'dated' ? draft.date : null, size: draft.size || '', provider: draft.provider || '', notes: (draft.notes || '').trim(), fromId: draft.fromId || null };
     var opt = { groupId: draft.group, playbookId: draft.playbook, kitId: draft.kit, outcome: draft.outcome, frameworkId: draft.framework, voiceId: draft.voice, lookId: draft.look,
@@ -927,9 +976,9 @@
       return putRequest('idea', body).then(function () {
         try { localStorage.removeItem('st-idea'); } catch (e) {}
         draft = {}; formNote = ''; banner('✓ ' + hm(Date.now()) + ' · applies by ' + appliesBy(Date.now())); $('banner').className = 'banner info';
-        location.hash = '#/ideas';
-      }).catch(function (e) { formNote = 'Not sent: ' + e.message + '. Kept.'; render(); });
-    });
+        delete busy.idea; location.hash = '#/ideas';
+      }).catch(function (e) { delete busy.idea; formNote = 'Not sent: ' + e.message; render(); });
+    }, function () { delete busy.idea; formNote = ''; render(); });
   }
 
   /* ---------- Requests (the Factory write-back): one file per click; ✓ HH:MM · applies by HH:MM; Undo trashes the file ---------- */
@@ -937,27 +986,33 @@
   function undoUntil(at) { var d = new Date(at), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next - 1, 0, 0); return d.getTime(); }
   function sentLine(id) {
     var at = sent[id], f = sentF[id], live = f && Date.now() < undoUntil(at);
-    return '<span class="sent" data-sent="' + esc(id) + '">✓ ' + hm(at) + ' · applies by ' + appliesBy(at) + '</span>' + (live ? '<button class="undo" type="button" data-undo="' + esc(id) + '">' + I('arrow-back-up') + 'Undo</button>' : '');
+    return '<span class="sent" data-sent="' + esc(id) + '">✓ ' + hm(at) + ' · ' + (studioOn() ? 'applies by ' + appliesBy(at) : 'waits: engine off') + '</span>' + (live ? '<button class="undo" type="button" data-undo="' + esc(id) + '">' + I('arrow-back-up') + 'Undo</button>' : '');
   }
   function undo(id) {
     var f = sentF[id]; if (!f) return;
-    drive(CFG.urls.files + '/' + f.fid + '?supportsAllDrives=true', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) })
+    withWrite(function () { return drive(CFG.urls.files + '/' + f.fid + '?supportsAllDrives=true', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) })
       .then(function () { delete sent[id]; delete sentF[id]; saveLocal('st-sent', sent); saveLocal('st-sentf', sentF); render(); })
-      .catch(function (e) { banner('Not undone: ' + e.message); render(); });
+      .catch(function (e) { banner('Not undone: ' + e.message); render(); }); }, function () { render(); });
   }
   function sendAct(id, act, verdict) {
-    if (EX) return;
-    var x = byId(id), n = $('note-' + id), body = { kind: act, accountId: x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() };
+    if (EX || busy[id]) return;
+    var x = byId(id), n = $('note-' + id), body = { kind: act, accountId: /^(ask|deliver|retire|refresh|result)$/.test(act) ? ownerId() : x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() };
     if (act === 'redo') { body.note = n ? n.value.trim() : ''; if (!body.note) { if (n) n.focus(); return; } }
     if (act === 'gate') body.verdict = verdict;
-    if (act === 'done') { var u = Number(doneUnits[id]); if (doneSel[id] && u > 0) body.creditsUsed = { product: doneSel[id], units: u }; delete doneSel[id]; delete doneUnits[id]; }
-    var box = document.querySelector('.crow[data-row="' + id + '"] .acts'); if (box) box.innerHTML = '<span class="sent">Sending…</span>';
+    if (act === 'result') { var rd = resDraft[id] || {}; rd.err = !rd.channel ? 'Pick a channel' : !/^\d{4}-\d{2}-\d{2}$/.test(rd.date || '') ? 'Pick a date' : !RKEYS.some(function (r) { return rd[r[0]] !== undefined && rd[r[0]] !== ''; }) ? 'Add a number' : RKEYS.some(function (r) { return rd[r[0]] !== undefined && rd[r[0]] !== '' && !(Number(rd[r[0]]) >= 0); }) ? 'Numbers only' : '';
+      if (rd.err) { render(); return; }
+      body.channel = rd.channel; body.date = rd.date; RKEYS.forEach(function (r) { if (rd[r[0]] !== undefined && rd[r[0]] !== '') body[r[0]] = Number(rd[r[0]]); }); delete resDraft[id]; }
+    if (act === 'retire') { var wy = $('why-' + id); body.why = wy ? wy.value.trim().slice(0, 300) : ''; if (!body.why) { if (wy) wy.focus(); return; } }
+    if (act === 'ask') { var q = $('askq-' + id); body.question = q ? q.value.trim().slice(0, 500) : ''; if (!body.question) { if (q) q.focus(); return; } delete drafts['q|' + id]; }
+    if (act === 'done') { var u = Number(doneUnits[id]); if (doneSel[id] && u > 0) body.creditsUsed = { product: doneSel[id], units: u }; }
+    busy[id] = 1; var box = document.querySelector('.crow[data-row="' + CSS.escape(id) + '"] .acts'); if (box) box.innerHTML = '<span class="sent">Sending…</span>';
+    Array.prototype.forEach.call(document.querySelectorAll('[data-panelbox="' + CSS.escape(id) + '"] button'), function (x) { x.disabled = true; });
     withWrite(function () {
       return putRequest(act, body)
-        .then(function (r) { sent[id] = Date.now(); saveLocal('st-sent', sent); delete drafts[id]; saveLocal('st-drafts', drafts); openPanel = null; return r.json().then(function (j) { sentF[id] = { fid: j.id, at: Date.now() }; saveLocal('st-sentf', sentF); }, function () {}); })
+        .then(function (r) { delete busy[id]; sent[id] = Date.now(); sentS[id] = { s: x ? x.stage : null, at: Date.now() }; saveLocal('st-sents', sentS); delete doneSel[id]; delete doneUnits[id]; saveLocal('st-sent', sent); delete drafts[id]; saveLocal('st-drafts', drafts); openPanel = null; return r.json().then(function (j) { sentF[id] = { fid: j.id, at: Date.now() }; saveLocal('st-sentf', sentF); }, function () {}); })
         .then(function () { render(); })
-        .catch(function (e) { banner('Not sent: ' + e.message); render(); });
-    });
+        .catch(function (e) { delete busy[id]; banner('Not sent: ' + e.message); render(); });
+    }, function () { delete busy[id]; render(); });
   }
   // set (who / priority) and studio (on/off) change at once on screen; the engine catches up at its next run.
   var pend = loadLocal('st-pend');
@@ -970,6 +1025,8 @@
       var a = byId(id);
       if (!a || a._t >= p.at || now - p.at > 36e5) { delete pend[id]; return; }
       if (p.who !== undefined) a.who = p.who;
+      if (p.destination !== undefined) a.destination = p.destination;
+      if (p.legalSetId !== undefined) { var lsx = byIdIn('legalSets', p.legalSetId); a.legal = Object.assign({}, a.legal || {}, { setId: p.legalSetId, setName: lsx ? lsx.name : p.legalSetId }); }
       if (p.priority !== undefined) a.priority = p.priority === 'none' ? null : p.priority;
     });
     saveLocal('st-pend', pend);
@@ -978,7 +1035,8 @@
     if (EX) return;
     var x = byId(id), body = { kind: 'set', accountId: x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() }; body[field] = val;
     pend[id] = Object.assign(pend[id] || {}, body, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); openPanel = null; render();
-    withWrite(function () { return putRequest('set', body).catch(function (e) { delete pend[id]; saveLocal('st-pend', pend); banner('Not sent: ' + e.message); load(); }); });
+    var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
+    withWrite(function () { return putRequest('set', body).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
   // Brand set-up tick: shows at once, one 'check' request file; the engine writes it into BRANDS at its next run.
   function sendCheck(bid, item) {
@@ -986,13 +1044,15 @@
     var b = brand(bid), key = 'chk|' + bid + '|' + item, cur = pend[key] ? pend[key].ok : !!((b.setupChecklist || []).filter(function (x) { return x.name === item; })[0] || {}).ok;
     var body = { kind: 'check', accountId: brandAcct(bid), brandId: bid, item: item, ok: !cur, at: new Date().toISOString() };
     pend[key] = { ok: !cur, at: Date.now() }; saveLocal('st-pend', pend); render();
-    withWrite(function () { return putRequest('check', body).catch(function (e) { delete pend[key]; saveLocal('st-pend', pend); banner('Not sent: ' + e.message); render(); }); });
+    var back = function () { delete pend[key]; saveLocal('st-pend', pend); render(); };
+    withWrite(function () { return putRequest('check', body).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
   function studioOn() { var p = pend.studio; return p && Date.now() - p.at < 36e5 ? p.on : !!S.studio.on; }
   function sendStudio() {
     if (EX) return;
     var on = !studioOn(); pend.studio = { on: on, at: Date.now() }; saveLocal('st-pend', pend); render();
-    withWrite(function () { return putRequest('studio', { kind: 'studio', accountId: ownerId(), on: on, at: new Date().toISOString() }).catch(function (e) { delete pend.studio; saveLocal('st-pend', pend); banner('Not sent: ' + e.message); render(); }); });
+    var back = function () { delete pend.studio; saveLocal('st-pend', pend); render(); };
+    withWrite(function () { return putRequest('studio', { kind: 'studio', accountId: ownerId(), on: on, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
   // Every request says who clicked (email + device).
   var whoAmI = null;
@@ -1013,21 +1073,25 @@
       return drive('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: payload });
     });
   }
-  var pendingWrite = null;
-  function withWrite(go) {
+  // One write waits for Google's Allow prompt at a time; cancel = the screen goes back (back()).
+  var pendingWrite = null, pendingBack = null, busy = {};
+  function withWrite(go, back) {
     var saved = DashAuth.valid();
     if (saved && DashAuth.hasScope(saved, WRITE)) return go();
-    pendingWrite = go; auth.requestWrite(WRITE);
+    if (pendingWrite) { banner('Finish the Google prompt first.'); if (back) back(); return; }
+    pendingWrite = go; pendingBack = back || null; auth.requestWrite(WRITE);
   }
+  function dropWrite(msg) { if (!pendingWrite) return; var b = pendingBack; pendingWrite = pendingBack = null; banner(msg); if (b) b(); }
   function loadLocal(k) { try { var o = JSON.parse(localStorage.getItem(k) || '{}'), now = Date.now(); Object.keys(o).forEach(function (x) { var t = o[x] && o[x].at || o[x]; if (typeof t === 'number' && now - t > 864e5) delete o[x]; }); return o; } catch (e) { return {}; } }
   function saveLocal(k, o) { try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} }
-  var sent = loadLocal('st-sent'), sentF = loadLocal('st-sentf'), drafts = loadLocal('st-drafts'), doneSel = {}, doneUnits = {};
+  var sent = loadLocal('st-sent'), sentF = loadLocal('st-sentf'), sentS = loadLocal('st-sents'), lastRead = 0, needRender = false, drafts = loadLocal('st-drafts'), doneSel = {}, doneUnits = {}, resDraft = {};
 
   /* ---------- Header and render ---------- */
   function headerPills() {
     var on = studioOn(), h = S.health || {}, st = S.studio || {}, ep = $('enginePill'), bp = $('budgetPill');
-    ep.className = 'pill' + (on ? ' ok' : ' bad');
-    ep.innerHTML = I('engine') + (on ? 'On' : 'Off') + (h.lastRun ? ' · ' + hm(Date.parse(h.lastRun)) : '');
+    var lr = Date.parse(h.lastRun) || 0, stale = on && (!lr || Date.now() - lr > 36e5);
+    ep.className = 'pill' + (on && !stale ? ' ok' : ' bad');
+    ep.innerHTML = I('engine') + (on ? 'On' : 'Off') + (lr ? ' · ' + (Date.now() - lr > 864e5 ? dmy(lr) + ' ' : '') + hm(lr) : '');
     ep.title = 'Engine ' + (on ? 'on' : 'off') + (h.lastRun ? ', last run ' + dmy(Date.parse(h.lastRun)) + ' ' + hm(Date.parse(h.lastRun)) : ', never run');
     var cap = Number(st.budgetMonth) || 0, spent = Number(st.spentMonth) || 0;
     bp.className = 'pill' + (cap && spent >= cap ? ' bad' : cap && spent >= cap * 0.8 ? ' warn' : '');
@@ -1066,6 +1130,7 @@
   document.addEventListener('input', function (e) {
     var f = e.target.getAttribute && e.target.getAttribute('data-f');
     var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('st-drafts', drafts); return; }
+    var rf = e.target.getAttribute && e.target.getAttribute('data-rf'); if (rf) { var ri = e.target.getAttribute('data-id'); (resDraft[ri] = resDraft[ri] || {})[rf] = e.target.value; return; }
     var un = e.target.getAttribute && e.target.getAttribute('data-units'); if (un) { doneUnits[un] = e.target.value; return; }
     if (!f) return;
     if (/^n-/.test(f)) { draft[f.slice(2)] = e.target.value; delete formErr[f.slice(2)]; saveDraft(); return; }
@@ -1092,6 +1157,7 @@
       return;
     }
     var ck = e.target.closest('[data-check]'); if (ck && !ck.disabled) { sendCheck(ck.getAttribute('data-check'), ck.getAttribute('data-item')); return; }
+    var rch = e.target.closest('[data-rch]'); if (rch) { var rid = rch.getAttribute('data-id'), rv = rch.getAttribute('data-rch'), rr = resDraft[rid] = resDraft[rid] || {}; rr.channel = rr.channel === rv ? '' : rv; rr.err = ''; render(); return; }
     var dt = e.target.closest('[data-dtool]'); if (dt) { var did = dt.getAttribute('data-id'), dv = dt.getAttribute('data-dtool'); doneSel[did] = doneSel[did] === dv ? '' : dv; render(); var ui = $('units-' + did); if (ui && doneSel[did]) ui.focus(); return; }
     var tp = e.target.closest('[data-tpick]'); if (tp) { var tk = tp.getAttribute('data-tpick'), tv = tp.getAttribute('data-val'); tdraft[tk] = tdraft[tk] === tv ? '' : tv; saveTool(); render(); return; }
     var tm = e.target.closest('[data-tmulti]'); if (tm) { var tmk = tm.getAttribute('data-tmulti'), tmv = tm.getAttribute('data-val'), tarr = tdraft[tmk] = tdraft[tmk] || [], ti = tarr.indexOf(tmv); if (ti >= 0) tarr.splice(ti, 1); else tarr.push(tmv); delete toolErr[tmk]; saveTool(); render(); return; }
@@ -1113,6 +1179,9 @@
       render(); if (openPanel && pkk === 'redo') { var inp = $('note-' + pid); if (inp) inp.focus(); } return; }
   });
   document.addEventListener('submit', function (e) {
+    var rs = e.target.closest('[data-result]'); if (rs) { e.preventDefault(); sendAct(rs.getAttribute('data-result'), 'result'); return; }
+    var rt = e.target.closest('[data-retire]'); if (rt) { e.preventDefault(); sendAct(rt.getAttribute('data-retire'), 'retire'); return; }
+    var ak = e.target.closest('[data-askc]'); if (ak) { e.preventDefault(); sendAct(ak.getAttribute('data-askc'), 'ask'); return; }
     var f = e.target.closest('[data-redo]'); if (!f) return; e.preventDefault();
     sendAct(f.getAttribute('data-redo'), 'redo');
   });
@@ -1126,24 +1195,29 @@
   /* ---------- Sign-in (one sign-in for the whole site, auth.js) ---------- */
   function startTimer() { stopTimer(); timer = setInterval(load, REFRESH_MS); }
   function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
-  setInterval(function () { if (Object.keys(sentF).length && S) render(); }, 6e4);
+  setInterval(function () { if (Object.keys(sentF).length && S) { if (typing()) needRender = true; else render(); } }, 6e4);
+  // Never redraw under someone's cursor: wait until they leave the box.
+  function typing() { var el = document.activeElement; return !!(el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) && $('view').contains(el) && el.getAttribute('data-f') !== 'fq'); }
+  document.addEventListener('focusout', function () { setTimeout(function () { if (needRender && !typing()) { needRender = false; render(); } }, 0); });
   function expired() { stopTimer(); accessToken = null; DashAuth.markExpired(); if (!auth.requestSilent()) banner('Sign-in expired. Sign in again.'); }
   function banner(t) { $('banner').className = 'banner'; $('banner').textContent = t; }
   function onToken(resp) {
     if (resp.error) { banner('Sign-in did not complete.'); return; }
     accessToken = resp.access_token;
     DashAuth.save(accessToken, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE);
-    var first = !signedIn; signedIn = true; $('banner').className = 'banner hidden';
-    if (pendingWrite && DashAuth.hasScope(DashAuth.valid(), WRITE)) { var p = pendingWrite; pendingWrite = null; p(); return; }
-    else if (pendingWrite) { pendingWrite = null; banner('Google blocked saving. Click again, choose Allow.'); }
-    if (first || !S) { startTimer(); load(); }
+    var first = !signedIn, stalled = !timer; signedIn = true; $('banner').className = 'banner hidden';
+    if (first || !S || stalled) { startTimer(); load(); }
+    if (pendingWrite && DashAuth.hasScope(DashAuth.valid(), WRITE)) { var p = pendingWrite; pendingWrite = pendingBack = null; p(); }
+    else dropWrite('Google blocked saving. Click again, choose Allow.');
   }
   function signOut() {
-    stopTimer(); var t = accessToken; accessToken = null; signedIn = false; S = null; EX = false; DashAuth.clear();
+    stopTimer(); var t = accessToken; accessToken = null; signedIn = false; S = null; EX = false; whoAmI = null; pendingWrite = pendingBack = null; DashAuth.clear();
+    ['st-idea', 'st-tool', 'st-drafts', 'st-pend', 'st-sent', 'st-sentf', 'st-sents'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
+    sent = {}; sentF = {}; sentS = {}; drafts = {}; pend = {}; draft = {}; tdraft = {};
     if (t && window.google && google.accounts) google.accounts.oauth2.revoke(t, function () {});
     render();
   }
-  var auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE, onToken: onToken, onError: function () { banner('Sign-in did not complete.'); }, onSilentFail: function (h) { if (h) banner('Sign-in expired. Sign in again.'); } });
+  var auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE, onToken: onToken, onError: function () { banner('Sign-in did not complete.'); dropWrite('Not sent: Google prompt closed.'); }, onSilentFail: function (h) { if (h) banner('Sign-in expired. Sign in again.'); dropWrite('Not sent: sign in again.'); } });
   fromUrl();
   var saved = DashAuth.valid();
   if (saved && DashAuth.hasScope(saved, SCOPE)) { accessToken = saved.access_token; signedIn = true; }

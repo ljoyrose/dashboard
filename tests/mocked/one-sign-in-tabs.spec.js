@@ -151,7 +151,8 @@ test.describe('Dashboard button (every page except home)', () => {
       const link = 'a.keytile[href="' + url + '"]';
       const [tab] = await Promise.all([context.waitForEvent('page'), page.locator(link).click()]);
       await expect(tab.locator('#backHome')).toBeVisible();
-      await Promise.all([tab.waitForEvent('close'), tab.locator('#backHome').click()]);
+      // The tab can close before click() returns; that close is the point, not an error.
+      await Promise.all([tab.waitForEvent('close'), tab.locator('#backHome').click().catch((e) => { if (!/closed/.test(e.message)) throw e; })]);
       expect(context.pages()).toEqual([page]);
       await expect(page).toHaveURL(/\/dashboard\/(#\/map)?$/);
     });

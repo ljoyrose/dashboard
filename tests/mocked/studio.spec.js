@@ -456,6 +456,111 @@ test.describe('Studio page', () => {
     expect(got[0].body).toMatchObject({ kind: 'check', accountId: 'acc-owner', brandId: 'sb-north', item: 'Email list', ok: true });
   });
 
+  test('hardening: a javascript: link is made dead, and a double tap on Approve writes one file', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/review', { change: (s) => { s.assets.filter((a) => a.id === 'sa-rev1')[0].reviewLink = 'javascript:alert(1)'; } });
+    const r = page.locator('.crow[data-row="sa-rev1"]');
+    await expect(r.locator('a.lk[aria-label="Preview"]')).toHaveAttribute('href', '#');
+    await r.locator('[data-act="approve"]').dblclick();
+    await expect(r.locator('[data-sent]')).toBeVisible();
+    expect(got).toHaveLength(1);
+  });
+
+  test('hardening: an engine last run over an hour ago turns the pill red; a failed refresh keeps the page', async ({ page, guard, allowedConsole }) => {
+    allowedConsole.push(/Failed to load resource|ERR_FAILED|net::/);
+    await open(page, guard, '#/me', { change: (s) => { s.health.lastRun = new Date(NOW.getTime() - 3 * 36e5).toISOString(); } });
+    await expect(page.locator('#enginePill')).toHaveClass(/bad/);
+    await page.route(/googleapis\.com\/drive\/v3\/files\?/, (route) => route.abort());
+    await page.locator('#refreshBtn').click();
+    await expect(page.locator('#banner')).toContainText('Offline');
+    await expect(page.locator('[data-sect="review"] .crow')).toHaveCount(2);
+  });
+
+  test('clients: Ask on a client item writes ask (sent by the owner account); Deliver on a client library item; owner items have neither; chips show', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/assets', { change: (s) => {
+      const c = s.assets.filter((a) => a.id === 'sa-client')[0];
+      c.delivery = null; c.ask = { question: 'Which cover photo?', at: s.generated_at, status: 'link ready (not sent)' };
+      s.assets.push(Object.assign({}, c, { id: 'sa-client-done', title: 'Sample client video', type: 'video', stage: 8, ask: null, delivery: { status: 'ready (not sent)', at: s.generated_at, mode: 'file', link: 'https://drive.google.com/file/d/1SAMPLEout/view' } }));
+    } });
+    const r = page.locator('.crow[data-row="sa-client"]');
+    await expect(r.locator('[data-chip="ask"]')).toContainText('Ask ready');
+    await expect(page.locator('.crow[data-row="sa-rev1"] [data-panel="ask"]')).toHaveCount(0);
+    await r.locator('[data-panel="ask"]').click();
+    await r.locator('#askq-sa-client').fill('Which cover photo do you prefer?');
+    await r.locator('#askq-sa-client').press('Enter');
+    await expect(r.locator('[data-sent]')).toBeVisible();
+    expect(got[0].body).toMatchObject({ kind: 'ask', assetId: 'sa-client', accountId: 'acc-owner', question: 'Which cover photo do you prefer?' });
+    await page.locator('nav.tabs a[data-nav="library"]').click();
+    const d = page.locator('.crow[data-row="sa-client-done"]');
+    await expect(d.locator('[data-chip="delivery"]')).toContainText('Ready');
+    await expect(d.locator('[data-chip="delivery"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/1SAMPLEout/view');
+    await d.locator('[data-act="deliver"]').click();
+    await expect(d.locator('[data-sent]')).toBeVisible();
+    expect(got[1].body).toMatchObject({ kind: 'deliver', assetId: 'sa-client-done', accountId: 'acc-owner' });
+  });
+
+  test('results: Add results on a library item checks channel and numbers, then writes one result request; the results chip shows totals', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/library', { change: (s) => { const l = s.assets.filter((a) => a.stage === 8)[0]; l.results = { views: 1200, clicks: 40, leads: 6, sales: 2, revenue: 90, last: '2026-10-27', channels: ['facebook'] }; } });
+    const r = page.locator('#view .crow').first();
+    await expect(r.locator('[data-chip="results"]')).toContainText('1200');
+    await r.locator('[data-panel="result"]').click();
+    await r.locator('.rform [type="submit"]').click();
+    await expect(r.locator('.rform .ferr')).toHaveText('Pick a channel');
+    await r.locator('[data-rch="facebook"]').click();
+    await r.locator('[data-rf="views"]').fill('350');
+    await r.locator('[data-rf="sales"]').fill('1');
+    await r.locator('.rform [type="submit"]').click();
+    await expect(r.locator('[data-sent]')).toBeVisible();
+    expect(got).toHaveLength(1);
+    expect(got[0].body).toMatchObject({ kind: 'result', accountId: 'acc-owner', channel: 'facebook', date: '2026-10-28', views: 350, sales: 1 });
+    expect(got[0].body.clicks).toBeUndefined();
+  });
+
+  test('spec: an early item with no legal set shows Legal?; the Where panel sets destination and legal set (same company only) with one set request each', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/me', { change: (s) => {
+      s.legalSets = [{ id: 'LS-N', name: 'North website', kind: 'brand website', entity: 'Sample Ltd', brandIds: ['sb-north'], status: 'live' },
+        { id: 'LS-APP', name: 'Sample app', kind: 'app', entity: 'Sample Ltd', brandIds: [], status: 'live' },
+        { id: 'LS-X', name: 'Other company', kind: 'brand website', entity: 'Other Ltd', brandIds: ['sb-other'], status: 'live' }];
+      const g = s.assets.filter((a) => a.id === 'sa-gate')[0]; g.brandIds = ['sb-north']; g.legal = { entity: 'Sample Ltd', setId: null };
+    } });
+    const r = page.locator('[data-sect="gate"] .crow[data-row="sa-gate"]');
+    await expect(r.locator('[data-chip="legal-missing"]')).toBeVisible();
+    await r.locator('[data-panel="where"]').click();
+    await expect(r.locator('[data-set="legalSetId"]')).toHaveCount(2);
+    await r.locator('[data-set="destination"][data-val="funnel"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'set', assetId: 'sa-gate', destination: 'funnel' });
+    await expect(r.locator('[data-chip="dest"]')).toContainText('Funnel');
+    await r.locator('[data-panel="where"]').click();
+    await r.locator('[data-set="legalSetId"][data-val="LS-APP"]').click();
+    await expect.poll(() => got.length).toBe(2);
+    expect(got[1].body).toMatchObject({ kind: 'set', assetId: 'sa-gate', legalSetId: 'LS-APP' });
+    await expect(r.locator('[data-chip="legal"]')).toContainText('Sample app');
+  });
+
+  test('brand kit: swatches, fonts, Canva kit and Brand sheet links on the brand card; Canva preview label and thumbnail on an item', async ({ page, guard }) => {
+    await page.route(/^https:\/\/drive\.google\.com\/thumbnail/, (route) => route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64') }));
+    await open(page, guard, '#/brands', { change: (s) => {
+      const b = s.brands.filter((x) => x.id === 'sb-north')[0];
+      b.kit = { colours: ['#A570D1', 'javascript:x', '#129FE7'], fontHeading: 'Lexend', fontBody: 'Inter', canvaKitUrl: 'https://www.canva.com/brand/sample', designRoute: 'Google templates + Canva by Claude' };
+      b.sheetRowUrl = 'https://docs.google.com/spreadsheets/d/1SAMPLEbrands/edit#gid=1&range=A2';
+      const a = s.assets.filter((x) => x.id === 'sa-rev1')[0]; a.reviewLink = 'https://www.canva.com/design/SAMPLE/view'; a.linkKind = 'canva'; a.thumbUrl = 'https://drive.google.com/thumbnail?id=1SAMPLEthumb0000000000000&sz=w400';
+    } });
+    const c = page.locator('[data-brandcard="sb-north"]');
+    await expect(c.locator('.sw')).toHaveCount(2);
+    await expect(c.locator('.kit')).toContainText('Lexend · Inter');
+    await expect(c.locator('[data-kit="canva"]')).toHaveAttribute('href', 'https://www.canva.com/brand/sample');
+    await expect(c.locator('[data-kit="sheet"]')).toHaveAttribute('href', /spreadsheets\/d\/1SAMPLEbrands/);
+    await page.locator('nav.tabs a[data-nav="review"]').click();
+    const r = page.locator('.crow[data-row="sa-rev1"]');
+    await expect(r.locator('a.lk')).toHaveAttribute('title', 'Open in Canva');
+    await r.locator('.ttl').click();
+    await expect(r.locator('img.thumb')).toHaveAttribute('src', /thumbnail\?id=1SAMPLEthumb/);
+  });
+
   test('example data has groups, kits, styles, formats, a variant and a gap (fictional), and sends nothing', async ({ page, guard }) => {
     await open(page, guard, '#/kits', { state: false });
     await expect(page.locator('[data-playbook="ex-pb1"]')).toBeVisible();
