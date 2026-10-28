@@ -722,7 +722,8 @@ test.describe('Studio page', () => {
     });
     expect(gaps).toMatchObject({ top: 16, side: 12, right: 12, cols: 12, pad: '12px' });
     // An empty column is one short "Empty" line, not a tall blank; full columns keep the full height.
-    const empty = page.locator('.col.empty').first(), full = page.locator('.col:not(.empty)').first();
+    const empty = page.locator('.col.col-empty').first(), full = page.locator('.col:not(.col-empty)').first();
+    for (const part of ['.col-head', '.col-list', '.col-foot']) expect((await empty.locator(part).boundingBox()).width, part + ' spans the column').toBeGreaterThan(270);
     await expect(empty.locator('.col-list')).toHaveText('Empty');
     const eh = (await empty.boundingBox()).height, fh = (await full.boundingBox()).height;
     expect(eh).toBeLessThan(160);
