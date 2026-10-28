@@ -94,7 +94,10 @@
   .subnav a[aria-current="page"], .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); }
   @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .achip:hover, .ico:hover, a.tag:hover, .chk li button:hover, .room:hover, .col-list .crow:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   .n:empty { display: none; }
-  .cnt, nav.tabs .n { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 1; color: var(--ink); background: transparent; }
+  /* Every standalone count wears the same ring: 1px ink, pill, 700, tabular. "Needs you" counts (Me, Decide, Do tabs) add a rose edge and tint,
+     never a solid fill. Stage step numbers keep their stage circle; numbers inside a sentence stay bold text. 13px, the page's floor (not 12). */
+  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 7px; border: 1px solid var(--ink); border-radius: 999px; font-size: 13px; font-weight: 700; line-height: 1; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; }
+  nav.tabs .n.need { border-color: var(--ljr-2); background: var(--ljr-2-tint); color: var(--ink); }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
   svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   main.wrap { padding-top: 16px; padding-bottom: 110px; display: flex; flex-direction: column; gap: 14px; }
@@ -107,7 +110,6 @@
   .muted { color: var(--muted); font-size: 14px; }
   .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); border-radius: 999px; padding: 3px 10px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
-  .pill .cnt { min-width: 22px; height: 22px; }
   .pill.warn { border-color: var(--ljr-3); } .pill.bad { border-color: var(--ljr-2); } .pill.ok .ti { color: var(--ljr-5-text); }
   .pill.stg { border-color: var(--c); min-width: 34px; justify-content: center; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; display: inline-block; }
@@ -169,7 +171,7 @@
   .fbar .sbox { flex: 1 1 220px; max-width: 420px; border-radius: 999px; min-height: 32px; }
   .fbar .sbox input { padding: 4px 0; }
   .fbar .fbtn { min-height: 32px; padding: 4px 12px; }
-  .fbtn .n:not(:empty)::before { content: ""; }
+  .fbtn .n:not(:empty) { margin-left: 2px; }
   .achip { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; min-height: 28px; display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
   .fbar > .fpanel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 15; width: min(640px, 100%); max-height: min(70vh, 560px); overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: 16px; box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,.12); padding: 14px; gap: 12px; }
   .fbar > .fpanel.sortp { width: min(420px, 100%); }
@@ -296,9 +298,9 @@
   nav.tabs a, nav.tabs a:hover, nav.tabs a[aria-current="page"] { outline: none; box-shadow: none; border-color: transparent; background: var(--card); }
   nav.tabs a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   /* Tab counts sit in the button's top-right corner, clear of the label. */
-  nav.tabs .n { position: absolute; top: 8px; right: 18px; min-width: 20px; height: auto; line-height: 18px; text-align: center; }
+  nav.tabs .n { position: absolute; top: 8px; right: 18px; }
   @media (max-width: 544px) {
-    nav.tabs .n { top: 2px; right: auto; left: calc(50% + 12px); min-width: 17px; line-height: 16px; padding: 0 4px; } /* beside the icon, above the label: clear of it whatever the font */ /* 13px, not 10: nothing on the page goes under 13px */
+    nav.tabs .n { top: 2px; right: auto; left: calc(50% + 12px); min-width: 17px; height: 18px; padding: 0 4px; } /* beside the icon, above the label: clear of it whatever the font */ /* 13px, not 10: nothing on the page goes under 13px */
     nav.tabs a[aria-current="page"] .bar { width: 26px; }
   }
   @media (max-width: 544px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; } }
@@ -353,9 +355,9 @@
   <div id="view"></div>
 </main>
 <nav class="tabs" id="tabs" aria-label="Sections">
-  <a href="#/me" data-nav="me" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-user"></i><span>Me</span><span class="n" id="nMe"></span></a>
-  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-traffic-lights"></i><span>Decide</span><span class="n" id="nDecide"></span></a>
-  <a href="#/do" data-nav="do" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-hand-finger"></i><span>Do</span><span class="n" id="nDo"></span></a>
+  <a href="#/me" data-nav="me" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-user"></i><span>Me</span><span class="n need" id="nMe"></span></a>
+  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-traffic-lights"></i><span>Decide</span><span class="n need" id="nDecide"></span></a>
+  <a href="#/do" data-nav="do" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-hand-finger"></i><span>Do</span><span class="n need" id="nDo"></span></a>
   <a href="#/line" data-nav="line" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-timeline"></i><span>Line</span><span class="n" id="nLine"></span></a>
   <a href="#/kits" data-nav="kits" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-box"></i><span>Kits</span><span class="n" id="nKits"></span></a>
 </nav>

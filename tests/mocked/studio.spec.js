@@ -892,6 +892,23 @@ test.describe('Studio page', () => {
     expect(sel).toBe('1px');
   });
 
+  test('numbers: every standalone count wears the same 1px ink ring; needs-you tab counts add a rose edge and tint; steps keep their stage circle', async ({ page, guard }) => {
+    await open(page, guard, '#/line?brand=sb-north');
+    await openFilters(page);
+    const ink = await page.evaluate(() => getComputedStyle(document.body).color);
+    const look = (sel) => page.locator(sel).first().evaluate((e) => { const c = getComputedStyle(e); return { b: c.borderTopWidth + ' ' + c.borderTopStyle, bc: c.borderTopColor, bg: c.backgroundColor, w: c.fontWeight, r: c.borderTopLeftRadius, num: c.fontVariantNumeric }; });
+    for (const [k, sel] of Object.entries({ column: '.col-head .cnt', subnav: '.subnav .cnt', chip: '#fpanel [data-fx] .cnt', filter: '#filtersBtn .n', tab: 'nav.tabs #nLine' })) {
+      const l = await look(sel);
+      expect(l, k).toMatchObject({ b: '1px solid', bc: ink, w: '700', num: 'tabular-nums' });
+      expect(parseFloat(l.r), `${k} is a pill`).toBeGreaterThan(9);
+    }
+    const need = await look('nav.tabs #nMe');
+    expect(need).toMatchObject({ b: '1px solid', bc: 'rgb(230, 68, 61)', bg: 'rgb(252, 228, 224)', w: '700' }); // rose edge (--ljr-2) and tint, never solid
+    const step = await look('.col-head .num');
+    expect(step.bc, 'a step keeps its stage colour').not.toBe(ink);
+    await expect(page.locator('.col-foot b').first()).toHaveCSS('border-top-style', 'none'); // inside a sentence: bold text
+  });
+
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
     await open(page, guard, '#/line');
     const html = page.locator('html');
