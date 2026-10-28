@@ -204,7 +204,7 @@
   /* Tools: credit meters */
   .meter { display: flex; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
   .meter:first-of-type { border-top: 0; }
-  .meter .bar { width: 6px; border-radius: var(--radius); background: color-mix(in srgb, var(--c) 18%, transparent); box-shadow: inset 0 0 0 1px var(--c); flex: none; }
+  .meter .bar { width: 3px; border-radius: var(--radius); background: color-mix(in srgb, var(--c) 18%, transparent); box-shadow: inset 0 0 0 1px var(--c); flex: none; }
   .meter .txt { flex: 1; min-width: 0; }
   .meter .track { height: 10px; border-radius: var(--radius); background: transparent; box-shadow: inset 0 0 0 1px var(--line); margin: 6px 0; overflow: hidden; }
   .meter .track i { display: block; height: 100%; background: color-mix(in srgb, var(--c) 22%, transparent); box-shadow: inset 0 0 0 1px var(--c); border-radius: var(--radius); }
@@ -235,7 +235,7 @@
   .ask .fin { flex: 1; min-width: 0; }
   .row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
   .row:first-of-type { border-top: 0; }
-  .row .bar { width: 6px; align-self: stretch; border-radius: var(--radius); background: color-mix(in srgb, var(--c) 18%, transparent); box-shadow: inset 0 0 0 1px var(--c); flex: none; }
+  .row .bar { width: 3px; align-self: stretch; border-radius: var(--radius); background: color-mix(in srgb, var(--c) 18%, transparent); box-shadow: inset 0 0 0 1px var(--c); flex: none; }
   .row .txt { flex: 1; min-width: 0; }
   .row .meta { font-size: 14px; color: var(--muted); text-align: right; }
   /* Calm focus: one line, a shade darker. */
@@ -277,7 +277,7 @@
   .board { flex: 1 1 auto; min-width: 0; display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; scrollbar-width: thin; }
   .col { flex: 0 0 280px; display: flex; flex-direction: column; min-height: 0; background: var(--canvas); border: 1px solid var(--bd); border-radius: var(--radius); overflow: hidden; scroll-snap-align: start; }
   .col-head { flex: none; position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 12px; min-height: 40px; font-weight: 600; background: var(--band); border-bottom: 1px solid var(--bd); }
-  .col-head .sbar { width: 4px; height: 18px; border-radius: 2px; background: var(--sc); flex: none; } /* stage colour: a small upright bar left of "Step N:" on the white head */
+  .col-head .sbar { width: 3px; height: 18px; border-radius: 2px; background: var(--sc); flex: none; } /* stage colour: a small upright bar left of "Step N:" on the white head */
   .step { color: var(--muted); font-weight: 600; white-space: nowrap; } /* stage numbers in words, never in a circle */
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .col-head .hico .ti { font-size: 16px; color: var(--ink); }
@@ -373,6 +373,9 @@
   .strip i { box-shadow: inset 0 0 0 1px var(--ctl); }
   /* Calm rows: date pill (plain 1px ring, muted text; rose ring + tint when late, amber ring + tint when due within 3 days), one need chip. */
   .crow .bline .bn { min-width: 0; overflow-wrap: anywhere; }
+  .bmark { width: 20px; height: 20px; flex: none; border-radius: 4px; box-sizing: border-box; display: inline-grid; place-items: center; }
+  img.blogo { object-fit: contain; }
+  .bav { border: 1px solid var(--c, var(--press)); background: color-mix(in srgb, var(--c, var(--press)) 14%, var(--card)); color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1; letter-spacing: -.02em; }
   .dpill { margin-left: auto; font-size: 13px; font-weight: 400; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; height: 24px; display: inline-flex; align-items: center; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); } /* every date wears a plain 1px ring */
   .dpill.late { color: var(--ink); border-color: var(--ljr-2); background: var(--ljr-2-tint); }
   .dpill.soon { color: var(--ink); border-color: var(--ljr-3); background: var(--ljr-3-tint); }
@@ -460,6 +463,11 @@
   .cvis { margin: 0; font-size: 13px; font-weight: 600; display: flex; gap: 6px; align-items: center; }
   .cform { display: flex; gap: 8px; align-items: flex-end; }
   .cform textarea { flex: 1; min-width: 0; min-height: 44px; resize: vertical; }
+  /* List view: each row has a 3px bar in its stage colour down its left edge (the same colour as the column's bar); not on board cards. */
+  .crow { position: relative; }
+  .card .crow { padding-left: 14px; }
+  .card .crow::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--sc); }
+  .col-list .crow::before { content: none; }
 </style>
 </head>
 <body>
@@ -566,6 +574,21 @@
   var $ = function (id) { return document.getElementById(id); };
   // Links from the sheet: only http(s) opens; anything else becomes a dead '#'.
   // Brand website (engine v0.2.14: kit.website from the BRANDS Sheet, or null): a small "↗ host" link, new tab; hidden when missing or not http(s).
+  // Brand mark: always a 20x20 slot so names never shift. The logo (engine kit.logo, https only) when there is one; else, or if it
+  // fails to load, an initials avatar (1-2 letters, 1px ring in the brand colour, pale tint).
+  function brandInitials(b) { var n = String((b && (b.shortName || b.short_name)) || (b && b.name) || '?').trim().split(/\s+/); return (n.length > 1 ? n[0].charAt(0) + n[n.length - 1].charAt(0) : n[0].slice(0, 2)).toUpperCase(); }
+  function brandAvatar(b) { return '<span class="bmark bav" data-bmark="' + esc(b.id) + '" style="--c:' + col(b.colour) + '" aria-hidden="true">' + esc(brandInitials(b)) + '</span>'; }
+  function brandMark(b) {
+    var u = b && b.kit && b.kit.logo;
+    if (u && /^https:\/\//i.test(String(u).trim())) return '<img class="bmark blogo" data-bmark="' + esc(b.id) + '" data-ini="' + esc(brandInitials(b)) + '" data-col="' + esc(col(b.colour)) + '" src="' + safeUrl(u) + '" alt="" width="20" height="20" loading="lazy">';
+    return brandAvatar(b);
+  }
+  // A logo that fails to load swaps to the initials avatar in the same slot.
+  document.addEventListener('error', function (e) {
+    var t = e.target; if (!t || !t.matches || !t.matches('img.blogo')) return;
+    var sp = document.createElement('span'); sp.className = 'bmark bav'; sp.setAttribute('data-bmark', t.getAttribute('data-bmark')); sp.setAttribute('aria-hidden', 'true');
+    sp.style.setProperty('--c', t.getAttribute('data-col')); sp.textContent = t.getAttribute('data-ini'); t.replaceWith(sp);
+  }, true);
   function siteLink(b) {
     var u = b && b.kit && b.kit.website, h = '';
     if (!u || safeUrl(u) === '#') return '';
@@ -1033,8 +1056,8 @@
   }
   function row(a, kind, withBrand) {
     var on = openPanel && openPanel.id === a.id, bo = brandOf(a), need = needOf(a), dp = datePill(a);
-    return '<div class="crow' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '">' +
-      (withBrand || dp ? '<div class="bline">' + (withBrand ? '<span class="dot" style="--c:' + col(bo.colour) + '"></span><span class="bn">' + esc(bo.name) + '</span>' : '') + dp + '</div>' : '') +
+    return '<div class="crow' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '" style="--sc:var(--ljr-' + stSlot(a.stage) + ')">' +
+      (withBrand || dp ? '<div class="bline">' + (withBrand ? brandMark(bo) + '<span class="bn">' + esc(bo.name) + '</span>' : '') + dp + '</div>' : '') +
       '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') +
       '</div></div><div class="cfoot">' + (need ? '<span class="tag need" data-chip="need">' + esc(need) + '</span>' : '<span></span>') + whoRing(a) + '</div>' +
@@ -1278,7 +1301,7 @@
       var n = BSTAGES.indexOf(b.stage), ck = (b.setupChecklist || []).map(function (x) { var p = pend['chk|' + b.id + '|' + x.name]; return p ? { name: x.name, ok: p.ok, pend: true } : x; });
       var done = ck.filter(function (x) { return x.ok; }).length, mine = A.filter(function (a) { return a.brandIds.indexOf(b.id) >= 0 && a.stage < 8; }).length;
       var sub = [b.groupId ? I(GROUP_ICON[b.groupId] || 'folder') + esc(group(b.groupId).name) : '', S.accounts.length > 1 ? esc(account(brandAcct(b.id)).name) : ''].filter(Boolean).join(' · ');
-      return '<section class="room" data-brandcard="' + esc(b.id) + '" style="--c:' + col(b.colour) + '"><h2 class="grp"><span class="dot"></span>' + esc(b.name) + '<a class="cnt" href="#/assets?brand=' + encodeURIComponent(b.id) + '" title="Assets in progress">' + mine + '</a></h2>' + (sub ? '<span class="stn" data-group="' + esc(b.groupId || '') + '">' + sub + '</span>' : '') +
+      return '<section class="room" data-brandcard="' + esc(b.id) + '" style="--c:' + col(b.colour) + '"><h2 class="grp">' + brandMark(b) + '<span class="bn">' + esc(b.name) + '</span><a class="cnt" href="#/assets?brand=' + encodeURIComponent(b.id) + '" title="Assets in progress">' + mine + '</a></h2>' + (sub ? '<span class="stn" data-group="' + esc(b.groupId || '') + '">' + sub + '</span>' : '') +
         '<div class="strip b6">' + BSTAGES.map(function (_, i) { return '<i class="' + (i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>' +
         '<div class="blab" title="' + BSTAGES.join(' · ') + '">' + (n >= 0 ? (n + 1) + '/6 · ' + esc(b.stage) : '') + '</div>' + kitStrip(b) +
         (ck.length ? '<div class="sect">' + I('list-check') + 'Set-up ' + cnt(done + '/' + ck.length) + '</div><ul class="chk">' + ck.map(function (x) { return '<li class="' + (x.ok ? 'ok' : '') + '"><button type="button" data-check="' + esc(b.id) + '" data-item="' + esc(x.name) + '" aria-pressed="' + !!x.ok + '"' + dis() + '>' + I(x.ok ? 'circle-check' : 'circle-dashed') + esc(x.name) + '</button></li>'; }).join('') + '</ul>' : '') + '</section>';
