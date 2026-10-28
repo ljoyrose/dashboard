@@ -623,6 +623,32 @@ test.describe('Studio page', () => {
     expect(got[0].body).toMatchObject({ kind: 'tool', product: name.split('|')[0] });
   });
 
+  test('search and sort everywhere: Decide and Do have the find bar; Tools, Kits and Brands have a search box; new sorts and Where/Series/Kit filters', async ({ page, guard }) => {
+    await open(page, guard, '#/decide');
+    await expect(page.locator('[data-bar="decide"] [data-f="fq"]')).toBeVisible();
+    await page.locator('[data-bar="decide"] [data-f="fq"]').fill('checklist');
+    await expect(page.locator('[data-sect="review"] .crow')).toHaveCount(1);
+    await go(page, 'do');
+    await expect(page.locator('[data-bar="do"]')).toBeVisible();
+    await go(page, 'line');
+    await page.locator('#filtersBtn').click();
+    await expect(page.locator('[data-frow="sort"] [data-val="due"]')).toBeVisible();
+    await expect(page.locator('[data-frow="sort"] [data-val="priority"]')).toBeVisible();
+    await go(page, 'tools');
+    const before = await page.locator('[data-tool]').count();
+    await page.locator('[data-lq="tools"]').fill('zzzz-nothing');
+    await expect(page.locator('[data-tool]')).toHaveCount(0);
+    await page.locator('[data-lq="tools"]').fill('');
+    await expect(page.locator('[data-tool]')).toHaveCount(before);
+    await page.locator('[data-tsort="reset"]').click();
+    await expect(page.locator('[data-tsort="reset"]')).toHaveAttribute('aria-pressed', 'true');
+    await go(page, 'brands');
+    await page.locator('[data-lq="brands"]').fill('north');
+    await expect(page.locator('[data-brandcard]')).toHaveCount(1);
+    await go(page, 'kits/kits');
+    await expect(page.locator('[data-lq="kits"]')).toBeVisible();
+  });
+
   test('example data has groups, kits, styles, formats, a variant and a gap (fictional), and sends nothing', async ({ page, guard }) => {
     await open(page, guard, '#/kits', { state: false });
     await expect(page.locator('[data-playbook="ex-pb1"]')).toBeVisible();

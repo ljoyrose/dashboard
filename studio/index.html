@@ -508,17 +508,17 @@
   function toolWarnings() { return (S.tools || []).filter(function (m) { return owned(m) && meterOf(m).k !== 'ok'; }).length; }
 
   /* ---------- Find bar (the Factory model). Each tab keeps its own filters (st-fs), and the address carries them. ---------- */
-  var BAR_TABS = /^(me|ideas|assets|review|library)$/;
+  var BAR_TABS = /^(me|decide|do|line|ideas|assets|review|library)$/;
   var FLAG_W = { 'needs-input': 'Needs input', refresh: 'Refresh', overdue: 'Overdue', blocked: 'Blocked', 'over-budget': 'Over budget', stale: 'Stale', test: 'Test' };
-  var SORTS = [['date', 'calendar', 'Date'], ['stage', 'stairs', 'Stage'], ['brand', 'tag', 'Brand']];
-  var LIST_KEYS = ['grp', 'acct', 'brand', 'type', 'st', 'who', 'fit', 'ev', 'f'];
+  var SORTS = [['date', 'calendar', 'Changed'], ['due', 'calendar-event', 'Due date'], ['priority', 'flag', 'Priority'], ['stage', 'stairs', 'Stage'], ['brand', 'tag', 'Brand'], ['name', 'sort-a-z', 'Name'], ['results', 'chart-bar', 'Results']];
+  var LIST_KEYS = ['grp', 'acct', 'brand', 'type', 'st', 'who', 'fit', 'ev', 'f', 'dest', 'series', 'kit'];
   var filtersOpen = false;
-  function fdef() { return { q: '', grp: [], acct: [], brand: [], type: [], st: [], who: [], fit: [], ev: [], f: [], sort: 'date', test: false }; }
+  function fdef() { return { q: '', grp: [], acct: [], brand: [], type: [], st: [], who: [], fit: [], ev: [], f: [], dest: [], series: [], kit: [], sort: 'date', test: false }; }
   var fs = (function () { try { return JSON.parse(localStorage.getItem('st-fs') || '') || {}; } catch (e) { return {}; } })();
   function fsOf(tab) { var d = fdef(), s = fs[tab] = fs[tab] || {}; Object.keys(d).forEach(function (k) { if (s[k] === undefined || (Array.isArray(d[k]) && !Array.isArray(s[k]))) s[k] = d[k]; }); return s; }
   function saveFs() { try { localStorage.setItem('st-fs', JSON.stringify(fs)); } catch (e) {} }
   function evOf(a) { return a.dated && a.eventDate ? 'dated' : 'evergreen'; }
-  function hay(a) { var t = typeOf(a.type), pr = product(a.productId); return [a.title, pr ? pr.name : '', account(a.accountId).name, a.projectName, a.recipe, a.provider, t[2], STAGES[a.stage], whoOf(a.who)[1], a.flags.join(' '), a.brandIds.map(function (b) { return brand(b).name; }).join(' '), group(grpOf(a)).name,
+  function hay(a) { var t = typeOf(a.type), pr = product(a.productId), se = byIdIn('series', a.seriesId), kt = byIdIn('kits', a.kitId), sy = byIdIn('styles', a.styleId); return [a.title, se ? se.name : '', kt ? kt.name : '', sy ? sy.name : '', a.legal ? (a.legal.setName || '') + ' ' + (a.legal.entity || '') : '', a.destination || '', a.audience || '', a.notes || '', pr ? pr.name : '', account(a.accountId).name, a.projectName, a.recipe, a.provider, t[2], STAGES[a.stage], whoOf(a.who)[1], a.flags.join(' '), a.brandIds.map(function (b) { return brand(b).name; }).join(' '), group(grpOf(a)).name,
     (byIdIn('frameworks', a.frameworkId) || {}).name, (byIdIn('kits', a.kitId) || {}).name, a.purpose, a.formatIds.map(fmtLabel).join(' ')].join(' ').toLowerCase(); }
   function hit(a, s, skip) {
     if (!s.test && isTest(a)) return false;
@@ -531,12 +531,18 @@
     if (skip !== 'fit' && s.fit.length && s.fit.indexOf(String(a.fit).toLowerCase()) < 0) return false;
     if (skip !== 'ev' && s.ev.length && s.ev.indexOf(evOf(a)) < 0) return false;
     if (skip !== 'f' && s.f.length && !s.f.every(function (f) { return a.flags.indexOf(f) >= 0; })) return false;
+    if (skip !== 'dest' && s.dest.length && s.dest.indexOf(a.destination || '') < 0) return false;
+    if (skip !== 'series' && s.series.length && s.series.indexOf(a.seriesId || '') < 0) return false;
+    if (skip !== 'kit' && s.kit.length && s.kit.indexOf(a.kitId || '') < 0) return false;
     if (s.q) { var h = hay(a); if (!s.q.toLowerCase().split(/\s+/).filter(Boolean).every(function (w) { return h.indexOf(w) >= 0; })) return false; }
     return true;
   }
   function sortA(list, by) {
     return list.slice().sort(function (a, b) {
-      return by === 'stage' ? b.stage - a.stage || b._t - a._t : by === 'brand' ? brandOf(a).name.localeCompare(brandOf(b).name) || b._t - a._t : b._t - a._t;
+      var pri = { urgent: 0, high: 1, normal: 2, low: 3 }, due = function (x) { return x.eventDate ? Date.parse(x.eventDate) : Infinity; }, res = function (x) { return x.results ? (x.results.sales || 0) * 1000 + (x.results.views || 0) : -1; };
+      return by === 'stage' ? b.stage - a.stage || b._t - a._t : by === 'brand' ? brandOf(a).name.localeCompare(brandOf(b).name) || b._t - a._t :
+        by === 'due' ? due(a) - due(b) || b._t - a._t : by === 'priority' ? (a.priority in pri ? pri[a.priority] : 9) - (b.priority in pri ? pri[b.priority] : 9) || b._t - a._t :
+        by === 'name' ? bare(a).localeCompare(bare(b)) : by === 'results' ? res(b) - res(a) || b._t - a._t : b._t - a._t;
     });
   }
   function onCount(tab) { var s = fsOf(tab); return LIST_KEYS.reduce(function (n, k) { return n + s[k].length; }, 0) + (s.test ? 1 : 0) + (s.sort !== 'date' ? 1 : 0); }
@@ -558,6 +564,7 @@
     if (filtersOpen) {
       var sc = counts(items, s, 'st', function (a) { return a.stage; }), wc = counts(items, s, 'who', function (a) { return a.who; }), fc = counts(items, s, 'fit', function (a) { return String(a.fit).toLowerCase(); });
       var ec = counts(items, s, 'ev', evOf), gc = counts(items, s, 'f', function (a) { return a.flags; }), tests = items.filter(isTest).length;
+      var dc = counts(items, s, 'dest', function (a) { return a.destination || []; }), sec = counts(items, s, 'series', function (a) { return a.seriesId || []; }), kc = counts(items, s, 'kit', function (a) { return a.kitId || []; });
       var row = function (key, lab, chips) { return chips ? '<div class="pills" data-frow="' + key + '"><span class="flab">' + lab + '</span>' + chips + '</div>' : ''; };
       html += '<div class="card fpanel">' +
         row('st', 'Stage', STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), String(i), s.st.indexOf(String(i)) >= 0, ' stg', ' style="--c:' + col(stSlot(i)) + '" title="' + name + '"') : ''; }).join('')) +
@@ -565,6 +572,9 @@
         row('fit', 'Fit', [['auto', 'Auto', 'robot'], ['hand', 'Manual', 'hand-finger']].filter(function (x) { return fc[x[0]] || s.fit.indexOf(x[0]) >= 0; }).map(function (x) { return fchip('fit', x[0], I(x[2]) + ' ' + x[1] + ' ' + cnt(fc[x[0]] || 0), s.fit.indexOf(x[0]) >= 0); }).join('')) +
         row('ev', 'Timing', [['evergreen', 'Evergreen', 'leaf'], ['dated', 'Dated', 'calendar-event']].filter(function (x) { return ec[x[0]] || s.ev.indexOf(x[0]) >= 0; }).map(function (x) { return fchip('ev', x[0], I(x[2]) + ' ' + x[1] + ' ' + cnt(ec[x[0]] || 0), s.ev.indexOf(x[0]) >= 0); }).join('')) +
         row('f', 'Flags', Object.keys(gc).concat(s.f.filter(function (f) { return !gc[f]; })).map(function (f) { return fchip('f', f, I('flag') + ' ' + esc(FLAG_W[f] || f) + ' ' + cnt(gc[f] || 0), s.f.indexOf(f) >= 0); }).join('')) +
+        row('dest', 'Where', DESTS.filter(function (d) { return dc[d[0]] || s.dest.indexOf(d[0]) >= 0; }).map(function (d) { return fchip('dest', d[0], I(d[1]) + ' ' + d[2] + ' ' + cnt(dc[d[0]] || 0), s.dest.indexOf(d[0]) >= 0); }).join('')) +
+        row('series', 'Series', S.series.filter(function (x) { return sec[x.id] || s.series.indexOf(x.id) >= 0; }).map(function (x) { return fchip('series', x.id, I('stack') + ' ' + esc(x.name) + ' ' + cnt(sec[x.id] || 0), s.series.indexOf(x.id) >= 0); }).join('')) +
+        row('kit', 'Kit', S.kits.filter(function (x) { return kc[x.id] || s.kit.indexOf(x.id) >= 0; }).map(function (x) { return fchip('kit', x.id, I('box') + ' ' + esc(x.name) + ' ' + cnt(kc[x.id] || 0), s.kit.indexOf(x.id) >= 0); }).join('')) +
         row('sort', 'Sort', SORTS.map(function (x) { return fchip('sort', x[0], I(x[1]) + ' ' + x[2], s.sort === x[0]); }).join('')) +
         '<div class="pills"><button class="pill" type="button" data-action="ftest" aria-pressed="' + s.test + '" title="TEST">TEST <span class="sw' + (s.test ? ' on' : '') + '"><i></i></span> ' + cnt(tests) + '</button>' +
         '<button class="pill" type="button" data-action="clearf">' + I('filter-off') + ' Clear</button></div></div>';
@@ -754,15 +764,17 @@
   }
   // Decide: everything only Lisa can decide. Do: everything only Lisa can do.
   function vDecide() {
-    var s = fsOf('me'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
+    var s = fsOf('decide'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
     var sect = function (icon, word, l, kind) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : '<p class="muted">' + I('circle-check') + ' Nothing waiting.</p>') + '</div>'; };
-    return sect('traffic-lights', 'Gates', keep(gates()), 'gate') + sect('eye-check', 'Review', keep(reviews()), 'review') + vSuggest();
+    return findBar('decide', gates().concat(reviews())) + sect('traffic-lights', 'Gates', keep(gates()), 'gate') + sect('eye-check', 'Review', keep(reviews()), 'review') + vSuggest();
   }
   function doItems() { var out = hands().slice(); all().forEach(function (a) { if (out.indexOf(a) < 0 && ((a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent') || (a.delivery && a.delivery.status === 'ready (not sent)'))) out.push(a); }); return out; }
   function vDo() {
-    var H = hands(), A = all().filter(function (a) { return a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent'; }), D = all().filter(function (a) { return a.delivery && a.delivery.status === 'ready (not sent)'; }), Rz = library().filter(function (a) { return !a.results || !a.results.last; });
+    var s = fsOf('do'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
+    var H = keep(hands()), A = all().filter(function (a) { return a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent'; }), D = all().filter(function (a) { return a.delivery && a.delivery.status === 'ready (not sent)'; }), Rz = library().filter(function (a) { return !a.results || !a.results.last; });
     var sect = function (icon, word, l, kind, note) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + (note ? info(note) : '') + '</div>' + (l.length ? l.map(function (a) { return row(a, kind === 'hand' ? 'hand' : kindFor(a), true); }).join('') : '<p class="muted">' + I('circle-check') + ' Nothing waiting.</p>') + '</div>'; };
-    return sect('hand-finger', 'Tasks', H, 'hand') + sect('message-question', 'Questions to send', A, 'asks', 'Engine off or email off: send the link yourself') + sect('package-export', 'Ready to send', D, 'deliver', 'Email off: send the link yourself') + sect('chart-bar', 'Results to add', Rz, 'results');
+    A = keep(A); D = keep(D); Rz = keep(Rz);
+    return findBar('do', doItems().concat(Rz)) + sect('hand-finger', 'Tasks', H, 'hand') + sect('message-question', 'Questions to send', A, 'asks', 'Engine off or email off: send the link yourself') + sect('package-export', 'Ready to send', D, 'deliver', 'Email off: send the link yourself') + sect('chart-bar', 'Results to add', Rz, 'results');
   }
   function vIdeas() {
     var inbox = ST.inboxFolderId ? '<a class="pill" href="https://drive.google.com/drive/folders/' + esc(ST.inboxFolderId) + '" target="_blank" rel="noopener" title="Inbox: drop files here" style="--hc:var(--ljr-7-text)">' + I('inbox') + 'Inbox</a>' : '';
@@ -783,10 +795,15 @@
     var fonts = [k.fontHeading, k.fontBody].filter(Boolean).map(esc).join(' · ');
     return sw || links || fonts ? '<div class="kit">' + (sw ? '<span class="sws">' + sw + '</span>' : '') + (fonts ? '<span class="muted">' + I('typography') + fonts + '</span>' : '') + links + '</div>' : '';
   }
+  // Search (and for Tools, sort) on the pages without the find bar. Text is kept per page for this visit.
+  var lq = {}, toolSort = 'name';
+  function qbox(key, extra) { return '<div class="srow"><label class="sbox">' + I('search') + '<input type="search" data-lq="' + key + '" value="' + esc(lq[key] || '') + '" aria-label="Search" autocomplete="off"></label></div>' + (extra || ''); }
+  function lqHit(key, text) { var q = (lq[key] || '').toLowerCase().trim(); return !q || q.split(/\s+/).every(function (w) { return String(text).toLowerCase().indexOf(w) >= 0; }); }
   function vBrands() {
     var A = all().filter(function (a) { return !isTest(a); });
     if (!S.brands.length) return '<div class="card muted">No brands yet.</div>';
-    return '<div class="bgrid">' + S.brands.map(function (b) {
+    var BL = S.brands.filter(function (b) { return lqHit('brands', [b.name, b.stage, group(b.groupId).name, account(brandAcct(b.id)).name].join(' ')); });
+    return qbox('brands') + '<div class="bgrid">' + BL.map(function (b) {
       var n = BSTAGES.indexOf(b.stage), ck = (b.setupChecklist || []).map(function (x) { var p = pend['chk|' + b.id + '|' + x.name]; return p ? { name: x.name, ok: p.ok, pend: true } : x; });
       var done = ck.filter(function (x) { return x.ok; }).length, mine = A.filter(function (a) { return a.brandIds.indexOf(b.id) >= 0 && a.stage < 8; }).length;
       var sub = [b.groupId ? I(GROUP_ICON[b.groupId] || 'folder') + esc(group(b.groupId).name) : '', S.accounts.length > 1 ? esc(account(brandAcct(b.id)).name) : ''].filter(Boolean).join(' · ');
@@ -807,6 +824,12 @@
     var add = '<div class="pills"><button class="pill" type="button" data-action="addtool" aria-expanded="' + toolOpen + '" style="--hc:var(--ljr-7-text)">' + I(toolOpen ? 'chevron-up' : 'plus') + 'Add tool</button></div>' + (toolOpen ? vToolForm() : '');
     var caps = function (m) { return m.capabilities.map(function (k) { var c = capOf(k); return '<span class="tag" data-cap="' + esc(k) + '" title="' + esc(k) + '">' + I(c[2]) + esc(c[1]) + '</span>'; }).join(''); };
     var fitTag = function (m) { var f = pickOf(FITS, m.fit) || [m.fit, /^BANNED:/.test(m.fit) ? 'Not for ' + m.fit.slice(7) : m.fit, 'ban']; return '<span class="tag" data-fit="' + esc(m.fit) + '" title="Fit">' + I(f[2]) + esc(f[1]) + '</span>'; };
+    T = T.filter(function (m) { return lqHit('tools', [m.product, m.thing, m.fit, (m.capabilities || []).join(' '), m.accountNotes].join(' ')); }).sort(function (a, b) {
+      if (toolSort === 'left') { var pa = a.allowance ? a.used / a.allowance : -1, pb = b.allowance ? b.used / b.allowance : -1; return pb - pa; }
+      if (toolSort === 'reset') { var ra = Date.parse(a.resetsOn) || Infinity, rb = Date.parse(b.resetsOn) || Infinity; return ra - rb; }
+      return String(a.product).localeCompare(String(b.product));
+    });
+    var tsort = '<div class="pills" data-frow="tsort"><span class="flab">Sort</span>' + [['name', 'sort-a-z', 'Name'], ['left', 'gauge', 'Most used'], ['reset', 'refresh', 'Resets soon']].map(function (x) { return '<button class="pill' + (toolSort === x[0] ? ' on' : '') + '" type="button" data-tsort="' + x[0] + '" aria-pressed="' + (toolSort === x[0]) + '">' + I(x[1]) + ' ' + x[2] + '</button>'; }).join('') + '</div>';
     var list = T.length ? '<div class="card">' + T.map(function (m) {
       if (!owned(m)) return '<div class="row" data-tool="' + esc(m.product) + '" style="--c:var(--ljr-0)"><span class="bar"></span><div class="txt"><b>' + esc(m.product) + '</b>' + (m.thing ? ' · ' + esc(m.thing) : '') + info(m.accountNotes) +
         '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + caps(m) + '</div></div></div>';
@@ -819,7 +842,7 @@
         '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + scoreTag('tools', m.product) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
         (m.audit ? '<a class="tag" href="' + safeUrl(m.audit) + '" target="_blank" rel="noopener" title="Audit">' + I('clipboard-check') + 'Audit</a>' : '') + '</div></div></div>';
     }).join('') + '</div>' : '<div class="card muted">No tools yet.</div>';
-    return gaps + add + list;
+    return qbox('tools', tsort) + gaps + add + list;
   }
   /* Add tool: one request file, kind 'tool'. Draft kept as you type. */
   var tdraft = (function () { try { return JSON.parse(localStorage.getItem('st-tool') || '') || {}; } catch (e) { return {}; } })(), toolOpen = false, toolErr = {}, toolNote = '';
@@ -896,7 +919,7 @@
     var empty = '<p class="muted">None yet.</p>', body = '';
     if (sub === 'playbooks') {
       body = '<div class="ogrid">' + OUTCOMES.map(function (o) {
-        var pbs = S.playbooks.filter(function (p) { return p.outcome === o[0]; });
+        var pbs = S.playbooks.filter(function (p) { return p.outcome === o[0] && lqHit('kits', [p.name, (p.steps || []).map(function (x) { return x.text || x.id; }).join(' ')].join(' ')); });
         return '<section class="room" data-outcome="' + o[0] + '" style="--c:var(--ljr-' + o[3] + ')"><h2 class="grp">' + I(o[2]) + o[1] + cnt(pbs.length) + '</h2>' +
           pbs.map(function (p) {
             return '<div class="pb" data-playbook="' + esc(p.id) + '"><b>' + esc(p.name) + '</b><ol class="steps">' + (p.steps || []).map(function (x) {
@@ -906,14 +929,16 @@
           }).join('') + '</section>';
       }).join('') + '</div>';
     } else if (sub === 'packs') {
-      body = '<div class="card">' + (S.packs.length ? S.packs.map(function (p) {
+      var PK = S.packs.filter(function (p) { return lqHit('kits', [p.name, p.kind, p.notes].join(' ')); });
+      body = '<div class="card">' + (PK.length ? PK.map(function (p) {
         return '<div class="crow" data-pack="' + esc(p.id) + '"><div class="l1"><span class="type">' + I('package') + '</span><span class="ttl">' + esc(p.name) + '</span><span title="Kits">' + cnt(p.kitIds.length) + '</span></div>' +
           '<div class="l2"><span class="icons">' + (p.kind ? '<span class="tag" title="Kind">' + esc(p.kind) + '</span>' : '') + p.kitIds.map(function (k) { return '<span class="tag" title="Kit">' + I('box') + esc(name('kits', k)) + '</span>'; }).join('') + '</span></div>' +
           (p.notes ? '<div class="when">' + esc(p.notes) + '</div>' : '') + '</div>';
       }).join('') : empty) + '</div>';
     } else if (sub === 'kits') {
       var used = {}; all().forEach(function (a) { if (a.kitId) used[a.kitId] = (used[a.kitId] || 0) + 1; });
-      body = '<div class="card">' + (S.kits.length ? S.kits.map(function (k) {
+      var KT = S.kits.filter(function (k) { return lqHit('kits', [k.name, k.type, k.notes, (k.needs || []).join(' ')].join(' ')); });
+      body = '<div class="card">' + (KT.length ? KT.map(function (k) {
         var t = typeOf(k.type);
         return '<div class="crow" data-kit="' + esc(k.id) + '"><div class="l1"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span><span class="ttl">' + esc(k.name) + '</span><span title="Assets using it">' + cnt(used[k.id] || 0) + '</span></div>' +
           '<div class="l2"><span class="icons">' + kitTags(k) + (k.brickIds.length ? '<span class="tag" title="Bricks: ' + esc(k.brickIds.map(function (b) { return name('bricks', b); }).join(' · ')) + '">' + I('puzzle') + k.brickIds.length + '</span>' : '') + '</span></div></div>';
@@ -938,7 +963,7 @@
           (f.channel ? '<div class="when">' + esc(f.channel) + '</div>' : '') + '</div>';
       }).join('') : empty) + '</div>';
     }
-    return nav + '<div data-kits="' + sub + '" style="display:flex;flex-direction:column;gap:14px">' + body + '</div>';
+    return nav + (/^(playbooks|packs|kits)$/.test(sub) ? qbox('kits') : '') + '<div data-kits="' + sub + '" style="display:flex;flex-direction:column;gap:14px">' + body + '</div>';
   }
   function vEngine() {
     var on = studioOn(), h = S.health || {};
@@ -1204,12 +1229,13 @@
     v.setAttribute('data-view', route[0] || 'me');
     v.innerHTML = route[0] === 'ideas' ? vIdeas() : route[0] === 'assets' ? list('assets', inProgress(), kindFor) : route[0] === 'review' ? list('review', reviews(), function () { return 'review'; }) :
       route[0] === 'brands' ? vBrands() : route[0] === 'library' ? list('library', library(), function () { return 'lib'; }) : route[0] === 'kits' ? vKits() : route[0] === 'tools' ? vTools() : route[0] === 'new' ? vNew() :
-      route[0] === 'asset' ? vAsset(decodeURIComponent(route[1] || '')) : route[0] === 'engine' ? vEngine() : route[0] === 'decide' ? vDecide() : route[0] === 'do' ? vDo() : route[0] === 'line' ? list('assets', inProgress(), kindFor) : vMe();
+      route[0] === 'asset' ? vAsset(decodeURIComponent(route[1] || '')) : route[0] === 'engine' ? vEngine() : route[0] === 'decide' ? vDecide() : route[0] === 'do' ? vDo() : route[0] === 'line' ? list('line', inProgress(), kindFor) : vMe();
     var sn = subNav(route[0]); if (sn) v.insertAdjacentHTML('afterbegin', sn);
   }
 
   /* ---------- Events ---------- */
   document.addEventListener('input', function (e) {
+    var lk = e.target.getAttribute && e.target.getAttribute('data-lq'); if (lk) { lq[lk] = e.target.value; var lp = e.target.selectionStart; render(); var lb = document.querySelector('[data-lq="' + lk + '"]'); if (lb) { lb.focus(); try { lb.setSelectionRange(lp, lp); } catch (x) {} } return; }
     var f = e.target.getAttribute && e.target.getAttribute('data-f');
     var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('st-drafts', drafts); return; }
     var rf = e.target.getAttribute && e.target.getAttribute('data-rf'); if (rf) { var ri = e.target.getAttribute('data-id'); (resDraft[ri] = resDraft[ri] || {})[rf] = e.target.value; return; }
@@ -1239,6 +1265,7 @@
       return;
     }
     var ck = e.target.closest('[data-check]'); if (ck && !ck.disabled) { sendCheck(ck.getAttribute('data-check'), ck.getAttribute('data-item')); return; }
+    var tso = e.target.closest('[data-tsort]'); if (tso) { toolSort = tso.getAttribute('data-tsort'); render(); return; }
     var sr = e.target.closest('[data-star]'); if (sr) { var sid = sr.getAttribute('data-id'), sv = +sr.getAttribute('data-star'), sf = fbDraft[sid] = fbDraft[sid] || { stars: 0, reasons: [] }; sf.stars = sf.stars === sv ? 0 : sv; render(); return; }
     var rn = e.target.closest('[data-reason]'); if (rn) { var rid0 = rn.getAttribute('data-id'), rv0 = rn.getAttribute('data-reason'), rf0 = fbDraft[rid0] = fbDraft[rid0] || { stars: 0, reasons: [] }, ri0 = rf0.reasons.indexOf(rv0); if (ri0 >= 0) rf0.reasons.splice(ri0, 1); else rf0.reasons.push(rv0); render(); return; }
     var et = e.target.closest('[data-edittool]'); if (et && !et.disabled) { var ek = et.getAttribute('data-edittool'), em = S.tools.filter(function (x) { return x.product + '|' + (x.thing || '') === ek; })[0]; if (em) { tdraft = toolToDraft(em); saveTool(); toolOpen = true; render(); var tf = document.querySelector('[data-toolform]'); if (tf) tf.scrollIntoView({ block: 'start' }); } return; }
