@@ -973,12 +973,15 @@ test.describe('Studio page', () => {
     expect(solid).toEqual([]);
   });
 
-  test('two pill sizes only: things you read are 24px, things you press are 36px (44px on the phone)', async ({ page, guard }) => {
+  test('two pill sizes only (24px to read, 36px / 44px to press) and one 12px corner radius', async ({ page, guard }) => {
     await open(page, guard, '#/line');
     await openFilters(page);
     const h = (sel) => page.locator(sel).first().evaluate((e) => Math.round(e.getBoundingClientRect().height));
     for (const sel of ['.col-head .cnt', '.subnav .cnt', '.crow .tag', '#stamp', 'nav.tabs #nLine']) expect(await h(sel), sel).toBe(24);
     for (const sel of ['#newBtn', '#fpanel [data-fx]', '#filtersBtn', '#sortBtn', '.subnav a', '[data-vmode="list"]', '.crow .ico', '.crow .btn', '#enginePill']) expect(await h(sel), sel).toBe(36);
+    // One corner radius (12px) on everything; circles only for status dots.
+    const r = (sel) => page.locator(sel).first().evaluate((e) => getComputedStyle(e).borderTopLeftRadius);
+    for (const sel of ['.col', '.col-list .crow', '#fpanel', '#newBtn', '#fpanel [data-fx]', '.subnav a', 'nav.tabs a', '.col-head .cnt', '.fbar .sbox', '.crow .tag']) expect(await r(sel), sel).toBe('12px');
     await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 390, height: 844 });
     for (const sel of ['#moreBtn', '#filtersBtn', '.subnav a', '.crow .ico']) expect(await h(sel), sel + ' on the phone').toBe(44);

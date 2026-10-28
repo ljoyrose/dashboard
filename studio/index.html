@@ -23,7 +23,7 @@
 <style>
   /* Colours: ../tokens.css for the LJR7 spine (stage colours, brand dots, red "needs you" never change); the page itself is
      "Warm clear" (default) or "Cool clear" from the Look menu, each with a dark version. No solid fills: selected = an outline. */
-  :root { --radius: 16px; --me: var(--ljr-7);
+  :root { --radius: 12px; --me: var(--ljr-7);
     --paper: #EEE8DF; --canvas: #E3DBCF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --soft: #DED5C7;
     --bd: var(--line); --band: var(--card); --chip: transparent;
     --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
@@ -88,14 +88,14 @@
   @media (prefers-reduced-motion: reduce) { nav.tabs a .bar { transition: none; } }
   html { scroll-padding-bottom: 96px; }
   .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
-  .subnav a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
+  .subnav a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
   /* One line rule (like Links and HubSpot): every edge is 1px; hover = selected = that same 1px edge turns ink (an outline laid exactly over it), so it darkens, never thickens or moves. Keyboard focus keeps the 2px ink ring. */
   .subnav a[aria-current="page"], .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); }
   @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .achip:hover, .ico:hover, a.tag:hover, .chk li button:hover, .room:hover, .col-list .crow:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   .n:empty { display: none; }
   /* Every standalone count wears the same ring: 1px ink, pill, 700, tabular. "Needs you" counts (Me, Decide, Do tabs) add a rose edge and tint,
      never a solid fill. Stage step numbers keep their stage circle; numbers inside a sentence stay bold text. 13px, the page's floor (not 12). */
-  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 7px; border: 1px solid var(--ink); border-radius: 999px; font-size: 13px; font-weight: 700; line-height: 1; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; }
+  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 7px; border: 1px solid var(--ink); border-radius: var(--radius); font-size: 13px; font-weight: 700; line-height: 1; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; }
   nav.tabs .n.need { border-color: var(--ljr-2); background: var(--ljr-2-tint); color: var(--ink); }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
   svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -108,7 +108,7 @@
   .card { background: var(--surface); border: 1px solid var(--bd); border-radius: var(--radius); padding: 14px 16px; min-width: 0; box-shadow: var(--shadow); }
   .muted { color: var(--muted); font-size: 14px; }
   .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); border-radius: 999px; padding: 3px 10px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+  .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); border-radius: var(--radius); padding: 3px 10px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
   .pill.warn { border-color: var(--ljr-3); } .pill.bad { border-color: var(--ljr-2); } .pill.ok .ti { color: var(--ljr-5-text); }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; display: inline-block; }
   .grp { font-size: 16px; font-weight: 700; margin: 0 0 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -149,13 +149,13 @@
   .stage.c .n { background: var(--ljr-7-tint); border-color: var(--ljr-7); color: var(--ink); }
   .stage.c { font-weight: 700; }
   .ico { position: relative; background: none; border: 1px solid transparent; border-radius: var(--radius); min-width: 32px; height: 32px; padding: 0 4px; display: inline-flex; gap: 3px; align-items: center; justify-content: center; cursor: pointer; color: var(--ink); font: inherit; font-size: 13px; }
-  .tag { font-size: 13px; color: var(--ink); display: inline-flex; gap: 3px; align-items: center; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; }
+  .tag { font-size: 13px; color: var(--ink); display: inline-flex; gap: 3px; align-items: center; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--radius); }
   .tag.over { border-color: var(--ljr-2); }
   .lk { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: var(--radius); }
   .lk.no { border-style: dashed; opacity: .7; }
   .acts .btn { padding: 4px 12px; }
   .sent { font-size: 14px; color: var(--muted); }
-  .undo { font: inherit; font-size: 14px; padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; margin-left: 6px; display: inline-flex; gap: 4px; align-items: center; }
+  .undo { font: inherit; font-size: 14px; padding: 2px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); cursor: pointer; margin-left: 6px; display: inline-flex; gap: 4px; align-items: center; }
   .strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; margin: 8px 0 2px; }
   .strip i { height: 8px; border-radius: var(--radius); background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
   .strip i.d { background: var(--ljr-5-tint); box-shadow: inset 0 0 0 1px var(--ljr-5); } .strip i.c { background: var(--ljr-7-tint); box-shadow: inset 0 0 0 1px var(--ljr-7); }
@@ -170,12 +170,12 @@
   /* Find bar: Search · Brand · Type always; Stage · Who · Fit · Timing · Flags · Sort · TEST behind Filter. */
   .fbar { display: flex; flex-direction: column; gap: 8px; position: relative; }
   .srow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .fbar .sbox { flex: 1 1 220px; max-width: 420px; border-radius: 999px; min-height: 32px; }
+  .fbar .sbox { flex: 1 1 220px; max-width: 420px; border-radius: var(--radius); min-height: 32px; }
   .fbar .sbox input { padding: 4px 0; }
   .fbar .fbtn { min-height: 32px; padding: 4px 12px; }
   .fbtn .n:not(:empty) { margin-left: 2px; }
-  .achip { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; min-height: 28px; display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
-  .fbar > .fpanel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 15; width: min(640px, 100%); max-height: min(70vh, 560px); overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: 16px; box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,.12); padding: 14px; gap: 12px; }
+  .achip { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 2px 10px; min-height: 28px; display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+  .fbar > .fpanel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 15; width: min(640px, 100%); max-height: min(70vh, 560px); overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,.12); padding: 14px; gap: 12px; }
   .fbar > .fpanel.sortp { width: min(420px, 100%); }
   .fgrp { display: flex; flex-direction: column; gap: 6px; }
   .fpanel .frow { justify-content: flex-start; margin-top: 4px; }
@@ -187,7 +187,7 @@
   .sbox { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 0 12px; background: var(--surface); }
   .sbox:focus-within { border-color: var(--muted); }
   .sbox input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 15px; padding: 8px 0; }
-  .fbtn { font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .fbtn { font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; padding: 7px 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
   .fpanel { display: flex; flex-direction: column; gap: 8px; }
   .flab { font-size: 13px; font-weight: 700; color: var(--muted); min-width: 52px; }
   .sw { display: inline-block; width: 28px; height: 16px; border-radius: var(--radius); border: 1px solid var(--muted); position: relative; vertical-align: middle; }
@@ -216,7 +216,7 @@
   .fq .qt { font-size: 15px; margin: 0 0 6px; position: relative; padding-right: 22px; }
   .fq .req { position: absolute; right: 0; top: 0; color: var(--ljr-2-text); font-weight: 700; }
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
-  .ch { font: inherit; font-size: 14px; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
+  .ch { font: inherit; font-size: 14px; padding: 5px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
   .ch .dot { width: 9px; height: 9px; }
   .fin { width: 100%; font: inherit; font-size: 15px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); }
   textarea.fin { min-height: 72px; resize: vertical; }
@@ -265,7 +265,7 @@
   #lookMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(340px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
   #lookMenu .lrow { display: flex; flex-direction: column; gap: 4px; }
   .seg { display: flex; flex-wrap: wrap; gap: 4px; }
-  .seg button, .vsw button { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+  .seg button, .vsw button { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 12px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
   /* Board / List switch at the top of Line and Decide. */
   .vtop { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   .vsw { display: inline-flex; gap: 4px; margin-left: auto; }
@@ -294,10 +294,10 @@
   .side .shead { display: flex; gap: 8px; align-items: flex-start; font-weight: 700; }
   .side .shead span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .side .panel { margin: 0; padding: 0; border: 0; background: transparent; } /* no grey box inside the white panel */
-  /* HubSpot sizing (CRM UI spec, s3/4/6/7/15/16): containers 16 radius, things you press are pills, tabs are 6px rectangles. */
-  .btn, .vsw button, .lk, .ico { border-radius: 999px; }
+  /* HubSpot sizing (CRM UI spec, s3/4/6/7/15/16). Corners: ONE radius token, --radius (12px), on everything; circles only for status dots. */
+  .btn, .vsw button, .lk, .ico { border-radius: var(--radius); }
   .pill { padding: 4px 12px; min-height: 28px; }
-  nav.tabs a, .subnav a { border-radius: 6px; }
+  nav.tabs a, .subnav a { border-radius: var(--radius); }
   nav.tabs a, nav.tabs a:hover, nav.tabs a[aria-current="page"] { outline: none; box-shadow: none; border-color: transparent; background: var(--card); }
   nav.tabs a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   /* Tab counts sit in the button's top-right corner, clear of the label. */
@@ -329,9 +329,9 @@
   @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 220px)); justify-content: center; } }
   /* Phone header: dot + Studio, the status pills and one "More" menu (Refresh, Look, New, Sign out, Dashboard). Desktop unchanged. */
   .morewrap { position: relative; display: none; margin-left: auto; }
-  #moreMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 25; width: 220px; background: var(--card); border: 1px solid var(--bd); border-radius: 16px; box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,.18); padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+  #moreMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 25; width: 220px; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,.18); padding: 8px; display: flex; flex-direction: column; gap: 4px; }
   #moreMenu.hidden { display: none; }
-  #moreMenu > * { font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 999px; min-height: 44px; padding: 0 14px; display: flex; gap: 8px; align-items: center; text-decoration: none; cursor: pointer; text-align: left; }
+  #moreMenu > * { font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: var(--radius); min-height: 44px; padding: 0 14px; display: flex; gap: 8px; align-items: center; text-decoration: none; cursor: pointer; text-align: left; }
   #moreMenu > * .ti { color: var(--ink); }
   @media (hover: hover) { #moreMenu > *:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   @media (max-width: 544px) {
