@@ -541,6 +541,26 @@ test.describe('Studio page', () => {
     await expect(r.locator('[data-chip="legal"]')).toContainText('Sample app');
   });
 
+  test('brand kit: swatches, fonts, Canva kit and Brand sheet links on the brand card; Canva preview label and thumbnail on an item', async ({ page, guard }) => {
+    await page.route(/^https:\/\/drive\.google\.com\/thumbnail/, (route) => route.fulfill({ status: 200, contentType: 'image/png', body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64') }));
+    await open(page, guard, '#/brands', { change: (s) => {
+      const b = s.brands.filter((x) => x.id === 'sb-north')[0];
+      b.kit = { colours: ['#A570D1', 'javascript:x', '#129FE7'], fontHeading: 'Lexend', fontBody: 'Inter', canvaKitUrl: 'https://www.canva.com/brand/sample', designRoute: 'Google templates + Canva by Claude' };
+      b.sheetRowUrl = 'https://docs.google.com/spreadsheets/d/1SAMPLEbrands/edit#gid=1&range=A2';
+      const a = s.assets.filter((x) => x.id === 'sa-rev1')[0]; a.reviewLink = 'https://www.canva.com/design/SAMPLE/view'; a.linkKind = 'canva'; a.thumbUrl = 'https://drive.google.com/thumbnail?id=1SAMPLEthumb0000000000000&sz=w400';
+    } });
+    const c = page.locator('[data-brandcard="sb-north"]');
+    await expect(c.locator('.sw')).toHaveCount(2);
+    await expect(c.locator('.kit')).toContainText('Lexend · Inter');
+    await expect(c.locator('[data-kit="canva"]')).toHaveAttribute('href', 'https://www.canva.com/brand/sample');
+    await expect(c.locator('[data-kit="sheet"]')).toHaveAttribute('href', /spreadsheets\/d\/1SAMPLEbrands/);
+    await page.locator('nav.tabs a[data-nav="review"]').click();
+    const r = page.locator('.crow[data-row="sa-rev1"]');
+    await expect(r.locator('a.lk')).toHaveAttribute('title', 'Open in Canva');
+    await r.locator('.ttl').click();
+    await expect(r.locator('img.thumb')).toHaveAttribute('src', /thumbnail\?id=1SAMPLEthumb/);
+  });
+
   test('example data has groups, kits, styles, formats, a variant and a gap (fictional), and sends nothing', async ({ page, guard }) => {
     await open(page, guard, '#/kits', { state: false });
     await expect(page.locator('[data-playbook="ex-pb1"]')).toBeVisible();

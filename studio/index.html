@@ -171,6 +171,10 @@
   .rform { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
   .rform .fin { width: 7.5em; }
   .rk { display: inline-flex; gap: 4px; align-items: center; }
+  .kit { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+  .sws { display: inline-flex; gap: 3px; }
+  .sw { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); display: inline-block; }
+  img.thumb { display: block; max-width: 100%; max-height: 240px; border-radius: var(--radius); border: 1px solid var(--line); margin-bottom: 8px; }
   .ask .fin { flex: 1; min-width: 0; }
   .row { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
   .row:first-of-type { border-top: 0; }
@@ -657,7 +661,7 @@
         ['Stage', esc(+a.stage) + ' ' + esc(STAGES[a.stage])], ['AI', esc(a.provider)], ['Cost', a.cost != null && a.cost !== '' ? money(a.cost) : ''], ['Rating', a.rating != null ? esc(a.rating) + ' / 5' : ''],
         ['Version', a.stage === 8 ? 'v' + esc(a.version || 1) : ''], ['Changed', a._t ? dmy(a._t) : ''],
         ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
-      body = '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
+      body = (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
     }
     return '<div class="panel" data-panelbox="' + esc(a.id) + '">' + body + '</div>';
   }
@@ -672,7 +676,7 @@
       '<div class="l2"><span class="icons">' + rowIcons(a) + '</span><span class="acts">' + actsFor(a, kind) + (a.stage <= 3 && !sent[a.id] ? '<button class="ico" type="button" data-panel="where" data-id="' + esc(a.id) + '" aria-label="Company, legal set and where" title="Company, legal set and where"' + dis() + '>' + I('map-pin') + '</button>' : '') + (isClient(a) && a.stage >= 1 && a.stage <= 7 && !sent[a.id] ? '<button class="ico" type="button" data-panel="ask" data-id="' + esc(a.id) + '" aria-label="Ask client" title="Ask client"' + dis() + '>' + I('message-question') + '</button>' : '') + '</span></div>' +
       (openPanel && openPanel.id === a.id ? panelOf(a, openPanel.k) : '') +
       '<div class="l3"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span>' +
-      (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="Preview" style="--hc:var(--ljr-6-text)">' + I('eye') + '</a>' : '<span class="lk no" title="No preview yet">' + I('eye') + '</span>') +
+      (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="' + ({ canva: 'Open in Canva', gdoc: 'Open the Google file', drive: 'Open in Drive', clickfunnels: 'Open in ClickFunnels' }[a.linkKind] || 'Preview') + '" style="--hc:var(--ljr-6-text)">' + I('eye') + '</a>' : '<span class="lk no" title="No preview yet">' + I('eye') + '</span>') +
       '<span class="grow"></span><span class="date" title="Changed">' + (a._t ? dmy(a._t) : '') + '</span></div></div>';
   }
   function cards(list, kindOf) {
@@ -709,6 +713,13 @@
       STAGES.map(function (name, i) { return '<div class="stage ' + (i < a.stage ? 'd' : i === a.stage ? 'c' : '') + '"><span class="n">' + i + '</span>' + name + '</div>'; }).join('') +
       '<p><a href="#/assets">← Assets</a></p></div>';
   }
+  // Brand kit from the BRANDS Sheet: colour swatches, fonts, Canva kit and the Sheet row. Never a link built from an id.
+  function kitStrip(b) {
+    var k = b.kit || {}, sw = (k.colours || []).map(function (c) { return /^#[0-9a-fA-F]{6}$/.test(c) ? '<i class="sw" style="background:' + c + '" title="' + c + '"></i>' : ''; }).join('');
+    var links = (k.canvaKitUrl ? '<a class="tag" data-kit="canva" href="' + safeUrl(k.canvaKitUrl) + '" target="_blank" rel="noopener">' + I('palette') + 'Canva kit</a>' : '') + (b.sheetRowUrl ? '<a class="tag" data-kit="sheet" href="' + safeUrl(b.sheetRowUrl) + '" target="_blank" rel="noopener">' + I('table') + 'Brand sheet</a>' : '');
+    var fonts = [k.fontHeading, k.fontBody].filter(Boolean).map(esc).join(' · ');
+    return sw || links || fonts ? '<div class="kit">' + (sw ? '<span class="sws">' + sw + '</span>' : '') + (fonts ? '<span class="muted">' + I('typography') + fonts + '</span>' : '') + links + '</div>' : '';
+  }
   function vBrands() {
     var A = all().filter(function (a) { return !isTest(a); });
     if (!S.brands.length) return '<div class="card muted">No brands yet.</div>';
@@ -718,7 +729,7 @@
       var sub = [b.groupId ? I(GROUP_ICON[b.groupId] || 'folder') + esc(group(b.groupId).name) : '', S.accounts.length > 1 ? esc(account(brandAcct(b.id)).name) : ''].filter(Boolean).join(' · ');
       return '<section class="room" data-brandcard="' + esc(b.id) + '" style="--c:' + col(b.colour) + '"><h2 class="grp"><span class="dot"></span>' + esc(b.name) + '<a class="cnt" href="#/assets?brand=' + encodeURIComponent(b.id) + '" title="Assets in progress">' + mine + '</a></h2>' + (sub ? '<span class="stn" data-group="' + esc(b.groupId || '') + '">' + sub + '</span>' : '') +
         '<div class="strip b6">' + BSTAGES.map(function (_, i) { return '<i class="' + (i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>' +
-        '<div class="blab" title="' + BSTAGES.join(' · ') + '">' + (n >= 0 ? (n + 1) + '/6 · ' + esc(b.stage) : '') + '</div>' +
+        '<div class="blab" title="' + BSTAGES.join(' · ') + '">' + (n >= 0 ? (n + 1) + '/6 · ' + esc(b.stage) : '') + '</div>' + kitStrip(b) +
         (ck.length ? '<div class="sect">' + I('list-check') + 'Set-up ' + cnt(done + '/' + ck.length) + '</div><ul class="chk">' + ck.map(function (x) { return '<li class="' + (x.ok ? 'ok' : '') + '"><button type="button" data-check="' + esc(b.id) + '" data-item="' + esc(x.name) + '" aria-pressed="' + !!x.ok + '"' + dis() + '>' + I(x.ok ? 'circle-check' : 'circle-dashed') + esc(x.name) + '</button></li>'; }).join('') + '</ul>' : '') + '</section>';
     }).join('') + '</div>';
   }
