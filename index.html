@@ -13,13 +13,23 @@
 <meta name="theme-color" content="#2C2C2A">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap">
 <script src="config.js"></script>
 <script src="toolkit.js"></script>
 <script src="auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="money/core.js"></script>
 <link rel="stylesheet" href="tokens.css">
+<script>
+  // House look: follow the Look saved in Studio ('dash-look', read only here): Warm clear or Cool clear, and Light / Dark / Device.
+  (function () {
+    try {
+      var o = JSON.parse(localStorage.getItem('dash-look') || '{}') || {}, r = document.documentElement;
+      if (o.bg === 'cool') r.classList.add('look-cool');
+      if (o.mode === 'light' || o.mode === 'dark') r.setAttribute('data-theme', o.mode);
+    } catch (e) { /* no storage: Warm clear, follow the device */ }
+  })();
+</script>
 <style>
   /* Colours come from ../tokens.css (one shared LJR7 file). These short names only point at it.
      Map 1 Vision · Read first/Drive 0 · PC-Personal/Drive check 4 Ops · Bin 8 · Changes/Cf 7 · Money 3. Failed reads and delete actions use 2 Risk. */
@@ -41,7 +51,7 @@
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
-    font-family: 'Lexend', sans-serif; font-size: 16px; line-height: 1.6;
+    font-family: 'Lexend', sans-serif; font-size: 16px; line-height: 1.5;
     text-align: left; hyphens: manual; -webkit-hyphens: manual;
     font-variant-numeric: tabular-nums;
   }
@@ -55,7 +65,7 @@
   header { background: var(--surface); border-bottom: 1px solid var(--line); }
   @media (min-width: 700px) { header { position: sticky; top: 0; z-index: 2; } }
   .top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-top: 12px; padding-bottom: 8px; text-align: left; }
-  .top h1 { font-size: 18px; font-weight: 700; margin: 0; flex: 1 1 auto; }
+  .top h1 { font-size: 18px; font-weight: 600; margin: 0; flex: 1 1 auto; }
   .readstamp { color: var(--muted); font-size: 14px; }
   .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; border-radius: 12px;
          border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 14px; text-decoration: none; }
@@ -66,13 +76,13 @@
   main { padding-top: 16px; padding-bottom: 32px; }
   .here { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; text-align: left; }
   .here span { color: var(--muted); font-size: 14px; }
-  .here h2 { margin: 0; font-size: 22px; font-weight: 700; }
+  .here h2 { margin: 0; font-size: 22px; font-weight: 600; }
   #view { display: flex; flex-direction: column; gap: 16px; transition: opacity 150ms ease; }
   #view.fade { opacity: 0; }
   @media (prefers-reduced-motion: reduce) { #view { transition: none; } }
 
   /* Cards: solid = established, dashed = not established. */
-  .card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--slot, var(--s0));
+  .card { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--slot, var(--s0));
           border-radius: 16px; padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); min-width: 0; }
   .card.sec { border-radius: 12px; }
   .card.pending { border-style: dashed; }
@@ -107,7 +117,7 @@
   .figs { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
   .fig { gap: 4px; padding: 12px 16px; }
   .fig .label { font-size: 14px; color: var(--muted); text-align: left; }
-  .fig .num { font-size: 32px; font-weight: 700; line-height: 1.2; }
+  .fig .num { font-size: 32px; font-weight: 600; line-height: 1.2; }
   .fig .meta { font-size: 14px; color: var(--muted); text-align: left; }
   .fig .act { font-size: 14px; font-weight: 600; margin-top: 4px; }
 
@@ -117,16 +127,16 @@
   ul.files li:first-child { border-top: none; padding-top: 0; }
   .fname { font-weight: 600; overflow-wrap: anywhere; hyphens: none; }
   .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--muted); font-size: 14px; }
-  .chip { font-size: 12px; background: var(--tint, var(--s0-tint)); color: var(--ink); border-radius: 8px; padding: 0 8px; line-height: 1.6; overflow-wrap: anywhere; }
+  .chip { font-size: 13px; background: var(--tint, var(--s0-tint)); color: var(--ink); border-radius: 8px; padding: 0 8px; line-height: 1.6; overflow-wrap: anywhere; }
   .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
   .pager .count { font-size: 14px; color: var(--muted); }
   .pager .gap { width: 1px; }
   .subnav { display: flex; flex-wrap: wrap; gap: 8px; }
-  .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 4px solid var(--s7); background: var(--surface); text-decoration: none; font-size: 14px; }
-  .subnav a[aria-current="page"] { font-weight: 700; background: var(--s7-tint); border-color: var(--s7); }
+  .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 3px solid var(--s7); background: var(--surface); text-decoration: none; font-size: 14px; }
+  .subnav a[aria-current="page"] { font-weight: 600; background: var(--s7-tint); border-color: var(--s7); }
   .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .stat { background: var(--tint, var(--s0-tint)); border-radius: 12px; padding: 8px 12px; text-align: left; }
-  .stat .num { font-size: 24px; font-weight: 700; }
+  .stat .num { font-size: 24px; font-weight: 600; }
   .stat .label { font-size: 14px; color: var(--muted); }
 
   /* Named next steps */
@@ -185,20 +195,20 @@
   .mtag.bin { --mc: var(--s8); --mt: var(--s8-tint); } .mtag.bin::before { border-radius: 0; }
   /* Needs you today: one short list, at most 7 rows, each in its LJR7 colour. */
   .needs ol { list-style: none; margin: 8px 0 0; padding: 0; }
-  .needs li { display: flex; gap: 10px; align-items: baseline; padding: 8px 0 8px 10px; border-top: 1px solid var(--line, rgba(0,0,0,.08)); border-left: 4px solid var(--nc, var(--s0)); }
+  .needs li { display: flex; gap: 10px; align-items: baseline; padding: 8px 0 8px 10px; border-top: 1px solid var(--line, rgba(0,0,0,.08)); border-left: 3px solid var(--nc, var(--s0)); }
   .needs li:first-child { border-top: 0; }
   .needs li.n-risk { --nc: var(--s2); } .needs li.n-fin { --nc: var(--fin); } .needs li.n-ops { --nc: var(--ops); } .needs li.n-bin { --nc: var(--s8); }
   .needs .nt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .ments { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
-  .ment { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--fin); border-radius: 12px; padding: 8px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
+  .ment { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--fin); border-radius: 12px; padding: 8px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
   .ment.bad { background: var(--s2-tint); border-left-color: var(--s2); }
-  .ment .num { font-size: 26px; font-weight: 700; line-height: 1.2; }
+  .ment .num { font-size: 26px; font-weight: 600; line-height: 1.2; }
   .ment .who { font-weight: 600; }
   .ment .sub { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
-  .mgroup { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; margin: 0; text-align: left; }
+  .mgroup { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0; text-align: left; }
   .hidden { display: none !important; }
   /* Home screen shortcuts. One tap each, tall enough for a thumb. */
-  #key-projects h2 { margin: 0; font-size: 20px; font-weight: 700; text-align: left; hyphens: manual; }
+  #key-projects h2 { margin: 0; font-size: 20px; font-weight: 600; text-align: left; hyphens: manual; }
   #key-projects .lead { margin: 0; font-size: 16px; text-align: left; color: var(--ink); hyphens: manual; }
   #key-projects .lead a { font-weight: 600; }
   .keytiles { display: grid; grid-template-columns: 1fr; gap: 8px; }
@@ -224,7 +234,7 @@
   .card.vision[class]:not(:hover) { border-color: var(--line); }
   a { color: inherit; }
   .btn:active, nav.main a:active { transform: none; }
-  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; font-weight: 700; color: var(--muted); cursor: help; vertical-align: middle; }
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--muted); cursor: help; vertical-align: middle; }
   .info:hover { border-color: var(--muted); }
 
   /* One page width everywhere (Lisa, 20 Oct): the full window up to 1600px, 24px edge; phones 16px. No wasted space. */
@@ -248,7 +258,7 @@
   body { padding-bottom: 96px; }
   nav.main { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
              padding: 6px 8px 10px; margin: 0; background: var(--surface); border-top: 1px solid var(--line); }
-  nav.main a { position: relative; text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column;
+  nav.main a { position: relative; text-decoration: none; font-size: 13px; font-weight: 600; color: var(--ink); min-height: 54px; display: flex; flex-direction: column;
                align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; background: transparent; }
   nav.main a .icon { width: 20px; height: 20px; }
   nav.main a:hover { border-color: var(--slot, var(--line)); }
@@ -256,17 +266,17 @@
   nav.main a[aria-current="page"] { border: 1.5px solid var(--ink); background: var(--tint, var(--s0-tint)); }
   /* "You are here" title: focus moves here on every screen change for screen readers; it must not draw a box. */
   #hereTitle, #hereTitle:focus, #hereTitle:focus-visible { outline: none; border: 0; box-shadow: none; }
-  nav.main .n { position: absolute; top: 2px; right: calc(50% - 28px); font-size: 13px; font-weight: 700; line-height: 18px; background: var(--ljr-2-solid); color: var(--ljr-2-on); border-radius: 999px; padding: 0 6px; min-width: 18px; }
+  nav.main .n { position: absolute; top: 2px; right: calc(50% - 28px); font-size: 13px; font-weight: 600; line-height: 18px; background: var(--ljr-2-solid); color: var(--ljr-2-on); border-radius: 999px; padding: 0 6px; min-width: 18px; }
   nav.main .n:empty { display: none; }
   /* Home: Needs you: N, three big count tiles that open a tab, then the one most urgent thing. */
-  .needsline { font-size: 26px; font-weight: 700; margin: 0; }
+  .needsline { font-size: 26px; font-weight: 600; margin: 0; }
   .needsline .zero { color: var(--ljr-5-text); }
   #homeTop { display: flex; flex-direction: column; gap: 12px; }
   .hometiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   a.hometile { min-height: 88px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 10px 12px; text-decoration: none; color: var(--ink);
                background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); min-width: 0; }
   a.hometile:hover { border-color: var(--slot, var(--muted)); }
-  a.hometile .v { font-size: 28px; font-weight: 700; line-height: 1.2; }
+  a.hometile .v { font-size: 28px; font-weight: 600; line-height: 1.2; }
   a.hometile .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
   .urgent { display: flex; flex-direction: column; gap: 8px; }
   .urgent .what { margin: 0; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
@@ -278,6 +288,170 @@
   a.morelink { display: flex; flex-direction: row; align-items: center; gap: 10px; min-height: 56px; padding: 10px 16px; font-size: 17px; font-weight: 600; text-decoration: none; }
   a.morelink .icon { width: 20px; height: 20px; }
   a.morelink small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
+
+  /* ==== House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio). Lexend 400/600, nothing under 13px, line height 1.5.
+     1px lines; hover AND selected = the same 1px edge turns ink (outline over it), nothing moves; focus 2px ink. One radius, 12px.
+     No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints. Dark frame top and bottom. ==== */
+  :root { --radius: 12px;
+    --paper: #EEE8DF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --ctl: #8A7F70;
+    --bg: var(--paper); --surface: var(--card); --tc8: #3A3632; --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
+    --frame: #3A3632; --frame-foot: #46413B; --frame-ink: #F6F1E8; --frame-line: #9C9285; }
+  :root.look-cool { --paper: #F2F4F6; --card: #FFFFFF; --ink: #2B3035; --muted: #5B646D; --line: #B9C3CC; --ctl: #7A8692;
+    --frame: #33475B; --frame-foot: #405569; --frame-ink: #FFFFFF; --frame-line: #9FB0C0; --shadow: 0 1px 2px rgba(20,30,40,.12), 0 1px 8px rgba(20,30,40,.10); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --paper: #181613; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --ctl: #7D7366;
+      --tc8: var(--ljr-8); --shadow: 0 1px 3px rgba(0,0,0,.4); --frame: #2A2622; --frame-foot: #34302B; color-scheme: dark; }
+    :root.look-cool:not([data-theme="light"]) { --paper: #16191C; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --ctl: #6F7A85; --frame: #24323F; --frame-foot: #2D3D4C; }
+  }
+  /* Mode = Dark from Studio's Look menu: tokens.css only darkens with the device, so its dark spine is repeated here. */
+  :root[data-theme="dark"] { --ljr-ink: #F3EEE5; --ljr-paper: #232019; --ljr-cream: #191714; --ljr-muted: #B4AB9E;
+    --ljr-0: #8E877B; --ljr-0-text: #B4AB9E; --ljr-0-tint: #2F2B25; --ljr-0-on: #F3EEE5; --ljr-0-solid: #5A554D;
+    --ljr-1: #232019; --ljr-1-text: #F3EEE5; --ljr-1-tint: #232019; --ljr-1-edge: #F3EEE5; --ljr-1-solid: #232019; --ljr-1-on: #F3EEE5;
+    --ljr-2-tint: #3C251E; --ljr-3-tint: #3C2D18; --ljr-4-tint: #3E3820; --ljr-5-tint: #293221; --ljr-6-tint: #213134; --ljr-7-tint: #342A31;
+    --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
+    --paper: #181613; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --ctl: #7D7366;
+    --tc8: #8E8A84; --shadow: 0 1px 3px rgba(0,0,0,.4); --frame: #2A2622; --frame-foot: #34302B; color-scheme: dark; }
+  :root.look-cool[data-theme="dark"] { --paper: #16191C; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --ctl: #6F7A85; --frame: #24323F; --frame-foot: #2D3D4C; }
+  h1, h2, h3, h4, b, strong, th { font-weight: 600; }
+  body { background: var(--bg); color: var(--ink); line-height: 1.5; }
+  /* No coloured words: failures and warnings keep ink text and carry a small rose dot or ring instead. */
+  .note.fail, .st-failed, .res.bad, .skip, .needsline .zero, .btn.danger { color: var(--ink); }
+  /* Bin "why it is held" lines share the class name with the skip link and were pushed off screen with it; now they show. */
+  div.skip { position: static; left: auto; top: auto; z-index: auto; background: none; padding: 0; border: 0; border-radius: 0; font-size: 14px; color: var(--ink); }
+  .note.fail::before, .res.bad::before, div.skip::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; border: 1px solid var(--ljr-2); background: var(--ljr-2-tint); vertical-align: 1px; }
+  /* No solid colour fills: the strong buttons are a light tint on the same clear line. */
+  .btn.danger { border-color: var(--ctl); } /* the same clear line as every button; the warning is the bin icon and the words */
+  .btn.danger.solid { background: var(--ljr-2-tint); color: var(--ink); border-color: var(--ctl); }
+  .btn.ai { background: var(--ljr-7-tint); color: var(--ink); border-color: var(--ctl); }
+  .st-empty .shape, .st-idle .shape, .st-loading .shape { border-width: 1px; }
+  .st-empty .shape { border-radius: 50%; }
+  /* One radius on everything; only status dots are round. */
+  .banner, a.skip, .mtag, .chip, .stat, .scrollbox, .ment, a.hometile, a.keytile, .subnav a, .index .btn, .picker select, input.find, nav.main a, .info, .card { border-radius: var(--radius); }
+  a.skip { border-width: 1px; }
+  .banner { border-style: solid; border-color: var(--ljr-2); }
+  .banner.info { border-color: var(--line); }
+  /* Cards: 1px line, one 12px step; no colour stripe (colour shows on an icon ring when pointed at). */
+  .card, .card[class] { border: 1px solid var(--line); padding: 12px; gap: 12px; box-shadow: var(--shadow); }
+  .card.failed[class] { border-color: var(--ljr-2); }
+  .card[class]:hover, details.card[class]:hover, nav.card[class]:hover { border-left-color: var(--line); }
+  .card.failed[class]:hover { border-left-color: var(--ljr-2); }
+  .needs li[class], .needs li[class]:hover { border-left: 0; padding-left: 0; }
+  #view { gap: 12px; }
+  .here h2 { font-size: 26px; }
+  .card h3, .card h2.h3 { font-size: 17px; }
+  /* Titles wrap to 2 lines, then … */
+  .fname, .urgent .what, .needs .nt a { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  html body .fname a:focus-visible, html body .needs .nt a:focus-visible { outline-offset: -2px !important; }
+  /* Two pill sizes. Read (24px): chips, tags, counts. Press (36px desktop, 44px phone): buttons, sub-tabs, inputs. */
+  .chip, .mtag { height: 24px; min-height: 24px; display: inline-flex; align-items: center; box-sizing: border-box; font-size: 13px; line-height: 1; padding: 0 8px; }
+  /* Read pills (tags, dates): a plain 1px ring in the clear line, muted words. Late = rose ring + tint, soon = amber ring + tint (ink words).
+     The small dot before the words keeps the slot colour. Read-only: no hover. */
+  .mtag { background: transparent; border: 1px solid var(--ctl); color: var(--muted); font-weight: 600; }
+  .mtag.risk { border-color: var(--ljr-2); background: var(--ljr-2-tint); color: var(--ink); }
+  .mtag.fin { border-color: var(--ljr-3-text); background: var(--ljr-3-tint); color: var(--ink); }
+  /* Count pills: ONE exact box so 1 and 2 digits match in any font: 30 x 22, line 20px, radius 11px.
+     Only 3+ digits (and worded pills) get .wide and grow. */
+  .cnt, nav.main .n { width: 30px; min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 3px; border-radius: 11px; box-sizing: border-box;
+    display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; overflow: hidden; }
+  .cnt.wide, nav.main .n.wide { width: auto; padding: 0 6px; overflow: visible; }
+  .cnt { border: 1px solid var(--ctl); font-weight: 600; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cnt.k-risk { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
+  .cnt.k-fin { border-color: var(--ljr-3-text); background: var(--ljr-3-tint); }
+  .btn, .subnav a, .index .btn, .index.top .btn, .picker select, input.find, .urgent .btn { min-height: 36px; font-size: 14px; font-weight: 600; }
+  .btn, .subnav a, .picker select, input.find { border-color: var(--ctl); }
+  .subnav a { display: inline-flex; align-items: center; }
+  @media (max-width: 600px) { .btn, .subnav a, .index .btn, .index.top .btn, .picker select, input.find, .urgent .btn { min-height: 44px; } }
+  /* Hover = selected = the same 1px edge turns ink. An outline laid over the edge: never thicker, never moves. */
+  .subnav a[aria-current="page"] { outline: 1px solid var(--ink); outline-offset: -1px; background: transparent; border-color: var(--ctl); }
+  @media (hover: hover) {
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.hometile:hover, a.card:hover, a.ment:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.hometile:hover, a.ment:hover { border-color: var(--ctl); }
+    a.ment.bad:hover { border-color: var(--ljr-2); }
+    a.card[class]:hover { border-color: var(--ctl); }
+  }
+  /* Everything you can press rests on the same clear line (--ctl); containers keep the softer --line. No button starts out ink. */
+  a.hometile, a.keytile { border-width: 1px; border-color: var(--ctl); background: var(--surface); }
+  a.card, a.card[class], a.card.vision[class], a.card.vision[class]:not(:hover) { border-color: var(--ctl); }
+  .ment, .ment.bad { border: 1px solid var(--ctl); background: var(--surface); }
+  .ment.bad { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
+  /* Colour on hover only: a section's colour shows on its icon ring when pointed at. */
+  a.morelink > .icon { width: 36px; height: 36px; padding: 7px; box-sizing: border-box; border: 1px solid var(--line); border-radius: var(--radius); }
+  @media (hover: hover) { a.morelink:hover > .icon { border-color: var(--slot, var(--ink)); } }
+  /* Keyboard focus: 2px ink ring (the one exception to 1px). The screen title keeps no box. */
+  html body :focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  html body #hereTitle, html body #hereTitle:focus, html body #hereTitle:focus-visible { outline: none !important; }
+  /* Home: Needs you line with its urgency split, three tiles, then the Next card. */
+  .needsrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+  .needsline { font-size: 26px; font-weight: 600; }
+  .hsplit { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+  .hometiles { gap: 12px; }
+  a.hometile .v { font-size: 28px; font-weight: 600; }
+  .nextcard[class] { border-color: var(--ink); background: var(--card); }
+  .nextcard .actions { gap: 12px; }
+  .nextcard .hint { flex: 1 1 180px; }
+  /* Friendly empty state: a small green-ring check. */
+  .okstate { display: flex; flex-direction: row; align-items: center; gap: 12px; }
+  .okstate h3 { margin: 0; }
+  .okring { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--ljr-5); background: var(--ljr-5-tint); color: var(--ink); font-size: 15px; font-weight: 600; }
+  /* Frame: dark top bar and dark bottom tab bar (never black); the bottom bar one step lighter so both read the same. */
+  header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
+  .top { padding-top: 12px; padding-bottom: 12px; }
+  .top h1 { font-size: 20px; color: var(--frame-ink); }
+  .readstamp { color: var(--frame-ink); font-size: 14px; }
+  header .btn, header .btn.vision { color: var(--frame-ink); background: transparent; border-color: var(--ctl); }
+  @media (hover: hover) { header .btn:hover { outline-color: var(--frame-ink); border-color: var(--ctl); } }
+  /* Signed out the sign-in gate hides the header box (and its dark frame), so the one Sign in button sits on the page: page colours. */
+  html.dash-locked header .btn, html.dash-locked header .btn.vision { color: var(--ink); background: var(--surface); }
+  @media (hover: hover) { html.dash-locked header .btn:hover { outline-color: var(--ink); } }
+  html.dash-locked body header :focus-visible { outline-color: var(--ink) !important; }
+  html body header :focus-visible { outline-color: var(--frame-ink) !important; }
+  nav.main { background: var(--frame-foot); border-top: 0; gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  @media (min-width: 601px) { nav.main { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 220px)); justify-content: center; } }
+  /* Tabs: light buttons, no rings. Hover and selected = the small colour bar above the label widens (same height, nothing moves). */
+  nav.main a, nav.main a:hover, nav.main a[aria-current="page"] { border: 1px solid transparent; outline: none; box-shadow: none; background: var(--card); font-weight: 600; color: var(--ink); }
+  nav.main a { --tc: var(--slot, var(--ljr-0)); }
+  nav.main a.vision { --tc: var(--ink); } nav.main a.slot8 { --tc: var(--tc8); }
+  nav.main a .bar { display: block; width: 18px; height: 4px; border-radius: 2px; background: var(--tc); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
+  nav.main a[aria-current="page"] .bar { width: 40px; opacity: 1; }
+  @media (hover: hover) { nav.main a:hover .bar { width: 40px; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { nav.main a .bar { transition: none; } }
+  html body nav.main a:focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
+  /* Counts: a 1px ring pill in the tab's top-right corner; "needs you" counts add a rose edge and a light rose tint. */
+  nav.main .n { position: absolute; top: 8px; right: 18px; left: auto;
+    font-weight: 600; color: var(--ink); background: transparent; border: 1px solid var(--ctl); }
+  nav.main .n.need { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
+  nav.main .n:empty { display: none; }
+  @media (max-width: 600px) {
+    /* Phone tabs: colour bar, then icon + count on one line (count in flow), then the label on its own line. */
+    nav.main a { min-height: 62px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; padding: 6px 2px; }
+    nav.main a .bar { margin: 0 calc(50% - 9px); }
+    nav.main a[aria-current="page"] .bar { width: 26px; margin: 0 calc(50% - 13px); }
+    nav.main a > .icon { order: 1; }
+    nav.main .n { position: static; order: 2; }
+    nav.main a > span:not(.bar):not(.n) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }
+  }
+  @media (max-width: 600px) and (hover: hover) { nav.main a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
+  html { scroll-padding-bottom: 104px; } body { padding-bottom: 104px; }
+  /* House hover rule (Lisa, 28 Oct). Neutral controls: hover = 1px ink line inside + a pale muted tint. Meaning-coloured controls
+     (rose delete/late, purple AI, copper money, a section's colour) keep THEIR colour: the same 1px line in that colour + a pale tint
+     of it (about 14% into the card colour, dark card in dark mode). Never ink. Selected = the same look. Focus stays the 2px ink ring. */
+  .btn.danger { --hc: var(--ljr-2); --hl: var(--ljr-2); }
+  .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); }
+  a.ment { --hc: var(--ljr-3); --hl: var(--ljr-3); }
+  a.ment.bad { --hc: var(--ljr-2); --hl: var(--ljr-2); }
+  a.morelink.slotfin { --hc: var(--ljr-3); --hl: var(--ljr-3); }
+  a.morelink.slot4 { --hc: var(--ljr-4); --hl: var(--ljr-4-text); }
+  a.morelink.slot7, a.hometile.slot7 { --hc: var(--ljr-7); --hl: var(--ljr-7); }
+  a.morelink.slotsales { --hc: var(--ljr-6); --hl: var(--ljr-6); }
+  .subnav a[aria-current="page"] { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+  @media (hover: hover) {
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.hometile:hover, a.card:hover, a.ment:hover, details.fold > summary:hover, .index .btn:hover {
+      outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+    .btn.danger:hover, .btn.ai:hover, a.ment[class]:hover, a.morelink.slotfin:hover, a.morelink.slot4:hover, a.morelink.slot7:hover, a.morelink.slotsales:hover, a.hometile.slot7:hover {
+      outline: 1px solid var(--hl); outline-offset: -1px; background: color-mix(in srgb, var(--hc) 14%, var(--card)); }
+    header .btn:hover { background: color-mix(in srgb, var(--frame-ink) 12%, var(--frame)); }
+    html.dash-locked header .btn:hover { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+  }
 </style>
 </head>
 <body>
@@ -317,11 +491,11 @@
 </main>
 
 <nav id="mainNav" class="main hidden" aria-label="Sections">
-  <a href="#/map" data-nav="map" class="vision"><svg class="icon"><use href="#i-map"/></svg><span>Home</span><span class="n" id="n-map"></span></a>
-  <a href="#/drive" data-nav="drive" class="slot0"><svg class="icon"><use href="#i-drive"/></svg><span>Drive</span></a>
-  <a href="#/bin" data-nav="bin" class="slot8"><svg class="icon"><use href="#i-bin"/></svg><span>Bin</span><span class="n" id="n-bin"></span></a>
-  <a href="#/changes" data-nav="changes" class="slot7"><svg class="icon"><use href="#i-changes"/></svg><span>Changes</span></a>
-  <a href="#/more" data-nav="more" class="slot4"><svg class="icon"><use href="#i-more"/></svg><span>More</span></a>
+  <a href="#/map" data-nav="map" class="vision"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-map"/></svg><span>Home</span><span class="n need" id="n-map"></span></a>
+  <a href="#/drive" data-nav="drive" class="slot0"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-drive"/></svg><span>Drive</span></a>
+  <a href="#/bin" data-nav="bin" class="slot8"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-bin"/></svg><span>Bin</span><span class="n need" id="n-bin"></span></a>
+  <a href="#/changes" data-nav="changes" class="slot7"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-changes"/></svg><span>Changes</span></a>
+  <a href="#/more" data-nav="more" class="slot4"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-more"/></svg><span>More</span></a>
 </nav>
 
 <footer id="pageFoot" class="wrap hidden"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
@@ -2096,7 +2270,7 @@
     var label = { risk: 'risk', fin: 'fin', ops: 'ops', bin: 'bin' };
     var h = '<section class="card slot4 needs" id="needsToday" aria-labelledby="needsTitle"><div class="cardhead"><h3 id="needsTitle">Needs you today</h3>' +
       '<span class="mtag ' + (all.some(function (x) { return x.kind === 'risk'; }) ? 'risk' : all.length ? 'ops' : 'ok') + '">' + (reading ? 'Reading…' : all.length + (all.length === 1 ? ' thing' : ' things')) + '</span></div>';
-    if (!all.length) return h + '<p class="note">' + (reading ? 'Reading from Google Drive…' : 'Nothing needs you today.') + '</p></section>';
+    if (!all.length) return h + (reading ? '<p class="note">Reading from Google Drive…</p>' : '<div class="okstate"><span class="okring" aria-hidden="true">✓</span><p class="note">Nothing needs you today.</p></div>') + '</section>';
     h += '<ol>' + items.map(function (x) {
       return '<li class="n-' + x.kind + '"><span class="mtag ' + label[x.kind] + '">' + esc(x.tag) + '</span><span class="nt"><a href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>' + esc(x.text) + '</a></span></li>';
     }).join('') + '</ol>';
@@ -2114,18 +2288,25 @@
       ['bin', 'slot8', b && b.ready ? num(b.ready.length) : '–', b && b.ready ? 'Bin: ready to bin' : 'Bin: tap to check'],
       ['changes/24h', 'slot7', day ? num(day.length) : '–', 'Changes: last 24h']
     ];
-    var h = '<section id="homeTop" aria-label="Needs you"><p class="needsline">Needs you: ' + (n ? n : reading ? '…' : '<span class="zero">0</span>') + '</p>' +
+    // Split by urgency (read pills): urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
+    var split = [['risk', 'urgent'], ['fin', 'due soon'], ['todo', 'to do']].map(function (k) {
+      var c = all.filter(function (x) { return k[0] === 'todo' ? (x.kind === 'ops' || x.kind === 'bin') : x.kind === k[0]; }).length;
+      return c ? '<span class="cnt wide k-' + k[0] + '">' + c + ' ' + k[1] + '</span>' : '';
+    }).join('');
+    var h = '<section id="homeTop" aria-label="Needs you"><div class="needsrow"><p class="needsline">Needs you: ' + (n ? n : reading ? '…' : '<span class="zero">0</span>') + '</p>' +
+      (split ? '<span class="hsplit" id="needsSplit">' + split + '</span>' : '') + '</div>' +
       '<div class="hometiles">' + tiles.map(function (t) {
         return '<a class="hometile ' + t[1] + '" href="#/' + t[0] + '"><span class="v">' + t[2] + '</span><span class="k">' + esc(t[3]) + '</span></a>';
       }).join('') + '</div>';
     if (n) {
       var x = all[0];
-      h += '<div class="card urgent slot4" id="urgentOne"><div class="cardhead"><h3>First thing</h3><span class="mtag ' + x.kind + '">' + esc(x.tag) + '</span></div>' +
+      // Next: the one thing to do now, with one button. White card, 1px ink edge.
+      h += '<div class="card urgent nextcard" id="urgentOne"><div class="cardhead"><h3>Next</h3><span class="mtag ' + x.kind + '">' + esc(x.tag) + '</span></div>' +
         '<p class="what">' + esc(x.text) + '</p>' +
-        '<a class="btn" href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>Open it</a>' +
-        (n > 1 ? '<p class="hint">' + (n - 1) + ' more in Needs you today, below.</p>' : '') + '</div>';
+        '<div class="actions"><a class="btn" href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>Open it</a>' +
+        (n > 1 ? '<span class="hint">Then ' + (n - 1) + ' more in Needs you today, below.</span>' : '') + '</div></div>';
     } else if (!reading) {
-      h += '<div class="card urgent" id="urgentOne"><h3>All done</h3><p class="hint">Nothing needs you right now.</p></div>';
+      h += '<div class="card urgent okstate" id="urgentOne"><span class="okring" aria-hidden="true">✓</span><div><h3>Nothing needs you</h3><p class="hint">All clear right now. New things show here when Drive or Money changes.</p></div></div>';
     }
     return h + '</section>';
   }
@@ -2315,8 +2496,8 @@
         '<p class="note">Duplicates found: ' + num(dd.duplicate_files || 0) + ' files, ' + num(dd.wasted_gb || 0) + ' GB wasted' +
         (dd.complete === false ? ' (scan not finished)' : '') + '. Scan ' + esc(fmtTime(dd.generated) || 'date unknown') + '.</p>';
     }
-    html += '<div class="actions"><a class="btn danger" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>1. Delete marked files from DROPBOX only</span></a>' +
-      '<a class="btn danger" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>2. Empty DROPBOX trash</span></a></div>' +
+    html += '<div class="actions"><a class="btn danger" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>Step 1: Delete marked files from DROPBOX only</span></a>' +
+      '<a class="btn danger" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>Step 2: Empty DROPBOX trash</span></a></div>' +
       '<ul class="notes"><li>1: GitHub workflow 3. Empty box = dry run. Type DELETE to run.</li><li>Moves only ZZ_DELETE_DROPBOX_ files (recoverable for a while). Drive never changed.</li></ul>' +
       '<ul class="notes"><li>2: Dropbox Deleted files. Select all, Permanently delete.</li><li>Dropbox only. Cannot be automated (personal account).</li></ul>';
     html += sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</div></details>';
@@ -2444,6 +2625,7 @@
   function tabBadge(key, n, label) {
     var b = $('n-' + key); if (!b) return;
     b.textContent = n ? String(n) : '';
+    b.classList.toggle('wide', String(n).length > 2); // count pills: exact 30px box for 1-2 digits, only 3+ grow
     b.parentNode.setAttribute('aria-label', label + (n ? ', ' + n + ' waiting' : ''));
   }
   function updateHeader() {

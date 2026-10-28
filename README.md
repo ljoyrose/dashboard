@@ -55,7 +55,7 @@ Business and personal entities are shown separately and are never added together
 
 <https://ljoyrose.github.io/dashboard/studio/> is the asset hub (slot 7): PDFs, ebooks, lead magnets, slides, scripts, logbooks,
 family trees, puppy packs, social graphics, page and email drafts, for every brand. Idea → approved → reused.
-- **Tabs:** Me (Review, Gates, Tasks with Done) · Ideas · Assets · Review · Brands (set-up ticks) · Library · Kits · Tools (credit meters, gaps, Add tool) · + New.
+- **Tabs (bottom bar, like Marketplace):** Me (everything waiting on Lisa) · Decide (Gates, Review, suggestions) · Do (Tasks, questions and deliveries to send, results to add) · Line (Ideas, In progress, Library) · Kits (Kits, Tools, Brands). + New at the top.
 - **Two ladders (v0.2):** WHERE = Group › Business (brand) › Product (Group chips on the find bar). WHAT = Brick › Kit › Pack › Playbook;
   a playbook aims at one outcome (Attract, Convert, Deliver, Keep, Reuse). Style = Framework + Voice + Look. Formats are presets.
   A variant points at its master (refresh, rebrand, reformat, translate, A/B test). Sources carry a rights flag.
@@ -66,4 +66,13 @@ family trees, puppy packs, social graphics, page and email drafts, for every bra
   The STUDIO-ENGINE Apps Script applies it. Undo until the engine's next run.
 - **Client-ready:** accounts (owner or client) and products; every brand, product, asset, idea and request carries `accountId`.
   Account chips show when there is more than one account. An idea cannot mix two accounts.
+- **Look (clear board):** Line and Decide open as a board on a desktop (fixed columns per stage or decision, each scrolling inside itself,
+  head and foot with "need you · £ AI", details on the right) and as a list on the phone (one column per screen if Board is picked,
+  details under the card). The Board/List switch is kept per page. The palette button (Look) sets Background (Warm clear / Cool clear),
+  Selected (Outline / Soft tint), Coloured words, Text size, Spacing and Mode (Device / Light / Dark), kept in `localStorage['dash-look']`
+  for the other hubs. No solid colour fills: every edge is 1px; hover and selected turn that edge ink, so nothing thickens or moves.
+  Dark frame top and bottom (never black). The find bar is one row (Search · Filter · Sort); Filter opens a panel with every
+  filter group, and active filters show as removable chips.
+  Stages read "Step N: Name" (no numbers in circles); counts wear one ring; no solid colour fills; one 12px radius
+  (`--radius`); two pill sizes; two font weights. On the phone the header keeps the status pills and one More menu.
 - Same sign-in, find bar and rules as Factory. TEST stamp until `studio.live` and the state's mode are both LIVE.

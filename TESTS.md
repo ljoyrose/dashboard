@@ -49,11 +49,12 @@ If any of these breaks, the tick turns red and says which page.
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
-| Studio (example data, real data, accounts, groups, tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, phone, dark, text size) | `/dashboard/studio/` | 23 |
+| Factory house look (dark frame, bottom tabs, 1px lines, one radius, fixed counts, hover rule, contrast light/dark/warm/cool, empty states, one calm find bar, phone) | `/dashboard/factory/` | 24 |
+| Studio (example data, real data, accounts, groups, bottom tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, clients, results, spec, brand kit, books, feedback, phone, dark, text size, board, Board/List, Look menu, frame, one-row find bar, one line rule, numbers, no solid fills, pill sizes, weights, dark tour, greys follow the background, calm cards, Me summary, who ring, consistency, brand website, no empty counts, brand mark, list bars) | `/dashboard/studio/` | 56 |
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 470 checks that must pass (mocked + phone, 28 Oct 2026, Studio v0.2).
+That is 529 checks that must pass (mocked + phone, 28 Oct 2026, Factory house look).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
@@ -83,6 +84,12 @@ That is 470 checks that must pass (mocked + phone, 28 Oct 2026, Studio v0.2).
 - Done on a Task writes `done` with the credits used. A set-up tick writes `check` and shows at once.
 - A `javascript:` link becomes a dead link, and a double tap on Approve writes only one file.
 - An engine that last ran over an hour ago shows a red pill. A failed refresh keeps the page and says "Offline".
+- Five bottom tabs (Me, Decide, Do, Line, Kits); every older page opens under its tab with a sub-row of links.
+- Books: part progress and Add part (writes `part` with the next order). Feedback: stars and reasons go with Approve. A suggestion is accepted with one `suggestion` request.
+- Search and sort everywhere: Decide and Do have the find bar; Tools, Kits and Brands have a search box; Tools sorts by name, most used or resets soon; new sorts (due date, priority, name, results) and Where, Series and Kit filters.
+- Board: Line has a column per stage that scrolls inside itself, details open on the right, and the page does not scroll on a desktop; Decide keeps Gates and Review as columns. Board/List is kept per page across a reload; the phone starts on List; a phone board opens details under the card with no sideways scroll. The Look menu changes the page, is stored in `dash-look`, and survives a reload (Mode Dark gives a dark page).
+- Find bar is one row (Search · Filter · Sort): every filter group sits in the Filter panel, active filters show as removable chips, the Filter button counts them, Esc/Done/outside click close it and focus returns, Search keeps focus while typing; on the phone the panel is a sheet above the tabs. Every control type hovers with its 1px edge turning ink (selected the same) and nothing moves.
+- Steps are words ("Step N: Name"), counts wear one ring (needs-you counts rose), no solid colour fills, two pill sizes (24 / 36 / 44 px), one 12px radius, two font weights (400, 600), empty columns shrink, titles stop at two lines. Phone header has one More menu. Dark mode tour (device and Look › Dark, warm and cool): text 4.5:1, rings 3:1. No warm grey on Cool clear.
 - 390px: no sideways scroll on any tab, Kits section, or open form. Dark mode: dark page, every word at least 4.5:1. No text under 13px.
 
 **CD Hub**
@@ -274,7 +281,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | The Map led with links and counts, so what needed Lisa today was spread over several cards | "shows at most 7 rows, overdue (red) first, each row a link, and the tab title carries the count" |
 | 18 Oct 2026 | Money only said "runs dry on X" in words, so a forecast dip was easy to miss | "a forecast that goes below zero marks the runs-dry date in red" |
 | 20 Oct 2026 | Factory: a send named "Links · …" for the app "LJR7 Links" was filed under "Factory", so Lisa could not find it in Do | "a send named Links · P5 sits under its app Sample Links…" |
-| 20 Oct 2026 | Factory: the selected tab and chip showed a double line (a focus ring around the tab, an inner shadow inside the chip) | "after clicking a tab and a chip, and with keyboard focus, selected tabs and chips have one line" |
+| 20 Oct 2026 | Factory: the selected tab and chip showed a double line (a focus ring around the tab, an inner shadow inside the chip). House look, 28 Oct: a selected chip is the 1px line drawn inside, the tab only widens its bar, focus is a 2px ring | "after clicking a tab and a chip: selected chips wear the 1px inside line, the tab only its wider bar; focus is 2px" |
 | 18 Oct 2026 | Phone install needs a kept copy of the site, and it must never hold Drive data or the sign-in | "after signing in and reading, the kept copy holds only the page files" |
 | 18 Oct 2026 | There was no way to find a file, to-do or dog without opening each page and scrolling | "home: / opens search; it finds Drive file names per shared drive and Money to-dos, each a link" |
 | 19 Oct 2026 | Lisa still signed in twice: the sign-in lived in one tab only, so Money in a new tab or window, or the installed app, asked again | "sign in on home, open Money Hub and CD Hub: each opens in a new tab already signed in, no prompt" |

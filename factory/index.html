@@ -5,15 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-factory-zz-test-2026-10-20">
+<meta name="build" content="ljr-factory-look-2026-10-28">
 <title>Factory</title>
 <link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="../icons/icon-180.png">
 <link rel="manifest" href="../manifest.webmanifest">
-<meta name="theme-color" content="#2C2C2A">
+<meta name="theme-color" content="#3A3632">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap">
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
@@ -21,295 +21,352 @@
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
-  :root { --radius: 12px; }
-  /* Colours: ../tokens.css only (LJR7 spine). 0 system · 1 vision · 2 risk · 3 money · 4 ops · 5 connect · 6 sales · 7 ideas · 8 bin. */
-  :root { --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted); --line: #DED5C8; }
-  @media (prefers-color-scheme: dark) { :root { --line: #3D372F; } }
+  /* House look (Lisa, 28 Oct 2026; the same rules as Money, Studio and Marketplace). Colours: ../tokens.css only. The Warm clear
+     and Cool clear greys and the dark frame are MIXED here from tokens.css colours, so no colour is written in this page; their exact
+     values (warm line 8A7F70, cool 7A8692, frame 3A3632 / 46413B) belong in tokens.css once every hub uses them. The background follows
+     Studio's Look menu (localStorage 'dash-look', read only). Lexend 400/600, nothing under 13px, line height 1.5, ONE radius 12px
+     (only dots and rings are round), 1px lines. No solid colour fills and no coloured words: colour sits in dots, bars, 1px rings,
+     tints and icons. Two allowed solid markers: the new-comment dot and the on/off switch knob (outlined they are too faint). */
+  :root { --radius: 12px;
+    --bg: color-mix(in srgb, var(--ljr-0) 25%, var(--ljr-cream)); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
+    --line: color-mix(in srgb, var(--ljr-0) 85%, var(--ljr-muted));          /* containers: the softer line */
+    --ctl: color-mix(in srgb, var(--ljr-muted) 70%, var(--ljr-0));            /* the ONE clear line every pressable rests on (warm 8A7F70), 3:1 */
+    --frame: color-mix(in srgb, var(--ljr-ink) 81%, var(--ljr-muted));        /* warm charcoal top bar (3A3632), never black */
+    --frame-foot: color-mix(in srgb, var(--ljr-ink) 62%, var(--ljr-muted));   /* bottom bar one step lighter (46413B) */
+    --frame-ink: var(--ljr-cream); --frame-line: color-mix(in srgb, var(--ljr-0) 70%, var(--ljr-muted));
+    /* Meaning lines (3:1 or better on a card) and their tints. Words stay ink. */
+    --r-risk: var(--ljr-2); --r-warn: var(--ljr-3-text); --r-ops: var(--ljr-4-text); --r-ok: var(--ljr-5-text); --r-sales: var(--ljr-6-text); --r-ideas: var(--ljr-7-text);
+    --t-risk: var(--ljr-2-tint); --t-warn: var(--ljr-3-tint); --t-ok: var(--ljr-5-tint);
+    --hov: color-mix(in srgb, var(--muted) 14%, var(--surface)); }
+  :root.look-cool { --cmuted: color-mix(in srgb, var(--ljr-muted) 80%, var(--ljr-6-text));
+    --bg: color-mix(in srgb, var(--ljr-6-text) 6%, var(--ljr-paper)); --surface: color-mix(in srgb, var(--ljr-6-text) 3%, var(--ljr-paper)); --ink: color-mix(in srgb, var(--ljr-ink) 90%, var(--ljr-6-text)); --muted: var(--cmuted);
+    --line: color-mix(in srgb, var(--cmuted) 45%, var(--ljr-paper)); --ctl: color-mix(in srgb, var(--cmuted) 78%, var(--ljr-paper));   /* cool 7A8692 */
+    --frame: color-mix(in srgb, color-mix(in srgb, var(--ljr-ink) 60%, var(--ljr-muted)) 80%, var(--ljr-6-text));
+    --frame-foot: color-mix(in srgb, color-mix(in srgb, var(--ljr-ink) 45%, var(--ljr-muted)) 78%, var(--ljr-6-text));
+    --frame-ink: var(--ljr-paper); --frame-line: color-mix(in srgb, var(--cmuted) 45%, var(--ljr-paper)); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
+      --line: color-mix(in srgb, var(--ljr-0) 35%, var(--ljr-paper)); --ctl: color-mix(in srgb, var(--ljr-0) 85%, var(--ljr-paper));
+      --frame: color-mix(in srgb, var(--ljr-0) 7%, var(--ljr-paper)); --frame-foot: color-mix(in srgb, var(--ljr-0) 14%, var(--ljr-paper));
+      --frame-ink: var(--ljr-ink); --frame-line: var(--ljr-0); --r-warn: var(--ljr-3-text); color-scheme: dark; }
+    :root.look-cool:not([data-theme="light"]) { --cmuted: color-mix(in srgb, var(--ljr-muted) 85%, var(--ljr-6-text));
+      --bg: color-mix(in srgb, var(--ljr-6-text) 6%, var(--ljr-cream)); --surface: color-mix(in srgb, var(--ljr-6-text) 8%, var(--ljr-paper));
+      --ink: color-mix(in srgb, var(--ljr-ink) 92%, var(--ljr-6-text)); --muted: var(--cmuted);
+      --line: color-mix(in srgb, var(--cmuted) 25%, var(--ljr-paper)); --ctl: color-mix(in srgb, var(--cmuted) 70%, var(--ljr-paper));
+      --frame: color-mix(in srgb, var(--ljr-6-text) 14%, var(--ljr-paper)); --frame-foot: color-mix(in srgb, var(--ljr-6-text) 20%, var(--ljr-paper));
+      --frame-ink: var(--ljr-ink); --frame-line: var(--cmuted); }
+  }
   * { box-sizing: border-box; }
+  h1, h2, h3, h4, b, strong, th, summary { font-weight: 600; }   /* two weights only: 400 and 600 */
+  html { scroll-padding-bottom: 120px; }   /* a control scrolled into view never hides under the tab bar */
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
-  header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
-  .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 16px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
-  .top h1 a { color: inherit; text-decoration: none; }
-  .stamp { font-size: 11px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 5px; }
-  .stamp:empty { display: none; }
-  .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 7px 14px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; }
-  .btn.main { border-color: var(--ink); color: var(--ink); }
   .hidden { display: none !important; }
-  nav.tabs { display: flex; gap: 6px; overflow-x: auto; padding: 0 16px 10px; scrollbar-width: none; }
-  nav.tabs a { --radius: 999px; flex: none; text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); display: inline-flex; gap: 6px; align-items: center; }
-  /* One state only: hover = selected = a slightly heavier faint line. Same size always, so nothing moves. */
-  nav.tabs a, .pill, .btn, .ico, .flagb, .opt, .mark, .plus { transition: none; }
-  nav.tabs a:hover, nav.tabs a[aria-current="page"], .pill:hover, .pill.on, .btn:hover, .ico:hover, .ico.on, .flagb:hover, .mark:hover, .plus:hover { border-color: var(--muted); }
-  nav.tabs a:active, .pill:active, .btn:active { transform: none; }
-  nav.tabs .fbtn { margin-left: auto; }
-  nav.tabs .fbtn.hidden + .cal { margin-left: auto; }
-  .fbtn { --radius: 999px; font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; padding: 7px 12px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
-  .fbtn:hover, .fbtn.on { border-color: var(--muted); }
-  .fbtn .n:empty { display: none; }
-  .ti { font-size: 18px; line-height: 1; }
-  /* Grey at rest; an icon's own colour on hover / when open. Logos grey until hover. */
-  .ico:hover, .ico.on { color: var(--hc, var(--ink)); }
-  .mark svg { filter: grayscale(1); opacity: .55; } .mark:hover svg { filter: none; opacity: 1; }
-  .pill .ti { color: var(--muted); } .pill.alert.has:hover .ti { color: var(--ljr-2-text); }
-  .hot { color: var(--ljr-2-text); font-weight: 700; }
-  .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-weight: 500; }
-  .crow .l3 { display: flex; align-items: center; gap: 2px; margin-top: 4px; }
-  .crow .l3 .grow { flex: 1; }
-  .appcard { padding-top: 10px; }
-  .appcard .grp { margin: 0 0 4px; padding-bottom: 6px; }
-  .appcard > .crow:first-of-type { border-top: 0; }
-  .more { font: inherit; font-size: 13px; font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 4px 10px; margin-top: 4px; cursor: pointer; }
-  .more:hover { border-color: var(--muted); }
-  .crow .type { color: var(--muted); width: 28px; display: inline-flex; justify-content: center; }
-  .mark { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; border: 1px solid transparent; border-radius: var(--radius); }
-  .plus { margin-left: auto; display: inline-flex; width: 28px; height: 28px; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 50%; color: var(--ink); text-decoration: none; }
-  .acts .btn.yes { color: var(--ljr-5-text); border-color: var(--ljr-5); }
-  .acts .btn.no { color: var(--ljr-2-text); border-color: var(--ljr-2); }
-  nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-4); color: #2C2C2A; border-radius: var(--radius); padding: 0 7px; }
-  main { padding: 16px 0 48px; display: flex; flex-direction: column; gap: 14px; }
-  main.wrap { padding: 16px 16px 48px; }
-  .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
-  .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
-  #view { display: flex; flex-direction: column; gap: 14px; }
+  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  a.pill, a.chip, a.btn, a.lk, a.mark, a.plus, a.need, nav.tabs a, .room h2 .rlink { text-decoration: none; color: inherit; }
+  .ti { line-height: 1; }
+  svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .muted { color: var(--muted); font-size: 14px; }
+
+  /* One page width everywhere: the full window up to 1600px, 24px edge; phones 16px. */
+  .wrap, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; padding-left: 24px; padding-right: 24px; }
+  @media (max-width: 600px) { .wrap, .hin { padding-left: 16px; padding-right: 16px; } }
+
+  /* Frame: dark top bar (never black). Buttons on it are outlined in the frame's own light line. */
+  header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
+  .top { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
+  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
+  .top h1 a { color: var(--frame-ink); text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
+  .top h1 .dot { --c: var(--ljr-4); width: 10px; height: 10px; }
+  .stamp { font-size: 13px; font-weight: 600; color: var(--frame-ink); border: 1px solid var(--frame-line); border-radius: var(--radius); height: 24px; padding: 0 8px; display: inline-flex; align-items: center; }
+  .stamp:empty { display: none; }
+  header .btn { background: transparent; color: var(--frame-ink); border-color: var(--frame-line); }
+  #backHome { min-height: 44px; }   /* the shared Dashboard button rule: 44px on every page */
+  /* Signed out (auth.js hides the page): the dark bar stays, so Sign in and Dashboard keep their frame, both on the right. */
+  html.dash-locked header { visibility: visible; }
+  html.dash-locked .top > #signInBtn { margin-left: auto; }
+
+  /* Everything you press: the same clear 1px line (--ctl), 12px corners, 36px on a desktop / 44px on a phone, 14px 600. */
+  .btn, button.pill, a.pill, .fbtn, .ch, .more, .undo, .copy, .tick, .stat, label.date, a.chip, a.need, details.arch > summary, .fdet > summary {
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius);
+    min-height: 36px; padding: 0 14px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; text-decoration: none; line-height: 1.5; }
+  /* Icon buttons: a 36px square on the same line. */
+  .ico, .flagb, .opt, .mark, .plus, .lk { position: relative; flex: none; font: inherit; font-size: 16px; font-weight: 600; width: 36px; height: 36px; padding: 0; border: 1px solid var(--ctl); border-radius: var(--radius);
+    background: var(--surface); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; }
+  span.lk { cursor: default; }
+  .lk.no { border-style: dashed; }
+  .lk .lkn { font-size: 13px; color: var(--ink); }
+  .lk.off { width: auto; padding: 0 12px; gap: 4px; font-size: 14px; color: var(--ink); }
+  .btn:disabled, .btn[disabled] { opacity: .6; cursor: default; }
+  .sbox { flex: 1; min-height: 36px; display: flex; gap: 8px; align-items: center; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 12px; background: var(--surface); }
+  .sbox .ti { color: var(--muted); font-size: 16px; }
+  .sbox input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 15px; padding: 4px 0; }
+  .sbox input::-webkit-search-cancel-button { cursor: pointer; }
+  .fin, .ask input, .ask select { font: inherit; font-size: 15px; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 6px 12px; min-height: 36px; }
+  .fin { width: 100%; }
+  textarea.fin { min-height: 72px; resize: vertical; }
+
+  /* Meaning-coloured controls rest on their own colour line (--mc) and keep it on hover: same line drawn inside + a pale tint of it. */
+  .btn.yes { --mc: var(--r-ok); } .btn.no { --mc: var(--r-risk); } .lk.off { --mc: var(--r-risk); }
+  a.need.n4 { --mc: var(--r-ops); } a.need.n5 { --mc: var(--r-ok); }
+  a.chip.stuck { --mc: var(--r-risk); } a.pill.alert.has { --mc: var(--r-risk); }
+  label.date.over { --mc: var(--r-risk); } label.date.soon { --mc: var(--r-warn); }
+  .stat { --mc: var(--sc); }
+  .btn.yes, .btn.no, .lk.off, a.need.n4, a.need.n5, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat { border-color: var(--mc); }
+  .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .lk.off .ti, a.pill.alert.has .ti { color: var(--ljr-2-text); }
+  label.date.over, label.date.soon { background: color-mix(in srgb, var(--mc) 10%, var(--surface)); }
+
+  /* Hover = selected: a 1px line drawn inside (nothing moves). Neutral = ink line + muted tint; meaning = its own colour + its tint. */
+  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+  @media (hover: hover) {
+    .btn:hover, button.pill:hover, a.pill:hover, .fbtn:hover, .ch:hover, .more:hover, .undo:hover, .copy:hover, .tick:hover, label.date:hover, a.chip:hover, details.arch > summary:hover,
+    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+    .btn.yes:hover, .btn.no:hover, .lk.off:hover, a.need:hover, a.chip.stuck:hover, a.pill.alert.has:hover, label.date.over:hover, label.date.soon:hover, .stat:hover {
+      outline: 1px solid var(--mc); outline-offset: -1px; background: color-mix(in srgb, var(--mc) 14%, var(--surface)); }
+    header .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 10%, var(--frame)); }
+    .ico:hover { color: var(--hc, var(--ink)); }
+    .mark:hover svg { filter: none; opacity: 1; }
+    .crow .ttl:hover, .room h2 .rlink:hover { text-decoration: underline; }
+  }
+  .ico.on { color: var(--hc, var(--ink)); }
+  .mark svg { filter: grayscale(1); opacity: .55; }
+  /* Keyboard focus: a 2px ink ring (the one exception to 1px). */
+  a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
+  /* !important: focus always wins over the 1px hover / selected line, so the keyboard ring is never lost. */
+  :focus-visible, label.date:has(input:focus-visible) { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  header :focus-visible, nav.tabs a:focus-visible { outline-color: var(--frame-ink) !important; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ink); }
+  .sbox:focus-within { border-color: var(--ink); }
+
+  /* Frame: dark bottom tab bar, light tab buttons with no rings. Hover and selected = the small colour bar above the label widens. */
+  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(6, minmax(0, 200px)); justify-content: center; gap: 8px;
+    padding: 8px 24px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--frame-foot); }
+  nav.tabs a { --tc: var(--ljr-0); position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 56px; padding: 4px 2px;
+    border-radius: var(--radius); background: var(--surface); color: var(--ink); font-size: 14px; font-weight: 600; text-align: center; }
+  nav.tabs a .bar { width: 18px; height: 4px; border-radius: 2px; background: var(--tc); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
+  nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
+  @media (hover: hover) { nav.tabs a:hover .bar { width: 40px; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { nav.tabs a .bar { transition: none; } }
+  nav.tabs a > .ti { font-size: 18px; color: var(--muted); }
+  nav.tabs .n { position: absolute; top: 6px; right: 10px; }
+
+  /* Counts: ONE fixed box so 1 and 2 digits match (30 x 22, radius 11); only 3+ digits grow (.wide). Read-only: no hover.
+     Tab counts are an amber ring only (no fill); "needs you" counts in the page are a rose ring + tint. A count of 0 shows no pill. */
+  .cnt, nav.tabs .n, .fbtn .n, .fdet > summary .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 30px; height: 22px; padding: 0 3px; flex: none;
+    border: 1px solid var(--ctl); border-radius: 11px; font-size: 13px; font-weight: 600; line-height: 20px; color: var(--ink); background: transparent; white-space: nowrap; font-variant-numeric: tabular-nums; vertical-align: middle; }
+  .cnt.wide, nav.tabs .n.wide, .fbtn .n.wide { width: auto; min-width: 30px; padding: 0 6px; }
+  nav.tabs .n { border-color: var(--r-warn); }
+  .cnt.need { border-color: var(--r-risk); background: var(--t-risk); }
+  .cnt:empty, nav.tabs .n:empty, .fbtn .n:empty, .fdet > summary .n:empty { display: none; }
+  @media (max-width: 600px) {
+    .btn, button.pill, a.pill, .fbtn, .ch, .more, .undo, .copy, .tick, .stat, label.date, a.chip, a.need, details.arch > summary, .fdet > summary, .sbox, .fin, .ask input, .ask select { min-height: 44px; }
+    .ico, .flagb, .opt, .mark, .plus, .lk { width: 44px; height: 44px; }
+    .lk.off { width: auto; }
+    /* Phone: two rows of three tabs; the count sits in flow beside the label, never over it. */
+    nav.tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px)); }
+    nav.tabs a { min-height: 44px; flex-direction: row; flex-wrap: wrap; align-content: center; gap: 2px 6px; }
+    nav.tabs a .bar { flex: 0 0 auto; margin: 0 calc(50% - 9px); }
+    nav.tabs a[aria-current="page"] .bar { width: 26px; margin: 0 calc(50% - 13px); }
+    nav.tabs a > .ti { display: none; }
+    nav.tabs .n { position: static; }
+    html { scroll-padding-bottom: 150px; }
+  }
+  @media (max-width: 600px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
+
+  /* Work area: 12px steps, 16px under the header. */
+  main.wrap { padding-top: 16px; padding-bottom: 120px; display: flex; flex-direction: column; gap: 12px; }
+  @media (max-width: 600px) { main.wrap { padding-bottom: 160px; } }
+  #view { display: flex; flex-direction: column; gap: 12px; }
   #view > p { margin: 0; }
-  .pills { display: flex; gap: 8px; flex-wrap: wrap; }
-  .pills.docs { margin-top: 8px; }
-  .pill { font-size: 13px; font-weight: 600; border-radius: var(--radius); padding: 3px 10px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; }
-  .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-  .room { border: 2px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; }
-  /* Room: faint line at rest; its own colour on hover / focus, same width so nothing moves. */
-  .room:hover, .room:focus-within { border-color: var(--c); }
-  .room h2 { font-size: 15px; margin: 0; display: flex; gap: 8px; align-items: center; }
-  .room .stn { font-size: 12px; color: var(--muted); margin-top: -6px; }
-  .room h2 .ct { margin-left: auto; font-size: 13px; color: var(--muted); }
-  .room h2 .rlink { color: var(--ink); text-decoration: none; display: flex; gap: 8px; align-items: center; }
-  .room h2 .rlink:hover { text-decoration: underline; }
-  .dot { width: 12px; height: 12px; border-radius: 50%; background: var(--c); flex: none; }
-  .chip { display: flex; gap: 6px; align-items: center; text-decoration: none; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius); padding: 6px 8px; font-size: 14px; }
-  .chip .st { margin-left: auto; font-size: 12px; color: var(--muted); }
-  .chip.stuck { border-color: var(--ljr-2); }
-  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+  .appmenu { margin: 0; }
+  .banner { border: 1px solid var(--r-risk); border-radius: var(--radius); padding: 8px 12px; background: var(--t-risk); color: var(--ink); }
+  .banner.info { border-color: var(--line); background: var(--surface); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-width: 0; }
+  .card.appcard.alarm { border-color: var(--r-risk); }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .pills.docs { margin-top: 12px; }
+  /* Read-only pills: 24px, 13px, a 1px ring, no hover. */
+  span.pill, .gate, .codes .cd, .age { font-size: 13px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid var(--ctl); border-radius: var(--radius);
+    height: 24px; padding: 0 8px; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; cursor: default; }
+  .pill .ti, .gate .ti, .age .ti { color: var(--muted); }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ljr-0)); flex: none; display: inline-block; }
+
+  /* Rooms: a white card on the soft line, its stage colour as a 3px bar on the left (as Links). */
+  .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .room { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 12px 12px 12px 15px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; box-shadow: inset 3px 0 0 var(--c); }
+  .room h2 { font-size: 16px; margin: 0; display: flex; gap: 8px; align-items: center; }
+  .room .stn { font-size: 13px; color: var(--muted); margin-top: -4px; }
+  .room h2 .ct { margin-left: auto; }
+  .room h2 .rlink { color: var(--ink); display: flex; gap: 8px; align-items: center; }
+  a.chip { justify-content: flex-start; width: 100%; font-weight: 400; padding: 0 12px; }
+  a.chip .st { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; gap: 4px; align-items: center; }
   .hero { display: flex; gap: 12px; align-items: center; }
-  .disc { width: 42px; height: 42px; border-radius: 50%; background: var(--c); color: #2C2C2A; display: flex; align-items: center; justify-content: center; font-weight: 700; flex: none; }
-  .hero h2 { margin: 0; font-size: 20px; }
+  .hero h2 { margin: 0; font-size: 20px; display: flex; gap: 8px; align-items: center; }
   .hero p { margin: 0; color: var(--muted); font-size: 14px; }
-  .strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; margin: 10px 0 2px; }
-  .strip i { height: 10px; border-radius: var(--radius); background: var(--line); }
-  .strip i.d { background: var(--ljr-5); } .strip i.c { background: var(--ljr-6); }
-  .stage { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); cursor: pointer; }
-  .stage .n { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: var(--bg); border: 1px solid var(--line); flex: none; }
-  .stage.d .n { background: var(--ljr-5); border-color: var(--ljr-5); color: #2C2C2A; }
-  .stage.c .n { background: var(--ljr-6); border-color: var(--ljr-6); color: #2C2C2A; }
+  .step { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  /* Stage strip and step rings: tint inside a 1px ring, never solid. */
+  .strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin: 12px 0 4px; }
+  .strip i { height: 10px; border-radius: var(--radius); background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+  .strip i.d { background: var(--t-ok); box-shadow: inset 0 0 0 1px var(--r-ok); } .strip i.c { background: var(--ljr-6-tint); box-shadow: inset 0 0 0 1px var(--r-sales); }
+  .stage { display: flex; gap: 12px; align-items: center; padding: 8px 4px; border-top: 1px solid var(--line); cursor: pointer; }
+  .stage .n { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; background: transparent; border: 1px solid var(--line); color: var(--ink); flex: none; }
+  .stage .n .i { width: 13px; height: 13px; }
+  .stage.d .n { background: var(--t-ok); border-color: var(--r-ok); }
+  .stage.c .n { background: var(--ljr-6-tint); border-color: var(--r-sales); }
   .stage.c { font-weight: 600; }
-  .stage .r { margin-left: auto; font-size: 13px; color: var(--muted); }
-  .lines { list-style: none; margin: 0 0 6px; padding: 0 0 0 34px; }
-  .lines li { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 3px 0; }
-  .lines li .who { margin-left: auto; font-size: 12px; color: var(--muted); }
-  .codes { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 10px; }
-  .codes span { font-size: 12px; font-weight: 600; border: 1.5px solid var(--line); border-radius: var(--radius); padding: 1px 7px; }
-  .codes span.q { color: var(--muted); }
-  .ask { display: flex; gap: 8px; margin-top: 10px; }
-  .ask input { flex: 1; font: inherit; font-size: 15px; padding: 8px 12px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
-  .rowask { margin-top: 6px; }
-  .by { font-size: 11px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; margin-left: 6px; }
-  .rowask input { font-size: 14px; padding: 6px 10px; }
-  .why.q { color: var(--ljr-3-text); }
-  .ask select { font: inherit; font-size: 14px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
-  .row { display: flex; gap: 10px; align-items: center; padding: 9px 0; border-top: 1px solid var(--line); }
+  .stage .r { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+  .lines { list-style: none; margin: 0 0 8px; padding: 0 0 0 34px; }
+  .lines li { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 4px 0; }
+  .lines li .who { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .codes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; align-items: center; }
+  .codes .q { color: var(--muted); font-size: 13px; }
+  .codes .cgrp { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+  .codes .csep { color: var(--muted); padding: 0 4px; align-self: center; }
+  .codes .cd b { font-weight: 600; }
+  .codes .cd.set { border-color: var(--r-ok); } .codes .cd.open { border-color: var(--r-warn); } .codes .cd.bad { border-color: var(--r-risk); background: var(--t-risk); }
+  .ask { display: flex; gap: 8px; margin-top: 12px; }
+  .ask input { flex: 1; min-width: 0; }
+  .rowask { margin-top: 8px; }
+
+  /* Health rows: a 3px colour bar on the left (tint inside a 1px line), words ink. */
+  .row { display: flex; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
   .row a { color: var(--ink); text-decoration: none; font-weight: 600; }
   .card > .row:first-child { border-top: 0; padding-top: 0; }
   .row .txt { flex: 1; min-width: 0; }
   .row .why { font-size: 13px; color: var(--muted); margin-top: 2px; }
-  .row .why a { font-weight: 400; text-decoration: underline; }
   .row .meta { margin-left: auto; font-size: 13px; color: var(--muted); text-align: right; }
-  .grp { font-size: 15px; font-weight: 700; margin: 14px 0 2px; display: flex; gap: 8px; align-items: center; }
-  .grp:first-child { margin-top: 0; }
-  .grp .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
-  .grp .st { font-size: 12px; font-weight: 600; color: var(--muted); }
+  .row .bar { width: 3px; align-self: stretch; border-radius: 2px; background: var(--c); flex: none; }
+
+  .grp { font-size: 16px; font-weight: 600; margin: 0 0 4px; padding-bottom: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grp .dot { width: 10px; height: 10px; }
+  .grp .st { font-size: 13px; font-weight: 400; color: var(--muted); }
   .grp a { color: var(--ink); text-decoration: none; }
-  .grp .pill { font-size: 11px; padding: 1px 8px; }
-  /* Links: normal text colour, underlined. Pills, chips, buttons and tabs look clickable already: no underline. */
-  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
-  a.pill, a.chip, a.btn, nav.tabs a, .room h2 .rlink { text-decoration: none; color: inherit; }
+  .grp a:hover { text-decoration: underline; }
+  .grp .links { margin-left: auto; }
 
-  .sw { display: inline-block; width: 28px; height: 16px; border-radius: var(--radius); border: 1.5px solid var(--muted); position: relative; vertical-align: middle; }
-  .sw i { position: absolute; top: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); transition: left .15s; }
-  .sw.on { border-color: var(--ljr-5); } .sw.on i { left: 14px; background: var(--ljr-5); }
-  .crow { padding: 10px 0; border-top: 1px solid var(--line); }
-  .card > .crow:first-child, .clines > .crow:first-child { border-top: 0; }
+  /* On/off switch: a 1px ring; ON = green ring + solid green knob (allowed solid: outlined it is too faint). */
+  .sw { display: inline-block; width: 30px; height: 18px; border-radius: var(--radius); border: 1px solid var(--muted); position: relative; vertical-align: middle; flex: none; }
+  .sw i { position: absolute; top: 3px; left: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); transition: left .15s; }
+  .sw.on { border-color: var(--r-ok); background: var(--t-ok); } .sw.on i { left: 15px; background: var(--ljr-5-text); }
+  @media (prefers-reduced-motion: reduce) { .sw i { transition: none; } }
+
+  /* Calm rows */
+  .crow { padding: 12px 0; border-top: 1px solid var(--line); }
+  .card > .crow:first-child, .clines > .crow:first-child, .appcard > .crow:first-of-type { border-top: 0; }
   .crow .l1 { display: flex; gap: 8px; align-items: flex-start; }
-  .crow .type { flex: none; width: 22px; text-align: center; }
-  .crow .ttl { flex: 1; min-width: 0; font-weight: 500; }
-  .crow .ttl .app { font-weight: 800; margin-right: 4px; }
-  .crow .why { font-size: 13px; color: var(--muted); margin: 3px 0 0; }
-  .crow .l2 { display: flex; gap: 8px; align-items: center; margin: 6px 0 0; }
-  .crow .l3 { display: flex; justify-content: flex-end; margin-top: 4px; }
-  .crow .icons { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; flex: 1; }
-  .crow .acts { display: flex; gap: 6px; }
-  .crow .acts .btn { padding: 4px 14px; font-size: 16px; }
-  .ico, .flagb, .opt { position: relative; background: none; border: 1px solid transparent; border-radius: var(--radius); width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: var(--muted); }
-
-  .ico .new { position: absolute; top: 1px; right: 1px; width: 7px; height: 7px; border-radius: 50%; background: var(--ljr-2); }
+  .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; }
+  .crow .ttl .app { font-weight: 600; margin-right: 4px; }
+  .crow .why { font-size: 14px; color: var(--muted); margin: 4px 0 0; overflow-wrap: anywhere; }
+  .crow .why.q { color: var(--ink); }
+  .crow .l2 { display: flex; gap: 8px; align-items: center; margin: 8px 0 0; flex-wrap: wrap; }
+  .crow .l3 { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
+  .crow .l3 .grow, .l3 .grow { flex: 1; }
+  .l3 { display: flex; align-items: center; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .crow .icons { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 0; }
+  .crow .type { color: var(--muted); width: 28px; display: inline-flex; justify-content: center; flex: none; font-size: 18px; }
+  .acts { display: flex; gap: 8px; flex: none; align-items: center; }
+  .acts .btn { padding: 0 14px; font-size: 16px; }
+  .ico .new { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--ljr-2); }   /* allowed solid: the new-comment dot */
   .flag { width: 18px; height: 18px; display: block; color: var(--muted); }
-  .stat { font: inherit; font-size: 11px; font-weight: 700; text-transform: uppercase; color: #fff; background: var(--sc); border: 0; border-radius: var(--radius); padding: 2px 7px; cursor: pointer; }
-  .date { position: relative; font-size: 13px; color: var(--muted); white-space: nowrap; cursor: pointer; }
-  .date.over { color: var(--ljr-2-text); font-weight: 700; }
-  .date input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
-  .panel { margin: 8px 0 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 14px; display: flex; flex-wrap: wrap; gap: 6px; flex-direction: column; }
+  label.date { position: relative; white-space: nowrap; font-weight: 400; color: var(--muted); padding: 0 12px; }
+  label.date.over, label.date.soon { color: var(--ink); font-weight: 600; }
+  label.date input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+  .panel { margin: 8px 0 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 14px; display: flex; flex-wrap: wrap; gap: 8px; flex-direction: column; }
   .panel p { margin: 0; }
-  .tick { font: inherit; text-align: left; background: none; border: 0; cursor: pointer; color: var(--ink); padding: 2px 0; }
+  .panel .opt, .panel .stat { align-self: flex-start; }
+  .tick { justify-content: flex-start; font-weight: 400; text-align: left; }
   .tick.ok { color: var(--muted); text-decoration: line-through; }
-  .fbar { display: flex; justify-content: flex-end; }
-  .fbar .n { margin-left: 4px; }
-  .fpanel { display: flex; flex-direction: column; gap: 8px; }
+  .stat { font-weight: 600; }
+  .fpanel { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
   .fpanel .pills { margin: 0; }
-  .acts { display: flex; gap: 6px; flex: none; }
-  .acts .btn { padding: 5px 12px; }
-  .acts .yes { border-color: var(--ljr-5); }
-  .acts .no { border-color: var(--ljr-2); }
+  .fpanel .pills + .pills { margin-top: 4px; }
   .sent { font-size: 13px; color: var(--muted); flex: none; }
-  .bar { width: 6px; align-self: stretch; border-radius: var(--radius); background: var(--c); flex: none; }
-  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
-  .tile { border: 2px solid var(--c); border-radius: var(--radius); padding: 12px; background: var(--surface); }
-  .tile b { display: block; font-size: 28px; line-height: 1.1; }
-  .tile span { font-size: 13px; color: var(--muted); }
-  .muted { color: var(--muted); font-size: 14px; }
-  svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-  footer { color: var(--muted); font-size: 13px; padding: 0 16px 24px; }
+  .appcard .grp { border-bottom: 1px solid var(--line); margin-bottom: 0; }
+  .more { margin-top: 8px; color: var(--muted); }
+  .more .cnt { border-color: var(--ctl); }
 
-  /* One page width everywhere (Lisa, 20 Oct): the full window up to 1600px, 24px edge; phones 16px. No wasted space. */
-  .wrap, .wrap.wide, .wide, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
-  main.wrap { padding-left: 24px; padding-right: 24px; }
-  @media (max-width: 600px) { .wrap, .wide, .hin, main.wrap { padding-left: 16px; padding-right: 16px; } }
-  header .top, header nav.tabs { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
-  @media (max-width: 600px) { header .top, header nav.tabs { padding-left: 16px; padding-right: 16px; } }
-
-  /* One card frame (Lisa ✓ 20 Oct): link icons bottom left, dashed = not recorded yet; colour only when something needs you. */
-  .links { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-left: auto; }
-  .lk { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; border: 1px solid var(--line); border-radius: var(--radius); color: var(--muted); text-decoration: none; font-size: 16px; }
-  .lk:hover { border-color: var(--muted); color: var(--ink); }
-  .lk.no { border-style: dashed; opacity: .7; }
-  .lk.off { width: auto; padding: 0 10px; gap: 4px; font-size: 13px; color: var(--ljr-2-text); border-color: var(--ljr-2); }
-  .appcard.alarm { border-color: var(--ljr-2); }
-  .outs { display: grid; grid-template-columns: 18px 1fr; gap: 2px 6px; font-size: 14px; color: var(--muted); margin: 2px 0 4px; }
-  .outs i.ti { font-size: 15px; margin-top: 3px; }
-  .outs .y { color: var(--ljr-5-text); } .outs .n { color: var(--ljr-2-text); }
-  .q1 { font-size: 15px; margin: 2px 0; }
-  .age { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 2px; padding: 0 4px; }
-  .age.old { color: var(--ljr-2-text); }
-  .info { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border: 1px solid var(--line); border-radius: 50%; font-size: 11px; color: var(--muted); cursor: help; margin-left: 4px; vertical-align: 1px; }
-  .undo { font-size: 13px; padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; margin-left: 6px; }
-  .undo:hover { border-color: var(--muted); color: var(--ink); }
-  .copy { font-size: 13px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
-  .copy:hover { border-color: var(--muted); }
-  /* Calm focus (Lisa, 20 Oct: no double lines): never a second ring. Focus = the same one line, a shade darker. Plain text links get a thicker underline. */
-  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
-  a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
-  a:focus-visible, button:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: none; border-color: var(--ink) !important; }
-  #view a:not([class]):focus-visible, summary:focus-visible { text-decoration: underline; text-decoration-thickness: 2px; }
-  .lock { color: var(--ljr-3-text); font-size: 16px; display: inline-flex; align-items: center; gap: 4px; }
-
-  /* Forms in the dashboard's own style (Lisa ✓ 20 Oct): chips, (i) on hover, no placeholder words, draft kept. */
-  .fq { padding: 10px 0; border-top: 1px solid var(--line); }
-  .fq:first-of-type { border-top: 0; }
-  .fq .qt { font-size: 15px; margin: 0 0 6px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
-  .fq .code { font-size: 12px; font-weight: 700; color: var(--muted); letter-spacing: .02em; }
-  .fq .req { color: var(--ljr-2-text); font-size: 12px; }
-  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
-  .ch { font: inherit; font-size: 14px; padding: 5px 12px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; }
-  .ch:hover, .ch.on { border-color: var(--muted); }
-  .ch b { font-weight: 700; margin-right: 4px; }
-  .fin { width: 100%; font: inherit; font-size: 15px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); }
-  textarea.fin { min-height: 72px; resize: vertical; }
-  .ferr { color: var(--ljr-2-text); font-size: 13px; margin-top: 4px; }
-  .frow { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; }
-  .grpt { font-size: 13px; font-weight: 700; color: var(--muted); margin: 10px 0 6px; display: flex; gap: 6px; align-items: center; }
-  .grpt:first-child { margin-top: 0; }
-  details.arch > summary { cursor: pointer; list-style: none; }
-  .search { width: 100%; max-width: 320px; }
-  .addlink { display: flex; gap: 6px; margin-top: 6px; }
-  .ico, .ico:hover, .ico.on, .flagb, .flagb:hover, .mark, .mark:hover, .lk:not(.no):not(.off), .lk:not(.no):not(.off):hover { border-color: transparent; }
-  .acts .btn.yes, .acts .btn.no, .acts .yes, .acts .no, .btn.yes { border-color: var(--line); }
-  .acts .btn.yes:hover, .btn.yes:hover { border-color: var(--ljr-5); } .acts .btn.no:hover { border-color: var(--ljr-2); }
-  .flab { font-size: 13px; font-weight: 700; color: var(--muted); min-width: 44px; align-self: center; }
-  .fpanel .pills + .pills { margin-top: 8px; }
-
-  /* Year 3 (Lisa ✓ 20 Oct): portfolio table and grouped links. */
-  .ptab { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .ptab th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 600; padding: 4px 6px; }
-  .ptab td { padding: 6px; border-top: 1px solid var(--line); vertical-align: middle; }
-  .ptab a { color: var(--ink); text-decoration: none; }
-  .ptab a:hover { text-decoration: underline; }
-  @media (max-width: 600px) { .ptab:not(.dtab) th:nth-child(2), .ptab:not(.dtab) td:nth-child(2), .ptab:not(.dtab) th:nth-child(5), .ptab:not(.dtab) td:nth-child(5), .dtab td:nth-child(4) { display: none; } }
-  .lgrid { display: grid; grid-template-columns: 72px 1fr; gap: 4px 8px; align-items: center; margin-top: 10px; }
-  .lgrid .lg { font-size: 12px; font-weight: 700; color: var(--muted); }
-
-  /* Colour rule (Lisa, 20 Oct): icons grey at rest, their own colour on hover, so each one is told apart without shouting.
-     Colour at rest only for what needs you: the red Off, overdue dates, the new-comment dot, Decide / Do tags on docs. */
+  /* Link icons (Build · Run · Sell …): grey at rest, their own colour on hover; dashed = not recorded yet. */
+  .links { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-left: auto; align-items: center; }
   .lk[data-g="Build"]:hover { color: var(--ljr-7-text); } .lk[data-g="Run"]:hover { color: var(--ljr-4-text); }
   .lk[data-g="Sell"]:hover, .lk[data-g="Social"]:hover { color: var(--ljr-6-text); } .lk[data-g="Support"]:hover { color: var(--ljr-5-text); }
+  .lgrid { display: grid; grid-template-columns: 72px 1fr; gap: 4px 8px; align-items: center; margin-top: 12px; }
+  .lgrid > span:nth-child(2n) { display: flex; gap: 4px; flex-wrap: wrap; }
+  .lgrid .lg { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .outs { display: grid; grid-template-columns: 18px 1fr; gap: 2px 8px; font-size: 14px; color: var(--muted); margin: 4px 0; }
+  .outs i.ti { font-size: 15px; margin-top: 3px; }
+  .outs .y { color: var(--ljr-5-text); } .outs .n { color: var(--ljr-2-text); }
+  .q1 { font-size: 15px; margin: 4px 0; }
+  .age.old { border-color: var(--r-risk); background: var(--t-risk); }
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: 1px solid var(--ctl); border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--muted); cursor: help; margin-left: 4px; vertical-align: 1px; flex: none; }
+  .lock { color: var(--ink); font-size: 16px; display: inline-flex; align-items: center; gap: 4px; }
+  .lock .ti { color: var(--ljr-3-text); }
+  .gate { border-color: var(--r-warn); height: auto; min-height: 24px; white-space: normal; max-width: 100%; }   /* a long list of missing lines wraps inside its ring */
+  .plus { margin-left: auto; color: var(--ink); }
+
+  /* Forms: chips, (i) on hover, no placeholder words, draft kept. ★ = must answer, at the far right, in a rose ring. */
+  .fq { padding: 12px 0; border-top: 1px solid var(--line); }
+  .fq:first-of-type { border-top: 0; }
+  .fq .qt { font-size: 15px; margin: 0 0 8px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; position: relative; padding-right: 30px; }
+  .fq .code { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .fq .req, .fq .qt .req { position: absolute; right: 0; top: 0; color: var(--ink); font-size: 13px; font-weight: 600; width: 22px; height: 22px; border: 1px solid var(--r-risk); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ch { font-weight: 400; }
+  .ch b { font-weight: 600; margin-right: 4px; }
+  .ferr { color: var(--ink); font-size: 13px; margin-top: 4px; }
+  .ferr::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--r-risk); margin-right: 6px; }
+  .frow { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; }
+  .grpt { font-size: 14px; font-weight: 600; color: var(--muted); margin: 12px 0 8px; display: flex; gap: 6px; align-items: center; }
+  .grpt:first-child { margin-top: 0; }
+  details.arch > summary { list-style: none; width: max-content; }
+  details.arch > summary::-webkit-details-marker { display: none; }
+  .search { width: 100%; max-width: 320px; }
+  .addlink { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+  .flab { font-size: 14px; font-weight: 600; color: var(--muted); min-width: 44px; align-self: center; }
+
+  /* Portfolio and Docs tables */
+  .ptab { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .ptab th { text-align: left; font-size: 13px; color: var(--muted); font-weight: 600; padding: 4px 6px; }
+  .ptab td { padding: 6px; border-top: 1px solid var(--line); vertical-align: middle; overflow-wrap: anywhere; }
+  .ptab a { color: var(--ink); text-decoration: none; }
+  .ptab a:not([class]):hover { text-decoration: underline; }
+  @media (max-width: 600px) { .ptab:not(.dtab) th:nth-child(2), .ptab:not(.dtab) td:nth-child(2), .ptab:not(.dtab) th:nth-child(5), .ptab:not(.dtab) td:nth-child(5), .dtab td:nth-child(4) { display: none; } }
   .dti { color: var(--muted); }
   tr:hover .dti[data-t="card"], .pill:hover .dti[data-t="card"], tr:hover .dti[data-t="mockup"], .pill:hover .dti[data-t="mockup"] { color: var(--ljr-7-text); }
   tr:hover .dti[data-t="prompt"], .pill:hover .dti[data-t="prompt"] { color: var(--ljr-3-text); }
   tr:hover .dti[data-t="research"], .pill:hover .dti[data-t="research"] { color: var(--ljr-6-text); }
   tr:hover .dti[data-t="report"], .pill:hover .dti[data-t="report"] { color: var(--ljr-5-text); }
   tr:hover .dti[data-t="rules"], .pill:hover .dti[data-t="rules"] { color: var(--ljr-4-text); }
-  .need { font-size: 12px; font-weight: 700; text-decoration: none; padding: 2px 10px; border-radius: 999px; border: 1px solid; }
-  .need.n4 { color: var(--ljr-4-text); border-color: var(--ljr-4); } .need.n5 { color: var(--ljr-5-text); border-color: var(--ljr-5); }
-  .dgrp td { border-top: 1px solid var(--line); padding-top: 12px; font-weight: 700; }
+  .dgrp td { border-top: 1px solid var(--line); padding-top: 12px; font-weight: 600; }
   .dgrp:first-child td { border-top: 0; padding-top: 4px; }
-  .dgrp a { color: var(--ink); text-decoration: none; } .dgrp .muted { font-weight: 400; font-size: 12px; }
+  .dgrp a { color: var(--ink); text-decoration: none; } .dgrp .muted { font-weight: 400; font-size: 13px; }
   .dtab td { border-top: 0; }
+  .dtab .dot { margin-right: 6px; }
 
-  /* Counts (Lisa, 20 Oct): a faint circle round every number that counts something; menu counts the same, no solid fill. */
-  .cnt { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; font-weight: 600; line-height: 1; color: var(--ink); box-sizing: border-box; vertical-align: middle; }
-  nav.tabs .n, .fbtn .n { background: transparent !important; color: var(--ink) !important; border: 1px solid var(--line); border-radius: 999px; min-width: 22px; height: 22px; padding: 0 6px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 12px; }
-
-  /* No coloured words (Lisa, 20 Oct): text is always ink. Colour lives only in lines and icons: a coloured outline, ring or icon says "look". */
-  .hot, .why.q, .ferr, .fq .req, .need, .need.n4, .need.n5, .lk.off, .age.old, .date.over, .lock, .banner, .acts .btn.yes, .acts .btn.no { color: var(--ink); }
-  .acts .btn.yes .ti { color: var(--ljr-5-text); } .acts .btn.no .ti { color: var(--ljr-2-text); }
-  .lk.off .ti { color: var(--ljr-2-text); }
-  .lock .ti { color: var(--ljr-3-text); }
-  .banner { background: transparent; }
-  .date.over { border: 1px solid var(--ljr-2); border-radius: 999px; padding: 0 8px; font-weight: 600; }
-  .age.old { border: 1px solid var(--ljr-2); border-radius: 999px; }
-  .hot { border: 1px solid var(--ljr-2); border-radius: 999px; padding: 0 6px; font-weight: 600; }
-  .ferr::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ljr-2); margin-right: 6px; vertical-align: 0; }
-  .fq .req { font-weight: 700; }
-
-  /* ★ = must answer: red, always at the far right of its line, so it never moves (Lisa, 20 Oct). */
-  .fq .qt { position: relative; padding-right: 22px; }
-  .fq .req, .fq .qt .req { position: absolute; right: 0; top: 0; color: var(--ljr-2); font-size: 15px; font-weight: 700; }
-
-  /* Codes (The Codes key): ink letters, state in the ring. */
-  .codes .cgrp { display: inline-flex; gap: 4px; flex-wrap: wrap; }
-  .codes .csep { color: var(--muted); padding: 0 4px; align-self: center; }
-  .codes .cd { font-size: 12px; font-weight: 600; border: 1.5px solid var(--line); border-radius: 999px; padding: 1px 8px; color: var(--ink); }
-  .codes .cd.set { border-color: var(--ljr-5); } .codes .cd.open { border-color: var(--ljr-3); } .codes .cd.bad { border-color: var(--ljr-2); }
-
-  /* Find bar (Lisa, 20 Oct): one bar, same place on every list tab. Search · App · Kind always; Who · Stage · Flags · Sort · TEST behind the Filter button. */
-  nav.tabs .cal { margin-left: auto; }
+  /* Find bar: one row (Search · Filter), then App and Kind chips; Who · Stage · Flags · Sort · Test behind Filter. */
   .fbar2 { display: flex; flex-direction: column; gap: 8px; }
   .srow { display: flex; gap: 8px; align-items: center; }
-  .sbox { flex: 1; display: flex; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 0 12px; background: var(--surface); }
-  .sbox:focus-within { border-color: var(--muted); }
-  .sbox .ti { color: var(--muted); font-size: 16px; }
-  .sbox input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 15px; padding: 8px 0; }
-  .sbox input::-webkit-search-cancel-button { cursor: pointer; }
-  .fbar2 .pills { gap: 8px; }
-  .pill { cursor: pointer; font-family: inherit; color: var(--ink); }
-  .pill .cnt { min-width: 20px; height: 20px; font-size: 11px; }
-  .pill.stg { border-color: var(--c); min-width: 32px; justify-content: center; }
-  .pill.stg.on { border-color: var(--ink); }
-  .empty { display: flex; gap: 12px; align-items: center; }
-  .appmenu { max-width: 1600px; margin: 0 auto; padding: 0 24px 12px; }
-  @media (max-width: 600px) { .appmenu { padding: 0 16px 12px; } }
-  .appmenu .pills { gap: 8px; }
-  .gate { font-size: 13px; padding: 4px 10px; border: 1px solid var(--ljr-3); border-radius: 999px; color: var(--ink); display: inline-flex; gap: 4px; align-items: center; }
-  .gate .ti { color: var(--muted); }
-  .sect { font-size: 13px; font-weight: 700; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 4px 0 0; }
+  .fbtn .n { margin-left: 2px; }
+  /* Filter = a summary in the search row's right end (absolutely placed in the room the row keeps for it); the chips open below. */
+  .fbar2 { position: relative; }
+  .fbar2 .srow { padding-right: 124px; }
+  .fdet > summary { position: absolute; top: 0; right: 0; width: 116px; justify-content: center; list-style: none; }
+  .fdet > summary::-webkit-details-marker { display: none; }
+  .fdet[open] > summary { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+  .fdet .fbody { display: flex; flex-direction: column; gap: 8px; }
+  .fdet .n { margin-left: 2px; }
+  .srow .sbox { min-width: 0; }
+  .srow > .pill { flex: none; white-space: nowrap; }
+  @media (max-width: 600px) {
+    .fbar2 .srow { padding-right: 100px; }
+    .fdet > summary { width: 92px; padding: 0 8px; gap: 4px; }
+    .srow > .pill { padding: 0 10px; }
+  }
+  .sect { font-size: 14px; font-weight: 600; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 12px 0 0; }
+
+  /* Friendly empty state: plain words after a small green-ring check. */
+  .empty { margin: 0; display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 15px; }
+  .empty::before { content: "\2713"; flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--r-ok); background: var(--t-ok); color: var(--ink); font-size: 13px; }
+  .card[data-empty] { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  footer { color: var(--muted); font-size: 13px; }
 </style>
 </head>
 <body>
@@ -326,30 +383,35 @@
   <symbol id="i-stamp" viewBox="0 0 24 24"><path d="M9 4h6v6l3 3v3H6v-3l3-3Z"/><path d="M5 20h14"/></symbol>
 </svg>
 <header>
-  <div class="top">
-    <h1><a href="#/rooms">Factory</a></h1>
+  <div class="top wrap">
+    <h1><a href="#/rooms"><span class="dot" aria-hidden="true"></span>Factory</a></h1>
     <button id="appPick" class="btn hidden" type="button" data-action="apppick" aria-label="Apps" aria-expanded="false"><i class="ti ti-apps"></i></button>
     <span id="stamp" class="stamp"></span>
     <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
-    <a class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
+    <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
   </div>
-  <nav class="tabs" aria-label="Sections">
-    <a href="#/me" data-nav="me">Me <span class="n" id="nMe">0</span></a>
-    <a href="#/rooms" data-nav="rooms">Rooms</a>
-    <a href="#/decide" data-nav="decide">Decide <span class="n" id="nDecide">0</span></a>
-    <a href="#/do" data-nav="do">Do <span class="n" id="nDo">0</span></a>
-    <a href="#/docs" data-nav="docs">Docs</a>
-    <a href="#/today" data-nav="today" aria-label="Today" class="cal"><i class="ti ti-calendar"></i></a>
-  </nav>
-  <div id="appMenu" class="appmenu hidden"></div>
 </header>
+<nav class="tabs" aria-label="Sections">
+  <a href="#/me" data-nav="me" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-user" aria-hidden="true"></i><span class="tl">Me</span><span class="n" id="nMe"></span></a>
+  <a href="#/rooms" data-nav="rooms" style="--tc:var(--ljr-0)"><span class="bar" aria-hidden="true"></span><i class="ti ti-building-factory-2" aria-hidden="true"></i><span class="tl">Rooms</span></a>
+  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-scale" aria-hidden="true"></i><span class="tl">Decide</span><span class="n" id="nDecide"></span></a>
+  <a href="#/do" data-nav="do" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-square-check" aria-hidden="true"></i><span class="tl">Do</span><span class="n" id="nDo"></span></a>
+  <a href="#/docs" data-nav="docs" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-file" aria-hidden="true"></i><span class="tl">Docs</span></a>
+  <a href="#/today" data-nav="today" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-calendar" aria-hidden="true"></i><span class="tl">Today</span></a>
+</nav>
 <main class="wrap" id="content">
+  <div id="appMenu" class="appmenu hidden"></div>
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
 </main>
 
+<script>
+/* Studio's Look setting (localStorage 'dash-look': bg warm|cool) is read here, never written. Warm clear is the default. */
+(function () { function look() { try { var o = JSON.parse(localStorage.getItem('dash-look') || '{}') || {}; document.documentElement.classList.toggle('look-cool', o.bg === 'cool'); } catch (e) {} }
+  look(); window.addEventListener('storage', function (e) { if (e.key === 'dash-look') look(); }); })();
+</script>
 <script>
 (function () {
   'use strict';
@@ -417,7 +479,7 @@
   function load() {
     if (!accessToken) return;
     findFile(F.logs, F.state).then(function (f) { return media(f.id).then(function (r) { return r.json(); }); })
-      .then(function (j) { S = j; err = null; allTasks(); applyPend(); var nf = 0; (j.failed || []).forEach(function (f) { if (sent[f.taskId]) { delete sent[f.taskId]; nf++; } }); if (nf) { saveSent(); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); } $('stamp').textContent = String(j.mode).toUpperCase() === 'LIVE' ? '' : 'TEST'; render(); })
+      .then(function (j) { S = j; err = null; allTasks(); applyPend(); var nf = 0; (j.failed || []).forEach(function (f) { if (sent[f.taskId]) { delete sent[f.taskId]; nf++; } }); if (nf) { saveSent(); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); } $('stamp').textContent = String(j.mode).toUpperCase() === 'LIVE' ? '' : 'Test'; render(); })
       .catch(function (e) { err = e.message; render(); });
   }
   function cardFor(t) {
@@ -456,13 +518,14 @@
 
   /* views */
   function vRooms() {
-    var all = apps(), fsR = fsOf('rooms'), A = all.filter(function (a) { return hit(a, fsR, APP); }), html = findBar('rooms', all, APP, []) + (A.length ? '' : emptyBox()) + '<div class="pills">' +
+    var all = apps(), fsR = fsOf('rooms'), A = all.filter(function (a) { return hit(a, fsR, APP); }), sw = '<button class="pill" type="button" data-action="factory" aria-label="Factory on or off" title="Factory"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span> Factory ' + (factoryOn() ? 'on' : 'off') + '</button>';
+    var html = findBar('rooms', all, APP, [], { side: sw, extra: '<div class="pills">' +
       // Every count is a link: it opens the list it counts.
-      '<a class="pill" href="#/all" title="Apps"><i class="ti ti-apps"></i> ' + A.length + '</a>' +
-      '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> <span' + (A.filter(stuck).length >= 1 ? ' class="hot"' : '') + '>' + A.filter(stuck).length + '</span></a>' +
+      '<a class="pill" href="#/all" title="Apps"><i class="ti ti-apps"></i> Apps ' + cnt(A.length) + '</a>' +
+      '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> Stuck ' + cnt(A.filter(stuck).length, true) + '</a>' +
       '<a class="pill" href="#/room/reactor" title="Build slots"><i class="ti ti-hammer"></i> ' + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + '/3</a>' +
-      people().map(function (w) { return '<a class="pill" href="#/queue/' + encodeURIComponent(w) + '">' + esc(w) + ' ' + queue(w).length + '</a>'; }).join('') +
-      '<button class="pill" type="button" data-action="factory" aria-label="Factory on or off" title="Factory"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span></button>' + enginePill() + ckPill() + '</div>' + docsStrip() + '<div class="rooms">';
+      people().map(function (w) { return '<a class="pill" href="#/queue/' + encodeURIComponent(w) + '">' + esc(w) + ' ' + cnt(queue(w).length) + '</a>'; }).join('') +
+      enginePill() + ckPill() + '</div>' + docsStrip() }) + (A.length ? '' : emptyBox()) + '<div class="rooms">';
     ROOMS.forEach(function (r) {
       var inRoom = A.filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
       html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><a class="rlink" href="#/room/' + r.key + '"><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '</a><span class="ct">' + cnt(inRoom.length) + '</span></h2><span class="stn">' + esc(r.st.join(' · ')) + '</span>' +
@@ -484,9 +547,9 @@
     var inRoom = apps().filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
     var ids = inRoom.map(function (t) { return t.id; });
     var asks = decisions().filter(function (d) { return ids.some(function (id) { return String(d.desc).indexOf('GATE: ' + id + ' ') >= 0; }); });
-    return '<div class="card"><div class="hero" style="--c:' + col(r.slot) + '"><div class="disc">' + inRoom.length + '</div><div><h2>' + esc(r.name) + (r.paid ? ' ' + ic('coin') : '') + '</h2><p>' + esc(ROOM_DO[key] || '') + '</p></div></div>' +
+    return '<div class="card"><div class="hero" style="--c:' + col(r.slot) + '"><div><h2><span class="dot" aria-hidden="true"></span>' + esc(r.name) + (r.paid ? ' ' + ic('coin') : '') + ' ' + cnt(inRoom.length) + '</h2><p>' + esc(ROOM_DO[key] || '') + '</p></div></div>' +
       '<p class="muted">' + esc(r.st.join(' · ')) + '</p>' + (key === 'reception' ? '<p>' + newIdea() + '</p>' : '') +
-      '<div class="pills">' + (inRoom.length ? inRoom.map(chipOf).join('') : '<span class="muted">—</span>') + '</div>' +
+      '<div class="pills">' + (inRoom.length ? inRoom.map(chipOf).join('') : '<p class="empty">No apps in this room right now.</p>') + '</div>' +
       (asks.length ? '<p><a class="btn" href="#/decide">' + ic('stamp') + asks.length + ' to decide here</a></p>' : '') +
       '<p><a href="#/rooms">← Rooms</a></p></div>';
   }
@@ -496,8 +559,8 @@
     var n = stageNo(t.status), slot = n === null ? 0 : (n <= 3 ? 7 : n <= 5 ? 4 : n === 6 ? 3 : n === 7 ? 6 : 5);
     var subs = (S.lists.work || []).filter(function (x) { return x.tags.indexOf('app-' + t.id) >= 0 && x.tags.indexOf('line') >= 0; });
     var tpl = (S.lists.template || []).filter(function (x) { return x.parent; });
-    var html = '<div class="card"><div class="hero" style="--c:' + col(slot) + '"><div class="disc">' + (n === null ? '–' : n) + '</div><div><h2>' + esc(t.name) + '</h2><p>' + esc(cap(t.status)) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
-      '<div class="pills" style="margin-top:10px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
+    var html = '<div class="card"><div class="hero"><div><h2>' + esc(t.name) + '</h2><p>' + (n === null ? '' : '<span class="step">Step ' + n + ':</span> ' + esc(STAGES[n]) + ' · ') + esc(cap(t.status)) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
+      '<div class="pills" style="margin-top:12px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<div id="codes" class="codes"><span class="q">…</span></div>' +
       '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span>' + linkStrip(t, false) + '<button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
       linkGroups(t) + (addLink && addLink.id === t.id ? linkForm() : '') + (cardAsk ? '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn" type="submit" aria-label="Send"><i class="ti ti-send"></i></button></form><div id="askNote" class="muted"></div>' : '') + waiting(t) +
@@ -508,7 +571,7 @@
       var lines = mineLines.length ? mineLines : tpl.filter(function (x) { return x.tags.indexOf('st-' + i) >= 0; });
       var done = lines.filter(function (x) { return !isOpen(x); }).length;
       var isOpenRow = open[i] === undefined ? i === n : open[i];
-      html += '<div class="stage ' + cls + '" data-stage="' + i + '"><span class="n">' + i + '</span>' + name + (i === 6 ? ' ' + ic('coin') : '') +
+      html += '<div class="stage ' + cls + '" data-stage="' + i + '"><span class="n" aria-hidden="true">' + (cls === 'd' ? '\u2713' : cls === 'c' ? '\u25cf' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i === 6 ? ' ' + ic('coin') : '') +
         '<span class="r">' + (mineLines.length ? done + ' / ' + lines.length : lines.length ? lines.length + ' lines' : '') + '</span></div>';
       if (isOpenRow) {
         html += mineLines.length ? '<div class="clines">' + lines.map(function (x) { return row(x, x.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view'); }).join('') + (i === 6 ? '<ul class="lines">' + sendsFor(t) + '</ul>' : '') + '</div>' : '<ul class="lines">' + lines.map(function (x) {
@@ -570,7 +633,7 @@
     var room = app ? ROOMS.filter(function (r) { return r.st.indexOf(String(app.status).toLowerCase()) >= 0; })[0] : null;
     var c = room ? col(room.slot) : col(slot);
     return '<div class="grp"><span class="dot" style="background:' + c + '"></span>' + (app ? '<a href="#/card/' + esc(app.id) + '">' + esc(g) + '</a>' : 'Factory') +
-      (app ? '<span class="st">' + esc((room ? room.name + ' · ' : '') + cap(app.status)) + '</span>' : '') + (isTest(t) ? '<span class="pill">TEST</span>' : '') + linkStrip(app) + '</div>' + (app && addLink && addLink.id === app.id ? linkForm() : '');
+      (app ? '<span class="st">' + esc((room ? room.name + ' · ' : '') + cap(app.status)) + '</span>' : '') + (isTest(t) ? '<span class="pill">Test</span>' : '') + linkStrip(app) + '</div>' + (app && addLink && addLink.id === app.id ? linkForm() : '');
   }
   // When the engine will apply a click: its next 15-minute run (:03 :18 :33 :48) plus a minute.
   function appliesBy(ts) { var d = new Date(ts), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next + 1); return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
@@ -581,7 +644,8 @@
    */
   var PRI = { urgent: [1, '#f50000'], high: [2, '#ffcc00'], normal: [3, '#6fddff'], low: [4, '#d8d8d8'] };
   var MEANING = /^(paid|sen-check|kill-suggested|leak|question)/;
-  var openPanel = null, filtersOpen = false, weekView = false, cardAsk = false;
+  var openPanel = null, filtersOpen = false, weekView = false, cardAsk = false, fdOpen = null;
+  document.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('fdet')) fdOpen = e.target.open; }, true);
   var pend = loadLocal('af-pend'), seen = loadLocal('af-seen');
   function allTasks() { var L = S.lists, out = []; Object.keys(L).forEach(function (k) { if (k !== 'template') (L[k] || []).forEach(function (t) { t._k = k; out.push(t); }); }); return out; }
   function byId(id) { return allTasks().filter(function (t) { return t.id === id; })[0]; }
@@ -603,6 +667,7 @@
   function iso(ts) { var d = new Date(ts); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function dayStart(off) { var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() + (off || 0) * 864e5; }
   function overdue(t) { return t.due && t.due < dayStart(0) && isOpen(t); }
+  function soon(t) { return t.due && t.due >= dayStart(0) && t.due < dayStart(3) && isOpen(t); }   // due today or in the next 2 days: amber ring
   function whoOf(t) {
     var w = t.tags.filter(function (g) { return /^who-/.test(g); }).map(function (g) { return { lisa: 'Lisa', grok: 'Grok', claude: 'Claude' }[g.slice(4)] || g.slice(4); });
     (t.who || []).forEach(function (u) { var n = /grok/i.test(u) ? 'Grok' : /lisa|joyaa/i.test(u) ? 'Lisa' : /ukdoodles|claude/i.test(u) ? 'Claude' : u; if (w.indexOf(n) < 0) w.push(n); });
@@ -641,7 +706,7 @@
     if (k === 'who') body = whoOf(t).map(esc).join(' · ');
     if (k === 'tags') body = t.tags.filter(function (g) { return MEANING.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join(' ');
     if (k === 'flag') body = ['urgent', 'high', 'normal', 'low', 'none'].map(function (p) { return '<button class="opt" type="button" data-set="priority" data-val="' + p + '" data-id="' + esc(t.id) + '" aria-label="' + p + '">' + flagIcon(p === 'none' ? null : { p: p }) + '</button>'; }).join('');
-    if (k === 'status') body = ((S.statuses || {})[t._k] || []).map(function (x) { return '<button class="stat" type="button" data-set="status" data-val="' + esc(x.s) + '" data-id="' + esc(t.id) + '" style="--sc:' + esc(x.c) + '">' + esc(x.s) + '</button>'; }).join(' ');
+    if (k === 'status') body = ((S.statuses || {})[t._k] || []).map(function (x) { return '<button class="stat" type="button" data-set="status" data-val="' + esc(x.s) + '" data-id="' + esc(t.id) + '" style="--sc:' + esc(x.c) + '">' + esc(cap(x.s)) + '</button>'; }).join(' ');
     return '<div class="panel">' + body + '</div>';
   }
   // Do: what comes next, and what it waits on; prompts link straight to OverSkill.
@@ -678,7 +743,7 @@
     var stat = t._k === 'apps' || /^to do$/i.test(t.status) ? '' : '<button class="ico" type="button" data-panel="status" data-id="' + esc(t.id) + '" aria-label="Status ' + esc(cap(t.status)) + '" title="' + esc(cap(t.status)) + '" style="color:' + esc(t.color || 'inherit') + '"><i class="ti ti-' + (SI[String(t.status).toLowerCase()] || 'circle') + '"></i></button>';
     var icons = iconsOf(t, kind).map(function (x) { return '<button class="ico' + (openPanel && openPanel.id === t.id && openPanel.k === x[0] ? ' on' : '') + '" type="button" data-panel="' + x[0] + '" data-id="' + esc(t.id) + '" aria-label="' + x[2] + '" style="--hc:var(--ljr-' + x[4] + '-text)">' + x[1] + (x[3] ? '<i class="new"></i>' : '') + '</button>'; }).join('');
     var mineQ = asked[t.id] ? '<div class="why q">✎ ' + esc(asked[t.id].text) + ' · ✓ ' + hm(asked[t.id].at) + '</div>' : '';
-    var date = '<label class="date' + (overdue(t) ? ' over' : '') + '">' + (t.due ? dmy(t.due) : '<i class="ti ti-calendar"></i>') + '<input type="date" data-due="' + esc(t.id) + '" value="' + (t.due ? iso(t.due) : '') + '" aria-label="Due date"></label>';
+    var date = '<label class="date' + (overdue(t) ? ' over' : soon(t) ? ' soon' : '') + '">' + (t.due ? dmy(t.due) : '<i class="ti ti-calendar"></i>') + '<input type="date" data-due="' + esc(t.id) + '" value="' + (t.due ? iso(t.due) : '') + '" aria-label="Due date"></label>';
     var drive = (String(t.desc).match(/https:\/\/drive\.google\.com\/file\/d\/[\w-]+/) || [])[0];
     var out = '<a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a>' +
       (drive ? '<a class="mark" href="' + esc(drive) + '/view" target="_blank" rel="noopener" aria-label="Open card in Drive" title="Drive">' + DRIVE_MARK + '</a>' : '');
@@ -780,9 +845,14 @@
   function fchip(key, val, label, on, extra) { return '<button class="pill' + (on ? ' on' : '') + (extra || '') + '" type="button" data-fx="' + key + '" data-val="' + esc(val) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + label + '</button>'; }
   function flagWords(h) { return h.replace('URGENT', flagIcon({ p: 'urgent' })).replace('NOFLAG', flagIcon(null)); }
   // The bar. Chips show only what is on this tab (count in a faint circle); a row with one choice is left out.
-  function findBar(tab, items, F, kinds) {
-    var s = fsOf(tab), n = onCount(tab), html = '<div class="fbar2" data-bar="' + tab + '"><div class="srow"><label class="sbox"><i class="ti ti-search" aria-hidden="true"></i><input type="search" data-f="fq" value="' + esc(s.q) + '" aria-label="Search" autocomplete="off"></label>' +
-      '<button id="filtersBtn" class="fbtn' + (filtersOpen ? ' on' : '') + '" type="button" data-action="filters" aria-label="Filter" aria-expanded="' + filtersOpen + '"><i class="ti ti-adjustments-horizontal"></i><span class="n" id="nFilters">' + (n || '') + '</span></button></div>';
+  // One calm row (Lisa's Studio choice, 28 Oct): Search · (Factory on/off on Rooms) · Filter. Filter is a details/summary that holds
+  // every chip row; open by default at 900px and wider, closed on a phone, and it remembers what you chose. The count on it says
+  // how many filters are on. Inside, "More" opens Who · Stage · Flags · Sort · Test as before.
+  function findBar(tab, items, F, kinds, o) {
+    o = o || {};
+    var s = fsOf(tab), n = onCount(tab), open = fdOpen === null ? window.matchMedia('(min-width: 900px)').matches : fdOpen;
+    var html = '<div class="fbar2" data-bar="' + tab + '"><div class="srow"><label class="sbox"><i class="ti ti-search" aria-hidden="true"></i><input type="search" data-f="fq" value="' + esc(s.q) + '" aria-label="Search" autocomplete="off"></label>' +
+      (o.side || '') + '</div><details class="fdet"' + (open ? ' open' : '') + '><summary id="filterSum"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>Filter<span class="n" id="nFilters">' + (n || '') + '</span></summary><div class="fbody">';
     var by = {}, order = [];
     items.filter(function (x) { return hit(x, s, F, 'app'); }).forEach(function (x) { var g = F.app(x); if (!by[g]) { by[g] = 0; order.push(g); } by[g]++; });
     order.sort(function (a, b) { return (a === 'Factory') - (b === 'Factory') || a.localeCompare(b); });
@@ -791,21 +861,27 @@
     var kc = {}; items.filter(function (x) { return hit(x, s, F, 'kind'); }).forEach(function (x) { var k = F.kind(x); if (k) kc[k] = (kc[k] || 0) + 1; });
     var kh = kinds.filter(function (k) { return kc[k[0]] || s.kind.indexOf(k[0]) >= 0; });
     if (kh.length > 1 || s.kind.length) html += '<div class="pills" data-frow="kind">' + kh.map(function (k) { return fchip('kind', k[0], '<i class="ti ti-' + k[1] + (tab === 'docs' ? ' dti" data-t="' + k[0] : '') + '"></i> ' + k[2] + ' ' + cnt(kc[k[0]] || 0), s.kind.indexOf(k[0]) >= 0); }).join('') + '</div>';
+    html += '<div class="pills"><button id="filtersBtn" class="fbtn' + (filtersOpen ? ' on' : '') + '" type="button" data-action="filters" aria-expanded="' + filtersOpen + '"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>More</button></div>';
     if (filtersOpen) {
       var wc = {}; items.filter(function (x) { return hit(x, s, F, 'who'); }).forEach(function (x) { F.who(x).forEach(function (w) { wc[w] = (wc[w] || 0) + 1; }); });
       var sc = {}; items.filter(function (x) { return hit(x, s, F, 'st'); }).forEach(function (x) { var v = F.st(x); if (v !== null) sc[v] = (sc[v] || 0) + 1; });
       var tests = items.filter(function (x) { return F.test(x); }).length;
       html += '<div class="card fpanel">' +
         (WHO.some(function (w) { return wc[w[1]]; }) ? '<div class="pills" data-frow="who">' + WHO.filter(function (w) { return wc[w[1]] || s.who.indexOf(w[0]) >= 0; }).map(function (w) { return fchip('who', w[0], '<i class="ti ti-user"></i> ' + w[2] + ' ' + cnt(wc[w[1]] || 0), s.who.indexOf(w[0]) >= 0); }).join('') + '</div>' : '') +
-        '<div class="pills" data-frow="st">' + STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), String(i), s.st.indexOf(String(i)) >= 0, ' stg" style="--c:' + col(stSlot(i)) + '" title="' + name) : ''; }).join('') + '</div>' +
+        '<div class="pills" data-frow="st">' + STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), '<span class="step">Step ' + i + ':</span> ' + name, s.st.indexOf(String(i)) >= 0, '" title="' + name) : ''; }).join('') + '</div>' +
         (F.flags ? '<div class="pills" data-frow="f">' + FLAGS.map(function (x) { return fchip('f', x[0], flagWords(x[1]), s.f.indexOf(x[0]) >= 0); }).join('') + '</div>' +
           '<div class="pills" data-frow="sort">' + SORTS.map(function (x) { return fchip('sort', x[0], flagWords(x[1]), s.sort === x[0]); }).join('') + '</div>' : '') +
-        '<div class="pills"><button class="pill" type="button" data-action="ftest" aria-pressed="' + s.test + '" title="TEST">TEST <span class="sw' + (s.test ? ' on' : '') + '"><i></i></span> ' + cnt(tests) + '</button>' +
+        '<div class="pills"><button class="pill" type="button" data-action="ftest" aria-pressed="' + s.test + '" title="TEST">Test <span class="sw' + (s.test ? ' on' : '') + '"><i></i></span> ' + cnt(tests) + '</button>' +
         '<button class="pill" type="button" data-action="clearf"><i class="ti ti-filter-off"></i> Clear</button></div></div>';
     }
-    return html + '</div>';
+    return html + (o.extra || '') + '</div></details></div>';
   }
-  function emptyBox() { return '<div class="card empty" data-empty>' + cnt(0) + '<button class="pill" type="button" data-action="clearf"><i class="ti ti-filter-off"></i> Clear</button></div>'; }
+  // Friendly empty state: plain words after a green-ring check; Clear only when a filter or search is on.
+  function emptyBox(words) {
+    var tb = barTab(), on = tb && (onCount(tb) || fsOf(tb).q);
+    return '<div class="card" data-empty><p class="empty">' + esc(words || (on ? 'Nothing matches these filters.' : 'Nothing waiting here. All clear.')) + '</p>' +
+      (on ? '<button class="pill" type="button" data-action="clearf"><i class="ti ti-filter-off"></i> Clear</button>' : '') + '</div>';
+  }
   // One card per app (Lisa, 20 Oct): the app's name once in the header, its items inside split by a thin line.
   // Cards follow the sorted items; each shows its top 3, "+N" opens the rest (remembered).
   var shownAll = loadLocal('af-open');
@@ -827,7 +903,7 @@
   function meItems() { var out = decisions().slice(); mine().forEach(function (t) { if (out.indexOf(t) < 0) out.push(t); }); return out; }
   // One app on one screen: its Decide, Do and Docs. TEST and filters do not hide anything here.
   function vApp(slug) {
-    var g = groupOfSlug(slug); if (!g) return emptyBox();
+    var g = groupOfSlug(slug); if (!g) return emptyBox('No app by that name.');
     var mineG = function (t) { return appOf(t) === g; };
     var ds = sortT(decisions().filter(mineG), 'flag'), dos = sortT(mine().filter(function (t) { return mineG(t) && ds.indexOf(t) < 0; }), 'flag'), docs = allDocs().filter(function (d) { return d.app === g; });
     var app = apps().filter(function (a) { return bare(a) === g && !isTest(a); })[0] || apps().filter(function (a) { return bare(a) === g; })[0];
@@ -839,7 +915,7 @@
   }
   // One item, opened: the link a bot sends Lisa (#/item/<ClickUp id>).
   function vItem(id) {
-    var t = byId(id); if (!t) return emptyBox();
+    var t = byId(id); if (!t) return emptyBox('That item is done or gone. Nothing to do here.');
     var kind = t._k === 'decisions' ? 'decide' : mine().indexOf(t) >= 0 || t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view';
     return '<div class="card appcard" data-item="' + esc(id) + '">' + headOf(t, 4) + row(t, kind, true) + '</div>';
   }
@@ -939,7 +1015,7 @@
       else if (st >= x[3] && st >= 0) out += '<button class="lk no" type="button" data-addlink-open="' + esc(app.id) + '" data-key="' + x[0] + '" title="' + x[2] + ': add"><i class="ti ti-' + x[1] + '"></i></button>';
     });
     if (st >= 7) out += '<a class="lk" href="#/problem/' + esc(app.id) + '" title="Report a problem"><i class="ti ti-alert-triangle"></i></a>';
-    if (!full) { var n = LINKS.filter(function (x) { return L[x[0]]; }).length; out += '<a class="lk" href="#/card/' + esc(app.id) + '" title="All links"><span style="font-size:12px">' + n + '</span></a>'; }
+    if (!full) { var n = LINKS.filter(function (x) { return L[x[0]]; }).length; out += '<a class="lk" href="#/card/' + esc(app.id) + '" title="All links"><span class="lkn">' + n + '</span></a>'; }
     return out ? '<span class="links">' + out + '</span>' : '';
   }
   // App card: every link, grouped by job (Build · Run · Sell · Social · Support); dashed = expected by now, tap to add.
@@ -959,7 +1035,9 @@
     return a || q ? '<p class="muted" style="margin:0">' + (a ? '<i class="ti ti-circle-check"></i> ' + cnt(a) + ' passed on their own today' : '') + (a && q ? ' · ' : '') + (q ? '<i class="ti ti-hourglass"></i> ' + cnt(q) + ' waiting behind these' : '') + '</p>' : '';
   }
   // A count sits in a faint circle, so it reads as "how many", never as part of the words (Lisa, 20 Oct).
-  function cnt(n) { return '<span class="cnt">' + n + '</span>'; }
+  // One fixed box (30 x 22); 3+ characters grow. A count of 0 (or nothing) shows no pill at all; need = rose ring + tint.
+  function cnt(n, need) { return !n ? '' : '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + (need ? ' need' : '') + '">' + n + '</span>'; }
+  function tabN(id, n) { var e = $(id); e.textContent = n ? n : ''; e.classList.toggle('wide', String(n).length > 2); }
   // Words on screen start with a capital, after any code number: "8 Operate", "To do", "0 No data stored" (Lisa, 20 Oct).
   function cap(t) { return String(t == null ? '' : t).replace(/^(\S*\d\S*\s+|[?]\s+)?([a-z])/, function (m, d, c) { return (d || '') + c.toUpperCase(); }); }
   function lines(t) { return String(t.desc || '').split(/\r?\n|\\n/).map(function (l) { return l.trim(); }).filter(Boolean); }
@@ -1109,7 +1187,7 @@
     PARTS.forEach(function (p) { if (!p[1] && !idea.a[p[0]]) idea.a[p[0]] = '? not yet known'; });
     KILLS.forEach(function (k) { if (!idea.a[k[0]]) idea.a[k[0]] = 'no'; });
     var er = function (k) { return formErr[k] ? '<div class="ferr">' + esc(formErr[k]) + '</div>' : ''; };
-    return '<div class="card"><div class="grp" style="margin:0 0 6px"><span class="dot" style="background:var(--ljr-7)"></span>New idea</div>' +
+    return '<div class="card"><div class="grp" style="margin:0 0 8px"><span class="dot" style="background:var(--ljr-7)"></span>New idea</div>' +
       '<div class="fq"><p class="qt">Name<span class="req" title="Must answer">★</span></p><input class="fin" data-f="name" value="' + esc(idea.name || '') + '" aria-label="Name" maxlength="60">' + er('name') + '</div>' +
       BRIEF.map(function (b) {
         var input = b[3] ? chipsFor(b[0], b[3]) : '<textarea class="fin" data-f="' + b[0] + '" aria-label="' + esc(b[1]) + '" rows="2">' + esc(idea[b[0]] || '') + '</textarea>';
@@ -1147,7 +1225,7 @@
     var app = apps().filter(function (a) { return a.id === id; })[0];
     if (!app) return '<div class="card">Not found. <a href="#/rooms">Rooms</a></div>';
     var L = linksOf(app);
-    return '<div class="card"><div class="grp" style="margin:0 0 6px"><span class="dot" style="background:var(--ljr-2)"></span>' + esc(app.name.replace(/^TEST-/, '')) + ' · problem' + (isTest(app) ? '<span class="pill">TEST</span>' : '') + '</div>' +
+    return '<div class="card"><div class="grp" style="margin:0 0 8px"><span class="dot" style="background:var(--ljr-2)"></span>' + esc(app.name.replace(/^TEST-/, '')) + ' · problem' + (isTest(app) ? '<span class="pill">Test</span>' : '') + '</div>' +
       '<div class="fq"><div class="chips">' + PROB.map(function (p) { return '<button class="ch' + (prob.k === p[0] ? ' on' : '') + '" type="button" data-prob="' + p[0] + '"><i class="ti ti-' + p[1] + '"></i> ' + p[2] + '</button>'; }).join('') + '</div>' + (formErr.k ? '<div class="ferr">' + esc(formErr.k) + '</div>' : '') + '</div>' +
       '<div class="fq"><textarea class="fin" data-f="pwhat" aria-label="What happened">' + esc(prob.what || '') + '</textarea>' + (formErr.what ? '<div class="ferr">' + esc(formErr.what) + '</div>' : '') + '</div>' +
       (prob.k === 'leak' ? '<div class="fq"><p class="qt"><i class="ti ti-power"></i> Off first' + info('Unpublish in OverSkill now; the ICO clock (72 hours) starts when you know.') + '</p>' + linkStrip(app) + '</div>' : '') +
@@ -1205,10 +1283,10 @@
       '<table class="ptab"><thead><tr><th>App</th><th>Family</th><th>Stage</th><th></th><th>Changed</th></tr></thead><tbody>' +
       list.slice(0, pfo.all ? 2000 : 50).map(function (a) {
         var h = HW[health(a)];
-        return '<tr><td><a href="#/card/' + esc(a.id) + '"><span class="dot" style="background:var(--ljr-' + h[2] + ');display:inline-block;width:9px;height:9px;margin-right:6px"></span>' + esc(a.name.replace(/^TEST-/, '')) + '</a>' + (isTest(a) ? ' <span class="pill">TEST</span>' : '') + '</td><td class="muted">' + esc(famName(a) || '—') + '</td><td>' + esc(cap(a.status)) + '</td><td title="' + h[0] + '"><i class="ti ti-' + h[1] + '"></i></td><td class="muted">' + ago(a.updated) + '</td></tr>';
+        return '<tr><td><a href="#/card/' + esc(a.id) + '"><span class="dot" style="background:var(--ljr-' + h[2] + ');margin-right:8px"></span>' + esc(a.name.replace(/^TEST-/, '')) + '</a>' + (isTest(a) ? ' <span class="pill">Test</span>' : '') + '</td><td class="muted">' + esc(famName(a) || '—') + '</td><td>' + esc(cap(a.status)) + '</td><td title="' + h[0] + '"><i class="ti ti-' + h[1] + '"></i></td><td class="muted">' + ago(a.updated) + '</td></tr>';
       }).join('') + '</tbody></table>' +
       (list.length > 50 && !pfo.all ? '<button class="more" type="button" data-action="pfall">+' + (list.length - 50) + '</button>' : '') +
-      (!pfo.h && !pfo.arch && cntH('archive') ? '<button class="more" type="button" data-action="pfarch"><i class="ti ti-archive"></i> ' + cnt('archive') + '</button>' : '') + '</div>';
+      (!pfo.h && !pfo.arch && cntH('archive') ? '<button class="more" type="button" data-action="pfarch"><i class="ti ti-archive"></i> Archive ' + cnt(cntH('archive')) + '</button>' : '') + '</div>';
   }
   // Apps & ideas at any size: Needs you · Building · Ideas · Archive (folded), with a search box.
   var appQ = '';
@@ -1220,7 +1298,7 @@
       ['Building', 'hammer', list.filter(function (a) { return !arch(a) && !alarm(a) && !stuck(a) && reached(a) >= 4 && reached(a) < 8; })],
       ['Ideas', 'bulb', list.filter(function (a) { return !arch(a) && !alarm(a) && !stuck(a) && reached(a) < 4; })]];
     var a8 = list.filter(arch);
-    return '<div class="card"><input class="fin search" data-f="appq" value="' + esc(appQ) + '" aria-label="Search apps" type="search"><div style="margin-top:10px">' +
+    return '<div class="card"><input class="fin search" data-f="appq" value="' + esc(appQ) + '" aria-label="Search apps" type="search"><div style="margin-top:12px">' +
       G.filter(function (g) { return g[2].length; }).map(function (g) { return '<div class="grpt"><i class="ti ti-' + g[1] + '"></i>' + g[0] + ' ' + cnt(g[2].length) + '</div><div class="pills">' + g[2].map(chipOf).join('') + '</div>'; }).join('') +
       (a8.length ? '<details class="arch"><summary class="grpt"><i class="ti ti-archive"></i>Archive · ' + a8.length + '</summary><div class="pills">' + a8.map(chipOf).join('') + '</div></details>' : '') +
       '</div></div>';
@@ -1275,7 +1353,7 @@
     var head = function (g) {
       var a = inPlay[g] || apps().filter(function (x) { return bare(x) === g; })[0];
       var h = a ? HW[health(a)] : null;
-      return '<tr class="dgrp"><td colspan="4"><span class="dot" style="background:var(--ljr-' + (h ? h[2] : 0) + ');display:inline-block;width:9px;height:9px;margin-right:6px"></span>' +
+      return '<tr class="dgrp"><td colspan="4"><span class="dot" style="background:var(--ljr-' + (h ? h[2] : 0) + ');margin-right:8px"></span>' +
         (a ? '<a href="#/app/' + esc(slugOf(g)) + '">' + esc(g) + '</a> <span class="muted">' + esc(cap(a.status)) + '</span>' : esc(g)) + '</td></tr>';
     };
     var shown = 0, body = groups.map(function (g) { var rows = by[g].slice(0, docsAll ? 999 : 8); shown += rows.length; return head(g) + rows.map(function (d) { return docRow(d, need); }).join('') + (by[g].length > rows.length ? '<tr><td></td><td colspan="3">' + cnt('+' + (by[g].length - rows.length)) + '</td></tr>' : ''); }).join('');
@@ -1340,8 +1418,8 @@
       return h.result !== 'OK' || !(now - last < WINDOW_H[h.job] * 36e5);
     }).map(function (h) { return (JOB[h.job] || h.job) + ' ' + word(h); });
     if (now - Date.parse(S.generated_at) > 45 * 6e4) bad.unshift('Data old');
-    return bad.length ? '<a class="pill alert has" href="#/health" title="' + esc(bad.join(' · ')) + '"><i class="ti ti-alert-triangle"></i> <span class="hot">' + bad.length + '</span></a>' :
-      '<a class="pill" href="#/health" title="Engine"><i class="ti ti-check"></i></a>';
+    return bad.length ? '<a class="pill alert has" href="#/health" title="' + esc(bad.join(' · ')) + '"><i class="ti ti-alert-triangle"></i> Engine ' + cnt(bad.length, true) + '</a>' :
+      '<a class="pill" href="#/health" title="Engine"><i class="ti ti-check"></i> Engine</a>';
   }
   var JOB = { syncState: 'Screen sync', dailyDigest: 'Daily email', staleCheck: 'Stuck check', weeklyBackup: 'Backup', leakProbe: 'Live-app check', onIdeaSubmit: 'Idea Form' };
   function word(h) { var r = String(h.result).toUpperCase(); return r === 'INSTALLED' ? 'Never' : r === 'OFF' ? 'Off' : r === 'OK' ? 'Late' : r.charAt(0) + r.slice(1).toLowerCase(); }
@@ -1357,7 +1435,7 @@
       }).join('') + '<p class="muted">Data read ' + new Date(S.generated_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + '.</p><p><a href="#/rooms">← Rooms</a></p></div>';
   }
   function vApps(title, list) {
-    return '<div class="card"><b>' + esc(title) + ' · ' + list.length + '</b><div class="pills" style="margin-top:8px">' + (list.length ? list.map(chipOf).join('') : '<span class="muted">None.</span>') + '</div><p><a href="#/rooms">← Rooms</a></p></div>';
+    return '<div class="card"><b>' + esc(title) + '</b> ' + cnt(list.length) + '<div class="pills" style="margin-top:8px">' + (list.length ? list.map(chipOf).join('') : '<p class="empty">None right now. All clear.</p>') + '</div><p><a href="#/rooms">← Rooms</a></p></div>';
   }
   // Clicks already sent stay marked "sent" for a day, so a row never asks twice before the engine catches up.
   function loadSent() {
@@ -1393,7 +1471,7 @@
     allTasks();
     // Menu counts: unanswered, and TEST only when that tab shows TEST.
     var waiting = function (tab) { return function (t) { return !sent[t.id] && (fsOf(tab).test || !testT(t)); }; };
-    $('nMe').textContent = meItems().filter(waiting('me')).length; $('nDecide').textContent = decisions().filter(waiting('decide')).length; $('nDo').textContent = mine().filter(waiting('do')).length;
+    tabN('nMe', meItems().filter(waiting('me')).length); tabN('nDecide', decisions().filter(waiting('decide')).length); tabN('nDo', mine().filter(waiting('do')).length);
     var tb = barTab(); if (tb) toUrl(tb);
     v.innerHTML = route[0] === 'me' ? list('me', meItems(), 4, 'me') : route[0] === 'item' ? vItem(route[1]) : route[0] === 'app' ? vApp(route[1]) :
       route[0] === 'today' ? vToday() : route[0] === 'queue' ? list('queue', queue(route[1]), 5, 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? vPortfolio() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list('decide', decisions(), 4, 'decide') + decideFoot() :

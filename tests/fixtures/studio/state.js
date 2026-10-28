@@ -25,9 +25,9 @@
         { id: 'sp-client', accountId: 'acc-client', brandId: 'sb-client', name: 'Sample client book', type: 'book' }
       ],
       brands: [
-        { id: 'sb-north', accountId: 'acc-owner', name: 'Sample Brand North', colour: 7, stage: 'Running', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }, { name: 'Email list', ok: false }], groupId: 'grp-dogs', voiceId: 'vo-warm', lookId: 'look-combination' },
-        { id: 'sb-south', accountId: 'acc-owner', name: 'Sample Brand South', colour: 6, stage: 'Tech set-up', setupChecklist: [{ name: 'Name checked', ok: true }], groupId: 'grp-dogs', voiceId: null, lookId: null },
-        { id: 'sb-client', accountId: 'acc-client', name: 'Sample Client Brand', colour: 5, stage: 'Launch', setupChecklist: [], groupId: 'grp-services', voiceId: null, lookId: null }
+        { id: 'sb-north', accountId: 'acc-owner', name: 'Sample Brand North', colour: 7, stage: 'Running', setupChecklist: [{ name: 'Name checked', ok: true }, { name: 'Logo', ok: true }, { name: 'Email list', ok: false }], groupId: 'grp-dogs', voiceId: 'vo-warm', lookId: 'look-combination', kit: { canvaKitId: null, canvaKitUrl: null, font: null, colours: ['#A570D1'], fontHeading: 'Lexend', fontBody: null, logoIds: [], logo: 'https://www.example.com/north-logo.png', voice: null, designRoute: null, website: 'https://www.example.com/north' } },
+        { id: 'sb-south', accountId: 'acc-owner', name: 'Sample Brand South', colour: 6, stage: 'Tech set-up', setupChecklist: [{ name: 'Name checked', ok: true }], groupId: 'grp-dogs', voiceId: null, lookId: null, kit: { canvaKitId: null, canvaKitUrl: null, font: null, colours: [], fontHeading: null, fontBody: null, logoIds: [], logo: null, voice: null, designRoute: null, website: null } },
+        { id: 'sb-client', accountId: 'acc-client', name: 'Sample Client Brand', colour: 5, stage: 'Launch', setupChecklist: [], groupId: 'grp-services', voiceId: null, lookId: null, kit: { canvaKitId: null, canvaKitUrl: null, font: null, colours: [], fontHeading: null, fontBody: null, logoIds: [], logo: null, voice: null, designRoute: null, website: null } }
       ],
       assets: [
         a({ id: 'sa-rev1', title: 'Sample checklist PDF', productId: 'sp-course', stage: 7, reviewLink: 'https://drive.google.com/file/d/1SAMPLEreviewDoc00000000000/view', updated: iso(-H),
