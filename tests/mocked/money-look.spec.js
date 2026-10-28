@@ -21,6 +21,9 @@ async function go(page, v) {
   await page.evaluate((h) => { location.hash = '#/' + h; }, v);
   await expect(page.locator('#view')).toHaveAttribute('data-view', v.split('/')[0]);
 }
+// Wait until every CSS transition on the element and inside it has finished (the tab colour bar widens over .15s),
+// so the final value is measured, never a frame in the middle of the animation.
+const settle = (loc) => loc.evaluate((e) => Promise.all([e, ...e.querySelectorAll('*')].flatMap((n) => n.getAnimations()).map((a) => a.finished)));
 const shown = (e) => e.getClientRects().length > 0 && getComputedStyle(e).visibility !== 'hidden';
 
 test.describe('Money Hub look: rules 1-4 by computed style', () => {
@@ -142,7 +145,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
         await el.scrollIntoViewIfNeeded();
         const before = await el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; });
         await el.hover();
-        await page.waitForTimeout(250);
+        await settle(el);
         const got = await el.evaluate((e, kind) => {
           const r = e.getBoundingClientRect(), cs = getComputedStyle(e), root = getComputedStyle(document.documentElement);
           // Expected colours, resolved by the browser itself through a probe element.
@@ -174,6 +177,8 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
     await go(page, 'todo');
     const look = (sel) => page.locator(sel).evaluate((e) => { const cs = getComputedStyle(e); return [cs.outlineStyle, cs.outlineWidth, cs.outlineOffset, cs.outlineColor, cs.backgroundColor]; });
     const sub = await look('.subnav a[aria-current="page"]');
+    await page.mouse.move(0, 0); // nothing hovered: the bar must be wide because it is selected
+    await settle(page.locator('nav.main a[aria-current="page"]'));
     const tab = await page.locator('nav.main a[aria-current="page"]').evaluate((e) => {
       const d = document.createElement('i'); d.style.backgroundColor = 'var(--card)'; e.appendChild(d); const card = getComputedStyle(d).backgroundColor; d.remove();
       const cs = getComputedStyle(e);
