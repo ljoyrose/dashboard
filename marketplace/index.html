@@ -140,8 +140,8 @@
 
   /* Work area. Spacing in 12px steps; 16px under a header line before the first item. */
   main, main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }   /* .wrap alone would drop the room for the tab bar */
-  #view { display: flex; flex-direction: column; gap: 24px; }   /* two steps between cards: Lisa 27 Oct, "very cramped" */
-  #view > .grp, #view > .ghead { margin-top: 12px; margin-bottom: -8px; }   /* a heading sits close to its own cards: 16px under it */
+  #view { display: flex; flex-direction: column; gap: 12px; }   /* one 12px step between cards (Lisa chose 12px, 28 Oct) */
+  #view > .grp, #view > .ghead { margin-top: 12px; margin-bottom: 4px; }   /* 16px under a header line before its first card (12px gap + 4px) */
   .needs { font-size: 26px; font-weight: 600; margin: 0; line-height: 1.3; }   /* the page greeting */
   .needs .zero { font-variant-numeric: tabular-nums; }
   .hint { font-size: 14px; color: var(--muted); margin: 0; }

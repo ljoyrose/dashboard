@@ -886,6 +886,24 @@ test.describe('Marketplace house look', () => {
     expect(wide[1]).toBe(22); expect(wide[0]).toBeGreaterThan(30);
   });
 
+  test('spacing: 12px between cards (Lisa chose 12px), 16px under a header line before its first card', async ({ page }) => {
+    await lookSheets(page);
+    await open(page, '#/do');
+    const gaps = await page.evaluate(() => {
+      const kids = [...document.querySelectorAll('#view > *')].filter((e) => e.offsetParent);
+      const out = { cards: [], head: [] };
+      for (let i = 1; i < kids.length; i++) {
+        const a = kids[i - 1], b = kids[i], g = Math.round(b.getBoundingClientRect().top - a.getBoundingClientRect().bottom);
+        if (a.matches('.card') && b.matches('.card')) out.cards.push(g);
+        if (a.matches('.ghead') && b.matches('.card')) out.head.push(g);
+      }
+      return out;
+    });
+    expect(gaps.cards.length).toBeGreaterThan(0); expect(gaps.head.length).toBeGreaterThan(0);
+    expect([...new Set(gaps.cards)]).toEqual([12]);
+    expect([...new Set(gaps.head)]).toEqual([16]);
+  });
+
   test('keyboard focus is a 2px ink ring', async ({ page }) => {
     await lookSheets(page);
     await open(page);
