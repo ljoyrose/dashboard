@@ -79,7 +79,8 @@
   /* Signed out (auth.js hides the page): the dark bar itself stays, so the sign-in and Dashboard buttons keep their frame;
      the title is hidden there, so Dashboard keeps its top-right place. */
   html.dash-locked header { visibility: visible; }
-  html.dash-locked .back { margin-left: auto; }
+  html.dash-locked .top > .readstamp, html.dash-locked .top > [data-search-open] { display: none; }
+  html.dash-locked .top > #signInBtn { margin-left: auto; }
   #backHome { min-height: 44px; } /* the shared Dashboard button rule (one-sign-in-tabs): 44px on every page, as in Studio */
 
   /* Everything you press: the same clear line (--ctl), 1px, 12px corners, 36px desktop / 44px phone, 14px 600. Never starts out ink. */
