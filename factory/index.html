@@ -86,7 +86,7 @@
   html.dash-locked .top > #signInBtn { margin-left: auto; }
 
   /* Everything you press: the same clear 1px line (--ctl), 12px corners, 36px on a desktop / 44px on a phone, 14px 600. */
-  .btn, button.pill, a.pill, .fbtn, .ch, .more, .undo, .copy, .tick, .stat, label.date, a.chip, a.need, details.arch > summary {
+  .btn, button.pill, a.pill, .fbtn, .ch, .more, .undo, .copy, .tick, .stat, label.date, a.chip, a.need, details.arch > summary, .fdet > summary {
     font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius);
     min-height: 36px; padding: 0 14px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; text-decoration: none; line-height: 1.5; }
   /* Icon buttons: a 36px square on the same line. */
@@ -119,7 +119,7 @@
   .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
   @media (hover: hover) {
     .btn:hover, button.pill:hover, a.pill:hover, .fbtn:hover, .ch:hover, .more:hover, .undo:hover, .copy:hover, .tick:hover, label.date:hover, a.chip:hover, details.arch > summary:hover,
-    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
     .btn.yes:hover, .btn.no:hover, .lk.off:hover, a.need:hover, a.chip.stuck:hover, a.pill.alert.has:hover, label.date.over:hover, label.date.soon:hover, .stat:hover {
       outline: 1px solid var(--mc); outline-offset: -1px; background: color-mix(in srgb, var(--mc) 14%, var(--surface)); }
     header .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 10%, var(--frame)); }
@@ -151,14 +151,14 @@
 
   /* Counts: ONE fixed box so 1 and 2 digits match (30 x 22, radius 11); only 3+ digits grow (.wide). Read-only: no hover.
      Tab counts are an amber ring only (no fill); "needs you" counts in the page are a rose ring + tint. A count of 0 shows no pill. */
-  .cnt, nav.tabs .n, .fbtn .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 30px; height: 22px; padding: 0 3px; flex: none;
+  .cnt, nav.tabs .n, .fbtn .n, .fdet > summary .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 30px; height: 22px; padding: 0 3px; flex: none;
     border: 1px solid var(--ctl); border-radius: 11px; font-size: 13px; font-weight: 600; line-height: 20px; color: var(--ink); background: transparent; white-space: nowrap; font-variant-numeric: tabular-nums; vertical-align: middle; }
   .cnt.wide, nav.tabs .n.wide, .fbtn .n.wide { width: auto; min-width: 30px; padding: 0 6px; }
   nav.tabs .n { border-color: var(--r-warn); }
   .cnt.need { border-color: var(--r-risk); background: var(--t-risk); }
-  .cnt:empty, nav.tabs .n:empty, .fbtn .n:empty { display: none; }
+  .cnt:empty, nav.tabs .n:empty, .fbtn .n:empty, .fdet > summary .n:empty { display: none; }
   @media (max-width: 600px) {
-    .btn, button.pill, a.pill, .fbtn, .ch, .more, .undo, .copy, .tick, .stat, label.date, a.chip, a.need, details.arch > summary, .sbox, .fin, .ask input, .ask select { min-height: 44px; }
+    .btn, button.pill, a.pill, .fbtn, .ch, .more, .undo, .copy, .tick, .stat, label.date, a.chip, a.need, details.arch > summary, .fdet > summary, .sbox, .fin, .ask input, .ask select { min-height: 44px; }
     .ico, .flagb, .opt, .mark, .plus, .lk { width: 44px; height: 44px; }
     .lk.off { width: auto; }
     /* Phone: two rows of three tabs; the count sits in flow beside the label, never over it. */
@@ -345,6 +345,21 @@
   .fbar2 { display: flex; flex-direction: column; gap: 8px; }
   .srow { display: flex; gap: 8px; align-items: center; }
   .fbtn .n { margin-left: 2px; }
+  /* Filter = a summary in the search row's right end (absolutely placed in the room the row keeps for it); the chips open below. */
+  .fbar2 { position: relative; }
+  .fbar2 .srow { padding-right: 124px; }
+  .fdet > summary { position: absolute; top: 0; right: 0; width: 116px; justify-content: center; list-style: none; }
+  .fdet > summary::-webkit-details-marker { display: none; }
+  .fdet[open] > summary { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+  .fdet .fbody { display: flex; flex-direction: column; gap: 8px; }
+  .fdet .n { margin-left: 2px; }
+  .srow .sbox { min-width: 0; }
+  .srow > .pill { flex: none; white-space: nowrap; }
+  @media (max-width: 600px) {
+    .fbar2 .srow { padding-right: 100px; }
+    .fdet > summary { width: 92px; padding: 0 8px; gap: 4px; }
+    .srow > .pill { padding: 0 10px; }
+  }
   .sect { font-size: 14px; font-weight: 600; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 12px 0 0; }
 
   /* Friendly empty state: plain words after a small green-ring check. */
@@ -503,13 +518,14 @@
 
   /* views */
   function vRooms() {
-    var all = apps(), fsR = fsOf('rooms'), A = all.filter(function (a) { return hit(a, fsR, APP); }), html = findBar('rooms', all, APP, []) + (A.length ? '' : emptyBox()) + '<div class="pills">' +
+    var all = apps(), fsR = fsOf('rooms'), A = all.filter(function (a) { return hit(a, fsR, APP); }), sw = '<button class="pill" type="button" data-action="factory" aria-label="Factory on or off" title="Factory"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span> Factory ' + (factoryOn() ? 'on' : 'off') + '</button>';
+    var html = findBar('rooms', all, APP, [], { side: sw, extra: '<div class="pills">' +
       // Every count is a link: it opens the list it counts.
       '<a class="pill" href="#/all" title="Apps"><i class="ti ti-apps"></i> Apps ' + cnt(A.length) + '</a>' +
       '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> Stuck ' + cnt(A.filter(stuck).length, true) + '</a>' +
       '<a class="pill" href="#/room/reactor" title="Build slots"><i class="ti ti-hammer"></i> ' + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + '/3</a>' +
       people().map(function (w) { return '<a class="pill" href="#/queue/' + encodeURIComponent(w) + '">' + esc(w) + ' ' + cnt(queue(w).length) + '</a>'; }).join('') +
-      '<button class="pill" type="button" data-action="factory" aria-label="Factory on or off" title="Factory"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span> Factory ' + (factoryOn() ? 'on' : 'off') + '</button>' + enginePill() + ckPill() + '</div>' + docsStrip() + '<div class="rooms">';
+      enginePill() + ckPill() + '</div>' + docsStrip() }) + (A.length ? '' : emptyBox()) + '<div class="rooms">';
     ROOMS.forEach(function (r) {
       var inRoom = A.filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
       html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><a class="rlink" href="#/room/' + r.key + '"><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '</a><span class="ct">' + cnt(inRoom.length) + '</span></h2><span class="stn">' + esc(r.st.join(' · ')) + '</span>' +
@@ -628,7 +644,8 @@
    */
   var PRI = { urgent: [1, '#f50000'], high: [2, '#ffcc00'], normal: [3, '#6fddff'], low: [4, '#d8d8d8'] };
   var MEANING = /^(paid|sen-check|kill-suggested|leak|question)/;
-  var openPanel = null, filtersOpen = false, weekView = false, cardAsk = false;
+  var openPanel = null, filtersOpen = false, weekView = false, cardAsk = false, fdOpen = null;
+  document.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('fdet')) fdOpen = e.target.open; }, true);
   var pend = loadLocal('af-pend'), seen = loadLocal('af-seen');
   function allTasks() { var L = S.lists, out = []; Object.keys(L).forEach(function (k) { if (k !== 'template') (L[k] || []).forEach(function (t) { t._k = k; out.push(t); }); }); return out; }
   function byId(id) { return allTasks().filter(function (t) { return t.id === id; })[0]; }
@@ -828,9 +845,14 @@
   function fchip(key, val, label, on, extra) { return '<button class="pill' + (on ? ' on' : '') + (extra || '') + '" type="button" data-fx="' + key + '" data-val="' + esc(val) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + label + '</button>'; }
   function flagWords(h) { return h.replace('URGENT', flagIcon({ p: 'urgent' })).replace('NOFLAG', flagIcon(null)); }
   // The bar. Chips show only what is on this tab (count in a faint circle); a row with one choice is left out.
-  function findBar(tab, items, F, kinds) {
-    var s = fsOf(tab), n = onCount(tab), html = '<div class="fbar2" data-bar="' + tab + '"><div class="srow"><label class="sbox"><i class="ti ti-search" aria-hidden="true"></i><input type="search" data-f="fq" value="' + esc(s.q) + '" aria-label="Search" autocomplete="off"></label>' +
-      '<button id="filtersBtn" class="fbtn' + (filtersOpen ? ' on' : '') + '" type="button" data-action="filters" aria-label="Filter" aria-expanded="' + filtersOpen + '"><i class="ti ti-adjustments-horizontal"></i><span class="n" id="nFilters">' + (n || '') + '</span></button></div>';
+  // One calm row (Lisa's Studio choice, 28 Oct): Search · (Factory on/off on Rooms) · Filter. Filter is a details/summary that holds
+  // every chip row; open by default at 900px and wider, closed on a phone, and it remembers what you chose. The count on it says
+  // how many filters are on. Inside, "More" opens Who · Stage · Flags · Sort · Test as before.
+  function findBar(tab, items, F, kinds, o) {
+    o = o || {};
+    var s = fsOf(tab), n = onCount(tab), open = fdOpen === null ? window.matchMedia('(min-width: 900px)').matches : fdOpen;
+    var html = '<div class="fbar2" data-bar="' + tab + '"><div class="srow"><label class="sbox"><i class="ti ti-search" aria-hidden="true"></i><input type="search" data-f="fq" value="' + esc(s.q) + '" aria-label="Search" autocomplete="off"></label>' +
+      (o.side || '') + '</div><details class="fdet"' + (open ? ' open' : '') + '><summary id="filterSum"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>Filter<span class="n" id="nFilters">' + (n || '') + '</span></summary><div class="fbody">';
     var by = {}, order = [];
     items.filter(function (x) { return hit(x, s, F, 'app'); }).forEach(function (x) { var g = F.app(x); if (!by[g]) { by[g] = 0; order.push(g); } by[g]++; });
     order.sort(function (a, b) { return (a === 'Factory') - (b === 'Factory') || a.localeCompare(b); });
@@ -839,6 +861,7 @@
     var kc = {}; items.filter(function (x) { return hit(x, s, F, 'kind'); }).forEach(function (x) { var k = F.kind(x); if (k) kc[k] = (kc[k] || 0) + 1; });
     var kh = kinds.filter(function (k) { return kc[k[0]] || s.kind.indexOf(k[0]) >= 0; });
     if (kh.length > 1 || s.kind.length) html += '<div class="pills" data-frow="kind">' + kh.map(function (k) { return fchip('kind', k[0], '<i class="ti ti-' + k[1] + (tab === 'docs' ? ' dti" data-t="' + k[0] : '') + '"></i> ' + k[2] + ' ' + cnt(kc[k[0]] || 0), s.kind.indexOf(k[0]) >= 0); }).join('') + '</div>';
+    html += '<div class="pills"><button id="filtersBtn" class="fbtn' + (filtersOpen ? ' on' : '') + '" type="button" data-action="filters" aria-expanded="' + filtersOpen + '"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>More</button></div>';
     if (filtersOpen) {
       var wc = {}; items.filter(function (x) { return hit(x, s, F, 'who'); }).forEach(function (x) { F.who(x).forEach(function (w) { wc[w] = (wc[w] || 0) + 1; }); });
       var sc = {}; items.filter(function (x) { return hit(x, s, F, 'st'); }).forEach(function (x) { var v = F.st(x); if (v !== null) sc[v] = (sc[v] || 0) + 1; });
@@ -851,7 +874,7 @@
         '<div class="pills"><button class="pill" type="button" data-action="ftest" aria-pressed="' + s.test + '" title="TEST">Test <span class="sw' + (s.test ? ' on' : '') + '"><i></i></span> ' + cnt(tests) + '</button>' +
         '<button class="pill" type="button" data-action="clearf"><i class="ti ti-filter-off"></i> Clear</button></div></div>';
     }
-    return html + '</div>';
+    return html + (o.extra || '') + '</div></details></div>';
   }
   // Friendly empty state: plain words after a green-ring check; Clear only when a filter or search is on.
   function emptyBox(words) {

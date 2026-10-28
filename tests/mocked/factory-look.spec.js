@@ -375,3 +375,19 @@ test.describe('Factory look: counts and empty states', () => {
     expect(ring[3]).toBe('50%');
   });
 });
+
+test('find bar: Search, Factory on/off and Filter in one row; Filter is open by default at 900px and wider', async ({ page, guard }) => {
+  await open(page, guard, '#/rooms');
+  await expect(page.locator('details.fdet')).toHaveAttribute('open', '');
+  const top = (sel) => page.locator(sel).first().evaluate((e) => Math.round(e.getBoundingClientRect().top));
+  expect(await top('#filterSum')).toBe(await top('.srow .sbox'));
+  expect(await top('.srow [data-action="factory"]')).toBe(await top('.srow .sbox'));
+  await expect(page.locator('#filterSum')).toContainText('Filter');
+  await expect(page.locator('#filterSum .n')).toBeHidden(); // nothing on: no empty ring
+  await page.locator('[data-fx="app"][data-val="links"]').click();
+  await expect(page.locator('#nFilters')).toHaveText('1');
+  await page.locator('#filterSum').click();
+  await expect(page.locator('[data-fx="app"]').first()).toBeHidden();
+  await page.locator('nav.tabs a[data-nav="do"]').click();
+  await expect(page.locator('details.fdet')).not.toHaveAttribute('open', ''); // your choice is kept
+});

@@ -25,7 +25,7 @@ for (const scheme of ['light', 'dark']) {
     for (const v of VIEWS) {
       await page.evaluate((h) => { location.hash = '#/' + h; }, v);
       await expect(page.locator('#view > *').first()).toBeVisible();
-      if (v === 'do') await page.locator('#filtersBtn').click();
+      if (v === 'do') { await page.locator('#filterSum').click(); await page.locator('#filtersBtn').click(); }
       const r = await page.evaluate((PRESS) => {
         const out = [], W = window.innerWidth;
         if (document.documentElement.scrollWidth > W + 1) out.push('page is ' + document.documentElement.scrollWidth + 'px wide');
@@ -52,3 +52,33 @@ for (const scheme of ['light', 'dark']) {
     }
   });
 }
+
+// One calm row on the phone (Lisa's Studio choice): Search, Factory on/off and Filter in one row; the chips wait behind Filter.
+test('Factory phone: Rooms opens with one calm row, the first room card within 260px of the top of the content', async ({ page, guard }) => {
+  guard.world.folder(LOGS, 'AF logs (sample)');
+  guard.world.file('af-state-sample', 'af-state.json', JSON.stringify(build(Date.now())), { parents: [LOGS], mimeType: 'application/json' });
+  await page.goto('factory/#/rooms');
+  await expect(page.locator('#signInBtn')).toBeEnabled();
+  await page.locator('#signInBtn').click();
+  await expect(page.locator('.rooms .room').first()).toBeVisible();
+  const r = await page.evaluate(() => {
+    const top = document.querySelector('main').getBoundingClientRect().top, room = document.querySelector('.rooms .room').getBoundingClientRect().top;
+    const row = (sel) => document.querySelector(sel).getBoundingClientRect();
+    const a = row('.srow .sbox'), b = row('.srow [data-action="factory"]'), c = row('#filterSum');
+    return { gap: room - top, search: a.top, sw: b.top, filter: c.top, order: a.right <= b.left + 0.5 && b.right <= c.left + 0.5 && c.right <= window.innerWidth, searchW: a.width };
+  });
+  expect(r.order, 'search, switch and Filter side by side, none overlapping, all on screen').toBe(true);
+  expect(r.searchW, 'the search box keeps room to type').toBeGreaterThanOrEqual(80);
+  expect(r.gap, 'first room card from the top of the content').toBeLessThanOrEqual(260);
+  expect(Math.abs(r.sw - r.search), 'Factory on/off sits beside the search').toBeLessThan(2);
+  expect(Math.abs(r.filter - r.search), 'Filter sits in the same row').toBeLessThan(2);
+  await expect(page.locator('.srow [data-action="factory"]')).toContainText(/Factory (on|off)/);
+  await expect(page.locator('details.fdet')).not.toHaveAttribute('open', '');
+  await expect(page.locator('[data-fx="app"]').first()).toBeHidden();
+  // Filter opens the chips, and the count on it says how many are on.
+  await page.locator('#filterSum').click();
+  await expect(page.locator('[data-fx="app"]').first()).toBeVisible();
+  await page.locator('[data-fx="app"][data-val="links"]').click();
+  await expect(page.locator('#nFilters')).toHaveText('1');
+  await expect(page.locator('details.fdet')).toHaveAttribute('open', ''); // stays open after a redraw
+});
