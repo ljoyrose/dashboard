@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-food-2026-10-27-v7">
+<meta name="build" content="ljr-food-2026-10-28-v8">
 <title>GA Hub</title>
 <!-- GA Hub v1 (26 Oct 2026): Designer Dog Foods orders, GA invoices, products and GA details. PUBLIC repo: no data, no secrets.
      The workbook id comes from ../config.js (DASH_CONFIG.food); everything else is read at run time with Lisa's Google sign-in
@@ -16,82 +16,207 @@
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap">
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="../tokens.css">
+<script>
+  /* Look (shared with Studio): localStorage 'dash-look' = { bg: warm|cool, sel: line|soft, mode: device|light|dark }. Read only here;
+     it is set from the Look menu in Studio. Classes go on <html> before anything is drawn. Mode "dark" follows the device on this page
+     (tokens.css only darkens with the device). */
+  (function () { try { var o = JSON.parse(localStorage.getItem('dash-look') || '{}') || {}, c = document.documentElement.classList;
+    c.toggle('look-cool', o.bg === 'cool'); c.toggle('sel-soft', o.sel === 'soft'); if (o.mode === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {} })();
+</script>
 <style>
-  /* Colours: ../tokens.css only (LJR7 spine), same shapes as marketplace/. No colour is written here. */
-  :root { --radius: 12px; --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
-          --line: color-mix(in srgb, var(--ljr-0) 55%, var(--ljr-paper)); }
+  /* House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026). Colours: ../tokens.css only, mixed here; no colour is written on this page.
+     Warm clear (default) or Cool clear, each with a dark version. Lexend 400/600, nothing under 13px, line height 1.5.
+     Every line is 1px. Hover and selected = the same 1px edge turns ink (outline over it): nothing moves or grows. ONE radius, 12px.
+     No solid colour fills and no coloured words: colour lives only in dots, thin bars, 1px rings and light tints. */
+  :root { --radius: 12px;
+    --bg: color-mix(in srgb, var(--ljr-cream) 70%, var(--ljr-0-tint)); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
+    --line: color-mix(in srgb, var(--ljr-0) 70%, var(--ljr-paper));                 /* dividers inside a card */
+    --ctl: color-mix(in srgb, color-mix(in srgb, var(--ljr-muted) 70%, var(--ljr-0)) 95%, var(--ljr-3));   /* warm control line, as the brief's 8A7F70 */                  /* the clear line every control rests on: 3:1 */
+    --frame: color-mix(in srgb, var(--ljr-ink) 80%, var(--ljr-muted));              /* warm charcoal, never black */
+    --frame-foot: color-mix(in srgb, var(--ljr-ink) 66%, var(--ljr-muted));         /* one step lighter, so both bars read the same */
+    --frame-ink: var(--ljr-paper); --frame-line: color-mix(in srgb, var(--ljr-paper) 55%, var(--ljr-muted));
+    --rose: var(--ljr-2-text); --rose-tint: var(--ljr-2-tint); --amber: var(--ljr-3-text); --amber-tint: var(--ljr-3-tint);
+    --green: var(--ljr-5-text); --green-tint: var(--ljr-5-tint);
+    --sel-bd: var(--ink); --sel-fill: color-mix(in srgb, var(--muted) 14%, var(--surface)); }   /* neutral hover = selected: ink line + muted tint */
+  :root.look-cool {
+    --bg: color-mix(in srgb, var(--ljr-paper) 94%, var(--ljr-ava-h)); --surface: color-mix(in srgb, var(--ljr-paper) 98%, var(--ljr-ava-h));
+    --ink: color-mix(in srgb, var(--ljr-ink) 90%, var(--ljr-ava-h)); --muted: color-mix(in srgb, var(--ljr-muted) 82%, var(--ljr-ava-h));
+    --line: color-mix(in srgb, color-mix(in srgb, var(--ljr-0) 70%, var(--ljr-paper)) 88%, var(--ljr-ava-h));
+    --ctl: color-mix(in srgb, color-mix(in srgb, var(--ljr-muted) 53%, var(--ljr-0)) 73%, var(--ljr-ava-h));   /* cool control line, as the brief's 7A8692 */
+    --frame: color-mix(in srgb, color-mix(in srgb, var(--ljr-ink) 70%, var(--ljr-muted)) 70%, var(--ljr-ava-h));   /* slate */
+    --frame-foot: color-mix(in srgb, color-mix(in srgb, color-mix(in srgb, var(--ljr-ink) 70%, var(--ljr-muted)) 70%, var(--ljr-ava-h)) 92%, var(--ljr-paper));
+    --frame-ink: var(--ljr-paper); --frame-line: color-mix(in srgb, color-mix(in srgb, var(--ljr-paper) 55%, var(--ljr-muted)) 85%, var(--ljr-ava-h)); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { color-scheme: dark;
+      --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
+      --line: color-mix(in srgb, var(--ljr-0) 70%, var(--ljr-paper)); --ctl: color-mix(in srgb, var(--ljr-muted) 65%, var(--ljr-0));
+      --frame: color-mix(in srgb, var(--ljr-paper) 60%, var(--ljr-0-tint)); --frame-foot: color-mix(in srgb, var(--ljr-paper) 20%, var(--ljr-0-tint));
+      --frame-ink: var(--ljr-ink); --frame-line: var(--ljr-muted); }
+    :root.look-cool:not([data-theme="light"]) {
+      --bg: color-mix(in srgb, var(--ljr-cream) 90%, var(--ljr-ava-h)); --surface: color-mix(in srgb, var(--ljr-paper) 90%, var(--ljr-ava-h));
+      --ink: color-mix(in srgb, var(--ljr-ink) 92%, var(--ljr-ava-h)); --muted: color-mix(in srgb, var(--ljr-muted) 85%, var(--ljr-ava-h));
+      --line: color-mix(in srgb, color-mix(in srgb, var(--ljr-0) 70%, var(--ljr-paper)) 88%, var(--ljr-ava-h));
+      --ctl: color-mix(in srgb, color-mix(in srgb, var(--ljr-muted) 65%, var(--ljr-0)) 85%, var(--ljr-ava-h));
+      --frame: color-mix(in srgb, var(--ljr-paper) 80%, var(--ljr-ava-h)); --frame-foot: color-mix(in srgb, var(--ljr-paper) 70%, var(--ljr-ava-h));
+      --frame-ink: var(--ljr-ink); --frame-line: color-mix(in srgb, var(--ljr-muted) 85%, var(--ljr-ava-h)); }
+  }
+  :root.sel-soft { --sel-bd: var(--ljr-7-text); --sel-fill: var(--ljr-7-tint); }
   * { box-sizing: border-box; }
-  html { scroll-padding-bottom: 96px; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 17px; line-height: 1.5; }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
-  header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
-  .top { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; padding: 10px 16px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
-  .top h1 a { color: inherit; text-decoration: none; }
-  .stamp { font-size: 11px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 5px; }
-  .btn { font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 8px 14px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; min-height: 44px; }
-  .btn:hover { border-color: var(--muted); }
-  .btn.main { border-color: var(--ink); }
-  .btn.big { width: 100%; justify-content: center; font-size: 19px; min-height: 60px; }
-  .btn.yes { color: var(--ljr-5-text); border-color: var(--ljr-5); }
-  .btn.no { color: var(--ljr-2-text); border-color: var(--ljr-2); }
-  .hidden { display: none !important; }
-  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px 8px 10px; background: var(--surface); border-top: 1px solid var(--line); }
-  nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; }
-  nav.tabs a:hover { border-color: var(--line); }
-  nav.tabs a[aria-current="page"] { border-color: var(--ink); background: var(--bg); }
-  nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-2-solid); color: var(--ljr-2-on); border-radius: 999px; padding: 0 7px; min-width: 20px; }
-  nav.tabs .n:empty { visibility: hidden; }
-  main, main.wrap { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 14px; }
-  #view { display: flex; flex-direction: column; gap: 14px; }   /* tiles, cards and lists never touch */
-  .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
-  .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
-  .needs { font-size: 26px; font-weight: 700; margin: 0; }
-  .needs .zero { color: var(--ljr-5-text); }
-  .hint { font-size: 14px; color: var(--muted); margin: 0; }
-  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .tile { font: inherit; text-align: left; background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 10px 12px; color: var(--ink); text-decoration: none; min-height: 72px; display: flex; flex-direction: column; justify-content: center; }
-  a.tile:hover { border-color: var(--muted); }
-  .tile .k { font-size: 13px; color: var(--muted); } .tile .v { font-size: 22px; font-weight: 700; overflow-wrap: anywhere; }
-  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
-  .card.acc2 { border-left: 4px solid var(--ljr-2); } .card.acc5 { border-left: 4px solid var(--ljr-5); } .card.acc4 { border-left: 4px solid var(--ljr-4); }
-  .card h2 { font-size: 19px; margin: 0; }
-  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
-  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
-  .acts .btn { flex: 1; justify-content: center; }
-  .row { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
-  .card > .row:first-of-type { border-top: 0; }
-  .row .txt { flex: 1; min-width: 0; }
-  .row .m { font-size: 14px; color: var(--muted); }
-  .row .amt { font-weight: 700; text-align: right; white-space: nowrap; }
-  .row .links { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
-  .row .links .btn { min-height: 40px; padding: 6px 12px; font-size: 14px; }
-  .badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-  .badge { font-size: 13px; font-weight: 600; border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; background: var(--bg); white-space: nowrap; }
-  .badge.no { color: var(--ljr-2-text); border-color: var(--ljr-2); }
-  .grp { font-size: 15px; font-weight: 700; margin: 0; color: var(--muted); }
-  .red { color: var(--ljr-2-text); font-weight: 700; }
-  .good { color: var(--ljr-5-text); font-weight: 700; }
-  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
-  .chip { font: inherit; font-size: 15px; font-weight: 600; border-radius: 999px; padding: 6px 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 40px; }
-  .chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
-  input.txtin { font: inherit; font-size: 18px; padding: 8px 10px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); width: 100%; }
-  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 6px 10px; cursor: pointer; align-self: flex-start; min-height: 44px; }
-  .more:hover { border-color: var(--muted); }
+  h1, h2, h3, b, strong { font-weight: 600; }   /* two weights only: 400 and 600 */
+  html { scroll-padding-bottom: 110px; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   a.btn, nav.tabs a, a.tile { text-decoration: none; }
+  .hidden { display: none !important; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ljr-0)); flex: none; display: inline-block; }   /* the only round thing */
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+
+  /* Frame: dark top bar and dark bottom tab bar around a light work area. */
+  header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
+  .top { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; }
+  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
+  .top h1 a { color: inherit; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
+  .stamp { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
+  .stamp:empty { display: none; }
+  .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }   /* the frame's own clear line (3:1 on the dark bar) */
+  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); } }
+
+  /* Things you press: all rest on the same clear 1px line (--ctl), 12px corners, 14px/600, 36px on a desktop and 44px on a phone.
+     None starts out ink, so hover (that edge turns ink) always shows. Read-only pills, counts and dates have no hover. */
+  .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 14px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; min-height: 36px; }
+  .btn.big { width: 100%; justify-content: center; min-height: 44px; }
+  .btn[disabled] { cursor: not-allowed; opacity: .55; }
+  .chip { font: inherit; font-size: 14px; font-weight: 600; border-radius: var(--radius); padding: 0 14px; border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; }
+  .chip[aria-pressed="true"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); }
+  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 14px; cursor: pointer; align-self: flex-start; min-height: 36px; }
+  /* House hover rule (Lisa, 28 Oct): hover = selected = a 1px line drawn inside + a pale tint; nothing moves.
+     Neutral controls: ink line + muted tint. Meaning-coloured controls (green yes, rose no) keep their OWN colour: line + 14% tint. */
+  .btn.yes { --mc: var(--green); } .btn.no { --mc: var(--rose); }
+  @media (hover: hover) {
+    .btn:hover, .chip:hover, .more:hover, a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); }
+    .btn.yes:hover, .btn.no:hover { outline-color: var(--mc); background: color-mix(in srgb, var(--mc) 14%, var(--surface)); }
+  }
+  input:focus { outline: none; }
+  a:focus, button:focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }   /* keyboard ring: 2px ink, never the browser blue */
+  .top :focus-visible { outline-color: var(--frame-ink); }
+
+  /* Bottom tabs: light buttons on the dark bar, no rings. Hover and selected = the small colour bar above the label widens. */
+  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--frame-foot); }
+  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 180px)); justify-content: center; } }
+  nav.tabs a { position: relative; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--surface); min-height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: var(--radius); padding: 6px 2px; text-align: center; }
+  nav.tabs a .bar { width: 18px; height: 4px; border-radius: var(--radius); background: var(--tc); opacity: .6; transition: width .15s ease-out, opacity .15s ease-out; }
+  nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
+  @media (hover: hover) { nav.tabs a:hover .bar { width: 40px; opacity: 1; } }
+  /* Tabs are exempt from the hover rule (Lisa): no ring, no outline; only the colour bar widens. */
+  @media (prefers-reduced-motion: reduce) { nav.tabs a .bar { transition: none; } }
+  nav.tabs a[aria-current="page"] { font-weight: 600; }
+  nav.tabs .n { position: absolute; top: 6px; right: 10px; }
+  /* Counts: a grey 1px ring pill; "needs you" = rose ring + light rose tint. Never a solid fill. */
+  /* ONE fixed size, so 1 and 2 digits match whatever the font: an exact 30 x 22px box, full round ends (radius 11px = half the height).
+     Only 3+ digits (class "wide", set by the page) grow from 30px. */
+  .cnt, nav.tabs .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; height: 22px; width: 30px; padding: 0 3px; white-space: nowrap; overflow: hidden; border: 1px solid var(--ctl); border-radius: 11px; font-size: 13px; font-weight: 600; line-height: 20px; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; }
+  .cnt.wide, nav.tabs .n.wide { width: auto; min-width: 30px; padding: 0 6px; overflow: visible; }
+  .cnt.need, nav.tabs .n.need { border-color: var(--rose); background: var(--rose-tint); }
+  .cnt.ok { border-color: var(--green); background: var(--green-tint); }
+  nav.tabs .n:empty { display: none; }
+
+  main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
+  #view { display: flex; flex-direction: column; gap: 12px; }   /* one 12px step: tiles, cards and lists never touch */
+  .banner { border: 1px solid var(--rose); border-radius: var(--radius); padding: 10px 14px; background: var(--rose-tint); color: var(--ink); }
+  .banner.info { border-color: var(--ctl); background: var(--surface); }
+  .needs { font-size: 26px; font-weight: 600; margin: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .hint { font-size: 14px; color: var(--muted); margin: 0; }
+
+  /* Summary strip: big numbers, a ring + tint only where something needs you. */
+  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  @media (min-width: 760px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; color: var(--ink); min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
+  a.tile { border-color: var(--ctl); }   /* a tile you can press rests on the control line */
+  .tile .k { font-size: 14px; color: var(--muted); }
+  .tile .v { font-size: 24px; font-weight: 600; overflow-wrap: anywhere; align-self: flex-start; line-height: 1.3; }
+  .tile .v.red { border: 1px solid var(--rose); background: var(--rose-tint); border-radius: var(--radius); padding: 0 10px; }
+  .tile .datep { align-self: flex-start; }
+  /* A date pill: its RING shows urgency (rose = late, amber = soon). The words stay ink. */
+  .datep { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; font-size: 13px; font-weight: 600; border: 1px solid var(--ctl); border-radius: var(--radius); white-space: nowrap; color: var(--muted); }
+  .datep.late { border-color: var(--rose); background: var(--rose-tint); color: var(--ink); }
+  .datep.soon { border-color: var(--amber); background: var(--amber-tint); color: var(--ink); }
+
+  /* Cards: a name line (dot + what kind), then the title (2 lines, then …). */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .card.next { border-color: var(--ink); }   /* Next: the one thing to do now; white with a 1px ink edge */
+  .bline { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 -8px; }
+  .bline .dot { width: 8px; height: 8px; }
+  .card h2 { font-size: 17px; margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
+  .card .what b { color: var(--ink); }
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acts .btn { flex: 1; justify-content: center; }
+  .empty { display: flex; gap: 12px; align-items: center; margin: 0; font-size: 15px; }
+  .empty::before { content: "\2713"; flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--green); background: var(--green-tint); color: var(--ink); font-size: 13px; font-weight: 600; }
+  .empty b { font-size: 16px; }
+  .empty .es { display: block; color: var(--muted); font-size: 14px; }
+
+  /* Calm rows: title, one flag, date, one action; 1px lines between rows, 16px under a header line. */
+  .row { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .card > .row:first-of-type { border-top: 0; padding-top: 4px; }
+  .row .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .row .m { font-size: 14px; color: var(--muted); }
+  .row .amt { font-weight: 600; text-align: right; white-space: nowrap; font-size: 15px; }
+  .row .amt.red, .row .amt.good { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); font-size: 13px; }
+  .row .amt.red { border-color: var(--rose); background: var(--rose-tint); }
+  .row .links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+  .row .links .btn { font-size: 14px; padding: 0 12px; }
+  .badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .badge { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 400; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 8px; background: transparent; white-space: nowrap; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .badge b { margin-right: 4px; }
+  .badge.no { border-color: var(--rose); background: var(--rose-tint); }
+  .grp { font-size: 16px; font-weight: 600; margin: 4px 0 0; display: flex; gap: 8px; align-items: center; }
+  .grp .cnt { margin-left: auto; }
+  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }   /* one filter row: Search, then the choices */
+  input.txtin { font: inherit; font-size: 16px; padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); flex: 1 1 240px; min-width: 0; max-width: 420px; }
+  input.txtin:focus { border-color: var(--ink); }
+  input.txtin::placeholder { color: var(--muted); opacity: 1; }
+
+  /* Phone: 44px targets; the tab count sits in flow next to the icon, the label on its own line. */
+  @media (max-width: 544px) {
+    .btn, .chip, .more, input.txtin { min-height: 44px; }
+    input.txtin { flex-basis: 100%; max-width: none; }
+    .top h1 { font-size: 20px; }
+    nav.tabs { gap: 6px; padding-left: 6px; padding-right: 6px; }
+    nav.tabs a { min-height: 62px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; padding: 6px 2px; }
+    nav.tabs a .bar { margin: 0 calc(50% - 9px); }
+    nav.tabs a[aria-current="page"] .bar { width: 26px; margin: 0 calc(50% - 13px); }
+    nav.tabs a > svg.i { order: 1; }
+    nav.tabs .n { position: static; order: 2; }
+    nav.tabs a > span:not(.bar):not(.n) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }
+  }
+  @media (max-width: 544px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
+  /* Keyboard focus always stays the 2px ink ring, over any hover or selected line. */
+  #view :focus-visible, nav.tabs a:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  header :focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/></symbol>
+  <symbol id="i-box" viewBox="0 0 24 24"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></symbol>
+  <symbol id="i-bill" viewBox="0 0 24 24"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 8h12l-1 13H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol>
+</svg>
 <header>
-  <div class="top"><h1><a href="#/home">GA Hub</a></h1><span class="stamp" id="stamp">TEST</span>
+  <div class="top"><h1><a href="#/home"><span class="dot" style="--c:var(--ljr-4)" aria-hidden="true"></span>GA Hub</a></h1><span class="stamp" id="stamp">TEST</span>
     <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh">↻</button>
     <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
     <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
@@ -101,11 +226,11 @@
   <div id="view"></div>
 </main>
 <nav class="tabs hidden" id="tabs" aria-label="GA Hub sections">
-  <a href="#/home" data-nav="home"><span>Home</span><span class="n" id="n-home"></span></a>
-  <a href="#/orders" data-nav="orders"><span>Orders</span><span class="n"></span></a>
-  <a href="#/invoices" data-nav="invoices"><span>Invoices</span><span class="n"></span></a>
-  <a href="#/products" data-nav="products"><span>Products</span><span class="n"></span></a>
-  <a href="#/ga" data-nav="ga"><span>GA</span><span class="n"></span></a>
+  <a href="#/home" data-nav="home" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-home"/></svg><span>Home</span><span class="n need" id="n-home"></span></a>
+  <a href="#/orders" data-nav="orders" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-box"/></svg><span>Orders</span><span class="n need" id="n-orders"></span></a>
+  <a href="#/invoices" data-nav="invoices" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bill"/></svg><span>Invoices</span><span class="n"></span></a>
+  <a href="#/products" data-nav="products" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Products</span><span class="n"></span></a>
+  <a href="#/ga" data-nav="ga" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span>GA</span><span class="n"></span></a>
 </nav>
 <script>
 (function () {
@@ -206,9 +331,19 @@
     return (/^https:\/\/(www\.)?dpd\.co\.uk\//.test(o.tracking) ? '<a class="btn" href="' + esc(o.tracking) + '" target="_blank" rel="noopener" aria-label="Track order ' + esc(o.order_no) + ' with DPD">📦 Track</a>' : '') +
       (shop && o.source === 'Shopify' ? '<a class="btn" href="https://admin.shopify.com/store/' + encodeURIComponent(shop) + '/orders?query=' + encodeURIComponent(o.order_no) + '" target="_blank" rel="noopener" aria-label="Open order ' + esc(o.order_no) + ' in Shopify">🛍 Shopify</a>' : '');
   }
-  function cardHtml(r) {
+  // A friendly empty state: a small green-ring tick, a plain line, and what happens next.
+  function empty(head, more) { return '<p class="empty"><span><b>' + esc(head) + '</b>' + (more ? '<span class="es">' + esc(more) + '</span>' : '') + '</span></p>'; }
+  // Whole days from today to a YYYY-MM-DD date (negative = past). A date pill's ring shows it: rose = late, amber = within a week.
+  function daysTo(ymd) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(ymd || '')); if (!m) return null; var t = new Date(); t.setHours(0, 0, 0, 0);
+    return Math.round((new Date(+m[1], m[2] - 1, +m[3]).getTime() - t.getTime()) / 864e5); }
+  function dateCls(ymd) { var d = daysTo(ymd); return d === null ? '' : d < 0 ? ' late' : d <= 7 ? ' soon' : ''; }
+  function inDays(ymd) { var d = daysTo(ymd); return d === null ? '' : d < 0 ? (-d) + ' day' + (d === -1 ? '' : 's') + ' late' : d === 0 ? 'today' : d === 1 ? 'tomorrow' : 'in ' + d + ' days'; }
+  function wide(n) { return n >= 100 ? ' wide' : ''; }   // count pills: 1-2 digits keep the exact 30px box, 3+ digits grow
+  function needsLook(o) { return !!(CHECK[o.check] && CHECK[o.check][1]); }
+  // A card: a name line (dot + what kind; "Next" on the first one), then the title. The first card on Home is the Next card.
+  function cardHtml(r, next) {
     var s = SECTIONS[r.section] || SECTIONS.check, d = detail(r);
-    var h = '<div class="card ' + (d.red ? 'acc2' : 'acc4') + '"><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.why || s.what) + '</p>';
+    var h = '<div class="card' + (next === true ? ' next' : '') + '"><p class="bline"><span class="dot" style="--c:var(--ljr-' + (d.red ? 2 : 3) + ')" aria-hidden="true"></span>' + (next === true ? 'Next: ' : '') + esc(s.name) + '</p><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.why || s.what) + '</p>';
     var on = /^(?:LOWPROFIT|MISSING|MISMATCH|UNKNOWN)-(.+)$/.exec(r.key), o = on && data.orders.filter(function (x) { return String(x.order_no) === on[1]; })[0];
     if (o) { var ol = orderLinks(o); h += (orderFacts(o) ? '<p class="what"><b>' + esc(orderFacts(o)) + '</b></p>' : '') + (ol || /^MISSING|^UNKNOWN/.test(r.key) ? '<div class="acts">' + ol + (/^MISSING|^UNKNOWN/.test(r.key) && /^https:/.test(setting('GA_PORTAL')) ? '<a class="btn" href="' + esc(setting('GA_PORTAL')) + '" target="_blank" rel="noopener">GA Portal</a>' : '') + '</div>' : ''); }
     if (d.file) h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(d.file) + '/view" target="_blank" rel="noopener">Open the PDF</a></div>';
@@ -224,15 +359,19 @@
     var due = unpaid().map(function (i) { return i.due_date; }).filter(Boolean).sort()[0];
     var notAtGa = data.orders.filter(function (o) { return /^(Waiting for GA|Not at GA)$/.test(o.check); }).length, late = data.orders.filter(function (o) { return o.check === 'Not at GA'; }).length;
     var min = num(setting('MIN_PROFIT')) || 15, low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
-    var h = '<p class="needs">Needs you: ' + (need ? need : '<span class="zero">0</span>') + '</p>';
+    var h = '<p class="needs">Needs you: ' + '<span class="cnt ' + (need ? 'need' : 'ok') + wide(need) + '">' + need + '</span></p>';
     var st = data.statements[0];   // GA's own weekly statement beats our sum of the invoices we have seen
     h += '<div class="tiles"><a class="tile" href="#/invoices"><span class="k">Owed to GA' + (st ? ' (statement ' + esc(ukDate(st.statement_date)) + ')' : '') + '</span><span class="v">' + money(st ? st.total_outstanding : owed) + '</span></a>' +
-      '<a class="tile" href="#/invoices"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span></a>' +
+      '<a class="tile" href="#/invoices"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span>' + (due ? '<span class="datep' + dateCls(due) + '">' + esc(inDays(due)) + '</span>' : '') + '</a>' +
       '<a class="tile" href="#/orders?check"><span class="k">Not at GA yet</span><span class="v' + (late ? ' red' : '') + '">' + notAtGa + (late ? ' (' + late + ' late)' : '') + '</span></a>' +
       '<a class="tile" href="#/orders"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a></div>';
-    if (!w.length) return h + '<div class="card acc5"><h2>All clear</h2><p class="what">Nothing from GA needs you. The engine checks GA\'s emails every 15 minutes.</p></div>';
-    h += cardHtml(w[0]);
-    if (w.length > 1) h += showAll ? w.slice(1).map(cardHtml).join('') : '<button class="more" type="button" data-action="all">Show ' + (w.length - 1) + ' more</button>';
+    if (!w.length) {
+      // Nothing to answer, but an order GA never got still comes first.
+      if (late) return h + '<div class="card next"><p class="bline"><span class="dot" style="--c:var(--ljr-2)" aria-hidden="true"></span>Next: Order check</p><h2>' + late + ' order' + (late > 1 ? 's are' : ' is') + ' not at GA</h2><p class="what">Check the GA Portal and enter ' + (late > 1 ? 'them' : 'it') + ' by hand if needed.</p><div class="acts"><a class="btn main" href="#/orders?check">Open the orders</a></div></div>';
+      return h + '<div class="card">' + empty('Nothing needs you', 'Nothing from GA needs you. The engine checks GA\'s emails every 15 minutes.') + '</div>';
+    }
+    h += cardHtml(w[0], true);
+    if (w.length > 1) h += showAll ? w.slice(1).map(function (r) { return cardHtml(r); }).join('') : '<button class="more" type="button" data-action="all">Show ' + (w.length - 1) + ' more</button>';
     return h;
   }
   // The order check: did every shop order reach GA, and did GA send the same items?
@@ -247,7 +386,9 @@
         || (ofilter === 'sub' && /^sub/i.test(o.order_type)) || (ofilter === 'low' && o.profit_est !== '' && num(o.profit_est) < min); });
     var chips = '<div class="chips" role="group" aria-label="Which orders">' + OFILTERS.map(function (f) { return '<button class="chip" type="button" data-ofilter="' + f[0] + '" aria-pressed="' + (ofilter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div>';
     var h = '<p class="needs">Orders</p><p class="hint">From GA\'s shipping reports and invoices. 📦 Track opens DPD; 🛍 Shopify opens the order (customer details stay in Shopify). Each order is checked: paid in the shop → shipped by GA → same items on GA\'s invoice.</p>' + chips;
-    if (!list.length) return h + '<div class="card"><p class="what">' + (ofilter === 'all' ? 'No orders yet. They appear after GA\'s next shipping report or invoice.' : 'None.') + '</p></div>';
+    var none = { all: ['No orders yet', 'They appear after GA\'s next shipping report or invoice.'], check: ['No orders need a look', 'Every order matches what GA shipped.'], ga: ['Every order is at GA', 'Nothing waiting to reach GA.'],
+      sub: ['No subscription orders', ''], low: ['No low-profit orders', 'Every order made at least £' + min + '.'] }[ofilter];
+    if (!list.length) return h + '<div class="card">' + empty(none[0], none[1]) + '</div>';
     var shown = showAll ? list : list.slice(0, 30);
     h += '<div class="card">' + shown.map(function (o) { var p = o.profit_est === '' ? '' : num(o.profit_est);
       var links = orderLinks(o);
@@ -273,10 +414,12 @@
         : '<div class="tile"><span class="k">Paid by</span><span class="v">' + esc(setting('GA_PAYMENT') || 'Not set') + '</span></div>') +
       (dd ? '<div class="tile"><span class="k">Paid to GA since ' + esc(ukDate(fyStart)) + ' (bank)</span><span class="v">' + money(paidFy) + '</span></div>' : '') + '</div>' +
       (dd || setting('BANK_FOLDER_ID') || setting('BANK_LEDGER_FILE_ID') ? '' : '<p class="hint">Paid dates fill in once the bank is linked (BANK_FOLDER_ID on the Settings tab).</p>');
-    if (!inv.length) return h + '<div class="card"><p class="what">No GA invoices read yet. They are saved here when the next one arrives by email.</p></div>';
+    if (!inv.length) return h + '<div class="card">' + empty('No GA invoices yet', 'They are saved here when the next one arrives by email.') + '</div>';
     var shown = showAll ? inv : inv.slice(0, 30);
     h += '<div class="card">' + shown.map(function (i) {
-      return '<div class="row"><div class="txt"><b>' + esc(i.si_no) + '</b> · order #' + esc(i.order_no) + '<div class="m">' + esc([ukDate(i.invoice_date), i.due_date ? 'due ' + ukDate(i.due_date) : '', i.paid_date ? 'paid ' + ukDate(i.paid_date) : 'unpaid'].filter(Boolean).join(' · ')) + '</div></div>' +
+      var open1 = !i.paid_date && i.due_date;   // unpaid: the due date is a pill whose ring shows how close it is
+      return '<div class="row"><div class="txt"><b>' + esc(i.si_no) + '</b> · order #' + esc(i.order_no) + '<div class="m">' + esc([ukDate(i.invoice_date), i.due_date && !open1 ? 'due ' + ukDate(i.due_date) : '', i.paid_date ? 'paid ' + ukDate(i.paid_date) : 'unpaid'].filter(Boolean).join(' · ')) + '</div>' +
+        (open1 ? '<div class="badges"><span class="datep' + dateCls(i.due_date) + '">due ' + esc(ukDate(i.due_date)) + '</span></div>' : '') + '</div>' +
         '<div class="amt">' + money(i.total) + '</div>' + (i.file_id ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(i.file_id) + '/view" target="_blank" rel="noopener" aria-label="Open ' + esc(i.si_no) + '">PDF</a>' : '') + '</div>'; }).join('') + '</div>';
     if (inv.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + inv.length + '</button>';
     return h + '<p class="hint">Saved in Drive by financial year. Paid dates come later from the bank (Money Hub).</p>';
@@ -297,14 +440,14 @@
   }
   function pageProducts() {
     var list = data.products.filter(inFilter).filter(function (p) { return !q || [p.ddf_name, p.recipe, p.tla, p.full_ga_code, p.range].join(' ').toLowerCase().indexOf(q) >= 0; });
-    var h = '<p class="needs">Products</p><p class="hint">Every GA recipe and size, by range: GA cost, your price and profit for one bag in one box. Red badges show why one can\'t be DDF.</p>' +
-      '<div class="chips" role="group" aria-label="Which products">' + FILTERS.map(function (f) { return '<button class="chip" type="button" data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div>' +
-      '<input class="txtin" type="search" placeholder="Find a recipe, name or code" aria-label="Find a product" data-find value="' + esc(q) + '">';
-    if (!list.length) return h + '<div class="card"><p class="what">Nothing here.</p></div>';
+    var h = '<p class="needs">Products</p><p class="hint">Every GA recipe and size, by range: GA cost, your price and profit for one bag in one box. A rose ring on a badge shows why one can\'t be DDF.</p>' +
+      '<div class="frow"><input class="txtin" type="search" placeholder="Find a recipe, name or code" aria-label="Find a product" data-find value="' + esc(q) + '">' +
+      '<div class="chips" role="group" aria-label="Which products">' + FILTERS.map(function (f) { return '<button class="chip" type="button" data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
+    if (!list.length) return h + '<div class="card">' + empty(q ? 'No products match "' + q + '"' : 'No products here', 'Try All, or a shorter search.') + '</div>';
     var shown = showAll ? list : list.slice(0, 40), min = num(setting('MIN_PROFIT')) || 15, groups = [], by = {};
     shown.forEach(function (p) { var r = p.range && p.range !== '(price list only)' ? p.range : 'Price list only (not on the Portal)'; if (!by[r]) { by[r] = []; groups.push(r); } by[r].push(p); });
     groups.forEach(function (g) {
-      h += '<p class="grp">' + esc(g) + ' · ' + by[g].length + '</p><div class="card">' + by[g].map(function (p) { var pr = p.profit_ex_vat_1bag_1box;
+      h += '<p class="grp">' + esc(g) + '<span class="sr"> · </span><span class="cnt' + wide(by[g].length) + '">' + by[g].length + '</span></p><div class="card">' + by[g].map(function (p) { var pr = p.profit_ex_vat_1bag_1box;
         return '<div class="row"><div class="txt"><b>' + esc(p.ddf_name || p.recipe) + '</b> · ' + esc(p.pack) + '<div class="m">' + esc([p.ddf_name ? p.recipe : '', p.full_ga_code || p.tla, 'GA ' + money(p.ga_price_ex_vat_portal_oct26 || p.ga_price_ex_vat_list_aug25), p.shopify_price_inc_vat ? 'shop ' + money(p.shopify_price_inc_vat) : '', p.subscription_price_inc_vat ? 'sub ' + money(p.subscription_price_inc_vat) : ''].filter(Boolean).join(' · ')) + '</div>' +
           badges(p) + (/ELIGIBLE|CHECK/.test(p.ddf_status) ? '<div class="m">' + esc(p.ddf_status) + '</div>' : '') +
           (/^https:\/\//.test(p.data_sheet_url) ? '<div class="links"><a class="btn" href="' + esc(p.data_sheet_url) + '" target="_blank" rel="noopener">📄 Data sheet</a></div>' : '') + '</div>' +
@@ -339,7 +482,8 @@
     $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    var n = waiting().length; $('n-home').textContent = n || '';
+    var n = waiting().length; $('n-home').textContent = n || ''; $('n-home').classList.toggle('wide', n >= 100);
+    var look = data.orders.filter(needsLook).length; $('n-orders').textContent = look || ''; $('n-orders').classList.toggle('wide', look >= 100);   // orders that need a look, on every page
     $('stamp').textContent = F && F.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
     $('signin').disabled = !token && !ready;

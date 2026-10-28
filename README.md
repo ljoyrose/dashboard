@@ -81,4 +81,6 @@ family trees, puppy packs, social graphics, page and email drafts, for every bra
   add-on and a lead time; VAT rates are listed read-only on Brands.
 - **Ownership** in an item's details: Client material (yes/no; client material is never reused) and Source files (kept
   by you / sold to client); one `rights` request.
+- **Comments** in an item's details: two threads, never mixed. Team (default, internal) and, for client items, Client
+  (every comment labelled "Client", and "Client can see this" above the box). Send writes one `comment` request.
 - Same sign-in, find bar and rules as Factory. TEST stamp until `studio.live` and the state's mode are both LIVE.

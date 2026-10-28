@@ -100,6 +100,12 @@
       // VAT (engine v0.2.18): rates edited in the Sheet; how prices show by default.
       vatRates: [{ country: 'GB', name: 'United Kingdom', rate: 20, checked: day(-28), source: '' }, { country: 'IE', name: 'Ireland', rate: 23, checked: day(-28), source: '' }],
       priceShow: 'ex',
+      // Comments (engine: COMMENTS tab): two threads per item, never mixed. "team" is internal; "client" is what the client sees.
+      comments: [
+        { id: 'cm-1', assetId: 'sa-client', thread: 'team', by: 'Team member', role: 'team', text: 'Check the cover crop before it goes out.', at: iso(-3 * H) },
+        { id: 'cm-2', assetId: 'sa-client', thread: 'client', by: 'Client contact', role: 'client', text: 'Could we try the blue cover?', at: iso(-2 * H) },
+        { id: 'cm-3', assetId: 'sa-client', thread: 'client', by: 'Team member', role: 'team', text: 'Yes, a blue version is on its way.', at: iso(-1 * H) }
+      ],
       failed: []
     };
   }

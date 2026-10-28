@@ -185,12 +185,13 @@ test.describe('Factory find bar', () => {
     await expect(rows(page)).toHaveCount(4);
   });
 
-  test('nothing found: a 0 in a circle and Clear, nothing else', async ({ page, guard }) => {
+  // House look (28 Oct): a friendly empty state in plain words with a green-ring check, never a "0" in a ring.
+  test('nothing found: plain words with a green-ring check, and Clear', async ({ page, guard }) => {
     await open(page, guard, '#/decide?q=zzzz');
     const box = page.locator('[data-empty]');
     await expect(box).toBeVisible();
-    await expect(box.locator('.cnt')).toHaveText('0');
-    await expect(box).toHaveText(/^\s*0\s*Clear\s*$/);
+    await expect(box.locator('.cnt')).toHaveCount(0);
+    await expect(box).toHaveText(/^\s*Nothing matches these filters\.\s*Clear\s*$/);
     await box.locator('[data-action="clearf"]').click();
     await expect(rows(page)).toHaveCount(3);
   });
@@ -244,7 +245,7 @@ test.describe('Factory find bar', () => {
     await expect(card.locator('.why')).toContainText('Send 2 of 2.');
     await expect(card.locator('[data-copy="869fk9d1r"]')).toBeVisible();
     await page.goto('factory/#/item/nosuchid0');
-    await expect(page.locator('[data-empty] .cnt')).toHaveText('0');
+    await expect(page.locator('[data-empty] .empty')).toHaveText('That item is done or gone. Nothing to do here.');
   });
 });
 
@@ -302,34 +303,36 @@ test.describe('Factory send gate', () => {
   });
 });
 
-// Single lines (Lisa, 20 Oct): a selected or focused tab, pill or chip is ONE line, a shade darker. No ring, no inner shadow.
-test.describe('Factory single lines', () => {
-  const lines = (loc) => loc.evaluateAll((els) => els.map((e) => { const c = getComputedStyle(e); return { ring: c.outlineStyle !== 'none' && parseFloat(c.outlineWidth) > 0, shadow: c.boxShadow }; }));
-  const single = async (loc) => { const all = await lines(loc); expect(all.length).toBeGreaterThan(0); all.forEach((x) => { expect(x.ring).toBe(false); expect(x.shadow).toBe('none'); }); };
+// Selected and focus (house look, 28 Oct 2026, replaces the 20 Oct "single line" rule): a selected chip is the same 1px line
+// drawn inside (outline 1px, offset -1px, nothing moves); a selected bottom tab only widens its colour bar (no ring); keyboard focus is a 2px ink ring.
+test.describe('Factory selected and focus lines', () => {
+  const st = (loc) => loc.evaluateAll((els) => els.map((e) => { const c = getComputedStyle(e); return { w: c.outlineWidth, s: c.outlineStyle, o: c.outlineOffset, shadow: c.boxShadow }; }));
+  const selected = async (loc) => { const all = await st(loc); expect(all.length).toBeGreaterThan(0); all.forEach((x) => { expect(x).toEqual({ w: '1px', s: 'solid', o: '-1px', shadow: 'none' }); }); };
 
-  test('after clicking a tab and a chip, and with keyboard focus, selected tabs and chips have one line @regression', async ({ page, guard }) => {
+  test('after clicking a tab and a chip: selected chips wear the 1px inside line, the tab only its wider bar; focus is 2px @regression', async ({ page, guard }) => {
     await open(page, guard, '#/do');
     await page.locator('nav.tabs a[data-nav="me"]').click();
-    await expect(page.locator('nav.tabs a[data-nav="me"]')).toHaveAttribute('aria-current', 'page');
+    const tab = page.locator('nav.tabs a[aria-current="page"]');
+    await expect(tab).toHaveAttribute('data-nav', 'me');
+    expect((await st(tab))[0].s).toBe('none');
+    await expect(tab.locator('.bar')).toHaveCSS('width', '40px');
     await chip(page, 'app', 'kennel-book').click();
     await chip(page, 'app', '').click();
     await expect(chip(page, 'app', '')).toHaveClass(/\bon\b/);
-    await single(page.locator('nav.tabs a[aria-current="page"]'));
-    await single(page.locator('#view .pill.on'));
-    // Keyboard focus is the same single line, never a second ring.
-    await page.keyboard.press('Tab');
-    await page.keyboard.press('Shift+Tab');
-    await single(page.locator(':focus'));
+    await page.mouse.move(0, 0);
+    await selected(page.locator('#view .pill.on'));
     await chip(page, 'app', '').focus();
-    await single(page.locator(':focus'));
-    // Stage pills in the Filter panel and chips on the New idea form.
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    const f = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineWidth, c.outlineStyle]; });
+    expect(f).toEqual(['2px', 'solid']);
     await panel(page);
-    const stg = page.locator('.fpanel [data-fx="st"]').first();
-    await stg.click();
-    await single(page.locator('.fpanel .pill.on'));
+    await page.locator('.fpanel [data-fx="st"]').first().click();
+    await page.mouse.move(0, 0);
+    await selected(page.locator('.fpanel .pill.on'));
     await page.goto('factory/#/new');
-    const ch = page.locator('#view .ch').first();
-    await ch.click();
-    await single(page.locator('#view .ch.on'));
+    await page.locator('#view .ch').first().click();
+    await page.mouse.move(0, 0);
+    await selected(page.locator('#view .ch.on'));
   });
 });

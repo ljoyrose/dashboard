@@ -576,9 +576,9 @@ test.describe('Marketplace page', () => {
     const writes = await sheets(page, rows);
     await open(page, '#/do');
     const band = page.locator('.cband').first();
-    await expect(band).toContainText('L-07'); await expect(band).toContainText('EVRI'); await expect(band).toContainText('Take to: Evri ParcelShop');
+    await expect(band).toContainText('L-07'); await expect(band.locator('.cn')).toHaveText('Evri'); await expect(band).toContainText('Take to: Evri ParcelShop');
     await expect(page.locator('#view')).toContainText('Label valid until 2026-11-02 09:00');
-    await expect(page.locator('.cband', { hasText: 'L-08' })).toContainText('POSTAGE NOT BOUGHT YET');
+    await expect(page.locator('.cband', { hasText: 'L-08' }).locator('.cn')).toHaveText('Postage not bought yet');
     await page.locator('[data-pid="PO|vinted|vt-1"]').fill('L-08');
     await page.locator('[data-ans="PO|vinted|vt-1"][data-v="Posted"]').click();
     await expect(page.locator('#banner')).toContainText('wrong parcel');
@@ -701,5 +701,291 @@ test.describe('Marketplace page', () => {
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     const last = await page.locator('#view .card').last().boundingBox(), bar = await page.locator('#tabs').boundingBox();
     expect(last.y + last.height).toBeLessThanOrEqual(bar.y);
+  });
+});
+
+// House look (LINKS-COMFORT-BRIEF v3 + Lisa's extra rules, 28 Oct 2026), checked by computed style in the browser.
+// Invented rows only: no buyer names, no real listings.
+function lookRows() {
+  const day = (d) => new Date(Date.now() + d * 864e5).toISOString().slice(0, 10);
+  return [
+    ['RM|1', 'remove', 'Clothes', 'Sample jacket with a very long title that has to wrap onto a second line and then stop with an ellipsis', JSON.stringify({ platform: 'Vinted', price: '£18.00', url: 'https://www.vinted.co.uk/items/1', sold: 'Sold on eBay 14:02', owner: 'CY' }), ago(5)],
+    ['PO|1', 'post', 'Clothes', 'Sample jumper', JSON.stringify({ platform: 'ebay', parcel_id: 'L-07', courier: 'Evri', shelf: 'B2', post_by: day(-1), price: '£22.00' }), ago(5)],
+    ['PO|2', 'post', 'Collars & accessories', 'Sample lead', JSON.stringify({ platform: 'vinted', parcel_id: 'L-08', courier: 'InPost', shelf: 'A1', post_by: day(0), price: '£9.00' }), ago(5)],
+    ['PO|3', 'post', 'Blades & grooming', 'Sample blade', JSON.stringify({ platform: 'ebay', parcel_id: 'L-09', courier: 'Royal Mail', shelf: 'C3', post_by: day(5), price: '£14.00', photo: 'https://i.ebayimg.com/images/g/ABC/s-l140.jpg' }), ago(5)],
+    ['GO|1', 'go', 'Treats', 'Sample treats', JSON.stringify({ price: '£12.00' }), ago(30)],
+    ['MSG|1', 'message', 'Clothes', 'Question about: sample jumper', JSON.stringify({ platform: 'eBay', url: 'https://www.ebay.co.uk/cnt/ViewMessage' }), ago(12)],
+  ];
+}
+async function lookSheets(page) {
+  await page.route(/i\.ebayimg\.com/, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>' }));
+  return sheets(page, lookRows());
+}
+// Runs in the page: every rule that can be read from computed style. Returns a list of plain-word problems.
+function auditLook() {
+  const out = [];
+  const vis = (el) => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); return r.width > 0 && r.height > 0 && s.visibility === 'visible' && s.display !== 'none'; };
+  const rgb = (c) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)(?: \/ ([\d.]+))?\)/.exec(c); if (m) return [m[1] * 255, m[2] * 255, m[3] * 255, m[4] === undefined ? 1 : +m[4]];
+    const n = (c.match(/[\d.]+/g) || []).map(Number); return [n[0], n[1], n[2], n[3] === undefined ? 1 : n[3]]; };
+  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const bgOf = (el) => { for (let e = el; e; e = e.parentElement) { const c = rgb(getComputedStyle(e).backgroundColor); if (c[3] > 0.5) return c; } return rgb(getComputedStyle(document.body).backgroundColor); };
+  const name = (el) => (el.id ? '#' + el.id : el.tagName.toLowerCase() + '.' + [...el.classList].join('.')) + ' "' + (el.textContent || '').trim().slice(0, 30) + '"';
+  const phone = innerWidth <= 544;
+  const same = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) < 4;
+  // Text: nothing under 13px, weights 400/600 only, contrast 4.5:1 on its own background.
+  for (const el of document.querySelectorAll('body *')) {
+    if (!vis(el) || /^(SCRIPT|STYLE|I|svg)$/i.test(el.tagName) || el.closest('.qr')) continue;
+    const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
+    if (!own) continue;
+    const s = getComputedStyle(el);
+    if (parseFloat(s.fontSize) < 13) out.push(`text under 13px: ${name(el)} ${s.fontSize}`);
+    if (!['400', '600'].includes(s.fontWeight)) out.push(`weight ${s.fontWeight}: ${name(el)}`);
+    if (s.textTransform === 'uppercase') out.push(`uppercase: ${name(el)}`);
+    if (s.fontStyle === 'italic') out.push(`italic: ${name(el)}`);
+    const r = ratio(rgb(s.color), bgOf(el));
+    if (r < 4.5 && !el.disabled && !el.closest('[disabled]')) out.push(`text contrast ${r.toFixed(2)}: ${name(el)}`);
+  }
+  // Things you press: one clear 1px line, 12px corners, 14px/600 words, 36px (44px on a phone); never ink at rest.
+  const ink = rgb(getComputedStyle(document.body).color);
+  const press = [...document.querySelectorAll('#view button, #view a.btn, #view a.tile, #view .chip, #view .more, #people .chip, header .btn')].filter(vis);
+  const lines = new Set();
+  for (const el of press) {
+    const s = getComputedStyle(el), box = el.getBoundingClientRect();
+    if (s.borderTopWidth !== '1px') out.push(`pressable edge ${s.borderTopWidth}: ${name(el)}`);
+    if (s.borderTopLeftRadius !== '12px') out.push(`pressable corner ${s.borderTopLeftRadius}: ${name(el)}`);
+    if (!el.closest('header') && !el.classList.contains('tile')) { if (s.fontSize !== '14px' || s.fontWeight !== '600') out.push(`pressable words ${s.fontSize}/${s.fontWeight}: ${name(el)}`); }
+    if (box.height < (phone ? 44 : 36) - 0.5) out.push(`pressable ${box.height}px high: ${name(el)}`);
+    const edge = rgb(s.borderTopColor);
+    if (!el.closest('header')) { lines.add(edge.slice(0, 3).map(Math.round).join(',')); if (same(edge, ink)) out.push(`pressable starts out ink: ${name(el)}`); }
+    // The resting line is 3:1 on what is behind it AND on the page itself (the brief; Lisa's 8A7F70 warm / 7A8692 cool).
+    const behind = [bgOf(el.parentElement)].concat(el.closest('header') ? [] : [rgb(getComputedStyle(document.body).backgroundColor)]);
+    for (const b of behind) if (ratio(edge, b) < 3) out.push(`pressable edge ${ratio(edge, b).toFixed(2)}:1, under 3:1: ${name(el)}`);
+    const bg = rgb(s.backgroundColor); if (!el.closest('header') && bg[3] > 0.5 && !matchMedia('(prefers-color-scheme: dark)').matches && lum(bg) < 0.6) out.push(`solid fill on ${name(el)}`);
+  }
+  if (lines.size > 1) out.push(`pressables rest on ${lines.size} different lines: ${[...lines].join(' | ')}`);
+  // Read-only markers: counts, date pills, parcel numbers: never a solid colour fill (tints only).
+  for (const el of [...document.querySelectorAll('.cnt, nav.tabs .n, .date, .pid, .needs3 .v, .ava, .okring, .stamp, .readat')].filter(vis)) {
+    const bg = rgb(getComputedStyle(el).backgroundColor), page = bgOf(el.parentElement);
+    if (bg[3] > 0.5 && ratio(bg, page) > 1.6) out.push(`solid fill on marker ${name(el)}`);
+  }
+  // Counts: one fixed size (30 x 22, radius 11) so 1 and 2 digits match.
+  for (const el of [...document.querySelectorAll('.cnt, nav.tabs .n')].filter(vis)) {
+    const s = getComputedStyle(el), b = el.getBoundingClientRect();
+    if (Math.round(b.height) !== 22 || (el.textContent.length < 3 && Math.round(b.width) !== 30) || s.borderTopLeftRadius !== '11px') out.push(`count pill ${Math.round(b.width)}x${Math.round(b.height)} r${s.borderTopLeftRadius}: ${name(el)}`);
+  }
+  // One radius: 12px on everything with corners; circles only for status dots and initial rings; counts 11px.
+  for (const el of [...document.querySelectorAll('body *')].filter(vis)) {
+    const r = getComputedStyle(el).borderTopLeftRadius; if (r === '0px') continue;
+    if (el.matches('.sdot, .cdot, .ava, .okring, .h1dot, .top h1 .dot')) { if (r !== '50%' && parseFloat(r) < 4) out.push(`dot not round: ${name(el)}`); continue; }
+    if (el.matches('.cnt, nav.tabs .n')) continue;
+    if (el.matches('nav.tabs .bar')) continue;   // the 4px colour bar above a tab label
+    if (r !== '12px') out.push(`radius ${r}: ${name(el)}`);
+  }
+  // Thumbnails: one size, 44 x 44.
+  for (const el of [...document.querySelectorAll('.item > img, .item > .ph, .prow > img, .prow > .ph, .row > img, .row > .ph')].filter(vis)) {
+    const b = el.getBoundingClientRect(); if (Math.round(b.width) !== 44 || Math.round(b.height) !== 44) out.push(`thumbnail ${b.width}x${b.height}: ${name(el)}`);
+  }
+  // Titles wrap to 2 lines, then ellipsis.
+  for (const el of [...document.querySelectorAll('#view .ttl')].filter(vis)) { const s = getComputedStyle(el); if (s.webkitLineClamp !== '2' || s.overflow !== 'hidden') out.push(`title not clamped: ${name(el)}`); }
+  return out;
+}
+
+test.describe('Marketplace house look', () => {
+  for (const scheme of ['light', 'dark']) {
+    for (const [w, h] of [[1280, 900], [390, 844]]) {
+      test(`${scheme} ${w}px: text 13px+ at 400/600 with 4.5:1, pressables on one clear 1px line at 12px, counts one size, no solid fills, 44px thumbnails`, async ({ page }) => {
+        await page.emulateMedia({ colorScheme: scheme });
+        await page.setViewportSize({ width: w, height: h });
+        await lookSheets(page);
+        await open(page);
+        for (const hash of ['#/me', '#/do', '#/decide', '#/reply', '#/insights']) {
+          await page.evaluate((x) => { location.hash = x; }, hash);
+          await expect(page.locator('#view .needs, #view .tiles').first()).toBeVisible();
+          expect(await page.evaluate(auditLook), `${scheme} ${w} ${hash}`).toEqual([]);
+          const sw = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
+          expect(sw[0], `${hash}: page wider than the screen`).toBeLessThanOrEqual(sw[1]);
+        }
+      });
+    }
+  }
+
+  // HOUSE HOVER RULE (Lisa 28 Oct): neutral = 1px ink line inside + muted tint; meaning-coloured = a line + tint of ITS colour,
+  // never ink. Selected = hover. Nothing moves; read-only pills have no hover.
+  const hoverLook = (el) => el.evaluate((e) => {
+    const c = getComputedStyle(e), probe = (v) => { const s = document.createElement('span'); s.style.color = v; e.appendChild(s); const x = getComputedStyle(s).color; s.remove(); return x; };
+    return { style: c.outlineStyle, width: c.outlineWidth, offset: c.outlineOffset, line: c.outlineColor, bg: c.backgroundColor,
+      ink: probe('var(--ink)'), ok: probe('var(--ok)'), need: probe('var(--need)'), tc: probe('var(--tc)'), surface: getComputedStyle(document.querySelector('#view .card') || document.body).backgroundColor };
+  });
+  const chan = (c) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)/.exec(c); return m ? [m[1] * 255, m[2] * 255, m[3] * 255] : (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number); };
+  test('hover: neutral controls get a 1px ink line inside + a muted tint; nothing moves or resizes; read-only pills have no hover', async ({ page }) => {
+    await lookSheets(page);
+    await open(page, '#/do');
+    for (const sel of ['#view a.btn[href*="vinted"]', '#view [data-action="pack"]', '#view .chip[data-site]:not([aria-pressed="true"])']) {
+      const el = page.locator(sel).first();
+      const before = await el.boundingBox(), rest = await hoverLook(el);
+      await el.hover();
+      const h = await hoverLook(el);
+      expect([h.style, h.width, h.offset], sel).toEqual(['solid', '1px', '-1px']);
+      expect(h.line, `${sel}: neutral hover line is ink`).toBe(h.ink);
+      expect(h.bg, `${sel}: a muted tint appears`).not.toBe(rest.bg);
+      expect(await el.boundingBox(), `${sel} moved or resized on hover`).toEqual(before);
+    }
+    // Selected looks the same as hover.
+    const sel = await hoverLook(page.locator('#view .chip[data-site][aria-pressed="true"]'));
+    expect([sel.style, sel.width, sel.offset, sel.line === sel.ink]).toEqual(['solid', '1px', '-1px', true]);
+    for (const s of ['#view .cnt', '#view .date', '#view .pid']) {
+      const el = page.locator(s).first();
+      await el.hover();
+      expect(await el.evaluate((e) => getComputedStyle(e).outlineStyle), s).toBe('none');
+    }
+  });
+
+  test('hover: meaning-coloured controls keep their OWN colour (line + pale tint of it, never ink): green Yes, rose No', async ({ page }) => {
+    await lookSheets(page);
+    await open(page, '#/decide');
+    for (const [s, key, lean] of [['[data-ans="GO|1"][data-v="Yes"]', 'ok', 'green'], ['[data-ans="GO|1"][data-v="No"]', 'need', 'red']]) {
+      const el = page.locator(s), before = await el.boundingBox(), rest = await hoverLook(el);
+      await el.hover();
+      const h = await hoverLook(el);
+      expect([h.style, h.width, h.offset], s).toEqual(['solid', '1px', '-1px']);
+      expect(h.line, `${s}: line keeps its colour`).toBe(h[key]);
+      expect(h.line, `${s}: never ink`).not.toBe(h.ink);
+      expect(h.bg, `${s}: a tint appears`).not.toBe(rest.bg);
+      const [r, g] = chan(h.bg);
+      if (lean === 'green') expect(g, `${s}: tint is green`).toBeGreaterThan(r); else expect(r, `${s}: tint is rose`).toBeGreaterThan(g);
+      expect(await el.boundingBox(), `${s} moved`).toEqual(before);
+    }
+  });
+
+  test('bottom tabs are exempt: no ring or tint on hover or when selected; the colour bar widens and nothing moves', async ({ page }) => {
+    await lookSheets(page);
+    await open(page, '#/decide');
+    const tab = page.locator('#tabs a[data-nav="reply"]'), box = await tab.boundingBox();
+    const w0 = await tab.locator('.bar').evaluate((e) => e.getBoundingClientRect().width), rest = await hoverLook(tab);
+    await tab.hover();
+    await expect.poll(() => tab.locator('.bar').evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(w0);
+    const h = await hoverLook(tab);
+    expect(h.style).toBe('none');
+    expect(h.bg, 'no tint on a tab').toBe(rest.bg);
+    expect(await tab.boundingBox()).toEqual(box);
+    const cur = page.locator('#tabs a[aria-current="page"]'), c = await hoverLook(cur);
+    expect(c.style).toBe('none'); expect(c.bg).toBe(rest.bg);
+    expect(await cur.locator('.bar').evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(w0);
+  });
+
+  test('count pills are one exact box (30 x 22) for 1 and 2 digits even in a wider fallback font; only 3+ digits grow', async ({ page }) => {
+    const many = Array.from({ length: 88 }, (_, i) => ['GO|' + i, 'go', 'Treats', 'Sample ' + i, '{}', ago(5)]).concat(Array.from({ length: 120 }, (_, i) => ['RM|' + i, 'remove', 'Clothes', 'Sample ' + i, '{}', ago(5)]));
+    await sheets(page, many.concat([['MSG|1', 'message', 'Clothes', 'Sample question', '{}', ago(5)]]));
+    await open(page);
+    await page.addStyleTag({ content: '* { font-family: "DejaVu Sans", Verdana, sans-serif !important; letter-spacing: .04em !important; }' });   // wider than Lexend
+    const box = (sel) => page.locator(sel).evaluate((e) => { const b = e.getBoundingClientRect(); return [Math.round(b.width * 100) / 100, Math.round(b.height * 100) / 100]; });
+    expect(await box('#n-reply')).toEqual([30, 22]);    // 1 digit
+    expect(await box('#n-decide')).toEqual([30, 22]);   // 2 digits
+    const wide = await box('#n-do');                    // 3 digits grow
+    expect(wide[1]).toBe(22); expect(wide[0]).toBeGreaterThan(30);
+  });
+
+  test('spacing: 12px between cards (Lisa chose 12px), 16px under a header line before its first card', async ({ page }) => {
+    await lookSheets(page);
+    await open(page, '#/do');
+    const gaps = await page.evaluate(() => {
+      const kids = [...document.querySelectorAll('#view > *')].filter((e) => e.offsetParent);
+      const out = { cards: [], head: [] };
+      for (let i = 1; i < kids.length; i++) {
+        const a = kids[i - 1], b = kids[i], g = Math.round(b.getBoundingClientRect().top - a.getBoundingClientRect().bottom);
+        if (a.matches('.card') && b.matches('.card')) out.cards.push(g);
+        if (a.matches('.ghead') && b.matches('.card')) out.head.push(g);
+      }
+      return out;
+    });
+    expect(gaps.cards.length).toBeGreaterThan(0); expect(gaps.head.length).toBeGreaterThan(0);
+    expect([...new Set(gaps.cards)]).toEqual([12]);
+    expect([...new Set(gaps.head)]).toEqual([16]);
+  });
+
+  test('keyboard focus is a 2px ink ring', async ({ page }) => {
+    await lookSheets(page);
+    await open(page);
+    await page.locator('[data-ans="RM|1"]').focus();
+    await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
+    const s = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineStyle, c.outlineWidth, c.outlineColor === getComputedStyle(document.body).color]; });
+    expect(s).toEqual(['solid', '2px', true]);
+  });
+
+  test('date pills: plain 1px ring at rest; late = rose ring + tint, today or tomorrow = amber ring + tint; words say it too', async ({ page }) => {
+    await lookSheets(page);
+    await open(page);
+    const pills = page.locator('#view .plist .date');
+    await expect(pills).toHaveCount(3);
+    await expect(pills.nth(0)).toContainText('late'); await expect(pills.nth(0)).toHaveClass(/late/);
+    await expect(pills.nth(1)).toContainText('today'); await expect(pills.nth(1)).toHaveClass(/soon/);
+    await expect(pills.nth(2)).not.toHaveClass(/late|soon/);
+    const look = await pills.evaluateAll((els) => els.map((e) => { const s = getComputedStyle(e); return [s.borderTopWidth, s.borderTopColor, s.backgroundColor]; }));
+    expect(look.map((l) => l[0])).toEqual(['1px', '1px', '1px']);
+    expect(look[0][1]).not.toBe(look[2][1]); expect(look[1][1]).not.toBe(look[2][1]); expect(look[0][1]).not.toBe(look[1][1]);
+    expect(look[2][2]).toBe('rgba(0, 0, 0, 0)');   // the plain one has no tint
+  });
+
+  test('Home: a Next card with a 1px ink edge, a "To post" list (late first, at most 7) and Start packing that opens packing mode', async ({ page }) => {
+    await lookSheets(page);
+    await open(page);
+    const next = page.locator('#view > .card.next');
+    await expect(next).toHaveCount(1);
+    await expect(next.locator('.nextlab')).toHaveText('Next');
+    expect(await next.evaluate((e) => getComputedStyle(e).borderTopColor === getComputedStyle(document.body).color)).toBe(true);
+    await expect(page.locator('#view .ghead', { hasText: 'To post' }).locator('.cnt.need')).toHaveText('3');
+    await expect(page.locator('#view .plist .ttl')).toHaveText(['Sample jumper', 'Sample lead', 'Sample blade']);
+    await expect(page.locator('#view .plist img')).toHaveCount(1);          // the real photo where there is one
+    await expect(page.locator('#view .plist .ph .ti-shirt')).toHaveCount(1); // else a line icon of the item type
+    await page.locator('#view [data-gopack]').click();
+    await expect(page.locator('#view .packbar')).toContainText('Packing · 1 of 3');
+    await expect(page.locator('#tabs a[data-nav="do"]')).toHaveAttribute('aria-current', 'page');
+    await page.locator('[data-action="stoppack"]').click();
+    await expect(page.locator('#view .needs')).toHaveText('Do now: 4');
+    await expect(page).toHaveURL(/#\/do$/);
+  });
+
+  test('empty tabs say so in plain words with a small green-ring check; the header says when the list was read', async ({ page }) => {
+    await sheets(page, []);
+    await open(page);
+    await expect(page.locator('#readAt')).toHaveText(/^Read \d\d:\d\d$/);
+    for (const [hash, words] of [['#/me', 'Nothing needs you'], ['#/do', 'Nothing waiting'], ['#/decide', 'All decided'], ['#/reply', 'No one is waiting for a reply']]) {
+      await page.evaluate((x) => { location.hash = x; }, hash);
+      const e = page.locator('#view .card.empty');
+      await expect(e.locator('h2')).toHaveText(words);
+      await expect(e.locator('.okring')).toHaveText('✓');
+      const ok = await e.locator('.okring').evaluate((x) => { const s = getComputedStyle(x); return [s.borderTopWidth, s.borderTopLeftRadius]; });
+      expect(ok).toEqual(['1px', '50%']);
+    }
+    await page.locator('#signin').click();
+    await expect(page.locator('#readAt')).toBeHidden();
+  });
+
+  test('frame: dark top bar and dark bottom tab bar, never black; Warm clear greys are warm and Cool clear greys are cool, light and dark', async ({ page }) => {
+    await lookSheets(page);
+    for (const scheme of ['light', 'dark']) {
+      for (const look of ['warm', 'cool']) {
+        await page.emulateMedia({ colorScheme: scheme });
+        await page.evaluate((lk) => { try { localStorage.setItem('dash-look', JSON.stringify({ bg: lk })); } catch (e) {} }, look).catch(() => {});
+        if (scheme === 'light' && look === 'warm') await open(page);
+        else { await page.reload(); await expect(page.locator('#view .needs')).toBeVisible(); }
+        const c = await page.evaluate(() => {
+          const rgb = (x) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)/.exec(x); return m ? [m[1] * 255, m[2] * 255, m[3] * 255] : (x.match(/[\d.]+/g) || []).slice(0, 3).map(Number); };
+          const g = (sel, p) => rgb(getComputedStyle(document.querySelector(sel))[p]);
+          return { cool: document.documentElement.classList.contains('look-cool'), head: g('header', 'backgroundColor'), foot: g('#tabs', 'backgroundColor'), page: g('body', 'backgroundColor'),
+            line: g('#view .card', 'borderTopColor'), muted: g('#view .hint', 'color'), ctl: g('#view .btn', 'borderTopColor') };
+        });
+        expect(c.cool, `${scheme} ${look}`).toBe(look === 'cool');
+        const L = (v) => 0.2126 * v[0] + 0.7152 * v[1] + 0.0722 * v[2];
+        expect(Math.max(...c.head), 'top bar is never black').toBeGreaterThan(30);
+        expect(L(c.head), 'top bar is dark').toBeLessThan(80);
+        expect(L(c.foot), 'bottom bar one step lighter than the top bar').toBeGreaterThan(L(c.head));
+        for (const k of ['page', 'line', 'muted', 'ctl']) {
+          if (look === 'cool') expect(c[k][2], `${scheme} cool ${k} ${c[k]}`).toBeGreaterThanOrEqual(c[k][0]);
+          else expect(c[k][0], `${scheme} warm ${k} ${c[k]}`).toBeGreaterThanOrEqual(c[k][2]);
+        }
+      }
+    }
   });
 });
