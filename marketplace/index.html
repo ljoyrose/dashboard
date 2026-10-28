@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-marketplace-2026-10-25-v2">
+<meta name="build" content="ljr-marketplace-2026-10-28-look">
 <title>Marketplace</title>
 <!-- Marketplace V2 (25 Oct 2026): tabs Home / Do now / Decide / Reply / Insights, person chips, packing mode, label sheet. PUBLIC repo: no data, no secrets. Ids come from ../config.js (DASH_CONFIG.marketplace);
      everything else is read at run time with Lisa's Google sign-in from the "Marketplace" tab of RR_OPEN-WORK, which the
@@ -15,7 +15,7 @@
 <link rel="manifest" href="../manifest.webmanifest">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap">
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
@@ -23,128 +23,253 @@
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
-  /* Colours: ../tokens.css only (LJR7 spine), same shapes as factory/ and cdhub/. No colour is written here. */
-  :root { --radius: 12px; --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
-          --line: color-mix(in srgb, var(--ljr-0) 55%, var(--ljr-paper)); }
+  /* House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026), the same rules as Studio. Colours: ../tokens.css only. The Warm clear
+     and Cool clear greys and the dark frame are MIXED here from tokens.css colours, so no colour is written in this page;
+     their exact values belong in tokens.css once every hub uses them. The background follows Studio's Look menu
+     (localStorage 'dash-look', read only). No solid colour fills, no coloured words: colour sits in dots, thin bars, 1px rings, tints. */
+  :root { --radius: 12px;
+    --bg: color-mix(in srgb, var(--ljr-0) 25%, var(--ljr-cream)); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
+    --line: color-mix(in srgb, var(--ljr-0) 85%, var(--ljr-muted));          /* dividers */
+    --ctl: color-mix(in srgb, var(--ljr-muted) 70%, var(--ljr-0));            /* the ONE clear line every pressable rests on, 3:1 on the page (Lisa: warm 8A7F70) */
+    --frame: color-mix(in srgb, var(--ljr-ink) 80%, var(--ljr-muted));        /* warm charcoal top bar, never black */
+    --frame-foot: color-mix(in srgb, var(--ljr-ink) 62%, var(--ljr-muted));   /* bottom bar one step lighter */
+    --frame-ink: var(--ljr-cream); --frame-line: color-mix(in srgb, var(--ljr-0) 70%, var(--ljr-muted));
+    --shade: color-mix(in srgb, var(--ljr-ink) 12%, transparent); --need: var(--ljr-2-text); --soon: var(--ljr-3-text); --ok: var(--ljr-5-text); }
+  :root.look-cool { --cmuted: color-mix(in srgb, var(--ljr-muted) 80%, var(--ljr-6-text));
+    --bg: color-mix(in srgb, var(--ljr-6-text) 6%, var(--ljr-paper)); --surface: color-mix(in srgb, var(--ljr-6-text) 3%, var(--ljr-paper)); --ink: color-mix(in srgb, var(--ljr-ink) 90%, var(--ljr-6-text)); --muted: var(--cmuted);
+    --line: color-mix(in srgb, var(--cmuted) 45%, var(--ljr-paper)); --ctl: color-mix(in srgb, var(--cmuted) 78%, var(--ljr-paper));   /* Lisa: cool 7A8692 */
+    --frame: color-mix(in srgb, color-mix(in srgb, var(--ljr-ink) 60%, var(--ljr-muted)) 80%, var(--ljr-6-text));
+    --frame-foot: color-mix(in srgb, color-mix(in srgb, var(--ljr-ink) 45%, var(--ljr-muted)) 78%, var(--ljr-6-text));
+    --frame-ink: var(--ljr-paper); --frame-line: color-mix(in srgb, var(--cmuted) 45%, var(--ljr-paper)); }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
+      --line: color-mix(in srgb, var(--ljr-0) 35%, var(--ljr-paper)); --ctl: color-mix(in srgb, var(--ljr-0) 85%, var(--ljr-paper));
+      --frame: color-mix(in srgb, var(--ljr-0) 7%, var(--ljr-paper)); --frame-foot: color-mix(in srgb, var(--ljr-0) 14%, var(--ljr-paper));
+      --frame-ink: var(--ljr-ink); --frame-line: var(--ljr-0); --shade: color-mix(in srgb, var(--ljr-cream) 60%, transparent); color-scheme: dark; }
+    :root.look-cool:not([data-theme="light"]) { --cmuted: color-mix(in srgb, var(--ljr-muted) 85%, var(--ljr-6-text));
+      --bg: color-mix(in srgb, var(--ljr-6-text) 6%, var(--ljr-cream)); --surface: color-mix(in srgb, var(--ljr-6-text) 8%, var(--ljr-paper));
+      --ink: color-mix(in srgb, var(--ljr-ink) 92%, var(--ljr-6-text)); --muted: var(--cmuted);
+      --line: color-mix(in srgb, var(--cmuted) 25%, var(--ljr-paper)); --ctl: color-mix(in srgb, var(--cmuted) 70%, var(--ljr-paper));
+      --frame: color-mix(in srgb, var(--ljr-6-text) 14%, var(--ljr-paper)); --frame-foot: color-mix(in srgb, var(--ljr-6-text) 20%, var(--ljr-paper));
+      --frame-ink: var(--ljr-ink); --frame-line: var(--cmuted); }
+  }
   * { box-sizing: border-box; }
+  h1, h2, h3, b, strong, th, summary { font-weight: 600; }   /* two weights only: 400 and 600 */
   html { scroll-padding-bottom: 96px; }   /* a button scrolled into view never hides under the tab bar */
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 17px; line-height: 1.5; }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }   /* same width as Factory and the main dashboard */
-  header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
-  .top { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; padding: 10px 16px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
-  .top h1 a { color: inherit; text-decoration: none; }
-  .stamp { font-size: 11px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 5px; }
-  .btn { font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 8px 14px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; min-height: 44px; }
-  /* Lisa 27 Oct: outline at rest; filled on hover/press so a tap clearly lands (black; Yes green, No red); "Saving…" while it writes. */
-  .btn:hover, .btn:active { background: var(--ink); border-color: var(--ink); color: var(--surface); }
-  .btn.yes:hover, .btn.yes:active { background: var(--ljr-5-text); border-color: var(--ljr-5-text); color: var(--surface); }
-  .btn.no:hover, .btn.no:active { background: var(--ljr-2-text); border-color: var(--ljr-2-text); color: var(--surface); }
-  .btn:active { transform: scale(.97); }
-  .btn:focus-visible { outline: 3px solid var(--ljr-6); outline-offset: 2px; }
-  .m.post { font-weight: 700; } .m.post.seller { color: var(--ljr-2-text); } .m.post.buyer { color: var(--ljr-5-text); }
-  .btn.saving, .btn.saving:hover { background: var(--muted); border-color: var(--muted); color: var(--surface); cursor: progress; }
-  .btn:disabled:not(.saving) { opacity: .5; cursor: default; }
-  .btn.main { border-color: var(--ink); }
-  .btn.big { width: 100%; justify-content: center; font-size: 19px; min-height: 60px; }
-  .btn.yes { color: var(--ljr-5-text); border-color: var(--ljr-5); }
-  .btn.no { color: var(--ljr-2-text); border-color: var(--ljr-2); }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
   .hidden { display: none !important; }
-  /* V2: five tabs in a bar at the bottom (thumb reach on the phone), person chips under the title. */
-  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px 8px 10px; background: var(--surface); border-top: 1px solid var(--line); }
-  nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; }
-  nav.tabs a:hover { border-color: var(--line); }
-  nav.tabs a[aria-current="page"] { border-color: var(--ink); background: var(--bg); }
-  nav.tabs .n { font-size: 12px; font-weight: 700; background: var(--ljr-2-solid); color: var(--ljr-2-on); border-radius: 999px; padding: 0 7px; min-width: 20px; }
-  nav.tabs .n:empty { visibility: hidden; }
-  .chips.people { padding: 0 16px 10px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
-  .chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
-  main, main.wrap { padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 14px; }   /* .wrap alone would drop the room for the tab bar */
-  .tiles.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .tile.big { min-height: 88px; display: flex; flex-direction: column; justify-content: center; text-decoration: none; }
-  .tile.big .v { font-size: 28px; }
-  .hint { font-size: 14px; color: var(--muted); margin: 0; }
-  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  .fact { background: var(--bg); border-radius: var(--radius); padding: 8px 10px; }
-  .fact .k { display: block; font-size: 12px; color: var(--muted); } .fact .v { font-size: 18px; font-weight: 700; overflow-wrap: anywhere; }
-  .parcel { font-size: 34px; font-weight: 700; }
-  .dropcode { border: 2px dashed var(--line); border-radius: var(--radius); padding: 12px; text-align: center; }
-  .dropcode .code { display: block; font-size: 22px; font-weight: 700; letter-spacing: 2px; overflow-wrap: anywhere; }
-  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; max-width: 520px; }
-  .pair figure { margin: 0; display: flex; flex-direction: column; gap: 4px; }
-  .pair img, .pair .nopic { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg); display: block; }
-  .pair .nopic { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
-  .pair figcaption { font-size: 13px; color: var(--muted); font-weight: 600; }
-  .verdict { margin: 0; font-weight: 700; font-size: 15px; }
-  .verdict.go { color: var(--ljr-5-text); } .verdict.wait { color: var(--ljr-2-text); }
-  .opbox { display: inline-flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-  label.qty { font-weight: 600; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; }
-  details .txtin { margin: 6px 0; }
-  .ava { --ava: var(--ljr-ava-other); float: right; margin: 0 0 6px 10px; width: 36px; height: 36px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; background: var(--ava); color: var(--ljr-ava-on); font-size: 13px; font-weight: 800; letter-spacing: .02em; border: 2px solid var(--surface); box-shadow: 0 0 0 1.5px var(--ava); }
-  .ava img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; display: block; }
-  .buyfrom { display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; font-weight: 600; } .buyfrom .k { color: var(--muted); font-weight: 600; }
-  details.madeof { display: block; } details.madeof[open] > *:not(summary) { margin-top: 10px; } details.madeof label.qty { margin-top: 12px; }
-  .packbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
-  .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ljr-2-text); }
-  .banner.info { border-color: var(--line); background: var(--surface); color: var(--ink); }
-  .needs { font-size: 26px; font-weight: 700; margin: 0; }
-  .needs .zero { color: var(--ljr-5-text); }
-  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; }
-  /* Lisa 27 Oct: "no gaps between, very cramped": cards, groups and buttons get room to breathe. */
-  #view { display: flex; flex-direction: column; gap: 32px; }   /* Lisa 27 Oct: 16px still read as cramped on the phone */
-  #view > .grp { margin-top: 12px; margin-bottom: -18px; }   /* a heading sits close to its own cards, far from the last group */
-  .card .acts { margin-top: 4px; }
-  /* Courier band on post cards (Lisa 26 Oct): brand colour + name + where to take it. Name always in text, never colour alone. */
-  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: -16px -18px 2px; padding: 12px 18px; border-radius: var(--radius) var(--radius) 0 0; font-weight: 800; font-size: 17px; letter-spacing: .02em; }
-  .cband .pid { font-size: 22px; } .cband .to { font-weight: 600; font-size: 15px; }
-  .cb-inpost { background: var(--ljr-cb-inpost); color: var(--ljr-cb-inpost-on); } .cb-evri { background: var(--ljr-cb-evri); color: var(--ljr-cb-on); } .cb-rm { background: var(--ljr-cb-rm); color: var(--ljr-cb-on); }
-  .cb-dpd { background: var(--ljr-cb-dpd); color: var(--ljr-cb-on); } .cb-yodel { background: var(--ljr-cb-yodel); color: var(--ljr-cb-on); } .cb-pf { background: var(--ljr-cb-pf); color: var(--ljr-cb-on); } .cb-none { background: var(--ljr-cb-none); color: var(--ljr-cb-on); }
-  .card.acc2 { border-left: 4px solid var(--ljr-2); } .card.acc5 { border-left: 4px solid var(--ljr-5); } .card.acc4 { border-left: 4px solid var(--ljr-4); }
-  .card h2 { font-size: 19px; margin: 0; }
-  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
-  .item { display: flex; gap: 12px; align-items: center; }
-  .item img { width: 64px; height: 64px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); flex: none; background: var(--bg); }
-  .item .t { flex: 1; min-width: 0; font-weight: 600; }
-  .item .m { font-size: 14px; color: var(--muted); font-weight: 400; margin-top: 2px; }
-  .acts { display: flex; gap: 10px; flex-wrap: wrap; }
-  .acts .btn { flex: 1; justify-content: center; }
-  .grp { font-size: 15px; font-weight: 700; margin: 6px 0 0; color: var(--muted); }
-  .row { display: flex; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
-  /* engine v11 cards: the money lines (▶ headline bold, ⚠ warnings red), the list of questions, a card inside a card */
-  ul.money, ul.asks { margin: 0; padding-left: 18px; font-size: 15px; display: flex; flex-direction: column; gap: 4px; }
-  ul.money { list-style: none; padding-left: 0; } ul.money li.head { font-weight: 700; }
-  .card.inner { padding: 4px 12px; }
-  .card > .row:first-of-type { border-top: 0; }
-  .row .txt { flex: 1; min-width: 0; }
-  .row .why { font-size: 14px; color: var(--muted); }
-  .steps { margin: 8px 0 0; padding-left: 22px; font-size: 15px; }
-  .steps li { margin: 4px 0; }
-  .red { color: var(--ljr-2-text); font-weight: 700; }
-  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 6px 10px; cursor: pointer; align-self: flex-start; }
-  .more:hover { border-color: var(--muted); }
-  .tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
-  .tile { font: inherit; text-align: left; background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 10px 12px; cursor: pointer; color: var(--ink); }
-  .tile:hover { border-color: var(--muted); }
-  .tile .k { font-size: 13px; color: var(--muted); } .tile .v { font-size: 20px; font-weight: 700; }
-  .tile .up { color: var(--ljr-5-text); } .tile .down { color: var(--ljr-2-text); } .tile .flat { color: var(--muted); }
-  input.num, input.txtin { font: inherit; font-size: 18px; padding: 8px 10px; border-radius: var(--radius); border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); }
-  input.num { width: 72px; text-align: center; }
-  input.txtin { width: 100%; }
-  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
-  .chip { font: inherit; font-size: 15px; font-weight: 600; border-radius: 999px; padding: 6px 14px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 40px; }
-  .chip.on { border-color: var(--ink); }
-  .qr { position: fixed; inset: 0; background: var(--ljr-paper); color: var(--ljr-ink); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
-  .qr .code { font-size: 44px; font-weight: 700; letter-spacing: 3px; word-break: break-all; }
-  .qr img { max-width: 90vw; max-height: 60vh; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   a.btn, nav.tabs a, a.tile { text-decoration: none; }
+  .ti { line-height: 1; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }   /* same width as Factory and the main dashboard */
+
+  /* Frame: dark top bar (never black). Buttons on it are outlined in the frame's own light colour. */
+  header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
+  header .top, header .chips.people { max-width: 980px; margin: 0 auto; }
+  .top { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; padding: 12px 16px; }
+  .top h1 { font-size: 22px; margin: 0 auto 0 0; display: flex; gap: 8px; align-items: center; }
+  .top h1 a { color: inherit; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
+  .top h1 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ljr-6); flex: none; }
+  .stamp, .readat { font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; color: var(--frame-ink); font-variant-numeric: tabular-nums; }
+  .stamp:empty, .readat:empty { display: none; }
+  header .btn, header .chip { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
+  header .btn .ti { color: var(--frame-ink); }
+  /* Signed out the dark bar is hidden by the sign-in gate, so its buttons switch to page colours (still readable). */
+  html.dash-locked header .btn { color: var(--ink); border-color: var(--ctl); }
+  html.dash-locked #backHome { margin-left: auto; }
+
+  /* Buttons: two sizes only. 36px on a desktop, 44px on a phone. 1px edge; hover = that edge turns ink; nothing moves. */
+  .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 14px; cursor: pointer; text-decoration: none; display: inline-flex; gap: 6px; align-items: center; min-height: 36px; }
+  #backHome { min-height: 44px; }
+  /* Lisa 28 Oct: every pressable rests on the SAME clear line (no button starts out ink, so hover always shows). Yes / No and
+     the main button differ by their words and place only. */
+  .btn.big { width: 100%; justify-content: center; }
+  .btn.saving, .btn.saving:hover { border-style: dashed; border-color: var(--muted); color: var(--muted); cursor: progress; }
+  .btn:disabled:not(.saving) { opacity: .55; cursor: default; }
+  .chip { font: inherit; font-size: 14px; font-weight: 600; border-radius: var(--radius); padding: 0 14px; border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; white-space: nowrap; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chips.people { padding: 0 16px 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  /* Selected = the same 1px edge turned ink (an outline laid exactly over it), never a fill. */
+  .chip[aria-pressed="true"], .chip.on { outline: 1px solid var(--ink); outline-offset: -1px; }
+  header .chip[aria-pressed="true"] { outline-color: var(--frame-ink); }
+  @media (hover: hover) {
+    .btn:hover, .chip:hover, a.tile:hover, button.tile:hover, .more:hover, details > summary:hover, .pair figure > a:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    header .btn:hover, header .chip:hover { outline-color: var(--frame-ink); }
+    html.dash-locked header .btn:hover { outline-color: var(--ink); }
+  }
+  /* Keyboard focus: a 2px ink ring (the one exception to 1px). */
+  a:focus, button:focus, summary:focus { outline: none; }
+  :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  header :focus-visible, header a:focus-visible, header button:focus-visible { outline-color: var(--frame-ink); }
+  input:focus { outline: none; border-color: var(--ink); }
+
+  /* Frame: dark bottom tab bar, light tab buttons, no rings. Hover and selected = the small colour bar above the label widens. */
+  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--frame-foot); }
+  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 200px)); justify-content: center; } }
+  nav.tabs a { --tc: var(--ljr-0); position: relative; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--surface); min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); padding: 4px 2px; text-align: center; }
+  nav.tabs a .bar { width: 18px; height: 4px; border-radius: 2px; background: var(--tc); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
+  nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
+  @media (hover: hover) { nav.tabs a:hover .bar { width: 40px; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { nav.tabs a .bar { transition: none; } }
+  nav.tabs a > .ti { font-size: 18px; color: var(--ink); }
+  nav.tabs a:focus-visible { outline: 2px solid var(--frame-ink); outline-offset: 2px; }
+  /* Counts: a 24px ring pill. In the tab's top-right corner on a desktop; in flow beside the icon on a phone. */
+  /* One fixed size so 1 and 2 digits match (Lisa 28 Oct): 30 x 22, radius 11; only 3+ digits grow. */
+  .cnt, nav.tabs .n { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 22px; padding: 0 3px; white-space: nowrap; border: 1px solid var(--ctl); border-radius: 11px; font-size: 13px; font-weight: 600; line-height: 20px; box-sizing: border-box; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; }
+  .cnt.wide, nav.tabs .n.wide { width: auto; min-width: 30px; padding: 0 6px; }   /* only 3+ digits grow */
+  nav.tabs .n { position: absolute; top: 6px; right: 12px; }
+  nav.tabs .n:empty { display: none; }
+  .cnt.need, nav.tabs .n.need { border-color: var(--need); background: var(--ljr-2-tint); }   /* "needs you" counts: rose edge + light rose tint */
+  @media (max-width: 544px) {
+    .btn, .chip { min-height: 44px; }
+    nav.tabs { gap: 4px; padding-left: 6px; padding-right: 6px; }
+    nav.tabs a { min-height: 62px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; padding: 6px 2px; }
+    nav.tabs a .bar { margin: 0 calc(50% - 9px); }
+    nav.tabs a[aria-current="page"] .bar { width: 26px; margin: 0 calc(50% - 13px); }
+    nav.tabs a > .ti { order: 1; }
+    nav.tabs .n { position: static; order: 2; }
+    nav.tabs a > span:not(.bar):not(.n) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }
+  }
+  @media (max-width: 544px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
+
+  /* Work area. Spacing in 12px steps; 16px under a header line before the first item. */
+  main, main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }   /* .wrap alone would drop the room for the tab bar */
+  #view { display: flex; flex-direction: column; gap: 24px; }   /* two steps between cards: Lisa 27 Oct, "very cramped" */
+  #view > .grp, #view > .ghead { margin-top: 12px; margin-bottom: -8px; }   /* a heading sits close to its own cards: 16px under it */
+  .needs { font-size: 26px; font-weight: 600; margin: 0; line-height: 1.3; }   /* the page greeting */
+  .needs .zero { font-variant-numeric: tabular-nums; }
+  .hint { font-size: 14px; color: var(--muted); margin: 0; }
+  .grp { font-size: 16px; font-weight: 600; margin: 0; }
+  .ghead { display: flex; gap: 8px; align-items: center; }
+  .ghead .cnt { margin-left: auto; }
+  .banner { border: 1px solid var(--need); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ink); }
+  .banner.info { border-color: var(--line); background: var(--surface); }
+  .card { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 3px var(--shade); min-width: 0; }
+  /* A card's colour is a thin bar on its left edge, never a thick border or a fill. Rose = needs you now, green = right. */
+  .card.acc2::before, .card.acc5::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: 4px; border-radius: 0 4px 4px 0; background: var(--ljr-2); }
+  .card.acc5::before { background: var(--ljr-5); }
+  .card.empty::before { content: none; }
+  /* The "Next" card on Home: the one thing to do now, white with a 1px ink edge. */
+  .card.next { border-color: var(--ink); }
+  .nextlab { margin: 0 0 -8px; font-size: 13px; font-weight: 600; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .nextlab .ti { font-size: 16px; color: var(--ink); }
+  .card h2 { font-size: 17px; margin: 0; line-height: 1.35; }
+  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
+  .card .acts { margin-top: 4px; }
+  .card.inner { padding: 0; border: 0; box-shadow: none; gap: 0; background: transparent; }   /* no box inside a box: rows split by 1px lines */
+  .card > .row:first-of-type, .card.inner > .row:first-child { border-top: 0; }
+  /* Friendly empty states: a small green-ring check and plain words. */
+  .card.empty { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .card.empty > div { flex: 1; min-width: 0; }
+  .okring { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--ok); background: var(--ljr-5-tint); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .card.empty h2 { font-size: 17px; }
+  .card.empty .what { margin-top: 2px; }
+
+  /* Item block: 44×44 photo (or a line icon of the item type) left of the text; name line, then the title (2 lines, then …). */
+  .item { display: flex; gap: 12px; align-items: flex-start; }
+  .item > img, .item > .ph, .row > img, .row > .ph { width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); flex: none; background: var(--bg); }
+  .ph { display: inline-flex; align-items: center; justify-content: center; }
+  .ph .ti { font-size: 22px; color: var(--muted); }
+  .item .t { flex: 1; min-width: 0; font-weight: 400; }
+  .bline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; }
+  .sdot { --c: var(--ljr-0); width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; display: inline-block; }
+  .ttl { font-size: 16px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .item .m { font-size: 14px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .m.post { font-weight: 600; color: var(--ink); display: flex; gap: 6px; align-items: center; }
+  .m.post .ti { font-size: 16px; color: var(--muted); }
+  /* Who a card belongs to: initials (or their photo) in a small ring of that person's colour, on the name line. */
+  .ava { --ava: var(--ljr-ava-other); width: 24px; height: 24px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; flex: none;
+    border: 1px solid color-mix(in srgb, var(--ava) 70%, var(--ink)); background: color-mix(in srgb, var(--ava) 14%, var(--surface)); color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1; }
+  .ava img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; display: block; }
+  /* Date pill: its RING shows urgency (rose = late, amber = today or tomorrow). The words stay ink. */
+  .date { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--radius); font-size: 13px; font-weight: 600; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .date.late { border-color: var(--need); background: var(--ljr-2-tint); color: var(--ink); }
+  .date.soon { border-color: var(--soon); background: var(--ljr-3-tint); color: var(--ink); }
+  /* Flags in words: ink text with a small coloured dot in front, never coloured words. */
+  .red, .verdict.wait, .verdict.go, ul.money li.red { color: var(--ink); font-weight: 600; }
+  .red::before, .verdict::before, ul.money li.red::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ljr-2); margin-right: 6px; vertical-align: 1px; }
+  .verdict.wait::before { background: var(--ljr-3); } .verdict.go::before { background: var(--ljr-5); }
+  .verdict { margin: 0; font-size: 15px; }
+
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acts .btn { flex: 1; justify-content: center; }
+  .row { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .row .txt { flex: 1; min-width: 0; }
+  .row .why { font-size: 14px; color: var(--muted); }
+  .steps { margin: 0; padding-left: 22px; font-size: 15px; }
+  .steps li { margin: 4px 0; }
+  .steps.words { list-style: none; padding-left: 0; }
+  .steps.words li { display: flex; gap: 8px; align-items: baseline; }
+  .steps.words .sn { flex: none; font-weight: 600; }
+  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 12px; min-height: 36px; cursor: pointer; align-self: flex-start; }
+  @media (max-width: 544px) { .more { min-height: 44px; } }
+
+  /* Summary strip: big numbers in tabular figures, each tile a 1px edge; a "needs you" number wears the rose ring. */
+  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .tiles.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 12px; cursor: pointer; color: var(--ink); min-width: 0; }
+  .tile.big { min-height: 88px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+  .tile .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; } .tile .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .tile.big .v { font-size: 28px; line-height: 1.2; }
+  .needs3 .v { align-self: flex-start; min-width: 44px; padding: 0 10px; border: 1px solid var(--ctl); border-radius: var(--radius); text-align: center; }
+  .needs3 .v.need { border-color: var(--need); background: var(--ljr-2-tint); }
+  .tile .up, .tile .down, .tile .flat { color: var(--muted); font-size: 15px; }
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .fact { padding: 8px 12px; border-left: 1px solid var(--line); min-width: 0; }
+  .fact:nth-child(3n + 1) { border-left: 0; padding-left: 0; }
+  .fact .k { display: block; font-size: 13px; color: var(--muted); } .fact .v { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  ul.money, ul.asks { margin: 0; padding-left: 18px; font-size: 15px; display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
+  ul.money { list-style: none; padding-left: 0; } ul.money li.head { font-weight: 600; }
+
+  /* Post cards. Courier line: brand dot + name (always in words) + where to take it; the parcel number in a ring pill. */
+  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 -4px; padding: 0 0 12px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 16px; }
+  .cband .cdot { width: 12px; height: 12px; border-radius: 50%; background: var(--cb); box-shadow: 0 0 0 1px var(--ctl); flex: none; }
+  .cband .pid { font-size: 17px; height: 28px; padding: 0 10px; border: 1px solid var(--ink); border-radius: var(--radius); display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
+  .cband .to { font-weight: 400; font-size: 15px; color: var(--muted); }
+  .cb-inpost { --cb: var(--ljr-cb-inpost); } .cb-evri { --cb: var(--ljr-cb-evri); } .cb-rm { --cb: var(--ljr-cb-rm); } .cb-dpd { --cb: var(--ljr-cb-dpd); }
+  .cb-yodel { --cb: var(--ljr-cb-yodel); } .cb-pf { --cb: var(--ljr-cb-pf); } .cb-none { --cb: var(--ljr-cb-none); }
+  .parcel { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .row .parcel { font-size: 17px; min-width: 44px; }
+  .dropcode { border: 1px dashed var(--ctl); border-radius: var(--radius); padding: 12px; text-align: center; }
+  .dropcode .code { display: block; font-size: 22px; font-weight: 600; letter-spacing: 2px; overflow-wrap: anywhere; }
+  .packbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
+  .pidin { width: 9em; }
+  /* Home: "To post" list, calm rows (photo, title, date pill), one button under it. Not a card, so Home keeps one Next card. */
+  .plist { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 16px 12px; display: flex; flex-direction: column; box-shadow: 0 1px 3px var(--shade); }
+  .prow { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); color: var(--ink); }
+  .prow:first-child { border-top: 0; }
+  .prow .pt { flex: 1; min-width: 0; display: flex; gap: 4px 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .prow .ttl { min-width: 0; font-size: 15px; }
+  .prow > img, .prow > .ph { width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); flex: none; background: var(--bg); }
+  .plist .acts { margin-top: 4px; }
+
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 520px; }
+  .pair figure > a { display: block; border-radius: var(--radius); }
+  .pair figure { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .pair img, .pair .nopic { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg); display: block; }
+  .pair .nopic { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
+  .pair figcaption { font-size: 13px; color: var(--muted); font-weight: 600; overflow-wrap: anywhere; }
+  .opbox { display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  label.qty { font-weight: 600; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; border-radius: var(--radius); }
+  details .txtin { margin: 8px 0; }
+  .buyfrom { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-weight: 600; } .buyfrom .k { color: var(--muted); font-weight: 600; }
+  details.madeof { display: block; } details.madeof[open] > *:not(summary) { margin-top: 12px; } details.madeof label.qty { margin-top: 12px; }
+  input.num, input.txtin { font: inherit; font-size: 16px; min-height: 36px; padding: 4px 10px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); }
+  @media (max-width: 544px) { input.num, input.txtin { min-height: 44px; } }
+  input.num { width: 72px; text-align: center; font-variant-numeric: tabular-nums; }
+  input.num.pidin { width: 9em; }
+  input.txtin { width: 100%; }
+  input::placeholder { color: var(--muted); opacity: 1; }
+  .qr { position: fixed; inset: 0; background: var(--ljr-paper); color: var(--ljr-ink); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
+  .qr .code { font-size: 44px; font-weight: 600; letter-spacing: 3px; word-break: break-all; }
+  .qr img { max-width: 90vw; max-height: 60vh; }
 </style>
 </head>
 <body>
 <header>
-  <div class="top"><h1><a href="#/me">Marketplace</a></h1><span class="stamp" id="stamp">TEST</span>
+  <div class="top"><h1><a href="#/me"><span class="dot" aria-hidden="true"></span>Marketplace</a></h1><span class="stamp" id="stamp">TEST</span><span class="readat" id="readAt" title="When the list was last read. It reads again every 5 minutes."></span>
     <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh"><i class="ti ti-refresh"></i></button>
     <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
     <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
@@ -155,11 +280,11 @@
   <div id="view"></div>
 </main>
 <nav class="tabs hidden" id="tabs" aria-label="Marketplace sections">
-  <a href="#/me" data-nav="me"><span>Home</span><span class="n"></span></a>
-  <a href="#/do" data-nav="do"><span>Do now</span><span class="n" id="n-do"></span></a>
-  <a href="#/decide" data-nav="decide"><span>Decide</span><span class="n" id="n-decide"></span></a>
-  <a href="#/reply" data-nav="reply"><span>Reply</span><span class="n" id="n-reply"></span></a>
-  <a href="#/insights" data-nav="insights"><span>Insights</span><span class="n"></span></a>
+  <a href="#/me" data-nav="me" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-home" aria-hidden="true"></i><span>Home</span><span class="n"></span></a>
+  <a href="#/do" data-nav="do" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-package" aria-hidden="true"></i><span>Do now</span><span class="n need" id="n-do"></span></a>
+  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-traffic-lights" aria-hidden="true"></i><span>Decide</span><span class="n need" id="n-decide"></span></a>
+  <a href="#/reply" data-nav="reply" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-message" aria-hidden="true"></i><span>Reply</span><span class="n need" id="n-reply"></span></a>
+  <a href="#/insights" data-nav="insights" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-chart-bar" aria-hidden="true"></i><span>Insights</span><span class="n"></span></a>
 </nav>
 <div id="qr" class="qr hidden" role="dialog" aria-label="Drop-off code"></div>
 <script>
@@ -201,6 +326,9 @@
   var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false, stockFilter = 'all';
   var who = 'All', site = 'All';
   try { who = localStorage.getItem('mkt.who') || 'All'; if (PEOPLE.indexOf(who) < 0) who = 'All'; } catch (e) {}
+  // Background follows Studio's Look menu (one JSON in localStorage 'dash-look'); read only here. Warm clear is the default.
+  function applyLook() { try { var lk = JSON.parse(localStorage.getItem('dash-look') || '{}'); document.documentElement.classList.toggle('look-cool', !!lk && lk.bg === 'cool'); } catch (e) {} }
+  applyLook(); window.addEventListener('storage', function (e) { if (e.key === 'dash-look') applyLook(); });
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
@@ -213,7 +341,21 @@
     if (PHOTO_HOSTS.test(id)) return w > 300 ? id.replace(/\/s-l\d+\./, w >= 1000 ? '/s-l1600.' : '/s-l500.') : id;
     return /^[\w-]{20,}$/.test(id) ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w' + w : '';
   }
-  function thumb(id) { var src = photoSrc(id, 200); return src ? '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(src) + '">' : ''; }
+  // One thumbnail size, 44x44, left of the title: the real photo cropped, else a grey line icon of the item's type.
+  var CAT_ICON = { 'Clothes': 'shirt', 'Blades & grooming': 'scissors', 'Health & supplements': 'pill', 'Treats': 'bone', 'Crates & beds': 'bed', 'Towels & textiles': 'wash', 'Collars & accessories': 'paw', 'Electronics & media': 'device-tv' };
+  function thumb(id, cat) { var src = photoSrc(id, 200); return src ? '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(src) + '">' : '<span class="ph" aria-hidden="true"><i class="ti ti-' + (CAT_ICON[cat] || 'tag') + '"></i></span>'; }
+  // The name line above a title: the site (a dot in its colour + its name in words) and whose item it is.
+  var SITE_COL = { ebay: 'var(--ljr-6)', vinted: 'var(--ljr-5)', etsy: 'var(--ljr-3)', depop: 'var(--ljr-7)', temu: 'var(--ljr-4)' };
+  function nameLine(r, d) { var s = siteOf(r), o = String(d.owner || 'Lisa');
+    return '<div class="bline">' + (s ? '<span class="sdot" style="--c:' + (SITE_COL[s.toLowerCase()] || 'var(--ljr-0)') + '" aria-hidden="true"></span><span>' + esc(s) + '</span><span aria-hidden="true">·</span>' : '') + avatar(o) + (/^[A-Z]{1,3}$/.test(o) ? '' : '<span>' + esc(o) + '</span>') + '</div>'; }
+  // Date pill: a plain 1px ring; its ring shows urgency (rose + tint = late, amber + tint = today or tomorrow). Words say it too.
+  function dueOf(d) { var day = String(d.post_by || '').slice(0, 10); if (isNaN(Date.parse(day))) return d.red ? 'late' : '';
+    var today = new Date().toISOString().slice(0, 10), tom = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+    return d.red || day < today ? 'late' : day === today ? 'today' : day === tom ? 'tomorrow' : ''; }
+  function datePill(d) { if (!d.post_by) return ''; var u = dueOf(d), lab = ukDay(d.post_by) || d.post_by;
+    return '<span class="date' + (u === 'late' ? ' late' : u ? ' soon' : '') + '">Post by ' + esc(lab) + (u ? ' · ' + u : '') + '</span>'; }
+  function emptyCard(title, line, extra) { return '<div class="card empty"><span class="okring" aria-hidden="true">✓</span><div><h2>' + esc(title) + '</h2>' + (line ? '<p class="what">' + esc(line) + '</p>' : '') + '</div>' + (extra || '') + '</div>'; }
+  function ghead(name, n, need) { return '<div class="ghead"><p class="grp">' + esc(name) + '</p>' + (n ? '<span class="cnt' + (need ? ' need' : '') + (n > 99 ? ' wide' : '') + '">' + n + '</span>' : '') + '</div>'; }
   // "Same item?" cards (key LINK|<other>|<eBay>): both photos side by side, big; tap one to open it full size.
   // The second photo comes from RR_LISTINGS.csv (image_url), read once with Lisa's sign-in; nothing is written to it.
   // Who a card belongs to: a round photo per person (a Drive image named AVATAR_<name>, e.g. AVATAR_Lisa.jpg, read with Lisa's
@@ -299,7 +441,7 @@
     if (!token) { render(); return; }
     api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
       rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
-      $('banner').className = 'banner hidden'; render(); loadPics(); loadAvatars();
+      $('banner').className = 'banner hidden'; $('readAt').textContent = 'Read ' + hm(Date.now()); render(); loadPics(); loadAvatars();
     }).catch(function (e) { banner('Could not load: ' + e.message); });
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
   }
@@ -368,15 +510,16 @@
     else if (d.qr) steps.push('At the ' + (courierOf(d) ? courierOf(d).to : 'drop-off') + ', tap Show QR.');
     else if (mail) steps.push('Print the label from the email (button below).');
     steps.push('Pack it, write ' + (d.parcel_id || 'the parcel number') + ' on the parcel, post it, then tap Posted.');
-    return '<p class="what"><b>Sold on ' + esc(site) + (d.sold_at ? ' ' + esc(ukDay(d.sold_at)) : '') + '.</b> ' + (d.post_by ? '<span class="' + (d.red ? 'red' : '') + '">Post by ' + esc(ukDay(d.post_by)) + (d.red ? ' (late)' : '') + '.</span>' : eb ? 'Post as soon as you can (eBay shows the date on the order).' : '') + '</p>' +
-      '<ol class="steps">' + steps.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ol>' +
+    return '<p class="what"><b>Sold on ' + esc(site) + (d.sold_at ? ' ' + esc(ukDay(d.sold_at)) : '') + '.</b> ' + (d.post_by ? datePill(d) : eb ? 'Post as soon as you can (eBay shows the date on the order).' : '') + '</p>' +
+      '<ol class="steps words">' + steps.map(function (x, i) { return '<li><span class="sn">Step ' + (i + 1) + ':</span><span>' + esc(x) + '</span></li>'; }).join('') + '</ol>' +
       ((order || mail) ? '<div class="acts">' + (order ? linkBtn(order, 'Open the order on eBay') : '') + (mail ? linkBtn(mail, 'Open the label email') : '') + '</div>' : '');
   }
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
-    var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + '">' + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
-      '<div class="item">' + (isPair ? '' : thumb(d.photo)) + '<div class="t">' + avatar(d.owner) + esc(r.title) + '<div class="m">' + esc([d.price, siteOf(r), d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier, d.owner].filter(Boolean).join(' · ')) + '</div>' +
-      postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m ' + (d.red ? 'red' : '') + '">Post by ' + esc(d.post_by) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
+    var nx = opts && opts.next;
+    var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
+      '<div class="item">' + (isPair ? '' : thumb(d.photo, r.category)) + '<div class="t">' + nameLine(r, d) + '<div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([d.price, d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier].filter(Boolean).join(' · ')) + '</div>' +
+      postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m">' + datePill(d) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
       (isPair ? pair(r, d) : '') + (r.section === 'post' ? postGuide(r, d) : '') + (d.why && d.kind !== 'which_parcel' ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
     var acts = [];
@@ -441,14 +584,14 @@
   }
   function factsOf(pairs) { pairs = pairs.filter(function (p) { return p[1] !== '' && p[1] !== undefined && p[1] !== null; }); return pairs.length ? '<div class="facts">' + pairs.map(function (p) { return '<div class="fact"><span class="k">' + esc(p[0]) + '</span><span class="v">' + esc(p[1]) + '</span></div>'; }).join('') + '</div>' : ''; }
   // Courier from the card ("Royal Mail 2nd Class", "InPost"...) -> band colour, short name and where to take it.
-  var COURIERS = [[/inpost/i, 'cb-inpost', 'INPOST', 'InPost locker or shop'], [/evri|hermes/i, 'cb-evri', 'EVRI', 'Evri ParcelShop'], [/parcelforce/i, 'cb-pf', 'PARCELFORCE', 'Post Office'],
-    [/royal ?mail/i, 'cb-rm', 'ROYAL MAIL', 'Post Office'], [/dpd/i, 'cb-dpd', 'DPD', 'DPD Pickup shop'], [/yodel/i, 'cb-yodel', 'YODEL', 'Yodel Store'], [/collect/i, 'cb-none', 'COLLECTION', 'Buyer collects: no post']];
+  var COURIERS = [[/inpost/i, 'cb-inpost', 'InPost', 'InPost locker or shop'], [/evri|hermes/i, 'cb-evri', 'Evri', 'Evri ParcelShop'], [/parcelforce/i, 'cb-pf', 'Parcelforce', 'Post Office'],
+    [/royal ?mail/i, 'cb-rm', 'Royal Mail', 'Post Office'], [/dpd/i, 'cb-dpd', 'DPD', 'DPD Pickup shop'], [/yodel/i, 'cb-yodel', 'Yodel', 'Yodel Store'], [/collect/i, 'cb-none', 'Collection', 'Buyer collects: no post']];
   function courierOf(d) { var c = String(d.courier || ''); for (var i = 0; i < COURIERS.length; i++) if (COURIERS[i][0].test(c)) return { cls: COURIERS[i][1], name: COURIERS[i][2], to: COURIERS[i][3], full: c }; return null; }
   function courierBand(r, d) {
     var c = courierOf(d), pid = d.parcel_id || '';
     if (!c && !d.qr && !d.tracking && !pid) return '';
-    return '<div class="cband ' + (c ? c.cls : 'cb-none') + '">' + (pid ? '<span class="pid">' + esc(pid) + '</span>' : '') +
-      '<span>' + esc(c ? c.name : /ebay/i.test(d.platform) ? 'POSTAGE NOT BOUGHT YET' : 'COURIER ON THE LABEL') + '</span><span class="to">' + esc(c ? 'Take to: ' + c.to + (c.full && c.full.toUpperCase() !== c.name ? ' · ' + c.full : '') : /ebay/i.test(d.platform) ? 'Buy it on the eBay order' : 'Open the label email to see it') + '</span></div>';
+    return '<div class="cband ' + (c ? c.cls : 'cb-none') + '"><span class="cdot" aria-hidden="true"></span>' + (pid ? '<span class="pid">' + esc(pid) + '</span>' : '') +
+      '<span class="cn">' + esc(c ? c.name : /ebay/i.test(d.platform) ? 'Postage not bought yet' : 'Courier on the label') + '</span><span class="to">' + esc(c ? 'Take to: ' + c.to + (c.full && c.full.toLowerCase() !== c.name.toLowerCase() ? ' · ' + c.full : '') : /ebay/i.test(d.platform) ? 'Buy it on the eBay order' : 'Open the label email to see it') + '</span></div>';
   }
   var V11 = {
     newprod: function (r, d) {
@@ -548,7 +691,7 @@
       return '<button class="chip" type="button" data-sfilter="' + c[0] + '" aria-pressed="' + (stockFilter === c[0]) + '">' + c[1] + '</button>'; }).join('') + '</div>';
     list.filter(function (r) { var d = detail(r); return stockFilter === 'all' || (stockFilter === 'low' && d.low) || (stockFilter === 'unknown' && d.unknown); }).forEach(function (r) {
       var d = detail(r);
-      h += '<div class="card stockrow' + (d.low ? ' acc2' : '') + '" data-text="' + esc((r.title + ' ' + d.item_sku + ' ' + (d.shelf || '')).toLowerCase()) + '"><div class="item">' + thumb(d.photo) + '<div class="t">' + esc(r.title) +
+      h += '<div class="card stockrow' + (d.low ? ' acc2' : '') + '" data-text="' + esc((r.title + ' ' + d.item_sku + ' ' + (d.shelf || '')).toLowerCase()) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' +
         '<div class="m">' + esc([d.item_sku, d.shelf ? 'shelf ' + d.shelf : '', d.owner && d.owner !== 'Lisa' ? d.owner : '', d.listings + (d.listings === 1 ? ' listing' : ' listings')].filter(Boolean).join(' · ')) + '</div></div></div>' +
         '<div class="facts"><div class="fact"><span class="k">Have</span><span class="v' + (d.unknown ? ' red' : '') + '">' + (d.unknown ? '?' : esc(d.have)) + '</span></div><div class="fact"><span class="k">On order</span><span class="v">' + esc(d.on_order || 0) + '</span></div><div class="fact"><span class="k">Min</span><span class="v">' + (d.min === '' ? '–' : esc(d.min)) + '</span></div></div>' +
         priceLine(d);
@@ -572,7 +715,7 @@
     var total = buys.reduce(function (n, r) { var d = detail(r), c = parseFloat(String(d.price_now || d.last_cost || '').replace(/[^\d.]/g, '')); return n + (isNaN(c) || !d.buy ? 0 : c * d.buy); }, 0);
     var h = '<p class="needs">Temu order list: ' + buys.length + '</p><p class="hint">Temu cannot take orders from the system: tap Open on Temu, buy, then type how many and tap Ordered. Tap Arrived when it lands.</p>';
     if (total) h += '<p class="what">About £' + total.toFixed(2) + ' for everything below (last prices).</p>';
-    h += buys.length ? buys.map(function (r) { return itemCard(r); }).join('') : '<div class="card acc5"><h2>Nothing to buy</h2><p class="what">Items appear here when they reach their minimum.</p></div>';
+    h += buys.length ? buys.map(function (r) { return itemCard(r); }).join('') : emptyCard('Nothing to buy', 'Items appear here when they reach their minimum.');
     var cps = rows.filter(function (r) { return r.section === 'temu' && !r.applied_at && !r.answer && detail(r).kind === 'coupon'; });
     if (cps.length) h += '<p class="grp">Coupons and offers · ' + cps.length + '</p>' + cps.map(function (r) { return itemCard(r); }).join('');
     var cl = rows.filter(function (r) { return r.section === 'temu' && !r.applied_at && detail(r).kind !== 'coupon'; });
@@ -602,13 +745,24 @@
       '<a class="tile big" href="#/do"><span class="v' + (late.length ? ' red' : '') + '">' + open.length + '</span><span class="k">To post' + (late.length ? ' · ' + late.length + ' late' : '') + '</span></a></div>' +
       (latest ? '<p class="hint">Latest: <a href="#/do">' + esc(latest.title.slice(0, 60)) + '</a> · ' + esc(siteOf(latest) || detail(latest).platform || '') + ' · ' + esc(ukDay(day(latest))) + '</p>' : '');
   }
+  // Home: what to post, late ones first then by post-by date, at most 7 calm rows, one button that starts packing.
+  function toPost() {
+    var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; });
+    if (!list.length) return '';
+    var key = function (r) { var d = detail(r); return dueOf(d) === 'late' ? '0' : String(d.post_by || '9').slice(0, 10); };
+    var top = list.slice().sort(function (a, b) { return key(a).localeCompare(key(b)); }).slice(0, 7);
+    return ghead('To post', list.length, true) + '<div class="plist">' + top.map(function (r) { var d = detail(r);
+      return '<div class="prow">' + thumb(d.photo, r.category) + '<div class="pt"><span class="ttl">' + esc(r.title) + '</span>' + datePill(d) + '</div></div>'; }).join('') +
+      (list.length > top.length ? '<p class="hint">And ' + (list.length - top.length) + ' more in Do now.</p>' : '') +
+      '<div class="acts"><a class="btn" href="#/do?pack" data-gopack>Start packing (' + list.length + ')</a></div></div>';
+  }
   function pageMe() {
     var n = needsCount(), h = '<p class="needs">Needs you: ' + (n ? n : '<span class="zero">0</span>') + '</p>';
     h += '<div class="tiles three needs3">' + [['do', 'Do now'], ['decide', 'Decide'], ['reply', 'Reply']].map(function (t) {
-      return '<a class="tile big" href="#/' + t[0] + '"><span class="v">' + tabCount(t[0]) + '</span><span class="k">' + t[1] + '</span></a>'; }).join('') + '</div>';
+      var n = tabCount(t[0]); return '<a class="tile big" href="#/' + t[0] + '"><span class="v' + (n ? ' need' : '') + '">' + n + '</span><span class="k">' + t[1] + '</span></a>'; }).join('') + '</div>';
     var first = null; ORDER.some(function (s) { if (SECTIONS[s].quiet) return false; var w = byCat(waiting(s)); if (w.length) { first = w[0]; return true; } return false; });
-    h += ordersStrip();
-    if (first) h += itemCard(first, { head: true }); else h += '<div class="card acc5"><h2>All done</h2><p class="what">Nothing needs you right now.</p></div>';
+    if (first) h += itemCard(first, { head: true, next: true }); else h += emptyCard('Nothing needs you', 'The engine is watching. New jobs show here when they come in.');
+    h += toPost() + ordersStrip();
     var just = rows.filter(function (r) { return r.answer && !r.applied_at && Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
     if (just.length) h += '<p class="grp">Just done</p>' + just.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '</div>' + sentLine(r) + '</div>'; }).join('');
     h += '<p class="hint"><i class="ti ti-camera"></i> New item? Put photos in <b>DROP › ' + esc(who === 'All' ? 'Lisa' : who) + ' › NEW to list</b>.</p>';
@@ -625,19 +779,20 @@
     var list = [], done = []; TABS[t].forEach(function (s) { byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); })).forEach(function (r) {
       if (!r.answer || (r.section === 'post' && r.answer === 'Found')) list.push(r); else if (Date.now() < Date.parse(r.answered_at) + UNDO_MS) done.push(r); }); });
     var tail = done.length ? '<details class="justdone"><summary>Just done · ' + done.length + ' (Undo for 10 minutes)</summary>' + done.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '<div class="why">' + esc(r.answer) + '</div></div>' + sentLine(r) + '</div>'; }).join('') + '</details>' : '';
-    if (!list.length) return h + '<div class="card acc5"><h2>Nothing here</h2></div>' + tail;
+    var EMPTY = { do: ['Nothing waiting', 'Sales to post and items to take off other sites show here.'], decide: ['All decided', 'New questions show here.'], reply: ['No one is waiting for a reply', 'Buyer messages show here.'] };
+    if (!list.length) return h + emptyCard(EMPTY[t][0], EMPTY[t][1]) + tail;
     var one = t === 'decide' && !showAll, sec = null;
-    (one ? list.slice(0, 1) : list).forEach(function (r) { if (r.section !== sec) { sec = r.section; h += '<p class="grp">' + esc(SECTIONS[sec].name) + '</p>'; } h += itemCard(r); });
+    (one ? list.slice(0, 1) : list).forEach(function (r) { if (r.section !== sec) { sec = r.section; h += ghead(SECTIONS[sec].name, list.filter(function (x) { return x.section === sec; }).length, !SECTIONS[sec].quiet); } h += itemCard(r); });
     if (t === 'decide' && list.length > 1) h += '<button class="more" type="button" data-action="all">' + (showAll ? 'Show one at a time' : '1 of ' + list.length + ' · show all') + '</button>';
     return h + tail;
   }
   // Packing mode: one parcel at a time in shelf order. Found → the drop-off code shows once the engine has it → Posted.
   function pagePack() {
     var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found' || Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
-    if (!list.length) { pack = null; return '<p class="needs">Packing</p><div class="card acc5"><h2>All packed</h2><button class="btn main big" type="button" data-action="stoppack">Back to Do now</button></div>'; }
+    if (!list.length) { pack = null; return '<p class="needs">Packing</p>' + emptyCard('All packed', 'Nothing left to post.', '<button class="btn main big" type="button" data-action="stoppack">Back to Do now</button>'); }
     var i = Math.min(pack.i, list.length - 1), r = list[i], d = detail(r);
     var h = '<div class="packbar"><span>Packing · ' + (i + 1) + ' of ' + list.length + '</span><button class="btn" type="button" data-action="stoppack">Stop</button></div>';
-    h += '<div class="card acc4">' + courierBand(r, d) + '<div class="item">' + thumb(d.photo) + '<div class="t"><span class="parcel">#' + esc(r._no) + '</span><div>' + esc(r.title) + '</div><div class="m">' + esc([owner(r), d.platform ? 'sold on ' + d.platform : ''].filter(Boolean).join(' · ')) + '</div></div></div>';
+    h += '<div class="card acc4">' + courierBand(r, d) + '<div class="item">' + thumb(d.photo, r.category) + '<div class="t"><span class="parcel">#' + esc(r._no) + '</span><div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([owner(r), d.platform ? 'sold on ' + d.platform : ''].filter(Boolean).join(' · ')) + '</div></div></div>';
     h += '<div class="facts"><div class="fact"><span class="k">Shelf</span><span class="v">' + esc(d.shelf || '?') + '</span></div><div class="fact"><span class="k">Courier</span><span class="v">' + esc(d.courier || '?') + '</span></div><div class="fact"><span class="k">Post by</span><span class="v' + (d.red ? ' red' : '') + '">' + esc(d.post_by || '?') + '</span></div></div>';
     if (d.found && d.qr) h += '<div class="dropcode"><span class="hint">Write #' + esc(r._no) + ' on the parcel. Drop-off code:</span><span class="code">' + esc(d.qr) + '</span></div>';
     if (r.answer) h += sentLine(r);
@@ -654,10 +809,10 @@
     var pdf = (rows.filter(function (r) { return r.section === 'post-head'; })[0] || {}), pd = detail(pdf).label_pdf;
     var h = '<div class="packbar"><span class="needs">Label sheet</span><button class="btn" type="button" data-action="closesheet">Close</button></div>';
     h += pd ? '<a class="btn main" href="https://drive.google.com/file/d/' + esc(pd) + '/view" target="_blank" rel="noopener">Open today’s PDF to print</a>' : '<p class="hint">The printable PDF is not made yet. Write each number on its parcel.</p>';
-    if (!list.length) return h + '<div class="card acc5"><h2>Nothing to post</h2></div>';
+    if (!list.length) return h + emptyCard('Nothing to post', 'Parcels show here when something sells.');
     Object.keys(by).sort().forEach(function (c) {
       h += '<p class="grp">' + esc(c) + ' · ' + by[c].length + (by[c].length === 1 ? ' parcel' : ' parcels') + '</p><div class="card">' + by[c].map(function (r) { var d = detail(r);
-        return '<div class="row"><span class="parcel">#' + esc(r._no) + '</span>' + thumb(d.photo) + '<div class="txt">' + esc(r.title) + '<div class="why">' + esc(['shelf ' + (d.shelf || '?'), owner(r), d.platform].filter(Boolean).join(' · ')) + '</div></div></div>'; }).join('') + '</div>';
+        return '<div class="row"><span class="parcel">#' + esc(r._no) + '</span>' + thumb(d.photo, r.category) + '<div class="txt"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="why">' + esc(['shelf ' + (d.shelf || '?'), owner(r), d.platform].filter(Boolean).join(' · ')) + '</div></div></div>'; }).join('') + '</div>';
     });
     return h;
   }
@@ -676,7 +831,7 @@
     var s = SECTIONS[sec], list = byCat(rows.filter(function (r) { return r.section === sec && !r.applied_at; }));
     var h = '<p class="needs">' + esc(s.name) + ': ' + waiting(sec).length + '</p>';
     if (sec === 'post') { var hd = rows.filter(function (r) { return r.section === 'post-head'; })[0]; if (hd) h += '<p class="what">' + esc(hd.title) + '</p>'; }
-    if (!list.length) return h + '<div class="card acc5"><h2>Nothing here</h2></div>';
+    if (!list.length) return h + emptyCard('Nothing here', '');
     var cat = null, shown = showAll ? list : list.slice(0, 1);
     shown.forEach(function (r) { var c = sec === 'post' ? (detail(r).courier || '') : r.category; if (c !== cat) { cat = c; h += '<p class="grp">' + esc(c || 'Other') + '</p>'; } h += itemCard(r); });
     if (list.length > 1) h += '<button class="more" type="button" data-action="all">' + (showAll ? 'Show one at a time' : 'Show all ' + list.length) + '</button>';
@@ -690,7 +845,7 @@
     var h = '<p class="needs">Shelf ' + esc(shelf) + '</p><p class="what">' + (at + 1) + ' of ' + shelves.length + ' shelves. Tick if right, or type what is there.</p>';
     items.filter(function (r) { return (detail(r).shelf || '?') === shelf; }).forEach(function (r) {
       var d = detail(r), v = round[r.key] || {}, bad = v.n !== undefined && v.n !== '' && Number(v.n) !== Number(d.expected);
-      h += '<div class="card ' + (bad ? 'acc2' : (v.ok || r.answer ? 'acc5' : '')) + '"><div class="item">' + thumb(d.photo) + '<div class="t">' + esc(r.title) + '<div class="m">expect ' + esc(d.expected) + '</div></div>' +
+      h += '<div class="card ' + (bad ? 'acc2' : (v.ok || r.answer ? 'acc5' : '')) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="m">expect ' + esc(d.expected) + '</div></div>' +
         (r.answer ? '' : '<button class="btn yes" type="button" data-tick="' + esc(r.key) + '" aria-label="Right">✓</button><input class="num" inputmode="numeric" data-count="' + esc(r.key) + '" value="' + esc(v.n === undefined ? '' : v.n) + '" aria-label="Counted">') + '</div>' +
         (bad ? '<div class="chips">' + ['sold', 'lost', 'found', 'damaged'].map(function (x) { return '<button class="chip' + (v.reason === x ? ' on' : '') + '" type="button" data-reason="' + esc(r.key) + '" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>' : '') +
         (r.answer ? sentLine(r) : '') + '</div>';
@@ -722,12 +877,13 @@
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);   // menu only after sign-in
     var on = TAB_OF[view] || view;
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    ['do', 'decide', 'reply'].forEach(function (t) { var n = tabCount(t); $('n-' + t).textContent = n || ''; $('n-' + t).parentNode.setAttribute('aria-label', $('n-' + t).previousSibling.textContent + (n ? ', ' + n + ' waiting' : '')); });
+    ['do', 'decide', 'reply'].forEach(function (t) { var n = tabCount(t); $('n-' + t).textContent = n || ''; $('n-' + t).classList.toggle('wide', n > 99); $('n-' + t).parentNode.setAttribute('aria-label', $('n-' + t).previousSibling.textContent + (n ? ', ' + n + ' waiting' : '')); });
     $('people').classList.toggle('hidden', !token || !rows.some(function (r) { return detail(r).owner && detail(r).owner !== 'Lisa'; }));
     $('people').innerHTML = PEOPLE.map(function (p) { return '<button class="chip" type="button" data-who="' + p + '" aria-pressed="' + (who === p) + '">' + p + '</button>'; }).join('');
     $('stamp').textContent = M && M.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
     $('signin').disabled = !token && !ready;
+    if (!token) $('readAt').textContent = '';
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see what needs you</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
     $('view').innerHTML = pack && view === 'do' ? pagePack() : sheet && view === 'do' ? pageSheet() : view === 'me' ? pageMe() : view === 'round' ? pageRound() : view === 'numbers' ? pageNumbers()
       : view === 'insights' ? pageInsights() : view === 'stock' ? pageStock() : view === 'temu' ? pageTemu() : view === 'suppliers' ? pageSuppliers() : TABS[view] ? pageTab(view) : SECTIONS[view] ? pageList(view) : pageMe();
@@ -746,7 +902,7 @@
     if (t.hasAttribute('data-site')) { site = t.getAttribute('data-site'); return render(); }
     if (a === 'pack') { pack = { i: 0 }; sheet = false; return render(); }
     if (a === 'nextpack') { pack.i += 1; if (pack.i >= posts().length) pack.i = 0; return render(); }
-    if (a === 'stoppack') { pack = null; return render(); }
+    if (a === 'stoppack') { pack = null; if (/\?pack\b/.test(location.hash)) { location.hash = '#/do'; return; } return render(); }
     if (a === 'sheet') { sheet = true; pack = null; return render(); }
     if (a === 'closesheet') { sheet = false; return render(); }
     if (t.hasAttribute('data-ans')) {
@@ -808,7 +964,7 @@
     todo.reduce(function (p, r) { var v = round[r.key]; return p.then(function () { return answer(r, v.ok || v.n === '' || v.n === undefined ? 'ok' : String(Number(v.n)) + ' ' + v.reason, ''); }); }, Promise.resolve())
       .then(function () { banner('Round saved. The engine applies it after 10 minutes.', true); });
   }
-  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'me'; showAll = false; pack = null; sheet = false; render(); }
+  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'me'; showAll = false; pack = view === 'do' && /\?pack\b/.test(location.hash) ? { i: 0 } : null; sheet = false; render(); }
   window.addEventListener('hashchange', route);
 
   /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */

@@ -53,6 +53,32 @@ test.describe('Phone: CD Hub menu', () => {
   });
 });
 
+test.describe('Phone: Marketplace', () => {
+  test('loads, signs in, every tab works, no sideways scroll, every button 44px, tab counts in flow beside the icon', async ({ page }) => {
+    const ago = new Date(Date.now() - 5 * 60000).toISOString();
+    const rows = [
+      ['RM|1', 'remove', 'Clothes', 'Sample jacket with a long title that wraps onto a second line on a phone screen', JSON.stringify({ platform: 'Vinted', price: '£18.00', url: 'https://www.vinted.co.uk/items/1', owner: 'CY' }), ago],
+      ['PO|1', 'post', 'Clothes', 'Sample jumper', JSON.stringify({ platform: 'ebay', parcel_id: 'L-07', courier: 'Evri', shelf: 'B2', post_by: '2026-10-20' }), ago],
+      ['GO|1', 'go', 'Treats', 'Sample treats', JSON.stringify({ price: '£12.00' }), ago],
+    ];
+    await page.route(/^https:\/\/sheets\.googleapis\.com\//, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: rows }) }));
+    expect((await page.goto('marketplace/')).status()).toBe(200);
+    await noSidewaysScroll(page, 'signed out');
+    await page.locator('#view [data-action="signin"]').click();
+    await expect(page.locator('#view .needs')).toHaveText('Needs you: 3');
+    for (const key of ['do', 'decide', 'reply', 'insights', 'me']) {
+      await page.locator(`#tabs a[data-nav="${key}"]`).click();
+      await expect(page.locator(`#tabs a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
+      await noSidewaysScroll(page, key);
+      const small = await page.evaluate(() => [...document.querySelectorAll('#view button, #view a.btn, #view .chip, header .btn')].filter((b) => b.offsetParent).filter((b) => b.getBoundingClientRect().height < 44).map((b) => b.textContent.trim()));
+      expect(small, `${key}: buttons under 44px`).toEqual([]);
+    }
+    const n = await page.locator('#n-do').boundingBox(), icon = await page.locator('#tabs a[data-nav="do"] .ti').boundingBox(), label = await page.locator('#tabs a[data-nav="do"] span:not(.bar):not(.n)').boundingBox();
+    expect(Math.abs((n.y + n.height / 2) - (icon.y + icon.height / 2)), 'count sits on the icon line').toBeLessThan(6);
+    expect(label.y, 'label has its own line below the count').toBeGreaterThanOrEqual(n.y + n.height - 1);
+  });
+});
+
 test.describe('Phone: Money Hub', () => {
   test('loads, signs in, menu works, no sideways scroll', async ({ page }) => {
     expect((await page.goto('money/')).status()).toBe(200);
