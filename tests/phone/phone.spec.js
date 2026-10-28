@@ -68,3 +68,26 @@ test.describe('Phone: Money Hub', () => {
     }
   });
 });
+
+test.describe('Phone: GA Hub', () => {
+  test('loads, signs in, every tab works, no sideways scroll, controls 44px tall', async ({ page }) => {
+    // Pretend Sheets with one invented row per tab (no real orders or names).
+    await page.route(/^https:\/\/sheets\.googleapis\.com\//, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ valueRanges: [
+      { values: [['PRICE-SAMPLE', 'price', 'Products', 'Sample price change', '{}', new Date().toISOString()]] },
+      { values: [['order_no', 'source', 'status', 'check', 'profit_est'], ['9001', 'Shopify', 'Placed', 'Not at GA', '8']] },
+      { values: [['si_no', 'invoice_date', 'order_no', 'total', 'due_date', 'paid_date'], ['SI-1', '2026-10-25', '9001', '50', '2026-12-06', '']] },
+      { values: [['COUNT: sample'], ['tla', 'range', 'recipe', 'pack', 'ddf_status'], ['AAA', 'Sample range', 'Sample recipe', '12kg', 'ON SALE (Shopify)']].slice(1) },
+      { values: [['key', 'value'], ['GA_ACCOUNT_CODE', 'XYZ']] }, { values: [] }, { values: [] }, { values: [] }] }) }));
+    expect((await page.goto('food/')).status()).toBe(200);
+    await noSidewaysScroll(page, 'signed out');
+    await page.locator('#view [data-action="signin"]').click();
+    await expect(page.locator('#view .needs')).toBeVisible();
+    for (const key of ['orders', 'invoices', 'products', 'ga', 'home']) {
+      await page.locator(`nav.tabs a[data-nav="${key}"]`).click();
+      await expect(page.locator(`nav.tabs a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
+      await noSidewaysScroll(page, key);
+      const short = await page.evaluate(() => [...document.querySelectorAll('#view button, #view a.btn, #view .chip, header .btn')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
+      expect(short, key + ': controls under 44px').toEqual([]);
+    }
+  });
+});
