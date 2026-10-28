@@ -308,7 +308,12 @@
   var BSTAGES = ['Concept', 'Name check', 'Identity', 'Tech set-up', 'Launch', 'Running'];
   var TYPES = [['pdf', 'file-type-pdf', 'PDF'], ['ebook', 'book', 'Ebook'], ['lead', 'magnet', 'Lead magnet'], ['slides', 'presentation', 'Slides'],
     ['script', 'video', 'Script'], ['logbook', 'notebook', 'Logbook'], ['tree', 'binary-tree', 'Family tree'], ['pack', 'package', 'Puppy pack'],
-    ['social', 'photo', 'Social graphic'], ['page', 'layout', 'Page draft'], ['email', 'mail', 'Email draft']];
+    ['social', 'photo', 'Social graphic'], ['page', 'layout', 'Page draft'], ['email', 'mail', 'Email draft'],
+    ['video', 'movie', 'Video'], ['audio', 'headphones', 'Audio'], ['image', 'photo-scan', 'Image'], ['listing', 'tag', 'Listing'], ['book', 'book-2', 'Book'],
+    ['appstore', 'device-mobile', 'App store'], ['funnel', 'filter', 'Funnel'], ['course', 'school', 'Course'], ['podcast', 'microphone', 'Podcast'], ['other', 'dots', 'Other']];
+  // How a finished item reaches a client (engine DELIVERY_MODE): a copied file, a copied Doc, or a link.
+  var DMODE = { script: 'text', social: 'text', email: 'text', page: 'link', funnel: 'link', listing: 'link', podcast: 'link' };
+  var DSTAT = { 'ready (not sent)': ['package', 'Ready', 4], sent: ['send', 'Sent', 5], 'no file': ['alert-triangle', 'No file', 2] };
   var WHO = [['lisa', 'Lisa', 'user'], ['claude', 'Claude', 'sparkles'], ['grok', 'Grok', 'bolt'], ['engine', 'Engine', 'settings']];
   var VERDICTS = [['GO', 'Go', 'check', 5], ['HOLD', 'Hold', 'player-pause', 4], ['RESHAPE', 'Reshape', 'shape', 7], ['REFINE', 'Refine', 'adjustments', 6], ['KILL', 'Kill', 'x', 2], ['RECYCLE', 'Recycle', 'recycle', 0]];
   var PROVIDERS = ['Claude', 'Grok', 'ChatGPT', 'Gemini'];
@@ -465,6 +470,7 @@
   function ownerId() { var o = S.accounts.filter(function (x) { return x.kind === 'owner'; })[0] || S.accounts[0]; return o ? o.id : null; }
   function product(id) { return S.products.filter(function (x) { return x.id === id; })[0] || null; }
   function brandAcct(id) { return brand(id).accountId || ownerId(); }
+  function isClient(a) { return account(a.accountId).kind === 'client'; }
   function isTest(a) { return /^(TEST-|ZZ_DELETE_)/i.test(a.title) || a.flags.indexOf('test') >= 0; }
   function bare(a) { return String(a.title).replace(/^TEST-/, ''); }
   function ideas() { return all().filter(function (a) { return a.stage === 0; }); }
@@ -590,6 +596,8 @@
     var pu = pickOf(PURPOSES, a.purpose); if (pu) out += '<span class="tag" data-chip="purpose" title="Variant">' + I(pu[2]) + pu[1] + '</span>';
     if (a.masterId) { var m = byId(a.masterId); out += '<a class="tag" data-chip="master" href="#/asset/' + encodeURIComponent(a.masterId) + '" title="Master: ' + esc(m ? bare(m) : a.masterId) + '">' + I('link') + 'Master</a>'; }
     if (a.sourceIds.length) out += '<span class="tag" title="Sources">' + I('paperclip') + a.sourceIds.length + '</span>';
+    if (a.ask && a.ask.question) out += '<span class="tag" data-chip="ask" title="Asked: ' + esc(a.ask.question) + '">' + I('message-question') + (a.ask.status === 'sent' ? 'Asked' : 'Ask ready') + '</span>';
+    if (a.delivery && a.delivery.status) { var dz = DSTAT[a.delivery.status] || ['package', a.delivery.status, 0]; out += (a.delivery.link ? '<a class="tag" href="' + safeUrl(a.delivery.link) + '" target="_blank" rel="noopener"' : '<span class="tag"') + ' data-chip="delivery" title="Delivery" style="--hc:var(--ljr-' + dz[2] + '-text)">' + I(dz[0]) + esc(dz[1]) + (a.delivery.link ? '</a>' : '</span>'); }
     return out;
   }
   function actsFor(a, kind) {
@@ -598,13 +606,14 @@
       '<button class="btn" type="button" data-panel="redo" data-id="' + esc(a.id) + '" aria-label="Redo"' + dis() + '>' + I('pencil') + 'Redo</button>' +
       '<button class="btn no" type="button" data-act="bin" data-id="' + esc(a.id) + '" aria-label="Bin"' + dis() + '>' + I('trash') + '</button>';
     if (kind === 'gate') return VERDICTS.map(function (v) { return '<button class="btn" type="button" data-act="gate" data-verdict="' + v[0] + '" data-id="' + esc(a.id) + '" aria-label="' + v[1] + '" style="--hc:var(--ljr-' + v[3] + '-text)"' + dis() + '>' + I(v[2]) + v[1] + '</button>'; }).join('');
-    if (kind === 'lib') return '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>';
+    if (kind === 'lib') return '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>' + (isClient(a) ? '<button class="btn" type="button" data-act="deliver" data-id="' + esc(a.id) + '" aria-label="Deliver"' + dis() + '>' + I('package-export') + 'Deliver</button>' : '');
     if (kind === 'hand' && a.stage >= 1) return '<button class="btn yes" type="button" data-panel="done" data-id="' + esc(a.id) + '" aria-label="Done"' + dis() + '>' + I('check') + 'Done</button>';
     return '';
   }
   function panelOf(a, k) {
     var body = '';
     if (k === 'redo') body = '<form class="ask" data-redo="' + esc(a.id) + '"><input class="fin" id="note-' + esc(a.id) + '" data-draft="' + esc(a.id) + '" value="' + esc(drafts[a.id] || '') + '" aria-label="What to change" required><button class="btn" type="submit" aria-label="Send redo"' + dis() + '>' + I('send') + '</button></form>';
+    if (k === 'ask') body = '<form class="ask" data-askc="' + esc(a.id) + '"><input class="fin" id="askq-' + esc(a.id) + '" data-draft="q|' + esc(a.id) + '" value="' + esc(drafts['q|' + a.id] || '') + '" maxlength="500" aria-label="Question for the client" placeholder="Question for the client" required><button class="btn" type="submit" aria-label="Send question"' + dis() + '>' + I('send') + '</button></form>';
     if (k === 'who') body = '<div class="chips">' + WHO.map(function (w) { return '<button class="ch' + (a.who === w[0] ? ' on' : '') + '" type="button" data-set="who" data-val="' + w[0] + '" data-id="' + esc(a.id) + '"' + dis() + '>' + I(w[2]) + w[1] + '</button>'; }).join('') + '</div>';
     if (k === 'flag') body = '<div class="chips">' + ['urgent', 'high', 'normal', 'low', 'none'].map(function (p) { return '<button class="ch' + ((a.priority || 'none') === p ? ' on' : '') + '" type="button" data-set="priority" data-val="' + p + '" data-id="' + esc(a.id) + '"' + dis() + '>' + flagIcon(p !== 'none') + p.charAt(0).toUpperCase() + p.slice(1) + '</button>'; }).join('') + '</div>';
     if (k === 'done') {
@@ -635,7 +644,7 @@
       '<button class="ico" type="button" data-panel="flag" data-id="' + esc(a.id) + '" aria-label="Priority ' + (p || 'none') + '" style="--hc:var(--ljr-2-text)">' + flagIcon(p) + '</button></div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + info('Stage ' + a.stage + ' ' + STAGES[a.stage]) + '</div>' : '') +
       (a.stage >= 1 ? strip(a.stage) : '') +
-      '<div class="l2"><span class="icons">' + rowIcons(a) + '</span><span class="acts">' + actsFor(a, kind) + '</span></div>' +
+      '<div class="l2"><span class="icons">' + rowIcons(a) + '</span><span class="acts">' + actsFor(a, kind) + (isClient(a) && a.stage >= 1 && a.stage <= 7 && !sent[a.id] ? '<button class="ico" type="button" data-panel="ask" data-id="' + esc(a.id) + '" aria-label="Ask client" title="Ask client"' + dis() + '>' + I('message-question') + '</button>' : '') + '</span></div>' +
       (openPanel && openPanel.id === a.id ? panelOf(a, openPanel.k) : '') +
       '<div class="l3"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span>' +
       (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="Preview" style="--hc:var(--ljr-6-text)">' + I('eye') + '</a>' : '<span class="lk no" title="No preview yet">' + I('eye') + '</span>') +
@@ -951,9 +960,10 @@
   }
   function sendAct(id, act, verdict) {
     if (EX || busy[id]) return;
-    var x = byId(id), n = $('note-' + id), body = { kind: act, accountId: x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() };
+    var x = byId(id), n = $('note-' + id), body = { kind: act, accountId: act === 'ask' || act === 'deliver' ? ownerId() : x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() };
     if (act === 'redo') { body.note = n ? n.value.trim() : ''; if (!body.note) { if (n) n.focus(); return; } }
     if (act === 'gate') body.verdict = verdict;
+    if (act === 'ask') { var q = $('askq-' + id); body.question = q ? q.value.trim().slice(0, 500) : ''; if (!body.question) { if (q) q.focus(); return; } delete drafts['q|' + id]; }
     if (act === 'done') { var u = Number(doneUnits[id]); if (doneSel[id] && u > 0) body.creditsUsed = { product: doneSel[id], units: u }; }
     busy[id] = 1; var box = document.querySelector('.crow[data-row="' + CSS.escape(id) + '"] .acts'); if (box) box.innerHTML = '<span class="sent">Sending…</span>';
     Array.prototype.forEach.call(document.querySelectorAll('[data-panelbox="' + CSS.escape(id) + '"] button'), function (x) { x.disabled = true; });
@@ -1125,6 +1135,7 @@
       render(); if (openPanel && pkk === 'redo') { var inp = $('note-' + pid); if (inp) inp.focus(); } return; }
   });
   document.addEventListener('submit', function (e) {
+    var ak = e.target.closest('[data-askc]'); if (ak) { e.preventDefault(); sendAct(ak.getAttribute('data-askc'), 'ask'); return; }
     var f = e.target.closest('[data-redo]'); if (!f) return; e.preventDefault();
     sendAct(f.getAttribute('data-redo'), 'redo');
   });

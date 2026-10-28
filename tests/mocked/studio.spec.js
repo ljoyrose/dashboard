@@ -476,6 +476,30 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-sect="review"] .crow')).toHaveCount(2);
   });
 
+  test('clients: Ask on a client item writes ask (sent by the owner account); Deliver on a client library item; owner items have neither; chips show', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/assets', { change: (s) => {
+      const c = s.assets.filter((a) => a.id === 'sa-client')[0];
+      c.delivery = null; c.ask = { question: 'Which cover photo?', at: s.generated_at, status: 'link ready (not sent)' };
+      s.assets.push(Object.assign({}, c, { id: 'sa-client-done', title: 'Sample client video', type: 'video', stage: 8, ask: null, delivery: { status: 'ready (not sent)', at: s.generated_at, mode: 'file', link: 'https://drive.google.com/file/d/1SAMPLEout/view' } }));
+    } });
+    const r = page.locator('.crow[data-row="sa-client"]');
+    await expect(r.locator('[data-chip="ask"]')).toContainText('Ask ready');
+    await expect(page.locator('.crow[data-row="sa-rev1"] [data-panel="ask"]')).toHaveCount(0);
+    await r.locator('[data-panel="ask"]').click();
+    await r.locator('#askq-sa-client').fill('Which cover photo do you prefer?');
+    await r.locator('#askq-sa-client').press('Enter');
+    await expect(r.locator('[data-sent]')).toBeVisible();
+    expect(got[0].body).toMatchObject({ kind: 'ask', assetId: 'sa-client', accountId: 'acc-owner', question: 'Which cover photo do you prefer?' });
+    await page.locator('nav.tabs a[data-nav="library"]').click();
+    const d = page.locator('.crow[data-row="sa-client-done"]');
+    await expect(d.locator('[data-chip="delivery"]')).toContainText('Ready');
+    await expect(d.locator('[data-chip="delivery"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/1SAMPLEout/view');
+    await d.locator('[data-act="deliver"]').click();
+    await expect(d.locator('[data-sent]')).toBeVisible();
+    expect(got[1].body).toMatchObject({ kind: 'deliver', assetId: 'sa-client-done', accountId: 'acc-owner' });
+  });
+
   test('example data has groups, kits, styles, formats, a variant and a gap (fictional), and sends nothing', async ({ page, guard }) => {
     await open(page, guard, '#/kits', { state: false });
     await expect(page.locator('[data-playbook="ex-pb1"]')).toBeVisible();
