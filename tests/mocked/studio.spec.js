@@ -744,7 +744,15 @@ test.describe('Studio page', () => {
     // An empty column is one short "Empty" line, not a tall blank; full columns keep the full height.
     const empty = page.locator('.col.col-empty').first(), full = page.locator('.col:not(.col-empty)').first();
     for (const part of ['.col-head', '.col-list', '.col-foot']) expect((await empty.locator(part).boundingBox()).width, part + ' spans the column').toBeGreaterThan(270);
-    await expect(empty.locator('.col-list')).toHaveText('Empty');
+    await expect(empty.locator('.col-list')).toHaveText('Nothing waiting.');
+    // Friendly empty state: a small green ring with a tick and plain words.
+    const tick = await empty.locator('.okempty').evaluate((e) => { const c = getComputedStyle(e, '::before'); return [c.content, c.borderTopWidth, c.borderTopColor === c.color]; });
+    expect(tick.slice(0, 2)).toEqual(['"✓"', '1px']);
+    await go(page, 'decide');
+    await page.locator('[data-bar="decide"] [data-f="fq"]').fill('zzzz-nothing');
+    await expect(page.locator('.col[data-sect="review"] .okempty')).toHaveText('All decided. Nothing waiting.');
+    await page.locator('[data-bar="decide"] [data-f="fq"]').fill('');
+    await go(page, 'line');
     const eh = (await empty.boundingBox()).height, fh = (await full.boundingBox()).height;
     expect(eh).toBeLessThan(160);
     expect(fh).toBeGreaterThan(eh + 100);

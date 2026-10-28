@@ -292,7 +292,7 @@
   /* An empty column shrinks to one short line; full columns keep the full height. */
   .col.col-empty { align-self: flex-start; }
   .col.col-empty .col-list { flex: none; }
-  .cempty { margin: 0; font-size: 13px; color: var(--muted); }
+  .cempty { font-size: 13px; }
   .col-foot { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 45px; padding: 4px 12px; font-size: 14px; line-height: 18px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); }
   .col-foot b { color: var(--ink); }
   .side { flex: 0 0 380px; min-width: 0; overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -1079,7 +1079,7 @@
     var need = o.need != null ? o.need : o.items.filter(needsYou).length, ai = o.items.reduce(function (t, a) { return t + (Number(a.cost) || 0); }, 0);
     return '<section class="col' + (o.body ? '' : ' col-empty') + '" ' + o.attr + ' style="--sc:var(--ljr-' + o.slot + ');--sct:var(--ljr-' + o.slot + '-text)">' +
       '<div class="col-head">' + (o.step != null ? '<span class="lab"><span class="step">Step ' + o.step + ':</span> ' + o.name + '</span>' : '<span class="hico">' + o.badge + '</span><span class="lab">' + o.name + '</span>') + icnt(o.n != null ? o.n : o.items.length) + '</div>' +
-      '<div class="col-list">' + (o.body || '<p class="cempty">Empty</p>') + '</div>' +
+      '<div class="col-list">' + (o.body || '<p class="okempty cempty">' + (o.none || 'Nothing waiting.') + '</p>') + '</div>' +
       '<div class="col-foot"><span><b>' + need + '</b> need you</span><span>' + money(ai) + ' AI</span></div></section>';
   }
   function board(tab, cols) {
@@ -1128,12 +1128,12 @@
   // Decide: everything only Lisa can decide. Do: everything only Lisa can do.
   function vDecide() {
     var s = fsOf('decide'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
-    var sect = function (icon, word, l, kind) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : '<p class="muted">' + I('circle-check') + ' Nothing waiting.</p>') + '</div>'; };
+    var sect = function (icon, word, l, kind) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : '<p class="okempty">' + (kind === 'review' ? 'All decided. Nothing waiting.' : 'Nothing waiting.') + '</p>') + '</div>'; };
     if (viewOf('decide') === 'board') {
       var G = keep(gates()), R = keep(reviews()), L = S.suggestions.filter(function (g) { return !pend['sug|' + g.id]; });
       return findBar('decide', gates().concat(reviews())) + board('decide', [
         { attr: 'data-sect="gate"', slot: 4, badge: I('traffic-lights'), name: 'Gates', items: G, body: G.map(function (a) { return row(a, 'gate', true); }).join('') },
-        { attr: 'data-sect="review"', slot: 6, badge: I('eye-check'), name: 'Review', items: R, body: R.map(function (a) { return row(a, 'review', true); }).join('') }
+        { attr: 'data-sect="review"', slot: 6, badge: I('eye-check'), name: 'Review', items: R, none: 'All decided. Nothing waiting.', body: R.map(function (a) { return row(a, 'review', true); }).join('') }
       ].concat(L.length ? [{ attr: 'data-sect="suggest"', slot: 7, badge: I('bulb'), name: 'Suggestions', items: [], n: L.length, need: L.length, body: sugRows(L) }] : []));
     }
     return findBar('decide', gates().concat(reviews())) + sect('traffic-lights', 'Gates', keep(gates()), 'gate') + sect('eye-check', 'Review', keep(reviews()), 'review') + vSuggest();
@@ -1142,7 +1142,7 @@
   function vDo() {
     var s = fsOf('do'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
     var H = keep(hands()), A = all().filter(function (a) { return a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent'; }), D = all().filter(function (a) { return a.delivery && a.delivery.status === 'ready (not sent)'; }), Rz = library().filter(function (a) { return !a.results || !a.results.last; });
-    var sect = function (icon, word, l, kind, note) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + (note ? info(note) : '') + '</div>' + (l.length ? l.map(function (a) { return row(a, kind === 'hand' ? 'hand' : kindFor(a), true); }).join('') : '<p class="muted">' + I('circle-check') + ' Nothing waiting.</p>') + '</div>'; };
+    var sect = function (icon, word, l, kind, note) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + (note ? info(note) : '') + '</div>' + (l.length ? l.map(function (a) { return row(a, kind === 'hand' ? 'hand' : kindFor(a), true); }).join('') : '<p class="okempty">Nothing waiting.</p>') + '</div>'; };
     A = keep(A); D = keep(D); Rz = keep(Rz);
     return findBar('do', doItems().concat(Rz)) + sect('hand-finger', 'Tasks', H, 'hand') + sect('message-question', 'Questions to send', A, 'asks', 'Engine off or email off: send the link yourself') + sect('package-export', 'Ready to send', D, 'deliver', 'Email off: send the link yourself') + sect('chart-bar', 'Results to add', Rz, 'results');
   }
