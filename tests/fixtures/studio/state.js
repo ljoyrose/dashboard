@@ -51,13 +51,13 @@
         { id: 'pb-grow', name: 'Sample list builder', outcome: 'attract', steps: [{ kind: 'kit', id: 'kit-lead', text: 'Sample lead magnet kit' }, { kind: 'kit', id: 'kit-social', text: 'Sample social post kit' }], notes: '' }
       ],
       packs: [
-        { id: 'pk-funnel', name: 'Sample webclass funnel', kind: 'funnel', kitIds: ['kit-webclass', 'kit-email'], notes: 'Pages and emails' }
+        { id: 'pk-funnel', name: 'Sample webclass funnel', kind: 'funnel', kitIds: ['kit-webclass', 'kit-email'], notes: 'Pages and emails', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null }
       ],
       kits: [
-        { id: 'kit-lead', name: 'Sample lead magnet kit', type: 'lead', price: 100, priceBasis: 'ex', priceEx: 100, priceInc: 120, readyDays: 3, brickIds: ['br-hook'], needs: ['doc-fill', 'pdf-export'], frameworkId: 'fw-pas', voiceId: null, lookId: null, formatIds: ['fmt-a4'], notes: '' },
-        { id: 'kit-email', name: 'Sample email kit', type: 'email', brickIds: [], needs: ['email-draft'], frameworkId: 'fw-hso', voiceId: null, lookId: null, formatIds: ['fmt-email-header'], notes: '' },
-        { id: 'kit-webclass', name: 'Sample webclass kit', type: 'slides', brickIds: ['br-hook'], needs: ['slides-fill', 'video-reformat'], frameworkId: 'fw-webinar', voiceId: null, lookId: null, formatIds: ['fmt-youtube', 'fmt-reel'], notes: '' },
-        { id: 'kit-social', name: 'Sample social post kit', type: 'social', brickIds: [], needs: ['image-generate'], frameworkId: null, voiceId: null, lookId: null, formatIds: ['fmt-fb-feed'], notes: '' }
+        { id: 'kit-lead', name: 'Sample lead magnet kit', type: 'lead', price: 100, priceBasis: 'ex', priceEx: 100, priceInc: 120, readyDays: 3, sourcePrice: null, brickIds: ['br-hook'], needs: ['doc-fill', 'pdf-export'], frameworkId: 'fw-pas', voiceId: null, lookId: null, formatIds: ['fmt-a4'], notes: '' },
+        { id: 'kit-email', name: 'Sample email kit', type: 'email', brickIds: [], needs: ['email-draft'], frameworkId: 'fw-hso', voiceId: null, lookId: null, formatIds: ['fmt-email-header'], notes: '', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null },
+        { id: 'kit-webclass', name: 'Sample webclass kit', type: 'slides', brickIds: ['br-hook'], needs: ['slides-fill', 'video-reformat'], frameworkId: 'fw-webinar', voiceId: null, lookId: null, formatIds: ['fmt-youtube', 'fmt-reel'], notes: '', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null },
+        { id: 'kit-social', name: 'Sample social post kit', type: 'social', brickIds: [], needs: ['image-generate'], frameworkId: null, voiceId: null, lookId: null, formatIds: ['fmt-fb-feed'], notes: '', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null }
       ],
       bricks: [
         { id: 'br-hook', name: 'Sample hook line', kind: 'hook', text: 'Sample hook text', link: '', notes: '' }
@@ -97,7 +97,7 @@
         { capability: 'video-reformat', format: 'fmt-reel', ratio: '9:16', reason: 'no owned tool can do video-reformat at 9:16', assetIds: ['sa-make'] }
       ],
       // VAT (engine v0.2.18): rates edited in the Sheet; how prices show by default.
-      vatRates: [{ country: 'GB', name: 'United Kingdom', rate: 20, checked: day(-28), home: true }, { country: 'IE', name: 'Ireland', rate: 23, checked: day(-28) }],
+      vatRates: [{ country: 'GB', name: 'United Kingdom', rate: 20, checked: day(-28), source: '' }, { country: 'IE', name: 'Ireland', rate: 23, checked: day(-28), source: '' }],
       priceShow: 'ex',
       failed: []
     };

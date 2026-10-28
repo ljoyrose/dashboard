@@ -1455,18 +1455,18 @@ test.describe('Studio page', () => {
 
   test('ownership: client material and source files in the details send one rights request; client material is never reused', async ({ page, guard }) => {
     const got = await uploads(page, guard);
-    await open(page, guard, '#/assets', { change: (s) => { s.assets.filter((a) => a.stage === 8)[0].clientMaterial = true; } });
+    await open(page, guard, '#/assets', { change: (s) => { s.assets.filter((a) => a.stage === 8)[0].clientMaterial = 'yes'; } });
     const d = await details(page, 'sa-client');
     const r = page.locator('[data-rights="sa-client"]');
     await expect(r.locator('[data-rset="clientMaterial"][data-val="false"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(r.locator('[data-rset="sourceRights"][data-val="kept"]')).toHaveAttribute('aria-pressed', 'true');
     await r.locator('[data-rset="clientMaterial"][data-val="true"]').click();
     await expect.poll(() => got.length).toBe(1);
-    expect(got[0].body).toMatchObject({ kind: 'rights', accountId: 'acc-owner', assetId: 'sa-client', clientMaterial: true, sourceRights: 'kept' });
+    expect(got[0].body).toMatchObject({ kind: 'rights', accountId: 'acc-owner', assetId: 'sa-client', clientMaterial: 'yes', sourceRights: 'kept' });
     await expect(page.locator('.crow[data-row="sa-client"] [data-chip="client-only"]')).toHaveText('Client-only · never reused');
     await page.locator('[data-rights="sa-client"] [data-rset="sourceRights"][data-val="sold"]').click();
     await expect.poll(() => got.length).toBe(2);
-    expect(got[1].body).toMatchObject({ kind: 'rights', assetId: 'sa-client', clientMaterial: true, sourceRights: 'sold' });
+    expect(got[1].body).toMatchObject({ kind: 'rights', assetId: 'sa-client', clientMaterial: 'yes', sourceRights: 'sold' });
     // A library item marked as client material cannot be reused; the reason shows.
     await go(page, 'library');
     const lib = page.locator('#view .crow').first();
@@ -1487,6 +1487,50 @@ test.describe('Studio page', () => {
     await f.locator('[data-action="libsend"]').click();
     await expect.poll(() => got.length).toBe(1);
     expect(got[0].body.fields).toMatchObject({ price: 200, priceBasis: 'ex', sourcePrice: 50 });
+  });
+
+  test('protection: proof view only, low-res + watermark reminder, full size held until approved + paid, Paid switch, delivery waits for payment', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/library', { change: (s) => {
+      const c = s.assets.filter((a) => a.id === 'sa-client')[0]; Object.assign(c, { protect: 'yes', paid: 'no', disclose: 'yes', hasProof: true, hasFinal: false, needsWatermark: true, proofLowRes: 'Proof: low-res (max 1200px wide) + watermark', finalLink: 'https://drive.google.com/file/d/SHOULD-NEVER-SHOW/view' });
+      s.assets.push(Object.assign({}, c, { id: 'sa-client-done', title: 'Sample client video', type: 'video', stage: 8, needsWatermark: false, proofLowRes: null, hasFinal: true, delivery: null, ask: null }));
+    } });
+    const d = page.locator('.crow[data-row="sa-client-done"]');
+    await expect(d.locator('[data-nodeliver]')).toBeDisabled();
+    await expect(d.locator('[data-nodeliver-why]')).toHaveText('Final files wait for payment');
+    const dd = await details(page, 'sa-client-done');
+    const box = page.locator('[data-delivery="sa-client-done"]');
+    await expect(box.locator('[data-protect]')).toContainText('Protected');
+    await expect(box.locator('[data-fullsize]')).toContainText('Held until approved + paid');
+    await expect(box.locator('[data-tick="Approved"]')).toHaveText('Approved ✓');
+    await expect(box.locator('[data-tick="Paid"]')).toHaveText('Paid ✗');
+    await expect(box.locator('[data-disclose]')).toHaveText('On');
+    await expect(page.locator('#view')).not.toContainText('SHOULD-NEVER-SHOW'); // the final file's link never shows before release
+    await box.locator('[data-paid="yes"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'paid', accountId: 'acc-owner', assetId: 'sa-client-done', paid: 'yes' });
+    await expect(page.locator('.crow[data-row="sa-client-done"] [data-act="deliver"]')).toBeVisible(); // paid: delivery opens
+    // A protected proof still in progress: chip on the card, reminder in the details.
+    await go(page, 'assets');
+    await expect(page.locator('.crow[data-row="sa-client"] [data-chip="proof"]')).toHaveText('Proof · view only');
+    await details(page, 'sa-client');
+    await expect(page.locator('[data-delivery="sa-client"] [data-chip="lowres"]')).toHaveText('Low-res + watermark');
+    await expect(page.locator('[data-delivery="sa-client"] [data-watermark]')).toHaveText('Add Studio watermark layer');
+    void dd;
+  });
+
+  test('save as a kit: a finished item opens the kit form filled in and sends fromAssetId; never from client material', async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    await open(page, guard, '#/library');
+    const id = await page.locator('#view .crow').first().getAttribute('data-row');
+    await details(page, id);
+    await page.locator('[data-savekit="' + id + '"]').click();
+    await expect(page.locator('#view')).toHaveAttribute('data-view', 'kits');
+    const f = page.locator('[data-libform="kits"]');
+    expect((await f.locator('[data-lf="name"]').inputValue()).length).toBeGreaterThan(0);
+    await f.locator('[data-action="libsend"]').click();
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'library', table: 'kits', op: 'new', fromAssetId: id });
   });
 
   test('library: example data has the buttons switched off and sends nothing', async ({ page, guard }) => {

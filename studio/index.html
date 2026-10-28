@@ -461,6 +461,7 @@
   .libform .req { color: var(--ink); }
   .libsug .ask { align-items: flex-end; }
   .rights { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .tick { font-size: 13px; color: var(--muted); } .tick.ok { color: var(--ink); }
   .rrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; } .rlab { min-width: 120px; color: var(--muted); font-size: 14px; }
   .pline { font-size: 13px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
 </style>
@@ -521,7 +522,8 @@
  *        masterId, purpose, sources: [{ kind: link|upload|note, url, fileName, note, rights }]} · set {who | priority} · studio {on} ·
  *        tool {product, thing, unit, capabilities, inputs, outputs, fit, costPerUnit, allowance, period, resetsOn, carriesOver,
  *        accountNotes, audit} · done {assetId, creditsUsed?: {product, units}} · check {brandId, item, ok} ·
- *        source {assetId, source} · library {table: playbooks|packs|kits|bricks, op: new|edit, id?, fields} · libsuggest {table, text} · rights {assetId, clientMaterial, sourceRights: kept|sold}.   Undo = the request file goes to Drive Trash
+ *        source {assetId, source} · library {table: playbooks|packs|kits|bricks, op: new|edit, id?, fields} · libsuggest {table, text} · rights {assetId, clientMaterial: yes|no, sourceRights: kept|sold} · paid {assetId, paid: yes|no};
+ *        library may carry fromAssetId (refused by the engine for client material).   Undo = the request file goes to Drive Trash
  *        before the engine's next run (every 15 min at :03 :18 :33 :48).
  *
  * studio-state.json (written by the engine):
@@ -964,10 +966,10 @@
       '<button class="btn no" type="button" data-act="bin" data-id="' + esc(a.id) + '" aria-label="Bin"' + dis() + '>' + I('trash') + '</button>' +
       '<button class="ico" type="button" data-panel="fb" data-id="' + esc(a.id) + '" aria-label="Stars and reasons" title="Stars and reasons"' + dis() + '>' + I(fbDraft[a.id] && (fbDraft[a.id].stars || fbDraft[a.id].reasons.length) ? 'star-filled' : 'star') + '</button>';
     if (kind === 'gate') return VERDICTS.map(function (v) { return '<button class="btn" type="button" data-act="gate" data-verdict="' + v[0] + '" data-id="' + esc(a.id) + '" aria-label="' + v[1] + '" style="--hc:var(--ljr-' + v[3] + '-text)"' + dis() + '>' + I(v[2]) + v[1] + '</button>'; }).join('');
-    if (kind === 'lib') return (a.clientMaterial ? '<button class="btn" type="button" disabled data-noreuse title="Client material: the client owns it, so it is never reused">' + I('recycle') + 'Reuse</button><span class="sent" data-noreuse-why>Client material \u00b7 never reused</span>' : '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>') +
+    if (kind === 'lib') return (isCM(a) ? '<button class="btn" type="button" disabled data-noreuse title="Client material: the client owns it, so it is never reused">' + I('recycle') + 'Reuse</button><span class="sent" data-noreuse-why>Client material \u00b7 never reused</span>' : '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>') +
       '<button class="btn" type="button" data-panel="result" data-id="' + esc(a.id) + '" aria-label="Add results"' + dis() + '>' + I('chart-bar') + 'Results</button>' +
       '<button class="btn" type="button" data-act="refresh" data-id="' + esc(a.id) + '" aria-label="Refresh"' + dis() + '>' + I('refresh-dot') + 'Refresh</button>' +
-      '<button class="btn no" type="button" data-panel="retire" data-id="' + esc(a.id) + '" aria-label="Retire"' + dis() + '>' + I('archive') + '</button>' + (isClient(a) ? '<button class="btn" type="button" data-act="deliver" data-id="' + esc(a.id) + '" aria-label="Deliver"' + dis() + '>' + I('package-export') + 'Deliver</button>' : '');
+      '<button class="btn no" type="button" data-panel="retire" data-id="' + esc(a.id) + '" aria-label="Retire"' + dis() + '>' + I('archive') + '</button>' + (isClient(a) ? (a.protect === 'yes' && a.paid !== 'yes' ? '<button class="btn" type="button" disabled data-nodeliver title="Protected: the final files go out once it is paid">' + I('package-export') + 'Deliver</button><span class="sent" data-nodeliver-why>Final files wait for payment</span>' : '<button class="btn" type="button" data-act="deliver" data-id="' + esc(a.id) + '" aria-label="Deliver"' + dis() + '>' + I('package-export') + 'Deliver</button>') : '');
     if (kind === 'hand' && a.stage >= 1) return '<button class="btn yes" type="button" data-panel="done" data-id="' + esc(a.id) + '" aria-label="Done"' + dis() + '>' + I('check') + 'Done</button>';
     return '';
   }
@@ -1026,7 +1028,7 @@
         ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
       var inStep = Math.max(0, Math.floor((Date.now() - (Date.parse(a.stageSince) || a._t || Date.now())) / 864e5)), wo = waitingOn(a), acc = account(a.accountId);
       kv.unshift(['With', wo.w], [isClient(a) ? 'Client' : 'Brand owner', isClient(a) ? esc(acc.name) : 'Own brand'], ['In this step', inStep + (inStep === 1 ? ' day' : ' days') + (inStep > 3 && a.stage < 8 ? ' \u00b7 stuck?' : '')]);
-      body = rowMore(a) + rightsRows(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
+      body = rowMore(a) + rightsRows(a) + deliveryRows(a) + saveAsKit(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
     }
     return '<div class="panel" data-panelbox="' + esc(a.id) + '">' + body + '</div>';
   }
@@ -1055,7 +1057,8 @@
       (withBrand || dp ? '<div class="bline">' + (withBrand ? brandMark(bo) + '<span class="bn">' + esc(bo.name) + '</span>' : '') + dp + '</div>' : '') +
       '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') +
-      (a.clientMaterial ? '<div class="needl"><span class="tag" data-chip="client-only" title="The client owns this; it is never reused">Client-only \u00b7 never reused</span></div>' : '') +
+      (a.protect === 'yes' && a.stage < 8 ? '<div class="needl"><span class="tag" data-chip="proof" title="Clients see a view-only proof">Proof \u00b7 view only</span></div>' : '') +
+      (isCM(a) ? '<div class="needl"><span class="tag" data-chip="client-only" title="The client owns this; it is never reused">Client-only \u00b7 never reused</span></div>' : '') +
       '</div></div><div class="cfoot">' + (need ? '<span class="tag need" data-chip="need">' + esc(need) + '</span>' : '<span></span>') + whoRing(a) + '</div>' +
       (function (x) { return x ? '<div class="l2"><span class="acts">' + x + '</span></div>' : ''; })(actsFor(a, kind) + (a.parts && a.parts.total && a.parts.approved === a.parts.total && a.stage < 7 && !sent[a.id] ? '<button class="btn yes" type="button" data-act="assemble" data-id="' + esc(a.id) + '" aria-label="Assemble"' + dis() + '>' + I('books') + 'Assemble</button>' : '')) +
       (on && !(sideOn && openPanel.k === 'all') ? panelOf(a, openPanel.k) : '') + '</div>';
@@ -1256,7 +1259,7 @@
   function vatRatesCard() {
     var V = S.vatRates || []; if (!V.length) return '';
     return '<div class="card" data-vatrates><div class="sect">' + I('receipt-tax') + 'VAT rates <span class="muted">(edited in the Sheet)</span></div><dl class="kv">' +
-      V.map(function (v) { return '<dt>' + esc(v.name || v.country) + (v.home ? ' \u00b7 home' : '') + '</dt><dd>' + esc(String(v.rate)) + '%' + (v.checked ? ' \u00b7 checked ' + esc(dmy(Date.parse(v.checked))) : '') + '</dd>'; }).join('') + '</dl></div>';
+      V.map(function (v) { return '<dt>' + esc(v.name || v.country) + (v.home || /^(GB|UK)$/i.test(v.country) ? ' \u00b7 home' : '') + '</dt><dd>' + esc(String(v.rate)) + '%' + (v.checked ? ' \u00b7 checked ' + esc(dmy(Date.parse(v.checked))) : '') + '</dd>'; }).join('') + '</dl></div>';
   }
   function vBrands() {
     var A = all().filter(function (a) { return !isTest(a); });
@@ -1467,7 +1470,7 @@
       if (fd[2] === 'money' || fd[2] === 'int') { if (String(v == null ? '' : v).trim() !== '') fields[fd[0]] = Number(v); return; }
       if (fd[2] === 'basis') { if (String(f.price == null ? '' : f.price).trim() !== '') fields[fd[0]] = v === 'inc' ? 'inc' : 'ex'; return; }
  fields[fd[0]] = fd[2] === 'multi' ? (v || []).slice() : fd[2] === 'lines' ? String(v || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean) : String(v || '').trim(); });
-    var body = { kind: 'library', accountId: ownerId(), table: t, op: libDraft.op, fields: fields, at: new Date().toISOString() }; if (libDraft.op === 'edit') body.id = libDraft.id;
+    var body = { kind: 'library', accountId: ownerId(), table: t, op: libDraft.op, fields: fields, at: new Date().toISOString() }; if (libDraft.op === 'edit') body.id = libDraft.id; if (libDraft.from) body.fromAssetId = libDraft.from;
     var keep = libDraft; libDraft = {}; saveLocal('st-lib', libDraft); libSent[t] = 'Sent · applies at the engine’s next run'; render();
     withWrite(function () { return putRequest('library', body).catch(function (e) { libDraft = keep; saveLocal('st-lib', libDraft); delete libSent[t]; banner('Not sent: ' + e.message); render(); }); }, function () { libDraft = keep; delete libSent[t]; render(); });
   }
@@ -1715,6 +1718,7 @@
       if (p.priority !== undefined) a.priority = p.priority === 'none' ? null : p.priority;
       if (p.clientMaterial !== undefined) a.clientMaterial = p.clientMaterial;
       if (p.sourceRights !== undefined) a.sourceRights = p.sourceRights;
+      if (p.paid !== undefined) a.paid = p.paid;
     });
     saveLocal('st-pend', pend);
   }
@@ -1730,13 +1734,40 @@
   function sendRights(id, patch) {
     if (EX) return;
     var x = byId(id); if (!x) return;
-    var body = { kind: 'rights', accountId: ownerId(), assetId: id, clientMaterial: patch.clientMaterial !== undefined ? patch.clientMaterial : !!x.clientMaterial, sourceRights: patch.sourceRights || (x.sourceRights === 'sold' ? 'sold' : 'kept'), at: new Date().toISOString() };
+    var body = { kind: 'rights', accountId: ownerId(), assetId: id, clientMaterial: patch.clientMaterial !== undefined ? (patch.clientMaterial ? 'yes' : 'no') : isCM(x) ? 'yes' : 'no', sourceRights: patch.sourceRights || (x.sourceRights === 'sold' ? 'sold' : 'kept'), at: new Date().toISOString() };
     pend[id] = Object.assign(pend[id] || {}, { clientMaterial: body.clientMaterial, sourceRights: body.sourceRights }, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); render();
     var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
     withWrite(function () { return putRequest('rights', body).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
+  // Proof protection, payment and the AI note (engine v0.2.18 item fields, all optional): protect, paid, disclose, hasProof,
+  // hasFinal, needsWatermark, proofLowRes. The final file's link is never in the state, so it can never show here; full size is
+  // released at stage 8 + paid. Paid is the owner's switch: one 'paid' request {assetId, paid: yes|no}.
+  function sendPaid(id, val) {
+    if (EX) return;
+    var x = byId(id); if (!x) return;
+    pend[id] = Object.assign(pend[id] || {}, { paid: val }, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); render();
+    var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
+    withWrite(function () { return putRequest('paid', { kind: 'paid', accountId: ownerId(), assetId: id, paid: val, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
+  }
+  function deliveryRows(a) {
+    var prot = a.protect === 'yes', paid = a.paid === 'yes', approved = a.stage >= 8, tick = function (ok, w) { return '<span class="tick' + (ok ? ' ok' : '') + '" data-tick="' + w + '">' + w + ' ' + (ok ? '\u2713' : '\u2717') + '</span>'; };
+    var rows = '<div class="rrow" data-protect="' + (prot ? 'yes' : 'no') + '"><span class="rlab">Protection</span><span>' + (prot ? 'Protected' : 'Off') + ' \u00b7 ' + (isClient(a) ? 'client account' : 'own brand') + '</span></div>' +
+      '<div class="rrow"><span class="rlab">AI note on delivery</span><span data-disclose>' + (a.disclose === 'no' ? 'Off' : 'On') + '</span></div>' +
+      '<div class="rrow"><span class="rlab">Paid</span><div class="seg" role="group" aria-label="Paid">' + [['yes', 'Yes'], ['no', 'No']].map(function (o) { return '<button type="button" data-paid="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + ((paid ? 'yes' : 'no') === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div>';
+    if (a.hasProof) rows += '<div class="rrow"><span class="rlab">Proof (low-res)</span>' + (a.reviewLink ? '<a href="' + safeUrl(a.reviewLink) + '" target="_blank" rel="noopener" data-proof>Open the proof</a>' : '<span>Shared</span>') + '</div>';
+    if (prot) rows += '<div class="rrow" data-fullsize><span class="rlab">Full size</span><span>' + (approved && paid ? 'Released' : 'Held until approved + paid') + '</span>' + tick(approved, 'Approved') + tick(paid, 'Paid') + '</div>';
+    var remind = a.needsWatermark || a.proofLowRes ? '<div class="rrow"><span class="tag" data-chip="lowres" title="' + esc(a.proofLowRes || '') + '">Low-res + watermark</span><span class="muted" data-watermark>Add Studio watermark layer</span></div>' : '';
+    return '<div class="rights" data-delivery="' + esc(a.id) + '">' + rows + remind + '</div>';
+  }
+  // Save a finished item's set-up as a new kit: opens the kit form; the request carries fromAssetId. Never from client material.
+  function saveAsKit(a) {
+    if (a.stage < 8) return '';
+    return isCM(a) ? '<div class="rrow"><button class="btn" type="button" disabled data-noreuse title="Client material: the client owns it, so it is never reused">' + I('box') + 'Save as a kit</button><span class="sent">Client material \u00b7 never reused</span></div>'
+      : '<div class="rrow"><button class="btn" type="button" data-savekit="' + esc(a.id) + '"' + dis() + '>' + I('box') + 'Save as a kit</button></div>';
+  }
+  function isCM(a) { return !!a && (a.clientMaterial === 'yes' || a.clientMaterial === true); } // engine sends 'yes' / 'no'
   function rightsRows(a) {
-    var cm = !!a.clientMaterial, sr = a.sourceRights === 'sold' ? 'sold' : 'kept';
+    var cm = isCM(a), sr = a.sourceRights === 'sold' ? 'sold' : 'kept';
     return '<div class="rights" data-rights="' + esc(a.id) + '"><div class="rrow"><span class="rlab">Client material</span><div class="seg" role="group" aria-label="Client material">' +
       [[true, 'Yes'], [false, 'No']].map(function (o) { return '<button type="button" data-rset="clientMaterial" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (cm === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div>' +
       '<div class="rrow"><span class="rlab">Source files</span><div class="seg" role="group" aria-label="Source files">' +
@@ -1867,6 +1898,8 @@
     var ln = e.target.closest('[data-libnew]'); if (ln && !ln.disabled) { var lt = ln.getAttribute('data-libnew'); libDraft = { t: lt, op: 'new', f: {}, at: Date.now() }; libErr = {}; delete libSent[lt]; saveLocal('st-lib', libDraft); render(); var lf0 = document.querySelector('[data-libform] [data-lf]'); if (lf0) lf0.focus(); return; }
     var le = e.target.closest('[data-libedit]'); if (le && !le.disabled) { var et = le.getAttribute('data-libedit'), eid = le.getAttribute('data-id'); libDraft = { t: et, op: 'edit', id: eid, f: libFrom(et, eid), at: Date.now() }; libErr = {}; delete libSent[et]; saveLocal('st-lib', libDraft); render(); var lf1 = document.querySelector('[data-libform] [data-lf]'); if (lf1) { lf1.focus(); lf1.scrollIntoView({ block: 'center' }); } return; }
     var rs = e.target.closest('[data-rset]'); if (rs && !rs.disabled) { var rk = rs.getAttribute('data-rset'), rv = rs.getAttribute('data-val'), rp = {}; rp[rk] = rk === 'clientMaterial' ? rv === 'true' : rv; sendRights(rs.getAttribute('data-id'), rp); return; }
+    var pd = e.target.closest('[data-paid]'); if (pd && !pd.disabled) { sendPaid(pd.getAttribute('data-id'), pd.getAttribute('data-paid')); return; }
+    var sk = e.target.closest('[data-savekit]'); if (sk && !sk.disabled) { var sa = byId(sk.getAttribute('data-savekit')); if (sa && !isCM(sa)) { libDraft = { t: 'kits', op: 'new', from: sa.id, f: { name: bare(sa), type: sa.type, formatIds: (sa.formatIds || []).slice(), frameworkId: sa.frameworkId || '', voiceId: sa.voiceId || '', lookId: sa.lookId || '' }, at: Date.now() }; libErr = {}; saveLocal('st-lib', libDraft); location.hash = '#/kits/kits'; } return; }
     var lb = e.target.closest('[data-lbasis]'); if (lb && libDraft.t) { libDraft.f = libDraft.f || {}; libDraft.f.priceBasis = lb.getAttribute('data-lbasis'); saveLocal('st-lib', libDraft); render(); return; }
     var ps = e.target.closest('[data-pshow]'); if (ps) { pshowLocal = ps.getAttribute('data-pshow'); try { localStorage.setItem('st-pshow', pshowLocal); } catch (x) {} render(); return; }
     var lx = e.target.closest('[data-lfx]'); if (lx && libDraft.t) { var lk = lx.getAttribute('data-lfx'), lv = lx.getAttribute('data-val'); libDraft.f = libDraft.f || {};
