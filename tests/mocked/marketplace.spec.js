@@ -680,6 +680,20 @@ test.describe('Marketplace page', () => {
     await expect.poll(() => writes.length).toBe(3);
     expect(writes[2].body.values[0][0]).toBe('Unknown');
   });
+  test('engine v11.9 eBay account type card on Numbers: fees and profit both ways, help link, one tap writes Business; never counted as needing you', async ({ page }) => {
+    const d = { kind: 'seller_type', now: 'private', other: 'business', line: 'Last 30 days, 2 eBay sales: eBay fees £1.21 as private, £6.17 as business (£4.96 more).', profit_line: 'Profit before postage (1 of 2 sales with a known cost): £10.00 as private, £5.83 as business.', url: 'https://www.ebay.co.uk/help/selling/fees-credits-invoices/selling-fees?id=4822', why: 'Tapping Business changes only these sums; change the account on eBay first.' };
+    const writes = await sheets(page, [['SW|ebay_seller_type', 'switch', '', 'eBay account type: private', JSON.stringify(d), ago(5)], ...sampleRows()]);
+    await open(page, '#/numbers');
+    const card = page.locator('#seller-type');
+    await expect(card.locator('h2')).toHaveText('eBay account type: private');
+    await expect(card).toContainText('£6.17 as business (£4.96 more)');
+    await expect(card).toContainText('£5.83 as business');
+    await expect(card.locator('a[href*="id=4822"]')).toHaveAttribute('target', '_blank');
+    await card.locator('[data-v="Business"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0][0]).toBe('Business');
+    await page.goto('marketplace/#/me'); await expect(page.locator('#view .needs')).toHaveText('Needs you: 2');
+  });
   test('the last button on a long page can always be scrolled clear of the bottom tab bar @regression', async ({ page }) => {
     const rows = Array.from({ length: 12 }, (_, i) => ['RM|L' + i, 'remove', 'Clothes', 'Sample item ' + i, JSON.stringify({ platform: 'Vinted' }), ago(5)]);
     await sheets(page, rows);

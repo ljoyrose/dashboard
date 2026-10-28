@@ -190,6 +190,7 @@
     vat: { name: 'VAT', what: 'Sales against the VAT registration threshold.' },
     offer: { name: 'Send offer', what: 'Buyers are watching these on eBay. Send them a discount?' },
     cost: { name: 'What did it cost?', what: 'Profit stays unknown until the cost is known. Type what you paid for one. Changes only your list, never eBay or Vinted.' },
+    switch: { name: 'eBay account type', quiet: true, what: 'Fees and profit as a private and as a business seller.' },
     suppliers: { name: 'Supplier details', quiet: true, what: 'Contacts, terms and the order list per supplier.' }
   };
   var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'check', 'cost', 'receipt', 'newprod', 'offer', 'supplier', 'learn', 'job', 'vat', 'restock', 'temu'];
@@ -697,16 +698,24 @@
     h += '<div class="acts">' + (at > 0 ? '<button class="btn" type="button" data-shelf="-1">◂ Back</button>' : '') + (at < shelves.length - 1 ? '<button class="btn main" type="button" data-shelf="1">Next shelf ▸</button>' : '<button class="btn main big" type="button" data-action="finish">Finish round</button>') + '</div>';
     return h + '<p class="what">Where this saves: the Marketplace tab of the Open work sheet. The engine applies it after 10 minutes.</p>';
   }
+  // Engine v11.9: one permanent card. The tap changes only the engine's sums (setting ebay_seller_type), never the eBay account.
+  function switchCard() {
+    var r = rows.filter(function (x) { return x.section === 'switch' && !x.applied_at; })[0]; if (!r) return '';
+    var d = detail(r), other = d.other === 'business' ? 'Business' : 'Private';
+    var h = '<div class="card acc4" id="seller-type"><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.line) + '</p><p class="what">' + esc(d.profit_line) + '</p><p class="hint">' + esc(d.why) + '</p>' + stamp(r, d);
+    if (r.answer) return h + sentLine(r) + '</div>';
+    return h + '<div class="acts">' + linkBtn(d.url, 'eBay fees (help page)') + ansBtn(r, other, 'Switch sums to ' + other) + '</div></div>';
+  }
   function pageNumbers() {
     var k = rows.filter(function (r) { return r.section === 'kpi'; })[0];
-    if (!k) return '<p class="needs">Numbers</p><div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
+    if (!k) return '<p class="needs">Numbers</p>' + switchCard() + '<div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
     var d = detail(k), ar = { up: '▲', down: '▼', flat: '–' };
     function show(t) { return typeof t.value === 'string' ? t.value : /_p$/.test(t.key) ? '£' + (Number(t.value) / 100).toFixed(2) : t.value; }   // v11.7: "£8.40 from 1 of 2 sales" or "?" come as text
     var h = '<p class="needs">Numbers</p><div class="tiles">' + (d.tiles || []).map(function (t) { return '<button class="tile" type="button" data-tile="' + esc(t.key) + '"><div class="k">' + esc(t.label) + '</div><div class="v">' + esc(show(t)) + ' <span class="' + esc(t.arrow) + '">' + ar[t.arrow] + '</span></div></button>'; }).join('') + '</div>';
     if (open.tile) h += '<div class="card">' + (d.byCategory || []).map(function (c) { return '<div class="row"><div class="txt">' + esc(c.category) + '</div><div>' + esc(open.tile === 'sold' ? c.sold : '£' + (c.profit_p / 100).toFixed(2)) + '</div></div>'; }).join('') + '</div>';
     if (d.vat) h += '<p class="what">' + esc(d.vat) + '</p>';
     if (d.health) h += '<p class="what">' + esc(d.health) + '</p>';
-    return h;
+    return h + switchCard();
   }
   function render() {
     $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
