@@ -70,5 +70,7 @@ family trees, puppy packs, social graphics, page and email drafts, for every bra
   head and foot with "need you · £ AI", details on the right) and as a list on the phone (one column per screen if Board is picked,
   details under the card). The Board/List switch is kept per page. The palette button (Look) sets Background (Warm clear / Cool clear),
   Selected (Outline / Soft tint), Coloured words, Text size, Spacing and Mode (Device / Light / Dark), kept in `localStorage['dash-look']`
-  for the other hubs. No solid colour fills: selected and hover are the same 2px ink outline.
+  for the other hubs. No solid colour fills: every edge is 1px; hover and selected turn that edge ink, so nothing thickens or moves.
+  Dark frame top and bottom (never black). The find bar is one row (Search · Filter · Sort); Filter opens a panel with every
+  filter group, and active filters show as removable chips.
 - Same sign-in, find bar and rules as Factory. TEST stamp until `studio.live` and the state's mode are both LIVE.

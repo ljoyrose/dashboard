@@ -58,7 +58,7 @@
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); } }
   :root.sel-soft { --sel-bd: var(--ljr-7-text); --sel-fill: var(--ljr-7-tint); }
   html.text-lg body { zoom: 1.12; } html.text-xl body { zoom: 1.25; }
-  html.space-roomy body { line-height: 1.75; } html.space-roomy .crow { padding-top: 14px; padding-bottom: 14px; } html.space-roomy .col-list { gap: 12px; }
+  html.space-roomy body { line-height: 1.75; } html.space-roomy .crow { padding-top: 14px; padding-bottom: 14px; } html.space-roomy .col-list { gap: 16px; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
   .hidden { display: none !important; }
@@ -73,14 +73,14 @@
   .top h1 .dot { background: var(--me); }
   .stamp { font-size: 13px; font-weight: 700; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; }
   .stamp:empty { display: none; }
-  .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 7px 14px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
+  .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 14px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
   .btn.main { border-color: var(--ink); }
   #backHome { min-height: 44px; }
   html.dash-locked #backHome { margin-left: auto; } /* signed out the title is hidden, so the button keeps its top-right place */
   .btn[disabled] { cursor: not-allowed; opacity: .55; }
   /* Five tabs in a bar at the bottom, like Marketplace (thumb reach on the phone); a sub-row of links inside Line, Decide and Kits. */
   nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
-  nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; position: relative; }
+  nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1px solid transparent; padding: 4px 2px; text-align: center; position: relative; }
   /* Bottom tabs: no ring or inner line. Hover and selected = the small colour bar above the label grows (same height, so nothing moves). */
   nav.tabs a .bar { width: 18px; height: 4px; border-radius: 2px; background: var(--tc); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
   nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
@@ -89,31 +89,27 @@
   @media (min-width: 900px) { nav.tabs { max-width: 900px; margin: 0 auto; border-left: 1px solid var(--line); border-right: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; } }
   html { scroll-padding-bottom: 96px; }
   .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
-  .subnav a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
-  .subnav a[aria-current="page"] { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: var(--sel-fill); }
-  /* One state only: hover = selected = the border in ink plus a 1.5px outline drawn inside it; borders never change width, so nothing moves. Never a solid fill. */
-  .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: var(--sel-fill); }
-  @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .col-list .crow:hover { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; } }
+  .subnav a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
+  /* One line rule (like Links and HubSpot): every edge is 1px; hover = selected = that same 1px edge turns ink (an outline laid exactly over it), so it darkens, never thickens or moves. Keyboard focus keeps the 2px ink ring. */
+  .subnav a[aria-current="page"], .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); }
+  @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .achip:hover, .ico:hover, a.tag:hover, .chk li button:hover, .room:hover, .col-list .crow:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   .n:empty { display: none; }
   .cnt, nav.tabs .n { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 1; color: var(--ink); background: transparent; }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
-  /* Icons grey at rest, their own colour on hover. */
-  .ico:hover .ti, .pill:hover .ti, .lk:hover .ti, .btn:hover .ti, .ch:hover .ti, .ch.on .ti { color: var(--hc, var(--ink)); }
   svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   main.wrap { padding-top: 16px; padding-bottom: 110px; display: flex; flex-direction: column; gap: 14px; }
   #view { display: flex; flex-direction: column; gap: 14px; }
-  .banner { border: 1.5px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; color: var(--ink); display: flex; gap: 8px; align-items: center; }
+  .banner { border: 1px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; color: var(--ink); display: flex; gap: 8px; align-items: center; }
   .banner.info { border-color: var(--line); }
   .banner.ex { border-color: var(--me); }
   .banner.ex .ti { color: var(--ljr-7-text); }
   .card { background: var(--surface); border: 1px solid var(--bd); border-radius: var(--radius); padding: 14px 16px; min-width: 0; box-shadow: var(--shadow); }
   .muted { color: var(--muted); font-size: 14px; }
   .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); border-radius: 999px; padding: 3px 10px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+  .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); border-radius: 999px; padding: 3px 10px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
   .pill .cnt { min-width: 22px; height: 22px; }
   .pill.warn { border-color: var(--ljr-3); } .pill.bad { border-color: var(--ljr-2); } .pill.ok .ti { color: var(--ljr-5-text); }
   .pill.stg { border-color: var(--c); min-width: 34px; justify-content: center; }
-  .pill.stg.on { border-color: var(--ink); }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; display: inline-block; }
   .grp { font-size: 16px; font-weight: 700; margin: 0 0 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .grp .st { font-size: 13px; font-weight: 600; color: var(--muted); }
@@ -138,8 +134,7 @@
   .crow .l3 .grow { flex: 1; }
   .date { font-size: 13px; color: var(--muted); white-space: nowrap; }
   .appcard { padding-top: 10px; }
-  .room { border: 2px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-  .room:hover, .room:focus-within { border-color: var(--c); }
+  .room { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .room .grp { margin: 0; font-size: 15px; }
   .room .stn { font-size: 13px; color: var(--muted); margin-top: -6px; }
   .hero { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; }
@@ -152,14 +147,11 @@
   .stage.c .n { background: var(--ljr-7-solid); border-color: var(--ljr-7-solid); color: var(--ljr-7-on); }
   .stage.c { font-weight: 600; }
   .ico { position: relative; background: none; border: 1px solid transparent; border-radius: var(--radius); min-width: 32px; height: 32px; padding: 0 4px; display: inline-flex; gap: 3px; align-items: center; justify-content: center; cursor: pointer; color: var(--ink); font: inherit; font-size: 13px; }
-  .ico:hover, .ico.on { border-color: var(--line); }
   .tag { font-size: 13px; color: var(--ink); display: inline-flex; gap: 3px; align-items: center; padding: 0 6px; border: 1px solid var(--line); border-radius: 999px; }
   .tag.over { border-color: var(--ljr-2); }
   .lk { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: var(--radius); }
   .lk.no { border-style: dashed; opacity: .7; }
   .acts .btn { padding: 4px 12px; }
-  .acts .btn.yes:hover { border-color: var(--ljr-5); } .acts .btn.yes .ti { --hc: var(--ljr-5-text); }
-  .acts .btn.no:hover { border-color: var(--ljr-2); } .acts .btn.no .ti { --hc: var(--ljr-2-text); }
   .sent { font-size: 14px; color: var(--muted); }
   .undo { font: inherit; font-size: 14px; padding: 2px 10px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--ink); cursor: pointer; margin-left: 6px; display: inline-flex; gap: 4px; align-items: center; }
   .strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; margin: 8px 0 2px; }
@@ -172,15 +164,29 @@
   .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 4px 10px; margin-top: 4px; cursor: pointer; }
   .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; color: var(--muted); cursor: help; margin-left: 4px; vertical-align: 1px; }
   /* Find bar: Search · Brand · Type always; Stage · Who · Fit · Timing · Flags · Sort · TEST behind Filter. */
-  .fbar { display: flex; flex-direction: column; gap: 8px; }
-  .srow { display: flex; gap: 8px; align-items: center; }
+  .fbar { display: flex; flex-direction: column; gap: 8px; position: relative; }
+  .srow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .fbar .sbox { flex: 1 1 220px; max-width: 420px; border-radius: 999px; min-height: 32px; }
+  .fbar .sbox input { padding: 4px 0; }
+  .fbar .fbtn { min-height: 32px; padding: 4px 12px; }
+  .fbtn .n:not(:empty)::before { content: ""; }
+  .achip { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 2px 10px; min-height: 28px; display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+  .fbar > .fpanel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 15; width: min(640px, 100%); max-height: min(70vh, 560px); overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: 16px; box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,.12); padding: 14px; gap: 12px; }
+  .fbar > .fpanel.sortp { width: min(420px, 100%); }
+  .fgrp { display: flex; flex-direction: column; gap: 6px; }
+  .fpanel .frow { justify-content: flex-start; margin-top: 4px; }
+  @media (max-width: 544px) {
+    .fbar .sbox { flex-basis: 100%; max-width: none; min-height: 44px; }
+    .fbar .fbtn, .achip { min-height: 44px; }
+    .fbar > .fpanel { position: fixed; top: auto; left: 8px; right: 8px; width: auto; bottom: calc(86px + env(safe-area-inset-bottom, 0px)); max-height: 65vh; z-index: 30; }
+  }
   .sbox { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 0 12px; background: var(--surface); }
   .sbox:focus-within { border-color: var(--muted); }
   .sbox input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 15px; padding: 8px 0; }
-  .fbtn { font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; padding: 7px 12px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .fbtn { font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
   .fpanel { display: flex; flex-direction: column; gap: 8px; }
   .flab { font-size: 13px; font-weight: 700; color: var(--muted); min-width: 52px; }
-  .sw { display: inline-block; width: 28px; height: 16px; border-radius: var(--radius); border: 1.5px solid var(--muted); position: relative; vertical-align: middle; }
+  .sw { display: inline-block; width: 28px; height: 16px; border-radius: var(--radius); border: 1px solid var(--muted); position: relative; vertical-align: middle; }
   .sw i { position: absolute; top: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
   .sw.on { border-color: var(--ljr-5); } .sw.on i { left: 14px; background: var(--ljr-5); }
   .empty { display: flex; gap: 12px; align-items: center; }
@@ -211,7 +217,7 @@
   .fin { width: 100%; font: inherit; font-size: 15px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); }
   textarea.fin { min-height: 72px; resize: vertical; }
   .ferr { font-size: 14px; margin-top: 4px; }
-  .ferr::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--ljr-2); margin-right: 6px; }
+  .ferr::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--ljr-2); margin-right: 6px; }
   .frow { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
   .ask { display: flex; gap: 8px; }
   .rform { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
@@ -235,7 +241,6 @@
   footer { color: var(--muted); font-size: 13px; padding: 0 16px 24px; }
   /* v0.2: Kits tab (playbooks by outcome, packs, kits, styles, formats), sources, gaps, tool form */
   a.tag { text-decoration: none; }
-  a.tag:hover { border-color: var(--muted); }
   .ogrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
   .steps { margin: 0; padding-left: 22px; font-size: 14px; }
   .steps li { padding: 1px 0; }
@@ -248,7 +253,6 @@
   .src:first-child { border-top: 0; }
   .src .ask .fin { font-size: 14px; }
   .chk li button { all: unset; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius); padding: 0 4px; }
-  .chk li button:hover, .chk li button:focus-visible { border-color: var(--line); }
   .fsub { font-size: 13px; font-weight: 700; color: var(--muted); margin: 6px 0 4px; }
   /* Cool clear: neutral chips get a faint fill; the red and green outlines (needs you, On) stay as they are. */
   :root.look-cool .ch:not(.on), :root.look-cool .tag, :root.look-cool .fbtn:not(.on), :root.look-cool .pill:not(.on) { background: var(--chip); }
@@ -261,21 +265,22 @@
   /* Board / List switch at the top of Line and Decide. */
   .vtop { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   .vsw { display: inline-flex; gap: 4px; margin-left: auto; }
-  .vsw button { width: 44px; height: 40px; justify-content: center; padding: 0; border-radius: var(--radius); }
+  .vsw button { min-height: 36px; justify-content: center; padding: 4px 12px; }
   /* Board (HubSpot-style): fixed columns that scroll inside themselves; head and foot stay put; details on the right. */
   html.board-on main.wrap { padding-bottom: 0; }
   .bwrap { display: flex; gap: 12px; min-height: 0; }
-  .board { flex: 1 1 auto; min-width: 0; display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; scrollbar-width: thin; }
-  .col { flex: 0 0 280px; display: flex; flex-direction: column; min-height: 0; background: var(--canvas); border: 1px solid var(--bd); border-top: 3px solid var(--sc); border-radius: var(--radius); overflow: hidden; scroll-snap-align: start; }
-  .col-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px; min-height: 40px; font-weight: 600; background: var(--band); border-bottom: 1px solid var(--bd); }
-  .col-head .num { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 13px; border: 1.5px solid var(--sc); flex: none; }
+  .board { flex: 1 1 auto; min-width: 0; display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; scrollbar-width: thin; }
+  .col { flex: 0 0 280px; display: flex; flex-direction: column; min-height: 0; background: var(--canvas); border: 1px solid var(--bd); border-radius: var(--radius); overflow: hidden; scroll-snap-align: start; }
+  .col-head { flex: none; position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 12px; min-height: 40px; font-weight: 600; background: var(--band); border-bottom: 1px solid var(--bd); }
+  .col-head::before { content: ""; position: absolute; top: 0; left: 14px; right: 14px; height: 3px; border-radius: 0 0 3px 3px; background: var(--sc); } /* stage colour as a short tab: never touches the corners */
+  .col-head .num { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 13px; border: 1px solid var(--sc); flex: none; }
   .col-head .num .ti { font-size: 15px; color: var(--ink); }
   .col-head .lab { color: var(--ink); min-width: 0; overflow-wrap: anywhere; } /* colour only in the ring and the top line */
   .col-head .cnt { margin-left: auto; }
-  .col-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 12px 8px 8px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; }
-  .col-list .crow, .col-list .row { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow); position: relative; }
+  .col-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; }
+  .col-list .crow, .col-list .row { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); position: relative; }
   .col-list .crow .ttl { font-weight: 600; font-size: 16px; }
-  .col-list .crow.sel { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: linear-gradient(var(--sel-fill), var(--sel-fill)) var(--card); }
+  .col-list .crow.sel { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: linear-gradient(var(--sel-fill), var(--sel-fill)) var(--card); }
   .col-list .crow.sel::after { content: "\2713"; position: absolute; top: -8px; right: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--card); color: var(--ink); border: 2px solid var(--sel-bd); }
   .col-list > .muted { padding: 4px; margin: 0; }
   .col-foot { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 45px; padding: 4px 12px; font-size: 14px; line-height: 18px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); }
@@ -293,13 +298,13 @@
   /* Tab counts sit in the button's top-right corner, clear of the label. */
   nav.tabs .n { position: absolute; top: 8px; right: 18px; min-width: 20px; height: auto; line-height: 18px; text-align: center; }
   @media (max-width: 544px) {
-    nav.tabs .n { top: 4px; right: 4px; min-width: 17px; line-height: 16px; padding: 0 4px; } /* 13px, not 10: nothing on the page goes under 13px */
+    nav.tabs .n { top: 2px; right: auto; left: calc(50% + 12px); min-width: 17px; line-height: 16px; padding: 0 4px; } /* beside the icon, above the label: clear of it whatever the font */ /* 13px, not 10: nothing on the page goes under 13px */
     nav.tabs a[aria-current="page"] .bar { width: 26px; }
   }
   @media (max-width: 544px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; } }
   .subnav { gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
   .vtop .subnav { flex: 1 1 auto; }
-  .subnav a { border-color: transparent; background: transparent; }
+  .subnav a, :root.look-cool .subnav a { border-color: transparent; background: transparent; }
   .btn { min-height: 36px; }
   @media (min-width: 545px) { .subnav a { min-height: 32px; padding: 0 12px; } }
   @media (max-width: 544px) { .btn, .subnav a { min-height: 44px; } }
@@ -312,7 +317,7 @@
   header .top > .btn.main { border-color: var(--frame-ink); }
   header .top > .pill.ok { border-color: var(--frame-ok); } header .top > .pill.ok .ti { color: var(--frame-ok); }
   header .top > .pill.warn { border-color: var(--frame-warn); } header .top > .pill.bad { border-color: var(--frame-bad); }
-  @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover { border-color: var(--frame-ink); outline-color: var(--frame-ink); } }
+  @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover { outline-color: var(--frame-ink); } } /* the same 1px line, in the frame's ink */
   header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
   nav.tabs { background: var(--frame-foot); border-top: 0; gap: 8px; padding-top: 8px; padding-left: 8px; padding-right: 8px; }
   @media (min-width: 900px) { nav.tabs { border-left: 0; border-right: 0; } }
@@ -335,7 +340,7 @@
     <a id="enginePill" class="pill hidden" href="#/engine"></a>
     <a id="budgetPill" class="pill hidden" href="#/tools"></a>
     <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again" title="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
-    <span class="lookwrap"><button id="lookBtn" class="btn" type="button" data-action="look" aria-label="Look" title="Look" aria-expanded="false" aria-controls="lookMenu"><i class="ti ti-palette" aria-hidden="true"></i></button><div id="lookMenu" class="hidden" role="dialog" aria-label="Look"></div></span>
+    <span class="lookwrap"><button id="lookBtn" class="btn" type="button" data-action="look" aria-label="Look" title="Look" aria-expanded="false" aria-controls="lookMenu"><i class="ti ti-palette" aria-hidden="true"></i>Look</button><div id="lookMenu" class="hidden" role="dialog" aria-label="Look"></div></span>
     <a class="btn" href="#/new" data-nav="new" id="newBtn" aria-label="New idea"><i class="ti ti-plus"></i>New</a>
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
@@ -679,39 +684,53 @@
         by === 'name' ? bare(a).localeCompare(bare(b)) : by === 'results' ? res(b) - res(a) || b._t - a._t : b._t - a._t;
     });
   }
-  function onCount(tab) { var s = fsOf(tab); return LIST_KEYS.reduce(function (n, k) { return n + s[k].length; }, 0) + (s.test ? 1 : 0) + (s.sort !== 'date' ? 1 : 0); }
   function fchip(key, val, label, on, extra, style) { return '<button class="pill' + (on ? ' on' : '') + (extra || '') + '" type="button" data-fx="' + key + '" data-val="' + esc(val) + '" aria-pressed="' + on + '"' + (style || '') + '>' + label + '</button>'; }
   function counts(items, s, key, val) { var c = {}; items.filter(function (a) { return hit(a, s, key); }).forEach(function (a) { [].concat(val(a)).forEach(function (v) { c[v] = (c[v] || 0) + 1; }); }); return c; }
+  // Find bar (HubSpot style): ONE row = Search · Filter (count) · Sort, then a removable chip per active filter.
+  // Filter opens a panel with every filter group (Group, Account, Brand, Type, Stage, Who, Fit, Timing, Flags, Where, Series, Kit).
+  var sortOpen = false;
+  function fOnCount(tab) { var s = fsOf(tab); return LIST_KEYS.reduce(function (n, k) { return n + s[k].length; }, 0) + (s.test ? 1 : 0); }
+  var FLAB = { grp: 'Group', acct: 'Account', brand: 'Brand', type: 'Type', st: 'Stage', who: 'Who', fit: 'Fit', ev: 'Timing', f: 'Flag', dest: 'Where', series: 'Series', kit: 'Kit' };
+  function fName(k, v) {
+    if (k === 'grp') return group(v).name; if (k === 'acct') return account(v).name; if (k === 'brand') return brand(v).name; if (k === 'type') return typeOf(v)[2];
+    if (k === 'st') return v + ' ' + (STAGES[+v] || ''); if (k === 'who') return whoOf(v)[1]; if (k === 'fit') return v === 'hand' ? 'Manual' : 'Auto';
+    if (k === 'ev') return v === 'dated' ? 'Dated' : 'Evergreen'; if (k === 'f') return FLAG_W[v] || v; if (k === 'dest') return (pickOf(DESTS, v) || [])[2] || v;
+    if (k === 'series' || k === 'kit') { var x = byIdIn(k === 'kit' ? 'kits' : 'series', v); return x ? x.name : v; }
+    return v;
+  }
   function findBar(tab, items) {
-    var s = fsOf(tab), n = onCount(tab);
-    var gc = counts(items, s, 'grp', grpOf), gids = S.groups.map(function (g) { return g.id; }).concat(gc.none ? ['none'] : []).filter(function (id) { return gc[id] || s.grp.indexOf(id) >= 0; });
-    var html = '<div class="fbar" data-bar="' + tab + '">';
-    if (gids.length > 1 || s.grp.length) html += '<div class="pills" data-frow="grp">' + fchip('grp', '', 'All', !s.grp.length) + gids.map(function (id) { return fchip('grp', id, I(GROUP_ICON[id] || 'folder') + ' ' + esc(group(id).name) + ' ' + cnt(gc[id] || 0), s.grp.indexOf(id) >= 0); }).join('') + '</div>';
-    html += '<div class="srow"><label class="sbox">' + I('search') + '<input type="search" data-f="fq" value="' + esc(s.q) + '" aria-label="Search" autocomplete="off"></label>' +
-      '<button id="filtersBtn" class="fbtn' + (filtersOpen ? ' on' : '') + '" type="button" data-action="filters" aria-label="Filter" aria-expanded="' + filtersOpen + '">' + I('adjustments-horizontal') + '<span class="n">' + (n || '') + '</span></button></div>';
-    var ac = counts(items, s, 'acct', function (a) { return a.accountId; });
-    if (S.accounts.length > 1) html += '<div class="pills" data-frow="acct">' + fchip('acct', '', 'All', !s.acct.length) + S.accounts.map(function (x) { return fchip('acct', x.id, I(x.kind === 'client' ? 'briefcase' : 'home') + ' ' + esc(x.name) + ' ' + cnt(ac[x.id] || 0), s.acct.indexOf(x.id) >= 0); }).join('') + '</div>';
-    var bc = counts(items, s, 'brand', function (a) { return a.brandIds; }), bids = S.brands.map(function (b) { return b.id; }).filter(function (id) { return bc[id] || s.brand.indexOf(id) >= 0; });
-    if (bids.length > 1 || s.brand.length) html += '<div class="pills" data-frow="brand">' + fchip('brand', '', 'All', !s.brand.length) + bids.map(function (id) { var b = brand(id); return fchip('brand', id, '<span class="dot" style="--c:' + col(b.colour) + '"></span>' + esc(b.name) + ' ' + cnt(bc[id] || 0), s.brand.indexOf(id) >= 0); }).join('') + '</div>';
-    var tc = counts(items, s, 'type', function (a) { return a.type; }), th = TYPES.filter(function (t) { return tc[t[0]] || s.type.indexOf(t[0]) >= 0; });
-    if (th.length > 1 || s.type.length) html += '<div class="pills" data-frow="type">' + th.map(function (t) { return fchip('type', t[0], I(t[1]) + ' ' + t[2] + ' ' + cnt(tc[t[0]] || 0), s.type.indexOf(t[0]) >= 0); }).join('') + '</div>';
+    var s = fsOf(tab), n = fOnCount(tab), srt = pickOf(SORTS, s.sort) || SORTS[0];
+    var html = '<div class="fbar" data-bar="' + tab + '"><div class="srow">' +
+      '<label class="sbox">' + I('search') + '<input type="search" data-f="fq" value="' + esc(s.q) + '" placeholder="Search" aria-label="Search" autocomplete="off"></label>' +
+      '<button id="filtersBtn" class="fbtn' + (filtersOpen ? ' on' : '') + '" type="button" data-action="filters" aria-expanded="' + filtersOpen + '" aria-controls="fpanel">' + I('adjustments-horizontal') + 'Filter<span class="n">' + (n || '') + '</span></button>' +
+      '<button id="sortBtn" class="fbtn' + (sortOpen ? ' on' : '') + '" type="button" data-action="sort" aria-expanded="' + sortOpen + '" aria-controls="sortpanel" title="Sort: ' + srt[2] + '">' + I('arrows-sort') + 'Sort' + (s.sort !== 'date' ? ': ' + srt[2] : '') + '</button>' +
+      LIST_KEYS.map(function (k) { return s[k].map(function (v) { return '<button class="achip" type="button" data-fxoff="' + k + '" data-val="' + esc(v) + '" aria-label="Remove ' + FLAB[k] + ': ' + esc(fName(k, v)) + '">' + FLAB[k] + ': ' + esc(fName(k, v)) + ' <span aria-hidden="true">×</span></button>'; }).join(''); }).join('') +
+      (s.test ? '<button class="achip" type="button" data-action="ftest" aria-label="Remove TEST">TEST <span aria-hidden="true">×</span></button>' : '') + '</div>';
+    if (sortOpen) html += '<div class="fpanel sortp" id="sortpanel" role="dialog" aria-label="Sort"><div class="pills" data-frow="sort">' + SORTS.map(function (x) { return fchip('sort', x[0], I(x[1]) + ' ' + x[2], s.sort === x[0]); }).join('') + '</div></div>';
     if (filtersOpen) {
+      var gc = counts(items, s, 'grp', grpOf), gids = S.groups.map(function (g) { return g.id; }).concat(gc.none ? ['none'] : []).filter(function (id) { return gc[id] || s.grp.indexOf(id) >= 0; });
+      var ac = counts(items, s, 'acct', function (a) { return a.accountId; });
+      var bc = counts(items, s, 'brand', function (a) { return a.brandIds; }), bids = S.brands.map(function (b) { return b.id; }).filter(function (id) { return bc[id] || s.brand.indexOf(id) >= 0; });
+      var tc = counts(items, s, 'type', function (a) { return a.type; }), th = TYPES.filter(function (t) { return tc[t[0]] || s.type.indexOf(t[0]) >= 0; });
       var sc = counts(items, s, 'st', function (a) { return a.stage; }), wc = counts(items, s, 'who', function (a) { return a.who; }), fc = counts(items, s, 'fit', function (a) { return String(a.fit).toLowerCase(); });
-      var ec = counts(items, s, 'ev', evOf), gc = counts(items, s, 'f', function (a) { return a.flags; }), tests = items.filter(isTest).length;
+      var ec = counts(items, s, 'ev', evOf), flc = counts(items, s, 'f', function (a) { return a.flags; }), tests = items.filter(isTest).length;
       var dc = counts(items, s, 'dest', function (a) { return a.destination || []; }), sec = counts(items, s, 'series', function (a) { return a.seriesId || []; }), kc = counts(items, s, 'kit', function (a) { return a.kitId || []; });
-      var row = function (key, lab, chips) { return chips ? '<div class="pills" data-frow="' + key + '"><span class="flab">' + lab + '</span>' + chips + '</div>' : ''; };
-      html += '<div class="card fpanel">' +
-        row('st', 'Stage', STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), String(i), s.st.indexOf(String(i)) >= 0, ' stg', ' style="--c:' + col(stSlot(i)) + '" title="' + name + '"') : ''; }).join('')) +
-        row('who', 'Who', WHO.filter(function (w) { return wc[w[0]] || s.who.indexOf(w[0]) >= 0; }).map(function (w) { return fchip('who', w[0], I(w[2]) + ' ' + w[1] + ' ' + cnt(wc[w[0]] || 0), s.who.indexOf(w[0]) >= 0); }).join('')) +
-        row('fit', 'Fit', [['auto', 'Auto', 'robot'], ['hand', 'Manual', 'hand-finger']].filter(function (x) { return fc[x[0]] || s.fit.indexOf(x[0]) >= 0; }).map(function (x) { return fchip('fit', x[0], I(x[2]) + ' ' + x[1] + ' ' + cnt(fc[x[0]] || 0), s.fit.indexOf(x[0]) >= 0); }).join('')) +
-        row('ev', 'Timing', [['evergreen', 'Evergreen', 'leaf'], ['dated', 'Dated', 'calendar-event']].filter(function (x) { return ec[x[0]] || s.ev.indexOf(x[0]) >= 0; }).map(function (x) { return fchip('ev', x[0], I(x[2]) + ' ' + x[1] + ' ' + cnt(ec[x[0]] || 0), s.ev.indexOf(x[0]) >= 0); }).join('')) +
-        row('f', 'Flags', Object.keys(gc).concat(s.f.filter(function (f) { return !gc[f]; })).map(function (f) { return fchip('f', f, I('flag') + ' ' + esc(FLAG_W[f] || f) + ' ' + cnt(gc[f] || 0), s.f.indexOf(f) >= 0); }).join('')) +
-        row('dest', 'Where', DESTS.filter(function (d) { return dc[d[0]] || s.dest.indexOf(d[0]) >= 0; }).map(function (d) { return fchip('dest', d[0], I(d[1]) + ' ' + d[2] + ' ' + cnt(dc[d[0]] || 0), s.dest.indexOf(d[0]) >= 0); }).join('')) +
-        row('series', 'Series', S.series.filter(function (x) { return sec[x.id] || s.series.indexOf(x.id) >= 0; }).map(function (x) { return fchip('series', x.id, I('stack') + ' ' + esc(x.name) + ' ' + cnt(sec[x.id] || 0), s.series.indexOf(x.id) >= 0); }).join('')) +
-        row('kit', 'Kit', S.kits.filter(function (x) { return kc[x.id] || s.kit.indexOf(x.id) >= 0; }).map(function (x) { return fchip('kit', x.id, I('box') + ' ' + esc(x.name) + ' ' + cnt(kc[x.id] || 0), s.kit.indexOf(x.id) >= 0); }).join('')) +
-        row('sort', 'Sort', SORTS.map(function (x) { return fchip('sort', x[0], I(x[1]) + ' ' + x[2], s.sort === x[0]); }).join('')) +
-        '<div class="pills"><button class="pill" type="button" data-action="ftest" aria-pressed="' + s.test + '" title="TEST">TEST <span class="sw' + (s.test ? ' on' : '') + '"><i></i></span> ' + cnt(tests) + '</button>' +
-        '<button class="pill" type="button" data-action="clearf">' + I('filter-off') + ' Clear</button></div></div>';
+      var row = function (key, chips) { return chips ? '<div class="fgrp" role="group" aria-label="' + FLAB[key] + '"><span class="flab">' + FLAB[key] + '</span><div class="pills" data-frow="' + key + '">' + chips + '</div></div>' : ''; };
+      html += '<div class="fpanel" id="fpanel" role="dialog" aria-label="Filter">' +
+        (gids.length > 1 || s.grp.length ? row('grp', fchip('grp', '', 'All', !s.grp.length) + gids.map(function (id) { return fchip('grp', id, I(GROUP_ICON[id] || 'folder') + ' ' + esc(group(id).name) + ' ' + cnt(gc[id] || 0), s.grp.indexOf(id) >= 0); }).join('')) : '') +
+        (S.accounts.length > 1 ? row('acct', fchip('acct', '', 'All', !s.acct.length) + S.accounts.map(function (x) { return fchip('acct', x.id, I(x.kind === 'client' ? 'briefcase' : 'home') + ' ' + esc(x.name) + ' ' + cnt(ac[x.id] || 0), s.acct.indexOf(x.id) >= 0); }).join('')) : '') +
+        (bids.length > 1 || s.brand.length ? row('brand', fchip('brand', '', 'All', !s.brand.length) + bids.map(function (id) { var b = brand(id); return fchip('brand', id, '<span class="dot" style="--c:' + col(b.colour) + '"></span>' + esc(b.name) + ' ' + cnt(bc[id] || 0), s.brand.indexOf(id) >= 0); }).join('')) : '') +
+        (th.length > 1 || s.type.length ? row('type', th.map(function (t) { return fchip('type', t[0], I(t[1]) + ' ' + t[2] + ' ' + cnt(tc[t[0]] || 0), s.type.indexOf(t[0]) >= 0); }).join('')) : '') +
+        row('st', STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), String(i), s.st.indexOf(String(i)) >= 0, ' stg', ' style="--c:' + col(stSlot(i)) + '" title="' + name + '"') : ''; }).join('')) +
+        row('who', WHO.filter(function (w) { return wc[w[0]] || s.who.indexOf(w[0]) >= 0; }).map(function (w) { return fchip('who', w[0], I(w[2]) + ' ' + w[1] + ' ' + cnt(wc[w[0]] || 0), s.who.indexOf(w[0]) >= 0); }).join('')) +
+        row('fit', [['auto', 'Auto', 'robot'], ['hand', 'Manual', 'hand-finger']].filter(function (x) { return fc[x[0]] || s.fit.indexOf(x[0]) >= 0; }).map(function (x) { return fchip('fit', x[0], I(x[2]) + ' ' + x[1] + ' ' + cnt(fc[x[0]] || 0), s.fit.indexOf(x[0]) >= 0); }).join('')) +
+        row('ev', [['evergreen', 'Evergreen', 'leaf'], ['dated', 'Dated', 'calendar-event']].filter(function (x) { return ec[x[0]] || s.ev.indexOf(x[0]) >= 0; }).map(function (x) { return fchip('ev', x[0], I(x[2]) + ' ' + x[1] + ' ' + cnt(ec[x[0]] || 0), s.ev.indexOf(x[0]) >= 0); }).join('')) +
+        row('f', Object.keys(flc).concat(s.f.filter(function (f) { return !flc[f]; })).map(function (f) { return fchip('f', f, I('flag') + ' ' + esc(FLAG_W[f] || f) + ' ' + cnt(flc[f] || 0), s.f.indexOf(f) >= 0); }).join('')) +
+        row('dest', DESTS.filter(function (d) { return dc[d[0]] || s.dest.indexOf(d[0]) >= 0; }).map(function (d) { return fchip('dest', d[0], I(d[1]) + ' ' + d[2] + ' ' + cnt(dc[d[0]] || 0), s.dest.indexOf(d[0]) >= 0); }).join('')) +
+        row('series', S.series.filter(function (x) { return sec[x.id] || s.series.indexOf(x.id) >= 0; }).map(function (x) { return fchip('series', x.id, I('stack') + ' ' + esc(x.name) + ' ' + cnt(sec[x.id] || 0), s.series.indexOf(x.id) >= 0); }).join('')) +
+        row('kit', S.kits.filter(function (x) { return kc[x.id] || s.kit.indexOf(x.id) >= 0; }).map(function (x) { return fchip('kit', x.id, I('box') + ' ' + esc(x.name) + ' ' + cnt(kc[x.id] || 0), s.kit.indexOf(x.id) >= 0); }).join('')) +
+        '<div class="frow"><button class="pill" type="button" data-action="ftest" aria-pressed="' + s.test + '" title="TEST">TEST <span class="sw' + (s.test ? ' on' : '') + '"><i></i></span> ' + cnt(tests) + '</button>' +
+        '<button class="pill" type="button" data-action="clearf">' + I('filter-off') + ' Clear all</button><button class="pill" type="button" data-action="fdone">Done</button></div></div>';
     }
     return html + '</div>';
   }
@@ -905,7 +924,7 @@
       (a ? '<aside class="side" data-side="' + esc(a.id) + '" aria-label="Details"><div class="shead"><span>' + esc(bare(a)) + '</span><button class="ico" type="button" data-panel="all" data-id="' + esc(a.id) + '" aria-label="Close details" title="Close">' + I('x') + '</button></div>' + panelOf(a, 'all') + '</aside>' : '') + '</div>';
   }
   function vswitch(tab) {
-    return '<div class="vsw" role="group" aria-label="View">' + [['board', 'layout-kanban', 'Board'], ['list', 'list', 'List']].map(function (x) { return '<button type="button" data-vmode="' + x[0] + '" data-tab="' + tab + '" aria-pressed="' + (viewOf(tab) === x[0]) + '" aria-label="' + x[2] + '" title="' + x[2] + '">' + I(x[1]) + '</button>'; }).join('') + '</div>';
+    return '<div class="vsw" role="group" aria-label="View">' + [['board', 'layout-kanban', 'Board'], ['list', 'list', 'List']].map(function (x) { return '<button type="button" data-vmode="' + x[0] + '" data-tab="' + tab + '" aria-pressed="' + (viewOf(tab) === x[0]) + '" aria-label="' + x[2] + '" title="' + x[2] + '">' + I(x[1]) + x[2] + '</button>'; }).join('') + '</div>';
   }
   function vLine() {
     if (viewOf('line') !== 'board') return list('line', inProgress(), kindFor);
@@ -1440,13 +1459,17 @@
   document.addEventListener('click', function (e) {
     if (!e.target.closest('.lookwrap') && !document.getElementById('lookMenu').classList.contains('hidden')) showLook(false);
     var lk0 = e.target.closest('[data-look]'); if (lk0) { look[lk0.getAttribute('data-look')] = lk0.getAttribute('data-val'); try { localStorage.setItem('dash-look', JSON.stringify(look)); } catch (x) {} applyLook(); showLook(true); fitBoard(boardScroll()); return; }
+    if ((filtersOpen || sortOpen) && !e.target.closest('.fpanel, #filtersBtn, #sortBtn, [data-fxoff]')) { closeF(true); }
+    var fo = e.target.closest('[data-fxoff]'); if (fo) { var t4 = barTab(); if (t4) { var s4 = fsOf(t4), k4 = fo.getAttribute('data-fxoff'), i4 = s4[k4].indexOf(fo.getAttribute('data-val')); if (i4 >= 0) s4[k4].splice(i4, 1); saveFs(); } render(); var fb = $('filtersBtn'); if (fb) fb.focus(); return; }
     var vm = e.target.closest('[data-vmode]'); if (vm) { vmode[vm.getAttribute('data-tab')] = vm.getAttribute('data-vmode'); try { localStorage.setItem('st-view', JSON.stringify(vmode)); } catch (x) {} openPanel = null; render(); return; }
     var a = e.target.closest('[data-action]');
     if (a && !a.disabled) {
       var k = a.getAttribute('data-action');
       if (k === 'look') { showLook(document.getElementById('lookMenu').classList.contains('hidden')); return; }
       if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
-      else if (k === 'filters') { filtersOpen = !filtersOpen; render(); }
+      else if (k === 'filters') { filtersOpen = !filtersOpen; sortOpen = false; render(); fFocus(); }
+      else if (k === 'sort') { sortOpen = !sortOpen; filtersOpen = false; render(); fFocus(); }
+      else if (k === 'fdone') { closeF(); }
       else if (k === 'ftest') { var t1 = barTab(); if (t1) { fsOf(t1).test = !fsOf(t1).test; saveFs(); render(); } }
       else if (k === 'clearf') { var t2 = barTab(); if (t2) { fs[t2] = fdef(); saveFs(); } render(); }
       else if (k === 'more') { var g = a.getAttribute('data-brand'); shownAll[g] = { on: !(shownAll[g] && shownAll[g].on), at: Date.now() }; saveLocal('st-open', shownAll); render(); }
@@ -1473,7 +1496,7 @@
     var b = e.target.closest('[data-act]'); if (b && !b.disabled) { sendAct(b.getAttribute('data-id'), b.getAttribute('data-act'), b.getAttribute('data-verdict')); return; }
     var fx = e.target.closest('[data-fx]'); if (fx) { var t3 = barTab(); if (!t3) return; var sx = fsOf(t3), fk = fx.getAttribute('data-fx'), fv = fx.getAttribute('data-val');
       if (fk === 'sort') sx.sort = fv; else if ((fk === 'brand' || fk === 'acct' || fk === 'grp') && !fv) sx[fk] = []; else { var i = sx[fk].indexOf(fv); if (i >= 0) sx[fk].splice(i, 1); else sx[fk].push(fv); }
-      saveFs(); render(); return; }
+      saveFs(); render(); if (fk === 'sort') { sortOpen = false; render(); var sb = $('sortBtn'); if (sb) sb.focus(); } else { var again = document.querySelector('.fpanel [data-fx="' + fk + '"][data-val="' + (window.CSS && CSS.escape ? CSS.escape(fv) : fv) + '"]'); if (again) again.focus(); } return; }
     var ud = e.target.closest('[data-undo]'); if (ud) { ud.disabled = true; undo(ud.getAttribute('data-undo')); return; }
     var st = e.target.closest('[data-set]'); if (st && !st.disabled) { sendSet(st.getAttribute('data-id'), st.getAttribute('data-set'), st.getAttribute('data-val')); return; }
     var pk = e.target.closest('[data-pick]'); if (pk) { var key = pk.getAttribute('data-pick'), val = pk.getAttribute('data-val'); draft[key] = draft[key] === val ? '' : val; delete formErr[key]; delete formErr.date;
@@ -1496,8 +1519,12 @@
   });
   window.addEventListener('resize', function () { if (S && signedIn && phone() !== wasPhone) { wasPhone = phone(); render(); } else fitBoard(boardScroll()); });
   var wasPhone = phone();
+  // Filter and Sort panels: focus goes in on open and back to the button on close (Done, Esc, a click outside).
+  function fFocus() { var p = document.querySelector('.fbar > .fpanel'); if (p) { var f = p.querySelector('.on, button'); if (f) f.focus(); } }
+  function closeF(quiet) { var back = filtersOpen ? 'filtersBtn' : sortOpen ? 'sortBtn' : null; filtersOpen = sortOpen = false; render(); if (back && !quiet) { var b = $(back); if (b) b.focus(); } }
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (filtersOpen || sortOpen)) { closeF(); return; } });
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('lookMenu').classList.contains('hidden')) { showLook(false); document.getElementById('lookBtn').focus(); } });
-  window.addEventListener('hashchange', function () { openPanel = null; filtersOpen = false; formErr = {}; formNote = ''; fromUrl(); render(); window.scrollTo(0, 0); });
+  window.addEventListener('hashchange', function () { openPanel = null; filtersOpen = sortOpen = false; formErr = {}; formNote = ''; fromUrl(); render(); window.scrollTo(0, 0); });
   // "/" puts the cursor in this page's search box (before toolkit.js's own search dialog).
   window.addEventListener('keydown', function (e) {
     if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;

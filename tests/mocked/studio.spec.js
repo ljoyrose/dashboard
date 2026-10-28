@@ -42,6 +42,8 @@ async function uploads(page, guard) {
   return got;
 }
 const rows = (page) => page.locator('#view .crow');
+// The find bar is one row (Search · Filter · Sort); every filter group sits in the Filter panel.
+const openFilters = async (page) => { await page.locator('#filtersBtn').click(); await expect(page.locator('#fpanel')).toBeVisible(); };
 // Old tab names are now pages under the five bottom tabs (Me, Decide, Do, Line, Kits): open them by address.
 const go = async (page, key) => { await page.evaluate((k) => { location.hash = '#/' + k; }, key); await expect(page.locator('#view')).toHaveAttribute('data-view', key.split('/')[0]); };
 const NAV = { me: 'me', decide: 'decide', do: 'do', line: 'line', ideas: 'line', assets: 'line', review: 'decide', brands: 'kits', library: 'line', kits: 'kits', tools: 'kits', new: 'line' };
@@ -117,6 +119,7 @@ test.describe('Studio page', () => {
   test('find bar: a brand chip filters Assets, the address carries it, All clears it, and it is remembered', async ({ page, guard }) => {
     await open(page, guard, '#/assets');
     await expect(rows(page)).toHaveCount(6);
+    await openFilters(page);
     const south = page.locator('#view [data-fx="brand"][data-val="sb-south"]');
     await expect(south.locator('.cnt')).toHaveText('3');
     await page.locator('#view [data-fx="brand"][data-val="sb-north"]').click();
@@ -125,6 +128,7 @@ test.describe('Studio page', () => {
     await expect(page.locator('.crow[data-row="sa-gate"]')).toHaveCount(0);
     await page.reload();
     await expect(rows(page)).toHaveCount(3);
+    await openFilters(page);
     await page.locator('#view [data-fx="brand"][data-val=""]').click();
     await expect(rows(page)).toHaveCount(6);
     await page.locator('#view [data-f="fq"]').fill('webclass');
@@ -177,6 +181,7 @@ test.describe('Studio page', () => {
   test('accounts: owner and client kept apart; Account chips filter; an idea cannot mix two accounts', async ({ page, guard }) => {
     await open(page, guard, '#/assets');
     const acct = (v) => page.locator(`#view [data-fx="acct"][data-val="${v}"]`);
+    await openFilters(page);
     await expect(acct('acc-client').locator('.cnt')).toHaveText('1');
     await acct('acc-client').click();
     await expect(page).toHaveURL(/acct=acc-client/);
@@ -199,11 +204,13 @@ test.describe('Studio page', () => {
   test('one account only: no Account chips', async ({ page, guard }) => {
     await open(page, guard, '#/assets', { change: (s) => { s.accounts = s.accounts.slice(0, 1); s.brands = s.brands.slice(0, 2); s.assets = s.assets.filter((a) => a.accountId === 'acc-owner'); } });
     await expect(rows(page)).toHaveCount(5);
+    await openFilters(page);
     await expect(page.locator('#view [data-frow="acct"]')).toHaveCount(0);
   });
 
   test('example data shows the owner and one client account apart', async ({ page, guard }) => {
     await open(page, guard, '#/assets', { state: false });
+    await openFilters(page);
     await expect(page.locator('#view [data-fx="acct"][data-val="ex-owner"]')).toContainText('Example owner');
     await expect(page.locator('#view [data-fx="acct"][data-val="ex-client"]')).toContainText('Example client');
     await expect(page.locator('.crow[data-row="ex-8"]')).toBeVisible();
@@ -292,7 +299,8 @@ test.describe('Studio page', () => {
   test('group chips: Dogs and Client services filter Assets, the address carries it; Group shows on brand cards; hidden with one group', async ({ page, guard }) => {
     await open(page, guard, '#/assets');
     const grp = (v) => page.locator(`#view [data-fx="grp"][data-val="${v}"]`);
-    await expect(page.locator('#view .fbar > :first-child')).toHaveAttribute('data-frow', 'grp'); // top of the find bar
+    await openFilters(page);
+    await expect(page.locator('#fpanel > :first-child [data-frow]')).toHaveAttribute('data-frow', 'grp'); // first in the Filter panel
     await expect(grp('grp-dogs').locator('.cnt')).toHaveText('5');
     await expect(grp('grp-services').locator('.cnt')).toHaveText('1');
     await expect(grp('grp-apps')).toHaveCount(0); // no items, no chip
@@ -310,6 +318,7 @@ test.describe('Studio page', () => {
   test('one group only: no Group chips', async ({ page, guard }) => {
     await open(page, guard, '#/assets', { change: (s) => { s.brands.forEach((b) => { b.groupId = 'grp-dogs'; }); s.assets.forEach((a) => { a.groupId = null; }); } });
     await expect(rows(page)).toHaveCount(6);
+    await openFilters(page);
     await expect(page.locator('#view [data-frow="grp"]')).toHaveCount(0);
   });
 
@@ -631,7 +640,7 @@ test.describe('Studio page', () => {
     await go(page, 'do');
     await expect(page.locator('[data-bar="do"]')).toBeVisible();
     await go(page, 'line');
-    await page.locator('#filtersBtn').click();
+    await page.locator('#sortBtn').click();
     await expect(page.locator('[data-frow="sort"] [data-val="due"]')).toBeVisible();
     await expect(page.locator('[data-frow="sort"] [data-val="priority"]')).toBeVisible();
     await go(page, 'tools');
@@ -674,10 +683,23 @@ test.describe('Studio page', () => {
     await expect(page.locator('.col[data-stage="5"] .col-head')).toContainText('Make');
     await expect(rows(page)).toHaveCount(6);
     for (const c of await page.locator('.col-list').all()) await expect(c).toHaveCSS('overflow-y', 'auto');
-    // The column carries its own 3px stage line and clips its corners; the head has no radius or shadow of its own.
-    await expect(page.locator('.col[data-stage="5"]')).toHaveCSS('border-top-width', '3px');
+    // One even 1px border round each column; the stage colour is a short tab inside the head, clear of the corners.
+    await expect(page.locator('.col[data-stage="5"]')).toHaveCSS('border-top-width', '1px');
     await expect(page.locator('.col[data-stage="5"]')).toHaveCSS('overflow', 'hidden');
     await expect(page.locator('.col[data-stage="5"] .col-head')).toHaveCSS('box-shadow', 'none');
+    const tabBar = await page.locator('.col[data-stage="5"] .col-head').evaluate((e) => { const c = getComputedStyle(e, '::before'); return { h: c.height, l: c.left, r: c.right }; });
+    expect(tabBar).toEqual({ h: '3px', l: '14px', r: '14px' });
+    // One spacing step: 16px from the head line to the first card, 12px to the sides, between cards, between columns, and inside cards.
+    const gaps = await page.evaluate(() => {
+      const r = (e) => e.getBoundingClientRect(), cols = [...document.querySelectorAll('.col')], two = cols.find((c) => c.querySelectorAll('.col-list .crow').length >= 2) || null;
+      const c = cols.find((x) => x.querySelector('.col-list .crow')), list = c.querySelector('.col-list'), card = list.querySelector('.crow'), head = c.querySelector('.col-head');
+      const out = { top: Math.round(r(card).top - r(head).bottom), side: Math.round(r(card).left - r(list).left), right: Math.round(r(list).right - r(card).right),
+        cols: Math.round(r(cols[1]).left - r(cols[0]).right), pad: getComputedStyle(card).padding };
+      if (two) { const cs = two.querySelectorAll('.col-list .crow'); out.between = Math.round(r(cs[1]).top - r(cs[0]).bottom); }
+      return out;
+    });
+    expect(gaps).toMatchObject({ top: 16, side: 12, right: 12, cols: 12, pad: '12px' });
+    if (gaps.between !== undefined) expect(gaps.between).toBe(12);
     await expect(page.locator('.col[data-stage="1"] .col-foot')).toContainText('need you');
     await expect(page.locator('.col[data-stage="1"] .col-foot')).toContainText('AI');
     const h = await page.evaluate(() => ({ doc: document.documentElement.scrollHeight, screen: innerHeight }));
@@ -796,6 +818,78 @@ test.describe('Studio page', () => {
     expect(await bg('nav.tabs')).toBe('rgb(64, 85, 105)'); // #405569
     await page.locator('#lookMenu [data-look="mode"][data-val="dark"]').click();
     expect(await bg('header')).toBe('rgb(36, 50, 63)'); // #24323F, still a frame in dark mode
+  });
+
+  test('find bar is one row: Search · Filter · Sort; the panel holds the groups; chips remove filters; focus and typing are kept', async ({ page, guard }) => {
+    await open(page, guard, '#/assets');
+    const bar = page.locator('#view .fbar > .srow');
+    expect((await bar.boundingBox()).height, 'one row, no taller than 44px').toBeLessThanOrEqual(44);
+    await expect(page.locator('#view [data-frow]')).toHaveCount(0); // no stacked filter rows
+    await expect(page.locator('#view [data-f="fq"]')).toHaveAttribute('placeholder', 'Search');
+    await expect(page.locator('#filtersBtn')).toContainText('Filter'); // words, so it never shows empty if the icons fail
+    await expect(page.locator('#sortBtn')).toContainText('Sort');
+    await openFilters(page);
+    await expect(page.locator('#filtersBtn')).toHaveAttribute('aria-expanded', 'true');
+    expect(await page.evaluate(() => !!document.activeElement.closest('#fpanel')), 'focus moves into the panel').toBe(true);
+    for (const k of ['grp', 'acct', 'brand', 'type']) await expect(page.locator(`#fpanel [data-frow="${k}"]`)).toBeVisible();
+    await page.locator('#fpanel [data-fx="brand"][data-val="sb-north"]').click();
+    await page.locator('#fpanel [data-fx="type"][data-val="pdf"]').click();
+    await expect(page.locator('#filtersBtn .n')).toHaveText('2');
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#fpanel')).toHaveCount(0);
+    await expect(page.locator('#filtersBtn')).toBeFocused();
+    const chip = page.locator('.achip[data-fxoff="brand"][data-val="sb-north"]');
+    await expect(chip).toContainText('Brand: Sample Brand North');
+    await chip.click();
+    await expect(page.locator('.achip[data-fxoff="brand"]')).toHaveCount(0);
+    await expect(page).not.toHaveURL(/brand=/);
+    await page.locator('.achip[data-fxoff="type"]').click();
+    await expect(rows(page)).toHaveCount(6);
+    // Typing in Search: the page redraws on every letter but the box keeps its focus and text.
+    await page.locator('#view [data-f="fq"]').click();
+    await page.keyboard.type('webclass', { delay: 20 });
+    await expect(page.locator('#view [data-f="fq"]')).toBeFocused();
+    await expect(page.locator('#view [data-f="fq"]')).toHaveValue('webclass');
+    await expect(rows(page)).toHaveCount(1);
+    // Sort opens its own small panel; Done and a click outside close the Filter panel.
+    await page.locator('#sortBtn').click();
+    await page.locator('#sortpanel [data-fx="sort"][data-val="name"]').click();
+    await expect(page.locator('#sortBtn')).toContainText('Sort: Name');
+    await openFilters(page);
+    await page.locator('#fpanel [data-action="fdone"]').click();
+    await expect(page.locator('#fpanel')).toHaveCount(0);
+    await openFilters(page);
+    await page.locator('h1').click();
+    await expect(page.locator('#fpanel')).toHaveCount(0);
+    // Phone: the row wraps, the panel is a sheet above the bottom tabs, and nothing scrolls sideways.
+    await page.setViewportSize({ width: 390, height: 844 });
+    await noSidewaysScroll(page, 'find bar on the phone');
+    await openFilters(page);
+    await expect(page.locator('#fpanel')).toHaveCSS('position', 'fixed');
+    const sheet = await page.locator('#fpanel').boundingBox(), tabs = await page.locator('nav.tabs').boundingBox();
+    expect(sheet.y + sheet.height).toBeLessThanOrEqual(tabs.y + 1);
+    await noSidewaysScroll(page, 'Filter panel on the phone');
+  });
+
+  test('one line rule: every control type hovers with its 1px edge turning ink, and nothing moves', async ({ page, guard }) => {
+    await open(page, guard, '#/line');
+    await openFilters(page);
+    const ink = await page.evaluate(() => getComputedStyle(document.body).color);
+    const kinds = { pill: '#fpanel [data-fx="brand"][data-val="sb-north"]', button: '.crow[data-row="sa-gate"] [data-act="gate"]', subnav: '.subnav a[data-sub="ideas"]', switch: '[data-vmode="list"]',
+      card: '.crow[data-row="sa-make"]', icon: '.crow[data-row="sa-make"] [data-panel="flag"]', filter: '#sortBtn' };
+    for (const [k, sel] of Object.entries(kinds)) {
+      const el = page.locator(sel).first();
+      await el.scrollIntoViewIfNeeded();
+      const b0 = await el.boundingBox();
+      await el.hover();
+      const st = await el.evaluate((e) => { const c = getComputedStyle(e); return { w: c.outlineWidth, o: c.outlineOffset, c: c.outlineColor, s: c.outlineStyle }; });
+      expect(st, `${k} hover`).toEqual({ w: '1px', o: '-1px', c: ink, s: 'solid' });
+      expect(await el.boundingBox(), `${k} must not move`).toEqual(b0);
+      if (k === 'pill') await page.mouse.move(0, 400);
+    }
+    // Selected is the same line.
+    const sel = await page.locator('.subnav a[aria-current="page"]').evaluate((e) => getComputedStyle(e).outlineWidth);
+    expect(sel).toBe('1px');
   });
 
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
