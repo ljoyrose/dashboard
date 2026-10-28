@@ -49,11 +49,11 @@ If any of these breaks, the tick turns red and says which page.
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
-| Studio (example data, real data, accounts, groups, bottom tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, clients, results, spec, brand kit, books, feedback, phone, dark, text size) | `/dashboard/studio/` | 33 |
+| Studio (example data, real data, accounts, groups, bottom tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, clients, results, spec, brand kit, books, feedback, phone, dark, text size, board, Board/List, Look menu) | `/dashboard/studio/` | 37 |
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 470 checks that must pass (mocked + phone, 28 Oct 2026, Studio v0.2).
+That is 484 checks that must pass (mocked + phone, 28 Oct 2026, Studio clear board).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
@@ -86,6 +86,7 @@ That is 470 checks that must pass (mocked + phone, 28 Oct 2026, Studio v0.2).
 - Five bottom tabs (Me, Decide, Do, Line, Kits); every older page opens under its tab with a sub-row of links.
 - Books: part progress and Add part (writes `part` with the next order). Feedback: stars and reasons go with Approve. A suggestion is accepted with one `suggestion` request.
 - Search and sort everywhere: Decide and Do have the find bar; Tools, Kits and Brands have a search box; Tools sorts by name, most used or resets soon; new sorts (due date, priority, name, results) and Where, Series and Kit filters.
+- Board: Line has a column per stage that scrolls inside itself, details open on the right, and the page does not scroll on a desktop; Decide keeps Gates and Review as columns. Board/List is kept per page across a reload; the phone starts on List; a phone board opens details under the card with no sideways scroll. The Look menu changes the page, is stored in `dash-look`, and survives a reload (Mode Dark gives a dark page).
 - 390px: no sideways scroll on any tab, Kits section, or open form. Dark mode: dark page, every word at least 4.5:1. No text under 13px.
 
 **CD Hub**

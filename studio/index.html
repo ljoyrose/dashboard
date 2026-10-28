@@ -21,9 +21,40 @@
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
-  /* Colours: ../tokens.css only (LJR7 spine). Studio = slot 7. One radius, one border state, nothing under 13px. */
-  :root { --radius: 12px; --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
-    --line: color-mix(in srgb, var(--ljr-0) 55%, var(--ljr-paper)); --me: var(--ljr-7); }
+  /* Colours: ../tokens.css for the LJR7 spine (stage colours, brand dots, red "needs you" never change); the page itself is
+     "Warm clear" (default) or "Cool clear" from the Look menu, each with a dark version. No solid fills: selected = an outline. */
+  :root { --radius: 12px; --me: var(--ljr-7);
+    --paper: #EEE8DF; --canvas: #E3DBCF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --soft: #DED5C7;
+    --bd: var(--line); --band: var(--card); --chip: transparent;
+    --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
+    --bg: var(--paper); --surface: var(--card); --sel-bd: var(--ink); --sel-fill: transparent;
+    --w2: #C32924; --w3: #9E5802; --w4: #766602; --w5: #217A2D; --w6: #0271A4; --w7: #8850B6; }
+  :root.look-cool { --paper: #F2F4F6; --canvas: #E4E9EE; --card: #FFFFFF; --ink: #2B3035; --muted: #5B646D; --line: #B9C3CC; --soft: #D9E0E6;
+    --bd: #C3CCD4; --band: #FFFFFF; --chip: #F5F7F9; --shadow: 0 1px 2px rgba(20,30,40,.12), 0 1px 8px rgba(20,30,40,.10); }
+  @media (prefers-color-scheme: light) { :root.words-light:not([data-theme="dark"]) { --w2: #D93732; --w3: #AD6202; --w4: #877402; --w5: #258631; --w6: #027BB5; --w7: #915CBC; } }
+  :root.words-light[data-theme="light"] { --w2: #D93732; --w3: #AD6202; --w4: #877402; --w5: #258631; --w6: #027BB5; --w7: #915CBC; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) { --paper: #181613; --canvas: #1F1C18; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --soft: #2F2A24;
+      --bd: var(--line); --band: var(--card); --chip: transparent; --shadow: 0 1px 3px rgba(0,0,0,.4);
+      --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; }
+    :root.look-cool:not([data-theme="light"]) { --paper: #16191C; --canvas: #1C2024; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --soft: #2B3137; --bd: var(--line); --band: var(--card); --chip: var(--card); }
+  }
+  /* Mode = Dark from the Look menu: tokens.css only darkens with the device, so its dark spine is repeated here. */
+  :root[data-theme="dark"] { --ljr-ink: #F3EEE5; --ljr-paper: #232019; --ljr-cream: #191714; --ljr-muted: #B4AB9E;
+    --ljr-0: #8E877B; --ljr-0-text: #B4AB9E; --ljr-0-tint: #2F2B25; --ljr-0-on: #F3EEE5; --ljr-0-solid: #5A554D;
+    --ljr-1: #232019; --ljr-1-text: #F3EEE5; --ljr-1-tint: #232019; --ljr-1-edge: #F3EEE5; --ljr-1-solid: #232019; --ljr-1-on: #F3EEE5;
+    --ljr-2-tint: #3C251E; --ljr-3-tint: #3C2D18; --ljr-4-tint: #3E3820; --ljr-5-tint: #293221; --ljr-6-tint: #213134; --ljr-7-tint: #342A31;
+    --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
+    --paper: #181613; --canvas: #1F1C18; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --soft: #2F2A24;
+    --bd: var(--line); --band: var(--card); --chip: transparent; --shadow: 0 1px 3px rgba(0,0,0,.4);
+    --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; }
+  :root.look-cool[data-theme="dark"] { --paper: #16191C; --canvas: #1C2024; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --soft: #2B3137; --bd: var(--line); --band: var(--card); --chip: var(--card); }
+  /* Coloured words are the darker set (Look › Coloured words › Lighter swaps it). */
+  :root, :root[data-theme] { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); } }
+  :root.sel-soft { --sel-bd: var(--ljr-7-text); --sel-fill: var(--ljr-7-tint); }
+  html.text-lg body { zoom: 1.12; } html.text-xl body { zoom: 1.25; }
+  html.space-roomy body { line-height: 1.75; } html.space-roomy .crow { padding-top: 14px; padding-bottom: 14px; } html.space-roomy .col-list { gap: 12px; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
   .hidden { display: none !important; }
@@ -46,15 +77,16 @@
   /* Five tabs in a bar at the bottom, like Marketplace (thumb reach on the phone); a sub-row of links inside Line, Decide and Kits. */
   nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
   nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; position: relative; }
-  nav.tabs a[aria-current="page"] { border-color: var(--ink); background: var(--bg); }
+  nav.tabs a[aria-current="page"] { outline: 2px solid var(--sel-bd); outline-offset: -2px; background: var(--sel-fill); }
   nav.tabs .n { position: absolute; top: 2px; right: calc(50% - 30px); }
   @media (min-width: 900px) { nav.tabs { max-width: 900px; margin: 0 auto; border-left: 1px solid var(--line); border-right: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; } }
   html { scroll-padding-bottom: 96px; }
   .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
   .subnav a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
-  .subnav a[aria-current="page"], .subnav a:hover { border-color: var(--muted); }
-  /* One state only: hover = selected = a slightly heavier faint line. Same width always, so nothing moves. */
-  .pill:hover, .pill.on, .btn:hover, .ch:hover, .ch.on, .lk:hover, .more:hover, .undo:hover { border-color: var(--muted); }
+  .subnav a[aria-current="page"] { outline: 2px solid var(--sel-bd); outline-offset: -2px; background: var(--sel-fill); }
+  /* One state only: hover = selected = a 2px outline in ink (drawn inside the edge, so nothing moves). Never a solid fill. */
+  .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { outline: 2px solid var(--sel-bd); outline-offset: -2px; background: var(--sel-fill); }
+  @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, nav.tabs a:hover, .vsw button:hover, .seg button:hover, .col-list .crow:hover { outline: 2px solid var(--sel-bd); outline-offset: -2px; } }
   .n:empty { display: none; }
   .cnt, nav.tabs .n { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 1; color: var(--ink); background: transparent; }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
@@ -67,7 +99,7 @@
   .banner.info { border-color: var(--line); }
   .banner.ex { border-color: var(--me); }
   .banner.ex .ti { color: var(--ljr-7-text); }
-  .card { background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 14px 16px; min-width: 0; }
+  .card { background: var(--surface); border: 1px solid var(--bd); border-radius: var(--radius); padding: 14px 16px; min-width: 0; box-shadow: var(--shadow); }
   .muted { color: var(--muted); font-size: 14px; }
   .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); border-radius: 999px; padding: 3px 10px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
@@ -138,7 +170,6 @@
   .sbox:focus-within { border-color: var(--muted); }
   .sbox input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 15px; padding: 8px 0; }
   .fbtn { font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; padding: 7px 12px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
-  .fbtn:hover, .fbtn.on { border-color: var(--muted); }
   .fpanel { display: flex; flex-direction: column; gap: 8px; }
   .flab { font-size: 13px; font-weight: 700; color: var(--muted); min-width: 52px; }
   .sw { display: inline-block; width: 28px; height: 16px; border-radius: var(--radius); border: 1.5px solid var(--muted); position: relative; vertical-align: middle; }
@@ -210,6 +241,44 @@
   .chk li button { all: unset; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius); padding: 0 4px; }
   .chk li button:hover, .chk li button:focus-visible { border-color: var(--line); }
   .fsub { font-size: 13px; font-weight: 700; color: var(--muted); margin: 6px 0 4px; }
+  /* Cool clear: neutral chips get a faint fill; the red and green outlines (needs you, On) stay as they are. */
+  :root.look-cool .ch:not(.on), :root.look-cool .tag, :root.look-cool .fbtn:not(.on), :root.look-cool .subnav a:not([aria-current="page"]), :root.look-cool .pill:not(.on) { background: var(--chip); }
+  /* Look menu (header palette button). Stored in localStorage 'dash-look' so other hubs can read it. */
+  .lookwrap { position: relative; }
+  #lookMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(340px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+  #lookMenu .lrow { display: flex; flex-direction: column; gap: 4px; }
+  .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+  .seg button, .vsw button { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+  /* Board / List switch at the top of Line and Decide. */
+  .vtop { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .vsw { display: inline-flex; gap: 4px; margin-left: auto; }
+  .vsw button { width: 44px; height: 40px; justify-content: center; padding: 0; border-radius: var(--radius); }
+  /* Board (HubSpot-style): fixed columns that scroll inside themselves; head and foot stay put; details on the right. */
+  html.board-on main.wrap { padding-bottom: 0; }
+  .bwrap { display: flex; gap: 12px; min-height: 0; }
+  .board { flex: 1 1 auto; min-width: 0; display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; scrollbar-width: thin; }
+  .col { flex: 0 0 280px; display: flex; flex-direction: column; min-height: 0; background: var(--canvas); border: 1px solid var(--bd); border-radius: var(--radius); scroll-snap-align: start; }
+  .col-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-weight: 700; background: var(--band); border-bottom: 1px solid var(--bd); box-shadow: inset 0 3px 0 var(--sc); border-radius: var(--radius) var(--radius) 0 0; }
+  .col-head .num { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 13px; border: 1.5px solid var(--sc); flex: none; }
+  .col-head .num .ti { font-size: 15px; color: var(--sct); }
+  .col-head .lab { color: var(--sct); min-width: 0; overflow-wrap: anywhere; }
+  .col-head .cnt { margin-left: auto; }
+  .col-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; }
+  .col-list .crow, .col-list .row { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 10px 12px; box-shadow: var(--shadow); position: relative; }
+  .col-list .crow .ttl { font-weight: 700; }
+  .col-list .crow.sel { outline: 2px solid var(--sel-bd); outline-offset: -2px; background: linear-gradient(var(--sel-fill), var(--sel-fill)) var(--card); }
+  .col-list .crow.sel::after { content: "\2713"; position: absolute; top: -8px; right: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--card); color: var(--ink); border: 2px solid var(--sel-bd); }
+  .col-list > .muted { padding: 4px; margin: 0; }
+  .col-foot { flex: none; display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; font-size: 13px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); border-radius: 0 0 var(--radius) var(--radius); }
+  .col-foot b { color: var(--ink); }
+  .side { flex: 0 0 380px; min-width: 0; overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .side .shead { display: flex; gap: 8px; align-items: flex-start; font-weight: 700; }
+  .side .shead span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .side .panel { margin: 0; }
+  @media (max-width: 760px) {
+    .board { scroll-snap-type: x mandatory; }
+    .col { flex-basis: calc(100vw - 48px); }
+  }
 </style>
 </head>
 <body>
@@ -225,6 +294,7 @@
     <a id="enginePill" class="pill hidden" href="#/engine"></a>
     <a id="budgetPill" class="pill hidden" href="#/tools"></a>
     <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again" title="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
+    <span class="lookwrap"><button id="lookBtn" class="btn" type="button" data-action="look" aria-label="Look" title="Look" aria-expanded="false" aria-controls="lookMenu"><i class="ti ti-palette" aria-hidden="true"></i></button><div id="lookMenu" class="hidden" role="dialog" aria-label="Look"></div></span>
     <a class="btn" href="#/new" data-nav="new" id="newBtn" aria-label="New idea"><i class="ti ti-plus"></i>New</a>
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
@@ -315,6 +385,29 @@
   function daysTo(iso) { var t = Date.parse(iso); return isNaN(t) ? null : Math.round((new Date(t).setHours(0, 0, 0, 0) - dayStart(0)) / 864e5); }
   function money(n) { return '£' + (Math.round((Number(n) || 0) * 100) / 100); }
 
+  /* ---------- Look (header palette menu): one JSON in localStorage 'dash-look' so other hubs can read it later ----------
+   * { bg: warm|cool, sel: line|soft, words: dark|light, text: n|lg|xl, space: n|roomy, mode: device|light|dark }.
+   * Classes on <html>; stage colours, brand dots and the red "needs you" never change. */
+  var LOOKS = [['bg', 'Background', [['warm', 'Warm clear'], ['cool', 'Cool clear']]], ['sel', 'Selected', [['line', 'Outline'], ['soft', 'Soft tint']]],
+    ['words', 'Coloured words', [['dark', 'Darker'], ['light', 'Lighter']]], ['text', 'Text', [['n', 'Normal'], ['lg', 'Larger'], ['xl', 'Largest']]],
+    ['space', 'Spacing', [['n', 'Normal'], ['roomy', 'Roomy']]], ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]]];
+  var look = (function () { try { var o = JSON.parse(localStorage.getItem('dash-look') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } })();
+  function lookOf(k) { var l = LOOKS.filter(function (x) { return x[0] === k; })[0]; return l[2].some(function (x) { return x[0] === look[k]; }) ? look[k] : l[2][0][0]; }
+  function applyLook() {
+    var r = document.documentElement, c = r.classList, t = lookOf('text'), m = lookOf('mode');
+    c.toggle('look-cool', lookOf('bg') === 'cool'); c.toggle('sel-soft', lookOf('sel') === 'soft'); c.toggle('words-light', lookOf('words') === 'light');
+    c.toggle('text-lg', t === 'lg'); c.toggle('text-xl', t === 'xl'); c.toggle('space-roomy', lookOf('space') === 'roomy');
+    if (m === 'device') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', m);
+  }
+  applyLook();
+  function lookMenu() {
+    return LOOKS.map(function (l) { return '<div class="lrow"><span class="flab">' + l[1] + '</span><div class="seg" role="group" aria-label="' + l[1] + '">' + l[2].map(function (x) { return '<button type="button" data-look="' + l[0] + '" data-val="' + x[0] + '" aria-pressed="' + (lookOf(l[0]) === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></div>'; }).join('');
+  }
+  function showLook(on) { var m = document.getElementById('lookMenu'); if (on) m.innerHTML = lookMenu(); m.classList.toggle('hidden', !on); document.getElementById('lookBtn').setAttribute('aria-expanded', String(on)); }
+  /* ---------- Board / List on Line and Decide: desktop starts on Board, the phone on List; the choice is kept per page ---------- */
+  var vmode = (function () { try { var o = JSON.parse(localStorage.getItem('st-view') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } })();
+  function phone() { return window.matchMedia('(max-width: 760px)').matches; }
+  function viewOf(tab) { return vmode[tab] === 'board' || vmode[tab] === 'list' ? vmode[tab] : phone() ? 'list' : 'board'; }
   var STAGES = ['Idea', 'Research', 'Recipe', 'Spec lock', 'Inputs', 'Make', 'Check', 'Approve', 'Operate'];
   var BSTAGES = ['Concept', 'Name check', 'Identity', 'Tech set-up', 'Launch', 'Running'];
   var TYPES = [['pdf', 'file-type-pdf', 'PDF'], ['ebook', 'book', 'Ebook'], ['lead', 'magnet', 'Lead magnet'], ['slides', 'presentation', 'Slides'],
@@ -708,13 +801,14 @@
   function row(a, kind, withBrand) {
     var t = typeOf(a.type), p = a.priority && PRI[a.priority] ? a.priority : null;
     var link = a.reviewLink || a.docLink;
-    return '<div class="crow" data-row="' + esc(a.id) + '"><div class="l1">' +
+    var on = openPanel && openPanel.id === a.id;
+    return '<div class="crow' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '"><div class="l1">' +
       '<button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + (withBrand ? '<b>' + esc(brandOf(a).name) + '</b>' : '') + esc(bare(a)) + '</button>' +
       '<button class="ico" type="button" data-panel="flag" data-id="' + esc(a.id) + '" aria-label="Priority ' + (p || 'none') + '" style="--hc:var(--ljr-2-text)">' + flagIcon(p) + '</button></div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + info('Stage ' + a.stage + ' ' + STAGES[a.stage]) + '</div>' : '') +
       (a.stage >= 1 ? strip(a.stage) : '') +
       '<div class="l2"><span class="icons">' + rowIcons(a) + '</span><span class="acts">' + actsFor(a, kind) + (a.size === 'L' && a.stage >= 3 && a.stage <= 6 && !a.parentId && !sent[a.id] ? '<button class="ico" type="button" data-panel="part" data-id="' + esc(a.id) + '" aria-label="Add part" title="Add part (chapter)"' + dis() + '>' + I('file-plus') + '</button>' : '') + (a.parts && a.parts.total && a.parts.approved === a.parts.total && a.stage < 7 && !sent[a.id] ? '<button class="btn yes" type="button" data-act="assemble" data-id="' + esc(a.id) + '" aria-label="Assemble"' + dis() + '>' + I('books') + 'Assemble</button>' : '') + (a.stage <= 3 && !sent[a.id] ? '<button class="ico" type="button" data-panel="where" data-id="' + esc(a.id) + '" aria-label="Company, legal set and where" title="Company, legal set and where"' + dis() + '>' + I('map-pin') + '</button>' : '') + (isClient(a) && a.stage >= 1 && a.stage <= 7 && !sent[a.id] ? '<button class="ico" type="button" data-panel="ask" data-id="' + esc(a.id) + '" aria-label="Ask client" title="Ask client"' + dis() + '>' + I('message-question') + '</button>' : '') + '</span></div>' +
-      (openPanel && openPanel.id === a.id ? panelOf(a, openPanel.k) : '') +
+      (on && !(sideOn && openPanel.k === 'all') ? panelOf(a, openPanel.k) : '') +
       '<div class="l3"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span>' +
       (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="' + ({ canva: 'Open in Canva', gdoc: 'Open the Google file', drive: 'Open in Drive', clickfunnels: 'Open in ClickFunnels' }[a.linkKind] || 'Preview') + '" style="--hc:var(--ljr-6-text)">' + I('eye') + '</a>' : '<span class="lk no" title="No preview yet">' + I('eye') + '</span>') +
       '<span class="grow"></span><span class="date" title="Changed">' + (a._t ? dmy(a._t) : '') + '</span></div></div>';
@@ -745,10 +839,55 @@
   function vSuggest() {
     var L = S.suggestions.filter(function (g) { return !pend['sug|' + g.id]; });
     if (!L.length) return '';
-    return '<div class="card" data-sect="suggest"><div class="sect">' + I('bulb') + 'Suggestions ' + cnt(L.length) + '</div>' + L.map(function (g) {
+    return '<div class="card" data-sect="suggest"><div class="sect">' + I('bulb') + 'Suggestions ' + cnt(L.length) + '</div>' + sugRows(L) + '</div>';
+  }
+  function sugRows(L) {
+    return L.map(function (g) {
       return '<div class="row" data-suggest="' + esc(g.id) + '" style="--c:var(--ljr-7)"><span class="bar"></span><div class="txt"><b>' + esc(g.proposal || g.reason) + '</b><div class="muted">' + esc([g.kind, g.targetId, g.reason].filter(Boolean).join(' \u00b7 ')) + '</div></div>' +
         '<span class="acts"><button class="btn yes" type="button" data-sug="' + esc(g.id) + '" data-val="accepted" aria-label="Accept"' + dis() + '>' + I('check') + '</button><button class="btn no" type="button" data-sug="' + esc(g.id) + '" data-val="declined" aria-label="Decline"' + dis() + '>' + I('x') + '</button></span></div>';
-    }).join('') + '</div>';
+    }).join('');
+  }
+  // Board: one column per stage (Line) or per decision (Decide). Head and foot stay put; the list scrolls inside the column.
+  // On a desktop the details of the picked card open on the right; on the phone they open under the card.
+  var sideOn = false;
+  function needsYou(a) { var k = kindFor(a); return k === 'gate' || k === 'review' || k === 'hand' || a.flags.indexOf('needs-input') >= 0; }
+  function column(o) {
+    var need = o.need != null ? o.need : o.items.filter(needsYou).length, ai = o.items.reduce(function (t, a) { return t + (Number(a.cost) || 0); }, 0);
+    return '<section class="col" ' + o.attr + ' style="--sc:var(--ljr-' + o.slot + ');--sct:var(--ljr-' + o.slot + '-text)">' +
+      '<div class="col-head"><span class="num">' + o.badge + '</span><span class="lab">' + o.name + '</span>' + cnt(o.n != null ? o.n : o.items.length) + '</div>' +
+      '<div class="col-list">' + (o.body || '<p class="muted">Nothing here.</p>') + '</div>' +
+      '<div class="col-foot"><span><b>' + need + '</b> need you</span><span>' + money(ai) + ' AI</span></div></section>';
+  }
+  function board(tab, cols) {
+    var a = sideOn && openPanel && openPanel.k === 'all' ? byId(openPanel.id) : null;
+    return '<div class="bwrap" data-board="' + tab + '"><div class="board">' + cols.map(column).join('') + '</div>' +
+      (a ? '<aside class="side" data-side="' + esc(a.id) + '" aria-label="Details"><div class="shead"><span>' + esc(bare(a)) + '</span><button class="ico" type="button" data-panel="all" data-id="' + esc(a.id) + '" aria-label="Close details" title="Close">' + I('x') + '</button></div>' + panelOf(a, 'all') + '</aside>' : '') + '</div>';
+  }
+  function vswitch(tab) {
+    return '<div class="vsw" role="group" aria-label="View">' + [['board', 'layout-kanban', 'Board'], ['list', 'list', 'List']].map(function (x) { return '<button type="button" data-vmode="' + x[0] + '" data-tab="' + tab + '" aria-pressed="' + (viewOf(tab) === x[0]) + '" aria-label="' + x[2] + '" title="' + x[2] + '">' + I(x[1]) + '</button>'; }).join('') + '</div>';
+  }
+  function vLine() {
+    if (viewOf('line') !== 'board') return list('line', inProgress(), kindFor);
+    var s = fsOf('line'), show = sortA(inProgress().filter(function (a) { return hit(a, s); }), s.sort);
+    return findBar('line', inProgress()) + board('line', [1, 2, 3, 4, 5, 6, 7].map(function (n) {
+      var l = show.filter(function (a) { return a.stage === n; });
+      return { attr: 'data-stage="' + n + '"', slot: stSlot(n), badge: n, name: STAGES[n], items: l, body: l.map(function (a) { return row(a, kindFor(a), true); }).join('') };
+    }));
+  }
+  // Keep each column's place when the page redraws (a click redraws everything).
+  function boardScroll() {
+    var b = document.querySelector('.board'); if (!b) return null;
+    var o = { x: b.scrollLeft, y: {} };
+    Array.prototype.forEach.call(b.querySelectorAll('.col'), function (c, i) { o.y[i] = c.querySelector('.col-list').scrollTop; });
+    return o;
+  }
+  function fitBoard(keep) {
+    var w = document.querySelector('.bwrap');
+    document.documentElement.classList.toggle('board-on', !!w);
+    if (!w) return;
+    var z = parseFloat(getComputedStyle(document.body).zoom) || 1, t = document.getElementById('tabs'), th = t && !t.classList.contains('hidden') ? t.getBoundingClientRect().height : 0;
+    w.style.height = Math.max(360, Math.floor((innerHeight - th - 12) / z - (w.getBoundingClientRect().top + scrollY) / z)) + 'px';
+    if (keep) { var b = w.querySelector('.board'); b.scrollLeft = keep.x; Array.prototype.forEach.call(b.querySelectorAll('.col'), function (c, i) { if (keep.y[i]) c.querySelector('.col-list').scrollTop = keep.y[i]; }); }
   }
   // Bottom tabs (Me, Decide, Do, Line, Kits): which tab each page sits under, and the sub-row of links inside it.
   var NAV_OF = { me: 'me', decide: 'decide', review: 'decide', do: 'do', line: 'line', ideas: 'line', assets: 'line', library: 'line', asset: 'line', new: 'line', kits: 'kits', tools: 'kits', brands: 'kits', engine: 'kits' };
@@ -766,6 +905,13 @@
   function vDecide() {
     var s = fsOf('decide'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
     var sect = function (icon, word, l, kind) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : '<p class="muted">' + I('circle-check') + ' Nothing waiting.</p>') + '</div>'; };
+    if (viewOf('decide') === 'board') {
+      var G = keep(gates()), R = keep(reviews()), L = S.suggestions.filter(function (g) { return !pend['sug|' + g.id]; });
+      return findBar('decide', gates().concat(reviews())) + board('decide', [
+        { attr: 'data-sect="gate"', slot: 4, badge: I('traffic-lights'), name: 'Gates', items: G, body: G.map(function (a) { return row(a, 'gate', true); }).join('') },
+        { attr: 'data-sect="review"', slot: 6, badge: I('eye-check'), name: 'Review', items: R, body: R.map(function (a) { return row(a, 'review', true); }).join('') }
+      ].concat(L.length ? [{ attr: 'data-sect="suggest"', slot: 7, badge: I('bulb'), name: 'Suggestions', items: [], n: L.length, need: L.length, body: sugRows(L) }] : []));
+    }
     return findBar('decide', gates().concat(reviews())) + sect('traffic-lights', 'Gates', keep(gates()), 'gate') + sect('eye-check', 'Review', keep(reviews()), 'review') + vSuggest();
   }
   function doItems() { var out = hands().slice(); all().forEach(function (a) { if (out.indexOf(a) < 0 && ((a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent') || (a.delivery && a.delivery.status === 'ready (not sent)'))) out.push(a); }); return out; }
@@ -1205,6 +1351,7 @@
   }
   function render() {
     var route = hashParts().path;
+    document.documentElement.classList.remove('board-on');
     var grp = navGroup(route[0]);
     Array.prototype.forEach.call(document.querySelectorAll('nav.tabs [data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === grp ? 'page' : 'false'); });
     $('tabs').classList.toggle('hidden', !signedIn); $('newBtn').classList.toggle('hidden', !signedIn);
@@ -1227,10 +1374,13 @@
     $('nKits').textContent = toolWarnings() || '';
     var tb = barTab(); if (tb) toUrl(tb);
     v.setAttribute('data-view', route[0] || 'me');
+    var keep = boardScroll(), bt = route[0] === 'line' || route[0] === 'decide' ? route[0] : null;
+    sideOn = !!bt && viewOf(bt) === 'board' && !phone();
     v.innerHTML = route[0] === 'ideas' ? vIdeas() : route[0] === 'assets' ? list('assets', inProgress(), kindFor) : route[0] === 'review' ? list('review', reviews(), function () { return 'review'; }) :
       route[0] === 'brands' ? vBrands() : route[0] === 'library' ? list('library', library(), function () { return 'lib'; }) : route[0] === 'kits' ? vKits() : route[0] === 'tools' ? vTools() : route[0] === 'new' ? vNew() :
-      route[0] === 'asset' ? vAsset(decodeURIComponent(route[1] || '')) : route[0] === 'engine' ? vEngine() : route[0] === 'decide' ? vDecide() : route[0] === 'do' ? vDo() : route[0] === 'line' ? list('line', inProgress(), kindFor) : vMe();
-    var sn = subNav(route[0]); if (sn) v.insertAdjacentHTML('afterbegin', sn);
+      route[0] === 'asset' ? vAsset(decodeURIComponent(route[1] || '')) : route[0] === 'engine' ? vEngine() : route[0] === 'decide' ? vDecide() : route[0] === 'do' ? vDo() : route[0] === 'line' ? vLine() : vMe();
+    var sn = subNav(route[0]); if (sn) v.insertAdjacentHTML('afterbegin', bt ? '<div class="vtop">' + sn + vswitch(bt) + '</div>' : sn);
+    fitBoard(keep);
   }
 
   /* ---------- Events ---------- */
@@ -1247,9 +1397,13 @@
     if (f === 'fq') { var tb = barTab(); if (!tb) return; fsOf(tb).q = e.target.value; saveFs(); var p = e.target.selectionStart; render(); var b = document.querySelector('[data-f="fq"]'); if (b) { b.focus(); try { b.setSelectionRange(p, p); } catch (x) {} } }
   });
   document.addEventListener('click', function (e) {
+    if (!e.target.closest('.lookwrap') && !document.getElementById('lookMenu').classList.contains('hidden')) showLook(false);
+    var lk0 = e.target.closest('[data-look]'); if (lk0) { look[lk0.getAttribute('data-look')] = lk0.getAttribute('data-val'); try { localStorage.setItem('dash-look', JSON.stringify(look)); } catch (x) {} applyLook(); showLook(true); fitBoard(boardScroll()); return; }
+    var vm = e.target.closest('[data-vmode]'); if (vm) { vmode[vm.getAttribute('data-tab')] = vm.getAttribute('data-vmode'); try { localStorage.setItem('st-view', JSON.stringify(vmode)); } catch (x) {} openPanel = null; render(); return; }
     var a = e.target.closest('[data-action]');
     if (a && !a.disabled) {
       var k = a.getAttribute('data-action');
+      if (k === 'look') { showLook(document.getElementById('lookMenu').classList.contains('hidden')); return; }
       if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'filters') { filtersOpen = !filtersOpen; render(); }
       else if (k === 'ftest') { var t1 = barTab(); if (t1) { fsOf(t1).test = !fsOf(t1).test; saveFs(); render(); } }
@@ -1299,6 +1453,9 @@
     var f = e.target.closest('[data-redo]'); if (!f) return; e.preventDefault();
     sendAct(f.getAttribute('data-redo'), 'redo');
   });
+  window.addEventListener('resize', function () { if (S && signedIn && phone() !== wasPhone) { wasPhone = phone(); render(); } else fitBoard(boardScroll()); });
+  var wasPhone = phone();
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('lookMenu').classList.contains('hidden')) { showLook(false); document.getElementById('lookBtn').focus(); } });
   window.addEventListener('hashchange', function () { openPanel = null; filtersOpen = false; formErr = {}; formNote = ''; fromUrl(); render(); window.scrollTo(0, 0); });
   // "/" puts the cursor in this page's search box (before toolkit.js's own search dialog).
   window.addEventListener('keydown', function (e) {

@@ -66,4 +66,9 @@ family trees, puppy packs, social graphics, page and email drafts, for every bra
   The STUDIO-ENGINE Apps Script applies it. Undo until the engine's next run.
 - **Client-ready:** accounts (owner or client) and products; every brand, product, asset, idea and request carries `accountId`.
   Account chips show when there is more than one account. An idea cannot mix two accounts.
+- **Look (clear board):** Line and Decide open as a board on a desktop (fixed columns per stage or decision, each scrolling inside itself,
+  head and foot with "need you · £ AI", details on the right) and as a list on the phone (one column per screen if Board is picked,
+  details under the card). The Board/List switch is kept per page. The palette button (Look) sets Background (Warm clear / Cool clear),
+  Selected (Outline / Soft tint), Coloured words, Text size, Spacing and Mode (Device / Light / Dark), kept in `localStorage['dash-look']`
+  for the other hubs. No solid colour fills: selected and hover are the same 2px ink outline.
 - Same sign-in, find bar and rules as Factory. TEST stamp until `studio.live` and the state's mode are both LIVE.

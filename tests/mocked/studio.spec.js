@@ -664,4 +664,101 @@ test.describe('Studio page', () => {
     await expect(page.locator('[data-check="ex-a"]').first()).toBeDisabled();
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
+
+  /* ---------- Clear board look (28 Oct 2026): columns per stage, Board/List switch, Look menu ---------- */
+  test('board: Line has a column per stage that scrolls inside itself; details open on the right; the page itself does not scroll', async ({ page, guard }) => {
+    await open(page, guard, '#/line');
+    await expect(page.locator('.bwrap[data-board="line"]')).toBeVisible(); // desktop starts on Board
+    await expect(page.locator('[data-vmode="board"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.col[data-stage]')).toHaveCount(7);
+    await expect(page.locator('.col[data-stage="5"] .col-head')).toContainText('Make');
+    await expect(rows(page)).toHaveCount(6);
+    for (const c of await page.locator('.col-list').all()) await expect(c).toHaveCSS('overflow-y', 'auto');
+    await expect(page.locator('.col[data-stage="1"] .col-foot')).toContainText('need you');
+    await expect(page.locator('.col[data-stage="1"] .col-foot')).toContainText('AI');
+    const h = await page.evaluate(() => ({ doc: document.documentElement.scrollHeight, screen: innerHeight }));
+    expect(h.doc, 'the page should not scroll up and down on a desktop board').toBeLessThanOrEqual(h.screen + 1);
+    const r = page.locator('.crow[data-row="sa-make"]');
+    await r.locator('.ttl').click();
+    await expect(page.locator('.side[data-side="sa-make"] .kv')).toContainText('Stage');
+    await expect(r).toHaveClass(/\bsel\b/);
+    await expect(r.locator('.panel')).toHaveCount(0); // not under the card on a desktop
+    await page.locator('.side [aria-label="Close details"]').click();
+    await expect(page.locator('.side')).toHaveCount(0);
+    // Decide keeps its sections as columns.
+    await go(page, 'decide');
+    await expect(page.locator('.bwrap[data-board="decide"] .col[data-sect="gate"] .crow[data-row="sa-gate"]')).toBeVisible();
+    await expect(page.locator('.col[data-sect="review"] .crow')).toHaveCount(2);
+  });
+
+  test('Board / List switch: kept per page across a reload; the phone starts on List', async ({ page, guard }) => {
+    await open(page, guard, '#/line');
+    await page.locator('[data-vmode="list"]').click();
+    await expect(page.locator('.bwrap')).toHaveCount(0);
+    await expect(page.locator('#view .card.appcard').first()).toBeVisible();
+    await page.reload(); // still signed in (saved token)
+    await expect(page.locator('#enginePill')).toBeVisible();
+    await expect(page.locator('[data-vmode="list"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.bwrap')).toHaveCount(0);
+    await go(page, 'decide');
+    await expect(page.locator('.bwrap[data-board="decide"]')).toBeVisible(); // Decide kept its own (default) choice
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('st-view')))).toEqual({ line: 'list' });
+    await page.evaluate(() => localStorage.removeItem('st-view'));
+    await page.setViewportSize({ width: 390, height: 844 });
+    await go(page, 'line');
+    await expect(page.locator('[data-vmode="list"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.bwrap')).toHaveCount(0);
+  });
+
+  test('phone board: one column per screen, details open under the card (never on top), no sideways scroll in either view', async ({ page, guard }) => {
+    await page.setViewportSize({ width: 390, height: 844 });
+    await open(page, guard, '#/line');
+    await noSidewaysScroll(page, 'line list');
+    await page.locator('[data-vmode="board"]').click();
+    await expect(page.locator('.bwrap[data-board="line"]')).toBeVisible();
+    const w = await page.locator('.col').first().evaluate((e) => e.getBoundingClientRect().width);
+    expect(w).toBeGreaterThan(300);
+    await noSidewaysScroll(page, 'line board');
+    const r = page.locator('.crow[data-row="sa-make"]');
+    await r.locator('.ttl').click();
+    await expect(r.locator('.panel .kv')).toContainText('Stage');
+    await expect(page.locator('.side')).toHaveCount(0);
+    await noSidewaysScroll(page, 'line board with details open');
+    await go(page, 'decide');
+    await noSidewaysScroll(page, 'decide list');
+    await page.locator('[data-vmode="board"]').click();
+    await expect(page.locator('.bwrap[data-board="decide"]')).toBeVisible();
+    await noSidewaysScroll(page, 'decide board');
+  });
+
+  test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
+    await open(page, guard, '#/line');
+    const html = page.locator('html');
+    await expect(html).not.toHaveClass(/look-cool/);
+    const bg0 = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+    expect(bg0).toBe('rgb(238, 232, 223)'); // Warm clear
+    await page.locator('#lookBtn').click();
+    await expect(page.locator('#lookMenu')).toBeVisible();
+    for (const [k, v] of [['bg', 'cool'], ['sel', 'soft'], ['words', 'light'], ['text', 'lg'], ['space', 'roomy']]) await page.locator(`#lookMenu [data-look="${k}"][data-val="${v}"]`).click();
+    await expect(page.locator('#lookMenu [data-look="bg"][data-val="cool"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(html).toHaveClass(/look-cool/);
+    await expect(html).toHaveClass(/sel-soft/);
+    await expect(html).toHaveClass(/words-light/);
+    await expect(html).toHaveClass(/text-lg/);
+    await expect(html).toHaveClass(/space-roomy/);
+    expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe('rgb(242, 244, 246)'); // Cool clear
+    await page.locator('#lookMenu [data-look="mode"][data-val="dark"]').click();
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+    await page.locator('h1').click(); // a click outside closes it
+    await expect(page.locator('#lookMenu')).toBeHidden();
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('dash-look')))).toEqual({ bg: 'cool', sel: 'soft', words: 'light', text: 'lg', space: 'roomy', mode: 'dark' });
+    await page.reload();
+    await expect(html).toHaveClass(/look-cool/);
+    await expect(html).toHaveAttribute('data-theme', 'dark');
+    const d = await page.evaluate(() => getComputedStyle(document.body).backgroundColor.match(/\d+/g).slice(0, 3).reduce((t, x) => t + +x, 0));
+    expect(d, 'Mode Dark gives a dark page').toBeLessThan(150);
+    await page.locator('#lookBtn').click();
+    await page.locator('#lookMenu [data-look="mode"][data-val="device"]').click();
+    await expect(html).not.toHaveAttribute('data-theme', /./);
+  });
 });
