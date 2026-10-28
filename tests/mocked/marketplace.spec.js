@@ -653,6 +653,47 @@ test.describe('Marketplace page', () => {
     expect(writes[0].body.values[0][0]).toBe('Same'); expect(writes[0].body.values[0][1]).toBe('qty 9');
   });
 
+  test('engine v11.9 What did it cost? card: sold count, last price, source link; Save needs a £ number; Own item and Don\'t know write one answer each', async ({ page }) => {
+    const d = { kind: 'cost', item_sku: 'SKU-9', listing_id: 'L9', platform: 'eBay', url: 'https://www.ebay.co.uk/itm/110000000009', price: '£12.00', times_sold: 3, last_price: '£11.00', why: 'Sold 3 times but we do not know what it cost you, so its profit is unknown.' };
+    const rows = [['CST|SKU-9', 'cost', 'Other', 'Sample clipper blade', JSON.stringify(d), ago(5)], ['CST|SKU-8', 'cost', 'Other', 'Sample brush', JSON.stringify(Object.assign({}, d, { item_sku: 'SKU-8', times_sold: 0 })), ago(4)],
+      ['CST|SKU-7', 'cost', 'Other', 'Sample comb', JSON.stringify(Object.assign({}, d, { item_sku: 'SKU-7' })), ago(3)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/decide');
+    await page.locator('[data-action="all"]').click();
+    const card = page.locator('.card', { hasText: 'Sample clipper blade' });
+    await expect(page.locator('#view .grp', { hasText: 'What did it cost?' })).toHaveCount(1);
+    await expect(card.locator('.facts')).toContainText('Sold3 times');
+    await expect(card.locator('.facts')).toContainText('Last sold at£11.00');
+    await expect(card.locator('a[href="https://www.ebay.co.uk/itm/110000000009"]')).toHaveAttribute('target', '_blank');
+    await expect(page.locator('.card', { hasText: 'Sample brush' }).locator('.facts')).toContainText('Soldnot yet');
+    await card.locator('[data-v="Save"]').click();
+    await expect(page.locator('#banner')).toContainText('Type what you paid for one');
+    expect(writes.length).toBe(0);
+    await card.locator('[data-note="CST|SKU-9"]').fill('£4.5');
+    await card.locator('[data-v="Save"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Save', '4.5']);
+    await page.locator('.card', { hasText: 'Sample brush' }).locator('[data-v="Own"]').click();
+    await expect.poll(() => writes.length).toBe(2);
+    expect(writes[1].body.values[0][0]).toBe('Own');
+    await page.locator('.card', { hasText: 'Sample comb' }).locator('[data-v="Unknown"]').click();
+    await expect.poll(() => writes.length).toBe(3);
+    expect(writes[2].body.values[0][0]).toBe('Unknown');
+  });
+  test('engine v11.9 eBay account type card on Numbers: fees and profit both ways, help link, one tap writes Business; never counted as needing you', async ({ page }) => {
+    const d = { kind: 'seller_type', now: 'private', other: 'business', line: 'Last 30 days, 2 eBay sales: eBay fees £1.21 as private, £6.17 as business (£4.96 more).', profit_line: 'Profit before postage (1 of 2 sales with a known cost): £10.00 as private, £5.83 as business.', url: 'https://www.ebay.co.uk/help/selling/fees-credits-invoices/selling-fees?id=4822', why: 'Tapping Business changes only these sums; change the account on eBay first.' };
+    const writes = await sheets(page, [['SW|ebay_seller_type', 'switch', '', 'eBay account type: private', JSON.stringify(d), ago(5)], ...sampleRows()]);
+    await open(page, '#/numbers');
+    const card = page.locator('#seller-type');
+    await expect(card.locator('h2')).toHaveText('eBay account type: private');
+    await expect(card).toContainText('£6.17 as business (£4.96 more)');
+    await expect(card).toContainText('£5.83 as business');
+    await expect(card.locator('a[href*="id=4822"]')).toHaveAttribute('target', '_blank');
+    await card.locator('[data-v="Business"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].body.values[0][0]).toBe('Business');
+    await page.goto('marketplace/#/me'); await expect(page.locator('#view .needs')).toHaveText('Needs you: 2');
+  });
   test('the last button on a long page can always be scrolled clear of the bottom tab bar @regression', async ({ page }) => {
     const rows = Array.from({ length: 12 }, (_, i) => ['RM|L' + i, 'remove', 'Clothes', 'Sample item ' + i, JSON.stringify({ platform: 'Vinted' }), ago(5)]);
     await sheets(page, rows);
