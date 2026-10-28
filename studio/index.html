@@ -86,7 +86,6 @@
   nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
   @media (hover: hover) { nav.tabs a:hover .bar { width: 40px; opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { nav.tabs a .bar { transition: none; } }
-  @media (min-width: 900px) { nav.tabs { max-width: 900px; margin: 0 auto; border-left: 1px solid var(--line); border-right: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; } }
   html { scroll-padding-bottom: 96px; }
   .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
   .subnav a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
@@ -322,7 +321,8 @@
   @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover { outline-color: var(--frame-ink); } } /* the same 1px line, in the frame's ink */
   header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
   nav.tabs { background: var(--frame-foot); border-top: 0; gap: 8px; padding-top: 8px; padding-left: 8px; padding-right: 8px; }
-  @media (min-width: 900px) { nav.tabs { border-left: 0; border-right: 0; } }
+  /* The dark band spans the screen like the top bar; each tab button stays a sensible width. */
+  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 220px)); justify-content: center; } }
   /* Phone header: dot + Studio, the status pills and one "More" menu (Refresh, Look, New, Sign out, Dashboard). Desktop unchanged. */
   .morewrap { position: relative; display: none; margin-left: auto; }
   #moreMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 25; width: 220px; background: var(--card); border: 1px solid var(--bd); border-radius: 16px; box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,.18); padding: 8px; display: flex; flex-direction: column; gap: 4px; }

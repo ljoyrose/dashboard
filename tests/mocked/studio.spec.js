@@ -818,6 +818,9 @@ test.describe('Studio page', () => {
     expect(await bg('header')).toBe('rgb(58, 54, 50)'); // #3A3632
     expect(await bg('nav.tabs')).toBe('rgb(70, 65, 59)'); // #46413B
     expect(await bg('nav.tabs a')).toBe('rgb(255, 254, 251)'); // card
+    const band = await page.locator('nav.tabs').boundingBox();
+    expect(band.x).toBe(0);
+    expect(band.width).toBe(page.viewportSize().width); // edge to edge on a desktop, like the top bar
     const worst = await page.evaluate(() => {
       const rgb = (c) => c.match(/[\d.]+/g).slice(0, 3).map(Number);
       const lum = ([r, g, b]) => [r, g, b].map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }).reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
