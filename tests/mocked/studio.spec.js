@@ -968,6 +968,23 @@ test.describe('Studio page', () => {
       expect(await el.boundingBox(), `${k} must not move`).toEqual(b0);
       if (k === 'pill') { await page.mouse.move(0, 400); await page.keyboard.press('Escape'); } // close the Filter panel so it covers nothing
     }
+    // Neutral hover also lays a pale grey tint; meaning-coloured buttons keep their own colour (line and tint), never ink.
+    await page.locator('#filtersBtn').hover();
+    expect(await page.locator('#filtersBtn').evaluate((e) => getComputedStyle(e).backgroundColor)).not.toBe(await page.locator('#sortBtn').evaluate((e) => getComputedStyle(e).backgroundColor));
+    await go(page, 'review');
+    const yes = page.locator('.crow[data-row="sa-rev1"] [data-act="approve"]'), no = page.locator('.crow[data-row="sa-rev1"] [data-act="bin"]');
+    const y0 = await yes.boundingBox();
+    await yes.hover();
+    const ys = await yes.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor, w: c.outlineWidth, bg: c.backgroundColor }; });
+    expect(ys.o).toBe(ys.b); // green line kept, not ink
+    expect(ys.o).not.toBe(ink);
+    expect(ys.w).toBe('1px');
+    expect(ys.bg).not.toBe('rgba(0, 0, 0, 0)');
+    expect(await yes.boundingBox()).toEqual(y0);
+    await no.hover();
+    const ns = await no.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor }; });
+    expect(ns.o).toBe(ns.b); // rose line kept
+    await go(page, 'line');
     // Selected is the same line.
     const sel = await page.locator('.subnav a[aria-current="page"]').evaluate((e) => getComputedStyle(e).outlineWidth);
     expect(sel).toBe('1px');

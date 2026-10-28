@@ -27,7 +27,7 @@
     --paper: #EEE8DF; --canvas: #E3DBCF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --soft: #DED5C7;
     --bd: var(--line); --band: var(--card); --chip: transparent; --ctl: var(--line); --press: #8A7F70;
     --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
-    --bg: var(--paper); --surface: var(--card); --sel-bd: var(--ink); --sel-fill: transparent;
+    --bg: var(--paper); --surface: var(--card); --sel-bd: var(--ink); --sel-fill: color-mix(in srgb, var(--muted) 14%, var(--card));
     --w2: #C32924; --w3: #9E5802; --w4: #766602; --w5: #217A2D; --w6: #0271A4; --w7: #8850B6;
     --frame: #3A3632; --frame-foot: #46413B; --frame-ink: #F6F1E8; --frame-line: #9C9285; --frame-ok: #8BCF8F; --frame-bad: #F28B85; --frame-warn: #F2A65A; }
   :root.look-cool { --frame: #33475B; --frame-foot: #405569; --frame-ink: #FFFFFF; --frame-line: #9FB0C0; --press: #7A8692; }
@@ -433,7 +433,13 @@
   .btn.yes, .acts .btn.yes { border-color: var(--ljr-5); } .btn.no, .acts .btn.no { border-color: var(--ljr-2); }
   .fbar .sbox { font-weight: 400; }
   @media (max-width: 544px) { .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { min-height: 44px; } .ico, .lk { min-width: 44px; height: 44px; } }
-  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover, #moreMenu > *:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover, #moreMenu > *:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background-color: var(--sel-fill); } }
+  /* Buttons that carry a meaning colour keep it on hover: their own 1px line drawn inside + a pale tint of that colour (never ink). Icons keep their colour. */
+  .btn.yes .ti, .acts .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .acts .btn.no .ti { color: var(--ljr-2-text); }
+  @media (hover: hover) {
+    .btn.yes:hover, .acts .btn.yes:hover { outline: 1px solid var(--ljr-5); outline-offset: -1px; background-color: color-mix(in srgb, var(--ljr-5) 14%, var(--card)); }
+    .btn.no:hover, .acts .btn.no:hover { outline: 1px solid var(--ljr-2); outline-offset: -1px; background-color: color-mix(in srgb, var(--ljr-2) 14%, var(--card)); }
+  }
   span.pill:hover, span.tag:hover, .cnt:hover, .dpill:hover, .stamp:hover { outline: none; }
   /* Counts: one fixed size so 1 and 2 digits match; only 3+ digits grow. */
   .cnt, nav.tabs .n, .fbtn .n:not(:empty) { box-sizing: border-box; width: 30px; min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 3px; border-radius: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
