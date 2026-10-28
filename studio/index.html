@@ -123,8 +123,10 @@
   .card > .crow:last-child { padding-bottom: 16px; }
   .crow .l1 { display: flex; gap: 8px; align-items: flex-start; }
   .crow .type { flex: none; width: 28px; display: inline-flex; justify-content: center; }
-  .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-weight: 500; overflow-wrap: anywhere; }
-  .crow .ttl b { font-weight: 700; margin-right: 4px; }
+  .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-size: 16px; font-weight: 600; overflow-wrap: anywhere; }
+  /* Brand on its own small line above the title; never run together with it. */
+  .crow .bline { display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; overflow-wrap: anywhere; }
+  .crow .bline .dot { width: 8px; height: 8px; }
   .crow .ttl:focus-visible { text-decoration: underline; }
   .crow .l2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
   .crow .icons { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 0; }
@@ -887,8 +889,9 @@
     var t = typeOf(a.type), p = a.priority && PRI[a.priority] ? a.priority : null;
     var link = a.reviewLink || a.docLink;
     var on = openPanel && openPanel.id === a.id;
-    return '<div class="crow' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '"><div class="l1">' +
-      '<button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + (withBrand ? '<b>' + esc(brandOf(a).name) + '</b>' : '') + esc(bare(a)) + '</button>' +
+    var bo = brandOf(a);
+    return '<div class="crow' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '">' + (withBrand ? '<div class="bline"><span class="dot" style="--c:' + col(bo.colour) + '"></span>' + esc(bo.name) + '</div>' : '') + '<div class="l1">' +
+      '<button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' +
       '<button class="ico" type="button" data-panel="flag" data-id="' + esc(a.id) + '" aria-label="Priority ' + (p || 'none') + '" style="--hc:var(--ljr-2-text)">' + flagIcon(p) + '</button></div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + info('Stage ' + a.stage + ' ' + STAGES[a.stage]) + '</div>' : '') +
       (a.stage >= 1 ? strip(a.stage) : '') +

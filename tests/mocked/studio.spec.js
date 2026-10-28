@@ -727,6 +727,10 @@ test.describe('Studio page', () => {
     const h = await page.evaluate(() => ({ doc: document.documentElement.scrollHeight, screen: innerHeight }));
     expect(h.doc, 'the page should not scroll up and down on a desktop board').toBeLessThanOrEqual(h.screen + 1);
     const r = page.locator('.crow[data-row="sa-make"]');
+    // Brand on its own small line above the title; the title is the title only.
+    await expect(r.locator('.bline')).toHaveText('Sample Brand North');
+    await expect(r.locator('.ttl')).toHaveText('Sample webclass slides');
+    expect((await r.locator('.bline').boundingBox()).y).toBeLessThan((await r.locator('.ttl').boundingBox()).y);
     await r.locator('.ttl').click();
     await expect(page.locator('.side[data-side="sa-make"] .kv')).toContainText('Stage');
     await expect(r).toHaveClass(/\bsel\b/);
