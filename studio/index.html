@@ -524,7 +524,10 @@
  *        accountNotes, audit} · done {assetId, creditsUsed?: {product, units}} · check {brandId, item, ok} ·
  *        source {assetId, source} · library {table: playbooks|packs|kits|bricks, op: new|edit, id?, fields} · libsuggest {table, text} · rights {assetId, clientMaterial: yes|no, sourceRights: kept|sold} · paid {assetId, paid: yes|no} · protect {target: account|project, id, protect: ''|yes|no};
  *        rights may instead carry disclose (yes|no) or protect (''|yes|no, '' = inherit) on its own;
- *        library may carry fromAssetId (refused by the engine for client material).   Undo = the request file goes to Drive Trash
+ *        library may carry fromAssetId (refused by the engine for client material).
+ *        Every request carries the signed-in person's account: their Google email matched to accounts[].emails; the backup
+ *        person (role team) sends their own id and may only approve, redo, deliver, comment, library (no prices), rights
+ *        (client material / AI note), idea, libsuggest and ask; the rest shows "Owner only".   Undo = the request file goes to Drive Trash
  *        before the engine's next run (every 15 min at :03 :18 :33 :48).
  *
  * studio-state.json (written by the engine):
@@ -774,6 +777,7 @@
       var nf = 0; (S.failed || []).forEach(function (x) { if (sent[x.assetId]) { delete sent[x.assetId]; nf++; } });
       if (nf) { saveLocal('st-sent', sent); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); }
       if (typing()) needRender = true; else render();
+      if (!whoAmI) who().then(function () { if (isTeam()) { if (typing()) needRender = true; else render(); } });
     }).catch(function (e) { var m = /fetch|network/i.test(e.message) ? 'Offline' : e.message; if (S) { banner(m + ' · last read ' + hm(lastRead)); } else { err = m; render(); } });
   }
   function prep() {
@@ -794,6 +798,18 @@
   function brand(id) { return S.brands.filter(function (b) { return b.id === id; })[0] || { id: id || 'none', name: id ? id : 'No brand', colour: 0, stage: '', setupChecklist: [] }; }
   function brandOf(a) { return brand(a.brandIds[0]); }
   function account(id) { return S.accounts.filter(function (x) { return x.id === id; })[0] || { id: id || '', name: id || 'No account', kind: 'owner' }; }
+  // Who is signed in (engine v0.2.20): their Google email matched to accounts[].emails (lowercase). Role owner | team | client.
+  // No match keeps the old behaviour (everything as the owner).
+  function meAcct() {
+    var em = String(whoAmI || '').split(' \u00b7 ')[0].trim().toLowerCase(); if (!em || em === '?' || !S) return null;
+    var a = (S.accounts || []).filter(function (x) { return (x.emails || []).map(function (e) { return String(e).toLowerCase(); }).indexOf(em) >= 0; })[0];
+    return a ? { id: a.id, role: a.role || (a.kind === 'owner' ? 'owner' : a.kind === 'client' ? 'client' : 'team') } : null;
+  }
+  function bizAccts() { return (S.accounts || []).filter(function (x) { return x.role !== 'team'; }); } // the team (backup) account owns no work
+  function isTeam() { var m = meAcct(); return !!m && m.role === 'team'; }
+  // Owner-only controls for the backup person: switched off with the reason.
+  function own() { return isTeam() ? ' disabled title="Owner only" data-owneronly' : ''; }
+  function ownWhy() { return isTeam() ? '<span class="sent" data-owneronly-why>Owner only</span>' : ''; }
   function ownerId() { var o = S.accounts.filter(function (x) { return x.kind === 'owner'; })[0] || S.accounts[0]; return o ? o.id : null; }
   function product(id) { return S.products.filter(function (x) { return x.id === id; })[0] || null; }
   function brandAcct(id) { return brand(id).accountId || ownerId(); }
@@ -891,7 +907,7 @@
       var row = function (key, chips) { return chips ? '<div class="fgrp" role="group" aria-label="' + FLAB[key] + '"><span class="flab">' + FLAB[key] + '</span><div class="pills" data-frow="' + key + '">' + chips + '</div></div>' : ''; };
       html += '<div class="fpanel" id="fpanel" role="dialog" aria-label="Filter">' +
         (gids.length > 1 || s.grp.length ? row('grp', fchip('grp', '', 'All', !s.grp.length) + gids.map(function (id) { return fchip('grp', id, I(GROUP_ICON[id] || 'folder') + ' ' + esc(group(id).name) + ' ' + cnt(gc[id] || 0), s.grp.indexOf(id) >= 0); }).join('')) : '') +
-        (S.accounts.length > 1 ? row('acct', fchip('acct', '', 'All', !s.acct.length) + S.accounts.map(function (x) { return fchip('acct', x.id, I(x.kind === 'client' ? 'briefcase' : 'home') + ' ' + esc(x.name) + ' ' + cnt(ac[x.id] || 0), s.acct.indexOf(x.id) >= 0); }).join('')) : '') +
+        (bizAccts().length > 1 ? row('acct', fchip('acct', '', 'All', !s.acct.length) + bizAccts().map(function (x) { return fchip('acct', x.id, I(x.kind === 'client' ? 'briefcase' : 'home') + ' ' + esc(x.name) + ' ' + cnt(ac[x.id] || 0), s.acct.indexOf(x.id) >= 0); }).join('')) : '') +
         (bids.length > 1 || s.brand.length ? row('brand', fchip('brand', '', 'All', !s.brand.length) + bids.map(function (id) { var b = brand(id); return fchip('brand', id, '<span class="dot" style="--c:' + col(b.colour) + '"></span>' + esc(b.name) + ' ' + cnt(bc[id] || 0), s.brand.indexOf(id) >= 0); }).join('')) : '') +
         (th.length > 1 || s.type.length ? row('type', th.map(function (t) { return fchip('type', t[0], I(t[1]) + ' ' + t[2] + ' ' + cnt(tc[t[0]] || 0), s.type.indexOf(t[0]) >= 0); }).join('')) : '') +
         row('st', STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), '<span class="step">Step ' + i + ':</span> ' + name + ' ' + cnt(sc[i] || 0), s.st.indexOf(String(i)) >= 0) : ''; }).join('')) +
@@ -964,9 +980,9 @@
     if (kind === 'review' && a.flags.indexOf('client-review') >= 0) return '<span class="sent" data-with="client">' + I('user-check') + 'With client</span>';
     if (kind === 'review') return '<button class="btn yes" type="button" data-act="approve" data-id="' + esc(a.id) + '" aria-label="Approve"' + dis() + '>' + I('check') + 'Approve</button>' +
       '<button class="btn" type="button" data-panel="redo" data-id="' + esc(a.id) + '" aria-label="Redo"' + dis() + '>' + I('pencil') + 'Redo</button>' +
-      '<button class="btn no" type="button" data-act="bin" data-id="' + esc(a.id) + '" aria-label="Bin"' + dis() + '>' + I('trash') + '</button>' +
+      '<button class="btn no" type="button" data-act="bin" data-id="' + esc(a.id) + '" aria-label="Bin"' + dis() + own() + '>' + I('trash') + '</button>' +
       '<button class="ico" type="button" data-panel="fb" data-id="' + esc(a.id) + '" aria-label="Stars and reasons" title="Stars and reasons"' + dis() + '>' + I(fbDraft[a.id] && (fbDraft[a.id].stars || fbDraft[a.id].reasons.length) ? 'star-filled' : 'star') + '</button>';
-    if (kind === 'gate') return VERDICTS.map(function (v) { return '<button class="btn" type="button" data-act="gate" data-verdict="' + v[0] + '" data-id="' + esc(a.id) + '" aria-label="' + v[1] + '" style="--hc:var(--ljr-' + v[3] + '-text)"' + dis() + '>' + I(v[2]) + v[1] + '</button>'; }).join('');
+    if (kind === 'gate') return VERDICTS.map(function (v) { return '<button class="btn" type="button" data-act="gate" data-verdict="' + v[0] + '" data-id="' + esc(a.id) + '" aria-label="' + v[1] + '" style="--hc:var(--ljr-' + v[3] + '-text)"' + dis() + own() + '>' + I(v[2]) + v[1] + '</button>'; }).join('') + ownWhy();
     if (kind === 'lib') return (isCM(a) ? '<button class="btn" type="button" disabled data-noreuse title="Client material: the client owns it, so it is never reused">' + I('recycle') + 'Reuse</button><span class="sent" data-noreuse-why>Client material \u00b7 never reused</span>' : '<a class="btn" href="#/new?from=' + encodeURIComponent(a.id) + '" aria-label="Reuse">' + I('recycle') + 'Reuse</a>') +
       '<button class="btn" type="button" data-panel="result" data-id="' + esc(a.id) + '" aria-label="Add results"' + dis() + '>' + I('chart-bar') + 'Results</button>' +
       '<button class="btn" type="button" data-act="refresh" data-id="' + esc(a.id) + '" aria-label="Refresh"' + dis() + '>' + I('refresh-dot') + 'Refresh</button>' +
@@ -1019,7 +1035,7 @@
     if (k === 'all') {
       var pr = product(a.productId), kit = byIdIn('kits', a.kitId), pb = byIdIn('playbooks', a.playbookId), oc = pickOf(OUTCOMES, a.outcome), vo = byIdIn('voices', a.voiceId), lo = byIdIn('looks', a.lookId), ln = pickOf(LANGS, a.language);
       var srcs = S.sources.filter(function (x) { return a.sourceIds.indexOf(x.id) >= 0 || x.targetId === a.id; });
-      var kv = [['Group', esc(group(grpOf(a)).name)], ['Account', S.accounts.length > 1 ? esc(account(a.accountId).name) : ''], ['Product', pr ? esc(pr.name) : ''], ['Brand', a.brandIds.map(function (b) { var x = brand(b), sl = siteLink(x); return esc(x.name) + (sl ? ' ' + sl : ''); }).join(' · ')], ['Project', esc(a.projectName)], ['Type', esc(typeOf(a.type)[2])], ['Recipe', esc(a.recipe)],
+      var kv = [['Group', esc(group(grpOf(a)).name)], ['Account', bizAccts().length > 1 ? esc(account(a.accountId).name) : ''], ['Product', pr ? esc(pr.name) : ''], ['Brand', a.brandIds.map(function (b) { var x = brand(b), sl = siteLink(x); return esc(x.name) + (sl ? ' ' + sl : ''); }).join(' · ')], ['Project', esc(a.projectName)], ['Type', esc(typeOf(a.type)[2])], ['Recipe', esc(a.recipe)],
         ['Playbook', pb ? esc(pb.name) : ''], ['Kit', kit ? esc(kit.name) : ''], ['Outcome', oc ? oc[1] : ''], ['Voice', vo ? esc(vo.name) : ''], ['Look', lo ? esc(lo.name) : ''], ['Language', ln ? ln[1] : esc(a.language)], ['Length', esc(a.length)],
         ['A/B', a.test ? esc(a.test) + (a.result ? ' · ' + esc(a.result) : '') : ''],
         ['Sources', srcs.map(function (x) { var r = pickOf(RIGHTS, x.rights); return (x.url ? '<a href="' + safeUrl(x.url) + '" target="_blank" rel="noopener">' + esc(x.note || x.url.replace(/^https?:\/\//, '').slice(0, 40)) + '</a>' : esc(x.fileName || x.note)) + ' · ' + (r ? r[1] : esc(x.rights)); }).join('<br>')],
@@ -1276,7 +1292,7 @@
     return qbox('brands') + '<div class="bgrid">' + BL.map(function (b) {
       var n = BSTAGES.indexOf(b.stage), ck = (b.setupChecklist || []).map(function (x) { var p = pend['chk|' + b.id + '|' + x.name]; return p ? { name: x.name, ok: p.ok, pend: true } : x; });
       var done = ck.filter(function (x) { return x.ok; }).length, mine = A.filter(function (a) { return a.brandIds.indexOf(b.id) >= 0 && a.stage < 8; }).length;
-      var sub = [b.groupId ? I(GROUP_ICON[b.groupId] || 'folder') + esc(group(b.groupId).name) : '', S.accounts.length > 1 ? esc(account(brandAcct(b.id)).name) : ''].filter(Boolean).join(' · ');
+      var sub = [b.groupId ? I(GROUP_ICON[b.groupId] || 'folder') + esc(group(b.groupId).name) : '', bizAccts().length > 1 ? esc(account(brandAcct(b.id)).name) : ''].filter(Boolean).join(' · ');
       return '<section class="room" data-brandcard="' + esc(b.id) + '" style="--c:' + col(b.colour) + '"><h2 class="grp">' + brandMark(b) + '<span class="bn">' + esc(b.name) + '</span><a class="cnt" href="#/assets?brand=' + encodeURIComponent(b.id) + '" title="Assets in progress">' + mine + '</a></h2>' + (sub ? '<span class="stn" data-group="' + esc(b.groupId || '') + '">' + sub + '</span>' : '') +
         '<div class="strip b6">' + BSTAGES.map(function (_, i) { return '<i class="' + (i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>' +
         '<div class="blab" title="' + BSTAGES.join(' · ') + '">' + (n >= 0 ? (n + 1) + '/6 · ' + esc(b.stage) : '') + '</div>' + kitStrip(b) +
@@ -1346,6 +1362,7 @@
       '<div class="frow"><span class="muted">' + esc(toolNote) + '</span><button class="btn yes" type="button" data-action="sendtool" aria-label="Send tool"' + dis() + '>' + I('check') + 'Send</button></div></div>';
   }
   function sendTool() {
+    if (isTeam()) { banner('Owner only'); return; }
     if (EX) return;
     toolErr = {};
     if (!(tdraft.product || '').trim()) toolErr.product = 'Add a name';
@@ -1436,6 +1453,7 @@
     var L = LIB[table], f = d.f || {}, opt = function (fd) { return typeof fd[4] === 'function' ? fd[4]() : []; };
     return '<div class="card libform" data-libform="' + table + '"><div class="grp">' + (d.op === 'edit' ? 'Edit ' + L.one : 'New ' + L.one) + '</div>' +
       (table === 'bricks' && d.op === 'edit' && String(f.kind) === 'prompt' ? '<p class="muted" data-libnote>Changing a prompt\u2019s text sends it back for approval.</p>' : '') +
+      (isTeam() && (table === 'kits' || table === 'packs') ? '<p class="muted" data-owneronly-why>Prices: Owner only</p>' : '') +
       libFields(table, d.op).map(function (fd) {
         var k = fd[0], lab = fd[1] + (fd[3] ? ' <span class="req" aria-hidden="true">*</span>' : ''), err = libErr[k] ? '<div class="ferr">' + esc(libErr[k]) + '</div>' : '', v = f[k];
         if (fd[2] === 'basis') return '<div class="fq" data-lfq="' + k + '"><div class="seg" role="group" aria-label="Price is">' + [['ex', 'ex VAT'], ['inc', 'inc VAT']].map(function (o) { var on = (v || 'ex') === o[0]; return '<button type="button" data-lbasis="' + o[0] + '" aria-pressed="' + on + '">' + o[1] + '</button>'; }).join('') + '</div><p class="pline" data-vatline>' + esc(vatLine(f.price, v || 'ex')) + '</p></div>';
@@ -1448,7 +1466,8 @@
       '<div class="frow"><button class="btn" type="button" data-action="libcancel">Cancel</button><button class="btn yes" type="button" data-action="libsend"' + dis() + '>' + I('send') + (d.op === 'edit' ? 'Save' : 'Add') + '</button></div></div>';
   }
   // The Sheet's rules, as engine v0.2.17 checks them: name 200, notes 2000, text 5000, steps 30 x 200 (no ';'), lists 30.
-  function libFields(table, op) { return LIB[table].fields.filter(function (fd) { return fd[5] !== 'edit' || op === 'edit'; }); }
+  var PRICE_FIELDS = ['price', 'priceBasis', 'sourcePrice'];
+  function libFields(table, op) { return LIB[table].fields.filter(function (fd) { return (fd[5] !== 'edit' || op === 'edit') && !(isTeam() && PRICE_FIELDS.indexOf(fd[0]) >= 0); }); } // prices: owner only
   function libCheck(table, f, op) {
     var e = {};
     libFields(table, op).forEach(function (fd) {
@@ -1565,7 +1584,7 @@
   }
   function vEngine() {
     var on = studioOn(), h = S.health || {};
-    return '<div class="card"><div class="grp">' + I('engine') + 'Engine<button class="pill" type="button" data-action="studio" aria-label="Studio on or off" aria-pressed="' + on + '"' + dis() + '><span class="sw' + (on ? ' on' : '') + '"><i></i></span>' + (on ? 'On' : 'Off') + '</button></div>' +
+    return '<div class="card"><div class="grp">' + I('engine') + 'Engine<button class="pill" type="button" data-action="studio" aria-label="Studio on or off" aria-pressed="' + on + '"' + dis() + own() + '><span class="sw' + (on ? ' on' : '') + '"><i></i></span>' + (on ? 'On' : 'Off') + '</button></div>' +
       '<p class="muted">' + (h.lastRun ? 'Last run ' + dmy(Date.parse(h.lastRun)) + ' ' + hm(Date.parse(h.lastRun)) : 'Never run') + (S.generated_at ? ' · read ' + hm(Date.parse(S.generated_at)) : '') + '</p>' +
       (h.jobs || []).map(function (j) { var ok = j.result === 'OK'; return '<div class="row" style="--c:var(--ljr-' + (ok ? 5 : 2) + ')"><span class="bar"></span><div class="txt"><b>' + esc(j.job) + '</b>' + (j.note ? '<div class="muted">' + esc(String(j.note).slice(0, 80)) + '</div>' : '') + '</div><span class="meta">' + esc(ok ? 'OK' : j.result) + '<br>' + (Date.parse(j.last) ? hm(Date.parse(j.last)) : '') + '</span></div>'; }).join('') +
       (ST.rootFolderId ? '<p><a href="https://drive.google.com/drive/folders/' + esc(ST.rootFolderId) + '" target="_blank" rel="noopener">Studio folder</a></p>' : '') + '</div>';
@@ -1586,7 +1605,7 @@
     var q = hashParts().q; if (q.get('from')) prefill(q.get('from'));
     draft.brands = draft.brands || []; draft.formats = draft.formats || []; draft.sources = draft.sources || [];
     var prods = S.products.filter(function (x) { return draft.brands.indexOf(x.brandId) >= 0; });
-    var multi = S.accounts.length > 1, grps = brandGroups();
+    var multi = bizAccts().length > 1, grps = brandGroups();
     var shownBrands = S.brands.filter(function (b) { return !draft.group || b.groupId === draft.group || draft.brands.indexOf(b.id) >= 0; });
     var er = function (k) { return formErr[k] ? '<div class="ferr">' + esc(formErr[k]) + '</div>' : ''; };
     var fq = function (label, req, body, k, tip) { return '<div class="fq"><p class="qt">' + label + info(tip) + (req ? '<span class="req" title="Must answer">★</span>' : '') + '</p>' + body + er(k) + '</div>'; };
@@ -1688,6 +1707,7 @@
   }
   function sendAct(id, act, verdict) {
     if (EX || busy[id]) return;
+    if (isTeam() && !/^(approve|redo|deliver|ask)$/.test(act)) { banner('Owner only'); return; } // engine v0.2.20: what the backup person may do
     var x = byId(id), n = $('note-' + id), body = { kind: act, accountId: /^(ask|deliver|retire|refresh|result)$/.test(act) ? ownerId() : x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() };
     if (act === 'redo') { body.note = n ? n.value.trim() : ''; if (!body.note) { if (n) n.focus(); return; } }
     if (act === 'gate') body.verdict = verdict;
@@ -1734,7 +1754,7 @@
     saveLocal('st-pend', pend);
   }
   function sendSet(id, field, val) {
-    if (EX) return;
+    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
     var x = byId(id), body = { kind: 'set', accountId: x ? x.accountId : ownerId(), assetId: id, at: new Date().toISOString() }; body[field] = val;
     pend[id] = Object.assign(pend[id] || {}, body, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); openPanel = null; render();
     var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
@@ -1743,7 +1763,7 @@
   // Ownership (Lisa, 28 Oct 2026): the client owns the finished file once paid; Lisa keeps the source files unless the client
   // pays for them. One 'rights' request {assetId, clientMaterial, sourceRights: kept|sold} (owner); shows at once.
   function sendRights(id, patch) {
-    if (EX) return;
+    if (EX) return; if (isTeam() && (patch.sourceRights !== undefined || patch.protect !== undefined)) { banner('Owner only'); return; }
     var x = byId(id); if (!x) return;
     var body = { kind: 'rights', accountId: ownerId(), assetId: id, at: new Date().toISOString() }, show = {};
     if (patch.disclose !== undefined || patch.protect !== undefined) { // engine v0.2.19: one of these on its own; protect '' = inherit
@@ -1761,7 +1781,7 @@
   // hasFinal, needsWatermark, proofLowRes. The final file's link is never in the state, so it can never show here; full size is
   // released at stage 8 + paid. Paid is the owner's switch: one 'paid' request {assetId, paid: yes|no}.
   function sendPaid(id, val) {
-    if (EX) return;
+    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
     var x = byId(id); if (!x) return;
     pend[id] = Object.assign(pend[id] || {}, { paid: val }, { at: Date.now() }); saveLocal('st-pend', pend); applyPend(); render();
     var back = function () { delete pend[id]; saveLocal('st-pend', pend); load(); };
@@ -1769,7 +1789,7 @@
   }
   // Account default and project protection: one owner-side 'protect' request {target: account|project, id, protect: ''|yes|no}.
   function sendProtect(target, id, val) {
-    if (EX) return;
+    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
     var key = 'prot|' + target + '|' + id; pend[key] = { protect: val, at: Date.now() }; saveLocal('st-pend', pend); render();
     var back = function () { delete pend[key]; saveLocal('st-pend', pend); render(); };
     withWrite(function () { return putRequest('protect', { kind: 'protect', accountId: ownerId(), target: target, id: id, protect: val, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
@@ -1777,7 +1797,7 @@
   function protOf(target, x) { var p = pend['prot|' + target + '|' + x.id]; return p ? p.protect : (x.protect || ''); }
   var PROT_SRC = { item: 'set here', project: 'from project', account: 'from account', kind: 'by account kind' };
   function protSeg(attrs, cur, inheritWord) {
-    return '<div class="seg" role="group" aria-label="Protection">' + [['', inheritWord], ['yes', 'On'], ['no', 'Off']].map(function (o) { return '<button type="button" ' + attrs + ' data-val="' + o[0] + '" aria-pressed="' + (cur === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div>';
+    return '<div class="seg" role="group" aria-label="Protection">' + [['', inheritWord], ['yes', 'On'], ['no', 'Off']].map(function (o) { return '<button type="button" ' + attrs + ' data-val="' + o[0] + '" aria-pressed="' + (cur === o[0]) + '"' + dis() + own() + '>' + o[1] + '</button>'; }).join('') + '</div>' + ownWhy();
   }
   function deliveryRows(a) {
     var prot = a.protect === 'yes', paid = a.paid === 'yes', approved = a.stage >= 8, tick = function (ok, w) { return '<span class="tick' + (ok ? ' ok' : '') + '" data-tick="' + w + '">' + w + ' ' + (ok ? '\u2713' : '\u2717') + '</span>'; };
@@ -1787,7 +1807,7 @@
       (pr ? '<div class="rrow" data-projprot="' + esc(pr.id) + '"><span class="rlab">Project ' + esc(pr.name) + '</span>' + protSeg('data-pprot="' + esc(pr.id) + '"', protOf('project', pr), 'Inherit') +
         '<span class="muted">account default: ' + ((account(pr.accountId || a.accountId).protectEffective || (isClient(a) ? 'yes' : 'no')) === 'yes' ? 'Protected' : 'Off') + '</span></div>' : '') +
       '<div class="rrow"><span class="rlab">AI note on delivery</span><div class="seg" role="group" aria-label="AI note on delivery">' + [['yes', 'On'], ['no', 'Off']].map(function (o) { return '<button type="button" data-disc="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + ((a.disclose === 'no' ? 'no' : 'yes') === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div>' +
-      '<div class="rrow"><span class="rlab">Paid</span><div class="seg" role="group" aria-label="Paid">' + [['yes', 'Yes'], ['no', 'No']].map(function (o) { return '<button type="button" data-paid="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + ((paid ? 'yes' : 'no') === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div>';
+      '<div class="rrow"><span class="rlab">Paid</span><div class="seg" role="group" aria-label="Paid">' + [['yes', 'Yes'], ['no', 'No']].map(function (o) { return '<button type="button" data-paid="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + ((paid ? 'yes' : 'no') === o[0]) + '"' + dis() + own() + '>' + o[1] + '</button>'; }).join('') + '</div>' + ownWhy() + '</div>';
     if (a.hasProof) rows += '<div class="rrow"><span class="rlab">Proof (low-res)</span>' + (a.reviewLink ? '<a href="' + safeUrl(a.reviewLink) + '" target="_blank" rel="noopener" data-proof>Open the proof</a>' : '<span>Shared</span>') + '</div>';
     if (prot) rows += '<div class="rrow" data-fullsize><span class="rlab">Full size</span><span>' + (approved && paid ? 'Released' : 'Held until approved + paid') + '</span>' + tick(approved, 'Approved') + tick(paid, 'Paid') + '</div>';
     var remind = a.needsWatermark || a.proofLowRes ? '<div class="rrow"><span class="tag" data-chip="lowres" title="' + esc(a.proofLowRes || '') + '">Low-res + watermark</span><span class="muted" data-watermark>Add Studio watermark layer</span></div>' : '';
@@ -1805,10 +1825,11 @@
     return '<div class="rights" data-rights="' + esc(a.id) + '"><div class="rrow"><span class="rlab">Client material</span><div class="seg" role="group" aria-label="Client material">' +
       [[true, 'Yes'], [false, 'No']].map(function (o) { return '<button type="button" data-rset="clientMaterial" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (cm === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div>' +
       '<div class="rrow"><span class="rlab">Source files</span><div class="seg" role="group" aria-label="Source files">' +
-      [['kept', 'Kept by you'], ['sold', 'Sold to client']].map(function (o) { return '<button type="button" data-rset="sourceRights" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (sr === o[0]) + '"' + dis() + '>' + o[1] + '</button>'; }).join('') + '</div></div></div>';
+      [['kept', 'Kept by you'], ['sold', 'Sold to client']].map(function (o) { return '<button type="button" data-rset="sourceRights" data-val="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + (sr === o[0]) + '"' + dis() + own() + '>' + o[1] + '</button>'; }).join('') + '</div>' + ownWhy() + '</div></div>';
   }
   // Brand set-up tick: shows at once, one 'check' request file; the engine writes it into BRANDS at its next run.
   function sendCheck(bid, item) {
+    if (isTeam()) { banner('Owner only'); return; }
     if (EX) return;
     var b = brand(bid), key = 'chk|' + bid + '|' + item, cur = pend[key] ? pend[key].ok : !!((b.setupChecklist || []).filter(function (x) { return x.name === item; })[0] || {}).ok;
     var body = { kind: 'check', accountId: brandAcct(bid), brandId: bid, item: item, ok: !cur, at: new Date().toISOString() };
@@ -1818,13 +1839,13 @@
   }
   function studioOn() { var p = pend.studio; return p && Date.now() - p.at < 36e5 ? p.on : !!S.studio.on; }
   function sendSuggestion(sid, status) {
-    if (EX) return;
+    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
     var key = 'sug|' + sid, back = function () { delete pend[key]; saveLocal('st-pend', pend); render(); };
     pend[key] = { status: status, at: Date.now() }; saveLocal('st-pend', pend); render();
     withWrite(function () { return putRequest('suggestion', { kind: 'suggestion', accountId: ownerId(), id: sid, status: status, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
   }
   function sendStudio() {
-    if (EX) return;
+    if (EX) return; if (isTeam()) { banner('Owner only'); return; }
     var on = !studioOn(); pend.studio = { on: on, at: Date.now() }; saveLocal('st-pend', pend); render();
     var back = function () { delete pend.studio; saveLocal('st-pend', pend); render(); };
     withWrite(function () { return putRequest('studio', { kind: 'studio', accountId: ownerId(), on: on, at: new Date().toISOString() }).catch(function (e) { back(); banner('Not sent: ' + e.message); }); }, back);
@@ -1842,6 +1863,7 @@
     if (EX) return Promise.reject(new Error('example data'));
     return who().then(function (by) {
       body.by = by;
+      var me = meAcct(); if (me && me.role === 'team') body.accountId = me.id; // the backup person signs as themselves (engine v0.2.20)
       var meta = { name: prefix + '-' + Date.now() + '.json', parents: [ST.requestsFolderId], mimeType: 'application/json' };
       var b = 'st' + Date.now();
       var payload = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(body) + '\r\n--' + b + '--';

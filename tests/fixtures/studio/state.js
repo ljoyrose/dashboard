@@ -18,7 +18,8 @@
       generated_at: iso(-60e3),
       studio: { on: true, mode: 'TEST', budgetMonth: 50, spentMonth: 20 },
       health: { lastRun: iso(-10 * 60e3), jobs: [{ job: 'syncState', result: 'OK', last: iso(-10 * 60e3), note: 'sample' }] },
-      accounts: [{ id: 'acc-owner', name: 'Sample owner', kind: 'owner', protect: '', protectEffective: 'no' }, { id: 'acc-client', name: 'Sample client', kind: 'client', protect: '', protectEffective: 'yes' }],
+      accounts: [{ id: 'acc-owner', name: 'Sample owner', kind: 'owner', role: 'owner', emails: ['owner@sample.test'], protect: '', protectEffective: 'no' },
+        { id: 'acc-client', name: 'Sample client', kind: 'client', role: 'client', emails: [], protect: '', protectEffective: 'yes' }],
       groups: [{ id: 'grp-dogs', name: 'Dogs' }, { id: 'grp-apps', name: 'Apps' }, { id: 'grp-services', name: 'Client services' }, { id: 'grp-lisa', name: 'Lisa' }],
       products: [
         { id: 'sp-course', accountId: 'acc-owner', brandId: 'sb-north', name: 'Sample course', type: 'course', protect: '', protectEffective: 'no' },

@@ -1554,6 +1554,37 @@ test.describe('Studio page', () => {
     expect(got[0].body).toMatchObject({ kind: 'library', table: 'kits', op: 'new', fromAssetId: id });
   });
 
+  for (const role of ['team', 'owner']) test(`signed in as the ${role}: requests carry that account; ${role === 'team' ? 'owner-only controls are switched off with "Owner only"' : 'nothing is switched off'}`, async ({ page, guard }) => {
+    const got = await uploads(page, guard);
+    guard.world.email = role === 'team' ? 'Backup@Sample.test' : 'owner@sample.test'; // matched case-blind to accounts[].emails
+    await open(page, guard, '#/decide', { change: (s) => { s.accounts.push({ id: 'acc-team', name: 'Sample backup', kind: 'owner', role: 'team', emails: ['backup@sample.test'], protect: '', protectEffective: 'no' }); } });
+    const team = role === 'team';
+    const gate = page.locator('.crow[data-row="sa-gate"] [data-act="gate"]').first();
+    await expect.poll(() => gate.isDisabled()).toBe(team); // the role is known once the page has asked Drive who is signed in
+    if (team) {
+      await expect(gate).toHaveAttribute('title', 'Owner only');
+      await expect(page.locator('.crow[data-row="sa-gate"] [data-owneronly-why]')).toHaveText('Owner only');
+      await expect(page.locator('.crow[data-row="sa-rev1"] [data-act="bin"]')).toBeDisabled();
+    }
+    await expect(page.locator('#view [data-fx="acct"][data-val="acc-team"]')).toHaveCount(0); // the backup account owns no work
+    await page.locator('.crow[data-row="sa-rev1"] [data-act="approve"]').click(); // team may approve
+    await expect.poll(() => got.length).toBe(1);
+    expect(got[0].body).toMatchObject({ kind: 'approve', assetId: 'sa-rev1', accountId: team ? 'acc-team' : 'acc-owner' });
+    // Item details: Paid, Source files and Protection are the owner's; Client material and the AI note are not.
+    await go(page, 'assets');
+    await details(page, 'sa-client');
+    for (const sel of ['[data-paid="yes"]', '[data-rset="sourceRights"][data-val="sold"]', '[data-iprot="sa-client"][data-val="yes"]']) await expect(page.locator('[data-delivery="sa-client"] ' + sel + ', [data-rights="sa-client"] ' + sel).first()).toBeEnabled({ enabled: !team });
+    await expect(page.locator('[data-rights="sa-client"] [data-rset="clientMaterial"][data-val="true"]')).toBeEnabled();
+    await expect(page.locator('[data-delivery="sa-client"] [data-disc="no"]')).toBeEnabled();
+    // Library: prices are the owner's.
+    await go(page, 'kits/kits');
+    await page.locator('[data-libnew="kits"]').click();
+    await expect(page.locator('[data-libform="kits"] [data-lf="price"]')).toHaveCount(team ? 0 : 1);
+    if (team) await expect(page.locator('[data-libform="kits"] [data-owneronly-why]')).toHaveText('Prices: Owner only');
+    await go(page, 'engine');
+    await expect(page.locator('[data-action="studio"]')).toBeEnabled({ enabled: !team });
+  });
+
   test('library: example data has the buttons switched off and sends nothing', async ({ page, guard }) => {
     await open(page, guard, '#/kits/packs', { state: false });
     await expect(page.locator('[data-libnew="packs"]')).toBeDisabled();
