@@ -231,6 +231,16 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#tabs a[data-nav="insights"]')).toHaveAttribute('aria-current', 'page');
   });
 
+  test('Numbers: a tile whose profit is only partly known shows the engine\'s words ("from 1 of 2 sales", "?"), money tiles still show £', async ({ page }) => {
+    const k = { tiles: [{ key: 'profit_p', label: 'Profit this month', value: '£8.40 from 1 of 2 sales', arrow: 'flat' }, { key: 'takings_p', label: 'Takings this month', value: 3820, arrow: 'up' },
+      { key: 'avg_profit_p', label: 'Profit per item', value: '?', arrow: 'flat' }], byCategory: [] };
+    await sheets(page, [['KPI', 'kpi', '', 'Numbers', JSON.stringify(k), ago(5)]]);
+    await open(page, '#/numbers');
+    await expect(page.locator('#view .tile')).toHaveCount(3);
+    await expect(page.locator('#view .tile').nth(0)).toContainText('£8.40 from 1 of 2 sales');
+    await expect(page.locator('#view .tile').nth(1)).toContainText('£38.20');
+    await expect(page.locator('#view .tile').nth(2)).toContainText('?');
+  });
   test('person chips: hidden until a card has another owner; picking CY shows only CY\'s cards and is remembered', async ({ page }) => {
     const rows = [
       ['RM|L1', 'remove', 'Clothes', 'Lisa jumper', JSON.stringify({ platform: 'eBay' }), ago(5)],

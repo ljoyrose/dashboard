@@ -689,7 +689,7 @@
     var k = rows.filter(function (r) { return r.section === 'kpi'; })[0];
     if (!k) return '<p class="needs">Numbers</p><div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
     var d = detail(k), ar = { up: '▲', down: '▼', flat: '–' };
-    function show(t) { return /_p$/.test(t.key) ? '£' + (Number(t.value) / 100).toFixed(2) : t.value; }
+    function show(t) { return typeof t.value === 'string' ? t.value : /_p$/.test(t.key) ? '£' + (Number(t.value) / 100).toFixed(2) : t.value; }   // v11.7: "£8.40 from 1 of 2 sales" or "?" come as text
     var h = '<p class="needs">Numbers</p><div class="tiles">' + (d.tiles || []).map(function (t) { return '<button class="tile" type="button" data-tile="' + esc(t.key) + '"><div class="k">' + esc(t.label) + '</div><div class="v">' + esc(show(t)) + ' <span class="' + esc(t.arrow) + '">' + ar[t.arrow] + '</span></div></button>'; }).join('') + '</div>';
     if (open.tile) h += '<div class="card">' + (d.byCategory || []).map(function (c) { return '<div class="row"><div class="txt">' + esc(c.category) + '</div><div>' + esc(open.tile === 'sold' ? c.sold : '£' + (c.profit_p / 100).toFixed(2)) + '</div></div>'; }).join('') + '</div>';
     if (d.vat) h += '<p class="what">' + esc(d.vat) + '</p>';
