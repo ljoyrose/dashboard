@@ -278,7 +278,7 @@
   .board { flex: 1 1 auto; min-width: 0; display: flex; gap: 12px; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; scrollbar-width: thin; }
   .col { flex: 0 0 280px; display: flex; flex-direction: column; min-height: 0; background: var(--canvas); border: 1px solid var(--bd); border-radius: var(--radius); overflow: hidden; scroll-snap-align: start; }
   .col-head { flex: none; position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 12px; min-height: 40px; font-weight: 600; background: var(--band); border-bottom: 1px solid var(--bd); }
-  .col-head::before { content: ""; position: absolute; top: 0; left: 14px; right: 14px; height: 3px; border-radius: 0 0 3px 3px; background: var(--sc); } /* stage colour as a short tab: never touches the corners */
+  .col-head .sbar { width: 4px; height: 18px; border-radius: 2px; background: var(--sc); flex: none; } /* stage colour: a small upright bar left of "Step N:" on the white head */
   .step { color: var(--muted); font-weight: 600; white-space: nowrap; } /* stage numbers in words, never in a circle */
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .col-head .hico .ti { font-size: 16px; color: var(--ink); }
@@ -1078,7 +1078,7 @@
   function column(o) {
     var need = o.need != null ? o.need : o.items.filter(needsYou).length, ai = o.items.reduce(function (t, a) { return t + (Number(a.cost) || 0); }, 0);
     return '<section class="col' + (o.body ? '' : ' col-empty') + '" ' + o.attr + ' style="--sc:var(--ljr-' + o.slot + ');--sct:var(--ljr-' + o.slot + '-text)">' +
-      '<div class="col-head">' + (o.step != null ? '<span class="lab"><span class="step">Step ' + o.step + ':</span> ' + o.name + '</span>' : '<span class="hico">' + o.badge + '</span><span class="lab">' + o.name + '</span>') + icnt(o.n != null ? o.n : o.items.length) + '</div>' +
+      '<div class="col-head">' + (o.step != null ? '<span class="sbar" aria-hidden="true"></span><span class="lab"><span class="step">Step ' + o.step + ':</span> ' + o.name + '</span>' : '<span class="hico">' + o.badge + '</span><span class="lab">' + o.name + '</span>') + icnt(o.n != null ? o.n : o.items.length) + '</div>' +
       '<div class="col-list">' + (o.body || '<p class="okempty cempty">' + (o.none || 'Nothing waiting.') + '</p>') + '</div>' +
       '<div class="col-foot"><span><b>' + need + '</b> need you</span><span>' + money(ai) + ' AI</span></div></section>';
   }

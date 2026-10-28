@@ -729,8 +729,11 @@ test.describe('Studio page', () => {
     await expect(page.locator('.col[data-stage="5"]')).toHaveCSS('border-top-width', '1px');
     await expect(page.locator('.col[data-stage="5"]')).toHaveCSS('overflow', 'hidden');
     await expect(page.locator('.col[data-stage="5"] .col-head')).toHaveCSS('box-shadow', 'none');
-    const tabBar = await page.locator('.col[data-stage="5"] .col-head').evaluate((e) => { const c = getComputedStyle(e, '::before'); return { h: c.height, l: c.left, r: c.right }; });
-    expect(tabBar).toEqual({ h: '3px', l: '14px', r: '14px' });
+    // Stage colour: a small upright 4×18 bar left of "Step N:", no top tab.
+    expect(await page.locator('.col[data-stage="5"] .col-head').evaluate((e) => getComputedStyle(e, '::before').content)).toBe('none');
+    const sb = await page.locator('.col[data-stage="5"] .col-head .sbar').boundingBox(), slab = await page.locator('.col[data-stage="5"] .col-head .lab').boundingBox();
+    expect([Math.round(sb.width), Math.round(sb.height)]).toEqual([4, 18]);
+    expect(sb.x).toBeLessThan(slab.x);
     // One spacing step: 16px from the head line to the first card, 12px to the sides, between cards, between columns, and inside cards.
     const gaps = await page.evaluate(() => {
       const r = (e) => e.getBoundingClientRect(), cols = [...document.querySelectorAll('.col')], two = cols.find((c) => c.querySelectorAll('.col-list .crow').length >= 2) || null;
