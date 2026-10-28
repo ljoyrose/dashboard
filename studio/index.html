@@ -23,7 +23,7 @@
 <style>
   /* Colours: ../tokens.css for the LJR7 spine (stage colours, brand dots, red "needs you" never change); the page itself is
      "Warm clear" (default) or "Cool clear" from the Look menu, each with a dark version. No solid fills: selected = an outline. */
-  :root { --radius: 12px; --me: var(--ljr-7);
+  :root { --radius: 16px; --me: var(--ljr-7);
     --paper: #EEE8DF; --canvas: #E3DBCF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --soft: #DED5C7;
     --bd: var(--line); --band: var(--card); --chip: transparent;
     --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
@@ -77,16 +77,16 @@
   /* Five tabs in a bar at the bottom, like Marketplace (thumb reach on the phone); a sub-row of links inside Line, Decide and Kits. */
   nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
   nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 700; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; position: relative; }
-  nav.tabs a[aria-current="page"] { outline: 2px solid var(--sel-bd); outline-offset: -2px; background: var(--sel-fill); }
+  nav.tabs a[aria-current="page"] { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: var(--sel-fill); }
   nav.tabs .n { position: absolute; top: 2px; right: calc(50% - 30px); }
   @media (min-width: 900px) { nav.tabs { max-width: 900px; margin: 0 auto; border-left: 1px solid var(--line); border-right: 1px solid var(--line); border-radius: var(--radius) var(--radius) 0 0; } }
   html { scroll-padding-bottom: 96px; }
   .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
   .subnav a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
-  .subnav a[aria-current="page"] { outline: 2px solid var(--sel-bd); outline-offset: -2px; background: var(--sel-fill); }
-  /* One state only: hover = selected = a 2px outline in ink (drawn inside the edge, so nothing moves). Never a solid fill. */
-  .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { outline: 2px solid var(--sel-bd); outline-offset: -2px; background: var(--sel-fill); }
-  @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, nav.tabs a:hover, .vsw button:hover, .seg button:hover, .col-list .crow:hover { outline: 2px solid var(--sel-bd); outline-offset: -2px; } }
+  .subnav a[aria-current="page"] { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: var(--sel-fill); }
+  /* One state only: hover = selected = the border in ink plus a 1.5px outline drawn inside it; borders never change width, so nothing moves. Never a solid fill. */
+  .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: var(--sel-fill); }
+  @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, nav.tabs a:hover, .vsw button:hover, .seg button:hover, .col-list .crow:hover { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; } }
   .n:empty { display: none; }
   .cnt, nav.tabs .n { display: inline-flex; align-items: center; justify-content: center; min-width: 24px; height: 24px; padding: 0 7px; border: 1px solid var(--line); border-radius: 999px; font-size: 13px; font-weight: 600; line-height: 1; color: var(--ink); background: transparent; }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
@@ -222,7 +222,8 @@
   /* Calm focus: one line, a shade darker. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus, button:focus { outline: none; }
-  a:focus-visible, button:focus-visible { outline: 2px solid var(--muted); outline-offset: 2px; border-color: var(--ink) !important; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; } /* never the browser blue */
+  a:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-color: var(--ink) !important; }
   footer { color: var(--muted); font-size: 13px; padding: 0 16px 24px; }
   /* v0.2: Kits tab (playbooks by outcome, packs, kits, styles, formats), sources, gaps, tool form */
   a.tag { text-decoration: none; }
@@ -242,7 +243,7 @@
   .chk li button:hover, .chk li button:focus-visible { border-color: var(--line); }
   .fsub { font-size: 13px; font-weight: 700; color: var(--muted); margin: 6px 0 4px; }
   /* Cool clear: neutral chips get a faint fill; the red and green outlines (needs you, On) stay as they are. */
-  :root.look-cool .ch:not(.on), :root.look-cool .tag, :root.look-cool .fbtn:not(.on), :root.look-cool .subnav a:not([aria-current="page"]), :root.look-cool .pill:not(.on) { background: var(--chip); }
+  :root.look-cool .ch:not(.on), :root.look-cool .tag, :root.look-cool .fbtn:not(.on), :root.look-cool .pill:not(.on) { background: var(--chip); }
   /* Look menu (header palette button). Stored in localStorage 'dash-look' so other hubs can read it. */
   .lookwrap { position: relative; }
   #lookMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(340px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
@@ -256,25 +257,35 @@
   /* Board (HubSpot-style): fixed columns that scroll inside themselves; head and foot stay put; details on the right. */
   html.board-on main.wrap { padding-bottom: 0; }
   .bwrap { display: flex; gap: 12px; min-height: 0; }
-  .board { flex: 1 1 auto; min-width: 0; display: flex; gap: 10px; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; scrollbar-width: thin; }
+  .board { flex: 1 1 auto; min-width: 0; display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding-bottom: 4px; scrollbar-width: thin; }
   .col { flex: 0 0 280px; display: flex; flex-direction: column; min-height: 0; background: var(--canvas); border: 1px solid var(--bd); border-radius: var(--radius); scroll-snap-align: start; }
-  .col-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 12px; font-weight: 700; background: var(--band); border-bottom: 1px solid var(--bd); box-shadow: inset 0 3px 0 var(--sc); border-radius: var(--radius) var(--radius) 0 0; }
+  .col-head { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 12px; min-height: 40px; font-weight: 600; background: var(--band); border-bottom: 1px solid var(--bd); box-shadow: inset 0 3px 0 var(--sc); border-radius: var(--radius) var(--radius) 0 0; }
   .col-head .num { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 13px; border: 1.5px solid var(--sc); flex: none; }
-  .col-head .num .ti { font-size: 15px; color: var(--sct); }
-  .col-head .lab { color: var(--sct); min-width: 0; overflow-wrap: anywhere; }
+  .col-head .num .ti { font-size: 15px; color: var(--ink); }
+  .col-head .lab { color: var(--ink); min-width: 0; overflow-wrap: anywhere; } /* colour only in the ring and the top line */
   .col-head .cnt { margin-left: auto; }
   .col-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px; display: flex; flex-direction: column; gap: 8px; scrollbar-width: thin; }
   .col-list .crow, .col-list .row { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 10px 12px; box-shadow: var(--shadow); position: relative; }
-  .col-list .crow .ttl { font-weight: 700; }
-  .col-list .crow.sel { outline: 2px solid var(--sel-bd); outline-offset: -2px; background: linear-gradient(var(--sel-fill), var(--sel-fill)) var(--card); }
+  .col-list .crow .ttl { font-weight: 600; font-size: 16px; }
+  .col-list .crow.sel { border-color: var(--sel-bd); outline: 1.5px solid var(--sel-bd); outline-offset: -2.5px; background: linear-gradient(var(--sel-fill), var(--sel-fill)) var(--card); }
   .col-list .crow.sel::after { content: "\2713"; position: absolute; top: -8px; right: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; background: var(--card); color: var(--ink); border: 2px solid var(--sel-bd); }
   .col-list > .muted { padding: 4px; margin: 0; }
-  .col-foot { flex: none; display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; font-size: 13px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); border-radius: 0 0 var(--radius) var(--radius); }
+  .col-foot { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 45px; padding: 4px 12px; font-size: 14px; line-height: 18px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); border-radius: 0 0 var(--radius) var(--radius); }
   .col-foot b { color: var(--ink); }
   .side { flex: 0 0 380px; min-width: 0; overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
   .side .shead { display: flex; gap: 8px; align-items: flex-start; font-weight: 700; }
   .side .shead span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .side .panel { margin: 0; }
+  /* HubSpot sizing (CRM UI spec, s3/4/6/7/15/16): containers 16 radius, things you press are pills, tabs are 6px rectangles. */
+  .btn, .vsw button, .lk, .ico { border-radius: 999px; }
+  .pill { padding: 4px 12px; min-height: 28px; }
+  nav.tabs a, .subnav a { border-radius: 6px; }
+  .subnav { gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .vtop .subnav { flex: 1 1 auto; }
+  .subnav a { border-color: transparent; background: transparent; }
+  .btn { min-height: 36px; }
+  @media (min-width: 545px) { .subnav a { min-height: 32px; padding: 0 12px; } }
+  @media (max-width: 544px) { .btn, .subnav a { min-height: 44px; } }
   @media (max-width: 760px) {
     .board { scroll-snap-type: x mandatory; }
     .col { flex-basis: calc(100vw - 48px); }

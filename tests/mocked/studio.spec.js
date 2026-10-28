@@ -683,6 +683,21 @@ test.describe('Studio page', () => {
     await expect(page.locator('.side[data-side="sa-make"] .kv')).toContainText('Stage');
     await expect(r).toHaveClass(/\bsel\b/);
     await expect(r.locator('.panel')).toHaveCount(0); // not under the card on a desktop
+    // Hover and selected never move or resize anything; stage names are ink (colour only in the ring and the top line).
+    const other = page.locator('.crow[data-row="sa-gate"]');
+    await other.scrollIntoViewIfNeeded();
+    const box0 = await other.boundingBox();
+    await other.hover();
+    expect(await other.boundingBox()).toEqual(box0);
+    await expect(other).toHaveCSS('outline-style', 'solid');
+    const lab = await page.locator('.col[data-stage="5"] .col-head .lab').evaluate((e) => getComputedStyle(e).color);
+    expect(lab).toBe(await page.evaluate(() => getComputedStyle(document.body).color));
+    // Keyboard focus is an ink ring like hover, never the browser blue.
+    await page.locator('[data-vmode="list"]').focus();
+    await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
+    const ring = await page.evaluate(() => { const e = document.activeElement, c = getComputedStyle(e); return { o: c.outlineColor, w: c.outlineWidth, ink: getComputedStyle(document.body).color }; });
+    expect(ring.o).toBe(ring.ink);
+    expect(ring.w).toBe('2px');
     await page.locator('.side [aria-label="Close details"]').click();
     await expect(page.locator('.side')).toHaveCount(0);
     // Decide keeps its sections as columns.
