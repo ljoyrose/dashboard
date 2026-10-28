@@ -189,11 +189,12 @@
     job: { name: 'Do by hand', what: 'No AI could read this one. Do it by hand, then tap Done.' },
     vat: { name: 'VAT', what: 'Sales against the VAT registration threshold.' },
     offer: { name: 'Send offer', what: 'Buyers are watching these on eBay. Send them a discount?' },
+    cost: { name: 'What did it cost?', what: 'Profit stays unknown until the cost is known. Type what you paid for one. Changes only your list, never eBay or Vinted.' },
     suppliers: { name: 'Supplier details', quiet: true, what: 'Contacts, terms and the order list per supplier.' }
   };
-  var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'check', 'receipt', 'newprod', 'offer', 'supplier', 'learn', 'job', 'vat', 'restock', 'temu'];
+  var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'check', 'cost', 'receipt', 'newprod', 'offer', 'supplier', 'learn', 'job', 'vat', 'restock', 'temu'];
   // V2 tabs: each groups engine sections. Old links (#/remove, #/check, #/numbers ...) still open and light up their tab.
-  var TABS = { do: ['remove', 'post', 'vinted', 'job'], decide: ['go', 'check', 'offer', 'receipt', 'newprod', 'supplier', 'learn', 'vat'], reply: ['message'], insights: ['restock', 'temu'] };
+  var TABS = { do: ['remove', 'post', 'vinted', 'job'], decide: ['go', 'check', 'cost', 'offer', 'receipt', 'newprod', 'supplier', 'learn', 'vat'], reply: ['message'], insights: ['restock', 'temu'] };
   var TAB_OF = { numbers: 'insights', round: 'insights', stock: 'insights', suppliers: 'insights' }; Object.keys(TABS).forEach(function (t) { TABS[t].forEach(function (s) { TAB_OF[s] = t; }); });
   var PEOPLE = ['All', 'Lisa', 'CY', 'G', 'H', 'CN'];   // a card with no owner is Lisa's
   var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false, stockFilter = 'all';
@@ -481,6 +482,12 @@
       var h = factsOf([['Price', d.price], ['After ' + d.pct + '% off', d.after], ['Profit left', d.profit_left || '–']]) + (d.rule ? '<p class="hint">' + esc(d.rule) + '</p>' : '') + boxes;
       return { h: h, acts: [linkBtn(d.url, 'Open on eBay'), ansBtn(r, 'Send', 'Send offer', true), ansBtn(r, 'Always', 'Send + always for this item'), ansBtn(r, 'Never', 'Never offer'), ansBtn(r, 'No', 'Not now')] };
     },
+    // Engine v11.9: What did it cost? One card per product code (or per sale with no code). £ box + Save / Own item (£0) / Don't know.
+    cost: function (r, d) {
+      var h = factsOf([['Sold', d.times_sold ? d.times_sold + (d.times_sold > 1 ? ' times' : ' time') : 'not yet'], ['Last sold at', d.last_price || '–'], ['Listed at', d.price || '–']]) +
+        '<label class="qty">Cost of one £ <input class="num" inputmode="decimal" data-note="' + esc(r.key) + '" placeholder="4.50" aria-label="What you paid for one, in pounds"></label>';
+      return { h: h, acts: [linkBtn(d.url, 'Open on ' + (d.platform || 'the site')), ansBtn(r, 'Save', 'Save', true), ansBtn(r, 'Own', 'Own item (£0)'), ansBtn(r, 'Unknown', 'Don\'t know')] };
+    },
     vat: function (r, d) { return { h: '<p class="verdict wait">' + esc(d.line) + '</p>', acts: [ansBtn(r, 'OK', 'Told my accountant', true)] }; }
   };
   // Suppliers: one card per supplier. Account number copies, phone calls, terms, what is on the order list and the gap.
@@ -739,6 +746,7 @@
       var nb = document.querySelector('[data-note="' + r.key + '"]');                      // v11 cards: a note box (terms, quantity)
       if (nb && nb.value.trim()) note = nb.value.trim();
       if (v === 'Set' && !note) return banner('Type what to change first, for example: min 100, free over 300, delivery 15');
+      if (r.section === 'cost' && v === 'Save') { var cn = note.replace(/^£\s*/, ''); if (!/^\d+(\.\d{1,2})?$/.test(cn)) return banner('Type what you paid for one, in pounds, for example 4.50. Or tap Own item if it was yours.'); note = cn; }
       if (r.section === 'offer') {                                                           // % box (data-note) + min profit box (data-min)
         var pc = note, mb = document.querySelector('[data-min="' + r.key + '"]'), mn = mb ? mb.value.trim() : '';
         if (pc && !(Number(pc) >= 5 && Number(pc) <= 90)) return banner('Type a % between 5 and 90, or leave it blank for ' + detail(r).pct + '%.');
