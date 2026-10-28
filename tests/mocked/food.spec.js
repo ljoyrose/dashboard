@@ -372,10 +372,46 @@ test.describe('GA Hub house look', () => {
     await sheets(page, b);
     await open(page, '#/products');
     await page.locator('[data-filter="all"]').click();
-    const sizes = await page.evaluate(() => [...document.querySelectorAll('.cnt, nav.tabs .n')].filter((e) => e.getBoundingClientRect().width > 1).map((e) => {
-      const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.justifyContent, s.lineHeight]; }));
+    const measure = () => page.evaluate(() => [...document.querySelectorAll('.cnt, nav.tabs .n')].filter((e) => e.getBoundingClientRect().width > 1).map((e) => {
+      const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.justifyContent, s.lineHeight, e.scrollWidth <= e.clientWidth]; }));
+    let sizes = await measure();
     expect(sizes.map((x) => x[0]).sort()).toEqual(['1', '13', '2', '2']);   // product groups 2 and 1, Home 13 (two digits), Orders 2
-    for (const x of sizes) expect(x.slice(1), 'count ' + x[0]).toEqual([30, 22, '11px', 'center', '20px']);
+    for (const x of sizes) expect(x.slice(1), 'count ' + x[0]).toEqual([30, 22, '11px', 'center', '20px', true]);
+    // The same with a wider fallback font (as on a machine without Lexend): the box stays exactly 30 x 22 and two digits still fit.
+    await page.addStyleTag({ content: '.cnt, nav.tabs .n { font-family: "DejaVu Sans", Verdana, sans-serif !important; }' });
+    sizes = await measure();
+    for (const x of sizes) expect(x.slice(1), 'wide font, count ' + x[0]).toEqual([30, 22, '11px', 'center', '20px', true]);
+  });
+
+  for (const look of ['warm', 'cool']) {
+    test(`${look} clear: the control line is 3:1 or better on the page and on a card (light mode, where it is faintest)`, async ({ page }) => {
+      await page.addInitScript((bg) => localStorage.setItem('dash-look', JSON.stringify({ bg })), look);
+      await page.emulateMedia({ colorScheme: 'light' });
+      await sheets(page, book());
+      await open(page);
+      const r = await page.evaluate(() => {
+        const probe = (v) => { const d = document.createElement('i'); d.style.color = 'var(' + v + ')'; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
+        const rgb = (s) => { const m = /\(srgb ([^)]+)\)|\(([^)]+)\)/.exec(s), v = (m[1] || m[2]).split(/[ ,/]+/).filter(Boolean).map(Number), k = m[1] ? 255 : 1; return [v[0] * k, v[1] * k, v[2] * k]; };
+        const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+        const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+        const ctl = rgb(probe('--ctl'));
+        return { page: ratio(ctl, rgb(probe('--bg'))), card: ratio(ctl, rgb(probe('--surface'))), btn: getComputedStyle(document.querySelector('#view .btn')).borderTopColor === probe('--ctl') };
+      });
+      expect(r.page).toBeGreaterThanOrEqual(3);
+      expect(r.card).toBeGreaterThanOrEqual(3);
+      expect(r.btn).toBe(true);
+    });
+  }
+
+  test('count pills: only 3+ digits grow past 30px', async ({ page }) => {
+    const b = book(); for (let i = 0; i < 120; i++) b.cards.push(['CHK-' + i, 'check', 'Orders', 'Sample check ' + i, '{}', ago(1)]);
+    await sheets(page, b);
+    await open(page);
+    await expect(page.locator('#n-home')).toHaveText('123');
+    await expect(page.locator('#n-home')).toHaveClass(/wide/);
+    await expect(page.locator('#n-orders')).not.toHaveClass(/wide/);
+    const w = await page.locator('#n-home').evaluate((e) => [e.getBoundingClientRect().width, e.scrollWidth <= e.clientWidth]);
+    expect(w[0]).toBeGreaterThan(30); expect(w[1]).toBe(true);
   });
 
   test('no solid colour fills: counts, badges, date pills, amounts and the chosen filter are rings or light tints', async ({ page }) => {
