@@ -904,8 +904,11 @@ test.describe('Studio page', () => {
     }
     const need = await look('nav.tabs #nMe');
     expect(need).toMatchObject({ b: '1px solid', bc: 'rgb(230, 68, 61)', bg: 'rgb(252, 228, 224)', w: '700' }); // rose edge (--ljr-2) and tint, never solid
-    const step = await look('.col-head .num');
-    expect(step.bc, 'a step keeps its stage colour').not.toBe(ink);
+    // Steps are words, not ringed numbers: the only ringed number in a column head is its count.
+    await expect(page.locator('.col[data-stage="5"] .col-head .step')).toHaveText('Step 5:');
+    await expect(page.locator('.col[data-stage="5"] .col-head .cnt')).toHaveAttribute('aria-label', /^\d+ items$/);
+    await expect(page.locator('.col-head .num')).toHaveCount(0);
+    await expect(page.locator('#fpanel [data-fx="st"]').first()).toContainText('Step ');
     await expect(page.locator('.col-foot b').first()).toHaveCSS('border-top-style', 'none'); // inside a sentence: bold text
   });
 
@@ -915,6 +918,8 @@ test.describe('Studio page', () => {
     const ink = await page.evaluate(() => getComputedStyle(document.body).color);
     const done = await st('.stage.d .n'), cur = await st('.stage.c .n'), fut = await st('.stage:not(.d):not(.c) .n');
     expect(done).toMatchObject({ w: '1px', color: ink, text: '✓' });
+    await expect(page.locator('.stage.c')).toContainText('Step 5:');
+    await expect(page.locator('.hero .step')).toHaveText('Step 5:');
     expect(done.bg).not.toBe('rgba(0, 0, 0, 0)'); // light green tint
     expect(cur).toMatchObject({ w: '1px', color: ink });
     expect(fut).toMatchObject({ w: '1px', bg: 'rgba(0, 0, 0, 0)' });

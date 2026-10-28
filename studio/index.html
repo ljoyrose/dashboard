@@ -111,7 +111,6 @@
   .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); border-radius: 999px; padding: 3px 10px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
   .pill.warn { border-color: var(--ljr-3); } .pill.bad { border-color: var(--ljr-2); } .pill.ok .ti { color: var(--ljr-5-text); }
-  .pill.stg { border-color: var(--c); min-width: 34px; justify-content: center; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; display: inline-block; }
   .grp { font-size: 16px; font-weight: 700; margin: 0 0 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .grp .st { font-size: 13px; font-weight: 600; color: var(--muted); }
@@ -140,12 +139,11 @@
   .room .grp { margin: 0; font-size: 15px; }
   .room .stn { font-size: 13px; color: var(--muted); margin-top: -6px; }
   .hero { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; }
-  .disc { width: 42px; height: 42px; border-radius: 50%; background: color-mix(in srgb, var(--c) 16%, var(--card)); border: 1px solid var(--c); color: var(--ink); display: flex; align-items: center; justify-content: center; font-weight: 700; flex: none; }
   .hero h2 { margin: 0; font-size: 20px; }
   .hero p { margin: 0; color: var(--muted); font-size: 14px; }
   .stage { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
   /* Steps: outlined, never solid. Done = green ring + tint + ✓; current = purple ring + tint, label bold; future = grey ring, muted number. */
-  .stage .n { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: transparent; border: 1px solid var(--line); color: var(--muted); flex: none; }
+  .stage .n { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; background: transparent; border: 1px solid var(--line); color: var(--muted); flex: none; }
   .stage.d .n { background: var(--ljr-5-tint); border-color: var(--ljr-5); color: var(--ink); }
   .stage.c .n { background: var(--ljr-7-tint); border-color: var(--ljr-7); color: var(--ink); }
   .stage.c { font-weight: 700; }
@@ -276,8 +274,9 @@
   .col { flex: 0 0 280px; display: flex; flex-direction: column; min-height: 0; background: var(--canvas); border: 1px solid var(--bd); border-radius: var(--radius); overflow: hidden; scroll-snap-align: start; }
   .col-head { flex: none; position: relative; display: flex; align-items: center; gap: 8px; padding: 8px 12px; min-height: 40px; font-weight: 600; background: var(--band); border-bottom: 1px solid var(--bd); }
   .col-head::before { content: ""; position: absolute; top: 0; left: 14px; right: 14px; height: 3px; border-radius: 0 0 3px 3px; background: var(--sc); } /* stage colour as a short tab: never touches the corners */
-  .col-head .num { width: 26px; height: 26px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 13px; border: 1px solid var(--sc); flex: none; }
-  .col-head .num .ti { font-size: 15px; color: var(--ink); }
+  .step { color: var(--muted); font-weight: 600; white-space: nowrap; } /* stage numbers in words, never in a circle */
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .col-head .hico .ti { font-size: 16px; color: var(--ink); }
   .col-head .lab { color: var(--ink); min-width: 0; overflow-wrap: anywhere; } /* colour only in the ring and the top line */
   .col-head .cnt { margin-left: auto; }
   .col-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; }
@@ -724,7 +723,7 @@
         (S.accounts.length > 1 ? row('acct', fchip('acct', '', 'All', !s.acct.length) + S.accounts.map(function (x) { return fchip('acct', x.id, I(x.kind === 'client' ? 'briefcase' : 'home') + ' ' + esc(x.name) + ' ' + cnt(ac[x.id] || 0), s.acct.indexOf(x.id) >= 0); }).join('')) : '') +
         (bids.length > 1 || s.brand.length ? row('brand', fchip('brand', '', 'All', !s.brand.length) + bids.map(function (id) { var b = brand(id); return fchip('brand', id, '<span class="dot" style="--c:' + col(b.colour) + '"></span>' + esc(b.name) + ' ' + cnt(bc[id] || 0), s.brand.indexOf(id) >= 0); }).join('')) : '') +
         (th.length > 1 || s.type.length ? row('type', th.map(function (t) { return fchip('type', t[0], I(t[1]) + ' ' + t[2] + ' ' + cnt(tc[t[0]] || 0), s.type.indexOf(t[0]) >= 0); }).join('')) : '') +
-        row('st', STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), String(i), s.st.indexOf(String(i)) >= 0, ' stg', ' style="--c:' + col(stSlot(i)) + '" title="' + name + '"') : ''; }).join('')) +
+        row('st', STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), '<span class="step">Step ' + i + ':</span> ' + name + ' ' + cnt(sc[i] || 0), s.st.indexOf(String(i)) >= 0) : ''; }).join('')) +
         row('who', WHO.filter(function (w) { return wc[w[0]] || s.who.indexOf(w[0]) >= 0; }).map(function (w) { return fchip('who', w[0], I(w[2]) + ' ' + w[1] + ' ' + cnt(wc[w[0]] || 0), s.who.indexOf(w[0]) >= 0); }).join('')) +
         row('fit', [['auto', 'Auto', 'robot'], ['hand', 'Manual', 'hand-finger']].filter(function (x) { return fc[x[0]] || s.fit.indexOf(x[0]) >= 0; }).map(function (x) { return fchip('fit', x[0], I(x[2]) + ' ' + x[1] + ' ' + cnt(fc[x[0]] || 0), s.fit.indexOf(x[0]) >= 0); }).join('')) +
         row('ev', [['evergreen', 'Evergreen', 'leaf'], ['dated', 'Dated', 'calendar-event']].filter(function (x) { return ec[x[0]] || s.ev.indexOf(x[0]) >= 0; }).map(function (x) { return fchip('ev', x[0], I(x[2]) + ' ' + x[1] + ' ' + cnt(ec[x[0]] || 0), s.ev.indexOf(x[0]) >= 0); }).join('')) +
@@ -913,11 +912,12 @@
   // Board: one column per stage (Line) or per decision (Decide). Head and foot stay put; the list scrolls inside the column.
   // On a desktop the details of the picked card open on the right; on the phone they open under the card.
   var sideOn = false;
+  function icnt(n) { return '<span class="cnt" aria-label="' + n + ' items">' + n + '</span>'; }
   function needsYou(a) { var k = kindFor(a); return k === 'gate' || k === 'review' || k === 'hand' || a.flags.indexOf('needs-input') >= 0; }
   function column(o) {
     var need = o.need != null ? o.need : o.items.filter(needsYou).length, ai = o.items.reduce(function (t, a) { return t + (Number(a.cost) || 0); }, 0);
     return '<section class="col" ' + o.attr + ' style="--sc:var(--ljr-' + o.slot + ');--sct:var(--ljr-' + o.slot + '-text)">' +
-      '<div class="col-head"><span class="num">' + o.badge + '</span><span class="lab">' + o.name + '</span>' + cnt(o.n != null ? o.n : o.items.length) + '</div>' +
+      '<div class="col-head">' + (o.step != null ? '<span class="lab"><span class="step">Step ' + o.step + ':</span> ' + o.name + '</span>' : '<span class="hico">' + o.badge + '</span><span class="lab">' + o.name + '</span>') + icnt(o.n != null ? o.n : o.items.length) + '</div>' +
       '<div class="col-list">' + (o.body || '<p class="muted">Nothing here.</p>') + '</div>' +
       '<div class="col-foot"><span><b>' + need + '</b> need you</span><span>' + money(ai) + ' AI</span></div></section>';
   }
@@ -934,7 +934,7 @@
     var s = fsOf('line'), show = sortA(inProgress().filter(function (a) { return hit(a, s); }), s.sort);
     return findBar('line', inProgress()) + board('line', [1, 2, 3, 4, 5, 6, 7].map(function (n) {
       var l = show.filter(function (a) { return a.stage === n; });
-      return { attr: 'data-stage="' + n + '"', slot: stSlot(n), badge: n, name: STAGES[n], items: l, body: l.map(function (a) { return row(a, kindFor(a), true); }).join('') };
+      return { attr: 'data-stage="' + n + '"', slot: stSlot(n), step: n, name: STAGES[n], items: l, body: l.map(function (a) { return row(a, kindFor(a), true); }).join('') };
     }));
   }
   // Keep each column's place when the page redraws (a click redraws everything).
@@ -992,9 +992,9 @@
   function vAsset(id) {
     var a = byId(id); if (!a) return '<div class="card">Not found. <a href="#/assets">Assets</a></div>';
     var b = brandOf(a);
-    return '<div class="card appcard"><div class="hero" style="--c:' + col(stSlot(a.stage)) + '"><div class="disc">' + esc(+a.stage) + '</div><div><h2>' + esc(bare(a)) + '</h2><p>' + esc(b.name + ' · ' + STAGES[a.stage]) + '</p></div></div>' +
+    return '<div class="card appcard"><div class="hero"><div><h2>' + esc(bare(a)) + '</h2><p>' + esc(b.name) + ' · <span class="step">Step ' + esc(+a.stage) + ':</span> ' + esc(STAGES[a.stage]) + '</p></div></div>' +
       row(a, kindFor(a)) +
-      STAGES.map(function (name, i) { return '<div class="stage ' + (i < a.stage ? 'd' : i === a.stage ? 'c' : '') + '"><span class="n">' + (i < a.stage ? '\u2713' : i) + '</span>' + name + '</div>'; }).join('') +
+      STAGES.map(function (name, i) { return '<div class="stage ' + (i < a.stage ? 'd' : i === a.stage ? 'c' : '') + '"><span class="n" aria-hidden="true">' + (i < a.stage ? '\u2713' : i === a.stage ? '\u25cf' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i < a.stage ? ' <span class="sr">done</span>' : i === a.stage ? ' <span class="sr">now</span>' : '') + '</div>'; }).join('') +
       '<p><a href="#/assets">← Assets</a></p></div>';
   }
   // Brand kit from the BRANDS Sheet: colour swatches, fonts, Canva kit and the Sheet row. Never a link built from an id.
