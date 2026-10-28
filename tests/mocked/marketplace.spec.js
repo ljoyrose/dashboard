@@ -761,7 +761,7 @@ function auditLook() {
     // The resting line is 3:1 on what is behind it AND on the page itself (the brief; Lisa's 8A7F70 warm / 7A8692 cool).
     const behind = [bgOf(el.parentElement)].concat(el.closest('header') ? [] : [rgb(getComputedStyle(document.body).backgroundColor)]);
     for (const b of behind) if (ratio(edge, b) < 3) out.push(`pressable edge ${ratio(edge, b).toFixed(2)}:1, under 3:1: ${name(el)}`);
-    const bg = rgb(s.backgroundColor); if (bg[3] > 0.5 && !matchMedia('(prefers-color-scheme: dark)').matches && lum(bg) < 0.6) out.push(`solid fill on ${name(el)}`);
+    const bg = rgb(s.backgroundColor); if (!el.closest('header') && bg[3] > 0.5 && !matchMedia('(prefers-color-scheme: dark)').matches && lum(bg) < 0.6) out.push(`solid fill on ${name(el)}`);
   }
   if (lines.size > 1) out.push(`pressables rest on ${lines.size} different lines: ${[...lines].join(' | ')}`);
   // Read-only markers: counts, date pills, parcel numbers: never a solid colour fill (tints only).
@@ -810,31 +810,68 @@ test.describe('Marketplace house look', () => {
     }
   }
 
-  test('hover turns the same 1px edge ink (outline 1px, offset -1px) and nothing moves or resizes; read-only pills have no hover', async ({ page }) => {
+  // HOUSE HOVER RULE (Lisa 28 Oct): neutral = 1px ink line inside + muted tint; meaning-coloured = a line + tint of ITS colour,
+  // never ink. Selected = hover. Nothing moves; read-only pills have no hover.
+  const hoverLook = (el) => el.evaluate((e) => {
+    const c = getComputedStyle(e), probe = (v) => { const s = document.createElement('span'); s.style.color = v; e.appendChild(s); const x = getComputedStyle(s).color; s.remove(); return x; };
+    return { style: c.outlineStyle, width: c.outlineWidth, offset: c.outlineOffset, line: c.outlineColor, bg: c.backgroundColor,
+      ink: probe('var(--ink)'), ok: probe('var(--ok)'), need: probe('var(--need)'), tc: probe('var(--tc)'), surface: getComputedStyle(document.querySelector('#view .card') || document.body).backgroundColor };
+  });
+  const chan = (c) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)/.exec(c); return m ? [m[1] * 255, m[2] * 255, m[3] * 255] : (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number); };
+  test('hover: neutral controls get a 1px ink line inside + a muted tint; nothing moves or resizes; read-only pills have no hover', async ({ page }) => {
     await lookSheets(page);
     await open(page, '#/do');
-    const ink = await page.evaluate(() => getComputedStyle(document.body).color);
-    for (const sel of ['[data-ans="RM|1"]', '#view [data-action="pack"]', '#view .chip[data-site]', '#refresh']) {
+    for (const sel of ['#view a.btn[href*="vinted"]', '#view [data-action="pack"]', '#view .chip[data-site]:not([aria-pressed="true"])']) {
       const el = page.locator(sel).first();
-      const before = await el.boundingBox();
+      const before = await el.boundingBox(), rest = await hoverLook(el);
       await el.hover();
-      const s = await el.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineStyle, c.outlineWidth, c.outlineOffset, c.outlineColor]; });
-      expect(s.slice(0, 3), sel).toEqual(['solid', '1px', '-1px']);
-      if (sel !== '#refresh') expect(s[3], sel).toBe(ink);
+      const h = await hoverLook(el);
+      expect([h.style, h.width, h.offset], sel).toEqual(['solid', '1px', '-1px']);
+      expect(h.line, `${sel}: neutral hover line is ink`).toBe(h.ink);
+      expect(h.bg, `${sel}: a muted tint appears`).not.toBe(rest.bg);
       expect(await el.boundingBox(), `${sel} moved or resized on hover`).toEqual(before);
     }
-    for (const sel of ['#view .cnt', '#view .date', '#view .pid']) {
-      const el = page.locator(sel).first();
+    // Selected looks the same as hover.
+    const sel = await hoverLook(page.locator('#view .chip[data-site][aria-pressed="true"]'));
+    expect([sel.style, sel.width, sel.offset, sel.line === sel.ink]).toEqual(['solid', '1px', '-1px', true]);
+    for (const s of ['#view .cnt', '#view .date', '#view .pid']) {
+      const el = page.locator(s).first();
       await el.hover();
-      expect(await el.evaluate((e) => getComputedStyle(e).outlineStyle), sel).toBe('none');
+      expect(await el.evaluate((e) => getComputedStyle(e).outlineStyle), s).toBe('none');
     }
-    // Tabs: no ring; the colour bar widens on hover, the tab itself keeps its size.
+  });
+
+  test('hover: meaning-coloured controls keep their OWN colour (line + pale tint of it, never ink): green Yes, rose No', async ({ page }) => {
+    await lookSheets(page);
+    await open(page, '#/decide');
+    for (const [s, key, lean] of [['[data-ans="GO|1"][data-v="Yes"]', 'ok', 'green'], ['[data-ans="GO|1"][data-v="No"]', 'need', 'red']]) {
+      const el = page.locator(s), before = await el.boundingBox(), rest = await hoverLook(el);
+      await el.hover();
+      const h = await hoverLook(el);
+      expect([h.style, h.width, h.offset], s).toEqual(['solid', '1px', '-1px']);
+      expect(h.line, `${s}: line keeps its colour`).toBe(h[key]);
+      expect(h.line, `${s}: never ink`).not.toBe(h.ink);
+      expect(h.bg, `${s}: a tint appears`).not.toBe(rest.bg);
+      const [r, g] = chan(h.bg);
+      if (lean === 'green') expect(g, `${s}: tint is green`).toBeGreaterThan(r); else expect(r, `${s}: tint is rose`).toBeGreaterThan(g);
+      expect(await el.boundingBox(), `${s} moved`).toEqual(before);
+    }
+  });
+
+  test('bottom tabs are exempt: no ring or tint on hover or when selected; the colour bar widens and nothing moves', async ({ page }) => {
+    await lookSheets(page);
+    await open(page, '#/decide');
     const tab = page.locator('#tabs a[data-nav="reply"]'), box = await tab.boundingBox();
-    const w0 = await tab.locator('.bar').evaluate((e) => e.getBoundingClientRect().width);
+    const w0 = await tab.locator('.bar').evaluate((e) => e.getBoundingClientRect().width), rest = await hoverLook(tab);
     await tab.hover();
     await expect.poll(() => tab.locator('.bar').evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(w0);
-    expect(await tab.evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
+    const h = await hoverLook(tab);
+    expect(h.style).toBe('none');
+    expect(h.bg, 'no tint on a tab').toBe(rest.bg);
     expect(await tab.boundingBox()).toEqual(box);
+    const cur = page.locator('#tabs a[aria-current="page"]'), c = await hoverLook(cur);
+    expect(c.style).toBe('none'); expect(c.bg).toBe(rest.bg);
+    expect(await cur.locator('.bar').evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(w0);
   });
 
   test('count pills are one exact box (30 x 22) for 1 and 2 digits even in a wider fallback font; only 3+ digits grow', async ({ page }) => {

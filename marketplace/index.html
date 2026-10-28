@@ -90,12 +90,17 @@
   .chips { display: flex; gap: 8px; flex-wrap: wrap; }
   .chips.people { padding: 0 16px 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   /* Selected = the same 1px edge turned ink (an outline laid exactly over it), never a fill. */
-  .chip[aria-pressed="true"], .chip.on { outline: 1px solid var(--ink); outline-offset: -1px; }
-  header .chip[aria-pressed="true"] { outline-color: var(--frame-ink); }
+  /* HOUSE HOVER RULE (Lisa 28 Oct). Neutral controls: a 1px ink line drawn inside + a pale muted tint. Meaning-coloured
+     controls (green Yes/Done, rose No) keep THEIR colour: a 1px line in it + a pale tint of it, never ink.
+     Selected looks the same as hover. Nothing moves; keyboard focus stays the 2px ink ring; read-only pills have no hover. */
+  .chip[aria-pressed="true"], .chip.on { outline: 1px solid var(--ink); outline-offset: -1px; background-color: color-mix(in srgb, var(--muted) 14%, var(--surface)); }
+  header .chip[aria-pressed="true"] { outline-color: var(--frame-ink); background-color: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); }
   @media (hover: hover) {
-    .btn:hover, .chip:hover, a.tile:hover, button.tile:hover, .more:hover, details > summary:hover, .pair figure > a:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
-    header .btn:hover, header .chip:hover { outline-color: var(--frame-ink); }
-    html.dash-locked header .btn:hover { outline-color: var(--ink); }
+    .btn:hover, .chip:hover, a.tile:hover, button.tile:hover, .more:hover, details > summary:hover, .pair figure > a:hover { outline: 1px solid var(--ink); outline-offset: -1px; background-color: color-mix(in srgb, var(--muted) 14%, var(--surface)); }
+    .btn.yes:hover { outline-color: var(--ok); background-color: color-mix(in srgb, var(--ok) 14%, var(--surface)); }
+    .btn.no:hover { outline-color: var(--need); background-color: color-mix(in srgb, var(--need) 14%, var(--surface)); }
+    header .btn:hover, header .chip:hover { outline-color: var(--frame-ink); background-color: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); }
+    html.dash-locked header .btn:hover { outline-color: var(--ink); background-color: color-mix(in srgb, var(--muted) 14%, var(--surface)); }
   }
   /* Keyboard focus: a 2px ink ring (the one exception to 1px). */
   a:focus, button:focus, summary:focus { outline: none; }
@@ -109,6 +114,7 @@
   nav.tabs a { --tc: var(--ljr-0); position: relative; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--surface); min-height: 56px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); padding: 4px 2px; text-align: center; }
   nav.tabs a .bar { width: 18px; height: 4px; border-radius: 2px; background: var(--tc); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
   nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
+  /* Bottom tabs are exempt from the house hover rule (Lisa): no ring, no tint; hover and selected = the colour bar widens. */
   @media (hover: hover) { nav.tabs a:hover .bar { width: 40px; opacity: 1; } }
   @media (prefers-reduced-motion: reduce) { nav.tabs a .bar { transition: none; } }
   nav.tabs a > .ti { font-size: 18px; color: var(--ink); }
