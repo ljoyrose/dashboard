@@ -100,12 +100,12 @@ test.describe('Factory find bar', () => {
     await expect(page.locator('.rooms .chip')).toContainText('Sample Links');
   });
 
-  test('stage 0–8: chips outlined in the room colour, one stage at a time or several', async ({ page, guard }) => {
+  test('stage 0–8: chips say "Step N: Name" (words, not a number in a coloured ring), one stage at a time or several', async ({ page, guard }) => {
     await open(page, guard, '#/decide');
     await panel(page);
     const s1 = chip(page, 'st', '1');
     await expect(s1).toHaveAttribute('title', 'Research');
-    expect(await s1.evaluate((el) => getComputedStyle(el).borderTopColor)).not.toBe(await page.locator('#filtersBtn').evaluate((el) => getComputedStyle(el).borderTopColor));
+    await expect(s1).toContainText('Step 1: Research');
     await s1.click();
     await expect(rows(page)).toHaveCount(1);
     await expect(row(page, 'dec000002')).toBeVisible();
@@ -324,7 +324,7 @@ test.describe('Factory single lines', () => {
     await single(page.locator(':focus'));
     // Stage pills in the Filter panel and chips on the New idea form.
     await panel(page);
-    const stg = page.locator('.fpanel .pill.stg').first();
+    const stg = page.locator('.fpanel [data-fx="st"]').first();
     await stg.click();
     await single(page.locator('.fpanel .pill.on'));
     await page.goto('factory/#/new');

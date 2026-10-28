@@ -36,3 +36,39 @@ test.describe('Factory checklist', () => {
     await expect(page.locator('#view .pill .ti-list-check')).toHaveCount(0);
   });
 });
+
+// Steps in words and no solid colour fills (Lisa, 28 Oct 2026): same rule as Studio.
+test.describe('Factory steps', () => {
+  test('an app card says "Step N: Name"; step rings and the stage strip are tint + 1px ring, never solid', async ({ page, guard }) => {
+    await open(page, guard);
+    await page.evaluate(() => { location.hash = '#/card/869fjxpc2'; });
+    await expect(page.locator('.hero .step')).toHaveText('Step 4:');
+    await expect(page.locator('.hero p')).toContainText('Step 4: Schema');
+    await expect(page.locator('.hero .disc')).toHaveCount(0);
+    await expect(page.locator('.stage[data-stage="2"]')).toContainText('Step 2: Base');
+    await expect(page.locator('.stage[data-stage="2"] .n')).toHaveText('✓');
+    await expect(page.locator('.stage[data-stage="4"] .n')).toHaveText('●');
+    const solid = await page.evaluate(() => {
+      const sum = (c) => { const m = c.match(/[\d.]+/g).map(Number), k = /^color\(/.test(c) ? 255 : 1; return m[3] === 0 ? 999 : (m[0] + m[1] + m[2]) * k; };
+      const bad = [];
+      document.querySelectorAll('.stage .n, .strip i').forEach((e) => {
+        const c = getComputedStyle(e), ring = c.borderTopWidth !== '0px' && c.borderTopStyle !== 'none' ? c.borderTopColor : (c.boxShadow.match(/rgba?\([^)]*\)/) || [''])[0];
+        if (ring && c.backgroundColor !== 'rgba(0, 0, 0, 0)' && sum(c.backgroundColor) <= sum(ring)) bad.push(e.className + ' ' + c.backgroundColor);
+      });
+      return bad;
+    });
+    expect(solid).toEqual([]);
+  });
+});
+
+// Factory tab counts match Studio's needs-you counts (Lisa, 28 Oct 2026); the unread dot and switch knob stay solid on purpose.
+test.describe('Factory tab counts', () => {
+  test('tab counts are an exact 30x22 amber ring with a tint and an ink number, never solid', async ({ page, guard }) => {
+    await open(page, guard);
+    const n = page.locator('#nMe');
+    const st = await n.evaluate((e) => { const c = getComputedStyle(e), b = e.getBoundingClientRect(); return { w: Math.round(b.width * 100) / 100, h: Math.round(b.height), bw: c.borderTopWidth, bc: c.borderTopColor, bg: c.backgroundColor, col: c.color, ink: getComputedStyle(document.body).color }; });
+    expect([st.w, st.h, st.bw]).toEqual([30, 22, '1px']);
+    expect(st.bg).not.toBe(st.bc); // a tint, not a solid fill of the ring colour
+    expect(st.col).toBe(st.ink);
+  });
+});
