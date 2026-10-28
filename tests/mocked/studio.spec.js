@@ -721,6 +721,13 @@ test.describe('Studio page', () => {
       return out;
     });
     expect(gaps).toMatchObject({ top: 16, side: 12, right: 12, cols: 12, pad: '12px' });
+    // An empty column is one short "Empty" line, not a tall blank; full columns keep the full height.
+    const empty = page.locator('.col.empty').first(), full = page.locator('.col:not(.empty)').first();
+    await expect(empty.locator('.col-list')).toHaveText('Empty');
+    const eh = (await empty.boundingBox()).height, fh = (await full.boundingBox()).height;
+    expect(eh).toBeLessThan(160);
+    expect(fh).toBeGreaterThan(eh + 100);
+    expect((await empty.boundingBox()).width).toBe(280);
     if (gaps.between !== undefined) expect(gaps.between).toBe(12);
     await expect(page.locator('.col[data-stage="1"] .col-foot')).toContainText('need you');
     await expect(page.locator('.col[data-stage="1"] .col-foot')).toContainText('AI');

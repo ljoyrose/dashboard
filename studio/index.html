@@ -288,7 +288,10 @@
   .col-list .crow .ttl { font-weight: 600; font-size: 16px; }
   .col-list .crow.sel { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: linear-gradient(var(--sel-fill), var(--sel-fill)) var(--card); }
   .col-list .crow.sel::after { content: "\2713"; position: absolute; top: -8px; right: -6px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 600; background: var(--card); color: var(--ink); border: 2px solid var(--sel-bd); }
-  .col-list > .muted { padding: 4px; margin: 0; }
+  /* An empty column shrinks to one short line; full columns keep the full height. */
+  .col.empty { align-self: flex-start; }
+  .col.empty .col-list { flex: none; }
+  .cempty { margin: 0; font-size: 13px; color: var(--muted); }
   .col-foot { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 45px; padding: 4px 12px; font-size: 14px; line-height: 18px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); }
   .col-foot b { color: var(--ink); }
   .side { flex: 0 0 380px; min-width: 0; overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -957,9 +960,9 @@
   function needsYou(a) { var k = kindFor(a); return k === 'gate' || k === 'review' || k === 'hand' || a.flags.indexOf('needs-input') >= 0; }
   function column(o) {
     var need = o.need != null ? o.need : o.items.filter(needsYou).length, ai = o.items.reduce(function (t, a) { return t + (Number(a.cost) || 0); }, 0);
-    return '<section class="col" ' + o.attr + ' style="--sc:var(--ljr-' + o.slot + ');--sct:var(--ljr-' + o.slot + '-text)">' +
+    return '<section class="col' + (o.body ? '' : ' empty') + '" ' + o.attr + ' style="--sc:var(--ljr-' + o.slot + ');--sct:var(--ljr-' + o.slot + '-text)">' +
       '<div class="col-head">' + (o.step != null ? '<span class="lab"><span class="step">Step ' + o.step + ':</span> ' + o.name + '</span>' : '<span class="hico">' + o.badge + '</span><span class="lab">' + o.name + '</span>') + icnt(o.n != null ? o.n : o.items.length) + '</div>' +
-      '<div class="col-list">' + (o.body || '<p class="muted">Nothing here.</p>') + '</div>' +
+      '<div class="col-list">' + (o.body || '<p class="cempty">Empty</p>') + '</div>' +
       '<div class="col-foot"><span><b>' + need + '</b> need you</span><span>' + money(ai) + ' AI</span></div></section>';
   }
   function board(tab, cols) {
