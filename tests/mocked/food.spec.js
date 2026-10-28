@@ -354,7 +354,7 @@ test.describe('GA Hub house look', () => {
     }
   });
 
-  test('read-only pills (counts, badges, date pills, amounts) have no hover; a bottom tab on hover gets its own colour line and tint and its bar widens, nothing moves', async ({ page }) => {
+  test('read-only pills (counts, badges, date pills, amounts) have no hover; the bottom tabs have no ring, only the colour bar widens', async ({ page }) => {
     const b = book(); b.invoices[1][8] = '2026-01-01';   // an unpaid invoice that is long overdue
     await sheets(page, b);
     await open(page, '#/invoices');
@@ -372,17 +372,18 @@ test.describe('GA Hub house look', () => {
     const before = await tab.boundingBox();
     await tab.hover();
     await expect.poll(() => tab.locator('.bar').evaluate((e) => e.getBoundingClientRect().width)).toBe(40);
-    expect(await tab.evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('solid');
+    expect(await tab.evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
+    expect(await page.locator('nav.tabs a[aria-current="page"]').evaluate((e) => getComputedStyle(e).outlineStyle), 'current tab').toBe('none');
     expect(await tab.boundingBox()).toEqual(before);
   });
 
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: meaning-coloured controls (Apply, Not now, each tab) keep their OWN colour on hover and when current: own-colour 1px line inside + a pale tint, never ink`, async ({ page }) => {
+    test(`${scheme}: meaning-coloured controls (Apply, Not now) keep their OWN colour on hover: own-colour 1px line inside + a pale tint, never ink (tabs are exempt)`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await sheets(page, book());
       await open(page);
       const ink = await page.evaluate(() => getComputedStyle(document.body).color);
-      const look = (el) => el.evaluate((e) => { const s = getComputedStyle(e), own = s.getPropertyValue(e.matches('.btn') ? '--mc' : '--tl').trim();
+      const look = (el) => el.evaluate((e) => { const s = getComputedStyle(e), own = s.getPropertyValue('--mc').trim();
         const probe = document.createElement('i'); probe.style.color = own; e.appendChild(probe); const oc = getComputedStyle(probe).color; probe.remove();
         return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, own: oc, bg: s.backgroundColor }; });
       const check = (l, what) => {
@@ -395,11 +396,6 @@ test.describe('GA Hub house look', () => {
       for (const v of ['Apply', 'Not now']) {
         const b = page.locator(`#view > .card button[data-v="${v}"]`);
         await b.hover(); check(await look(b), v);
-      }
-      check(await look(page.locator('nav.tabs a[data-nav="home"]')), 'current tab');   // selected looks the same as hover
-      for (const t of ['orders', 'invoices', 'products', 'ga']) {
-        const a = page.locator(`nav.tabs a[data-nav="${t}"]`);
-        await a.hover(); check(await look(a), 'tab ' + t);
       }
     });
   }
