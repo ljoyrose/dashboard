@@ -24,7 +24,8 @@ const goTab = async (page, key, title) => {
 
 // Shared page helpers: colour parsing and WCAG contrast, run inside the browser.
 const HELPERS = () => {
-  const rgb = (s) => { const m = String(s).match(/[\d.]+/g); return m ? { r: +m[0], g: +m[1], b: +m[2], a: m[3] == null ? 1 : +m[3] } : null; };
+  const rgb = (s) => { s = String(s); const srgb = /^color\(srgb/.test(s); const m = s.replace(/^color\(srgb/, '').match(/[\d.]+/g); if (!m) return null; // color-mix() computes to color(srgb 0-1 ...)
+    const k = srgb ? 255 : 1; const a = srgb ? (s.includes('/') ? +m[3] : 1) : (m[3] == null ? 1 : +m[3]); return { r: +m[0] * k, g: +m[1] * k, b: +m[2] * k, a }; };
   const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c.r) + 0.7152 * f(c.g) + 0.0722 * f(c.b); };
   const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
   const bgOf = (el) => { for (let e = el; e; e = e.parentElement) { const c = rgb(getComputedStyle(e).backgroundColor); if (c && c.a > 0.5) return c; } return rgb(getComputedStyle(document.body).backgroundColor); };
@@ -113,6 +114,54 @@ test.describe('Home: house look', () => {
         const after = await el.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineStyle, c.borderTopColor, c.backgroundColor].join('|'); });
         expect(after, sel + ' changed on hover').toBe(before);
       }
+    });
+  }
+
+  // House hover rule (28 Oct): a meaning-coloured control keeps its own colour on hover (1px line inside + pale tint of it), never ink;
+  // a neutral control gets the 1px ink line + a pale muted tint. Checked in light and dark.
+  for (const scheme of ['light', 'dark']) {
+    test(`${scheme}: hover keeps a coloured control in its own colour (line + pale tint, never ink); neutral = ink line + muted tint`, async ({ page }) => {
+      await page.emulateMedia({ colorScheme: scheme });
+      await page.goto('./');
+      await signIn(page);
+      await page.evaluate(HELPERS);
+      const check = async (sel, coloured) => {
+        const el = page.locator(sel).first();
+        await expect(el, sel).toBeVisible();
+        await el.scrollIntoViewIfNeeded();
+        await el.hover(); await page.waitForTimeout(120);
+        return el.evaluate((e, coloured) => {
+          const L = window.__look, c = getComputedStyle(e), root = getComputedStyle(document.documentElement);
+          const col = (v) => { const d = document.createElement('i'); d.style.color = v; document.body.appendChild(d); const x = getComputedStyle(d).color; d.remove(); return x; };
+          const ink = getComputedStyle(document.body).color, card = col(root.getPropertyValue('--card').trim());
+          const hc = col(c.getPropertyValue('--hc').trim() || 'transparent');
+          const bg = L.rgb(c.backgroundColor), cardRgb = L.rgb(card);
+          return { outline: c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineOffset, oc: c.outlineColor, ink, bg: c.backgroundColor, card, hc,
+            pale: bg.a === 1 && c.backgroundColor !== card && L.ratio(bg, cardRgb) < 1.6, coloured };
+        }, coloured);
+      };
+      const coloured = [['a.ment.bad', 'rose money entity'], ['a.ment:not(.bad)', 'copper money entity'], ['a.hometile.slot7', 'purple Changes tile']];
+      const more = [['#view a.morelink.slotfin', 'Money Hub'], ['#view a.morelink.slot4', 'PC-Personal'], ['#view a.morelink.slot7', 'Factory'], ['#view a.morelink.slotsales', 'Marketplace']];
+      const run = async (list) => { for (const [sel, name] of list) {
+        const r = await check(sel, true);
+        expect(r.outline, name).toBe('solid 1px -1px');
+        expect(r.oc, name + ': hover line is not ink').not.toBe(r.ink);
+        expect(r.bg, name + ': not solid').not.toBe(r.hc);
+        expect(r.bg, name + ': not white / plain card').not.toBe(r.card);
+        expect(r.pale, name + ': a pale tint ' + r.bg).toBe(true);
+      } };
+      await run(coloured);
+      for (const sel of ['#urgentOne a.btn', 'a.keytile', 'a.hometile.slot0']) {
+        const r = await check(sel, false);
+        expect([r.outline, r.oc], sel + ': neutral hover = ink line').toEqual(['solid 1px -1px', r.ink]);
+        expect(r.pale && r.bg !== r.card, sel + ': muted tint ' + r.bg).toBe(true);
+      }
+      await goTab(page, 'more', 'More');
+      await run(more);
+      await goTab(page, 'bin', 'Bin');
+      const allow = page.locator('[data-action="grantwrite"]');
+      if (await allow.count()) { await page.locator('#view details.fold > summary').first().click().catch(() => {}); }
+      if (await allow.isVisible()) await run([['[data-action="grantwrite"]', 'rose Allow Bin actions']]);
     });
   }
 

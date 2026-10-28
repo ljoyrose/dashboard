@@ -82,7 +82,7 @@
   @media (prefers-reduced-motion: reduce) { #view { transition: none; } }
 
   /* Cards: solid = established, dashed = not established. */
-  .card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--slot, var(--s0));
+  .card { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--slot, var(--s0));
           border-radius: 16px; padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: var(--shadow); min-width: 0; }
   .card.sec { border-radius: 12px; }
   .card.pending { border-style: dashed; }
@@ -132,7 +132,7 @@
   .pager .count { font-size: 14px; color: var(--muted); }
   .pager .gap { width: 1px; }
   .subnav { display: flex; flex-wrap: wrap; gap: 8px; }
-  .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 4px solid var(--s7); background: var(--surface); text-decoration: none; font-size: 14px; }
+  .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 3px solid var(--s7); background: var(--surface); text-decoration: none; font-size: 14px; }
   .subnav a[aria-current="page"] { font-weight: 600; background: var(--s7-tint); border-color: var(--s7); }
   .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .stat { background: var(--tint, var(--s0-tint)); border-radius: 12px; padding: 8px 12px; text-align: left; }
@@ -195,12 +195,12 @@
   .mtag.bin { --mc: var(--s8); --mt: var(--s8-tint); } .mtag.bin::before { border-radius: 0; }
   /* Needs you today: one short list, at most 7 rows, each in its LJR7 colour. */
   .needs ol { list-style: none; margin: 8px 0 0; padding: 0; }
-  .needs li { display: flex; gap: 10px; align-items: baseline; padding: 8px 0 8px 10px; border-top: 1px solid var(--line, rgba(0,0,0,.08)); border-left: 4px solid var(--nc, var(--s0)); }
+  .needs li { display: flex; gap: 10px; align-items: baseline; padding: 8px 0 8px 10px; border-top: 1px solid var(--line, rgba(0,0,0,.08)); border-left: 3px solid var(--nc, var(--s0)); }
   .needs li:first-child { border-top: 0; }
   .needs li.n-risk { --nc: var(--s2); } .needs li.n-fin { --nc: var(--fin); } .needs li.n-ops { --nc: var(--ops); } .needs li.n-bin { --nc: var(--s8); }
   .needs .nt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .ments { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
-  .ment { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--fin); border-radius: 12px; padding: 8px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
+  .ment { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--fin); border-radius: 12px; padding: 8px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
   .ment.bad { background: var(--s2-tint); border-left-color: var(--s2); }
   .ment .num { font-size: 26px; font-weight: 600; line-height: 1.2; }
   .ment .who { font-weight: 600; }
@@ -432,6 +432,26 @@
   }
   @media (max-width: 600px) and (hover: hover) { nav.main a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
   html { scroll-padding-bottom: 104px; } body { padding-bottom: 104px; }
+  /* House hover rule (Lisa, 28 Oct). Neutral controls: hover = 1px ink line inside + a pale muted tint. Meaning-coloured controls
+     (rose delete/late, purple AI, copper money, a section's colour) keep THEIR colour: the same 1px line in that colour + a pale tint
+     of it (about 14% into the card colour, dark card in dark mode). Never ink. Selected = the same look. Focus stays the 2px ink ring. */
+  .btn.danger { --hc: var(--ljr-2); --hl: var(--ljr-2); }
+  .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); }
+  a.ment { --hc: var(--ljr-3); --hl: var(--ljr-3); }
+  a.ment.bad { --hc: var(--ljr-2); --hl: var(--ljr-2); }
+  a.morelink.slotfin { --hc: var(--ljr-3); --hl: var(--ljr-3); }
+  a.morelink.slot4 { --hc: var(--ljr-4); --hl: var(--ljr-4-text); }
+  a.morelink.slot7, a.hometile.slot7 { --hc: var(--ljr-7); --hl: var(--ljr-7); }
+  a.morelink.slotsales { --hc: var(--ljr-6); --hl: var(--ljr-6); }
+  .subnav a[aria-current="page"] { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+  @media (hover: hover) {
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.hometile:hover, a.card:hover, a.ment:hover, details.fold > summary:hover, .index .btn:hover {
+      outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+    .btn.danger:hover, .btn.ai:hover, a.ment[class]:hover, a.morelink.slotfin:hover, a.morelink.slot4:hover, a.morelink.slot7:hover, a.morelink.slotsales:hover, a.hometile.slot7:hover {
+      outline: 1px solid var(--hl); outline-offset: -1px; background: color-mix(in srgb, var(--hc) 14%, var(--card)); }
+    header .btn:hover { background: color-mix(in srgb, var(--frame-ink) 12%, var(--frame)); }
+    html.dash-locked header .btn:hover { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+  }
 </style>
 </head>
 <body>
