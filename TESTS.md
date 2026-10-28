@@ -49,11 +49,11 @@ If any of these breaks, the tick turns red and says which page.
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
-| Studio (example data, real data, accounts, groups, bottom tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, clients, results, spec, brand kit, books, feedback, phone, dark, text size, board, Board/List, Look menu, frame, one-row find bar, one line rule, numbers, no solid fills) | `/dashboard/studio/` | 42 |
+| Studio (example data, real data, accounts, groups, bottom tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, clients, results, spec, brand kit, books, feedback, phone, dark, text size, board, Board/List, Look menu, frame, one-row find bar, one line rule, numbers, no solid fills, pill sizes, weights, dark tour, greys follow the background) | `/dashboard/studio/` | 47 |
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 490 checks that must pass (mocked + phone, 28 Oct 2026, Studio clear board).
+That is 495 checks that must pass (mocked + phone, 28 Oct 2026, Studio clear board).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
@@ -88,6 +88,7 @@ That is 490 checks that must pass (mocked + phone, 28 Oct 2026, Studio clear boa
 - Search and sort everywhere: Decide and Do have the find bar; Tools, Kits and Brands have a search box; Tools sorts by name, most used or resets soon; new sorts (due date, priority, name, results) and Where, Series and Kit filters.
 - Board: Line has a column per stage that scrolls inside itself, details open on the right, and the page does not scroll on a desktop; Decide keeps Gates and Review as columns. Board/List is kept per page across a reload; the phone starts on List; a phone board opens details under the card with no sideways scroll. The Look menu changes the page, is stored in `dash-look`, and survives a reload (Mode Dark gives a dark page).
 - Find bar is one row (Search · Filter · Sort): every filter group sits in the Filter panel, active filters show as removable chips, the Filter button counts them, Esc/Done/outside click close it and focus returns, Search keeps focus while typing; on the phone the panel is a sheet above the tabs. Every control type hovers with its 1px edge turning ink (selected the same) and nothing moves.
+- Steps are words ("Step N: Name"), counts wear one ring (needs-you counts rose), no solid colour fills, two pill sizes (24 / 36 / 44 px), one 12px radius, two font weights (400, 600), empty columns shrink, titles stop at two lines. Phone header has one More menu. Dark mode tour (device and Look › Dark, warm and cool): text 4.5:1, rings 3:1. No warm grey on Cool clear.
 - 390px: no sideways scroll on any tab, Kits section, or open form. Dark mode: dark page, every word at least 4.5:1. No text under 13px.
 
 **CD Hub**

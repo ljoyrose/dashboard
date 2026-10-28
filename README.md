@@ -73,4 +73,6 @@ family trees, puppy packs, social graphics, page and email drafts, for every bra
   for the other hubs. No solid colour fills: every edge is 1px; hover and selected turn that edge ink, so nothing thickens or moves.
   Dark frame top and bottom (never black). The find bar is one row (Search · Filter · Sort); Filter opens a panel with every
   filter group, and active filters show as removable chips.
+  Stages read "Step N: Name" (no numbers in circles); counts wear one ring; no solid colour fills; one 12px radius
+  (`--radius`); two pill sizes; two font weights. On the phone the header keeps the status pills and one More menu.
 - Same sign-in, find bar and rules as Factory. TEST stamp until `studio.live` and the state's mode are both LIVE.

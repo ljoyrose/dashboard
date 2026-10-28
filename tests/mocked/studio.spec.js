@@ -1072,6 +1072,31 @@ test.describe('Studio page', () => {
     await check('Look › Dark, phone More menu');
   });
 
+  test('every grey follows the background: no warm grey anywhere on Cool clear (light and dark)', async ({ page, guard }) => {
+    await page.addInitScript(() => { try { localStorage.setItem('dash-look', JSON.stringify({ bg: 'cool' })); } catch (e) {} });
+    const warm = () => page.evaluate(() => {
+      const bad = new Set();
+      const rgb = (c) => { const m = c.match(/[\d.]+/g); if (!m) return null; const n = m.map(Number), k = /^color\(/.test(c) ? 255 : 1; return [n[0] * k, n[1] * k, n[2] * k, n[3] === undefined ? 1 : n[3]]; };
+      document.querySelectorAll('body *').forEach((e) => {
+        if (!e.offsetParent) return;
+        const c = getComputedStyle(e);
+        [c.backgroundColor, c.borderTopColor, c.color].forEach((v) => {
+          const x = rgb(v); if (!x || x[3] < 0.5) return;
+          const spread = Math.max(x[0], x[1], x[2]) - Math.min(x[0], x[1], x[2]);
+          if (spread < 16 && x[0] - x[2] > 6) bad.add(e.className + ' ' + v);
+        });
+      });
+      return [...bad].slice(0, 6);
+    });
+    await open(page, guard, '#/line');
+    await page.locator('.crow[data-row="sa-make"] .ttl').click();
+    await openFilters(page);
+    expect(await warm(), 'Cool clear, light').toEqual([]);
+    await page.keyboard.press('Escape');
+    await page.emulateMedia({ colorScheme: 'dark' });
+    expect(await warm(), 'Cool clear, dark').toEqual([]);
+  });
+
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
     await open(page, guard, '#/line');
     const html = page.locator('html');
