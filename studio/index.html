@@ -371,6 +371,24 @@
   /* Control edges (things you press or read as a chip) use --ctl: the line colour in light, a 3:1 line in dark so every ring shows. */
   .btn, .pill, .ch, .fbtn, .achip, .fbar .sbox, .tag, .seg button, .vsw button, .undo, .lk, .stage .n, .stamp { border-color: var(--ctl); }
   .strip i { box-shadow: inset 0 0 0 1px var(--ctl); }
+  /* Calm rows: date pill (1px ring; rose + tint when late, amber + tint when due within 3 days, else plain muted), one need chip. */
+  .crow .bline .bn { min-width: 0; overflow-wrap: anywhere; }
+  .dpill { margin-left: auto; font-size: 13px; font-weight: 400; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; height: 24px; display: inline-flex; align-items: center; padding: 0 8px; border: 1px solid transparent; border-radius: var(--radius); }
+  .dpill.late { color: var(--ink); border-color: var(--ljr-2); background: var(--ljr-2-tint); }
+  .dpill.soon { color: var(--ink); border-color: var(--ljr-3); background: var(--ljr-3-tint); }
+  .needl { margin-top: 6px; }
+  .crow .tb { display: flex; gap: 10px; align-items: flex-start; }
+  .crow .tbr { flex: 1; min-width: 0; }
+  .pthumb { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); }
+  .pthumb { width: 56px; }
+  .pthumb svg, .pthumb .pimg { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); display: block; object-fit: cover; }
+  .pthumb .fmt { font-size: 13px; line-height: 1.2; color: var(--muted); text-align: center; overflow-wrap: anywhere; }
+  .tag.need { border-color: var(--ljr-2); background: var(--ljr-2-tint); color: var(--ink); }
+  .more-d { display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+  .more-d .icons { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .more-d .l3 { display: flex; align-items: center; gap: 8px; }
+  .more-d .type { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); }
+  .more-d .lk { width: auto; padding: 0 10px; gap: 4px; font-size: 13px; text-decoration: none; }
 </style>
 </head>
 <body>
@@ -909,24 +927,68 @@
         ['Stage', esc(+a.stage) + ' ' + esc(STAGES[a.stage])], ['AI', esc(a.provider)], ['Cost', a.cost != null && a.cost !== '' ? money(a.cost) : ''], ['Rating', a.rating != null ? esc(a.rating) + ' / 5' : ''],
         ['Version', a.stage === 8 ? 'v' + esc(a.version || 1) : ''], ['Changed', a._t ? dmy(a._t) : ''],
         ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
-      body = (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
+      body = rowMore(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
     }
     return '<div class="panel" data-panelbox="' + esc(a.id) + '">' + body + '</div>';
   }
+  // Calm row (Bloodline + Marketplace): brand line with the due-date pill at its end · title · at most ONE need chip ·
+  // the decision buttons. Everything else (who, fit, size, chips, strip, preview, small tools) lives in the details panel.
+  function needOf(a) {
+    var d = a.dated && a.eventDate ? daysTo(a.eventDate) : null;
+    if (d !== null && d < 0 && a.stage < 8) return 'Overdue';
+    if (a.gate && a.gate.question && a.stage < 8) return 'Gate';
+    if (a.stage === 7) return 'Approve';
+    if (a.flags.indexOf('blocked') >= 0) return 'Blocked';
+    if (a.flags.indexOf('needs-input') >= 0) return 'Needs input';
+    if (a.fit === 'HAND' && a.who === 'lisa' && a.stage >= 1 && a.stage < 7) return 'Your task';
+    if (a.flags.indexOf('prompt-unapproved') >= 0) return 'Prompt?';
+    if (a.stage <= 3 && a.stage >= 1 && !(a.legal && a.legal.setId)) return 'Legal set?';
+    return '';
+  }
+  function datePill(a) {
+    if (!(a.dated && a.eventDate)) return '';
+    var d = daysTo(a.eventDate), late = d !== null && d < 0 && a.stage < 8, soon = !late && d !== null && d <= 3 && a.stage < 8;
+    return '<span class="dpill' + (late ? ' late' : soon ? ' soon' : '') + '" data-due="' + esc(a.eventDate) + '" title="' + (late ? 'Late' : soon ? 'Due soon' : 'Due') + '">' + dmy(Date.parse(a.eventDate)) + '</span>';
+  }
   function row(a, kind, withBrand) {
-    var t = typeOf(a.type), p = a.priority && PRI[a.priority] ? a.priority : null;
-    var link = a.reviewLink || a.docLink;
-    var on = openPanel && openPanel.id === a.id;
-    var bo = brandOf(a);
-    return '<div class="crow' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '">' + (withBrand ? '<div class="bline"><span class="dot" style="--c:' + col(bo.colour) + '"></span>' + esc(bo.name) + '</div>' : '') + '<div class="l1">' +
-      '<button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' +
-      '<button class="ico" type="button" data-panel="flag" data-id="' + esc(a.id) + '" aria-label="Priority ' + (p || 'none') + '" style="--hc:var(--ljr-2-text)">' + flagIcon(p) + '</button></div>' +
-      (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + info('Stage ' + a.stage + ' ' + STAGES[a.stage]) + '</div>' : '') +
-      (a.stage >= 1 ? strip(a.stage) : '') +
-      '<div class="l2"><span class="icons">' + rowIcons(a) + '</span><span class="acts">' + actsFor(a, kind) + (a.size === 'L' && a.stage >= 3 && a.stage <= 6 && !a.parentId && !sent[a.id] ? '<button class="ico" type="button" data-panel="part" data-id="' + esc(a.id) + '" aria-label="Add part" title="Add part (chapter)"' + dis() + '>' + I('file-plus') + '</button>' : '') + (a.parts && a.parts.total && a.parts.approved === a.parts.total && a.stage < 7 && !sent[a.id] ? '<button class="btn yes" type="button" data-act="assemble" data-id="' + esc(a.id) + '" aria-label="Assemble"' + dis() + '>' + I('books') + 'Assemble</button>' : '') + (a.stage <= 3 && !sent[a.id] ? '<button class="ico" type="button" data-panel="where" data-id="' + esc(a.id) + '" aria-label="Company, legal set and where" title="Company, legal set and where"' + dis() + '>' + I('map-pin') + '</button>' : '') + (isClient(a) && a.stage >= 1 && a.stage <= 7 && !sent[a.id] ? '<button class="ico" type="button" data-panel="ask" data-id="' + esc(a.id) + '" aria-label="Ask client" title="Ask client"' + dis() + '>' + I('message-question') + '</button>' : '') + '</span></div>' +
-      (on && !(sideOn && openPanel.k === 'all') ? panelOf(a, openPanel.k) : '') +
-      '<div class="l3"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span>' +
-      (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="' + ({ canva: 'Open in Canva', gdoc: 'Open the Google file', drive: 'Open in Drive', clickfunnels: 'Open in ClickFunnels' }[a.linkKind] || 'Preview') + '" style="--hc:var(--ljr-6-text)">' + I('eye') + '</a>' : '<span class="lk no" title="No preview yet">' + I('eye') + '</span>') +
+    var on = openPanel && openPanel.id === a.id, bo = brandOf(a), need = needOf(a), dp = datePill(a);
+    return '<div class="crow' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '">' +
+      (withBrand || dp ? '<div class="bline">' + (withBrand ? '<span class="dot" style="--c:' + col(bo.colour) + '"></span><span class="bn">' + esc(bo.name) + '</span>' : '') + dp + '</div>' : '') +
+      '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button></div>' +
+      (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') +
+      (need ? '<div class="needl"><span class="tag need" data-chip="need">' + esc(need) + '</span></div>' : '') + '</div></div>' +
+      (function (x) { return x ? '<div class="l2"><span class="acts">' + x + '</span></div>' : ''; })(actsFor(a, kind) + (a.parts && a.parts.total && a.parts.approved === a.parts.total && a.stage < 7 && !sent[a.id] ? '<button class="btn yes" type="button" data-act="assemble" data-id="' + esc(a.id) + '" aria-label="Assemble"' + dis() + '>' + I('books') + 'Assemble</button>' : '')) +
+      (on && !(sideOn && openPanel.k === 'all') ? panelOf(a, openPanel.k) : '') + '</div>';
+  }
+  // Preview thumbnail left of the title: the real image when there is one, else a line drawing of the format (muted, never coloured).
+  var THUMB_SHORT = { social: 'Social', lead: 'Lead magnet', tree: 'Family tree', pack: 'Pack', page: 'Page', email: 'Email' };
+  function pthumb(a) {
+    var k = a.type, s = '', line = function (y, w) { return '<rect x="17" y="' + y + '" width="' + w + '" height="3" rx="1.5" fill="currentColor" opacity=".45"/>'; };
+    var ratio = (a.formatIds || []).map(fmtLabel).filter(function (x) { return /:/.test(x); })[0] || '';
+    var word = (THUMB_SHORT[k] || typeOf(k)[2]) + (ratio && (k === 'social' || k === 'video' || k === 'image') ? ' ' + ratio : '');
+    if (k === 'social' || k === 'image') s = '<rect x="12" y="6" width="32" height="40" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="28" cy="22" r="7" fill="currentColor" opacity=".35"/><rect x="17" y="34" width="22" height="3" rx="1.5" fill="currentColor" opacity=".45"/>';
+    else if (k === 'video' || k === 'script') s = '<rect x="16" y="4" width="24" height="44" rx="4" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M24 19 L34 26 L24 33 Z" fill="currentColor" opacity=".6"/>';
+    else if (k === 'ebook' || k === 'book' || k === 'logbook' || k === 'course') s = '<rect x="12" y="6" width="30" height="40" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="12" y="6" width="5" height="40" fill="currentColor" opacity=".3"/><rect x="21" y="14" width="16" height="3" rx="1.5" fill="currentColor" opacity=".5"/><rect x="21" y="20" width="12" height="3" rx="1.5" fill="currentColor" opacity=".35"/>';
+    else if (k === 'email') s = '<rect x="8" y="12" width="40" height="28" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 14 L28 28 L48 14" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".6"/>';
+    else if (k === 'tree') s = '<circle cx="28" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="16" cy="38" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="40" cy="38" r="5" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M28 17 V26 H16 V33 M28 26 H40 V33" fill="none" stroke="currentColor" stroke-width="1.5" opacity=".6"/>';
+    else if (k === 'pack') s = '<rect x="10" y="16" width="36" height="28" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 24 H46 M28 16 V44" stroke="currentColor" stroke-width="1.5" opacity=".5"/><path d="M20 16 Q28 6 28 16 Q28 6 36 16" fill="none" stroke="currentColor" stroke-width="1.5"/>';
+    else if (k === 'slides') s = '<rect x="6" y="10" width="44" height="28" rx="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M28 38 V46 M20 46 H36" stroke="currentColor" stroke-width="1.5"/>' + line(18, 22) + line(25, 16);
+    else s = '<path d="M14 6 H34 L42 14 V46 H14 Z" fill="none" stroke="currentColor" stroke-width="1.5"/>' + line(20, 18) + line(27, 22) + line(34, 14);
+    // One size for every thumb (44×44): a real preview is cropped to fill it; a format drawing sits inside it. The format word goes under both.
+    var box = a.thumbUrl ? '<img class="pimg" src="' + safeUrl(a.thumbUrl) + '" alt="" loading="lazy">' : '<svg viewBox="0 0 56 52" width="44" height="44">' + s + '</svg>';
+    return '<span class="pthumb" data-thumb="' + (a.thumbUrl ? 'image' : esc(k)) + '" aria-hidden="true">' + box + '<span class="fmt">' + esc(word) + '</span></span>';
+  }
+  // The details panel starts with everything the calm row leaves out.
+  function rowMore(a) {
+    var t = typeOf(a.type), p = a.priority && PRI[a.priority] ? a.priority : null, link = a.reviewLink || a.docLink;
+    return '<div class="more-d" data-more="' + esc(a.id) + '"><div class="icons">' +
+      '<button class="ico" type="button" data-panel="flag" data-id="' + esc(a.id) + '" aria-label="Priority ' + (p || 'none') + '">' + flagIcon(p) + '</button>' + rowIcons(a) +
+      (a.size === 'L' && a.stage >= 3 && a.stage <= 6 && !a.parentId && !sent[a.id] ? '<button class="ico" type="button" data-panel="part" data-id="' + esc(a.id) + '" aria-label="Add part" title="Add part (chapter)"' + dis() + '>' + I('file-plus') + '</button>' : '') +
+      (a.stage <= 3 && !sent[a.id] ? '<button class="ico" type="button" data-panel="where" data-id="' + esc(a.id) + '" aria-label="Company, legal set and where" title="Company, legal set and where"' + dis() + '>' + I('map-pin') + '</button>' : '') +
+      (isClient(a) && a.stage >= 1 && a.stage <= 7 && !sent[a.id] ? '<button class="ico" type="button" data-panel="ask" data-id="' + esc(a.id) + '" aria-label="Ask client" title="Ask client"' + dis() + '>' + I('message-question') + '</button>' : '') +
+      '</div>' + (a.stage >= 1 ? strip(a.stage) : '') +
+      '<div class="l3"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + esc(t[2]) + '</span>' +
+      (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="' + ({ canva: 'Open in Canva', gdoc: 'Open the Google file', drive: 'Open in Drive', clickfunnels: 'Open in ClickFunnels' }[a.linkKind] || 'Preview') + '">' + I('eye') + 'Preview</a>' : '') +
       '<span class="grow"></span><span class="date" title="Changed">' + (a._t ? dmy(a._t) : '') + '</span></div></div>';
   }
   function cards(list, kindOf) {

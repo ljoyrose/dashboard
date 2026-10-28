@@ -42,6 +42,13 @@ async function uploads(page, guard) {
   return got;
 }
 const rows = (page) => page.locator('#view .crow');
+// Calm rows (28 Oct 2026): chips, preview and small tools sit in the item's details, opened from its title.
+const details = async (page, id) => {
+  const d = page.locator(`[data-more="${id}"]`);
+  if (!(await d.count())) await page.locator(`.crow[data-row="${id}"] .ttl`).first().click();
+  await expect(d).toBeVisible();
+  return d;
+};
 // The find bar is one row (Search · Filter · Sort); every filter group sits in the Filter panel.
 const openFilters = async (page) => { await page.locator('#filtersBtn').click(); await expect(page.locator('#fpanel')).toBeVisible(); };
 // Old tab names are now pages under the five bottom tabs (Me, Decide, Do, Line, Kits): open them by address.
@@ -140,7 +147,7 @@ test.describe('Studio page', () => {
     const got = await uploads(page, guard);
     await open(page, guard, '#/review');
     const r = page.locator('.crow[data-row="sa-rev1"]');
-    await expect(r.locator('a.lk[aria-label="Preview"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/1SAMPLEreviewDoc00000000000/view');
+    await expect((await details(page, 'sa-rev1')).locator('a.lk[aria-label="Preview"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/1SAMPLEreviewDoc00000000000/view');
     await r.locator('[data-act="approve"]').click();
     await expect(r.locator('[data-sent]')).toHaveText('✓ 10:10 · applies by 10:19');
     expect(got).toHaveLength(1);
@@ -187,7 +194,8 @@ test.describe('Studio page', () => {
     await expect(page).toHaveURL(/acct=acc-client/);
     await expect(rows(page)).toHaveCount(1);
     await expect(page.locator('.crow[data-row="sa-client"]')).toContainText('Sample client ebook');
-    await expect(page.locator('.crow[data-row="sa-client"] .tag[title="Product"]')).toHaveText('Sample client book');
+    await expect((await details(page, 'sa-client')).locator('.tag[title="Product"]')).toHaveText('Sample client book');
+    await openFilters(page);
     await acct('').click();
     await expect(rows(page)).toHaveCount(6);
     await go(page, 'brands');
@@ -374,14 +382,14 @@ test.describe('Studio page', () => {
 
   test('asset rows show framework, format and variant chips, and a master link on a variant', async ({ page, guard }) => {
     await open(page, guard, '#/review');
-    const v = page.locator('.crow[data-row="sa-rev2"]');
+    const v = await details(page, 'sa-rev2');
     await expect(v.locator('[data-chip="framework"]')).toHaveText('Hook, story, offer');
     await expect(v.locator('[data-chip="format"]')).toHaveText('Email header');
     await expect(v.locator('[data-chip="purpose"]')).toHaveText('Refresh');
     await expect(v.locator('a[data-chip="master"]')).toHaveAttribute('href', '#/asset/sa-lib');
     await expect(page.locator('.crow[data-row="sa-rev1"] a[data-chip="master"]')).toHaveCount(0);
     await go(page, 'assets');
-    await expect(page.locator('.crow[data-row="sa-make"] [data-chip="format"]')).toHaveText(['16:9', '9:16']);
+    await expect((await details(page, 'sa-make')).locator('[data-chip="format"]')).toHaveText(['16:9', '9:16']);
   });
 
   test('New brief: group filters brands; More holds the style, formats, variant and sources; Send writes them all', async ({ page, guard }) => {
@@ -506,7 +514,7 @@ test.describe('Studio page', () => {
     const got = await uploads(page, guard);
     await open(page, guard, '#/review', { change: (s) => { s.assets.filter((a) => a.id === 'sa-rev1')[0].reviewLink = 'javascript:alert(1)'; } });
     const r = page.locator('.crow[data-row="sa-rev1"]');
-    await expect(r.locator('a.lk[aria-label="Preview"]')).toHaveAttribute('href', '#');
+    await expect((await details(page, 'sa-rev1')).locator('a.lk[aria-label="Preview"]')).toHaveAttribute('href', '#');
     await r.locator('[data-act="approve"]').dblclick();
     await expect(r.locator('[data-sent]')).toBeVisible();
     expect(got).toHaveLength(1);
@@ -530,17 +538,19 @@ test.describe('Studio page', () => {
       s.assets.push(Object.assign({}, c, { id: 'sa-client-done', title: 'Sample client video', type: 'video', stage: 8, ask: null, delivery: { status: 'ready (not sent)', at: s.generated_at, mode: 'file', link: 'https://drive.google.com/file/d/1SAMPLEout/view' } }));
     } });
     const r = page.locator('.crow[data-row="sa-client"]');
-    await expect(r.locator('[data-chip="ask"]')).toContainText('Ask ready');
-    await expect(page.locator('.crow[data-row="sa-rev1"] [data-panel="ask"]')).toHaveCount(0);
-    await r.locator('[data-panel="ask"]').click();
+    await expect((await details(page, 'sa-rev1')).locator('[data-panel="ask"]')).toHaveCount(0);
+    const dc = await details(page, 'sa-client');
+    await expect(dc.locator('[data-chip="ask"]')).toContainText('Ask ready');
+    await dc.locator('[data-panel="ask"]').click();
     await r.locator('#askq-sa-client').fill('Which cover photo do you prefer?');
     await r.locator('#askq-sa-client').press('Enter');
     await expect(r.locator('[data-sent]')).toBeVisible();
     expect(got[0].body).toMatchObject({ kind: 'ask', assetId: 'sa-client', accountId: 'acc-owner', question: 'Which cover photo do you prefer?' });
     await go(page, 'library');
     const d = page.locator('.crow[data-row="sa-client-done"]');
-    await expect(d.locator('[data-chip="delivery"]')).toContainText('Ready');
-    await expect(d.locator('[data-chip="delivery"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/1SAMPLEout/view');
+    const dd = await details(page, 'sa-client-done');
+    await expect(dd.locator('[data-chip="delivery"]')).toContainText('Ready');
+    await expect(dd.locator('[data-chip="delivery"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/1SAMPLEout/view');
     await d.locator('[data-act="deliver"]').click();
     await expect(d.locator('[data-sent]')).toBeVisible();
     expect(got[1].body).toMatchObject({ kind: 'deliver', assetId: 'sa-client-done', accountId: 'acc-owner' });
@@ -550,7 +560,7 @@ test.describe('Studio page', () => {
     const got = await uploads(page, guard);
     await open(page, guard, '#/library', { change: (s) => { const l = s.assets.filter((a) => a.stage === 8)[0]; l.results = { views: 1200, clicks: 40, leads: 6, sales: 2, revenue: 90, last: '2026-10-27', channels: ['facebook'] }; } });
     const r = page.locator('#view .crow').first();
-    await expect(r.locator('[data-chip="results"]')).toContainText('1200');
+    await expect((await details(page, await r.getAttribute('data-row'))).locator('[data-chip="results"]')).toContainText('1200');
     await r.locator('[data-panel="result"]').click();
     await r.locator('.rform [type="submit"]').click();
     await expect(r.locator('.rform .ferr')).toHaveText('Pick a channel');
@@ -573,18 +583,18 @@ test.describe('Studio page', () => {
       const g = s.assets.filter((a) => a.id === 'sa-gate')[0]; g.brandIds = ['sb-north']; g.legal = { entity: 'Sample Ltd', setId: null };
     } });
     const r = page.locator('[data-sect="gate"] .crow[data-row="sa-gate"]');
-    await expect(r.locator('[data-chip="legal-missing"]')).toBeVisible();
+    await expect((await details(page, 'sa-gate')).locator('[data-chip="legal-missing"]')).toBeVisible();
     await r.locator('[data-panel="where"]').click();
     await expect(r.locator('[data-set="legalSetId"]')).toHaveCount(2);
     await r.locator('[data-set="destination"][data-val="funnel"]').click();
     await expect.poll(() => got.length).toBe(1);
     expect(got[0].body).toMatchObject({ kind: 'set', assetId: 'sa-gate', destination: 'funnel' });
-    await expect(r.locator('[data-chip="dest"]')).toContainText('Funnel');
+    await expect((await details(page, 'sa-gate')).locator('[data-chip="dest"]')).toContainText('Funnel');
     await r.locator('[data-panel="where"]').click();
     await r.locator('[data-set="legalSetId"][data-val="LS-APP"]').click();
     await expect.poll(() => got.length).toBe(2);
     expect(got[1].body).toMatchObject({ kind: 'set', assetId: 'sa-gate', legalSetId: 'LS-APP' });
-    await expect(r.locator('[data-chip="legal"]')).toContainText('Sample app');
+    await expect((await details(page, 'sa-gate')).locator('[data-chip="legal"]')).toContainText('Sample app');
   });
 
   test('brand kit: swatches, fonts, Canva kit and Brand sheet links on the brand card; Canva preview label and thumbnail on an item', async ({ page, guard }) => {
@@ -602,8 +612,17 @@ test.describe('Studio page', () => {
     await expect(c.locator('[data-kit="sheet"]')).toHaveAttribute('href', /spreadsheets\/d\/1SAMPLEbrands/);
     await go(page, 'review');
     const r = page.locator('.crow[data-row="sa-rev1"]');
-    await expect(r.locator('a.lk')).toHaveAttribute('title', 'Open in Canva');
-    await r.locator('.ttl').click();
+    await expect(r.locator('.pthumb img')).toHaveAttribute('src', /thumbnail\?id=1SAMPLEthumb/); // the card shows the real preview
+    // Every row has a 44×44 thumb with its format word; without an image it is a line drawing of the format.
+    for (const th of await page.locator('#view .crow .pthumb').all()) {
+      const b = await th.locator('svg, img').boundingBox();
+      expect([Math.round(b.width), Math.round(b.height)]).toEqual([44, 44]);
+      await expect(th.locator('.fmt')).not.toHaveText('');
+    }
+    await expect(r.locator('.pthumb img')).toHaveCSS('object-fit', 'cover');
+    await expect(page.locator('.crow[data-row="sa-rev2"] .pthumb svg')).toHaveCount(1);
+    const d = await details(page, 'sa-rev1');
+    await expect(d.locator('a.lk')).toHaveAttribute('title', 'Open in Canva');
     await expect(r.locator('img.thumb')).toHaveAttribute('src', /thumbnail\?id=1SAMPLEthumb/);
   });
 
@@ -614,8 +633,9 @@ test.describe('Studio page', () => {
       s.assets.push(Object.assign({}, b, { id: 'sa-ch1', title: 'Sample chapter 1', size: 'M', stage: 8, parentId: 'sa-make', order: 1, parts: null }));
     } });
     const r = page.locator('.crow[data-row="sa-make"]');
-    await expect(r.locator('[data-chip="parts"]')).toContainText('1/2 · 9k/20k');
-    await r.locator('[data-panel="part"]').click();
+    const dm = await details(page, 'sa-make');
+    await expect(dm.locator('[data-chip="parts"]')).toContainText('1/2 · 9k/20k');
+    await dm.locator('[data-panel="part"]').click();
     await r.locator('#pname-sa-make').fill('Chapter 3: settling in');
     await r.locator('#pwords-sa-make').fill('4000');
     await r.locator('#pname-sa-make').press('Enter');
@@ -690,7 +710,7 @@ test.describe('Studio page', () => {
     await page.locator('[data-action="addtool"]').click();
     await expect(page.locator('[data-action="sendtool"]')).toBeDisabled();
     await go(page, 'assets');
-    await expect(page.locator('.crow[data-row="ex-9"] a[data-chip="master"]')).toHaveAttribute('href', '#/asset/ex-5');
+    await expect((await details(page, 'ex-9')).locator('a[data-chip="master"]')).toHaveAttribute('href', '#/asset/ex-5');
     await go(page, 'brands');
     await expect(page.locator('[data-check="ex-a"]').first()).toBeDisabled();
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
@@ -736,7 +756,7 @@ test.describe('Studio page', () => {
     expect(h.doc, 'the page should not scroll up and down on a desktop board').toBeLessThanOrEqual(h.screen + 1);
     const r = page.locator('.crow[data-row="sa-make"]');
     // Brand on its own small line above the title; the title is the title only.
-    await expect(r.locator('.bline')).toHaveText('Sample Brand North');
+    await expect(r.locator('.bline .bn')).toHaveText('Sample Brand North');
     await expect(r.locator('.ttl')).toHaveText('Sample webclass slides');
     expect((await r.locator('.bline').boundingBox()).y).toBeLessThan((await r.locator('.ttl').boundingBox()).y);
     await r.locator('.ttl').click();
@@ -922,7 +942,10 @@ test.describe('Studio page', () => {
     await openFilters(page);
     const ink = await page.evaluate(() => getComputedStyle(document.body).color);
     const kinds = { pill: '#fpanel [data-fx="brand"][data-val="sb-north"]', button: '.crow[data-row="sa-gate"] [data-act="gate"]', subnav: '.subnav a[data-sub="ideas"]', switch: '[data-vmode="list"]',
-      card: '.crow[data-row="sa-make"]', icon: '.crow[data-row="sa-make"] [data-panel="flag"]', filter: '#sortBtn' };
+      card: '.crow[data-row="sa-gate"]', icon: '.side [data-panel="flag"]', filter: '#sortBtn' };
+    await page.keyboard.press('Escape');
+    await details(page, 'sa-make');
+    await openFilters(page);
     for (const [k, sel] of Object.entries(kinds)) {
       const el = page.locator(sel).first();
       await el.scrollIntoViewIfNeeded();
@@ -931,7 +954,7 @@ test.describe('Studio page', () => {
       const st = await el.evaluate((e) => { const c = getComputedStyle(e); return { w: c.outlineWidth, o: c.outlineOffset, c: c.outlineColor, s: c.outlineStyle }; });
       expect(st, `${k} hover`).toEqual({ w: '1px', o: '-1px', c: ink, s: 'solid' });
       expect(await el.boundingBox(), `${k} must not move`).toEqual(b0);
-      if (k === 'pill') await page.mouse.move(0, 400);
+      if (k === 'pill') { await page.mouse.move(0, 400); await page.keyboard.press('Escape'); } // close the Filter panel so it covers nothing
     }
     // Selected is the same line.
     const sel = await page.locator('.subnav a[aria-current="page"]').evaluate((e) => getComputedStyle(e).outlineWidth);
@@ -1098,6 +1121,27 @@ test.describe('Studio page', () => {
     await page.keyboard.press('Escape');
     await page.emulateMedia({ colorScheme: 'dark' });
     expect(await warm(), 'Cool clear, dark').toEqual([]);
+  });
+
+  test('calm cards: brand line with the due-date pill, a thumb, the title and at most one need chip; the rest is in the details', async ({ page, guard }) => {
+    const day = (n) => new Date(NOW.getTime() + n * 864e5).toISOString().slice(0, 10);
+    await open(page, guard, '#/line', { change: (s) => {
+      const f = (id) => s.assets.filter((a) => a.id === id)[0];
+      Object.assign(f('sa-make'), { dated: true, eventDate: day(-2) });
+      Object.assign(f('sa-gate'), { dated: true, eventDate: day(2) });
+    } });
+    const rowsAll = page.locator('#view .crow');
+    for (const r of await rowsAll.all()) {
+      await expect(r.locator(':scope > .tb .tag, :scope > .needl .tag, :scope > .tb .needl .tag')).toHaveCount(await r.locator('[data-chip="need"]').count());
+      expect(await r.locator('[data-chip="need"]').count()).toBeLessThanOrEqual(1);
+      for (const gone of ['.strip', '.icons', 'a.lk', '.lk.no', '[data-chip="format"]', '[data-panel="who"]']) await expect(r.locator(gone), gone + ' is in the details, not the card').toHaveCount(0);
+    }
+    const late = page.locator('.crow[data-row="sa-make"] .bline .dpill'), soon = page.locator('.crow[data-row="sa-gate"] .bline .dpill');
+    await expect(late).toHaveClass(/\blate\b/);
+    await expect(late).toHaveCSS('border-top-color', 'rgb(230, 68, 61)');
+    await expect(soon).toHaveClass(/\bsoon\b/);
+    await expect(page.locator('.crow[data-row="sa-make"] [data-chip="need"]')).toHaveText('Overdue');
+    await expect(page.locator('.crow[data-row="sa-gate"] [data-chip="need"]')).toHaveText('Gate');
   });
 
   test('Look menu: background, selected, words, text, spacing and mode change the page and survive a reload', async ({ page, guard }) => {
