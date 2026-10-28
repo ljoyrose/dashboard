@@ -323,6 +323,20 @@
   header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
   nav.tabs { background: var(--frame-foot); border-top: 0; gap: 8px; padding-top: 8px; padding-left: 8px; padding-right: 8px; }
   @media (min-width: 900px) { nav.tabs { border-left: 0; border-right: 0; } }
+  /* Phone header: dot + Studio, the status pills and one "More" menu (Refresh, Look, New, Sign out, Dashboard). Desktop unchanged. */
+  .morewrap { position: relative; display: none; margin-left: auto; }
+  #moreMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 25; width: 220px; background: var(--card); border: 1px solid var(--bd); border-radius: 16px; box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,.18); padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+  #moreMenu.hidden { display: none; }
+  #moreMenu > * { font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: 999px; min-height: 44px; padding: 0 14px; display: flex; gap: 8px; align-items: center; text-decoration: none; cursor: pointer; text-align: left; }
+  #moreMenu > * .ti { color: var(--ink); }
+  @media (hover: hover) { #moreMenu > *:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
+  @media (max-width: 544px) {
+    html.signed-in .morewrap:not(.hidden) { display: inline-flex; }
+    html.signed-in header .top > #refreshBtn, html.signed-in header .top > #newBtn, html.signed-in header .top > #signOutBtn, html.signed-in header .top > #backHome, html.signed-in .lookwrap > #lookBtn { display: none !important; }
+    html.signed-in .lookwrap { position: static; }
+    html.signed-in #lookMenu { position: fixed; top: 64px; left: 8px; right: 8px; width: auto; }
+    header .top > .btn, header .top > .pill { min-height: 44px; }
+  }
   @media (max-width: 760px) {
     .board { scroll-snap-type: x mandatory; }
     .col { flex-basis: calc(100vw - 48px); }
@@ -347,6 +361,15 @@
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
     <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
+    <span class="morewrap hidden" id="moreWrap"><button id="moreBtn" class="btn" type="button" data-action="moremenu" aria-expanded="false" aria-controls="moreMenu">More<i class="ti ti-dots" aria-hidden="true"></i></button>
+      <div id="moreMenu" class="hidden" role="dialog" aria-label="More">
+        <button type="button" data-action="refresh"><i class="ti ti-refresh" aria-hidden="true"></i>Refresh</button>
+        <button type="button" data-action="lookmore"><i class="ti ti-palette" aria-hidden="true"></i>Look</button>
+        <a href="#/new"><i class="ti ti-plus" aria-hidden="true"></i>New</a>
+        <button type="button" data-action="signout"><i class="ti ti-logout" aria-hidden="true"></i>Sign out</button>
+        <a href="../" data-back-home><i class="ti ti-home" aria-hidden="true"></i>← Dashboard</a>
+        <button type="button" data-action="moredone">Done</button>
+      </div></span>
   </div>
 </header>
 <main class="wrap" id="content">
@@ -1419,7 +1442,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('nav.tabs [data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === grp ? 'page' : 'false'); });
     $('tabs').classList.toggle('hidden', !signedIn); $('newBtn').classList.toggle('hidden', !signedIn);
     $('signInBtn').classList.toggle('hidden', signedIn);
-    $('signOutBtn').classList.toggle('hidden', !signedIn);
+    $('signOutBtn').classList.toggle('hidden', !signedIn); $('moreWrap').classList.toggle('hidden', !signedIn); document.documentElement.classList.toggle('signed-in', !!signedIn);
     $('refreshBtn').classList.toggle('hidden', !signedIn);
     var ready = signedIn && S && !err;
     $('enginePill').classList.toggle('hidden', !ready); $('budgetPill').classList.toggle('hidden', !ready);
@@ -1460,7 +1483,8 @@
     if (f === 'fq') { var tb = barTab(); if (!tb) return; fsOf(tb).q = e.target.value; saveFs(); var p = e.target.selectionStart; render(); var b = document.querySelector('[data-f="fq"]'); if (b) { b.focus(); try { b.setSelectionRange(p, p); } catch (x) {} } }
   });
   document.addEventListener('click', function (e) {
-    if (!e.target.closest('.lookwrap') && !document.getElementById('lookMenu').classList.contains('hidden')) showLook(false);
+    if (!e.target.closest('.lookwrap, [data-action="lookmore"]') && !document.getElementById('lookMenu').classList.contains('hidden')) showLook(false);
+    if (!e.target.closest('#moreBtn') && !$('moreMenu').classList.contains('hidden')) showMore(false);
     var lk0 = e.target.closest('[data-look]'); if (lk0) { look[lk0.getAttribute('data-look')] = lk0.getAttribute('data-val'); try { localStorage.setItem('dash-look', JSON.stringify(look)); } catch (x) {} applyLook(); showLook(true); fitBoard(boardScroll()); return; }
     if ((filtersOpen || sortOpen) && !e.target.closest('.fpanel, #filtersBtn, #sortBtn, [data-fxoff]')) { closeF(true); }
     var fo = e.target.closest('[data-fxoff]'); if (fo) { var t4 = barTab(); if (t4) { var s4 = fsOf(t4), k4 = fo.getAttribute('data-fxoff'), i4 = s4[k4].indexOf(fo.getAttribute('data-val')); if (i4 >= 0) s4[k4].splice(i4, 1); saveFs(); } render(); var fb = $('filtersBtn'); if (fb) fb.focus(); return; }
@@ -1469,6 +1493,9 @@
     if (a && !a.disabled) {
       var k = a.getAttribute('data-action');
       if (k === 'look') { showLook(document.getElementById('lookMenu').classList.contains('hidden')); return; }
+      if (k === 'moremenu') { showMore($('moreMenu').classList.contains('hidden')); return; }
+      if (k === 'moredone') { showMore(false, true); return; }
+      if (k === 'lookmore') { showMore(false); showLook(true); var lf = document.querySelector('#lookMenu button'); if (lf) lf.focus(); return; }
       if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'filters') { filtersOpen = !filtersOpen; sortOpen = false; render(); fFocus(); }
       else if (k === 'sort') { sortOpen = !sortOpen; filtersOpen = false; render(); fFocus(); }
@@ -1523,10 +1550,12 @@
   window.addEventListener('resize', function () { if (S && signedIn && phone() !== wasPhone) { wasPhone = phone(); render(); } else fitBoard(boardScroll()); });
   var wasPhone = phone();
   // Filter and Sort panels: focus goes in on open and back to the button on close (Done, Esc, a click outside).
+  // Phone "More" menu: focus goes to its first item on open and back to the button on close.
+  function showMore(on, back) { var m = $('moreMenu'); m.classList.toggle('hidden', !on); $('moreBtn').setAttribute('aria-expanded', String(on)); if (on) { var f = m.querySelector('button, a'); if (f) f.focus(); } else if (back) $('moreBtn').focus(); }
   function fFocus() { var p = document.querySelector('.fbar > .fpanel'); if (p) { var f = p.querySelector('.on, button'); if (f) f.focus(); } }
   function closeF(quiet) { var back = filtersOpen ? 'filtersBtn' : sortOpen ? 'sortBtn' : null; filtersOpen = sortOpen = false; render(); if (back && !quiet) { var b = $(back); if (b) b.focus(); } }
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (filtersOpen || sortOpen)) { closeF(); return; } });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('lookMenu').classList.contains('hidden')) { showLook(false); document.getElementById('lookBtn').focus(); } });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (filtersOpen || sortOpen)) { closeF(); return; } if (e.key === 'Escape' && !$('moreMenu').classList.contains('hidden')) showMore(false, true); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('lookMenu').classList.contains('hidden')) { showLook(false); var lb0 = document.getElementById('lookBtn'); (lb0.offsetParent ? lb0 : $('moreBtn')).focus(); } });
   window.addEventListener('hashchange', function () { openPanel = null; filtersOpen = sortOpen = false; formErr = {}; formNote = ''; fromUrl(); render(); window.scrollTo(0, 0); });
   // "/" puts the cursor in this page's search box (before toolkit.js's own search dialog).
   window.addEventListener('keydown', function (e) {

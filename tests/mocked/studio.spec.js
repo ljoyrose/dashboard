@@ -248,7 +248,29 @@ test.describe('Studio page', () => {
     await page.evaluate(() => { location.hash = '#/assets'; });
     await page.locator('#filtersBtn').click();
     await noSidewaysScroll(page, 'assets with filters open');
-    await expect(page.locator('#backHome')).toBeVisible();
+    // Phone header: status pills plus one More menu (Refresh, Look, New, Sign out, Dashboard).
+    await expect(page.locator('#backHome')).toBeHidden();
+    await expect(page.locator('#enginePill')).toBeVisible();
+    await page.locator('#moreBtn').click();
+    const more = page.locator('#moreMenu');
+    await expect(more).toBeVisible();
+    for (const t of ['Refresh', 'Look', 'New', 'Sign out', 'Dashboard']) await expect(more).toContainText(t);
+    await expect(more.locator('a[href="../"]')).toBeVisible();
+    for (const b of await more.locator('button, a').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => !!document.activeElement.closest('#moreMenu')), 'focus moves into the menu').toBe(true);
+    await noSidewaysScroll(page, 'More menu open');
+    await page.keyboard.press('Escape');
+    await expect(more).toBeHidden();
+    await expect(page.locator('#moreBtn')).toBeFocused();
+    await page.locator('#moreBtn').click();
+    await more.locator('[data-action="lookmore"]').click();
+    await expect(page.locator('#lookMenu')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#lookMenu')).toBeHidden();
+    await expect(page.locator('#moreBtn')).toBeFocused();
+    await page.locator('#moreBtn').click();
+    await page.locator('#moreMenu [data-action="moredone"]').click();
+    await expect(more).toBeHidden();
   });
 
   test('dark mode: dark page, light text, and the words read clearly on every tab', async ({ page, guard }) => {
