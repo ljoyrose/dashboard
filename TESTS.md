@@ -51,10 +51,11 @@ If any of these breaks, the tick turns red and says which page.
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
 | Factory house look (dark frame, bottom tabs, 1px lines, one radius, fixed counts, hover rule, contrast light/dark/warm/cool, empty states, one calm find bar, phone) | `/dashboard/factory/` | 24 |
 | Studio (example data, real data, accounts, groups, bottom tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, clients, results, spec, brand kit, books, feedback, phone, dark, text size, board, Board/List, Look menu, frame, one-row find bar, one line rule, numbers, no solid fills, pill sizes, weights, dark tour, greys follow the background, calm cards, Me summary, who ring, consistency, brand website, no empty counts, brand mark, list bars, comments, library forms, prices and VAT, ownership, protection, save as kit, team role) | `/dashboard/studio/` | 66 |
+| House look on every hub (one set of rules from `tokens.css` + `house.css`: 12px radius, 1px lines and 3px bars, Lexend 400/600 at 13px+, no coloured words, one control line (meaning buttons rest on their own colour line), 36/44px buttons, 30 x 22 counts, ringed date pills, deep frame, 12px card padding and gaps, no solid fills, the hover rule, tabs exempt; every view, desktop warm light, phone cool dark and Look › Dark) | all seven hubs | 22 |
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 610 checks that must pass (mocked + phone, 28 Oct 2026, Studio library and team role).
+That is 651 checks that must pass (mocked + phone, 28 Oct 2026, house look on every hub).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
@@ -335,6 +336,13 @@ Each entity page draws its `FORECAST.csv` as a line, with a dashed £0 line, the
 - Every visible button, tile and link: has a label; internal links answer 200; outside links are https and open a new tab.
 - Each one is clicked on a fresh copy of the screen. It must go somewhere, open a tab, change the page or ask a question. A dead click fails.
 - Not clicked: Sign out and the skip link (own tests). Outside links are checked, not opened.
+- A link that opens a new tab (like "Sample task ready now" on the Map, which opens Money Hub) waits for that tab to open, however long it takes under four workers. It used to give it 700ms and sometimes called it a dead click.
+
+## The house look, once
+
+- The agreed rules (Lisa, 28 Oct 2026) are written once: the numbers and colours in `tokens.css` (including Look › Dark), the shared parts in `house.css` (buttons, pills, counts, date pills, the hover rule, bottom tabs, bars, cards, the phone Filter button). Every hub loads `tokens.css`, then `house.css`, then its own layout.
+- `tests/mocked/house-look.spec.js` holds every hub to the same rules by computed style, on every view. `HOUSE_AUDIT=<file>` runs every combination (light and dark, warm and cool, 1280 and 390, Look › Dark) and writes each deviation to that file instead of failing.
+- Checks that read a value after a hover use one shared helper, `tests/support/settle.js`, which waits for the colour-bar transition to finish instead of a fixed pause.
 
 ## Phone install and keyboard keys
 

@@ -1,0 +1,136 @@
+/* House look: the shared parts every hub uses (Lisa, 28 Oct 2026). ONE file; the numbers and colours come from tokens.css.
+   Load order on every hub: tokens.css, then this file, then the page's own <style> (layout and anything only that page has).
+   Rules: one 12px radius (dots and rings round); 1px lines, 3px left colour bars; Lexend 400/600, nothing under 13px, no coloured
+   words, sentence case; one control line; buttons 36px (44px on a phone); hover = selected = a 1px line drawn inside plus a pale
+   tint (a meaning colour keeps its own colour, neutral = ink line + muted tint), nothing ever moves, focus = 2px ink ring;
+   read-only pills never hover; bottom tabs only widen their colour bar; no solid fills (small status dots and switch knobs only);
+   counts one fixed 30 x 22 pill; date pills always ringed; 12px between cards, 16px under a section header, 12px inside a card;
+   deep dark frame top and bottom with light tab buttons. No colour is written here: every colour is a token from tokens.css. */
+
+/* 1 Names. Every hub reads these short names; they point at the house tokens, so a look change is one edit in tokens.css. */
+:root {
+  --radius: var(--house-radius);
+  --paper: var(--house-paper); --bg: var(--house-paper); --canvas: var(--house-canvas);
+  --card: var(--house-card); --surface: var(--house-card);
+  --ink: var(--house-ink); --muted: var(--house-muted); --line: var(--house-soft-line); --soft: var(--house-soft);
+  --press: var(--house-press); --ctl: var(--house-press);
+  --frame: var(--house-frame); --frame-foot: var(--house-foot); --frame-ink: var(--house-frame-ink); --frame-line: var(--house-frame-line);
+  --shadow: var(--house-shadow);
+  --sel-bd: var(--house-ink);
+  --hov: color-mix(in srgb, var(--house-muted) var(--house-tint), var(--house-card));
+  --sel-fill: var(--hov);
+}
+:root.sel-soft { --sel-bd: var(--ljr-7-text); --sel-fill: var(--ljr-7-tint); }
+/* A control's meaning colour (green yes, rose no / delete, purple AI...). Set on the control itself, never inherited. */
+@property --hmc { syntax: '*'; inherits: false; }
+
+/* 2 Type: Lexend, two weights, nothing under 13px, sentence case. */
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: 16px; line-height: 1.5; }
+h1, h2, h3, h4, h5, h6, b, strong, th, summary { font-weight: 600; }
+button, input, select, textarea { font: inherit; color: inherit; }
+code, kbd, samp, pre { font-family: var(--house-font); }
+a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+
+/* 3 The frame: deep dark top bar; its buttons wear the frame's own light line. */
+header { background: var(--frame); color: var(--frame-ink); }
+header .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
+
+/* 4 Everything you press: one control line, 1px, 12px corners, 14px / 600, 36px (44px on a phone). Never starts out ink. */
+.btn, button.pill, a.pill, button.chip, a.chip, .ch, .fbtn, .achip, .more, .undo, .lk, .ico, .copy, .flagb, .subnav a, .seg button, .vsw button {
+  min-height: var(--house-btn); border: var(--house-line) solid var(--press); border-radius: var(--radius);
+  font-size: var(--house-press-size); font-weight: 600; color: var(--ink); cursor: pointer; text-decoration: none; }
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; background: var(--card); line-height: 1.2; }
+.btn[disabled], .btn:disabled { cursor: not-allowed; opacity: .55; }
+@media (max-width: 600px) {
+  .btn, button.pill, a.pill, button.chip, a.chip, .ch, .fbtn, .achip, .more, .undo, .lk, .ico, .copy, .flagb, .subnav a, .seg button, .vsw button { min-height: var(--house-btn-phone); }
+}
+/* Meaning buttons (Lisa's approved picture, 28 Oct): they REST on their own colour line with their icon in that colour
+   (yes / approve / done green; no / redo / delete rose) and keep that line on hover, adding the pale tint. Neutral ones rest
+   on the one control line. --hmc is the meaning colour, set on the button itself. */
+.btn.yes { --hmc: var(--house-ok); } .btn.no, .btn.danger { --hmc: var(--house-risk); }
+.btn.yes, .btn.no, .btn.danger { border-color: var(--hmc); }
+.btn.yes > :is(.ti, svg, .icon) { color: var(--ljr-5-text); } .btn.no > :is(.ti, svg, .icon), .btn.danger > :is(.ti, svg, .icon) { color: var(--ljr-2-text); }
+
+/* 5 The hover rule. Hover = selected: a 1px line drawn inside (outline, offset -1px) plus a pale tint mixed into the card colour.
+   Neutral: ink line + muted tint. Meaning colour (--hmc): its own line + a 14% tint of it, never ink. Nothing moves. */
+.btn[aria-pressed="true"], button.pill.on, a.pill.on, button.chip[aria-pressed="true"], button.chip.on, .ch.on, .fbtn.on, .achip.on, .subnav a[aria-current="page"], .seg button[aria-pressed="true"], .vsw button[aria-pressed="true"] {
+  outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line));
+  background-color: color-mix(in srgb, var(--hmc, var(--house-muted)) var(--house-tint), var(--card)); }
+@media (hover: hover) {
+  .btn:hover, button.pill:hover, a.pill:hover, button.chip:hover, a.chip:hover, .ch:hover, .fbtn:hover, .achip:hover, .more:hover, .undo:hover, .lk:hover, .ico:hover, .copy:hover, .flagb:hover, .subnav a:hover, .seg button:hover, .vsw button:hover, a.card:hover {
+    outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line));
+    background-color: color-mix(in srgb, var(--hmc, var(--house-muted)) var(--house-tint), var(--card)); }
+  header .btn:hover { outline-color: var(--frame-ink); background-color: color-mix(in srgb, var(--frame-ink) var(--house-tint), var(--frame)); }
+}
+/* Read-only pills (counts, dates, tags, stamps) never hover. */
+.cnt:hover, .dpill:hover, .datep:hover, span.date:hover, span.pill:hover, span.tag:hover, .stamp:hover { outline: none; }
+/* Keyboard focus: the 2px ink ring (frame ink on the frame), never the browser blue. */
+:focus-visible { outline: var(--house-focus) solid var(--ink); outline-offset: 2px; }
+header :focus-visible { outline-color: var(--frame-ink); }
+
+/* 6 Bottom tabs (.house-tabs): deep dark bar, light tab buttons with no ring or outline. Hover and selected only widen the
+   small colour bar above the label (same height, so nothing moves). The tab's colour is --tc. */
+.house-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--frame-foot); border-top: 0; }
+.house-tabs > a, .house-tabs > button { position: relative; background: var(--card); color: var(--ink); border: 0; border-radius: var(--radius);
+  font-size: 13px; font-weight: 600; text-decoration: none; text-align: center; cursor: pointer; min-width: 0;
+  min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 2px; }
+.house-tabs > a, .house-tabs > a:hover, .house-tabs > a[aria-current="page"], .house-tabs > button, .house-tabs > button:hover, .house-tabs > button[aria-current="page"] {
+  outline: none; box-shadow: none; border: 0; background: var(--card); }
+.house-tabs > :focus-visible { outline: var(--house-focus) solid var(--frame-ink); outline-offset: 2px; }
+.house-tabs .bar { display: block; min-width: 0; box-shadow: none; flex: none; width: var(--house-tab-bar); height: var(--house-tab-bar-h); border-radius: var(--radius); background: var(--tc, var(--c, var(--ljr-0))); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
+.house-tabs [aria-current="page"] .bar { width: var(--house-tab-bar-on); opacity: 1; }
+@media (hover: hover) { .house-tabs > :hover .bar { width: var(--house-tab-bar-on); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .house-tabs .bar { transition: none; } }
+/* The tab count sits in the top-right corner on a desktop; on a phone it is in the flow beside the label (never over it). */
+.house-tabs .n, .house-tabs .cnt { position: absolute; top: 8px; right: 12px; }
+@media (max-width: 600px) {
+  .house-tabs > a, .house-tabs > button { min-height: 62px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; padding: 6px 2px; }
+  .house-tabs .bar { margin: 0 calc(50% - var(--house-tab-bar) / 2); }
+  .house-tabs [aria-current="page"] .bar { width: var(--house-tab-bar-phone); margin: 0 calc(50% - var(--house-tab-bar-phone) / 2); }
+  .house-tabs > * > :where(.ti, svg, .icon) { order: 1; }
+  .house-tabs .n, .house-tabs .cnt { position: static; order: 2; }
+  .house-tabs > * > :where(span, .lab):where(:not(.bar, .n, .cnt)) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }   /* low weight: a page with room puts the count beside the label */
+}
+@media (max-width: 600px) and (hover: hover) { .house-tabs > :hover .bar { width: var(--house-tab-bar-phone); margin: 0 calc(50% - var(--house-tab-bar-phone) / 2); } }
+
+/* 7 Counts: ONE exact box, so 1 and 2 digits match in any font: 30 x 22, line 20px, radius 11px, padding 0 3px.
+   Only 3+ digits (class .wide) grow. Empty shows nothing (pages write "" for 0). "Needs you" = rose ring + tint. */
+.cnt, .house-tabs .n { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
+  width: var(--house-count-w); min-width: var(--house-count-w); height: var(--house-count-h); min-height: var(--house-count-h);
+  line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border: var(--house-line) solid var(--house-ring); border-radius: var(--house-count-r);
+  font-size: 13px; font-weight: 600; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+.cnt.wide, .house-tabs .n.wide { width: auto; padding: 0 6px; overflow: visible; }
+.cnt:empty, .n:empty { display: none !important; }
+.cnt.need, .house-tabs .n.need { border-color: var(--house-late); background: var(--house-late-tint); }
+
+/* 8 Date pills: always ringed. Grey ring + muted words; late = rose ring + tint, soon = amber ring + tint (ink words). */
+.dpill, .datep, span.date { display: inline-flex; align-items: center; height: var(--house-pill); padding: 0 8px; font-size: 13px; white-space: nowrap;
+  border: var(--house-line) solid var(--house-ring); border-radius: var(--radius); color: var(--muted); background: transparent; font-variant-numeric: tabular-nums; }
+:is(.dpill, .datep, span.date, label.date).late, :is(.dpill, .datep, span.date, label.date).over { border-color: var(--house-late); background: var(--house-late-tint); color: var(--ink); }
+:is(.dpill, .datep, span.date, label.date).soon { border-color: var(--house-soon); background: var(--house-soon-tint); color: var(--ink); }
+
+/* 9 Cards: 1px line, 12px corners, 12px inside; 12px between cards; 16px under a section header. */
+.card { background: var(--card); border: var(--house-line) solid var(--line); border-radius: var(--radius); padding: var(--house-pad); min-width: 0; }
+.house-stack { display: flex; flex-direction: column; gap: var(--house-gap); }
+
+/* 10 Colour bars: 3px down the left of a card or row; the column-title stage marker is 3 x 18. */
+.house-lbar { position: relative; }
+.house-lbar::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: var(--house-bar); border-radius: var(--radius); background: var(--sc, var(--ljr-0)); }
+.house-marker { width: var(--house-marker-w); height: var(--house-marker-h); border-radius: var(--radius); background: var(--sc, var(--ljr-0)); flex: none; }
+
+/* 11 Brand logo slot: 20 x 20, the logo or the brand's initials on a pale tint of its colour. The ONE radius exception:
+   a 20 x 20 logo keeps a 4px corner (12px would turn it into a circle and crop square logos). */
+.bmark { width: var(--house-logo); height: var(--house-logo); flex: none; border-radius: 4px; display: inline-grid; place-items: center; }
+.bav { border: var(--house-line) solid var(--c, var(--press)); background: color-mix(in srgb, var(--c, var(--press)) var(--house-tint), var(--card)); color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1; }
+
+/* 12 Phone filters: one calm row. On a phone each filter group (.house-filters) folds behind one Filter button (.house-fbtn,
+   toolkit.js opens it); on a desktop the button is hidden and the choices show inline. */
+.house-fbtn { display: none; }
+.house-fbtn .cnt { margin-left: 2px; }
+@media (max-width: 600px) {
+  .house-fbtn { display: inline-flex; }
+  .house-filters:not(.open) { display: none !important; }
+  .house-filters.open { flex-basis: 100%; }
+}
+.house-frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }

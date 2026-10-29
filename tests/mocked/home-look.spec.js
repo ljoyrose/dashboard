@@ -2,6 +2,7 @@
 // nothing under 13px, two weights, no coloured words, no solid colour fills, dark frame, phone without sideways scroll,
 // dark mode contrast. Plus the home improvements: Needs you split, the Next card and the green-tick empty state.
 const { test, expect, buildWorld } = require('../support/test');
+const { settle } = require('../support/settle');
 
 const SHOTS = process.env.HOME_SHOTS; // folder for screenshots (optional; off in CI)
 
@@ -47,7 +48,7 @@ test.describe('Home: house look', () => {
       await page.mouse.move(2, 400);
       const before = await el.evaluate((e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e); return { x: r.x, y: r.y, w: r.width, h: r.height, b: [c.borderTopWidth, c.borderRightWidth, c.borderBottomWidth, c.borderLeftWidth].join(' '), p: c.padding }; });
       await el.hover();
-      await page.waitForTimeout(200);
+      await settle(el);
       const after = await el.evaluate((e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e); return { x: r.x, y: r.y, w: r.width, h: r.height, b: [c.borderTopWidth, c.borderRightWidth, c.borderBottomWidth, c.borderLeftWidth].join(' '), p: c.padding, ow: parseFloat(c.outlineWidth) || 0, os: c.outlineStyle }; });
       expect({ x: after.x, y: after.y, w: after.w, h: after.h, b: after.b, p: after.p }, sel + ' moved or changed size on hover').toEqual(before);
       if (after.os !== 'none') expect(after.ow, sel + ': hover line').toBeLessThanOrEqual(1);
@@ -57,7 +58,7 @@ test.describe('Home: house look', () => {
     const tab = page.locator('#mainNav a[data-nav="bin"]');
     await page.mouse.move(2, 400);
     const bar0 = await tab.locator('.bar').boundingBox();
-    await tab.hover(); await page.waitForTimeout(250);
+    await tab.hover(); await settle(tab); // the bar's width transition has finished
     const bar1 = await tab.locator('.bar').boundingBox();
     expect(bar1.width).toBeGreaterThan(bar0.width);
     expect(bar1.height).toBe(bar0.height);
@@ -77,7 +78,7 @@ test.describe('Home: house look', () => {
         const bad = await page.evaluate((line) => {
           const out = [];
           const ink = getComputedStyle(document.body).color;
-          const PRESS = 'main .btn:not([disabled]), header .btn:not([disabled]), .subnav a, input.find, .picker select, a.hometile, a.keytile, a.card, a.ment:not(.bad)';
+          const PRESS = 'main .btn:not([disabled]):not(.danger):not(.ai), header .btn:not([disabled]), .subnav a, input.find, .picker select, a.hometile, a.keytile, a.card, a.ment:not(.bad)';
           document.querySelectorAll(PRESS).forEach((e) => {
             if (e.offsetParent === null) return;
             const c = getComputedStyle(e), n = (e.className || e.tagName) + ' "' + e.textContent.trim().slice(0, 20) + '"';
@@ -101,7 +102,7 @@ test.describe('Home: house look', () => {
       for (const sel of ['#urgentOne a.btn', 'a.hometile >> nth=0', 'a.keytile >> nth=0']) {
         const el = page.locator(sel);
         if (!(await el.count())) continue;
-        await el.hover(); await page.waitForTimeout(100);
+        await el.hover(); await settle(el);
         const o = await el.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineStyle, c.outlineWidth, c.outlineOffset, c.outlineColor === getComputedStyle(document.body).color]; });
         expect(o, sel + ' hover').toEqual(['solid', '1px', '-1px', true]);
       }
@@ -110,7 +111,7 @@ test.describe('Home: house look', () => {
         const el = page.locator(sel);
         if (!(await el.count())) continue;
         const before = await el.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineStyle, c.borderTopColor, c.backgroundColor].join('|'); });
-        await el.hover(); await page.waitForTimeout(100);
+        await el.hover(); await settle(el);
         const after = await el.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineStyle, c.borderTopColor, c.backgroundColor].join('|'); });
         expect(after, sel + ' changed on hover').toBe(before);
       }
@@ -129,7 +130,7 @@ test.describe('Home: house look', () => {
         const el = page.locator(sel).first();
         await expect(el, sel).toBeVisible();
         await el.scrollIntoViewIfNeeded();
-        await el.hover(); await page.waitForTimeout(120);
+        await el.hover(); await settle(el);
         return el.evaluate((e, coloured) => {
           const L = window.__look, c = getComputedStyle(e), root = getComputedStyle(document.documentElement);
           const col = (v) => { const d = document.createElement('i'); d.style.color = v; document.body.appendChild(d); const x = getComputedStyle(d).color; d.remove(); return x; };

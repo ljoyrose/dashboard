@@ -7,7 +7,7 @@ name: Publish site (after tests)
 # Until then the "publish" job notices Pages is still on branch publishing, says so in its summary, and does nothing,
 # so merging this file changes nothing about the live site by itself.
 #
-# What goes live: index.html, auth.js, tokens.css, cdhub/, money/, factory/, marketplace/, food/ and studio/ only (the pages, the shared sign-in, the shared colours and money/core.js).
+# What goes live: index.html, auth.js, tokens.css, house.css, cdhub/, money/, factory/, marketplace/, food/ and studio/ only (the pages, the shared sign-in, the shared colours, the shared house look and money/core.js).
 # Not tests/, docs/, TESTS.md, zips, fixtures, tools/ or .github/. A test fails if a page refers to a file left out here.
 # No secrets: only the run's own built-in token. Rollback: Settings > Pages > Source = "Deploy from a branch" > main > / (root).
 on:
@@ -92,9 +92,9 @@ jobs:
         if: steps.ready.outputs.ready == 'true'
         run: |
           mkdir _site
-          cp -r index.html auth.js config.js toolkit.js tokens.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio _site/
+          cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio _site/
           ls -R _site
-          test -f _site/index.html && test -f _site/cdhub/index.html && test -f _site/money/index.html && test -f _site/money/core.js && test -f _site/factory/index.html && test -f _site/marketplace/index.html && test -f _site/food/index.html && test -f _site/studio/index.html && test -f _site/auth.js && test -f _site/tokens.css
+          test -f _site/index.html && test -f _site/cdhub/index.html && test -f _site/money/index.html && test -f _site/money/core.js && test -f _site/factory/index.html && test -f _site/marketplace/index.html && test -f _site/food/index.html && test -f _site/studio/index.html && test -f _site/auth.js && test -f _site/tokens.css && test -f _site/house.css
       - name: Package the site
         if: steps.ready.outputs.ready == 'true'
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
