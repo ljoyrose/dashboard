@@ -173,6 +173,21 @@ test.describe('Marketplace page', () => {
       expect(src, f).not.toMatch(/login_hint|authuser/);   // mailto addresses are caught by the line above
     }
   });
+  test('signed out, signed in on every tab, and the privacy page: no email address in the shown text or any link @regression', async ({ page }) => {
+    const ADDR = /[A-Za-z0-9._+-]+(@|%40)[A-Za-z0-9-]+\.[A-Za-z]{2,}/;
+    const shown = () => page.evaluate(() => document.body.innerText + '\n' + [...document.querySelectorAll('a[href]')].map((a) => a.getAttribute('href')).join('\n'));
+    await sheets(page, sampleRows());
+    await page.goto('marketplace/#/me');
+    expect(await shown(), 'signed out').not.toMatch(ADDR);
+    await open(page, '#/me');
+    for (const tab of ['#/me', '#/do', '#/decide', '#/reply', '#/insights']) {
+      await page.goto('marketplace/' + tab);
+      await expect(page.locator('#view')).toBeVisible();
+      expect(await shown(), tab).not.toMatch(ADDR);
+    }
+    await page.goto('marketplace/privacy.html');
+    expect(await shown(), 'privacy').not.toMatch(ADDR);
+  });
   test('privacy policy page: public (no sign-in, no scripts), names the contact, says buyer details are not stored, tokens.css colours only', async ({ page }) => {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'marketplace', 'privacy.html'), 'utf8');
     expect(src).not.toMatch(/<script/i);
