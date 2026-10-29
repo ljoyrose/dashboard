@@ -405,10 +405,10 @@
     h += '</div>';
     if (data.codes.length) {
       var kinds = [['brand', 'Brand'], ['channel', 'Code for where it was sold (means nothing to customers)'], ['partner_type', 'Partner type (+ 2 digits, e.g. R01)'], ['partner', 'Partners'], ['suffix', 'Ending (+ a number)']];
-      h += '<p class="grp">Order reference on the GA Portal</p><div class="card"><p class="what"><b>Customers see this reference</b>, so only the brand is readable. Type <b>BRAND-CODE-NUMBER</b>, e.g. <b>DDF-KQ-1234</b>. A plain number (5375) is a DDF Shopify order; PC-1001 is a Puppy Classroom Shopify order. Wholesale adds the partner: DDF-TB-R01-0007. A resend adds -R1.</p>' +
+      h += '<p class="grp">Order reference on the GA Portal</p><div class="card"><p class="what">Type the <b>Shopify order number only, digits</b>, e.g. <b>5382</b>. Customers see this reference in their tracking only (it is not on the label), so it never holds names, partner codes, prices or notes. Search the Portal for the number first: never enter an order twice.</p><p class="hint">Other shops (later): ClickFunnels orders are DDF-KQ-number; a resend adds -R1. The codes below are what the engine reads.</p>' +
         kinds.map(function (k) { var list = data.codes.filter(function (c) { return c.kind === k[0]; }); if (!list.length) return '';
           return '<div class="row"><div class="txt"><div class="m">' + esc(k[1]) + '</div><div class="badges">' + list.map(function (c) { return '<span class="badge"><b>' + esc(c.code) + '</b> ' + esc(c.name) + '</span>'; }).join('') + '</div></div></div>'; }).join('') +
-        '<p class="hint">Add a brand, shop or partner on the Codes tab of RR_FOOD. An unknown code on the Portal turns into a red card.</p></div>';
+        '<p class="hint">A reference the engine cannot read turns into a red card.</p></div>';
     }
     return h;
   }
