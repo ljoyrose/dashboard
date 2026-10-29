@@ -39,10 +39,10 @@ test.describe('Main dashboard: sign-in (mocked)', () => {
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
-  test('after sign-in the Map shows and the nav, header and footer appear', async ({ page }) => {
+  test('after sign-in the Dashboard shows and the nav, header and footer appear', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await expect(page.locator('#hereTitle')).toHaveText('Map');
+    await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
     await expect(page.locator('#view')).toHaveAttribute('data-view', 'map');
     await expect(page.locator('#signOutBtn')).toBeVisible();
     await expect(page.locator('#signInBtn')).toBeHidden();
@@ -73,7 +73,7 @@ test.describe('Main dashboard: sign-in (mocked)', () => {
 
 test.describe('Main dashboard: navigation', () => {
   const tabs = [
-    ['Map', 'map', 'Map'],
+    ['Dashboard', 'map', 'Dashboard'],
     ['Read first', 'readfirst', 'Read first'],
     ['Drive', 'drive', 'Drive'],
     ['PC-Personal', 'personal', 'PC-Personal'],
@@ -131,10 +131,10 @@ test.describe('Main dashboard: navigation', () => {
     });
   }
 
-  test('an unknown hash falls back to the Map', async ({ page }) => {
+  test('an unknown hash falls back to the Dashboard', async ({ page }) => {
     await page.goto('./#/nonsense');
     await signIn(page);
-    await expect(page.locator('#hereTitle')).toHaveText('Map');
+    await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
   });
 
   test('Changes sub-menu links work (Recent, Last 24h, Last 7 days, Totals)', async ({ page }) => {
@@ -148,12 +148,13 @@ test.describe('Main dashboard: navigation', () => {
     }
   });
 
-  test('"Next:" links at the bottom of a section move on to the next one', async ({ page }) => {
-    await page.goto('./');
+  test('"← Dashboard" at the top of a section goes back to the Dashboard', async ({ page }) => {
+    await page.goto('./#/readfirst');
     await signIn(page);
-    await page.locator('#view a.sec', { hasText: 'Next: Read first' }).click();
-    await expect(page).toHaveURL(/#\/readfirst/);
     await expect(page.locator('#hereTitle')).toHaveText('Read first');
+    await page.locator('#view a.btn.back[data-back-home]').click();
+    await expect(page).toHaveURL(/#\/map/);
+    await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
   });
 });
 

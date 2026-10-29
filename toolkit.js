@@ -120,7 +120,7 @@
 
   // ---- Keyboard keys: g then a letter to go somewhere, r reread, / search, ? the list ----
   var KEYS = [
-    ['g m', 'Map (home)', function () { go('./#/map'); }],
+    ['g m', 'Dashboard', function () { go('./#/map'); }],
     ['g d', 'Drive', function () { go('./#/drive'); }],
     ['g b', 'Bin', function () { go('./#/bin'); }],
     ['g c', 'Changes', function () { go('./#/changes'); }],

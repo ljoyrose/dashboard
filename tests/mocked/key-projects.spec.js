@@ -12,7 +12,6 @@ const TILES = [
   ['Marketplace', 'marketplace/', true],
   ['GA Hub', 'food/', true],
   ['Studio', 'studio/', true],
-  ['Map', '#/map', false],
   ['Read first', '#/readfirst', false],
   ['PC-Personal', '#/personal', false],
   ['Drive check', '#/usb', false],
@@ -42,7 +41,7 @@ test.describe('Home: Key projects & docs', () => {
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
     await expect(page.locator('#mainNav')).toBeVisible();
-    await expect(page.locator('#hereTitle')).toHaveText('Map');
+    await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
 
     const block = page.locator('#view > #key-projects');

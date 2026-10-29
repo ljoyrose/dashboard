@@ -17,7 +17,7 @@ const noSidewaysScroll = async (page, where) => {
   expect(w.doc, `${where}: page is ${w.doc}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
   expect(w.body, `${where}: body is ${w.body}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
 };
-const VIEWS = [['map', 'Map'], ['drive', 'Drive'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['more', 'More']];
+const VIEWS = [['map', 'Dashboard'], ['drive', 'Drive'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['more', 'More']];
 const goTab = async (page, key, title) => {
   await page.locator(`#mainNav a[data-nav="${key}"]`).click();
   await expect(page.locator('#hereTitle')).toHaveText(title);
@@ -97,7 +97,7 @@ test.describe('Home: house look', () => {
         }, line);
         expect(bad, `${look} ${title}`).toEqual([]);
       }
-      await goTab(page, 'map', 'Map');
+      await goTab(page, 'map', 'Dashboard');
       // Hover: the same 1px edge turns ink (an outline over it), on a button, a tile and a link card.
       for (const sel of ['#urgentOne a.btn', 'a.hometile >> nth=0', 'a.keytile >> nth=0']) {
         const el = page.locator(sel);
@@ -354,7 +354,7 @@ test.describe('Home: phone (390 x 844)', () => {
       await goTab(page, key, title);
       await noSidewaysScroll(page, title);
     }
-    await goTab(page, 'map', 'Map');
+    await goTab(page, 'map', 'Dashboard');
     const n = page.locator('#n-map');
     expect(await n.evaluate((e) => getComputedStyle(e).position)).toBe('static');
     for (const sel of ['header #refreshBtn', 'header #signOutBtn', '#urgentOne a.btn']) {
