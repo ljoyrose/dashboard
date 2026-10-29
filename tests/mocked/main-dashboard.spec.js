@@ -234,11 +234,10 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
     await expect(tab.locator('h1')).toContainText('Money Hub');
   });
 
-  test('More tab "Money Hub" link goes to /money/', async ({ page }) => {
+  test('Key projects "Money Hub" tile goes to /money/', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await page.locator('#mainNav a[data-nav="more"]').click(); // Hub V2: hub links live in the More tab
-    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a.morelink[href="money/"]').click()]); // opens in a new tab
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a.keytile[href="money/"]').click()]); // opens in a new tab
     await expect(tab).toHaveURL(/\/dashboard\/money\/$/);
     await expect(tab).toHaveTitle(/Money Hub/);
   });

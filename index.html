@@ -469,7 +469,6 @@
   <a href="#/drives" data-nav="drives" class="slot0"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-drive"/></svg><span>Drives</span></a>
   <a href="#/bin" data-nav="bin" class="slot8"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-bin"/></svg><span>Bin</span><span class="n need" id="n-bin"></span></a>
   <a href="#/changes" data-nav="changes" class="slot7"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-changes"/></svg><span>Changes</span></a>
-  <a href="#/more" data-nav="more" class="slot4"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-more"/></svg><span>More</span></a>
 </nav>
 
 <footer id="pageFoot" class="wrap hidden"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
@@ -2157,19 +2156,6 @@
   }
 
   // ---- Views ----
-  function figure(slot, label, value, p, srcName, srcUrl, actHash, actLabel, partial) {
-    var cls = value === '–' ? (p.status === 'failed' ? ' failed' : ' pending') : '';
-    var meta = p.status === 'failed' ? '<span class="state st-failed"><span class="shape"></span>Read failed</span>' :
-      p.status === 'loading' ? '<span class="state st-loading"><span class="shape"></span>Reading…</span>' :
-      p.readAt ? esc(srcName) + ' · ' + esc(stamp(p.readAt)) :
-      '<span class="state st-idle"><span class="shape"></span>' + (signedIn ? 'Not read yet' : 'Not signed in') + '</span>';
-    return '<div class="card sec fig ' + slot + cls + '">' +
-      '<div class="label">' + esc(label) + '</div>' +
-      '<div class="num">' + value + '</div>' +
-      '<div class="meta">' + meta + (partial ? ' <span class="chip">Partial</span>' : '') + '</div>' +
-      '<a class="act" href="#/' + actHash + '">' + esc(actLabel) + '</a></div>';
-  }
-
   function moneyTile() {
     var MC = window.MoneyCore, p = S.money, d = p.data;
     var head = '<div class="cardhead"><h3>Money</h3>' + stateBadge(p, d ? 1 : null) + '</div>';
@@ -2211,20 +2197,16 @@
     return h + foot + '</section>';
   }
 
-  // Big one-tap links for the home screen. Only links that already exist, plus the MOVE workbook.
+  // Big one-tap links for the home screen: the MOVE workbook and one tile per hub (each opens its own tab).
   function keyProjects() {
     var tiles = [
       ['MOVE', MOVE_URL, true],
       ['Money Hub', 'money/', true],
       ['CD Hub', 'cdhub/', true],
+      ['Factory', 'factory/', true],
       ['Marketplace', 'marketplace/', true],
       ['GA Hub', 'food/', true],
-      ['Studio', 'studio/', true],
-      ['Read first', '#/drives/readfirst', false],
-      ['Work My Drive', '#/drives/work', false],
-      ['Drive check', '#/drives/usb', false],
-      ['Bin', '#/bin', false],
-      ['Changes', '#/changes', false]
+      ['Studio', 'studio/', true]
     ];
     return '<section class="card" id="key-projects" aria-labelledby="key-projects-title">' +
       '<h2 id="key-projects-title">Key projects & docs</h2>' +
@@ -2283,26 +2265,17 @@
     return h + '</section>';
   }
 
-  // Home opens with what needs you: the count, three big tiles (each opens a tab), then the ONE most urgent thing.
+  // Home opens with what needs you: the count, then the ONE most urgent thing. No tiles repeat a tab (stage 2c).
   function homeTop() {
     if (!signedIn) return '';
     var all = needsToday(), n = all.length, reading = S.money.status === 'loading' && !S.money.data;
-    var dr = S.drive.data, day = cfWithin(DAY), b = S.bin.data;
-    var tiles = [
-      ['drives/shared', 'slot0', dr ? num(dr.day, dr.dayMore) : '–', 'Drive: changed 24h'],
-      ['bin', 'slot8', b && b.ready ? num(b.ready.length) : '–', b && b.ready ? 'Bin: ready to bin' : 'Bin: tap to check'],
-      ['changes/24h', 'slot7', day ? num(day.length) : '–', 'Changes: last 24h']
-    ];
     // Split by urgency (read pills): urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
     var split = [['risk', 'urgent'], ['fin', 'due soon'], ['todo', 'to do']].map(function (k) {
       var c = all.filter(function (x) { return k[0] === 'todo' ? (x.kind === 'ops' || x.kind === 'bin') : x.kind === k[0]; }).length;
       return c ? '<span class="cnt wide k-' + k[0] + '">' + c + ' ' + k[1] + '</span>' : '';
     }).join('');
     var h = '<section id="homeTop" aria-label="Needs you"><div class="needsrow"><p class="needsline">Needs you: ' + (n ? n : reading ? '…' : '<span class="zero">0</span>') + '</p>' +
-      (split ? '<span class="hsplit" id="needsSplit">' + split + '</span>' : '') + '</div>' +
-      '<div class="hometiles">' + tiles.map(function (t) {
-        return '<a class="hometile ' + t[1] + '" href="#/' + t[0] + '"><span class="v">' + t[2] + '</span><span class="k">' + esc(t[3]) + '</span></a>';
-      }).join('') + '</div>';
+      (split ? '<span class="hsplit" id="needsSplit">' + split + '</span>' : '') + '</div>';
     if (n) {
       var x = all[0];
       // Next: the one thing to do now, with one button. White card, 1px ink edge.
@@ -2315,29 +2288,6 @@
     }
     return h + '</section>';
   }
-  function viewMore() {
-    var drv = [
-      ['readfirst', '#/drives/readfirst', 'slot0', 'read', 'Read first', 'The AI read-first folder'],
-      ['personal', '#/drives/work', 'slot4', 'drive', 'Work My Drive', 'Copies in your work My Drive'],
-      ['usb', '#/drives/usb', 'slot4', 'drive', 'Drive check', 'Check a plugged-in drive']
-    ];
-    var hubs = [
-      ['money', 'money/', 'slotfin', 'money', 'Money Hub', 'Cash, dates and to-dos'],
-      ['cdhub', 'cdhub/', 'slot7', 'map', 'CD Hub', 'Dogs, cabins and litters'],
-      ['factory', 'factory/', 'slot7', 'factory', 'Factory', 'The app factory'],
-      ['marketplace', 'marketplace/', 'slotsales', 'shop', 'Marketplace', 'Selling and posting'],
-      ['food', 'food/', 'slotsales', 'shop', 'GA Hub', 'Dog food orders, GA invoices, products'],
-      ['studio', 'studio/', 'slot7', 'studio', 'Studio', 'Assets: idea to approved to reused']
-    ];
-    function link(t) {
-      var hub = t[1].charAt(0) !== '#';
-      return '<a class="card sec morelink ' + t[2] + '" href="' + t[1] + '" data-nav="' + t[0] + '"' + (hub ? HUB_TAB : '') + '>' + icon(t[3]) +
-        '<span>' + esc(t[4]) + '<small>' + esc(t[5]) + '</small></span></a>';
-    }
-    return '<section class="card" id="moreDrive" aria-labelledby="moreDriveT"><h3 id="moreDriveT">Drive tools</h3><div class="morelist">' + drv.map(link).join('') + '</div></section>' +
-      '<section class="card" id="moreHubs" aria-labelledby="moreHubsT"><h3 id="moreHubsT">Other hubs</h3><p class="hint">Each opens in its own tab.</p><div class="morelist">' + hubs.map(link).join('') + '</div></section>';
-  }
-
   function viewMap() {
     // Home: what needs you first (homeTop), then Key projects, then the full Needs you today list.
     var html = homeTop() + keyProjects() + needsPanel();
@@ -2348,16 +2298,6 @@
         '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
     }
     html += moneyTile();
-    var rf = S.readfirst, dr = S.drive, cf = S.cf;
-    var day = cfWithin(DAY), week = cfWithin(7 * DAY), partial = cf.data && cf.data.capped;
-    html += '<div class="figs">' +
-      figure('slot0', 'Read first items', rf.data ? num(rf.data.files.length) : '–', rf, 'Read first', rfUrl(), 'drives/readfirst', 'Open Read first') +
-      figure('slot0', 'Shared drives last 24h', dr.data ? num(dr.data.day, dr.data.dayMore) : '–', dr, 'Shared drives', 'https://drive.google.com/drive/shared-drives', 'drives/shared', 'Open Drive') +
-      figure('slot7', 'Cf files', cf.data ? num(cf.data.files.length) : '–', cf, cfName(), cfUrl(), 'changes/totals', 'Open totals', partial) +
-      figure('slot7', 'Cf folders', cf.data ? num(cf.data.folderCount) : '–', cf, cfName(), cfUrl(), 'changes/totals', 'Open totals', partial) +
-      figure('slot7', 'Cf last 24h', day ? num(day.length) : '–', cf, cfName(), cfUrl(), 'changes/24h', 'Open last 24h', partial) +
-      figure('slot7', 'Cf 7 days', week ? num(week.length) : '–', cf, cfName(), cfUrl(), 'changes/7d', 'Open 7 days', partial) +
-      '</div>';
     return html;
   }
 
@@ -2582,7 +2522,7 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Dashboard', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', bin: 'Bin', changes: 'Changes', more: 'More' };
+  var VIEWS = { map: 'Dashboard', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
   // Every Drives page lights up the Drives tab.
   var TAB_OF = { drive: 'drives', readfirst: 'drives', personal: 'drives', pdrive: 'drives', usb: 'drives' };
   // Drives sub-menu: #/drives/<key> shows view <view>. The pills are the existing .subnav (as on Changes).
@@ -2594,8 +2534,10 @@
   ];
   var DRIVES_PURPOSE = "See what's where, spot what changed, and send anything to tidy to Bin.";
   var READFIRST_PURPOSE = 'Open the folder the AIs read first.';
-  // Old addresses keep working: #/drive(/drive/folder), #/readfirst, #/personal and #/usb move under #/drives.
+  // Old addresses keep working: #/drive(/drive/folder), #/readfirst, #/personal and #/usb move under #/drives;
+  // #/more (the old fifth tab) opens the Dashboard, which holds the hub tiles.
   function redirectOld(hash) {
+    if (/^#\/more(\/.*)?$/.test(hash)) return '#/map';
     var m = /^#\/(drive|readfirst|personal|usb)(\/.*)?$/.exec(hash);
     if (!m) return null;
     var rest = m[2] || '';
@@ -2618,7 +2560,7 @@
     if (parts[0] === 'drives') {
       var sub = DRIVES.filter(function (d) { return d.key === parts[1]; })[0];
       parts = parts[1] === 'readfirst' ? ['readfirst'].concat(parts.slice(2)) : sub ? [sub.view].concat(parts.slice(2)) : ['drives'].concat(parts.slice(1));
-    } else if (parts[0] !== 'map' && parts[0] !== 'bin' && parts[0] !== 'changes' && parts[0] !== 'more') parts = [];
+    } else if (parts[0] !== 'map' && parts[0] !== 'bin' && parts[0] !== 'changes') parts = [];
     var view = parts[0] && VIEWS[parts[0]] ? parts[0] : null;
     var r = { view: view, sub: null, page: 1 };
     parts.slice(1).forEach(function (x) {
@@ -2636,7 +2578,7 @@
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : r.view === 'more' ? viewMore() : viewChanges(r);
+    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : viewChanges(r);
     if (signedIn && TAB_OF[r.view] === 'drives' || signedIn && r.view === 'drives') html = drivesNav(r) + drivesPurpose(r) + html;
     if (signedIn && r.view !== 'map') html = '<p><a class="btn back" href="#/map" data-back-home>← Dashboard</a></p>' + html;
     var routeKey = location.hash;

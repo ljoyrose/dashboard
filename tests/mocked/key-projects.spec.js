@@ -9,14 +9,10 @@ const TILES = [
   ['MOVE', MOVE, true],
   ['Money Hub', 'money/', true],
   ['CD Hub', 'cdhub/', true],
+  ['Factory', 'factory/', true],
   ['Marketplace', 'marketplace/', true],
   ['GA Hub', 'food/', true],
   ['Studio', 'studio/', true],
-  ['Read first', '#/drives/readfirst', false],
-  ['Work My Drive', '#/drives/work', false],
-  ['Drive check', '#/drives/usb', false],
-  ['Bin', '#/bin', false],
-  ['Changes', '#/changes', false],
 ];
 
 function pageFile(href) {
