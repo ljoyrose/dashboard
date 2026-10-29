@@ -184,7 +184,7 @@ class T(unittest.TestCase):
 
     # --- allow list (+) ---
     def test_allow_list_small_and_business_only(self):
-        lines = open(os.path.join(HERE, "allow.txt"), encoding="utf8").read().splitlines()
+        with open(os.path.join(HERE, "allow.txt"), encoding="utf8") as fh: lines = fh.read().splitlines()
         self.assertLessEqual(len(lines), 10, "allow.txt must stay at 10 lines or fewer")
         emails = {l.split()[1].lower() for l in lines if l.startswith("email ")}
         self.assertLessEqual(len(emails), 1, "only the one business address may be allow-listed")
@@ -215,7 +215,7 @@ class T(unittest.TestCase):
         r = Repo(); sh(r.d, "git", "config", "core.hooksPath", os.path.join(REPO, ".githooks"))
         os.makedirs(os.path.join(r.d, "tools"), exist_ok=True)
         shutil.copytree(HERE, os.path.join(r.d, "tools", "privacy-guard"), ignore=shutil.ignore_patterns("__pycache__", "test_*"))
-        open(os.path.join(r.d, ".git", "info", "exclude"), "a").write("tools/\n")
+        with open(os.path.join(r.d, ".git", "info", "exclude"), "a") as fh: fh.write("tools/\n")
         return r
 
     def _env(self):
@@ -229,7 +229,9 @@ class T(unittest.TestCase):
     def test_pre_push_hook_refuses_added_then_removed(self):
         r = self._hooked(); remote = tempfile.mkdtemp(); sh(remote, "git", "init", "-q", "--bare")
         sh(r.d, "git", "remote", "add", "origin", remote); sh(r.d, "git", "push", "-q", "origin", "main")
-        f = os.path.join(r.d, "a.md"); open(f, "w").write(T1 + "\n"); sh(r.d, "git", "add", "-A")
+        f = os.path.join(r.d, "a.md")
+        with open(f, "w") as fh: fh.write(T1 + "\n")
+        sh(r.d, "git", "add", "-A")
         sh(r.d, "git", "commit", "-q", "--no-verify", "-m", "add"); os.remove(f); sh(r.d, "git", "add", "-A")
         sh(r.d, "git", "commit", "-q", "--no-verify", "-m", "rm")
         p = subprocess.run(["git", "push", "origin", "main"], cwd=r.d, capture_output=True, text=True, env=self._env())
@@ -246,6 +248,7 @@ class T(unittest.TestCase):
         loose = [u for u in re.findall(r"uses:\s*([^\s#]+)", wf) if not re.search(r"@[0-9a-f]{40}$", u)]
         self.assertEqual(loose, [], "every action pinned to a full commit id")
         self.assertNotRegex(wf, r"upload-artifact", "report-only runs upload nothing")
+        self.assertNotRegex(wf, r'\[ -n "\$t" \] &&', "a blank denylist line must not fail the mask step under bash -e")
 
     def test_no_fake_term_literal_in_repo_files(self):
         hits = subprocess.run(["git", "grep", "-l", "-i", "-e", T1, "-e", T2], cwd=REPO, capture_output=True, text=True).stdout.split()
