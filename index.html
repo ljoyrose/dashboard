@@ -241,7 +241,7 @@
   a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
 
   /* Hub V2 (25 Oct 2026, same layout as Marketplace): five sections in a bar at the bottom, in thumb reach on the phone.
-     Home (the Map), Drive, Bin, Changes, More. Red number = things that need you. Nothing hides under the bar. */
+     Dashboard, Drive, Bin, Changes, More. Red number = things that need you. Nothing hides under the bar. */
   html { scroll-padding-bottom: 96px; }
   body { padding-bottom: 96px; }
   nav.main { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
@@ -460,12 +460,12 @@
 
 <main id="content" class="wrap">
   <div id="banner" class="banner hidden" role="status"></div>
-  <div id="hereBox" class="here hidden"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Map</h2></div>
+  <div id="hereBox" class="here hidden"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Dashboard</h2></div>
   <div id="view" data-view="map"></div>
 </main>
 
 <nav id="mainNav" class="main house-tabs hidden" aria-label="Sections">
-  <a href="#/map" data-nav="map" class="vision"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-map"/></svg><span>Home</span><span class="n need" id="n-map"></span></a>
+  <a href="#/map" data-nav="map" class="vision"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-map"/></svg><span>Dashboard</span><span class="n need" id="n-map"></span></a>
   <a href="#/drive" data-nav="drive" class="slot0"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-drive"/></svg><span>Drive</span></a>
   <a href="#/bin" data-nav="bin" class="slot8"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-bin"/></svg><span>Bin</span><span class="n need" id="n-bin"></span></a>
   <a href="#/changes" data-nav="changes" class="slot7"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-changes"/></svg><span>Changes</span></a>
@@ -1809,7 +1809,7 @@
       if (!P.candidates.length) html += '<p class="note">No personal files starting ZZ_DELETE_DRIVE_.</p>';
     }
     html += '</div><ul class="notes"><li>Tick, press, confirm. Nothing changes before.</li><li>Select all = only the files you can see.</li><li>RR_ names: never ticked.</li><li>Bin only: ZZ_DELETE_DRIVE_ + ledger row.</li><li>A folder is binned only when every item inside is verified or junk.</li><li>Zero-byte files are UNSURE and are never marked or binned.</li><li>Trash only. Nothing is deleted for good.</li><li>Shared-drive copy: never changed.</li></ul></section>';
-    return html + nextSteps([NX.drive, NX.bin, NX.map]);
+    return html;
   }
 
   // ---- Streaming MD5 (browsers have no built-in MD5). Matches Google Drive's md5Checksum. ----
@@ -2031,7 +2031,7 @@
       '<button class="btn" type="button" data-action="usbcsv" data-which="match"' + (U.matches.length ? '' : ' disabled') + '><span>Download list: already in shared</span></button>' +
       '<button class="btn" type="button" data-action="usbcsv" data-which="only"' + (U.only.length ? '' : ' disabled') + '><span>Download list: only on this drive</span></button></div>' +
       '<ul class="notes"><li>Rename never deletes.</li><li>Delete later in Finder.</li><li>Zero-byte files are UNSURE and are not renamed.</li><li>Odd prefix spellings are listed and not renamed.</li><li>Chrome refuses the top of a drive? Pick a folder inside.</li></ul></section>';
-    return html + nextSteps([NX.drive, NX.bin, NX.map]);
+    return html;
   }
   // ==USB-END==
 
@@ -2096,18 +2096,6 @@
     return html;
   }
   function num(n, more) { return n == null ? '–' : n.toLocaleString('en-GB') + (more ? '+' : ''); }
-  function nextSteps(list) {
-    return '<nav class="next" aria-label="Next steps">' + list.map(function (s) {
-      return '<a class="card sec ' + s.slot + '" href="#/' + s.to + '">' + icon(s.icon) + '<span><span class="k">Next:</span> ' + esc(s.label) + '</span></a>';
-    }).join('') + '</nav>';
-  }
-  var NX = {
-    map: { to: 'map', label: 'Map', icon: 'map', slot: 'vision' },
-    readfirst: { to: 'readfirst', label: 'Read first', icon: 'read', slot: 'slot0' },
-    drive: { to: 'drive', label: 'Drive', icon: 'drive', slot: 'slot0' },
-    changes: { to: 'changes', label: 'Changes', icon: 'changes', slot: 'slot7' },
-    bin: { to: 'bin', label: 'Bin', icon: 'bin', slot: 'slot8' }
-  };
   function cfName() { return S.cf.data && S.cf.data.folder ? S.cf.data.folder.name : 'Cf overskill'; }
   function cfUrl() { return S.cf.data && S.cf.data.folder && S.cf.data.folder.webViewLink || folderUrl(CF_FOLDER_ID); }
   function rfName() { return S.readfirst.data && S.readfirst.data.folder ? S.readfirst.data.folder.name : '0 - AI (read first)'; }
@@ -2187,7 +2175,6 @@
       ['Marketplace', 'marketplace/', true],
       ['GA Hub', 'food/', true],
       ['Studio', 'studio/', true],
-      ['Map', '#/map', false],
       ['Read first', '#/readfirst', false],
       ['PC-Personal', '#/personal', false],
       ['Drive check', '#/usb', false],
@@ -2326,7 +2313,6 @@
       figure('slot7', 'Cf last 24h', day ? num(day.length) : '–', cf, cfName(), cfUrl(), 'changes/24h', 'Open last 24h', partial) +
       figure('slot7', 'Cf 7 days', week ? num(week.length) : '–', cf, cfName(), cfUrl(), 'changes/7d', 'Open 7 days', partial) +
       '</div>';
-    html += nextSteps([NX.readfirst, NX.drive, NX.bin, NX.changes]);
     return html;
   }
 
@@ -2336,7 +2322,7 @@
     html += failNote(p);
     if (p.data) html += '<p class="note">' + num(items.length) + ' items in folder.</p>' + pagedList(items, r.page, 'readfirst', { who: false, time: false }, 'Folder is empty.');
     html += sourceLine(rfName(), rfUrl(), p) + '</section>';
-    return html + nextSteps([NX.changes, NX.drive, NX.map]);
+    return html;
   }
 
   function drivePicker(r) {
@@ -2359,7 +2345,7 @@
         html += pagedList(d.files, r.page, 'drive', { drive: true }, d.drives.length ? 'No files found.' : 'No shared drives found for this account.');
       }
       html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</section>';
-      return html + nextSteps([NX.bin, NX.changes, NX.map]);
+      return html;
     }
     var drv = driveById(r.driveId);
     var key = folderKey(r), fp = F[key] || blank();
@@ -2380,7 +2366,7 @@
     }
     var url = fd && fd.folder && fd.folder.webViewLink || folderUrl(r.folderId || r.driveId);
     html += sourceLine(title, url, fp) + '</section>';
-    return html + nextSteps([{ to: 'drive', label: 'All shared drives', icon: 'drive', slot: 'slot0' }, NX.bin, NX.map]);
+    return html;
   }
 
   // Fold state lives here so a redraw never closes a section you opened.
@@ -2501,7 +2487,7 @@
         empty.map(function (x) { return '<li data-name="' + esc(x.drive.name.toLowerCase()) + '"><div class="fname">' + esc(x.drive.name) + '</div></li>'; }).join('') + '</ul></div></details>';
     }
     html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
-    return html + nextSteps([NX.drive, NX.changes, NX.map]);
+    return html;
   }
 
   var SUBS = [
@@ -2543,11 +2529,11 @@
     html += sourceLine(cfName(), cfUrl(), p) + '</section>';
     var i = SUBS.map(function (s) { return s.key; }).indexOf(sub);
     var nextSub = SUBS[(i + 1) % SUBS.length];
-    return html + nextSteps([{ to: 'changes/' + nextSub.key, label: nextSub.label, icon: 'changes', slot: 'slot7' }, NX.readfirst, NX.map]);
+    return html;
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Map', readfirst: 'Read first', drive: 'Drive', personal: 'PC-Personal', usb: 'Drive check', bin: 'Bin', changes: 'Changes', more: 'More' };
+  var VIEWS = { map: 'Dashboard', readfirst: 'Read first', drive: 'Drive', personal: 'PC-Personal', usb: 'Drive check', bin: 'Bin', changes: 'Changes', more: 'More' };
   // Sections not in the bottom bar light up its More tab.
   var TAB_OF = { readfirst: 'more', personal: 'more', usb: 'more' };
   function parseRoute() {
@@ -2568,6 +2554,7 @@
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
     var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal() : r.view === 'usb' ? viewUsb() : r.view === 'more' ? viewMore() : viewChanges(r);
+    if (signedIn && r.view !== 'map') html = '<p><a class="btn back" href="#/map" data-back-home>← Dashboard</a></p>' + html;
     var routeKey = location.hash;
     var changed = routeKey !== lastView;
     el.setAttribute('data-view', r.view);
@@ -2580,7 +2567,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
       if (a.getAttribute('data-nav') === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
-    tabBadge('map', nNeeds, 'Home');
+    tabBadge('map', nNeeds, 'Dashboard');
     tabBadge('bin', S.bin.data && S.bin.data.ready ? S.bin.data.ready.length : 0, 'Bin');
     if (changed && lastView !== null) {
       el.classList.add('fade');

@@ -28,8 +28,8 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     const tabs = bar.locator('a');
     await expect(tabs).toHaveCount(5);
     for (let i = 0; i < 5; i++) expect((await tabs.nth(i).boundingBox()).height).toBeGreaterThanOrEqual(44);
-    await noSidewaysScroll(page, 'Home');
-    for (const [key, title] of [['drive', 'Drive'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['more', 'More'], ['map', 'Map']]) {
+    await noSidewaysScroll(page, 'Dashboard');
+    for (const [key, title] of [['drive', 'Drive'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['more', 'More'], ['map', 'Dashboard']]) {
       await bar.locator(`a[data-nav="${key}"]`).click();
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await expect(bar.locator(`a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
