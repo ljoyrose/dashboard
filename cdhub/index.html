@@ -212,6 +212,12 @@ tr:last-child td{border-bottom:none}
 .mrow .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
 .mrow .v{font-weight:600;font-variant-numeric:tabular-nums}
 .mfoot{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+/* foundation: empty state for a field that needs data CD Hub does not have. It names the Bloodline table that will feed it. */
+/* The card itself is the house card (../house.css .card) with CD Hub's dashed edge (.card.dash); only the layout is here. */
+.card.arrive{margin:0;box-shadow:none}.card.arrive h3{margin:0}
+.card.arrive .awhy{margin:4px 0 0;color:var(--muted);font-size:13px}
+.card.arrive .arrives{margin:8px 0 0;font-weight:600}
+.arrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--house-gap);margin:0 0 var(--house-gap)}
 .okempty{margin:12px 0 0;color:var(--muted);font-size:15px;display:flex;gap:8px;align-items:center}
 .okempty::before{content:"\2713";display:inline-grid;place-items:center;width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--ljr-5);background:var(--ljr-5-tint);color:var(--ink);font-size:13px}
 /* checklist ✓ / ✗ marks: status dots, so they are circles */
@@ -539,7 +545,7 @@ function build(){
   CD.tempActions=(T['BLD-temperature_action.csv']||[]).map(function(r){
     return {dir:r.direction,at:parseFloat(r.threshold_c),action:r.action,source:r.source};
   }).sort(function(a,b){return b.at-a.at;});
-  CD.litters=T['BLD-litter.csv']||[]; CD.matings=T['BLD-mating.csv']||[];
+  CD.litters=T['BLD-litter.csv']||[];   // CD.matings stays the parsed rows from above (it was overwritten with the raw rows, so In whelp found nothing)
   CD.vetlink=T['BLD-MAP-animana.csv']||[]; CD.manifest=T['BLD-_MANIFEST.csv']||[];
   var MCN={}; (T['BLD-microchip.csv']||[]).forEach(function(r){ if(r.subject_id&&r.chip_number) MCN[r.subject_id]=r.chip_number; });
   var vmScore=function(m){ var sc=0, st=String(m.vet_status||''), nm=String(m.vet_name||''), cl=String(m.vet_client||'');
@@ -786,7 +792,7 @@ function daysBetween(a,b){ var x=(a||'').split('-'),y=(b||'').split('-');
  return Math.round((Date.UTC(+y[0],+y[1]-1,+y[2])-Date.UTC(+x[0],+x[1]-1,+x[2]))/86400000); }
 function inWhelp(onISO){
  var today=onISO||new Date().toISOString().slice(0,10), out=[], bydam={};
- // build() keeps the raw mating rows in CD.matings, so read either shape (raw column names or the short ones).
+ // CD.matings holds the parsed rows (dam/sire/on). Raw rows (dam_subject_id/mated_on) are still read, so a caller can pass either shape.
  (CD.matings||[]).map(function(m){ return m.dam!==undefined?m:{dam:m.dam_subject_id,sire:m.sire_subject_id,on:m.mated_on,litter:m.litter_id||'',produced:m.produced_litter||'',method:m.method||''}; })
   .forEach(function(m){ if(!m.dam) return; (bydam[m.dam]=bydam[m.dam]||[]).push(m); });
  Object.keys(bydam).forEach(function(dam){
@@ -892,6 +898,17 @@ function needRow(x,hide){
  return '<div class="mrow'+(hide?' hidden':'')+'"'+(hide?' data-needmore="1"':'')+'><span class="ic'+(x.tone?' '+x.tone:'')+'" aria-hidden="true"></span>'
   +'<span class="t">'+esc(x.title)+'<small>'+esc(x.sub||'')+'</small></span>'+dpill(x.date,x.tone)+goBtn(x)+'</div>';
 }
+/* foundation: empty state that names its source. Used where a screen needs data that only the Bloodline app will hold.
+   Table names are the Stage 4 schema draft in BLOODLINE-THE-DOCUMENT (4.0a); the words are the dog pack's labels. */
+var ARRIVES={
+ media:['media','media','Photos','Record cards show a grey icon until photos are kept against each record.'],
+ person:['person','person','Who has it, by name','The ring says on site or off site. A named keeper needs people on file (BLD-subject_owner already points at person ids).'],
+ due:['work_item','work item','Due dates on Outstanding','BLD-WORK.csv has no date column, so these rows carry no date pill.'],
+ reading:['reading','reading','Temperatures that are kept','Readings typed on The round are not saved here. Kept readings need their own table.'],
+ stage:['birth_group_stage','litter stage','Litter stage','Born, weaning, ready: a litter\u2019s stage is recorded, not guessed from its age.']};
+function arrives(k){ var a=ARRIVES[k];   // a = [Bloodline table, the words shown, heading, why]
+ return '<section class="card dash arrive" id="arrive-'+k+'" data-arrives="'+esc(a[0])+'"><h3>'+esc(a[2])+'</h3>'
+  +'<p class="arrives">Arrives with Bloodline: '+esc(a[1])+'</p><p class="awhy">'+esc(a[3])+'</p></section>'; }
 /* foundation: summary strip (On track / Needs you / Overdue) */
 function summaryStrip(){
  var n=needsToday(), late=n.filter(function(x){return x.tone==='late';}).length;
@@ -1129,6 +1146,8 @@ function pageDogs(){
  +'<div class="key stf">'+STATUS.map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false"><b>'+x[0]+'</b>'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
  +'<span class="info" tabindex="0" title="The dot by each name is the sex: blue male, pink female, a ring when neutered, dashed when not recorded. A dog that has been done also says spayed or neutered. The buttons are the status: tap one to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>'
  +(miss?'<div class="card acc2"><h4>'+miss+' here carry no sex</h4><p style="margin-bottom:0">A blank sex drops a dog out of the breeding-bitch count silently.'+(missGone?' A further <b>'+missGone+'</b> have no sex but have been collected or have died — nothing to fix there.':'')+'</p></div>':(missGone?'<div class="card acc5"><h4>Every dog still here has a sex recorded</h4><p style="margin-bottom:0">'+missGone+' subjects carry no sex, and <b>all of them have been collected or have died</b>. Nothing to chase.</p></div>':''))
+ /* foundation: record media and named people, not held yet */
+ +'<div class="arrow">'+arrives('media')+arrives('person')+'</div>'
  +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
 }
 function ageBand(m){ if(m===null) return '__none'; if(m<6) return 'p'; if(m<12) return 'j'; if(m<84) return 'a'; return 'o'; }
@@ -1328,6 +1347,8 @@ function pageLitters(){
    groups:[['Date of birth',fsel('ld','Date of birth','<option value="y">has a DOB</option><option value="n">missing a DOB</option>')],
     ['Year',fsel('ly','Year','')],['Status',fsel('ls','Status','')],['Dam',fsel('lm','Dam','')],['Sire',fsel('lp','Sire','')],
     ['Pups',fsel('lk','Pups','<option value="y">pups linked</option><option value="n">no pups linked</option>')]]})
+ /* kit: animal (litter stage, not held yet) */
+ +'<div class="arrow">'+arrives('stage')+'</div>'
  +'<div class="scroll"><table><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>pups</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
  return h;
 }
@@ -1527,6 +1548,7 @@ function pageRound(){
  var h='<h2>The round</h2><p class="sub">Cabins in order: who is in, how it is run, temperatures.</p>'
  +'<div class="filt"><label class="mut" for="rdate">date</label><input id="rdate" type="date" value="'+date+'">'
  +'<span class="mut" id="rstat">'+(DB?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'read-only \u2014 saving is off for now')+'</span></div>';
+ if(!DB) h+='<div class="arrow">'+arrives('reading')+'</div>';   /* foundation: kept readings, not held yet */
  if(!DB) h+='<div class="card acc2"><h4>Saving off</h4><p style="margin-bottom:0">'
   +esc(DBERR||'No store: a tick could not be trusted.')+'</p></div>';
  else h+='<div class="card acc4"><h4>Where this saves</h4><p style="margin-bottom:0">'
@@ -1654,6 +1676,7 @@ function pageWork(){
  var mine=W.filter(function(r){return r.status!=='DONE' && r.owner==='Claude';}).length;
  var hers=W.filter(function(r){return r.status!=='DONE' && r.owner==='Lisa';}).length;
  var h='<h2>Outstanding</h2>'
+  +'<div class="arrow">'+arrives('due')+'</div>'   /* foundation: a due date on a work record, not held yet */
   +'<p class="note">Every ask in this project, with who it is waiting on. <b>'+hers+'</b> are waiting on you, <b>'+mine+'</b> on me, <b>'+(by.DONE||[]).length+'</b> done. This is a live file \u2014 change BLD-WORK.csv and this page changes.</p>';
  [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me'],['DONE','acc5','Done']].forEach(function(g){
   var rows=by[g[0]]||[]; if(!rows.length) return;

@@ -37,7 +37,7 @@ If any of these breaks, the tick turns red and says which page.
 | Page | Address | Checks |
 |---|---|---|
 | Main dashboard | `/dashboard/` | 46 |
-| CD Hub | `/dashboard/cdhub/` | 30 |
+| CD Hub | `/dashboard/cdhub/` | 51 |
 | Money Hub | `/dashboard/money/` | 41 |
 | Reading CSV files | both readers | 17 |
 | Safety checks | the whole repo | 4 |
@@ -55,7 +55,7 @@ If any of these breaks, the tick turns red and says which page.
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 651 checks that must pass (mocked + phone, 28 Oct 2026, house look on every hub).
+That is 654 checks that must pass (mocked + phone, 29 Oct 2026, house look on every hub; CD Hub In whelp fixture test and Bloodline empty states).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
