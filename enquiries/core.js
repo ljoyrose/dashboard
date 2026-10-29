@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.2.0 (2026-10-29)';
+  var VERSION = 'enquiries-core 1.3.0 (2026-10-29)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -429,6 +429,80 @@
     return out;
   }
 
+  // ---- Capture: email and website forms ---------------------------------------------------------------------------
+  // Form notifications (WordPress on labradoodles.co.uk, ClickFunnels, HubSpot) write "Label: value" lines. Pull the
+  // fields we know by any of their usual labels; keep the rest out (the sheet holds a 300 character summary at most).
+  var FIELD_LABELS = {
+    name: /^(your |full |first )?name$|^contact name$/, last: /^(last|sur) ?name$/, email: /^(your )?e-?mail( address)?$/,
+    phone: /^(your )?(phone|mobile|telephone|tel|whats ?app)( number| no\.?)?$/, country: /^(your )?country( of residence)?$/,
+    message: /^(your )?(message|enquiry|inquiry|comments?|question|how can (i|we) help\??|tell us .*)$/,
+    timing: /^(when|timing|when would you like.*|preferred timing)$/, breed: /^(breed|which breed.*)$/
+  };
+  function formFields(body) {
+    var out = {}, lines = String(body || '').replace(/\r/g, '').split('\n');
+    for (var i = 0; i < lines.length; i++) {
+      var m = lines[i].match(/^\s*\**\s*([A-Za-z][A-Za-z ?.'/-]{1,40}?)\s*\**\s*[:：]\s*(.*)$/);
+      if (!m) continue;
+      var label = m[1].trim().toLowerCase(), val = m[2].trim();
+      if (!val && lines[i + 1] && !/:/.test(lines[i + 1])) val = lines[i + 1].trim();   // value on the next line
+      for (var f in FIELD_LABELS) if (FIELD_LABELS[f].test(label) && !out[f] && val) out[f] = val;
+    }
+    if (out.last && out.name && out.name.indexOf(out.last) < 0) out.name = out.name + ' ' + out.last;
+    delete out.last;
+    return out;
+  }
+
+  // Senders and words that are never an enquiry. Settings can add more (noise_senders, comma list) at run time.
+  var NOISE_SENDERS = /@(calendly\.com|github\.com|google\.com|accounts\.google\.com|wordfence\.com|semrush\.com|xero\.com|paypal\.|stripe\.com|shopify\.com|mailchimp|hubspot\.com$|e\.hubspot\.com|linkedin\.com|facebookmail\.com$)|^(no-?reply|noreply|mailer-daemon|postmaster)@/i;
+  var NOISE_SUBJECT = /\b(invoice|statement|remittance|receipt|order confirm(ation|ed)|price ?list|newsletter|webinar|seo (report|audit)|ranking report|weekly (activity|report)|security alert|wordfence|new user registration|password reset|unsubscribe|% off|sale ends|your order|payment (received|failed)|direct debit)\b/i;
+  var NOISE_BODY = /\b(view (this email )?in (your )?browser|to unsubscribe|manage (your )?preferences|invoice (no|number)|amount due|vat (no|number)|keyword rankings?|domain authority|backlinks?)\b/i;
+  var FORM_SIGNAL = /\b(new (form )?submission|form submission|new (enquiry|inquiry|contact|lead|message) (from|via|on)|contact form|enquiry form|website (enquiry|form)|has submitted|submitted the form|opt-?in)\b/i;
+  var DOG_WORDS = /\b(pupp(y|ies)|pups?|litters?|cobberdogs?|labradoodles?|doodles?|stud|breed(ing|er)?|waiting list|dog|girl|boy|deposit)\b/i;
+  var ASK_WORDS = /\?|\b(interested|enquir|inquir|looking for|would (like|love)|available|availability|how much|cost|price|waiting list|can (i|we|you)|do you have)\b/i;
+
+  // One email -> { enquiry: bool, channel, kind, reason, fields }.
+  // m: { from, to, subject, body, labels: [..], noiseSenders: [..], formSenders: [..] }. formSenders are the addresses or
+  // domains that send form notifications (the website, ClickFunnels, HubSpot): their mail is judged on its fields.
+  function classifyEmail(m) {
+    m = m || {};
+    var from = String(m.from || '').toLowerCase(), subject = String(m.subject || ''), body = String(m.body || '');
+    var addr = (from.match(/<([^>]+)>/) || [null, from])[1].trim();
+    var labels = (m.labels || []).map(function (l) { return String(l).toLowerCase(); });
+    var no = function (why) { return { enquiry: false, channel: '', kind: '', reason: why, fields: {} }; };
+    if (labels.some(function (l) { return /^(spam|trash|category_promotions|promotions|category_social)$/.test(l); })) return no('promotions or spam');
+    var extra = (m.noiseSenders || []).map(function (x) { return String(x).trim().toLowerCase(); }).filter(Boolean);
+    if (extra.some(function (x) { return addr.indexOf(x) >= 0; })) return no('listed noise sender');
+    var formSender = (m.formSenders || []).some(function (x) { x = String(x).trim().toLowerCase(); return x && addr.indexOf(x) >= 0; });
+    var fields = formFields(body);
+    var isForm = formSender || FORM_SIGNAL.test(subject) || (FORM_SIGNAL.test(body) && (fields.email || fields.phone));
+    if (isForm) {
+      if (NOISE_SUBJECT.test(subject) && !(fields.email || fields.phone)) return no('system mail from a form sender');
+      if (!(fields.email || fields.phone || fields.message)) return no('form mail with no contact fields');
+      var text = [fields.message, subject].join(' ');
+      var ch = /clickfunnels|myclickfunnels/.test(addr + ' ' + body.toLowerCase()) ? 'cf-website-optin' : /hubspot/.test(addr) ? 'hubspot' : /pets4homes/.test(addr) ? 'pets4homes' : 'web-form';
+      return { enquiry: true, channel: ch, kind: kindOrPuppy(text), reason: 'form notification', fields: fields };
+    }
+    if (NOISE_SENDERS.test(addr)) return no('system or supplier sender');
+    if (NOISE_SUBJECT.test(subject) || NOISE_BODY.test(body)) return no('invoice, report or marketing mail');
+    var all = subject + ' ' + body;
+    if (/pets4homes/.test(addr) && DOG_WORDS.test(all)) return { enquiry: true, channel: 'pets4homes', kind: kindOrPuppy(all), reason: 'Pets4Homes message', fields: fields };
+    if (DOG_WORDS.test(all) && ASK_WORDS.test(all)) return { enquiry: true, channel: 'email', kind: kindOrPuppy(all), reason: 'asks about our dogs', fields: fields };
+    return no('no enquiry words');
+  }
+  function kindOrPuppy(text) { var k = classifyKind(text); return k === 'other' && DOG_WORDS.test(text) ? 'puppy' : k; }
+
+  // Gmail search for the reader: mail to the business addresses or from the form senders, newest first, never
+  // promotions, spam or trash. Addresses and senders come from Settings (kept out of this public file).
+  function gmailQuery(o) {
+    o = o || {};
+    var to = (o.addresses || []).filter(Boolean), frm = (o.formSenders || []).filter(Boolean);
+    var parts = [];
+    if (to.length) parts.push('to:(' + to.join(' OR ') + ')');
+    if (frm.length) parts.push('from:(' + frm.join(' OR ') + ')');
+    var q = parts.length > 1 ? '{' + parts.join(' ') + '}' : (parts[0] || '');
+    return (q + ' newer_than:' + (o.days || 90) + 'd -category:promotions -category:social -in:spam -in:trash').trim();
+  }
+
   var api = {
     VERSION: VERSION, CALLING: CALLING, STAGES: STAGES, ADULT_STAGES: ADULT_STAGES, KINDS: KIND_ORDER.slice(),
     normalisePhone: normalisePhone, countryFromPhone: countryFromPhone, countryFromTimezone: countryFromTimezone,
@@ -437,7 +511,8 @@
     hoursSince: hoursSince, toMs: toMs,
     FLOW: FLOW, COLUMNS: COLUMNS, CHANNELS: CHANNELS, BANDS: BANDS, CONSENT: CONSENT, ENUMS: ENUMS,
     checkHeader: checkHeader, validateRow: validateRow, stageFlags: stageFlags, parseTab: parseTab, truthy: truthy,
-    toUk: toUk, summary: summary, lastPart: lastPart, calendlyRecords: calendlyRecords
+    toUk: toUk, summary: summary, lastPart: lastPart, calendlyRecords: calendlyRecords,
+    formFields: formFields, classifyEmail: classifyEmail, gmailQuery: gmailQuery
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

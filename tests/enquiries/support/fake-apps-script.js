@@ -34,7 +34,7 @@ function makeBook(name) {
 }
 
 // routes: [[RegExp, (url, opt) => jsonObject]]. Unmatched URLs throw, so a test sees any unexpected call.
-function load(engineSource, { props = {}, routes = [], dryRun } = {}) {
+function load(engineSource, { props = {}, routes = [], dryRun, gmail = [] } = {}) {
   const store = Object.assign({}, props);
   const http = [];
   let book = null;
@@ -49,6 +49,13 @@ function load(engineSource, { props = {}, routes = [], dryRun } = {}) {
     DriveApp: { getFileById: () => ({ moveTo: () => {} }), getFolderById: () => ({}) },
     Utilities: { formatDate: (d) => d.toISOString().slice(0, 19), sleep: () => {} },
     ScriptApp: { getProjectTriggers: () => [], newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create: () => {} }) }) }) },
+    // gmail: [{ id, from, to, subject, body, date, labels }] -> read-only thread objects. Every call is recorded.
+    GmailApp: {
+      search: (q, start, max) => { http.push({ url: 'gmail:search ' + q, method: 'get' }); return gmail.slice(start || 0, max || 100).map((m) => ({
+        getId: () => m.id, getLabels: () => (m.labels || []).map((n) => ({ getName: () => n })), isInSpam: () => false,
+        getMessages: () => [{ getFrom: () => m.from, getTo: () => m.to || '', getSubject: () => m.subject, getPlainBody: () => m.body, getDate: () => new Date(m.date || '2026-10-20T10:00:00Z') }]
+      })); }
+    },
     UrlFetchApp: {
       fetch: (url, opt) => {
         http.push({ url, method: (opt && opt.method) || 'get', headers: opt && opt.headers });
