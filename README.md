@@ -27,6 +27,18 @@ A single-page Google **shared drives** surface (read-only browsing, plus a Bin),
 The repo contains no secrets. The OAuth client ID in `index.html` is public by design and only works from the
 authorised origin `https://ljoyrose.github.io`.
 
+## Privacy guard (this repo is PUBLIC)
+
+Everything pushed here (every commit, branch, commit message and Actions log) can be read by anyone, for ever. A force-push does not remove it. So a guard blocks private material before it lands.
+
+- **What it blocks:** a term from the private denylist (in text, file names or commit messages), an email address that is not on the allow list, a Google Drive/Docs id or link outside `config.js`, a UK phone number (Ofcom's fiction numbers such as 07700 900xxx are fine for samples), data paths (sends, runs, regression sets, zips, `.env`, `.pyc`), and a commit author email that is not a noreply address. It prints file:line and the rule, never the private text.
+- **Where it runs:** on every pull request and push (workflow "Privacy guard", job **Privacy guard (public repo)**, a required check on `main`), and on your machine through git hooks. Daily and hand-started runs are report-only: counts by rule, nothing uploaded, never red.
+- **The denylist is never in this repo.** CI reads it from the repository secret `PRIVACY_DENYLIST` (one term per line). On your machine keep a copy outside the repo, for example `$HOME/.config/repo-privacy/denylist.txt`, and `export PRIVACY_DENYLIST_FILE=$HOME/.config/repo-privacy/denylist.txt`. The master copy stays on Lisa's Drive. With no denylist the guard fails closed (exit 2; in CI: "PRIVACY_DENYLIST secret missing: failing closed").
+- **Install the hooks once:** `git config core.hooksPath .githooks`. `pre-commit` checks what you stage; `pre-push` checks every commit you push, so something added then removed is still caught.
+- **Run it by hand:** `python3 tools/privacy-guard/privacy_guard.py --staged` (or `--range A..B`, `--tree`, `--history`; add `--report /some/path/outside/the/repo.md` for a report-only run). Self-tests: `python3 tools/privacy-guard/test_privacy_guard.py` (fake data only).
+- **On a FAIL:** do not push. Remove the line by a normal edit (Drive ids go in `config.js`; people and app names become aliases such as APP-A). If it was already pushed: stop, do not force-push or delete anything, and tell Lisa; only she decides history rewrites.
+- **Allow list:** `tools/privacy-guard/allow.txt` is public and stays tiny (10 lines at most; the one business address, and Drive ids only in `config.js`). A test fails if it grows.
+
 ## Design rules (every page, now and future)
 
 - **Dashboard button.** Every page except home has a **Dashboard** button at the top right of the header. Always shown (signed in or out), keyboard reachable, `aria-label`, existing button style. Opened from the dashboard: it brings that tab back and closes itself. Otherwise it goes to the site root.

@@ -218,14 +218,14 @@ This is what turns the tests from "advice" into "protection". It needs your admi
 2. Left side: **Branches**. Click **Add branch protection rule** (or **Add classic branch protection rule**).
 3. **Branch name pattern:** type `main`.
 4. Tick **Require a pull request before merging**. Leave "Required approvals" at **0** (you are the only person, so you could not approve your own).
-5. Tick **Require status checks to pass before merging**. In the search box type `Browser tests` and pick **Browser tests (pretend Google and Drive)**. (It only appears in the list because it has run recently. If you cannot find it, open the Actions tab, run "Dashboard tests" once, then try again.)
+5. Tick **Require status checks to pass before merging**. In the search box type `Browser tests` and pick **Browser tests (pretend Google and Drive)**. (It only appears in the list because it has run recently. If you cannot find it, open the Actions tab, run "Dashboard tests" once, then try again.) Then type `Privacy guard` and also pick **Privacy guard (public repo)** (the check that blocks private material; this repo is public). **Status of this second check: not yet added (waits for Lisa's settings visit, after the PRIVACY_DENYLIST secret is saved).** Until it is added, the weekly protection watch reports it.
 6. Tick **Do not allow bypassing the above settings** (this makes it apply to you too).
 7. Leave **Allow force pushes** and **Allow deletions** **unticked**.
 8. Click **Create** (or **Save changes**).
 
 What changes for you: nothing can go straight into `main`; every change comes as a pull request, and the green **Merge** button only lights up when the tests are green. A red tick means "fix it first". If you ever need to bypass it in an emergency, untick step 6 for a moment.
 
-Do not rename the job "Browser tests (pretend Google and Drive)" in `tests.yml`. If it is renamed, merges stick on "Expected, waiting for status" and the rule must be edited to the new name.
+Do not rename the job "Browser tests (pretend Google and Drive)" in `tests.yml`, or "Privacy guard (public repo)" in `privacy-guard.yml`. If it is renamed, merges stick on "Expected, waiting for status" and the rule must be edited to the new name.
 
 ## Publishing waits for the tests
 
