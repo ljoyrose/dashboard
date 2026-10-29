@@ -69,8 +69,15 @@
       wakeFile: 'MKT-WAKE-WEBAPP.json',
       live: false
     },
-    // Bin guard (Apps Script, owned by lisa@puppyclassroom.com). Restores binned items that are not ZZ_DELETE_/ZZ_SUPERSEDED_
-    // into 00 CHECK. The web app is domain-only, so its address is not needed by anyone outside puppyclassroom.com.
+    // App Factory page (factory/): reads af-state.json from logsFolderId (written by AF-ENGINE); writes request files into
+    // requestsFolderId. The Idea Form is the front door (AF-ENGINE writes the card and the ClickUp task).
+    factory: {
+      logsFolderId: '1e04LM9qA2lXpy63Qfcd7x9HEEjhsMj9k',
+      requestsFolderId: '1Z1Iuc_rRFq7cy12ELM0seZ-onpCSfDQ2',
+      ideaFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSfzzTnlyNWeXzFEz9NfYxNXsCFN6KwV8RxFyIRTJZ-WrH15nw/viewform'
+    },
+    // Bin guard (Apps Script, owned by the business account). Restores binned items that are not ZZ_DELETE_/ZZ_SUPERSEDED_
+    // into 00 CHECK. The web app is domain-only, so its address is not needed by anyone outside the business domain.
     binGuard: {
       checkFolderId: '1o7ag4AndYA20h7aOmPsm0x69q3f2PqaZ', // LD > *00 Current > 00 CHECK
       homeFolderId: '1HKAMkAER7ft-xMJYUQGzi_v6jV-3vQwk', // LD > *00 Current: the web app writes its address file here when first opened

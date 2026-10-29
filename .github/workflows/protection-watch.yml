@@ -30,7 +30,7 @@ jobs:
       - name: Off? Open or update the one issue
         if: ${{ failure() && steps.check.outcome == 'failure' && github.ref == 'refs/heads/main' }}
         continue-on-error: true
-        run: node tests/support/report-issue.js --state red --label protection-off --title-prefix "Branch protection needs a look" --results none --note "Protection on main is off or no longer requires the test check. See the run summary."
+        run: node tests/support/report-issue.js --state red --label protection-off --title-prefix "Branch protection needs a look" --results none --note "Protection on main is off or no longer requires the test check or the privacy guard check. See the run summary."
       - name: On? Close the issue
         if: ${{ success() && github.ref == 'refs/heads/main' }}
         continue-on-error: true
