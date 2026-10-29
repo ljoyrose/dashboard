@@ -42,9 +42,8 @@ jobs:
         run: |
           printf '%s\n' "$PRIVACY_DENYLIST" | while IFS= read -r t; do
             t="$(printf '%s' "$t" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
-            [ -n "$t" ] && echo "::add-mask::$t"
+            if [ -n "$t" ]; then echo "::add-mask::$t"; fi
           done
-          true
 
       - name: Scan
         id: scan
