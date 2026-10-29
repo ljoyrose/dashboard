@@ -3,7 +3,7 @@
 // covers every tab, and Money Hub and CD Hub open in their own tab with a "Dashboard" button.
 const { test, expect } = require('../support/test');
 
-const MOVE = 'https://docs.google.com/spreadsheets/d/1AIgIefQMATEdWLtAkdvE7SvdnX8g2sTX87VnvOX5c-I/edit';
+const MOVE = require('../support/world').IDS.moveSheet; // read from config.js, never copied (this repo is public)
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();

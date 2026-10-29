@@ -49,7 +49,7 @@ function foodBook() {
     products: [['tla', 'full_ga_code', 'range', 'species', 'life_stage', 'recipe', 'pack', 'pack_kg', 'ga_price_ex_vat_portal_oct26', 'ga_price_ex_vat_list_aug25', 'price_change', 'list_vat_flag', 'in_portal', 'in_price_list', 'chicken_in_name', 'grain', 'ddf_status', 'ddf_name', 'barcode', 'kibble', 'protein_pct', 'fresh_meat_pct', 'shopify', 'shopify_price_inc_vat', 'subscription_price_inc_vat', 'clickfunnels_price_inc_vat', 'puppyclassroom_price_inc_vat', 'profit_ex_vat_1bag_1box'],
       ['AAA', 'AAA0012KZPSXZZZ', 'Grain Free', 'Dog', 'Adult', 'GF Sample Fish', '12kg', '12', '31.20', '31.20', '', 'WD*', 'Y', 'Y', 'N', 'Grain free', 'ON SALE (Shopify)', 'Sample Doodle', '', '', '', '', 'Y', '65', '63', '', '', '8.17'],
       ['BBB', '', 'Grain Free', 'Dog', 'Adult', 'GF Sample Rabbit', '6kg', '6', '21.97', '21.97', '', 'WD*', 'Y', 'Y', 'N', 'Grain free', 'DDF-ELIGIBLE: check data sheet, then list', '', '', '', '', '', 'N', '', '', '', '', '']],
-    settings: [['key', 'value', 'note'], ['MIN_PROFIT', '15', ''], ['GA_ACCOUNT_CODE', 'XYZ', ''], ['GA_PHONE_ORDERS', '01234 567890', ''], ['GA_PORTAL', 'https://partners.example.test', ''], ['GA_PAYMENT', 'Direct debit', '']],
+    settings: [['key', 'value', 'note'], ['MIN_PROFIT', '15', ''], ['GA_ACCOUNT_CODE', 'XYZ', ''], ['GA_PHONE_ORDERS', '01632 960123', ''], ['GA_PORTAL', 'https://partners.example.test', ''], ['GA_PAYMENT', 'Direct debit', '']],
   };
 }
 
@@ -115,8 +115,7 @@ const HUBS = {
     url: 'factory/', views: ['rooms', 'me', 'decide', 'do', 'docs', 'today', 'room/rig', 'app/links', 'health', 'all', 'new'],
     async open(page, guard) {
       const { build } = require('../fixtures/factory/state');
-      const src = fs.readFileSync(path.join(ROOT, 'factory', 'index.html'), 'utf8');
-      const logs = /logs: '([^']+)'/.exec(src)[1];
+      const logs = require('./world').IDS.factoryLogs;
       const st = build(Date.now());
       st.lists.work[1].due = Date.now() + 864e5;
       guard.world.folder(logs, 'AF logs (sample)');

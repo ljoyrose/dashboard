@@ -1981,7 +1981,7 @@
       if (k === 'moremenu') { showMore($('moreMenu').classList.contains('hidden')); return; }
       if (k === 'moredone') { showMore(false, true); return; }
       if (k === 'lookmore') { showMore(false); showLook(true); var lf = document.querySelector('#lookMenu button'); if (lf) lf.focus(); return; }
-      if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
+      if (k === 'signin') auth.requestInteractive(CFG.money && CFG.money.owner ? { login_hint: CFG.money.owner } : {}); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'filters') { filtersOpen = !filtersOpen; sortOpen = false; render(); fFocus(); }
       else if (k === 'sort') { sortOpen = !sortOpen; filtersOpen = false; render(); fFocus(); }
       else if (k === 'fdone') { closeF(); }

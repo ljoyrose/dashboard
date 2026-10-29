@@ -6,7 +6,7 @@ const { test, expect } = require('../support/test');
 const { build } = require('../fixtures/factory/state');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'factory', 'index.html'), 'utf8');
-const LOGS = /logs: '([^']+)'/.exec(SRC)[1];
+const LOGS = require('../support/world').IDS.factoryLogs;
 const VIEWS = ['rooms', 'me', 'decide', 'do', 'docs', 'today', 'card/869fjxpc2', 'room/rig', 'item/869fk9d1r', 'item/869fk6k00', 'app/links', 'health', 'all', 'new'];
 const PRESS = 'main .btn, main button.pill, main a.pill, main .fbtn, main .ch, main .more, main .copy, main label.date, main a.chip, main a.need, main .ico, main .flagb, main .mark, main .plus, main a.lk, main button.lk, main .sbox, header .btn, nav.tabs a';
 

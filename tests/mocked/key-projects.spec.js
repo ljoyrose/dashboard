@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const MOVE = 'https://docs.google.com/spreadsheets/d/1AIgIefQMATEdWLtAkdvE7SvdnX8g2sTX87VnvOX5c-I/edit';
+const MOVE = require('../support/world').IDS.moveSheet; // read from config.js, never copied (this repo is public)
 const TILES = [
   ['MOVE', MOVE, true],
   ['Money Hub', 'money/', true],
