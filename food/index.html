@@ -210,7 +210,7 @@
   }
   function why(status, msg) {
     if (/insufficient|scope/i.test(msg)) return 'Google did not give this page spreadsheet access. Sign out, sign in again and tick every box Google shows.';
-    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the RR_FOOD workbook. Sign in as lisa@puppyclassroom.com.';
+    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the RR_FOOD workbook. Sign in with the Google account that owns it.';
     if (/Unable to parse range/i.test(msg)) return 'the RR_FOOD workbook is missing a tab. Run "setup" once in the food engine.';
     return 'Google said ' + status + (msg ? ': ' + msg : '');
   }
@@ -430,7 +430,7 @@
   document.addEventListener('click', function (e) {
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
-    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
+    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(F && F.owner ? { login_hint: F.owner } : {}); }
     if (a === 'signout') { token = null; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }

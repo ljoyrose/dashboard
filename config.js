@@ -47,6 +47,7 @@
     // (RR_DDF folder), which the RR_FOOD-ENGINE Apps Script fills. The page writes only the 4 answer cells of a Cards row.
     food: {
       bookId: '1Lags6XfdNhvxwxGNgEKwfoosHr6ci9rzG-QXulgCfxU', // RR_FOOD (RR_DDF folder)
+      owner: 'lisa@puppyclassroom.com', // sign-in hint (config.js is the only place private addresses live)
       live: false
     },
     // Studio page (studio/): asset hub. Reads studio-state.json from logsFolderId (written by the STUDIO-ENGINE Apps Script);
