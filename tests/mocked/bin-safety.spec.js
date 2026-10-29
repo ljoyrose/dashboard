@@ -345,7 +345,7 @@ test.describe('PC-Personal bin uses the same ledger gate', () => {
     guard.world.file('me-rr', 'ZZ_DELETE_DRIVE_RR_copy.pdf', 'x', mine);
     ledger(guard.world, ['me-ok', 'me-rr']);
     page.on('dialog', (d) => d.accept());
-    await page.goto('./#/personal');
+    await page.goto('./#/bin');
     await signIn(page);
     const view = page.locator('#view');
     await expect(view).toContainText('ZZ_DELETE_DRIVE_ok.pdf');

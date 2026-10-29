@@ -5,7 +5,7 @@ A single-page Google **shared drives** surface (read-only browsing, plus a Bin),
 
 - **Sections** (one shared header, Map first): Map, Read first, Drive, Bin, Changes (Recent, Last 24h, Last 7 days, Totals).
 - **Excluded drive (hard rule 14):** Karen - SHARED (`0AEf6v2sKb4FrUk9PVA`, `excludedDrives` in `config.js`) is never queried, listed, searched or binned.
-- **Drive** lists shared drives only (`drives.list`, `corpora=drive`), with a picker and folder browsing (`#/drive/<driveId>/<folderId>`). My Drive is never listed.
+- **Drives** (bottom tab, `#/drives`) has one pill row: Shared drives (`#/drives/shared/<driveId>/<folderId>`, with Read first pinned at the top), Work My Drive (`#/drives/work`), Personal Drive (`#/drives/personal-drive`) and Drive check (`#/drives/usb`). Shared drives lists shared drives only (`drives.list`, `corpora=drive`). Work My Drive and Personal Drive are look-only scans; Personal Drive uses its own read-only sign-in (`drive.metadata.readonly`), held in memory only and never used for work calls. Old addresses (`#/drive…`, `#/readfirst`, `#/personal`, `#/usb`) redirect.
 - **Bin** (`#/bin`): lists names starting `ZZ_`. Only a ticked name that starts `ZZ_DELETE_` and has a row in the delete ledger can be moved.
   No ledger row: held, not ticked. Other `ZZ_` names, including retired `ZZ_SUPERSEDED_`, are Rename needed and are never binned.
   `RR_` anywhere in the name, inside an `RR_` folder, or a folder that holds an `RR_` item, is left out. If the ledger cannot be read, nothing is binned.

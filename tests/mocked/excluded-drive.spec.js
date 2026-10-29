@@ -20,17 +20,17 @@ test.describe('Excluded shared drive (Karen - SHARED, hard rule 14)', () => {
     await page.goto('./');
     expect(await page.evaluate(() => window.DASH_CONFIG.excludedDrives)).toContain(KAREN);
     await signIn(page);
-    for (const hash of ['#/map', '#/drive', '#/drive/' + KAREN, '#/bin', '#/changes', '#/changes/24h', '#/changes/7d']) {
+    for (const hash of ['#/map', '#/drives', '#/drives/shared', '#/drives/shared/' + KAREN, '#/bin', '#/changes', '#/changes/24h', '#/changes/7d']) {
       await page.goto('./' + hash);
       await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
       await page.waitForTimeout(300);
       await expect(page.locator('body')).not.toContainText(/Karen|karen-/);
     }
-    await page.goto('./#/drive');
+    await page.goto('./#/drives/shared');
     await expect(page.locator('#drivePicker option[value="' + KAREN + '"]')).toHaveCount(0);
 
     // PC-Personal duplicate scan: compares with every shared drive except the excluded one.
-    await page.goto('./#/personal');
+    await page.goto('./#/drives/work');
     await page.locator('[data-action="pcpscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished|already in a shared drive|personal files/);
     await expect(page.locator('body')).not.toContainText(/Karen|karen-/);

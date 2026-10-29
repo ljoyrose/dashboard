@@ -29,7 +29,7 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     await expect(tabs).toHaveCount(5);
     for (let i = 0; i < 5; i++) expect((await tabs.nth(i).boundingBox()).height).toBeGreaterThanOrEqual(44);
     await noSidewaysScroll(page, 'Dashboard');
-    for (const [key, title] of [['drive', 'Drive'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['more', 'More'], ['map', 'Dashboard']]) {
+    for (const [key, title] of [['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['more', 'More'], ['map', 'Dashboard']]) {
       await bar.locator(`a[data-nav="${key}"]`).click();
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await expect(bar.locator(`a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
@@ -55,11 +55,11 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     await expect(page.locator('#hereTitle')).toHaveText('Bin');
   });
 
-  test('More lists the sections not in the bar and the other hubs; those sections light up More', async ({ page }) => {
+  test('More lists the Drives pages and the other hubs; those pages light up Drives', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     await page.locator('#mainNav a[data-nav="more"]').click();
-    for (const key of ['readfirst', 'personal', 'usb']) await expect(page.locator(`#view a[data-nav="${key}"]`)).toHaveAttribute('href', '#/' + key);
+    for (const [key, href] of [['readfirst', '#/drives/readfirst'], ['personal', '#/drives/work'], ['usb', '#/drives/usb']]) await expect(page.locator(`#view a[data-nav="${key}"]`)).toHaveAttribute('href', href);
     for (const href of ['money/', 'cdhub/', 'factory/', 'marketplace/', 'food/', 'studio/']) {
       const a = page.locator(`#view a.morelink[href="${href}"]`);
       await expect(a).toHaveAttribute('target', '_blank');
@@ -67,13 +67,13 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     }
     await page.locator('#view a[data-nav="usb"]').click();
     await expect(page.locator('#hereTitle')).toHaveText('Drive check');
-    await expect(page.locator('#mainNav a[data-nav="more"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#mainNav a[data-nav="drives"]')).toHaveAttribute('aria-current', 'page');
   });
 
   test('the selected tab has one clean border and a colour fill; the "You are here" title has no box @regression', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    for (const [via, key, title] of [['bar', 'drive', 'Drive'], ['more', 'readfirst', 'Read first'], ['bar', 'bin', 'Bin']]) {
+    for (const [via, key, title] of [['bar', 'drives', 'Drives'], ['more', 'readfirst', 'Read first'], ['bar', 'bin', 'Bin']]) {
       if (via === 'more') { await page.locator('#mainNav a[data-nav="more"]').click(); await page.locator(`#view a[data-nav="${key}"]`).click(); }
       else await page.locator(`#mainNav a[data-nav="${key}"]`).click();
       await expect(page.locator('#hereTitle')).toHaveText(title);
@@ -89,17 +89,17 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
       expect(h.b).toBe('nonenone');
       expect(h.sh).toBe('none');
     }
-    // Keyboard route too (g then d = Drive): a keyboard user gets :focus-visible, which drew the square box.
+    // Keyboard route too (g then d = Drives): a keyboard user gets :focus-visible, which drew the square box.
     await page.locator('body').click({ position: { x: 5, y: 300 } });
     await page.keyboard.press('g'); await page.keyboard.press('d');
-    await expect(page.locator('#hereTitle')).toHaveText('Drive');
+    await expect(page.locator('#hereTitle')).toHaveText('Drives');
     await expect(page.locator('#hereTitle')).toBeFocused();
     const k = await page.locator('#hereTitle').evaluate((e) => { const c = getComputedStyle(e); return c.outlineStyle === 'none' || c.outlineWidth === '0px'; });
     expect(k, 'heading has no outline after a keyboard move').toBe(true);
   });
 
   test('deep links still land on their section and light the right tab', async ({ page }) => {
-    for (const [hash, tab] of [['#/changes/24h', 'changes'], ['#/bin', 'bin'], ['#/personal', 'more']]) {
+    for (const [hash, tab] of [['#/changes/24h', 'changes'], ['#/bin', 'bin'], ['#/drives/work', 'drives']]) {
       await page.goto('./' + hash);
       await signIn(page);
       await expect(page).toHaveURL(new RegExp(hash.replace(/[/#]/g, (c) => '\\' + c)));

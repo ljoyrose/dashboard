@@ -13,7 +13,9 @@
     scopes: {
       read: 'https://www.googleapis.com/auth/drive.readonly',
       // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
-      write: 'https://www.googleapis.com/auth/drive'
+      write: 'https://www.googleapis.com/auth/drive',
+      // Personal Drive page only: a second, look-only sign-in. Its token stays in memory and is never used for work calls.
+      personal: 'https://www.googleapis.com/auth/drive.metadata.readonly'
     },
     // Ids only, derived from cleanup.excludedDrives. Kept so older checks still find them.
     excludedDrives: EXCLUDED.map(function (d) { return d.id; }),

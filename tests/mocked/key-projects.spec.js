@@ -12,9 +12,9 @@ const TILES = [
   ['Marketplace', 'marketplace/', true],
   ['GA Hub', 'food/', true],
   ['Studio', 'studio/', true],
-  ['Read first', '#/readfirst', false],
-  ['PC-Personal', '#/personal', false],
-  ['Drive check', '#/usb', false],
+  ['Read first', '#/drives/readfirst', false],
+  ['Work My Drive', '#/drives/work', false],
+  ['Drive check', '#/drives/usb', false],
   ['Bin', '#/bin', false],
   ['Changes', '#/changes', false],
 ];
@@ -60,7 +60,7 @@ test.describe('Home: Key projects & docs', () => {
     await expect(tiles).toHaveCount(TILES.length);
     await expect(block.locator('a.keytile[href="#/drive"]')).toHaveCount(0);
     await expect(block.getByRole('link', { name: 'Drive', exact: true })).toHaveCount(0);
-    await expect(page.locator('#mainNav a[data-nav="drive"]')).toHaveAttribute('href', '#/drive');
+    await expect(page.locator('#mainNav a[data-nav="drives"]')).toHaveAttribute('href', '#/drives');
     for (let i = 0; i < TILES.length; i++) {
       const [label, href, blank] = TILES[i];
       const tile = tiles.nth(i);
