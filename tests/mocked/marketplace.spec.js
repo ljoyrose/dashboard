@@ -166,6 +166,13 @@ test.describe('Marketplace page', () => {
     await page.goto('marketplace/#/go');
     await expect(page.locator('#view')).toContainText('relist on Depop by hand, then tap Go');
   });
+  test('public pages hold no email address: no "@" address, no login_hint, no authuser (Stage 0A, D1 = B) @regression', async () => {
+    for (const f of ['index.html', 'privacy.html']) {
+      const src = fs.readFileSync(path.join(__dirname, '..', '..', 'marketplace', f), 'utf8');
+      expect(src, f).not.toMatch(/[A-Za-z0-9._+-]+(@|%40)[A-Za-z0-9-]+\.[A-Za-z]{2,}/);
+      expect(src, f).not.toMatch(/login_hint|authuser|mailto:[^'"]/);
+    }
+  });
   test('privacy policy page: public (no sign-in, no scripts), names the contact, says buyer details are not stored, tokens.css colours only', async ({ page }) => {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'marketplace', 'privacy.html'), 'utf8');
     expect(src).not.toMatch(/<script/i);
@@ -173,7 +180,7 @@ test.describe('Marketplace page', () => {
     expect(src.replace(/<!--[\s\S]*?-->/g, '')).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(|hsl\(/i);
     await page.goto('marketplace/privacy.html');
     await expect(page.locator('h1')).toHaveText('Privacy policy');
-    await expect(page.locator('a[href="mailto:lisa@puppyclassroom.com"]').first()).toBeVisible();
+    await expect(page.locator('main a', { hasText: 'contact page on the website' }).first()).toBeVisible();
     await expect(page.locator('main')).toContainText('does not store buyer names');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
@@ -548,7 +555,7 @@ test.describe('Marketplace page', () => {
   test('answered cards leave the list at once and wait in "Just done" (with Undo) at the bottom', async ({ page }) => {
     const rows = [['LINK|L1|L2', 'check', 'Other', 'Sample golf balls', JSON.stringify({ kind: 'missing', platform: 'eBay', why: 'Live on eBay but missing from your list. Add it?' }), ago(5)],
       ['LINK|L3|L4', 'check', 'Other', 'Sample watch', JSON.stringify({ kind: 'missing', platform: 'eBay', why: 'Live on eBay but missing from your list. Add it?' }), ago(4)]];
-    rows[0].push('Yes', '', new Date().toISOString(), 'lisa@puppyclassroom.com');
+    rows[0].push('Yes', '', new Date().toISOString(), 'sample@example.com');
     await sheets(page, rows);
     await open(page, '#/decide');
     await expect(page.locator('#view .card .t').first()).toContainText('Sample watch');
