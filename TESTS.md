@@ -51,11 +51,12 @@ If any of these breaks, the tick turns red and says which page.
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
 | Factory house look (dark frame, bottom tabs, 1px lines, one radius, fixed counts, hover rule, contrast light/dark/warm/cool, empty states, one calm find bar, phone) | `/dashboard/factory/` | 24 |
 | Studio (example data, real data, accounts, groups, bottom tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, clients, results, spec, brand kit, books, feedback, phone, dark, text size, board, Board/List, Look menu, frame, one-row find bar, one line rule, numbers, no solid fills, pill sizes, weights, dark tour, greys follow the background, calm cards, Me summary, who ring, consistency, brand website, no empty counts, brand mark, list bars, comments, library forms, prices and VAT, ownership, protection, save as kit, team role) | `/dashboard/studio/` | 66 |
+| Studio plain words and calmer screens (no "Spec lock", "Bricks" or "Engine" on any page; How Studio works fold; Open in Infinity only for an https Infinity card link; two taps from a tab; phone tab bar) | `/dashboard/studio/` | 7 |
 | House look on every hub (one set of rules from `tokens.css` + `house.css`: 12px radius, 1px lines and 3px bars, Lexend 400/600 at 13px+, no coloured words, one control line (meaning buttons rest on their own colour line), 36/44px buttons, 30 x 22 counts, ringed date pills, deep frame, 12px card padding and gaps, no solid fills, the hover rule, tabs exempt; every view, desktop warm light, phone cool dark and Look › Dark) | all seven hubs | 22 |
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 654 checks that must pass (mocked + phone, 29 Oct 2026, house look on every hub; CD Hub In whelp fixture test and Bloodline empty states).
+That is 661 checks that must pass (mocked + phone, 29 Oct 2026, house look on every hub; CD Hub In whelp fixture test and Bloodline empty states; Studio plain words).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
@@ -69,6 +70,12 @@ That is 654 checks that must pass (mocked + phone, 29 Oct 2026, house look on ev
 - The Money tile shows each entity on its own, never added together.
 - The Money tile links open `/money/`, a single entity, and a single to-do.
 - Sign-in problems show a clear message (permission refused, window closed, window blocked).
+
+**Studio plain words** (`tests/mocked/studio-plain-words.spec.js`, same invented data)
+- No page shows "Spec lock", "Brick(s)" or "Engine" in its text or in what a screen reader says; it reads "Agree the brief", "Parts" and "Studio helper". Code ids stay.
+- Me has a closed "How Studio works" fold with 3 lines; one tap opens it.
+- "Open in Infinity" shows only when an item has an https startinfinity.com card link, and opens in a new tab.
+- Every page is two taps or fewer from a bottom tab. At phone width no tab scrolls sideways and the last button clears the tab bar.
 
 **Studio** (`tests/mocked/studio.spec.js`, data in `tests/fixtures/studio/state.js`)
 - No `studio-state.json` on Drive: the example banner shows, example brands show, every write button is off, and nothing is written.
