@@ -9,7 +9,8 @@ T1, T2 = "ZEBRA" + "QUILL", "Moon" + "kettle"
 FAKE = T1 + "\n" + T2
 AT = "@"
 BIZ = [l.split()[1] for l in open(os.path.join(HERE, "allow.txt"), encoding="utf8") if l.startswith("email ")][0]
-FAKE_ID = "1" + "FAKE" * 8                       # 33 chars, Drive file id shape
+FAKE_ID = "1" + "FAKE" * 8                       # 33 chars, Drive file id shape, marked made-up (not flagged)
+ID_SHAPE = "1" + "aB3dE5" * 5 + "xy"              # 33 chars, unmarked: the guard must treat it as real
 MOBILE = "0" + "7000 000000"
 FICTION = "07700 900123"                          # Ofcom fiction range: allowed
 
@@ -89,10 +90,10 @@ class T(unittest.TestCase):
         r2 = Repo(); r2.write("docs/x.md", BIZ + "\n"); self.assertEqual(r2.run("--staged").returncode, 1)
 
     def test_drive_ids_blocked_outside_allow_list(self):
-        self.r.write("docs/x.md", f"folder {FAKE_ID}\n"); self.assertIn("DRIVE", fails(self.r.run("--staged")))
+        self.r.write("docs/x.md", f"folder {ID_SHAPE}\n"); self.assertIn("DRIVE", fails(self.r.run("--staged")))
         r2 = Repo(); r2.write("docs/y.md", "shared 0A" + "B" * 17 + "\n"); self.assertIn("DRIVE", fails(r2.run("--staged")))
         r3 = Repo(); r3.write("docs/z.md", "doc 1" + "F" * 43 + "\n"); self.assertIn("DRIVE", fails(r3.run("--staged")))
-        r4 = Repo(); r4.write("config.js", f"id: '{FAKE_ID}'\n"); self.assertEqual(r4.run("--staged").returncode, 0)
+        r4 = Repo(); r4.write("config.js", f"id: '{ID_SHAPE}'\n"); self.assertEqual(r4.run("--staged").returncode, 0)
 
     def test_blocked_paths(self):
         for p in ["tools/presend/regression/T1.txt", "tools/presend/sends/F2.txt", "tools/presend/runs/R.md",
@@ -150,9 +151,14 @@ class T(unittest.TestCase):
     # --- Drive links (+) ---
     def test_drive_and_docs_links_blocked_outside_config(self):
         for host in ["docs", "drive"]:
-            r = Repo(); r.write("x.html", f'<a href="https://{host}.google' + '.com/file/d/abc">x</a>\n')
+            r = Repo(); r.write("x.html", f'<a href="https://{host}.google' + '.com/file/d/1abcdefghijklmnopqrstuvwxyz0/view">x</a>\n')
             self.assertIn("DRIVE", fails(r.run("--staged")), host)
+        r1 = Repo(); r1.write("x.js", "u = 'https://drive.google" + ".com/drive/folders/' + id;\n"); self.assertEqual(r1.run("--staged").returncode, 0)
         r2 = Repo(); r2.write("config.js", "u: 'https://drive.google" + ".com/drive/folders/'\n"); self.assertEqual(r2.run("--staged").returncode, 0)
+
+    def test_made_up_ids_marked_sample_or_fake_are_fine(self):
+        self.r.write("t.js", "a = '1SAMPLE" + "0" * 26 + "'; b = '" + FAKE_ID + "x" * 11 + "'\n"); self.assertEqual(self.r.run("--staged").returncode, 0)
+        r2 = Repo(); r2.write("t.js", "a = '1sample" + "0" * 26 + "'\n"); self.assertIn("DRIVE", fails(r2.run("--staged")))
 
     # --- report mode (+) ---
     def test_report_mode_counts_only_on_screen(self):

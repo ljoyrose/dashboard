@@ -4,8 +4,8 @@
 Checks (each FAIL names file:line and a rule id, never the matched private text):
   DENY   a term from the private denylist (in content, file paths or commit messages)
   EMAIL  an email address not on the allow list
-  DRIVE  a Google Drive / Docs / shared-drive id, or a docs.google.com / drive.google.com link,
-         outside allow-listed paths
+  DRIVE  a Google Drive / Docs / shared-drive id, or a docs.google.com / drive.google.com link
+         holding an id, outside allow-listed paths (made-up ids containing SAMPLE or FAKE are fine)
   PHONE  a UK phone number (07..., 01..., 02..., 03..., +44 ...), except Ofcom's fiction ranges
   PATH   a path that must never be committed (data, sends, runs, regression sets, .pyc, zips)
   AUTHOR a commit author/committer email that is not a GitHub/bot noreply address
@@ -32,8 +32,10 @@ DRIVE_RES = [
     re.compile(r"(?<![A-Za-z0-9_-])1[A-Za-z0-9_-]{32}(?![A-Za-z0-9_-])"),   # file / folder id
     re.compile(r"(?<![A-Za-z0-9_-])1[A-Za-z0-9_-]{43}(?![A-Za-z0-9_-])"),   # Docs / Sheets id
     re.compile(r"(?<![A-Za-z0-9_-])0A[A-Za-z0-9_-]{17}(?![A-Za-z0-9_-])"),  # shared drive id
-    re.compile(r"(?i)\b(?:docs|drive)\.google\.com/"),                       # any Docs / Drive link
+    re.compile(r"(?i)\b(?:docs|drive)\.google\.com/[^\s'\"<>`]*?[A-Za-z0-9_-]{25,}"),  # Docs / Drive link with an id
 ]
+# Made-up ids in tests and samples say so (1SAMPLE..., 1FAKEFAKE...): not flagged.
+FIXTURE_ID = re.compile(r"SAMPLE|FAKE")
 # UK numbers: 0 or +44, then 10 national digits starting 1, 2, 3 or 7; spaces, dashes, (0) allowed.
 PHONE_RE = re.compile(r"(?<![\w+.])(\+44[\s-]?(?:\(0\)[\s-]?)?|0)([1237](?:[\s-]?\d){9})(?![\w.])")
 # Ofcom's ranges reserved for fiction (07700 900xxx, 020 7946 0xxx, 0113 496 0xxx ...): safe for tests and samples.
@@ -128,7 +130,7 @@ def scan_text(path, text, deny, allow, where, out):
         for m in EMAIL_RE.finditer(line):
             if not email_ok(m.group(0), path, allow):
                 out.append(("EMAIL", f"{where}{shown}:{n}: EMAIL address not on the allow list"))
-        if not drive_ok and any(rx.search(line) for rx in DRIVE_RES):
+        if not drive_ok and any(not FIXTURE_ID.search(m.group(0)) for rx in DRIVE_RES for m in rx.finditer(line)):
             out.append(("DRIVE", f"{where}{shown}:{n}: DRIVE id or link outside allow-listed files"))
         if any(not FICTION_RE.match(re.sub(r"\D", "", m.group(2))) for m in PHONE_RE.finditer(line)):
             out.append(("PHONE", f"{where}{shown}:{n}: PHONE number"))
