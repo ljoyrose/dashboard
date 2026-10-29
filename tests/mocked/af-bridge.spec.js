@@ -49,7 +49,7 @@ test.describe('App Factory bridge (Stage 6)', () => {
     expect(got).toHaveLength(1);
     expect(got[0].meta.parents).toEqual([CONF.studio.requestsFolderId]);
     expect(got[0].meta.name).toMatch(/^idea-\d+\.json$/);
-    expect(got[0].body).toMatchObject({ kind: 'idea', playbookId: 'P1', appRef: { id: '869fjxpc2', slug: 'sample' }, from: 'factory' });
+    expect(got[0].body).toMatchObject({ kind: 'idea', type: 'pack', playbookId: 'P1', appRef: { id: '869fjxpc2', slug: 'sample' }, from: 'factory' });
     expect(got[0].body.appRef.slug).toHaveLength(6);
     // Reload: still asked, still no second button.
     await page.reload();

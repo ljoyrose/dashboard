@@ -1482,6 +1482,7 @@
   }
   // Stage 6 (D6 A): at Step 7 Launch, one button asks Studio for a launch pack. It writes ONE Studio request (kind idea,
   // playbook P1, appRef) into Studio's requests folder; the STUDIO-ENGINE makes the idea. appRef = AF app id + 6-letter slug.
+  // Engine v0.2.23 still rejects it (needs brandIds; no P1 row; appRef not kept): that engine edit waits for Stage 2.
   var STUDIO_REQ = (CFG.studio || {}).requestsFolderId, launched = loadLocal('af-launch');
   function appRefOf(t) { return { id: t.id, slug: slugify(bare(t)).replace(/-/g, '').slice(0, 6) }; }
   function launchAsk(t) {
@@ -1494,7 +1495,7 @@
     var id = btn.getAttribute('data-id'), t = byId(id); if (!t || launched[id]) return;
     btn.disabled = true; btn.parentNode.innerHTML = '<span class="sent">sending…</span>';
     withWrite(function () {
-      return putRequest('idea', { kind: 'idea', at: new Date().toISOString(), name: 'Launch pack · ' + bare(t), playbookId: 'P1', appRef: appRefOf(t), from: 'factory' }, STUDIO_REQ)
+      return putRequest('idea', { kind: 'idea', at: new Date().toISOString(), name: 'Launch pack · ' + bare(t), type: 'pack', playbookId: 'P1', appRef: appRefOf(t), from: 'factory' }, STUDIO_REQ)
         .then(function () { launched[id] = { at: Date.now() }; saveLocal('af-launch', launched); render(); })
         .catch(function (e) { banner('Not sent: ' + e.message); render(); });
     });
