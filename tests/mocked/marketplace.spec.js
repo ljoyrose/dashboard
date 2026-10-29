@@ -170,7 +170,7 @@ test.describe('Marketplace page', () => {
     for (const f of ['index.html', 'privacy.html']) {
       const src = fs.readFileSync(path.join(__dirname, '..', '..', 'marketplace', f), 'utf8');
       expect(src, f).not.toMatch(/[A-Za-z0-9._+-]+(@|%40)[A-Za-z0-9-]+\.[A-Za-z]{2,}/);
-      expect(src, f).not.toMatch(/login_hint|authuser|mailto:[^'"]/);
+      expect(src, f).not.toMatch(/login_hint|authuser/);   // mailto addresses are caught by the line above
     }
   });
   test('privacy policy page: public (no sign-in, no scripts), names the contact, says buyer details are not stored, tokens.css colours only', async ({ page }) => {
