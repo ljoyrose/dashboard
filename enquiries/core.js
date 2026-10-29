@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.0.0 (2026-10-29)';
+  var VERSION = 'enquiries-core 1.1.0 (2026-10-29)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -183,8 +183,10 @@
   var STAGES = ['new', 'replied', 'call-booked', 'call-held', 'offered', 'deposit', 'balance', 'collected', 'lost', 'parked'];
   var ADULT_STAGES = ['asked', 'details-sent', 'viewing', 'agreed', 'handed-over'];
   var CLOSED = { lost: 1, parked: 1 };
+  // The order a puppy sale really moves in: the deposit comes before a pup is offered (offers are Lisa's alone).
+  var FLOW = ['new', 'replied', 'call-booked', 'call-held', 'deposit', 'offered', 'balance', 'collected'];
   function stageRank(s) {
-    var i = STAGES.indexOf(s); if (i >= 0 && !CLOSED[s]) return i;
+    var i = FLOW.indexOf(s); if (i >= 0) return i;
     i = ADULT_STAGES.indexOf(s); return i >= 0 ? i : -1;
   }
 
@@ -255,12 +257,110 @@
     return Math.floor((b - a) / 3600000);
   }
 
+  // ---- Data contract: RR_ENQUIRIES --------------------------------------------------------------------------
+  // The page and the engine agree on these names. A tab whose header row is missing a column, or has one renamed or
+  // moved, is refused (fail closed): the page shows "the sheet changed" and no rows, rather than wrong rows.
+  var COLUMNS = {
+    Enquiries: ['key', 'person_key', 'source', 'source_ref', 'received_uk', 'channel', 'kind', 'brand', 'country',
+      'country_basis', 'breed_interest', 'size', 'colour', 'coat', 'sex', 'timing', 'household_flags', 'question_summary',
+      'score', 'band', 'stage', 'next_step', 'next_due_uk', 'owner', 'do_not_contact', 'consent', 'litter_ref', 'pup_ref',
+      'lost_reason', 'flag', 'ref', 'updated_uk'],
+    People: ['person_key', 'ref', 'name', 'email', 'phone_e164', 'country', 'country_basis', 'sources', 'first_contact_uk',
+      'last_touch_uk', 'touches', 'repeat_buyer', 'past_deposit', 'do_not_contact', 'consent', 'match_confidence', 'check', 'updated_uk'],
+    Events: ['event_key', 'enquiry_key', 'person_key', 'at_uk', 'channel', 'type', 'detail', 'source_ref'],
+    Drafts: ['draft_key', 'enquiry_key', 'person_key', 'case', 'version', 'text', 'links', 'made_uk', 'status', 'blocked_by'],
+    FollowUps: ['followup_key', 'enquiry_key', 'person_key', 'rule', 'try', 'due_uk', 'status', 'snoozed_to_uk', 'draft_key', 'updated_uk'],
+    Litters: ['litter_ref', 'pup_ref', 'sex', 'colour', 'size', 'coat', 'status', 'person_key', 'list', 'list_order',
+      'deposit_date', 'source_sheet', 'read_uk'],
+    'Sale Replies': ['group_ref', 'dog_ref', 'enquiry_key', 'person_key', 'reply_kind', 'at_uk', 'sale_status', 'read_uk'],
+    Deposits: ['litter_ref', 'pup_ref', 'person_key', 'deposit_date', 'deposit', 'balance_due', 'balance_paid',
+      'collection_date', 'basis', 'read_uk'],
+    Sources: ['source', 'lands_where', 'machine_readable', 'reader', 'last_read_uk', 'last_count', 'status', 'note'],
+    Settings: ['setting', 'value', 'note'],
+    Requests: ['request_file', 'kind', 'enquiry_key', 'received_uk', 'applied_uk', 'result'],
+    Log: ['at_uk', 'level', 'step', 'message', 'count', 'dry_run', 'engine_version']
+  };
+  var CHANNELS = ['email', 'calendly', 'web-form', 'cf-website-optin', 'cf-breeding', 'cf-waiting-list', 'hubspot',
+    'hubspot-legacy', 'pets4homes', 'whatsapp', 'facebook', 'instagram', 'phone', 'manual'];
+  var BANDS = ['hot', 'warm', 'cool', 'not-a-fit'];
+  var CONSENT = ['ok', 'do-not-contact', 'unsubscribed', 'unknown'];
+  var BASIS = ['stated', 'inferred'];
+  var BREEDS = ['Cobberdog', 'Labradoodle', 'either'];
+  // Enquiries columns that must hold one word from a list (blank allowed only where noted).
+  var ENUMS = {
+    channel: [CHANNELS, false], kind: [KIND_ORDER, false], stage: [STAGES.concat(ADULT_STAGES), false],
+    band: [BANDS, true], consent: [CONSENT, true], country_basis: [BASIS, true], breed_interest: [BREEDS, true]
+  };
+
+  // Check one header row against the contract. Returns [] when it matches, else plain-English problems.
+  function checkHeader(tab, header) {
+    var want = COLUMNS[tab];
+    if (!want) return ['unknown tab "' + tab + '"'];
+    var got = (header || []).map(function (h) { return String(h == null ? '' : h).trim(); });
+    var problems = [];
+    want.forEach(function (c, i) {
+      if (got.indexOf(c) < 0) problems.push(tab + ': column "' + c + '" is missing or renamed');
+      else if (got[i] !== c) problems.push(tab + ': column "' + c + '" has moved (column ' + (got.indexOf(c) + 1) + ', expected ' + (i + 1) + ')');
+    });
+    return problems;
+  }
+
+  function truthy(v) { return v === true || /^(true|yes|y|1)$/i.test(String(v == null ? '' : v).trim()); }
+
+  // Check one Enquiries row: words outside the lists, and stage flow (see stageFlags).
+  function validateRow(r) {
+    var problems = [];
+    Object.keys(ENUMS).forEach(function (col) {
+      var v = String(r[col] == null ? '' : r[col]).trim(), list = ENUMS[col][0], blankOk = ENUMS[col][1];
+      if (!v) { if (!blankOk) problems.push(col + ' is blank'); return; }
+      if (list.indexOf(v) < 0) problems.push(col + ' "' + v + '" is not one of the allowed words');
+    });
+    if (!String(r.key || '').trim()) problems.push('key is blank');
+    return problems;
+  }
+
+  // A puppy enquiry must pass deposit before it is offered a pup, pays a balance or is collected. history is the list
+  // of stages the enquiry has been at (from Events), or the row may carry a deposit. Returns flag words ([] = fine).
+  function stageFlags(r, history) {
+    var s = String(r.stage || '').trim(), flags = [];
+    var after = { offered: 1, balance: 1, collected: 1 };
+    if (after[s]) {
+      var seen = (history || []).some(function (h) { return h === 'deposit'; }) || truthy(r.deposit_paid) || !!String(r.deposit_date || '').trim();
+      if (!seen) flags.push('no-deposit-before-' + s);
+    }
+    if (truthy(r.do_not_contact) && r.consent === 'ok') flags.push('consent-conflict');
+    return flags;
+  }
+
+  // Sheet values (first row = header) -> { ok, problems, rows }. ok is false when the header breaks the contract:
+  // then rows is EMPTY (fail closed). Each row object carries _row (sheet row number) and, for Enquiries, _problems.
+  function parseTab(tab, values) {
+    values = values || [];
+    var header = values[0] || [];
+    var problems = checkHeader(tab, header);
+    if (!values.length) problems = [tab + ': no header row'];
+    if (problems.length) return { ok: false, problems: problems, rows: [] };
+    var cols = COLUMNS[tab];
+    var rows = [];
+    for (var i = 1; i < values.length; i++) {
+      var v = values[i] || [];
+      if (!v.some(function (c) { return String(c == null ? '' : c).trim(); })) continue;
+      var o = { _row: i + 1 };
+      cols.forEach(function (c, j) { o[c] = v[j] == null ? '' : v[j]; });
+      if (tab === 'Enquiries') o._problems = validateRow(o);
+      rows.push(o);
+    }
+    return { ok: true, problems: [], rows: rows };
+  }
+
   var api = {
     VERSION: VERSION, CALLING: CALLING, STAGES: STAGES, ADULT_STAGES: ADULT_STAGES, KINDS: KIND_ORDER.slice(),
     normalisePhone: normalisePhone, countryFromPhone: countryFromPhone, countryFromTimezone: countryFromTimezone,
     inferCountry: inferCountry, normaliseEmail: normaliseEmail, hash: hash, emailKey: emailKey, phoneKey: phoneKey,
     rowKey: rowKey, groupPeople: groupPeople, mergeRow: mergeRow, stageRank: stageRank, classifyKind: classifyKind,
-    hoursSince: hoursSince, toMs: toMs
+    hoursSince: hoursSince, toMs: toMs,
+    FLOW: FLOW, COLUMNS: COLUMNS, CHANNELS: CHANNELS, BANDS: BANDS, CONSENT: CONSENT, ENUMS: ENUMS,
+    checkHeader: checkHeader, validateRow: validateRow, stageFlags: stageFlags, parseTab: parseTab, truthy: truthy
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
