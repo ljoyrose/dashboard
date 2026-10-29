@@ -1,7 +1,8 @@
 // Hard rule 14: Karen - SHARED is never listed, read, searched or binned, on any page.
 const { test, expect } = require('../support/test');
+const { IDS } = require('../support/world');
 
-const KAREN = '0AEf6v2sKb4FrUk9PVA';
+const KAREN = IDS.excludedDrive; // read from config.js, never copied (this repo is public)
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();

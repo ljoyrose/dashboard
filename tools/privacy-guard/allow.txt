@@ -3,6 +3,4 @@
 # drive <path-glob>             files that need Drive ids to work (the live pages' config)
 # path  <path-glob>             files skipped entirely (keep this list tiny)
 email lisa@puppyclassroom.com config.js
-email lisa@puppyclassroom.com index.html
-email lisa@puppyclassroom.com factory/index.html
 drive config.js
