@@ -59,6 +59,14 @@
       stateFile: 'studio-state.json',
       live: false
     },
+    // Web Estate Hub (estate/): reads the private RR_WEB-ESTATE sheet (Properties tab) with Lisa's sign-in; Add drops one
+    // request file into requestsFolderId for the RR_WEB-ESTATE engine. Both ids stay empty until Lisa installs the engine:
+    // until then the page shows invented example rows and sends nothing. Read only: nothing here changes DNS or a site.
+    estate: {
+      sheetId: '',
+      requestsFolderId: '',
+      live: false
+    },
     marketplace: {
       openWorkId: '1ShYbYmY8W-MEWqm9kHFsIcS5uR4b2SG00uXle_yL76U', // RR_OPEN-WORK (00 AI Commons)
       tab: 'Marketplace',

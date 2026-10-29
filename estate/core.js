@@ -9,7 +9,7 @@
 })(this, function () {
   'use strict';
 
-  var VERSION = '1.0.0';
+  var VERSION = '1.1.0';
 
   // ---- CSV ----
   // RFC 4180 style: quoted fields may hold commas, quotes ("") and new lines. Drops a start-of-file marker.
@@ -191,6 +191,46 @@
     return ids && ids.length ? 'found (' + ids.length + ')' : 'not found in page source';
   }
 
+  // ---- data contract: the RR_WEB-ESTATE Properties tab ----
+  // The page and the engine agree on these names, in this order. The engine's PROPERTY_COLUMNS must match.
+  var COLUMNS = ['key', 'kind', 'company', 'brand', 'client', 'owner_role', 'url_or_domain', 'platform', 'dns_host',
+    'live_status', 'http_code', 'ssl_expires', 'domain_expires', 'spf', 'dkim', 'dmarc', 'gsc_verified', 'merchant_center',
+    'ga4', 'gtm', 'meta_pixel', 'feed', 'keywords_tracked', 'access_note', 'source', 'checked_uk', 'flag'];
+  var KINDS = ['site', 'funnel', 'shop', 'app', 'dns-zone', 'email-domain', 'ads-account'];
+
+  // Fails closed: any required column missing means "do not show rows". A missing column next to an unknown one
+  // is reported as a likely rename. Extra columns are harmless and only reported.
+  function checkHeader(header) {
+    var found = (header || []).map(function (h) { return String(h == null ? '' : h).trim().toLowerCase(); });
+    var missing = COLUMNS.filter(function (c) { return found.indexOf(c) === -1; });
+    var extra = found.filter(function (c) { return c && COLUMNS.indexOf(c) === -1; });
+    var dupes = found.filter(function (c, i) { return c && found.indexOf(c) !== i; });
+    var problems = [];
+    if (missing.length && extra.length) problems.push('column renamed? missing ' + missing.join(', ') + '; found ' + extra.join(', '));
+    else if (missing.length) problems.push('missing column' + (missing.length > 1 ? 's' : '') + ': ' + missing.join(', '));
+    if (dupes.length) problems.push('column named twice: ' + dupes.filter(function (c, i) { return dupes.indexOf(c) === i; }).join(', '));
+    return { ok: !problems.length, missing: missing, extra: extra, problems: problems };
+  }
+
+  // Sheet values (header row first) -> checked rows. A bad header gives no rows at all. A row with no key or an
+  // unknown kind is left out and counted, never guessed.
+  function rowsFromValues(values) {
+    var v = (values || []).filter(function (r) { return r && r.some(function (c) { return String(c == null ? '' : c).trim() !== ''; }); });
+    if (!v.length) return { ok: false, rows: [], skipped: 0, problems: ['the Properties tab is empty: no header row'] };
+    var head = checkHeader(v[0]);
+    if (!head.ok) return { ok: false, rows: [], skipped: 0, problems: head.problems };
+    var rows = toObjects(v), kept = [], noKey = 0, badKind = 0;
+    rows.forEach(function (r) {
+      if (!r.key) noKey++;
+      else if (KINDS.indexOf(r.kind) === -1) badKind++;
+      else kept.push(r);
+    });
+    var problems = [];
+    if (noKey) problems.push(noKey + ' row' + (noKey > 1 ? 's' : '') + ' with no key left out');
+    if (badKind) problems.push(badKind + ' row' + (badKind > 1 ? 's' : '') + ' with an unknown kind left out');
+    return { ok: true, rows: kept, skipped: noKey + badKind, problems: problems, extra: head.extra };
+  }
+
   return {
     VERSION: VERSION,
     parseCSV: parseCSV,
@@ -200,6 +240,10 @@
     mergeRows: mergeRows,
     classifyDnsHost: classifyDnsHost,
     readTags: readTags,
-    tagWord: tagWord
+    tagWord: tagWord,
+    COLUMNS: COLUMNS,
+    KINDS: KINDS,
+    checkHeader: checkHeader,
+    rowsFromValues: rowsFromValues
   };
 });
