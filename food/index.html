@@ -22,51 +22,17 @@
 <script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="../tokens.css">
-<script>
-  /* Look (shared with Studio): localStorage 'dash-look' = { bg: warm|cool, sel: line|soft, mode: device|light|dark }. Read only here;
-     it is set from the Look menu in Studio. Classes go on <html> before anything is drawn. Mode "dark" follows the device on this page
-     (tokens.css only darkens with the device). */
-  (function () { try { var o = JSON.parse(localStorage.getItem('dash-look') || '{}') || {}, c = document.documentElement.classList;
-    c.toggle('look-cool', o.bg === 'cool'); c.toggle('sel-soft', o.sel === 'soft'); if (o.mode === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {} })();
-</script>
+<link rel="stylesheet" href="../house.css">
 <style>
   /* House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026). Colours: ../tokens.css only, mixed here; no colour is written on this page.
      Warm clear (default) or Cool clear, each with a dark version. Lexend 400/600, nothing under 13px, line height 1.5.
      Every line is 1px. Hover and selected = the same 1px edge turns ink (outline over it): nothing moves or grows. ONE radius, 12px.
      No solid colour fills and no coloured words: colour lives only in dots, thin bars, 1px rings and light tints. */
-  :root { --radius: 12px;
-    --bg: color-mix(in srgb, var(--ljr-cream) 70%, var(--ljr-0-tint)); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
-    --line: color-mix(in srgb, var(--ljr-0) 70%, var(--ljr-paper));                 /* dividers inside a card */
-    --ctl: color-mix(in srgb, color-mix(in srgb, var(--ljr-muted) 70%, var(--ljr-0)) 95%, var(--ljr-3));   /* warm control line, as the brief's 8A7F70 */                  /* the clear line every control rests on: 3:1 */
-    --frame: color-mix(in srgb, var(--ljr-ink) 80%, var(--ljr-muted));              /* warm charcoal, never black */
-    --frame-foot: color-mix(in srgb, var(--ljr-ink) 66%, var(--ljr-muted));         /* one step lighter, so both bars read the same */
-    --frame-ink: var(--ljr-paper); --frame-line: color-mix(in srgb, var(--ljr-paper) 55%, var(--ljr-muted));
-    --rose: var(--ljr-2-text); --rose-tint: var(--ljr-2-tint); --amber: var(--ljr-3-text); --amber-tint: var(--ljr-3-tint);
-    --green: var(--ljr-5-text); --green-tint: var(--ljr-5-tint);
-    --sel-bd: var(--ink); --sel-fill: color-mix(in srgb, var(--muted) 14%, var(--surface)); }   /* neutral hover = selected: ink line + muted tint */
-  :root.look-cool {
-    --bg: color-mix(in srgb, var(--ljr-paper) 94%, var(--ljr-ava-h)); --surface: color-mix(in srgb, var(--ljr-paper) 98%, var(--ljr-ava-h));
-    --ink: color-mix(in srgb, var(--ljr-ink) 90%, var(--ljr-ava-h)); --muted: color-mix(in srgb, var(--ljr-muted) 82%, var(--ljr-ava-h));
-    --line: color-mix(in srgb, color-mix(in srgb, var(--ljr-0) 70%, var(--ljr-paper)) 88%, var(--ljr-ava-h));
-    --ctl: color-mix(in srgb, color-mix(in srgb, var(--ljr-muted) 53%, var(--ljr-0)) 73%, var(--ljr-ava-h));   /* cool control line, as the brief's 7A8692 */
-    --frame: color-mix(in srgb, color-mix(in srgb, var(--ljr-ink) 70%, var(--ljr-muted)) 70%, var(--ljr-ava-h));   /* slate */
-    --frame-foot: color-mix(in srgb, color-mix(in srgb, color-mix(in srgb, var(--ljr-ink) 70%, var(--ljr-muted)) 70%, var(--ljr-ava-h)) 92%, var(--ljr-paper));
-    --frame-ink: var(--ljr-paper); --frame-line: color-mix(in srgb, color-mix(in srgb, var(--ljr-paper) 55%, var(--ljr-muted)) 85%, var(--ljr-ava-h)); }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { color-scheme: dark;
-      --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted);
-      --line: color-mix(in srgb, var(--ljr-0) 70%, var(--ljr-paper)); --ctl: color-mix(in srgb, var(--ljr-muted) 65%, var(--ljr-0));
-      --frame: color-mix(in srgb, var(--ljr-paper) 60%, var(--ljr-0-tint)); --frame-foot: color-mix(in srgb, var(--ljr-paper) 20%, var(--ljr-0-tint));
-      --frame-ink: var(--ljr-ink); --frame-line: var(--ljr-muted); }
-    :root.look-cool:not([data-theme="light"]) {
-      --bg: color-mix(in srgb, var(--ljr-cream) 90%, var(--ljr-ava-h)); --surface: color-mix(in srgb, var(--ljr-paper) 90%, var(--ljr-ava-h));
-      --ink: color-mix(in srgb, var(--ljr-ink) 92%, var(--ljr-ava-h)); --muted: color-mix(in srgb, var(--ljr-muted) 85%, var(--ljr-ava-h));
-      --line: color-mix(in srgb, color-mix(in srgb, var(--ljr-0) 70%, var(--ljr-paper)) 88%, var(--ljr-ava-h));
-      --ctl: color-mix(in srgb, color-mix(in srgb, var(--ljr-muted) 65%, var(--ljr-0)) 85%, var(--ljr-ava-h));
-      --frame: color-mix(in srgb, var(--ljr-paper) 80%, var(--ljr-ava-h)); --frame-foot: color-mix(in srgb, var(--ljr-paper) 70%, var(--ljr-ava-h));
-      --frame-ink: var(--ljr-ink); --frame-line: color-mix(in srgb, var(--ljr-muted) 85%, var(--ljr-ava-h)); }
-  }
-  :root.sel-soft { --sel-bd: var(--ljr-7-text); --sel-fill: var(--ljr-7-tint); }
+  /* Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule come from ../tokens.css through
+     ../house.css, the same on every hub; the Look (Warm / Cool clear, Light / Dark / Device) is applied by ../toolkit.js.
+     GA Hub's own names: the meaning rings and tints (words stay ink). */
+  :root { --rose: var(--house-risk); --rose-tint: var(--house-risk-tint); --amber: var(--house-soon); --amber-tint: var(--house-soon-tint);
+    --green: var(--house-ok); --green-tint: var(--house-ok-tint); }
   * { box-sizing: border-box; }
   h1, h2, h3, b, strong { font-weight: 600; }   /* two weights only: 400 and 600 */
   html { scroll-padding-bottom: 110px; }
@@ -89,45 +55,22 @@
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }   /* the frame's own clear line (3:1 on the dark bar) */
   @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); } }
 
-  /* Things you press: all rest on the same clear 1px line (--ctl), 12px corners, 14px/600, 36px on a desktop and 44px on a phone.
-     None starts out ink, so hover (that edge turns ink) always shows. Read-only pills, counts and dates have no hover. */
-  .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 14px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; min-height: 36px; }
+  /* Things you press, the hover rule (meaning colour = --hmc), focus, the bottom tabs and the counts: ../house.css. Layout only here. */
   .btn.big { width: 100%; justify-content: center; min-height: 44px; }
-  .btn[disabled] { cursor: not-allowed; opacity: .55; }
-  .chip { font: inherit; font-size: 14px; font-weight: 600; border-radius: var(--radius); padding: 0 14px; border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; }
-  .chip[aria-pressed="true"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); }
-  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 14px; cursor: pointer; align-self: flex-start; min-height: 36px; }
-  /* House hover rule (Lisa, 28 Oct): hover = selected = a 1px line drawn inside + a pale tint; nothing moves.
-     Neutral controls: ink line + muted tint. Meaning-coloured controls (green yes, rose no) keep their OWN colour: line + 14% tint. */
-  .btn.yes { --mc: var(--green); } .btn.no { --mc: var(--rose); }
-  @media (hover: hover) {
-    .btn:hover, .chip:hover, .more:hover, a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); }
-    .btn.yes:hover, .btn.no:hover { outline-color: var(--mc); background: color-mix(in srgb, var(--mc) 14%, var(--surface)); }
-  }
+  .chip { padding: 0 14px; background: var(--surface); display: inline-flex; align-items: center; }
+  .more { background: transparent; padding: 0 14px; align-self: flex-start; }
+  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); } }
   input:focus { outline: none; }
   a:focus, button:focus { outline: none; }
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }   /* keyboard ring: 2px ink, never the browser blue */
   .top :focus-visible { outline-color: var(--frame-ink); }
 
-  /* Bottom tabs: light buttons on the dark bar, no rings. Hover and selected = the small colour bar above the label widens. */
-  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--frame-foot); }
+  /* Bottom tabs (.house-tabs): five across. */
+  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
   @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 180px)); justify-content: center; } }
-  nav.tabs a { position: relative; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--surface); min-height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; border-radius: var(--radius); padding: 6px 2px; text-align: center; }
-  nav.tabs a .bar { width: 18px; height: 4px; border-radius: var(--radius); background: var(--tc); opacity: .6; transition: width .15s ease-out, opacity .15s ease-out; }
-  nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
-  @media (hover: hover) { nav.tabs a:hover .bar { width: 40px; opacity: 1; } }
-  /* Tabs are exempt from the hover rule (Lisa): no ring, no outline; only the colour bar widens. */
-  @media (prefers-reduced-motion: reduce) { nav.tabs a .bar { transition: none; } }
-  nav.tabs a[aria-current="page"] { font-weight: 600; }
-  nav.tabs .n { position: absolute; top: 6px; right: 10px; }
-  /* Counts: a grey 1px ring pill; "needs you" = rose ring + light rose tint. Never a solid fill. */
-  /* ONE fixed size, so 1 and 2 digits match whatever the font: an exact 30 x 22px box, full round ends (radius 11px = half the height).
-     Only 3+ digits (class "wide", set by the page) grow from 30px. */
-  .cnt, nav.tabs .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; height: 22px; width: 30px; padding: 0 3px; white-space: nowrap; overflow: hidden; border: 1px solid var(--ctl); border-radius: 11px; font-size: 13px; font-weight: 600; line-height: 20px; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; }
-  .cnt.wide, nav.tabs .n.wide { width: auto; min-width: 30px; padding: 0 6px; overflow: visible; }
-  .cnt.need, nav.tabs .n.need { border-color: var(--rose); background: var(--rose-tint); }
+  @media (min-width: 601px) { nav.tabs a { min-height: 58px; gap: 3px; padding: 6px 2px; } }
+  nav.tabs .n { top: 6px; right: 10px; }
   .cnt.ok { border-color: var(--green); background: var(--green-tint); }
-  nav.tabs .n:empty { display: none; }
 
   main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
   #view { display: flex; flex-direction: column; gap: 12px; }   /* one 12px step: tiles, cards and lists never touch */
@@ -146,12 +89,10 @@
   .tile .v.red { border: 1px solid var(--rose); background: var(--rose-tint); border-radius: var(--radius); padding: 0 10px; }
   .tile .datep { align-self: flex-start; }
   /* A date pill: its RING shows urgency (rose = late, amber = soon). The words stay ink. */
-  .datep { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; font-size: 13px; font-weight: 600; border: 1px solid var(--ctl); border-radius: var(--radius); white-space: nowrap; color: var(--muted); }
-  .datep.late { border-color: var(--rose); background: var(--rose-tint); color: var(--ink); }
-  .datep.soon { border-color: var(--amber); background: var(--amber-tint); color: var(--ink); }
+  .datep { font-weight: 600; } /* the house date pill (../house.css): always ringed; rose late, amber soon */
 
   /* Cards: a name line (dot + what kind), then the title (2 lines, then …). */
-  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .card { display: flex; flex-direction: column; gap: 12px; } /* the house card (../house.css): 1px line, 12px inside */
   .card.next { border-color: var(--ink); }   /* Next: the one thing to do now; white with a 1px ink edge */
   .bline { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 -8px; }
   .bline .dot { width: 8px; height: 8px; }
@@ -191,17 +132,10 @@
   /* Phone: 44px targets; the tab count sits in flow next to the icon, the label on its own line. */
   @media (max-width: 544px) {
     .btn, .chip, .more, input.txtin { min-height: 44px; }
-    input.txtin { flex-basis: 100%; max-width: none; }
+    input.txtin { flex: 1 1 160px; max-width: none; }   /* Search and Filter share one calm row */
     .top h1 { font-size: 20px; }
     nav.tabs { gap: 6px; padding-left: 6px; padding-right: 6px; }
-    nav.tabs a { min-height: 62px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; padding: 6px 2px; }
-    nav.tabs a .bar { margin: 0 calc(50% - 9px); }
-    nav.tabs a[aria-current="page"] .bar { width: 26px; margin: 0 calc(50% - 13px); }
-    nav.tabs a > svg.i { order: 1; }
-    nav.tabs .n { position: static; order: 2; }
-    nav.tabs a > span:not(.bar):not(.n) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }
   }
-  @media (max-width: 544px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
   /* Keyboard focus always stays the 2px ink ring, over any hover or selected line. */
   #view :focus-visible, nav.tabs a:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
   header :focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
@@ -225,7 +159,7 @@
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
 </main>
-<nav class="tabs hidden" id="tabs" aria-label="GA Hub sections">
+<nav class="tabs house-tabs hidden" id="tabs" aria-label="GA Hub sections">
   <a href="#/home" data-nav="home" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-home"/></svg><span>Home</span><span class="n need" id="n-home"></span></a>
   <a href="#/orders" data-nav="orders" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-box"/></svg><span>Orders</span><span class="n need" id="n-orders"></span></a>
   <a href="#/invoices" data-nav="invoices" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bill"/></svg><span>Invoices</span><span class="n"></span></a>
@@ -384,7 +318,7 @@
     var min = num(setting('MIN_PROFIT')) || 15, list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); }).filter(function (o) {
       return ofilter === 'all' || (ofilter === 'check' && CHECK[o.check] && CHECK[o.check][1]) || (ofilter === 'ga' && /^(Waiting for GA|Not at GA)$/.test(o.check))
         || (ofilter === 'sub' && /^sub/i.test(o.order_type)) || (ofilter === 'low' && o.profit_est !== '' && num(o.profit_est) < min); });
-    var chips = '<div class="chips" role="group" aria-label="Which orders">' + OFILTERS.map(function (f) { return '<button class="chip" type="button" data-ofilter="' + f[0] + '" aria-pressed="' + (ofilter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div>';
+    var chips = '<div class="house-frow">' + DashKit.filterButton('ofilters', ofilter !== 'all' ? 1 : 0) + '<div class="chips house-filters" id="ofilters" role="group" aria-label="Which orders">' + OFILTERS.map(function (f) { return '<button class="chip" type="button" data-ofilter="' + f[0] + '" aria-pressed="' + (ofilter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
     var h = '<p class="needs">Orders</p><p class="hint">From GA\'s shipping reports and invoices. 📦 Track opens DPD; 🛍 Shopify opens the order (customer details stay in Shopify). Each order is checked: paid in the shop → shipped by GA → same items on GA\'s invoice.</p>' + chips;
     var none = { all: ['No orders yet', 'They appear after GA\'s next shipping report or invoice.'], check: ['No orders need a look', 'Every order matches what GA shipped.'], ga: ['Every order is at GA', 'Nothing waiting to reach GA.'],
       sub: ['No subscription orders', ''], low: ['No low-profit orders', 'Every order made at least £' + min + '.'] }[ofilter];
@@ -441,8 +375,8 @@
   function pageProducts() {
     var list = data.products.filter(inFilter).filter(function (p) { return !q || [p.ddf_name, p.recipe, p.tla, p.full_ga_code, p.range].join(' ').toLowerCase().indexOf(q) >= 0; });
     var h = '<p class="needs">Products</p><p class="hint">Every GA recipe and size, by range: GA cost, your price and profit for one bag in one box. A rose ring on a badge shows why one can\'t be DDF.</p>' +
-      '<div class="frow"><input class="txtin" type="search" placeholder="Find a recipe, name or code" aria-label="Find a product" data-find value="' + esc(q) + '">' +
-      '<div class="chips" role="group" aria-label="Which products">' + FILTERS.map(function (f) { return '<button class="chip" type="button" data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
+      '<div class="frow"><input class="txtin" type="search" placeholder="Find a recipe, name or code" aria-label="Find a product" data-find value="' + esc(q) + '">' + DashKit.filterButton('pfilters', filter !== FILTERS[0][0] ? 1 : 0) +
+      '<div class="chips house-filters" id="pfilters" role="group" aria-label="Which products">' + FILTERS.map(function (f) { return '<button class="chip" type="button" data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
     if (!list.length) return h + '<div class="card">' + empty(q ? 'No products match "' + q + '"' : 'No products here', 'Try All, or a shorter search.') + '</div>';
     var shown = showAll ? list : list.slice(0, 40), min = num(setting('MIN_PROFIT')) || 15, groups = [], by = {};
     shown.forEach(function (p) { var r = p.range && p.range !== '(price list only)' ? p.range : 'Price list only (not on the Portal)'; if (!by[r]) { by[r] = []; groups.push(r); } by[r].push(p); });

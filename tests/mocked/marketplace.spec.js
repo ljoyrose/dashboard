@@ -113,9 +113,12 @@ test.describe('Marketplace page', () => {
     expect(css).not.toMatch(/#[0-9a-f]{3,8}\b/i);
     expect(css).not.toMatch(/\b(rgba?|hsla?)\(/i);
     expect(css).not.toMatch(/:\s*(white|black|red|green|blue|grey|gray|orange|yellow|purple)\b/i);
+    // Every colour name used comes from the page itself or from the two shared files (tokens.css numbers, house.css names).
+    const shared = fs.readFileSync(path.join(__dirname, '..', '..', 'tokens.css'), 'utf8') + fs.readFileSync(path.join(__dirname, '..', '..', 'house.css'), 'utf8');
+    expect(SRC).toContain('<link rel="stylesheet" href="../house.css">');
     for (const v of css.match(/var\(--[\w-]+/g) || []) {
       const name = v.slice(4);
-      expect(/^--ljr-/.test(name) || new RegExp(name + '\\s*:').test(css), name).toBe(true);
+      expect(/^--ljr-/.test(name) || new RegExp(name + '\\s*:').test(css) || new RegExp(name + '\\s*:').test(shared), name).toBe(true);
     }
   });
 
@@ -757,7 +760,8 @@ function auditLook() {
     if (!el.closest('header') && !el.classList.contains('tile')) { if (s.fontSize !== '14px' || s.fontWeight !== '600') out.push(`pressable words ${s.fontSize}/${s.fontWeight}: ${name(el)}`); }
     if (box.height < (phone ? 44 : 36) - 0.5) out.push(`pressable ${box.height}px high: ${name(el)}`);
     const edge = rgb(s.borderTopColor);
-    if (!el.closest('header')) { lines.add(edge.slice(0, 3).map(Math.round).join(',')); if (same(edge, ink)) out.push(`pressable starts out ink: ${name(el)}`); }
+    // Yes / No rest on their own colour line (Lisa's approved picture, 28 Oct); everything else on the one control line.
+    if (!el.closest('header')) { if (!el.matches('.btn.yes, .btn.no')) lines.add(edge.slice(0, 3).map(Math.round).join(',')); if (same(edge, ink)) out.push(`pressable starts out ink: ${name(el)}`); }
     // The resting line is 3:1 on what is behind it AND on the page itself (the brief; Lisa's 8A7F70 warm / 7A8692 cool).
     const behind = [bgOf(el.parentElement)].concat(el.closest('header') ? [] : [rgb(getComputedStyle(document.body).backgroundColor)]);
     for (const b of behind) if (ratio(edge, b) < 3) out.push(`pressable edge ${ratio(edge, b).toFixed(2)}:1, under 3:1: ${name(el)}`);

@@ -20,31 +20,19 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="money/core.js"></script>
 <link rel="stylesheet" href="tokens.css">
-<script>
-  // House look: follow the Look saved in Studio ('dash-look', read only here): Warm clear or Cool clear, and Light / Dark / Device.
-  (function () {
-    try {
-      var o = JSON.parse(localStorage.getItem('dash-look') || '{}') || {}, r = document.documentElement;
-      if (o.bg === 'cool') r.classList.add('look-cool');
-      if (o.mode === 'light' || o.mode === 'dark') r.setAttribute('data-theme', o.mode);
-    } catch (e) { /* no storage: Warm clear, follow the device */ }
-  })();
-</script>
+<link rel="stylesheet" href="house.css">
 <style>
   /* Colours come from ../tokens.css (one shared LJR7 file). These short names only point at it.
      Map 1 Vision · Read first/Drive 0 · PC-Personal/Drive check 4 Ops · Bin 8 · Changes/Cf 7 · Money 3. Failed reads and delete actions use 2 Risk. */
   :root {
-    --bg: var(--ljr-cream); --surface: var(--ljr-paper); --ink: var(--ljr-ink); --muted: var(--ljr-muted); --line: #DED5C8;
-    --s0: var(--ljr-0); --s1: var(--ljr-1); --s1-edge: var(--ljr-1-edge); --s1-stripe: #FFFEFB;
+    --s0: var(--ljr-0); --s1: var(--ljr-1); --s1-edge: var(--ljr-1-edge); --s1-stripe: var(--ljr-paper);
     --s2: var(--ljr-2); --s4: var(--ljr-4); --s7: var(--ljr-7); --s8: var(--ljr-8);
     --fail: var(--ljr-2-text); --risk-text: var(--ljr-2-text);
     --s0-tint: var(--ljr-0-tint); --s2-tint: var(--ljr-2-tint); --s4-tint: var(--ljr-4-tint); --s7-tint: var(--ljr-7-tint); --s8-tint: var(--ljr-8-tint); --fail-tint: var(--ljr-2-tint);
-    --shadow: 0 4px 12px rgba(44, 44, 42, 0.06);
     --fin: var(--ljr-3); --ops: var(--ljr-4); --ok: var(--ljr-5); --fin-tint: var(--ljr-3-tint); --ops-tint: var(--ljr-4-tint); --ok-tint: var(--ljr-5-tint);
   }
-  @media (prefers-color-scheme: dark) {
-    :root { --line: #3D372F; --s1-stripe: #F3EEE5; --shadow: 0 4px 12px rgba(0, 0, 0, 0.32); }
-  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --s1-stripe: var(--ljr-ink); } }
+  :root[data-theme="dark"] { --s1-stripe: var(--ljr-ink); }
   * { box-sizing: border-box; }
   .skip { position: absolute; left: -999px; top: 8px; z-index: 50; background: var(--surface); color: var(--ink); padding: 8px 14px; border-radius: 8px; border: 2px solid var(--ink); }
   .skip:focus { left: 8px; }
@@ -67,7 +55,7 @@
   .top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-top: 12px; padding-bottom: 8px; text-align: left; }
   .top h1 { font-size: 18px; font-weight: 600; margin: 0; flex: 1 1 auto; }
   .readstamp { color: var(--muted); font-size: 14px; }
-  .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 8px 12px; border-radius: 12px;
+  .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: 12px;
          border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 14px; text-decoration: none; }
   .btn:hover { border-color: var(--muted); }
   .btn:disabled { opacity: .6; cursor: default; }
@@ -189,7 +177,7 @@
   .mtag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; background: var(--mt, var(--s0-tint)); border-radius: 8px; padding: 0 8px; white-space: nowrap; }
   .mtag::before { content: ''; width: 9px; height: 9px; background: var(--mc, var(--s0)); border-radius: 50%; flex: none; }
   .mtag.risk { --mc: var(--s2); --mt: var(--s2-tint); } .mtag.risk::before { border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 10px; height: 10px; }
-  .mtag.ops { --mc: var(--ops); --mt: var(--ops-tint); } .mtag.ops::before { border-radius: 2px; }
+  .mtag.ops { --mc: var(--ops); --mt: var(--ops-tint); }
   .mtag.ok { --mc: var(--ok); --mt: var(--ok-tint); }
   .mtag.fin { --mc: var(--fin); --mt: var(--fin-tint); }
   .mtag.bin { --mc: var(--s8); --mt: var(--s8-tint); } .mtag.bin::before { border-radius: 0; }
@@ -283,7 +271,7 @@
   .urgent .btn { min-height: 52px; justify-content: center; font-size: 16px; font-weight: 600; }
   .hint { margin: 0; font-size: 14px; color: var(--muted); }
   /* More: the other sections and hubs, one big button each. */
-  .morelist { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .morelist { display: grid; grid-template-columns: 1fr; gap: var(--house-gap); }
   @media (min-width: 700px) { .morelist { grid-template-columns: 1fr 1fr; } }
   a.morelink { display: flex; flex-direction: row; align-items: center; gap: 10px; min-height: 56px; padding: 10px 16px; font-size: 17px; font-weight: 600; text-decoration: none; }
   a.morelink .icon { width: 20px; height: 20px; }
@@ -292,26 +280,11 @@
   /* ==== House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio). Lexend 400/600, nothing under 13px, line height 1.5.
      1px lines; hover AND selected = the same 1px edge turns ink (outline over it), nothing moves; focus 2px ink. One radius, 12px.
      No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints. Dark frame top and bottom. ==== */
-  :root { --radius: 12px;
-    --paper: #EEE8DF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --ctl: #8A7F70;
-    --bg: var(--paper); --surface: var(--card); --tc8: #3A3632; --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
-    --frame: #3A3632; --frame-foot: #46413B; --frame-ink: #F6F1E8; --frame-line: #9C9285; }
-  :root.look-cool { --paper: #F2F4F6; --card: #FFFFFF; --ink: #2B3035; --muted: #5B646D; --line: #B9C3CC; --ctl: #7A8692;
-    --frame: #33475B; --frame-foot: #405569; --frame-ink: #FFFFFF; --frame-line: #9FB0C0; --shadow: 0 1px 2px rgba(20,30,40,.12), 0 1px 8px rgba(20,30,40,.10); }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --paper: #181613; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --ctl: #7D7366;
-      --tc8: var(--ljr-8); --shadow: 0 1px 3px rgba(0,0,0,.4); --frame: #2A2622; --frame-foot: #34302B; color-scheme: dark; }
-    :root.look-cool:not([data-theme="light"]) { --paper: #16191C; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --ctl: #6F7A85; --frame: #24323F; --frame-foot: #2D3D4C; }
-  }
-  /* Mode = Dark from Studio's Look menu: tokens.css only darkens with the device, so its dark spine is repeated here. */
-  :root[data-theme="dark"] { --ljr-ink: #F3EEE5; --ljr-paper: #232019; --ljr-cream: #191714; --ljr-muted: #B4AB9E;
-    --ljr-0: #8E877B; --ljr-0-text: #B4AB9E; --ljr-0-tint: #2F2B25; --ljr-0-on: #F3EEE5; --ljr-0-solid: #5A554D;
-    --ljr-1: #232019; --ljr-1-text: #F3EEE5; --ljr-1-tint: #232019; --ljr-1-edge: #F3EEE5; --ljr-1-solid: #232019; --ljr-1-on: #F3EEE5;
-    --ljr-2-tint: #3C251E; --ljr-3-tint: #3C2D18; --ljr-4-tint: #3E3820; --ljr-5-tint: #293221; --ljr-6-tint: #213134; --ljr-7-tint: #342A31;
-    --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
-    --paper: #181613; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --ctl: #7D7366;
-    --tc8: #8E8A84; --shadow: 0 1px 3px rgba(0,0,0,.4); --frame: #2A2622; --frame-foot: #34302B; color-scheme: dark; }
-  :root.look-cool[data-theme="dark"] { --paper: #16191C; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --ctl: #6F7A85; --frame: #24323F; --frame-foot: #2D3D4C; }
+  /* Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule: ../tokens.css through ../house.css.
+     Home's own: the Bin tab colour (slot 8 as warm charcoal, never black). */
+  :root { --tc8: #3A3632; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --tc8: var(--ljr-8); } }
+  :root[data-theme="dark"] { --tc8: var(--ljr-8); }
   h1, h2, h3, h4, b, strong, th { font-weight: 600; }
   body { background: var(--bg); color: var(--ink); line-height: 1.5; }
   /* No coloured words: failures and warnings keep ink text and carry a small rose dot or ring instead. */
@@ -320,9 +293,10 @@
   div.skip { position: static; left: auto; top: auto; z-index: auto; background: none; padding: 0; border: 0; border-radius: 0; font-size: 14px; color: var(--ink); }
   .note.fail::before, .res.bad::before, div.skip::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; border: 1px solid var(--ljr-2); background: var(--ljr-2-tint); vertical-align: 1px; }
   /* No solid colour fills: the strong buttons are a light tint on the same clear line. */
-  .btn.danger { border-color: var(--ctl); } /* the same clear line as every button; the warning is the bin icon and the words */
-  .btn.danger.solid { background: var(--ljr-2-tint); color: var(--ink); border-color: var(--ctl); }
-  .btn.ai { background: var(--ljr-7-tint); color: var(--ink); border-color: var(--ctl); }
+  /* Meaning buttons rest on their own colour line (Lisa's approved picture, 28 Oct): delete rose, AI purple; hover keeps it. */
+  .btn.danger { border-color: var(--hl); }
+  .btn.danger.solid { background: var(--ljr-2-tint); color: var(--ink); border-color: var(--hl); }
+  .btn.ai { background: var(--ljr-7-tint); color: var(--ink); border-color: var(--hl); }
   .st-empty .shape, .st-idle .shape, .st-loading .shape { border-width: 1px; }
   .st-empty .shape { border-radius: 50%; }
   /* One radius on everything; only status dots are round. */
@@ -435,8 +409,8 @@
   /* House hover rule (Lisa, 28 Oct). Neutral controls: hover = 1px ink line inside + a pale muted tint. Meaning-coloured controls
      (rose delete/late, purple AI, copper money, a section's colour) keep THEIR colour: the same 1px line in that colour + a pale tint
      of it (about 14% into the card colour, dark card in dark mode). Never ink. Selected = the same look. Focus stays the 2px ink ring. */
-  .btn.danger { --hc: var(--ljr-2); --hl: var(--ljr-2); }
-  .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); }
+  .btn.danger { --hc: var(--ljr-2); --hl: var(--ljr-2); --hmc: var(--ljr-2); }
+  .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); --hmc: var(--ljr-7); }
   a.ment { --hc: var(--ljr-3); --hl: var(--ljr-3); }
   a.ment.bad { --hc: var(--ljr-2); --hl: var(--ljr-2); }
   a.morelink.slotfin { --hc: var(--ljr-3); --hl: var(--ljr-3); }
@@ -490,7 +464,7 @@
   <div id="view" data-view="map"></div>
 </main>
 
-<nav id="mainNav" class="main hidden" aria-label="Sections">
+<nav id="mainNav" class="main house-tabs hidden" aria-label="Sections">
   <a href="#/map" data-nav="map" class="vision"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-map"/></svg><span>Home</span><span class="n need" id="n-map"></span></a>
   <a href="#/drive" data-nav="drive" class="slot0"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-drive"/></svg><span>Drive</span></a>
   <a href="#/bin" data-nav="bin" class="slot8"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-bin"/></svg><span>Bin</span><span class="n need" id="n-bin"></span></a>
@@ -2196,7 +2170,7 @@
       ready.slice(0, todoN).map(function (x) { return '<li><div class="fname"><a href="money/#/register/' + encodeURIComponent(x.r.id) + '"' + HUB_TAB + '>' + esc(x.r.subject) + '</a></div><div class="meta">' + (/urgent/i.test(x.r.priority) ? '<span class="mtag risk">urgent</span>' : /high/i.test(x.r.priority) ? '<span class="mtag ops">high</span>' : '') + '<span>' + esc(x.r.id) + '</span></div></li>'; }).join('') + '</ul>' + showBar('money-todos', ready.length, 3);
     var dates = MC.overdueDates(d.data, d.today).concat(MC.dueWithin(d.data, d.today, 14));
     var dateN = listShown('money-dates', dates.length, 6);
-    h += '<div class="cardhead"><h4>Dates · overdue and next 14 days</h4><span class="mtag ' + (dates.some(function (x) { return x.days < 0; }) ? 'risk' : 'ops') + '">' + dates.length + '</span></div>';
+    h += '<div class="cardhead"><h4>Dates · overdue and next 14 days</h4><span class="cnt' + (dates.some(function (x) { return x.days < 0; }) ? ' need' : '') + (String(dates.length).length > 2 ? ' wide' : '') + '">' + (dates.length || '') + '</span></div>'; // a count: the house count pill
     h += dates.length ? '<ul class="files">' + dates.slice(0, dateN).map(function (x) {
       var late = x.days < 0;
       return '<li><div class="fname">' + esc(x.r.filing) + '</div><div class="meta"><span class="mtag ' + (late ? 'risk' : 'ops') + '">' + (late ? 'Overdue ' + (-x.days) + 'd' : x.days === 0 ? 'Today' : 'In ' + x.days + 'd') + '</span><span>' + fd(x.due) + '</span><span>' + esc(x.r.entity) + '</span></div></li>';

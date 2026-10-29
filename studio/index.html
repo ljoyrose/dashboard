@@ -19,40 +19,26 @@
 <script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../house.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
-  /* Colours: ../tokens.css for the LJR7 spine (stage colours, brand dots, red "needs you" never change); the page itself is
-     "Warm clear" (default) or "Cool clear" from the Look menu, each with a dark version. No solid fills: selected = an outline. */
-  :root { --radius: 12px; --me: var(--ljr-7);
-    --paper: #EEE8DF; --canvas: #E3DBCF; --card: #FFFEFB; --ink: #262624; --muted: #57504A; --line: #BFB4A3; --soft: #DED5C7;
-    --bd: var(--line); --band: var(--card); --chip: transparent; --ctl: var(--line); --press: #8A7F70;
-    --shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
-    --bg: var(--paper); --surface: var(--card); --sel-bd: var(--ink); --sel-fill: color-mix(in srgb, var(--muted) 14%, var(--card));
+  /* Greys, lines, frame, radius and the control line: ../tokens.css (house tokens) through ../house.css, so Studio and every hub
+     share them. Only Studio's own extras live here: its colour (--me), the column band and chip fills, the coloured-word set and
+     the status colours on the dark frame. */
+  :root { --me: var(--ljr-7); --bd: var(--line); --band: var(--card); --chip: transparent;
     --w2: #C32924; --w3: #9E5802; --w4: #766602; --w5: #217A2D; --w6: #0271A4; --w7: #8850B6;
-    --frame: #3A3632; --frame-foot: #46413B; --frame-ink: #F6F1E8; --frame-line: #9C9285; --frame-ok: #8BCF8F; --frame-bad: #F28B85; --frame-warn: #F2A65A; }
-  :root.look-cool { --frame: #33475B; --frame-foot: #405569; --frame-ink: #FFFFFF; --frame-line: #9FB0C0; --press: #7A8692; }
-  :root.look-cool { --paper: #F2F4F6; --canvas: #E4E9EE; --card: #FFFFFF; --ink: #2B3035; --muted: #5B646D; --line: #B9C3CC; --soft: #D9E0E6;
-    --bd: #C3CCD4; --band: #FFFFFF; --chip: #F5F7F9; --shadow: 0 1px 2px rgba(20,30,40,.12), 0 1px 8px rgba(20,30,40,.10); }
+    --frame-ok: #8BCF8F; --frame-bad: #F28B85; --frame-warn: #F2A65A; }
+  :root.look-cool { --bd: #C3CCD4; --band: #FFFFFF; --chip: #F5F7F9; }
   @media (prefers-color-scheme: light) { :root.words-light:not([data-theme="dark"]) { --w2: #D93732; --w3: #AD6202; --w4: #877402; --w5: #258631; --w6: #027BB5; --w7: #915CBC; } }
   :root.words-light[data-theme="light"] { --w2: #D93732; --w3: #AD6202; --w4: #877402; --w5: #258631; --w6: #027BB5; --w7: #915CBC; }
   @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) { --paper: #181613; --canvas: #1F1C18; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --soft: #2F2A24;
-      --bd: var(--line); --band: var(--card); --chip: transparent; --shadow: 0 1px 3px rgba(0,0,0,.4);
-      --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; --ctl: #7D7366; --press: #857B6E; }
-    :root.look-cool:not([data-theme="light"]) { --frame: #24323F; --frame-foot: #2D3D4C; --ctl: #6F7A85; --press: #7A8691; }
-    :root.look-cool:not([data-theme="light"]) { --paper: #16191C; --canvas: #1C2024; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --soft: #2B3137; --bd: var(--line); --band: var(--card); --chip: var(--card); }
+    :root:not([data-theme="light"]) { --bd: var(--line); --band: var(--card); --chip: transparent;
+      --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; }
+    :root.look-cool:not([data-theme="light"]) { --bd: var(--line); --band: var(--card); --chip: var(--card); }
   }
-  /* Mode = Dark from the Look menu: tokens.css only darkens with the device, so its dark spine is repeated here. */
-  :root[data-theme="dark"] { --ljr-ink: #F3EEE5; --ljr-paper: #232019; --ljr-cream: #191714; --ljr-muted: #B4AB9E;
-    --ljr-0: #8E877B; --ljr-0-text: #B4AB9E; --ljr-0-tint: #2F2B25; --ljr-0-on: #F3EEE5; --ljr-0-solid: #5A554D;
-    --ljr-1: #232019; --ljr-1-text: #F3EEE5; --ljr-1-tint: #232019; --ljr-1-edge: #F3EEE5; --ljr-1-solid: #232019; --ljr-1-on: #F3EEE5;
-    --ljr-2-tint: #3C251E; --ljr-3-tint: #3C2D18; --ljr-4-tint: #3E3820; --ljr-5-tint: #293221; --ljr-6-tint: #213134; --ljr-7-tint: #342A31;
-    --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
-    --paper: #181613; --canvas: #1F1C18; --card: #27231E; --ink: #F3EEE5; --muted: #B3AA9D; --line: #3E372F; --soft: #2F2A24;
-    --bd: var(--line); --band: var(--card); --chip: transparent; --shadow: 0 1px 3px rgba(0,0,0,.4);
-    --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; color-scheme: dark; --frame: #2A2622; --frame-foot: #34302B; --ctl: #7D7366; --press: #857B6E; }
-  :root.look-cool[data-theme="dark"] { --frame: #24323F; --frame-foot: #2D3D4C; --ctl: #6F7A85; --press: #7A8691; }
-  :root.look-cool[data-theme="dark"] { --paper: #16191C; --canvas: #1C2024; --card: #23282D; --ink: #EEF2F5; --muted: #A9B3BC; --line: #39414A; --soft: #2B3137; --bd: var(--line); --band: var(--card); --chip: var(--card); }
+  :root[data-theme="dark"] { --bd: var(--line); --band: var(--card); --chip: transparent;
+    --w2: #F28B85; --w3: #F2A65A; --w4: #E9D46A; --w5: #8BCF8F; --w6: #6CC4F2; --w7: #C9A2EA; }
+  :root.look-cool[data-theme="dark"] { --bd: var(--line); --band: var(--card); --chip: var(--card); }
   /* Coloured words are the darker set (Look › Coloured words › Lighter swaps it). */
   :root, :root[data-theme] { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); }
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --ljr-2-text: var(--w2); --ljr-3-text: var(--w3); --ljr-4-text: var(--w4); --ljr-5-text: var(--w5); --ljr-6-text: var(--w6); --ljr-7-text: var(--w7); } }
@@ -79,13 +65,8 @@
   html.dash-locked #backHome { margin-left: auto; } /* signed out the title is hidden, so the button keeps its top-right place */
   .btn[disabled] { cursor: not-allowed; opacity: .55; }
   /* Five tabs in a bar at the bottom, like Marketplace (thumb reach on the phone); a sub-row of links inside Line, Decide and Kits. */
-  nav.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(10px + env(safe-area-inset-bottom, 0px)); background: var(--surface); border-top: 1px solid var(--line); }
-  nav.tabs a { text-decoration: none; font-size: 13px; font-weight: 600; color: var(--ink); min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1px solid transparent; padding: 4px 2px; text-align: center; position: relative; }
-  /* Bottom tabs: no ring or inner line. Hover and selected = the small colour bar above the label grows (same height, so nothing moves). */
-  nav.tabs a .bar { width: 18px; height: 4px; border-radius: 2px; background: var(--tc); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
-  nav.tabs a[aria-current="page"] .bar { width: 40px; opacity: 1; }
-  @media (hover: hover) { nav.tabs a:hover .bar { width: 40px; opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { nav.tabs a .bar { transition: none; } }
+  /* Bottom tabs: the frame, light buttons, no ring, the colour bar that widens: ../house.css (.house-tabs). Layout only here. */
+  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
   html { scroll-padding-bottom: 96px; }
   .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
   .subnav a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
@@ -93,19 +74,19 @@
   .subnav a[aria-current="page"], .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); }
   @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .achip:hover, .ico:hover, a.tag:hover, .chk li button:hover, .room:hover, .col-list .crow:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   .n:empty { display: none; }
-  /* Every standalone count wears the same ring: 1px ink, pill, 700, tabular. "Needs you" counts (Me, Decide, Do tabs) add a rose edge and tint,
-     never a solid fill. Stage step numbers keep their stage circle; numbers inside a sentence stay bold text. 13px, the page's floor (not 12). */
-  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 7px; border: 1px solid var(--ink); border-radius: var(--radius); font-size: 13px; font-weight: 600; line-height: 1; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; }
-  nav.tabs .n.need { border-color: var(--ljr-2); background: var(--ljr-2-tint); color: var(--ink); }
+  /* Counts: the house count pill (../house.css, 30 x 22). Studio's counts wear an ink ring; "needs you" counts the rose ring + tint. */
+  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { border-color: var(--ink); }
+  .fbtn .n:not(:empty) { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border: 1px solid var(--ink); border-radius: var(--house-count-r); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  nav.tabs .n.need { border-color: var(--house-late); }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
   svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
-  main.wrap { padding-top: 16px; padding-bottom: 110px; display: flex; flex-direction: column; gap: 14px; }
-  #view { display: flex; flex-direction: column; gap: 14px; }
+  main.wrap { padding-top: 16px; padding-bottom: 110px; display: flex; flex-direction: column; gap: var(--house-gap); }
+  #view { display: flex; flex-direction: column; gap: var(--house-gap); }
   .banner { border: 1px solid var(--ljr-2); border-radius: var(--radius); padding: 10px 14px; color: var(--ink); display: flex; gap: 8px; align-items: center; }
   .banner.info { border-color: var(--line); }
   .banner.ex { border-color: var(--me); }
   .banner.ex .ti { color: var(--ljr-7-text); }
-  .card { background: var(--surface); border: 1px solid var(--bd); border-radius: var(--radius); padding: 14px 16px; min-width: 0; box-shadow: var(--shadow); }
+  .card { border-color: var(--bd); box-shadow: var(--shadow); } /* the house card (../house.css): 12px inside */
   .muted { color: var(--muted); font-size: 14px; }
   .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); border-radius: var(--radius); padding: 3px 10px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
@@ -136,7 +117,6 @@
   .crow .l3 { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
   .crow .l3 .grow { flex: 1; }
   .date { font-size: 13px; color: var(--muted); white-space: nowrap; }
-  .appcard { padding-top: 10px; }
   .room { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
   .room .grp { margin: 0; font-size: 15px; }
   .room .stn { font-size: 13px; color: var(--muted); margin-top: -6px; }
@@ -215,7 +195,7 @@
   .fq { padding: 10px 0; border-top: 1px solid var(--line); }
   .fq:first-of-type { border-top: 0; }
   .fq .qt { font-size: 15px; margin: 0 0 6px; position: relative; padding-right: 22px; }
-  .fq .req { position: absolute; right: 0; top: 0; color: var(--ljr-2-text); font-weight: 600; }
+  .fq .req { position: absolute; right: 0; top: 0; color: var(--ink); font-weight: 600; } /* no coloured words: the star stays ink */
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
   .ch { font: inherit; font-size: 14px; padding: 5px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
   .ch .dot { width: 9px; height: 9px; }
@@ -260,7 +240,7 @@
   .chk li button { all: unset; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius); padding: 0 4px; }
   .fsub { font-size: 13px; font-weight: 600; color: var(--muted); margin: 6px 0 4px; }
   /* Cool clear: neutral chips get a faint fill; the red and green outlines (needs you, On) stay as they are. */
-  :root.look-cool .ch:not(.on), :root.look-cool .tag, :root.look-cool .fbtn:not(.on), :root.look-cool .pill:not(.on) { background: var(--chip); }
+  :root.look-cool .ch:not(.on):not(:hover), :root.look-cool .tag:not(:hover), :root.look-cool .fbtn:not(.on):not(:hover), :root.look-cool .pill:not(.on):not(:hover) { background: var(--chip); } /* not on hover, so the hover tint shows */
   /* Look menu (header palette button). Stored in localStorage 'dash-look' so other hubs can read it. */
   .lookwrap { position: relative; }
   #lookMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(340px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
@@ -291,7 +271,6 @@
   .col.col-empty { align-self: flex-start; }
   .col.col-empty .col-list { flex: none; }
   .cempty { font-size: 13px; }
-  .cnt:empty, .n:empty { display: none !important; } /* a count of 0 or unknown shows no ring at all */
   a.site { font-size: 13px; color: var(--ink); white-space: nowrap; }
   .col-foot { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 45px; padding: 4px 12px; font-size: 14px; line-height: 18px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); }
   .col-foot b { color: var(--ink); }
@@ -303,15 +282,7 @@
   .btn, .vsw button, .lk, .ico { border-radius: var(--radius); }
   .pill { padding: 4px 12px; min-height: 28px; }
   nav.tabs a, .subnav a { border-radius: var(--radius); }
-  nav.tabs a, nav.tabs a:hover, nav.tabs a[aria-current="page"] { outline: none; box-shadow: none; border-color: transparent; background: var(--card); }
-  nav.tabs a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-  /* Tab counts sit in the button's top-right corner, clear of the label. */
-  nav.tabs .n { position: absolute; top: 8px; right: 18px; }
-  @media (max-width: 544px) {
- /* beside the icon, above the label: clear of it whatever the font */ /* 13px, not 10: nothing on the page goes under 13px */
-    nav.tabs a[aria-current="page"] .bar { width: 26px; }
-  }
-  @media (max-width: 544px) and (hover: hover) { nav.tabs a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
+  nav.tabs .n { right: 18px; }
   .subnav { gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
   .vtop .subnav { flex: 1 1 auto; }
   .subnav a, :root.look-cool .subnav a { border-color: transparent; background: transparent; }
@@ -329,7 +300,6 @@
   header .top > .pill.warn { border-color: var(--frame-warn); } header .top > .pill.bad { border-color: var(--frame-bad); }
   @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover, header .morewrap > .btn:hover { outline-color: var(--frame-ink); } } /* the same 1px line, in the frame's ink */
   header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible, header .morewrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
-  nav.tabs { background: var(--frame-foot); border-top: 0; gap: 8px; padding-top: 8px; padding-left: 8px; padding-right: 8px; }
   /* The dark band spans the screen like the top bar; each tab button stays a sensible width. */
   @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 220px)); justify-content: center; } }
   /* Phone header: dot + Studio, the status pills and one "More" menu (Refresh, Look, New, Sign out, Dashboard). Desktop unchanged. */
@@ -352,21 +322,14 @@
   }
   /* Two pill sizes only. Small = things you read (counts, tags, the TEST stamp): 24px high, 13px text.
      Button = anything you press (buttons, filter and pick chips, sub-tabs, switches, menu items, icon buttons): 36px, 44px on the phone. */
-  .cnt, nav.tabs .n, .fbtn .n:not(:empty), .tag, .stamp { height: 24px; min-height: 24px; min-width: 24px; font-size: 13px; line-height: 1; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
+  .tag, .stamp { height: 24px; min-height: 24px; min-width: 24px; font-size: 13px; line-height: 1; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
   .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, #moreMenu > *, .fbar .sbox { min-height: 36px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; display: inline-flex; align-items: center; }
   #moreMenu > * { display: flex; }
   .lk, .ico { min-width: 36px; width: auto; height: 36px; }
   @media (max-width: 544px) {
     .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, #moreMenu > *, .fbar .sbox { min-height: 44px; }
     .lk, .ico { min-width: 44px; height: 44px; }
-    /* Phone tabs: the count is in normal flow, on the icon's line, and the label has a line of its own below,
-       so no label width (any font) can ever run into the count. Lines: colour bar · icon + count · label. */
-    nav.tabs a { min-height: 62px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; padding: 6px 2px; }
-    nav.tabs a .bar { margin: 0 calc(50% - 9px); }
-    nav.tabs a[aria-current="page"] .bar { margin: 0 calc(50% - 13px); }
-    nav.tabs a > .ti { order: 1; }
-    nav.tabs .n { position: static; order: 2; min-width: 24px; height: 24px; padding: 0 6px; }
-    nav.tabs a > span:not(.bar):not(.n) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }
+    /* Phone tabs (colour bar · icon + count · label): ../house.css. */
   }
   /* Control edges (things you press or read as a chip) use --ctl: the line colour in light, a 3:1 line in dark so every ring shows. */
   .btn, .pill, .ch, .fbtn, .achip, .fbar .sbox, .tag, .seg button, .vsw button, .undo, .lk, .stage .n, .stamp { border-color: var(--ctl); }
@@ -407,7 +370,7 @@
   .three .sum.need .big { border-color: var(--ljr-3); background: var(--ljr-3-tint); }
   .three .sum.over .big { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
   .mecards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; align-items: start; }
-  .mcard { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); min-width: 0; }
+  .mcard { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: var(--house-pad); box-shadow: var(--shadow); min-width: 0; }
   .mcard h3 { margin: 0 0 8px; font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .mcard h3 .cnt { margin-left: auto; }
   .mcard.next { border-color: var(--ink); }
@@ -433,21 +396,13 @@
   .ico, .lk { min-width: 36px; height: 36px; justify-content: center; }
   .chk li button, button.tag, a.tag { padding: 0 12px; height: auto; }
   .more { color: var(--ink); }
-  .btn.yes, .acts .btn.yes { border-color: var(--ljr-5); } .btn.no, .acts .btn.no { border-color: var(--ljr-2); }
+  .btn.yes, .acts .btn.yes { --hmc: var(--house-ok); border-color: var(--hmc); } .btn.no, .acts .btn.no { --hmc: var(--house-risk); border-color: var(--hmc); } /* rest on their own colour line and keep it on hover */
   .fbar .sbox { font-weight: 400; }
   @media (max-width: 544px) { .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { min-height: 44px; } .ico, .lk { min-width: 44px; height: 44px; } }
-  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover, #moreMenu > *:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background-color: var(--sel-fill); } }
-  /* Buttons that carry a meaning colour keep it on hover: their own 1px line drawn inside + a pale tint of that colour (never ink). Icons keep their colour. */
+  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover, #moreMenu > *:hover { outline: 1px solid var(--hmc, var(--sel-bd)); outline-offset: -1px; background-color: color-mix(in srgb, var(--hmc, var(--muted)) var(--house-tint), var(--card)); } }
+  /* Meaning-coloured buttons keep their colour on hover (the --hmc rule above, from ../house.css); icons keep it too. */
   .btn.yes .ti, .acts .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .acts .btn.no .ti { color: var(--ljr-2-text); }
-  @media (hover: hover) {
-    .btn.yes:hover, .acts .btn.yes:hover { outline: 1px solid var(--ljr-5); outline-offset: -1px; background-color: color-mix(in srgb, var(--ljr-5) 14%, var(--card)); }
-    .btn.no:hover, .acts .btn.no:hover { outline: 1px solid var(--ljr-2); outline-offset: -1px; background-color: color-mix(in srgb, var(--ljr-2) 14%, var(--card)); }
-  }
-  span.pill:hover, span.tag:hover, .cnt:hover, .dpill:hover, .stamp:hover { outline: none; }
-  /* Counts: one fixed size so 1 and 2 digits match; only 3+ digits grow. */
-  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { box-sizing: border-box; width: 30px; min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 3px; border-radius: 11px; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .cnt.wide, nav.tabs .n.wide, .fbtn .n.wide { width: auto; padding: 0 6px; }
-  @media (max-width: 544px) { nav.tabs .n { min-width: 30px; height: 24px; min-height: 24px; line-height: 22px; border-radius: 12px; } }
+  .fbtn .n.wide { width: auto; padding: 0 6px; }
   .pthumb svg, .pthumb .pimg { border-radius: var(--radius); }
   /* Comments: two threads, Team (internal, default) and Client (client-visible, always labelled). */
   .cmts { display: flex; flex-direction: column; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--line); }
@@ -514,7 +469,7 @@
   <div id="exBanner" class="banner ex hidden" role="status"><i class="ti ti-flask" aria-hidden="true"></i><span>Example data · engine off</span></div>
   <div id="view"></div>
 </main>
-<nav class="tabs" id="tabs" aria-label="Sections">
+<nav class="tabs house-tabs" id="tabs" aria-label="Sections">
   <a href="#/me" data-nav="me" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-user"></i><span>Me</span><span class="n need" id="nMe"></span></a>
   <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-traffic-lights"></i><span>Decide</span><span class="n need" id="nDecide"></span></a>
   <a href="#/do" data-nav="do" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-hand-finger"></i><span>Do</span><span class="n need" id="nDo"></span></a>
@@ -612,7 +567,7 @@
   }
   function safeUrl(u) { u = String(u == null ? '' : u).trim(); return /^https?:\/\//i.test(u) ? esc(u) : '#'; }
   function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
-  function cnt(n) { return '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + '">' + n + '</span>'; } // 1-2 characters: one exact box; 3+ grow
+  function cnt(n) { n = (n === 0 || n === '0' || n == null) ? '' : n; return '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + '">' + n + '</span>'; } // 1-2 characters: one exact box; 3+ grow; 0 shows no ring
   function info(t) { return t ? '<span class="info" tabindex="0" title="' + esc(t) + '" aria-label="' + esc(t) + '">i</span>' : ''; }
   function I(n) { return '<i class="ti ti-' + n + '" aria-hidden="true"></i>'; }
   function hm(ts) { return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
@@ -1228,7 +1183,7 @@
   // Board: one column per stage (Line) or per decision (Decide). Head and foot stay put; the list scrolls inside the column.
   // On a desktop the details of the picked card open on the right; on the phone they open under the card.
   var sideOn = false;
-  function icnt(n) { return '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + '" aria-label="' + n + ' items">' + n + '</span>'; }
+  function icnt(n) { return '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + '" aria-label="' + n + ' items">' + ((n === 0 || n === '0' || n == null) ? '' : n) + '</span>'; }
   function needsYou(a) { var k = kindFor(a); return k === 'gate' || k === 'review' || k === 'hand' || a.flags.indexOf('needs-input') >= 0; }
   function column(o) {
     var need = o.need != null ? o.need : o.items.filter(needsYou).length, ai = o.items.reduce(function (t, a) { return t + (Number(a.cost) || 0); }, 0);
@@ -1345,7 +1300,7 @@
       var n = BSTAGES.indexOf(b.stage), ck = (b.setupChecklist || []).map(function (x) { var p = pend['chk|' + b.id + '|' + x.name]; return p ? { name: x.name, ok: p.ok, pend: true } : x; });
       var done = ck.filter(function (x) { return x.ok; }).length, mine = A.filter(function (a) { return a.brandIds.indexOf(b.id) >= 0 && a.stage < 8; }).length;
       var sub = [b.groupId ? I(GROUP_ICON[b.groupId] || 'folder') + esc(group(b.groupId).name) : '', bizAccts().length > 1 ? esc(account(brandAcct(b.id)).name) : ''].filter(Boolean).join(' · ');
-      return '<section class="room" data-brandcard="' + esc(b.id) + '" style="--c:' + col(b.colour) + '"><h2 class="grp">' + brandMark(b) + '<span class="bn">' + esc(b.name) + '</span><a class="cnt" href="#/assets?brand=' + encodeURIComponent(b.id) + '" title="Assets in progress">' + mine + '</a></h2>' + (sub ? '<span class="stn" data-group="' + esc(b.groupId || '') + '">' + sub + '</span>' : '') +
+      return '<section class="room" data-brandcard="' + esc(b.id) + '" style="--c:' + col(b.colour) + '"><h2 class="grp">' + brandMark(b) + '<span class="bn">' + esc(b.name) + '</span><a class="cnt" href="#/assets?brand=' + encodeURIComponent(b.id) + '" title="Assets in progress">' + (mine || '') + '</a></h2>' + (sub ? '<span class="stn" data-group="' + esc(b.groupId || '') + '">' + sub + '</span>' : '') +
         '<div class="strip b6">' + BSTAGES.map(function (_, i) { return '<i class="' + (i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>' +
         '<div class="blab" title="' + BSTAGES.join(' · ') + '">' + (n >= 0 ? (n + 1) + '/6 · ' + esc(b.stage) : '') + '</div>' + kitStrip(b) +
         (ck.length ? '<div class="sect">' + I('list-check') + 'Set-up ' + cnt(done + '/' + ck.length) + '</div><ul class="chk">' + ck.map(function (x) { return '<li class="' + (x.ok ? 'ok' : '') + '"><button type="button" data-check="' + esc(b.id) + '" data-item="' + esc(x.name) + '" aria-pressed="' + !!x.ok + '"' + dis() + '>' + I(x.ok ? 'circle-check' : 'circle-dashed') + esc(x.name) + '</button></li>'; }).join('') + '</ul>' : '') + '</section>';

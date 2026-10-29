@@ -339,13 +339,13 @@ test.describe('GA Hub house look', () => {
         const st = await el.evaluate((e) => { const s = getComputedStyle(e); return { w: s.borderTopWidth, c: s.borderTopColor, r: s.borderTopLeftRadius, fs: s.fontSize, fw: s.fontWeight, h: e.getBoundingClientRect().height, tile: e.classList.contains('tile'), pressed: e.getAttribute('aria-pressed') === 'true' }; });
         expect(st.w).toBe('1px'); expect(st.r).toBe('12px'); expect(st.c).not.toBe(ink); expect(st.h).toBeGreaterThanOrEqual(36);
         if (!st.tile) { expect(st.fs).toBe('14px'); expect(st.fw).toBe('600'); }
-        lines.add(st.c);
+        if (!(await el.evaluate((e) => e.matches('.yes, .no')))) lines.add(st.c); // meaning buttons rest on their own colour line
         await el.scrollIntoViewIfNeeded();
         const before = await el.boundingBox();
         await el.hover();
         const hv = await el.evaluate((e) => { const s = getComputedStyle(e); return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, bw: s.borderTopWidth, coloured: e.matches('.yes, .no'), bg: s.backgroundColor, card: getComputedStyle(e.closest('.card, #view')).backgroundColor }; });
         expect({ ow: hv.ow, os: hv.os, oo: hv.oo, bw: hv.bw }).toEqual({ ow: '1px', os: 'solid', oo: '-1px', bw: '1px' });
-        if (hv.coloured) expect(hv.oc).not.toBe(ink); else expect(hv.oc).toBe(ink);
+        if (hv.coloured) { expect(hv.oc).not.toBe(ink); expect(hv.oc, 'keeps its resting colour line').toBe(st.c); } else expect(hv.oc).toBe(ink);
         expect(isTint(hv.bg, 'light'), `${tab}: hover fill ${hv.bg}`).toBe(true);
         const after = await el.boundingBox();
         expect(after).toEqual(before);
@@ -383,7 +383,7 @@ test.describe('GA Hub house look', () => {
       await sheets(page, book());
       await open(page);
       const ink = await page.evaluate(() => getComputedStyle(document.body).color);
-      const look = (el) => el.evaluate((e) => { const s = getComputedStyle(e), own = s.getPropertyValue('--mc').trim();
+      const look = (el) => el.evaluate((e) => { const s = getComputedStyle(e), own = s.getPropertyValue('--hmc').trim(); // the house meaning colour (house.css)
         const probe = document.createElement('i'); probe.style.color = own; e.appendChild(probe); const oc = getComputedStyle(probe).color; probe.remove();
         return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, own: oc, bg: s.backgroundColor }; });
       const check = (l, what) => {
@@ -428,7 +428,7 @@ test.describe('GA Hub house look', () => {
         const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
         const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
         const ctl = rgb(probe('--ctl'));
-        return { page: ratio(ctl, rgb(probe('--bg'))), card: ratio(ctl, rgb(probe('--surface'))), btn: getComputedStyle(document.querySelector('#view .btn')).borderTopColor === probe('--ctl') };
+        return { page: ratio(ctl, rgb(probe('--bg'))), card: ratio(ctl, rgb(probe('--surface'))), btn: getComputedStyle(document.querySelector('#view .btn:not(.yes):not(.no), #view .more, #view .chip')).borderTopColor === probe('--ctl') }; // yes / no rest on their own colour
       });
       expect(r.page).toBeGreaterThanOrEqual(3);
       expect(r.card).toBeGreaterThanOrEqual(3);

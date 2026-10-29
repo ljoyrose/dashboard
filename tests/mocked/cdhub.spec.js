@@ -256,7 +256,7 @@ function cdAudit() {
     const bw = ['Top', 'Right', 'Bottom', 'Left'].map((k) => parseFloat(s['border' + k + 'Width']) || 0);
     if (Math.max(...bw) > 1) out.line.push(name(el) + ' ' + bw.join('/'));
     const rad = s.borderTopLeftRadius;
-    const okRad = rad === '0px' || rad === '12px' || (rad === '11px' && el.matches('.cnt')) || (rad === '50%' && el.matches(ROUND)) || (rad === '2px' && el.matches('nav#nav .tbar'));
+    const okRad = rad === '0px' || rad === '12px' || (rad === '11px' && el.matches('.cnt')) || (rad === '50%' && el.matches(ROUND)) || (rad === '12px' && el.matches('nav#nav .bar'));
     if (!okRad) out.radius.push(name(el) + ' ' + rad);
     // Rings on things you press or read as a pill: 3:1 against what they sit on.
     if (el.matches('#main button:not([disabled]), #main select, .btn, .pill, .dpill, .cnt, .achip, .sfb') && bw[0] === 1 && s.borderTopStyle !== 'none') {
@@ -352,11 +352,11 @@ test.describe('CD Hub house look', () => {
     const tab = page.locator('#nav button[data-go="dogs"]');
     const before = await tab.boundingBox();
     await tab.hover();
-    await expect.poll(() => tab.locator('.tbar').evaluate((e) => e.getBoundingClientRect().width)).toBe(40);
+    await expect.poll(() => tab.locator('.bar').evaluate((e) => e.getBoundingClientRect().width)).toBe(40);
     expect(await tab.evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
     expect(await tab.boundingBox()).toEqual(before);
     await page.mouse.move(0, 0);
-    await expect.poll(() => page.locator('#nav button[data-go="map"] .tbar').evaluate((e) => e.getBoundingClientRect().width)).toBe(40);   // selected
+    await expect.poll(() => page.locator('#nav button[data-go="map"] .bar').evaluate((e) => e.getBoundingClientRect().width)).toBe(40);   // selected
   });
 
   test('count pills are one fixed box: 30 x 22px for 1 and 2 digits, even with a wider font; 3 digits grow', async ({ page, guard }) => {

@@ -976,7 +976,7 @@ test.describe('Studio page', () => {
     const y0 = await yes.boundingBox();
     await yes.hover();
     const ys = await yes.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor, w: c.outlineWidth, bg: c.backgroundColor }; });
-    expect(ys.o).toBe(ys.b); // green line kept, not ink
+    expect(ys.o).toBe(ys.b); // rests on its green line and keeps it on hover (Lisa's approved picture), never ink
     expect(ys.o).not.toBe(ink);
     expect(ys.w).toBe('1px');
     expect(ys.bg).not.toBe('rgba(0, 0, 0, 0)');
@@ -1040,16 +1040,16 @@ test.describe('Studio page', () => {
     await openFilters(page);
     const h = (sel) => page.locator(sel).first().evaluate((e) => Math.round(e.getBoundingClientRect().height));
     for (const sel of ['.crow .tag', '#stamp']) expect(await h(sel), sel).toBe(24);
-    for (const sel of ['.col-head .cnt', '.subnav .cnt', 'nav.tabs #nLine']) expect(await h(sel), sel).toBe(22); // counts: one fixed size
+    for (const sel of ['.col-head .cnt:not(:empty)', '.subnav .cnt:not(:empty)', 'nav.tabs #nLine']) expect(await h(sel), sel).toBe(22); // counts: one fixed size (0 shows none)
     for (const sel of ['#newBtn', '#fpanel [data-fx]', '#filtersBtn', '#sortBtn', '.subnav a', '[data-vmode="list"]', '.crow .ico', '.crow .btn', '#enginePill']) expect(await h(sel), sel).toBe(36);
     // One corner radius (12px) on everything; circles only for status dots.
     const r = (sel) => page.locator(sel).first().evaluate((e) => getComputedStyle(e).borderTopLeftRadius);
     for (const sel of ['.col', '.col-list .crow', '#fpanel', '#newBtn', '#fpanel [data-fx]', '.subnav a', 'nav.tabs a', '.fbar .sbox', '.crow .tag', '.pthumb svg']) expect(await r(sel), sel).toBe('12px');
-    expect(await r('.col-head .cnt')).toBe('11px');
+    expect(await r('.col-head .cnt:not(:empty)')).toBe('11px');
     await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 390, height: 844 });
     for (const sel of ['#moreBtn', '#filtersBtn', '.subnav a', '.crow .ico']) await expect.poll(() => h(sel), sel + ' on the phone').toBe(44); // the page redraws when it crosses into phone width
-    expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(24);
+    expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(22); // the house count is 30 x 22 on the phone too (in the flow beside the label)
   });
 
   test('two font weights only (400 and 600) on every tab', async ({ page, guard }) => {
@@ -1243,7 +1243,9 @@ test.describe('Studio page', () => {
       const bad = await page.evaluate(() => {
         const press = getComputedStyle(document.documentElement).getPropertyValue('--press').trim();
         const hex = (h) => { const m = h.replace('#', '').match(/../g).map((x) => parseInt(x, 16)); return 'rgb(' + m.join(', ') + ')'; };
-        const ok = [hex(press), getComputedStyle(document.querySelector('nav.tabs')).getPropertyValue('--ljr-5').trim(), getComputedStyle(document.documentElement).getPropertyValue('--ljr-2').trim()].map((c) => c.startsWith('#') ? hex(c) : c);
+        // The control line, or a meaning button's own colour line (yes green, no rose: --house-ok / --house-risk, 3:1 on a card).
+        const col = (v) => { const d = document.createElement('i'); d.style.color = 'var(' + v + ')'; document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
+        const ok = [hex(press), col('--house-ok'), col('--house-risk')];
         const out = [];
         document.querySelectorAll('#view button, #view a.btn, #view a.pill, #view a.tag, #view .lk, .fbar .sbox').forEach((e) => {
           if (!e.offsetParent || e.matches('.ttl, .subnav a, .mrow, [data-kitnav]') || e.closest('.subnav, #moreMenu, .kv, .chk')) return;
@@ -1277,7 +1279,7 @@ test.describe('Studio page', () => {
     await page.evaluate(() => document.documentElement.classList.remove('look-cool'));
     // Read-only things never hover; pressables always do.
     await go(page, 'line');
-    for (const sel of ['.col-head .cnt', '.crow .dpill', '.crow [data-chip="need"]']) {
+    for (const sel of ['.col-head .cnt:not(:empty)', '.crow .dpill', '.crow [data-chip="need"]']) {
       const el = page.locator(sel).first(); if (!(await el.count())) continue;
       await el.hover();
       await expect(el, sel + ' is read-only').toHaveCSS('outline-style', 'none');
