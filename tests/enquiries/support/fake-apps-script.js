@@ -34,7 +34,7 @@ function makeBook(name) {
 }
 
 // routes: [[RegExp, (url, opt) => jsonObject]]. Unmatched URLs throw, so a test sees any unexpected call.
-function load(engineSource, { props = {}, routes = [], dryRun, gmail = [] } = {}) {
+function load(engineSource, { props = {}, routes = [], dryRun, gmail = [], files = [] } = {}) {
   const store = Object.assign({}, props);
   const http = [];
   let book = null;
@@ -46,7 +46,11 @@ function load(engineSource, { props = {}, routes = [], dryRun, gmail = [] } = {}
       create: (n) => { book = makeBook(n); return book; },
       openById: (id) => { if (!book || id !== 'SAMPLE-BOOK-ID') throw new Error('no such book ' + id); return book; }
     },
-    DriveApp: { getFileById: () => ({ moveTo: () => {} }), getFolderById: () => ({}) },
+    // files: [{ id, name, text, created }] in the requests folder. Read only: no move, trash or delete is offered.
+    DriveApp: { getFileById: () => ({ moveTo: () => {} }), getFolderById: () => {
+      let i = 0;
+      return { getFiles: () => ({ hasNext: () => i < files.length, next: () => { const f = files[i++]; return { getId: () => f.id, getName: () => f.name, getDateCreated: () => new Date(f.created || '2026-10-29T10:00:00Z'), getBlob: () => ({ getDataAsString: () => f.text }) }; } }) };
+    } },
     Utilities: { formatDate: (d) => d.toISOString().slice(0, 19), sleep: () => {} },
     ScriptApp: { getProjectTriggers: () => [], newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create: () => {} }) }) }) },
     // gmail: [{ id, from, to, subject, body, date, labels }] -> read-only thread objects. Every call is recorded.

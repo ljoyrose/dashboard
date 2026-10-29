@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.3.0 (2026-10-29)';
+  var VERSION = 'enquiries-core 1.4.0 (2026-10-29)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -503,6 +503,154 @@
     return (q + ' newer_than:' + (o.days || 90) + 'd -category:promotions -category:social -in:spam -in:trash').trim();
   }
 
+  // ---- Contact rules (SYS-CK) ---------------------------------------------------------------------------------
+  // Do-not-contact lives in ClickFunnels tags and in every unsubscribe. A person with any of these is never drafted to
+  // and never gets a follow-up. Settings can add tag words (dnc_tags) at run time.
+  var DNC_TAGS = /x-?dont-?contact|do-?not-?(contact|market)|ldd-bad/i;
+  var UNSUB_TAGS = /opted-?out|unsubscrib/i;
+  function consentFrom(o) {
+    o = o || {};
+    var tags = (o.tags || []).map(String), extra = (o.dncTags || []).filter(Boolean);
+    var dnc = tags.some(function (t) { return DNC_TAGS.test(t) || extra.some(function (x) { return t.toLowerCase() === String(x).toLowerCase(); }); });
+    if (dnc) return { consent: 'do-not-contact', do_not_contact: true };
+    if (truthy(o.unsubscribed) || tags.some(function (t) { return UNSUB_TAGS.test(t); })) return { consent: 'unsubscribed', do_not_contact: true };
+    if (truthy(o.optedIn)) return { consent: 'ok', do_not_contact: false };
+    return { consent: 'unknown', do_not_contact: false };
+  }
+
+  // ---- Junk check (HubSpot integration batches, form spam) ----------------------------------------------------
+  // Stage 0 found about 20 of 23 new HubSpot contacts in 30 days were junk: random mixed-case letter names, dotted
+  // throwaway mail, test domains, a dummy number. Returns the reasons ([] = looks real). Shown, and kept out of counts.
+  // opts.testDomains replaces the built-in test-domain list (the tests pass [] because their invented people use
+  // example.com, which in real data is a test entry).
+  var TEST_DOMAINS = ['example.com', 'example.org', 'example.net', 'mailinator.com', 'guerrillamail.com', 'yopmail.com', 'sharklasers.com', 'tempmail.com'];
+  function junkReasons(p, opts) {
+    p = p || {}; opts = opts || {};
+    var testDomains = opts.testDomains || TEST_DOMAINS;
+    var why = [], name = String(p.name || '').trim(), email = normaliseEmail(p.email) || String(p.email || '').toLowerCase();
+    var word = name.replace(/\s+/g, '');
+    if (word.length >= 8 && /[a-z][A-Z][a-z]*[A-Z]/.test(word) && !/\s/.test(name.trim()) ) why.push('random letters name');
+    else if (word.length >= 10 && !/[aeiou]{1}/i.test(word.slice(0, 6))) why.push('random letters name');
+    var local = String(p.email || '').split('@')[0] || '';
+    if ((local.match(/\./g) || []).length >= 3) why.push('dotted throwaway address');
+    var dom = email.split('@')[1] || '';
+    if (testDomains.indexOf(dom) >= 0 || /\.(test|invalid|localhost)$/.test(dom) || /^test\./.test(dom)) why.push('test or throwaway domain');
+    var ph = normalisePhone(p.phone).e164;
+    if (/^\+44(7123456789|7000000000|1234567890)$/.test(ph) || /^\+\d*(\d)\1{7,}$/.test(ph)) why.push('dummy phone');
+    if (/^test\b|\btest$/i.test(name) || /^test/i.test(local)) why.push('test entry');
+    return why;
+  }
+
+  // ---- ClickFunnels guard --------------------------------------------------------------------------------------
+  // Before every read batch the engine reads the workspace live and compares id and exact name with Script Properties.
+  function workspaceGuard(expected, live) {
+    expected = expected || {}; live = live || {};
+    if (!expected.id || !expected.name) return { ok: false, why: 'CF_WORKSPACE_ID and CF_WORKSPACE_NAME are not both set' };
+    if (String(live.id) !== String(expected.id)) return { ok: false, why: 'workspace id does not match' };
+    if (String(live.name || '') !== String(expected.name)) return { ok: false, why: 'workspace name does not match (live "' + (live.name || '') + '")' };
+    return { ok: true, why: '' };
+  }
+
+  // ---- Capture: ClickFunnels workflow runs ---------------------------------------------------------------------
+  // runs: [{ id, workflow, created_at, page, contact: { id, email, phone, first_name, last_name, tags: [names] } | null }]
+  // A run with no email and no phone is an anonymous page view: noise, never an enquiry (27 of 27 Breeding Cobberdogs
+  // runs on 29 Oct were like this). Returns { enquiries, people, events, noise: n, byWorkflow: { name: { runs, real } } }.
+  var CF_WORKFLOWS = [
+    [/website ?opt-?in/i, 'cf-website-optin', 'puppy'], [/breeding cobberdogs|breeder/i, 'cf-breeding', 'breeding-set'],
+    [/waiting ?list|application/i, 'cf-waiting-list', 'puppy']
+  ];
+  function cfRecords(runs, opts) {
+    opts = opts || {};
+    var out = { enquiries: [], people: [], events: [], noise: 0, byWorkflow: {} };
+    (runs || []).forEach(function (r) {
+      var wf = String(r.workflow || ''), map = null;
+      for (var i = 0; i < CF_WORKFLOWS.length; i++) if (CF_WORKFLOWS[i][0].test(wf)) { map = CF_WORKFLOWS[i]; break; }
+      var b = out.byWorkflow[wf] = out.byWorkflow[wf] || { runs: 0, real: 0, noise: 0 };
+      b.runs++;
+      var c = r.contact || {}, email = normaliseEmail(c.email), ph = normalisePhone(c.phone, opts.defaultCode);
+      if (!map || (!email && !ph.valid)) { b.noise++; out.noise++; return; }
+      b.real++;
+      var key = rowKey(map[1], r.id), name = [c.first_name, c.last_name].filter(Boolean).join(' ');
+      var cons = consentFrom({ tags: c.tags, dncTags: opts.dncTags });
+      var msg = c.message || r.message || '';
+      var where = inferCountry({ stated: c.country, phone: c.phone, defaultCode: opts.defaultCode });
+      out.enquiries.push({ key: key, source: 'ClickFunnels ' + wf, source_ref: String(r.id), received_uk: toUk(r.created_at), channel: map[1],
+        kind: msg ? (classifyKind(msg) === 'other' ? map[2] : classifyKind(msg)) : map[2], country: where.country, country_basis: where.basis,
+        question_summary: summary(msg, opts.maxChars), stage: 'new', consent: cons.consent, do_not_contact: cons.do_not_contact,
+        flag: junkReasons({ name: name, email: c.email, phone: c.phone }, opts).length ? 'junk?' : '' });
+      out.people.push({ enquiry_key: key, channel: map[1], name: name, email: email, phone_e164: ph.valid ? ph.e164 : '', country: where.country, country_basis: where.basis, consent: cons.consent });
+      out.events.push({ event_key: 'V-' + hash(key + '|received'), enquiry_key: key, at_uk: toUk(r.created_at), channel: map[1], type: 'received', detail: 'workflow ' + wf + (r.page ? ' on ' + r.page : ''), source_ref: String(r.id) });
+    });
+    return out;
+  }
+
+  // OW-0003: match each breeder-form run to a page submission that carries a contact, by page and time (within
+  // windowMin minutes). Returns { matched: [{ run, submission }], unmatched: [run] }. Counts only go in a slip.
+  function matchSubmissions(runs, submissions, windowMin) {
+    var w = (windowMin || 10) * 60000, used = {}, out = { matched: [], unmatched: [] };
+    (runs || []).forEach(function (r) {
+      var t = toMs(r.created_at), best = null, bestGap = Infinity;
+      (submissions || []).forEach(function (s, i) {
+        if (used[i] || !(s.contact && (s.contact.email || s.contact.phone))) return;
+        if (r.page && s.page && String(r.page) !== String(s.page)) return;
+        var gap = Math.abs(toMs(s.created_at) - t);
+        if (gap <= w && gap < bestGap) { best = i; bestGap = gap; }
+      });
+      if (best === null) out.unmatched.push(r); else { used[best] = 1; out.matched.push({ run: r, submission: submissions[best] }); }
+    });
+    return out;
+  }
+
+  // ---- Capture: HubSpot contacts --------------------------------------------------------------------------------
+  // contacts: HubSpot v3 objects { id, properties: { email, firstname, lastname, phone, mobilephone, country, createdate,
+  // message, hs_email_optout, recent_conversion_event_name } }. Junk is counted, not captured.
+  function hubspotRecords(contacts, opts) {
+    opts = opts || {};
+    var out = { enquiries: [], people: [], events: [], junk: 0 };
+    (contacts || []).forEach(function (c) {
+      var p = (c && c.properties) || {}, name = [p.firstname, p.lastname].filter(Boolean).join(' ');
+      var phone = p.phone || p.mobilephone || '', email = normaliseEmail(p.email), ph = normalisePhone(phone, opts.defaultCode);
+      if (!email && !ph.valid) { out.junk++; return; }
+      if (junkReasons({ name: name, email: p.email, phone: phone }, opts).length) { out.junk++; return; }
+      var key = rowKey('hubspot', c.id), msg = p.message || p.recent_conversion_event_name || '';
+      var where = inferCountry({ stated: p.country, phone: phone, defaultCode: opts.defaultCode });
+      var cons = consentFrom({ unsubscribed: p.hs_email_optout });
+      out.enquiries.push({ key: key, source: 'HubSpot contact', source_ref: String(c.id), received_uk: toUk(p.createdate), channel: 'hubspot',
+        kind: msg ? (classifyKind(msg) === 'other' ? 'puppy' : classifyKind(msg)) : 'puppy', country: where.country, country_basis: where.basis,
+        question_summary: summary(msg, opts.maxChars), stage: 'new', consent: cons.consent, do_not_contact: cons.do_not_contact });
+      out.people.push({ enquiry_key: key, channel: 'hubspot', name: name, email: email, phone_e164: ph.valid ? ph.e164 : '', country: where.country, country_basis: where.basis, consent: cons.consent });
+      out.events.push({ event_key: 'V-' + hash(key + '|received'), enquiry_key: key, at_uk: toUk(p.createdate), channel: 'hubspot', type: 'received', detail: p.recent_conversion_event_name ? 'form ' + p.recent_conversion_event_name : 'contact created', source_ref: String(c.id) });
+    });
+    return out;
+  }
+
+  // ---- Add by hand ----------------------------------------------------------------------------------------------
+  // The page's "Add by hand" box: Lisa pastes a message from email, WhatsApp, Facebook, Instagram, a phone call or
+  // Pets4Homes, picks the channel and kind; the page writes ONE request file; the engine turns it into a row.
+  var HAND_CHANNELS = ['email', 'whatsapp', 'facebook', 'instagram', 'phone', 'pets4homes'];
+  var HAND_MAX = 5000;
+  function addRequest(o, nowIso) {
+    o = o || {};
+    var channel = String(o.channel || '').trim(), kind = String(o.kind || '').trim(), text = String(o.text == null ? '' : o.text);
+    if (!channel) return { ok: false, error: 'Pick where it came from.' };
+    if (HAND_CHANNELS.indexOf(channel) < 0) return { ok: false, error: 'Unknown channel "' + channel + '".' };
+    if (kind && KIND_ORDER.indexOf(kind) < 0) return { ok: false, error: 'Unknown kind "' + kind + '".' };
+    if (!text.trim()) return { ok: false, error: 'Paste the message first.' };
+    if (text.length > HAND_MAX) return { ok: false, error: 'That is ' + text.length + ' characters; the most is ' + HAND_MAX + '. Paste the part that matters.' };
+    var at = nowIso || new Date().toISOString();
+    return { ok: true, name: 'ENQ-add-' + at.replace(/[^0-9]/g, '').slice(0, 14) + '-' + hash(channel + text).slice(0, 6) + '.json',
+      body: { v: 1, kind: 'add', channel: channel, enquiry_kind: kind || classifyKind(text), text: text, at: at } };
+  }
+  // The engine's read of a pasted message: name, email and phone if the text gives them.
+  function parsePasted(text, defaultCode) {
+    var t = String(text || ''), f = formFields(t);
+    var em = f.email || ((t.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}/) || [])[0]) || '';
+    var phRaw = f.phone || ((t.match(/(\+|00)\d[\d\s().-]{7,}\d|\b0\d[\d\s-]{8,}\d/) || [])[0]) || '';
+    var ph = normalisePhone(phRaw, defaultCode);
+    var name = f.name || ((t.match(/^(?:from|name)\s*[:\-]\s*(.+)$/im) || [])[1] || '').trim();
+    return { name: name, email: normaliseEmail(em), phone_e164: ph.valid ? ph.e164 : '', message: f.message || t.trim() };
+  }
+
   var api = {
     VERSION: VERSION, CALLING: CALLING, STAGES: STAGES, ADULT_STAGES: ADULT_STAGES, KINDS: KIND_ORDER.slice(),
     normalisePhone: normalisePhone, countryFromPhone: countryFromPhone, countryFromTimezone: countryFromTimezone,
@@ -512,7 +660,10 @@
     FLOW: FLOW, COLUMNS: COLUMNS, CHANNELS: CHANNELS, BANDS: BANDS, CONSENT: CONSENT, ENUMS: ENUMS,
     checkHeader: checkHeader, validateRow: validateRow, stageFlags: stageFlags, parseTab: parseTab, truthy: truthy,
     toUk: toUk, summary: summary, lastPart: lastPart, calendlyRecords: calendlyRecords,
-    formFields: formFields, classifyEmail: classifyEmail, gmailQuery: gmailQuery
+    formFields: formFields, classifyEmail: classifyEmail, gmailQuery: gmailQuery,
+    consentFrom: consentFrom, junkReasons: junkReasons, workspaceGuard: workspaceGuard, cfRecords: cfRecords,
+    matchSubmissions: matchSubmissions, hubspotRecords: hubspotRecords, HAND_CHANNELS: HAND_CHANNELS, HAND_MAX: HAND_MAX,
+    addRequest: addRequest, parsePasted: parsePasted
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
