@@ -523,7 +523,7 @@
   // E02 money rollback (RR_MASTER v0.59). Wins over a tick, a ledger row, Select all and every other bin rule.
   // Never restore, migrate or bin these. Folder holds use the two Drive ids below, never the folder name.
   var E02_LABEL = 'Held: money rollback (E02), do not touch until FIX 6 is confirmed';
-  // 0.1 - Index. Its parent is Money 00 (1X6b7CJfpvPK5gfj0i1xi8mTYCmdPcwzQ); that parent is not excluded.
+  // 0.1 - Index. Its parent is Money 00; that parent is not excluded.
   var INDEX_FOLDER_ID = CFG.money.folders.index;
   // 4 - Ops, the one that holds CHECK-LOG. Another folder also named "4 - Ops" is not this id and is not excluded.
   var OPS_FOLDER_ID = CFG.money.folders.ops;
@@ -1529,7 +1529,7 @@
   }
   var P = pcpFresh('idle', '');
   function pcpLabel() {
-    return P.email === 'lisa@puppyclassroom.com' ? 'PC-Personal' : P.email === 'lisahcarson@gmail.com' ? 'lisah Personal' : (P.email || 'Personal drive');
+    return P.email && P.email === ((CFG.money || {}).owner || '') ? 'PC-Personal' : /@(gmail|googlemail)\.com$/i.test(P.email || '') ? 'lisah Personal' : (P.email || 'Personal drive');   // by account type: the business account (config.js) or a personal Gmail
   }
   function pcpAllPages(params, each, tok) {
     var n = 0;
@@ -1819,7 +1819,7 @@
   // Bin > Work My Drive: rename exact copies (from the last Work My Drive scan) and bin marked files. Bin stage 5 folds this into Ready to bin.
   function pcpBinCard() {
     var html = '<section class="card slot4" id="pcpTidy"><div class="cardhead"><h3>Work My Drive: files to tidy</h3><span class="mtag">Work My Drive</span></div>' +
-      '<ul class="notes"><li>Finds personal files already in a shared drive (exact copy).</li><li>PC-Personal = lisa@puppyclassroom.com. lisah Personal = lisahcarson@gmail.com.</li><li>Nothing changes until you click Rename.</li></ul>';
+      '<ul class="notes"><li>Finds personal files already in a shared drive (exact copy).</li><li>PC-Personal = the business Google account. lisah Personal = the personal Gmail account.</li><li>Nothing changes until you click Rename.</li></ul>';
     if (P.status !== 'done') html += '<p class="note">Scan <a href="#/drives/work">Work My Drive</a> to find exact copies to rename.</p>';
     else {
       if (P.matches.length) {

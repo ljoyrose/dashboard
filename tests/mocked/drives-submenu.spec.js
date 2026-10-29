@@ -173,13 +173,11 @@ test.describe('Personal Drive: a second, look-only sign-in', () => {
 });
 
 test.describe('Personal address stays out of the public repo', () => {
-  // Agreed (SYS-CD R1 BOT 18:24 UK): CJ9 stage 5 removes the existing lines; until it merges this is reported, not a fail.
-  test('the personal mail domain appears nowhere outside config.js (report until CJ9 stage 5 merges)', () => {
+  // CJ9 stage 5 (merged) removed the old lines, so the stage 2b done-test is now strict: 0 places outside config.js.
+  test('the personal mail domain appears nowhere outside config.js', () => {
     let hits = '';
     try { hits = execSync("git grep -n -i 'gmail\\.com' -- . ':!config.js'", { cwd: ROOT, encoding: 'utf8' }); } catch (e) { hits = ''; }
     const lines = hits.split('\n').filter(Boolean).map((l) => l.split(':').slice(0, 2).join(':'));
-    test.info().annotations.push({ type: 'personal mail domain outside config.js', description: lines.length + (lines.length ? ': ' + lines.join(', ') : '') });
-    // This stage adds none: the only allowed places are the ones CJ9 stage 5 owns.
-    for (const l of lines) expect(l).toMatch(/^(index\.html|README\.md|tests\/mocked\/repo-hygiene\.spec\.js):/);
+    expect(lines).toEqual([]);
   });
 });

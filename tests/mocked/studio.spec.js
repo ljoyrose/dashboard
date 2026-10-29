@@ -1593,8 +1593,8 @@ test.describe('Studio page', () => {
 
   for (const role of ['team', 'owner']) test(`signed in as the ${role}: requests carry that account; ${role === 'team' ? 'owner-only controls are switched off with "Owner only"' : 'nothing is switched off'}`, async ({ page, guard }) => {
     const got = await uploads(page, guard);
-    guard.world.email = role === 'team' ? 'Backup@Sample.test' : 'owner@sample.test'; // matched case-blind to accounts[].emails
-    await open(page, guard, '#/decide', { change: (s) => { s.accounts.push({ id: 'acc-team', name: 'Sample backup', kind: 'owner', role: 'team', emails: ['backup@sample.test'], protect: '', protectEffective: 'no' }); } });
+    guard.world.email = role === 'team' ? 'Backup@Example.test' : 'owner@example.test'; // matched case-blind to accounts[].emails
+    await open(page, guard, '#/decide', { change: (s) => { s.accounts.push({ id: 'acc-team', name: 'Sample backup', kind: 'owner', role: 'team', emails: ['backup@example.test'], protect: '', protectEffective: 'no' }); } });
     const team = role === 'team';
     const gate = page.locator('.crow[data-row="sa-gate"] [data-act="gate"]').first();
     await expect.poll(() => gate.isDisabled()).toBe(team); // the role is known once the page has asked Drive who is signed in

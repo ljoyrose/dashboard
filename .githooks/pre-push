@@ -1,0 +1,8 @@
+#!/bin/sh
+# Scans EVERY commit being pushed (not only the tip): a file added then removed is still public.
+z=0000000000000000000000000000000000000000
+while read lref lsha rref rsha; do
+  [ "$lsha" = "$z" ] && continue
+  if [ "$rsha" = "$z" ]; then range="$lsha --not --remotes"; else range="$rsha..$lsha"; fi
+  python3 "$(git rev-parse --show-toplevel)/tools/privacy-guard/privacy_guard.py" --range "$range" || exit 1
+done
