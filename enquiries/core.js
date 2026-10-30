@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.5.0 (2026-10-30)';
+  var VERSION = 'enquiries-core 1.6.0 (2026-10-30)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -383,6 +383,123 @@
     return { past_deposit: !!hit, repeat_buyer: !!(hit && hit.sold), check: check };
   }
 
+  // ---- What they asked for (Stage 7) ---------------------------------------------------------------------------
+  // Sex, size, colour, coat and breed words in free text. Only fills what the enquiry row leaves blank.
+  var PREF_WORDS = {
+    sex: [['female', /\b(girls?|female|bitch(es)?)\b/i], ['male', /\b(boys?|males?)\b/i]],
+    size: [['miniature', /\b(mini(ature)?)\b/i], ['medium', /\bmedium\b/i], ['standard', /\b(standard|large)\b/i]],
+    colour: [['chocolate', /\bchoc(olate)?\b/i], ['caramel', /\bcaramel\b/i], ['cream', /\bcream\b/i], ['black', /\bblack\b/i],
+      ['red', /\bred\b/i], ['apricot', /\bapricot\b/i], ['gold', /\bgold(en)?\b/i], ['parti', /\bparti\b/i], ['phantom', /\bphantom\b/i],
+      ['cafe', /\bcaf[eé]\b/i], ['lavender', /\blavender\b/i], ['chalk', /\bchalk\b/i]],
+    coat: [['fleece', /\bfleece\b/i], ['wool', /\bwool(ly)?\b/i], ['hair', /\bhair coat\b/i]],
+    breed_interest: [['Cobberdog', /\bcobber(dog)?s?\b/i], ['Labradoodle', /\b(labra)?doodles?\b/i]]
+  };
+  function extractPrefs(text, row) {
+    var t = String(text || ''), r = row || {}, out = {};
+    Object.keys(PREF_WORDS).forEach(function (f) {
+      if (r[f]) { out[f] = r[f]; return; }
+      var hits = PREF_WORDS[f].filter(function (w) { return w[1].test(t); }).map(function (w) { return w[0]; });
+      if (f === 'breed_interest' && hits.length > 1) out[f] = 'either';
+      else if (hits.length === 1) out[f] = hits[0];
+      else out[f] = '';
+    });
+    return out;
+  }
+  // Does one pup fit what the enquiry asked? A field the enquiry leaves blank (or "either") fits anything.
+  function pupFits(prefs, pup) {
+    prefs = prefs || {}; pup = pup || {};
+    return ['sex', 'size', 'colour', 'coat'].every(function (f) {
+      var want = String(prefs[f] || '').toLowerCase(), have = String(pup[f] || '').toLowerCase();
+      return !want || want === 'either' || !have || have.indexOf(want) >= 0;
+    });
+  }
+
+  // When they want a pup, in months from now (0 = now), or null when the text does not say.
+  var MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  var SEASON = { spring: 2, summer: 5, autumn: 8, fall: 8, winter: 11 }; // the month a season starts (0 = January)
+  function timingMonths(text, now) {
+    var t = String(text || '').toLowerCase(), d = new Date(toMs(now) || Date.now());
+    var y0 = d.getUTCFullYear(), m0 = d.getUTCMonth();
+    if (/\b(asap|as soon as possible|right away|straight away|now|this month|immediately|ready now)\b/.test(t)) return 0;
+    if (/\bnext month\b/.test(t)) return 1;
+    var m = t.match(/\b(?:in|within)\s+(\d{1,2})\s*(weeks?|months?)\b/);
+    if (m) return m[2].charAt(0) === 'w' ? Math.round(Number(m[1]) / 4.3) : Number(m[1]);
+    if (/\bnext year\b/.test(t)) return 12 - m0;
+    var yr = (t.match(/\b(20\d\d)\b/) || [])[1];
+    var mon = -1;
+    MONTHS.forEach(function (n, i) { if (mon < 0 && new RegExp('\\b' + n + '[a-z]*\\b').test(t)) mon = i; });
+    if (mon < 0) Object.keys(SEASON).forEach(function (n) { if (mon < 0 && new RegExp('\\b' + n + '\\b').test(t)) mon = SEASON[n]; });
+    if (mon < 0 && !yr) return null;
+    var y = yr ? Number(yr) : y0;
+    if (mon < 0) mon = yr && Number(yr) > y0 ? 0 : m0;
+    var diff = (y - y0) * 12 + (mon - m0);
+    if (diff < 0 && !yr) diff += 12;
+    return Math.max(0, diff);
+  }
+
+  // ---- Triage and scoring (Stage 7) ----------------------------------------------------------------------------
+  // Score 0 to 100 from weights Lisa keeps in Settings (score_weights, score_bands). Every score comes with its top 3
+  // reasons. Sensitive things (allergies, a neurodiverse home, young children, export to a hard country) are flags
+  // that are SHOWN, never scored down: the same message with or without them scores the same.
+  var WEIGHTS = { timing: 20, fit: 15, deposit: 15, home: 10, uk: 10, repeat: 15, call: 15 };
+  var BAND_AT = { hot: 70, warm: 45, cool: 20 };
+  function parseNumbers(text, defaults) {
+    var out = {}, k;
+    for (k in defaults) out[k] = defaults[k];
+    String(text || '').split(',').forEach(function (p) {
+      var m = p.match(/^\s*([a-z-]+)\s*=\s*(-?\d+(\.\d+)?)\s*$/i);
+      if (m && Object.prototype.hasOwnProperty.call(defaults, m[1].toLowerCase())) out[m[1].toLowerCase()] = Number(m[2]);
+    });
+    return out;
+  }
+  var DEPOSIT_WORDS = /\b(deposit|ready to (pay|commit|go)|reserve|secure (a|one|our)|put (a|my|our) name down|waiting list|book (a|one|our) pup|how do (i|we) (pay|reserve|book))\b/i;
+  var HOME_WORDS = /\b(garden|fenced|work(s|ing)? from home|wfh|retired|at home all day|had dogs|have had|owned (a )?dogs?|experience(d)? (with|owner)|grew up with dogs|current dog|our (old|last) dog|dog walker|puppy class(es)?)\b/i;
+  var SENSITIVE = [
+    ['allergies', /\b(allerg\w*|asthma\w*)\b/i],
+    ['neurodiverse home', /\b(autis\w*|asd|adhd|neurodiver\w*|sensory needs?|special needs|send)\b/i],
+    ['young children', /\b(toddlers?|bab(y|ies)|newborn|young (children|kids|family)|little ones|under (5|five)s?|(1|2|3|4|one|two|three|four)[- ]?(year|yr)[- ]?old)\b/i]
+  ];
+  var HOME_COUNTRIES = ['United Kingdom', 'Jersey', 'Guernsey', 'Isle of Man'];
+  function listOf(v) { return Array.isArray(v) ? v : String(v || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
+  // e: an Enquiries row. ctx: { now, person (People row), openPups: [Litters rows], weights, bands, simpleCountries,
+  // hardCountries }. Returns { score, band, reasons: [3 at most, never none], flags: [], prefs }.
+  function scoreEnquiry(e, ctx) {
+    e = e || {}; ctx = ctx || {};
+    var w = ctx.weights && typeof ctx.weights === 'object' ? Object.assign({}, WEIGHTS, ctx.weights) : parseNumbers(ctx.weights, WEIGHTS);
+    var b = ctx.bands && typeof ctx.bands === 'object' ? Object.assign({}, BAND_AT, ctx.bands) : parseNumbers(ctx.bands, BAND_AT);
+    var text = [e.question_summary, e.timing, e.household_flags].filter(Boolean).join(' · ');
+    var prefs = extractPrefs(text, e), got = [], flags = [];
+    function add(points, why) { if (points > 0) got.push({ p: points, why: why + ' (+' + points + ')' }); }
+    var tm = timingMonths(e.timing || text, ctx.now);
+    if (tm !== null && tm <= 3) add(w.timing, 'Wants a pup within 3 months');
+    else if (tm !== null && tm <= 6) add(Math.round(w.timing / 2), 'Wants a pup in 4 to 6 months');
+    var open = (ctx.openPups || []).filter(function (p) { return /^(open|available|for sale)$/i.test(String(p.status || '').trim()); });
+    if (e.kind === 'puppy' || !e.kind) {
+      var fits = open.filter(function (p) { return pupFits(prefs, p); });
+      var stated = ['sex', 'size', 'colour', 'coat'].some(function (f) { return prefs[f]; });
+      if (fits.length && stated) add(w.fit, fits.length + ' open pup' + (fits.length > 1 ? 's fit' : ' fits') + ' what they asked');
+      else if (fits.length) add(Math.round(w.fit / 2), 'Open pups now; no preference stated yet');
+    }
+    if (DEPOSIT_WORDS.test(text)) add(w.deposit, 'Talks about a deposit or reserving');
+    if (HOME_WORDS.test(text)) add(w.home, 'Home and dog experience sound right');
+    var simple = listOf(ctx.simpleCountries);
+    if (HOME_COUNTRIES.indexOf(e.country) >= 0) add(w.uk, 'Lives in the UK');
+    else if (e.country && simple.indexOf(e.country) >= 0) add(Math.round(w.uk / 2), 'Simple import (' + e.country + ')');
+    var person = ctx.person || {};
+    if (truthy(person.repeat_buyer)) add(w.repeat, 'Has bought from us before');
+    else if (truthy(person.past_deposit)) add(Math.round(w.repeat / 2), 'Paid a deposit before');
+    if (e.channel === 'calendly' || stageRank(e.stage) >= stageRank('call-booked')) add(w.call, 'Booked a call');
+    SENSITIVE.forEach(function (s) { if (s[1].test(text)) flags.push(s[0]); });
+    var hard = listOf(ctx.hardCountries);
+    if (e.country && hard.indexOf(e.country) >= 0) flags.push('export to ' + e.country);
+    var score = Math.max(0, Math.min(100, got.reduce(function (a, g) { return a + g.p; }, 0)));
+    got.sort(function (x, y) { return y.p - x.p; });
+    var reasons = got.slice(0, 3).map(function (g) { return g.why; });
+    if (!reasons.length) reasons = ['No fit signals yet: nothing on timing, home, deposit or a call (0)'];
+    var band = score >= b.hot ? 'hot' : score >= b.warm ? 'warm' : score >= b.cool ? 'cool' : 'not-a-fit';
+    return { score: score, band: band, reasons: reasons, flags: flags, prefs: prefs };
+  }
+
   // ---- Do-not-contact gate (Stage 6; used by every draft and follow-up writer) ---------------------------------
   // A person or enquiry marked do-not-contact or unsubscribed is never drafted to and never gets a follow-up.
   function mayContact(person, enquiry) {
@@ -486,7 +603,7 @@
     Enquiries: ['key', 'person_key', 'source', 'source_ref', 'received_uk', 'channel', 'kind', 'brand', 'country',
       'country_basis', 'breed_interest', 'size', 'colour', 'coat', 'sex', 'timing', 'household_flags', 'question_summary',
       'score', 'band', 'stage', 'next_step', 'next_due_uk', 'owner', 'do_not_contact', 'consent', 'litter_ref', 'pup_ref',
-      'lost_reason', 'flag', 'ref', 'updated_uk'],
+      'lost_reason', 'flag', 'ref', 'score_reasons', 'updated_uk'],
     People: ['person_key', 'ref', 'name', 'email', 'phone_e164', 'country', 'country_basis', 'sources', 'first_contact_uk',
       'last_touch_uk', 'touches', 'repeat_buyer', 'past_deposit', 'do_not_contact', 'consent', 'match_confidence', 'check', 'updated_uk'],
     Events: ['event_key', 'enquiry_key', 'person_key', 'at_uk', 'channel', 'type', 'detail', 'source_ref'],
@@ -887,7 +1004,8 @@
     matchSubmissions: matchSubmissions, hubspotRecords: hubspotRecords, HAND_CHANNELS: HAND_CHANNELS, HAND_MAX: HAND_MAX,
     addRequest: addRequest, parsePasted: parsePasted,
     nameKey: nameKey, nameSimilarity: nameSimilarity, mergePerson: mergePerson, resolvePeople: resolvePeople,
-    personHistory: personHistory, depositKeys: depositKeys, depositRowsFrom: depositRowsFrom, depositFlags: depositFlags, mayContact: mayContact, gateContact: gateContact
+    personHistory: personHistory, depositKeys: depositKeys, depositRowsFrom: depositRowsFrom, depositFlags: depositFlags, mayContact: mayContact, gateContact: gateContact,
+    extractPrefs: extractPrefs, pupFits: pupFits, timingMonths: timingMonths, scoreEnquiry: scoreEnquiry, WEIGHTS: WEIGHTS, BAND_AT: BAND_AT
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
