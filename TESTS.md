@@ -218,14 +218,14 @@ This is what turns the tests from "advice" into "protection". It needs your admi
 2. Left side: **Branches**. Click **Add branch protection rule** (or **Add classic branch protection rule**).
 3. **Branch name pattern:** type `main`.
 4. Tick **Require a pull request before merging**. Leave "Required approvals" at **0** (you are the only person, so you could not approve your own).
-5. Tick **Require status checks to pass before merging**. In the search box type `Browser tests` and pick **Browser tests (pretend Google and Drive)**. (It only appears in the list because it has run recently. If you cannot find it, open the Actions tab, run "Dashboard tests" once, then try again.)
+5. Tick **Require status checks to pass before merging**. In the search box type `Browser tests` and pick **Browser tests (pretend Google and Drive)**. (It only appears in the list because it has run recently. If you cannot find it, open the Actions tab, run "Dashboard tests" once, then try again.) Then type `Privacy guard` and also pick **Privacy guard (public repo)** (the check that blocks private material; this repo is public). **Status of this second check: not yet added (waits for Lisa's settings visit, after the PRIVACY_DENYLIST secret is saved).** Until it is added, the weekly protection watch reports it.
 6. Tick **Do not allow bypassing the above settings** (this makes it apply to you too).
 7. Leave **Allow force pushes** and **Allow deletions** **unticked**.
 8. Click **Create** (or **Save changes**).
 
 What changes for you: nothing can go straight into `main`; every change comes as a pull request, and the green **Merge** button only lights up when the tests are green. A red tick means "fix it first". If you ever need to bypass it in an emergency, untick step 6 for a moment.
 
-Do not rename the job "Browser tests (pretend Google and Drive)" in `tests.yml`. If it is renamed, merges stick on "Expected, waiting for status" and the rule must be edited to the new name.
+Do not rename the job "Browser tests (pretend Google and Drive)" in `tests.yml`, or "Privacy guard (public repo)" in `privacy-guard.yml`. If it is renamed, merges stick on "Expected, waiting for status" and the rule must be edited to the new name.
 
 ## Publishing waits for the tests
 
@@ -363,7 +363,7 @@ A quote in the words is escaped before it reaches Drive. Signed out, nothing is 
 
 ## Bin guard: 00 CHECK on the Bin page
 
-A Google Apps Script owned by lisa@puppyclassroom.com (the "bin guard", code kept in Drive, not in this public repo) looks in the bins every day at about 8am UK. Anything whose name does not start `ZZ_DELETE_` or `ZZ_SUPERSEDED_` is taken back out and put in **LD > *00 Current > 00 CHECK**. It never deletes for good and never empties a bin.
+A Google Apps Script owned by the business account (the "bin guard", code kept in Drive, not in this public repo) looks in the bins every day at about 8am UK. Anything whose name does not start `ZZ_DELETE_` or `ZZ_SUPERSEDED_` is taken back out and put in **LD > *00 Current > 00 CHECK**. It never deletes for good and never empties a bin.
 
 The Bin page shows 00 CHECK with ticks, **Select all**, **Clear**, **ZZ_DELETE** and **Refer to AI**. The page only **reads** 00 CHECK. The two buttons open the guard's own Google page (a web app that only puppyclassroom.com accounts can open, and only Lisa can use) with the ticked ids; nothing changes until Lisa presses the button there. RR_ names are never ticked. The buttons stay off until the web app exists: it writes its address into `BIN-GUARD-WEBAPP.json` in *00 Current the first time Lisa opens it, or you can put the address in `config.js` (`binGuard.webAppUrl`). Only a `https://script.google.com/.../exec` address is accepted. Tests: `tests/mocked/bin-guard.spec.js`.
 

@@ -452,7 +452,7 @@
     <a class="btn" href="#/new" data-nav="new" id="newBtn" aria-label="New idea"><i class="ti ti-plus"></i>New</a>
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
-    <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
+    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
     <span class="morewrap hidden" id="moreWrap"><button id="moreBtn" class="btn" type="button" data-action="moremenu" aria-expanded="false" aria-controls="moreMenu">More<i class="ti ti-dots" aria-hidden="true"></i></button>
       <div id="moreMenu" class="hidden" role="dialog" aria-label="More">
         <button type="button" data-action="refresh"><i class="ti ti-refresh" aria-hidden="true"></i>Refresh</button>
@@ -1981,7 +1981,7 @@
       if (k === 'moremenu') { showMore($('moreMenu').classList.contains('hidden')); return; }
       if (k === 'moredone') { showMore(false, true); return; }
       if (k === 'lookmore') { showMore(false); showLook(true); var lf = document.querySelector('#lookMenu button'); if (lf) lf.focus(); return; }
-      if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
+      if (k === 'signin') auth.requestInteractive(CFG.money && CFG.money.owner ? { login_hint: CFG.money.owner } : {}); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'filters') { filtersOpen = !filtersOpen; sortOpen = false; render(); fFocus(); }
       else if (k === 'sort') { sortOpen = !sortOpen; filtersOpen = false; render(); fFocus(); }
       else if (k === 'fdone') { closeF(); }

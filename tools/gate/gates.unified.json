@@ -4,7 +4,7 @@
     "job": "E16-GATE",
     "date": "2026-10-16",
     "author": "Claude Code",
-    "status": "Lisa ruled E16 Q1-Q5 on 16 Oct 2026 11:55 (DE62, J1 slip 1eatRPZDH4XJDb3rWYukC5TJvro5WS3W7). Conflicts C1-C10 RESOLVED. Q2 changed: leak is three phases, not one 7->8 gate.",
+    "status": "Lisa ruled E16 Q1-Q5 on 16 Oct 2026 11:55 (DE62, J1 slip [Drive id removed: public repo]). Conflicts C1-C10 RESOLVED. Q2 changed: leak is three phases, not one 7->8 gate.",
     "sources": [
       "APP-FACTORY-FRAMEWORK.md section 2 (12 gates, PR616/PR617)",
       "GATES.csv (7 gates, 19 Sep 2026)",
@@ -120,7 +120,7 @@
         { "id": "MONITOR", "card_key": "Leak_monitor", "required_at": "7->8", "verdict_set": ["CLEAR", "LEAK-SEEN"], "pass_verdicts": ["CLEAR"], "rule": "leaks watched throughout the build; LEAK-SEEN at any point stops the build and sends the card to Trouble" },
         { "id": "POST", "card_key": "Leak_post", "required_at": "7->8", "verdict_set": ["PASS", "FAIL"], "pass_verdicts": ["PASS"], "rule": "the pre-written tests run after the build, negative cases on every table; a follow-up Overskill app prompt may fix and re-run" }
       ],
-      "source_citation": "Lisa 16 Oct 2026 DE62 (E16-Q2 changed); RR_PC-APPFACT-RULES 1_rySIoZKKiODeRStQsbi3zsGbXdUVPGX s6; S3 1frnqZY8bBOdaSfU9kpyZfm6MO9UhDTOW",
+      "source_citation": "Lisa 16 Oct 2026 DE62 (E16-Q2 changed); RR_PC-APPFACT-RULES [Drive id removed: public repo] s6; S3 [Drive id removed: public repo]",
       "confidence": "HIGH",
       "conflict_ids": []
     },

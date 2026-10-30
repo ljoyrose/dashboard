@@ -366,7 +366,7 @@
     <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
     <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
-    <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
+    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
   </div>
 </header>
 <nav class="tabs house-tabs" aria-label="Sections">
@@ -390,7 +390,8 @@
 (function () {
   'use strict';
   var CFG = window.DASH_CONFIG, CLIENT_ID = CFG.clientId, SCOPE = CFG.scopes.read, WRITE = CFG.scopes.write;
-  var F = { logs: '1e04LM9qA2lXpy63Qfcd7x9HEEjhsMj9k', requests: '1Z1Iuc_rRFq7cy12ELM0seZ-onpCSfDQ2', state: 'af-state.json' };
+  var FC = CFG.factory || {};
+  var F = { logs: FC.logsFolderId, requests: FC.requestsFolderId, state: 'af-state.json' };
   var REFRESH_MS = 5 * 60 * 1000;
   var accessToken = null, tokenExpiresAt = 0, signedIn = false, S = null, err = null, timer = null, open = {}, cardCache = {}, sent = loadSent();
   var $ = function (id) { return document.getElementById(id); };
@@ -509,7 +510,7 @@
   }
   function chipOf(t) { return '<a class="chip' + (stuck(t) ? ' stuck' : '') + '" href="#/card/' + t.id + '">' + esc(t.name) + '<span class="st">' + (stuck(t) ? ic('warn') : '') + esc(cap(t.status)) + '</span></a>'; }
   // The front door: the Idea Form (AF-ENGINE writes the card and the ClickUp task, even with the factory OFF).
-  var FORM = 'https://docs.google.com/forms/d/e/1FAIpQLSfzzTnlyNWeXzFEz9NfYxNXsCFN6KwV8RxFyIRTJZ-WrH15nw/viewform';
+  var FORM = FC.ideaFormUrl || '';
   function newIdea() { return '<a class="plus" href="#/new" aria-label="New idea"><i class="ti ti-plus"></i></a>'; }
   var ROOM_DO = { reception: 'New ideas. You say Yes at Screen.', research: 'Grok researches. You judge Merit, then Lock the features.',
     rig: 'Schema and data set up (Claude + Grok). No-stamp gates.', reactor: 'Prompts in OverSkill: you send, Happy Hour each time. Costs credits.',
@@ -1528,7 +1529,7 @@
   document.addEventListener('click', function (e) {
     var a = e.target.closest('[data-action]'); if (a && !a.disabled) {
       var k = a.getAttribute('data-action');
-      if (k === 'signin') auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
+      if (k === 'signin') auth.requestInteractive(CFG.money && CFG.money.owner ? { login_hint: CFG.money.owner } : {}); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'cardask') { cardAsk = !cardAsk; render(); var ai = document.querySelector('form.ask[data-ask] input[name=text]'); if (cardAsk && ai) ai.focus(); }
       else if (k === 'more') { var ga = a.getAttribute('data-app'); shownAll[ga] = { on: !(shownAll[ga] && shownAll[ga].on), at: Date.now() }; saveLocal('af-open', shownAll); render(); }
       else if (k === 'dqall') { docsAll = true; render(); }

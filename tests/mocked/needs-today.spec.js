@@ -1,4 +1,4 @@
-// "Needs you today" on the home Map: one short list (at most 7) of what needs Lisa, from data already read.
+// "Needs you today" on the Dashboard: one short list (at most 7) of what needs Lisa, from data already read.
 const { test, expect, buildWorld } = require('../support/test');
 const { IDS } = require('../support/world');
 
@@ -9,7 +9,7 @@ const signIn = async (page) => {
 };
 
 test.describe('Needs you today', () => {
-  test('signed out there is no panel; signed in it comes straight after Needs you and Key projects on the Map', async ({ page }) => {
+  test('signed out there is no panel; signed in it comes straight after Needs you and Key projects on the Dashboard', async ({ page }) => {
     await page.goto('./');
     await expect(page.locator('#needsToday')).toHaveCount(0);
     await signIn(page);
@@ -32,7 +32,7 @@ test.describe('Needs you today', () => {
     for (let i = 1; i < kinds.length; i++) expect(rank[kinds[i]]).toBeGreaterThanOrEqual(rank[kinds[i - 1]]);
     for (let i = 0; i < n; i++) await expect(rows.nth(i).locator('a')).toHaveAttribute('href', /.+/);
     const total = Number((await page.locator('#needsToday .cardhead .mtag').textContent()).match(/\d+/)[0]);
-    await expect(page).toHaveTitle(new RegExp('^\\(' + total + '\\) Map'));
+    await expect(page).toHaveTitle(new RegExp('^\\(' + total + '\\) Dashboard'));
     if (total > 7) await expect(page.locator('#needsToday')).toContainText('And ' + (total - 7) + ' more.');
   });
 
