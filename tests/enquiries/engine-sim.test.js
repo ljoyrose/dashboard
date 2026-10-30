@@ -313,3 +313,31 @@ test('Stage 8: styleSample() keeps only Lisa\'s own stripped replies in the Styl
   assert.equal(st[0].links, 'https://doc.labradoodles.co.uk/breed');
   assert.ok(e.http.every((h) => h.method === 'get'));
 });
+
+// ---- Stage 9: call held ----------------------------------------------------------------------------------------------
+test('Stage 9: "call held" moves the stage to call-held and makes exactly one after-call WhatsApp draft', { skip }, () => {
+  const files = [];
+  const e = FAKE.load(src, { props: { CALENDLY_TOKEN: 'test-token-not-real', ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, routes: calendlyRoutes(), files, dryRun: false });
+  e.ctx.setup();
+  e.ctx.runOnce();
+  const booked = e.tab('Enquiries').find((x) => x.stage === 'call-booked');
+  assert.ok(booked, 'a booked call from the invented Calendly data');
+  const r = C.callHeldRequest(booked.key, '2026-10-29T11:00:00.000Z');
+  files.push({ id: 'FILE-S9-1', name: r.name, text: JSON.stringify(r.body) });
+  const bad = C.callHeldRequest('K-' + 'f'.repeat(16), '2026-10-29T11:00:00.000Z');
+  files.push({ id: 'FILE-S9-2', name: bad.name, text: JSON.stringify(bad.body) });
+  e.ctx.runOnce();
+  const now = e.tab('Enquiries').find((x) => x.key === booked.key);
+  assert.equal(now.stage, 'call-held');
+  const after = e.tab('Drafts').filter((d) => d.enquiry_key === booked.key && d.case === 'after-call');
+  assert.equal(after.length, 1);
+  assert.equal(after[0].version, 'whatsapp');
+  assert.equal(after[0].status, 'ready');
+  assert.ok(e.tab('Events').some((v) => v.enquiry_key === booked.key && v.type === 'call-held'));
+  const req = e.tab('Requests');
+  assert.match(req.find((x) => x.request_file === 'FILE-S9-2').result, /refused: unknown enquiry/);
+  assert.equal(e.tab('Enquiries').filter((x) => x.key === bad.body.enquiry_key).length, 0, 'no row made for an unknown key');
+  e.ctx.runOnce();
+  assert.equal(e.tab('Drafts').filter((d) => d.enquiry_key === booked.key && d.case === 'after-call').length, 1, 'still one after a re-run');
+  assert.equal(e.tab('Enquiries').find((x) => x.key === booked.key).stage, 'call-held');
+});

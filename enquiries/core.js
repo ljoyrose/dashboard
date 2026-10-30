@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.7.0 (2026-10-30)';
+  var VERSION = 'enquiries-core 1.8.0 (2026-10-30)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -671,6 +671,66 @@
       words: (t.match(/\S+/g) || []).length, links: links.filter(function (u, j) { return links.indexOf(u) === j; }) };
   }
 
+  // ---- Call prep and after the call (Stage 9) ------------------------------------------------------------------
+  // One IANA zone for countries that have one, so the prep card can show the caller's own clock. Countries with
+  // several zones (USA, Canada, Australia ...) show "their time: check" rather than a guess.
+  var ONE_ZONE = { 'United Kingdom': 'Europe/London', Jersey: 'Europe/Jersey', Guernsey: 'Europe/Guernsey', 'Isle of Man': 'Europe/Isle_of_Man',
+    Ireland: 'Europe/Dublin', Switzerland: 'Europe/Zurich', France: 'Europe/Paris', Germany: 'Europe/Berlin', Netherlands: 'Europe/Amsterdam',
+    Belgium: 'Europe/Brussels', Italy: 'Europe/Rome', Austria: 'Europe/Vienna', Denmark: 'Europe/Copenhagen', Sweden: 'Europe/Stockholm',
+    Norway: 'Europe/Oslo', Finland: 'Europe/Helsinki', Poland: 'Europe/Warsaw', Greece: 'Europe/Athens', Luxembourg: 'Europe/Luxembourg',
+    'New Zealand': 'Pacific/Auckland', Singapore: 'Asia/Singapore', 'Hong Kong': 'Asia/Hong_Kong', Japan: 'Asia/Tokyo',
+    'United Arab Emirates': 'Asia/Dubai', Israel: 'Asia/Jerusalem', 'South Africa': 'Africa/Johannesburg' };
+  function clockIn(ms, zone) {
+    try {
+      var p = {};
+      new Intl.DateTimeFormat('en-GB', { timeZone: zone, weekday: 'short', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+        .formatToParts(new Date(ms)).forEach(function (x) { p[x.type] = x.value; });
+      return p.weekday + ' ' + p.hour + ':' + p.minute;
+    } catch (e) { return ''; }
+  }
+  // The two questions most worth asking: the first two things the enquiry has not told us yet.
+  function questionsToAsk(e, prefs, flags) {
+    e = e || {}; prefs = prefs || {}; flags = flags || [];
+    var text = [e.question_summary, e.timing, e.household_flags].join(' '), q = [];
+    if (flags.indexOf('allergies') >= 0) q.push('Who in the family has allergies, and have they spent time with a low-shedding dog?');
+    if (flags.indexOf('young children') >= 0) q.push('How old are the children, and how are they with dogs?');
+    if (timingMonths(e.timing || text) === null) q.push('When would you like your puppy to come home?');
+    if (!prefs.sex && !prefs.size) q.push('Girl or boy, and what size suits your home?');
+    if (!HOME_WORDS.test(text)) q.push('Tell me about your home and day: garden, work hours, other pets?');
+    if (e.country && HOME_COUNTRIES.indexOf(e.country) < 0) q.push('How are you thinking of bringing the puppy home to ' + e.country + '?');
+    q.push('What made you choose a ' + (prefs.breed_interest === 'Labradoodle' ? 'Labradoodle' : 'Cobberdog') + '?');
+    return q.slice(0, 2);
+  }
+  // The prep card for one booked WhatsApp call. ctx: { now, person, openPups, events (all Events rows), weights,
+  // bands, simpleCountries, hardCountries, readyHours (2) }. The card is "ready" from readyHours before the call.
+  // Returns null for an enquiry with no booked call.
+  function callPrep(e, ctx) {
+    e = e || {}; ctx = ctx || {};
+    if (e.channel !== 'calendly' || e.stage !== 'call-booked' || !e.next_due_uk) return null;
+    var call = toMs(e.next_due_uk), now = ctx.now == null ? Date.now() : toMs(ctx.now), ready = call - (ctx.readyHours || 2) * 3600000;
+    if (isNaN(call)) return null;
+    var s = scoreEnquiry(e, ctx), zone = ONE_ZONE[e.country];
+    var fits = (ctx.openPups || []).filter(function (p) { return /^(open|available|for sale)$/i.test(String(p.status || '').trim()) && pupFits(s.prefs, p); })
+      .map(function (p) { return p.pup_ref; }).filter(Boolean);
+    var pk = e.person_key, touches = (ctx.events || []).filter(function (v) { return (pk && v.person_key === pk) || v.enquiry_key === e.key; })
+      .sort(function (a, b) { return String(b.at_uk).localeCompare(String(a.at_uk)); }).slice(0, 5)
+      .map(function (v) { return String(v.at_uk).slice(0, 10) + ' · ' + v.channel + ' · ' + v.type; });
+    return {
+      enquiry_key: e.key, ref: e.ref || '', call_uk: e.next_due_uk, ready_from_uk: toUk(ready), ready: now >= ready, past: now > call + 3600000,
+      score: s.score, band: s.band, reasons: s.reasons, flags: s.flags, asked: e.question_summary || '(nothing written on the booking form)',
+      country: e.country || '', country_basis: e.country_basis || '', their_time: zone ? clockIn(call, zone) : (e.country ? 'their time: check' : ''),
+      pups: fits, touches: touches, questions: questionsToAsk(e, s.prefs, s.flags), repeat_buyer: truthy((ctx.person || {}).repeat_buyer)
+    };
+  }
+  // The page's one-tap "call held" request (request-file pattern). The engine moves the stage to call-held and the
+  // after-call WhatsApp draft follows in the same run.
+  function callHeldRequest(enquiryKey, nowIso, note) {
+    if (!/^K-[0-9a-f]{16}$/.test(String(enquiryKey || ''))) return { ok: false, error: 'Unknown enquiry.' };
+    var at = nowIso || new Date().toISOString(), n = String(note == null ? '' : note).slice(0, 500);
+    return { ok: true, name: 'ENQ-call-held-' + at.replace(/[^0-9]/g, '').slice(0, 14) + '-' + String(enquiryKey).slice(2, 8) + '.json',
+      body: { v: 1, kind: 'call-held', enquiry_key: enquiryKey, note: n, at: at } };
+  }
+
   // ---- Do-not-contact gate (Stage 6; used by every draft and follow-up writer) ---------------------------------
   // A person or enquiry marked do-not-contact or unsubscribed is never drafted to and never gets a follow-up.
   function mayContact(person, enquiry) {
@@ -1186,7 +1246,8 @@
     personHistory: personHistory, depositKeys: depositKeys, depositRowsFrom: depositRowsFrom, depositFlags: depositFlags, mayContact: mayContact, gateContact: gateContact,
     extractPrefs: extractPrefs, pupFits: pupFits, timingMonths: timingMonths, scoreEnquiry: scoreEnquiry, WEIGHTS: WEIGHTS, BAND_AT: BAND_AT,
     DRAFT_CASES: CASES, AUTO_CASES: AUTO_CASES, LINKS: LINKS, firstName: firstName, linksFor: linksFor, importLine: importLine,
-    chooseCase: chooseCase, buildDraft: buildDraft, checkDraft: checkDraft, stripForStyle: stripForStyle
+    chooseCase: chooseCase, buildDraft: buildDraft, checkDraft: checkDraft, stripForStyle: stripForStyle,
+    questionsToAsk: questionsToAsk, callPrep: callPrep, callHeldRequest: callHeldRequest
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
