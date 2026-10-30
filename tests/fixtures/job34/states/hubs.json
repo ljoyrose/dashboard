@@ -1,0 +1,10 @@
+{
+  "_note": "Group E state matrix: per hub, where it opens, its sign-in button, and the words each state should show. Invented, no data.",
+  "home":        { "url": "./",               "signIn": "#signInBtn",                    "loading": "Reading…",            "empty": "Nothing needs you",  "error": "read failed" },
+  "money":       { "url": "money/",           "signIn": "#signInBtn",                    "loading": "Reading…",            "empty": "Nothing needs you",  "error": "read failed" },
+  "cdhub":       { "url": "cdhub/",           "signIn": "#signinbtn",                    "loading": "Reading the tables",  "empty": "not in the folder",  "error": "could not be read" },
+  "food":        { "url": "food/#/home",      "signIn": "#view [data-action=\"signin\"]", "loading": "Reading|Loading",     "empty": "Nothing needs you",  "error": "Could not load: Google said 500" },
+  "marketplace": { "url": "marketplace/#/me", "signIn": "#view [data-action=\"signin\"]", "loading": "Reading|Loading",     "empty": "Nothing needs you",  "error": "Could not load: Google said 500" },
+  "factory":     { "url": "factory/#/rooms",  "signIn": "#signInBtn",                    "loading": "Reading|Loading",     "empty": "not found yet",      "error": "Drive said 500" },
+  "studio":      { "url": "studio/#/me",      "signIn": "#signInBtn",                    "loading": "Reading|Loading",     "empty": "Example data",       "error": "Drive error 500" }
+}
