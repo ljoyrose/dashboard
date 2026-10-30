@@ -17,7 +17,7 @@ const noSidewaysScroll = async (page, where) => {
   expect(w.doc, `${where}: page is ${w.doc}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
   expect(w.body, `${where}: body is ${w.body}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
 };
-const VIEWS = [['map', 'Dashboard'], ['drive', 'Drive'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['more', 'More']];
+const VIEWS = [['map', 'Dashboard'], ['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['more', 'More']];
 const goTab = async (page, key, title) => {
   await page.locator(`#mainNav a[data-nav="${key}"]`).click();
   await expect(page.locator('#hereTitle')).toHaveText(title);
@@ -41,7 +41,7 @@ test.describe('Home: house look', () => {
   test('hover only turns the 1px edge ink: no element grows, shrinks or moves', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const sels = ['a.hometile >> nth=0', 'a.keytile >> nth=0', '#urgentOne a.btn', 'header #refreshBtn', '#mainNav a[data-nav="drive"]'];
+    const sels = ['a.hometile >> nth=0', 'a.keytile >> nth=0', '#urgentOne a.btn', 'header #refreshBtn', '#mainNav a[data-nav="drives"]'];
     for (const sel of sels) {
       const el = page.locator(sel);
       if (!(await el.count())) continue;
@@ -262,7 +262,7 @@ test.describe('Home: house look', () => {
     const foot = await page.locator('#mainNav').evaluate((e) => getComputedStyle(e).backgroundColor);
     expect(head).toBe('rgb(58, 54, 50)'); // #3A3632 warm charcoal, never black
     expect(foot).toBe('rgb(70, 65, 59)'); // #46413B one step lighter
-    const tab = await page.locator('#mainNav a[data-nav="drive"]').evaluate((e) => getComputedStyle(e).backgroundColor);
+    const tab = await page.locator('#mainNav a[data-nav="drives"]').evaluate((e) => getComputedStyle(e).backgroundColor);
     expect(tab).toBe('rgb(255, 254, 251)');
     const n = page.locator('#n-map');
     if ((await n.textContent()).trim()) {
