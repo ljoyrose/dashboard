@@ -517,7 +517,9 @@
  *              gate: { question, at: ISO } | null   (a gate waiting on Lisa: GO · HOLD · RESHAPE · REFINE · KILL · RECYCLE),
  *              kitId, groupId, playbookId, outcome: 'attract'|'convert'|'deliver'|'keep'|'reuse'|null, frameworkId, voiceId, lookId,
  *              formatIds: [id], language, length, masterId (variant of), purpose: 'refresh'|'rebrand'|'reformat'|'translate'|'test'|null,
- *              test (A/B group id), result, sourceIds: [id] }],   (ids are null when not set)
+ *              test (A/B group id), result, sourceIds: [id],
+ *              claim: { by: 'grok'|'claude', at: ISO } | null (a bot is making it), checkNotes: string | null (the automatic check's reasons) }],   (ids are null when not set)
+ *              flags may include 'auto-approved' · 'check-failed' · 'check-wait' (the automatic check); studio.maker: { claimMinutes, pieceCapGBP, autoApprove, aiDisclosure, inProgressFolderId }
  *   ideas:  [same shape as assets, stage 0],
  *   playbooks: [{ id, name, outcome, steps: [{ kind: 'pack'|'kit'|'action', id|null, text }], notes }],   (WHAT ladder: Brick › Kit › Pack › Playbook)
  *   packs:  [{ id, name, kind (e.g. funnel), kitIds: [id], notes }],
@@ -806,7 +808,7 @@
 
   /* ---------- Find bar (the Factory model). Each tab keeps its own filters (st-fs), and the address carries them. ---------- */
   var BAR_TABS = /^(me|decide|do|line|ideas|assets|review|library)$/;
-  var FLAG_W = { 'needs-input': 'Needs input', refresh: 'Refresh', overdue: 'Overdue', blocked: 'Blocked', 'over-budget': 'Over budget', stale: 'Stale', test: 'Test' };
+  var FLAG_W = { 'needs-input': 'Needs input', refresh: 'Refresh', overdue: 'Overdue', blocked: 'Blocked', 'over-budget': 'Over budget', stale: 'Stale', test: 'Test', 'auto-approved': 'Approved by check', 'check-failed': 'Check failed', 'check-wait': 'Waiting for check' };
   var SORTS = [['date', 'calendar', 'Changed'], ['due', 'calendar-event', 'Due date'], ['priority', 'flag', 'Priority'], ['stage', 'stairs', 'Stage'], ['brand', 'tag', 'Brand'], ['name', 'sort-a-z', 'Name'], ['results', 'chart-bar', 'Results']];
   var LIST_KEYS = ['grp', 'acct', 'brand', 'type', 'st', 'who', 'fit', 'ev', 'f', 'dest', 'series', 'kit'];
   var filtersOpen = false;
@@ -925,7 +927,8 @@
     if (a.size) out += '<span class="tag" title="Size">' + esc(a.size) + '</span>';
     if (a.dated && a.eventDate) { var d = daysTo(a.eventDate); out += '<span class="tag' + (d !== null && d < 0 ? ' over' : '') + '" title="Dated">' + I('calendar-event') + dmy(Date.parse(a.eventDate)) + '</span>'; }
     else out += '<span class="tag" title="Evergreen">' + I('leaf') + '</span>';
-    a.flags.filter(function (f) { return f !== 'test'; }).forEach(function (f) { out += '<span class="tag" title="Flag">' + I('flag') + esc(FLAG_W[f] || f) + '</span>'; });
+    a.flags.filter(function (f) { return f !== 'test' && !CHECK_CHIP[f]; }).forEach(function (f) { out += '<span class="tag" title="Flag">' + I('flag') + esc(FLAG_W[f] || f) + '</span>'; });
+    out += checkChips(a);
     var pr = product(a.productId); if (pr) out += '<span class="tag" title="Product">' + I('box') + esc(pr.name) + '</span>';
     var fw = byIdIn('frameworks', a.frameworkId); if (fw) out += '<span class="tag" data-chip="framework" title="Framework">' + I('stack-2') + esc(fw.name) + '</span>';
     a.formatIds.forEach(function (f) { var x = byIdIn('formats', f); out += '<span class="tag" data-chip="format" title="' + esc(x ? x.name : f) + '">' + I('aspect-ratio') + esc(fmtLabel(f)) + '</span>'; });
@@ -1032,6 +1035,18 @@
     if (a.stage <= 3 && a.stage >= 1 && !(a.legal && a.legal.setId)) return 'Legal set?';
     return '';
   }
+  // Bot maker loop (engine v0.2.24): who is making it, the automatic check's verdict and reasons. Nothing when absent.
+  var CHECK_CHIP = { 'auto-approved': ['circle-check', 'Approved by check'], 'check-failed': ['circle-x', 'Check failed'], 'check-wait': ['hourglass', 'Waiting for check'] };
+  function checkChips(a) { return a.flags.filter(function (f) { return CHECK_CHIP[f]; }).map(function (f) { return '<span class="tag" data-chip="' + f + '" title="Automatic check">' + I(CHECK_CHIP[f][0]) + CHECK_CHIP[f][1] + '</span>'; }).join(''); }
+  function claimLine(a) {
+    var c = a.claim, w = c && { grok: 'Grok', claude: 'Claude' }[c.by], t = c && Date.parse(c.at);
+    return w && a.stage < 8 ? '<div class="needl muted" data-claim="' + c.by + '">' + w + ' is making this' + (t ? ' \u00b7 since ' + hm(t) : '') + '</div>' : '';
+  }
+  function checkLine(a) { return a.checkNotes && a.stage >= 5 && a.stage <= 7 ? '<div class="needl muted" data-check>Check: ' + esc(String(a.checkNotes)) + '</div>' : ''; }
+  function makerLine() {
+    var m = (S.studio || {}).maker;
+    return m && typeof m === 'object' ? '<p class="muted" data-maker>Bots: auto-approve ' + (m.autoApprove ? 'on' : 'off') + (m.pieceCapGBP != null && m.pieceCapGBP !== '' ? ' \u00b7 ' + money(m.pieceCapGBP) + ' a piece' : '') + '</p>' : '';
+  }
   function datePill(a) {
     if (!(a.dated && a.eventDate)) return '';
     var d = daysTo(a.eventDate), late = d !== null && d < 0 && a.stage < 8, soon = !late && d !== null && d <= 3 && a.stage < 8;
@@ -1045,6 +1060,7 @@
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') +
       (a.protect === 'yes' && a.stage < 8 ? '<div class="needl"><span class="tag" data-chip="proof" title="Clients see a view-only proof">Proof \u00b7 view only</span></div>' : '') +
       (isCM(a) ? '<div class="needl"><span class="tag" data-chip="client-only" title="The client owns this; it is never reused">Client-only \u00b7 never reused</span></div>' : '') +
+      claimLine(a) + checkLine(a) +
       '</div></div><div class="cfoot">' + (need ? '<span class="tag need" data-chip="need">' + esc(need) + '</span>' : '<span></span>') + whoRing(a) + '</div>' +
       (function (x) { return x ? '<div class="l2"><span class="acts">' + x + '</span></div>' : ''; })(actsFor(a, kind) + (a.parts && a.parts.total && a.parts.approved === a.parts.total && a.stage < 7 && !sent[a.id] ? '<button class="btn yes" type="button" data-act="assemble" data-id="' + esc(a.id) + '" aria-label="Assemble"' + dis() + '>' + I('books') + 'Assemble</button>' : '')) +
       (on && !(sideOn && openPanel.k === 'all') ? panelOf(a, openPanel.k) : '') + '</div>';
@@ -1592,7 +1608,7 @@
   function vEngine() {
     var on = studioOn(), h = S.health || {};
     return '<div class="card"><div class="grp">' + I('engine') + 'Engine<button class="pill" type="button" data-action="studio" aria-label="Studio on or off" aria-pressed="' + on + '"' + dis() + own() + '><span class="sw' + (on ? ' on' : '') + '"><i></i></span>' + (on ? 'On' : 'Off') + '</button></div>' +
-      '<p class="muted">' + (h.lastRun ? 'Last run ' + dmy(Date.parse(h.lastRun)) + ' ' + hm(Date.parse(h.lastRun)) : 'Never run') + (S.generated_at ? ' · read ' + hm(Date.parse(S.generated_at)) : '') + '</p>' +
+      makerLine() + '<p class="muted">' + (h.lastRun ? 'Last run ' + dmy(Date.parse(h.lastRun)) + ' ' + hm(Date.parse(h.lastRun)) : 'Never run') + (S.generated_at ? ' · read ' + hm(Date.parse(S.generated_at)) : '') + '</p>' +
       (h.jobs || []).map(function (j) { var ok = j.result === 'OK'; return '<div class="row" style="--c:var(--ljr-' + (ok ? 5 : 2) + ')"><span class="bar"></span><div class="txt"><b>' + esc(j.job) + '</b>' + (j.note ? '<div class="muted">' + esc(String(j.note).slice(0, 80)) + '</div>' : '') + '</div><span class="meta">' + esc(ok ? 'OK' : j.result) + '<br>' + (Date.parse(j.last) ? hm(Date.parse(j.last)) : '') + '</span></div>'; }).join('') +
       (ST.rootFolderId ? '<p><a href="https://drive.google.com/drive/folders/' + esc(ST.rootFolderId) + '" target="_blank" rel="noopener">Studio folder</a></p>' : '') + '</div>';
   }
