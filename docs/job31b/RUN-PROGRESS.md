@@ -10,7 +10,10 @@ All three branches are stacked on claude/job31-4-wiring (#174) and touch no file
 | 1 Factory | claude/job31b-1-factory | #182 | 15/15 green; 12/12 red under CONTRACT_PROVE_RED=1; rebuild no diff | PASS |
 | 2 Home | claude/job31b-2-home | #185 | 16/16 green; 12/12 red; rebuild no diff | PASS |
 | 3 Money + CD Hub | claude/job31b-3-money-cdhub | #186 | 36/36 green; 8/8 red | PASS |
+| 4 Live state check (Factory + Home) | claude/job31b-4-live | see slip | 81/81 hub-contracts green; 2/2 red; dry run counts only | PASS |
 
 Mocked suite with JOB 31 + 31b contracts: 47 + 15 + 16 + 36. Privacy guard CLEAN on every branch (DENY placeholder; CI runs real).
 Merge order (Lisa only): #161 → #162 → #163 → #174, then #182, #185, #186 in any order.
+Stage 4 (JOB 31b.2): new tests/contract/check-real-state-b.js, the Factory/Home twin of JOB 31 Stage 3. Branch merges
+#185 and #182 (no rebase), so merge it after both. New files only; check-real-headers.js (JOB 31 #163) untouched.
 Parked: required-field choices (see each PR). Next: none; watch CI.
