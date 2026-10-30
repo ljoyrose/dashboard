@@ -487,3 +487,26 @@ test('Stage 14: in DRY_RUN results_() writes nothing but the Log', { skip }, () 
   assert.equal(e.tab('Results').length, 0);
   assert.ok(e.tab('Log').some((r) => r.step === 'results'));
 });
+
+// ---- Stage 15: alerts ---------------------------------------------------------------------------------------------
+test('Stage 15: alerts_() lists a hot enquiry with no reply after 24 h in one Log line and writes nothing else', { skip }, () => {
+  const files = [req('FILE-S15-1', 'phone', 'From: Buyer T One\nRang about a girl\n07700 900151', '2026-10-01T09:00:00.000Z')];
+  const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, dryRun: false });
+  e.ctx.setup();
+  e.ctx.runOnce();
+  assert.ok(e.tab('Log').some((r) => r.step === 'alerts'), 'runOnce runs alerts_()');
+  // Make the one invented enquiry hot and still at "new", received weeks ago (the engine clock is the real one).
+  const sh = e.book().getSheetByName('Enquiries'), h = sh.rows[0];
+  assert.equal(sh.rows.length, 2);
+  sh.rows[1][h.indexOf('band')] = 'hot'; sh.rows[1][h.indexOf('stage')] = 'new'; sh.rows[1][h.indexOf('received_uk')] = '2026-10-01T09:00:00';
+  const names = ['Enquiries', 'People', 'Events', 'Drafts', 'FollowUps', 'Litters', 'Deposits', 'Sources', 'Settings', 'Results', 'Requests'];
+  const before = JSON.stringify(names.map((n) => e.tab(n))), logN = e.tab('Log').length;
+  e.ctx.alerts_();
+  const log = e.tab('Log');
+  assert.equal(log.length, logN + 1, 'one Log line');
+  const last = log[log.length - 1];
+  assert.equal(last.step, 'alerts');
+  assert.match(last.message, /hot-no-reply:1/);
+  assert.doesNotMatch(last.message, /Buyer|7700/, 'refs only');
+  assert.equal(JSON.stringify(names.map((n) => e.tab(n))), before, 'no other tab changed');
+});
