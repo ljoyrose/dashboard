@@ -1,4 +1,5 @@
-// Stage 2b: one Drives tab with one pill row (Shared drives · Work My Drive · Personal Drive · Drive check),
+// Stage 2b: one Drives tab with one pill row (Shared drives · Work My Drive · Personal Drive · Drive check;
+// stage 9 adds Dropbox · iCloud · Mac),
 // old addresses redirect, one purpose line per page, look-only Drives pages, and a second look-only sign-in
 // for Personal Drive that never touches the work sign-in.
 const { test, expect } = require('../support/test');
@@ -11,6 +12,9 @@ const PILLS = [
   ['Work My Drive', 'drives/work', 'personal'],
   ['Personal Drive', 'drives/personal-drive', 'pdrive'],
   ['Drive check', 'drives/usb', 'usb'],
+  ['Dropbox', 'drives/dropbox', 'dropbox'],
+  ['iCloud', 'drives/icloud', 'icloud'],
+  ['Mac', 'drives/mac', 'mac'],
 ];
 const PERSONAL_SCOPE = 'https://www.googleapis.com/auth/drive.metadata.readonly';
 

@@ -36,7 +36,9 @@
       cfFolderId: '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A',
       readFirstId: '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L',
       dbxFolderId: '0AEqV6Ky2jpmDUk9PVA', // Drive folder holding DROPBOX-TOTALS.json
-      dbxTotalsName: 'DROPBOX-TOTALS.json'
+      dbxTotalsName: 'DROPBOX-TOTALS.json',
+      // Stage 9: iCloud and Mac dry-run reports, written by the private engines into the same folder (look only).
+      coverageReports: { icloud: 'ICLOUD-REPORT.json', mac: 'MAC-REPORT.json' }
     },
     cdhub: {
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
