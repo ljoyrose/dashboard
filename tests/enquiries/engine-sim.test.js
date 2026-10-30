@@ -235,7 +235,9 @@ test('Stage 6: past deposit and repeat buyer from the allocation sheets, read on
   assert.ok(e.tab('Log').some((r) => r.step === 'people' && /2 with a past deposit, 1 to check/.test(r.message)));
   for (const t of Object.keys(e.book().sheets.reduce((a, s) => (a[s.name] = 1, a), {}))) {
     const flat = JSON.stringify(e.book().getSheetByName(t).rows);
-    assert.ok(!/LDB-WAITING|"X-1"|deposit paid|2026-09-10|2025-03-01/.test(flat), 'no allocation-sheet text copied into ' + t);
+    // Litters (Stage 10) mirrors list names, statuses and deposit dates by design; names, ids and numbers never.
+    const never = t === 'Litters' ? /Buyer W|"X-1"|7700 9003/ : /LDB-WAITING|"X-1"|deposit paid|2026-09-10|2025-03-01/;
+    assert.ok(!never.test(flat), 'no allocation-sheet text copied into ' + t);
   }
 });
 
@@ -340,4 +342,39 @@ test('Stage 9: "call held" moves the stage to call-held and makes exactly one af
   e.ctx.runOnce();
   assert.equal(e.tab('Drafts').filter((d) => d.enquiry_key === booked.key && d.case === 'after-call').length, 1, 'still one after a re-run');
   assert.equal(e.tab('Enquiries').find((x) => x.key === booked.key).stage, 'call-held');
+});
+
+// ---- Stage 10: litters and the adult-dog sale ---------------------------------------------------------------------
+const LIT = require('../fixtures/enquiries/litter.js');
+test('Stage 10: Litters mirrors the allocation sheet read only, with matches and flags; Sale Replies never carry a price', { skip }, () => {
+  const others = { 'ALLOC-SAMPLE': { CURRENT: LIT.current, LESSONS: [['x'], ['never read']] }, 'SALE-SAMPLE': { Sheet1: LIT.sale } };
+  const files = [req('FILE-S10-1', 'facebook', 'From: Buyer D1\nAny news on our girl? d1@example.com'),
+    req('FILE-S10-2', 'email', 'From: Breeder Sample\nCould we come and see Dog Charlie? breeder.s10@example.com')];
+  files[1].text = JSON.stringify(Object.assign(JSON.parse(files[1].text), { enquiry_kind: 'adult-dog' }));
+  const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, others, dryRun: false });
+  e.ctx.setup();
+  setSetting(e, 'allocation_sheet_ids', 'ALLOC-SAMPLE');
+  setSetting(e, 'sale_sheet_id', 'SALE-SAMPLE');
+  e.ctx.runOnce();
+  const lit = e.tab('Litters');
+  assert.equal(lit.filter((r) => r.list === 'pups').length, 7);
+  assert.equal(lit.filter((r) => r.list === 'litter-a').length, 8);
+  const d1 = e.tab('People').find((p) => p.email === 'd1@example.com');
+  assert.ok(lit.some((r) => r.person_key === d1.person_key && r.list === 'litter-a'), 'a known person is carried by their own person key');
+  assert.match(lit.find((r) => r.pup_ref === 'xx26-01' && r.list === 'pups').flag, /open pup, no offer/);
+  assert.ok(lit.filter((r) => /two lists/.test(r.flag)).length === 2);
+  assert.doesNotMatch(JSON.stringify(e.book().getSheetByName('Litters').rows), /Buyer|example\.com|7700/, 'no allocation-sheet names or numbers copied');
+  assert.ok(e.tab('Log').some((r) => r.step === 'litters' && /7 pups \(2 open\), 8 deposit holders, 4 matches/.test(r.message)));
+  const sr = e.tab('Sale Replies');
+  assert.equal(sr.length, 1);
+  assert.equal(sr[0].group_ref, '1'); assert.equal(sr[0].dog_ref, 'Dog Charlie'); assert.equal(sr[0].sale_status, 'Viewing booked');
+  assert.doesNotMatch(JSON.stringify(e.book().getSheetByName('Sale Replies').rows), /9999|%|COI/);
+  assert.deepEqual(e.touched, [], 'nothing but reads on the allocation and Sale sheets');
+  // A second run keeps when each status started, and adds nothing.
+  const since = lit.find((r) => r.pup_ref === 'xx26-03' && r.list === 'pups').status_since_uk;
+  e.ctx.runOnce();
+  assert.equal(e.tab('Litters').length, lit.length);
+  assert.equal(e.tab('Litters').find((r) => r.pup_ref === 'xx26-03' && r.list === 'pups').status_since_uk, since);
+  // Open pups now feed the score: Buyer D1's enquiry gets fit points.
+  assert.ok(e.tab('Enquiries').find((x) => x.source_ref === 'FILE-S10-1').score > 0);
 });

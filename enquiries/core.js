@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.8.0 (2026-10-30)';
+  var VERSION = 'enquiries-core 1.9.0 (2026-10-30)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -731,6 +731,132 @@
       body: { v: 1, kind: 'call-held', enquiry_key: enquiryKey, note: n, at: at } };
   }
 
+  // ---- Waiting list and litters (Stage 10) ----------------------------------------------------------------------
+  // The allocation sheet's current tab, read only, turned into Litters rows: one row per pup (person_key blank) and
+  // one row per person on a list (pup_ref = their provisional pup, if any). People are carried as hashed person keys
+  // only: no name, email or number from the allocation sheet is ever written anywhere.
+  //   values: the tab, header first (section, ref, name, status, deposit_date, whatsapp, email, ppf, notes, provisional_pup)
+  //   opts: { personKeyOf(email, phone) -> person_key, litterRef, source, defaultCode }
+  var LIT_COLS = { section: /^section$/i, ref: /^ref$/i, status: /^status$/i, deposit: /^deposit_date$/i, phone: /^(whatsapp|phone)$/i,
+    email: /^e-?mail$/i, pref: /^ppf\b/i, notes: /^notes$/i, pup: /^provisional_pup$/i };
+  function litterRowsFrom(values, opts) {
+    opts = opts || {};
+    var v = values || [], head = (v[0] || []).map(function (h) { return String(h == null ? '' : h).trim(); }), at = {}, out = [], order = {};
+    Object.keys(LIT_COLS).forEach(function (f) { at[f] = -1; head.forEach(function (h, i) { if (at[f] < 0 && LIT_COLS[f].test(h)) at[f] = i; }); });
+    function cell(r, f) { return at[f] < 0 || r[at[f]] == null ? '' : String(r[at[f]]).trim(); }
+    var lref = opts.litterRef || '';
+    v.slice(1).forEach(function (r) {
+      var section = cell(r, 'section'), ref = cell(r, 'ref');
+      if (!section && !ref) return;
+      var prefs = extractPrefs([cell(r, 'pref'), cell(r, 'notes')].join(' '), {});
+      if (/^pups?$/i.test(section)) {
+        var lr = lref || (ref.indexOf('-') > 0 ? ref.slice(0, ref.indexOf('-')) : '');
+        out.push({ litter_ref: lr, pup_ref: ref, sex: prefs.sex, colour: prefs.colour, size: prefs.size, coat: prefs.coat,
+          status: cell(r, 'status').toLowerCase(), person_key: '', list: 'pups', list_order: '', deposit_date: '', source_sheet: opts.source || '' });
+        return;
+      }
+      var list = section.toLowerCase();
+      order[list] = (order[list] || 0) + 1;
+      var pk = opts.personKeyOf ? opts.personKeyOf(cell(r, 'email'), cell(r, 'phone')) : '';
+      if (!pk) { var id = emailKey(cell(r, 'email')) || phoneKey(cell(r, 'phone'), opts.defaultCode); pk = id ? 'P-' + hash(id) : 'P-' + hash('alloc|' + (opts.source || '') + '|' + ref); }
+      out.push({ litter_ref: lref, pup_ref: cell(r, 'pup'), sex: prefs.sex, colour: prefs.colour, size: prefs.size, coat: prefs.coat,
+        status: cell(r, 'status').toLowerCase(), person_key: pk, list: list, list_order: order[list], deposit_date: cell(r, 'deposit'), source_sheet: opts.source || '' });
+    });
+    out.forEach(function (o) { o.litter_key = 'L-' + hash([o.source_sheet, o.list, o.pup_ref, o.person_key].join('|')); });
+    if (!lref) { var any = out.filter(function (o) { return o.litter_ref; })[0]; if (any) out.forEach(function (o) { if (!o.litter_ref) o.litter_ref = any.litter_ref; }); }
+    return out;
+  }
+  var OPEN_PUP = /^(open|available|for sale)$/i;
+  function isClosedList(list) { return /closed|lost|refund/i.test(String(list || '')); }
+  // Waiting people matched to open pups by sex, colour, size and coat. Deposit holders come first, then each list in
+  // its own order. A person already holding a pup is not matched again. Returns [{ pup_ref, person_key, list, list_order }].
+  function matchLitter(rows) {
+    var pups = (rows || []).filter(function (r) { return r.list === 'pups' && OPEN_PUP.test(r.status); });
+    var waiting = (rows || []).filter(function (r) { return r.list !== 'pups' && !isClosedList(r.list) && !r.pup_ref; })
+      .sort(function (a, b) { return (b.deposit_date ? 1 : 0) - (a.deposit_date ? 1 : 0) || String(a.list).localeCompare(String(b.list)) || a.list_order - b.list_order; });
+    var out = [];
+    pups.forEach(function (p) {
+      waiting.forEach(function (w) { if (pupFits(w, p)) out.push({ pup_ref: p.pup_ref, person_key: w.person_key, list: w.list, list_order: w.list_order }); });
+    });
+    return out;
+  }
+  // Flags Lisa should see. now: a time; offerDays: 3. Returns [{ litter_key, pup_ref, person_key, flag }].
+  function litterFlags(rows, now, offerDays) {
+    rows = rows || []; offerDays = offerDays || 3;
+    var t = now == null ? Date.now() : toMs(now), out = [], lists = {};
+    var held = {}; rows.forEach(function (r) { if (r.list !== 'pups' && r.pup_ref && !isClosedList(r.list)) held[r.pup_ref] = 1; });
+    rows.forEach(function (r) {
+      if (r.list === 'pups') {
+        if (OPEN_PUP.test(r.status) && !held[r.pup_ref]) out.push({ litter_key: r.litter_key, pup_ref: r.pup_ref, person_key: '', flag: 'open pup, no offer' });
+        if (/^offered$/i.test(r.status) && r.status_since_uk && (t - toMs(r.status_since_uk)) / 86400000 > offerDays)
+          out.push({ litter_key: r.litter_key, pup_ref: r.pup_ref, person_key: '', flag: 'offered more than ' + offerDays + ' days, no answer' });
+        return;
+      }
+      if (isClosedList(r.list)) return;
+      if (r.deposit_date && !r.pup_ref) out.push({ litter_key: r.litter_key, pup_ref: '', person_key: r.person_key, flag: 'deposit holder with no pup' });
+      (lists[r.person_key] = lists[r.person_key] || []).push(r);
+    });
+    Object.keys(lists).forEach(function (pk) {
+      var l = lists[pk], names = l.map(function (r) { return r.list; }).filter(function (x, i, a) { return a.indexOf(x) === i; });
+      if (names.length > 1 || l.length > 1) l.forEach(function (r) { out.push({ litter_key: r.litter_key, pup_ref: r.pup_ref, person_key: pk, flag: 'on two lists (double deposits note)' }); });
+    });
+    return out;
+  }
+
+  // ---- Adult-dog sale (Stage 10) --------------------------------------------------------------------------------
+  // From the Sale sheet only three things are read: the sale group, the dog's name and the Status column. Price,
+  // COI and every other column are never read, so they can never reach a card.
+  var SALE_COLS = { group: /^sale ?group$/i, dog: /^(name|dog|dog name)$/i, status: /^status$/i };
+  function saleDogsFrom(values) {
+    var v = values || [], head = (v[0] || []).map(function (h) { return String(h == null ? '' : h).trim(); }), at = {};
+    Object.keys(SALE_COLS).forEach(function (f) { at[f] = -1; head.forEach(function (h, i) { if (at[f] < 0 && SALE_COLS[f].test(h)) at[f] = i; }); });
+    if (at.group < 0 || at.dog < 0) return [];
+    return v.slice(1).map(function (r) {
+      return { group_ref: String(r[at.group] == null ? '' : r[at.group]).trim(), dog_ref: String(r[at.dog] == null ? '' : r[at.dog]).trim(),
+        sale_status: at.status < 0 ? '' : String(r[at.status] == null ? '' : r[at.status]).trim() };
+    }).filter(function (d) { return d.group_ref && d.dog_ref; });
+  }
+  // Adult-dog and breeding-set enquiries joined to a sale group by the dog's name or "group <n>" in what they wrote.
+  var REPLY_KIND = { asked: 'reply', 'details-sent': 'reply', viewing: 'viewing', agreed: 'agreed', 'handed-over': 'agreed' };
+  function saleReplyRows(enquiries, dogs) {
+    var out = [];
+    (enquiries || []).forEach(function (e) {
+      if (e.kind !== 'adult-dog' && e.kind !== 'breeding-set') return;
+      var t = String(e.question_summary || ''), hit = {};
+      (dogs || []).forEach(function (d) {
+        var byName = new RegExp('\\b' + d.dog_ref.split('/')[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(t);
+        var m = t.match(/\b(?:group|set)\s*(\d{1,2})\b/i), byGroup = m && String(d.group_ref).split(/[^0-9]+/).indexOf(m[1]) >= 0;
+        if (byName || byGroup) hit[d.group_ref + '|' + (byName ? d.dog_ref : '')] = d;
+      });
+      Object.keys(hit).forEach(function (k) {
+        var d = hit[k], dog = k.split('|')[1];
+        out.push({ reply_key: 'R-' + hash(e.key + '|' + k), group_ref: d.group_ref, dog_ref: dog, enquiry_key: e.key, person_key: e.person_key || '',
+          reply_kind: REPLY_KIND[e.stage] || 'reply', at_uk: e.received_uk || '', sale_status: dog ? d.sale_status : '' });
+      });
+    });
+    return out;
+  }
+  // One card per sale group: its dogs and their sale status, and counts of replies, viewings and agreed. Price on
+  // request only; never a price or a COI value.
+  function saleGroupCards(dogs, replies) {
+    var by = {};
+    (dogs || []).forEach(function (d) { (by[d.group_ref] = by[d.group_ref] || { group_ref: d.group_ref, dogs: [], replies: 0, viewings: 0, agreed: 0, price: 'price on request' }).dogs.push({ dog_ref: d.dog_ref, sale_status: d.sale_status || 'no status' }); });
+    var seen = {};
+    (replies || []).forEach(function (r) {
+      var c = by[r.group_ref]; if (!c) return;
+      var k = r.group_ref + '|' + r.enquiry_key; if (seen[k]) return; seen[k] = 1;
+      c.replies++; if (r.reply_kind === 'viewing') c.viewings++; if (r.reply_kind === 'agreed') c.agreed++;
+    });
+    return Object.keys(by).map(function (k) { return by[k]; });
+  }
+  // A card is refused if any text in it looks like a price or a COI value.
+  function checkCard(card) {
+    var t = JSON.stringify(card || {}), why = [];
+    if (PRICE_RE.test(t) || /"price":"(?!price on request")/.test(t)) why.push('a price');
+    if (/\bCOI\b|inbreeding/i.test(t)) why.push('a COI value');
+    return why;
+  }
+
   // ---- Do-not-contact gate (Stage 6; used by every draft and follow-up writer) ---------------------------------
   // A person or enquiry marked do-not-contact or unsubscribed is never drafted to and never gets a follow-up.
   function mayContact(person, enquiry) {
@@ -846,9 +972,9 @@
     Events: ['event_key', 'enquiry_key', 'person_key', 'at_uk', 'channel', 'type', 'detail', 'source_ref'],
     Drafts: ['draft_key', 'enquiry_key', 'person_key', 'case', 'version', 'text', 'links', 'made_uk', 'status', 'blocked_by'],
     FollowUps: ['followup_key', 'enquiry_key', 'person_key', 'rule', 'try', 'due_uk', 'status', 'snoozed_to_uk', 'draft_key', 'updated_uk'],
-    Litters: ['litter_ref', 'pup_ref', 'sex', 'colour', 'size', 'coat', 'status', 'person_key', 'list', 'list_order',
-      'deposit_date', 'source_sheet', 'read_uk'],
-    'Sale Replies': ['group_ref', 'dog_ref', 'enquiry_key', 'person_key', 'reply_kind', 'at_uk', 'sale_status', 'read_uk'],
+    Litters: ['litter_key', 'litter_ref', 'pup_ref', 'sex', 'colour', 'size', 'coat', 'status', 'status_since_uk', 'person_key',
+      'list', 'list_order', 'deposit_date', 'flag', 'source_sheet', 'read_uk'],
+    'Sale Replies': ['reply_key', 'group_ref', 'dog_ref', 'enquiry_key', 'person_key', 'reply_kind', 'at_uk', 'sale_status', 'read_uk'],
     Deposits: ['litter_ref', 'pup_ref', 'person_key', 'deposit_date', 'deposit', 'balance_due', 'balance_paid',
       'collection_date', 'basis', 'read_uk'],
     Sources: ['source', 'lands_where', 'machine_readable', 'reader', 'last_read_uk', 'last_count', 'status', 'note'],
@@ -1247,7 +1373,9 @@
     extractPrefs: extractPrefs, pupFits: pupFits, timingMonths: timingMonths, scoreEnquiry: scoreEnquiry, WEIGHTS: WEIGHTS, BAND_AT: BAND_AT,
     DRAFT_CASES: CASES, AUTO_CASES: AUTO_CASES, LINKS: LINKS, firstName: firstName, linksFor: linksFor, importLine: importLine,
     chooseCase: chooseCase, buildDraft: buildDraft, checkDraft: checkDraft, stripForStyle: stripForStyle,
-    questionsToAsk: questionsToAsk, callPrep: callPrep, callHeldRequest: callHeldRequest
+    questionsToAsk: questionsToAsk, callPrep: callPrep, callHeldRequest: callHeldRequest,
+    litterRowsFrom: litterRowsFrom, matchLitter: matchLitter, litterFlags: litterFlags, saleDogsFrom: saleDogsFrom,
+    saleReplyRows: saleReplyRows, saleGroupCards: saleGroupCards, checkCard: checkCard, isClosedList: isClosedList
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
