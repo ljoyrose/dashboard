@@ -124,6 +124,8 @@ test.describe('Navigation across pages', () => {
   };
   for (const [hub, , home] of DEEP) {
     test(`${hub}: an unknown address shows the first view with its tab lit, without errors`, async ({ page, guard }) => {
+      // FIX-REQUEST J34c-F01 (marketplace) and J34c-F02 (factory): an unknown address draws the first view but lights no tab.
+      // DECISION NEEDED: fix the page (light the first tab on fallback) or accept. OWNER: Marketplace / Factory hub owner. BY 2026-11-13
       test.fixme(!!FALLBACK_BUGS[hub], FALLBACK_BUGS[hub]);
       await openAt(page, guard, hub, '#/no-such-view');
       await expect(page.locator('#view, main').first()).toBeVisible();
