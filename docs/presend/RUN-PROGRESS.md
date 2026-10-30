@@ -9,7 +9,8 @@ Resume from this file plus the newest AA_CJ-PRESEND-LANDING slip in 00 AI Common
 | 2 Factory Send gate (stacked on 1) | claude/presend-land-2-factory | #143 | factory 56 pass; mocked 665 pass; phone 12 pass; 360 px: 4 views, no sideways scroll | local range CLEAN; CI on the PR | PASS locally, CI pending |
 | 3 weeklyBackup review refresh (stacked on 2, for this file only) | claude/presend-land-3-review | #144 | docs only | local range CLEAN; CI on the PR | PASS: 26 Oct CONFIRMED nothing trimmed (8 to 11 of 24); next trim Mon 30 Nov 2026 |
 | 4 Box run kit (stacked on 3) | claude/presend-land-4-runbook | #145 | invented flow: NOT READY case 3 FAIL no READY stamp; READY case stamp written; verify 0, after 1-char edit 1; empty data 5 NOT RUN blocks READY; selftests 0 silent with and without data | local range CLEAN; CI on the PR | PASS |
-| 5 Hash the trimmed text (stacked on 4; default A) | claude/presend-land-5-hash-trimmed | see slip | selftest 0 silent (new control: end newlines ignored, inside edit caught); send gate specs 13 pass | local range CLEAN | PASS |
+| 5 Hash the trimmed text (stacked on 4; default A) | claude/presend-land-5-hash-trimmed | #167 | selftest 0 silent (new control: end newlines ignored, inside edit caught); send gate specs 13 pass | local range CLEAN | PASS |
+| 6 Engine stamp handler, ready to paste (stacked on 5; default A) | claude/presend-land-6-stamp-handler | see slip | stamp handler specs 14 pass | local range CLEAN | PASS (not deployed: Mac route) |
 
 Parked: 5 (the job's 4 plus the stamp-text match rule; in the slip).
 Overlap: 1 open PR (Studio Stage 6) also edits factory/index.html, other lines.
