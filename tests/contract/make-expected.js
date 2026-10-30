@@ -29,3 +29,60 @@ for (const group of ['money', 'cdhub']) {
 const pretty = JSON.stringify(out, null, 2).replace(/\[\s+("[^\]]*?)\s+\]/g, (m, inner) => '[' + inner.replace(/\s*\n\s*/g, ' ') + ']');
 fs.writeFileSync(path.join(__dirname, 'expected-headers.json'), pretty + '\n');
 console.log('Wrote tests/contract/expected-headers.json');
+
+// ---- JOB 31: Food, Marketplace and Studio. Same rule: names only, built from the invented fixtures and the page code. ----
+const STATE_OUT = path.join(__dirname, 'expected-state.json');
+const src = (g) => pageSource(g);
+const constList = (html, name) => [...(new RegExp('var ' + name + ' = \\[([^\\]]*)\\]').exec(html) || [, ''])[1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
+const json = (rel) => JSON.parse(fs.readFileSync(path.join(FIX, rel), 'utf8'));
+const withRead = (group, e) => Object.assign(e, { read: e.columns.filter((c) => readsColumn(src(group), c)) });
+
+// Food: one RR_FOOD workbook read with values:batchGet. Cards by position (no header); the other tabs by their header row.
+const foodHtml = src('food');
+const book = json('food/book.json');
+out.food = {};
+constList(foodHtml, 'RANGES').forEach((range) => {
+  const tab = range.split('!')[0];
+  if (tab === 'Cards') { out.food[tab] = withRead('food', { range, by: 'position', columns: constList(foodHtml, 'CARD_COLS') }); return; }
+  const e = withRead('food', { range, by: 'header', header_row: Number(/!A(\d+)/.exec(range)[1]), columns: book[tab][0].map(String) });
+  if (tab === 'Settings') e.keys_read = book.Settings.slice(1).map((r) => r[0]).filter((k) => readsColumn(foodHtml, k));
+  out.food[tab] = e;
+});
+
+// Marketplace: the Open work tab by position, RR_LISTINGS.csv by its header (found by listing_id in the first 5 lines).
+const mktHtml = src('marketplace');
+out.marketplace = {
+  'Open work tab': withRead('marketplace', { range: '<tab>!A2:L', by: 'position', columns: constList(mktHtml, 'COLS') }),
+  'RR_LISTINGS.csv': withRead('marketplace', { key: 'listing_id', columns: headOf(path.join(FIX, 'marketplace', 'RR_LISTINGS.csv'), 'listing_id') })
+};
+fs.writeFileSync(path.join(__dirname, 'expected-headers.json'), JSON.stringify(out, null, 2).replace(/\[\s+("[^\]]*?)\s+\]/g, (m, inner) => '[' + inner.replace(/\s*\n\s*/g, ' ') + ']') + '\n');
+
+// JSON state files: a key -> type map per path ("brands[]" = each brand, "brands[].kit" = its kit object).
+// Only names the page code reads are kept. Types come from the invented fixture; "required" is a decision, kept here.
+const typeOf = (v) => (Array.isArray(v) ? 'array' : v === null ? 'null' : typeof v);
+function shape(obj, html, at, into) {
+  const items = Array.isArray(obj) ? obj : [obj];
+  const map = into[at] || (into[at] = {});
+  items.filter((o) => o && typeof o === 'object' && !Array.isArray(o)).forEach((o) => Object.keys(o).forEach((k) => {
+    if (!readsColumn(html, k)) return;
+    const v = o[k];
+    map[k] = typeOf(v);
+    if (v && typeof v === 'object' && (!Array.isArray(v) || (v.length && typeof v[0] === 'object'))) shape(v, html, (at ? at + '.' : '') + k + (Array.isArray(v) ? '[]' : ''), into);
+  }));
+  return into;
+}
+const studioHtml = src('studio');
+const studioFields = shape(json('studio/contract-state.json'), studioHtml, '', {});
+const top = studioFields['']; delete studioFields[''];
+// Required: without these the page crashes or drops items (see docs/job31/RUN-PROGRESS.md, Stage 0).
+const REQUIRED = {
+  'assets[]': ['id', 'title', 'stage'], 'ideas[]': ['id', 'title'], 'brands[]': ['id', 'name'],
+  'kits[]': ['needs', 'formatIds', 'brickIds'], 'packs[]': ['kitIds']
+};
+const state = {
+  _about: 'Field NAMES and JS types only (no values). What each page expects inside each JSON state file. Rebuild with tests/contract/make-expected.js, then review the diff.',
+  studio: { 'studio-state.json': { fixture: 'tests/fixtures/studio/contract-state.json', top, fields: studioFields, required: REQUIRED } },
+  marketplace: { 'MKT-WAKE-WEBAPP.json': { fixture: 'tests/fixtures/marketplace/MKT-WAKE-WEBAPP.json', top: shape(json('marketplace/MKT-WAKE-WEBAPP.json'), mktHtml, '', {})[''], fields: {}, required: { '': ['url'] } } }
+};
+fs.writeFileSync(STATE_OUT, JSON.stringify(state, null, 2) + '\n');
+console.log('Wrote tests/contract/expected-state.json');
