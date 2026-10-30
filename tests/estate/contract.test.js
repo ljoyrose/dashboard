@@ -113,3 +113,23 @@ test('reader: Google errors become plain words and never throw', async () => {
   assert.equal(net.state, 'error');
   assert.match(net.problems[0], /offline/);
 });
+
+test('reader: an optional tab reads as plain rows; a missing tab is "missing", not an error', async () => {
+  const seen = [];
+  const ok = await R.readTab({ sheetId: 'SHEET', token: 'tok', fetch: fakeFetch(200, { values: [['key', 'plan'], ['shop.example.org', 'Basic'], ['', '']] }, seen) }, 'Shops');
+  assert.deepEqual(ok, { ok: true, rows: [{ key: 'shop.example.org', plan: 'Basic' }], missing: false });
+  assert.match(seen[0].url, /values\/Shops\?/);
+  const gone = await R.readTab({ sheetId: 'SHEET', token: 'tok', fetch: fakeFetch(400, { error: { message: 'Unable to parse range: Shops' } }) }, 'Shops');
+  assert.deepEqual(gone, { ok: true, rows: [], missing: true });
+  const no = await R.readTab({ sheetId: 'SHEET', token: 'tok', fetch: fakeFetch(403, { error: { message: 'The caller does not have permission' } }) }, 'Shops');
+  assert.equal(no.ok, false);
+  assert.equal((await R.readTab({ sheetId: '', token: 'tok', fetch: fakeFetch(200, {}) }, 'Shops')).ok, false);
+});
+
+test('reader: tabs lists the sheet tab names and never throws', async () => {
+  const seen = [];
+  assert.deepEqual(await R.tabs({ sheetId: 'SHEET', token: 'tok', fetch: fakeFetch(200, { sheets: [{ properties: { title: 'Properties' } }, { properties: { title: 'Shops' } }] }, seen) }), ['Properties', 'Shops']);
+  assert.match(seen[0].url, /spreadsheets\/SHEET\?fields=sheets\.properties\.title$/);
+  assert.deepEqual(await R.tabs({ sheetId: 'SHEET', token: 'tok', fetch: fakeFetch(403, {}) }), []);
+  assert.deepEqual(await R.tabs({ sheetId: 'SHEET', token: 'tok', fetch: () => Promise.reject(new Error('offline')) }), []);
+});

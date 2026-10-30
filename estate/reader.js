@@ -50,5 +50,38 @@
       .catch(function (e) { return done('error', ['could not reach Google: ' + ((e && e.message) || e)]); });
   }
 
-  return { TAB: TAB, rangeUrl: rangeUrl, read: read, why: why };
+  // An optional extra tab (Shops, Keywords): plain objects by header, no contract. A missing tab is not an error:
+  // it resolves { ok: true, rows: [], missing: true } so the page can say "not reported" / "not connected".
+  function readTab(opts, tab) {
+    opts = opts || {};
+    var fetchFn = opts.fetch || (root && root.DashKit && root.DashKit.googleFetch) || (root && root.fetch);
+    if (!opts.sheetId || !opts.token || !fetchFn) return Promise.resolve({ ok: false, rows: [], missing: true });
+    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(opts.sheetId) + '/values/' + encodeURIComponent(tab) + '?majorDimension=ROWS';
+    return Promise.resolve()
+      .then(function () { return fetchFn(url, { headers: { Authorization: 'Bearer ' + opts.token } }); })
+      .then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (j) {
+          var msg = (j.error && j.error.message) || '';
+          if (!res.ok) return /Unable to parse range/i.test(msg) ? { ok: true, rows: [], missing: true } : { ok: false, rows: [], missing: false, problem: why(res.status, msg) };
+          var v = (j.values || []).filter(function (r) { return r && r.some(function (c) { return String(c == null ? '' : c).trim() !== ''; }); });
+          return { ok: true, rows: Core.toObjects(v), missing: false };
+        });
+      })
+      .catch(function (e) { return { ok: false, rows: [], missing: false, problem: 'could not reach Google: ' + ((e && e.message) || e) }; });
+  }
+
+  // The tab names in the sheet (one metadata read), so the page only asks for tabs that exist.
+  function tabs(opts) {
+    opts = opts || {};
+    var fetchFn = opts.fetch || (root && root.DashKit && root.DashKit.googleFetch) || (root && root.fetch);
+    if (!opts.sheetId || !opts.token || !fetchFn) return Promise.resolve([]);
+    var url = 'https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(opts.sheetId) + '?fields=sheets.properties.title';
+    return Promise.resolve()
+      .then(function () { return fetchFn(url, { headers: { Authorization: 'Bearer ' + opts.token } }); })
+      .then(function (res) { return res.ok ? res.json() : {}; })
+      .then(function (j) { return (j.sheets || []).map(function (x) { return x.properties && x.properties.title; }).filter(Boolean); })
+      .catch(function () { return []; });
+  }
+
+  return { TAB: TAB, rangeUrl: rangeUrl, read: read, readTab: readTab, tabs: tabs, why: why };
 });
