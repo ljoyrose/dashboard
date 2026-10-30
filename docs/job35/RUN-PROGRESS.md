@@ -10,5 +10,6 @@
 | 5 owner handoff | slip | n/a | 1 FIX-REQUEST (JOB 32) | PASS |
 
 Counts: axe findings 2 rules (1 fixed, 1 FIX-REQUEST); speed fixes 1; KNOWN 3.
-Parked: full manual keyboard walk (JOB 35.3); remove the 4 cdhub KNOWN rows in job35-a11y-budget once #214 merges.
+Parked: full manual keyboard walk (JOB 35.3). This PR is stacked on #214 (CD Hub fix), so its guard expects CD Hub clean.
+CI note: CI fonts are wider than the session's, so more tables overflow there; #212 fixes the same fault on Money for that reason.
 Next step: JOB 35.3 only if Lisa wants the manual keyboard walk; otherwise job complete pending merges.

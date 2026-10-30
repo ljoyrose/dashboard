@@ -8,10 +8,11 @@ JOB 35b (PR #212). Live site UNVERIFIED (JOB 6).
 
 | Page | View @ width | Rule | Count | Severity | File:line | Owner | Action | Status |
 |---|---|---|---|---|---|---|---|---|
-| cdhub | shape, areas, litters, buyers @390 | scrollable-region-focusable | 6 | serious | cdhub/index.html (14 `.scroll` boxes) | JOB 35 scope | FIX HERE | FIXED in PR #214 |
+| cdhub | shape, areas, litters, buyers (+ vet in CI) @390 | scrollable-region-focusable | 6 (9 in CI) | serious | cdhub/index.html (14 `.scroll` boxes) | JOB 35 scope | FIX HERE | FIXED in PR #214 |
 | factory | all @1280 and @390 | empty-table-header | 1 | minor | factory/index.html:1258 | JOB 32 | FIX-REQUEST: `<th></th>` → `<th>Health</th>` (attribute alone does not satisfy axe; tested) | FIX-REQUEST |
 | home, factory, food, marketplace | several | links/checkboxes under 24px (17px inline links, 18px checkboxes) | n/a | none | various | n/a | none | KNOWN: WCAG 2.5.8 inline and spacing exceptions; axe target-size passes |
-| money, studio, marketplace, privacy, home, food | every view, both widths | none | 0 | n/a | n/a | n/a | n/a | CLEAN |
+| money | money, e/TESTCO @390 (CI fonts) | scrollable-region-focusable | 2 | serious | money/index.html (11 `.scroll` boxes) | JOB 35 scope | FIX HERE | FIXED in PR #212 |
+| studio, marketplace, privacy, home, food | every view, both widths | none | 0 | n/a | n/a | n/a | n/a | CLEAN |
 
 ## Speed (first load, own files, mocked)
 

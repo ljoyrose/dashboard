@@ -13,11 +13,6 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const BYTES = { home: 277000, cdhub: 211500, factory: 205000, food: 102000 };
 // Known axe problems kept on purpose: { 'page:view@width': { ruleId: places } }, each with its reason.
 const KNOWN = {
-  // Fixed by PR #214 (CD Hub scroll boxes focusable); remove these four once it is merged.
-  'cdhub:shape@390': { 'scrollable-region-focusable': 2 },
-  'cdhub:areas@390': { 'scrollable-region-focusable': 2 },
-  'cdhub:litters@390': { 'scrollable-region-focusable': 1 },
-  'cdhub:buyers@390': { 'scrollable-region-focusable': 1 },
   // FIX-REQUEST to the Factory owner (JOB 32): the health column header needs visible text; an attribute does not satisfy axe.
   'factory:all@1280': { 'empty-table-header': 1 },
   'factory:all@390': { 'empty-table-header': 1 },
