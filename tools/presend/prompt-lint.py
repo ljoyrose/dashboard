@@ -318,7 +318,7 @@ def presend(path,meta_path=None,app_id=None,now=None,write=True):
     meta_path=meta_path or (path[:-4]+'.meta.json' if os.path.exists(path[:-4]+'.meta.json') else None)
     meta=json.load(open(meta_path,encoding='utf8')) if meta_path else {}
     app=app_row(app_id or meta.get('app'),text); rows=lessons()
-    sha=hashlib.sha256(open(path,'rb').read()).hexdigest()
+    sha=text_sha(path)
     out=[]; extra=[]
     res=check(text,rows or []); lf=[r for r,h in res if h and r['severity']=='FAIL']; lw=[r for r,h in res if h and r['severity']!='FAIL']
     if rows is None: out.append(('NOT RUN','LESSONS','no PROMPT-LESSONS.csv in PRESEND_DATA'))
@@ -346,10 +346,14 @@ def presend(path,meta_path=None,app_id=None,now=None,write=True):
             json.dump({'kind':'stamp','taskId':meta['clickup_task_id'],'line':stamp,'sha256':sha,'ready':ready,'at':now.isoformat(),'by':'presend checker'},
                       open(os.path.join(DATA,'outbox',f'stamp-{stem_}-{tag}.json'),'w',encoding='utf8'),indent=1)
     return ready,stamp,lines
+def text_sha(path):
+    """The stamp's hash: SHA-256 of the text with leading and trailing whitespace removed (UTF-8).
+    The Factory Copy button hashes the same trimmed text, so a newline at the end of the file never breaks the match."""
+    return hashlib.sha256(open(path,encoding='utf8').read().strip().encode('utf8')).hexdigest()
 def verify(path,line):
     """The Send gate's test: the stamp must be READY and its SHA-256 must equal the text being sent."""
     m=re.search(r'presend: READY sha256:([0-9a-f]{64})',line or '')
-    return bool(m) and m.group(1)==hashlib.sha256(open(path,'rb').read()).hexdigest()
+    return bool(m) and m.group(1)==text_sha(path)
 GOOD_CONTROL="""Standing rules apply.
 Code described below was read live on 1 January 2030 at 09:00 UK time.
 SCOPE OF READING: the only existing files in scope are the two files this prompt may change: src/pages/Home.tsx and src/lib/store.ts. READ ONLY: src/lib/auth.ts.
@@ -392,9 +396,11 @@ def _presend_selftest():
     if ck51(t,{'ledger_file':os.path.join(d,'none.md')},{})[0]!='NOT RUN': print('  CONTROL DID NOT FIRE: CK51 missing ledger must be NOT RUN, never PASS'); bad+=1
     if ck51(t,{'ledger_file':led,'ledger_section':'3.7'},{'send_id':'P1'})[0]!='FAIL': print('  CONTROL DID NOT FIRE: CK51 open row due at P1'); bad+=1
     if ck51(t,{'ledger_file':led,'ledger_section':'3.7'},{'send_id':'P2'})[0]!='NOT RUN': print('  CONTROL DID NOT FIRE: CK51 rule with no lesson must be NOT RUN'); bad+=1
-    sha=hashlib.sha256(open(g,'rb').read()).hexdigest()
+    sha=text_sha(g)
     if not verify(g,f'presend: READY sha256:{sha} 1 Jan 2030 UK') or verify(g,f'presend: READY sha256:{"0"*64} 1 Jan 2030 UK') or verify(g,'inputs-gate: PASS'):
         print('  CONTROL DID NOT FIRE: STAMP verify'); bad+=1
+    g2=os.path.join(d,'draft-nl.txt'); open(g2,'w').write(t.rstrip('\n')+'\n\n\n'); g3=os.path.join(d,'draft-edit.txt'); open(g3,'w').write(t.replace('one Enter','one  Enter'))
+    if text_sha(g2)!=sha or text_sha(g3)==sha: print('  CONTROL DID NOT FIRE: STAMP hash must ignore end newlines and catch an inside edit'); bad+=1
     return bad
 if __name__=='__main__':
     a=sys.argv[1:]

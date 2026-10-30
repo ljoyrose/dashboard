@@ -22,7 +22,7 @@ One plain line per check, then `READY` or `NOT READY`. Exit 0 only on READY. Any
 | NEWER-DRAFT | a higher -vN of the same draft is in the folder |
 | DASHBOARD | the meta file has no Dashboard lines |
 
-On READY the run report in `$PRESEND_DATA/runs/` carries `presend: READY sha256:<hash of the exact text> <UK date>`. Any edit changes the hash: re-run. `--verify FILE "LINE"` is the Send gate's test (exit 0 only when the line is READY and the hash matches). If the meta file names `clickup_task_id`, a request file `$PRESEND_DATA/outbox/stamp-*.json` (`kind: stamp`) is written for the engine; it is not copied to the engine's request folder until the engine has a `stamp` handler (docs/presend/ENGINE-STAMP-PROPOSAL.md).
+On READY the run report in `$PRESEND_DATA/runs/` carries `presend: READY sha256:<hash of the text, trimmed at both ends> <UK date>`. Any edit inside the text changes the hash: re-run. `--verify FILE "LINE"` is the Send gate's test (exit 0 only when the line is READY and the hash matches). If the meta file names `clickup_task_id`, a request file `$PRESEND_DATA/outbox/stamp-*.json` (`kind: stamp`) is written for the engine; it is not copied to the engine's request folder until the engine has a `stamp` handler (docs/presend/ENGINE-STAMP-PROPOSAL.md).
 
 Other modes: `prompt-lint.py PROMPT.txt` (lessons only), `--selftest` (lesson controls + pre-send controls on invented text; needs no data, and also checks the real lessons file when `PRESEND_DATA` is set), `--regress`, `--split` (Drive bundles PROMPT-REGRESSION-SET*.txt into regression/*.txt + .expect; `+presend` in an .expect switches on CK56/FILESCOPE/OOSCLASH for that case).
 

@@ -1052,7 +1052,7 @@
    * Read from the description and the comments (the engine can't edit descriptions yet). Missing lines are named instead of Copy.
    *   Last turn: T<nn> = live chat … checked <today>        (YYYY-MM-DD or "20 Oct", Europe/London)
    *   Prediction: <link> · Simulation: <link>
-   *   presend: READY sha256:<64 hex> <date>                (written by tools/presend/prompt-lint.py --presend; dated today, Europe/London; Copy
+   *   presend: READY sha256:<64 hex> <date>                (written by tools/presend/prompt-lint.py --presend: SHA-256 of the trimmed text; dated today, Europe/London; Copy
    *                                                         refuses text whose SHA-256 differs. The checker runs inputs-gate itself.)
    *   Happy Hour: active, <n> min left, read <HH:MM> · …   (read 15 minutes ago or less)
    *   AFTER SEND YOU MUST: …                                (shown on the card, with Lisa's Do lines for the same app)
@@ -1117,7 +1117,7 @@
       if (!m) throw new Error(sec + ' not found in the prompt doc');
       return m[2].trim();
     }).then(function (x) {
-      return sha256(x).then(function (h) { if (h !== g.sha) throw new Error('the text is not the one the checker stamped (edited since?): re-run presend'); return x; });
+      return sha256(x.trim()).then(function (h) { if (h !== g.sha) throw new Error('the text is not the one the checker stamped (edited since?): re-run presend'); return x; });
     });
     var ok = function () { btn.innerHTML = '<i class="ti ti-check"></i> Copied'; }, no = function (e) { banner('Not copied: ' + e.message); };
     try {

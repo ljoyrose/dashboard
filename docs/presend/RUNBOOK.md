@@ -15,7 +15,7 @@ Fill `$PRESEND_DATA` from Drive (the checker run log lists which Drive file fill
 With the real lessons in place, run `--selftest` again: it then also checks every real lesson row.
 
 ## 2. Each send
-1. Put the exact send text in `$PRESEND_DATA/sends/<APP>-<P>-v<N>.txt`. It must be byte for byte what Copy will take from the prompt doc. When the doc holds several sections (P1, P2 …), Copy takes one section, trimmed. So the file holds that section with no blank line or newline at the end. Otherwise the hashes differ and Copy refuses.
+1. Put the exact send text in `$PRESEND_DATA/sends/<APP>-<P>-v<N>.txt`: the same words Copy will take from the prompt doc (when the doc holds several sections P1, P2 …, just that section). The stamp hashes the text with blank lines and spaces at the start and end removed, and so does Copy. A newline at the end does not matter; any change inside the text does.
 2. Write `<same name>.meta.json` beside it:
 ```json
 {"app":"<APPS.csv key>","send_id":"P1","clickup_task_id":"<Sends task id>",

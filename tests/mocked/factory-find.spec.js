@@ -304,13 +304,13 @@ test.describe('Factory send gate', () => {
     await expect(page.locator('[data-copy="869fk9d1r"]')).not.toContainText('Copied');
   });
 
-  test('good stamp: READY, dated today, hash of the exact text: Copy copies it', async ({ page, guard }) => {
+  test('good stamp: READY, dated today, hash of the trimmed text (as the checker writes it): Copy copies it', async ({ page, guard }) => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-    guard.world.file(PROMPT_DOC, 'prompt-sample.md', PROMPT_TEXT, { mimeType: 'text/markdown' });
-    await open(page, guard, '#/item/869fk9d1r', { change: (st) => stamp(st, 'presend: READY sha256:' + sha(PROMPT_TEXT) + ' ' + today()) });
+    guard.world.file(PROMPT_DOC, 'prompt-sample.md', PROMPT_TEXT + '\n\n', { mimeType: 'text/markdown' }); // blank lines at the end never break the match
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => stamp(st, 'presend: READY sha256:' + sha(PROMPT_TEXT.trim()) + ' ' + today()) });
     await page.locator('[data-copy="869fk9d1r"]').click();
     await expect(page.locator('[data-copy="869fk9d1r"]')).toContainText('Copied');
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(PROMPT_TEXT);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(PROMPT_TEXT + '\n\n');
   });
 
   test('Prompts: the next send per app on top with its checker state, then waiting; sent and rules folded away; reached from Do', async ({ page, guard }) => {
