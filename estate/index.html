@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-estate-2026-10-30-v3">
+<meta name="build" content="ljr-estate-2026-10-30-v4">
 <title>Web Estate</title>
 <!-- Web Estate Hub v1 (30 Oct 2026): every domain, site, funnel, shop and app, grouped by company, brand and client.
      PUBLIC repo: no data, no secrets. Read only: this page never changes DNS, a site, a shop or an account.
@@ -25,6 +25,7 @@
 <script src="reader.js"></script>
 <script src="add.js"></script>
 <script src="shop.js"></script>
+<script src="keywords.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
@@ -150,7 +151,7 @@
 <script>
 (function () {
   'use strict';
-  var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop;
+  var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop, KW = window.EstateKeywords;
   var CLIENT_ID = CFG.clientId, SCOPE = (CFG.scopes || {}).read, WRITE = (CFG.scopes || {}).write, A = window.EstateAdd;
   var VIEWS = ['home', 'look', 'unchecked', 'shops'];
   var FILTER_WORD = { company: 'Company', brand: 'Brand', client: 'Client', kind: 'Kind', platform: 'Platform', flag: 'Flag' };
@@ -291,6 +292,20 @@
     var ws = SH.funnelsByWorkspace(list);
     h += '<p class="grp">ClickFunnels funnels by workspace<span class="sr"> · </span><span class="cnt">' + ws.length + '</span></p><div class="card" data-card="funnels">' +
       (ws.length ? ws.map(function (w) { return '<div class="prop"><div class="pline"><span class="addr">' + esc(w.workspace) + '</span><span class="m">' + w.count + ' funnel' + (w.count > 1 ? 's' : '') + '</span></div><div class="badges"><span class="badge ok"><b>Live</b>' + w.live + '</span><span class="badge' + (w.down ? ' no' : '') + '"><b>Down</b>' + w.down + '</span></div></div>'; }).join('') : '<p class="empty">No funnels with these filters.</p>') + '</div>';
+    h += keywordsCard(list);
+    return h;
+  }
+  // Tracked keywords and ads accounts: manual rows in the private Keywords tab for now. Semrush, Search Console and
+  // Google Ads readers are not connected yet, so a source with no rows says "not connected" and never shows a 0.
+  function keywordsCard(list) {
+    var keys = list.map(function (r) { return r.key; }), rows = extra.Keywords.filter(function (k) { return !k.key || keys.indexOf(k.key) !== -1; });
+    var cards = KW.keywordCard(rows), ads = KW.adsAccounts(list), h = '<p class="grp">Keywords</p><div class="card" data-card="keywords">';
+    h += cards.map(function (c) {
+      return '<div class="prop" data-source="' + esc(c.source) + '"><div class="pline"><span class="addr">' + esc(c.source) + '</span><span class="badge' + (c.connected ? ' ok' : '') + '">' + esc(c.word) + '</span></div>' +
+        (c.rows.length ? '<div class="badges">' + c.rows.map(function (k) { return '<span class="badge" data-kw><b>' + esc(k.position_word) + '</b>' + esc(k.keyword) + '</span>'; }).join('') + '</div>' : '') + '</div>';
+    }).join('') + '</div>';
+    h += '<p class="grp">Ads accounts<span class="sr"> · </span><span class="cnt">' + ads.length + '</span></p><div class="card" data-card="ads">' +
+      (ads.length ? ads.map(function (a) { return '<div class="prop"><div class="pline"><span class="addr">' + esc(a.account_label) + '</span><span class="m">' + esc(a.client || '') + '</span></div>' + (a.access_note ? '<div class="badges"><span class="badge"><b>Access</b>' + esc(a.access_note) + '</span></div>' : '') + '</div>'; }).join('') : '<p class="empty">No ads accounts with these filters.</p>') + '</div>';
     return h;
   }
   function page() {
