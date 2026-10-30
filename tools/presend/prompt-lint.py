@@ -370,6 +370,11 @@ CONTROL_LEDGER="""### 3.7 Obligations ledger
 """
 def presend_selftest():
     """Controls for the pre-send checks, on invented text only: each must fire on a broken copy and stay quiet on the good one."""
+    global DATA
+    keep,DATA=DATA,None  # the controls never read real data (an OB-LESSON-MAP row could hide a control)
+    try: return _presend_selftest()
+    finally: DATA=keep
+def _presend_selftest():
     import tempfile
     bad=0; t=GOOD_CONTROL; app=CONTROL_APP; pat=r'\bZQX[0-9]\b'  # invented internal-term pattern
     checks={'CK56':lambda x,a: ck56(x,pat),'FILESCOPE':file_scope,'OOSCLASH':oos_clash}
