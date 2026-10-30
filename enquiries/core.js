@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.11.0 (2026-10-30)';
+  var VERSION = 'enquiries-core 1.12.0 (2026-10-30)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -1601,6 +1601,150 @@
     return { name: name, email: normaliseEmail(em), phone_e164: ph.valid ? ph.e164 : '', message: f.message || t.trim() };
   }
 
+  // ---- The enquiries page (Stage 13) ------------------------------------------------------------------------------
+  // Pure logic for enquiries/index.html: order, counts, filters kept in the URL hash, the detail view, and the local
+  // copy of a tap (the engine does the real work from the request file; the page shows the result at once).
+  var BAND_RANK = { hot: 0, warm: 1, cool: 2, 'not-a-fit': 3 };
+  var DONE_STAGES = { lost: 1, parked: 1, collected: 1, 'handed-over': 1 };
+  var PAGE_FILTERS = ['source', 'band', 'stage', 'litter', 'country'];
+  function ukDay(v) { return toUk(v).slice(0, 10); }
+  // Newest and hottest first: band (hot, warm, cool, not-a-fit, blank), then newest received, then key.
+  function sortEnquiries(rows) {
+    return (rows || []).slice().sort(function (a, b) {
+      var ra = BAND_RANK[a.band] == null ? 4 : BAND_RANK[a.band], rb = BAND_RANK[b.band] == null ? 4 : BAND_RANK[b.band];
+      return ra - rb || (toMs(b.received_uk) || 0) - (toMs(a.received_uk) || 0) || String(a.key).localeCompare(String(b.key));
+    });
+  }
+  // '#/list?band=hot&country=Spain' -> { view: 'list', key: '', f: { band: 'hot', country: 'Spain' } }; '#/e/K-...' opens one.
+  function filtersFromHash(h) {
+    var s = String(h || '').replace(/^#\/?/, ''), q = s.indexOf('?'), path = q < 0 ? s : s.slice(0, q), f = {};
+    (q < 0 ? '' : s.slice(q + 1)).split('&').forEach(function (p) {
+      var i = p.indexOf('='); if (i < 1) return;
+      var k = decodeURIComponent(p.slice(0, i)), v = decodeURIComponent(p.slice(i + 1).replace(/\+/g, ' '));
+      if (PAGE_FILTERS.indexOf(k) >= 0 && v) f[k] = v;
+    });
+    var parts = path.split('/'), view = parts[0] || 'home', key = '';
+    if (view === 'e') key = parts[1] || '';
+    return { view: view, key: key, f: f };
+  }
+  function hashFor(view, f) {
+    var q = PAGE_FILTERS.filter(function (k) { return f && f[k]; }).map(function (k) { return k + '=' + encodeURIComponent(f[k]); }).join('&');
+    return '#/' + (view || 'home') + (q ? '?' + q : '');
+  }
+  function filterEnquiries(rows, f) {
+    f = f || {};
+    return (rows || []).filter(function (e) {
+      return (!f.source || e.source === f.source || e.channel === f.source) && (!f.band || e.band === f.band) && (!f.stage || e.stage === f.stage)
+        && (!f.litter || e.litter_ref === f.litter) && (!f.country || e.country === f.country);
+    });
+  }
+  // The choices each filter offers: the words found in the rows, sorted, blanks left out.
+  function filterOptions(rows) {
+    var out = {}, col = { source: 'source', band: 'band', stage: 'stage', litter: 'litter_ref', country: 'country' };
+    PAGE_FILTERS.forEach(function (k) {
+      var seen = {}; (rows || []).forEach(function (e) { var v = String(e[col[k]] || '').trim(); if (v) seen[v] = 1; });
+      out[k] = Object.keys(seen).sort(k === 'band' ? function (a, b) { return (BAND_RANK[a] || 0) - (BAND_RANK[b] || 0); } : undefined);
+    });
+    return out;
+  }
+  function openPupRows(litters) { return (litters || []).filter(function (r) { return r.list === 'pups' && OPEN_PUP.test(String(r.status || '').trim()); }); }
+  // Everything the front of the page shows. tabs: { Enquiries, People, Events, Drafts, FollowUps, Litters, 'Sale Replies',
+  // Deposits, Settings } as row lists (parseTab rows); opts: { now, dueDays }. Nothing here writes anywhere.
+  function hubView(tabs, opts) {
+    tabs = tabs || {}; opts = opts || {};
+    var now = opts.now == null ? Date.now() : toMs(opts.now), today = ukDay(now);
+    var enq = sortEnquiries(tabs.Enquiries), people = {}, open = openPupRows(tabs.Litters), byKey = {};
+    (tabs.People || []).forEach(function (p) { people[p.person_key] = p; });
+    enq.forEach(function (e) { byKey[e.key] = e; });
+    var live = enq.filter(function (e) { return !DONE_STAGES[e.stage]; });
+    var calls = live.filter(function (e) { var t = toMs(e.next_due_uk); return e.stage === 'call-booked' && !isNaN(t) && t >= now - 3600000 && t <= now + 48 * 3600000; })
+      .sort(function (a, b) { return toMs(a.next_due_uk) - toMs(b.next_due_uk); });
+    var fus = gateContact((tabs.FollowUps || []).filter(function (f) {
+      var t = toMs(f.status === 'snoozed' ? f.snoozed_to_uk : f.due_uk);
+      return byKey[f.enquiry_key] && (f.status === 'due' || ((f.status === 'waiting' || f.status === 'snoozed') && !isNaN(t) && t <= now));
+    }), people, byKey).keep.sort(function (a, b) { return String(a.due_uk).localeCompare(String(b.due_uk)); });
+    var prep = calls.map(function (e) {
+      return callPrep(e, { now: now, person: people[e.person_key], openPups: open, events: tabs.Events || [] });
+    }).filter(Boolean);
+    var lits = {}, flags = litterFlags(tabs.Litters || [], now);
+    (tabs.Litters || []).forEach(function (r) {
+      var l = lits[r.litter_ref || '(no litter)'] = lits[r.litter_ref || '(no litter)'] || { litter_ref: r.litter_ref || '(no litter)', open: [], lists: {}, flags: [] };
+      if (r.list === 'pups') { if (OPEN_PUP.test(String(r.status || '').trim())) l.open.push(r.pup_ref); return; }
+      if (isClosedList(r.list)) return;
+      l.lists[r.list] = (l.lists[r.list] || 0) + 1;
+    });
+    flags.forEach(function (fl) {
+      var r = (tabs.Litters || []).filter(function (x) { return x.litter_key === fl.litter_key; })[0], l = r && lits[r.litter_ref || '(no litter)'];
+      if (l && l.flags.indexOf(fl.flag) < 0) l.flags.push(fl.flag);
+    });
+    var dogs = (tabs['Sale Replies'] || []).map(function (r) { return { group_ref: r.group_ref, dog_ref: r.dog_ref, sale_status: r.sale_status }; }).filter(function (d) { return d.dog_ref; });
+    return {
+      enquiries: enq,
+      counts: { newToday: enq.filter(function (e) { return ukDay(e.received_uk) === today; }).length,
+        hot: live.filter(function (e) { return e.band === 'hot'; }).length, calls48: calls.length, followupsDue: fus.length, openPups: open.length },
+      today: { calls: prep, followups: fus },
+      fresh: live.filter(function (e) { return e.stage === 'new'; }),
+      hot: live.filter(function (e) { return e.band === 'hot'; }),
+      waiting: Object.keys(lits).sort().map(function (k) { return lits[k]; }),
+      deposits: depositTotals(tabs.Deposits || [], now, { dueDays: opts.dueDays }),
+      sale: saleGroupCards(dogs, tabs['Sale Replies'] || []),
+      options: filterOptions(enq)
+    };
+  }
+  // One enquiry opened: score reasons, touches, the draft to copy (none when a contact rule says no), the prep card,
+  // its follow-ups and the actions that fit its stage.
+  function enquiryDetail(tabs, key, opts) {
+    tabs = tabs || {}; opts = opts || {};
+    var e = (tabs.Enquiries || []).filter(function (x) { return x.key === key; })[0];
+    if (!e) return null;
+    var person = (tabs.People || []).filter(function (p) { return p.person_key && p.person_key === e.person_key; })[0] || {};
+    var gate = mayContact(person, e);
+    var drafts = (tabs.Drafts || []).filter(function (d) { return d.enquiry_key === key && !d.blocked_by && d.status !== 'sent' && d.status !== 'blocked'; })
+      .sort(function (a, b) { return String(b.made_uk).localeCompare(String(a.made_uk)); });
+    var draft = gate.ok && drafts[0] && !checkDraft(drafts[0].text).length ? drafts[0] : null;
+    var touches = (tabs.Events || []).filter(function (v) { return v.enquiry_key === key || (e.person_key && v.person_key === e.person_key); })
+      .sort(function (a, b) { return String(b.at_uk).localeCompare(String(a.at_uk)); });
+    var fus = (tabs.FollowUps || []).filter(function (f) { return f.enquiry_key === key && FU_OPEN[f.status]; });
+    var acts = [];
+    if (e.stage === 'call-booked') acts.push('call-held');
+    if (stageRank(e.stage) >= stageRank('call-held') && stageRank(e.stage) < stageRank('deposit') && FLOW.indexOf(e.stage) >= 0) acts.push('deposit-paid');
+    if (e.stage === 'new' && gate.ok) acts.push('replied');
+    if (fus.length && gate.ok) acts.push('snooze', 'done');
+    return {
+      enquiry: e, person: { ref: person.ref || '', touches: person.touches || '', repeat_buyer: truthy(person.repeat_buyer) },
+      reasons: String(e.score_reasons || '').split(' | ').filter(Boolean), touches: touches, contact: gate,
+      draft: draft, prep: callPrep(e, { now: opts.now, person: person, openPups: openPupRows(tabs.Litters), events: tabs.Events || [] }),
+      followups: fus, actions: acts
+    };
+  }
+  // The page's own copy of a tap, applied at once so Lisa sees the result; the engine makes it real from the request
+  // file. built: what a *Request() function returned. Changes tabs in place and returns it.
+  function applyRequest(tabs, built, nowIso) {
+    if (!tabs || !built || !built.ok) return tabs;
+    var b = built.body, at = toUk(nowIso || b.at || Date.now());
+    var e = (tabs.Enquiries || []).filter(function (x) { return x.key === b.enquiry_key; })[0];
+    var f = (tabs.FollowUps || []).filter(function (x) { return x.followup_key === b.followup_key; })[0];
+    function ev(type) { (tabs.Events = tabs.Events || []).push({ event_key: 'V-' + hash(b.enquiry_key + '|' + type + '|' + at), enquiry_key: e.key, person_key: e.person_key || '', at_uk: at, channel: 'page', type: type, detail: '', source_ref: built.name }); }
+    if (b.kind === 'call-held' && e) {
+      e.stage = 'call-held'; e.updated_uk = at; ev('call-held');
+      var person = (tabs.People || []).filter(function (p) { return p.person_key === e.person_key; })[0] || {};
+      var has = (tabs.Drafts || []).some(function (d) { return d.enquiry_key === e.key && d.case === 'after-call'; });
+      if (!has && mayContact(person, e).ok) {
+        var d = buildDraft('after-call', { name: person.name, country: e.country, prefs: extractPrefs(e.question_summary, e) });
+        (tabs.Drafts = tabs.Drafts || []).push({ draft_key: 'DR-' + hash(e.key + '|after-call'), enquiry_key: e.key, person_key: e.person_key || '', case: 'after-call',
+          version: 1, text: d.whatsapp, links: d.links.join(' '), made_uk: at, status: 'ready', blocked_by: '' });
+      }
+    } else if (b.kind === 'deposit-paid' && e) { e.stage = 'deposit'; e.updated_uk = at; ev('deposit-paid'); }
+    else if (b.kind === 'replied' && e) { if (e.stage === 'new') e.stage = 'replied'; e.updated_uk = at; ev('replied'); }
+    else if (b.kind === 'snooze' && f) { f.status = 'snoozed'; f.snoozed_to_uk = b.until_uk; f.due_uk = b.until_uk; f.updated_uk = at; }
+    else if (b.kind === 'done' && f) {
+      f.status = 'done'; f.updated_uk = at;
+      var fe = (tabs.Enquiries || []).filter(function (x) { return x.key === f.enquiry_key; })[0];
+      if (b.lost && fe) fe.stage = 'lost';
+    }
+    return tabs;
+  }
+
   var api = {
     VERSION: VERSION, CALLING: CALLING, STAGES: STAGES, ADULT_STAGES: ADULT_STAGES, KINDS: KIND_ORDER.slice(),
     normalisePhone: normalisePhone, countryFromPhone: countryFromPhone, countryFromTimezone: countryFromTimezone,
@@ -1625,7 +1769,9 @@
     money: money, isoDate: isoDate, parseCsv: parseCsv, depositLedgerFrom: depositLedgerFrom, depositTotals: depositTotals,
     xeroInvoicesFrom: xeroInvoicesFrom, matchInvoices: matchInvoices, depositPaidRequest: depositPaidRequest,
     followUpRules: followUpRules, followUpCase: followUpCase, planFollowUps: planFollowUps, outOfQuiet: outOfQuiet,
-    repliedRequest: repliedRequest, snoozeRequest: snoozeRequest, doneRequest: doneRequest
+    repliedRequest: repliedRequest, snoozeRequest: snoozeRequest, doneRequest: doneRequest,
+    sortEnquiries: sortEnquiries, filtersFromHash: filtersFromHash, hashFor: hashFor, filterEnquiries: filterEnquiries, filterOptions: filterOptions,
+    hubView: hubView, enquiryDetail: enquiryDetail, applyRequest: applyRequest, PAGE_FILTERS: PAGE_FILTERS
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
