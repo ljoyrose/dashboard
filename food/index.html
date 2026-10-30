@@ -286,12 +286,13 @@
       .sort(function (a, b) { return Date.parse(a.placed_at) - Date.parse(b.placed_at); });
     return { last: last.length, prev: prev.length, repeat: pct(repeat), subs: pct(subs), oneOff: last.length - subs, reorder: reorder, due: due };
   }
+  function nth(k) { var v = k % 100; return k + (v > 10 && v < 14 ? 'th' : ['th', 'st', 'nd', 'rd'][k % 10] || 'th'); }
   function daysAgo(at) { var d = Math.floor((Date.now() - Date.parse(at)) / 864e5); return d + ' day' + (d === 1 ? '' : 's') + ' ago'; }
   // The Next step: the biggest gap wins (fewer orders than the 30 days before, customers due to reorder, few subscriptions).
   function growCard(g) {
     var gaps = [
       { n: g.prev - g.last, name: 'Orders are falling', h: 'Orders are down ' + (g.prev - g.last) + ' on the 30 days before', what: g.last + ' in the last 30 days against ' + g.prev + '. Look at what changed in Shopify (stock, prices, ads).', href: shopAdmin('orders'), btn: 'Open Shopify orders' },
-      { n: g.reorder.length, name: 'Customers due to reorder', h: g.reorder.length + ' customer' + (g.reorder.length === 1 ? ' is' : 's are') + ' due to reorder', what: 'Their one-off order is over ' + g.due + ' days old. Check each in Shopify and draft a reminder there; nothing is sent from here.', href: '', act: 'reorder', btn: 'See who' },
+      { n: g.reorder.length, name: 'Due to reorder', h: g.reorder.length + ' one-off order' + (g.reorder.length === 1 ? ' is' : 's are') + ' due a reorder', what: 'Paid over ' + g.due + ' days ago. Check each in Shopify (they may have ordered again) and draft a reminder there; nothing is sent from here.', href: '', act: 'reorder', btn: 'See who' },
       { n: g.subs < 50 ? g.oneOff : 0, name: 'Few subscriptions', h: 'Only ' + g.subs + '% of orders are subscriptions', what: g.oneOff + ' one-off order' + (g.oneOff === 1 ? '' : 's') + ' in the last 30 days. Draft a subscribe offer for Lisa to check; no discount is set from here.', href: shopAdmin('customers'), btn: 'Open Shopify customers' }
     ].filter(function (x) { return x.n > 0; }).sort(function (a, b) { return b.n - a.n; });
     if (!gaps.length) return '<div class="card grow">' + empty('Orders are holding up', 'No fall on the 30 days before, nobody due to reorder, and most orders are subscriptions.') + '</div>';
@@ -310,7 +311,7 @@
       (mo ? '<a class="tile" href="#/orders"><span class="k">Orders this month (aim ' + mo + ')</span><span class="v' + (g.last < mo ? ' red' : '') + '">' + g.last + '</span></a>' : '') + '</div>';
     h += growCard(g);
     h += '<div class="card" id="reorder"><p class="bline"><span class="dot" style="--c:var(--ljr-6)" aria-hidden="true"></span>Reorder due (one-off orders over ' + g.due + ' days old)</p>' +
-      (g.reorder.length ? g.reorder.map(function (o) { return '<div class="row"><div class="txt"><div><b>Order #' + esc(o.order_no) + '</b></div><div class="m">' + esc(daysAgo(o.placed_at)) + (num(o.customer_orders) ? ' · customer\'s order ' + esc(num(o.customer_orders)) : '') + '</div><div class="links">' + shopLink(o) + '</div></div></div>'; }).join('')
+      (g.reorder.length ? g.reorder.map(function (o) { return '<div class="row"><div class="txt"><div><b>Order #' + esc(o.order_no) + '</b></div><div class="m">' + esc(daysAgo(o.placed_at)) + (num(o.customer_orders) ? ' · customer\'s ' + esc(nth(num(o.customer_orders))) + ' order' : '') + '</div><div class="links">' + shopLink(o) + '</div></div></div>'; }).join('')
         : empty('Nobody due to reorder', 'One-off orders show here ' + g.due + ' days after they were paid (REORDER_DUE_DAYS on the Settings tab).')) + '</div></section>';
     return h;
   }

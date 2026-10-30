@@ -174,7 +174,7 @@ test.describe('GA Hub page', () => {
     const rows = page.locator('#reorder .row');
     await expect(rows).toHaveCount(2);
     await expect(rows.nth(0)).toContainText('Order #9312');
-    await expect(rows.nth(0)).toContainText('50 days ago');
+    await expect(rows.nth(0)).toContainText("50 days ago · customer's 2nd order");
     await expect(rows.nth(1)).toContainText('Order #9311');
     await expect(rows.nth(1).locator('a.btn')).toHaveCount(1);   // no Track button: the Shopify button only
     await expect(rows.nth(1).locator('a.btn')).toHaveAttribute('href', 'https://admin.shopify.com/store/samplestore/orders?query=9311');
@@ -196,7 +196,7 @@ test.describe('GA Hub page', () => {
     // reorder: 3 due, no fall
     b = growBook([growRow('9331', 2, sub), growRow('9332', 3, sub), growRow('9333', 4, one), growRow('9334', 36, one), growRow('9335', 37, one), growRow('9336', 38, one)]);
     await page.unroute(/sheets/); await sheets(page, b); await page.locator('#refresh').click();
-    await expect(page.locator('#view .card.grow h2')).toHaveText('3 customers are due to reorder');
+    await expect(page.locator('#view .card.grow h2')).toHaveText('3 one-off orders are due a reorder');
     await page.locator('#view .card.grow [data-action="reorder"]').click();
     await expect(page.locator('#reorder')).toBeInViewport();
     // few subscriptions: 4 one-off orders now, none before, nobody due
