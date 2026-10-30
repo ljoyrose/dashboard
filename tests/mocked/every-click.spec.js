@@ -4,7 +4,7 @@
 const { test, expect } = require('../support/test');
 
 const ROUTES = [
-  ['./', ['#/map', '#/readfirst', '#/drive', '#/drive/drv-alpha1', '#/personal', '#/usb', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'], '#signInBtn'],
+  ['./', ['#/map', '#/drives', '#/drives/shared', '#/drives/readfirst', '#/drives/shared/drv-alpha1', '#/drives/work', '#/drives/personal-drive', '#/drives/usb', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'], '#signInBtn'],
   ['money/', ['#/now', '#/money', '#/dates', '#/todo', '#/accountant', '#/control', '#/e/TESTCO', '#/register/R001'], '#signInBtn'],
   ['cdhub/', ['#/map', '#/work', '#/shape', '#/today', '#/round', '#/dogs', '#/areas', '#/litters', '#/vet', '#/buyers'], '#signinbtn'],
 ];
