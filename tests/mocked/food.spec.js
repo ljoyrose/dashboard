@@ -122,6 +122,45 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view a[aria-label="Open SI-1000001"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/FILE000000000000000000001/view');
   });
 
+  // VAT invoices (engine v1.15): numbers, order numbers, status chips and an Open button built from the sheet's file id. Every value is invented.
+  function vatBook(on) {
+    const b = book(), h = b.orders[0].concat(['sent_at', 'order_route', 'xml_status', 'vat_inv_no', 'vat_inv_status', 'vat_inv_file_id', 'vat_inv_at']), pad = (r) => r.concat(Array(h.length - r.length).fill(''));
+    b.orders = [h].concat(b.orders.slice(1).map(pad));
+    const set = (no, v) => { const r = b.orders.find((x) => x[0] === no); h.slice(-4).forEach((c, i) => { r[h.indexOf(c)] = v[i]; }); };
+    set('9001', ['261030-9001', 'drafted', 'FILEVAT0000000000000000001', '2026-10-30']);
+    set('9002', ['', 'dry-run', '', '2026-10-30']);
+    set('9003', ['', 'held: NO_TAX', '', '2026-10-30']);
+    set('9004', ['', 'none: refunded', '', '2026-10-30']);
+    b.settings = b.settings.concat([['VAT_INVOICES', on ? 'ON' : 'OFF', '']]);
+    return b;
+  }
+  test('Invoices: VAT invoices card lists numbers and order numbers with status chips, Open uses the sheet file id, waiting count', async ({ page }) => {
+    await sheets(page, vatBook(true));
+    await open(page, '#/invoices');
+    const grp = page.locator('#view .grp', { hasText: 'VAT invoices' });
+    await expect(grp).toBeVisible(); await expect(grp.locator('.cnt')).toHaveText('2');
+    const card = grp.locator('xpath=following-sibling::div[contains(@class,"card")][1]');
+    await expect(card.locator('.row')).toHaveCount(3);   // "none: refunded" is not listed
+    await expect(card.locator('.row').nth(0)).toContainText('Held'); await expect(card.locator('.row').nth(0)).toContainText('Shopify gave no tax lines');
+    await expect(card.locator('.row').nth(1)).toContainText('Dry run'); await expect(card.locator('.row').nth(1)).toContainText('order #9002');
+    await expect(card.locator('.row').nth(2)).toContainText('261030-9001'); await expect(card.locator('.row').nth(2)).toContainText('Draft in Gmail');
+    await expect(page.locator('#view a[aria-label="Open 261030-9001"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/FILEVAT0000000000000000001/view');
+    await expect(card.locator('a.btn')).toHaveCount(1);
+    await expect(page.locator('#view')).toContainText('2 ticked orders waiting');
+    await page.screenshot({ path: 'test-results/food-vat-invoices.png', fullPage: true });
+  });
+  test('Invoices: VAT invoices off and none made -> one plain "off" line; the GA invoices below are unchanged', async ({ page }) => {
+    await sheets(page, book());
+    await open(page, '#/invoices');
+    await expect(page.locator('#view')).toContainText('VAT invoices are off');
+    await expect(page.locator('#view a[aria-label="Open SI-1000001"]')).toBeVisible();
+  });
+  test('the page holds no Drive id for VAT invoices and reads the vat_inv_* columns by name', async () => {
+    expect(SRC).toContain("'Orders!A1:AK'");
+    expect(SRC).toMatch(/o\.vat_inv_file_id/);
+    expect(SRC).not.toMatch(/drive\.google\.com\/file\/d\/[A-Za-z0-9_-]{20,}/);
+  });
+
   test('Products: filter chips and search', async ({ page }) => {
     await sheets(page, book());
     await open(page, '#/products');
