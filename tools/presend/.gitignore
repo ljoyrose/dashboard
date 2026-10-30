@@ -8,3 +8,5 @@ runs/
 outbox/
 PROMPT-REGRESSION-SET*.txt
 __pycache__/
+# The repo ignores *.csv; this invented sample shows the APPS.csv columns.
+!APPS.example.csv
