@@ -2,7 +2,16 @@
 // colours only from tokens.css, phone width. Pretend Google only; the sheet rows below are invented.
 const fs = require('fs');
 const path = require('path');
+const vm = require('vm');
 const { test, expect } = require('../support/test');
+
+const ctx = { window: {} };
+vm.createContext(ctx);
+vm.runInContext(fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), 'utf8'), ctx);
+const CFG = ctx.window.DASH_CONFIG; // the listings id and Lisa's address come from config.js (the only place the privacy allow-list permits them)
+const reEsc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const LISTINGS = new RegExp('googleapis\\.com/drive/v3/files/' + reEsc(CFG.marketplace.listingsFileId) + '\\?alt=media');
+const OWNER = CFG.money.owner;
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'marketplace', 'index.html'), 'utf8');
 const SHEETS = /^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\//;
@@ -173,7 +182,7 @@ test.describe('Marketplace page', () => {
     expect(src.replace(/<!--[\s\S]*?-->/g, '')).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(|hsl\(/i);
     await page.goto('marketplace/privacy.html');
     await expect(page.locator('h1')).toHaveText('Privacy policy');
-    await expect(page.locator('a[href="mailto:lisa@puppyclassroom.com"]').first()).toBeVisible();
+    await expect(page.locator(`a[href="mailto:${OWNER}"]`).first()).toBeVisible();
     await expect(page.locator('main')).toContainText('does not store buyer names');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
@@ -305,7 +314,7 @@ test.describe('Marketplace page', () => {
     const csv = 'COUNT: 2 rows held\nlisting_id,item_sku,platform,platform_item_id,url,title,image_url\nL0020,,Vinted,7001,https://www.vinted.co.uk/items/7001,"Rascal watch, green case",\nL0156,,eBay,226000000156,,"Linus and Lucy watch, green case",https://i.ebayimg.com/images/g/LpsA/s-l300.jpg\n';
     const rows = [['LINK|L0020|L0156', 'check', 'Other', 'Rascal watch', JSON.stringify({ kind: 'link', platform: 'Vinted', photo: '1AbCdEfGhIjKlMnOpQrStUvWxYz', why: 'Same item as on eBay?' }), ago(5)]];
     await sheets(page, rows);
-    await page.route(/googleapis\.com\/drive\/v3\/files\/1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW\?alt=media/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: csv }));
+    await page.route(LISTINGS, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: csv }));
     await open(page, '#/decide');
     await expect(page.locator('#view .pair figure')).toHaveCount(2);
     await expect(page.locator('#view .pair figcaption')).toHaveText(['Vinted · L0020', 'eBay · L0156']);
@@ -327,7 +336,7 @@ test.describe('Marketplace page', () => {
     let csv = head, reads = 0;
     const rows = [['LINK|L0033|L0225', 'check', 'Clothes', 'Socks', JSON.stringify({ kind: 'link', platform: 'Vinted', why: 'Same item as on eBay?' }), ago(5)]];
     await sheets(page, rows);
-    await page.route(/googleapis\.com\/drive\/v3\/files\/1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW\?alt=media/, (route) => { reads++; route.fulfill({ status: 200, contentType: 'text/csv', body: csv }); });
+    await page.route(LISTINGS, (route) => { reads++; route.fulfill({ status: 200, contentType: 'text/csv', body: csv }); });
     await open(page, '#/decide');
     await expect(page.locator('#view .pair figure').nth(1)).toContainText('No photo');
     csv = head + 'L0225,,ebay,318328514007,https://www.ebay.co.uk/itm/318328514007,5 Pairs Sheer Socks,https://i.ebayimg.com/images/g/BqQA/s-l300.jpg\n';
@@ -548,7 +557,7 @@ test.describe('Marketplace page', () => {
   test('answered cards leave the list at once and wait in "Just done" (with Undo) at the bottom', async ({ page }) => {
     const rows = [['LINK|L1|L2', 'check', 'Other', 'Sample golf balls', JSON.stringify({ kind: 'missing', platform: 'eBay', why: 'Live on eBay but missing from your list. Add it?' }), ago(5)],
       ['LINK|L3|L4', 'check', 'Other', 'Sample watch', JSON.stringify({ kind: 'missing', platform: 'eBay', why: 'Live on eBay but missing from your list. Add it?' }), ago(4)]];
-    rows[0].push('Yes', '', new Date().toISOString(), 'lisa@puppyclassroom.com');
+    rows[0].push('Yes', '', new Date().toISOString(), 'sample@example.com');
     await sheets(page, rows);
     await open(page, '#/decide');
     await expect(page.locator('#view .card .t').first()).toContainText('Sample watch');
