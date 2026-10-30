@@ -12,8 +12,10 @@ Resume from this file plus the newest AA_CJ-PRESEND-LANDING slip in 00 AI Common
 | 5 Hash the trimmed text (stacked on 4; default A) | claude/presend-land-5-hash-trimmed | #167 | selftest 0 silent (new control: end newlines ignored, inside edit caught); send gate specs 13 pass | local range CLEAN | PASS |
 | 6 Engine stamp handler, ready to paste (stacked on 5; default A) | claude/presend-land-6-stamp-handler | #170 | stamp handler specs 14 pass | local range CLEAN | PASS (not deployed: Mac route) |
 | 7 Full tests: every tools/presend path + every Send gate state (stacked on 6) | claude/presend-land-7-tests | #181 | Python 94 pass (all lines run except CLI blocks, run by subprocess); gate specs 18 new; full mocked 727 pass | local range CLEAN | PASS |
-| 8 Copy takes the prompt doc, never the Prediction doc (stacked on 7; parked P1, recommended) | claude/presend-land-8-prompt-link | see slip | 2 new tests fail on old code, pass now; factory specs pass | local range CLEAN | PASS |
+| 8 Copy takes the prompt doc, never the Prediction doc (stacked on 7; parked P1, recommended) | claude/presend-land-8-prompt-link | #184 | 2 new tests fail on old code, pass now; factory specs pass | local range CLEAN | PASS |
 
-Parked: 5 (the job's 4 plus the stamp-text match rule; in the slip).
+Parked: 2 (retire the old branch, Lisa only; build --to-outbox only after the stamp handler is deployed).
 Overlap: 1 open PR (Studio Stage 6) also edits factory/index.html, other lines.
-Main merged into stages 1-4 on 30 Oct (no rebase). Next: final slip with every default decision for Lisa's review; CI on PRs.
+Main merged into stages 1-4 on 30 Oct (no rebase).
+Resume check 30 Oct: 8 PRs open, stacked 140 > 143 > 144 > 145 > 167 > 170 > 181 > 184; CI green on each; each merges clean into today's main (31 commits newer), so main was not merged in again. None merged.
+Next: nothing to build. Waiting on Lisa: merges in stack order, the old branch, the Mac-route deploy of the stamp handler.
