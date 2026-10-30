@@ -6,7 +6,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const HUBS = ['money', 'cdhub', 'factory', 'food', 'marketplace', 'studio'];
-const VIEWS = ['drives', 'drives/shared', 'drives/readfirst', 'drives/work', 'drives/personal-drive', 'drives/usb', 'bin', 'changes', 'more'];
+const VIEWS = ['drives', 'drives/shared', 'drives/readfirst', 'drives/work', 'drives/personal-drive', 'drives/usb', 'bin', 'changes'];
 
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();

@@ -290,6 +290,8 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 19 Oct 2026 | Hard rule 14: the Bin (and Drive, Changes, search) listed Karen - SHARED | "is in config, never queried and never shown on Map, Drive, Bin, Changes, PC-Personal or search" |
 | 25 Oct 2026 | Main dashboard: the selected menu pill had lost its colour fill and showed an odd left edge, and the "You are here" title showed a square focus box after each screen change | "the selected tab has one clean border and a colour fill; the "You are here" title has no box" |
 | 25 Oct 2026 | Marketplace V2: the bottom tab bar covered the last button on long pages (the page's bottom space was lost to the `.wrap` rule) | "the last button on a long page can always be scrolled clear of the bottom tab bar @regression" |
+| 29 Oct 2026 | Marketplace: the public pages (hub and privacy policy) showed a personal email address (sign-in hint, Gmail link, contact) | "public pages hold no email address: no "@" address, no login_hint, no authuser (Stage 0A, D1 = B) @regression" |
+| 29 Oct 2026 | Marketplace: the same check on what the page actually shows (text and links), signed out, on every tab and on the privacy page | "signed out, signed in on every tab, and the privacy page: no email address in the shown text or any link @regression" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

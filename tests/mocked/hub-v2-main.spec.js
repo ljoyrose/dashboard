@@ -26,10 +26,10 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     const box = await bar.boundingBox();
     expect(Math.round(box.y + box.height)).toBe(844); // touches the bottom of the screen
     const tabs = bar.locator('a');
-    await expect(tabs).toHaveCount(5);
-    for (let i = 0; i < 5; i++) expect((await tabs.nth(i).boundingBox()).height).toBeGreaterThanOrEqual(44);
+    await expect(tabs).toHaveCount(4);
+    for (let i = 0; i < 4; i++) expect((await tabs.nth(i).boundingBox()).height).toBeGreaterThanOrEqual(44);
     await noSidewaysScroll(page, 'Dashboard');
-    for (const [key, title] of [['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['more', 'More'], ['map', 'Dashboard']]) {
+    for (const [key, title] of [['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['map', 'Dashboard']]) {
       await bar.locator(`a[data-nav="${key}"]`).click();
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await expect(bar.locator(`a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
@@ -38,7 +38,7 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     }
   });
 
-  test('Home opens with Needs you: N, three tiles that open tabs, then one urgent card; the Home tab carries the count', async ({ page }) => {
+  test('Home opens with Needs you: N, no tiles that repeat a tab, then one urgent card; the Dashboard tab carries the count', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const top = page.locator('#view > #homeTop');
@@ -46,34 +46,28 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     const total = await page.locator('#needsToday li').count() ? Number((await page.locator('#needsToday .cardhead .mtag').textContent()).match(/\d+/)[0]) : 0;
     await expect(top.locator('.needsline')).toHaveText('Needs you: ' + total);
     if (total) await expect(page.locator('#n-map')).toHaveText(String(total));
-    const tiles = top.locator('a.hometile');
-    await expect(tiles).toHaveCount(3);
-    for (let i = 0; i < 3; i++) expect((await tiles.nth(i).boundingBox()).height).toBeGreaterThanOrEqual(52);
+    await expect(top.locator('a.hometile')).toHaveCount(0);
     await expect(top.locator('#urgentOne')).toHaveCount(1);
     if (total) await expect(top.locator('#urgentOne a.btn')).toHaveAttribute('href', /.+/);
-    await tiles.nth(1).click();
-    await expect(page.locator('#hereTitle')).toHaveText('Bin');
   });
 
-  test('More lists the Drives pages and the other hubs; those pages light up Drives', async ({ page }) => {
-    await page.goto('./');
+  test('the More tab is gone: #/more opens the Dashboard, where every hub has one tile that opens its own tab', async ({ page }) => {
+    await page.goto('./#/more');
     await signIn(page);
-    await page.locator('#mainNav a[data-nav="more"]').click();
-    for (const [key, href] of [['readfirst', '#/drives/readfirst'], ['personal', '#/drives/work'], ['usb', '#/drives/usb']]) await expect(page.locator(`#view a[data-nav="${key}"]`)).toHaveAttribute('href', href);
+    await expect(page).toHaveURL(/#\/map$/);
+    await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
+    await expect(page.locator('#mainNav a[data-nav="more"]')).toHaveCount(0);
     for (const href of ['money/', 'cdhub/', 'factory/', 'marketplace/', 'food/', 'studio/']) {
-      const a = page.locator(`#view a.morelink[href="${href}"]`);
+      const a = page.locator(`#view a.keytile[href="${href}"]`);
+      await expect(a).toHaveCount(1);
       await expect(a).toHaveAttribute('target', '_blank');
-      expect((await a.boundingBox()).height).toBeGreaterThanOrEqual(52);
     }
-    await page.locator('#view a[data-nav="usb"]').click();
-    await expect(page.locator('#hereTitle')).toHaveText('Drive check');
-    await expect(page.locator('#mainNav a[data-nav="drives"]')).toHaveAttribute('aria-current', 'page');
   });
 
   test('the selected tab has one clean border and a colour fill; the "You are here" title has no box @regression', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    for (const [via, key, title] of [['bar', 'drives', 'Drives'], ['more', 'readfirst', 'Read first'], ['bar', 'bin', 'Bin']]) {
+    for (const [via, key, title] of [['bar', 'drives', 'Drives'], ['bar', 'changes', 'Changes · Recent'], ['bar', 'bin', 'Bin']]) {
       if (via === 'more') { await page.locator('#mainNav a[data-nav="more"]').click(); await page.locator(`#view a[data-nav="${key}"]`).click(); }
       else await page.locator(`#mainNav a[data-nav="${key}"]`).click();
       await expect(page.locator('#hereTitle')).toHaveText(title);
