@@ -198,6 +198,8 @@
   function table(values, skip) { var v = (values || []).slice(skip || 0), h = (v[0] || []).map(String);
     return v.slice(1).filter(function (r) { return r.some(String); }).map(function (r) { var o = {}; h.forEach(function (c, i) { o[c] = r[i] === undefined ? '' : r[i]; }); return o; }); }
   function setting(k) { return (data.settings[k] || {}).value || ''; }
+  // Low-profit line: MIN_PROFIT on the Settings tab; £8 when the cell is blank (Lisa, 30 Oct 2026).
+  function minProfit() { return num(setting('MIN_PROFIT')) || 8; }
 
   /* ---------- Google Sheets ---------- */
   function api(url, init) {
@@ -292,7 +294,7 @@
     var w = data.cards.filter(function (r) { return !r.applied_at && (!r.answer || Date.now() < Date.parse(r.answered_at) + APPLY_MS); }).sort(byUrgency), need = waiting().length, owed = unpaid().reduce(function (n, i) { return n + num(i.total); }, 0);
     var due = unpaid().map(function (i) { return i.due_date; }).filter(Boolean).sort()[0];
     var notAtGa = data.orders.filter(function (o) { return /^(Waiting for GA|Not at GA)$/.test(o.check); }).length, late = data.orders.filter(function (o) { return o.check === 'Not at GA'; }).length;
-    var min = num(setting('MIN_PROFIT')) || 15, low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
+    var min = minProfit(), low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
     var h = '<p class="needs">Needs you: ' + '<span class="cnt ' + (need ? 'need' : 'ok') + wide(need) + '">' + need + '</span></p>';
     var st = data.statements[0];   // GA's own weekly statement beats our sum of the invoices we have seen
     h += '<div class="tiles"><a class="tile" href="#/invoices"><span class="k">Owed to GA' + (st ? ' (statement ' + esc(ukDate(st.statement_date)) + ')' : '') + '</span><span class="v">' + money(st ? st.total_outstanding : owed) + '</span></a>' +
@@ -315,7 +317,7 @@
   function checkBadge(o) { var c = CHECK[o.check]; return c ? '<div class="badges"><span class="badge' + (c[1] ? ' ' + c[1] : '') + '">' + esc(c[0]) + '</span></div>' : ''; }
   var OFILTERS = [['all', 'All'], ['check', 'Needs a look'], ['ga', 'Not at GA yet'], ['sub', 'Subscriptions'], ['low', 'Low profit']], ofilter = 'all';
   function pageOrders() {
-    var min = num(setting('MIN_PROFIT')) || 15, list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); }).filter(function (o) {
+    var min = minProfit(), list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); }).filter(function (o) {
       return ofilter === 'all' || (ofilter === 'check' && CHECK[o.check] && CHECK[o.check][1]) || (ofilter === 'ga' && /^(Waiting for GA|Not at GA)$/.test(o.check))
         || (ofilter === 'sub' && /^sub/i.test(o.order_type)) || (ofilter === 'low' && o.profit_est !== '' && num(o.profit_est) < min); });
     var chips = '<div class="house-frow">' + DashKit.filterButton('ofilters', ofilter !== 'all' ? 1 : 0) + '<div class="chips house-filters" id="ofilters" role="group" aria-label="Which orders">' + OFILTERS.map(function (f) { return '<button class="chip" type="button" data-ofilter="' + f[0] + '" aria-pressed="' + (ofilter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
@@ -378,7 +380,7 @@
       '<div class="frow"><input class="txtin" type="search" placeholder="Find a recipe, name or code" aria-label="Find a product" data-find value="' + esc(q) + '">' + DashKit.filterButton('pfilters', filter !== FILTERS[0][0] ? 1 : 0) +
       '<div class="chips house-filters" id="pfilters" role="group" aria-label="Which products">' + FILTERS.map(function (f) { return '<button class="chip" type="button" data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
     if (!list.length) return h + '<div class="card">' + empty(q ? 'No products match "' + q + '"' : 'No products here', 'Try All, or a shorter search.') + '</div>';
-    var shown = showAll ? list : list.slice(0, 40), min = num(setting('MIN_PROFIT')) || 15, groups = [], by = {};
+    var shown = showAll ? list : list.slice(0, 40), min = minProfit(), groups = [], by = {};
     shown.forEach(function (p) { var r = p.range && p.range !== '(price list only)' ? p.range : 'Price list only (not on the Portal)'; if (!by[r]) { by[r] = []; groups.push(r); } by[r].push(p); });
     groups.forEach(function (g) {
       h += '<p class="grp">' + esc(g) + '<span class="sr"> · </span><span class="cnt' + wide(by[g].length) + '">' + by[g].length + '</span></p><div class="card">' + by[g].map(function (p) { var pr = p.profit_ex_vat_1bag_1box;

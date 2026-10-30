@@ -103,6 +103,32 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('nav.tabs a[data-nav="orders"]')).toHaveAttribute('aria-current', 'page');
   });
 
+  // G1 (Lisa, 30 Oct 2026): the low-profit warning is under £8. The value is read from MIN_PROFIT; a blank cell means 8.
+  test('low profit: blank MIN_PROFIT means £8; under 8 is flagged, exactly 8 and over are not; a typed value still wins', async ({ page }) => {
+    const b = book(), row = (no, p) => [no, 'Shopify', 'DDF', 'GA', 'Invoiced', '', '', '1', '', '', '', '', '', p, '', '', '', '', '', '', '', 'One-off (Online Store)', '', '', '', '[]', 'Matched'];
+    b.orders = [b.orders[0], row('9101', '7.99'), row('9102', '8.00'), row('9103', '8.01')];
+    b.settings = b.settings.filter((s) => s[0] !== 'MIN_PROFIT');
+    await sheets(page, b);
+    await open(page);
+    await expect(page.locator('#view .tiles')).toContainText('Under £8 profit');
+    await expect(page.locator('#view .tile', { hasText: 'Under £8 profit' }).locator('.v')).toHaveText('1');
+    await page.goto('food/#/orders');
+    await page.locator('[data-ofilter="low"]').click();
+    await expect(page.locator('#view .row')).toHaveCount(1);
+    await expect(page.locator('#view .row')).toContainText('#9101');
+    await expect(page.locator('#view .row .amt.red')).toHaveText('£7.99');
+  });
+  test('low profit: MIN_PROFIT typed as 8 gives the same line; typed as 10 moves it (never hard-coded)', async ({ page }) => {
+    const b = book(), row = (no, p) => [no, 'Shopify', 'DDF', 'GA', 'Invoiced', '', '', '1', '', '', '', '', '', p, '', '', '', '', '', '', '', 'One-off (Online Store)', '', '', '', '[]', 'Matched'];
+    b.orders = [b.orders[0], row('9101', '7.99'), row('9102', '8.00'), row('9103', '9.50')];
+    b.settings = b.settings.map((s) => (s[0] === 'MIN_PROFIT' ? ['MIN_PROFIT', '8', ''] : s));
+    await sheets(page, b);
+    await open(page);
+    await expect(page.locator('#view .tile', { hasText: 'Under £8 profit' }).locator('.v')).toHaveText('1');
+    b.settings = b.settings.map((s) => (s[0] === 'MIN_PROFIT' ? ['MIN_PROFIT', '10', ''] : s));
+    await page.locator('#refresh').click();
+    await expect(page.locator('#view .tile', { hasText: 'Under £10 profit' }).locator('.v')).toHaveText('3');
+  });
   test('a GA statement on file: its balance is the Owed figure on Home and the first tile on Invoices', async ({ page }) => {
     const b = book(); b.statements = [['statement_date', 'total_outstanding', 'file_id'], ['2026-10-19', '1234.56', '']];
     await sheets(page, b);
