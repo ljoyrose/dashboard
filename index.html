@@ -2550,7 +2550,7 @@
     }
     if (d && !d.notConnected && !d.none && p.status !== 'failed')
       html += '<p class="note">' + (view === 'dropbox' ? 'Scan' : 'Dry run') + ' ' + esc(fmtTime(d.generated) || 'date unknown') + (d.complete === false ? ' (not finished)' : '') + '. Nothing was renamed or moved.</p>';
-    html += '<p class="note" data-bin-pointer>Anything to tidy is done in <a href="#/bin">Bin</a>.</p>';
+    html += '<p class="note" data-bin-pointer>Anything to tidy is done in Bin.</p>';  // text only: Bin keeps one way in
     var name = view === 'dropbox' ? 'Dropbox totals' : label + ' report';
     return html + sourceLine(name, DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', p) + '</section>';
   }

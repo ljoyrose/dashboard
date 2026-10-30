@@ -53,7 +53,8 @@ test.describe('Stage 9: Dropbox, iCloud and Mac pages (look only)', () => {
       await expect(card.locator('[data-no-report]')).toHaveText('No report yet.');
       await expect(card).not.toHaveClass(/\bfailed\b/);
       await expect(card.locator('.note.fail')).toHaveCount(0);
-      await expect(card.locator('[data-bin-pointer] a')).toHaveAttribute('href', '#/bin');
+      await expect(card.locator('[data-bin-pointer]')).toHaveText('Anything to tidy is done in Bin.');
+      await expect(v.locator('a[href="#/bin"]')).toHaveCount(0); // Bin keeps its one way in (the tab)
       await lookOnly(v);
       expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
     });
@@ -72,7 +73,7 @@ test.describe('Stage 9: Dropbox, iCloud and Mac pages (look only)', () => {
     await expect(card.locator('[data-no-report]')).toHaveCount(0);
     await lookOnly(page.locator('#view'));
     // The delete steps stay in Bin.
-    await page.locator('#coverageCard [data-bin-pointer] a').click();
+    await page.locator('#mainNav a[data-nav="bin"]').click();
     await expect(page.locator('#dropboxCard')).toContainText('Waiting to delete: 12 files (3.5 GB)');
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
