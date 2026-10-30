@@ -129,6 +129,26 @@ test.describe('GA Hub page', () => {
     await page.locator('#refresh').click();
     await expect(page.locator('#view .tile', { hasText: 'Under £10 profit' }).locator('.v')).toHaveText('3');
   });
+  // G2 (Lisa, 30 Oct 2026): MIN_ORDERS_MONTH blank = no orders warning; set = an "Orders this month" tile, red when under it.
+  test('orders this month: blank MIN_ORDERS_MONTH shows no tile; set, it counts paid orders in the last 30 days (not cancelled, not older) and goes red under the aim', async ({ page }) => {
+    const day = (n) => new Date(Date.now() - n * 864e5).toISOString();
+    const row = (no, at, status) => [no, 'Shopify', 'DDF', 'GA', status || 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '', '1', at, '[]', 'Waiting for GA'];
+    const b = book();
+    b.orders = [b.orders[0], row('9201', day(2)), row('9202', day(29)), row('9203', day(31)), row('9204', day(5), 'Cancelled')];
+    await sheets(page, b);
+    await open(page);
+    await expect(page.locator('#view .tile', { hasText: 'Orders this month' })).toHaveCount(0);
+    b.settings = b.settings.concat([['MIN_ORDERS_MONTH', '3', '']]);
+    await page.locator('#refresh').click();
+    const tile = page.locator('#view .tile', { hasText: 'Orders this month' });
+    await expect(tile).toContainText('aim 3');
+    await expect(tile.locator('.v')).toHaveText('2');
+    await expect(tile.locator('.v')).toHaveClass(/red/);
+    b.settings = b.settings.map((x) => (x[0] === 'MIN_ORDERS_MONTH' ? ['MIN_ORDERS_MONTH', '2', ''] : x));
+    await page.locator('#refresh').click();
+    await expect(tile).toContainText('aim 2');
+    await expect(tile.locator('.v')).not.toHaveClass(/red/);
+  });
   test('a GA statement on file: its balance is the Owed figure on Home and the first tile on Invoices', async ({ page }) => {
     const b = book(); b.statements = [['statement_date', 'total_outstanding', 'file_id'], ['2026-10-19', '1234.56', '']];
     await sheets(page, b);
