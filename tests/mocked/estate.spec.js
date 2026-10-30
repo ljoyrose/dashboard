@@ -31,6 +31,7 @@ test.describe('Web Estate page', () => {
     const sheets = [];
     await page.route(SHEETS, (route) => { sheets.push(route.request().url()); return route.abort(); });
     await page.goto('estate/');
+    await page.locator('#view [data-action="signin"]').click();
     await expect(page.locator('#banner')).toContainText('Example rows');
     await expect(page.locator('.prop').first()).toHaveAttribute('data-status', 'down');
     await expect(page.locator('#stamp')).toHaveText('TEST');

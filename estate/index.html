@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-estate-2026-10-30-v1">
+<meta name="build" content="ljr-estate-2026-10-30-v2">
 <title>Web Estate</title>
 <!-- Web Estate Hub v1 (30 Oct 2026): every domain, site, funnel, shop and app, grouped by company, brand and client.
      PUBLIC repo: no data, no secrets. Read only: this page never changes DNS, a site, a shop or an account.
@@ -23,6 +23,7 @@
 <script src="../auth.js"></script>
 <script src="core.js"></script>
 <script src="reader.js"></script>
+<script src="add.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
@@ -103,8 +104,17 @@
   select.txtin { font: inherit; font-size: 16px; padding: 0 8px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
   select.txtin:focus { border-color: var(--ink); }
 
+  details.add > summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 36px; }
+  details.add > summary::-webkit-details-marker { display: none; }
+  details.add > summary::before { content: "+"; display: inline-grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--ctl); border-radius: var(--radius); }
+  details.add[open] > summary::before { content: "\2212"; }
+  .addf { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .addf .frow label { max-width: none; }
+  input.txtin { font: inherit; font-size: 16px; padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
+  input.txtin:focus { border-color: var(--ink); }
+  .queued { font-size: 14px; margin: 0; }
   @media (max-width: 544px) {
-    .btn, .chip, select.txtin, nav.tabs a { min-height: 44px; }
+    .btn, .chip, select.txtin, input.txtin, nav.tabs a, details.add > summary { min-height: 44px; }
     .frow label { flex: 1 1 calc(50% - 4px); max-width: none; }
     .top h1 { font-size: 20px; }
     nav.tabs { gap: 6px; padding-left: 6px; padding-right: 6px; }
@@ -138,7 +148,7 @@
 (function () {
   'use strict';
   var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader;
-  var CLIENT_ID = CFG.clientId, SCOPE = (CFG.scopes || {}).read;
+  var CLIENT_ID = CFG.clientId, SCOPE = (CFG.scopes || {}).read, WRITE = (CFG.scopes || {}).write, A = window.EstateAdd;
   var VIEWS = ['home', 'look', 'unchecked'];
   var FILTER_WORD = { company: 'Company', brand: 'Brand', client: 'Client', kind: 'Kind', platform: 'Platform', flag: 'Flag' };
   // Invented rows shown until the sheet id is in config.js. Nothing is read or sent while these show.
@@ -150,6 +160,7 @@
     { key: 'email-domain:example.com', kind: 'email-domain', company: 'Example Co', url_or_domain: 'example.com', spf: 'two records', dkim: 'not found', dmarc: 'missing', source: 'example' }
   ];
   var token = null, rows = [], loaded = false, view = 'home', filters = {}, example = !ES.sheetId;
+  var addOpen = false, addMsg = '', addBusy = false, addDraft = { input: '', company: '', brand: '', client: '', kind: '' }, pendingWrite = null;
   function day(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); }
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -159,8 +170,8 @@
 
   /* ---------- reading ---------- */
   function load() {
-    if (example) { rows = EXAMPLE.slice(); loaded = true; banner('Example rows: the RR_WEB-ESTATE sheet is not set up yet, so nothing is read or sent. These addresses are invented.', true); return render(); }
-    if (!token) { loaded = false; return render(); }
+    if (example && token) { rows = EXAMPLE.slice(); loaded = true; banner('Example rows: the RR_WEB-ESTATE sheet is not set up yet, so nothing is read or sent. These addresses are invented.', true); return render(); }
+    if (!token) { loaded = false; if (example) banner('Example rows after sign-in: the RR_WEB-ESTATE sheet is not set up yet, so nothing is read or sent.', true); return render(); }
     R.read({ sheetId: ES.sheetId, token: token }).then(function (out) {
       if (out.state === 'signed-out' || /sign-in expired/.test(out.problems[0] || '')) { token = null; DashAuth.markExpired(); }
       rows = out.rows; loaded = out.ok;
@@ -209,11 +220,48 @@
       (mail.length ? '<span class="badge no"><b>Email</b>' + esc(mail.join(', ')) + '</span>' : '') +
       '</div>' + (r.checked_uk ? '<span class="m">Checked ' + esc(r.checked_uk) + '</span>' : '') + '</div>';
   }
+  // Add: paste a web address or a bare domain, pick who it belongs to. The page drops one request file for the engine,
+  // which scans it (DNS, SSL, live, tags, and email for a bare domain) and writes one row with source "Add".
+  function addBox() {
+    var f = function (k, label, list) {
+      return '<label>' + label + '<input class="txtin" data-add="' + k + '" value="' + esc(addDraft[k]) + '"' + (list ? ' list="dl-' + k + '"' : '') + ' autocomplete="off">' +
+        (list ? '<datalist id="dl-' + k + '">' + E.choices(rows, k).map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist>' : '') + '</label>';
+    };
+    return '<details class="add card"' + (addOpen ? ' open' : '') + '><summary data-action="addtoggle">Add a property</summary><div class="addf">' +
+      '<label>Web address or domain<input class="txtin" data-add="input" value="' + esc(addDraft.input) + '" placeholder="https://… or example.com" inputmode="url" autocapitalize="off" spellcheck="false"></label>' +
+      '<div class="frow">' + f('company', 'Company', true) + f('brand', 'Brand', true) + f('client', 'Client', true) +
+      '<label>Kind<select class="txtin" data-add="kind"><option value="">Guess</option>' + E.KINDS.map(function (k) { return '<option' + (addDraft.kind === k ? ' selected' : '') + '>' + k + '</option>'; }).join('') + '</select></label></div>' +
+      '<button class="btn main" type="button" data-action="add"' + (addBusy ? ' disabled' : '') + '>Add and scan</button>' +
+      (addMsg ? '<p class="queued" role="status" id="addMsg">' + esc(addMsg) + '</p>' : '') + '</div></details>';
+  }
+  function upload(req, fileName) {
+    var b = 'es' + Date.now();
+    return DashKit.googleFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST',
+      headers: { Authorization: 'Bearer ' + DashAuth.valid().access_token, 'Content-Type': 'multipart/related; boundary=' + b }, body: A.multipartBody(req, ES.requestsFolderId, b, fileName) })
+      .then(function (r) { if (!r.ok) throw new Error('Google said ' + r.status); });
+  }
+  function withWrite(go) {
+    var saved = DashAuth.valid();
+    if (saved && DashAuth.hasScope(saved, WRITE)) return go();
+    pendingWrite = go; auth.requestWrite(WRITE);
+  }
+  function add() {
+    var built = A.buildRequest({ input: addDraft.input, company: addDraft.company, brand: addDraft.brand, client: addDraft.client, kind: addDraft.kind, by: 'estate page', now: new Date() });
+    if (!built.ok) { addMsg = 'Not added: ' + built.reason + '.'; return render(); }
+    if (example || !ES.requestsFolderId) { addMsg = 'Example only: nothing was sent. Add works once the estate engine is installed.'; return render(); }
+    addBusy = true; addMsg = 'Sending…'; render();
+    withWrite(function () {
+      upload(built.request, built.fileName).then(function () {
+        addBusy = false; addMsg = 'Queued: ' + built.request.target.key + '. The engine scans it and adds the row within about 15 minutes.';
+        addDraft.input = ''; render();
+      }).catch(function (e) { addBusy = false; addMsg = 'Not sent: ' + e.message + '.'; render(); });
+    });
+  }
   function page() {
     var list = E.applyFilters(rows, filters), shown = inView(list);
     var title = view === 'look' ? 'Needs a look' : view === 'unchecked' ? 'Not checked' : 'Web Estate';
     var hint = view === 'look' ? 'Down, expiring in 60 days, blocked to scripts or failing an email check.' : view === 'unchecked' ? 'Not scanned yet. The engine checks them once its daily scan is switched on.' : 'Every domain, site, funnel, shop and app. Read only: nothing here changes DNS or a site.';
-    var h = '<p class="needs">' + title + '</p><p class="hint">' + hint + '</p>' + tiles(list) + filterRow();
+    var h = '<p class="needs">' + title + '</p><p class="hint">' + hint + '</p>' + (view === 'home' ? addBox() : '') + tiles(list) + filterRow();
     if (!shown.length) return h + '<div class="card"><p class="empty">' + (rows.length ? 'Nothing here with these filters.' : 'No properties yet.') + '</p></div>';
     E.groupRows(shown, today()).forEach(function (g) {
       h += '<p class="grp">' + esc(g.name) + '<span class="sr"> · </span><span class="cnt">' + g.rows.length + '</span></p><div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>';
@@ -226,22 +274,26 @@
     $('n-home').textContent = list.length || ''; $('n-look').textContent = look || ''; $('n-unchecked').textContent = unc || '';
     $('stamp').textContent = ES.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
-    $('signin').classList.toggle('hidden', example || !!token); $('signin').disabled = !ready;
+    $('signin').classList.toggle('hidden', !!token); $('signin').disabled = !ready;
     $('refresh').classList.toggle('hidden', example || !token);
-    if (!example && !token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the Web Estate</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
+    if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the Web Estate</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
     if (!loaded && !rows.length) { $('view').innerHTML = '<div class="card"><p class="hint">Loading…</p></div>'; return; }
     $('view').innerHTML = page();
   }
 
   /* ---------- taps ---------- */
   document.addEventListener('click', function (e) {
-    var t = e.target.closest('button, a'); if (!t) return;
+    var t = e.target.closest('button, a, summary'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(); }
     if (a === 'refresh') return load();
     if (a === 'clear') { location.hash = E.filterHash(view, {}); }
+    if (a === 'addtoggle') { e.preventDefault(); addOpen = !addOpen; return render(); }
+    if (a === 'add') return add();
   });
+  document.addEventListener('input', function (e) { var k = e.target.getAttribute && e.target.getAttribute('data-add'); if (k) addDraft[k] = e.target.value; });
   document.addEventListener('change', function (e) {
+    var ak = e.target.getAttribute && e.target.getAttribute('data-add'); if (ak) { addDraft[ak] = e.target.value; return; }
     var k = e.target.getAttribute && e.target.getAttribute('data-filter'); if (!k) return;
     var f = Object.assign({}, filters); if (e.target.value) f[k] = e.target.value; else delete f[k];
     location.hash = E.filterHash(view, f);
@@ -258,7 +310,9 @@
   var auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE,
     onToken: function (resp) {
       if (resp.error) return banner('Sign-in did not complete.');
-      token = resp.access_token; DashAuth.save(token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE); load();
+      token = resp.access_token; DashAuth.save(token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE);
+      if (pendingWrite) { var p = pendingWrite; pendingWrite = null; if (DashAuth.hasScope(DashAuth.valid(), WRITE)) return p(); addBusy = false; addMsg = 'Google blocked saving. Tap Add again and choose Allow.'; return render(); }
+      load();
     },
     onError: function () { banner('Sign-in did not complete.'); }, onSilentFail: function () {} });
   var saved = DashAuth.valid(); if (saved && DashAuth.hasScope(saved, SCOPE)) token = saved.access_token;
