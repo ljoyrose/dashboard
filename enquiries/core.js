@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.10.0 (2026-10-30)';
+  var VERSION = 'enquiries-core 1.11.0 (2026-10-30)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -639,7 +639,8 @@
   var UK_PET_TRAVEL = 'https://www.gov.uk/taking-your-pet-abroad';
   var BRAND_LINE = 'Australian Labradoodles/Cobberdogs, www.cobberdogs.com';
   var STOP_LINE = "If you would rather not hear from me again, reply STOP and I won't contact you again.";
-  var CASES = ['first-uk', 'first-abroad', 'after-call', 'waiting-list', 'pup-offer', 'no-fit-now', 'adult-dog', 'breeder', 'missed', 'gentle-close'];
+  var CASES = ['first-uk', 'first-abroad', 'after-call', 'waiting-list', 'pup-offer', 'no-fit-now', 'adult-dog', 'breeder', 'missed', 'gentle-close',
+    'check-in', 'call-check-in', 'offer-check-in', 'waiting-check-in'];
   // Cases the engine may pick by itself. A pup offer is Lisa's alone: it is only ever drafted when she asks for it.
   var AUTO_CASES = ['first-uk', 'first-abroad', 'after-call', 'no-fit-now', 'adult-dog', 'breeder', 'missed', 'gentle-close'];
 
@@ -747,6 +748,31 @@
         body = [hi, '', 'I just wanted to check in. If you\'re still looking for a puppy I\'d love to help, and if your plans have changed that\'s absolutely fine.', '',
           'The breed pages are here if useful:', '', list];
         wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking in: if you\'re still looking I\'d love to help, and if plans have changed that\'s fine. ' + links[0];
+        break;
+      // Stage 12 follow-ups: short check-ins. Never a price, never a new offer (offers are Lisa's alone).
+      case 'check-in':
+        subject = 'Just checking in';
+        body = [hi, '', 'I just wanted to check my last message reached you. If you\'re still looking for a puppy I\'d love to help, and if now isn\'t the right time that\'s absolutely fine.', '',
+          'The breed pages are here if useful:', '', list];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking my last message reached you. If you\'re still looking I\'d love to help. ' + links[0];
+        break;
+      case 'call-check-in':
+        subject = 'Following up on our call';
+        body = [hi, '', 'Thank you again for your time on the call. I just wanted to see if you had any questions after reading the pages I sent.', '',
+          'They are here again if useful:', '', list, '', 'Just reply, or message me on WhatsApp, and I\'ll help with the next step.'];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Following up on our call: any questions after reading ' + links[0] + '? Happy to help with the next step.';
+        break;
+      case 'offer-check-in':
+        subject = 'The puppy I mentioned';
+        body = [hi, '', 'I just wanted to check you saw my message about the puppy. There\'s no pressure at all: just let me know either way when you can, so I can keep my list fair to everyone.', '',
+          'The breed pages are here if useful:', '', list];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking you saw my message about the puppy. No pressure: let me know either way when you can. ' + links[0];
+        break;
+      case 'waiting-check-in':
+        subject = 'News from our waiting list';
+        body = [hi, '', 'A quick hello from our waiting list. [Lisa: litter news, or "no news yet"]. You are still on our list, and I\'ll be in touch as soon as I have more.', '',
+          'The breed pages are here if useful:', '', list, '', 'If anything has changed for you, just reply and let me know.'];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa with a quick waiting-list hello: [Lisa: litter news]. You are still on our list. Breed info: ' + links[0];
         break;
       default: return null;
     }
@@ -1002,6 +1028,96 @@
       if (g.ok) keep.push(it); else blocked.push({ item: it, why: g.why });
     });
     return { keep: keep, blocked: blocked };
+  }
+
+  // ---- Follow-ups (Stage 12) ------------------------------------------------------------------------------------
+  // Rules from Settings (followup_rules): days to each follow-up, and tries before the hub suggests lost.
+  var FU_DEFAULTS = { 'first-reply': 2, 'after-call': 1, offer: 3, 'waiting-list': 30, 'lost-after': 3 };
+  function followUpRules(text) {
+    var o = {}, k;
+    for (k in FU_DEFAULTS) o[k] = FU_DEFAULTS[k];
+    String(text || '').split(/[,;\n]/).forEach(function (part) {
+      var m = part.match(/^\s*([a-z-]+)\s*=\s*(\d+(?:\.\d+)?)\s*$/i);
+      if (m && Object.prototype.hasOwnProperty.call(FU_DEFAULTS, m[1].toLowerCase())) o[m[1].toLowerCase()] = Number(m[2]);
+    });
+    return o;
+  }
+  // Which rule an enquiry's stage follows, and the Events type that starts its clock. Other stages have no follow-up.
+  var FU_RULE = { replied: 'first-reply', 'call-held': 'after-call', offered: 'offer', deposit: 'waiting-list' };
+  var FU_EVENT = { 'first-reply': 'replied', 'after-call': 'call-held', offer: 'offered', 'waiting-list': 'deposit-paid' };
+  var FU_CASE = { 'first-reply': 'check-in', 'after-call': 'call-check-in', offer: 'offer-check-in', 'waiting-list': 'waiting-check-in' };
+  function followUpCase(rule) { return FU_CASE[rule] || ''; }
+  var FU_OPEN = { waiting: 1, due: 1, snoozed: 1, 'suggest-lost': 1 };
+  // Move a time out of UK quiet hours ('21:00-08:00'): a time inside them goes to the end of them, UK clock.
+  function outOfQuiet(ms, quiet) {
+    var m = String(quiet || '').match(/^\s*(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})\s*$/);
+    if (!m || isNaN(ms)) return ms;
+    var a = +m[1] * 60 + +m[2], b = +m[3] * 60 + +m[4], uk = toUk(ms), mins = +uk.slice(11, 13) * 60 + +uk.slice(14, 16);
+    var inside = a > b ? mins >= a || mins < b : mins >= a && mins < b;
+    if (!inside) return ms;
+    var day = uk.slice(0, 10);
+    if (a > b && mins >= a) day = toUk(toMs(day + 'T12:00:00') + 86400000).slice(0, 10);
+    return toMs(day + 'T' + ('0' + m[3]).slice(-2) + ':' + m[4] + ':00');
+  }
+  // FollowUps rows for every enquiry: one open row per enquiry and rule (try n), closed when the enquiry moves on,
+  // suggest-lost after the last try (the waiting-list check-in repeats and is never lost). The clock starts at the
+  // stage's event (or the row's own update), or at Lisa's last "done" for the next try. A snooze moves the due time.
+  //   opts: { now, rules: followUpRules(...), quiet: '21:00-08:00' }
+  function planFollowUps(enquiries, events, existing, opts) {
+    opts = opts || {};
+    var now = opts.now == null ? Date.now() : toMs(opts.now), rules = opts.rules || followUpRules(''), out = [], byEnq = {}, last = {};
+    (existing || []).forEach(function (f) { (byEnq[f.enquiry_key] = byEnq[f.enquiry_key] || []).push(f); });
+    (events || []).forEach(function (v) {
+      var k = v.enquiry_key + '|' + v.type, t = toMs(v.at_uk);
+      if (!isNaN(t) && !(last[k] >= t)) last[k] = t;
+    });
+    (enquiries || []).forEach(function (e) {
+      var rule = FU_RULE[e.stage], mine = byEnq[e.key] || [];
+      mine.forEach(function (f) {
+        if (f.rule !== rule && FU_OPEN[f.status]) out.push(row(f, { status: 'closed' }));
+      });
+      if (!rule) return;
+      var done = mine.filter(function (f) { return f.rule === rule && f.status === 'done'; });
+      var n = done.length + 1, key = 'F-' + hash([e.key, rule, n].join('|')), open = mine.filter(function (f) { return f.followup_key === key; })[0] || {};
+      var base = last[e.key + '|' + FU_EVENT[rule]];
+      if (base == null || isNaN(base)) base = toMs(e.updated_uk || e.received_uk);
+      done.forEach(function (f) { var t = toMs(f.updated_uk || f.due_uk); if (!isNaN(t) && !(base >= t)) base = t; });
+      var it = { followup_key: key, enquiry_key: e.key, person_key: e.person_key || '', rule: rule, try: n, snoozed_to_uk: open.snoozed_to_uk || '', draft_key: open.draft_key || '' };
+      if (rule !== 'waiting-list' && done.length >= (rules['lost-after'] || 3)) { out.push(row(it, { due_uk: '', status: 'suggest-lost' })); return; }
+      if (isNaN(base)) return;
+      var due = outOfQuiet(base + (rules[rule] == null ? FU_DEFAULTS[rule] : rules[rule]) * 86400000, opts.quiet), status = due <= now ? 'due' : 'waiting';
+      var sn = toMs(open.snoozed_to_uk);
+      if (open.status === 'snoozed' && !isNaN(sn)) { due = outOfQuiet(sn, opts.quiet); status = due <= now ? 'due' : 'snoozed'; }
+      out.push(row(it, { due_uk: toUk(due), status: status }));
+    });
+    function row(f, o) {
+      var r = { followup_key: f.followup_key, enquiry_key: f.enquiry_key, person_key: f.person_key || '', rule: f.rule, try: f.try,
+        due_uk: f.due_uk || '', status: f.status, snoozed_to_uk: f.snoozed_to_uk || '', draft_key: f.draft_key || '' };
+      for (var k in o) r[k] = o[k];
+      return r;
+    }
+    return out;
+  }
+  // The page's follow-up taps (request-file pattern): Lisa replied herself; snooze a follow-up; done (sent), or done and lost.
+  function stamp(at) { return at.replace(/[^0-9]/g, '').slice(0, 14); }
+  function repliedRequest(enquiryKey, nowIso) {
+    if (!/^K-[0-9a-f]{16}$/.test(String(enquiryKey || ''))) return { ok: false, error: 'Unknown enquiry.' };
+    var at = nowIso || new Date().toISOString();
+    return { ok: true, name: 'ENQ-replied-' + stamp(at) + '-' + String(enquiryKey).slice(2, 8) + '.json', body: { v: 1, kind: 'replied', enquiry_key: enquiryKey, at: at } };
+  }
+  function snoozeRequest(followupKey, untilUk, nowIso) {
+    if (!/^F-[0-9a-f]{16}$/.test(String(followupKey || ''))) return { ok: false, error: 'Unknown follow-up.' };
+    var at = nowIso || new Date().toISOString(), t = toMs(untilUk);
+    if (isNaN(t)) return { ok: false, error: 'Pick a date and time.' };
+    if (t <= toMs(at)) return { ok: false, error: 'Pick a time in the future.' };
+    return { ok: true, name: 'ENQ-snooze-' + stamp(at) + '-' + String(followupKey).slice(2, 8) + '.json',
+      body: { v: 1, kind: 'snooze', followup_key: followupKey, until_uk: toUk(t), at: at } };
+  }
+  function doneRequest(followupKey, lost, nowIso) {
+    if (!/^F-[0-9a-f]{16}$/.test(String(followupKey || ''))) return { ok: false, error: 'Unknown follow-up.' };
+    var at = nowIso || new Date().toISOString();
+    return { ok: true, name: 'ENQ-done-' + stamp(at) + '-' + String(followupKey).slice(2, 8) + '.json',
+      body: { v: 1, kind: 'done', followup_key: followupKey, lost: lost === true, at: at } };
   }
 
   // ---- Merging one enquiry row ---------------------------------------------------------------------------------
@@ -1507,7 +1623,9 @@
     litterRowsFrom: litterRowsFrom, matchLitter: matchLitter, litterFlags: litterFlags, saleDogsFrom: saleDogsFrom,
     saleReplyRows: saleReplyRows, saleGroupCards: saleGroupCards, checkCard: checkCard, isClosedList: isClosedList,
     money: money, isoDate: isoDate, parseCsv: parseCsv, depositLedgerFrom: depositLedgerFrom, depositTotals: depositTotals,
-    xeroInvoicesFrom: xeroInvoicesFrom, matchInvoices: matchInvoices, depositPaidRequest: depositPaidRequest
+    xeroInvoicesFrom: xeroInvoicesFrom, matchInvoices: matchInvoices, depositPaidRequest: depositPaidRequest,
+    followUpRules: followUpRules, followUpCase: followUpCase, planFollowUps: planFollowUps, outOfQuiet: outOfQuiet,
+    repliedRequest: repliedRequest, snoozeRequest: snoozeRequest, doneRequest: doneRequest
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
