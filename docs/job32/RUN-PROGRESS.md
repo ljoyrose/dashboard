@@ -4,8 +4,8 @@
 |---|---|---|---|---|
 | 0 Read and report | none | none | baseline factory-checklist 4/4 | PASS |
 | 1 Next-step marker | claude/job32-1-next | #166 | 698/698 mocked + phone; new spec 3/3 | PASS |
-| 2 Per-stage checks | claude/job32-2-checks (stacked on 1) | see slip | 701/701 mocked + phone; new spec 3/3 | PASS |
-| 3 Wrap | claude/job32-3-wrap if needed | not yet | not yet | not yet |
+| 2 Per-stage checks | claude/job32-2-checks (stacked on 1) | #173 | 701/701 mocked + phone; new spec 3/3 | PASS |
+| 3 Wrap | claude/job32-3-wrap (stacked on 2, main merged in) | see slip | full mocked + phone after main merge | PASS |
 
 Tested commit for stage 1: 6ed78c391ed596c2b19865f5f5c2644afae2ae8d. Stage 2: 7d864b4d57580ecaa9add1fabab86aacba3b26dd.
 
@@ -13,4 +13,6 @@ Privacy guard: CLEAN on origin/main..claude/job32-1-next and origin/main..claude
 
 Parked for Lisa: 2 (new engine fields; wording of the next-step chip). Details in the slip.
 
-Next step: stage 3 wrap (slip only: the AF-ENGINE request; no code left).
+Stage 3: no new code. Main merged into the stack (no conflicts) so the three PRs merge cleanly in order #166, #173, stage 3. AF-ENGINE request (4 missing fields) and 3 parked items are in the slips.
+
+Next step: none. JOB 32 done; waiting on Lisa's merge OKs.
