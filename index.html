@@ -466,10 +466,9 @@
 
 <nav id="mainNav" class="main house-tabs hidden" aria-label="Sections">
   <a href="#/map" data-nav="map" class="vision"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-map"/></svg><span>Dashboard</span><span class="n need" id="n-map"></span></a>
-  <a href="#/drive" data-nav="drive" class="slot0"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-drive"/></svg><span>Drive</span></a>
+  <a href="#/drives" data-nav="drives" class="slot0"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-drive"/></svg><span>Drives</span></a>
   <a href="#/bin" data-nav="bin" class="slot8"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-bin"/></svg><span>Bin</span><span class="n need" id="n-bin"></span></a>
   <a href="#/changes" data-nav="changes" class="slot7"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-changes"/></svg><span>Changes</span></a>
-  <a href="#/more" data-nav="more" class="slot4"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-more"/></svg><span>More</span></a>
 </nav>
 
 <footer id="pageFoot" class="wrap hidden"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
@@ -616,9 +615,12 @@
   }
 
   // ---- Drive API. GETs for browsing; PATCH/DELETE only from the Bin buttons. ----
-  function apiCall(method, url, body) {
-    if (!accessToken || Date.now() > tokenExpiresAt) return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
-    var opt = { method: method, headers: { Authorization: 'Bearer ' + accessToken } };
+  // tok: only the Personal Drive page passes its own look-only token (GETs only); everything else uses the work token.
+  function apiCall(method, url, body, tok) {
+    if (tok !== undefined) {
+      if (!tok || method !== 'GET') return Promise.reject(new ApiError(401, 'Personal sign-in expired', 'authError'));
+    } else if (!accessToken || Date.now() > tokenExpiresAt) return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
+    var opt = { method: method, headers: { Authorization: 'Bearer ' + (tok !== undefined ? tok : accessToken) } };
     if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
     return KIT.googleFetch(url, opt).then(function (res) {
       if (res.ok) return res.status === 204 ? {} : res.json().catch(function () { return {}; });
@@ -629,7 +631,7 @@
       });
     });
   }
-  function apiGet(url) { return apiCall('GET', url); }
+  function apiGet(url, tok) { return apiCall('GET', url, null, tok); }
   function apiText(url) {
     if (!accessToken || Date.now() > tokenExpiresAt) return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
     return KIT.googleFetch(url, { method: 'GET', headers: { Authorization: 'Bearer ' + accessToken } }).then(function (res) {
@@ -641,12 +643,12 @@
       });
     });
   }
-  function driveList(params) {
+  function driveList(params, tok) {
     if (excludedDrive(params.driveId)) return Promise.resolve({ files: [] }); // never asked
     var q = new URLSearchParams(params);
     q.set('supportsAllDrives', 'true');
     q.set('includeItemsFromAllDrives', 'true');
-    return apiGet(API + '?' + q.toString()).then(function (r) {
+    return apiGet(API + '?' + q.toString(), tok).then(function (r) {
       if (r && r.files) r.files = r.files.filter(function (f) { return !excludedDrive(f.driveId); });
       return r;
     });
@@ -1061,10 +1063,10 @@
   function ensureRoute() {
     if (!signedIn || !accessToken || loading) return;
     var r = parseRoute();
-    if (r.view === 'drive' && r.driveId && driveById(r.driveId) && !F[folderKey(r)]) loadFolder(r);
+    if ((r.view === 'drive' || r.view === 'drives') && r.driveId && driveById(r.driveId) && !F[folderKey(r)]) loadFolder(r);
     if (r.view === 'bin' && S.bin.status === 'idle' && drives()) loadBin();
     if (r.view === 'bin' && S.check.status === 'idle' && CHECK_FOLDER_ID) loadCheck();
-    if (r.view === 'personal') loadPcpCandidates();
+    if (r.view === 'personal' || r.view === 'bin') loadPcpCandidates();
   }
   function folderKey(r) { return r.driveId + '/' + (r.folderId || ''); }
   function loadFolder(r) {
@@ -1529,87 +1531,108 @@
   function pcpLabel() {
     return P.email && P.email === ((CFG.money || {}).owner || '') ? 'PC-Personal' : /@(gmail|googlemail)\.com$/i.test(P.email || '') ? 'lisah Personal' : (P.email || 'Personal drive');   // by account type: the business account (config.js) or a personal Gmail
   }
-  function pcpAllPages(params, each) {
+  function pcpAllPages(params, each, tok) {
     var n = 0;
-    function page(tok) {
+    function page(pt) {
       var p = {}; Object.keys(params).forEach(function (k) { p[k] = params[k]; });
-      if (tok) p.pageToken = tok;
-      return driveList(p).then(function (r) {
+      if (pt) p.pageToken = pt;
+      return driveList(p, tok).then(function (r) {
         each(r.files || [], ++n);
         return r.nextPageToken ? page(r.nextPageToken) : null;
       });
     }
     return page(null);
   }
-  function readPersonal(seen) {
-    P.mine = 0; P.matches = []; P.matchBytes = 0; P.skippedMarked = 0; P.personalUnsure = 0; P.personalNoChecksum = 0;
-    P.log = 'Reading your personal drive…'; render();
+  // Two scan slots, one scan code: 'work' = the work account's My Drive (P), 'personal' = the Personal Drive page (Q).
+  // The shared drives are always read with the work token; only the personal My Drive list uses the personal token.
+  var Q = pcpFresh('idle', '');
+  var personalAuth = DashAuth.personal({
+    clientId: CLIENT_ID,
+    scope: CFG.scopes.personal,
+    onToken: function () { Q = pcpFresh('idle', ''); render(); },
+    onError: function () { Q = pcpFresh('idle', ''); Q.error = 'Personal sign-in did not complete.'; render(); }
+  });
+  function slotState(slot) { return slot === 'personal' ? Q : P; }
+  function readPersonal(seen, slot) {
+    var st = slotState(slot), tok = slot === 'personal' ? personalAuth.token() : undefined;
+    st.mine = 0; st.matches = []; st.matchBytes = 0; st.skippedMarked = 0; st.personalUnsure = 0; st.personalNoChecksum = 0;
+    st.log = 'Reading your ' + (slot === 'personal' ? 'personal Drive' : 'work My Drive') + '…'; render();
     return pcpAllPages({ corpora: 'user', q: "'me' in owners and trashed = false and mimeType != '" + FOLDER_MIME + "'", pageSize: '1000', fields: 'nextPageToken,files(id,name,size,md5Checksum,mimeType,modifiedTime,ownedByMe)' }, function (files, n) {
       files.forEach(function (f) {
         if (f.trashed || f.ownedByMe === false) return;
-        if (isShortcut(f) || isGoogleNative(f) || !f.md5Checksum) { P.personalNoChecksum++; return; }
-        if (isZeroByte(f)) { P.personalUnsure++; return; }
-        P.mine++;
-        if (isZzFamilyName(f.name) || isHoldFolderName(f.name)) { P.skippedMarked++; return; }
+        if (isShortcut(f) || isGoogleNative(f) || !f.md5Checksum) { st.personalNoChecksum++; return; }
+        if (isZeroByte(f)) { st.personalUnsure++; return; }
+        st.mine++;
+        if (isZzFamilyName(f.name) || isHoldFolderName(f.name)) { st.skippedMarked++; return; }
         if (seen[f.md5Checksum + ':' + String(f.size)]) {
           var sz = parseInt(f.size || '0', 10);
-          if (!sz) { P.personalUnsure++; return; }
-          P.matches.push({ id: f.id, name: f.name, size: sz, md5Checksum: f.md5Checksum, modifiedTime: f.modifiedTime || '', mimeType: f.mimeType || '' });
-          P.matchBytes += sz;
+          if (!sz) { st.personalUnsure++; return; }
+          st.matches.push({ id: f.id, name: f.name, size: sz, md5Checksum: f.md5Checksum, modifiedTime: f.modifiedTime || '', mimeType: f.mimeType || '' });
+          st.matchBytes += sz;
         }
       });
-      if (n % 5 === 1) { P.log = 'Reading your personal drive: ' + num(P.mine) + ' files so far'; render(); }
-    });
+      if (n % 5 === 1) { st.log = 'Reading: ' + num(st.mine) + ' files so far'; render(); }
+    }, tok).catch(function (err) { if (slot === 'personal') err.personal = true; throw err; });
   }
-  function pcpScan(mode) {
+  function pcpScan(mode, slot) {
     if (busy) return;
+    if (slot === 'personal' && !personalAuth.token()) { Q = pcpFresh('idle', ''); render(); return; }
     busy = true;
-    pcpLoadGen++;
-    var continuing = mode === 'continue' && P.keeper;
-    if (!continuing) P = pcpFresh('running', 'Starting…');
-    else { P.status = 'running'; P.error = ''; P.log = 'Continuing…'; }
+    if (slot !== 'personal') pcpLoadGen++;
+    var st = slotState(slot);
+    var continuing = mode === 'continue' && st.keeper;
+    if (!continuing) {
+      st = pcpFresh('running', 'Starting…');
+      if (slot === 'personal') Q = st; else P = st;
+    } else { st.status = 'running'; st.error = ''; st.log = 'Continuing…'; }
     render();
-    var start = continuing ? Promise.resolve() : apiGet(CFG.urls.driveApi + '/about?fields=user(emailAddress)').then(function (a) {
-      P.email = a && a.user ? a.user.emailAddress : '';
+    // Work slot only: which work account is signed in. The personal token is never used for this.
+    var start = continuing || slot === 'personal' ? Promise.resolve() : apiGet(CFG.urls.driveApi + '/about?fields=user(emailAddress)').then(function (a) {
+      st.email = a && a.user ? a.user.emailAddress : '';
     });
     start.then(function () { return listDrives(); }).then(function (ds) {
       var todo = ds;
-      if (continuing && P.failedDrives && P.failedDrives.length) {
+      if (continuing && st.failedDrives && st.failedDrives.length) {
         var ids = {};
-        P.failedDrives.forEach(function (d) { ids[d.id] = 1; });
+        st.failedDrives.forEach(function (d) { ids[d.id] = 1; });
         todo = ds.filter(function (d) { return ids[d.id]; });
       }
       return collectKeepers(todo, function (d, idx, total, n) {
-        P.log = 'Reading shared drive ' + idx + ' of ' + total + ' (' + d.name + '): ' + num(n) + ' kept copies so far';
+        st.log = 'Reading shared drive ' + idx + ' of ' + total + ' (' + d.name + '): ' + num(n) + ' kept copies so far';
         render();
       }).then(function (pack) {
-        if (continuing && P.keeper) {
-          Object.keys(pack.seen).forEach(function (k) { P.keeper.seen[k] = 1; });
+        if (continuing && st.keeper) {
+          Object.keys(pack.seen).forEach(function (k) { st.keeper.seen[k] = 1; });
           pack.bySize.forEach(function (set, size) {
-            var cur = P.keeper.bySize.get(size);
-            if (!cur) P.keeper.bySize.set(size, set);
+            var cur = st.keeper.bySize.get(size);
+            if (!cur) st.keeper.bySize.set(size, set);
             else set.forEach(function (md5) { cur.add(md5); });
           });
-          Object.keys(pack.stats).forEach(function (k) { P.keeper.stats[k] = (P.keeper.stats[k] || 0) + pack.stats[k]; });
-          P.stats = P.keeper.stats;
-          P.failedDrives = pack.failed;
-          P.keeper.failed = pack.failed;
+          Object.keys(pack.stats).forEach(function (k) { st.keeper.stats[k] = (st.keeper.stats[k] || 0) + pack.stats[k]; });
+          st.stats = st.keeper.stats;
+          st.failedDrives = pack.failed;
+          st.keeper.failed = pack.failed;
         } else {
-          P.keeper = pack;
-          P.stats = pack.stats;
-          P.failedDrives = pack.failed;
+          st.keeper = pack;
+          st.stats = pack.stats;
+          st.failedDrives = pack.failed;
         }
-        return readPersonal(P.keeper.seen);
+        return readPersonal(st.keeper.seen, slot);
       });
     }).then(function () {
-      var missed = P.failedDrives.length ? ' ' + P.failedDrives.length + ' shared drive' + (P.failedDrives.length === 1 ? '' : 's') + ' could not be read and were not used as proof.' : '';
-      P.status = 'done';
-      P.log = 'Finished ' + stamp(Date.now()) + '. Compared ' + num(P.stats.keepers) + ' live kept copies with ' + num(P.mine) + ' personal files.' + missed;
+      var missed = st.failedDrives.length ? ' ' + st.failedDrives.length + ' shared drive' + (st.failedDrives.length === 1 ? '' : 's') + ' could not be read and were not used as proof.' : '';
+      st.status = 'done';
+      st.log = 'Finished ' + stamp(Date.now()) + '. Compared ' + num(st.stats.keepers) + ' live kept copies with ' + num(st.mine) + ' files in this Drive.' + missed;
     }, function (err) {
       var fr = friendlyError(err);
-      P.status = 'failed'; P.error = fr.text;
-      if (fr.expired) { P.keeper = null; P.failedDrives = []; handleExpired(); }
-    }).then(function () { busy = false; P.binStatus = 'idle'; render(); loadPcpCandidates(); });
+      st.status = 'failed'; st.error = err && err.personal && fr.expired ? 'Personal sign-in expired. Sign in again.' : fr.text;
+      if (err && err.personal) { if (fr.expired) personalAuth.clear(); }
+      else if (fr.expired) { st.keeper = null; st.failedDrives = []; handleExpired(); }
+    }).then(function () {
+      busy = false;
+      if (slot === 'personal') { render(); return; }
+      P.binStatus = 'idle'; render(); loadPcpCandidates();
+    });
   }
   function classifyPcp(f, led) {
     var reason = '', spell = spellingOf(f.name, PCP_PREFIX);
@@ -1763,19 +1786,42 @@
         (reason ? '<div class="skip">' + esc(reason) + '</div>' : '') + '</li>';
     }).join('') + '</ul>' + showBar(listKey, items.length, step);
   }
-  function viewPersonal() {
-    var running = P.status === 'running';
-    var html = '<section class="card slot4' + (P.status === 'done' ? '' : P.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + esc(P.email ? pcpLabel() : 'PC-Personal') + '</h3>' +
-      '<span class="state ' + (P.status === 'done' ? 'st-ok' : P.status === 'failed' ? 'st-failed' : running ? 'st-loading' : 'st-idle') + '"><span class="shape"></span>' +
-      (P.status === 'done' ? 'Scanned' : P.status === 'failed' ? 'Failed' : running ? 'Reading…' : 'Not scanned') + '</span></div>' +
+  // Drives > Work My Drive (slot 'work') and Drives > Personal Drive (slot 'personal'): look-only. Scan and list only;
+  // the rename and bin steps for the work account live on #/bin (pcpBinCard). The Personal Drive page can never change anything.
+  function viewPersonal(slot) {
+    var st = slotState(slot), running = st.status === 'running', personal = slot === 'personal';
+    var title = personal ? 'Personal Drive' : 'Work My Drive';
+    var html = '<section class="card slot4' + (st.status === 'done' ? '' : st.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + title + '</h3>' +
+      '<span class="state ' + (st.status === 'done' ? 'st-ok' : st.status === 'failed' ? 'st-failed' : running ? 'st-loading' : 'st-idle') + '"><span class="shape"></span>' +
+      (st.status === 'done' ? 'Scanned' : st.status === 'failed' ? 'Failed' : running ? 'Reading…' : 'Not scanned') + '</span></div>';
+    if (personal) html += '<ul class="notes"><li>Look only: this page never renames, moves or bins.</li><li>Uses its own read-only sign-in, kept only while this tab is open and never used for work.</li></ul>';
+    else html += '<ul class="notes"><li>Finds files in your work My Drive that already sit in a shared drive (exact copy).</li><li>Look only here. Rename and bin them in Bin.</li></ul>';
+    if (st.log) html += '<p class="note">' + esc(st.log) + '</p>';
+    if (st.error) html += '<p class="note fail">Stopped: ' + esc(st.error) + '</p>';
+    if (st.status === 'done') {
+      var stt = st.stats || emptyKeeperStats();
+      html += '<p class="note"><strong>' + num(st.matches.length) + '</strong> personal files (' + (st.matchBytes / 1e9).toFixed(2) + ' GB) already in a shared drive.</p>';
+      html += '<p class="note" data-pcp-counts>Counts: ' + num(st.matches.length) + ' exact copies, ' + num(st.skippedMarked) + ' already marked, ' + num(st.personalUnsure) + ' UNSURE (zero-byte), ' + num(st.personalNoChecksum) + ' with no checksum (shortcuts and Google files), ' + num(stt.notKeeper) + ' shared copies ignored (marked, or inside a ZZ_ or AA_HOLD_ folder), ' + num(stt.shortcuts) + ' shortcuts and ' + num(stt.native) + ' Google files not used as proof.</p>';
+      if (st.failedDrives && st.failedDrives.length) html += '<p class="note fail">Not used as proof: ' + esc(st.failedDrives.map(function (d) { return d.name; }).join(', ')) + '. Press Continue to read them again.</p>';
+      if (st.matches.length) html += '<div data-pcp-list="' + slot + '"><h4>Already in a shared drive</h4><ul class="files">' + st.matches.slice(0, listShown('pcp-look-' + slot, st.matches.length, 30)).map(function (f) {
+        return '<li><div class="fname">' + esc(f.name) + '</div></li>';
+      }).join('') + '</ul>' + showBar('pcp-look-' + slot, st.matches.length, 30) + '</div>';
+    }
+    if (!personal && P.binStatus === 'ok') html += '<p class="note" data-pcp-inbin>' + num(allowedItems('pcpbin').length) + ' ready in Bin.</p>';
+    if (personal && !personalAuth.token()) {
+      html += '<div class="actions"><button class="btn" type="button" data-action="psignin">' + icon('in') + '<span>Sign in to your personal Google account (read-only)</span></button></div>';
+    } else {
+      html += '<div class="actions"><button class="btn" type="button" data-action="pcpscan" data-slot="' + slot + '"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>Scan this Drive vs shared drives</span></button>' +
+        (st.failedDrives && st.failedDrives.length && !busy ? '<button class="btn" type="button" data-action="pcpresume" data-slot="' + slot + '"><span>Continue: read the missed shared drives</span></button>' : '') + '</div>';
+    }
+    return html + '</section>';
+  }
+  // Bin > Work My Drive: rename exact copies (from the last Work My Drive scan) and bin marked files. Bin stage 5 folds this into Ready to bin.
+  function pcpBinCard() {
+    var html = '<section class="card slot4" id="pcpTidy"><div class="cardhead"><h3>Work My Drive: files to tidy</h3><span class="mtag">Work My Drive</span></div>' +
       '<ul class="notes"><li>Finds personal files already in a shared drive (exact copy).</li><li>PC-Personal = the business Google account. lisah Personal = the personal Gmail account.</li><li>Nothing changes until you click Rename.</li></ul>';
-    if (P.log) html += '<p class="note">' + esc(P.log) + '</p>';
-    if (P.error) html += '<p class="note fail">Stopped: ' + esc(P.error) + '</p>';
-    if (P.status === 'done') {
-      var st = P.stats || emptyKeeperStats();
-      html += '<p class="note"><strong>' + num(P.matches.length) + '</strong> personal files (' + (P.matchBytes / 1e9).toFixed(2) + ' GB) already in a shared drive.</p>';
-      html += '<p class="note" data-pcp-counts>Counts: ' + num(P.matches.length) + ' to rename, ' + num(P.skippedMarked) + ' already marked, ' + num(P.personalUnsure) + ' UNSURE (zero-byte), ' + num(P.personalNoChecksum) + ' with no checksum (shortcuts and Google files), ' + num(st.notKeeper) + ' shared copies ignored (marked, or inside a ZZ_ or AA_HOLD_ folder), ' + num(st.shortcuts) + ' shortcuts and ' + num(st.native) + ' Google files not used as proof.</p>';
-      if (P.failedDrives && P.failedDrives.length) html += '<p class="note fail">Not used as proof: ' + esc(P.failedDrives.map(function (d) { return d.name; }).join(', ')) + '. Press Continue to read them again.</p>';
+    if (P.status !== 'done') html += '<p class="note">Scan <a href="#/drives/work">Work My Drive</a> to find exact copies to rename.</p>';
+    else {
       if (P.matches.length) {
         html += '<div data-bin-list="pcp-rename"><h4>Rename matches</h4>' + pickButtons('pcpmark', 'pcpmark', 'Rename') + tickList('pcpmark', P.matches, function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : (isZeroByte(f) ? 'UNSURE: zero-byte file, left alone.' : (isMoneyRollback(f, f._chain || []) ? E02_LABEL : '')); }, 'pcp-rename') + '</div>';
       }
@@ -1787,8 +1833,6 @@
         return '<li><div class="fname">' + esc(n.name) + '</div><p class="res bad">' + esc(n.text) + '</p></li>';
       }).join('') + '</ul>';
     }
-    html += '<div class="actions"><button class="btn" type="button" data-action="pcpscan"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>1. Scan this account vs shared drives</span></button>' +
-      (P.failedDrives && P.failedDrives.length && !busy ? '<button class="btn" type="button" data-action="pcpresume"><span>Continue: read the missed shared drives</span></button>' : '') + '</div>';
     html += '<div data-bin-list="pcp-bin"><h4>Personal files starting ZZ_DELETE_DRIVE_</h4>';
     if (P.ledgerNote) html += '<p class="note fail">' + esc(P.ledgerNote) + '</p>';
     if (P.binStatus !== 'ok') html += '<p class="note">Reading marked personal files…</p>';
@@ -2112,19 +2156,6 @@
   }
 
   // ---- Views ----
-  function figure(slot, label, value, p, srcName, srcUrl, actHash, actLabel, partial) {
-    var cls = value === '–' ? (p.status === 'failed' ? ' failed' : ' pending') : '';
-    var meta = p.status === 'failed' ? '<span class="state st-failed"><span class="shape"></span>Read failed</span>' :
-      p.status === 'loading' ? '<span class="state st-loading"><span class="shape"></span>Reading…</span>' :
-      p.readAt ? esc(srcName) + ' · ' + esc(stamp(p.readAt)) :
-      '<span class="state st-idle"><span class="shape"></span>' + (signedIn ? 'Not read yet' : 'Not signed in') + '</span>';
-    return '<div class="card sec fig ' + slot + cls + '">' +
-      '<div class="label">' + esc(label) + '</div>' +
-      '<div class="num">' + value + '</div>' +
-      '<div class="meta">' + meta + (partial ? ' <span class="chip">Partial</span>' : '') + '</div>' +
-      '<a class="act" href="#/' + actHash + '">' + esc(actLabel) + '</a></div>';
-  }
-
   function moneyTile() {
     var MC = window.MoneyCore, p = S.money, d = p.data;
     var head = '<div class="cardhead"><h3>Money</h3>' + stateBadge(p, d ? 1 : null) + '</div>';
@@ -2166,20 +2197,16 @@
     return h + foot + '</section>';
   }
 
-  // Big one-tap links for the home screen. Only links that already exist, plus the MOVE workbook.
+  // Big one-tap links for the home screen: the MOVE workbook and one tile per hub (each opens its own tab).
   function keyProjects() {
     var tiles = [
       ['MOVE', MOVE_URL, true],
       ['Money Hub', 'money/', true],
       ['CD Hub', 'cdhub/', true],
+      ['Factory', 'factory/', true],
       ['Marketplace', 'marketplace/', true],
       ['GA Hub', 'food/', true],
-      ['Studio', 'studio/', true],
-      ['Read first', '#/readfirst', false],
-      ['PC-Personal', '#/personal', false],
-      ['Drive check', '#/usb', false],
-      ['Bin', '#/bin', false],
-      ['Changes', '#/changes', false]
+      ['Studio', 'studio/', true]
     ];
     return '<section class="card" id="key-projects" aria-labelledby="key-projects-title">' +
       '<h2 id="key-projects-title">Key projects & docs</h2>' +
@@ -2238,26 +2265,17 @@
     return h + '</section>';
   }
 
-  // Home opens with what needs you: the count, three big tiles (each opens a tab), then the ONE most urgent thing.
+  // Home opens with what needs you: the count, then the ONE most urgent thing. No tiles repeat a tab (stage 2c).
   function homeTop() {
     if (!signedIn) return '';
     var all = needsToday(), n = all.length, reading = S.money.status === 'loading' && !S.money.data;
-    var dr = S.drive.data, day = cfWithin(DAY), b = S.bin.data;
-    var tiles = [
-      ['drive', 'slot0', dr ? num(dr.day, dr.dayMore) : '–', 'Drive: changed 24h'],
-      ['bin', 'slot8', b && b.ready ? num(b.ready.length) : '–', b && b.ready ? 'Bin: ready to bin' : 'Bin: tap to check'],
-      ['changes/24h', 'slot7', day ? num(day.length) : '–', 'Changes: last 24h']
-    ];
     // Split by urgency (read pills): urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
     var split = [['risk', 'urgent'], ['fin', 'due soon'], ['todo', 'to do']].map(function (k) {
       var c = all.filter(function (x) { return k[0] === 'todo' ? (x.kind === 'ops' || x.kind === 'bin') : x.kind === k[0]; }).length;
       return c ? '<span class="cnt wide k-' + k[0] + '">' + c + ' ' + k[1] + '</span>' : '';
     }).join('');
     var h = '<section id="homeTop" aria-label="Needs you"><div class="needsrow"><p class="needsline">Needs you: ' + (n ? n : reading ? '…' : '<span class="zero">0</span>') + '</p>' +
-      (split ? '<span class="hsplit" id="needsSplit">' + split + '</span>' : '') + '</div>' +
-      '<div class="hometiles">' + tiles.map(function (t) {
-        return '<a class="hometile ' + t[1] + '" href="#/' + t[0] + '"><span class="v">' + t[2] + '</span><span class="k">' + esc(t[3]) + '</span></a>';
-      }).join('') + '</div>';
+      (split ? '<span class="hsplit" id="needsSplit">' + split + '</span>' : '') + '</div>';
     if (n) {
       var x = all[0];
       // Next: the one thing to do now, with one button. White card, 1px ink edge.
@@ -2270,29 +2288,6 @@
     }
     return h + '</section>';
   }
-  function viewMore() {
-    var drv = [
-      ['readfirst', '#/readfirst', 'slot0', 'read', 'Read first', 'The AI read-first folder'],
-      ['personal', '#/personal', 'slot4', 'drive', 'PC-Personal', 'Personal copies to tidy'],
-      ['usb', '#/usb', 'slot4', 'drive', 'Drive check', 'Check a plugged-in drive']
-    ];
-    var hubs = [
-      ['money', 'money/', 'slotfin', 'money', 'Money Hub', 'Cash, dates and to-dos'],
-      ['cdhub', 'cdhub/', 'slot7', 'map', 'CD Hub', 'Dogs, cabins and litters'],
-      ['factory', 'factory/', 'slot7', 'factory', 'Factory', 'The app factory'],
-      ['marketplace', 'marketplace/', 'slotsales', 'shop', 'Marketplace', 'Selling and posting'],
-      ['food', 'food/', 'slotsales', 'shop', 'GA Hub', 'Dog food orders, GA invoices, products'],
-      ['studio', 'studio/', 'slot7', 'studio', 'Studio', 'Assets: idea to approved to reused']
-    ];
-    function link(t) {
-      var hub = t[1].charAt(0) !== '#';
-      return '<a class="card sec morelink ' + t[2] + '" href="' + t[1] + '" data-nav="' + t[0] + '"' + (hub ? HUB_TAB : '') + '>' + icon(t[3]) +
-        '<span>' + esc(t[4]) + '<small>' + esc(t[5]) + '</small></span></a>';
-    }
-    return '<section class="card" id="moreDrive" aria-labelledby="moreDriveT"><h3 id="moreDriveT">Drive tools</h3><div class="morelist">' + drv.map(link).join('') + '</div></section>' +
-      '<section class="card" id="moreHubs" aria-labelledby="moreHubsT"><h3 id="moreHubsT">Other hubs</h3><p class="hint">Each opens in its own tab.</p><div class="morelist">' + hubs.map(link).join('') + '</div></section>';
-  }
-
   function viewMap() {
     // Home: what needs you first (homeTop), then Key projects, then the full Needs you today list.
     var html = homeTop() + keyProjects() + needsPanel();
@@ -2303,16 +2298,6 @@
         '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
     }
     html += moneyTile();
-    var rf = S.readfirst, dr = S.drive, cf = S.cf;
-    var day = cfWithin(DAY), week = cfWithin(7 * DAY), partial = cf.data && cf.data.capped;
-    html += '<div class="figs">' +
-      figure('slot0', 'Read first items', rf.data ? num(rf.data.files.length) : '–', rf, 'Read first', rfUrl(), 'readfirst', 'Open Read first') +
-      figure('slot0', 'Shared drives last 24h', dr.data ? num(dr.data.day, dr.data.dayMore) : '–', dr, 'Shared drives', 'https://drive.google.com/drive/shared-drives', 'drive', 'Open Drive') +
-      figure('slot7', 'Cf files', cf.data ? num(cf.data.files.length) : '–', cf, cfName(), cfUrl(), 'changes/totals', 'Open totals', partial) +
-      figure('slot7', 'Cf folders', cf.data ? num(cf.data.folderCount) : '–', cf, cfName(), cfUrl(), 'changes/totals', 'Open totals', partial) +
-      figure('slot7', 'Cf last 24h', day ? num(day.length) : '–', cf, cfName(), cfUrl(), 'changes/24h', 'Open last 24h', partial) +
-      figure('slot7', 'Cf 7 days', week ? num(week.length) : '–', cf, cfName(), cfUrl(), 'changes/7d', 'Open 7 days', partial) +
-      '</div>';
     return html;
   }
 
@@ -2336,7 +2321,10 @@
   function viewDrive(r) {
     var p = S.drive, d = p.data, html;
     if (!r.driveId) {
-      html = '<section class="card slot0' + cardClass(p) + '"><div class="cardhead"><h3>Recent in shared drives</h3>' + stateBadge(p, d ? d.files.length : null) + '</div>';
+      // Read first is pinned here (not a pill): one line into the folder the AIs read first.
+      var rf = S.readfirst;
+      html = '<p class="note" data-readfirst-pin><a href="#/drives/readfirst">Read first</a> · the folder the AIs read first' + (rf.data ? ' (' + num(rf.data.files.length) + ' items)' : '') + '</p>';
+      html += '<section class="card slot0' + cardClass(p) + '"><div class="cardhead"><h3>Recent in shared drives</h3>' + stateBadge(p, d ? d.files.length : null) + '</div>';
       html += failNote(p);
       if (d) {
         html += drivePicker(r);
@@ -2355,14 +2343,14 @@
     html = '<section class="card slot0' + cardClass(fp) + '"><div class="cardhead"><h3>' + esc(title) + '</h3>' + stateBadge(fp, fd ? fd.files.length : null) + '</div>';
     html += drivePicker(r);
     if (drv && r.folderId) {
-      var up = fd && fd.folder && fd.folder.parents && fd.folder.parents[0] && fd.folder.parents[0] !== r.driveId ? '#/drive/' + r.driveId + '/' + fd.folder.parents[0] : '#/drive/' + r.driveId;
-      html += '<div class="crumbs"><a href="#/drive/' + esc(r.driveId) + '">' + esc(drv.name) + '</a><span>/ ' + esc(title) + '</span><a href="' + esc(up) + '">Up one level</a></div>';
+      var up = fd && fd.folder && fd.folder.parents && fd.folder.parents[0] && fd.folder.parents[0] !== r.driveId ? '#/drives/shared/' + r.driveId + '/' + fd.folder.parents[0] : '#/drives/shared/' + r.driveId;
+      html += '<div class="crumbs"><a href="#/drives/shared/' + esc(r.driveId) + '">' + esc(drv.name) + '</a><span>/ ' + esc(title) + '</span><a href="' + esc(up) + '">Up one level</a></div>';
     }
     html += failNote(fp);
     if (fd) {
       html += '<p class="note">' + num(fd.files.length) + (fd.more ? '+' : '') + ' items.</p>';
       html += pagedList(fd.files, r.page, 'drive/' + r.driveId + (r.folderId ? '/' + r.folderId : ''),
-        { who: true, folderHref: function (f) { return '#/drive/' + r.driveId + '/' + f.id; } }, 'Folder is empty.');
+        { who: true, folderHref: function (f) { return '#/drives/shared/' + r.driveId + '/' + f.id; } }, 'Folder is empty.');
     }
     var url = fd && fd.folder && fd.folder.webViewLink || folderUrl(r.folderId || r.driveId);
     html += sourceLine(title, url, fp) + '</section>';
@@ -2444,6 +2432,7 @@
         }).join('') + '</ul>') + '</div>';
     }
     html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
+    html += pcpBinCard();
     // Dropbox (counts only)
     var dx = S.dbx, dd = dx.data;
     html += foldOpen('dropbox', true, 'card slot2' + cardClass(dx), 'dropboxCard') + '<summary><h3>Dropbox: delete marked files</h3>' + stateBadge(dx, null) + '</summary><div class="fbody">';
@@ -2533,34 +2522,71 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Dashboard', readfirst: 'Read first', drive: 'Drive', personal: 'PC-Personal', usb: 'Drive check', bin: 'Bin', changes: 'Changes', more: 'More' };
-  // Sections not in the bottom bar light up its More tab.
-  var TAB_OF = { readfirst: 'more', personal: 'more', usb: 'more' };
+  var VIEWS = { map: 'Dashboard', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
+  // Every Drives page lights up the Drives tab.
+  var TAB_OF = { drive: 'drives', readfirst: 'drives', personal: 'drives', pdrive: 'drives', usb: 'drives' };
+  // Drives sub-menu: #/drives/<key> shows view <view>. The pills are the existing .subnav (as on Changes).
+  var DRIVES = [
+    { key: 'shared', view: 'drive', label: 'Shared drives', purpose: 'Browse the shared drives and see what changed in 24 hours.' },
+    { key: 'work', view: 'personal', label: 'Work My Drive', purpose: 'Find files in your work My Drive that already sit in a shared drive.' },
+    { key: 'personal-drive', view: 'pdrive', label: 'Personal Drive', purpose: 'See which files in your personal Google Drive already sit in a shared drive.' },
+    { key: 'usb', view: 'usb', label: 'Drive check', purpose: 'Check a plugged-in drive against the shared drives before you clear it.' }
+  ];
+  var DRIVES_PURPOSE = "See what's where, spot what changed, and send anything to tidy to Bin.";
+  var READFIRST_PURPOSE = 'Open the folder the AIs read first.';
+  // Old addresses keep working: #/drive(/drive/folder), #/readfirst, #/personal and #/usb move under #/drives;
+  // #/more (the old fifth tab) opens the Dashboard, which holds the hub tiles.
+  function redirectOld(hash) {
+    if (/^#\/more(\/.*)?$/.test(hash)) return '#/map';
+    var m = /^#\/(drive|readfirst|personal|usb)(\/.*)?$/.exec(hash);
+    if (!m) return null;
+    var rest = m[2] || '';
+    if (m[1] === 'drive') return '#/drives/shared' + rest;
+    return '#/drives/' + (m[1] === 'personal' ? 'work' : m[1]) + rest;
+  }
+  function drivesNav(r) {
+    var cur = r.view === 'readfirst' || r.view === 'drives' ? 'drive' : r.view;
+    return '<nav class="subnav" aria-label="Drives">' + DRIVES.map(function (d) {
+      return '<a href="#/drives/' + d.key + '"' + (d.view === cur ? ' aria-current="page"' : '') + '>' + esc(d.label) + '</a>';
+    }).join('') + '</nav>';
+  }
+  function drivesPurpose(r) {
+    var line = r.view === 'drives' ? DRIVES_PURPOSE : r.view === 'readfirst' ? READFIRST_PURPOSE :
+      DRIVES.filter(function (d) { return d.view === r.view; })[0].purpose;
+    return '<p class="hint" data-purpose>' + esc(line) + '</p>';
+  }
   function parseRoute() {
     var parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
+    if (parts[0] === 'drives') {
+      var sub = DRIVES.filter(function (d) { return d.key === parts[1]; })[0];
+      parts = parts[1] === 'readfirst' ? ['readfirst'].concat(parts.slice(2)) : sub ? [sub.view].concat(parts.slice(2)) : ['drives'].concat(parts.slice(1));
+    } else if (parts[0] !== 'map' && parts[0] !== 'bin' && parts[0] !== 'changes') parts = [];
     var view = parts[0] && VIEWS[parts[0]] ? parts[0] : null;
     var r = { view: view, sub: null, page: 1 };
     parts.slice(1).forEach(function (x) {
       if (/^p\d+$/.test(x)) r.page = parseInt(x.slice(1), 10);
       else if (view === 'changes' && SUBS.some(function (s) { return s.key === x; })) r.sub = x;
-      else if (view === 'drive' && /^[A-Za-z0-9_-]{5,}$/.test(x)) { if (!r.driveId) r.driveId = x; else if (!r.folderId) r.folderId = x; }
+      else if ((view === 'drive' || view === 'drives') && /^[A-Za-z0-9_-]{5,}$/.test(x)) { if (!r.driveId) r.driveId = x; else if (!r.folderId) r.folderId = x; }
     });
     if (view === 'changes' && !r.sub) r.sub = 'recent';
     return r;
   }
   var lastView = null;
   function render() {
+    var moved = redirectOld(location.hash);
+    if (moved) history.replaceState(null, '', moved);
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal() : r.view === 'usb' ? viewUsb() : r.view === 'more' ? viewMore() : viewChanges(r);
+    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : viewChanges(r);
+    if (signedIn && TAB_OF[r.view] === 'drives' || signedIn && r.view === 'drives') html = drivesNav(r) + drivesPurpose(r) + html;
     if (signedIn && r.view !== 'map') html = '<p><a class="btn back" href="#/map" data-back-home>← Dashboard</a></p>' + html;
     var routeKey = location.hash;
     var changed = routeKey !== lastView;
     el.setAttribute('data-view', r.view);
     el.setAttribute('data-route', routeKey);
     $('hereTitle').textContent = VIEWS[r.view] + (r.view === 'changes' ? ' · ' + SUBS.filter(function (s) { return s.key === r.sub; })[0].label : '') +
-      (r.view === 'drive' && r.driveId ? ' · ' + driveName(r.driveId) : '');
+      ((r.view === 'drive' || r.view === 'drives') && r.driveId ? ' · ' + driveName(r.driveId) : '');
     var nNeeds = needsCount();
     document.title = (nNeeds ? '(' + nNeeds + ') ' : '') + VIEWS[r.view] + ' · Lisa Dashboard';
     var tab = TAB_OF[r.view] || r.view;
@@ -2661,7 +2687,8 @@
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     S = freshState();
     F = {}; R = { sweep: null, check: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++;
-    P = pcpFresh('idle', ''); U = usbBlank();
+    P = pcpFresh('idle', ''); Q = pcpFresh('idle', ''); U = usbBlank();
+    personalAuth.clear();
     if (window.MoneyCore) window.MoneyCore.clearCache();
     showBanner(otherTab === true ? 'Signed out in another tab. Nothing kept.' : 'Signed out. Nothing kept.', true, false);
     render();
@@ -2730,8 +2757,9 @@
       var el = document.querySelector('[data-fold="' + key + '"]');
       if (el) { el.scrollIntoView({ block: 'start' }); var sm = el.querySelector('summary'); if (sm) sm.focus(); }
     }
-    else if (a === 'pcpscan') pcpScan();
-    else if (a === 'pcpresume') pcpScan('continue');
+    else if (a === 'pcpscan') pcpScan('', t.getAttribute('data-slot') || 'work');
+    else if (a === 'pcpresume') pcpScan('continue', t.getAttribute('data-slot') || 'work');
+    else if (a === 'psignin') personalAuth.request();
     else if (a === 'pcpmark') pcpMark();
     else if (a === 'pcpbin') pcpBin();
     else if (a === 'usbscan') usbScan();
@@ -2757,7 +2785,7 @@
       render();
       return;
     }
-    if (t && t.id === 'drivePicker') location.hash = t.value ? '#/drive/' + t.value : '#/drive';
+    if (t && t.id === 'drivePicker') location.hash = t.value ? '#/drives/shared/' + t.value : '#/drives/shared';
   });
   // A screen change moves keyboard focus to the screen title (no scroll), so screen readers say where you are.
   // Tapping the link to the screen you are already on reads it again and goes back to its top (never a dead click).

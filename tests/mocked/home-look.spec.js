@@ -17,7 +17,7 @@ const noSidewaysScroll = async (page, where) => {
   expect(w.doc, `${where}: page is ${w.doc}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
   expect(w.body, `${where}: body is ${w.body}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
 };
-const VIEWS = [['map', 'Dashboard'], ['drive', 'Drive'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['more', 'More']];
+const VIEWS = [['map', 'Dashboard'], ['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent']];
 const goTab = async (page, key, title) => {
   await page.locator(`#mainNav a[data-nav="${key}"]`).click();
   await expect(page.locator('#hereTitle')).toHaveText(title);
@@ -41,7 +41,7 @@ test.describe('Home: house look', () => {
   test('hover only turns the 1px edge ink: no element grows, shrinks or moves', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const sels = ['a.hometile >> nth=0', 'a.keytile >> nth=0', '#urgentOne a.btn', 'header #refreshBtn', '#mainNav a[data-nav="drive"]'];
+    const sels = ['a.hometile >> nth=0', 'a.keytile >> nth=0', '#urgentOne a.btn', 'header #refreshBtn', '#mainNav a[data-nav="drives"]'];
     for (const sel of sels) {
       const el = page.locator(sel);
       if (!(await el.count())) continue;
@@ -141,8 +141,8 @@ test.describe('Home: house look', () => {
             pale: bg.a === 1 && c.backgroundColor !== card && L.ratio(bg, cardRgb) < 1.6, coloured };
         }, coloured);
       };
-      const coloured = [['a.ment.bad', 'rose money entity'], ['a.ment:not(.bad)', 'copper money entity'], ['a.hometile.slot7', 'purple Changes tile']];
-      const more = [['#view a.morelink.slotfin', 'Money Hub'], ['#view a.morelink.slot4', 'PC-Personal'], ['#view a.morelink.slot7', 'Factory'], ['#view a.morelink.slotsales', 'Marketplace']];
+      // Stage 2c: the home tiles and the More tab are gone, so the coloured and neutral checks use what remains.
+      const coloured = [['a.ment.bad', 'rose money entity'], ['a.ment:not(.bad)', 'copper money entity']];
       const run = async (list) => { for (const [sel, name] of list) {
         const r = await check(sel, true);
         expect(r.outline, name).toBe('solid 1px -1px');
@@ -152,13 +152,11 @@ test.describe('Home: house look', () => {
         expect(r.pale, name + ': a pale tint ' + r.bg).toBe(true);
       } };
       await run(coloured);
-      for (const sel of ['#urgentOne a.btn', 'a.keytile', 'a.hometile.slot0']) {
+      for (const sel of ['#urgentOne a.btn', 'a.keytile']) {
         const r = await check(sel, false);
         expect([r.outline, r.oc], sel + ': neutral hover = ink line').toEqual(['solid 1px -1px', r.ink]);
         expect(r.pale && r.bg !== r.card, sel + ': muted tint ' + r.bg).toBe(true);
       }
-      await goTab(page, 'more', 'More');
-      await run(more);
       await goTab(page, 'bin', 'Bin');
       const allow = page.locator('[data-action="grantwrite"]');
       if (await allow.count()) { await page.locator('#view details.fold > summary').first().click().catch(() => {}); }
@@ -262,7 +260,7 @@ test.describe('Home: house look', () => {
     const foot = await page.locator('#mainNav').evaluate((e) => getComputedStyle(e).backgroundColor);
     expect(head).toBe('rgb(58, 54, 50)'); // #3A3632 warm charcoal, never black
     expect(foot).toBe('rgb(70, 65, 59)'); // #46413B one step lighter
-    const tab = await page.locator('#mainNav a[data-nav="drive"]').evaluate((e) => getComputedStyle(e).backgroundColor);
+    const tab = await page.locator('#mainNav a[data-nav="drives"]').evaluate((e) => getComputedStyle(e).backgroundColor);
     expect(tab).toBe('rgb(255, 254, 251)');
     const n = page.locator('#n-map');
     if ((await n.textContent()).trim()) {
@@ -374,8 +372,8 @@ if (SHOTS) {
         await signIn(page);
         await page.waitForTimeout(300);
         await page.screenshot({ path: `${SHOTS}/hub-home-${w}-${scheme}.png`, fullPage: true });
-        await goTab(page, 'more', 'More');
-        await page.screenshot({ path: `${SHOTS}/hub-home-${w}-${scheme}-more.png`, fullPage: false });
+        await goTab(page, 'drives', 'Drives');
+        await page.screenshot({ path: `${SHOTS}/hub-home-${w}-${scheme}-drives.png`, fullPage: false });
       });
     }
   }
