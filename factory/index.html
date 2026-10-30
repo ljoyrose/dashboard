@@ -191,7 +191,15 @@
   .stage.d .n { background: var(--t-ok); border-color: var(--r-ok); }
   .stage.c .n { background: var(--ljr-6-tint); border-color: var(--r-sales); }
   .stage.c { font-weight: 600; }
-  .stage .r { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+  .stage .r { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .stage { flex-wrap: wrap; }
+  /* Per-stage checks: read-only rings, words ink. Pass = green ring, fail = rose ring + tint, not run = the control line. */
+  .ck { font-size: 13px; font-weight: 600; color: var(--ink); border: 1px solid var(--ctl); border-radius: var(--radius); height: 22px; padding: 0 6px; display: inline-flex; align-items: center; white-space: nowrap; }
+  .ck[data-ck="pass"] { border-color: var(--r-ok); } .ck[data-ck="fail"] { border-color: var(--r-risk); background: var(--t-risk); }
+  details.fold { margin: 0 0 8px 34px; }
+  details.fold > summary { font-weight: 400; color: var(--muted); }
+  details.fold[open] > summary { margin-bottom: 4px; }
+  details.fold .lines { padding-left: 0; }
   .lines { list-style: none; margin: 0 0 8px; padding: 0 0 0 34px; }
   .lines li { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 4px 0; }
   .lines li .who { margin-left: auto; font-size: 13px; color: var(--muted); }
@@ -546,16 +554,22 @@
       var cls = n !== null && i < n ? 'd' : i === n ? 'c' : '';
       var mineLines = subs.filter(function (x) { return x.tags.indexOf('st-' + i) >= 0; });
       var lines = mineLines.length ? mineLines : tpl.filter(function (x) { return x.tags.indexOf('st-' + i) >= 0; });
-      var done = lines.filter(function (x) { return !isOpen(x); }).length;
+      // Checks (JOB 32): this app's own lines are pass (closed), fail (a status with "fail") or not run (open). Template lines
+      // were never run for this app, so they all count as not run. No lines at all: "not recorded".
+      var fail = mineLines.filter(function (x) { return /fail/i.test(x.status); }).length;
+      var pass = mineLines.filter(function (x) { return !isOpen(x); }).length, none = lines.length - pass - fail;
       var isOpenRow = open[i] === undefined ? i === n : open[i];
-      html += '<div class="stage ' + cls + '" data-stage="' + i + '"><span class="n" aria-hidden="true">' + (cls === 'd' ? '\u2713' : cls === 'c' ? '\u25cf' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i === 6 ? ' ' + ic('coin') : '') +
-        '<span class="r">' + (mineLines.length ? done + ' / ' + lines.length : lines.length ? lines.length + ' lines' : '') + '</span></div>';
+      html += '<div class="stage ' + cls + '" data-stage="' + i + '"><span class="n" aria-hidden="true">' + (cls === 'd' ? '✓' : cls === 'c' ? '●' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i === 6 ? ' ' + ic('coin') : '') +
+        '<span class="r">' + (lines.length ? (pass ? '<span class="ck" data-ck="pass">✓ ' + pass + ' pass</span>' : '') + (fail ? '<span class="ck" data-ck="fail">✗ ' + fail + ' fail</span>' : '') +
+          (none ? '<span class="ck" data-ck="none">' + none + ' not run</span>' : '') : '<span class="nr">not recorded</span>') + '</span></div>';
       if (isOpenRow) {
-        html += mineLines.length ? '<div class="clines">' + lines.map(function (x) { return row(x, x.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view'); }).join('') + (i === 6 ? '<ul class="lines">' + sendsFor(t) + '</ul>' : '') + '</div>' : '<ul class="lines">' + lines.map(function (x) {
-          var who = (x.tags.filter(function (g) { return /^who-/.test(g); })[0] || '').replace('who-', '');
-          return '<li>' + ic(isOpen(x) ? 'dot' : 'tick') + esc(x.name.replace(/^(TEST-)?[^·]+ · /, '').replace(/^\d\s·\s/, '')) + '<span class="who">' + esc(who) + '</span></li>';
-        }).join('') + (!mineLines.length && lines.length ? '<li class="muted">Template</li>' : '') +
-        (i === 6 ? sendsFor(t) : '') + '</ul>';
+        // The template's rule lines (53 on Step 6) sit in a closed fold; prompts stay in view.
+        html += mineLines.length ? '<div class="clines">' + lines.map(function (x) { return row(x, x.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view'); }).join('') + (i === 6 ? '<ul class="lines">' + sendsFor(t) + '</ul>' : '') + '</div>' :
+          (lines.length ? '<details class="arch fold" data-fold="' + i + '"><summary>' + lines.length + ' rule lines</summary><ul class="lines">' + lines.map(function (x) {
+            var who = (x.tags.filter(function (g) { return /^who-/.test(g); })[0] || '').replace('who-', '');
+            return '<li>' + ic(isOpen(x) ? 'dot' : 'tick') + esc(x.name.replace(/^(TEST-)?[^·]+ · /, '').replace(/^\d\s·\s/, '')) + '<span class="who">' + esc(who) + '</span></li>';
+          }).join('') + '<li class="muted">Template</li></ul></details>' : '') +
+          (i === 6 && sendsFor(t) ? '<ul class="lines">' + sendsFor(t) + '</ul>' : '');
       }
     });
     html += '</div>';
