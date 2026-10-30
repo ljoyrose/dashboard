@@ -1104,11 +1104,18 @@
       (g.avail ? '<i class="ti ti-user"></i><span>' + esc(g.avail) + '</span>' : '');
     return out ? '<div class="outs" data-sendinfo="' + esc(t.id) + '">' + out + '</div>' : '';
   }
+  // The prompt doc: the Drive file on a "Prompt …:" line; else the first Drive file not on a Prediction / Simulation line.
+  function promptDoc(t) {
+    var L = lines(t), drive = /https?:\/\/drive\.google\.com\/file\/d\/([\w-]+)/, pick = function (l) { var m = l.match(drive); return m ? m[1] : ''; };
+    var id = L.filter(function (l) { return /^Prompt\b[^:]*:/i.test(l); }).map(pick).filter(Boolean)[0] ||
+      L.filter(function (l) { return !/^(Prediction|Simulation)\b/i.test(l); }).map(pick).filter(Boolean)[0];
+    return id ? [null, id] : null;
+  }
   function copyPrompt(btn) {
     var t = byId(btn.getAttribute('data-copy')); if (!t) return;
     var g = sendGate(t);
     if (!g.ok) { render(); return; }
-    var doc = (urls(t).filter(function (u) { return /drive\.google\.com\/file\/d\//.test(u); })[0] || '').match(/\/d\/([\w-]+)/);
+    var doc = promptDoc(t);
     var sec = (t.name.match(/·\s*(P\d+)\s*·/) || [])[1];
     if (!doc) { banner('No prompt doc on this task.'); return; }
     var text = media(doc[1]).then(function (r) { return r.text(); }).then(function (md) {

@@ -125,6 +125,27 @@ test.describe('Factory send gate: Copy', () => {
     await expect(copyBtn(page)).not.toContainText('Copied');
   });
 
+  test('no "Prompt …:" line and only Prediction / Simulation Drive links: never copies the Prediction doc', async ({ page, guard }) => {
+    await open(page, guard, '#/item/' + ID, { change: (st) => { const t = send(st, ID); t.desc = t.desc.replace(/\nPrompt text:[^\n]*/, ''); } });
+    await copyBtn(page).click();
+    await expect(page.locator('#banner')).toHaveText('No prompt doc on this task.');
+    expect(guard.world.calls.some((c) => c.url.includes('alt=media') && !c.url.includes('af-state'))).toBe(false);
+  });
+
+  test('a "Prompt doc:" line after the Prediction line is the one copied', async ({ page, guard }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    const OTHER = '1SAMPLEpromptDocOther000000000';
+    guard.world.file(OTHER, 'prompt-other-sample.md', PROMPT_TEXT, { mimeType: 'text/markdown' });
+    await open(page, guard, '#/item/' + ID, { change: (st) => {
+      const t = send(st, ID);
+      t.desc = t.desc.replace(/\nPrompt text:[^\n]*/, '') + '\nPrompt doc: https://drive.google.com/file/d/' + OTHER + '/view';
+      stamp(st, 'presend: READY sha256:' + sha(PROMPT_TEXT.trim()) + ' ' + today());
+    } });
+    await copyBtn(page).click();
+    await expect(copyBtn(page)).toContainText('Copied');
+    expect(await clip(page)).toBe(PROMPT_TEXT);
+  });
+
   test('no prompt doc link on the task: "No prompt doc on this task."', async ({ page, guard }) => {
     await open(page, guard, '#/item/' + ID, { change: (st) => {
       const t = send(st, ID);
