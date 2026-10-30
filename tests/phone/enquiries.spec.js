@@ -7,7 +7,7 @@ test('enquiries: every view at 360 px, no sideways scroll, tap targets 44 px', a
   await page.goto('enquiries/');
   await page.locator('#view [data-action="signin"]').click();
   await expect(page.locator('[data-count="hot"]')).toBeVisible();
-  for (const h of ['#/home', '#/today', '#/list?band=hot', '#/litters', '#/add', '#/e/K-a000000000000001', '#/e/K-a000000000000003', '#/e/K-a000000000000005']) {
+  for (const h of ['#/home', '#/today', '#/list?band=hot', '#/litters', '#/add', '#/results', '#/e/K-a000000000000001', '#/e/K-a000000000000003', '#/e/K-a000000000000005']) {
     await page.goto('enquiries/' + h);
     await expect(page.locator('#view')).not.toBeEmpty();
     const w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, screen: window.innerWidth }));

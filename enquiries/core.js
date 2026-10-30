@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.12.0 (2026-10-30)';
+  var VERSION = 'enquiries-core 1.13.0 (2026-10-30)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -1228,7 +1228,10 @@
     Requests: ['request_file', 'kind', 'enquiry_key', 'received_uk', 'applied_uk', 'result'],
     Log: ['at_uk', 'level', 'step', 'message', 'count', 'dry_run', 'engine_version'],
     // Stage 8: Lisa's own sent replies with names, emails and numbers stripped, read by styleSample(). Private.
-    Style: ['style_key', 'sent_uk', 'words', 'greeting', 'sign_off', 'links', 'text', 'read_uk']
+    Style: ['style_key', 'sent_uk', 'words', 'greeting', 'sign_off', 'links', 'text', 'read_uk'],
+    // Stage 14: counts only, one row per month and source (and 'all'). basis: live, hubspot-history or deposit-list.
+    Results: ['result_key', 'month', 'source', 'basis', 'enquiries', 'calls_booked', 'calls_held', 'offers', 'deposits', 'balances',
+      'collected', 'lost', 'junk', 'adult_sale', 'median_reply_h', 'lost_reasons', 'made_uk']
   };
   var CHANNELS = ['email', 'calendly', 'web-form', 'cf-website-optin', 'cf-breeding', 'cf-waiting-list', 'hubspot',
     'hubspot-legacy', 'pets4homes', 'whatsapp', 'facebook', 'instagram', 'phone', 'manual'];
@@ -1745,6 +1748,225 @@
     return tabs;
   }
 
+  // ---- Results (Stage 14) --------------------------------------------------------------------------------------
+  // Counts per month (the month an enquiry came in, UK) and source (its channel). An enquiry counts at every step up to
+  // the furthest it reached, from its stage or its Events (a lost row keeps the steps its Events show), so each step
+  // is a subset of the one before. Junk rows (flag junk?) are counted as junk and nowhere else. A rate with nothing
+  // under it is null and shows "no data", never 0%. Counts only: no names, no amounts.
+  var RESULT_COUNTS = ['enquiries', 'calls_booked', 'calls_held', 'offers', 'deposits', 'balances', 'collected', 'lost', 'junk', 'adult_sale'];
+  // The conversion chain in the order a sale moves (FLOW: the deposit comes before the offer).
+  var RESULT_STEPS = ['enquiries', 'calls_booked', 'calls_held', 'deposits', 'offers', 'balances', 'collected'];
+  var STEP_OF_STAGE = { 'call-booked': 1, 'call-held': 2, deposit: 3, offered: 4, balance: 5, collected: 6 };
+  var STEP_OF_EVENT = { booked: 1, rescheduled: 1, 'call-held': 2, 'deposit-paid': 3 };
+  var REPLY_EVENTS = { replied: 1, 'call-held': 1 };
+  function median(list) {
+    var a = (list || []).filter(function (x) { return typeof x === 'number' && !isNaN(x); }).sort(function (x, y) { return x - y; });
+    if (!a.length) return null;
+    var m = Math.floor(a.length / 2);
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  }
+  function rate(n, of) { return of > 0 ? n / of : null; }
+  function pct(r) { return r == null ? 'no data' : Math.round(r * 100) + '%'; }
+  function emptyResult(month, source, basis) {
+    var r = { result_key: 'R-' + month + '-' + source + (basis && basis !== 'live' ? '-' + basis : ''), month: month, source: source, basis: basis || 'live' };
+    RESULT_COUNTS.forEach(function (k) { r[k] = 0; });
+    r.median_reply_h = ''; r.lost_reasons = '';
+    return r;
+  }
+  function reasonsText(tally) {
+    return Object.keys(tally).sort(function (a, b) { return tally[b] - tally[a] || a.localeCompare(b); }).map(function (k) { return k + ':' + tally[k]; }).join(' | ');
+  }
+  function reasonsTally(text, into) {
+    into = into || {};
+    String(text || '').split(' | ').forEach(function (p) { var i = p.lastIndexOf(':'); if (i > 0) into[p.slice(0, i)] = (into[p.slice(0, i)] || 0) + (Number(p.slice(i + 1)) || 0); });
+    return into;
+  }
+  // One enquiry's furthest step (0 to 6), whether it is lost, and hours to Lisa's first reply (null if none yet).
+  function resultOf(e, evs) {
+    var adult = e.kind === 'adult-dog' || ADULT_STAGES.indexOf(e.stage) >= 0;
+    var step = adult ? 0 : (STEP_OF_STAGE[e.stage] || 0), first = null;
+    (evs || []).forEach(function (v) {
+      if (!adult && STEP_OF_EVENT[v.type] > step) step = STEP_OF_EVENT[v.type];
+      if (REPLY_EVENTS[v.type]) { var t = toMs(v.at_uk); if (!isNaN(t) && (first == null || t < first)) first = t; }
+    });
+    var got = toMs(e.received_uk), h = first != null && !isNaN(got) && first >= got ? Math.round((first - got) / 360000) / 10 : null;
+    return { step: step, lost: e.stage === 'lost', reply_h: h };
+  }
+  // Live Results rows from the Enquiries, Events and Sale Replies tabs: per month x source, plus source 'all'.
+  // opts: { from: 'YYYY-MM-DD' } leaves out enquiries received before it.
+  function resultsRows(tabs, opts) {
+    tabs = tabs || {}; opts = opts || {};
+    var from = opts.from ? String(opts.from).slice(0, 7) : '', evs = {}, sale = {}, cells = {}, hours = {}, lost = {};
+    (tabs.Events || []).forEach(function (v) { (evs[v.enquiry_key] = evs[v.enquiry_key] || []).push(v); });
+    (tabs['Sale Replies'] || []).forEach(function (r) { if (r.enquiry_key) sale[r.enquiry_key] = 1; });
+    (tabs.Enquiries || []).forEach(function (e) {
+      var month = ukDay(e.received_uk).slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(month) || (from && month < from)) return;
+      [e.channel || 'unknown', 'all'].forEach(function (src) {
+        var id = month + '|' + src, r = cells[id] = cells[id] || emptyResult(month, src);
+        if (/junk/.test(String(e.flag || ''))) { r.junk++; return; }
+        var o = resultOf(e, evs[e.key]);
+        r.enquiries++;
+        for (var i = 1; i <= o.step; i++) r[RESULT_STEPS[i]]++;
+        if (o.lost) { r.lost++; var why = String(e.lost_reason || '').trim().toLowerCase() || 'no reason given'; (lost[id] = lost[id] || {})[why] = (lost[id][why] || 0) + 1; }
+        if (e.kind === 'adult-dog' || sale[e.key]) r.adult_sale++;
+        if (o.reply_h != null) (hours[id] = hours[id] || []).push(o.reply_h);
+      });
+    });
+    return Object.keys(cells).sort().map(function (id) {
+      var r = cells[id], m = median(hours[id]);
+      r.median_reply_h = m == null ? '' : m; r.lost_reasons = lost[id] ? reasonsText(lost[id]) : '';
+      return r;
+    });
+  }
+  // Rates for one Results row: conversion at each step of the chain, deposits per 10 calls held, median reply hours.
+  function resultRates(r) {
+    r = r || {};
+    var n = function (k) { return Number(r[k]) || 0; }, steps = [];
+    for (var i = 1; i < RESULT_STEPS.length; i++) {
+      var a = RESULT_STEPS[i - 1], b = RESULT_STEPS[i];
+      steps.push({ from: a, to: b, n: n(b), of: n(a), rate: rate(n(b), n(a)) });
+    }
+    var dep10 = n('calls_held') > 0 ? Math.round(n('deposits') / n('calls_held') * 100) / 10 : null;
+    var med = r.median_reply_h === '' || r.median_reply_h == null || isNaN(Number(r.median_reply_h)) ? null : Number(r.median_reply_h);
+    return { steps: steps, overall: rate(n('collected'), n('enquiries')), lost: rate(n('lost'), n('enquiries')), deposits_per_10_calls: dep10, median_reply_h: med };
+  }
+  // Months from 'YYYY-MM' to 'YYYY-MM', newest first.
+  function monthsBetween(from, to) {
+    var out = [], y = Number(String(from).slice(0, 4)), m = Number(String(from).slice(5, 7)), ty = Number(String(to).slice(0, 4)), tm = Number(String(to).slice(5, 7));
+    if (!y || !m || !ty || !tm) return out;
+    while ((y < ty || (y === ty && m <= tm)) && out.length < 240) { out.push(y + '-' + ('0' + m).slice(-2)); m++; if (m > 12) { m = 1; y++; } }
+    return out.reverse();
+  }
+  // What the Results card and tab show. Live rows are computed from the tabs; history rows (basis not live) come from
+  // the Results tab and are added to the same month and source. Every month from opts.from to now is listed, so a
+  // month with nothing in it shows "no data". opts: { now, from }.
+  function resultsView(tabs, opts) {
+    tabs = tabs || {}; opts = opts || {};
+    var now = opts.now == null ? Date.now() : toMs(opts.now), from = String(opts.from || '2026-05-01').slice(0, 7);
+    var rows = resultsRows(tabs, { from: from }).concat((tabs.Results || []).filter(function (r) { return r.basis && r.basis !== 'live'; }));
+    var cells = {}, sources = {}, reasons = {};
+    rows.forEach(function (r) {
+      var month = String(r.month || '').slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(month)) return;
+      var src = r.source || 'unknown', id = month + '|' + src, c = cells[id] = cells[id] || emptyResult(month, src, 'view');
+      RESULT_COUNTS.forEach(function (k) { c[k] += Number(r[k]) || 0; });
+      if ((r.basis || 'live') === 'live' && r.median_reply_h !== '' && r.median_reply_h != null) c.median_reply_h = Number(r.median_reply_h);
+      c.lost_reasons = reasonsText(reasonsTally(r.lost_reasons, reasonsTally(c.lost_reasons)));
+      if (src !== 'all') sources[src] = 1;
+      if (r.basis && r.basis !== 'live') {
+        // History rows have no 'all' row of their own: add them to it.
+        var aid = month + '|all', a = cells[aid] = cells[aid] || emptyResult(month, 'all', 'view');
+        RESULT_COUNTS.forEach(function (k) { a[k] += Number(r[k]) || 0; });
+        a.lost_reasons = reasonsText(reasonsTally(r.lost_reasons, reasonsTally(a.lost_reasons)));
+      }
+    });
+    var first = Object.keys(cells).map(function (id) { return id.slice(0, 7); }).sort()[0];
+    var months = monthsBetween(first && first < from ? first : from, ukDay(now).slice(0, 7)).map(function (mo) {
+      var all = cells[mo + '|all'] || emptyResult(mo, 'all', 'view');
+      var by = Object.keys(sources).sort().filter(function (s) { return cells[mo + '|' + s]; }).map(function (s) { return { row: cells[mo + '|' + s], rates: resultRates(cells[mo + '|' + s]) }; });
+      reasonsTally(all.lost_reasons, reasons);
+      return { month: mo, total: all, rates: resultRates(all), bySource: by, empty: !(all.enquiries || all.deposits || all.junk) };
+    });
+    var sum = emptyResult('all', 'all', 'view');
+    months.forEach(function (m) { RESULT_COUNTS.forEach(function (k) { sum[k] += m.total[k]; }); });
+    return { months: months, current: months[0] || null, total: sum, totalRates: resultRates(sum), sources: Object.keys(sources).sort(),
+      lostReasons: reasonsText(reasons), medianReplyAll: medianReplyHours(tabs, from), adultSale: sum.adult_sale };
+  }
+  function medianReplyHours(tabs, from) {
+    var evs = {}, hs = [];
+    (tabs.Events || []).forEach(function (v) { (evs[v.enquiry_key] = evs[v.enquiry_key] || []).push(v); });
+    (tabs.Enquiries || []).forEach(function (e) {
+      var mo = ukDay(e.received_uk).slice(0, 7);
+      if (/junk/.test(String(e.flag || '')) || !/^\d{4}-\d{2}$/.test(mo) || (from && mo < from)) return;
+      var h = resultOf(e, evs[e.key]).reply_h; if (h != null) hs.push(h);
+    });
+    return median(hs);
+  }
+
+  // ---- History import (Stage 14, one-off) ---------------------------------------------------------------------
+  // Old HubSpot deals and contacts from an EXPORT CSV that Lisa drops in the private requests folder (HubSpot is never
+  // written). Header names are matched loosely. Stages are mapped to the hub's; spam and test entries (junkReasons)
+  // are counted as junk and left out; a contact whose email is on a deal counts once. Only rows created before
+  // opts.before are counted, so nothing the live readers already hold is counted twice. Returns counts only.
+  var HUBSPOT_STAGE_MAP = [
+    [/closed ?won|collected|completed|went home|customer/i, 'collected'], [/closed ?lost|\blost\b|not interested|unqualified/i, 'lost'],
+    [/balance|contract ?sent/i, 'balance'], [/offer|presentation|decision ?maker/i, 'offered'], [/deposit/i, 'deposit'],
+    [/call ?(held|done)|qualified ?to ?buy|opportunity|sales ?qualified/i, 'call-held'], [/appointment|call ?booked|scheduled/i, 'call-booked']
+  ];
+  function hubspotStage(text) {
+    var s = String(text || '').trim();
+    for (var i = 0; i < HUBSPOT_STAGE_MAP.length; i++) if (HUBSPOT_STAGE_MAP[i][0].test(s)) return HUBSPOT_STAGE_MAP[i][1];
+    return 'new';
+  }
+  function csvObjects(rows) {
+    var head = (rows && rows[0]) || [];
+    return (rows || []).slice(1).map(function (r) { var o = {}; head.forEach(function (h, i) { o[String(h).trim().toLowerCase()] = r[i] == null ? '' : String(r[i]); }); return o; });
+  }
+  function pick(o, res) {
+    var ks = Object.keys(o);
+    for (var i = 0; i < res.length; i++) for (var j = 0; j < ks.length; j++) if (res[i].test(ks[j]) && String(o[ks[j]]).trim()) return String(o[ks[j]]).trim();
+    return '';
+  }
+  // rows: parseCsv output of one export (deals or contacts; told apart by a deal stage column).
+  // Returns { rows: Results rows (basis hubspot-history, source hubspot-legacy), read, counted, junk, later, undated, stages }.
+  function hubspotHistoryFrom(exportsRows, opts) {
+    opts = opts || {};
+    var before = opts.before ? String(opts.before).slice(0, 10) : '', seen = {}, recs = [];
+    var out = { rows: [], read: 0, counted: 0, junk: 0, later: 0, undated: 0, stages: {} };
+    var lists = (exportsRows || []).map(csvObjects);
+    lists.sort(function (a, b) { return (a[0] && pick(a[0], [/deal ?stage/]) ? 0 : 1) - (b[0] && pick(b[0], [/deal ?stage/]) ? 0 : 1); });
+    lists.forEach(function (list) {
+      list.forEach(function (o) {
+        out.read++;
+        var deal = !!pick(o, [/deal ?stage/]);
+        var name = [pick(o, [/^first ?name$/]), pick(o, [/^last ?name$/])].filter(Boolean).join(' ') || (deal ? '' : pick(o, [/^name$/]));
+        var email = pick(o, [/^e-?mail$/, /e-?mail/]), phone = pick(o, [/phone/, /mobile/]), dealName = pick(o, [/deal ?name/]);
+        if (junkReasons({ name: name, email: email, phone: phone }, opts).length || /^test\b|\btest$/i.test(dealName)) { out.junk++; return; }
+        var ek = emailKey(email);
+        if (ek && seen[ek]) return;
+        if (ek) seen[ek] = 1;
+        var day = isoDate(pick(o, [/^create ?date/, /created/, /^date/])) || ukDay(pick(o, [/^create ?date/, /created/]));
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) { out.undated++; return; }
+        if (before && day >= before) { out.later++; return; }
+        var stage = hubspotStage(deal ? pick(o, [/deal ?stage/]) : pick(o, [/lifecycle ?stage/, /lead ?status/]));
+        out.stages[stage] = (out.stages[stage] || 0) + 1;
+        recs.push({ month: day.slice(0, 7), stage: stage, why: pick(o, [/lost ?reason/]) });
+      });
+    });
+    var cells = {};
+    recs.forEach(function (x) {
+      var r = cells[x.month] = cells[x.month] || emptyResult(x.month, 'hubspot-legacy', 'hubspot-history');
+      var step = STEP_OF_STAGE[x.stage] || 0;
+      r.enquiries++; for (var i = 1; i <= step; i++) r[RESULT_STEPS[i]]++;
+      if (x.stage === 'lost') { r.lost++; var t = reasonsTally(r.lost_reasons), w = String(x.why || '').toLowerCase() || 'no reason given'; t[w] = (t[w] || 0) + 1; r.lost_reasons = reasonsText(t); }
+      out.counted++;
+    });
+    out.rows = Object.keys(cells).sort().map(function (k) { return cells[k]; });
+    return out;
+  }
+  // The old deposit list (a sheet tab, header first): deposits counted per month of the deposit date. Counts only:
+  // nothing about the person is kept. Rows on or after opts.before are left to the live hub.
+  function depositHistoryFrom(values, opts) {
+    opts = opts || {};
+    var before = opts.before ? String(opts.before).slice(0, 10) : '', head = ((values && values[0]) || []).map(function (h) { return String(h).trim(); });
+    var col = -1;
+    head.forEach(function (h, i) { if (col < 0 && /^(deposit_date|first_deposit|deposit date|date paid|date)$/i.test(h)) col = i; });
+    var out = { rows: [], read: 0, counted: 0, undated: 0, later: 0, nodate_column: col < 0 }, cells = {};
+    if (col < 0) return out;
+    (values || []).slice(1).forEach(function (r) {
+      if (!r.some(function (x) { return String(x == null ? '' : x).trim(); })) return;
+      out.read++;
+      var day = isoDate(r[col]);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day || '')) { out.undated++; return; }
+      if (before && day >= before) { out.later++; return; }
+      var c = cells[day.slice(0, 7)] = cells[day.slice(0, 7)] || emptyResult(day.slice(0, 7), 'deposit-list', 'deposit-list');
+      c.deposits++; out.counted++;
+    });
+    out.rows = Object.keys(cells).sort().map(function (k) { return cells[k]; });
+    return out;
+  }
+
   var api = {
     VERSION: VERSION, CALLING: CALLING, STAGES: STAGES, ADULT_STAGES: ADULT_STAGES, KINDS: KIND_ORDER.slice(),
     normalisePhone: normalisePhone, countryFromPhone: countryFromPhone, countryFromTimezone: countryFromTimezone,
@@ -1771,7 +1993,10 @@
     followUpRules: followUpRules, followUpCase: followUpCase, planFollowUps: planFollowUps, outOfQuiet: outOfQuiet,
     repliedRequest: repliedRequest, snoozeRequest: snoozeRequest, doneRequest: doneRequest,
     sortEnquiries: sortEnquiries, filtersFromHash: filtersFromHash, hashFor: hashFor, filterEnquiries: filterEnquiries, filterOptions: filterOptions,
-    hubView: hubView, enquiryDetail: enquiryDetail, applyRequest: applyRequest, PAGE_FILTERS: PAGE_FILTERS
+    hubView: hubView, enquiryDetail: enquiryDetail, applyRequest: applyRequest, PAGE_FILTERS: PAGE_FILTERS,
+    RESULT_COUNTS: RESULT_COUNTS, RESULT_STEPS: RESULT_STEPS, median: median, pct: pct, resultsRows: resultsRows, resultRates: resultRates,
+    monthsBetween: monthsBetween, resultsView: resultsView, hubspotStage: hubspotStage, hubspotHistoryFrom: hubspotHistoryFrom,
+    depositHistoryFrom: depositHistoryFrom
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

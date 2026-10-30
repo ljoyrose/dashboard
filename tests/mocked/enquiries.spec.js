@@ -93,4 +93,28 @@ test.describe('Enquiries page @enquiries', () => {
       if (/hypo-?allergenic/i.test(t)) expect(t).toMatch(/low[- ]shedding/i);
     }
   });
+  test('Stage 14: the Results card shows this month and opens every month since the history', async ({ page }) => {
+    const card = page.locator('[data-card="results"]');
+    await expect(card).toContainText('enquiries');
+    await card.locator('a[href="#/results"]').click();
+    await expect(page.locator('[data-card="results-all"]')).toBeVisible();
+    // The invented HubSpot history month: 10 enquiries, 6 calls booked = 60%, 4 held of 6 = 67%.
+    const mar = page.locator('[data-results-month="2026-03"]');
+    await expect(mar.locator('tr[data-step="calls_booked"] [data-rate]')).toHaveText('60%');
+    await expect(mar.locator('tr[data-step="calls_held"] [data-rate]')).toHaveText('67%');
+    await expect(mar.locator('tr[data-step="dep10"] [data-rate]')).toHaveText('5');
+    await expect(mar.locator('[data-source="hubspot-legacy"]')).toBeVisible();
+    await expect(page.locator('[data-adult-sale]')).toHaveText('1');
+    await expect(page.locator('nav.tabs a[aria-current="page"]')).toHaveAttribute('data-nav', 'home');
+  });
+
+  test('ACCEPT Stage 14: a month with no data shows "no data", never 0%', async ({ page }) => {
+    await page.goto('enquiries/#/results');
+    const june = page.locator('[data-results-month="2026-06"]');
+    await expect(june).toContainText('no data');
+    const rates = await june.locator('[data-rate]').allTextContents();
+    expect(rates.length).toBeGreaterThan(6);
+    for (const r of rates) expect(r.trim(), 'an empty month never shows a percentage').toBe('no data');
+    await expect(june).not.toContainText('0%');
+  });
 });

@@ -83,6 +83,11 @@
   .acts { display: flex; gap: 8px; flex-wrap: wrap; }
   .acts .btn { flex: 1 1 140px; justify-content: center; min-height: 44px; }
   .empty { margin: 0; font-size: 15px; color: var(--muted); }
+  .rtab { width: 100%; border-collapse: collapse; font-size: 15px; }
+  .rtab th, .rtab td { text-align: left; padding: 6px 4px; border-top: 1px solid var(--ctl); overflow-wrap: anywhere; }
+  .rtab th { color: var(--muted); font-weight: 400; }
+  .rtab td.n, .rtab th.n { text-align: right; white-space: nowrap; }
+  .rtab .nodata { color: var(--muted); }
   ul.plain { margin: 0; padding-left: 20px; }
   ul.plain li { overflow-wrap: anywhere; }
   .frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
@@ -214,6 +219,48 @@
   }
 
   /* ---------- views ---------- */
+  var STEP_LABEL = { enquiries: 'Enquiries', calls_booked: 'Calls booked', calls_held: 'Calls held', deposits: 'Deposits', offers: 'Offers',
+    balances: 'Balances', collected: 'Collected' };
+  function monthName(m) { var d = new Date(m + '-01T12:00:00Z'); return isNaN(d) ? m : d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric', timeZone: 'UTC' }); }
+  function rateCell(r) { var t = Core.pct(r); return '<td class="n' + (r == null ? ' nodata' : '') + '" data-rate>' + t + '</td>'; }
+  function hoursText(h) { return h == null ? 'no data' : h < 48 ? h + ' h' : Math.round(h / 24 * 10) / 10 + ' days'; }
+  // One month: each step with its count and the share of the step before; lost, junk, adult-dog sale, reply time.
+  function monthTable(m) {
+    var r = m.total, x = m.rates;
+    return '<table class="rtab" data-month="' + esc(m.month) + '"><thead><tr><th>Step</th><th class="n">Count</th><th class="n">Of step before</th></tr></thead><tbody>' +
+      '<tr><td>Enquiries</td><td class="n">' + r.enquiries + '</td><td class="n"></td></tr>' +
+      x.steps.map(function (s) { return '<tr data-step="' + s.to + '"><td>' + STEP_LABEL[s.to] + '</td><td class="n">' + s.n + '</td>' + rateCell(s.rate) + '</tr>'; }).join('') +
+      '<tr data-step="lost"><td>Lost</td><td class="n">' + r.lost + '</td>' + rateCell(x.lost) + '</tr>' +
+      '<tr data-step="dep10"><td>Deposits per 10 calls held</td><td class="n' + (x.deposits_per_10_calls == null ? ' nodata' : '') + '" colspan="2" data-rate>' + (x.deposits_per_10_calls == null ? 'no data' : x.deposits_per_10_calls) + '</td></tr>' +
+      '<tr data-step="reply"><td>Median time to first reply</td><td class="n' + (x.median_reply_h == null ? ' nodata' : '') + '" colspan="2" data-rate>' + hoursText(x.median_reply_h) + '</td></tr>' +
+      '</tbody></table>' +
+      '<p class="what">' + r.junk + ' spam or test left out · ' + r.adult_sale + ' from the adult-dog sale' + (r.lost_reasons ? ' · lost: ' + esc(r.lost_reasons.replace(/:/g, ' ')) : '') + '</p>';
+  }
+  function resultsCard(rv) {
+    var m = rv.current;
+    if (!m) return '';
+    return '<div class="card" data-card="results"><h2>Results · ' + esc(monthName(m.month)) + '</h2>' +
+      (m.empty ? '<p class="empty">No enquiries yet this month: no data.</p>' :
+        '<p class="what"><b>' + m.total.enquiries + '</b> enquiries · <b>' + m.total.calls_held + '</b> calls held · <b>' + m.total.deposits + '</b> deposits · ' +
+        'calls booked ' + Core.pct(m.rates.steps[0].rate) + ' of enquiries · first reply ' + hoursText(m.rates.median_reply_h) + '</p>') +
+      '<div class="acts"><a class="btn" href="#/results">All months</a></div></div>';
+  }
+  function pageResults(rv) {
+    var t = rv.total, x = rv.totalRates;
+    return '<p><a class="btn" href="#/home">← Home</a></p>' +
+      '<div class="card" data-card="results-all"><h2>Results since ' + esc(monthName(rv.months.length ? rv.months[rv.months.length - 1].month : '')) + '</h2>' +
+      '<p class="what"><b>' + t.enquiries + '</b> enquiries · <b>' + t.calls_held + '</b> calls held · <b>' + t.deposits + '</b> deposits · <b>' + t.collected + '</b> collected · ' +
+      'deposits per 10 calls ' + (x.deposits_per_10_calls == null ? 'no data' : x.deposits_per_10_calls) + ' · median first reply ' + hoursText(rv.medianReplyAll) + '</p>' +
+      '<p class="what">From the adult-dog sale: <b data-adult-sale>' + rv.adultSale + '</b>' + (rv.lostReasons ? ' · lost reasons: ' + esc(rv.lostReasons.replace(/:/g, ' ')) : '') + '</p></div>' +
+      rv.months.map(function (m) {
+        return '<div class="card" data-results-month="' + esc(m.month) + '"><h2>' + esc(monthName(m.month)) + (m.empty ? ' <span class="badge">no data</span>' : '') + '</h2>' + monthTable(m) +
+          (m.bySource.length ? '<p class="what"><b>By source:</b></p><ul class="plain" data-sources>' + m.bySource.map(function (s) {
+            var r = s.row;
+            return '<li data-source="' + esc(r.source) + '"><b>' + esc(r.source) + '</b>: ' + r.enquiries + ' enquiries, ' + r.calls_booked + ' booked, ' + r.calls_held + ' held, ' +
+              r.deposits + ' deposits, ' + r.collected + ' collected, ' + r.lost + ' lost · held to deposit ' + Core.pct(s.rates.steps[2].rate) + '</li>';
+          }).join('') + '</ul>' : '') + '</div>';
+      }).join('');
+  }
   function pageHome(v) {
     var c = v.counts, t = function (k, n, href, id) { return '<a class="tile" href="' + href + '" data-count="' + id + '"><span class="k">' + k + '</span><span class="v">' + n + '</span></a>'; };
     return '<div class="tiles">' + t('New today', c.newToday, '#/list', 'newToday') + t('Hot', c.hot, Core.hashFor('list', { band: 'hot' }), 'hot') +
@@ -221,7 +268,7 @@
       pageToday(v) +
       '<div class="card" data-card="new"><h2>New ' + cnt(v.fresh.length) + '</h2>' + list(v.fresh, 'Nothing new waiting for a reply.') + '</div>' +
       '<div class="card" data-card="hot"><h2>Hot ' + cnt(v.hot.length) + '</h2>' + list(v.hot, 'No hot enquiries open.') + '</div>' +
-      waitingCard(v.waiting) + depositsCard(v.deposits) + saleCard(v.sale) +
+      resultsCard(Core.resultsView(tabs, {})) + waitingCard(v.waiting) + depositsCard(v.deposits) + saleCard(v.sale) +
       '<a class="btn big" href="#/add" data-add>Add by hand</a>';
   }
   function pageToday(v) {
@@ -270,7 +317,7 @@
   }
 
   function render() {
-    var nav = route.view === 'e' ? 'list' : route.view;
+    var nav = route.view === 'e' ? 'list' : route.view === 'results' ? 'home' : route.view;
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === nav) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     $('stamp').textContent = E.live ? '' : (EXAMPLE ? 'EXAMPLE' : 'TEST');
     $('refresh').classList.toggle('hidden', !tabs); $('tabs').classList.toggle('hidden', !token);
@@ -280,7 +327,7 @@
     var v = Core.hubView(tabs, {});
     $('n-home').textContent = v.counts.hot || ''; $('n-today').textContent = (v.counts.calls48 + v.counts.followupsDue) || '';
     $('view').innerHTML = route.view === 'e' ? pageDetail() : route.view === 'today' ? pageToday(v) : route.view === 'list' ? pageList(v)
-      : route.view === 'litters' ? pageLitters(v) : route.view === 'add' ? pageAdd() : pageHome(v);
+      : route.view === 'litters' ? pageLitters(v) : route.view === 'add' ? pageAdd() : route.view === 'results' ? pageResults(Core.resultsView(tabs, {})) : pageHome(v);
   }
 
   /* ---------- taps ---------- */
@@ -315,7 +362,7 @@
     var f = Object.assign({}, route.f); if (ev.target.value) f[k] = ev.target.value; else delete f[k];
     location.hash = Core.hashFor('list', f);
   });
-  function onHash() { route = Core.filtersFromHash(location.hash); if (['home', 'today', 'list', 'litters', 'add', 'e'].indexOf(route.view) < 0) route.view = 'home'; render(); window.scrollTo(0, 0); }
+  function onHash() { route = Core.filtersFromHash(location.hash); if (['home', 'today', 'list', 'litters', 'add', 'results', 'e'].indexOf(route.view) < 0) route.view = 'home'; render(); window.scrollTo(0, 0); }
   window.addEventListener('hashchange', onHash);
 
   /* ---------- sign-in: the shared DashAuth, as on every hub (example mode too: the house gate locks the page) ---------- */

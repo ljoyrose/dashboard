@@ -9,7 +9,7 @@ const X = require('../../enquiries/examples.js');
 const NOW = '2026-11-03T12:00:00Z';
 const fresh = () => X.build(NOW);
 
-test('version is 1.12.0', () => assert.match(C.VERSION, /^enquiries-core 1\.12\.0 /));
+test('version is 1.13.0', () => assert.match(C.VERSION, /^enquiries-core 1\.13\.0 /));
 
 test('ACCEPT: newest and hottest first: a hot row shows above a cool row, newest first within a band', () => {
   const rows = [
