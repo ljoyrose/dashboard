@@ -123,7 +123,8 @@ test.describe('Bin page Log reads RUN-LOG (stage 7)', () => {
     guard.world.failWith = { status: 500, reason: 'backendError' };
     await withFolder(page);
     const log = await openLog(page);
-    await expect(log.locator('[data-runlog-none]')).toHaveText('No runs logged yet.');
+    // A 500 is retried 3 times with back-off (toolkit.js WAITS 1+2+4 s plus jitter) before the read counts as failed.
+    await expect(log.locator('[data-runlog-none]')).toHaveText('No runs logged yet.', { timeout: 20000 });
     await expect(page.locator('#logCard .fail, #logCard .res.bad')).toHaveCount(0);
     await expect(page.locator('#needsNow')).toContainText('1 file ready for you to approve');
     await expect(page.locator('#needsNow')).toContainText('0 problems');
