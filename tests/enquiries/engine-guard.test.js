@@ -84,12 +84,16 @@ test('engine: setup() creates RR_ENQUIRIES with the 13 tabs of the shared contra
   assert.match(src, /function setup\(\)/);
 });
 
-test('engine: the allocation sheets are only read (Stage 6 past deposits)', { skip }, () => {
-  const m = code.match(/function depositKeys_\([\s\S]*?\n\}/);
-  assert.ok(m, 'depositKeys_ exists');
+test('engine: other spreadsheets (allocation sheets, Sale sheet) are opened in one place and only read', { skip }, () => {
+  const m = code.match(/function readOtherBook_\([\s\S]*?\n\}/);
+  assert.ok(m, 'readOtherBook_ exists');
   assert.ok(!/\.set[A-Z]\w*\(|\.append|\.insert|\.delete|\.clear|\.moveTo|\.copyTo|\.sort\(|\.protect/.test(m[0]), 'no write call on another book');
   const opens = code.match(/SpreadsheetApp\.openById\(/g) || [];
-  assert.equal(opens.length, 3, 'openById only in book_(), setup() and depositKeys_()');
+  assert.equal(opens.length, 3, 'openById only in book_(), setup() and readOtherBook_()');
+  for (const fn of ['depositKeys_', 'litters_', 'saleReplies_']) {
+    const body = code.match(new RegExp('function ' + fn + '\\([\\s\\S]*?\\n\\}'))[0];
+    assert.ok(!/SpreadsheetApp/.test(body), fn + ' goes through readOtherBook_');
+  }
 });
 
 test('engine: FollowUps is written in one place, behind the contact gate', { skip }, () => {
