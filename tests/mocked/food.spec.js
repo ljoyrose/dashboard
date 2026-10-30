@@ -67,8 +67,8 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#n-home')).toHaveText('3');
     await expect(page.locator('#view > .card')).toHaveCount(1);
     await expect(page.locator('#view > .card h2')).toContainText('GA price up');
-    await expect(page.locator('#view .tile').first()).toContainText('£50.42');   // owed: the unpaid invoice only
-    await expect(page.locator('#view .tiles')).toContainText('06/12/2026');
+    await expect(page.locator('#view > .tiles .tile').first()).toContainText('£50.42');   // owed: the unpaid invoice only
+    await expect(page.locator('#view > .tiles')).toContainText('06/12/2026');
     await expect(page.locator('#stamp')).toHaveText('TEST');
   });
 
@@ -110,7 +110,7 @@ test.describe('GA Hub page', () => {
     b.settings = b.settings.filter((s) => s[0] !== 'MIN_PROFIT');
     await sheets(page, b);
     await open(page);
-    await expect(page.locator('#view .tiles')).toContainText('Under £8 profit');
+    await expect(page.locator('#view > .tiles')).toContainText('Under £8 profit');
     await expect(page.locator('#view .tile', { hasText: 'Under £8 profit' }).locator('.v')).toHaveText('1');
     await page.goto('food/#/orders');
     await page.locator('[data-ofilter="low"]').click();
@@ -149,12 +149,72 @@ test.describe('GA Hub page', () => {
     await expect(tile).toContainText('aim 2');
     await expect(tile.locator('.v')).not.toHaveClass(/red/);
   });
+  // G3 (Lisa, 30 Oct 2026): the Home leads with order growth. Invented orders only; nothing is written, sent or discounted.
+  const growRow = (no, daysAgo, type, nth, status) => [no, 'Shopify', 'DDF', 'GA', status || 'Shipped', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', type, '', String(nth || 1), new Date(Date.now() - daysAgo * 864e5).toISOString(), '[]', 'Shipped'];
+  function growBook(rows, extra) { const b = book(); b.orders = [b.orders[0]].concat(rows); b.settings = b.settings.concat(extra || []); return b; }
+  test('grow orders leads the Home: trend on the 30 days before, repeat and subscription share, all from the Orders tab', async ({ page }) => {
+    const writes = await sheets(page, growBook([
+      growRow('9301', 1, 'Subscription (PayWhirl)', 4), growRow('9302', 3, 'One-off (Online Store)', 2), growRow('9303', 10, 'One-off (Online Store)', 1), growRow('9304', 20, 'Subscription (PayWhirl)', 3),
+      growRow('9305', 35, 'One-off (Online Store)', 1), growRow('9306', 50, 'One-off (Online Store)', 1), growRow('9307', 2, 'One-off (Online Store)', 1, 'Cancelled')]));
+    await open(page);
+    const first = page.locator('#view > *').first();
+    await expect(first).toHaveClass(/growth/);
+    const tiles = page.locator('#view .growth .tile');
+    await expect(tiles.nth(0)).toContainText('Orders, last 30 days4up 2 on the 30 days before');
+    await expect(tiles.nth(0).locator('.v')).not.toHaveClass(/red/);
+    await expect(tiles.nth(1)).toContainText('Repeat orders75%');   // 3 of 4 from customers on their 2nd order or more
+    await expect(tiles.nth(2)).toContainText('Subscriptions50%');
+    expect(writes).toHaveLength(0);
+  });
+  test('reorder due: one-off orders over REORDER_DUE_DAYS (default 35) old, oldest first, each with only the Shopify button; subscriptions and recent orders left out', async ({ page }) => {
+    const b = growBook([growRow('9311', 36, 'One-off (Online Store)', 1), growRow('9312', 50, 'One-off (Online Store)', 2), growRow('9313', 40, 'Subscription (PayWhirl)', 3), growRow('9314', 20, 'One-off (Online Store)', 1), growRow('9315', 70, 'One-off (Online Store)', 1)]);
+    b.orders[1][20] = 'https://www.dpd.co.uk/service/tracking?parcel=SAMPLE';
+    await sheets(page, b);
+    await open(page);
+    const rows = page.locator('#reorder .row');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toContainText('Order #9312');
+    await expect(rows.nth(0)).toContainText("50 days ago · customer's 2nd order");
+    await expect(rows.nth(1)).toContainText('Order #9311');
+    await expect(rows.nth(1).locator('a.btn')).toHaveCount(1);   // no Track button: the Shopify button only
+    await expect(rows.nth(1).locator('a.btn')).toHaveAttribute('href', 'https://admin.shopify.com/store/samplestore/orders?query=9311');
+    b.settings = b.settings.concat([['REORDER_DUE_DAYS', '45', '']]);
+    await page.locator('#refresh').click();
+    await expect(page.locator('#reorder')).toContainText('over 45 days old');
+    await expect(rows).toHaveCount(2);   // the window moves to 45-75 days: #9315 (70) comes in, #9311 (36) drops out
+    await expect(rows.nth(0)).toContainText('Order #9315');
+    await expect(rows.nth(1)).toContainText('Order #9312');
+  });
+  test('the Grow orders card picks the biggest gap: falling orders, then customers due to reorder, then few subscriptions; See who goes to the list', async ({ page }) => {
+    const one = 'One-off (Online Store)', sub = 'Subscription (PayWhirl)';
+    // falling: 1 now against 4 before (gap 3) beats 1 customer due to reorder and 1 one-off order
+    let b = growBook([growRow('9321', 5, one), growRow('9322', 36, one), growRow('9323', 40, sub), growRow('9324', 45, sub), growRow('9325', 50, sub)]);
+    await sheets(page, b);
+    await open(page);
+    await expect(page.locator('#view .card.grow h2')).toHaveText('Orders are down 3 on the 30 days before');
+    await expect(page.locator('#view .card.grow a.btn')).toHaveAttribute('href', 'https://admin.shopify.com/store/samplestore/orders');
+    // reorder: 3 due, no fall
+    b = growBook([growRow('9331', 2, sub), growRow('9332', 3, sub), growRow('9333', 4, one), growRow('9334', 36, one), growRow('9335', 37, one), growRow('9336', 38, one)]);
+    await page.unroute(/sheets/); await sheets(page, b); await page.locator('#refresh').click();
+    await expect(page.locator('#view .card.grow h2')).toHaveText('3 one-off orders are due a reorder');
+    await page.locator('#view .card.grow [data-action="reorder"]').click();
+    await expect(page.locator('#reorder')).toBeInViewport();
+    // few subscriptions: 4 one-off orders now, none before, nobody due
+    b = growBook([growRow('9341', 1, one), growRow('9342', 2, one), growRow('9343', 3, one), growRow('9344', 4, one)]);
+    await page.unroute(/sheets/); await sheets(page, b); await page.locator('#refresh').click();
+    await expect(page.locator('#view .card.grow h2')).toHaveText('Only 0% of orders are subscriptions');
+    await expect(page.locator('#view .card.grow a.btn')).toHaveAttribute('href', 'https://admin.shopify.com/store/samplestore/customers');
+    // nothing to fix
+    b = growBook([growRow('9351', 1, sub), growRow('9352', 2, sub)]);
+    await page.unroute(/sheets/); await sheets(page, b); await page.locator('#refresh').click();
+    await expect(page.locator('#view .card.grow')).toContainText('Orders are holding up');
+  });
   test('a GA statement on file: its balance is the Owed figure on Home and the first tile on Invoices', async ({ page }) => {
     const b = book(); b.statements = [['statement_date', 'total_outstanding', 'file_id'], ['2026-10-19', '1234.56', '']];
     await sheets(page, b);
     await open(page);
-    await expect(page.locator('#view .tile').first()).toContainText('£1234.56');
-    await expect(page.locator('#view .tile').first()).toContainText('statement 19/10/2026');
+    await expect(page.locator('#view > .tiles .tile').first()).toContainText('£1234.56');
+    await expect(page.locator('#view > .tiles .tile').first()).toContainText('statement 19/10/2026');
     await page.goto('food/#/invoices');
     await expect(page.locator('#view .tile').first()).toContainText('GA statement 19/10/2026');
   });
@@ -212,7 +272,7 @@ test.describe('GA Hub page', () => {
   test('spacing: tiles, cards and headings in the view never touch (same 14px gap as the main column)', async ({ page }) => {
     await sheets(page, book());
     await open(page);
-    const gap = await page.evaluate(() => { const t = document.querySelector('#view .tiles').getBoundingClientRect(), c = document.querySelector('#view > .card').getBoundingClientRect(); return c.top - t.bottom; });
+    const gap = await page.evaluate(() => { const t = document.querySelector('#view > .tiles').getBoundingClientRect(), c = document.querySelector('#view > .card').getBoundingClientRect(); return c.top - t.bottom; });
     expect(gap).toBeGreaterThanOrEqual(12);
   });
 
@@ -536,7 +596,7 @@ test.describe('GA Hub house look', () => {
     await page.unroute(SHEETS);
     await sheets(page, c);
     await page.locator('#refresh').click();
-    await expect(page.locator('#view .empty')).toContainText('Nothing needs you');
+    await expect(page.locator('#view > .card .empty')).toContainText('Nothing needs you');
     await page.goto('food/#/orders');
     await page.locator('[data-ofilter="low"]').click();
     await page.locator('[data-ofilter="sub"]').click();
