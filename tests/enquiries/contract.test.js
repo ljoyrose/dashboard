@@ -14,7 +14,7 @@ const REQUIRED = ['key', 'person_key', 'source', 'source_ref', 'received_uk', 'c
 
 test('contract: the Enquiries tab carries every column the job names, in order', () => {
   assert.deepEqual(C.COLUMNS.Enquiries.slice(0, REQUIRED.length), REQUIRED);
-  assert.deepEqual(Object.keys(C.COLUMNS), ['Enquiries', 'People', 'Events', 'Drafts', 'FollowUps', 'Litters', 'Sale Replies', 'Deposits', 'Sources', 'Settings', 'Requests', 'Log', 'Style']);
+  assert.deepEqual(Object.keys(C.COLUMNS), ['Enquiries', 'People', 'Events', 'Drafts', 'FollowUps', 'Litters', 'Sale Replies', 'Deposits', 'Sources', 'Settings', 'Requests', 'Log', 'Style', 'Results']);
 });
 
 test('contract: the word lists are exactly the job\'s lists', () => {
