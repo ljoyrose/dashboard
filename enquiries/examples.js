@@ -7,7 +7,7 @@
   var K = function (n) { return 'K-a' + String(n).padStart(15, '0'); };
   var F = function (n) { return 'F-f' + String(n).padStart(15, '0'); };
 
-  // build(now) -> { Enquiries, People, Events, Drafts, FollowUps, Litters, 'Sale Replies', Deposits, Results } as page rows.
+  // build(now) -> { Enquiries, People, Events, Drafts, FollowUps, Litters, 'Sale Replies', Deposits, Sources, Log, Results } as page rows.
   function build(now) {
     var t = now == null ? Date.now() : Core.toMs(now);
     var uk = function (hours) { return Core.toUk(t + hours * 3600000); };
@@ -72,6 +72,18 @@
       Deposits: [
         { deposit_key: 'D-x7', litter_ref: 'L-EX1', pup_ref: 'L-EX1-3', person_key: 'P-x7', deposit_date: day(-20, '10:00').slice(0, 10), deposit: '500', balance_due: '1500',
           balance_paid: '', collection_date: day(14, '10:00').slice(0, 10), status: 'held', basis: 'example', check: '' }
+      ],
+      // Stage 15: invented Sources and engine Log rows, so the Alerts card has a silent source and a blank run to show.
+      Sources: [
+        { source: 'Calendly', lands_where: 'Calendly', machine_readable: 'yes', reader: 'calendly', last_read_uk: uk(-1), last_count: 0, status: 'live', note: '' },
+        { source: 'Website', lands_where: 'Email', machine_readable: 'yes', reader: 'gmail', last_read_uk: uk(-1), last_count: 0, status: 'live', note: '' },
+        { source: 'Pets4Homes', lands_where: 'Email', machine_readable: 'yes', reader: 'gmail', last_read_uk: uk(-1), last_count: 0, status: 'live', note: '' }
+      ],
+      Log: [
+        { at_uk: uk(-1), level: 'INFO', step: 'run', message: 'start, DRY_RUN=false', count: '', dry_run: false, engine_version: 'example' },
+        { at_uk: uk(-1), level: 'INFO', step: 'calendly', message: '0 calls, 0 enquiries', count: 0, dry_run: false, engine_version: 'example' },
+        { at_uk: uk(-1), level: 'INFO', step: 'gmail', message: '0 threads read, 0 enquiries', count: 0, dry_run: false, engine_version: 'example' },
+        { at_uk: uk(-1), level: 'INFO', step: 'run', message: 'done in 9s', count: '', dry_run: false, engine_version: 'example' }
       ],
       // Stage 14: invented history counts (as the one-off HubSpot import writes them), before the live months.
       Results: [

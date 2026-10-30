@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.13.0 (2026-10-30)';
+  var VERSION = 'enquiries-core 1.14.0 (2026-10-30)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -1967,6 +1967,113 @@
     return out;
   }
 
+  // ---- Alerts (Stage 15) ---------------------------------------------------------------------------------------
+  // Things Lisa should look at, worked out from the tabs on every read. Shown on the page and listed in the run slip as
+  // suggested RR_OPEN-WORK rows; nothing here (or in the engine) writes an alert anywhere. Refs only: no names, no amounts.
+  // opts: { now, replyHours: 24, prepHours: 2, runHours: 3, offerDays: 3, silentDays: 14 }.
+  var ALERT_KINDS = ['hot-no-reply', 'blank-run', 'contact-blocked', 'call-no-prep', 'pup-no-offer', 'balance-overdue', 'source-silent'];
+  var ALERT_TODO = {
+    'hot-no-reply': 'Reply to this hot enquiry today.', 'blank-run': 'Open the engine Log and check the readers and keys.',
+    'contact-blocked': 'Check the contact rule is right; no draft is made while it stands.', 'call-no-prep': 'Read the enquiry before the call: the booking form gave nothing to prepare from.',
+    'pup-no-offer': 'Offer this pup to the next person on the list.', 'balance-overdue': 'Chase or record the balance.',
+    'source-silent': 'Check this source still lands enquiries (form, forwarding, keys).'
+  };
+  var READER_STEPS = { calendly: 1, gmail: 1, clickfunnels: 1, hubspot: 1, requests: 1 };
+  var QUIET_SOURCE = /^(off|retired|paused|manual|closed)$/i;
+  function makeAlert(kind, key, o) {
+    var a = { kind: kind, key: 'A-' + kind + '-' + key, ref: '', enquiry_key: '', pup_ref: '', source: '', since_uk: '', text: '', todo: ALERT_TODO[kind] };
+    for (var k in o) a[k] = o[k];
+    return a;
+  }
+  // The last finished engine run, from the Log rows in sheet order: { start, done, read, errors } or null.
+  function lastRun(log) {
+    log = log || [];
+    for (var i = log.length - 1; i >= 0; i--) {
+      if (log[i].step !== 'run' || !/^done\b/.test(String(log[i].message || ''))) continue;
+      var j = i - 1; while (j >= 0 && !(log[j].step === 'run' && /^start\b/.test(String(log[j].message || '')))) j--;
+      var read = 0, readers = 0, errors = 0;
+      for (var k = j + 1; k < i; k++) {
+        var r = log[k], step = String(r.step || '').replace(/_$/, '').replace(/^read/i, '').toLowerCase();
+        if (r.level === 'ERROR') errors++;
+        if (READER_STEPS[step] && r.level === 'INFO') { readers++; var n = Number(r.count); if (!isNaN(n)) read += n; }
+      }
+      return { start: j >= 0 ? log[j].at_uk : '', done: log[i].at_uk, read: read, readers: readers, errors: errors };
+    }
+    return null;
+  }
+  // tabs as hubView takes them, plus Log and Sources. Returns the alerts, oldest first within each kind.
+  function alertsView(tabs, opts) {
+    tabs = tabs || {}; opts = opts || {};
+    var now = opts.now == null ? Date.now() : toMs(opts.now), H = 3600000, out = [];
+    var replyH = opts.replyHours || 24, prepH = opts.prepHours || 2, runH = opts.runHours || 3, offerD = opts.offerDays || 3, silentD = opts.silentDays || 14;
+    var people = {}, replied = {}, enq = tabs.Enquiries || [];
+    (tabs.People || []).forEach(function (p) { people[p.person_key] = p; });
+    (tabs.Events || []).forEach(function (v) { if (REPLY_EVENTS[v.type]) replied[v.enquiry_key] = 1; });
+    var live = enq.filter(function (e) { return !DONE_STAGES[e.stage] && !/junk/.test(String(e.flag || '')); });
+    // 1. A hot enquiry still at "new" with no reply event, received replyHours or more ago (contactable only).
+    live.forEach(function (e) {
+      var h = hoursSince(e.received_uk, now);
+      if (e.band !== 'hot' || e.stage !== 'new' || replied[e.key] || h == null || h < replyH || !mayContact(people[e.person_key], e).ok) return;
+      out.push(makeAlert('hot-no-reply', e.key, { ref: e.ref || '', enquiry_key: e.key, since_uk: e.received_uk, text: (e.ref || 'An enquiry') + ': hot, no reply for ' + h + ' h' }));
+    });
+    // 2. The engine's last run read nothing from any reader, or no run has finished for runHours (Log read only when given).
+    if (tabs.Log && tabs.Log.length) {
+      var run = lastRun(tabs.Log), ago = run ? hoursSince(run.done, now) : null;
+      if (!run) out.push(makeAlert('blank-run', 'none', { text: 'The engine has started but never finished a run' }));
+      else if (ago != null && ago >= runH) out.push(makeAlert('blank-run', 'stale', { since_uk: run.done, text: 'No engine run for ' + ago + ' h' }));
+      else if (!run.read) out.push(makeAlert('blank-run', String(run.done), { since_uk: run.done, text: 'The last run read nothing from any source' + (run.errors ? ' (' + run.errors + ' errors)' : '') }));
+    }
+    // 3. A live enquiry a contact rule blocks while it still waits on a reply or a follow-up (so no draft is made).
+    live.forEach(function (e) {
+      var g = mayContact(people[e.person_key], e);
+      if (g.ok || ['new', 'replied', 'call-held', 'offered'].indexOf(e.stage) < 0) return;
+      out.push(makeAlert('contact-blocked', e.key, { ref: e.ref || '', enquiry_key: e.key, since_uk: e.updated_uk || e.received_uk, text: (e.ref || 'An enquiry') + ': draft blocked (' + g.why + ')' }));
+    });
+    // 4. A call starting within prepHours with no prep card, or a prep card with nothing from the booking form.
+    live.forEach(function (e) {
+      var t = toMs(e.next_due_uk);
+      if (e.stage !== 'call-booked' || isNaN(t) || t < now || t > now + prepH * H) return;
+      var p = callPrep(e, { now: now, person: people[e.person_key], openPups: openPupRows(tabs.Litters), events: tabs.Events || [] });
+      if (p && String(e.question_summary || '').trim()) return;
+      out.push(makeAlert('call-no-prep', e.key, { ref: e.ref || '', enquiry_key: e.key, since_uk: e.next_due_uk, text: (e.ref || 'A call') + ': call at ' + toUk(t).slice(11, 16) + ', nothing to prepare from' }));
+    });
+    // 5. An open pup nobody holds, open for more than offerDays (an unreadable or blank date counts as long enough).
+    var since = {};
+    (tabs.Litters || []).forEach(function (r) { if (r.list === 'pups') since[r.litter_key] = r.status_since_uk; });
+    litterFlags(tabs.Litters || [], now, offerD).forEach(function (f) {
+      if (f.flag !== 'open pup, no offer') return;
+      var s = toMs(since[f.litter_key]);
+      if (!isNaN(s) && now - s <= offerD * 86400000) return;
+      out.push(makeAlert('pup-no-offer', f.pup_ref || f.litter_key, { pup_ref: f.pup_ref, since_uk: since[f.litter_key] || '', text: (f.pup_ref || 'A pup') + ': open, no offer' }));
+    });
+    // 6. A held deposit whose collection date has passed with balance still owed (no amount shown).
+    (tabs.Deposits || []).forEach(function (r) {
+      if (r.status !== 'held') return;
+      var due = money(r.balance_due), paid = money(r.balance_paid), c = toMs(r.collection_date);
+      var owed = String(r.balance_due || '').trim() ? (isNaN(due) ? 0 : Math.max(0, due - (isNaN(paid) ? 0 : paid))) : (String(r.balance_paid || '').trim() ? 0 : 1);
+      if (isNaN(c) || c >= now || owed <= 0) return;
+      out.push(makeAlert('balance-overdue', r.deposit_key || r.pup_ref, { pup_ref: r.pup_ref || '', since_uk: String(r.collection_date), text: (r.pup_ref || r.litter_ref || 'A deposit') + ': balance overdue since ' + ukDay(c) }));
+    });
+    // 7. A source on the Sources tab (not off, retired, paused or manual) with no enquiry for silentDays.
+    var last = {};
+    enq.forEach(function (e) { var t = toMs(e.received_uk); if (isNaN(t)) return; [e.source, e.channel].forEach(function (s) { s = String(s || '').toLowerCase(); if (s && !(last[s] >= t)) last[s] = t; }); });
+    (tabs.Sources || []).forEach(function (s) {
+      var name = String(s.source || '').trim();
+      if (!name || QUIET_SOURCE.test(String(s.status || '').trim())) return;
+      var t = last[name.toLowerCase()];
+      if (t != null && now - t < silentD * 86400000) return;
+      out.push(makeAlert('source-silent', name, { source: name, since_uk: t == null ? '' : toUk(t), text: name + (t == null ? ': no enquiry yet' : ': no enquiry for ' + Math.floor((now - t) / 86400000) + ' days') }));
+    });
+    return out.sort(function (a, b) { return ALERT_KINDS.indexOf(a.kind) - ALERT_KINDS.indexOf(b.kind) || String(a.since_uk).localeCompare(String(b.since_uk)); });
+  }
+  // Alerts as suggested RR_OPEN-WORK rows for the run slip (never written by code). Refs only.
+  function openWorkRows(alerts, nowIso) {
+    var at = toUk(nowIso || Date.now());
+    return (alerts || []).map(function (a) {
+      return { key: a.key, area: 'Puppy Enquiries Hub', item: a.text, next_step: a.todo, owner: 'Lisa', raised_uk: at, source: 'enquiries alerts (' + a.kind + ')' };
+    });
+  }
+
   var api = {
     VERSION: VERSION, CALLING: CALLING, STAGES: STAGES, ADULT_STAGES: ADULT_STAGES, KINDS: KIND_ORDER.slice(),
     normalisePhone: normalisePhone, countryFromPhone: countryFromPhone, countryFromTimezone: countryFromTimezone,
@@ -1996,7 +2103,7 @@
     hubView: hubView, enquiryDetail: enquiryDetail, applyRequest: applyRequest, PAGE_FILTERS: PAGE_FILTERS,
     RESULT_COUNTS: RESULT_COUNTS, RESULT_STEPS: RESULT_STEPS, median: median, pct: pct, resultsRows: resultsRows, resultRates: resultRates,
     monthsBetween: monthsBetween, resultsView: resultsView, hubspotStage: hubspotStage, hubspotHistoryFrom: hubspotHistoryFrom,
-    depositHistoryFrom: depositHistoryFrom
+    depositHistoryFrom: depositHistoryFrom, ALERT_KINDS: ALERT_KINDS, lastRun: lastRun, alertsView: alertsView, openWorkRows: openWorkRows
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

@@ -117,4 +117,17 @@ test.describe('Enquiries page @enquiries', () => {
     for (const r of rates) expect(r.trim(), 'an empty month never shows a percentage').toBe('no data');
     await expect(june).not.toContainText('0%');
   });
+  test('Stage 15: the Alerts card lists the example alerts; a contact-rule alert opens the enquiry, which has no reply box', async ({ page }) => {
+    const card = page.locator('[data-card="alerts"]');
+    await expect(card).toBeVisible();
+    await expect(card.locator('h2')).toContainText('Alerts');
+    for (const k of ['blank-run', 'contact-blocked', 'pup-no-offer', 'source-silent']) await expect(card.locator(`[data-alert="${k}"]`).first()).toBeVisible();
+    await expect(card.locator('[data-alert="pup-no-offer"]')).toHaveCount(2);
+    await expect(card.locator('[data-alert="source-silent"]')).toContainText('Pets4Homes');
+    await expect(card.locator('[data-alert="hot-no-reply"]')).toHaveCount(0);
+    await expect(card).not.toContainText('example.test');
+    await card.locator('a[data-alert="contact-blocked"]').click();
+    await expect(page).toHaveURL(/#\/e\/K-a000000000000005$/);
+    await expect(page.locator('#draftText')).toHaveCount(0);
+  });
 });
