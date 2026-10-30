@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-estate-2026-10-30-v5">
+<meta name="build" content="ljr-estate-2026-10-30-v6">
 <title>Web Estate</title>
 <!-- Web Estate Hub v1 (30 Oct 2026): every domain, site, funnel, shop and app, grouped by company, brand and client.
      PUBLIC repo: no data, no secrets. Read only: this page never changes DNS, a site, a shop or an account.
@@ -27,6 +27,7 @@
 <script src="shop.js"></script>
 <script src="keywords.js"></script>
 <script src="views.js"></script>
+<script src="alerts.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
@@ -154,7 +155,7 @@
 <script>
 (function () {
   'use strict';
-  var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop, KW = window.EstateKeywords, V = window.EstateViews;
+  var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop, KW = window.EstateKeywords, V = window.EstateViews, AL = window.EstateAlerts;
   var CLIENT_ID = CFG.clientId, SCOPE = (CFG.scopes || {}).read, WRITE = (CFG.scopes || {}).write, A = window.EstateAdd;
   var VIEWS = ['home', 'look', 'unchecked', 'shops', 'access', 'client'];
   var FILTER_WORD = { company: 'Company', brand: 'Brand', client: 'Client', kind: 'Kind', platform: 'Platform', flag: 'Flag' };
@@ -341,6 +342,15 @@
     E.groupRows(list, today()).forEach(function (g) { h += '<div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>'; });
     return h;
   }
+  // Alerts: down; SSL or domain inside 30 days; DMARC missing; two SPF records (tag lost is the engine's, scan to scan).
+  // Shown here only. Each becomes a suggested RR_OPEN-WORK row in the progress slip, never written by code.
+  function alertsCard(list) {
+    var al = AL.alerts(list, today());
+    if (!al.length) return '<div class="card" data-card="alerts"><p class="empty">No alerts.</p></div>';
+    return '<p class="grp">Alerts<span class="sr"> · </span><span class="cnt">' + al.length + '</span></p><div class="card" data-card="alerts">' + al.map(function (a) {
+      return '<div class="prop" data-alert="' + esc(a.kind) + '" data-akey="' + esc(a.key) + '"><div class="pline"><span class="dot" style="--c:var(--ljr-' + (a.level === 'red' ? 2 : 3) + ')" aria-hidden="true"></span><span class="addr">' + esc(a.text) + '</span></div></div>';
+    }).join('') + '</div>';
+  }
   function page() {
     var list = E.applyFilters(rows, filters), shown = inView(list);
     if (view === 'access') return accessPage(E.applyFilters(rows, filters));
@@ -348,7 +358,7 @@
     if (view === 'shops') return '<p class="needs">Shops &amp; ads</p><p class="hint">Shops, their feeds and channels, ClickFunnels funnels, tracked keywords and ads accounts. Read only.</p>' + filterRow() + shopsPage(E.applyFilters(rows, filters));
     var title = view === 'look' ? 'Needs a look' : view === 'unchecked' ? 'Not checked' : 'Web Estate';
     var hint = view === 'look' ? 'Down, expiring in 60 days, blocked to scripts or failing an email check.' : view === 'unchecked' ? 'Not scanned yet. The engine checks them once its daily scan is switched on.' : 'Every domain, site, funnel, shop and app. Read only: nothing here changes DNS or a site.';
-    var h = '<p class="needs">' + title + '</p><p class="hint">' + hint + '</p>' + (view === 'home' ? addBox() : '') + tiles(list) + filterRow();
+    var h = '<p class="needs">' + title + '</p><p class="hint">' + hint + '</p>' + (view === 'home' ? addBox() : '') + tiles(list) + filterRow() + (view === 'look' ? alertsCard(list) : '');
     if (!shown.length) return h + '<div class="card"><p class="empty">' + (rows.length ? 'Nothing here with these filters.' : 'No properties yet.') + '</p></div>';
     E.groupRows(shown, today()).forEach(function (g) {
       h += '<p class="grp">' + esc(g.name) + '<span class="sr"> · </span><span class="cnt">' + g.rows.length + '</span></p><div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>';
