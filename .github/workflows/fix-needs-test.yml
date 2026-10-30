@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: fix-needs-test-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   check:
     name: Bug fix without a test? (warning only)
