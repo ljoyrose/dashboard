@@ -251,3 +251,24 @@ test('Stage 6: setup() on an older sheet adds only the new settings and keeps Li
   assert.equal(st.rows.find((r) => r[0] === 'gmail_days')[1], '30');
   assert.ok(st.rows.some((r) => r[0] === 'name_match_min'));
 });
+
+// ---- Stage 7: scoring ----------------------------------------------------------------------------------------------
+test('Stage 7: every enquiry is scored with a band, 1 to 3 reasons and flags; prefs fill blank fields', { skip }, () => {
+  const files = [
+    req('FILE-S7-1', 'whatsapp', 'From: Buyer S Sample\nLooking for a chocolate girl asap, fenced garden, ready to pay a deposit. I have allergies.\n07700 900401'),
+    req('FILE-S7-2', 'facebook', 'From: Buyer T Sample\nhello')
+  ];
+  const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, dryRun: false });
+  e.ctx.setup();
+  e.ctx.runOnce();
+  const enq = e.tab('Enquiries');
+  const s = enq.find((x) => x.source_ref === 'FILE-S7-1'), t = enq.find((x) => x.source_ref === 'FILE-S7-2');
+  assert.equal(s.score, 55); // timing 20 + deposit 15 + home 10 + UK 10 (no Litters rows yet, so no fit points)
+  assert.equal(s.band, 'warm');
+  assert.equal(String(s.score_reasons).split(' | ').length, 3);
+  assert.equal(s.household_flags, 'allergies');
+  assert.equal(s.sex, 'female'); assert.equal(s.colour, 'chocolate');
+  assert.equal(t.band, 'not-a-fit');
+  assert.ok(String(t.score_reasons).length > 0, 'a score always has a reason');
+  assert.ok(e.tab('Log').some((r) => r.step === 'score' && /2 scored/.test(r.message)));
+});
