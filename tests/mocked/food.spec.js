@@ -192,6 +192,19 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view .row')).toHaveCount(1);
   });
 
+  test('Fish Treats (engine v1.14.1): a fish-only order waits as "Pack at home" until Lisa taps Packed; "No GA items" no longer claims it was packed', async ({ page }) => {
+    const b = book(), blank = n => Array(n).fill('');
+    b.orders.push(['9201', 'Shopify', 'DDF', 'GA', 'Placed', ...blank(19), '2026-10-30T10:00:00Z', '[]', 'Pack at home']);
+    b.orders.push(['9202', 'Shopify', 'DDF', 'GA', 'Placed', ...blank(19), '2026-10-30T10:00:00Z', '[]', 'Packed at home']);
+    b.orders.push(['9203', 'Shopify', 'DDF', 'GA', 'Placed', ...blank(19), '2026-10-30T10:00:00Z', '[]', 'No GA items']);
+    await sheets(page, b);
+    await open(page, '#/orders');
+    await expect(page.locator('#view .row', { hasText: '#9201' }).locator('.badge')).toHaveText('🏠 Pack at home: tap Packed once posted');
+    await expect(page.locator('#view .row', { hasText: '#9202' }).locator('.badge')).toHaveText('🏠 Packed at home');
+    await expect(page.locator('#view .row', { hasText: '#9203' }).locator('.badge')).toHaveText('📭 No GA items: see its card');
+    await expect(page.locator('#view')).not.toContainText('Packed at home (no GA items)');
+  });
+
   test('order codes: a partner shows by name (or its type), a resend shows as a replacement, and the GA tab lists the codes to type on the Portal', async ({ page }) => {
     const b = book();
     b.orders[0].push('tracking_sent', 'partner'); b.orders[1].push('', 'B07');
