@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-estate-2026-10-30-v2">
+<meta name="build" content="ljr-estate-2026-10-30-v3">
 <title>Web Estate</title>
 <!-- Web Estate Hub v1 (30 Oct 2026): every domain, site, funnel, shop and app, grouped by company, brand and client.
      PUBLIC repo: no data, no secrets. Read only: this page never changes DNS, a site, a shop or an account.
@@ -24,6 +24,7 @@
 <script src="core.js"></script>
 <script src="reader.js"></script>
 <script src="add.js"></script>
+<script src="shop.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
@@ -60,8 +61,8 @@
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .top :focus-visible { outline-color: var(--frame-ink); }
 
-  nav.tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(3, minmax(0, 180px)); justify-content: center; } }
+  nav.tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(4, minmax(0, 180px)); justify-content: center; } }
   @media (min-width: 601px) { nav.tabs a { min-height: 58px; gap: 3px; padding: 6px 2px; } }
   nav.tabs .n { top: 6px; right: 10px; }
 
@@ -127,6 +128,7 @@
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 8h12l-1 13H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
 </svg>
 <header>
@@ -143,13 +145,14 @@
   <a href="#/home" data-nav="home" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg><span>Estate</span><span class="n" id="n-home"></span></a>
   <a href="#/look" data-nav="look" style="--tc:var(--ljr-2)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-alert"/></svg><span>Needs a look</span><span class="n need" id="n-look"></span></a>
   <a href="#/unchecked" data-nav="unchecked" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span>Not checked</span><span class="n" id="n-unchecked"></span></a>
+  <a href="#/shops" data-nav="shops" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Shops &amp; ads</span><span class="n" id="n-shops"></span></a>
 </nav>
 <script>
 (function () {
   'use strict';
-  var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader;
+  var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop;
   var CLIENT_ID = CFG.clientId, SCOPE = (CFG.scopes || {}).read, WRITE = (CFG.scopes || {}).write, A = window.EstateAdd;
-  var VIEWS = ['home', 'look', 'unchecked'];
+  var VIEWS = ['home', 'look', 'unchecked', 'shops'];
   var FILTER_WORD = { company: 'Company', brand: 'Brand', client: 'Client', kind: 'Kind', platform: 'Platform', flag: 'Flag' };
   // Invented rows shown until the sheet id is in config.js. Nothing is read or sent while these show.
   var EXAMPLE = [
@@ -160,6 +163,7 @@
     { key: 'email-domain:example.com', kind: 'email-domain', company: 'Example Co', url_or_domain: 'example.com', spf: 'two records', dkim: 'not found', dmarc: 'missing', source: 'example' }
   ];
   var token = null, rows = [], loaded = false, view = 'home', filters = {}, example = !ES.sheetId;
+  var extra = { Shops: [], Keywords: [] }, extraMissing = { Shops: true, Keywords: true };
   var addOpen = false, addMsg = '', addBusy = false, addDraft = { input: '', company: '', brand: '', client: '', kind: '' }, pendingWrite = null;
   function day(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); }
   function $(id) { return document.getElementById(id); }
@@ -175,7 +179,20 @@
     R.read({ sheetId: ES.sheetId, token: token }).then(function (out) {
       if (out.state === 'signed-out' || /sign-in expired/.test(out.problems[0] || '')) { token = null; DashAuth.markExpired(); }
       rows = out.rows; loaded = out.ok;
+      if (out.ok) loadExtra();
       banner(out.ok ? (out.problems.length ? out.problems.join('. ') + '.' : '') : 'Could not show the estate: ' + out.problems.join('. ') + '.', out.ok);
+      render();
+    });
+  }
+
+  // Optional tabs the engine (or Lisa by hand) fills: Shops (free listings report per shop), Keywords (manual rows).
+  function loadExtra() {
+    var o = { sheetId: ES.sheetId, token: token };
+    R.tabs(o).then(function (have) {
+      ['Shops', 'Keywords'].forEach(function (tab) {
+        if (have.indexOf(tab) === -1) { extra[tab] = []; extraMissing[tab] = true; return; }
+        R.readTab(o, tab).then(function (r) { extra[tab] = r.rows || []; extraMissing[tab] = !r.ok || r.missing; render(); });
+      });
       render();
     });
   }
@@ -185,6 +202,7 @@
   function inView(list) {
     if (view === 'look') return list.filter(needsLook);
     if (view === 'unchecked') return list.filter(function (r) { return E.statusOf(r) === 'not checked'; });
+    if (view === 'shops') return list.filter(function (r) { return r.kind === 'shop' || r.kind === 'funnel' || r.kind === 'ads-account'; });
     return list;
   }
   function tile(k, v, cls) { return '<div class="tile"><span class="k">' + esc(k) + '</span><span class="v' + (v && cls ? ' ' + cls : '') + '" data-count="' + esc(k) + '">' + v + '</span></div>'; }
@@ -257,8 +275,27 @@
       }).catch(function (e) { addBusy = false; addMsg = 'Not sent: ' + e.message + '.'; render(); });
     });
   }
+  // Shops & ads: a card per shop (report from the free listings job, else "not reported"), then funnels by workspace.
+  function shopsPage(list) {
+    var shops = list.filter(function (r) { return r.kind === 'shop'; }), h = '';
+    h += '<p class="grp">Shops<span class="sr"> · </span><span class="cnt">' + shops.length + '</span></p><div class="card" data-card="shops">';
+    h += shops.length ? shops.map(function (r) {
+      var rep = extra.Shops.filter(function (x) { return x.key === r.key; })[0] || null;
+      if (rep && rep.channels && typeof rep.channels === 'string') rep = Object.assign({}, rep, { channels: rep.channels.split(/\s*[,;]\s*/).filter(Boolean) });
+      var c = SH.shopCard(r, rep), bad = function (v) { return v === 'not reported' ? ' soon' : ''; };
+      return '<div class="prop" data-shop="' + esc(r.key) + '"><div class="pline"><span class="addr">' + esc((r.url_or_domain || r.key).replace(/^https?:\/\//, '')) + '</span><span class="m">' + esc([r.company, r.brand].filter(Boolean).join(' · ')) + '</span></div><div class="badges">' +
+        [['Platform', c.platform], ['Plan', c.plan], ['Currency', c.currency], ['Products', c.products], ['Channels', c.channels], ['Feed', c.feed], ['Merchant Center', c.merchant_center]]
+          .map(function (b) { return '<span class="badge' + bad(b[1]) + '" data-f="' + b[0] + '"><b>' + b[0] + '</b>' + esc(b[1]) + '</span>'; }).join('') + '</div></div>';
+    }).join('') : '<p class="empty">No shops with these filters.</p>';
+    h += '</div><p class="hint">Feed and Merchant Center come from the free listings job\'s report. Until it reports, they say "not reported".</p>';
+    var ws = SH.funnelsByWorkspace(list);
+    h += '<p class="grp">ClickFunnels funnels by workspace<span class="sr"> · </span><span class="cnt">' + ws.length + '</span></p><div class="card" data-card="funnels">' +
+      (ws.length ? ws.map(function (w) { return '<div class="prop"><div class="pline"><span class="addr">' + esc(w.workspace) + '</span><span class="m">' + w.count + ' funnel' + (w.count > 1 ? 's' : '') + '</span></div><div class="badges"><span class="badge ok"><b>Live</b>' + w.live + '</span><span class="badge' + (w.down ? ' no' : '') + '"><b>Down</b>' + w.down + '</span></div></div>'; }).join('') : '<p class="empty">No funnels with these filters.</p>') + '</div>';
+    return h;
+  }
   function page() {
     var list = E.applyFilters(rows, filters), shown = inView(list);
+    if (view === 'shops') return '<p class="needs">Shops &amp; ads</p><p class="hint">Shops, their feeds and channels, ClickFunnels funnels, tracked keywords and ads accounts. Read only.</p>' + filterRow() + shopsPage(E.applyFilters(rows, filters));
     var title = view === 'look' ? 'Needs a look' : view === 'unchecked' ? 'Not checked' : 'Web Estate';
     var hint = view === 'look' ? 'Down, expiring in 60 days, blocked to scripts or failing an email check.' : view === 'unchecked' ? 'Not scanned yet. The engine checks them once its daily scan is switched on.' : 'Every domain, site, funnel, shop and app. Read only: nothing here changes DNS or a site.';
     var h = '<p class="needs">' + title + '</p><p class="hint">' + hint + '</p>' + (view === 'home' ? addBox() : '') + tiles(list) + filterRow();
@@ -271,7 +308,7 @@
   function render() {
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     var list = E.applyFilters(rows, filters), look = list.filter(needsLook).length, unc = list.filter(function (r) { return E.statusOf(r) === 'not checked'; }).length;
-    $('n-home').textContent = list.length || ''; $('n-look').textContent = look || ''; $('n-unchecked').textContent = unc || '';
+    $('n-home').textContent = list.length || ''; $('n-shops').textContent = list.filter(function (r) { return r.kind === 'shop'; }).length || ''; $('n-look').textContent = look || ''; $('n-unchecked').textContent = unc || '';
     $('stamp').textContent = ES.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
     $('signin').classList.toggle('hidden', !!token); $('signin').disabled = !ready;
