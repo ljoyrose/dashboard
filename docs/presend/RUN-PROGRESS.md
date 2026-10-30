@@ -10,8 +10,9 @@ Resume from this file plus the newest AA_CJ-PRESEND-LANDING slip in 00 AI Common
 | 3 weeklyBackup review refresh (stacked on 2, for this file only) | claude/presend-land-3-review | #144 | docs only | local range CLEAN; CI on the PR | PASS: 26 Oct CONFIRMED nothing trimmed (8 to 11 of 24); next trim Mon 30 Nov 2026 |
 | 4 Box run kit (stacked on 3) | claude/presend-land-4-runbook | #145 | invented flow: NOT READY case 3 FAIL no READY stamp; READY case stamp written; verify 0, after 1-char edit 1; empty data 5 NOT RUN blocks READY; selftests 0 silent with and without data | local range CLEAN; CI on the PR | PASS |
 | 5 Hash the trimmed text (stacked on 4; default A) | claude/presend-land-5-hash-trimmed | #167 | selftest 0 silent (new control: end newlines ignored, inside edit caught); send gate specs 13 pass | local range CLEAN | PASS |
-| 6 Engine stamp handler, ready to paste (stacked on 5; default A) | claude/presend-land-6-stamp-handler | see slip | stamp handler specs 14 pass | local range CLEAN | PASS (not deployed: Mac route) |
+| 6 Engine stamp handler, ready to paste (stacked on 5; default A) | claude/presend-land-6-stamp-handler | #170 | stamp handler specs 14 pass | local range CLEAN | PASS (not deployed: Mac route) |
+| 7 Full tests: every tools/presend path + every Send gate state (stacked on 6) | claude/presend-land-7-tests | see slip | Python 94 pass (all lines run except CLI blocks, run by subprocess); gate specs 18 new; full mocked 727 pass | local range CLEAN | PASS |
 
 Parked: 5 (the job's 4 plus the stamp-text match rule; in the slip).
 Overlap: 1 open PR (Studio Stage 6) also edits factory/index.html, other lines.
-Main merged into stages 1-4 on 30 Oct (no rebase). Next: engine stamp handler code (proposal approved by default A), full presend test suite, Send gate state tests.
+Main merged into stages 1-4 on 30 Oct (no rebase). Next: final slip with every default decision for Lisa's review; CI on PRs.
