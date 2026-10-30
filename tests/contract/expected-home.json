@@ -1,0 +1,38 @@
+{
+  "_about": "Field NAMES and JS types only (no values). What the Home hub (index.html) expects inside each JSON file it reads from Drive. Rebuild with tests/contract/make-expected-home.js, then review the diff.",
+  "home": {
+    "DROPBOX-TOTALS.json": {
+      "fixture": "tests/fixtures/dropbox/DROPBOX-TOTALS.json",
+      "top": {
+        "generated": "string",
+        "complete": "boolean",
+        "marked_files": "number",
+        "marked_gb": "number",
+        "duplicate_files": "number",
+        "wasted_gb": "number"
+      },
+      "fields": {},
+      "required": {
+        "": [
+          "complete",
+          "marked_files",
+          "marked_gb",
+          "duplicate_files",
+          "wasted_gb"
+        ]
+      }
+    },
+    "BIN-GUARD-WEBAPP.json": {
+      "fixture": "tests/contract/fixture-home-bin-guard.json",
+      "top": {
+        "url": "string"
+      },
+      "fields": {},
+      "required": {
+        "": [
+          "url"
+        ]
+      }
+    }
+  }
+}
