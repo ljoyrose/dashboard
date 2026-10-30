@@ -1,6 +1,6 @@
 name: House lint
 
-# tools/lint/lint.mjs: plain Node, no packages, no secrets, read-only. JOB 38. 
+# tools/lint/lint.mjs: plain Node, no packages, no secrets, read-only. JOB 38.
 # Fails only on NEW findings; today's are counted in tools/lint/known.json (lower a number when you fix one).
 # Workflows must pass outright: every action pinned to a full SHA, top-level permissions contents read only,
 # a timeout on every job, and a concurrency block. Not a required check.
