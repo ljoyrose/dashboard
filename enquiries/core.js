@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.6.0 (2026-10-30)';
+  var VERSION = 'enquiries-core 1.7.0 (2026-10-30)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -500,6 +500,177 @@
     return { score: score, band: band, reasons: reasons, flags: flags, prefs: prefs };
   }
 
+  // ---- Reply drafts in Lisa's style (Stage 8) ------------------------------------------------------------------
+  // Drafts only: written to the Drafts tab and shown in copy boxes; Lisa sends every message herself. The wording
+  // follows her own approved texts (sales plan Appendix A and B) until the style guide from her sent mail is approved.
+  // Never a price, a £ figure, a COI value, the licence number, a puppyclassroom.com link or "hypoallergenic" without
+  // "low-shedding". Every draft carries at least one info link. checkDraft() enforces all of this on every draft.
+  var INFO = 'https://doc.labradoodles.co.uk/';
+  var LINKS = { breed: INFO + 'breed', health: INFO + 'health-tests', sizes: INFO + 'sizes', colour: INFO + 'colour', coats: INFO + 'coats' };
+  var UK_PET_TRAVEL = 'https://www.gov.uk/taking-your-pet-abroad';
+  var BRAND_LINE = 'Australian Labradoodles/Cobberdogs, www.cobberdogs.com';
+  var STOP_LINE = "If you would rather not hear from me again, reply STOP and I won't contact you again.";
+  var CASES = ['first-uk', 'first-abroad', 'after-call', 'waiting-list', 'pup-offer', 'no-fit-now', 'adult-dog', 'breeder', 'missed', 'gentle-close'];
+  // Cases the engine may pick by itself. A pup offer is Lisa's alone: it is only ever drafted when she asks for it.
+  var AUTO_CASES = ['first-uk', 'first-abroad', 'after-call', 'no-fit-now', 'adult-dog', 'breeder', 'missed', 'gentle-close'];
+
+  function firstName(name) {
+    var t = String(name || '').trim().split(/\s+/)[0] || '';
+    return /^[A-Za-zÀ-ɏ'-]{2,}$/.test(t) ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : '';
+  }
+  // Which links fit: always the breed page, then what they asked about; the missed-enquiry apology carries all five.
+  function linksFor(kase, prefs) {
+    prefs = prefs || {};
+    if (kase === 'missed') return [LINKS.breed, LINKS.sizes, LINKS.colour, LINKS.coats, LINKS.health];
+    var out = [LINKS.breed];
+    if (prefs.size) out.push(LINKS.sizes);
+    if (prefs.colour) out.push(LINKS.colour);
+    if (prefs.coat) out.push(LINKS.coats);
+    if (kase === 'breeder' || kase === 'adult-dog' || out.length === 1) out.push(LINKS.health);
+    return out;
+  }
+  // The official page for buyers abroad: Lisa keeps a country=URL list in Settings (import_pages). With no page on
+  // file the draft points to the UK government pet travel page and says "Lisa to confirm" for the country's rules.
+  function importLine(country, pages) {
+    var map = {};
+    String(pages || '').split(/[\n;]+/).forEach(function (p) {
+      var m = p.match(/^\s*([^=]+?)\s*=\s*(https:\/\/\S+)\s*$/);
+      if (m && /\.(gov\.uk|admin\.ch|gov|gouv\.fr|europa\.eu|gv\.at|bund\.de|govt\.nz|gov\.au|gc\.ca|gov\.ie)(\/|$)/i.test(m[2])) map[m[1].toLowerCase()] = m[2];
+    });
+    var own = map[String(country || '').toLowerCase()];
+    if (own) return { text: 'The official rules for bringing a puppy to ' + country + ' are here: ' + own, link: own };
+    return { text: 'For travel from the UK the government page is ' + UK_PET_TRAVEL + '. The rules for ' + (country || 'your country') + ' are: Lisa to confirm.', link: UK_PET_TRAVEL };
+  }
+  // Pick the case for an enquiry with no reply yet. ctx: { now, missedDays (7) }.
+  function chooseCase(e, ctx) {
+    e = e || {}; ctx = ctx || {};
+    var days = hoursSince(e.received_uk, ctx.now) / 24, missed = ctx.missedDays || 7;
+    if (e.stage === 'call-held') return 'after-call';
+    if (e.stage && e.stage !== 'new') return '';
+    if (e.kind === 'adult-dog') return 'adult-dog';
+    if (e.kind === 'breeding-set' || e.kind === 'stud' || e.channel === 'cf-breeding') return 'breeder';
+    if (days > missed) return 'missed';
+    if (e.country && HOME_COUNTRIES.indexOf(e.country) < 0) return 'first-abroad';
+    return 'first-uk';
+  }
+  function sign(lines) { return lines.concat(['', 'Kind regards,', '', 'Lisa', '', BRAND_LINE]); }
+  // Build one case as { email: { subject, text }, whatsapp, links }. o: { name, country, prefs, importPages }.
+  function buildDraft(kase, o) {
+    o = o || {};
+    var fn = firstName(o.name), hi = fn ? 'Hi ' + fn + ',' : 'Hi there,', links = linksFor(kase, o.prefs), list = links.join('\n');
+    var subject = 'Your puppy enquiry with Australian Labradoodles/Cobberdogs', body, wa, stop = false;
+    switch (kase) {
+      case 'first-uk':
+      case 'first-abroad':
+        var imp = kase === 'first-abroad' ? importLine(o.country, o.importPages) : null;
+        if (imp && links.indexOf(imp.link) < 0) links.push(imp.link);
+        body = [hi, '', 'Thank you for getting in touch about our puppies. I\'d love to help.', '',
+          'These pages explain the breed and how we health test:', '', list].concat(imp ? ['', imp.text] : [])
+          .concat(['', 'Just reply and tell me what you\'re looking for and when, and I\'ll let you know what we have coming up. If it\'s easier, we can have a short WhatsApp call.']);
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa from Australian Labradoodles/Cobberdogs. Thank you for your enquiry, I\'d love to help. The breed: ' + links[0]
+          + (imp ? '. Travel: ' + imp.link + ' (rules for ' + (o.country || 'your country') + ': Lisa to confirm)' : '') + '. What are you looking for, and when?';
+        break;
+      case 'after-call':
+        subject = 'Lovely to talk to you';
+        body = [hi, '', 'Thank you for your time on the call today. As promised, here are the pages we talked about:', '', list, '',
+          'Have a read, and just reply with any questions. I\'ll be in touch about the next step.'];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', lovely to talk today. Here is the breed page we mentioned: ' + links[0] + '. Any questions, just message me. Lisa';
+        break;
+      case 'waiting-list':
+        subject = 'Our waiting list';
+        body = [hi, '', 'Thank you for waiting so patiently. We have a place on our waiting list for you if you would like it.', '',
+          'The pages about the breed and our health testing are here:', '', list, '', 'Just reply if you\'d like me to put your name down, and I\'ll send you the details.'];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. We have a place on our waiting list for you if you\'d like it. Breed info: ' + links[0] + '. Shall I send you the details?';
+        break;
+      case 'pup-offer':
+        subject = 'A puppy for you';
+        body = [hi, '', 'I think we may have the right puppy for you: [Lisa: which pup and why].', '', 'The pages about the breed and our health testing are here:', '', list, '',
+          'Just reply and I\'ll send you the details.'];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. I think we may have the right puppy for you: [Lisa: which pup]. Breed info: ' + links[0] + '. Shall I send you the details?';
+        break;
+      case 'no-fit-now':
+        body = [hi, '', 'Thank you for getting in touch. I don\'t have a puppy that fits what you\'re looking for just now, but I\'d love to keep you in mind for our next litters.', '',
+          'These pages explain the breed and how we health test:', '', list, '', 'Just reply if you\'d like me to keep you posted.'];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. I don\'t have a puppy that fits just now, but I\'d love to keep you posted about our next litters. Breed info: ' + links[0];
+        break;
+      case 'adult-dog':
+        subject = 'Our adult dogs';
+        body = [hi, '', 'Thank you for asking about our adult dogs. Prices are on request, and I\'m happy to send you the details of any dog you\'re interested in.', '',
+          'You can read about the breed and our health testing here:', '', list, '', 'Just reply and tell me what you\'re looking for.'];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Thank you for asking about our adult dogs. Price on request: I\'m happy to send details. Breed info: ' + links[0];
+        break;
+      case 'breeder':
+        stop = true;
+        subject = 'Cobberdogs from Australian Labradoodles/Cobberdogs';
+        body = [hi, '', 'I\'m Lisa from Australian Labradoodles/Cobberdogs in Wales. Thank you for your interest in our breeding dogs.', '',
+          'You can read about the breed and our health testing here:', '', list, '', 'Prices are on request. Just reply and I\'ll send you the details, or message me on WhatsApp.'];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa from Australian Labradoodles/Cobberdogs. Thank you for your interest in our breeding dogs; price on request. Breed info: ' + links[0] + '. Reply STOP and I won\'t contact you again.';
+        break;
+      case 'missed':
+        stop = true;
+        body = [hi, '', 'Thank you for getting in touch through our website, and I\'m so sorry for the very slow reply. A problem with our website form meant your message never reached me, and that has now been put right.', '',
+          'If you are still looking for a puppy, I\'d love to help. These pages explain the breed, sizes, colours, coats and our health testing:', '', list, '',
+          'Just reply and tell me what you\'re looking for, and I\'ll let you know what we have coming up.'];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa from Australian Labradoodles/Cobberdogs. I\'m so sorry for the very slow reply: a website problem meant your message never reached me. If you\'re still looking, I\'d love to help. Breed info: ' + links[0] + '. Reply STOP and I won\'t contact you again.';
+        break;
+      case 'gentle-close':
+        subject = 'Still looking?';
+        body = [hi, '', 'I just wanted to check in. If you\'re still looking for a puppy I\'d love to help, and if your plans have changed that\'s absolutely fine.', '',
+          'The breed pages are here if useful:', '', list];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking in: if you\'re still looking I\'d love to help, and if plans have changed that\'s fine. ' + links[0];
+        break;
+      default: return null;
+    }
+    var text = sign(body).concat(stop ? ['', STOP_LINE] : []).join('\n');
+    return { email: { subject: subject, text: text }, whatsapp: wa, links: links };
+  }
+
+  // Everything a draft must never contain. Returns plain-English problems ([] = fine).
+  var PRICE_RE = /£|€|\$\s*\d|\b\d[\d,.]*\s*(k\b|pounds?|gbp|eur(os?)?|chf|francs?|usd|dollars?)|\b(gbp|eur|chf|usd)\s*\d|\bprice (is|of|will be|=)\s*\d/i;
+  var LICENCE_WORDS = /\blicen[cs]e\s*(no\.?|number|#|ref(erence)?)\b/i, LICENCE_CODE = /\b[A-Z]{2,4}[\s\/-]?\d{3,}\b/;
+  function checkDraft(text, o) {
+    var t = String(text || ''), why = [];
+    o = o || {};
+    if (PRICE_RE.test(t)) why.push('a price or money figure');
+    if (/\bCOI\b|coefficient of inbreeding|inbreeding (coefficient|%)|\d+(\.\d+)?\s*%\s*(coi|inbreeding)/i.test(t)) why.push('a COI value');
+    if (/hypo-?allergenic/i.test(t) && !/low[- ]shedding/i.test(t)) why.push('"hypoallergenic" without "low-shedding"');
+    if (LICENCE_WORDS.test(t) || LICENCE_CODE.test(t)) why.push('a licence number or licence-number pattern');
+    if (/puppyclassroom\.com/i.test(t)) why.push('a puppyclassroom.com link');
+    if (t.indexOf(INFO) < 0) why.push('no info link');
+    if (o.stop && t.indexOf('STOP') < 0) why.push('no STOP line on a cold message');
+    return why;
+  }
+
+  // Lisa's own sent reply, made safe for the private Style tab: quoted text cut off, every email, phone number, money
+  // figure and reference code replaced, the greeting name and the recipient's names replaced by <name>. Returns
+  // { text, greeting, sign_off, words, links } where links are page addresses only (no query strings).
+  function stripForStyle(raw, opts) {
+    opts = opts || {};
+    var lines = String(raw || '').replace(/\r/g, '').split('\n'), keep = [];
+    for (var i = 0; i < lines.length; i++) {
+      var l = lines[i];
+      if (/^\s*>/.test(l) || /^On .+wrote:\s*$/.test(l) || /^-{2,}\s*Original Message/i.test(l) || /^From:\s/.test(l)) break;
+      keep.push(l);
+    }
+    var t = keep.join('\n').trim();
+    var links = (t.match(/https?:\/\/[^\s<>()]+/g) || []).map(function (u) { return u.replace(/[?#].*$/, '').replace(/[.,;:!]+$/, ''); });
+    t = t.replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g, '<email>')
+      .replace(/(\+|00)\d[\d\s().-]{7,}\d|\b0\d[\d\s-]{8,}\d/g, '<number>')
+      .replace(/(£|€|\$)\s*\d[\d,.]*|\b\d[\d,.]*\s*(pounds?|gbp|eur(os?)?|chf|francs?)\b/gi, '<price>')
+      .replace(/\b[A-Z]{2,4}[\s\/-]?\d{3,}\b/g, '<ref>')
+      .replace(/\b\d{4,}\b/g, '<number>');
+    var gm = t.match(/^(hi|hello|dear|good (morning|afternoon|evening))\s+([^\s,!]+)/im);
+    var names = (opts.names || []).map(String).join(' ').split(/[\s,<>"]+/).filter(function (n) { return /^[A-Za-zÀ-ɏ'-]{2,}$/.test(n); });
+    if (gm && names.indexOf(gm[3]) < 0) names.push(gm[3]);
+    names.forEach(function (n) {
+      if (/^(lisa|there|all|everyone)$/i.test(n)) return;
+      t = t.replace(new RegExp('\\b' + n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'g'), '<name>');
+    });
+    var first = (t.split('\n')[0] || '').trim(), tail = t.split('\n').filter(function (x) { return x.trim(); }).slice(-3).join(' / ');
+    return { text: t, greeting: first.length <= 40 ? first : first.slice(0, 40), sign_off: tail.slice(0, 80),
+      words: (t.match(/\S+/g) || []).length, links: links.filter(function (u, j) { return links.indexOf(u) === j; }) };
+  }
+
   // ---- Do-not-contact gate (Stage 6; used by every draft and follow-up writer) ---------------------------------
   // A person or enquiry marked do-not-contact or unsubscribed is never drafted to and never gets a follow-up.
   function mayContact(person, enquiry) {
@@ -584,9 +755,15 @@
   // ---- Time ----------------------------------------------------------------------------------------------------
   function toMs(v) {
     if (v instanceof Date) return v.getTime();
+    if (typeof v === 'number') return v;
     var s = String(v || '').trim(); if (!s) return NaN;
-    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) s += 'T00:00:00Z';
-    else if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(s)) s = s.replace(' ', 'T') + 'Z';  // a bare time is read as UTC
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return Date.parse(s + 'T00:00:00Z');
+    if (/^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}(:\d{2})?$/.test(s)) {
+      // A bare time is UK clock time (every *_uk column), so it is read as Europe/London, BST or GMT as on that day.
+      var guess = Date.parse(s.replace(' ', 'T') + 'Z'), ms = guess;
+      for (var i = 0; i < 2; i++) { var shown = Date.parse(toUk(ms) + 'Z'); if (!isNaN(shown)) ms = guess - (shown - ms); }
+      return ms;
+    }
     return Date.parse(s);
   }
   // Whole hours from askedAt to now (now defaults to the clock). NaN-safe: an unreadable time gives null.
@@ -617,7 +794,9 @@
     Sources: ['source', 'lands_where', 'machine_readable', 'reader', 'last_read_uk', 'last_count', 'status', 'note'],
     Settings: ['setting', 'value', 'note'],
     Requests: ['request_file', 'kind', 'enquiry_key', 'received_uk', 'applied_uk', 'result'],
-    Log: ['at_uk', 'level', 'step', 'message', 'count', 'dry_run', 'engine_version']
+    Log: ['at_uk', 'level', 'step', 'message', 'count', 'dry_run', 'engine_version'],
+    // Stage 8: Lisa's own sent replies with names, emails and numbers stripped, read by styleSample(). Private.
+    Style: ['style_key', 'sent_uk', 'words', 'greeting', 'sign_off', 'links', 'text', 'read_uk']
   };
   var CHANNELS = ['email', 'calendly', 'web-form', 'cf-website-optin', 'cf-breeding', 'cf-waiting-list', 'hubspot',
     'hubspot-legacy', 'pets4homes', 'whatsapp', 'facebook', 'instagram', 'phone', 'manual'];
@@ -1005,7 +1184,9 @@
     addRequest: addRequest, parsePasted: parsePasted,
     nameKey: nameKey, nameSimilarity: nameSimilarity, mergePerson: mergePerson, resolvePeople: resolvePeople,
     personHistory: personHistory, depositKeys: depositKeys, depositRowsFrom: depositRowsFrom, depositFlags: depositFlags, mayContact: mayContact, gateContact: gateContact,
-    extractPrefs: extractPrefs, pupFits: pupFits, timingMonths: timingMonths, scoreEnquiry: scoreEnquiry, WEIGHTS: WEIGHTS, BAND_AT: BAND_AT
+    extractPrefs: extractPrefs, pupFits: pupFits, timingMonths: timingMonths, scoreEnquiry: scoreEnquiry, WEIGHTS: WEIGHTS, BAND_AT: BAND_AT,
+    DRAFT_CASES: CASES, AUTO_CASES: AUTO_CASES, LINKS: LINKS, firstName: firstName, linksFor: linksFor, importLine: importLine,
+    chooseCase: chooseCase, buildDraft: buildDraft, checkDraft: checkDraft, stripForStyle: stripForStyle
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
