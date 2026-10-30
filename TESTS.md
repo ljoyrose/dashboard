@@ -46,6 +46,7 @@ If any of these breaks, the tick turns red and says which page.
 | PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 14 |
 | Clean-up safety (keepers, folders, resume) | `#/bin`, `#/personal`, `#/usb`, `#/changes` | 13 |
 | Header contract (column names) | list of expected columns | 12 |
+| Hub data contracts (Food, Marketplace, Studio: names, types, red/green) | `tests/contract/*.contract.spec.js`, run by `tests/mocked/hub-contracts.spec.js` | 47 |
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
@@ -140,6 +141,12 @@ That is 654 checks that must pass (mocked + phone, 29 Oct 2026, house look on ev
 - The file `tests/contract/expected-headers.json` lists the **column names** (names only, no figures) each Drive file should have.
 - The robot checks that the sample files, the page code and that list all agree, and that the pages still read the columns they read before. A column renamed in the page or in the samples turns the tick red.
 - This is how a renamed column gets noticed even though the pretend Drive can never rename one. To check your **real** files, see "Check your real column names".
+
+**Hub data contracts (Food, Marketplace, Studio)**
+- `tests/contract/expected-headers.json` also lists the RR_FOOD tabs and the Marketplace Open work tab and RR_LISTINGS.csv. `tests/contract/expected-state.json` lists the field names and types inside `studio-state.json` and the Marketplace wake file.
+- Each hub has invented sample data. If an engine drops, renames or adds a column or field, puts the wrong kind of value in it, or writes an empty file, the robot names the kind of change: MISSING, RENAMED, EXTRA, WRONG_TYPE or EMPTY.
+- The checks run each page's own reading code on the samples. `CONTRACT_PROVE_RED=1` flips every failure case, so you can see each one go red.
+- Rebuild the lists after a deliberate change: `node tests/contract/make-expected.js`, then read the diff.
 
 **Reading CSV files**
 - Commas inside quotes, quotes inside quotes, line breaks inside quotes.
@@ -246,6 +253,7 @@ The pretend Drive cannot tell us if a column was renamed in your real files. Thi
 1. In Google Drive, download the files to check (for example the Money index files and the `BLD-app-tables` files) into one folder on your computer.
 2. In a terminal in the `dashboard` folder: `node tests/contract/check-real-headers.js /path/to/that/folder`
 3. It prints `ok` or `PROBLEM` per file and names any missing or renamed column. It reads only the top of each file, prints column names only, never values, and sends nothing anywhere.
+4. Food, Marketplace and Studio too: download each RR_FOOD tab as CSV (`RR_FOOD - Orders.csv` and so on), the Open work tab (`… - Marketplace.csv`), `RR_LISTINGS.csv`, `MKT-WAKE-WEBAPP.json` and `studio-state.json` into the same folder. Add `--counts` to print counts only. `--dry-run` tries it on the invented samples.
 
 GitHub does not run this one, on purpose: it would need a Google key stored in GitHub, and none is stored.
 
