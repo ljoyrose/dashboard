@@ -9,7 +9,7 @@
 })(this, function () {
   'use strict';
 
-  var VERSION = '1.2.0';
+  var VERSION = '1.2.1';
 
   // ---- CSV ----
   // RFC 4180 style: quoted fields may hold commas, quotes ("") and new lines. Drops a start-of-file marker.
@@ -174,7 +174,7 @@
     meta = uniq(meta);
     var loadedBy = [];
     if (/web-pixels-manager|webPixelsManager/i.test(s)) loadedBy.push('Shopify web pixels');
-    if (/google_and_youtube|google-and-youtube|"appId":"?gid:\/\/shopify\/App\/1780363/i.test(s)) loadedBy.push('Google & YouTube app');
+    if (/google_and_youtube|google-and-youtube|"appId":"?gid:\/\/shopify\/App\/1780363|"apiClientId":1780363\b/i.test(s)) loadedBy.push('Google & YouTube app');
     if (/facebook-and-instagram|"facebook_pixel_id"/i.test(s)) loadedBy.push('Facebook & Instagram app');
     if (/clickfunnels|cf2\.com|myclickfunnels\.com/i.test(s)) loadedBy.push('ClickFunnels');
     var verify = [];

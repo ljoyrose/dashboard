@@ -110,3 +110,10 @@ test('no tag in page source is "not found in page source", never "none"', () => 
   assert.equal(E.tagWord([], false), 'not checked');
   assert.doesNotMatch(E.tagWord([], true), /none/i);
 });
+
+test('readTags sees the Google & YouTube app by its api client id too (seen on a live shop, 30 Oct 2026)', () => {
+  const t = E.readTags('<script>var meta = {"apiClientId":1780363,"x":1}; gtag("config","G-ABC1234XYZ");</script>');
+  assert.ok(t.loadedBy.includes('Google & YouTube app'));
+  assert.deepEqual(t.ga4, ['G-ABC1234XYZ']);
+  assert.equal(E.readTags('{"apiClientId":17803630}').loadedBy.includes('Google & YouTube app'), false, 'a longer number is another app');
+});
