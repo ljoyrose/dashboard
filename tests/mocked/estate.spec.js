@@ -95,6 +95,7 @@ test.describe('Web Estate page', () => {
   test('Not checked tab lists only rows with no scan yet', async ({ page }) => {
     await withSheet(page, F.values());
     await signIn(page, '#/unchecked');
+    await expect(page.locator('.prop')).toHaveCount(3); // wait for the rows: reading them at once can catch "Loading…"
     const keys = await page.locator('.prop').evaluateAll((els) => els.map((e) => e.getAttribute('data-key')).sort());
     expect(keys).toEqual(['ads-account:client-b.example', 'dns-zone:example.com', 'email-domain:example.com']);
   });
