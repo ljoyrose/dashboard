@@ -200,6 +200,9 @@
   function setting(k) { return (data.settings[k] || {}).value || ''; }
   // Low-profit line: MIN_PROFIT on the Settings tab; £8 when the cell is blank (Lisa, 30 Oct 2026).
   function minProfit() { return num(setting('MIN_PROFIT')) || 8; }
+  // Shop orders paid between `from` and `to` days ago (cancelled ones left out), from placed_at on the Orders tab.
+  function ordersBetween(from, to) { var now = Date.now();
+    return data.orders.filter(function (o) { var t = Date.parse(o.placed_at); return o.status !== 'Cancelled' && isFinite(t) && t <= now - from * 864e5 && t > now - to * 864e5; }); }
 
   /* ---------- Google Sheets ---------- */
   function api(url, init) {
@@ -295,12 +298,15 @@
     var due = unpaid().map(function (i) { return i.due_date; }).filter(Boolean).sort()[0];
     var notAtGa = data.orders.filter(function (o) { return /^(Waiting for GA|Not at GA)$/.test(o.check); }).length, late = data.orders.filter(function (o) { return o.check === 'Not at GA'; }).length;
     var min = minProfit(), low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
+    var mo = num(setting('MIN_ORDERS_MONTH')), month = ordersBetween(0, 30).length;
     var h = '<p class="needs">Needs you: ' + '<span class="cnt ' + (need ? 'need' : 'ok') + wide(need) + '">' + need + '</span></p>';
     var st = data.statements[0];   // GA's own weekly statement beats our sum of the invoices we have seen
     h += '<div class="tiles"><a class="tile" href="#/invoices"><span class="k">Owed to GA' + (st ? ' (statement ' + esc(ukDate(st.statement_date)) + ')' : '') + '</span><span class="v">' + money(st ? st.total_outstanding : owed) + '</span></a>' +
       '<a class="tile" href="#/invoices"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span>' + (due ? '<span class="datep' + dateCls(due) + '">' + esc(inDays(due)) + '</span>' : '') + '</a>' +
       '<a class="tile" href="#/orders?check"><span class="k">Not at GA yet</span><span class="v' + (late ? ' red' : '') + '">' + notAtGa + (late ? ' (' + late + ' late)' : '') + '</span></a>' +
-      '<a class="tile" href="#/orders"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a></div>';
+      '<a class="tile" href="#/orders"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a>' +
+      // MIN_ORDERS_MONTH on the Settings tab: blank = no tile (Lisa, 30 Oct 2026); set = red when the last 30 days are under it.
+      (mo ? '<a class="tile" href="#/orders"><span class="k">Orders this month (aim ' + mo + ')</span><span class="v' + (month < mo ? ' red' : '') + '">' + month + '</span></a>' : '') + '</div>';
     if (!w.length) {
       // Nothing to answer, but an order GA never got still comes first.
       if (late) return h + '<div class="card next"><p class="bline"><span class="dot" style="--c:var(--ljr-2)" aria-hidden="true"></span>Next: Order check</p><h2>' + late + ' order' + (late > 1 ? 's are' : ' is') + ' not at GA</h2><p class="what">Check the GA Portal and enter ' + (late > 1 ? 'them' : 'it') + ' by hand if needed.</p><div class="acts"><a class="btn main" href="#/orders?check">Open the orders</a></div></div>';
