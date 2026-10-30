@@ -83,6 +83,7 @@ test.describe('CD Hub: Buyers prospects (invented rows)', () => {
   });
 
   // FIX-REQUEST J34-F20: cdhub/index.html:1509 ranks with (RK[x]||9); RK['VERY STRONG'] is 0, so the strongest lead falls to the bottom.
+  // DECISION NEEDED: fix the sort (CD Hub owner) or accept. OWNER: CD Hub owner. BY 2026-11-06
   test.fixme('J34-F20 default Sort "strongest signal" puts a VERY STRONG lead above a MODERATE one', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-prospect.csv', fixture('cdhub', 'BLD-prospect.csv'));
     await HUBS.cdhub.open(page, guard);
