@@ -1,0 +1,10 @@
+# Real Drive content never goes in this public repo. Fill these from Drive before a run (see README "Data").
+PROMPT-LESSONS.csv
+APPS.csv
+data/
+sends/
+regression/
+runs/
+outbox/
+PROMPT-REGRESSION-SET*.txt
+__pycache__/
