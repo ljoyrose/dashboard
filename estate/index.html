@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-estate-2026-10-30-v4">
+<meta name="build" content="ljr-estate-2026-10-30-v5">
 <title>Web Estate</title>
 <!-- Web Estate Hub v1 (30 Oct 2026): every domain, site, funnel, shop and app, grouped by company, brand and client.
      PUBLIC repo: no data, no secrets. Read only: this page never changes DNS, a site, a shop or an account.
@@ -26,6 +26,7 @@
 <script src="add.js"></script>
 <script src="shop.js"></script>
 <script src="keywords.js"></script>
+<script src="views.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
@@ -62,8 +63,8 @@
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .top :focus-visible { outline-color: var(--frame-ink); }
 
-  nav.tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(4, minmax(0, 180px)); justify-content: center; } }
+  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 180px)); justify-content: center; } }
   @media (min-width: 601px) { nav.tabs a { min-height: 58px; gap: 3px; padding: 6px 2px; } }
   nav.tabs .n { top: 6px; right: 10px; }
 
@@ -130,6 +131,7 @@
   <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></symbol>
   <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 8h12l-1 13H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
 </svg>
 <header>
@@ -147,13 +149,14 @@
   <a href="#/look" data-nav="look" style="--tc:var(--ljr-2)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-alert"/></svg><span>Needs a look</span><span class="n need" id="n-look"></span></a>
   <a href="#/unchecked" data-nav="unchecked" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span>Not checked</span><span class="n" id="n-unchecked"></span></a>
   <a href="#/shops" data-nav="shops" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Shops &amp; ads</span><span class="n" id="n-shops"></span></a>
+  <a href="#/access" data-nav="access" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-key"/></svg><span>Access</span><span class="n" id="n-access"></span></a>
 </nav>
 <script>
 (function () {
   'use strict';
-  var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop, KW = window.EstateKeywords;
+  var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop, KW = window.EstateKeywords, V = window.EstateViews;
   var CLIENT_ID = CFG.clientId, SCOPE = (CFG.scopes || {}).read, WRITE = (CFG.scopes || {}).write, A = window.EstateAdd;
-  var VIEWS = ['home', 'look', 'unchecked', 'shops'];
+  var VIEWS = ['home', 'look', 'unchecked', 'shops', 'access', 'client'];
   var FILTER_WORD = { company: 'Company', brand: 'Brand', client: 'Client', kind: 'Kind', platform: 'Platform', flag: 'Flag' };
   // Invented rows shown until the sheet id is in config.js. Nothing is read or sent while these show.
   var EXAMPLE = [
@@ -308,8 +311,40 @@
       (ads.length ? ads.map(function (a) { return '<div class="prop"><div class="pline"><span class="addr">' + esc(a.account_label) + '</span><span class="m">' + esc(a.client || '') + '</span></div>' + (a.access_note ? '<div class="badges"><span class="badge"><b>Access</b>' + esc(a.access_note) + '</span></div>' : '') + '</div>'; }).join('') : '<p class="empty">No ads accounts with these filters.</p>') + '</div>';
     return h;
   }
+  // Access: who holds which login role per property. Role names only; anything that looks like a login is hidden.
+  function accessPage(list) {
+    var acc = V.accessRows(list), by = {};
+    list.forEach(function (r) { by[r.key] = r; });
+    var h = '<p class="needs">Access</p><p class="hint">Who holds each login role, by role name only. Passwords and email addresses are never shown here.</p>' + filterRow();
+    h += '<div class="card" data-card="access">' + acc.map(function (a) {
+      var r = by[a.key] || {}, roles = (r.owner_role ? ['you: ' + r.owner_role] : []).concat(a.roles);
+      return '<div class="prop" data-access="' + esc(a.key) + '"><div class="pline"><span class="addr">' + esc((r.url_or_domain || a.key).replace(/^https?:\/\//, '')) + '</span><span class="m">' + esc(r.kind || '') + '</span></div><div class="badges">' +
+        (roles.length ? roles.map(function (x) { return '<span class="badge">' + esc(x) + '</span>'; }).join('') : '<span class="badge">no roles noted</span>') +
+        (a.hidden ? '<span class="badge soon">' + a.hidden + ' hidden (looked like a login)</span>' : '') + '</div></div>';
+    }).join('') + '</div>';
+    var clients = E.choices(list, 'client');
+    h += '<p class="grp">Client views<span class="sr"> · </span><span class="cnt">' + clients.length + '</span></p><div class="card" data-card="clients"><p class="hint">One client\'s properties only, with no other client, no other company and no internal notes: ready for a white-label or reseller report. Sharing a view is yours to do.</p><div class="acts">' +
+      (clients.length ? clients.map(function (c) { return '<a class="btn" href="#/client?client=' + encodeURIComponent(c) + '">' + esc(c) + '</a>'; }).join('') : '<p class="empty">No clients yet.</p>') + '</div></div>';
+    var res = V.resellerReport(list, today());
+    h += '<p class="grp">Resellers<span class="sr"> · </span><span class="cnt">' + res.length + '</span></p><div class="card" data-card="resellers">' +
+      (res.length ? res.map(function (x) { return '<div class="prop"><div class="pline"><span class="addr">' + esc(x.url_or_domain || x.key) + '</span><span class="m">' + esc(x.reseller) + '</span></div><div class="badges">' + (x.fee_monthly ? '<span class="badge"><b>Monthly</b>' + esc(x.fee_monthly) + '</span>' : '') + (x.renewal ? '<span class="badge' + (x.days_to_go !== null && x.days_to_go <= 30 ? ' soon' : '') + '"><b>Renews</b>' + esc(x.renewal) + (x.days_to_go !== null ? ' (' + x.days_to_go + ' days)' : '') + '</span>' : '') + '</div></div>'; }).join('') : '<p class="empty">No resold properties noted.</p>') +
+      '</div><p class="hint">A report only: no billing here.</p>';
+    return h;
+  }
+  // Client view: one client's rows, stripped of every internal field, with no filters that would name others.
+  function clientPage() {
+    var who = filters.client || '', list = V.clientView(rows, who);
+    var h = '<p class="needs" data-client-view="' + esc(who) + '">' + esc(who || 'No client picked') + '</p><p class="hint">Client view: only this client\'s properties. <a href="#/access">Back to Access</a></p>';
+    if (!list.length) return h + '<div class="card"><p class="empty">No properties for this client.</p></div>';
+    var c = E.summarise(list, today());
+    h += '<div class="tiles">' + tile('Live', c.live) + tile('Down', c.down, 'red') + tile('Expiring in 60 days', c.expiring, 'amber') + '</div>';
+    E.groupRows(list, today()).forEach(function (g) { h += '<div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>'; });
+    return h;
+  }
   function page() {
     var list = E.applyFilters(rows, filters), shown = inView(list);
+    if (view === 'access') return accessPage(E.applyFilters(rows, filters));
+    if (view === 'client') return clientPage();
     if (view === 'shops') return '<p class="needs">Shops &amp; ads</p><p class="hint">Shops, their feeds and channels, ClickFunnels funnels, tracked keywords and ads accounts. Read only.</p>' + filterRow() + shopsPage(E.applyFilters(rows, filters));
     var title = view === 'look' ? 'Needs a look' : view === 'unchecked' ? 'Not checked' : 'Web Estate';
     var hint = view === 'look' ? 'Down, expiring in 60 days, blocked to scripts or failing an email check.' : view === 'unchecked' ? 'Not scanned yet. The engine checks them once its daily scan is switched on.' : 'Every domain, site, funnel, shop and app. Read only: nothing here changes DNS or a site.';
@@ -323,6 +358,7 @@
   function render() {
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     var list = E.applyFilters(rows, filters), look = list.filter(needsLook).length, unc = list.filter(function (r) { return E.statusOf(r) === 'not checked'; }).length;
+    $('tabs').classList.toggle('hidden', view === 'client');
     $('n-home').textContent = list.length || ''; $('n-shops').textContent = list.filter(function (r) { return r.kind === 'shop'; }).length || ''; $('n-look').textContent = look || ''; $('n-unchecked').textContent = unc || '';
     $('stamp').textContent = ES.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
