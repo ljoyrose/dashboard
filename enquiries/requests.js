@@ -29,7 +29,10 @@
   // The one-tap "call held" after a WhatsApp call (Stage 9). The engine moves the stage and makes the after-call draft.
   function callHeld(o, enquiryKey, note) { return send(o, Core.callHeldRequest(enquiryKey, null, note)); }
 
-  var api = { send: send, addByHand: addByHand, callHeld: callHeld, UPLOAD: UPLOAD };
+  // Lisa's "deposit paid" tap (Stage 11). Never carries an amount; depositKey confirms a suggested Xero row.
+  function depositPaid(o, enquiryKey, depositKey) { return send(o, Core.depositPaidRequest(enquiryKey, depositKey)); }
+
+  var api = { send: send, addByHand: addByHand, callHeld: callHeld, depositPaid: depositPaid, UPLOAD: UPLOAD };
   root.EnquiriesRequests = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

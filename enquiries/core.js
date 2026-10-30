@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.9.0 (2026-10-30)';
+  var VERSION = 'enquiries-core 1.10.0 (2026-10-30)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -381,6 +381,135 @@
       if (nk.split(' ').length >= 2) { hit = keys['nm:' + hash(nk)]; if (hit) check = 'deposit list match on name only'; }
     }
     return { past_deposit: !!hit, repeat_buyer: !!(hit && hit.sold), check: check };
+  }
+
+  // ---- Deposits and balances report (Stage 11) ------------------------------------------------------------------
+  // Report only. Amounts come from the allocation sheets and a Xero invoice CSV EXPORT that Lisa or the Money Hub drops
+  // into the private requests folder; nothing here makes an invoice, a payment link or a reminder, and nothing is ever
+  // written to Xero, Activepieces or an allocation sheet. Amounts per person live only in the private Deposits tab.
+  function money(v) {
+    var s = String(v == null ? '' : v).replace(/[£€$,\s]|GBP|EUR/gi, '');
+    return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
+  }
+  // A date cell to YYYY-MM-DD: 2026-08-01, 01/08/2026 (UK order), 1 Aug 2026 or a Date. '' when unreadable.
+  function isoDate(v) {
+    if (v instanceof Date) return isNaN(v.getTime()) ? '' : v.toISOString().slice(0, 10);
+    var s = String(v == null ? '' : v).trim(), m;
+    if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return m[1] + '-' + m[2] + '-' + m[3];
+    if ((m = s.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})$/))) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+    if ((m = s.match(/^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})$/)) && MONTHS.indexOf(m[2].toLowerCase()) >= 0)
+      return m[3] + '-' + ('0' + (MONTHS.indexOf(m[2].toLowerCase()) + 1)).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+    return '';
+  }
+  // CSV text (RFC 4180: quotes, doubled quotes, CRLF, a leading BOM) to rows of strings. Blank lines are dropped.
+  function parseCsv(text) {
+    var t = String(text || '').replace(/^﻿/, ''), rows = [], row = [], cell = '', q = false;
+    for (var i = 0; i < t.length; i++) {
+      var c = t[i];
+      if (q) {
+        if (c === '"') { if (t[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c;
+      } else if (c === '"') q = true;
+      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += c;
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); });
+  }
+  // Allocation tab (header first) to Deposits rows: one per person whose deposit date or amount is filled. People are
+  // carried as hashed person keys only. opts as litterRowsFrom: { personKeyOf, litterRef, source, defaultCode }.
+  var LEDGER_COLS = { section: /^section$/i, ref: /^(ref|xero_contact_id)$/i, status: /^status$/i, outcome: /^(outcome.*|old_.*stage)$/i,
+    date: /^(deposit_date|first_deposit)$/i, amount: /^(deposit|deposit_total|deposit_amount)$/i, due: /^balance(_due)?$/i,
+    paid: /^balance_paid$/i, collect: /^(collection|collection_date|collect(ion)?_on|go_home)$/i, pup: /^(provisional_pup|pup|pup_ref)$/i,
+    litter: /^litter(_ref)?$/i, email: /^e-?mail$/i, phone: /^(whatsapp|phone|mobile)$/i };
+  function depositLedgerFrom(values, opts) {
+    opts = opts || {};
+    var v = values || [], head = (v[0] || []).map(function (h) { return String(h == null ? '' : h).trim(); }), at = {}, out = [];
+    Object.keys(LEDGER_COLS).forEach(function (f) { at[f] = -1; head.forEach(function (h, i) { if (at[f] < 0 && LEDGER_COLS[f].test(h)) at[f] = i; }); });
+    function cell(r, f) { return at[f] < 0 || r[at[f]] == null ? '' : r[at[f]] instanceof Date ? r[at[f]] : String(r[at[f]]).trim(); }
+    v.slice(1).forEach(function (r, n) {
+      var section = String(cell(r, 'section')), date = isoDate(cell(r, 'date')) || String(cell(r, 'date')), amount = String(cell(r, 'amount'));
+      if (/^pups?$/i.test(section) || (!date && !amount)) return;
+      var words = [cell(r, 'status'), cell(r, 'outcome')].join(' '), pup = String(cell(r, 'pup'));
+      var status = /refund/i.test(words) ? 'refunded' : REPEAT_WORDS.test(words) ? 'collected' : isClosedList(section) ? 'closed' : 'held';
+      var pk = opts.personKeyOf ? opts.personKeyOf(String(cell(r, 'email')), String(cell(r, 'phone'))) : '', check = '';
+      if (!pk) {
+        var id = emailKey(String(cell(r, 'email'))) || phoneKey(String(cell(r, 'phone')), opts.defaultCode);
+        pk = id ? 'P-' + hash(id) : 'P-' + hash('alloc|' + (opts.source || '') + '|' + (cell(r, 'ref') || n));
+        check = 'not matched to an enquiry yet';
+      }
+      if (amount && isNaN(money(amount))) check = (check ? check + '; ' : '') + 'deposit amount unreadable';
+      out.push({ deposit_key: 'D-' + hash(['alloc', opts.source || '', cell(r, 'ref') || n, pk].join('|')),
+        litter_ref: opts.litterRef || String(cell(r, 'litter')) || (pup.indexOf('-') > 0 ? pup.slice(0, pup.indexOf('-')) : ''),
+        pup_ref: pup, person_key: pk, deposit_date: date, deposit: amount, balance_due: String(cell(r, 'due')), balance_paid: String(cell(r, 'paid')),
+        collection_date: isoDate(cell(r, 'collect')) || String(cell(r, 'collect')), status: status, basis: 'allocation sheet', check: check });
+    });
+    return out;
+  }
+  // Held, due and overdue totals from Deposits rows, overall and by litter. Only 'held' rows count (a suggested Xero
+  // match waits for Lisa's tap). A balance is due when the collection date falls within dueDays (30) from now and the
+  // balance is not paid; overdue when the collection date has passed and it is still not paid.
+  function depositTotals(rows, now, opts) {
+    opts = opts || {};
+    var t = now == null ? Date.now() : toMs(now), days = opts.dueDays || 30, all = blank(), by = {};
+    function blank() { return { held_count: 0, held: 0, due_count: 0, due: 0, overdue_count: 0, overdue: 0, undated: 0, unreadable: 0, suggested: 0 }; }
+    (rows || []).forEach(function (r) {
+      var lr = r.litter_ref || '(no litter)', b = by[lr] = by[lr] || blank();
+      [all, b].forEach(function (o) {
+        if (r.status === 'suggested') { o.suggested++; return; }
+        if (r.status !== 'held') return;
+        var d = money(r.deposit), due = money(r.balance_due), paid = money(r.balance_paid);
+        o.held_count++;
+        if (String(r.deposit || '').trim() && isNaN(d)) o.unreadable++; else if (!isNaN(d)) o.held += d;
+        if (String(r.balance_due || '').trim() && isNaN(due)) o.unreadable++;
+        var owed = isNaN(due) ? 0 : Math.max(0, due - (isNaN(paid) ? 0 : paid));
+        var settled = String(r.balance_due || '').trim() ? owed === 0 : String(r.balance_paid || '').trim() !== '';
+        var c = toMs(r.collection_date);
+        if (isNaN(c)) { o.undated++; return; }
+        if (settled) return;
+        if (c < t) { o.overdue_count++; o.overdue += owed; } else if (c - t <= days * 86400000) { o.due_count++; o.due += owed; }
+      });
+    });
+    return { all: all, byLitter: by };
+  }
+  // Xero invoice CSV export rows (header first) to paid invoices: { invoice_key, email, date, amount }. Only the
+  // email, number, date and paid amount are read: no name, address or line text is kept.
+  var XERO_COLS = { email: /^(email ?address|e-?mail|\*?emailaddress)$/i, number: /^\*?invoice ?number$/i,
+    date: /^(\*?invoice ?date|payment ?date|paid ?date|date)$/i, paid: /^(invoice ?amount ?paid|amount ?paid|paid)$/i,
+    total: /^(\*?total|invoice ?total|amount)$/i, owed: /^(invoice ?amount ?due|amount ?due|due)$/i, status: /^status$/i };
+  function xeroInvoicesFrom(values) {
+    var v = values || [], head = (v[0] || []).map(function (h) { return String(h == null ? '' : h).trim(); }), at = {}, out = [];
+    Object.keys(XERO_COLS).forEach(function (f) { at[f] = -1; head.forEach(function (h, i) { if (at[f] < 0 && XERO_COLS[f].test(h)) at[f] = i; }); });
+    function cell(r, f) { return at[f] < 0 || r[at[f]] == null ? '' : String(r[at[f]]).trim(); }
+    v.slice(1).forEach(function (r) {
+      var st = cell(r, 'status'), amt = at.paid >= 0 ? money(cell(r, 'paid')) : money(cell(r, 'total')), owed = money(cell(r, 'owed'));
+      var paid = st ? /^paid$/i.test(st) : at.owed >= 0 ? owed === 0 : at.paid >= 0;
+      var em = normaliseEmail(cell(r, 'email'));
+      if (!paid || isNaN(amt) || amt <= 0 || !em) return;
+      out.push({ invoice_key: 'X-' + hash([cell(r, 'number'), em, cell(r, 'date'), amt].join('|')), email: em, date: isoDate(cell(r, 'date')), amount: amt.toFixed(2) });
+    });
+    return out;
+  }
+  // Suggest Xero invoices as deposits: the email must match an open enquiry AND the amount must equal one of the
+  // deposit amounts in Settings. Same email, other amount: refused. Returns { suggested, refused, unmatched }.
+  function matchInvoices(invoices, candidates, amounts) {
+    var ok = (amounts || []).map(money).filter(function (n) { return !isNaN(n); }), byEm = {}, out = { suggested: [], refused: [], unmatched: 0 };
+    (candidates || []).forEach(function (c) { var em = normaliseEmail(c.email); if (em && !byEm[em]) byEm[em] = c; });
+    (invoices || []).forEach(function (iv) {
+      var c = byEm[normaliseEmail(iv.email)], amt = money(iv.amount);
+      if (!c) { out.unmatched++; return; }
+      if (!ok.some(function (a) { return Math.abs(a - amt) < 0.005; })) { out.refused.push({ invoice_key: iv.invoice_key, enquiry_key: c.enquiry_key, why: 'amount is not a deposit amount' }); return; }
+      out.suggested.push({ invoice_key: iv.invoice_key, enquiry_key: c.enquiry_key, person_key: c.person_key, litter_ref: c.litter_ref || '', date: iv.date, amount: amt.toFixed(2) });
+    });
+    return out;
+  }
+  // The page's "deposit paid" tap (request-file pattern). Never carries an amount. depositKey confirms a suggested row.
+  function depositPaidRequest(enquiryKey, depositKey, nowIso) {
+    if (!/^K-[0-9a-f]{16}$/.test(String(enquiryKey || ''))) return { ok: false, error: 'Unknown enquiry.' };
+    if (depositKey && !/^D-[0-9a-f]{16}$/.test(String(depositKey))) return { ok: false, error: 'Unknown deposit row.' };
+    var at = nowIso || new Date().toISOString();
+    return { ok: true, name: 'ENQ-deposit-paid-' + at.replace(/[^0-9]/g, '').slice(0, 14) + '-' + String(enquiryKey).slice(2, 8) + '.json',
+      body: { v: 1, kind: 'deposit-paid', enquiry_key: enquiryKey, deposit_key: depositKey || '', at: at } };
   }
 
   // ---- What they asked for (Stage 7) ---------------------------------------------------------------------------
@@ -975,8 +1104,9 @@
     Litters: ['litter_key', 'litter_ref', 'pup_ref', 'sex', 'colour', 'size', 'coat', 'status', 'status_since_uk', 'person_key',
       'list', 'list_order', 'deposit_date', 'flag', 'source_sheet', 'read_uk'],
     'Sale Replies': ['reply_key', 'group_ref', 'dog_ref', 'enquiry_key', 'person_key', 'reply_kind', 'at_uk', 'sale_status', 'read_uk'],
-    Deposits: ['litter_ref', 'pup_ref', 'person_key', 'deposit_date', 'deposit', 'balance_due', 'balance_paid',
-      'collection_date', 'basis', 'read_uk'],
+    // Stage 11: deposit_key, status (held, suggested, collected, refunded, closed) and check added. Private amounts.
+    Deposits: ['deposit_key', 'litter_ref', 'pup_ref', 'person_key', 'deposit_date', 'deposit', 'balance_due', 'balance_paid',
+      'collection_date', 'status', 'basis', 'check', 'read_uk'],
     Sources: ['source', 'lands_where', 'machine_readable', 'reader', 'last_read_uk', 'last_count', 'status', 'note'],
     Settings: ['setting', 'value', 'note'],
     Requests: ['request_file', 'kind', 'enquiry_key', 'received_uk', 'applied_uk', 'result'],
@@ -1375,7 +1505,9 @@
     chooseCase: chooseCase, buildDraft: buildDraft, checkDraft: checkDraft, stripForStyle: stripForStyle,
     questionsToAsk: questionsToAsk, callPrep: callPrep, callHeldRequest: callHeldRequest,
     litterRowsFrom: litterRowsFrom, matchLitter: matchLitter, litterFlags: litterFlags, saleDogsFrom: saleDogsFrom,
-    saleReplyRows: saleReplyRows, saleGroupCards: saleGroupCards, checkCard: checkCard, isClosedList: isClosedList
+    saleReplyRows: saleReplyRows, saleGroupCards: saleGroupCards, checkCard: checkCard, isClosedList: isClosedList,
+    money: money, isoDate: isoDate, parseCsv: parseCsv, depositLedgerFrom: depositLedgerFrom, depositTotals: depositTotals,
+    xeroInvoicesFrom: xeroInvoicesFrom, matchInvoices: matchInvoices, depositPaidRequest: depositPaidRequest
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
