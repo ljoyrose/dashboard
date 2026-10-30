@@ -383,3 +383,22 @@ Nothing in the dashboard pages themselves was changed to add these tests (Job 6 
 ## Bin page order (TidyUp stage 5)
 
 `tests/mocked/bin-page.spec.js` checks the Bin page follows the job file's section 8: Needs you now, Ready to bin (first card, open), Check, Not ready yet, Already in the bin, Log, Dropbox (closed, last). Only **Bin these** is red; no disabled tick boxes; no internal names (ZZ_, ledger, RR_, E02, UNSURE, lcme-grok) in the visible text outside file names, tooltips and the "why" fold; one confirm of at most 40 words bins a shared-drive row and a Work My Drive row together, and Cancel bins nothing.
+
+## Bin page Log reads RUN-LOG (TidyUp stage 7)
+
+`tests/mocked/bin-log.spec.js` checks the Log reads `RUN-LOG.csv` from the folder in `config.js` and shows only the last 7 days of runs, newest first, with the time in UK time (GMT or BST, including a `date_uk` cell with no offset), the engine, Dry run or Live, the counts and the result, plus the distinct lessons. A Google Sheet of the same name is read the same way. With the shipped placeholder (no folder id), no file, only old runs, or no `date_uk` column it says "No runs logged yet". A failed read shows the same neutral text, counts no problem, and Bin these still bins. The page only reads the file.
+
+RUN-LOG.csv column contract (the private repo writes it; header row first; columns matched by name in any order; extra columns ignored):
+
+| Column | What goes in it |
+|---|---|
+| `date_uk` | When the run ended, ISO 8601. With an offset (`2026-10-30T14:05:00+00:00` or `Z`) preferred; without one it is read as UK time. Required. |
+| `job` (or `engine`) | Which engine ran, e.g. `bin-engine`, `bin-guard`. |
+| `place` | The shared drive, Work My Drive or Dropbox the run looked at. |
+| `mode` | `dry` for a dry run; `mark`, `trash` or `live` for a live run. |
+| `found` | Candidates looked at (whole number). |
+| `changed` | Items renamed or binned (whole number; 0 on a dry run). |
+| `ledger_rows_added` | Delete-ledger rows written (whole number). |
+| `errors` | Errors in the run (whole number). |
+| `result` | `ok`, `partial` or `failed`. Blank = ok when errors is 0, else partial. |
+| `lesson` | One short line, or blank. |
