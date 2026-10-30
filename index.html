@@ -2206,7 +2206,8 @@
       ['Factory', 'factory/', true],
       ['Marketplace', 'marketplace/', true],
       ['GA Hub', 'food/', true],
-      ['Studio', 'studio/', true]
+      ['Studio', 'studio/', true],
+      ['Web Estate', 'estate/', true]
     ];
     return '<section class="card" id="key-projects" aria-labelledby="key-projects-title">' +
       '<h2 id="key-projects-title">Key projects & docs</h2>' +
@@ -2249,7 +2250,7 @@
     out.sort(function (a, b2) { return rank[a.kind] - rank[b2.kind]; });
     return out;
   }
-  function hubLink(href) { return /^(money|cdhub|factory|marketplace|food|studio)\//.test(String(href || '')); }
+  function hubLink(href) { return /^(money|cdhub|factory|marketplace|food|studio|estate)\//.test(String(href || '')); }
   function needsCount() { return signedIn ? needsToday().length : 0; }
   function needsPanel() {
     if (!signedIn) return '';
