@@ -58,6 +58,24 @@ test.describe('App Factory bridge (Stage 6)', () => {
     expect(got).toHaveLength(1);
   });
 
+  test('Factory: an app name with no letters or digits still sends a 6-character slug (from the app id)', async ({ page, guard }) => {
+    const got = await uploads(page);
+    const s = factoryState(Date.now());
+    const app = s.lists.apps.filter((t) => t.id === '869fjxpc2')[0];
+    app.status = '7 launch'; app.name = '!!! ???';
+    guard.world.folder(CONF.factory.logsFolderId, 'AF logs (sample)');
+    guard.world.file('af-state-sample', 'af-state.json', JSON.stringify(s), { parents: [CONF.factory.logsFolderId], mimeType: 'application/json' });
+    await page.goto('factory/#/rooms');
+    await expect(page.locator('#signInBtn')).toBeEnabled();
+    await page.locator('#signInBtn').click();
+    await expect(page.locator('#appPick')).toBeVisible();
+    await page.evaluate(() => { location.hash = '#/card/869fjxpc2'; });
+    await page.locator('[data-action="launchpack"]').click();
+    await expect(page.locator('[data-launch="869fjxpc2"] .sent')).toHaveText('Asked Studio for a launch pack');
+    expect(got).toHaveLength(1);
+    expect(got[0].body.appRef).toEqual({ id: '869fjxpc2', slug: '869fjx' });
+  });
+
   test('Factory: no launch-pack button before Step 7', async ({ page, guard }) => {
     await openFactory(page, guard, '4 schema');
     await expect(page.locator('[data-action="launchpack"]')).toHaveCount(0);

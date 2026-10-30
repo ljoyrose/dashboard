@@ -1484,7 +1484,7 @@
   // playbook P1, appRef) into Studio's requests folder; the STUDIO-ENGINE makes the idea. appRef = AF app id + 6-letter slug.
   // Engine v0.2.23 still rejects it (needs brandIds; no P1 row; appRef not kept): that engine edit waits for Stage 2.
   var STUDIO_REQ = (CFG.studio || {}).requestsFolderId, launched = loadLocal('af-launch');
-  function appRefOf(t) { return { id: t.id, slug: slugify(bare(t)).replace(/-/g, '').slice(0, 6) }; }
+  function appRefOf(t) { return { id: t.id, slug: slugify(bare(t)).replace(/-/g, '').slice(0, 6) || String(t.id).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6) }; }
   function launchAsk(t) {
     if (stageNo(t.status) !== 7 || !STUDIO_REQ) return '';
     var l = launched[t.id];
