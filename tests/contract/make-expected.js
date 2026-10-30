@@ -74,8 +74,9 @@ function shape(obj, html, at, into) {
 const studioHtml = src('studio');
 const studioFields = shape(json('studio/contract-state.json'), studioHtml, '', {});
 const top = studioFields['']; delete studioFields[''];
-// Required: without these the page crashes or drops items (see docs/job31/RUN-PROGRESS.md, Stage 0).
+// Required: top level = the keys the page's schema comment says the engine writes; below = without these the page crashes or drops items.
 const REQUIRED = {
+  '': ['generated_at', 'studio', 'health', 'accounts', 'products', 'brands', 'groups', 'assets', 'ideas', 'playbooks', 'packs', 'kits', 'bricks', 'frameworks', 'voices', 'looks', 'formats', 'sources', 'tools', 'gaps', 'failed'],
   'assets[]': ['id', 'title', 'stage'], 'ideas[]': ['id', 'title'], 'brands[]': ['id', 'name'],
   'kits[]': ['needs', 'formatIds', 'brickIds'], 'packs[]': ['kitIds']
 };
