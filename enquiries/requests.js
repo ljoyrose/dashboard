@@ -32,7 +32,12 @@
   // Lisa's "deposit paid" tap (Stage 11). Never carries an amount; depositKey confirms a suggested Xero row.
   function depositPaid(o, enquiryKey, depositKey) { return send(o, Core.depositPaidRequest(enquiryKey, depositKey)); }
 
-  var api = { send: send, addByHand: addByHand, callHeld: callHeld, depositPaid: depositPaid, UPLOAD: UPLOAD };
+  // Follow-up taps (Stage 12): Lisa replied herself; snooze to a UK time; done (sent), or done and lost.
+  function replied(o, enquiryKey) { return send(o, Core.repliedRequest(enquiryKey)); }
+  function snooze(o, followupKey, untilUk) { return send(o, Core.snoozeRequest(followupKey, untilUk)); }
+  function done(o, followupKey, lost) { return send(o, Core.doneRequest(followupKey, lost)); }
+
+  var api = { send: send, addByHand: addByHand, callHeld: callHeld, depositPaid: depositPaid, replied: replied, snooze: snooze, done: done, UPLOAD: UPLOAD };
   root.EnquiriesRequests = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
