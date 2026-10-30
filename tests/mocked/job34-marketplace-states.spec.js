@@ -85,6 +85,7 @@ test.describe('Marketplace (JOB 34)', () => {
     await expect(page.locator('#view .card.next')).toBeVisible();
   });
 
+  // FIX-REQUEST J34-F70 (marketplace/index.html:392-399, :929). DECISION NEEDED: fix the page (Marketplace owner) or accept. OWNER: Marketplace owner. BY 2026-11-06
   test.fixme('J34-F70 while the list is being read after sign-in, the page says it is reading (not the sign-in card again)', async ({ page }) => {
     await page.route(SHEETS, async (route) => { await new Promise((r) => setTimeout(r, 2500)); route.fulfill({ status: 200, contentType: 'application/json', body: '{"values":[]}' }); });
     await page.goto('marketplace/');
