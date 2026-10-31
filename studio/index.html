@@ -363,6 +363,9 @@
   .more-d .lk { width: auto; padding: 0 10px; gap: 4px; font-size: 13px; text-decoration: none; }
   /* Me: greeting, summary strip, Next, Needs you today; friendly empty states. */
   .hello { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  /* Stage 8: a closed 3-line "How Studio works" fold under the greeting; plain text, no fill. */
+  .howto { margin: 8px 0 12px; } .howto > summary { list-style: none; width: max-content; max-width: 100%; } .howto > summary::-webkit-details-marker { display: none; } .howto[open] > summary { margin-bottom: 8px; }
+  .howto ol { margin: 0 0 4px; padding-left: 22px; color: var(--muted); } .howto li { margin: 2px 0; }
   .hello h2 { margin: 0; font-size: 26px; font-weight: 600; } .hello .sub { margin: 0; color: var(--muted); }
   .three { display: flex; gap: 8px; flex-wrap: wrap; }
   .three .sum { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 8px 14px 8px 8px; font-weight: 600; }
@@ -466,7 +469,7 @@
 </header>
 <main class="wrap" id="content">
   <div id="banner" class="banner hidden" role="status"></div>
-  <div id="exBanner" class="banner ex hidden" role="status"><i class="ti ti-flask" aria-hidden="true"></i><span>Example data · engine off</span></div>
+  <div id="exBanner" class="banner ex hidden" role="status"><i class="ti ti-flask" aria-hidden="true"></i><span>Example data · Studio helper off</span></div>
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs" id="tabs" aria-label="Sections">
@@ -517,7 +520,7 @@
  *              gate: { question, at: ISO } | null   (a gate waiting on Lisa: GO · HOLD · RESHAPE · REFINE · KILL · RECYCLE),
  *              kitId, groupId, playbookId, outcome: 'attract'|'convert'|'deliver'|'keep'|'reuse'|null, frameworkId, voiceId, lookId,
  *              formatIds: [id], language, length, masterId (variant of), purpose: 'refresh'|'rebrand'|'reformat'|'translate'|'test'|null,
- *              test (A/B group id), result, sourceIds: [id] }],   (ids are null when not set)
+ *              test (A/B group id), result, sourceIds: [id], lineCardUrl (the item's Studio Line card in Infinity, https) }],   (ids are null when not set)
  *   ideas:  [same shape as assets, stage 0],
  *   playbooks: [{ id, name, outcome, steps: [{ kind: 'pack'|'kit'|'action', id|null, text }], notes }],   (WHAT ladder: Brick › Kit › Pack › Playbook)
  *   packs:  [{ id, name, kind (e.g. funnel), kitIds: [id], notes }],
@@ -599,7 +602,7 @@
   var vmode = (function () { try { var o = JSON.parse(localStorage.getItem('st-view') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } })();
   function phone() { return window.matchMedia('(max-width: 760px)').matches; }
   function viewOf(tab) { return vmode[tab] === 'board' || vmode[tab] === 'list' ? vmode[tab] : phone() ? 'list' : 'board'; }
-  var STAGES = ['Idea', 'Research', 'Recipe', 'Spec lock', 'Inputs', 'Make', 'Check', 'Approve', 'Operate'];
+  var STAGES = ['Idea', 'Research', 'Recipe', 'Agree the brief', 'Inputs', 'Make', 'Check', 'Approve', 'Operate'];
   var BSTAGES = ['Concept', 'Name check', 'Identity', 'Tech set-up', 'Launch', 'Running'];
   var TYPES = [['pdf', 'file-type-pdf', 'PDF'], ['ebook', 'book', 'Ebook'], ['lead', 'magnet', 'Lead magnet'], ['slides', 'presentation', 'Slides'],
     ['script', 'video', 'Script'], ['logbook', 'notebook', 'Logbook'], ['tree', 'binary-tree', 'Family tree'], ['pack', 'package', 'Puppy pack'],
@@ -613,7 +616,7 @@
   var CHANNELS = ['facebook', 'instagram', 'tiktok', 'youtube', 'pinterest', 'linkedin', 'email', 'website', 'etsy', 'amazon', 'other'];
   var RKEYS = [['views', 'eye', 'Views'], ['clicks', 'click', 'Clicks'], ['leads', 'user-plus', 'Leads'], ['sales', 'shopping-cart', 'Sales'], ['revenue', 'currency-pound', '\u00a3']];
   var DSTAT = { 'ready (not sent)': ['package', 'Ready', 4], sent: ['send', 'Sent', 5], 'no file': ['alert-triangle', 'No file', 2] };
-  var WHO = [['lisa', 'Lisa', 'user'], ['claude', 'Claude', 'sparkles'], ['grok', 'Grok', 'bolt'], ['engine', 'Engine', 'settings']];
+  var WHO = [['lisa', 'Lisa', 'user'], ['claude', 'Claude', 'sparkles'], ['grok', 'Grok', 'bolt'], ['engine', 'Studio helper', 'settings']];
   var VERDICTS = [['GO', 'Go', 'check', 5], ['HOLD', 'Hold', 'player-pause', 4], ['RESHAPE', 'Reshape', 'shape', 7], ['REFINE', 'Refine', 'adjustments', 6], ['KILL', 'Kill', 'x', 2], ['RECYCLE', 'Recycle', 'recycle', 0]];
   var PROVIDERS = ['Claude', 'Grok', 'ChatGPT', 'Gemini'];
   var PRI = { urgent: 1, high: 2, normal: 3, low: 4 };
@@ -629,7 +632,7 @@
     ['video-reformat', 'Resize video', 'aspect-ratio'], ['video-captions', 'Captions', 'badge-cc'], ['voice-tts', 'Voice', 'microphone'], ['voice-clone', 'Voice clone', 'microphone'],
     ['page-build', 'Pages', 'layout'], ['email-draft', 'Email', 'mail'], ['transcribe', 'Transcribe', 'message-2'], ['research', 'Research', 'search'], ['translate', 'Translate', 'language']];
   var GROUP_ICON = { 'grp-dogs': 'dog', 'grp-apps': 'apps', 'grp-services': 'briefcase', 'grp-lisa': 'user' };
-  var KSUBS = [['playbooks', 'Playbooks', 'route'], ['packs', 'Packs', 'package'], ['kits', 'Kits', 'box'], ['bricks', 'Bricks', 'puzzle'], ['styles', 'Styles', 'palette'], ['formats', 'Formats', 'aspect-ratio']];
+  var KSUBS = [['playbooks', 'Playbooks', 'route'], ['packs', 'Packs', 'package'], ['kits', 'Kits', 'box'], ['bricks', 'Parts', 'puzzle'], ['styles', 'Styles', 'palette'], ['formats', 'Formats', 'aspect-ratio']];
   function pickOf(list, k) { return list.filter(function (x) { return x[0] === k; })[0] || null; }
   function capOf(k) { return pickOf(CAPS, k) || [k, k, 'tools']; }
   function typeOf(k) { return TYPES.filter(function (t) { return t[0] === k; })[0] || ['other', 'file', 'Other']; }
@@ -1012,7 +1015,8 @@
         ['Company', a.legal ? esc(a.legal.entity) : ''], ['Legal set', a.legal ? esc(a.legal.setName || a.legal.setId) : ''], ['Where', (pickOf(DESTS, a.destination) || [])[2] || ''],
         ['Stage', esc(+a.stage) + ' ' + esc(STAGES[a.stage])], ['AI', esc(a.provider)], ['Cost', a.cost != null && a.cost !== '' ? money(a.cost) : ''], ['Rating', a.rating != null ? esc(a.rating) + ' / 5' : ''],
         ['Version', a.stage === 8 ? 'v' + esc(a.version || 1) : ''], ['Changed', a._t ? dmy(a._t) : ''],
-        ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
+        ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : ''],
+        ['Board', infinityLink(a)]].filter(function (x) { return x[1]; });
       var inStep = Math.max(0, Math.floor((Date.now() - (Date.parse(a.stageSince) || a._t || Date.now())) / 864e5)), wo = waitingOn(a), acc = account(a.accountId);
       kv.unshift(['With', wo.w], [isClient(a) ? 'Client' : 'Brand owner', isClient(a) ? esc(acc.name) : 'Own brand'], ['In this step', inStep + (inStep === 1 ? ' day' : ' days') + (inStep > 3 && a.stage < 8 ? ' \u00b7 stuck?' : '')]);
       body = rowMore(a) + comments(a) + rightsRows(a) + deliveryRows(a) + saveAsKit(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
@@ -1149,6 +1153,8 @@
   // Me (Bloodline + Marketplace): greeting, a three-number summary, the one Next item, what needs you today, then the decision lists.
   function lateOf(a) { var d = a.dated && a.eventDate ? daysTo(a.eventDate) : null; return d !== null && d < 0 && a.stage < 8; }
   function urgency(a) { var d = a.dated && a.eventDate ? daysTo(a.eventDate) : 9999; return (lateOf(a) ? -1e5 : 0) + d; }
+  // Stage 8: "Open in Infinity" when the engine has given the item its Studio Line card link (https on startinfinity.com only).
+  function infinityLink(a) { var u = String(a.lineCardUrl || '').trim(); return /^https:\/\/([a-z0-9-]+\.)*startinfinity\.com\//i.test(u) ? '<a href="' + safeUrl(u) + '" target="_blank" rel="noopener" data-infinity>Open in Infinity</a>' : ''; }
   function vMe() {
     var s = fsOf('me'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
     var R = keep(reviews()), G = keep(gates()), H = keep(hands());
@@ -1162,6 +1168,10 @@
     var mrow = function (a) { var sl = stSlot(a.stage); return '<a class="mrow" data-mrow="' + esc(a.id) + '" href="#/asset/' + encodeURIComponent(a.id) + '" style="--sc:var(--ljr-' + sl + ');--tint:var(--ljr-' + sl + '-tint)"><span class="ic" aria-hidden="true"></span><span class="t">' + esc(bare(a)) + '<small>' + esc(needOf(a)) + ' · Step ' + a.stage + ': ' + esc(STAGES[a.stage]) + '</small></span>' + datePill(a) + '</a>'; };
     var nx = needs[0];
     return '<div class="hello"><h2>' + hello + ', Lisa</h2><p class="sub">' + esc(today) + '</p></div>' +
+      '<details class="card howto" data-howto><summary class="btn">' + I('info-circle') + 'How Studio works</summary><ol>' +
+        '<li>An idea moves along the Line, one step at a time.</li>' +
+        '<li>The Studio helper, Claude and Grok make the pieces; you decide at the gates.</li>' +
+        '<li>Nothing is sent, shared or paid for without your own tap.</li></ol></details>' +
       '<div class="three" data-three><span class="sum" data-sum="ok"><span class="big">' + onTrack + '</span>On track</span><span class="sum need" data-sum="need"><span class="big">' + needs.length + '</span>Needs you</span><span class="sum over" data-sum="over"><span class="big">' + over + '</span>Overdue</span></div>' +
       '<div class="mecards">' +
       '<section class="mcard next" data-next>' + '<h3>Next</h3>' + (nx ? '<div class="t">' + esc(bare(nx)) + '</div><p class="sub">' + esc(needOf(nx)) + (nx.dated && nx.eventDate ? ' · due ' + dmy(Date.parse(nx.eventDate)) : '') + '</p><a class="btn" href="#/asset/' + encodeURIComponent(nx.id) + '">Open it</a>' : ok('Nothing needs you.')) + '</section>' +
@@ -1255,7 +1265,7 @@
     var H = keep(hands()), A = all().filter(function (a) { return a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent'; }), D = all().filter(function (a) { return a.delivery && a.delivery.status === 'ready (not sent)'; }), Rz = library().filter(function (a) { return !a.results || !a.results.last; });
     var sect = function (icon, word, l, kind, note) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + (note ? info(note) : '') + '</div>' + (l.length ? l.map(function (a) { return row(a, kind === 'hand' ? 'hand' : kindFor(a), true); }).join('') : '<p class="okempty">Nothing waiting.</p>') + '</div>'; };
     A = keep(A); D = keep(D); Rz = keep(Rz);
-    return findBar('do', doItems().concat(Rz)) + sect('hand-finger', 'Tasks', H, 'hand') + sect('message-question', 'Questions to send', A, 'asks', 'Engine off or email off: send the link yourself') + sect('package-export', 'Ready to send', D, 'deliver', 'Email off: send the link yourself') + sect('chart-bar', 'Results to add', Rz, 'results');
+    return findBar('do', doItems().concat(Rz)) + sect('hand-finger', 'Tasks', H, 'hand') + sect('message-question', 'Questions to send', A, 'asks', 'Studio helper off or email off: send the link yourself') + sect('package-export', 'Ready to send', D, 'deliver', 'Email off: send the link yourself') + sect('chart-bar', 'Results to add', Rz, 'results');
   }
   function vIdeas() {
     var inbox = ST.inboxFolderId ? '<a class="pill" href="https://drive.google.com/drive/folders/' + esc(ST.inboxFolderId) + '" target="_blank" rel="noopener" title="Inbox: drop files here" style="--hc:var(--ljr-7-text)">' + I('inbox') + 'Inbox</a>' : '';
@@ -1264,7 +1274,7 @@
   function vAsset(id) {
     var a = byId(id); if (!a) return '<div class="card">Not found. <a href="#/assets">Assets</a></div>';
     var b = brandOf(a);
-    return '<div class="card appcard"><div class="hero"><div><h2>' + esc(bare(a)) + '</h2><p>' + esc(b.name) + ' · <span class="step">Step ' + esc(+a.stage) + ':</span> ' + esc(STAGES[a.stage]) + '</p></div></div>' +
+    return '<div class="card appcard"><div class="hero"><div><h2>' + esc(bare(a)) + '</h2><p>' + esc(b.name) + ' · <span class="step">Step ' + esc(+a.stage) + ':</span> ' + esc(STAGES[a.stage]) + (infinityLink(a) ? ' · ' + infinityLink(a) : '') + '</p></div></div>' +
       row(a, kindFor(a)) +
       STAGES.map(function (name, i) { return '<div class="stage ' + (i < a.stage ? 'd' : i === a.stage ? 'c' : '') + '"><span class="n" aria-hidden="true">' + (i < a.stage ? '\u2713' : i === a.stage ? '\u25cf' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i < a.stage ? ' <span class="sr">done</span>' : i === a.stage ? ' <span class="sr">now</span>' : '') + '</div>'; }).join('') +
       '<p><a href="#/assets">← Assets</a></p></div>';
@@ -1350,6 +1360,7 @@
       }).join('') : '<p class="muted">' + I('circle-check') + ' None.</p>') + '</div>';
     var add = '<div class="pills"><button class="pill" type="button" data-action="addtool" aria-expanded="' + toolOpen + '" style="--hc:var(--ljr-7-text)">' + I(toolOpen ? 'chevron-up' : 'plus') + 'Add tool</button></div>' + (toolOpen ? vToolForm() : '');
     var caps = function (m) { return m.capabilities.map(function (k) { var c = capOf(k); return '<span class="tag" data-cap="' + esc(k) + '" title="' + esc(k) + '">' + I(c[2]) + esc(c[1]) + '</span>'; }).join(''); };
+    var parkTag = function (m) { return m.parked ? '<span class="tag" data-chip="parked" title="Parked: not counted as covering a gap">' + I('player-pause') + 'Parked</span>' : ''; };
     var fitTag = function (m) { var f = pickOf(FITS, m.fit) || [m.fit, /^BANNED:/.test(m.fit) ? 'Not for ' + m.fit.slice(7) : m.fit, 'ban']; return '<span class="tag" data-fit="' + esc(m.fit) + '" title="Fit">' + I(f[2]) + esc(f[1]) + '</span>'; };
     T = T.filter(function (m) { return lqHit('tools', [m.product, m.thing, m.fit, (m.capabilities || []).join(' '), m.accountNotes].join(' ')); }).sort(function (a, b) {
       if (toolSort === 'left') { var pa = a.allowance ? a.used / a.allowance : -1, pb = b.allowance ? b.used / b.allowance : -1; return pb - pa; }
@@ -1359,14 +1370,14 @@
     var tsort = '<div class="pills" data-frow="tsort"><span class="flab">Sort</span>' + [['name', 'sort-a-z', 'Name'], ['left', 'gauge', 'Most used'], ['reset', 'refresh', 'Resets soon']].map(function (x) { return '<button class="pill' + (toolSort === x[0] ? ' on' : '') + '" type="button" data-tsort="' + x[0] + '" aria-pressed="' + (toolSort === x[0]) + '">' + I(x[1]) + ' ' + x[2] + '</button>'; }).join('') + '</div>';
     var list = T.length ? '<div class="card">' + T.map(function (m) {
       if (!owned(m)) return '<div class="row" data-tool="' + esc(m.product) + '" style="--c:var(--ljr-0)"><span class="bar"></span><div class="txt"><b>' + esc(m.product) + '</b>' + (m.thing ? ' · ' + esc(m.thing) : '') + info(m.accountNotes) +
-        '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + caps(m) + '</div></div></div>';
+        '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + parkTag(m) + caps(m) + '</div></div></div>';
       var st = meterOf(m), pct = Math.min(100, Math.round(st.pct * 100)), d = daysTo(m.resetsOn);
       return '<div class="meter" data-meter="' + st.k + '" data-tool="' + esc(m.product) + '" style="--c:var(--ljr-' + st.slot + ')"><span class="bar"></span><div class="txt"><b>' + esc(m.product) + '</b>' + (m.thing ? ' · ' + esc(m.thing) : '') +
-        info([m.period ? 'Per ' + m.period : '', m.carriesOver ? 'Carries over' : 'Does not carry over', m.fit === 'HAND' ? 'Used manually' : 'Used by the engine', m.costPerUnit ? money(m.costPerUnit) + ' each' : '', m.accountNotes || ''].filter(Boolean).join(' · ')) +
+        info([m.period ? 'Per ' + m.period : '', m.carriesOver ? 'Carries over' : 'Does not carry over', m.fit === 'HAND' ? 'Used manually' : 'Used by the Studio helper', m.costPerUnit ? money(m.costPerUnit) + ' each' : '', m.accountNotes || ''].filter(Boolean).join(' · ')) +
         (m.allowance ? '<div class="track" role="img" aria-label="' + pct + '% used"><i style="width:' + pct + '%"></i></div>' +
         '<div class="nums"><span>' + esc(m.used) + ' / ' + esc(m.allowance) + ' ' + esc(m.unit || '') + '</span>' + (m.resetsOn ? '<span>' + I('refresh') + ' ' + dmy(Date.parse(m.resetsOn)) + (d !== null && d >= 0 ? ' · ' + d + 'd' : '') + '</span>' : '') + '</div>' : '') +
         (st.text ? '<div class="why">' + I(st.icon) + '<span>' + esc(st.text) + '</span></div>' : '') +
-        '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + scoreTag('tools', m.product) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
+        '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + parkTag(m) + scoreTag('tools', m.product) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
         (m.audit ? '<a class="tag" href="' + safeUrl(m.audit) + '" target="_blank" rel="noopener" title="Audit">' + I('clipboard-check') + 'Audit</a>' : '') + '</div></div></div>';
     }).join('') + '</div>' : '<div class="card muted">No tools yet.</div>';
     return qbox('tools', tsort) + ownedCard() + gaps + add + list;
@@ -1443,14 +1454,14 @@
       ['price', 'Price \u00a3', 'money', 0, 100000], ['priceBasis', 'Price is', 'basis', 0, null], ['sourcePrice', 'Source files add-on \u00a3 (same ex / inc as the price)', 'money', 0, 100000], ['readyDays', 'Ready in (days)', 'int', 0, 365],
       ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
     kits: { one: 'kit', fields: [['name', 'Name', 'text', 1, 200], ['type', 'Type', 'pick', 1, function () { return TYPES.map(function (t) { return [t[0], t[2]]; }); }],
-      ['brickIds', 'Bricks', 'multi', 0, function () { return S.bricks.map(function (b) { return [b.id, b.name]; }); }], ['needs', 'Needs', 'multi', 0, function () { return CAPS.map(function (c) { return [c[0], c[1]]; }); }],
+      ['brickIds', 'Parts', 'multi', 0, function () { return S.bricks.map(function (b) { return [b.id, b.name]; }); }], ['needs', 'Needs', 'multi', 0, function () { return CAPS.map(function (c) { return [c[0], c[1]]; }); }],
       ['frameworkId', 'Framework', 'pick', 0, function () { return S.frameworks.map(function (x) { return [x.id, x.name]; }); }], ['voiceId', 'Voice', 'pick', 0, function () { return S.voices.map(function (x) { return [x.id, x.name]; }); }],
       ['lookId', 'Look', 'pick', 0, function () { return S.looks.map(function (x) { return [x.id, x.name]; }); }], ['formatIds', 'Formats', 'multi', 0, function () { return S.formats.map(function (x) { return [x.id, fmtLabel(x.id)]; }); }],
       ['makePromptId', 'Make prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
       ['price', 'Price \u00a3', 'money', 0, 100000], ['priceBasis', 'Price is', 'basis', 0, null], ['sourcePrice', 'Source files add-on \u00a3 (same ex / inc as the price)', 'money', 0, 100000], ['readyDays', 'Ready in (days)', 'int', 0, 365],
       ['checkPromptId', 'Check prompt', 'pick', 0, function () { return S.bricks.filter(function (b) { return b.kind === 'prompt'; }).map(function (b) { return [b.id, b.name]; }); }],
       ['groupId', 'Group', 'pick', 0, function () { return S.groups.map(function (g) { return [g.id, g.name]; }); }], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] },
-    bricks: { one: 'brick', fields: [['name', 'Name', 'text', 1, 200], ['kind', 'Kind (lowercase, e.g. hook, prompt, cta)', 'slug', 1, 40], ['text', 'Text', 'area', 1, 5000], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] }
+    bricks: { one: 'part', fields: [['name', 'Name', 'text', 1, 200], ['kind', 'Kind (lowercase, e.g. hook, prompt, cta)', 'slug', 1, 40], ['text', 'Text', 'area', 1, 5000], ['link', 'Link', 'url'], ['notes', 'Notes', 'area', 0, 2000]] }
   };
   var LIB_STATUS = [['live', 'Live'], ['archived', 'Archived'], ['retired', 'Retired']];
   Object.keys(LIB).forEach(function (t) { LIB[t].fields.push(['status', 'Status', 'pick', 0, function () { return LIB_STATUS; }, 'edit']); });
@@ -1479,12 +1490,16 @@
     var bits = []; if (pr) bits.push(sh === 'both' ? gbp(pr.ex) + ' ex \u00b7 ' + gbp(pr.inc) + ' inc VAT' : sh === 'inc' ? gbp(pr.inc) + ' inc VAT' : gbp(pr.ex) + ' ex VAT'); if (d !== null) bits.push(d + (d === 1 ? ' day' : ' days'));
     return bits.length ? '<div class="pline" data-price>' + bits.join(' \u00b7 ') + '</div>' : '';
   }
+  // Playbook step: who does it and how (engine v0.2.24), shown only when both are set. The engine shows as "Studio helper".
+  function stepWho(x) { var w = pickOf(WHO, x.who); if (!w || (x.fit !== 'AUTO' && x.fit !== 'HAND')) return '';
+    return ' <span class="tag" data-chip="step-who" title="Who · how">' + I(w[2]) + (x.who === 'engine' ? 'Studio helper' : esc(w[1])) + ' \u00b7 ' + (x.fit === 'AUTO' ? 'AUTO' : 'by hand') + '</span>'; }
+  var STEP_WHO = / @(lisa|claude|grok|engine)\/(AUTO|HAND)$/; // optional suffix on a library step line
   function libEditBtn(table, id) { return '<button class="btn" type="button" data-libedit="' + table + '" data-id="' + esc(id) + '" aria-label="Edit"' + dis() + '>' + I('pencil') + 'Edit</button>'; }
   function libFrom(table, id) {
     var x = byIdIn(table, id) || {}, f = {};
     LIB[table].fields.forEach(function (d) {
       var v = x[d[0]];
-      if (d[0] === 'steps') v = (x.steps || []).map(function (st) { return st.kind === 'kit' || st.kind === 'pack' ? st.kind + ':' + st.id : st.text; }).join('\n');
+      if (d[0] === 'steps') v = (x.steps || []).map(function (st) { return (st.kind === 'kit' || st.kind === 'pack' ? st.kind + ':' + st.id : st.text) + (pickOf(WHO, st.who) && (st.fit === 'AUTO' || st.fit === 'HAND') ? ' @' + st.who + '/' + st.fit : ''); }).join('\n');
       f[d[0]] = d[2] === 'multi' ? (v || []).slice() : v == null ? '' : String(v);
     });
     return f;
@@ -1525,7 +1540,7 @@
       else if (fd[2] === 'pick' && opts.indexOf(v) < 0) e[k] = 'Pick from the list';
       else if ((fd[2] === 'text' || fd[2] === 'area') && fd[4] && v.length > fd[4]) e[k] = 'At most ' + fd[4] + ' characters';
       else if (fd[2] === 'lines') { var ls = v.split('\n').map(function (x) { return x.trim(); }).filter(Boolean); if (ls.length > fd[4]) e[k] = 'At most ' + fd[4] + ' steps';
-        ls.forEach(function (x) { if (x.length > 200) e[k] = 'Each step at most 200 characters'; if (/;/.test(x)) e[k] = 'No ; in a step (one step per line)'; var m = x.match(/^(kit|pack)\s*:\s*(\S+)$/i); if (m && !byIdIn(m[1].toLowerCase() === 'kit' ? 'kits' : 'packs', m[2])) e[k] = 'No ' + m[1].toLowerCase() + ' called ' + m[2]; }); }
+        ls.forEach(function (x) { if (x.length > 200) e[k] = 'Each step at most 200 characters'; if (/;/.test(x)) e[k] = 'No ; in a step (one step per line)'; var m = x.replace(STEP_WHO, '').match(/^(kit|pack)\s*:\s*(\S+)$/i); if (m && !byIdIn(m[1].toLowerCase() === 'kit' ? 'kits' : 'packs', m[2])) e[k] = 'No ' + m[1].toLowerCase() + ' called ' + m[2]; }); }
     });
     return e;
   }
@@ -1539,7 +1554,7 @@
       if (fd[2] === 'basis') { if (String(f.price == null ? '' : f.price).trim() !== '') fields[fd[0]] = v === 'inc' ? 'inc' : 'ex'; return; }
  fields[fd[0]] = fd[2] === 'multi' ? (v || []).slice() : fd[2] === 'lines' ? String(v || '').split('\n').map(function (x) { return x.trim(); }).filter(Boolean) : String(v || '').trim(); });
     var body = { kind: 'library', accountId: ownerId(), table: t, op: libDraft.op, fields: fields, at: new Date().toISOString() }; if (libDraft.op === 'edit') body.id = libDraft.id; if (libDraft.from) body.fromAssetId = libDraft.from;
-    var keep = libDraft; libDraft = {}; saveLocal('st-lib', libDraft); libSent[t] = 'Sent · applies at the engine’s next run'; render();
+    var keep = libDraft; libDraft = {}; saveLocal('st-lib', libDraft); libSent[t] = 'Sent · applies at the Studio helper’s next run'; render();
     withWrite(function () { return putRequest('library', body).catch(function (e) { libDraft = keep; saveLocal('st-lib', libDraft); delete libSent[t]; banner('Not sent: ' + e.message); render(); }); }, function () { libDraft = keep; delete libSent[t]; render(); });
   }
   function libSuggest(table) {
@@ -1572,9 +1587,9 @@
         var pbs = S.playbooks.filter(function (p) { return p.outcome === o[0] && lqHit('kits', [p.name, (p.steps || []).map(function (x) { return x.text || x.id; }).join(' ')].join(' ')); });
         return '<section class="room" data-outcome="' + o[0] + '" style="--c:var(--ljr-' + o[3] + ')"><h2 class="grp">' + I(o[2]) + o[1] + cnt(pbs.length) + '</h2>' +
           pbs.map(function (p) {
-            return '<div class="pb" data-playbook="' + esc(p.id) + '"><div class="pbh"><b>' + esc(p.name) + '</b>' + libEditBtn('playbooks', p.id) + '</div><ol class="steps">' + (p.steps || []).map(function (x) {
+            return '<div class="pb" data-playbook="' + esc(p.id) + '"><div class="pbh"><b>' + (p.code ? '<span class="tag" data-chip="pb-code" title="Code">' + esc(p.code) + '</span> ' : '') + esc(p.name) + '</b>' + libEditBtn('playbooks', p.id) + '</div><ol class="steps">' + (p.steps || []).map(function (x) {
               var href = x.kind === 'kit' ? '#/kits/kits' : x.kind === 'pack' ? '#/kits/packs' : '';
-              return '<li>' + I(x.kind === 'pack' ? 'package' : x.kind === 'kit' ? 'box' : 'hand-finger') + (href ? '<a href="' + href + '">' + esc(x.text || x.id) + '</a>' : esc(x.text)) + '</li>';
+              return '<li>' + I(x.kind === 'pack' ? 'package' : x.kind === 'kit' ? 'box' : 'hand-finger') + (href ? '<a href="' + href + '">' + esc(x.text || x.id) + '</a>' : esc(x.text)) + stepWho(x) + '</li>';
             }).join('') + '</ol></div>';
           }).join('') + '</section>';
       }).join('') + '</div>';
@@ -1591,7 +1606,7 @@
       body = '<div class="card">' + (KT.length ? KT.map(function (k) {
         var t = typeOf(k.type);
         return '<div class="crow" data-kit="' + esc(k.id) + '"><div class="l1"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + '</span><span class="ttl">' + esc(k.name) + '</span><span title="Assets using it">' + cnt(used[k.id] || 0) + '</span>' + libEditBtn('kits', k.id) + '</div>' +
-          '<div class="l2"><span class="icons">' + kitTags(k) + (k.brickIds.length ? '<span class="tag" title="Bricks: ' + esc(k.brickIds.map(function (b) { return name('bricks', b); }).join(' · ')) + '">' + I('puzzle') + k.brickIds.length + '</span>' : '') + '</span></div>' + priceLine(k) + '</div>';
+          '<div class="l2"><span class="icons">' + kitTags(k) + (k.brickIds.length ? '<span class="tag" title="Parts: ' + esc(k.brickIds.map(function (b) { return name('bricks', b); }).join(' · ')) + '">' + I('puzzle') + k.brickIds.length + '</span>' : '') + '</span></div>' + priceLine(k) + '</div>';
       }).join('') : empty) + '</div>';
     } else if (sub === 'bricks') {
       var BR = S.bricks.filter(function (b) { return lqHit('kits', [b.name, b.kind, b.text, b.notes].join(' ')); });
@@ -1625,7 +1640,7 @@
   }
   function vEngine() {
     var on = studioOn(), h = S.health || {};
-    return '<div class="card"><div class="grp">' + I('engine') + 'Engine<button class="pill" type="button" data-action="studio" aria-label="Studio on or off" aria-pressed="' + on + '"' + dis() + own() + '><span class="sw' + (on ? ' on' : '') + '"><i></i></span>' + (on ? 'On' : 'Off') + '</button></div>' +
+    return '<div class="card"><div class="grp">' + I('engine') + 'Studio helper<button class="pill" type="button" data-action="studio" aria-label="Studio on or off" aria-pressed="' + on + '"' + dis() + own() + '><span class="sw' + (on ? ' on' : '') + '"><i></i></span>' + (on ? 'On' : 'Off') + '</button></div>' +
       '<p class="muted">' + (h.lastRun ? 'Last run ' + dmy(Date.parse(h.lastRun)) + ' ' + hm(Date.parse(h.lastRun)) : 'Never run') + (S.generated_at ? ' · read ' + hm(Date.parse(S.generated_at)) : '') + '</p>' +
       (h.jobs || []).map(function (j) { var ok = j.result === 'OK'; return '<div class="row" style="--c:var(--ljr-' + (ok ? 5 : 2) + ')"><span class="bar"></span><div class="txt"><b>' + esc(j.job) + '</b>' + (j.note ? '<div class="muted">' + esc(String(j.note).slice(0, 80)) + '</div>' : '') + '</div><span class="meta">' + esc(ok ? 'OK' : j.result) + '<br>' + (Date.parse(j.last) ? hm(Date.parse(j.last)) : '') + '</span></div>'; }).join('') +
       (ST.rootFolderId ? '<p><a href="https://drive.google.com/drive/folders/' + esc(ST.rootFolderId) + '" target="_blank" rel="noopener">Studio folder</a></p>' : '') + '</div>';
@@ -1738,7 +1753,7 @@
   function undoUntil(at) { var d = new Date(at), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next - 1, 0, 0); return d.getTime(); }
   function sentLine(id) {
     var at = sent[id], f = sentF[id], live = f && Date.now() < undoUntil(at);
-    return '<span class="sent" data-sent="' + esc(id) + '">✓ ' + hm(at) + ' · ' + (studioOn() ? 'applies by ' + appliesBy(at) : 'waits: engine off') + '</span>' + (live ? '<button class="undo" type="button" data-undo="' + esc(id) + '">' + I('arrow-back-up') + 'Undo</button>' : '');
+    return '<span class="sent" data-sent="' + esc(id) + '">✓ ' + hm(at) + ' · ' + (studioOn() ? 'applies by ' + appliesBy(at) : 'waits: Studio helper off') + '</span>' + (live ? '<button class="undo" type="button" data-undo="' + esc(id) + '">' + I('arrow-back-up') + 'Undo</button>' : '');
   }
   function undo(id) {
     var f = sentF[id]; if (!f) return;
@@ -1851,8 +1866,15 @@
       '<div class="rrow"><span class="rlab">Paid</span><div class="seg" role="group" aria-label="Paid">' + [['yes', 'Yes'], ['no', 'No']].map(function (o) { return '<button type="button" data-paid="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + ((paid ? 'yes' : 'no') === o[0]) + '"' + dis() + own() + '>' + o[1] + '</button>'; }).join('') + '</div>' + ownWhy() + '</div>';
     if (a.hasProof) rows += '<div class="rrow"><span class="rlab">Proof (low-res)</span>' + (a.reviewLink ? '<a href="' + safeUrl(a.reviewLink) + '" target="_blank" rel="noopener" data-proof>Open the proof</a>' : '<span>Shared</span>') + '</div>';
     if (prot) rows += '<div class="rrow" data-fullsize><span class="rlab">Full size</span><span>' + (approved && paid ? 'Released' : 'Held until approved + paid') + '</span>' + tick(approved, 'Approved') + tick(paid, 'Paid') + '</div>';
-    var remind = a.needsWatermark || a.proofLowRes ? '<div class="rrow"><span class="tag" data-chip="lowres" title="' + esc(a.proofLowRes || '') + '">Low-res + watermark</span><span class="muted" data-watermark>Add Studio watermark layer</span></div>' : '';
+    var remind = 'proofCheck' in a ? proofCheckRow(a) : a.needsWatermark || a.proofLowRes ? '<div class="rrow"><span class="tag" data-chip="lowres" title="' + esc(a.proofLowRes || '') + '">Low-res + watermark</span><span class="muted" data-watermark>Add Studio watermark layer</span></div>' : '';
     return '<div class="rights" data-delivery="' + esc(a.id) + '">' + rows + remind + '</div>';
+  }
+  // Proof check (engine v0.2.24 item field proofCheck: missing|hand|ok|stale, null = not protected): one chip in place of the
+  // low-res + watermark reminder. Absent on older state, which keeps the reminder above.
+  var PROOF_CHECK = { ok: 'Proof ready', hand: 'Proof added by hand', missing: 'Proof due', stale: 'Proof out of date' };
+  function proofCheckRow(a) {
+    var w = PROOF_CHECK[a.proofCheck];
+    return w ? '<div class="rrow"><span class="tag" data-chip="proofcheck" data-check="' + esc(a.proofCheck) + '">' + w + '</span></div>' : '';
   }
   // Save a finished item's set-up as a new kit: opens the kit form; the request carries fromAssetId. Never from client material.
   function saveAsKit(a) {
@@ -1930,7 +1952,7 @@
     var lr = Date.parse(h.lastRun) || 0, stale = on && (!lr || Date.now() - lr > 36e5);
     ep.className = 'pill' + (on && !stale ? ' ok' : ' bad');
     ep.innerHTML = I('engine') + (on ? 'On' : 'Off') + (lr ? ' · ' + (Date.now() - lr > 864e5 ? dmy(lr) + ' ' : '') + hm(lr) : '');
-    ep.title = 'Engine ' + (on ? 'on' : 'off') + (h.lastRun ? ', last run ' + dmy(Date.parse(h.lastRun)) + ' ' + hm(Date.parse(h.lastRun)) : ', never run');
+    ep.title = 'Studio helper ' + (on ? 'on' : 'off') + (h.lastRun ? ', last run ' + dmy(Date.parse(h.lastRun)) + ' ' + hm(Date.parse(h.lastRun)) : ', never run');
     var cap = Number(st.budgetMonth) || 0, spent = Number(st.spentMonth) || 0;
     bp.className = 'pill' + (cap && spent >= cap ? ' bad' : cap && spent >= cap * 0.8 ? ' warn' : '');
     bp.innerHTML = I('coin') + money(spent) + ' / ' + money(cap);
