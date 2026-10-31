@@ -155,8 +155,24 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view')).toContainText('VAT invoices are off');
     await expect(page.locator('#view a[aria-label="Open SI-1000001"]')).toBeVisible();
   });
+  // Commercial invoices (engine v1.15 module, orders sent outside the UK) share the vat_inv_* columns, with inv_doc = COMMERCIAL. Invented values only.
+  test('Invoices: commercial invoices show a Commercial badge; saved = waiting for the GA SI number, drafted = draft to GA', async ({ page }) => {
+    const b = vatBook(true), h = b.orders[0]; h.push('other_lines', 'line_flag', 'inv_doc'); b.orders = [h].concat(b.orders.slice(1).map((r) => r.concat(['', '', ''])));
+    const set = (no, v) => { const r = b.orders.find((x) => x[0] === no); ['vat_inv_no', 'vat_inv_status', 'vat_inv_file_id', 'vat_inv_at', 'inv_doc'].forEach((c, i) => { r[h.indexOf(c)] = v[i]; }); };
+    set('9003', ['261030-9003', 'saved', 'FAKECI00000000000000000003', '2026-10-30', 'COMMERCIAL']);
+    set('9002', ['261030-9002', 'drafted', 'FAKECI00000000000000000002', '2026-10-30', 'COMMERCIAL']);
+    await sheets(page, b);
+    await open(page, '#/invoices');
+    const card = page.locator('#view .grp', { hasText: 'VAT invoices' }).locator('xpath=following-sibling::div[contains(@class,"card")][1]');
+    const r3 = card.locator('.row', { hasText: '261030-9003' }), r2 = card.locator('.row', { hasText: '261030-9002' }), r1 = card.locator('.row', { hasText: '261030-9001' });
+    await expect(r3).toContainText('Commercial'); await expect(r3).toContainText('Waiting for GA SI no.');
+    await expect(r2).toContainText('Commercial'); await expect(r2).toContainText('Draft to GA in Gmail');
+    await expect(r1).not.toContainText('Commercial'); await expect(r1).toContainText('Draft in Gmail');
+    await expect(page.locator('#view a[aria-label="Open 261030-9003"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/FAKECI00000000000000000003/view');
+    await page.screenshot({ path: 'test-results/food-commercial-invoices.png', fullPage: true });
+  });
   test('the page holds no Drive id for VAT invoices and reads the vat_inv_* columns by name', async () => {
-    expect(SRC).toContain("'Orders!A1:AK'");
+    expect(SRC).toContain("'Orders!A1:AZ'");
     expect(SRC).toMatch(/o\.vat_inv_file_id/);
     expect(SRC).not.toMatch(/drive\.google\.com\/file\/d\/[A-Za-z0-9_-]{20,}/);
   });
