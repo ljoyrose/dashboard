@@ -13,7 +13,9 @@
     scopes: {
       read: 'https://www.googleapis.com/auth/drive.readonly',
       // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
-      write: 'https://www.googleapis.com/auth/drive'
+      write: 'https://www.googleapis.com/auth/drive',
+      // Personal Drive page only: a second, look-only sign-in. Its token stays in memory and is never used for work calls.
+      personal: 'https://www.googleapis.com/auth/drive.metadata.readonly'
     },
     // Ids only, derived from cleanup.excludedDrives. Kept so older checks still find them.
     excludedDrives: EXCLUDED.map(function (d) { return d.id; }),
@@ -57,6 +59,16 @@
       requestsFolderId: '13KclIUhOej1bmoQznfbrUiHtoab-FnDV', // the page writes request JSON files here
       inboxFolderId: '1poaewHMRwrOcXwXa0PrMZhnmhyn66BzL', // Ideas > Inbox - drop files here
       stateFile: 'studio-state.json',
+      // Owned tools list (Tools page): read with the signed-in token only. The tool data lives in the sheet, never in this repo.
+      ownedTools: { sheetId: '1iwlUFBeFOAUxlHlr8FsCIxpmhqSWzq3038OEDN-Zfz8', tab: 'OWNED_TOOLS' }, // STUDIO-CONTROL sheet, Owned Tools tab
+      live: false
+    },
+    // Web Estate Hub (estate/): reads the private RR_WEB-ESTATE sheet (Properties tab) with Lisa's sign-in; Add drops one
+    // request file into requestsFolderId for the RR_WEB-ESTATE engine. Both ids stay empty until Lisa installs the engine:
+    // until then the page shows invented example rows and sends nothing. Read only: nothing here changes DNS or a site.
+    estate: {
+      sheetId: '',
+      requestsFolderId: '',
       live: false
     },
     marketplace: {
