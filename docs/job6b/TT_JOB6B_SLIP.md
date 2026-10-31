@@ -8,7 +8,7 @@
 ## Links
 - **PR:** https://github.com/ljoyrose/dashboard/pull/12 (branch `claude/job6b-test-protection` into `main`)
 - **Action run on the PR branch:** https://github.com/ljoyrose/dashboard/actions/runs/38823562125 (**green**; job "Browser tests (pretend Google and Drive)" passed)
-- **Zip:** `docs/job6b/JOB6B_DASHBOARD-TESTS_v1.zip` on the branch
+- **Zip:** removed from the repo on 29 Oct 2026 (zips are never kept in this public repo; it remains in git history)
 
 ## Lisa: do this (about 2 minutes) after the Action is green
 **Branch protection is NOT on.** The builder was refused when it tried to change repository settings (HTTP 403). Click-path:
