@@ -1,49 +1,73 @@
 {
-  "_about": "Invented RR_FOOD workbook for the data-shape contract (tests/contract). Each tab holds the rows the page gets back for its range: the header first. Names only in Stage 1; invented rows are added by the contract tests.",
+  "_about": "Invented RR_FOOD workbook for the data-shape contract (tests/contract). Each tab holds the rows the page gets back for its range, header first. Cards: row 1 is the header the engine writes (the page reads A2:L by position). Every value is invented.",
+  "Cards": [
+    ["key", "section", "category", "title", "detail", "created_at", "answer", "note", "answered_at", "answered_by", "applied_at", "applied_by"],
+    [
+      "LOWPROFIT-S900001",
+      "profit",
+      "",
+      "Sample order S900001",
+      "{\"why\":\"Sample reason\",\"red\":true,\"file\":\"1SAMPLEfoodFile00000000000\",\"files\":[\"1SAMPLEfoodFile00000000001\"]}",
+      "2026-10-20T09:00:00Z",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    ["CHECK-0002", "check", "", "Sample check", "{}", "2026-10-21T09:00:00Z", "", "", "", "", "", ""]
+  ],
   "Orders": [
-    ["order_no", "order_type", "customer_orders", "source", "brand", "partner", "tracking", "check", "profit_est", "status", "s_no", "boxes", "shipped_date", "ga_total"]
+    ["order_no", "order_type", "customer_orders", "source", "brand", "partner", "tracking", "check", "profit_est", "status", "s_no", "boxes", "shipped_date", "ga_total"],
+    ["S900001", "shop", "1", "Shopify", "SMP", "PX", "https://track.dpd.co.uk/parcels/SAMPLE0001", "ok", "12.50", "shipped", "S-1", "1", "2026-10-19", "40.00"]
   ],
   "Invoices": [
-    ["si_no", "order_no", "invoice_date", "due_date", "paid_date", "total", "goods", "delivery", "vat", "fy", "file_id"]
+    ["si_no", "order_no", "invoice_date", "due_date", "paid_date", "total", "goods", "delivery", "vat", "fy", "file_id"],
+    ["SI-0001", "S900001", "2026-10-19", "2026-11-18", "", "48.00", "38.00", "2.00", "8.00", "2026-27", "1SAMPLEinvoice000000000000"]
   ],
   "Products": [
-    ["tla", "full_ga_code", "range", "species", "life_stage", "recipe", "pack", "grain", "kibble", "chicken_in_name", "fresh_meat_pct", "protein_pct", "ddf_status", "ddf_name", "ga_price_ex_vat_portal_oct26", "ga_price_ex_vat_list_aug25", "shopify_price_inc_vat", "subscription_price_inc_vat", "profit_ex_vat_1bag_1box", "data_sheet_url"]
+    ["tla", "full_ga_code", "range", "species", "life_stage", "recipe", "pack", "grain", "kibble", "chicken_in_name", "fresh_meat_pct", "protein_pct", "ddf_status", "ddf_name", "ga_price_ex_vat_portal_oct26", "ga_price_ex_vat_list_aug25", "shopify_price_inc_vat", "subscription_price_inc_vat", "profit_ex_vat_1bag_1box", "data_sheet_url"],
+    ["SMP", "SMP-12", "Sample range", "dog", "adult", "Sample recipe", "12kg", "grain free", "small", "N", "0.6", "0.28", "listed", "Sample food", "30.00", "29.00", "55.00", "50.00", "15.00", "https://www.example.com/sample-sheet.pdf"]
   ],
   "Settings": [
     ["key", "value", "note"],
-    ["FY_START_MONTH", "", ""],
-    ["MIN_PROFIT", "", ""],
-    ["SHOPIFY_STORE", "", ""],
-    ["GA_PORTAL", "", ""],
-    ["BANK_FOLDER_ID", "", ""],
-    ["BANK_LEDGER_FILE_ID", "", ""],
-    ["GA_PAYMENT", "", ""],
-    ["GA_ACCOUNT_CODE", "", ""],
-    ["GA_PHONE_ORDERS", "", ""],
-    ["GA_PHONE_ACCOUNTS", "", ""],
-    ["GA_PARTNER_MANAGER", "", ""],
-    ["GA_FIELD_MANAGER", "", ""],
-    ["GA_TERMS", "", ""],
-    ["GA_CUTOFF", "", ""],
-    ["DELIVERY_FIRST_BOX", "", ""],
-    ["DELIVERY_NEXT_BOX", "", ""],
-    ["GA_DELIVERY_ZONE_C", "", ""],
-    ["GA_PALLET", "", ""],
-    ["GA_ORDER_TO", "", ""],
-    ["GA_XML_CONTACT", "", ""],
-    ["GA_ORDER_FROM", "", ""],
-    ["GA_SHIP_FROM", "", ""],
-    ["GA_INVOICE_FROM", "", ""],
-    ["COMMERCIAL_INVOICE_TO", "", ""],
-    ["SUB_DISCOUNT", "", ""]
+    ["FY_START_MONTH", "4", ""],
+    ["MIN_PROFIT", "15", ""],
+    ["SHOPIFY_STORE", "sample", ""],
+    ["GA_PORTAL", "https://www.example.com/portal", ""],
+    ["BANK_FOLDER_ID", "sample", ""],
+    ["BANK_LEDGER_FILE_ID", "sample", ""],
+    ["GA_PAYMENT", "sample", ""],
+    ["GA_ACCOUNT_CODE", "sample", ""],
+    ["GA_PHONE_ORDERS", "sample", ""],
+    ["GA_PHONE_ACCOUNTS", "sample", ""],
+    ["GA_PARTNER_MANAGER", "sample", ""],
+    ["GA_FIELD_MANAGER", "sample", ""],
+    ["GA_TERMS", "sample", ""],
+    ["GA_CUTOFF", "sample", ""],
+    ["DELIVERY_FIRST_BOX", "sample", ""],
+    ["DELIVERY_NEXT_BOX", "sample", ""],
+    ["GA_DELIVERY_ZONE_C", "sample", ""],
+    ["GA_PALLET", "sample", ""],
+    ["GA_ORDER_TO", "sample", ""],
+    ["GA_XML_CONTACT", "sample", ""],
+    ["GA_ORDER_FROM", "sample", ""],
+    ["GA_SHIP_FROM", "sample", ""],
+    ["GA_INVOICE_FROM", "sample", ""],
+    ["COMMERCIAL_INVOICE_TO", "sample", ""],
+    ["SUB_DISCOUNT", "5", ""]
   ],
   "Statements": [
-    ["statement_date", "total_outstanding"]
+    ["statement_date", "total_outstanding"],
+    ["2026-10-01", "120.00"]
   ],
   "DirectDebits": [
-    ["date", "amount"]
+    ["date", "amount"],
+    ["2026-10-05", "120.00"]
   ],
   "Codes": [
-    ["kind", "code", "name", "active"]
+    ["kind", "code", "name", "active"],
+    ["partner", "PX", "Sample partner", "Y"]
   ]
 }
