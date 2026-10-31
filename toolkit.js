@@ -121,7 +121,7 @@
   // ---- Keyboard keys: g then a letter to go somewhere, r reread, / search, ? the list ----
   var KEYS = [
     ['g m', 'Dashboard', function () { go('./#/map'); }],
-    ['g d', 'Drive', function () { go('./#/drive'); }],
+    ['g d', 'Drives', function () { go('./#/drives'); }],
     ['g b', 'Bin', function () { go('./#/bin'); }],
     ['g c', 'Changes', function () { go('./#/changes'); }],
     ['g f', 'Money Hub', function () { go('money/'); }],
