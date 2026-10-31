@@ -8,13 +8,19 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read
+
+concurrency:
+  group: fix-needs-test-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   check:
     name: Bug fix without a test? (warning only)
     runs-on: ubuntu-24.04
     timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read # lists the PR's changed files
     steps:
       - name: Look at the title, labels and changed files
         env:
