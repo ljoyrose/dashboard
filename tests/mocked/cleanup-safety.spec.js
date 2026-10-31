@@ -43,14 +43,14 @@ test('a shared copy counts only when it is a live kept file', async ({ page, gua
   w.file('sh-doc', 'notes-doc', '', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'application/vnd.google-apps.document', size: '' });
   notMine(w, 'sh-doc');
   w.file('me-zero', 'empty-personal.pdf', '', Object.assign({ md5Checksum: 'md5-zero', size: 0 }, mine));
-  await page.goto('./#/personal');
+  await page.goto('./#/drives/work');
   await signIn(page);
   await page.locator('[data-action="pcpscan"]').click();
   const view = page.locator('#view');
   await expect(view).toContainText(/Finished/);
-  await expect(view.locator('[data-bin-list="pcp-rename"]')).toContainText('kept.pdf');
+  await expect(view.locator('[data-pcp-list="work"]')).toContainText('kept.pdf');
   for (const name of ['not-kept-zz.pdf', 'not-kept-space.pdf', 'not-kept-hyphen.pdf', 'not-kept-inside.pdf', 'not-kept-hold.pdf', 'not-kept-shortcut.pdf', 'empty-personal.pdf']) {
-    await expect(view.locator('[data-bin-list="pcp-rename"]')).not.toContainText(name);
+    await expect(view.locator('[data-pcp-list="work"]')).not.toContainText(name);
   }
   const counts = view.locator('[data-pcp-counts]');
   await expect(counts).toContainText('UNSURE (zero-byte)');
@@ -65,7 +65,7 @@ test('a drive is excluded by its configured name as well as its id', async ({ pa
   w.file('sh-k', 'only-there.pdf', 'x', { parents: ['drv-name-excluded'], driveId: 'drv-name-excluded', mimeType: 'application/pdf', md5Checksum: 'md5-k', size: 120 });
   notMine(w, 'sh-k');
   w.file('me-k', 'only-there.pdf', 'x', { parents: ['my-root'], driveId: null, mimeType: 'application/pdf', md5Checksum: 'md5-k', size: 120 });
-  await page.goto('./#/personal');
+  await page.goto('./#/drives/work');
   await signIn(page);
   await page.locator('[data-action="pcpscan"]').click();
   const view = page.locator('#view');
@@ -91,7 +91,7 @@ test('a personal folder is binned only when every item inside is junk or marked'
   w.file('pf-odd', 'zz_delete_drive_notes.pdf', 'x', Object.assign({ mimeType: 'application/pdf' }, mine));
   ledger(w, ['pf-bad', 'pf-ok', 'pf-other', 'pf-zero', 'pf-odd']);
   page.on('dialog', (d) => d.accept());
-  await page.goto('./#/personal');
+  await page.goto('./#/bin');
   await signIn(page);
   const view = page.locator('#view');
   await expect(view.locator('li', { hasText: PCP + 'mixed' })).toContainText('not verified or junk');
@@ -200,7 +200,7 @@ test('a personal file owned by someone else is not binned', async ({ page, guard
   page.on('dialog', (d) => d.accept());
   w.file('me-marked', PCP + 'older.pdf', 'x', { parents: ['my-root'], driveId: null, mimeType: 'application/pdf' });
   ledger(w, ['me-marked']);
-  await page.goto('./#/personal');
+  await page.goto('./#/bin');
   await signIn(page);
   await expect(page.locator('#view')).toContainText(PCP + 'older.pdf');
   notMine(w, 'me-marked');
@@ -223,7 +223,7 @@ test('a shared drive that cannot be read is skipped, and Continue reads it', asy
   notMine(w, 'sh-a'); notMine(w, 'sh-b');
   w.file('me-a', 'invoice-a.pdf', 'x', Object.assign({ md5Checksum: 'md5-aaa', size: 100 }, mine));
   w.file('me-b', 'invoice-b.pdf', 'x', Object.assign({ md5Checksum: 'md5-bbb', size: 200 }, mine));
-  await page.goto('./#/personal');
+  await page.goto('./#/drives/work');
   await signIn(page);
   w.failFor = 'corpora=drive';
   w.failWith = { status: 403, reason: 'forbidden', message: 'Sample refusal' };
@@ -236,8 +236,8 @@ test('a shared drive that cannot be read is skipped, and Continue reads it', asy
   w.failWith = null;
   await page.locator('[data-action="pcpresume"]').click();
   await expect(view).toContainText('2 personal files');
-  await expect(view.locator('[data-bin-list="pcp-rename"]')).toContainText('invoice-a.pdf');
-  await expect(view.locator('[data-bin-list="pcp-rename"]')).toContainText('invoice-b.pdf');
+  await expect(view.locator('[data-pcp-list="work"]')).toContainText('invoice-a.pdf');
+  await expect(view.locator('[data-pcp-list="work"]')).toContainText('invoice-b.pdf');
 });
 
 function installPretendDrive(page, files) {
@@ -274,7 +274,7 @@ test('Drive check ignores a kept copy that is marked or sitting in a marked fold
     'zz_delete_local_odd.bin': localOdd,
     [USB + 'done.bin']: localOk,
   });
-  await page.goto('./#/usb');
+  await page.goto('./#/drives/usb');
   await signIn(page);
   await page.locator('[data-action="usbscan"]').click();
   const view = page.locator('#view');
@@ -296,7 +296,7 @@ test('Drive check says when a shared drive could not be read, and Continue finis
   const sum = crypto.createHash('md5').update(text).digest('hex');
   w.file('usb-sh', 'copy.bin', 'x', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'application/octet-stream', md5Checksum: sum, size: text.length });
   await installPretendDrive(page, { 'match.bin': text });
-  await page.goto('./#/usb');
+  await page.goto('./#/drives/usb');
   await signIn(page);
   w.failFor = 'corpora=drive';
   w.failWith = { status: 403, reason: 'forbidden', message: 'Sample refusal' };
@@ -329,7 +329,7 @@ test('Changes names a shortcut and counts shortcuts and Google files', async ({ 
 test('a sign-in that expires during a personal scan is reported and stops the scan', async ({ page, guard, allowedConsole }) => {
   allowedConsole.push(/status of 401/);
   const w = guard.world;
-  await page.goto('./#/personal');
+  await page.goto('./#/drives/work');
   await signIn(page);
   w.failFor = 'corpora=drive';
   w.failWith = { status: 401, reason: 'authError', message: 'Invalid Credentials' };

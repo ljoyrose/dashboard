@@ -183,6 +183,38 @@
     };
   }
 
+  // Second, look-only sign-in for the Personal Drive page. Its token is held only in this object (never saved to
+  // the browser, never shared with other tabs or pages) and is cleared on sign-out. It never replaces the work token.
+  function personal(opts) {
+    var client = null, token = null, expiresAt = 0;
+    function init() {
+      if (client) return true;
+      if (!(global.google && google.accounts && google.accounts.oauth2)) return false;
+      client = google.accounts.oauth2.initTokenClient({
+        client_id: opts.clientId,
+        scope: opts.scope,
+        callback: function (resp) {
+          if (!resp || resp.error || !google.accounts.oauth2.hasGrantedAllScopes(resp, opts.scope)) { if (opts.onError) opts.onError(resp || {}); return; }
+          token = resp.access_token;
+          expiresAt = expiryFrom(resp.expires_in);
+          if (opts.onToken) opts.onToken();
+        },
+        error_callback: function (e) { if (opts.onError) opts.onError(e || {}); }
+      });
+      return true;
+    }
+    return {
+      // Only ever called from a button press on the Personal Drive page.
+      request: function () { if (init()) client.requestAccessToken({ prompt: 'select_account' }); },
+      token: function () { return token && Date.now() < expiresAt ? token : null; },
+      clear: function () {
+        var t = token;
+        token = null; expiresAt = 0;
+        if (t && global.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
+      }
+    };
+  }
+
   gate();
   // Another tab signed in or out: lock or unlock this one too.
   global.addEventListener('storage', function (e) { if (e.key === KEY || e.key === null) gate(); });
@@ -198,6 +230,7 @@
     hasScope: hasScope,
     onChange: onChange,
     expiryFrom: expiryFrom,
-    bind: bind
+    bind: bind,
+    personal: personal
   };
 })(window);
