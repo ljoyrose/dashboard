@@ -23,7 +23,8 @@
       task({ id: '869fk9d1r', name: 'Links · P5-GATE-v11 (lock 38 tables) · send 2 of 2', tags: ['app-869fjxpc2', 'app-links', 'leak-open'], created: now - 2 * H,
         desc: 'Send 2 of 2.\nPrompt text: https://drive.google.com/file/d/1SAMPLEpromptDocId00000000000/view\nApp: Sample Links.\n' +
           'Last turn: T56 = live chat, 682 credits, checked ' + day(now) + '\n' +
-          'Prediction: https://drive.google.com/file/d/1SAMPLEpredictionDoc0000000/view · Simulation: https://drive.google.com/file/d/1SAMPLEsimulationDoc0000000/view · inputs-gate: PASS ' + day(now) + '\n' +
+          'Prediction: https://drive.google.com/file/d/1SAMPLEpredictionDoc0000000/view · Simulation: https://drive.google.com/file/d/1SAMPLEsimulationDoc0000000/view\n' +
+          'presend: READY sha256:' + 'ab'.repeat(32) + ' ' + day(now) + '\n' +
           'Happy Hour: active, 40 min left, read ' + hm(now - 5 * 60e3) + ' · next press due ' + hm(now + 35 * 60e3) + ' · presses today 2/5\n' +
           'AFTER SEND YOU MUST: run the leak tests (~15 min after send, ~20 min)\n' +
           'Lisa available: 16:00–18:00\n' +
