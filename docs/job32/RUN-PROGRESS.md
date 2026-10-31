@@ -16,3 +16,5 @@ Parked for Lisa: 2 (new engine fields; wording of the next-step chip). Details i
 Stage 3: no new code. Main merged into the stack (no conflicts) so the three PRs merge cleanly in order #166, #173, stage 3. AF-ENGINE request (4 missing fields) and 3 parked items are in the slips.
 
 Next step: none. JOB 32 done; waiting on Lisa's merge OKs.
+
+JOB 32.4: main (with #166 and #173 merged) merged into claude/job32-3-wrap as 5c9585e. No conflicts: #213 holds only this file on top of main. Privacy guard CLEAN on origin/main..HEAD. Mocked suite: running.
