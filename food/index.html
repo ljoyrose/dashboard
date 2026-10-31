@@ -173,7 +173,7 @@
   var CLIENT_ID = CFG.clientId, READ = (CFG.scopes || {}).read, SHEETS = 'https://www.googleapis.com/auth/spreadsheets';
   var SCOPE = READ + ' ' + SHEETS;
   var CARD_COLS = ['key', 'section', 'category', 'title', 'detail', 'created_at', 'answer', 'note', 'answered_at', 'answered_by', 'applied_at', 'applied_by'];
-  var RANGES = ['Cards!A2:L', 'Orders!A1:AD', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E', 'DirectDebits!A1:G', 'Codes!A1:F'];
+  var RANGES = ['Cards!A2:L', 'Orders!A1:AK', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E', 'DirectDebits!A1:G', 'Codes!A1:F'];
   var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
   var SECTIONS = {
     price: { name: 'GA price changed', yes: 'Apply', no: 'Not now', what: 'Apply updates your product list and the suggested shop and subscription prices. Shops are not changed.' },
@@ -356,6 +356,7 @@
         : '<div class="tile"><span class="k">Paid by</span><span class="v">' + esc(setting('GA_PAYMENT') || 'Not set') + '</span></div>') +
       (dd ? '<div class="tile"><span class="k">Paid to GA since ' + esc(ukDate(fyStart)) + ' (bank)</span><span class="v">' + money(paidFy) + '</span></div>' : '') + '</div>' +
       (dd || setting('BANK_FOLDER_ID') || setting('BANK_LEDGER_FILE_ID') ? '' : '<p class="hint">Paid dates fill in once the bank is linked (BANK_FOLDER_ID on the Settings tab).</p>');
+    h += vatInvoices() + '<p class="grp">GA invoices</p>';
     if (!inv.length) return h + '<div class="card">' + empty('No GA invoices yet', 'They are saved here when the next one arrives by email.') + '</div>';
     var shown = showAll ? inv : inv.slice(0, 30);
     h += '<div class="card">' + shown.map(function (i) {
@@ -365,6 +366,22 @@
         '<div class="amt">' + money(i.total) + '</div>' + (i.file_id ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(i.file_id) + '/view" target="_blank" rel="noopener" aria-label="Open ' + esc(i.si_no) + '">PDF</a>' : '') + '</div>'; }).join('') + '</div>';
     if (inv.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + inv.length + '</button>';
     return h + '<p class="hint">Saved in Drive by financial year. Paid dates come later from the bank (Money Hub).</p>';
+  }
+  // VAT invoices the food engine made for buyers ticked VAT-INVOICE in Shopify (Orders tab vat_inv_* columns: numbers only, no buyer details).
+  var VAT_CHIP = { 'dry-run': ['Dry run', ''], drafted: ['Draft in Gmail', ''], saved: ['Saved', ''], held: ['Held', 'no'] };
+  var VAT_HELD = { NO_TAX: 'Shopify gave no tax lines', MISMATCH: 'Figures do not add up', NO_PAYMENT: 'No payment found', NO_BUYER: 'No address on the order', 'no email': 'No email: send it by hand', 'part refunded': 'Part refunded first: make it by hand' };
+  function vatInvoices() {
+    var rows = data.orders.filter(function (o) { return o.vat_inv_status && !/^none/.test(o.vat_inv_status); })
+      .sort(function (a, b) { return num(b.order_no) - num(a.order_no); });
+    var waiting = rows.filter(function (o) { return /^(dry-run|held)/.test(o.vat_inv_status); }).length, on = setting('VAT_INVOICES') === 'ON';
+    var h = '<p class="grp">VAT invoices' + (waiting ? '<span class="sr"> · </span><span class="cnt' + wide(waiting) + '" title="Ticked orders waiting">' + waiting + '</span>' : '') + '</p>';
+    if (!rows.length) return h + '<div class="card">' + empty(on ? 'No VAT invoices yet' : 'VAT invoices are off', on ? 'Made when a buyer tagged VAT-INVOICE in Shopify has paid in full.' : 'Turn on with VAT_INVOICES on the Settings tab of RR_FOOD.') + '</div>';
+    return h + '<div class="card">' + rows.slice(0, 10).map(function (o) {
+      var st = String(o.vat_inv_status), c = VAT_CHIP[st.split(':')[0]] || [st, ''];
+      return '<div class="row"><div class="txt"><b>' + esc(o.vat_inv_no || 'Not made yet') + '</b> · order #' + esc(o.order_no) + '<div class="m">' + esc(st.indexOf(':') > 0 ? (VAT_HELD[st.slice(st.indexOf(':') + 1).trim()] || st.slice(st.indexOf(':') + 1).trim()) : ukDate(o.vat_inv_at)) + '</div>' +
+        '<div class="badges"><span class="badge' + (c[1] ? ' ' + c[1] : '') + '">' + esc(c[0]) + '</span></div></div>' +
+        (o.vat_inv_file_id ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(o.vat_inv_file_id) + '/view" target="_blank" rel="noopener" aria-label="Open ' + esc(o.vat_inv_no) + '">Open</a>' : '') + '</div>'; }).join('') + '</div>' +
+      '<p class="hint">' + (waiting ? waiting + ' ticked order' + (waiting > 1 ? 's' : '') + ' waiting (dry run or held). ' : '') + 'Drafts wait in Gmail for you to read and send.</p>';
   }
   var FILTERS = [['sale', 'On sale'], ['eligible', 'Could add'], ['cat', 'Cat'], ['not', 'Not DDF'], ['all', 'All']];
   function inFilter(p) { var s = String(p.ddf_status || '');
