@@ -247,6 +247,8 @@ test.describe('GA Hub page', () => {
     await expect(codes).toContainText('in their tracking only (it is not on the label)');
     await expect(codes).not.toContainText('BRAND-CODE-NUMBER');
     await expect(codes).not.toContainText('add the code on the Codes tab');
+    await expect(codes).not.toContainText('Add a brand, shop or partner on the Codes tab of RR_FOOD');   // the sentence #122 removed, word for word
+    await expect(codes).not.toContainText('Codes tab');
     await expect(codes).toContainText('R01 Sample Pet Shop');
     await expect(codes).not.toContainText('Old shop');   // inactive codes are hidden
   });
