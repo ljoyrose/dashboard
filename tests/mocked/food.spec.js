@@ -56,6 +56,16 @@ async function open(page, hash) {
 }
 
 test.describe('GA Hub page', () => {
+  test('privacy: no email address in food/index.html; the sign-in hint comes from config.js', async ({ page }) => {
+    expect(SRC.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) || []).toEqual([]);
+    await sheets(page, book());
+    await page.goto('food/');
+    await page.locator('#view [data-action="signin"]').click();
+    await expect(page.locator('#tabs')).toBeVisible();
+    const req = await page.evaluate(() => window.__GIS_LAST_REQUEST);
+    const owner = await page.evaluate(() => (window.DASH_CONFIG.food || {}).owner);
+    expect(req.login_hint).toBe(owner);
+  });
   test('signed out: only a sign-in button, no tabs; signed in: "Needs you: 3", tiles, and one main card (price change first)', async ({ page }) => {
     await sheets(page, book());
     await page.goto('food/');
