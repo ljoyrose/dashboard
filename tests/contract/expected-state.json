@@ -1,0 +1,536 @@
+{
+  "_about": "Field NAMES and JS types only (no values). What each page expects inside each JSON state file. Rebuild with tests/contract/make-expected.js, then review the diff.",
+  "studio": {
+    "studio-state.json": {
+      "fixture": "tests/fixtures/studio/contract-state.json",
+      "top": {
+        "generated_at": "string",
+        "studio": "object",
+        "health": "object",
+        "accounts": "array",
+        "products": "array",
+        "brands": "array",
+        "groups": "array",
+        "assets": "array",
+        "ideas": "array",
+        "playbooks": "array",
+        "packs": "array",
+        "kits": "array",
+        "bricks": "array",
+        "frameworks": "array",
+        "voices": "array",
+        "looks": "array",
+        "formats": "array",
+        "sources": "array",
+        "tools": "array",
+        "gaps": "array",
+        "failed": "array",
+        "comments": "array",
+        "suggestions": "array",
+        "learning": "object",
+        "legalSets": "array",
+        "styles": "array",
+        "series": "array",
+        "vatRates": "array",
+        "priceShow": "string"
+      },
+      "fields": {
+        "studio": {
+          "on": "boolean",
+          "mode": "string",
+          "budgetMonth": "number",
+          "spentMonth": "number"
+        },
+        "health": {
+          "lastRun": "string",
+          "jobs": "array"
+        },
+        "health.jobs[]": {
+          "job": "string",
+          "result": "string",
+          "last": "string",
+          "note": "string"
+        },
+        "accounts[]": {
+          "id": "string",
+          "name": "string",
+          "kind": "string",
+          "role": "string",
+          "emails": "array",
+          "protect": "string",
+          "protectEffective": "string"
+        },
+        "products[]": {
+          "id": "string",
+          "name": "string",
+          "accountId": "string",
+          "brandId": "string",
+          "protect": "string"
+        },
+        "brands[]": {
+          "id": "string",
+          "name": "string",
+          "accountId": "string",
+          "colour": "number",
+          "stage": "string",
+          "setupChecklist": "array",
+          "groupId": "string",
+          "voiceId": "string",
+          "lookId": "string",
+          "shortName": "string",
+          "sheetRowUrl": "string",
+          "kit": "object"
+        },
+        "brands[].setupChecklist[]": {
+          "name": "string",
+          "ok": "boolean"
+        },
+        "brands[].kit": {
+          "logo": "string",
+          "website": "string",
+          "colours": "array",
+          "fontHeading": "string",
+          "fontBody": "string",
+          "canvaKitUrl": "string"
+        },
+        "groups[]": {
+          "id": "string",
+          "name": "string"
+        },
+        "assets[]": {
+          "id": "string",
+          "title": "string",
+          "accountId": "string",
+          "brandIds": "array",
+          "stage": "number",
+          "type": "string",
+          "who": "string",
+          "fit": "string",
+          "flags": "array",
+          "updated": "string",
+          "stageSince": "string",
+          "evergreen": "boolean",
+          "dated": "boolean",
+          "eventDate": "string",
+          "size": "string",
+          "priority": "string",
+          "productId": "string",
+          "projectName": "string",
+          "recipe": "string",
+          "provider": "string",
+          "cost": "number",
+          "rating": "number",
+          "version": "number",
+          "reviewLink": "string",
+          "docLink": "string",
+          "language": "string",
+          "length": "string",
+          "test": "string",
+          "result": "string",
+          "gate": "object",
+          "kitId": "string",
+          "groupId": "string",
+          "playbookId": "string",
+          "outcome": "string",
+          "frameworkId": "string",
+          "voiceId": "string",
+          "lookId": "string",
+          "masterId": "string",
+          "purpose": "string",
+          "formatIds": "array",
+          "sourceIds": "array",
+          "seriesId": "string",
+          "seriesNo": "number",
+          "styleId": "string",
+          "destination": "string",
+          "audience": "string",
+          "notes": "string",
+          "parentId": "string",
+          "order": "number",
+          "thumbUrl": "string",
+          "linkKind": "string",
+          "audioVoiceId": "string",
+          "avatarId": "string",
+          "legal": "object",
+          "parts": "object",
+          "results": "object",
+          "ask": "object",
+          "delivery": "object",
+          "protect": "string",
+          "protectSource": "string",
+          "paid": "boolean",
+          "disclose": "string",
+          "clientMaterial": "boolean",
+          "sourceRights": "string",
+          "hasProof": "boolean",
+          "needsWatermark": "boolean",
+          "proofLowRes": "boolean"
+        },
+        "assets[].gate": {
+          "question": "string",
+          "at": "string"
+        },
+        "assets[].legal": {
+          "setId": "string",
+          "setName": "string",
+          "entity": "string"
+        },
+        "assets[].parts": {
+          "total": "number",
+          "approved": "number",
+          "words": "number",
+          "targetWords": "number"
+        },
+        "assets[].results": {
+          "views": "number",
+          "clicks": "number",
+          "sales": "number",
+          "last": "string"
+        },
+        "assets[].ask": {
+          "question": "string",
+          "status": "string"
+        },
+        "assets[].delivery": {
+          "status": "string",
+          "link": "string"
+        },
+        "ideas[]": {
+          "id": "string",
+          "title": "string",
+          "accountId": "string",
+          "brandIds": "array",
+          "stage": "number",
+          "type": "string",
+          "who": "string",
+          "fit": "string",
+          "flags": "array",
+          "updated": "string",
+          "stageSince": "string",
+          "evergreen": "boolean",
+          "dated": "boolean",
+          "eventDate": "string",
+          "size": "string",
+          "priority": "string",
+          "productId": "string",
+          "projectName": "string",
+          "recipe": "string",
+          "provider": "string",
+          "cost": "number",
+          "rating": "number",
+          "version": "number",
+          "reviewLink": "string",
+          "docLink": "string",
+          "language": "string",
+          "length": "string",
+          "test": "string",
+          "result": "string",
+          "gate": "object",
+          "kitId": "string",
+          "groupId": "string",
+          "playbookId": "string",
+          "outcome": "string",
+          "frameworkId": "string",
+          "voiceId": "string",
+          "lookId": "string",
+          "masterId": "string",
+          "purpose": "string",
+          "formatIds": "array",
+          "sourceIds": "array",
+          "seriesId": "string",
+          "seriesNo": "number",
+          "styleId": "string",
+          "destination": "string",
+          "audience": "string",
+          "notes": "string",
+          "parentId": "string",
+          "order": "number",
+          "thumbUrl": "string",
+          "linkKind": "string",
+          "audioVoiceId": "string",
+          "avatarId": "string",
+          "legal": "object",
+          "parts": "object",
+          "results": "object",
+          "ask": "object",
+          "delivery": "object",
+          "protect": "string",
+          "protectSource": "string",
+          "paid": "boolean",
+          "disclose": "string",
+          "clientMaterial": "boolean",
+          "sourceRights": "string",
+          "hasProof": "boolean",
+          "needsWatermark": "boolean",
+          "proofLowRes": "boolean"
+        },
+        "ideas[].gate": {
+          "question": "string",
+          "at": "string"
+        },
+        "ideas[].legal": {
+          "setId": "string",
+          "setName": "string",
+          "entity": "string"
+        },
+        "ideas[].parts": {
+          "total": "number",
+          "approved": "number",
+          "words": "number",
+          "targetWords": "number"
+        },
+        "ideas[].results": {
+          "views": "number",
+          "clicks": "number",
+          "sales": "number",
+          "last": "string"
+        },
+        "ideas[].ask": {
+          "question": "string",
+          "status": "string"
+        },
+        "ideas[].delivery": {
+          "status": "string",
+          "link": "string"
+        },
+        "playbooks[]": {
+          "id": "string",
+          "name": "string",
+          "outcome": "string",
+          "steps": "array",
+          "groupId": "string",
+          "link": "string",
+          "notes": "string",
+          "status": "string"
+        },
+        "playbooks[].steps[]": {
+          "kind": "string",
+          "id": "string",
+          "text": "string"
+        },
+        "packs[]": {
+          "id": "string",
+          "name": "string",
+          "kind": "string",
+          "kitIds": "array",
+          "notes": "string",
+          "price": "number",
+          "priceBasis": "string",
+          "priceEx": "number",
+          "priceInc": "number",
+          "sourcePrice": "number",
+          "readyDays": "number",
+          "groupId": "string",
+          "link": "string",
+          "status": "string"
+        },
+        "kits[]": {
+          "id": "string",
+          "name": "string",
+          "type": "string",
+          "needs": "array",
+          "formatIds": "array",
+          "brickIds": "array",
+          "frameworkId": "string",
+          "voiceId": "string",
+          "lookId": "string",
+          "notes": "string",
+          "makePromptId": "string",
+          "checkPromptId": "string",
+          "price": "number",
+          "priceBasis": "string",
+          "priceEx": "number",
+          "priceInc": "number",
+          "sourcePrice": "number",
+          "readyDays": "number",
+          "groupId": "string",
+          "link": "string",
+          "status": "string"
+        },
+        "bricks[]": {
+          "id": "string",
+          "name": "string",
+          "kind": "string",
+          "text": "string",
+          "link": "string",
+          "notes": "string"
+        },
+        "frameworks[]": {
+          "id": "string",
+          "name": "string",
+          "steps": "array",
+          "when": "string",
+          "notes": "string",
+          "source": "string"
+        },
+        "voices[]": {
+          "id": "string",
+          "name": "string",
+          "steps": "array",
+          "when": "string",
+          "notes": "string",
+          "brandId": "string",
+          "kind": "string",
+          "consent": "string"
+        },
+        "looks[]": {
+          "id": "string",
+          "name": "string",
+          "steps": "array",
+          "when": "string",
+          "notes": "string",
+          "kind": "string"
+        },
+        "formats[]": {
+          "id": "string",
+          "name": "string",
+          "channel": "string",
+          "ratio": "string",
+          "size": "string",
+          "maxLength": "string",
+          "safeZone": "string",
+          "fileType": "string",
+          "notes": "string"
+        },
+        "sources[]": {
+          "id": "string",
+          "targetId": "string",
+          "url": "string",
+          "fileName": "string",
+          "note": "string",
+          "rights": "string"
+        },
+        "tools[]": {
+          "product": "string",
+          "thing": "string",
+          "unit": "string",
+          "allowance": "number",
+          "used": "number",
+          "left": "number",
+          "period": "string",
+          "resetsOn": "string",
+          "carriesOver": "boolean",
+          "fit": "string",
+          "capabilities": "array",
+          "inputs": "array",
+          "outputs": "array",
+          "accountNotes": "string",
+          "costPerUnit": "number",
+          "audit": "string"
+        },
+        "gaps[]": {
+          "capability": "string",
+          "format": "string",
+          "ratio": "string",
+          "reason": "string",
+          "assetIds": "array"
+        },
+        "failed[]": {
+          "assetId": "string",
+          "kind": "string"
+        },
+        "comments[]": {
+          "id": "string",
+          "assetId": "string",
+          "thread": "string",
+          "by": "string",
+          "text": "string",
+          "at": "string"
+        },
+        "suggestions[]": {
+          "id": "string",
+          "kind": "string",
+          "targetId": "string",
+          "reason": "string",
+          "proposal": "string"
+        },
+        "learning": {
+          "tools": "array",
+          "kits": "array"
+        },
+        "learning.tools[]": {
+          "id": "string",
+          "n": "number",
+          "firstTimeRate": "number",
+          "redoRate": "number",
+          "avgStars": "number",
+          "topReasons": "array"
+        },
+        "learning.tools[].topReasons[]": {
+          "reason": "string"
+        },
+        "learning.kits[]": {
+          "id": "string",
+          "n": "number",
+          "firstTimeRate": "number",
+          "redoRate": "number",
+          "avgStars": "number",
+          "topReasons": "array"
+        },
+        "learning.kits[].topReasons[]": {
+          "reason": "string"
+        },
+        "legalSets[]": {
+          "id": "string",
+          "name": "string",
+          "entity": "string",
+          "brandIds": "array"
+        },
+        "styles[]": {
+          "id": "string",
+          "name": "string",
+          "brandId": "string"
+        },
+        "series[]": {
+          "id": "string",
+          "name": "string",
+          "brandId": "string"
+        },
+        "vatRates[]": {
+          "country": "string",
+          "name": "string",
+          "rate": "number",
+          "checked": "string",
+          "home": "boolean"
+        }
+      },
+      "required": {
+        "assets[]": [
+          "id",
+          "title",
+          "stage"
+        ],
+        "ideas[]": [
+          "id",
+          "title"
+        ],
+        "brands[]": [
+          "id",
+          "name"
+        ],
+        "kits[]": [
+          "needs",
+          "formatIds",
+          "brickIds"
+        ],
+        "packs[]": [
+          "kitIds"
+        ]
+      }
+    }
+  },
+  "marketplace": {
+    "MKT-WAKE-WEBAPP.json": {
+      "fixture": "tests/fixtures/marketplace/MKT-WAKE-WEBAPP.json",
+      "top": {
+        "url": "string"
+      },
+      "fields": {},
+      "required": {
+        "": [
+          "url"
+        ]
+      }
+    }
+  }
+}

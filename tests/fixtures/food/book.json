@@ -1,0 +1,49 @@
+{
+  "_about": "Invented RR_FOOD workbook for the data-shape contract (tests/contract). Each tab holds the rows the page gets back for its range: the header first. Names only in Stage 1; invented rows are added by the contract tests.",
+  "Orders": [
+    ["order_no", "order_type", "customer_orders", "source", "brand", "partner", "tracking", "check", "profit_est", "status", "s_no", "boxes", "shipped_date", "ga_total"]
+  ],
+  "Invoices": [
+    ["si_no", "order_no", "invoice_date", "due_date", "paid_date", "total", "goods", "delivery", "vat", "fy", "file_id"]
+  ],
+  "Products": [
+    ["tla", "full_ga_code", "range", "species", "life_stage", "recipe", "pack", "grain", "kibble", "chicken_in_name", "fresh_meat_pct", "protein_pct", "ddf_status", "ddf_name", "ga_price_ex_vat_portal_oct26", "ga_price_ex_vat_list_aug25", "shopify_price_inc_vat", "subscription_price_inc_vat", "profit_ex_vat_1bag_1box", "data_sheet_url"]
+  ],
+  "Settings": [
+    ["key", "value", "note"],
+    ["FY_START_MONTH", "", ""],
+    ["MIN_PROFIT", "", ""],
+    ["SHOPIFY_STORE", "", ""],
+    ["GA_PORTAL", "", ""],
+    ["BANK_FOLDER_ID", "", ""],
+    ["BANK_LEDGER_FILE_ID", "", ""],
+    ["GA_PAYMENT", "", ""],
+    ["GA_ACCOUNT_CODE", "", ""],
+    ["GA_PHONE_ORDERS", "", ""],
+    ["GA_PHONE_ACCOUNTS", "", ""],
+    ["GA_PARTNER_MANAGER", "", ""],
+    ["GA_FIELD_MANAGER", "", ""],
+    ["GA_TERMS", "", ""],
+    ["GA_CUTOFF", "", ""],
+    ["DELIVERY_FIRST_BOX", "", ""],
+    ["DELIVERY_NEXT_BOX", "", ""],
+    ["GA_DELIVERY_ZONE_C", "", ""],
+    ["GA_PALLET", "", ""],
+    ["GA_ORDER_TO", "", ""],
+    ["GA_XML_CONTACT", "", ""],
+    ["GA_ORDER_FROM", "", ""],
+    ["GA_SHIP_FROM", "", ""],
+    ["GA_INVOICE_FROM", "", ""],
+    ["COMMERCIAL_INVOICE_TO", "", ""],
+    ["SUB_DISCOUNT", "", ""]
+  ],
+  "Statements": [
+    ["statement_date", "total_outstanding"]
+  ],
+  "DirectDebits": [
+    ["date", "amount"]
+  ],
+  "Codes": [
+    ["kind", "code", "name", "active"]
+  ]
+}
