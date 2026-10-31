@@ -59,6 +59,8 @@
       requestsFolderId: '13KclIUhOej1bmoQznfbrUiHtoab-FnDV', // the page writes request JSON files here
       inboxFolderId: '1poaewHMRwrOcXwXa0PrMZhnmhyn66BzL', // Ideas > Inbox - drop files here
       stateFile: 'studio-state.json',
+      // Owned tools list (Tools page): read with the signed-in token only. The tool data lives in the sheet, never in this repo.
+      ownedTools: { sheetId: '1iwlUFBeFOAUxlHlr8FsCIxpmhqSWzq3038OEDN-Zfz8', tab: 'OWNED_TOOLS' }, // STUDIO-CONTROL sheet, Owned Tools tab
       live: false
     },
     // Web Estate Hub (estate/): reads the private RR_WEB-ESTATE sheet (Properties tab) with Lisa's sign-in; Add drops one
