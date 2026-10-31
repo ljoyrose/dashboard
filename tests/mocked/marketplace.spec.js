@@ -243,7 +243,7 @@ test.describe('Marketplace page', () => {
     ];
     await sheets(page, rows);
     await open(page);
-    await expect(page.locator('#tabs a')).toHaveText([/Home/, /Do now/, /Decide/, /Reply/, /Insights/]);
+    await expect(page.locator('#tabs a')).toHaveText([/Home/, /Do now/, /Decide/, /New stock/, /Reply/, /Insights/]);
     await expect(page.locator('#view .needs3 a.tile')).toHaveText([/1\s*Do now/, /2\s*Decide/, /1\s*Reply/]);
     await expect(page.locator('#n-decide')).toHaveText('2');
     await page.locator('#tabs a[data-nav="decide"]').click();
@@ -372,9 +372,12 @@ test.describe('Marketplace page', () => {
     await page.locator('[data-ans="LINK|L0018|L0155"][data-v="Yes"]').click();
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Yes', 'qty 4']);
-    await page.locator('[data-ans="LINK|L0020|L0156"][data-v="No"]').click();
+    await page.locator('[data-diff="LINK|L0020|L0156"]').click();                           // v11.10: Different items -> a count for each
+    await page.locator('[data-diffa="LINK|L0020|L0156"]').fill('1');
+    await page.locator('[data-diffb="LINK|L0020|L0156"]').fill('2');
+    await page.locator('[data-ans="LINK|L0020|L0156"][data-v="Different"]').click();
     await expect.poll(() => writes.length).toBe(2);
-    expect(writes[1].body.values[0].slice(0, 2)).toEqual(['No', '']);
+    expect(writes[1].body.values[0].slice(0, 2)).toEqual(['Different', 'this=1 ebay=2']);
   });
 
   test('Stock page: have / on order / min per code; Low and No-count chips; search; Count, Ordered and Settings each write one answer', async ({ page }) => {
@@ -432,23 +435,103 @@ test.describe('Marketplace page', () => {
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].range).toBe('Marketplace!G3:J3'); expect(writes[0].body.values[0][0]).toBe('Ordered 6');
   });
-  test('engine v11 New product? card: both VAT profit lines (headline bold, warning red), best and runner-up, the order gap; Yes writes the quantity', async ({ page }) => {
-    const np = { kind: 'newprod', code: 'H1', supplier: 'Sample Supplier', lines: ['Buy £10.00 + VAT £2.00 (20%) = £12.00 from Sample Supplier (delivered)', 'Sell £24.99 (VAT inside £4.17) · after fees and postage £18.24',
-      '▶ Not VAT-registered: profit £6.24 (input VAT £2.00 is a cost)', 'VAT-registered: profit £4.07 (pay £4.17 output VAT, reclaim £2.00)', '⚠ Loses money if VAT-registered'],
-      best: 'Sample Supplier £12.00 inc VAT', runner_up: 'Other £12.50', moq: '1', case_cost: '£72.00 for 6', gap: 'Below the £100.00 minimum: add £88.00', sell_basis: 'RRP (not yet checked against eBay sold prices)' };
-    const rows = [['NP|Sample Supplier|h1', 'newprod', 'Other', 'Sample harness (4 sizes/colours)', JSON.stringify(np), ago(5)]];
+  test('engine v11.10 New stock: New product? cards leave Decide, fold by supplier with free-postage gap and profit; Agree this order writes one Order + InOrder answers; set box writes Terms', async ({ page }) => {
+    const np = (code, sup, t, ex, inc, prof, moq, terms) => JSON.stringify({ kind: 'newprod', code, supplier: sup, unit_ex_p: ex, unit_inc_p: inc, profit_p: prof, moq, terms, best: sup + ' inc VAT', sell: '£29.99',
+      lines: ['▶ Not VAT-registered: profit £5.20', '⚠ Loses money if VAT-registered'] });
+    const A = { free_over: '150', min_order: '' }, rows = [];
+    for (let i = 1; i <= 7; i++) rows.push(['NP|Sample Supplier A|A' + i, 'newprod', 'Other', 'Sample lead A' + i, np('A' + i, 'Sample Supplier A', 'x', 1400, 1680, 520, i === 1 ? '3' : '', A), ago(5)]);
+    for (let i = 1; i <= 3; i++) rows.push(['NP|Sample Supplier B|B' + i, 'newprod', 'Other', 'Sample toy B' + i, np('B' + i, 'Sample Supplier B', 'x', 300, 360, 250, '', {}), ago(5)]);
+    rows.push(['GO|L4', 'go', 'Clothes', 'Sample hat', JSON.stringify({ platform: 'eBay' }), ago(5)]);
     const writes = await sheets(page, rows);
     await open(page, '#/decide');
-    await expect(page.locator('#view .grp').first()).toHaveText('New product?');
-    await expect(page.locator('#view ul.money li.head')).toHaveText('▶ Not VAT-registered: profit £6.24 (input VAT £2.00 is a cost)');
-    await expect(page.locator('#view ul.money li.red')).toHaveText('⚠ Loses money if VAT-registered');
-    await expect(page.locator('#view ul.money li')).toHaveCount(5);
-    await expect(page.locator('#view')).toContainText('Below the £100.00 minimum: add £88.00');
-    await expect(page.locator('#view .fact', { hasText: 'Runner-up' })).toContainText('Other £12.50');
-    await page.locator('[data-note="NP|Sample Supplier|h1"]').fill('6');
-    await page.locator('[data-ans="NP|Sample Supplier|h1"][data-v="Yes"]').click();
+    await expect(page.locator('#view .needs')).toHaveText('Decide: 1');                       // only current items
+    await expect(page.locator('#n-newstock')).toHaveText('10');
+    await page.locator('#tabs a[data-nav="newstock"]').click();
+    await expect(page.locator('#view .needs')).toHaveText('New stock: 10');
+    await expect(page.locator('#view details.npgroup')).toHaveCount(2);
+    const g = page.locator('details.npgroup', { hasText: 'Sample Supplier A' });
+    await expect(g).not.toHaveAttribute('open', '');                                          // folded
+    await expect(g.locator('summary').first()).toContainText('7 items · basket £126.00 ex VAT · £24.00 to free postage · profit £46.80');
+    await g.locator('summary').first().click();
+    await page.locator('[data-npq="NP|Sample Supplier A|A2"]').fill('3');
+    await expect(g.locator('summary').first()).toContainText('basket £154.00 ex VAT · free postage reached');
+    await page.locator('[data-npinc="NP|Sample Supplier A|A7"]').uncheck();
+    page.on('dialog', d => d.accept());
+    await g.locator('[data-nporder="Sample Supplier A"]').click();
+    await expect.poll(() => writes.length).toBe(6);
+    const lead = writes[writes.length - 1].body.values[0];
+    expect(lead[0]).toBe('Order'); expect(lead[1]).toBe('items=NP|Sample Supplier A|A1*3,NP|Sample Supplier A|A2*3,NP|Sample Supplier A|A3*1,NP|Sample Supplier A|A4*1,NP|Sample Supplier A|A5*1,NP|Sample Supplier A|A6*1');
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['InOrder', 'lead=NP|Sample Supplier A|A1']);
+    const b = page.locator('details.npgroup', { hasText: 'Sample Supplier B' });
+    await expect(b.locator('summary').first()).toContainText('free postage: not known yet');
+    await b.locator('summary').first().click();
+    await page.locator('[data-nptermsin="NP|Sample Supplier B|B1"]').fill('free over 100, min 50');
+    await page.locator('[data-npterms="NP|Sample Supplier B|B1"]').click();
+    await expect.poll(() => writes.length).toBe(7);
+    expect(writes[6].body.values[0].slice(0, 2)).toEqual(['Terms', 'free over 100, min 50']);
+  });
+
+  test('engine v11.10 cost card asks the supplier first (last one picked already), Add new supplier, then cost with code/link; note carries them', async ({ page }) => {
+    const d = { kind: 'cost', item_sku: 'SKU-9', platform: 'eBay', times_sold: 2, last_price: '£13.93', suppliers: ['Sample Supplier B', 'Sample Supplier A'], last_supplier: 'Sample Supplier B', last_cost: '5.90', last_code: 'B-95',
+      product_suppliers: [{ supplier: 'Sample Supplier B', cost: '5.90' }, { supplier: 'Sample Supplier A', cost: '6.50' }], cheapest: 'Sample Supplier B £5.90' };
+    const rows = [['CST|SKU-9', 'cost', 'Other', 'Sample ceramic blade 9.5mm', JSON.stringify(d), ago(5)], ['CST|SKU-8', 'cost', 'Other', 'Sample brush', JSON.stringify(Object.assign({}, d, { item_sku: 'SKU-8', last_supplier: '', product_suppliers: [] })), ago(4)]];
+    const writes = await sheets(page, rows);
+    await open(page, '#/decide'); await page.locator('[data-action="all"]').click();
+    const c = page.locator('.card', { hasText: 'Sample ceramic blade' });
+    await expect(c).toContainText('Cheapest to restock: Sample Supplier B £5.90');
+    await expect(c).toContainText('Bought from Sample Supplier B');
+    await expect(c.locator('[data-note="CST|SKU-9"]')).toHaveValue('5.90');
+    await c.locator('[data-v="Save"]').click();
     await expect.poll(() => writes.length).toBe(1);
-    expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Yes', '6']);
+    expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Save', '5.90|sup=Sample Supplier B|code=B-95|cur=GBP']);
+    const b = page.locator('.card', { hasText: 'Sample brush' });
+    await expect(b).toContainText('Who did you buy it from?');
+    await expect(b.locator('[data-v="Save"]')).toHaveCount(0);                                  // one question at a time
+    await b.locator('[data-costsup="CST|SKU-8"][data-v="+new"]').click();
+    await page.locator('[data-costnew="CST|SKU-8"]').fill('Sample New Ltd');
+    await page.locator('[data-costnewok="CST|SKU-8"]').click();
+    await page.locator('[data-note="CST|SKU-8"]').fill('3.20');
+    await page.locator('.card', { hasText: 'Sample brush' }).locator('[data-v="Save"]').click();
+    await expect.poll(() => writes.length).toBe(2);
+    expect(writes[1].body.values[0].slice(0, 2)).toEqual(['Save', '3.20|sup=Sample New Ltd|cur=GBP|new=1']);
+  });
+
+  test('engine v11.10 Numbers: the To post tile counts the board now, not Monday\'s figure', async ({ page }) => {
+    const rows = [['KPI|w', 'kpi', '', 'Week', JSON.stringify({ tiles: [{ key: 'to_post', label: 'To post · needs you', value: '0 · 0', arrow: 'flat' }] }), ago(5)],
+      ['PO|ebay|1-2', 'post', 'Other', 'Sample parcel', JSON.stringify({ platform: 'eBay', courier: 'Royal Mail' }), ago(5)]];
+    await sheets(page, rows); await open(page, '#/numbers');
+    await expect(page.locator('#view .tile', { hasText: 'To post' })).toContainText('1 · 1');
+  });
+
+test('v11.10 Fix 5: the same item sold twice = two cards, each with its order no, 3-letter buyer tag, sold date, own label link and "1 of 2" / "2 of 2"', async ({ page }) => {
+    const v = (id, tag, mail, t) => ['PO|vinted|vt-c-' + id, 'post', 'Blades & grooming', 'Sample blade case', JSON.stringify({ platform: 'vinted', order_id: 'vt-c-' + id, title_key: 'vt-c', owner: 'Lisa', buyer_tag: tag, sold_at: '2026-10-30', parcel_id: 'L-1' + id, label_email: mail, label_pdf: 'L' + id + '.pdf' }), t];
+    const rows = [v('1', 'abc', 'm1', ago(9)), v('2', 'xyz', 'm2', ago(5)),
+      ['PO|ebay|12-777', 'post', 'Other', 'Sample lead', JSON.stringify({ platform: 'ebay', order_id: '12-777', owner: 'CY', buyer_tag: 'qrs', sold_at: '2026-10-29', parcel_id: 'CY-01', courier: 'Unknown' }), ago(4)]];
+    await sheets(page, rows); await open(page, '#/do');
+    const c1 = page.locator('.card', { hasText: 'L-11' }), c2 = page.locator('.card', { hasText: 'L-12' });
+    await expect(c1.locator('.ordl')).toContainText('buyer abc… · sold'); await expect(c1.locator('.ordl b')).toHaveText('1 of 2');
+    await expect(c2.locator('.ordl')).toContainText('buyer xyz…'); await expect(c2.locator('.ordl b')).toHaveText('2 of 2');
+    await expect(c1.locator('a', { hasText: 'label' })).toHaveAttribute('href', /m1/); await expect(c2.locator('a', { hasText: 'label' })).toHaveAttribute('href', /m2/);
+    const e = page.locator('.card', { hasText: 'Sample lead' });
+    await expect(e.locator('.ordl')).toContainText('Order 12-777 · buyer qrs…'); await expect(e.locator('.ordl b')).toHaveCount(0);
+    await expect(e.locator('.ava')).toHaveText('CY');
+  });
+
+  test('v11.10 Fix 6 / L-06: a shipped order shows 0 times; an open order shows exactly once on Do now with ONE next step; tracked eBay parcel never says Postage not bought yet', async ({ page }) => {
+    const rows = [['PO|ebay|12-00000-00002', 'post', 'Blades & grooming', 'Sample blade carry case', JSON.stringify({ platform: 'ebay', order_id: '12-00000-00002', parcel_id: 'L-02', courier: 'Unknown', sold_at: '2026-10-27' }), ago(9), '', '', '', '', new Date().toISOString(), 'engine: shipped on eBay'],
+      ['PO|ebay|12-1', 'post', 'Other', 'Sample tracked lead', JSON.stringify({ platform: 'ebay', order_id: '12-1', parcel_id: 'L-03', courier: '', tracking: 'TRK1', sold_at: '2026-10-30', found: true }), ago(5)]];
+    await sheets(page, rows); await open(page, '#/do');
+    await expect(page.locator('#view')).not.toContainText('L-02');
+    await expect(page.locator('#view')).not.toContainText('Postage not bought yet');
+    await expect(page.locator('#view .card', { hasText: 'Sample tracked lead' })).toHaveCount(1);
+    await expect(page.locator('#view .nextstep')).toHaveCount(1);
+    await expect(page.locator('#view .nextstep')).toHaveText('Next: Pack it, write the parcel number on it, post it, tap Posted');
+    await expect(page.locator('[data-action="pack"]')).toHaveCount(0);
+    await page.evaluate(() => { location.hash = '#/me'; });
+    await expect(page.locator('#view .needs')).toBeVisible();
+    await expect(page.locator('#view')).not.toContainText('L-02');
+    await expect(page.locator('#view .card', { hasText: 'Sample tracked lead' })).toHaveCount(1);   // the Next card, not again in a list
+    await expect(page.locator('#view .plist')).toHaveCount(0);
   });
 
   test('engine v11 supplier cards: terms questions need text before Save; a price list behind a link opens it and the 6 TRADE folder; a receipt shows unmatched lines in red', async ({ page }) => {
@@ -613,7 +696,7 @@ test.describe('Marketplace page', () => {
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].body.values[0][0]).toBe('Posted');
     await expect(page.locator('[data-ans="WP|vinted|JJD1"][data-v="Done"]')).toHaveText('Sorted it');
-    await expect(page.locator('[data-action="pack"]')).toHaveText('Start packing (1)');
+    await expect(page.locator('[data-action="pack"]')).toHaveCount(0);   // v11.10 Fix 6: one parcel left = just its card, no packing buttons
   });
 
   test('Stock "Made of": add an existing part, add a new part with a count, and paste a supplier link; each writes one Set answer', async ({ page }) => {
@@ -664,8 +747,8 @@ test.describe('Marketplace page', () => {
     await page.evaluate(() => { location.hash = '#/do'; });
     const card = page.locator('.card', { hasText: 'Sample case' });
     await expect(card).toContainText('Sold on eBay'); await expect(card).toContainText('Buy postage on the eBay order');
-    await expect(card.locator('a', { hasText: 'Open the order on eBay' })).toHaveAttribute('href', /orderid=12-9/);
-    await expect(card.locator('a', { hasText: 'Open the order on eBay' })).toHaveAttribute('target', '_blank');
+    await expect(card.locator('a', { hasText: /order on eBay|Buy postage/ })).toHaveAttribute('href', /orderid=12-9/);
+    await expect(card.locator('a', { hasText: /order on eBay|Buy postage/ })).toHaveAttribute('target', '_blank');
     await expect(card.locator('.ava')).toHaveText('CY');
     const wp = page.locator('.card', { hasText: 'Which parcel?' });
     await expect(wp).toContainText('Not a new sale'); await expect(wp.locator('a', { hasText: 'Open the email' })).toHaveAttribute('target', '_blank');
