@@ -16,7 +16,9 @@
     };
     return {
       generated_at: iso(-60e3),
-      studio: { on: true, mode: 'TEST', budgetMonth: 50, spentMonth: 20 },
+      studio: { on: true, mode: 'TEST', budgetMonth: 50, spentMonth: 20,
+        // Bot maker loop (engine v0.2.24): invented settings; the folder id is a placeholder and never shown.
+        maker: { claimMinutes: 45, pieceCapGBP: 2, autoApprove: true, aiDisclosure: 'Sample disclosure line', inProgressFolderId: 'sample-in-progress-folder' } },
       health: { lastRun: iso(-10 * 60e3), jobs: [{ job: 'syncState', result: 'OK', last: iso(-10 * 60e3), note: 'sample' }] },
       accounts: [{ id: 'acc-owner', name: 'Sample owner', kind: 'owner', role: 'owner', emails: ['owner@example.test'], protect: '', protectEffective: 'no' },
         { id: 'acc-client', name: 'Sample client', kind: 'client', role: 'client', emails: [], protect: '', protectEffective: 'yes' }],
@@ -34,9 +36,11 @@
         a({ id: 'sa-rev1', title: 'Sample checklist PDF', productId: 'sp-course', stage: 7, reviewLink: 'https://drive.google.com/file/d/1SAMPLEreviewDoc00000000000/view', updated: iso(-H),
           kitId: 'kit-lead', outcome: 'attract', frameworkId: 'fw-pas', formatIds: ['fmt-a4'], language: 'en-GB', sourceIds: ['src-1'] }),
         a({ id: 'sa-rev2', title: 'Sample welcome email', brandIds: ['sb-south'], type: 'email', stage: 7, updated: iso(-2 * H),
-          kitId: 'kit-email', outcome: 'keep', frameworkId: 'fw-hso', formatIds: ['fmt-email-header'], masterId: 'sa-lib', purpose: 'refresh', test: 'ab-welcome' }),
+          kitId: 'kit-email', outcome: 'keep', frameworkId: 'fw-hso', formatIds: ['fmt-email-header'], masterId: 'sa-lib', purpose: 'refresh', test: 'ab-welcome',
+          checkNotes: 'Sample note: subject line is long' }),
         a({ id: 'sa-make', title: 'Sample webclass slides', brandIds: ['sb-north', 'sb-south'], type: 'slides', stage: 5, size: 'L', evergreen: false, dated: true, eventDate: day(14),
-          kitId: 'kit-webclass', playbookId: 'pb-launch', outcome: 'convert', frameworkId: 'fw-webinar', formatIds: ['fmt-youtube', 'fmt-reel'] }),
+          kitId: 'kit-webclass', playbookId: 'pb-launch', outcome: 'convert', frameworkId: 'fw-webinar', formatIds: ['fmt-youtube', 'fmt-reel'],
+          claim: { by: 'grok', at: iso(-H) }, flags: ['check-wait'] }),
         a({ id: 'sa-gate', title: 'Sample lead magnet', brandIds: ['sb-south'], type: 'lead', stage: 3, who: 'lisa', fit: 'HAND', gate: { question: 'Lock the spec?', at: iso(-3 * H) } }),
         a({ id: 'sa-hand', title: 'Sample social graphic', type: 'social', stage: 4, who: 'lisa', fit: 'HAND', size: 'S', flags: ['needs-input'], kitId: 'kit-social', formatIds: ['fmt-fb-feed'] }),
         a({ id: 'sa-lib', title: 'Sample puppy pack', brandIds: ['sb-south'], type: 'pack', stage: 8, version: 3, rating: 5 }),
