@@ -1360,6 +1360,7 @@
       }).join('') : '<p class="muted">' + I('circle-check') + ' None.</p>') + '</div>';
     var add = '<div class="pills"><button class="pill" type="button" data-action="addtool" aria-expanded="' + toolOpen + '" style="--hc:var(--ljr-7-text)">' + I(toolOpen ? 'chevron-up' : 'plus') + 'Add tool</button></div>' + (toolOpen ? vToolForm() : '');
     var caps = function (m) { return m.capabilities.map(function (k) { var c = capOf(k); return '<span class="tag" data-cap="' + esc(k) + '" title="' + esc(k) + '">' + I(c[2]) + esc(c[1]) + '</span>'; }).join(''); };
+    var parkTag = function (m) { return m.parked ? '<span class="tag" data-chip="parked" title="Parked: not counted as covering a gap">' + I('player-pause') + 'Parked</span>' : ''; };
     var fitTag = function (m) { var f = pickOf(FITS, m.fit) || [m.fit, /^BANNED:/.test(m.fit) ? 'Not for ' + m.fit.slice(7) : m.fit, 'ban']; return '<span class="tag" data-fit="' + esc(m.fit) + '" title="Fit">' + I(f[2]) + esc(f[1]) + '</span>'; };
     T = T.filter(function (m) { return lqHit('tools', [m.product, m.thing, m.fit, (m.capabilities || []).join(' '), m.accountNotes].join(' ')); }).sort(function (a, b) {
       if (toolSort === 'left') { var pa = a.allowance ? a.used / a.allowance : -1, pb = b.allowance ? b.used / b.allowance : -1; return pb - pa; }
@@ -1369,14 +1370,14 @@
     var tsort = '<div class="pills" data-frow="tsort"><span class="flab">Sort</span>' + [['name', 'sort-a-z', 'Name'], ['left', 'gauge', 'Most used'], ['reset', 'refresh', 'Resets soon']].map(function (x) { return '<button class="pill' + (toolSort === x[0] ? ' on' : '') + '" type="button" data-tsort="' + x[0] + '" aria-pressed="' + (toolSort === x[0]) + '">' + I(x[1]) + ' ' + x[2] + '</button>'; }).join('') + '</div>';
     var list = T.length ? '<div class="card">' + T.map(function (m) {
       if (!owned(m)) return '<div class="row" data-tool="' + esc(m.product) + '" style="--c:var(--ljr-0)"><span class="bar"></span><div class="txt"><b>' + esc(m.product) + '</b>' + (m.thing ? ' · ' + esc(m.thing) : '') + info(m.accountNotes) +
-        '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + caps(m) + '</div></div></div>';
+        '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + parkTag(m) + caps(m) + '</div></div></div>';
       var st = meterOf(m), pct = Math.min(100, Math.round(st.pct * 100)), d = daysTo(m.resetsOn);
       return '<div class="meter" data-meter="' + st.k + '" data-tool="' + esc(m.product) + '" style="--c:var(--ljr-' + st.slot + ')"><span class="bar"></span><div class="txt"><b>' + esc(m.product) + '</b>' + (m.thing ? ' · ' + esc(m.thing) : '') +
         info([m.period ? 'Per ' + m.period : '', m.carriesOver ? 'Carries over' : 'Does not carry over', m.fit === 'HAND' ? 'Used manually' : 'Used by the Studio helper', m.costPerUnit ? money(m.costPerUnit) + ' each' : '', m.accountNotes || ''].filter(Boolean).join(' · ')) +
         (m.allowance ? '<div class="track" role="img" aria-label="' + pct + '% used"><i style="width:' + pct + '%"></i></div>' +
         '<div class="nums"><span>' + esc(m.used) + ' / ' + esc(m.allowance) + ' ' + esc(m.unit || '') + '</span>' + (m.resetsOn ? '<span>' + I('refresh') + ' ' + dmy(Date.parse(m.resetsOn)) + (d !== null && d >= 0 ? ' · ' + d + 'd' : '') + '</span>' : '') + '</div>' : '') +
         (st.text ? '<div class="why">' + I(st.icon) + '<span>' + esc(st.text) + '</span></div>' : '') +
-        '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + scoreTag('tools', m.product) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
+        '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + parkTag(m) + scoreTag('tools', m.product) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
         (m.audit ? '<a class="tag" href="' + safeUrl(m.audit) + '" target="_blank" rel="noopener" title="Audit">' + I('clipboard-check') + 'Audit</a>' : '') + '</div></div></div>';
     }).join('') + '</div>' : '<div class="card muted">No tools yet.</div>';
     return qbox('tools', tsort) + ownedCard() + gaps + add + list;
@@ -1489,12 +1490,16 @@
     var bits = []; if (pr) bits.push(sh === 'both' ? gbp(pr.ex) + ' ex \u00b7 ' + gbp(pr.inc) + ' inc VAT' : sh === 'inc' ? gbp(pr.inc) + ' inc VAT' : gbp(pr.ex) + ' ex VAT'); if (d !== null) bits.push(d + (d === 1 ? ' day' : ' days'));
     return bits.length ? '<div class="pline" data-price>' + bits.join(' \u00b7 ') + '</div>' : '';
   }
+  // Playbook step: who does it and how (engine v0.2.24), shown only when both are set. The engine shows as "Studio helper".
+  function stepWho(x) { var w = pickOf(WHO, x.who); if (!w || (x.fit !== 'AUTO' && x.fit !== 'HAND')) return '';
+    return ' <span class="tag" data-chip="step-who" title="Who · how">' + I(w[2]) + (x.who === 'engine' ? 'Studio helper' : esc(w[1])) + ' \u00b7 ' + (x.fit === 'AUTO' ? 'AUTO' : 'by hand') + '</span>'; }
+  var STEP_WHO = / @(lisa|claude|grok|engine)\/(AUTO|HAND)$/; // optional suffix on a library step line
   function libEditBtn(table, id) { return '<button class="btn" type="button" data-libedit="' + table + '" data-id="' + esc(id) + '" aria-label="Edit"' + dis() + '>' + I('pencil') + 'Edit</button>'; }
   function libFrom(table, id) {
     var x = byIdIn(table, id) || {}, f = {};
     LIB[table].fields.forEach(function (d) {
       var v = x[d[0]];
-      if (d[0] === 'steps') v = (x.steps || []).map(function (st) { return st.kind === 'kit' || st.kind === 'pack' ? st.kind + ':' + st.id : st.text; }).join('\n');
+      if (d[0] === 'steps') v = (x.steps || []).map(function (st) { return (st.kind === 'kit' || st.kind === 'pack' ? st.kind + ':' + st.id : st.text) + (pickOf(WHO, st.who) && (st.fit === 'AUTO' || st.fit === 'HAND') ? ' @' + st.who + '/' + st.fit : ''); }).join('\n');
       f[d[0]] = d[2] === 'multi' ? (v || []).slice() : v == null ? '' : String(v);
     });
     return f;
@@ -1535,7 +1540,7 @@
       else if (fd[2] === 'pick' && opts.indexOf(v) < 0) e[k] = 'Pick from the list';
       else if ((fd[2] === 'text' || fd[2] === 'area') && fd[4] && v.length > fd[4]) e[k] = 'At most ' + fd[4] + ' characters';
       else if (fd[2] === 'lines') { var ls = v.split('\n').map(function (x) { return x.trim(); }).filter(Boolean); if (ls.length > fd[4]) e[k] = 'At most ' + fd[4] + ' steps';
-        ls.forEach(function (x) { if (x.length > 200) e[k] = 'Each step at most 200 characters'; if (/;/.test(x)) e[k] = 'No ; in a step (one step per line)'; var m = x.match(/^(kit|pack)\s*:\s*(\S+)$/i); if (m && !byIdIn(m[1].toLowerCase() === 'kit' ? 'kits' : 'packs', m[2])) e[k] = 'No ' + m[1].toLowerCase() + ' called ' + m[2]; }); }
+        ls.forEach(function (x) { if (x.length > 200) e[k] = 'Each step at most 200 characters'; if (/;/.test(x)) e[k] = 'No ; in a step (one step per line)'; var m = x.replace(STEP_WHO, '').match(/^(kit|pack)\s*:\s*(\S+)$/i); if (m && !byIdIn(m[1].toLowerCase() === 'kit' ? 'kits' : 'packs', m[2])) e[k] = 'No ' + m[1].toLowerCase() + ' called ' + m[2]; }); }
     });
     return e;
   }
@@ -1582,9 +1587,9 @@
         var pbs = S.playbooks.filter(function (p) { return p.outcome === o[0] && lqHit('kits', [p.name, (p.steps || []).map(function (x) { return x.text || x.id; }).join(' ')].join(' ')); });
         return '<section class="room" data-outcome="' + o[0] + '" style="--c:var(--ljr-' + o[3] + ')"><h2 class="grp">' + I(o[2]) + o[1] + cnt(pbs.length) + '</h2>' +
           pbs.map(function (p) {
-            return '<div class="pb" data-playbook="' + esc(p.id) + '"><div class="pbh"><b>' + esc(p.name) + '</b>' + libEditBtn('playbooks', p.id) + '</div><ol class="steps">' + (p.steps || []).map(function (x) {
+            return '<div class="pb" data-playbook="' + esc(p.id) + '"><div class="pbh"><b>' + (p.code ? '<span class="tag" data-chip="pb-code" title="Code">' + esc(p.code) + '</span> ' : '') + esc(p.name) + '</b>' + libEditBtn('playbooks', p.id) + '</div><ol class="steps">' + (p.steps || []).map(function (x) {
               var href = x.kind === 'kit' ? '#/kits/kits' : x.kind === 'pack' ? '#/kits/packs' : '';
-              return '<li>' + I(x.kind === 'pack' ? 'package' : x.kind === 'kit' ? 'box' : 'hand-finger') + (href ? '<a href="' + href + '">' + esc(x.text || x.id) + '</a>' : esc(x.text)) + '</li>';
+              return '<li>' + I(x.kind === 'pack' ? 'package' : x.kind === 'kit' ? 'box' : 'hand-finger') + (href ? '<a href="' + href + '">' + esc(x.text || x.id) + '</a>' : esc(x.text)) + stepWho(x) + '</li>';
             }).join('') + '</ol></div>';
           }).join('') + '</section>';
       }).join('') + '</div>';
