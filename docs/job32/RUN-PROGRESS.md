@@ -17,4 +17,4 @@ Stage 3: no new code. Main merged into the stack (no conflicts) so the three PRs
 
 Next step: none. JOB 32 done; waiting on Lisa's merge OKs.
 
-JOB 32.4: main (with #166 and #173 merged) merged into claude/job32-3-wrap as 5c9585e. No conflicts: #213 holds only this file on top of main. Privacy guard CLEAN on origin/main..HEAD. Mocked suite: running.
+JOB 32.4: main (with #166 and #173 merged) merged into claude/job32-3-wrap as 5c9585e. No conflicts: #213 holds only this file on top of main. Privacy guard CLEAN on origin/main..HEAD. Mocked suite 725/725 passed (11:16 GMT, 31 Oct 2026). Next step: none; waiting on Lisa's merge OK for #213.
