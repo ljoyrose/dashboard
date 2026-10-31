@@ -19,3 +19,6 @@ Overlap: 1 open PR (Studio Stage 6) also edits factory/index.html, other lines.
 Main merged into stages 1-4 on 30 Oct (no rebase).
 Resume check 30 Oct: 8 PRs open, stacked 140 > 143 > 144 > 145 > 167 > 170 > 181 > 184; CI green on each; each merges clean into today's main (31 commits newer), so main was not merged in again. None merged.
 Next: nothing to build. Waiting on Lisa: merges in stack order, the old branch, the Mac-route deploy of the stamp handler.
+
+Merge of main (31 Oct, JOB 23.3 merge-main): main 36c61aa merged into #143, #144, #145, #167, #170, #181 and #184 (merge commits, no rebase, no force-push). One conflict each, in factory/index.html (two adjacent CSS rule groups); both sides kept. Privacy guard CLEAN on all 7. `node --test` on each: 150 pass, 1 fail.
+Open (not caused by the merge): `node --test` also lists tests/support/test.js, a Playwright helper, not a test. It fails at line 6 with "Cannot find module '@playwright/test'" (dependencies not installed in the box). Main fails it identically (150 pass, 1 fail). Fix is outside this job: exclude tests/support from the node --test glob, or run `npm ci` first. #140 untouched.
