@@ -121,7 +121,7 @@
   // ---- Keyboard keys: g then a letter to go somewhere, r reread, / search, ? the list ----
   var KEYS = [
     ['g m', 'Dashboard', function () { go('./#/map'); }],
-    ['g d', 'Drive', function () { go('./#/drive'); }],
+    ['g d', 'Drives', function () { go('./#/drives'); }],
     ['g b', 'Bin', function () { go('./#/bin'); }],
     ['g c', 'Changes', function () { go('./#/changes'); }],
     ['g f', 'Money Hub', function () { go('money/'); }],
@@ -132,6 +132,7 @@
   ];
   function go(rel) { var u = new URL(rel, SITE); if (u.href !== root.location.href) root.location.href = u.href; }
   function typing(t) { return t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)); }
+  /** Opens the keyboard-keys dialog, building it on first use. Exported as showKeys. */
   function help() {
     var doc = root.document, d = doc.getElementById('dashKeys');
     if (!d) {
@@ -162,6 +163,7 @@
   // A provider is function (query) -> Promise of [{ group, slot (0-8), title, sub, href | act }].
   // Read-only: providers only read (Drive file names on home, tables already in memory elsewhere).
   var PROVIDERS = [], searchGen = 0, searchTimer = null;
+  /** Adds a search provider: fn(query) returns result items or a Promise of them. */
   function registerSearch(fn) { PROVIDERS.push(fn); }
   function escHtml(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function searchDialog() {
@@ -185,6 +187,7 @@
     return d;
   }
   var SLOT = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(function (n) { return 'var(--ljr-' + (n === 1 ? '1-edge' : n) + ')'; }); // slot colours from tokens.css
+  /** Runs every registered provider for q and draws the grouped results. Returns a Promise of all results ([] under 2 letters or when a newer search started). */
   function runSearch(q) {
     var d = searchDialog(), st = d.querySelector('#dashSearchStatus'), out = d.querySelector('#dashSearchResults');
     q = String(q || '').trim();
@@ -206,8 +209,10 @@
         return all;
       });
   }
+  /** Opens the search dialog and focuses its box. */
   function openSearch() { var d = searchDialog(); if (!d.open) d.showModal(); var b = d.querySelector('#dashSearchBox'); b.focus(); b.select(); }
   if (root.document) root.document.addEventListener('click', function (e) { var b = e.target.closest && e.target.closest('[data-search-open]'); if (b) { e.preventDefault(); openSearch(); } });
+  /** Returns a test function: true when a text contains every word of q (case-insensitive). */
   function matches(q) { var words = String(q).toLowerCase().split(/\s+/).filter(Boolean); return function (text) { text = String(text || '').toLowerCase(); return words.every(function (w) { return text.indexOf(w) >= 0; }); }; }
 
   root.DashKit = { applyLook: applyLook, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help };
