@@ -5,7 +5,7 @@ const { test, expect } = require('../support/test');
 const { build } = require('../fixtures/factory/state');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'factory', 'index.html'), 'utf8');
-const LOGS = /logs: '([^']+)'/.exec(SRC)[1];
+const LOGS = require('../support/world').IDS.factoryLogs;
 
 async function open(page, guard, change) {
   const state = build(Date.now());

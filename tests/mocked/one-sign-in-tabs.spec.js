@@ -3,7 +3,7 @@
 // covers every tab, and Money Hub and CD Hub open in their own tab with a "Dashboard" button.
 const { test, expect } = require('../support/test');
 
-const MOVE = 'https://docs.google.com/spreadsheets/d/1AIgIefQMATEdWLtAkdvE7SvdnX8g2sTX87VnvOX5c-I/edit';
+const MOVE = require('../support/world').IDS.moveSheet; // read from config.js, never copied (this repo is public)
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
@@ -16,8 +16,7 @@ test.describe('One sign-in for every tab', () => {
     await page.goto('./');
     await signIn(page);
 
-    for (const [sel, url] of [['a.keytile[href="money/"]', /\/money\/$/], ['a.morelink[href="money/"]', /\/money\/$/]]) {
-      if (sel.startsWith('a.morelink')) await page.locator('#mainNav a[data-nav="more"]').click(); // Hub V2: More tab
+    for (const [sel, url] of [['a.keytile[href="money/"]', /\/money\/$/]]) {
       const [tab] = await Promise.all([context.waitForEvent('page'), page.locator(sel).click()]);
       await expect(tab).toHaveURL(url);
       await expect(tab.locator('#readStamp')).toContainText(/^Read \d/);

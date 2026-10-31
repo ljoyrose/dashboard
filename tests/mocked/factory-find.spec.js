@@ -7,7 +7,7 @@ const { test, expect } = require('../support/test');
 const { build } = require('../fixtures/factory/state');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'factory', 'index.html'), 'utf8');
-const LOGS = /logs: '([^']+)'/.exec(SRC)[1]; // the Drive folder the page reads af-state.json from
+const LOGS = require('../support/world').IDS.factoryLogs; // the Drive folder the page reads af-state.json from
 
 async function open(page, guard, hash, { sent, change } = {}) {
   const state = build(Date.now());
@@ -268,6 +268,62 @@ test.describe('Factory send gate', () => {
     await open(page, guard, '#/item/869fk9d1r', { change: (st) => { const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/\nClass:[^\n]*/, '\nClass: CURRENT TEN:1 · TARGET TEN:3'); } });
     await expect(page.locator('[data-copy="869fk9d1r"]')).toHaveCount(0);
     await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Class/);
+  });
+
+  // Pre-send checker stamp (Presend Checker Landing, 30 Oct 2026): Copy needs "presend: READY sha256:<hash> <today>" and the text's hash must match.
+  const PROMPT_DOC = '1SAMPLEpromptDocId00000000000';
+  const PROMPT_TEXT = 'Invented prompt text for the gate test.\nTHE WORK.\n1. Do one invented thing.\n';
+  const sha = (x) => require('crypto').createHash('sha256').update(x, 'utf8').digest('hex');
+  const stamp = (st, line) => { const t = send(st, '869fk9d1r'); t.desc = t.desc.replace(/\npresend:[^\n]*/, line ? '\n' + line : ''); };
+  const today = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });
+
+  test('no checker stamp: Copy is locked with a plain reason (the typed "inputs-gate: PASS" is not enough)', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => stamp(st, 'inputs-gate: PASS ' + today()) });
+    await expect(page.locator('[data-copy="869fk9d1r"]')).toHaveCount(0);
+    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/No checker stamp/);
+  });
+
+  test('a NOT READY stamp (the latest stamp wins, here a comment) locks Copy', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => { send(st, '869fk9d1r').cm = [{ by: 'Claude', at: Date.now(), text: 'presend: NOT READY (3 FAIL, 1 NOT RUN) sha256:' + 'cd'.repeat(32) }]; } });
+    await expect(page.locator('[data-copy="869fk9d1r"]')).toHaveCount(0);
+    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Checker: NOT READY/);
+  });
+
+  test('a stale READY stamp (another day) locks Copy', async ({ page, guard }) => {
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => stamp(st, 'presend: READY sha256:' + sha(PROMPT_TEXT) + ' 2020-01-01') });
+    await expect(page.locator('[data-copy="869fk9d1r"]')).toHaveCount(0);
+    await expect(page.locator('[data-gate="869fk9d1r"]')).toHaveText(/Checker stamp not today/);
+  });
+
+  test('wrong hash: a READY stamp for other text shows Copy, but Copy refuses the text', async ({ page, guard }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    guard.world.file(PROMPT_DOC, 'prompt-sample.md', PROMPT_TEXT, { mimeType: 'text/markdown' });
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => stamp(st, 'presend: READY sha256:' + sha('some other invented text') + ' ' + today()) });
+    await page.locator('[data-copy="869fk9d1r"]').click();
+    await expect(page.locator('#banner')).toContainText('Not copied: the text is not the one the checker stamped');
+    await expect(page.locator('[data-copy="869fk9d1r"]')).not.toContainText('Copied');
+  });
+
+  test('good stamp: READY, dated today, hash of the exact text: Copy copies it', async ({ page, guard }) => {
+    await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
+    guard.world.file(PROMPT_DOC, 'prompt-sample.md', PROMPT_TEXT, { mimeType: 'text/markdown' });
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => stamp(st, 'presend: READY sha256:' + sha(PROMPT_TEXT) + ' ' + today()) });
+    await page.locator('[data-copy="869fk9d1r"]').click();
+    await expect(page.locator('[data-copy="869fk9d1r"]')).toContainText('Copied');
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(PROMPT_TEXT);
+  });
+
+  test('Prompts: the next send per app on top with its checker state, then waiting; sent and rules folded away; reached from Do', async ({ page, guard }) => {
+    await open(page, guard, '#/do');
+    await page.locator('#view [data-prompts-link]').click();
+    await expect(page).toHaveURL(/#\/prompts$/);
+    const v = page.locator('#view [data-prompts]');
+    await expect(v.locator('[data-ps="869fk9d1r"]')).toHaveText(/READY/);
+    await expect(v.locator('[data-ps="869fk6k00"]')).toHaveText(/NOT READY · not checked/);
+    await expect(v.locator('details[data-sec="sent"]')).not.toHaveAttribute('open', '');
+    await expect(v.locator('details[data-sec="rules"]')).not.toHaveAttribute('open', '');
+    await expect(v.locator('details[data-sec="sent"] .crow[data-row="869fk9d1n"]')).toHaveCount(1);
+    await expect(v.locator('.pitem').first().locator('[data-ps]')).toHaveText(/^\s*READY/);
   });
 
   test('a send with none of the lines names each missing one instead of Copy', async ({ page, guard }) => {

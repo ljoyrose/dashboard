@@ -37,6 +37,9 @@ const IDS = {
   moneyFolders: MC.CFG.folders,
   clientId: CONF.clientId,
   ledger: CONF.home.ledgerFileId,
+  excludedDrive: (CONF.cleanup.excludedDrives.find((d) => d.name === 'Karen - SHARED') || {}).id, // hard rule 14, found by name
+  moveSheet: CONF.urls.moveSheet,
+  factoryLogs: CONF.factory.logsFolderId, // the folder the Factory page reads af-state.json from
 };
 const WANT_BLD = (() => {
   const m = /var WANT=\[([\s\S]*?)\];/.exec(cdHtml);

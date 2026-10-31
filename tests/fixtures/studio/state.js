@@ -18,7 +18,7 @@
       generated_at: iso(-60e3),
       studio: { on: true, mode: 'TEST', budgetMonth: 50, spentMonth: 20 },
       health: { lastRun: iso(-10 * 60e3), jobs: [{ job: 'syncState', result: 'OK', last: iso(-10 * 60e3), note: 'sample' }] },
-      accounts: [{ id: 'acc-owner', name: 'Sample owner', kind: 'owner', role: 'owner', emails: ['owner@sample.test'], protect: '', protectEffective: 'no' },
+      accounts: [{ id: 'acc-owner', name: 'Sample owner', kind: 'owner', role: 'owner', emails: ['owner@example.test'], protect: '', protectEffective: 'no' },
         { id: 'acc-client', name: 'Sample client', kind: 'client', role: 'client', emails: [], protect: '', protectEffective: 'yes' }],
       groups: [{ id: 'grp-dogs', name: 'Dogs' }, { id: 'grp-apps', name: 'Apps' }, { id: 'grp-services', name: 'Client services' }, { id: 'grp-lisa', name: 'Lisa' }],
       products: [
@@ -49,7 +49,17 @@
       ],
       playbooks: [
         { id: 'pb-launch', name: 'Sample launch playbook', outcome: 'convert', steps: [{ kind: 'pack', id: 'pk-funnel', text: 'Sample webclass funnel' }, { kind: 'kit', id: 'kit-email', text: 'Sample email kit' }, { kind: 'action', id: null, text: 'Post the replay link' }], notes: '' },
-        { id: 'pb-grow', name: 'Sample list builder', outcome: 'attract', steps: [{ kind: 'kit', id: 'kit-lead', text: 'Sample lead magnet kit' }, { kind: 'kit', id: 'kit-social', text: 'Sample social post kit' }], notes: '' }
+        { id: 'pb-grow', name: 'Sample list builder', outcome: 'attract', steps: [{ kind: 'kit', id: 'kit-lead', text: 'Sample lead magnet kit' }, { kind: 'kit', id: 'kit-social', text: 'Sample social post kit' }], notes: '' },
+        // Engine v0.2.24: a playbook code, and who does each step and how (AUTO or by hand). Invented.
+        { id: 'pb-app-launch', code: 'P1', name: 'Example app launch pack', outcome: 'deliver', notes: '', steps: [
+          { kind: 'action', id: null, text: 'Agree the brief', who: 'lisa', fit: 'HAND' },
+          { kind: 'action', id: null, text: 'Write the store listing', who: 'claude', fit: 'AUTO' },
+          { kind: 'kit', id: 'kit-pet-card', text: 'Example pet card', who: 'claude', fit: 'AUTO' },
+          { kind: 'action', id: null, text: 'Make the launch images', who: 'grok', fit: 'AUTO' },
+          { kind: 'action', id: null, text: 'Check the legal line', who: 'lisa', fit: 'HAND' },
+          { kind: 'action', id: null, text: 'File the parts', who: 'engine', fit: 'AUTO' },
+          { kind: 'action', id: null, text: 'Post the launch', who: 'lisa', fit: 'HAND' },
+          { kind: 'action', id: null, text: 'Say thank you', who: null, fit: null }] }
       ],
       packs: [
         { id: 'pk-funnel', name: 'Sample webclass funnel', kind: 'funnel', kitIds: ['kit-webclass', 'kit-email'], notes: 'Pages and emails', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null }
@@ -58,6 +68,7 @@
         { id: 'kit-lead', name: 'Sample lead magnet kit', type: 'lead', price: 100, priceBasis: 'ex', priceEx: 100, priceInc: 120, readyDays: 3, sourcePrice: null, brickIds: ['br-hook'], needs: ['doc-fill', 'pdf-export'], frameworkId: 'fw-pas', voiceId: null, lookId: null, formatIds: ['fmt-a4'], notes: '' },
         { id: 'kit-email', name: 'Sample email kit', type: 'email', brickIds: [], needs: ['email-draft'], frameworkId: 'fw-hso', voiceId: null, lookId: null, formatIds: ['fmt-email-header'], notes: '', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null },
         { id: 'kit-webclass', name: 'Sample webclass kit', type: 'slides', brickIds: ['br-hook'], needs: ['slides-fill', 'video-reformat'], frameworkId: 'fw-webinar', voiceId: null, lookId: null, formatIds: ['fmt-youtube', 'fmt-reel'], notes: '', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null },
+        { id: 'kit-pet-card', name: 'Example pet card', type: 'social', brickIds: [], needs: ['image-generate'], frameworkId: null, voiceId: null, lookId: null, formatIds: ['fmt-fb-feed'], notes: 'Legal line: [placeholder legal line]', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null },
         { id: 'kit-social', name: 'Sample social post kit', type: 'social', brickIds: [], needs: ['image-generate'], frameworkId: null, voiceId: null, lookId: null, formatIds: ['fmt-fb-feed'], notes: '', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null }
       ],
       bricks: [

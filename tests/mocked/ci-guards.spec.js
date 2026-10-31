@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { test, expect } = require('@playwright/test');
-const { evaluate, REQUIRED_JOB } = require('../support/check-protection');
+const { evaluate, REQUIRED_JOB, PRIVACY_JOB } = require('../support/check-protection');
 const { BREAKS } = require('../teeth/breaks');
 
 const REPO = path.resolve(__dirname, '..', '..');
@@ -74,24 +74,34 @@ test.describe('Learning loop is mechanical @ci-guard', () => {
 
 test.describe('Alarm wiring @ci-guard', () => {
   test('the required check name exists as a job in tests.yml (so merges can never wait forever)', () => {
-    const { problems } = evaluate({ protected: true, protection: { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB], enforcement_level: 'everyone' } } }, read('.github/workflows/tests.yml'));
+    const { problems } = evaluate({ protected: true, protection: { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB, PRIVACY_JOB], enforcement_level: 'everyone' } } }, read('.github/workflows/tests.yml'));
     expect(problems).toEqual([]);
   });
 
   test('protection check: off, switched off, wrong check, admin bypass and a renamed job are all reported', () => {
     const wf = read('.github/workflows/tests.yml');
-    const on = { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB], enforcement_level: 'everyone' } };
+    const on = { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB, PRIVACY_JOB], enforcement_level: 'everyone' } };
     expect(evaluate({ protected: false }, wf).problems.join()).toMatch(/NO branch protection/);
     expect(evaluate({ protected: true, protection: { ...on, enabled: false } }, wf).problems.join()).toMatch(/switched off/);
     expect(evaluate({ protected: true, protection: { ...on, required_status_checks: { contexts: ['Something else'], enforcement_level: 'everyone' } } }, wf).problems.join()).toMatch(/no longer requires/);
-    expect(evaluate({ protected: true, protection: { ...on, required_status_checks: { contexts: [REQUIRED_JOB], enforcement_level: 'non_admins' } } }, wf).problems.join()).toMatch(/Admins can bypass/);
+    expect(evaluate({ protected: true, protection: { ...on, required_status_checks: { contexts: [REQUIRED_JOB, PRIVACY_JOB], enforcement_level: 'non_admins' } } }, wf).problems.join()).toMatch(/Admins can bypass/);
     expect(evaluate({ protected: true, protection: on }, wf.replace('name: ' + REQUIRED_JOB, 'name: Renamed job')).problems.join()).toMatch(/No job in tests.yml/);
     expect(evaluate({ protected: true }, wf).problems).toEqual([]); // token can't see details: only "is on" is checked
   });
 
+  test('protection check: the privacy guard must stay a required check and its job must keep its name', () => {
+    const wf = read('.github/workflows/tests.yml');
+    const pg = read('.github/workflows/privacy-guard.yml');
+    const on = { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB, PRIVACY_JOB], enforcement_level: 'everyone' } };
+    expect(evaluate({ protected: true, protection: on }, wf, null, pg).problems).toEqual([]);
+    expect(evaluate({ protected: true, protection: { ...on, required_status_checks: { contexts: [REQUIRED_JOB], enforcement_level: 'everyone' } } }, wf, null, pg).problems.join()).toMatch(/does not require the check "Privacy guard/);
+    expect(evaluate({ protected: true, protection: on }, wf, null, pg.replace('name: ' + PRIVACY_JOB, 'name: Renamed')).problems.join()).toMatch(/No job in privacy-guard.yml/);
+    expect(evaluate({ protected: true, protection: on }, wf, null, null).problems.join()).toMatch(/No job in privacy-guard.yml/);
+  });
+
   test('protection watch also reports GitHub Issues switched off (the alarm cannot open an Issue then)', () => {
     const wf = read('.github/workflows/tests.yml');
-    const on = { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB], enforcement_level: 'everyone' } };
+    const on = { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB, PRIVACY_JOB], enforcement_level: 'everyone' } };
     expect(evaluate({ protected: true, protection: on }, wf, { has_issues: false }).problems.join()).toMatch(/Issues are switched OFF/);
     expect(evaluate({ protected: true, protection: on }, wf, { has_issues: true }).problems).toEqual([]);
     expect(evaluate({ protected: true, protection: on }, wf, null).problems).toEqual([]); // could not read: no false alarm
@@ -104,10 +114,11 @@ test.describe('Alarm wiring @ci-guard', () => {
     expect(out).toMatch(/\*\*What to do:\*\* open the run link/);
   });
 
-  test('every workflow that can open an issue does it with the built-in token only (no stored secrets)', () => {
+  test('every workflow that can open an issue does it with the built-in token only (no stored secrets but the privacy denylist)', () => {
     const secrets = [];
     fs.readdirSync(path.join(REPO, '.github', 'workflows')).forEach((f) => {
-      [...read('.github/workflows/' + f).matchAll(/secrets\.([A-Za-z0-9_]+)/g)].forEach((m) => { if (m[1] !== 'GITHUB_TOKEN') secrets.push(`${f}: uses secrets.${m[1]}`); });
+      // One exception: the privacy guard reads its denylist from the PRIVACY_DENYLIST secret (it can never live in this public repo).
+      [...read('.github/workflows/' + f).matchAll(/secrets\.([A-Za-z0-9_]+)/g)].forEach((m) => { if (m[1] !== 'GITHUB_TOKEN' && !(f === 'privacy-guard.yml' && m[1] === 'PRIVACY_DENYLIST')) secrets.push(`${f}: uses secrets.${m[1]}`); });
     });
     expect(secrets).toEqual([]);
   });

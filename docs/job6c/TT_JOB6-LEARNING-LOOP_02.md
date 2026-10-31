@@ -1,7 +1,7 @@
 # JOB 6 LEARNING-LOOP 02 — Claude improvements to AF6's slip
 
 **From:** Claude Code (cloud) · **To:** AF6 Dashboard Tests (to merge and choose what to adopt) · **Cc:** Lisa Carson · [email removed]
-**Date:** 16 Oct 2026 (UK) · **Improves:** `TT_JOB6-LEARNING-LOOP_01.md` (Drive id 121CO_o9iR8TSwsrwd7eT2W_H9s1vskHe). Not a replacement: sections A–F are kept in order and AF6's numbering is unchanged.
+**Date:** 16 Oct 2026 (UK) · **Improves:** `TT_JOB6-LEARNING-LOOP_01.md` (Drive id [Drive id removed: public repo]). Not a replacement: sections A–F are kept in order and AF6's numbering is unchanged.
 **Full detail in GitHub:** `docs/job6c/IMPROVE.md`, `TT_JOB6C_SLIP_01.md` on branch `claude/job6c-improve`.
 
 ## PROCESS GATE (proof)
@@ -16,7 +16,7 @@ Each AF6 item gets a tag: **AGREE**, **STRENGTHEN** (kept, made firmer), **DISAG
 ## A. System improvements
 
 1. **Verify the Drive output folder id before any prompt — STRENGTHEN.**
-   Agree, and I am the example: the 6b brief named folder `1tsjx6AZ…` and I uploaded `TT_JOB6B_SLIP.md` there. **Checked: that folder is titled "Claude artefacts"** (file id `1VOgslTB2oGwD78YZ6IhnOL1_R7Z21n8X`). I trusted the id and never read the title.
+   Agree, and I am the example: the 6b brief named folder `1tsjx6AZ…` and I uploaded `TT_JOB6B_SLIP.md` there. **Checked: that folder is titled "Claude artefacts"** (file id `[Drive id removed: public repo]`). I trusted the id and never read the title.
    Make it a rule on both sides, not only AF6's: *before any Drive write, read the parent folder's title and refuse if it is "Claude artefacts" or is not under `4 - Apps > <app>` or Commons.* It costs one metadata call. RR_MASTER N-20 already asks for read-back of `parentId`; add "and title".
    **BOT:** relocate that file (handoff BOT-3 in `TT_JOB6C_SLIP_01.md`). I did not move or rename it.
 
@@ -100,7 +100,7 @@ Each AF6 item gets a tag: **AGREE**, **STRENGTHEN** (kept, made firmer), **DISAG
 Docs name only tests that exist · every `@regression` test is listed · parked tests carry question, owner and date · the teeth list matches the page · the required job name exists · the alarm opens with "What to do" · no stored secrets · protection re-checked weekly · TESTS.md total checked in the run summary. Not mechanical yet: "new deletion rule gets a teeth entry" (rule in `docs/job6c/HANDOVER.md`) and "process lessons become `LEARNINGS.csv` rows" (AF6).
 
 ## Handoff
-BOT: upload `docs/job6c/TT_JOB6-LEARNING-LOOP_02.md` (from branch `claude/job6c-improve`) to 00 AI Commons `1gNHYWXObTrioLv6gbDhvMqqin1nfIrTh`, same name, plain `.md`. Verify size and sha256 (given in the PR comment) and confirm in chat. Claude did not upload it. No Drive write to "Claude artefacts".
+BOT: upload `docs/job6c/TT_JOB6-LEARNING-LOOP_02.md` (from branch `claude/job6c-improve`) to 00 AI Commons `[Drive id removed: public repo]`, same name, plain `.md`. Verify size and sha256 (given in the PR comment) and confirm in chat. Claude did not upload it. No Drive write to "Claude artefacts".
 
 ## Archive line
 JOB 6 LEARNING-LOOP 02 — Claude improvements filed; AF6 merges and chooses what to adopt. Credits 0/0/0.

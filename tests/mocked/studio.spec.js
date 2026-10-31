@@ -65,7 +65,7 @@ test.describe('Studio page', () => {
   test('no studio-state.json yet: the example banner, example brands, and every write switched off', async ({ page, guard }) => {
     await open(page, guard, '#/me', { state: false });
     await expect(page.locator('#exBanner')).toBeVisible();
-    await expect(page.locator('#exBanner')).toHaveText('Example data · engine off');
+    await expect(page.locator('#exBanner')).toHaveText('Example data · Studio helper off');
     await expect(page.locator('#stamp')).toHaveText('TEST');
     await expect(page.locator('#enginePill')).toContainText('Off');
     await go(page, 'brands');
@@ -362,11 +362,11 @@ test.describe('Studio page', () => {
     await expect(launch.locator('li')).toHaveText(['Sample webclass funnel', 'Sample email kit', 'Post the replay link']);
     await expect(page.locator('[data-outcome="attract"] [data-playbook="pb-grow"]')).toBeVisible();
     await expect(page.locator('[data-outcome="convert"] .grp .cnt')).toHaveText('1');
-    await expect(page.locator('[data-kitnav="kits"] .cnt')).toHaveText('4');
+    await expect(page.locator('[data-kitnav="kits"] .cnt')).toHaveText('5');
     await page.locator('[data-kitnav="packs"]').click();
     await expect(page.locator('[data-pack="pk-funnel"]')).toContainText('Sample webclass kit');
     await page.locator('[data-kitnav="kits"]').click();
-    await expect(page.locator('[data-kit]')).toHaveCount(4);
+    await expect(page.locator('[data-kit]')).toHaveCount(5);
     await expect(page.locator('[data-kit="kit-webclass"] [data-cap="video-reformat"]')).toBeVisible();
     await expect(page.locator('[data-kit="kit-webclass"]')).toContainText('9:16');
     await page.locator('[data-kitnav="styles"]').click();
@@ -1593,8 +1593,8 @@ test.describe('Studio page', () => {
 
   for (const role of ['team', 'owner']) test(`signed in as the ${role}: requests carry that account; ${role === 'team' ? 'owner-only controls are switched off with "Owner only"' : 'nothing is switched off'}`, async ({ page, guard }) => {
     const got = await uploads(page, guard);
-    guard.world.email = role === 'team' ? 'Backup@Sample.test' : 'owner@sample.test'; // matched case-blind to accounts[].emails
-    await open(page, guard, '#/decide', { change: (s) => { s.accounts.push({ id: 'acc-team', name: 'Sample backup', kind: 'owner', role: 'team', emails: ['backup@sample.test'], protect: '', protectEffective: 'no' }); } });
+    guard.world.email = role === 'team' ? 'Backup@Example.test' : 'owner@example.test'; // matched case-blind to accounts[].emails
+    await open(page, guard, '#/decide', { change: (s) => { s.accounts.push({ id: 'acc-team', name: 'Sample backup', kind: 'owner', role: 'team', emails: ['backup@example.test'], protect: '', protectEffective: 'no' }); } });
     const team = role === 'team';
     const gate = page.locator('.crow[data-row="sa-gate"] [data-act="gate"]').first();
     await expect.poll(() => gate.isDisabled()).toBe(team); // the role is known once the page has asked Drive who is signed in

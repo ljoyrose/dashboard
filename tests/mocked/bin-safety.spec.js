@@ -275,7 +275,7 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     const w = guard.world;
     const LABEL = 'Held: money rollback (E02), do not touch until FIX 6 is confirmed';
     // The other folder that is also titled "4 - Ops". This id is not excluded.
-    const OTHER_OPS = '1M7sJssW6ZGsNk2IbDLAffmYD6sSOEloz';
+    const OTHER_OPS = '1SAMPLEotherOpsFolder000000000000'; // made-up id (this repo is public)
     const ops = { parents: [IDS.moneyFolders.ops], driveId: IDS.moneyDrive, mimeType: 'text/plain' };
     const index = { parents: [IDS.moneyFolders.index], driveId: IDS.moneyDrive, mimeType: 'text/plain' };
     w.file('e02-sup', 'ZZ_SUPERSEDED_2026-01_DO-NOT-USE__MON-REGISTER.csv', 'invented', A);
@@ -345,7 +345,7 @@ test.describe('PC-Personal bin uses the same ledger gate', () => {
     guard.world.file('me-rr', 'ZZ_DELETE_DRIVE_RR_copy.pdf', 'x', mine);
     ledger(guard.world, ['me-ok', 'me-rr']);
     page.on('dialog', (d) => d.accept());
-    await page.goto('./#/personal');
+    await page.goto('./#/bin');
     await signIn(page);
     const view = page.locator('#view');
     await expect(view).toContainText('ZZ_DELETE_DRIVE_ok.pdf');
