@@ -431,6 +431,7 @@
   .libsug .ask { align-items: flex-end; }
   .rights { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--line); }
   .tick { font-size: 13px; color: var(--muted); } .tick.ok { color: var(--ink); }
+  .steps ol { list-style: none; margin: 0 0 8px; padding: 0; } .steps li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 0; border-top: 1px solid var(--line); font-size: 14px; } .steps li:first-child { border-top: 0; } .steps .tx { flex: 1 1 10em; min-width: 0; overflow-wrap: anywhere; } .steps .tw { font-size: 12px; color: var(--muted); } .steps li[data-status="skipped"] .tx { color: var(--muted); text-decoration: line-through; }
   .rrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; } .rlab { min-width: 120px; color: var(--muted); font-size: 14px; }
   .pline { font-size: 13px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
 </style>
@@ -1015,7 +1016,7 @@
         ['Doc', a.docLink ? '<a href="' + safeUrl(a.docLink) + '" target="_blank" rel="noopener">open</a>' : '']].filter(function (x) { return x[1]; });
       var inStep = Math.max(0, Math.floor((Date.now() - (Date.parse(a.stageSince) || a._t || Date.now())) / 864e5)), wo = waitingOn(a), acc = account(a.accountId);
       kv.unshift(['With', wo.w], [isClient(a) ? 'Client' : 'Brand owner', isClient(a) ? esc(acc.name) : 'Own brand'], ['In this step', inStep + (inStep === 1 ? ' day' : ' days') + (inStep > 3 && a.stage < 8 ? ' \u00b7 stuck?' : '')]);
-      body = rowMore(a) + comments(a) + rightsRows(a) + deliveryRows(a) + saveAsKit(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
+      body = rowMore(a) + stepsList(a) + comments(a) + rightsRows(a) + deliveryRows(a) + saveAsKit(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
     }
     return '<div class="panel" data-panelbox="' + esc(a.id) + '">' + body + '</div>';
   }
@@ -1043,7 +1044,7 @@
     return '<div class="crow' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '" style="--sc:var(--ljr-' + stSlot(a.stage) + ')">' +
       (withBrand || dp ? '<div class="bline">' + (withBrand ? brandMark(bo) + '<span class="bn">' + esc(bo.name) + '</span>' : '') + dp + '</div>' : '') +
       '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
-      (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') +
+      (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') + autoGateLine(a) +
       (a.protect === 'yes' && a.stage < 8 ? '<div class="needl"><span class="tag" data-chip="proof" title="Clients see a view-only proof">Proof \u00b7 view only</span></div>' : '') +
       (isCM(a) ? '<div class="needl"><span class="tag" data-chip="client-only" title="The client owns this; it is never reused">Client-only \u00b7 never reused</span></div>' : '') +
       '</div></div><div class="cfoot">' + (need ? '<span class="tag need" data-chip="need">' + esc(need) + '</span>' : '<span></span>') + whoRing(a) + '</div>' +
@@ -1129,6 +1130,23 @@
       '<div class="l3"><span class="type" title="' + esc(t[2]) + '">' + I(t[1]) + esc(t[2]) + '</span>' +
       (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="' + ({ canva: 'Open in Canva', gdoc: 'Open the Google file', drive: 'Open in Drive', clickfunnels: 'Open in ClickFunnels' }[a.linkKind] || 'Preview') + '">' + I('eye') + 'Preview</a>' : '') +
       '<span class="grow"></span><span class="date" title="Changed">' + (a._t ? dmy(a._t) : '') + '</span></div></div>';
+  }
+  // Steps (engine v0.2.24): the playbook steps copied onto this piece, in order. Only when the engine sends item.tasks.
+  var TASK_WHO = { lisa: 'Lisa', claude: 'Claude', grok: 'Grok', engine: 'Studio helper' };
+  function stepsList(a) {
+    if (!Array.isArray(a.tasks) || !a.tasks.length) return '';
+    return '<div class="steps" data-steps="' + esc(a.id) + '"><div class="fsub">' + I('list-check') + 'Steps</div><ol>' + a.tasks.map(function (t) {
+      var st = t.status === 'done' || t.status === 'skipped' ? t.status : 'open';
+      return '<li data-task="' + esc(t.n) + '" data-status="' + st + '"><span class="tn">' + esc(t.n) + '.</span><span class="tx">' + esc(t.step) + '</span><span class="tw" data-twho="' + esc(t.who) + '">' + esc(TASK_WHO[t.who] || t.who || '') + '</span>' +
+        (t.fit ? '<span class="tag" data-chip="fit">' + (t.fit === 'HAND' ? 'HAND' : 'AUTO') + '</span>' : '') +
+        (st === 'done' ? '<span class="tick ok" data-done title="Done">\u2713<span class="sr"> done</span></span>' : st === 'skipped' ? '<span class="tick" data-skipped>Skipped</span>' : '') + '</li>';
+    }).join('') + '</ol></div>';
+  }
+  // Auto gate (engine v0.2.24): at the merit (stage 0) and approve (stage 7) gates, whether it passes by itself or stays with Lisa.
+  function autoGateLine(a) {
+    var g = a.autoGate;
+    if (!g || typeof g !== 'object' || (a.stage !== 0 && a.stage !== 7)) return '';
+    return '<div class="needl muted" data-autogate="' + (g.auto === true ? 'auto' : 'you') + '">' + (g.auto === true ? 'Passes by itself' : 'Stays with you' + (g.why ? ': ' + esc(g.why) : '')) + '</div>';
   }
   function cards(list, kindOf) {
     var groups = [], by = {};
@@ -1265,7 +1283,7 @@
     var a = byId(id); if (!a) return '<div class="card">Not found. <a href="#/assets">Assets</a></div>';
     var b = brandOf(a);
     return '<div class="card appcard"><div class="hero"><div><h2>' + esc(bare(a)) + '</h2><p>' + esc(b.name) + ' · <span class="step">Step ' + esc(+a.stage) + ':</span> ' + esc(STAGES[a.stage]) + '</p></div></div>' +
-      row(a, kindFor(a)) +
+      row(a, kindFor(a)) + stepsList(a) +
       STAGES.map(function (name, i) { return '<div class="stage ' + (i < a.stage ? 'd' : i === a.stage ? 'c' : '') + '"><span class="n" aria-hidden="true">' + (i < a.stage ? '\u2713' : i === a.stage ? '\u25cf' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i < a.stage ? ' <span class="sr">done</span>' : i === a.stage ? ' <span class="sr">now</span>' : '') + '</div>'; }).join('') +
       '<p><a href="#/assets">← Assets</a></p></div>';
   }
