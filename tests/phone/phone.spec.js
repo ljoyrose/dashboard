@@ -18,8 +18,8 @@ test.describe('Phone: Main dashboard', () => {
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
-    await noSidewaysScroll(page, 'Map');
-    for (const [key, title] of [['drive', 'Drive'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['map', 'Map']]) {
+    await noSidewaysScroll(page, 'Dashboard');
+    for (const [key, title] of [['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['map', 'Dashboard']]) {
       await page.locator(`#mainNav a[data-nav="${key}"]`).click();
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await noSidewaysScroll(page, title);

@@ -72,7 +72,7 @@ test.describe('Keyboard keys', () => {
   });
 
   test('r reads again, and keys do nothing while typing in a box', async ({ page, guard }) => {
-    await page.goto('./#/drive/drv-alpha1');
+    await page.goto('./#/drives/shared/drv-alpha1');
     await signIn(page);
     const before = guard.world.calls.filter((c) => c.path === '/drives').length;
     await page.keyboard.press('r');

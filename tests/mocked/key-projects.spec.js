@@ -9,15 +9,10 @@ const TILES = [
   ['MOVE', MOVE, true],
   ['Money Hub', 'money/', true],
   ['CD Hub', 'cdhub/', true],
+  ['Factory', 'factory/', true],
   ['Marketplace', 'marketplace/', true],
   ['GA Hub', 'food/', true],
   ['Studio', 'studio/', true],
-  ['Map', '#/map', false],
-  ['Read first', '#/readfirst', false],
-  ['PC-Personal', '#/personal', false],
-  ['Drive check', '#/usb', false],
-  ['Bin', '#/bin', false],
-  ['Changes', '#/changes', false],
 ];
 
 function pageFile(href) {
@@ -42,7 +37,7 @@ test.describe('Home: Key projects & docs', () => {
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
     await expect(page.locator('#mainNav')).toBeVisible();
-    await expect(page.locator('#hereTitle')).toHaveText('Map');
+    await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
 
     const block = page.locator('#view > #key-projects');
@@ -61,7 +56,7 @@ test.describe('Home: Key projects & docs', () => {
     await expect(tiles).toHaveCount(TILES.length);
     await expect(block.locator('a.keytile[href="#/drive"]')).toHaveCount(0);
     await expect(block.getByRole('link', { name: 'Drive', exact: true })).toHaveCount(0);
-    await expect(page.locator('#mainNav a[data-nav="drive"]')).toHaveAttribute('href', '#/drive');
+    await expect(page.locator('#mainNav a[data-nav="drives"]')).toHaveAttribute('href', '#/drives');
     for (let i = 0; i < TILES.length; i++) {
       const [label, href, blank] = TILES[i];
       const tile = tiles.nth(i);

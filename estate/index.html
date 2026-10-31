@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="build" content="ljr-estate-2026-10-30-v6">
+<title>Web Estate</title>
+<!-- Web Estate Hub v1 (30 Oct 2026): every domain, site, funnel, shop and app, grouped by company, brand and client.
+     PUBLIC repo: no data, no secrets. Read only: this page never changes DNS, a site, a shop or an account.
+     Rows are read at run time with Lisa's Google sign-in from the private RR_WEB-ESTATE sheet (DASH_CONFIG.estate.sheetId),
+     which the RR_WEB-ESTATE engine fills. Until that id is set the page shows invented example rows and sends nothing.
+     The logic (contract, status words, counts, order, filters) is in core.js and tested in tests/estate/. -->
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap">
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
+<script src="../auth.js"></script>
+<script src="core.js"></script>
+<script src="reader.js"></script>
+<script src="add.js"></script>
+<script src="shop.js"></script>
+<script src="keywords.js"></script>
+<script src="views.js"></script>
+<script src="alerts.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../house.css">
+<style>
+  /* House look: colours from ../tokens.css only, shapes from ../house.css. Same frame, cards, badges and tabs as GA Hub.
+     Colour lives only in dots, 1px rings and light tints; words stay ink. */
+  :root { --rose: var(--house-risk); --rose-tint: var(--house-risk-tint); --amber: var(--house-soon); --amber-tint: var(--house-soon-tint);
+    --green: var(--house-ok); --green-tint: var(--house-ok-tint); }
+  * { box-sizing: border-box; }
+  h1, h2, h3, b, strong { font-weight: 600; }
+  html { scroll-padding-bottom: 110px; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  a.btn, nav.tabs a, a.tile { text-decoration: none; }
+  .hidden { display: none !important; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ljr-0)); flex: none; display: inline-block; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+
+  header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
+  .top { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; }
+  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
+  .top h1 a { color: inherit; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
+  .stamp { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
+  .stamp:empty { display: none; }
+  .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
+  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); } }
+
+  .btn.big { width: 100%; justify-content: center; min-height: 44px; }
+  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); } }
+  input:focus, select:focus { outline: none; }
+  a:focus, button:focus { outline: none; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .top :focus-visible { outline-color: var(--frame-ink); }
+
+  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 180px)); justify-content: center; } }
+  @media (min-width: 601px) { nav.tabs a { min-height: 58px; gap: 3px; padding: 6px 2px; } }
+  nav.tabs .n { top: 6px; right: 10px; }
+
+  main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
+  #view { display: flex; flex-direction: column; gap: 12px; }
+  .banner { border: 1px solid var(--rose); border-radius: var(--radius); padding: 10px 14px; background: var(--rose-tint); color: var(--ink); }
+  .banner.info { border-color: var(--ctl); background: var(--surface); }
+  .needs { font-size: 26px; font-weight: 600; margin: 0; }
+  .hint { font-size: 14px; color: var(--muted); margin: 0; }
+
+  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  @media (min-width: 760px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; color: var(--ink); min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
+  .tile .k { font-size: 14px; color: var(--muted); }
+  .tile .v { font-size: 24px; font-weight: 600; align-self: flex-start; line-height: 1.3; }
+  .tile .v.red { border: 1px solid var(--rose); background: var(--rose-tint); border-radius: var(--radius); padding: 0 10px; }
+  .tile .v.amber { border: 1px solid var(--amber); background: var(--amber-tint); border-radius: var(--radius); padding: 0 10px; }
+
+  .card { display: flex; flex-direction: column; gap: 12px; }
+  .grp { font-size: 16px; font-weight: 600; margin: 4px 0 0; display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
+  .grp .cnt { margin-left: auto; }
+  .prop { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid var(--line); min-width: 0; }
+  .card > .prop:first-child { border-top: 0; padding-top: 0; }
+  .prop:last-child { padding-bottom: 0; }
+  .pline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; min-width: 0; }
+  .pline .addr { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+  .pline .m { font-size: 14px; color: var(--muted); }
+  .badges { display: flex; gap: 4px; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 400; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 8px; background: transparent; white-space: nowrap; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .badge b { margin-right: 4px; font-weight: 600; }
+  .badge.no { border-color: var(--rose); background: var(--rose-tint); }
+  .badge.soon { border-color: var(--amber); background: var(--amber-tint); }
+  .badge.ok { border-color: var(--green); background: var(--green-tint); }
+  .badge.st { font-weight: 600; }
+  .empty { display: flex; gap: 12px; align-items: center; margin: 0; font-size: 15px; }
+  .empty::before { content: "\2713"; flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--green); background: var(--green-tint); color: var(--ink); font-size: 13px; font-weight: 600; }
+
+  .frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+  .frow label { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--muted); flex: 1 1 140px; min-width: 0; max-width: 220px; }
+  select.txtin { font: inherit; font-size: 16px; padding: 0 8px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
+  select.txtin:focus { border-color: var(--ink); }
+
+  details.add > summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 36px; }
+  details.add > summary::-webkit-details-marker { display: none; }
+  details.add > summary::before { content: "+"; display: inline-grid; place-items: center; width: 24px; height: 24px; border: 1px solid var(--ctl); border-radius: var(--radius); }
+  details.add[open] > summary::before { content: "\2212"; }
+  .addf { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .addf .frow label { max-width: none; }
+  input.txtin { font: inherit; font-size: 16px; padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
+  input.txtin:focus { border-color: var(--ink); }
+  .queued { font-size: 14px; margin: 0; }
+  @media (max-width: 544px) {
+    .btn, .chip, select.txtin, input.txtin, nav.tabs a, details.add > summary { min-height: 44px; }
+    .frow label { flex: 1 1 calc(50% - 4px); max-width: none; }
+    .top h1 { font-size: 20px; }
+    nav.tabs { gap: 6px; padding-left: 6px; padding-right: 6px; }
+  }
+  #view :focus-visible, nav.tabs a:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  header :focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3l9 16H3z"/><path d="M12 10v4M12 17v.5"/></symbol>
+  <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 8h12l-1 13H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+</svg>
+<header>
+  <div class="top"><h1><a href="#/home"><span class="dot" style="--c:var(--ljr-5)" aria-hidden="true"></span>Web Estate</a></h1><span class="stamp" id="stamp">TEST</span>
+    <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh">↻</button>
+    <button class="btn hidden" type="button" data-action="signin" id="signin">Sign in</button>
+    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
+</header>
+<main class="wrap">
+  <div id="banner" class="banner hidden" role="status"></div>
+  <div id="view"></div>
+</main>
+<nav class="tabs house-tabs" id="tabs" aria-label="Web Estate sections">
+  <a href="#/home" data-nav="home" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg><span>Estate</span><span class="n" id="n-home"></span></a>
+  <a href="#/look" data-nav="look" style="--tc:var(--ljr-2)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-alert"/></svg><span>Needs a look</span><span class="n need" id="n-look"></span></a>
+  <a href="#/unchecked" data-nav="unchecked" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span>Not checked</span><span class="n" id="n-unchecked"></span></a>
+  <a href="#/shops" data-nav="shops" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Shops &amp; ads</span><span class="n" id="n-shops"></span></a>
+  <a href="#/access" data-nav="access" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-key"/></svg><span>Access</span><span class="n" id="n-access"></span></a>
+</nav>
+<script>
+(function () {
+  'use strict';
+  var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop, KW = window.EstateKeywords, V = window.EstateViews, AL = window.EstateAlerts;
+  var CLIENT_ID = CFG.clientId, SCOPE = (CFG.scopes || {}).read, WRITE = (CFG.scopes || {}).write, A = window.EstateAdd;
+  var VIEWS = ['home', 'look', 'unchecked', 'shops', 'access', 'client'];
+  var FILTER_WORD = { company: 'Company', brand: 'Brand', client: 'Client', kind: 'Kind', platform: 'Platform', flag: 'Flag' };
+  // Invented rows shown until the sheet id is in config.js. Nothing is read or sent while these show.
+  var EXAMPLE = [
+    { key: 'example.com', kind: 'site', company: 'Example Co', brand: 'Example Brand', url_or_domain: 'https://example.com', platform: 'Example builder', dns_host: 'Cloudflare', live_status: 'live', http_code: '200', ssl_expires: day(120), domain_expires: day(200), spf: 'pass', dkim: 'found', dmarc: 'none', ga4: 'found (1)', gtm: 'not found in page source', source: 'example' },
+    { key: 'shop.example.org', kind: 'shop', company: 'Example Co', brand: 'Example Brand', url_or_domain: 'https://shop.example.org', platform: 'Shopify', live_status: 'live', http_code: '200', ssl_expires: day(25), ga4: 'found (1)', merchant_center: 'linked (per Lisa, not machine-checked)', feed: 'not reported', source: 'example' },
+    { key: 'funnels.example.net', kind: 'funnel', company: 'Example Co', brand: 'Second Brand', url_or_domain: 'https://funnels.example.net', platform: 'ClickFunnels', live_status: 'down', flag: 'TLS fail', source: 'example' },
+    { key: 'app.example.test', kind: 'app', company: 'Example Ltd', client: 'Client A', url_or_domain: 'https://app.example.test', platform: 'Example app builder', live_status: 'blocked to scripts', http_code: '403', source: 'example' },
+    { key: 'email-domain:example.com', kind: 'email-domain', company: 'Example Co', url_or_domain: 'example.com', spf: 'two records', dkim: 'not found', dmarc: 'missing', source: 'example' }
+  ];
+  var token = null, rows = [], loaded = false, view = 'home', filters = {}, example = !ES.sheetId;
+  var extra = { Shops: [], Keywords: [] }, extraMissing = { Shops: true, Keywords: true };
+  var addOpen = false, addMsg = '', addBusy = false, addDraft = { input: '', company: '', brand: '', client: '', kind: '' }, pendingWrite = null;
+  function day(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); }
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function banner(t, info) { var b = $('banner'); if (!t) { b.className = 'banner hidden'; return; } b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
+  function ukDate(s) { var d = E.parseDay(s); return d === null ? String(s || '') : new Date(d).toISOString().slice(0, 10).split('-').reverse().join('/'); }
+  function today() { return new Date(); }
+
+  /* ---------- reading ---------- */
+  function load() {
+    if (example && token) { rows = EXAMPLE.slice(); loaded = true; banner('Example rows: the RR_WEB-ESTATE sheet is not set up yet, so nothing is read or sent. These addresses are invented.', true); return render(); }
+    if (!token) { loaded = false; if (example) banner('Example rows after sign-in: the RR_WEB-ESTATE sheet is not set up yet, so nothing is read or sent.', true); return render(); }
+    R.read({ sheetId: ES.sheetId, token: token }).then(function (out) {
+      if (out.state === 'signed-out' || /sign-in expired/.test(out.problems[0] || '')) { token = null; DashAuth.markExpired(); }
+      rows = out.rows; loaded = out.ok;
+      if (out.ok) loadExtra();
+      banner(out.ok ? (out.problems.length ? out.problems.join('. ') + '.' : '') : 'Could not show the estate: ' + out.problems.join('. ') + '.', out.ok);
+      render();
+    });
+  }
+
+  // Optional tabs the engine (or Lisa by hand) fills: Shops (free listings report per shop), Keywords (manual rows).
+  function loadExtra() {
+    var o = { sheetId: ES.sheetId, token: token };
+    R.tabs(o).then(function (have) {
+      ['Shops', 'Keywords'].forEach(function (tab) {
+        if (have.indexOf(tab) === -1) { extra[tab] = []; extraMissing[tab] = true; return; }
+        R.readTab(o, tab).then(function (r) { extra[tab] = r.rows || []; extraMissing[tab] = !r.ok || r.missing; render(); });
+      });
+      render();
+    });
+  }
+
+  /* ---------- views ---------- */
+  function needsLook(r) { return E.rank(r, today()) <= 2 || E.emailProblems(r).length > 0; }
+  function inView(list) {
+    if (view === 'look') return list.filter(needsLook);
+    if (view === 'unchecked') return list.filter(function (r) { return E.statusOf(r) === 'not checked'; });
+    if (view === 'shops') return list.filter(function (r) { return r.kind === 'shop' || r.kind === 'funnel' || r.kind === 'ads-account'; });
+    return list;
+  }
+  function tile(k, v, cls) { return '<div class="tile"><span class="k">' + esc(k) + '</span><span class="v' + (v && cls ? ' ' + cls : '') + '" data-count="' + esc(k) + '">' + v + '</span></div>'; }
+  function tiles(list) {
+    var c = E.summarise(list, today());
+    return '<div class="tiles">' + tile('Live', c.live) + tile('Down', c.down, 'red') + tile('Blocked to scripts', c.blocked, 'amber') +
+      tile('Not checked', c.notChecked + c.parked) + tile('Expiring in 60 days', c.expiring, 'amber') + tile('Email checks failing', c.emailFailing, 'red') + '</div>';
+  }
+  function filterRow() {
+    return '<div class="frow" role="group" aria-label="Filters">' + E.FILTERS.map(function (k) {
+      var opts = k === 'flag' ? [['any', 'Any flag'], ['none', 'No flag']].concat(E.choices(rows, k).map(function (v) { return [v, v]; })) : E.choices(rows, k).map(function (v) { return [v, v]; });
+      return '<label>' + FILTER_WORD[k] + '<select class="txtin" data-filter="' + k + '"><option value="">All</option>' +
+        opts.map(function (o) { return '<option value="' + esc(o[0]) + '"' + (filters[k] === o[0] ? ' selected' : '') + '>' + esc(o[1]) + '</option>'; }).join('') + '</select></label>';
+    }).join('') + (Object.keys(filters).length ? '<button class="btn" type="button" data-action="clear">Clear filters</button>' : '') + '</div>';
+  }
+  // Expiry badge: rose when passed or under 30 days, amber under 60, else plain.
+  function expiryBadge(name, v) {
+    if (!v) return '';
+    var d = E.daysUntil(v, today()), cls = d === null ? '' : d < 30 ? ' no' : d <= 60 ? ' soon' : '';
+    return '<span class="badge' + cls + '"><b>' + name + '</b>' + esc(ukDate(v)) + (d !== null && d <= 60 ? ' (' + (d < 0 ? 'passed' : d + ' days') + ')' : '') + '</span>';
+  }
+  function check(name, v, bad) { return v ? '<span class="badge' + (bad ? ' no' : '') + '"><b>' + name + '</b>' + esc(v) + '</span>' : ''; }
+  function prop(r) {
+    var s = E.statusOf(r), mail = E.emailProblems(r), addr = r.url_or_domain || r.key;
+    var stCls = s === 'down' ? ' no' : s === 'blocked' ? ' soon' : s === 'live' ? ' ok' : '';
+    var http = /^https?:\/\//.test(addr) && E.normaliseTarget(addr).ok ? '<a class="addr" href="' + esc(E.normaliseTarget(addr).url) + '" target="_blank" rel="noopener noreferrer">' + esc(addr.replace(/^https?:\/\//, '')) + '</a>' : '<span class="addr">' + esc(addr) + '</span>';
+    return '<div class="prop" data-key="' + esc(r.key) + '" data-status="' + s + '"><div class="pline"><span class="badge st' + stCls + '">' + E.STATUS_WORD[s] + '</span>' + http +
+      '<span class="m">' + esc([r.kind, r.platform].filter(Boolean).join(' · ')) + '</span></div><div class="badges">' +
+      check('HTTP', r.http_code, /^[45]/.test(r.http_code || '')) + expiryBadge('SSL', r.ssl_expires) + expiryBadge('Domain', r.domain_expires) + check('DNS', r.dns_host) +
+      check('SPF', r.spf, /two|missing|fail/i.test(r.spf || '')) + check('DKIM', r.dkim, /^missing/i.test(r.dkim || '')) + check('DMARC', r.dmarc, /missing/i.test(r.dmarc || '')) +
+      check('Search Console', r.gsc_verified) + check('Merchant Center', r.merchant_center) + check('GA4', r.ga4) + check('Tag Manager', r.gtm) + check('Meta pixel', r.meta_pixel) +
+      check('Feed', r.feed) + check('Keywords', r.keywords_tracked) + check('Access', r.access_note) + check('Flag', r.flag, true) +
+      (mail.length ? '<span class="badge no"><b>Email</b>' + esc(mail.join(', ')) + '</span>' : '') +
+      '</div>' + (r.checked_uk ? '<span class="m">Checked ' + esc(r.checked_uk) + '</span>' : '') + '</div>';
+  }
+  // Add: paste a web address or a bare domain, pick who it belongs to. The page drops one request file for the engine,
+  // which scans it (DNS, SSL, live, tags, and email for a bare domain) and writes one row with source "Add".
+  function addBox() {
+    var f = function (k, label, list) {
+      return '<label>' + label + '<input class="txtin" data-add="' + k + '" value="' + esc(addDraft[k]) + '"' + (list ? ' list="dl-' + k + '"' : '') + ' autocomplete="off">' +
+        (list ? '<datalist id="dl-' + k + '">' + E.choices(rows, k).map(function (v) { return '<option value="' + esc(v) + '">'; }).join('') + '</datalist>' : '') + '</label>';
+    };
+    return '<details class="add card"' + (addOpen ? ' open' : '') + '><summary data-action="addtoggle">Add a property</summary><div class="addf">' +
+      '<label>Web address or domain<input class="txtin" data-add="input" value="' + esc(addDraft.input) + '" placeholder="https://… or example.com" inputmode="url" autocapitalize="off" spellcheck="false"></label>' +
+      '<div class="frow">' + f('company', 'Company', true) + f('brand', 'Brand', true) + f('client', 'Client', true) +
+      '<label>Kind<select class="txtin" data-add="kind"><option value="">Guess</option>' + E.KINDS.map(function (k) { return '<option' + (addDraft.kind === k ? ' selected' : '') + '>' + k + '</option>'; }).join('') + '</select></label></div>' +
+      '<button class="btn main" type="button" data-action="add"' + (addBusy ? ' disabled' : '') + '>Add and scan</button>' +
+      (addMsg ? '<p class="queued" role="status" id="addMsg">' + esc(addMsg) + '</p>' : '') + '</div></details>';
+  }
+  function upload(req, fileName) {
+    var b = 'es' + Date.now();
+    return DashKit.googleFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST',
+      headers: { Authorization: 'Bearer ' + DashAuth.valid().access_token, 'Content-Type': 'multipart/related; boundary=' + b }, body: A.multipartBody(req, ES.requestsFolderId, b, fileName) })
+      .then(function (r) { if (!r.ok) throw new Error('Google said ' + r.status); });
+  }
+  function withWrite(go) {
+    var saved = DashAuth.valid();
+    if (saved && DashAuth.hasScope(saved, WRITE)) return go();
+    pendingWrite = go; auth.requestWrite(WRITE);
+  }
+  function add() {
+    var built = A.buildRequest({ input: addDraft.input, company: addDraft.company, brand: addDraft.brand, client: addDraft.client, kind: addDraft.kind, by: 'estate page', now: new Date() });
+    if (!built.ok) { addMsg = 'Not added: ' + built.reason + '.'; return render(); }
+    if (example || !ES.requestsFolderId) { addMsg = 'Example only: nothing was sent. Add works once the estate engine is installed.'; return render(); }
+    addBusy = true; addMsg = 'Sending…'; render();
+    withWrite(function () {
+      upload(built.request, built.fileName).then(function () {
+        addBusy = false; addMsg = 'Queued: ' + built.request.target.key + '. The engine scans it and adds the row within about 15 minutes.';
+        addDraft.input = ''; render();
+      }).catch(function (e) { addBusy = false; addMsg = 'Not sent: ' + e.message + '.'; render(); });
+    });
+  }
+  // Shops & ads: a card per shop (report from the free listings job, else "not reported"), then funnels by workspace.
+  function shopsPage(list) {
+    var shops = list.filter(function (r) { return r.kind === 'shop'; }), h = '';
+    h += '<p class="grp">Shops<span class="sr"> · </span><span class="cnt">' + shops.length + '</span></p><div class="card" data-card="shops">';
+    h += shops.length ? shops.map(function (r) {
+      var rep = extra.Shops.filter(function (x) { return x.key === r.key; })[0] || null;
+      if (rep && rep.channels && typeof rep.channels === 'string') rep = Object.assign({}, rep, { channels: rep.channels.split(/\s*[,;]\s*/).filter(Boolean) });
+      var c = SH.shopCard(r, rep), bad = function (v) { return v === 'not reported' ? ' soon' : ''; };
+      return '<div class="prop" data-shop="' + esc(r.key) + '"><div class="pline"><span class="addr">' + esc((r.url_or_domain || r.key).replace(/^https?:\/\//, '')) + '</span><span class="m">' + esc([r.company, r.brand].filter(Boolean).join(' · ')) + '</span></div><div class="badges">' +
+        [['Platform', c.platform], ['Plan', c.plan], ['Currency', c.currency], ['Products', c.products], ['Channels', c.channels], ['Feed', c.feed], ['Merchant Center', c.merchant_center]]
+          .map(function (b) { return '<span class="badge' + bad(b[1]) + '" data-f="' + b[0] + '"><b>' + b[0] + '</b>' + esc(b[1]) + '</span>'; }).join('') + '</div></div>';
+    }).join('') : '<p class="empty">No shops with these filters.</p>';
+    h += '</div><p class="hint">Feed and Merchant Center come from the free listings job\'s report. Until it reports, they say "not reported".</p>';
+    var ws = SH.funnelsByWorkspace(list);
+    h += '<p class="grp">ClickFunnels funnels by workspace<span class="sr"> · </span><span class="cnt">' + ws.length + '</span></p><div class="card" data-card="funnels">' +
+      (ws.length ? ws.map(function (w) { return '<div class="prop"><div class="pline"><span class="addr">' + esc(w.workspace) + '</span><span class="m">' + w.count + ' funnel' + (w.count > 1 ? 's' : '') + '</span></div><div class="badges"><span class="badge ok"><b>Live</b>' + w.live + '</span><span class="badge' + (w.down ? ' no' : '') + '"><b>Down</b>' + w.down + '</span></div></div>'; }).join('') : '<p class="empty">No funnels with these filters.</p>') + '</div>';
+    h += keywordsCard(list);
+    return h;
+  }
+  // Tracked keywords and ads accounts: manual rows in the private Keywords tab for now. Semrush, Search Console and
+  // Google Ads readers are not connected yet, so a source with no rows says "not connected" and never shows a 0.
+  function keywordsCard(list) {
+    var keys = list.map(function (r) { return r.key; }), rows = extra.Keywords.filter(function (k) { return !k.key || keys.indexOf(k.key) !== -1; });
+    var cards = KW.keywordCard(rows), ads = KW.adsAccounts(list), h = '<p class="grp">Keywords</p><div class="card" data-card="keywords">';
+    h += cards.map(function (c) {
+      return '<div class="prop" data-source="' + esc(c.source) + '"><div class="pline"><span class="addr">' + esc(c.source) + '</span><span class="badge' + (c.connected ? ' ok' : '') + '">' + esc(c.word) + '</span></div>' +
+        (c.rows.length ? '<div class="badges">' + c.rows.map(function (k) { return '<span class="badge" data-kw><b>' + esc(k.position_word) + '</b>' + esc(k.keyword) + '</span>'; }).join('') + '</div>' : '') + '</div>';
+    }).join('') + '</div>';
+    h += '<p class="grp">Ads accounts<span class="sr"> · </span><span class="cnt">' + ads.length + '</span></p><div class="card" data-card="ads">' +
+      (ads.length ? ads.map(function (a) { return '<div class="prop"><div class="pline"><span class="addr">' + esc(a.account_label) + '</span><span class="m">' + esc(a.client || '') + '</span></div>' + (a.access_note ? '<div class="badges"><span class="badge"><b>Access</b>' + esc(a.access_note) + '</span></div>' : '') + '</div>'; }).join('') : '<p class="empty">No ads accounts with these filters.</p>') + '</div>';
+    return h;
+  }
+  // Access: who holds which login role per property. Role names only; anything that looks like a login is hidden.
+  function accessPage(list) {
+    var acc = V.accessRows(list), by = {};
+    list.forEach(function (r) { by[r.key] = r; });
+    var h = '<p class="needs">Access</p><p class="hint">Who holds each login role, by role name only. Passwords and email addresses are never shown here.</p>' + filterRow();
+    h += '<div class="card" data-card="access">' + acc.map(function (a) {
+      var r = by[a.key] || {}, roles = (r.owner_role ? ['you: ' + r.owner_role] : []).concat(a.roles);
+      return '<div class="prop" data-access="' + esc(a.key) + '"><div class="pline"><span class="addr">' + esc((r.url_or_domain || a.key).replace(/^https?:\/\//, '')) + '</span><span class="m">' + esc(r.kind || '') + '</span></div><div class="badges">' +
+        (roles.length ? roles.map(function (x) { return '<span class="badge">' + esc(x) + '</span>'; }).join('') : '<span class="badge">no roles noted</span>') +
+        (a.hidden ? '<span class="badge soon">' + a.hidden + ' hidden (looked like a login)</span>' : '') + '</div></div>';
+    }).join('') + '</div>';
+    var clients = E.choices(list, 'client');
+    h += '<p class="grp">Client views<span class="sr"> · </span><span class="cnt">' + clients.length + '</span></p><div class="card" data-card="clients"><p class="hint">One client\'s properties only, with no other client, no other company and no internal notes: ready for a white-label or reseller report. Sharing a view is yours to do.</p><div class="acts">' +
+      (clients.length ? clients.map(function (c) { return '<a class="btn" href="#/client?client=' + encodeURIComponent(c) + '">' + esc(c) + '</a>'; }).join('') : '<p class="empty">No clients yet.</p>') + '</div></div>';
+    var res = V.resellerReport(list, today());
+    h += '<p class="grp">Resellers<span class="sr"> · </span><span class="cnt">' + res.length + '</span></p><div class="card" data-card="resellers">' +
+      (res.length ? res.map(function (x) { return '<div class="prop"><div class="pline"><span class="addr">' + esc(x.url_or_domain || x.key) + '</span><span class="m">' + esc(x.reseller) + '</span></div><div class="badges">' + (x.fee_monthly ? '<span class="badge"><b>Monthly</b>' + esc(x.fee_monthly) + '</span>' : '') + (x.renewal ? '<span class="badge' + (x.days_to_go !== null && x.days_to_go <= 30 ? ' soon' : '') + '"><b>Renews</b>' + esc(x.renewal) + (x.days_to_go !== null ? ' (' + x.days_to_go + ' days)' : '') + '</span>' : '') + '</div></div>'; }).join('') : '<p class="empty">No resold properties noted.</p>') +
+      '</div><p class="hint">A report only: no billing here.</p>';
+    return h;
+  }
+  // Client view: one client's rows, stripped of every internal field, with no filters that would name others.
+  function clientPage() {
+    var who = filters.client || '', list = V.clientView(rows, who);
+    var h = '<p class="needs" data-client-view="' + esc(who) + '">' + esc(who || 'No client picked') + '</p><p class="hint">Client view: only this client\'s properties. <a href="#/access">Back to Access</a></p>';
+    if (!list.length) return h + '<div class="card"><p class="empty">No properties for this client.</p></div>';
+    var c = E.summarise(list, today());
+    h += '<div class="tiles">' + tile('Live', c.live) + tile('Down', c.down, 'red') + tile('Expiring in 60 days', c.expiring, 'amber') + '</div>';
+    E.groupRows(list, today()).forEach(function (g) { h += '<div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>'; });
+    return h;
+  }
+  // Alerts: down; SSL or domain inside 30 days; DMARC missing; two SPF records (tag lost is the engine's, scan to scan).
+  // Shown here only. Each becomes a suggested RR_OPEN-WORK row in the progress slip, never written by code.
+  function alertsCard(list) {
+    var al = AL.alerts(list, today());
+    if (!al.length) return '<div class="card" data-card="alerts"><p class="empty">No alerts.</p></div>';
+    return '<p class="grp">Alerts<span class="sr"> · </span><span class="cnt">' + al.length + '</span></p><div class="card" data-card="alerts">' + al.map(function (a) {
+      return '<div class="prop" data-alert="' + esc(a.kind) + '" data-akey="' + esc(a.key) + '"><div class="pline"><span class="dot" style="--c:var(--ljr-' + (a.level === 'red' ? 2 : 3) + ')" aria-hidden="true"></span><span class="addr">' + esc(a.text) + '</span></div></div>';
+    }).join('') + '</div>';
+  }
+  function page() {
+    var list = E.applyFilters(rows, filters), shown = inView(list);
+    if (view === 'access') return accessPage(E.applyFilters(rows, filters));
+    if (view === 'client') return clientPage();
+    if (view === 'shops') return '<p class="needs">Shops &amp; ads</p><p class="hint">Shops, their feeds and channels, ClickFunnels funnels, tracked keywords and ads accounts. Read only.</p>' + filterRow() + shopsPage(E.applyFilters(rows, filters));
+    var title = view === 'look' ? 'Needs a look' : view === 'unchecked' ? 'Not checked' : 'Web Estate';
+    var hint = view === 'look' ? 'Down, expiring in 60 days, blocked to scripts or failing an email check.' : view === 'unchecked' ? 'Not scanned yet. The engine checks them once its daily scan is switched on.' : 'Every domain, site, funnel, shop and app. Read only: nothing here changes DNS or a site.';
+    var h = '<p class="needs">' + title + '</p><p class="hint">' + hint + '</p>' + (view === 'home' ? addBox() : '') + tiles(list) + filterRow() + (view === 'look' ? alertsCard(list) : '');
+    if (!shown.length) return h + '<div class="card"><p class="empty">' + (rows.length ? 'Nothing here with these filters.' : 'No properties yet.') + '</p></div>';
+    E.groupRows(shown, today()).forEach(function (g) {
+      h += '<p class="grp">' + esc(g.name) + '<span class="sr"> · </span><span class="cnt">' + g.rows.length + '</span></p><div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>';
+    });
+    return h;
+  }
+  function render() {
+    document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    var list = E.applyFilters(rows, filters), look = list.filter(needsLook).length, unc = list.filter(function (r) { return E.statusOf(r) === 'not checked'; }).length;
+    $('tabs').classList.toggle('hidden', view === 'client');
+    $('n-home').textContent = list.length || ''; $('n-shops').textContent = list.filter(function (r) { return r.kind === 'shop'; }).length || ''; $('n-look').textContent = look || ''; $('n-unchecked').textContent = unc || '';
+    $('stamp').textContent = ES.live ? '' : 'TEST';
+    var ready = typeof auth !== 'undefined' && auth.ready();
+    $('signin').classList.toggle('hidden', !!token); $('signin').disabled = !ready;
+    $('refresh').classList.toggle('hidden', example || !token);
+    if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the Web Estate</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
+    if (!loaded && !rows.length) { $('view').innerHTML = '<div class="card"><p class="hint">Loading…</p></div>'; return; }
+    $('view').innerHTML = page();
+  }
+
+  /* ---------- taps ---------- */
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button, a, summary'); if (!t) return;
+    var a = t.getAttribute('data-action');
+    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(); }
+    if (a === 'refresh') return load();
+    if (a === 'clear') { location.hash = E.filterHash(view, {}); }
+    if (a === 'addtoggle') { e.preventDefault(); addOpen = !addOpen; return render(); }
+    if (a === 'add') return add();
+  });
+  document.addEventListener('input', function (e) { var k = e.target.getAttribute && e.target.getAttribute('data-add'); if (k) addDraft[k] = e.target.value; });
+  document.addEventListener('change', function (e) {
+    var ak = e.target.getAttribute && e.target.getAttribute('data-add'); if (ak) { addDraft[ak] = e.target.value; return; }
+    var k = e.target.getAttribute && e.target.getAttribute('data-filter'); if (!k) return;
+    var f = Object.assign({}, filters); if (e.target.value) f[k] = e.target.value; else delete f[k];
+    location.hash = E.filterHash(view, f);
+  });
+  function route() {
+    view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'home'; if (VIEWS.indexOf(view) < 0) view = 'home';
+    filters = E.parseFilters(location.hash);
+    document.querySelectorAll('nav.tabs a').forEach(function (a) { a.setAttribute('href', E.filterHash(a.getAttribute('data-nav'), filters)); });
+    render();
+  }
+  window.addEventListener('hashchange', route);
+
+  /* ---------- sign-in: the shared DashAuth, read scope only ---------- */
+  var auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE,
+    onToken: function (resp) {
+      if (resp.error) return banner('Sign-in did not complete.');
+      token = resp.access_token; DashAuth.save(token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE);
+      if (pendingWrite) { var p = pendingWrite; pendingWrite = null; if (DashAuth.hasScope(DashAuth.valid(), WRITE)) return p(); addBusy = false; addMsg = 'Google blocked saving. Tap Add again and choose Allow.'; return render(); }
+      load();
+    },
+    onError: function () { banner('Sign-in did not complete.'); }, onSilentFail: function () {} });
+  var saved = DashAuth.valid(); if (saved && DashAuth.hasScope(saved, SCOPE)) token = saved.access_token;
+  route(); load(); setInterval(function () { if (token && !example) load(); }, 10 * 60000);
+  var tries = 0;
+  (function wait() { if (auth.init()) { render(); return; } if (++tries > 100) { if (!example) banner('Google sign-in did not load.'); return; } setTimeout(wait, 100); })();
+})();
+</script>
+</body>
+</html>
