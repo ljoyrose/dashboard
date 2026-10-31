@@ -511,6 +511,8 @@
       if (d.maybe_sku) acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Same">Same item</button><button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">No, a new item</button>');
       else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Add it</button>');
       acts.push('<button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Leave it off</button>'); }
+    else if (r.section === 'check' && !isPair && Array.isArray(d.options) && d.options.length) {   // v11.11: the engine names the answers (growth checks, rare item, ads test)
+      acts.push(linkBtn(d.url, 'Open on ' + (d.platform || 'eBay'))); d.options.forEach(function (o, i) { acts.push(ansBtn(r, String(o), String(o), i === 0)); }); }
     else if (r.section === 'check') { if (d.url && !isPair) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');   // pairs: one button under each photo
       if (isPair) {   // v11.10: the photo check line, then Same (one count) or Different items (two stock lines, a count each)
         if (d.photo_check) h += '<p class="hint">Photo check: ' + esc(d.photo_check) + '</p>';
@@ -610,7 +612,8 @@
     // v11.10 (Fix 3): one question at a time. 1) Who did you buy it from? (last supplier picked already; or add a new one) 2) Cost of one.
     cost: function (r, d) {
       var h = factsOf([['Sold', d.times_sold ? d.times_sold + (d.times_sold > 1 ? ' times' : ' time') : 'not yet'], ['Last sold at', d.last_price || '–'], ['Listed at', d.price || '–']]);
-      var names = d.suppliers || [], pick = costPick[r.key] !== undefined ? costPick[r.key] : (d.last_supplier || null), stay = [linkBtn(d.url, 'Open on ' + (d.platform || 'the site')), ansBtn(r, 'Own', 'Own item (£0)'), ansBtn(r, 'Unknown', 'Don\'t know')];
+      var names = d.suppliers || [], pick = costPick[r.key] !== undefined ? costPick[r.key] : (d.last_supplier || null), stay = [linkBtn(d.url, 'Open on ' + (d.platform || 'the site')), d.restock ? '' : ansBtn(r, 'Own', d.declutter ? '£0 declutter' : 'Own item (£0)'), ansBtn(r, 'Unknown', 'Don\'t know')];   // v11.11 C: restock items are never £0
+      if (d.restock) h += '<p class="hint">Bought to resell: type what you paid. It cannot be £0.</p>'; else if (d.declutter) h += '<p class="hint">Marked as your own item: one tap for £0.</p>';
       if (d.cheapest) h += '<p class="what">Cheapest to restock: ' + esc(d.cheapest) + '</p>';
       if ((d.product_suppliers || []).length > 1) h += '<p class="hint">Bought from: ' + esc(d.product_suppliers.map(function (x) { return x.supplier + ' ' + (x.currency && x.currency !== 'GBP' ? x.currency + ' ' : '£') + x.cost; }).join(' · ')) + '</p>';
       if (d.suppliers === undefined) return { h: h + '<label class="qty">Cost of one £ <input class="num" inputmode="decimal" data-note="' + esc(r.key) + '" placeholder="4.50" aria-label="What you paid for one, in pounds"></label>', acts: [ansBtn(r, 'Save', 'Save', true)].concat(stay) };   // a card from engine v11.9
@@ -812,8 +815,9 @@
     h += toPost(first && first.section === 'post' ? first : null) + ordersStrip();
     var just = rows.filter(function (r) { return r.answer && !r.applied_at && Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
     if (just.length) h += '<p class="grp">Just done</p>' + just.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '</div>' + sentLine(r) + '</div>'; }).join('');
+    h += growthHome();
     h += '<p class="hint"><i class="ti ti-camera"></i> New item? Put photos in <b>DROP › ' + esc(who === 'All' ? 'Lisa' : who) + ' › NEW to list</b>.</p>';
-    return h;
+    return h + engineLine();
   }
   // A tab: its sections one after another. Do now and Reply show every job; Decide shows one question at a time.
   function pageTab(t) {
@@ -908,17 +912,42 @@
     if (r.answer) return h + sentLine(r) + '</div>';
     return h + '<div class="acts">' + linkBtn(d.url, 'eBay fees (help page)') + ansBtn(r, other, 'Switch sums to ' + other) + '</div></div>';
   }
+  // v11.11 L-10: one line from the engine's ENGINE|status row: version, TEST or LIVE, last run, and the last error if there is one.
+  // The engine runs every 15 minutes, so no run for 40 minutes is flagged.
+  function engineLine() {
+    var r = rows.filter(function (x) { return x.key === 'ENGINE|status'; })[0];
+    if (!r) return '<p class="hint" data-engine>Engine: no status yet</p>';
+    var d = detail(r), t = Date.parse(d.last_run || r.created_at || ''), late = !isNaN(t) && Date.now() - t > 40 * 60000;
+    var when = isNaN(t) ? 'last run not known' : 'last run ' + (new Date(t).toDateString() === new Date().toDateString() ? hm(t) : ukDay(new Date(t).toISOString()) + ' ' + hm(t));
+    return '<p class="hint" data-engine>' + esc(['Engine ' + (d.version || '?'), d.mode === 'LIVE' ? 'LIVE' : 'TEST', when].join(' · ')) +
+      (late ? ' · <span class="why red">no run for over 40 minutes</span>' : '') + (d.last_error ? ' · <span class="why red">Last error: ' + esc(d.last_error) + '</span>' : ' · no errors') + '</p>';
+  }
+  // v11.11 B/E/F: the engine's GROWTH|numbers row (morning number, KPI tiles, ads line) and the item A note once Lisa agrees it.
+  function growthOf() { var g = rows.filter(function (r) { return r.key === 'GROWTH|numbers'; })[0]; return g ? detail(g) : null; }
+  function growthBlock() {
+    var g = growthOf(), n = rows.filter(function (r) { return r.key === 'NOTE|baselines-A'; })[0];
+    if (!g && !n) return '';
+    var h = '<p class="grp">Growth</p>' + (n ? '<p class="what" data-anote>' + esc(detail(n).text || n.title) + '</p>' : '');
+    if (!g) return h;
+    var m = g.morning || {}, tl = (m.ok ? [{ k: m.label, v: m.value, s: m.sub }] : []).concat(g.kpis || []);
+    if (!m.ok && m.why) h += '<p class="hint">Morning number: ' + esc(m.why) + '</p>';
+    if (tl.length) h += '<div class="tiles" data-growth>' + tl.map(function (t) { return '<div class="tile"><div class="k">' + esc(t.k) + '</div><div class="v">' + esc(t.v) + '</div>' + (t.s ? '<div class="k">' + esc(t.s) + '</div>' : '') + '</div>'; }).join('') + '</div>';
+    if (g.ads) h += '<p class="what' + (g.ads.over ? ' red' : '') + '">' + esc('Ads: ' + g.ads.fees + ' = ' + (g.ads.pct === null ? '?' : g.ads.pct + '%') + ' of known profit' + (g.ads.over ? '. Over the limit: the Ads card is in Decide.' : '. Under the limit.')) + '</p>';
+    if (g.refunds_read === false) h += '<p class="hint">Refunds not read this time: takings may be high.</p>';
+    return h;
+  }
+  function growthHome() { var g = growthOf(), m = g && g.morning; return m && m.ok ? '<p class="hint" data-morning>' + esc(m.label + ': ' + m.value + ' (' + m.sub + ')') + ' · <a href="#/numbers">Numbers</a></p>' : ''; }
   function pageNumbers() {
     var k = rows.filter(function (r) { return r.section === 'kpi'; })[0];
-    if (!k) return '<p class="needs">Numbers</p>' + switchCard() + '<div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
+    if (!k) return '<p class="needs">Numbers</p>' + engineLine() + growthBlock() + switchCard() + '<div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
     var d = detail(k), ar = { up: '▲', down: '▼', flat: '–' };
     function show(t) { return typeof t.value === 'string' ? t.value : /_p$/.test(t.key) ? '£' + (Number(t.value) / 100).toFixed(2) : t.value; }   // v11.7: "£8.40 from 1 of 2 sales" or "?" come as text
     (d.tiles || []).forEach(function (t) { if (t.key === 'to_post') t.value = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; }).length + ' · ' + needsCount(); });   // v11.10: live, not Monday's
-    var h = '<p class="needs">Numbers</p><div class="tiles">' + (d.tiles || []).map(function (t) { return '<button class="tile" type="button" data-tile="' + esc(t.key) + '"><div class="k">' + esc(t.label) + '</div><div class="v">' + esc(show(t)) + ' <span class="' + esc(t.arrow) + '">' + ar[t.arrow] + '</span></div></button>'; }).join('') + '</div>';
+    var h = '<p class="needs">Numbers</p>' + engineLine() + '<div class="tiles">' + (d.tiles || []).map(function (t) { return '<button class="tile" type="button" data-tile="' + esc(t.key) + '"><div class="k">' + esc(t.label) + '</div><div class="v">' + esc(show(t)) + ' <span class="' + esc(t.arrow) + '">' + ar[t.arrow] + '</span></div></button>'; }).join('') + '</div>';
     if (open.tile) h += '<div class="card">' + (d.byCategory || []).map(function (c) { return '<div class="row"><div class="txt">' + esc(c.category) + '</div><div>' + esc(open.tile === 'sold' ? c.sold : '£' + (c.profit_p / 100).toFixed(2)) + '</div></div>'; }).join('') + '</div>';
     if (d.vat) h += '<p class="what">' + esc(d.vat) + '</p>';
     if (d.health) h += '<p class="what">' + esc(d.health) + '</p>';
-    return h + switchCard();
+    return h + growthBlock() + switchCard();
   }
   function render() {
     $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
