@@ -362,11 +362,11 @@ test.describe('Studio page', () => {
     await expect(launch.locator('li')).toHaveText(['Sample webclass funnel', 'Sample email kit', 'Post the replay link']);
     await expect(page.locator('[data-outcome="attract"] [data-playbook="pb-grow"]')).toBeVisible();
     await expect(page.locator('[data-outcome="convert"] .grp .cnt')).toHaveText('1');
-    await expect(page.locator('[data-kitnav="kits"] .cnt')).toHaveText('4');
+    await expect(page.locator('[data-kitnav="kits"] .cnt')).toHaveText('5');
     await page.locator('[data-kitnav="packs"]').click();
     await expect(page.locator('[data-pack="pk-funnel"]')).toContainText('Sample webclass kit');
     await page.locator('[data-kitnav="kits"]').click();
-    await expect(page.locator('[data-kit]')).toHaveCount(4);
+    await expect(page.locator('[data-kit]')).toHaveCount(5);
     await expect(page.locator('[data-kit="kit-webclass"] [data-cap="video-reformat"]')).toBeVisible();
     await expect(page.locator('[data-kit="kit-webclass"]')).toContainText('9:16');
     await page.locator('[data-kitnav="styles"]').click();
