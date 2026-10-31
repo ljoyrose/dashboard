@@ -740,6 +740,7 @@
   function media(id) { return drive(CFG.urls.files + '/' + id + '?alt=media&supportsAllDrives=true', { cache: 'no-store' }); }
   function load() {
     if (!accessToken) return;
+    if (OT.st !== 'loading') OT.st = 'idle'; // Refresh re-reads the Owned Tools tab too
     findFile(ST.logsFolderId, ST.stateFile).then(function (f) {
       if (!f) return null;
       return media(f.id).then(function (r) { return r.json(); });
@@ -1316,6 +1317,39 @@
         (ck.length ? '<div class="sect">' + I('list-check') + 'Set-up ' + cnt(done + '/' + ck.length) + '</div><ul class="chk">' + ck.map(function (x) { return '<li class="' + (x.ok ? 'ok' : '') + '"><button type="button" data-check="' + esc(b.id) + '" data-item="' + esc(x.name) + '" aria-pressed="' + !!x.ok + '"' + dis() + '>' + I(x.ok ? 'circle-check' : 'circle-dashed') + esc(x.name) + '</button></li>'; }).join('') + '</ul>' : '') + '</section>';
     }).join('') + '</div>' + accountsCard() + vatRatesCard();
   }
+  /* Owned tools (30 Oct 2026): the tools Lisa owns, from the Owned Tools tab of her Drive sheet (config.js studio.ownedTools).
+   * Read only, and only once signed in: nothing about any tool is written in this repo. Columns (row 1 is the header):
+   * tool · licence_tier_and_codes · agency_white_label · used_for · verdict. Before any brief or purchase, check this list first. */
+  var OT = { st: 'idle', rows: [], msg: '' };
+  function otCfg() { return ST.ownedTools || {}; }
+  function otSlot(v) { v = String(v || '').toUpperCase(); return /^KEEP/.test(v) ? 5 : /SELL WITH|CANDIDATE/.test(v) ? 3 : /CHECK|UNRESOLVED/.test(v) ? 4 : /CANNOT|GONE|CLOSE|DROP|DEAD/.test(v) ? 2 : 0; }
+  function loadOwned() {
+    var c = otCfg();
+    if (!signedIn || !accessToken || OT.st !== 'idle') return;
+    if (!c.sheetId) { OT.st = 'off'; return; }
+    OT.st = 'loading';
+    drive('https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(c.sheetId) + '/values/' + encodeURIComponent((c.tab || 'OWNED_TOOLS') + '!A1:E') + '?majorDimension=ROWS', { cache: 'no-store' })
+      .then(function (r) { return r.json(); }).then(function (j) {
+        var v = j.values || [], h = (v[0] || []).map(function (x) { return String(x).trim().toLowerCase(); });
+        var at = function (k, i) { var n = h.indexOf(k); return n >= 0 ? n : i; }, ix = [at('tool', 0), at('licence_tier_and_codes', 1), at('agency_white_label', 2), at('used_for', 3), at('verdict', 4)];
+        OT.rows = v.slice(1).map(function (r) { return { tool: r[ix[0]] || '', tier: r[ix[1]] || '', agency: r[ix[2]] || '', use: r[ix[3]] || '', verdict: r[ix[4]] || '' }; }).filter(function (r) { return String(r.tool).trim(); });
+        OT.st = 'ok'; OT.msg = '';
+      }).catch(function (e) { OT.st = 'err'; OT.rows = []; OT.msg = /fetch|network/i.test(e.message) ? 'Offline' : e.message; })
+      .then(function () { if (signedIn && hashParts().path[0] === 'tools') { if (typing()) needRender = true; else render(); } });
+  }
+  function ownedCard() {
+    var head = function (n) { return '<div class="sect">' + I('license') + 'Owned tools ' + cnt(n) + info('From the Owned Tools tab in your Drive sheet. Check this list first before any new brief or purchase.') + '</div>'; };
+    if (OT.st === 'off') return '<div class="card" data-owned="off">' + head(0) + '<p class="muted">Not set up yet.</p></div>';
+    if (OT.st === 'err') return '<div class="card" data-owned="err">' + head(0) + '<p class="muted">' + I('alert-triangle') + ' Could not read the Owned Tools tab: ' + esc(OT.msg) + '</p></div>';
+    if (OT.st !== 'ok') return '<div class="card" data-owned="loading">' + head(0) + '<p class="muted">Reading…</p></div>';
+    var L = OT.rows.filter(function (r) { return lqHit('tools', [r.tool, r.tier, r.agency, r.use, r.verdict].join(' ')); });
+    return '<div class="card" data-owned="ok">' + head(L.length) + (L.length ? L.map(function (r) {
+      return '<div class="row" data-ownedtool="' + esc(r.tool) + '" style="--c:var(--ljr-' + otSlot(r.verdict) + ')"><span class="bar"></span><div class="txt"><b>' + esc(r.tool) + '</b>' + (r.use ? ' · <span class="muted">' + esc(r.use) + '</span>' : '') +
+        '<div class="pills" style="margin-top:6px">' + (r.verdict ? '<span class="tag" data-verdict title="Verdict">' + I('gavel') + esc(r.verdict) + '</span>' : '') +
+        (r.tier ? '<span class="tag" data-tier title="Licence tier and codes">' + I('key') + esc(r.tier) + '</span>' : '') +
+        (r.agency ? '<span class="tag" data-agency title="Agency or white-label rights">' + I('building-store') + esc(r.agency) + '</span>' : '') + '</div></div></div>';
+    }).join('') : '<p class="muted">No match.</p>') + '</div>';
+  }
   function vTools() {
     var T = S.tools || [], G = S.gaps || [];
     var gaps = '<div class="card" data-gaps><div class="sect">' + I('alert-triangle') + 'Gaps ' + cnt(G.length) + info('No tool for these yet') + '</div>' +
@@ -1345,7 +1379,7 @@
         '<div class="pills" style="margin-top:6px">' + editTool(m) + fitTag(m) + scoreTag('tools', m.product) + caps(m) + m.outputs.map(function (o) { return '<span class="tag" title="Makes">' + I('aspect-ratio') + esc(fmtLabel(o)) + '</span>'; }).join('') +
         (m.audit ? '<a class="tag" href="' + safeUrl(m.audit) + '" target="_blank" rel="noopener" title="Audit">' + I('clipboard-check') + 'Audit</a>' : '') + '</div></div></div>';
     }).join('') + '</div>' : '<div class="card muted">No tools yet.</div>';
-    return qbox('tools', tsort) + gaps + add + list;
+    return qbox('tools', tsort) + ownedCard() + gaps + add + list;
   }
   /* Add tool: one request file, kind 'tool'. Draft kept as you type. */
   var tdraft = (function () { try { return JSON.parse(localStorage.getItem('st-tool') || '') || {}; } catch (e) { return {}; } })(), toolOpen = false, toolErr = {}, toolNote = '';
@@ -1939,6 +1973,7 @@
     ['nMe', 'nDecide', 'nDo', 'nLine', 'nKits'].forEach(function (k) { $(k).classList.toggle('wide', $(k).textContent.length > 2); });
     var tb = barTab(); if (tb) toUrl(tb);
     v.setAttribute('data-view', route[0] || 'me');
+    if (route[0] === 'tools') loadOwned();
     var keep = boardScroll(), bt = route[0] === 'line' || route[0] === 'decide' ? route[0] : null;
     sideOn = !!bt && viewOf(bt) === 'board' && !phone();
     v.innerHTML = route[0] === 'ideas' ? vIdeas() : route[0] === 'assets' ? list('assets', inProgress(), kindFor) : route[0] === 'review' ? list('review', reviews(), function () { return 'review'; }) :
@@ -2083,7 +2118,7 @@
   function signOut() {
     stopTimer(); var t = accessToken; accessToken = null; signedIn = false; S = null; EX = false; whoAmI = null; pendingWrite = pendingBack = null; DashAuth.clear();
     ['st-idea', 'st-tool', 'st-lib', 'st-drafts', 'st-pend', 'st-sent', 'st-sentf', 'st-sents'].forEach(function (k) { try { localStorage.removeItem(k); } catch (e) {} });
-    sent = {}; sentF = {}; sentS = {}; drafts = {}; pend = {}; draft = {}; tdraft = {};
+    sent = {}; sentF = {}; sentS = {}; drafts = {}; pend = {}; draft = {}; tdraft = {}; OT = { st: 'idle', rows: [], msg: '' };
     if (t && window.google && google.accounts) google.accounts.oauth2.revoke(t, function () {});
     render();
   }
