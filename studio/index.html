@@ -1851,8 +1851,15 @@
       '<div class="rrow"><span class="rlab">Paid</span><div class="seg" role="group" aria-label="Paid">' + [['yes', 'Yes'], ['no', 'No']].map(function (o) { return '<button type="button" data-paid="' + o[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + ((paid ? 'yes' : 'no') === o[0]) + '"' + dis() + own() + '>' + o[1] + '</button>'; }).join('') + '</div>' + ownWhy() + '</div>';
     if (a.hasProof) rows += '<div class="rrow"><span class="rlab">Proof (low-res)</span>' + (a.reviewLink ? '<a href="' + safeUrl(a.reviewLink) + '" target="_blank" rel="noopener" data-proof>Open the proof</a>' : '<span>Shared</span>') + '</div>';
     if (prot) rows += '<div class="rrow" data-fullsize><span class="rlab">Full size</span><span>' + (approved && paid ? 'Released' : 'Held until approved + paid') + '</span>' + tick(approved, 'Approved') + tick(paid, 'Paid') + '</div>';
-    var remind = a.needsWatermark || a.proofLowRes ? '<div class="rrow"><span class="tag" data-chip="lowres" title="' + esc(a.proofLowRes || '') + '">Low-res + watermark</span><span class="muted" data-watermark>Add Studio watermark layer</span></div>' : '';
+    var remind = 'proofCheck' in a ? proofCheckRow(a) : a.needsWatermark || a.proofLowRes ? '<div class="rrow"><span class="tag" data-chip="lowres" title="' + esc(a.proofLowRes || '') + '">Low-res + watermark</span><span class="muted" data-watermark>Add Studio watermark layer</span></div>' : '';
     return '<div class="rights" data-delivery="' + esc(a.id) + '">' + rows + remind + '</div>';
+  }
+  // Proof check (engine v0.2.24 item field proofCheck: missing|hand|ok|stale, null = not protected): one chip in place of the
+  // low-res + watermark reminder. Absent on older state, which keeps the reminder above.
+  var PROOF_CHECK = { ok: 'Proof ready', hand: 'Proof added by hand', missing: 'Proof due', stale: 'Proof out of date' };
+  function proofCheckRow(a) {
+    var w = PROOF_CHECK[a.proofCheck];
+    return w ? '<div class="rrow"><span class="tag" data-chip="proofcheck" data-check="' + esc(a.proofCheck) + '">' + w + '</span></div>' : '';
   }
   // Save a finished item's set-up as a new kit: opens the kit form; the request carries fromAssetId. Never from client material.
   function saveAsKit(a) {
