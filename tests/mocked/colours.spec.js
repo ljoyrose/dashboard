@@ -33,16 +33,17 @@ for (const [name, url] of [['Main dashboard', './'], ['Money Hub', 'money/'], ['
 
 // Calm layer (Lisa, 20 Oct 2026), house look (28 Oct): the slot colour shows on hover, so the check hovers first.
 // Bottom tabs carry their colour in the small bar above the label (slot 8 = warm charcoal #3A3632, never black);
-// More's links show it on their icon ring when pointed at (the card edge itself only turns ink).
-test('the colour carries meaning on the dashboard menu: Bin is slot 8, Money slot 3, PC-Personal slot 4', async ({ page }) => {
+// Stage 2c removed the More tab, so Money (slot 3) is checked on its Dashboard card and Work My Drive (slot 4) on its Drives page.
+test('the colour carries meaning on the dashboard menu: Bin is slot 8, Money slot 3, Work My Drive slot 4', async ({ page }) => {
   await page.goto('./');
   await page.locator('#signInBtn').click();
   await expect(page.locator('#mainNav')).toBeVisible();
   await page.locator('#mainNav a[data-nav="bin"]').hover();
   expect(await page.locator('#mainNav a[data-nav="bin"] .bar').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(58, 54, 50)');
-  const ring = async (sel) => { await page.locator(sel).hover(); return page.locator(sel + ' > .icon').evaluate((e) => getComputedStyle(e).borderLeftColor); };
-  // Hub V2: Money and PC-Personal moved from the top menu to the More tab (bottom bar).
-  await page.locator('#mainNav a[data-nav="more"]').click();
-  expect(await ring('#view a.slotfin')).toBe('rgb(231, 134, 21)');
-  expect(await ring('#view a[data-nav="personal"]')).toBe('rgb(243, 216, 78)');
+  const slot = (sel) => page.locator(sel).first().evaluate((e) => { const d = document.createElement('i'); d.style.color = getComputedStyle(e).getPropertyValue('--slot').trim(); document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; });
+  await expect(page.locator('#view section.card.slotfin')).toHaveCount(1);
+  expect(await slot('#view section.card.slotfin')).toBe('rgb(231, 134, 21)');
+  await page.locator('#mainNav a[data-nav="drives"]').click();
+  await page.locator('#view nav.subnav a', { hasText: /^Work My Drive$/ }).click();
+  expect(await slot('#view section.card.slot4')).toBe('rgb(243, 216, 78)');
 });
