@@ -280,7 +280,7 @@
   var TABS = { do: ['remove', 'post', 'vinted', 'job'], decide: ['go', 'check', 'cost', 'offer', 'receipt', 'supplier', 'learn', 'vat'], newstock: ['newprod'], reply: ['message'], insights: ['restock', 'temu'] };   // engine v11.10: New product? cards have their own tab
   var TAB_OF = { numbers: 'insights', round: 'insights', stock: 'insights', suppliers: 'insights' }; Object.keys(TABS).forEach(function (t) { TABS[t].forEach(function (s) { TAB_OF[s] = t; }); });
   var PEOPLE = ['All', 'Lisa', 'CY', 'G', 'H', 'CN'];   // a card with no owner is Lisa's
-  var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false, stockFilter = 'all';
+  var token = null, me = '', rows = [], rowsRead = false, view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false, stockFilter = 'all';
   var who = 'All', site = 'All', pairDiff = {}, costPick = {}, npState = {};   // v11.10: Different items step; cost card supplier; New stock qty/ticks
   try { who = localStorage.getItem('mkt.who') || 'All'; if (PEOPLE.indexOf(who) < 0) who = 'All'; } catch (e) {}
   // The Look (Warm / Cool clear, Light / Dark) from Studio's Look menu is applied by ../toolkit.js on every hub.
@@ -395,7 +395,7 @@
     if (!M || !M.openWorkId) { banner('Not set up yet: the Marketplace settings are not in config.js.', true); return; }
     if (!token) { render(); return; }
     api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
-      rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
+      rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; }); rowsRead = true;
       $('banner').className = 'banner hidden'; $('readAt').textContent = 'Read ' + hm(Date.now()); render(); loadPics(); loadAvatars();
     }).catch(function (e) { banner('Could not load: ' + e.message); });
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
@@ -916,7 +916,7 @@
   // The engine runs every 15 minutes, so no run for 40 minutes is flagged.
   function engineLine() {
     var r = rows.filter(function (x) { return x.key === 'ENGINE|status'; })[0];
-    if (!r) return '<p class="hint" data-engine>Engine: no status yet</p>';
+    if (!r) return '<p class="hint" data-engine>' + (rowsRead ? 'Engine: no status yet' : 'Engine: reading the sheet…') + '</p>';   // T-L10: not "no status" before the first read
     var d = detail(r), t = Date.parse(d.last_run || r.created_at || ''), late = !isNaN(t) && Date.now() - t > 40 * 60000;
     var when = isNaN(t) ? 'last run not known' : 'last run ' + (new Date(t).toDateString() === new Date().toDateString() ? hm(t) : ukDay(new Date(t).toISOString()) + ' ' + hm(t));
     return '<p class="hint" data-engine>' + esc(['Engine ' + (d.version || '?'), d.mode === 'LIVE' ? 'LIVE' : 'TEST', when].join(' · ')) +
@@ -973,7 +973,7 @@
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(); }
-    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; pics = null; avatars = null; return render(); }
+    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; rowsRead = false; pics = null; avatars = null; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }
     if (t.hasAttribute('data-who')) { who = t.getAttribute('data-who'); try { localStorage.setItem('mkt.who', who); } catch (x) {} return render(); }
