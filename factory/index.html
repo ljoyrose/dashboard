@@ -164,6 +164,10 @@
   span.pill, .gate, .codes .cd, .age { font-size: 13px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid var(--ctl); border-radius: var(--radius);
     height: 24px; padding: 0 8px; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; cursor: default; }
   .pill .ti, .gate .ti, .age .ti { color: var(--muted); }
+  /* Presend checker state (Prompts view): READY on the green line, anything else on the risk line. */
+  span.pill.ps { border-color: var(--ljr-2); } span.pill.ps .ti { color: var(--ljr-2-text); }
+  span.pill.ps.ok { border-color: var(--ljr-5); } span.pill.ps.ok .ti { color: var(--ljr-5-text); }
+  .pitem > span.pill.ps { margin: 8px 0 4px; }
   .nextstep .pill { height: auto; min-height: 24px; white-space: normal; max-width: 100%; }   /* a long step wraps inside its ring */
   .nr { color: var(--muted); font-weight: 400; }   /* "not recorded": the grey words */
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ljr-0)); flex: none; display: inline-block; }
@@ -1082,7 +1086,9 @@
   /* ---------- Send gate (APPFACT E11 E14 E15 E16, 20 Oct 2026): Copy shows only when the checks before a paid send are on the task ----------
    * Read from the description and the comments (the engine can't edit descriptions yet). Missing lines are named instead of Copy.
    *   Last turn: T<nn> = live chat … checked <today>        (YYYY-MM-DD or "20 Oct", Europe/London)
-   *   Prediction: <link> · Simulation: <link> · inputs-gate: PASS <date>
+   *   Prediction: <link> · Simulation: <link>
+   *   presend: READY sha256:<64 hex> <date>                (written by tools/presend/prompt-lint.py --presend; dated today, Europe/London; Copy
+   *                                                         refuses text whose SHA-256 differs. The checker runs inputs-gate itself.)
    *   Happy Hour: active, <n> min left, read <HH:MM> · …   (read 15 minutes ago or less)
    *   AFTER SEND YOU MUST: …                                (shown on the card, with Lisa's Do lines for the same app)
    *   Lisa available: <HH:MM–HH:MM>                         (only for tasks tagged security or leak…)
@@ -1097,10 +1103,20 @@
     return mo ? londonDay(Date.now()).slice(0, 4) + '-' + ('0' + mo).slice(-2) + '-' + ('0' + m[1]).slice(-2) : '';
   }
   function gateLines(t) { var out = lines(t); (t.cm || []).forEach(function (c) { String(c.text || '').split(/\r?\n/).forEach(function (l) { if (l.trim()) out.push(l.trim()); }); }); return out; }
+  // The checker's last stamp on the task (description or comments): READY with the SHA-256 of the exact text, dated today.
+  function presendOf(t) {
+    var ps = gateLines(t).filter(function (l) { return /^presend:\s*(READY|NOT READY)\b/i.test(l); }), last = ps[ps.length - 1] || '';
+    var m = last.match(/^presend:\s*READY\s+sha256:([0-9a-f]{64})\s+(.*)$/i);
+    if (!last) return { state: 'NONE', sha: '' };
+    if (!m) return { state: 'NOT READY', sha: '' };
+    return { state: dayOf(m[2]) === londonDay(Date.now()) ? 'READY' : 'OLD', sha: m[1].toLowerCase() };
+  }
+  var PS_WHY = { NONE: 'No checker stamp', 'NOT READY': 'Checker: NOT READY', OLD: 'Checker stamp not today' };
+  function sha256(text) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function (b) { return Array.prototype.map.call(new Uint8Array(b), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }); }
   function sendGate(t) {
     var L = gateLines(t), all = function (re) { return L.filter(function (l) { return re.test(l); }); }, today = londonDay(Date.now()), now = londonMin(Date.now()), miss = [];
     if (!all(/^Last turn:\s*T\d+\s*=\s*live chat/i).some(function (l) { return dayOf((l.match(/checked\s+(.*)$/i) || [])[1]) === today; })) miss.push('Last turn');
-    if (!all(/^Prediction:\s*https?:\/\//i).some(function (l) { return /Simulation:\s*https?:\/\//i.test(l) && /inputs-gate:\s*PASS/i.test(l); })) miss.push('Prediction');
+    if (!all(/^Prediction:\s*https?:\/\//i).some(function (l) { return /Simulation:\s*https?:\/\//i.test(l); })) miss.push('Prediction');
     var hh = all(/^Happy Hour:\s*active/i).filter(function (l) { var m = l.match(/read\s+(\d{1,2}):(\d{2})/i); return m && (now - (+m[1] * 60 + +m[2]) + 1440) % 1440 <= 15; })[0] || '';
     if (!hh) miss.push('Happy Hour');
     var after = [], k = -1;
@@ -1110,7 +1126,9 @@
     if (t.tags.some(function (g) { return /^(security|leak)/.test(g); }) && !avail) miss.push('Lisa available');
     var cls = all(/^Class:\s*CURRENT\s+\S.*·\s*DATA\s+\S.*·\s*TARGET\s+\S.*\(\s*\S+.*\)/i)[0] || '';
     if (!cls) miss.push('Class');
-    return { ok: !miss.length, miss: miss, hh: hh, after: after, avail: avail, cls: cls };
+    var st = presendOf(t);
+    if (st.state !== 'READY') miss.push(PS_WHY[st.state]);
+    return { ok: !miss.length, miss: miss, hh: hh, after: after, avail: avail, cls: cls, sha: st.sha, ps: st.state };
   }
   // On the Sends card: the Happy Hour reading, what Lisa must do after the send (with her Do lines for the same app), when she is free.
   function sendInfo(t, g) {
@@ -1123,7 +1141,8 @@
   }
   function copyPrompt(btn) {
     var t = byId(btn.getAttribute('data-copy')); if (!t) return;
-    if (!sendGate(t).ok) { render(); return; }
+    var g = sendGate(t);
+    if (!g.ok) { render(); return; }
     var doc = (urls(t).filter(function (u) { return /drive\.google\.com\/file\/d\//.test(u); })[0] || '').match(/\/d\/([\w-]+)/);
     var sec = (t.name.match(/·\s*(P\d+)\s*·/) || [])[1];
     if (!doc) { banner('No prompt doc on this task.'); return; }
@@ -1132,6 +1151,8 @@
       var re = new RegExp('(^|\\n)([#*\\s]*' + sec + '\\b[\\s\\S]*?)(?=\\n[#*\\s]*P\\d+\\b|$)'), m = md.match(re);
       if (!m) throw new Error(sec + ' not found in the prompt doc');
       return m[2].trim();
+    }).then(function (x) {
+      return sha256(x).then(function (h) { if (h !== g.sha) throw new Error('the text is not the one the checker stamped (edited since?): re-run presend'); return x; });
     });
     var ok = function () { btn.innerHTML = '<i class="ti ti-check"></i> Copied'; }, no = function (e) { banner('Not copied: ' + e.message); };
     try {
@@ -1466,6 +1487,31 @@
   document.addEventListener('input', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('af-drafts', drafts); } });
   function barTab() { var r = hashParts().path[0] || 'rooms'; return BAR_TABS.test(r) ? r : null; }
   function saveSent() { try { localStorage.setItem('af-sent', JSON.stringify(sent)); } catch (e) {} }
+  /* ---------- Prompts (Lisa, 23 Oct 2026): the next send text per app on top with its checker state, then the rest waiting; sent and the rules folded away ---------- */
+  var PS_LOOK = { READY: ['circle-check', 'READY'], 'NOT READY': ['circle-x', 'NOT READY'], OLD: ['clock', 'NOT READY · stamp not today'], NONE: ['circle-dashed', 'NOT READY · not checked'] };
+  function psBadge(t) { var s = presendOf(t), L = PS_LOOK[s.state]; return '<span class="pill ps' + (s.state === 'READY' ? ' ok' : '') + '" data-ps="' + esc(t.id) + '"><i class="ti ti-' + L[0] + '"></i> ' + L[1] + '</span>'; }
+  function sendsAll() { return (S.lists.sends || []).filter(function (t) { return fsOf('do').test || !testT(t); }); }
+  function vPrompts() {
+    var all = sendsAll(), open = all.filter(isOpen), shut = all.filter(function (t) { return !isOpen(t); }), next = {};
+    open.forEach(function (t) {
+      var k = (t.tags.filter(function (g) { return /^app-/.test(g); })[0]) || t.id, n = +((t.name.match(/·\s*P(\d+)\s*·/) || [])[1] || 99);
+      if (!next[k] || n < next[k].n) next[k] = { n: n, t: t };
+    });
+    var tops = Object.keys(next).map(function (k) { return next[k].t; }).sort(function (a, b) { return (presendOf(a).state === 'READY' ? 0 : 1) - (presendOf(b).state === 'READY' ? 0 : 1) || a.created - b.created; });
+    var rest = open.filter(function (t) { return tops.indexOf(t) < 0; });
+    var item = function (t, kind) { return '<div class="pitem">' + psBadge(t) + row(t, kind) + '</div>'; };
+    return '<div class="card" data-prompts><h2>' + ic('send') + 'Prompts</h2>' +
+      '<div class="grpt" data-sec="next"><i class="ti ti-player-play"></i>Next ' + cnt(tops.length) + '</div>' + (tops.length ? tops.map(function (t) { return item(t, 'do'); }).join('') : '<p class="muted">Nothing to send.</p>') +
+      (rest.length ? '<div class="grpt" data-sec="waiting"><i class="ti ti-hourglass"></i>Waiting ' + cnt(rest.length) + '</div>' + rest.map(function (t) { return item(t, 'view'); }).join('') : '') +
+      '<details class="arch" data-sec="sent"><summary class="grpt"><i class="ti ti-archive"></i>Sent · ' + shut.length + '</summary>' + shut.map(function (t) { return row(t, 'view'); }).join('') + '</details>' +
+      '<details class="arch" data-sec="rules"><summary class="grpt"><i class="ti ti-list-check"></i>Rules</summary><ul class="lines">' +
+      ['Copy shows only when the task carries: Last turn (today), Prediction + Simulation links, Happy Hour (read in the last 15 min), AFTER SEND YOU MUST, Class, and the checker stamp "presend: READY sha256:… <today>".',
+       'The stamp is written by the pre-send checker. Any edit to the text changes its SHA-256: Copy refuses text that does not match the stamp.',
+       'NOT READY lists what failed or did not run. Nothing that was not run counts as a pass.',
+       'Leak or security sends also need "Lisa available".'].map(function (x) { return '<li>' + ic('dot') + esc(x) + '</li>'; }).join('') + '</ul></details></div>';
+  }
+  // Under the Do list: the way into Prompts (no extra bottom tab).
+  function doFoot() { var n = sendsAll().filter(isOpen).length; return n ? '<p class="muted" style="margin:0"><a href="#/prompts" data-prompts-link><i class="ti ti-send"></i> Prompts ' + cnt(n) + '</a></p>' : ''; }
   function render() {
     var route = hashParts().path;
     Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (/^(card|room|health|stuck|all|queue|new|problem)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
@@ -1484,8 +1530,8 @@
     tabN('nMe', meItems().filter(waiting('me')).length); tabN('nDecide', decisions().filter(waiting('decide')).length); tabN('nDo', mine().filter(waiting('do')).length);
     var tb = barTab(); if (tb) toUrl(tb);
     v.innerHTML = route[0] === 'me' ? list('me', meItems(), 4, 'me') : route[0] === 'item' ? vItem(route[1]) : route[0] === 'app' ? vApp(route[1]) :
-      route[0] === 'today' ? vToday() : route[0] === 'queue' ? list('queue', queue(route[1]), 5, 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? vPortfolio() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list('decide', decisions(), 4, 'decide') + decideFoot() :
-      route[0] === 'do' ? list('do', mine(), 4, 'do') : vRooms();
+      route[0] === 'today' ? vToday() : route[0] === 'prompts' ? vPrompts() : route[0] === 'queue' ? list('queue', queue(route[1]), 5, 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? vPortfolio() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list('decide', decisions(), 4, 'decide') + decideFoot() :
+      route[0] === 'do' ? list('do', mine(), 4, 'do') + doFoot() : vRooms();
   }
 
   /* Ask box → AF › requests (the engine turns it into a ClickUp task) */
