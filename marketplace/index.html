@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-marketplace-2026-10-28-look">
+<meta name="build" content="ljr-marketplace-2026-10-29-no-emails">
 <title>Marketplace</title>
 <!-- Marketplace V2 (25 Oct 2026): tabs Home / Do now / Decide / Reply / Insights, person chips, packing mode, label sheet. PUBLIC repo: no data, no secrets. Ids come from ../config.js (DASH_CONFIG.marketplace);
      everything else is read at run time with Lisa's Google sign-in from the "Marketplace" tab of RR_OPEN-WORK, which the
@@ -78,8 +78,8 @@
   input:focus { outline: none; border-color: var(--ink); }
 
   /* Bottom tabs (.house-tabs): five across. */
-  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 200px)); justify-content: center; } }
+  nav.tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(6, minmax(0, 180px)); justify-content: center; } }
   nav.tabs a { --tc: var(--ljr-0); }
   @media (min-width: 601px) { nav.tabs a { min-height: 56px; } }
   nav.tabs a > .ti { font-size: 18px; color: var(--ink); }
@@ -207,6 +207,7 @@
   details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; border-radius: var(--radius); }
   details .txtin { margin: 8px 0; }
   .buyfrom { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-weight: 600; } .buyfrom .k { color: var(--muted); font-weight: 600; }
+  details.npgroup > summary { min-height: 56px; } details.npgroup[open] > *:not(summary) { margin-top: 12px; } details.npgroup .row .num { width: 72px; } details.npgroup input[type=checkbox] { width: 28px; height: 28px; }   /* v11.10 New stock */
   details.madeof { display: block; } details.madeof[open] > *:not(summary) { margin-top: 12px; } details.madeof label.qty { margin-top: 12px; }
   input.num, input.txtin { font: inherit; font-size: 16px; min-height: 36px; padding: 4px 10px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); }
   @media (max-width: 544px) { input.num, input.txtin { min-height: 44px; } }
@@ -238,6 +239,7 @@
   <a href="#/me" data-nav="me" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-home" aria-hidden="true"></i><span>Home</span><span class="n"></span></a>
   <a href="#/do" data-nav="do" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-package" aria-hidden="true"></i><span>Do now</span><span class="n need" id="n-do"></span></a>
   <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-traffic-lights" aria-hidden="true"></i><span>Decide</span><span class="n need" id="n-decide"></span></a>
+  <a href="#/newstock" data-nav="newstock" style="--tc:var(--ljr-2)"><span class="bar" aria-hidden="true"></span><i class="ti ti-truck-delivery" aria-hidden="true"></i><span>New stock</span><span class="n need" id="n-newstock"></span></a>
   <a href="#/reply" data-nav="reply" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-message" aria-hidden="true"></i><span>Reply</span><span class="n need" id="n-reply"></span></a>
   <a href="#/insights" data-nav="insights" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-chart-bar" aria-hidden="true"></i><span>Insights</span><span class="n"></span></a>
 </nav>
@@ -275,11 +277,11 @@
   };
   var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'check', 'cost', 'receipt', 'newprod', 'offer', 'supplier', 'learn', 'job', 'vat', 'restock', 'temu'];
   // V2 tabs: each groups engine sections. Old links (#/remove, #/check, #/numbers ...) still open and light up their tab.
-  var TABS = { do: ['remove', 'post', 'vinted', 'job'], decide: ['go', 'check', 'cost', 'offer', 'receipt', 'newprod', 'supplier', 'learn', 'vat'], reply: ['message'], insights: ['restock', 'temu'] };
+  var TABS = { do: ['remove', 'post', 'vinted', 'job'], decide: ['go', 'check', 'cost', 'offer', 'receipt', 'supplier', 'learn', 'vat'], newstock: ['newprod'], reply: ['message'], insights: ['restock', 'temu'] };   // engine v11.10: New product? cards have their own tab
   var TAB_OF = { numbers: 'insights', round: 'insights', stock: 'insights', suppliers: 'insights' }; Object.keys(TABS).forEach(function (t) { TABS[t].forEach(function (s) { TAB_OF[s] = t; }); });
   var PEOPLE = ['All', 'Lisa', 'CY', 'G', 'H', 'CN'];   // a card with no owner is Lisa's
   var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false, stockFilter = 'all';
-  var who = 'All', site = 'All';
+  var who = 'All', site = 'All', pairDiff = {}, costPick = {}, npState = {};   // v11.10: Different items step; cost card supplier; New stock qty/ticks
   try { who = localStorage.getItem('mkt.who') || 'All'; if (PEOPLE.indexOf(who) < 0) who = 'All'; } catch (e) {}
   // The Look (Warm / Cool clear, Light / Dark) from Studio's Look menu is applied by ../toolkit.js on every hub.
   function $(id) { return document.getElementById(id); }
@@ -385,7 +387,7 @@
   function why(status, msg) {
     if (/has not been used|is disabled|SERVICE_DISABLED/i.test(msg)) return 'the Google Sheets switch is off for the dashboard\'s Google project. Turn on "Google Sheets API" for it (one click), then reload.';
     if (/insufficient|scope/i.test(msg)) return 'Google did not give this page spreadsheet access. Sign out, sign in again and tick every box Google shows.';
-    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the Open work sheet. Sign in as lisa@puppyclassroom.com.';
+    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the Open work sheet. Sign in with the business Google account.';
     return 'Google said ' + status + (msg ? ': ' + msg : '');
   }
   function sheetUrl(range) { return 'https://sheets.googleapis.com/v4/spreadsheets/' + M.openWorkId + '/values/' + encodeURIComponent(range); }
@@ -445,10 +447,28 @@
   }
   // Every parcel card says what it is and what to do, with links that open in a new tab (Lisa 27 Oct: the dashboard is the
   // one place to work from; never leave her guessing what a card is about).
-  var MAIL = 'https://mail.google.com/mail/u/?authuser=lisa%40puppyclassroom.com#all/';
+  var MAIL = 'https://mail.google.com/mail/u/0/#all/';
   // Lisa 27 Oct: every card says when it was last updated (the engine's updated_at when it refreshed the card, else when it was made).
   function stamp(r, d) { var t = Date.parse(d.updated_at || r.created_at || ''); return isNaN(t) ? '' : '<div class="m">Updated ' + esc(new Date(t).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</div>'; }
   function ukDay(s) { var t = Date.parse(String(s || '').slice(0, 10)); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  // v11.10 Fix 6: ONE source for the post step words, used by the card, the band and packing mode.
+  var STEP = { find: 'Find it', found: 'Found ✓', buy: 'Buy postage on the eBay order', label: 'Print the label from the email', qr: 'Show the QR at the drop-off', pack: 'Pack it, write the parcel number on it, post it, tap Posted' };
+  function postSteps(d) {
+    var eb = /ebay/i.test(d.platform), mail = d.email_url || d.label_email, s = [{ k: d.found ? 'found' : 'find', done: !!d.found }];
+    if (eb && !d.courier_known && !courierOf(d) && !d.tracking) s.push({ k: 'buy' }); else if (d.qr) s.push({ k: 'qr' }); else if (mail || d.label_pdf) s.push({ k: 'label' });
+    s.push({ k: 'pack' }); return s;
+  }
+  function nextStep(d) { var s = postSteps(d).filter(function (x) { return !x.done; })[0]; return s ? STEP[s.k] : STEP.pack; }
+  // v11.10 Fix 5: which order this is: order no, a 3-letter buyer tag (never a name), sold date, and "1 of 2" when one item sold more than once.
+  function sameItemNo(r) { var d = detail(r), k = d.title_key || String(r.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    var g = rows.filter(function (x) { if (x.section !== 'post' || x.applied_at || !/^PO\|/.test(x.key)) return false; var e = detail(x); return (e.title_key || String(x.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()) === k; })
+      .sort(function (a, b) { return String(a.created_at || '').localeCompare(String(b.created_at || '')) || a.key.localeCompare(b.key); });
+    return g.length > 1 ? (g.map(function (x) { return x.key; }).indexOf(r.key) + 1) + ' of ' + g.length : ''; }
+  function orderLine(r, d) {
+    var oid = String(d.order_id || r.key.split('|')[2] || ''), tag = String(d.buyer_tag || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 3), n = sameItemNo(r);
+    return '<div class="m ordl">' + esc([oid && !/^vt-/.test(oid) ? 'Order ' + oid : '', tag ? 'buyer ' + tag + '…' : '', d.sold_at ? 'sold ' + ukDay(d.sold_at) : '', d.qty > 1 ? 'qty ' + d.qty : ''].filter(Boolean).join(' · ')) +
+      (n ? ' <b class="date">' + esc(n) + '</b>' : '') + '</div>';
+  }
   function postGuide(r, d) {
     var eb = /ebay/i.test(d.platform), site = eb ? 'eBay' : /vinted/i.test(d.platform) ? 'Vinted' : (d.platform || 'the site');
     var order = eb && d.order_id ? 'https://www.ebay.co.uk/mesh/ord/details?orderid=' + encodeURIComponent(d.order_id) : '';
@@ -458,20 +478,17 @@
       (d.could_be && d.could_be.length ? '<p class="hint">It could be: ' + esc(d.could_be.join(' · ')) + '</p>' : '') +
       '<ol class="steps"><li>' + (mail ? 'Open the email (button below) to see the item.' : 'Search your email for the parcel number above to see the item.') + '</li><li>If that parcel is already posted, just tap Sorted it.</li><li>If not, pack that item and post it, then tap Sorted it.</li></ol>' +
       (mail ? '<div class="acts">' + linkBtn(mail, 'Open the email') + '</div>' : '');
-    var steps = [d.found ? 'Found ✓' : 'Find it' + (d.shelf ? ' on shelf ' + d.shelf : '') + ', then tap Found.'];
-    if (eb && !d.courier_known && !courierOf(d)) steps.push('Buy postage on the eBay order (button below) and print the label.');
-    else if (d.qr) steps.push('At the ' + (courierOf(d) ? courierOf(d).to : 'drop-off') + ', tap Show QR.');
-    else if (mail) steps.push('Print the label from the email (button below).');
-    steps.push('Pack it, write ' + (d.parcel_id || 'the parcel number') + ' on the parcel, post it, then tap Posted.');
+    var steps = postSteps(d), nx = nextStep(d);
     return '<p class="what"><b>Sold on ' + esc(site) + (d.sold_at ? ' ' + esc(ukDay(d.sold_at)) : '') + '.</b> ' + (d.post_by ? datePill(d) : eb ? 'Post as soon as you can (eBay shows the date on the order).' : '') + '</p>' +
-      '<ol class="steps words">' + steps.map(function (x, i) { return '<li><span class="sn">Step ' + (i + 1) + ':</span><span>' + esc(x) + '</span></li>'; }).join('') + '</ol>' +
-      ((order || mail) ? '<div class="acts">' + (order ? linkBtn(order, 'Open the order on eBay') : '') + (mail ? linkBtn(mail, 'Open the label email') : '') + '</div>' : '');
+      '<p class="what nextstep"><b>Next: ' + esc(nx) + (nx === STEP.find && d.shelf ? ' (shelf ' + esc(d.shelf) + ')' : '') + '</b></p>' +
+      '<details class="allsteps"><summary class="btn">All ' + steps.length + ' steps</summary><ol class="steps words">' + steps.map(function (x, i) { return '<li><span class="sn">Step ' + (i + 1) + ':</span><span>' + esc(STEP[x.k]) + '</span></li>'; }).join('') + '</ol></details>' +
+      ((order || mail) ? '<div class="acts">' + (order ? linkBtn(order, nx === STEP.buy ? STEP.buy : 'Open this order on eBay') : '') + (mail ? linkBtn(mail, d.label_pdf ? 'Open this order\u2019s label' : 'Open the label email') : '') + '</div>' : '');
   }
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
     var nx = opts && opts.next;
     var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
-      '<div class="item">' + (isPair ? '' : thumb(d.photo, r.category)) + '<div class="t">' + nameLine(r, d) + '<div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([d.price, d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier].filter(Boolean).join(' · ')) + '</div>' +
+      '<div class="item">' + (isPair ? '' : thumb(d.photo, r.category)) + '<div class="t">' + nameLine(r, d) + '<div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([d.price, d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier].filter(Boolean).join(' · ')) + '</div>' + (r.section === 'post' && /^PO\|/.test(r.key) ? orderLine(r, d) : '') +
       postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m">' + datePill(d) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
       (isPair ? pair(r, d) : '') + (r.section === 'post' ? postGuide(r, d) : '') + (d.why && d.kind !== 'which_parcel' ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
     if (r.answer) return h + sentLine(r) + '</div>';
@@ -494,9 +511,21 @@
       if (d.maybe_sku) acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Same">Same item</button><button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">No, a new item</button>');
       else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Add it</button>');
       acts.push('<button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Leave it off</button>'); }
+    else if (r.section === 'check' && !isPair && Array.isArray(d.options) && d.options.length) {   // v11.11: the engine names the answers (growth checks, rare item, ads test)
+      acts.push(linkBtn(d.url, 'Open on ' + (d.platform || 'eBay'))); d.options.forEach(function (o, i) { acts.push(ansBtn(r, String(o), String(o), i === 0)); }); }
     else if (r.section === 'check') { if (d.url && !isPair) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');   // pairs: one button under each photo
-      if (isPair) h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Leave blank if you are not sure. Yes then keeps one count for both sites.</p>';
-      acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">No</button>'); }
+      if (isPair) {   // v11.10: the photo check line, then Same (one count) or Different items (two stock lines, a count each)
+        if (d.photo_check) h += '<p class="hint">Photo check: ' + esc(d.photo_check) + '</p>';
+        if (pairDiff[r.key]) {
+          h += '<p class="what">Two separate items. How many of each do you have?</p>' +
+            '<label class="qty">This one (' + esc(d.platform || 'Vinted') + ') <input class="num" inputmode="numeric" data-diffa="' + esc(r.key) + '" aria-label="How many of this one"></label>' +
+            '<label class="qty">The eBay one <input class="num" inputmode="numeric" data-diffb="' + esc(r.key) + '" aria-label="How many of the eBay one"></label><p class="hint">Leave a box blank if you are not sure.</p>';
+          acts.push('<button class="btn main no" type="button" data-ans="' + esc(r.key) + '" data-v="Different">Save: different items</button><button class="btn" type="button" data-diffback="' + esc(r.key) + '">Back</button>');
+        } else {
+          h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Leave blank if you are not sure. Yes then keeps one count for both sites.</p>';
+          acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes, same item</button><button class="btn no" type="button" data-diff="' + esc(r.key) + '">Different items</button>');
+        }
+      } else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">No</button>'); }
     else if (r.section === 'vinted') {
       if (d.folder) acts.push('<a class="btn" href="https://drive.google.com/drive/folders/' + esc(d.folder) + '" target="_blank" rel="noopener">Open folder</a>');
       acts.push('<button class="btn" type="button" data-copy="' + esc(r.key) + '">Copy text</button><a class="btn" href="https://www.vinted.co.uk/items/new" target="_blank" rel="noopener">Open Vinted</a>');
@@ -544,7 +573,7 @@
     var c = courierOf(d), pid = d.parcel_id || '';
     if (!c && !d.qr && !d.tracking && !pid) return '';
     return '<div class="cband ' + (c ? c.cls : 'cb-none') + '"><span class="cdot" aria-hidden="true"></span>' + (pid ? '<span class="pid">' + esc(pid) + '</span>' : '') +
-      '<span class="cn">' + esc(c ? c.name : /ebay/i.test(d.platform) ? 'Postage not bought yet' : 'Courier on the label') + '</span><span class="to">' + esc(c ? 'Take to: ' + c.to + (c.full && c.full.toLowerCase() !== c.name.toLowerCase() ? ' · ' + c.full : '') : /ebay/i.test(d.platform) ? 'Buy it on the eBay order' : 'Open the label email to see it') + '</span></div>';
+      '<span class="cn">' + esc(c ? c.name : /ebay/i.test(d.platform) && !d.tracking && !d.shipped_at ? 'Postage not bought yet' : 'Courier on the label') + '</span>' + (c ? '<span class="to">' + esc('Take to: ' + c.to + (c.full && c.full.toLowerCase() !== c.name.toLowerCase() ? ' · ' + c.full : '')) + '</span>' : '') + '</div>';   // v11.10 Fix 6: the step is said once, on the card
   }
   var V11 = {
     newprod: function (r, d) {
@@ -580,13 +609,80 @@
       return { h: h, acts: [linkBtn(d.url, 'Open on eBay'), ansBtn(r, 'Send', 'Send offer', true), ansBtn(r, 'Always', 'Send + always for this item'), ansBtn(r, 'Never', 'Never offer'), ansBtn(r, 'No', 'Not now')] };
     },
     // Engine v11.9: What did it cost? One card per product code (or per sale with no code). £ box + Save / Own item (£0) / Don't know.
+    // v11.10 (Fix 3): one question at a time. 1) Who did you buy it from? (last supplier picked already; or add a new one) 2) Cost of one.
     cost: function (r, d) {
-      var h = factsOf([['Sold', d.times_sold ? d.times_sold + (d.times_sold > 1 ? ' times' : ' time') : 'not yet'], ['Last sold at', d.last_price || '–'], ['Listed at', d.price || '–']]) +
-        '<label class="qty">Cost of one £ <input class="num" inputmode="decimal" data-note="' + esc(r.key) + '" placeholder="4.50" aria-label="What you paid for one, in pounds"></label>';
-      return { h: h, acts: [linkBtn(d.url, 'Open on ' + (d.platform || 'the site')), ansBtn(r, 'Save', 'Save', true), ansBtn(r, 'Own', 'Own item (£0)'), ansBtn(r, 'Unknown', 'Don\'t know')] };
+      var h = factsOf([['Sold', d.times_sold ? d.times_sold + (d.times_sold > 1 ? ' times' : ' time') : 'not yet'], ['Last sold at', d.last_price || '–'], ['Listed at', d.price || '–']]);
+      var names = d.suppliers || [], pick = costPick[r.key] !== undefined ? costPick[r.key] : (d.last_supplier || null), stay = [linkBtn(d.url, 'Open on ' + (d.platform || 'the site')), d.restock ? '' : ansBtn(r, 'Own', d.declutter ? '£0 declutter' : 'Own item (£0)'), ansBtn(r, 'Unknown', 'Don\'t know')];   // v11.11 C: restock items are never £0
+      if (d.restock) h += '<p class="hint">Bought to resell: type what you paid. It cannot be £0.</p>'; else if (d.declutter) h += '<p class="hint">Marked as your own item: one tap for £0.</p>';
+      if (d.cheapest) h += '<p class="what">Cheapest to restock: ' + esc(d.cheapest) + '</p>';
+      if ((d.product_suppliers || []).length > 1) h += '<p class="hint">Bought from: ' + esc(d.product_suppliers.map(function (x) { return x.supplier + ' ' + (x.currency && x.currency !== 'GBP' ? x.currency + ' ' : '£') + x.cost; }).join(' · ')) + '</p>';
+      if (d.suppliers === undefined) return { h: h + '<label class="qty">Cost of one £ <input class="num" inputmode="decimal" data-note="' + esc(r.key) + '" placeholder="4.50" aria-label="What you paid for one, in pounds"></label>', acts: [ansBtn(r, 'Save', 'Save', true)].concat(stay) };   // a card from engine v11.9
+      if (!pick || pick === '+new') {                                                       // step 1
+        h += '<p class="what"><b>Who did you buy it from?</b></p><div class="acts">' + names.map(function (n) { return '<button class="btn big" type="button" data-costsup="' + esc(r.key) + '" data-v="' + esc(n) + '">' + esc(n) + '</button>'; }).join('') +
+          '<button class="btn big" type="button" data-costsup="' + esc(r.key) + '" data-v="+new">+ Add new supplier</button></div>';
+        if (pick === '+new') h += '<input class="txtin" type="text" maxlength="60" data-costnew="' + esc(r.key) + '" placeholder="Supplier name" aria-label="New supplier name"><button class="btn main" type="button" data-costnewok="' + esc(r.key) + '">Use this supplier</button>';
+        return { h: h, acts: stay };
+      }
+      var same = pick === d.last_supplier;                                                  // step 2
+      h += '<p class="what">Bought from <b>' + esc(pick) + '</b> <button class="btn" type="button" data-costsup="' + esc(r.key) + '" data-v="">Change</button></p>' +
+        '<label class="qty">Cost of one <input class="num" inputmode="decimal" data-note="' + esc(r.key) + '" placeholder="4.50" value="' + esc(same ? d.last_cost || '' : '') + '" aria-label="What you paid for one"></label>' +
+        '<details><summary>More (optional): their code, link, currency</summary>' +
+        '<input class="txtin" type="text" maxlength="60" data-costcode="' + esc(r.key) + '" value="' + esc(same ? d.last_code || '' : '') + '" placeholder="Their product code (SKU)" aria-label="Supplier product code">' +
+        '<input class="txtin" type="url" data-costlink="' + esc(r.key) + '" value="' + esc(same ? d.last_url || '' : '') + '" placeholder="Their product link https://..." aria-label="Supplier product link">' +
+        '<label class="qty">Currency <select data-costcur="' + esc(r.key) + '" aria-label="Currency"><option>GBP</option><option>USD</option><option>EUR</option></select></label></details>';
+      return { h: h, acts: [ansBtn(r, 'Save', 'Save', true)].concat(stay) };
     },
     vat: function (r, d) { return { h: '<p class="verdict wait">' + esc(d.line) + '</p>', acts: [ansBtn(r, 'OK', 'Told my accountant', true)] }; }
   };
+  // v11.10 (Fix 4, Lisa 31 Oct: "potential new suppliers and items needs new section ... folded by supplier and linked to minimum order
+  // for free postage so all grouped and an order all together can be created and agreed"). One folded group per supplier: free-postage
+  // minimum, basket so far, still to add, expected profit. Each item: qty (Min qty first) and a tick. "Agree this order" = ONE DRAFT row
+  // in the Order list. Nothing is bought, emailed or sent: Lisa orders it herself.
+  function npGroups() {
+    var g = {}, order = [];
+    waiting('newprod').forEach(function (r) { var d = detail(r), s = d.supplier || 'Supplier not known'; if (!g[s]) { g[s] = { supplier: s, rows: [], terms: d.terms || {} }; order.push(s); } g[s].rows.push(r); });
+    return order.map(function (s) { return g[s]; }).sort(function (a, b) { return b.rows.length - a.rows.length || a.supplier.localeCompare(b.supplier); });
+  }
+  function npQty(r) { var st = npState[r.key] || {}, d = detail(r), q = st.q !== undefined ? st.q : (d.moq || 1); q = parseInt(q, 10); return q >= 1 ? q : 0; }
+  function npOn(r) { return !(npState[r.key] || {}).off; }
+  function npMoney(p) { return '£' + (p / 100).toFixed(2); }
+  function npTotals(grp) {
+    var ex = 0, inc = 0, prof = 0, n = 0; grp.rows.forEach(function (r) { if (!npOn(r)) return; var d = detail(r), q = npQty(r); if (!q) return; n++; ex += (Number(d.unit_ex_p) || 0) * q; inc += (Number(d.unit_inc_p) || 0) * q; prof += (Number(d.profit_p) || 0) * q; });
+    var free = Math.round(parseFloat(grp.terms.free_over) * 100), min = Math.round(parseFloat(grp.terms.min_order) * 100);
+    return { n: n, ex: ex, inc: inc, prof: prof, free: free > 0 ? free : null, min: min > 0 ? min : null, toFree: free > 0 ? Math.max(0, free - ex) : null, toMin: min > 0 ? Math.max(0, min - ex) : null };
+  }
+  function npLine(grp) { var t = npTotals(grp);
+    return grp.rows.length + ' item' + (grp.rows.length > 1 ? 's' : '') + ' · basket ' + npMoney(t.ex) + ' ex VAT' +
+      (t.toMin ? ' · ' + npMoney(t.toMin) + ' to the minimum' : '') + (t.free === null ? ' · free postage: not known yet' : t.toFree ? ' · ' + npMoney(t.toFree) + ' to free postage' : ' · free postage reached') +
+      ' · profit ' + npMoney(t.prof); }
+  function npSums(sup) { var grp = npGroups().filter(function (x) { return x.supplier === sup; })[0]; if (!grp) return; var el = document.querySelector('[data-npline="' + cssKey(sup) + '"]'); if (el) el.textContent = npLine(grp); }
+  function cssKey(s) { return String(s).replace(/[^A-Za-z0-9]/g, '_'); }
+  function pageNewStock() {
+    var groups = npGroups(), total = waiting('newprod').length;
+    var h = '<p class="needs">New stock: ' + total + '</p><p class="hint">New items worth stocking, folded by supplier. Tick what you want, set how many, then Agree this order. That makes a DRAFT order for you to buy yourself: nothing is bought or sent.</p>' + siteChips();
+    if (!groups.length) return h + emptyCard('No new stock ideas', 'New items from supplier price lists show here.');
+    groups.forEach(function (grp) { var lead = grp.rows[0], tm = grp.terms || {};
+      h += '<details class="card npgroup"><summary><span><b>' + esc(grp.supplier) + '</b><br><span class="hint" data-npline="' + esc(cssKey(grp.supplier)) + '">' + esc(npLine(grp)) + '</span></span></summary>';
+      h += factsOf([['Free postage from', tm.free_over ? '£' + tm.free_over : 'not known yet'], ['Min order', tm.min_order ? '£' + tm.min_order : ''], ['Delivery', tm.delivery ? '£' + tm.delivery : ''], ['Case', tm.case_rule]]);
+      if (!tm.free_over || !tm.min_order) h += '<span class="opbox"><input class="txtin" type="text" data-nptermsin="' + esc(lead.key) + '" placeholder="free over 150, min 100" aria-label="Free postage and minimum order for ' + esc(grp.supplier) + '"><button class="btn" type="button" data-npterms="' + esc(lead.key) + '">Save terms</button></span>';
+      grp.rows.forEach(function (r) { var d = detail(r);
+        h += '<div class="row"><label class="qty"><input type="checkbox" data-npinc="' + esc(r.key) + '" data-npsup="' + esc(grp.supplier) + '"' + (npOn(r) ? ' checked' : '') + ' aria-label="Include ' + esc(r.title) + '"> </label>' +
+          '<div class="txt">' + esc(r.title) + '<div class="why">' + esc([d.unit_inc_p ? npMoney(d.unit_inc_p) + ' inc VAT each' : d.best, d.profit_p ? 'profit ' + npMoney(d.profit_p) + ' each' : '', d.sell ? 'sells ' + d.sell : '', d.moq ? 'min qty ' + d.moq : '', d.case_size ? 'case of ' + d.case_size : ''].filter(Boolean).join(' · ')) + '</div></div>' +
+          '<input class="num" inputmode="numeric" data-npq="' + esc(r.key) + '" data-npsup="' + esc(grp.supplier) + '" value="' + esc(npQty(r) || '') + '" aria-label="How many ' + esc(r.title) + '"></div>' +
+          ((d.lines || []).length ? '<details class="nplines"><summary>Profit both VAT ways</summary><ul class="money">' + d.lines.map(function (l) { return '<li' + (/^▶/.test(l) ? ' class="head"' : /^⚠/.test(l) ? ' class="red"' : '') + '>' + esc(l) + '</li>'; }).join('') + '</ul>' + factsOf([['Best', d.best], ['Runner-up', d.runner_up]]) + '</details>' : ''); });
+      h += '<button class="btn main yes big" type="button" data-nporder="' + esc(grp.supplier) + '">Agree this order</button></details>'; });
+    return h;
+  }
+  function npOrder(sup, btn) {
+    var grp = npGroups().filter(function (x) { return x.supplier === sup; })[0]; if (!grp) return;
+    var picked = grp.rows.filter(function (r) { return npOn(r) && npQty(r) > 0; }); if (!picked.length) return banner('Tick at least one item and give it a number.');
+    var t = npTotals(grp);
+    if (!window.confirm('Make a DRAFT order for ' + sup + '?\n' + picked.length + ' item' + (picked.length > 1 ? 's' : '') + ', ' + npMoney(t.ex) + ' ex VAT (' + npMoney(t.inc) + ' inc VAT), profit ' + npMoney(t.prof) + '.\nNothing is bought or sent: you order it yourself.')) return;
+    btn.disabled = true; btn.textContent = 'Saving…';
+    var lead = picked[0], note = 'items=' + picked.map(function (r) { return r.key + '*' + npQty(r); }).join(',');
+    picked.slice(1).reduce(function (p, r) { return p.then(function () { return answer(r, 'InOrder', 'lead=' + lead.key); }); }, Promise.resolve())
+      .then(function () { return answer(lead, 'Order', note); });
+  }
   // Suppliers: one card per supplier. Account number copies, phone calls, terms, what is on the order list and the gap.
   function pageSuppliers() {
     var list = rows.filter(function (r) { return r.section === 'suppliers' && !r.applied_at; }).sort(function (a, b) { return a.title.localeCompare(b.title); });
@@ -603,7 +699,7 @@
         ((d.order || []).length ? '<p class="grp">Order list · ' + esc(d.basket) + '</p><div class="card inner">' + d.order.map(function (o) { return '<div class="row"><div class="txt">' + esc(o.title || o.code) + '</div><div>' + esc(o.qty) + '</div></div>'; }).join('') + '</div>' + (d.gap ? '<p class="what">' + esc(d.gap) + '</p>' : '') : '') +
         ((d.missing || []).length ? '<p class="what red">Missing: ' + esc(d.missing.join(' · ')) + '</p>' : '');
       if (r.answer) { h += '<div class="sent">✓ ' + esc(r.answer) + ' · saved, the engine applies it after 10 minutes</div></div>'; return; }
-      h += '<details><summary>Settings</summary>' + noteBox(r, 'min 100, free over 300, delivery 15, account AB123, phone 01234 567890, from orders@supplier.co.uk', 'Supplier terms') +
+      h += '<details><summary>Settings</summary>' + noteBox(r, 'min 100, free over 300, delivery 15, account AB123, phone 01632 960123, order email on their website', 'Supplier terms') +
         '<button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Set">Save</button></details></div>';
     });
     return h;
@@ -699,15 +795,16 @@
       (latest ? '<p class="hint">Latest: <a href="#/do">' + esc(latest.title.slice(0, 60)) + '</a> · ' + esc(siteOf(latest) || detail(latest).platform || '') + ' · ' + esc(ukDay(day(latest))) + '</p>' : '');
   }
   // Home: what to post, late ones first then by post-by date, at most 7 calm rows, one button that starts packing.
-  function toPost() {
-    var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; });
+  function toPost(skip) {
+    var all = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; }), list = all.filter(function (r) { return !skip || r.key !== skip.key; });
+    if (!list.length) return all.length ? '<p class="hint">To post: ' + all.length + ' (the Next card above).</p>' : '';
     if (!list.length) return '';
     var key = function (r) { var d = detail(r); return dueOf(d) === 'late' ? '0' : String(d.post_by || '9').slice(0, 10); };
     var top = list.slice().sort(function (a, b) { return key(a).localeCompare(key(b)); }).slice(0, 7);
     return ghead('To post', list.length, true) + '<div class="plist">' + top.map(function (r) { var d = detail(r);
       return '<div class="prow">' + thumb(d.photo, r.category) + '<div class="pt"><span class="ttl">' + esc(r.title) + '</span>' + datePill(d) + '</div></div>'; }).join('') +
       (list.length > top.length ? '<p class="hint">And ' + (list.length - top.length) + ' more in Do now.</p>' : '') +
-      '<div class="acts"><a class="btn" href="#/do?pack" data-gopack>Start packing (' + list.length + ')</a></div></div>';
+      '<div class="acts"><a class="btn" href="#/do?pack" data-gopack>Start packing (' + all.length + ')</a></div></div>';
   }
   function pageMe() {
     var n = needsCount(), h = '<p class="needs">Needs you: ' + (n ? n : '<span class="zero">0</span>') + '</p>';
@@ -715,18 +812,19 @@
       var n = tabCount(t[0]); return '<a class="tile big" href="#/' + t[0] + '"><span class="v' + (n ? ' need' : '') + '">' + n + '</span><span class="k">' + t[1] + '</span></a>'; }).join('') + '</div>';
     var first = null; ORDER.some(function (s) { if (SECTIONS[s].quiet) return false; var w = byCat(waiting(s)); if (w.length) { first = w[0]; return true; } return false; });
     if (first) h += itemCard(first, { head: true, next: true }); else h += emptyCard('Nothing needs you', 'The engine is watching. New jobs show here when they come in.');
-    h += toPost() + ordersStrip();
+    h += toPost(first && first.section === 'post' ? first : null) + ordersStrip();
     var just = rows.filter(function (r) { return r.answer && !r.applied_at && Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
     if (just.length) h += '<p class="grp">Just done</p>' + just.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '</div>' + sentLine(r) + '</div>'; }).join('');
+    h += growthHome();
     h += '<p class="hint"><i class="ti ti-camera"></i> New item? Put photos in <b>DROP › ' + esc(who === 'All' ? 'Lisa' : who) + ' › NEW to list</b>.</p>';
-    return h;
+    return h + engineLine();
   }
   // A tab: its sections one after another. Do now and Reply show every job; Decide shows one question at a time.
   function pageTab(t) {
     var names = { do: 'Do now', decide: 'Decide', reply: 'Reply' }, intro = { do: 'Jobs with your hands. Remove first, then post in shelf order.', decide: 'One question at a time. Undo for 10 minutes.', reply: 'Buyers who wrote. Reply on the site, then tap Done.' };
     var h = '<p class="needs">' + names[t] + ': ' + tabCount(t) + '</p><p class="hint">' + intro[t] + '</p>' + siteChips();
     if (t === 'do') { var p = posts().filter(function (r) { return !r.answer; }).length;
-      if (p) h += '<div class="acts"><button class="btn main" type="button" data-action="pack">Start packing (' + p + ')</button><button class="btn" type="button" data-action="sheet">Label sheet (' + p + ')</button></div>'; }
+      if (p > 1) h += '<div class="acts"><button class="btn main" type="button" data-action="pack">Start packing (' + p + ')</button><button class="btn" type="button" data-action="sheet">Label sheet (' + p + ')</button></div>'; }
     // Answered cards leave the list at once (Lisa 27 Oct: "once decided then still at top of list"); they wait in "Just done" at the
     // bottom while Undo is possible, then disappear. Found parcels stay: they still need posting.
     var list = [], done = []; TABS[t].forEach(function (s) { byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); })).forEach(function (r) {
@@ -745,7 +843,7 @@
     if (!list.length) { pack = null; return '<p class="needs">Packing</p>' + emptyCard('All packed', 'Nothing left to post.', '<button class="btn main big" type="button" data-action="stoppack">Back to Do now</button>'); }
     var i = Math.min(pack.i, list.length - 1), r = list[i], d = detail(r);
     var h = '<div class="packbar"><span>Packing · ' + (i + 1) + ' of ' + list.length + '</span><button class="btn" type="button" data-action="stoppack">Stop</button></div>';
-    h += '<div class="card acc4">' + courierBand(r, d) + '<div class="item">' + thumb(d.photo, r.category) + '<div class="t"><span class="parcel">#' + esc(r._no) + '</span><div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([owner(r), d.platform ? 'sold on ' + d.platform : ''].filter(Boolean).join(' · ')) + '</div></div></div>';
+    h += '<div class="card acc4">' + courierBand(r, d) + '<div class="item">' + thumb(d.photo, r.category) + '<div class="t"><span class="parcel">#' + esc(r._no) + '</span><div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([owner(r), d.platform ? 'sold on ' + d.platform : ''].filter(Boolean).join(' · ')) + '</div>' + orderLine(r, d) + '<p class="what"><b>Next: ' + esc(nextStep(d)) + '</b></p></div></div>';
     h += '<div class="facts"><div class="fact"><span class="k">Shelf</span><span class="v">' + esc(d.shelf || '?') + '</span></div><div class="fact"><span class="k">Courier</span><span class="v">' + esc(d.courier || '?') + '</span></div><div class="fact"><span class="k">Post by</span><span class="v' + (d.red ? ' red' : '') + '">' + esc(d.post_by || '?') + '</span></div></div>';
     if (d.found && d.qr) h += '<div class="dropcode"><span class="hint">Write #' + esc(r._no) + ' on the parcel. Drop-off code:</span><span class="code">' + esc(d.qr) + '</span></div>';
     if (r.answer) h += sentLine(r);
@@ -814,23 +912,49 @@
     if (r.answer) return h + sentLine(r) + '</div>';
     return h + '<div class="acts">' + linkBtn(d.url, 'eBay fees (help page)') + ansBtn(r, other, 'Switch sums to ' + other) + '</div></div>';
   }
+  // v11.11 L-10: one line from the engine's ENGINE|status row: version, TEST or LIVE, last run, and the last error if there is one.
+  // The engine runs every 15 minutes, so no run for 40 minutes is flagged.
+  function engineLine() {
+    var r = rows.filter(function (x) { return x.key === 'ENGINE|status'; })[0];
+    if (!r) return '<p class="hint" data-engine>Engine: no status yet</p>';
+    var d = detail(r), t = Date.parse(d.last_run || r.created_at || ''), late = !isNaN(t) && Date.now() - t > 40 * 60000;
+    var when = isNaN(t) ? 'last run not known' : 'last run ' + (new Date(t).toDateString() === new Date().toDateString() ? hm(t) : ukDay(new Date(t).toISOString()) + ' ' + hm(t));
+    return '<p class="hint" data-engine>' + esc(['Engine ' + (d.version || '?'), d.mode === 'LIVE' ? 'LIVE' : 'TEST', when].join(' · ')) +
+      (late ? ' · <span class="why red">no run for over 40 minutes</span>' : '') + (d.last_error ? ' · <span class="why red">Last error: ' + esc(d.last_error) + '</span>' : ' · no errors') + '</p>';
+  }
+  // v11.11 B/E/F: the engine's GROWTH|numbers row (morning number, KPI tiles, ads line) and the item A note once Lisa agrees it.
+  function growthOf() { var g = rows.filter(function (r) { return r.key === 'GROWTH|numbers'; })[0]; return g ? detail(g) : null; }
+  function growthBlock() {
+    var g = growthOf(), n = rows.filter(function (r) { return r.key === 'NOTE|baselines-A'; })[0];
+    if (!g && !n) return '';
+    var h = '<p class="grp">Growth</p>' + (n ? '<p class="what" data-anote>' + esc(detail(n).text || n.title) + '</p>' : '');
+    if (!g) return h;
+    var m = g.morning || {}, tl = (m.ok ? [{ k: m.label, v: m.value, s: m.sub }] : []).concat(g.kpis || []);
+    if (!m.ok && m.why) h += '<p class="hint">Morning number: ' + esc(m.why) + '</p>';
+    if (tl.length) h += '<div class="tiles" data-growth>' + tl.map(function (t) { return '<div class="tile"><div class="k">' + esc(t.k) + '</div><div class="v">' + esc(t.v) + '</div>' + (t.s ? '<div class="k">' + esc(t.s) + '</div>' : '') + '</div>'; }).join('') + '</div>';
+    if (g.ads) h += '<p class="what' + (g.ads.over ? ' red' : '') + '">' + esc('Ads: ' + g.ads.fees + ' = ' + (g.ads.pct === null ? '?' : g.ads.pct + '%') + ' of known profit' + (g.ads.over ? '. Over the limit: the Ads card is in Decide.' : '. Under the limit.')) + '</p>';
+    if (g.refunds_read === false) h += '<p class="hint">Refunds not read this time: takings may be high.</p>';
+    return h;
+  }
+  function growthHome() { var g = growthOf(), m = g && g.morning; return m && m.ok ? '<p class="hint" data-morning>' + esc(m.label + ': ' + m.value + ' (' + m.sub + ')') + ' · <a href="#/numbers">Numbers</a></p>' : ''; }
   function pageNumbers() {
     var k = rows.filter(function (r) { return r.section === 'kpi'; })[0];
-    if (!k) return '<p class="needs">Numbers</p>' + switchCard() + '<div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
+    if (!k) return '<p class="needs">Numbers</p>' + engineLine() + growthBlock() + switchCard() + '<div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
     var d = detail(k), ar = { up: '▲', down: '▼', flat: '–' };
     function show(t) { return typeof t.value === 'string' ? t.value : /_p$/.test(t.key) ? '£' + (Number(t.value) / 100).toFixed(2) : t.value; }   // v11.7: "£8.40 from 1 of 2 sales" or "?" come as text
-    var h = '<p class="needs">Numbers</p><div class="tiles">' + (d.tiles || []).map(function (t) { return '<button class="tile" type="button" data-tile="' + esc(t.key) + '"><div class="k">' + esc(t.label) + '</div><div class="v">' + esc(show(t)) + ' <span class="' + esc(t.arrow) + '">' + ar[t.arrow] + '</span></div></button>'; }).join('') + '</div>';
+    (d.tiles || []).forEach(function (t) { if (t.key === 'to_post') t.value = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; }).length + ' · ' + needsCount(); });   // v11.10: live, not Monday's
+    var h = '<p class="needs">Numbers</p>' + engineLine() + '<div class="tiles">' + (d.tiles || []).map(function (t) { return '<button class="tile" type="button" data-tile="' + esc(t.key) + '"><div class="k">' + esc(t.label) + '</div><div class="v">' + esc(show(t)) + ' <span class="' + esc(t.arrow) + '">' + ar[t.arrow] + '</span></div></button>'; }).join('') + '</div>';
     if (open.tile) h += '<div class="card">' + (d.byCategory || []).map(function (c) { return '<div class="row"><div class="txt">' + esc(c.category) + '</div><div>' + esc(open.tile === 'sold' ? c.sold : '£' + (c.profit_p / 100).toFixed(2)) + '</div></div>'; }).join('') + '</div>';
     if (d.vat) h += '<p class="what">' + esc(d.vat) + '</p>';
     if (d.health) h += '<p class="what">' + esc(d.health) + '</p>';
-    return h + switchCard();
+    return h + growthBlock() + switchCard();
   }
   function render() {
     $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);   // menu only after sign-in
     var on = TAB_OF[view] || view;
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    ['do', 'decide', 'reply'].forEach(function (t) { var n = tabCount(t); $('n-' + t).textContent = n || ''; $('n-' + t).classList.toggle('wide', n > 99); $('n-' + t).parentNode.setAttribute('aria-label', $('n-' + t).previousSibling.textContent + (n ? ', ' + n + ' waiting' : '')); });
+    ['do', 'decide', 'newstock', 'reply'].forEach(function (t) { var n = tabCount(t); $('n-' + t).textContent = n || ''; $('n-' + t).classList.toggle('wide', n > 99); $('n-' + t).parentNode.setAttribute('aria-label', $('n-' + t).previousSibling.textContent + (n ? ', ' + n + ' waiting' : '')); });
     $('people').classList.toggle('hidden', !token || !rows.some(function (r) { return detail(r).owner && detail(r).owner !== 'Lisa'; }));
     $('whoN').textContent = ((who !== 'All') + (site !== 'All') + (stockFilter !== 'all')) || '';   // the phone's one Filter button counts the filters that are on
     $('people').innerHTML = PEOPLE.map(function (p) { return '<button class="chip" type="button" data-who="' + p + '" aria-pressed="' + (who === p) + '">' + p + '</button>'; }).join('');
@@ -840,7 +964,7 @@
     if (!token) $('readAt').textContent = '';
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see what needs you</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
     $('view').innerHTML = pack && view === 'do' ? pagePack() : sheet && view === 'do' ? pageSheet() : view === 'me' ? pageMe() : view === 'round' ? pageRound() : view === 'numbers' ? pageNumbers()
-      : view === 'insights' ? pageInsights() : view === 'stock' ? pageStock() : view === 'temu' ? pageTemu() : view === 'suppliers' ? pageSuppliers() : TABS[view] ? pageTab(view) : SECTIONS[view] ? pageList(view) : pageMe();
+      : view === 'insights' ? pageInsights() : view === 'stock' ? pageStock() : view === 'temu' ? pageTemu() : view === 'suppliers' ? pageSuppliers() : view === 'newstock' ? pageNewStock() : TABS[view] ? pageTab(view) : SECTIONS[view] ? pageList(view) : pageMe();
   }
 
   /* ---------- taps ---------- */
@@ -848,7 +972,7 @@
   document.addEventListener('click', function (e) {
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
-    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
+    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(); }
     if (a === 'signout') { token = null; DashAuth.clear(); rows = []; pics = null; avatars = null; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }
@@ -859,13 +983,25 @@
     if (a === 'stoppack') { pack = null; if (/\?pack\b/.test(location.hash)) { location.hash = '#/do'; return; } return render(); }
     if (a === 'sheet') { sheet = true; pack = null; return render(); }
     if (a === 'closesheet') { sheet = false; return render(); }
+    if (t.hasAttribute('data-diff')) { pairDiff[t.getAttribute('data-diff')] = true; return render(); }               // v11.10 Fix 2
+    if (t.hasAttribute('data-diffback')) { delete pairDiff[t.getAttribute('data-diffback')]; return render(); }
+    if (t.hasAttribute('data-costsup')) { costPick[t.getAttribute('data-costsup')] = t.getAttribute('data-v') || null; return render(); }   // v11.10 Fix 3
+    if (t.hasAttribute('data-costnewok')) { var ck = t.getAttribute('data-costnewok'), ci = document.querySelector('[data-costnew="' + ck + '"]'), cv2 = ci ? ci.value.replace(/[|=]/g, ' ').trim() : '';
+      if (!cv2) return banner('Type the supplier\'s name first.'); costPick[ck] = cv2; return render(); }
+    if (t.hasAttribute('data-nporder')) return npOrder(t.getAttribute('data-nporder'), t);                                  // v11.10 Fix 4
+    if (t.hasAttribute('data-npterms')) { var tr = find(t.getAttribute('data-npterms')), ti = document.querySelector('[data-nptermsin="' + tr.key + '"]'), tv = ti ? ti.value.trim() : '';
+      if (!/\d/.test(tv)) return banner('Type it like: free over 150, min 100'); t.disabled = true; return answer(tr, 'Terms', tv); }
     if (t.hasAttribute('data-ans')) {
       var r = find(t.getAttribute('data-ans')), v = t.getAttribute('data-v'), note = '';
       if (r.section === 'vinted') { var inp = document.querySelector('[data-link="' + r.key + '"]'); note = inp ? inp.value.trim() : ''; }
       var nb = document.querySelector('[data-note="' + r.key + '"]');                      // v11 cards: a note box (terms, quantity)
       if (nb && nb.value.trim()) note = nb.value.trim();
       if (v === 'Set' && !note) return banner('Type what to change first, for example: min 100, free over 300, delivery 15');
-      if (r.section === 'cost' && v === 'Save') { var cn = note.replace(/^£\s*/, ''); if (!/^\d+(\.\d{1,2})?$/.test(cn)) return banner('Type what you paid for one, in pounds, for example 4.50. Or tap Own item if it was yours.'); note = cn; }
+      if (r.section === 'cost' && v === 'Save') { var cn = note.replace(/^[£$€]\s*/, ''); if (!/^\d+(\.\d{1,2})?$/.test(cn)) return banner('Type what you paid for one, for example 4.50. Or tap Own item if it was yours.');
+        var cd = detail(r), cs = costPick[r.key] !== undefined ? costPick[r.key] : (cd.last_supplier || ''), clean = function (x) { return String(x || '').replace(/[|=]/g, ' ').trim(); };   // v11.10: supplier, code, link, currency
+        var cc = document.querySelector('[data-costcode="' + r.key + '"]'), cl = document.querySelector('[data-costlink="' + r.key + '"]'), cu = document.querySelector('[data-costcur="' + r.key + '"]'), lk = cl ? cl.value.trim() : '';
+        if (lk && !/^https?:\/\/\S+$/i.test(lk)) return banner('The link must start https://');
+        note = cn + (cs && cs !== '+new' ? '|sup=' + clean(cs) + (cc && cc.value.trim() ? '|code=' + clean(cc.value) : '') + (lk ? '|link=' + lk.replace(/\|/g, '%7C') : '') + '|cur=' + (cu ? cu.value : 'GBP') + ((cd.suppliers || []).indexOf(cs) < 0 ? '|new=1' : '') : ''); }
       if (r.section === 'offer') {                                                           // % box (data-note) + min profit box (data-min)
         var pc = note, mb = document.querySelector('[data-min="' + r.key + '"]'), mn = mb ? mb.value.trim() : '';
         if (pc && !(Number(pc) >= 5 && Number(pc) <= 90)) return banner('Type a % between 5 and 90, or leave it blank for ' + detail(r).pct + '%.');
@@ -877,6 +1013,8 @@
         if (pv !== String(detail(r).parcel_id).toUpperCase()) return banner('Type the parcel number written on the parcel (' + detail(r).parcel_id + ') before tapping Posted. If it does not match, stop: it may be the wrong parcel.');
       }
       var qb = document.querySelector('[data-qty="' + r.key + '"]');
+      if (v === 'Different') { var da = document.querySelector('[data-diffa="' + r.key + '"]'), db = document.querySelector('[data-diffb="' + r.key + '"]'), na = da ? da.value.trim() : '', nb3 = db ? db.value.trim() : '';
+        if ((na && !/^\d+$/.test(na)) || (nb3 && !/^\d+$/.test(nb3))) return banner('Type a number in each box, or leave it blank.'); note = [na ? 'this=' + na : '', nb3 ? 'ebay=' + nb3 : ''].filter(Boolean).join(' '); }
       if (qb && (v === 'Yes' || v === 'Same') && qb.value.trim()) { var qn = parseInt(qb.value, 10); if (!(qn >= 0)) return banner('Type a number for how many you have, or leave it blank.'); note = 'qty ' + qn; }
       t.disabled = true; t.classList.add('saving'); t.textContent = 'Saving…'; return answer(r, v, note);
     }
@@ -908,8 +1046,11 @@
     if (a === 'finish') return finishRound();
   });
   document.addEventListener('input', function (e) {
+    if (e.target.hasAttribute('data-npq')) { var qk = e.target.getAttribute('data-npq'); npState[qk] = Object.assign(npState[qk] || {}, { q: e.target.value }); return npSums(e.target.getAttribute('data-npsup')); }   // v11.10 Fix 4
     if (e.target.hasAttribute('data-find')) { var q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.stockrow').forEach(function (c) { c.classList.toggle('hidden', !!q && c.getAttribute('data-text').indexOf(q) < 0); }); return; } var k = e.target.getAttribute('data-count'); if (k) { round[k] = Object.assign(round[k] || {}, { n: e.target.value, ok: false }); } });
-  document.addEventListener('change', function () { if (view === 'round') render(); });
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-npinc')) { var ik = e.target.getAttribute('data-npinc'); npState[ik] = Object.assign(npState[ik] || {}, { off: !e.target.checked }); return npSums(e.target.getAttribute('data-npsup')); }
+    if (view === 'round') render(); });
   // No reason, no save (CD Hub round rule). Each item row gets "ok" or "<count> <reason>".
   function finishRound() {
     var todo = rows.filter(function (r) { return r.section === 'round' && !r.answer && round[r.key]; }), missing = [];
