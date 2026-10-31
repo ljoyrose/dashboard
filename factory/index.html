@@ -164,6 +164,8 @@
   span.pill, .gate, .codes .cd, .age { font-size: 13px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid var(--ctl); border-radius: var(--radius);
     height: 24px; padding: 0 8px; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; cursor: default; }
   .pill .ti, .gate .ti, .age .ti { color: var(--muted); }
+  .nextstep .pill { height: auto; min-height: 24px; white-space: normal; max-width: 100%; }   /* a long step wraps inside its ring */
+  .nr { color: var(--muted); font-weight: 400; }   /* "not recorded": the grey words */
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ljr-0)); flex: none; display: inline-block; }
 
   /* Rooms: a white card on the soft line, its stage colour as a 3px bar on the left (as Links). */
@@ -534,7 +536,7 @@
     var n = stageNo(t.status), slot = n === null ? 0 : (n <= 3 ? 7 : n <= 5 ? 4 : n === 6 ? 3 : n === 7 ? 6 : 5);
     var subs = (S.lists.work || []).filter(function (x) { return x.tags.indexOf('app-' + t.id) >= 0 && x.tags.indexOf('line') >= 0; });
     var tpl = (S.lists.template || []).filter(function (x) { return x.parent; });
-    var html = '<div class="card"><div class="hero"><div><h2>' + esc(t.name) + '</h2><p>' + (n === null ? '' : '<span class="step">Step ' + n + ':</span> ' + esc(STAGES[n]) + ' · ') + esc(cap(t.status)) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
+    var html = '<div class="card"><div class="hero"><div><h2>' + esc(t.name) + '</h2><p>' + (n === null ? '' : '<span class="step">Step ' + n + ':</span> ' + esc(STAGES[n]) + ' · ') + esc(cap(t.status)) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' + nextStep(t) +
       '<div class="pills" style="margin-top:12px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<div id="codes" class="codes"><span class="q">…</span></div>' +
       '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span>' + linkStrip(t, false) + '<button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
@@ -571,11 +573,30 @@
     return html;
   }
   // On the card: this app's open decisions and its prompts (Sends), whatever the stage. "Where is my next prompt?" lives here.
-  function waiting(t) {
+  function asksOf(t) {
     var key = ((t.tags.filter(function (g) { return /^app-/.test(g); })[0] || '').replace('app-', ''));
     var word = key && key !== t.id ? new RegExp('\\b' + key.replace(/[^a-z0-9]/gi, '') + '\\b', 'i') : null;
-    var ds = decisions().filter(function (d) { return String(d.desc).indexOf('GATE: ' + t.id + ' ') >= 0 || (word && word.test(d.name)); });
-    var ss = (S.lists.sends || []).filter(function (x) { return key && x.tags.indexOf('app-' + key) >= 0 && isOpen(x); });
+    return { ds: decisions().filter(function (d) { return String(d.desc).indexOf('GATE: ' + t.id + ' ') >= 0 || (word && word.test(d.name)); }),
+      ss: (S.lists.sends || []).filter(function (x) { return key && x.tags.indexOf('app-' + key) >= 0 && isOpen(x); }) };
+  }
+  // Next step and who it waits on (JOB 32), read only from af-state.json: the first open line of this stage (else any open line),
+  // else the first open decision or prompt. No engine field holds these yet, so a gap says "not recorded".
+  function nextOf(t) {
+    var n = stageNo(t.status), a = asksOf(t);
+    var own = (S.lists.work || []).filter(function (x) { return x.tags.indexOf('app-' + t.id) >= 0 && x.tags.indexOf('line') >= 0 && isOpen(x); })
+      .sort(function (x, y) { return x.created - y.created; });
+    var x = own.filter(function (y) { return y.tags.indexOf('st-' + n) >= 0; })[0] || own[0] || a.ds[0] || a.ss[0];
+    if (!x) return null;
+    var who = whoOf(x).join(' · ') || line(x, /^Waits on:\s*/i);
+    return { step: String(x.name).replace(/^(TEST-)?[^·]+ · /, '').replace(/^\d\s·\s/, ''), who: who };
+  }
+  function nextStep(t) {
+    var x = nextOf(t), nr = '<span class="nr">not recorded</span>';
+    return '<div class="pills nextstep" style="margin-top:12px"><span class="pill" data-next="step"><i class="ti ti-arrow-right"></i>Next: ' + (x ? esc(x.step) : nr) + '</span>' +
+      '<span class="pill" data-next="who"><i class="ti ti-user"></i>Waits on: ' + (x && x.who ? esc(x.who) : nr) + '</span></div>';
+  }
+  function waiting(t) {
+    var a = asksOf(t), ds = a.ds, ss = a.ss;
     if (!ds.length && !ss.length) return '';
     return '<div class="stage c"><span class="n">' + ic('stamp') + '</span>Waiting on you<span class="r">' + cnt(ds.length + ss.length) + '</span></div><ul class="lines">' +
       ds.map(function (d) { return '<li>' + ic('stamp') + '<a href="#/decide">' + esc(d.name.replace(/^TEST-/, '')) + '</a></li>'; }).join('') +
