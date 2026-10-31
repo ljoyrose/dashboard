@@ -26,9 +26,10 @@ cd "$WT" || exit 2
 if [ -d "$REPO/node_modules" ]; then ln -s "$REPO/node_modules" node_modules
 else npm ci --no-audit --no-fund >"$TMP/npm.log" 2>&1 || { echo "npm ci failed (see $TMP/npm.log)"; exit 2; }; fi
 
-DENY_NOTE="real"
+DENY_NOTE="outside file"
 if [ -z "${PRIVACY_DENYLIST_FILE:-}" ]; then
-  printf 'zzinventedplaceholderterm\n' > "$TMP/denylist.txt"
+  # The term is built at run time so it never appears in any file the guard scans (it would flag this script).
+  printf 'zz%sq%sx\n' "$RANDOM$RANDOM" "$$" > "$TMP/denylist.txt"
   export PRIVACY_DENYLIST_FILE="$TMP/denylist.txt"; DENY_NOTE="placeholder"
 fi
 
