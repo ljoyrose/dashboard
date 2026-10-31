@@ -51,11 +51,12 @@ If any of these breaks, the tick turns red and says which page.
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
 | Factory house look (dark frame, bottom tabs, 1px lines, one radius, fixed counts, hover rule, contrast light/dark/warm/cool, empty states, one calm find bar, phone) | `/dashboard/factory/` | 24 |
 | Studio (example data, real data, accounts, groups, bottom tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, clients, results, spec, brand kit, books, feedback, phone, dark, text size, board, Board/List, Look menu, frame, one-row find bar, one line rule, numbers, no solid fills, pill sizes, weights, dark tour, greys follow the background, calm cards, Me summary, who ring, consistency, brand website, no empty counts, brand mark, list bars, comments, library forms, prices and VAT, ownership, protection, save as kit, team role) | `/dashboard/studio/` | 66 |
+| Studio Owned tools (read only after sign-in, with the sign-in token; rows come only from the Owned Tools tab; empty and no-access states; sheet id only in `config.js`; no tool data in the repo) | `/dashboard/studio/#/tools` | 7 |
 | House look on every hub (one set of rules from `tokens.css` + `house.css`: 12px radius, 1px lines and 3px bars, Lexend 400/600 at 13px+, no coloured words, one control line (meaning buttons rest on their own colour line), 36/44px buttons, 30 x 22 counts, ringed date pills, deep frame, 12px card padding and gaps, no solid fills, the hover rule, tabs exempt; every view, desktop warm light, phone cool dark and Look › Dark) | all seven hubs | 22 |
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 654 checks that must pass (mocked + phone, 29 Oct 2026, house look on every hub; CD Hub In whelp fixture test and Bloodline empty states).
+That is 661 checks that must pass (mocked + phone, 30 Oct 2026, Studio Owned tools; before that house look on every hub, CD Hub In whelp fixture test and Bloodline empty states).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
@@ -293,6 +294,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 29 Oct 2026 | Marketplace: the public pages (hub and privacy policy) showed a personal email address (sign-in hint, Gmail link, contact) | "public pages hold no email address: no "@" address, no login_hint, no authuser (Stage 0A, D1 = B) @regression" |
 | 29 Oct 2026 | Marketplace: the same check on what the page actually shows (text and links), signed out, on every tab and on the privacy page | "signed out, signed in on every tab, and the privacy page: no email address in the shown text or any link @regression" |
 | 30 Oct 2026 | Money Hub on a phone: sideways-scrolling tables could not be reached by keyboard (axe scrollable-region-focusable; CI fonts made the table overflow) | "@regression Money Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-money-scroll.spec.js) |
+| 30 Oct 2026 | CD Hub on a phone: sideways-scrolling tables and the table map could not be reached by keyboard (axe scrollable-region-focusable) | "@regression CD Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-cdhub-scroll.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
