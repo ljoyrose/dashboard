@@ -269,10 +269,10 @@ test.describe('Main dashboard: Bin', () => {
     await page.goto('./#/bin');
     await signIn(page);
     const view = page.locator('#view');
-    await expect(page.locator('#sweepCard h3')).toHaveText('Google Drive: ZZ_DELETE_ files ready to bin');
+    await expect(page.locator('#sweepCard h3')).toHaveText('Ready to bin');
     await expect(view.locator('[data-bin-list="rename"]')).toContainText('ZZ_sample-old-copy.txt');
     await expect(view.locator('[data-bin-list="rename"]')).toContainText('ZZ_sample-dupe.txt');
-    await expect(view).toContainText('Ready (0)');
+    await expect(page.locator('#sweepCard')).toContainText('Nothing is ready to bin.');
     await expect(page.locator('[data-action="sweep"]')).toBeDisabled();
     // the archive file must not appear anywhere on the Bin page
     await expect(view).not.toContainText('RR_sample-archive.txt');
@@ -289,13 +289,13 @@ test.describe('Main dashboard: Bin', () => {
     const sweep = page.locator('[data-action="sweep"]');
     await expect(sweep).toBeDisabled();
     await page.locator('[data-action="selectall"][data-group="bin"]').click();
-    await expect(sweep).toContainText('Move selected (1)');
+    await expect(sweep).toContainText('Allow access, then bin (1)');
     await sweep.click(); // first click only asks for the extra (pretend) permission
-    await expect(page.locator('#view')).toContainText(/Bin actions on|Move selected \(1\)/);
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Bin these (1)');
     await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => dialogs.length).toBe(1);
-    expect(dialogs[0]).toMatch(/Move 1 selected item to the bin/);
-    expect(dialogs[0]).toMatch(/RR_ names are never included/);
+    expect(dialogs[0]).toMatch(/^Bin 1 file\? It goes to the shared-drive bin and can be restored for 30 days\./);
+    expect(dialogs[0]).toMatch(/Protected and unready files are never included/);
     expect(guard.world.calls.filter((c) => c.method === 'PATCH')).toEqual([]);
     expect(guard.world.byId('zz-del-1').trashed).toBe(false);
     expect(guard.world.byId('zz-1').trashed).toBe(false);
@@ -328,11 +328,11 @@ test.describe('Main dashboard: Bin', () => {
     await expect(card).toContainText('Waiting to delete: 12 files (3.5 GB)');
     await expect(card).toContainText('Duplicates found: 40 files');
     await expect(card).toContainText('scan not finished');
-    const job = card.locator('a', { hasText: 'Delete marked files from DROPBOX only' });
+    const job = card.locator('a', { hasText: 'Delete marked files from Dropbox only' });
     await expect(job).toHaveAttribute('href', /^https:\/\/github\.com\/ljoyrose\/dropbox-cleanup\/actions\/workflows\//);
     await expect(job).toHaveAttribute('target', '_blank');
     await expect(job).toHaveAttribute('rel', /noopener/);
-    await expect(card.locator('a', { hasText: 'Empty DROPBOX trash' })).toHaveAttribute('href', 'https://www.dropbox.com/deleted_files');
+    await expect(card.locator('a', { hasText: 'Open Dropbox Deleted files (your own step)' })).toHaveAttribute('href', 'https://www.dropbox.com/deleted_files');
   });
 
   test('Dropbox line says nothing is published when no totals file exists, and the Dropbox links are present', async ({ page }) => {
