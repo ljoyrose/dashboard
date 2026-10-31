@@ -303,7 +303,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 30 Oct 2026 | Phone install: Factory, Food and Marketplace were not on the service worker list, so they did not open offline | "@regression every published hub page is on the service worker list" (tests/mocked/pwa-and-keys.spec.js) |
 | 30 Oct 2026 | Money Hub on a phone: sideways-scrolling tables could not be reached by keyboard (axe scrollable-region-focusable; CI fonts made the table overflow) | "@regression Money Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-money-scroll.spec.js) |
 | 30 Oct 2026 | CD Hub on a phone: sideways-scrolling tables and the table map could not be reached by keyboard (axe scrollable-region-focusable) | "@regression CD Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-cdhub-scroll.spec.js) |
-| 31 Oct 2026 | (found in live checks) Marketplace Home said "Engine: no status yet" before the sheet had loaded | "v11.11 L-10: on a return visit (saved sign-in) the line says reading the sheet… until the first read" @regression (tests/mocked/marketplace.spec.js) |
+| 31 Oct 2026 | (found in live checks) Marketplace Home said "Engine: no status yet" before the sheet had loaded | "v11.11 L-10: on a return visit (saved sign-in) the line says…" @regression (tests/mocked/marketplace.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
