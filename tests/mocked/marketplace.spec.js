@@ -810,6 +810,92 @@ test('v11.10 Fix 5: the same item sold twice = two cards, each with its order no
     const last = await page.locator('#view .card').last().boundingBox(), bar = await page.locator('#tabs').boundingBox();
     expect(last.y + last.height).toBeLessThanOrEqual(bar.y);
   });
+  // Engine v11.11 (L-10, B, E, F, G, I, C). Invented rows only: FAKE / SAMPLE values, no buyer details.
+  const status = (o) => ['ENGINE|status', 'status', '', 'Engine v11.11', JSON.stringify(Object.assign({ kind: 'status', version: 'v11.11', mode: 'TEST', last_run: ago(3), last_error: '' }, o || {})), ago(3)];
+  const growth = (o) => ['GROWTH|numbers', 'growth', '', 'Growth numbers', JSON.stringify(Object.assign({ kind: 'growth', version: 'MKT-34 v2', refunds_read: true,
+    morning: { ok: true, label: 'Takings, last 7 days (after refunds)', value: '£27.00', sub: 'cost known 1/2', mode: 'takings' },
+    kpis: [{ k: 'Takings 7 days', v: '£30.00' }, { k: 'Takings 30 days', v: '£120.00' }, { k: 'Sales 30 days', v: '9' }, { k: 'Average sale', v: '£13.33' }, { k: 'Cost known', v: '5/9' }] }, o || {})), ago(3)];
+  test('v11.11 L-10: Home and Numbers show one engine line: version, TEST, last run, no errors; an error or a stale run shows in red', async ({ page }) => {
+    await sheets(page, [status(), ...sampleRows()]);
+    await open(page);
+    const line = page.locator('#view [data-engine]');
+    await expect(line).toHaveCount(1);
+    await expect(line).toContainText(/^Engine v11\.11 · TEST · last run \d\d:\d\d · no errors$/);
+    await expect(line.locator('.red')).toHaveCount(0);
+    await expect(page.locator('#view .needs')).toHaveText('Needs you: 2');   // the status row never counts as a job
+    await page.evaluate(() => { location.hash = '#/numbers'; });
+    await expect(page.locator('#view [data-engine]')).toContainText('Engine v11.11 · TEST');
+  });
+  test('v11.11 L-10: the last error and a run over 40 minutes old are named in red; no status row says so', async ({ page }) => {
+    await sheets(page, [status({ last_run: ago(90), last_error: '2026-10-31T09:00 SAMPLE error text' }), ...sampleRows()]);
+    await open(page);
+    const line = page.locator('#view [data-engine]');
+    await expect(line.locator('.why.red')).toHaveText(['no run for over 40 minutes', 'Last error: 2026-10-31T09:00 SAMPLE error text']);
+    await expect(line).not.toContainText('no errors');
+  });
+  test('v11.11 L-10: with no status row the line says so', async ({ page }) => {
+    await sheets(page, sampleRows());
+    await open(page);
+    await expect(page.locator('#view [data-engine]')).toHaveText('Engine: no status yet');
+  });
+  test('v11.11 B/E/F: Numbers shows the morning number and KPI tiles in the house tiles, the A note and the ads line; Home shows the morning line', async ({ page }) => {
+    const note = ['NOTE|baselines-A', 'note', '', 'SAMPLE baseline note', JSON.stringify({ kind: 'note', item: 'A', text: 'SAMPLE: baselines agree, £1,072.42 net 5 Aug–27 Oct.' }), ago(3)];
+    await sheets(page, [status(), growth({ ads: { fees: '£3.00', pct: 12.5, over: true } }), note, ...sampleRows()]);
+    await open(page);
+    await expect(page.locator('#view [data-morning]')).toHaveText('Takings, last 7 days (after refunds): £27.00 (cost known 1/2) · Numbers');
+    await page.evaluate(() => { location.hash = '#/numbers'; });
+    const tiles = page.locator('#view [data-growth] .tile');
+    await expect(tiles).toHaveCount(6);
+    await expect(tiles.first()).toContainText('£27.00');
+    await expect(tiles.nth(5)).toContainText('Cost known5/9');
+    await expect(page.locator('#view [data-anote]')).toContainText('£1,072.42');
+    await expect(page.locator('#view p.what.red', { hasText: 'Ads: £3.00 = 12.5% of known profit' })).toHaveCount(1);
+  });
+  test('v11.11 B: before item A is agreed the morning number waits and says why; Home shows nothing for it', async ({ page }) => {
+    await sheets(page, [growth({ morning: { ok: false, why: 'Waits for item A (baselines agree)' } }), ...sampleRows()]);
+    await open(page);
+    await expect(page.locator('#view [data-morning]')).toHaveCount(0);
+    await page.evaluate(() => { location.hash = '#/numbers'; });
+    await expect(page.locator('#view')).toContainText('Morning number: Waits for item A (baselines agree)');
+    await expect(page.locator('#view [data-growth] .tile')).toHaveCount(5);
+  });
+  test('v11.11 G/I/F: a check card with engine answer options shows one button per option (first is main) and a tap writes that option', async ({ page }) => {
+    const d = { kind: 'refund_reason', why: 'Order O-SAMPLE-1 was refunded. Why?', options: ['Wrong item', 'Damaged', 'Not as described', 'Buyer changed mind', 'Other'] };
+    const writes = await sheets(page, [['GROWTH|refund|O-SAMPLE-1', 'check', '', 'Refund: SAMPLE lead', JSON.stringify(d), ago(5)]]);
+    await open(page, '#/decide');
+    const card = page.locator('.card', { hasText: 'Refund: SAMPLE lead' });
+    await expect(card.locator('.acts button')).toHaveText(d.options);
+    await expect(card.locator('.acts button.main')).toHaveText('Wrong item');
+    await expect(card.locator('[data-v="Yes"]')).toHaveCount(0);
+    await card.locator('[data-v="Damaged"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Marketplace!G2:J2'); expect(writes[0].body.values[0][0]).toBe('Damaged');
+  });
+  test('v11.11 C: cost card: own item says "£0 declutter"; a restock item (supplier known) has no £0 button', async ({ page }) => {
+    const d = { kind: 'cost', item_sku: 'SKU-FAKE-1', listing_id: 'L1', platform: 'eBay', price: '£12.00', times_sold: 1, last_price: '£11.00' };
+    await sheets(page, [['CST|SKU-FAKE-1', 'cost', 'Other', 'Sample mug', JSON.stringify(Object.assign({ declutter: true }, d)), ago(5)],
+      ['CST|SKU-FAKE-2', 'cost', 'Other', 'Sample treats', JSON.stringify(Object.assign({}, d, { item_sku: 'SKU-FAKE-2', restock: true, suppliers: ['Sample Supplier'], last_supplier: 'Sample Supplier' })), ago(4)]]);
+    await open(page, '#/decide');
+    await page.locator('[data-action="all"]').click();
+    await expect(page.locator('.card', { hasText: 'Sample mug' }).locator('[data-v="Own"]')).toHaveText('£0 declutter');
+    const rs = page.locator('.card', { hasText: 'Sample treats' });
+    await expect(rs.locator('[data-v="Own"]')).toHaveCount(0);
+    await expect(rs).toContainText('It cannot be £0');
+  });
+  test('v11.11: the house look holds on Numbers with the engine line, growth tiles and an error, and on a check card with options', async ({ page }) => {
+    await sheets(page, [status({ last_error: 'SAMPLE error' }), growth({ ads: { fees: '£3.00', pct: 12.5, over: true } }),
+      ['GROWTH|big|SKU-FAKE', 'check', '', 'SAMPLE fish treats: 100 in stock at £26.25', JSON.stringify({ kind: 'big_line', why: 'Is this right?', options: ['Yes, it is right', 'No, I will fix it'] }), ago(5)]]);
+    await open(page, '#/numbers');
+    for (const [w, h] of [[1280, 900], [390, 844]]) {
+      await page.setViewportSize({ width: w, height: h });
+      await page.evaluate(() => { location.hash = '#/numbers'; });
+      await expect(page.locator('#view [data-growth]')).toBeVisible();
+      expect(await page.evaluate(auditLook), `numbers ${w}`).toEqual([]);
+      await page.evaluate(() => { location.hash = '#/decide'; });
+      await expect(page.locator('#view .card')).toHaveCount(1);
+      expect(await page.evaluate(auditLook), `decide ${w}`).toEqual([]);
+    }
+  });
 });
 
 // House look (LINKS-COMFORT-BRIEF v3 + Lisa's extra rules, 28 Oct 2026), checked by computed style in the browser.
