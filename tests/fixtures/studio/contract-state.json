@@ -1,0 +1,550 @@
+{
+  "generated_at": "2026-10-22T10:00:00.000Z",
+  "studio": {
+    "on": true,
+    "mode": "TEST",
+    "budgetMonth": 50,
+    "spentMonth": 20
+  },
+  "health": {
+    "lastRun": "2026-10-22T09:00:00.000Z",
+    "jobs": [
+      {
+        "job": "syncState",
+        "result": "OK",
+        "last": "2026-10-22T09:00:00.000Z",
+        "note": "sample"
+      }
+    ]
+  },
+  "accounts": [
+    {
+      "id": "acc-owner",
+      "name": "Sample owner",
+      "kind": "owner",
+      "role": "owner",
+      "emails": [
+        "owner@example.test"
+      ],
+      "protect": "no",
+      "protectEffective": "no"
+    }
+  ],
+  "products": [
+    {
+      "id": "sp-course",
+      "name": "Sample course",
+      "accountId": "acc-owner",
+      "brandId": "sb-north",
+      "protect": "no"
+    }
+  ],
+  "brands": [
+    {
+      "id": "sb-north",
+      "name": "Sample Brand North",
+      "accountId": "acc-owner",
+      "colour": 7,
+      "stage": "Running",
+      "setupChecklist": [
+        {
+          "name": "Name checked",
+          "ok": true
+        }
+      ],
+      "groupId": "grp-sample",
+      "voiceId": "vo-warm",
+      "lookId": "look-wordmark",
+      "shortName": "North",
+      "sheetRowUrl": "https://docs.google.com/spreadsheets/d/1SAMPLEsheet000000000000/edit#gid=0&range=A2",
+      "kit": {
+        "logo": "https://www.example.com/north-logo.png",
+        "website": "https://www.example.com/north",
+        "colours": [
+          "#A570D1"
+        ],
+        "fontHeading": "Lexend",
+        "fontBody": "Inter",
+        "canvaKitUrl": "https://www.example.com/sample-brand-kit"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "id": "grp-sample",
+      "name": "Sample group"
+    }
+  ],
+  "assets": [
+    {
+      "id": "sa-rev1",
+      "title": "Sample checklist PDF",
+      "accountId": "acc-owner",
+      "brandIds": [
+        "sb-north"
+      ],
+      "stage": 7,
+      "type": "pdf",
+      "who": "claude",
+      "fit": "AUTO",
+      "flags": [
+        "needs-input"
+      ],
+      "updated": "2026-10-20T09:00:00.000Z",
+      "stageSince": "2026-10-18T09:00:00.000Z",
+      "evergreen": false,
+      "dated": true,
+      "eventDate": "2026-10-28",
+      "size": "M",
+      "priority": "high",
+      "productId": "sp-course",
+      "projectName": "Sample project",
+      "recipe": "Sample recipe",
+      "provider": "Claude",
+      "cost": 1.5,
+      "rating": 4,
+      "version": 2,
+      "reviewLink": "https://drive.google.com/file/d/1SAMPLEreviewDoc00000000000/view",
+      "docLink": "https://docs.google.com/document/d/1SAMPLEdocLink000000000000/edit",
+      "language": "en-GB",
+      "length": "12 pages",
+      "test": "ab-sample",
+      "result": "A won",
+      "gate": {
+        "question": "Lock the spec?",
+        "at": "2026-10-19T09:00:00.000Z"
+      },
+      "kitId": "kit-lead",
+      "groupId": "grp-sample",
+      "playbookId": "pb-launch",
+      "outcome": "attract",
+      "frameworkId": "fw-pas",
+      "voiceId": "vo-warm",
+      "lookId": "look-wordmark",
+      "masterId": "sa-master",
+      "purpose": "refresh",
+      "formatIds": [
+        "fmt-a4"
+      ],
+      "sourceIds": [
+        "src-1"
+      ],
+      "seriesId": "ser-1",
+      "seriesNo": 1,
+      "styleId": "sty-1",
+      "destination": "Sample shop",
+      "audience": "Sample readers",
+      "notes": "Sample note",
+      "parentId": "sa-parent",
+      "order": 1,
+      "thumbUrl": "https://www.example.com/sample-thumb.png",
+      "linkKind": "doc",
+      "audioVoiceId": "vo-warm",
+      "avatarId": "av-sample",
+      "legal": {
+        "setId": "ls-1",
+        "setName": "Sample legal set",
+        "entity": "Sample Entity Ltd"
+      },
+      "parts": {
+        "total": 4,
+        "approved": 2,
+        "words": 3000,
+        "targetWords": 8000
+      },
+      "results": {
+        "views": 120,
+        "clicks": 14,
+        "sales": 2,
+        "last": "2026-10-21T09:00:00.000Z"
+      },
+      "ask": {
+        "question": "Which cover colour?",
+        "status": "open"
+      },
+      "delivery": {
+        "status": "sent",
+        "link": "https://www.example.com/sample-delivery"
+      },
+      "protect": "yes",
+      "protectSource": "account",
+      "paid": true,
+      "disclose": "yes",
+      "clientMaterial": true,
+      "sourceRights": "own",
+      "hasProof": true,
+      "needsWatermark": true,
+      "proofLowRes": true
+    }
+  ],
+  "ideas": [
+    {
+      "id": "si-1",
+      "title": "Sample ebook idea",
+      "accountId": "acc-owner",
+      "brandIds": [
+        "sb-north"
+      ],
+      "stage": 0,
+      "type": "ebook",
+      "who": "lisa",
+      "fit": "HAND",
+      "flags": [
+        "needs-input"
+      ],
+      "updated": "2026-10-20T09:00:00.000Z",
+      "stageSince": "2026-10-18T09:00:00.000Z",
+      "evergreen": false,
+      "dated": true,
+      "eventDate": "2026-10-28",
+      "size": "M",
+      "priority": "high",
+      "productId": "sp-course",
+      "projectName": "Sample project",
+      "recipe": "Sample recipe",
+      "provider": "Claude",
+      "cost": 1.5,
+      "rating": 4,
+      "version": 2,
+      "reviewLink": "https://drive.google.com/file/d/1SAMPLEreviewDoc00000000000/view",
+      "docLink": "https://docs.google.com/document/d/1SAMPLEdocLink000000000000/edit",
+      "language": "en-GB",
+      "length": "12 pages",
+      "test": "ab-sample",
+      "result": "A won",
+      "gate": {
+        "question": "Lock the spec?",
+        "at": "2026-10-19T09:00:00.000Z"
+      },
+      "kitId": "kit-lead",
+      "groupId": "grp-sample",
+      "playbookId": "pb-launch",
+      "outcome": "attract",
+      "frameworkId": "fw-pas",
+      "voiceId": "vo-warm",
+      "lookId": "look-wordmark",
+      "masterId": "sa-master",
+      "purpose": "refresh",
+      "formatIds": [
+        "fmt-a4"
+      ],
+      "sourceIds": [
+        "src-1"
+      ],
+      "seriesId": "ser-1",
+      "seriesNo": 1,
+      "styleId": "sty-1",
+      "destination": "Sample shop",
+      "audience": "Sample readers",
+      "notes": "Sample note",
+      "parentId": "sa-parent",
+      "order": 1,
+      "thumbUrl": "https://www.example.com/sample-thumb.png",
+      "linkKind": "doc",
+      "audioVoiceId": "vo-warm",
+      "avatarId": "av-sample",
+      "legal": {
+        "setId": "ls-1",
+        "setName": "Sample legal set",
+        "entity": "Sample Entity Ltd"
+      },
+      "parts": {
+        "total": 4,
+        "approved": 2,
+        "words": 3000,
+        "targetWords": 8000
+      },
+      "results": {
+        "views": 120,
+        "clicks": 14,
+        "sales": 2,
+        "last": "2026-10-21T09:00:00.000Z"
+      },
+      "ask": {
+        "question": "Which cover colour?",
+        "status": "open"
+      },
+      "delivery": {
+        "status": "sent",
+        "link": "https://www.example.com/sample-delivery"
+      },
+      "protect": "yes",
+      "protectSource": "account",
+      "paid": true,
+      "disclose": "yes",
+      "clientMaterial": true,
+      "sourceRights": "own",
+      "hasProof": true,
+      "needsWatermark": true,
+      "proofLowRes": true
+    }
+  ],
+  "playbooks": [
+    {
+      "id": "pb-launch",
+      "name": "Sample launch playbook",
+      "outcome": "convert",
+      "steps": [
+        {
+          "kind": "kit",
+          "id": "kit-lead",
+          "text": "Sample lead magnet kit"
+        }
+      ],
+      "groupId": "grp-sample",
+      "link": "https://docs.google.com/document/d/1SAMPLEplaybook0000000000/edit",
+      "notes": "Sample notes",
+      "status": "active"
+    }
+  ],
+  "packs": [
+    {
+      "id": "pk-funnel",
+      "name": "Sample funnel pack",
+      "kind": "funnel",
+      "kitIds": [
+        "kit-lead"
+      ],
+      "notes": "Sample notes",
+      "price": 100,
+      "priceBasis": "ex",
+      "priceEx": 100,
+      "priceInc": 120,
+      "sourcePrice": 100,
+      "readyDays": 3,
+      "groupId": "grp-sample",
+      "link": "https://docs.google.com/document/d/1SAMPLEkitLink00000000000/edit",
+      "status": "active"
+    }
+  ],
+  "kits": [
+    {
+      "id": "kit-lead",
+      "name": "Sample lead magnet kit",
+      "type": "lead",
+      "needs": [
+        "doc-fill"
+      ],
+      "formatIds": [
+        "fmt-a4"
+      ],
+      "brickIds": [
+        "br-hook"
+      ],
+      "frameworkId": "fw-pas",
+      "voiceId": "vo-warm",
+      "lookId": "look-wordmark",
+      "notes": "Sample notes",
+      "makePromptId": "br-hook",
+      "checkPromptId": "br-hook",
+      "price": 100,
+      "priceBasis": "ex",
+      "priceEx": 100,
+      "priceInc": 120,
+      "sourcePrice": 100,
+      "readyDays": 3,
+      "groupId": "grp-sample",
+      "link": "https://docs.google.com/document/d/1SAMPLEkitLink00000000000/edit",
+      "status": "active"
+    }
+  ],
+  "bricks": [
+    {
+      "id": "br-hook",
+      "name": "Sample hook line",
+      "kind": "hook",
+      "text": "Sample hook text",
+      "link": "https://www.example.com/sample-brick",
+      "notes": "Sample notes"
+    }
+  ],
+  "frameworks": [
+    {
+      "id": "fw-pas",
+      "name": "Problem, agitate, solve",
+      "steps": [
+        "Problem",
+        "Agitate",
+        "Solve"
+      ],
+      "when": "Lead magnets",
+      "notes": "Sample notes",
+      "source": "Sample source"
+    }
+  ],
+  "voices": [
+    {
+      "id": "vo-warm",
+      "name": "Sample warm expert",
+      "steps": [
+        "Short sentences"
+      ],
+      "when": "Everything for Brand North",
+      "notes": "Sample notes",
+      "brandId": "sb-north",
+      "kind": "writing",
+      "consent": "yes"
+    }
+  ],
+  "looks": [
+    {
+      "id": "look-wordmark",
+      "name": "Wordmark",
+      "steps": [
+        "The name in one typeface"
+      ],
+      "when": "Short, clear names",
+      "notes": "Sample notes",
+      "kind": "logo"
+    }
+  ],
+  "formats": [
+    {
+      "id": "fmt-a4",
+      "name": "Print A4",
+      "channel": "Print",
+      "ratio": "1:1.41",
+      "size": "210x297mm + 3mm bleed",
+      "maxLength": "12 pages",
+      "safeZone": "3mm margin",
+      "fileType": "pdf",
+      "notes": "Sample notes"
+    }
+  ],
+  "sources": [
+    {
+      "id": "src-1",
+      "targetId": "sa-rev1",
+      "url": "https://www.example.com/sample-inspiration",
+      "fileName": "sample.pdf",
+      "note": "Sample note",
+      "rights": "inspiration"
+    }
+  ],
+  "tools": [
+    {
+      "product": "Sample writing tool",
+      "thing": "Messages",
+      "unit": "messages",
+      "allowance": 200,
+      "used": 20,
+      "left": 180,
+      "period": "month",
+      "resetsOn": "2026-10-31",
+      "carriesOver": true,
+      "fit": "AUTO",
+      "capabilities": [
+        "doc-fill"
+      ],
+      "inputs": [
+        "text"
+      ],
+      "outputs": [
+        "fmt-a4"
+      ],
+      "accountNotes": "Sample notes",
+      "costPerUnit": 0.1,
+      "audit": "Sample audit"
+    }
+  ],
+  "gaps": [
+    {
+      "capability": "video-reformat",
+      "format": "fmt-a4",
+      "ratio": "1:1.41",
+      "reason": "no owned tool can do video-reformat at 1:1.41",
+      "assetIds": [
+        "sa-rev1"
+      ]
+    }
+  ],
+  "failed": [
+    {
+      "assetId": "sa-rev1",
+      "kind": "approve"
+    }
+  ],
+  "comments": [
+    {
+      "id": "cm-1",
+      "assetId": "sa-rev1",
+      "thread": "team",
+      "by": "Team member",
+      "text": "Check the cover crop.",
+      "at": "2026-10-21T11:00:00.000Z"
+    }
+  ],
+  "suggestions": [
+    {
+      "id": "sug-1",
+      "kind": "kit",
+      "targetId": "kit-lead",
+      "reason": "Redo rate is high",
+      "proposal": "Shorten the lead magnet kit"
+    }
+  ],
+  "learning": {
+    "tools": [
+      {
+        "id": "Sample writing tool",
+        "n": 5,
+        "firstTimeRate": 0.6,
+        "redoRate": 0.2,
+        "avgStars": 4.2,
+        "topReasons": [
+          {
+            "reason": "too long"
+          }
+        ]
+      }
+    ],
+    "kits": [
+      {
+        "id": "kit-lead",
+        "n": 5,
+        "firstTimeRate": 0.6,
+        "redoRate": 0.2,
+        "avgStars": 4.2,
+        "topReasons": [
+          {
+            "reason": "too long"
+          }
+        ]
+      }
+    ]
+  },
+  "legalSets": [
+    {
+      "id": "ls-1",
+      "name": "Sample legal set",
+      "entity": "Sample Entity Ltd",
+      "brandIds": [
+        "sb-north"
+      ]
+    }
+  ],
+  "styles": [
+    {
+      "id": "sty-1",
+      "name": "Sample style",
+      "brandId": "sb-north"
+    }
+  ],
+  "series": [
+    {
+      "id": "ser-1",
+      "name": "Sample series",
+      "brandId": "sb-north"
+    }
+  ],
+  "vatRates": [
+    {
+      "country": "GB",
+      "name": "United Kingdom",
+      "rate": 20,
+      "checked": "2026-10-01",
+      "home": true
+    }
+  ],
+  "priceShow": "ex"
+}
