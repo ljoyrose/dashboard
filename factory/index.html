@@ -168,6 +168,8 @@
   span.pill.ps { border-color: var(--ljr-2); } span.pill.ps .ti { color: var(--ljr-2-text); }
   span.pill.ps.ok { border-color: var(--ljr-5); } span.pill.ps.ok .ti { color: var(--ljr-5-text); }
   .pitem > span.pill.ps { margin: 8px 0 4px; }
+  .nextstep .pill { height: auto; min-height: 24px; white-space: normal; max-width: 100%; }   /* a long step wraps inside its ring */
+  .nr { color: var(--muted); font-weight: 400; }   /* "not recorded": the grey words */
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ljr-0)); flex: none; display: inline-block; }
 
   /* Rooms: a white card on the soft line, its stage colour as a 3px bar on the left (as Links). */
@@ -193,7 +195,15 @@
   .stage.d .n { background: var(--t-ok); border-color: var(--r-ok); }
   .stage.c .n { background: var(--ljr-6-tint); border-color: var(--r-sales); }
   .stage.c { font-weight: 600; }
-  .stage .r { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+  .stage .r { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .stage { flex-wrap: wrap; }
+  /* Per-stage checks: read-only rings, words ink. Pass = green ring, fail = rose ring + tint, not run = the control line. */
+  .ck { font-size: 13px; font-weight: 600; color: var(--ink); border: 1px solid var(--ctl); border-radius: var(--radius); height: 22px; padding: 0 6px; display: inline-flex; align-items: center; white-space: nowrap; }
+  .ck[data-ck="pass"] { border-color: var(--r-ok); } .ck[data-ck="fail"] { border-color: var(--r-risk); background: var(--t-risk); }
+  details.fold { margin: 0 0 8px 34px; }
+  details.fold > summary { font-weight: 400; color: var(--muted); }
+  details.fold[open] > summary { margin-bottom: 4px; }
+  details.fold .lines { padding-left: 0; }
   .lines { list-style: none; margin: 0 0 8px; padding: 0 0 0 34px; }
   .lines li { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 4px 0; }
   .lines li .who { margin-left: auto; font-size: 13px; color: var(--muted); }
@@ -538,7 +548,7 @@
     var n = stageNo(t.status), slot = n === null ? 0 : (n <= 3 ? 7 : n <= 5 ? 4 : n === 6 ? 3 : n === 7 ? 6 : 5);
     var subs = (S.lists.work || []).filter(function (x) { return x.tags.indexOf('app-' + t.id) >= 0 && x.tags.indexOf('line') >= 0; });
     var tpl = (S.lists.template || []).filter(function (x) { return x.parent; });
-    var html = '<div class="card"><div class="hero"><div><h2>' + esc(t.name) + '</h2><p>' + (n === null ? '' : '<span class="step">Step ' + n + ':</span> ' + esc(STAGES[n]) + ' · ') + esc(cap(t.status)) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' +
+    var html = '<div class="card"><div class="hero"><div><h2>' + esc(t.name) + '</h2><p>' + (n === null ? '' : '<span class="step">Step ' + n + ':</span> ' + esc(STAGES[n]) + ' · ') + esc(cap(t.status)) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' + nextStep(t) +
       '<div class="pills" style="margin-top:12px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<div id="codes" class="codes"><span class="q">…</span></div>' +
       '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span>' + linkStrip(t, false) + '<button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
@@ -548,16 +558,22 @@
       var cls = n !== null && i < n ? 'd' : i === n ? 'c' : '';
       var mineLines = subs.filter(function (x) { return x.tags.indexOf('st-' + i) >= 0; });
       var lines = mineLines.length ? mineLines : tpl.filter(function (x) { return x.tags.indexOf('st-' + i) >= 0; });
-      var done = lines.filter(function (x) { return !isOpen(x); }).length;
+      // Checks (JOB 32): this app's own lines are pass (closed), fail (a status with "fail") or not run (open). Template lines
+      // were never run for this app, so they all count as not run. No lines at all: "not recorded".
+      var fail = mineLines.filter(function (x) { return /fail/i.test(x.status); }).length;
+      var pass = mineLines.filter(function (x) { return !isOpen(x); }).length, none = lines.length - pass - fail;
       var isOpenRow = open[i] === undefined ? i === n : open[i];
-      html += '<div class="stage ' + cls + '" data-stage="' + i + '"><span class="n" aria-hidden="true">' + (cls === 'd' ? '\u2713' : cls === 'c' ? '\u25cf' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i === 6 ? ' ' + ic('coin') : '') +
-        '<span class="r">' + (mineLines.length ? done + ' / ' + lines.length : lines.length ? lines.length + ' lines' : '') + '</span></div>';
+      html += '<div class="stage ' + cls + '" data-stage="' + i + '"><span class="n" aria-hidden="true">' + (cls === 'd' ? '✓' : cls === 'c' ? '●' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i === 6 ? ' ' + ic('coin') : '') +
+        '<span class="r">' + (lines.length ? (pass ? '<span class="ck" data-ck="pass">✓ ' + pass + ' pass</span>' : '') + (fail ? '<span class="ck" data-ck="fail">✗ ' + fail + ' fail</span>' : '') +
+          (none ? '<span class="ck" data-ck="none">' + none + ' not run</span>' : '') : '<span class="nr">not recorded</span>') + '</span></div>';
       if (isOpenRow) {
-        html += mineLines.length ? '<div class="clines">' + lines.map(function (x) { return row(x, x.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view'); }).join('') + (i === 6 ? '<ul class="lines">' + sendsFor(t) + '</ul>' : '') + '</div>' : '<ul class="lines">' + lines.map(function (x) {
-          var who = (x.tags.filter(function (g) { return /^who-/.test(g); })[0] || '').replace('who-', '');
-          return '<li>' + ic(isOpen(x) ? 'dot' : 'tick') + esc(x.name.replace(/^(TEST-)?[^·]+ · /, '').replace(/^\d\s·\s/, '')) + '<span class="who">' + esc(who) + '</span></li>';
-        }).join('') + (!mineLines.length && lines.length ? '<li class="muted">Template</li>' : '') +
-        (i === 6 ? sendsFor(t) : '') + '</ul>';
+        // The template's rule lines (53 on Step 6) sit in a closed fold; prompts stay in view.
+        html += mineLines.length ? '<div class="clines">' + lines.map(function (x) { return row(x, x.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view'); }).join('') + (i === 6 ? '<ul class="lines">' + sendsFor(t) + '</ul>' : '') + '</div>' :
+          (lines.length ? '<details class="arch fold" data-fold="' + i + '"><summary>' + lines.length + ' rule lines</summary><ul class="lines">' + lines.map(function (x) {
+            var who = (x.tags.filter(function (g) { return /^who-/.test(g); })[0] || '').replace('who-', '');
+            return '<li>' + ic(isOpen(x) ? 'dot' : 'tick') + esc(x.name.replace(/^(TEST-)?[^·]+ · /, '').replace(/^\d\s·\s/, '')) + '<span class="who">' + esc(who) + '</span></li>';
+          }).join('') + '<li class="muted">Template</li></ul></details>' : '') +
+          (i === 6 && sendsFor(t) ? '<ul class="lines">' + sendsFor(t) + '</ul>' : '');
       }
     });
     html += '</div>';
@@ -575,11 +591,30 @@
     return html;
   }
   // On the card: this app's open decisions and its prompts (Sends), whatever the stage. "Where is my next prompt?" lives here.
-  function waiting(t) {
+  function asksOf(t) {
     var key = ((t.tags.filter(function (g) { return /^app-/.test(g); })[0] || '').replace('app-', ''));
     var word = key && key !== t.id ? new RegExp('\\b' + key.replace(/[^a-z0-9]/gi, '') + '\\b', 'i') : null;
-    var ds = decisions().filter(function (d) { return String(d.desc).indexOf('GATE: ' + t.id + ' ') >= 0 || (word && word.test(d.name)); });
-    var ss = (S.lists.sends || []).filter(function (x) { return key && x.tags.indexOf('app-' + key) >= 0 && isOpen(x); });
+    return { ds: decisions().filter(function (d) { return String(d.desc).indexOf('GATE: ' + t.id + ' ') >= 0 || (word && word.test(d.name)); }),
+      ss: (S.lists.sends || []).filter(function (x) { return key && x.tags.indexOf('app-' + key) >= 0 && isOpen(x); }) };
+  }
+  // Next step and who it waits on (JOB 32), read only from af-state.json: the first open line of this stage (else any open line),
+  // else the first open decision or prompt. No engine field holds these yet, so a gap says "not recorded".
+  function nextOf(t) {
+    var n = stageNo(t.status), a = asksOf(t);
+    var own = (S.lists.work || []).filter(function (x) { return x.tags.indexOf('app-' + t.id) >= 0 && x.tags.indexOf('line') >= 0 && isOpen(x); })
+      .sort(function (x, y) { return x.created - y.created; });
+    var x = own.filter(function (y) { return y.tags.indexOf('st-' + n) >= 0; })[0] || own[0] || a.ds[0] || a.ss[0];
+    if (!x) return null;
+    var who = whoOf(x).join(' · ') || line(x, /^Waits on:\s*/i);
+    return { step: String(x.name).replace(/^(TEST-)?[^·]+ · /, '').replace(/^\d\s·\s/, ''), who: who };
+  }
+  function nextStep(t) {
+    var x = nextOf(t), nr = '<span class="nr">not recorded</span>';
+    return '<div class="pills nextstep" style="margin-top:12px"><span class="pill" data-next="step"><i class="ti ti-arrow-right"></i>Next: ' + (x ? esc(x.step) : nr) + '</span>' +
+      '<span class="pill" data-next="who"><i class="ti ti-user"></i>Waits on: ' + (x && x.who ? esc(x.who) : nr) + '</span></div>';
+  }
+  function waiting(t) {
+    var a = asksOf(t), ds = a.ds, ss = a.ss;
     if (!ds.length && !ss.length) return '';
     return '<div class="stage c"><span class="n">' + ic('stamp') + '</span>Waiting on you<span class="r">' + cnt(ds.length + ss.length) + '</span></div><ul class="lines">' +
       ds.map(function (d) { return '<li>' + ic('stamp') + '<a href="#/decide">' + esc(d.name.replace(/^TEST-/, '')) + '</a></li>'; }).join('') +
