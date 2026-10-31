@@ -11,7 +11,6 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '..', '..', 'config.js'), '
 const CFG = ctx.window.DASH_CONFIG; // the listings id and Lisa's address come from config.js (the only place the privacy allow-list permits them)
 const reEsc = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const LISTINGS = new RegExp('googleapis\\.com/drive/v3/files/' + reEsc(CFG.marketplace.listingsFileId) + '\\?alt=media');
-const OWNER = CFG.money.owner;
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'marketplace', 'index.html'), 'utf8');
 const SHEETS = /^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\//;
@@ -175,6 +174,28 @@ test.describe('Marketplace page', () => {
     await page.goto('marketplace/#/go');
     await expect(page.locator('#view')).toContainText('relist on Depop by hand, then tap Go');
   });
+  test('public pages hold no email address: no "@" address, no login_hint, no authuser (Stage 0A, D1 = B) @regression', async () => {
+    for (const f of ['index.html', 'privacy.html']) {
+      const src = fs.readFileSync(path.join(__dirname, '..', '..', 'marketplace', f), 'utf8');
+      expect(src, f).not.toMatch(/[A-Za-z0-9._+-]+(@|%40)[A-Za-z0-9-]+\.[A-Za-z]{2,}/);
+      expect(src, f).not.toMatch(/login_hint|authuser/);   // mailto addresses are caught by the line above
+    }
+  });
+  test('signed out, signed in on every tab, and the privacy page: no email address in the shown text or any link @regression', async ({ page }) => {
+    const ADDR = /[A-Za-z0-9._+-]+(@|%40)[A-Za-z0-9-]+\.[A-Za-z]{2,}/;
+    const shown = () => page.evaluate(() => document.body.innerText + '\n' + [...document.querySelectorAll('a[href]')].map((a) => a.getAttribute('href')).join('\n'));
+    await sheets(page, sampleRows());
+    await page.goto('marketplace/#/me');
+    expect(await shown(), 'signed out').not.toMatch(ADDR);
+    await open(page, '#/me');
+    for (const tab of ['#/me', '#/do', '#/decide', '#/reply', '#/insights']) {
+      await page.goto('marketplace/' + tab);
+      await expect(page.locator('#view')).toBeVisible();
+      expect(await shown(), tab).not.toMatch(ADDR);
+    }
+    await page.goto('marketplace/privacy.html');
+    expect(await shown(), 'privacy').not.toMatch(ADDR);
+  });
   test('privacy policy page: public (no sign-in, no scripts), names the contact, says buyer details are not stored, tokens.css colours only', async ({ page }) => {
     const src = fs.readFileSync(path.join(__dirname, '..', '..', 'marketplace', 'privacy.html'), 'utf8');
     expect(src).not.toMatch(/<script/i);
@@ -182,7 +203,7 @@ test.describe('Marketplace page', () => {
     expect(src.replace(/<!--[\s\S]*?-->/g, '')).not.toMatch(/#[0-9a-f]{3,8}\b|rgb\(|hsl\(/i);
     await page.goto('marketplace/privacy.html');
     await expect(page.locator('h1')).toHaveText('Privacy policy');
-    await expect(page.locator(`a[href="mailto:${OWNER}"]`).first()).toBeVisible();
+    await expect(page.locator('main a', { hasText: 'contact page on the website' }).first()).toBeVisible();
     await expect(page.locator('main')).toContainText('does not store buyer names');
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
