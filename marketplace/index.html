@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
-<meta name="build" content="ljr-marketplace-2026-10-28-look">
+<meta name="build" content="ljr-marketplace-2026-10-29-no-emails">
 <title>Marketplace</title>
 <!-- Marketplace V2 (25 Oct 2026): tabs Home / Do now / Decide / Reply / Insights, person chips, packing mode, label sheet. PUBLIC repo: no data, no secrets. Ids come from ../config.js (DASH_CONFIG.marketplace);
      everything else is read at run time with Lisa's Google sign-in from the "Marketplace" tab of RR_OPEN-WORK, which the
@@ -385,7 +385,7 @@
   function why(status, msg) {
     if (/has not been used|is disabled|SERVICE_DISABLED/i.test(msg)) return 'the Google Sheets switch is off for the dashboard\'s Google project. Turn on "Google Sheets API" for it (one click), then reload.';
     if (/insufficient|scope/i.test(msg)) return 'Google did not give this page spreadsheet access. Sign out, sign in again and tick every box Google shows.';
-    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the Open work sheet. Sign in as lisa@puppyclassroom.com.';
+    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the Open work sheet. Sign in with the business Google account.';
     return 'Google said ' + status + (msg ? ': ' + msg : '');
   }
   function sheetUrl(range) { return 'https://sheets.googleapis.com/v4/spreadsheets/' + M.openWorkId + '/values/' + encodeURIComponent(range); }
@@ -445,7 +445,7 @@
   }
   // Every parcel card says what it is and what to do, with links that open in a new tab (Lisa 27 Oct: the dashboard is the
   // one place to work from; never leave her guessing what a card is about).
-  var MAIL = 'https://mail.google.com/mail/u/?authuser=lisa%40puppyclassroom.com#all/';
+  var MAIL = 'https://mail.google.com/mail/u/0/#all/';
   // Lisa 27 Oct: every card says when it was last updated (the engine's updated_at when it refreshed the card, else when it was made).
   function stamp(r, d) { var t = Date.parse(d.updated_at || r.created_at || ''); return isNaN(t) ? '' : '<div class="m">Updated ' + esc(new Date(t).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</div>'; }
   function ukDay(s) { var t = Date.parse(String(s || '').slice(0, 10)); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
@@ -603,7 +603,7 @@
         ((d.order || []).length ? '<p class="grp">Order list · ' + esc(d.basket) + '</p><div class="card inner">' + d.order.map(function (o) { return '<div class="row"><div class="txt">' + esc(o.title || o.code) + '</div><div>' + esc(o.qty) + '</div></div>'; }).join('') + '</div>' + (d.gap ? '<p class="what">' + esc(d.gap) + '</p>' : '') : '') +
         ((d.missing || []).length ? '<p class="what red">Missing: ' + esc(d.missing.join(' · ')) + '</p>' : '');
       if (r.answer) { h += '<div class="sent">✓ ' + esc(r.answer) + ' · saved, the engine applies it after 10 minutes</div></div>'; return; }
-      h += '<details><summary>Settings</summary>' + noteBox(r, 'min 100, free over 300, delivery 15, account AB123, phone 01234 567890, from orders@supplier.co.uk', 'Supplier terms') +
+      h += '<details><summary>Settings</summary>' + noteBox(r, 'min 100, free over 300, delivery 15, account AB123, phone 01632 960123, order email on their website', 'Supplier terms') +
         '<button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Set">Save</button></details></div>';
     });
     return h;
@@ -848,7 +848,7 @@
   document.addEventListener('click', function (e) {
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
-    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
+    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(); }
     if (a === 'signout') { token = null; DashAuth.clear(); rows = []; pics = null; avatars = null; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }
