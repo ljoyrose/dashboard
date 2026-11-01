@@ -181,7 +181,7 @@
       "read": ["key", "section", "category", "title", "detail", "created_at", "answer", "note", "answered_at", "answered_by", "applied_at", "applied_by"]
     },
     "Orders": {
-      "range": "Orders!A1:AD",
+      "range": "Orders!A1:AK",
       "by": "header",
       "header_row": 1,
       "columns": ["order_no", "order_type", "customer_orders", "source", "brand", "partner", "tracking", "check", "profit_est", "status", "s_no", "boxes", "shipped_date", "ga_total"],
