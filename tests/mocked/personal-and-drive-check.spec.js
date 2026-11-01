@@ -39,6 +39,11 @@ const askForWriteThen = async (page, action) => {
   await expect.poll(() => page.evaluate(() => window.__GIS_CALLS.request)).toBeGreaterThan(1);
 };
 const allow = (world, ids) => { world.byId(IDS.ledger).content = 'file_id\n' + ids.join('\n') + '\n'; };
+// Work My Drive (#/drives/work) only scans and lists; the rename and bin steps sit on #/bin (stage 2b).
+const toBin = async (page) => {
+  await page.locator('#mainNav a[data-nav="bin"]').click();
+  await expect(page.locator('#hereTitle')).toHaveText('Bin');
+};
 const tickAll = (page, group) => page.locator(`[data-action="selectall"][data-group="${group}"]`).click();
 
 test.describe('PC-Personal: rename and bin (mocked, writes only reach the pretend Drive)', () => {
@@ -47,10 +52,11 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
   test('Rename: needs the extra permission, then a confirm; Cancel changes nothing', async ({ page, guard }) => {
     const dialogs = [];
     page.on('dialog', async (d) => { dialogs.push(d.message()); await d.dismiss(); });
-    await page.goto('./#/personal');
+    await page.goto('./#/drives/work');
     await signIn(page);
     await page.locator('[data-action="pcpscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished/);
+    await toBin(page);
     await expect(page.locator('[data-action="pcpmark"]')).toBeDisabled();
     await tickAll(page, 'pcpmark');
     await askForWriteThen(page, 'pcpmark');
@@ -64,10 +70,11 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
 
   test('Rename: confirming renames only the two matches, nothing else, and deletes nothing', async ({ page, guard }) => {
     page.on('dialog', (d) => d.accept());
-    await page.goto('./#/personal');
+    await page.goto('./#/drives/work');
     await signIn(page);
     await page.locator('[data-action="pcpscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished/);
+    await toBin(page);
     await tickAll(page, 'pcpmark');
     await askForWriteThen(page, 'pcpmark');
     await page.locator('[data-action="pcpmark"]').click();
@@ -89,15 +96,15 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
     allow(guard.world, ['me-marked']);
     const dialogs = [];
     page.on('dialog', async (d) => { dialogs.push(d.message()); await d.dismiss(); });
-    await page.goto('./#/personal');
+    await page.goto('./#/bin');
     await signIn(page);
-    await expect(page.locator('#view')).toContainText(PCP + 'older.pdf');
-    await expect(page.locator('[data-action="pcpbin"]')).toBeDisabled();
-    await tickAll(page, 'pcpbin');
-    await askForWriteThen(page, 'pcpbin');
-    await page.locator('[data-action="pcpbin"]').click();
+    await expect(page.locator('#view [title="' + PCP + 'older.pdf"]')).toHaveCount(1);
+    await expect(page.locator('[data-action="sweep"]')).toBeDisabled();
+    await tickAll(page, 'bin');
+    await askForWriteThen(page, 'sweep');
+    await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => dialogs.length).toBe(1);
-    expect(dialogs[0]).toMatch(new RegExp('Move 1 selected personal file to the bin'));
+    expect(dialogs[0]).toMatch(/^Bin 1 file\? It goes to the Drive bin and can be restored for 30 days\./);
     await expect(page.locator('#view')).toContainText('Cancelled. Nothing binned.');
     expect(writes(guard.world)).toEqual([]);
     expect(guard.world.byId('me-marked').trashed).toBeFalsy();
@@ -106,12 +113,12 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
   test('Bin: confirming moves only the ZZ_DELETE_DRIVE_ file to the bin; ordinary files stay', async ({ page, guard }) => {
     allow(guard.world, ['me-marked']);
     page.on('dialog', (d) => d.accept());
-    await page.goto('./#/personal');
+    await page.goto('./#/bin');
     await signIn(page);
-    await expect(page.locator('#view')).toContainText(PCP + 'older.pdf');
-    await tickAll(page, 'pcpbin');
-    await askForWriteThen(page, 'pcpbin');
-    await page.locator('[data-action="pcpbin"]').click();
+    await expect(page.locator('#view [title="' + PCP + 'older.pdf"]')).toHaveCount(1);
+    await tickAll(page, 'bin');
+    await askForWriteThen(page, 'sweep');
+    await page.locator('[data-action="sweep"]').click();
     await expect(page.locator('#view')).toContainText('Found 1, moved 1 to the bin');
     expect(guard.world.byId('me-marked').trashed).toBe(true);
     for (const id of ['me-a', 'me-b', 'me-only', 'sh-a', 'sh-b', 'rr-1']) expect(guard.world.byId(id).trashed, id).toBeFalsy();
@@ -120,7 +127,7 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
   });
 
   test('a read-only sign-in never writes: scanning only reads', async ({ page, guard }) => {
-    await page.goto('./#/personal');
+    await page.goto('./#/drives/work');
     await signIn(page);
     await page.locator('[data-action="pcpscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished/);
@@ -135,27 +142,27 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
     guard.world.file('me-rr-marked', PCP + 'RR_copy.pdf', 'x', { parents: ['my-root'], driveId: null, mimeType: 'application/pdf' });
     allow(guard.world, ['me-marked', 'me-rr-marked', 'me-a', 'me-b']);
     page.on('dialog', (d) => d.accept());
-    await page.goto('./#/personal');
+    await page.goto('./#/drives/work');
     await signIn(page);
     await page.locator('[data-action="pcpscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished/);
+    await toBin(page);
     const rrRow = page.locator('li', { hasText: 'RR_archive.pdf' });
-    await expect(rrRow).toContainText('Name contains RR_, left out.');
-    await expect(rrRow.locator('input')).toBeDisabled();
+    await expect(rrRow).toHaveAttribute('title', 'Name contains RR_, left out.');
+    await expect(rrRow.locator('input')).toHaveCount(0);
     await tickAll(page, 'pcpmark');
-    await expect(rrRow.locator('input')).not.toBeChecked();
-    await expect(page.locator('[data-action="pcpmark"]')).toContainText('Rename selected (2)');
+    await expect(page.locator('[data-action="pcpmark"]')).toContainText('Rename these (2)');
     await askForWriteThen(page, 'pcpmark');
     await page.locator('[data-action="pcpmark"]').click();
     await expect(page.locator('#view')).toContainText('Renamed 2 to ' + PCP);
     expect(guard.world.byId('me-rr').name).toBe('RR_archive.pdf');
     expect(guard.world.byId('sh-a').name).toBe('invoice-a.pdf');
     const markedRr = page.locator('li', { hasText: PCP + 'RR_copy.pdf' });
-    await expect(markedRr.locator('input')).toBeDisabled();
-    await tickAll(page, 'pcpbin');
-    await expect(markedRr.locator('input')).not.toBeChecked();
-    await expect(page.locator('[data-action="pcpbin"]')).toContainText('Move selected (3)');
-    await page.locator('[data-action="pcpbin"]').click();
+    await expect(markedRr.locator('input')).toHaveCount(0);
+    await tickAll(page, 'bin');
+    await expect(page.locator('#view input[data-pick-group="pcpbin"]:checked')).toHaveCount(3);
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Bin these (3)');
+    await page.locator('[data-action="sweep"]').click();
     await expect(page.locator('#view')).toContainText('moved 3 to the bin');
     expect(guard.world.byId('me-marked').trashed).toBe(true);
     expect(guard.world.byId('me-a').trashed).toBe(true);
@@ -166,29 +173,31 @@ test.describe('PC-Personal: rename and bin (mocked, writes only reach the preten
   });
 
   test('Rename does nothing with zero ticked, and Clear puts the count back to zero', async ({ page, guard }) => {
-    await page.goto('./#/personal');
+    await page.goto('./#/drives/work');
     await signIn(page);
     await page.locator('[data-action="pcpscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished/);
+    await toBin(page);
     const mark = page.locator('[data-action="pcpmark"]');
     await expect(mark).toBeDisabled();
-    await expect(mark).toContainText('Rename selected (0)');
+    await expect(mark).toContainText('Rename these: tick a file first');
     await tickAll(page, 'pcpmark');
-    await expect(mark).toContainText('Rename selected (2)');
+    await expect(mark).toContainText('Rename these (2)');
     await page.locator('[data-action="clearpick"][data-group="pcpmark"]').click();
-    await expect(mark).toContainText('Rename selected (0)');
+    await expect(mark).toContainText('Rename these: tick a file first');
     await expect(mark).toBeDisabled();
     expect(writes(guard.world)).toEqual([]);
   });
 
   test('Rename changes only the match that was ticked', async ({ page, guard }) => {
     page.on('dialog', (d) => d.accept());
-    await page.goto('./#/personal');
+    await page.goto('./#/drives/work');
     await signIn(page);
     await page.locator('[data-action="pcpscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished/);
+    await toBin(page);
     await page.locator('li', { hasText: 'invoice-a.pdf' }).locator('input').check();
-    await expect(page.locator('[data-action="pcpmark"]')).toContainText('Rename selected (1)');
+    await expect(page.locator('[data-action="pcpmark"]')).toContainText('Rename these (1)');
     await askForWriteThen(page, 'pcpmark');
     await page.locator('[data-action="pcpmark"]').click();
     await expect(page.locator('#view')).toContainText('Renamed 1 to ' + PCP);
@@ -241,7 +250,7 @@ test.describe('Drive check: rename on a plugged-in drive (pretend drive in memor
     await installPretendDrive(page, FILES);
   });
   const scan = async (page) => {
-    await page.goto('./#/usb');
+    await page.goto('./#/drives/usb');
     await signIn(page);
     await page.locator('[data-action="usbscan"]').click();
     await expect(page.locator('#view')).toContainText(/Finished/);

@@ -46,16 +46,19 @@ If any of these breaks, the tick turns red and says which page.
 | PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 14 |
 | Clean-up safety (keepers, folders, resume) | `#/bin`, `#/personal`, `#/usb`, `#/changes` | 13 |
 | Header contract (column names) | list of expected columns | 12 |
+| Hub data contracts (Food, Marketplace, Studio: names, types, red/green) | `tests/contract/*.contract.spec.js`, run by `tests/mocked/hub-contracts.spec.js` | 47 |
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
 | Factory house look (dark frame, bottom tabs, 1px lines, one radius, fixed counts, hover rule, contrast light/dark/warm/cool, empty states, one calm find bar, phone) | `/dashboard/factory/` | 24 |
 | Studio (example data, real data, accounts, groups, bottom tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, clients, results, spec, brand kit, books, feedback, phone, dark, text size, board, Board/List, Look menu, frame, one-row find bar, one line rule, numbers, no solid fills, pill sizes, weights, dark tour, greys follow the background, calm cards, Me summary, who ring, consistency, brand website, no empty counts, brand mark, list bars, comments, library forms, prices and VAT, ownership, protection, save as kit, team role) | `/dashboard/studio/` | 66 |
+| Studio plain words and calmer screens (no "Spec lock", "Bricks" or "Engine" on any page; How Studio works fold; Open in Infinity only for an https Infinity card link; two taps from a tab; phone tab bar) | `/dashboard/studio/` | 7 |
+| Studio Owned tools (read only after sign-in, with the sign-in token; rows come only from the Owned Tools tab; empty and no-access states; sheet id only in `config.js`; no tool data in the repo) | `/dashboard/studio/#/tools` | 7 |
 | House look on every hub (one set of rules from `tokens.css` + `house.css`: 12px radius, 1px lines and 3px bars, Lexend 400/600 at 13px+, no coloured words, one control line (meaning buttons rest on their own colour line), 36/44px buttons, 30 x 22 counts, ringed date pills, deep frame, 12px card padding and gaps, no solid fills, the hover rule, tabs exempt; every view, desktop warm light, phone cool dark and Look › Dark) | all seven hubs | 22 |
 
 The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
 
-That is 654 checks that must pass (mocked + phone, 29 Oct 2026, house look on every hub; CD Hub In whelp fixture test and Bloodline empty states).
+That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain words and Studio Owned tools; before that house look on every hub, CD Hub In whelp fixture test and Bloodline empty states).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
@@ -69,6 +72,12 @@ That is 654 checks that must pass (mocked + phone, 29 Oct 2026, house look on ev
 - The Money tile shows each entity on its own, never added together.
 - The Money tile links open `/money/`, a single entity, and a single to-do.
 - Sign-in problems show a clear message (permission refused, window closed, window blocked).
+
+**Studio plain words** (`tests/mocked/studio-plain-words.spec.js`, same invented data)
+- No page shows "Spec lock", "Brick(s)" or "Engine" in its text or in what a screen reader says; it reads "Agree the brief", "Parts" and "Studio helper". Code ids stay.
+- Me has a closed "How Studio works" fold with 3 lines; one tap opens it.
+- "Open in Infinity" shows only when an item has an https startinfinity.com card link, and opens in a new tab.
+- Every page is two taps or fewer from a bottom tab. At phone width no tab scrolls sideways and the last button clears the tab bar.
 
 **Studio** (`tests/mocked/studio.spec.js`, data in `tests/fixtures/studio/state.js`)
 - No `studio-state.json` on Drive: the example banner shows, example brands show, every write button is off, and nothing is written.
@@ -140,6 +149,12 @@ That is 654 checks that must pass (mocked + phone, 29 Oct 2026, house look on ev
 - The file `tests/contract/expected-headers.json` lists the **column names** (names only, no figures) each Drive file should have.
 - The robot checks that the sample files, the page code and that list all agree, and that the pages still read the columns they read before. A column renamed in the page or in the samples turns the tick red.
 - This is how a renamed column gets noticed even though the pretend Drive can never rename one. To check your **real** files, see "Check your real column names".
+
+**Hub data contracts (Food, Marketplace, Studio)**
+- `tests/contract/expected-headers.json` also lists the RR_FOOD tabs and the Marketplace Open work tab and RR_LISTINGS.csv. `tests/contract/expected-state.json` lists the field names and types inside `studio-state.json` and the Marketplace wake file.
+- Each hub has invented sample data. If an engine drops, renames or adds a column or field, puts the wrong kind of value in it, or writes an empty file, the robot names the kind of change: MISSING, RENAMED, EXTRA, WRONG_TYPE or EMPTY.
+- The checks run each page's own reading code on the samples. `CONTRACT_PROVE_RED=1` flips every failure case, so you can see each one go red.
+- Rebuild the lists after a deliberate change: `node tests/contract/make-expected.js`, then read the diff.
 
 **Reading CSV files**
 - Commas inside quotes, quotes inside quotes, line breaks inside quotes.
@@ -246,6 +261,7 @@ The pretend Drive cannot tell us if a column was renamed in your real files. Thi
 1. In Google Drive, download the files to check (for example the Money index files and the `BLD-app-tables` files) into one folder on your computer.
 2. In a terminal in the `dashboard` folder: `node tests/contract/check-real-headers.js /path/to/that/folder`
 3. It prints `ok` or `PROBLEM` per file and names any missing or renamed column. It reads only the top of each file, prints column names only, never values, and sends nothing anywhere.
+4. Food, Marketplace and Studio too: download each RR_FOOD tab as CSV (`RR_FOOD - Orders.csv` and so on), the Open work tab (`… - Marketplace.csv`), `RR_LISTINGS.csv`, `MKT-WAKE-WEBAPP.json` and `studio-state.json` into the same folder. Add `--counts` to print counts only. `--dry-run` tries it on the invented samples.
 
 GitHub does not run this one, on purpose: it would need a Google key stored in GitHub, and none is stored.
 
@@ -290,6 +306,11 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 19 Oct 2026 | Hard rule 14: the Bin (and Drive, Changes, search) listed Karen - SHARED | "is in config, never queried and never shown on Map, Drive, Bin, Changes, PC-Personal or search" |
 | 25 Oct 2026 | Main dashboard: the selected menu pill had lost its colour fill and showed an odd left edge, and the "You are here" title showed a square focus box after each screen change | "the selected tab has one clean border and a colour fill; the "You are here" title has no box" |
 | 25 Oct 2026 | Marketplace V2: the bottom tab bar covered the last button on long pages (the page's bottom space was lost to the `.wrap` rule) | "the last button on a long page can always be scrolled clear of the bottom tab bar @regression" |
+| 29 Oct 2026 | Marketplace: the public pages (hub and privacy policy) showed a personal email address (sign-in hint, Gmail link, contact) | "public pages hold no email address: no "@" address, no login_hint, no authuser (Stage 0A, D1 = B) @regression" |
+| 29 Oct 2026 | Marketplace: the same check on what the page actually shows (text and links), signed out, on every tab and on the privacy page | "signed out, signed in on every tab, and the privacy page: no email address in the shown text or any link @regression" |
+| 30 Oct 2026 | Phone install: Factory, Food and Marketplace were not on the service worker list, so they did not open offline | "@regression every published hub page is on the service worker list" (tests/mocked/pwa-and-keys.spec.js) |
+| 30 Oct 2026 | Money Hub on a phone: sideways-scrolling tables could not be reached by keyboard (axe scrollable-region-focusable; CI fonts made the table overflow) | "@regression Money Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-money-scroll.spec.js) |
+| 30 Oct 2026 | CD Hub on a phone: sideways-scrolling tables and the table map could not be reached by keyboard (axe scrollable-region-focusable) | "@regression CD Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-cdhub-scroll.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
@@ -363,7 +384,7 @@ A quote in the words is escaped before it reaches Drive. Signed out, nothing is 
 
 A Google Apps Script owned by the business account (the "bin guard", code kept in Drive, not in this public repo) looks in the bins every day at about 8am UK. Anything whose name does not start `ZZ_DELETE_` or `ZZ_SUPERSEDED_` is taken back out and put in **LD > *00 Current > 00 CHECK**. It never deletes for good and never empties a bin.
 
-The Bin page shows 00 CHECK with ticks, **Select all**, **Clear**, **ZZ_DELETE** and **Refer to AI**. The page only **reads** 00 CHECK. The two buttons open the guard's own Google page (a web app that only puppyclassroom.com accounts can open, and only Lisa can use) with the ticked ids; nothing changes until Lisa presses the button there. RR_ names are never ticked. The buttons stay off until the web app exists: it writes its address into `BIN-GUARD-WEBAPP.json` in *00 Current the first time Lisa opens it, or you can put the address in `config.js` (`binGuard.webAppUrl`). Only a `https://script.google.com/.../exec` address is accepted. Tests: `tests/mocked/bin-guard.spec.js`.
+The Bin page shows 00 CHECK ("Check: put back by the bin guard") with ticks, **Select all**, **Clear**, **Approve binning** and **Ask the AI to sort**. The page only **reads** 00 CHECK. The two buttons open the guard's own Google page (a web app that only puppyclassroom.com accounts can open, and only Lisa can use) with the ticked ids; nothing changes until Lisa presses the button there. RR_ names have no tick box. Until the web app exists the card shows **Waiting for the tidy bot** instead of the buttons: it writes its address into `BIN-GUARD-WEBAPP.json` in *00 Current the first time Lisa opens it, or you can put the address in `config.js` (`binGuard.webAppUrl`). Only a `https://script.google.com/.../exec` address is accepted. Tests: `tests/mocked/bin-guard.spec.js`.
 
 ## Where things live
 
@@ -379,3 +400,7 @@ The Bin page shows 00 CHECK with ticks, **Select all**, **Clear**, **ZZ_DELETE**
 | Settings | `playwright.config.js`, `package.json` |
 
 Nothing in the dashboard pages themselves was changed to add these tests (Job 6 or Job 6b).
+
+## Bin page order (TidyUp stage 5)
+
+`tests/mocked/bin-page.spec.js` checks the Bin page follows the job file's section 8: Needs you now, Ready to bin (first card, open), Check, Not ready yet, Already in the bin, Log, Dropbox (closed, last). Only **Bin these** is red; no disabled tick boxes; no internal names (ZZ_, ledger, RR_, E02, UNSURE, lcme-grok) in the visible text outside file names, tooltips and the "why" fold; one confirm of at most 40 words bins a shared-drive row and a Work My Drive row together, and Cancel bins nothing.

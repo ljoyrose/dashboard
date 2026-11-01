@@ -142,7 +142,7 @@
     },
     "BLD-litter.csv": {
       "columns": ["id", "dam_subject_id", "sire_subject_id", "born_on", "notes"],
-      "read": ["id", "dam_subject_id", "sire_subject_id", "notes"]
+      "read": ["id", "dam_subject_id", "sire_subject_id", "born_on", "notes"]
     },
     "BLD-mating.csv": {
       "columns": ["id", "dam_subject_id", "sire_subject_id", "mated_on", "mating_no", "method", "is_first_of_season", "due_from_this_mating", "litter_id", "produced_litter", "notes"],
@@ -157,8 +157,8 @@
       "read": ["subject_id", "area_id", "classification", "off_site_kind"]
     },
     "BLD-subject.csv": {
-      "columns": ["id", "name", "sex", "dob", "size_band", "coat_type", "kind", "neuter_status", "source", "species", "breed", "coat_colour_id", "coat_pattern_id", "nose_pigment_id", "birth_litter_id"],
-      "read": ["id", "name", "sex", "dob", "size_band", "coat_type", "kind", "neuter_status", "source", "species", "breed", "coat_colour_id", "coat_pattern_id", "nose_pigment_id", "birth_litter_id"]
+      "columns": ["id", "name", "sex", "dob", "size_band", "coat_type", "kind", "neuter_status", "source", "species", "breed", "coat_colour_id", "coat_pattern_id", "nose_pigment_id", "birth_litter_id", "rx_moxi_date", "rx_moxi_expiry", "rx_moxi_file_url"],
+      "read": ["id", "name", "sex", "dob", "size_band", "coat_type", "kind", "neuter_status", "source", "species", "breed", "coat_colour_id", "coat_pattern_id", "nose_pigment_id", "birth_litter_id", "rx_moxi_expiry", "rx_moxi_file_url"]
     },
     "BLD-subject_status.csv": {
       "columns": ["subject_id", "state"],
@@ -171,6 +171,77 @@
     "BLD-weight.csv": {
       "columns": ["subject_id", "performed_on", "weight_kg", "unit", "body_condition_score", "bcs_scale", "source"],
       "read": ["subject_id", "performed_on", "weight_kg", "unit", "body_condition_score", "bcs_scale", "source"]
+    }
+  },
+  "food": {
+    "Cards": {
+      "range": "Cards!A2:L",
+      "by": "position",
+      "columns": ["key", "section", "category", "title", "detail", "created_at", "answer", "note", "answered_at", "answered_by", "applied_at", "applied_by"],
+      "read": ["key", "section", "category", "title", "detail", "created_at", "answer", "note", "answered_at", "answered_by", "applied_at", "applied_by"]
+    },
+    "Orders": {
+      "range": "Orders!A1:AK",
+      "by": "header",
+      "header_row": 1,
+      "columns": ["order_no", "order_type", "customer_orders", "source", "brand", "partner", "tracking", "check", "profit_est", "status", "s_no", "boxes", "shipped_date", "ga_total"],
+      "read": ["order_no", "order_type", "customer_orders", "source", "brand", "partner", "tracking", "check", "profit_est", "status", "s_no", "boxes", "shipped_date", "ga_total"]
+    },
+    "Invoices": {
+      "range": "Invoices!A1:P",
+      "by": "header",
+      "header_row": 1,
+      "columns": ["si_no", "order_no", "invoice_date", "due_date", "paid_date", "total", "goods", "delivery", "vat", "fy", "file_id"],
+      "read": ["si_no", "order_no", "invoice_date", "due_date", "paid_date", "total", "goods", "delivery", "vat", "fy", "file_id"]
+    },
+    "Products": {
+      "range": "Products!A2:AE",
+      "by": "header",
+      "header_row": 2,
+      "columns": ["tla", "full_ga_code", "range", "species", "life_stage", "recipe", "pack", "grain", "kibble", "chicken_in_name", "fresh_meat_pct", "protein_pct", "ddf_status", "ddf_name", "ga_price_ex_vat_portal_oct26", "ga_price_ex_vat_list_aug25", "shopify_price_inc_vat", "subscription_price_inc_vat", "profit_ex_vat_1bag_1box", "data_sheet_url"],
+      "read": ["tla", "full_ga_code", "range", "species", "life_stage", "recipe", "pack", "grain", "kibble", "chicken_in_name", "fresh_meat_pct", "protein_pct", "ddf_status", "ddf_name", "ga_price_ex_vat_portal_oct26", "ga_price_ex_vat_list_aug25", "shopify_price_inc_vat", "subscription_price_inc_vat", "profit_ex_vat_1bag_1box", "data_sheet_url"]
+    },
+    "Settings": {
+      "range": "Settings!A1:C",
+      "by": "header",
+      "header_row": 1,
+      "columns": ["key", "value", "note"],
+      "read": ["key", "value", "note"],
+      "keys_read": ["FY_START_MONTH", "MIN_PROFIT", "SHOPIFY_STORE", "GA_PORTAL", "BANK_FOLDER_ID", "BANK_LEDGER_FILE_ID", "GA_PAYMENT", "GA_ACCOUNT_CODE", "GA_PHONE_ORDERS", "GA_PHONE_ACCOUNTS", "GA_PARTNER_MANAGER", "GA_FIELD_MANAGER", "GA_TERMS", "GA_CUTOFF", "DELIVERY_FIRST_BOX", "DELIVERY_NEXT_BOX", "GA_DELIVERY_ZONE_C", "GA_PALLET", "GA_ORDER_TO", "GA_XML_CONTACT", "GA_ORDER_FROM", "GA_SHIP_FROM", "GA_INVOICE_FROM", "COMMERCIAL_INVOICE_TO", "SUB_DISCOUNT"]
+    },
+    "Statements": {
+      "range": "Statements!A1:E",
+      "by": "header",
+      "header_row": 1,
+      "columns": ["statement_date", "total_outstanding"],
+      "read": ["statement_date", "total_outstanding"]
+    },
+    "DirectDebits": {
+      "range": "DirectDebits!A1:G",
+      "by": "header",
+      "header_row": 1,
+      "columns": ["date", "amount"],
+      "read": ["date", "amount"]
+    },
+    "Codes": {
+      "range": "Codes!A1:F",
+      "by": "header",
+      "header_row": 1,
+      "columns": ["kind", "code", "name", "active"],
+      "read": ["kind", "code", "name", "active"]
+    }
+  },
+  "marketplace": {
+    "Open work tab": {
+      "range": "<tab>!A2:L",
+      "by": "position",
+      "columns": ["key", "section", "category", "title", "detail", "created_at", "answer", "note", "answered_at", "answered_by", "applied_at", "applied_by"],
+      "read": ["key", "section", "category", "title", "detail", "created_at", "answer", "note", "answered_at", "answered_by", "applied_at", "applied_by"]
+    },
+    "RR_LISTINGS.csv": {
+      "key": "listing_id",
+      "columns": ["listing_id", "image_url", "title", "platform", "url", "platform_item_id"],
+      "read": ["listing_id", "image_url", "title", "platform", "url", "platform_item_id"]
     }
   }
 }

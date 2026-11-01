@@ -14,6 +14,10 @@ const signIn = async (page) => {
 };
 const A = { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' };
 const ledger = (world, ids) => { world.byId(IDS.ledger).content = 'file_id\n' + ids.join('\n') + '\n'; };
+// Stage 5: a Ready row shows the name without its ZZ_DELETE_ prefix; the full name is its tooltip.
+const readyRow = (page, name) => page.locator('#view li:has([title="' + name + '"])');
+// Stage 5: a protected row in Not ready yet has no tick box at all; its reason is the row's tooltip.
+const keptRow = (view, name) => view.locator('li', { hasText: name });
 const patched = (world) => world.calls.filter((c) => c.method === 'PATCH').map((c) => c.path.replace('/files/', '')).sort();
 
 test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
@@ -32,21 +36,21 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     await page.goto('./#/bin');
     await signIn(page);
     const view = page.locator('#view');
-    await expect(page.locator('#sweepCard h3')).toHaveText('Google Drive: ZZ_DELETE_ files ready to bin');
-    await expect(view).toContainText('retired ZZ_SUPERSEDED_');
+    await expect(page.locator('#sweepCard h3')).toHaveText('Ready to bin');
+    await expect(view.locator('#notReadyCard [data-why]')).toContainText('retired ZZ_SUPERSEDED_');
     await expect(view).toContainText('ZZ_old-folder-with-archive');
-    await expect(view).toContainText('Folder holds an RR_ item, left alone.');
+    await expect(view.locator('li[title="Folder holds an RR_ item, left alone."]').first()).toBeAttached();
     await expect(view).toContainText('ZZ_DELETE_in-archive.txt');
-    await expect(view).toContainText('Inside an RR_ archive folder, left alone.');
+    await expect(view.locator('li[title="Inside an RR_ archive folder, left alone."]').first()).toBeAttached();
     await expect(view.locator('[data-bin-list="leftout"]')).toContainText('ZZ_DELETE_RR_notes.txt');
-    await expect(view).toContainText('Name contains RR_, left out.');
+    await expect(view.locator('li[title="Name contains RR_, left out."]').first()).toBeAttached();
     await expect(view.locator('[data-bin-list="held"]')).toContainText('ZZ_DELETE_needs-a-row.txt');
-    await expect(view).toContainText('No ledger row.');
+    await expect(view.locator('li[title="No ledger row."]').first()).toBeAttached();
     await expect(view.locator('[data-bin-list="rename"]')).toContainText('ZZ_SUPERSEDED_old.txt');
-    await expect(view).toContainText('Rename needed');
+    await expect(view.locator('[data-bin-list="rename"]')).toContainText('Name needs fixing by the tidy bot');
     await expect(view).not.toContainText('My ZZ_DELETE_ notes.txt');
     for (const name of ['ZZ_old-folder-with-archive', 'ZZ_DELETE_in-archive.txt', 'ZZ_DELETE_RR_notes.txt', 'ZZ_DELETE_needs-a-row.txt', 'ZZ_SUPERSEDED_old.txt']) {
-      await expect(view.locator('li', { hasText: name }).locator('input')).toBeDisabled();
+      await expect(keptRow(view, name).locator('input')).toHaveCount(0);
     }
   });
 
@@ -66,12 +70,12 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     const view = page.locator('#view');
     for (const name of ['ZZ_DELETE_outer-folder', 'ZZ_DELETE_second-folder']) {
       const row = view.locator('li', { hasText: name });
-      await expect(row).toContainText('Folder holds an RR_ item, left alone.');
-      await expect(row.locator('input')).toBeDisabled();
+      await expect(row).toHaveAttribute('title', 'Folder holds an RR_ item, left alone.');
+      await expect(row.locator('input')).toHaveCount(0);
     }
-    await expect(view.locator('[data-bin-list="ready"]')).not.toContainText('ZZ_DELETE_outer-folder');
+    await expect(view.locator('[data-bin-list="ready"]').locator('[title="' + 'ZZ_DELETE_outer-folder' + '"]')).toHaveCount(0);
     await page.locator('[data-action="selectall"][data-group="bin"]').click();
-    await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (1)');
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Allow access, then bin (1)');
     await page.locator('[data-action="sweep"]').click();
     await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => w.byId('zz-ok').trashed).toBe(true);
@@ -94,10 +98,10 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     const view = page.locator('#view');
     for (const name of ['ZZ_DELETE_two-levels-down.txt', 'ZZ_DELETE_folder-in-archive']) {
       const row = view.locator('li', { hasText: name });
-      await expect(row).toContainText('Inside an RR_ archive folder, left alone.');
-      await expect(row.locator('input')).toBeDisabled();
+      await expect(row).toHaveAttribute('title', 'Inside an RR_ archive folder, left alone.');
+      await expect(row.locator('input')).toHaveCount(0);
     }
-    await page.locator('li', { hasText: 'ZZ_DELETE_fine.txt' }).locator('input').check();
+    await readyRow(page, 'ZZ_DELETE_fine.txt').locator('input').check();
     await page.locator('[data-action="sweep"]').click();
     await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => w.byId('zz-ok').trashed).toBe(true);
@@ -119,12 +123,12 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     await page.goto('./#/bin');
     await signIn(page);
     const view = page.locator('#view');
-    await expect(view.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_ready.txt');
-    await expect(view.locator('[data-bin-list="ready"]')).not.toContainText('ZZ_DELETE_clean-folder');
+    await expect(view.locator('[data-bin-list="ready"]').locator('[title="' + 'ZZ_DELETE_ready.txt' + '"]')).toHaveCount(1);
+    await expect(view.locator('[data-bin-list="ready"]').locator('[title="' + 'ZZ_DELETE_clean-folder' + '"]')).toHaveCount(0);
     await expect(view.locator('[data-bin-list="blocked"]')).toContainText('ZZ_DELETE_clean-folder');
-    await expect(view.locator('li', { hasText: 'ZZ_DELETE_clean-folder' })).toContainText('not verified or junk');
-    await page.locator('li', { hasText: 'ZZ_DELETE_ready.txt' }).locator('input').check();
-    await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (1)');
+    await expect(view.locator('li', { hasText: 'ZZ_DELETE_clean-folder' })).toHaveAttribute('title', /not verified or junk/);
+    await readyRow(page, 'ZZ_DELETE_ready.txt').locator('input').check();
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Allow access, then bin (1)');
     await page.locator('[data-action="sweep"]').click();
     await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => w.byId('zz-ready').trashed).toBe(true);
@@ -144,14 +148,13 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     await signIn(page);
     const sweep = page.locator('[data-action="sweep"]');
     await expect(sweep).toBeDisabled();
-    await expect(sweep).toContainText('Move selected (0)');
+    await expect(sweep).toContainText('Bin these: tick a file first');
     expect(patched(guard.world)).toEqual([]);
     await page.locator('[data-action="selectall"][data-group="bin"]').click();
-    await expect(sweep).toContainText('Move selected (2)');
-    await expect(page.locator('li', { hasText: 'ZZ_DELETE_held.txt' }).locator('input')).toBeDisabled();
-    await expect(page.locator('li', { hasText: 'ZZ_DELETE_held.txt' }).locator('input')).not.toBeChecked();
+    await expect(sweep).toContainText('Allow access, then bin (2)');
+    await expect(page.locator('li', { hasText: 'ZZ_DELETE_held.txt' }).locator('input')).toHaveCount(0);
     await page.locator('[data-action="clearpick"][data-group="bin"]').click();
-    await expect(sweep).toContainText('Move selected (0)');
+    await expect(sweep).toContainText('Bin these: tick a file first');
     await expect(sweep).toBeDisabled();
     expect(patched(guard.world)).toEqual([]);
   });
@@ -165,7 +168,7 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     const view = page.locator('#view');
     await expect(view).toContainText('The delete ledger could not be read. Nothing will be binned.');
     await expect(page.locator('[data-action="sweep"]')).toBeDisabled();
-    await expect(view.locator('li', { hasText: 'ZZ_DELETE_ready.txt' }).locator('input')).toBeDisabled();
+    await expect(view.locator('input[data-pick-group="bin"]')).toHaveCount(0);
     expect(w.byId('zz-ready').trashed).toBeFalsy();
   });
 
@@ -175,9 +178,9 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     w.file('slip-rows', 'AA_DELETE-LEDGER-ROWS_extra.csv', 'file_id\nslip-1\n', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/csv' });
     await page.goto('./#/bin');
     await signIn(page);
-    await expect(page.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_from-slip.txt');
+    await expect(page.locator('[data-bin-list="ready"]').locator('[title="' + 'ZZ_DELETE_from-slip.txt' + '"]')).toHaveCount(1);
     await page.locator('[data-action="selectall"][data-group="bin"]').click();
-    await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (1)');
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Allow access, then bin (1)');
   });
 
   test('a slip with no file_id column bins nothing, even when the ledger itself is fine', async ({ page, guard }) => {
@@ -198,7 +201,7 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     w.byId(IDS.ledger).content = '"COUNT: 1 rows. 2026-10-18-1228 sample note, with a comma"\ndate,old_name,file_id,merged_into,agent\n2026-10-18-1200,ready.txt,zz-ready,,sample\n';
     await page.goto('./#/bin');
     await signIn(page);
-    await expect(page.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_ready.txt');
+    await expect(page.locator('[data-bin-list="ready"]').locator('[title="' + 'ZZ_DELETE_ready.txt' + '"]')).toHaveCount(1);
     await expect(page.locator('#view')).not.toContainText('The delete ledger could not be read');
   });
 
@@ -229,10 +232,10 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     await expect(ready.locator('[data-action="showmore"]')).toBeVisible();
     await expect(ready.locator('[data-action="showall"]')).toBeVisible();
     await expect(ready.locator('li')).toHaveCount(50);
-    await expect(ready).not.toContainText('ZZ_DELETE_cap-052.txt');
+    await expect(ready.locator('[title="' + 'ZZ_DELETE_cap-052.txt' + '"]')).toHaveCount(0);
     await page.locator('[data-action="selectall"][data-group="bin"]').click();
     await expect(ready.locator('input:checked')).toHaveCount(50);
-    await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (50)');
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Allow access, then bin (50)');
     await page.locator('[data-action="sweep"]').click();
     await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => w.byId('cap-050').trashed).toBe(true);
@@ -259,11 +262,11 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     const ready = page.locator('[data-bin-list="ready"]');
     await ready.locator('[data-action="showall"]').click();
     await expect(ready.locator('li')).toHaveCount(52);
-    await expect(ready).toContainText('ZZ_DELETE_cap-052.txt');
+    await expect(ready.locator('[title="' + 'ZZ_DELETE_cap-052.txt' + '"]')).toHaveCount(1);
     await expect(ready.locator('[data-action="showall"]')).toHaveCount(0);
     await page.locator('[data-action="selectall"][data-group="bin"]').click();
     await expect(ready.locator('input:checked')).toHaveCount(52);
-    await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (52)');
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Allow access, then bin (52)');
     await page.locator('[data-action="sweep"]').click();
     await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => w.byId('cap-052').trashed).toBe(true);
@@ -295,7 +298,7 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     const view = page.locator('#view');
     const held = view.locator('[data-bin-list="e02"]');
     const ready = view.locator('[data-bin-list="ready"]');
-    await expect(held).toContainText(LABEL);
+    await expect(held.locator('li[title="' + LABEL + '"]').first()).toBeAttached();
     for (const name of [
       'ZZ_SUPERSEDED_2026-01_DO-NOT-USE__MON-REGISTER.csv',
       'ZZ_SUPERSEDED_oldCHECK-LOG.csv',
@@ -304,23 +307,22 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
       'ZZ_DELETE_MON-ENGINE-ledger.txt',
     ]) {
       const row = held.locator('li', { hasText: name });
-      await expect(row).toContainText(LABEL);
-      await expect(row.locator('input')).toBeDisabled();
+      await expect(row).toHaveAttribute('title', LABEL);
+      await expect(row.locator('input')).toHaveCount(0);
     }
-    await expect(held.getByText('CHECK-LOG.csv', { exact: true })).toBeVisible();
+    await page.locator('#notReadyCard > summary').click();
+    await expect(held.getByText('ZZ_SUPERSEDED_oldCHECK-LOG.csv', { exact: true })).toBeVisible();
     await expect(held).not.toContainText('ZZ_DELETE_other-ops.txt');
     await expect(held).not.toContainText('ZZ_DELETE_fake-index.txt');
     await expect(view.locator('[data-bin-list="rename"]')).not.toContainText('ZZ_SUPERSEDED_2026-01_DO-NOT-USE__MON-REGISTER.csv');
     await expect(view.locator('[data-bin-list="rename"]')).not.toContainText('ZZ_SUPERSEDED_oldCHECK-LOG.csv');
     for (const name of ['ZZ_DELETE_ordinary.txt', 'ZZ_DELETE_other-ops.txt', 'ZZ_DELETE_fake-index.txt']) {
-      await expect(ready).toContainText(name);
+      await expect(ready.locator('[title="' + name + '"]')).toHaveCount(1);
     }
-    await expect(ready).not.toContainText('ZZ_DELETE_MON-ENGINE-ledger.txt');
+    await expect(ready.locator('[title="' + 'ZZ_DELETE_MON-ENGINE-ledger.txt' + '"]')).toHaveCount(0);
     await page.locator('[data-action="selectall"][data-group="bin"]').click();
-    await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (3)');
-    for (const name of ['MON-ENGINE-ops-hold.csv', 'MON-ENGINE-index-hold.csv', 'ZZ_DELETE_MON-ENGINE-ledger.txt']) {
-      await expect(held.locator('li', { hasText: name }).locator('input')).not.toBeChecked();
-    }
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Allow access, then bin (3)');
+    await expect(held.locator('input')).toHaveCount(0);
     await page.locator('[data-action="sweep"]').click();
     await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => w.byId('zz-ok').trashed).toBe(true);
@@ -345,18 +347,18 @@ test.describe('PC-Personal bin uses the same ledger gate', () => {
     guard.world.file('me-rr', 'ZZ_DELETE_DRIVE_RR_copy.pdf', 'x', mine);
     ledger(guard.world, ['me-ok', 'me-rr']);
     page.on('dialog', (d) => d.accept());
-    await page.goto('./#/personal');
+    await page.goto('./#/bin');
     await signIn(page);
     const view = page.locator('#view');
-    await expect(view).toContainText('ZZ_DELETE_DRIVE_ok.pdf');
-    await expect(view).toContainText('No ledger row.');
-    await expect(view).toContainText('Name contains RR_, left out.');
-    await expect(view.locator('li', { hasText: 'ZZ_DELETE_DRIVE_held.pdf' }).locator('input')).toBeDisabled();
-    await expect(view.locator('li', { hasText: 'ZZ_DELETE_DRIVE_RR_copy.pdf' }).locator('input')).toBeDisabled();
-    await page.locator('[data-action="selectall"][data-group="pcpbin"]').click();
-    await expect(page.locator('[data-action="pcpbin"]')).toContainText('Move selected (1)');
-    await page.locator('[data-action="pcpbin"]').click();
-    await page.locator('[data-action="pcpbin"]').click();
+    await expect(readyRow(page, 'ZZ_DELETE_DRIVE_ok.pdf')).toHaveCount(1);
+    await expect(view.locator('li[title="No ledger row."]').first()).toBeAttached();
+    await expect(view.locator('li[title="Name contains RR_, left out."]').first()).toBeAttached();
+    await expect(view.locator('li', { hasText: 'ZZ_DELETE_DRIVE_held.pdf' }).locator('input')).toHaveCount(0);
+    await expect(view.locator('li', { hasText: 'ZZ_DELETE_DRIVE_RR_copy.pdf' }).locator('input')).toHaveCount(0);
+    await page.locator('[data-action="selectall"][data-group="bin"]').click();
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Allow access, then bin (1)');
+    await page.locator('[data-action="sweep"]').click();
+    await page.locator('[data-action="sweep"]').click();
     await expect(view).toContainText('moved 1 to the bin');
     expect(guard.world.byId('me-ok').trashed).toBe(true);
     expect(guard.world.byId('me-held').trashed).toBeFalsy();
