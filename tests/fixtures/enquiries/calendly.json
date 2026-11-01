@@ -1,0 +1,29 @@
+{
+  "_about": "Invented Calendly API v2 shapes (scheduled_events + invitees). Nobody here is real: example.com, Ofcom fiction numbers, made-up uris.",
+  "pairs": [
+    {
+      "event": { "uri": "https://api.calendly.com/scheduled_events/EV-SAMPLE-1", "name": "Whatsapp Call", "status": "canceled", "start_time": "2026-10-30T10:00:00.000000Z", "end_time": "2026-10-30T10:10:00.000000Z", "created_at": "2026-10-27T09:15:00.000000Z" },
+      "invitee": { "uri": "https://api.calendly.com/scheduled_events/EV-SAMPLE-1/invitees/INV-SAMPLE-1", "name": "Buyer A", "email": "buyer.a@example.com", "status": "canceled", "timezone": "Europe/Zurich", "created_at": "2026-10-27T09:15:00.000000Z", "updated_at": "2026-10-28T08:00:00.000000Z", "rescheduled": true, "old_invitee": null, "new_invitee": "https://api.calendly.com/scheduled_events/EV-SAMPLE-2/invitees/INV-SAMPLE-2", "no_show": null, "cancellation": { "canceled_by": "Buyer A", "reason": "", "canceler_type": "invitee", "created_at": "2026-10-28T08:00:00.000000Z" },
+        "questions_and_answers": [ { "question": "Your whatsapp mobile number", "answer": "+41 79 000 00 01", "position": 0 }, { "question": "How can I help?", "answer": "We would love a chocolate Cobberdog girl puppy next spring", "position": 1 } ] }
+    },
+    {
+      "event": { "uri": "https://api.calendly.com/scheduled_events/EV-SAMPLE-2", "name": "Whatsapp Call", "status": "canceled", "start_time": "2026-11-02T10:00:00.000000Z", "end_time": "2026-11-02T10:10:00.000000Z", "created_at": "2026-10-28T08:00:00.000000Z" },
+      "invitee": { "uri": "https://api.calendly.com/scheduled_events/EV-SAMPLE-2/invitees/INV-SAMPLE-2", "name": "Buyer A", "email": "Buyer.A@example.com", "status": "canceled", "timezone": "Europe/Zurich", "created_at": "2026-10-28T08:00:00.000000Z", "updated_at": "2026-10-29T07:30:00.000000Z", "rescheduled": false, "old_invitee": "https://api.calendly.com/scheduled_events/EV-SAMPLE-1/invitees/INV-SAMPLE-1", "new_invitee": null, "no_show": null, "cancellation": { "canceled_by": "Buyer A", "reason": "Plans changed", "canceler_type": "invitee", "created_at": "2026-10-29T07:30:00.000000Z" },
+        "questions_and_answers": [ { "question": "Your whatsapp mobile number", "answer": "+41 79 000 00 01", "position": 0 }, { "question": "How can I help?", "answer": "We would love a chocolate Cobberdog girl puppy next spring", "position": 1 } ] }
+    },
+    {
+      "event": { "uri": "https://api.calendly.com/scheduled_events/EV-SAMPLE-3", "name": "Whatsapp Call", "status": "active", "start_time": "2026-10-31T15:00:00.000000Z", "end_time": "2026-10-31T15:10:00.000000Z", "created_at": "2026-10-29T12:00:00.000000Z" },
+      "invitee": { "uri": "https://api.calendly.com/scheduled_events/EV-SAMPLE-3/invitees/INV-SAMPLE-3", "name": "Buyer B", "email": "buyer.b@example.com", "status": "active", "timezone": "Europe/London", "created_at": "2026-10-29T12:00:00.000000Z", "updated_at": "2026-10-29T12:00:00.000000Z", "rescheduled": false, "old_invitee": null, "new_invitee": null, "no_show": null,
+        "questions_and_answers": [ { "question": "Your whatsapp mobile number", "answer": "07700 900102", "position": 0 }, { "question": "How can I help?", "answer": "Puppies", "position": 1 } ] }
+    },
+    {
+      "event": { "uri": "https://api.calendly.com/scheduled_events/EV-SAMPLE-4", "name": "Whatsapp Call", "status": "active", "start_time": "2026-10-20T09:00:00.000000Z", "end_time": "2026-10-20T09:10:00.000000Z", "created_at": "2026-10-18T10:00:00.000000Z" },
+      "invitee": { "uri": "https://api.calendly.com/scheduled_events/EV-SAMPLE-4/invitees/INV-SAMPLE-4", "name": "Buyer C", "email": "buyer.c@example.com", "status": "active", "timezone": "Europe/Berlin", "created_at": "2026-10-18T10:00:00.000000Z", "updated_at": "2026-10-20T09:20:00.000000Z", "rescheduled": false, "old_invitee": null, "new_invitee": null, "no_show": { "uri": "https://api.calendly.com/invitee_no_shows/NS-SAMPLE-4", "created_at": "2026-10-20T09:20:00.000000Z" },
+        "questions_and_answers": [ { "question": "Your whatsapp mobile number", "answer": "+33 6 00 00 00 04", "position": 0 }, { "question": "How can I help?", "answer": "Is your boy available at stud for my girl?", "position": 1 } ] }
+    },
+    {
+      "event": { "uri": "https://api.calendly.com/scheduled_events/EV-SAMPLE-5", "name": "Old Discovery Call", "status": "active", "start_time": "2026-10-21T09:00:00.000000Z", "end_time": "2026-10-21T09:30:00.000000Z", "created_at": "2026-10-19T10:00:00.000000Z" },
+      "invitee": { "uri": "https://api.calendly.com/scheduled_events/EV-SAMPLE-5/invitees/INV-SAMPLE-5", "name": "Not A Buyer", "email": "someone@example.com", "status": "active", "timezone": "Europe/London", "created_at": "2026-10-19T10:00:00.000000Z", "rescheduled": false, "old_invitee": null, "new_invitee": null, "no_show": null, "questions_and_answers": [] }
+    }
+  ]
+}

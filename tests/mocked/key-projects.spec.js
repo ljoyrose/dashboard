@@ -13,6 +13,7 @@ const TILES = [
   ['Marketplace', 'marketplace/', true],
   ['GA Hub', 'food/', true],
   ['Studio', 'studio/', true],
+  ['Web Estate', 'estate/', true],
 ];
 
 function pageFile(href) {

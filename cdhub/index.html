@@ -514,6 +514,7 @@ function build(){
       where:'',off:o.off_site_kind||'',
       treats:DSP[r.id]||[], dna:DNA[r.id]||[],
       chip:m.chip_number||'',source:r.source,
+      rxExpiry:r.rx_moxi_expiry||'',rxUrl:r.rx_moxi_file_url||'',
       species:r.species||'',breed:r.breed||'',breed_vet:r.breed_vet_recorded||'',
       colour:c?{name:c.name,family:c.base_family,hex:c.swatch_hex,noseApplies:c.nose_pigment_applies==='true'}:null,
       pat:p?p.name:'',pig:g?{name:g.name,code:g.code,hex:g.swatch_hex}:null,
@@ -571,6 +572,9 @@ function build(){
 
 var TODAY=new Date();
 function dmy(iso){ if(!iso) return ''; var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso); return m? m[3]+'/'+m[2]+'/'+m[1] : iso; }
+var UKMON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function ukDate(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); if(!m) return '';
+  var mon=UKMON[+m[2]-1]; return mon?((+m[3])+' '+mon+' '+m[1]):''; }
 function nameOf(sid){ if(!sid) return ''; var d=(CD._byId||{})[sid]; return (d&&d.name)?d.name:sid.replace(/^sub-/,'').replace(/-/g,' '); }
 
 function months(iso){ if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
@@ -1008,7 +1012,7 @@ function pageToday(){
  +(function(){ var w=inWhelp(date); if(!w.length) return '';
    /* kit: animal */
    return '<h3>In whelp '+cntPill(w.length)+'</h3><div class="card">'
-    +'<div class="scroll"><table><thead><tr><th>bitch</th><th>day</th><th>first mated</th><th>working due (+63)</th><th>window 57\u201372</th><th>sire(s) \u00b7 method</th></tr></thead><tbody>'
+    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>bitch</th><th>day</th><th>first mated</th><th>working due (+63)</th><th>window 57\u201372</th><th>sire(s) \u00b7 method</th></tr></thead><tbody>'
     +w.map(function(x){
       if(x.unknown) return '<tr><td><b>'+esc(x.dog.name)+'</b></td><td colspan="5"><span class="pill no">mating date not recorded</span> '+esc(x.matings)+' mating row(s), no date \u2014 no due date can be computed</td></tr>';
       var late=x.day>72, close=x.day>=57;
@@ -1079,7 +1083,7 @@ function showList(key){
  var list=listFor(key);
  var areaName={}; CD.areas.forEach(function(a){ areaName[a.id]=a.code; });
  var h='<div class="card"><h4>'+esc(capFirst(LISTNAME[key]||key))+cntPill(list.length)+'</h4>'
-  +'<div class="scroll"><table><thead><tr><th>dog</th><th>age</th><th>sex</th><th>status</th><th>where (location)</th><th>classification</th><th></th></tr></thead><tbody>';
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>dog</th><th>age</th><th>sex</th><th>status</th><th>where (location)</th><th>classification</th><th></th></tr></thead><tbody>';
  list.slice().sort(function(a,b){return (a.name||'')<(b.name||'')?-1:1;}).forEach(function(d){
   var m=months(d.dob), st=statusOf(d);
   h+='<tr><td><b>'+esc(d.name)+'</b></td>'
@@ -1156,7 +1160,7 @@ function showWeights(id){
  var el=document.getElementById('wpanel'); if(!el) return;
  if(!d.weights.length){ el.innerHTML='<div class="card acc2"><h4>'+esc(d.name)+' has no weighings</h4></div>'; return; }
  var h='<div class="card"><h4>'+esc(d.name)+': weighings'+cntPill(d.weights.length)+'</h4>'
-  +'<div class="scroll"><table><thead><tr><th>date</th><th>weight</th><th>change</th><th>BCS</th><th>source</th></tr></thead><tbody>';
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>weight</th><th>change</th><th>BCS</th><th>source</th></tr></thead><tbody>';
  for(var i=d.weights.length-1;i>=0;i--){ var w=d.weights[i], pv=i>0?d.weights[i-1]:null;
   var dl=pv?(w.kg-pv.kg):null;
   h+='<tr><td>'+esc(dmy(w.on))+'</td><td><b>'+w.kg+' kg</b></td>'
@@ -1174,7 +1178,7 @@ function showTreats(id){
  var t=d.treats||[];
  if(!t.length){ el.innerHTML='<div class="card acc2"><h4>'+esc(d.name)+' has no treatments recorded</h4></div>'; return; }
  var h='<div class="card"><h4>'+esc(d.name)+': treatments'+cntPill(t.length)+'</h4>'
-  +'<div class="scroll"><table><thead><tr><th>date</th><th>product</th><th>dose</th><th>chosen because</th><th>source</th></tr></thead><tbody>';
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>product</th><th>dose</th><th>chosen because</th><th>source</th></tr></thead><tbody>';
  for(var i=t.length-1;i>=0;i--){ var r=t[i];
   var unk=/NOT STATED/.test(r.product||'');
   h+='<tr><td>'+esc(dmy(r.on))+'</td>'
@@ -1190,6 +1194,15 @@ function showTreats(id){
  if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 var dogShown=300, unplacedShown=40;
+// Moxiclear prescription: expiry from the subject table, and the latest file only when that table gives a real web address.
+function moxiLine(d){
+ var when=ukDate(d.rxExpiry), url=safeUrl(d.rxUrl);
+ if(!when && !url) return '';
+ return '<div class="wt"><span class="lb">Moxiclear</span>'
+  +(when?'<b>'+esc(when)+'</b>':'')
+  +(url?'<a class="cb" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="'+esc('Rx for '+(d.name||'this dog'))+'">Rx</a>':'')
+  +'</div>';
+}
 function drawDogs(){
  var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
  var q=v('q').toLowerCase(),fs=v('fs'),fn=v('fn'),fa=v('fa'),fst=v('fst'),fc=v('fc'),ft=v('ft');
@@ -1241,6 +1254,7 @@ function drawDogs(){
       +'<b>'+d.treats.filter(function(x){return !/NOT STATED/.test(x.product||'');}).length+' given</b>'
       +(d.treats.some(function(x){return /NOT STATED/.test(x.product||'');})?'<span class="pill no">1 not named</span>':'')
       +'<span class="mut">last '+esc(dmy(d.treats[d.treats.length-1].on))+'</span></div>':'')
+   +moxiLine(d)
    +(d.chip?'<div class="chipline"><span class="lb">Chip</span><span class="vl">'+esc(d.chip)+'</span></div>'
           :'<div class="chipline"><span class="lb">Chip</span><span class="none">none recorded</span></div>')
    +'<div class="cfoot"><span class="mut">'+esc(d.where||(d.off?'off site':'cabin not recorded'))+'</span>'
@@ -1318,7 +1332,7 @@ function pageAreas(){
    
    {
     var modes = cur ? [cur] : ['free','limited'];
-    h+='<div class="scroll"><table><thead><tr><th>flap</th>'+BANDS.map(function(b){return '<th>'+esc(b)+'</th>';}).join('')+'</tr></thead><tbody>'
+    h+='<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>flap</th>'+BANDS.map(function(b){return '<th>'+esc(b)+'</th>';}).join('')+'</tr></thead><tbody>'
      +modes.map(function(mo){
         return '<tr><td><b>'+mo+'</b>'+(cur?'':' <span class="mut">(not chosen)</span>')+'</td>'
          +BANDS.map(function(b){ var v=capFor(a.id,b,mo);
@@ -1349,7 +1363,7 @@ function pageLitters(){
     ['Pups',fsel('lk','Pups','<option value="y">pups linked</option><option value="n">no pups linked</option>')]]})
  /* kit: animal (litter stage, not held yet) */
  +'<div class="arrow">'+arrives('stage')+'</div>'
- +'<div class="scroll"><table><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>pups</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>pups</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
  return h;
 }
 function litterPups(){
@@ -1403,7 +1417,7 @@ function pageVet(){
  +tile('b4',here.filter(function(l){return (byId[l.subject_id].weights||[]).length;}).length,'of these have weights','')+'</div>'
  +'<div class="card acc5"><h4>A foreign id lives in one file only</h4>'
  +'<p style="margin-bottom:0">Animana patient ids appear in <code>BLD-MAP-animana.csv</code> and nowhere else. If Animana renumbers, one file changes.</p></div>'
- +'<div class="scroll"><table><thead><tr><th>dog</th><th>chip</th><th>animana patient ID</th><th>weighings</th></tr></thead><tbody>';
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>dog</th><th>chip</th><th>animana patient ID</th><th>weighings</th></tr></thead><tbody>';
  here.slice().sort(function(a,b){return (a.vet_name||'')<(b.vet_name||'')?-1:1;}).forEach(function(l){
   h+='<tr><td><b>'+esc(l.vet_name)+'</b></td><td><code>'+esc(l.matched_on_chip||(byId[l.subject_id]||{}).chip||'')+'</code></td>'
    +'<td><code class="mut">'+esc(l.foreign_id)+'</code></td><td>'+(wcount[l.subject_id]||0)+'</td></tr>';});
@@ -1416,7 +1430,7 @@ function flag(iso){ iso=(iso||'').toUpperCase();
 function pageBuyers(){
  var live=CD.assoc.filter(function(a){return a.status!=='DEFUNCT';});
  var cob=live.filter(function(a){return a.recognises_cobberdog==='true';});
- var h='<h2>Buyers</h2><p class="sub">Who could take the lines on. Associations first.</p>'
+ var h='<h2>Assocs</h2><p class="sub">Who could take the lines on. Associations first.</p>'
  +'<div class="tiles">'+tile('b6',CD.prospects.length,'prospects logged','BLD-prospect.csv')
  +tile('b5',live.length,'live associations','BLD-association.csv')
  +tile('b2',cob.length,'recognise the Cobberdog','of '+live.length)
@@ -1429,7 +1443,7 @@ function pageBuyers(){
  if(!CD.prospects.length) h+='<div class="card dash acc4"><h4>No prospects harvested yet</h4>'
   +'<p style="margin-bottom:0">Empty on purpose. Pass 2 fills it from the directories below. Nothing invented.</p></div>';
  h+='<h3><span class="dot" style="background:var(--p2)"></span>Associations</h3>'
- +'<div class="scroll"><table><thead><tr><th>body</th><th>country</th><th>Cobberdog</th><th>registry</th>'
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>body</th><th>country</th><th>Cobberdog</th><th>registry</th>'
  +'<th>breeders listed</th><th>directory</th></tr></thead><tbody>';
  live.slice().sort(function(a,b){ return (b.recognises_cobberdog==='true')-(a.recognises_cobberdog==='true') || (a.acronym<b.acronym?-1:1); })
   .forEach(function(a){
@@ -1448,7 +1462,7 @@ function pageBuyers(){
  +'<div class="card acc3"><h4>Every sale is a commercial export</h4>'
  +'<p style="margin-bottom:0">A change of ownership is commercial even where no money moves, so the ordinary pet travel certificate does not apply. '
  +'Read each route before promising a buyer a date.</p></div>'
- +'<div class="scroll"><table><thead><tr><th>to</th><th>difficulty</th><th>lead time</th><th>what is required</th></tr></thead><tbody>';
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>to</th><th>difficulty</th><th>lead time</th><th>what is required</th></tr></thead><tbody>';
  CD.exportRoutes.forEach(function(e){
   var cls=e.difficulty==='LOW'?'ok':(e.difficulty==='HIGH'?'no':'w');
   h+='<tr><td>'+flag(e.country_iso)+' <b>'+esc(e.country)+'</b></td>'
@@ -1467,7 +1481,7 @@ function pageBuyers(){
       ['MDBA number',fsel('bmd','MDBA number','<option value="y">has one</option><option value="n">none found</option>')],
       ['Email',fsel('bem','Email','<option value="y">has an email</option><option value="n">no email</option>')],
       ['Reachable by',fsel('bch','Reachable by',['whatsapp','email','website form','none found'].map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join(''))]]})
-   +'<div class="scroll"><table><thead><tr><th>kennel</th><th>country</th><th>MDBA</th><th>type</th>'
+   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>kennel</th><th>country</th><th>MDBA</th><th>type</th>'
    +'<th>appetite</th><th>contact</th><th>why them</th></tr></thead><tbody id="brows"></tbody></table></div>';
  }
  return h;
@@ -1683,7 +1697,7 @@ function pageWork(){
   rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
   /* foundation: work records grouped by who they wait on */
   h+='<div class="card '+g[1]+'"><h4>'+g[2]+cntPill(rows.length,g[0]==='BLOCKED'?'need':'')+'</h4>'
-   +'<div class="scroll"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
+   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
    +rows.map(function(r){
      return '<tr><td class="mut">'+esc(r.id)+'</td><td><span class="pill i">'+esc(r.area)+'</span></td>'
       +'<td>'+esc(r.item)+(r.note?'<br><span class="mut">'+esc(r.note)+'</span>':'')+'</td>'
@@ -1780,7 +1794,7 @@ function pageShape(){
     +' stroke-width="'+(thin?1:(mid?1.8:2.6))+'"'+(thin?' stroke-dasharray="3 3"':'')+' opacity="'+(thin?.95:.7)+'"/>'
     +'<text x="'+(mx)+'" y="'+((y1+y2)/2-6)+'" font-size="13" text-anchor="middle" fill="currentColor">'+e.pct+'%</text>';
  });
- var svg='<figure style="margin:0"><div class="scroll"><svg role="img" aria-label="Map of the breeder tables: subject is the spine with '
+ var svg='<figure style="margin:0"><div class="scroll" tabindex="0" role="group" aria-label="Map, scroll sideways for more"><svg role="img" aria-label="Map of the breeder tables: subject is the spine with '
   +(N.subject?N.subject.in:0)+' tables pointing at it; arrow weight shows how much of each join is actually filled." '
   +'viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'">'
   +'<text x="'+colL+'" y="44" font-size="15" font-weight="600" fill="currentColor">Looked up</text>'
@@ -1796,12 +1810,12 @@ function pageShape(){
   +'<p class="note">Who points at whom · rows · <b>how full each link is</b> (a join can be almost empty).</p>'
   +'<div class="card map">'+svg+'</div>'
   +'<div class="card acc2"><h4>Joins that exist but are nearly empty'+cntPill(thin.length)+'</h4>'
-  +'<p>These are the ones a flat diagram would draw the same as a full one.</p><div class="scroll"><table><thead><tr><th>from</th><th>column</th><th>to</th><th>filled</th></tr></thead><tbody>'
+  +'<p>These are the ones a flat diagram would draw the same as a full one.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>from</th><th>column</th><th>to</th><th>filled</th></tr></thead><tbody>'
   +thin.map(function(e){return '<tr><td>'+esc(e.from)+'</td><td class="mut">'+esc(e.col)+'</td><td>'+esc(e.to)+'</td><td><span class="pill no">'+e.pct+'%</span> '+e.filled+' of '+e.of+'</td></tr>';}).join('')
   +'</tbody></table></div></div>'
   +'<div class="card acc4"><h4>tenant_id is on every table and is deliberately not drawn</h4><p style="margin-bottom:0">All '+Object.keys(N).length+' tables carry it at 100%, so drawing it would add a line to every box and say nothing. It is a band across the whole picture, not a relationship. <b>And one tenant in the data never proves isolation</b> — that needs a second tenant.</p></div>'
   +'<div class="card acc7"><h4>Tables other tables point at that do not exist</h4>'
-  +'<p>Dashed, because nothing is there. This is where the picture stops.</p><div class="scroll"><table><thead><tr><th>table</th><th>pointed at by</th><th>what it would hold</th></tr></thead><tbody>'
+  +'<p>Dashed, because nothing is there. This is where the picture stops.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>table</th><th>pointed at by</th><th>what it would hold</th></tr></thead><tbody>'
   +GHOSTS.map(function(x){return '<tr><td><b>'+esc(x[0])+'</b></td><td><span class="pill no">'+x[1]+' tables</span></td><td class="mut">'+esc(x[2])+'</td></tr>';}).join('')
   +'</tbody></table></div></div>'
   +(loose.length?'<div class="card"><h4>Loaded but joined to nothing'+cntPill(loose.length)+'</h4><p style="margin-bottom:0" class="mut">'+loose.map(esc).join(', ')+'</p></div>':'');
@@ -1809,13 +1823,13 @@ function pageShape(){
 }
 
 var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,vet:pageVet,buyers:pageBuyers};
-var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Buyers']];
+var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Assocs']];
 var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','vet'],areas:['today','litters'],litters:['dogs','vet'],vet:['dogs','buyers'],buyers:['dogs','map']};
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 // Bottom tab bar: icon, short label (narrow screens) and the tab's colour (shown only in the small bar above the label).
 var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sitemap','Tables',0],today:['calendar-event','Today',4],
  round:['route','Round',4],dogs:['paw','Dogs',5],areas:['building-cottage','Areas',3],litters:['baby-carriage','Litters',7],
- vet:['stethoscope','Vet',5],buyers:['world','Buyers',6]};
+ vet:['stethoscope','Vet',5],buyers:['world','Assocs',6]};
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; } // 0 shows no ring
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
