@@ -13,6 +13,7 @@
     "teeth": "node tests/teeth/run-teeth.js",
     "test:gate": "node --test tests/gate/gate.test.mjs",
     "gate": "node tools/gate/gate.mjs",
+    "lint": "node tools/lint/lint.mjs",
     "test:job34": "playwright test --project=mocked job34"
   },
   "devDependencies": {

@@ -27,10 +27,10 @@ test.describe('One way in', () => {
     await expect(page.locator('#view .figs, #view .fig')).toHaveCount(0);
   });
 
-  test('Key projects holds exactly MOVE and the six hubs', async ({ page }) => {
+  test('Key projects holds exactly MOVE and the seven hubs', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await expect(page.locator('#key-projects a.keytile')).toHaveText(['MOVE', 'Money Hub', 'CD Hub', 'Factory', 'Marketplace', 'GA Hub', 'Studio']);
+    await expect(page.locator('#key-projects a.keytile')).toHaveText(['MOVE', 'Money Hub', 'CD Hub', 'Factory', 'Marketplace', 'GA Hub', 'Studio', 'Web Estate']);
     for (const a of await page.locator('#key-projects a.keytile').all()) await expect(a).toHaveAttribute('target', '_blank');
   });
 
