@@ -88,6 +88,7 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
   }
   // The bin list is where the old button lived. Open one shared drive's bin.
   await page.evaluate(() => { location.hash = '#/bin'; });
+  await page.locator('#binCard > summary').click(); // Already in the bin is folded closed by default (stage 5)
   const binJump = page.locator('[data-action="foldjump"][data-key="bin-drv-alpha1"]');
   await expect(binJump).toBeVisible();
   await binJump.click();
