@@ -20,7 +20,7 @@ const NEVER = [
   [/\.moveToTrash\s*\(|\.setTrashed\s*\(/, 'trash'], [/\.addLabel\s*\(|\.removeLabel\s*\(/, 'Gmail label change'],
   [/['"](post|put|patch|delete)['"]\s*$/im, 'a write HTTP method on its own'],
   [/method\s*:\s*['"](put|patch|delete)['"]/i, 'HTTP PUT/PATCH/DELETE'],
-  [/stripe|paypal|gocardless|sumup|square(up)?\.com/i, 'a payment API'],
+  [/api\.(stripe|paypal|gocardless|sumup)\.com|connect\.squareup\.com|api\.squareup\.com/i, 'a payment API'],
   [/api\.xero\.com|activepieces/i, 'a Xero or Activepieces call'],
   [/\/tags?\b[^\n]*method\s*:\s*['"]post/i, 'a tag write'],
   [/\.delete(Row|Rows|Sheet|Column|Columns)\s*\(|\.clearContents|\.clear\s*\(/, 'a sheet delete or clear']
