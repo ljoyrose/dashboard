@@ -548,6 +548,9 @@
   var BG_CFG = CFG.binGuard || {};
   var CHECK_FOLDER_ID = BG_CFG.checkFolderId;
   var BG_URL_RE = /^https:\/\/script\.google\.com\/(a\/macros\/puppyclassroom\.com\/|macros\/)s\/[A-Za-z0-9_-]+\/exec$/;
+  // Projects Hub tile: drawn only when config.js holds a valid Apps Script /exec address (same rule as the Bin guard).
+  var PH_URL = (CFG.projectsHub || {}).webAppUrl || '';
+  if (!BG_URL_RE.test(PH_URL)) PH_URL = '';
 
   // Page state stays in memory. The sign-in token is the one thing shared, via auth.js.
   var accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
@@ -2246,6 +2249,7 @@
       ['Studio', 'studio/', true],
       ['Web Estate', 'estate/', true]
     ];
+    if (PH_URL) tiles.push(['Projects Hub', PH_URL, true]);
     return '<section class="card" id="key-projects" aria-labelledby="key-projects-title">' +
       '<h2 id="key-projects-title">Key projects & docs</h2>' +
       '<div class="keytiles">' + tiles.map(function (t) {
