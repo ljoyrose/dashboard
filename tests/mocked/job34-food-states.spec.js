@@ -127,10 +127,11 @@ test.describe('GA Hub (JOB 34)', () => {
   test('an empty workbook: Orders, Invoices and Products each say so in plain words', async ({ page }) => {
     await page.route(SHEETS, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY8) }));
     await signIn(page);
-    await expect(page.locator('#view .empty')).toContainText('Nothing needs you');
+    // Home now carries more than one empty card (growth cards); pick the one by its words.
+    await expect(page.locator('#view .empty', { hasText: 'Nothing needs you' })).toBeVisible();
     for (const [view, words] of [['orders', 'No orders yet'], ['invoices', 'No GA invoices yet'], ['products', 'No products here']]) {
       await go(page, view);
-      await expect(page.locator('#view .empty'), view).toContainText(words);
+      await expect(page.locator('#view .empty', { hasText: words }).first(), view).toBeVisible();
     }
   });
 
