@@ -552,7 +552,7 @@
       '<div class="pills" style="margin-top:12px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
       '<div id="codes" class="codes"><span class="q">…</span></div>' +
       '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span>' + linkStrip(t, false) + '<button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
-      linkGroups(t) + (addLink && addLink.id === t.id ? linkForm() : '') + (cardAsk ? '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn" type="submit" aria-label="Send"><i class="ti ti-send"></i></button></form><div id="askNote" class="muted"></div>' : '') + waiting(t) +
+      linkGroups(t) + (addLink && addLink.id === t.id ? linkForm() : '') + (cardAsk ? '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn" type="submit" aria-label="Send"><i class="ti ti-send"></i></button></form><div id="askNote" class="muted"></div>' : '') + waiting(t) + launchAsk(t) +
       '<div class="strip">' + STAGES.map(function (_, i) { return '<i class="' + (n !== null && i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>';
     STAGES.forEach(function (name, i) {
       var cls = n !== null && i < n ? 'd' : i === n ? 'c' : '';
@@ -1561,6 +1561,26 @@
         .catch(function (e) { banner('Not sent: ' + e.message); render(); });
     });
   }
+  // Stage 6 (D6 A): at Step 7 Launch, one button asks Studio for a launch pack. It writes ONE Studio request (kind idea,
+  // playbook P1, appRef) into Studio's requests folder; the STUDIO-ENGINE makes the idea. appRef = AF app id + 6-letter slug.
+  // Engine v0.2.23 still rejects it (needs brandIds; no P1 row; appRef not kept): that engine edit waits for Stage 2.
+  var STUDIO_REQ = (CFG.studio || {}).requestsFolderId, launched = loadLocal('af-launch');
+  function appRefOf(t) { return { id: t.id, slug: slugify(bare(t)).replace(/-/g, '').slice(0, 6) || String(t.id).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6) }; }
+  function launchAsk(t) {
+    if (stageNo(t.status) !== 7 || !STUDIO_REQ) return '';
+    var l = launched[t.id];
+    return '<p class="launch" data-launch="' + esc(t.id) + '">' + (l ? '<span class="sent">' + ic('tick') + 'Asked Studio for a launch pack</span>' :
+      '<button class="btn" type="button" data-action="launchpack" data-id="' + esc(t.id) + '">' + ic('send') + 'Ask Studio for a launch pack</button>') + '</p>';
+  }
+  function sendLaunch(btn) {
+    var id = btn.getAttribute('data-id'), t = byId(id); if (!t || launched[id]) return;
+    btn.disabled = true; btn.parentNode.innerHTML = '<span class="sent">sending…</span>';
+    withWrite(function () {
+      return putRequest('idea', { kind: 'idea', at: new Date().toISOString(), name: 'Launch pack · ' + bare(t), type: 'pack', playbookId: 'P1', appRef: appRefOf(t), from: 'factory' }, STUDIO_REQ)
+        .then(function () { launched[id] = { at: Date.now() }; saveLocal('af-launch', launched); render(); })
+        .catch(function (e) { banner('Not sent: ' + e.message); render(); });
+    });
+  }
   // Every click file says who clicked (email + device): a YES on 20 Oct could not be traced.
   var whoAmI = null;
   function device() { var u = navigator.userAgent; return /iPhone|iPad/.test(u) ? 'iPhone/iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'other'; }
@@ -1570,10 +1590,10 @@
       .then(function (j) { return (whoAmI = ((j.user && j.user.emailAddress) || '?') + ' · ' + device()); })
       .catch(function () { return '? · ' + device(); });
   }
-  function putRequest(prefix, body) {
+  function putRequest(prefix, body, folder) {
     return who().then(function (by) {
       body.by = by;
-      var meta = { name: prefix + '-' + Date.now() + '.json', parents: [F.requests], mimeType: 'application/json' };
+      var meta = { name: prefix + '-' + Date.now() + '.json', parents: [folder || F.requests], mimeType: 'application/json' };
       var b = 'af' + Date.now();
       var payload = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(body) + '\r\n--' + b + '--';
       return drive('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: payload });
@@ -1618,6 +1638,7 @@
       else if (k === 'ftest') { var t1 = barTab(); if (t1) { fsOf(t1).test = !fsOf(t1).test; saveFs(); render(); } }
       else if (k === 'pfclear') { pfo = {}; savePf(); render(); } else if (k === 'pfall') { pfo.all = true; render(); } else if (k === 'pfarch') { pfo.arch = true; render(); }
       else if (k === 'clearf') { var t2 = barTab(); if (t2) { fs[t2] = fdef(t2); saveFs(); } render(); }
+      else if (k === 'launchpack') sendLaunch(a);
       else if (k === 'sendidea') sendIdea(); else if (k === 'sendprob') sendProblem(a.getAttribute('data-id'));
       else if (k === 'filters') { filtersOpen = !filtersOpen; render(); } else if (k === 'factory') sendFactory(); else if (k === 'today' || k === 'week') { weekView = k === 'week'; render(); }
       return;

@@ -520,7 +520,9 @@
  *              gate: { question, at: ISO } | null   (a gate waiting on Lisa: GO · HOLD · RESHAPE · REFINE · KILL · RECYCLE),
  *              kitId, groupId, playbookId, outcome: 'attract'|'convert'|'deliver'|'keep'|'reuse'|null, frameworkId, voiceId, lookId,
  *              formatIds: [id], language, length, masterId (variant of), purpose: 'refresh'|'rebrand'|'reformat'|'translate'|'test'|null,
- *              test (A/B group id), result, sourceIds: [id], lineCardUrl (the item's Studio Line card in Infinity, https) }],   (ids are null when not set)
+ *              test (A/B group id), result, sourceIds: [id], lineCardUrl (the item's Studio Line card in Infinity, https),
+ *              appRef: { id, slug, alias } | null }],   (ids are null when not set; appRef = the App Factory app that asked
+ *              for it (Stage 6): AF app id + 6-letter slug; the page shows only alias (or slug), never the id)
  *   ideas:  [same shape as assets, stage 0],
  *   playbooks: [{ id, name, outcome, steps: [{ kind: 'pack'|'kit'|'action', id|null, text }], notes }],   (WHAT ladder: Brick › Kit › Pack › Playbook)
  *   packs:  [{ id, name, kind (e.g. funnel), kitIds: [id], notes }],
@@ -1049,6 +1051,7 @@
       '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') +
       (a.protect === 'yes' && a.stage < 8 ? '<div class="needl"><span class="tag" data-chip="proof" title="Clients see a view-only proof">Proof \u00b7 view only</span></div>' : '') +
+      (a.appRef && (a.appRef.alias || a.appRef.slug) ? '<div class="needl"><span class="tag" data-chip="from-app" title="Asked for by App Factory">From app: ' + esc(a.appRef.alias || a.appRef.slug) + '</span></div>' : '') +
       (isCM(a) ? '<div class="needl"><span class="tag" data-chip="client-only" title="The client owns this; it is never reused">Client-only \u00b7 never reused</span></div>' : '') +
       '</div></div><div class="cfoot">' + (need ? '<span class="tag need" data-chip="need">' + esc(need) + '</span>' : '<span></span>') + whoRing(a) + '</div>' +
       (function (x) { return x ? '<div class="l2"><span class="acts">' + x + '</span></div>' : ''; })(actsFor(a, kind) + (a.parts && a.parts.total && a.parts.approved === a.parts.total && a.stage < 7 && !sent[a.id] ? '<button class="btn yes" type="button" data-act="assemble" data-id="' + esc(a.id) + '" aria-label="Assemble"' + dis() + '>' + I('books') + 'Assemble</button>' : '')) +
