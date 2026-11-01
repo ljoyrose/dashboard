@@ -120,11 +120,7 @@ test.describe('Marketplace (JOB 34b): every button and link does what it says', 
     await expect(page.locator('#view .packbar')).toContainText('Packing · 1 of 2');
   });
 
-  // FIX-REQUEST J34b-F42 (marketplace/index.html:867 pagePack sets pack = null when the list is empty; route() at :1086).
-  // The "All packed" card shows, then the next render (the extra Cards read, or the 5-minute re-read) swaps it for the
-  // Do now "Nothing waiting" card while the address still says #/do?pack, so "Back to Do now" vanishes.
-  // DECISION NEEDED: fix the page (keep packing mode until Stop / Back to Do now) or accept. OWNER: Marketplace owner. BY 2026-11-13
-  test.fixme('J34b-F42 packing with nothing left: All packed stays, and Back to Do now goes back to the list', async ({ page }) => {
+  test('packing with nothing left: All packed, and Back to Do now goes back to the list', async ({ page }) => {
     await book(page, []);
     await open(page, '#/do?pack');
     await expect(page.locator('#view .card.empty h2')).toHaveText('All packed');
