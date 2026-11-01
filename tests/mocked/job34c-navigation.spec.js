@@ -15,6 +15,7 @@ const signIn = async (page) => {
 const LANDED = {
   'money/': '#signInBtn, #readStamp',
   'cdhub/': '#signinbtn, #nav button[data-go]',
+  'estate/': '#view',
   'factory/': '#view',
   'marketplace/': '#view',
   'food/': '#view',

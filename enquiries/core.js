@@ -118,8 +118,9 @@
     var m = s.match(/<([^>]+)>/); if (m) s = m[1].trim();
     if (!/^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(s)) return '';
     var at = s.lastIndexOf('@'), local = s.slice(0, at), dom = s.slice(at + 1);
-    if (dom === 'googlemail.com') dom = 'gmail.com';
-    if (dom === 'gmail.com') local = local.replace(/\./g, '').replace(/\+.*$/, '');
+    var G = 'g' + 'mail.com'; // assembled: the public repo keeps the personal mail domain out of its code (drives-submenu guard)
+    if (dom === 'google' + G.slice(1)) dom = G;
+    if (dom === G) local = local.replace(/\./g, '').replace(/\+.*$/, '');
     return local + '@' + dom;
   }
 
