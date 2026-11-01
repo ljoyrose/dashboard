@@ -1,0 +1,3 @@
+id,tenant_id,table_name,table_kind,default_row_visibility,rows_carry_own_visibility,row_visibility_column,who_may_read_by_default,who_may_write_by_default,overskill_access_mode,reason,set_by,set_on
+tp-p01,ten-REPLACE-ME,area_reading,operational,tenant,no,,owner (all),staff add rows only; owner may edit in place,admin_only - NOT user_scoped,PROPOSED: temperature log. Not in the table policy yet.,PROPOSED - claude-job4 - Lisa to approve,2026-10-16
+tp-p02,ten-REPLACE-ME,occupancy_check,operational,tenant,no,,owner (all),staff add rows only,admin_only - NOT user_scoped,"PROPOSED: daily check log, one row per ""All the rest unmoved"" tap. New table, off by default. Staff can add rows but have no read rows for it.",PROPOSED - claude-job4 - Lisa to approve,2026-10-16
