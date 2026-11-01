@@ -1,0 +1,8 @@
+{
+  "_about": "Invented Open work tab (Marketplace) for the data-shape contract. Row 1 is the header the engine writes; the page reads A2:L by position. Every value is invented.",
+  "rows": [
+    ["key", "section", "category", "title", "detail", "created_at", "answer", "note", "answered_at", "answered_by", "applied_at", "applied_by"],
+    ["POST|S-1", "post", "Leads", "Sample blue lead", "{\"platform\":\"ebay\",\"price\":\"\u00a39\",\"shelf\":\"A1\",\"courier\":\"Evri\",\"red\":false}", "2026-10-20T09:00:00Z", "", "", "", "", "", ""],
+    ["LINK|L-0001|L-0002", "check", "Toys", "Sample toy rope", "{\"kind\":\"new\",\"qty\":2}", "2026-10-21T09:00:00Z", "", "", "", "", "", ""]
+  ]
+}

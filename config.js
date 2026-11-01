@@ -59,6 +59,8 @@
       requestsFolderId: '13KclIUhOej1bmoQznfbrUiHtoab-FnDV', // the page writes request JSON files here
       inboxFolderId: '1poaewHMRwrOcXwXa0PrMZhnmhyn66BzL', // Ideas > Inbox - drop files here
       stateFile: 'studio-state.json',
+      // Owned tools list (Tools page): read with the signed-in token only. The tool data lives in the sheet, never in this repo.
+      ownedTools: { sheetId: '1iwlUFBeFOAUxlHlr8FsCIxpmhqSWzq3038OEDN-Zfz8', tab: 'OWNED_TOOLS' }, // STUDIO-CONTROL sheet, Owned Tools tab
       live: false
     },
     // Web Estate Hub (estate/): reads the private RR_WEB-ESTATE sheet (Properties tab) with Lisa's sign-in; Add drops one
@@ -68,6 +70,20 @@
       sheetId: '',
       requestsFolderId: '',
       live: false
+    },
+    // Actions minutes card (Home). Reads ACTIONS-MINUTES.json (counts only) from folderId with Lisa's sign-in; the file is
+    // written by the private ACTIONS-MINUTES collector (Apps Script in Drive, read-only GitHub token in its Script Properties).
+    // folderId empty = the card shows invented example data with the EXAMPLE stamp and reads nothing.
+    // repoLabels: short labels only (the collector maps real repos to these); they set the row order. Never real repo names.
+    actionsMinutes: {
+      folderId: '',
+      fileName: 'ACTIONS-MINUTES.json',
+      freeMinutes: 2000,
+      amber: 0.75,
+      red: 0.90,
+      staleDays: 2,
+      repoLabels: [],
+      usageUrl: 'https://github.com/settings/billing/usage'
     },
     marketplace: {
       openWorkId: '1ShYbYmY8W-MEWqm9kHFsIcS5uR4b2SG00uXle_yL76U', // RR_OPEN-WORK (00 AI Commons)
