@@ -71,6 +71,20 @@
       requestsFolderId: '',
       live: false
     },
+    // Actions minutes card (Home). Reads ACTIONS-MINUTES.json (counts only) from folderId with Lisa's sign-in; the file is
+    // written by the private ACTIONS-MINUTES collector (Apps Script in Drive, read-only GitHub token in its Script Properties).
+    // folderId empty = the card shows invented example data with the EXAMPLE stamp and reads nothing.
+    // repoLabels: short labels only (the collector maps real repos to these); they set the row order. Never real repo names.
+    actionsMinutes: {
+      folderId: '',
+      fileName: 'ACTIONS-MINUTES.json',
+      freeMinutes: 2000,
+      amber: 0.75,
+      red: 0.90,
+      staleDays: 2,
+      repoLabels: [],
+      usageUrl: 'https://github.com/settings/billing/usage'
+    },
     marketplace: {
       openWorkId: '1ShYbYmY8W-MEWqm9kHFsIcS5uR4b2SG00uXle_yL76U', // RR_OPEN-WORK (00 AI Commons)
       tab: 'Marketplace',
@@ -93,6 +107,11 @@
       homeFolderId: '1HKAMkAER7ft-xMJYUQGzi_v6jV-3vQwk', // LD > *00 Current: the web app writes its address file here when first opened
       webAppFile: 'BIN-GUARD-WEBAPP.json',
       webAppUrl: '' // optional: paste the /exec address here instead. Left empty, the page reads it from webAppFile.
+    },
+    // Projects Hub (Apps Script web app in the private projects-hub repo). Its address is NOT kept here yet: left empty,
+    // the home screen shows no Projects Hub tile. Where the address will live is Lisa's open privacy decision for all hubs.
+    projectsHub: {
+      webAppUrl: '' // the hub's /exec address; only a script.google.com /exec address is accepted
     },
     money: {
       owner: 'lisa@puppyclassroom.com',

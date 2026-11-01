@@ -1,0 +1,2 @@
+app_id,key,name,match,inputs_file,ledger_file,ledger_section,roles_section,snags_file,roadmap_file,clickup_tag,clickup_workspace,ui_controls,notes
+00000,sample,Sample App,\bSample\b,data/INPUTS-SAMPLE.json,data/SAMPLE-THE-DOCUMENT.md,3.7,4.0,data/SNAGS-SAMPLE.md,,app-sample,0000000000,Log out@Header.tsx@the header@sign[- ]?out|log[- ]?out;Sign out@Home.tsx@the Home page@sign[- ]?out|log[- ]?out,Invented row showing the columns.
