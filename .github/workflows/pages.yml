@@ -1,0 +1,106 @@
+name: Publish site (after tests)
+
+# The live site is published ONLY after the tests pass on the very commit being published.
+# (Before this, GitHub Pages published whatever landed on main without waiting for the tests.)
+#
+# Needs ONE click from Lisa, once: Settings > Pages > Build and deployment > Source = "GitHub Actions" (see TESTS.md).
+# Until then the "publish" job notices Pages is still on branch publishing, says so in its summary, and does nothing,
+# so merging this file changes nothing about the live site by itself.
+#
+# What goes live: index.html, auth.js, tokens.css, house.css, cdhub/, money/, factory/, marketplace/, food/ and studio/ only (the pages, the shared sign-in, the shared colours, the shared house look and money/core.js).
+# Not tests/, docs/, TESTS.md, zips, fixtures, tools/ or .github/. A test fails if a page refers to a file left out here.
+# No secrets: only the run's own built-in token. Rollback: Settings > Pages > Source = "Deploy from a branch" > main > / (root).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pages-publish
+  cancel-in-progress: false
+
+env:
+  CI: 'true'
+
+jobs:
+  gate:
+    name: Gate (tests must pass before anything is published)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20 # one run hit 15 (26 Oct 2026); the suite itself takes about 7
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - name: Install packages (exact versions from package-lock.json)
+        run: npm ci
+      - name: Remember the test browser between runs
+        id: pw-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Install the test browser (first time, or after a version change)
+        if: steps.pw-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Install the browser's system libraries (browser itself came from the cache)
+        if: steps.pw-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Run the same tests as the required check
+        run: npx playwright test --project=mocked --project=phone
+      - name: Write the short summary
+        if: always()
+        run: node tests/support/summary.js test-results/results.json
+
+  publish:
+    name: Publish (only if the gate passed)
+    needs: gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Is Pages switched to "GitHub Actions" yet?
+        id: ready
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          type=$(gh api "repos/${{ github.repository }}/pages" --jq .build_type 2>/dev/null || echo none)
+          echo "Pages build type: $type"
+          if [ "$type" = "workflow" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "### ⏳ Waiting for Lisa's one click"
+              echo ""
+              echo "The tests passed, but GitHub Pages is still publishing straight from the branch (build type: \`$type\`), so nothing was published by this workflow."
+              echo "Settings > Pages > Build and deployment > Source > **GitHub Actions**. Then run **Publish site (after tests)** once."
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Assemble the site (the three pages and the shared sign-in only)
+        if: steps.ready.outputs.ready == 'true'
+        run: |
+          mkdir _site
+          cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio estate _site/
+          ls -R _site
+          test -f _site/index.html && test -f _site/cdhub/index.html && test -f _site/money/index.html && test -f _site/money/core.js && test -f _site/factory/index.html && test -f _site/marketplace/index.html && test -f _site/food/index.html && test -f _site/studio/index.html && test -f _site/estate/index.html && test -f _site/estate/core.js && test -f _site/auth.js && test -f _site/tokens.css && test -f _site/house.css
+      - name: Package the site
+        if: steps.ready.outputs.ready == 'true'
+        uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
+        with:
+          path: _site
+      - name: Publish
+        id: deployment
+        if: steps.ready.outputs.ready == 'true'
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4.0.5

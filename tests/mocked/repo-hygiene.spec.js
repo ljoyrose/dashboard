@@ -32,10 +32,16 @@ test('no passwords, secret keys or access tokens are committed', () => {
   expect(hits).toEqual([]);
 });
 
-test('the only OAuth client id in the pages is the public one, and it is the same on all three pages', () => {
-  const ids = ['index.html', 'cdhub/index.html', 'money/index.html'].map((f) => (read(f).match(/[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com/g) || [])[0]);
-  expect(ids[0]).toBeTruthy();
-  expect(new Set(ids).size).toBe(1);
+test('the only OAuth client id is the public one, written once in config.js, and all three pages read it from there', () => {
+  expect((read('config.js').match(/[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com/g) || []).length).toBe(1);
+  const where = files.filter((f) => f !== 'config.js' && !f.startsWith('tests/') && !f.startsWith('docs/') && /[0-9]+-[a-z0-9]+\.apps\.googleusercontent\.com/.test(read(f)));
+  expect(where, 'client id copied outside config.js').toEqual([]);
+  for (const [f, pre] of [['index.html', ''], ['cdhub/index.html', '../'], ['money/index.html', '../']]) {
+    const t = read(f);
+    expect(t, f + ' loads config.js').toContain('<script src="' + pre + 'config.js"></script>');
+    expect(t, f + ' loads toolkit.js').toContain('<script src="' + pre + 'toolkit.js"></script>');
+    expect(t).toMatch(/CLIENT_ID\s*=\s*(window\.DASH_CONFIG|CFG)\.clientId/);
+  }
 });
 
 test('sample CSVs are invented: only example.test addresses and no real-looking data', () => {
@@ -63,5 +69,13 @@ test('the pages pull in scripts, styles and images only from Google sign-in and 
       if (/^https?:\/\//.test(u) && !ok.test(u)) bad.push(`${f}: ${u}`);
     }
   }
+  expect(bad).toEqual([]);
+});
+
+test('no personal email addresses anywhere in the repo (this repo is public)', () => {
+  // No allow-list: personal addresses are never allowed. The privacy guard (tools/privacy-guard) is the main check; this is the backstop.
+  const PERSONAL = /[\w.+-]+@(?:me\.com|icloud\.com|gmail\.com|googlemail\.com|outlook\.com|hotmail\.com|yahoo\.[a-z.]+)/gi;
+  const bad = [];
+  files.forEach((f) => (read(f).match(PERSONAL) || []).forEach((m) => bad.push(`${f}: a personal address (not shown: logs are public)`)));
   expect(bad).toEqual([]);
 });

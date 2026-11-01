@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const { test, expect } = require('@playwright/test');
-const { evaluate, REQUIRED_JOB } = require('../support/check-protection');
+const { evaluate, REQUIRED_JOB, PRIVACY_JOB } = require('../support/check-protection');
 const { BREAKS } = require('../teeth/breaks');
 
 const REPO = path.resolve(__dirname, '..', '..');
@@ -74,19 +74,37 @@ test.describe('Learning loop is mechanical @ci-guard', () => {
 
 test.describe('Alarm wiring @ci-guard', () => {
   test('the required check name exists as a job in tests.yml (so merges can never wait forever)', () => {
-    const { problems } = evaluate({ protected: true, protection: { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB], enforcement_level: 'everyone' } } }, read('.github/workflows/tests.yml'));
+    const { problems } = evaluate({ protected: true, protection: { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB, PRIVACY_JOB], enforcement_level: 'everyone' } } }, read('.github/workflows/tests.yml'));
     expect(problems).toEqual([]);
   });
 
   test('protection check: off, switched off, wrong check, admin bypass and a renamed job are all reported', () => {
     const wf = read('.github/workflows/tests.yml');
-    const on = { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB], enforcement_level: 'everyone' } };
+    const on = { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB, PRIVACY_JOB], enforcement_level: 'everyone' } };
     expect(evaluate({ protected: false }, wf).problems.join()).toMatch(/NO branch protection/);
     expect(evaluate({ protected: true, protection: { ...on, enabled: false } }, wf).problems.join()).toMatch(/switched off/);
     expect(evaluate({ protected: true, protection: { ...on, required_status_checks: { contexts: ['Something else'], enforcement_level: 'everyone' } } }, wf).problems.join()).toMatch(/no longer requires/);
-    expect(evaluate({ protected: true, protection: { ...on, required_status_checks: { contexts: [REQUIRED_JOB], enforcement_level: 'non_admins' } } }, wf).problems.join()).toMatch(/Admins can bypass/);
+    expect(evaluate({ protected: true, protection: { ...on, required_status_checks: { contexts: [REQUIRED_JOB, PRIVACY_JOB], enforcement_level: 'non_admins' } } }, wf).problems.join()).toMatch(/Admins can bypass/);
     expect(evaluate({ protected: true, protection: on }, wf.replace('name: ' + REQUIRED_JOB, 'name: Renamed job')).problems.join()).toMatch(/No job in tests.yml/);
     expect(evaluate({ protected: true }, wf).problems).toEqual([]); // token can't see details: only "is on" is checked
+  });
+
+  test('protection check: the privacy guard must stay a required check and its job must keep its name', () => {
+    const wf = read('.github/workflows/tests.yml');
+    const pg = read('.github/workflows/privacy-guard.yml');
+    const on = { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB, PRIVACY_JOB], enforcement_level: 'everyone' } };
+    expect(evaluate({ protected: true, protection: on }, wf, null, pg).problems).toEqual([]);
+    expect(evaluate({ protected: true, protection: { ...on, required_status_checks: { contexts: [REQUIRED_JOB], enforcement_level: 'everyone' } } }, wf, null, pg).problems.join()).toMatch(/does not require the check "Privacy guard/);
+    expect(evaluate({ protected: true, protection: on }, wf, null, pg.replace('name: ' + PRIVACY_JOB, 'name: Renamed')).problems.join()).toMatch(/No job in privacy-guard.yml/);
+    expect(evaluate({ protected: true, protection: on }, wf, null, null).problems.join()).toMatch(/No job in privacy-guard.yml/);
+  });
+
+  test('protection watch also reports GitHub Issues switched off (the alarm cannot open an Issue then)', () => {
+    const wf = read('.github/workflows/tests.yml');
+    const on = { enabled: true, required_status_checks: { contexts: [REQUIRED_JOB, PRIVACY_JOB], enforcement_level: 'everyone' } };
+    expect(evaluate({ protected: true, protection: on }, wf, { has_issues: false }).problems.join()).toMatch(/Issues are switched OFF/);
+    expect(evaluate({ protected: true, protection: on }, wf, { has_issues: true }).problems).toEqual([]);
+    expect(evaluate({ protected: true, protection: on }, wf, null).problems).toEqual([]); // could not read: no false alarm
   });
 
   test('the alarm message starts with a plain "What to do" line', () => {
@@ -96,10 +114,11 @@ test.describe('Alarm wiring @ci-guard', () => {
     expect(out).toMatch(/\*\*What to do:\*\* open the run link/);
   });
 
-  test('every workflow that can open an issue does it with the built-in token only (no stored secrets)', () => {
+  test('every workflow that can open an issue does it with the built-in token only (no stored secrets but the privacy denylist)', () => {
     const secrets = [];
     fs.readdirSync(path.join(REPO, '.github', 'workflows')).forEach((f) => {
-      [...read('.github/workflows/' + f).matchAll(/secrets\.([A-Za-z0-9_]+)/g)].forEach((m) => { if (m[1] !== 'GITHUB_TOKEN') secrets.push(`${f}: uses secrets.${m[1]}`); });
+      // One exception: the privacy guard reads its denylist from the PRIVACY_DENYLIST secret (it can never live in this public repo).
+      [...read('.github/workflows/' + f).matchAll(/secrets\.([A-Za-z0-9_]+)/g)].forEach((m) => { if (m[1] !== 'GITHUB_TOKEN' && !(f === 'privacy-guard.yml' && m[1] === 'PRIVACY_DENYLIST')) secrets.push(`${f}: uses secrets.${m[1]}`); });
     });
     expect(secrets).toEqual([]);
   });
@@ -115,5 +134,70 @@ test.describe('Teeth list stays in step with the pages @ci-guard', () => {
     });
     expect(BREAKS.length).toBeGreaterThanOrEqual(8);
     expect(stale).toEqual([]);
+  });
+});
+
+test.describe('Publishing waits for the tests @ci-guard', () => {
+  const pages = () => read('.github/workflows/pages.yml');
+  const LIVE_FILES = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'house.css', 'manifest.webmanifest', 'sw.js', 'icons/icon.svg', 'cdhub/index.html', 'money/index.html', 'money/core.js', 'factory/index.html', 'marketplace/index.html', 'food/index.html', 'studio/index.html', 'estate/index.html', 'estate/core.js'];
+
+  test('the publish job needs the gate job, and the gate runs the same suite as the required check', () => {
+    const wf = pages();
+    expect(wf).toMatch(/publish:[\s\S]*?needs:\s*gate/);
+    expect(wf).toMatch(/npx playwright test --project=mocked --project=phone/);
+    expect(read('.github/workflows/tests.yml')).toMatch(/npx playwright test --project=mocked --project=phone/);
+  });
+
+  test('nothing can bypass the gate: no always(), no continue-on-error, only push to main or a manual run', () => {
+    const wf = pages();
+    expect(wf).not.toMatch(/if:\s*\$?\{?\{?\s*always\(\)[^\n]*\n[^\n]*uses:\s*actions\/deploy-pages/);
+    expect(wf).not.toMatch(/continue-on-error/);
+    expect(wf).not.toMatch(/workflow_run/);
+    expect(wf).toMatch(/on:\s*\n\s*push:\s*\n\s*branches:\s*\[main\]\s*\n\s*workflow_dispatch:/);
+  });
+
+  test('only the four pages and the shared sign-in are published (never tests, docs or .github) and all four live files are in it', () => {
+    const m = /cp -r ([^\n]+) _site\//.exec(pages());
+    expect(m, 'the copy line').toBeTruthy();
+    const copied = m[1].trim().split(/\s+/);
+    expect(copied.sort()).toEqual(['auth.js', 'cdhub', 'config.js', 'estate', 'factory', 'food', 'house.css', 'icons', 'index.html', 'manifest.webmanifest', 'marketplace', 'money', 'studio', 'sw.js', 'tokens.css', 'toolkit.js']);
+    LIVE_FILES.forEach((f) => expect(copied.some((c) => f === c || f.startsWith(c + '/')), f + ' must be published').toBe(true));
+    // and the live-match test compares exactly these files
+    LIVE_FILES.forEach((f) => expect(read('tests/live/live-smoke.spec.js')).toContain(`'${f}'`));
+  });
+
+  // A hub is a top-level folder with its own index.html. Each one must be copied and checked by pages.yml,
+  // or it merges green and stays 404 (the Web Estate hub did, 30 Oct 2026).
+  test('every hub folder on main is copied and checked by pages.yml', () => {
+    const wf = pages();
+    const copied = /cp -r ([^\n]+) _site\//.exec(wf)[1].trim().split(/\s+/);
+    const hubs = fs.readdirSync(REPO, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && !d.name.startsWith('.') && !['tests', 'tools', 'docs', 'node_modules', 'icons'].includes(d.name))
+      .filter((d) => fs.existsSync(path.join(REPO, d.name, 'index.html'))).map((d) => d.name);
+    expect(hubs.length).toBeGreaterThan(5);
+    const missing = hubs.filter((h) => !copied.includes(h) || !wf.includes(`test -f _site/${h}/index.html`));
+    expect(missing, 'hub folders missing from pages.yml (cp line or test line)').toEqual([]);
+  });
+
+  test('every action in pages.yml is pinned to a full commit id', () => {
+    const loose = [...pages().matchAll(/uses:\s*([^\s#]+)/g)].map((x) => x[1]).filter((u) => !/@[0-9a-f]{40}$/.test(u));
+    expect(loose).toEqual([]);
+  });
+
+  test('the live check after deploy listens for the new publish workflow by its exact name', () => {
+    const name = /^name:\s*(.+)$/m.exec(pages())[1].trim();
+    expect(read('.github/workflows/live-after-deploy.yml')).toContain(`'${name}'`);
+  });
+
+  test('no page references a file that is not published', () => {
+    const bad = [];
+    ['index.html', 'cdhub/index.html', 'money/index.html'].forEach((f) => {
+      [...read(f).matchAll(/\b(?:src|href)="([^"#:?]+)"/g)].map((m) => m[1]).filter((u) => !/^(https?|mailto|tel|data)/.test(u) && !/^['"+\s]/.test(u)).forEach((u) => {
+        const target = path.posix.normalize(path.posix.join(path.posix.dirname(f), u)).replace(/^\.\/$/, '.');
+        const published = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'house.css', 'manifest.webmanifest', 'sw.js', 'icons/', 'cdhub/', 'money/', 'factory/', 'marketplace/', 'food/', 'studio/', 'estate/'].some((p) => target === p || target.startsWith(p) || target === '.' || target === '');
+        if (!published) bad.push(`${f} refers to ${u}`);
+      });
+    });
+    expect(bad).toEqual([]);
   });
 });

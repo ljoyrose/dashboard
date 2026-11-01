@@ -1,0 +1,89 @@
+name: Privacy guard
+# This repo is PUBLIC. Fails any PR or push that adds a denylisted term, an email address, a Drive id or link,
+# a phone number or a data path (rules: tools/privacy-guard/privacy_guard.py). The denylist lives ONLY in the
+# repo secret PRIVACY_DENYLIST (one term per line). Findings print file:line + rule, never the term.
+# The job "Privacy guard (public repo)" is a required check on main (see README). Do not rename it.
+# Daily and hand-started runs are REPORT-ONLY: counts by rule in the log, never locations, never fail, upload nothing.
+on:
+  push:
+  pull_request:
+  schedule:
+    - cron: '41 5 * * *' # daily full-history count, about 05:41/06:41 UK
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'history = every commit ever; tree = the files on this branch now'
+        type: choice
+        options: [history, tree]
+        default: history
+
+permissions:
+  contents: read
+
+# A newer push to the same pull request cancels the older PR run (the new head is scanned in full).
+# Pushes, the daily count and hand-started runs are never cancelled. Never path-filtered.
+concurrency:
+  group: privacy-guard-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  guard:
+    name: Privacy guard (public repo)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      issues: write # only used to open/close the one "privacy guard is red" issue for a push to main
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Self-test (fake terms only)
+        run: python3 tools/privacy-guard/test_privacy_guard.py
+
+      - name: Hide every denylist term from the log
+        env:
+          PRIVACY_DENYLIST: ${{ secrets.PRIVACY_DENYLIST }}
+        run: |
+          printf '%s\n' "$PRIVACY_DENYLIST" | while IFS= read -r t; do
+            t="$(printf '%s' "$t" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+            if [ -n "$t" ]; then echo "::add-mask::$t"; fi
+          done
+
+      - name: Scan
+        id: scan
+        env:
+          PRIVACY_DENYLIST: ${{ secrets.PRIVACY_DENYLIST }}
+          BEFORE: ${{ github.event.before }}
+          EVENT: ${{ github.event_name }}
+          MODE: ${{ inputs.mode || 'history' }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          G=tools/privacy-guard/privacy_guard.py
+          if [ -z "$PRIVACY_DENYLIST" ]; then echo "PRIVACY_DENYLIST secret missing: failing closed"; exit 2; fi
+          case "$EVENT" in
+            schedule) python3 $G --history --report "$RUNNER_TEMP/privacy-report.md" ;;
+            workflow_dispatch)
+              if [ "$MODE" = tree ]; then python3 $G --tree HEAD --report "$RUNNER_TEMP/privacy-report.md"
+              else python3 $G --history --report "$RUNNER_TEMP/privacy-report.md"; fi ;;
+            pull_request) python3 $G --range "$PR_BASE..$PR_HEAD" ;;
+            *) if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$BEFORE" 2>/dev/null; then
+                 python3 $G --range "HEAD --not $(git for-each-ref --format='%(refname)' refs/remotes/origin | grep -v "refs/remotes/origin/${GITHUB_REF_NAME}$" | tr '\n' ' ')"
+               else python3 $G --range "$BEFORE..HEAD"; fi ;;
+          esac
+
+      # A push to main that adds a finding: the run is red AND one issue opens (GitHub emails the owner).
+      - name: Red on main? Open or update the one issue
+        if: ${{ failure() && steps.scan.outcome == 'failure' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        run: node tests/support/report-issue.js --state red --label privacy-red --title-prefix "Privacy guard is red on main" --results none --note "A push to main added something private (or the PRIVACY_DENYLIST secret is missing). Open the run for file:line + rule. Do not force-push; ask Lisa."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Green on main? Close the issue
+        if: ${{ success() && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+        continue-on-error: true
+        run: node tests/support/report-issue.js --state green --label privacy-red
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

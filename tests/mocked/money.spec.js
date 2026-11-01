@@ -76,15 +76,16 @@ test.describe('Money Hub: sign-in (mocked) and the Lisa gate', () => {
     await expect(page.locator('#readStamp')).toHaveText('Not signed in');
     await expect(page.locator('#view')).not.toContainText('£');
     expect(await page.evaluate(() => window.__GIS_CALLS.revoke)).toBe(1);
-    expect(await page.evaluate(() => sessionStorage.length)).toBe(0);
+    expect(await page.evaluate(() => sessionStorage.length + localStorage.length)).toBe(0);
   });
 
-  test('keeps only the shared sign-in for this tab', async ({ page, context }) => {
+  test('keeps only the shared sign-in, one key in this browser', async ({ page, context }) => {
     await page.goto('money/');
     await signIn(page);
-    const stores = await page.evaluate(() => ({ local: localStorage.length, session: Object.keys(sessionStorage), key: window.DashAuth.KEY }));
-    expect(stores.local).toBe(0);
-    expect(stores.session).toEqual([stores.key]);
+    const stores = await page.evaluate(() => ({ local: Object.keys(localStorage), session: sessionStorage.length, key: window.DashAuth.KEY, saved: JSON.parse(localStorage.getItem(window.DashAuth.KEY)) }));
+    expect(stores.local).toEqual([stores.key]);
+    expect(stores.session).toBe(0);
+    expect(Object.keys(stores.saved).sort()).toEqual(['access_token', 'expires_at', 'scope']); // no refresh token, no secret
     expect(await context.cookies()).toEqual([]);
   });
 });
@@ -109,7 +110,7 @@ test.describe('Money Hub: navigation', () => {
     await expect(page.locator('#hereTitle')).toHaveText('Now');
   });
 
-  test('"← Dashboard" goes back to the main dashboard', async ({ page }) => {
+  test('"Dashboard" button goes back to the main dashboard', async ({ page }) => {
     await page.goto('money/');
     await page.locator('a.back').click();
     await expect(page).toHaveURL(/\/dashboard\/(#\/map)?$/);
@@ -166,7 +167,7 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     await expect(v).toContainText('TESTPERS');
     await expect(v).toContainText('£12,000'); // BALANCES.csv, the account with a balance
     await expect(v).toContainText('£3,000');
-    await expect(v).toContainText('There is no grand total');
+    await expect(v).toContainText('No grand total');
     await expect(v).not.toContainText('OLDCO'); // retired in MON-SUBJECTS.csv
     await expect(v).not.toContainText('£15,000'); // never summed across entities
   });

@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="build" content="ljr-factory-look-2026-10-28">
+<title>Factory</title>
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#3A3632">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap">
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
+<script src="../auth.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../house.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  /* House look (Lisa, 28 Oct 2026; the same rules on every hub). The Warm clear and Cool clear greys, the control line
+     (warm 8A7F70, cool 7A8692), the frame (3A3632 / 46413B), radius, counts, date pills, tabs and the hover rule now live once:
+     the numbers in ../tokens.css, the shared parts in ../house.css. The Look (Studio's Look menu, 'dash-look') is applied by
+     ../toolkit.js. Lexend 400/600, nothing under 13px, line height 1.5, ONE radius 12px (only dots and rings are round), 1px lines.
+     No solid colour fills and no coloured words: colour sits in dots, bars, 1px rings, tints and icons. Two allowed solid markers:
+     the new-comment dot and the on/off switch knob (outlined they are too faint). Factory's own names: the meaning lines. */
+  :root {
+    /* Meaning lines (3:1 or better on a card) and their tints. Words stay ink. */
+    --r-risk: var(--house-late); --r-warn: var(--house-soon); --r-ops: var(--ljr-4-text); --r-ok: var(--house-ok); --r-sales: var(--ljr-6-text); --r-ideas: var(--ljr-7-text);
+    --t-risk: var(--ljr-2-tint); --t-warn: var(--ljr-3-tint); --t-ok: var(--ljr-5-tint); }
+  * { box-sizing: border-box; }
+  h1, h2, h3, h4, b, strong, th, summary { font-weight: 600; }   /* two weights only: 400 and 600 */
+  html { scroll-padding-bottom: 120px; }   /* a control scrolled into view never hides under the tab bar */
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  .hidden { display: none !important; }
+  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  a.pill, a.chip, a.btn, a.lk, a.mark, a.plus, a.need, nav.tabs a, .room h2 .rlink { text-decoration: none; color: inherit; }
+  .ti { line-height: 1; }
+  svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .muted { color: var(--muted); font-size: 14px; }
+
+  /* One page width everywhere: the full window up to 1600px, 24px edge; phones 16px. */
+  .wrap, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; padding-left: 24px; padding-right: 24px; }
+  @media (max-width: 600px) { .wrap, .hin { padding-left: 16px; padding-right: 16px; } }
+
+  /* Frame: dark top bar (never black). Buttons on it are outlined in the frame's own light line. */
+  header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
+  .top { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
+  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
+  .top h1 a { color: var(--frame-ink); text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
+  .top h1 .dot { --c: var(--ljr-4); width: 10px; height: 10px; }
+  .stamp { font-size: 13px; font-weight: 600; color: var(--frame-ink); border: 1px solid var(--frame-line); border-radius: var(--radius); height: 24px; padding: 0 8px; display: inline-flex; align-items: center; }
+  .stamp:empty { display: none; }
+  header .btn { background: transparent; color: var(--frame-ink); border-color: var(--frame-line); }
+  #backHome { min-height: 44px; }   /* the shared Dashboard button rule: 44px on every page */
+  /* Signed out (auth.js hides the page): the dark bar stays, so Sign in and Dashboard keep their frame, both on the right. */
+  html.dash-locked header { visibility: visible; }
+  html.dash-locked .top > #signInBtn { margin-left: auto; }
+
+  /* Everything you press: the same clear 1px line (--ctl), 12px corners, 36px on a desktop / 44px on a phone, 14px 600. */
+  .btn, button.pill, a.pill, .fbtn, .ch, .more, .undo, .copy, .tick, .stat, label.date, a.chip, a.need, details.arch > summary, .fdet > summary {
+    font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius);
+    min-height: 36px; padding: 0 14px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; text-decoration: none; line-height: 1.5; }
+  /* Icon buttons: a 36px square on the same line. */
+  .ico, .flagb, .opt, .mark, .plus, .lk { position: relative; flex: none; font: inherit; font-size: 16px; font-weight: 600; width: 36px; height: 36px; padding: 0; border: 1px solid var(--ctl); border-radius: var(--radius);
+    background: var(--surface); color: var(--muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; text-decoration: none; }
+  span.lk { cursor: default; }
+  .lk.no { border-style: dashed; }
+  .lk .lkn { font-size: 13px; color: var(--ink); }
+  .lk.off { width: auto; padding: 0 12px; gap: 4px; font-size: 14px; color: var(--ink); }
+  .btn:disabled, .btn[disabled] { opacity: .6; cursor: default; }
+  .sbox { flex: 1; min-height: 36px; display: flex; gap: 8px; align-items: center; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 12px; background: var(--surface); }
+  .sbox .ti { color: var(--muted); font-size: 16px; }
+  .sbox input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 15px; padding: 4px 0; }
+  .sbox input::-webkit-search-cancel-button { cursor: pointer; }
+  .fin, .ask input, .ask select { font: inherit; font-size: 15px; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 6px 12px; min-height: 36px; }
+  .fin { width: 100%; }
+  textarea.fin { min-height: 72px; resize: vertical; }
+
+  /* Meaning-coloured controls rest on their own colour line (--mc) and keep it on hover: same line drawn inside + a pale tint of it. */
+  .btn.yes { --mc: var(--r-ok); } .btn.no { --mc: var(--r-risk); } .lk.off { --mc: var(--r-risk); }
+  a.need.n4 { --mc: var(--r-ops); } a.need.n5 { --mc: var(--r-ok); }
+  a.chip.stuck { --mc: var(--r-risk); } a.pill.alert.has { --mc: var(--r-risk); }
+  label.date.over { --mc: var(--r-risk); } label.date.soon { --mc: var(--r-warn); }
+  .stat { --mc: var(--sc); }
+  /* Status pills that are also links (needs, stuck, alert, dates, stats) wear their status ring: the ring is the information.
+     Yes / No / Off rest on their own colour line (Lisa's approved picture) and keep it on hover, adding the pale tint. */
+  .btn.yes, .btn.no, .lk.off, a.need.n4, a.need.n5, a.chip.stuck, a.pill.alert.has, label.date.over, label.date.soon, .stat { border-color: var(--mc); }
+  .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .lk.off .ti, a.pill.alert.has .ti { color: var(--ljr-2-text); }
+  label.date.over, label.date.soon { background: color-mix(in srgb, var(--mc) 10%, var(--surface)); }
+
+  /* Hover = selected: a 1px line drawn inside (nothing moves). Neutral = ink line + muted tint; meaning = its own colour + its tint. */
+  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+  @media (hover: hover) {
+    .btn:hover, button.pill:hover, a.pill:hover, .fbtn:hover, .ch:hover, .more:hover, .undo:hover, .copy:hover, .tick:hover, label.date:hover, a.chip:hover, details.arch > summary:hover,
+    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+    .btn.yes:hover, .btn.no:hover, .lk.off:hover, a.need:hover, a.chip.stuck:hover, a.pill.alert.has:hover, label.date.over:hover, label.date.soon:hover, .stat:hover {
+      outline: 1px solid var(--mc); outline-offset: -1px; background: color-mix(in srgb, var(--mc) 14%, var(--surface)); }
+    header .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 10%, var(--frame)); }
+    .ico:hover { color: var(--hc, var(--ink)); }
+    .mark:hover svg { filter: none; opacity: 1; }
+    .crow .ttl:hover, .room h2 .rlink:hover { text-decoration: underline; }
+  }
+  .ico.on { color: var(--hc, var(--ink)); }
+  .mark svg { filter: grayscale(1); opacity: .55; }
+  /* Keyboard focus: a 2px ink ring (the one exception to 1px). */
+  a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
+  /* !important: focus always wins over the 1px hover / selected line, so the keyboard ring is never lost. */
+  :focus-visible, label.date:has(input:focus-visible) { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  header :focus-visible, nav.tabs a:focus-visible { outline-color: var(--frame-ink) !important; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ink); }
+  .sbox:focus-within { border-color: var(--ink); }
+
+  /* Frame: dark bottom tab bar, light tab buttons with no rings. Hover and selected = the small colour bar above the label widens. */
+  /* The frame, light tab buttons, no ring, the widening colour bar: ../house.css (.house-tabs). Six across here. */
+  nav.tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 200px)); justify-content: center; gap: 8px;
+    padding: 8px 24px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  nav.tabs a { --tc: var(--ljr-0); font-size: 14px; }
+  @media (min-width: 601px) { nav.tabs a { min-height: 56px; } }
+  nav.tabs a > .ti { font-size: 18px; color: var(--muted); }
+  nav.tabs .n { top: 6px; right: 10px; }
+
+  /* Counts: ONE fixed box so 1 and 2 digits match (30 x 22, radius 11); only 3+ digits grow (.wide). Read-only: no hover.
+     Tab counts are an amber ring only (no fill); "needs you" counts in the page are a rose ring + tint. A count of 0 shows no pill. */
+  /* The count pill itself: ../house.css; the counts inside Filter and the fold titles use the same box. */
+  .fbtn .n, .fdet > summary .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: var(--house-count-w); height: var(--house-count-h); padding: 0 var(--house-count-pad);
+    border: 1px solid var(--ctl); border-radius: var(--house-count-r); font-size: 13px; font-weight: 600; line-height: var(--house-count-lh); color: var(--ink); background: transparent; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .cnt, nav.tabs .n, .fbtn .n, .fdet > summary .n { flex: none; vertical-align: middle; }
+  .fbtn .n.wide { width: auto; min-width: 30px; padding: 0 6px; }
+  nav.tabs .n { border-color: var(--r-warn); }
+  .cnt.need { border-color: var(--r-risk); background: var(--t-risk); }
+  .cnt:empty, nav.tabs .n:empty, .fbtn .n:empty, .fdet > summary .n:empty { display: none; }
+  @media (max-width: 600px) {
+    .btn, button.pill, a.pill, .fbtn, .ch, .more, .undo, .copy, .tick, .stat, label.date, a.chip, a.need, details.arch > summary, .fdet > summary, .sbox, .fin, .ask input, .ask select { min-height: 44px; }
+    .ico, .flagb, .opt, .mark, .plus, .lk { width: 44px; height: 44px; }
+    .lk.off { width: auto; }
+    /* Phone: two rows of three tabs; the count sits in flow beside the label, never over it. */
+    nav.tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px)); }
+    nav.tabs a { min-height: 44px; flex-direction: row; flex-wrap: wrap; align-content: center; gap: 2px 6px; }
+    nav.tabs a .bar { flex: 0 0 auto; }
+    nav.tabs a > .ti { display: none; }
+    nav.tabs a > .tl { order: 1; flex: 0 1 auto; }   /* room here: the count sits in the flow beside the label */
+    nav.tabs .n { position: static; }
+    html { scroll-padding-bottom: 150px; }
+  }
+
+  /* Work area: 12px steps, 16px under the header. */
+  main.wrap { padding-top: 16px; padding-bottom: 120px; display: flex; flex-direction: column; gap: 12px; }
+  @media (max-width: 600px) { main.wrap { padding-bottom: 160px; } }
+  #view { display: flex; flex-direction: column; gap: 12px; }
+  #view > p { margin: 0; }
+  .appmenu { margin: 0; }
+  .banner { border: 1px solid var(--r-risk); border-radius: var(--radius); padding: 8px 12px; background: var(--t-risk); color: var(--ink); }
+  .banner.info { border-color: var(--line); background: var(--surface); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; min-width: 0; }
+  .card.appcard.alarm { border-color: var(--r-risk); }
+  .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .pills.docs { margin-top: 12px; }
+  /* Read-only pills: 24px, 13px, a 1px ring, no hover. */
+  span.pill, .gate, .codes .cd, .age { font-size: 13px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid var(--ctl); border-radius: var(--radius);
+    height: 24px; padding: 0 8px; display: inline-flex; gap: 4px; align-items: center; white-space: nowrap; cursor: default; }
+  .pill .ti, .gate .ti, .age .ti { color: var(--muted); }
+  /* Presend checker state (Prompts view): READY on the green line, anything else on the risk line. */
+  span.pill.ps { border-color: var(--ljr-2); } span.pill.ps .ti { color: var(--ljr-2-text); }
+  span.pill.ps.ok { border-color: var(--ljr-5); } span.pill.ps.ok .ti { color: var(--ljr-5-text); }
+  .pitem > span.pill.ps { margin: 8px 0 4px; }
+  .nextstep .pill { height: auto; min-height: 24px; white-space: normal; max-width: 100%; }   /* a long step wraps inside its ring */
+  .nr { color: var(--muted); font-weight: 400; }   /* "not recorded": the grey words */
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ljr-0)); flex: none; display: inline-block; }
+
+  /* Rooms: a white card on the soft line, its stage colour as a 3px bar on the left (as Links). */
+  .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .room { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 12px 12px 12px 15px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; box-shadow: inset 3px 0 0 var(--c); }
+  .room h2 { font-size: 16px; margin: 0; display: flex; gap: 8px; align-items: center; }
+  .room .stn { font-size: 13px; color: var(--muted); margin-top: -4px; }
+  .room h2 .ct { margin-left: auto; }
+  .room h2 .rlink { color: var(--ink); display: flex; gap: 8px; align-items: center; }
+  a.chip { justify-content: flex-start; width: 100%; font-weight: 400; padding: 0 12px; }
+  a.chip .st { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; gap: 4px; align-items: center; }
+  .hero { display: flex; gap: 12px; align-items: center; }
+  .hero h2 { margin: 0; font-size: 20px; display: flex; gap: 8px; align-items: center; }
+  .hero p { margin: 0; color: var(--muted); font-size: 14px; }
+  .step { color: var(--muted); font-weight: 600; white-space: nowrap; }
+  /* Stage strip and step rings: tint inside a 1px ring, never solid. */
+  .strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 4px; margin: 12px 0 4px; }
+  .strip i { height: 10px; border-radius: var(--radius); background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
+  .strip i.d { background: var(--t-ok); box-shadow: inset 0 0 0 1px var(--r-ok); } .strip i.c { background: var(--ljr-6-tint); box-shadow: inset 0 0 0 1px var(--r-sales); }
+  .stage { display: flex; gap: 12px; align-items: center; padding: 8px 4px; border-top: 1px solid var(--line); cursor: pointer; }
+  .stage .n { width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; background: transparent; border: 1px solid var(--line); color: var(--ink); flex: none; }
+  .stage .n .i { width: 13px; height: 13px; }
+  .stage.d .n { background: var(--t-ok); border-color: var(--r-ok); }
+  .stage.c .n { background: var(--ljr-6-tint); border-color: var(--r-sales); }
+  .stage.c { font-weight: 600; }
+  .stage .r { margin-left: auto; font-size: 13px; color: var(--muted); display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+  .stage { flex-wrap: wrap; }
+  /* Per-stage checks: read-only rings, words ink. Pass = green ring, fail = rose ring + tint, not run = the control line. */
+  .ck { font-size: 13px; font-weight: 600; color: var(--ink); border: 1px solid var(--ctl); border-radius: var(--radius); height: 22px; padding: 0 6px; display: inline-flex; align-items: center; white-space: nowrap; }
+  .ck[data-ck="pass"] { border-color: var(--r-ok); } .ck[data-ck="fail"] { border-color: var(--r-risk); background: var(--t-risk); }
+  details.fold { margin: 0 0 8px 34px; }
+  details.fold > summary { font-weight: 400; color: var(--muted); }
+  details.fold[open] > summary { margin-bottom: 4px; }
+  details.fold .lines { padding-left: 0; }
+  .lines { list-style: none; margin: 0 0 8px; padding: 0 0 0 34px; }
+  .lines li { display: flex; gap: 8px; align-items: center; font-size: 14px; padding: 4px 0; }
+  .lines li .who { margin-left: auto; font-size: 13px; color: var(--muted); }
+  .codes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; align-items: center; }
+  .codes .q { color: var(--muted); font-size: 13px; }
+  .codes .cgrp { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+  .codes .csep { color: var(--muted); padding: 0 4px; align-self: center; }
+  .codes .cd b { font-weight: 600; }
+  .codes .cd.set { border-color: var(--r-ok); } .codes .cd.open { border-color: var(--r-warn); } .codes .cd.bad { border-color: var(--r-risk); background: var(--t-risk); }
+  .ask { display: flex; gap: 8px; margin-top: 12px; }
+  .ask input { flex: 1; min-width: 0; }
+  .rowask { margin-top: 8px; }
+
+  /* Health rows: a 3px colour bar on the left (tint inside a 1px line), words ink. */
+  .row { display: flex; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
+  .row a { color: var(--ink); text-decoration: none; font-weight: 600; }
+  .card > .row:first-child { border-top: 0; padding-top: 0; }
+  .row .txt { flex: 1; min-width: 0; }
+  .row .why { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .row .meta { margin-left: auto; font-size: 13px; color: var(--muted); text-align: right; }
+  .row .bar { width: 3px; align-self: stretch; border-radius: 2px; background: var(--c); flex: none; }
+
+  .grp { font-size: 16px; font-weight: 600; margin: 0 0 4px; padding-bottom: 8px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grp .dot { width: 10px; height: 10px; }
+  .grp .st { font-size: 13px; font-weight: 400; color: var(--muted); }
+  .grp a { color: var(--ink); text-decoration: none; }
+  .grp a:hover { text-decoration: underline; }
+  .grp .links { margin-left: auto; }
+
+  /* On/off switch: a 1px ring; ON = green ring + solid green knob (allowed solid: outlined it is too faint). */
+  .sw { display: inline-block; width: 30px; height: 18px; border-radius: var(--radius); border: 1px solid var(--muted); position: relative; vertical-align: middle; flex: none; }
+  .sw i { position: absolute; top: 3px; left: 3px; width: 10px; height: 10px; border-radius: 50%; background: var(--muted); transition: left .15s; }
+  .sw.on { border-color: var(--r-ok); background: var(--t-ok); } .sw.on i { left: 15px; background: var(--ljr-5-text); }
+  @media (prefers-reduced-motion: reduce) { .sw i { transition: none; } }
+
+  /* Calm rows */
+  .crow { padding: 12px 0; border-top: 1px solid var(--line); }
+  .card > .crow:first-child, .clines > .crow:first-child, .appcard > .crow:first-of-type { border-top: 0; }
+  .crow .l1 { display: flex; gap: 8px; align-items: flex-start; }
+  .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-weight: 400; line-height: 1.5; overflow-wrap: anywhere; }
+  .crow .ttl .app { font-weight: 600; margin-right: 4px; }
+  .crow .why { font-size: 14px; color: var(--muted); margin: 4px 0 0; overflow-wrap: anywhere; }
+  .crow .why.q { color: var(--ink); }
+  .crow .l2 { display: flex; gap: 8px; align-items: center; margin: 8px 0 0; flex-wrap: wrap; }
+  .crow .l3 { display: flex; align-items: center; gap: 4px; margin-top: 8px; }
+  .crow .l3 .grow, .l3 .grow { flex: 1; }
+  .l3 { display: flex; align-items: center; gap: 4px; margin-top: 8px; flex-wrap: wrap; }
+  .crow .icons { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 0; }
+  .crow .type { color: var(--muted); width: 28px; display: inline-flex; justify-content: center; flex: none; font-size: 18px; }
+  .acts { display: flex; gap: 8px; flex: none; align-items: center; }
+  .acts .btn { padding: 0 14px; font-size: 16px; }
+  .ico .new { position: absolute; top: 3px; right: 3px; width: 8px; height: 8px; border-radius: 50%; background: var(--ljr-2); }   /* allowed solid: the new-comment dot */
+  .flag { width: 18px; height: 18px; display: block; color: var(--muted); }
+  label.date { position: relative; white-space: nowrap; font-weight: 400; color: var(--muted); padding: 0 12px; }
+  label.date.over, label.date.soon { color: var(--ink); font-weight: 600; }
+  label.date input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+  .panel { margin: 8px 0 0; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 14px; display: flex; flex-wrap: wrap; gap: 8px; flex-direction: column; }
+  .panel p { margin: 0; }
+  .panel .opt, .panel .stat { align-self: flex-start; }
+  .tick { justify-content: flex-start; font-weight: 400; text-align: left; }
+  .tick.ok { color: var(--muted); text-decoration: line-through; }
+  .stat { font-weight: 600; }
+  .fpanel { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+  .fpanel .pills { margin: 0; }
+  .fpanel .pills + .pills { margin-top: 4px; }
+  .sent { font-size: 13px; color: var(--muted); flex: none; }
+  .appcard .grp { border-bottom: 1px solid var(--line); margin-bottom: 0; }
+  .more { margin-top: 8px; color: var(--muted); }
+  .more .cnt { border-color: var(--ctl); }
+
+  /* Link icons (Build · Run · Sell …): grey at rest, their own colour on hover; dashed = not recorded yet. */
+  .links { display: inline-flex; gap: 4px; flex-wrap: wrap; margin-left: auto; align-items: center; }
+  .lk[data-g="Build"]:hover { color: var(--ljr-7-text); } .lk[data-g="Run"]:hover { color: var(--ljr-4-text); }
+  .lk[data-g="Sell"]:hover, .lk[data-g="Social"]:hover { color: var(--ljr-6-text); } .lk[data-g="Support"]:hover { color: var(--ljr-5-text); }
+  .lgrid { display: grid; grid-template-columns: 72px 1fr; gap: 4px 8px; align-items: center; margin-top: 12px; }
+  .lgrid > span:nth-child(2n) { display: flex; gap: 4px; flex-wrap: wrap; }
+  .lgrid .lg { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .outs { display: grid; grid-template-columns: 18px 1fr; gap: 2px 8px; font-size: 14px; color: var(--muted); margin: 4px 0; }
+  .outs i.ti { font-size: 15px; margin-top: 3px; }
+  .outs .y { color: var(--ljr-5-text); } .outs .n { color: var(--ljr-2-text); }
+  .q1 { font-size: 15px; margin: 4px 0; }
+  .age.old { border-color: var(--r-risk); background: var(--t-risk); }
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border: 1px solid var(--ctl); border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--muted); cursor: help; margin-left: 4px; vertical-align: 1px; flex: none; }
+  .lock { color: var(--ink); font-size: 16px; display: inline-flex; align-items: center; gap: 4px; }
+  .lock .ti { color: var(--ljr-3-text); }
+  .gate { border-color: var(--r-warn); height: auto; min-height: 24px; white-space: normal; max-width: 100%; }   /* a long list of missing lines wraps inside its ring */
+  .plus { margin-left: auto; color: var(--ink); }
+
+  /* Forms: chips, (i) on hover, no placeholder words, draft kept. ★ = must answer, at the far right, in a rose ring. */
+  .fq { padding: 12px 0; border-top: 1px solid var(--line); }
+  .fq:first-of-type { border-top: 0; }
+  .fq .qt { font-size: 15px; margin: 0 0 8px; display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; position: relative; padding-right: 30px; }
+  .fq .code { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .fq .req, .fq .qt .req { position: absolute; right: 0; top: 0; color: var(--ink); font-size: 13px; font-weight: 600; width: 22px; height: 22px; border: 1px solid var(--r-risk); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ch { font-weight: 400; }
+  .ch b { font-weight: 600; margin-right: 4px; }
+  .ferr { color: var(--ink); font-size: 13px; margin-top: 4px; }
+  .ferr::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--r-risk); margin-right: 6px; }
+  .frow { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; }
+  .grpt { font-size: 14px; font-weight: 600; color: var(--muted); margin: 12px 0 8px; display: flex; gap: 6px; align-items: center; }
+  .grpt:first-child { margin-top: 0; }
+  details.arch > summary { list-style: none; width: max-content; }
+  details.arch > summary::-webkit-details-marker { display: none; }
+  .search { width: 100%; max-width: 320px; }
+  .addlink { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+  .flab { font-size: 14px; font-weight: 600; color: var(--muted); min-width: 44px; align-self: center; }
+
+  /* Portfolio and Docs tables */
+  .ptab { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .ptab th { text-align: left; font-size: 13px; color: var(--muted); font-weight: 600; padding: 4px 6px; }
+  .ptab td { padding: 6px; border-top: 1px solid var(--line); vertical-align: middle; overflow-wrap: anywhere; }
+  .ptab a { color: var(--ink); text-decoration: none; }
+  .ptab a:not([class]):hover { text-decoration: underline; }
+  @media (max-width: 600px) { .ptab:not(.dtab) th:nth-child(2), .ptab:not(.dtab) td:nth-child(2), .ptab:not(.dtab) th:nth-child(5), .ptab:not(.dtab) td:nth-child(5), .dtab td:nth-child(4) { display: none; } }
+  .dti { color: var(--muted); }
+  tr:hover .dti[data-t="card"], .pill:hover .dti[data-t="card"], tr:hover .dti[data-t="mockup"], .pill:hover .dti[data-t="mockup"] { color: var(--ljr-7-text); }
+  tr:hover .dti[data-t="prompt"], .pill:hover .dti[data-t="prompt"] { color: var(--ljr-3-text); }
+  tr:hover .dti[data-t="research"], .pill:hover .dti[data-t="research"] { color: var(--ljr-6-text); }
+  tr:hover .dti[data-t="report"], .pill:hover .dti[data-t="report"] { color: var(--ljr-5-text); }
+  tr:hover .dti[data-t="rules"], .pill:hover .dti[data-t="rules"] { color: var(--ljr-4-text); }
+  .dgrp td { border-top: 1px solid var(--line); padding-top: 12px; font-weight: 600; }
+  .dgrp:first-child td { border-top: 0; padding-top: 4px; }
+  .dgrp a { color: var(--ink); text-decoration: none; } .dgrp .muted { font-weight: 400; font-size: 13px; }
+  .dtab td { border-top: 0; }
+  .dtab .dot { margin-right: 6px; }
+
+  /* Find bar: one row (Search · Filter), then App and Kind chips; Who · Stage · Flags · Sort · Test behind Filter. */
+  .fbar2 { display: flex; flex-direction: column; gap: 8px; }
+  .srow { display: flex; gap: 8px; align-items: center; }
+  .fbtn .n { margin-left: 2px; }
+  /* Filter = a summary in the search row's right end (absolutely placed in the room the row keeps for it); the chips open below. */
+  .fbar2 { position: relative; }
+  .fbar2 .srow { padding-right: 124px; }
+  .fdet > summary { position: absolute; top: 0; right: 0; width: 116px; justify-content: center; list-style: none; }
+  .fdet > summary::-webkit-details-marker { display: none; }
+  .fdet[open] > summary { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+  .fdet .fbody { display: flex; flex-direction: column; gap: 8px; }
+  .fdet .n { margin-left: 2px; }
+  .srow .sbox { min-width: 0; }
+  .srow > .pill { flex: none; white-space: nowrap; }
+  @media (max-width: 600px) {
+    .fbar2 .srow { padding-right: 100px; }
+    .fdet > summary { width: 92px; padding: 0 8px; gap: 4px; }
+    .srow > .pill { padding: 0 10px; }
+  }
+  .sect { font-size: 14px; font-weight: 600; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 12px 0 0; }
+
+  /* Friendly empty state: plain words after a small green-ring check. */
+  .empty { margin: 0; display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 15px; }
+  .empty::before { content: "\2713"; flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--r-ok); background: var(--t-ok); color: var(--ink); font-size: 13px; }
+  .card[data-empty] { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  footer { color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M11 8l4 4-4 4M15 12H4"/></symbol>
+  <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6"/><path d="M20 4v7h-7"/></symbol>
+  <symbol id="i-coin" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v9"/></symbol>
+  <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 4l9 16H3Z"/><path d="M12 10v4M12 17v.1"/></symbol>
+  <symbol id="i-tick" viewBox="0 0 24 24"><path d="M4.5 12.5l5 5 10-11"/></symbol>
+  <symbol id="i-dot" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-doc" viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8Z"/><path d="M14 3v5h5"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-6Z"/></symbol>
+  <symbol id="i-stamp" viewBox="0 0 24 24"><path d="M9 4h6v6l3 3v3H6v-3l3-3Z"/><path d="M5 20h14"/></symbol>
+</svg>
+<header>
+  <div class="top wrap">
+    <h1><a href="#/rooms"><span class="dot" aria-hidden="true"></span>Factory</a></h1>
+    <button id="appPick" class="btn hidden" type="button" data-action="apppick" aria-label="Apps" aria-expanded="false"><i class="ti ti-apps"></i></button>
+    <span id="stamp" class="stamp"></span>
+    <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
+    <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
+    <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
+    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
+  </div>
+</header>
+<nav class="tabs house-tabs" aria-label="Sections">
+  <a href="#/me" data-nav="me" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-user" aria-hidden="true"></i><span class="tl">Me</span><span class="n" id="nMe"></span></a>
+  <a href="#/rooms" data-nav="rooms" style="--tc:var(--ljr-0)"><span class="bar" aria-hidden="true"></span><i class="ti ti-building-factory-2" aria-hidden="true"></i><span class="tl">Rooms</span></a>
+  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-scale" aria-hidden="true"></i><span class="tl">Decide</span><span class="n" id="nDecide"></span></a>
+  <a href="#/do" data-nav="do" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-square-check" aria-hidden="true"></i><span class="tl">Do</span><span class="n" id="nDo"></span></a>
+  <a href="#/docs" data-nav="docs" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-file" aria-hidden="true"></i><span class="tl">Docs</span></a>
+  <a href="#/today" data-nav="today" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-calendar" aria-hidden="true"></i><span class="tl">Today</span></a>
+</nav>
+<main class="wrap" id="content">
+  <div id="appMenu" class="appmenu hidden"></div>
+  <div id="banner" class="banner hidden" role="status"></div>
+  <div id="view"></div>
+</main>
+
+<script>
+/* Studio's Look setting ('dash-look') is applied by ../toolkit.js (Warm clear by default), never written here. */
+</script>
+<script>
+(function () {
+  'use strict';
+  var CFG = window.DASH_CONFIG, CLIENT_ID = CFG.clientId, SCOPE = CFG.scopes.read, WRITE = CFG.scopes.write;
+  var FC = CFG.factory || {};
+  var F = { logs: FC.logsFolderId, requests: FC.requestsFolderId, state: 'af-state.json' };
+  var REFRESH_MS = 5 * 60 * 1000;
+  var accessToken = null, tokenExpiresAt = 0, signedIn = false, S = null, err = null, timer = null, open = {}, cardCache = {}, sent = loadSent();
+  var $ = function (id) { return document.getElementById(id); };
+  function esc(t) { return String(t == null ? '' : t).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function ic(n) { return '<svg class="i"><use href="#i-' + n + '"/></svg>'; }
+
+  /* stage → room (Atlas floor plan) */
+  var ROOMS = [
+    { key: 'reception', name: 'Reception', slot: 7, st: ['0 idea'] },
+    { key: 'research', name: 'Research', slot: 7, st: ['1 research', '2 base', '3 features'] },
+    { key: 'rig', name: 'Rig', slot: 4, st: ['4 schema', '5 data'] },
+    { key: 'reactor', name: 'Reactor', slot: 3, st: ['6 prompts'], paid: true },
+    { key: 'runway', name: 'Runway', slot: 6, st: ['7 launch'] },
+    { key: 'radar', name: 'Radar', slot: 5, st: ['8 operate'] },
+    { key: 'rescue', name: 'Rescue', slot: 2, st: ['rescue'] },
+    { key: 'recovery', name: 'Recovery', slot: 0, st: ['hold', 'killed'] },
+    { key: 'recycle', name: 'Recycle', slot: 8, st: ['retired'] }
+  ];
+  var STAGES = ['Idea', 'Research', 'Base', 'Features', 'Schema', 'Data', 'Prompts', 'Launch', 'Operate'];
+  function stageNo(status) { var m = String(status || '').match(/^(\d)/); return m ? +m[1] : null; }
+  function col(slot) { return 'var(--ljr-' + slot + ')'; }
+  function stuck(t) { return !/^(killed|retired|hold)$/i.test(t.status) && Date.now() - t.updated > 14 * 864e5; }
+  function apps() { return (S && S.lists.apps || []).filter(function (t) { return !t.parent; }); }
+  function isOpen(t) { return !/^(done|closed|complete|cancelled|retired|killed|decided|verified|proved live|to decide done)$/i.test(t.status); }
+  function mine() {
+    var all = [].concat(S.lists.work || [], S.lists.sends || [], S.lists.incidents || []); // never app cards: an app asks through its gate row
+    var next = {};
+    (S.lists.sends || []).filter(isOpen).forEach(function (t) {
+      var k = (t.tags.filter(function (g) { return /^app-/.test(g); })[0]) || t.id, n = +((t.name.match(/·\s*P(\d+)\s*·/) || [])[1] || 99);
+      if (!next[k] || n < next[k].n) next[k] = { n: n, t: t };
+    });
+    var sendIds = Object.keys(next).map(function (k) { return next[k].t.id; });
+    return all.filter(function (t) { return isOpen(t) && t.tags.indexOf('lisa-done') < 0 && t.tags.indexOf('queued') < 0 && (t.tags.indexOf('who-lisa') >= 0 || sendIds.indexOf(t.id) >= 0); })
+      .sort(function (a, b) { return (/^blocked$/i.test(a.status) ? 1 : 0) - (/^blocked$/i.test(b.status) ? 1 : 0); });
+  }
+  function decisions() { return (S.lists.decisions || []).filter(function (t) { return isOpen(t) && t.tags.indexOf('queued') < 0; }); }
+  function queuedN() { return (S.lists.decisions || []).filter(function (t) { return isOpen(t) && t.tags.indexOf('queued') >= 0; }).length; }
+  function autoToday() { var d0 = dayStart(0); return (S.lists.decisions || []).filter(function (t) { return t.tags.indexOf('auto') >= 0 && t.updated >= d0; }).length; }
+
+  /* Drive */
+  function drive(url, init) {
+    init = init || {}; init.headers = Object.assign({ Authorization: 'Bearer ' + accessToken }, init.headers || {});
+    return DashKit.googleFetch(url, init).then(function (r) {
+      if (r.status === 401) { expired(); throw new Error('Sign-in expired.'); }
+      if (!r.ok) throw new Error('Drive said ' + r.status);
+      return r;
+    });
+  }
+  function findFile(folder, name) {
+    var q = encodeURIComponent("'" + folder + "' in parents and name = '" + name + "' and trashed = false");
+    return drive(CFG.urls.files + '?q=' + q + '&fields=files(id,name,modifiedTime)&supportsAllDrives=true&includeItemsFromAllDrives=true')
+      .then(function (r) { return r.json(); }).then(function (j) {
+        if (!j.files.length) throw new Error('af-state.json not found yet. AF-ENGINE writes it every 15 min once installed.');
+        if (j.files.length > 1) throw new Error('Two af-state.json files. One must go.');
+        return j.files[0];
+      });
+  }
+  // no-store: the browser must never show an old af-state.json (it did on 20 Oct: "data 22:48" the next morning).
+  function media(id) { return drive(CFG.urls.files + '/' + id + '?alt=media&supportsAllDrives=true', { cache: 'no-store' }); }
+  function load() {
+    if (!accessToken) return;
+    findFile(F.logs, F.state).then(function (f) { return media(f.id).then(function (r) { return r.json(); }); })
+      .then(function (j) { S = j; err = null; allTasks(); applyPend(); var nf = 0; (j.failed || []).forEach(function (f) { if (sent[f.taskId]) { delete sent[f.taskId]; nf++; } }); if (nf) { saveSent(); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); } $('stamp').textContent = String(j.mode).toUpperCase() === 'LIVE' ? '' : 'Test'; render(); })
+      .catch(function (e) { err = e.message; render(); });
+  }
+  function cardFor(t) {
+    var m = String(t.desc || '').match(/\/d\/([A-Za-z0-9_-]{20,})/);
+    if (!m) return Promise.resolve(null);
+    if (cardCache[m[1]]) return Promise.resolve(cardCache[m[1]]);
+    return media(m[1]).then(function (r) { return r.text(); }).then(function (md) { cardCache[m[1]] = { id: m[1], md: md }; return cardCache[m[1]]; }, function () { return null; });
+  }
+  // A code reads "TEN:4" on screen. Typed or stored as TEN4, TEN 4, TEN:4, TEN-4, TEN=4 or TEN·4, it is understood the same.
+  function codeParts(x) { var m = String(x).trim().match(/^([A-Z]{2,8})\s*[:=·\-]?\s*([0-9?]+|L\?)$/); return m ? [m[0], m[1], m[2]] : [x, x, '']; }
+  // The Codes (Lisa's key): codes in groups split by " / ", Leak outside the groups. State in the ring only:
+  // settled = green ring, open (?) = amber ring; Leak: no = green, yes = red, not tested = amber. Words stay ink.
+  var CODE_GROUPS = [['Who owns what', ['TEN', 'PARENTS', 'DOWN', 'MEET', 'POOL', 'EXIT']], ['People', ['ROLE', 'BELONG', 'GUEST', 'HELP', 'JOIN']], ['Customers and money', ['CUST', 'PRICE', 'SHARE', 'PAY']], ['Public and data', ['SEN', 'VIEW', 'POST', 'BRAND', 'SEND']]];
+  function codeGroups(codes, md) {
+    var by = {}; codes.forEach(function (x) { var m = codeParts(x); by[m[1]] = m[2]; });
+    var ring = function (k, v, title) { return '<span class="cd ' + (v === '?' || v === '' ? 'open' : 'set') + '" title="' + esc(title || '') + '">' + esc(k) + ':<b>' + esc(v === '' ? '?' : v) + '</b></span>'; };
+    var html = CODE_GROUPS.map(function (g) {
+      var have = g[1].filter(function (k) { return k in by; }); if (!have.length) return '';
+      return '<span class="cgrp" title="' + g[0] + '">' + have.map(function (k) { var p = PARTS.filter(function (x) { return x[0] === k; })[0]; return ring(k, by[k], p ? p[2] : ''); }).join('') + '</span>';
+    }).filter(Boolean).join('<span class="csep">/</span>');
+    var lk = (String(md || '').match(/\bL\s*[:=]?\s*(y|n|\?)/i) || [])[1] || '?';
+    return html + '<span class="csep"></span><span class="cd ' + (lk === 'n' ? 'set' : lk === 'y' ? 'bad' : 'open') + '" title="Leak test: y = leaks, n = none, ? = not tested">L:<b>' + esc(lk) + '</b></span>';
+  }
+  function codesOf(md) {
+    var out = [];
+    String(md || '').split('\n').forEach(function (l) {
+      var c = l.split('|').map(function (x) { return x.trim(); });
+      if (c.length > 5 && /^\d+$/.test(c[1]) && /^[A-Z]{3,7}/.test(c[2])) {
+        var code = c[2].replace(/\s*★/, ''), now = c[3].length < 14 ? c[3] : c[4];
+        var v = /^[A-Z]+\d/.test(now) ? now : (now.match(/^(\d)/) ? code + now.match(/^(\d)/)[1] : code + '?');
+        out.push(v);
+      }
+    });
+    return out;
+  }
+
+  /* views */
+  function vRooms() {
+    var all = apps(), fsR = fsOf('rooms'), A = all.filter(function (a) { return hit(a, fsR, APP); }), sw = '<button class="pill" type="button" data-action="factory" aria-label="Factory on or off" title="Factory"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span> Factory ' + (factoryOn() ? 'on' : 'off') + '</button>';
+    var html = findBar('rooms', all, APP, [], { side: sw, extra: '<div class="pills">' +
+      // Every count is a link: it opens the list it counts.
+      '<a class="pill" href="#/all" title="Apps"><i class="ti ti-apps"></i> Apps ' + cnt(A.length) + '</a>' +
+      '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> Stuck ' + cnt(A.filter(stuck).length, true) + '</a>' +
+      '<a class="pill" href="#/room/reactor" title="Build slots"><i class="ti ti-hammer"></i> ' + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + '/3</a>' +
+      people().map(function (w) { return '<a class="pill" href="#/queue/' + encodeURIComponent(w) + '">' + esc(w) + ' ' + cnt(queue(w).length) + '</a>'; }).join('') +
+      enginePill() + ckPill() + '</div>' + docsStrip() }) + (A.length ? '' : emptyBox()) + '<div class="rooms">';
+    ROOMS.forEach(function (r) {
+      var inRoom = A.filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
+      html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><a class="rlink" href="#/room/' + r.key + '"><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '</a><span class="ct">' + cnt(inRoom.length) + '</span></h2><span class="stn">' + esc(r.st.join(' · ')) + '</span>' +
+        inRoom.map(chipOf).join('') + (r.key === 'reception' ? newIdea() : '') + '</section>';
+    });
+    return html + '</div>';
+  }
+  function chipOf(t) { return '<a class="chip' + (stuck(t) ? ' stuck' : '') + '" href="#/card/' + t.id + '">' + esc(t.name) + '<span class="st">' + (stuck(t) ? ic('warn') : '') + esc(cap(t.status)) + '</span></a>'; }
+  // The front door: the Idea Form (AF-ENGINE writes the card and the ClickUp task, even with the factory OFF).
+  var FORM = FC.ideaFormUrl || '';
+  function newIdea() { return '<a class="plus" href="#/new" aria-label="New idea"><i class="ti ti-plus"></i></a>'; }
+  var ROOM_DO = { reception: 'New ideas. You say Yes at Screen.', research: 'Grok researches. You judge Merit, then Lock the features.',
+    rig: 'Schema and data set up (Claude + Grok). No-stamp gates.', reactor: 'Prompts in OverSkill: you send, Happy Hour each time. Costs credits.',
+    runway: 'Launch checks. You say go live.', radar: 'Live. Checked every day.', rescue: 'Something broke. Fix, then back to Radar.',
+    recovery: 'On hold or killed.', recycle: 'Retired.' };
+  function vRoom(key) {
+    var r = ROOMS.filter(function (x) { return x.key === key; })[0];
+    if (!r) return '<div class="card">Not found. <a href="#/rooms">Rooms</a></div>';
+    var inRoom = apps().filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
+    var ids = inRoom.map(function (t) { return t.id; });
+    var asks = decisions().filter(function (d) { return ids.some(function (id) { return String(d.desc).indexOf('GATE: ' + id + ' ') >= 0; }); });
+    return '<div class="card"><div class="hero" style="--c:' + col(r.slot) + '"><div><h2><span class="dot" aria-hidden="true"></span>' + esc(r.name) + (r.paid ? ' ' + ic('coin') : '') + ' ' + cnt(inRoom.length) + '</h2><p>' + esc(ROOM_DO[key] || '') + '</p></div></div>' +
+      '<p class="muted">' + esc(r.st.join(' · ')) + '</p>' + (key === 'reception' ? '<p>' + newIdea() + '</p>' : '') +
+      '<div class="pills">' + (inRoom.length ? inRoom.map(chipOf).join('') : '<p class="empty">No apps in this room right now.</p>') + '</div>' +
+      (asks.length ? '<p><a class="btn" href="#/decide">' + ic('stamp') + asks.length + ' to decide here</a></p>' : '') +
+      '<p><a href="#/rooms">← Rooms</a></p></div>';
+  }
+  function vCard(id) {
+    var t = apps().filter(function (x) { return x.id === id; })[0];
+    if (!t) return '<div class="card">Not found. <a href="#/rooms">Rooms</a></div>';
+    var n = stageNo(t.status), slot = n === null ? 0 : (n <= 3 ? 7 : n <= 5 ? 4 : n === 6 ? 3 : n === 7 ? 6 : 5);
+    var subs = (S.lists.work || []).filter(function (x) { return x.tags.indexOf('app-' + t.id) >= 0 && x.tags.indexOf('line') >= 0; });
+    var tpl = (S.lists.template || []).filter(function (x) { return x.parent; });
+    var html = '<div class="card"><div class="hero"><div><h2>' + esc(t.name) + '</h2><p>' + (n === null ? '' : '<span class="step">Step ' + n + ':</span> ' + esc(STAGES[n]) + ' · ') + esc(cap(t.status)) + (stuck(t) ? ' · ' + ic('warn') + ' stuck 14+ days' : '') + '</p></div></div>' + nextStep(t) +
+      '<div class="pills" style="margin-top:12px">' + t.tags.filter(function (g) { return /^(who-|leak|paid|sen)/.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join('') + '</div>' +
+      '<div id="codes" class="codes"><span class="q">…</span></div>' +
+      '<div class="l3" id="cardMarks"><a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a><span class="grow"></span>' + linkStrip(t, false) + '<button class="ico' + (cardAsk ? ' on' : '') + '" type="button" data-action="cardask" aria-label="Ask"><i class="ti ti-pencil"></i></button></div>' +
+      linkGroups(t) + (addLink && addLink.id === t.id ? linkForm() : '') + (cardAsk ? '<form class="ask" data-ask="' + esc(t.id) + '"><input name="text" aria-label="Ask" required><select name="to" aria-label="Who"><option value="claude">Claude</option><option value="grok">Grok</option></select><button class="btn" type="submit" aria-label="Send"><i class="ti ti-send"></i></button></form><div id="askNote" class="muted"></div>' : '') + waiting(t) + launchAsk(t) +
+      '<div class="strip">' + STAGES.map(function (_, i) { return '<i class="' + (n !== null && i < n ? 'd' : i === n ? 'c' : '') + '"></i>'; }).join('') + '</div>';
+    STAGES.forEach(function (name, i) {
+      var cls = n !== null && i < n ? 'd' : i === n ? 'c' : '';
+      var mineLines = subs.filter(function (x) { return x.tags.indexOf('st-' + i) >= 0; });
+      var lines = mineLines.length ? mineLines : tpl.filter(function (x) { return x.tags.indexOf('st-' + i) >= 0; });
+      // Checks (JOB 32): this app's own lines are pass (closed), fail (a status with "fail") or not run (open). Template lines
+      // were never run for this app, so they all count as not run. No lines at all: "not recorded".
+      var fail = mineLines.filter(function (x) { return /fail/i.test(x.status); }).length;
+      var pass = mineLines.filter(function (x) { return !isOpen(x); }).length, none = lines.length - pass - fail;
+      var isOpenRow = open[i] === undefined ? i === n : open[i];
+      html += '<div class="stage ' + cls + '" data-stage="' + i + '"><span class="n" aria-hidden="true">' + (cls === 'd' ? '✓' : cls === 'c' ? '●' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i === 6 ? ' ' + ic('coin') : '') +
+        '<span class="r">' + (lines.length ? (pass ? '<span class="ck" data-ck="pass">✓ ' + pass + ' pass</span>' : '') + (fail ? '<span class="ck" data-ck="fail">✗ ' + fail + ' fail</span>' : '') +
+          (none ? '<span class="ck" data-ck="none">' + none + ' not run</span>' : '') : '<span class="nr">not recorded</span>') + '</span></div>';
+      if (isOpenRow) {
+        // The template's rule lines (53 on Step 6) sit in a closed fold; prompts stay in view.
+        html += mineLines.length ? '<div class="clines">' + lines.map(function (x) { return row(x, x.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view'); }).join('') + (i === 6 ? '<ul class="lines">' + sendsFor(t) + '</ul>' : '') + '</div>' :
+          (lines.length ? '<details class="arch fold" data-fold="' + i + '"><summary>' + lines.length + ' rule lines</summary><ul class="lines">' + lines.map(function (x) {
+            var who = (x.tags.filter(function (g) { return /^who-/.test(g); })[0] || '').replace('who-', '');
+            return '<li>' + ic(isOpen(x) ? 'dot' : 'tick') + esc(x.name.replace(/^(TEST-)?[^·]+ · /, '').replace(/^\d\s·\s/, '')) + '<span class="who">' + esc(who) + '</span></li>';
+          }).join('') + '<li class="muted">Template</li></ul></details>' : '') +
+          (i === 6 && sendsFor(t) ? '<ul class="lines">' + sendsFor(t) + '</ul>' : '');
+      }
+    });
+    html += '</div>';
+    setTimeout(function () {
+      cardFor(t).then(function (c) {
+        var box = $('codes'); if (!box) return;
+        if (!c) { box.innerHTML = '<span class="q">No card</span>'; return; }
+        var codes = codesOf(c.md);
+        // "POOL 0": name, a space, the value in bold, so codes never run together.
+        box.innerHTML = codeGroups(codes, c.md);
+          '';
+        var m = $('cardMarks') && $('cardMarks').querySelector('.mark'); if (m) m.insertAdjacentHTML('afterend', '<a class="mark" href="https://drive.google.com/file/d/' + c.id + '/view" target="_blank" rel="noopener" aria-label="Open card in Drive" title="Drive">' + DRIVE_MARK + '</a>');
+      });
+    }, 0);
+    return html;
+  }
+  // On the card: this app's open decisions and its prompts (Sends), whatever the stage. "Where is my next prompt?" lives here.
+  function asksOf(t) {
+    var key = ((t.tags.filter(function (g) { return /^app-/.test(g); })[0] || '').replace('app-', ''));
+    var word = key && key !== t.id ? new RegExp('\\b' + key.replace(/[^a-z0-9]/gi, '') + '\\b', 'i') : null;
+    return { ds: decisions().filter(function (d) { return String(d.desc).indexOf('GATE: ' + t.id + ' ') >= 0 || (word && word.test(d.name)); }),
+      ss: (S.lists.sends || []).filter(function (x) { return key && x.tags.indexOf('app-' + key) >= 0 && isOpen(x); }) };
+  }
+  // Next step and who it waits on (JOB 32), read only from af-state.json: the first open line of this stage (else any open line),
+  // else the first open decision or prompt. No engine field holds these yet, so a gap says "not recorded".
+  function nextOf(t) {
+    var n = stageNo(t.status), a = asksOf(t);
+    var own = (S.lists.work || []).filter(function (x) { return x.tags.indexOf('app-' + t.id) >= 0 && x.tags.indexOf('line') >= 0 && isOpen(x); })
+      .sort(function (x, y) { return x.created - y.created; });
+    var x = own.filter(function (y) { return y.tags.indexOf('st-' + n) >= 0; })[0] || own[0] || a.ds[0] || a.ss[0];
+    if (!x) return null;
+    var who = whoOf(x).join(' · ') || line(x, /^Waits on:\s*/i);
+    return { step: String(x.name).replace(/^(TEST-)?[^·]+ · /, '').replace(/^\d\s·\s/, ''), who: who };
+  }
+  function nextStep(t) {
+    var x = nextOf(t), nr = '<span class="nr">not recorded</span>';
+    return '<div class="pills nextstep" style="margin-top:12px"><span class="pill" data-next="step"><i class="ti ti-arrow-right"></i>Next: ' + (x ? esc(x.step) : nr) + '</span>' +
+      '<span class="pill" data-next="who"><i class="ti ti-user"></i>Waits on: ' + (x && x.who ? esc(x.who) : nr) + '</span></div>';
+  }
+  function waiting(t) {
+    var a = asksOf(t), ds = a.ds, ss = a.ss;
+    if (!ds.length && !ss.length) return '';
+    return '<div class="stage c"><span class="n">' + ic('stamp') + '</span>Waiting on you<span class="r">' + cnt(ds.length + ss.length) + '</span></div><ul class="lines">' +
+      ds.map(function (d) { return '<li>' + ic('stamp') + '<a href="#/decide">' + esc(d.name.replace(/^TEST-/, '')) + '</a></li>'; }).join('') +
+      ss.map(function (x) { return '<li>' + ic('send') + '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">Prompt · ' + esc(x.name) + '</a><span class="who">' + esc(cap(x.status)) + '</span></li>'; }).join('') + '</ul>';
+  }
+  function sendsFor(t) {
+    var key = t.tags.filter(function (g) { return /^app-/.test(g); })[0];
+    var sends = (S.lists.sends || []).filter(function (x) { return key && x.tags.indexOf(key) >= 0; });
+    if (!sends.length) return '';
+    return sends.map(function (x) { return '<li>' + ic('send') + '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + esc(x.name) + '</a><span class="who">' + esc(cap(x.status)) + '</span></li>'; }).join('');
+  }
+  // Decide rows get Yes / No, Do rows get Done. A click drops a request file; the engine updates ClickUp.
+  // Rows are grouped by app (the name before the first " · "), app by app, so stages never mix.
+  // The name before " · " first; else the task's app- tag, by app id or the app's own key ("Links · …" belongs to "LJR7 Links").
+  function bare(x) { return String(x.name).replace(/^TEST-/, ''); }
+  function appOf(t) {
+    var A = apps(), n = String(t.name).replace(/^TEST-/, ''), a = n.indexOf(' · ') > 0 ? n.split(' · ')[0] : '';
+    if (A.indexOf(t) >= 0) return bare(t);
+    if (a && A.some(function (x) { return bare(x) === a; })) return a;
+    var tags = (t.tags || []).filter(function (g) { return /^app-/.test(g); });
+    for (var i = 0; i < tags.length; i++) { var hit = A.filter(function (x) { return x !== t && ('app-' + x.id === tags[i] || x.tags.indexOf(tags[i]) >= 0); })[0]; if (hit) return bare(hit); }
+    return 'Factory';
+  }
+  // Test data: TEST- names, and anything marked ZZ_DELETE_ (Lisa, 20 Oct: hidden from chips, lists and counts unless TEST is on).
+  function isTest(t) { return /^(TEST-|ZZ_DELETE_)/i.test(t.name); }
+  // Group order: real apps, then Factory rules, then TEST apps. Heading = app · room · stage.
+  function rank(t) { return isTest(t) ? 2 : appOf(t) === 'Factory rules' ? 1 : 0; }
+  function headOf(t, slot) {
+    var g = appOf(t), app = apps().filter(function (a) { return a.name.replace(/^TEST-/, '') === g; })[0];
+    var room = app ? ROOMS.filter(function (r) { return r.st.indexOf(String(app.status).toLowerCase()) >= 0; })[0] : null;
+    var c = room ? col(room.slot) : col(slot);
+    return '<div class="grp"><span class="dot" style="background:' + c + '"></span>' + (app ? '<a href="#/card/' + esc(app.id) + '">' + esc(g) + '</a>' : 'Factory') +
+      (app ? '<span class="st">' + esc((room ? room.name + ' · ' : '') + cap(app.status)) + '</span>' : '') + (isTest(t) ? '<span class="pill">Test</span>' : '') + linkStrip(app) + '</div>' + (app && addLink && addLink.id === app.id ? linkForm() : '');
+  }
+  // When the engine will apply a click: its next 15-minute run (:03 :18 :33 :48) plus a minute.
+  function appliesBy(ts) { var d = new Date(ts), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next + 1); return d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+  /* ---------- Calm rows: one look on every screen (Lisa, 20 Oct 2026) ----------
+   * Always: type icon · title · flag (top right) · ✓ / ✗ · date DD/MM/YY (bottom right).
+   * Everything else is an icon, shown only when there is something; tap opens it under the row, one at a time.
+   * Every value is read from its ClickUp field; every change goes to AF › requests and AF-ENGINE writes it to that field.
+   */
+  var PRI = { urgent: [1, '#f50000'], high: [2, '#ffcc00'], normal: [3, '#6fddff'], low: [4, '#d8d8d8'] };
+  var MEANING = /^(paid|sen-check|kill-suggested|leak|question)/;
+  var openPanel = null, filtersOpen = false, weekView = false, cardAsk = false, fdOpen = null;
+  document.addEventListener('toggle', function (e) { if (e.target.classList && e.target.classList.contains('fdet')) fdOpen = e.target.open; }, true);
+  var pend = loadLocal('af-pend'), seen = loadLocal('af-seen');
+  function allTasks() { var L = S.lists, out = []; Object.keys(L).forEach(function (k) { if (k !== 'template') (L[k] || []).forEach(function (t) { t._k = k; out.push(t); }); }); return out; }
+  function byId(id) { return allTasks().filter(function (t) { return t.id === id; })[0]; }
+  // A change waits in the browser until ClickUp shows it (the task's "updated" moves past the click).
+  function applyPend() {
+    var now = Date.now();
+    Object.keys(pend).forEach(function (id) {
+      if (id === 'factory') return;
+      var p = pend[id], t = byId(id);
+      if (!t || t.updated >= p.at || now - p.at > 36e5) { delete pend[id]; return; }
+      if (p.priority !== undefined) t.pri = p.priority === 'none' ? null : { p: p.priority, c: PRI[p.priority][1] };
+      if (p.due !== undefined) t.due = p.due ? Date.parse(p.due + 'T17:00:00Z') : null;
+      if (p.status !== undefined) t.status = p.status;
+    });
+    saveLocal('af-pend', pend);
+  }
+  function hm(ts) { return new Date(ts).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+  function dmy(ts) { return new Date(ts).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' }); }
+  function iso(ts) { var d = new Date(ts); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+  function dayStart(off) { var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() + (off || 0) * 864e5; }
+  function overdue(t) { return t.due && t.due < dayStart(0) && isOpen(t); }
+  function soon(t) { return t.due && t.due >= dayStart(0) && t.due < dayStart(3) && isOpen(t); }   // due today or in the next 2 days: amber ring
+  function whoOf(t) {
+    var w = t.tags.filter(function (g) { return /^who-/.test(g); }).map(function (g) { return { lisa: 'Lisa', grok: 'Grok', claude: 'Claude' }[g.slice(4)] || g.slice(4); });
+    (t.who || []).forEach(function (u) { var n = /grok/i.test(u) ? 'Grok' : /lisa|joyaa/i.test(u) ? 'Lisa' : /ukdoodles|claude/i.test(u) ? 'Claude' : u; if (w.indexOf(n) < 0) w.push(n); });
+    return w;
+  }
+  function typeIcon(t) {
+    var k = t._k;
+    var n = k === 'decisions' ? (t.tags.indexOf('gate') >= 0 ? 'traffic-lights' : 'bookmark') : t.tags.indexOf('ask') >= 0 ? 'help-circle' :
+      ({ sends: 'send', incidents: 'alert-triangle', apps: 'diamond' }[k] || (t.tags.indexOf('line') >= 0 ? 'square-check' : 'point'));
+    return '<i class="ti ti-' + n + '" title="' + ({ 'traffic-lights': 'Gate', bookmark: 'Decision', 'help-circle': 'Question', send: 'Prompt', 'alert-triangle': 'Incident', diamond: 'App', 'square-check': 'Line', point: 'Task' }[n]) + '"></i>';
+  }
+  function flagIcon(p) {
+    var c = p ? (PRI[p.p] ? PRI[p.p][1] : p.c) : 'none';
+    return '<svg class="flag" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 1.5v13" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M3.5 2.5h9l-2 3 2 3h-9z" fill="' + c + '" stroke="' + (p ? c : 'currentColor') + '" stroke-width="1.2" stroke-linejoin="round"/></svg>';
+  }
+  function iconsOf(t, kind) {
+    var out = [], mt = t.tags.filter(function (g) { return MEANING.test(g); }), items = [].concat.apply([], (t.chk || []).map(function (c) { return c.items; }));
+    var I = function (n) { return '<i class="ti ti-' + n + '"></i>'; };
+    if (t.cm && t.cm.length) out.push(['cm', I('message-circle'), 'Comments', t.cm[0].at > (seen[t.id] || 0), 5]);
+    if (items.length) out.push(['chk', I('list-check'), 'Checklist', false, 4]);
+    if (t.files && t.files.length) out.push(['files', I('paperclip'), 'Files', false, 6]);
+    if (t.est || t.spent) out.push(['time', I('clock'), 'Time', false, 3]);
+    if (whoOf(t).length) out.push(['who', I('user'), 'Who', false, 5]);
+    if (mt.length) out.push(['tags', I('tag'), 'Tags', false, 7]);
+    if (kind === 'decide') out.push(['reply', I('pencil'), 'Reply', !!drafts[t.id], 7]);
+    return out;
+  }
+  function dur(ms) { var m = Math.round(ms / 6e4); return m >= 60 ? Math.floor(m / 60) + 'h' + (m % 60 ? ' ' + m % 60 + 'm' : '') : m + 'm'; }
+  function panelOf(t, k) {
+    var body = '';
+    if (k === 'reply') body = '<form class="ask rowask" data-ask="' + esc(t.id) + '"><input name="text" id="note-' + esc(t.id) + '" data-draft="' + esc(t.id) + '" value="' + esc(drafts[t.id] || '') + '" aria-label="Reply"><input type="hidden" name="to" value="claude"><button class="btn" type="submit" aria-label="Send">➤</button></form><div class="asknote muted"></div>';
+    if (k === 'cm') body = t.cm.map(function (c) { return '<p><b>' + esc(c.by) + '</b> <span class="muted">' + dmy(c.at) + ' ' + hm(c.at) + '</span><br>' + esc(c.text) + '</p>'; }).join('');
+    if (k === 'chk') body = (t.chk || []).map(function (c) { return '<p class="muted">' + esc(c.name) + '</p>' + c.items.map(function (i) { return '<button class="tick' + (i.ok ? ' ok' : '') + '" type="button" data-check="' + esc(c.id) + '" data-item="' + esc(i.id) + '" data-id="' + esc(t.id) + '" data-ok="' + (i.ok ? 1 : 0) + '">' + (i.ok ? '☑' : '☐') + ' ' + esc(i.name) + '</button>'; }).join(''); }).join('');
+    if (k === 'files') body = t.files.map(function (f) { return '<a href="' + esc(f.url) + '" target="_blank" rel="noopener">📎 ' + esc(f.title) + '</a>'; }).join('<br>');
+    if (k === 'time') body = (t.est ? '⏱ ' + dur(t.est) : '') + (t.spent ? ' · ' + dur(t.spent) + ' spent' : '');
+    if (k === 'who') body = whoOf(t).map(esc).join(' · ');
+    if (k === 'tags') body = t.tags.filter(function (g) { return MEANING.test(g); }).map(function (g) { return '<span class="pill">' + esc(g) + '</span>'; }).join(' ');
+    if (k === 'flag') body = ['urgent', 'high', 'normal', 'low', 'none'].map(function (p) { return '<button class="opt" type="button" data-set="priority" data-val="' + p + '" data-id="' + esc(t.id) + '" aria-label="' + p + '">' + flagIcon(p === 'none' ? null : { p: p }) + '</button>'; }).join('');
+    if (k === 'status') body = ((S.statuses || {})[t._k] || []).map(function (x) { return '<button class="stat" type="button" data-set="status" data-val="' + esc(x.s) + '" data-id="' + esc(t.id) + '" style="--sc:' + esc(x.c) + '">' + esc(cap(x.s)) + '</button>'; }).join(' ');
+    return '<div class="panel">' + body + '</div>';
+  }
+  // Do: what comes next, and what it waits on; prompts link straight to OverSkill.
+  function doLines(t, blocked) {
+    var then = line(t, /^(Then|After):\s*/i), waits = line(t, /^Waits on:\s*/i), before = line(t, /^Before:\s*/i);
+    var out = (blocked ? '<i class="ti ti-lock"></i><span>' + esc(waits ? 'Waits on: ' + waits : 'Blocked') + '</span>' : '') +
+      (then ? '<i class="ti ti-arrow-right"></i><span>Then: ' + esc(then) + '</span>' : '');
+    return out || before ? '<div class="outs">' + (before ? '<i class="ti ti-player-play"></i><span>Before: ' + esc(before) + '</span>' : '') + out + '</div>' : '';
+  }
+  // Proof and places to go: each link in the task becomes one icon (the doc, the test report, OverSkill).
+  function proofs(t, kind) {
+    var app = appTask(t), L = app ? linksOf(app) : {}, out = '';
+    if (t._k === 'sends') out += L.overskill ? '<a class="lk" href="' + esc(L.overskill) + '" target="_blank" rel="noopener" title="Open OverSkill project"><i class="ti ti-code"></i></a>' : '<span class="lk no" title="OverSkill: not recorded"><i class="ti ti-code"></i></span>';
+    var mk = (String(t.desc).match(/drive\.google\.com\/file\/d\/([\w-]+)/) || [])[1];
+    if (kind === 'decide' || t._k === 'sends') urls(t).filter(function (u) { return !/app\.clickup\.com/.test(u) && !(mk && u.indexOf(mk) >= 0); }).slice(0, 3).forEach(function (u) {
+      out += '<a class="lk" href="' + esc(u) + '" target="_blank" rel="noopener" title="' + (/drive\.google/.test(u) ? 'Open doc' : 'Open') + '"><i class="ti ti-' + (/drive\.google/.test(u) ? 'file-check' : 'external-link') + '"></i></a>';
+    });
+    return out;
+  }
+  function row(t, kind, inCard) {
+    if (!t._k) allTasks();
+    var p = t.pri && t.pri.p ? t.pri : null, sentAt = sent[t.id], ch = pend[t.id];
+    // The app's name always leads, bold; anything not tied to an app says Factory.
+    var label = String(t.name).replace(/^TEST-/, ''), app = appOf(t), known = apps().some(function (a) { return a.name.replace(/^TEST-/, '') === app; });
+    var rest = !known ? label : label.indexOf(app + ' · ') === 0 ? label.slice(app.length + 3) : label.replace(/^[^·]+?\s·\s/, '');
+    var title = inCard ? esc(rest) : '<b class="app">' + esc(known ? app : 'Factory') + '</b> ' + esc(rest);
+    if (kind === 'decide' && !line(t, /^Deciding:\s*/i)) title += info(line(t, /^What:\s*/i));
+    var blocked = /^blocked$/i.test(t.status), isSend = t._k === 'sends' && isOpen(t), gate = isSend ? sendGate(t) : null;
+    var acts = sentAt ? sentLine(t.id) : blocked && kind !== 'decide' ? '<span class="lock" title="Blocked' + (line(t, /^Waits on:\s*/i) ? ': waits on ' + esc(line(t, /^Waits on:\s*/i)) : '') + '"><i class="ti ti-lock"></i></span>' :
+      kind === 'decide' ? '<button class="btn yes" type="button" data-act="yes" data-id="' + esc(t.id) + '" aria-label="Yes"><i class="ti ti-check"></i></button><button class="btn no" type="button" data-act="no" data-id="' + esc(t.id) + '" aria-label="No"><i class="ti ti-x"></i></button>' :
+      kind === 'do' ? '<button class="btn yes" type="button" data-act="done" data-id="' + esc(t.id) + '" aria-label="Done"><i class="ti ti-check"></i></button>' : '';
+    // Status: an icon in ClickUp's colour, shown only when it isn't plain "to do".
+    var SI = { 'to do': 'circle-dashed', doing: 'progress', 'waiting lisa': 'player-pause', blocked: 'hand-stop', done: 'circle-check', cancelled: 'circle-x' };
+    var stat = t._k === 'apps' || /^to do$/i.test(t.status) ? '' : '<button class="ico" type="button" data-panel="status" data-id="' + esc(t.id) + '" aria-label="Status ' + esc(cap(t.status)) + '" title="' + esc(cap(t.status)) + '" style="color:' + esc(t.color || 'inherit') + '"><i class="ti ti-' + (SI[String(t.status).toLowerCase()] || 'circle') + '"></i></button>';
+    var icons = iconsOf(t, kind).map(function (x) { return '<button class="ico' + (openPanel && openPanel.id === t.id && openPanel.k === x[0] ? ' on' : '') + '" type="button" data-panel="' + x[0] + '" data-id="' + esc(t.id) + '" aria-label="' + x[2] + '" style="--hc:var(--ljr-' + x[4] + '-text)">' + x[1] + (x[3] ? '<i class="new"></i>' : '') + '</button>'; }).join('');
+    var mineQ = asked[t.id] ? '<div class="why q">✎ ' + esc(asked[t.id].text) + ' · ✓ ' + hm(asked[t.id].at) + '</div>' : '';
+    var date = '<label class="date' + (overdue(t) ? ' over' : soon(t) ? ' soon' : '') + '">' + (t.due ? dmy(t.due) : '<i class="ti ti-calendar"></i>') + '<input type="date" data-due="' + esc(t.id) + '" value="' + (t.due ? iso(t.due) : '') + '" aria-label="Due date"></label>';
+    var drive = (String(t.desc).match(/https:\/\/drive\.google\.com\/file\/d\/[\w-]+/) || [])[0];
+    var out = '<a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a>' +
+      (drive ? '<a class="mark" href="' + esc(drive) + '/view" target="_blank" rel="noopener" aria-label="Open card in Drive" title="Drive">' + DRIVE_MARK + '</a>' : '');
+    var detail = openPanel && openPanel.id === t.id && openPanel.k === 'all';
+    return '<div class="crow" data-row="' + esc(t.id) + '"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(t.id) + '">' + title + '</button>' +
+      '<button class="flagb" type="button" data-panel="flag" data-id="' + esc(t.id) + '" aria-label="Flag ' + (p ? p.p : 'none') + '">' + flagIcon(p) + '</button></div>' +
+      (detail ? why(t, true) : kind === 'decide' ? outcomes(t) : isSend || line(t, /^(Then|After):\s*/i) || blocked ? doLines(t, blocked) : '') + (gate ? sendInfo(t, gate) : '') + mineQ +
+      '<div class="l2"><span class="icons">' + (gate ? gate.ok ? '<button class="copy" type="button" data-copy="' + esc(t.id) + '"><i class="ti ti-copy"></i> Copy</button>' : '<span class="gate" data-gate="' + esc(t.id) + '" title="Missing before a send"><i class="ti ti-lock"></i> ' + gate.miss.join(' · ') + '</span>' : '') + stat + icons + proofs(t, kind) +
+      (kind === 'decide' && !sentAt ? '<span class="age' + (Date.now() - t.created > 3 * 864e5 ? ' old' : '') + '" title="Waiting since ' + dmy(t.created) + '"><i class="ti ti-hourglass"></i>' + ago(t.created) + '</span>' : '') + (ch ? '<span class="sent">✓ ' + hm(ch.at) + '</span>' : '') + '</span><span class="acts">' + acts + '</span></div>' +
+      (openPanel && openPanel.id === t.id && !detail ? panelOf(t, openPanel.k) : '') +
+      (detail ? iconsOf(t, kind).filter(function (x) { return x[0] !== 'reply'; }).map(function (x) { return panelOf(t, x[0]); }).join('') : '') +
+      '<div class="l3"><span class="type" aria-hidden="true">' + typeIcon(t) + '</span>' + out + '<span class="grow"></span>' + date + '</div></div>';
+  }
+  /* ---------- Find bar (Lisa, 20 Oct 2026): the Docs model on every list tab ----------
+   * Search · App chips · Kind chips always; Who · Stage · Flags · Sort · TEST behind the Filter button.
+   * Each tab remembers its own filters (af-fs), and the address carries them, so a bot can send a 1-click link:
+   *   #/do?app=links&kind=send   #/me   #/app/links   #/item/<ClickUp task id>
+   */
+  var KINDS = [['send', 'send', 'Send'], ['decide', 'scale', 'Decide'], ['do', 'square-check', 'Do'], ['test', 'flask', 'Test'], ['research', 'search', 'Research'], ['fix', 'tool', 'Fix']];
+  var WHO = [['me', 'Lisa', 'Me'], ['claude', 'Claude', 'Claude'], ['grok', 'Grok', 'Grok']];
+  var FLAGS = [['unanswered', '<i class="ti ti-hourglass"></i> Unanswered'], ['overdue', '<i class="ti ti-alert-triangle"></i> Overdue'], ['urgent', 'URGENT Urgent'], ['unflagged', 'NOFLAG Unflagged']];
+  var SORTS = [['flag', 'URGENT Flag'], ['date', '<i class="ti ti-calendar"></i> Date'], ['age', '<i class="ti ti-clock"></i> Oldest'], ['new', '<i class="ti ti-sparkles"></i> Newest']];
+  var BAR_TABS = /^(me|rooms|decide|do|docs|today|queue)$/;
+  var appMenu = false;
+  function fdef(tab) { return { q: '', app: [], kind: [], who: [], st: [], f: /^(rooms|docs)$/.test(tab) ? [] : ['unanswered'], sort: tab === 'me' ? 'new' : 'flag', test: false }; }
+  var fs = (function () { try { return JSON.parse(localStorage.getItem('af-fs') || '') || {}; } catch (e) { return {}; } })();
+  // Always the same object for a tab (filled with defaults in place), so a change made through it is kept.
+  function fsOf(tab) { var d = fdef(tab), s = fs[tab] = fs[tab] || {}; Object.keys(d).forEach(function (k) { if (s[k] === undefined || (Array.isArray(d[k]) && !Array.isArray(s[k]))) s[k] = d[k]; }); return s; }
+  function saveFs() { try { localStorage.setItem('af-fs', JSON.stringify(fs)); } catch (e) {} }
+  function slugify(x) { return String(x).toLowerCase().replace(/^test-/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
+  // An app's short name in links: its own key tag (app-links), else its name (kennel-book). Items with no app: factory.
+  function slugOf(g) {
+    var A = apps(), mine = A.filter(function (a) { return bare(a) === g; }), key = '';
+    mine.forEach(function (a) { a.tags.forEach(function (x) { var k = x.slice(4); if (!key && /^app-/.test(x) && k !== a.id && !A.some(function (b) { return b.id === k; })) key = k; }); });
+    return key || slugify(g);
+  }
+  function groupOfSlug(v) {
+    v = String(v || '').toLowerCase(); if (v === 'factory') return 'Factory';
+    var names = []; apps().forEach(function (a) { if (names.indexOf(bare(a)) < 0) names.push(bare(a)); });
+    return names.filter(function (g) { return slugOf(g) === v || slugify(g) === v; })[0] || names.filter(function (g) { return apps().some(function (a) { return bare(a) === g && a.id === v; }); })[0] || '';
+  }
+  // Kind: what the item asks for. Sends and incidents by list; the rest by the words in the name.
+  function kindOf(t) {
+    var n = String(t.name).replace(/^TEST-/, '');
+    if (t._k === 'sends') return 'send';
+    if (t._k === 'incidents' || /\b(fix|bug|broken|repair)/i.test(n)) return 'fix';
+    if (/\b(test|verif|probe|proof|check)/i.test(n)) return 'test';
+    if (/\b(research|rivals|merit)/i.test(n)) return 'research';
+    return t._k === 'decisions' ? 'decide' : 'do';
+  }
+  // Stage 0–8: the task's st- tag, prompts are 6, else the stage its app has reached.
+  function stOf(t) {
+    var g = (t.tags || []).filter(function (x) { return /^st-\d$/.test(x); })[0];
+    if (g) return +g.slice(3);
+    if (t._k === 'sends') return 6;
+    var a = t._k === 'apps' ? t : appTask(t), n = a ? reached(a) : -1;
+    return n >= 0 && n <= 8 ? n : null;
+  }
+  function stSlot(n) { return n === null ? 0 : n <= 3 ? 7 : n <= 5 ? 4 : n === 6 ? 3 : n === 7 ? 6 : 5; }
+  function roomOf(n) { return n === null ? null : ROOMS.filter(function (r) { return r.st.some(function (s) { return +s[0] === n; }); })[0]; }
+  function testT(t) { var a = t._k === 'apps' ? t : appTask(t); return isTest(t) || !!(a && isTest(a)); }
+  // What each tab lists, read the same way: app · kind · who · stage · TEST · words to search.
+  var TASK = { app: appOf, kind: kindOf, who: whoOf, st: stOf, test: testT, flags: true,
+    text: function (t) { var n = stOf(t), r = roomOf(n); return [appOf(t), t.name, t.tags.join(' '), r ? r.name : '', n === null ? '' : n + ' ' + STAGES[n], cap(t.status), KINDS.filter(function (k) { return k[0] === kindOf(t); })[0][2]].join(' '); } };
+  var APP = { app: bare, kind: function () { return null; }, who: whoOf, st: stOf, test: isTest,
+    text: function (a) { var n = stOf(a), r = roomOf(n); return [a.name, a.status, a.tags.join(' '), r ? r.name : '', n === null ? '' : STAGES[n]].join(' '); } };
+  var DOC = { app: function (d) { return d.app; }, kind: function (d) { return d.type[0]; }, who: function () { return []; }, test: function (d) { var a = apps().filter(function (x) { return bare(x) === d.app; }); return !!a.length && a.every(isTest); },
+    st: function (d) { var a = apps().filter(function (x) { return bare(x) === d.app; })[0]; return a ? stOf(a) : null; },
+    text: function (d) { return [d.title, d.app, d.from.join(' '), d.type[2]].join(' '); } };
+  function hit(x, s, F, skip) {
+    if (!s.test && F.test(x)) return false;
+    if (skip !== 'app' && s.app.length && s.app.indexOf(slugOf(F.app(x))) < 0) return false;
+    if (skip !== 'kind' && s.kind.length && s.kind.indexOf(F.kind(x)) < 0) return false;
+    if (skip !== 'who' && s.who.length && !WHO.some(function (w) { return s.who.indexOf(w[0]) >= 0 && F.who(x).indexOf(w[1]) >= 0; })) return false;
+    if (skip !== 'st' && s.st.length && s.st.indexOf(String(F.st(x))) < 0) return false;
+    if (s.q) { var hay = F.text(x).toLowerCase(); if (!s.q.toLowerCase().split(/\s+/).filter(Boolean).every(function (w) { return hay.indexOf(w) >= 0; })) return false; }
+    if (F.flags) {
+      var f = s.f;
+      if (f.indexOf('unanswered') >= 0 && sent[x.id] && !(sentF[x.id] && Date.now() < undoUntil(sent[x.id]))) return false;
+      if (f.indexOf('urgent') >= 0 && !(x.pri && x.pri.p === 'urgent')) return false;
+      if (f.indexOf('unflagged') >= 0 && x.pri && x.pri.p) return false;
+      if (f.indexOf('overdue') >= 0 && !overdue(x)) return false;
+    }
+    return true;
+  }
+  function sortT(items, by) {
+    return items.slice().sort(function (a, b) {
+      var ra = a.pri && PRI[a.pri.p] ? PRI[a.pri.p][0] : 5, rb = b.pri && PRI[b.pri.p] ? PRI[b.pri.p][0] : 5;
+      var flag = ra - rb, date = (a.due || 9e15) - (b.due || 9e15), age = a.created - b.created;
+      var lockd = (/^blocked$/i.test(a.status) ? 1 : 0) - (/^blocked$/i.test(b.status) ? 1 : 0);
+      return lockd || (by === 'new' ? -age : by === 'date' ? date || flag || age : by === 'age' ? age || flag : flag || date || age);
+    });
+  }
+  function onCount(tab) {
+    var s = fsOf(tab), d = fdef(tab);
+    return s.app.length + s.kind.length + s.who.length + s.st.length + (s.test ? 1 : 0) + (s.sort !== d.sort ? 1 : 0) +
+      FLAGS.filter(function (x) { return (s.f.indexOf(x[0]) >= 0) !== (d.f.indexOf(x[0]) >= 0); }).length;
+  }
+  function fchip(key, val, label, on, extra) { return '<button class="pill' + (on ? ' on' : '') + (extra || '') + '" type="button" data-fx="' + key + '" data-val="' + esc(val) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + label + '</button>'; }
+  function flagWords(h) { return h.replace('URGENT', flagIcon({ p: 'urgent' })).replace('NOFLAG', flagIcon(null)); }
+  // The bar. Chips show only what is on this tab (count in a faint circle); a row with one choice is left out.
+  // One calm row (Lisa's Studio choice, 28 Oct): Search · (Factory on/off on Rooms) · Filter. Filter is a details/summary that holds
+  // every chip row; open by default at 900px and wider, closed on a phone, and it remembers what you chose. The count on it says
+  // how many filters are on. Inside, "More" opens Who · Stage · Flags · Sort · Test as before.
+  function findBar(tab, items, F, kinds, o) {
+    o = o || {};
+    var s = fsOf(tab), n = onCount(tab), open = fdOpen === null ? window.matchMedia('(min-width: 900px)').matches : fdOpen;
+    var html = '<div class="fbar2" data-bar="' + tab + '"><div class="srow"><label class="sbox"><i class="ti ti-search" aria-hidden="true"></i><input type="search" data-f="fq" value="' + esc(s.q) + '" aria-label="Search" autocomplete="off"></label>' +
+      (o.side || '') + '</div><details class="fdet"' + (open ? ' open' : '') + '><summary id="filterSum"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>Filter<span class="n" id="nFilters">' + (n || '') + '</span></summary><div class="fbody">';
+    var by = {}, order = [];
+    items.filter(function (x) { return hit(x, s, F, 'app'); }).forEach(function (x) { var g = F.app(x); if (!by[g]) { by[g] = 0; order.push(g); } by[g]++; });
+    order.sort(function (a, b) { return (a === 'Factory') - (b === 'Factory') || a.localeCompare(b); });
+    if (order.length > 1 || s.app.length) html += '<div class="pills" data-frow="app">' + fchip('app', '', 'All', !s.app.length) + order.map(function (g) { return fchip('app', slugOf(g), esc(g) + ' ' + cnt(by[g]), s.app.indexOf(slugOf(g)) >= 0); }).join('') +
+      s.app.filter(function (v) { return !order.some(function (g) { return slugOf(g) === v; }); }).map(function (v) { return fchip('app', v, esc(groupOfSlug(v) || v) + ' ' + cnt(0), true); }).join('') + '</div>';
+    var kc = {}; items.filter(function (x) { return hit(x, s, F, 'kind'); }).forEach(function (x) { var k = F.kind(x); if (k) kc[k] = (kc[k] || 0) + 1; });
+    var kh = kinds.filter(function (k) { return kc[k[0]] || s.kind.indexOf(k[0]) >= 0; });
+    if (kh.length > 1 || s.kind.length) html += '<div class="pills" data-frow="kind">' + kh.map(function (k) { return fchip('kind', k[0], '<i class="ti ti-' + k[1] + (tab === 'docs' ? ' dti" data-t="' + k[0] : '') + '"></i> ' + k[2] + ' ' + cnt(kc[k[0]] || 0), s.kind.indexOf(k[0]) >= 0); }).join('') + '</div>';
+    html += '<div class="pills"><button id="filtersBtn" class="fbtn' + (filtersOpen ? ' on' : '') + '" type="button" data-action="filters" aria-expanded="' + filtersOpen + '"><i class="ti ti-adjustments-horizontal" aria-hidden="true"></i>More</button></div>';
+    if (filtersOpen) {
+      var wc = {}; items.filter(function (x) { return hit(x, s, F, 'who'); }).forEach(function (x) { F.who(x).forEach(function (w) { wc[w] = (wc[w] || 0) + 1; }); });
+      var sc = {}; items.filter(function (x) { return hit(x, s, F, 'st'); }).forEach(function (x) { var v = F.st(x); if (v !== null) sc[v] = (sc[v] || 0) + 1; });
+      var tests = items.filter(function (x) { return F.test(x); }).length;
+      html += '<div class="card fpanel">' +
+        (WHO.some(function (w) { return wc[w[1]]; }) ? '<div class="pills" data-frow="who">' + WHO.filter(function (w) { return wc[w[1]] || s.who.indexOf(w[0]) >= 0; }).map(function (w) { return fchip('who', w[0], '<i class="ti ti-user"></i> ' + w[2] + ' ' + cnt(wc[w[1]] || 0), s.who.indexOf(w[0]) >= 0); }).join('') + '</div>' : '') +
+        '<div class="pills" data-frow="st">' + STAGES.map(function (name, i) { return sc[i] || s.st.indexOf(String(i)) >= 0 ? fchip('st', String(i), '<span class="step">Step ' + i + ':</span> ' + name, s.st.indexOf(String(i)) >= 0, '" title="' + name) : ''; }).join('') + '</div>' +
+        (F.flags ? '<div class="pills" data-frow="f">' + FLAGS.map(function (x) { return fchip('f', x[0], flagWords(x[1]), s.f.indexOf(x[0]) >= 0); }).join('') + '</div>' +
+          '<div class="pills" data-frow="sort">' + SORTS.map(function (x) { return fchip('sort', x[0], flagWords(x[1]), s.sort === x[0]); }).join('') + '</div>' : '') +
+        '<div class="pills"><button class="pill" type="button" data-action="ftest" aria-pressed="' + s.test + '" title="TEST">Test <span class="sw' + (s.test ? ' on' : '') + '"><i></i></span> ' + cnt(tests) + '</button>' +
+        '<button class="pill" type="button" data-action="clearf"><i class="ti ti-filter-off"></i> Clear</button></div></div>';
+    }
+    return html + (o.extra || '') + '</div></details></div>';
+  }
+  // Friendly empty state: plain words after a green-ring check; Clear only when a filter or search is on.
+  function emptyBox(words) {
+    var tb = barTab(), on = tb && (onCount(tb) || fsOf(tb).q);
+    return '<div class="card" data-empty><p class="empty">' + esc(words || (on ? 'Nothing matches these filters.' : 'Nothing waiting here. All clear.')) + '</p>' +
+      (on ? '<button class="pill" type="button" data-action="clearf"><i class="ti ti-filter-off"></i> Clear</button>' : '') + '</div>';
+  }
+  // One card per app (Lisa, 20 Oct): the app's name once in the header, its items inside split by a thin line.
+  // Cards follow the sorted items; each shows its top 3, "+N" opens the rest (remembered).
+  var shownAll = loadLocal('af-open');
+  function rowKind(t, kind) { return kind === 'me' ? (t._k === 'decisions' ? 'decide' : 'do') : kind === 'mixed' ? (t._k === 'decisions' ? 'decide' : t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view') : kind; }
+  function cards(show, slot, kind) {
+    var groups = [], by = {};
+    show.forEach(function (t) { var g = appOf(t); if (!by[g]) { by[g] = []; groups.push(g); } by[g].push(t); });
+    return groups.map(function (g) {
+      var rows = by[g], all = !!(shownAll[g] && shownAll[g].on), top = all ? rows : rows.slice(0, 3);
+      return '<div class="card appcard' + (alarm(appTask(rows[0])) ? ' alarm' : '') + '" data-app="' + esc(slugOf(g)) + '">' + headOf(rows[0], slot) + top.map(function (t) { return row(t, rowKind(t, kind), true); }).join('') +
+        (rows.length > 3 ? '<button class="more" type="button" data-action="more" data-app="' + esc(g) + '">' + (all ? '<i class="ti ti-chevron-up"></i>' : cnt('+' + (rows.length - 3))) + '</button>' : '') + '</div>';
+    }).join('');
+  }
+  function list(tab, items, slot, kind) {
+    var s = fsOf(tab), show = sortT(items.filter(function (t) { return hit(t, s, TASK); }), s.sort);
+    return findBar(tab, items, TASK, KINDS) + (show.length ? cards(show, slot, kind) : emptyBox());
+  }
+  // Me: everything waiting on Lisa (Decide + Do), newest first, by app.
+  function meItems() { var out = decisions().slice(); mine().forEach(function (t) { if (out.indexOf(t) < 0) out.push(t); }); return out; }
+  // One app on one screen: its Decide, Do and Docs. TEST and filters do not hide anything here.
+  function vApp(slug) {
+    var g = groupOfSlug(slug); if (!g) return emptyBox('No app by that name.');
+    var mineG = function (t) { return appOf(t) === g; };
+    var ds = sortT(decisions().filter(mineG), 'flag'), dos = sortT(mine().filter(function (t) { return mineG(t) && ds.indexOf(t) < 0; }), 'flag'), docs = allDocs().filter(function (d) { return d.app === g; });
+    var app = apps().filter(function (a) { return bare(a) === g && !isTest(a); })[0] || apps().filter(function (a) { return bare(a) === g; })[0];
+    var sect = function (icon, word, n, href) { return '<div class="sect"><i class="ti ti-' + icon + '"></i><a href="' + href + '">' + word + '</a> ' + cnt(n) + '</div>'; };
+    return '<div class="card appcard" data-app="' + esc(slugOf(g)) + '">' + (app ? headOf(app, 0) : '<div class="grp">' + esc(g) + '</div>') +
+      sect('scale', 'Decide', ds.length, '#/decide?app=' + encodeURIComponent(slugOf(g))) + ds.map(function (t) { return row(t, 'decide', true); }).join('') +
+      sect('square-check', 'Do', dos.length, '#/do?app=' + encodeURIComponent(slugOf(g))) + dos.map(function (t) { return row(t, 'do', true); }).join('') +
+      sect('file', 'Docs', docs.length, '#/docs?app=' + encodeURIComponent(slugOf(g))) + (docs.length ? '<table class="ptab dtab"><tbody>' + docs.map(function (d) { return docRow(d); }).join('') + '</tbody></table>' : '') + '</div>';
+  }
+  // One item, opened: the link a bot sends Lisa (#/item/<ClickUp id>).
+  function vItem(id) {
+    var t = byId(id); if (!t) return emptyBox('That item is done or gone. Nothing to do here.');
+    var kind = t._k === 'decisions' ? 'decide' : mine().indexOf(t) >= 0 || t.tags.indexOf('who-lisa') >= 0 ? 'do' : 'view';
+    return '<div class="card appcard" data-item="' + esc(id) + '">' + headOf(t, 4) + row(t, kind, true) + '</div>';
+  }
+  function vAppMenu() {
+    var names = [], n = {};
+    apps().forEach(function (a) { var g = bare(a); if (names.indexOf(g) < 0 && !/^ZZ_/.test(a.name) && (!/^(killed|retired)$/i.test(a.status) || apps().some(function (b) { return bare(b) === g && !/^(killed|retired)$/i.test(b.status); }))) names.push(g); });
+    meItems().forEach(function (t) { var g = appOf(t); n[g] = (n[g] || 0) + 1; if (names.indexOf(g) < 0) names.push(g); });
+    names.sort(function (a, b) { return (n[b] ? 1 : 0) - (n[a] ? 1 : 0) || (a === 'Factory') - (b === 'Factory') || a.localeCompare(b); });
+    return '<div class="pills">' + names.map(function (g) { return '<a class="pill" href="#/app/' + esc(slugOf(g)) + '">' + esc(g) + (n[g] ? ' ' + cnt(n[g]) : '') + '</a>'; }).join('') + '</div>';
+  }
+  // The address and the filters stay in step: opening a link sets the tab's filters; changing a filter rewrites the link.
+  var LIST_KEYS = ['app', 'kind', 'who', 'st', 'f'];
+  function hashParts() { var h = (location.hash || '#/rooms').slice(2), i = h.indexOf('?'); return { path: (i < 0 ? h : h.slice(0, i)).split('/'), q: new URLSearchParams(i < 0 ? '' : h.slice(i + 1)) }; }
+  function fromUrl() {
+    var p = hashParts(), tab = p.path[0];
+    if (!BAR_TABS.test(tab) || !Array.from(p.q.keys()).length) return;
+    var s = fdef(tab);
+    if (p.q.get('q')) s.q = p.q.get('q');
+    LIST_KEYS.forEach(function (k) { if (p.q.has(k)) s[k] = p.q.get(k).split(',').map(function (x) { return x.trim().toLowerCase(); }).filter(Boolean); });
+    if (p.q.has('sort')) s.sort = p.q.get('sort'); if (p.q.get('test') === '1') s.test = true;
+    s.app = s.app.map(function (v) { var g = groupOfSlug(v); return g ? slugOf(g) : v; });
+    fs[tab] = s; saveFs();
+  }
+  function toUrl(tab) {
+    var s = fsOf(tab), d = fdef(tab), q = [];
+    if (s.q) q.push('q=' + encodeURIComponent(s.q));
+    LIST_KEYS.forEach(function (k) { if (s[k].join(',') !== d[k].join(',')) q.push(k + '=' + s[k].map(encodeURIComponent).join(',')); });
+    if (s.sort !== d.sort) q.push('sort=' + s.sort); if (s.test) q.push('test=1');
+    var p = hashParts(), h = '#/' + p.path.join('/') + (q.length ? '?' + q.join('&') : '');
+    if (h !== location.hash) history.replaceState(null, '', h);
+  }
+  // Everyone who has open work (assigned or tagged in ClickUp), except Lisa: a new person gets a pill by themselves.
+  function people() {
+    var seen = ['Claude', 'Grok'];
+    allTasks().forEach(function (t) { if (isOpen(t) && t._k !== 'apps') whoOf(t).forEach(function (w) { if (w && w !== 'Lisa' && seen.indexOf(w) < 0) seen.push(w); }); });
+    return seen;
+  }
+  function queue(who) {
+    var w = decodeURIComponent(who); w = { claude: 'Claude', grok: 'Grok' }[w] || w;
+    return allTasks().filter(function (t) { return isOpen(t) && t._k !== 'apps' && (whoOf(t).indexOf(w) >= 0 || (w === 'Claude' && t._k === 'claude')); });
+  }
+  // 📅: Today (due today + overdue) by default; one tap for the week.
+  function vToday() {
+    var end = weekView ? dayStart(7) : dayStart(1);
+    var items = allTasks().filter(function (t) { return isOpen(t) && t.due && t.due < end && t._k !== 'apps'; });
+    return '<div class="pills"><button class="pill' + (weekView ? '' : ' on') + '" type="button" data-action="today">Today</button><button class="pill' + (weekView ? ' on' : '') + '" type="button" data-action="week">Week</button></div>' +
+      list('today', items, 4, 'mixed');
+  }
+  // The plain What / Yes = / No = lines on a decision. Links become an underlined "open".
+  var CU_MARK = '<svg width="18" height="18" viewBox="0 0 16 16" aria-hidden="true"><path d="M2 11l3-2.3c1.6 2 3.2 2 4.8 0L13 11c-2.7 3.3-8.3 3.3-11 0z" fill="#7B68EE"/><path d="M8 3.5L3.6 7.3 5.3 9.2 8 6.9l2.7 2.3 1.7-1.9z" fill="#FF02F0"/></svg>';
+  var DRIVE_MARK = '<svg width="18" height="16" viewBox="0 0 16 14" aria-hidden="true"><path d="M5.5 0h5l5 8.7h-5z" fill="#FFBA00"/><path d="M0 8.7L2.5 13l5-8.7L5 0z" fill="#0F9D58"/><path d="M2.5 13h10.5l2.5-4.3H5z" fill="#4285F4"/></svg>';
+
+  /* ---------- Links: each app task's description holds "key: URL" lines (Lisa ✓ 20 Oct) ----------
+   * A stage line records each link as it is made; an expected link that is missing shows dashed. */
+  var LINKS = [
+    ['mockup', 'layout-dashboard', 'Mockup', 3, 'Build'], ['overskill', 'code', 'OverSkill', 6, 'Build'], ['code', 'brand-github', 'Code', 6, 'Build'], ['db', 'database', 'Database', 6, 'Build'],
+    ['live', 'world', 'Live app', 7, 'Run'], ['domain', 'world-www', 'Domain', 4, 'Run'], ['dns', 'cloud', 'DNS', 7, 'Run'], ['uptime', 'activity', 'Uptime', 8, 'Run'], ['backup', 'file-zip', 'Backup', 8, 'Run'],
+    ['funnel', 'filter', 'ClickFunnels', 7, 'Sell'], ['pay', 'credit-card', 'Payments', 4, 'Sell'], ['email', 'mail', 'Email list', 7, 'Sell'], ['analytics', 'chart-line', 'Analytics', 7, 'Sell'], ['ads', 'speakerphone', 'Ads', 9, 'Sell'],
+    ['facebook', 'brand-facebook', 'Facebook', 7, 'Social'], ['instagram', 'brand-instagram', 'Instagram', 7, 'Social'], ['tiktok', 'brand-tiktok', 'TikTok', 9, 'Social'], ['calendar', 'calendar-event', 'Social calendar', 7, 'Social'],
+    ['support', 'inbox', 'Support inbox', 8, 'Support'], ['reviews', 'star', 'Reviews', 9, 'Support'],
+    ['card', 'id', 'Card', 0, 'Docs'], ['research', 'books', 'Research', 1, 'Docs'], ['brief', 'file-text', 'Brief', 9, 'Docs']]; // engine v2.5l doc keys
+  var LINK_GROUPS = ['Build', 'Run', 'Sell', 'Social', 'Support', 'Docs'];
+  var LINK_ALIAS = { payments: 'pay', database: 'db', site: 'live', app: 'live', publish: 'overskill', clickfunnels: 'funnel', github: 'code', fb: 'facebook', ig: 'instagram', social: 'calendar', inbox: 'support', cloudflare: 'dns' };
+  function linksOf(app) {
+    var o = {};
+    String(app && app.desc || '').split(/\r?\n|\\n/).forEach(function (l) {
+      var m = l.match(/^\s*(?:🔗\s*)?([a-z]+)\s*[:=]\s*(https?:\/\/\S+)/i); if (!m) return;
+      var k = m[1].toLowerCase(); k = LINK_ALIAS[k] || k;
+      if (LINKS.some(function (x) { return x[0] === k; })) o[k] = m[2];
+    });
+    Object.keys((app && app.links) || {}).forEach(function (k) { o[k] = app.links[k]; });
+    var fam = famOf(app);
+    if (fam && fam !== app) { var F2 = linksOf(fam); Object.keys(F2).forEach(function (k) { if (!o[k]) { o[k] = F2[k]; o['_from_' + k] = fam.name; } }); }
+    return o;
+  }
+  // Family: the Families list task that shares the app's fam- tag.
+  function famTag(t) { return t && t.family ? 'fam-' + t.family : ((t && t.tags) || []).filter(function (g) { return /^fam-/.test(g) && g !== 'fam-alert'; })[0] || ''; }
+  function famOf(app) { var g = famTag(app); if (!g || !S || !S.lists.families) return null; return S.lists.families.filter(function (f) { return f.tags.indexOf(g) >= 0; })[0] || null; }
+  function famName(app) { var f = famOf(app); return f ? f.name.replace(/^TEST-/, '') : (famTag(app) ? famTag(app).slice(4) : ''); }
+  // Stage an app has reached: its number, or 8 while live (rescue counts as live).
+  function reached(app) { var n = stageNo(app.status); return n !== null ? n : /^(rescue|operate)$/i.test(app.status) ? 8 : -1; }
+  function appTask(t) { var g = appOf(t); return apps().filter(function (a) { return a.name.replace(/^TEST-/, '') === g; })[0]; }
+  // Live and in trouble: a failed live-app check, a leak tag, or an open incident for this app.
+  function alarm(app) {
+    if (!app || reached(app) < 7) return false;
+    var probe = (S.health || []).filter(function (h) { return h.job === 'leakProbe'; })[0];
+    return (probe && probe.result === 'FAILED') || app.tags.indexOf('leak') >= 0 || app.status === 'rescue' ||
+      (S.lists.incidents || []).some(function (x) { return isOpen(x) && x.tags.indexOf('app-' + app.id) >= 0; });
+  }
+  function linkStrip(app, full) {
+    if (!app) return '';
+    var L = linksOf(app), st = reached(app), out = '';
+    if (alarm(app)) out += L.overskill ? '<a class="lk off" href="' + esc(L.overskill) + '" target="_blank" rel="noopener" title="Unpublish in OverSkill"><i class="ti ti-power"></i> Off</a>' :
+      '<span class="lk off no" title="OverSkill link not recorded: unpublish from OverSkill"><i class="ti ti-power"></i> Off</span>';
+    LINKS.filter(function (x) { return full || ['overskill', 'live', 'mockup'].indexOf(x[0]) >= 0; }).forEach(function (x) {
+      if (L[x[0]]) out += '<a class="lk" data-g="' + x[4] + '" href="' + esc(L[x[0]]) + '" target="_blank" rel="noopener" title="' + x[2] + (L['_from_' + x[0]] ? ' · ' + esc(L['_from_' + x[0]]) : '') + '"><i class="ti ti-' + x[1] + '"></i></a>';
+      else if (st >= x[3] && st >= 0) out += '<button class="lk no" type="button" data-addlink-open="' + esc(app.id) + '" data-key="' + x[0] + '" title="' + x[2] + ': add"><i class="ti ti-' + x[1] + '"></i></button>';
+    });
+    if (st >= 7) out += '<a class="lk" href="#/problem/' + esc(app.id) + '" title="Report a problem"><i class="ti ti-alert-triangle"></i></a>';
+    if (!full) { var n = LINKS.filter(function (x) { return L[x[0]]; }).length; out += '<a class="lk" href="#/card/' + esc(app.id) + '" title="All links"><span class="lkn">' + n + '</span></a>'; }
+    return out ? '<span class="links">' + out + '</span>' : '';
+  }
+  // App card: every link, grouped by job (Build · Run · Sell · Social · Support); dashed = expected by now, tap to add.
+  function linkGroups(app) {
+    var L = linksOf(app), st = reached(app);
+    return '<div class="lgrid">' + LINK_GROUPS.map(function (g) {
+      var cells = LINKS.filter(function (x) { return x[4] === g; }).map(function (x) {
+        if (L[x[0]]) return '<a class="lk" data-g="' + x[4] + '" href="' + esc(L[x[0]]) + '" target="_blank" rel="noopener" title="' + x[2] + (L['_from_' + x[0]] ? ' · ' + esc(L['_from_' + x[0]]) : '') + '"><i class="ti ti-' + x[1] + '"></i></a>';
+        return '<button class="lk no" data-g="' + x[4] + '" type="button" data-addlink-open="' + esc(app.id) + '" data-key="' + x[0] + '" title="' + x[2] + ': add"' + (st >= x[3] ? '' : ' style="opacity:.35"') + '><i class="ti ti-' + x[1] + '"></i></button>';
+      }).join('');
+      return '<span class="lg">' + g + '</span><span>' + cells + '</span>';
+    }).join('') + (famName(app) ? '<span class="lg">Family</span><span class="muted">' + esc(famName(app)) + '</span>' : '') + '</div>';
+  }
+  // Under Decide: what the factory did without you, and what waits behind your cap of 10.
+  function decideFoot() {
+    var a = autoToday(), q = queuedN();
+    return a || q ? '<p class="muted" style="margin:0">' + (a ? '<i class="ti ti-circle-check"></i> ' + cnt(a) + ' passed on their own today' : '') + (a && q ? ' · ' : '') + (q ? '<i class="ti ti-hourglass"></i> ' + cnt(q) + ' waiting behind these' : '') + '</p>' : '';
+  }
+  // A count sits in a faint circle, so it reads as "how many", never as part of the words (Lisa, 20 Oct).
+  // One fixed box (30 x 22); 3+ characters grow. A count of 0 (or nothing) shows no pill at all; need = rose ring + tint.
+  function cnt(n, need) { return !n ? '' : '<span class="cnt' + (String(n).length > 2 ? ' wide' : '') + (need ? ' need' : '') + '">' + n + '</span>'; }
+  function tabN(id, n) { var e = $(id); e.textContent = n ? n : ''; e.classList.toggle('wide', String(n).length > 2); }
+  // Words on screen start with a capital, after any code number: "8 Operate", "To do", "0 No data stored" (Lisa, 20 Oct).
+  function cap(t) { return String(t == null ? '' : t).replace(/^(\S*\d\S*\s+|[?]\s+)?([a-z])/, function (m, d, c) { return (d || '') + c.toUpperCase(); }); }
+  function lines(t) { return String(t.desc || '').split(/\r?\n|\\n/).map(function (l) { return l.trim(); }).filter(Boolean); }
+  function line(t, re) { var l = lines(t).filter(function (x) { return re.test(x); })[0]; return l ? l.replace(re, '').trim() : ''; }
+  function urls(t) { return (String(t.desc || '').match(/https?:\/\/[^\s<)\\]+/g) || []).filter(function (u, i, a) { return a.indexOf(u) === i; }); }
+  function info(text) { return text ? '<span class="info" tabindex="0" title="' + esc(text) + '" aria-label="' + esc(text) + '">i</span>' : ''; }
+  // Decide: the question, then ✓ and ✗ with what each does; the background sits behind (i).
+  function outcomes(t) {
+    var what = line(t, /^What:\s*/i), q = line(t, /^Deciding:\s*/i), y = line(t, /^Yes\s*=\s*/i), n = line(t, /^No\s*=\s*/i);
+    var extra = lines(t).filter(function (l) { return /^(Claude|Answer):/.test(l); });
+    if (!y && !n) return why(t, false);
+    if (n && t.tags.indexOf('gate') >= 0 && !/again/i.test(n)) n += ' · asked again in 7 days';
+    var lk = function (x) { return esc(x).replace(/https?:\/\/[^\s<]+/g, function (u) { return '<a href="' + u + '" target="_blank" rel="noopener">open</a>'; }); };
+    return (q ? '<div class="q1">' + lk(cap(q)) + info(cap(what)) + '</div>' : '') +
+      '<div class="outs">' + (y ? '<i class="ti ti-check y"></i><span>' + lk(cap(y)) + '</span>' : '') + (n ? '<i class="ti ti-x n"></i><span>' + lk(cap(n)) + '</span>' : '') +
+      extra.map(function (l) { return '<i class="ti ti-message-circle"></i><span>' + lk(l) + '</span>'; }).join('') + '</div>';
+  }
+  function ago(ts) { var h = (Date.now() - ts) / 36e5; return h < 1 ? Math.max(1, Math.round(h * 60)) + 'm' : h < 48 ? Math.round(h) + 'h' : Math.round(h / 24) + 'd'; }
+  // Undo: the request file goes to Drive Trash before the engine's next run reads it.
+  function undoUntil(at) { var d = new Date(at), m = d.getMinutes(), next = [3, 18, 33, 48].filter(function (x) { return x > m; })[0]; if (next === undefined) { d.setHours(d.getHours() + 1); next = 3; } d.setMinutes(next - 1, 0, 0); return d.getTime(); }
+  function sentLine(id) {
+    var at = sent[id], f = sentF[id], live = f && Date.now() < undoUntil(at);
+    return '<span class="sent">✓ ' + hm(at) + ' · by ' + appliesBy(at) + '</span>' + (live ? '<button class="undo" type="button" data-undo="' + esc(id) + '"><i class="ti ti-arrow-back-up"></i> Undo</button>' : '');
+  }
+  function undo(id) {
+    var f = sentF[id]; if (!f) return;
+    drive(CFG.urls.files + '/' + f.fid + '?supportsAllDrives=true', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ trashed: true }) })
+      .then(function () { delete sent[id]; delete sentF[id]; saveSent(); saveLocal('af-sentf', sentF); render(); })
+      .catch(function (e) { banner('Not undone: ' + e.message); });
+  }
+  // Copy a prompt: its section (P1, P2 …) from the prompt doc on Drive, ready to paste into OverSkill.
+  /* ---------- Send gate (APPFACT E11 E14 E15 E16, 20 Oct 2026): Copy shows only when the checks before a paid send are on the task ----------
+   * Read from the description and the comments (the engine can't edit descriptions yet). Missing lines are named instead of Copy.
+   *   Last turn: T<nn> = live chat … checked <today>        (YYYY-MM-DD or "20 Oct", Europe/London)
+   *   Prediction: <link> · Simulation: <link>
+   *   presend: READY sha256:<64 hex> <date>                (written by tools/presend/prompt-lint.py --presend; dated today, Europe/London; Copy
+   *                                                         refuses text whose SHA-256 differs. The checker runs inputs-gate itself.)
+   *   Happy Hour: active, <n> min left, read <HH:MM> · …   (read 15 minutes ago or less)
+   *   AFTER SEND YOU MUST: …                                (shown on the card, with Lisa's Do lines for the same app)
+   *   Lisa available: <HH:MM–HH:MM>                         (only for tasks tagged security or leak…)
+   *   Class: CURRENT <codes> · DATA <codes> · TARGET <codes> (<register id>)   (E19, shown on the card)
+   */
+  var MON = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  function londonDay(ts) { return new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); }
+  function londonMin(ts) { var p = new Date(ts).toLocaleTimeString('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', hour12: false }).split(':'); return +p[0] * 60 + +p[1]; }
+  function dayOf(x) {
+    var m = String(x || '').match(/(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0];
+    m = String(x || '').match(/\b(\d{1,2})\s+([A-Za-z]{3})/i); var mo = m && MON[m[2].toLowerCase()];
+    return mo ? londonDay(Date.now()).slice(0, 4) + '-' + ('0' + mo).slice(-2) + '-' + ('0' + m[1]).slice(-2) : '';
+  }
+  function gateLines(t) { var out = lines(t); (t.cm || []).forEach(function (c) { String(c.text || '').split(/\r?\n/).forEach(function (l) { if (l.trim()) out.push(l.trim()); }); }); return out; }
+  // The checker's last stamp on the task (description or comments): READY with the SHA-256 of the exact text, dated today.
+  function presendOf(t) {
+    var ps = gateLines(t).filter(function (l) { return /^presend:\s*(READY|NOT READY)\b/i.test(l); }), last = ps[ps.length - 1] || '';
+    var m = last.match(/^presend:\s*READY\s+sha256:([0-9a-f]{64})\s+(.*)$/i);
+    if (!last) return { state: 'NONE', sha: '' };
+    if (!m) return { state: 'NOT READY', sha: '' };
+    return { state: dayOf(m[2]) === londonDay(Date.now()) ? 'READY' : 'OLD', sha: m[1].toLowerCase() };
+  }
+  var PS_WHY = { NONE: 'No checker stamp', 'NOT READY': 'Checker: NOT READY', OLD: 'Checker stamp not today' };
+  function sha256(text) { return crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)).then(function (b) { return Array.prototype.map.call(new Uint8Array(b), function (x) { return ('0' + x.toString(16)).slice(-2); }).join(''); }); }
+  function sendGate(t) {
+    var L = gateLines(t), all = function (re) { return L.filter(function (l) { return re.test(l); }); }, today = londonDay(Date.now()), now = londonMin(Date.now()), miss = [];
+    if (!all(/^Last turn:\s*T\d+\s*=\s*live chat/i).some(function (l) { return dayOf((l.match(/checked\s+(.*)$/i) || [])[1]) === today; })) miss.push('Last turn');
+    if (!all(/^Prediction:\s*https?:\/\//i).some(function (l) { return /Simulation:\s*https?:\/\//i.test(l); })) miss.push('Prediction');
+    var hh = all(/^Happy Hour:\s*active/i).filter(function (l) { var m = l.match(/read\s+(\d{1,2}):(\d{2})/i); return m && (now - (+m[1] * 60 + +m[2]) + 1440) % 1440 <= 15; })[0] || '';
+    if (!hh) miss.push('Happy Hour');
+    var after = [], k = -1;
+    for (var i = 0; i < L.length; i++) if (/^AFTER SEND YOU MUST/i.test(L[i])) { k = i; break; }
+    if (k < 0) miss.push('After send'); else { after.push(L[k]); for (var j = k + 1; j < L.length && /^[-•*\d]/.test(L[j]); j++) after.push(L[j]); }
+    var avail = all(/^Lisa available:\s*\d{1,2}:\d{2}\s*[–-]\s*\d{1,2}:\d{2}/i)[0] || '';
+    if (t.tags.some(function (g) { return /^(security|leak)/.test(g); }) && !avail) miss.push('Lisa available');
+    var cls = all(/^Class:\s*CURRENT\s+\S.*·\s*DATA\s+\S.*·\s*TARGET\s+\S.*\(\s*\S+.*\)/i)[0] || '';
+    if (!cls) miss.push('Class');
+    var st = presendOf(t);
+    if (st.state !== 'READY') miss.push(PS_WHY[st.state]);
+    return { ok: !miss.length, miss: miss, hh: hh, after: after, avail: avail, cls: cls, sha: st.sha, ps: st.state };
+  }
+  // On the Sends card: the Happy Hour reading, what Lisa must do after the send (with her Do lines for the same app), when she is free.
+  function sendInfo(t, g) {
+    var mineTags = t.tags.filter(function (x) { return /^app-/.test(x); });
+    var dos = mineTags.length ? (S.lists.work || []).filter(function (x) { return isOpen(x) && x.tags.indexOf('who-lisa') >= 0 && x.tags.some(function (y) { return mineTags.indexOf(y) >= 0; }); }) : [];
+    var out = (g.cls ? '<i class="ti ti-tags"></i><span>' + esc(g.cls) + '</span>' : '') + (g.hh ? '<i class="ti ti-clock"></i><span>' + esc(g.hh) + '</span>' : '') + g.after.map(function (l) { return '<i class="ti ti-alert-circle"></i><span>' + esc(l) + '</span>'; }).join('') +
+      dos.map(function (x) { return '<i class="ti ti-user-check"></i><span><a href="#/item/' + esc(x.id) + '">' + esc(x.name.replace(/^TEST-/, '')) + '</a></span>'; }).join('') +
+      (g.avail ? '<i class="ti ti-user"></i><span>' + esc(g.avail) + '</span>' : '');
+    return out ? '<div class="outs" data-sendinfo="' + esc(t.id) + '">' + out + '</div>' : '';
+  }
+  function copyPrompt(btn) {
+    var t = byId(btn.getAttribute('data-copy')); if (!t) return;
+    var g = sendGate(t);
+    if (!g.ok) { render(); return; }
+    var doc = (urls(t).filter(function (u) { return /drive\.google\.com\/file\/d\//.test(u); })[0] || '').match(/\/d\/([\w-]+)/);
+    var sec = (t.name.match(/·\s*(P\d+)\s*·/) || [])[1];
+    if (!doc) { banner('No prompt doc on this task.'); return; }
+    var text = media(doc[1]).then(function (r) { return r.text(); }).then(function (md) {
+      if (!sec) return md;
+      var re = new RegExp('(^|\\n)([#*\\s]*' + sec + '\\b[\\s\\S]*?)(?=\\n[#*\\s]*P\\d+\\b|$)'), m = md.match(re);
+      if (!m) throw new Error(sec + ' not found in the prompt doc');
+      return m[2].trim();
+    }).then(function (x) {
+      return sha256(x).then(function (h) { if (h !== g.sha) throw new Error('the text is not the one the checker stamped (edited since?): re-run presend'); return x; });
+    });
+    var ok = function () { btn.innerHTML = '<i class="ti ti-check"></i> Copied'; }, no = function (e) { banner('Not copied: ' + e.message); };
+    try {
+      navigator.clipboard.write([new ClipboardItem({ 'text/plain': text.then(function (x) { return new Blob([x], { type: 'text/plain' }); }) })]).then(ok, no);
+    } catch (e) { text.then(function (x) { return navigator.clipboard.writeText(x); }).then(ok, no); }
+  }
+
+  /* ---------- Forms (Lisa ✓ 20 Oct): New idea · Problem · Link. Each writes one request file; AF-ENGINE does the rest. ---------- */
+  // The 20 frozen parts, same order and words as the Google Form. ★ = must answer; the rest start at "?".
+  var PARTS = [
+    ['TEN', 1, 'How many businesses, and who sits above them?', ['0 no data stored', '1 one business', '2 several, flat', '3 one reseller above', '4 several resellers', '5 one body above resellers', '6 several bodies'], 'e.g. 1 = a single kennel; 3 = a breed club above its kennels'],
+    ['PARENTS', 0, 'How many parties can one business sit under?', ['0 none', '1 one', '2 home plus claims', '3 several real owners'], 'e.g. 2 = a groomer under its own brand plus a franchise it claims'],
+    ['DOWN', 0, 'What may a party above do to the layers below?', ['0 nothing', '1 read the layer below', '2 read all the way down', '3 read and write by explicit grant'], 'e.g. 3 = a vet group edits a clinic only when the clinic grants it'],
+    ['MEET', 0, "Do businesses that don't own each other meet?", ['0 never', '1 share a record', '2 common marketplace', '3 money between unrelated businesses (STOP)'], 'e.g. 1 = two breeders on one litter record'],
+    ['POOL', 0, 'Is anything computed across businesses?', ['0 nothing', '1 only when enough contribute to hide individuals', '2 regardless', "3 one business's content surfaces to another"], 'e.g. 1 = a breed-wide health average'],
+    ['EXIT', 0, "What happens to a business's data when it leaves?", ['0 deleted', '1 frozen', '2 handed to them', '3 moves with them'], 'e.g. 2 = they get an export ZIP'],
+    ['ROLE', 0, 'Do all its people have the same access?', ['0 no sign-in', '1 everyone the same', '2 roles with different access'], 'e.g. 2 = owner and staff see different things'],
+    ['BELONG', 0, 'How many businesses can one person belong to?', ['0 none', '1 one', '2 many'], 'e.g. 2 = a handler working for several kennels'],
+    ['GUEST', 0, 'Can a business let an outside person in?', ['0 no', '1 a scoped view (e.g. accountant)'], 'e.g. 1 = an inspector sees the licence pages only'],
+    ['HELP', 0, 'Can someone see the app as another person sees it?', ['0 nobody', '1 Lisa, view only, logged', '2 brand admins too, if switched on', '3 can act as the person'], 'For support: who may look through a user\'s eyes'],
+    ['JOIN', 0, 'Who can create an account?', ['0 invite only', "1 only through a brand's address or join link", '2 anyone signed in'], 'e.g. 1 = sign up only from a kennel\'s link'],
+    ['CUST', 1, "How far into the business's customers does it go?", ['0 staff only', '1 records only', '2 customers read', '3 customers write', '4 customers pay in the app'], 'e.g. 2 = puppy buyers read their pack'],
+    ['PRICE', 0, 'Same price for everyone?', ['0 no pricing', '1 one list', '2 plus a trade list', '3 a price per customer'], 'Prices the business charges its customers'],
+    ['SHARE', 0, 'Can members share with each other?', ['0 no', '1 yes, as its own share record'], 'e.g. 1 = send a pedigree to another breeder'],
+    ['SEN', 1, 'How sensitive is the data?', ['0 ordinary', '1 personal', '2 health or clinical', '3 children'], '2 or 3 = held until a DPIA'],
+    ['VIEW', 1, 'Can a stranger read without signing in?', ['0 nothing', '1 link-holders only', '2 anyone'], 'e.g. 1 = a private buyer-pack link'],
+    ['POST', 1, 'Can a stranger put data in without signing in?', ['0 nothing', '1 link-holders only', '2 anyone'], 'e.g. 2 = a public enquiry form'],
+    ['BRAND', 0, 'Whose name is on the screen?', ['0 none', '1 one brand', '2 a brand per business'], 'e.g. 2 = each kennel\'s own name and logo'],
+    ['SEND', 0, "What does the app send out to systems we don't control?", ['0 nothing', '1 users download their own data', '2 pushed out automatically'], 'e.g. 2 = posts results to a registry'],
+    ['PAY', 1, 'Does money move between parties in one chain?', ['0 none', '1 Lisa bills the business', '2 payouts within one chain (reseller or parent body)'], 'e.g. 1 = monthly subscription to you']
+  ];
+  // [field, question, (i) example, chips or null, must answer]
+  var BRIEF = [
+    // Brunson: dream customer · their "before" and "after" · new opportunity beats improvement · false beliefs that stop the sale.
+    // Hormozi: value = dream outcome × likelihood ÷ (time × effort). JTBD: the moment that makes them look. Schwartz: their own words.
+    ['who', 'Who is the dream customer?', 'One person you can picture: role, size, place. e.g. "a 1–3 person UK dog breeder with 2–6 litters a year"', null, 1],
+    ['now', 'What are they stuck with today?', 'Their "before", in their words: the workaround, the hours, the money, the worry. e.g. "paper and Excel; KC forms take an evening; buyers want health proof I can\'t find"', null, 1],
+    ['after', 'What changes for them once it works?', 'Their "after": the result they would pay for, and how fast. e.g. "every litter and buyer pack in one place; KC paperwork in 10 minutes"', null, 1],
+    ['moment', 'What makes them go looking for help?', 'The moment it hurts enough to act. e.g. "a buyer asks for health papers on the day of collection"', null, 0],
+    ['kind', 'New, better, or a replacement?', 'New = a new way of doing it (sells easiest) · Better = an improvement on what they use · Replacement = they switch from a named tool.', ['New', 'Better', 'Replacement'], 1],
+    ['doubt', 'What would stop them buying?', 'Their doubts about it, about themselves, or about time and money. e.g. "I\'m not techy", "my data is in 6 places", "another subscription"', null, 0],
+    ['rivals', 'What do they use now?', 'Apps, sheets, paper, people. Names let research find the 1–2★ reviews.', null, 0],
+    ['where', 'Where do they gather?', 'Facebook groups, forums, shows, associations, hashtags: where research reads complaints and marketing finds them.', null, 0],
+    ['pays', 'Who pays, and what is it worth to them a month?', 'Who signs up and pays, a price guess, and what it saves or earns them each month.', null, 0],
+    // Same choices as OverSkill's AI Prompt Builder, so the build prompt fills it 1:1.
+    ['btype', 'Business type', 'OverSkill: Business Model › Business Type.', ['B2C', 'B2B', 'Marketplace', 'Internal tool'], 0],
+    ['revenue', 'How it makes money', 'OverSkill: Business Model › Revenue Model.', ['Free', 'Freemium', 'Subscription', 'One-time', 'Transaction fee'], 0],
+    ['market', 'Size of customer', 'OverSkill: Business Model › Target Market.', ['Individuals', 'Small teams', 'SMB', 'Enterprise'], 0],
+    ['look', 'Apps whose look to follow', 'OverSkill: Design Inspiration. Our base layout is The Board; add any rival or app whose screens you like.', null, 0]
+  ];
+  var KILLS = [['FRAGILE', 'Could it give wrong answers that look right?'], ['ONESHOT', 'Would people use it once and stop?'], ['NOHOOK', 'Is there no reason to come back?']];
+  var idea = (function () { try { return JSON.parse(localStorage.getItem('af-idea') || '') || {}; } catch (e) { return {}; } })();
+  function saveIdea() { idea.at = Date.now(); try { localStorage.setItem('af-idea', JSON.stringify(idea)); } catch (e) {} }
+  var formErr = {}, formNote = '';
+  function chipsFor(key, opts, q) {
+    return '<div class="chips">' + opts.map(function (o) {
+      var m = o.match(/^(\S+)\s+(.*)$/) || [o, o, ''], isCode = /^[0-9?]$/.test(m[1]) && PARTS.some(function (p) { return p[0] === key; });
+      return '<button class="ch' + ((idea.a || {})[key] === o ? ' on' : '') + '" type="button" data-pick="' + esc(key) + '" data-val="' + esc(o) + '"><b>' + esc(isCode ? key + ':' + m[1] : /\d/.test(m[1]) ? m[1] : cap(m[1])) + '</b>' + esc(cap(m[2])) + '</button>';
+    }).join('') + '</div>';
+  }
+  function vNew() {
+    idea.a = idea.a || {};
+    PARTS.forEach(function (p) { if (!p[1] && !idea.a[p[0]]) idea.a[p[0]] = '? not yet known'; });
+    KILLS.forEach(function (k) { if (!idea.a[k[0]]) idea.a[k[0]] = 'no'; });
+    var er = function (k) { return formErr[k] ? '<div class="ferr">' + esc(formErr[k]) + '</div>' : ''; };
+    return '<div class="card"><div class="grp" style="margin:0 0 8px"><span class="dot" style="background:var(--ljr-7)"></span>New idea</div>' +
+      '<div class="fq"><p class="qt">Name<span class="req" title="Must answer">★</span></p><input class="fin" data-f="name" value="' + esc(idea.name || '') + '" aria-label="Name" maxlength="60">' + er('name') + '</div>' +
+      BRIEF.map(function (b) {
+        var input = b[3] ? chipsFor(b[0], b[3]) : '<textarea class="fin" data-f="' + b[0] + '" aria-label="' + esc(b[1]) + '" rows="2">' + esc(idea[b[0]] || '') + '</textarea>';
+        return '<div class="fq"><p class="qt">' + esc(b[1]) + info(b[2]) + (b[4] ? '<span class="req" title="Must answer">★</span>' : '') + '</p>' + input + er(b[0]) + '</div>';
+      }).join('') +
+      PARTS.map(function (p) {
+        var opts = p[3].slice(); if (!p[1]) opts.push('? not yet known');
+        return '<div class="fq" id="q-' + p[0] + '"><p class="qt"><span class="code">' + p[0] + '</span>' + esc(p[2]) + info(p[4]) + (p[1] ? '<span class="req" title="Must answer">★</span>' : '') + '</p>' + chipsFor(p[0], opts) + er(p[0]) + '</div>';
+      }).join('') +
+      KILLS.map(function (k) { return '<div class="fq"><p class="qt"><span class="code">' + k[0] + '</span>' + esc(k[1]) + '</p>' + chipsFor(k[0], ['no', 'yes']) + '</div>'; }).join('') +
+      '<div class="fq"><p class="qt"><i class="ti ti-pencil" aria-hidden="true"></i></p><textarea class="fin" data-f="note" aria-label="Note">' + esc(idea.note || '') + '</textarea></div>' +
+      '<div class="frow"><span class="muted">' + esc(formNote) + '</span><button class="btn yes" type="button" data-action="sendidea" aria-label="Send"><i class="ti ti-check"></i></button></div></div>';
+  }
+  function sendIdea() {
+    formErr = {};
+    if (!(idea.name || '').trim()) formErr.name = 'Add a name';
+    BRIEF.forEach(function (b) { if (b[4] && !(b[3] ? (idea.a || {})[b[0]] : (idea[b[0]] || '').trim())) formErr[b[0]] = b[3] ? 'Pick one' : 'Add a few words'; });
+    PARTS.forEach(function (p) { if (p[1] && !(idea.a || {})[p[0]]) formErr[p[0]] = 'Pick one'; });
+    if (Object.keys(formErr).length) { render(); var first = document.querySelector('.ferr'); if (first) first.scrollIntoView({ block: 'center' }); return; }
+    formNote = 'Sending…'; render();
+    var brief = BRIEF.map(function (b) { var v = b[3] ? ((idea.a || {})[b[0]] || '') : (idea[b[0]] || '').trim(); return v ? b[1].replace(/\?$/, '') + ': ' + v : ''; }).filter(Boolean).join('\n');
+    var body = { kind: 'idea', at: new Date().toISOString(), name: idea.name.trim(), brief: brief, note: (idea.note || '').trim(), answers: idea.a, brief_parts: BRIEF.reduce(function (o, b) { o[b[0]] = b[3] ? ((idea.a || {})[b[0]] || '') : (idea[b[0]] || '').trim(); return o; }, {}) };
+    withWrite(function () {
+      return putRequest('idea', body).then(function () {
+        try { localStorage.removeItem('af-idea'); } catch (e) {}
+        idea = {}; formNote = ''; banner('✓ ' + hm(Date.now()) + ' · card by ' + appliesBy(Date.now())); $('banner').className = 'banner info';
+        location.hash = '#/rooms';
+      }).catch(function (e) { formNote = 'Not sent: ' + e.message + '. Your answers are kept.'; render(); });
+    });
+  }
+  // Problem: from any live app's card. A leak or outage opens an incident; the engine moves the app to Rescue.
+  var PROB = [['leak', 'shield-x', 'Leak'], ['down', 'plug-x', 'Down'], ['wrong', 'alert-triangle', 'Wrong'], ['other', 'dots', 'Other']];
+  var prob = {};
+  function vProblem(id) {
+    var app = apps().filter(function (a) { return a.id === id; })[0];
+    if (!app) return '<div class="card">Not found. <a href="#/rooms">Rooms</a></div>';
+    var L = linksOf(app);
+    return '<div class="card"><div class="grp" style="margin:0 0 8px"><span class="dot" style="background:var(--ljr-2)"></span>' + esc(app.name.replace(/^TEST-/, '')) + ' · problem' + (isTest(app) ? '<span class="pill">Test</span>' : '') + '</div>' +
+      '<div class="fq"><div class="chips">' + PROB.map(function (p) { return '<button class="ch' + (prob.k === p[0] ? ' on' : '') + '" type="button" data-prob="' + p[0] + '"><i class="ti ti-' + p[1] + '"></i> ' + p[2] + '</button>'; }).join('') + '</div>' + (formErr.k ? '<div class="ferr">' + esc(formErr.k) + '</div>' : '') + '</div>' +
+      '<div class="fq"><textarea class="fin" data-f="pwhat" aria-label="What happened">' + esc(prob.what || '') + '</textarea>' + (formErr.what ? '<div class="ferr">' + esc(formErr.what) + '</div>' : '') + '</div>' +
+      (prob.k === 'leak' ? '<div class="fq"><p class="qt"><i class="ti ti-power"></i> Off first' + info('Unpublish in OverSkill now; the ICO clock (72 hours) starts when you know.') + '</p>' + linkStrip(app) + '</div>' : '') +
+      '<div class="frow"><span class="muted">' + esc(formNote) + '</span><button class="btn yes" type="button" data-action="sendprob" data-id="' + esc(id) + '" aria-label="Send"><i class="ti ti-check"></i></button></div></div>';
+  }
+  function sendProblem(id) {
+    formErr = {};
+    if (!prob.k) formErr.k = 'Pick one'; if (!(prob.what || '').trim()) formErr.what = 'Say what happened';
+    if (Object.keys(formErr).length) { render(); return; }
+    formNote = 'Sending…'; render();
+    withWrite(function () {
+      return putRequest('problem', { kind: 'problem', at: new Date().toISOString(), taskId: id, problem: prob.k, what: prob.what.trim() })
+        .then(function () { prob = {}; formNote = ''; banner('✓ ' + hm(Date.now()) + ' · incident by ' + appliesBy(Date.now())); $('banner').className = 'banner info'; location.hash = '#/card/' + id; })
+        .catch(function (e) { formNote = 'Not sent: ' + e.message; render(); });
+    });
+  }
+  // Link: tap a dashed icon, paste the address, ✓. The engine writes "key: URL" on the ClickUp app task.
+  var addLink = null;
+  function sendLink(form) {
+    var url = form.url.value.trim(), id = form.getAttribute('data-app'), key = form.getAttribute('data-key');
+    if (!/^https:\/\/\S+$/.test(url)) { form.querySelector('.ferr').textContent = 'Paste a full https:// address'; return; }
+    form.querySelector('.ferr').textContent = 'Sending…';
+    withWrite(function () {
+      return putRequest('link', { kind: 'link', at: new Date().toISOString(), taskId: id, key: key, url: url })
+        .then(function () { var a = apps().filter(function (x) { return x.id === id; })[0]; if (a) a.desc = String(a.desc || '') + '\n' + key + ': ' + url; addLink = null; render(); })
+        .catch(function (e) { form.querySelector('.ferr').textContent = 'Not sent: ' + e.message; });
+    });
+  }
+  function linkForm() {
+    if (!addLink) return '';
+    var x = LINKS.filter(function (l) { return l[0] === addLink.key; })[0];
+    return '<form class="addlink" data-addlink data-app="' + esc(addLink.id) + '" data-key="' + esc(addLink.key) + '"><i class="ti ti-' + x[1] + '" title="' + x[2] + '" style="align-self:center"></i><input class="fin" name="url" aria-label="' + x[2] + ' address" type="text" inputmode="url" autocomplete="off"><button class="btn" type="submit" aria-label="Save"><i class="ti ti-check"></i></button><span class="ferr" style="align-self:center"></span></form>';
+  }
+  var pfo = (function () { try { return JSON.parse(localStorage.getItem('af-pf') || '') || {}; } catch (e) { return {}; } })();
+  function savePf() { try { localStorage.setItem('af-pf', JSON.stringify(pfo)); } catch (e) {} }
+  function health(a) { return alarm(a) || a.losing || a.tags.indexOf('fam-alert') >= 0 ? 'alarm' : stuck(a) ? 'stuck' : /^(killed|retired|hold|cancelled)$/i.test(a.status) ? 'archive' : reached(a) >= 8 ? 'live' : reached(a) >= 4 ? 'building' : 'idea'; }
+  var HW = { alarm: ['Needs you', 'alert-triangle', 2], stuck: ['Stuck', 'clock-pause', 3], live: ['Live', 'world', 5], building: ['Building', 'hammer', 4], idea: ['Idea', 'bulb', 7], archive: ['Archive', 'archive', 8] };
+  function vPortfolio() {
+    var all = apps(), fams = [], q = (pfo.q || '').toLowerCase();
+    all.forEach(function (a) { var f = famName(a) || '—'; if (fams.indexOf(f) < 0) fams.push(f); });
+    var list = all.filter(function (a) {
+      if (q && (a.name + ' ' + a.status + ' ' + famName(a)).toLowerCase().indexOf(q) < 0) return false;
+      if (pfo.fam && (famName(a) || '—') !== pfo.fam) return false;
+      if (pfo.h && health(a) !== pfo.h) return false;
+      if (!pfo.h && !pfo.arch && health(a) === 'archive') return false;
+      return true;
+    }).sort(function (a, b) { var o = ['alarm', 'stuck', 'live', 'building', 'idea', 'archive']; return o.indexOf(health(a)) - o.indexOf(health(b)) || reached(b) - reached(a) || b.updated - a.updated; });
+    var chip = function (k, v, label) { return '<button class="pill' + (pfo[k] === v ? ' on' : '') + '" type="button" data-pf="' + k + '" data-val="' + esc(v) + '">' + label + '</button>'; };
+    var cntH = function (h) { return all.filter(function (a) { return health(a) === h; }).length; };
+    return '<div class="card"><div class="pills"><span class="flab">Filter</span>' +
+      Object.keys(HW).map(function (h) { return cntH(h) ? chip('h', h, '<i class="ti ti-' + HW[h][1] + '"></i> ' + HW[h][0] + ' ' + cnt(cntH(h))) : ''; }).join('') +
+      (fams.length > 1 ? fams.map(function (f) { return chip('fam', f, esc(f)); }).join('') : '') +
+      ((pfo.h || pfo.fam || pfo.q) ? '<button class="pill" type="button" data-action="pfclear" aria-label="Clear filters" title="Clear filters"><i class="ti ti-filter-off"></i></button>' : '') + '</div>' +
+      '<div style="margin:8px 0"><input class="fin search" data-f="pfq" value="' + esc(pfo.q || '') + '" aria-label="Search apps" type="search"></div>' +
+      '<table class="ptab"><thead><tr><th>App</th><th>Family</th><th>Stage</th><th></th><th>Changed</th></tr></thead><tbody>' +
+      list.slice(0, pfo.all ? 2000 : 50).map(function (a) {
+        var h = HW[health(a)];
+        return '<tr><td><a href="#/card/' + esc(a.id) + '"><span class="dot" style="background:var(--ljr-' + h[2] + ');margin-right:8px"></span>' + esc(a.name.replace(/^TEST-/, '')) + '</a>' + (isTest(a) ? ' <span class="pill">Test</span>' : '') + '</td><td class="muted">' + esc(famName(a) || '—') + '</td><td>' + esc(cap(a.status)) + '</td><td title="' + h[0] + '"><i class="ti ti-' + h[1] + '"></i></td><td class="muted">' + ago(a.updated) + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      (list.length > 50 && !pfo.all ? '<button class="more" type="button" data-action="pfall">+' + (list.length - 50) + '</button>' : '') +
+      (!pfo.h && !pfo.arch && cntH('archive') ? '<button class="more" type="button" data-action="pfarch"><i class="ti ti-archive"></i> Archive ' + cnt(cntH('archive')) + '</button>' : '') + '</div>';
+  }
+  // Apps & ideas at any size: Needs you · Building · Ideas · Archive (folded), with a search box.
+  var appQ = '';
+  function vAllApps() {
+    var q = appQ.toLowerCase(), list = apps().filter(function (a) { return !q || (a.name + ' ' + a.status).toLowerCase().indexOf(q) >= 0; });
+    var arch = function (a) { return /^(killed|retired|hold|cancelled)$/i.test(a.status); };
+    var G = [['Needs you', 'alert-triangle', list.filter(function (a) { return !arch(a) && (alarm(a) || stuck(a)); })],
+      ['Live', 'world', list.filter(function (a) { return !arch(a) && !alarm(a) && !stuck(a) && reached(a) >= 8; })],
+      ['Building', 'hammer', list.filter(function (a) { return !arch(a) && !alarm(a) && !stuck(a) && reached(a) >= 4 && reached(a) < 8; })],
+      ['Ideas', 'bulb', list.filter(function (a) { return !arch(a) && !alarm(a) && !stuck(a) && reached(a) < 4; })]];
+    var a8 = list.filter(arch);
+    return '<div class="card"><input class="fin search" data-f="appq" value="' + esc(appQ) + '" aria-label="Search apps" type="search"><div style="margin-top:12px">' +
+      G.filter(function (g) { return g[2].length; }).map(function (g) { return '<div class="grpt"><i class="ti ti-' + g[1] + '"></i>' + g[0] + ' ' + cnt(g[2].length) + '</div><div class="pills">' + g[2].map(chipOf).join('') + '</div>'; }).join('') +
+      (a8.length ? '<details class="arch"><summary class="grpt"><i class="ti ti-archive"></i>Archive · ' + a8.length + '</summary><div class="pills">' + a8.map(chipOf).join('') + '</div></details>' : '') +
+      '</div></div>';
+  }
+
+  /* ---------- Docs (Lisa, 20 Oct): every doc the factory knows, by app and type, with search. Opens in Drive (new tab). ---------- */
+  var docsAll = false;
+  var DT = [['card', 'id-badge-2', 'Card', /CARD|card \d|Card \d/], ['prompt', 'message-2-code', 'Prompt', /prompt|· P\d/i], ['mockup', 'layout-dashboard', 'Mockup', /mockup|board/i],
+    ['research', 'search', 'Research', /research|rivals|base/i], ['report', 'file-check', 'Report', /report|test|proof|audit/i], ['rules', 'book', 'Rules', /rule|protocol|scheme|template|standard/i], ['other', 'file', 'Other', /.*/]];
+  function docType(text) { return DT.filter(function (d) { return d[3].test(text); })[0]; }
+  function allDocs() {
+    var by = {}, add = function (id, url, title, t) {
+      if (by[id]) { if (t && by[id].from.indexOf(t.name) < 0) by[id].from.push(t.name); return; }
+      var app = t ? (t._k === 'apps' ? t.name.replace(/^TEST-/, '') : appOf(t)) : 'Factory';
+      by[id] = { id: id, url: url, title: title, app: app, type: docType(title + ' ' + (t ? t.name : '')), from: t ? [t.name] : [], at: t ? t.updated : 0 };
+    };
+    (S.cards || []).forEach(function (c) {
+      var owner = apps().filter(function (a) { return String(a.desc).indexOf(c.id) >= 0; })[0];
+      add(c.id, 'https://drive.google.com/file/d/' + c.id + '/view', c.name, owner || null);
+      if (by[c.id]) { by[c.id].type = DT[0]; by[c.id].at = c.updated; }
+    });
+    allTasks().concat(apps()).forEach(function (t) {
+      (String(t.desc || '').match(/https:\/\/(?:drive|docs)\.google\.com\/[^\s<)\\"]+/g) || []).forEach(function (u) {
+        var id = (u.match(/\/d\/([\w-]{20,})/) || u.match(/id=([\w-]{20,})/) || [])[1]; if (!id) return;
+        var line = String(t.desc).split(/\r?\n|\\n/).filter(function (l) { return l.indexOf(u) >= 0; })[0] || '';
+        var label = line.replace(u, '').replace(/\(section\s*/i, '').replace(/[()]/g, '').replace(/^[\s\-•·:]+|[\s\-•·:]+$/g, '').replace(/^(Prompt text|Look|Source|Card \d+|open)\s*:?\s*/i, '').slice(0, 50);
+        var task = t.name.replace(/^TEST-/, '').replace(/^[^·]+·\s*/, '');
+        add(id, u, (t._k === 'apps' ? (label.length < 12 ? 'App notes' + (label ? ' · ' + label : '') : label) : task + (label && task.indexOf(label) < 0 ? ' · ' + label : '')).slice(0, 80), t);
+      });
+    });
+    return Object.keys(by).map(function (k) { return by[k]; });
+  }
+  // Docs (Lisa, 20 Oct): search first. Without a search: each app in progress (idea → launch) with its own docs, plus any doc a
+  // waiting Decide / Do item needs (coloured tag = needs you). Search finds every doc, live and old.
+  function needs() { var need = {}; decisions().forEach(function (t) { need[t.name] = 'decide'; }); mine().forEach(function (t) { if (!need[t.name]) need[t.name] = 'do'; }); return need; }
+  function tagOf(d, need) { var k = ''; need = need || needs(); d.from.forEach(function (n) { if (need[n] === 'decide') k = 'decide'; else if (need[n] === 'do' && !k) k = 'do'; }); return k; }
+  var TAG = { decide: ['Decide', '#/decide', 4], do: ['Do', '#/do', 5] };
+  function docRow(d, need) {
+    var k = tagOf(d, need);
+    return '<tr><td style="width:28px"><i class="ti ti-' + d.type[1] + ' dti" data-t="' + d.type[0] + '" title="' + d.type[2] + '"></i></td>' +
+      '<td><a href="' + esc(d.url) + '" target="_blank" rel="noopener" title="Opens in Drive (new tab)">' + esc(d.title) + '</a></td>' +
+      '<td style="width:72px">' + (k ? '<a class="need n' + TAG[k][2] + '" href="' + TAG[k][1] + '">' + TAG[k][0] + '</a>' : '') + '</td>' +
+      '<td style="width:30px"><a class="mark" href="' + esc(d.url) + '" target="_blank" rel="noopener" aria-label="Open in Drive (new tab)" title="Opens in Drive (new tab)">' + DRIVE_MARK + '</a></td></tr>';
+  }
+  function vDocs() {
+    var docs = allDocs(), s = fsOf('docs'), need = needs(), any = s.q || onCount('docs');
+    var inPlay = {}; apps().forEach(function (a) { var h = health(a); if (h !== 'archive' && h !== 'live') inPlay[bare(a)] = a; });
+    var list = docs.filter(function (d) { return hit(d, s, DOC) && (any || !!tagOf(d, need) || !!inPlay[d.app]); });
+    var groups = [], by = {};
+    list.forEach(function (d) { if (!by[d.app]) { by[d.app] = []; groups.push(d.app); } by[d.app].push(d); });
+    groups.sort(function (a, b) { var na = by[a].some(function (d) { return tagOf(d, need); }) ? 0 : 1, nb = by[b].some(function (d) { return tagOf(d, need); }) ? 0 : 1; return na - nb || a.localeCompare(b); });
+    var head = function (g) {
+      var a = inPlay[g] || apps().filter(function (x) { return bare(x) === g; })[0];
+      var h = a ? HW[health(a)] : null;
+      return '<tr class="dgrp"><td colspan="4"><span class="dot" style="background:var(--ljr-' + (h ? h[2] : 0) + ');margin-right:8px"></span>' +
+        (a ? '<a href="#/app/' + esc(slugOf(g)) + '">' + esc(g) + '</a> <span class="muted">' + esc(cap(a.status)) + '</span>' : esc(g)) + '</td></tr>';
+    };
+    var shown = 0, body = groups.map(function (g) { var rows = by[g].slice(0, docsAll ? 999 : 8); shown += rows.length; return head(g) + rows.map(function (d) { return docRow(d, need); }).join('') + (by[g].length > rows.length ? '<tr><td></td><td colspan="3">' + cnt('+' + (by[g].length - rows.length)) + '</td></tr>' : ''); }).join('');
+    var typesHere = DT.filter(function (t) { return docs.some(function (x) { return x.type[0] === t[0]; }); });
+    return findBar('docs', docs, DOC, typesHere) + (shown ? '<div class="card"><table class="ptab dtab"><tbody>' + body + '</tbody></table>' +
+      (!docsAll && list.length > shown ? '<button class="more" type="button" data-action="dqall"><i class="ti ti-chevron-down"></i></button>' : '') + '</div>' : emptyBox());
+  }
+  // full = the whole description (title tapped); otherwise the first 4 lines plus Claude's answers.
+  function why(t, full) {
+    var d = String(t.desc || '').trim();
+    if (!d) return '';
+    var ls = d.split('\n').filter(function (l) { return l && !/^(GATE|NO|APP|App):/.test(l); });
+    if (!full) ls = ls.slice(0, 4).concat(ls.slice(4).filter(function (l) { return /^(Claude|Answer):/.test(l); }));
+    return '<div class="why">' + ls.map(function (l) {
+      return esc(l).replace(/https?:\/\/[^\s<]+/g, function (u) { return '<a href="' + u + '" target="_blank" rel="noopener">open</a>'; });
+    }).join('<br>') + '</div>';
+  }
+  // Factory switch: flips at once on screen; AF-ENGINE writes SETTINGS › FACTORY at its next run.
+  function factoryOn() { var p = pend.factory; return p && Date.now() - p.at < 36e5 && String(S.factory).toUpperCase() !== (p.on ? 'ON' : 'OFF') ? p.on : String(S.factory).toUpperCase() === 'ON'; }
+  function sendFactory() {
+    var on = !factoryOn(); pend.factory = { on: on, at: Date.now() }; saveLocal('af-pend', pend); render();
+    withWrite(function () { return putRequest('factory', { kind: 'factory', on: on, at: new Date().toISOString() }).catch(function (e) { delete pend.factory; saveLocal('af-pend', pend); banner('Not sent: ' + e.message); render(); }); });
+  }
+  function sendSet(id, field, val) {
+    var t = byId(id); if (!t) return;
+    var body = { kind: 'set', taskId: id, at: new Date().toISOString() }; body[field] = val;
+    pend[id] = Object.assign(pend[id] || {}, body, { at: Date.now() }); saveLocal('af-pend', pend);
+    applyPend(); openPanel = null; render();
+    withWrite(function () { return putRequest('set', body).catch(function (e) { delete pend[id]; saveLocal('af-pend', pend); banner('Not sent: ' + e.message); load(); }); });
+  }
+  function sendCheck(id, checklist, item, resolved) {
+    var t = byId(id); if (!t) return;
+    (t.chk || []).forEach(function (c) { c.items.forEach(function (i) { if (i.id === item) i.ok = resolved; }); }); render();
+    withWrite(function () { return putRequest('check', { kind: 'check', taskId: id, checklist: checklist, item: item, resolved: resolved, at: new Date().toISOString() }).catch(function (e) { banner('Not sent: ' + e.message); load(); }); });
+  }
+  // Green only when every job ran OK within its window and the data is fresh. OFF / never ran / late = red.
+  var WINDOW_H = { syncState: 0.75, dailyDigest: 74, staleCheck: 26, leakProbe: 26, weeklyBackup: 170 };
+  // Factory checklist score (engine v2.5l): PASS counts only with a proof link. Tap = the checklist in ClickUp.
+  function docsTask() { return ((S.lists || {}).checklist || []).filter(function (t) { return t.tags.indexOf('docs') >= 0; })[0] || null; }
+  function docLinks(t) {
+    var o = [];
+    String(t && (t.full || t.desc) || '').split(/\r?\n|\\n/).forEach(function (l) { var m = l.match(/^\s*([a-z][a-z0-9 ]{0,20}?)\s*:\s*(https:\/\/\S+)/i); if (m) o.push([m[1], m[2]]); });
+    return o;
+  }
+  function ckPill() {
+    var c = S.checklist; if (!c || !c.total) return '';
+    var url = (docLinks(docsTask()).filter(function (x) { return x[0] === 'checklist'; })[0] || [])[1];
+    var tip = 'Checklist: ' + c.pass + ' pass · ' + c.fail + ' fail · ' + c.open + ' open', txt = '<i class="ti ti-list-check"></i> ' + c.pass + '/' + c.total;
+    return url ? '<a class="pill" href="' + esc(url) + '" target="_blank" rel="noopener" title="' + tip + '">' + txt + '</a>' : '<span class="pill" title="' + tip + '">' + txt + '</span>';
+  }
+  function docsStrip() {
+    var L = docLinks(docsTask()); if (!L.length) return '';
+    return '<div class="pills docs"><span class="pill" title="Factory docs"><i class="ti ti-folder"></i></span>' + L.map(function (x) { return '<a class="pill" href="' + esc(x[1]) + '" target="_blank" rel="noopener">' + esc(x[0]) + '</a>'; }).join('') + '</div>';
+  }
+  function enginePill() {
+    // Real problems only: a watch-job that is off (or never ran) because the Factory is OFF is expected, not a fault.
+    var off = String(S.factory).toUpperCase() !== 'ON';
+    var now = Date.now(), bad = (S.health || []).filter(function (h) {
+      if (!WINDOW_H[h.job]) return h.result === 'FAILED';
+      if (off && h.job !== 'syncState' && /^(OFF|INSTALLED)$/i.test(h.result)) return false;
+      var last = Date.parse(h.last);
+      return h.result !== 'OK' || !(now - last < WINDOW_H[h.job] * 36e5);
+    }).map(function (h) { return (JOB[h.job] || h.job) + ' ' + word(h); });
+    if (now - Date.parse(S.generated_at) > 45 * 6e4) bad.unshift('Data old');
+    return bad.length ? '<a class="pill alert has" href="#/health" title="' + esc(bad.join(' · ')) + '"><i class="ti ti-alert-triangle"></i> Engine ' + cnt(bad.length, true) + '</a>' :
+      '<a class="pill" href="#/health" title="Engine"><i class="ti ti-check"></i> Engine</a>';
+  }
+  var JOB = { syncState: 'Screen sync', dailyDigest: 'Daily email', staleCheck: 'Stuck check', weeklyBackup: 'Backup', leakProbe: 'Live-app check', onIdeaSubmit: 'Idea Form' };
+  function word(h) { var r = String(h.result).toUpperCase(); return r === 'INSTALLED' ? 'Never' : r === 'OFF' ? 'Off' : r === 'OK' ? 'Late' : r.charAt(0) + r.slice(1).toLowerCase(); }
+  // Jobs page: what each job is, when it last ran, and whether that is OK. Plain words.
+  function vHealth() {
+    var now = Date.now(), on = String(S.factory).toUpperCase() === 'ON';
+    return '<div class="card"><b>Factory <button class="pill" type="button" data-action="factory" aria-label="Factory on or off"><span class="sw' + (factoryOn() ? ' on' : '') + '"><i></i></span></button> ' + esc(String(S.mode)) + '</b><p class="muted">' +
+      (on ? '' : '') + '</p>' +
+      (S.health || []).map(function (h) {
+        var last = Date.parse(h.last), okNow = h.result === 'OK' && (!WINDOW_H[h.job] || now - last < WINDOW_H[h.job] * 36e5);
+        return '<div class="row"><span class="bar" style="--c:var(--ljr-' + (okNow ? 5 : 2) + ')"></span><div class="txt"><b>' + esc(JOB[h.job] || h.job) + '</b><div class="why">' + esc(h.schedule) + (h.note ? ' · ' + esc(String(h.note).slice(0, 80)) : '') + '</div></div><span class="meta">' +
+          (okNow ? ic('tick') + 'ok' : ic('warn') + esc(word(h))) + '<br>' + (isNaN(last) ? '' : new Date(last).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</span></div>';
+      }).join('') + '<p class="muted">Data read ' + new Date(S.generated_at).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + '.</p><p><a href="#/rooms">← Rooms</a></p></div>';
+  }
+  function vApps(title, list) {
+    return '<div class="card"><b>' + esc(title) + '</b> ' + cnt(list.length) + '<div class="pills" style="margin-top:8px">' + (list.length ? list.map(chipOf).join('') : '<p class="empty">None right now. All clear.</p>') + '</div><p><a href="#/rooms">← Rooms</a></p></div>';
+  }
+  // Clicks already sent stay marked "sent" for a day, so a row never asks twice before the engine catches up.
+  function loadSent() {
+    try { var o = JSON.parse(localStorage.getItem('af-sent') || '{}'), now = Date.now(); Object.keys(o).forEach(function (k) { if (now - o[k] > 864e5) delete o[k]; }); return o; } catch (e) { return {}; }
+  }
+  function loadLocal(k) { try { var o = JSON.parse(localStorage.getItem(k) || '{}'), now = Date.now(); Object.keys(o).forEach(function (x) { if (o[x] && o[x].at && now - o[x].at > 2 * 864e5) delete o[x]; }); return o; } catch (e) { return {}; } }
+  function saveLocal(k, o) { try { localStorage.setItem(k, JSON.stringify(o)); } catch (e) {} }
+  var drafts = loadLocal('af-drafts'), asked = loadLocal('af-asked'), sentF = loadLocal('af-sentf');
+  // Typing is kept as you go, so a refresh never wipes a half-written answer.
+  document.addEventListener('input', function (e) {
+    var f = e.target.getAttribute && e.target.getAttribute('data-f'); if (!f) return;
+    if (f === 'name' || f === 'note' || BRIEF.some(function (b) { return b[0] === f; })) { idea[f] = e.target.value; delete formErr[f]; saveIdea(); }
+    else if (f === 'pwhat') prob.what = e.target.value;
+    else if (f === 'fq') { var tb = barTab(); if (!tb) return; fsOf(tb).q = e.target.value; saveFs(); var p4 = e.target.selectionStart; render(); var b4 = document.querySelector('[data-f="fq"]'); if (b4) { b4.focus(); try { b4.setSelectionRange(p4, p4); } catch (x) {} } }
+    else if (f === 'pfq') { pfo.q = e.target.value; savePf(); var p2 = e.target.selectionStart; render(); var b2 = document.querySelector('[data-f="pfq"]'); if (b2) { b2.focus(); b2.setSelectionRange(p2, p2); } }
+    else if (f === 'appq') { appQ = e.target.value; var pos = e.target.selectionStart; render(); var b = document.querySelector('[data-f="appq"]'); if (b) { b.focus(); b.setSelectionRange(pos, pos); } }
+  });
+  document.addEventListener('input', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-draft'); if (d) { drafts[d] = e.target.value; saveLocal('af-drafts', drafts); } });
+  function barTab() { var r = hashParts().path[0] || 'rooms'; return BAR_TABS.test(r) ? r : null; }
+  function saveSent() { try { localStorage.setItem('af-sent', JSON.stringify(sent)); } catch (e) {} }
+  /* ---------- Prompts (Lisa, 23 Oct 2026): the next send text per app on top with its checker state, then the rest waiting; sent and the rules folded away ---------- */
+  var PS_LOOK = { READY: ['circle-check', 'READY'], 'NOT READY': ['circle-x', 'NOT READY'], OLD: ['clock', 'NOT READY · stamp not today'], NONE: ['circle-dashed', 'NOT READY · not checked'] };
+  function psBadge(t) { var s = presendOf(t), L = PS_LOOK[s.state]; return '<span class="pill ps' + (s.state === 'READY' ? ' ok' : '') + '" data-ps="' + esc(t.id) + '"><i class="ti ti-' + L[0] + '"></i> ' + L[1] + '</span>'; }
+  function sendsAll() { return (S.lists.sends || []).filter(function (t) { return fsOf('do').test || !testT(t); }); }
+  function vPrompts() {
+    var all = sendsAll(), open = all.filter(isOpen), shut = all.filter(function (t) { return !isOpen(t); }), next = {};
+    open.forEach(function (t) {
+      var k = (t.tags.filter(function (g) { return /^app-/.test(g); })[0]) || t.id, n = +((t.name.match(/·\s*P(\d+)\s*·/) || [])[1] || 99);
+      if (!next[k] || n < next[k].n) next[k] = { n: n, t: t };
+    });
+    var tops = Object.keys(next).map(function (k) { return next[k].t; }).sort(function (a, b) { return (presendOf(a).state === 'READY' ? 0 : 1) - (presendOf(b).state === 'READY' ? 0 : 1) || a.created - b.created; });
+    var rest = open.filter(function (t) { return tops.indexOf(t) < 0; });
+    var item = function (t, kind) { return '<div class="pitem">' + psBadge(t) + row(t, kind) + '</div>'; };
+    return '<div class="card" data-prompts><h2>' + ic('send') + 'Prompts</h2>' +
+      '<div class="grpt" data-sec="next"><i class="ti ti-player-play"></i>Next ' + cnt(tops.length) + '</div>' + (tops.length ? tops.map(function (t) { return item(t, 'do'); }).join('') : '<p class="muted">Nothing to send.</p>') +
+      (rest.length ? '<div class="grpt" data-sec="waiting"><i class="ti ti-hourglass"></i>Waiting ' + cnt(rest.length) + '</div>' + rest.map(function (t) { return item(t, 'view'); }).join('') : '') +
+      '<details class="arch" data-sec="sent"><summary class="grpt"><i class="ti ti-archive"></i>Sent · ' + shut.length + '</summary>' + shut.map(function (t) { return row(t, 'view'); }).join('') + '</details>' +
+      '<details class="arch" data-sec="rules"><summary class="grpt"><i class="ti ti-list-check"></i>Rules</summary><ul class="lines">' +
+      ['Copy shows only when the task carries: Last turn (today), Prediction + Simulation links, Happy Hour (read in the last 15 min), AFTER SEND YOU MUST, Class, and the checker stamp "presend: READY sha256:… <today>".',
+       'The stamp is written by the pre-send checker. Any edit to the text changes its SHA-256: Copy refuses text that does not match the stamp.',
+       'NOT READY lists what failed or did not run. Nothing that was not run counts as a pass.',
+       'Leak or security sends also need "Lisa available".'].map(function (x) { return '<li>' + ic('dot') + esc(x) + '</li>'; }).join('') + '</ul></details></div>';
+  }
+  // Under the Do list: the way into Prompts (no extra bottom tab).
+  function doFoot() { var n = sendsAll().filter(isOpen).length; return n ? '<p class="muted" style="margin:0"><a href="#/prompts" data-prompts-link><i class="ti ti-send"></i> Prompts ' + cnt(n) + '</a></p>' : ''; }
+  function render() {
+    var route = hashParts().path;
+    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (/^(card|room|health|stuck|all|queue|new|problem)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
+    $('appPick').classList.toggle('hidden', !signedIn || !S); $('appPick').setAttribute('aria-expanded', appMenu ? 'true' : 'false');
+    $('appMenu').classList.toggle('hidden', !appMenu || !S); if (appMenu && S) $('appMenu').innerHTML = vAppMenu();
+    $('signInBtn').classList.toggle('hidden', signedIn);
+    $('signOutBtn').classList.toggle('hidden', !signedIn);
+    $('refreshBtn').classList.toggle('hidden', !signedIn);
+    var v = $('view');
+    if (!signedIn) { v.innerHTML = '<div class="card"><b>Factory</b><button class="btn main" type="button" data-action="signin">' + ic('in') + 'Sign in with Google</button></div>'; return; }
+    if (err) { v.innerHTML = '<div class="banner">' + esc(err) + '</div>'; return; }
+    if (!S) { v.innerHTML = '<div class="card muted">Reading…</div>'; return; }
+    allTasks();
+    // Menu counts: unanswered, and TEST only when that tab shows TEST.
+    var waiting = function (tab) { return function (t) { return !sent[t.id] && (fsOf(tab).test || !testT(t)); }; };
+    tabN('nMe', meItems().filter(waiting('me')).length); tabN('nDecide', decisions().filter(waiting('decide')).length); tabN('nDo', mine().filter(waiting('do')).length);
+    var tb = barTab(); if (tb) toUrl(tb);
+    v.innerHTML = route[0] === 'me' ? list('me', meItems(), 4, 'me') : route[0] === 'item' ? vItem(route[1]) : route[0] === 'app' ? vApp(route[1]) :
+      route[0] === 'today' ? vToday() : route[0] === 'prompts' ? vPrompts() : route[0] === 'queue' ? list('queue', queue(route[1]), 5, 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? vPortfolio() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list('decide', decisions(), 4, 'decide') + decideFoot() :
+      route[0] === 'do' ? list('do', mine(), 4, 'do') + doFoot() : vRooms();
+  }
+
+  /* Ask box → AF › requests (the engine turns it into a ClickUp task) */
+  function sendAsk(form) {
+    var text = form.text.value.trim(), to = form.to.value, id = form.getAttribute('data-ask');
+    var lists = S.lists || {}, t = [].concat(lists.apps || [], lists.decisions || [], lists.work || [], lists.sends || [], lists.incidents || []).filter(function (x) { return x.id === id; })[0] || {};
+    var note = form.nextElementSibling && form.nextElementSibling.classList.contains('asknote') ? form.nextElementSibling : $('askNote');
+    var body = { at: new Date().toISOString(), to: to, text: text, taskId: id, taskUrl: t.url, app: t.name, appTag: (t.tags || []).filter(function (g) { return /^app-/.test(g); })[0] || '' };
+    if (!text) return;
+    drafts[id] = text; saveLocal('af-drafts', drafts);
+    note.textContent = 'Saving… (Google may ask you to allow saving)';
+    var done = false;
+    setTimeout(function () { if (!done) note.textContent = 'Not sent yet: allow Google saving, then press Ask again. Your text is kept.'; }, 20000);
+    withWrite(function () {
+      return putRequest('ask', body)
+        .then(function () { done = true; delete drafts[id]; saveLocal('af-drafts', drafts); asked[id] = { text: text, at: Date.now() }; saveLocal('af-asked', asked); openPanel = null; render(); })
+        .catch(function (e) { done = true; note.textContent = 'Not sent: ' + e.message + '. Your text is kept; press Ask again.'; });
+    });
+  }
+  function sendAct(btn) {
+    var id = btn.getAttribute('data-id'), act = btn.getAttribute('data-act'), n = document.getElementById('note-' + id), note = n ? n.value.trim() : '';
+    btn.parentNode.innerHTML = '<span class="sent">sending…</span>';
+    withWrite(function () {
+      return putRequest('act', { kind: 'act', action: act, taskId: id, note: note, at: new Date().toISOString() })
+        .then(function (r) { sent[id] = Date.now(); saveSent(); return r.json().then(function (j) { sentF[id] = { fid: j.id, at: Date.now() }; saveLocal('af-sentf', sentF); }, function () {}); })
+        .then(function () { render(); })
+        .catch(function (e) { banner('Not sent: ' + e.message); render(); });
+    });
+  }
+  // Stage 6 (D6 A): at Step 7 Launch, one button asks Studio for a launch pack. It writes ONE Studio request (kind idea,
+  // playbook P1, appRef) into Studio's requests folder; the STUDIO-ENGINE makes the idea. appRef = AF app id + 6-letter slug.
+  // Engine v0.2.23 still rejects it (needs brandIds; no P1 row; appRef not kept): that engine edit waits for Stage 2.
+  var STUDIO_REQ = (CFG.studio || {}).requestsFolderId, launched = loadLocal('af-launch');
+  function appRefOf(t) { return { id: t.id, slug: slugify(bare(t)).replace(/-/g, '').slice(0, 6) || String(t.id).toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 6) }; }
+  function launchAsk(t) {
+    if (stageNo(t.status) !== 7 || !STUDIO_REQ) return '';
+    var l = launched[t.id];
+    return '<p class="launch" data-launch="' + esc(t.id) + '">' + (l ? '<span class="sent">' + ic('tick') + 'Asked Studio for a launch pack</span>' :
+      '<button class="btn" type="button" data-action="launchpack" data-id="' + esc(t.id) + '">' + ic('send') + 'Ask Studio for a launch pack</button>') + '</p>';
+  }
+  function sendLaunch(btn) {
+    var id = btn.getAttribute('data-id'), t = byId(id); if (!t || launched[id]) return;
+    btn.disabled = true; btn.parentNode.innerHTML = '<span class="sent">sending…</span>';
+    withWrite(function () {
+      return putRequest('idea', { kind: 'idea', at: new Date().toISOString(), name: 'Launch pack · ' + bare(t), type: 'pack', playbookId: 'P1', appRef: appRefOf(t), from: 'factory' }, STUDIO_REQ)
+        .then(function () { launched[id] = { at: Date.now() }; saveLocal('af-launch', launched); render(); })
+        .catch(function (e) { banner('Not sent: ' + e.message); render(); });
+    });
+  }
+  // Every click file says who clicked (email + device): a YES on 20 Oct could not be traced.
+  var whoAmI = null;
+  function device() { var u = navigator.userAgent; return /iPhone|iPad/.test(u) ? 'iPhone/iPad' : /Android/.test(u) ? 'Android' : /Mac/.test(u) ? 'Mac' : /Windows/.test(u) ? 'Windows' : 'other'; }
+  function who() {
+    if (whoAmI) return Promise.resolve(whoAmI);
+    return drive('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (r) { return r.json(); })
+      .then(function (j) { return (whoAmI = ((j.user && j.user.emailAddress) || '?') + ' · ' + device()); })
+      .catch(function () { return '? · ' + device(); });
+  }
+  function putRequest(prefix, body, folder) {
+    return who().then(function (by) {
+      body.by = by;
+      var meta = { name: prefix + '-' + Date.now() + '.json', parents: [folder || F.requests], mimeType: 'application/json' };
+      var b = 'af' + Date.now();
+      var payload = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: application/json\r\n\r\n' + JSON.stringify(body) + '\r\n--' + b + '--';
+      return drive('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true', { method: 'POST', headers: { 'Content-Type': 'multipart/related; boundary=' + b }, body: payload });
+    });
+  }
+  function withWrite(go) {
+    var saved = DashAuth.valid();
+    if (saved && DashAuth.hasScope(saved, WRITE)) return go();
+    pendingAsk = go; auth.requestWrite(WRITE);
+  }
+  var pendingAsk = null;
+
+  /* sign-in (same pattern as Money Hub; one sign-in shared by the site) */
+  function startTimer() { stopTimer(); timer = setInterval(load, REFRESH_MS); }
+  setInterval(function () { if (Object.keys(sentF).length && S) render(); }, 6e4);
+  function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
+  function expired() { stopTimer(); accessToken = null; DashAuth.markExpired(); if (!auth.requestSilent()) banner('Sign-in expired. Sign in again.'); }
+  function banner(t) { $('banner').className = 'banner'; $('banner').textContent = t; }
+  function onToken(resp) {
+    if (resp.error) { banner('Sign-in did not complete.'); return; }
+    accessToken = resp.access_token; tokenExpiresAt = DashAuth.expiryFrom(resp.expires_in);
+    DashAuth.save(accessToken, tokenExpiresAt, resp.scope || SCOPE);
+    signedIn = true; $('banner').className = 'banner hidden';
+    if (pendingAsk && DashAuth.hasScope(DashAuth.valid(), WRITE)) { var p = pendingAsk; pendingAsk = null; p(); }
+    else if (pendingAsk) { pendingAsk = null; banner('Saving was not allowed by Google. Click again and choose Allow.'); }
+    startTimer(); load();
+  }
+  function signOut() {
+    stopTimer(); var t = accessToken; accessToken = null; signedIn = false; S = null; DashAuth.clear();
+    if (t && window.google && google.accounts) google.accounts.oauth2.revoke(t, function () {});
+    render();
+  }
+  var auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE, onToken: onToken, onError: function () { banner('Sign-in did not complete.'); }, onSilentFail: function (h) { if (h) banner('Sign-in expired. Sign in again.'); } });
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-action]'); if (a && !a.disabled) {
+      var k = a.getAttribute('data-action');
+      if (k === 'signin') auth.requestInteractive(CFG.money && CFG.money.owner ? { login_hint: CFG.money.owner } : {}); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
+      else if (k === 'cardask') { cardAsk = !cardAsk; render(); var ai = document.querySelector('form.ask[data-ask] input[name=text]'); if (cardAsk && ai) ai.focus(); }
+      else if (k === 'more') { var ga = a.getAttribute('data-app'); shownAll[ga] = { on: !(shownAll[ga] && shownAll[ga].on), at: Date.now() }; saveLocal('af-open', shownAll); render(); }
+      else if (k === 'dqall') { docsAll = true; render(); }
+      else if (k === 'apppick') { appMenu = !appMenu; render(); }
+      else if (k === 'ftest') { var t1 = barTab(); if (t1) { fsOf(t1).test = !fsOf(t1).test; saveFs(); render(); } }
+      else if (k === 'pfclear') { pfo = {}; savePf(); render(); } else if (k === 'pfall') { pfo.all = true; render(); } else if (k === 'pfarch') { pfo.arch = true; render(); }
+      else if (k === 'clearf') { var t2 = barTab(); if (t2) { fs[t2] = fdef(t2); saveFs(); } render(); }
+      else if (k === 'launchpack') sendLaunch(a);
+      else if (k === 'sendidea') sendIdea(); else if (k === 'sendprob') sendProblem(a.getAttribute('data-id'));
+      else if (k === 'filters') { filtersOpen = !filtersOpen; render(); } else if (k === 'factory') sendFactory(); else if (k === 'today' || k === 'week') { weekView = k === 'week'; render(); }
+      return;
+    }
+    var b = e.target.closest('[data-act]'); if (b) { sendAct(b); return; }
+    var fx = e.target.closest('[data-fx]'); if (fx) { var t3 = barTab(); if (!t3) return; var sx = fsOf(t3), fk = fx.getAttribute('data-fx'), fv = fx.getAttribute('data-val');
+      if (fk === 'sort') sx.sort = fv; else if (fk === 'app' && !fv) sx.app = []; else { var ai = sx[fk].indexOf(fv); if (ai >= 0) sx[fk].splice(ai, 1); else sx[fk].push(fv); }
+      saveFs(); render(); return; }
+    var pfb = e.target.closest('[data-pf]'); if (pfb) { var pk3 = pfb.getAttribute('data-pf'), pv = pfb.getAttribute('data-val'); pfo[pk3] = pfo[pk3] === pv ? '' : pv; savePf(); render(); return; }
+    var pk2 = e.target.closest('[data-pick]'); if (pk2) { idea.a = idea.a || {}; idea.a[pk2.getAttribute('data-pick')] = pk2.getAttribute('data-val'); delete formErr[pk2.getAttribute('data-pick')]; saveIdea(); render(); return; }
+    var pr = e.target.closest('[data-prob]'); if (pr) { prob.k = pr.getAttribute('data-prob'); delete formErr.k; render(); return; }
+    var al = e.target.closest('[data-addlink-open]'); if (al) { var aid = al.getAttribute('data-addlink-open'), ak = al.getAttribute('data-key'); addLink = addLink && addLink.id === aid && addLink.key === ak ? null : { id: aid, key: ak }; render(); var inp2 = document.querySelector('form[data-addlink] input'); if (inp2) inp2.focus(); return; }
+    var ud = e.target.closest('[data-undo]'); if (ud) { ud.disabled = true; undo(ud.getAttribute('data-undo')); return; }
+    var cp = e.target.closest('[data-copy]'); if (cp) { copyPrompt(cp); return; }
+    var pn = e.target.closest('[data-panel]'); if (pn) { var pid = pn.getAttribute('data-id'), pk = pn.getAttribute('data-panel');
+      openPanel = openPanel && openPanel.id === pid && openPanel.k === pk ? null : { id: pid, k: pk };
+      if (pk === 'cm') { seen[pid] = Date.now(); saveLocal('af-seen', seen); }
+      render(); if (openPanel && pk === 'reply') { var inp = $('note-' + pid); if (inp) inp.focus(); } return; }
+    var st = e.target.closest('[data-set]'); if (st) { sendSet(st.getAttribute('data-id'), st.getAttribute('data-set'), st.getAttribute('data-val')); return; }
+    var ck = e.target.closest('[data-check]'); if (ck) { sendCheck(ck.getAttribute('data-id'), ck.getAttribute('data-check'), ck.getAttribute('data-item'), ck.getAttribute('data-ok') !== '1'); return; }
+    var s = e.target.closest('[data-stage]'); if (s) { var i = +s.getAttribute('data-stage'); var cur = open[i] === undefined ? (s.classList.contains('c')) : open[i]; open[i] = !cur; render(); }
+  });
+  document.addEventListener('change', function (e) { var d = e.target.getAttribute && e.target.getAttribute('data-due'); if (d) sendSet(d, 'due', e.target.value || ''); });
+  document.addEventListener('submit', function (e) { var lf = e.target.closest('[data-addlink]'); if (lf) { e.preventDefault(); sendLink(lf); return; } var f = e.target.closest('[data-ask]'); if (f) { e.preventDefault(); sendAsk(f); } });
+  function onRoute() { fromUrl(); var r = hashParts().path; if (r[0] === 'item' && r[1]) openPanel = { id: r[1], k: 'all' }; }
+  window.addEventListener('hashchange', function () { open = {}; openPanel = null; filtersOpen = false; appMenu = false; cardAsk = false; addLink = null; formErr = {}; formNote = ''; docsAll = false; onRoute(); render(); window.scrollTo(0, 0); });
+  // "/" puts the cursor in this page's search box. Runs before toolkit.js's own "/" (its search dialog), which still opens where there is no box.
+  window.addEventListener('keydown', function (e) {
+    if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName) || e.target.isContentEditable) return;
+    var b = document.querySelector('[data-f="fq"]'); if (b) { e.preventDefault(); e.stopPropagation(); b.focus(); }
+  }, true);
+  onRoute();
+  var saved = DashAuth.valid();
+  if (saved && DashAuth.hasScope(saved, SCOPE)) { accessToken = saved.access_token; tokenExpiresAt = saved.expires_at; signedIn = true; }
+  render(); if (signedIn) { startTimer(); load(); }
+  DashAuth.onChange(function (sv) { if (!sv) { if (signedIn) signOut(); return; } accessToken = sv.access_token; if (!signedIn) { signedIn = true; startTimer(); load(); } });
+  var tries = 0;
+  (function wait() {
+    if (auth.init()) { var b = $('signInBtn'); b.disabled = false; b.querySelector('span').textContent = 'Sign in'; return; }
+    if (++tries > 100) { banner('Google sign-in did not load.'); return; }
+    setTimeout(wait, 100);
+  })();
+})();
+</script>
+</body>
+</html>

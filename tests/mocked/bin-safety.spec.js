@@ -33,7 +33,7 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     await signIn(page);
     const view = page.locator('#view');
     await expect(page.locator('#sweepCard h3')).toHaveText('Google Drive: ZZ_DELETE_ files ready to bin');
-    await expect(view).toContainText('ZZ_SUPERSEDED_ is retired and is not a valid state');
+    await expect(view).toContainText('retired ZZ_SUPERSEDED_');
     await expect(view).toContainText('ZZ_old-folder-with-archive');
     await expect(view).toContainText('Folder holds an RR_ item, left alone.');
     await expect(view).toContainText('ZZ_DELETE_in-archive.txt');
@@ -48,6 +48,60 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     for (const name of ['ZZ_old-folder-with-archive', 'ZZ_DELETE_in-archive.txt', 'ZZ_DELETE_RR_notes.txt', 'ZZ_DELETE_needs-a-row.txt', 'ZZ_SUPERSEDED_old.txt']) {
       await expect(view.locator('li', { hasText: name }).locator('input')).toBeDisabled();
     }
+  });
+
+  test('an RR_ item deep inside a ZZ_DELETE_ folder keeps the whole folder out of the bin, even with Select all @regression', async ({ page, guard }) => {
+    const w = guard.world;
+    w.folder('zzd-outer', 'ZZ_DELETE_outer-folder', A);
+    w.folder('zzd-mid', 'middle', { parents: ['zzd-outer'], driveId: 'drv-alpha1' });
+    w.folder('zzd-deep', 'deeper', { parents: ['zzd-mid'], driveId: 'drv-alpha1' });
+    w.file('rr-deep', 'RR_keep-forever.txt', 'invented', { parents: ['zzd-deep'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+    w.folder('zzd-outer2', 'ZZ_DELETE_second-folder', A);
+    w.file('rr-mid-name', 'notes RR_v2.txt', 'invented', { parents: ['zzd-outer2'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+    w.file('zz-ok', 'ZZ_DELETE_fine.txt', 'invented', A);
+    ledger(w, ['zzd-outer', 'zzd-outer2', 'zz-ok']);
+    page.on('dialog', (d) => d.accept());
+    await page.goto('./#/bin');
+    await signIn(page);
+    const view = page.locator('#view');
+    for (const name of ['ZZ_DELETE_outer-folder', 'ZZ_DELETE_second-folder']) {
+      const row = view.locator('li', { hasText: name });
+      await expect(row).toContainText('Folder holds an RR_ item, left alone.');
+      await expect(row.locator('input')).toBeDisabled();
+    }
+    await expect(view.locator('[data-bin-list="ready"]')).not.toContainText('ZZ_DELETE_outer-folder');
+    await page.locator('[data-action="selectall"][data-group="bin"]').click();
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (1)');
+    await page.locator('[data-action="sweep"]').click();
+    await page.locator('[data-action="sweep"]').click();
+    await expect.poll(() => w.byId('zz-ok').trashed).toBe(true);
+    expect(patched(w)).toEqual(['zz-ok']);
+    for (const id of ['zzd-outer', 'zzd-outer2', 'rr-deep', 'rr-mid-name']) expect(w.byId(id).trashed, id).toBeFalsy();
+  });
+
+  test('a ZZ_DELETE_ item anywhere below an RR_ folder is left alone, even with a ledger row @regression', async ({ page, guard }) => {
+    const w = guard.world;
+    w.folder('rr-top', 'RR_top-archive', A);
+    w.folder('rr-top-sub', 'plain-sub', { parents: ['rr-top'], driveId: 'drv-alpha1' });
+    w.file('zz-two-down', 'ZZ_DELETE_two-levels-down.txt', 'invented', { parents: ['rr-top-sub'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+    w.folder('rr-midname', 'Old RR_photos', A);
+    w.folder('zz-fold-in-rr', 'ZZ_DELETE_folder-in-archive', { parents: ['rr-midname'], driveId: 'drv-alpha1' });
+    w.file('zz-ok', 'ZZ_DELETE_fine.txt', 'invented', A);
+    ledger(w, ['zz-two-down', 'zz-fold-in-rr', 'zz-ok']);
+    page.on('dialog', (d) => d.accept());
+    await page.goto('./#/bin');
+    await signIn(page);
+    const view = page.locator('#view');
+    for (const name of ['ZZ_DELETE_two-levels-down.txt', 'ZZ_DELETE_folder-in-archive']) {
+      const row = view.locator('li', { hasText: name });
+      await expect(row).toContainText('Inside an RR_ archive folder, left alone.');
+      await expect(row.locator('input')).toBeDisabled();
+    }
+    await page.locator('li', { hasText: 'ZZ_DELETE_fine.txt' }).locator('input').check();
+    await page.locator('[data-action="sweep"]').click();
+    await page.locator('[data-action="sweep"]').click();
+    await expect.poll(() => w.byId('zz-ok').trashed).toBe(true);
+    expect(patched(w)).toEqual(['zz-ok']);
   });
 
   test('sweeping moves only a ticked ZZ_DELETE_ item that has a ledger row and no RR_ nearby', async ({ page, guard }) => {
@@ -66,7 +120,9 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     await signIn(page);
     const view = page.locator('#view');
     await expect(view.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_ready.txt');
-    await expect(view.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_clean-folder');
+    await expect(view.locator('[data-bin-list="ready"]')).not.toContainText('ZZ_DELETE_clean-folder');
+    await expect(view.locator('[data-bin-list="blocked"]')).toContainText('ZZ_DELETE_clean-folder');
+    await expect(view.locator('li', { hasText: 'ZZ_DELETE_clean-folder' })).toContainText('not verified or junk');
     await page.locator('li', { hasText: 'ZZ_DELETE_ready.txt' }).locator('input').check();
     await expect(page.locator('[data-action="sweep"]')).toContainText('Move selected (1)');
     await page.locator('[data-action="sweep"]').click();
@@ -136,6 +192,26 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     expect(w.byId('zz-ready').trashed).toBeFalsy();
   });
 
+  test('a ledger that starts with a COUNT note line above the header is still read @regression', async ({ page, guard }) => {
+    const w = guard.world;
+    w.file('zz-ready', 'ZZ_DELETE_ready.txt', 'invented', A);
+    w.byId(IDS.ledger).content = '"COUNT: 1 rows. 2026-10-18-1228 sample note, with a comma"\ndate,old_name,file_id,merged_into,agent\n2026-10-18-1200,ready.txt,zz-ready,,sample\n';
+    await page.goto('./#/bin');
+    await signIn(page);
+    await expect(page.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_ready.txt');
+    await expect(page.locator('#view')).not.toContainText('The delete ledger could not be read');
+  });
+
+  test('a ledger whose first lines are not a note plus a file_id header still bins nothing', async ({ page, guard }) => {
+    const w = guard.world;
+    w.file('zz-ready', 'ZZ_DELETE_ready.txt', 'invented', A);
+    w.byId(IDS.ledger).content = 'some other note\nsecond note\nfile_id\nzz-ready\n';
+    await page.goto('./#/bin');
+    await signIn(page);
+    await expect(page.locator('#view')).toContainText('The delete ledger could not be read. Nothing will be binned.');
+    await expect(page.locator('[data-action="sweep"]')).toBeDisabled();
+  });
+
   test('Select all on a list of 52 with 50 shown moves only those 50 @regression', async ({ page, guard }) => {
     const w = guard.world;
     const ids = [];
@@ -199,7 +275,7 @@ test.describe('Main dashboard: Bin never takes an RR_ archive with it', () => {
     const w = guard.world;
     const LABEL = 'Held: money rollback (E02), do not touch until FIX 6 is confirmed';
     // The other folder that is also titled "4 - Ops". This id is not excluded.
-    const OTHER_OPS = '1M7sJssW6ZGsNk2IbDLAffmYD6sSOEloz';
+    const OTHER_OPS = '1SAMPLEotherOpsFolder000000000000'; // made-up id (this repo is public)
     const ops = { parents: [IDS.moneyFolders.ops], driveId: IDS.moneyDrive, mimeType: 'text/plain' };
     const index = { parents: [IDS.moneyFolders.index], driveId: IDS.moneyDrive, mimeType: 'text/plain' };
     w.file('e02-sup', 'ZZ_SUPERSEDED_2026-01_DO-NOT-USE__MON-REGISTER.csv', 'invented', A);
@@ -269,7 +345,7 @@ test.describe('PC-Personal bin uses the same ledger gate', () => {
     guard.world.file('me-rr', 'ZZ_DELETE_DRIVE_RR_copy.pdf', 'x', mine);
     ledger(guard.world, ['me-ok', 'me-rr']);
     page.on('dialog', (d) => d.accept());
-    await page.goto('./#/personal');
+    await page.goto('./#/bin');
     await signIn(page);
     const view = page.locator('#view');
     await expect(view).toContainText('ZZ_DELETE_DRIVE_ok.pdf');

@@ -1,0 +1,124 @@
+/* LJR7 colours for the whole dashboard (home, Money Hub, CD Hub). ONE file: change a colour here and every page follows.
+   Palette A "Clear" (chosen by Lisa, 18 Oct 2026). Colour = meaning (LJR7 spine):
+     0 Basics / AI / read first   1 White Vision   2 Red Security, legal, risk   3 Orange Financial
+     4 Yellow Action, operations  5 Green Connection   6 Blue Sales, marketing   7 Purple Creative, ideas   8 Black Superseded, bin
+   For each slot:
+     --ljr-N        the fill: stripes, dots, borders, bars
+     --ljr-N-text   the same colour dark enough to READ as text (4.5:1 or better on white, the cream page and the tinted cards)
+     --ljr-N-tint   a pale background for cards and chips of that slot
+     --ljr-N-solid  the fill to use BEHIND text (red and purple use their darker text colour so white text passes)
+     --ljr-N-on     the text colour to put on --ljr-N-solid (ink on orange, yellow, green and blue; white on red and purple)
+   To try another palette, change only the --ljr-N lines (and their -text/-tint) below. */
+:root {
+  --ljr-ink: #2C2C2A; --ljr-paper: #FFFEFB; --ljr-cream: #FAF7F2; --ljr-muted: #6B645C;
+  --ljr-0: #C7C0B4; --ljr-0-text: #6B645C; --ljr-0-tint: #F0ECE5; --ljr-0-solid: #C7C0B4; --ljr-0-on: #2C2C2A;
+  --ljr-1: #FFFEFB; --ljr-1-text: #2C2C2A; --ljr-1-tint: #FFFEFB; --ljr-1-edge: #2C2C2A; --ljr-1-solid: #FFFEFB; --ljr-1-on: #2C2C2A;
+  --ljr-2: #E6443D; --ljr-2-text: #C32924; --ljr-2-tint: #FCE4E0; --ljr-2-solid: #C32924; --ljr-2-on: #FFFFFF; /* 2 Risk */
+  --ljr-3: #E78615; --ljr-3-text: #9E5802; --ljr-3-tint: #FCEDDB; --ljr-3-solid: #E78615; --ljr-3-on: #2C2C2A; /* 3 Money */
+  --ljr-4: #F3D84E; --ljr-4-text: #817002; --ljr-4-tint: #FDF9E3; --ljr-4-solid: #F3D84E; --ljr-4-on: #2C2C2A; /* 4 Ops */
+  --ljr-5: #51AD57; --ljr-5-text: #217A2D; --ljr-5-tint: #E7F3E4; --ljr-5-solid: #51AD57; --ljr-5-on: #2C2C2A; /* 5 Connect */
+  --ljr-6: #129FE7; --ljr-6-text: #0271A4; --ljr-6-tint: #DEF1F8; --ljr-6-solid: #129FE7; --ljr-6-on: #2C2C2A; /* 6 Sales */
+  --ljr-7: #A570D1; --ljr-7-text: #8850B6; --ljr-7-tint: #F2EAF5; --ljr-7-solid: #8850B6; --ljr-7-on: #FFFFFF; /* 7 Ideas */
+  --ljr-8: #141413; --ljr-8-text: #141413; --ljr-8-tint: #ECEAE6; --ljr-8-solid: #141413; --ljr-8-on: #FFFEFB;
+  /* Courier bands on Marketplace post cards (approximate brand colours, the same in dark mode; name always written too). */
+  --ljr-cb-inpost: #FFCD00; --ljr-cb-inpost-on: #111111; --ljr-cb-evri: #00539F; --ljr-cb-rm: #DA202A; --ljr-cb-dpd: #A50034; --ljr-cb-yodel: #1E6B32; --ljr-cb-pf: #B5121B; --ljr-cb-none: #595959; --ljr-cb-on: #FFFFFF;
+  /* Person badges on Marketplace cards (white initials on each; all pass 4.5:1). */
+  --ljr-ava-lisa: #7A3E9D; --ljr-ava-cy: #0F7B6C; --ljr-ava-g: #B4540A; --ljr-ava-h: #2B5FB4; --ljr-ava-cn: #A3324A; --ljr-ava-other: #555555; --ljr-ava-on: #FFFFFF;
+}
+/* Dark mode (follows the device). Fills stay the same; text and tints change so they still read on a dark page. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ljr-ink: #F3EEE5; --ljr-paper: #232019; --ljr-cream: #191714; --ljr-muted: #B4AB9E;
+    --ljr-0: #8E877B; --ljr-0-text: #B4AB9E; --ljr-0-tint: #2F2B25; --ljr-0-on: #F3EEE5; --ljr-0-solid: #5A554D;
+    --ljr-1: #232019; --ljr-1-text: #F3EEE5; --ljr-1-tint: #232019; --ljr-1-edge: #F3EEE5; --ljr-1-solid: #232019; --ljr-1-on: #F3EEE5;
+    --ljr-2-text: #EF7D79; --ljr-2-tint: #3C251E;
+    --ljr-3-text: #EC942E; --ljr-3-tint: #3C2D18;
+    --ljr-4-text: #F3D84E; --ljr-4-tint: #3E3820;
+    --ljr-5-text: #65B769; --ljr-5-tint: #293221;
+    --ljr-6-text: #32AEF0; --ljr-6-tint: #213134;
+    --ljr-7-text: #BB93DD; --ljr-7-tint: #342A31;
+    --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
+  }
+}
+
+/* Mode = Dark from Studio's Look menu ([data-theme="dark"] on <html>, set by toolkit.js from 'dash-look'): the same dark spine as the
+   device's dark mode, written once here so no page repeats it. */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ljr-ink: #F3EEE5; --ljr-paper: #232019; --ljr-cream: #191714; --ljr-muted: #B4AB9E;
+  --ljr-0: #8E877B; --ljr-0-text: #B4AB9E; --ljr-0-tint: #2F2B25; --ljr-0-on: #F3EEE5; --ljr-0-solid: #5A554D;
+  --ljr-1: #232019; --ljr-1-text: #F3EEE5; --ljr-1-tint: #232019; --ljr-1-edge: #F3EEE5; --ljr-1-solid: #232019; --ljr-1-on: #F3EEE5;
+  --ljr-2-text: #EF7D79; --ljr-2-tint: #3C251E;
+  --ljr-3-text: #EC942E; --ljr-3-tint: #3C2D18;
+  --ljr-4-text: #F3D84E; --ljr-4-tint: #3E3820;
+  --ljr-5-text: #65B769; --ljr-5-tint: #293221;
+  --ljr-6-text: #32AEF0; --ljr-6-tint: #213134;
+  --ljr-7-text: #BB93DD; --ljr-7-tint: #342A31;
+  --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
+}
+
+/* ===== House look (Lisa, 28 Oct 2026): the agreed rules as numbers, ONCE. house.css builds the shared parts from these;
+   every hub loads tokens.css, then house.css, then its own layout. Change a number here and every hub follows.
+   Sizes and lines are the same in every look. Colours: "Warm clear" (default) and "Cool clear" (Look menu, html.look-cool),
+   each with a dark version (the device's dark mode, or Look > Dark = [data-theme="dark"]). ===== */
+:root {
+  --house-radius: 12px;            /* one radius on everything; dots and rings are round */
+  --house-line: 1px;               /* every line */
+  --house-bar: 3px;                /* left colour bars on cards and rows */
+  --house-marker-w: 3px; --house-marker-h: 18px;   /* the column-title stage marker */
+  --house-tab-bar: 18px; --house-tab-bar-on: 40px; --house-tab-bar-phone: 26px; --house-tab-bar-h: 4px;   /* bottom-tab colour bar: rest / hover and selected */
+  --house-focus: 2px;              /* keyboard focus ring */
+  --house-btn: 36px; --house-btn-phone: 44px;      /* everything you press */
+  --house-pill: 24px;              /* read-only pills (tags, dates, stamps) */
+  --house-count-w: 30px; --house-count-h: 22px; --house-count-r: 11px; --house-count-lh: 20px; --house-count-pad: 3px;
+  --house-font: Lexend, system-ui, sans-serif; --house-min: 13px; --house-press-size: 14px;
+  --house-gap: 12px;               /* between cards */
+  --house-head-gap: 16px;          /* under a section header */
+  --house-pad: 12px;               /* inside a card */
+  --house-logo: 20px;              /* brand logo slot (initials when there is no logo) */
+  --house-tint: 14%;               /* hover / selected tint, mixed into the card colour */
+  /* Warm clear, light */
+  --house-paper: #EEE8DF; --house-canvas: #E3DBCF; --house-card: #FFFEFB; --house-ink: #262624; --house-muted: #57504A;
+  --house-soft-line: #BFB4A3; --house-soft: #DED5C7;
+  --house-press: #8A7F70;          /* the ONE control line every pressable rests on (3:1) */
+  --house-ring: var(--house-press); /* read-only rings (plain date pills, tags, counts): the same one line */
+  --house-frame: #3A3632; --house-foot: #46413B; --house-frame-ink: #F6F1E8; --house-frame-line: #9C9285;
+  --house-shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
+  /* Meaning lines (3:1 or better on a card): date pills, yes / no, needs-you. Tints are the slot tints. */
+  --house-late: var(--ljr-2); --house-late-tint: var(--ljr-2-tint);
+  --house-soon: var(--ljr-3-text); --house-soon-tint: var(--ljr-3-tint);
+  --house-ok: var(--ljr-5-text); --house-ok-tint: var(--ljr-5-tint);
+  --house-risk: var(--ljr-2-text); --house-risk-tint: var(--ljr-2-tint);
+}
+:root.look-cool {
+  --house-paper: #F2F4F6; --house-canvas: #E4E9EE; --house-card: #FFFFFF; --house-ink: #2B3035; --house-muted: #5B646D;
+  --house-soft-line: #B9C3CC; --house-soft: #D9E0E6; --house-press: #7A8692;
+  --house-frame: #33475B; --house-foot: #405569; --house-frame-ink: #FFFFFF; --house-frame-line: #9FB0C0;
+  --house-shadow: 0 1px 2px rgba(20,30,40,.12), 0 1px 8px rgba(20,30,40,.10);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --house-paper: #181613; --house-canvas: #1F1C18; --house-card: #27231E; --house-ink: #F3EEE5; --house-muted: #B3AA9D;
+    --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E;
+    --house-frame: #2A2622; --house-foot: #34302B; --house-shadow: 0 1px 3px rgba(0,0,0,.4);
+  }
+  :root.look-cool:not([data-theme="light"]) {
+    --house-paper: #16191C; --house-canvas: #1C2024; --house-card: #23282D; --house-ink: #EEF2F5; --house-muted: #A9B3BC;
+    --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691;
+    --house-frame: #24323F; --house-foot: #2D3D4C;
+  }
+}
+:root[data-theme="dark"] {
+  --house-paper: #181613; --house-canvas: #1F1C18; --house-card: #27231E; --house-ink: #F3EEE5; --house-muted: #B3AA9D;
+  --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E;
+  --house-frame: #2A2622; --house-foot: #34302B; --house-shadow: 0 1px 3px rgba(0,0,0,.4);
+}
+:root.look-cool[data-theme="dark"] {
+  --house-paper: #16191C; --house-canvas: #1C2024; --house-card: #23282D; --house-ink: #EEF2F5; --house-muted: #A9B3BC;
+  --house-soft-line: #39414A; --house-soft: #2B3137; --house-press: #7A8691;
+  --house-frame: #24323F; --house-foot: #2D3D4C;
+}
+
+/* Links (Lisa, 20 Oct 2026): normal text colour, underlined; never default blue. */
+a { color: inherit; }

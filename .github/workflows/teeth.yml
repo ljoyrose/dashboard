@@ -11,6 +11,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: teeth
+  cancel-in-progress: false # it opens and closes issues: let a started run finish
+
 env:
   CI: 'true'
 

@@ -12,7 +12,7 @@ class FakeDrive {
     this.files = []; // {id,name,mimeType,parents,driveId,modifiedTime,content,trashed,...}
     this.calls = []; // every request seen, for assertions
     this.unhandled = []; // Drive calls the pretend Drive did not know how to answer (drift check, see summary.js)
-    this.failWith = null; // {status, reason, message} makes every files call fail (error-path tests)
+    this.failWith = null; // {status, reason, message, times?} makes every files call fail (error-path tests); times = only the first N
     this.failFor = null; // optional: only fail when the URL contains this text
     this._n = 0;
   }
@@ -78,7 +78,15 @@ class FakeDrive {
     return parseOr();
   }
 
-  _list(params) {
+    _present(f) {
+      const meta = Object.assign({}, f);
+      delete meta.content;
+      meta.ownedByMe = f.mine !== false;
+      if (meta.size != null) meta.size = String(meta.size);
+      return meta;
+    }
+
+    _list(params) {
     let out = this.files.filter((f) => this._match(f, params.get('q')));
     if (params.get('corpora') === 'drive' && params.get('driveId')) out = out.filter((f) => f.driveId === params.get('driveId'));
     const order = params.get('orderBy') || '';
@@ -87,7 +95,7 @@ class FakeDrive {
     const size = Number(params.get('pageSize') || 100);
     const start = Number(params.get('pageToken') || 0);
     const page = out.slice(start, start + size);
-    const body = { files: page.map(({ content, ...meta }) => meta) };
+    const body = { files: page.map((f) => this._present(f)) };
     if (start + size < out.length) body.nextPageToken = String(start + size);
     return body;
   }
@@ -99,11 +107,16 @@ class FakeDrive {
       const url = new URL(req.url());
       const p = url.pathname.replace('/drive/v3', '');
       const params = url.searchParams;
-      this.calls.push({ method: req.method(), path: p, query: params.get('q') || '', url: req.url() });
-      const json = (status, body) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
       const auth = req.headers()['authorization'];
-      if (auth !== 'Bearer FAKE-TEST-TOKEN') return json(401, { error: { code: 401, message: 'Invalid Credentials', errors: [{ reason: 'authError' }] } });
-      if (this.failWith && (p !== '/about' || this.failWith.includeAbout) && (!this.failFor || req.url().includes(this.failFor))) {
+      this.calls.push({ method: req.method(), path: p, query: params.get('q') || '', url: req.url(), auth });
+      const json = (status, body) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
+      // The Personal Drive page's look-only token is accepted for reads only (it sees the same pretend Drive).
+      if (auth !== 'Bearer FAKE-TEST-TOKEN' && !(auth === 'Bearer FAKE-PERSONAL-TOKEN' && req.method() === 'GET')) return json(401, { error: { code: 401, message: 'Invalid Credentials', errors: [{ reason: 'authError' }] } });
+      let failNow = this.failWith && (p !== '/about' || this.failWith.includeAbout) && (!this.failFor || req.url().includes(this.failFor));
+      if (failNow && typeof this.failWith.times === 'number') { // fail only the first N matching calls, then answer normally
+        if (this.failWith.times <= 0) failNow = false; else this.failWith.times--;
+      }
+      if (failNow) {
         const f = this.failWith;
         return json(f.status, { error: { code: f.status, message: f.message || 'Sample failure', errors: [{ reason: f.reason || 'backendError' }] } });
       }
@@ -131,8 +144,7 @@ class FakeDrive {
           return json(200, { id: f.id, name: f.name, trashed: !!f.trashed });
         }
         if (params.get('alt') === 'media') return route.fulfill({ status: 200, contentType: f.mimeType === 'application/json' ? 'application/json' : 'text/plain', body: f.content || '' });
-        const { content, ...meta } = f;
-        return json(200, meta);
+        return json(200, this._present(f));
       }
       this.unhandled.push(req.method() + ' ' + p);
       return json(404, { error: { code: 404, message: 'Not handled by the pretend Drive: ' + p } });

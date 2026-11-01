@@ -4,13 +4,15 @@
 //  - Blocks every other outside address and remembers it, so a test fails if the page tries to call out.
 //  - Watches the browser console and fails the test on unexpected errors.
 const base = require('@playwright/test');
+const PNG1 = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
 const fs = require('fs');
 const path = require('path');
 const gisStub = require('./gis-stub');
 const { buildWorld } = require('./world');
 
 // Outside addresses the pages use for looks only. Answered with empty files so they never hit the internet.
-const LOOKS_ONLY = [/^https:\/\/fonts\.googleapis\.com\//, /^https:\/\/fonts\.gstatic\.com\//];
+// Looks only (fonts and the Factory page's icon font): answered empty, never a data call.
+const LOOKS_ONLY = [/^https:\/\/fonts\.googleapis\.com\//, /^https:\/\/fonts\.gstatic\.com\//, /^https:\/\/cdn\.jsdelivr\.net\/npm\/@tabler\/icons-webfont@[\d.]+\/dist\//];
 
 const test = base.test.extend({
   // Which person the pretend Google account is, and what the pretend Drive holds. Tests may override.
@@ -41,10 +43,21 @@ const test = base.test.extend({
         const url = route.request().url();
         if (/^https:\/\/(accounts\.google\.com\/gsi\/client|www\.googleapis\.com\/drive\/v3\/)/.test(url)) return route.fallback();
         if (LOOKS_ONLY.some((re) => re.test(url))) {
-          return route.fulfill({ status: 200, contentType: url.includes('fonts.googleapis') ? 'text/css' : 'font/woff2', body: '' });
+          return route.fulfill({ status: 200, contentType: url.includes('fonts.googleapis') || /\.css(\?|$)/.test(url) ? 'text/css' : 'font/woff2', body: '' });
         }
+        // Reserved example domains (RFC 2606) never resolve in real life: fixture images there (brand logos) get a 1px PNG.
+        if (/^https:\/\/(www\.)?example\.(com|org|net)\/[^?#]*\.(png|jpe?g|svg|webp|gif)(\?|$)/i.test(url)) return route.fulfill({ status: 200, contentType: 'image/png', body: PNG1 });
         outside.push(url);
         return route.fulfill({ status: 200, contentType: 'text/plain', body: '' });
+      });
+      // Studio's Owned tools list (Sheets values read): answered from an invented sample (added after the catch-all, so it wins), and every call remembered with
+      // whether it carried a sign-in token, so tests can prove it is only read after sign-in.
+      const ownedCalls = [];
+      const OWNED = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'owned-tools.json'), 'utf8'));
+      await context.route(/^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\/[^/]+\/values\/OWNED_TOOLS/, (route) => {
+        const req = route.request();
+        ownedCalls.push({ url: req.url(), auth: !!(req.headers().authorization || '').match(/^Bearer \S+/) });
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ range: 'OWNED_TOOLS!A1:E', majorDimension: 'ROWS', values: OWNED.values }) });
       });
 
       page.on('console', (m) => {
@@ -52,7 +65,7 @@ const test = base.test.extend({
       });
       page.on('pageerror', (e) => problems.push('Page error: ' + e.message));
 
-      const guard = { outside, consoleSeen, problems, world };
+      const guard = { outside, consoleSeen, problems, world, ownedCalls };
       await use(guard);
 
       // Drift check: remember Drive calls the pretend Drive could not answer (counted in the Action summary).
@@ -63,7 +76,8 @@ const test = base.test.extend({
         } catch (e) { /* never let bookkeeping fail a test */ }
       }
 
-      const unexpected = consoleSeen.filter((t) => !allowedConsole.some((re) => re.test(t)));
+      // The suite blocks service workers on purpose (playwright.config.js), and Chrome says so. Not a page problem.
+      const unexpected = consoleSeen.filter((t) => !/Service Worker registration blocked by Playwright/.test(t) && !allowedConsole.some((re) => re.test(t)));
       base.expect(problems, 'Uncaught errors on the page').toEqual([]);
       base.expect(unexpected, 'Unexpected console errors or warnings').toEqual([]);
       base.expect(outside, 'The page tried to call an outside address that is not mocked').toEqual([]);

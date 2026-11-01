@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="build" content="ljr-marketplace-2026-10-29-no-emails">
+<title>Marketplace</title>
+<!-- Marketplace V2 (25 Oct 2026): tabs Home / Do now / Decide / Reply / Insights, person chips, packing mode, label sheet. PUBLIC repo: no data, no secrets. Ids come from ../config.js (DASH_CONFIG.marketplace);
+     everything else is read at run time with Lisa's Google sign-in from the "Marketplace" tab of RR_OPEN-WORK, which the
+     RR_MKT-ENGINE Apps Script fills. A tap writes ONLY the 4 answer cells (G:J) of one row; the engine applies it after 10 minutes. -->
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap">
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
+<script src="../auth.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../house.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+  /* Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule: ../tokens.css through ../house.css,
+     the same on every hub; the Look (Warm / Cool clear, Light / Dark / Device) is applied by ../toolkit.js.
+     Marketplace's own names: the photo shade and the meaning rings (words stay ink). */
+  :root { --shade: color-mix(in srgb, var(--ljr-ink) 12%, transparent); --need: var(--house-risk); --soon: var(--house-soon); --ok: var(--house-ok); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --shade: color-mix(in srgb, var(--ljr-cream) 60%, transparent); } }
+  :root[data-theme="dark"] { --shade: color-mix(in srgb, var(--ljr-cream) 60%, transparent); }
+  * { box-sizing: border-box; }
+  h1, h2, h3, b, strong, th, summary { font-weight: 600; }   /* two weights only: 400 and 600 */
+  html { scroll-padding-bottom: 96px; }   /* a button scrolled into view never hides under the tab bar */
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  .hidden { display: none !important; }
+  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  a.btn, nav.tabs a, a.tile { text-decoration: none; }
+  .ti { line-height: 1; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }   /* same width as Factory and the main dashboard */
+
+  /* Frame: dark top bar (never black). Buttons on it are outlined in the frame's own light colour. */
+  header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
+  header .top, header .chips.people { max-width: 980px; margin: 0 auto; }
+  .top { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; padding: 12px 16px; }
+  .top h1 { font-size: 22px; margin: 0 auto 0 0; display: flex; gap: 8px; align-items: center; }
+  .top h1 a { color: inherit; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
+  .top h1 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ljr-6); flex: none; }
+  .stamp, .readat { font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; color: var(--frame-ink); font-variant-numeric: tabular-nums; }
+  .stamp:empty, .readat:empty { display: none; }
+  header .btn, header .chip { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
+  header .btn .ti { color: var(--frame-ink); }
+  /* Signed out the dark bar is hidden by the sign-in gate, so its buttons switch to page colours (still readable). */
+  html.dash-locked header .btn { color: var(--ink); border-color: var(--ctl); }
+  html.dash-locked #backHome { margin-left: auto; }
+
+  /* Buttons, chips, the hover rule (a meaning colour, --hmc, keeps its own colour), focus, the bottom tabs and the counts:
+     ../house.css. Every pressable rests on the same clear line; Yes / No differ by their words, place and hover colour. */
+  #backHome { min-height: 44px; }
+  .btn.big { width: 100%; justify-content: center; }
+  .btn.saving, .btn.saving:hover { border-style: dashed; border-color: var(--muted); color: var(--muted); cursor: progress; }
+  .btn:disabled:not(.saving) { opacity: .55; cursor: default; }
+  .chip { padding: 0 14px; background: var(--surface); display: inline-flex; align-items: center; gap: 6px; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chips.people { padding: 0 16px 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .chip[aria-pressed="true"], .chip.on { outline: 1px solid var(--ink); outline-offset: -1px; background-color: var(--hov); }
+  header .chip[aria-pressed="true"] { outline-color: var(--frame-ink); background-color: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); }
+  @media (hover: hover) {
+    a.tile:hover, button.tile:hover, details > summary:hover, .pair figure > a:hover { outline: 1px solid var(--ink); outline-offset: -1px; background-color: var(--hov); }
+    header .chip:hover { outline-color: var(--frame-ink); background-color: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); }
+    html.dash-locked header .btn:hover { outline-color: var(--ink); background-color: var(--hov); }
+  }
+  /* Keyboard focus: a 2px ink ring (the one exception to 1px). */
+  a:focus, button:focus, summary:focus { outline: none; }
+  :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  header :focus-visible, header a:focus-visible, header button:focus-visible { outline-color: var(--frame-ink); }
+  input:focus { outline: none; border-color: var(--ink); }
+
+  /* Bottom tabs (.house-tabs): five across. */
+  nav.tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(6, minmax(0, 180px)); justify-content: center; } }
+  nav.tabs a { --tc: var(--ljr-0); }
+  @media (min-width: 601px) { nav.tabs a { min-height: 56px; } }
+  nav.tabs a > .ti { font-size: 18px; color: var(--ink); }
+  nav.tabs .n { top: 6px; }
+  @media (max-width: 544px) { nav.tabs { gap: 4px; padding-left: 6px; padding-right: 6px; } }
+
+  /* Work area. Spacing in 12px steps; 16px under a header line before the first item. */
+  main, main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }   /* .wrap alone would drop the room for the tab bar */
+  #view { display: flex; flex-direction: column; gap: 12px; }   /* one 12px step between cards (Lisa chose 12px, 28 Oct) */
+  #view > .grp, #view > .ghead { margin-top: 12px; margin-bottom: 4px; }   /* 16px under a header line before its first card (12px gap + 4px) */
+  .needs { font-size: 26px; font-weight: 600; margin: 0; line-height: 1.3; }   /* the page greeting */
+  .needs .zero { font-variant-numeric: tabular-nums; }
+  .hint { font-size: 14px; color: var(--muted); margin: 0; }
+  .grp { font-size: 16px; font-weight: 600; margin: 0; }
+  .ghead { display: flex; gap: 8px; align-items: center; }
+  .ghead .cnt { margin-left: auto; }
+  .banner { border: 1px solid var(--need); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ink); }
+  .banner.info { border-color: var(--line); background: var(--surface); }
+  .card { position: relative; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 3px var(--shade); } /* the house card (../house.css): 12px inside */
+  /* A card's colour is a thin bar on its left edge, never a thick border or a fill. Rose = needs you now, green = right. */
+  .card.acc2::before, .card.acc5::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: var(--house-bar); border-radius: var(--radius); background: var(--ljr-2); } /* the 3px left colour bar */
+  .card.acc5::before { background: var(--ljr-5); }
+  .card.empty::before { content: none; }
+  /* The "Next" card on Home: the one thing to do now, white with a 1px ink edge. */
+  .card.next { border-color: var(--ink); }
+  .nextlab { margin: 0 0 -8px; font-size: 13px; font-weight: 600; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .nextlab .ti { font-size: 16px; color: var(--ink); }
+  .card h2 { font-size: 17px; margin: 0; line-height: 1.35; }
+  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
+  .card .acts { margin-top: 4px; }
+  .card.inner { padding: 0; border: 0; box-shadow: none; gap: 0; background: transparent; }   /* no box inside a box: rows split by 1px lines */
+  .card > .row:first-of-type, .card.inner > .row:first-child { border-top: 0; }
+  /* Friendly empty states: a small green-ring check and plain words. */
+  .card.empty { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
+  .card.empty > div { flex: 1; min-width: 0; }
+  .okring { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--ok); background: var(--ljr-5-tint); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: var(--ink); }
+  .card.empty h2 { font-size: 17px; }
+  .card.empty .what { margin-top: 2px; }
+
+  /* Item block: 44×44 photo (or a line icon of the item type) left of the text; name line, then the title (2 lines, then …). */
+  .item { display: flex; gap: 12px; align-items: flex-start; }
+  .item > img, .item > .ph, .row > img, .row > .ph { width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); flex: none; background: var(--bg); }
+  .ph { display: inline-flex; align-items: center; justify-content: center; }
+  .ph .ti { font-size: 22px; color: var(--muted); }
+  .item .t { flex: 1; min-width: 0; font-weight: 400; }
+  .bline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; }
+  .sdot { --c: var(--ljr-0); width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; display: inline-block; }
+  .ttl { font-size: 16px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .item .m { font-size: 14px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .m.post { font-weight: 600; color: var(--ink); display: flex; gap: 6px; align-items: center; }
+  .m.post .ti { font-size: 16px; color: var(--muted); }
+  /* Who a card belongs to: initials (or their photo) in a small ring of that person's colour, on the name line. */
+  .ava { --ava: var(--ljr-ava-other); width: 24px; height: 24px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; flex: none;
+    border: 1px solid color-mix(in srgb, var(--ava) 70%, var(--ink)); background: color-mix(in srgb, var(--ava) 14%, var(--surface)); color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1; }
+  .ava img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; display: block; }
+  /* Date pill: its RING shows urgency (rose = late, amber = today or tomorrow). The words stay ink. */
+  .date { gap: 6px; font-weight: 600; } /* the house date pill (../house.css): always ringed; rose late, amber soon */
+  /* Flags in words: ink text with a small coloured dot in front, never coloured words. */
+  .red, .verdict.wait, .verdict.go, ul.money li.red { color: var(--ink); font-weight: 600; }
+  .red::before, .verdict::before, ul.money li.red::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ljr-2); margin-right: 6px; vertical-align: 1px; }
+  .verdict.wait::before { background: var(--ljr-3); } .verdict.go::before { background: var(--ljr-5); }
+  .verdict { margin: 0; font-size: 15px; }
+
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acts .btn { flex: 1; justify-content: center; }
+  .row { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .row .txt { flex: 1; min-width: 0; }
+  .row .why { font-size: 14px; color: var(--muted); }
+  .steps { margin: 0; padding-left: 22px; font-size: 15px; }
+  .steps li { margin: 4px 0; }
+  .steps.words { list-style: none; padding-left: 0; }
+  .steps.words li { display: flex; gap: 8px; align-items: baseline; }
+  .steps.words .sn { flex: none; font-weight: 600; }
+  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 12px; min-height: 36px; cursor: pointer; align-self: flex-start; }
+  @media (max-width: 544px) { .more { min-height: 44px; } }
+
+  /* Summary strip: big numbers in tabular figures, each tile a 1px edge; a "needs you" number wears the rose ring. */
+  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .tiles.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 12px; cursor: pointer; color: var(--ink); min-width: 0; }
+  .tile.big { min-height: 88px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+  .tile .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; } .tile .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .tile.big .v { font-size: 28px; line-height: 1.2; }
+  .needs3 .v { align-self: flex-start; min-width: 44px; padding: 0 10px; border: 1px solid var(--ctl); border-radius: var(--radius); text-align: center; }
+  .needs3 .v.need { border-color: var(--need); background: var(--ljr-2-tint); }
+  .tile .up, .tile .down, .tile .flat { color: var(--muted); font-size: 15px; }
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .fact { padding: 8px 12px; border-left: 1px solid var(--line); min-width: 0; }
+  .fact:nth-child(3n + 1) { border-left: 0; padding-left: 0; }
+  .fact .k { display: block; font-size: 13px; color: var(--muted); } .fact .v { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  ul.money, ul.asks { margin: 0; padding-left: 18px; font-size: 15px; display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
+  ul.money { list-style: none; padding-left: 0; } ul.money li.head { font-weight: 600; }
+
+  /* Post cards. Courier line: brand dot + name (always in words) + where to take it; the parcel number in a ring pill. */
+  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 -4px; padding: 0 0 12px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 16px; }
+  .cband .cdot { width: 12px; height: 12px; border-radius: 50%; background: var(--cb); box-shadow: 0 0 0 1px var(--ctl); flex: none; }
+  .cband .pid { font-size: 17px; height: 28px; padding: 0 10px; border: 1px solid var(--ink); border-radius: var(--radius); display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
+  .cband .to { font-weight: 400; font-size: 15px; color: var(--muted); }
+  .cb-inpost { --cb: var(--ljr-cb-inpost); } .cb-evri { --cb: var(--ljr-cb-evri); } .cb-rm { --cb: var(--ljr-cb-rm); } .cb-dpd { --cb: var(--ljr-cb-dpd); }
+  .cb-yodel { --cb: var(--ljr-cb-yodel); } .cb-pf { --cb: var(--ljr-cb-pf); } .cb-none { --cb: var(--ljr-cb-none); }
+  .parcel { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .row .parcel { font-size: 17px; min-width: 44px; }
+  .dropcode { border: 1px dashed var(--ctl); border-radius: var(--radius); padding: 12px; text-align: center; }
+  .dropcode .code { display: block; font-size: 22px; font-weight: 600; letter-spacing: 2px; overflow-wrap: anywhere; }
+  .packbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
+  .pidin { width: 9em; }
+  /* Home: "To post" list, calm rows (photo, title, date pill), one button under it. Not a card, so Home keeps one Next card. */
+  .plist { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 4px 16px 12px; display: flex; flex-direction: column; box-shadow: 0 1px 3px var(--shade); }
+  .prow { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); color: var(--ink); }
+  .prow:first-child { border-top: 0; }
+  .prow .pt { flex: 1; min-width: 0; display: flex; gap: 4px 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+  .prow .ttl { min-width: 0; font-size: 15px; }
+  .prow > img, .prow > .ph { width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); flex: none; background: var(--bg); }
+  .plist .acts { margin-top: 4px; }
+
+  .pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; max-width: 520px; }
+  .pair figure > a { display: block; border-radius: var(--radius); }
+  .pair figure { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .pair img, .pair .nopic { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg); display: block; }
+  .pair .nopic { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
+  .pair figcaption { font-size: 13px; color: var(--muted); font-weight: 600; overflow-wrap: anywhere; }
+  .opbox { display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  label.qty { font-weight: 600; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; border-radius: var(--radius); }
+  details .txtin { margin: 8px 0; }
+  .buyfrom { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-weight: 600; } .buyfrom .k { color: var(--muted); font-weight: 600; }
+  details.npgroup > summary { min-height: 56px; } details.npgroup[open] > *:not(summary) { margin-top: 12px; } details.npgroup .row .num { width: 72px; } details.npgroup input[type=checkbox] { width: 28px; height: 28px; }   /* v11.10 New stock */
+  details.madeof { display: block; } details.madeof[open] > *:not(summary) { margin-top: 12px; } details.madeof label.qty { margin-top: 12px; }
+  input.num, input.txtin { font: inherit; font-size: 16px; min-height: 36px; padding: 4px 10px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); }
+  @media (max-width: 544px) { input.num, input.txtin { min-height: 44px; } }
+  input.num { width: 72px; text-align: center; font-variant-numeric: tabular-nums; }
+  input.num.pidin { width: 9em; }
+  input.txtin { width: 100%; }
+  input::placeholder { color: var(--muted); opacity: 1; }
+  header:has(#people.hidden) [data-house-filter] { display: none !important; }   /* no Filter until the people row shows */
+  header .house-filters.open { padding-top: 0; }
+  .qr { position: fixed; inset: 0; background: var(--ljr-paper); color: var(--ljr-ink); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
+  .qr .code { font-size: 44px; font-weight: 600; letter-spacing: 3px; word-break: break-all; }
+  .qr img { max-width: 90vw; max-height: 60vh; }
+</style>
+</head>
+<body>
+<header>
+  <div class="top"><h1><a href="#/me"><span class="dot" aria-hidden="true"></span>Marketplace</a></h1><span class="stamp" id="stamp">TEST</span><span class="readat" id="readAt" title="When the list was last read. It reads again every 5 minutes."></span>
+    <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh"><i class="ti ti-refresh"></i></button>
+    <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
+    <button class="btn house-fbtn" type="button" data-house-filter="people sitef stockf" aria-controls="people" aria-expanded="false">Filter<span class="cnt" id="whoN"></span></button>
+    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
+  <div class="chips people house-filters hidden" id="people" role="group" aria-label="Whose items"></div>
+</header>
+<main class="wrap">
+  <div id="banner" class="banner hidden" role="status"></div>
+  <div id="view"></div>
+</main>
+<nav class="tabs house-tabs hidden" id="tabs" aria-label="Marketplace sections">
+  <a href="#/me" data-nav="me" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-home" aria-hidden="true"></i><span>Home</span><span class="n"></span></a>
+  <a href="#/do" data-nav="do" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-package" aria-hidden="true"></i><span>Do now</span><span class="n need" id="n-do"></span></a>
+  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-traffic-lights" aria-hidden="true"></i><span>Decide</span><span class="n need" id="n-decide"></span></a>
+  <a href="#/newstock" data-nav="newstock" style="--tc:var(--ljr-2)"><span class="bar" aria-hidden="true"></span><i class="ti ti-truck-delivery" aria-hidden="true"></i><span>New stock</span><span class="n need" id="n-newstock"></span></a>
+  <a href="#/reply" data-nav="reply" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-message" aria-hidden="true"></i><span>Reply</span><span class="n need" id="n-reply"></span></a>
+  <a href="#/insights" data-nav="insights" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-chart-bar" aria-hidden="true"></i><span>Insights</span><span class="n"></span></a>
+</nav>
+<div id="qr" class="qr hidden" role="dialog" aria-label="Drop-off code"></div>
+<script>
+(function () {
+  'use strict';
+  var CFG = window.DASH_CONFIG || {}, M = CFG.marketplace || null;
+  var CLIENT_ID = CFG.clientId, READ = (CFG.scopes || {}).read, SHEETS = 'https://www.googleapis.com/auth/spreadsheets';
+  var SCOPE = READ + ' ' + SHEETS;
+  var COLS = ['key', 'section', 'category', 'title', 'detail', 'created_at', 'answer', 'note', 'answered_at', 'answered_by', 'applied_at', 'applied_by'];
+  var CATS = ['Clothes', 'Blades & grooming', 'Health & supplements', 'Treats', 'Crates & beds', 'Towels & textiles', 'Collars & accessories', 'Electronics & media', 'Other'];
+  var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
+  var SECTIONS = {
+    remove: { name: 'Remove from other sites', urgent: true, verb: 'Done', what: 'It sold. Take it off the site named on the card.' },
+    message: { name: 'Messages', urgent: true, verb: 'Done', what: 'A buyer wrote. Open your messages, answer there, then tap Done.' },
+    post: { name: 'Post', urgent: true, verb: 'Posted', what: 'Find it, pack it, post it.' },
+    go: { name: 'Go', verb: 'Go', no: 'Not this one', what: 'List this item.' },
+    vinted: { name: 'Post to Vinted', verb: 'Done', what: 'Drag the photos into Vinted, paste the text, then tap Done.' },
+    restock: { name: 'Restock', quiet: true, what: 'Low on stock. Buy on Temu when it suits you.' },
+    temu: { name: 'Temu claims', quiet: true, what: 'Price dropped. Claim in Temu if you like.' },
+    stock: { name: 'Stock', quiet: true, what: 'What you have, what is on order, and when to buy.' },
+    check: { name: 'Check your list', verb: 'Yes', no: 'No', what: 'Keeps your list right. Changes only your list, never eBay or Vinted.' },
+    // Engine v11: suppliers, new products, receipts, brands, VAT, jobs the AI could not do. None of them changes eBay or Vinted.
+    newprod: { name: 'New product?', what: 'Worth stocking? Profit is shown both VAT ways. Yes puts it on the order list.' },
+    receipt: { name: 'Add to stock?', what: 'A receipt was read. Yes adds the matched lines to stock and updates their cost.' },
+    supplier: { name: 'Suppliers', what: 'Price lists, terms and offers from your suppliers.' },
+    learn: { name: 'Brands to source', what: 'Brands that sell with no trade price on file.' },
+    job: { name: 'Do by hand', what: 'No AI could read this one. Do it by hand, then tap Done.' },
+    vat: { name: 'VAT', what: 'Sales against the VAT registration threshold.' },
+    offer: { name: 'Send offer', what: 'Buyers are watching these on eBay. Send them a discount?' },
+    cost: { name: 'What did it cost?', what: 'Profit stays unknown until the cost is known. Type what you paid for one. Changes only your list, never eBay or Vinted.' },
+    switch: { name: 'eBay account type', quiet: true, what: 'Fees and profit as a private and as a business seller.' },
+    suppliers: { name: 'Supplier details', quiet: true, what: 'Contacts, terms and the order list per supplier.' }
+  };
+  var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'check', 'cost', 'receipt', 'newprod', 'offer', 'supplier', 'learn', 'job', 'vat', 'restock', 'temu'];
+  // V2 tabs: each groups engine sections. Old links (#/remove, #/check, #/numbers ...) still open and light up their tab.
+  var TABS = { do: ['remove', 'post', 'vinted', 'job'], decide: ['go', 'check', 'cost', 'offer', 'receipt', 'supplier', 'learn', 'vat'], newstock: ['newprod'], reply: ['message'], insights: ['restock', 'temu'] };   // engine v11.10: New product? cards have their own tab
+  var TAB_OF = { numbers: 'insights', round: 'insights', stock: 'insights', suppliers: 'insights' }; Object.keys(TABS).forEach(function (t) { TABS[t].forEach(function (s) { TAB_OF[s] = t; }); });
+  var PEOPLE = ['All', 'Lisa', 'CY', 'G', 'H', 'CN'];   // a card with no owner is Lisa's
+  var token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false, stockFilter = 'all';
+  var who = 'All', site = 'All', pairDiff = {}, costPick = {}, npState = {};   // v11.10: Different items step; cost card supplier; New stock qty/ticks
+  try { who = localStorage.getItem('mkt.who') || 'All'; if (PEOPLE.indexOf(who) < 0) who = 'All'; } catch (e) {}
+  // The Look (Warm / Cool clear, Light / Dark) from Studio's Look menu is applied by ../toolkit.js on every hub.
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
+  function hm(ms) { return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }); }
+  function detail(r) { try { return JSON.parse(r.detail || '{}'); } catch (e) { return {}; } }
+  // A card's photo: an eBay/Etsy/Vinted picture address (those hosts only), or the Drive id of a photo in the item's folder.
+  var PHOTO_HOSTS = /^https:\/\/(i\.ebayimg\.com|i\.etsystatic\.com|images\d*\.vinted\.net)\//;
+  function photoSrc(id, w) {
+    if (!id) return '';
+    if (PHOTO_HOSTS.test(id)) return w > 300 ? id.replace(/\/s-l\d+\./, w >= 1000 ? '/s-l1600.' : '/s-l500.') : id;
+    return /^[\w-]{20,}$/.test(id) ? 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(id) + '&sz=w' + w : '';
+  }
+  // One thumbnail size, 44x44, left of the title: the real photo cropped, else a grey line icon of the item's type.
+  var CAT_ICON = { 'Clothes': 'shirt', 'Blades & grooming': 'scissors', 'Health & supplements': 'pill', 'Treats': 'bone', 'Crates & beds': 'bed', 'Towels & textiles': 'wash', 'Collars & accessories': 'paw', 'Electronics & media': 'device-tv' };
+  function thumb(id, cat) { var src = photoSrc(id, 200); return src ? '<img alt="" loading="lazy" referrerpolicy="no-referrer" src="' + esc(src) + '">' : '<span class="ph" aria-hidden="true"><i class="ti ti-' + (CAT_ICON[cat] || 'tag') + '"></i></span>'; }
+  // The name line above a title: the site (a dot in its colour + its name in words) and whose item it is.
+  var SITE_COL = { ebay: 'var(--ljr-6)', vinted: 'var(--ljr-5)', etsy: 'var(--ljr-3)', depop: 'var(--ljr-7)', temu: 'var(--ljr-4)' };
+  function nameLine(r, d) { var s = siteOf(r), o = String(d.owner || 'Lisa');
+    return '<div class="bline">' + (s ? '<span class="sdot" style="--c:' + (SITE_COL[s.toLowerCase()] || 'var(--ljr-0)') + '" aria-hidden="true"></span><span>' + esc(s) + '</span><span aria-hidden="true">·</span>' : '') + avatar(o) + (/^[A-Z]{1,3}$/.test(o) ? '' : '<span>' + esc(o) + '</span>') + '</div>'; }
+  // Date pill: a plain 1px ring; its ring shows urgency (rose + tint = late, amber + tint = today or tomorrow). Words say it too.
+  function dueOf(d) { var day = String(d.post_by || '').slice(0, 10); if (isNaN(Date.parse(day))) return d.red ? 'late' : '';
+    var today = new Date().toISOString().slice(0, 10), tom = new Date(Date.now() + 864e5).toISOString().slice(0, 10);
+    return d.red || day < today ? 'late' : day === today ? 'today' : day === tom ? 'tomorrow' : ''; }
+  function datePill(d) { if (!d.post_by) return ''; var u = dueOf(d), lab = ukDay(d.post_by) || d.post_by;
+    return '<span class="date' + (u === 'late' ? ' late' : u ? ' soon' : '') + '">Post by ' + esc(lab) + (u ? ' · ' + u : '') + '</span>'; }
+  function emptyCard(title, line, extra) { return '<div class="card empty"><span class="okring" aria-hidden="true">✓</span><div><h2>' + esc(title) + '</h2>' + (line ? '<p class="what">' + esc(line) + '</p>' : '') + '</div>' + (extra || '') + '</div>'; }
+  function ghead(name, n, need) { return '<div class="ghead"><p class="grp">' + esc(name) + '</p>' + (n ? '<span class="cnt' + (need ? ' need' : '') + (n > 99 ? ' wide' : '') + '">' + n + '</span>' : '') + '</div>'; }
+  // "Same item?" cards (key LINK|<other>|<eBay>): both photos side by side, big; tap one to open it full size.
+  // The second photo comes from RR_LISTINGS.csv (image_url), read once with Lisa's sign-in; nothing is written to it.
+  // Who a card belongs to: a round photo per person (a Drive image named AVATAR_<name>, e.g. AVATAR_Lisa.jpg, read with Lisa's
+  // sign-in, never stored in this public site), else the person's initials in their own colour. The photo is cropped to a
+  // circle on screen (centred, a little above the middle where faces usually are), so any photo size works.
+  var AVA_COL = { lisa: 1, cy: 1, g: 1, h: 1, cn: 1 }, avatars = null;   // colours: --ljr-ava-<name> in tokens.css
+  function loadAvatars() {
+    if (avatars !== null) return; avatars = {};
+    var q = "name contains 'AVATAR_' and mimeType contains 'image/' and trashed = false";
+    fetch('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent(q) + '&fields=files(id,name)&pageSize=50&supportsAllDrives=true&includeItemsFromAllDrives=true', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (j) { (j.files || []).forEach(function (f) { var who = (f.name.match(/^AVATAR_([A-Za-z]+)/) || [])[1]; if (!who) return;
+        fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(f.id) + '?alt=media&supportsAllDrives=true', { headers: { Authorization: 'Bearer ' + token } })
+          .then(function (r) { if (!r.ok) throw new Error(r.status); return r.blob(); }).then(function (b) { avatars[who.toLowerCase()] = URL.createObjectURL(b); render(); }).catch(function () {}); }); })
+      .catch(function () {});   // no photo is fine: initials show instead
+  }
+  function avatar(owner) {
+    var who = String(owner || 'Lisa'), pic = avatars && avatars[who.toLowerCase()], col = 'var(--ljr-ava-' + (AVA_COL[who.toLowerCase()] ? who.toLowerCase() : 'other') + ')';
+    return '<span class="ava" title="' + esc(who) + '" aria-label="' + esc(who) + '\'s" style="--ava:' + col + '">' + (pic ? '<img alt="" src="' + esc(pic) + '">' : esc(/^[A-Z]{1,3}$/.test(who) ? who : who.charAt(0).toUpperCase())) + '</span>';
+  }
+  var pics = null, picsAt = 0;
+  // Lisa 28 Oct: a card named a listing added after the page had read the list (L0225), so it showed "No photo" with no eBay
+  // button. Read again (at most once a minute) whenever a "Same item?" card names a listing the last read did not have.
+  function loadPics() {
+    var link = rows.filter(function (r) { return /^LINK\|/.test(r.key); });
+    if (!M.listingsFileId || !link.length) return;
+    var missing = pics === null || link.some(function (r) { var ids = r.key.split('|'); return !pics[ids[1]] || !pics[ids[2]]; });
+    if (!missing || Date.now() - picsAt < 60000) return;
+    picsAt = Date.now(); var next = {};
+    fetch('https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(M.listingsFileId) + '?alt=media&supportsAllDrives=true', { headers: { Authorization: 'Bearer ' + token } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.text(); })
+      .then(function (t) { var t2 = csvRows(t), h = -1;
+        for (var i = 0; i < Math.min(t2.length, 5); i++) if (t2[i].indexOf('listing_id') >= 0) { h = i; break; }
+        if (h < 0) return; var hd = t2[h], li = hd.indexOf('listing_id'), im = hd.indexOf('image_url'), ti = hd.indexOf('title'), pl = hd.indexOf('platform'), ur = hd.indexOf('url'), pi = hd.indexOf('platform_item_id');
+        t2.slice(h + 1).forEach(function (r) { next[r[li]] = { photo: r[im] || '', title: r[ti] || '', platform: r[pl] || '', url: listingUrl(r[pl], r[ur], r[pi]) }; });
+        pics = next; render(); })
+      .catch(function () {});   // no second photo is not an error: the card still works
+  }
+  function csvRows(text) {
+    var out = [], row = [], cell = '', q = false; text = String(text || '').replace(/^\uFEFF/, '').replace(/\r/g, '');
+    for (var i = 0; i < text.length; i++) { var c = text[i];
+      if (q) { if (c === '"') { if (text[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c; }
+      else if (c === '"') q = true; else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n') { row.push(cell); out.push(row); row = []; cell = ''; } else cell += c; }
+    if (cell.length || row.length) { row.push(cell); out.push(row); }
+    return out;
+  }
+  // The listing itself (not its picture): the file's url, else the eBay item page from the item number. Marketplace hosts only.
+  var LISTING_HOSTS = /^https:\/\/(www\.)?(ebay\.co\.uk|ebay\.com|vinted\.co\.uk|etsy\.com|depop\.com)\//;
+  function listingUrl(platform, url, itemId) {
+    if (url && LISTING_HOSTS.test(url)) return url;
+    return String(platform).toLowerCase() === 'ebay' && /^\d{6,}$/.test(itemId || '') ? 'https://www.ebay.co.uk/itm/' + itemId : '';
+  }
+  function pair(r, d) {
+    var ids = r.key.split('|'), b = (pics || {})[ids[2]] || {};
+    function side(id, label, link, site) { var big = photoSrc(id, 1600), sm = photoSrc(id, 600);
+      return '<figure>' + (sm ? '<a href="' + esc(big) + '" target="_blank" rel="noopener" aria-label="Open the ' + esc(label) + ' photo full size"><img alt="' + esc(label) + ' photo" loading="lazy" referrerpolicy="no-referrer" src="' + esc(sm) + '"></a>' : '<div class="nopic">No photo</div>') + '<figcaption>' + esc(label) + '</figcaption>' +
+        (link ? '<a class="btn" href="' + esc(link) + '" target="_blank" rel="noopener">Open on ' + esc(site) + '</a>' : '') + '</figure>'; }
+    var a = (pics || {})[ids[1]] || {};
+    return '<div class="pair">' + side(d.photo, (d.platform || 'This one') + ' · ' + ids[1], (d.url && LISTING_HOSTS.test(d.url) ? d.url : a.url), d.platform || a.platform || 'the site') +
+      side(b.photo, (b.platform || 'eBay') + ' · ' + ids[2], b.url, b.platform || 'eBay') + '</div>';
+  }
+
+  /* ---------- Google: Sheets (data) and Drive (who am I, wake address) ---------- */
+  function api(url, init) {
+    init = init || {}; init.headers = Object.assign({ Authorization: 'Bearer ' + token }, init.headers || {});
+    return fetch(url, init).then(function (r) {
+      if (r.status === 401) { token = null; render(); throw new Error('Sign-in expired. Sign in again.'); }
+      if (!r.ok) return r.json().catch(function () { return {}; }).then(function (j) { throw new Error(why(r.status, (j.error && j.error.message) || '')); });
+      return r.json();
+    });
+  }
+  // Google's reason in plain words, so a refusal says what to do (not just a number).
+  function why(status, msg) {
+    if (/has not been used|is disabled|SERVICE_DISABLED/i.test(msg)) return 'the Google Sheets switch is off for the dashboard\'s Google project. Turn on "Google Sheets API" for it (one click), then reload.';
+    if (/insufficient|scope/i.test(msg)) return 'Google did not give this page spreadsheet access. Sign out, sign in again and tick every box Google shows.';
+    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the Open work sheet. Sign in with the business Google account.';
+    return 'Google said ' + status + (msg ? ': ' + msg : '');
+  }
+  function sheetUrl(range) { return 'https://sheets.googleapis.com/v4/spreadsheets/' + M.openWorkId + '/values/' + encodeURIComponent(range); }
+  function load() {
+    if (!M || !M.openWorkId) { banner('Not set up yet: the Marketplace settings are not in config.js.', true); return; }
+    if (!token) { render(); return; }
+    api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
+      rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; }).concat(fishRows);
+      $('banner').className = 'banner hidden'; $('readAt').textContent = 'Read ' + hm(Date.now()); render(); loadPics(); loadAvatars();
+    }).catch(function (e) { banner('Could not load: ' + e.message); });
+    loadFish();
+    if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
+  }
+  // G7 (30 Oct 2026): Fish Treats postage to-dos from the GA Hub's Cards tab (DASH_CONFIG.food.bookId, read-only second source;
+  // RR_FOOD-ENGINE owns them, never the Marketplace tab). Shown in Do now > Post; Posted writes only that Cards row's answer cells.
+  var fishRows = [];
+  function loadFish() {
+    var F = (window.DASH_CONFIG || {}).food; if (!F || !F.bookId) return;
+    api('https://sheets.googleapis.com/v4/spreadsheets/' + F.bookId + '/values/' + encodeURIComponent('Cards!A2:L')).then(function (j) {
+      fishRows = (j.values || []).map(function (v, i) { var o = { _row: i + 2, _book: F.bookId, _tab: 'Cards' }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; })
+        .filter(function (o) { return /^PACK-/.test(o.key) && !o.applied_at; })
+        .map(function (o) { var d = detail(o); d.kind = 'fish'; d.found = true; o.section = 'post'; o.category = 'Fish Treats'; o.detail = JSON.stringify(d); return o; });
+      rows = rows.filter(function (r) { return !r._book; }).concat(fishRows); render();
+    }).catch(function () {});   // no GA Hub access: the Marketplace list still works
+  }
+  // Write the 4 answer cells of the row with this key; check the key before and after, put the old values back if it moved.
+  function answer(r, value, note) {
+    var url = r._book ? function (x) { return 'https://sheets.googleapis.com/v4/spreadsheets/' + r._book + '/values/' + encodeURIComponent(x); } : sheetUrl, tab = r._tab || M.tab;
+    var rng = tab + '!A' + r._row + ':L' + r._row, at = value === '' ? '' : new Date().toISOString(), who = value === '' ? '' : me;
+    return api(url(rng)).then(function (j) {
+      var cur = (j.values || [[]])[0];
+      if (cur[0] !== r.key) throw new Error('the list changed: refresh and tap again');
+      var old = [cur[6] || '', cur[7] || '', cur[8] || '', cur[9] || ''];
+      var w = tab + '!G' + r._row + ':J' + r._row;
+      return api(url(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [[value, note || '', at, who]] }) })
+        .then(function () { return api(url(tab + '!A' + r._row)); })
+        .then(function (k) { if (((k.values || [[]])[0] || [])[0] !== r.key) return api(url(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [old] }) }).then(function () { throw new Error('the list changed: refresh and tap again'); }); })
+        .then(function () { r.answer = value; r.note = note || ''; r.answered_at = at; r.answered_by = who; if (!r._book) wake(); render(); });
+    }).catch(function (e) { banner('Not saved: ' + e.message); render(); });   // render puts the button back (no stuck "Saving…")
+  }
+  // Wake the engine (no data sent). The address is read from a Drive file, never kept in this public page.
+  var wakeUrl = null;
+  function wake() {
+    if (!M.wakeFolderId || !M.wakeFile) return;
+    var go = function (u) { if (u) fetch(u, { method: 'POST', mode: 'no-cors', body: 'ping' }).catch(function () {}); };
+    if (wakeUrl !== null) return go(wakeUrl);
+    api('https://www.googleapis.com/drive/v3/files?q=' + encodeURIComponent("'" + M.wakeFolderId + "' in parents and name = '" + M.wakeFile + "' and trashed = false") + '&fields=files(id)&supportsAllDrives=true&includeItemsFromAllDrives=true')
+      .then(function (j) { var f = (j.files || [])[0]; if (!f) { wakeUrl = ''; return; }
+        return fetch('https://www.googleapis.com/drive/v3/files/' + f.id + '?alt=media&supportsAllDrives=true', { headers: { Authorization: 'Bearer ' + token } }).then(function (r) { return r.json(); }).then(function (x) { wakeUrl = x.url || ''; go(wakeUrl); }); })
+      .catch(function () { wakeUrl = ''; });
+  }
+
+  /* ---------- what needs Lisa ---------- */
+  function owner(r) { return detail(r).owner || 'Lisa'; }
+  var SITE_NAMES = { ebay: 'eBay', vinted: 'Vinted', etsy: 'Etsy', depop: 'Depop', temu: 'Temu', facebook: 'Facebook' };
+  function siteOf(r) { var p = String(detail(r).platform || '').toLowerCase(); return SITE_NAMES[p] || (p ? p.charAt(0).toUpperCase() + p.slice(1) : ''); }
+  function shown(r) { return (who === 'All' || owner(r) === who) && (site === 'All' || siteOf(r).toLowerCase() === site.toLowerCase()); }
+  function waiting(sec) { return rows.filter(function (r) { return r.section === sec && !r.answer && !r.applied_at && shown(r); }); }
+  function tabCount(t) { return TABS[t].filter(function (s) { return !SECTIONS[s].quiet; }).reduce(function (n, s) { return n + waiting(s).length; }, 0); }
+  function needsCount() { return ORDER.filter(function (s) { return !SECTIONS[s].quiet; }).reduce(function (n, s) { return n + waiting(s).length; }, 0); }
+  // Posts in packing order: shelf, then title. The parcel number is the engine's when it sends one, else the place in this list.
+  function posts() {
+    return rows.filter(function (r) { return r.section === 'post' && detail(r).kind !== 'which_parcel' && !r.applied_at && shown(r); })
+      .sort(function (a, b) { var x = detail(a).shelf || '~', y = detail(b).shelf || '~'; return x < y ? -1 : x > y ? 1 : a.title.localeCompare(b.title); })
+      .map(function (r, i) { r._no = detail(r).parcel_id || detail(r).parcel_no || (i + 1); return r; });
+  }
+  function byCat(list) { return list.slice().sort(function (a, b) { var x = CATS.indexOf(a.category), y = CATS.indexOf(b.category); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || a.title.localeCompare(b.title); }); }
+  function sentLine(r) {
+    var at = Date.parse(r.answered_at), live = Date.now() < at + UNDO_MS;
+    return '<div class="sent">✓ ' + hm(at) + ' · applies by ' + hm(at + APPLY_MS) + (live ? ' <button class="btn" type="button" data-undo="' + esc(r.key) + '"><i class="ti ti-arrow-back-up"></i> Undo</button>' : '') + '</div>';
+  }
+  // Every parcel card says what it is and what to do, with links that open in a new tab (Lisa 27 Oct: the dashboard is the
+  // one place to work from; never leave her guessing what a card is about).
+  var MAIL = 'https://mail.google.com/mail/u/0/#all/';
+  // Lisa 27 Oct: every card says when it was last updated (the engine's updated_at when it refreshed the card, else when it was made).
+  function stamp(r, d) { var t = Date.parse(d.updated_at || r.created_at || ''); return isNaN(t) ? '' : '<div class="m">Updated ' + esc(new Date(t).toLocaleString('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })) + '</div>'; }
+  function ukDay(s) { var t = Date.parse(String(s || '').slice(0, 10)); return isNaN(t) ? '' : new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  // v11.10 Fix 6: ONE source for the post step words, used by the card, the band and packing mode.
+  var STEP = { find: 'Find it', found: 'Found ✓', buy: 'Buy postage on the eBay order', label: 'Print the label from the email', qr: 'Show the QR at the drop-off', pack: 'Pack it, write the parcel number on it, post it, tap Posted' };
+  function postSteps(d) {
+    var eb = /ebay/i.test(d.platform), mail = d.email_url || d.label_email, s = [{ k: d.found ? 'found' : 'find', done: !!d.found }];
+    if (eb && !d.courier_known && !courierOf(d) && !d.tracking) s.push({ k: 'buy' }); else if (d.qr) s.push({ k: 'qr' }); else if (mail || d.label_pdf) s.push({ k: 'label' });
+    s.push({ k: 'pack' }); return s;
+  }
+  function nextStep(d) { var s = postSteps(d).filter(function (x) { return !x.done; })[0]; return s ? STEP[s.k] : STEP.pack; }
+  // v11.10 Fix 5: which order this is: order no, a 3-letter buyer tag (never a name), sold date, and "1 of 2" when one item sold more than once.
+  function sameItemNo(r) { var d = detail(r), k = d.title_key || String(r.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    var g = rows.filter(function (x) { if (x.section !== 'post' || x.applied_at || !/^PO\|/.test(x.key)) return false; var e = detail(x); return (e.title_key || String(x.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()) === k; })
+      .sort(function (a, b) { return String(a.created_at || '').localeCompare(String(b.created_at || '')) || a.key.localeCompare(b.key); });
+    return g.length > 1 ? (g.map(function (x) { return x.key; }).indexOf(r.key) + 1) + ' of ' + g.length : ''; }
+  function orderLine(r, d) {
+    var oid = String(d.order_id || r.key.split('|')[2] || ''), tag = String(d.buyer_tag || '').replace(/[^A-Za-z0-9]/g, '').slice(0, 3), n = sameItemNo(r);
+    return '<div class="m ordl">' + esc([oid && !/^vt-/.test(oid) ? 'Order ' + oid : '', tag ? 'buyer ' + tag + '…' : '', d.sold_at ? 'sold ' + ukDay(d.sold_at) : '', d.qty > 1 ? 'qty ' + d.qty : ''].filter(Boolean).join(' · ')) +
+      (n ? ' <b class="date">' + esc(n) + '</b>' : '') + '</div>';
+  }
+  function postGuide(r, d) {
+    if (d.kind === 'fish') return fishGuide(d);
+    var eb = /ebay/i.test(d.platform), site = eb ? 'eBay' : /vinted/i.test(d.platform) ? 'Vinted' : (d.platform || 'the site');
+    var order = eb && d.order_id ? 'https://www.ebay.co.uk/mesh/ord/details?orderid=' + encodeURIComponent(d.order_id) : '';
+    var mail = d.email_url || (d.label_email ? MAIL + encodeURIComponent(d.label_email) : '');
+    if (d.kind === 'which_parcel') return '<p class="what"><b>Not a new sale.</b> A ' + esc(d.courier || 'courier') + ' label or QR came by email and the engine could not tell which sale it is for.</p>' +
+      factsOf([['Parcel number', d.tracking || ''], ['Code', d.qr || ''], ['Email came', ukDay(d.email_at)]]) +
+      (d.could_be && d.could_be.length ? '<p class="hint">It could be: ' + esc(d.could_be.join(' · ')) + '</p>' : '') +
+      '<ol class="steps"><li>' + (mail ? 'Open the email (button below) to see the item.' : 'Search your email for the parcel number above to see the item.') + '</li><li>If that parcel is already posted, just tap Sorted it.</li><li>If not, pack that item and post it, then tap Sorted it.</li></ol>' +
+      (mail ? '<div class="acts">' + linkBtn(mail, 'Open the email') + '</div>' : '');
+    var steps = postSteps(d), nx = nextStep(d);
+    return '<p class="what"><b>Sold on ' + esc(site) + (d.sold_at ? ' ' + esc(ukDay(d.sold_at)) : '') + '.</b> ' + (d.post_by ? datePill(d) : eb ? 'Post as soon as you can (eBay shows the date on the order).' : '') + '</p>' +
+      '<p class="what nextstep"><b>Next: ' + esc(nx) + (nx === STEP.find && d.shelf ? ' (shelf ' + esc(d.shelf) + ')' : '') + '</b></p>' +
+      '<details class="allsteps"><summary class="btn">All ' + steps.length + ' steps</summary><ol class="steps words">' + steps.map(function (x, i) { return '<li><span class="sn">Step ' + (i + 1) + ':</span><span>' + esc(STEP[x.k]) + '</span></li>'; }).join('') + '</ol></details>' +
+      ((order || mail) ? '<div class="acts">' + (order ? linkBtn(order, nx === STEP.buy ? STEP.buy : 'Open this order on eBay') : '') + (mail ? linkBtn(mail, d.label_pdf ? 'Open this order\u2019s label' : 'Open the label email') : '') + '</div>' : '');
+  }
+  // G7: a Fish Treats to-do from the GA Hub. The address is in the Shopify order (Lisa's sign-in), never on this card or page.
+  function fishGuide(d) {
+    var shop = d.store && d.order ? 'https://admin.shopify.com/store/' + encodeURIComponent(d.store) + '/orders?query=' + encodeURIComponent(d.order) : '';
+    var steps = d.decide ? ['Decide how to send these ' + (d.units || '') + ' units (see below).', 'Send them that way.', 'Tap Posted.']
+      : ['Open the order in Shopify for the address.', 'Book ' + (d.courier || 'the postage') + (/parcel2go/i.test(d.courier) ? ' on parcel2go.com' : '') + ', pack ' + (d.units || '') + ' Fish Treat unit' + (d.units > 1 ? 's' : '') + ' and post it.', 'Tap Posted.'];
+    return '<p class="what"><b>Shop order #' + esc(d.order || '?') + ' · ' + esc(d.units || '?') + ' Fish Treat unit' + (d.units > 1 ? 's' : '') + (d.with_food ? ' · the food goes to GA' : '') + '.</b></p>' +
+      '<ol class="steps words">' + steps.map(function (x, i) { return '<li><span class="sn">Step ' + (i + 1) + ':</span><span>' + esc(x) + '</span></li>'; }).join('') + '</ol>' +
+      (shop ? '<div class="acts">' + linkBtn(shop, 'Open the order in Shopify') + '</div>' : '');
+  }
+  function itemCard(r, opts) {
+    var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
+    var nx = opts && opts.next;
+    var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
+      '<div class="item">' + (isPair ? '' : thumb(d.photo, r.category)) + '<div class="t">' + nameLine(r, d) + '<div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([d.price, d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier].filter(Boolean).join(' · ')) + '</div>' + (r.section === 'post' && /^PO\|/.test(r.key) ? orderLine(r, d) : '') +
+      postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m">' + datePill(d) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
+      (isPair ? pair(r, d) : '') + (r.section === 'post' ? postGuide(r, d) : '') + (d.why && d.kind !== 'which_parcel' ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
+    if (r.answer) return h + sentLine(r) + '</div>';
+    var acts = [];
+    if (r.section === 'remove') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
+    else if (r.section === 'message') { if (d.url) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open messages</a>'); acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>'); }
+    else if (r.section === 'post' && d.kind === 'which_parcel') acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Sorted it</button>');
+    else if (r.section === 'post') {
+      if (!d.found) acts.push('<button class="btn main" type="button" data-ans="' + esc(r.key) + '" data-v="Found">Found</button>');
+      else { if (d.qr) acts.push('<button class="btn" type="button" data-qr="' + esc(r.key) + '">Show QR</button>'); else if (d.qr_missing) acts.push('<span class="why red">QR not found</span>');
+        acts.push(pidCheck(r, d) + '<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'); }
+    } else if (r.section === 'go') { acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Go</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Not this one</button>'); }
+    else if (r.section === 'check' && /^postage_/.test(d.kind || '')) { acts.push(linkBtn(d.revise, 'Fix on eBay', true), linkBtn(d.url, 'Open on eBay'));
+      acts.push('<button class="btn yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">I fixed it</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Leave it</button>'); }
+    else if (r.section === 'check' && d.kind === 'new') {   // v11.5: say what eBay shows, and offer the item she probably already has
+      h += factsOf([['eBay says for sale', d.qty === '' || d.qty === undefined ? '?' : String(d.qty)], ['Price', d.price || '']]);
+      if (d.maybe_sku) h += '<div class="item">' + thumb(d.maybe_photo) + '<div class="t">Looks like: ' + esc(d.maybe_title) + '<div class="m">' + esc(d.maybe_sku + ' · ' + d.maybe_where) + '</div></div></div>';
+      h += '<label class="qty">How many do you have? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have"></label><p class="hint">Leave blank if you are not sure.' + (d.maybe_sku ? ' Same item keeps one count for both adverts, so a sale on one updates the other.' : '') + '</p>';
+      acts.push(linkBtn(d.url, 'Open on eBay'));
+      if (d.maybe_sku) acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Same">Same item</button><button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">No, a new item</button>');
+      else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Add it</button>');
+      acts.push('<button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">Leave it off</button>'); }
+    else if (r.section === 'check' && !isPair && Array.isArray(d.options) && d.options.length) {   // v11.11: the engine names the answers (growth checks, rare item, ads test)
+      acts.push(linkBtn(d.url, 'Open on ' + (d.platform || 'eBay'))); d.options.forEach(function (o, i) { acts.push(ansBtn(r, String(o), String(o), i === 0)); }); }
+    else if (r.section === 'check') { if (d.url && !isPair) acts.push('<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(d.platform || 'the site') + '</a>');   // pairs: one button under each photo
+      if (isPair) {   // v11.10: the photo check line, then Same (one count) or Different items (two stock lines, a count each)
+        if (d.photo_check) h += '<p class="hint">Photo check: ' + esc(d.photo_check) + '</p>';
+        if (pairDiff[r.key]) {
+          h += '<p class="what">Two separate items. How many of each do you have?</p>' +
+            '<label class="qty">This one (' + esc(d.platform || 'Vinted') + ') <input class="num" inputmode="numeric" data-diffa="' + esc(r.key) + '" aria-label="How many of this one"></label>' +
+            '<label class="qty">The eBay one <input class="num" inputmode="numeric" data-diffb="' + esc(r.key) + '" aria-label="How many of the eBay one"></label><p class="hint">Leave a box blank if you are not sure.</p>';
+          acts.push('<button class="btn main no" type="button" data-ans="' + esc(r.key) + '" data-v="Different">Save: different items</button><button class="btn" type="button" data-diffback="' + esc(r.key) + '">Back</button>');
+        } else {
+          h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Leave blank if you are not sure. Yes then keeps one count for both sites.</p>';
+          acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes, same item</button><button class="btn no" type="button" data-diff="' + esc(r.key) + '">Different items</button>');
+        }
+      } else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">No</button>'); }
+    else if (r.section === 'vinted') {
+      if (d.folder) acts.push('<a class="btn" href="https://drive.google.com/drive/folders/' + esc(d.folder) + '" target="_blank" rel="noopener">Open folder</a>');
+      acts.push('<button class="btn" type="button" data-copy="' + esc(r.key) + '">Copy text</button><a class="btn" href="https://www.vinted.co.uk/items/new" target="_blank" rel="noopener">Open Vinted</a>');
+      h += '<input class="txtin" type="url" placeholder="Paste the Vinted link (or leave blank)" data-link="' + esc(r.key) + '">';
+      acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Done</button>');
+    } else if (r.section === 'restock' && d.have !== undefined) {
+      h += '<p class="what">' + esc(['have ' + d.have, d.on_order ? d.on_order + ' on order' : '', 'min ' + d.min_stock, 'buy ' + d.buy].filter(Boolean).join(' · ')) + '</p>' + priceLine(d);
+      if (d.url) acts.push('<a class="btn main" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on Temu</a>'); else if (d.url_flag) acts.push('<span class="why red">' + esc(d.url_flag) + '</span>');
+      acts.push(opBox(r.key, ['Ordered', 'Arrived'], d.buy));
+    } else if (r.section === 'restock') { if (d.url) acts.push('<a class="btn main" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on Temu</a>');
+      acts.push('<input class="num" inputmode="numeric" aria-label="How many arrived" data-arrived="' + esc(r.key) + '"><button class="btn yes" type="button" data-arrive="' + esc(r.key) + '">Arrived</button>'); h += '<p class="what">' + esc([d.cheaper_now, 'last cost ' + d.last_cost, d.sell_through_30 + ' sold in 30 days', 'profit ' + d.profit_per_unit + ' each', 'buy ' + d.qty_to_target + ' to reach target'].filter(Boolean).join(' · ')) + '</p>'; }
+    else if (r.section === 'temu' && d.kind === 'coupon') {
+      h += '<p class="what">' + esc([d.min_spend ? 'orders over ' + d.min_spend : '', d.expires ? 'ends ' + d.expires : ''].filter(Boolean).join(' · ') || d.from) + '</p>';
+      if (d.code) acts.push('<button class="btn" type="button" data-copycode="' + esc(d.code) + '">Copy code ' + esc(d.code) + '</button>');
+      acts.push('<button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Used or not needed</button>');
+    }
+    else if (r.section === 'temu') { h += '<p class="what">' + esc([d.days_left + ' days left', d.drop ? 'dropped ' + d.drop : ''].filter(Boolean).join(' · ')) + '</p>'; acts.push('<button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Done">Claimed</button>'); }
+    else if (V11[r.section]) { var v = V11[r.section](r, d); h += v.h; acts = acts.concat(v.acts); }
+    return h + '<div class="acts">' + acts.join('') + '</div></div>';
+  }
+  /* ---------- engine v11 cards ---------- */
+  // Who pays postage, in words and an icon (Lisa 27 Oct): "Buyer pays postage £2.89" or "FREE postage: you pay".
+  function postLine(d) {
+    if (d.postage === 'buyer') return '<div class="m post buyer"><i class="ti ti-truck-delivery" aria-hidden="true"></i> Buyer pays postage' + (d.buyer_post ? ' ' + esc(d.buyer_post) : '') + '</div>';
+    if (d.postage === 'seller') return '<div class="m post seller"><i class="ti ti-gift" aria-hidden="true"></i> FREE postage: you pay' + (d.post_est ? ' about ' + esc(d.post_est) : '') + '</div>';
+    return '';
+  }
+  // Posted needs the parcel number written on the parcel (no mix-ups): the box must match the card's number.
+  function pidCheck(r, d) { return d.parcel_id ? '<input class="num pidin" type="text" autocapitalize="characters" data-pid="' + esc(r.key) + '" placeholder="Number on parcel" aria-label="Parcel number written on the parcel">' : ''; }
+  function ansBtn(r, v, label, main) { return '<button class="btn' + (main ? ' main yes' : '') + '" type="button" data-ans="' + esc(r.key) + '" data-v="' + esc(v) + '">' + esc(label || v) + '</button>'; }
+  function noteBox(r, ph, label) { return '<input class="txtin" type="text" data-note="' + esc(r.key) + '" placeholder="' + esc(ph) + '" aria-label="' + esc(label || ph) + '">'; }
+  function safeUrl(u) { return /^https:\/\//.test(String(u || '')) ? String(u) : ''; }
+  function linkBtn(u, label, main) { u = safeUrl(u); return u ? '<a class="btn' + (main ? ' main' : '') + '" href="' + esc(u) + '" target="_blank" rel="noopener">' + esc(label) + '</a>' : ''; }
+  function mailBtn(m, label) { return /^mailto:/.test(String(m || '')) ? '<a class="btn" href="' + esc(m) + '">' + esc(label) + '</a>' : ''; }
+  // The money lines from the engine: ▶ marks the headline (go / no-go), ⚠ lines are warnings.
+  function moneyLines(lines) {
+    return (lines || []).length ? '<ul class="money">' + lines.map(function (l) { l = String(l); return '<li class="' + (/^▶/.test(l) ? 'head' : /^⚠/.test(l) ? 'red' : '') + '">' + esc(l) + '</li>'; }).join('') + '</ul>' : '';
+  }
+  function factsOf(pairs) { pairs = pairs.filter(function (p) { return p[1] !== '' && p[1] !== undefined && p[1] !== null; }); return pairs.length ? '<div class="facts">' + pairs.map(function (p) { return '<div class="fact"><span class="k">' + esc(p[0]) + '</span><span class="v">' + esc(p[1]) + '</span></div>'; }).join('') + '</div>' : ''; }
+  // Courier from the card ("Royal Mail 2nd Class", "InPost"...) -> band colour, short name and where to take it.
+  var COURIERS = [[/inpost/i, 'cb-inpost', 'InPost', 'InPost locker or shop'], [/evri|hermes/i, 'cb-evri', 'Evri', 'Evri ParcelShop'], [/parcelforce/i, 'cb-pf', 'Parcelforce', 'Post Office'],
+    [/royal ?mail/i, 'cb-rm', 'Royal Mail', 'Post Office'], [/dpd/i, 'cb-dpd', 'DPD', 'DPD Pickup shop'], [/yodel/i, 'cb-yodel', 'Yodel', 'Yodel Store'], [/collect/i, 'cb-none', 'Collection', 'Buyer collects: no post'], [/parcel2go/i, 'cb-none', 'Parcel2Go', 'the drop-off on the Parcel2Go booking']];
+  function courierOf(d) { var c = String(d.courier || ''); for (var i = 0; i < COURIERS.length; i++) if (COURIERS[i][0].test(c)) return { cls: COURIERS[i][1], name: COURIERS[i][2], to: COURIERS[i][3], full: c }; return null; }
+  function courierBand(r, d) {
+    var c = courierOf(d), pid = d.parcel_id || '';
+    if (!c && !d.qr && !d.tracking && !pid) return '';
+    return '<div class="cband ' + (c ? c.cls : 'cb-none') + '"><span class="cdot" aria-hidden="true"></span>' + (pid ? '<span class="pid">' + esc(pid) + '</span>' : '') +
+      '<span class="cn">' + esc(c ? c.name : /ebay/i.test(d.platform) && !d.tracking && !d.shipped_at ? 'Postage not bought yet' : 'Courier on the label') + '</span>' + (c ? '<span class="to">' + esc('Take to: ' + c.to + (c.full && c.full.toLowerCase() !== c.name.toLowerCase() ? ' · ' + c.full : '')) + '</span>' : '') + '</div>';   // v11.10 Fix 6: the step is said once, on the card
+  }
+  var V11 = {
+    newprod: function (r, d) {
+      var h = moneyLines(d.lines) + factsOf([['Best', d.best], ['Runner-up', d.runner_up || '–'], ['Min qty', d.moq], ['Case', d.case_cost || d.case_size]]) +
+        (d.gap ? '<p class="what">' + esc(d.gap) + '</p>' : '') + (d.sell_basis ? '<p class="hint">Sell price: ' + esc(d.sell_basis) + '</p>' : '') +
+        '<label class="qty">How many to order? <input class="num" inputmode="numeric" data-note="' + esc(r.key) + '" placeholder="' + esc(d.moq || 1) + '" aria-label="How many to order"></label>';
+      return { h: h, acts: [ansBtn(r, 'Yes', 'Add to order list', true), ansBtn(r, 'No', 'Not this one')] };
+    },
+    receipt: function (r, d) {
+      var h = '<div class="card inner">' + (d.lines || []).map(function (l) { return '<div class="row"><div class="txt">' + esc(l.title || l.code) + '<div class="why' + (l.sku ? '' : ' red') + '">' + esc([l.qty ? l.qty + ' × ' + (l.unit_cost ? '£' + l.unit_cost : '?') : '', l.sku ? l.sku : 'not matched to a product'].filter(Boolean).join(' · ')) + '</div></div></div>'; }).join('') + '</div>';
+      return { h: h, acts: [linkBtn(d.file_url, 'Open receipt'), ansBtn(r, 'Yes', 'Add to stock', true), ansBtn(r, 'No', 'Not now')] };
+    },
+    supplier: function (r, d) {
+      if (d.kind === 'terms') return { h: '<ul class="asks">' + (d.asks || []).map(function (q) { return '<li>' + esc(q.ask) + '</li>'; }).join('') + '</ul>' + noteBox(r, d.example || 'min 100, free over 300, delivery 15', 'Terms') + '<p class="hint">Type what you know, in any order. Leave out what you do not know.</p>', acts: [ansBtn(r, 'Set', 'Save', true)] };
+      if (d.kind === 'terms_check') return { h: factsOf([['Min order', d.terms && d.terms.min_order], ['Free from', d.terms && d.terms.free_over], ['Delivery', d.terms && d.terms.delivery]]) + noteBox(r, 'only if changed: min 100, free over 300', 'Changes'), acts: [ansBtn(r, 'Yes', 'Still right', true), ansBtn(r, 'Set', 'Save changes')] };
+      if (d.kind === 'link') return { h: d.subject ? '<p class="hint">Email: ' + esc(d.subject) + '</p>' : '', acts: [linkBtn(d.url, 'Open the link', true), linkBtn(d.folder, 'Open 6 TRADE'), ansBtn(r, 'Done', 'Dropped it in')] };
+      return { h: '', acts: [linkBtn(d.file_url, 'Open file'), ansBtn(r, 'OK', 'OK', true)] };
+    },
+    learn: function (r, d) {
+      var h = (d.titles && d.titles.length ? '<p class="hint">Sold: ' + esc(d.titles.join(' · ')) + '</p>' : '');
+      if (d.kind === 'found') return { h: h + factsOf([['Trade email', d.trade_email], ['Phone', d.trade_phone], ['Min order', d.min_order]]) + ((d.wholesalers || []).length ? '<p class="what">Wholesalers: ' + esc(d.wholesalers.map(function (w) { return w.name; }).join(', ')) + '</p>' : ''),
+        acts: [mailBtn(d.ask && d.ask.mailto, 'Write the email'), linkBtn(d.trade_page, 'Trade page'), ansBtn(r, 'Ask', 'Sent it', true), ansBtn(r, 'No', 'Not now')] };
+      if (d.kind === 'on_list') return { h: h, acts: [ansBtn(r, 'Use', 'Use that', true), ansBtn(r, 'No', 'Not now')] };
+      return { h: h + '<p class="hint">Find: the AI looks up their trade contact (a card for you if AI is off). Ask: write to them yourself.</p>', acts: [ansBtn(r, 'Find', 'Find a supplier', true), mailBtn(d.ask && d.ask.mailto, 'Write the email'), ansBtn(r, 'No', 'Not this one')] };
+    },
+    job: function (r, d) { return { h: String(d.file_ids || '').split(',').filter(Boolean).map(function (id) { return /^[\w-]{20,}$/.test(id) ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(id) + '/view" target="_blank" rel="noopener">Open file</a>' : ''; }).join('') + noteBox(r, 'What it says (optional)', 'What it says'), acts: [ansBtn(r, 'Done', 'Done', true)] }; },
+    offer: function (r, d) {
+      var boxes = '<label class="qty">% off (at least 5) <input class="num" inputmode="numeric" data-note="' + esc(r.key) + '" placeholder="' + esc(d.pct) + '" aria-label="Percent off"></label>' +
+        '<label class="qty">Min profit (£ or %) <input class="num" type="text" data-min="' + esc(r.key) + '" placeholder="' + esc(d.min_profit || '£3') + '" aria-label="Least profit to keep, pounds or percent of the price"></label>';
+      if (d.kind === 'terms') return { h: factsOf([['Price', d.price], ['Watchers', 'yes']]) + boxes + '<p class="hint">Agree once: offers then go automatically for this item.</p>',
+        acts: [linkBtn(d.url, 'Open on eBay'), ansBtn(r, 'Always', 'Agree: automatic', true), ansBtn(r, 'Never', 'Never offer'), ansBtn(r, 'No', 'Not now')] };
+      var h = factsOf([['Price', d.price], ['After ' + d.pct + '% off', d.after], ['Profit left', d.profit_left || '–']]) + (d.rule ? '<p class="hint">' + esc(d.rule) + '</p>' : '') + boxes;
+      return { h: h, acts: [linkBtn(d.url, 'Open on eBay'), ansBtn(r, 'Send', 'Send offer', true), ansBtn(r, 'Always', 'Send + always for this item'), ansBtn(r, 'Never', 'Never offer'), ansBtn(r, 'No', 'Not now')] };
+    },
+    // Engine v11.9: What did it cost? One card per product code (or per sale with no code). £ box + Save / Own item (£0) / Don't know.
+    // v11.10 (Fix 3): one question at a time. 1) Who did you buy it from? (last supplier picked already; or add a new one) 2) Cost of one.
+    cost: function (r, d) {
+      var h = factsOf([['Sold', d.times_sold ? d.times_sold + (d.times_sold > 1 ? ' times' : ' time') : 'not yet'], ['Last sold at', d.last_price || '–'], ['Listed at', d.price || '–']]);
+      var names = d.suppliers || [], pick = costPick[r.key] !== undefined ? costPick[r.key] : (d.last_supplier || null), stay = [linkBtn(d.url, 'Open on ' + (d.platform || 'the site')), d.restock ? '' : ansBtn(r, 'Own', d.declutter ? '£0 declutter' : 'Own item (£0)'), ansBtn(r, 'Unknown', 'Don\'t know')];   // v11.11 C: restock items are never £0
+      if (d.restock) h += '<p class="hint">Bought to resell: type what you paid. It cannot be £0.</p>'; else if (d.declutter) h += '<p class="hint">Marked as your own item: one tap for £0.</p>';
+      if (d.cheapest) h += '<p class="what">Cheapest to restock: ' + esc(d.cheapest) + '</p>';
+      if ((d.product_suppliers || []).length > 1) h += '<p class="hint">Bought from: ' + esc(d.product_suppliers.map(function (x) { return x.supplier + ' ' + (x.currency && x.currency !== 'GBP' ? x.currency + ' ' : '£') + x.cost; }).join(' · ')) + '</p>';
+      if (d.suppliers === undefined) return { h: h + '<label class="qty">Cost of one £ <input class="num" inputmode="decimal" data-note="' + esc(r.key) + '" placeholder="4.50" aria-label="What you paid for one, in pounds"></label>', acts: [ansBtn(r, 'Save', 'Save', true)].concat(stay) };   // a card from engine v11.9
+      if (!pick || pick === '+new') {                                                       // step 1
+        h += '<p class="what"><b>Who did you buy it from?</b></p><div class="acts">' + names.map(function (n) { return '<button class="btn big" type="button" data-costsup="' + esc(r.key) + '" data-v="' + esc(n) + '">' + esc(n) + '</button>'; }).join('') +
+          '<button class="btn big" type="button" data-costsup="' + esc(r.key) + '" data-v="+new">+ Add new supplier</button></div>';
+        if (pick === '+new') h += '<input class="txtin" type="text" maxlength="60" data-costnew="' + esc(r.key) + '" placeholder="Supplier name" aria-label="New supplier name"><button class="btn main" type="button" data-costnewok="' + esc(r.key) + '">Use this supplier</button>';
+        return { h: h, acts: stay };
+      }
+      var same = pick === d.last_supplier;                                                  // step 2
+      h += '<p class="what">Bought from <b>' + esc(pick) + '</b> <button class="btn" type="button" data-costsup="' + esc(r.key) + '" data-v="">Change</button></p>' +
+        '<label class="qty">Cost of one <input class="num" inputmode="decimal" data-note="' + esc(r.key) + '" placeholder="4.50" value="' + esc(same ? d.last_cost || '' : '') + '" aria-label="What you paid for one"></label>' +
+        '<details><summary>More (optional): their code, link, currency</summary>' +
+        '<input class="txtin" type="text" maxlength="60" data-costcode="' + esc(r.key) + '" value="' + esc(same ? d.last_code || '' : '') + '" placeholder="Their product code (SKU)" aria-label="Supplier product code">' +
+        '<input class="txtin" type="url" data-costlink="' + esc(r.key) + '" value="' + esc(same ? d.last_url || '' : '') + '" placeholder="Their product link https://..." aria-label="Supplier product link">' +
+        '<label class="qty">Currency <select data-costcur="' + esc(r.key) + '" aria-label="Currency"><option>GBP</option><option>USD</option><option>EUR</option></select></label></details>';
+      return { h: h, acts: [ansBtn(r, 'Save', 'Save', true)].concat(stay) };
+    },
+    vat: function (r, d) { return { h: '<p class="verdict wait">' + esc(d.line) + '</p>', acts: [ansBtn(r, 'OK', 'Told my accountant', true)] }; }
+  };
+  // v11.10 (Fix 4, Lisa 31 Oct: "potential new suppliers and items needs new section ... folded by supplier and linked to minimum order
+  // for free postage so all grouped and an order all together can be created and agreed"). One folded group per supplier: free-postage
+  // minimum, basket so far, still to add, expected profit. Each item: qty (Min qty first) and a tick. "Agree this order" = ONE DRAFT row
+  // in the Order list. Nothing is bought, emailed or sent: Lisa orders it herself.
+  function npGroups() {
+    var g = {}, order = [];
+    waiting('newprod').forEach(function (r) { var d = detail(r), s = d.supplier || 'Supplier not known'; if (!g[s]) { g[s] = { supplier: s, rows: [], terms: d.terms || {} }; order.push(s); } g[s].rows.push(r); });
+    return order.map(function (s) { return g[s]; }).sort(function (a, b) { return b.rows.length - a.rows.length || a.supplier.localeCompare(b.supplier); });
+  }
+  function npQty(r) { var st = npState[r.key] || {}, d = detail(r), q = st.q !== undefined ? st.q : (d.moq || 1); q = parseInt(q, 10); return q >= 1 ? q : 0; }
+  function npOn(r) { return !(npState[r.key] || {}).off; }
+  function npMoney(p) { return '£' + (p / 100).toFixed(2); }
+  function npTotals(grp) {
+    var ex = 0, inc = 0, prof = 0, n = 0; grp.rows.forEach(function (r) { if (!npOn(r)) return; var d = detail(r), q = npQty(r); if (!q) return; n++; ex += (Number(d.unit_ex_p) || 0) * q; inc += (Number(d.unit_inc_p) || 0) * q; prof += (Number(d.profit_p) || 0) * q; });
+    var free = Math.round(parseFloat(grp.terms.free_over) * 100), min = Math.round(parseFloat(grp.terms.min_order) * 100);
+    return { n: n, ex: ex, inc: inc, prof: prof, free: free > 0 ? free : null, min: min > 0 ? min : null, toFree: free > 0 ? Math.max(0, free - ex) : null, toMin: min > 0 ? Math.max(0, min - ex) : null };
+  }
+  function npLine(grp) { var t = npTotals(grp);
+    return grp.rows.length + ' item' + (grp.rows.length > 1 ? 's' : '') + ' · basket ' + npMoney(t.ex) + ' ex VAT' +
+      (t.toMin ? ' · ' + npMoney(t.toMin) + ' to the minimum' : '') + (t.free === null ? ' · free postage: not known yet' : t.toFree ? ' · ' + npMoney(t.toFree) + ' to free postage' : ' · free postage reached') +
+      ' · profit ' + npMoney(t.prof); }
+  function npSums(sup) { var grp = npGroups().filter(function (x) { return x.supplier === sup; })[0]; if (!grp) return; var el = document.querySelector('[data-npline="' + cssKey(sup) + '"]'); if (el) el.textContent = npLine(grp); }
+  function cssKey(s) { return String(s).replace(/[^A-Za-z0-9]/g, '_'); }
+  function pageNewStock() {
+    var groups = npGroups(), total = waiting('newprod').length;
+    var h = '<p class="needs">New stock: ' + total + '</p><p class="hint">New items worth stocking, folded by supplier. Tick what you want, set how many, then Agree this order. That makes a DRAFT order for you to buy yourself: nothing is bought or sent.</p>' + siteChips();
+    if (!groups.length) return h + emptyCard('No new stock ideas', 'New items from supplier price lists show here.');
+    groups.forEach(function (grp) { var lead = grp.rows[0], tm = grp.terms || {};
+      h += '<details class="card npgroup"><summary><span><b>' + esc(grp.supplier) + '</b><br><span class="hint" data-npline="' + esc(cssKey(grp.supplier)) + '">' + esc(npLine(grp)) + '</span></span></summary>';
+      h += factsOf([['Free postage from', tm.free_over ? '£' + tm.free_over : 'not known yet'], ['Min order', tm.min_order ? '£' + tm.min_order : ''], ['Delivery', tm.delivery ? '£' + tm.delivery : ''], ['Case', tm.case_rule]]);
+      if (!tm.free_over || !tm.min_order) h += '<span class="opbox"><input class="txtin" type="text" data-nptermsin="' + esc(lead.key) + '" placeholder="free over 150, min 100" aria-label="Free postage and minimum order for ' + esc(grp.supplier) + '"><button class="btn" type="button" data-npterms="' + esc(lead.key) + '">Save terms</button></span>';
+      grp.rows.forEach(function (r) { var d = detail(r);
+        h += '<div class="row"><label class="qty"><input type="checkbox" data-npinc="' + esc(r.key) + '" data-npsup="' + esc(grp.supplier) + '"' + (npOn(r) ? ' checked' : '') + ' aria-label="Include ' + esc(r.title) + '"> </label>' +
+          '<div class="txt">' + esc(r.title) + '<div class="why">' + esc([d.unit_inc_p ? npMoney(d.unit_inc_p) + ' inc VAT each' : d.best, d.profit_p ? 'profit ' + npMoney(d.profit_p) + ' each' : '', d.sell ? 'sells ' + d.sell : '', d.moq ? 'min qty ' + d.moq : '', d.case_size ? 'case of ' + d.case_size : ''].filter(Boolean).join(' · ')) + '</div></div>' +
+          '<input class="num" inputmode="numeric" data-npq="' + esc(r.key) + '" data-npsup="' + esc(grp.supplier) + '" value="' + esc(npQty(r) || '') + '" aria-label="How many ' + esc(r.title) + '"></div>' +
+          ((d.lines || []).length ? '<details class="nplines"><summary>Profit both VAT ways</summary><ul class="money">' + d.lines.map(function (l) { return '<li' + (/^▶/.test(l) ? ' class="head"' : /^⚠/.test(l) ? ' class="red"' : '') + '>' + esc(l) + '</li>'; }).join('') + '</ul>' + factsOf([['Best', d.best], ['Runner-up', d.runner_up]]) + '</details>' : ''); });
+      h += '<button class="btn main yes big" type="button" data-nporder="' + esc(grp.supplier) + '">Agree this order</button></details>'; });
+    return h;
+  }
+  function npOrder(sup, btn) {
+    var grp = npGroups().filter(function (x) { return x.supplier === sup; })[0]; if (!grp) return;
+    var picked = grp.rows.filter(function (r) { return npOn(r) && npQty(r) > 0; }); if (!picked.length) return banner('Tick at least one item and give it a number.');
+    var t = npTotals(grp);
+    if (!window.confirm('Make a DRAFT order for ' + sup + '?\n' + picked.length + ' item' + (picked.length > 1 ? 's' : '') + ', ' + npMoney(t.ex) + ' ex VAT (' + npMoney(t.inc) + ' inc VAT), profit ' + npMoney(t.prof) + '.\nNothing is bought or sent: you order it yourself.')) return;
+    btn.disabled = true; btn.textContent = 'Saving…';
+    var lead = picked[0], note = 'items=' + picked.map(function (r) { return r.key + '*' + npQty(r); }).join(',');
+    picked.slice(1).reduce(function (p, r) { return p.then(function () { return answer(r, 'InOrder', 'lead=' + lead.key); }); }, Promise.resolve())
+      .then(function () { return answer(lead, 'Order', note); });
+  }
+  // Suppliers: one card per supplier. Account number copies, phone calls, terms, what is on the order list and the gap.
+  function pageSuppliers() {
+    var list = rows.filter(function (r) { return r.section === 'suppliers' && !r.applied_at; }).sort(function (a, b) { return a.title.localeCompare(b.title); });
+    var h = '<p class="needs">Suppliers</p><p class="hint">Tap the account number to copy it, the phone to call. Change terms with Settings.</p>';
+    if (!list.length) return h + '<div class="card"><p class="what">Suppliers appear after engine v11 is pasted and set up.</p></div>';
+    list.forEach(function (r) { var d = detail(r);
+      h += '<div class="card' + (d.missing && d.missing.length ? ' acc2' : '') + '"><h2>' + esc(r.title) + '</h2>' +
+        '<div class="acts">' + (d.account_no ? '<button class="btn" type="button" data-copycode="' + esc(d.account_no) + '">Account ' + esc(d.account_no) + '</button>' : '') +
+        (/^[+\d ()-]{7,}$/.test(d.phone || '') ? '<a class="btn" href="tel:' + esc(String(d.phone).replace(/[^+\d]/g, '')) + '">Call ' + esc(d.phone) + '</a>' : '') +
+        (/^[^@\s]+@[^@\s]+$/.test(d.order_email || '') ? '<a class="btn" href="mailto:' + esc(d.order_email) + '">Email orders</a>' : '') + linkBtn(d.website, 'Website') + '</div>' +
+        factsOf([['Min order', d.min_order ? '£' + d.min_order : ''], ['Free from', d.free_over ? '£' + d.free_over : ''], ['Delivery', d.delivery ? '£' + d.delivery : ''], ['Case', d.case_rule], ['Pay', d.payment], ['Lead', d.lead_days ? d.lead_days + ' days' : '']]) +
+        '<p class="what">' + esc([d.prices ? d.prices + ' prices · list ' + d.list_date : 'No price list yet', d.rep ? 'rep ' + d.rep : '', d.mode, d.dext ? 'Dext ' + d.dext : '', d.checked_at ? 'checked ' + d.checked_at : ''].filter(Boolean).join(' · ')) + '</p>' +
+        (d.stale ? '<p class="verdict wait">Price list is over 60 days old: prices may have changed.</p>' : '') +
+        ((d.order || []).length ? '<p class="grp">Order list · ' + esc(d.basket) + '</p><div class="card inner">' + d.order.map(function (o) { return '<div class="row"><div class="txt">' + esc(o.title || o.code) + '</div><div>' + esc(o.qty) + '</div></div>'; }).join('') + '</div>' + (d.gap ? '<p class="what">' + esc(d.gap) + '</p>' : '') : '') +
+        ((d.missing || []).length ? '<p class="what red">Missing: ' + esc(d.missing.join(' · ')) + '</p>' : '');
+      if (r.answer) { h += '<div class="sent">✓ ' + esc(r.answer) + ' · saved, the engine applies it after 10 minutes</div></div>'; return; }
+      h += '<details><summary>Settings</summary>' + noteBox(r, 'min 100, free over 300, delivery 15, account AB123, phone 01632 960123, order email on their website', 'Supplier terms') +
+        '<button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Set">Save</button></details></div>';
+    });
+    return h;
+  }
+
+  // Price line on restock and stock cards: last price, Lisa's buy-at price, the last Temu price seen, and buy now / wait.
+  function priceLine(d) {
+    var verdict = d.buy_now === true ? (d.buy_at ? 'Buy now: at or below your ' + d.buy_at : '') : d.buy_now === false ? 'Wait: ' + d.price_now + ' is above your ' + d.buy_at : d.buy_at ? 'Price not seen yet' : '';
+    var bits = [d.last_cost ? 'last paid ' + d.last_cost : '', d.buy_at ? 'buy at ' + d.buy_at : '', d.price_now ? 'Temu now ' + d.price_now + (d.price_seen_at ? ' (' + d.price_seen_at + ')' : '') : ''].filter(Boolean);
+    return (bits.length ? '<p class="what">' + esc(bits.join(' · ')) + '</p>' : '') + (verdict ? '<p class="verdict ' + (d.buy_now === true ? 'go' : 'wait') + '">' + esc(verdict) + '</p>' : '');
+  }
+  // A number box with one button per action ("Count 4", "Ordered 6", "Arrived 6"): one answer on that code's row.
+  function opBox(key, ops, hint) {
+    return '<span class="opbox"><input class="num" inputmode="numeric" aria-label="How many" placeholder="' + esc(hint || '') + '" data-opin="' + esc(key) + '">' +
+      ops.map(function (o) { return '<button class="btn" type="button" data-op="' + o + '" data-opkey="' + esc(key) + '">' + o + '</button>'; }).join('') + '</span>';
+  }
+  // Stock: one row per product code. Search, and chips for Low / No count. Count, Ordered, Arrived and settings write one answer each.
+  // "Made of": the parts one sale uses (a watch + its case). Pick a code from the list, or add a new part with its count.
+  function madeOf(r, d) {
+    var parts = d.made_of ? d.made_of.split('+').map(function (p) { return p.trim(); }) : [];
+    var now = parts.length ? parts.map(function (p) { var c = p.split(/\s+x/i)[0], t = codeTitle[c]; return esc(c + (t ? ' ' + t.slice(0, 50) : '')) + (/\sx\d+$/i.test(p) ? ' ' + esc(p.match(/x\d+$/i)[0]) : ''); }).join('<br>') : 'Just itself (1 of ' + esc(d.item_sku) + ')';
+    return '<details class="madeof"><summary>Made of' + (parts.length ? ' (' + parts.length + ' parts)' : '') + '</summary><p class="hint">' + now + '</p>' +
+      '<label class="qty">Add a part <input class="txtin" type="text" list="stockcodes" data-partpick="' + esc(r.key) + '" placeholder="Type a code or name" aria-label="Part code"></label>' +
+      '<button class="btn" type="button" data-partadd="' + esc(r.key) + '" data-base="' + esc(d.made_of || d.item_sku) + '">Add part</button>' +
+      '<label class="qty">Or a new part <input class="txtin" type="text" data-newpart="' + esc(r.key) + '" placeholder="green watch case" aria-label="New part name"> <input class="txtin" type="number" min="0" inputmode="numeric" data-newqty="' + esc(r.key) + '" placeholder="how many" aria-label="How many of the new part"></label>' +
+      '<button class="btn" type="button" data-partnew="' + esc(r.key) + '">Add new part</button>' + (parts.length ? '<button class="btn" type="button" data-partclear="' + esc(r.key) + '">Just itself</button>' : '') + '</details>';
+  }
+  var codeTitle = {};
+  function pageStock() {
+    var list = byCat(rows.filter(function (r) { return r.section === 'stock' && !r.applied_at && shown(r); }));
+    var low = list.filter(function (r) { return detail(r).low; }).length, unknown = list.filter(function (r) { return detail(r).unknown; }).length;
+    var h = '<p class="needs">Stock</p><p class="hint">What you have, what is on order, and when to buy. Counts change only your stock list until you go live.</p>';
+    if (!list.length) return h + '<div class="card"><p class="what">The stock list appears after the engine update is pasted and set up.</p></div>';
+    h += '<input class="txtin" type="search" placeholder="Find an item or code" aria-label="Find an item or code" data-find>';
+    codeTitle = {}; list.forEach(function (r) { codeTitle[detail(r).item_sku] = r.title; });   // one shared list for every "Add a part" box
+    h += '<datalist id="stockcodes">' + list.map(function (r) { var c = detail(r).item_sku; return '<option value="' + esc(c) + '">' + esc(r.title.slice(0, 60)) + '</option>'; }).join('') + '</datalist>';
+    h += '<div class="chips house-filters" id="stockf" role="group" aria-label="Show">' + [['all', 'All ' + list.length], ['low', 'Low ' + low], ['unknown', 'No count ' + unknown]].map(function (c) {
+      return '<button class="chip" type="button" data-sfilter="' + c[0] + '" aria-pressed="' + (stockFilter === c[0]) + '">' + c[1] + '</button>'; }).join('') + '</div>';
+    list.filter(function (r) { var d = detail(r); return stockFilter === 'all' || (stockFilter === 'low' && d.low) || (stockFilter === 'unknown' && d.unknown); }).forEach(function (r) {
+      var d = detail(r);
+      h += '<div class="card stockrow' + (d.low ? ' acc2' : '') + '" data-text="' + esc((r.title + ' ' + d.item_sku + ' ' + (d.shelf || '')).toLowerCase()) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' +
+        '<div class="m">' + esc([d.item_sku, d.shelf ? 'shelf ' + d.shelf : '', d.owner && d.owner !== 'Lisa' ? d.owner : '', d.listings + (d.listings === 1 ? ' listing' : ' listings')].filter(Boolean).join(' · ')) + '</div></div></div>' +
+        '<div class="facts"><div class="fact"><span class="k">Have</span><span class="v' + (d.unknown ? ' red' : '') + '">' + (d.unknown ? '?' : esc(d.have)) + '</span></div><div class="fact"><span class="k">On order</span><span class="v">' + esc(d.on_order || 0) + '</span></div><div class="fact"><span class="k">Min</span><span class="v">' + (d.min === '' ? '–' : esc(d.min)) + '</span></div></div>' +
+        priceLine(d);
+      if (r.answer) { h += '<div class="sent">✓ ' + esc(r.answer) + ' · saved, the engine applies it after 10 minutes</div></div>'; return; }
+      var supName = d.supplier || 'the supplier';
+      h += '<div class="acts">' + opBox(r.key, ['Count', 'Ordered', 'Arrived']) + '</div>' +
+        // Where to buy more: always on the card (Lisa 27 Oct: "how do you know where the item comes from if I replenish it?")
+        '<div class="buyfrom"><span class="k">Buy more from</span> ' + (d.url ? '<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener">Open on ' + esc(supName) + '</a>'
+          : '<span class="red">not set yet</span><span class="opbox"><input class="txtin" type="url" data-supin="' + esc(r.key) + '" placeholder="Paste the supplier\'s product link" aria-label="Supplier link"><button class="btn" type="button" data-sup="' + esc(r.key) + '">Save link</button></span>') + '</div>' +
+        madeOf(r, d) +
+        '<details><summary>Settings</summary><input class="txtin" type="text" data-setin="' + esc(r.key) + '" placeholder="min 2, reorder 6, buy at 1.20, shelf B2, link https://..." aria-label="Settings">' +
+        '<button class="btn" type="button" data-set="' + esc(r.key) + '">Save settings</button><p class="hint">Now: ' + esc(['min ' + (d.min === '' ? 'not set' : d.min), 'reorder ' + (d.reorder || 'not set'), 'buy at ' + (d.buy_at || 'not set'), d.url ? supName + ' link set' : 'no supplier link'].join(' · ')) + '</p></details></div>';
+    });
+    return h;
+  }
+  // Temu order list: what to buy, best first (price at or below your buy-at price), with the exact link; coupons; claims.
+  function pageTemu() {
+    var buys = rows.filter(function (r) { return r.section === 'restock' && !r.applied_at && shown(r); });
+    var rank = function (r) { var b = detail(r).buy_now; return b === true ? 0 : b === 'unknown' ? 1 : 2; };
+    buys.sort(function (a, b) { return rank(a) - rank(b) || a.title.localeCompare(b.title); });
+    var total = buys.reduce(function (n, r) { var d = detail(r), c = parseFloat(String(d.price_now || d.last_cost || '').replace(/[^\d.]/g, '')); return n + (isNaN(c) || !d.buy ? 0 : c * d.buy); }, 0);
+    var h = '<p class="needs">Temu order list: ' + buys.length + '</p><p class="hint">Temu cannot take orders from the system: tap Open on Temu, buy, then type how many and tap Ordered. Tap Arrived when it lands.</p>';
+    if (total) h += '<p class="what">About £' + total.toFixed(2) + ' for everything below (last prices).</p>';
+    h += buys.length ? buys.map(function (r) { return itemCard(r); }).join('') : emptyCard('Nothing to buy', 'Items appear here when they reach their minimum.');
+    var cps = rows.filter(function (r) { return r.section === 'temu' && !r.applied_at && !r.answer && detail(r).kind === 'coupon'; });
+    if (cps.length) h += '<p class="grp">Coupons and offers · ' + cps.length + '</p>' + cps.map(function (r) { return itemCard(r); }).join('');
+    var cl = rows.filter(function (r) { return r.section === 'temu' && !r.applied_at && detail(r).kind !== 'coupon'; });
+    if (cl.length) h += '<p class="grp">Price drops to claim · ' + cl.length + '</p>' + cl.map(function (r) { return itemCard(r); }).join('');
+    return h;
+  }
+  /* ---------- screens ---------- */
+  function siteChips() {
+    var have = []; rows.forEach(function (r) { var s = siteOf(r); if (s && have.indexOf(s) < 0) have.push(s); });
+    if (have.length < 2) return '';
+    return '<div class="chips house-filters" id="sitef" role="group" aria-label="Which site">' + ['All'].concat(have.sort()).map(function (s) {
+      return '<button class="chip" type="button" data-site="' + esc(s) + '" aria-pressed="' + (site === s) + '">' + esc(s) + '</button>'; }).join('') + '</div>';   // on a phone it opens from the one Filter button in the header
+  }
+  // Orders at a glance (Lisa 27 Oct: "where am I supposed to know there was an order?"), for the person picked above (All = everyone).
+  // Counted from the parcel cards: one card per order. Money shows once the engine puts the sale price on the card.
+  function ordersStrip() {
+    var po = rows.filter(function (r) { return r.section === 'post' && detail(r).kind !== 'which_parcel' && shown(r); });
+    var day = function (r) { return String(detail(r).sold_at || r.created_at || '').slice(0, 10); }, today = new Date().toISOString().slice(0, 10);
+    var wk = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10);
+    var nToday = po.filter(function (r) { return day(r) === today; }), nWeek = po.filter(function (r) { return day(r) >= wk; });
+    var open = po.filter(function (r) { return !r.applied_at; }), late = open.filter(function (r) { return detail(r).red; });
+    var money = nWeek.reduce(function (t, r) { var v = parseFloat(String(detail(r).price || '').replace(/[^\d.]/g, '')); return isNaN(v) ? t : t + v; }, 0);
+    var latest = po.slice().sort(function (a, b) { return day(b).localeCompare(day(a)); })[0];
+    return '<p class="grp">Orders' + (who === 'All' ? '' : ' · ' + esc(who)) + '</p><div class="tiles three">' +
+      '<a class="tile big" href="#/do"><span class="v">' + nToday.length + '</span><span class="k">New today</span></a>' +
+      '<a class="tile big" href="#/do"><span class="v">' + nWeek.length + '</span><span class="k">Last 7 days' + (money ? ' · £' + money.toFixed(2) : '') + '</span></a>' +
+      '<a class="tile big" href="#/do"><span class="v' + (late.length ? ' red' : '') + '">' + open.length + '</span><span class="k">To post' + (late.length ? ' · ' + late.length + ' late' : '') + '</span></a></div>' +
+      (latest ? '<p class="hint">Latest: <a href="#/do">' + esc(latest.title.slice(0, 60)) + '</a> · ' + esc(siteOf(latest) || detail(latest).platform || '') + ' · ' + esc(ukDay(day(latest))) + '</p>' : '');
+  }
+  // Home: what to post, late ones first then by post-by date, at most 7 calm rows, one button that starts packing.
+  function toPost(skip) {
+    var all = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; }), list = all.filter(function (r) { return !skip || r.key !== skip.key; });
+    if (!list.length) return all.length ? '<p class="hint">To post: ' + all.length + ' (the Next card above).</p>' : '';
+    if (!list.length) return '';
+    var key = function (r) { var d = detail(r); return dueOf(d) === 'late' ? '0' : String(d.post_by || '9').slice(0, 10); };
+    var top = list.slice().sort(function (a, b) { return key(a).localeCompare(key(b)); }).slice(0, 7);
+    return ghead('To post', list.length, true) + '<div class="plist">' + top.map(function (r) { var d = detail(r);
+      return '<div class="prow">' + thumb(d.photo, r.category) + '<div class="pt"><span class="ttl">' + esc(r.title) + '</span>' + datePill(d) + '</div></div>'; }).join('') +
+      (list.length > top.length ? '<p class="hint">And ' + (list.length - top.length) + ' more in Do now.</p>' : '') +
+      '<div class="acts"><a class="btn" href="#/do?pack" data-gopack>Start packing (' + all.length + ')</a></div></div>';
+  }
+  function pageMe() {
+    var n = needsCount(), h = '<p class="needs">Needs you: ' + (n ? n : '<span class="zero">0</span>') + '</p>';
+    h += '<div class="tiles three needs3">' + [['do', 'Do now'], ['decide', 'Decide'], ['reply', 'Reply']].map(function (t) {
+      var n = tabCount(t[0]); return '<a class="tile big" href="#/' + t[0] + '"><span class="v' + (n ? ' need' : '') + '">' + n + '</span><span class="k">' + t[1] + '</span></a>'; }).join('') + '</div>';
+    var first = null; ORDER.some(function (s) { if (SECTIONS[s].quiet) return false; var w = byCat(waiting(s)); if (w.length) { first = w[0]; return true; } return false; });
+    if (first) h += itemCard(first, { head: true, next: true }); else h += emptyCard('Nothing needs you', 'The engine is watching. New jobs show here when they come in.');
+    h += toPost(first && first.section === 'post' ? first : null) + ordersStrip();
+    var just = rows.filter(function (r) { return r.answer && !r.applied_at && Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
+    if (just.length) h += '<p class="grp">Just done</p>' + just.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '</div>' + sentLine(r) + '</div>'; }).join('');
+    h += growthHome();
+    h += '<p class="hint"><i class="ti ti-camera"></i> New item? Put photos in <b>DROP › ' + esc(who === 'All' ? 'Lisa' : who) + ' › NEW to list</b>.</p>';
+    return h + engineLine();
+  }
+  // A tab: its sections one after another. Do now and Reply show every job; Decide shows one question at a time.
+  function pageTab(t) {
+    var names = { do: 'Do now', decide: 'Decide', reply: 'Reply' }, intro = { do: 'Jobs with your hands. Remove first, then post in shelf order.', decide: 'One question at a time. Undo for 10 minutes.', reply: 'Buyers who wrote. Reply on the site, then tap Done.' };
+    var h = '<p class="needs">' + names[t] + ': ' + tabCount(t) + '</p><p class="hint">' + intro[t] + '</p>' + siteChips();
+    if (t === 'do') { var p = posts().filter(function (r) { return !r.answer; }).length;
+      if (p > 1) h += '<div class="acts"><button class="btn main" type="button" data-action="pack">Start packing (' + p + ')</button><button class="btn" type="button" data-action="sheet">Label sheet (' + p + ')</button></div>'; }
+    // Answered cards leave the list at once (Lisa 27 Oct: "once decided then still at top of list"); they wait in "Just done" at the
+    // bottom while Undo is possible, then disappear. Found parcels stay: they still need posting.
+    var list = [], done = []; TABS[t].forEach(function (s) { byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); })).forEach(function (r) {
+      if (!r.answer || (r.section === 'post' && r.answer === 'Found')) list.push(r); else if (Date.now() < Date.parse(r.answered_at) + UNDO_MS) done.push(r); }); });
+    var tail = done.length ? '<details class="justdone"><summary>Just done · ' + done.length + ' (Undo for 10 minutes)</summary>' + done.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '<div class="why">' + esc(r.answer) + '</div></div>' + sentLine(r) + '</div>'; }).join('') + '</details>' : '';
+    var EMPTY = { do: ['Nothing waiting', 'Sales to post and items to take off other sites show here.'], decide: ['All decided', 'New questions show here.'], reply: ['No one is waiting for a reply', 'Buyer messages show here.'] };
+    if (!list.length) return h + emptyCard(EMPTY[t][0], EMPTY[t][1]) + tail;
+    var one = t === 'decide' && !showAll, sec = null;
+    (one ? list.slice(0, 1) : list).forEach(function (r) { if (r.section !== sec) { sec = r.section; h += ghead(SECTIONS[sec].name, list.filter(function (x) { return x.section === sec; }).length, !SECTIONS[sec].quiet); } h += itemCard(r); });
+    if (t === 'decide' && list.length > 1) h += '<button class="more" type="button" data-action="all">' + (showAll ? 'Show one at a time' : '1 of ' + list.length + ' · show all') + '</button>';
+    return h + tail;
+  }
+  // Packing mode: one parcel at a time in shelf order. Found → the drop-off code shows once the engine has it → Posted.
+  function pagePack() {
+    var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found' || Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
+    if (!list.length) { return '<p class="needs">Packing</p>' + emptyCard('All packed', 'Nothing left to post.', '<button class="btn main big" type="button" data-action="stoppack">Back to Do now</button>'); }
+    var i = Math.min(pack.i, list.length - 1), r = list[i], d = detail(r);
+    var h = '<div class="packbar"><span>Packing · ' + (i + 1) + ' of ' + list.length + '</span><button class="btn" type="button" data-action="stoppack">Stop</button></div>';
+    h += '<div class="card acc4">' + courierBand(r, d) + '<div class="item">' + thumb(d.photo, r.category) + '<div class="t"><span class="parcel">#' + esc(r._no) + '</span><div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([owner(r), d.platform ? 'sold on ' + d.platform : ''].filter(Boolean).join(' · ')) + '</div>' + orderLine(r, d) + '<p class="what"><b>Next: ' + esc(nextStep(d)) + '</b></p></div></div>';
+    h += '<div class="facts"><div class="fact"><span class="k">Shelf</span><span class="v">' + esc(d.shelf || '?') + '</span></div><div class="fact"><span class="k">Courier</span><span class="v">' + esc(d.courier || '?') + '</span></div><div class="fact"><span class="k">Post by</span><span class="v' + (d.red ? ' red' : '') + '">' + esc(d.post_by || '?') + '</span></div></div>';
+    if (d.found && d.qr) h += '<div class="dropcode"><span class="hint">Write #' + esc(r._no) + ' on the parcel. Drop-off code:</span><span class="code">' + esc(d.qr) + '</span></div>';
+    if (r.answer) h += sentLine(r);
+    else if (!d.found) h += '<button class="btn main big" type="button" data-ans="' + esc(r.key) + '" data-v="Found">Found it</button>';
+    else { if (d.qr) h += '<button class="btn" type="button" data-qr="' + esc(r.key) + '">Show QR</button>'; else if (d.qr_missing) h += '<span class="why red">QR not found</span>';
+      h += pidCheck(r, d) + '<button class="btn main yes big" type="button" data-ans="' + esc(r.key) + '" data-v="Posted">Posted</button>'; }
+    if (r.answer === 'Found' && !d.found) h += '<p class="hint">The drop-off code shows here after the engine’s next run.</p>';
+    return h + (list.length > 1 ? '<button class="btn" type="button" data-action="nextpack">' + (r.answer ? 'Next parcel' : 'Skip for now') + '</button>' : '') + '</div>';
+  }
+  // Today's label sheet, grouped by courier, in parcel-number order. The PDF link appears when the engine makes one.
+  function pageSheet() {
+    var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; }), by = {};
+    list.forEach(function (r) { var c = detail(r).courier || 'Courier not set'; (by[c] = by[c] || []).push(r); });
+    var pdf = (rows.filter(function (r) { return r.section === 'post-head'; })[0] || {}), pd = detail(pdf).label_pdf;
+    var h = '<div class="packbar"><span class="needs">Label sheet</span><button class="btn" type="button" data-action="closesheet">Close</button></div>';
+    h += pd ? '<a class="btn main" href="https://drive.google.com/file/d/' + esc(pd) + '/view" target="_blank" rel="noopener">Open today’s PDF to print</a>' : '<p class="hint">The printable PDF is not made yet. Write each number on its parcel.</p>';
+    if (!list.length) return h + emptyCard('Nothing to post', 'Parcels show here when something sells.');
+    Object.keys(by).sort().forEach(function (c) {
+      h += '<p class="grp">' + esc(c) + ' · ' + by[c].length + (by[c].length === 1 ? ' parcel' : ' parcels') + '</p><div class="card">' + by[c].map(function (r) { var d = detail(r);
+        return '<div class="row"><span class="parcel">#' + esc(r._no) + '</span>' + thumb(d.photo, r.category) + '<div class="txt"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="why">' + esc(['shelf ' + (d.shelf || '?'), owner(r), d.platform].filter(Boolean).join(' · ')) + '</div></div></div>'; }).join('') + '</div>';
+    });
+    return h;
+  }
+  function pageInsights() {
+    var st = rows.filter(function (r) { return r.section === 'stock' && !r.applied_at; }), low = st.filter(function (r) { return detail(r).low; }).length;
+    var buy = rows.filter(function (r) { return r.section === 'restock' && !r.applied_at; }).length;
+    var h = '<div class="tiles three"><a class="tile big" href="#/stock"><span class="v">' + low + '</span><span class="k">Stock low</span></a><a class="tile big" href="#/temu"><span class="v">' + buy + '</span><span class="k">Temu to buy</span></a><a class="tile big" href="#/round"><span class="v">' + st.length + '</span><span class="k">Stock round</span></a></div>';
+    var sp = rows.filter(function (r) { return r.section === 'suppliers' && !r.applied_at; });
+    if (sp.length) h += '<div class="acts"><a class="btn main" href="#/suppliers">Suppliers (' + sp.length + ')</a></div>';
+    h += pageNumbers();
+    ['restock', 'temu'].forEach(function (s) { var l = byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); }));
+      if (l.length) h += '<p class="grp">' + esc(SECTIONS[s].name) + ' · ' + l.length + '</p>' + l.map(function (r) { return itemCard(r); }).join(''); });
+    return h + '<div class="acts"><a class="btn" href="#/round">Stock round</a></div>';
+  }
+  function pageList(sec) {
+    var s = SECTIONS[sec], list = byCat(rows.filter(function (r) { return r.section === sec && !r.applied_at; }));
+    var h = '<p class="needs">' + esc(s.name) + ': ' + waiting(sec).length + '</p>';
+    if (sec === 'post') { var hd = rows.filter(function (r) { return r.section === 'post-head'; })[0]; if (hd) h += '<p class="what">' + esc(hd.title) + '</p>'; }
+    if (!list.length) return h + emptyCard('Nothing here', '');
+    var cat = null, shown = showAll ? list : list.slice(0, 1);
+    shown.forEach(function (r) { var c = sec === 'post' ? (detail(r).courier || '') : r.category; if (c !== cat) { cat = c; h += '<p class="grp">' + esc(c || 'Other') + '</p>'; } h += itemCard(r); });
+    if (list.length > 1) h += '<button class="more" type="button" data-action="all">' + (showAll ? 'Show one at a time' : 'Show all ' + list.length) + '</button>';
+    return h;
+  }
+  function pageRound() {
+    var items = byCat(rows.filter(function (r) { return r.section === 'round' && !r.applied_at; }));
+    if (!items.length) return '<p class="needs">Stock round</p><div class="card acc5"><h2>No round open</h2><p class="what">The monthly round starts on the first Monday. Until then, check or correct any count on the Stock page.</p><div class="acts"><a class="btn main" href="#/stock">Open Stock</a><a class="btn" href="#/insights">← Insights</a></div></div>';
+    var shelves = []; items.forEach(function (r) { var s = detail(r).shelf || '?'; if (shelves.indexOf(s) < 0) shelves.push(s); });
+    var at = Math.min(round.i || 0, shelves.length - 1), shelf = shelves[at];
+    var h = '<p class="needs">Shelf ' + esc(shelf) + '</p><p class="what">' + (at + 1) + ' of ' + shelves.length + ' shelves. Tick if right, or type what is there.</p>';
+    items.filter(function (r) { return (detail(r).shelf || '?') === shelf; }).forEach(function (r) {
+      var d = detail(r), v = round[r.key] || {}, bad = v.n !== undefined && v.n !== '' && Number(v.n) !== Number(d.expected);
+      h += '<div class="card ' + (bad ? 'acc2' : (v.ok || r.answer ? 'acc5' : '')) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="m">expect ' + esc(d.expected) + '</div></div>' +
+        (r.answer ? '' : '<button class="btn yes" type="button" data-tick="' + esc(r.key) + '" aria-label="Right">✓</button><input class="num" inputmode="numeric" data-count="' + esc(r.key) + '" value="' + esc(v.n === undefined ? '' : v.n) + '" aria-label="Counted">') + '</div>' +
+        (bad ? '<div class="chips">' + ['sold', 'lost', 'found', 'damaged'].map(function (x) { return '<button class="chip' + (v.reason === x ? ' on' : '') + '" type="button" data-reason="' + esc(r.key) + '" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>' : '') +
+        (r.answer ? sentLine(r) : '') + '</div>';
+    });
+    h += '<div class="acts">' + (at > 0 ? '<button class="btn" type="button" data-shelf="-1">◂ Back</button>' : '') + (at < shelves.length - 1 ? '<button class="btn main" type="button" data-shelf="1">Next shelf ▸</button>' : '<button class="btn main big" type="button" data-action="finish">Finish round</button>') + '</div>';
+    return h + '<p class="what">Where this saves: the Marketplace tab of the Open work sheet. The engine applies it after 10 minutes.</p>';
+  }
+  // Engine v11.9: one permanent card. The tap changes only the engine's sums (setting ebay_seller_type), never the eBay account.
+  function switchCard() {
+    var r = rows.filter(function (x) { return x.section === 'switch' && !x.applied_at; })[0]; if (!r) return '';
+    var d = detail(r), other = d.other === 'business' ? 'Business' : 'Private';
+    var h = '<div class="card acc4" id="seller-type"><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.line) + '</p><p class="what">' + esc(d.profit_line) + '</p><p class="hint">' + esc(d.why) + '</p>' + stamp(r, d);
+    if (r.answer) return h + sentLine(r) + '</div>';
+    return h + '<div class="acts">' + linkBtn(d.url, 'eBay fees (help page)') + ansBtn(r, other, 'Switch sums to ' + other) + '</div></div>';
+  }
+  // v11.11 L-10: one line from the engine's ENGINE|status row: version, TEST or LIVE, last run, and the last error if there is one.
+  // The engine runs every 15 minutes, so no run for 40 minutes is flagged.
+  function engineLine() {
+    var r = rows.filter(function (x) { return x.key === 'ENGINE|status'; })[0];
+    if (!r) return '<p class="hint" data-engine>Engine: no status yet</p>';
+    var d = detail(r), t = Date.parse(d.last_run || r.created_at || ''), late = !isNaN(t) && Date.now() - t > 40 * 60000;
+    var when = isNaN(t) ? 'last run not known' : 'last run ' + (new Date(t).toDateString() === new Date().toDateString() ? hm(t) : ukDay(new Date(t).toISOString()) + ' ' + hm(t));
+    return '<p class="hint" data-engine>' + esc(['Engine ' + (d.version || '?'), d.mode === 'LIVE' ? 'LIVE' : 'TEST', when].join(' · ')) +
+      (late ? ' · <span class="why red">no run for over 40 minutes</span>' : '') + (d.last_error ? ' · <span class="why red">Last error: ' + esc(d.last_error) + '</span>' : ' · no errors') + '</p>';
+  }
+  // v11.11 B/E/F: the engine's GROWTH|numbers row (morning number, KPI tiles, ads line) and the item A note once Lisa agrees it.
+  function growthOf() { var g = rows.filter(function (r) { return r.key === 'GROWTH|numbers'; })[0]; return g ? detail(g) : null; }
+  function growthBlock() {
+    var g = growthOf(), n = rows.filter(function (r) { return r.key === 'NOTE|baselines-A'; })[0];
+    if (!g && !n) return '';
+    var h = '<p class="grp">Growth</p>' + (n ? '<p class="what" data-anote>' + esc(detail(n).text || n.title) + '</p>' : '');
+    if (!g) return h;
+    var m = g.morning || {}, tl = (m.ok ? [{ k: m.label, v: m.value, s: m.sub }] : []).concat(g.kpis || []);
+    if (!m.ok && m.why) h += '<p class="hint">Morning number: ' + esc(m.why) + '</p>';
+    if (tl.length) h += '<div class="tiles" data-growth>' + tl.map(function (t) { return '<div class="tile"><div class="k">' + esc(t.k) + '</div><div class="v">' + esc(t.v) + '</div>' + (t.s ? '<div class="k">' + esc(t.s) + '</div>' : '') + '</div>'; }).join('') + '</div>';
+    if (g.ads) h += '<p class="what' + (g.ads.over ? ' red' : '') + '">' + esc('Ads: ' + g.ads.fees + ' = ' + (g.ads.pct === null ? '?' : g.ads.pct + '%') + ' of known profit' + (g.ads.over ? '. Over the limit: the Ads card is in Decide.' : '. Under the limit.')) + '</p>';
+    if (g.refunds_read === false) h += '<p class="hint">Refunds not read this time: takings may be high.</p>';
+    return h;
+  }
+  function growthHome() { var g = growthOf(), m = g && g.morning; return m && m.ok ? '<p class="hint" data-morning>' + esc(m.label + ': ' + m.value + ' (' + m.sub + ')') + ' · <a href="#/numbers">Numbers</a></p>' : ''; }
+  function pageNumbers() {
+    var k = rows.filter(function (r) { return r.section === 'kpi'; })[0];
+    if (!k) return '<p class="needs">Numbers</p>' + engineLine() + growthBlock() + switchCard() + '<div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
+    var d = detail(k), ar = { up: '▲', down: '▼', flat: '–' };
+    function show(t) { return typeof t.value === 'string' ? t.value : /_p$/.test(t.key) ? '£' + (Number(t.value) / 100).toFixed(2) : t.value; }   // v11.7: "£8.40 from 1 of 2 sales" or "?" come as text
+    (d.tiles || []).forEach(function (t) { if (t.key === 'to_post') t.value = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; }).length + ' · ' + needsCount(); });   // v11.10: live, not Monday's
+    var h = '<p class="needs">Numbers</p>' + engineLine() + '<div class="tiles">' + (d.tiles || []).map(function (t) { return '<button class="tile" type="button" data-tile="' + esc(t.key) + '"><div class="k">' + esc(t.label) + '</div><div class="v">' + esc(show(t)) + ' <span class="' + esc(t.arrow) + '">' + ar[t.arrow] + '</span></div></button>'; }).join('') + '</div>';
+    if (open.tile) h += '<div class="card">' + (d.byCategory || []).map(function (c) { return '<div class="row"><div class="txt">' + esc(c.category) + '</div><div>' + esc(open.tile === 'sold' ? c.sold : '£' + (c.profit_p / 100).toFixed(2)) + '</div></div>'; }).join('') + '</div>';
+    if (d.vat) h += '<p class="what">' + esc(d.vat) + '</p>';
+    if (d.health) h += '<p class="what">' + esc(d.health) + '</p>';
+    return h + growthBlock() + switchCard();
+  }
+  function render() {
+    $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
+    $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);   // menu only after sign-in
+    var on = TAB_OF[view] || view;
+    document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    ['do', 'decide', 'newstock', 'reply'].forEach(function (t) { var n = tabCount(t); $('n-' + t).textContent = n || ''; $('n-' + t).classList.toggle('wide', n > 99); $('n-' + t).parentNode.setAttribute('aria-label', $('n-' + t).previousSibling.textContent + (n ? ', ' + n + ' waiting' : '')); });
+    $('people').classList.toggle('hidden', !token || !rows.some(function (r) { return detail(r).owner && detail(r).owner !== 'Lisa'; }));
+    $('whoN').textContent = ((who !== 'All') + (site !== 'All') + (stockFilter !== 'all')) || '';   // the phone's one Filter button counts the filters that are on
+    $('people').innerHTML = PEOPLE.map(function (p) { return '<button class="chip" type="button" data-who="' + p + '" aria-pressed="' + (who === p) + '">' + p + '</button>'; }).join('');
+    $('stamp').textContent = M && M.live ? '' : 'TEST';
+    var ready = typeof auth !== 'undefined' && auth.ready();
+    $('signin').disabled = !token && !ready;
+    if (!token) $('readAt').textContent = '';
+    if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see what needs you</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
+    $('view').innerHTML = pack && view === 'do' ? pagePack() : sheet && view === 'do' ? pageSheet() : view === 'me' ? pageMe() : view === 'round' ? pageRound() : view === 'numbers' ? pageNumbers()
+      : view === 'insights' ? pageInsights() : view === 'stock' ? pageStock() : view === 'temu' ? pageTemu() : view === 'suppliers' ? pageSuppliers() : view === 'newstock' ? pageNewStock() : TABS[view] ? pageTab(view) : SECTIONS[view] ? pageList(view) : pageMe();
+  }
+
+  /* ---------- taps ---------- */
+  function find(key) { return rows.filter(function (r) { return r.key === key; })[0]; }
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('button, a'); if (!t) return;
+    var a = t.getAttribute('data-action');
+    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(); }
+    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; pics = null; avatars = null; return render(); }
+    if (a === 'refresh') return load();
+    if (a === 'all') { showAll = !showAll; return render(); }
+    if (t.hasAttribute('data-who')) { who = t.getAttribute('data-who'); try { localStorage.setItem('mkt.who', who); } catch (x) {} return render(); }
+    if (t.hasAttribute('data-site')) { site = t.getAttribute('data-site'); return render(); }
+    if (a === 'pack') { pack = { i: 0 }; sheet = false; return render(); }
+    if (a === 'nextpack') { pack.i += 1; if (pack.i >= posts().length) pack.i = 0; return render(); }
+    if (a === 'stoppack') { pack = null; if (/\?pack\b/.test(location.hash)) { location.hash = '#/do'; return; } return render(); }
+    if (a === 'sheet') { sheet = true; pack = null; return render(); }
+    if (a === 'closesheet') { sheet = false; return render(); }
+    if (t.hasAttribute('data-diff')) { pairDiff[t.getAttribute('data-diff')] = true; return render(); }               // v11.10 Fix 2
+    if (t.hasAttribute('data-diffback')) { delete pairDiff[t.getAttribute('data-diffback')]; return render(); }
+    if (t.hasAttribute('data-costsup')) { costPick[t.getAttribute('data-costsup')] = t.getAttribute('data-v') || null; return render(); }   // v11.10 Fix 3
+    if (t.hasAttribute('data-costnewok')) { var ck = t.getAttribute('data-costnewok'), ci = document.querySelector('[data-costnew="' + ck + '"]'), cv2 = ci ? ci.value.replace(/[|=]/g, ' ').trim() : '';
+      if (!cv2) return banner('Type the supplier\'s name first.'); costPick[ck] = cv2; return render(); }
+    if (t.hasAttribute('data-nporder')) return npOrder(t.getAttribute('data-nporder'), t);                                  // v11.10 Fix 4
+    if (t.hasAttribute('data-npterms')) { var tr = find(t.getAttribute('data-npterms')), ti = document.querySelector('[data-nptermsin="' + tr.key + '"]'), tv = ti ? ti.value.trim() : '';
+      if (!/\d/.test(tv)) return banner('Type it like: free over 150, min 100'); t.disabled = true; return answer(tr, 'Terms', tv); }
+    if (t.hasAttribute('data-ans')) {
+      var r = find(t.getAttribute('data-ans')), v = t.getAttribute('data-v'), note = '';
+      if (r.section === 'vinted') { var inp = document.querySelector('[data-link="' + r.key + '"]'); note = inp ? inp.value.trim() : ''; }
+      var nb = document.querySelector('[data-note="' + r.key + '"]');                      // v11 cards: a note box (terms, quantity)
+      if (nb && nb.value.trim()) note = nb.value.trim();
+      if (v === 'Set' && !note) return banner('Type what to change first, for example: min 100, free over 300, delivery 15');
+      if (r.section === 'cost' && v === 'Save') { var cn = note.replace(/^[£$€]\s*/, ''); if (!/^\d+(\.\d{1,2})?$/.test(cn)) return banner('Type what you paid for one, for example 4.50. Or tap Own item if it was yours.');
+        var cd = detail(r), cs = costPick[r.key] !== undefined ? costPick[r.key] : (cd.last_supplier || ''), clean = function (x) { return String(x || '').replace(/[|=]/g, ' ').trim(); };   // v11.10: supplier, code, link, currency
+        var cc = document.querySelector('[data-costcode="' + r.key + '"]'), cl = document.querySelector('[data-costlink="' + r.key + '"]'), cu = document.querySelector('[data-costcur="' + r.key + '"]'), lk = cl ? cl.value.trim() : '';
+        if (lk && !/^https?:\/\/\S+$/i.test(lk)) return banner('The link must start https://');
+        note = cn + (cs && cs !== '+new' ? '|sup=' + clean(cs) + (cc && cc.value.trim() ? '|code=' + clean(cc.value) : '') + (lk ? '|link=' + lk.replace(/\|/g, '%7C') : '') + '|cur=' + (cu ? cu.value : 'GBP') + ((cd.suppliers || []).indexOf(cs) < 0 ? '|new=1' : '') : ''); }
+      if (r.section === 'offer') {                                                           // % box (data-note) + min profit box (data-min)
+        var pc = note, mb = document.querySelector('[data-min="' + r.key + '"]'), mn = mb ? mb.value.trim() : '';
+        if (pc && !(Number(pc) >= 5 && Number(pc) <= 90)) return banner('Type a % between 5 and 90, or leave it blank for ' + detail(r).pct + '%.');
+        if (mn && !/^(£?\s*\d+(\.\d{1,2})?|\d+(\.\d+)?\s*%)$/.test(mn)) return banner('Min profit: type pounds like £20, or a % of the price like 25%.');
+        note = (pc ? 'pct=' + pc : '') + (mn ? (pc ? ';' : '') + 'min=' + mn.replace(/\s+/g, '') : '');
+      }
+      if (v === 'Posted' && detail(r).parcel_id) {                                           // no mix-ups: the number on the parcel must match
+        var pb = document.querySelector('[data-pid="' + r.key + '"]'), pv = pb ? pb.value.trim().toUpperCase() : '';
+        if (pv !== String(detail(r).parcel_id).toUpperCase()) return banner('Type the parcel number written on the parcel (' + detail(r).parcel_id + ') before tapping Posted. If it does not match, stop: it may be the wrong parcel.');
+      }
+      var qb = document.querySelector('[data-qty="' + r.key + '"]');
+      if (v === 'Different') { var da = document.querySelector('[data-diffa="' + r.key + '"]'), db = document.querySelector('[data-diffb="' + r.key + '"]'), na = da ? da.value.trim() : '', nb3 = db ? db.value.trim() : '';
+        if ((na && !/^\d+$/.test(na)) || (nb3 && !/^\d+$/.test(nb3))) return banner('Type a number in each box, or leave it blank.'); note = [na ? 'this=' + na : '', nb3 ? 'ebay=' + nb3 : ''].filter(Boolean).join(' '); }
+      if (qb && (v === 'Yes' || v === 'Same') && qb.value.trim()) { var qn = parseInt(qb.value, 10); if (!(qn >= 0)) return banner('Type a number for how many you have, or leave it blank.'); note = 'qty ' + qn; }
+      t.disabled = true; t.classList.add('saving'); t.textContent = 'Saving…'; return answer(r, v, note);
+    }
+    if (t.hasAttribute('data-op')) { var ok = find(t.getAttribute('data-opkey')), ib = document.querySelector('[data-opin="' + ok.key + '"]'), on = ib ? parseInt(ib.value, 10) : NaN;
+      if (!(on >= 0)) return banner('Type how many first, then tap ' + t.getAttribute('data-op') + '.'); t.disabled = true; return answer(ok, t.getAttribute('data-op') + ' ' + on, ''); }
+    if (t.hasAttribute('data-set')) { var sr = find(t.getAttribute('data-set')), si = document.querySelector('[data-setin="' + sr.key + '"]'), sv = si ? si.value.trim() : '';
+      if (!sv) return banner('Type what to change, for example: min 2, reorder 6, buy at 1.20'); t.disabled = true; return answer(sr, 'Set', sv); }
+    if (t.hasAttribute('data-sup')) { var su = find(t.getAttribute('data-sup')), sb = document.querySelector('[data-supin="' + su.key + '"]'), sl = sb ? sb.value.trim() : '';
+      if (!/^https?:\/\/\S+$/i.test(sl)) return banner('Paste the full product link, starting https://'); t.disabled = true; return answer(su, 'Set', 'link ' + sl); }
+    if (t.hasAttribute('data-partadd')) { var pa = find(t.getAttribute('data-partadd')), ps = document.querySelector('[data-partpick="' + pa.key + '"]'), pv2 = ps ? ps.value : '';
+      pv2 = pv2.trim().split(/\s+/)[0]; if (!pv2 || !codeTitle[pv2]) return banner('Type or pick a code from the list (for example SKU-0141).'); t.disabled = true; return answer(pa, 'Set', 'made of ' + t.getAttribute('data-base') + ' + ' + pv2); }
+    if (t.hasAttribute('data-partnew')) { var pn = find(t.getAttribute('data-partnew')), nb2 = document.querySelector('[data-newpart="' + pn.key + '"]'), nq = document.querySelector('[data-newqty="' + pn.key + '"]');
+      var nm = nb2 ? nb2.value.trim().replace(/[,;]/g, ' ') : '', qn2 = nq && nq.value.trim() !== '' ? parseInt(nq.value, 10) : null;
+      if (!nm) return banner('Type the new part\'s name, for example: green watch case'); if (qn2 !== null && !(qn2 >= 0)) return banner('How many: type a number, or leave it blank.');
+      t.disabled = true; return answer(pn, 'Set', 'new part: ' + nm + (qn2 !== null ? ', ' + qn2 : '')); }
+    if (t.hasAttribute('data-partclear')) { t.disabled = true; return answer(find(t.getAttribute('data-partclear')), 'Set', 'made of none'); }
+    if (t.hasAttribute('data-sfilter')) { stockFilter = t.getAttribute('data-sfilter'); return render(); }
+    if (t.hasAttribute('data-copycode')) { navigator.clipboard.writeText(t.getAttribute('data-copycode')).then(function () { t.textContent = 'Copied'; }); return; }
+    if (t.hasAttribute('data-arrive')) { var ar = find(t.getAttribute('data-arrive')), box = document.querySelector('[data-arrived="' + ar.key + '"]'), n = box ? parseInt(box.value, 10) : NaN;
+      if (!(n >= 0)) return banner('Type how many arrived, then tap Arrived.'); t.disabled = true; return answer(ar, 'Arrived ' + n, ''); }
+    if (t.hasAttribute('data-undo')) { var u = find(t.getAttribute('data-undo')); if (Date.now() < Date.parse(u.answered_at) + UNDO_MS) answer(u, '', ''); return; }
+    if (t.hasAttribute('data-copy')) { var c = find(t.getAttribute('data-copy')); navigator.clipboard.writeText(detail(c).text || '').then(function () { t.textContent = 'Copied'; }); return; }
+    if (t.hasAttribute('data-qr')) { var q = detail(find(t.getAttribute('data-qr'))); $('qr').innerHTML = (q.qr_image ? '<img alt="QR code" src="' + esc(q.qr_image) + '">' : '') + '<div class="code">' + esc(q.qr) + '</div><button class="btn big" type="button" data-action="closeqr">Close</button>'; $('qr').className = 'qr'; return; }
+    if (a === 'closeqr') { $('qr').className = 'qr hidden'; return; }
+    if (t.hasAttribute('data-tile')) { open.tile = open.tile === t.getAttribute('data-tile') ? null : t.getAttribute('data-tile'); return render(); }
+    if (t.hasAttribute('data-tick')) { var k = t.getAttribute('data-tick'); round[k] = { ok: true, n: '' }; return render(); }
+    if (t.hasAttribute('data-reason')) { var kk = t.getAttribute('data-reason'); round[kk] = Object.assign(round[kk] || {}, { reason: t.getAttribute('data-v') }); return render(); }
+    if (t.hasAttribute('data-shelf')) { round.i = (round.i || 0) + Number(t.getAttribute('data-shelf')); showAll = false; return render(); }
+    if (a === 'finish') return finishRound();
+  });
+  document.addEventListener('input', function (e) {
+    if (e.target.hasAttribute('data-npq')) { var qk = e.target.getAttribute('data-npq'); npState[qk] = Object.assign(npState[qk] || {}, { q: e.target.value }); return npSums(e.target.getAttribute('data-npsup')); }   // v11.10 Fix 4
+    if (e.target.hasAttribute('data-find')) { var q = e.target.value.trim().toLowerCase(); document.querySelectorAll('.stockrow').forEach(function (c) { c.classList.toggle('hidden', !!q && c.getAttribute('data-text').indexOf(q) < 0); }); return; } var k = e.target.getAttribute('data-count'); if (k) { round[k] = Object.assign(round[k] || {}, { n: e.target.value, ok: false }); } });
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.hasAttribute && e.target.hasAttribute('data-npinc')) { var ik = e.target.getAttribute('data-npinc'); npState[ik] = Object.assign(npState[ik] || {}, { off: !e.target.checked }); return npSums(e.target.getAttribute('data-npsup')); }
+    if (view === 'round') render(); });
+  // No reason, no save (CD Hub round rule). Each item row gets "ok" or "<count> <reason>".
+  function finishRound() {
+    var todo = rows.filter(function (r) { return r.section === 'round' && !r.answer && round[r.key]; }), missing = [];
+    todo.forEach(function (r) { var v = round[r.key], d = detail(r); if (v.n !== '' && v.n !== undefined && Number(v.n) !== Number(d.expected) && !v.reason) missing.push(r.title); });
+    if (missing.length) return banner('Pick a reason for: ' + missing.join(', '));
+    todo.reduce(function (p, r) { var v = round[r.key]; return p.then(function () { return answer(r, v.ok || v.n === '' || v.n === undefined ? 'ok' : String(Number(v.n)) + ' ' + v.reason, ''); }); }, Promise.resolve())
+      .then(function () { banner('Round saved. The engine applies it after 10 minutes.', true); });
+  }
+  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'me'; showAll = false; pack = view === 'do' && /\?pack\b/.test(location.hash) ? { i: 0 } : null; sheet = false; render(); }
+  window.addEventListener('hashchange', route);
+
+  /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */
+  var auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE,
+    onToken: function (resp) {
+      if (resp.error) return banner('Sign-in did not complete.');
+      if (window.google && google.accounts && !google.accounts.oauth2.hasGrantedAllScopes(resp, SHEETS)) { banner('Google did not give this page spreadsheet access. Tap Sign in again and tick every box Google shows.'); return; }
+      token = resp.access_token; DashAuth.save(token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE); load();
+    },
+    onError: function () { banner('Sign-in did not complete.'); }, onSilentFail: function () {} });
+  var saved = DashAuth.valid(); if (saved && DashAuth.hasScope(saved, SCOPE)) { token = saved.access_token; }
+  route(); load(); setInterval(function () { if (token) load(); }, 5 * 60000);
+  // Google's sign-in script loads after this one: start the shared sign-in as soon as it is there (same as Factory).
+  var tries = 0;
+  (function wait() { if (auth.init()) { render(); return; } if (++tries > 100) { banner('Google sign-in did not load.'); return; } setTimeout(wait, 100); })();
+})();
+</script>
+</body>
+</html>

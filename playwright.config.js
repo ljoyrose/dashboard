@@ -27,13 +27,14 @@ module.exports = defineConfig({
       // Everything here uses the pretend Google sign-in and pretend Drive. No internet needed.
       name: 'mocked',
       testDir: './tests/mocked',
-      use: { ...devices['Desktop Chrome'], baseURL: LOCAL },
+      // Service workers are off in the suite so every test starts clean; pwa.spec.js switches them on itself.
+      use: { ...devices['Desktop Chrome'], baseURL: LOCAL, serviceWorkers: 'block' },
     },
     {
       // Small phone-sized check (about 390 x 844, like a Pixel). Same pretend Google and Drive. Not a copy of the desktop suite.
       name: 'phone',
       testDir: './tests/phone',
-      use: { ...devices['Pixel 5'], viewport: { width: 390, height: 844 }, baseURL: LOCAL },
+      use: { ...devices['Pixel 5'], viewport: { width: 390, height: 844 }, baseURL: LOCAL, serviceWorkers: 'block' },
     },
     {
       // Optional. Only opens the three real web addresses, signed out. Skipped unless LIVE_SMOKE=1.

@@ -68,7 +68,7 @@
 3. **OWNER:** SCHEDULE: Claude Code, "page polish" job, Lisa's go (`start a11y job`). Not now: page changes, and AF6's recommendation (not now) is right while the ratchet holds. UNVERIFIED: the exact font floor in Lisa's look rules (not read this session).
 
 ### 11. A file went into the forbidden Drive folder
-1. **WHAT:** the 6b brief named folder `1tsjx6AZ…` as the slip destination. It is titled **"Claude artefacts"**. `TT_JOB6B_SLIP.md` (file id `1VOgslTB2oGwD78YZ6IhnOL1_R7Z21n8X`) was uploaded there in Job 6b.
+1. **WHAT:** the 6b brief named folder `1tsjx6AZ…` as the slip destination. It is titled **"Claude artefacts"**. `TT_JOB6B_SLIP.md` (file id `[Drive id removed: public repo]`) was uploaded there in Job 6b.
 2. **WHY:** it is the folder this job's brief forbids. Cause: the 6b upload trusted the id and never read the folder's title. Mechanical fix: before any Drive write, read the parent's title and refuse if it is "Claude artefacts" (the protocol already asks for read-back of `parentId`, N-20).
 3. **OWNER:** BOT CAN DO (Claude moved nothing: moving or renaming is outside this job). Handoff BOT-3.
 

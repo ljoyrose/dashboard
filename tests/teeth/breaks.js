@@ -2,14 +2,16 @@
 // tests/mocked/ci-guards.spec.js checks on every push that each `find` text still appears exactly once in its file.
 // find: exact text that must appear exactly once in `file` (if not, this list is out of date: reported, not ignored)
 const BREAKS = [
-  { id: 'back-link', what: 'Money Hub "← Dashboard" link goes to the wrong place', file: 'money/index.html',
-    find: '<a class="back" href="../">', replace: '<a class="back" href="../nowhere/">', project: 'mocked', spec: 'main-dashboard' },
+  { id: 'one-sign-in', what: 'The sign-in goes back to one tab only (Lisa signs in twice)', file: 'auth.js',
+    find: 'try { return global.localStorage; }', replace: 'try { return global.sessionStorage; }', project: 'mocked', spec: 'one-sign-in-tabs' },
+  { id: 'back-link', what: 'Money Hub "Dashboard" button goes to the wrong place', file: 'money/index.html',
+    find: '<a id="backHome" class="btn back" href="../"', replace: '<a id="backHome" class="btn back" href="../nowhere/"', project: 'mocked', spec: 'main-dashboard' },
   { id: 'write-scope', what: 'Main dashboard asks Google for more than read-only access', file: 'index.html',
-    find: "var SCOPE = 'https://www.googleapis.com/auth/drive.readonly';", replace: "var SCOPE = 'https://www.googleapis.com/auth/drive';", project: 'mocked', spec: 'main-dashboard' },
+    find: "var SCOPE = CFG.scopes.read;", replace: "var SCOPE = CFG.scopes.write;", project: 'mocked', spec: 'main-dashboard' },
   { id: 'rr-inside-folder', what: 'Bin stops noticing an RR_ item inside a ZZ_ folder', file: 'index.html',
-    find: "if (isArchiveName(r.files[i].name)) return true;", replace: "", project: 'mocked', spec: 'bin-safety' },
+    find: "if (nameHasRr(r.files[i].name)) return true;", replace: "", project: 'mocked', spec: 'bin-safety' },
   { id: 'rr-folder-chain', what: 'Bin stops protecting ZZ_ items that sit inside an RR_ folder', file: 'index.html',
-    find: "if (chain.some(isArchiveName)) {", replace: "if (false) {", project: 'mocked', spec: 'bin-safety' },
+    find: "if (chain.some(nameHasRr)) {", replace: "if (false) {", project: 'mocked', spec: 'bin-safety' },
   { id: 'rename-prefix', what: 'PC-Personal rename stops adding the ZZ_DELETE_DRIVE_ prefix', file: 'index.html',
     find: "{ name: PCP_PREFIX + f.name }", replace: "{ name: f.name }", project: 'mocked', spec: 'personal-and-drive-check' },
   { id: 'bom', what: 'Money CSV reader stops ignoring the hidden start-of-file marker', file: 'money/core.js',
@@ -18,6 +20,10 @@ const BREAKS = [
     find: "income_vs_avg_pct", replace: "income_vs_avg", project: 'mocked', spec: 'header-contract' },
   { id: 'sideways-scroll', what: 'Money Hub becomes wider than a phone screen', file: 'money/index.html',
     find: '</head>', replace: '<style>body{min-width:700px}</style></head>', project: 'phone', spec: 'phone' },
+  { id: 'publish-ungated', what: 'The publish job stops waiting for the tests (the live site would go out untested)', file: '.github/workflows/pages.yml',
+    find: 'needs: gate', replace: 'needs: []', project: 'mocked', spec: 'ci-guards' },
+  { id: 'publish-too-much', what: 'The publish copies the tests folder onto the live site', file: '.github/workflows/pages.yml',
+    find: 'cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio estate _site/', replace: 'cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio estate tests _site/', project: 'mocked', spec: 'ci-guards' },
 ];
 
 module.exports = { BREAKS };

@@ -4,18 +4,16 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const MOVE = 'https://docs.google.com/spreadsheets/d/1AIgIefQMATEdWLtAkdvE7SvdnX8g2sTX87VnvOX5c-I/edit';
+const MOVE = require('../support/world').IDS.moveSheet; // read from config.js, never copied (this repo is public)
 const TILES = [
   ['MOVE', MOVE, true],
-  ['Money Hub', 'money/', false],
-  ['CD Hub', 'cdhub/', false],
-  ['Map', '#/map', false],
-  ['Read first', '#/readfirst', false],
-  ['Drive', '#/drive', false],
-  ['PC-Personal', '#/personal', false],
-  ['Drive check', '#/usb', false],
-  ['Bin', '#/bin', false],
-  ['Changes', '#/changes', false],
+  ['Money Hub', 'money/', true],
+  ['CD Hub', 'cdhub/', true],
+  ['Factory', 'factory/', true],
+  ['Marketplace', 'marketplace/', true],
+  ['GA Hub', 'food/', true],
+  ['Studio', 'studio/', true],
+  ['Web Estate', 'estate/', true],
 ];
 
 function pageFile(href) {
@@ -29,14 +27,26 @@ function pageFile(href) {
 test.describe('Home: Key projects & docs', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('the block is on the home screen, every tile has a working link, and each is tap-sized', async ({ page }) => {
+  test('the block is hidden until sign-in, then every tile has a working link and is tap-sized', async ({ page }) => {
     const res = await page.goto('./');
     expect(res.status()).toBe(200);
-    const block = page.locator('#key-projects');
+
+    // Signed out: the links are not drawn at all, only the sign-in card.
+    await expect(page.locator('#key-projects')).toHaveCount(0);
+    await expect(page.locator('#move-link')).toHaveCount(0);
+    await expect(page.locator('a.keytile')).toHaveCount(0);
+    await expect(page.locator('#signInBtn')).toBeEnabled();
+    await page.locator('#signInBtn').click();
+    await expect(page.locator('#mainNav')).toBeVisible();
+    await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
+    await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
+
+    const block = page.locator('#view > #key-projects');
     await expect(block).toBeVisible();
     await expect(block.locator('h2')).toHaveText('Key projects & docs');
+    // Hub V2: "Needs you" and its tiles come first; Key projects still starts on the first screen, above the bottom bar.
     const top = await block.boundingBox();
-    expect(top.y).toBeLessThan(420);
+    expect(top.y).toBeLessThan(844 - 96);
 
     const move = page.locator('#move-link');
     await expect(move).toHaveAttribute('href', MOVE);
@@ -45,6 +55,9 @@ test.describe('Home: Key projects & docs', () => {
 
     const tiles = block.locator('a.keytile');
     await expect(tiles).toHaveCount(TILES.length);
+    await expect(block.locator('a.keytile[href="#/drive"]')).toHaveCount(0);
+    await expect(block.getByRole('link', { name: 'Drive', exact: true })).toHaveCount(0);
+    await expect(page.locator('#mainNav a[data-nav="drives"]')).toHaveAttribute('href', '#/drives');
     for (let i = 0; i < TILES.length; i++) {
       const [label, href, blank] = TILES[i];
       const tile = tiles.nth(i);
@@ -70,11 +83,8 @@ test.describe('Home: Key projects & docs', () => {
       }
     }
 
-    await expect(page.locator('#signInBtn')).toBeEnabled();
-    await page.locator('#signInBtn').click();
-    await expect(page.locator('#mainNav')).toBeVisible();
-    await expect(page.locator('#hereTitle')).toHaveText('Map');
-    await expect(page.locator('#view > #key-projects')).toBeVisible();
-    await expect(page.locator('#move-link')).toHaveAttribute('href', MOVE);
+    // Signing out removes the links again.
+    await page.locator('#signOutBtn').click();
+    await expect(page.locator('#key-projects')).toHaveCount(0);
   });
 });

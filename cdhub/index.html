@@ -3,166 +3,328 @@
 <title>CD Hub</title>
 <meta name="robots" content="noindex,nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<meta name="theme-color" content="#2C2C2A">
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
-<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script>
+/* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
+(function(){ var o={}; try{ o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{}; }catch(e){ o={}; }
+ var r=document.documentElement, c=r.classList;
+ c.toggle('look-cool',o.bg==='cool'); c.toggle('sel-soft',o.sel==='soft');
+ c.toggle('text-lg',o.text==='lg'); c.toggle('text-xl',o.text==='xl'); c.toggle('space-roomy',o.space==='roomy');
+ if(o.mode==='light'||o.mode==='dark') r.setAttribute('data-theme',o.mode); })();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../house.css">
 <style>
-:root{--p0:#B8B1A5;--p2:#BE6A5D;--p3:#C07D59;--p4:#B3A74D;--p5:#89AF6A;--p6:#4098BE;--p7:#8D6B9C;--p8:#2C2C2A;
- --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:#B8B1A5;
- --bg:#FFFEFB;--fg:#22211F;--ln:#E1DCD2;--sub:#6C665C;--card:#FFFFFF;--soft:#F7F5F0;}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16161A;--fg:#EFEDE8;--ln:#33322E;--sub:#A7A197;--card:#1D1D21;--soft:#212126;}}
-:root[data-theme="dark"]{--bg:#16161A;--fg:#EFEDE8;--ln:#33322E;--sub:#A7A197;--card:#1D1D21;--soft:#212126;}
+/* ==== House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio).
+   Lexend 400/600, nothing under 13px, line height 1.5, no uppercase. 1px lines. Hover AND selected = the same 1px edge
+   turns ink (outline over it), nothing moves; keyboard focus 2px ink. ONE radius, 12px (circles only for status dots and
+   who rings). No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints.
+   Dark frame top and bottom. Greys follow Warm clear (default) or Cool clear, read from Studio's Look ('dash-look', read only).
+   Screens are built on generic Bloodline foundation concepts (record, round, check, rule, place, person, document);
+   animal-only parts are marked "kit: animal". ==== */
+/* Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule: ../tokens.css through ../house.css,
+   the same on every hub. CD Hub's own names below: the LJR7 slots, the kit (sex) colours and the old short names. */
+:root{--sel-fill:transparent;--hov-fill:var(--hov);
+ /* LJR7 slots (tokens.css). --male/--female are kit colours (sex), shown only as dots. */
+ --p0:var(--ljr-0);--p2:var(--ljr-2);--p3:var(--ljr-3);--p4:var(--ljr-4);--p5:var(--ljr-5);--p6:var(--ljr-6);--p7:var(--ljr-7);--p8:var(--ljr-8);
+ --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:var(--ljr-0);
+ /* old names kept so every rule below reads one set of tokens */
+ --fg:var(--ink);--ln:var(--line);--sub:var(--muted);}
+:root.sel-soft{--sel-fill:var(--soft);}
+html.text-lg body{zoom:1.12}html.text-xl body{zoom:1.25}html.space-roomy body{line-height:1.75}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--fg);font:400 15px/1.55 Lexend,system-ui,sans-serif;-webkit-text-size-adjust:100%;hyphens:auto}
-.wrap{max-width:1180px;margin:0 auto;padding:0 16px 80px}
-header.top{border-bottom:1px solid var(--ln);background:var(--card);position:sticky;top:0;z-index:20}
-.hin{max-width:1180px;margin:0 auto;padding:12px 16px}
-.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-.brand h1{font-size:19px;margin:0;font-weight:600;letter-spacing:-.01em}
-.brand .sl{font-size:12px;color:var(--sub)}
-.live{font-size:11px;font-weight:600;border:1px solid var(--ln);border-radius:999px;padding:2px 9px;color:var(--sub);white-space:nowrap}
-.live.ok{border-color:rgba(137,175,106,.6);color:#5d8a3e}
-.live.bad{border-color:rgba(190,106,93,.6);color:var(--p2)}
-nav{display:flex;gap:4px;overflow-x:auto;margin-top:9px;padding-bottom:2px}
-nav button{flex:0 0 auto;background:transparent;border:1px solid transparent;border-radius:999px;padding:5px 12px;font:500 13px Lexend,sans-serif;color:var(--sub);cursor:pointer;white-space:nowrap}
-nav button:hover{background:var(--soft);color:var(--fg)}
-nav button[aria-current="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
-h2{font-size:23px;font-weight:600;letter-spacing:-.015em;margin:26px 0 4px}
-h3{font-size:16px;font-weight:600;margin:26px 0 8px;display:flex;align-items:center;gap:8px}
-.sub{color:var(--sub);font-size:13.5px;margin:0 0 16px;max-width:74ch}
-.card{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px 16px;margin:0 0 12px}
+h1,h2,h3,h4,b,strong,th{font-weight:600}   /* two weights only: 400 and 600 */
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 Lexend,system-ui,sans-serif;-webkit-text-size-adjust:100%;hyphens:manual}
+a{color:inherit;text-underline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.hidden{display:none!important}
+.wrap,.hin{max-width:1600px;margin:0 auto;padding-left:24px;padding-right:24px}
+.wrap{padding-bottom:140px}
+@media (max-width:600px){.wrap,.hin{padding-left:16px;padding-right:16px}}
+.ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}   /* line icons drawn in the page (no icon font) */
+
+/* ---- Frame: dark top bar ---- */
+header.top{background:var(--frame);color:var(--frame-ink);position:sticky;top:0;z-index:20}
+.hin{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:12px;padding-bottom:12px}
+.brand{display:contents}
+.brand h1{font-size:22px;margin:0;display:flex;align-items:center;gap:8px}
+.brand h1 .dot{width:10px;height:10px;border-radius:50%;background:var(--ljr-5);display:inline-block}
+.brand .sl{font-size:14px;color:var(--frame-ink);opacity:.85;margin-right:auto}
+.live{font-size:13px;font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
+.live.ok{border-color:var(--ljr-5)}.live.bad{border-color:var(--ljr-2)}
+header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
+@media (hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
+header .btn:focus-visible{outline:2px solid var(--frame-ink);outline-offset:2px}
+.backhome{min-height:44px!important;text-decoration:none}
+/* Signed out, the frame is hidden by the sign-in gate and only Dashboard shows, on the page colour: use page ink. */
+html.dash-locked header .backhome{color:var(--ink);border-color:var(--press);margin-left:auto}
+.morewrap{position:relative;display:none}
+#moreMenu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:220px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow),0 8px 24px rgba(0,0,0,.18);padding:8px;display:flex;flex-direction:column;gap:4px}
+#moreMenu.hidden{display:none}
+#moreMenu>*{font:inherit;font-size:15px;font-weight:600;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:var(--radius);min-height:44px;padding:0 14px;display:flex;gap:8px;align-items:center;text-decoration:none;cursor:pointer;text-align:left}
+@media (hover:hover){#moreMenu>*:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}}
+
+/* ---- Frame: dark bottom tab bar. Light buttons, no ring; hover/selected = the small colour bar above the label widens. ---- */
+nav#nav{z-index:20;display:grid;grid-template-columns:repeat(10,minmax(0,1fr)) repeat(2,minmax(0,.75fr));gap:8px;padding:8px 24px calc(10px + env(safe-area-inset-bottom,0px))}
+nav#nav:empty{display:none}
+/* The tab buttons and their widening colour bar: ../house.css (.house-tabs). */
+nav#nav button{font:inherit;font-size:13px}
+nav#nav button .ti{color:var(--muted)}
+nav#nav button .lab{line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+nav#nav button .ls{display:none}
+nav#nav button.util .bar{visibility:hidden}
+nav#nav button:focus-visible{outline:2px solid var(--frame-ink);outline-offset:2px}
+nav#nav .cnt{position:absolute;top:6px;right:8px}
+@media (max-width:1180px){nav#nav{grid-template-columns:repeat(6,minmax(0,1fr))}}
+@media (max-width:900px){nav#nav button .lf{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}nav#nav button .ls{display:inline}}
+@media (max-width:544px){
+ nav#nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px))}
+ nav#nav button.util{display:none}
+ nav#nav button{min-height:56px;flex-direction:row;flex-wrap:wrap;align-content:center;gap:2px 4px;padding:4px 2px}
+ nav#nav button .ti{order:1}nav#nav .cnt{position:static;order:2}nav#nav button .lab{order:3;flex:0 0 100%}
+ html.cd-in .morewrap{display:inline-flex}
+ html.cd-in header .srchbtn,html.cd-in header #backHome{display:none!important}
+ .brand .sl{display:none}
+ .brand h1{font-size:20px;margin-right:auto}
+ .wrap{padding-bottom:170px}
+}
+
+/* ---- Type ladder ---- */
+h2{font-size:26px;margin:24px 0 4px;line-height:1.3}
+h3{font-size:17px;margin:24px 0 12px;display:flex;align-items:center;gap:8px}
+.sub{color:var(--muted);font-size:15px;margin:0 0 16px;max-width:74ch}
+.mut{color:var(--muted);font-size:14px}
+.note{font-size:14px;color:var(--muted);margin:8px 0 12px}
+code{font-family:inherit;font-size:14px;font-variant-numeric:tabular-nums;background:transparent;padding:0}
+
+/* ---- Cards: one white panel, 1px line, 12px step; read-only, so nothing happens on hover. ---- */
+.card{margin:0 0 12px;box-shadow:var(--shadow)} /* the house card (../house.css): 1px line, 12px inside */
 .card.dash{border-style:dashed}
-.card h4{margin:0 0 6px;font-size:14.5px;font-weight:600}
-.card p{margin:0 0 8px;font-size:13.5px}.card p:last-child{margin-bottom:0}
-.acc2{border-left:3px solid var(--p2)}.acc3{border-left:3px solid var(--p3)}.acc4{border-left:3px solid var(--p4)}
-.acc5{border-left:3px solid var(--p5)}.acc6{border-left:3px solid var(--p6)}.acc7{border-left:3px solid var(--p7)}
-.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:10px;margin:0 0 14px}
-.tile{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:13px 14px}
-.tile .n{font-size:30px;font-weight:600;line-height:1.05;letter-spacing:-.02em}
-.tile .k{font-size:12px;color:var(--sub);margin-top:3px;font-weight:500}
-.tile .src{font-size:10.5px;color:var(--sub);margin-top:7px;opacity:.8;line-height:1.35}
-.tile.b0{border-top:3px solid var(--p0)}.tile.b2{border-top:3px solid var(--p2)}.tile.b3{border-top:3px solid var(--p3)}
-.tile.b4{border-top:3px solid var(--p4)}.tile.b5{border-top:3px solid var(--p5)}.tile.b6{border-top:3px solid var(--p6)}
-.tile.b7{border-top:3px solid var(--p7)}
-.scroll{overflow-x:auto;border:1px solid var(--ln);border-radius:12px;background:var(--card)}
-table{width:100%;border-collapse:collapse;font-size:12.5px}
-th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--ln);font-weight:600;white-space:nowrap;position:sticky;top:0;background:var(--card)}
-td{padding:7px 10px;border-bottom:1px solid var(--ln);vertical-align:top}
+.card h4,.card .hx4{margin:0 0 12px;font-size:17px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:0;line-height:1.4}
+.card p{margin:0 0 8px;font-size:15px}.card p:last-child{margin-bottom:0}
+/* attention / good cards: a small ring dot before the heading, never a coloured stripe */
+.card.acc2>:is(h4,.hx4):first-child::before,.card.acc5>:is(h4,.hx4):first-child::before{content:"";width:10px;height:10px;border-radius:50%;flex:none;border:1px solid var(--ljr-2);background:var(--ljr-2-tint)}
+.card.acc5>:is(h4,.hx4):first-child::before{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
+.card .card{box-shadow:none}
+
+/* ---- Pressables: ONE clear line (--press, 3:1), 1px, 12px, 36px (44px phone), 14px/600; never start ink. ---- */
+.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{
+ font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);
+ min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;box-sizing:border-box;line-height:1.2}
+.filt input,.sbox input,.tmp input,#rdate{font-weight:400;cursor:text}
+.filt select,.fpanel select,.sortsel{padding:0 10px}
+.btn[disabled],#main button[disabled]{cursor:not-allowed;opacity:.6}
+@media (hover:hover){.btn:hover,.cb:hover,.ci:hover,.tl:hover,.next button:hover,.sfb:hover,.achip:hover,#main button:not(.tile):not(.ttl):hover,.filt select:hover,.fpanel select:hover,.sortsel:hover,.mrow.go:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}}
+.tile.tl:hover,.ci:hover{border-color:var(--press)}
+.sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}
+.sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
+/* Buttons with a meaning colour keep it on hover and when chosen: the same 1px line in that colour inside, plus a pale tint of it. Never ink. */
+/* They rest on the same control line as every pressable (house rule); the colour shows on hover. */
+@media (hover:hover){.btn.yes:hover{outline-color:var(--house-ok);background:color-mix(in srgb,var(--house-ok) 14%,var(--card))}.btn.no:hover{outline-color:var(--house-risk);background:color-mix(in srgb,var(--house-risk) 14%,var(--card))}}
+.dc .nl .st{border:0;padding:0;height:auto;font-size:13px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
+:focus-visible{outline:2px solid var(--ink)!important;outline-offset:2px}
+@media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{min-height:44px}}
+
+/* ---- Read-only pills, counts and dates: small (24px), 1px ring, no hover. ---- */
+.pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:13px;font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
+.pill.ok{border-color:var(--ljr-5-text)}
+.pill.no{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
+.pill.w{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
+.pill.i{border-color:var(--press)}
+/* Counts: one fixed box so 1 and 2 digits match; only 3+ digits grow. "Needs you" = rose ring + light tint. */
+.cnt{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;padding:0 3px;border-radius:11px;border:1px solid var(--ink);font-size:13px;font-weight:600;line-height:20px;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink);background:transparent;flex:none}
+.cnt.wide{width:auto;min-width:30px;padding:0 6px}
+.cnt.need{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
+.cnt.ok{border-color:var(--ljr-5-text)}
+nav#nav .cnt.need{background:var(--ljr-2-tint)}
+.card h4 .cnt,.card .hx4 .cnt,.mcard h3 .cnt{margin-left:auto}
+/* Every date pill wears a plain 1px ring; late = rose ring + tint; soon = amber ring + tint. */
+.dpill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border:1px solid var(--press);border-radius:var(--radius);font-size:13px;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums;flex:none}
+.dpill.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
+.dpill.soon{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
+.pill:hover,.cnt:hover,.dpill:hover,.live:hover{outline:none}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c,var(--ljr-0));flex:none;vertical-align:0}
+.info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--press);border-radius:var(--radius);font-size:13px;font-weight:600;color:var(--muted);cursor:help;vertical-align:middle}
+
+/* ---- Tiles (big numbers). A tile you can press is a pressable; a read-only tile is a plain panel. ---- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;text-align:left;font:inherit;color:var(--ink);min-width:0}
+.tile .n{font-size:28px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
+.tile .k{font-size:14px;font-weight:600;margin-top:2px}
+.tile .src{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.4}
+button.tile{cursor:pointer;border-color:var(--press);display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;width:100%}
+@media (hover:hover){button.tile:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}}
+
+/* ---- Tables ---- */
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--card)}
+td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:none}
-code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:var(--soft);padding:1px 5px;border-radius:4px}
-.pill{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;border:1px solid var(--ln);white-space:nowrap}
-.pill.ok{background:rgba(137,175,106,.16);border-color:rgba(137,175,106,.5)}
-.pill.no{background:rgba(190,106,93,.16);border-color:rgba(190,106,93,.5)}
-.pill.w{background:rgba(179,167,77,.18);border-color:rgba(179,167,77,.5)}
-.pill.i{background:rgba(64,152,190,.16);border-color:rgba(64,152,190,.5)}
-.mut{color:var(--sub);font-size:11.5px}
-.filt{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px;align-items:center}
-.filt input,.filt select{font:400 13px Lexend,sans-serif;padding:6px 10px;border:1px solid var(--ln);border-radius:8px;background:var(--card);color:var(--fg)}
+
+/* ---- One filter row: Search, Filter (panel), Sort, removable chips. ---- */
+.filt,.srow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
 .filt input{min-width:190px}
-.filt button{font:500 13px Lexend,sans-serif;padding:6px 12px;border:1px solid var(--ln);border-radius:8px;background:var(--card);color:var(--sub);cursor:pointer}
-.filt button:hover{color:var(--fg);border-color:var(--fg)}
-.next{display:flex;gap:10px;flex-wrap:wrap;margin-top:28px;padding-top:16px;border-top:1px solid var(--ln)}
-.next button{background:var(--card);border:1px solid var(--ln);border-radius:10px;padding:9px 14px;font:500 13px Lexend,sans-serif;color:var(--fg);cursor:pointer}
-.next button:hover{border-color:var(--fg)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:10px}
-.dc{background:var(--card);border:1px solid var(--ln);border-left:4px solid var(--unk);border-radius:12px;display:flex;flex-direction:column}
-.dc.me{border-left-color:var(--male)}.dc.fe{border-left-color:var(--female)}
-.dc.mn{border-left-color:var(--male-n);border-left-style:dotted}
-.dc.fn{border-left-color:var(--female-n);border-left-style:dotted}
-.dc.u{border-left-style:dotted}
-.dc .bd{padding:11px 13px 12px;display:flex;flex-direction:column;gap:7px;flex:1}
-.dc .hd{display:flex;align-items:flex-start;gap:9px}
-.ph{position:relative;flex:0 0 auto;width:44px;height:44px;border-radius:10px;background:var(--soft);border:1px dashed var(--ln);display:grid;place-items:center;font-size:17px;font-weight:600;color:var(--sub)}
-.dc.me .ph{border-color:var(--male)}.dc.fe .ph{border-color:var(--female)}
-.sym{position:absolute;right:-6px;bottom:-6px;width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:600;border:2px solid var(--unk);color:var(--unk);background:var(--card);line-height:1}
-.dc.me .sym{border-color:var(--male);color:var(--male)}.dc.fe .sym{border-color:var(--female);color:var(--female)}
-.dc.mn .sym{border-color:var(--male-n);color:var(--male-n);border-style:dotted}
-.dc.fn .sym{border-color:var(--female-n);color:var(--female-n);border-style:dotted}
-.dc.u .sym{border-style:dotted}
-.dc .nm{font-weight:600;font-size:14.5px;line-height:1.25}
-.dc .meta{font-size:11.5px;color:var(--sub);margin-top:1px}
-.dc .age{margin-left:auto;font-size:11px;font-weight:600;color:var(--sub);border:1px solid var(--ln);border-radius:999px;padding:1px 7px;white-space:nowrap}
-.dc .par{font-size:11.5px;color:var(--sub)}.dc .par b{color:var(--fg);font-weight:500}
-.dc .chips{display:flex;flex-wrap:wrap;gap:3px}
-.st{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:700;letter-spacing:.04em;border-radius:999px;padding:2px 9px 2px 3px;border:1px solid transparent;color:#1B1B19}
-.st b{display:grid;place-items:center;width:17px;height:17px;border-radius:50%;background:rgba(255,255,255,.65);font-size:9px;letter-spacing:0}
-/* status colour follows the sex it implies: BB = female pink, ST = male blue */
-.st-bi{background:var(--female)}.st-bi b{color:#7A2F4C}
-.st-st{background:var(--male);color:#FFF}.st-st b{color:#10465F}
-.st-tr{background:#C07D59}.st-gr{background:#89AF6A}
-.st-ce{background:#7FB8C9}.st-ce b{color:#1F4C58}
-.st-ln{background:#B3A74D}.st-ln b{color:#4A4318}
-.st-pu{background:#C9B2DB}.st-pu b{color:#5B4270}
-.st-de{background:transparent;border-color:var(--p8);color:var(--sub)}.st-de b{background:var(--soft)}
-.st-cl{background:transparent;border-color:var(--ln);color:var(--sub)}.st-cl b{background:var(--soft)}
-.st-un{background:transparent;border-color:var(--p2);color:var(--p2)}.st-un b{background:transparent;border:1px solid var(--p2)}
+.fbar{position:relative;margin:0 0 12px}
+.fbar .srow{margin:0}
+.sbox{flex:1 1 220px;max-width:420px;padding:0 12px;cursor:text}
+.sbox input{flex:1;min-width:0;border:0;outline:none;background:transparent;color:var(--ink);font:inherit;font-size:15px;font-weight:400;padding:6px 0}
+.sbox .ti{color:var(--muted)}
+.sbox:focus-within{border-color:var(--ink)}
+.fpanel{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.fgrp{display:flex;flex-direction:column;gap:4px;min-width:150px}
+.flab{font-size:13px;font-weight:600;color:var(--muted)}
+.achips{display:contents}
+.achip .ti{width:14px;height:14px}
+
+/* ---- Calm rows (Needs you today, checklists, cards on Live feed) ---- */
+.three{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.three .sum{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--card);border-radius:var(--radius);padding:8px 14px 8px 8px;font-weight:600}
+.three .sum .big{font-size:24px;min-width:40px;height:40px;display:inline-grid;place-items:center;border-radius:var(--radius);border:1px solid var(--ink);padding:0 8px;font-variant-numeric:tabular-nums}
+.three .sum.need .big{border-color:var(--ljr-3);background:var(--ljr-3-tint)}
+.three .sum.over .big{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
+.mecards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;align-items:start;margin:0 0 12px}
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);min-width:0}
+.mcard h3{margin:0 0 4px;font-size:17px;display:flex;align-items:center;gap:8px}
+.mcard h3 .ti{color:var(--muted)}
+@media (hover:hover){.mcard:hover h3 .ti{color:var(--hc,var(--muted))}}
+.mcard.nextc{border-color:var(--ink);background:linear-gradient(var(--ljr-6-tint),var(--ljr-6-tint)) var(--card)}
+.mcard.nextc .bline{font-size:13px;font-weight:600;color:var(--muted)}
+.mcard.nextc .t{font-size:20px;font-weight:600;margin:2px 0 4px;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.mcard.nextc .sub{margin:0 0 12px;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
+.mcard .big{font-size:32px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
+.mrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);color:inherit;text-decoration:none;min-width:0}
+.mcard h3+.mrow,.mcard .mrow:first-of-type{border-top:0;padding-top:16px}
+.mrow .t{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.mrow .t small{display:block;color:var(--muted);font-size:13px;font-weight:400;margin-top:2px}
+.mrow .ic{width:12px;height:12px;flex:none;border-radius:50%;border:1px solid var(--press)}
+.mrow .ic.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
+.mrow .ic.soon{border-color:var(--ljr-3);background:var(--ljr-3-tint)}
+.mrow .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
+.mrow .v{font-weight:600;font-variant-numeric:tabular-nums}
+.mfoot{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+/* foundation: empty state for a field that needs data CD Hub does not have. It names the Bloodline table that will feed it. */
+/* The card itself is the house card (../house.css .card) with CD Hub's dashed edge (.card.dash); only the layout is here. */
+.card.arrive{margin:0;box-shadow:none}.card.arrive h3{margin:0}
+.card.arrive .awhy{margin:4px 0 0;color:var(--muted);font-size:13px}
+.card.arrive .arrives{margin:8px 0 0;font-weight:600}
+.arrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--house-gap);margin:0 0 var(--house-gap)}
+.okempty{margin:12px 0 0;color:var(--muted);font-size:15px;display:flex;gap:8px;align-items:center}
+.okempty::before{content:"\2713";display:inline-grid;place-items:center;width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--ljr-5);background:var(--ljr-5-tint);color:var(--ink);font-size:13px}
+/* checklist ✓ / ✗ marks: status dots, so they are circles */
+.mk{display:inline-grid;place-items:center;width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--ljr-5);background:var(--ljr-5-tint);color:var(--ink);font-size:13px;font-weight:600}
+.mk.bad{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
+.mk.part{border-color:var(--ljr-3);background:var(--ljr-3-tint)}
+.ckrow .btn,.ckrow .ci{flex:none}
+@media (max-width:760px){.three{flex-wrap:nowrap;gap:6px}.three .sum{padding:4px 8px 4px 4px;gap:6px;font-size:13px;flex:1;min-width:0}.three .sum .big{font-size:17px;min-width:30px;height:30px;padding:0 6px}.mecards{grid-template-columns:minmax(0,1fr)}}
+
+/* ---- Record cards (Dogs). Name line, then title (2 lines, then …); 44×44 thumbnail; who-has-it ring bottom-right. ---- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.dc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;box-shadow:var(--shadow);min-width:0}
+.dc .bd{padding:12px;display:flex;flex-direction:column;gap:8px;flex:1;min-width:0}
+.dc .hd{display:flex;align-items:flex-start;gap:12px;min-width:0}
+.ph{position:relative;flex:0 0 auto;width:44px;height:44px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted)}
+.ph .ti{width:24px;height:24px}
+.dc .tbr{flex:1;min-width:0}
+.dc .nl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.dc .nm{font-weight:600;font-size:17px;line-height:1.35;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.dc .meta{font-size:14px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dc .age{margin-left:auto}
+.sexdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--unk);flex:none}
+.sexdot.me{background:var(--male)}.sexdot.fe{background:var(--female)}
+.sexdot.mn{background:transparent;border:1px solid var(--male)}.sexdot.fn{background:transparent;border:1px solid var(--female)}
+.sexdot.u{background:transparent;border:1px dashed var(--unk)}
+.dc .chips{display:flex;flex-wrap:wrap;gap:4px}
+.cfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px;margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
+.whor{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--press);display:grid;place-items:center;font-size:13px;color:var(--muted)}
+.whor .ti{width:15px;height:15px}
+/* status (kit: animal): a status-colour dot + code + word, ink text, no fill */
+.st{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--radius);height:24px;padding:0 8px;white-space:nowrap}
+.st b{font-weight:600}
+.st::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--sc,var(--ljr-0));flex:none}
+.st-bi{--sc:#DB7FA2}.st-st{--sc:#1F6F96}.st-tr{--sc:var(--ljr-3)}.st-gr{--sc:var(--ljr-5)}.st-ce{--sc:#7FB8C9}.st-ln{--sc:var(--ljr-4)}.st-pu{--sc:#C9B2DB}
+.st-de{--sc:transparent}.st-de::before,.st-cl::before,.st-un::before{background:transparent;border:1px solid var(--muted)}
+.st-un::before{border-color:var(--ljr-2)}
+.sfb.st{height:auto;min-height:36px;border-color:var(--press);font-size:14px}
+.st-all::before{display:none}
+@media (max-width:544px){.sfb.st{min-height:44px}}
+.neu{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:13px;border:1px dashed var(--press);color:var(--ink);margin-left:6px}
 .swwrap{position:relative;display:inline-block;flex:0 0 auto;line-height:0;vertical-align:-3px}
-.sw{display:block;width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.25)}
-.sw-none{background:repeating-linear-gradient(45deg,var(--soft) 0 3px,var(--ln) 3px 6px)}
-.nose{position:absolute;right:-3px;bottom:-2px;width:8px;height:8px;border-radius:50%;border:1.5px solid var(--card);box-shadow:0 0 0 .5px rgba(0,0,0,.35)}
-.coat{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--sub)}
-.wt{display:flex;align-items:baseline;gap:6px;font-size:11.5px;color:var(--sub);flex-wrap:wrap}
-.wt .lb,.chipline .lb{font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;opacity:.75}
-.wt b{color:var(--fg);font-size:13px}
-.wt .up{color:var(--p5);font-weight:600}.wt .dn{color:var(--p2);font-weight:600}
-.wt.none{opacity:.6;font-style:italic}
-.tmp{display:grid;grid-template-columns:auto repeat(2,minmax(0,1fr)) auto;gap:6px 8px;align-items:center;border-top:1px dashed var(--ln);padding-top:8px;margin-top:4px}
-.tmp .sl{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--sub);font-weight:600}
-.tmp input{width:100%;font:400 13px ui-monospace,Menlo,monospace;padding:5px 8px;border:1px solid var(--ln);border-radius:8px;background:var(--card);color:var(--fg);text-align:right}
-.tmp input.bad{border-color:var(--p2);background:rgba(190,106,93,.08)}
-.tmp .hd2{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--sub);text-align:right}
-.tmp .msg{font-size:11px;color:var(--sub);min-width:54px}
-.spk{color:var(--p6);opacity:.85;overflow:visible}
-.chipline{display:flex;align-items:baseline;gap:7px;font-size:11.5px;color:var(--sub);border-top:1px dashed var(--ln);padding-top:6px}
-.chipline .vl{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--fg)}
-.chipline .none{color:var(--p2);font-style:italic;font-family:inherit}
-.key{display:flex;gap:14px;flex-wrap:wrap;align-items:center;font-size:12px;color:var(--sub);margin:0 0 10px}
-.key i{display:inline-block;width:4px;height:15px;border-radius:2px;margin-right:6px;vertical-align:-3px}
-.dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:7px}
-.bar{height:7px;background:var(--soft);border-radius:4px;overflow:hidden;min-width:60px}
-.bar i{display:block;height:100%;background:var(--p6)}
-.note{font-size:12px;color:var(--sub);margin-top:8px}
-.neu{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.06em;border:1px dashed var(--sub);color:var(--sub);vertical-align:2px}
-.sym.nx::after{content:'';position:absolute;left:0;right:0;top:50%;height:1.5px;background:currentColor;transform:rotate(-20deg)}
-.chk{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
-.ci{display:inline-flex;align-items:center;gap:6px;padding:6px 11px;border-radius:999px;border:1px solid var(--ln);background:var(--card);color:var(--sub);font:600 11.5px Lexend,sans-serif;cursor:pointer}
-.ci i{width:8px;height:8px;border-radius:50%;background:var(--p5);flex:0 0 auto}
-.ci.bad{border-color:rgba(190,106,93,.65);color:var(--p2)}
-.ci.bad i{background:var(--p2)}
-.ci:hover{border-color:var(--fg)}
-.tl{cursor:pointer;text-align:left;font:inherit;width:100%}
-.tl:hover{border-color:var(--fg)}
-.srch{position:relative;display:inline-flex;align-items:center}
-.srch svg{position:absolute;left:10px;color:var(--sub);pointer-events:none}
-.srch input{padding-left:30px}
-.stf{gap:6px}
-.sfb{cursor:pointer;font-family:inherit;border:1px solid transparent;opacity:.55;transition:opacity .12s}
-.sfb:hover{opacity:.85}
-.sfb[aria-pressed="true"]{opacity:1;outline:2px solid var(--fg);outline-offset:1px}
-.st-all{background:var(--soft);color:var(--sub)}
-.wtc{cursor:pointer;border-radius:6px;padding:2px 3px;margin:-2px -3px}
-.wtc:hover{background:var(--soft)}
-.cbs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:5px}
-.cb{display:inline-block;padding:7px 11px;border-radius:8px;border:1px solid var(--ln);background:var(--soft);color:var(--fg);text-decoration:none;font-size:12px;font-weight:600;line-height:18px}
-.cb:hover{border-color:var(--fg)}
-.cb.wa{background:rgba(37,211,102,.16);border-color:rgba(37,211,102,.55)}
+.sw{display:block;width:16px;height:16px;border-radius:50%;border:1px solid var(--press)}
+.sw-none{background:repeating-linear-gradient(45deg,var(--soft) 0 3px,var(--line) 3px 6px)}
+.nose{position:absolute;right:-3px;bottom:-2px;width:8px;height:8px;border-radius:50%;border:1px solid var(--card)}
+.coat{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.wt{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);flex-wrap:wrap}
+.wt .lb,.chipline .lb{font-size:13px;color:var(--muted)}
+.wt b{color:var(--ink)}
+.wt .up,.wt .dn{color:var(--ink);font-weight:600}
+.wt.none{color:var(--muted)}
+.wtc{cursor:pointer;border-radius:var(--radius);padding:2px 4px;margin:-2px -4px;border:1px solid transparent}
+@media (hover:hover){.wtc:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}}
+.spk{color:var(--ljr-6);overflow:visible}
+.chipline{display:flex;align-items:baseline;gap:8px;font-size:14px;color:var(--muted)}
+.chipline .vl{color:var(--ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.chipline .none{color:var(--ink)}
+.chipline .none::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;border:1px solid var(--ljr-2);background:var(--ljr-2-tint);margin-right:6px}
+.key{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:14px;color:var(--muted);margin:0 0 12px}
+.key>span{display:inline-flex;align-items:center;gap:6px}
+.stf{gap:8px}
+
+/* ---- The round: temperatures ---- */
+.tmp{display:grid;grid-template-columns:auto repeat(2,minmax(0,160px)) minmax(0,1fr);gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
+.tmp .sl{font-size:13px;color:var(--muted);font-weight:600}
+.tmp input{width:100%;text-align:right;padding:0 10px;font-variant-numeric:tabular-nums}
+.tmp input.bad{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
+.tmp .hd2{font-size:13px;color:var(--muted);text-align:right}
+.tmp .msg{font-size:13px;color:var(--muted);min-width:54px}
+.step{color:var(--muted);font-weight:600;white-space:nowrap}
+.rdel{cursor:pointer;margin-left:4px}
+
+/* ---- Bits ---- */
+.bar{height:8px;background:transparent;box-shadow:inset 0 0 0 1px var(--line);border-radius:var(--radius);overflow:hidden;min-width:60px}
+.bar i{display:block;height:100%;background:var(--ljr-6-tint);box-shadow:inset 0 0 0 1px var(--ljr-6)}
+.next{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}
+.cbs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .ct{min-width:152px}
 .sel{user-select:all;-webkit-user-select:all;word-break:break-all}
-@media(max-width:640px){.cb{padding:10px 14px;font-size:13px}}
-.boot{padding:40px 0;text-align:center;color:var(--sub);font-size:14px}
-.boot .rows{margin-top:14px;font-size:12px;line-height:1.9;font-family:ui-monospace,Menlo,monospace}
-</style></head><body>
+ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:14px}ul.notes li{margin:2px 0}
+.skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
+.skip:focus{left:8px}
+.boot{padding:40px 0;text-align:center;color:var(--muted);font-size:15px}
+.boot .rows{margin-top:16px;font-size:14px;line-height:1.9}
+.map svg text{font-family:Lexend,system-ui,sans-serif}
+.map .scroll{border:0}
+.map svg{display:block;min-width:1180px}
+@media (max-width:544px){header.top{position:static}}
+</style>
+</head><body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3 8l4-16l3 8h4"/></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5-2.5M3.5 11.5l1.5 1.5l2.5-2.5M3.5 17.5l1.5 1.5l2.5-2.5M11 6h9M11 12h9M11 18h9"/></symbol><symbol id="i-sitemap" viewBox="0 0 24 24"><path d="M3 15h6v6H3zM15 15h6v6h-6zM9 3h6v6H9zM6 15v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1M12 9v3"/></symbol><symbol id="i-calendar-event" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM16 3v4M8 3v4M4 11h16M8 15h2v2H8z"/></symbol><symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-8a3.5 3.5 0 0 1 0-7H12"/></symbol><symbol id="i-paw" viewBox="0 0 24 24"><path d="M14.7 13.5c-1.1-2-1.4-2.5-2.7-2.5s-1.6.5-2.7 2.5c-1.1 2-3 2.1-3 4c0 1.5 1.2 2.5 2.7 2.5c1.2 0 2-.5 3-.5s1.8.5 3 .5c1.5 0 2.7-1 2.7-2.5c0-1.9-1.9-2-3-4z"/><circle cx="5" cy="10" r="1.6"/><circle cx="9" cy="5.5" r="1.6"/><circle cx="15" cy="5.5" r="1.6"/><circle cx="19" cy="10" r="1.6"/></symbol><symbol id="i-building-cottage" viewBox="0 0 24 24"><path d="M3 21h18M4 21V10l8-6l8 6v11M9 21v-6h6v6"/></symbol><symbol id="i-baby-carriage" viewBox="0 0 24 24"><circle cx="8" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M2 5h2.5l1.7 4H20a6 6 0 0 1-6 6H8.7M11 9V3a7 7 0 0 1 7 6"/></symbol><symbol id="i-stethoscope" viewBox="0 0 24 24"><path d="M6 4H5a1 1 0 0 0-1 1v3.5a5.5 5.5 0 0 0 11 0V5a1 1 0 0 0-1-1h-1M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></symbol><symbol id="i-world" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4l4 4M6 12h10"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7"/><path d="M21 21l-6-6"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M5 12H3l9-9l9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol><symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0zM10 9h4"/></symbol><symbol id="i-adjustments-horizontal" viewBox="0 0 24 24"><circle cx="14" cy="6" r="2"/><path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h11M19 18h1"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol></svg>
+<a class="skip" href="#main" data-skip="main">Skip to content</a>
 <header class="top"><div class="hin">
-<div class="brand"><h1>Cobberdog Hub</h1>
-<span class="sl">CurlyCwtch Australian Cobberdogs</span>
-<span class="live" id="livepill">connecting&hellip;</span></div>
-<nav id="nav"></nav></div></header>
+<div class="brand"><h1><span class="dot" aria-hidden="true"></span>Cobberdog Hub</h1>
+<span class="sl">CurlyCwtch Australian Cobberdogs</span></div>
+<span class="live" id="livepill">connecting&hellip;</span>
+<button type="button" class="btn srchbtn" data-search-open aria-keyshortcuts="/" title="Search (press /)"><svg class="ti" aria-hidden="true"><use href="#i-search"/></svg>Search</button>
+<a id="backHome" class="btn back backhome" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
+<span class="morewrap" id="moreWrap"><button type="button" class="btn" id="moreBtn" data-more="toggle" aria-expanded="false" aria-controls="moreMenu">More<svg class="ti" aria-hidden="true"><use href="#i-dots"/></svg></button>
+<div id="moreMenu" class="hidden" role="menu" aria-label="More"><button type="button" role="menuitem" data-more="search"><svg class="ti" aria-hidden="true"><use href="#i-search"/></svg>Search</button><button type="button" role="menuitem" data-reload="1"><svg class="ti" aria-hidden="true"><use href="#i-refresh"/></svg>Reread</button><button type="button" role="menuitem" data-signout="1"><svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg>Sign out</button><a role="menuitem" href="../" data-back-home><svg class="ti" aria-hidden="true"><use href="#i-home"/></svg>Dashboard</a></div></span>
+</div></header>
 <div class="wrap"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
 <div class="next" id="next"></div></div>
+<nav id="nav" class="house-tabs" aria-label="Sections"></nav>
 <script>
 
-var FOLDER='10m8HauOLAdj2QStgNJ2T3b3W599VXWro';   
-var FOLDER_NAME='*01 SLA Inspections / BLD-app-tables';
+var FOLDER=window.DASH_CONFIG.cdhub.folderId;   
+var FOLDER_NAME=window.DASH_CONFIG.cdhub.folderName;
 var WANT=['BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
  'BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-microchip_registration.csv','BLD-weight.csv',
  'BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-association.csv','BLD-prospect.csv','BLD-export_route.csv','BLD-breeder_category.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv',
@@ -174,7 +336,9 @@ var WANT=['BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_p
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
 
-function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+// Links that come from the tables: only plain web addresses are allowed (never javascript:, data: etc.).
+function safeUrl(u){ u=String(u==null?'':u).trim(); return /^https?:\/\/[^\s"'<>]+$/i.test(u)?u:''; }
 function unesc(s){ return String(s||''); }
 function parseCSV(text){
   text=unesc(text).replace(/[ \t]+\n/g,'\n').replace(/\r/g,'');
@@ -198,20 +362,20 @@ function setBoot(msg,rows){
   b.firstChild.nodeValue=msg;
   if(rows!=null) document.getElementById('bootrows').innerHTML=rows;
 }
-var CLIENT_ID='135419966158-qqhndd85mott7p7rqbjbrji8sjhbkt88.apps.googleusercontent.com';
-var SCOPE='https://www.googleapis.com/auth/drive.readonly';
-var DRIVE='https://www.googleapis.com/drive/v3/files';
+var CLIENT_ID=window.DASH_CONFIG.clientId;
+var SCOPE=window.DASH_CONFIG.scopes.read;
+var DRIVE=window.DASH_CONFIG.urls.files;
 var TOKEN=null, TOKEN_EXP=0;
-var SAVE_OFF='Saving is turned off on this web version for now. The round, cabin access and flags are read-only here, and nothing is written to Drive or kept in this browser. Saving comes later.';
+var SAVE_OFF='Saving off for now. Round, cabin access and flags are read-only. Nothing written to Drive or kept in this browser.';
 LOAD.state='signin'; DBERR=SAVE_OFF;
 function DriveErr(status,msg){ var e=new Error(msg); e.status=status;
-  e.code=status===401?'Sign-in expired':status===403?('Google refused access'+(msg?' ('+msg+')':'')):status===404?'Folder not found, or this account cannot see it':('Drive error '+status+(msg?' ('+msg+')':''));
+  e.code=status===429?DashKit.BUSY_TEXT:status===401?'Sign-in expired':status===403?('Google refused access'+(msg?' ('+msg+')':'')):status===404?'Folder not found, or this account cannot see it':('Drive error '+status+(msg?' ('+msg+')':''));
   return e; }
 function gget(url,asText){
   if(!TOKEN||Date.now()>TOKEN_EXP) return Promise.reject(DriveErr(401,''));
-  return fetch(url,{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
+  return DashKit.googleFetch(url,{headers:{Authorization:'Bearer '+TOKEN}}).then(function(res){
     if(res.ok) return asText?res.text():res.json();
-    return res.text().then(function(b){ var m=''; try{ var j=JSON.parse(b); m=(j.error&&j.error.message)||''; }catch(x){} throw DriveErr(res.status,m); }); });
+    return res.text().then(function(b){ var m='',why=''; try{ var j=JSON.parse(b); m=(j.error&&j.error.message)||''; why=(j.error&&j.error.errors&&j.error.errors[0]&&j.error.errors[0].reason)||''; }catch(x){} throw DriveErr(DashKit.isBusy(res.status,why)?429:res.status,m); }); });
 }
 async function listFolder(){
   var files=[], pt='';
@@ -265,6 +429,12 @@ function restoreShared(){
   load();
 }
 restoreShared();
+// Another tab signed in, refreshed the token, or signed out.
+if(window.DashAuth) DashAuth.onChange(function(saved){
+  if(!saved||!DashAuth.hasScope(saved,SCOPE)){ if(TOKEN){ TOKEN=null; TOKEN_EXP=0; T={}; CD={}; LOAD={state:'signin',err:'Signed out in another tab.',storedAt:null,notes:[]}; render(); } return; }
+  var was=TOKEN; TOKEN=saved.access_token; TOKEN_EXP=saved.expires_at;
+  if(!was||LOAD.state==='signin'||LOAD.state==='err') load();
+});
 (function waitGoogle(n){ if(!initGoogle() && n<100) setTimeout(function(){ waitGoogle(n+1); },100);
   else if(!auth.ready()){ LOAD.err='Google sign-in could not load. Check the connection and reload the page.'; render(); } })(0);
 async function load(){
@@ -344,6 +514,7 @@ function build(){
       where:'',off:o.off_site_kind||'',
       treats:DSP[r.id]||[], dna:DNA[r.id]||[],
       chip:m.chip_number||'',source:r.source,
+      rxExpiry:r.rx_moxi_expiry||'',rxUrl:r.rx_moxi_file_url||'',
       species:r.species||'',breed:r.breed||'',breed_vet:r.breed_vet_recorded||'',
       colour:c?{name:c.name,family:c.base_family,hex:c.swatch_hex,noseApplies:c.nose_pigment_applies==='true'}:null,
       pat:p?p.name:'',pig:g?{name:g.name,code:g.code,hex:g.swatch_hex}:null,
@@ -375,7 +546,7 @@ function build(){
   CD.tempActions=(T['BLD-temperature_action.csv']||[]).map(function(r){
     return {dir:r.direction,at:parseFloat(r.threshold_c),action:r.action,source:r.source};
   }).sort(function(a,b){return b.at-a.at;});
-  CD.litters=T['BLD-litter.csv']||[]; CD.matings=T['BLD-mating.csv']||[];
+  CD.litters=T['BLD-litter.csv']||[];   // CD.matings stays the parsed rows from above (it was overwritten with the raw rows, so In whelp found nothing)
   CD.vetlink=T['BLD-MAP-animana.csv']||[]; CD.manifest=T['BLD-_MANIFEST.csv']||[];
   var MCN={}; (T['BLD-microchip.csv']||[]).forEach(function(r){ if(r.subject_id&&r.chip_number) MCN[r.subject_id]=r.chip_number; });
   var vmScore=function(m){ var sc=0, st=String(m.vet_status||''), nm=String(m.vet_name||''), cl=String(m.vet_client||'');
@@ -395,11 +566,15 @@ function build(){
    if(!d.chip && m.matched_on_chip) d.chip=m.matched_on_chip; });
   CD.tenant=(T['BLD-tenant.csv']||[])[0]||{};
   CD._byId={}; CD.dogs.forEach(function(d){ CD._byId[d.id]=d; });
+  CD._built=Date.now(); CD._needs=null;
   CD.counts={}; WANT.forEach(function(t){ CD.counts[t.replace('BLD-','').replace('.csv','')]=(T[t]||[]).length; });
 }
 
 var TODAY=new Date();
 function dmy(iso){ if(!iso) return ''; var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso); return m? m[3]+'/'+m[2]+'/'+m[1] : iso; }
+var UKMON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function ukDate(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||''); if(!m) return '';
+  var mon=UKMON[+m[2]-1]; return mon?((+m[3])+' '+mon+' '+m[1]):''; }
 function nameOf(sid){ if(!sid) return ''; var d=(CD._byId||{})[sid]; return (d&&d.name)?d.name:sid.replace(/^sub-/,'').replace(/-/g,' '); }
 
 function months(iso){ if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
@@ -621,7 +796,9 @@ function daysBetween(a,b){ var x=(a||'').split('-'),y=(b||'').split('-');
  return Math.round((Date.UTC(+y[0],+y[1]-1,+y[2])-Date.UTC(+x[0],+x[1]-1,+x[2]))/86400000); }
 function inWhelp(onISO){
  var today=onISO||new Date().toISOString().slice(0,10), out=[], bydam={};
- (CD.matings||[]).forEach(function(m){ if(!m.dam) return; (bydam[m.dam]=bydam[m.dam]||[]).push(m); });
+ // CD.matings holds the parsed rows (dam/sire/on). Raw rows (dam_subject_id/mated_on) are still read, so a caller can pass either shape.
+ (CD.matings||[]).map(function(m){ return m.dam!==undefined?m:{dam:m.dam_subject_id,sire:m.sire_subject_id,on:m.mated_on,litter:m.litter_id||'',produced:m.produced_litter||'',method:m.method||''}; })
+  .forEach(function(m){ if(!m.dam) return; (bydam[m.dam]=bydam[m.dam]||[]).push(m); });
  Object.keys(bydam).forEach(function(dam){
   var ms=bydam[dam].slice().sort(function(a,b){return (a.on||'')<(b.on||'')?-1:1;});
   var open=ms.filter(function(m){ return !m.litter && (m.produced||'').toLowerCase()!=='yes'; });
@@ -676,25 +853,145 @@ function checks(){
 }
 function strip(){
  return '<div class="chk">'+checks().map(function(x){
-  return '<button class="ci'+(x.ok?' ok':' bad')+'" data-list="'+(x.list||'')+'" title="'+esc(x.msg)+'">'
+  // Only a check with a list to open is a button. The others are status chips (the reason is in the title and the card below).
+  if(!x.list) return '<span class="ci ci-s'+(x.ok?' ok':' bad')+'" title="'+esc(x.msg)+'"><i></i>'+esc(x.k)+'</span>';
+  return '<button type="button" class="ci'+(x.ok?' ok':' bad')+'" data-list="'+x.list+'" title="'+esc(x.msg)+'">'
    +'<i></i>'+esc(x.k)+'</button>'; }).join('')+'</div>';
 }
 
 
+/* ---------- Live feed: the Bloodline home screens, built only from what this page already reads. ---------- */
+var CHECKNAME={'tables':'Tables read','law vs yours':'Licence counts','date of birth':'Date of birth','microchip':'Microchip',
+ 'placed in an area':'Placed in a cabin','joins':'Joins','dates':'Dates','rule changes':'Rule changes','saving off':'Saving'};
+function capFirst(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1); }
+function dmyShort(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||''); return m? m[3]+'/'+m[2]+'/'+m[1].slice(2) : (iso||''); }
+/* foundation: date on a record. Every date pill wears a plain ring; late = rose ring + tint, soon = amber ring + tint. */
+function dpill(iso,tone){ return iso?'<span class="dpill'+(tone?' '+tone:'')+'">'+esc(dmyShort(iso))+(tone?'<span class="sr"> ('+tone+')</span>':'')+'</span>':''; }
+/* foundation: needs-you queue. One list of things waiting on the owner, from checks, rules, places and work records.
+   Each item: title, one-line why, an optional date with its urgency, and ONE place to go. Never stored; worked out each time. */
+function needsToday(){
+ var date=CD._roundDate||todayISO();
+ if(CD._needs&&CD._needs.date===date&&CD._needs.built===CD._built) return CD._needs.list;
+ var out=[];
+ /* foundation: check (a data check that fails) */
+ checks().forEach(function(x){ if(x.ok||x.k==='saving off') return;
+  out.push({title:(CHECKNAME[x.k]||capFirst(x.k))+' needs a look',sub:x.msg,go:x.list?'today':(x.k==='law vs yours'?'today':'shape'),list:x.list||'',tone:'',kind:'check'}); });
+ /* kit: animal (a pregnancy getting close to its whelping window, from the mating rows) */
+ inWhelp(date).forEach(function(x){
+  if(x.unknown){ out.push({title:x.dog.name+': mating date not recorded',sub:'No due date can be worked out',go:'today',tone:'',kind:'kit'}); return; }
+  if(x.day<50) return;
+  out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+' · window '+dmy(x.from)+' to '+dmy(x.to),date:x.due,
+   tone:x.day>63?'late':(x.day>=57?'soon':''),go:'today',kind:'kit'}); });
+ /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
+ (CD.areas||[]).forEach(function(a){ var acc=accessOf(a.id), cap=capFor(a.id,'10-25kg (medium)',acc), n=inCabin(a.id,date).length;
+  if(cap!=null && n>parseInt(cap,10)) out.push({title:a.code+' is over its headcount',sub:n+' in, '+cap+' permitted ('+acc+')',date:date,tone:'late',go:'round',kind:'rule'}); });
+ /* foundation: work record (an open item waiting on the owner) */
+ (CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).forEach(function(r){
+  out.push({title:r.item||r.id,sub:'Outstanding'+(r.area?' · '+r.area:'')+(r.blocked_on?' · '+r.blocked_on:''),go:'work',tone:'',kind:'record'}); });
+ var rank=function(x){ return x.tone==='late'?0:(x.tone==='soon'?1:(x.date?2:3)); };
+ out=out.map(function(x,i){x.i=i;return x;}).sort(function(a,b){ return rank(a)-rank(b) || (a.date||'').localeCompare(b.date||'') || a.i-b.i; });
+ CD._needs={date:date,built:CD._built,list:out};
+ return out;
+}
+function goBtn(x,text){
+ var t=text||'Open', lab=t+': '+x.title;
+ if(x.list) return '<button type="button" class="btn ci" data-list="'+esc(x.list)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
+ return '<button type="button" class="btn" data-go="'+esc(x.go)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
+}
+function needRow(x,hide){
+ return '<div class="mrow'+(hide?' hidden':'')+'"'+(hide?' data-needmore="1"':'')+'><span class="ic'+(x.tone?' '+x.tone:'')+'" aria-hidden="true"></span>'
+  +'<span class="t">'+esc(x.title)+'<small>'+esc(x.sub||'')+'</small></span>'+dpill(x.date,x.tone)+goBtn(x)+'</div>';
+}
+/* foundation: empty state that names its source. Used where a screen needs data that only the Bloodline app will hold.
+   Table names are the Stage 4 schema draft in BLOODLINE-THE-DOCUMENT (4.0a); the words are the dog pack's labels. */
+var ARRIVES={
+ media:['media','media','Photos','Record cards show a grey icon until photos are kept against each record.'],
+ person:['person','person','Who has it, by name','The ring says on site or off site. A named keeper needs people on file (BLD-subject_owner already points at person ids).'],
+ due:['work_item','work item','Due dates on Outstanding','BLD-WORK.csv has no date column, so these rows carry no date pill.'],
+ reading:['reading','reading','Temperatures that are kept','Readings typed on The round are not saved here. Kept readings need their own table.'],
+ stage:['birth_group_stage','litter stage','Litter stage','Born, weaning, ready: a litter\u2019s stage is recorded, not guessed from its age.']};
+function arrives(k){ var a=ARRIVES[k];   // a = [Bloodline table, the words shown, heading, why]
+ return '<section class="card dash arrive" id="arrive-'+k+'" data-arrives="'+esc(a[0])+'"><h3>'+esc(a[2])+'</h3>'
+  +'<p class="arrives">Arrives with Bloodline: '+esc(a[1])+'</p><p class="awhy">'+esc(a[3])+'</p></section>'; }
+/* foundation: summary strip (On track / Needs you / Overdue) */
+function summaryStrip(){
+ var n=needsToday(), late=n.filter(function(x){return x.tone==='late';}).length;
+ var ok=checks().filter(function(x){return x.ok && x.k!=='saving off';}).length;
+ return '<div class="three" id="summary">'
+  +'<span class="sum" title="Checks that pass"><span class="big">'+ok+'</span>On track</span>'
+  +'<span class="sum need" title="Waiting on you, not late"><span class="big">'+(n.length-late)+'</span>Needs you</span>'
+  +'<span class="sum over" title="Late"><span class="big">'+late+'</span>Overdue</span></div>';
+}
+/* foundation: next action (the one thing to do now, with one button) */
+function nextCard(){
+ var x=needsToday()[0];
+ if(!x) return '<section class="mcard nextc" id="nextCard"><div class="bline">Next</div><p class="okempty">Nothing needs you</p>'
+  +'<p class="sub" style="margin-top:8px">Checks pass. Nothing is waiting on you.</p><button type="button" class="btn" data-go="today">Open Today</button></section>';
+ return '<section class="mcard nextc" id="nextCard"><div class="bline">Next</div><div class="t">'+esc(x.title)+'</div>'
+  +'<p class="sub">'+esc(x.sub||'')+(x.date?' · '+esc(dmy(x.date)):'')+'</p>'+goBtn(x,'Open '+label(x.go))+'</section>';
+}
+function needsCard(){
+ var n=needsToday();
+ var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Needs you today'+cntPill(n.length,n.length?'need':'ok')+'</h3>';
+ if(!n.length) return h+'<p class="okempty">Nothing needs you</p></section>';
+ h+=n.map(function(x,i){ return needRow(x,i>=7); }).join('');
+ if(n.length>7) h+='<div class="mfoot"><span class="mut">Showing 7 of '+n.length+'</span><button type="button" class="btn" data-needall="1">Show all</button></div>';
+ return h+'</section>';
+}
+/* foundation: place occupancy (who is on site). The words are the animal kit's labels. */
+function onSiteCard(){
+ var c=counts();
+ var row=function(t,v,s){ return '<div class="mrow"><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
+ return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
+  +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><span class="big">'+c.here.length+'</span><span class="mut">dogs on the premises today</span></div>'
+  +row('Adults',c.adults.length,'6 months and over')+row('Under 6 months',c.pups.length,'')
+  +row('Breeding bitches in law',c.bitches.length,'female, entire, 6 months and over')+row('Stud males',c.studs.length,'')
+  +row('Off site',c.offsite.length,'owned by family, still tracked')
+  +'<div class="mfoot"><span class="mut">'+CD.dogs.length+' records and '+CD.counts.weight+' weighings on file in total, archive, not today.</span><button type="button" class="btn" data-go="dogs">Open Dogs</button></div></section>';
+}
+/* kit: animal (Litters card: pregnancies from the mating rows, and litters born in the last 12 weeks) */
+function littersCard(){
+ var date=CD._roundDate||todayISO(), w=inWhelp(date).filter(function(x){return !x.unknown;});
+ var recent=(CD.litters||[]).filter(function(l){ var b=l.dob||l.born_on; var d=b?daysBetween(b,date):null; return d!==null&&d>=0&&d<=84; })
+  .sort(function(a,b){ return (b.dob||b.born_on||'').localeCompare(a.dob||a.born_on||''); });
+ var pups=litterPups(), n=w.length+recent.length;
+ var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>Litters'+cntPill(n)+'</h3>';
+ h+=w.map(function(x){ var tone=x.day>63?'late':(x.day>=57?'soon':'');
+   return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' of 57–72 · working due</small></span>'+dpill(x.due,tone)+'</div>'; }).join('');
+ h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
+   return '<div class="mrow"><span class="t">'+esc(l.pairing||((nameOf(l.dam_subject_id)||'?')+' × '+(nameOf(l.sire_subject_id)||'?')))
+    +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
+ if(!n) h+='<p class="okempty">No litters on the go</p>';
+ return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span><button type="button" class="btn" data-go="litters">Open Litters</button></div></section>';
+}
+/* foundation: readings against a rule band (temperature per place, per round slot) */
+function tempsCard(){
+ var date=CD._roundDate||todayISO(), N=(CD.areas||[]).length;
+ var has=function(slot){ return (CD.areas||[]).filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
+ var am=has('am'), pm=has('pm');
+ var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
+ var row=function(t,v,s,done){ return '<div class="mrow"><span class="ic'+(done?' ok':'')+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
+ return '<section class="mcard" id="tempsCard" style="--hc:var(--ljr-4)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
+  +row('Morning readings',am+' of '+N,'cabins with a reading',N&&am===N)+row('Evening readings',pm+' of '+N,'cabins with a reading',N&&pm===N)
+  +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||out.kind||''),false)
+       :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No outdoor reading on file for today</small></span></div>')
+  +'<div class="mfoot"><span class="mut">'+(DB?'Kept as typed, to two decimal places.':'Saving is off, so readings are not kept yet.')+'</span><button type="button" class="btn" data-go="round">Open The round</button></div></section>';
+}
+/* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
+function checksCard(){
+ var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
+ return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'need':'ok')+'</h3>'
+  +all.map(function(x){
+   return '<div class="mrow ckrow'+(x.ok?' ok':' bad')+'"><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.ok?'✓':'✗')+'</span>'
+    +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
+    +(x.list?'<button type="button" class="btn ci" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
+  +'</section>';
+}
 function pageMap(){
- var c=counts(), bad=checks().filter(function(x){return !x.ok;});
- return '<h2>Live from Drive</h2>'
- +'<p class="sub">Read fresh from <code>'+esc(FOLDER_NAME)+'</code> every time you open it.</p>'
- +strip()
- +(bad.length?'<div class="card acc2"><h4>'+bad.length+' need looking at</h4><p style="margin-bottom:0">'
-    +bad.map(function(x){return '<b>'+esc(x.k)+'</b> \u2014 '+esc(x.msg);}).join('<br>')+'</p></div>'
-   :'<div class="card acc5"><h4>Everything checks out</h4><p style="margin-bottom:0">Every dot is green. Counts agree, tables match the manifest, nothing is missing a date of birth, a chip or a cabin.</p></div>')
- +'<div class="tiles">'
- +tile('b5',c.here.length,'dogs here','on the premises today')
- +tile('b6',c.adults.length,'adults','6 months and over')
- +tile('b7',c.pups.length,'under 6 months','')
- +tile('b0',c.offsite.length,'off site','owned by family, still tracked')+'</div>'
- +'<div class="mut">'+CD.dogs.length+' subjects and '+CD.counts.weight+' weighings are on file in total \u2014 archive, not today.</div>';
+ var date=CD._roundDate||todayISO();
+ return '<h2>Live</h2><p class="sub">'+esc(dmy(date))+(CD.tenant&&CD.tenant.name?' · '+esc(CD.tenant.name):'')+'</p>'
+ +summaryStrip()
+ +'<div class="mecards">'+nextCard()+needsCard()+onSiteCard()+littersCard()+tempsCard()+checksCard()+'</div>';
 }
 
 function pageToday(){
@@ -706,14 +1003,16 @@ function pageToday(){
  var unplaced=c.here.filter(function(d){ return !placed[d.id] && !d.area_id; });
  var ft=Math.ceil(c.adults.length/20), pt=Math.ceil(c.adults.length/10);
  var h='<h2>Today</h2><p class="sub">'+esc(dmy(date))+'</p>'
+ +todayChecklist(date,unplaced.length)
  +'<div class="tiles">'
- +tileC('b'+(temps.length>=cabins?'5':'2'),temps.length+' of '+cabins,'cabins with a temperature','','')
+ +tileGo('b'+(temps.length>=cabins?'5':'2'),temps.length+' of '+cabins,'cabins with a temperature','enter on The round','round')
  +tileC('b'+(unplaced.length?'2':'5'),unplaced.length,'dogs not yet placed','','unplaced')
  +tileC('b6',c.here.length,'dogs here','tap for the list','here')
  +tileC('b4',ft+' FT',(pt+' PT')+' \u2014 staffing','1 per 20 adults, or 1 per 10','adults')+'</div>'
  +(function(){ var w=inWhelp(date); if(!w.length) return '';
-   return '<h3>In whelp \u2014 '+w.length+'</h3><div class="card acc3">'
-    +'<div class="scroll"><table><thead><tr><th>bitch</th><th>day</th><th>first mated</th><th>working due (+63)</th><th>window 57\u201372</th><th>sire(s) \u00b7 method</th></tr></thead><tbody>'
+   /* kit: animal */
+   return '<h3>In whelp '+cntPill(w.length)+'</h3><div class="card">'
+    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>bitch</th><th>day</th><th>first mated</th><th>working due (+63)</th><th>window 57\u201372</th><th>sire(s) \u00b7 method</th></tr></thead><tbody>'
     +w.map(function(x){
       if(x.unknown) return '<tr><td><b>'+esc(x.dog.name)+'</b></td><td colspan="5"><span class="pill no">mating date not recorded</span> '+esc(x.matings)+' mating row(s), no date \u2014 no due date can be computed</td></tr>';
       var late=x.day>72, close=x.day>=57;
@@ -723,7 +1022,7 @@ function pageToday(){
        +'<td class="mut">'+esc(dmy(x.from))+' \u2013 '+esc(dmy(x.to))+'</td>'
        +'<td class="mut">'+esc((x.sires||[]).join(', '))+' \u00b7 '+esc((x.methods||[]).join(', '))+'</td></tr>'; }).join('')
     +'</tbody></table></div>'
-    +'<p class="note" style="margin-bottom:0">In whelp is <b>derived from the mating rows</b>, never a stored flag \u2014 a flag would still say pregnant the day after she whelps. <b>Two sources disagree on the window and both are shown:</b> Lisa gives first mating + 63 days, which is the working date; register FI18 gives 63\u00b11 from <i>ovulation</i> and <b>57\u201372 from first mating, stated as poor confidence</b>. A single date off a mating would claim a precision the source denies.</p></div>'; })()
+    +'<ul class="notes" style="margin-bottom:0"><li>From the mating rows, never a stored flag.</li><li>Working due: first mating + 63 days (Lisa).</li><li>Window 57\u201372 from first mating (FI18, poor confidence). Both shown.</li></ul></div>'; })()
  +'<div id="tpanel"></div>'
  +'<h3>The licence counts</h3><div class="tiles">'
  +tileC('b2',c.adults.length,'adult dogs here','6 months or over','adults')
@@ -739,6 +1038,32 @@ function pageToday(){
  +'<div class="mut">Tap any number to see the dogs behind it. If one is wrong, tap the dog and flag it \u2014 I pick the flags up and correct the tables.</div>';
  return h;
 }
+/* foundation: checklist instance for today's round. Each line is a check on the round's places (✓ done / ✗ not yet),
+   worked out from what is read: placements, flap modes, readings and headcounts. Nothing is stored. */
+function todayChecklist(date,unplacedN){
+ var A=CD.areas||[], N=A.length;
+ var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
+ var am=has('am'), pm=has('pm'), modes=A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.access||accessOf(a.id); }).length;
+ var over=A.filter(function(a){ var acc=(ROUND[roundKey(date,a.id)]||{}).access||accessOf(a.id), cap=capFor(a.id,'10-25kg (medium)',acc); return cap!=null&&inCabin(a.id,date).length>parseInt(cap,10); }).length;
+ var c=counts();
+ var L=[
+  [!unplacedN,'Every dog on site is in a cabin',unplacedN?unplacedN+' not yet placed':'all placed'],
+  [N>0&&am===N,'Morning temperature in every cabin',am+' of '+N+' cabins'],
+  [N>0&&pm===N,'Evening temperature in every cabin',pm+' of '+N+' cabins'],
+  [N>0&&modes===N,'Every cabin has its flap mode',modes+' of '+N+' chosen'],
+  [!over,'No cabin over its headcount',over?over+' over':'all within'],
+  [c.bitches.length===c.active.length,'Licence counts agree','law '+c.bitches.length+', your list '+c.active.length]];
+ var done=L.filter(function(x){return x[0];}).length;
+ return '<section class="mcard" id="todayChecklist" style="--hc:var(--ljr-4);margin-bottom:12px"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Today checklist<span class="mut" style="margin-left:auto;font-weight:400">'+done+' of '+L.length+' done</span></h3>'
+  +L.map(function(x){ return '<div class="mrow ckrow"><span class="mk'+(x[0]?'':' bad')+'" aria-hidden="true">'+(x[0]?'✓':'✗')+'</span>'
+    +'<span class="t">'+esc(x[1])+'<span class="sr">'+(x[0]?' done':' not done')+'</span><small>'+esc(x[2])+'</small></span></div>'; }).join('')
+  +'<div class="mfoot"><span class="mut">'+(DB?'From the round.':'Saving is off, so the round shows the tables, not today’s ticks.')+'</span><button type="button" class="btn" data-go="round">Open The round</button></div></section>';
+}
+// A tile that opens another section (e.g. the temperature tile opens The round, where temperatures are entered).
+function tileGo(c,n,k,s,to){
+ return '<button type="button" class="tile tl '+c+'" data-go="'+to+'"><div class="n">'+n+'</div>'
+  +'<div class="k">'+k+'</div>'+(s?'<div class="src">'+s+'</div>':'')+'</button>';
+}
 function tileC(c,n,k,s,list){
  return '<button class="tile tl '+c+'"'+(list?' data-list="'+list+'"':'')+'><div class="n">'+n+'</div>'
   +'<div class="k">'+k+'</div>'+(s?'<div class="src">'+s+'</div>':'')+'</button>';
@@ -750,13 +1075,15 @@ function listFor(key){
    return c.here.filter(function(d){return !placed[d.id]&&!d.area_id;}); }
  return c[key]||[];
 }
+var LISTNAME={unplaced:'dogs not yet placed',here:'dogs here',adults:'adult dogs here',bitches:'breeding bitches in law',active:'your working list',
+ studs:'stud males',nodob:'no date of birth',nochip:'no microchip recorded',noarea:'not in a cabin',pups:'under 6 months',offsite:'off site'};
 function showList(key){
  var el=document.getElementById('tpanel'); if(!el) return;
  if(!key){ el.innerHTML=''; return; }
  var list=listFor(key);
  var areaName={}; CD.areas.forEach(function(a){ areaName[a.id]=a.code; });
- var h='<div class="card acc6"><h4>'+list.length+' \u2014 '+esc(key)+'</h4>'
-  +'<div class="scroll"><table><thead><tr><th>dog</th><th>age</th><th>sex</th><th>status</th><th>where (location)</th><th>classification</th><th></th></tr></thead><tbody>';
+ var h='<div class="card"><h4>'+esc(capFirst(LISTNAME[key]||key))+cntPill(list.length)+'</h4>'
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>dog</th><th>age</th><th>sex</th><th>status</th><th>where (location)</th><th>classification</th><th></th></tr></thead><tbody>';
  list.slice().sort(function(a,b){return (a.name||'')<(b.name||'')?-1:1;}).forEach(function(d){
   var m=months(d.dob), st=statusOf(d);
   h+='<tr><td><b>'+esc(d.name)+'</b></td>'
@@ -780,28 +1107,51 @@ async function flagDog(id,btn){
  catch(e){ btn.textContent='NOT saved \u2014 '+((e&&e.code)||'error'); }
 }
 
+/* foundation: list view filter row (one row: Search, Filter panel, Sort, removable chips). Used by Dogs, Litters and Buyers. */
+function fbar(o){
+ return '<div class="fbar" id="fb-'+o.id+'"><div class="srow">'
+  +'<label class="sbox srch"><svg class="ti" aria-hidden="true"><use href="#i-search"/></svg><input id="'+o.q+'" type="search" aria-label="Search '+esc(o.what)+'" placeholder="Search '+esc(o.what)+'"></label>'
+  +'<button type="button" class="btn fbtn" data-fpanel="fp-'+o.id+'" aria-expanded="false" aria-controls="fp-'+o.id+'"><svg class="ti" aria-hidden="true"><use href="#i-adjustments-horizontal"/></svg>Filter<span class="fcount"></span></button>'
+  +'<select id="'+o.sort[0]+'" class="sortsel" aria-label="Sort">'+o.sort[1].map(function(x){return '<option value="'+x[0]+'">Sort: '+esc(x[1])+'</option>';}).join('')+'</select>'
+  +'<span class="achips" id="ach-'+o.id+'"></span><span class="mut" id="'+o.count+'"></span></div>'
+  +'<div class="fpanel hidden" id="fp-'+o.id+'">'+o.groups.map(function(g){ return '<div class="fgrp"><span class="flab" aria-hidden="true">'+esc(g[0])+'</span>'+g[1]+'</div>'; }).join('')
+  +'<div class="fgrp" style="justify-content:flex-end"><button type="button" class="btn" id="'+o.clear+'">Clear filters</button></div></div>'
+  +(o.hidden||'')+'</div>';
+}
+function quiet(x){ return capFirst(String(x||'').toLowerCase()); }   // data written in capitals is shown in sentence case
+function fsel(id,name,opts){ return '<select id="'+id+'" aria-label="'+esc(name)+'" data-fname="'+esc(name)+'"><option value="">Any</option>'+(opts||'')+'</select>'; }
+function fchips(id,ids){
+ var box=document.getElementById('ach-'+id); if(!box) return;
+ var on=ids.map(function(i){ var e=document.getElementById(i); if(!e||!e.value) return null;
+   var t=e.tagName==='SELECT'?(e.options[e.selectedIndex]||{}).textContent:(e.dataset.ftext?e.dataset.ftext(e.value):e.value);
+   if(i==='fst'){ var s=STATUS.filter(function(x){return x[0]===e.value;})[0]; t=s?s[1]:e.value; }
+   return [i,(e.dataset.fname||'Filter')+': '+t]; }).filter(Boolean);
+ box.innerHTML=on.map(function(x){ return '<button type="button" class="achip" data-fclear="'+x[0]+'" aria-label="Remove filter '+esc(x[1])+'">'+esc(x[1])+' <span aria-hidden="true">×</span></button>'; }).join('');
+ var b=document.querySelector('[data-fpanel="fp-'+id+'"] .fcount'); if(b) b.innerHTML=on.length?' '+cntPill(on.length):'';
+}
 function pageDogs(){
- 
+
  var missAll=CD.dogs.filter(function(d){return !d.sex;});
  var missVis=missAll.filter(function(d){var c=statusOf(d).code; return c!=='CL'&&c!=='DE';});
  var miss=missVis.length, missGone=missAll.length-missVis.length;
  return '<h2>Dogs</h2>'
- +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="q" placeholder="name, chip…"></span>'
- +'<select id="fs"><option value="">sex</option><option>Female</option><option>Male</option><option value="__none">not recorded</option></select>'
- +'<select id="fn"><option value="">neuter</option><option value="e">entire</option><option value="n">neutered</option></select>'
- +'<select id="fa"><option value="">age</option><option value="p">under 6m</option><option value="j">6m–12m</option><option value="a">1–7y</option><option value="o">7y+</option><option value="__none">no DOB</option></select>'
- +'<input type="hidden" id="fst" value="">'
- +'<select id="fc"><option value="">colour</option></select>'
- +'<select id="ft"><option value="">screening</option></select>'
- +'<button id="clr">clear</button><span class="mut" id="cnt"></span></div>'
- +'<div class="key"><span><i style="background:var(--male)"></i>entire male</span>'
- +'<span><i style="background:var(--male-n)"></i>neutered male</span>'
- +'<span><i style="background:var(--female)"></i>entire female</span>'
- +'<span><i style="background:var(--female-n)"></i>neutered female</span>'
- +'<span><i style="background:var(--unk)"></i>sex missing</span></div>'
- +'<div class="key stf">'+STATUS.map(function(x){return '<button class="st sfb '+x[2]+'" data-code="'+x[0]+'"><b>'+x[0]+'</b>'+x[1]+'</button>';}).join('')+'<button class="st sfb st-all" data-code="">ALL</button></div>'
- +'<div class="note" style="margin:-4px 0 10px"><b>Left edge of each card = sex.</b> Blue male, pink female, grey not recorded. An entire dog shows nothing extra. A dog that has been done carries the word SPAYED or NEUTERED beside its status, a struck-through sex symbol, and a dotted edge. The coloured buttons above are the status \u2014 tap one to filter, tap ALL to clear. Collected and deceased are hidden until you tap them.</div>'
+ +fbar({id:'dogs',what:'dogs',q:'q',count:'cnt',clear:'clr',sort:['dsort',[['','as on file'],['name','name A to Z'],['young','youngest first'],['old','oldest first']]],
+   hidden:'<input type="hidden" id="fst" value="" data-fname="Status">',
+   groups:[['Sex',fsel('fs','Sex','<option>Female</option><option>Male</option><option value="__none">not recorded</option>')],
+    ['Neutered',fsel('fn','Neutered','<option value="e">entire</option><option value="n">neutered</option>')],
+    ['Age',fsel('fa','Age','<option value="p">under 6m</option><option value="j">6m to 12m</option><option value="a">1 to 7y</option><option value="o">7y+</option><option value="__none">no DOB</option>')],
+    ['Colour',fsel('fc','Colour','')],['Screening',fsel('ft','Screening','')]]})
+ /* kit: animal (sex key and status chips) */
+ +'<div class="key"><span><i class="sexdot me"></i>entire male</span>'
+ +'<span><i class="sexdot mn"></i>neutered male</span>'
+ +'<span><i class="sexdot fe"></i>entire female</span>'
+ +'<span><i class="sexdot fn"></i>neutered female</span>'
+ +'<span><i class="sexdot u"></i>sex missing</span></div>'
+ +'<div class="key stf">'+STATUS.map(function(x){return '<button type="button" class="st sfb '+x[2]+'" data-code="'+x[0]+'" aria-pressed="false"><b>'+x[0]+'</b>'+x[1]+'</button>';}).join('')+'<button type="button" class="st sfb st-all" data-code="" aria-pressed="true">All</button>'
+ +'<span class="info" tabindex="0" title="The dot by each name is the sex: blue male, pink female, a ring when neutered, dashed when not recorded. A dog that has been done also says spayed or neutered. The buttons are the status: tap one to filter, tap All to clear. Collected and deceased are hidden until you tap them.">i</span></div>'
  +(miss?'<div class="card acc2"><h4>'+miss+' here carry no sex</h4><p style="margin-bottom:0">A blank sex drops a dog out of the breeding-bitch count silently.'+(missGone?' A further <b>'+missGone+'</b> have no sex but have been collected or have died — nothing to fix there.':'')+'</p></div>':(missGone?'<div class="card acc5"><h4>Every dog still here has a sex recorded</h4><p style="margin-bottom:0">'+missGone+' subjects carry no sex, and <b>all of them have been collected or have died</b>. Nothing to chase.</p></div>':''))
+ /* foundation: record media and named people, not held yet */
+ +'<div class="arrow">'+arrives('media')+arrives('person')+'</div>'
  +'<div id="wpanel"></div><div class="grid" id="rows"></div>'
 }
 function ageBand(m){ if(m===null) return '__none'; if(m<6) return 'p'; if(m<12) return 'j'; if(m<84) return 'a'; return 'o'; }
@@ -809,8 +1159,8 @@ function showWeights(id){
  var d=CD._byId[id]; if(!d) return;
  var el=document.getElementById('wpanel'); if(!el) return;
  if(!d.weights.length){ el.innerHTML='<div class="card acc2"><h4>'+esc(d.name)+' has no weighings</h4></div>'; return; }
- var h='<div class="card acc6"><h4>'+esc(d.name)+' \u2014 '+d.weights.length+' weighings</h4>'
-  +'<div class="scroll"><table><thead><tr><th>date</th><th>weight</th><th>change</th><th>BCS</th><th>source</th></tr></thead><tbody>';
+ var h='<div class="card"><h4>'+esc(d.name)+': weighings'+cntPill(d.weights.length)+'</h4>'
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>weight</th><th>change</th><th>BCS</th><th>source</th></tr></thead><tbody>';
  for(var i=d.weights.length-1;i>=0;i--){ var w=d.weights[i], pv=i>0?d.weights[i-1]:null;
   var dl=pv?(w.kg-pv.kg):null;
   h+='<tr><td>'+esc(dmy(w.on))+'</td><td><b>'+w.kg+' kg</b></td>'
@@ -827,8 +1177,8 @@ function showTreats(id){
  var el=document.getElementById('wpanel'); if(!el) return;
  var t=d.treats||[];
  if(!t.length){ el.innerHTML='<div class="card acc2"><h4>'+esc(d.name)+' has no treatments recorded</h4></div>'; return; }
- var h='<div class="card acc4"><h4>'+esc(d.name)+' \u2014 '+t.length+' treatment'+(t.length===1?'':'s')+'</h4>'
-  +'<div class="scroll"><table><thead><tr><th>date</th><th>product</th><th>dose</th><th>chosen because</th><th>source</th></tr></thead><tbody>';
+ var h='<div class="card"><h4>'+esc(d.name)+': treatments'+cntPill(t.length)+'</h4>'
+  +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>date</th><th>product</th><th>dose</th><th>chosen because</th><th>source</th></tr></thead><tbody>';
  for(var i=t.length-1;i>=0;i--){ var r=t[i];
   var unk=/NOT STATED/.test(r.product||'');
   h+='<tr><td>'+esc(dmy(r.on))+'</td>'
@@ -837,13 +1187,22 @@ function showTreats(id){
    +'<td class="mut">'+(r.kg?esc(r.kg)+' kg on the day'+(r.band?', band '+esc(r.band):''):(r.need?esc(r.need):''))+'</td>'
    +'<td class="mut">'+esc(r.src||'')+'</td></tr>'; }
  h+='</tbody></table></div>'
-  +'<p class="note" style="margin-bottom:0">Every dose here is worked out from the weight recorded on the same date, never from today\u2019s weight. Moxiclear does not treat tapeworm \u2014 the SPC names no cestode at all \u2014 so a tapeworm wormer is always a second row.</p>'
+  +'<ul class="notes" style="margin-bottom:0"><li>Dose from the weight on the same date, never today\u2019s.</li><li>Moxiclear: no tapeworm cover. Tapeworm wormer = separate row.</li></ul>'
   +'<button id="mclose" class="cb" style="margin-top:8px">close</button></div>';
  el.innerHTML=h;
  var c=document.getElementById('mclose'); if(c) c.addEventListener('click',function(){ el.innerHTML=''; });
  if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 var dogShown=300, unplacedShown=40;
+// Moxiclear prescription: expiry from the subject table, and the latest file only when that table gives a real web address.
+function moxiLine(d){
+ var when=ukDate(d.rxExpiry), url=safeUrl(d.rxUrl);
+ if(!when && !url) return '';
+ return '<div class="wt"><span class="lb">Moxiclear</span>'
+  +(when?'<b>'+esc(when)+'</b>':'')
+  +(url?'<a class="cb" href="'+esc(url)+'" target="_blank" rel="noopener" aria-label="'+esc('Rx for '+(d.name||'this dog'))+'">Rx</a>':'')
+  +'</div>';
+}
 function drawDogs(){
  var v=function(i){var e=document.getElementById(i);return e?(e.value||''):'';};
  var q=v('q').toLowerCase(),fs=v('fs'),fn=v('fn'),fa=v('fa'),fst=v('fst'),fc=v('fc'),ft=v('ft');
@@ -859,43 +1218,54 @@ function drawDogs(){
   if(!q) return true;
   return ((d.name||'')+' '+(d.chip||'')).toLowerCase().indexOf(q)>=0; });
  var h='', dogN=dogShown==='all'?list.length:Math.min(list.length, Math.max(300, dogShown));
+ var so=v('dsort');
+ if(so==='name') list=list.slice().sort(function(a,b){ return (a.name||'').localeCompare(b.name||''); });
+ else if(so==='young'||so==='old') list=list.slice().sort(function(a,b){ var x=a.dob||'', y=b.dob||''; if(!x!==!y) return x?-1:1; return so==='young'?y.localeCompare(x):x.localeCompare(y); });
+ /* foundation: record card (name line, title, 44x44 thumbnail, who-has-it ring). The rows inside are kit: animal. */
  list.slice(0,dogN).forEach(function(d){
   var m=months(d.dob), st=statusOf(d);
   var cls=!d.sex?'u':((d.sex==='Male'?'m':'f')+(isEntire(d)?'e':'n'));
-  var sym=!d.sex?'?':(d.sex==='Male'?'♂':'♀'); var nEd=!isEntire(d);
+  var nEd=!isEntire(d);
   var age=m===null?'no DOB':(m<12?m+'m':(Math.floor(m/12)+'y'+(m%12?' '+(m%12)+'m':'')));
   var lastB=null; for(var bi=d.weights.length-1;bi>=0;bi--){ if(d.weights[bi].bcs){lastB=d.weights[bi];break;} }
   var w=d.weights.length?{kg:d.weights[d.weights.length-1].kg,on:d.weights[d.weights.length-1].on,n:d.weights.length,
        delta:d.weights.length>1?(d.weights[d.weights.length-1].kg-d.weights[d.weights.length-2].kg):null}:null;
+  var away=!!d.off||st.code==='CL'||st.code==='DE';
+  var who=st.code==='DE'?'Deceased':(st.code==='CL'?'Collected, with a new owner':(d.off?'Off site: '+d.off:(d.where?'On site, '+d.where:'On site, cabin not recorded')));
   h+='<article class="dc '+cls+'"><div class="bd">'
-   +'<div class="hd"><div class="ph">'+esc((d.name||'?').slice(0,1).toUpperCase())
-   +'<span class="sym'+(nEd?' nx':'')+'" title="'+(d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered')+'">'+sym+'</span></div>'
-   +'<div><div class="nm">'+esc(d.name||'—')+'</div><div class="meta">'+esc(d.size||'size not recorded')+((d.breed&&d.breed!=='Australian Cobberdog')?'<br><b>'+esc(d.breed)+'</b>':'')+'</div></div>'
-   +'<span class="age">'+age+'</span></div>'
-   +'<div><span class="st '+st.cls+'" title="'+esc(d.where||'location not recorded')+'"><b>'+st.code+'</b>'+esc(st.label)+'</span>'+(nEd?'<span class="neu">'+(d.sex==='Female'?'SPAYED':'NEUTERED')+'</span>':'')+'</div>'
+   +'<div class="hd"><div class="ph" aria-hidden="true"><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg></div>'
+   +'<div class="tbr"><div class="nl"><span class="st '+st.cls+'" title="'+esc(d.where||'location not recorded')+'"><b>'+st.code+'</b>'+esc(st.label)+'</span></div>'
+   +'<div class="nm">'+esc(d.name||'—')+'</div>'
+   +'<div class="meta"><i class="sexdot '+cls+'" title="'+esc((d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered'))+'"></i>'
+   +esc(d.sex||'sex not recorded')+(nEd?'<span class="neu">'+(d.sex==='Female'?'spayed':'neutered')+'</span>':'')
+   +'<span class="age">'+age+'</span></div></div></div>'
+   +'<div class="meta">'+esc(d.size||'size not recorded')+((d.breed&&d.breed!=='Australian Cobberdog')?' · <b>'+esc(d.breed)+'</b>':'')+'</div>'
    +'<div class="coat">'+swatch(d)+'<span>'+esc(colourLabel(d))+'</span></div>'
-   +(w?'<div class="wt wtc" data-dog="'+esc(d.id)+'" title="tap for the full weight history"><span class="lb">weight</span><b>'+w.kg+' kg</b>'
+   +(w?'<div class="wt wtc" data-dog="'+esc(d.id)+'" title="tap for the full weight history"><span class="lb">Weight</span><b>'+w.kg+' kg</b>'
       +(w.delta!==null?'<span class="'+(w.delta>0?'up':(w.delta<0?'dn':''))+'">'+(w.delta>0?'↑':(w.delta<0?'↓':'→'))+' '+Math.abs(w.delta).toFixed(1)+'</span>':'')
       +(lastB?'<span class="pill '+(lastB.bcs==="5"?'ok':(parseInt(lastB.bcs,10)>5?'w':'no'))+'" title="body condition score '+esc(lastB.bcs)+' of 9, '+esc(dmy(lastB.on))+'">BCS '+esc(lastB.bcs)+'</span>':'')
       +spark(d.weights,54,15)
-
       +'<span class="mut">'+esc(dmy(w.on))+' · '+w.n+' weighings</span></div>'
-     :'<div class="wt none"><span class="lb">weight</span><span>no weighings recorded</span></div>')
+     :'<div class="wt none"><span class="lb">Weight</span><span>no weighings recorded</span></div>')
    +(d.findings.length?'<div class="chips">'+d.findings.map(function(f){
       return '<span class="pill '+(f.certainty==='possible'?'w':(f.certainty==='clear'?'ok':'no'))+'" title="'+esc(f.from_text)+'">'
       +esc(f.test)+(f.grade?' '+esc(f.grade):'')+(f.certainty==='possible'?'?':'')+'</span>';}).join('')+'</div>':'')
-   +(d.treats.length?'<div class="wt wtc trc" data-dog="'+esc(d.id)+'" title="tap for every treatment"><span class="lb">meds</span>'
+   +(d.treats.length?'<div class="wt wtc trc" data-dog="'+esc(d.id)+'" title="tap for every treatment"><span class="lb">Meds</span>'
       +'<b>'+d.treats.filter(function(x){return !/NOT STATED/.test(x.product||'');}).length+' given</b>'
       +(d.treats.some(function(x){return /NOT STATED/.test(x.product||'');})?'<span class="pill no">1 not named</span>':'')
       +'<span class="mut">last '+esc(dmy(d.treats[d.treats.length-1].on))+'</span></div>':'')
-   +(d.chip?'<div class="chipline"><span class="lb">chip</span><span class="vl">'+esc(d.chip)+'</span></div>'
-          :'<div class="chipline"><span class="lb">chip</span><span class="none">none recorded</span></div>')
+   +moxiLine(d)
+   +(d.chip?'<div class="chipline"><span class="lb">Chip</span><span class="vl">'+esc(d.chip)+'</span></div>'
+          :'<div class="chipline"><span class="lb">Chip</span><span class="none">none recorded</span></div>')
+   +'<div class="cfoot"><span class="mut">'+esc(d.where||(d.off?'off site':'cabin not recorded'))+'</span>'
+   +'<span class="whor" role="img" aria-label="'+esc(who)+'" title="'+esc(who)+'"><svg class="ti" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span></div>'
    +'</div></article>';});
  if(dogN<list.length) h+='<div class="filt" data-show-bar="dogs"><p class="mut">Showing '+dogN+' of '+list.length+'.</p>'
   +'<button type="button" class="cb" data-dogshow="more">Show more</button>'
   +'<button type="button" class="cb" data-dogshow="all">Show all</button></div>';
  document.getElementById('rows').innerHTML=h;
  document.getElementById('cnt').textContent=list.length+' of '+CD.dogs.length+(dogN<list.length?' · Showing '+dogN+' of '+list.length:'');
+ fchips('dogs',['fs','fn','fa','fst','fc','ft']);
 }
 function familyOf(a){ return (a&&a.grouping)?a.grouping:'other'; }
 var FAMNAME={};
@@ -937,7 +1307,7 @@ function pageAreas(){
  +tile('b3',CD.areas.filter(function(a){return inCabin(a.id,date).length;}).length,'occupied today','from the round, else BLD-occupancy')+'</div>'
  +'<div class="card acc6"><h4>Free access and limited are the same cabin run two ways</h4>'
  +'<div class="card acc6"><h4>Free access or limited \u2014 one or the other</h4>'
- +'<p style="margin-bottom:0">The same cabin run two ways, each with its own floor area and its own permitted numbers. Pick one and the capacity check runs.</p></div>'
+ +'<p style="margin-bottom:0">One cabin, two ways to run it. Pick one to check capacity.</p></div>'
  +'<p style="margin-bottom:0"><b>Every number below is a headcount \u2014 how many dogs, not square metres.</b> '
  +'All of them come from the Welsh Government guidance s1.2 Size of Quarters. A cabin has ONE floor area; the flap only decides which minimum it must meet, because a confined dog needs more room than one that can come and go. '
  +'The three <b>+ pups</b> columns are a yes/no: can one bitch whelp and raise a litter here? That minimum is double the one-adult figure, per the SRS conditions.</p></div>';
@@ -962,14 +1332,14 @@ function pageAreas(){
    
    {
     var modes = cur ? [cur] : ['free','limited'];
-    h+='<div class="scroll"><table><thead><tr><th>flap</th>'+BANDS.map(function(b){return '<th>'+esc(b)+'</th>';}).join('')+'</tr></thead><tbody>'
+    h+='<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>flap</th>'+BANDS.map(function(b){return '<th>'+esc(b)+'</th>';}).join('')+'</tr></thead><tbody>'
      +modes.map(function(mo){
         return '<tr><td><b>'+mo+'</b>'+(cur?'':' <span class="mut">(not chosen)</span>')+'</td>'
          +BANDS.map(function(b){ var v=capFor(a.id,b,mo);
             return '<td'+(v==='0'?' class="mut"':'')+'>'+(v==null?'<span class="pill no">no figure</span>':(v==='0'?'0':'<b>'+esc(v)+'</b>'))+'</td>';}).join('')
          +'</tr>'; }).join('')
      +'</tbody></table></div>'
-     +(cur?'':'<p class="mut" style="margin:6px 0 0">Both modes shown because the flap has not been set for this cabin. Choose above to pin one.</p>')
+     +(cur?'':'<p class="mut" style="margin:6px 0 0">Flap not set: both shown. Choose above.</p>')
      +'<div class="mut" style="margin-top:6px">in here on '+esc(date)+': '
      +(who.length?who.map(function(sid){var d=CD._byId[sid];return '<span class="pill i">'+esc(d?d.name:sid)+'</span>';}).join(' ')
        :'<span class="mut">empty</span>')
@@ -987,15 +1357,13 @@ function pageLitters(){
  +'<div class="tiles">'+tile('b7',CD.litters.length,'litters','')
  +tile('b5',withDob,'born','')+tile('b2',CD.litters.length-withDob,'no DOB','planned, in progress, or did not take')
  +tile('b6',CD.matings.length,'matings recorded','including those that did not take')+'</div>'
- +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="lq" placeholder="dam, sire, litter name…"></span>'
- +'<select id="ld"><option value="">date of birth</option><option value="y">has a DOB</option><option value="n">missing a DOB</option></select>'
- +'<select id="ly"><option value="">year</option></select>'
- +'<select id="ls"><option value="">status</option></select>'
- +'<select id="lm"><option value="">dam</option></select>'
- +'<select id="lp"><option value="">sire</option></select>'
- +'<select id="lk"><option value="">pups</option><option value="y">pups linked</option><option value="n">no pups linked</option></select>'
- +'<button id="lclr">clear</button><span class="mut" id="lcnt"></span></div>'
- +'<div class="scroll"><table><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>pups</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
+ +fbar({id:'litters',what:'litters',q:'lq',count:'lcnt',clear:'lclr',sort:['lsort',[['','newest first'],['old','oldest first'],['pair','pairing A to Z']]],
+   groups:[['Date of birth',fsel('ld','Date of birth','<option value="y">has a DOB</option><option value="n">missing a DOB</option>')],
+    ['Year',fsel('ly','Year','')],['Status',fsel('ls','Status','')],['Dam',fsel('lm','Dam','')],['Sire',fsel('lp','Sire','')],
+    ['Pups',fsel('lk','Pups','<option value="y">pups linked</option><option value="n">no pups linked</option>')]]})
+ /* kit: animal (litter stage, not held yet) */
+ +'<div class="arrow">'+arrives('stage')+'</div>'
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>pairing</th><th>raw name</th><th>dam</th><th>sire</th><th>born</th><th>pups</th><th>status</th></tr></thead><tbody id="lrows"></tbody></table></div>';
  return h;
 }
 function litterPups(){
@@ -1023,7 +1391,10 @@ function drawLitters(){
   if(lk==='n'&&(pups[l.id]||0)) return false;
   if(!q) return true;
   return ((l.pairing||'')+' '+(l.raw_name||'')+' '+nameOf(l.dam_subject_id)+' '+nameOf(l.sire_subject_id)).toLowerCase().indexOf(q)>=0;});
- list.sort(function(a,b){return (b.dob||'')>(a.dob||'')?1:-1;});
+ var so=v('lsort');
+ if(so==='pair') list.sort(function(a,b){ return (a.pairing||'').localeCompare(b.pairing||''); });
+ else if(so==='old') list.sort(function(a,b){ return (a.dob||'9')<(b.dob||'9')?-1:1; });
+ else list.sort(function(a,b){return (b.dob||'')>(a.dob||'')?1:-1;});
  document.getElementById('lrows').innerHTML=list.map(function(l){
   return '<tr><td><b>'+esc(l.pairing)+'</b></td><td class="mut"><code>'+esc(l.raw_name||'—')+'</code></td>'
    +'<td>'+esc(nameOf(l.dam_subject_id)||'—')+'</td>'
@@ -1032,6 +1403,7 @@ function drawLitters(){
    +'<td>'+((pups[l.id]||0)?'<b>'+pups[l.id]+'</b>':'<span class="mut">—</span>')+'</td>'
    +'<td class="mut">'+esc(l.status||'—')+'</td></tr>';}).join('');
  document.getElementById('lcnt').textContent=list.length+' of '+CD.litters.length;
+ fchips('litters',['ld','ly','ls','lm','lp','lk']);
 }
 function pageVet(){
  var wcount={}; CD.dogs.forEach(function(d){ wcount[d.id]=d.weights.length; });
@@ -1045,7 +1417,7 @@ function pageVet(){
  +tile('b4',here.filter(function(l){return (byId[l.subject_id].weights||[]).length;}).length,'of these have weights','')+'</div>'
  +'<div class="card acc5"><h4>A foreign id lives in one file only</h4>'
  +'<p style="margin-bottom:0">Animana patient ids appear in <code>BLD-MAP-animana.csv</code> and nowhere else. If Animana renumbers, one file changes.</p></div>'
- +'<div class="scroll"><table><thead><tr><th>dog</th><th>chip</th><th>animana patient ID</th><th>weighings</th></tr></thead><tbody>';
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>dog</th><th>chip</th><th>animana patient ID</th><th>weighings</th></tr></thead><tbody>';
  here.slice().sort(function(a,b){return (a.vet_name||'')<(b.vet_name||'')?-1:1;}).forEach(function(l){
   h+='<tr><td><b>'+esc(l.vet_name)+'</b></td><td><code>'+esc(l.matched_on_chip||(byId[l.subject_id]||{}).chip||'')+'</code></td>'
    +'<td><code class="mut">'+esc(l.foreign_id)+'</code></td><td>'+(wcount[l.subject_id]||0)+'</td></tr>';});
@@ -1058,7 +1430,7 @@ function flag(iso){ iso=(iso||'').toUpperCase();
 function pageBuyers(){
  var live=CD.assoc.filter(function(a){return a.status!=='DEFUNCT';});
  var cob=live.filter(function(a){return a.recognises_cobberdog==='true';});
- var h='<h2>Buyers</h2><p class="sub">Who could take the lines on. Associations first \u2014 their directories are where the breeders are.</p>'
+ var h='<h2>Assocs</h2><p class="sub">Who could take the lines on. Associations first.</p>'
  +'<div class="tiles">'+tile('b6',CD.prospects.length,'prospects logged','BLD-prospect.csv')
  +tile('b5',live.length,'live associations','BLD-association.csv')
  +tile('b2',cob.length,'recognise the Cobberdog','of '+live.length)
@@ -1069,9 +1441,9 @@ function pageBuyers(){
  +'The big Labradoodle directories hold far more breeders, but <b>ALAA Rule 15 requires a 6-generation AKC/CKC-traceable pedigree</b>, '
  +'which an MDBA Cobberdog pedigree is not. Volume and eligibility point in opposite directions.</p></div>';
  if(!CD.prospects.length) h+='<div class="card dash acc4"><h4>No prospects harvested yet</h4>'
-  +'<p style="margin-bottom:0">The sheet exists and is empty on purpose. Pass 2 walks each directory below and fills it \u2014 kennel, country, website, contact, association, directory entry. Nothing is invented.</p></div>';
+  +'<p style="margin-bottom:0">Empty on purpose. Pass 2 fills it from the directories below. Nothing invented.</p></div>';
  h+='<h3><span class="dot" style="background:var(--p2)"></span>Associations</h3>'
- +'<div class="scroll"><table><thead><tr><th>body</th><th>country</th><th>Cobberdog</th><th>registry</th>'
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>body</th><th>country</th><th>Cobberdog</th><th>registry</th>'
  +'<th>breeders listed</th><th>directory</th></tr></thead><tbody>';
  live.slice().sort(function(a,b){ return (b.recognises_cobberdog==='true')-(a.recognises_cobberdog==='true') || (a.acronym<b.acronym?-1:1); })
   .forEach(function(a){
@@ -1080,7 +1452,7 @@ function pageBuyers(){
    +'<td>'+(a.recognises_cobberdog==='true'?'<span class="pill ok">yes</span>':'<span class="mut">Labradoodle only</span>')+'</td>'
    +'<td>'+(a.is_registry==='true'?'<span class="pill i">registry</span>':'<span class="mut">club</span>')+'</td>'
    +'<td class="mut">'+esc(a.listed_breeders)+'</td>'
-   +'<td>'+(a.directory_url?'<a href="'+esc(a.directory_url)+'" target="_blank" rel="noopener">open \u2197</a>':'<span class="mut">none</span>')+'</td></tr>'
+   +'<td>'+(safeUrl(a.directory_url)?'<a href="'+esc(safeUrl(a.directory_url))+'" target="_blank" rel="noopener">open \u2197</a>':'<span class="mut">none</span>')+'</td></tr>'
    +(a.note?'<tr><td colspan="6" class="mut" style="padding-top:0">'+esc(a.note)+'</td></tr>':'');});
  h+='</tbody></table></div>';
  var dead=CD.assoc.filter(function(a){return a.status==='DEFUNCT';});
@@ -1090,33 +1462,26 @@ function pageBuyers(){
  +'<div class="card acc3"><h4>Every sale is a commercial export</h4>'
  +'<p style="margin-bottom:0">A change of ownership is commercial even where no money moves, so the ordinary pet travel certificate does not apply. '
  +'Read each route before promising a buyer a date.</p></div>'
- +'<div class="scroll"><table><thead><tr><th>to</th><th>difficulty</th><th>lead time</th><th>what is required</th></tr></thead><tbody>';
+ +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>to</th><th>difficulty</th><th>lead time</th><th>what is required</th></tr></thead><tbody>';
  CD.exportRoutes.forEach(function(e){
   var cls=e.difficulty==='LOW'?'ok':(e.difficulty==='HIGH'?'no':'w');
   h+='<tr><td>'+flag(e.country_iso)+' <b>'+esc(e.country)+'</b></td>'
-   +'<td><span class="pill '+cls+'">'+esc(e.difficulty)+'</span></td><td class="mut">'+esc(e.lead_time)+'</td>'
+   +'<td><span class="pill '+cls+'">'+esc(quiet(e.difficulty))+'</span></td><td class="mut">'+esc(e.lead_time)+'</td>'
    +'<td>'+esc(e.requirement)+(e.conflict?'<div class="mut" style="margin-top:4px"><b>'+esc(e.conflict)+'</b></div>':'')+'</td></tr>';});
  h+='</tbody></table></div>';
  if(CD.prospects.length){
   var cats=CD.categories.filter(function(c){return c.code!=='Not yet categorised';});
   var ctry={}; CD.prospects.forEach(function(p){ if(p.country_iso&&p.country_iso!=='unknown') ctry[p.country_iso]=p.country; });
   h+='<h3><span class="dot" style="background:var(--p6)"></span>Prospects</h3>'
-   +'<div class="filt"><span class="srch"><svg viewBox="0 0 16 16" width="13" height="13"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><input id="bq" placeholder="kennel, person, MDBA number\u2026"></span>'
-   +'<select id="bcat"><option value="">breeder type</option>'
-   +cats.map(function(c){return '<option value="'+esc(c.code)+'">'+esc(c.code)+'</option>';}).join('')+'</select>'
-   +'<select id="bctry"><option value="">country</option>'
-   +Object.keys(ctry).sort().map(function(k){return '<option value="'+k+'">'+flag(k)+' '+esc(ctry[k])+'</option>';}).join('')
-   +'<option value="unknown">country not known</option></select>'
-   +'<select id="bapp"><option value="">upgrade appetite</option>'
-   +['HIGHEST','HIGH','MED-HIGH','MED','LOW-MED','LOW','unknown'].map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('')+'</select>'
-   +'<select id="bsig"><option value="">buyer signal</option>'
-   +['VERY STRONG','STRONG','MODERATE','UNKNOWN'].map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('')+'</select>'
-   +'<select id="bmd"><option value="">MDBA number</option><option value="y">has one</option><option value="n">none found</option></select>'
-   +'<select id="bem"><option value="">email</option><option value="y">has an email</option><option value="n">no email</option></select>'
-   +'<select id="bch"><option value="">reachable by</option>'
-   +['whatsapp','email','website form','none found'].map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join('')+'</select>'
-   +'<button id="bclr">clear</button><span class="mut" id="bcnt"></span></div>'
-   +'<div class="scroll"><table><thead><tr><th>kennel</th><th>country</th><th>MDBA</th><th>type</th>'
+   +fbar({id:'buyers',what:'prospects',q:'bq',count:'bcnt',clear:'bclr',sort:['bsort',[['','strongest signal'],['name','kennel A to Z'],['country','country']]],
+     groups:[['Breeder type',fsel('bcat','Breeder type',cats.map(function(c){return '<option value="'+esc(c.code)+'">'+esc(c.code)+'</option>';}).join(''))],
+      ['Country',fsel('bctry','Country',Object.keys(ctry).sort().map(function(k){return '<option value="'+k+'">'+flag(k)+' '+esc(ctry[k])+'</option>';}).join('')+'<option value="unknown">country not known</option>')],
+      ['Upgrade appetite',fsel('bapp','Upgrade appetite',['HIGHEST','HIGH','MED-HIGH','MED','LOW-MED','LOW','unknown'].map(function(x){return '<option value="'+x+'">'+esc(quiet(x))+'</option>';}).join(''))],
+      ['Buyer signal',fsel('bsig','Buyer signal',['VERY STRONG','STRONG','MODERATE','UNKNOWN'].map(function(x){return '<option value="'+x+'">'+esc(quiet(x))+'</option>';}).join(''))],
+      ['MDBA number',fsel('bmd','MDBA number','<option value="y">has one</option><option value="n">none found</option>')],
+      ['Email',fsel('bem','Email','<option value="y">has an email</option><option value="n">no email</option>')],
+      ['Reachable by',fsel('bch','Reachable by',['whatsapp','email','website form','none found'].map(function(x){return '<option value="'+x+'">'+x+'</option>';}).join(''))]]})
+   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>kennel</th><th>country</th><th>MDBA</th><th>type</th>'
    +'<th>appetite</th><th>contact</th><th>why them</th></tr></thead><tbody id="brows"></tbody></table></div>';
  }
  return h;
@@ -1126,9 +1491,9 @@ function contactLinks(p){
  if(ok(p.whatsapp)) o.push('<a class="cb wa" href="https://wa.me/'+esc(p.whatsapp.replace(/[^0-9]/g,''))+'" target="_blank" rel="noopener">WhatsApp</a>');
  if(ok(p.phone)) o.push('<a class="cb" href="tel:'+esc(p.phone.replace(/[^0-9+]/g,''))+'">Call</a>');
  if(ok(p.email)) o.push('<a class="cb" href="mailto:'+esc(p.email)+'">Email</a>');
- if(ok(p.facebook)) o.push('<a class="cb" href="'+esc(p.facebook)+'" target="_blank" rel="noopener">Facebook</a>');
- if(ok(p.instagram)) o.push('<a class="cb" href="'+esc(p.instagram)+'" target="_blank" rel="noopener">Instagram</a>');
- if(ok(p.linkedin)) o.push('<a class="cb" href="'+esc(p.linkedin)+'" target="_blank" rel="noopener">LinkedIn</a>');
+ if(safeUrl(p.facebook)) o.push('<a class="cb" href="'+esc(safeUrl(p.facebook))+'" target="_blank" rel="noopener">Facebook</a>');
+ if(safeUrl(p.instagram)) o.push('<a class="cb" href="'+esc(safeUrl(p.instagram))+'" target="_blank" rel="noopener">Instagram</a>');
+ if(safeUrl(p.linkedin)) o.push('<a class="cb" href="'+esc(safeUrl(p.linkedin))+'" target="_blank" rel="noopener">LinkedIn</a>');
  if(!o.length && ok(p.website) && p.website.indexOf('SITE')<0)
    o.push('<a class="cb" href="https://'+esc(p.website.replace(/^https?:\/\//,''))+'" target="_blank" rel="noopener">Website form</a>');
  var det='';
@@ -1152,7 +1517,10 @@ function drawBuyers(){
   if(!q) return true;
   return ((p.kennel_name||'')+' '+(p.contact_name||'')+' '+(p.mdba_number||'')+' '+(p.region||'')).toLowerCase().indexOf(q)>=0;});
  var RK={'VERY STRONG':0,'STRONG':1,'MODERATE':2,'UNKNOWN':3};
- list.sort(function(a,b){ return (RK[a.buyer_signal]||9)-(RK[b.buyer_signal]||9) || (a.kennel_name<b.kennel_name?-1:1); });
+ var so=v('bsort');
+ if(so==='name') list.sort(function(a,b){ return (a.kennel_name||'').localeCompare(b.kennel_name||''); });
+ else if(so==='country') list.sort(function(a,b){ return (a.country||'').localeCompare(b.country||'') || (a.kennel_name<b.kennel_name?-1:1); });
+ else list.sort(function(a,b){ return (RK[a.buyer_signal]||9)-(RK[b.buyer_signal]||9) || (a.kennel_name<b.kennel_name?-1:1); });
  var el=document.getElementById('brows'); if(!el) return;
  el.innerHTML=list.map(function(p){
   var sig=p.buyer_signal==='VERY STRONG'?'ok':(p.buyer_signal==='STRONG'?'i':(p.buyer_signal==='UNKNOWN'?'':'w'));
@@ -1162,10 +1530,11 @@ function drawBuyers(){
    +'<td>'+flag(p.country_iso)+' '+esc(p.country)+(p.region&&p.region!=='unknown'?'<div class="mut">'+esc(p.region)+'</div>':'')+'</td>'
    +'<td>'+(p.mdba_number&&p.mdba_number!=='unknown'?'<code>'+esc(p.mdba_number)+'</code>':'<span class="mut">\u2014</span>')+'</td>'
    +'<td>'+(p.categories||'').split('; ').filter(Boolean).map(function(x){return '<span class="pill">'+esc(x)+'</span>';}).join(' ')+'</td>'
-   +'<td><span class="pill '+apc+'">'+esc(p.upgrade_appetite||'?')+'</span></td>'
+   +'<td><span class="pill '+apc+'">'+esc(quiet(p.upgrade_appetite||'?'))+'</span></td>'
    +'<td class="ct">'+contactLinks(p)+'</td>'
-   +'<td><span class="pill '+sig+'">'+esc(p.buyer_signal)+'</span><div class="mut">'+esc(p.notes)+'</div></td></tr>';}).join('');
+   +'<td><span class="pill '+sig+'">'+esc(quiet(p.buyer_signal))+'</span><div class="mut">'+esc(p.notes)+'</div></td></tr>';}).join('');
  var cnt=document.getElementById('bcnt'); if(cnt) cnt.textContent=list.length+' of '+CD.prospects.length;
+ fchips('buyers',['bcat','bctry','bapp','bsig','bmd','bem','bch']);
 }
 function todayISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
 
@@ -1190,11 +1559,12 @@ function pageRound(){
  var placed={}; Object.keys(ROUND).forEach(function(k){ if(k.indexOf(date+'__')===0)
    (ROUND[k].subjects||[]).forEach(function(sid){ placed[sid]=ROUND[k].areaId; }); });
  var unplaced=dogs.filter(function(d){ return !placed[d.id]; });
- var h='<h2>The round</h2><p class="sub">Walk the cabins in order. Say who is in each, and how it is being run.</p>'
- +'<div class="filt"><label class="mut">date</label><input id="rdate" type="date" value="'+date+'">'
+ var h='<h2>The round</h2><p class="sub">Cabins in order: who is in, how it is run, temperatures.</p>'
+ +'<div class="filt"><label class="mut" for="rdate">date</label><input id="rdate" type="date" value="'+date+'">'
  +'<span class="mut" id="rstat">'+(DB?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'read-only \u2014 saving is off for now')+'</span></div>';
- if(!DB) h+='<div class="card acc2"><h4>Saving is off in this web version</h4><p style="margin-bottom:0">'
-  +esc(DBERR||'The page has no store, so a tick would look identical whether or not it landed.')+'</p></div>';
+ if(!DB) h+='<div class="arrow">'+arrives('reading')+'</div>';   /* foundation: kept readings, not held yet */
+ if(!DB) h+='<div class="card acc2"><h4>Saving off</h4><p style="margin-bottom:0">'
+  +esc(DBERR||'No store: a tick could not be trusted.')+'</p></div>';
  else h+='<div class="card acc4"><h4>Where this saves</h4><p style="margin-bottom:0">'
   +'Into the page\u2019s own store, <b>not into the Drive tables</b>. It shows here and to anyone else with the page open. '
   +'I fold it into <code>BLD-occupancy.csv</code> <code>BLD-area_access.csv</code> and <code>BLD-area_reading.csv</code> when you ask. <b>Temperatures are kept exactly as typed, to two decimal places</b> \u2014 a rounded reading cannot be un-rounded.</p></div>';
@@ -1212,7 +1582,7 @@ function pageRound(){
   var cap=capFor(aid,'10-25kg (medium)',acc);   
   var over=(cap!=null && sel.length>parseInt(cap,10));
   h+='<div class="card '+(over?'acc2':(sel.length?'acc5':''))+'" data-area="'+aid+'">'
-   +'<h4>'+c.step+'. '+esc(c.cabin)
+   +'<h4><span class="step">Step '+c.step+':</span> '+esc(c.cabin)
    +' <span class="mut" style="font-weight:400">'+esc(m2)+' m\u00b2</span>'
    +(acc?' <span class="pill '+(acc==='free'?'i':'w')+'">'+acc+'</span>':' <span class="pill no">flap?</span>')+'</h4>'
    +'<div class="filt" style="margin-bottom:6px">'
@@ -1246,8 +1616,8 @@ function pageRound(){
         return ' <span class="pill no" title="'+esc(act)+'">'+(v==='low'?'below band':'above band')+'</span>'
           +(act?' <span class="mut">'+esc(act)+'</span>':''); };
       return '<span class="sl">'+slot+'</span>'
-       +'<input class="tmin'+(vmin&&vmin!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal" placeholder="00.00" value="'+esc(t.min||'')+'">'
-       +'<input class="tmax'+(vmax&&vmax!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal" placeholder="00.00" value="'+esc(t.max||'')+'">'
+       +'<input class="tmin'+(vmin&&vmin!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal"  value="'+esc(t.min||'')+'">'
+       +'<input class="tmax'+(vmax&&vmax!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal"  value="'+esc(t.max||'')+'">'
        +'<span class="msg tmsg" data-area="'+aid+'" data-slot="'+slot+'">'+(t.at?'saved':'')+flag(vmin,t.min)+flag(vmax,t.max)+'</span>'; }).join('')
    +'</div>'
    +'<div class="mut">'+(acc?('permitted in '+acc+' mode, 10\u201325 kg: '+(cap==null?'not recorded':cap)+' \u00b7 in here: '+sel.length)
@@ -1315,17 +1685,19 @@ async function roundSave(areaId,patch,msgEl){
 }
 function pageWork(){
  var W=CD.work||[];
- if(!W.length) return '<h2>Outstanding</h2><div class="card acc2"><h4>BLD-WORK.csv did not load</h4><p style="margin-bottom:0">The outstanding list is a live file, not a list kept in a reply. If this card is showing, the file is missing or unreadable.</p></div>';
+ if(!W.length) return '<h2>Outstanding</h2><div class="card acc2"><h4>BLD-WORK.csv did not load</h4><p style="margin-bottom:0">Live file. Missing or unreadable.</p></div>';
  var by={}; W.forEach(function(r){ (by[r.status]=by[r.status]||[]).push(r); });
  var mine=W.filter(function(r){return r.status!=='DONE' && r.owner==='Claude';}).length;
  var hers=W.filter(function(r){return r.status!=='DONE' && r.owner==='Lisa';}).length;
  var h='<h2>Outstanding</h2>'
+  +'<div class="arrow">'+arrives('due')+'</div>'   /* foundation: a due date on a work record, not held yet */
   +'<p class="note">Every ask in this project, with who it is waiting on. <b>'+hers+'</b> are waiting on you, <b>'+mine+'</b> on me, <b>'+(by.DONE||[]).length+'</b> done. This is a live file \u2014 change BLD-WORK.csv and this page changes.</p>';
  [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me'],['DONE','acc5','Done']].forEach(function(g){
   var rows=by[g[0]]||[]; if(!rows.length) return;
   rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
-  h+='<div class="card '+g[1]+'"><h4>'+g[2]+' \u2014 '+rows.length+'</h4>'
-   +'<div class="scroll"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
+  /* foundation: work records grouped by who they wait on */
+  h+='<div class="card '+g[1]+'"><h4>'+g[2]+cntPill(rows.length,g[0]==='BLOCKED'?'need':'')+'</h4>'
+   +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
    +rows.map(function(r){
      return '<tr><td class="mut">'+esc(r.id)+'</td><td><span class="pill i">'+esc(r.area)+'</span></td>'
       +'<td>'+esc(r.item)+(r.note?'<br><span class="mut">'+esc(r.note)+'</span>':'')+'</td>'
@@ -1375,121 +1747,178 @@ function pageShape(){
           .sort(function(a,b){return N[b].rows-N[a].rows;});
  var loose=Object.keys(N).filter(function(t){return N[t].in===0&&N[t].out===0;}).sort();
 
- var W=1180, PAD=28, colL=PAD+10, colS=430, colE=800;
+ /* foundation: data model map (records, lookups, events and how full each link is). Real text sizes: the map sits in its own
+    sideways-scrolling box, so it is never shrunk below 13px. Colour only in the lines, never the words. */
+ var W=1180, PAD=28, colL=PAD+10, colS=430, colE=800, STEP=56, BH=46;
  var rowsH=Math.max(look.length,ev.length,3);
- var H=Math.max(560, 90+rowsH*46);
+ var H=Math.max(600, 110+rowsH*STEP);
  function box(x,y,w,h,label,sub,cls){
-  return '<g><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6" '+cls+'/>'
-   +'<text x="'+(x+10)+'" y="'+(y+18)+'" font-size="12.5" font-weight="600" fill="currentColor">'+esc(label)+'</text>'
-   +(sub?'<text x="'+(x+10)+'" y="'+(y+32)+'" font-size="10.5" fill="currentColor" opacity=".62">'+esc(sub)+'</text>':'')
+  return '<g><rect x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="12" '+cls+'/>'
+   +'<text x="'+(x+12)+'" y="'+(y+20)+'" font-size="14" font-weight="600" fill="currentColor">'+esc(label)+'</text>'
+   +(sub?'<text x="'+(x+12)+'" y="'+(y+38)+'" font-size="13" style="fill:var(--muted)">'+esc(sub)+'</text>':'')
    +'</g>';
  }
  var g='';
  // spine
- var spineY={}, sy=86;
+ var spineY={}, sy=100;
  SPINE.forEach(function(t){
   if(!N[t]) return;
-  var h=40+Math.min(34,Math.round(N[t].rows/12));
+  var h=50+Math.min(34,Math.round(N[t].rows/12));
   spineY[t]=sy+h/2;
-  g+=box(colS,sy,215,h,t,N[t].rows+' rows · '+N[t].in+' tables point here',
-     'fill="none" stroke="#BE6A5D" stroke-width="2.2"');
+  g+=box(colS,sy,260,h,t,N[t].rows+' rows · '+N[t].in+' tables point here',
+     'fill="none" style="stroke:var(--ljr-2)" stroke-width="1"');
   sy+=h+30;
  });
  // lookups left
  var lookY={};
- look.forEach(function(t,i){ var y=86+i*44; lookY[t]=y+15;
-  g+=box(colL,y,190,30,t,N[t].rows+' rows','fill="none" stroke="currentColor" stroke-width="1" opacity=".55"'); });
+ look.forEach(function(t,i){ var y=100+i*STEP; lookY[t]=y+BH/2;
+  g+=box(colL,y,200,BH,t,N[t].rows+' rows','fill="none" style="stroke:var(--press)" stroke-width="1"'); });
  // events right
  var evY={};
- ev.forEach(function(t,i){ var y=86+i*44; evY[t]=y+15;
-  g+=box(colE,y,230,30,t,N[t].rows+' rows','fill="none" stroke="#89AF6A" stroke-width="1.4"'); });
+ ev.forEach(function(t,i){ var y=100+i*STEP; evY[t]=y+BH/2;
+  g+=box(colE,y,250,BH,t,N[t].rows+' rows','fill="none" style="stroke:var(--ljr-5)" stroke-width="1"'); });
 
  function yOf(t){ return spineY[t]!==undefined?spineY[t]:(lookY[t]!==undefined?lookY[t]:evY[t]); }
- function xOut(t){ return evY[t]!==undefined?colE:(lookY[t]!==undefined?colL+190:colS); }
- function xIn(t){ return spineY[t]!==undefined?(lookY[t]===undefined?colS+215:colS):colS; }
  // edges: weight and dash carry the FILL RATE
  E.forEach(function(e){
   var y1=yOf(e.from), y2=yOf(e.to); if(y1===undefined||y2===undefined) return;
   var x1,x2;
-  if(evY[e.from]!==undefined){ x1=colE; x2=colS+215; }
-  else if(lookY[e.from]!==undefined){ x1=colL+190; x2=colS; }
-  else if(spineY[e.from]!==undefined && lookY[e.to]!==undefined){ x1=colS; x2=colL+190; }
-  else { x1=colS; x2=colS+215; }
+  if(evY[e.from]!==undefined){ x1=colE; x2=colS+260; }
+  else if(lookY[e.from]!==undefined){ x1=colL+200; x2=colS; }
+  else if(spineY[e.from]!==undefined && lookY[e.to]!==undefined){ x1=colS; x2=colL+200; }
+  else { x1=colS; x2=colS+260; }
   var thin=e.pct<25, mid=e.pct<75;
-  var col=thin?'#BE6A5D':(mid?'#C07D59':'#89AF6A');
+  var col=thin?'var(--ljr-2)':(mid?'var(--ljr-3)':'var(--ljr-5)');
   var mx=(x1+x2)/2;
-  g+='<path d="M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2+'" fill="none" stroke="'+col+'"'
+  g+='<path d="M'+x1+' '+y1+' C'+mx+' '+y1+' '+mx+' '+y2+' '+x2+' '+y2+'" fill="none" style="stroke:'+col+'"'
     +' stroke-width="'+(thin?1:(mid?1.8:2.6))+'"'+(thin?' stroke-dasharray="3 3"':'')+' opacity="'+(thin?.95:.7)+'"/>'
-    +'<text x="'+(mx)+'" y="'+((y1+y2)/2-4)+'" font-size="9.5" text-anchor="middle" fill="'+col+'">'+e.pct+'%</text>';
+    +'<text x="'+(mx)+'" y="'+((y1+y2)/2-6)+'" font-size="13" text-anchor="middle" fill="currentColor">'+e.pct+'%</text>';
  });
- var svg='<figure style="margin:0"><svg role="img" aria-label="Map of the breeder tables: subject is the spine with '
+ var svg='<figure style="margin:0"><div class="scroll" tabindex="0" role="group" aria-label="Map, scroll sideways for more"><svg role="img" aria-label="Map of the breeder tables: subject is the spine with '
   +(N.subject?N.subject.in:0)+' tables pointing at it; arrow weight shows how much of each join is actually filled." '
-  +'viewBox="0 0 '+W+' '+H+'" style="max-width:100%;height:auto">'
-  +'<text x="'+colL+'" y="42" font-size="11" font-weight="700" fill="currentColor" opacity=".6">LOOKED UP</text>'
-  +'<text x="'+colS+'" y="42" font-size="11" font-weight="700" fill="#BE6A5D">THE SPINE</text>'
-  +'<text x="'+colE+'" y="42" font-size="11" font-weight="700" fill="#89AF6A">WHAT HAPPENS TO A DOG</text>'
-  +'<text x="'+colL+'" y="62" font-size="10" fill="currentColor" opacity=".5">colour, markers, products</text>'
-  +'<text x="'+colS+'" y="62" font-size="10" fill="currentColor" opacity=".5">what a thing IS</text>'
-  +'<text x="'+colE+'" y="62" font-size="10" fill="currentColor" opacity=".5">one row per event, never a column</text>'
-  +g+'</svg><figcaption class="mut" style="margin-top:8px">Arrow weight and colour are the <b>fill rate</b>, not the relationship: solid green is 75%+ of rows carrying the link, amber 25–74%, dashed red under 25%. Box height is row count. Drawn from the tables loaded on this page.</figcaption></figure>';
+  +'viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'">'
+  +'<text x="'+colL+'" y="44" font-size="15" font-weight="600" fill="currentColor">Looked up</text>'
+  +'<text x="'+colS+'" y="44" font-size="15" font-weight="600" fill="currentColor">The spine</text>'
+  +'<text x="'+colE+'" y="44" font-size="15" font-weight="600" fill="currentColor">What happens to a dog</text>'
+  +'<text x="'+colL+'" y="66" font-size="13" style="fill:var(--muted)">colour, markers, products</text>'
+  +'<text x="'+colS+'" y="66" font-size="13" style="fill:var(--muted)">what a thing is</text>'
+  +'<text x="'+colE+'" y="66" font-size="13" style="fill:var(--muted)">one row per event, never a column</text>'
+  +g+'</svg></div><figcaption class="mut" style="margin-top:8px">Line weight and colour are the <b>fill rate</b>, not the relationship: solid green is 75%+ of rows carrying the link, amber 25 to 74%, dashed rose under 25%. Box height is row count. Drawn from the tables loaded on this page.</figcaption></figure>';
 
  var thin=E.filter(function(e){return e.pct<25;}).sort(function(a,b){return a.pct-b.pct;});
  var h='<h2>Table map</h2>'
-  +'<p class="note">A normal entity diagram shows only which tables are joined. That hides the thing that actually matters — <b>a join can exist and be almost empty</b>. This one draws all three dimensions: who points at whom, how many rows, and how much of each link is filled.</p>'
-  +'<div class="card acc6">'+svg+'</div>'
-  +'<div class="card acc2"><h4>Joins that exist but are nearly empty — '+thin.length+'</h4>'
-  +'<p>These are the ones a flat diagram would draw the same as a full one.</p><div class="scroll"><table><thead><tr><th>from</th><th>column</th><th>to</th><th>filled</th></tr></thead><tbody>'
+  +'<p class="note">Who points at whom · rows · <b>how full each link is</b> (a join can be almost empty).</p>'
+  +'<div class="card map">'+svg+'</div>'
+  +'<div class="card acc2"><h4>Joins that exist but are nearly empty'+cntPill(thin.length)+'</h4>'
+  +'<p>These are the ones a flat diagram would draw the same as a full one.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>from</th><th>column</th><th>to</th><th>filled</th></tr></thead><tbody>'
   +thin.map(function(e){return '<tr><td>'+esc(e.from)+'</td><td class="mut">'+esc(e.col)+'</td><td>'+esc(e.to)+'</td><td><span class="pill no">'+e.pct+'%</span> '+e.filled+' of '+e.of+'</td></tr>';}).join('')
   +'</tbody></table></div></div>'
   +'<div class="card acc4"><h4>tenant_id is on every table and is deliberately not drawn</h4><p style="margin-bottom:0">All '+Object.keys(N).length+' tables carry it at 100%, so drawing it would add a line to every box and say nothing. It is a band across the whole picture, not a relationship. <b>And one tenant in the data never proves isolation</b> — that needs a second tenant.</p></div>'
   +'<div class="card acc7"><h4>Tables other tables point at that do not exist</h4>'
-  +'<p>Dashed, because nothing is there. This is where the picture stops.</p><div class="scroll"><table><thead><tr><th>table</th><th>pointed at by</th><th>what it would hold</th></tr></thead><tbody>'
+  +'<p>Dashed, because nothing is there. This is where the picture stops.</p><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>table</th><th>pointed at by</th><th>what it would hold</th></tr></thead><tbody>'
   +GHOSTS.map(function(x){return '<tr><td><b>'+esc(x[0])+'</b></td><td><span class="pill no">'+x[1]+' tables</span></td><td class="mut">'+esc(x[2])+'</td></tr>';}).join('')
   +'</tbody></table></div></div>'
-  +(loose.length?'<div class="card"><h4>Loaded but joined to nothing — '+loose.length+'</h4><p style="margin-bottom:0" class="mut">'+loose.map(esc).join(', ')+'</p></div>':'');
+  +(loose.length?'<div class="card"><h4>Loaded but joined to nothing'+cntPill(loose.length)+'</h4><p style="margin-bottom:0" class="mut">'+loose.map(esc).join(', ')+'</p></div>':'');
  return h;
 }
 
 var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,vet:pageVet,buyers:pageBuyers};
-var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Buyers']];
+var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Assocs']];
 var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','vet'],areas:['today','litters'],litters:['dogs','vet'],vet:['dogs','buyers'],buyers:['dogs','map']};
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
+// Bottom tab bar: icon, short label (narrow screens) and the tab's colour (shown only in the small bar above the label).
+var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sitemap','Tables',0],today:['calendar-event','Today',4],
+ round:['route','Round',4],dogs:['paw','Dogs',5],areas:['building-cottage','Areas',3],litters:['baby-carriage','Litters',7],
+ vet:['stethoscope','Vet',5],buyers:['world','Assocs',6]};
+function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; } // 0 shows no ring
+function navHtml(){
+ var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
+ var counts={map:nd,work:wait};
+ return SECTIONS.map(function(s){ var m=TABMETA[s[0]]||['point',s[1],0], n=counts[s[0]];
+   return '<button type="button" data-go="'+s[0]+'" style="--tc:var(--ljr-'+m[2]+')"><span class="bar" aria-hidden="true"></span>'
+    +'<svg class="ti" aria-hidden="true"><use href="#i-'+m[0]+'"/></svg>'+(n?cntPill(n,'need'):'')
+    +'<span class="lab"><span class="lf">'+esc(s[1])+'</span><span class="ls" aria-hidden="true">'+esc(m[1])+'</span></span></button>'; }).join('')
+  +'<button type="button" class="util" data-reload="1" title="Read the tables from Drive again"><span class="bar" aria-hidden="true"></span><svg class="ti" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lab">Reread</span></button>'
+  +'<button type="button" class="util" data-signout="1"><span class="bar" aria-hidden="true"></span><svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg><span class="lab">Sign out</span></button>';
+}
 function pill(){
  var p=document.getElementById('livepill');
  if(LOAD.state==='ok'){ p.className='live ok';
-  p.textContent='live · read-only · '+(CD.counts?Object.keys(CD.counts).length:0)+' tables'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):''); }
+  var w='live · read-only · '+(CD.counts?Object.keys(CD.counts).length:0)+' tables'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):'');
+  // ✓ on screen; the words stay for screen readers (and the tests), and on hover.
+  p.title=w+' · '+FOLDER_NAME; p.innerHTML='<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">'+esc(w)+'</span>\u2713'; }
  else if(LOAD.state==='signin'){ p.className='live bad'; p.textContent='signed out'; }
- else if(LOAD.state==='loading'){ p.className='live'; p.textContent='reading Drive\u2026'; }
+ else if(LOAD.state==='loading'){ p.className='live'; p.textContent='\u2026'; }
  else if(LOAD.state==='ambiguous'){ p.className='live bad'; p.textContent='duplicate file titles'; }
  else if(LOAD.state==='err'){ p.className='live bad'; p.textContent='read failed'; }
 }
+// Every dropdown and box gets a name a screen reader can say: its first "choose…" option or its placeholder,
+// plus the cabin name when the dropdown belongs to one cabin.
+function labelControls(root){
+ Array.prototype.forEach.call(root.querySelectorAll('select,input'),function(el){
+  if(el.getAttribute('aria-label')||(el.id&&root.querySelector('label[for="'+el.id+'"]'))||el.closest('label')) return;
+  if(el.type==='hidden'||el.type==='checkbox'||el.type==='radio') return;
+  var t=el.tagName==='SELECT'?((el.options[0]&&el.options[0].value==='')?el.options[0].textContent:''):(el.placeholder||'');
+  t=(t||el.name||el.id||'choose').replace(/\u2026|\.\.\.$/g,'').trim();
+  var card=el.dataset.area&&el.closest('.card,section,li,tr'), h=card&&card.querySelector('h4,.hx4,b,strong');
+  if(h&&h.textContent.trim()) t+=' \u2013 '+h.textContent.trim();
+  el.setAttribute('aria-label',t);
+ });
+}
 function render(){ go((location.hash||'#/map').replace('#/',''),false); }
+// Headings must not skip a level (h2 then h4). A card heading (h4) with no h3 above it since the last h2
+// becomes an h3 that looks the same, so screen-reader heading lists make sense on every screen.
+function levelHeadings(root){
+ var seen3=false;
+ Array.prototype.slice.call(root.querySelectorAll('h1,h2,h3,h4')).forEach(function(h){
+  var t=h.tagName;
+  if(t==='H1'||t==='H2'){ seen3=false; return; }
+  if(t==='H3'){ seen3=true; return; }
+  if(seen3) return;
+  var n=document.createElement('h3');
+  Array.prototype.forEach.call(h.attributes,function(a){ n.setAttribute(a.name,a.value); });
+  n.classList.add('hx4');
+  while(h.firstChild) n.appendChild(h.firstChild);
+  h.parentNode.replaceChild(n,h);
+ });
+}
+// After a screen change, move keyboard focus to the new screen's title (without scrolling),
+// so a screen reader announces where you are and Tab carries on from the top of the new screen.
+function focusView(){
+ var h=document.querySelector('#main h2')||document.querySelector('#main h3,#main h4');
+ if(!h) return;
+ h.setAttribute('tabindex','-1');
+ h.focus({preventScroll:true});
+}
 function go(id,push){
  pill();
  var main=document.getElementById('main');
  if(LOAD.state==='signin'){
-  main.innerHTML='<div class="card acc4" style="margin-top:24px"><h4>Sign in to see the tables</h4>'
-   +'<p>This page holds no data of its own. Once you sign in with Google it reads the tables live from '+esc(FOLDER_NAME)+', with read-only access. The sign-in is shared with the rest of this site until you sign out or it expires.</p>'
+  main.innerHTML='<div class="card acc4" style="margin-top:24px"><h2 class="hx4">Sign in to see the tables</h2>'
+   +'<ul class="notes"><li>No data of its own. Read-only, live from '+esc(FOLDER_NAME)+'.</li><li>One sign-in for the whole site.</li></ul>'
    +(LOAD.err?'<p class="mut">'+esc(LOAD.err)+'</p>':'')
    +'<p style="margin-bottom:0"><button id="signinbtn" data-signin="1"'+(auth.ready()?'':' disabled')+'>'+(auth.ready()?'Sign in with Google':'Loading Google sign-in\u2026')+'</button></p></div>';
-  document.getElementById('nav').innerHTML=''; return;
+  document.getElementById('nav').innerHTML=''; document.documentElement.classList.remove('cd-in'); return;
  }
  if(LOAD.state==='loading'){ return; }
  if(LOAD.state!=='ok'){
-  main.innerHTML='<div class="card acc2" style="margin-top:24px"><h4>'+
+  main.innerHTML='<div class="card acc2" style="margin-top:24px"><h2 class="hx4">'+
    (LOAD.state==='ambiguous'?'More than one file shares a title'
-    :LOAD.state==='err'?'The folder could not be read':'Loading…')+'</h4>'
+    :LOAD.state==='err'?'The folder could not be read':'Loading…')+'</h2>'
    +'<p>'+(LOAD.state==='ambiguous'
      ?'Refusing to guess which is current: '+esc(LOAD.err)
      :LOAD.state==='err'?esc(LOAD.err||'')+'. The tables live in '+esc(FOLDER_NAME)+'.'
      :'The tables live in '+esc(FOLDER_NAME)+'. Nothing is stored in this page, so there is nothing to show without them.')+'</p>'
    +'<p style="margin-bottom:0"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
-  document.getElementById('nav').innerHTML=''; return;
+  document.getElementById('nav').innerHTML=''; document.documentElement.classList.remove('cd-in'); return;
  }
  if(!PAGES[id]) id='map';
- document.getElementById('nav').innerHTML=SECTIONS.map(function(s){return '<button data-go="'+s[0]+'">'+s[1]+'</button>';}).join('')+'<button data-reload="1" title="Read the tables from Drive again">Reread</button><button data-signout="1">Sign out</button>';
+ document.documentElement.classList.add('cd-in');
+ document.getElementById('nav').innerHTML=navHtml();
  main.innerHTML=PAGES[id]();
- Array.prototype.forEach.call(document.querySelectorAll('#nav button'),function(b){ b.setAttribute('aria-current',b.dataset.go===id?'true':'false'); });
+ Array.prototype.forEach.call(document.querySelectorAll('#nav button'),function(b){ if(b.dataset.go===id) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+ labelControls(main);
+ levelHeadings(main);
  document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
  if(id==='dogs'){
   var fst=document.getElementById('fst');
@@ -1512,8 +1941,9 @@ function go(id,push){
    var el=ev.target&&ev.target.closest?ev.target.closest('.wtc'):null; if(!el||!el.dataset.dog) return;
    if(el.classList.contains('trc')) showTreats(el.dataset.dog); else showWeights(el.dataset.dog);
    var wp=document.getElementById('wpanel'); if(wp&&wp.scrollIntoView) wp.scrollIntoView({behavior:'smooth',block:'start'}); });
-  ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawDogs); if(i!=='q') e.addEventListener('change',drawDogs); });
-  document.getElementById('clr').addEventListener('click',function(){ ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){document.getElementById(i).value='';}); drawDogs(); });
+  ['q','fs','fn','fa','fst','fc','ft','dsort'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawDogs); if(i!=='q') e.addEventListener('change',drawDogs); });
+  document.getElementById('clr').addEventListener('click',function(){ ['q','fs','fn','fa','fst','fc','ft'].forEach(function(i){document.getElementById(i).value='';});
+   Array.prototype.forEach.call(document.querySelectorAll('.sfb'),function(x){ x.setAttribute('aria-pressed',x.dataset.code===''?'true':'false'); }); drawDogs(); });
   drawDogs();
  }
  if(id==='litters'){
@@ -1526,7 +1956,7 @@ function go(id,push){
   add('ls',Object.keys(ss).sort());
   add('lm',Object.keys(dm).sort(function(x,y){return nameOf(x)<nameOf(y)?-1:1;}),nameOf);
   add('lp',Object.keys(sr).sort(function(x,y){return nameOf(x)<nameOf(y)?-1:1;}),nameOf);
-  ['lq','ld','ly','ls','lm','lp','lk'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawLitters); if(i!=='lq') e.addEventListener('change',drawLitters); });
+  ['lq','ld','ly','ls','lm','lp','lk','lsort'].forEach(function(i){ var e=document.getElementById(i); if(!e) return; e.addEventListener('input',drawLitters); if(i!=='lq') e.addEventListener('change',drawLitters); });
   document.getElementById('lclr').addEventListener('click',function(){ ['lq','ld','ly','ls','lm','lp','lk'].forEach(function(i){var e=document.getElementById(i); if(e) e.value='';}); drawLitters(); });
   drawLitters();
  }
@@ -1538,9 +1968,12 @@ function go(id,push){
  if(id==='map'){
   Array.prototype.forEach.call(document.querySelectorAll('.ci'),function(b){
    b.addEventListener('click',function(){ if(b.dataset.list){ go('today',true); setTimeout(function(){showList(b.dataset.list);},60);} }); });
+  var na=document.querySelector('[data-needall]');
+  if(na) na.addEventListener('click',function(){ Array.prototype.forEach.call(document.querySelectorAll('[data-needmore]'),function(r){ r.classList.remove('hidden'); });
+   var f=na.closest('.mfoot'); if(f) f.remove(); });
  }
  if(id==='buyers'){
-  ['bq','bcat','bctry','bapp','bsig','bmd','bem','bch'].forEach(function(i){ var e=document.getElementById(i);
+  ['bq','bcat','bctry','bapp','bsig','bmd','bem','bch','bsort'].forEach(function(i){ var e=document.getElementById(i);
     if(e){ e.addEventListener('input',drawBuyers); e.addEventListener('change',drawBuyers); } });
   var bc=document.getElementById('bclr');
   if(bc) bc.addEventListener('click',function(){ ['bq','bcat','bctry','bapp','bsig','bmd','bem','bch'].forEach(function(i){
@@ -1583,7 +2016,9 @@ function go(id,push){
  if(push!==false && location.hash!=='#/'+id) history.pushState({id:id},'','#/'+id);
  window.scrollTo(0,0);
 }
-document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b) go(b.dataset.go); });
+document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
+// Skip link: jump to the content without touching the #/section address.
+document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus(); } });
 document.addEventListener('click',function(e){
  var b=e.target.closest&&e.target.closest('[data-dogshow],[data-unshow]'); if(!b) return;
  if(b.getAttribute('data-dogshow')){
@@ -1596,9 +2031,57 @@ document.addEventListener('click',function(e){
   if(document.getElementById('rdate')) go('round', false);
  }
 });
+// Phone header: one More menu (Search, Reread, Sign out, Dashboard) instead of a row of buttons that would wrap.
+function moreMenu(on){ var m=document.getElementById('moreMenu'), b=document.getElementById('moreBtn'); if(!m||!b) return;
+ m.classList.toggle('hidden',!on); b.setAttribute('aria-expanded',String(!!on)); }
+document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('[data-more]');
+ if(!t){ moreMenu(false); return; }
+ if(t.dataset.more==='toggle'){ moreMenu(document.getElementById('moreMenu').classList.contains('hidden')); return; }
+ moreMenu(false);
+ if(t.dataset.more==='search'){ var s=document.querySelector('header [data-search-open]'); if(s) s.click(); } });
+document.addEventListener('keydown',function(e){ if(e.key==='Escape') moreMenu(false); });
+// Filter row: Filter opens its panel; a chip clears its own filter; Sort redraws.
+document.addEventListener('click',function(e){
+ var f=e.target.closest&&e.target.closest('[data-fpanel]');
+ if(f){ var p=document.getElementById(f.dataset.fpanel); if(p){ var open=p.classList.contains('hidden'); p.classList.toggle('hidden',!open); f.setAttribute('aria-expanded',String(open)); } return; }
+ var c=e.target.closest&&e.target.closest('[data-fclear]');
+ if(c){ var el=document.getElementById(c.dataset.fclear); if(el){ el.value=''; el.dispatchEvent(new Event('change')); }
+   if(c.dataset.fclear==='fst') Array.prototype.forEach.call(document.querySelectorAll('.sfb'),function(x){ x.setAttribute('aria-pressed',x.dataset.code===''?'true':'false'); }); }
+});
 document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('[data-signin],[data-signout],[data-reload]'); if(!t||t.disabled) return;
  if(t.dataset.signin) signIn(); else if(t.dataset.signout) signOut();
  else if(t.dataset.reload){ if(TOKEN&&Date.now()<TOKEN_EXP) load(); else auth.requestSilent(); } });
-window.addEventListener('popstate',function(){ if(LOAD.state==='ok') go((location.hash||'#/map').replace('#/',''),false); });
+// Search (press /): dogs (name, chip, id) and litters (id, dam, sire, born) from the tables already read.
+DashKit.search.register(function(q){
+ if(LOAD.state!=='ok') return [];
+ var hit=DashKit.search.matches(q), out=[], byId=CD._byId||{};
+ (CD.dogs||[]).filter(function(d){ return hit([d.name,d.id,d.chip,d.breed].join(' ')); }).slice(0,12).forEach(function(d){
+  out.push({group:'CD Hub dogs',slot:5,title:d.name||d.id,sub:[d.sex,d.dob,d.chip?'chip '+d.chip:''].filter(Boolean).join(' · '),
+   act:function(){ go('dogs'); var b=document.getElementById('q'); if(b){ b.value=d.name||d.id; b.dispatchEvent(new Event('input')); } focusView(); }});
+ });
+ (CD.litters||[]).filter(function(l){ var dam=byId[l.dam_subject_id], sire=byId[l.sire_subject_id];
+   return hit([l.id,l.born_on,dam&&dam.name,sire&&sire.name].join(' ')); }).slice(0,8).forEach(function(l){
+  var dam=byId[l.dam_subject_id];
+  out.push({group:'CD Hub litters',slot:5,title:'Litter '+(l.born_on||l.id)+(dam?' · '+dam.name:''),sub:l.id,act:function(){ go('litters'); focusView(); }});
+ });
+ return out;
+});
+window.addEventListener('popstate',function(){ if(LOAD.state==='ok'){ go((location.hash||'#/map').replace('#/',''),false); focusView(); } });
 render();
-</script></body></html>
+</script>
+<script>
+/* Calm: every help bullet list (ul.notes) becomes one (i); its words show on hover or tap. */
+(function () {
+  function calm() {
+    document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
+      var t = Array.prototype.map.call(ul.querySelectorAll('li'), function (li) { return li.textContent.trim(); }).join(' · ');
+      var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.textContent = 'i';
+      var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h); // screen readers (and tests) still get the words
+      ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
+    });
+  }
+  new MutationObserver(calm).observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('DOMContentLoaded', calm); calm();
+})();
+</script>
+</body></html>

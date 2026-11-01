@@ -25,7 +25,7 @@ Green means all of these are true on all three pages:
 5. The sample spreadsheets (CSV files) are read and shown correctly.
 6. The browser shows **no unexpected errors** in its hidden error log.
 7. The page never tries to contact any address we did not plan for.
-8. Only the shared sign-in for this browser tab is saved. Sign-out clears it.
+8. Only the shared sign-in is saved (one key, this browser, every tab). Sign-out clears it in every tab.
 9. On a phone-sized screen, each page opens, the menu works and nothing scrolls sideways.
 10. The column names the pages expect in your Drive files are still the ones on our list.
 11. Dark mode still works, and accessibility and the smallest text size have not got worse.
@@ -37,23 +37,31 @@ If any of these breaks, the tick turns red and says which page.
 | Page | Address | Checks |
 |---|---|---|
 | Main dashboard | `/dashboard/` | 46 |
-| CD Hub | `/dashboard/cdhub/` | 30 |
+| CD Hub | `/dashboard/cdhub/` | 51 |
 | Money Hub | `/dashboard/money/` | 41 |
 | Reading CSV files | both readers | 17 |
 | Safety checks | the whole repo | 4 |
 | Bin safety (`RR_` archives never taken) | `#/bin` | 10 |
 | Never empty the bin | all three pages | 2 |
 | PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 14 |
+| Clean-up safety (keepers, folders, resume) | `#/bin`, `#/personal`, `#/usb`, `#/changes` | 13 |
 | Header contract (column names) | list of expected columns | 12 |
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
+| Factory house look (dark frame, bottom tabs, 1px lines, one radius, fixed counts, hover rule, contrast light/dark/warm/cool, empty states, one calm find bar, phone) | `/dashboard/factory/` | 24 |
+| Studio (example data, real data, accounts, groups, bottom tabs, Kits, find bar, Review write-back and Undo, new brief, Add tool, gaps, Done, set-up ticks, Tools warnings, clients, results, spec, brand kit, books, feedback, phone, dark, text size, board, Board/List, Look menu, frame, one-row find bar, one line rule, numbers, no solid fills, pill sizes, weights, dark tour, greys follow the background, calm cards, Me summary, who ring, consistency, brand website, no empty counts, brand mark, list bars, comments, library forms, prices and VAT, ownership, protection, save as kit, team role) | `/dashboard/studio/` | 66 |
+| Studio plain words and calmer screens (no "Spec lock", "Bricks" or "Engine" on any page; How Studio works fold; Open in Infinity only for an https Infinity card link; two taps from a tab; phone tab bar) | `/dashboard/studio/` | 7 |
+| Studio Owned tools (read only after sign-in, with the sign-in token; rows come only from the Owned Tools tab; empty and no-access states; sheet id only in `config.js`; no tool data in the repo) | `/dashboard/studio/#/tools` | 7 |
+| House look on every hub (one set of rules from `tokens.css` + `house.css`: 12px radius, 1px lines and 3px bars, Lexend 400/600 at 13px+, no coloured words, one control line (meaning buttons rest on their own colour line), 36/44px buttons, 30 x 22 counts, ringed date pills, deep frame, 12px card padding and gaps, no solid fills, the hover rule, tabs exempt; every view, desktop warm light, phone cool dark and Look › Dark) | all seven hubs | 22 |
 
-That is 207 checks that must pass.
+The rows above are the main areas. Smaller checks sit in the same run and are included in the total.
+
+That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain words and Studio Owned tools; before that house look on every hub, CD Hub In whelp fixture test and Bloodline empty states).
 
 **Main dashboard**
 - Opens and shows a sign-in button until you sign in. The home screen also shows Key projects & docs (MOVE, Money Hub, CD Hub and the other sections).
-- Every menu tab works: Map, Read first, Drive, PC-Personal, Drive check, Bin, Changes.
+- Every menu tab works. The menu is a bar at the bottom (Home, Drive, Bin, Changes, More); Read first, PC-Personal, Drive check and the other hubs open from More. Home starts with "Needs you: N", three big tiles and the one most urgent thing (`tests/mocked/hub-v2-main.spec.js`).
 - Links straight to a section work, like `#/changes/24h`, `#/bin` and `#/personal`.
 - The Back button works.
 - Drive lists the shared drives, opens a folder and has an "Up one level" link.
@@ -63,6 +71,35 @@ That is 207 checks that must pass.
 - The Money tile shows each entity on its own, never added together.
 - The Money tile links open `/money/`, a single entity, and a single to-do.
 - Sign-in problems show a clear message (permission refused, window closed, window blocked).
+
+**Studio plain words** (`tests/mocked/studio-plain-words.spec.js`, same invented data)
+- No page shows "Spec lock", "Brick(s)" or "Engine" in its text or in what a screen reader says; it reads "Agree the brief", "Parts" and "Studio helper". Code ids stay.
+- Me has a closed "How Studio works" fold with 3 lines; one tap opens it.
+- "Open in Infinity" shows only when an item has an https startinfinity.com card link, and opens in a new tab.
+- Every page is two taps or fewer from a bottom tab. At phone width no tab scrolls sideways and the last button clears the tab bar.
+
+**Studio** (`tests/mocked/studio.spec.js`, data in `tests/fixtures/studio/state.js`)
+- No `studio-state.json` on Drive: the example banner shows, example brands show, every write button is off, and nothing is written.
+- The real state: TEST stamp, engine On with its last run, budget pill, and Me lists Review, Gates and Tasks. TEST items show only with the TEST switch.
+- Every tab opens its own view and lights its tab. A brand chip filters Assets, the address carries it and a reload keeps it.
+- Approve writes one `approve` request into the requests folder and shows "✓ HH:MM · applies by HH:MM"; Undo trashes the file. Redo sends its note. A gate verdict and a new idea each write one file.
+- Accounts: owner and client stay apart. Account chips filter (hidden with one account); requests carry `accountId`; an idea cannot mix two accounts. The example shows one owner and one client.
+- Tools: a meter at 85% shows its warning and the Tools tab counts it.
+- Groups: Group chips sit at the top of the find bar and filter (hidden with one group). Brand cards show their group.
+- Kits: playbooks in outcome columns, packs, kits with their needs, styles (frameworks, voices, looks), formats.
+- Asset rows show framework, format and variant chips, and a Master link on a variant.
+- New brief: group filters brands; More holds playbook, kit, style, formats, language, length, variant and sources; Send writes them all. A variant needs a purpose.
+- Add tool writes one `tool` request. Gaps list what no owned tool can do. A tool we do not own has no meter.
+- Done on a Task writes `done` with the credits used. A set-up tick writes `check` and shows at once.
+- A `javascript:` link becomes a dead link, and a double tap on Approve writes only one file.
+- An engine that last ran over an hour ago shows a red pill. A failed refresh keeps the page and says "Offline".
+- Five bottom tabs (Me, Decide, Do, Line, Kits); every older page opens under its tab with a sub-row of links.
+- Books: part progress and Add part (writes `part` with the next order). Feedback: stars and reasons go with Approve. A suggestion is accepted with one `suggestion` request.
+- Search and sort everywhere: Decide and Do have the find bar; Tools, Kits and Brands have a search box; Tools sorts by name, most used or resets soon; new sorts (due date, priority, name, results) and Where, Series and Kit filters.
+- Board: Line has a column per stage that scrolls inside itself, details open on the right, and the page does not scroll on a desktop; Decide keeps Gates and Review as columns. Board/List is kept per page across a reload; the phone starts on List; a phone board opens details under the card with no sideways scroll. The Look menu changes the page, is stored in `dash-look`, and survives a reload (Mode Dark gives a dark page).
+- Find bar is one row (Search · Filter · Sort): every filter group sits in the Filter panel, active filters show as removable chips, the Filter button counts them, Esc/Done/outside click close it and focus returns, Search keeps focus while typing; on the phone the panel is a sheet above the tabs. Every control type hovers with its 1px edge turning ink (selected the same) and nothing moves.
+- Steps are words ("Step N: Name"), counts wear one ring (needs-you counts rose), no solid colour fills, two pill sizes (24 / 36 / 44 px), one 12px radius, two font weights (400, 600), empty columns shrink, titles stop at two lines. Phone header has one More menu. Dark mode tour (device and Look › Dark, warm and cool): text 4.5:1, rings 3:1. No warm grey on Cool clear.
+- 390px: no sideways scroll on any tab, Kits section, or open form. Dark mode: dark page, every word at least 4.5:1. No text under 13px.
 
 **CD Hub**
 - Opens, asks for sign-in, then reads the sample `BLD-*` tables.
@@ -83,7 +120,10 @@ That is 207 checks that must pass.
 
 **Bin safety**
 - A folder with an `RR_` item anywhere inside is **left alone**, with a note saying why.
+- A `ZZ_DELETE_` folder is binned only when every item inside is junk or itself marked (exact prefix plus a ledger row). Anything else, including an ordinary file, is left alone and the note says why.
 - A file inside an `RR_` folder is **left alone**.
+- A zero-byte file is **UNSURE** and is never ticked or binned. An odd prefix spelling (different case, spaces or hyphens) is listed under Rename needed and is never binned.
+- The bin button shows a dry-run count and asks you to confirm. Trash only. Before anything is binned, the page reads it again and skips it if it changed, is already in the bin, or (on My Drive) is owned by someone else.
 - A name containing `RR_`, a `ZZ_DELETE_` file with no ledger row, and a retired `ZZ_SUPERSEDED_` name cannot be ticked.
 - A name that merely contains `ZZ_DELETE_` in the middle is not listed.
 - If the delete ledger or a pending slip cannot be read, nothing is binned.
@@ -99,9 +139,10 @@ That is 207 checks that must pass.
 
 **PC-Personal and Drive check (these rename and bin real files, so they matter most)**
 - Every write goes to a pretend Drive or a pretend plugged-in drive that only exists in memory. Nothing real can be renamed or binned.
-- PC-Personal "Rename selected": with nothing ticked, nothing happens. It asks for the extra permission, then asks you to confirm. Cancel changes nothing. Confirm renames **only** the ticked files that match a shared-drive copy, adds `ZZ_DELETE_DRIVE_`, and never touches the shared copy, a file with no match, or a name containing `RR_`.
-- PC-Personal "Move selected": finds files starting `ZZ_DELETE_DRIVE_`, and moves only the ticked ones that have a ledger row (never deletes). A name containing `RR_` cannot be ticked.
-- Drive check: finds the files already in a shared drive, ignores tiny and system files, and renames only the ticked matches (`ZZ_DELETE_LOCAL_`). A name containing `RR_` cannot be ticked. Deletes nothing.
+- PC-Personal "Rename selected": with nothing ticked, nothing happens. It asks for the extra permission, then asks you to confirm. Cancel changes nothing. Confirm renames **only** the ticked files that match a live kept copy in a shared drive, adds `ZZ_DELETE_DRIVE_`, and never touches the shared copy, a file with no match, a zero-byte file, or a name containing `RR_`. A shared copy does not count when its name is a `ZZ_` variant, when a `ZZ_` or `AA_HOLD_` folder sits above it, when it is a shortcut or a Google file with no checksum, or when it is on an excluded drive (matched by id or by the drive's name).
+- PC-Personal "Move selected": finds files starting `ZZ_DELETE_DRIVE_`, and moves only the ticked ones that have a ledger row (never deletes). A folder is included only when every item inside is verified or junk. A name containing `RR_` cannot be ticked. A file owned by someone else is skipped.
+- If a shared drive cannot be read, the scan finishes, says that drive was not used as proof, and Continue reads just that drive again.
+- Drive check uses the same kept-copy rules. It ignores tiny and system files, counts zero-byte files as UNSURE, lists odd prefix spellings, and renames only the ticked matches (`ZZ_DELETE_LOCAL_`). A name containing `RR_` cannot be ticked. Deletes nothing. If the shared-drive read was incomplete, the "only on this drive" line says so, and Continue tries the missed drives again.
 
 **Header contract**
 - The file `tests/contract/expected-headers.json` lists the **column names** (names only, no figures) each Drive file should have.
@@ -185,14 +226,26 @@ This is what turns the tests from "advice" into "protection". It needs your admi
 2. Left side: **Branches**. Click **Add branch protection rule** (or **Add classic branch protection rule**).
 3. **Branch name pattern:** type `main`.
 4. Tick **Require a pull request before merging**. Leave "Required approvals" at **0** (you are the only person, so you could not approve your own).
-5. Tick **Require status checks to pass before merging**. In the search box type `Browser tests` and pick **Browser tests (pretend Google and Drive)**. (It only appears in the list because it has run recently. If you cannot find it, open the Actions tab, run "Dashboard tests" once, then try again.)
+5. Tick **Require status checks to pass before merging**. In the search box type `Browser tests` and pick **Browser tests (pretend Google and Drive)**. (It only appears in the list because it has run recently. If you cannot find it, open the Actions tab, run "Dashboard tests" once, then try again.) Then type `Privacy guard` and also pick **Privacy guard (public repo)** (the check that blocks private material; this repo is public). **Status of this second check: not yet added (waits for Lisa's settings visit, after the PRIVACY_DENYLIST secret is saved).** Until it is added, the weekly protection watch reports it.
 6. Tick **Do not allow bypassing the above settings** (this makes it apply to you too).
 7. Leave **Allow force pushes** and **Allow deletions** **unticked**.
 8. Click **Create** (or **Save changes**).
 
 What changes for you: nothing can go straight into `main`; every change comes as a pull request, and the green **Merge** button only lights up when the tests are green. A red tick means "fix it first". If you ever need to bypass it in an emergency, untick step 6 for a moment.
 
-Do not rename the job "Browser tests (pretend Google and Drive)" in `tests.yml`. If it is renamed, merges stick on "Expected, waiting for status" and the rule must be edited to the new name.
+Do not rename the job "Browser tests (pretend Google and Drive)" in `tests.yml`, or "Privacy guard (public repo)" in `privacy-guard.yml`. If it is renamed, merges stick on "Expected, waiting for status" and the rule must be edited to the new name.
+
+## Publishing waits for the tests
+
+**The problem it fixes:** GitHub Pages publishes every merge to `main` straight away, at the same time as the tests run, and it publishes the whole repo (`docs/`, zips, `TESTS.md`, test fixtures, gate rules), so they can all be read on the web.
+
+**What was built** (finishing the Job 6d branch): a workflow called "Publish site (after tests)". On every merge to `main` it runs the same tests as the required check first. It publishes only if they all pass, and it publishes only `index.html`, `auth.js`, `config.js`, `toolkit.js`, `tokens.css`, `cdhub/` and `money/`. Tests check this, including deliberate breaks that prove they would catch a publish that skips the tests or includes too much. A test also fails if a page refers to a file that would not be published.
+
+**Lisa: one click, once.** GitHub > **dashboard** > **Settings** > **Pages** > **Build and deployment** > **Source** = **GitHub Actions**. Then press **Actions > Publish site (after tests) > Run workflow** once. Until you click, the workflow does nothing harmful: its summary says "Waiting for Lisa's one click", and the old branch publishing carries on.
+
+**To undo it:** Settings > Pages > Source > **Deploy from a branch** > `main` > `/ (root)` > Save.
+
+**Also needs one click:** GitHub Issues are switched off on this repo (checked 18 Oct 2026), so the alarm can't open an Issue. Settings > General > Features > tick **Issues**. The Monday protection watch reports it until then.
 
 ## Check your real column names (optional, on your computer only)
 
@@ -225,6 +278,31 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 15 Oct 2026 | (found by the teeth check, not a live bug) a hidden marker in front of the "CURRENT" line made the row-count warning disappear; and the rules that stop a `ZZ_` folder holding an `RR_` item being binned had no test | "a BOM in front of the…" (the "CURRENT: n rows held" line test), and the two Bin safety tests |
 | 17 Oct 2026 | A bulk move could still change rows hidden past Showing 50 of 52 | "Select all on a list of 52 with 50 shown" |
 | 17 Oct 2026 | Signing in on one page asked again on Money and again on the way back | "one sign-in is shared, and an expired token does ask again" |
+| 18 Oct 2026 | (found in review) CD Hub did not clean quote marks and let any link through, so a table cell could run code in the signed-in page | "CD Hub cleans quote marks and refuses javascript: links from the tables" |
+| 18 Oct 2026 | (found in review) Signing out while on the Bin and signing back in broke the Bin (the Dropbox slot was forgotten) | "signing out on the Bin and back in draws the Bin with no errors" |
+| 18 Oct 2026 | (found in review) The 5-minute refresh silently unticked everything you had ticked | "the 5-minute refresh keeps your ticks and waits while you have any" |
+| 18 Oct 2026 | Live Bin said "The delete ledger could not be read" because the ledger now starts with a "COUNT: n rows" note line above the header | "a ledger that starts with a COUNT note line above the header is still read" |
+| 18 Oct 2026 | A Google "too many requests" (429) answer failed the read straight away instead of trying again | "home: two 429 answers in a row are retried and the page still reads normally" |
+| 18 Oct 2026 | Every Money reread downloaded every file again (27 Drive calls each time), even when nothing had changed | "Reread with nothing changed downloads no file at all, and stays inside the Drive call budget" |
+| 18 Oct 2026 | The teeth check showed the "RR_ item inside a ZZ_ folder" guard could be removed without any test noticing (a second, wider check hid it) | "an RR_ item deep inside a ZZ_DELETE_ folder keeps the whole folder out of the bin, even with Select all" |
+| 18 Oct 2026 | Same for the "ZZ_ item inside an RR_ folder" guard | "a ZZ_DELETE_ item anywhere below an RR_ folder is left alone, even with a ledger row" |
+| 18 Oct 2026 | Changing screen left keyboard focus on the old menu item, so screen readers did not say where you were | "home: clicking a menu item puts focus on the screen title" |
+| 18 Oct 2026 | The Map led with links and counts, so what needed Lisa today was spread over several cards | "shows at most 7 rows, overdue (red) first, each row a link, and the tab title carries the count" |
+| 18 Oct 2026 | Money only said "runs dry on X" in words, so a forecast dip was easy to miss | "a forecast that goes below zero marks the runs-dry date in red" |
+| 20 Oct 2026 | Factory: a send named "Links · …" for the app "LJR7 Links" was filed under "Factory", so Lisa could not find it in Do | "a send named Links · P5 sits under its app Sample Links…" |
+| 20 Oct 2026 | Factory: the selected tab and chip showed a double line (a focus ring around the tab, an inner shadow inside the chip). House look, 28 Oct: a selected chip is the 1px line drawn inside, the tab only widens its bar, focus is a 2px ring | "after clicking a tab and a chip: selected chips wear the 1px inside line, the tab only its wider bar; focus is 2px" |
+| 18 Oct 2026 | Phone install needs a kept copy of the site, and it must never hold Drive data or the sign-in | "after signing in and reading, the kept copy holds only the page files" |
+| 18 Oct 2026 | There was no way to find a file, to-do or dog without opening each page and scrolling | "home: / opens search; it finds Drive file names per shared drive and Money to-dos, each a link" |
+| 19 Oct 2026 | Lisa still signed in twice: the sign-in lived in one tab only, so Money in a new tab or window, or the installed app, asked again | "sign in on home, open Money Hub and CD Hub: each opens in a new tab already signed in, no prompt" |
+| 19 Oct 2026 | CD Hub Today: "0 of 23 cabins with a temperature" did nothing when clicked (a button with no action) | "CD Hub Today: the temperature tile opens The round, where temperatures are entered" |
+| 19 Oct 2026 | Hard rule 14: the Bin (and Drive, Changes, search) listed Karen - SHARED | "is in config, never queried and never shown on Map, Drive, Bin, Changes, PC-Personal or search" |
+| 25 Oct 2026 | Main dashboard: the selected menu pill had lost its colour fill and showed an odd left edge, and the "You are here" title showed a square focus box after each screen change | "the selected tab has one clean border and a colour fill; the "You are here" title has no box" |
+| 25 Oct 2026 | Marketplace V2: the bottom tab bar covered the last button on long pages (the page's bottom space was lost to the `.wrap` rule) | "the last button on a long page can always be scrolled clear of the bottom tab bar @regression" |
+| 29 Oct 2026 | Marketplace: the public pages (hub and privacy policy) showed a personal email address (sign-in hint, Gmail link, contact) | "public pages hold no email address: no "@" address, no login_hint, no authuser (Stage 0A, D1 = B) @regression" |
+| 29 Oct 2026 | Marketplace: the same check on what the page actually shows (text and links), signed out, on every tab and on the privacy page | "signed out, signed in on every tab, and the privacy page: no email address in the shown text or any link @regression" |
+| 30 Oct 2026 | Phone install: Factory, Food and Marketplace were not on the service worker list, so they did not open offline | "@regression every published hub page is on the service worker list" (tests/mocked/pwa-and-keys.spec.js) |
+| 30 Oct 2026 | Money Hub on a phone: sideways-scrolling tables could not be reached by keyboard (axe scrollable-region-focusable; CI fonts made the table overflow) | "@regression Money Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-money-scroll.spec.js) |
+| 30 Oct 2026 | CD Hub on a phone: sideways-scrolling tables and the table map could not be reached by keyboard (axe scrollable-region-focusable) | "@regression CD Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-cdhub-scroll.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
@@ -240,6 +318,65 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 - Your real column names in CI (use the local script above).
 - Phone sizes beyond one Pixel-sized screen, and only a short list of checks on it.
 - A real USB stick or real renaming on a disk (the Drive check is tested against a pretend plugged-in drive).
+
+## Settings file and Google retries
+
+All ids and addresses (the public sign-in id, the Drive folder and file ids, the Google addresses) are written once, in `config.js`. The three pages and the tests read them from there. A test fails if the sign-in id is copied anywhere else.
+
+`toolkit.js` holds the shared Google reader. When Google says "too many requests" (429 or a rate-limit 403) or has a hiccup (5xx), a read tries again by itself: up to 4 tries, about 1, 2 and 4 seconds apart, plus a little random extra. A plain refusal (no access, folder not found) is not retried, and a change to Drive (the Bin buttons) is never retried. If all 4 tries fail, each page says: "Google is busy right now (too many requests). The dashboard tried 4 times. Wait a minute, then try again." Tests: `tests/mocked/google-retries.spec.js`.
+
+## Money reads only what changed
+
+Money keeps a copy of each file **in memory only** (never in the browser's storage), with the "last changed" time Drive gave for it. On Reread, and on the 10-minute timed reread, it still asks Drive for the folder listings, but it downloads a file again only if its "last changed" time is different. Sign-out forgets the copy. A test caps the Drive calls: a first read of the sample drive may use at most 40 (today 27), and a reread with nothing changed at most 8 (today 6) with no downloads. Tests: `tests/mocked/money-cache.spec.js`.
+
+## Money chart and worked-out deadlines
+
+Each entity page draws its `FORECAST.csv` as a line, with a dashed £0 line, the start point and, if the forecast goes below zero, a red dot labelled "Runs dry". The same facts are in the chart's spoken label and in a note under it. The Dates page and each entity page also list **deadlines worked out from the usual UK rules**: Self Assessment (31 January and 31 July) for personal entities; Companies House accounts (9 months), Corporation Tax payment (9 months and 1 day) and CT600 (12 months) for companies with a `year_end`; VAT (1 month and 7 days after each quarter) where `vat_quarter_end` is set. Every row says **check with accountant**; it is not tax advice. A date already in MON-DATES for the same entity (within 5 days) is not repeated. Tests: `tests/mocked/money-forecast-deadlines.spec.js`.
+
+## One sign-in for every tab, and the Dashboard button
+
+- One sign-in covers home, Money Hub and CD Hub in every tab, window and the installed app (one key, `ljr-dash-auth`, in this browser).
+- Only the short-lived access token and its expiry. No refresh token, no secret. Expired = not reused.
+- Sign out in one tab = signed out in all. Sign in in one tab = the others pick it up.
+- Money Hub and CD Hub links on home open in a new tab.
+- Every page except home has a **Dashboard** button, top right. Opened from the dashboard: it brings that tab back and closes itself. Otherwise it goes home.
+- Home links the MOVE workbook once (the tile).
+- Tests: `tests/mocked/one-sign-in-tabs.spec.js`.
+
+## Every click works
+
+- `tests/mocked/every-click.spec.js` opens every screen of home (11), Money Hub (8) and CD Hub (10) with pretend data.
+- Every visible button, tile and link: has a label; internal links answer 200; outside links are https and open a new tab.
+- Each one is clicked on a fresh copy of the screen. It must go somewhere, open a tab, change the page or ask a question. A dead click fails.
+- Not clicked: Sign out and the skip link (own tests). Outside links are checked, not opened.
+- A link that opens a new tab (like "Sample task ready now" on the Map, which opens Money Hub) waits for that tab to open, however long it takes under four workers. It used to give it 700ms and sometimes called it a dead click.
+
+## The house look, once
+
+- The agreed rules (Lisa, 28 Oct 2026) are written once: the numbers and colours in `tokens.css` (including Look › Dark), the shared parts in `house.css` (buttons, pills, counts, date pills, the hover rule, bottom tabs, bars, cards, the phone Filter button). Every hub loads `tokens.css`, then `house.css`, then its own layout.
+- `tests/mocked/house-look.spec.js` holds every hub to the same rules by computed style, on every view. `HOUSE_AUDIT=<file>` runs every combination (light and dark, warm and cool, 1280 and 390, Look › Dark) and writes each deviation to that file instead of failing.
+- Checks that read a value after a hover use one shared helper, `tests/support/settle.js`, which waits for the colour-bar transition to finish instead of a fixed pause.
+
+## Phone install and keyboard keys
+
+`manifest.webmanifest`, the icon in `icons/` and `sw.js` let you add the dashboard to your phone's home screen. It opens full screen. The service worker keeps **only the site's own page files**, so the pages open fast and still open offline (they then say a read failed, because nothing from Drive is kept). It never touches Google addresses, never keeps a request that carries a sign-in, and keeps no Drive data or token. A test signs in, reads, and then checks every kept file is a page file. The rest of the suite runs with service workers switched off, so every test starts clean.
+
+Keyboard keys on all three pages (from `toolkit.js`): `g` then `m` Map, `d` Drive, `b` Bin, `c` Changes, `f` Money Hub, `h` CD Hub; `r` read again; `/` search; `?` shows the list. Keys do nothing while you type in a box. Tests: `tests/mocked/pwa-and-keys.spec.js`.
+
+## Search
+
+Press `/` (or the Search button) on any page. One box, results grouped by where they came from, each group in its colour:
+- **Home:** Drive file names in each shared drive (one read-only name search per shared drive, at most 12 drives, never My Drive), plus the Money to-dos and dates the page has already read.
+- **Money Hub:** to-dos, dates and accountant questions already read (no extra Drive calls).
+- **CD Hub:** dogs (name, chip, id) and litters already read. Picking a dog opens Dogs filtered to it.
+
+A quote in the words is escaped before it reaches Drive. Signed out, nothing is searched. Tests: `tests/mocked/search.spec.js`.
+
+## Bin guard: 00 CHECK on the Bin page
+
+A Google Apps Script owned by the business account (the "bin guard", code kept in Drive, not in this public repo) looks in the bins every day at about 8am UK. Anything whose name does not start `ZZ_DELETE_` or `ZZ_SUPERSEDED_` is taken back out and put in **LD > *00 Current > 00 CHECK**. It never deletes for good and never empties a bin.
+
+The Bin page shows 00 CHECK with ticks, **Select all**, **Clear**, **ZZ_DELETE** and **Refer to AI**. The page only **reads** 00 CHECK. The two buttons open the guard's own Google page (a web app that only puppyclassroom.com accounts can open, and only Lisa can use) with the ticked ids; nothing changes until Lisa presses the button there. RR_ names are never ticked. The buttons stay off until the web app exists: it writes its address into `BIN-GUARD-WEBAPP.json` in *00 Current the first time Lisa opens it, or you can put the address in `config.js` (`binGuard.webAppUrl`). Only a `https://script.google.com/.../exec` address is accepted. Tests: `tests/mocked/bin-guard.spec.js`.
 
 ## Where things live
 
