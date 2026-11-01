@@ -48,7 +48,7 @@ test.describe('Install on your phone', () => {
         return out.sort();
       });
       expect(kept.length).toBeGreaterThan(5);
-      for (const p of kept) expect(p, 'kept: ' + p).toMatch(/^\/dashboard\/(|index\.html|auth\.js|config\.js|toolkit\.js|tokens\.css|house\.css|manifest\.webmanifest|sw\.js|icons\/icon[-\w]*\.(svg|png)|money\/|money\/index\.html|money\/core\.js|cdhub\/|cdhub\/index\.html|studio\/|studio\/index\.html)$/);
+      for (const p of kept) expect(p, 'kept: ' + p).toMatch(/^\/dashboard\/(|index\.html|auth\.js|config\.js|toolkit\.js|tokens\.css|house\.css|manifest\.webmanifest|sw\.js|icons\/icon[-\w]*\.(svg|png)|money\/|money\/index\.html|money\/core\.js|cdhub\/|cdhub\/index\.html|studio\/|studio\/index\.html|factory\/|factory\/index\.html|food\/|food\/index\.html|marketplace\/|marketplace\/index\.html)$/);
     });
   });
 });
@@ -72,7 +72,7 @@ test.describe('Keyboard keys', () => {
   });
 
   test('r reads again, and keys do nothing while typing in a box', async ({ page, guard }) => {
-    await page.goto('./#/drive/drv-alpha1');
+    await page.goto('./#/drives/shared/drv-alpha1');
     await signIn(page);
     const before = guard.world.calls.filter((c) => c.path === '/drives').length;
     await page.keyboard.press('r');
@@ -93,4 +93,13 @@ test.describe('Keyboard keys', () => {
     await page.keyboard.press('f');
     await expect(page).toHaveURL(/\/dashboard\/money\/$/);
   });
+});
+
+// JOB 35 (30 Oct 2026) @regression: Factory, Food and Marketplace were left out of the phone's kept copy, so they did
+// not open offline while Money, CD Hub and Studio did. Every hub page the site publishes must be on the list.
+test('@regression every published hub page is on the service worker list', () => {
+  const sw = fs.readFileSync(path.join(ROOT, 'sw.js'), 'utf8');
+  for (const hub of ['money', 'cdhub', 'studio', 'factory', 'food', 'marketplace']) {
+    expect(sw, hub).toContain(`'${hub}/', '${hub}/index.html'`);
+  }
 });

@@ -1,0 +1,4 @@
+COUNT: 2 sample rows
+listing_id,image_url,title,platform,url,platform_item_id
+L-0001,https://i.ebayimg.com/images/g/sample1/s-l500.jpg,Sample blue lead,ebay,https://www.ebay.co.uk/itm/100000000001,100000000001
+L-0002,,Sample toy rope,vinted,,

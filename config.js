@@ -13,7 +13,9 @@
     scopes: {
       read: 'https://www.googleapis.com/auth/drive.readonly',
       // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
-      write: 'https://www.googleapis.com/auth/drive'
+      write: 'https://www.googleapis.com/auth/drive',
+      // Personal Drive page only: a second, look-only sign-in. Its token stays in memory and is never used for work calls.
+      personal: 'https://www.googleapis.com/auth/drive.metadata.readonly'
     },
     // Ids only, derived from cleanup.excludedDrives. Kept so older checks still find them.
     excludedDrives: EXCLUDED.map(function (d) { return d.id; }),
@@ -57,7 +59,31 @@
       requestsFolderId: '13KclIUhOej1bmoQznfbrUiHtoab-FnDV', // the page writes request JSON files here
       inboxFolderId: '1poaewHMRwrOcXwXa0PrMZhnmhyn66BzL', // Ideas > Inbox - drop files here
       stateFile: 'studio-state.json',
+      // Owned tools list (Tools page): read with the signed-in token only. The tool data lives in the sheet, never in this repo.
+      ownedTools: { sheetId: '1iwlUFBeFOAUxlHlr8FsCIxpmhqSWzq3038OEDN-Zfz8', tab: 'OWNED_TOOLS' }, // STUDIO-CONTROL sheet, Owned Tools tab
       live: false
+    },
+    // Web Estate Hub (estate/): reads the private RR_WEB-ESTATE sheet (Properties tab) with Lisa's sign-in; Add drops one
+    // request file into requestsFolderId for the RR_WEB-ESTATE engine. Both ids stay empty until Lisa installs the engine:
+    // until then the page shows invented example rows and sends nothing. Read only: nothing here changes DNS or a site.
+    estate: {
+      sheetId: '',
+      requestsFolderId: '',
+      live: false
+    },
+    // Actions minutes card (Home). Reads ACTIONS-MINUTES.json (counts only) from folderId with Lisa's sign-in; the file is
+    // written by the private ACTIONS-MINUTES collector (Apps Script in Drive, read-only GitHub token in its Script Properties).
+    // folderId empty = the card shows invented example data with the EXAMPLE stamp and reads nothing.
+    // repoLabels: short labels only (the collector maps real repos to these); they set the row order. Never real repo names.
+    actionsMinutes: {
+      folderId: '',
+      fileName: 'ACTIONS-MINUTES.json',
+      freeMinutes: 2000,
+      amber: 0.75,
+      red: 0.90,
+      staleDays: 2,
+      repoLabels: [],
+      usageUrl: 'https://github.com/settings/billing/usage'
     },
     marketplace: {
       openWorkId: '1ShYbYmY8W-MEWqm9kHFsIcS5uR4b2SG00uXle_yL76U', // RR_OPEN-WORK (00 AI Commons)
@@ -81,6 +107,11 @@
       homeFolderId: '1HKAMkAER7ft-xMJYUQGzi_v6jV-3vQwk', // LD > *00 Current: the web app writes its address file here when first opened
       webAppFile: 'BIN-GUARD-WEBAPP.json',
       webAppUrl: '' // optional: paste the /exec address here instead. Left empty, the page reads it from webAppFile.
+    },
+    // Projects Hub (Apps Script web app in the private projects-hub repo). Its address is NOT kept here yet: left empty,
+    // the home screen shows no Projects Hub tile. Where the address will live is Lisa's open privacy decision for all hubs.
+    projectsHub: {
+      webAppUrl: '' // the hub's /exec address; only a script.google.com /exec address is accepted
     },
     money: {
       owner: 'lisa@puppyclassroom.com',
