@@ -139,7 +139,7 @@ test.describe('Teeth list stays in step with the pages @ci-guard', () => {
 
 test.describe('Publishing waits for the tests @ci-guard', () => {
   const pages = () => read('.github/workflows/pages.yml');
-  const LIVE_FILES = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'house.css', 'manifest.webmanifest', 'sw.js', 'icons/icon.svg', 'cdhub/index.html', 'money/index.html', 'money/core.js', 'factory/index.html', 'marketplace/index.html', 'food/index.html', 'studio/index.html'];
+  const LIVE_FILES = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'house.css', 'manifest.webmanifest', 'sw.js', 'icons/icon.svg', 'cdhub/index.html', 'money/index.html', 'money/core.js', 'factory/index.html', 'marketplace/index.html', 'food/index.html', 'studio/index.html', 'estate/index.html', 'estate/core.js'];
 
   test('the publish job needs the gate job, and the gate runs the same suite as the required check', () => {
     const wf = pages();
@@ -160,10 +160,23 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     const m = /cp -r ([^\n]+) _site\//.exec(pages());
     expect(m, 'the copy line').toBeTruthy();
     const copied = m[1].trim().split(/\s+/);
-    expect(copied.sort()).toEqual(['auth.js', 'cdhub', 'config.js', 'factory', 'food', 'house.css', 'icons', 'index.html', 'manifest.webmanifest', 'marketplace', 'money', 'studio', 'sw.js', 'tokens.css', 'toolkit.js']);
+    expect(copied.sort()).toEqual(['auth.js', 'cdhub', 'config.js', 'estate', 'factory', 'food', 'house.css', 'icons', 'index.html', 'manifest.webmanifest', 'marketplace', 'money', 'studio', 'sw.js', 'tokens.css', 'toolkit.js']);
     LIVE_FILES.forEach((f) => expect(copied.some((c) => f === c || f.startsWith(c + '/')), f + ' must be published').toBe(true));
     // and the live-match test compares exactly these files
     LIVE_FILES.forEach((f) => expect(read('tests/live/live-smoke.spec.js')).toContain(`'${f}'`));
+  });
+
+  // A hub is a top-level folder with its own index.html. Each one must be copied and checked by pages.yml,
+  // or it merges green and stays 404 (the Web Estate hub did, 30 Oct 2026).
+  test('every hub folder on main is copied and checked by pages.yml', () => {
+    const wf = pages();
+    const copied = /cp -r ([^\n]+) _site\//.exec(wf)[1].trim().split(/\s+/);
+    const hubs = fs.readdirSync(REPO, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && !d.name.startsWith('.') && !['tests', 'tools', 'docs', 'node_modules', 'icons'].includes(d.name))
+      .filter((d) => fs.existsSync(path.join(REPO, d.name, 'index.html'))).map((d) => d.name);
+    expect(hubs.length).toBeGreaterThan(5);
+    const missing = hubs.filter((h) => !copied.includes(h) || !wf.includes(`test -f _site/${h}/index.html`));
+    expect(missing, 'hub folders missing from pages.yml (cp line or test line)').toEqual([]);
   });
 
   test('every action in pages.yml is pinned to a full commit id', () => {
@@ -181,7 +194,7 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     ['index.html', 'cdhub/index.html', 'money/index.html'].forEach((f) => {
       [...read(f).matchAll(/\b(?:src|href)="([^"#:?]+)"/g)].map((m) => m[1]).filter((u) => !/^(https?|mailto|tel|data)/.test(u) && !/^['"+\s]/.test(u)).forEach((u) => {
         const target = path.posix.normalize(path.posix.join(path.posix.dirname(f), u)).replace(/^\.\/$/, '.');
-        const published = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'house.css', 'manifest.webmanifest', 'sw.js', 'icons/', 'cdhub/', 'money/', 'factory/', 'marketplace/', 'food/', 'studio/'].some((p) => target === p || target.startsWith(p) || target === '.' || target === '');
+        const published = ['index.html', 'auth.js', 'config.js', 'toolkit.js', 'tokens.css', 'house.css', 'manifest.webmanifest', 'sw.js', 'icons/', 'cdhub/', 'money/', 'factory/', 'marketplace/', 'food/', 'studio/', 'estate/'].some((p) => target === p || target.startsWith(p) || target === '.' || target === '');
         if (!published) bad.push(`${f} refers to ${u}`);
       });
     });
