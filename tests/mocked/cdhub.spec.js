@@ -123,6 +123,18 @@ test.describe('CD Hub: navigation', () => {
     await expect(page.locator('#nav button[data-signout]')).toHaveCount(1);
   });
 
+  test('the associations button is labelled Assocs and still opens #/buyers', async ({ page }) => {
+    await page.goto('cdhub/');
+    await signIn(page);
+    const tab = page.locator('#nav button[data-go="buyers"]');
+    await expect(tab).toHaveAccessibleName('Assocs');
+    await expect(tab).not.toContainText('Buyers');
+    await tab.click();
+    await expect(page).toHaveURL(/#\/buyers$/);
+    await expect(page.locator('#main h2')).toHaveText('Assocs');
+    await expect(page.locator('#next')).toContainText('Next: Dogs');
+  });
+
   test('the "Next:" buttons at the bottom lead to other sections', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
@@ -225,6 +237,22 @@ const setFile = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
   if (f) { f.content = content; f.size = String(content.length); }
   else world.file('bld-extra-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
+};
+// Writes the three Moxiclear columns on the invented subject table. Addresses stay example.test.
+const setRx = (world, byId) => {
+  const f = world.files.find((x) => x.name === 'BLD-subject.csv');
+  const lines = f.content.replace(/\r/g, '').replace(/\n$/, '').split('\n');
+  const head = lines[0].split(',');
+  const ix = { date: head.indexOf('rx_moxi_date'), exp: head.indexOf('rx_moxi_expiry'), url: head.indexOf('rx_moxi_file_url') };
+  const rows = lines.slice(1).filter(Boolean).map((line) => {
+    const c = line.split(',');
+    while (c.length < head.length) c.push('');
+    const rx = byId[c[0]];
+    if (rx) { c[ix.date] = rx.date || ''; c[ix.exp] = rx.exp || ''; c[ix.url] = rx.url || ''; }
+    return c.join(',');
+  });
+  f.content = [lines[0], ...rows].join('\n') + '\n';
+  f.size = String(f.content.length);
 };
 const MATINGS = () => 'id,dam_subject_id,sire_subject_id,mated_on,mating_no,method,is_first_of_season,due_from_this_mating,litter_id,produced_litter,notes\n'
   + `mat-x1,sub-test-dog-1,sub-test-dog-2,${iso(-66)},1,natural,yes,,,,invented\nmat-x2,sub-test-pup-1,sub-test-dog-2,${iso(-58)},1,natural,yes,,,,invented\n`;
@@ -538,6 +566,46 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const r = await card.evaluate((e) => { const c = e.getBoundingClientRect(), w = e.querySelector('.whor').getBoundingClientRect(); return [Math.round(c.right - w.right), Math.round(c.bottom - w.bottom)]; });
     expect(r[0]).toBeLessThanOrEqual(14); expect(r[1]).toBeLessThanOrEqual(14);   // bottom-right
     expect(await card.locator('.nm').evaluate((e) => getComputedStyle(e).webkitLineClamp)).toBe('2');
+  });
+
+  test('Dogs: Moxiclear Rx expiry and the Rx link are read from the subject table', async ({ page, guard }) => {
+    setRx(guard.world, {
+      'sub-test-dog-1': { date: '2026-10-01', exp: '2026-11-06', url: 'https://example.test/rx/sample-one' },
+      'sub-test-dog-2': { exp: '', url: 'https://example.test/rx/sample-two' },
+      'sub-test-pup-1': { exp: '2026-03-02', url: '' },
+    });
+    await page.goto('cdhub/');
+    await signIn(page);
+    await openTab(page, 'dogs');
+    const card = (name) => page.locator('.dc', { has: page.locator('.nm', { hasText: name }) });
+    const one = card('Test Dog One');
+    await expect(one.locator('.wt', { hasText: 'Moxiclear' })).toContainText('6 Nov 2026');
+    const rx = one.getByRole('link', { name: 'Rx' });
+    await expect(rx).toHaveAttribute('href', 'https://example.test/rx/sample-one');
+    await expect(rx).toHaveAttribute('target', '_blank');
+    await expect(rx).toHaveAttribute('rel', 'noopener');
+    const look = await rx.evaluate((e) => {
+      const s = getComputedStyle(e);
+      return { h: e.getBoundingClientRect().height, fs: s.fontSize, fw: s.fontWeight, r: s.borderTopLeftRadius, bw: s.borderTopWidth };
+    });
+    expect(look).toEqual({ h: 36, fs: '14px', fw: '600', r: '12px', bw: '1px' });
+    const two = card('Test Dog Two');
+    await expect(two.getByRole('link', { name: 'Rx' })).toHaveAttribute('href', 'https://example.test/rx/sample-two');
+    await expect(two.locator('.wt', { hasText: 'Moxiclear' })).not.toContainText(/\d/);
+    const pup = card('Test Pup One');
+    await expect(pup.locator('.wt', { hasText: 'Moxiclear' })).toContainText('2 Mar 2026');
+    await expect(pup.getByRole('link', { name: 'Rx' })).toHaveCount(0);
+
+    setRx(guard.world, {
+      'sub-test-dog-1': { exp: '', url: '' },
+      'sub-test-dog-2': { exp: '', url: 'javascript:alert(1)' },
+      'sub-test-pup-1': { exp: 'not-a-date', url: 'not a url' },
+    });
+    await page.locator('#nav button[data-reload]').click();
+    await expect(page.locator('#nav button[data-go="dogs"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('.dc a', { hasText: 'Rx' })).toHaveCount(0);
+    await expect(page.locator('#rows')).not.toContainText('Moxiclear');
+    await expect(page.locator('#rows')).not.toContainText('javascript:');
   });
 
   test('Litters: the same filter row; Sort changes the order', async ({ page, guard }) => {

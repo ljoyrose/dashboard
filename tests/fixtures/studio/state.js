@@ -16,7 +16,7 @@
     };
     return {
       generated_at: iso(-60e3),
-      studio: { on: true, mode: 'TEST', budgetMonth: 50, spentMonth: 20 },
+      studio: { on: true, mode: 'TEST', budgetMonth: 50, spentMonth: 20, autoGates: true, lisaCap: 5 },
       health: { lastRun: iso(-10 * 60e3), jobs: [{ job: 'syncState', result: 'OK', last: iso(-10 * 60e3), note: 'sample' }] },
       accounts: [{ id: 'acc-owner', name: 'Sample owner', kind: 'owner', role: 'owner', emails: ['owner@example.test'], protect: '', protectEffective: 'no' },
         { id: 'acc-client', name: 'Sample client', kind: 'client', role: 'client', emails: [], protect: '', protectEffective: 'yes' }],
@@ -32,7 +32,11 @@
       ],
       assets: [
         a({ id: 'sa-rev1', title: 'Sample checklist PDF', productId: 'sp-course', stage: 7, reviewLink: 'https://drive.google.com/file/d/1SAMPLEreviewDoc00000000000/view', updated: iso(-H),
-          kitId: 'kit-lead', outcome: 'attract', frameworkId: 'fw-pas', formatIds: ['fmt-a4'], language: 'en-GB', sourceIds: ['src-1'] }),
+          kitId: 'kit-lead', outcome: 'attract', frameworkId: 'fw-pas', formatIds: ['fmt-a4'], language: 'en-GB', sourceIds: ['src-1'],
+          // Stage 5 (engine v0.2.24): the playbook steps copied onto this piece, and whether its approve gate passes by itself.
+          tasks: [{ n: 1, step: 'Draft the checklist', who: 'claude', fit: 'AUTO', status: 'done' }, { n: 2, step: 'Check the facts', who: 'grok', fit: 'AUTO', status: 'skipped' },
+            { n: 3, step: 'Lay out the pages', who: 'engine', fit: 'AUTO', status: 'open' }, { n: 4, step: 'Read it through', who: 'lisa', fit: 'HAND', status: 'open' }],
+          autoGate: { gate: 'approve', auto: false, why: 'Cost is over your cap' } }),
         a({ id: 'sa-rev2', title: 'Sample welcome email', brandIds: ['sb-south'], type: 'email', stage: 7, updated: iso(-2 * H),
           kitId: 'kit-email', outcome: 'keep', frameworkId: 'fw-hso', formatIds: ['fmt-email-header'], masterId: 'sa-lib', purpose: 'refresh', test: 'ab-welcome' }),
         a({ id: 'sa-make', title: 'Sample webclass slides', brandIds: ['sb-north', 'sb-south'], type: 'slides', stage: 5, size: 'L', evergreen: false, dated: true, eventDate: day(14),
@@ -49,7 +53,17 @@
       ],
       playbooks: [
         { id: 'pb-launch', name: 'Sample launch playbook', outcome: 'convert', steps: [{ kind: 'pack', id: 'pk-funnel', text: 'Sample webclass funnel' }, { kind: 'kit', id: 'kit-email', text: 'Sample email kit' }, { kind: 'action', id: null, text: 'Post the replay link' }], notes: '' },
-        { id: 'pb-grow', name: 'Sample list builder', outcome: 'attract', steps: [{ kind: 'kit', id: 'kit-lead', text: 'Sample lead magnet kit' }, { kind: 'kit', id: 'kit-social', text: 'Sample social post kit' }], notes: '' }
+        { id: 'pb-grow', name: 'Sample list builder', outcome: 'attract', steps: [{ kind: 'kit', id: 'kit-lead', text: 'Sample lead magnet kit' }, { kind: 'kit', id: 'kit-social', text: 'Sample social post kit' }], notes: '' },
+        // Engine v0.2.24: a playbook code, and who does each step and how (AUTO or by hand). Invented.
+        { id: 'pb-app-launch', code: 'P1', name: 'Example app launch pack', outcome: 'deliver', notes: '', steps: [
+          { kind: 'action', id: null, text: 'Agree the brief', who: 'lisa', fit: 'HAND' },
+          { kind: 'action', id: null, text: 'Write the store listing', who: 'claude', fit: 'AUTO' },
+          { kind: 'kit', id: 'kit-pet-card', text: 'Example pet card', who: 'claude', fit: 'AUTO' },
+          { kind: 'action', id: null, text: 'Make the launch images', who: 'grok', fit: 'AUTO' },
+          { kind: 'action', id: null, text: 'Check the legal line', who: 'lisa', fit: 'HAND' },
+          { kind: 'action', id: null, text: 'File the parts', who: 'engine', fit: 'AUTO' },
+          { kind: 'action', id: null, text: 'Post the launch', who: 'lisa', fit: 'HAND' },
+          { kind: 'action', id: null, text: 'Say thank you', who: null, fit: null }] }
       ],
       packs: [
         { id: 'pk-funnel', name: 'Sample webclass funnel', kind: 'funnel', kitIds: ['kit-webclass', 'kit-email'], notes: 'Pages and emails', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null }
@@ -58,6 +72,7 @@
         { id: 'kit-lead', name: 'Sample lead magnet kit', type: 'lead', price: 100, priceBasis: 'ex', priceEx: 100, priceInc: 120, readyDays: 3, sourcePrice: null, brickIds: ['br-hook'], needs: ['doc-fill', 'pdf-export'], frameworkId: 'fw-pas', voiceId: null, lookId: null, formatIds: ['fmt-a4'], notes: '' },
         { id: 'kit-email', name: 'Sample email kit', type: 'email', brickIds: [], needs: ['email-draft'], frameworkId: 'fw-hso', voiceId: null, lookId: null, formatIds: ['fmt-email-header'], notes: '', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null },
         { id: 'kit-webclass', name: 'Sample webclass kit', type: 'slides', brickIds: ['br-hook'], needs: ['slides-fill', 'video-reformat'], frameworkId: 'fw-webinar', voiceId: null, lookId: null, formatIds: ['fmt-youtube', 'fmt-reel'], notes: '', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null },
+        { id: 'kit-pet-card', name: 'Example pet card', type: 'social', brickIds: [], needs: ['image-generate'], frameworkId: null, voiceId: null, lookId: null, formatIds: ['fmt-fb-feed'], notes: 'Legal line: [placeholder legal line]', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null },
         { id: 'kit-social', name: 'Sample social post kit', type: 'social', brickIds: [], needs: ['image-generate'], frameworkId: null, voiceId: null, lookId: null, formatIds: ['fmt-fb-feed'], notes: '', price: null, priceBasis: 'ex', priceEx: null, priceInc: null, readyDays: null, sourcePrice: null }
       ],
       bricks: [
