@@ -554,7 +554,7 @@
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
-  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank() }; }
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank(), mins: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
@@ -1017,6 +1017,42 @@
     }));
   }
 
+  // ---- Actions minutes (counts only). ACTIONS-MINUTES.json is written by the private collector in Drive; empty folder id = example. ----
+  var MINS = CFG.actionsMinutes || {};
+  function loadMins() {
+    if (!signedIn || !accessToken) return;
+    if (!MINS.folderId) { S.mins = { status: 'ok', readAt: Date.now(), error: null, data: { example: true, state: minsExample(Date.now()) } }; render(); return; }
+    run('mins', driveList({
+      q: "'" + MINS.folderId + "' in parents and name = '" + MINS.fileName + "' and trashed = false",
+      corpora: 'allDrives', pageSize: '1', fields: 'files(id,name)'
+    }).then(function (r) {
+      if (!r.files || !r.files.length) return { none: true };
+      return apiGet(API + '/' + encodeURIComponent(r.files[0].id) + '?alt=media&supportsAllDrives=true').then(function (st) { return { state: st }; });
+    }));
+  }
+  // Invented numbers, shown with the Example tag until the collector exists. Labels are made up.
+  function minsExample(now) {
+    var d = new Date(now);
+    return {
+      generated_at: new Date(now - 3 * 3600e3).toISOString(), reset_at: new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString(),
+      free_minutes: MINS.freeMinutes || 2000, used_minutes: 1240, source: 'billing',
+      repos: [{ label: 'Repo A', minutes: 910, last_run: { status: 'success' } }, { label: 'Repo B', minutes: 300, last_run: { status: 'failure' } }, { label: 'Repo C', minutes: 30, last_run: { status: 'none' } }],
+      workflows: [{ repo: 'Repo A', label: 'Nightly scan', minutes: 780, runs: 26 }, { repo: 'Repo A', label: 'Tests', minutes: 130, runs: 41 }, { repo: 'Repo B', label: 'Sync', minutes: 300, runs: 60 }]
+    };
+  }
+  // Level, days to reset and age, worked out from the file and config.js (amber 75%, red 90%, stale after 2 days).
+  function minsView(st, now) {
+    var free = st.free_minutes || MINS.freeMinutes || 2000, used = Number(st.used_minutes) || 0, r = free ? used / free : 0;
+    var reset = Date.parse(st.reset_at), age = now - Date.parse(st.generated_at);
+    return {
+      free: free, used: used, pct: Math.round(r * 100),
+      level: r >= (MINS.red || 0.9) ? 'red' : r >= (MINS.amber || 0.75) ? 'amber' : 'ok',
+      days: isNaN(reset) ? null : Math.max(0, Math.ceil((reset - now) / DAY)),
+      ageDays: isNaN(age) ? null : Math.floor(age / DAY),
+      stale: isNaN(age) || age > (MINS.staleDays || 2) * DAY
+    };
+  }
+
   // timed = the 5-minute refresh. It keeps your ticks, Show-more choices and Bin results;
   // only the Refresh button (or signing in) starts from clean.
   function loadAll(timed) {
@@ -1025,7 +1061,7 @@
     loading = true;
     var b = $('refreshBtn'); b.disabled = true; b.querySelector('span').textContent = 'Reading…';
     clearBanner();
-    if (!timed) { F = {}; S.bin = blank(); S.check = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
+    if (!timed) { F = {}; S.bin = blank(); S.check = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
@@ -1066,6 +1102,7 @@
     if ((r.view === 'drive' || r.view === 'drives') && r.driveId && driveById(r.driveId) && !F[folderKey(r)]) loadFolder(r);
     if (r.view === 'bin' && S.bin.status === 'idle' && drives()) loadBin();
     if (r.view === 'bin' && S.check.status === 'idle' && CHECK_FOLDER_ID) loadCheck();
+    if (r.view === 'map' && S.mins.status === 'idle') loadMins();
     if (r.view === 'personal' || r.view === 'bin') loadPcpCandidates();
   }
   function folderKey(r) { return r.driveId + '/' + (r.folderId || ''); }
@@ -2298,8 +2335,40 @@
         '<p class="note">Read-only. The Bin asks for more only when used.</p>' +
         '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
     }
-    html += moneyTile();
+    html += moneyTile() + minsTile();
     return html;
+  }
+
+  // Actions minutes card: private minutes used this month against the free allowance. Read only; sends nothing.
+  function minsTile() {
+    var p = S.mins, d = p.data, st = d && d.state;
+    var tag = d && d.example ? '<span class="mtag" data-example>Example</span>' : '';
+    var head = '<div class="cardhead"><h3>Actions minutes</h3>' + tag + stateBadge(p, d && d.none ? 0 : null) + '</div>';
+    var foot = sourceLine(d && d.example ? 'Example data' : MINS.fileName, MINS.folderId ? folderUrl(MINS.folderId) : MINS.usageUrl, p) + '</section>';
+    var open = '<section class="card slot7' + cardClass(p) + '" id="minsCard">';
+    if (!d) return open + head + failNote(p) + foot;
+    if (d.none) return open + head + '<p class="note">No minutes file yet. The collector has not written one.</p>' + foot;
+    var v = minsView(st, Date.now()), lvl = { ok: ['ok', 'Under 75%'], amber: ['ops', 'Over 75%'], red: ['risk', 'Over 90%'] }[v.level];
+    var chip = { success: ['ok', 'Passed'], failure: ['risk', 'Failed'], running: ['ops', 'Running'], cancelled: ['', 'Cancelled'], none: ['', 'No runs'] };
+    var h = open + head;
+    if (d.example) h += '<p class="note">Example numbers. Real ones appear once the collector is installed.</p>';
+    h += '<div class="stats"><div class="stat" data-mins-used><div class="num">' + num(v.used) + ' / ' + num(v.free) + '</div><div class="label">Private minutes used this month (' + v.pct + '%)</div></div>' +
+      '<div class="stat" data-mins-reset><div class="num">' + (v.days == null ? '–' : v.days) + '</div><div class="label">Days to the monthly reset</div></div></div>';
+    h += '<div class="meta" data-mins-level="' + v.level + '"><span class="mtag ' + lvl[0] + '">' + lvl[1] + '</span>' +
+      (v.stale ? '<span class="mtag ops" data-mins-stale>Stale: ' + (v.ageDays == null ? 'no date' : v.ageDays + ' days old') + '</span>' : '<span>Updated ' + esc(stamp(Date.parse(st.generated_at))) + '</span>') +
+      (st.source === 'estimate' ? '<span>Estimated from run times</span>' : '') + (st.partial ? '<span>Partial count</span>' : '') + '</div>';
+    if (v.level === 'red') h += '<p class="note" data-mins-diet>Ask SYS-CD for a minutes diet</p>';
+    var repos = st.repos || [];
+    h += '<div class="cardhead"><h4>Per repo</h4></div><ul class="files" data-mins-repos>' + repos.map(function (x) {
+      var c = chip[(x.last_run && x.last_run.status) || 'none'] || chip.none;
+      return '<li><div class="fname">' + esc(x.label) + '</div><div class="meta"><span>' + num(x.minutes) + ' min</span><span class="mtag' + (c[0] ? ' ' + c[0] : '') + '">' + c[1] + '</span></div></li>';
+    }).join('') + '</ul>';
+    var wf = st.workflows || [], wfN = listShown('mins-wf', wf.length, 5);
+    h += '<div class="cardhead"><h4>Per workflow</h4></div>' + (wf.length ? '<ul class="files" data-mins-workflows>' + wf.slice(0, wfN).map(function (x) {
+      return '<li><div class="fname">' + esc(x.label) + '</div><div class="meta"><span>' + esc(x.repo) + '</span><span>' + num(x.minutes) + ' min</span><span>' + num(x.runs) + ' runs</span></div></li>';
+    }).join('') + '</ul>' + showBar('mins-wf', wf.length, 5) : '<p class="note">No workflow runs this month.</p>');
+    h += '<div class="actions"><a class="btn" href="' + esc(MINS.usageUrl) + '" target="_blank" rel="noopener" data-mins-usage><span>Check usage on GitHub</span></a></div>';
+    return h + foot;
   }
 
   function viewReadFirst(r) {
