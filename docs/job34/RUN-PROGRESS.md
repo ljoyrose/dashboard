@@ -14,5 +14,6 @@ Counts only. No private values. Updated by JOB 34.2, 30 Oct 2026.
 | 34b Money, Marketplace gaps | claude/job34b-2-money-mkt-studio | #195 merged | 41 pass, 3 fixme | pass | 0 |
 | 34c Cross-page flows | claude/job34c-1-flows | #196 merged | 11 pass, 2 fixme | pass | 0 |
 | 7 Run-all and coverage | claude/job34-7-wrap | #194 | all JOB 34: 196 pass, 17 fixme, 0 fail | pass | 0 |
+| 8 Marketplace drift | claude/job34-8-mkt-drift | #232 | 34b specs follow Marketplace v11.11; 1 new fixme (J34b-F42) | pass | 0 |
 
 Next step: none for JOB 34 beyond Lisa's merges. See the latest slip in 00 AI Commons > CHANGES.
