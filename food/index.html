@@ -74,6 +74,8 @@
 
   main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
   #view { display: flex; flex-direction: column; gap: 12px; }   /* one 12px step: tiles, cards and lists never touch */
+  .growth { display: flex; flex-direction: column; gap: 12px; }   /* Grow orders leads the Home, same 12px step */
+  .tile .m { font-size: 13px; color: var(--muted); }
   .banner { border: 1px solid var(--rose); border-radius: var(--radius); padding: 10px 14px; background: var(--rose-tint); color: var(--ink); }
   .banner.info { border-color: var(--ctl); background: var(--surface); }
   .needs { font-size: 26px; font-weight: 600; margin: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
@@ -170,6 +172,8 @@
 (function () {
   'use strict';
   var CFG = window.DASH_CONFIG || {}, F = CFG.food || null;
+  // Owner sign-in address: read from config.js (DASH_CONFIG.money.owner), never written in this page.
+  var OWNER = String((CFG.money || {}).owner || '');
   var CLIENT_ID = CFG.clientId, READ = (CFG.scopes || {}).read, SHEETS = 'https://www.googleapis.com/auth/spreadsheets';
   var SCOPE = READ + ' ' + SHEETS;
   var CARD_COLS = ['key', 'section', 'category', 'title', 'detail', 'created_at', 'answer', 'note', 'answered_at', 'answered_by', 'applied_at', 'applied_by'];
@@ -198,6 +202,11 @@
   function table(values, skip) { var v = (values || []).slice(skip || 0), h = (v[0] || []).map(String);
     return v.slice(1).filter(function (r) { return r.some(String); }).map(function (r) { var o = {}; h.forEach(function (c, i) { o[c] = r[i] === undefined ? '' : r[i]; }); return o; }); }
   function setting(k) { return (data.settings[k] || {}).value || ''; }
+  // Low-profit line: MIN_PROFIT on the Settings tab; £8 when the cell is blank (Lisa, 30 Oct 2026).
+  function minProfit() { return num(setting('MIN_PROFIT')) || 8; }
+  // Shop orders paid between `from` and `to` days ago (cancelled ones left out), from placed_at on the Orders tab.
+  function ordersBetween(from, to) { var now = Date.now();
+    return data.orders.filter(function (o) { var t = Date.parse(o.placed_at); return o.status !== 'Cancelled' && isFinite(t) && t <= now - from * 864e5 && t > now - to * 864e5; }); }
 
   /* ---------- Google Sheets ---------- */
   function api(url, init) {
@@ -210,7 +219,7 @@
   }
   function why(status, msg) {
     if (/insufficient|scope/i.test(msg)) return 'Google did not give this page spreadsheet access. Sign out, sign in again and tick every box Google shows.';
-    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the RR_FOOD workbook. Sign in as lisa@puppyclassroom.com.';
+    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the RR_FOOD workbook. Sign in as ' + (OWNER || 'the owner account') + '.';
     if (/Unable to parse range/i.test(msg)) return 'the RR_FOOD workbook is missing a tab. Run "setup" once in the food engine.';
     return 'Google said ' + status + (msg ? ': ' + msg : '');
   }
@@ -220,7 +229,8 @@
     if (!token) { render(); return; }
     api(base() + ':batchGet?' + RANGES.map(function (r) { return 'ranges=' + encodeURIComponent(r); }).join('&')).then(function (j) {
       var vr = (j.valueRanges || []).map(function (x) { return x.values || []; });
-      data.cards = (vr[0] || []).map(function (v, i) { var o = { _row: i + 2 }; CARD_COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
+      data.cards = (vr[0] || []).map(function (v, i) { var o = { _row: i + 2 }; CARD_COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; })
+        .filter(function (o) { return !/^PACK-/.test(o.key); });   // G7: Fish Treats postage to-dos live in the Marketplace hub (Do now > Post), not told twice
       data.orders = table(vr[1]); data.invoices = table(vr[2]); data.products = table(vr[3]);
       data.settings = {}; table(vr[4]).forEach(function (s) { data.settings[s.key] = s; });
       data.statements = table(vr[5]).sort(function (a, b) { return String(b.statement_date).localeCompare(String(a.statement_date)); });
@@ -263,7 +273,50 @@
   function orderLinks(o) {
     var shop = setting('SHOPIFY_STORE');
     return (/^https:\/\/(www\.)?dpd\.co\.uk\//.test(o.tracking) ? '<a class="btn" href="' + esc(o.tracking) + '" target="_blank" rel="noopener" aria-label="Track order ' + esc(o.order_no) + ' with DPD">📦 Track</a>' : '') +
-      (shop && o.source === 'Shopify' ? '<a class="btn" href="https://admin.shopify.com/store/' + encodeURIComponent(shop) + '/orders?query=' + encodeURIComponent(o.order_no) + '" target="_blank" rel="noopener" aria-label="Open order ' + esc(o.order_no) + ' in Shopify">🛍 Shopify</a>' : '');
+      shopLink(o);
+  }
+  function shopLink(o) { var shop = setting('SHOPIFY_STORE');
+    return shop && o.source === 'Shopify' ? '<a class="btn" href="https://admin.shopify.com/store/' + encodeURIComponent(shop) + '/orders?query=' + encodeURIComponent(o.order_no) + '" target="_blank" rel="noopener" aria-label="Open order ' + esc(o.order_no) + ' in Shopify">🛍 Shopify</a>' : ''; }
+  function shopAdmin(where) { var shop = setting('SHOPIFY_STORE'); return shop ? 'https://admin.shopify.com/store/' + encodeURIComponent(shop) + '/' + where : ''; }
+  // Grow orders (Lisa, 30 Oct 2026): the Home leads with order growth. All from the Orders tab at run time; nothing here
+  // sends, emails, discounts or changes a price. Any reminder or offer is Lisa's own draft in Shopify.
+  function growth() {
+    var last = ordersBetween(0, 30), prev = ordersBetween(30, 60), due = num(setting('REORDER_DUE_DAYS')) || 35;
+    var pct = function (n) { return last.length ? Math.round(n * 100 / last.length) : 0; };
+    var repeat = last.filter(function (o) { return num(o.customer_orders) >= 2; }).length, subs = last.filter(function (o) { return /^sub/i.test(o.order_type); }).length;
+    // Reorder due: one-off shop orders paid REORDER_DUE_DAYS to 30 days beyond that ago, oldest first (subscribers reorder by themselves).
+    var reorder = ordersBetween(due, due + 30).filter(function (o) { return o.source === 'Shopify' && /^one-off/i.test(o.order_type); })
+      .sort(function (a, b) { return Date.parse(a.placed_at) - Date.parse(b.placed_at); });
+    return { last: last.length, prev: prev.length, repeat: pct(repeat), subs: pct(subs), oneOff: last.length - subs, reorder: reorder, due: due };
+  }
+  function nth(k) { var v = k % 100; return k + (v > 10 && v < 14 ? 'th' : ['th', 'st', 'nd', 'rd'][k % 10] || 'th'); }
+  function daysAgo(at) { var d = Math.floor((Date.now() - Date.parse(at)) / 864e5); return d + ' day' + (d === 1 ? '' : 's') + ' ago'; }
+  // The Next step: the biggest gap wins (fewer orders than the 30 days before, customers due to reorder, few subscriptions).
+  function growCard(g) {
+    var gaps = [
+      { n: g.prev - g.last, name: 'Orders are falling', h: 'Orders are down ' + (g.prev - g.last) + ' on the 30 days before', what: g.last + ' in the last 30 days against ' + g.prev + '. Look at what changed in Shopify (stock, prices, ads).', href: shopAdmin('orders'), btn: 'Open Shopify orders' },
+      { n: g.reorder.length, name: 'Due to reorder', h: g.reorder.length + ' one-off order' + (g.reorder.length === 1 ? ' is' : 's are') + ' due a reorder', what: 'Paid over ' + g.due + ' days ago. Check each in Shopify (they may have ordered again) and draft a reminder there; nothing is sent from here.', href: '', act: 'reorder', btn: 'See who' },
+      { n: g.subs < 50 ? g.oneOff : 0, name: 'Few subscriptions', h: 'Only ' + g.subs + '% of orders are subscriptions', what: g.oneOff + ' one-off order' + (g.oneOff === 1 ? '' : 's') + ' in the last 30 days. Draft a subscribe offer for Lisa to check; no discount is set from here.', href: shopAdmin('customers'), btn: 'Open Shopify customers' }
+    ].filter(function (x) { return x.n > 0; }).sort(function (a, b) { return b.n - a.n; });
+    if (!gaps.length) return '<div class="card grow">' + empty('Orders are holding up', 'No fall on the 30 days before, nobody due to reorder, and most orders are subscriptions.') + '</div>';
+    var x = gaps[0];
+    return '<div class="card grow"><p class="bline"><span class="dot" style="--c:var(--ljr-4)" aria-hidden="true"></span>Grow orders: ' + esc(x.name) + '</p><h2>' + esc(x.h) + '</h2><p class="what">' + esc(x.what) + '</p>' +
+      (x.act ? '<div class="acts"><button class="btn main" type="button" data-action="' + x.act + '">' + esc(x.btn) + '</button></div>'
+        : x.href ? '<div class="acts"><a class="btn main" href="' + esc(x.href) + '" target="_blank" rel="noopener">' + esc(x.btn) + '</a></div>' : '') + '</div>';
+  }
+  function growthHtml() {
+    var g = growth(), mo = num(setting('MIN_ORDERS_MONTH')), d = g.last - g.prev;
+    var h = '<section class="growth" aria-label="Grow orders"><p class="grp">Grow orders</p><div class="tiles">' +
+      '<a class="tile" href="#/orders"><span class="k">Orders, last 30 days</span><span class="v' + (d < 0 ? ' red' : '') + '">' + g.last + '</span><span class="m">' + (d > 0 ? 'up ' + d : d < 0 ? 'down ' + (-d) : 'same as') + (d ? ' on' : '') + ' the 30 days before</span></a>' +
+      '<div class="tile"><span class="k">Repeat orders</span><span class="v">' + g.repeat + '%</span><span class="m">from customers on their 2nd order or more</span></div>' +
+      '<a class="tile" href="#/orders"><span class="k">Subscriptions</span><span class="v">' + g.subs + '%</span><span class="m">of orders, last 30 days</span></a>' +
+      // MIN_ORDERS_MONTH on the Settings tab: blank = no tile (Lisa, 30 Oct 2026); set = red when the last 30 days are under it.
+      (mo ? '<a class="tile" href="#/orders"><span class="k">Orders this month (aim ' + mo + ')</span><span class="v' + (g.last < mo ? ' red' : '') + '">' + g.last + '</span></a>' : '') + '</div>';
+    h += growCard(g);
+    h += '<div class="card" id="reorder"><p class="bline"><span class="dot" style="--c:var(--ljr-6)" aria-hidden="true"></span>Reorder due (one-off orders over ' + g.due + ' days old)</p>' +
+      (g.reorder.length ? g.reorder.map(function (o) { return '<div class="row"><div class="txt"><div><b>Order #' + esc(o.order_no) + '</b></div><div class="m">' + esc(daysAgo(o.placed_at)) + (num(o.customer_orders) ? ' · customer\'s ' + esc(nth(num(o.customer_orders))) + ' order' : '') + '</div><div class="links">' + shopLink(o) + '</div></div></div>'; }).join('')
+        : empty('Nobody due to reorder', 'One-off orders show here ' + g.due + ' days after they were paid (REORDER_DUE_DAYS on the Settings tab).')) + '</div></section>';
+    return h;
   }
   // A friendly empty state: a small green-ring tick, a plain line, and what happens next.
   function empty(head, more) { return '<p class="empty"><span><b>' + esc(head) + '</b>' + (more ? '<span class="es">' + esc(more) + '</span>' : '') + '</span></p>'; }
@@ -292,8 +345,8 @@
     var w = data.cards.filter(function (r) { return !r.applied_at && (!r.answer || Date.now() < Date.parse(r.answered_at) + APPLY_MS); }).sort(byUrgency), need = waiting().length, owed = unpaid().reduce(function (n, i) { return n + num(i.total); }, 0);
     var due = unpaid().map(function (i) { return i.due_date; }).filter(Boolean).sort()[0];
     var notAtGa = data.orders.filter(function (o) { return /^(Waiting for GA|Not at GA)$/.test(o.check); }).length, late = data.orders.filter(function (o) { return o.check === 'Not at GA'; }).length;
-    var min = num(setting('MIN_PROFIT')) || 15, low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
-    var h = '<p class="needs">Needs you: ' + '<span class="cnt ' + (need ? 'need' : 'ok') + wide(need) + '">' + need + '</span></p>';
+    var min = minProfit(), low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
+    var h = growthHtml() + '<p class="needs">Needs you: ' + '<span class="cnt ' + (need ? 'need' : 'ok') + wide(need) + '">' + need + '</span></p>';
     var st = data.statements[0];   // GA's own weekly statement beats our sum of the invoices we have seen
     h += '<div class="tiles"><a class="tile" href="#/invoices"><span class="k">Owed to GA' + (st ? ' (statement ' + esc(ukDate(st.statement_date)) + ')' : '') + '</span><span class="v">' + money(st ? st.total_outstanding : owed) + '</span></a>' +
       '<a class="tile" href="#/invoices"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span>' + (due ? '<span class="datep' + dateCls(due) + '">' + esc(inDays(due)) + '</span>' : '') + '</a>' +
@@ -310,12 +363,12 @@
   }
   // The order check: did every shop order reach GA, and did GA send the same items?
   var CHECK = { 'Matched': ['✅ Matched with GA', ''], 'Shipped': ['🚚 Shipped by GA', ''], 'Waiting for GA': ['⏳ Waiting for GA', ''], 'At GA': ['📥 At GA (confirmed)', ''], 'At GA, not shipped': ['⚠️ At GA but not shipped', 'no'], 'Not at GA': ['❌ Not at GA: check the Portal', 'no'],
-    'Items differ': ['⚠️ GA sent different items', 'no'], 'Not in Shopify': ['❓ Not in Shopify: check the reference', 'no'], 'No GA items': ['🏠 Packed at home (no GA items)', ''], 'Cancelled': ['✖ Cancelled', ''],
+    'Items differ': ['⚠️ GA sent different items', 'no'], 'Not in Shopify': ['❓ Not in Shopify: check the reference', 'no'], 'No GA items': ['📭 No GA items: see its card', ''], 'Pack at home': ['🏠 Pack at home: tap Packed once posted', ''], 'Packed at home': ['🏠 Packed at home', ''], 'Cancelled': ['✖ Cancelled', ''],
     'Replacement': ['🔁 Replacement, sent again', ''], 'Split box': ['📦 Extra box of the same order', ''] };
   function checkBadge(o) { var c = CHECK[o.check]; return c ? '<div class="badges"><span class="badge' + (c[1] ? ' ' + c[1] : '') + '">' + esc(c[0]) + '</span></div>' : ''; }
   var OFILTERS = [['all', 'All'], ['check', 'Needs a look'], ['ga', 'Not at GA yet'], ['sub', 'Subscriptions'], ['low', 'Low profit']], ofilter = 'all';
   function pageOrders() {
-    var min = num(setting('MIN_PROFIT')) || 15, list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); }).filter(function (o) {
+    var min = minProfit(), list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); }).filter(function (o) {
       return ofilter === 'all' || (ofilter === 'check' && CHECK[o.check] && CHECK[o.check][1]) || (ofilter === 'ga' && /^(Waiting for GA|Not at GA)$/.test(o.check))
         || (ofilter === 'sub' && /^sub/i.test(o.order_type)) || (ofilter === 'low' && o.profit_est !== '' && num(o.profit_est) < min); });
     var chips = '<div class="house-frow">' + DashKit.filterButton('ofilters', ofilter !== 'all' ? 1 : 0) + '<div class="chips house-filters" id="ofilters" role="group" aria-label="Which orders">' + OFILTERS.map(function (f) { return '<button class="chip" type="button" data-ofilter="' + f[0] + '" aria-pressed="' + (ofilter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
@@ -395,7 +448,7 @@
       '<div class="frow"><input class="txtin" type="search" placeholder="Find a recipe, name or code" aria-label="Find a product" data-find value="' + esc(q) + '">' + DashKit.filterButton('pfilters', filter !== FILTERS[0][0] ? 1 : 0) +
       '<div class="chips house-filters" id="pfilters" role="group" aria-label="Which products">' + FILTERS.map(function (f) { return '<button class="chip" type="button" data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
     if (!list.length) return h + '<div class="card">' + empty(q ? 'No products match "' + q + '"' : 'No products here', 'Try All, or a shorter search.') + '</div>';
-    var shown = showAll ? list : list.slice(0, 40), min = num(setting('MIN_PROFIT')) || 15, groups = [], by = {};
+    var shown = showAll ? list : list.slice(0, 40), min = minProfit(), groups = [], by = {};
     shown.forEach(function (p) { var r = p.range && p.range !== '(price list only)' ? p.range : 'Price list only (not on the Portal)'; if (!by[r]) { by[r] = []; groups.push(r); } by[r].push(p); });
     groups.forEach(function (g) {
       h += '<p class="grp">' + esc(g) + '<span class="sr"> · </span><span class="cnt' + wide(by[g].length) + '">' + by[g].length + '</span></p><div class="card">' + by[g].map(function (p) { var pr = p.profit_ex_vat_1bag_1box;
@@ -447,9 +500,10 @@
   document.addEventListener('click', function (e) {
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
-    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
+    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(OWNER ? { login_hint: OWNER } : {}); }
     if (a === 'signout') { token = null; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }; return render(); }
     if (a === 'refresh') return load();
+    if (a === 'reorder') { var ro = $('reorder'); if (ro) ro.scrollIntoView({ block: 'start' }); return; }
     if (a === 'all') { showAll = !showAll; return render(); }
     if (t.hasAttribute('data-ofilter')) { ofilter = t.getAttribute('data-ofilter'); showAll = false; return render(); }
     if (t.hasAttribute('data-filter')) { filter = t.getAttribute('data-filter'); showAll = false; return render(); }

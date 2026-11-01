@@ -395,23 +395,37 @@
     if (!M || !M.openWorkId) { banner('Not set up yet: the Marketplace settings are not in config.js.', true); return; }
     if (!token) { render(); return; }
     api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
-      rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
+      rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; }).concat(fishRows);
       $('banner').className = 'banner hidden'; $('readAt').textContent = 'Read ' + hm(Date.now()); render(); loadPics(); loadAvatars();
     }).catch(function (e) { banner('Could not load: ' + e.message); });
+    loadFish();
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
+  }
+  // G7 (30 Oct 2026): Fish Treats postage to-dos from the GA Hub's Cards tab (DASH_CONFIG.food.bookId, read-only second source;
+  // RR_FOOD-ENGINE owns them, never the Marketplace tab). Shown in Do now > Post; Posted writes only that Cards row's answer cells.
+  var fishRows = [];
+  function loadFish() {
+    var F = (window.DASH_CONFIG || {}).food; if (!F || !F.bookId) return;
+    api('https://sheets.googleapis.com/v4/spreadsheets/' + F.bookId + '/values/' + encodeURIComponent('Cards!A2:L')).then(function (j) {
+      fishRows = (j.values || []).map(function (v, i) { var o = { _row: i + 2, _book: F.bookId, _tab: 'Cards' }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; })
+        .filter(function (o) { return /^PACK-/.test(o.key) && !o.applied_at; })
+        .map(function (o) { var d = detail(o); d.kind = 'fish'; d.found = true; o.section = 'post'; o.category = 'Fish Treats'; o.detail = JSON.stringify(d); return o; });
+      rows = rows.filter(function (r) { return !r._book; }).concat(fishRows); render();
+    }).catch(function () {});   // no GA Hub access: the Marketplace list still works
   }
   // Write the 4 answer cells of the row with this key; check the key before and after, put the old values back if it moved.
   function answer(r, value, note) {
-    var rng = M.tab + '!A' + r._row + ':L' + r._row, at = value === '' ? '' : new Date().toISOString(), who = value === '' ? '' : me;
-    return api(sheetUrl(rng)).then(function (j) {
+    var url = r._book ? function (x) { return 'https://sheets.googleapis.com/v4/spreadsheets/' + r._book + '/values/' + encodeURIComponent(x); } : sheetUrl, tab = r._tab || M.tab;
+    var rng = tab + '!A' + r._row + ':L' + r._row, at = value === '' ? '' : new Date().toISOString(), who = value === '' ? '' : me;
+    return api(url(rng)).then(function (j) {
       var cur = (j.values || [[]])[0];
       if (cur[0] !== r.key) throw new Error('the list changed: refresh and tap again');
       var old = [cur[6] || '', cur[7] || '', cur[8] || '', cur[9] || ''];
-      var w = M.tab + '!G' + r._row + ':J' + r._row;
-      return api(sheetUrl(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [[value, note || '', at, who]] }) })
-        .then(function () { return api(sheetUrl(M.tab + '!A' + r._row)); })
-        .then(function (k) { if (((k.values || [[]])[0] || [])[0] !== r.key) return api(sheetUrl(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [old] }) }).then(function () { throw new Error('the list changed: refresh and tap again'); }); })
-        .then(function () { r.answer = value; r.note = note || ''; r.answered_at = at; r.answered_by = who; wake(); render(); });
+      var w = tab + '!G' + r._row + ':J' + r._row;
+      return api(url(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [[value, note || '', at, who]] }) })
+        .then(function () { return api(url(tab + '!A' + r._row)); })
+        .then(function (k) { if (((k.values || [[]])[0] || [])[0] !== r.key) return api(url(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [old] }) }).then(function () { throw new Error('the list changed: refresh and tap again'); }); })
+        .then(function () { r.answer = value; r.note = note || ''; r.answered_at = at; r.answered_by = who; if (!r._book) wake(); render(); });
     }).catch(function (e) { banner('Not saved: ' + e.message); render(); });   // render puts the button back (no stuck "Saving…")
   }
   // Wake the engine (no data sent). The address is read from a Drive file, never kept in this public page.
@@ -470,6 +484,7 @@
       (n ? ' <b class="date">' + esc(n) + '</b>' : '') + '</div>';
   }
   function postGuide(r, d) {
+    if (d.kind === 'fish') return fishGuide(d);
     var eb = /ebay/i.test(d.platform), site = eb ? 'eBay' : /vinted/i.test(d.platform) ? 'Vinted' : (d.platform || 'the site');
     var order = eb && d.order_id ? 'https://www.ebay.co.uk/mesh/ord/details?orderid=' + encodeURIComponent(d.order_id) : '';
     var mail = d.email_url || (d.label_email ? MAIL + encodeURIComponent(d.label_email) : '');
@@ -483,6 +498,15 @@
       '<p class="what nextstep"><b>Next: ' + esc(nx) + (nx === STEP.find && d.shelf ? ' (shelf ' + esc(d.shelf) + ')' : '') + '</b></p>' +
       '<details class="allsteps"><summary class="btn">All ' + steps.length + ' steps</summary><ol class="steps words">' + steps.map(function (x, i) { return '<li><span class="sn">Step ' + (i + 1) + ':</span><span>' + esc(STEP[x.k]) + '</span></li>'; }).join('') + '</ol></details>' +
       ((order || mail) ? '<div class="acts">' + (order ? linkBtn(order, nx === STEP.buy ? STEP.buy : 'Open this order on eBay') : '') + (mail ? linkBtn(mail, d.label_pdf ? 'Open this order\u2019s label' : 'Open the label email') : '') + '</div>' : '');
+  }
+  // G7: a Fish Treats to-do from the GA Hub. The address is in the Shopify order (Lisa's sign-in), never on this card or page.
+  function fishGuide(d) {
+    var shop = d.store && d.order ? 'https://admin.shopify.com/store/' + encodeURIComponent(d.store) + '/orders?query=' + encodeURIComponent(d.order) : '';
+    var steps = d.decide ? ['Decide how to send these ' + (d.units || '') + ' units (see below).', 'Send them that way.', 'Tap Posted.']
+      : ['Open the order in Shopify for the address.', 'Book ' + (d.courier || 'the postage') + (/parcel2go/i.test(d.courier) ? ' on parcel2go.com' : '') + ', pack ' + (d.units || '') + ' Fish Treat unit' + (d.units > 1 ? 's' : '') + ' and post it.', 'Tap Posted.'];
+    return '<p class="what"><b>Shop order #' + esc(d.order || '?') + ' · ' + esc(d.units || '?') + ' Fish Treat unit' + (d.units > 1 ? 's' : '') + (d.with_food ? ' · the food goes to GA' : '') + '.</b></p>' +
+      '<ol class="steps words">' + steps.map(function (x, i) { return '<li><span class="sn">Step ' + (i + 1) + ':</span><span>' + esc(x) + '</span></li>'; }).join('') + '</ol>' +
+      (shop ? '<div class="acts">' + linkBtn(shop, 'Open the order in Shopify') + '</div>' : '');
   }
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
@@ -567,7 +591,7 @@
   function factsOf(pairs) { pairs = pairs.filter(function (p) { return p[1] !== '' && p[1] !== undefined && p[1] !== null; }); return pairs.length ? '<div class="facts">' + pairs.map(function (p) { return '<div class="fact"><span class="k">' + esc(p[0]) + '</span><span class="v">' + esc(p[1]) + '</span></div>'; }).join('') + '</div>' : ''; }
   // Courier from the card ("Royal Mail 2nd Class", "InPost"...) -> band colour, short name and where to take it.
   var COURIERS = [[/inpost/i, 'cb-inpost', 'InPost', 'InPost locker or shop'], [/evri|hermes/i, 'cb-evri', 'Evri', 'Evri ParcelShop'], [/parcelforce/i, 'cb-pf', 'Parcelforce', 'Post Office'],
-    [/royal ?mail/i, 'cb-rm', 'Royal Mail', 'Post Office'], [/dpd/i, 'cb-dpd', 'DPD', 'DPD Pickup shop'], [/yodel/i, 'cb-yodel', 'Yodel', 'Yodel Store'], [/collect/i, 'cb-none', 'Collection', 'Buyer collects: no post']];
+    [/royal ?mail/i, 'cb-rm', 'Royal Mail', 'Post Office'], [/dpd/i, 'cb-dpd', 'DPD', 'DPD Pickup shop'], [/yodel/i, 'cb-yodel', 'Yodel', 'Yodel Store'], [/collect/i, 'cb-none', 'Collection', 'Buyer collects: no post'], [/parcel2go/i, 'cb-none', 'Parcel2Go', 'the drop-off on the Parcel2Go booking']];
   function courierOf(d) { var c = String(d.courier || ''); for (var i = 0; i < COURIERS.length; i++) if (COURIERS[i][0].test(c)) return { cls: COURIERS[i][1], name: COURIERS[i][2], to: COURIERS[i][3], full: c }; return null; }
   function courierBand(r, d) {
     var c = courierOf(d), pid = d.parcel_id || '';
