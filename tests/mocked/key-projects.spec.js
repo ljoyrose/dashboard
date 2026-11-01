@@ -87,4 +87,32 @@ test.describe('Home: Key projects & docs', () => {
     await page.locator('#signOutBtn').click();
     await expect(page.locator('#key-projects')).toHaveCount(0);
   });
+
+  // Projects Hub: no tile while config.js has no address (as shipped); a tile only for a valid Apps Script /exec address.
+  // The addresses below are invented (EXAMPLE), never a real deployment.
+  for (const [what, url, shown] of [
+    ['valid /exec address', 'https://script.google.com/macros/s/EXAMPLE-PROJECTS-HUB/exec', true],
+    ['not an Apps Script address', 'https://example.com/projects', false],
+  ]) {
+    test('Projects Hub tile: ' + what, async ({ page }) => {
+      await page.route('**/config.js', async (route) => {
+        const res = await route.fetch();
+        const body = (await res.text()) + "\nwindow.DASH_CONFIG.projectsHub = { webAppUrl: " + JSON.stringify(url) + " };\n";
+        await route.fulfill({ response: res, body });
+      });
+      await page.goto('./');
+      await page.locator('#signInBtn').click();
+      await expect(page.locator('#readStamp')).toContainText(/^Read \d/); // reads finished: no more redraws
+      const block = page.locator('#view > #key-projects');
+      await expect(block).toBeVisible();
+      const tile = block.getByRole('link', { name: 'Projects Hub', exact: true });
+      if (!shown) { await expect(tile).toHaveCount(0); await expect(block.locator('a.keytile')).toHaveCount(TILES.length); return; }
+      await expect(tile).toHaveAttribute('href', url);
+      await expect(tile).toHaveAttribute('target', '_blank');
+      await expect(block.locator('a.keytile')).toHaveCount(TILES.length + 1);
+      await expect(tile).toBeVisible();
+      const box = await tile.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(48);
+    });
+  }
 });

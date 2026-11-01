@@ -32,14 +32,14 @@ test.describe('Bin page: 00 CHECK (bin guard)', () => {
     const card = page.locator('#checkCard');
     await expect(card).toContainText('back-from-bin-a.txt');
     await expect(card).toContainText('RR_sample-archive-note.txt');
-    await expect(card.locator('li', { hasText: 'RR_sample-archive-note.txt' }).locator('input')).toBeDisabled();
+    // Stage 5: a protected row has no tick box at all, and with no web app there are no buttons to press, only "Waiting for the tidy bot".
+    await expect(card.locator('li', { hasText: 'RR_sample-archive-note.txt' }).locator('input')).toHaveCount(0);
+    await expect(card.locator('li', { hasText: 'RR_sample-archive-note.txt' })).toHaveAttribute('title', /RR_/);
     await expect(card.locator('[data-check-nourl]')).toBeVisible();
-    await card.locator('[data-action="selectall"][data-group="check"]').click();
-    await expect(card.locator('[data-action="checkzz"]')).toContainText('ZZ_DELETE selected (2)');
-    await expect(card.locator('[data-action="checkzz"]')).toBeDisabled();
-    await expect(card.locator('[data-action="checkai"]')).toBeDisabled();
-    await card.locator('[data-action="clearpick"][data-group="check"]').click();
-    await expect(card.locator('[data-action="checkai"]')).toContainText('Refer to AI selected (0)');
+    await expect(card.locator('[data-check-nourl]')).toContainText('Waiting for the tidy bot');
+    await expect(card.locator('input[type="checkbox"]')).toHaveCount(0);
+    await expect(card.locator('[data-action="checkzz"]')).toHaveCount(0);
+    await expect(card.locator('[data-action="checkai"]')).toHaveCount(0);
     expect(writes(w)).toEqual([]);
   });
 
@@ -52,6 +52,11 @@ test.describe('Bin page: 00 CHECK (bin guard)', () => {
     await signIn(page);
     const card = page.locator('#checkCard');
     await expect(card.locator('[data-check-nourl]')).toHaveCount(0);
+    await card.locator('[data-action="selectall"][data-group="check"]').click();
+    await expect(card.locator('[data-action="checkzz"]')).toContainText('Approve binning (2)');
+    await expect(card.locator('li', { hasText: 'RR_sample-archive-note.txt' }).locator('input')).toHaveCount(0);
+    await card.locator('[data-action="clearpick"][data-group="check"]').click();
+    await expect(card.locator('[data-action="checkai"]')).toContainText('Ask the AI to sort: tick a file first');
     await card.locator('li', { hasText: 'back-from-bin-b.txt' }).locator('input').check();
     const btn = card.locator('[data-action="checkzz"]');
     await expect(btn).toBeEnabled();
@@ -63,7 +68,7 @@ test.describe('Bin page: 00 CHECK (bin guard)', () => {
     expect(u.origin + u.pathname).toBe(URL_OK);
     expect(u.searchParams.get('action')).toBe('zzdelete');
     expect(u.searchParams.get('ids')).toBe('chk-b');
-    await expect(card.locator('[data-check-sent]')).toContainText('1 item (ZZ_DELETE)');
+    await expect(page.locator('#logCard [data-check-sent]')).toContainText('1 item (Approve binning)');
     expect(writes(w)).toEqual([]);
     expect(w.byId('chk-b').trashed).toBeFalsy();
   });
@@ -75,7 +80,7 @@ test.describe('Bin page: 00 CHECK (bin guard)', () => {
     await signIn(page);
     const card = page.locator('#checkCard');
     await expect(card.locator('[data-check-nourl]')).toBeVisible();
-    await card.locator('[data-action="selectall"][data-group="check"]').click();
-    await expect(card.locator('[data-action="checkai"]')).toBeDisabled();
+    await expect(card.locator('input[type="checkbox"]')).toHaveCount(0);
+    await expect(card.locator('[data-action="checkai"]')).toHaveCount(0);
   });
 });

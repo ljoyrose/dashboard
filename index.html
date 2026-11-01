@@ -101,13 +101,6 @@
   .st-failed { color: var(--fail); font-weight: 600; }
   .st-failed .shape { background: var(--fail); clip-path: polygon(20% 0, 50% 30%, 80% 0, 100% 20%, 70% 50%, 100% 80%, 80% 100%, 50% 70%, 20% 100%, 0 80%, 30% 50%, 0 20%); }
 
-  /* Figures: thing, then number, then action. */
-  .figs { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-  .fig { gap: 4px; padding: 12px 16px; }
-  .fig .label { font-size: 14px; color: var(--muted); text-align: left; }
-  .fig .num { font-size: 32px; font-weight: 600; line-height: 1.2; }
-  .fig .meta { font-size: 14px; color: var(--muted); text-align: left; }
-  .fig .act { font-size: 14px; font-weight: 600; margin-top: 4px; }
 
   /* Lists */
   ul.files { list-style: none; margin: 0; padding: 0; }
@@ -260,22 +253,10 @@
   .needsline { font-size: 26px; font-weight: 600; margin: 0; }
   .needsline .zero { color: var(--ljr-5-text); }
   #homeTop { display: flex; flex-direction: column; gap: 12px; }
-  .hometiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  a.hometile { min-height: 88px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 10px 12px; text-decoration: none; color: var(--ink);
-               background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); min-width: 0; }
-  a.hometile:hover { border-color: var(--slot, var(--muted)); }
-  a.hometile .v { font-size: 28px; font-weight: 600; line-height: 1.2; }
-  a.hometile .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
   .urgent { display: flex; flex-direction: column; gap: 8px; }
   .urgent .what { margin: 0; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
   .urgent .btn { min-height: 52px; justify-content: center; font-size: 16px; font-weight: 600; }
   .hint { margin: 0; font-size: 14px; color: var(--muted); }
-  /* More: the other sections and hubs, one big button each. */
-  .morelist { display: grid; grid-template-columns: 1fr; gap: var(--house-gap); }
-  @media (min-width: 700px) { .morelist { grid-template-columns: 1fr 1fr; } }
-  a.morelink { display: flex; flex-direction: row; align-items: center; gap: 10px; min-height: 56px; padding: 10px 16px; font-size: 17px; font-weight: 600; text-decoration: none; }
-  a.morelink .icon { width: 20px; height: 20px; }
-  a.morelink small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
 
   /* ==== House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio). Lexend 400/600, nothing under 13px, line height 1.5.
      1px lines; hover AND selected = the same 1px edge turns ink (outline over it), nothing moves; focus 2px ink. One radius, 12px.
@@ -300,7 +281,7 @@
   .st-empty .shape, .st-idle .shape, .st-loading .shape { border-width: 1px; }
   .st-empty .shape { border-radius: 50%; }
   /* One radius on everything; only status dots are round. */
-  .banner, a.skip, .mtag, .chip, .stat, .scrollbox, .ment, a.hometile, a.keytile, .subnav a, .index .btn, .picker select, input.find, nav.main a, .info, .card { border-radius: var(--radius); }
+  .banner, a.skip, .mtag, .chip, .stat, .scrollbox, .ment, a.keytile, .subnav a, .index .btn, .picker select, input.find, nav.main a, .info, .card { border-radius: var(--radius); }
   a.skip { border-width: 1px; }
   .banner { border-style: solid; border-color: var(--ljr-2); }
   .banner.info { border-color: var(--line); }
@@ -338,19 +319,17 @@
   /* Hover = selected = the same 1px edge turns ink. An outline laid over the edge: never thicker, never moves. */
   .subnav a[aria-current="page"] { outline: 1px solid var(--ink); outline-offset: -1px; background: transparent; border-color: var(--ctl); }
   @media (hover: hover) {
-    .btn:hover, .subnav a:hover, a.keytile:hover, a.hometile:hover, a.card:hover, a.ment:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
-    .btn:hover, .subnav a:hover, a.keytile:hover, a.hometile:hover, a.ment:hover { border-color: var(--ctl); }
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.ment:hover { border-color: var(--ctl); }
     a.ment.bad:hover { border-color: var(--ljr-2); }
     a.card[class]:hover { border-color: var(--ctl); }
   }
   /* Everything you can press rests on the same clear line (--ctl); containers keep the softer --line. No button starts out ink. */
-  a.hometile, a.keytile { border-width: 1px; border-color: var(--ctl); background: var(--surface); }
+  a.keytile { border-width: 1px; border-color: var(--ctl); background: var(--surface); }
   a.card, a.card[class], a.card.vision[class], a.card.vision[class]:not(:hover) { border-color: var(--ctl); }
   .ment, .ment.bad { border: 1px solid var(--ctl); background: var(--surface); }
   .ment.bad { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
   /* Colour on hover only: a section's colour shows on its icon ring when pointed at. */
-  a.morelink > .icon { width: 36px; height: 36px; padding: 7px; box-sizing: border-box; border: 1px solid var(--line); border-radius: var(--radius); }
-  @media (hover: hover) { a.morelink:hover > .icon { border-color: var(--slot, var(--ink)); } }
   /* Keyboard focus: 2px ink ring (the one exception to 1px). The screen title keeps no box. */
   html body :focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
   html body #hereTitle, html body #hereTitle:focus, html body #hereTitle:focus-visible { outline: none !important; }
@@ -358,8 +337,6 @@
   .needsrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
   .needsline { font-size: 26px; font-weight: 600; }
   .hsplit { display: inline-flex; flex-wrap: wrap; gap: 8px; }
-  .hometiles { gap: 12px; }
-  a.hometile .v { font-size: 28px; font-weight: 600; }
   .nextcard[class] { border-color: var(--ink); background: var(--card); }
   .nextcard .actions { gap: 12px; }
   .nextcard .hint { flex: 1 1 180px; }
@@ -413,15 +390,11 @@
   .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); --hmc: var(--ljr-7); }
   a.ment { --hc: var(--ljr-3); --hl: var(--ljr-3); }
   a.ment.bad { --hc: var(--ljr-2); --hl: var(--ljr-2); }
-  a.morelink.slotfin { --hc: var(--ljr-3); --hl: var(--ljr-3); }
-  a.morelink.slot4 { --hc: var(--ljr-4); --hl: var(--ljr-4-text); }
-  a.morelink.slot7, a.hometile.slot7 { --hc: var(--ljr-7); --hl: var(--ljr-7); }
-  a.morelink.slotsales { --hc: var(--ljr-6); --hl: var(--ljr-6); }
   .subnav a[aria-current="page"] { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
   @media (hover: hover) {
-    .btn:hover, .subnav a:hover, a.keytile:hover, a.hometile:hover, a.card:hover, a.ment:hover, details.fold > summary:hover, .index .btn:hover {
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover, details.fold > summary:hover, .index .btn:hover {
       outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
-    .btn.danger:hover, .btn.ai:hover, a.ment[class]:hover, a.morelink.slotfin:hover, a.morelink.slot4:hover, a.morelink.slot7:hover, a.morelink.slotsales:hover, a.hometile.slot7:hover {
+    .btn.danger:hover, .btn.ai:hover, a.ment[class]:hover {
       outline: 1px solid var(--hl); outline-offset: -1px; background: color-mix(in srgb, var(--hc) 14%, var(--card)); }
     header .btn:hover { background: color-mix(in srgb, var(--frame-ink) 12%, var(--frame)); }
     html.dash-locked header .btn:hover { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
@@ -443,7 +416,6 @@
   <symbol id="i-shop" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
   <symbol id="i-factory" viewBox="0 0 24 24"><path d="M3 20V10l5 3V10l5 3V10l5 3V4h3v16z"/><path d="M7 17h2M12 17h2"/></symbol>
   <symbol id="i-studio" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.8-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/></symbol>
-  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></symbol>
   <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M11 8l4 4-4 4M15 12H4"/></symbol>
 </svg>
 
@@ -548,6 +520,9 @@
   var BG_CFG = CFG.binGuard || {};
   var CHECK_FOLDER_ID = BG_CFG.checkFolderId;
   var BG_URL_RE = /^https:\/\/script\.google\.com\/(a\/macros\/puppyclassroom\.com\/|macros\/)s\/[A-Za-z0-9_-]+\/exec$/;
+  // Projects Hub tile: drawn only when config.js holds a valid Apps Script /exec address (same rule as the Bin guard).
+  var PH_URL = (CFG.projectsHub || {}).webAppUrl || '';
+  if (!BG_URL_RE.test(PH_URL)) PH_URL = '';
 
   // Page state stays in memory. The sign-in token is the one thing shared, via auth.js.
   var accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
@@ -1279,37 +1254,47 @@
     R.check = { at: Date.now(), n: ids.length, action: action };
     render();
   }
+  // Bin > Check: put back by the bin guard (00 CHECK). Plain words; the internal detail sits in the "why" fold.
   function viewCheck() {
     var p = S.check, d = p.data, html = '';
-    var n = d ? d.items.length : null, picked = pickCount('check'), busyOrNoUrl = busy || !(d && d.url);
-    html += foldOpen('check', !!(d && n), 'card slot8' + cardClass(p), 'checkCard') + '<summary><h3>00 CHECK: taken back out of a bin</h3>' + stateBadge(p, n) + '</summary><div class="fbody">';
-    html += '<p class="note">Every day at about 8am the bin guard looks in the bins. Anything whose name does not start ZZ_DELETE_ or ZZ_SUPERSEDED_ is taken back out and put here. ' +
-      'Tick what you have checked. ZZ_DELETE renames it ZZ_DELETE_…, adds a tidy-ledger row and moves it to the bin (30-day recovery). Refer to AI marks it and wakes lcme-grok. ' +
-      'Both open the bin guard\'s own Google page with your ticks; nothing changes until you press the button there. RR_ names are never ticked.</p>';
+    var n = d ? d.items.length : null, picked = pickCount('check'), live = !!(d && d.url);
+    html += foldOpen('check', !!(d && n), 'card slot8' + cardClass(p), 'checkCard') + '<summary><h3>Check: put back by the bin guard</h3>' + stateBadge(p, n) + '</summary><div class="fbody">';
+    html += '<p class="note">Each morning the bin guard takes back out anything binned by mistake and puts it here. Tick what you have checked.</p>';
     html += failNote(p);
     if (d) {
-      if (!d.url) html += '<p class="note fail" data-check-nourl>The bin guard web app is not set up yet, so ZZ_DELETE and Refer to AI are off. It switches on by itself once Lisa deploys the web app and opens it once.</p>';
-      html += '<div class="actions" data-pick-bar="check">' +
-        '<button class="btn" type="button" data-action="selectall" data-group="check"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
-        '<button class="btn" type="button" data-action="clearpick" data-group="check"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
-        '<button class="btn danger solid" type="button" data-action="checkzz"' + (picked && !busyOrNoUrl ? '' : ' disabled') + '>' + icon('bin') + '<span>ZZ_DELETE selected (' + picked + ')</span></button>' +
-        '<button class="btn ai" type="button" data-action="checkai"' + (picked && !busyOrNoUrl ? '' : ' disabled') + '><span>Refer to AI selected (' + picked + ')</span></button>' +
-        (d.url ? '<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener"><span>Open the bin guard page</span></a>' : '') + '</div>';
-      if (!d.items.length) html += '<p class="note">00 CHECK is empty.</p>';
+      if (!live) html += '<div class="actions" data-check-nourl><button class="btn" type="button" disabled><span>Waiting for the tidy bot</span></button></div>';
+      else {
+        var tick = function (word) { return picked ? word + ' (' + picked + ')' : word + ': tick a file first'; };
+        html += '<p class="note">Opens a confirm page in a new tab; nothing changes until you press there.</p>' +
+          '<div class="actions" data-pick-bar="check">' +
+          '<button class="btn" type="button" data-action="selectall" data-group="check"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
+          '<button class="btn" type="button" data-action="clearpick" data-group="check"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
+          '<button class="btn" type="button" data-action="checkzz"' + (picked && !busy ? '' : ' disabled') + '>' + icon('bin') + '<span>' + tick('Approve binning') + '</span></button>' +
+          '<button class="btn ai" type="button" data-action="checkai"' + (picked && !busy ? '' : ' disabled') + '><span>' + tick('Ask the AI to sort') + '</span></button>' +
+          '<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener"><span>Open the confirm page</span></a></div>';
+      }
+      if (!d.items.length) html += '<p class="note">Nothing to check.</p>';
       else html += '<div data-bin-list="check">' + binList(d.items, function (f) {
-        var blocked = !!f._block;
         var nameHtml = f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name);
         var refer = f.properties && f.properties.REFER_TO_AI;
-        return '<li data-id="' + esc(f.id) + '"' + (blocked ? ' data-blocked="1"' : '') + '>' + tickBox('check', f.id, blocked, nameHtml) +
-          '<div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' + (refer ? '<span class="chip" data-refer>Referred to AI</span>' : '') +
-          '<span>Changed ' + esc(fmtTime(f.modifiedTime) || 'date unknown') + '</span></div>' +
-          (f._block ? '<div class="skip">' + esc(f._block) + '</div>' : '') + '</li>';
+        var meta = '<div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' + (refer ? '<span class="chip" data-refer>Sent to the AI</span>' : '') +
+          '<span>Changed ' + esc(fmtTime(f.modifiedTime) || 'date unknown') + '</span></div>';
+        // A protected row has no tick box at all (never a disabled one); its reason sits in the tooltip.
+        if (f._block || !live) return '<li data-id="' + esc(f.id) + '"' + (f._block ? ' data-blocked="1" title="' + esc(f._block) + '"' : '') + '><div class="fname">' + nameHtml + '</div>' + meta +
+          (f._block ? '<p class="note">Protected, never binned</p>' : '') + '</li>';
+        return '<li data-id="' + esc(f.id) + '">' + tickBox('check', f.id, false, nameHtml) + meta + '</li>';
       }, 'check-list') + '</div>';
-      if (d.more) html += '<p class="note fail">Partial: 00 CHECK holds more than one read can show.</p>';
-      if (R.check) html += '<p class="note" data-check-sent>' + esc(stamp(R.check.at)) + ': opened the bin guard page for ' + num(R.check.n) + ' item' + (R.check.n === 1 ? '' : 's') + ' (' + (R.check.action === 'zzdelete' ? 'ZZ_DELETE' : 'Refer to AI') + '). Finish there, then press Refresh.</p>';
+      if (d.more) html += '<p class="note fail">Partial: there is more to check than one read can show.</p>';
     }
+    html += whyFold('checkwhy', 'Why are these here?', ['Every day at about 8am the bin guard looks in the bins. Anything whose name does not start ZZ_DELETE_ or ZZ_SUPERSEDED_ is taken back out and put in 00 CHECK.',
+      'Approve binning renames it ZZ_DELETE_…, adds a tidy-ledger row and moves it to the bin (30-day recovery).', 'Ask the AI to sort marks it and wakes lcme-grok.',
+      'Both open the bin guard\'s own Google page with your ticks.', 'RR_ names and money records (E02) are never ticked.']);
     html += sourceLine('00 CHECK', 'https://drive.google.com/drive/folders/' + CHECK_FOLDER_ID, p) + '</div></details>';
     return html;
+  }
+  function whyFold(key, title, notes) {
+    return foldOpen(key, false, 'subfold').replace('<details ', '<details data-why ') + '<summary><h4>' + esc(title) + '</h4></summary><div class="fbody"><ul class="notes">' +
+      notes.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div></details>';
   }
   function loadBin() {
     var list = drives();
@@ -1521,24 +1506,31 @@
       return { ok: false, text: 'Not moved: ' + (err && err.status === 403 && !isScopeError(err) ? 'no permission to bin this.' : fr.text) };
     });
   }
+  // Bin these (n): one confirm for every ticked Ready row, shared drives and Work My Drive alike.
+  // Each side keeps its own safety re-checks (sweepItems, pcpBinItems); nothing moves before the confirm.
   function sweep() {
     if (busy) return;
-    var d = S.bin.data; if (!d || !d.ledgerOk) return;
-    var items = pickedItems('bin').filter(function (f) {
+    var d = S.bin.data;
+    var items = d && d.ledgerOk ? pickedItems('bin').filter(function (f) {
       return !isMoneyRollback(f, f._chain) && isDeleteName(f.name) && !nameHasRr(f.name) && !f._skip && !isZeroByte(f) && d.ledgerOk && d.ready.indexOf(f) !== -1;
-    });
-    if (!items.length) return;
+    }) : [];
+    var pItems = pcpPicked();
+    if (!items.length && !pItems.length) return;
     if (!writeGranted) { requestWrite(); return; }
-    var noun = items.length === 1 ? 'item' : 'items';
-    var ok = window.confirm('Dry run: ' + items.length + ' selected ' + noun + ' will move to the bin.\n\n' +
-      'Move ' + items.length + ' selected ' + noun + ' to the bin?\n\n' +
-      'Trash only. Nothing is deleted for good. Shared-drive bins keep items for 30 days.\n\n' +
-      'Only ticked names that start ZZ_DELETE_ and have a delete-ledger row are included. Zero-byte files are left as UNSURE. Odd prefix spellings are not binned. A folder is included only when every item inside is verified or junk. RR_ names are never included. Money rollback files are never included.\n\n' +
-      'Press OK to confirm. Cancel changes nothing.');
-    if (!ok) { R.sweep = { at: Date.now(), cancelled: true, items: [], moved: 0, skipped: 0, unsure: 0, failed: 0 }; render(); return; }
+    var n = items.length + pItems.length, where = pItems.length ? 'Drive bin' : 'shared-drive bin';
+    var ok = window.confirm('Bin ' + n + (n === 1 ? ' file? It goes to the ' : ' files? They go to the ') + where + ' and can be restored for 30 days. Protected and unready files are never included.');
+    FOLD.log = true;
+    if (!ok) {
+      if (items.length) R.sweep = { at: Date.now(), cancelled: true, items: [], moved: 0, skipped: 0, unsure: 0, failed: 0 };
+      if (pItems.length) P.binned = { done: 0, failed: 0, skipped: 0, unsure: 0, found: pItems.length, cancelled: true, notes: [] };
+      render(); return;
+    }
+    (pItems.length ? pcpBinItems(pItems) : Promise.resolve()).then(function () { if (items.length) return sweepItems(items); });
+  }
+  function sweepItems(items) {
     busy = true; render();
     var halted = false, counts = { moved: 0, skipped: 0, unsure: 0, failed: 0 };
-    mapLimit(items, 3, function (f) {
+    return mapLimit(items, 3, function (f) {
       var row = { name: f.name, path: f._path };
       if (halted) { row.ok = false; row.text = 'Skipped: sign-in expired.'; counts.skipped++; return row; }
       if (isMoneyRollback(f, f._chain) || isZeroByte(f) || f._skip || !isDeleteName(f.name) || nameHasRr(f.name)) {
@@ -1768,23 +1760,17 @@
       loadPcpCandidates();
     });
   }
-  function pcpBin() {
-    if (busy || !P.ledgerOk) return;
-    var items = pickedItems('pcpbin').filter(function (f) {
+  function pcpPicked() {
+    if (!P.ledgerOk) return [];
+    return pickedItems('pcpbin').filter(function (f) {
       return !f.blocked && !f._moneyHold && !isMoneyRollback(f, f._chain || []) && spellingOf(f.name, PCP_PREFIX) === 'exact' && !nameHasRr(f.name) && !isZeroByte(f);
     });
-    if (!items.length) return;
-    if (!writeGranted) { requestWrite(); return; }
-    var noun = items.every(function (f) { return f.mimeType !== FOLDER_MIME; }) ? 'file' : 'item';
-    var plural = items.length === 1 ? noun : noun + 's';
-    if (!window.confirm('Dry run: ' + items.length + ' selected personal ' + plural + ' will move to the bin.\n\nMove ' + items.length + ' selected personal ' + plural + ' to the bin?\n\nTrash only. Nothing is deleted for good. Drive keeps binned items for 30 days.\n\nOnly ticked files that start ' + PCP_PREFIX + ' and have a delete-ledger row are included. Zero-byte files are left as UNSURE. A folder is included only when every item inside is verified or junk. Names containing RR_ are never included.\n\nPress OK to confirm. Cancel changes nothing.')) {
-      P.binned = { done: 0, failed: 0, skipped: 0, unsure: 0, found: items.length, cancelled: true, notes: [] };
-      render();
-      return;
-    }
+  }
+  // Runs from Bin these (sweep) after its one confirm.
+  function pcpBinItems(items) {
     busy = true; P.binned = { done: 0, failed: 0, skipped: 0, unsure: 0, found: items.length, notes: [] }; render();
     var halted = false;
-    mapLimit(items, 4, function (f) {
+    return mapLimit(items, 4, function (f) {
       if (halted) { P.binned.skipped++; return; }
       if (f._moneyHold || isMoneyRollback(f, f._chain || []) || isZeroByte(f) || spellingOf(f.name, PCP_PREFIX) !== 'exact') { P.binned.failed++; P.binned.notes.push({ name: f.name, text: 'Not moved' }); return; }
       return recheckForBin(f, { prefix: PCP_PREFIX, requireOwned: true, personal: true }).then(function (chk) {
@@ -1824,7 +1810,7 @@
     }).join('') + '</ul>' + showBar(listKey, items.length, step);
   }
   // Drives > Work My Drive (slot 'work') and Drives > Personal Drive (slot 'personal'): look-only. Scan and list only;
-  // the rename and bin steps for the work account live on #/bin (pcpBinCard). The Personal Drive page can never change anything.
+  // the rename and bin steps for the work account live on #/bin (Ready to bin). The Personal Drive page can never change anything.
   function viewPersonal(slot) {
     var st = slotState(slot), running = st.status === 'running', personal = slot === 'personal';
     var title = personal ? 'Personal Drive' : 'Work My Drive';
@@ -1854,45 +1840,6 @@
     return html + '</section>';
   }
   // Bin > Work My Drive: rename exact copies (from the last Work My Drive scan) and bin marked files. Bin stage 5 folds this into Ready to bin.
-  function pcpBinCard() {
-    var html = '<section class="card slot4" id="pcpTidy"><div class="cardhead"><h3>Work My Drive: files to tidy</h3><span class="mtag">Work My Drive</span></div>' +
-      '<ul class="notes"><li>Finds personal files already in a shared drive (exact copy).</li><li>PC-Personal = the business Google account. lisah Personal = the personal Gmail account.</li><li>Nothing changes until you click Rename.</li></ul>';
-    if (P.status !== 'done') html += '<p class="note">Scan <a href="#/drives/work">Work My Drive</a> to find exact copies to rename.</p>';
-    else {
-      if (P.matches.length) {
-        html += '<div data-bin-list="pcp-rename"><h4>Rename matches</h4>' + pickButtons('pcpmark', 'pcpmark', 'Rename') + tickList('pcpmark', P.matches, function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : (isZeroByte(f) ? 'UNSURE: zero-byte file, left alone.' : (isMoneyRollback(f, f._chain || []) ? E02_LABEL : '')); }, 'pcp-rename') + '</div>';
-      }
-    }
-    if (P.marked) html += '<p class="res ' + (P.marked.failed ? 'bad' : 'ok') + '">Renamed ' + num(P.marked.done) + ' to ' + esc(PCP_PREFIX) + '…' + (P.marked.failed ? ', ' + P.marked.failed + ' failed' : '') + (P.marked.skipped ? ', ' + P.marked.skipped + ' skipped' : '') + '.</p>';
-    if (P.binned) {
-      html += '<p class="res ' + (P.binned.failed || P.binned.error ? 'bad' : 'ok') + '">' + (P.binned.cancelled ? 'Cancelled. Nothing binned.' : P.binned.error ? esc(P.binned.error) : 'Found ' + num(P.binned.found) + ', moved ' + num(P.binned.done) + ' to the bin' + (P.binned.failed ? ', ' + P.binned.failed + ' failed' : '') + (P.binned.skipped ? ', ' + P.binned.skipped + ' skipped' : '') + (P.binned.unsure ? ', ' + P.binned.unsure + ' UNSURE' : '') + '.') + '</p>';
-      if (P.binned.notes && P.binned.notes.length) html += '<ul class="files">' + P.binned.notes.map(function (n) {
-        return '<li><div class="fname">' + esc(n.name) + '</div><p class="res bad">' + esc(n.text) + '</p></li>';
-      }).join('') + '</ul>';
-    }
-    html += '<div data-bin-list="pcp-bin"><h4>Personal files starting ZZ_DELETE_DRIVE_</h4>';
-    if (P.ledgerNote) html += '<p class="note fail">' + esc(P.ledgerNote) + '</p>';
-    if (P.binStatus !== 'ok') html += '<p class="note">Reading marked personal files…</p>';
-    else {
-      var heldP = P.candidates.filter(function (f) { return f.reason === 'No ledger row.'; });
-      var leftP = P.candidates.filter(function (f) { return nameHasRr(f.name); });
-      var unsureP = P.candidates.filter(function (f) { return /^UNSURE/.test(f.reason || ''); });
-      var oddP = P.candidates.filter(function (f) { return /Odd prefix/.test(f.reason || ''); });
-      var otherP = P.candidates.filter(function (f) { return f.blocked && f.reason !== 'No ledger row.' && !nameHasRr(f.name) && unsureP.indexOf(f) === -1 && oddP.indexOf(f) === -1; });
-      html += '<p class="note" data-pcp-dry>Dry run: ' + num(allowedItems('pcpbin').length) + ' ready to bin, ' + num(heldP.length) + ' held, ' + num(unsureP.length) + ' UNSURE, ' + num(oddP.length) + ' odd prefix, ' + num(otherP.length) + ' not ready. Trash only, after you confirm.</p>';
-      html += pickButtons('pcpbin', 'pcpbin', 'Move');
-      html += '<h4>Ready to bin (' + num(allowedItems('pcpbin').length) + ')</h4>' + tickList('pcpbin', allowedItems('pcpbin'), function () { return ''; }, 'pcp-ready');
-      html += '<h4>Held: no ledger row (' + num(heldP.length) + ')</h4>' + tickList('pcpbin', heldP, function (f) { return f.reason; }, 'pcp-held');
-      if (unsureP.length) html += '<h4>UNSURE: zero-byte (' + num(unsureP.length) + ')</h4>' + tickList('pcpbin', unsureP, function (f) { return f.reason; }, 'pcp-unsure');
-      if (oddP.length) html += '<h4>Rename needed: odd prefix (' + num(oddP.length) + ')</h4>' + tickList('pcpbin', oddP, function (f) { return f.reason; }, 'pcp-odd');
-      if (leftP.length) html += '<h4>Left out (name contains RR_) (' + num(leftP.length) + ')</h4>' + tickList('pcpbin', leftP, function (f) { return f.reason; }, 'pcp-left');
-      if (otherP.length) html += '<h4>Not ready (' + num(otherP.length) + ')</h4>' + tickList('pcpbin', otherP, function (f) { return f.reason; }, 'pcp-other');
-      if (!P.candidates.length) html += '<p class="note">No personal files starting ZZ_DELETE_DRIVE_.</p>';
-    }
-    html += '</div><ul class="notes"><li>Tick, press, confirm. Nothing changes before.</li><li>Select all = only the files you can see.</li><li>RR_ names: never ticked.</li><li>Bin only: ZZ_DELETE_DRIVE_ + ledger row.</li><li>A folder is binned only when every item inside is verified or junk.</li><li>Zero-byte files are UNSURE and are never marked or binned.</li><li>Trash only. Nothing is deleted for good.</li><li>Shared-drive copy: never changed.</li></ul></section>';
-    return html;
-  }
-
   // ---- Streaming MD5 (browsers have no built-in MD5). Matches Google Drive's md5Checksum. ----
   var MD5_K = [], MD5_S = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
   for (var mi = 0; mi < 64; mi++) MD5_K[mi] = Math.floor(Math.abs(Math.sin(mi + 1)) * 4294967296) >>> 0;
@@ -2246,6 +2193,7 @@
       ['Studio', 'studio/', true],
       ['Web Estate', 'estate/', true]
     ];
+    if (PH_URL) tiles.push(['Projects Hub', PH_URL, true]);
     return '<section class="card" id="key-projects" aria-labelledby="key-projects-title">' +
       '<h2 id="key-projects-title">Key projects & docs</h2>' +
       '<div class="keytiles">' + tiles.map(function (t) {
@@ -2458,69 +2406,177 @@
         (f._block ? '<div class="skip">' + esc(f._block) + '</div>' : '') + '</li>';
     }, listKey);
   }
-  function viewBin() {
-    var p = S.bin, d = p.data, html = '';
-    // Index: every section on one line, with its count
-    var readyN = d ? d.ready.length : null, dxd = S.dbx.data, binsN = d ? d.per.reduce(function (t, x) { return t + x.trash.length; }, 0) : null;
-    var cnt = function (n, word) { return n == null ? 'reading…' : num(n) + ' ' + word; };
-    html += '<nav class="card slot8" aria-label="Bin index"><div class="index top">' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="check"><b>00 CHECK</b><span class="n">' + cnt(S.check.data ? S.check.data.items.length : null, 'to check') + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="sweep"><b>Google Drive: ZZ_DELETE_ files</b><span class="n">' + cnt(readyN, 'ready to bin') + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="dropbox"><b>Dropbox: marked files</b><span class="n">' + (dxd && dxd.marked_files != null ? num(dxd.marked_files) + ' at last scan' : 'delete, then empty trash') + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="bins"><b>Google Drive: bins</b><span class="n">' + cnt(binsN, 'in the bin') + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="access"><b>Permission</b><span class="n">' + (writeGranted ? 'bin actions on' : 'allow bin actions') + '</span></button></div></nav>';
-    // Access card
-    html += foldOpen('access', !writeGranted, 'card slot2' + (signedIn && writeGranted ? '' : ' pending')) + '<summary><h3>Permission to use the bin</h3>' +
-      (writeGranted ? '<span class="state st-ok"><span class="shape"></span>Bin actions on</span>' : '<span class="state st-idle"><span class="shape"></span>Read-only</span>') + '</summary><div class="fbody">' +
-      '<ul class="notes"><li>Read-only until you tick.</li><li>Moving needs full Drive access: asked here only, kept until sign-out.</li><li>Shared-drive bins: never emptied.</li></ul>' +
-      (signedIn && !writeGranted ? '<div class="actions"><button class="btn danger" type="button" data-action="grantwrite">' + icon('in') + '<span>Allow Bin actions</span></button></div>' : '') +
-      '</div></details>';
-    html += viewCheck();
-    // ZZ_DELETE_ sweep. Only ticked ready items can move. Nothing moves until Lisa confirms.
-    var listed = d ? d.ready.length + d.held.length + d.rename.length + d.leftout.length + d.blocked.length + (d.e02 ? d.e02.length : 0) + (d.unsure ? d.unsure.length : 0) : null;
-    html += foldOpen('sweep', !!(d && listed), 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Google Drive: ZZ_DELETE_ files ready to bin</h3>' + stateBadge(p, listed) + '</summary><div class="fbody">';
-    html += '<ul class="notes"><li>Tickable: ZZ_DELETE_ + ledger row.</li><li>No ledger row: held.</li><li>Other ZZ_ (incl. retired ZZ_SUPERSEDED_): Rename needed, never binned.</li><li>Odd prefix spellings (case, spaces, hyphens): Rename needed, never binned.</li><li>Zero-byte files: UNSURE, never binned.</li><li>A folder is binned only when every item inside is verified or junk.</li><li>RR_ (name, folder, or inside): left out.</li><li>Money rollback (0.1 - Index, 4 - Ops by id): held, never touched.</li><li>Trash only, after a confirm. Nothing is deleted for good.</li><li>Select all = only rows you can see.</li></ul>';
+  // ---- Bin page (job file section 8): Needs you now, Ready to bin, Check, Not ready yet, Already in the bin, Log, Dropbox ----
+  // Plain words lead; internal names sit in tooltips or a "why" fold. Only "Bin these" is a red button.
+  var WMD = 'Work My Drive';
+  function plainName(name) {
+    var s = String(name || '');
+    if (s.indexOf(PCP_PREFIX) === 0) return s.slice(PCP_PREFIX.length);
+    if (s.indexOf(DELETE_PREFIX) === 0) return s.slice(DELETE_PREFIX.length);
+    return s;
+  }
+  function binReadyN() {
+    var d = S.bin.data;
+    if (!d) return null;
+    return (d.ledgerOk ? d.ready.length : 0) + (P.binStatus === 'ok' ? allowedItems('pcpbin').length : 0);
+  }
+  function binProblems() {
+    var d = S.bin.data, out = [];
+    if (S.bin.status === 'failed') out.push('sweep');
+    if (d && d.ledgerNote) out.push('sweep');
+    if (P.ledgerNote) out.push('sweep');
+    if (S.check.status === 'failed') out.push('check');
+    if (S.dbx.status === 'failed') out.push('dropbox');
+    return out;
+  }
+  function needsNowCard() {
+    var readyN = binReadyN(), checkN = S.check.data ? S.check.data.items.length : null, probs = binProblems();
+    var jump = function (key, n, one, many) {
+      return '<button class="btn" type="button" data-action="foldjump" data-key="' + key + '"><span class="n">' + (n == null ? '…' : num(n)) + '</span> <span>' + (n === 1 ? one : many) + '</span></button>';
+    };
+    return '<section class="card slot8" id="needsNow" aria-labelledby="needsNowT"><h3 id="needsNowT">Needs you now</h3><div class="index top">' +
+      jump('sweep', readyN, 'file ready for you to approve', 'files ready for you to approve') +
+      jump('check', checkN, 'item to check', 'items to check') +
+      jump(probs[0] || 'log', probs.length, 'problem', 'problems') + '</div></section>';
+  }
+  function readyRow(group, f, place) {
+    var full = f.name || f.path || '';
+    var nm = f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener" title="' + esc(full) + '">' + esc(plainName(full)) + '</a>' : '<span title="' + esc(full) + '">' + esc(plainName(full)) + '</span>';
+    return '<li data-id="' + esc(f.id) + '" data-group="' + group + '">' + tickBox(group, itemKey(group, f), false, nm) +
+      '<div class="meta"><span class="mtag" title="' + esc(f._path || place) + '">' + esc(place) + '</span><span class="chip">' + typeWord(f.mimeType) + '</span></div></li>';
+  }
+  function readyCard() {
+    var p = S.bin, d = p.data, n = pickCount('bin') + pickCount('pcpbin');
+    // Same rows pickedItems() counts: the visible slice of each list, allowed rows only, so no tick box is ever disabled.
+    var shared = d && d.ledgerOk ? visibleRows('bin').filter(function (f) { return rowAllowed('bin', f); }) : [];
+    var work = P.binStatus === 'ok' ? visibleRows('pcpbin').filter(function (f) { return rowAllowed('pcpbin', f); }) : [];
+    var total = binReadyN();
+    var html = foldOpen('sweep', true, 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Ready to bin</h3>' + stateBadge(p, total) + '</summary><div class="fbody">';
     html += failNote(p);
+    if (d && d.ledgerNote) html += '<p class="note fail">' + esc(d.ledgerNote) + '</p>';
+    if (P.ledgerNote) html += '<p class="note fail">' + esc(P.ledgerNote) + '</p>';
     if (d) {
-      if (d.ledgerNote) html += '<p class="note fail">' + esc(d.ledgerNote) + '</p>';
-      html += '<p class="note" data-bin-dry>Dry run: ' + num(d.ready.length) + ' ready to bin, ' + num(d.held.length) + ' held, ' + num(d.unsure ? d.unsure.length : 0) + ' UNSURE, ' + num(d.rename.length) + ' rename needed, ' + num(d.blocked.length) + ' left alone. Trash only, after you confirm.</p>';
-      html += pickButtons('bin', 'sweep', 'Move');
-      if (d.e02 && d.e02.length) html += '<div data-bin-list="e02"><h4>' + esc(E02_LABEL) + ' (' + num(d.e02.length) + ')</h4>' + binTickItems('bin-e02', d.e02) + '</div>';
-      html += '<div data-bin-list="ready"><h4>Ready (' + num(d.ready.length) + ')</h4>' + binTickItems('bin-ready', d.ready) + '</div>';
-      if (d.unsure && d.unsure.length) html += '<div data-bin-list="unsure"><h4>UNSURE: zero-byte (' + num(d.unsure.length) + ')</h4>' + binTickItems('bin-unsure', d.unsure) + '</div>';
-      html += '<div data-bin-list="held"><h4>Held: no ledger row (' + num(d.held.length) + ')</h4>' + binTickItems('bin-held', d.held) + '</div>';
-      html += '<div data-bin-list="rename"><h4>Rename needed (' + num(d.rename.length) + ')</h4>' + binTickItems('bin-rename', d.rename) + '</div>';
-      if (d.leftout.length) html += '<div data-bin-list="leftout"><h4>Left out (name contains RR_) (' + num(d.leftout.length) + ')</h4>' + binTickItems('bin-leftout', d.leftout) + '</div>';
-      if (d.blocked.length) html += '<div data-bin-list="blocked"><h4>Left alone (' + num(d.blocked.length) + ')</h4>' + binTickItems('bin-blocked', d.blocked) + '</div>';
-      if (d.zzMore) html += '<p class="note fail">Partial: some drives have more matches than one read can hold. Nothing extra is binned from an unread page.</p>';
+      if (!shared.length && !work.length) html += '<p class="note">Nothing is ready to bin.</p>';
+      else html += '<div data-bin-list="ready"><div class="scrollbox"><ul class="files">' +
+        shared.map(function (f) { return readyRow('bin', f, f._drive || 'Shared drive'); }).join('') +
+        work.map(function (f) { return readyRow('pcpbin', f, WMD); }).join('') + '</ul></div>' +
+        showBar('bin-ready', d.ledgerOk ? d.ready.length : 0, BIN_SHOW) + (P.binStatus === 'ok' ? showBar('pcp-ready', listForGroup('pcpbin').length, 30) : '') + '</div>';
+      var label = !n ? 'Bin these: tick a file first' : writeGranted ? 'Bin these (' + n + ')' : 'Allow access, then bin (' + n + ')';
+      html += '<div class="actions" data-pick-bar="ready">' +
+        '<button class="btn" type="button" data-action="selectall" data-group="bin" data-also="pcpbin"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
+        '<button class="btn" type="button" data-action="clearpick" data-group="bin" data-also="pcpbin"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
+        '<button class="btn' + (writeGranted ? ' danger solid' : '') + '" type="button" data-action="sweep"' + (n && !busy ? '' : ' disabled') + '>' + icon('bin') + '<span>' + label + '</span></button></div>' +
+        '<p class="note">Goes to the shared-drive bin. You can get it back for 30 days.</p>';
     }
+    if (P.binStatus !== 'ok' && signedIn) html += '<p class="note">Reading ' + WMD + '…</p>';
+    html += renameBlock() + '</div></details>';
+    return html;
+  }
+  // Work My Drive exact copies: renaming them gets them ready to bin. A neutral button; nothing is binned here.
+  function renameBlock() {
+    if (P.status !== 'done') return '<p class="note">Scan <a href="#/drives/work">' + WMD + '</a> to find exact copies to tidy.</p>';
+    var rows = visibleRows('pcpmark').filter(function (f) { return rowAllowed('pcpmark', f); }), n = pickCount('pcpmark');
+    var html = '';
+    if (P.matches.length) {
+      html += '<div data-bin-list="pcp-rename"><h4>Exact copies in ' + WMD + ': rename them to get them ready</h4>';
+      html += rows.length ? '<ul class="files">' + rows.map(function (f) {
+        return '<li data-id="' + esc(f.id) + '">' + tickBox('pcpmark', f.id, false, esc(f.name)) + '</li>';
+      }).join('') + '</ul>' + showBar('pcp-rename', P.matches.length, 30) : '<p class="note">None can be renamed.</p>';
+      html += '<div class="actions" data-pick-bar="pcpmark">' +
+        '<button class="btn" type="button" data-action="selectall" data-group="pcpmark"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
+        '<button class="btn" type="button" data-action="clearpick" data-group="pcpmark"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
+        '<button class="btn" type="button" data-action="pcpmark"' + (n && !busy ? '' : ' disabled') + '><span>' + (n ? 'Rename these (' + n + ')' : 'Rename these: tick a file first') + '</span></button></div></div>';
+    }
+    return html;
+  }
+  function notReadyCard() {
+    var d = S.bin.data, groups = [], count = 0;
+    var WAIT = 'Waiting for the tidy bot to log it', NAME = 'Name needs fixing by the tidy bot', EMPTY = 'Empty file, left for a person to check', KEEP = 'Protected, never binned';
+    function add(key, title, list, owner, place, whyOf) {
+      if (!list || !list.length) return;
+      count += list.length;
+      groups.push('<div data-bin-list="' + key + '"><h4>' + esc(title) + ' (' + num(list.length) + ')</h4>' + binList(list, function (f) {
+        var why = whyOf ? whyOf(f) : (f._block || f.reason || f._skip || '');
+        var who = typeof owner === 'function' ? owner(f) : owner;
+        return '<li data-id="' + esc(f.id) + '"' + (why ? ' title="' + esc(why) + '"' : '') + '><div class="fname">' + esc(f.name || '') + '</div>' +
+          '<div class="meta"><span class="mtag" title="' + esc(f._path || '') + '">' + esc(place || f._drive || 'Shared drive') + '</span></div><p class="note">' + esc(who) + '</p></li>';
+      }, 'nr-' + key) + '</div>');
+    }
+    if (d) {
+      add('held', 'Waiting to be logged', d.held, WAIT);
+      add('rename', 'Names to fix', d.rename, NAME);
+      add('unsure', 'Empty files', d.unsure || [], EMPTY);
+      add('leftout', 'Protected: archive names', d.leftout, KEEP);
+      add('blocked', 'Left alone', d.blocked, function (f) { return f._block === 'Ledger could not be read.' ? WAIT : KEEP; });
+      add('e02', 'Protected: money records', d.e02 || [], KEEP);
+    }
+    if (P.binStatus === 'ok') {
+      var c = P.candidates;
+      var unsureP = c.filter(function (f) { return /^UNSURE/.test(f.reason || ''); });
+      var oddP = c.filter(function (f) { return /Odd prefix/.test(f.reason || ''); });
+      add('pcp-held', WMD + ': waiting to be logged', c.filter(function (f) { return f.reason === 'No ledger row.'; }), WAIT, WMD);
+      add('pcp-unsure', WMD + ': empty files', unsureP, EMPTY, WMD);
+      add('pcp-odd', WMD + ': names to fix', oddP, NAME, WMD);
+      add('pcp-left', WMD + ': protected', c.filter(function (f) { return nameHasRr(f.name); }), KEEP, WMD);
+      add('pcp-other', WMD + ': left alone', c.filter(function (f) { return f.blocked && f.reason !== 'No ledger row.' && !nameHasRr(f.name) && unsureP.indexOf(f) === -1 && oddP.indexOf(f) === -1; }), KEEP, WMD);
+    }
+    if (P.status === 'done') add('pcp-keep', WMD + ': copies left as they are', P.matches.filter(function (f) { return !rowAllowed('pcpmark', f) && !isZzFamilyName(f.name); }), function (f) { return isZeroByte(f) ? EMPTY : KEEP; }, WMD,
+      function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : isZeroByte(f) ? 'UNSURE: zero-byte file, left alone.' : isMoneyRollback(f, f._chain || []) ? E02_LABEL : ''; });
+    var html = foldOpen('notready', false, 'card slot4' + cardClass(S.bin), 'notReadyCard') + '<summary><h3>Not ready yet: nothing for you to do</h3>' + stateBadge(S.bin, d ? count : null) + '</summary><div class="fbody">';
+    html += groups.length ? groups.join('') : (d ? '<p class="note">Nothing waiting.</p>' : '');
+    if (d && d.zzMore) html += '<p class="note fail">Partial: some drives have more matches than one read can hold. Nothing extra is binned from an unread page.</p>';
+    html += whyFold('binwhy', "Why can't these be binned?", ['Tickable: ZZ_DELETE_ + ledger row.', 'No ledger row: held.', 'Other ZZ_ (incl. retired ZZ_SUPERSEDED_): Rename needed, never binned.',
+      'Odd prefix spellings (case, spaces, hyphens): Rename needed, never binned.', 'Zero-byte files: UNSURE, never binned.', 'A folder is binned only when every item inside is verified or junk.',
+      'RR_ (name, folder, or inside): left out.', 'Money rollback (0.1 - Index, 4 - Ops by id): held, never touched (E02).', 'Work My Drive: bin only ZZ_DELETE_DRIVE_ + ledger row; the shared-drive copy is never changed.',
+      'Trash only, after a confirm. Nothing is deleted for good.', 'Select all = only rows you can see.']);
+    return html + '</div></details>';
+  }
+  function logCard() {
+    var html = foldOpen('log', false, 'card slot8', 'logCard') + '<summary><h3>Log</h3></summary><div class="fbody">', any = false;
     if (R.sweep) {
-      html += '<div id="sweepResults"><h4>Last sweep · ' + esc(stamp(R.sweep.at)) + '</h4>' + (R.sweep.cancelled ? '<p class="res ok">Cancelled. Nothing moved.</p>' :
-        '<p class="res ' + (R.sweep.failed ? 'bad' : 'ok') + '">Moved ' + num(R.sweep.moved) + ' to the bin. Skipped ' + num(R.sweep.skipped) + '. UNSURE ' + num(R.sweep.unsure) + '. Failed ' + num(R.sweep.failed) + '.</p>' +
+      any = true;
+      html += '<div id="sweepResults"><h4>Last bin · ' + esc(stamp(R.sweep.at)) + '</h4>' + (R.sweep.cancelled ? '<p class="res ok">Cancelled. Nothing moved.</p>' :
+        '<p class="res ' + (R.sweep.failed ? 'bad' : 'ok') + '">Moved ' + num(R.sweep.moved) + ' to the bin. Skipped ' + num(R.sweep.skipped) + '. Empty files left ' + num(R.sweep.unsure) + '. Failed ' + num(R.sweep.failed) + '.</p>' +
         '<ul class="files">' + R.sweep.items.map(function (x) {
           return '<li><div class="fname">' + esc(x.name) + '</div><p class="res ' + (x.ok ? 'ok' : 'bad') + '">' + esc(x.text) + ' · ' + esc(x.path) + '</p></li>';
         }).join('') + '</ul>') + '</div>';
     }
-    html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
-    html += pcpBinCard();
-    // Dropbox (counts only)
+    if (P.binned) {
+      any = true;
+      html += '<div id="pcpResults"><h4>Last ' + WMD + ' bin</h4><p class="res ' + (P.binned.failed || P.binned.error ? 'bad' : 'ok') + '">' + (P.binned.cancelled ? 'Cancelled. Nothing binned.' : P.binned.error ? esc(P.binned.error) : 'Found ' + num(P.binned.found) + ', moved ' + num(P.binned.done) + ' to the bin' + (P.binned.failed ? ', ' + P.binned.failed + ' failed' : '') + (P.binned.skipped ? ', ' + P.binned.skipped + ' skipped' : '') + (P.binned.unsure ? ', ' + P.binned.unsure + ' empty files left' : '') + '.') + '</p>';
+      if (P.binned.notes && P.binned.notes.length) html += '<ul class="files">' + P.binned.notes.map(function (n) {
+        return '<li><div class="fname">' + esc(n.name) + '</div><p class="res bad">' + esc(n.text) + '</p></li>';
+      }).join('') + '</ul>';
+      html += '</div>';
+    }
+    if (P.marked) { any = true; html += '<p class="res ' + (P.marked.failed ? 'bad' : 'ok') + '" data-pcp-marked>Renamed ' + num(P.marked.done) + ' to ' + esc(PCP_PREFIX) + '…' + (P.marked.failed ? ', ' + P.marked.failed + ' failed' : '') + (P.marked.skipped ? ', ' + P.marked.skipped + ' skipped' : '') + '.</p>'; }
+    if (R.check) { any = true; html += '<p class="note" data-check-sent>' + esc(stamp(R.check.at)) + ': opened the confirm page for ' + num(R.check.n) + ' item' + (R.check.n === 1 ? '' : 's') + ' (' + (R.check.action === 'zzdelete' ? 'Approve binning' : 'Ask the AI to sort') + '). Finish there, then press Refresh.</p>'; }
+    if (!any) html += '<p class="note">Nothing done yet this visit.</p>';
+    html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', S.bin);
+    return html + '</div></details>';
+  }
+  function dropboxCard() {
     var dx = S.dbx, dd = dx.data;
-    html += foldOpen('dropbox', true, 'card slot2' + cardClass(dx), 'dropboxCard') + '<summary><h3>Dropbox: delete marked files</h3>' + stateBadge(dx, null) + '</summary><div class="fbody">';
+    var html = foldOpen('dropbox', false, 'card slot2' + cardClass(dx), 'dropboxCard') + '<summary><h3>Dropbox (being emptied)</h3>' + stateBadge(dx, null) + '</summary><div class="fbody">';
+    html += '<p class="note">Dropbox is being emptied. A Dropbox copy never counts as a safe copy.</p>';
     if (dd && dd.notConnected) html += '<p class="note">Dropbox counts are not connected yet.</p>';
     else if (dd && dd.none) html += '<p class="note">No Dropbox scan published yet. Nothing is waiting.</p>';
     else if (dx.status === 'failed') html += failNote(dx);
     else if (dd) {
-      html += '<p class="note">Waiting to delete: <strong>' + num(dd.marked_files || 0) + '</strong> files (' + num(dd.marked_gb || 0) + ' GB) named ZZ_DELETE_DROPBOX_ (Dropbox copies only).</p>' +
+      html += '<p class="note">Waiting to delete: <strong>' + num(dd.marked_files || 0) + '</strong> files (' + num(dd.marked_gb || 0) + ' GB) marked in Dropbox (Dropbox copies only).</p>' +
         '<p class="note">Duplicates found: ' + num(dd.duplicate_files || 0) + ' files, ' + num(dd.wasted_gb || 0) + ' GB wasted' +
         (dd.complete === false ? ' (scan not finished)' : '') + '. Scan ' + esc(fmtTime(dd.generated) || 'date unknown') + '.</p>';
     }
-    html += '<div class="actions"><a class="btn danger" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>Step 1: Delete marked files from DROPBOX only</span></a>' +
-      '<a class="btn danger" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>Step 2: Empty DROPBOX trash</span></a></div>' +
-      '<ul class="notes"><li>1: GitHub workflow 3. Empty box = dry run. Type DELETE to run.</li><li>Moves only ZZ_DELETE_DROPBOX_ files (recoverable for a while). Drive never changed.</li></ul>' +
-      '<ul class="notes"><li>2: Dropbox Deleted files. Select all, Permanently delete.</li><li>Dropbox only. Cannot be automated (personal account).</li></ul>';
-    html += sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</div></details>';
-    // Bin per shared drive: indexed, drives with items first, each folded; empty bins grouped.
-    html += foldOpen('bins', true, 'card slot2' + cardClass(p), 'binCard') + '<summary><h3>Google Drive: shared-drive bins</h3>' + stateBadge(p, d ? d.per.length : null) + '</summary><div class="fbody">';
+    html += '<div class="actions"><a class="btn" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener"><span>Step 1: Delete marked files from Dropbox only</span></a>' +
+      '<a class="btn" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener"><span>Open Dropbox Deleted files (your own step)</span></a></div>' +
+      '<ul class="notes"><li>1: opens the clean-up job on GitHub. Leave the box empty for a dry run; type DELETE to run. Google Drive is never changed.</li>' +
+      '<li>2: in Dropbox Deleted files, select all, then Permanently delete. Yours to do; it cannot be automated on a personal account.</li></ul>';
+    return html + sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</div></details>';
+  }
+  function binsCard() {
+    var p = S.bin, d = p.data, html = '';
+    // Already in the bin: per shared drive, read only, folded.
+    html += foldOpen('bins', false, 'card slot2' + cardClass(p), 'binCard') + '<summary><h3>Already in the bin</h3>' + stateBadge(p, d ? d.per.length : null) + '</summary><div class="fbody">';
     html += failNote(p);
     if (d) {
       if (!d.per.length) html += '<p class="note">No shared drives found for this account.</p>';
@@ -2547,6 +2603,10 @@
     }
     html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
     return html;
+  }
+
+  function viewBin() {
+    return needsNowCard() + readyCard() + viewCheck() + notReadyCard() + binsCard() + logCard() + dropboxCard();
   }
 
   var SUBS = [
@@ -2804,8 +2864,8 @@
     else if (a === 'signout') signOut();
     else if (a === 'refresh') loadAll(false);
     else if (a === 'grantwrite') requestWrite();
-    else if (a === 'selectall') { selectAll(t.getAttribute('data-group')); render(); }
-    else if (a === 'clearpick') { clearPick(t.getAttribute('data-group')); render(); }
+    else if (a === 'selectall') { selectAll(t.getAttribute('data-group')); if (t.getAttribute('data-also')) selectAll(t.getAttribute('data-also')); render(); }
+    else if (a === 'clearpick') { clearPick(t.getAttribute('data-group')); if (t.getAttribute('data-also')) clearPick(t.getAttribute('data-also')); render(); }
     else if (a === 'showmore') {
       var listKey = t.getAttribute('data-list');
       var step = parseInt(t.getAttribute('data-step'), 10) || BIN_SHOW;
@@ -2831,7 +2891,6 @@
     else if (a === 'pcpresume') pcpScan('continue', t.getAttribute('data-slot') || 'work');
     else if (a === 'psignin') personalAuth.request();
     else if (a === 'pcpmark') pcpMark();
-    else if (a === 'pcpbin') pcpBin();
     else if (a === 'usbscan') usbScan();
     else if (a === 'usbcontinue') usbContinue();
     else if (a === 'usbstop') { U.stop = true; }

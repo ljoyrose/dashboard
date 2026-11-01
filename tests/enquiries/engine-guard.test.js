@@ -20,7 +20,7 @@ const NEVER = [
   [/\.moveToTrash\s*\(|\.setTrashed\s*\(/, 'trash'], [/\.addLabel\s*\(|\.removeLabel\s*\(/, 'Gmail label change'],
   [/['"](post|put|patch|delete)['"]\s*$/im, 'a write HTTP method on its own'],
   [/method\s*:\s*['"](put|patch|delete)['"]/i, 'HTTP PUT/PATCH/DELETE'],
-  [/stripe|paypal|gocardless|sumup|square(up)?\.com/i, 'a payment API'],
+  [/api\.(stripe|paypal|gocardless|sumup)\.com|connect\.squareup\.com|api\.squareup\.com/i, 'a payment API'],
   [/api\.xero\.com|activepieces/i, 'a Xero or Activepieces call'],
   [/\/tags?\b[^\n]*method\s*:\s*['"]post/i, 'a tag write'],
   [/\.delete(Row|Rows|Sheet|Column|Columns)\s*\(|\.clearContents|\.clear\s*\(/, 'a sheet delete or clear']
@@ -61,10 +61,10 @@ test('engine: embeds the current core.js under its version header', { skip }, ()
   assert.ok(src.includes(core.trim()), 'embedded copy matches enquiries/core.js exactly');
 });
 
-test('engine: setup() creates RR_ENQUIRIES with the 12 tabs', { skip }, () => {
-  for (const t of ['Enquiries', 'People', 'Events', 'Drafts', 'FollowUps', 'Litters', 'Sale Replies', 'Deposits', 'Sources', 'Settings', 'Requests', 'Log']) {
-    assert.ok(src.includes("'" + t + "': ["), 'tab ' + t);
-  }
+test('engine: setup() creates RR_ENQUIRIES with the 12 tabs of the shared contract', { skip }, () => {
+  const C = require('../../enquiries/core.js');
+  assert.deepEqual(Object.keys(C.COLUMNS), ['Enquiries', 'People', 'Events', 'Drafts', 'FollowUps', 'Litters', 'Sale Replies', 'Deposits', 'Sources', 'Settings', 'Requests', 'Log']);
+  assert.match(code, /function tabs_\(\) \{ return EnquiriesCore\.COLUMNS; \}/);
   assert.match(src, /var SHEET_NAME = 'RR_ENQUIRIES';/);
   assert.match(src, /function setup\(\)/);
 });

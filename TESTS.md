@@ -384,7 +384,7 @@ A quote in the words is escaped before it reaches Drive. Signed out, nothing is 
 
 A Google Apps Script owned by the business account (the "bin guard", code kept in Drive, not in this public repo) looks in the bins every day at about 8am UK. Anything whose name does not start `ZZ_DELETE_` or `ZZ_SUPERSEDED_` is taken back out and put in **LD > *00 Current > 00 CHECK**. It never deletes for good and never empties a bin.
 
-The Bin page shows 00 CHECK with ticks, **Select all**, **Clear**, **ZZ_DELETE** and **Refer to AI**. The page only **reads** 00 CHECK. The two buttons open the guard's own Google page (a web app that only puppyclassroom.com accounts can open, and only Lisa can use) with the ticked ids; nothing changes until Lisa presses the button there. RR_ names are never ticked. The buttons stay off until the web app exists: it writes its address into `BIN-GUARD-WEBAPP.json` in *00 Current the first time Lisa opens it, or you can put the address in `config.js` (`binGuard.webAppUrl`). Only a `https://script.google.com/.../exec` address is accepted. Tests: `tests/mocked/bin-guard.spec.js`.
+The Bin page shows 00 CHECK ("Check: put back by the bin guard") with ticks, **Select all**, **Clear**, **Approve binning** and **Ask the AI to sort**. The page only **reads** 00 CHECK. The two buttons open the guard's own Google page (a web app that only puppyclassroom.com accounts can open, and only Lisa can use) with the ticked ids; nothing changes until Lisa presses the button there. RR_ names have no tick box. Until the web app exists the card shows **Waiting for the tidy bot** instead of the buttons: it writes its address into `BIN-GUARD-WEBAPP.json` in *00 Current the first time Lisa opens it, or you can put the address in `config.js` (`binGuard.webAppUrl`). Only a `https://script.google.com/.../exec` address is accepted. Tests: `tests/mocked/bin-guard.spec.js`.
 
 ## Where things live
 
@@ -400,3 +400,7 @@ The Bin page shows 00 CHECK with ticks, **Select all**, **Clear**, **ZZ_DELETE**
 | Settings | `playwright.config.js`, `package.json` |
 
 Nothing in the dashboard pages themselves was changed to add these tests (Job 6 or Job 6b).
+
+## Bin page order (TidyUp stage 5)
+
+`tests/mocked/bin-page.spec.js` checks the Bin page follows the job file's section 8: Needs you now, Ready to bin (first card, open), Check, Not ready yet, Already in the bin, Log, Dropbox (closed, last). Only **Bin these** is red; no disabled tick boxes; no internal names (ZZ_, ledger, RR_, E02, UNSURE, lcme-grok) in the visible text outside file names, tooltips and the "why" fold; one confirm of at most 40 words bins a shared-drive row and a Work My Drive row together, and Cancel bins nothing.

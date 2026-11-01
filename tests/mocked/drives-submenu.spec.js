@@ -99,9 +99,10 @@ test.describe('Drives: tab, pills and purpose lines', () => {
     await expect(page.locator('[data-pcp-list="work"]')).toContainText('invoice-a.pdf');
     await expect(page.locator('[data-pcp-inbin]')).toContainText('ready in Bin');
     await page.locator('#mainNav a[data-nav="bin"]').click();
-    await expect(page.locator('#pcpTidy')).toContainText('invoice-a.pdf');
-    await expect(page.locator('#pcpTidy [data-action="pcpmark"]')).toHaveCount(1);
-    await expect(page.locator('#pcpTidy [data-action="pcpbin"]')).toHaveCount(1);
+    // Stage 5: the rename step sits at the end of Ready to bin, next to the one Bin these button.
+    await expect(page.locator('#sweepCard [data-bin-list="pcp-rename"]')).toContainText('invoice-a.pdf');
+    await expect(page.locator('#sweepCard [data-action="pcpmark"]')).toHaveCount(1);
+    await expect(page.locator('#sweepCard [data-action="sweep"]')).toHaveCount(1);
     expect(w.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 });
