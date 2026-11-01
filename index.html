@@ -88,6 +88,7 @@
   .note.fail { color: var(--fail); font-weight: 600; }
   ul.notes { margin: 4px 0 8px; padding-left: 20px; color: var(--muted); font-size: 14px; }
   ul.notes li { margin: 2px 0; }
+  ul.lessons { margin: 4px 0 8px; padding-left: 20px; font-size: 14px; } ul.lessons li { margin: 2px 0; }
   .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 8px; text-align: left; }
   .source a { color: var(--muted); }
 
@@ -529,7 +530,7 @@
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
-  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank(), mins: blank() }; }
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank(), runlog: blank(), mins: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
@@ -992,6 +993,104 @@
     }));
   }
 
+  // ---- Bin page Log: run history (RUN-LOG.csv). Read only; this page never writes it. ----
+  // RUN-LOG.csv column contract (the private repo's engines write it; one row per run; header row first;
+  // columns are matched by name, any order, extra columns ignored):
+  //   date_uk            when the run ended: ISO 8601, with an offset (2026-10-30T14:05:00+00:00 or ...Z) preferred;
+  //                      without an offset (2026-10-30 14:05) it is read as UK time. Required; a row without it is skipped.
+  //   job                which engine ran (bin-engine, bin-guard, drive-sweep ...). "engine" is accepted as the same column.
+  //   place              shared drive, Work My Drive or Dropbox the run looked at.
+  //   mode               dry (dry run), or mark / trash / live (live run).
+  //   found              items the run looked at as candidates (whole number).
+  //   changed            items renamed or binned (whole number; 0 on a dry run).
+  //   ledger_rows_added  delete-ledger rows the run wrote (whole number).
+  //   errors             errors in the run (whole number).
+  //   result             ok, partial or failed. Blank = ok when errors is 0, else partial.
+  //   lesson             one short line, or blank. The Log lists the last 7 days' distinct lessons.
+  // Missing folder id, missing file, unreadable file or no date_uk column: the Log says "No runs logged yet".
+  // A failed read is never a Bin problem and never blocks the page.
+  var RUNLOG_FOLDER_ID = CFG.home.runLogFolderId || '';
+  var RUNLOG_NAME = CFG.home.runLogName || 'RUN-LOG.csv';
+  var RUNLOG_DAYS = 7, RUNLOG_SHOW = 30, LESSONS_SHOW = 5;
+  var runFmt = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit', hour12: false, timeZoneName: 'short' });
+  var ukParts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+  function ukOffset(ms) { // minutes London is ahead of UTC at this moment (0 or 60)
+    var p = {}; ukParts.formatToParts(new Date(ms)).forEach(function (x) { p[x.type] = x.value; });
+    return Math.round((Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour % 24, +p.minute, +p.second) - Math.floor(ms / 1000) * 1000) / 60000);
+  }
+  function runTime(v) {
+    v = String(v || '').trim();
+    var m = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?)?\s*(Z|[+-]\d{2}:?\d{2})?$/i.exec(v);
+    if (!m) return NaN;
+    if (m[7]) return Date.parse(m[1] + '-' + m[2] + '-' + m[3] + 'T' + (m[4] || '00') + ':' + (m[5] || '00') + ':' + (m[6] || '00') + (m[7].toUpperCase() === 'Z' ? 'Z' : m[7].replace(/^([+-]\d{2})(\d{2})$/, '$1:$2')));
+    var naive = Date.UTC(+m[1], +m[2] - 1, +m[3], +(m[4] || 0), +(m[5] || 0), +(m[6] || 0)); // UK wall clock
+    return naive - ukOffset(naive - ukOffset(naive) * 60000) * 60000;
+  }
+  function runsFromCsv(text, now) {
+    var rows = parseCsv(text);
+    if (!rows.length) return null;
+    var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
+    var at = function (name) { return head.indexOf(name); };
+    if (at('date_uk') < 0) return null;
+    var col = { job: at('job') >= 0 ? at('job') : at('engine') };
+    ['date_uk', 'place', 'mode', 'found', 'changed', 'ledger_rows_added', 'errors', 'result', 'lesson'].forEach(function (k) { col[k] = at(k); });
+    var cell = function (r, k) { return col[k] >= 0 ? String(r[col[k]] == null ? '' : r[col[k]]).trim() : ''; };
+    var from = now - RUNLOG_DAYS * DAY, runs = [];
+    rows.slice(1).forEach(function (r) {
+      var t = runTime(cell(r, 'date_uk'));
+      if (isNaN(t) || t < from || t > now + DAY) return;
+      runs.push({ t: t, job: cell(r, 'job'), place: cell(r, 'place'), mode: cell(r, 'mode'), found: cell(r, 'found'), changed: cell(r, 'changed'),
+        logged: cell(r, 'ledger_rows_added'), errors: cell(r, 'errors'), result: cell(r, 'result').toLowerCase(), lesson: cell(r, 'lesson') });
+    });
+    runs.sort(function (a, b) { return b.t - a.t; });
+    var seen = {}, lessons = [];
+    runs.forEach(function (x) { var k = x.lesson.toLowerCase(); if (x.lesson && !seen[k]) { seen[k] = true; lessons.push(x.lesson); } });
+    return { runs: runs, lessons: lessons };
+  }
+  function loadRunLog() {
+    if (!signedIn || !accessToken) return;
+    if (!RUNLOG_FOLDER_ID) { S.runlog = { status: 'ok', readAt: Date.now(), error: null, data: null }; render(); return; }
+    run('runlog', driveList({
+      q: "'" + RUNLOG_FOLDER_ID + "' in parents and name = '" + RUNLOG_NAME + "' and trashed = false",
+      corpora: 'allDrives', pageSize: '1', fields: 'files(id,name)'
+    }).then(function (r) {
+      if (!r.files || !r.files.length) return null;
+      return readDriveText(r.files[0].id).then(function (text) { return runsFromCsv(text, Date.now()); });
+    }));
+  }
+  function runModeWord(m) {
+    m = String(m || '').toLowerCase();
+    if (!m) return '';
+    if (/^dry/.test(m)) return 'Dry run';
+    return m === 'live' ? 'Live' : 'Live (' + m + ')';
+  }
+  function runResult(x) {
+    var errs = parseInt(x.errors, 10) || 0;
+    var r = x.result || (errs ? 'partial' : 'ok');
+    return { bad: r !== 'ok', word: r === 'ok' ? 'OK' : r === 'failed' ? 'Failed' : r === 'partial' ? 'Partly done' : r.charAt(0).toUpperCase() + r.slice(1) };
+  }
+  function runLogBlock() {
+    var p = S.runlog, d = p.status === 'ok' ? p.data : null, html = '<div id="runLog"><h4>Runs, last ' + RUNLOG_DAYS + ' days</h4>';
+    try {
+      if (p.status === 'loading' || p.status === 'idle') return html + '<p class="note">Reading…</p></div>';
+      if (!d || !d.runs.length) return html + '<p class="note" data-runlog-none>No runs logged yet.</p></div>';
+      var counts = function (x) {
+        return [['Found', x.found], ['changed', x.changed], ['logged', x.logged], ['errors', x.errors]].filter(function (c) { return c[1] !== ''; })
+          .map(function (c) { return c[0] + ' ' + esc(c[1]); }).join(' · ');
+      };
+      html += '<ul class="files" data-runlog>' + d.runs.slice(0, RUNLOG_SHOW).map(function (x) {
+        var res = runResult(x), c = counts(x);
+        return '<li data-run><div><strong>' + esc(runFmt.format(new Date(x.t))) + '</strong>' + (x.job ? ' · ' + esc(x.job) : '') + (x.mode ? ' · ' + esc(runModeWord(x.mode)) : '') +
+          (x.place ? ' <span class="mtag">' + esc(x.place) + '</span>' : '') + '</div><p class="res ' + (res.bad ? 'bad' : 'ok') + '">' + (c ? c + '. ' : '') + esc(res.word) + '.</p></li>';
+      }).join('') + '</ul>';
+      if (d.runs.length > RUNLOG_SHOW) html += '<p class="note">Showing the newest ' + RUNLOG_SHOW + ' of ' + num(d.runs.length) + ' runs.</p>';
+      if (d.lessons.length) html += '<h4>Lessons</h4><ul class="lessons" data-lessons>' + d.lessons.slice(0, LESSONS_SHOW).map(function (l) { return '<li>' + esc(l) + '</li>'; }).join('') + '</ul>';
+      return html + '</div>';
+    } catch (e) {
+      return '<div id="runLog"><h4>Runs, last ' + RUNLOG_DAYS + ' days</h4><p class="note" data-runlog-none>No runs logged yet.</p></div>';
+    }
+  }
+
   // ---- Actions minutes (counts only). ACTIONS-MINUTES.json is written by the private collector in Drive; empty folder id = example. ----
   var MINS = CFG.actionsMinutes || {};
   function loadMins() {
@@ -1036,7 +1135,7 @@
     loading = true;
     var b = $('refreshBtn'); b.disabled = true; b.querySelector('span').textContent = 'Reading…';
     clearBanner();
-    if (!timed) { F = {}; S.bin = blank(); S.check = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
+    if (!timed) { F = {}; S.bin = blank(); S.check = blank(); S.runlog = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
@@ -2552,6 +2651,7 @@
     if (P.marked) { any = true; html += '<p class="res ' + (P.marked.failed ? 'bad' : 'ok') + '" data-pcp-marked>Renamed ' + num(P.marked.done) + ' to ' + esc(PCP_PREFIX) + '…' + (P.marked.failed ? ', ' + P.marked.failed + ' failed' : '') + (P.marked.skipped ? ', ' + P.marked.skipped + ' skipped' : '') + '.</p>'; }
     if (R.check) { any = true; html += '<p class="note" data-check-sent>' + esc(stamp(R.check.at)) + ': opened the confirm page for ' + num(R.check.n) + ' item' + (R.check.n === 1 ? '' : 's') + ' (' + (R.check.action === 'zzdelete' ? 'Approve binning' : 'Ask the AI to sort') + '). Finish there, then press Refresh.</p>'; }
     if (!any) html += '<p class="note">Nothing done yet this visit.</p>';
+    html += runLogBlock();
     html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', S.bin);
     return html + '</div></details>';
   }
@@ -2737,6 +2837,7 @@
     applyBinFilter();
     updateHeader();
     if (r.view === 'bin' && S.dbx.status === 'idle') loadDbx();
+    if (r.view === 'bin' && S.runlog.status === 'idle') loadRunLog();
   }
   function tabBadge(key, n, label) {
     var b = $('n-' + key); if (!b) return;
