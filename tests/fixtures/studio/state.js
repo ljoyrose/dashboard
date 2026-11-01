@@ -16,7 +16,7 @@
     };
     return {
       generated_at: iso(-60e3),
-      studio: { on: true, mode: 'TEST', budgetMonth: 50, spentMonth: 20 },
+      studio: { on: true, mode: 'TEST', budgetMonth: 50, spentMonth: 20, autoGates: true, lisaCap: 5 },
       health: { lastRun: iso(-10 * 60e3), jobs: [{ job: 'syncState', result: 'OK', last: iso(-10 * 60e3), note: 'sample' }] },
       accounts: [{ id: 'acc-owner', name: 'Sample owner', kind: 'owner', role: 'owner', emails: ['owner@example.test'], protect: '', protectEffective: 'no' },
         { id: 'acc-client', name: 'Sample client', kind: 'client', role: 'client', emails: [], protect: '', protectEffective: 'yes' }],
@@ -32,7 +32,11 @@
       ],
       assets: [
         a({ id: 'sa-rev1', title: 'Sample checklist PDF', productId: 'sp-course', stage: 7, reviewLink: 'https://drive.google.com/file/d/1SAMPLEreviewDoc00000000000/view', updated: iso(-H),
-          kitId: 'kit-lead', outcome: 'attract', frameworkId: 'fw-pas', formatIds: ['fmt-a4'], language: 'en-GB', sourceIds: ['src-1'] }),
+          kitId: 'kit-lead', outcome: 'attract', frameworkId: 'fw-pas', formatIds: ['fmt-a4'], language: 'en-GB', sourceIds: ['src-1'],
+          // Stage 5 (engine v0.2.24): the playbook steps copied onto this piece, and whether its approve gate passes by itself.
+          tasks: [{ n: 1, step: 'Draft the checklist', who: 'claude', fit: 'AUTO', status: 'done' }, { n: 2, step: 'Check the facts', who: 'grok', fit: 'AUTO', status: 'skipped' },
+            { n: 3, step: 'Lay out the pages', who: 'engine', fit: 'AUTO', status: 'open' }, { n: 4, step: 'Read it through', who: 'lisa', fit: 'HAND', status: 'open' }],
+          autoGate: { gate: 'approve', auto: false, why: 'Cost is over your cap' } }),
         a({ id: 'sa-rev2', title: 'Sample welcome email', brandIds: ['sb-south'], type: 'email', stage: 7, updated: iso(-2 * H),
           kitId: 'kit-email', outcome: 'keep', frameworkId: 'fw-hso', formatIds: ['fmt-email-header'], masterId: 'sa-lib', purpose: 'refresh', test: 'ab-welcome' }),
         a({ id: 'sa-make', title: 'Sample webclass slides', brandIds: ['sb-north', 'sb-south'], type: 'slides', stage: 5, size: 'L', evergreen: false, dated: true, eventDate: day(14),
