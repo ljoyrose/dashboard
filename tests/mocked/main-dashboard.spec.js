@@ -82,6 +82,9 @@ test.describe('Main dashboard: navigation', () => {
     ['Work My Drive', 'drives/work', 'personal', 'Work My Drive', 'pill'],
     ['Personal Drive', 'drives/personal-drive', 'pdrive', 'Personal Drive', 'pill'],
     ['Drive check', 'drives/usb', 'usb', 'Drive check', 'pill'],
+    ['Dropbox', 'drives/dropbox', 'dropbox', 'Dropbox', 'pill'],
+    ['iCloud', 'drives/icloud', 'icloud', 'iCloud', 'pill'],
+    ['Mac', 'drives/mac', 'mac', 'Mac', 'pill'],
     ['Bin', 'bin', 'bin', 'Bin', 'tab'],
     ['Changes', 'changes', 'changes', 'Changes · Recent', 'tab'],
   ];

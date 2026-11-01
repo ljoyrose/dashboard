@@ -529,7 +529,7 @@
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
-  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank(), mins: blank() }; }
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), icloud: blank(), mac: blank(), check: blank(), mins: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
@@ -980,17 +980,20 @@
   var DBX_TOTALS_NAME = CFG.home.dbxTotalsName;  // written by the private Dropbox scan job
   var DBX_JOB_URL = 'https://github.com/ljoyrose/dropbox-cleanup/actions/workflows/dropbox-delete.yml';   // workflow 3 (press Run workflow there)
   var DBX_TRASH_URL = 'https://www.dropbox.com/deleted_files';   // Dropbox cannot empty this by API on a personal account
-  function loadDbx() {
+  // iCloud and Mac dry-run reports (stage 9): written by the private engines into the same Drive folder. Look only.
+  var REPORT_NAMES = CFG.home.coverageReports || {};
+  function loadReport(key, name) {
     if (!signedIn || !accessToken) return;
-    if (!DBX_FOLDER_ID) { S.dbx = { status: 'ok', readAt: Date.now(), error: null, data: { notConnected: true } }; render(); return; }
-    run('dbx', driveList({
-      q: "'" + DBX_FOLDER_ID + "' in parents and name = '" + DBX_TOTALS_NAME + "' and trashed = false",
+    if (!DBX_FOLDER_ID || !name) { S[key] = { status: 'ok', readAt: Date.now(), error: null, data: { notConnected: true } }; render(); return; }
+    run(key, driveList({
+      q: "'" + DBX_FOLDER_ID + "' in parents and name = '" + name + "' and trashed = false",
       corpora: 'allDrives', pageSize: '1', fields: 'files(id,name)'
     }).then(function (r) {
       if (!r.files || !r.files.length) return { none: true };
       return apiGet(API + '/' + encodeURIComponent(r.files[0].id) + '?alt=media&supportsAllDrives=true');
     }));
   }
+  function loadDbx() { loadReport('dbx', DBX_TOTALS_NAME); }
 
   // ---- Actions minutes (counts only). ACTIONS-MINUTES.json is written by the private collector in Drive; empty folder id = example. ----
   var MINS = CFG.actionsMinutes || {};
@@ -2605,6 +2608,27 @@
     return html;
   }
 
+  // ---- Dropbox, iCloud and Mac (Drives sub-menu, stage 9): look only, counts from each engine's dry-run report ----
+  function viewCoverage(view) {
+    var key = view === 'dropbox' ? 'dbx' : view, p = S[key], d = p.data, label = VIEWS[view];
+    var html = '<section class="card slot4' + cardClass(p) + '" id="coverageCard" data-coverage="' + view + '"><div class="cardhead"><h3>' +
+      (view === 'dropbox' ? 'Dropbox totals' : label + ' report') + '</h3>' + stateBadge(p, null) + '</div>';
+    if (p.status === 'failed' || !d) html += failNote(p);
+    else if (d.notConnected || d.none) html += '<p class="note" data-no-report>No report yet.</p>';
+    else if (view === 'dropbox') {
+      html += '<p class="note">Marked to delete: <strong>' + num(d.marked_files || 0) + '</strong> files (' + num(d.marked_gb || 0) + ' GB).</p>' +
+        '<p class="note">Duplicates found: ' + num(d.duplicate_files || 0) + ' files, ' + num(d.wasted_gb || 0) + ' GB wasted.</p>';
+    } else {
+      html += '<p class="note">Looked at: <strong>' + num(d.files || 0) + '</strong> files (' + num(d.gb || 0) + ' GB).</p>' +
+        '<p class="note">Exact copies found: ' + num(d.duplicate_files || 0) + ' files, ' + num(d.wasted_gb || 0) + ' GB.</p>';
+    }
+    if (d && !d.notConnected && !d.none && p.status !== 'failed')
+      html += '<p class="note">' + (view === 'dropbox' ? 'Scan' : 'Dry run') + ' ' + esc(fmtTime(d.generated) || 'date unknown') + (d.complete === false ? ' (not finished)' : '') + '. Nothing was renamed or moved.</p>';
+    html += '<p class="note" data-bin-pointer>Anything to tidy is done in Bin.</p>';  // text only: Bin keeps one way in
+    var name = view === 'dropbox' ? 'Dropbox totals' : label + ' report';
+    return html + sourceLine(name, DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', p) + '</section>';
+  }
+
   function viewBin() {
     return needsNowCard() + readyCard() + viewCheck() + notReadyCard() + binsCard() + logCard() + dropboxCard();
   }
@@ -2652,15 +2676,19 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Dashboard', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
+  var VIEWS = { map: 'Dashboard', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', dropbox: 'Dropbox', icloud: 'iCloud', mac: 'Mac', bin: 'Bin', changes: 'Changes' };
   // Every Drives page lights up the Drives tab.
-  var TAB_OF = { drive: 'drives', readfirst: 'drives', personal: 'drives', pdrive: 'drives', usb: 'drives' };
+  var TAB_OF = { drive: 'drives', readfirst: 'drives', personal: 'drives', pdrive: 'drives', usb: 'drives', dropbox: 'drives', icloud: 'drives', mac: 'drives' };
   // Drives sub-menu: #/drives/<key> shows view <view>. The pills are the existing .subnav (as on Changes).
   var DRIVES = [
     { key: 'shared', view: 'drive', label: 'Shared drives', purpose: 'Browse the shared drives and see what changed in 24 hours.' },
     { key: 'work', view: 'personal', label: 'Work My Drive', purpose: 'Find files in your work My Drive that already sit in a shared drive.' },
     { key: 'personal-drive', view: 'pdrive', label: 'Personal Drive', purpose: 'See which files in your personal Google Drive already sit in a shared drive.' },
-    { key: 'usb', view: 'usb', label: 'Drive check', purpose: 'Check a plugged-in drive against the shared drives before you clear it.' }
+    { key: 'usb', view: 'usb', label: 'Drive check', purpose: 'Check a plugged-in drive against the shared drives before you clear it.' },
+    // Stage 9, look only: each shows its engine's dry-run report. Any action sits in Bin.
+    { key: 'dropbox', view: 'dropbox', label: 'Dropbox', purpose: 'See how much is still in Dropbox and what is marked to delete.' },
+    { key: 'icloud', view: 'icloud', label: 'iCloud', purpose: 'See what the last iCloud check found. Nothing is changed here.' },
+    { key: 'mac', view: 'mac', label: 'Mac', purpose: 'See what the last Mac check found. Nothing is changed here.' }
   ];
   var DRIVES_PURPOSE = "See what's where, spot what changed, and send anything to tidy to Bin.";
   var READFIRST_PURPOSE = 'Open the folder the AIs read first.';
@@ -2708,7 +2736,7 @@
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : viewChanges(r);
+    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : r.view === 'dropbox' || r.view === 'icloud' || r.view === 'mac' ? viewCoverage(r.view) : viewChanges(r);
     if (signedIn && TAB_OF[r.view] === 'drives' || signedIn && r.view === 'drives') html = drivesNav(r) + drivesPurpose(r) + html;
     if (signedIn && r.view !== 'map') html = '<p><a class="btn back" href="#/map" data-back-home>← Dashboard</a></p>' + html;
     var routeKey = location.hash;
@@ -2736,7 +2764,8 @@
     lastView = routeKey;
     applyBinFilter();
     updateHeader();
-    if (r.view === 'bin' && S.dbx.status === 'idle') loadDbx();
+    if ((r.view === 'bin' || r.view === 'dropbox') && S.dbx.status === 'idle') loadDbx();
+    if ((r.view === 'icloud' || r.view === 'mac') && S[r.view].status === 'idle') loadReport(r.view, REPORT_NAMES[r.view]);
   }
   function tabBadge(key, n, label) {
     var b = $('n-' + key); if (!b) return;

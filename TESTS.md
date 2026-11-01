@@ -404,3 +404,7 @@ Nothing in the dashboard pages themselves was changed to add these tests (Job 6 
 ## Bin page order (TidyUp stage 5)
 
 `tests/mocked/bin-page.spec.js` checks the Bin page follows the job file's section 8: Needs you now, Ready to bin (first card, open), Check, Not ready yet, Already in the bin, Log, Dropbox (closed, last). Only **Bin these** is red; no disabled tick boxes; no internal names (ZZ_, ledger, RR_, E02, UNSURE, lcme-grok) in the visible text outside file names, tooltips and the "why" fold; one confirm of at most 40 words bins a shared-drive row and a Work My Drive row together, and Cancel bins nothing.
+
+## Dropbox, iCloud and Mac pages (TidyUp stage 9)
+
+`tests/mocked/coverage-pages.spec.js` checks the three look-only Drives pills (Dropbox, iCloud, Mac): each page opens with one purpose line, marks its own pill current, has no bin, move or rename button (only "← Dashboard"), and says "No report yet." (not a failure) until its engine writes a dry-run report. With a report, it shows the counts and "Nothing was renamed or moved." Dropbox reads the same DROPBOX-TOTALS.json as the Bin Dropbox fold; its delete steps stay in Bin. No page makes a write call.
