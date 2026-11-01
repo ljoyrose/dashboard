@@ -18,7 +18,7 @@ for the hub owner). "existing" = an older spec already proved it, so JOB 34 did 
 | Factory | factory-flows | states-empty | states-sheet-error | states-signed-out | J34-F83 | factory-flows, states-phone | factory-flows, states-keyboard | guard |
 | Studio | studio-flows | states-empty | states-sheet-error | states-signed-out | J34-F84 | studio-flows, states-phone | studio-flows, states-keyboard | guard |
 | Food | food-states | food-states, J34-F62 | food-states, J34-F60 | states-signed-out | J34-F61 = J34-F81 | existing (phone/phone.spec.js) | food-states, states-keyboard | guard |
-| Marketplace | marketplace-states, 34b marketplace-clicks, J34b-F40 | 34b marketplace-states | 34b marketplace-states, states-sheet-error | states-signed-out | J34-F70 = J34-F82 | marketplace-states, 34b phone-keys | 34b phone-keys, J34b-F41 | guard |
+| Marketplace | marketplace-states, 34b marketplace-clicks, J34b-F40, J34b-F42 | 34b marketplace-states | 34b marketplace-states, states-sheet-error | states-signed-out | J34-F70 = J34-F82 | marketplace-states, 34b phone-keys | 34b phone-keys, J34b-F41 | guard |
 | Bin | bin-index, J34-F01 | existing (bin-guard, bin-safety) | bin-index | signin-flow | not applicable (no data read before a click) | existing (phone/phone.spec.js) | existing (focus-and-headings.spec.js) | guard |
 | Drives and structure | drives-pages | drives-pages | drives-pages | signin-flow | not applicable | existing (phone/phone.spec.js) | existing (focus-and-headings.spec.js) | guard |
 | Cross-page (34c) | 34c navigation, J34c-F01, J34c-F02 | | | 34c navigation (deep link survives sign-in) | | | 34c navigation | guard |
@@ -29,9 +29,9 @@ for the hub owner). "existing" = an older spec already proved it, so JOB 34 did 
 |---|---|
 | JOB 34 spec files (34 + 34b + 34c) | 22 |
 | Tests listed | 213 |
-| Passed in session | 196 |
-| `test.fixme` (findings) | 17 |
-| Distinct finding ids | 17 (J34-F01 F20 F60 F61 F62 F70 F80-F85, J34b-F20 F40 F41, J34c-F01 F02) |
+| Passed in session | 195 |
+| `test.fixme` (findings) | 18 |
+| Distinct finding ids | 18 (J34-F01 F20 F60 F61 F62 F70 F80-F85, J34b-F20 F40 F41 F42, J34c-F01 F02) |
 | Same bug, two ids | 2 pairs (F61 = F81 Food loading, F70 = F82 Marketplace loading) |
 
 Specs by file: bin-index 5, cdhub-views 14, drives-pages 7, factory-flows 14, fixtures-invented 2,
