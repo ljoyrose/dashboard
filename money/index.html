@@ -441,7 +441,7 @@
     if (rs.length) {
       var wk = rs.map(function (r) { return r.week_of; }).sort().slice(-1)[0];
       var rows = rs.filter(function (r) { return r.week_of === wk; });
-      h += '<section class="card c-mute"><div class="cardhead"><h3>Last weekly pack · week of ' + d(wk) + '</h3>' + tag('c-ops', 'Job paused') + '</div><div class="scroll"><table><tr><th>Entity</th><th class="r">Cash</th><th class="r">Month net</th><th>Vs 3-month average</th><th>Runs dry</th></tr>' +
+      h += '<section class="card c-mute"><div class="cardhead"><h3>Last weekly pack · week of ' + d(wk) + '</h3>' + tag('c-ops', 'Job paused') + '</div><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Entity</th><th class="r">Cash</th><th class="r">Month net</th><th>Vs 3-month average</th><th>Runs dry</th></tr>' +
         rows.map(function (r) {
           var pct = function (v) { return v === '' || isNaN(+v) ? '–' : (+v >= 0 ? '+' : '') + Math.round(+v) + '%'; };
           return '<tr><td><b>' + esc(r.entity) + '</b></td><td class="r">' + (r.cash_bank ? gbp(+r.cash_bank) + '<div class="lbl">' + d(r.cash_as_of) + '</div>' : '–') + '</td><td class="r">' + (r.net_month ? gbp(+r.net_month) + '<div class="lbl">' + esc(r.month) + '</div>' : '–') + '</td><td>' +
@@ -456,7 +456,7 @@
     if (!rows.length) return '';
     var max = Math.max.apply(null, rows.map(function (r) { return Math.max(M.n(r.money_in) || 0, -(M.n(r.money_out) || 0)); })) || 1;
     var partial = m.bankAsOf ? m.bankAsOf.slice(0, 7) : '';
-    return '<div class="scroll"><table><tr><th>Month</th><th class="r">In</th><th class="r">Out</th><th class="r">Net</th><th style="width:30%"><span class="skip-label">Bar</span></th></tr>' + rows.map(function (r) {
+    return '<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Month</th><th class="r">In</th><th class="r">Out</th><th class="r">Net</th><th style="width:30%"><span class="skip-label">Bar</span></th></tr>' + rows.map(function (r) {
       var i = M.n(r.money_in) || 0, o = -(M.n(r.money_out) || 0), nn = M.n(r.net) || 0;
       return '<tr><td>' + esc(r.month) + (r.month === partial ? ' ' + chip('part month') : '') + '</td><td class="r">' + gbp(i) + '</td><td class="r">' + gbp(o) + '</td><td class="r">' + cash(nn) + '</td>' +
         '<td><span class="bar in" style="width:' + Math.round(i / max * 100) + '%"></span><br><span class="bar out" style="width:' + Math.round(o / max * 100) + '%"></span></td></tr>';
@@ -481,7 +481,7 @@
       (m.noData ? '<p class="note">No ledger files found for ' + esc(m.code) + ' yet. Drop statements into Drop / ' + esc(m.code) + ' and they will be filed into the ledger.</p>' : '') + '</section>';
     if (m.accounts && m.accounts.length) {
       var bal = efile(code, 'balances');
-      h += '<section class="card c-fin"><h3>Accounts</h3><div class="scroll"><table><tr><th>Account</th><th class="r">Balance</th><th>As at</th></tr>' + bal.table.rows.map(function (a) {
+      h += '<section class="card c-fin"><h3>Accounts</h3><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Account</th><th class="r">Balance</th><th>As at</th></tr>' + bal.table.rows.map(function (a) {
         return '<tr><td>' + esc(a.account) + (a.status === 'nil' ? ' ' + chip('closed / nil') : '') + '</td><td class="r">' + (a.balance !== '' ? gbp(+a.balance, 2) : '?') + '</td><td>' + d(a.as_of) + '</td></tr>';
       }).join('') + '</table></div>' + src('BALANCES.csv · ' + code, bal) + '</section>';
     }
@@ -494,7 +494,7 @@
       var inn = M.sum(due.filter(function (r) { return r.direction === 'in'; }), function (r) { return r.amount; });
       var out = -M.sum(due.filter(function (r) { return r.direction === 'out'; }), function (r) { return r.amount; });
       h += '<section class="card c-fin"><div class="cardhead"><h3>Expected in and out, next 30 days</h3>' + tag('c-ok', '+' + gbp(inn)) + tag('c-fin', '−' + gbp(out)) + '</div>' +
-        (due.length ? '<details><summary class="more">' + due.length + ' expected items</summary><div class="scroll"><table><tr><th>Date</th><th>Who</th><th class="r">Amount</th><th>Sure?</th></tr>' + due.map(function (r) {
+        (due.length ? '<details><summary class="more">' + due.length + ' expected items</summary><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Date</th><th>Who</th><th class="r">Amount</th><th>Sure?</th></tr>' + due.map(function (r) {
           return '<tr><td>' + d(r.expected_on) + '</td><td>' + esc(r.counterparty) + '</td><td class="r">' + gbp(M.n(r.amount) * (r.direction === 'out' && M.n(r.amount) > 0 ? -1 : 1), 2) + '</td><td>' + esc(r.confidence) + '</td></tr>';
         }).join('') + '</table></div></details>' : '<p class="note">Nothing expected in this window.</p>') +
         '<p class="note">Regular items only. Plan made ' + d(M.provDate(cf.table.prov)) + ': some may have happened.</p>' + src('CASHFLOW.csv · ' + code, cf) + '</section>';
@@ -505,7 +505,7 @@
       var rr = rec.table.rows.slice().sort(function (a, b) { return Math.abs(M.n(b.amount_expected) || 0) - Math.abs(M.n(a.amount_expected) || 0); });
       var trow = function (r) { return '<tr><td>' + esc(r.counterparty) + '<div class="lbl">' + esc(r.cadence) + ' · ' + esc(r.direction) + (r.status && r.status !== 'learned' ? ' · ' + esc(r.status) : '') + '</div></td><td class="r">' + gbp(M.n(r.amount_expected), 2) + '</td><td>' + d(r.next_expected) + '</td></tr>'; };
       var recN = listShown('rec-' + code, rr.length, 8);
-      h += '<section class="card c-fin"><h3>Regular payments</h3><div class="scroll"><table><tr><th>Who</th><th class="r">Usual amount</th><th>Next</th></tr>' + rr.slice(0, recN).map(trow).join('') + '</table></div>' +
+      h += '<section class="card c-fin"><h3>Regular payments</h3><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Who</th><th class="r">Usual amount</th><th>Next</th></tr>' + rr.slice(0, recN).map(trow).join('') + '</table></div>' +
         showBar('rec-' + code, rr.length, 8) + src('RECURRING.csv · ' + code, rec) + '</section>';
     }
     if (m.liab) {
@@ -531,7 +531,7 @@
     if (!pay && !recv && !pnl) return '';
     h += '<section class="card c-fin"><div class="cardhead"><h3>Xero</h3>' + chip('connector not configured here') + '</div><p class="note">From Xero exports. Matches the bank only once reconciled.</p>';
     if (pnl && pnl.table) {
-      h += '<h4>Profit and loss by year</h4><div class="scroll"><table><tr><th>Year</th><th class="r">Income</th><th class="r">Expenses</th><th class="r">Net profit</th></tr>' + pnl.table.rows.map(function (r) {
+      h += '<h4>Profit and loss by year</h4><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Year</th><th class="r">Income</th><th class="r">Expenses</th><th class="r">Net profit</th></tr>' + pnl.table.rows.map(function (r) {
         return '<tr><td>' + esc(r.fy) + '</td><td class="r">' + gbp(M.n(r.income)) + '</td><td class="r">' + gbp(M.n(r.expenses)) + '</td><td class="r">' + cash(M.n(r.net_profit)) + '</td></tr>';
       }).join('') + '</table></div>';
     }
@@ -539,16 +539,16 @@
       var pr = pay.table.rows.slice().sort(function (a, b) { return (M.n(b.amount_due) || 0) - (M.n(a.amount_due) || 0); });
       var prow = function (r) { return '<tr><td>' + esc(r.supplier) + '<div class="lbl">' + esc(r.unpaid_bills) + ' bill(s) · oldest ' + d(r.oldest_due) + '</div></td><td class="r">' + gbp(M.n(r.amount_due), 2) + '</td></tr>'; };
       var payN = listShown('pay-' + code, pr.length, 6);
-      h += '<h4>Unpaid bills by supplier · ' + gbp(m.bills.total, 2) + ' across ' + m.bills.suppliers + '</h4><div class="scroll"><table>' + pr.slice(0, payN).map(prow).join('') + '</table></div>' +
+      h += '<h4>Unpaid bills by supplier · ' + gbp(m.bills.total, 2) + ' across ' + m.bills.suppliers + '</h4><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table>' + pr.slice(0, payN).map(prow).join('') + '</table></div>' +
         showBar('pay-' + code, pr.length, 6);
     }
     if (recv && recv.table) h += '<h4>Owed to you</h4><ul class="items">' + recv.table.rows.map(function (r) { return '<li><div class="itext">' + gbp(M.n(r.amount_due), 2) + ' · ' + esc(r.customer) + '</div><div class="meta"><span>' + esc(r.invoice_number) + '</span><span>due ' + d(r.due_date) + '</span></div></li>'; }).join('') + '</ul>';
     if (inc && inc.table) {
       var cols = inc.table.head.filter(function (c) { return c !== 'account'; });
-      h += '<details><summary class="more">Income by account</summary><div class="scroll"><table><tr><th>Account</th>' + cols.map(function (c) { return '<th class="r">' + esc(c) + '</th>'; }).join('') + '</tr>' +
+      h += '<details><summary class="more">Income by account</summary><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Account</th>' + cols.map(function (c) { return '<th class="r">' + esc(c) + '</th>'; }).join('') + '</tr>' +
         inc.table.rows.map(function (r) { return '<tr><td>' + esc(r.account) + '</td>' + cols.map(function (c) { return '<td class="r">' + gbp(M.n(r[c])) + '</td>'; }).join('') + '</tr>'; }).join('') + '</table></div></details>';
     }
-    if (un && un.table) h += '<details><summary class="more">' + un.table.rows.length + ' unreconciled bank lines</summary><div class="scroll"><table>' + un.table.rows.map(function (r) { return '<tr><td>' + d(r.date) + '</td><td>' + esc(r.account) + '<div class="lbl">' + esc(r.reference) + '</div></td><td class="r">' + gbp(M.n(r.amount), 2) + '</td></tr>'; }).join('') + '</table></div></details>';
+    if (un && un.table) h += '<details><summary class="more">' + un.table.rows.length + ' unreconciled bank lines</summary><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table>' + un.table.rows.map(function (r) { return '<tr><td>' + d(r.date) + '</td><td>' + esc(r.account) + '<div class="lbl">' + esc(r.reference) + '</div></td><td class="r">' + gbp(M.n(r.amount), 2) + '</td></tr>'; }).join('') + '</table></div></details>';
     var srcs = ['pnl', 'pay', 'recv', 'income', 'unrec', 'snapshot', 'banks'].map(function (k) { var f = efile(code, k); return f ? f : null; }).filter(Boolean);
     h += '<div class="source">' + srcs.map(function (f) { return '<span>' + (f.file ? '<a href="' + esc(f.file.webViewLink || '#') + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name)) + (f.asOf ? ' · ' + d(f.asOf) : '') + (f.error ? ' · <b>' + esc(f.error) + '</b>' : '') + '</span>'; }).join('') + '</div>';
     return h + '</section>';
@@ -645,7 +645,7 @@
       tag(bad.length ? 'c-risk' : 'c-ok', (fc.length - bad.length) + ' of ' + fc.length + ' found once') + '</div>' +
       '<p class="note">Found by folder + exact title. Two copies or none = error. Never an old file id.</p>' +
       (bad.length || warn.length ? '' : '<details><summary class="more">Show all ' + fc.length + ' files</summary>') +
-      '<div class="scroll"><table><tr><th>Where</th><th>File</th><th>State</th><th>Data as of</th></tr>' + fc.slice().sort(function (a, b) { var o = { fail: 0, warn: 1, wait: 2, ok: 3 }; return o[a.state] - o[b.state]; }).map(function (f) {
+      '<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Where</th><th>File</th><th>State</th><th>Data as of</th></tr>' + fc.slice().sort(function (a, b) { var o = { fail: 0, warn: 1, wait: 2, ok: 3 }; return o[a.state] - o[b.state]; }).map(function (f) {
         return '<tr><td>' + esc(f.scope) + '</td><td>' + (f.link ? '<a href="' + esc(f.link) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name)) + '</td><td>' +
           tag(f.state === 'fail' ? 'c-risk' : f.state === 'warn' ? 'c-ops' : f.state === 'ok' ? 'c-ok' : 'c-mute', f.state === 'ok' ? 'OK' : f.state === 'warn' ? 'Count off' : f.state === 'fail' ? 'Problem' : 'Not read') + '<div class="lbl">' + esc(f.note) + '</div></td><td>' + d(f.asOf) + '</td></tr>';
       }).join('') + '</table></div>' + (bad.length || warn.length ? '' : '</details>') + '</section>';
@@ -662,7 +662,7 @@
     var k14 = latest.K014, tm = meta('triggers');
     h += '<section class="card c-ops"><div class="cardhead"><h3>Scheduled jobs</h3>' + tag('c-ops', 'Paused') + '</div>' +
       '<p>All scheduled money jobs are paused while you review the hub. ' + (k14 ? 'Last confirmed ' + esc(whenOf(k14.run_on)) + ': ' + esc(k14.result) : '') + '</p>' +
-      (trig.length ? '<details><summary class="more">' + trig.length + ' money jobs listed in TRIGGERS.csv</summary><div class="scroll"><table><tr><th>Job</th><th>When</th><th>Task id</th><th>File says</th></tr>' + trig.map(function (t) {
+      (trig.length ? '<details><summary class="more">' + trig.length + ' money jobs listed in TRIGGERS.csv</summary><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Job</th><th>When</th><th>Task id</th><th>File says</th></tr>' + trig.map(function (t) {
         return '<tr><td><b>' + esc(t.trigger_id) + '</b><div class="lbl">' + esc(String(t.name || '').replace(/^TR-\S+ · /, '')) + '</div></td><td>' + esc(t.cadence_uk) + '</td><td><code>' + esc(t.mechanism_id) + '</code></td><td>' + esc(t.status) + '</td></tr>';
       }).join('') + '</table></div><p class="note">TRIGGERS.csv was last recounted ' + d(tm && tm.asOf) + ' and still says ENABLED for these; the pause check above is newer.</p></details>' : '<p class="note">TRIGGERS.csv not read' + (tm && tm.error ? ': ' + esc(tm.error) : '') + '.</p>') +
       src('TRIGGERS.csv', tm) + '</section>';
