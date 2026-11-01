@@ -864,7 +864,7 @@
   // Packing mode: one parcel at a time in shelf order. Found → the drop-off code shows once the engine has it → Posted.
   function pagePack() {
     var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found' || Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
-    if (!list.length) { pack = null; return '<p class="needs">Packing</p>' + emptyCard('All packed', 'Nothing left to post.', '<button class="btn main big" type="button" data-action="stoppack">Back to Do now</button>'); }
+    if (!list.length) { return '<p class="needs">Packing</p>' + emptyCard('All packed', 'Nothing left to post.', '<button class="btn main big" type="button" data-action="stoppack">Back to Do now</button>'); }
     var i = Math.min(pack.i, list.length - 1), r = list[i], d = detail(r);
     var h = '<div class="packbar"><span>Packing · ' + (i + 1) + ' of ' + list.length + '</span><button class="btn" type="button" data-action="stoppack">Stop</button></div>';
     h += '<div class="card acc4">' + courierBand(r, d) + '<div class="item">' + thumb(d.photo, r.category) + '<div class="t"><span class="parcel">#' + esc(r._no) + '</span><div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([owner(r), d.platform ? 'sold on ' + d.platform : ''].filter(Boolean).join(' · ')) + '</div>' + orderLine(r, d) + '<p class="what"><b>Next: ' + esc(nextStep(d)) + '</b></p></div></div>';
