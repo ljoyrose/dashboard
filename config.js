@@ -108,10 +108,10 @@
       webAppFile: 'BIN-GUARD-WEBAPP.json',
       webAppUrl: '' // optional: paste the /exec address here instead. Left empty, the page reads it from webAppFile.
     },
-    // Projects Hub (Apps Script web app in the private projects-hub repo). Its address is NOT kept here yet: left empty,
-    // the home screen shows no Projects Hub tile. Where the address will live is Lisa's open privacy decision for all hubs.
+    // Projects Hub (Apps Script web app in the private projects-hub repo). Lisa OK'd the address here (1 Nov 2026): it
+    // grants nothing on its own; Google limits the web app to her Workspace and the hub lets in only its EDITORS list.
     projectsHub: {
-      webAppUrl: '' // the hub's /exec address; only a script.google.com /exec address is accepted
+      webAppUrl: 'https://script.google.com/macros/s/AKfycbx42JNrRiolxbf5JJEqnOwXy_GgYelx-6GKhQaNuQMyUsTW5e89P2VZBANP_yGSOxgj/exec'
     },
     money: {
       owner: 'lisa@puppyclassroom.com',
