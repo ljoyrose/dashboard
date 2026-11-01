@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
+const PH = require('../support/world').IDS.projectsHub; // Projects Hub tile only when config.js holds its address
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
@@ -27,10 +28,10 @@ test.describe('One way in', () => {
     await expect(page.locator('#view .figs, #view .fig')).toHaveCount(0);
   });
 
-  test('Key projects holds exactly MOVE and the seven hubs', async ({ page }) => {
+  test('Key projects holds exactly MOVE and the hubs', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await expect(page.locator('#key-projects a.keytile')).toHaveText(['MOVE', 'Money Hub', 'CD Hub', 'Factory', 'Marketplace', 'GA Hub', 'Studio', 'Web Estate']);
+    await expect(page.locator('#key-projects a.keytile')).toHaveText(['MOVE', 'Money Hub', 'CD Hub', 'Factory', 'Marketplace', 'GA Hub', 'Studio', 'Web Estate'].concat(PH ? ['Projects Hub'] : []));
     for (const a of await page.locator('#key-projects a.keytile').all()) await expect(a).toHaveAttribute('target', '_blank');
   });
 

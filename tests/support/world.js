@@ -39,6 +39,7 @@ const IDS = {
   ledger: CONF.home.ledgerFileId,
   excludedDrive: (CONF.cleanup.excludedDrives.find((d) => d.name === 'Karen - SHARED') || {}).id, // hard rule 14, found by name
   moveSheet: CONF.urls.moveSheet,
+  projectsHub: (CONF.projectsHub || {}).webAppUrl || '', // the Projects Hub tile's /exec address ('' = no tile)
   factoryLogs: CONF.factory.logsFolderId, // the folder the Factory page reads af-state.json from
 };
 const WANT_BLD = (() => {
