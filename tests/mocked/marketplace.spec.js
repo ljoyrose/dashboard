@@ -846,6 +846,22 @@ test('v11.10 Fix 5: the same item sold twice = two cards, each with its order no
     await open(page);
     await expect(page.locator('#view [data-engine]')).toHaveText('Engine: no status yet');
   });
+  test('v11.11 L-10: on a return visit (saved sign-in) the line says "reading the sheet…" until the first read, then "no status yet" @regression', async ({ page }) => {
+    let hold = false, release;
+    const held = new Promise((r) => { release = r; });
+    await page.route(/googleapis\.com\/drive\/v3\/files\/[\w-]+\?alt=media/, (route) => route.fulfill({ status: 200, contentType: 'text/csv', body: 'listing_id,image_url\n' }));
+    await page.route(SHEETS, async (route) => {   // after the first visit, hold the read so the page draws before the rows arrive
+      if (hold) await held;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: sampleRows() }) });
+    });
+    await open(page);   // first visit: signs in and saves the sign-in
+    hold = true;
+    await page.reload();   // return visit: the saved sign-in draws the page at once, before the sheet is read
+    await expect(page.locator('#view [data-engine]')).toHaveText('Engine: reading the sheet…');
+    await expect(page.locator('#view')).not.toContainText('Engine: no status yet');
+    release();
+    await expect(page.locator('#view [data-engine]')).toHaveText('Engine: no status yet');
+  });
   test('v11.11 B/E/F: Numbers shows the morning number and KPI tiles in the house tiles, the A note and the ads line; Home shows the morning line', async ({ page }) => {
     const note = ['NOTE|baselines-A', 'note', '', 'SAMPLE baseline note', JSON.stringify({ kind: 'note', item: 'A', text: 'SAMPLE: baselines agree, £1,072.42 net 5 Aug–27 Oct.' }), ago(3)];
     await sheets(page, [status(), growth({ ads: { fees: '£3.00', pct: 12.5, over: true } }), note, ...sampleRows()]);
