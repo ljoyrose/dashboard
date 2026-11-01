@@ -2,6 +2,7 @@
 // app window started signed out. Now one sign-in (kept in this browser until it expires or you sign out)
 // covers every tab, and Money Hub and CD Hub open in their own tab with a "Dashboard" button.
 const { test, expect } = require('../support/test');
+const { at } = require('../support/site');
 
 const MOVE = require('../support/world').IDS.moveSheet; // read from config.js, never copied (this repo is public)
 const signIn = async (page) => {
@@ -31,7 +32,7 @@ test.describe('One sign-in for every tab', () => {
     await expect(cd.locator('#signinbtn')).toHaveCount(0);
     expect(await gisRequests(cd)).toBe(0);
     // The dashboard tab itself was not replaced.
-    await expect(page).toHaveURL(/\/dashboard\/(#\/map)?$/);
+    await expect(page).toHaveURL(at('(#/map)?'));
   });
 
   test('a brand-new tab (or the installed app window) typed straight to money/ is signed in too', async ({ page, context }) => {
@@ -140,7 +141,7 @@ test.describe('Dashboard button (every page except home)', () => {
       await b.focus();
       await expect(b).toBeFocused();
       await page.keyboard.press('Enter');
-      await expect(page).toHaveURL(/\/dashboard\/(#\/map)?$/);
+      await expect(page).toHaveURL(at('(#/map)?'));
       await expect(page).toHaveTitle(/Lisa Dashboard|Map/);
     });
 
@@ -153,7 +154,7 @@ test.describe('Dashboard button (every page except home)', () => {
       // The tab can close before click() returns; that close is the point, not an error.
       await Promise.all([tab.waitForEvent('close'), tab.locator('#backHome').click().catch((e) => { if (!/closed/.test(e.message)) throw e; })]);
       expect(context.pages()).toEqual([page]);
-      await expect(page).toHaveURL(/\/dashboard\/(#\/map)?$/);
+      await expect(page).toHaveURL(at('(#/map)?'));
     });
   }
 });

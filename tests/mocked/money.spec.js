@@ -1,5 +1,6 @@
 // Money Hub: https://ljoyrose.github.io/dashboard/money/
 const { test, expect, buildWorld } = require('../support/test');
+const { at } = require('../support/site');
 const { IDS } = require('../support/world');
 
 const signIn = async (page) => {
@@ -113,7 +114,7 @@ test.describe('Money Hub: navigation', () => {
   test('"Dashboard" button goes back to the main dashboard', async ({ page }) => {
     await page.goto('money/');
     await page.locator('a.back').click();
-    await expect(page).toHaveURL(/\/dashboard\/(#\/map)?$/);
+    await expect(page).toHaveURL(at('(#/map)?'));
     await expect(page).toHaveTitle(/Lisa Dashboard|Map/);
   });
 
