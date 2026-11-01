@@ -229,7 +229,8 @@
     if (!token) { render(); return; }
     api(base() + ':batchGet?' + RANGES.map(function (r) { return 'ranges=' + encodeURIComponent(r); }).join('&')).then(function (j) {
       var vr = (j.valueRanges || []).map(function (x) { return x.values || []; });
-      data.cards = (vr[0] || []).map(function (v, i) { var o = { _row: i + 2 }; CARD_COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
+      data.cards = (vr[0] || []).map(function (v, i) { var o = { _row: i + 2 }; CARD_COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; })
+        .filter(function (o) { return !/^PACK-/.test(o.key); });   // G7: Fish Treats postage to-dos live in the Marketplace hub (Do now > Post), not told twice
       data.orders = table(vr[1]); data.invoices = table(vr[2]); data.products = table(vr[3]);
       data.settings = {}; table(vr[4]).forEach(function (s) { data.settings[s.key] = s; });
       data.statements = table(vr[5]).sort(function (a, b) { return String(b.statement_date).localeCompare(String(a.statement_date)); });
