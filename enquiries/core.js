@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.1.0 (2026-10-29)';
+  var VERSION = 'enquiries-core 1.2.0 (2026-10-29)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -354,6 +354,82 @@
     return { ok: true, problems: [], rows: rows };
   }
 
+  // ---- UK time ------------------------------------------------------------------------------------------------
+  // Any time -> 'YYYY-MM-DDTHH:mm:ss' on the UK clock (GMT or BST). '' when unreadable.
+  var UK_FMT = null;
+  function toUk(v) {
+    var ms = toMs(v); if (isNaN(ms)) return '';
+    try {
+      UK_FMT = UK_FMT || new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' });
+      var p = {}; UK_FMT.formatToParts(new Date(ms)).forEach(function (x) { p[x.type] = x.value; });
+      return p.year + '-' + p.month + '-' + p.day + 'T' + p.hour + ':' + p.minute + ':' + p.second;
+    } catch (e) { return new Date(ms).toISOString().slice(0, 19); }
+  }
+  function summary(text, max) {
+    var t = String(text == null ? '' : text).replace(/\s+/g, ' ').trim();
+    max = max || 300;
+    return t.length > max ? t.slice(0, max - 1) + '…' : t;
+  }
+  function lastPart(uri) { var s = String(uri || '').replace(/\/+$/, ''); return s.slice(s.lastIndexOf('/') + 1); }
+
+  // ---- Capture: Calendly "Whatsapp Call" ------------------------------------------------------------------------
+  // pairs: [{ event, invitee }] as the Calendly API v2 returns them (scheduled_events and their invitees, cancelled ones
+  // included). A reschedule in Calendly cancels the old invitee (rescheduled: true, new_invitee set) and books a new one
+  // (old_invitee set), so we follow old_invitee back to the first booking: one chain = one enquiry.
+  // Returns { enquiries: [row], events: [row], people: [person] }. Person details go only to the private People tab.
+  function calendlyRecords(pairs, opts) {
+    opts = opts || {};
+    var byUri = {}, list = (pairs || []).filter(function (p) { return p && p.invitee && p.invitee.uri; });
+    if (opts.eventName) {
+      var want = String(opts.eventName).toLowerCase();
+      list = list.filter(function (p) { return String((p.event && p.event.name) || '').toLowerCase() === want; });
+    }
+    list.forEach(function (p) { byUri[p.invitee.uri] = p; });
+    function root(p) {
+      var seen = {}, cur = p;
+      while (cur.invitee.old_invitee && byUri[cur.invitee.old_invitee] && !seen[cur.invitee.uri]) { seen[cur.invitee.uri] = 1; cur = byUri[cur.invitee.old_invitee]; }
+      return cur;
+    }
+    var chains = {};
+    list.forEach(function (p) { var r = root(p).invitee.uri; (chains[r] = chains[r] || []).push(p); });
+    var out = { enquiries: [], events: [], people: [] };
+    Object.keys(chains).forEach(function (rootUri) {
+      var ch = chains[rootUri].sort(function (a, b) { return toMs(a.invitee.created_at) - toMs(b.invitee.created_at); });
+      var first = ch[0], last = ch[ch.length - 1], inv = last.invitee;
+      var key = rowKey('calendly', rootUri);
+      var qa = {};
+      ch.forEach(function (p) { (p.invitee.questions_and_answers || []).forEach(function (q) { if (q && q.answer) qa[String(q.question || '').toLowerCase()] = q.answer; }); });
+      var help = '', phone = inv.text_reminder_number || '';
+      Object.keys(qa).forEach(function (q) { if (/help/.test(q)) help = qa[q]; else if (/whats ?app|mobile|phone|number/.test(q)) phone = qa[q] || phone; });
+      var where = inferCountry({ phone: phone, timezone: inv.timezone, defaultCode: opts.defaultCode });
+      var ev = [];
+      ch.forEach(function (p, i) {
+        var at = p.invitee.created_at;
+        ev.push({ type: i === 0 ? 'booked' : 'rescheduled', at: at, start: p.event && p.event.start_time, ref: p.invitee.uri });
+      });
+      if (inv.status === 'canceled' && !inv.rescheduled) ev.push({ type: 'cancelled', at: (inv.cancellation && inv.cancellation.created_at) || inv.updated_at, start: last.event && last.event.start_time, ref: inv.uri, who: inv.cancellation && inv.cancellation.canceler_type });
+      if (inv.no_show) ev.push({ type: 'no-show', at: inv.no_show.created_at || (last.event && last.event.start_time), start: last.event && last.event.start_time, ref: inv.uri });
+      ev.forEach(function (e) {
+        out.events.push({ event_key: 'V-' + hash(rootUri + '|' + e.type + '|' + e.ref), enquiry_key: key, person_key: '', at_uk: toUk(e.at),
+          channel: 'calendly', type: e.type, detail: e.start ? 'call ' + toUk(e.start).replace('T', ' ').slice(0, 16) + ' UK' + (e.who ? ', cancelled by ' + e.who : '') : '', source_ref: lastPart(e.ref) });
+      });
+      var cancelled = inv.status === 'canceled' && !inv.rescheduled;
+      var kind = help ? classifyKind(help) : 'puppy';
+      if (kind === 'other' && !/\w{3,}.*\w{3,}/.test(help)) kind = 'puppy';  // a one-word answer on the puppy call is a puppy enquiry
+      out.enquiries.push({
+        key: key, person_key: '', source: 'Calendly ' + ((first.event && first.event.name) || 'Whatsapp Call'), source_ref: lastPart(rootUri),
+        received_uk: toUk(first.invitee.created_at), channel: 'calendly', kind: kind, country: where.country,
+        country_basis: where.basis, question_summary: summary(help, opts.maxChars), stage: cancelled ? 'new' : 'call-booked',
+        next_step: cancelled ? 'Call cancelled: offer a new time' : inv.no_show ? 'No-show: message to rebook' : 'Prep the WhatsApp call',
+        next_due_uk: cancelled ? '' : toUk(last.event && last.event.start_time), consent: 'unknown',
+        flag: [where.conflict ? 'country-check' : '', inv.no_show ? 'no-show' : ''].filter(Boolean).join(' ')
+      });
+      out.people.push({ enquiry_key: key, name: inv.name || [inv.first_name, inv.last_name].filter(Boolean).join(' '), email: normaliseEmail(inv.email),
+        phone_e164: normalisePhone(phone, opts.defaultCode).e164, country: where.country, country_basis: where.basis, timezone: inv.timezone || '' });
+    });
+    return out;
+  }
+
   var api = {
     VERSION: VERSION, CALLING: CALLING, STAGES: STAGES, ADULT_STAGES: ADULT_STAGES, KINDS: KIND_ORDER.slice(),
     normalisePhone: normalisePhone, countryFromPhone: countryFromPhone, countryFromTimezone: countryFromTimezone,
@@ -361,7 +437,8 @@
     rowKey: rowKey, groupPeople: groupPeople, mergeRow: mergeRow, stageRank: stageRank, classifyKind: classifyKind,
     hoursSince: hoursSince, toMs: toMs,
     FLOW: FLOW, COLUMNS: COLUMNS, CHANNELS: CHANNELS, BANDS: BANDS, CONSENT: CONSENT, ENUMS: ENUMS,
-    checkHeader: checkHeader, validateRow: validateRow, stageFlags: stageFlags, parseTab: parseTab, truthy: truthy
+    checkHeader: checkHeader, validateRow: validateRow, stageFlags: stageFlags, parseTab: parseTab, truthy: truthy,
+    toUk: toUk, summary: summary, lastPart: lastPart, calendlyRecords: calendlyRecords
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
