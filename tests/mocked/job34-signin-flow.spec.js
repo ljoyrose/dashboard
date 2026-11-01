@@ -1,6 +1,20 @@
 // JOB 34 (group A): the home page sign-in flow paths no other spec walks.
 // Pretend Google and Drive only (tests/support). Every row is invented.
-const { test, expect } = require('../fixtures/job34/load');
+const { test, expect, IDS } = require('../fixtures/job34/load');
+
+// Since TidyUp stage 5 (#135) Bin access is asked from the "Allow access, then bin" button, so these paths tick
+// one invented ready file first. bin-page.spec.js covers the label and the grant-then-bin path; this file covers
+// what happens around the permission answer.
+const readyFile = (world) => {
+  world.file('zz-sample-ready', 'ZZ_DELETE_sample-ready.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
+  world.byId(IDS.ledger).content = 'file_id\nzz-sample-ready\n';
+};
+const tickReady = async (page) => {
+  await page.locator('#sweepCard li:has([title="ZZ_DELETE_sample-ready.txt"]) input').check();
+  const btn = page.locator('#sweepCard [data-action="sweep"]');
+  await expect(btn).toContainText('Allow access, then bin (1)');
+  return btn;
+};
 
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
@@ -34,28 +48,30 @@ test.describe('Home sign-in: the paths around the button', () => {
     await expect(page.locator('#mainNav')).toBeVisible();
   });
 
-  test('Bin permission refused by Google: says browsing still works, stays signed in, no "Sign in again"', async ({ page }) => {
+  test('Bin permission refused by Google: says browsing still works, stays signed in, no "Sign in again"', async ({ page, guard }) => {
+    readyFile(guard.world);
     await page.goto('./#/bin');
     await signIn(page);
-    const allow = page.locator('[data-action="grantwrite"]');
-    await expect(allow).toBeVisible();
+    const allow = await tickReady(page);
     await page.evaluate(() => { window.__GIS_MODE = 'error'; });
     await allow.click();
     await expect(page.locator('#banner')).toHaveText('Bin access not granted. Browsing still works.');
     await expect(page.locator('#banner [data-action="signin"]')).toHaveCount(0);
     await expect(page.locator('#signOutBtn')).toBeVisible();
-    await expect(page.locator('[data-action="foldjump"][data-key="access"]')).toContainText('allow bin actions');
-    await expect(allow).toBeVisible();
+    await expect(allow).toContainText('Allow access, then bin (1)');
+    expect(guard.world.byId('zz-sample-ready').trashed).toBeFalsy();
   });
 
-  // J34-F01 FIX-REQUEST (index.html onError ~line 2707 and requestWrite ~line 1364): the Bin permission window closing is
+  // J34-F01 FIX-REQUEST (index.html onToken ~line 2775 and requestWrite ~line 1386): the Bin permission window closing is
   // reported as a failed sign-in, and wantWrite is never reset. DECISION NEEDED: fix the page (JOB 4 TidyUp) or accept.
   // OWNER: JOB 4 TidyUp lead. BY 2026-11-06
-  test.fixme('J34-F01 closing the Bin permission window says the Bin was not allowed, not "Sign in again" while still signed in', async ({ page }) => {
+  test.fixme('J34-F01 closing the Bin permission window says the Bin was not allowed, not "Sign in again" while still signed in', async ({ page, guard }) => {
+    readyFile(guard.world);
     await page.goto('./#/bin');
     await signIn(page);
+    const allow = await tickReady(page);
     await page.evaluate(() => { window.__GIS_MODE = 'popup-closed'; });
-    await page.locator('[data-action="grantwrite"]').click();
+    await allow.click();
     // Today: "Sign-in window closed early." with a "Sign in again" button, although the person is signed in.
     await expect(page.locator('#banner')).toContainText('Bin access not granted');
     await expect(page.locator('#banner [data-action="signin"]')).toHaveCount(0);
@@ -65,13 +81,16 @@ test.describe('Home sign-in: the paths around the button', () => {
     await expect(page.locator('#banner')).toBeHidden();
   });
 
-  test('Bin permission granted: the Permission line says "bin actions on" and the Allow button goes away', async ({ page }) => {
+  test('Bin permission granted: no banner, nothing binned yet, and the button turns into the red "Bin these (1)"', async ({ page, guard }) => {
+    readyFile(guard.world);
     await page.goto('./#/bin');
     await signIn(page);
-    await page.locator('[data-action="grantwrite"]').click();
-    await expect(page.locator('[data-action="foldjump"][data-key="access"]')).toContainText('bin actions on');
-    await expect(page.locator('[data-action="grantwrite"]')).toHaveCount(0);
+    const allow = await tickReady(page);
+    await allow.click();
+    await expect(allow).toContainText('Bin these (1)');
+    await expect(allow).toHaveClass(/danger/);
     await expect(page.locator('#banner')).toBeHidden();
+    expect(guard.world.byId('zz-sample-ready').trashed).toBeFalsy();
   });
 
   test('a sign-in that runs out during the 5-minute refresh says "Sign-in expired." and Sign in again works', async ({ page }) => {

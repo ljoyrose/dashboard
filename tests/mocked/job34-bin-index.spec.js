@@ -1,4 +1,6 @@
-// JOB 34 (group A): the Bin page index, drive filter, empty bins and a failed read.
+// JOB 34 (group A): the Bin page "Needs you now" jumps, drive buttons, drive filter, empty bins and a failed read.
+// Follows the TidyUp stage 5 page (#135): the old index strip and Permission card are gone; bin-page.spec.js
+// covers section order and the Bin these button, so this file does not repeat them.
 // Pretend Google and Drive only. Every drive and file is invented.
 const { test, expect } = require('../fixtures/job34/load');
 
@@ -10,25 +12,29 @@ const signIn = async (page) => {
 const openBin = async (page) => {
   await page.goto('./#/bin');
   await signIn(page);
-  await expect(page.locator('#binCard .cardhead, #binCard summary .state').first()).not.toContainText('Reading');
-  await expect(page.locator('[data-action="foldjump"][data-key="bins"] .n')).not.toHaveText('reading…');
+  await expect(page.locator('#binCard summary .state').first()).not.toContainText('Reading');
 };
 
 test.describe('Bin: index and sections', () => {
-  test('each index button opens its section and puts the keyboard on that section\'s title', async ({ page }) => {
+  test('Needs you now: each count button opens its section and puts the keyboard on that section\'s title', async ({ page }) => {
     await openBin(page);
-    for (const key of ['check', 'sweep', 'dropbox', 'bins', 'access']) {
+    const jumps = page.locator('#needsNow [data-action="foldjump"]');
+    await expect(jumps).toHaveCount(3);
+    const keys = await jumps.evaluateAll((els) => els.map((e) => e.getAttribute('data-key')));
+    expect(keys.slice(0, 2)).toEqual(['sweep', 'check']);
+    for (const key of keys) {
       // Close it first, so the button has something to do.
       await page.evaluate((k) => { const d = document.querySelector('[data-fold="' + k + '"]'); if (d) d.open = false; }, key);
-      await page.locator(`[data-action="foldjump"][data-key="${key}"]`).click();
+      await page.locator(`#needsNow [data-action="foldjump"][data-key="${key}"]`).click();
       const fold = page.locator(`details[data-fold="${key}"]`);
       await expect(fold, key + ' opens').toHaveAttribute('open', '');
       await expect(fold.locator('summary').first(), key + ' title has focus').toBeFocused();
     }
   });
 
-  test('a drive button in the bins list opens that drive\'s bin and lists what was binned', async ({ page }) => {
+  test('a drive button in Already in the bin opens that drive\'s bin and lists what was binned', async ({ page }) => {
     await openBin(page);
+    await page.locator('#binCard > summary').click();
     const btn = page.locator('#binCard [data-action="foldjump"][data-key="bin-drv-alpha1"]');
     await expect(btn).toContainText('Test Drive Alpha');
     await btn.click();
@@ -45,6 +51,7 @@ test.describe('Bin: index and sections', () => {
       guard.world.file('trash-SAMPLE-' + i, 'binned-sample-' + i + '.txt', 'invented', { parents: [id], driveId: id, mimeType: 'text/plain', trashed: true, trashedTime: '2026-03-08T09:00:00.000Z' });
     }
     await openBin(page);
+    await page.locator('#binCard > summary').click();
     const box = page.locator('#binFilter');
     await expect(box).toHaveAttribute('placeholder', /Find a shared drive \(9\)/);
     const buttons = page.locator('#binCard .index [data-action="foldjump"]');
@@ -61,9 +68,10 @@ test.describe('Bin: index and sections', () => {
     const b = guard.world.byId('bin-1');
     b.trashed = false;
     await openBin(page);
+    await page.locator('#binCard > summary').click();
     await expect(page.locator('#binCard')).toContainText('Every shared drive has an empty bin.');
     await expect(page.locator('#binCard')).toContainText('3 shared drives have an empty bin');
-    await expect(page.locator('[data-action="foldjump"][data-key="bins"] .n')).toHaveText('0 in the bin');
+    await expect(page.locator('#binCard [data-action="foldjump"]')).toHaveCount(0);
   });
 
   test('Drive refuses the Bin read: the sections say "Read failed" and nothing can be ticked or moved', async ({ page, guard, allowedConsole }) => {
