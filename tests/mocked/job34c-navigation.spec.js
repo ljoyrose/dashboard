@@ -15,11 +15,11 @@ const signIn = async (page) => {
 const LANDED = {
   'money/': '#signInBtn, #readStamp',
   'cdhub/': '#signinbtn, #nav button[data-go]',
+  'estate/': '#view',
   'factory/': '#view',
   'marketplace/': '#view',
   'food/': '#view',
   'studio/': '#signInBtn, #enginePill',
-  'estate/': '#view', // Web Estate tile added to Home by #190
 };
 // The lit menu entries on a hub, by href / data-go / data-nav, so every hub's style of menu reads the same.
 const current = (page) => page.evaluate(() => [...document.querySelectorAll('[aria-current="page"]')]
