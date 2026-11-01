@@ -89,7 +89,7 @@ family trees, puppy packs, social graphics, page and email drafts, for every bra
   filter group, and active filters show as removable chips.
   Stages read "Step N: Name" (no numbers in circles); counts wear one ring; no solid colour fills; one 12px radius
   (`--radius`); two pill sizes; two font weights. On the phone the header keeps the status pills and one More menu.
-- **Library** (Kits tab): Playbooks, Packs, Kits and Bricks each have + New and Edit (the Sheet's fields, checked before
+- **Library** (Kits tab): Playbooks, Packs, Kits and Parts (code id `bricks`) each have + New and Edit (the Sheet's fields, checked before
   sending; one `library` request) and a Suggest box anyone on the team can use (one `libsuggest` request, waits for Lisa).
   Kits and Packs carry an optional price (ex or inc VAT, shown ex / inc / both by the viewer's choice), a source-files
   add-on and a lead time; VAT rates are listed read-only on Brands.
