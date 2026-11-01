@@ -362,7 +362,7 @@
   }
   // The order check: did every shop order reach GA, and did GA send the same items?
   var CHECK = { 'Matched': ['✅ Matched with GA', ''], 'Shipped': ['🚚 Shipped by GA', ''], 'Waiting for GA': ['⏳ Waiting for GA', ''], 'At GA': ['📥 At GA (confirmed)', ''], 'At GA, not shipped': ['⚠️ At GA but not shipped', 'no'], 'Not at GA': ['❌ Not at GA: check the Portal', 'no'],
-    'Items differ': ['⚠️ GA sent different items', 'no'], 'Not in Shopify': ['❓ Not in Shopify: check the reference', 'no'], 'No GA items': ['🏠 Packed at home (no GA items)', ''], 'Cancelled': ['✖ Cancelled', ''],
+    'Items differ': ['⚠️ GA sent different items', 'no'], 'Not in Shopify': ['❓ Not in Shopify: check the reference', 'no'], 'No GA items': ['📭 No GA items: see its card', ''], 'Pack at home': ['🏠 Pack at home: tap Packed once posted', ''], 'Packed at home': ['🏠 Packed at home', ''], 'Cancelled': ['✖ Cancelled', ''],
     'Replacement': ['🔁 Replacement, sent again', ''], 'Split box': ['📦 Extra box of the same order', ''] };
   function checkBadge(o) { var c = CHECK[o.check]; return c ? '<div class="badges"><span class="badge' + (c[1] ? ' ' + c[1] : '') + '">' + esc(c[0]) + '</span></div>' : ''; }
   var OFILTERS = [['all', 'All'], ['check', 'Needs a look'], ['ga', 'Not at GA yet'], ['sub', 'Subscriptions'], ['low', 'Low profit']], ofilter = 'all';
