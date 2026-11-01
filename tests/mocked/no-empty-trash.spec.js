@@ -80,7 +80,7 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
-  const mainSections = ['#/map', '#/readfirst', '#/drive', '#/drive/drv-alpha1', '#/personal', '#/usb', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'];
+  const mainSections = ['#/map', '#/drives', '#/drives/shared', '#/drives/readfirst', '#/drives/shared/drv-alpha1', '#/drives/work', '#/drives/personal-drive', '#/drives/usb', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'];
   for (const hash of mainSections) {
     await page.evaluate((h) => { location.hash = h; }, hash);
     await expect(page.locator('#view')).toHaveAttribute('data-route', hash);
