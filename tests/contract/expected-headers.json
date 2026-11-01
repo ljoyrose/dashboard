@@ -157,8 +157,8 @@
       "read": ["subject_id", "area_id", "classification", "off_site_kind"]
     },
     "BLD-subject.csv": {
-      "columns": ["id", "name", "sex", "dob", "size_band", "coat_type", "kind", "neuter_status", "source", "species", "breed", "coat_colour_id", "coat_pattern_id", "nose_pigment_id", "birth_litter_id"],
-      "read": ["id", "name", "sex", "dob", "size_band", "coat_type", "kind", "neuter_status", "source", "species", "breed", "coat_colour_id", "coat_pattern_id", "nose_pigment_id", "birth_litter_id"]
+      "columns": ["id", "name", "sex", "dob", "size_band", "coat_type", "kind", "neuter_status", "source", "species", "breed", "coat_colour_id", "coat_pattern_id", "nose_pigment_id", "birth_litter_id", "rx_moxi_date", "rx_moxi_expiry", "rx_moxi_file_url"],
+      "read": ["id", "name", "sex", "dob", "size_band", "coat_type", "kind", "neuter_status", "source", "species", "breed", "coat_colour_id", "coat_pattern_id", "nose_pigment_id", "birth_litter_id", "rx_moxi_expiry", "rx_moxi_file_url"]
     },
     "BLD-subject_status.csv": {
       "columns": ["subject_id", "state"],
