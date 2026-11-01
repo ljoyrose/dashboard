@@ -30,6 +30,14 @@ jobs:
       issues: write # only used to open/close the one "tests are red" issue on scheduled runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # to compare the whole branch with main
+
+      # Docs-only branch (only docs/ or *.md, never TESTS.md, .github/ or tests/): skip the browser, still run the
+      # no-browser checks (secret scan of every file, CI guards). main, schedules and hand-started runs always run everything.
+      - name: Docs-only branch? (the browser is skipped, the file checks still run)
+        id: scope
+        run: bash tools/ci-local/docs-only.sh
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -40,6 +48,7 @@ jobs:
         run: npm ci
 
       - name: Remember the test browser between runs
+        if: steps.scope.outputs.browser == 'true'
         id: pw-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -47,16 +56,21 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install the test browser (first time, or after a version change)
-        if: steps.pw-cache.outputs.cache-hit != 'true'
+        if: steps.scope.outputs.browser == 'true' && steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Install the browser's system libraries (browser itself came from the cache)
-        if: steps.pw-cache.outputs.cache-hit == 'true'
+        if: steps.scope.outputs.browser == 'true' && steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
       - name: Run tests (desktop suite, then the small phone-sized set)
+        if: steps.scope.outputs.browser == 'true'
         id: run
         run: npx playwright test --project=mocked --project=phone
+
+      - name: Docs-only branch - run the checks that need no browser (secret scan, CI guards)
+        if: steps.scope.outputs.browser == 'false'
+        run: npx playwright test --project=mocked tests/mocked/repo-hygiene.spec.js tests/mocked/ci-guards.spec.js
 
       - name: Write the short summary
         if: always()
