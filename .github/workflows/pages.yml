@@ -92,9 +92,9 @@ jobs:
         if: steps.ready.outputs.ready == 'true'
         run: |
           mkdir _site
-          cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio _site/
+          cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio estate _site/
           ls -R _site
-          test -f _site/index.html && test -f _site/cdhub/index.html && test -f _site/money/index.html && test -f _site/money/core.js && test -f _site/factory/index.html && test -f _site/marketplace/index.html && test -f _site/food/index.html && test -f _site/studio/index.html && test -f _site/auth.js && test -f _site/tokens.css && test -f _site/house.css
+          test -f _site/index.html && test -f _site/cdhub/index.html && test -f _site/money/index.html && test -f _site/money/core.js && test -f _site/factory/index.html && test -f _site/marketplace/index.html && test -f _site/food/index.html && test -f _site/studio/index.html && test -f _site/estate/index.html && test -f _site/estate/core.js && test -f _site/auth.js && test -f _site/tokens.css && test -f _site/house.css
       - name: Package the site
         if: steps.ready.outputs.ready == 'true'
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0
