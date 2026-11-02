@@ -1,3 +1,4 @@
+const { tabClick } = require('../support/tabs');
 // JOB 34 (group A): the Bin page index, drive filter, empty bins and a failed read.
 // Pretend Google and Drive only. Every drive and file is invented.
 const { test, expect } = require('../fixtures/job34/load');
@@ -82,7 +83,7 @@ test.describe('Bin: index and sections', () => {
     await page.goto('./');
     await signIn(page);
     guard.world.failWith = { status: 403, reason: 'forbidden', message: 'Sample refusal' };
-    await page.locator('#mainNav a[data-nav="bin"]').click();
+    await tabClick(page, '#mainNav a[data-nav="bin"]');
     await expect(page.locator('#sweepCard')).toContainText('Read failed: Access refused by Google.');
     await expect(page.locator('#binCard')).toContainText('Read failed');
     await expect(page.locator('#view input[data-pick-group="bin"]')).toHaveCount(0);

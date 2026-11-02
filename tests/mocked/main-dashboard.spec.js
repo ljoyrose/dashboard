@@ -1,5 +1,6 @@
 // Main dashboard: https://ljoyrose.github.io/dashboard/
 const { test, expect, buildWorld } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { at } = require('../support/site');
 
 const signIn = async (page) => {
@@ -13,13 +14,13 @@ test.describe('Main dashboard: loads', () => {
   test('page loads with HTTP 200 and shows only a sign-in button when signed out', async ({ page }) => {
     const res = await page.goto('./');
     expect(res.status()).toBe(200);
-    await expect(page).toHaveTitle(/Lisa Dashboard/);
+    await expect(page).toHaveTitle(/^Dashboard$/); // "Lisa Dashboard" became "Dashboard" (Lisa, 2 Nov: the phone cut it off)
     await expect(page.locator('#signInBtn')).toBeVisible();
     await expect(page.locator('#readStamp')).toHaveText('Not signed in');
     // README: signed out shows no tabs, labels or data
     await expect(page.locator('#mainNav')).toBeHidden();
     await expect(page.locator('#hereBox')).toBeHidden();
-    await expect(page.locator('#pageFoot')).toBeHidden();
+    await expect(page.locator('#pageFoot')).toHaveCount(0); // the footer explainer is gone (Lisa, 2 Nov)
   });
 
   test('sign-in button wakes up once the (pretend) Google script has loaded', async ({ page }) => {
@@ -40,14 +41,16 @@ test.describe('Main dashboard: sign-in (mocked)', () => {
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
-  test('after sign-in the Dashboard shows and the nav, header and footer appear', async ({ page }) => {
+  test('after sign-in the Dashboard shows and the nav and header appear; no footer explainer (Lisa, 2 Nov)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
     await expect(page.locator('#view')).toHaveAttribute('data-view', 'map');
     await expect(page.locator('#signOutBtn')).toBeVisible();
     await expect(page.locator('#signInBtn')).toBeHidden();
-    await expect(page.locator('#pageFoot')).toBeVisible();
+    await expect(page.locator('#mainNav')).toBeVisible();
+    await expect(page.locator('#pageFoot')).toHaveCount(0);
+    await expect(page.locator('body')).not.toContainText('Shared drives only. Browsing is read-only');
   });
 
   test('keeps only the shared sign-in, one key in this browser (no cookies, no refresh token)', async ({ page, context }) => {
@@ -91,9 +94,9 @@ test.describe('Main dashboard: navigation', () => {
       await page.goto('./');
       await signIn(page);
       if (how === 'tab') {
-        await page.locator(`#mainNav a[data-nav="${route}"]`).click();
+        await tabClick(page, `#mainNav a[data-nav="${route}"]`);
       } else {
-        await page.locator('#mainNav a[data-nav="drives"]').click();
+        await tabClick(page, '#mainNav a[data-nav="drives"]');
         await expect(page.locator('#hereTitle')).toHaveText('Drives');
         if (how === 'pin') await page.locator('#view [data-readfirst-pin] a').click();
         else await page.locator('#view nav.subnav a', { hasText: new RegExp(`^${label}$`) }).click();
@@ -108,9 +111,9 @@ test.describe('Main dashboard: navigation', () => {
   test('back button returns to the previous section (sections live in the URL)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await page.locator('#mainNav a[data-nav="bin"]').click();
+    await tabClick(page, '#mainNav a[data-nav="bin"]');
     await expect(page.locator('#hereTitle')).toHaveText('Bin');
-    await page.locator('#mainNav a[data-nav="drives"]').click();
+    await tabClick(page, '#mainNav a[data-nav="drives"]');
     await expect(page.locator('#hereTitle')).toHaveText('Drives');
     await page.goBack();
     await expect(page.locator('#hereTitle')).toHaveText('Bin');
@@ -216,9 +219,17 @@ test.describe('Main dashboard: reads Drive (mocked)', () => {
 });
 
 test.describe('Main dashboard: Money tile and links to /money/', () => {
+  const openMoney = async (page) => {
+    await expect(page.locator('#view #moneyTile')).toHaveCount(0);
+    await page.locator('#mainNav [data-house-more]').click();
+    await page.locator('#houseMore a[href="#/money"]').click();
+    await expect(page.locator('#view')).toHaveAttribute('data-view', 'money');
+    await expect(page.locator('#view #moneyTile')).toBeVisible();
+  };
   test('Money tile shows each entity separately, with cash, for Lisa', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
+    await openMoney(page); // the Money card moved off Main into More (Lisa, 2 Nov)
     const tile = page.locator('#view');
     await expect(tile).toContainText('TESTCO');
     await expect(tile).toContainText('TESTPERS');
@@ -230,15 +241,16 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
   test('"Open Money Hub" link goes to /money/ and that page loads', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
+    await openMoney(page); // the Money card moved off Main into More (Lisa, 2 Nov)
     const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a', { hasText: 'Open Money Hub' }).click()]); // opens in a new tab
     await expect(tab).toHaveURL(at('money/'));
     await expect(tab.locator('h1')).toContainText('Money Hub');
   });
 
-  test('Key projects "Money Hub" tile goes to /money/', async ({ page }) => {
+  test('the Money hub tile goes to /money/', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a.keytile[href="money/"]').click()]); // opens in a new tab
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view #hubTiles .hubtile a.hgo[href="money/"]').click()]); // opens in a new tab
     await expect(tab).toHaveURL(at('money/'));
     await expect(tab).toHaveTitle(/Money Hub/);
   });
@@ -246,6 +258,7 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
   test('clicking an entity on the tile opens that entity in the Money Hub', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
+    await openMoney(page); // the Money card moved off Main into More (Lisa, 2 Nov)
     const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a.ment', { hasText: 'TESTCO' }).click()]); // opens in a new tab
     await expect(tab).toHaveURL(/\/money\/#\/e\/TESTCO$/);
   });
@@ -253,6 +266,7 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
   test('a to-do on the tile links to that row in the Money Hub', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
+    await openMoney(page); // the Money card moved off Main into More (Lisa, 2 Nov)
     const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a[href^="money/#/register/"]').first().click()]); // opens in a new tab
     await expect(tab).toHaveURL(/\/money\/#\/register\/R001$/);
   });

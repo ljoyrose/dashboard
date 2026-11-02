@@ -3,6 +3,7 @@
 // each hub survive sign-in; unknown addresses fall back to the hub's first view with its tab lit.
 // All data is the invented sample world from tests/support (pretend Google, Drive and Sheets).
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { HUBS, go } = require('../support/hubs');
 
 const signIn = async (page) => {
@@ -42,11 +43,11 @@ async function openAt(page, guard, hub, hash) {
 }
 
 test.describe('Navigation across pages', () => {
-  test('every Key projects hub tile loads in the same tab, and its Dashboard button brings Home back still signed in', async ({ page }) => {
+  test('every hub tile on Main loads in the same tab, and its Dashboard button brings Home back still signed in', async ({ page }) => {
     test.setTimeout(30_000);
     await page.goto('./');
     await signIn(page);
-    const hrefs = await page.locator('#key-projects a.keytile').evaluateAll((els) => els.map((a) => a.getAttribute('href')).filter((h) => !/^https?:/.test(h)));
+    const hrefs = await page.locator('#hubTiles .hubtile a.hgo').evaluateAll((els) => els.map((a) => a.getAttribute('href')).filter((h) => !/^https?:/.test(h)));
     expect(hrefs.sort()).toEqual(Object.keys(LANDED).sort());
     const home = page.url().replace(/#.*$/, '');
     for (const href of hrefs) {
@@ -69,7 +70,7 @@ test.describe('Navigation across pages', () => {
     const steps = [['drives', 'Drives'], ['bin', 'Bin'], ['changes', /^Changes/], ['map', 'Dashboard']];
     const seen = [['map', 'Dashboard']];
     for (const [nav, title] of steps) {
-      await page.locator(`#mainNav a[data-nav="${nav}"]`).click();
+      await tabClick(page, `#mainNav a[data-nav="${nav}"]`);
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await expect(page.locator(`#mainNav a[data-nav="${nav}"]`)).toHaveAttribute('aria-current', 'page');
       seen.push([nav, title]);
@@ -87,9 +88,9 @@ test.describe('Navigation across pages', () => {
   test('browser history spans pages: Home Changes > Money Hub > Back lands on Home Changes, Forward on Money', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const href = await page.locator('#key-projects a.keytile', { hasText: 'Money Hub' }).getAttribute('href');
+    const href = await page.locator('#hubTiles .hubtile[data-hub="money"] a.hgo').getAttribute('href');
     expect(href).toBe('money/');
-    await page.locator('#mainNav a[data-nav="changes"]').click();
+    await tabClick(page, '#mainNav a[data-nav="changes"]');
     await expect(page.locator('#hereTitle')).toHaveText(/^Changes/);
     const changesUrl = page.url();
     await page.goto(new URL(href, page.url()).href);

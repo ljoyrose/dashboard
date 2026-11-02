@@ -1,6 +1,7 @@
 // Quick fixes from the 18 Oct 2026 review: CD Hub link and text cleaning, sign-out on the Bin,
 // and the 5-minute refresh that used to wipe your ticks. Pretend Google and Drive only.
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { IDS } = require('../support/world');
 
 const signIn = async (page) => {
@@ -38,7 +39,7 @@ test.describe('CD Hub: table text can never become code', () => {
     await page.locator('#signinbtn').click();
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
     for (const go of ['dogs', 'round', 'areas', 'litters']) {
-      await page.locator(`#nav button[data-go="${go}"]`).click();
+      await tabClick(page, `#nav button[data-go="${go}"]`);
       expect(await page.locator('[onmouseover]').count(), go).toBe(0);
     }
     expect(await page.evaluate(() => window.__pwned)).toBeUndefined();
