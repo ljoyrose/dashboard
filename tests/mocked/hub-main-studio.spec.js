@@ -50,7 +50,7 @@ test.describe('Studio Main', () => {
 
   test('Next, Needs you (5, late first) and Approve · Due Today · Sold, each a link to its list', async ({ page, guard }) => {
     await open(page, guard, { change: busy });
-    const got = await checkMain(page, { labels: LABELS, hrefs: HREFS, late: [false, true, false] });
+    const got = await checkMain(page, { labels: LABELS, hrefs: HREFS, late: [false, false, false] });
     await onlyMain(page);
     await page.mouse.move(0, 0);
     await shot(page, 'studio', 1280, 'light');

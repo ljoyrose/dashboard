@@ -373,6 +373,10 @@ test.describe('Factory selected and focus lines', () => {
     await expect(tab).toHaveAttribute('data-nav', 'me');
     expect((await st(tab))[0].s).toBe('none');
     await expect(tab.locator('.bar')).toHaveCSS('width', '40px');
+    // The app chips moved with the old Main list to More > Mine (#/me/all) when Main became the hub Main (Lisa, 2 Nov).
+    await page.locator('nav.tabs [data-house-more]').click();
+    await page.locator('nav.tabs a[href="#/me/all"]').click();
+    await expect(page).toHaveURL(/#\/me\/all$/);
     await chip(page, 'app', 'kennel-book').click();
     await chip(page, 'app', '').click();
     await expect(chip(page, 'app', '')).toHaveClass(/\bon\b/);

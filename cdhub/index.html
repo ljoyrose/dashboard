@@ -950,7 +950,8 @@ function mainRows(){
  return needsToday().map(function(x){
   var href=x.list?'#/today/'+x.list:'#/'+x.go;
   return {kind:x.tone==='late'?'late':(x.date===today?'today':'wait'),pill:x.tone==='soon'?'Soon':(x.date&&x.tone!=='late'&&x.date!==today?dmy(x.date):''),
-   text:x.title,sub:x.sub||'',href:href,act:x.list?'Show the dogs':(MAIN_ACT[x.go]||label(x.go))};
+   // A long note (e.g. 43 missing file names) keeps only its lead on Main; the full text stays on the page it opens.
+   text:x.title,sub:String(x.sub||'').split(' \u00b7 ').map(function(p){ return p.length>60?p.replace(/:.*$/,''):p; }).join(' \u00b7 '),href:href,act:x.list?'Show the dogs':(MAIN_ACT[x.go]||label(x.go))};
  });
 }
 // Temps: cabins with a temperature today ("x of y"), Unplaced: dogs on site not in a cabin, Bitches: breeding bitches in law

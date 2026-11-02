@@ -396,7 +396,7 @@
   .crow { position: relative; }
   .card .crow { padding-left: 14px; }
   .card .crow { --house-lbar-out: 0px; }   /* the bar itself: ../house.css section 10 (full height, 3px) */
-  .card .crow.house-lbar::before { border-radius: var(--radius); }   /* a row has square corners: the bar still curves like a card's */
+  .card .crow.house-lbar::before { border-radius: 0; }   /* a row has square corners, so its bar is a straight 3px line, never a "(" (Lisa, 2 Nov) */
   .col-list .crow::before { content: none; }
   /* Library: + New / Edit form and the Suggest box. */
   .libbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -1166,11 +1166,11 @@
     add(all().filter(function (a) { return a.delivery && a.delivery.status === 'ready (not sent)'; }), 'deliver');
     return out;
   }
-  // Approve = pieces waiting at stage 7; Due Today = dated pieces due today (rose when any); Sold (this week): Studio's state keeps
+  // Approve = pieces waiting at stage 7; Due Today = dated pieces due today (no ring: due today is not late); Sold (this week): Studio's state keeps
   // running sales totals only (results.sales), never dated sales, so it is "–" until the engine sends dated sales. Never invented.
   function mainNums(ok) {
     var rv = ok ? reviews().filter(function (a) { return !isTest(a); }).length : null, dt = ok ? dueTodayL().length : null;
-    return [{ label: 'Approve', value: rv, href: '#/review' }, { label: 'Due Today', value: dt, href: '#/me/today', late: dt > 0 },
+    return [{ label: 'Approve', value: rv, href: '#/review' }, { label: 'Due Today', value: dt, href: '#/me/today' },
       { label: 'Sold', value: null, href: '#/library', aria: 'Sold this week: not recorded by date yet. Open the Library' }];
   }
   function vMe(error) {

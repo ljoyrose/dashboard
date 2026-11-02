@@ -1,7 +1,7 @@
 // Counts and colour lines (Lisa's house-style picks, 2 Nov 2026), on all 8 pages:
 //  - a ringed count is a ring only: never a fill or tint behind the number (rose ring = late, grey ring = waiting, 0 = no ring);
-//  - a coloured left line on a card or row runs the WHOLE height of it, 3px wide, curved with the card's corner (no short stub
-//    floating in the middle, no inset shadow);
+//  - a coloured left line on a card or row runs the WHOLE height of it, 3px wide, curved with a card's corner and straight on
+//    a square row (no short stub floating in the middle, no inset shadow);
 //  - icon shades are the --ljr-N-icon tokens (slots 0 to 7, light and dark looks);
 //  - a bottom tab's count ring never overlaps the tab's icon, on a phone (390) or a laptop (1280), and on a wide tab the icon
 //    stays centred.
@@ -77,7 +77,10 @@ for (const [hub, H] of Object.entries(ALL)) {
       for (const l of m.lines) {
         expect(l.w, `${hub} #/${v} ${l.what}: the line is 3px`).toBeCloseTo(3, 1);
         expect(Math.abs(l.h - l.host), `${hub} #/${v} ${l.what}: the line runs the full height (${l.h} vs ${l.host})`).toBeLessThanOrEqual(1);
-        expect(l.radius, `${hub} #/${v} ${l.what}: the line curves with the card's corner`).toBeGreaterThanOrEqual(Math.max(8, l.hostRadius - 0.5));
+        // A card's line curves with the card's corner; a row inside a card has square corners, so its line is straight
+        // (Lisa, 2 Nov 2026: rows use a straight 3px .house-lbar, never a "(" bracket).
+        if (l.hostRadius > 0) expect(l.radius, `${hub} #/${v} ${l.what}: the line curves with the card's corner`).toBeGreaterThanOrEqual(Math.max(8, l.hostRadius - 0.5));
+        else expect(l.radius, `${hub} #/${v} ${l.what}: a row's line is straight`).toBe(0);
         expect(l.radiusB, `${hub} #/${v} ${l.what}: both ends curve`).toBeCloseTo(l.radius, 1);
       }
       found += m.lines.length;

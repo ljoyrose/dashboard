@@ -371,7 +371,7 @@
       { label: 'Owe GA', value: loaded ? '£' + owed.toFixed(2) : null, href: '#/invoices?unpaid', aria: loaded ? 'Owe GA: £' + owed.toFixed(2) + '. Open the unpaid invoices' : '' },
       { label: 'Today', value: loaded ? data.orders.filter(placedToday).length : null, href: '#/orders?today', aria: loaded ? 'Today: ' + data.orders.filter(placedToday).length + ' orders placed today. Open them' : '' }];
     var xml = loaded && !late ? '<a class="hm-xml" data-xml href="#/orders?ga" aria-label="✓ XML: every order reached GA. Open Not at GA yet">✓ XML</a>' : '';
-    return DashKit.hubMain({ hub: 'food', rows: loaded ? mainRows() : [], nums: nums, doHref: '#/do', extra: xml, error: loaded ? '' : 'The GA Hub workbook: ' + failed });
+    return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'food', rows: loaded ? mainRows() : [], nums: nums, doHref: '#/do', extra: xml, error: loaded ? '' : 'The GA Hub workbook: ' + failed });
   }
   // Do (More): every card waiting on Lisa, with its safe buttons (Apply / Seen / Send, Undo for 10 minutes), and the order GA never got.
   function pageDo() {

@@ -20,6 +20,7 @@ const emptyCsv = (world, name) => {
 test.describe('Money Hub: links and buttons go where their words say', () => {
   test('an entity card in "Money by entity" opens that entity; the Money tab stays selected', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
+    await hashTo(page, 'money'); // Money by entity moved from Main to Money (Hub Mains, 2 Nov 2026)
     await page.locator('#view a.ent[href="#/e/TESTCO"]').first().click();
     await expect(page).toHaveURL(/#\/e\/TESTCO$/);
     await expect(page.locator('#hereTitle')).toHaveText('TESTCO');
@@ -29,11 +30,13 @@ test.describe('Money Hub: links and buttons go where their words say', () => {
 
   test('every link in "Needs you" opens the screen it points at', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
+    await hashTo(page, 'todo'); // the full Needs you list moved from Main to To-do (Hub Mains, 2 Nov 2026)
     const card = page.locator('#view section.card.now', { has: page.locator('h3', { hasText: 'Needs you' }) });
+    await expect(card).toBeVisible();
     const hrefs = await card.locator('ul.items a[href^="#/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
     expect(hrefs.length, 'the sample data has links in this list').toBeGreaterThan(0);
     for (const href of [...new Set(hrefs)]) {
-      await hashTo(page, 'now');
+      await hashTo(page, 'todo');
       await card.locator(`ul.items a[href="${href}"]`).first().click();
       await expect(page).toHaveURL(new RegExp(href.replace(/[/#]/g, (c) => '\\' + c) + '$'));
       const view = href.slice(2).split('/')[0];
@@ -115,7 +118,8 @@ test.describe('Money Hub: sign-in that goes wrong, then "Sign in again"', () => 
     await page.locator('#banner button', { hasText: 'Sign in again' }).click();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
     await expect(page.locator('#banner')).toBeHidden();
-    await expect(page.locator('#view')).not.toContainText('Could not read Drive');
+    await expect(page.locator('#view')).not.toContainText('Could not read');
+    await hashTo(page, 'money');
     await expect(page.locator('#view a.ent', { hasText: 'TESTCO' }).first()).toBeVisible();
   });
 
@@ -250,7 +254,7 @@ test.describe('Money Hub phone: the problem screens fit at 390px', () => {
     guard.world.failWith = { status: 403, reason: 'forbidden', message: 'Sample refusal', includeAbout: true };
     await page.goto('money/');
     await signInHeader(page);
-    await expect(page.locator('#view')).toContainText('Could not read Drive');
+    await expect(page.locator('#view [data-hm="fail"]')).toContainText('Could not read');
     expect(await sideScroll(page)).toBe(false);
     const b = await page.locator('#view button', { hasText: 'Try again' }).boundingBox();
     expect(b.x).toBeGreaterThanOrEqual(0);

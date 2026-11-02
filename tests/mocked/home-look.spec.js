@@ -167,10 +167,24 @@ test.describe('Home: house look', () => {
         expect(r.bg, name + ': not white / plain card').not.toBe(r.card);
         expect(r.pale, name + ': a pale tint ' + r.bg).toBe(true);
       } };
-      for (const sel of ['#urgentOne a.btn', '.hubtile a.hgo']) { // the hub tiles replaced the Key projects buttons (Lisa, 2 Nov)
+      for (const sel of ['#urgentOne a.btn']) {
         const r = await check(sel, false);
         expect([r.outline, r.oc], sel + ': neutral hover = ink line').toEqual(['solid 1px -1px', r.ink]);
         expect(r.pale && r.bg !== r.card, sel + ': muted tint ' + r.bg).toBe(true);
+      }
+      // A hub tile's links (its name and its 3 numbers) take the tile's own colour on hover: a 1px ring only, no fill (Lisa, 2 Nov).
+      for (const sel of ['.hubtile a.hgo', '.hubtile a.hk']) {
+        const el = page.locator(sel).first();
+        await el.scrollIntoViewIfNeeded();
+        await el.hover(); await settle(el);
+        const r = await el.evaluate((e) => {
+          const c = getComputedStyle(e), d = document.createElement('i');
+          d.style.color = getComputedStyle(e.closest('.hubtile')).getPropertyValue('--sc').trim() || getComputedStyle(document.body).color;
+          document.body.appendChild(d); const sc = getComputedStyle(d).color; d.remove();
+          return { outline: c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineOffset, oc: c.outlineColor, sc, bg: c.backgroundColor };
+        });
+        expect([r.outline, r.oc], sel + ': hover = 1px ring in the tile colour').toEqual(['solid 1px -1px', r.sc]);
+        expect(r.bg, sel + ': no fill on hover').toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
       }
       await goTab(page, 'money', 'Money'); // the money entity cards moved off Main into More (Lisa, 2 Nov)
       await run(coloured);

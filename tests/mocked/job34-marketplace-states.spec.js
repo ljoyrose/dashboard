@@ -44,7 +44,7 @@ test.describe('Marketplace (JOB 34)', () => {
   test('an unknown address opens Home; the Marketplace title goes Home; ← Dashboard points at the main dashboard', async ({ page }) => {
     await HUBS.marketplace.open(page);
     await go(page, 'nope');
-    await expect(page.locator('#view .card.next')).toBeVisible();
+    await expect(page.locator('#view [data-hm="next"]')).toBeVisible();
     await go(page, 'insights');
     await page.locator('header h1 a').click();
     await expect(page).toHaveURL(/#\/me$/);
@@ -86,7 +86,7 @@ test.describe('Marketplace (JOB 34)', () => {
     broken = false;
     await page.locator('#refresh').click();
     await expect(page.locator('#banner')).toBeHidden();
-    await expect(page.locator('#view .card.next')).toBeVisible();
+    await expect(page.locator('#view [data-hm="next"]')).toBeVisible();
   });
 
   // FIX-REQUEST J34-F70 (marketplace/index.html:392-399, :929). DECISION NEEDED: fix the page (Marketplace owner) or accept. OWNER: Marketplace owner. BY 2026-11-06

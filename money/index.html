@@ -868,6 +868,12 @@
     signedIn = true;
     return true;
   }
+  // Tapping the tab (or any link) for the screen already open goes back to its top and reads it fresh, like a new visit.
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#/"]');
+    if (!a || e.defaultPrevented || a.getAttribute('href') !== location.hash) return;
+    e.preventDefault(); render(); window.scrollTo(0, 0);
+  });
   // Skip link: jump to the content without changing the #/ address.
   document.addEventListener('click', function (e) {
     var k = e.target.closest && e.target.closest('[data-skip]');

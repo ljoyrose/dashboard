@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="../house.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   /* House look (Lisa, 28 Oct 2026; the same rules on every hub). The Warm clear and Cool clear greys, the control line
      (warm 8A7F70, cool 7A8692), the frame (3A3632 / 46413B), radius, counts, date pills, tabs and the hover rule now live once:
      the numbers in ../tokens.css, the shared parts in ../house.css. The Look (Studio's Look menu, 'dash-look') is applied by
@@ -914,7 +915,7 @@
   }
   function vMain() {
     var ok = !!S && !err;
-    return DashKit.hubMain({ hub: 'apps', doHref: '#/do', rows: ok ? mainRows() : [], error: ok ? '' : (err || 'Factory state not read.'),
+    return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'apps', doHref: '#/do', rows: ok ? mainRows() : [], error: ok ? '' : (err || 'Factory state not read.'),
       nums: [{ label: 'Questions', value: ok ? questionsOf().length : null, href: '#/decide/questions' },
         { label: 'Gates', value: ok ? gatesOf().length : null, href: '#/decide/gates' },
         { label: 'Live', value: ok ? liveApps().length : null, href: '#/all/live' }] });
@@ -1520,7 +1521,7 @@
   function doFoot() { var n = sendsAll().filter(isOpen).length; return n ? '<p class="muted" style="margin:0"><a href="#/prompts" data-prompts-link><i class="ti ti-send"></i> Prompts ' + cnt(n) + '</a></p>' : ''; }
   function render() {
     var route = hashParts().path;
-    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (/^(card|room|health|stuck|all|queue|new|problem)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { var here = route[0] === 'me' && route[1] === 'all' ? 'mine' : route[0]; a.setAttribute('aria-current', a.getAttribute('data-nav') === here || (/^(card|room|health|stuck|all|queue|new|problem)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
     $('appPick').classList.toggle('hidden', !signedIn || !S); $('appPick').setAttribute('aria-expanded', appMenu ? 'true' : 'false');
     $('appMenu').classList.toggle('hidden', !appMenu || !S); if (appMenu && S) $('appMenu').innerHTML = vAppMenu();
     $('signInBtn').classList.toggle('hidden', signedIn);

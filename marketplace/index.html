@@ -206,6 +206,7 @@
   .qr { position: fixed; inset: 0; background: var(--ljr-paper); color: var(--ljr-ink); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
   .qr .code { font-size: var(--fs-figure); font-weight: 600; letter-spacing: 3px; word-break: break-all; }
   .qr img { max-width: 90vw; max-height: 60vh; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -845,7 +846,7 @@
     if (!readDone && !readErr) return '<div class="card"><p class="what">Reading…</p></div>';
     var ok = !readErr, tp = ok ? mainToPost() : [], late = tp.some(function (r) { return dueOf(detail(r)) === 'late'; });
     var reply = ok ? rows.filter(function (r) { return r.section === 'message' && !r.answer && !r.applied_at; }).length : null;
-    return DashKit.hubMain({ hub: 'marketplace', doHref: '#/do', error: readErr ? 'The Marketplace sheet: ' + readErr : '', rows: ok ? mainRows() : [], nums: [
+    return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'marketplace', doHref: '#/do', error: readErr ? 'The Marketplace sheet: ' + readErr : '', rows: ok ? mainRows() : [], nums: [
       { label: 'To Post', value: ok ? tp.length : null, late: late, href: '#/do?post' },
       { label: 'To Reply', value: reply, href: '#/reply' },
       { label: 'Sold', value: ok ? soldWeek().length : null, href: '#/sold', aria: ok ? 'Sold in the last 7 days: ' + soldWeek().length + '. Open the list' : '' }] });

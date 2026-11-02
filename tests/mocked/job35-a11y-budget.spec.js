@@ -10,7 +10,10 @@ const { HUBS, go } = require('../support/hubs');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 329000, cdhub: 238300, factory: 232000, food: 140600 };
+const BYTES = { home: 339100, cdhub: 238300, factory: 243300, food: 151600 };
+// home 329000 > 339100 (+10100), factory 232000 > 243300 (+11300) and food 140600 > 151600 (+11000) on 2 Nov 2026: Hub Mains (Lisa's
+// house style: every hub's Main is Next, Needs you and 3 numbers) add DashKit.hubMain to toolkit.js and its rules to house.css, which
+// every hub loads, and the moved sections keep their code in their new tabs. Measured 372900, 267264 and 166560.
 // home 325000 > 329000 (+4000) and factory 229700 > 232000 (+2300) on 2 Nov 2026: every number and row opens what it counts and
 // the icon-font fallback (Lisa's clickable picks) add to the shared toolkit.js and house.css; measured 360921 and 254207 bytes.
 // home 311500 > 325000 (+13500) on 2 Nov 2026: Dashboard Main (Lisa's hub tiles with 3 linked numbers each, Decide and Do, the inline hub

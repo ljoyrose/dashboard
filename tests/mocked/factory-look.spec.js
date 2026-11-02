@@ -183,14 +183,15 @@ test.describe('Factory look: rules by computed style on every view', () => {
 test.describe('Factory look: frame', () => {
   const close = (got, hex) => { const want = hex.match(/../g).map((x) => parseInt(x, 16)); const g0 = got.match(/[\d.]+/g).map(Number), g = /^color\(/.test(got) ? g0.map((x) => x * 255) : g0; return want.every((v, i) => Math.abs(v - g[i]) <= 4); };
   test('dark top and bottom frame (Deep 3A3632 / 46413B), light tab buttons with no ring, bar widens on hover and when selected', async ({ page, guard }) => {
-    await open(page, guard, '#/me/all');
+    await open(page, guard, '#/me'); // Main selected, so every link in the bar and its More menu is at rest
     const bg = (sel) => page.locator(sel).first().evaluate((e) => getComputedStyle(e).backgroundColor);
     const top = await bg('header'), foot = await bg('nav.tabs');
     expect(close(top, '3A3632'), 'top frame ' + top).toBe(true);
     expect(close(foot, '46413B'), 'bottom frame ' + foot).toBe(true);
     const tabs = page.locator('nav.tabs a');
-    await expect(tabs).toHaveCount(6);
-    for (let i = 0; i < 6; i++) {
+    // Main, Decide, Do, Rooms, then under More: Today, Docs and Mine (the old Main list, 2 Nov).
+    await expect(tabs).toHaveCount(7);
+    for (let i = 0; i < 7; i++) {
       const t = tabs.nth(i);
       const s = await t.evaluate((e) => { const c = getComputedStyle(e); return [c.borderTopStyle, c.outlineStyle, c.boxShadow, c.backgroundColor]; });
       expect(s.slice(0, 3), 'tab has no ring').toEqual(['none', 'none', 'none']);
