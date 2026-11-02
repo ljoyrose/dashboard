@@ -65,16 +65,10 @@ test.describe('Studio plain words (Stage 8)', () => {
     await expect(page.locator('#view')).toContainText('Studio helper');
   });
 
-  test('Me has a closed 3-line "How Studio works" fold that opens with one tap', async ({ page, guard }) => {
+  test('Me has no greeting and no "How Studio works" fold (Lisa, 2 Nov: no unnecessary words)', async ({ page, guard }) => {
     await open(page, guard, '#/me');
-    const f = page.locator('#view [data-howto]');
-    await expect(f).toHaveCount(1);
-    await expect(f).not.toHaveAttribute('open', '');
-    await expect(f.locator('li')).toHaveCount(3);
-    await expect(f.locator('li').first()).toBeHidden();
-    await f.locator('summary').click();
-    await expect(f.locator('li').nth(2)).toBeVisible();
-    await expect(f.locator('li').nth(2)).toHaveText('Nothing is sent, shared or paid for without your own tap.');
+    await expect(page.locator('#view [data-howto]')).toHaveCount(0);
+    await expect(page.locator('#view')).not.toContainText(/How Studio works|Good (morning|afternoon|evening)|moves along the Line/);
   });
 
   test('"Open in Infinity" shows only when the item has an https Infinity card link, and opens in a new tab', async ({ page, guard }) => {

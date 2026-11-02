@@ -27,9 +27,9 @@ test.describe('Money Hub: links and buttons go where their words say', () => {
     await expect(page).toHaveTitle('TESTCO · Money Hub');
   });
 
-  test('every link in "What needs you now" opens the screen it points at', async ({ page, guard }) => {
+  test('every link in "Needs you" opens the screen it points at', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
-    const card = page.locator('#view section.card.now', { has: page.locator('h3', { hasText: 'What needs you now' }) });
+    const card = page.locator('#view section.card.now', { has: page.locator('h3', { hasText: 'Needs you' }) });
     const hrefs = await card.locator('ul.items a[href^="#/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
     expect(hrefs.length, 'the sample data has links in this list').toBeGreaterThan(0);
     for (const href of [...new Set(hrefs)]) {
@@ -65,7 +65,7 @@ test.describe('Money Hub: signed out on a deep link', () => {
   test('#/accountant signed out shows only the sign-in card; its own "Sign in with Google" button opens Accountant', async ({ page, guard }) => {
     await page.goto('money/#/accountant');
     await expect(page.locator('#signInBtn')).toBeEnabled();
-    const card = page.locator('#view .card', { hasText: 'Sign in to see your money' });
+    const card = page.locator('#view .card', { has: page.locator('h3', { hasText: /^Sign in$/ }) });
     await expect(card).toBeVisible();
     await expect(page.locator('#view')).not.toContainText('Sample open question');
     await expect(page.locator('#refreshBtn')).toBeHidden();
@@ -156,23 +156,23 @@ test.describe('Money Hub: empty files say so in plain words', () => {
     await expect(page.locator('#view')).toContainText('Nothing due in the next 14 days.');
     await expect(page.locator('#nDates')).toHaveText('');
     await hashTo(page, 'dates');
-    await expect(page.locator('#view')).toContainText('No dates waiting. Everything in MON-DATES is done.');
+    await expect(page.locator('#view')).toContainText('No dates waiting.');
     await expect(page.locator('#view h3', { hasText: 'Overdue' })).toHaveCount(0);
   });
 
-  test('accountant file with no rows: "Nothing waiting on the accountant.", no Answered card, no tab count', async ({ page, guard }) => {
+  test('accountant file with no rows: "No open questions.", no Answered card, no tab count', async ({ page, guard }) => {
     emptyCsv(guard.world, 'QUESTIONS-FOR-ACCOUNTANT.csv');
     await HUBS.money.open(page, guard);
     await expect(page.locator('#nAcct')).toHaveText('');
     await hashTo(page, 'accountant');
-    await expect(page.locator('#view')).toContainText('Nothing waiting on the accountant.');
+    await expect(page.locator('#view')).toContainText('No open questions.');
     await expect(page.locator('#view h3', { hasText: 'Answered' })).toHaveCount(0);
   });
 
-  test('register with no rows: Now says "Nothing waiting on you." and the To-do button says "All 0 to-dos"', async ({ page, guard }) => {
+  test('register with no rows: Now says "Nothing waiting." and the To-do button says "All 0 to-dos"', async ({ page, guard }) => {
     emptyCsv(guard.world, 'MON-REGISTER.csv');
     await HUBS.money.open(page, guard);
-    await expect(page.locator('#view')).toContainText('Nothing waiting on you.');
+    await expect(page.locator('#view')).toContainText('Nothing waiting.');
     await expect(page.locator('#view a.btn', { hasText: /^All 0 to-dos$/ })).toHaveAttribute('href', '#/todo');
     await expect(page.locator('#nTodo')).toHaveText('');
   });

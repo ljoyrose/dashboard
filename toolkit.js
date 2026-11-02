@@ -6,7 +6,7 @@
   var TRIES = 4;
   var WAITS = [1000, 2000, 4000];
   var JITTER_MS = 250;
-  var BUSY_TEXT = 'Google is busy right now (too many requests). The dashboard tried 4 times. Wait a minute, then try again.';
+  var BUSY_TEXT = 'Google is busy. Wait a minute, then try again.';
 
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
