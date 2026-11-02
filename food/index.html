@@ -47,9 +47,7 @@
 
   /* Frame: dark top bar and dark bottom tab bar around a light work area. */
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
-  .top { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
-  .top h1 a { color: inherit; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
+  .top { max-width: 980px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
   .stamp { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }   /* the frame's own clear line (3:1 on the dark bar) */
@@ -135,12 +133,11 @@
   @media (max-width: 544px) {
     .btn, .chip, .more, input.txtin { min-height: 44px; }
     input.txtin { flex: 1 1 160px; max-width: none; }   /* Search and Filter share one calm row */
-    .top h1 { font-size: 20px; }
     nav.tabs { gap: 6px; padding-left: 6px; padding-right: 6px; }
   }
   /* Keyboard focus always stays the 2px ink ring, over any hover or selected line. */
   #view :focus-visible, nav.tabs a:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
-  header :focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
+  header :focus-visible:not(.house-menu *) { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
 </style>
 </head>
 <body>
@@ -151,11 +148,16 @@
   <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 8h12l-1 13H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol>
 </svg>
-<header>
-  <div class="top"><h1><a href="#/home"><span class="dot" style="--c:var(--ljr-4)" aria-hidden="true"></span>GA Hub</a></h1><span class="stamp" id="stamp">TEST</span>
-    <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh">↻</button>
+<header class="house-head">
+  <div class="top house-row">
+    <a id="backHome" class="btn back house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
+    <h1><a href="#/home"><span class="dot" style="--c:var(--ljr-4)" aria-hidden="true"></span>GA Hub</a></h1>
+    <span class="house-sp" aria-hidden="true"></span>
+    <span class="stamp" id="stamp">TEST</span>
+    <button class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh" id="refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap" data-house-look></span>
     <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
-    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
+  </div>
 </header>
 <main class="wrap">
   <div id="banner" class="banner hidden" role="status"></div>
@@ -485,7 +487,7 @@
     return h;
   }
   function render() {
-    $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
+    DashKit.signButton($('signin'), !!token);
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     var n = waiting().length; $('n-home').textContent = n || ''; $('n-home').classList.toggle('wide', n >= 100);

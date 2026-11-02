@@ -55,7 +55,105 @@
     if (o.mode === 'light' || o.mode === 'dark') r.setAttribute('data-theme', o.mode); else r.removeAttribute('data-theme');
   }
   applyLook();
-  if (root.addEventListener) root.addEventListener('storage', function (e) { if (e.key === 'dash-look') applyLook(); });
+  if (root.addEventListener) root.addEventListener('storage', function (e) { if (e.key === 'dash-look') { applyLook(); syncLookMenu(); } });
+
+  // ---- The top bar's one icon set (Lisa's pick A, 2 Nov): 24px outline icons, stroke 2 (Tabler shapes), as one hidden sprite.
+  // Pages draw <svg aria-hidden="true"><use href="#hi-NAME"/></svg>; the sprite is added once, at the top of <body>.
+  var ICONS = {
+    home: '<path d="M5 12H3l9-9 9 9h-2"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/><path d="M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/>',
+    search: '<circle cx="10" cy="10" r="7"/><path d="M21 21l-6-6"/>',
+    refresh: '<path d="M20 11a8.1 8.1 0 0 0-15.5-2m-.5-4v4h4"/><path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"/>',
+    palette: '<path d="M12 21a9 9 0 0 1 0-18c4.97 0 9 3.58 9 8 0 1.06-.47 2.08-1.32 2.83-.84.75-1.99 1.17-3.18 1.17H14a2 2 0 0 0-1 3.75A1.3 1.3 0 0 1 12 21"/><circle cx="8.5" cy="10.5" r="1"/><circle cx="12.5" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/>',
+    logout: '<path d="M14 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-2"/><path d="M9 12h12l-3-3"/><path d="M18 15l3-3"/>',
+    plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+    apps: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/><path d="M14 7h6M17 4v6"/>'
+  };
+  function addIcons() {
+    var doc = root.document; if (!doc || !doc.body || doc.getElementById('houseIcons')) return;
+    var d = doc.createElement('div');
+    d.innerHTML = '<svg id="houseIcons" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">' +
+      Object.keys(ICONS).map(function (k) { return '<symbol id="hi-' + k + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + ICONS[k] + '</symbol>'; }).join('') + '</svg>';
+    doc.body.insertBefore(d.firstChild, doc.body.firstChild);
+  }
+  /** The HTML of one icon from the top bar's set (hidden from screen readers: the button carries the name). */
+  function icon(name) { return '<svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-' + name + '"/></svg>'; }
+  /** One top-bar button that is Sign in (a word button, the one call to action) when signed out and the Sign out icon when signed in. */
+  function signButton(b, signedIn) {
+    if (!b) return;
+    b.setAttribute('data-action', signedIn ? 'signout' : 'signin');
+    b.classList.toggle('house-ib', !!signedIn);
+    if (signedIn) { if (!b.querySelector('svg')) b.innerHTML = icon('logout'); b.setAttribute('aria-label', 'Sign out'); b.title = 'Sign out'; }
+    else { if (b.textContent !== 'Sign in' || b.querySelector('svg')) b.textContent = 'Sign in'; b.removeAttribute('aria-label'); b.removeAttribute('title'); }
+  }
+
+  // ---- Look button + menu on every page (Lisa, 2 Nov): pages place <span class="lookwrap" data-house-look></span> in the top bar.
+  // The menu offers what applyLook supports and saves it in 'dash-look', merged, so Studio's own keys (words, text, space) stay.
+  // On a phone it also shows the read time and a Sign out item that presses the page's own Sign out (both leave the bar there).
+  var LOOK_ROWS = [['bg', 'Background', [['warm', 'Warm clear'], ['cool', 'Cool clear']]], ['sel', 'Selected', [['line', 'Outline'], ['soft', 'Soft tint']]],
+    ['mode', 'Mode', [['device', 'Device'], ['light', 'Light'], ['dark', 'Dark']]]];
+  function readLook() { var o = {}; try { o = JSON.parse(root.localStorage.getItem('dash-look') || '{}') || {}; } catch (e) { o = {}; } return typeof o === 'object' ? o : {}; }
+  function lookVal(o, row) { return row[2].some(function (x) { return x[0] === o[row[0]]; }) ? o[row[0]] : row[2][0][0]; }
+  function setLook(key, val) {
+    var o = readLook(); o[key] = val;
+    try { root.localStorage.setItem('dash-look', JSON.stringify(o)); } catch (e) { /* private window: this page still changes */ }
+    var r = root.document.documentElement;
+    if (key === 'bg') r.classList.toggle('look-cool', val === 'cool');
+    else if (key === 'sel') r.classList.toggle('sel-soft', val === 'soft');
+    else if (key === 'mode') { if (val === 'light' || val === 'dark') r.setAttribute('data-theme', val); else r.removeAttribute('data-theme'); }
+  }
+  // The page's own Sign out in the top bar, when it is there (signed in). Hidden only by the phone rule counts as there.
+  function headSignout() {
+    var doc = root.document, b = doc.querySelector('header [data-action="signout"], header [data-signout]');
+    return b && !b.disabled && !b.hidden && !b.closest('.hidden, [hidden]') ? b : null;
+  }
+  function headRead() {
+    var e = root.document.querySelector('header [data-house-read]'); if (!e || e.closest('.hidden, [hidden]')) return '';
+    return String(e.getAttribute('data-read') || e.textContent || '').trim();
+  }
+  /** The phone-only part of a Look menu: the read time and Sign out (Studio adds it to its own fuller menu). */
+  function lookExtras() {
+    var t = headRead(), out = headSignout();
+    return (t ? '<p class="house-mread house-phone" data-house-mread>' + escHtml(t) + '</p>' : '') +
+      (out ? '<button type="button" class="btn house-mitem house-phone" data-house-menu-signout>' + icon('logout') + '<span>Sign out</span></button>' : '');
+  }
+  function lookBody() {
+    var o = readLook();
+    return LOOK_ROWS.map(function (l) { return '<div class="lrow"><span class="flab" id="houseLook-' + l[0] + '">' + l[1] + '</span><div class="seg" role="group" aria-labelledby="houseLook-' + l[0] + '">' +
+        l[2].map(function (x) { return '<button type="button" data-house-look-set="' + l[0] + '" data-val="' + x[0] + '" aria-pressed="' + (lookVal(o, l) === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></div>'; }).join('') +
+      lookExtras();
+  }
+  function lookParts() { var doc = root.document; return { b: doc.getElementById('houseLookBtn'), m: doc.getElementById('houseLook') }; }
+  function showHouseLook(on, back) {
+    var p = lookParts(); if (!p.b || !p.m) return;
+    if (on) p.m.innerHTML = lookBody();
+    p.m.hidden = !on; p.b.setAttribute('aria-expanded', String(!!on));
+    if (on) { var f = p.m.querySelector('[aria-pressed="true"]') || p.m.querySelector('button'); if (f) f.focus(); }
+    else if (back) p.b.focus();
+  }
+  function syncLookMenu() { var p = lookParts(); if (p.m && !p.m.hidden) { var a = root.document.activeElement, k = a && a.getAttribute && a.getAttribute('data-house-look-set'), v = a && a.getAttribute && a.getAttribute('data-val'); p.m.innerHTML = lookBody(); if (k) { var n = p.m.querySelector('[data-house-look-set="' + k + '"][data-val="' + v + '"]'); if (n) n.focus(); } } }
+  function fillLook() {
+    var doc = root.document;
+    Array.prototype.forEach.call(doc.querySelectorAll('[data-house-look]'), function (w) {
+      if (w.firstChild) return;
+      w.innerHTML = '<button type="button" class="btn house-ib" id="houseLookBtn" aria-label="Look" title="Look" aria-expanded="false" aria-controls="houseLook">' + icon('palette') + '</button>' +
+        '<div id="houseLook" class="house-menu" role="dialog" aria-label="Look" hidden></div>';
+    });
+  }
+  if (root.document) {
+    var ready = function () { addIcons(); fillLook(); };
+    if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', ready); else ready();
+    root.document.addEventListener('click', function (e) {
+      var t = e.target, p = lookParts();
+      var o = t.closest && t.closest('[data-house-menu-signout]');
+      if (o) { var b = headSignout(); if (p.m) showHouseLook(false); if (b) b.click(); return; }
+      if (!p.m) return;
+      if (t.closest && t.closest('#houseLookBtn')) { showHouseLook(p.m.hidden); return; }
+      var s = t.closest && t.closest('[data-house-look-set]');
+      if (s) { setLook(s.getAttribute('data-house-look-set'), s.getAttribute('data-val')); syncLookMenu(); return; }
+      if (!p.m.hidden && !(t.closest && t.closest('#houseLook'))) showHouseLook(false);
+    });
+    root.document.addEventListener('keydown', function (e) { var p = lookParts(); if (e.key === 'Escape' && p.m && !p.m.hidden) { e.preventDefault(); showHouseLook(false, true); } });
+  }
 
   // ---- Phone filters: one calm row. Filter groups (.house-filters, each with an id) fold behind ONE Filter button
   // (.house-fbtn, data-house-filter="<id> [<id>...]") on a phone; on a desktop the button is hidden and the chips show inline (house.css).
@@ -215,5 +313,5 @@
   /** Returns a test function: true when a text contains every word of q (case-insensitive). */
   function matches(q) { var words = String(q).toLowerCase().split(/\s+/).filter(Boolean); return function (text) { text = String(text || '').toLowerCase(); return words.every(function (w) { return text.indexOf(w) >= 0; }); }; }
 
-  root.DashKit = { applyLook: applyLook, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help };
+  root.DashKit = { applyLook: applyLook, icon: icon, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help };
 })(typeof window !== 'undefined' ? window : this);

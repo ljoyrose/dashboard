@@ -28,7 +28,8 @@ async function open(page, guard, hash, { state = true, change } = {}) {
   await page.goto('studio/' + (hash || '#/me'));
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
-  await expect(page.locator('#enginePill')).toBeVisible();
+  await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
 }
 const go = async (page, key) => { await page.evaluate((k) => { location.hash = '#/' + k; }, key); await expect(page.locator('#view')).toHaveAttribute('data-view', key.split('/')[0]); };
 // Words a reader meets: the text on screen plus the names a screen reader says (aria-label, title, placeholder).

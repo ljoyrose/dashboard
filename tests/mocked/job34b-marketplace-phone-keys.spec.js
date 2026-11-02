@@ -69,11 +69,14 @@ test.describe('Marketplace (JOB 34b): phone 390px', () => {
     expect(wide).toEqual([]);
   });
 
-  test('the one Filter button in the header opens and shuts the person and site chips, and counts the filters that are on', async ({ page }) => {
+  test('the one Filter button at the top of the page opens and shuts the person and site chips, and counts the filters that are on', async ({ page }) => {
     await book(page);
     await open(page, '#/do');
-    const btn = page.locator('header .house-fbtn');
+    // The people row left the 56px top bar (Lisa's pick A): its Filter button sits at the top of the page, above the cards.
+    await expect(page.locator('header .house-fbtn, header #people')).toHaveCount(0);
+    const btn = page.locator('main .house-fbtn');
     await expect(btn).toBeVisible();
+    expect((await btn.boundingBox()).y, 'top of the page').toBeLessThan((await page.locator('#view').boundingBox()).y);
     await expect(page.locator('#people')).toBeHidden();
     await expect(page.locator('#sitef')).toBeHidden();
     await btn.click();

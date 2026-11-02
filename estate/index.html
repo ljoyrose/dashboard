@@ -49,9 +49,7 @@
   .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
 
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
-  .top { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
-  .top h1 a { color: inherit; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
+  .top { max-width: 980px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
   .stamp { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
@@ -120,11 +118,10 @@
   @media (max-width: 544px) {
     .btn, .chip, select.txtin, input.txtin, nav.tabs a, details.add > summary { min-height: 44px; }
     .frow label { flex: 1 1 calc(50% - 4px); max-width: none; }
-    .top h1 { font-size: 20px; }
     nav.tabs { gap: 6px; padding-left: 6px; padding-right: 6px; }
   }
   #view :focus-visible, nav.tabs a:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
-  header :focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
+  header :focus-visible:not(.house-menu *) { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
 </style>
 </head>
 <body>
@@ -135,11 +132,16 @@
   <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
 </svg>
-<header>
-  <div class="top"><h1><a href="#/home"><span class="dot" style="--c:var(--ljr-5)" aria-hidden="true"></span>Web Estate</a></h1><span class="stamp" id="stamp">TEST</span>
-    <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh">↻</button>
+<header class="house-head">
+  <div class="top house-row">
+    <a id="backHome" class="btn back house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
+    <h1><a href="#/home"><span class="dot" style="--c:var(--ljr-5)" aria-hidden="true"></span>Web Estate</a></h1>
+    <span class="house-sp" aria-hidden="true"></span>
+    <span class="stamp" id="stamp">TEST</span>
+    <button class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh" id="refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap" data-house-look></span>
     <button class="btn hidden" type="button" data-action="signin" id="signin">Sign in</button>
-    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
+  </div>
 </header>
 <main class="wrap">
   <div id="banner" class="banner hidden" role="status"></div>
@@ -372,8 +374,8 @@
     $('n-home').textContent = list.length || ''; $('n-shops').textContent = list.filter(function (r) { return r.kind === 'shop'; }).length || ''; $('n-look').textContent = look || ''; $('n-unchecked').textContent = unc || '';
     $('stamp').textContent = ES.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
-    $('signin').classList.toggle('hidden', !!token); $('signin').disabled = !ready;
-    $('refresh').classList.toggle('hidden', example || !token);
+    DashKit.signButton($('signin'), !!token); $('signin').classList.remove('hidden'); $('signin').disabled = !token && !ready;
+    $('refresh').classList.toggle('hidden', !token);
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the Web Estate</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
     if (!loaded && !rows.length) { $('view').innerHTML = '<div class="card"><p class="hint">Loading…</p></div>'; return; }
     $('view').innerHTML = page();
@@ -384,6 +386,7 @@
     var t = e.target.closest('button, a, summary'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(); }
+    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; loaded = false; return render(); }
     if (a === 'refresh') return load();
     if (a === 'clear') { location.hash = E.filterHash(view, {}); }
     if (a === 'addtoggle') { e.preventDefault(); addOpen = !addOpen; return render(); }
