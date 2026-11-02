@@ -354,10 +354,9 @@
   .mcard.next .sub { margin: 0 0 12px; color: var(--muted); }
   .mrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
   .mrow:first-of-type { border-top: 0; }
-  .mrow .ic { width: 32px; height: 32px; flex: none; border-radius: 50%; border: 1px solid var(--ctl); }
   .mrow .t { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; } .mrow .t small { display: block; color: var(--muted); font-size: var(--fs-small); font-weight: 400; }
   .mrow .dpill { margin-left: 0; }
-  @media (hover: hover) { .mrow:hover .ic { border-color: var(--sc); background: var(--tint); } .mrow:hover .t { text-decoration: underline; text-underline-offset: 3px; } }
+  @media (hover: hover) { .mrow:hover .t { text-decoration: underline; text-underline-offset: 3px; } }
   .okempty { margin: 0; color: var(--muted); font-size: var(--fs-small); display: flex; gap: 8px; align-items: center; }
   .okempty::before { content: "\2713"; display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 50%; border: 1px solid var(--ljr-5); background: var(--ljr-5-tint); color: var(--ink); font-size: 13px; }
   @media (max-width: 760px) {
@@ -868,6 +867,8 @@
     }
     return html + '</div>';
   }
+  // One empty line for a whole view (Lisa, 2 Nov); with a search or filter on, the Clear box instead.
+  function oneEmpty(tab) { var s = fsOf(tab); return s.q || fOnCount(tab) ? emptyBox() : '<div class="card" data-empty-one><p class="okempty">Nothing needs you</p></div>'; }
   function emptyBox() { return '<div class="card empty" data-empty>' + cnt(0) + '<button class="pill" type="button" data-action="clearf">' + I('filter-off') + ' Clear</button></div>'; }
   function hashParts() { var h = (location.hash || '#/me').slice(2), i = h.indexOf('?'); return { path: (i < 0 ? h : h.slice(0, i)).split('/'), q: new URLSearchParams(i < 0 ? '' : h.slice(i + 1)) }; }
   function barTab() { var r = hashParts().path[0] || 'me'; return BAR_TABS.test(r) ? r : null; }
@@ -1016,9 +1017,9 @@
   }
   function row(a, kind, withBrand) {
     var on = openPanel && openPanel.id === a.id, bo = brandOf(a), need = needOf(a), dp = datePill(a);
-    return '<div class="crow house-lbar' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '" style="--sc:var(--ljr-' + stSlot(a.stage) + ')">' +
+    return '<div class="crow house-lbar' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '" data-open-row style="--sc:var(--ljr-' + stSlot(a.stage) + ')">' +
       (withBrand || dp ? '<div class="bline">' + (withBrand ? brandMark(bo) + '<span class="bn">' + esc(bo.name) + '</span>' : '') + dp + '</div>' : '') +
-      '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
+      '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl house-open" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') + autoGateLine(a) +
       (a.protect === 'yes' && a.stage < 8 ? '<div class="needl"><span class="tag" data-chip="proof" title="Clients see a view-only proof">Proof \u00b7 view only</span></div>' : '') +
       (a.appRef && (a.appRef.alias || a.appRef.slug) ? '<div class="needl"><span class="tag" data-chip="from-app" title="Asked for by App Factory">From app: ' + esc(a.appRef.alias || a.appRef.slug) + '</span></div>' : '') +
@@ -1152,15 +1153,29 @@
     var needs = live.filter(function (a) { return needOf(a); }).sort(function (a, b) { return urgency(a) - urgency(b); });
     var over = live.filter(lateOf).length, onTrack = live.filter(function (a) { return a.stage >= 1 && !needOf(a); }).length;
     var ok = function (t) { return '<p class="okempty">' + t + '</p>'; };
-    var sect = function (icon, word, href, l, kind, none) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + '<a href="' + href + '">' + word + '</a> ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : ok(none || 'Nothing waiting.')) + '</div>'; };
-    var mrow = function (a) { var sl = stSlot(a.stage); return '<a class="mrow" data-mrow="' + esc(a.id) + '" href="#/asset/' + encodeURIComponent(a.id) + '" style="--sc:var(--ljr-' + sl + ');--tint:var(--ljr-' + sl + '-tint)"><span class="ic" aria-hidden="true"></span><span class="t">' + esc(bare(a)) + '<small>' + esc(needOf(a)) + ' · Step ' + a.stage + ': ' + esc(STAGES[a.stage]) + '</small></span>' + datePill(a) + '</a>'; };
+    // A section with nothing in it is not drawn; when nothing at all needs Lisa, ONE line says so (Lisa, 2 Nov).
+    var sect = function (icon, word, href, l, kind) { return l.length ? '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + '<a class="house-go" href="' + href + '" aria-label="' + word + ': ' + l.length + '. Open the list">' + word + ' ' + cnt(l.length) + '</a></div>' + l.map(function (a) { return row(a, kind, true); }).join('') + '</div>' : ''; };
+    var mrow = function (a) { var sl = stSlot(a.stage); return '<a class="mrow" data-mrow="' + esc(a.id) + '" href="#/asset/' + encodeURIComponent(a.id) + '" style="--sc:var(--ljr-' + sl + ');--tint:var(--ljr-' + sl + '-tint)"><span class="t">' + esc(bare(a)) + '<small>' + esc(needOf(a)) + ' · Step ' + a.stage + ': ' + esc(STAGES[a.stage]) + '</small></span>' + datePill(a) + '</a>'; };
     var nx = needs[0];
-    return '<h2 class="sr">Main</h2><div class="three" data-three><span class="sum" data-sum="ok"><span class="big' + (onTrack ? '' : ' zero') + '">' + onTrack + '</span>On track</span><span class="sum need" data-sum="need"><span class="big' + (needs.length ? '' : ' zero') + '">' + needs.length + '</span>Needs you</span><span class="sum over" data-sum="over"><span class="big' + (over ? '' : ' zero') + '">' + over + '</span>Overdue</span></div>' +
+    var sum = function (k, cls, n, w) { return '<a class="sum house-go' + cls + '" data-sum="' + k + '" href="#/me/' + k + '" aria-label="' + w + ': ' + n + '. Open the list"><span class="big' + (n ? '' : ' zero') + '">' + n + '</span>' + w + '</a>'; };
+    var body = (nx ? '<div class="mecards">' +
       '<div class="mecards">' +
-      '<section class="mcard next" data-next>' + '<h3>Next</h3>' + (nx ? '<div class="t">' + esc(bare(nx)) + '</div><p class="sub">' + esc(needOf(nx)) + (nx.dated && nx.eventDate ? ' · due ' + dmy(Date.parse(nx.eventDate)) : '') + '</p><a class="btn" href="#/asset/' + encodeURIComponent(nx.id) + '">Open</a>' : ok('Nothing needs you.')) + '</section>' +
-      '<section class="mcard need-card" data-needs><h3>Needs you today ' + icnt(needs.length) + '</h3>' + (needs.length ? needs.slice(0, 7).map(mrow).join('') : ok('Nothing needs you.')) + '</section>' +
-      '</div>' +
-      findBar('me', meItems()) + sect('eye-check', 'Approve', '#/review', R, 'review', 'All decided.') + sect('traffic-lights', 'Gates', '#/assets', G, 'gate') + sect('hand-finger', 'Tasks', '#/assets?fit=hand', H, 'hand') + vSuggest();
+      '<section class="mcard next" data-next data-open-row>' + '<h3>Next</h3>' + '<div class="t">' + esc(bare(nx)) + '</div><p class="sub">' + esc(needOf(nx)) + (nx.dated && nx.eventDate ? ' · due ' + dmy(Date.parse(nx.eventDate)) : '') + '</p><a class="btn house-open" href="#/asset/' + encodeURIComponent(nx.id) + '" aria-label="Open ' + esc(bare(nx)) + '">Open</a></section>' +
+      '<section class="mcard need-card" data-needs><h3><a class="house-go" href="#/me/need" aria-label="Needs you today: ' + needs.length + '. Open the list">Needs you today ' + icnt(needs.length) + '</a></h3>' + needs.slice(0, 7).map(mrow).join('') + '</section>' +
+      '</div>' : '') +
+      sect('eye-check', 'Approve', '#/review', R, 'review') + sect('traffic-lights', 'Gates', '#/me/gate', G, 'gate') + sect('hand-finger', 'Tasks', '#/me/hand', H, 'hand') + vSuggest();
+    var filtered = !!(s.q || fOnCount('me'));
+    return '<h2 class="sr">Main</h2><div class="three" data-three>' + sum('ok', '', onTrack, 'On track') + sum('need', ' need', needs.length, 'Needs you') + sum('over', ' over', over, 'Overdue') + '</div>' +
+      findBar('me', meItems()) + (body ? body : filtered ? emptyBox() : '<div class="card" data-empty-one>' + ok('Nothing needs you') + '</div>');
+  }
+  // Main's numbers and section heads open their own list (Lisa, 2 Nov: "anywhere you give info should be clickable to get it").
+  var ME_LISTS = { ok: 'On track', need: 'Needs you', over: 'Overdue', gate: 'Gates', hand: 'Tasks' };
+  function meList(k) {
+    var live = all().filter(function (a) { return !isTest(a) && !sent[a.id] && a.stage < 8; });
+    var l = k === 'ok' ? live.filter(function (a) { return a.stage >= 1 && !needOf(a); }) : k === 'need' ? live.filter(function (a) { return needOf(a); }).sort(function (a, b) { return urgency(a) - urgency(b); }) :
+      k === 'over' ? live.filter(lateOf) : k === 'gate' ? gates() : k === 'hand' ? hands() : [];
+    return '<div class="card" data-melist="' + esc(k) + '"><div class="sect"><a class="house-go" href="#/me" aria-label="Back to Main">Main</a> \u203a ' + esc(ME_LISTS[k] || k) + ' ' + cnt(l.length) + '</div>' +
+      (l.length ? l.map(function (a) { return row(a, kindFor(a), true); }).join('') : '<p class="okempty">Nothing here</p>') + '</div>';
   }
   // Studio's own suggestions from the learning loop: nothing changes until Lisa accepts.
   function vSuggest() {
@@ -1232,7 +1247,7 @@
   // Decide: everything only Lisa can decide. Do: everything only Lisa can do.
   function vDecide() {
     var s = fsOf('decide'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
-    var sect = function (icon, word, l, kind) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : '<p class="okempty">' + (kind === 'review' ? 'All decided. Nothing waiting.' : 'Nothing waiting.') + '</p>') + '</div>'; };
+    var sect = function (icon, word, l, kind) { return l.length ? '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + '</div>' + l.map(function (a) { return row(a, kind, true); }).join('') + '</div>' : ''; };
     if (viewOf('decide') === 'board') {
       var G = keep(gates()), R = keep(reviews()), L = S.suggestions.filter(function (g) { return !pend['sug|' + g.id]; });
       return findBar('decide', gates().concat(reviews())) + board('decide', [
@@ -1240,15 +1255,17 @@
         { attr: 'data-sect="review"', slot: 6, badge: I('eye-check'), name: 'Review', items: R, none: 'All decided.', body: R.map(function (a) { return row(a, 'review', true); }).join('') }
       ].concat(L.length ? [{ attr: 'data-sect="suggest"', slot: 7, badge: I('bulb'), name: 'Suggestions', items: [], n: L.length, need: L.length, body: sugRows(L) }] : []));
     }
-    return findBar('decide', gates().concat(reviews())) + sect('traffic-lights', 'Gates', keep(gates()), 'gate') + sect('eye-check', 'Review', keep(reviews()), 'review') + vSuggest();
+    var body = sect('traffic-lights', 'Gates', keep(gates()), 'gate') + sect('eye-check', 'Review', keep(reviews()), 'review') + vSuggest();
+    return findBar('decide', gates().concat(reviews())) + (body || oneEmpty('decide'));
   }
   function doItems() { var out = hands().slice(); all().forEach(function (a) { if (out.indexOf(a) < 0 && ((a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent') || (a.delivery && a.delivery.status === 'ready (not sent)'))) out.push(a); }); return out; }
   function vDo() {
     var s = fsOf('do'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
     var H = keep(hands()), A = all().filter(function (a) { return a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent'; }), D = all().filter(function (a) { return a.delivery && a.delivery.status === 'ready (not sent)'; }), Rz = library().filter(function (a) { return !a.results || !a.results.last; });
-    var sect = function (icon, word, l, kind, note) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + (note ? info(note) : '') + '</div>' + (l.length ? l.map(function (a) { return row(a, kind === 'hand' ? 'hand' : kindFor(a), true); }).join('') : '<p class="okempty">Nothing waiting.</p>') + '</div>'; };
+    var sect = function (icon, word, l, kind, note) { return l.length ? '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + (note ? info(note) : '') + '</div>' + l.map(function (a) { return row(a, kind === 'hand' ? 'hand' : kindFor(a), true); }).join('') + '</div>' : ''; };
     A = keep(A); D = keep(D); Rz = keep(Rz);
-    return findBar('do', doItems().concat(Rz)) + sect('hand-finger', 'Tasks', H, 'hand') + sect('message-question', 'Questions to send', A, 'asks', 'Studio helper off or email off: send the link yourself') + sect('package-export', 'Ready to send', D, 'deliver', 'Email off: send the link yourself') + sect('chart-bar', 'Results to add', Rz, 'results');
+    var body = sect('hand-finger', 'Tasks', H, 'hand') + sect('message-question', 'Questions to send', A, 'asks', 'Studio helper off or email off: send the link yourself') + sect('package-export', 'Ready to send', D, 'deliver', 'Email off: send the link yourself') + sect('chart-bar', 'Results to add', Rz, 'results');
+    return findBar('do', doItems().concat(Rz)) + (body || oneEmpty('do'));
   }
   function vIdeas() {
     var inbox = ST.inboxFolderId ? '<a class="pill" href="https://drive.google.com/drive/folders/' + esc(ST.inboxFolderId) + '" target="_blank" rel="noopener" title="Inbox: drop files here" style="--hc:var(--ljr-7-text)">' + I('inbox') + 'Inbox</a>' : '';
@@ -1973,7 +1990,7 @@
     sideOn = !!bt && viewOf(bt) === 'board' && !phone();
     v.innerHTML = route[0] === 'ideas' ? vIdeas() : route[0] === 'assets' ? list('assets', inProgress(), kindFor) : route[0] === 'review' ? list('review', reviews(), function () { return 'review'; }) :
       route[0] === 'brands' ? vBrands() : route[0] === 'library' ? list('library', library(), function () { return 'lib'; }) : route[0] === 'kits' ? vKits() : route[0] === 'tools' ? vTools() : route[0] === 'new' ? vNew() :
-      route[0] === 'asset' ? vAsset(decodeURIComponent(route[1] || '')) : route[0] === 'engine' ? vEngine() : route[0] === 'decide' ? vDecide() : route[0] === 'do' ? vDo() : route[0] === 'line' ? vLine() : vMe();
+      route[0] === 'asset' ? vAsset(decodeURIComponent(route[1] || '')) : route[0] === 'engine' ? vEngine() : route[0] === 'decide' ? vDecide() : route[0] === 'do' ? vDo() : route[0] === 'line' ? vLine() : route[0] === 'me' && route[1] ? meList(route[1]) : vMe();
     var sn = subNav(route[0]); if (sn) v.insertAdjacentHTML('afterbegin', bt ? '<div class="vtop">' + sn + vswitch(bt) + '</div>' : sn);
     fitBoard(keep);
   }

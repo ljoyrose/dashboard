@@ -213,11 +213,18 @@
     if (view === 'shops') return list.filter(function (r) { return r.kind === 'shop' || r.kind === 'funnel' || r.kind === 'ads-account'; });
     return list;
   }
-  function tile(k, v, cls) { return '<div class="tile"><span class="k">' + esc(k) + '</span><span class="v' + (v && cls ? ' ' + cls : '') + '" data-count="' + esc(k) + '">' + v + '</span></div>'; }
+  // Each tile opens the list of what it counts (Lisa, 2 Nov): #/<view>?show=down, kept with the filters already picked.
+  var SHOW = { live: ['Live', function (r) { return E.statusOf(r) === 'live'; }], down: ['Down', function (r) { return E.statusOf(r) === 'down'; }],
+    blocked: ['Blocked to scripts', function (r) { return E.statusOf(r) === 'blocked'; }], unchecked: ['Not checked', function (r) { var s = E.statusOf(r); return s === 'not checked' || s === 'parked'; }],
+    expiring: ['Expiring in 60 days', function (r) { return E.expiringSoon(r, today(), 60); }], email: ['Email checks failing', function (r) { return E.emailProblems(r).length > 0; }] };
+  function showOf() { var m = /[?&]show=(\w+)/.exec(location.hash); return m && SHOW[m[1]] ? m[1] : ''; }
+  function showHash(key) { var h = E.filterHash(view, filters); return h + (h.indexOf('?') < 0 ? '?' : '&') + 'show=' + key; }
+  function tile(k, v, cls, key) { var inner = '<span class="k">' + esc(k) + '</span><span class="v' + (v && cls ? ' ' + cls : '') + '" data-count="' + esc(k) + '">' + v + '</span>';
+    return key ? '<a class="tile" href="' + esc(showHash(key)) + '" data-show="' + key + '" aria-label="' + esc(k) + ': ' + v + '. Open the list">' + inner + '</a>' : '<div class="tile">' + inner + '</div>'; }
   function tiles(list) {
     var c = E.summarise(list, today());
-    return '<div class="tiles">' + tile('Live', c.live) + tile('Down', c.down, 'red') + tile('Blocked to scripts', c.blocked, 'amber') +
-      tile('Not checked', c.notChecked + c.parked) + tile('Expiring in 60 days', c.expiring, 'amber') + tile('Email checks failing', c.emailFailing, 'red') + '</div>';
+    return '<div class="tiles">' + tile('Live', c.live, '', 'live') + tile('Down', c.down, 'red', 'down') + tile('Blocked to scripts', c.blocked, 'amber', 'blocked') +
+      tile('Not checked', c.notChecked + c.parked, '', 'unchecked') + tile('Expiring in 60 days', c.expiring, 'amber', 'expiring') + tile('Email checks failing', c.emailFailing, 'red', 'email') + '</div>';
   }
   function filterRow() {
     return '<div class="frow" role="group" aria-label="Filters">' + E.FILTERS.map(function (k) {
@@ -236,8 +243,8 @@
   function prop(r) {
     var s = E.statusOf(r), mail = E.emailProblems(r), addr = r.url_or_domain || r.key;
     var stCls = s === 'down' ? ' no' : s === 'blocked' ? ' soon' : s === 'live' ? ' ok' : '';
-    var http = /^https?:\/\//.test(addr) && E.normaliseTarget(addr).ok ? '<a class="addr" href="' + esc(E.normaliseTarget(addr).url) + '" target="_blank" rel="noopener noreferrer">' + esc(addr.replace(/^https?:\/\//, '')) + '</a>' : '<span class="addr">' + esc(addr) + '</span>';
-    return '<div class="prop" data-key="' + esc(r.key) + '" data-status="' + s + '"><div class="pline"><span class="badge st' + stCls + '">' + E.STATUS_WORD[s] + '</span>' + http +
+    var http = /^https?:\/\//.test(addr) && E.normaliseTarget(addr).ok ? '<a class="addr house-open" href="' + esc(E.normaliseTarget(addr).url) + '" target="_blank" rel="noopener noreferrer">' + esc(addr.replace(/^https?:\/\//, '')) + '</a>' : '<span class="addr">' + esc(addr) + '</span>';
+    return '<div class="prop" data-key="' + esc(r.key) + '" data-status="' + s + '"' + (/house-open/.test(http) ? ' data-open-row' : '') + '><div class="pline"><span class="badge st' + stCls + '">' + E.STATUS_WORD[s] + '</span>' + http +
       '<span class="m">' + esc([r.kind, r.platform].filter(Boolean).join(' · ')) + '</span></div><div class="badges">' +
       check('HTTP', r.http_code, /^[45]/.test(r.http_code || '')) + expiryBadge('SSL', r.ssl_expires) + expiryBadge('Domain', r.domain_expires) + check('DNS', r.dns_host) +
       check('SPF', r.spf, /two|missing|fail/i.test(r.spf || '')) + check('DKIM', r.dkim, /^missing/i.test(r.dkim || '')) + check('DMARC', r.dmarc, /missing/i.test(r.dmarc || '')) +
@@ -349,20 +356,23 @@
   // Shown here only. Each becomes a suggested RR_OPEN-WORK row in the progress slip, never written by code.
   function alertsCard(list) {
     var al = AL.alerts(list, today());
-    if (!al.length) return '<div class="card" data-card="alerts"><p class="empty">No alerts.</p></div>';
+    if (!al.length) return '';   // one empty line per view (Lisa, 2 Nov): no alerts, no Alerts card
     return '<p class="grp">Alerts<span class="sr"> · </span><span class="cnt">' + al.length + '</span></p><div class="card" data-card="alerts">' + al.map(function (a) {
       return '<div class="prop" data-alert="' + esc(a.kind) + '" data-akey="' + esc(a.key) + '"><div class="pline"><span class="dot" style="--c:var(--ljr-' + (a.level === 'red' ? 2 : 3) + ')" aria-hidden="true"></span><span class="addr">' + esc(a.text) + '</span></div></div>';
     }).join('') + '</div>';
   }
   function page() {
-    var list = E.applyFilters(rows, filters), shown = inView(list);
+    var list = E.applyFilters(rows, filters), shown = inView(list), sk = showOf();
+    if (sk) shown = shown.filter(SHOW[sk][1]);
     if (view === 'access') return accessPage(E.applyFilters(rows, filters));
     if (view === 'client') return clientPage();
     if (view === 'shops') return '<p class="needs">Shops &amp; ads</p>' + filterRow() + shopsPage(E.applyFilters(rows, filters));
     var title = view === 'look' ? 'Needs a look' : view === 'unchecked' ? 'Not checked' : 'Web Estate';
     var hint = view === 'unchecked' ? 'Not scanned yet.' : '';
-    var h = '<p class="needs">' + title + '</p>' + (hint ? '<p class="hint">' + hint + '</p>' : '') + (view === 'home' ? addBox() : '') + tiles(list) + filterRow() + (view === 'look' ? alertsCard(list) : '');
-    if (!shown.length) return h + '<div class="card"><p class="empty">' + (rows.length ? 'Nothing here with these filters.' : 'No properties yet.') + '</p></div>';
+    if (sk) hint = SHOW[sk][0] + ' only. <a href="' + esc(E.filterHash(view, filters)) + '">Show all</a>';
+    var al = view === 'look' && !sk ? alertsCard(list) : '';
+    var h = '<p class="needs">' + title + '</p>' + (hint ? '<p class="hint">' + hint + '</p>' : '') + (view === 'home' ? addBox() : '') + tiles(list) + filterRow() + al;
+    if (!shown.length) return h + (al ? '' : '<div class="card" data-empty-one><p class="empty">' + (sk || Object.keys(filters).length ? 'Nothing here' : view === 'look' ? 'Nothing needs you' : rows.length ? 'Nothing here' : 'No properties yet.') + '</p></div>');
     E.groupRows(shown, today()).forEach(function (g) {
       h += '<p class="grp">' + esc(g.name) + '<span class="sr"> · </span><span class="cnt">' + g.rows.length + '</span></p><div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>';
     });

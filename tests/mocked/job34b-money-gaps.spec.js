@@ -150,10 +150,12 @@ test.describe('Money Hub: someone else\'s account on every screen', () => {
 });
 
 test.describe('Money Hub: empty files say so in plain words', () => {
-  test('MON-DATES with no rows: Dates says nothing is waiting, Now says nothing due in 14 days, Dates tab has no count', async ({ page, guard }) => {
+  test('MON-DATES with no rows: Dates says nothing is waiting, Now draws no empty Dates card, Dates tab has no count', async ({ page, guard }) => {
     emptyCsv(guard.world, 'MON-DATES.csv');
     await HUBS.money.open(page, guard);
-    await expect(page.locator('#view')).toContainText('Nothing due in the next 14 days.');
+    // Lisa, 2 Nov: an empty section is not drawn on Now (one "Nothing needs you" line only when everything is empty).
+    await expect(page.locator('#view .cardhead h3', { hasText: /^Dates$/ })).toHaveCount(0);
+    await expect(page.locator('#view')).not.toContainText('Nothing due in the next 14 days.');
     await expect(page.locator('#nDates')).toHaveText('');
     await hashTo(page, 'dates');
     await expect(page.locator('#view')).toContainText('No dates waiting.');
@@ -169,11 +171,12 @@ test.describe('Money Hub: empty files say so in plain words', () => {
     await expect(page.locator('#view h3', { hasText: 'Answered' })).toHaveCount(0);
   });
 
-  test('register with no rows: Now says "Nothing waiting." and the To-do button says "All 0 to-dos"', async ({ page, guard }) => {
+  test('register with no rows: Now draws no empty Your turn card and no "All 0 to-dos" button', async ({ page, guard }) => {
     emptyCsv(guard.world, 'MON-REGISTER.csv');
     await HUBS.money.open(page, guard);
-    await expect(page.locator('#view')).toContainText('Nothing waiting.');
-    await expect(page.locator('#view a.btn', { hasText: /^All 0 to-dos$/ })).toHaveAttribute('href', '#/todo');
+    await expect(page.locator('#view .cardhead h3', { hasText: /^Your turn$/ })).toHaveCount(0);
+    await expect(page.locator('#view')).not.toContainText('Nothing waiting.');
+    await expect(page.locator('#view a.btn', { hasText: /^All 0 to-dos$/ })).toHaveCount(0);
     await expect(page.locator('#nTodo')).toHaveText('');
   });
 });

@@ -864,11 +864,11 @@ function needsToday(){
 }
 function goBtn(x,text){
  var t=text||'Open', lab=t+': '+x.title;
- if(x.list) return '<button type="button" class="btn ci" data-list="'+esc(x.list)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
- return '<button type="button" class="btn" data-go="'+esc(x.go)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
+ if(x.list) return '<button type="button" class="btn ci house-open" data-list="'+esc(x.list)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
+ return '<button type="button" class="btn house-open" data-go="'+esc(x.go)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
 }
 function needRow(x,hide){
- return '<div class="mrow'+(hide?' hidden':'')+'"'+(hide?' data-needmore="1"':'')+'><span class="ic'+(x.tone?' '+x.tone:'')+'" aria-hidden="true"></span>'
+ return '<div class="mrow'+(hide?' hidden':'')+'" data-open-row'+(hide?' data-needmore="1"':'')+'>'+(x.tone?'<span class="ic '+x.tone+'" aria-hidden="true"></span>':'')   // a plain empty circle meant nothing: only late/soon show a dot (Lisa, 2 Nov)
   +'<span class="t">'+esc(x.title)+'<small>'+esc(x.sub||'')+'</small></span>'+dpill(x.date,x.tone)+goBtn(x)+'</div>';
 }
 /* foundation: empty state that names its source. Used where a screen needs data that only the Bloodline app will hold.
@@ -883,26 +883,31 @@ function arrives(k){ var a=ARRIVES[k];   // a = [Bloodline table, the words show
  return '<section class="card dash arrive" id="arrive-'+k+'" data-arrives="'+esc(a[0])+'"><h3>'+esc(a[2])+'</h3>'
   +'<p class="arrives">Arrives with Bloodline: '+esc(a[1])+'</p><p class="awhy">'+esc(a[3])+'</p></section>'; }
 /* foundation: summary strip (On track / Needs you / Overdue) */
+// Each number opens what it counts (Lisa, 2 Nov): On track = the passing checks; Needs you / Overdue = the Needs you list, filtered.
+var NEEDF='', CHECKF='';   // CHECKF 'ok': Data checks shows just the passing ones (the On track number)
 function summaryStrip(){
  var n=needsToday(), late=n.filter(function(x){return x.tone==='late';}).length;
  var ok=checks().filter(function(x){return x.ok && x.k!=='saving off';}).length;
+ var one=function(cls,f,v,word,title){ return '<a class="sum house-go'+(cls?' '+cls:'')+'" href="#/map" data-needf="'+f+'" title="'+title+'" aria-label="'+word+': '+v+'. Open the list"><span class="big'+(v?'':' zero')+'">'+v+'</span>'+word+'</a>'; };
  return '<div class="three" id="summary">'
-  +'<span class="sum" title="Checks that pass"><span class="big'+(ok?'':' zero')+'">'+ok+'</span>On track</span>'
-  +'<span class="sum need" title="Waiting on you, not late"><span class="big'+(n.length-late?'':' zero')+'">'+(n.length-late)+'</span>Needs you</span>'
-  +'<span class="sum over" title="Late"><span class="big'+(late?'':' zero')+'">'+late+'</span>Overdue</span></div>';
+  +one('','ok',ok,'On track','Checks that pass')
+  +one('need','need',n.length-late,'Needs you','Waiting on you, not late')
+  +one('over','late',late,'Overdue','Late')+'</div>';
 }
 /* foundation: next action (the one thing to do now, with one button) */
 function nextCard(){
  var x=needsToday()[0];
  if(!x) return '<section class="mcard nextc" id="nextCard"><div class="bline">Next</div><p class="okempty">Nothing needs you</p>'
   +'<p class="sub" style="margin-top:8px">Nothing waiting.</p><button type="button" class="btn" data-go="today">Today</button></section>';
- return '<section class="mcard nextc" id="nextCard"><div class="bline">Next</div><div class="t">'+esc(x.title)+'</div>'
+ return '<section class="mcard nextc" id="nextCard" data-open-row><div class="bline">Next</div><div class="t">'+esc(x.title)+'</div>'
   +'<p class="sub">'+esc(x.sub||'')+(x.date?' · '+esc(dmy(x.date)):'')+'</p>'+goBtn(x,label(x.go))+'</section>';
 }
 function needsCard(){
- var n=needsToday();
- var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Needs you today'+cntPill(n.length,n.length?'need':'ok')+'</h3>';
- if(!n.length) return h+'<p class="okempty">Nothing needs you</p></section>';
+ var all=needsToday(), n=NEEDF==='late'?all.filter(function(x){return x.tone==='late';}):NEEDF==='need'?all.filter(function(x){return x.tone!=='late';}):all;
+ if(!all.length) return '';   // one empty line per view (Lisa, 2 Nov): the Next card already says Nothing needs you
+ var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2-icon)"'+(NEEDF?' data-needf="'+NEEDF+'"':'')+'><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>'+(NEEDF==='late'?'Overdue':'Needs you today')+cntPill(n.length,n.length?'need':'ok')+'</h3>'
+  +(NEEDF?'<p class="sub">'+(NEEDF==='late'?'Late only.':'Not late.')+' <a href="#/map" data-needf="">Show all</a></p>':'');
+ if(!n.length) return h+'<p class="okempty">Nothing here</p></section>';
  h+=n.map(function(x,i){ return needRow(x,i>=7); }).join('');
  if(n.length>7) h+='<div class="mfoot"><span class="mut">Showing 7 of '+n.length+'</span><button type="button" class="btn" data-needall="1">Show all</button></div>';
  return h+'</section>';
@@ -910,12 +915,13 @@ function needsCard(){
 /* foundation: place occupancy (who is on site). The words are the animal kit's labels. */
 function onSiteCard(){
  var c=counts();
- var row=function(t,v,s){ return '<div class="mrow"><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
+ // Each count opens its list of dogs on Today (Lisa, 2 Nov).
+ var row=function(t,v,s,k){ return '<a class="mrow go" href="#/today" data-golist="'+k+'" aria-label="'+t+': '+v+'. Open the list"><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></a>'; };
  return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
-  +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><span class="big">'+c.here.length+'</span></div>'
-  +row('Adults',c.adults.length,'')+row('Under 6 months',c.pups.length,'')
-  +row('Breeding bitches in law',c.bitches.length,'female, entire, 6 months and over')+row('Stud males',c.studs.length,'')
-  +row('Off site',c.offsite.length,'')
+  +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><a class="big house-go" href="#/today" data-golist="here" aria-label="On site: '+c.here.length+'. Open the list">'+c.here.length+'</a></div>'
+  +row('Adults',c.adults.length,'','adults')+row('Under 6 months',c.pups.length,'','pups')
+  +row('Breeding bitches in law',c.bitches.length,'female, entire, 6 months and over','bitches')+row('Stud males',c.studs.length,'','studs')
+  +row('Off site',c.offsite.length,'','offsite')
   +'<div class="mfoot"><span class="mut"></span><button type="button" class="btn" data-go="dogs">Dogs</button></div></section>';
 }
 /* kit: animal (Litters card: pregnancies from the mating rows, and litters born in the last 12 weeks) */
@@ -930,7 +936,7 @@ function littersCard(){
  h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
    return '<div class="mrow"><span class="t">'+esc(l.pairing||((nameOf(l.dam_subject_id)||'?')+' × '+(nameOf(l.sire_subject_id)||'?')))
     +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
- if(!n) h+='<p class="okempty">No litters on the go</p>';
+ // no "No litters" line: one empty line per view (Lisa, 2 Nov); the footer still says how many are on file
  return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span><button type="button" class="btn" data-go="litters">Litters</button></div></section>';
 }
 /* foundation: readings against a rule band (temperature per place, per round slot) */
@@ -940,20 +946,21 @@ function tempsCard(){
  var am=has('am'), pm=has('pm');
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
  var row=function(t,v,s,done){ return '<div class="mrow"><span class="ic'+(done?' ok':'')+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
- return '<section class="mcard" id="tempsCard" style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
+ return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
   +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||out.kind||''),false)
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
-  +'<div class="mfoot"><span class="mut">'+(DB?'':'Saving off.')+'</span><button type="button" class="btn" data-go="round">The round</button></div></section>';
+  +'<div class="mfoot"><span class="mut">'+(DB?'':'Saving off.')+'</span><button type="button" class="btn house-open" data-go="round">The round</button></div></section>';
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 function checksCard(){
- var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
- return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'need':'ok')+'</h3>'
+ var every=checks(), all=CHECKF==='ok'?every.filter(function(x){return x.ok && x.k!=='saving off';}):every, bad=every.filter(function(x){return !x.ok;}).length;
+ return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"'+(CHECKF?' data-checkf="ok"':'')+'><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>'+(CHECKF?'On track'+cntPill(all.length):'Data checks'+cntPill(bad,bad?'need':'ok'))+'</h3>'
+  +(CHECKF?'<p class="sub">Passing checks only. <a href="#/map" data-needf="">Show all</a></p>':'')
   +all.map(function(x){
-   return '<div class="mrow ckrow'+(x.ok?' ok':' bad')+'"><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.ok?'✓':'✗')+'</span>'
+   return '<div class="mrow ckrow'+(x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.ok?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
-    +(x.list?'<button type="button" class="btn ci" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
+    +(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
   +'</section>';
 }
 function pageMap(){
@@ -1941,6 +1948,13 @@ function go(id,push){
    b.addEventListener('click',function(){ showList(b.dataset.list); }); });
  }
  if(id==='map'){
+  Array.prototype.forEach.call(document.querySelectorAll('[data-golist]'),function(b){
+   b.addEventListener('click',function(e){ e.preventDefault(); go('today',true); setTimeout(function(){showList(b.dataset.golist);},60); }); });
+  Array.prototype.forEach.call(document.querySelectorAll('[data-needf]'),function(b){
+   if(b.tagName!=='A') return;
+   b.addEventListener('click',function(e){ e.preventDefault(); var f=b.dataset.needf;
+    if(f==='ok'){ CHECKF='ok'; NEEDF=''; go('map',false); var c=document.getElementById('checksCard'); if(c) c.scrollIntoView({block:'start'}); return; }
+    NEEDF=f; CHECKF=''; go('map',false); var n=document.getElementById('needsCard')||document.getElementById('nextCard'); if(n){ n.scrollIntoView({block:'start'}); } }); });
   Array.prototype.forEach.call(document.querySelectorAll('.ci'),function(b){
    b.addEventListener('click',function(){ if(b.dataset.list){ go('today',true); setTimeout(function(){showList(b.dataset.list);},60);} }); });
   var na=document.querySelector('[data-needall]');

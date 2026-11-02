@@ -376,7 +376,9 @@ test.describe('CD Hub house look', () => {
   test('read-only pills, counts and checklist marks never hover; bottom tabs have no ring, only the colour bar widens, nothing moves', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    for (const sel of ['#needsCard h3 .cnt', '#summary .sum', '#checksCard .mk', '#nav .ht .n']) {
+    // The three summary numbers open what they count (Lisa, 2 Nov), so they are links and do hover; see clickable-info.spec.js.
+    await expect(page.locator('#summary a.sum')).toHaveCount(3);
+    for (const sel of ['#needsCard h3 .cnt', '#checksCard .mk', '#nav .ht .n']) {
       const el = page.locator(sel).first();
       await el.hover();
       expect(await el.evaluate((e) => getComputedStyle(e).outlineStyle), sel).toBe('none');
@@ -470,7 +472,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#nav button[data-go="map"] .n')).toHaveText('5');
     await expect(page.locator('#nav button[data-go="work"] .n')).toHaveText('1');
     await expect(page.locator('#onSiteCard .big')).toHaveText('3');
-    await expect(page.locator('#littersCard .okempty')).toHaveText('No litters on the go');
+    await expect(page.locator('#littersCard .okempty')).toHaveCount(0);   // one empty line per view (Lisa, 2 Nov): the Next card says it
     await expect(page.locator('#tempsCard')).toContainText('0 of 2');
     await expect(page.locator('#tempsCard')).toContainText('No reading today');
     await expect(page.locator('#checksCard h3 .cnt')).toHaveText('4');
