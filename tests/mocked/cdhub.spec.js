@@ -288,7 +288,7 @@ function cdAudit() {
     const bw = ['Top', 'Right', 'Bottom', 'Left'].map((k) => parseFloat(s['border' + k + 'Width']) || 0);
     if (Math.max(...bw) > 1) out.line.push(name(el) + ' ' + bw.join('/'));
     const rad = s.borderTopLeftRadius;
-    const okRad = rad === '0px' || rad === '12px' || (rad === '11px' && el.matches('.cnt')) || (rad === '50%' && el.matches(ROUND)) || (rad === '2px' && el.matches('nav#nav .bar')) || (rad === '9px' && el.matches('nav#nav .ht > .n')) || (rad === '50%' && el.matches('nav#nav .hic'));   // the bottom tabs (Lisa's picks, 2 Nov): a rounded line, a round count ring, the icon's round place
+    const okRad = rad === '0px' || rad === '12px' || (rad === '50%' && el.matches(ROUND)) || (rad === '2px' && el.matches('nav#nav .bar')) || (rad === '50%' && el.matches('nav#nav .hic'));   // the bottom tabs (Lisa's picks, 2 Nov): a rounded line, a round count ring, the icon's round place
     if (!okRad) out.radius.push(name(el) + ' ' + rad);
     // Rings on things you press or read as a pill: 3:1 against what they sit on.
     if (el.matches('#main button:not([disabled]), #main select, .btn, .pill, .dpill, .cnt, .achip, .sfb') && bw[0] === 1 && s.borderTopStyle !== 'none') {
@@ -391,7 +391,7 @@ test.describe('CD Hub house look', () => {
     await expect.poll(() => page.locator('#nav button[data-go="map"] .bar').evaluate((e) => e.getBoundingClientRect().width)).toBe(40);   // selected
   });
 
-  test('count pills are one fixed box: 30 x 22px for 1 and 2 digits, even with a wider font; 3 digits grow', async ({ page, guard }) => {
+  test('count pills are one fixed box: 30 x 24px for 1 and 2 digits (a 14px number), even with a wider font; 3 digits grow', async ({ page, guard }) => {
     const rows = ['id,area,item,status,owner,blocked_on,evidence,note'];
     for (let i = 1; i <= 12; i++) rows.push(`W1${i},sample,Invented ask ${i},BLOCKED,Lisa,,,`);
     setFile(guard.world, 'BLD-WORK.csv', rows.join('\n') + '\n');
@@ -403,13 +403,13 @@ test.describe('CD Hub house look', () => {
       if (wide) await page.addStyleTag({ content: '.cnt{font-family:Verdana,"DejaVu Sans",sans-serif!important;letter-spacing:.12em!important}' });
       const sizes = await measure();
       expect(sizes.map((x) => x[0]), 'one- and two-digit counts on Live feed').toEqual(expect.arrayContaining(['16', '4']));
-      // The tab counts are Lisa's small corner ring (tab picks, 2 Nov): 18px high whatever the font, the two digits on one line.
-      const tc = await page.locator('#nav button[data-go="work"] .n').evaluate((e) => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.height, s.borderTopLeftRadius, s.whiteSpace]; });
-      expect(tc, 'the Do tab count' + (wide ? ' (wider font)' : '')).toEqual(['12', 18, '9px', 'nowrap']);
-      for (const x of sizes) expect(x.slice(1), `count ${x[0]}${wide ? ' (wider font)' : ''}`).toEqual([30, 22, '11px', 'nowrap', 'tabular-nums']);
+      // The tab counts are the corner ring (tab picks, 2 Nov) holding a 14px number (pick A): 24 x 24 whatever the font, the two digits on one line.
+      const tc = await page.locator('#nav button[data-go="work"] .n').evaluate((e) => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.whiteSpace, s.fontSize]; });
+      expect(tc, 'the Do tab count' + (wide ? ' (wider font)' : '')).toEqual(['12', 24, 24, '12px', 'nowrap', '14px']);
+      for (const x of sizes) expect(x.slice(1), `count ${x[0]}${wide ? ' (wider font)' : ''}`).toEqual([30, 24, '12px', 'nowrap', 'tabular-nums']);
     }
     const big = await page.evaluate(() => { const h = document.createElement('div'); h.innerHTML = cntPill(123); document.querySelector('#main').appendChild(h); const r = h.firstChild.getBoundingClientRect(); return [r.width, r.height]; });
-    expect(big[0]).toBeGreaterThan(30); expect(big[1]).toBe(22);
+    expect(big[0]).toBeGreaterThan(30); expect(big[1]).toBe(24);
   });
 
   test('no solid colour fills: counts, pills, date pills, checklist marks, summary numbers, tabs and chosen chips are rings or light tints', async ({ page, guard }) => {

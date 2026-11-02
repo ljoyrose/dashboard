@@ -39,7 +39,7 @@
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
-    font-family: 'Lexend', sans-serif; font-size: 16px; line-height: 1.5;
+    font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5;
     text-align: left; hyphens: manual; -webkit-hyphens: manual;
     font-variant-numeric: tabular-nums;
   }
@@ -53,15 +53,15 @@
   header { background: var(--surface); border-bottom: 1px solid var(--line); }
   @media (min-width: 700px) { header { position: sticky; top: 0; z-index: 2; } }
   .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: 12px;
-         border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 14px; text-decoration: none; }
+         border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: var(--fs-small); text-decoration: none; }
   .btn:hover { border-color: var(--muted); }
   .btn:disabled { opacity: .6; cursor: default; }
   .btn.vision { border: 1px solid var(--s1-edge); background: var(--s1); font-weight: 600; }
 
   main { padding-top: 16px; padding-bottom: 32px; }
   .here { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; text-align: left; }
-  .here span { color: var(--muted); font-size: 14px; }
-  .here h2 { margin: 0; font-size: 22px; font-weight: 600; }
+  .here span { color: var(--muted); font-size: var(--fs-small); }
+  .here h2 { margin: 0; font-size: var(--fs-head); font-weight: 600; }
   #view { display: flex; flex-direction: column; gap: 16px; transition: opacity 150ms ease; }
   #view.fade { opacity: 0; }
   @media (prefers-reduced-motion: reduce) { #view { transition: none; } }
@@ -79,17 +79,17 @@
   .slot4 { --slot: var(--s4); --tint: var(--s4-tint); }
   .slot8 { --slot: var(--s8); --tint: var(--s8-tint); }
   .slotsales { --slot: var(--ljr-6); --tint: var(--ljr-6-tint); }
-  .card h3, .card h2.h3 { margin: 0; font-size: 18px; font-weight: 600; text-align: left; }
+  .card h3, .card h2.h3 { margin: 0; font-size: var(--fs-head); font-weight: 600; text-align: left; }
   .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .note { margin: 0; color: var(--muted); font-size: 14px; text-align: left; }
+  .note { margin: 0; color: var(--muted); font-size: var(--fs-small); text-align: left; }
   .note.fail { color: var(--fail); font-weight: 600; }
-  ul.notes { margin: 4px 0 8px; padding-left: 20px; color: var(--muted); font-size: 14px; }
+  ul.notes { margin: 4px 0 8px; padding-left: 20px; color: var(--muted); font-size: var(--fs-small); }
   ul.notes li { margin: 2px 0; }
-  .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 8px; text-align: left; }
+  .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: var(--fs-small); border-top: 1px solid var(--line); padding-top: 8px; text-align: left; }
   .source a { color: var(--muted); }
 
   /* State badge: colour + shape + word. */
-  .state { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); white-space: nowrap; }
+  .state { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-small); color: var(--muted); white-space: nowrap; }
   .shape { width: 12px; height: 12px; flex: none; display: inline-block; }
   .st-ok .shape { border-radius: 50%; background: var(--slot, var(--s0)); }
   .st-empty .shape { border: 2px solid var(--slot, var(--s0)); border-radius: 2px; }
@@ -104,18 +104,18 @@
   ul.files li { padding: 8px 0; border-top: 1px solid var(--line); text-align: left; }
   ul.files li:first-child { border-top: none; padding-top: 0; }
   .fname { font-weight: 600; overflow-wrap: anywhere; hyphens: none; }
-  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--muted); font-size: 14px; }
-  .chip { font-size: 13px; background: var(--tint, var(--s0-tint)); color: var(--ink); border-radius: 8px; padding: 0 8px; line-height: 1.6; overflow-wrap: anywhere; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--muted); font-size: var(--fs-small); }
+  .chip { font-size: var(--fs-small); background: var(--tint, var(--s0-tint)); color: var(--ink); border-radius: 8px; padding: 0 8px; line-height: 1.6; overflow-wrap: anywhere; }
   .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-  .pager .count { font-size: 14px; color: var(--muted); }
+  .pager .count { font-size: var(--fs-small); color: var(--muted); }
   .pager .gap { width: 1px; }
   .subnav { display: flex; flex-wrap: wrap; gap: 8px; }
-  .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 3px solid var(--s7); background: var(--surface); text-decoration: none; font-size: 14px; }
+  .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 3px solid var(--s7); background: var(--surface); text-decoration: none; font-size: var(--fs-small); }
   .subnav a[aria-current="page"] { font-weight: 600; background: var(--s7-tint); border-color: var(--s7); }
   .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .stat { background: var(--tint, var(--s0-tint)); border-radius: 12px; padding: 8px 12px; text-align: left; }
-  .stat .num { font-size: 24px; font-weight: 600; }
-  .stat .label { font-size: 14px; color: var(--muted); }
+  .stat .num { font-size: var(--fs-figure); font-weight: 600; }
+  .stat .label { font-size: var(--fs-small); color: var(--muted); }
 
   /* Named next steps */
   .next { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 8px; }
@@ -126,12 +126,12 @@
   .banner.info { border-color: var(--line); background: var(--surface); }
   .banner p { margin: 0; flex: 1 1 200px; }
   /* Shared-drive picker and Bin */
-  .card h4 { margin: 0; font-size: 16px; font-weight: 600; text-align: left; overflow-wrap: anywhere; }
+  .card h4 { margin: 0; font-size: var(--fs-head); font-weight: 600; text-align: left; overflow-wrap: anywhere; }
   .picker { display: flex; flex-direction: column; gap: 4px; text-align: left; }
-  .picker label { font-size: 14px; color: var(--muted); }
-  .picker select { font: inherit; min-height: 40px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line);
+  .picker label { font-size: var(--fs-small); color: var(--muted); }
+  .picker select { font: inherit; min-height: 40px; padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line);
                    background: var(--surface); color: var(--ink); width: 100%; max-width: 100%; }
-  .crumbs { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; color: var(--muted); text-align: left; overflow-wrap: anywhere; }
+  .crumbs { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: var(--fs-small); color: var(--muted); text-align: left; overflow-wrap: anywhere; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .btn.danger { border-color: var(--risk-text); color: var(--risk-text); font-weight: 600; }
   .btn.danger.solid { background: var(--ljr-2-solid); color: var(--ljr-2-on); }
@@ -147,24 +147,24 @@
   .scrollbox { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
   .index { display: flex; flex-wrap: wrap; gap: 8px; }
   .index.top { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-  .index .btn { font-size: 14px; padding: 4px 12px; }
+  .index .btn { font-size: var(--fs-small); padding: 4px 12px; }
   .index.top .btn { padding: 8px 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
   .index.top .btn b { font-weight: 600; }
-  .index .n { color: var(--muted); font-size: 13px; }
+  .index .n { color: var(--muted); font-size: var(--fs-small); }
   input.find { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); }
   .binsec { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
   .binsec:first-of-type { border-top: none; padding-top: 0; }
   .hidden-by-filter { display: none !important; }
-  .res { font-size: 14px; text-align: left; margin: 0; }
+  .res { font-size: var(--fs-small); text-align: left; margin: 0; }
   .res.ok { color: var(--muted); }
   .res.bad { color: var(--fail); font-weight: 600; }
-  .skip { color: var(--fail); font-size: 14px; }
+  .skip { color: var(--fail); font-size: var(--fs-small); }
   label.tick { display: flex; align-items: flex-start; gap: 8px; text-align: left; font-weight: 600; }
   label.tick input { width: 18px; height: 18px; margin: 4px 0 0; flex: none; }
   label.tick span { overflow-wrap: anywhere; min-width: 0; }
   /* Money tile: Finances copper for money, Operations for to-dos and dates, Risks for overdue, Connections for on track. */
   .slotfin { --slot: var(--fin); --tint: var(--fin-tint); }
-  .mtag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; background: var(--mt, var(--s0-tint)); border-radius: 8px; padding: 0 8px; white-space: nowrap; }
+  .mtag { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-small); font-weight: 600; background: var(--mt, var(--s0-tint)); border-radius: 8px; padding: 0 8px; white-space: nowrap; }
   .mtag::before { content: ''; width: 9px; height: 9px; background: var(--mc, var(--s0)); border-radius: 50%; flex: none; }
   .mtag.risk { --mc: var(--s2); --mt: var(--s2-tint); } .mtag.risk::before { border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 10px; height: 10px; }
   .mtag.ops { --mc: var(--ops); --mt: var(--ops-tint); }
@@ -180,25 +180,25 @@
   .ments { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
   .ment { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--fin); border-radius: 12px; padding: 8px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
   .ment.bad { background: var(--s2-tint); border-left-color: var(--s2); }
-  .ment .num { font-size: 26px; font-weight: 600; line-height: 1.2; }
+  .ment .num { font-size: var(--fs-figure); font-weight: 600; line-height: 1.2; }
   .ment .who { font-weight: 600; }
-  .ment .sub { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
-  .mgroup { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0; text-align: left; }
+  .ment .sub { font-size: var(--fs-small); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+  .mgroup { font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 0; text-align: left; }
   .hidden { display: none !important; }
   /* Home screen shortcuts. One tap each, tall enough for a thumb. */
-  #key-projects h2 { margin: 0; font-size: 20px; font-weight: 600; text-align: left; hyphens: manual; }
-  #key-projects .lead { margin: 0; font-size: 16px; text-align: left; color: var(--ink); hyphens: manual; }
+  #key-projects h2 { margin: 0; font-size: var(--fs-head); font-weight: 600; text-align: left; hyphens: manual; }
+  #key-projects .lead { margin: 0; font-size: var(--fs-head); text-align: left; color: var(--ink); hyphens: manual; }
   #key-projects .lead a { font-weight: 600; }
   .keytiles { display: grid; grid-template-columns: 1fr; gap: 8px; }
   @media (min-width: 700px) { .keytiles { grid-template-columns: 1fr 1fr; } }
   a.keytile { display: flex; align-items: center; min-height: 48px; padding: 12px 16px; border: 1px solid var(--line);
-    border-radius: 12px; background: var(--bg); color: var(--ink); text-decoration: none; font-size: 17px; font-weight: 600;
+    border-radius: 12px; background: var(--bg); color: var(--ink); text-decoration: none; font-size: var(--fs-head); font-weight: 600;
     line-height: 1.3; text-align: left; hyphens: manual; }
   a.keytile:hover { border-color: var(--ink); }
   a.keytile:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
-  footer p { margin: 0; color: var(--muted); font-size: 14px; }
+  footer p { margin: 0; color: var(--muted); font-size: var(--fs-small); }
 
   /* ---- Calm layer (Lisa, 20 Oct 2026): one corner, faint lines, no fills on selected, colour only on hover or for attention, nothing moves. ---- */
   :root { --radius: 12px; }
@@ -212,7 +212,7 @@
   .card.vision[class]:not(:hover) { border-color: var(--line); }
   a { color: inherit; }
   .btn:active { transform: none; }
-  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--muted); cursor: help; vertical-align: middle; }
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: var(--fs-small); font-weight: 600; color: var(--muted); cursor: help; vertical-align: middle; }
   .info:hover { border-color: var(--muted); }
 
   /* One page width everywhere (Lisa, 2 Nov): the full window, the house side gap (--house-gutter: 24px; phones 16px). */
@@ -236,13 +236,13 @@
   /* "You are here" title: focus moves here on every screen change for screen readers; it must not draw a box. */
   #hereTitle, #hereTitle:focus, #hereTitle:focus-visible { outline: none; border: 0; box-shadow: none; }
   /* Home: Needs you: N, three big count tiles that open a tab, then the one most urgent thing. */
-  .needsline { font-size: 26px; font-weight: 600; margin: 0; }
+  .needsline { font-size: var(--fs-figure); font-weight: 600; margin: 0; }
   .needsline .zero { color: var(--ljr-5-text); }
   #homeTop { display: flex; flex-direction: column; gap: 12px; }
   .urgent { display: flex; flex-direction: column; gap: 8px; }
-  .urgent .what { margin: 0; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
-  .urgent .btn { min-height: 52px; justify-content: center; font-size: 16px; font-weight: 600; }
-  .hint { margin: 0; font-size: 14px; color: var(--muted); }
+  .urgent .what { margin: 0; font-size: var(--fs-head); font-weight: 600; overflow-wrap: anywhere; }
+  .urgent .btn { min-height: 52px; justify-content: center; font-size: var(--fs-body); font-weight: 600; }
+  .hint { margin: 0; font-size: var(--fs-small); color: var(--muted); }
 
   /* ==== House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio). Lexend 400/600, nothing under 13px, line height 1.5.
      1px lines; hover AND selected = the same 1px edge turns ink (outline over it), nothing moves; focus 2px ink. One radius, 12px.
@@ -257,7 +257,7 @@
   /* No coloured words: failures and warnings keep ink text and carry a small rose dot or ring instead. */
   .note.fail, .st-failed, .res.bad, .skip, .needsline .zero, .btn.danger { color: var(--ink); }
   /* Bin "why it is held" lines share the class name with the skip link and were pushed off screen with it; now they show. */
-  div.skip { position: static; left: auto; top: auto; z-index: auto; background: none; padding: 0; border: 0; border-radius: 0; font-size: 14px; color: var(--ink); }
+  div.skip { position: static; left: auto; top: auto; z-index: auto; background: none; padding: 0; border: 0; border-radius: 0; font-size: var(--fs-small); color: var(--ink); }
   .note.fail::before, .res.bad::before, div.skip::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; border: 1px solid var(--ljr-2); background: var(--ljr-2-tint); vertical-align: 1px; }
   /* No solid colour fills: the strong buttons are a light tint on the same clear line. */
   /* Meaning buttons rest on their own colour line (Lisa's approved picture, 28 Oct): delete rose, AI purple; hover keeps it. */
@@ -278,27 +278,27 @@
   .card.failed[class]:hover { border-left-color: var(--ljr-2); }
   .needs li[class], .needs li[class]:hover { border-left: 0; padding-left: 0; }
   #view { gap: 12px; }
-  .here h2 { font-size: 26px; }
-  .card h3, .card h2.h3 { font-size: 17px; }
+  .here h2 { font-size: var(--fs-head); }
+  .card h3, .card h2.h3 { font-size: var(--fs-head); }
   /* Titles wrap to 2 lines, then … */
   .fname, .urgent .what, .needs .nt a { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
   html body .fname a:focus-visible, html body .needs .nt a:focus-visible { outline-offset: -2px !important; }
   /* Two pill sizes. Read (24px): chips, tags, counts. Press (36px desktop, 44px phone): buttons, sub-tabs, inputs. */
-  .chip, .mtag { height: 24px; min-height: 24px; display: inline-flex; align-items: center; box-sizing: border-box; font-size: 13px; line-height: 1; padding: 0 8px; }
+  .chip, .mtag { height: 24px; min-height: 24px; display: inline-flex; align-items: center; box-sizing: border-box; font-size: var(--fs-small); line-height: 1; padding: 0 8px; }
   /* Read pills (tags, dates): a plain 1px ring in the clear line, muted words. Late = rose ring + tint, soon = amber ring + tint (ink words).
      The small dot before the words keeps the slot colour. Read-only: no hover. */
   .mtag { background: transparent; border: 1px solid var(--ctl); color: var(--muted); font-weight: 600; }
   .mtag.risk { border-color: var(--ljr-2); background: var(--ljr-2-tint); color: var(--ink); }
   .mtag.fin { border-color: var(--ljr-3-text); background: var(--ljr-3-tint); color: var(--ink); }
-  /* Count pills: ONE exact box so 1 and 2 digits match in any font: 30 x 22, line 20px, radius 11px.
-     Only 3+ digits (and worded pills) get .wide and grow. */
-  .cnt { width: 30px; min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 3px; border-radius: 11px; box-sizing: border-box;
-    display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; overflow: hidden; }
+  /* Count pills: ONE exact box so 1 and 2 digits match in any font: 30 x 24, 14px words, line 22px, radius 12px (the house count tokens).
+     Only 3+ digits (and worded pills) get .wide and grow. Ring only, no fill: rose = late / risk, grey = waiting. */
+  .cnt { width: var(--house-count-w); min-width: var(--house-count-w); height: var(--house-count-h); min-height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); box-sizing: border-box;
+    display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: var(--fs-small); white-space: nowrap; font-variant-numeric: tabular-nums; overflow: hidden; }
   .cnt.wide { width: auto; padding: 0 6px; overflow: visible; }
   .cnt { border: 1px solid var(--ctl); font-weight: 600; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .cnt.k-risk { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
-  .cnt.k-fin { border-color: var(--ljr-3-text); background: var(--ljr-3-tint); }
-  .btn, .subnav a, .index .btn, .index.top .btn, .picker select, input.find, .urgent .btn { min-height: 36px; font-size: 14px; font-weight: 600; }
+  .cnt.k-risk { border-color: var(--ljr-2); background: transparent; }
+  .cnt.k-fin { border-color: var(--ctl); background: transparent; }
+  .btn, .subnav a, .index .btn, .index.top .btn, .picker select, input.find, .urgent .btn { min-height: 36px; font-size: var(--fs-small); font-weight: 600; }
   .btn, .subnav a, .picker select, input.find { border-color: var(--ctl); }
   .subnav a { display: inline-flex; align-items: center; }
   @media (max-width: 600px) { .btn, .subnav a, .index .btn, .index.top .btn, .picker select, input.find, .urgent .btn { min-height: 44px; } }
@@ -321,7 +321,7 @@
   html body #hereTitle, html body #hereTitle:focus, html body #hereTitle:focus-visible { outline: none !important; }
   /* Home: Needs you line with its urgency split, three tiles, then the Next card. */
   .needsrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-  .needsline { font-size: 26px; font-weight: 600; }
+  .needsline { font-size: var(--fs-figure); font-weight: 600; }
   .hsplit { display: inline-flex; flex-wrap: wrap; gap: 8px; }
   .nextcard[class] { border-color: var(--ink); background: var(--card); }
   .nextcard .actions { gap: 12px; }
@@ -329,7 +329,7 @@
   /* Friendly empty state: a small green-ring check. */
   .okstate { display: flex; flex-direction: row; align-items: center; gap: 12px; }
   .okstate h3 { margin: 0; }
-  .okring { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--ljr-5); background: var(--ljr-5-tint); color: var(--ink); font-size: 15px; font-weight: 600; }
+  .okring { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--ljr-5); background: var(--ljr-5-tint); color: var(--ink); font-size: var(--fs-body); font-weight: 600; }
   /* Frame: dark top bar and dark bottom tab bar (never black); the bottom bar one step lighter so both read the same. */
   header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
   header .btn, header .btn.vision { color: var(--frame-ink); background: transparent; border-color: var(--ctl); }

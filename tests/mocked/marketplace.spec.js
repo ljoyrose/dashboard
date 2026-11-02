@@ -976,16 +976,16 @@ function auditLook() {
     const bg = rgb(getComputedStyle(el).backgroundColor), page = bgOf(el.parentElement);
     if (bg[3] > 0.5 && ratio(bg, page) > 1.6) out.push(`solid fill on marker ${name(el)}`);
   }
-  // Counts: one fixed size (30 x 22, radius 11) so 1 and 2 digits match.
-  // Bottom-tab counts are Lisa's 18px corner ring instead (tab picks, 2 Nov): 18 high, 9px ends, at least 18 wide.
+  // Counts: one fixed size (30 x 24, radius 12, a 14px number: Lisa's pick A, 2 Nov) so 1 and 2 digits match.
+  // Bottom-tab counts are the corner ring instead (tab picks, 2 Nov): 24 x 24, 12px ends.
   for (const el of [...document.querySelectorAll('nav.house-tabs .ht > .n')].filter(vis)) {
     const s = getComputedStyle(el), b = el.getBoundingClientRect();
-    if (Math.round(b.height) !== 18 || b.width < 17.4 || s.borderTopLeftRadius !== '9px' || s.lineHeight !== '16px' || s.position !== 'absolute') out.push(`tab count ${Math.round(b.width)}x${Math.round(b.height)} r${s.borderTopLeftRadius}: ${name(el)}`);
+    if (Math.round(b.height) !== 24 || (el.textContent.length < 3 && Math.round(b.width) !== 24) || s.borderTopLeftRadius !== '12px' || s.lineHeight !== '22px' || s.fontSize !== '14px' || s.position !== 'absolute') out.push(`tab count ${Math.round(b.width)}x${Math.round(b.height)} r${s.borderTopLeftRadius}: ${name(el)}`);
   }
   for (const el of [...document.querySelectorAll('.cnt, nav.tabs .n')].filter(vis)) {
     if (el.matches('nav.house-tabs .ht > .n')) continue;
     const s = getComputedStyle(el), b = el.getBoundingClientRect();
-    if (Math.round(b.height) !== 22 || (el.textContent.length < 3 && Math.round(b.width) !== 30) || s.borderTopLeftRadius !== '11px') out.push(`count pill ${Math.round(b.width)}x${Math.round(b.height)} r${s.borderTopLeftRadius}: ${name(el)}`);
+    if (Math.round(b.height) !== 24 || (el.textContent.length < 3 && Math.round(b.width) !== 30) || s.borderTopLeftRadius !== '12px' || s.fontSize !== '14px') out.push(`count pill ${Math.round(b.width)}x${Math.round(b.height)} r${s.borderTopLeftRadius}: ${name(el)}`);
   }
   // One radius: 12px on everything with corners; circles only for status dots and initial rings; counts 11px.
   for (const el of [...document.querySelectorAll('body *')].filter(vis)) {
@@ -1088,19 +1088,19 @@ test.describe('Marketplace house look', () => {
     expect(await cur.locator('.bar').evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(w0);
   });
 
-  test('count pills are one exact box for 1 and 2 digits even in a wider fallback font; only 3+ digits grow (tab counts: the 18px corner ring)', async ({ page }) => {
+  test('count pills are one exact box for 1 and 2 digits even in a wider fallback font; only 3+ digits grow (tab counts too: the 24 x 24 corner ring)', async ({ page }) => {
     const many = Array.from({ length: 88 }, (_, i) => ['GO|' + i, 'go', 'Treats', 'Sample ' + i, '{}', ago(5)]).concat(Array.from({ length: 120 }, (_, i) => ['RM|' + i, 'remove', 'Clothes', 'Sample ' + i, '{}', ago(5)]));
     await sheets(page, many.concat([['MSG|1', 'message', 'Clothes', 'Sample question', '{}', ago(5)]]));
     await open(page);
     await page.addStyleTag({ content: '* { font-family: "DejaVu Sans", Verdana, sans-serif !important; letter-spacing: .04em !important; }' });   // wider than Lexend
     const box = (sel) => page.locator(sel).evaluate((e) => { const b = e.getBoundingClientRect(); return [Math.round(b.width * 100) / 100, Math.round(b.height * 100) / 100]; });
-    // Bottom-tab counts are Lisa's 18px corner ring (tab picks, 2 Nov): always 18 high, at least 18 wide, growing with the digits.
+    // Bottom-tab counts are the corner ring (tab picks, 2 Nov) holding a 14px number (pick A): always 24 high, one 28px width for 1 and 2
+    // digits, only 3+ digits grow.
     const one = await box('#n-reply');                  // 1 digit
     const two = await box('#n-decide');                 // 2 digits
     const wide = await box('#n-do');                    // 3 digits grow
-    expect([one[1], two[1], wide[1]]).toEqual([18, 18, 18]);
-    expect(one[0]).toBeGreaterThanOrEqual(18);
-    expect(two[0]).toBeGreaterThan(one[0]);
+    expect([one[1], two[1], wide[1]]).toEqual([24, 24, 24]);
+    expect([one[0], two[0]]).toEqual([24, 24]);
     expect(wide[0]).toBeGreaterThan(two[0]);
   });
 

@@ -33,7 +33,7 @@
   * { box-sizing: border-box; }
   h1, h2, h3, b, strong, th, summary { font-weight: 600; }   /* two weights only: 400 and 600 */
   html { scroll-padding-bottom: 96px; }   /* a button scrolled into view never hides under the tab bar */
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5; }
   .hidden { display: none !important; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   a.btn, nav.tabs a, a.tile { text-decoration: none; }
@@ -44,7 +44,7 @@
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
   header .top { margin: 0; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
   .top h1 .dot { background: var(--ljr-6); }
-  .stamp { font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; color: var(--frame-ink); font-variant-numeric: tabular-nums; }
+  .stamp { font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; color: var(--frame-ink); font-variant-numeric: tabular-nums; }
   .stamp:empty { display: none; }
   .readat { font-variant-numeric: tabular-nums; }
   /* Signed out the dark bar is hidden by the sign-in gate, so its buttons switch to page colours (still readable). */
@@ -77,10 +77,10 @@
   main, main.wrap { padding: 16px var(--house-gutter) 120px; display: flex; flex-direction: column; gap: 12px; }   /* .wrap alone would drop the room for the tab bar */
   #view { display: flex; flex-direction: column; gap: 12px; }   /* one 12px step between cards (Lisa chose 12px, 28 Oct) */
   #view > .grp, #view > .ghead { margin-top: 12px; margin-bottom: 4px; }   /* 16px under a header line before its first card (12px gap + 4px) */
-  .needs { font-size: 26px; font-weight: 600; margin: 0; line-height: 1.3; }   /* the page greeting */
+  .needs { font-size: var(--fs-figure); font-weight: 600; margin: 0; line-height: 1.3; }   /* the page greeting */
   .needs .zero { font-variant-numeric: tabular-nums; }
-  .hint { font-size: 14px; color: var(--muted); margin: 0; }
-  .grp { font-size: 16px; font-weight: 600; margin: 0; }
+  .hint { font-size: var(--fs-small); color: var(--muted); margin: 0; }
+  .grp { font-size: var(--fs-head); font-weight: 600; margin: 0; }
   .ghead { display: flex; gap: 8px; align-items: center; }
   .ghead .cnt { margin-left: auto; }
   .banner { border: 1px solid var(--need); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ink); }
@@ -92,18 +92,18 @@
   .card.empty::before { content: none; }
   /* The "Next" card on Home: the one thing to do now, white with a 1px ink edge. */
   .card.next { border-color: var(--ink); }
-  .nextlab { margin: 0 0 -8px; font-size: 13px; font-weight: 600; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .nextlab { margin: 0 0 -8px; font-size: var(--fs-small); font-weight: 600; color: var(--muted); display: flex; gap: 6px; align-items: center; }
   .nextlab .ti { font-size: 16px; color: var(--ink); }
-  .card h2 { font-size: 17px; margin: 0; line-height: 1.35; }
-  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
+  .card h2 { font-size: var(--fs-head); margin: 0; line-height: 1.35; }
+  .card .what { color: var(--muted); font-size: var(--fs-body); margin: 0; }
   .card .acts { margin-top: 4px; }
   .card.inner { padding: 0; border: 0; box-shadow: none; gap: 0; background: transparent; }   /* no box inside a box: rows split by 1px lines */
   .card > .row:first-of-type, .card.inner > .row:first-child { border-top: 0; }
   /* Friendly empty states: a small green-ring check and plain words. */
   .card.empty { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
   .card.empty > div { flex: 1; min-width: 0; }
-  .okring { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--ok); background: var(--ljr-5-tint); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: var(--ink); }
-  .card.empty h2 { font-size: 17px; }
+  .okring { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--ok); background: var(--ljr-5-tint); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+  .card.empty h2 { font-size: var(--fs-head); }
   .card.empty .what { margin-top: 2px; }
 
   /* Item block: 44×44 photo (or a line icon of the item type) left of the text; name line, then the title (2 lines, then …). */
@@ -112,15 +112,15 @@
   .ph { display: inline-flex; align-items: center; justify-content: center; }
   .ph .ti { font-size: 22px; color: var(--muted); }
   .item .t { flex: 1; min-width: 0; font-weight: 400; }
-  .bline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; }
+  .bline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; }
   .sdot { --c: var(--ljr-0); width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; display: inline-block; }
-  .ttl { font-size: 16px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
-  .item .m { font-size: 14px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .ttl { font-size: var(--fs-head); font-weight: 600; color: var(--ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .item .m { font-size: var(--fs-small); color: var(--muted); font-weight: 400; margin-top: 2px; }
   .m.post { font-weight: 600; color: var(--ink); display: flex; gap: 6px; align-items: center; }
   .m.post .ti { font-size: 16px; color: var(--muted); }
   /* Who a card belongs to: initials (or their photo) in a small ring of that person's colour, on the name line. */
   .ava { --ava: var(--ljr-ava-other); width: 24px; height: 24px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; flex: none;
-    border: 1px solid color-mix(in srgb, var(--ava) 70%, var(--ink)); background: color-mix(in srgb, var(--ava) 14%, var(--surface)); color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1; }
+    border: 1px solid color-mix(in srgb, var(--ava) 70%, var(--ink)); background: color-mix(in srgb, var(--ava) 14%, var(--surface)); color: var(--ink); font-size: var(--fs-small); font-weight: 600; line-height: 1; }
   .ava img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; display: block; }
   /* Date pill: its RING shows urgency (rose = late, amber = today or tomorrow). The words stay ink. */
   .date { gap: 6px; font-weight: 600; } /* the house date pill (../house.css): always ringed; rose late, amber soon */
@@ -128,20 +128,20 @@
   .red, .verdict.wait, .verdict.go, ul.money li.red { color: var(--ink); font-weight: 600; }
   .red::before, .verdict::before, ul.money li.red::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ljr-2); margin-right: 6px; vertical-align: 1px; }
   .verdict.wait::before { background: var(--ljr-3); } .verdict.go::before { background: var(--ljr-5); }
-  .verdict { margin: 0; font-size: 15px; }
+  .verdict { margin: 0; font-size: var(--fs-body); }
 
   .acts { display: flex; gap: 8px; flex-wrap: wrap; }
   .acts .btn { flex: 1; justify-content: center; }
   .row { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
   .row .txt { flex: 1; min-width: 0; }
-  .row .why { font-size: 14px; color: var(--muted); }
-  .steps { margin: 0; padding-left: 22px; font-size: 15px; }
+  .row .why { font-size: var(--fs-small); color: var(--muted); }
+  .steps { margin: 0; padding-left: 22px; font-size: var(--fs-body); }
   .steps li { margin: 4px 0; }
   .steps.words { list-style: none; padding-left: 0; }
   .steps.words li { display: flex; gap: 8px; align-items: baseline; }
   .steps.words .sn { flex: none; font-weight: 600; }
-  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 12px; min-height: 36px; cursor: pointer; align-self: flex-start; }
+  .sent { font-size: var(--fs-small); color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .more { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 12px; min-height: 36px; cursor: pointer; align-self: flex-start; }
   @media (max-width: 544px) { .more { min-height: 44px; } }
 
   /* Summary strip: big numbers in tabular figures, each tile a 1px edge; a "needs you" number wears the rose ring. */
@@ -149,29 +149,30 @@
   .tiles.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 12px; cursor: pointer; color: var(--ink); min-width: 0; }
   .tile.big { min-height: 88px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
-  .tile .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; } .tile .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-  .tile.big .v { font-size: 28px; line-height: 1.2; }
-  .needs3 .v { align-self: flex-start; min-width: 44px; padding: 0 10px; border: 1px solid var(--ctl); border-radius: var(--radius); text-align: center; }
-  .needs3 .v.need { border-color: var(--need); background: var(--ljr-2-tint); }
-  .tile .up, .tile .down, .tile .flat { color: var(--muted); font-size: 15px; }
+  .tile .k { font-size: var(--fs-small); color: var(--muted); overflow-wrap: anywhere; } .tile .v { font-size: var(--fs-figure); font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .tile.big .v { font-size: var(--fs-figure); line-height: 1.2; }
+  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
+  .needs3 .tile .v { align-self: flex-start; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--ctl); }
+  .needs3 .tile .v.need { border-color: var(--house-late); }
+  .tile .up, .tile .down, .tile .flat { color: var(--muted); font-size: var(--fs-body); }
   .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .fact { padding: 8px 12px; border-left: 1px solid var(--line); min-width: 0; }
   .fact:nth-child(3n + 1) { border-left: 0; padding-left: 0; }
-  .fact .k { display: block; font-size: 13px; color: var(--muted); } .fact .v { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-  ul.money, ul.asks { margin: 0; padding-left: 18px; font-size: 15px; display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
+  .fact .k { display: block; font-size: var(--fs-small); color: var(--muted); } .fact .v { font-size: var(--fs-figure); font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  ul.money, ul.asks { margin: 0; padding-left: 18px; font-size: var(--fs-body); display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
   ul.money { list-style: none; padding-left: 0; } ul.money li.head { font-weight: 600; }
 
   /* Post cards. Courier line: brand dot + name (always in words) + where to take it; the parcel number in a ring pill. */
-  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 -4px; padding: 0 0 12px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 16px; }
+  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 -4px; padding: 0 0 12px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: var(--fs-body); }
   .cband .cdot { width: 12px; height: 12px; border-radius: 50%; background: var(--cb); box-shadow: 0 0 0 1px var(--ctl); flex: none; }
-  .cband .pid { font-size: 17px; height: 28px; padding: 0 10px; border: 1px solid var(--ink); border-radius: var(--radius); display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
-  .cband .to { font-weight: 400; font-size: 15px; color: var(--muted); }
+  .cband .pid { font-size: var(--fs-figure); height: 28px; padding: 0 10px; border: 1px solid var(--ink); border-radius: var(--radius); display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
+  .cband .to { font-weight: 400; font-size: var(--fs-body); color: var(--muted); }
   .cb-inpost { --cb: var(--ljr-cb-inpost); } .cb-evri { --cb: var(--ljr-cb-evri); } .cb-rm { --cb: var(--ljr-cb-rm); } .cb-dpd { --cb: var(--ljr-cb-dpd); }
   .cb-yodel { --cb: var(--ljr-cb-yodel); } .cb-pf { --cb: var(--ljr-cb-pf); } .cb-none { --cb: var(--ljr-cb-none); }
-  .parcel { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .row .parcel { font-size: 17px; min-width: 44px; }
+  .parcel { font-size: var(--fs-figure); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .row .parcel { font-size: var(--fs-figure); min-width: 44px; }
   .dropcode { border: 1px dashed var(--ctl); border-radius: var(--radius); padding: 12px; text-align: center; }
-  .dropcode .code { display: block; font-size: 22px; font-weight: 600; letter-spacing: 2px; overflow-wrap: anywhere; }
+  .dropcode .code { display: block; font-size: var(--fs-figure); font-weight: 600; letter-spacing: 2px; overflow-wrap: anywhere; }
   .packbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
   .pidin { width: 9em; }
   /* Home: "To post" list, calm rows (photo, title, date pill), one button under it. Not a card, so Home keeps one Next card. */
@@ -179,7 +180,7 @@
   .prow { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); color: var(--ink); }
   .prow:first-child { border-top: 0; }
   .prow .pt { flex: 1; min-width: 0; display: flex; gap: 4px 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-  .prow .ttl { min-width: 0; font-size: 15px; }
+  .prow .ttl { min-width: 0; font-size: var(--fs-body); }
   .prow > img, .prow > .ph { width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); flex: none; background: var(--bg); }
   .plist .acts { margin-top: 4px; }
 
@@ -187,8 +188,8 @@
   .pair figure > a { display: block; border-radius: var(--radius); }
   .pair figure { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .pair img, .pair .nopic { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg); display: block; }
-  .pair .nopic { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
-  .pair figcaption { font-size: 13px; color: var(--muted); font-weight: 600; overflow-wrap: anywhere; }
+  .pair .nopic { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: var(--fs-small); }
+  .pair figcaption { font-size: var(--fs-small); color: var(--muted); font-weight: 600; overflow-wrap: anywhere; }
   .opbox { display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   label.qty { font-weight: 600; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; border-radius: var(--radius); }
@@ -196,14 +197,14 @@
   .buyfrom { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-weight: 600; } .buyfrom .k { color: var(--muted); font-weight: 600; }
   details.npgroup > summary { min-height: 56px; } details.npgroup[open] > *:not(summary) { margin-top: 12px; } details.npgroup .row .num { width: 72px; } details.npgroup input[type=checkbox] { width: 28px; height: 28px; }   /* v11.10 New stock */
   details.madeof { display: block; } details.madeof[open] > *:not(summary) { margin-top: 12px; } details.madeof label.qty { margin-top: 12px; }
-  input.num, input.txtin { font: inherit; font-size: 16px; min-height: 36px; padding: 4px 10px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); }
+  input.num, input.txtin { font: inherit; font-size: var(--fs-body); min-height: 36px; padding: 4px 10px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); }
   @media (max-width: 544px) { input.num, input.txtin { min-height: 44px; } }
   input.num { width: 72px; text-align: center; font-variant-numeric: tabular-nums; }
   input.num.pidin { width: 9em; }
   input.txtin { width: 100%; }
   input::placeholder { color: var(--muted); opacity: 1; }
   .qr { position: fixed; inset: 0; background: var(--ljr-paper); color: var(--ljr-ink); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
-  .qr .code { font-size: 44px; font-weight: 600; letter-spacing: 3px; word-break: break-all; }
+  .qr .code { font-size: var(--fs-figure); font-weight: 600; letter-spacing: 3px; word-break: break-all; }
   .qr img { max-width: 90vw; max-height: 60vh; }
 </style>
 </head>

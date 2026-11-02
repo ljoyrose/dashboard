@@ -61,13 +61,13 @@ test.describe('Factory steps', () => {
   });
 });
 
-// Factory tab counts follow Lisa's tab picks (2 Nov 2026): an 18px ring in the tab's top-right corner, no fill; the unread dot and switch knob stay solid on purpose.
+// Factory tab counts follow Lisa's tab picks (2 Nov 2026): a 24 x 24 ring holding a 14px number (pick A) in the tab's top-right corner, no fill; the unread dot and switch knob stay solid on purpose.
 test.describe('Factory tab counts', () => {
-  test('tab counts are an exact 18px ring with no fill and an ink number, never solid', async ({ page, guard }) => {
+  test('tab counts are an exact 24 x 24 ring (14px number) with no fill and an ink number, never solid', async ({ page, guard }) => {
     await open(page, guard);
     const n = page.locator('#nMe');
-    const st = await n.evaluate((e) => { const c = getComputedStyle(e), b = e.getBoundingClientRect(); return { w: Math.round(b.width * 100) / 100, h: Math.round(b.height), bw: c.borderTopWidth, bc: c.borderTopColor, bg: c.backgroundColor, col: c.color, ink: getComputedStyle(document.body).color }; });
-    expect([st.w >= 18, st.h, st.bw]).toEqual([true, 18, '1px']);
+    const st = await n.evaluate((e) => { const c = getComputedStyle(e), b = e.getBoundingClientRect(); return { w: Math.round(b.width * 100) / 100, h: Math.round(b.height), fs: c.fontSize, bw: c.borderTopWidth, bc: c.borderTopColor, bg: c.backgroundColor, col: c.color, ink: getComputedStyle(document.body).color }; });
+    expect([st.w, st.h, st.fs, st.bw]).toEqual([24, 24, '14px', '1px']);
     expect(st.bg).toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/); // ring only, no fill (Lisa's tab picks)
     expect(st.bc).not.toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
     expect(st.col).toBe(st.ink);

@@ -456,10 +456,10 @@ function audit() {
     const bw = ['Top', 'Right', 'Bottom', 'Left'].map((k) => parseFloat(s['border' + k + 'Width']) || 0);
     if (Math.max(...bw) > 1) out.line.push(name(el) + ' ' + bw.join('/'));
     const rad = s.borderTopLeftRadius;
-    const tabN = el.matches('nav.house-tabs .ht > .n');   // bottom-tab counts: Lisa's 18px corner ring, 9px round ends (tab picks, 2 Nov)
-    const pill = el.matches('.cnt, nav.tabs .n') && !tabN;   // count pills: 22px high with full round ends (11px)
-    const tabShape = (rad === '9px' && tabN) || (rad === '50%' && el.matches('nav.house-tabs .hic')) || (rad === '2px' && el.matches('nav.house-tabs .bar'));
-    if (rad !== '0px' && !tabShape && !(rad === '12px' && !pill && !tabN) && !(rad === '11px' && pill) && !(rad === '50%' && el.classList.contains('dot'))) out.radius.push(name(el) + ' ' + rad);
+    const tabN = el.matches('nav.house-tabs .ht > .n');   // bottom-tab counts: a 24 x 24 corner ring, 12px round ends (14px number, Lisa's pick A, 2 Nov)
+    const pill = el.matches('.cnt, nav.tabs .n') && !tabN;   // count pills: 24px high with full round ends (12px; 14px number, Lisa's pick A)
+    const tabShape = (rad === '12px' && tabN) || (rad === '50%' && el.matches('nav.house-tabs .hic')) || (rad === '2px' && el.matches('nav.house-tabs .bar'));
+    if (rad !== '0px' && !tabShape && !(rad === '12px' && !pill && !tabN) && !(rad === '12px' && pill) && !(rad === '50%' && el.classList.contains('dot'))) out.radius.push(name(el) + ' ' + rad);
     // Rings on things you press or read as a pill: 3:1 against what they sit on.
     if (el.matches('button:not([disabled]), .btn, .chip, .more, a.tile, input, .badge, .datep, .cnt, nav.tabs .n, .stamp, .row .amt.red, .row .amt.good') && bw[0] === 1) {
       const r = ratio(rgb(s.borderTopColor), bgOf(el.parentElement)); if (r < 3) out.ring.push(name(el) + ' ' + r.toFixed(2));
@@ -576,7 +576,7 @@ test.describe('GA Hub house look', () => {
     });
   }
 
-  test('count pills are one fixed size: 30 x 22px for 1 and 2 digits, centred, round ends', async ({ page }) => {
+  test('count pills are one fixed size: 30 x 24px for 1 and 2 digits, 14px, centred, round ends', async ({ page }) => {
     const b = book(); for (let i = 0; i < 10; i++) b.cards.push(['CHK-' + i, 'check', 'Orders', 'Sample check ' + i, '{}', ago(1)]);
     await sheets(page, b);
     await open(page, '#/products');
@@ -585,9 +585,10 @@ test.describe('GA Hub house look', () => {
       const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.justifyContent, s.lineHeight, e.scrollWidth <= e.clientWidth, e.matches('nav.house-tabs .ht > .n')]; }));
     let sizes = await measure();
     expect(sizes.map((x) => x[0]).sort()).toEqual(['1', '13', '2', '2']);   // product groups 2 and 1, Home 13 (two digits), Orders 2
-    // Bottom-tab counts (Home 13, Orders 2) are Lisa's 18px corner ring (tab picks, 2 Nov): 18 high, at least 18 wide, 9px ends, 16px line.
-    const check = (x, why) => x[7] ? (expect([x[2], x[1] >= 18, x[3], x[4], x[5], x[6]], why + x[0]).toEqual([18, true, '9px', 'center', '16px', true]))
-      : expect(x.slice(1, 7), why + x[0]).toEqual([30, 22, '11px', 'center', '20px', true]);
+    // Bottom-tab counts (Home 13, Orders 2) are a corner ring (tab picks, 2 Nov) holding a 14px number (Lisa's pick A): 24 x 24 for 1 and 2
+    // digits, 12px ends, 22px line. Every other count is the 30 x 24 pill.
+    const check = (x, why) => x[7] ? (expect([x[2], x[1], x[3], x[4], x[5], x[6]], why + x[0]).toEqual([24, 24, '12px', 'center', '22px', true]))
+      : expect(x.slice(1, 7), why + x[0]).toEqual([30, 24, '12px', 'center', '22px', true]);
     expect(sizes.filter((x) => x[7]).map((x) => x[0]).sort(), 'the tab counts').toEqual(['13', '2']);
     for (const x of sizes) check(x, 'count ');
     // The same with a wider fallback font (as on a machine without Lexend): the boxes keep their size and two digits still fit.
