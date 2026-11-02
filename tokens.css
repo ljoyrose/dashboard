@@ -79,20 +79,25 @@
   --house-tabs-h: 64px; --house-tabs-gap: 5px; --house-tab-max: 128px;
   --house-tab-bar: 18px; --house-tab-bar-on: 40px; --house-tab-bar-h: 4px;   /* the short line under each tab: rest / hover and selected */
   --house-tab-disc: 28px; --house-tab-icon: 22px;   /* the round place for the icon; a 1px ring shows round it only on hover, focus and press */
-  --house-tab-count-h: 18px; --house-tab-count-lh: 16px; --house-tab-count-pad: 5px;   /* a tab's count: a small ring in its top-right corner */
+  --house-tab-count-w: 24px; --house-tab-count-h: 24px; --house-tab-count-lh: 22px; --house-tab-count-pad: 0px;   /* a tab's count: a 14px number in a round ring in its top-right corner (1 and 2 digits one width) */
   --house-focus: 2px;              /* keyboard focus ring */
   --house-btn: 36px; --house-btn-phone: 44px;      /* everything you press */
   --house-head: 56px;              /* the top bar (Lisa's pick A, 2 Nov): one row, this high on every page, desktop and phone */
   --house-head-space: 8px;         /* between the things in the top bar */
-  --house-head-name: 20px;         /* the hub's name in the top bar */
+  --house-head-name: var(--fs-head); /* the hub's name in the top bar: 18px, like a heading */
   --house-gutter: 24px;            /* the page frame (Lisa, 2 Nov): every page uses the full window with this side gap; 16px on a phone */
-  --house-read-size: 14px;         /* the small read time in the top bar */
+  --house-read-size: var(--fs-small); /* the small read time in the top bar */
   --house-icon: 20px;              /* an icon inside an icon-only button (24px outline icons, stroke 2) */
   --house-icon-stroke: 2;
   --house-menu-w: 300px;           /* the shared Look menu */
   --house-pill: 24px;              /* read-only pills (tags, dates, stamps) */
-  --house-count-w: 30px; --house-count-h: 22px; --house-count-r: 11px; --house-count-lh: 20px; --house-count-pad: 3px;
-  --house-font: Lexend, system-ui, sans-serif; --house-min: 13px; --house-press-size: 14px;
+  --house-count-w: 30px; --house-count-h: 24px; --house-count-r: 12px; --house-count-lh: 22px; --house-count-pad: 3px;   /* every ringed number: 14px in this one box */
+  /* Type (Lisa, 2 Nov 2026): ONE font, three weights (400 / 500 / 600), and only these sizes. A big number is never bigger than a heading. */
+  --fs-head: 18px;                 /* headings (h1-h4, card titles), the hub name in the top bar */
+  --fs-figure: 18px;               /* big numbers and summary figures */
+  --fs-body: 15px;                 /* body text */
+  --fs-small: 14px;                /* labels, tabs, counts and ringed numbers, pills, tags, notes, meta lines, tables, menus; nothing smaller */
+  --house-font: Lexend, system-ui, sans-serif; --house-min: 14px; --house-press-size: var(--fs-small);
   --house-gap: 12px;               /* between cards */
   --house-head-gap: 16px;          /* under a section header */
   --house-pad: 12px;               /* inside a card */

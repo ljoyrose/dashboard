@@ -1,5 +1,5 @@
 // Factory on a phone (390 x 844): every view, no sideways scroll, 44px press targets, bottom tabs on screen with their
-// counts in flow beside the label (never over it), counts still the fixed 30 x 22 box. Pretend Google and Drive; invented data.
+// counts in flow beside the label (never over it), counts still the fixed 30 x 24 box (14px number). Pretend Google and Drive; invented data.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -44,7 +44,7 @@ for (const scheme of ['light', 'dark']) {
           const nb = n.getBoundingClientRect(), lb = l.getBoundingClientRect();
           if (!(nb.right <= lb.left || nb.left >= lb.right || nb.bottom <= lb.top || nb.top >= lb.bottom)) out.push('count sits on the label: ' + l.textContent);
           if (getComputedStyle(n).position !== 'absolute' || ab.right - nb.right > 5 || nb.top - ab.top > 5) out.push('count not in the top-right corner: ' + l.textContent);   // Lisa's tab picks, 2 Nov
-          if (Math.round(nb.height) !== 18 || nb.width < 18) out.push('tab count ' + nb.width + 'x' + nb.height + ': ' + l.textContent);
+          if (Math.round(nb.height) !== 24 || Math.round(nb.width) !== 24) out.push('tab count ' + nb.width + 'x' + nb.height + ': ' + l.textContent);
         });
         return out.slice(0, 10);
       }, PRESS);

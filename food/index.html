@@ -36,7 +36,7 @@
   * { box-sizing: border-box; }
   h1, h2, h3, b, strong { font-weight: 600; }   /* two weights only: 400 and 600 */
   html { scroll-padding-bottom: 110px; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   a.btn, nav.tabs a, a.tile { text-decoration: none; }
   .hidden { display: none !important; }
@@ -48,7 +48,7 @@
   /* Frame: dark top bar and dark bottom tab bar around a light work area. */
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
   .top { margin: 0; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
-  .stamp { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
+  .stamp { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }   /* the frame's own clear line (3:1 on the dark bar) */
   @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); } }
@@ -69,20 +69,21 @@
   main.wrap { padding: 16px var(--house-gutter) 120px; display: flex; flex-direction: column; gap: 12px; }
   #view { display: flex; flex-direction: column; gap: 12px; }   /* one 12px step: tiles, cards and lists never touch */
   .growth { display: flex; flex-direction: column; gap: 12px; }   /* Grow orders leads the Home, same 12px step */
-  .tile .m { font-size: 13px; color: var(--muted); }
+  .tile .m { font-size: var(--fs-small); color: var(--muted); }
   .banner { border: 1px solid var(--rose); border-radius: var(--radius); padding: 10px 14px; background: var(--rose-tint); color: var(--ink); }
   .banner.info { border-color: var(--ctl); background: var(--surface); }
-  .needs { font-size: 26px; font-weight: 600; margin: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .hint { font-size: 14px; color: var(--muted); margin: 0; }
+  .needs { font-size: var(--fs-figure); font-weight: 600; margin: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .hint { font-size: var(--fs-small); color: var(--muted); margin: 0; }
 
   /* Summary strip: big numbers, a ring + tint only where something needs you. */
   .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   @media (min-width: 760px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; color: var(--ink); min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
   a.tile { border-color: var(--ctl); }   /* a tile you can press rests on the control line */
-  .tile .k { font-size: 14px; color: var(--muted); }
-  .tile .v { font-size: 24px; font-weight: 600; overflow-wrap: anywhere; align-self: flex-start; line-height: 1.3; }
-  .tile .v.red { border: 1px solid var(--rose); background: var(--rose-tint); border-radius: var(--radius); padding: 0 10px; }
+  .tile .k { font-size: var(--fs-small); color: var(--muted); }
+  .tile .v { font-size: var(--fs-figure); font-weight: 600; overflow-wrap: anywhere; align-self: flex-start; line-height: 1.3; }
+  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
+  .tile .v.red { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--house-late); }
   .tile .datep { align-self: flex-start; }
   /* A date pill: its RING shows urgency (rose = late, amber = soon). The words stay ink. */
   .datep { font-weight: 600; } /* the house date pill (../house.css): always ringed; rose late, amber soon */
@@ -90,38 +91,38 @@
   /* Cards: a name line (dot + what kind), then the title (2 lines, then …). */
   .card { display: flex; flex-direction: column; gap: 12px; } /* the house card (../house.css): 1px line, 12px inside */
   .card.next { border-color: var(--ink); }   /* Next: the one thing to do now; white with a 1px ink edge */
-  .bline { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 -8px; }
+  .bline { display: flex; gap: 8px; align-items: center; font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 0 0 -8px; }
   .bline .dot { width: 8px; height: 8px; }
-  .card h2 { font-size: 17px; margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
-  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
+  .card h2 { font-size: var(--fs-head); margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .card .what { color: var(--muted); font-size: var(--fs-body); margin: 0; }
   .card .what b { color: var(--ink); }
   .acts { display: flex; gap: 8px; flex-wrap: wrap; }
   .acts .btn { flex: 1; justify-content: center; }
-  .empty { display: flex; gap: 12px; align-items: center; margin: 0; font-size: 15px; }
+  .empty { display: flex; gap: 12px; align-items: center; margin: 0; font-size: var(--fs-body); }
   .empty::before { content: "\2713"; flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--green); background: var(--green-tint); color: var(--ink); font-size: 13px; font-weight: 600; }
-  .empty b { font-size: 16px; }
-  .empty .es { display: block; color: var(--muted); font-size: 14px; }
+  .empty b { font-size: var(--fs-body); }
+  .empty .es { display: block; color: var(--muted); font-size: var(--fs-small); }
 
   /* Calm rows: title, one flag, date, one action; 1px lines between rows, 16px under a header line. */
   .row { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
   .card > .row:first-of-type { border-top: 0; padding-top: 4px; }
   .row .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  .row .m { font-size: 14px; color: var(--muted); }
-  .row .amt { font-weight: 600; text-align: right; white-space: nowrap; font-size: 15px; }
-  .row .amt.red, .row .amt.good { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); font-size: 13px; }
+  .row .m { font-size: var(--fs-small); color: var(--muted); }
+  .row .amt { font-weight: 600; text-align: right; white-space: nowrap; font-size: var(--fs-body); }
+  .row .amt.red, .row .amt.good { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); font-size: var(--fs-small); }
   .row .amt.red { border-color: var(--rose); background: var(--rose-tint); }
   .row .links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-  .row .links .btn { font-size: 14px; padding: 0 12px; }
+  .row .links .btn { font-size: var(--fs-small); padding: 0 12px; }
   .badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-  .badge { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 400; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 8px; background: transparent; white-space: nowrap; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .badge { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 400; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 8px; background: transparent; white-space: nowrap; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .badge b { margin-right: 4px; }
   .badge.no { border-color: var(--rose); background: var(--rose-tint); }
-  .grp { font-size: 16px; font-weight: 600; margin: 4px 0 0; display: flex; gap: 8px; align-items: center; }
+  .grp { font-size: var(--fs-head); font-weight: 600; margin: 4px 0 0; display: flex; gap: 8px; align-items: center; }
   .grp .cnt { margin-left: auto; }
-  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sent { font-size: var(--fs-small); color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }   /* one filter row: Search, then the choices */
-  input.txtin { font: inherit; font-size: 16px; padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); flex: 1 1 240px; min-width: 0; max-width: 420px; }
+  input.txtin { font: inherit; font-size: var(--fs-body); padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); flex: 1 1 240px; min-width: 0; max-width: 420px; }
   input.txtin:focus { border-color: var(--ink); }
   input.txtin::placeholder { color: var(--muted); opacity: 1; }
 

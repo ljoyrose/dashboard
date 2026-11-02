@@ -363,6 +363,7 @@ Each entity page draws its `FORECAST.csv` as a line, with a dashed £0 line, the
 
 - The agreed rules (Lisa, 28 Oct 2026) are written once: the numbers and colours in `tokens.css` (including Look › Dark), the shared parts in `house.css` (buttons, pills, counts, date pills, the hover rule, bottom tabs, bars, cards, the phone Filter button). Every hub loads `tokens.css`, then `house.css`, then its own layout.
 - `tests/mocked/house-look.spec.js` holds every hub to the same rules by computed style, on every view. `HOUSE_AUDIT=<file>` runs every combination (light and dark, warm and cool, 1280 and 390, Look › Dark) and writes each deviation to that file instead of failing.
+- Type (Lisa, 2 Nov 2026): one font (Lexend), weights 400 / 500 / 600, and only three sizes, as tokens in `tokens.css`: 18px headings, card titles, big numbers and the hub name; 15px body; 14px everything else (labels, tabs, counts, pills, tables, menus). Every ringed number is 14px in one box (30 x 24 on the page, 24 x 24 on a bottom tab), ring only. `tests/mocked/fonts.spec.js` reads every word on all 8 pages at 1280 and 390, on a few views and the open More and Look menus.
 - Checks that read a value after a hover use one shared helper, `tests/support/settle.js`, which waits for the colour-bar transition to finish instead of a fixed pause.
 
 ## Phone install and keyboard keys

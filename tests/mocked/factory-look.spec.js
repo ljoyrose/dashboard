@@ -1,7 +1,7 @@
 // Factory house look (Lisa's rules, 28 Oct 2026), checked by computed style on every view, light and dark.
 // 1 no solid colour fills (tint inside a 1px line; the new-comment dot and the switch knob are the two allowed solids)
 // 2 no coloured words   3 1px lines; every pressable rests on one clear control line (3:1)   4 one 12px radius
-// 5 dark frame top and bottom; light tabs with no ring, a colour bar that widens   6 counts are a fixed 30 x 22 pill
+// 5 dark frame top and bottom; light tabs with no ring, a colour bar that widens   6 counts are a fixed 30 x 24 pill (14px number)
 // 7 Lexend 400/600, nothing under 13px   9 date pills always ringed   10 hover: neutral = ink line + tint; meaning = own colour
 // 13 friendly empty states. Plus: no colour written in the page. Pretend Google and Drive; invented data only.
 const fs = require('fs');
@@ -74,23 +74,23 @@ test.describe('Factory look: rules by computed style on every view', () => {
           const F = window.__fx, out = [];
           const ink = F.tok('--ink'), muted = F.tok('--muted'), frameInk = F.tok('--frame-ink'), ctl = F.tok('--ctl');
           const meaning = ['--r-risk', '--r-warn', '--r-ok', '--r-ops'].map(F.tok);
-          // 2 + 7: every element that holds words: 13px or more, weight 400 or 600, ink / grey (frame ink on the frame).
+          // 2 + 7: every element that holds words: 14 / 15 / 18px only, weight 400 / 500 / 600 (Lisa's type, 2 Nov), ink / grey (frame ink on the frame).
           document.querySelectorAll('body *').forEach((e) => {
             if (!F.seen(e) || e.closest('svg')) return;
             if (!Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) return;
             const cs = getComputedStyle(e);
-            if (parseFloat(cs.fontSize) < 13) out.push('under 13px: ' + F.what(e) + ' ' + cs.fontSize);
-            if (!['400', '600'].includes(cs.fontWeight)) out.push('weight ' + cs.fontWeight + ': ' + F.what(e));
+            if (![14, 15, 18].includes(parseFloat(cs.fontSize))) out.push('size ' + cs.fontSize + ': ' + F.what(e));
+            if (!['400', '500', '600'].includes(cs.fontWeight)) out.push('weight ' + cs.fontWeight + ': ' + F.what(e));
             if (![ink, muted, frameInk].includes(cs.color)) out.push('coloured words ' + cs.color + ': ' + F.what(e));
             if (cs.textTransform === 'uppercase') out.push('uppercase: ' + F.what(e));
           });
-          // 4: one radius. 12px; round only on dots and rings; count pills 11px; the thin colour bars 2px.
-          // The bottom tabs follow Lisa's tab picks (2 Nov): a round ring round the icon and 9px-round counts.
+          // 4: one radius. 12px (count pills too, 24px high so their ends are round); round only on dots and rings; the thin colour bars 2px.
+          // The bottom tabs follow Lisa's tab picks (2 Nov): a round ring round the icon.
           document.querySelectorAll('body *').forEach((e) => {
             if (!F.seen(e) || e.closest('svg')) return;
             const r = getComputedStyle(e).borderTopLeftRadius;
             if (r === '0px') return;
-            const ok = r === '12px' || (r === '50%' && e.matches('.dot, .info, .new, .stage .n, .sw > i, .req, nav.house-tabs .hic')) || (r === '11px' && e.matches('.cnt, .n') && !e.matches('nav.house-tabs .ht > .n')) || (r === '9px' && e.matches('nav.house-tabs .ht > .n')) || (r === '2px' && e.matches('.bar'));
+            const ok = r === '12px' || (r === '50%' && e.matches('.dot, .info, .new, .stage .n, .sw > i, .req, nav.house-tabs .hic')) || (r === '2px' && e.matches('.bar'));
             if (!ok) out.push('radius ' + r + ': ' + F.what(e));
           });
           // 3 + 12: pressables rest on ONE clear 1px line (the control line, or their own meaning colour), 12px, 36px.
@@ -104,14 +104,14 @@ test.describe('Factory look: rules by computed style on every view', () => {
             const want = e.matches(MEANING) ? meaning : [ctl];
             if (!e.matches('.stat') && !want.includes(cs.borderTopColor)) out.push('press line colour ' + cs.borderTopColor + ' (want ' + want.join(' or ') + '): ' + F.what(e));
           });
-          // 6: count pills one fixed size; no empty count rings. Tab counts follow Lisa's tab picks (2 Nov):
-          // an 18px ring (16px line) with no fill, grey while waiting, rose when late.
+          // 6: count pills one fixed size (30 x 24, a 14px number: Lisa's pick A, 2 Nov); no empty count rings. Tab counts follow Lisa's
+          // tab picks: a 24 x 24 round ring (22px line) with no fill, grey while waiting, rose when late.
           document.querySelectorAll('.cnt, nav.tabs .n, .fbtn .n').forEach((e) => {
             if (!F.seen(e)) return;
             const r = e.getBoundingClientRect(), cs = getComputedStyle(e), t = e.textContent.trim();
-            const tab = e.matches('nav.house-tabs .ht > .n'), H = tab ? 18 : 22, W = tab ? null : 30, LH = tab ? '16px' : '20px';
+            const tab = e.matches('nav.house-tabs .ht > .n'), H = 24, W = tab ? 24 : 30, LH = '22px';
             if (!t) out.push('empty count ring: ' + F.what(e.parentElement));
-            if (Math.round(r.height) !== H || (W && t.length <= 2 && Math.round(r.width * 100) / 100 !== W) || (!W && r.width < H - 0.6)) out.push('count size ' + r.width + 'x' + r.height + ': ' + F.what(e));
+            if (Math.round(r.height) !== H || (W && t.length <= 2 && Math.round(r.width * 100) / 100 !== W)) out.push('count size ' + r.width + 'x' + r.height + ': ' + F.what(e));
             if (cs.boxSizing !== 'border-box' || cs.lineHeight !== LH || cs.borderTopWidth !== '1px') out.push('count box ' + cs.boxSizing + ' ' + cs.lineHeight + ': ' + F.what(e));
           });
           document.querySelectorAll('nav.tabs .n').forEach((e) => {
@@ -364,10 +364,9 @@ test.describe('Factory look: counts and empty states', () => {
     expect(sizes.length).toBeGreaterThan(5);
     expect(sizes.filter((s) => s.tab).length, 'the tab counts are measured too').toBeGreaterThan(0);
     for (const s of sizes) {
-      // Bottom-tab counts are Lisa's 18px corner ring (tab picks, 2 Nov); every other count is the 30 x 22 pill.
-      expect(s.h, `count "${s.t}" height`).toBe(s.tab ? 18 : 22);
-      if (s.tab) expect(s.w, `tab count "${s.t}" width`).toBeGreaterThanOrEqual(18);
-      else if (s.t.length <= 2) expect(s.w, `count "${s.t}" width`).toBe(30);
+      // Every count holds a 14px number (Lisa's pick A, 2 Nov): bottom-tab counts are the 24 x 24 corner ring, the rest the 30 x 24 pill.
+      expect(s.h, `count "${s.t}" height`).toBe(24);
+      if (s.t.length <= 2) expect(s.w, `${s.tab ? 'tab ' : ''}count "${s.t}" width`).toBe(s.tab ? 24 : 30);
     }
     expect(sizes.find((s) => s.t === '999').w).toBeGreaterThan(30);
   });

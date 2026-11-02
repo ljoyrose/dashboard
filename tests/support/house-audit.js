@@ -3,10 +3,10 @@
 //
 // The numbers here are the agreed rules themselves (not copies of tokens.css): the check would catch tokens.css drifting.
 const RULES = {
-  radius: 12, line: 1, bar: 3, marker: [3, 18], minFont: 13, weights: ['400', '600'],
-  count: { w: 30, h: 22, r: 11, lh: 20, pad: 3 },
+  radius: 12, line: 1, bar: 3, marker: [3, 18], sizes: [14, 15, 18], weights: ['400', '500', '600'],   // type: Lisa, 2 Nov 2026
+  count: { w: 30, h: 24, r: 12, lh: 22, pad: 3 },
   // A bottom tab's count (Lisa's tab picks, 2 Nov): a small ring in the tab's top-right corner, no fill, never in the flow.
-  tabCount: { h: 18, r: 9, lh: 16, pad: 5, corner: 5 },
+  tabCount: { w: 24, h: 24, r: 12, lh: 22, pad: 0, corner: 5 },   // 14px number (Lisa's pick A, 2 Nov)
   button: { desktop: 36, phone: 44 },
   // Control line, frame top and frame bottom, per background (warm/cool) and mode (light/dark).
   press: { 'warm-light': '#8A7F70', 'cool-light': '#7A8692', 'warm-dark': '#857B6E', 'cool-dark': '#7A8691' },
@@ -91,7 +91,7 @@ function audit(o) {
     const s = getComputedStyle(e);
     if (!/lexend/i.test(s.fontFamily.split(',')[0])) add('font', e, s.fontFamily.split(',')[0]);
     if (!R.weights.includes(s.fontWeight)) add('weight', e, s.fontWeight);
-    if (px(s.fontSize) < R.minFont - 0.01) add('size', e, s.fontSize);
+    if (!R.sizes.includes(Math.round(px(s.fontSize) * 100) / 100)) add('size', e, s.fontSize);
     if (s.textTransform !== 'none') add('case', e, s.textTransform);
     if (/small-caps/.test(s.fontVariant)) add('case', e, s.fontVariant);
     const c = rgb(s.color);
@@ -112,7 +112,7 @@ function audit(o) {
     if (chroma(bc) > 45) { if (!e.matches(STATUS)) add('control line', e, 'neutral control rests on a colour ' + hex6(bc)); continue; }
     if (!near(bc, press, 8)) add('control line', e, hex6(bc) + ' (want ' + hex6(press) + ')');
   }
-  // 7 counts: a small ringed box holding only a number. 30 x 22, radius 11, line-height 20, padding 0 3px; .wide for 3+ digits.
+  // 7 counts: a small ringed box holding only a number, 14px. 30 x 24, radius 12, line-height 22, padding 0 3px; .wide for 3+ digits.
   // A bottom tab's count follows R.tabCount instead (Lisa's tab picks, 2 Nov).
   for (const e of document.querySelectorAll('body *')) {
     if (!seen(e) || e.children.length || e.matches(PRESS)) continue;
@@ -123,7 +123,8 @@ function audit(o) {
     if (inTabs(e)) {
       const T = R.tabCount, tab = e.parentElement.getBoundingClientRect();
       if (Math.abs(r.height - T.h) > 0.6) add('count', e, 'tab count height ' + r.height + ' (want ' + T.h + ')');
-      if (r.width < T.h - 0.6) add('count', e, 'tab count width ' + r.width);
+      if (t.replace('+', '').length < 3 && Math.abs(r.width - T.w) > 0.6) add('count', e, 'tab count width ' + r.width + ' (want ' + T.w + ')');
+      if (px(s.fontSize) !== 14) add('count', e, 'tab count words ' + s.fontSize + ' (want 14px)');
       if (s.boxSizing !== 'border-box') add('count', e, s.boxSizing);
       if (Math.abs(px(s.borderTopLeftRadius) - T.r) > 0.5) add('count', e, 'tab count radius ' + s.borderTopLeftRadius);
       if (Math.abs(px(s.lineHeight) - T.lh) > 0.5) add('count', e, 'tab count line-height ' + s.lineHeight);

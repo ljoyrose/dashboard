@@ -202,7 +202,7 @@ test.describe('Home: house look', () => {
     }
   });
 
-  test('every count pill is one fixed size: 1 and 2 digits match exactly (30 x 22, line 20px, radius 11px), even in a wider font; tab counts are the 18px corner ring', async ({ page }) => {
+  test('every count pill is one fixed size: 1 and 2 digits match exactly (30 x 24, line 22px, radius 12px, 14px number), even in a wider font; tab counts are the 24 x 24 corner ring', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     // Fonts are not loaded in tests, so CI's fallback can be wider than Lexend: probe in the page font AND in a forced wide font.
@@ -213,9 +213,9 @@ test.describe('Home: house look', () => {
           const r = s.getBoundingClientRect(), c = getComputedStyle(s); const o = [r.width, r.height, c.lineHeight, c.borderTopLeftRadius]; s.remove(); box.remove(); return o; };
         return { c1: probe('1', 'cnt'), c2: probe('88', 'cnt'), n1: probe('1', 'n need'), n2: probe('88', 'n need'), c3: probe('888', 'cnt wide'), n3: probe('888', 'n need wide') };
       }, font);
-      for (const k of ['c1', 'c2']) expect(sizes[k], (font || 'page font') + ' ' + k).toEqual([30, 22, '20px', '11px']);
-      // Tab counts follow Lisa's tab picks (2 Nov): 18 high, 16px line, 9px ends, at least 18 wide.
-      for (const k of ['n1', 'n2']) expect([sizes[k][0] >= 18, ...sizes[k].slice(1)], (font || 'page font') + ' ' + k).toEqual([true, 18, '16px', '9px']);
+      for (const k of ['c1', 'c2']) expect(sizes[k], (font || 'page font') + ' ' + k).toEqual([30, 24, '22px', '12px']);
+      // Tab counts (Lisa's tab picks, 2 Nov) hold a 14px number (pick A): one 24 x 24 box for 1 and 2 digits, 22px line, 12px ends.
+      for (const k of ['n1', 'n2']) expect(sizes[k], (font || 'page font') + ' ' + k).toEqual([24, 24, '22px', '12px']);
       expect(sizes.c3[0], '3 digits may grow').toBeGreaterThan(30);
       expect(sizes.n3[0], '3 digits may grow').toBeGreaterThan(sizes.n1[0]);
     }
@@ -224,15 +224,15 @@ test.describe('Home: house look', () => {
     if ((await n.textContent()).trim().length <= 2) await expect(n).not.toHaveClass(/\bwide\b/);
   });
 
-  test('every home view: nothing under 13px, only weights 400 and 600, no uppercase labels, line height 1.5', async ({ page }) => {
+  test('every home view: sizes 14 / 15 / 18px only, weights 400 / 500 / 600 only, no uppercase labels, line height 1.5', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     await page.evaluate(HELPERS);
-    expect(await page.evaluate(() => getComputedStyle(document.body).lineHeight)).toBe('24px'); // 16px x 1.5
+    expect(await page.evaluate(() => getComputedStyle(document.body).lineHeight)).toBe('22.5px'); // 15px body (Lisa's type, 2 Nov) x 1.5
     for (const [key, title] of VIEWS) {
       await goTab(page, key, title);
       const bad = await page.evaluate(() => window.__look.visibleText().map((e) => { const c = getComputedStyle(e); return { t: e.textContent.trim().slice(0, 30), px: parseFloat(c.fontSize), w: c.fontWeight, u: c.textTransform }; })
-        .filter((x) => x.px < 13 || !['400', '600'].includes(x.w) || x.u === 'uppercase').slice(0, 5));
+        .filter((x) => ![14, 15, 18].includes(x.px) || !['400', '500', '600'].includes(x.w) || x.u === 'uppercase').slice(0, 5));
       expect(bad, title).toEqual([]);
     }
   });
@@ -274,7 +274,7 @@ test.describe('Home: house look', () => {
       expect(c.b).toBe('1px');
       expect(c.bc).toBe('rgb(230, 68, 61)'); // rose ring
       expect(c.bg).toBe('rgba(0, 0, 0, 0)'); // ring only, no fill (Lisa's tab picks, 2 Nov)
-      expect([c.h, c.w >= 18], 'tab count 18px high, at least 18 wide').toEqual([18, true]);
+      expect([c.h, c.w], 'tab count 24 x 24 (a 14px number, Lisa\'s pick A)').toEqual([24, 24]);
     }
   });
 

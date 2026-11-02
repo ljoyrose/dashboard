@@ -34,7 +34,7 @@
   * { box-sizing: border-box; }
   h1, h2, h3, h4, b, strong, th, summary { font-weight: 600; } /* two weights only: 400 and 600 */
   html { -webkit-text-size-adjust: 100%; scroll-padding-bottom: 96px; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: 'Lexend', system-ui, sans-serif; font-size: 16px; line-height: 1.5; font-variant-numeric: tabular-nums; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5; font-variant-numeric: tabular-nums; }
   button { font: inherit; color: inherit; }
   a { color: inherit; text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
   .hidden { display: none !important; }
@@ -56,7 +56,7 @@
   .btn, details > summary { display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--surface); line-height: 1.2; }
   .btn:disabled { opacity: .6; cursor: default; }
   details > summary { list-style: none; width: max-content; max-width: 100%; min-height: var(--house-btn); border: 1px solid var(--press); border-radius: var(--radius);
-    font-size: 14px; font-weight: 600; color: var(--ink); cursor: pointer; } /* Details is a button here: the house button look */
+    font-size: var(--fs-small); font-weight: 600; color: var(--ink); cursor: pointer; } /* Details is a button here: the house button look */
   @media (max-width: 600px) { details > summary { min-height: var(--house-btn-phone); } }
   details > summary::-webkit-details-marker { display: none; }
   details > summary::after { content: "\25BE"; font-size: 13px; color: var(--muted); }
@@ -72,7 +72,7 @@
   @media (max-width: 600px) { main { padding-bottom: 140px; } }
   .here { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; }
   .here span:empty { display: none; }
-  .here h2 { margin: 0; font-size: 26px; line-height: 1.25; }
+  .here h2 { margin: 0; font-size: var(--fs-head); line-height: 1.25; }
   #view { display: flex; flex-direction: column; gap: 12px; }
 
   /* Cards: one white panel, the softer 1px line, 12px padding; 16px under the header line before the first item. */
@@ -83,21 +83,21 @@
   .c-sales { --c: var(--c-sales); } .c-ideas { --c: var(--c-ideas); } .c-ink, .c-mute { --c: var(--c-mute); }
   .card h3:not(.sr)::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c, var(--c-mute)); flex: none; }
   .card.next { border-color: var(--ink); } /* the one thing to do now: definition from the ink edge only */
-  .card h3 { margin: 0; font-size: 17px; line-height: 1.35; display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .card h3 { margin: 0; font-size: var(--fs-head); line-height: 1.35; display: flex; align-items: center; gap: 8px; min-width: 0; }
   .card h3 .dot { width: 8px; height: 8px; }
-  .card h4 { margin: 4px 0 0; font-size: 15px; }
+  .card h4 { margin: 4px 0 0; font-size: var(--fs-head); }
   .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding-bottom: 12px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
   .cardhead .cnt, .cardhead .tag { margin-left: auto; }
-  .note, .quiet { margin: 0; color: var(--muted); font-size: 14px; }
-  .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 8px; }
+  .note, .quiet { margin: 0; color: var(--muted); font-size: var(--fs-small); }
+  .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: var(--fs-small); border-top: 1px solid var(--line); padding-top: 8px; }
   .source a { color: var(--muted); }
-  .sec-h { margin: 4px 0 0; font-size: 15px; color: var(--muted); }
+  .sec-h { margin: 4px 0 0; font-size: var(--fs-body); color: var(--muted); }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .actions .note { margin-right: auto; }
   .go { display: flex; flex-wrap: wrap; gap: 8px; }
 
   /* Flags and small pills: 24px, 13px, a 1px ring that shows the meaning, light tint, ink words. Read-only: no hover. */
-  .tag, .chip, .date { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: var(--radius); font-size: 13px; font-weight: 600; line-height: 1;
+  .tag, .chip, .date { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border-radius: var(--radius); font-size: var(--fs-small); font-weight: 600; line-height: 1;
     color: var(--ink); background: transparent; border: 1px solid var(--ctl); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .chip, .date { font-weight: 400; color: var(--muted); }
   .tag.c-risk { border-color: var(--r-risk); background: var(--t-risk); }
@@ -108,45 +108,48 @@
   /* A negative amount: a minus sign and a rose ring marker, never red words. */
   .neg { display: inline-flex; align-items: center; border: 1px solid var(--r-risk); background: var(--t-risk); border-radius: var(--radius); padding: 0 6px; color: var(--ink); }
   /* Friendly empty state with a small green-ring check. */
-  .empty { margin: 0; display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: 15px; }
+  .empty { margin: 0; display: flex; gap: 8px; align-items: center; color: var(--muted); font-size: var(--fs-body); }
   .empty::before { content: "\2713"; flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--r-ok); background: var(--t-ok); color: var(--ink); font-size: 13px; }
 
   /* Calm rows: a small entity line, the title (2 lines, then …), then ONE flag, a date pill and plain details. */
   ul.items { list-style: none; margin: 0; padding: 0; }
   ul.items > li { padding: 12px 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   ul.items > li:first-child { border-top: none; padding-top: 0; }
-  .bline { display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+  .bline { display: flex; gap: 6px; align-items: center; font-size: var(--fs-small); font-weight: 600; color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
   .bline .dot { width: 8px; height: 8px; }
   .itext { font-weight: 600; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
   .itext a { text-decoration: none; }
   .itext a:hover { text-decoration: underline; }
-  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--muted); font-size: 14px; min-width: 0; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; color: var(--muted); font-size: var(--fs-small); min-width: 0; }
   .meta > span { overflow-wrap: anywhere; }
-  .lbl { font-size: 14px; color: var(--muted); }
+  .lbl { font-size: var(--fs-small); color: var(--muted); }
 
   /* Summary strip: On track / Needs you / Overdue, each a big ringed number. */
   .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
   .sum { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 12px; min-width: 0; box-shadow: var(--shadow); }
-  .sum .num { font-size: 26px; font-weight: 600; min-width: 48px; height: 48px; padding: 0 8px; display: inline-grid; place-items: center; border-radius: var(--radius); border: 1px solid var(--ctl); line-height: 1; flex: none; }
-  .sum.need .num { border-color: var(--r-warn); background: var(--t-warn); }
-  .sum.over .num { border-color: var(--r-risk); background: var(--t-risk); }
-  .sum.ok .num { border-color: var(--r-ok); background: var(--t-ok); }
+  /* The summary rings (Lisa's pick A, 2 Nov): a 14px number, the same size as the words beside it, in the house count box.
+     Ring only, no fill: rose = overdue, grey = waiting. */
+  .sum .num { box-sizing: border-box; font-size: var(--fs-small); font-weight: 600; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh);
+    padding: 0 var(--house-count-pad); display: inline-flex; align-items: center; justify-content: center; border-radius: var(--house-count-r); border: 1px solid var(--house-ring);
+    background: transparent; font-variant-numeric: tabular-nums; white-space: nowrap; flex: none; }
+  .sum.over .num { border-color: var(--house-late); }
+  .sum .num.zero { border-color: transparent; }   /* 0 shows no ring (house rule) */
   .sum .t { display: flex; flex-direction: column; min-width: 0; font-weight: 600; }
-  .sum .t small { font-size: 13px; font-weight: 400; color: var(--muted); }
-  .next .ntitle { font-size: 20px; font-weight: 600; margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .sum .t small { font-size: var(--fs-small); font-weight: 400; color: var(--muted); }
+  .next .ntitle { font-size: var(--fs-head); font-weight: 600; margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
   @media (max-width: 600px) {
     .three { gap: 6px; } .sum { flex-direction: column; align-items: flex-start; gap: 6px; padding: 8px; }
-    .sum .num { font-size: 20px; min-width: 36px; height: 36px; } .sum .t { font-size: 14px; }
-    .here h2 { font-size: 22px; }
+    .sum .t { font-size: var(--fs-small); }
+    .here h2 { font-size: var(--fs-head); }
   }
 
   /* Entities */
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
   a.ent { text-decoration: none; gap: 6px; border-color: var(--ctl); }
   .ent .who { display: flex; flex-direction: column; gap: 2px; }
-  .ent .code { font-size: 17px; font-weight: 600; }
-  .big { font-size: 28px; font-weight: 600; line-height: 1.2; }
-  .line { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: 15px; border-top: 1px solid var(--line); padding-top: 6px; }
+  .ent .code { font-size: var(--fs-figure); font-weight: 600; }
+  .big { font-size: var(--fs-figure); font-weight: 600; line-height: 1.2; }
+  .line { display: flex; justify-content: space-between; align-items: center; gap: 10px; font-size: var(--fs-body); border-top: 1px solid var(--line); padding-top: 6px; }
   .line span:first-child { min-width: 0; }
   .line b { font-weight: 600; text-align: right; }
 
@@ -155,23 +158,23 @@
   .stat { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; background: transparent; }
   .stat.c-risk { border-color: var(--r-risk); background: var(--t-risk); }
   .stat.c-ok { border-color: var(--r-ok); background: var(--t-ok); }
-  .stat .num { font-size: 24px; font-weight: 600; line-height: 1.25; }
-  .stat .label { font-size: 14px; color: var(--ink); }
-  .stat .sub { font-size: 13px; color: var(--muted); }
+  .stat .num { font-size: var(--fs-figure); font-weight: 600; line-height: 1.25; }
+  .stat .label { font-size: var(--fs-small); color: var(--ink); }
+  .stat .sub { font-size: var(--fs-small); color: var(--muted); }
 
   /* Forecast chart: the line and a ringed marker; words stay ink or grey. */
   .chart svg { display: block; width: 100%; height: auto; max-height: 260px; }
   .chart .ln { fill: none; stroke: var(--c-fin); stroke-width: 2; }
   .chart .zero { stroke: var(--r-risk); stroke-width: 1; stroke-dasharray: 5 4; }
   .chart .grid { stroke: var(--line); stroke-width: 1; }
-  .chart text { fill: var(--muted); font-size: 13px; font-family: inherit; }
+  .chart text { fill: var(--muted); font-size: var(--fs-small); font-family: inherit; }
   .chart text.dry { fill: var(--ink); font-weight: 600; }
   .chart circle.dry { fill: var(--t-risk); stroke: var(--r-risk); stroke-width: 1.5; }
   .chart circle.now { fill: var(--card); stroke: var(--ink); stroke-width: 1.5; }
 
-  table { border-collapse: collapse; width: 100%; font-size: 15px; }
+  table { border-collapse: collapse; width: 100%; font-size: var(--fs-small); }
   th, td { text-align: left; padding: 6px 8px; border-top: 1px solid var(--line); vertical-align: top; }
-  th { font-size: 13px; color: var(--muted); border-top: none; }
+  th { font-size: var(--fs-small); color: var(--muted); border-top: none; }
   td.r, th.r { text-align: right; white-space: nowrap; }
   .scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   /* Month bars: thin, a light tint inside a 1px ring (never solid). */
@@ -180,20 +183,20 @@
   .bar.out { background: var(--t-warn); box-shadow: inset 0 0 0 1px var(--r-warn); }
 
   .subnav { display: flex; flex-wrap: wrap; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
-  .subnav a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); text-decoration: none; font-size: 14px; font-weight: 600; color: var(--ink); }
+  .subnav a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); text-decoration: none; font-size: var(--fs-small); font-weight: 600; color: var(--ink); }
 
   .banner { border-radius: var(--radius); padding: 8px 12px; border: 1px solid var(--r-risk); background: var(--t-risk); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
   .banner.info { border-color: var(--line); background: var(--surface); }
   .banner p { margin: 0; flex: 1 1 200px; }
-  .info { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 1px solid var(--ctl); border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--muted); cursor: help; vertical-align: middle; }
-  code { font-size: 14px; }
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border: 1px solid var(--ctl); border-radius: 50%; font-size: var(--fs-small); font-weight: 600; color: var(--muted); cursor: help; vertical-align: middle; }
+  code { font-size: var(--fs-small); }
   footer { padding-bottom: 12px; }
-  footer p { margin: 0; color: var(--muted); font-size: 14px; }
+  footer p { margin: 0; color: var(--muted); font-size: var(--fs-small); }
 
   @media (max-width: 600px) {
     .btn, details > summary, .subnav a { min-height: 44px; }
-    .big { font-size: 26px; }
-    th, td { padding: 6px 4px; font-size: 14px; }
+    .big { font-size: var(--fs-figure); }
+    th, td { padding: 6px 4px; font-size: var(--fs-small); }
   }
 
   /* Calm focus: a typing box shows a slightly darker line; keyboard focus is a 2px ink ring (never the browser blue). */
@@ -386,7 +389,7 @@
   function summary(items) {
     var over = items.filter(isOverdue).length, need = items.length - over;
     var fine = R.money.filter(function (m) { return !m.noData && !entBad(m); }).length;
-    var one = function (cls, n, label, sub) { return '<div class="sum ' + cls + '" data-sum="' + cls + '"><span class="num">' + n + '</span><span class="t">' + label + '<small>' + sub + '</small></span></div>'; };
+    var one = function (cls, n, label, sub) { return '<div class="sum ' + cls + '" data-sum="' + cls + '"><span class="num' + (n ? '' : ' zero') + '">' + n + '</span><span class="t">' + label + '<small>' + sub + '</small></span></div>'; };
     return '<div class="three" role="group" aria-label="Summary">' + one('ok', fine, 'On track', fine === 1 ? 'entity with nothing wrong' : 'entities with nothing wrong') +
       one('need', need, 'Needs you', 'urgent or due in 14 days') + one('over', over, 'Overdue', 'past their date') + '</div>';
   }
