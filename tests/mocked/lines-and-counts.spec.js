@@ -3,8 +3,8 @@
 //  - a coloured left line on a card or row runs the WHOLE height of it, 3px wide, curved with the card's corner (no short stub
 //    floating in the middle, no inset shadow);
 //  - icon shades are the --ljr-N-icon tokens (slots 0 to 7, light and dark looks);
-//  - a bottom tab's count ring never overlaps the tab's icon, on a phone (390) or a laptop (1280), and on a wide tab the icon
-//    stays centred.
+//  - a bottom tab's count never overlaps the tab's icon, on a phone (390, a dot beside the icon's top-right corner, Lisa's pick b)
+//    or a laptop (1280, the ring), and on a wide tab the icon stays centred.
 // Pretend Google, Drive and Sheets; every row is invented (tests/support/hubs.js).
 const fs = require('fs');
 const path = require('path');
@@ -105,15 +105,22 @@ for (const [hub, H] of Object.entries(ALL)) {
           const r = t.getBoundingClientRect(), a = t.querySelector(':scope > .hic').getBoundingClientRect(), b = t.querySelector(':scope > .n, :scope > .cnt').getBoundingClientRect();
           const l = t.querySelector(':scope > .htl').getBoundingClientRect();
           const cs = getComputedStyle(t.querySelector(':scope > .n, :scope > .cnt'));
-          return { word: l.width ? t.querySelector(':scope > .htl').textContent.trim() : '?', tab: [r.left, r.right], icon: [a.left, a.top, a.right, a.bottom], count: [b.left, b.top, b.right, b.bottom], bg: cs.backgroundColor,
+          return { word: l.width ? t.querySelector(':scope > .htl').textContent.trim() : '?', need: t.querySelector(':scope > .n, :scope > .cnt').classList.contains('need'), tab: [r.left, r.right], icon: [a.left, a.top, a.right, a.bottom], count: [b.left, b.top, b.right, b.bottom], bg: cs.backgroundColor,
             overlap: !(b.right <= a.left || b.left >= a.right || b.bottom <= a.top || b.top >= a.bottom) };
         });
       });
       for (const t of m) {
         expect(t.overlap, `${t.word}: count ${t.count.map(Math.round)} clear of the icon ${t.icon.map(Math.round)}`).toBe(false);
-        expect(t.bg, `${t.word}: the count has no fill`).toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
+        if (W === 1280) expect(t.bg, `${t.word}: the count has no fill`).toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
+        // On a phone the count is a dot (Lisa's pick b, 2 Nov): filled rose or grey, beside the icon's top-right corner.
+        else {
+          expect(t.bg, `${t.word}: the dot is rose (late) or grey (waiting)`).toBe(t.need ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)');
+          expect(t.count[0] - t.icon[2], `${t.word}: the dot sits right beside the icon's right edge`).toBeLessThanOrEqual(3);
+          expect(Math.abs(t.count[1] - t.icon[1]), `${t.word}: level with the icon's top`).toBeLessThanOrEqual(2);
+          expect(t.count[2], `${t.word}: the dot stays inside its tab`).toBeLessThanOrEqual(t.tab[1]);
+        }
         expect(t.icon[0], `${t.word}: the icon stays inside its tab`).toBeGreaterThanOrEqual(t.tab[0]);
-        if (W === 1280) expect(Math.abs((t.icon[0] + t.icon[2]) / 2 - (t.tab[0] + t.tab[1]) / 2), `${t.word}: on a wide tab the icon stays centred`).toBeLessThan(1);
+        expect(Math.abs((t.icon[0] + t.icon[2]) / 2 - (t.tab[0] + t.tab[1]) / 2), `${t.word}: the icon stays centred in its tab (phone too: the dot needs no room)`).toBeLessThan(1);
       }
     });
   }

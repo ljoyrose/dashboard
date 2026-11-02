@@ -382,7 +382,7 @@ for (const scheme of ['light', 'dark']) {
 
 test.describe('Home: phone (390 x 844)', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
-  test('no sideways scroll on any view; tab counts sit in the tab\'s top-right corner; press targets 44px', async ({ page }) => {
+  test('no sideways scroll on any view; tab counts are a dot at the icon\'s top right; press targets 44px', async ({ page }) => {
     await page.goto('./');
     await noSidewaysScroll(page, 'signed out');
     await signIn(page);
@@ -392,10 +392,15 @@ test.describe('Home: phone (390 x 844)', () => {
     }
     await goTab(page, 'map', 'Dashboard');
     const n = page.locator('#n-map');
-    const c = await n.evaluate((e) => { const r = e.getBoundingClientRect(), t = e.parentElement.getBoundingClientRect(); return { pos: getComputedStyle(e).position, top: r.top - t.top, right: t.right - r.right }; });
+    // Lisa's pick b (2 Nov): on a phone the count is an 8px dot just off the icon's top-right corner, inside the tab.
+    const c = await n.evaluate((e) => { const r = e.getBoundingClientRect(), t = e.parentElement.getBoundingClientRect(), i = e.parentElement.querySelector('.hic').getBoundingClientRect();
+      return { pos: getComputedStyle(e).position, w: r.width, h: r.height, gap: r.left - i.right, top: r.top - i.top, inside: r.right <= t.right }; });
     expect(c.pos).toBe('absolute');
-    expect(c.top).toBeLessThanOrEqual(5);
-    expect(c.right).toBeLessThanOrEqual(5);
+    expect([c.w, c.h]).toEqual([8, 8]);
+    expect(c.gap).toBeGreaterThanOrEqual(0);
+    expect(c.gap).toBeLessThanOrEqual(3);
+    expect(Math.abs(c.top)).toBeLessThanOrEqual(2);
+    expect(c.inside).toBe(true);
     // On a phone Sign out leaves the top bar for the Look menu (Lisa's pick A, 2 Nov); both are 44px there.
     await expect(page.locator('header #signOutBtn')).toBeHidden();
     await page.locator('header #houseLookBtn').click();

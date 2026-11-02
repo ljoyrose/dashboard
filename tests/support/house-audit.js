@@ -87,6 +87,8 @@ function audit(o) {
   // 3 type and 4 no coloured words: every element that holds words.
   for (const e of document.querySelectorAll('body *')) {
     if (!seen(e) || icon(e) || e.closest('#credential_picker_container, .sr')) continue;
+    // A phone's bottom-tab count is a dot with no number showing (Lisa's pick b, 2 Nov; tab-dots.spec.js pins it): not words.
+    if (innerWidth < 768 && e.matches('nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt')) continue;
     if (![...e.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
     const s = getComputedStyle(e);
     if (!/lexend/i.test(s.fontFamily.split(',')[0])) add('font', e, s.fontFamily.split(',')[0]);
