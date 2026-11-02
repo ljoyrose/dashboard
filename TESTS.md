@@ -154,6 +154,7 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - `tests/contract/expected-headers.json` also lists the RR_FOOD tabs and the Marketplace Open work tab and RR_LISTINGS.csv. `tests/contract/expected-state.json` lists the field names and types inside `studio-state.json` and the Marketplace wake file.
 - Each hub has invented sample data. If an engine drops, renames or adds a column or field, puts the wrong kind of value in it, or writes an empty file, the robot names the kind of change: MISSING, RENAMED, EXTRA, WRONG_TYPE or EMPTY.
 - The checks run each page's own reading code on the samples. `CONTRACT_PROVE_RED=1` flips every failure case, so you can see each one go red.
+- Product ideas (card detail and request file): `tests/contract/marketplace-ideas.contract.spec.js`, field lists in `tests/contract/expected-ideas.json`, rules in `marketplace/ideas.js`. See `docs/marketplace-ideas/CONTRACT.md`.
 - Rebuild the lists after a deliberate change: `node tests/contract/make-expected.js`, then read the diff.
 
 **Reading CSV files**

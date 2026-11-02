@@ -2,5 +2,6 @@
 // mocked suite (and so CI) run them. No browser, no Google, no Drive. See TESTS.md, "Hub data contracts".
 require('../contract/food.contract.spec.js');
 require('../contract/marketplace.contract.spec.js');
+require('../contract/marketplace-ideas.contract.spec.js');
 require('../contract/studio.contract.spec.js');
 require('../contract/live-check.contract.spec.js');
