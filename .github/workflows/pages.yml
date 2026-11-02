@@ -28,6 +28,8 @@ env:
 jobs:
   gate:
     name: Gate (tests must pass before anything is published)
+    # GitHub Pages is only for the public repo. Once private, the site is on Cloudflare and this costs minutes for nothing.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
     timeout-minutes: 20 # one run hit 15 (26 Oct 2026); the suite itself takes about 7
     steps:
