@@ -1053,7 +1053,8 @@ test.describe('Studio page', () => {
     await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 390, height: 844 });
     for (const sel of ['#lookBtn', '#refreshBtn', '#filtersBtn', '.subnav a', '.crow .ico']) await expect.poll(() => h(sel), sel + ' on the phone').toBe(44); // the page redraws when it crosses into phone width
-    expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(24); // the same corner ring on the phone (Lisa's pick A, 2 Nov)
+    expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(8); // on the phone the count is an 8px dot (Lisa's pick b, 2 Nov)
+    expect(await page.locator('nav.tabs #nLine').evaluate((e) => getComputedStyle(e).borderTopLeftRadius), 'the dot is round').toBe('50%');
   });
 
   test('two font weights only (400 and 600) on every tab', async ({ page, guard }) => {

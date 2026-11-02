@@ -80,6 +80,7 @@
   --house-tab-bar: 18px; --house-tab-bar-on: 40px; --house-tab-bar-h: 4px;   /* the short line under each tab: rest / hover and selected */
   --house-tab-disc: 28px; --house-tab-icon: 22px;   /* the round place for the icon; a 1px ring shows round it only on hover, focus and press */
   --house-tab-count-w: 24px; --house-tab-count-h: 24px; --house-tab-count-lh: 22px; --house-tab-count-pad: 0px;   /* a tab's count: a 14px number in a round ring in its top-right corner (1 and 2 digits one width) */
+  --house-tab-dot: 8px; --house-tab-dot-top: 6px;   /* on a phone (under 768px) a tab's count is this dot, off the icon's top-right corner */
   --house-focus: 2px;              /* keyboard focus ring */
   --house-btn: 36px; --house-btn-phone: 44px;      /* everything you press */
   --house-head: 56px;              /* the top bar (Lisa's pick A, 2 Nov): one row, this high on every page, desktop and phone */
