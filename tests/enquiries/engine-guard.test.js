@@ -16,7 +16,7 @@ const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"])\/\/.*$/gm,
 
 const NEVER = [
   [/GmailApp\s*\.\s*sendEmail/, 'GmailApp.sendEmail'], [/\bMailApp\b/, 'MailApp'], [/\.reply(All)?\s*\(/, 'Gmail reply'],
-  [/\.forward\s*\(/, 'Gmail forward'], [/createDraft\s*\(/, 'Gmail draft (GMAIL_DRAFTS is off)'],
+  [/\.forward\s*\(/, 'Gmail forward'],
   [/\.moveToTrash\s*\(|\.setTrashed\s*\(/, 'trash'], [/\.addLabel\s*\(|\.removeLabel\s*\(/, 'Gmail label change'],
   [/['"](post|put|patch|delete)['"]\s*$/im, 'a write HTTP method on its own'],
   [/method\s*:\s*['"](put|patch|delete)['"]/i, 'HTTP PUT/PATCH/DELETE'],
@@ -28,6 +28,21 @@ const NEVER = [
 
 test('engine: no send, draft, CRM write, payment, Xero, Activepieces, tag or delete call', { skip }, () => {
   for (const [re, what] of NEVER) assert.ok(!re.test(code), 'engine must never contain ' + what);
+});
+
+test('engine: a Gmail draft is made only inside an if (GMAIL_DRAFTS) block, and GMAIL_DRAFTS is false', { skip }, () => {
+  const lines = code.split('\n');
+  const at = lines.map((l, i) => (/createDraft\s*\(/.test(l) ? i : -1)).filter((i) => i >= 0);
+  assert.ok(at.length <= 1, 'createDraft in one place only');
+  for (const i of at) {
+    let depth = 0, ok = false;
+    for (let j = i - 1; j >= 0; j--) {
+      depth += (lines[j].match(/\}/g) || []).length - (lines[j].match(/\{/g) || []).length;
+      if (depth < 0) { ok = /if \(GMAIL_DRAFTS\) \{\s*$/.test(lines[j]); break; }
+    }
+    assert.ok(ok, 'createDraft outside if (GMAIL_DRAFTS): line ' + (i + 1));
+  }
+  assert.match(code, /var GMAIL_DRAFTS = false;/);
 });
 
 test('engine: DRY_RUN starts true and GMAIL_DRAFTS starts false', { skip }, () => {
@@ -61,9 +76,9 @@ test('engine: embeds the current core.js under its version header', { skip }, ()
   assert.ok(src.includes(core.trim()), 'embedded copy matches enquiries/core.js exactly');
 });
 
-test('engine: setup() creates RR_ENQUIRIES with the 12 tabs of the shared contract', { skip }, () => {
+test('engine: setup() creates RR_ENQUIRIES with the 13 tabs of the shared contract', { skip }, () => {
   const C = require('../../enquiries/core.js');
-  assert.deepEqual(Object.keys(C.COLUMNS), ['Enquiries', 'People', 'Events', 'Drafts', 'FollowUps', 'Litters', 'Sale Replies', 'Deposits', 'Sources', 'Settings', 'Requests', 'Log']);
+  assert.deepEqual(Object.keys(C.COLUMNS), ['Enquiries', 'People', 'Events', 'Drafts', 'FollowUps', 'Litters', 'Sale Replies', 'Deposits', 'Sources', 'Settings', 'Requests', 'Log', 'Style']);
   assert.match(code, /function tabs_\(\) \{ return EnquiriesCore\.COLUMNS; \}/);
   assert.match(src, /var SHEET_NAME = 'RR_ENQUIRIES';/);
   assert.match(src, /function setup\(\)/);
@@ -83,4 +98,12 @@ test('engine: FollowUps is written in one place, behind the contact gate', { ski
   const q = code.match(/function queueFollowUps_\([\s\S]*?\n\}/)[0];
   assert.match(q, /EnquiriesCore\.gateContact\(/);
   assert.match(q, /upsert_\('FollowUps', 'followup_key', g\.keep\)/);
+});
+
+test('engine: the Drafts tab is written in one place, behind the contact gate and the draft check', { skip }, () => {
+  const writes = code.match(/upsert_\(\s*'Drafts'|appendRows_\(\s*'Drafts'|writeRow_\(\s*'Drafts'/g) || [];
+  assert.equal(writes.length, 1);
+  const w = code.match(/function writeDrafts_\([\s\S]*?\n\}/)[0];
+  assert.match(w, /EnquiriesCore\.gateContact\(/);
+  assert.match(w, /EnquiriesCore\.checkDraft\(/);
 });

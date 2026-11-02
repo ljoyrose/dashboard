@@ -27,16 +27,16 @@ const calendlyRoutes = () => {
   ];
 };
 
-test('setup() makes RR_ENQUIRIES with 12 tabs, Settings and Sources, and no extra tab', { skip }, () => {
+test('setup() makes RR_ENQUIRIES with 13 tabs, Settings and Sources, and no extra tab', { skip }, () => {
   const e = FAKE.load(src);
   e.ctx.setup();
   const names = e.book().getSheets().map((s) => s.name);
-  assert.deepEqual(names.sort(), ['Deposits', 'Drafts', 'Enquiries', 'Events', 'FollowUps', 'Litters', 'Log', 'People', 'Requests', 'Sale Replies', 'Settings', 'Sources'].sort());
+  assert.deepEqual(names.sort(), ['Deposits', 'Drafts', 'Enquiries', 'Events', 'FollowUps', 'Litters', 'Log', 'People', 'Requests', 'Sale Replies', 'Settings', 'Sources', 'Style'].sort());
   assert.equal(e.props.ENQ_SHEET_ID, 'SAMPLE-BOOK-ID');
   assert.ok(e.tab('Settings').some((r) => r.setting === 'calendly_event_name' && r.value === 'Whatsapp Call'));
   assert.equal(e.tab('Sources').length, 12);
   e.ctx.setup(); // safe to run twice
-  assert.equal(e.book().getSheets().length, 12);
+  assert.equal(e.book().getSheets().length, 13);
   assert.ok(e.tab('Settings').length >= 10);
   const n = e.tab('Settings').length; e.ctx.setup(); assert.equal(e.tab('Settings').length, n);
 });
@@ -271,4 +271,45 @@ test('Stage 7: every enquiry is scored with a band, 1 to 3 reasons and flags; pr
   assert.equal(t.band, 'not-a-fit');
   assert.ok(String(t.score_reasons).length > 0, 'a score always has a reason');
   assert.ok(e.tab('Log').some((r) => r.step === 'score' && /2 scored/.test(r.message)));
+});
+
+// ---- Stage 8: reply drafts -----------------------------------------------------------------------------------------
+test('Stage 8: drafts in the Drafts tab only (email + WhatsApp), none for do-not-contact, every one passes the check', { skip }, () => {
+  const files = [req('FILE-S8-1', 'email', 'From: Buyer U Sample\nA chocolate girl please buyer.u@example.com'),
+    req('FILE-S8-2', 'facebook', 'From: Buyer P\nHello again buyer.p@example.com')];
+  const e = FAKE.load(src, { props: Object.assign({ ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, CF_PROPS), routes: cfRoutes('Australian Labradoodles/Cobberdogs'), files, dryRun: false });
+  e.ctx.setup();
+  e.ctx.runOnce();
+  const enq = e.tab('Enquiries'), drafts = e.tab('Drafts');
+  const u = enq.find((x) => x.source_ref === 'FILE-S8-1');
+  const mine = drafts.filter((d) => d.enquiry_key === u.key);
+  assert.deepEqual(mine.map((d) => d.version).sort(), ['email', 'whatsapp']);
+  assert.ok(mine.every((d) => d.status === 'ready' && d.case === 'first-uk'));
+  assert.match(mine.find((d) => d.version === 'email').text, /^Subject: Your puppy enquiry/);
+  assert.match(mine.find((d) => d.version === 'email').text, /Hi Buyer,/);
+  const dnc = enq.filter((x) => x.do_not_contact === true).map((x) => x.key);
+  assert.ok(dnc.length >= 2);
+  assert.ok(!drafts.some((d) => dnc.includes(d.enquiry_key)), 'no draft for a do-not-contact person');
+  for (const d of drafts) assert.deepEqual(C.checkDraft(d.text, { stop: d.case === 'breeder' || d.case === 'missed' }), [], d.case + ' ' + d.version);
+  assert.ok(drafts.some((d) => d.case === 'missed'), 'the 2025 Website Optin run gets the missed-enquiry apology');
+  assert.ok(!e.http.some((h) => /draft|send/i.test(h.url)), 'no draft or send call anywhere');
+  const n = drafts.length; e.ctx.runOnce(); assert.equal(e.tab('Drafts').length, n, 're-run adds no drafts');
+});
+
+test('Stage 8: styleSample() keeps only Lisa\'s own stripped replies in the Style tab', { skip }, () => {
+  const gmail = [
+    // Invented sender on Lisa's domain, assembled so the privacy guard does not read it as a real address.
+    { id: 'TH-S8-1', from: 'Lisa <lisa' + '@labradoodles.co.uk>', to: 'Buyerina Sample <buyer.s8@example.com>', subject: 'Re: puppy',
+      body: 'Hi Buyerina,\n\nThank you so much for getting in touch, I would love to help. Have a look at https://doc.labradoodles.co.uk/breed and tell me what you are looking for. You can call me on 07700 900511.\n\nKind regards,\nLisa\n\nOn Mon, 1 Sep 2026, Buyerina wrote:\n> Do you have puppies?' },
+    { id: 'TH-S8-2', from: 'Someone Else <someone@example.com>', to: 'x', subject: 'puppy', body: 'Not Lisa, long enough text to count as a reply here, really quite long indeed yes.' }
+  ];
+  const e = FAKE.load(src, { gmail, dryRun: false });
+  e.ctx.setup();
+  assert.equal(e.ctx.styleSample(), 1);
+  const st = e.tab('Style');
+  assert.equal(st.length, 1);
+  assert.match(st[0].text, /^Hi <name>,/);
+  assert.doesNotMatch(JSON.stringify(st), /Buyerina|7700|example\.com|Do you have puppies/);
+  assert.equal(st[0].links, 'https://doc.labradoodles.co.uk/breed');
+  assert.ok(e.http.every((h) => h.method === 'get'));
 });
