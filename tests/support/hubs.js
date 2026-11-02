@@ -138,7 +138,10 @@ const HUBS = {
       await page.goto('studio/#/me');
       await expect(page.locator('#signInBtn')).toBeEnabled();
       await page.locator('#signInBtn').click();
-      await expect(page.locator('#enginePill')).toBeVisible();
+      // Studio has read its state when the engine pill is drawn (the pill shows on a desktop only; the phone's 56px bar has no room).
+      await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/);
+      await expect(page.locator('#enginePill')).not.toBeEmpty();
+      if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible();
     },
   },
 };

@@ -179,6 +179,30 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(missing, 'hub folders missing from pages.yml (cp line or test line)').toEqual([]);
   });
 
+  // Cloudflare Pages runs tools/build-site/build.sh. It must publish exactly the pages.yml list: no tests, docs or tools.
+  test('the Cloudflare build publishes the same files as pages.yml and nothing else', () => {
+    const out = path.join(REPO, '_site');
+    execFileSync('sh', [path.join(REPO, 'tools/build-site/build.sh')], { stdio: 'pipe' });
+    const copied = /cp -r ([^\n]+) _site\//.exec(pages())[1].trim().split(/\s+/);
+    expect(fs.readdirSync(out).sort()).toEqual([...copied].sort());
+    LIVE_FILES.forEach((f) => expect(fs.existsSync(path.join(out, f)), f + ' must be built').toBe(true));
+    fs.rmSync(out, { recursive: true, force: true });
+  });
+
+  // Lisa's minutes plan (2 Nov 2026): once the repo is private, pushes skip the browser suite (weekly and hand-started runs keep it).
+  test('private repo: pushes and PRs skip the browser suite; schedule and hand-started runs keep it', () => {
+    const scope = (event, ref, priv) => execFileSync('bash', [path.join(REPO, 'tools/ci-local/docs-only.sh'), event, ref],
+      { cwd: REPO, env: { ...process.env, GITHUB_OUTPUT: '', REPO_PRIVATE: priv } }).toString().trim();
+    expect(scope('push', 'refs/heads/main', 'true')).toBe('browser=false');
+    expect(scope('push', 'refs/heads/some-branch', 'true')).toBe('browser=false');
+    expect(scope('pull_request', 'refs/pull/1/merge', 'true')).toBe('browser=false');
+    expect(scope('schedule', 'refs/heads/main', 'true')).toBe('browser=true');
+    expect(scope('workflow_dispatch', 'refs/heads/main', 'true')).toBe('browser=true');
+    expect(scope('push', 'refs/heads/main', 'false')).toBe('browser=true');
+    expect(read('.github/workflows/tests.yml')).toMatch(/REPO_PRIVATE: \$\{\{ github\.event\.repository\.private \}\}/);
+    expect(pages()).toMatch(/gate:[\s\S]*?if: \$\{\{ !github\.event\.repository\.private \}\}/);
+  });
+
   test('every action in pages.yml is pinned to a full commit id', () => {
     const loose = [...pages().matchAll(/uses:\s*([^\s#]+)/g)].map((x) => x[1]).filter((u) => !/@[0-9a-f]{40}$/.test(u));
     expect(loose).toEqual([]);
