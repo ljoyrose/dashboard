@@ -80,7 +80,8 @@ test.describe('Marketplace hub: Fish Treats postage to-dos (G7)', () => {
     await sheets(page);
     await page.goto('food/#/home');
     await page.locator('#view [data-action="signin"]').click();
-    await expect(page.locator('#view')).toContainText('profit');
+    await expect(page.locator('#view [data-hub-main="food"] [data-hm="nums"]')).toBeVisible();   // the house Main has read the sheet
+    await expect(page.locator('#view [data-hm="fail"]')).toHaveCount(0);
     await expect(page.locator('#view')).not.toContainText('Fish Treat unit');
   });
 });

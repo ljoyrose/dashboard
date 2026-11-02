@@ -467,5 +467,58 @@
   /** Returns a test function: true when a text contains every word of q (case-insensitive). */
   function matches(q) { var words = String(q).toLowerCase().split(/\s+/).filter(Boolean); return function (text) { text = String(text || '').toLowerCase(); return words.every(function (w) { return text.indexOf(w) >= 0; }); }; }
 
-  root.DashKit = { applyLook: applyLook, icon: icon, tabs: { tab: tabHtml, more: moreHtml, shut: function () { shutMores(null); } }, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help };
+  // ---- Hub Main (Lisa's house style, 2 Nov 2026): EVERY hub's Main is exactly three parts, in this order:
+  // 1 Next: the one most urgent thing, its action one tap away. 2 Needs you: at most 5 rows from the hub's Do and Decide,
+  // late first (rose), then due today, then waiting; "+N more" opens Do. Every row carries its action.
+  // 3 The hub's 3 numbers (the same ones its Dashboard tile shows), each a link to its filtered list; "–" when it cannot be read.
+  // Nothing needs you: Next and Needs you fold into ONE "Nothing needs you"; the numbers stay. A failed read says so instead.
+  // spec: { hub, rows: [{ kind: 'late'|'today'|'wait', text, href, act?, actHref?, sub?, pill?, ext?, sort? }],
+  //         nums: [{ label, value (null = "–"), href, late?, aria? }] x3, doHref, extra? (html after the numbers), error? (text) }
+  var HM_RANK = { late: 0, today: 1, wait: 2 };
+  function hmSort(rows) {
+    return (rows || []).map(function (r, i) { return { r: r, i: i }; }).sort(function (a, b) {
+      return (HM_RANK[a.r.kind] == null ? 2 : HM_RANK[a.r.kind]) - (HM_RANK[b.r.kind] == null ? 2 : HM_RANK[b.r.kind]) ||
+        (a.r.sort != null && b.r.sort != null ? a.r.sort - b.r.sort : 0) || a.i - b.i;
+    }).map(function (x) { return x.r; });
+  }
+  function hmTarget(r, ext) { return ext ? ' target="_blank" rel="noopener"' : ''; }
+  function hmPill(r) {
+    var k = HM_RANK[r.kind] == null ? 'wait' : r.kind, t = r.pill || (k === 'late' ? 'Late' : k === 'today' ? 'Today' : '');
+    return t ? '<span class="dpill' + (k === 'late' ? ' late' : k === 'today' ? ' soon' : '') + '">' + escHtml(t) + '</span>' : '';
+  }
+  function hmAct(r, cls) {
+    var href = r.actHref || r.href;
+    return href ? '<a class="btn ' + cls + '" data-hm-act href="' + escHtml(href) + '"' + hmTarget(r, r.actHref ? r.actExt : r.ext) +
+      ' aria-label="' + escHtml((r.act || 'Open') + ': ' + r.text) + '">' + escHtml(r.act || 'Open') + '</a>' : '';
+  }
+  function hubMain(spec) {
+    var rows = hmSort(spec.rows), max = spec.max || 5, shown = rows.slice(0, max), more = rows.length - shown.length, h = '';
+    var kind = function (r) { return HM_RANK[r.kind] == null ? 'wait' : r.kind; };
+    var doHref = escHtml(spec.doHref || '#/do');
+    if (spec.error) {
+      h += '<section class="card hm-fail" data-hm="fail" role="status"><h3>Could not read</h3><p class="note">' + escHtml(spec.error) + '</p></section>';
+    } else if (!rows.length) {
+      h += '<section class="card hm-empty" data-hm="empty"><span class="hm-ok" aria-hidden="true">✓</span><h3>Nothing needs you</h3></section>';
+    } else {
+      var x = rows[0];
+      h += '<section class="card hm-next" data-open-row data-hm="next" data-kind="' + kind(x) + '" aria-labelledby="hmNextT"><div class="hm-head"><h3 id="hmNextT">Next</h3>' + hmPill(x) + '</div>' +
+        '<p class="hm-what"><a class="house-open" href="' + escHtml(x.href) + '"' + hmTarget(x, x.ext) + '>' + escHtml(x.text) + '</a></p>' + (x.sub ? '<p class="hm-sub">' + escHtml(x.sub) + '</p>' : '') +
+        '<div class="hm-go">' + hmAct(x, 'hm-a') + '</div></section>';
+      var late = rows.some(function (r) { return kind(r) === 'late'; });
+      h += '<section class="card hm-needs" data-hm="needs" aria-labelledby="hmNeedsT"><div class="hm-head"><h3 id="hmNeedsT"><a class="house-go" href="' + doHref + '" aria-label="Needs you: ' + rows.length + '. Open Do">Needs you</a></h3>' +
+        '<a class="house-go" href="' + doHref + '" aria-label="' + rows.length + ' need you. Open Do"><span class="cnt' + (late ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + rows.length + '</span></a></div>' +
+        '<ol class="hm-rows">' + shown.map(function (r) {
+          return '<li class="hm-row house-lbar" data-open-row data-kind="' + kind(r) + '"><span class="hm-t"><a class="house-open" href="' + escHtml(r.href) + '"' + hmTarget(r, r.ext) + '>' + escHtml(r.text) + '</a>' +
+            (r.sub ? '<small>' + escHtml(r.sub) + '</small>' : '') + '</span>' + hmPill(r) + hmAct(r, 'hm-a') + '</li>';
+        }).join('') + '</ol>' + (more > 0 ? '<a class="hm-more" data-hm-more href="' + doHref + '">+' + more + ' more</a>' : '') + '</section>';
+    }
+    h += '<section class="hm-nums" data-hm="nums" aria-label="Numbers">' + (spec.nums || []).map(function (n) {
+      var v = n.value == null || n.value === '' ? '–' : String(n.value), late = !!n.late && n.value != null;
+      return '<a class="card hm-n house-go" data-k="' + escHtml(n.label) + '" href="' + escHtml(n.href) + '"' + (n.ext ? ' target="_blank" rel="noopener"' : '') +
+        ' aria-label="' + escHtml(n.aria || (n.label + ': ' + (v === '–' ? 'could not be read' : v) + '. Open the list')) + '"><span class="hm-v' + (late && v !== '0' ? ' need' : '') + '">' + escHtml(v) + '</span><span class="hm-l">' + escHtml(n.label) + '</span></a>';
+    }).join('') + (spec.extra || '') + '</section>';
+    return '<div class="hm" data-hub-main="' + escHtml(spec.hub || '') + '">' + h + '</div>';
+  }
+
+  root.DashKit = { applyLook: applyLook, icon: icon, tabs: { tab: tabHtml, more: moreHtml, shut: function () { shutMores(null); } }, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help, hubMain: hubMain, hubMainSort: hmSort };
 })(typeof window !== 'undefined' ? window : this);

@@ -396,34 +396,60 @@
     return '<div class="three" role="group" aria-label="Summary">' + one('ok', fine, 'On track') +
       one('need', need, 'Needs you') + one('over', over, 'Overdue') + '</div>';
   }
-  function openWord(href) {
-    return /^#\/e\//.test(href) ? href.slice(4) : /^#\/register\//.test(href) ? 'To-do' : /^#\/dates/.test(href) ? 'Dates' : /^#\/control/.test(href) ? 'Control' : 'Open';
-  }
-  function nextCard(items) {
-    var i = items[0];
-    if (!i) return '';
-    return '<section class="card next" data-next' + (i.href ? ' data-open-row' : '') + '><h3 class="sr">Next</h3>' + bline(i.ent, 'Next') + '<p class="ntitle">' + esc(i.text) + '</p>' +
-      '<div class="meta">' + tag(levelCls(i.level), i.tag) + (i.when ? datePill(M.fmtDate(i.when, R.today), i.level === 'risk' ? 'late' : 'soon') : '') + '</div>' +
-      (i.href ? '<div class="go"><a class="btn house-open" href="' + esc(i.href) + '">' + esc(openWord(i.href)) + '</a></div>' : '') + '</section>';
-  }
   function head(word, href, n, need, extra) { return '<div class="cardhead"><h3><a class="house-go" href="' + href + '" aria-label="' + word + (n != null ? ': ' + n : '') + '. Open the list">' + word + '</a></h3>' + (n != null ? '<a class="house-go" href="' + href + '" aria-label="' + word + ': ' + n + '. Open the list">' + cnt(n, need) + '</a>' : '') + (extra || '') + '</div>'; }
+  // Main (Lisa's house style, 2 Nov 2026): exactly Next, Needs you (at most 5) and Money's 3 numbers, the same ones its
+  // Dashboard tile shows (../index.html HubRead.money): Overdue · Due Soon · Cash. Built by ../toolkit.js DashKit.hubMain.
+  // Everything that used to sit here lives on its tab: the On track / Needs you / Overdue trio and Money by entity on Money,
+  // the overdue and 14-day dates on Dates, the full Needs you list and Your turn on Do (To-do).
+  function actWord(href) {
+    return /^#\/e\//.test(href) ? 'Open ' + href.slice(4) : /^#\/register\//.test(href) ? 'Open to-do' : /^#\/dates/.test(href) ? 'Open dates' : /^#\/control/.test(href) ? 'Open Control' : 'Open';
+  }
+  // A dated row opens its entity's page (its Dates card), as the Dates list does; otherwise where the item points.
+  function rowHref(i) {
+    var ent = String(i.ent || '').split(';')[0].trim();
+    return i.href === '#/dates' && ent && emoney(ent) ? '#/e/' + ent : i.href || '#/now/all';
+  }
+  function mainRows() {
+    var rows = [], seen = {};
+    M.needsNow(R.data, R.money, R.today).forEach(function (i) {
+      var href = rowHref(i);
+      seen[i.href] = 1;
+      rows.push({ kind: i.level === 'risk' ? 'late' : /^Today/.test(i.tag || '') ? 'today' : 'wait', text: i.text, href: href, act: actWord(href), pill: i.tag,
+        sub: [entList(i.ent).join(' · '), i.when ? M.fmtDate(i.when, R.today) : '', i.who].filter(Boolean).join(' · ') });
+    });
+    M.yourTurn(R.data).filter(function (x) { return x.ready === 'ready'; }).forEach(function (x) {
+      var href = '#/register/' + x.r.id;
+      if (seen[href]) return; // an urgent one is already in the list above
+      rows.push({ kind: /urgent/i.test(x.r.priority || '') ? 'late' : 'wait', text: x.r.subject, href: href, act: 'Open to-do', pill: 'Your turn', sub: entList(x.r.entity).join(' · ') });
+    });
+    // A file that could not be read is never hidden behind a calm "Nothing needs you": it is the first late row.
+    [['dates', 'MON-DATES.csv'], ['register', 'MON-REGISTER.csv']].forEach(function (f) {
+      var e = (meta(f[0]) || {}).error;
+      if (e && /fail/i.test(e)) rows.unshift({ kind: 'late', text: f[1] + ' could not be read', sub: e, href: '#/control', act: 'Open Control', pill: 'Read failed' });
+    });
+    return rows;
+  }
+  // Money's 3 numbers (HubRead.money): Overdue = the overdue dates and debts; Due Soon = Dates due in the next 14 days;
+  // Cash = the businesses' bank balances added up (personal never added in). null = could not be read: shown as "–".
+  function mainNums() {
+    var ok = R && R.gate === 'ok', datesOk = ok && !(meta('dates') || {}).error;
+    var over = datesOk ? M.needsNow(R.data, R.money, R.today).filter(isOverdue).length : null; // overdue dates: "–" when MON-DATES failed
+    var soon = datesOk ? M.dueWithin(R.data, R.today, 14).length : null;
+    var biz = ok ? R.money.filter(function (m) { return m.company && !m.noData && m.bank != null; }) : [];
+    var c = biz.length ? biz.reduce(function (t, m) { return t + m.bank; }, 0) : null;
+    var short = function (v) { return '\u00a3' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(Math.round(v))); };
+    return [
+      { label: 'Overdue', value: over, late: over > 0, href: '#/now/over' },
+      { label: 'Due Soon', value: soon, href: '#/dates/soon' },
+      { label: 'Cash', value: c == null ? null : (c < 0 ? '\u2212' : '') + short(Math.abs(c)), href: '#/money/biz' }
+    ];
+  }
   function viewNow() {
-    var items = M.needsNow(R.data, R.money, R.today);
-    var risk = items.filter(function (i) { return i.level === 'risk'; }).length;
-    var h = summary(items) + nextCard(items);
-    var soon = M.overdueDates(R.data, R.today).concat(M.dueWithin(R.data, R.today, 14));
-    var turn = M.yourTurn(R.data), readyN = turn.filter(function (x) { return x.ready === 'ready'; }).length;
-    // Nothing to do: ONE line says so and the empty sections are not drawn (Lisa, 2 Nov). The money cards always show.
-    // A file that could not be read keeps its card, so the failure shows (never a calm "Nothing needs you" over a failed read).
-    var dErr = (meta('dates') || {}).error, rErr = (meta('register') || {}).error;
-    if (!items.length && !soon.length && !turn.length && !/fail/i.test((dErr || '') + ' ' + (rErr || ''))) h += '<section class="card c-ok" data-empty-one>' + empty('Nothing needs you') + '</section>';
-    if (items.length) h += '<section class="card now ' + (risk ? 'c-risk' : 'c-ok') + '">' + head('Needs you', '#/now/all', items.length, true) + listWithMore(items, NOW_SHOW, itemLi, 'now-needs') + src('', null) + '</section>';
-    h += '<section class="card c-fin"><div class="cardhead"><h3><a class="house-go" href="#/money" aria-label="Money by entity. Open Money">Money by entity</a></h3></div>' + entGroups(R.money) + '</section>';
-    if (soon.length || dErr) h += '<section class="card c-ops">' + head('Dates', '#/dates', soon.length, soon.some(function (x) { return x.days < 0; })) +
-      (soon.length ? listWithMore(soon, 6, dateLi, 'now-dates') : '') + '<div class="go"><a class="btn" href="#/dates">All dates</a></div>' + src('MON-DATES.csv', meta('dates')) + '</section>';
-    if (turn.length || rErr) h += '<section class="card c-ops"><div class="cardhead"><h3><a class="house-go" href="#/todo" aria-label="Your turn: ' + readyN + ' ready, ' + turn.length + ' open. Open To-do">Your turn</a></h3><a class="house-go" href="#/todo" aria-label="' + readyN + ' ready, ' + turn.length + ' open. Open To-do">' + tag(readyN ? 'c-ops' : 'c-mute', readyN + ' ready · ' + turn.length + ' open') + '</a></div>' +
-      (turn.length ? listWithMore(turn, TURN_SHOW, turnLi, 'now-turn') : '') + '<div class="go"><a class="btn" href="#/todo">All ' + turn.length + ' to-dos</a></div>' + src('MON-REGISTER.csv', meta('register')) + '</section>';
-    return h;
+    return DashKit.hubMain({ hub: 'money', rows: mainRows(), nums: mainNums(), doHref: '#/todo' });
+  }
+  function mainFailed() {
+    return DashKit.hubMain({ hub: 'money', error: err, nums: [{ label: 'Overdue', value: null, href: '#/now/over' }, { label: 'Due Soon', value: null, href: '#/dates/soon' }, { label: 'Cash', value: null, href: '#/money/biz' }], doHref: '#/todo' }) +
+      '<div data-hm-allow><button class="btn" type="button" data-action="refresh">Try again</button></div>';
   }
   // What a Now number counts, as its own list: #/now/need, #/now/over, #/now/all (Lisa, 2 Nov: every number opens what it counts).
   function viewNowList(k) {
@@ -434,10 +460,16 @@
   }
 
   function viewMoney(only) {
-    // #/money/ok: just the entities with nothing wrong (the On track number on Main).
-    var list = only === 'ok' ? R.money.filter(function (m) { return !m.noData && !entBad(m); }) : R.money;
-    var h = '<section class="card c-fin"><div class="cardhead"><h3>' + (only === 'ok' ? 'On track' : 'Every entity') + '</h3>' + (only === 'ok' ? cnt(list.length) : '') + '</div>' + (list.length ? entGroups(list) : empty('Nothing here')) + '</section>';
-    if (only === 'ok') return h;
+    // #/money/ok: just the entities with nothing wrong (the On track number). #/money/biz: just the businesses, whose bank
+    // balances add up to Main's Cash number (personal never added in).
+    var list = only === 'ok' ? R.money.filter(function (m) { return !m.noData && !entBad(m); }) : only === 'biz' ? R.money.filter(function (m) { return m.company && !m.noData; }) : R.money;
+    var title = only === 'ok' ? 'On track' : only === 'biz' ? 'Business cash' : 'Every entity';
+    var biz = only === 'biz' ? list.filter(function (m) { return m.bank != null; }) : [];
+    var tot = biz.length ? '<span class="tag c-fin" data-cash-total>' + cash(biz.reduce(function (t, m) { return t + m.bank; }, 0)) + '</span>' : '';
+    var h = '<section class="card c-fin"><div class="cardhead"><h3>' + title + '</h3>' + (only === 'ok' ? cnt(list.length) : tot) + '</div>' + (list.length ? entGroups(list) : empty('Nothing here')) + '</section>';
+    if (only === 'ok' || only === 'biz') return h;
+    // The On track / Needs you / Overdue trio moved here from Main (Hub Mains, 2 Nov 2026).
+    h = summary(M.needsNow(R.data, R.money, R.today)) + h;
     var rs = R.data.reports || [];
     if (rs.length) {
       var wk = rs.map(function (r) { return r.week_of; }).sort().slice(-1)[0];
@@ -589,7 +621,12 @@
     return h + '<ul class="notes"><li>Usual UK deadlines. Not tax advice.</li></ul></section>';
   }
 
-  function viewDates() {
+  function viewDates(only) {
+    if (only === 'soon') {
+      var soonL = M.dueWithin(R.data, R.today, 14);
+      return '<section class="card c-ops" data-dates="soon"><div class="cardhead"><h3><a class="house-go" href="#/dates" aria-label="All dates">Dates</a> \u203a Due soon \u00b7 next 14 days</h3>' + cnt(soonL.length) + '</div>' +
+        (soonL.length ? '<ul class="items">' + soonL.map(dateLi).join('') + '</ul>' : empty('Nothing due in the next 14 days.')) + '</section>' + src('MON-DATES.csv', meta('dates'));
+    }
     var all = M.datesView(R.data, R.today).filter(function (x) { return !x.done; });
     var groups = [
       ['Overdue', 'c-risk', all.filter(function (x) { return !x.recurring && x.days !== null && x.days < 0; })],
@@ -617,10 +654,12 @@
     var wrap = function (title, cls, list, show) { return '<section class="card ' + cls + '"><div class="cardhead"><h3>' + esc(title) + '</h3>' + cnt(list.length, title === 'Ready now') + '</div>' + (list.length ? listWithMore(list, show || 10, turnLi, 'todo-' + sub + '-' + title) : empty('Nothing here.')) + '</section>'; };
     var mk = function (rows) { return rows.map(function (r) { return { r: r, ready: M.ready(r, reg) }; }); };
     if (sub === 'yours') {
-      var t = M.yourTurn(R.data);
+      var t = M.yourTurn(R.data), nn = M.needsNow(R.data, R.money, R.today);
+      // Every Needs you item (Main shows the first 5), moved here from Main (Hub Mains, 2 Nov 2026).
+      if (nn.length) h += '<section class="card now ' + (nn.some(function (i) { return i.level === 'risk'; }) ? 'c-risk' : 'c-ok') + '" data-needs-all>' + head('Needs you', '#/now/all', nn.length, true) + listWithMore(nn, NOW_SHOW, itemLi, 'todo-needs') + '</section>';
       var rdy = t.filter(function (x) { return x.ready === 'ready'; }), blk = t.filter(function (x) { return x.ready !== 'ready'; });
       // One empty line per view (Lisa, 2 Nov): empty sections are not drawn.
-      h += t.length ? (rdy.length ? wrap('Ready now', 'c-ops', rdy, 8) : '') + (blk.length ? wrap('Blocked', 'c-mute', blk, 5) : '') : '<section class="card c-ok" data-empty-one>' + empty('Nothing needs you') + '</section>';
+      h += t.length ? (rdy.length ? wrap('Ready now', 'c-ops', rdy, 8) : '') + (blk.length ? wrap('Blocked', 'c-mute', blk, 5) : '') : nn.length ? '' : '<section class="card c-ok" data-empty-one>' + empty('Nothing needs you') + '</section>';
     } else if (sub === 'others') {
       h += wrap('Waiting on others', 'c-ok', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isLisa(r) && M.isTask(r); })));
     } else if (sub === 'watch') {
@@ -693,10 +732,11 @@
   }
   function render() {
     var r = route(), html;
-    if (!signedIn || !R || R.gate !== 'ok') html = notReady();
+    if (signedIn && err && !R && r.view === 'now' && !r.a) html = mainFailed();
+    else if (!signedIn || !R || R.gate !== 'ok') html = notReady();
     else if (r.view === 'money') html = viewMoney(r.a);
     else if (r.view === 'e') html = viewEntity(r.a);
-    else if (r.view === 'dates') html = viewDates();
+    else if (r.view === 'dates') html = viewDates(r.a);
     else if (r.view === 'todo') html = viewTodo(r.a);
     else if (r.view === 'register') html = viewTodo(null, r.a);
     else if (r.view === 'accountant') html = viewAccountant();
@@ -828,6 +868,12 @@
     signedIn = true;
     return true;
   }
+  // Tapping the tab (or any link) for the screen already open goes back to its top and reads it fresh, like a new visit.
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#/"]');
+    if (!a || e.defaultPrevented || a.getAttribute('href') !== location.hash) return;
+    e.preventDefault(); render(); window.scrollTo(0, 0);
+  });
   // Skip link: jump to the content without changing the #/ address.
   document.addEventListener('click', function (e) {
     var k = e.target.closest && e.target.closest('[data-skip]');

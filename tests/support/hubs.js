@@ -90,7 +90,7 @@ const HUBS = {
     },
   },
   food: {
-    url: 'food/', views: ['home', 'orders', 'invoices', 'products', 'ga'],
+    url: 'food/', views: ['home', 'orders', 'invoices', 'products', 'ga', 'do', 'review'],
     async open(page) {
       const b = foodBook();
       await sheets(page, (url) => /:batchGet/.test(url)
@@ -98,17 +98,17 @@ const HUBS = {
         : { values: [(b.cards[Number((/Cards!A(\d+)/.exec(url) || [0, 2])[1]) - 2] || [])] });
       await page.goto('food/#/home');
       await page.locator('#view [data-action="signin"]').click();
-      await expect(page.locator('#view .needs')).toBeVisible();
+      await expect(page.locator('#view [data-hub-main="food"]')).toBeVisible();
     },
   },
   marketplace: {
-    url: 'marketplace/', views: ['me', 'do', 'decide', 'reply', 'insights', 'round', 'stock', 'temu', 'suppliers'],
+    url: 'marketplace/', views: ['me', 'do', 'do?post', 'decide', 'reply', 'insights', 'sold', 'round', 'stock', 'temu', 'suppliers'],
     async open(page) {
       const rows = marketRows();
       await sheets(page, (url) => /!A2:L$/.test(url) ? { values: rows } : { values: [(rows[Number((/!A(\d+)/.exec(url) || [0, 2])[1]) - 2] || [])] });
       await page.goto('marketplace/#/me');
       await page.locator('#view [data-action="signin"]').click();
-      await expect(page.locator('#view .needs')).toBeVisible();
+      await expect(page.locator('#view [data-hub-main="marketplace"]')).toBeVisible();
     },
   },
   factory: {

@@ -8,6 +8,7 @@ const vm = require('vm');
 const { test, expect } = require('../support/test');
 const { foodBook, marketRows, setLook } = require('../support/hubs');
 const { tabClick } = require('../support/tabs');
+const { steadyRows, numberGroup } = require('../support/hub-main');
 const { IDS } = require('../support/world');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -17,8 +18,9 @@ const SHOTS = process.env.MAIN_SHOTS || '';
 
 // Every number is its own link to the place in the hub where Lisa acts on it (Projects: the hub itself).
 const ROUTES = {
-  projects: ['', '', ''], web: ['#/look', '#/look', '#/home'], money: ['#/dates', '#/dates', '#/money'], food: ['#/orders', '#/invoices', '#/orders'],
-  dogs: ['#/today', '#/today', '#/dogs'], apps: ['#/decide', '#/decide', '#/all'], market: ['#/do', '#/reply', '#/numbers'], studio: ['#/review', '#/me', '#/library'],
+  projects: ['', '', ''], web: ['#/all?show=down', '#/all?show=expiring', '#/all?show=live'], money: ['#/now/over', '#/dates/soon', '#/money/biz'],
+  food: ['#/orders?late', '#/invoices?unpaid', '#/orders?today'], dogs: ['#/round', '#/today/unplaced', '#/today/bitches'],
+  apps: ['#/decide/questions', '#/decide/gates', '#/all/live'], market: ['#/do?post', '#/reply', '#/sold'], studio: ['#/review', '#/me/today', '#/library'],
 };
 // Lisa's order, colour (the 3px line; Projects has the rainbow line) and link for each tile. Projects opens config.js projectsHub.webAppUrl.
 const TILES = [
@@ -97,11 +99,11 @@ test.describe('Dashboard Main', () => {
       else expect(look.line, name + ' line colour').toBe(colour);
       expect(look.w).toBe('3px');
       await expect(t.locator('svg.hico use')).toHaveCount(1);
-      if (key === 'projects') await expect(t).toContainText('Opens in your work account');
+      await expect(t, name + ': no explainer line').not.toContainText('Opens in your work account');
       expect((await nums(page, key)).map((n) => n[0]), name + ' labels').toEqual(labels);
       for (const lab of labels) expect(lab.split(' ').length, 'labels are 1-2 words').toBeLessThanOrEqual(2);
     }
-    // Sizes: numbers 18px, labels 14px; a late number is a 14px rose ring.
+    // Sizes: every number 18px (late ones too, in a rose ring sized to them), labels 14px.
     const sz = await page.locator('#hubTiles .hubtile[data-hub="apps"] .hk').first().evaluate((k) => [getComputedStyle(k.firstElementChild).fontSize, getComputedStyle(k.lastElementChild).fontSize]);
     expect(sz).toEqual(['18px', '14px']);
     // The numbers, from the shared samples (see each hub's own spec for the same rules).
@@ -113,7 +115,7 @@ test.describe('Dashboard Main', () => {
     const money = await nums(page, 'money');
     expect(money.map((n) => n[0])).toEqual(['Overdue', 'Due Soon', 'Cash']);
     expect(money[2][1]).toMatch(/^−?£[\d.]+k?$/);
-    await expect(page.locator('#hubTiles .cnt.need').first()).toHaveCSS('font-size', '14px');
+    await expect(page.locator('#hubTiles .hk b.need').first()).toHaveCSS('font-size', '18px');
     // Web: the RR_WEB-ESTATE sheet id is empty in config.js, so nothing is read and every number is "–".
     expect(await nums(page, 'web')).toEqual([['Down', '–', false], ['Expiring', '–', false], ['Live', '–', false]]);
   });
@@ -152,7 +154,20 @@ test.describe('Dashboard Main', () => {
     for (const g of got) { expect(g.icon).toBe(true); expect(g.line).toBe('3px'); expect(g.hub).toBeTruthy(); }
     expect(new Set(got.map((g) => g.hub)).size, 'rows come from more than one hub').toBeGreaterThan(1);
     expect(got[0].k).toBe('risk');
-    await expect(page.locator('#needsToday')).toContainText(/And \d+ more\. Open Do\./);
+    await expect(page.locator('#needsToday a[data-needs-more]')).toHaveText(/^\+\d+ more$/);
+    await expect(page.locator('#needsToday a[data-needs-more]')).toHaveAttribute('href', '#/do');
+    await expect(page.locator('#needsToday')).not.toContainText('Open Do');
+  });
+
+  test('Needs you rows never jump: the same box and icon x on hover and focus, one left edge, a straight 3px bar', async ({ page, guard }) => {
+    await seed(page, guard);
+    await signIn(page);
+    await expect(page.locator('#needsToday li').first()).toBeVisible();
+    await steadyRows(page, '#needsToday ol > li', '.hico');
+    // Each tile's 3 numbers: one size, a rose ring only on a late one, ring-only hover and focus (Lisa, 2 Nov: the Projects tile).
+    for (const hub of ['apps', 'food', 'money']) await numberGroup(page, '#hubTiles .hubtile[data-hub="' + hub + '"] a.hk', 'b');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await steadyRows(page, '#needsToday ol > li', '.hico');
   });
 
   test('the big hub buttons and "You are here" are gone; the top bar says Dashboard', async ({ page, guard }) => {

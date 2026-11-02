@@ -136,10 +136,11 @@ test.describe('Money Hub: navigation', () => {
   test('links on the Now page lead to Dates and To-do', async ({ page }) => {
     await page.goto('money/');
     await signIn(page);
-    await page.locator('#view a', { hasText: 'All dates' }).click();
-    await expect(page).toHaveURL(/#\/dates$/);
+    // Main's Due Soon number opens the dates due soon; the Needs you heading opens To-do (Hub Mains, 2 Nov 2026).
+    await page.locator('#view [data-hm="nums"] a.hm-n', { hasText: 'Due Soon' }).click();
+    await expect(page).toHaveURL(/#\/dates\/soon$/);
     await page.goBack();
-    await page.locator('#view a', { hasText: /^All \d+ to-dos$/ }).click();
+    await page.locator('#view [data-hm="needs"] h3 a', { hasText: 'Needs you' }).click();
     await expect(page).toHaveURL(/#\/todo$/);
   });
 
@@ -201,8 +202,12 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     await page.goto('money/');
     await signIn(page);
     const v = page.locator('#view');
-    await expect(v.locator('section.now')).toContainText('Sample overdue filing');
-    await expect(v.locator('section.now')).toContainText(/TESTCO: 1 overdue on Sample tax body/);
+    // Main shows the first five; the full list lives on To-do (Hub Mains, 2 Nov 2026).
+    await expect(v.locator('[data-hub-main]')).toContainText('Sample overdue filing');
+    await expect(v.locator('[data-hub-main]')).toContainText(/TESTCO: 1 overdue on Sample tax body/);
+    await page.evaluate(() => { location.hash = '#/todo'; });
+    await expect(v.locator('section.now[data-needs-all]')).toContainText('Sample overdue filing');
+    await expect(v.locator('section.now[data-needs-all]')).toContainText(/TESTCO: 1 overdue on Sample tax body/);
   });
 
   test('To-do: tasks waiting on another task are held back until it is closed', async ({ page }) => {
@@ -288,8 +293,9 @@ test.describe('Money Hub: missing, duplicate or wrong files are shown as errors 
     await page.goto('money/');
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
-    await expect(page.locator('#view')).toContainText('Could not read Drive');
-    await expect(page.locator('#view')).toContainText('Google Drive refused access (forbidden)');
+    await expect(page.locator('#view [data-hm="fail"]')).toContainText('Could not read');
+    await expect(page.locator('#view [data-hm="fail"]')).toContainText('Google Drive refused access (forbidden)');
+    await expect(page.locator('#view [data-hm="nums"] .hm-v')).toHaveText(['–', '–', '–']);
     await expect(page.locator('#readStamp')).toHaveText('Read failed');
     await expect(page.locator('#view')).not.toContainText('£');
   });

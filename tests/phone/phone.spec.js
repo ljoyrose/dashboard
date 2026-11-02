@@ -87,7 +87,8 @@ test.describe('Phone: Marketplace', () => {
     expect((await page.goto('marketplace/')).status()).toBe(200);
     await noSidewaysScroll(page, 'signed out');
     await page.locator('#view [data-action="signin"]').click();
-    await expect(page.locator('#view .needs')).toHaveText('Needs you: 3');
+    // The "Needs you: N" line is now the Needs you heading on the hub Main (2 Nov), with its count.
+    await expect(page.locator('#view [data-hm="needs"] h3 a')).toHaveAttribute('aria-label', 'Needs you: 3. Open Do');
     for (const key of ['do', 'decide', 'reply', 'insights', 'me']) {
       await tabClick(page, `#tabs a[data-nav="${key}"]`);
       await expect(page.locator(`#tabs a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
@@ -135,8 +136,8 @@ test.describe('Phone: GA Hub', () => {
     expect((await page.goto('food/')).status()).toBe(200);
     await noSidewaysScroll(page, 'signed out');
     await page.locator('#view [data-action="signin"]').click();
-    await expect(page.locator('#view .needs')).toBeVisible();
-    for (const key of ['orders', 'invoices', 'products', 'ga', 'home']) {
+    await expect(page.locator('#view [data-hub-main]')).toBeVisible(); // Main is the hub Main (2 Nov)
+    for (const key of ['orders', 'invoices', 'products', 'do', 'review', 'ga', 'home']) { // Do + Review: the cards and growth moved off Main
       await tabClick(page, `nav.tabs a[data-nav="${key}"]`);
       await expect(page.locator(`nav.tabs a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
       await noSidewaysScroll(page, key);

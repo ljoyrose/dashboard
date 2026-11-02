@@ -7,7 +7,7 @@ const { test, expect } = require('../support/test');
 const { HUBS, setLook, go } = require('../support/hubs');
 
 // What counts as "info" on a view: summary numbers, tiles, list rows and the Next card.
-const INFO = '.sum, .tile, .mrow:not(.ckrow), .crow, .prow, .items > li, [data-next], .nextc';
+const INFO = '.sum, .tile, .mrow:not(.ckrow), .crow, .prow, .items > li, [data-next], .nextc, .hm-row, .hm-n, [data-hm="next"]';
 
 // Visible info elements with no target: not a link/button, not inside one, and not in a row that has an open control.
 async function bare(page) {
@@ -37,8 +37,8 @@ test.describe.configure({ timeout: 90_000 });   // one test walks several views 
 const VIEWS = {
   studio: ['me', 'do', 'decide'],
   money: ['now', 'todo'],
-  cdhub: ['map', 'today'],
-  food: ['home'],
+  cdhub: ['map', 'work', 'today'],
+  food: ['home', 'do'],
   marketplace: ['me', 'do', 'decide'],
   factory: ['rooms', 'me', 'do', 'decide'],
 };
@@ -59,17 +59,19 @@ test.describe('Clickable info: every number, card and row opens what it counts',
   test('estate: every tile opens its filtered list and every web address row opens the site', async ({ page }) => {
     await page.goto('estate/#/home');
     await page.locator('#view [data-action="signin"]').click();
-    await expect(page.locator('#view .tiles')).toBeVisible();
-    for (const v of ['home', 'look']) {
+    await expect(page.locator('#view [data-hub-main]')).toBeVisible();
+    expect(await bare(page), 'estate #/home').toEqual([]);
+    // The count tiles moved from Main to All (Hub Mains, 2 Nov 2026); Main's 3 numbers open All filtered.
+    for (const v of ['all', 'look']) {
       await go(page, v);
       expect(await bare(page), 'estate #/' + v).toEqual([]);
       const tiles = await page.locator('#view .tile').evaluateAll((l) => l.map((t) => [t.tagName, t.getAttribute('href')]));
       for (const [tag, href] of tiles) { expect(tag).toBe('A'); expect(href).toMatch(/[?&]show=\w+/); }
     }
     // A tile lands on its list, filtered to what it counts.
-    await go(page, 'home');
+    await go(page, 'all');
     await page.locator('#view a.tile[data-show="live"]').click();
-    await expect(page).toHaveURL(/#\/home\?show=live$/);
+    await expect(page).toHaveURL(/#\/all\?show=live$/);
     await expect(page.locator('#view .hint')).toContainText('Live only.');
     const st = await page.locator('#view .prop[data-status]').evaluateAll((l) => [...new Set(l.map((p) => p.getAttribute('data-status')))]);
     expect(st.length ? st : ['live']).toEqual(['live']);
@@ -79,65 +81,77 @@ test.describe('Clickable info: every number, card and row opens what it counts',
 test.describe('Clickable info: a sample of clicks land on the right filtered list', () => {
   test.use({ viewport: { width: 1280, height: 900 } });
 
-  test('Studio: On track / Needs you / Overdue open Main\'s list of just those; a Needs you row opens its item', async ({ page, guard }) => {
+  test('Studio: Needs you / Overdue / On track (now at the top of Do) open their lists; a Main row opens its item', async ({ page, guard }) => {
     await HUBS.studio.open(page, guard);
     for (const k of ['ok', 'need', 'over']) {
-      await go(page, 'me');
-      const n = Number((await page.locator(`#view a.sum[data-sum="${k}"] .big`).first().textContent()) || 0);
-      await page.locator(`#view a.sum[data-sum="${k}"]`).click();
+      await go(page, 'do');
+      await page.locator(`#view a[data-melink="${k}"]`).click();
       await expect(page).toHaveURL(new RegExp(`#/me/${k}$`));
-      await expect(page.locator('#view')).toContainText(n ? /\S/ : 'Nothing here');
+      await expect(page.locator('#view')).toContainText(/\S/);
     }
     await go(page, 'me');
-    const row = page.locator('#view a.mrow').first();
+    const row = page.locator('#view .hm-row .hm-t > a').first();
     const href = await row.getAttribute('href');
     await row.click();
     await expect(page).toHaveURL(new RegExp(href.replace(/[/?.]/g, '\\$&') + '$'));
   });
 
-  test('Money: the three numbers open Now filtered (or Money for On track); a Needs you row opens its item', async ({ page }) => {
+  test('Money: Overdue, Due Soon and Cash open their lists; On track (now on Money) opens Money filtered; a Needs you row opens its item', async ({ page }) => {
     await HUBS.money.open(page);
-    await page.locator('#view a.sum[data-sum="over"]').click();
+    await page.locator('#view a.hm-n[data-k="Overdue"]').click();
     await expect(page).toHaveURL(/#\/now\/over$/);
     await expect(page.locator('#view [data-nowlist="over"]')).toBeVisible();
     const over = Number(await page.locator('#view [data-nowlist="over"] .cnt').first().textContent().catch(() => '0')) || 0;
     if (over) await expect(page.locator('#view [data-nowlist="over"] .items > li')).toHaveCount(over);
     await go(page, 'now');
-    await page.locator('#view a.sum[data-sum="need"]').click();
-    await expect(page).toHaveURL(/#\/now\/need$/);
+    await page.locator('#view a.hm-n[data-k="Due Soon"]').click();
+    await expect(page).toHaveURL(/#\/dates\/soon$/);
+    await expect(page.locator('#view [data-dates="soon"]')).toBeVisible();
     await go(page, 'now');
+    await page.locator('#view a.hm-n[data-k="Cash"]').click();
+    await expect(page).toHaveURL(/#\/money\/biz$/);
+    await expect(page.locator('#view h3').first()).toHaveText('Business cash');
+    await go(page, 'money');
     await page.locator('#view a.sum[data-sum="ok"]').click();
     await expect(page).toHaveURL(/#\/money\/ok$/);
     await expect(page.locator('#view h3').first()).toHaveText('On track');
     await go(page, 'now');
-    const link = page.locator('#view .card.now .items > li a.house-open').first();
+    const link = page.locator('#view .hm-row .hm-t > a').first();
     const href = await link.getAttribute('href');
-    await page.locator('#view .card.now .items > li[data-open-row]').first().locator('.itext, .bline').first().click();
+    await link.click();
     await expect(page).toHaveURL(new RegExp(href.replace(/[/?.]/g, '\\$&') + '$'));
   });
 
-  test('CD Hub: Overdue opens Needs you filtered to late ones; an On site count opens its list of dogs', async ({ page }) => {
+  test('CD Hub: Unplaced and Bitches open their lists of dogs on Today; an On site count (now on Today) opens its list', async ({ page }) => {
     await HUBS.cdhub.open(page);
-    await page.locator('#summary a.sum.over').click();
-    await expect(page.locator('#needsCard[data-needf="late"]')).toBeVisible();
+    await page.locator('a.hm-n[data-k="Bitches"]').click();
+    await expect(page).toHaveURL(/#\/today\/bitches$/);
+    await expect(page.locator('#tpanel h4')).toBeVisible();
+    await page.goto('cdhub/#/today');
     await page.locator('#onSiteCard a.mrow[data-golist="adults"]').click();
-    await expect(page).toHaveURL(/#\/today$/);
+    await expect(page).toHaveURL(/#\/today(\/adults)?$/);
     await expect(page.locator('#tpanel h4')).toContainText('Adult dogs here');
   });
 
-  test('Food: Under £15 profit opens Orders filtered to low profit; Subscriptions opens subscription orders', async ({ page }) => {
+  test('Food: Late, Owe GA and Today open their filtered lists; Under £15 profit (now on Review) opens low-profit orders', async ({ page }) => {
     await HUBS.food.open(page);
+    for (const [k, re] of [['Late', /#\/orders\?late$/], ['Owe GA', /#\/invoices\?unpaid$/], ['Today', /#\/orders\?today$/]]) {
+      await go(page, 'home');
+      await page.locator(`#view a.hm-n[data-k="${k}"]`).click();
+      await expect(page).toHaveURL(re);
+    }
+    await go(page, 'review');
     await page.locator('#view a.tile[href="#/orders?low"]').click();
     await expect(page.locator('#ofilters [data-ofilter="low"]')).toHaveAttribute('aria-pressed', 'true');
-    await go(page, 'home');
+    await go(page, 'review');
     await page.locator('#view a.tile[href="#/orders?sub"]').click();
     await expect(page.locator('#ofilters [data-ofilter="sub"]')).toHaveAttribute('aria-pressed', 'true');
   });
 
   test('Marketplace: a To post row and the To post count open Do now, where its Found / Posted buttons are', async ({ page }) => {
     await HUBS.marketplace.open(page);
-    await page.locator('#view .prow[data-open-row] .pt').first().click({ position: { x: 2, y: 2 } });
-    await expect(page).toHaveURL(/#\/do$/);
+    await page.locator('#view a.hm-n[data-k="To Post"]').click();
+    await expect(page).toHaveURL(/#\/do\?post$/);
     await expect(page.locator('#view [data-ans][data-v="Found"], #view [data-ans][data-v="Posted"]').first()).toBeVisible();
   });
 });
@@ -148,19 +162,21 @@ test.describe('Action always actionable: every row asking Lisa to act carries th
 
   test('Studio Main, Do and Decide rows', async ({ page, guard }) => {
     await HUBS.studio.open(page, guard);
-    for (const v of ['me', 'do', 'decide']) { await go(page, v); expect(await noAction(page, '#view .crow, #view .mrow, #view [data-next]'), v).toEqual([]); }
+    for (const v of ['me', 'do', 'decide']) { await go(page, v); expect(await noAction(page, '#view .crow, #view .mrow, #view [data-next], #view .hm-row, #view [data-hm="next"]'), v).toEqual([]); }
   });
   test('Money Now and To-do rows', async ({ page }) => {
     await HUBS.money.open(page);
-    for (const v of ['now', 'todo']) { await go(page, v); expect(await noAction(page, '#view .items > li, #view [data-next]'), v).toEqual([]); }
+    for (const v of ['now', 'todo']) { await go(page, v); expect(await noAction(page, '#view .items > li, #view [data-next], #view .hm-row, #view [data-hm="next"]'), v).toEqual([]); }
   });
   test('Marketplace Do now, Decide and Reply cards', async ({ page }) => {
     await HUBS.marketplace.open(page);
     for (const v of ['me', 'do', 'decide', 'reply']) { await go(page, v); expect(await noAction(page, '#view .card:not(.empty), #view .prow'), v).toEqual([]); }
   });
-  test('CD Hub Needs you rows and the Next card', async ({ page }) => {
+  test('CD Hub Needs you rows (Main and Do) and the Next card', async ({ page }) => {
     await HUBS.cdhub.open(page);
-    expect(await noAction(page, '#needsCard .mrow, #nextCard')).toEqual([]);
+    expect(await noAction(page, '.hm-row, [data-hm="next"]')).toEqual([]);
+    await go(page, 'work');
+    expect(await noAction(page, '#needsCard .mrow')).toEqual([]);
   });
   test('Food Home cards', async ({ page }) => {
     await HUBS.food.open(page);
@@ -182,7 +198,7 @@ test.describe('One empty message per view', () => {
     guard.world.file('studio-state-sample', ST.stateFile, JSON.stringify(st), { parents: [ST.logsFolderId], mimeType: 'application/json' });
     await page.goto('studio/#/me');
     await page.locator('#signInBtn').click();
-    await expect(page.locator('#view [data-empty-one]')).toHaveCount(1);
+    await expect(page.locator('#view [data-hm="empty"]')).toHaveCount(1);
     await expect(page.locator('#view')).toContainText('Nothing needs you');
     expect(await page.locator('#view').evaluate((v) => (v.innerText.match(/Nothing needs you|Nothing waiting|Nothing here|All decided/g) || []).length)).toBe(1);
   });

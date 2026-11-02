@@ -4,7 +4,7 @@
 // All data is the invented sample world from tests/support (pretend Google, Drive and Sheets).
 const { test, expect } = require('../support/test');
 const { tabClick } = require('../support/tabs');
-const { HUBS, go } = require('../support/hubs');
+const { HUBS, go, sheets, marketRows, foodBook } = require('../support/hubs');
 
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
@@ -38,6 +38,25 @@ const DEEP = [
 async function openAt(page, guard, hub, hash) {
   const real = page.goto.bind(page);
   let first = true;
+  if (hub === 'marketplace') {   // its opener waits for Main, which a deep link does not show; sign in the same way and wait for the read
+    const rows = marketRows();
+    await sheets(page, (url) => /!A2:L$/.test(url) ? { values: rows } : { values: [(rows[Number((/!A(\d+)/.exec(url) || [0, 2])[1]) - 2] || [])] });
+    await real(HUBS[hub].url + hash);
+    await page.locator('#view [data-action="signin"]').click();
+    await expect(page.locator('#readAt')).toContainText(/^Read \d/);
+    return;
+  }
+  if (hub === 'food') {   // the same: its opener waits for Main; sign in with the same sample workbook and wait for the tabs
+    const b = foodBook();
+    await sheets(page, (url) => /:batchGet/.test(url)
+      ? { valueRanges: [{ values: b.cards }, { values: b.orders }, { values: b.invoices }, { values: b.products }, { values: b.settings }, { values: [['statement_date', 'total_outstanding']] }, { values: [['date', 'amount']] }, { values: [['kind', 'code', 'name']] }] }
+      : { values: [(b.cards[Number((/Cards!A(\d+)/.exec(url) || [0, 2])[1]) - 2] || [])] });
+    await real(HUBS[hub].url + hash);
+    await page.locator('#view [data-action="signin"]').click();
+    await expect(page.locator('#tabs')).toBeVisible();
+    await expect(page.locator('#view')).not.toContainText('Reading');
+    return;
+  }
   page.goto = (u, o) => { const to = first ? HUBS[hub].url + hash : u; first = false; return real(to, o); };
   try { await HUBS[hub].open(page, guard); } finally { page.goto = real; }
 }

@@ -396,7 +396,7 @@
   .crow { position: relative; }
   .card .crow { padding-left: 14px; }
   .card .crow { --house-lbar-out: 0px; }   /* the bar itself: ../house.css section 10 (full height, 3px) */
-  .card .crow.house-lbar::before { border-radius: var(--radius); }   /* a row has square corners: the bar still curves like a card's */
+  .card .crow.house-lbar::before { border-radius: 0; }   /* a row has square corners, so its bar is a straight 3px line, never a "(" (Lisa, 2 Nov) */
   .col-list .crow::before { content: none; }
   /* Library: + New / Edit form and the Suggest box. */
   .libbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -1162,34 +1162,43 @@
   function urgency(a) { var d = a.dated && a.eventDate ? daysTo(a.eventDate) : 9999; return (lateOf(a) ? -1e5 : 0) + d; }
   // Stage 8: "Open in Infinity" when the engine has given the item its Studio Line card link (https on startinfinity.com only).
   function infinityLink(a) { var u = String(a.lineCardUrl || '').trim(); return /^https:\/\/([a-z0-9-]+\.)*startinfinity\.com\//i.test(u) ? '<a href="' + safeUrl(u) + '" target="_blank" rel="noopener" data-infinity>Open in Infinity</a>' : ''; }
-  function vMe() {
-    var s = fsOf('me'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
-    var R = keep(reviews()), G = keep(gates()), H = keep(hands());
-    var live = all().filter(function (a) { return !isTest(a) && !sent[a.id] && a.stage < 8; });
-    var needs = live.filter(function (a) { return needOf(a); }).sort(function (a, b) { return urgency(a) - urgency(b); });
-    var over = live.filter(lateOf).length, onTrack = live.filter(function (a) { return a.stage >= 1 && !needOf(a); }).length;
-    var ok = function (t) { return '<p class="okempty">' + t + '</p>'; };
-    // A section with nothing in it is not drawn; when nothing at all needs Lisa, ONE line says so (Lisa, 2 Nov).
-    var sect = function (icon, word, href, l, kind) { return l.length ? '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + '<a class="house-go" href="' + href + '" aria-label="' + word + ': ' + l.length + '. Open the list">' + word + ' ' + cnt(l.length) + '</a></div>' + l.map(function (a) { return row(a, kind, true); }).join('') + '</div>' : ''; };
-    var mrow = function (a) { var sl = stSlot(a.stage); return '<a class="mrow" data-mrow="' + esc(a.id) + '" href="#/asset/' + encodeURIComponent(a.id) + '" style="--sc:var(--ljr-' + sl + ');--tint:var(--ljr-' + sl + '-tint)"><span class="t">' + esc(bare(a)) + '<small>' + esc(needOf(a)) + ' · Step ' + a.stage + ': ' + esc(STAGES[a.stage]) + '</small></span>' + datePill(a) + '</a>'; };
-    var nx = needs[0];
-    var sum = function (k, cls, n, w) { return '<a class="sum house-go' + cls + '" data-sum="' + k + '" href="#/me/' + k + '" aria-label="' + w + ': ' + n + '. Open the list"><span class="big' + (n ? '' : ' zero') + '">' + n + '</span>' + w + '</a>'; };
-    var body = (nx ? '<div class="mecards">' +
-      '<div class="mecards">' +
-      '<section class="mcard next" data-next data-open-row>' + '<h3>Next</h3>' + '<div class="t">' + esc(bare(nx)) + '</div><p class="sub">' + esc(needOf(nx)) + (nx.dated && nx.eventDate ? ' · due ' + dmy(Date.parse(nx.eventDate)) : '') + '</p><a class="btn house-open" href="#/asset/' + encodeURIComponent(nx.id) + '" aria-label="Open ' + esc(bare(nx)) + '">Open</a></section>' +
-      '<section class="mcard need-card" data-needs><h3><a class="house-go" href="#/me/need" aria-label="Needs you today: ' + needs.length + '. Open the list">Needs you today ' + icnt(needs.length) + '</a></h3>' + needs.slice(0, 7).map(mrow).join('') + '</section>' +
-      '</div>' : '') +
-      sect('eye-check', 'Approve', '#/review', R, 'review') + sect('traffic-lights', 'Gates', '#/me/gate', G, 'gate') + sect('hand-finger', 'Tasks', '#/me/hand', H, 'hand') + vSuggest();
-    var filtered = !!(s.q || fOnCount('me'));
-    return '<h2 class="sr">Main</h2><div class="three" data-three>' + sum('ok', '', onTrack, 'On track') + sum('need', ' need', needs.length, 'Needs you') + sum('over', ' over', over, 'Overdue') + '</div>' +
-      findBar('me', meItems()) + (body ? body : filtered ? emptyBox() : '<div class="card" data-empty-one>' + ok('Nothing needs you') + '</div>');
+  // Main (Lisa's house style, 2 Nov 2026): Next, Needs you (at most 5 rows from Decide and Do), then Studio's 3 numbers, the same as its
+  // Dashboard tile (root index.html HubRead studio). Built by ../toolkit.js DashKit.hubMain. What used to sit here moved:
+  // the On track / Needs you / Overdue lists and Needs you today -> the links at the top of Do (#/me/ok, #/me/need, #/me/over);
+  // Approve -> Decide › Review; Gates and Suggestions -> Decide; Tasks -> Do; the find bar -> Decide and Do (each has its own).
+  function dueIn(a) { return a.dated && a.eventDate ? daysTo(a.eventDate) : null; }
+  function dueTodayL() { return all().filter(function (a) { return !isTest(a) && a.stage < 8 && dueIn(a) === 0; }); }
+  var ME_ACT = { gate: 'Decide', review: 'Approve', hand: 'Do it', asks: 'Send', deliver: 'Send' };
+  function mainRows() {
+    var seen = {}, out = [], live = function (a) { return !isTest(a) && !sent[a.id] && !seen[a.id]; };
+    var add = function (l, kind) { l.filter(live).forEach(function (a) {
+      seen[a.id] = 1; var d = dueIn(a), k = a.stage < 8 && d !== null && d < 0 ? 'late' : a.stage < 8 && d === 0 ? 'today' : 'wait';
+      var n = needOf(a) || (kind === 'asks' ? 'Question to send' : kind === 'deliver' ? 'Ready to send' : '');
+      out.push({ kind: k, text: bare(a), href: '#/asset/' + encodeURIComponent(a.id), act: ME_ACT[kind], sort: d == null ? 9999 : d,
+        sub: [n, a.dated && a.eventDate ? 'due ' + dmy(Date.parse(a.eventDate)) : ''].filter(Boolean).join(' · '), pill: k === 'late' ? 'Late' : k === 'today' ? 'Today' : '' });
+    }); };
+    add(gates(), 'gate'); add(reviews(), 'review'); add(hands(), 'hand');
+    add(all().filter(function (a) { return a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent'; }), 'asks');
+    add(all().filter(function (a) { return a.delivery && a.delivery.status === 'ready (not sent)'; }), 'deliver');
+    return out;
+  }
+  // Approve = pieces waiting at stage 7; Due Today = dated pieces due today (no ring: due today is not late); Sold (this week): Studio's state keeps
+  // running sales totals only (results.sales), never dated sales, so it is "–" until the engine sends dated sales. Never invented.
+  function mainNums(ok) {
+    var rv = ok ? reviews().filter(function (a) { return !isTest(a); }).length : null, dt = ok ? dueTodayL().length : null;
+    return [{ label: 'Approve', value: rv, href: '#/review' }, { label: 'Due Today', value: dt, href: '#/me/today' },
+      { label: 'Sold', value: null, href: '#/library', aria: 'Sold this week: not recorded by date yet. Open the Library' }];
+  }
+  function vMe(error) {
+    if (error) return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'studio', rows: [], nums: mainNums(false), doHref: '#/do', error: error });
+    return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'studio', rows: mainRows(), nums: mainNums(true), doHref: '#/do' });
   }
   // Main's numbers and section heads open their own list (Lisa, 2 Nov: "anywhere you give info should be clickable to get it").
-  var ME_LISTS = { ok: 'On track', need: 'Needs you', over: 'Overdue', gate: 'Gates', hand: 'Tasks' };
+  var ME_LISTS = { ok: 'On track', need: 'Needs you', over: 'Overdue', gate: 'Gates', hand: 'Tasks', today: 'Due today' };
   function meList(k) {
     var live = all().filter(function (a) { return !isTest(a) && !sent[a.id] && a.stage < 8; });
     var l = k === 'ok' ? live.filter(function (a) { return a.stage >= 1 && !needOf(a); }) : k === 'need' ? live.filter(function (a) { return needOf(a); }).sort(function (a, b) { return urgency(a) - urgency(b); }) :
-      k === 'over' ? live.filter(lateOf) : k === 'gate' ? gates() : k === 'hand' ? hands() : [];
+      k === 'over' ? live.filter(lateOf) : k === 'gate' ? gates() : k === 'hand' ? hands() : k === 'today' ? dueTodayL() : [];
     return '<div class="card" data-melist="' + esc(k) + '"><div class="sect"><a class="house-go" href="#/me" aria-label="Back to Main">Main</a> \u203a ' + esc(ME_LISTS[k] || k) + ' ' + cnt(l.length) + '</div>' +
       (l.length ? l.map(function (a) { return row(a, kindFor(a), true); }).join('') : '<p class="okempty">Nothing here</p>') + '</div>';
   }
@@ -1274,6 +1283,13 @@
     var body = sect('traffic-lights', 'Gates', keep(gates()), 'gate') + sect('eye-check', 'Review', keep(reviews()), 'review') + vSuggest();
     return findBar('decide', gates().concat(reviews())) + (body || oneEmpty('decide'));
   }
+  // The lists that were Main's summary (On track / Needs you / Overdue, and Needs you today) now open from the top of Do.
+  function meLinks() {
+    var live = all().filter(function (a) { return !isTest(a) && !sent[a.id] && a.stage < 8; });
+    var n = { need: live.filter(function (a) { return needOf(a); }).length, ok: live.filter(function (a) { return a.stage >= 1 && !needOf(a); }).length, over: live.filter(lateOf).length };
+    return '<div class="pills" data-melinks>' + [['need', 'Needs you'], ['over', 'Overdue'], ['ok', 'On track']].map(function (x) {
+      return '<a class="pill" href="#/me/' + x[0] + '" data-melink="' + x[0] + '" aria-label="' + x[1] + ': ' + n[x[0]] + '. Open the list">' + x[1] + ' ' + (x[0] === 'over' && n.over ? '<span class="cnt need">' + n.over + '</span>' : cnt(n[x[0]])) + '</a>'; }).join('') + '</div>';
+  }
   function doItems() { var out = hands().slice(); all().forEach(function (a) { if (out.indexOf(a) < 0 && ((a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent') || (a.delivery && a.delivery.status === 'ready (not sent)'))) out.push(a); }); return out; }
   function vDo() {
     var s = fsOf('do'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
@@ -1281,7 +1297,7 @@
     var sect = function (icon, word, l, kind, note) { return l.length ? '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + (note ? info(note) : '') + '</div>' + l.map(function (a) { return row(a, kind === 'hand' ? 'hand' : kindFor(a), true); }).join('') + '</div>' : ''; };
     A = keep(A); D = keep(D); Rz = keep(Rz);
     var body = sect('hand-finger', 'Tasks', H, 'hand') + sect('message-question', 'Questions to send', A, 'asks', 'Studio helper off or email off: send the link yourself') + sect('package-export', 'Ready to send', D, 'deliver', 'Email off: send the link yourself') + sect('chart-bar', 'Results to add', Rz, 'results');
-    return findBar('do', doItems().concat(Rz)) + (body || oneEmpty('do'));
+    return meLinks() + findBar('do', doItems().concat(Rz)) + (body || oneEmpty('do'));
   }
   function vIdeas() {
     var inbox = ST.inboxFolderId ? '<a class="pill" href="https://drive.google.com/drive/folders/' + esc(ST.inboxFolderId) + '" target="_blank" rel="noopener" title="Inbox: drop files here" style="--hc:var(--ljr-7-text)">' + I('inbox') + 'Inbox</a>' : '';
@@ -1989,7 +2005,7 @@
     $('exBanner').classList.toggle('hidden', !(ready && EX));
     var v = $('view');
     if (!signedIn) { $('stamp').textContent = ''; v.innerHTML = '<div class="card"><b>Studio</b> <button class="btn main" type="button" data-action="signin"><svg class="i"><use href="#i-in"/></svg>Sign in with Google</button></div>'; return; }
-    if (err) { v.innerHTML = '<div class="banner">' + esc(err) + '</div>'; return; }
+    if (err) { v.innerHTML = '<div class="banner">' + esc(err) + '</div>' + (!route[0] || route[0] === 'me' && !route[1] ? vMe(String(err)) : ''); return; }
     if (!S) { v.innerHTML = '<div class="card muted">Reading…</div>'; return; }
     headerPills();
     var waiting = function (tab) { return function (a) { return !sent[a.id] && (fsOf(tab).test || !isTest(a)); }; };

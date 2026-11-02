@@ -207,6 +207,7 @@
   .qr { position: fixed; inset: 0; background: var(--ljr-paper); color: var(--ljr-ink); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
   .qr .code { font-size: var(--fs-figure); font-weight: 600; letter-spacing: 3px; word-break: break-all; }
   .qr img { max-width: 90vw; max-height: 60vh; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -277,9 +278,9 @@
   var ORDER = ['remove', 'message', 'post', 'go', 'vinted', 'check', 'cost', 'receipt', 'newprod', 'offer', 'supplier', 'learn', 'job', 'vat', 'restock', 'temu'];
   // V2 tabs: each groups engine sections. Old links (#/remove, #/check, #/numbers ...) still open and light up their tab.
   var TABS = { do: ['remove', 'post', 'vinted', 'job'], decide: ['go', 'check', 'cost', 'offer', 'receipt', 'supplier', 'learn', 'vat'], newstock: ['newprod', 'idea'], reply: ['message'], insights: ['restock', 'temu'] };   // engine v11.10: New product? cards have their own tab
-  var TAB_OF = { numbers: 'insights', round: 'insights', stock: 'insights', suppliers: 'insights', ideas: 'newstock', idea: 'newstock' }; Object.keys(TABS).forEach(function (t) { TABS[t].forEach(function (s) { TAB_OF[s] = t; }); });
+  var TAB_OF = { sold: 'insights', numbers: 'insights', round: 'insights', stock: 'insights', suppliers: 'insights', ideas: 'newstock', idea: 'newstock' }; Object.keys(TABS).forEach(function (t) { TABS[t].forEach(function (s) { TAB_OF[s] = t; }); });
   var PEOPLE = ['All', 'Lisa', 'CY', 'G', 'H', 'CN'];   // a card with no owner is Lisa's
-  var viewArg = '', token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false, stockFilter = 'all';
+  var viewArg = '', token = null, me = '', rows = [], view = 'me', open = {}, round = {}, showAll = false, pack = null, sheet = false, stockFilter = 'all', postOnly = false;
   var who = 'All', site = 'All', pairDiff = {}, costPick = {}, npState = {};   // v11.10: Different items step; cost card supplier; New stock qty/ticks
   try { who = localStorage.getItem('mkt.who') || 'All'; if (PEOPLE.indexOf(who) < 0) who = 'All'; } catch (e) {}
   // The Look (Warm / Cool clear, Light / Dark) from Studio's Look menu is applied by ../toolkit.js on every hub.
@@ -395,8 +396,9 @@
     if (!token) { render(); return; }
     api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
       rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; }).concat(fishRows);
+      readErr = null; readDone = true;
       $('banner').className = 'banner hidden'; $('readAt').textContent = 'Read ' + hm(Date.now()); render(); loadPics(); loadAvatars();
-    }).catch(function (e) { banner('Could not load: ' + e.message); });
+    }).catch(function (e) { readErr = e.message; banner('Could not load: ' + e.message); render(); });
     loadFish();
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
   }
@@ -817,40 +819,64 @@
       '<a class="tile big" href="#/do"><span class="v' + (late.length ? ' red' : '') + '">' + open.length + '</span><span class="k">To post' + (late.length ? ' · ' + late.length + ' late' : '') + '</span></a></div>' +
       (latest ? '<p class="hint">Latest: <a href="#/do">' + esc(latest.title.slice(0, 60)) + '</a> · ' + esc(siteOf(latest) || detail(latest).platform || '') + ' · ' + esc(ukDay(day(latest))) + '</p>' : '');
   }
-  // Home: what to post, late ones first then by post-by date, at most 7 calm rows, one button that starts packing.
-  function toPost(skip) {
-    var all = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; }), list = all.filter(function (r) { return !skip || r.key !== skip.key; });
-    if (!list.length) return all.length ? '<p class="hint">To post: ' + all.length + ' (the Next card above).</p>' : '';
-    if (!list.length) return '';
-    var key = function (r) { var d = detail(r); return dueOf(d) === 'late' ? '0' : String(d.post_by || '9').slice(0, 10); };
-    var top = list.slice().sort(function (a, b) { return key(a).localeCompare(key(b)); }).slice(0, 7);
-    // Every row and count opens where it is done (Lisa, 2 Nov). There is no page per parcel yet, so a row opens Do now, where its Found / Posted buttons are.
-    return '<a class="house-go" href="#/do" aria-label="To post: ' + list.length + '. Open Do now">' + ghead('To post', list.length, true) + '</a><div class="plist">' + top.map(function (r) { var d = detail(r);
-      return '<div class="prow" data-open-row>' + thumb(d.photo, r.category) + '<div class="pt"><a class="ttl house-open house-go" href="#/do" aria-label="' + esc(r.title) + '. Open Do now to post it">' + esc(r.title) + '</a>' + datePill(d) + '</div></div>'; }).join('') +
-      (list.length > top.length ? '<p class="hint">And ' + (list.length - top.length) + ' more in Do now.</p>' : '') +
-      '<div class="acts"><a class="btn" href="#/do?pack" data-gopack>Start packing (' + all.length + ')</a></div></div>';
+  // Main (Lisa's house style, 2 Nov 2026): exactly Next, Needs you (at most 5) and the 3 numbers, built by ../toolkit.js DashKit.hubMain.
+  // Counted as the Dashboard's Marketplace tile counts them (root index.html HubRead market), for everyone (no person or site filter):
+  // To Post = parcels still to post (rose when one is late), To Reply = buyer messages waiting, Sold = parcel cards sold in the last 7 days.
+  var MAIN_DO = ['remove', 'post', 'vinted', 'job'], MAIN_DECIDE = ['go', 'check', 'cost', 'offer', 'receipt', 'supplier', 'learn', 'vat'];
+  var readErr = null, readDone = false;
+  function mainPosts() { return rows.filter(function (r) { return r.section === 'post' && detail(r).kind !== 'which_parcel'; }); }
+  function mainToPost() { return mainPosts().filter(function (r) { return !r.applied_at && (!r.answer || r.answer === 'Found'); }); }
+  function soldWeek() { var wk = new Date(Date.now() - 6 * 864e5).toISOString().slice(0, 10);
+    return mainPosts().filter(function (r) { return String(detail(r).sold_at || r.created_at || '').slice(0, 10) >= wk; }); }
+  var ACT = { remove: 'Remove', post: 'Pack', vinted: 'Post', job: 'Do it', message: 'Reply', go: 'Decide', check: 'Check', cost: 'Add cost', offer: 'Send offer', receipt: 'Check', supplier: 'Answer', learn: 'Look', vat: 'Read' };
+  function mainRows() {
+    var out = [];
+    rows.forEach(function (r) {
+      var sec = r.section, isDo = MAIN_DO.indexOf(sec) >= 0, isDec = MAIN_DECIDE.indexOf(sec) >= 0;
+      if (!(isDo || isDec || sec === 'message') || r.answer || r.applied_at) return;
+      var d = detail(r), u = dueOf(d), tab = sec === 'message' ? 'reply' : isDo ? 'do' : 'decide', ext = safeUrl(d.url);
+      var row = { kind: u === 'late' ? 'late' : u === 'today' ? 'today' : 'wait', text: r.title || r.key, href: '#/' + tab + (sec === 'post' ? '?post' : ''),
+        sub: [SECTIONS[sec] ? SECTIONS[sec].name : sec, siteOf(r), owner(r) !== 'Lisa' ? owner(r) : ''].filter(Boolean).join(' · '),
+        act: ACT[sec] || 'Open', sort: d.post_by ? Date.parse(String(d.post_by).slice(0, 10)) || null : null };
+      if (sec === 'post') row.actHref = '#/do?pack';
+      else if ((sec === 'message' || sec === 'remove' || sec === 'offer') && ext) { row.actHref = ext; row.actExt = true; row.act = sec === 'message' ? 'Reply on ' + (siteOf(r) || 'the site') : row.act; }
+      out.push(row);
+    });
+    return out;
   }
   function pageMe() {
-    var n = needsCount(), h = '<p class="needs"><a class="house-go" href="#/do" aria-label="Needs you: ' + n + '. Open Do now">Needs you: ' + (n ? n : '<span class="zero">0</span>') + '</a></p>';
-    h += '<div class="tiles three needs3">' + [['do', 'Do now'], ['decide', 'Decide'], ['reply', 'Reply']].map(function (t) {
-      var n = tabCount(t[0]); return '<a class="tile big" href="#/' + t[0] + '"><span class="v' + (n ? ' need' : '') + '">' + n + '</span><span class="k">' + t[1] + '</span></a>'; }).join('') + '</div>';
-    var first = null; ORDER.some(function (s) { if (SECTIONS[s].quiet) return false; var w = byCat(waiting(s)); if (w.length) { first = w[0]; return true; } return false; });
-    if (first) h += itemCard(first, { head: true, next: true }); else h += emptyCard('Nothing needs you');
-    h += toPost(first && first.section === 'post' ? first : null) + ordersStrip();
+    if (!readDone && !readErr) return '<div class="card"><p class="what">Reading…</p></div>';
+    var ok = !readErr, tp = ok ? mainToPost() : [], late = tp.some(function (r) { return dueOf(detail(r)) === 'late'; });
+    var reply = ok ? rows.filter(function (r) { return r.section === 'message' && !r.answer && !r.applied_at; }).length : null;
+    return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'marketplace', doHref: '#/do', error: readErr ? 'The Marketplace sheet: ' + readErr : '', rows: ok ? mainRows() : [], nums: [
+      { label: 'To Post', value: ok ? tp.length : null, late: late, href: '#/do?post' },
+      { label: 'To Reply', value: reply, href: '#/reply' },
+      { label: 'Sold', value: ok ? soldWeek().length : null, href: '#/sold', aria: ok ? 'Sold in the last 7 days: ' + soldWeek().length + '. Open the list' : '' }] });
+  }
+  // Sold: the parcel cards sold in the last 7 days (the Sold number on Main and on the Dashboard's Marketplace tile), newest first.
+  function pageSold() {
+    var day = function (r) { return String(detail(r).sold_at || r.created_at || '').slice(0, 10); };
+    var list = soldWeek().sort(function (a, b) { return day(b).localeCompare(day(a)); });
+    var h = '<p class="needs"><a class="house-go" href="#/insights" aria-label="Back to Insights">Insights</a> › Sold, last 7 days: ' + list.length + '</p>';
+    if (!list.length) return h + emptyCard('Nothing sold in the last 7 days');
+    return h + '<div class="plist">' + list.map(function (r) { var d = detail(r);
+      return '<div class="prow" data-open-row>' + thumb(d.photo, r.category) + '<div class="pt"><a class="ttl house-open house-go" href="#/do" aria-label="' + esc(r.title) + '. Open Do now">' + esc(r.title) + '</a>' +
+        '<span class="m">' + esc([siteOf(r), ukDay(day(r)), d.price, r.applied_at ? 'posted' : 'to post'].filter(Boolean).join(' · ')) + '</span></div></div>'; }).join('') + '</div>';
+  }
+  // Just done (moved from Main): every answer still inside its Undo time, shown on Insights.
+  function justDone() {
     var just = rows.filter(function (r) { return r.answer && !r.applied_at && Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
-    if (just.length) h += '<p class="grp">Just done</p>' + just.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '</div>' + sentLine(r) + '</div>'; }).join('');
-    h += growthHome();
-    return h + engineLine();
+    return just.length ? '<p class="grp">Just done</p>' + just.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '</div>' + sentLine(r) + '</div>'; }).join('') : '';
   }
   // A tab: its sections one after another. Do now and Reply show every job; Decide shows one question at a time.
-  function pageTab(t) {
-    var names = { do: 'Do now', decide: 'Decide', reply: 'Reply' };
-    var h = '<p class="needs">' + names[t] + ': ' + tabCount(t) + '</p>' + siteChips();
+  function pageTab(t, only) {
+    var names = { do: 'Do now', decide: 'Decide', reply: 'Reply' }, secs = only ? [only] : TABS[t];
+    var h = '<p class="needs">' + (only ? '<a class="house-go" href="#/' + t + '" aria-label="All of ' + names[t] + '">' + names[t] + '</a> › ' + esc(SECTIONS[only].name) + ': ' + waiting(only).length : names[t] + ': ' + tabCount(t)) + '</p>' + siteChips();
     if (t === 'do') { var p = posts().filter(function (r) { return !r.answer; }).length;
       if (p > 1) h += '<div class="acts"><button class="btn main" type="button" data-action="pack">Start packing (' + p + ')</button><button class="btn" type="button" data-action="sheet">Label sheet (' + p + ')</button></div>'; }
     // Answered cards leave the list at once (Lisa 27 Oct: "once decided then still at top of list"); they wait in "Just done" at the
     // bottom while Undo is possible, then disappear. Found parcels stay: they still need posting.
-    var list = [], done = []; TABS[t].forEach(function (s) { byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); })).forEach(function (r) {
+    var list = [], done = []; secs.forEach(function (s) { byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); })).forEach(function (r) {
       if (!r.answer || (r.section === 'post' && r.answer === 'Found')) list.push(r); else if (Date.now() < Date.parse(r.answered_at) + UNDO_MS) done.push(r); }); });
     var tail = done.length ? '<details class="justdone"><summary>Just done · ' + done.length + ' (Undo for 10 minutes)</summary>' + done.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '<div class="why">' + esc(r.answer) + '</div></div>' + sentLine(r) + '</div>'; }).join('') + '</details>' : '';
     var EMPTY = { do: ['Nothing waiting', ''], decide: ['All decided', ''], reply: ['No one waiting', ''] };
@@ -893,7 +919,7 @@
   function pageInsights() {
     var st = rows.filter(function (r) { return r.section === 'stock' && !r.applied_at; }), low = st.filter(function (r) { return detail(r).low; }).length;
     var buy = rows.filter(function (r) { return r.section === 'restock' && !r.applied_at; }).length;
-    var h = '<div class="tiles three"><a class="tile big" href="#/stock"><span class="v">' + low + '</span><span class="k">Stock low</span></a><a class="tile big" href="#/temu"><span class="v">' + buy + '</span><span class="k">Temu to buy</span></a><a class="tile big" href="#/round"><span class="v">' + st.length + '</span><span class="k">Stock round</span></a></div>';
+    var h = ordersStrip() + growthHome() + justDone() + '<p class="grp">Stock</p><div class="tiles three"><a class="tile big" href="#/stock"><span class="v">' + low + '</span><span class="k">Stock low</span></a><a class="tile big" href="#/temu"><span class="v">' + buy + '</span><span class="k">Temu to buy</span></a><a class="tile big" href="#/round"><span class="v">' + st.length + '</span><span class="k">Stock round</span></a></div>';
     var sp = rows.filter(function (r) { return r.section === 'suppliers' && !r.applied_at; });
     if (sp.length) h += '<div class="acts"><a class="btn main" href="#/suppliers">Suppliers (' + sp.length + ')</a></div>';
     h += pageNumbers();
@@ -987,7 +1013,7 @@
     if (!token) $('readAt').textContent = '';
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see what needs you</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
     var fa = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-iform'), fpos = fa ? document.activeElement.selectionStart : 0;   // keep the cursor in the Add idea form across a refresh
-    $('view').innerHTML = pack && view === 'do' ? pagePack() : sheet && view === 'do' ? pageSheet() : view === 'me' ? pageMe() : view === 'round' ? pageRound() : view === 'numbers' ? pageNumbers()
+    $('view').innerHTML = pack && view === 'do' ? pagePack() : sheet && view === 'do' ? pageSheet() : view === 'me' ? pageMe() : view === 'sold' ? pageSold() : view === 'do' && postOnly ? pageTab('do', 'post') : view === 'round' ? pageRound() : view === 'numbers' ? pageNumbers()
       : view === 'insights' ? pageInsights() : view === 'stock' ? pageStock() : view === 'temu' ? pageTemu() : view === 'suppliers' ? pageSuppliers() : view === 'newstock' ? pageNewStock() : view === 'ideas' ? pageIdeas() : view === 'idea' ? pageIdea() : TABS[view] ? pageTab(view) : SECTIONS[view] ? pageList(view) : pageMe();
     if (fa) { var fe = document.getElementById('if-' + fa); if (fe) { fe.focus(); try { fe.setSelectionRange(fpos, fpos); } catch (x) {} } }
   }
@@ -1091,7 +1117,7 @@
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(); }
-    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; pics = null; avatars = null; return render(); }
+    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; readDone = false; readErr = null; pics = null; avatars = null; return render(); }
     if (a === 'refresh') return load();
     if (a === 'all') { showAll = !showAll; return render(); }
     if (t.hasAttribute('data-who')) { who = t.getAttribute('data-who'); try { localStorage.setItem('mkt.who', who); } catch (x) {} return render(); }
@@ -1183,7 +1209,7 @@
     todo.reduce(function (p, r) { var v = round[r.key]; return p.then(function () { return answer(r, v.ok || v.n === '' || v.n === undefined ? 'ok' : String(Number(v.n)) + ' ' + v.reason, ''); }); }, Promise.resolve())
       .then(function () { banner('Round saved. The engine applies it after 10 minutes.', true); });
   }
-  function route() { var seg = (location.hash.replace(/^#\//, '').split('?')[0]) || 'me', sl = seg.indexOf('/'); view = sl < 0 ? seg : seg.slice(0, sl); viewArg = sl < 0 ? '' : seg.slice(sl + 1); showAll = false; pack = view === 'do' && /\?pack\b/.test(location.hash) ? { i: 0 } : null; sheet = false; render(); }
+  function route() { var seg = (location.hash.replace(/^#\//, '').split('?')[0]) || 'me', sl = seg.indexOf('/'); view = sl < 0 ? seg : seg.slice(0, sl); viewArg = sl < 0 ? '' : seg.slice(sl + 1); showAll = false; pack = view === 'do' && /\?pack\b/.test(location.hash) ? { i: 0 } : null; postOnly = view === 'do' && /\?post\b/.test(location.hash); sheet = false; render(); }
   window.addEventListener('hashchange', route);
 
   /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */

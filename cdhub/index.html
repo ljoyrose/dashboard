@@ -882,32 +882,11 @@ var ARRIVES={
 function arrives(k){ var a=ARRIVES[k];   // a = [Bloodline table, the words shown, heading, why]
  return '<section class="card dash arrive" id="arrive-'+k+'" data-arrives="'+esc(a[0])+'"><h3>'+esc(a[2])+'</h3>'
   +'<p class="arrives">Arrives with Bloodline: '+esc(a[1])+'</p><p class="awhy">'+esc(a[3])+'</p></section>'; }
-/* foundation: summary strip (On track / Needs you / Overdue) */
-// Each number opens what it counts (Lisa, 2 Nov): On track = the passing checks; Needs you / Overdue = the Needs you list, filtered.
-var NEEDF='', CHECKF='';   // CHECKF 'ok': Data checks shows just the passing ones (the On track number)
-function summaryStrip(){
- var n=needsToday(), late=n.filter(function(x){return x.tone==='late';}).length;
- var ok=checks().filter(function(x){return x.ok && x.k!=='saving off';}).length;
- var one=function(cls,f,v,word,title){ return '<a class="sum house-go'+(cls?' '+cls:'')+'" href="#/map" data-needf="'+f+'" title="'+title+'" aria-label="'+word+': '+v+'. Open the list"><span class="big'+(v?'':' zero')+'">'+v+'</span>'+word+'</a>'; };
- return '<div class="three" id="summary">'
-  +one('','ok',ok,'On track','Checks that pass')
-  +one('need','need',n.length-late,'Needs you','Waiting on you, not late')
-  +one('over','late',late,'Overdue','Late')+'</div>';
-}
-/* foundation: next action (the one thing to do now, with one button) */
-function nextCard(){
- var x=needsToday()[0];
- if(!x) return '<section class="mcard nextc" id="nextCard"><div class="bline">Next</div><p class="okempty">Nothing needs you</p>'
-  +'<p class="sub" style="margin-top:8px">Nothing waiting.</p><button type="button" class="btn" data-go="today">Today</button></section>';
- return '<section class="mcard nextc" id="nextCard" data-open-row><div class="bline">Next</div><div class="t">'+esc(x.title)+'</div>'
-  +'<p class="sub">'+esc(x.sub||'')+(x.date?' · '+esc(dmy(x.date)):'')+'</p>'+goBtn(x,label(x.go))+'</section>';
-}
+// Every row that needs Lisa, in full (Main shows the top 5; its "+N more" opens this, on Do).
 function needsCard(){
- var all=needsToday(), n=NEEDF==='late'?all.filter(function(x){return x.tone==='late';}):NEEDF==='need'?all.filter(function(x){return x.tone!=='late';}):all;
- if(!all.length) return '';   // one empty line per view (Lisa, 2 Nov): the Next card already says Nothing needs you
- var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2-icon)"'+(NEEDF?' data-needf="'+NEEDF+'"':'')+'><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>'+(NEEDF==='late'?'Overdue':'Needs you today')+cntPill(n.length,n.length?'need':'ok')+'</h3>'
-  +(NEEDF?'<p class="sub">'+(NEEDF==='late'?'Late only.':'Not late.')+' <a href="#/map" data-needf="">Show all</a></p>':'');
- if(!n.length) return h+'<p class="okempty">Nothing here</p></section>';
+ var n=needsToday();
+ if(!n.length) return '';   // one empty line per view (Lisa, 2 Nov): Main already says Nothing needs you
+ var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Needs you today'+cntPill(n.length,'need')+'</h3>';
  h+=n.map(function(x,i){ return needRow(x,i>=7); }).join('');
  if(n.length>7) h+='<div class="mfoot"><span class="mut">Showing 7 of '+n.length+'</span><button type="button" class="btn" data-needall="1">Show all</button></div>';
  return h+'</section>';
@@ -954,20 +933,38 @@ function tempsCard(){
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 function checksCard(){
- var every=checks(), all=CHECKF==='ok'?every.filter(function(x){return x.ok && x.k!=='saving off';}):every, bad=every.filter(function(x){return !x.ok;}).length;
- return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"'+(CHECKF?' data-checkf="ok"':'')+'><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>'+(CHECKF?'On track'+cntPill(all.length):'Data checks'+cntPill(bad,bad?'need':'ok'))+'</h3>'
-  +(CHECKF?'<p class="sub">Passing checks only. <a href="#/map" data-needf="">Show all</a></p>':'')
+ var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
+ return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'need':'ok')+'</h3>'
   +all.map(function(x){
    return '<div class="mrow ckrow'+(x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.ok?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
     +(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
   +'</section>';
 }
+// Main (Lisa's house style, 2 Nov 2026): Next, Needs you (5 at most, from needsToday: checks, in whelp, headcounts, waiting on you)
+// and the hub's 3 numbers, the same as the Dogs tile on the Dashboard. The old Main cards moved: Needs you in full > Do,
+// On site and Temperatures today > Today, Litters > Litters, Data checks > Tables.
+var MAIN_ACT={work:'Do',round:'The round',today:'Today',shape:'Tables'};
+function mainRows(){
+ var today=todayISO();
+ return needsToday().map(function(x){
+  var href=x.list?'#/today/'+x.list:'#/'+x.go;
+  return {kind:x.tone==='late'?'late':(x.date===today?'today':'wait'),pill:x.tone==='soon'?'Soon':(x.date&&x.tone!=='late'&&x.date!==today?dmy(x.date):''),
+   // A long note (e.g. 43 missing file names) keeps only its lead on Main; the full text stays on the page it opens.
+   text:x.title,sub:String(x.sub||'').split(' \u00b7 ').map(function(p){ return p.length>60?p.replace(/:.*$/,''):p; }).join(' \u00b7 '),href:href,act:x.list?'Show the dogs':(MAIN_ACT[x.go]||label(x.go))};
+ });
+}
+// Temps: cabins with a temperature today ("x of y"), Unplaced: dogs on site not in a cabin, Bitches: breeding bitches in law
+// (rose when the law's count and her working list differ). ok false (a failed read): "–" for all three.
+function mainNums(ok){
+ var c=ok?counts():null, date=CD._roundDate||todayISO(), N=ok?(CD.areas||[]).length:0;
+ var t=ok?Object.keys(ROUND).filter(function(k){ return k.indexOf(date+'__')===0 && (ROUND[k].t_am||ROUND[k].t_pm); }).length:0;
+ return [{label:'Temps',value:ok&&N?t+' of '+N:null,href:'#/round',aria:ok&&N?'Temps: '+t+' of '+N+' cabins have a temperature today. Open The round':null},
+  {label:'Unplaced',value:ok?listFor('unplaced').length:null,href:'#/today/unplaced'},
+  {label:'Bitches',value:ok?c.bitches.length:null,href:'#/today/bitches',late:ok&&c.bitches.length!==c.active.length}];
+}
 function pageMap(){
- var date=CD._roundDate||todayISO();
- return '<h2>Live</h2><p class="sub">'+esc(dmy(date))+(CD.tenant&&CD.tenant.name?' · '+esc(CD.tenant.name):'')+'</p>'
- +summaryStrip()
- +'<div class="mecards">'+nextCard()+needsCard()+onSiteCard()+littersCard()+tempsCard()+checksCard()+'</div>';
+ return '<h2 class="sr">Main</h2>'+DashKit.hubMain({hub:'cdhub',rows:mainRows(),nums:mainNums(true),doHref:'#/work'});
 }
 
 function pageToday(){
@@ -980,6 +977,7 @@ function pageToday(){
  var ft=Math.ceil(c.adults.length/20), pt=Math.ceil(c.adults.length/10);
  var h='<h2>Today</h2><p class="sub">'+esc(dmy(date))+'</p>'
  +todayChecklist(date,unplaced.length)
+ +'<div class="mecards">'+onSiteCard()+tempsCard()+'</div>'
  +'<div class="tiles">'
  +tileGo('b'+(temps.length>=cabins?'5':'2'),temps.length+' of '+cabins,'cabins with a temperature','enter on The round','round')
  +tileC('b'+(unplaced.length?'2':'5'),unplaced.length,'dogs not yet placed','','unplaced')
@@ -1330,6 +1328,7 @@ function pageLitters(){
  var withDob=CD.litters.filter(function(l){return l.dob;}).length;
  var pups={}; CD.dogs.forEach(function(d){ (d.littersAsDam||[]).forEach(function(){}); });
  var h='<h2>Litters</h2><p class="sub">'+CD.litters.length+' rows. '+withDob+' have a date of birth.</p>'
+ +'<div class="mecards">'+littersCard()+'</div>'
  +'<div class="tiles">'+tile('b7',CD.litters.length,'litters','')
  +tile('b5',withDob,'born','')+tile('b2',CD.litters.length-withDob,'no DOB','planned, in progress, or did not take')
  +tile('b6',CD.matings.length,'matings recorded','including those that did not take')+'</div>'
@@ -1661,11 +1660,11 @@ async function roundSave(areaId,patch,msgEl){
 }
 function pageWork(){
  var W=CD.work||[];
- if(!W.length) return '<h2>Outstanding</h2><div class="card acc2"><h4>BLD-WORK.csv did not load</h4><p style="margin-bottom:0">Live file. Missing or unreadable.</p></div>';
+ if(!W.length) return '<h2>Outstanding</h2>'+needsCard()+'<div class="card acc2"><h4>BLD-WORK.csv did not load</h4><p style="margin-bottom:0">Live file. Missing or unreadable.</p></div>';
  var by={}; W.forEach(function(r){ (by[r.status]=by[r.status]||[]).push(r); });
  var mine=W.filter(function(r){return r.status!=='DONE' && r.owner==='Claude';}).length;
  var hers=W.filter(function(r){return r.status!=='DONE' && r.owner==='Lisa';}).length;
- var h='<h2>Outstanding</h2>'
+ var h='<h2>Outstanding</h2>'+needsCard()
   +'<div class="arrow">'+arrives('due')+'</div>'   /* foundation: a due date on a work record, not held yet */
   +'<p class="note">Every ask in this project, with who it is waiting on. <b>'+hers+'</b> are waiting on you, <b>'+mine+'</b> on me, <b>'+(by.DONE||[]).length+'</b> done. This is a live file \u2014 change BLD-WORK.csv and this page changes.</p>';
  [['BLOCKED','acc2','Waiting on you'],['OPEN','acc3','Waiting on me'],['DONE','acc5','Done']].forEach(function(g){
@@ -1782,7 +1781,7 @@ function pageShape(){
   +g+'</svg></div><figcaption class="mut" style="margin-top:8px">Line weight and colour are the <b>fill rate</b>, not the relationship: solid green is 75%+ of rows carrying the link, amber 25 to 74%, dashed rose under 25%. Box height is row count. Drawn from the tables loaded on this page.</figcaption></figure>';
 
  var thin=E.filter(function(e){return e.pct<25;}).sort(function(a,b){return a.pct-b.pct;});
- var h='<h2>Table map</h2>'
+ var h='<h2>Table map</h2>'+'<div class="mecards">'+checksCard()+'</div>'
   +'<p class="note">Who points at whom · rows · <b>how full each link is</b> (a join can be almost empty).</p>'
   +'<div class="card map">'+svg+'</div>'
   +'<div class="card acc2"><h4>Joins that exist but are nearly empty'+cntPill(thin.length)+'</h4>'
@@ -1874,6 +1873,8 @@ function focusView(){
 function cdIn(on){ document.documentElement.classList.toggle('cd-in',on); ['cdRefresh','cdSignout'].forEach(function(id){ document.getElementById(id).classList.toggle('hidden',!on); }); }
 function go(id,push){
  pill();
+ var full=String(id||''), sub=null, m=/^(\w+)\/(\w+)$/.exec(full);
+ if(m){ id=m[1]; sub=m[2]; }
  var main=document.getElementById('main');
  if(LOAD.state==='signin'){
   main.innerHTML='<div class="card acc4" style="margin-top:24px"><h2 class="hx4">Sign in to see the tables</h2>'
@@ -1884,14 +1885,11 @@ function go(id,push){
  }
  if(LOAD.state==='loading'){ return; }
  if(LOAD.state!=='ok'){
-  main.innerHTML='<div class="card acc2" style="margin-top:24px"><h2 class="hx4">'+
-   (LOAD.state==='ambiguous'?'More than one file shares a title'
-    :LOAD.state==='err'?'The folder could not be read':'Loading…')+'</h2>'
-   +'<p>'+(LOAD.state==='ambiguous'
-     ?'Refusing to guess which is current: '+esc(LOAD.err)
-     :LOAD.state==='err'?esc(LOAD.err||'')+'. The tables live in '+esc(FOLDER_NAME)+'.'
-     :'The tables live in '+esc(FOLDER_NAME)+'. Nothing is stored in this page, so there is nothing to show without them.')+'</p>'
-   +'<p style="margin-bottom:0"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
+  // A failed read: Main's three parts, the failure in place of Next and Needs you, every number "–" (never a made-up one).
+  main.innerHTML='<div style="margin-top:24px"><h2 class="sr">Main</h2>'+DashKit.hubMain({hub:'cdhub',error:(LOAD.state==='ambiguous'?'More than one file shares a title. Refusing to guess which is current: '+(LOAD.err||'')
+     :LOAD.state==='err'?'The folder could not be read. '+(LOAD.err||'')+'. The tables live in '+FOLDER_NAME+'.'
+     :'Loading. The tables live in '+FOLDER_NAME+'. Nothing is stored in this page, so there is nothing to show without them.'),nums:mainNums(false),doHref:'#/work'})
+   +'<p class="cd-retry"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
  if(!PAGES[id]) id='map';
@@ -1946,20 +1944,7 @@ function go(id,push){
   Array.prototype.forEach.call(document.querySelectorAll('.tl'),function(b){
    if(!b.dataset.list) return;
    b.addEventListener('click',function(){ showList(b.dataset.list); }); });
- }
- if(id==='map'){
-  Array.prototype.forEach.call(document.querySelectorAll('[data-golist]'),function(b){
-   b.addEventListener('click',function(e){ e.preventDefault(); go('today',true); setTimeout(function(){showList(b.dataset.golist);},60); }); });
-  Array.prototype.forEach.call(document.querySelectorAll('[data-needf]'),function(b){
-   if(b.tagName!=='A') return;
-   b.addEventListener('click',function(e){ e.preventDefault(); var f=b.dataset.needf;
-    if(f==='ok'){ CHECKF='ok'; NEEDF=''; go('map',false); var c=document.getElementById('checksCard'); if(c) c.scrollIntoView({block:'start'}); return; }
-    NEEDF=f; CHECKF=''; go('map',false); var n=document.getElementById('needsCard')||document.getElementById('nextCard'); if(n){ n.scrollIntoView({block:'start'}); } }); });
-  Array.prototype.forEach.call(document.querySelectorAll('.ci'),function(b){
-   b.addEventListener('click',function(){ if(b.dataset.list){ go('today',true); setTimeout(function(){showList(b.dataset.list);},60);} }); });
-  var na=document.querySelector('[data-needall]');
-  if(na) na.addEventListener('click',function(){ Array.prototype.forEach.call(document.querySelectorAll('[data-needmore]'),function(r){ r.classList.remove('hidden'); });
-   var f=na.closest('.mfoot'); if(f) f.remove(); });
+  if(sub&&LISTNAME[sub]) showList(sub);
  }
  if(id==='buyers'){
   ['bq','bcat','bctry','bapp','bsig','bmd','bem','bch','bsort'].forEach(function(i){ var e=document.getElementById(i);
@@ -2002,10 +1987,18 @@ function go(id,push){
     var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
     roundSave(el.dataset.area,{subjects:cur},msg); }); });
  }
- if(push!==false && location.hash!=='#/'+id) history.pushState({id:id},'','#/'+id);
+ var at=sub&&id==='today'?full:id;
+ if(push!==false && location.hash!=='#/'+at) history.pushState({id:at},'','#/'+at);
  window.scrollTo(0,0);
 }
 document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('[data-go]'); if(b){ go(b.dataset.go); focusView(); } });
+document.addEventListener('click',function(e){
+ var g=e.target.closest&&e.target.closest('[data-golist],button.ci[data-list]');
+ if(g){ e.preventDefault(); go('today/'+(g.dataset.golist||g.dataset.list),true); return; }
+ var na=e.target.closest&&e.target.closest('[data-needall]');
+ if(na){ Array.prototype.forEach.call(document.querySelectorAll('[data-needmore]'),function(r){ r.classList.remove('hidden'); });
+  var f=na.closest('.mfoot'); if(f) f.remove(); }
+});
 // Skip link: jump to the content without touching the #/section address.
 document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus(); } });
 document.addEventListener('click',function(e){

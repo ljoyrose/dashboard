@@ -22,6 +22,7 @@
 <link rel="stylesheet" href="../house.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   /* House look (Lisa, 28 Oct 2026; the same rules on every hub). The Warm clear and Cool clear greys, the control line
      (warm 8A7F70, cool 7A8692), the frame (3A3632 / 46413B), radius, counts, date pills, tabs and the hover rule now live once:
      the numbers in ../tokens.css, the shared parts in ../house.css. The Look (Studio's Look menu, 'dash-look') is applied by
@@ -373,6 +374,7 @@
     <div class="house-more" id="houseMore" hidden>
       <a href="#/today" data-nav="today" data-slot="4"><i class="ti ti-calendar" aria-hidden="true"></i><span class="htl">Today</span></a>
       <a href="#/docs" data-nav="docs" data-slot="6"><i class="ti ti-file" aria-hidden="true"></i><span class="htl">Docs</span></a>
+      <a href="#/me/all" data-nav="mine" data-slot="2"><i class="ti ti-user-check" aria-hidden="true"></i><span class="htl">Mine</span></a>
     </div>
   </div>
 </nav>
@@ -893,6 +895,30 @@
   function list(tab, items, slot, kind) {
     var s = fsOf(tab), show = sortT(items.filter(function (t) { return hit(t, s, TASK); }), s.sort);
     return findBar(tab, items, TASK, KINDS) + (show.length ? cards(show, slot, kind) : emptyBox());
+  }
+  // ---- Main (Lisa's house style, 2 Nov 2026): Next, Needs you (at most 5), then the 3 numbers the Dashboard's Apps tile shows,
+  // worked out exactly as root index.html HubRead apps does. Rows = open decisions (gates included) and Lisa's Do items, TEST and
+  // already-answered ones left out; late = due before today, today = due today, else waiting. Each row opens its item, where its
+  // own Yes / No / Done buttons are. The list that used to be here (Decide + Do with the find bar) is at #/me/all.
+  function testName(t) { return /^(TEST-|ZZ_DELETE_)/i.test(t.name || ''); }
+  function questionsOf() { return decisions().filter(function (t) { return !testName(t) && t.tags.indexOf('gate') < 0; }); }
+  function gatesOf() { return decisions().filter(function (t) { return !testName(t) && t.tags.indexOf('gate') >= 0; }); }
+  function liveApps() { return apps().filter(function (a) { return !/^(killed|retired|hold|cancelled)$/i.test(a.status) && !alarm(a) && !stuck(a) && reached(a) >= 8; }); }
+  var ACT = { send: 'Send', fix: 'Fix', decide: 'Decide', test: 'Check', research: 'Read' };
+  function mainRows() {
+    var d0 = dayStart(0), d1 = dayStart(1), seenIds = {};
+    return decisions().concat(mine()).filter(function (t) { if (seenIds[t.id] || testName(t) || sent[t.id]) return false; seenIds[t.id] = 1; return true; }).map(function (t) {
+      var k = t.due && t.due < d0 ? 'late' : t.due && t.due < d1 ? 'today' : 'wait', g = appOf(t);
+      return { kind: k, text: String(t.name).replace(/^TEST-/, ''), href: '#/item/' + encodeURIComponent(t.id), act: ACT[kindOf(t)] || 'Do',
+        sub: (g !== 'Factory' ? g : '') + (t.due && k === 'wait' ? (g !== 'Factory' ? ' · ' : '') + 'due ' + dmy(t.due) : ''), sort: t.due || 9e15 };
+    });
+  }
+  function vMain() {
+    var ok = !!S && !err;
+    return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'apps', doHref: '#/do', rows: ok ? mainRows() : [], error: ok ? '' : (err || 'Factory state not read.'),
+      nums: [{ label: 'Questions', value: ok ? questionsOf().length : null, href: '#/decide/questions' },
+        { label: 'Gates', value: ok ? gatesOf().length : null, href: '#/decide/gates' },
+        { label: 'Live', value: ok ? liveApps().length : null, href: '#/all/live' }] });
   }
   // Me: everything waiting on Lisa (Decide + Do), newest first, by app.
   function meItems() { var out = decisions().slice(); mine().forEach(function (t) { if (out.indexOf(t) < 0) out.push(t); }); return out; }
@@ -1495,7 +1521,7 @@
   function doFoot() { var n = sendsAll().filter(isOpen).length; return n ? '<p class="muted" style="margin:0"><a href="#/prompts" data-prompts-link><i class="ti ti-send"></i> Prompts ' + cnt(n) + '</a></p>' : ''; }
   function render() {
     var route = hashParts().path;
-    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === route[0] || (/^(card|room|health|stuck|all|queue|new|problem)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { var here = route[0] === 'me' && route[1] === 'all' ? 'mine' : route[0]; a.setAttribute('aria-current', a.getAttribute('data-nav') === here || (/^(card|room|health|stuck|all|queue|new|problem)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
     $('appPick').classList.toggle('hidden', !signedIn || !S); $('appPick').setAttribute('aria-expanded', appMenu ? 'true' : 'false');
     $('appMenu').classList.toggle('hidden', !appMenu || !S); if (appMenu && S) $('appMenu').innerHTML = vAppMenu();
     $('signInBtn').classList.toggle('hidden', signedIn);
@@ -1503,15 +1529,15 @@
     $('refreshBtn').classList.toggle('hidden', !signedIn);
     var v = $('view');
     if (!signedIn) { v.innerHTML = '<div class="card"><b>Factory</b><button class="btn main" type="button" data-action="signin">' + ic('in') + 'Sign in with Google</button></div>'; return; }
-    if (err) { v.innerHTML = '<div class="banner">' + esc(err) + '</div>'; return; }
+    if (err) { v.innerHTML = '<div class="banner">' + esc(err) + '</div>' + (route[0] === 'me' && !route[1] ? vMain() : ''); return; }
     if (!S) { v.innerHTML = '<div class="card muted">Reading…</div>'; return; }
     allTasks();
     // Menu counts: unanswered, and TEST only when that tab shows TEST.
     var waiting = function (tab) { return function (t) { return !sent[t.id] && (fsOf(tab).test || !testT(t)); }; };
     tabN('nMe', meItems().filter(waiting('me')).length); tabN('nDecide', decisions().filter(waiting('decide')).length); tabN('nDo', mine().filter(waiting('do')).length);
     var tb = barTab(); if (tb) toUrl(tb);
-    v.innerHTML = route[0] === 'me' ? list('me', meItems(), 4, 'me') : route[0] === 'item' ? vItem(route[1]) : route[0] === 'app' ? vApp(route[1]) :
-      route[0] === 'today' ? vToday() : route[0] === 'prompts' ? vPrompts() : route[0] === 'queue' ? list('queue', queue(route[1]), 5, 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? vPortfolio() : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? list('decide', decisions(), 4, 'decide') + decideFoot() :
+    v.innerHTML = route[0] === 'me' ? (route[1] === 'all' ? list('me', meItems(), 4, 'me') : vMain()) : route[0] === 'item' ? vItem(route[1]) : route[0] === 'app' ? vApp(route[1]) :
+      route[0] === 'today' ? vToday() : route[0] === 'prompts' ? vPrompts() : route[0] === 'queue' ? list('queue', queue(route[1]), 5, 'view') : route[0] === 'card' ? vCard(route[1]) : route[0] === 'room' ? vRoom(route[1]) : route[0] === 'health' ? vHealth() : route[0] === 'stuck' ? vApps('Stuck 14+ days', apps().filter(stuck)) : route[0] === 'docs' ? vDocs() : route[0] === 'all' ? (route[1] === 'live' ? vApps('Live', liveApps()) : vPortfolio()) : route[0] === 'new' ? vNew() : route[0] === 'problem' ? vProblem(route[1]) : route[0] === 'decide' ? (route[1] === 'questions' || route[1] === 'gates' ? '<p class="muted" data-only="' + route[1] + '" style="margin:0">' + (route[1] === 'gates' ? 'Gates' : 'Questions') + ' only · <a href="#/decide">All of Decide</a></p>' + list('decide', route[1] === 'gates' ? gatesOf() : questionsOf(), 4, 'decide') : list('decide', decisions(), 4, 'decide') + decideFoot()) :
       route[0] === 'do' ? list('do', mine(), 4, 'do') + doFoot() : vRooms();
   }
 

@@ -35,7 +35,8 @@ test.describe('Needs you today', () => {
     for (let i = 0; i < n; i++) await expect(rows.nth(i).locator('a')).toHaveAttribute('href', /.+/);
     const total = Number((await page.locator('#needsToday .cardhead .mtag').textContent()).match(/\d+/)[0]);
     await expect(page).toHaveTitle(new RegExp('^\\(' + total + '\\) Dashboard'));
-    if (total > 5) await expect(page.locator('#needsToday')).toContainText('And ' + (total - 5) + ' more.');
+    // The rest open Do from one plain "+N more" link (Lisa, 2 Nov).
+    if (total > 5) await expect(page.locator('#needsToday a[data-needs-more]')).toHaveText('+' + (total - 5) + ' more');
   });
 
   test('a failed read shows up as a red row, so a broken read is never silent', async ({ page, guard, allowedConsole }) => {
