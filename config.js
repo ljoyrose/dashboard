@@ -110,8 +110,10 @@
     },
     // Projects Hub (Apps Script web app in the private projects-hub repo). Lisa OK'd the address here (1 Nov 2026): it
     // grants nothing on its own; Google limits the web app to her Workspace and the hub lets in only its EDITORS list.
+    // The /a/macros/puppyclassroom.com/ form makes Google use the work account (the plain form loops when Chrome's
+    // first account is a personal one, 2 Nov 2026).
     projectsHub: {
-      webAppUrl: 'https://script.google.com/macros/s/AKfycbx42JNrRiolxbf5JJEqnOwXy_GgYelx-6GKhQaNuQMyUsTW5e89P2VZBANP_yGSOxgj/exec'
+      webAppUrl: 'https://script.google.com/a/macros/puppyclassroom.com/s/AKfycbx42JNrRiolxbf5JJEqnOwXy_GgYelx-6GKhQaNuQMyUsTW5e89P2VZBANP_yGSOxgj/exec'
     },
     money: {
       owner: 'lisa@puppyclassroom.com',
