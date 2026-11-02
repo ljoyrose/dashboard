@@ -5,7 +5,7 @@ const BREAKS = [
   { id: 'one-sign-in', what: 'The sign-in goes back to one tab only (Lisa signs in twice)', file: 'auth.js',
     find: 'try { return global.localStorage; }', replace: 'try { return global.sessionStorage; }', project: 'mocked', spec: 'one-sign-in-tabs' },
   { id: 'back-link', what: 'Money Hub "Dashboard" button goes to the wrong place', file: 'money/index.html',
-    find: '<a id="backHome" class="btn back" href="../"', replace: '<a id="backHome" class="btn back" href="../nowhere/"', project: 'mocked', spec: 'main-dashboard' },
+    find: '<a id="backHome" class="btn back house-ib" href="../"', replace: '<a id="backHome" class="btn back house-ib" href="../nowhere/"', project: 'mocked', spec: 'main-dashboard' },
   { id: 'write-scope', what: 'Main dashboard asks Google for more than read-only access', file: 'index.html',
     find: "var SCOPE = CFG.scopes.read;", replace: "var SCOPE = CFG.scopes.write;", project: 'mocked', spec: 'main-dashboard' },
   { id: 'rr-inside-folder', what: 'Bin stops noticing an RR_ item inside a ZZ_ folder', file: 'index.html',
@@ -23,7 +23,7 @@ const BREAKS = [
   { id: 'publish-ungated', what: 'The publish job stops waiting for the tests (the live site would go out untested)', file: '.github/workflows/pages.yml',
     find: 'needs: gate', replace: 'needs: []', project: 'mocked', spec: 'ci-guards' },
   { id: 'publish-too-much', what: 'The publish copies the tests folder onto the live site', file: '.github/workflows/pages.yml',
-    find: 'cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio _site/', replace: 'cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio tests _site/', project: 'mocked', spec: 'ci-guards' },
+    find: 'cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio estate _site/', replace: 'cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio estate tests _site/', project: 'mocked', spec: 'ci-guards' },
 ];
 
 module.exports = { BREAKS };
