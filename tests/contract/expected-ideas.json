@@ -24,7 +24,11 @@
       "supplier": "string",
       "lines": "array",
       "terms": "object",
-      "evidence": "array"
+      "evidence": "array",
+      "gate1": "object",
+      "gate2": "object",
+      "gate3": "object",
+      "classification_assumed": "boolean"
     },
     "fields": {
       "intake": {
