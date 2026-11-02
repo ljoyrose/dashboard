@@ -1,0 +1,9 @@
+{
+  "note": "Invented sample of the Owned Tools tab. Fake tool names only; the real list lives in Lisa's Drive sheet.",
+  "values": [
+    ["tool", "licence_tier_and_codes", "agency_white_label", "used_for", "verdict"],
+    ["Example Writer", "Tier 2 · 2 codes (2 redeemed)", "Yes - agency use allowed", "Drafts blog posts", "KEEP"],
+    ["Sample Snapper", "Code-based · 1 code (1 expired)", "Not checked", "Screenshots for guides", "CHECK FIRST"],
+    ["Demo Mailer", "Lifetime · not an AppSumo deal", "No", "Old newsletter tool", "CANDIDATE TO SELL"]
+  ]
+}

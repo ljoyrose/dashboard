@@ -6,6 +6,7 @@
 //   'error'         Google reports an error in the sign-in answer
 //   'popup-closed'  the person closed the sign-in window
 //   'popup-blocked' the browser blocked the sign-in window
+// A token client asked for drive.metadata.readonly only (the Personal Drive sign-in) gets 'FAKE-PERSONAL-TOKEN'.
 //   'silent-ok'     a silent refresh (prompt:'' with no extra scope) also succeeds.
 //                   By default that silent refresh fails, so a first visit still shows
 //                   the sign-in button. A write upgrade uses prompt:'' WITH a scope, and still succeeds.
@@ -32,7 +33,9 @@ module.exports = `
             return;
           }
           if (m === 'error') { cfg.callback({ error: 'access_denied' }); return; }
-          cfg.callback({ access_token: 'FAKE-TEST-TOKEN', expires_in: 3600, scope: m === 'denied-scope' ? 'openid' : scope, token_type: 'Bearer' });
+          // The Personal Drive page's own look-only sign-in gets a different pretend token, so tests can tell the two apart.
+          var tok = cfg.scope === 'https://www.googleapis.com/auth/drive.metadata.readonly' ? 'FAKE-PERSONAL-TOKEN' : 'FAKE-TEST-TOKEN';
+          cfg.callback({ access_token: tok, expires_in: 3600, scope: m === 'denied-scope' ? 'openid' : scope, token_type: 'Bearer' });
         }, 0);
       } };
     },

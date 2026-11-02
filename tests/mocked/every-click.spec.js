@@ -4,7 +4,7 @@
 const { test, expect } = require('../support/test');
 
 const ROUTES = [
-  ['./', ['#/map', '#/readfirst', '#/drive', '#/drive/drv-alpha1', '#/personal', '#/usb', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'], '#signInBtn'],
+  ['./', ['#/map', '#/drives', '#/drives/shared', '#/drives/readfirst', '#/drives/shared/drv-alpha1', '#/drives/work', '#/drives/personal-drive', '#/drives/usb', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'], '#signInBtn'],
   ['money/', ['#/now', '#/money', '#/dates', '#/todo', '#/accountant', '#/control', '#/e/TESTCO', '#/register/R001'], '#signInBtn'],
   ['cdhub/', ['#/map', '#/work', '#/shape', '#/today', '#/round', '#/dogs', '#/areas', '#/litters', '#/vet', '#/buyers'], '#signinbtn'],
 ];
@@ -34,6 +34,8 @@ function tag(withChrome) {
     const item = { i: seen.length, tag: el.tagName.toLowerCase(), name, href: el.getAttribute('href'), target: el.getAttribute('target'), disabled: !!el.disabled };
     item.sig = [item.tag, item.name, item.href || '', el.getAttribute('data-action') || '', el.getAttribute('data-go') || '', el.getAttribute('data-list') || ''].join('|');
     item.k = seen.filter((x) => x.sig === item.sig).length; // which copy of the same thing
+    // A plain in-page link (#/..., no data-* behaviour of its own): another one with the same address goes to the same place.
+    item.plain = el.tagName === 'A' && /^#\//.test(item.href || '') && !el.getAttributeNames().some((n) => n.startsWith('data-') && n !== 'data-audit') && !el.getAttribute('target');
     seen.push(item);
   });
   return seen;
@@ -42,7 +44,9 @@ function tag(withChrome) {
 for (const [base, hashes, signBtn] of ROUTES) {
   for (const hash of hashes) {
     test(`${base}${hash}: every button, tile and link is labelled and does something`, async ({ page, context, guard }) => {
-      test.setTimeout(240_000);
+      // #/bin has the most buttons and each click reloads the page: it passes alone but can run past 240 s under a full parallel run.
+      // Money #/now and CD Hub #/map: every number and row there now opens what it counts (Lisa, 2 Nov), so they hold the most links after #/bin.
+      test.setTimeout(['#/bin', '#/now', '#/map'].includes(hash) && base !== './' || hash === '#/bin' ? 480_000 : 240_000);
       guard.allowedConsole = guard.allowedConsole || [];
       // The Drive check opens the computer's folder picker; here it answers "not allowed" so the page shows its message.
       await page.addInitScript(() => { window.showDirectoryPicker = () => Promise.reject(Object.assign(new Error('test'), { name: 'NotAllowedError' })); });
@@ -72,8 +76,13 @@ for (const [base, hashes, signBtn] of ROUTES) {
           }
         }
       }
+      // Every number and row now opens what it counts (Lisa, 2 Nov), so a screen can hold several plain links to one list.
+      // The first is clicked and must land there; the others with the same address are the same link (each was checked above
+      // to have a label and an address that loads). This keeps the crawl inside its time on slower machines.
+      const landed = new Set();
       for (const it of items) {
         if (it.disabled) continue;
+        if (it.plain && landed.has(it.href)) continue;
         if (it.tag === 'a' && it.href && /^(https?:|mailto|tel)/.test(it.href) && !it.href.startsWith('http://127.0.0.1')) continue;
         // A fresh copy of the starting screen for each click (a click may have changed screen or opened a box).
         await page.goto('about:blank'); await page.goto(url); await ready(page, base);
@@ -102,6 +111,7 @@ for (const [base, hashes, signBtn] of ROUTES) {
         const [p, n] = await Promise.all([popup, nav]);
         if (p) { await p.close(); continue; }
         const moved = page.url() !== before || !!n;
+        if (it.plain && page.url() !== before && page.url().endsWith(it.href)) landed.add(it.href);
         const mut = moved ? 1 : await page.evaluate(() => window.__mut).catch(() => 1);
         if (!moved && !mut && (page.__dialog || 0) === dialogs) dead.push(`${it.tag} "${it.name}"${it.href ? ' (' + it.href + ')' : ''}: click does nothing`);
       }

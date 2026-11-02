@@ -1,0 +1,16 @@
+{
+  "kind": "mkt-idea",
+  "v": 1,
+  "id": "IDEA-20261102-1530-sam1",
+  "at": "2026-11-02T15:30:00.000Z",
+  "by": "SAMPLE-USER",
+  "dry_run": true,
+  "name": "SAMPLE pet brush",
+  "link": "https://example.invalid/sample-pet-brush",
+  "barcode": "4006381333931",
+  "price_seen": "£4.50",
+  "where_seen": "SAMPLE shop",
+  "image_link": "https://drive.google.com/file/d/SAMPLE-IMG-0000/view",
+  "own_audience_fit": "SAMPLE: puppy buyers",
+  "note": "SAMPLE note"
+}
