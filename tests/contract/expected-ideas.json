@@ -24,7 +24,8 @@
       "supplier": "string",
       "lines": "array",
       "terms": "object",
-      "evidence": "array"
+      "evidence": "array",
+      "infinity_item": "string"
     },
     "fields": {
       "intake": {

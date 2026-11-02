@@ -11,7 +11,10 @@ What the hub does today: it only ANSWERS existing cards (writes cells G:J of a r
 
 1. Add idea form checks its fields, then writes ONE file `MKT-IDEA-REQ-<id>.json` into a Drive folder (`marketplace.ideasRequestsFolderId` in `config.js`, empty until Lisa sets it).
 2. The engine (about every 10 minutes) reads new request files and appends ONE row, then marks the file done. Same key twice = no second row.
-3. The card appears under New stock > Ideas.
+3. In the same run the engine creates ONE item on the Infinity board "Marketplace - Product ideas" and writes its link into the card's `infinity_item`. The board id lives in the engine's own settings, never in this repo.
+4. The card appears under New stock > Ideas.
+
+**Master and mirror.** The hub card (Open work sheet row) is the master. The board item mirrors it: on each run the engine copies title, status, gate, verdict and next step onto the item. It is one way. An edit made on the board is overwritten on the next run, and nothing on the board is read back into the card. This route does not touch the App Factory hub, AF-ENGINE or ClickUp.
 
 | Row cell | Value |
 |---|---|
@@ -22,7 +25,8 @@ What the hub does today: it only ANSWERS existing cards (writes cells G:J of a r
 | detail | JSON below |
 
 **Engine side (NOT built here: `marketplace-engine` was not reachable from this session).** Two small additions, each its own tested PR in that repo:
-- A. Turn `MKT-IDEA-REQ-*.json` into a card row (`cardRow()` in `ideas.js` is the reference). Skip `dry_run: true` files.
+- A. Turn `MKT-IDEA-REQ-*.json` into a card row (`cardRow()` in `ideas.js` is the reference) AND one Infinity board item; write the item's link to `infinity_item`. Skip `dry_run: true` files. If the board call fails, still make the card (`infinity_item` stays empty) and retry the item on the next run: no card is lost and no second item is made (check `infinity_item` first).
+- A2. Mirror card changes onto the item each run (one way).
 - B. When an `idea` card is answered `Go` and its detail passes `goReady()`, make a `newprod` card `NEWPROD|<id>` copying `supplier`, `unit_ex_p`, `unit_inc_p`, `profit_p`, `sell`, `moq`, `lines`, `terms`.
 
 Why not let the hub append the row itself: it can, with the Sheets scope it already has, but it would race the engine's own writes to the same tab. Fallback only if A cannot be built.
@@ -38,6 +42,7 @@ Consequence to know: until A exists, a sent request just sits in the folder. The
 | Field | Type | Notes |
 |---|---|---|
 | kind | "idea" | required |
+| infinity_item | words | link to the board item (`https://...startinfinity.com/...`); empty until the engine fills it |
 | v | number | required, 1 |
 | status | new / screening / researching / testing / launched / dropped | required |
 | gate | 0..3 | required |
