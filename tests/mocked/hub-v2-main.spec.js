@@ -98,7 +98,9 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
       await signIn(page);
       await expect(page).toHaveURL(new RegExp(hash.replace(/[/#]/g, (c) => '\\' + c)));
       await expect(page.locator(`#mainNav a[data-nav="${tab}"]`)).toHaveAttribute('aria-current', 'page');
-      await page.locator('#signOutBtn').click();
+      // On a phone Sign out sits inside the Look menu (the top bar, Lisa's pick A).
+      await page.locator('#houseLookBtn').click();
+      await page.locator('#houseLook').getByRole('button', { name: 'Sign out', exact: true }).click();
     }
   });
 });

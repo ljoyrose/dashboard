@@ -18,7 +18,8 @@ async function signIn(page, hash) {
   await page.goto('studio/' + hash);
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
-  await expect(page.locator('#enginePill')).toBeVisible();
+  await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
 }
 
 test('config.js names the sheet and the OWNED_TOOLS tab for the Owned tools list', () => {

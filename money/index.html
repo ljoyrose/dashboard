@@ -47,20 +47,11 @@
 
   /* Frame: dark top bar (never black). */
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
-  .top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-top: 12px; padding-bottom: 12px; }
-  .top h1 { font-size: 20px; margin: 0 auto 0 0; }
-  .top h1 a { text-decoration: none; display: inline-flex; align-items: center; gap: 8px; color: var(--frame-ink); }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--c-mute)); flex: none; display: inline-block; }
   .top h1 .dot { --c: var(--c-fin); }
-  .readstamp { font-size: 13px; font-weight: 600; color: var(--frame-ink); border: 1px solid var(--frame-line); border-radius: var(--radius); height: 24px; padding: 0 8px; display: inline-flex; align-items: center; white-space: nowrap; }
-  /* Design rule: every page except home has "Dashboard" at the top right of the header, always shown. */
-  .back { order: 99; }
-  /* Signed out (auth.js hides the page): the dark bar itself stays, so the sign-in and Dashboard buttons keep their frame;
-     the title is hidden there, so Dashboard keeps its top-right place. */
+  /* Signed out (auth.js hides the page): the dark bar itself stays, so the sign-in and Dashboard buttons keep their frame. */
   html.dash-locked header { visibility: visible; }
   html.dash-locked .top > .readstamp, html.dash-locked .top > [data-search-open] { display: none; }
-  html.dash-locked .top > #signInBtn { margin-left: auto; }
-  #backHome { min-height: 44px; } /* the shared Dashboard button rule (one-sign-in-tabs): 44px on every page, as in Studio */
 
   /* Everything you press, the hover rule, focus, the bottom tabs and the counts: ../house.css. Money's layout only below. */
   .btn, details > summary { display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--surface); line-height: 1.2; }
@@ -214,8 +205,6 @@
 
   @media (max-width: 600px) {
     .btn, details > summary, .subnav a { min-height: 44px; }
-    header .btn .bt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } /* icon-only on the phone; the name stays for screen readers */
-    header .btn { padding: 0 12px; }
     .big { font-size: 26px; }
     th, td { padding: 6px 4px; font-size: 14px; }
   }
@@ -241,15 +230,17 @@
   <symbol id="i-acct" viewBox="0 0 24 24"><circle cx="12" cy="8.5" r="3.5"/><path d="M5 19.5a7 7 0 0 1 14 0"/></symbol>
   <symbol id="i-control" viewBox="0 0 24 24"><path d="M5 7h9M18 7h1M5 17h1M10 17h9"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></symbol>
 </svg>
-<header>
-  <div class="wrap top">
+<header class="house-head">
+  <div class="wrap top house-row">
+    <a id="backHome" class="btn back house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
     <h1><a href="#/now"><span class="dot" aria-hidden="true"></span>Money Hub</a></h1>
-    <span id="readStamp" class="readstamp">Not signed in</span>
-    <button class="btn" type="button" data-search-open aria-keyshortcuts="/" title="Search (press /)"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><span class="bt">Search</span></button>
-    <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" title="Read the files again"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="bt">Reread</span></button>
-    <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" title="Sign out"><svg class="icon" aria-hidden="true"><use href="#i-out"/></svg><span class="bt">Sign out</span></button>
+    <span class="house-sp" aria-hidden="true"></span>
+    <span id="readStamp" class="readstamp house-read" data-house-read>Not signed in</span>
+    <button class="btn house-ib" type="button" data-search-open aria-keyshortcuts="/" aria-label="Search" title="Search (press /)"><svg aria-hidden="true"><use href="#hi-search"/></svg></button>
+    <button id="refreshBtn" class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap" data-house-look></span>
+    <button id="signOutBtn" class="btn house-ib hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg aria-hidden="true"><use href="#hi-logout"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="icon" aria-hidden="true"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
-    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
   </div>
 </header>
 <main id="content" class="wrap">
