@@ -20,7 +20,7 @@ test.describe('Structure: one name and one way back', () => {
     await page.goto('./');
     await signIn(page);
     await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
-    await expect(page).toHaveTitle(/Dashboard · Lisa Dashboard$/);
+    await expect(page).toHaveTitle(/^(\(\d+\) )?Dashboard$/); // the top bar and title say "Dashboard" (Lisa, 2 Nov)
     await expect(page.locator('nav.main a[data-nav="map"]')).toContainText('Main');
     // No visible link to #/map is named "Map" or "Home".
     const names = await page.locator('a[href="#/map"]:visible').allInnerTexts();

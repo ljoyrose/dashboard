@@ -116,7 +116,7 @@ test.describe('Money Hub: navigation', () => {
     await page.goto('money/');
     await page.locator('a.back').click();
     await expect(page).toHaveURL(at('(#/map)?'));
-    await expect(page).toHaveTitle(/Lisa Dashboard|Map/);
+    await expect(page).toHaveTitle(/^(\(\d+\) )?Dashboard$/);
   });
 
   for (const [hash, check] of [

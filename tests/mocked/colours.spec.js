@@ -46,6 +46,7 @@ test('the colour carries meaning on the dashboard menu: Bin is slot 8, Money slo
   await expect.poll(() => page.locator('#mainNav a[data-nav="bin"] svg').first().evaluate((e) => getComputedStyle(e).color)).toBe('rgb(58, 54, 50)');
   await page.keyboard.press('Escape');
   const slot = (sel) => page.locator(sel).first().evaluate((e) => { const d = document.createElement('i'); d.style.color = getComputedStyle(e).getPropertyValue('--slot').trim(); document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; });
+  await tabClick(page, '#mainNav a[data-nav="money"]'); // the Money card moved off Main into More (Lisa, 2 Nov)
   await expect(page.locator('#view section.card.slotfin')).toHaveCount(1);
   expect(await slot('#view section.card.slotfin')).toBe('rgb(231, 134, 21)');
   await tabClick(page, '#mainNav a[data-nav="drives"]');

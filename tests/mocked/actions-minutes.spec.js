@@ -27,6 +27,10 @@ async function open(page) {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
+  await expect(page.locator('#view #minsCard')).toHaveCount(0); // off Main: the card lives in More (Lisa, 2 Nov)
+  await page.locator('#mainNav [data-house-more]').click();
+  await page.locator('#houseMore a[href="#/minutes"]').click();
+  await expect(page.locator('#view')).toHaveAttribute('data-view', 'minutes');
   const card = page.locator('#minsCard');
   await expect(card).toBeVisible();
   return card;
