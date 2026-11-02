@@ -50,7 +50,7 @@ test.describe('Needs you today', () => {
     w.byId(IDS.ledger).content = 'file_id\nzz-ready-n\n';
     await page.goto('./#/bin');
     await signIn(page);
-    await expect(page.locator('[data-bin-list="ready"]')).toContainText('ZZ_DELETE_ready-for-needs.txt');
+    await expect(page.locator('[data-bin-list="ready"]').locator('[title="' + 'ZZ_DELETE_ready-for-needs.txt' + '"]')).toHaveCount(1);
     await page.locator('nav.main a[data-nav="map"]').click();
     const row = page.locator('#needsToday li.n-bin');
     await expect(row).toContainText('1 file is ready to bin');

@@ -19,7 +19,7 @@ test.describe('Phone: Main dashboard', () => {
     await page.locator('#signInBtn').click();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
     await noSidewaysScroll(page, 'Dashboard');
-    for (const [key, title] of [['drive', 'Drive'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['map', 'Dashboard']]) {
+    for (const [key, title] of [['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['map', 'Dashboard']]) {
       await page.locator(`#mainNav a[data-nav="${key}"]`).click();
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await noSidewaysScroll(page, title);
@@ -54,7 +54,7 @@ test.describe('Phone: CD Hub menu', () => {
 });
 
 test.describe('Phone: CD Hub house look', () => {
-  test('every section: no sideways scroll, controls 44px tall, bottom tabs in two rows on screen, header uses one More menu', async ({ page }) => {
+  test('every section: no sideways scroll, controls 44px tall, bottom tabs in two rows on screen, one 56px top bar with the Home icon and Look', async ({ page }) => {
     await page.goto('cdhub/');
     await page.locator('#signinbtn').click();
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
@@ -67,8 +67,10 @@ test.describe('Phone: CD Hub house look', () => {
     }
     const rows = await page.evaluate(() => new Set([...document.querySelectorAll('#nav button[data-go]')].map((b) => Math.round(b.getBoundingClientRect().top))).size);
     expect(rows, 'bottom tabs: two rows').toBe(2);
-    await expect(page.locator('#moreBtn')).toBeVisible();
-    await expect(page.locator('#backHome')).toBeHidden();
+    expect(Math.round((await page.locator('header').boundingBox()).height), 'top bar height').toBe(56);
+    await expect(page.locator('#moreBtn')).toHaveCount(0);
+    await expect(page.locator('#backHome')).toBeVisible();
+    await expect(page.locator('#houseLookBtn')).toBeVisible();
   });
 });
 

@@ -2,6 +2,7 @@
 // app window started signed out. Now one sign-in (kept in this browser until it expires or you sign out)
 // covers every tab, and Money Hub and CD Hub open in their own tab with a "Dashboard" button.
 const { test, expect } = require('../support/test');
+const { at } = require('../support/site');
 
 const MOVE = require('../support/world').IDS.moveSheet; // read from config.js, never copied (this repo is public)
 const signIn = async (page) => {
@@ -16,8 +17,7 @@ test.describe('One sign-in for every tab', () => {
     await page.goto('./');
     await signIn(page);
 
-    for (const [sel, url] of [['a.keytile[href="money/"]', /\/money\/$/], ['a.morelink[href="money/"]', /\/money\/$/]]) {
-      if (sel.startsWith('a.morelink')) await page.locator('#mainNav a[data-nav="more"]').click(); // Hub V2: More tab
+    for (const [sel, url] of [['a.keytile[href="money/"]', /\/money\/$/]]) {
       const [tab] = await Promise.all([context.waitForEvent('page'), page.locator(sel).click()]);
       await expect(tab).toHaveURL(url);
       await expect(tab.locator('#readStamp')).toContainText(/^Read \d/);
@@ -32,7 +32,7 @@ test.describe('One sign-in for every tab', () => {
     await expect(cd.locator('#signinbtn')).toHaveCount(0);
     expect(await gisRequests(cd)).toBe(0);
     // The dashboard tab itself was not replaced.
-    await expect(page).toHaveURL(/\/dashboard\/(#\/map)?$/);
+    await expect(page).toHaveURL(at('(#/map)?'));
   });
 
   test('a brand-new tab (or the installed app window) typed straight to money/ is signed in too', async ({ page, context }) => {
@@ -125,23 +125,24 @@ test.describe('One sign-in for every tab', () => {
 
 test.describe('Dashboard button (every page except home)', () => {
   for (const [url, ready] of [['money/', '#signInBtn'], ['cdhub/', '#main'], ['marketplace/', '#signin'], ['studio/', '#signInBtn']]) {
-    test(`${url}: top-right "Dashboard" button is always shown, keyboard reachable, and goes home`, async ({ page }) => {
+    test(`${url}: top-left Home "Dashboard" button is always shown, keyboard reachable, and goes home`, async ({ page }) => {
       await page.goto(url);
       await expect(page.locator(ready)).toBeVisible();
       const b = page.locator('#backHome');
       await expect(b).toBeVisible(); // signed out too
-      await expect(b).toHaveAttribute('aria-label', 'Dashboard home');
-      await expect(b).toHaveText(/^← Dashboard$/);
+      await expect(b).toHaveAttribute('aria-label', 'Dashboard');
+      await expect(b).toHaveText('');   // the Home icon only (Lisa's pick A, 2 Nov)
+      await expect(b.locator('svg use')).toHaveAttribute('href', '#hi-home');
       await expect(b).toHaveAttribute('href', '../');
       const box = await b.boundingBox();
       const vw = page.viewportSize().width;
-      expect(box.y).toBeLessThan(80);
-      expect(box.x + box.width).toBeGreaterThan(vw * 0.75);
-      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.y).toBeLessThan(56);
+      expect(box.x + box.width).toBeLessThan(vw * 0.25);   // top left
+      expect(box.height).toBe(vw <= 600 ? 44 : 36);   // the house button size
       await b.focus();
       await expect(b).toBeFocused();
       await page.keyboard.press('Enter');
-      await expect(page).toHaveURL(/\/dashboard\/(#\/map)?$/);
+      await expect(page).toHaveURL(at('(#/map)?'));
       await expect(page).toHaveTitle(/Lisa Dashboard|Map/);
     });
 
@@ -154,7 +155,7 @@ test.describe('Dashboard button (every page except home)', () => {
       // The tab can close before click() returns; that close is the point, not an error.
       await Promise.all([tab.waitForEvent('close'), tab.locator('#backHome').click().catch((e) => { if (!/closed/.test(e.message)) throw e; })]);
       expect(context.pages()).toEqual([page]);
-      await expect(page).toHaveURL(/\/dashboard\/(#\/map)?$/);
+      await expect(page).toHaveURL(at('(#/map)?'));
     });
   }
 });

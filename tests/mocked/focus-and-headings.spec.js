@@ -6,7 +6,7 @@ test.describe('Focus moves to the new screen title', () => {
     await page.goto('./');
     await page.locator('#signInBtn').click();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
-    await page.locator('nav.main a[data-nav="drive"]').click();
+    await page.locator('nav.main a[data-nav="drives"]').click();
     await expect(page.locator('#hereTitle')).toBeFocused();
     await expect(page.locator('#hereTitle')).toHaveText(/^Drive/);
     await page.locator('nav.main a[data-nav="bin"]').click();

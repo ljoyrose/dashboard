@@ -27,7 +27,8 @@ async function open(page, guard, hash, { state = true, change } = {}) {
   await page.goto('studio/' + (hash || '#/me'));
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
-  await expect(page.locator('#enginePill')).toBeVisible();
+  await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
 }
 // Pretend Drive upload: records each request file and adds it to the pretend Drive, so Undo (PATCH trashed) can find it.
 async function uploads(page, guard) {
@@ -65,7 +66,7 @@ test.describe('Studio page', () => {
   test('no studio-state.json yet: the example banner, example brands, and every write switched off', async ({ page, guard }) => {
     await open(page, guard, '#/me', { state: false });
     await expect(page.locator('#exBanner')).toBeVisible();
-    await expect(page.locator('#exBanner')).toHaveText('Example data · engine off');
+    await expect(page.locator('#exBanner')).toHaveText('Example data · Studio helper off');
     await expect(page.locator('#stamp')).toHaveText('TEST');
     await expect(page.locator('#enginePill')).toContainText('Off');
     await go(page, 'brands');
@@ -257,29 +258,26 @@ test.describe('Studio page', () => {
     await page.evaluate(() => { location.hash = '#/assets'; });
     await page.locator('#filtersBtn').click();
     await noSidewaysScroll(page, 'assets with filters open');
-    // Phone header: status pills plus one More menu (Refresh, Look, New, Sign out, Dashboard).
-    await expect(page.locator('#backHome')).toBeHidden();
-    await expect(page.locator('#enginePill')).toBeVisible();
-    await page.locator('#moreBtn').click();
-    const more = page.locator('#moreMenu');
-    await expect(more).toBeVisible();
-    for (const t of ['Refresh', 'Look', 'New', 'Sign out', 'Dashboard']) await expect(more).toContainText(t);
-    await expect(more.locator('a[href="../"]')).toBeVisible();
-    for (const b of await more.locator('button, a').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
-    expect(await page.evaluate(() => !!document.activeElement.closest('#moreMenu')), 'focus moves into the menu').toBe(true);
-    await noSidewaysScroll(page, 'More menu open');
+    // Phone top bar (Lisa's pick A, it replaced the More menu): Home, Studio, New, Refresh and Look in one 56px row, all 44px;
+    // the engine and budget pills stay on a desktop; Sign out sits inside Look.
+    expect(Math.round((await page.locator('header').boundingBox()).height)).toBe(56);
+    await expect(page.locator('#moreBtn, #moreMenu')).toHaveCount(0);
+    await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
+    for (const id of ['#enginePill', '#budgetPill', '#signOutBtn']) await expect(page.locator(id)).toBeHidden();
+    for (const id of ['#backHome', '#newBtn', '#refreshBtn', '#lookBtn']) {
+      await expect(page.locator(id)).toBeVisible();
+      expect((await page.locator(id).boundingBox()).height, id).toBe(44);
+    }
+    await expect(page.locator('#backHome')).toHaveAttribute('href', '../');
+    await page.locator('#lookBtn').click();
+    const look = page.locator('#lookMenu');
+    await expect(look).toBeVisible();
+    for (const t of ['Background', 'Selected', 'Mode', 'Sign out']) await expect(look).toContainText(t);
+    for (const b of await look.locator('button').all()) expect((await b.boundingBox()).height).toBeGreaterThanOrEqual(44);
+    await noSidewaysScroll(page, 'Look menu open');
     await page.keyboard.press('Escape');
-    await expect(more).toBeHidden();
-    await expect(page.locator('#moreBtn')).toBeFocused();
-    await page.locator('#moreBtn').click();
-    await more.locator('[data-action="lookmore"]').click();
-    await expect(page.locator('#lookMenu')).toBeVisible();
-    await page.keyboard.press('Escape');
-    await expect(page.locator('#lookMenu')).toBeHidden();
-    await expect(page.locator('#moreBtn')).toBeFocused();
-    await page.locator('#moreBtn').click();
-    await page.locator('#moreMenu [data-action="moredone"]').click();
-    await expect(more).toBeHidden();
+    await expect(look).toBeHidden();
+    await expect(page.locator('#lookBtn')).toBeFocused();
   });
 
   test('dark mode: dark page, light text, and the words read clearly on every tab', async ({ page, guard }) => {
@@ -362,11 +360,11 @@ test.describe('Studio page', () => {
     await expect(launch.locator('li')).toHaveText(['Sample webclass funnel', 'Sample email kit', 'Post the replay link']);
     await expect(page.locator('[data-outcome="attract"] [data-playbook="pb-grow"]')).toBeVisible();
     await expect(page.locator('[data-outcome="convert"] .grp .cnt')).toHaveText('1');
-    await expect(page.locator('[data-kitnav="kits"] .cnt')).toHaveText('4');
+    await expect(page.locator('[data-kitnav="kits"] .cnt')).toHaveText('5');
     await page.locator('[data-kitnav="packs"]').click();
     await expect(page.locator('[data-pack="pk-funnel"]')).toContainText('Sample webclass kit');
     await page.locator('[data-kitnav="kits"]').click();
-    await expect(page.locator('[data-kit]')).toHaveCount(4);
+    await expect(page.locator('[data-kit]')).toHaveCount(5);
     await expect(page.locator('[data-kit="kit-webclass"] [data-cap="video-reformat"]')).toBeVisible();
     await expect(page.locator('[data-kit="kit-webclass"]')).toContainText('9:16');
     await page.locator('[data-kitnav="styles"]').click();
@@ -820,7 +818,8 @@ test.describe('Studio page', () => {
     await expect(page.locator('.bwrap')).toHaveCount(0);
     await expect(page.locator('#view .card.appcard').first()).toBeVisible();
     await page.reload(); // still signed in (saved token)
-    await expect(page.locator('#enginePill')).toBeVisible();
+    await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
+    if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
     await expect(page.locator('[data-vmode="list"]')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('.bwrap')).toHaveCount(0);
     await go(page, 'decide');
@@ -847,7 +846,7 @@ test.describe('Studio page', () => {
     await expect(r.locator('.panel .kv')).toContainText('Stage');
     await expect(page.locator('.side')).toHaveCount(0);
     await expect(r.locator('.panel')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)'); // no grey box under the card either
-    await expect(page.locator('#moreBtn')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)'); // More sits on the dark frame like the other header buttons
+    for (const id of ['#lookBtn', '#refreshBtn', '#newBtn']) await expect(page.locator(id)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)'); // the top bar's icon buttons sit on the dark frame
     await noSidewaysScroll(page, 'line board with details open');
     // Tab counts sit in the top-right corner of the tab, clear of the label; the selected bar is 26px on the phone.
     const tab = page.locator('nav.tabs a[data-nav="me"]'), tb = await tab.boundingBox(), nb = await tab.locator('.n').boundingBox(), lb = await tab.locator('span:not(.n):not(.bar)').boundingBox();
@@ -1048,7 +1047,7 @@ test.describe('Studio page', () => {
     expect(await r('.col-head .cnt:not(:empty)')).toBe('11px');
     await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 390, height: 844 });
-    for (const sel of ['#moreBtn', '#filtersBtn', '.subnav a', '.crow .ico']) await expect.poll(() => h(sel), sel + ' on the phone').toBe(44); // the page redraws when it crosses into phone width
+    for (const sel of ['#lookBtn', '#refreshBtn', '#filtersBtn', '.subnav a', '.crow .ico']) await expect.poll(() => h(sel), sel + ' on the phone').toBe(44); // the page redraws when it crosses into phone width
     expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(22); // the house count is 30 x 22 on the phone too (in the flow beside the label)
   });
 
@@ -1125,8 +1124,9 @@ test.describe('Studio page', () => {
     await page.keyboard.press('Escape');
     await tour('Look › Dark');
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator('#moreBtn').click();
-    await check('Look › Dark, phone More menu');
+    await page.locator('#lookBtn').click();   // the phone's Look menu (it now also holds Sign out)
+    await expect(page.locator('#lookMenu [data-house-menu-signout]')).toBeVisible();
+    await check('Look › Dark, phone Look menu');
   });
 
   test('every grey follows the background: no warm grey anywhere on Cool clear (light and dark)', async ({ page, guard }) => {

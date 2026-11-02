@@ -50,13 +50,22 @@ const test = base.test.extend({
         outside.push(url);
         return route.fulfill({ status: 200, contentType: 'text/plain', body: '' });
       });
+      // Studio's Owned tools list (Sheets values read): answered from an invented sample (added after the catch-all, so it wins), and every call remembered with
+      // whether it carried a sign-in token, so tests can prove it is only read after sign-in.
+      const ownedCalls = [];
+      const OWNED = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'owned-tools.json'), 'utf8'));
+      await context.route(/^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\/[^/]+\/values\/OWNED_TOOLS/, (route) => {
+        const req = route.request();
+        ownedCalls.push({ url: req.url(), auth: !!(req.headers().authorization || '').match(/^Bearer \S+/) });
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ range: 'OWNED_TOOLS!A1:E', majorDimension: 'ROWS', values: OWNED.values }) });
+      });
 
       page.on('console', (m) => {
         if (m.type() === 'error' || m.type() === 'warning') consoleSeen.push(`[${m.type()}] ${m.text()}`);
       });
       page.on('pageerror', (e) => problems.push('Page error: ' + e.message));
 
-      const guard = { outside, consoleSeen, problems, world };
+      const guard = { outside, consoleSeen, problems, world, ownedCalls };
       await use(guard);
 
       // Drift check: remember Drive calls the pretend Drive could not answer (counted in the Action summary).

@@ -6,7 +6,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const HUBS = ['money', 'cdhub', 'factory', 'food', 'marketplace', 'studio'];
-const VIEWS = ['readfirst', 'drive', 'personal', 'usb', 'bin', 'changes', 'more'];
+const VIEWS = ['drives', 'drives/shared', 'drives/readfirst', 'drives/work', 'drives/personal-drive', 'drives/usb', 'bin', 'changes'];
 
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
@@ -56,13 +56,18 @@ test.describe('Structure: one name and one way back', () => {
     expect(read('toolkit.js')).toMatch(/\['g m', 'Dashboard'/);
   });
 
+  // The top bar (Lisa's pick A, 2 Nov 2026): the way back is the Home icon, first in the bar, named "Dashboard" for screen readers.
   for (const h of HUBS) {
-    test(`${h}/ has exactly one "← Dashboard" button with class "btn back"`, () => {
+    test(`${h}/ has exactly one Home icon link named "Dashboard" with class "btn back", first in the top bar`, () => {
       const s = read(h + '/index.html');
-      const btns = s.match(/<a [^>]*data-back-home[^>]*>[^<]*<\/a>/g) || [];
+      const btns = s.match(/<a [^>]*data-back-home[^>]*>(?:(?!<\/a>)[\s\S])*<\/a>/g) || [];
       const back = btns.filter((a) => /class="[^"]*\bbtn\b[^"]*\bback\b[^"]*"/.test(a));
       expect(back).toHaveLength(1);
-      expect(back[0]).toMatch(/>(←|&larr;) Dashboard<\/a>$/);
+      expect(back[0]).toMatch(/^<a id="backHome" class="btn back[^"]*\bhouse-ib\b[^"]*" href="\.\.\/" data-back-home aria-label="Dashboard" title="Dashboard">/);
+      expect(back[0]).toMatch(/><svg aria-hidden="true"><use href="#hi-home"\/><\/svg><\/a>$/);   // the icon only, no words on screen
+      const head = s.slice(s.indexOf('<header'), s.indexOf('</header>'));
+      expect(head.indexOf(back[0]), 'inside the top bar').toBeGreaterThan(-1);
+      expect(head.replace(/<header[^>]*>\s*<div[^>]*>\s*/, '').indexOf('<a id="backHome"'), 'first in the bar').toBe(0);
     });
   }
 });

@@ -6,7 +6,7 @@
 ## Links
 - **PR:** https://github.com/ljoyrose/dashboard/pull/11 (branch `claude/job6-playwright-tests` into `main`)
 - **First Action run on the PR branch:** https://github.com/ljoyrose/dashboard/actions/runs/38818011211 (**green**)
-- **Zip:** `docs/job6/JOB6_DASHBOARD-TESTS_v1.zip` on the branch
+- **Zip:** removed from the repo on 29 Oct 2026 (zips are never kept in this public repo; it remains in git history)
 
 ## What was delivered
 1. **138 browser checks** for all three pages: main dashboard 47, CD Hub 30, Money Hub 41, CSV reading 16, repo safety 4.

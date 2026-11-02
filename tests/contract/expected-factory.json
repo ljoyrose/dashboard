@@ -1,0 +1,204 @@
+{
+  "_about": "Field NAMES and JS types only (no values). What the Factory page expects inside af-state.json. Rebuild with tests/contract/make-expected-factory.js, then review the diff.",
+  "factory": {
+    "af-state.json": {
+      "fixture": "tests/fixtures/factory/state.js (build)",
+      "top": {
+        "generated_at": "string",
+        "mode": "string",
+        "factory": "string",
+        "budget": "object",
+        "failed": "array",
+        "statuses": "object",
+        "cards": "array",
+        "spend": "object",
+        "health": "array",
+        "lists": "object"
+      },
+      "fields": {
+        "budget": {},
+        "statuses": {},
+        "spend": {},
+        "health[]": {
+          "job": "string",
+          "result": "string",
+          "last": "string",
+          "schedule": "string"
+        },
+        "lists": {
+          "apps": "array",
+          "decisions": "array",
+          "incidents": "array",
+          "claude": "array",
+          "template": "array",
+          "sends": "array",
+          "work": "array",
+          "families": "array"
+        },
+        "lists.apps[]": {
+          "status": "string",
+          "color": "string",
+          "tags": "array",
+          "url": "string",
+          "updated": "number",
+          "created": "number",
+          "parent": "string",
+          "desc": "string",
+          "links": "object",
+          "pri": "object",
+          "due": "number",
+          "who": "array",
+          "chk": "array",
+          "est": "number",
+          "spent": "number",
+          "cm": "array",
+          "files": "array",
+          "id": "string",
+          "name": "string"
+        },
+        "lists.apps[].links": {},
+        "lists.decisions[]": {
+          "status": "string",
+          "color": "string",
+          "tags": "array",
+          "url": "string",
+          "updated": "number",
+          "created": "number",
+          "parent": "string",
+          "desc": "string",
+          "links": "object",
+          "pri": "object",
+          "due": "number",
+          "who": "array",
+          "chk": "array",
+          "est": "number",
+          "spent": "number",
+          "cm": "array",
+          "files": "array",
+          "id": "string",
+          "name": "string"
+        },
+        "lists.decisions[].links": {},
+        "lists.decisions[].pri": {
+          "p": "string",
+          "c": "string"
+        },
+        "lists.incidents[]": {
+          "status": "string",
+          "color": "string",
+          "tags": "array",
+          "url": "string",
+          "updated": "number",
+          "created": "number",
+          "parent": "string",
+          "desc": "string",
+          "links": "object",
+          "pri": "object",
+          "due": "number",
+          "who": "array",
+          "chk": "array",
+          "est": "number",
+          "spent": "number",
+          "cm": "array",
+          "files": "array",
+          "id": "string",
+          "name": "string"
+        },
+        "lists.incidents[].links": {},
+        "lists.sends[]": {
+          "status": "string",
+          "color": "string",
+          "tags": "array",
+          "url": "string",
+          "updated": "number",
+          "created": "number",
+          "parent": "string",
+          "desc": "string",
+          "links": "object",
+          "pri": "object",
+          "due": "number",
+          "who": "array",
+          "chk": "array",
+          "est": "number",
+          "spent": "number",
+          "cm": "array",
+          "files": "array",
+          "id": "string",
+          "name": "string"
+        },
+        "lists.sends[].links": {},
+        "lists.work[]": {
+          "status": "string",
+          "color": "string",
+          "tags": "array",
+          "url": "string",
+          "updated": "number",
+          "created": "number",
+          "parent": "string",
+          "desc": "string",
+          "links": "object",
+          "pri": "object",
+          "due": "number",
+          "who": "array",
+          "chk": "array",
+          "est": "number",
+          "spent": "number",
+          "cm": "array",
+          "files": "array",
+          "id": "string",
+          "name": "string"
+        },
+        "lists.work[].links": {}
+      },
+      "required": {
+        "": [
+          "generated_at",
+          "mode",
+          "lists"
+        ],
+        "lists": [
+          "apps",
+          "decisions",
+          "sends",
+          "work",
+          "incidents"
+        ],
+        "lists.apps[]": [
+          "id",
+          "name",
+          "status",
+          "tags",
+          "updated"
+        ],
+        "lists.decisions[]": [
+          "id",
+          "name",
+          "status",
+          "tags",
+          "updated"
+        ],
+        "lists.sends[]": [
+          "id",
+          "name",
+          "status",
+          "tags",
+          "updated"
+        ],
+        "lists.work[]": [
+          "id",
+          "name",
+          "status",
+          "tags",
+          "updated"
+        ],
+        "lists.incidents[]": [
+          "id",
+          "name",
+          "status",
+          "tags",
+          "updated"
+        ]
+      }
+    }
+  }
+}
