@@ -10,7 +10,9 @@ const { HUBS, go } = require('../support/hubs');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 277000, cdhub: 211500, factory: 205000, food: 113000 };
+const BYTES = { home: 277000, cdhub: 211500, factory: 229700, food: 126600 };
+// factory 205000 > 229700 and food 113000 > 126600 on 2 Nov 2026: the shared top bar (Lisa's pick A) adds the Look menu and the one
+// icon set to toolkit.js, which every hub loads (about 7 KB); food also had its own growth since 1 Nov. Measured 229608 and 126575.
 // food raised 102000 > 113000 on 1 Nov 2026 (JOB 34.3): real growth from the Food stages (orders, growth numbers, fish treats, postage; PRs #199-#210). Measured 113019.
 // Known axe problems kept on purpose: { 'page:view@width': { ruleId: places } }, each with its reason.
 const KNOWN = {

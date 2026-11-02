@@ -417,7 +417,7 @@ test.describe('CD Hub house look', () => {
     for (const tab of ['dogs', 'today', 'round', 'work']) { await openTab(page, tab); expect(await fills(), tab).toEqual([]); }
   });
 
-  test('a phone (390px): no sideways scroll on any tab, every control 44px tall, header uses one More menu, tab counts sit in flow', async ({ page }) => {
+  test('a phone (390px): no sideways scroll on any tab, every control 44px tall, the one 56px top bar (Look holds Sign out), tab counts sit in flow', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('cdhub/');
     await signIn(page);
@@ -428,14 +428,22 @@ test.describe('CD Hub house look', () => {
       const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #next button, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, '#/' + tab).toEqual([]);
     }
-    await expect(page.locator('#backHome')).toBeHidden();
-    await expect(page.locator('header .srchbtn')).toBeHidden();
+    // The top bar (Lisa's pick A): one 56px row with Home, Search, Refresh and Look; Sign out and the read time sit inside Look.
+    expect(Math.round((await page.locator('header').boundingBox()).height)).toBe(56);
+    await expect(page.locator('#backHome')).toBeVisible();
+    await expect(page.locator('#backHome')).toHaveAttribute('href', '../');
     await expect(page.locator('#nav button[data-reload]')).toBeHidden();
-    await page.locator('#moreBtn').click();
-    await expect(page.locator('#moreMenu')).toBeVisible();
-    await expect(page.locator('#moreMenu')).toContainText('Reread');
-    await expect(page.locator('#moreMenu a[data-back-home]')).toHaveAttribute('href', '../');
-    await page.locator('#moreMenu [data-more="search"]').click();
+    await expect(page.locator('header button[data-reload]')).toHaveAttribute('aria-label', 'Refresh');
+    await expect(page.locator('header button[data-reload]')).toBeVisible();
+    await expect(page.locator('header button[data-signout]')).toBeHidden();
+    await page.locator('#houseLookBtn').click();
+    await expect(page.locator('#houseLook')).toBeVisible();
+    await expect(page.locator('#houseLook [data-house-mread]')).toHaveText(/^Read \d\d:\d\d$/);
+    await expect(page.locator('#houseLook').getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#houseLook')).toBeHidden();
+    await expect(page.locator('header .srchbtn')).toBeVisible();
+    await page.locator('header .srchbtn').click();
     await expect(page.locator('#dashSearch')).toBeVisible();
     expect(await page.locator('#nav .cnt').first().evaluate((e) => getComputedStyle(e).position)).toBe('static');
   });
