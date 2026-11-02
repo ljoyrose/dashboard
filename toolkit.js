@@ -249,6 +249,29 @@
     if (root.addEventListener) root.addEventListener('hashchange', function () { shutMores(null); });
   }
 
+  // ---- Tab names say the count ("Do, 3 waiting" / "Do, 1 late"; a phone shows only a dot), and --house-tab-fit = the longest word's room, so every phone tab is one size (house.css).
+  function nameTabs(nav) {
+    var fit = 0;
+    Array.prototype.forEach.call(nav.querySelectorAll(':scope > .ht, :scope > .ht-more > .ht'), function (t) {
+      var w = t.querySelector(':scope > .htl'), n = t.querySelector(':scope > .n, :scope > .cnt'), s; if (!w) return;
+      s = root.getComputedStyle(w); fit = Math.max(fit, Math.ceil(w.scrollWidth + parseFloat(s.marginLeft) * 2));
+      if (!n) return;
+      var c = n.textContent.trim(), name = w.textContent.trim() + (c ? ', ' + c + (n.classList.contains('need') ? ' late' : ' waiting') : '');
+      if (t.getAttribute('aria-label') !== name) t.setAttribute('aria-label', name);
+    });
+    if (nav.style.getPropertyValue('--house-tab-fit') !== (fit ? fit + 'px' : '')) nav.style.setProperty('--house-tab-fit', fit ? fit + 'px' : '');
+  }
+  function watchTabs() {
+    var navs = root.document.querySelectorAll('nav.house-tabs'), all = function () { Array.prototype.forEach.call(navs, nameTabs); };
+    Array.prototype.forEach.call(navs, function (nav) {
+      nameTabs(nav);
+      if (root.MutationObserver) new root.MutationObserver(function () { nameTabs(nav); }).observe(nav, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'aria-label'] });
+    });
+    if (root.document.fonts) root.document.fonts.ready.then(all);   // words change width when the web font arrives
+    root.addEventListener('resize', all);
+  }
+  if (root.document) { if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', watchTabs); else watchTabs(); }
+
   // ---- Phone filters: one calm row. Filter groups (.house-filters, each with an id) fold behind ONE Filter button
   // (.house-fbtn, data-house-filter="<id> [<id>...]") on a phone; on a desktop the button is hidden and the chips show inline (house.css).
   // The open / shut state survives the page redrawing its chips (pages redraw on every tap).

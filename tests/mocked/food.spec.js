@@ -56,6 +56,16 @@ async function open(page, hash) {
 }
 
 test.describe('GA Hub page', () => {
+  test('privacy: no email address in food/index.html; the sign-in hint comes from config.js', async ({ page }) => {
+    expect(SRC.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) || []).toEqual([]);
+    await sheets(page, book());
+    await page.goto('food/');
+    await page.locator('#view [data-action="signin"]').click();
+    await expect(page.locator('#tabs')).toBeVisible();
+    const req = await page.evaluate(() => window.__GIS_LAST_REQUEST);
+    const owner = await page.evaluate(() => (window.DASH_CONFIG.money || {}).owner);
+    expect(req.login_hint).toBe(owner);
+  });
   test('signed out: only a sign-in button, no tabs; signed in: Main with Owe GA, Do lists the 3 cards (price change first), payment date on Invoices', async ({ page }) => {
     await sheets(page, book());
     await page.goto('food/');
@@ -698,7 +708,7 @@ test.describe('GA Hub house look', () => {
     await expect(page.locator('#view .empty')).toContainText('No products match');
   });
 
-  test('a phone (390px): no sideways scroll on any tab, every control is 44px tall, tab counts sit in the tab\'s top-right corner', async ({ page }) => {
+  test('a phone (390px): no sideways scroll on any tab, every control is 44px tall, tab counts are a dot at the icon\'s top right', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await sheets(page, book());
     await open(page);
@@ -710,10 +720,15 @@ test.describe('GA Hub house look', () => {
       const short = await page.evaluate(() => [...document.querySelectorAll('#view button, #view a.btn, #view .chip, header .btn')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, '#/' + tab).toEqual([]);
     }
-    // Lisa's tab picks (2 Nov): the count sits in the tab's top-right corner and never moves the icon or word.
-    const c = await page.locator('#n-home').evaluate((e) => { const r = e.getBoundingClientRect(), t = e.parentElement.getBoundingClientRect(); return { pos: getComputedStyle(e).position, top: r.top - t.top, right: t.right - r.right }; });
+    // Lisa's pick b (2 Nov): on a phone the count is an 8px dot just off the icon's top-right corner, and never moves the icon or word.
+    const c = await page.locator('#n-home').evaluate((e) => { const r = e.getBoundingClientRect(), t = e.parentElement.getBoundingClientRect(), i = e.parentElement.querySelector('.hic').getBoundingClientRect();
+      return { pos: getComputedStyle(e).position, w: r.width, h: r.height, gap: r.left - i.right, top: r.top - i.top, inside: r.right <= t.right, iconMid: Math.abs((i.left + i.right) / 2 - (t.left + t.right) / 2) }; });
     expect(c.pos).toBe('absolute');
-    expect(c.top).toBeLessThanOrEqual(5);
-    expect(c.right).toBeLessThanOrEqual(5);
+    expect([c.w, c.h]).toEqual([8, 8]);
+    expect(c.gap).toBeGreaterThanOrEqual(0);
+    expect(c.gap).toBeLessThanOrEqual(3);
+    expect(Math.abs(c.top)).toBeLessThanOrEqual(2);
+    expect(c.inside).toBe(true);
+    expect(c.iconMid, 'the icon stays centred').toBeLessThan(1);
   });
 });

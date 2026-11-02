@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.4.0 (2026-10-29)';
+  var VERSION = 'enquiries-core 1.6.0 (2026-10-30)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -180,6 +180,345 @@
     });
   }
 
+  // ---- Names (Stage 6) -----------------------------------------------------------------------------------------
+  // Lower case, accents off, titles off, letters and spaces only: "Mrs. Zoë O'Brien" -> "zoe obrien".
+  var TITLES = { mr: 1, mrs: 1, ms: 1, miss: 1, mx: 1, dr: 1, prof: 1, sir: 1 };
+  function nameKey(raw) {
+    var s = String(raw == null ? '' : raw);
+    if (s.normalize) s = s.normalize('NFD').replace(/[̀-ͯ]/g, '');
+    s = s.toLowerCase().replace(/['’]/g, '').replace(/[^a-z\s-]/g, ' ').replace(/-/g, ' ');
+    return s.split(/\s+/).filter(function (t) { return t && !TITLES[t]; }).join(' ');
+  }
+  // Jaro-Winkler, 0 to 1.
+  function jaroWinkler(a, b) {
+    if (a === b) return a ? 1 : 0;
+    if (!a || !b) return 0;
+    var win = Math.max(0, Math.floor(Math.max(a.length, b.length) / 2) - 1), am = [], bm = [], m = 0, t = 0, i, j, k = 0;
+    for (i = 0; i < a.length; i++) {
+      for (j = Math.max(0, i - win); j < Math.min(b.length, i + win + 1); j++) {
+        if (bm[j] || a[i] !== b[j]) continue;
+        am[i] = bm[j] = true; m++; break;
+      }
+    }
+    if (!m) return 0;
+    for (i = 0; i < a.length; i++) {
+      if (!am[i]) continue;
+      while (!bm[k]) k++;
+      if (a[i] !== b[k]) t++;
+      k++;
+    }
+    var jaro = (m / a.length + m / b.length + (m - t / 2) / m) / 3, p = 0;
+    while (p < 4 && a[p] && a[p] === b[p]) p++;
+    return jaro + p * 0.1 * (1 - jaro);
+  }
+  // How alike two names are, 0 to 1. Needs a first AND a last name on both sides to go above 0.7: a first name on its
+  // own never makes two people one. An initial matches its name at 0.85 ("j smith" / "jane smith").
+  function nameSimilarity(a, b) {
+    var x = nameKey(a).split(' ').filter(Boolean), y = nameKey(b).split(' ').filter(Boolean);
+    if (!x.length || !y.length) return 0;
+    if (x.length < 2 || y.length < 2) return Math.round(jaroWinkler(x.join(' '), y.join(' ')) * 0.7 * 100) / 100;
+    function part(p, q) { return (p.length === 1 || q.length === 1) ? (p[0] === q[0] ? 0.85 : 0) : jaroWinkler(p, q); }
+    var last = jaroWinkler(x[x.length - 1], y[y.length - 1]), s = 0.4 * part(x[0], y[0]) + 0.6 * last;
+    if (last < 0.9) s = Math.min(s, 0.85); // surnames must be (nearly) the same: Smith / Smyth stay two people
+    return Math.round(s * 100) / 100;
+  }
+
+  // ---- One person across sources (Stage 6) ---------------------------------------------------------------------
+  // Matches each incoming person (from any reader) to a stored People row, or makes a new one. Never deletes and never
+  // re-keys a stored person, so a person_key once written stays put.
+  //   1. Same normalised email or same valid phone: the same person, confidence 1.
+  //   2. Otherwise a full name (first + last) at least opts.nameMin (0.9) alike, and NO clash (both have a phone and
+  //      the phones differ, or both have an email and the emails differ): joined, confidence = similarity x 0.88,
+  //      which is always below 0.9, so check is set and Lisa sees "check". Two people with the same first name and
+  //      different phones are never joined.
+  //   3. Otherwise a new person.
+  // When one incoming record links two stored people (email of one, phone of another) both stay; the later one is
+  // marked check "same as <key>?" for Lisa. Returns { people: [rows to upsert], assign: { enquiry_key: person_key } }.
+  var CONSENT_RANK = { 'do-not-contact': 3, unsubscribed: 2, ok: 1, unknown: 0, '': 0 };
+  function strongIds(p, dc) { return { em: emailKey(p.email), ph: phoneKey(p.phone_e164 || p.phone, dc) }; }
+  function clash(a, b, dc) {
+    var x = strongIds(a, dc), y = strongIds(b, dc);
+    return !!((x.ph && y.ph && x.ph !== y.ph) || (x.em && y.em && x.em !== y.em));
+  }
+  function addSource(list, s) {
+    var out = String(list || '').split(',').map(function (t) { return t.trim(); }).filter(Boolean);
+    String(s || '').split(',').forEach(function (t) { t = t.trim(); if (t && out.indexOf(t) < 0) out.push(t); });
+    return out.join(', ');
+  }
+  function stickyConsent(a, b) { return (CONSENT_RANK[b] || 0) > (CONSENT_RANK[a] || 0) ? b : (a || b || 'unknown'); }
+  // Merge two versions of one People row: blanks never overwrite, stated country beats inferred, sources add up,
+  // first contact is the earliest, last touch the latest, do-not-contact never switches itself off.
+  function mergePerson(stored, incoming) {
+    var out = {}, k; stored = stored || {}; incoming = incoming || {};
+    for (k in stored) if (Object.prototype.hasOwnProperty.call(stored, k)) out[k] = stored[k];
+    for (k in incoming) if (Object.prototype.hasOwnProperty.call(incoming, k) && k !== 'check' && k !== '_row' && (out[k] === undefined || out[k] === '') && incoming[k] !== '') out[k] = incoming[k];
+    if (incoming.country && (!out.country || (out.country_basis !== 'stated' && incoming.country_basis === 'stated'))) {
+      out.country = incoming.country; out.country_basis = incoming.country_basis || out.country_basis || '';
+    }
+    out.sources = addSource(out.sources, incoming.sources);
+    var f = [stored.first_contact_uk, incoming.first_contact_uk].filter(Boolean).sort();
+    out.first_contact_uk = f[0] || '';
+    var l = [stored.last_touch_uk, incoming.last_touch_uk].filter(Boolean).sort();
+    out.last_touch_uk = l.length ? l[l.length - 1] : '';
+    if (incoming.touches !== undefined && incoming.touches !== '') out.touches = incoming.touches;
+    out.consent = stickyConsent(String(stored.consent || ''), String(incoming.consent || ''));
+    out.do_not_contact = truthy(stored.do_not_contact) || truthy(incoming.do_not_contact) || CONSENT_RANK[out.consent] >= 2;
+    ['repeat_buyer', 'past_deposit'].forEach(function (c) { out[c] = truthy(stored[c]) || truthy(incoming[c]); });
+    var cs = stored.match_confidence, ci = incoming.match_confidence;
+    if (ci !== undefined && ci !== '') out.match_confidence = (cs === undefined || cs === '') ? Number(ci) : Math.min(Number(cs), Number(ci));
+    if (incoming.check && String(stored.check || '').indexOf(incoming.check) < 0) out.check = stored.check ? stored.check + '; ' + incoming.check : incoming.check;
+    if (out.check === undefined) out.check = '';
+    return out;
+  }
+  function nextRef(people) {
+    var n = 0;
+    (people || []).forEach(function (p) { var m = String(p.ref || '').match(/^C-(\d+)$/); if (m) n = Math.max(n, Number(m[1])); });
+    return n;
+  }
+  function pad4(n) { return ('000' + n).slice(-Math.max(4, String(n).length)); }
+  function resolvePeople(existing, incoming, opts) {
+    opts = opts || {};
+    var dc = opts.defaultCode, min = opts.nameMin || 0.9, people = [], touched = {}, assign = {};
+    (existing || []).forEach(function (p) { var c = {}; for (var k in p) if (k !== '_row') c[k] = p[k]; people.push(c); });
+    var refN = nextRef(people);
+    (incoming || []).forEach(function (r) {
+      var me = strongIds(r, dc), strong = [], at = -1, conf = 1, check = '';
+      people.forEach(function (p, i) { var x = strongIds(p, dc); if ((me.em && me.em === x.em) || (me.ph && me.ph === x.ph)) strong.push(i); });
+      if (strong.length) {
+        strong.sort(function (a, b) { return String(people[a].first_contact_uk || '9').localeCompare(String(people[b].first_contact_uk || '9')) || a - b; });
+        at = strong[0];
+        strong.slice(1).forEach(function (i) {
+          var note = 'same as ' + people[at].person_key + '?';
+          if (String(people[i].check || '').indexOf(note) < 0) { people[i] = mergePerson(people[i], { check: note, match_confidence: 0.5 }); touched[i] = 1; }
+        });
+      } else if (nameKey(r.name)) {
+        var best = -1, bs = 0;
+        people.forEach(function (p, i) {
+          if (clash(p, r, dc)) return;
+          var s = nameSimilarity(p.name, r.name);
+          if (s > bs) { bs = s; best = i; }
+        });
+        if (best >= 0 && bs >= min) { at = best; conf = Math.round(bs * 0.88 * 100) / 100; check = 'name match ' + conf; }
+      }
+      var row = { name: r.name || '', email: normaliseEmail(r.email), phone_e164: (normalisePhone(r.phone_e164 || r.phone, dc).e164) || '',
+        country: r.country || '', country_basis: r.country_basis || '', sources: r.channel || r.sources || '',
+        first_contact_uk: r.received_uk || r.first_contact_uk || '', consent: r.consent || 'unknown',
+        do_not_contact: truthy(r.do_not_contact), match_confidence: conf, check: check };
+      if (at < 0) {
+        var id = me.em || me.ph || ('row|' + (r.enquiry_key || people.length));
+        row.person_key = 'P-' + hash(id); row.ref = 'C-' + pad4(++refN);
+        people.push(mergePerson({}, row)); at = people.length - 1;
+      } else {
+        people[at] = mergePerson(people[at], row);
+      }
+      touched[at] = 1;
+      if (r.enquiry_key) assign[r.enquiry_key] = people[at].person_key;
+    });
+    return { people: Object.keys(touched).map(function (i) { return people[i]; }), assign: assign };
+  }
+
+  // ---- History: touches per person (Stage 6) -------------------------------------------------------------------
+  // From the Events tab (each event carries enquiry_key, and person_key once known) and the enquiry -> person map.
+  // Returns { person_key: { touches, first_uk, last_uk } }. A touch is any event (received, booked, replied ...).
+  function personHistory(events, personOf) {
+    var out = {};
+    (events || []).forEach(function (e) {
+      var pk = e.person_key || (personOf || {})[e.enquiry_key];
+      if (!pk) return;
+      var h = out[pk] = out[pk] || { touches: 0, first_uk: '', last_uk: '' };
+      h.touches++;
+      var at = String(e.at_uk || '');
+      if (at && (!h.first_uk || at < h.first_uk)) h.first_uk = at;
+      if (at && at > h.last_uk) h.last_uk = at;
+    });
+    return out;
+  }
+
+  // ---- Past deposits (Stage 6) ---------------------------------------------------------------------------------
+  // The litter allocation sheets (current tab and the old deposit list) are read by the engine and turned straight
+  // into hashed keys here: no name, email or number is kept, only 'em:', 'ph:' and 'nm:' hashes. A name-only match
+  // ('nm:') is weaker and sets check. repeatWords say a deposit ended in a sale (collected, sold ...).
+  var REPEAT_WORDS = /\b(collected|sold|home|went home|completed|bought|handed over)\b/i;
+  function depositKeys(rows, opts) {
+    opts = opts || {};
+    var dc = opts.defaultCode, re = opts.repeatWords || REPEAT_WORDS, out = {};
+    function put(k, sold) { if (!k) return; var o = out[k] = out[k] || { sold: false }; if (sold) o.sold = true; }
+    (rows || []).forEach(function (r) {
+      if (Object.prototype.hasOwnProperty.call(r, 'deposit') && !String(r.deposit == null ? '' : r.deposit).trim()) return; // a lead, not a deposit
+      var sold = re.test([r.status, r.outcome, r.stage, r.section].join(' '));
+      put(emailKey(r.email), sold);
+      put(phoneKey(r.phone || r.whatsapp, dc), sold);
+      var nk = nameKey(r.name);
+      if (nk.split(' ').length >= 2) put('nm:' + hash(nk), sold);
+    });
+    return out;
+  }
+  // Allocation-sheet values (header row first) to plain rows for depositKeys(). Column names vary between the current
+  // tab and the old deposit list, so each field takes the first header that fits. A row counts as a deposit only when
+  // a deposit column holds something (leads with no deposit are skipped by depositKeys).
+  var DEP_COLS = { name: /^(name|xero_contact|contact|buyer)$/i, email: /^e-?mail$/i, phone: /^(whatsapp|phone|mobile)$/i,
+    status: /^(status|section)$/i, outcome: /^(outcome.*|old_.*stage)$/i, deposit: /^(deposit_date|first_deposit|deposit_total|deposit)$/i };
+  function depositRowsFrom(values) {
+    var v = values || [], head = (v[0] || []).map(function (h) { return String(h == null ? '' : h).trim(); }), at = {};
+    Object.keys(DEP_COLS).forEach(function (f) {
+      at[f] = [];
+      head.forEach(function (h, i) { if (DEP_COLS[f].test(h)) at[f].push(i); });
+    });
+    return v.slice(1).map(function (r) {
+      var o = {};
+      Object.keys(at).forEach(function (f) {
+        if (!at[f].length) return;
+        o[f] = at[f].map(function (i) { return r[i] == null ? '' : String(r[i]).trim(); }).filter(Boolean).join(' ');
+      });
+      return o;
+    });
+  }
+  // Flags for one person from depositKeys(). Returns { past_deposit, repeat_buyer, check }.
+  function depositFlags(person, keys, dc) {
+    keys = keys || {};
+    var ids = strongIds(person || {}, dc), hit = keys[ids.em] || keys[ids.ph], check = '';
+    if (!hit) {
+      var nk = nameKey((person || {}).name);
+      if (nk.split(' ').length >= 2) { hit = keys['nm:' + hash(nk)]; if (hit) check = 'deposit list match on name only'; }
+    }
+    return { past_deposit: !!hit, repeat_buyer: !!(hit && hit.sold), check: check };
+  }
+
+  // ---- What they asked for (Stage 7) ---------------------------------------------------------------------------
+  // Sex, size, colour, coat and breed words in free text. Only fills what the enquiry row leaves blank.
+  var PREF_WORDS = {
+    sex: [['female', /\b(girls?|female|bitch(es)?)\b/i], ['male', /\b(boys?|males?)\b/i]],
+    size: [['miniature', /\b(mini(ature)?)\b/i], ['medium', /\bmedium\b/i], ['standard', /\b(standard|large)\b/i]],
+    colour: [['chocolate', /\bchoc(olate)?\b/i], ['caramel', /\bcaramel\b/i], ['cream', /\bcream\b/i], ['black', /\bblack\b/i],
+      ['red', /\bred\b/i], ['apricot', /\bapricot\b/i], ['gold', /\bgold(en)?\b/i], ['parti', /\bparti\b/i], ['phantom', /\bphantom\b/i],
+      ['cafe', /\bcaf[eé]\b/i], ['lavender', /\blavender\b/i], ['chalk', /\bchalk\b/i]],
+    coat: [['fleece', /\bfleece\b/i], ['wool', /\bwool(ly)?\b/i], ['hair', /\bhair coat\b/i]],
+    breed_interest: [['Cobberdog', /\bcobber(dog)?s?\b/i], ['Labradoodle', /\b(labra)?doodles?\b/i]]
+  };
+  function extractPrefs(text, row) {
+    var t = String(text || ''), r = row || {}, out = {};
+    Object.keys(PREF_WORDS).forEach(function (f) {
+      if (r[f]) { out[f] = r[f]; return; }
+      var hits = PREF_WORDS[f].filter(function (w) { return w[1].test(t); }).map(function (w) { return w[0]; });
+      if (f === 'breed_interest' && hits.length > 1) out[f] = 'either';
+      else if (hits.length === 1) out[f] = hits[0];
+      else out[f] = '';
+    });
+    return out;
+  }
+  // Does one pup fit what the enquiry asked? A field the enquiry leaves blank (or "either") fits anything.
+  function pupFits(prefs, pup) {
+    prefs = prefs || {}; pup = pup || {};
+    return ['sex', 'size', 'colour', 'coat'].every(function (f) {
+      var want = String(prefs[f] || '').toLowerCase(), have = String(pup[f] || '').toLowerCase();
+      return !want || want === 'either' || !have || have.indexOf(want) >= 0;
+    });
+  }
+
+  // When they want a pup, in months from now (0 = now), or null when the text does not say.
+  var MONTHS = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  var SEASON = { spring: 2, summer: 5, autumn: 8, fall: 8, winter: 11 }; // the month a season starts (0 = January)
+  function timingMonths(text, now) {
+    var t = String(text || '').toLowerCase(), d = new Date(toMs(now) || Date.now());
+    var y0 = d.getUTCFullYear(), m0 = d.getUTCMonth();
+    if (/\b(asap|as soon as possible|right away|straight away|now|this month|immediately|ready now)\b/.test(t)) return 0;
+    if (/\bnext month\b/.test(t)) return 1;
+    var m = t.match(/\b(?:in|within)\s+(\d{1,2})\s*(weeks?|months?)\b/);
+    if (m) return m[2].charAt(0) === 'w' ? Math.round(Number(m[1]) / 4.3) : Number(m[1]);
+    if (/\bnext year\b/.test(t)) return 12 - m0;
+    var yr = (t.match(/\b(20\d\d)\b/) || [])[1];
+    var mon = -1;
+    MONTHS.forEach(function (n, i) { if (mon < 0 && new RegExp('\\b' + n + '[a-z]*\\b').test(t)) mon = i; });
+    if (mon < 0) Object.keys(SEASON).forEach(function (n) { if (mon < 0 && new RegExp('\\b' + n + '\\b').test(t)) mon = SEASON[n]; });
+    if (mon < 0 && !yr) return null;
+    var y = yr ? Number(yr) : y0;
+    if (mon < 0) mon = yr && Number(yr) > y0 ? 0 : m0;
+    var diff = (y - y0) * 12 + (mon - m0);
+    if (diff < 0 && !yr) diff += 12;
+    return Math.max(0, diff);
+  }
+
+  // ---- Triage and scoring (Stage 7) ----------------------------------------------------------------------------
+  // Score 0 to 100 from weights Lisa keeps in Settings (score_weights, score_bands). Every score comes with its top 3
+  // reasons. Sensitive things (allergies, a neurodiverse home, young children, export to a hard country) are flags
+  // that are SHOWN, never scored down: the same message with or without them scores the same.
+  var WEIGHTS = { timing: 20, fit: 15, deposit: 15, home: 10, uk: 10, repeat: 15, call: 15 };
+  var BAND_AT = { hot: 70, warm: 45, cool: 20 };
+  function parseNumbers(text, defaults) {
+    var out = {}, k;
+    for (k in defaults) out[k] = defaults[k];
+    String(text || '').split(',').forEach(function (p) {
+      var m = p.match(/^\s*([a-z-]+)\s*=\s*(-?\d+(\.\d+)?)\s*$/i);
+      if (m && Object.prototype.hasOwnProperty.call(defaults, m[1].toLowerCase())) out[m[1].toLowerCase()] = Number(m[2]);
+    });
+    return out;
+  }
+  var DEPOSIT_WORDS = /\b(deposit|ready to (pay|commit|go)|reserve|secure (a|one|our)|put (a|my|our) name down|waiting list|book (a|one|our) pup|how do (i|we) (pay|reserve|book))\b/i;
+  var HOME_WORDS = /\b(garden|fenced|work(s|ing)? from home|wfh|retired|at home all day|had dogs|have had|owned (a )?dogs?|experience(d)? (with|owner)|grew up with dogs|current dog|our (old|last) dog|dog walker|puppy class(es)?)\b/i;
+  var SENSITIVE = [
+    ['allergies', /\b(allerg\w*|asthma\w*)\b/i],
+    ['neurodiverse home', /\b(autis\w*|asd|adhd|neurodiver\w*|sensory needs?|special needs|send)\b/i],
+    ['young children', /\b(toddlers?|bab(y|ies)|newborn|young (children|kids|family)|little ones|under (5|five)s?|(1|2|3|4|one|two|three|four)[- ]?(year|yr)[- ]?old)\b/i]
+  ];
+  var HOME_COUNTRIES = ['United Kingdom', 'Jersey', 'Guernsey', 'Isle of Man'];
+  function listOf(v) { return Array.isArray(v) ? v : String(v || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean); }
+  // e: an Enquiries row. ctx: { now, person (People row), openPups: [Litters rows], weights, bands, simpleCountries,
+  // hardCountries }. Returns { score, band, reasons: [3 at most, never none], flags: [], prefs }.
+  function scoreEnquiry(e, ctx) {
+    e = e || {}; ctx = ctx || {};
+    var w = ctx.weights && typeof ctx.weights === 'object' ? Object.assign({}, WEIGHTS, ctx.weights) : parseNumbers(ctx.weights, WEIGHTS);
+    var b = ctx.bands && typeof ctx.bands === 'object' ? Object.assign({}, BAND_AT, ctx.bands) : parseNumbers(ctx.bands, BAND_AT);
+    var text = [e.question_summary, e.timing, e.household_flags].filter(Boolean).join(' · ');
+    var prefs = extractPrefs(text, e), got = [], flags = [];
+    function add(points, why) { if (points > 0) got.push({ p: points, why: why + ' (+' + points + ')' }); }
+    var tm = timingMonths(e.timing || text, ctx.now);
+    if (tm !== null && tm <= 3) add(w.timing, 'Wants a pup within 3 months');
+    else if (tm !== null && tm <= 6) add(Math.round(w.timing / 2), 'Wants a pup in 4 to 6 months');
+    var open = (ctx.openPups || []).filter(function (p) { return /^(open|available|for sale)$/i.test(String(p.status || '').trim()); });
+    if (e.kind === 'puppy' || !e.kind) {
+      var fits = open.filter(function (p) { return pupFits(prefs, p); });
+      var stated = ['sex', 'size', 'colour', 'coat'].some(function (f) { return prefs[f]; });
+      if (fits.length && stated) add(w.fit, fits.length + ' open pup' + (fits.length > 1 ? 's fit' : ' fits') + ' what they asked');
+      else if (fits.length) add(Math.round(w.fit / 2), 'Open pups now; no preference stated yet');
+    }
+    if (DEPOSIT_WORDS.test(text)) add(w.deposit, 'Talks about a deposit or reserving');
+    if (HOME_WORDS.test(text)) add(w.home, 'Home and dog experience sound right');
+    var simple = listOf(ctx.simpleCountries);
+    if (HOME_COUNTRIES.indexOf(e.country) >= 0) add(w.uk, 'Lives in the UK');
+    else if (e.country && simple.indexOf(e.country) >= 0) add(Math.round(w.uk / 2), 'Simple import (' + e.country + ')');
+    var person = ctx.person || {};
+    if (truthy(person.repeat_buyer)) add(w.repeat, 'Has bought from us before');
+    else if (truthy(person.past_deposit)) add(Math.round(w.repeat / 2), 'Paid a deposit before');
+    if (e.channel === 'calendly' || stageRank(e.stage) >= stageRank('call-booked')) add(w.call, 'Booked a call');
+    SENSITIVE.forEach(function (s) { if (s[1].test(text)) flags.push(s[0]); });
+    var hard = listOf(ctx.hardCountries);
+    if (e.country && hard.indexOf(e.country) >= 0) flags.push('export to ' + e.country);
+    var score = Math.max(0, Math.min(100, got.reduce(function (a, g) { return a + g.p; }, 0)));
+    got.sort(function (x, y) { return y.p - x.p; });
+    var reasons = got.slice(0, 3).map(function (g) { return g.why; });
+    if (!reasons.length) reasons = ['No fit signals yet: nothing on timing, home, deposit or a call (0)'];
+    var band = score >= b.hot ? 'hot' : score >= b.warm ? 'warm' : score >= b.cool ? 'cool' : 'not-a-fit';
+    return { score: score, band: band, reasons: reasons, flags: flags, prefs: prefs };
+  }
+
+  // ---- Do-not-contact gate (Stage 6; used by every draft and follow-up writer) ---------------------------------
+  // A person or enquiry marked do-not-contact or unsubscribed is never drafted to and never gets a follow-up.
+  function mayContact(person, enquiry) {
+    var p = person || {}, e = enquiry || {};
+    if (truthy(p.do_not_contact) || CONSENT_RANK[p.consent] >= 2) return { ok: false, why: p.consent && CONSENT_RANK[p.consent] >= 2 ? p.consent : 'do-not-contact' };
+    if (truthy(e.do_not_contact) || CONSENT_RANK[e.consent] >= 2) return { ok: false, why: e.consent && CONSENT_RANK[e.consent] >= 2 ? e.consent : 'do-not-contact' };
+    return { ok: true, why: '' };
+  }
+  // Split FollowUps (or Drafts) rows into the ones that may be written and the ones a contact rule blocks.
+  function gateContact(items, peopleByKey, enquiriesByKey) {
+    var keep = [], blocked = [];
+    (items || []).forEach(function (it) {
+      var g = mayContact((peopleByKey || {})[it.person_key], (enquiriesByKey || {})[it.enquiry_key]);
+      if (g.ok) keep.push(it); else blocked.push({ item: it, why: g.why });
+    });
+    return { keep: keep, blocked: blocked };
+  }
+
   // ---- Merging one enquiry row ---------------------------------------------------------------------------------
   var STAGES = ['new', 'replied', 'call-booked', 'call-held', 'offered', 'deposit', 'balance', 'collected', 'lost', 'parked'];
   var ADULT_STAGES = ['asked', 'details-sent', 'viewing', 'agreed', 'handed-over'];
@@ -265,7 +604,7 @@
     Enquiries: ['key', 'person_key', 'source', 'source_ref', 'received_uk', 'channel', 'kind', 'brand', 'country',
       'country_basis', 'breed_interest', 'size', 'colour', 'coat', 'sex', 'timing', 'household_flags', 'question_summary',
       'score', 'band', 'stage', 'next_step', 'next_due_uk', 'owner', 'do_not_contact', 'consent', 'litter_ref', 'pup_ref',
-      'lost_reason', 'flag', 'ref', 'updated_uk'],
+      'lost_reason', 'flag', 'ref', 'score_reasons', 'updated_uk'],
     People: ['person_key', 'ref', 'name', 'email', 'phone_e164', 'country', 'country_basis', 'sources', 'first_contact_uk',
       'last_touch_uk', 'touches', 'repeat_buyer', 'past_deposit', 'do_not_contact', 'consent', 'match_confidence', 'check', 'updated_uk'],
     Events: ['event_key', 'enquiry_key', 'person_key', 'at_uk', 'channel', 'type', 'detail', 'source_ref'],
@@ -664,7 +1003,10 @@
     formFields: formFields, classifyEmail: classifyEmail, gmailQuery: gmailQuery,
     consentFrom: consentFrom, junkReasons: junkReasons, workspaceGuard: workspaceGuard, cfRecords: cfRecords,
     matchSubmissions: matchSubmissions, hubspotRecords: hubspotRecords, HAND_CHANNELS: HAND_CHANNELS, HAND_MAX: HAND_MAX,
-    addRequest: addRequest, parsePasted: parsePasted
+    addRequest: addRequest, parsePasted: parsePasted,
+    nameKey: nameKey, nameSimilarity: nameSimilarity, mergePerson: mergePerson, resolvePeople: resolvePeople,
+    personHistory: personHistory, depositKeys: depositKeys, depositRowsFrom: depositRowsFrom, depositFlags: depositFlags, mayContact: mayContact, gateContact: gateContact,
+    extractPrefs: extractPrefs, pupFits: pupFits, timingMonths: timingMonths, scoreEnquiry: scoreEnquiry, WEIGHTS: WEIGHTS, BAND_AT: BAND_AT
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

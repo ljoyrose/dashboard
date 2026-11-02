@@ -49,6 +49,8 @@ function readType({ sizes, weights }) {
   let n = 0;
   for (const e of document.querySelectorAll('body *')) {
     if (!seen(e) || icon(e) || e.closest('#credential_picker_container, .sr')) continue;
+    // A phone's bottom-tab count is a dot with no number showing (Lisa's pick b; tab-dots.spec.js pins it): not words.
+    if (innerWidth < 768 && e.matches('nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt')) continue;
     if (![...e.childNodes].some((x) => x.nodeType === 3 && x.textContent.trim())) continue;
     n++;
     const s = getComputedStyle(e), px = Math.round(parseFloat(s.fontSize) * 100) / 100;
