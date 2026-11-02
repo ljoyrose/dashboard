@@ -60,6 +60,17 @@ const test = base.test.extend({
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ range: 'OWNED_TOOLS!A1:E', majorDimension: 'ROWS', values: OWNED.values }) });
       });
 
+      // Dashboard Main hub tiles (HubRead in index.html) read the GA book (Food) and the Marketplace tab, GET only. On the Dashboard page alone
+      // they get empty sheets (so the tiles show 0, no rows); a spec that wants numbers answers with page.route, which wins.
+      // Any other page calling Sheets still falls through to the catch-all above and fails the test.
+      const homePath = new RegExp('^' + require('./site').esc(require('./site').BASE) + '(index\\.html)?$');
+      await context.route(/^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\/[^/?]+\/values(:batchGet\?|\/Marketplace)/, (route) => {
+        let from = '';
+        try { from = new URL(route.request().frame().url()).pathname; } catch (e) { from = ''; }
+        if (!homePath.test(from)) return route.fallback();
+        const batch = /:batchGet\?/.test(route.request().url());
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(batch ? { valueRanges: [{}, {}, {}] } : { range: 'Marketplace!A2:L', majorDimension: 'ROWS' }) });
+      });
       // Projects tile numbers (Projects Hub Sheet, INDEX tab): answered from invented rows, after the catch-all so it wins.
       const PH_INDEX = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'projects-hub-index.json'), 'utf8'));
       await context.route(/^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\/[^/]+\/values\/INDEX\?/, (route) =>
