@@ -171,6 +171,42 @@
     root.document.addEventListener('keydown', function (e) { var p = lookParts(); if (e.key === 'Escape' && p.m && !p.m.hidden) { e.preventDefault(); showHouseLook(false, true); } });
   }
 
+  // ---- Top bar: the hub's name in the middle (Lisa's pick A, 2 Nov). From 768px up, house.css gives the name all the room between
+  // the left and right icons (so it never overlaps them); this pads its shorter side so the words centre on the whole bar, the same
+  // spot on every page. The padding never squeezes the name below 120px (or its own width): past that it moves aside, then cuts with ...
+  // On a phone the name stays left after the Home icon: house.css uses the padding only from 768px up, so a resize never overflows.
+  var NAME_MIN = 120, nameFrame = 0;
+  function centreName() {
+    nameFrame = 0;
+    var doc = root.document, wide = root.matchMedia && root.matchMedia('(min-width: 768px)').matches;
+    Array.prototype.forEach.call(doc.querySelectorAll('header .house-row > h1'), function (h) {
+      h.style.removeProperty('--house-name-pl'); h.style.removeProperty('--house-name-pr');
+      if (!wide) return;
+      var r = h.parentNode.getBoundingClientRect(), b = h.getBoundingClientRect();
+      if (!b.width) return;
+      var rg = doc.createRange(); rg.selectNodeContents(h);
+      var words = rg.getBoundingClientRect().width, d = (r.right - b.right) - (b.left - r.left);
+      var pad = Math.min(Math.abs(d), Math.max(0, b.width - Math.min(words, NAME_MIN)));
+      if (pad > 0.5) h.style.setProperty(d > 0 ? '--house-name-pl' : '--house-name-pr', pad + 'px');
+    });
+  }
+  function centreNameSoon() { if (!nameFrame) nameFrame = (root.requestAnimationFrame || root.setTimeout)(centreName); }
+  function watchName() {
+    var doc = root.document, rows = doc.querySelectorAll('header .house-row');
+    if (!rows.length) return;
+    centreName();
+    if (root.ResizeObserver) {
+      // The row and everything in it except the name (its own padding would start a loop): buttons that show, hide or change words.
+      var ro = new root.ResizeObserver(centreNameSoon);
+      Array.prototype.forEach.call(rows, function (row) { ro.observe(row); Array.prototype.forEach.call(row.children, function (c) { if (c.tagName !== 'H1') ro.observe(c); }); });
+    }
+    root.addEventListener('resize', centreNameSoon);
+    if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(centreNameSoon, function () {});
+  }
+  if (root.document) {
+    if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', watchName); else watchName();
+  }
+
   // ---- Bottom tabs: the More menu (Lisa's picks, 2 Nov). Pages write the bar (house.css section 6); More is a button with
   // data-house-more and aria-controls naming its menu. One click opens or shuts it; choosing a view, a click outside, Esc or a new
   // address shuts it (Esc puts the focus back on More). Delegated, so it keeps working when a page redraws its bar.

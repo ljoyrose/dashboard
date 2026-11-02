@@ -46,9 +46,8 @@ body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 Lexend,
 a{color:inherit;text-underline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .hidden{display:none!important}
-.wrap,.hin{max-width:1600px;margin:0 auto;padding-left:24px;padding-right:24px}
+.wrap,.hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
 .wrap{padding-bottom:140px}
-@media (max-width:600px){.wrap,.hin{padding-left:16px;padding-right:16px}}
 .ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}   /* line icons drawn in the page (no icon font) */
 
 /* ---- Frame: dark top bar ---- */
@@ -287,7 +286,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:14px}ul
 <span class="lookwrap" data-house-look></span>
 <button type="button" class="btn house-ib hidden" id="cdSignout" data-signout="1" aria-label="Sign out" title="Sign out"><svg aria-hidden="true"><use href="#hi-logout"/></svg></button>
 </div></header>
-<div class="wrap"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
+<div class="wrap house-page"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
 <div class="next" id="next"></div></div>
 <nav id="nav" class="house-tabs" aria-label="Sections"></nav>
 <script>

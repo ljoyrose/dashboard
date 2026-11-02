@@ -36,7 +36,8 @@ a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; 
 header { background: var(--frame); color: var(--frame-ink); }
 header .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
 /* 3a The top bar (Lisa's pick A, 2 Nov 2026): ONE row, --house-head high on every page, desktop and phone; it never wraps or grows.
-   Left to right: Home icon (not on home), the hub's dot + name (cut short with ... when there is no room), a spacer, the read time
+   Left to right: Home icon (an empty place the same size on home), the hub's dot + name (centred from 768px up, see below; cut
+   short with ... when there is no room), a spacer (phones), the read time
    (desktop), then icon-only buttons (Search, Refresh, Look, Sign out), each with a name for screen readers. Sign in stays a word
    button. On a phone (600px or less) the read time and Sign out leave the bar and show inside the Look menu (toolkit.js builds
    the menu and the one 24px outline icon set). */
@@ -47,6 +48,7 @@ header.house-head { height: var(--house-head); min-height: var(--house-head); ma
 .house-row > h1 a { color: var(--frame-ink); text-decoration: none; }
 .house-row > h1 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: middle; position: relative; top: -2px; }
 .house-row > .house-sp { flex: 1 1 0; min-width: 0; }
+.house-slot { flex: none; width: var(--house-btn); height: var(--house-btn); }   /* the Dashboard has no Home icon: an empty place the same size */
 .house-row .house-read { font-size: var(--house-read-size); font-weight: 400; white-space: nowrap; color: var(--frame-ink); }
 .house-row .house-read:empty { display: none; }
 .house-row .btn { white-space: nowrap; }
@@ -66,11 +68,26 @@ header .btn.house-mitem > svg { width: var(--house-icon); height: var(--house-ic
 @media (hover: hover) { header .btn.house-mitem:hover { outline-color: var(--sel-bd); background-color: var(--hov); } }
 header [role="dialog"] :focus-visible { outline-color: var(--ink); }
 .house-phone { display: none !important; }
+/* The name's place (Lisa's pick A, 2 Nov 2026): on a laptop or tablet (768px and up) the hub's name sits in the middle of the bar,
+   the same spot on every page whatever icons sit left and right. It takes the room between them (so it can never overlap them,
+   and is cut short with ... first); toolkit.js pads its short side (--house-name-pl / -pr, used only here) so the words centre on the whole bar. On a phone it stays
+   left, straight after the Home icon (or the Dashboard's empty .house-slot). */
+@media (min-width: 768px) {
+  .house-row > h1 { flex: 1 1 0; box-sizing: border-box; text-align: center; padding-left: var(--house-name-pl, 0px); padding-right: var(--house-name-pr, 0px); }
+  html:not(.dash-locked) .house-row > .house-sp { display: none; }   /* signed out, auth.js hides the name off-screen: the spacer keeps Sign in right */
+}
 @media (max-width: 600px) {
+  .house-slot { width: var(--house-btn-phone); height: var(--house-btn-phone); }
   .btn.house-ib { width: var(--house-btn-phone); min-width: var(--house-btn-phone); height: var(--house-btn-phone); }
   .house-row .house-read, .house-row [data-house-read], .house-row :is([data-action="signout"], [data-signout]) { display: none !important; }
   .house-phone { display: flex !important; }
 }
+
+/* 3b The page frame (Lisa, 2 Nov 2026): every page uses the full window. The top bar's row and each page's frame (.house-page)
+   keep the same side gap, --house-gutter (24px; 16px on a phone), so the bar, the page and the bottom tabs line up to the same
+   edges on every page. Inside, grids reflow; long text may keep a sensible line length inside its card. */
+header.house-head > .house-row, .house-page.house-page { box-sizing: border-box; width: auto; max-width: none; margin-left: 0; margin-right: 0;
+  padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
 
 /* 4 Everything you press: one control line, 1px, 12px corners, 14px / 600, 36px (44px on a phone). Never starts out ink. */
 .btn, button.pill, a.pill, button.chip, a.chip, .ch, .fbtn, .achip, .more, .undo, .lk, .ico, .copy, .flagb, .subnav a, .seg button, .vsw button {

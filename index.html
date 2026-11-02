@@ -46,7 +46,7 @@
   button, input { font: inherit; color: inherit; }
   a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
   a:hover { text-decoration-thickness: 2px; }
-  .wrap { max-width: calc(66ch + 32px); margin: 0 auto; padding: 0 16px; }
+  .wrap { margin: 0 auto; padding: 0 var(--house-gutter); }
   .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
   /* Header: the only fixed element (desktop only). */
@@ -215,9 +215,8 @@
   .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--muted); cursor: help; vertical-align: middle; }
   .info:hover { border-color: var(--muted); }
 
-  /* One page width everywhere (Lisa, 20 Oct): the full window up to 1600px, 24px edge; phones 16px. No wasted space. */
-  .wrap, .wrap.wide, .wide, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
-  @media (max-width: 600px) { .wrap, .wide, .hin { padding-left: 16px; padding-right: 16px; } }
+  /* One page width everywhere (Lisa, 2 Nov): the full window, the house side gap (--house-gutter: 24px; phones 16px). */
+  .wrap, .wrap.wide, .wide, .hin { max-width: none; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
 
   /* Fewer scrolls: on wide screens file lists use 2-3 columns. */
   @media (min-width: 900px) { ul.files { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 8px 12px; } ul.files > li { margin: 0; } }
@@ -381,6 +380,7 @@
 
 <header class="house-head">
   <div class="wrap top house-row">
+    <span class="house-slot" aria-hidden="true"></span>
     <h1>Lisa Dashboard</h1>
     <span class="house-sp" aria-hidden="true"></span>
     <span id="readStamp" class="readstamp house-read" data-house-read>Not read</span>
@@ -392,7 +392,7 @@
   </div>
 </header>
 
-<main id="content" class="wrap">
+<main id="content" class="wrap house-page">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="hereBox" class="here hidden"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Dashboard</h2></div>
   <div id="view" data-view="map"></div>
@@ -409,7 +409,7 @@
   </div>
 </nav>
 
-<footer id="pageFoot" class="wrap hidden"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
+<footer id="pageFoot" class="wrap house-page hidden"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
 
 <script>
 (function () {

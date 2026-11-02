@@ -42,8 +42,7 @@
   .skip:focus { left: 8px; }
   .skip-label, .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .wrap { max-width: 1600px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
-  @media (max-width: 600px) { .wrap { padding-left: 16px; padding-right: 16px; } }
+  .wrap { max-width: none; margin: 0 auto; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }   /* the full window, the house side gap */
 
   /* Frame: dark top bar (never black). */
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
@@ -231,7 +230,7 @@
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="icon" aria-hidden="true"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
   </div>
 </header>
-<main id="content" class="wrap">
+<main id="content" class="wrap house-page">
   <div id="banner" class="banner hidden" role="status"></div>
   <div class="here"><span></span><h2 id="hereTitle" tabindex="-1">Now</h2></div>
   <div id="view"></div>
@@ -248,7 +247,7 @@
     </div>
   </div>
 </nav>
-<footer class="wrap"><span class="info" tabindex="0" title="Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time">i<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"> Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time</span></span></footer>
+<footer class="wrap house-page"><span class="info" tabindex="0" title="Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time">i<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"> Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time</span></span></footer>
 
 <script>
 (function () {

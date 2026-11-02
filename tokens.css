@@ -85,6 +85,7 @@
   --house-head: 56px;              /* the top bar (Lisa's pick A, 2 Nov): one row, this high on every page, desktop and phone */
   --house-head-space: 8px;         /* between the things in the top bar */
   --house-head-name: 20px;         /* the hub's name in the top bar */
+  --house-gutter: 24px;            /* the page frame (Lisa, 2 Nov): every page uses the full window with this side gap; 16px on a phone */
   --house-read-size: 14px;         /* the small read time in the top bar */
   --house-icon: 20px;              /* an icon inside an icon-only button (24px outline icons, stroke 2) */
   --house-icon-stroke: 2;
@@ -110,6 +111,7 @@
   --house-ok: var(--ljr-5-text); --house-ok-tint: var(--ljr-5-tint);
   --house-risk: var(--ljr-2-text); --house-risk-tint: var(--ljr-2-tint);
 }
+@media (max-width: 600px) { :root { --house-gutter: 16px; } }
 :root.look-cool {
   --house-paper: #F2F4F6; --house-canvas: #E4E9EE; --house-card: #FFFFFF; --house-ink: #2B3035; --house-muted: #5B646D;
   --house-soft-line: #B9C3CC; --house-soft: #D9E0E6; --house-press: #7A8692;
