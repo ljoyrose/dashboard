@@ -1,3 +1,4 @@
+const { tabClick, tabTo } = require('../support/tabs');
 // JOB 34 (group A): home page views, states and keyboard paths no other spec checks.
 // Pretend Google and Drive only. Every row is invented.
 const { test, expect, sideScroll } = require('../fixtures/job34/load');
@@ -27,10 +28,11 @@ test.describe('Home: views and states', () => {
     await page.goto('./');
     await signIn(page);
     const want = [['bin', 'Bin'], ['changes', 'Changes'], ['drives', 'Drives'], ['drives/shared', 'Shared drives'], ['drives/readfirst', 'Read first'],
-      ['drives/work', 'Work My Drive'], ['drives/personal-drive', 'Personal Drive'], ['drives/usb', 'Drive check'], ['map', 'Dashboard']];
+      ['drives/work', 'Work My Drive'], ['drives/personal-drive', 'Personal Drive'], ['drives/usb', 'Drive check'], ['decide', 'Decide'], ['do', 'Do'], ['map', '']];
     for (const [h, name] of want) {
       await page.evaluate((x) => { location.hash = '#/' + x; }, h);
-      await expect(page).toHaveTitle(new RegExp('^(\\(\\d+\\) )?' + name + ' · Lisa Dashboard$'));
+      // Main (the map) is just "Dashboard"; every other view is "<view> · Dashboard".
+      await expect(page).toHaveTitle(new RegExp('^(\\(\\d+\\) )?' + (name ? name + ' · ' : '') + 'Dashboard$'));
     }
   });
 
@@ -41,7 +43,7 @@ test.describe('Home: views and states', () => {
     await expect(page.locator('#sweepCard')).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 400));
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-    await page.locator('#mainNav a[data-nav="bin"]').click();
+    await tabClick(page, '#mainNav a[data-nav="bin"]');
     await expect(page).toHaveURL(/#\/bin$/);
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
     await expect(page.locator('#hereTitle')).toHaveText('Bin');
@@ -55,6 +57,13 @@ test.describe('Home: views and states', () => {
       await page.keyboard.press('Tab');
       const k = await page.evaluate(() => { const a = document.activeElement; return a ? (a.getAttribute('data-nav') || a.id || '') : ''; });
       if (['map', 'drives', 'bin', 'changes', 'refreshBtn', 'signOutBtn'].includes(k)) reached.add(k);
+    }
+    // Drives, Bin and Changes sit under More (Lisa's tab picks, 2 Nov): Tab to More, Enter opens it, Tab walks its menu.
+    for (const k of ['drives', 'bin', 'changes']) {
+      await page.keyboard.press('Escape');
+      await page.locator('#mainNav a[data-nav="map"]').focus();
+      expect(await tabTo(page, `#mainNav a[data-nav="${k}"]`, 20), k + ' reached by Tab').toBe(true);
+      reached.add(k);
     }
     expect([...reached].sort()).toEqual(['bin', 'changes', 'drives', 'map', 'refreshBtn', 'signOutBtn']);
     await page.locator('#mainNav a[data-nav="changes"]').focus();

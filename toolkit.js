@@ -6,7 +6,7 @@
   var TRIES = 4;
   var WAITS = [1000, 2000, 4000];
   var JITTER_MS = 250;
-  var BUSY_TEXT = 'Google is busy right now (too many requests). The dashboard tried 4 times. Wait a minute, then try again.';
+  var BUSY_TEXT = 'Google is busy. Wait a minute, then try again.';
 
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
@@ -66,7 +66,23 @@
     palette: '<path d="M12 21a9 9 0 0 1 0-18c4.97 0 9 3.58 9 8 0 1.06-.47 2.08-1.32 2.83-.84.75-1.99 1.17-3.18 1.17H14a2 2 0 0 0-1 3.75A1.3 1.3 0 0 1 12 21"/><circle cx="8.5" cy="10.5" r="1"/><circle cx="12.5" cy="7.5" r="1"/><circle cx="16.5" cy="10.5" r="1"/>',
     logout: '<path d="M14 8V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-2"/><path d="M9 12h12l-3-3"/><path d="M18 15l3-3"/>',
     plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
-    apps: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/><path d="M14 7h6M17 4v6"/>'
+    apps: '<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/><path d="M14 7h6M17 4v6"/>',
+    // The bottom tabs' icons (Lisa's picks, 2 Nov): <span class="hic"><svg class="hi"><use href="#hi-t-NAME"/></svg></span>.
+    't-main': '<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>',
+    't-do': '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3l5-6"/>',
+    't-decide': '<path d="M12 4v16M6 8h12M6 8l-3 6h6zM18 8l-3 6h6z"/>',
+    't-cal': '<rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/>',
+    't-money': '<path d="M16.7 8a3 3 0 0 0-2.7-2h-4a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6h-4a3 3 0 0 1-2.7-2M12 3v3M12 18v3"/>',
+    't-user': '<circle cx="12" cy="8" r="4"/><path d="M5 20a7 7 0 0 1 14 0"/>',
+    't-chat': '<path d="M4 18l2-4a8 6 0 1 1 3 2z"/>',
+    't-box': '<path d="M4 8l8-4l8 4v8l-8 4l-8-4zM4 8l8 4l8-4M12 12v8"/>',
+    't-bag': '<path d="M5 8h14l-1 12h-12zM9 8a3 3 0 0 1 6 0"/>',
+    't-truck': '<path d="M3 7h11v9h-11zM14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
+    't-paw': '<circle cx="12" cy="15" r="4"/><circle cx="6" cy="9" r="2"/><circle cx="18" cy="9" r="2"/><circle cx="10" cy="5" r="2"/><circle cx="14" cy="5" r="2"/>',
+    't-line': '<path d="M4 12h16M7 8v8M12 8v8M17 8v8"/>',
+    't-room': '<path d="M4 20v-10l8-6l8 6v10z"/>',
+    't-world': '<circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/>',
+    't-more': '<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>'
   };
   function addIcons() {
     var doc = root.document; if (!doc || !doc.body || doc.getElementById('houseIcons')) return;
@@ -155,6 +171,84 @@
     root.document.addEventListener('keydown', function (e) { var p = lookParts(); if (e.key === 'Escape' && p.m && !p.m.hidden) { e.preventDefault(); showHouseLook(false, true); } });
   }
 
+  // ---- Top bar: the hub's name in the middle (Lisa's pick A, 2 Nov). From 768px up, house.css gives the name all the room between
+  // the left and right icons (so it never overlaps them); this pads its shorter side so the words centre on the whole bar, the same
+  // spot on every page. The padding never squeezes the name below 120px (or its own width): past that it moves aside, then cuts with ...
+  // On a phone the name stays left after the Home icon: house.css uses the padding only from 768px up, so a resize never overflows.
+  var NAME_MIN = 120, nameFrame = 0;
+  function centreName() {
+    nameFrame = 0;
+    var doc = root.document, wide = root.matchMedia && root.matchMedia('(min-width: 768px)').matches;
+    Array.prototype.forEach.call(doc.querySelectorAll('header .house-row > h1'), function (h) {
+      h.style.removeProperty('--house-name-pl'); h.style.removeProperty('--house-name-pr');
+      if (!wide) return;
+      var r = h.parentNode.getBoundingClientRect(), b = h.getBoundingClientRect();
+      if (!b.width) return;
+      var rg = doc.createRange(); rg.selectNodeContents(h);
+      var words = rg.getBoundingClientRect().width, d = (r.right - b.right) - (b.left - r.left);
+      var pad = Math.min(Math.abs(d), Math.max(0, b.width - Math.min(words, NAME_MIN)));
+      if (pad > 0.5) h.style.setProperty(d > 0 ? '--house-name-pl' : '--house-name-pr', pad + 'px');
+    });
+  }
+  function centreNameSoon() { if (!nameFrame) nameFrame = (root.requestAnimationFrame || root.setTimeout)(centreName); }
+  function watchName() {
+    var doc = root.document, rows = doc.querySelectorAll('header .house-row');
+    if (!rows.length) return;
+    centreName();
+    if (root.ResizeObserver) {
+      // The row and everything in it except the name (its own padding would start a loop): buttons that show, hide or change words.
+      var ro = new root.ResizeObserver(centreNameSoon);
+      Array.prototype.forEach.call(rows, function (row) { ro.observe(row); Array.prototype.forEach.call(row.children, function (c) { if (c.tagName !== 'H1') ro.observe(c); }); });
+    }
+    root.addEventListener('resize', centreNameSoon);
+    if (doc.fonts && doc.fonts.ready) doc.fonts.ready.then(centreNameSoon, function () {});
+  }
+  if (root.document) {
+    if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', watchName); else watchName();
+  }
+
+  // ---- Bottom tabs: the More menu (Lisa's picks, 2 Nov). Pages write the bar (house.css section 6); More is a button with
+  // data-house-more and aria-controls naming its menu. One click opens or shuts it; choosing a view, a click outside, Esc or a new
+  // address shuts it (Esc puts the focus back on More). Delegated, so it keeps working when a page redraws its bar.
+  function moreMenu(b) { return b && root.document.getElementById(b.getAttribute('aria-controls') || ''); }
+  function showMore(b, on, back) {
+    var m = moreMenu(b); if (!m) return;
+    m.hidden = !on; b.setAttribute('aria-expanded', String(!!on));
+    if (on) { var f = m.querySelector('[aria-current="page"]') || m.querySelector('a, button'); if (f) f.focus(); }
+    else if (back) b.focus();
+  }
+  function shutMores(except, back) {
+    Array.prototype.forEach.call(root.document.querySelectorAll('[data-house-more][aria-expanded="true"]'), function (b) { if (b !== except) showMore(b, false, back); });
+  }
+  /** The HTML of one bottom tab: { href | go, nav, slot (0-8), icon (t-NAME), label, n (count id), need (rose ring) }. */
+  function tabHtml(t) {
+    var inner = '<span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true">' + icon(t.icon) + '</span><span class="htl">' + escHtml(t.label) + '</span>' +
+      (t.count != null ? '<span class="n' + (t.need ? ' need' : '') + '"' + (t.n ? ' id="' + t.n + '"' : '') + '>' + escHtml(t.count || '') + '</span>' : '');
+    return t.href ? '<a class="ht" data-slot="' + t.slot + '" href="' + t.href + '"' + (t.nav ? ' data-nav="' + t.nav + '"' : '') + '>' + inner + '</a>'
+      : '<button type="button" class="ht" data-slot="' + t.slot + '"' + (t.go ? ' data-go="' + t.go + '"' : '') + '>' + inner + '</button>';
+  }
+  /** The HTML of More (always the last tab) and its menu; items is the menu's own HTML (links or buttons). */
+  function moreHtml(id, items) {
+    return '<div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="' + id + '">' +
+      '<span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true">' + icon('t-more') + '</span><span class="htl">More</span></button>' +
+      '<div class="house-more" id="' + id + '" hidden>' + items + '</div></div>';
+  }
+  if (root.document) {
+    root.document.addEventListener('click', function (e) {
+      var t = e.target, b = t.closest && t.closest('[data-house-more]');
+      if (b) { var on = b.getAttribute('aria-expanded') !== 'true'; shutMores(b); showMore(b, on); return; }
+      var inMenu = t.closest && t.closest('.house-more');
+      if (inMenu) { if (t.closest('a, button')) shutMores(null); return; }
+      shutMores(null);
+    });
+    root.document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var open = root.document.querySelector('[data-house-more][aria-expanded="true"]');
+      if (open) { e.preventDefault(); showMore(open, false, true); }
+    });
+    if (root.addEventListener) root.addEventListener('hashchange', function () { shutMores(null); });
+  }
+
   // ---- Phone filters: one calm row. Filter groups (.house-filters, each with an id) fold behind ONE Filter button
   // (.house-fbtn, data-house-filter="<id> [<id>...]") on a phone; on a desktop the button is hidden and the chips show inline (house.css).
   // The open / shut state survives the page redrawing its chips (pages redraw on every tap).
@@ -216,6 +310,43 @@
     if (b && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) backHome(e);
   });
 
+  // ---- Icon-font fallback: a few pages draw icons with the Tabler icon font from a CDN. If that font does not arrive, a button with
+  // only an icon would show nothing, so it shows its name (from aria-label or title) as a word instead. Never runs when icons draw.
+  function iconFontMissing() {
+    var d = root.document, p = d.createElement('i'); p.className = 'ti ti-check'; p.style.cssText = 'position:absolute;left:-99px;top:0';
+    d.body.appendChild(p); var c = root.getComputedStyle(p, '::before').content, w = p.getBoundingClientRect().width; d.body.removeChild(p);
+    return !c || c === 'none' || c === 'normal' || w < 1;
+  }
+  function wordForIcons() {
+    Array.prototype.forEach.call(root.document.querySelectorAll('button, a'), function (b) {
+      if (b.textContent.trim() || b.querySelector('svg, img, .house-iw')) return;
+      var i = b.querySelector('i.ti'), w = b.getAttribute('aria-label') || b.getAttribute('title');
+      if (!i || !w) return;
+      var s = root.document.createElement('span'); s.className = 'house-iw'; s.setAttribute('aria-hidden', 'true'); s.textContent = w.replace(/:.*$/, ''); b.appendChild(s);
+    });
+  }
+  function watchIconFont() {
+    var d = root.document; if (!d || !d.querySelector('link[href*="tabler-icons"]') || !root.MutationObserver) return;
+    var go = function () {
+      if (!iconFontMissing()) return;
+      d.documentElement.classList.add('house-noicons'); wordForIcons();
+      var t = 0; new root.MutationObserver(function () { if (!t) t = root.setTimeout(function () { t = 0; wordForIcons(); }, 0); }).observe(d.body, { childList: true, subtree: true });
+    };
+    if (d.fonts && d.fonts.ready) d.fonts.ready.then(go); else root.setTimeout(go, 0);
+  }
+  if (root.document) { if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', watchIconFont); else watchIconFont(); }
+
+  // ---- Clickable info (Lisa, 2 Nov 2026: "anywhere you give info should be clickable to get it") ----
+  // A row or card marked data-open-row opens what it shows: a click anywhere on it (its chips, pills, numbers, words) presses its one
+  // .house-open link or button. Its own buttons and links still do their own thing. Keyboard: the .house-open control is the tab stop.
+  if (root.document) root.document.addEventListener('click', function (e) {
+    var t = e.target; if (e.defaultPrevented || e.button !== 0 || !t || !t.closest) return;
+    var r = t.closest('[data-open-row]'); if (!r) return;
+    if (t.closest('a, button, summary, input, select, textarea, label, [contenteditable="true"]')) return;
+    if (root.getSelection && String(root.getSelection())) return;   // selecting words, not opening
+    var o = r.querySelector('.house-open'); if (o) o.click();
+  });
+
   // ---- Keyboard keys: g then a letter to go somewhere, r reread, / search, ? the list ----
   var KEYS = [
     ['g m', 'Dashboard', function () { go('./#/map'); }],
@@ -235,7 +366,7 @@
     var doc = root.document, d = doc.getElementById('dashKeys');
     if (!d) {
       d = doc.createElement('dialog'); d.id = 'dashKeys'; d.setAttribute('aria-labelledby', 'dashKeysTitle');
-      d.innerHTML = '<h2 id="dashKeysTitle" style="margin:0 0 8px;font-size:18px">Keyboard keys</h2><table style="border-collapse:collapse">' +
+      d.innerHTML = '<h2 id="dashKeysTitle" style="margin:0 0 8px;font-size:var(--fs-head)">Keyboard keys</h2><table style="border-collapse:collapse">' +
         KEYS.map(function (k) { return '<tr><td style="padding:3px 14px 3px 0"><kbd>' + k[0].replace(' ', '</kbd> then <kbd>') + '</kbd></td><td>' + k[1] + '</td></tr>'; }).join('') +
         '</table><p style="margin:10px 0 0">Keys do nothing while you are typing in a box. Esc closes this.</p><form method="dialog" style="margin-top:10px"><button type="submit">Close</button></form>';
       d.style.cssText = 'max-width:420px;border:1px solid currentColor;border-radius:12px;padding:16px 18px;background:Canvas;color:CanvasText;font:inherit';
@@ -269,10 +400,10 @@
     if (d) return d;
     d = doc.createElement('dialog'); d.id = 'dashSearch'; d.setAttribute('aria-labelledby', 'dashSearchTitle');
     d.style.cssText = 'width:min(640px,94vw);max-height:80vh;border:1px solid currentColor;border-radius:12px;padding:14px 16px;background:Canvas;color:CanvasText;font:inherit';
-    d.innerHTML = '<h2 id="dashSearchTitle" style="margin:0 0 8px;font-size:18px">Search</h2>' +
-      '<label for="dashSearchBox" style="display:block;font-size:14px">Drive file names, Money to-dos and dates, CD Hub dogs and litters (what this page has read)</label>' +
+    d.innerHTML = '<h2 id="dashSearchTitle" style="margin:0 0 8px;font-size:var(--fs-head)">Search</h2>' +
+      '<label for="dashSearchBox" style="display:block;font-size:var(--fs-small)">Drive file names, Money to-dos and dates, CD Hub dogs and litters (what this page has read)</label>' +
       '<input id="dashSearchBox" type="search" autocomplete="off" style="width:100%;font:inherit;padding:8px 10px;margin:6px 0;border:1px solid currentColor;border-radius:12px">' +
-      '<p id="dashSearchStatus" role="status" style="margin:4px 0;font-size:14px">Type at least 2 letters.</p>' +
+      '<p id="dashSearchStatus" role="status" style="margin:4px 0;font-size:var(--fs-small)">Type at least 2 letters.</p>' +
       '<div id="dashSearchResults"></div><form method="dialog" style="margin-top:8px"><button type="submit">Close</button></form>';
     doc.body.appendChild(d);
     var box = d.querySelector('#dashSearchBox');
@@ -300,8 +431,8 @@
         st.textContent = all.length ? all.length + (all.length === 1 ? ' result' : ' results') + ' for "' + q + '".' : 'Nothing found for "' + q + '".';
         out.innerHTML = order.map(function (g) {
           var items = groups[g];
-          return '<section data-search-group="' + escHtml(g) + '" style="margin-top:10px;border-left:3px solid ' + SLOT[items[0].slot || 0] + ';padding-left:10px"><h3 style="margin:0 0 4px;font-size:15px">' + escHtml(g) + ' (' + items.length + ')</h3><ul style="margin:0;padding-left:18px">' +
-            items.map(function (x) { return '<li>' + (x.href ? '<a href="' + escHtml(x.href) + '"' + (/^https?:/.test(x.href) ? ' target="_blank" rel="noopener"' : /^(money|cdhub)\//.test(x.href) ? ' target="_blank" rel="opener"' : '') + '>' + escHtml(x.title) + '</a>' : '<a href="#" data-search-act="' + (acts.push(x.act) - 1) + '">' + escHtml(x.title) + '</a>') + (x.sub ? ' <span style="font-size:14px">· ' + escHtml(x.sub) + '</span>' : '') + '</li>'; }).join('') + '</ul></section>';
+          return '<section data-search-group="' + escHtml(g) + '" style="margin-top:10px;border-left:3px solid ' + SLOT[items[0].slot || 0] + ';padding-left:10px"><h3 style="margin:0 0 4px;font-size:var(--fs-body)">' + escHtml(g) + ' (' + items.length + ')</h3><ul style="margin:0;padding-left:18px">' +
+            items.map(function (x) { return '<li>' + (x.href ? '<a href="' + escHtml(x.href) + '"' + (/^https?:/.test(x.href) ? ' target="_blank" rel="noopener"' : /^(money|cdhub)\//.test(x.href) ? ' target="_blank" rel="opener"' : '') + '>' + escHtml(x.title) + '</a>' : '<a href="#" data-search-act="' + (acts.push(x.act) - 1) + '">' + escHtml(x.title) + '</a>') + (x.sub ? ' <span style="font-size:var(--fs-small)">· ' + escHtml(x.sub) + '</span>' : '') + '</li>'; }).join('') + '</ul></section>';
         }).join('');
         Array.prototype.forEach.call(out.querySelectorAll('[data-search-act]'), function (a) { a._act = acts[+a.getAttribute('data-search-act')]; });
         return all;
@@ -313,5 +444,5 @@
   /** Returns a test function: true when a text contains every word of q (case-insensitive). */
   function matches(q) { var words = String(q).toLowerCase().split(/\s+/).filter(Boolean); return function (text) { text = String(text || '').toLowerCase(); return words.every(function (w) { return text.indexOf(w) >= 0; }); }; }
 
-  root.DashKit = { applyLook: applyLook, icon: icon, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help };
+  root.DashKit = { applyLook: applyLook, icon: icon, tabs: { tab: tabHtml, more: moreHtml, shut: function () { shutMores(null); } }, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help };
 })(typeof window !== 'undefined' ? window : this);

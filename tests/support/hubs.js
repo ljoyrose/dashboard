@@ -161,4 +161,4 @@ async function go(page, view) {
 }
 
 
-module.exports = { HUBS, setLook, go, settle, sheets };
+module.exports = { HUBS, setLook, go, settle, sheets, foodBook, marketRows };

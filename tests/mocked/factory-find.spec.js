@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { build } = require('../fixtures/factory/state');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'factory', 'index.html'), 'utf8');
@@ -367,7 +368,7 @@ test.describe('Factory selected and focus lines', () => {
 
   test('after clicking a tab and a chip: selected chips wear the 1px inside line, the tab only its wider bar; focus is 2px @regression', async ({ page, guard }) => {
     await open(page, guard, '#/do');
-    await page.locator('nav.tabs a[data-nav="me"]').click();
+    await tabClick(page, 'nav.tabs a[data-nav="me"]');
     const tab = page.locator('nav.tabs a[aria-current="page"]');
     await expect(tab).toHaveAttribute('data-nav', 'me');
     expect((await st(tab))[0].s).toBe('none');

@@ -1,3 +1,4 @@
+const { tabClick, tabTo } = require('../support/tabs');
 // JOB 34 (group D): GA Hub gaps not proved by food.spec.js, house-look or phone.spec.js.
 // Sign out, unknown address, header links, "Show N more", Copy, load errors in plain words, an expired sign-in,
 // a failed save, a slow read, keyboard reach. Pretend Google and Sheets only; every row is invented.
@@ -46,8 +47,8 @@ test.describe('GA Hub (JOB 34)', () => {
     await expect(page.locator('#view')).toContainText('Order #9001');
     await expect(page.locator('#view')).toContainText('New GA price list');
     await expect(page.locator('#view [data-action="all"]')).toHaveCount(0);
-    await page.locator('nav.tabs a[data-nav="orders"]').click();
-    await page.locator('nav.tabs a[data-nav="home"]').click();
+    await tabClick(page, 'nav.tabs a[data-nav="orders"]');
+    await tabClick(page, 'nav.tabs a[data-nav="home"]');
     await expect(page.locator('#view [data-action="all"]')).toHaveText('Show 2 more');
   });
 
@@ -169,8 +170,10 @@ test.describe('GA Hub (JOB 34)', () => {
     await HUBS.food.open(page);
     await page.locator('body').click({ position: { x: 1, y: 1 } });
     const seen = await tabWalk(page, 40);
-    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Home', 'Orders', 'Invoices', 'Products', 'GA']) {
+    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Main', 'Invoices', 'Orders', 'Products', 'More']) {
       expect(seen.some((s) => s === name || s.startsWith(name)), `Tab reaches ${name}: ${seen.join(' | ')}`).toBe(true);
     }
+    // GA sits under More (Lisa's tab picks, 2 Nov): Tab to More, Enter, and it is in the menu.
+    expect(await tabTo(page, 'nav.tabs a[data-nav="ga"]', 60), 'Tab reaches GA under More').toBe(true);
   });
 });
