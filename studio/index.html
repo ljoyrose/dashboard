@@ -60,8 +60,7 @@
   .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 14px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
   .btn[disabled] { cursor: not-allowed; opacity: .55; }
   /* Five tabs in a bar at the bottom, like Marketplace (thumb reach on the phone); a sub-row of links inside Line, Decide and Kits. */
-  /* Bottom tabs: the frame, light buttons, no ring, the colour bar that widens: ../house.css (.house-tabs). Layout only here. */
-  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
   html { scroll-padding-bottom: 96px; }
   .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
   .subnav a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
@@ -70,9 +69,8 @@
   @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .achip:hover, .ico:hover, a.tag:hover, .chk li button:hover, .room:hover, .col-list .crow:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   .n:empty { display: none; }
   /* Counts: the house count pill (../house.css, 30 x 22). Studio's counts wear an ink ring; "needs you" counts the rose ring + tint. */
-  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { border-color: var(--ink); }
+  .cnt, .fbtn .n:not(:empty) { border-color: var(--ink); }
   .fbtn .n:not(:empty) { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border: 1px solid var(--ink); border-radius: var(--house-count-r); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  nav.tabs .n.need { border-color: var(--house-late); }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
   svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   main.wrap { padding-top: 16px; padding-bottom: 110px; display: flex; flex-direction: column; gap: var(--house-gap); }
@@ -275,8 +273,7 @@
   /* HubSpot sizing (CRM UI spec, s3/4/6/7/15/16). Corners: ONE radius token, --radius (12px), on everything; circles only for status dots. */
   .btn, .vsw button, .lk, .ico { border-radius: var(--radius); }
   .pill { padding: 4px 12px; min-height: 28px; }
-  nav.tabs a, .subnav a { border-radius: var(--radius); }
-  nav.tabs .n { right: 18px; }
+  .subnav a { border-radius: var(--radius); }
   .subnav { gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
   .vtop .subnav { flex: 1 1 auto; }
   .subnav a, :root.look-cool .subnav a { border-color: transparent; background: transparent; }
@@ -293,8 +290,6 @@
   header .top > .pill.warn { border-color: var(--frame-warn); } header .top > .pill.bad { border-color: var(--frame-bad); }
   @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover { outline-color: var(--frame-ink); } } /* the same 1px line, in the frame's ink */
   header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
-  /* The dark band spans the screen like the top bar; each tab button stays a sensible width. */
-  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 220px)); justify-content: center; } }
   /* Phone top bar: the engine and budget pills stay on a desktop only (the one 56px row has no room); Look opens full width. */
   @media (max-width: 600px) {
     header .top > #enginePill, header .top > #budgetPill { display: none !important; }
@@ -313,7 +308,6 @@
   @media (max-width: 544px) {
     .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, .fbar .sbox { min-height: 44px; }
     .lk, .ico { min-width: 44px; height: 44px; }
-    /* Phone tabs (colour bar · icon + count · label): ../house.css. */
   }
   /* Control edges (things you press or read as a chip) use --ctl: the line colour in light, a 3:1 line in dark so every ring shows. */
   .btn, .pill, .ch, .fbtn, .achip, .fbar .sbox, .tag, .seg button, .vsw button, .undo, .lk, .stage .n, .stamp { border-color: var(--ctl); }
@@ -450,11 +444,15 @@
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs" id="tabs" aria-label="Sections">
-  <a href="#/me" data-nav="me" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-user"></i><span>Me</span><span class="n need" id="nMe"></span></a>
-  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-traffic-lights"></i><span>Decide</span><span class="n need" id="nDecide"></span></a>
-  <a href="#/do" data-nav="do" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-hand-finger"></i><span>Do</span><span class="n need" id="nDo"></span></a>
-  <a href="#/line" data-nav="line" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-timeline"></i><span>Line</span><span class="n" id="nLine"></span></a>
-  <a href="#/kits" data-nav="kits" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-box"></i><span>Kits</span><span class="n" id="nKits"></span></a>
+  <a class="ht" data-slot="1" href="#/me" data-nav="me"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="nMe"></span></a>
+  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n need" id="nDecide"></span></a>
+  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n need" id="nDo"></span></a>
+  <a class="ht" data-slot="7" href="#/line" data-nav="line"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-line"/></svg></span><span class="htl">Line</span><span class="n" id="nLine"></span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/kits" data-nav="kits" data-slot="5"><i class="ti ti-box" aria-hidden="true"></i><span class="htl">Kits</span><span class="n" id="nKits"></span></a>
+    </div>
+  </div>
 </nav>
 
 <script>

@@ -2,6 +2,7 @@
 // old addresses redirect, one purpose line per page, look-only Drives pages, and a second look-only sign-in
 // for Personal Drive that never touches the work sign-in.
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { execSync } = require('child_process');
 const path = require('path');
 
@@ -25,7 +26,7 @@ test.describe('Drives: tab, pills and purpose lines', () => {
   test('the Drives tab opens the landing page with the pill row and one purpose line', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await page.locator('#mainNav a[data-nav="drives"]').click();
+    await tabClick(page, '#mainNav a[data-nav="drives"]');
     await expect(page).toHaveURL(/#\/drives$/);
     await expect(page.locator('#hereTitle')).toHaveText('Drives');
     await expect(page.locator('#mainNav a[data-nav="drives"]')).toHaveAttribute('aria-current', 'page');
@@ -98,7 +99,7 @@ test.describe('Drives: tab, pills and purpose lines', () => {
     await expect(page.locator('#view')).toContainText(/Finished/);
     await expect(page.locator('[data-pcp-list="work"]')).toContainText('invoice-a.pdf');
     await expect(page.locator('[data-pcp-inbin]')).toContainText('ready in Bin');
-    await page.locator('#mainNav a[data-nav="bin"]').click();
+    await tabClick(page, '#mainNav a[data-nav="bin"]');
     // Stage 5: the rename step sits at the end of Ready to bin, next to the one Bin these button.
     await expect(page.locator('#sweepCard [data-bin-list="pcp-rename"]')).toContainText('invoice-a.pdf');
     await expect(page.locator('#sweepCard [data-action="pcpmark"]')).toHaveCount(1);
@@ -112,7 +113,7 @@ test.describe('Personal Drive: a second, look-only sign-in', () => {
     await page.goto('./');
     await signIn(page);
     const before = await page.evaluate(() => window.__GIS_CALLS.request);
-    await page.locator('#mainNav a[data-nav="drives"]').click();
+    await tabClick(page, '#mainNav a[data-nav="drives"]');
     await page.locator('#view nav.subnav a', { hasText: /^Personal Drive$/ }).click();
     await expect(page.locator('#view [data-action="psignin"]')).toBeVisible();
     await expect(page.locator('#view [data-action="pcpscan"]')).toHaveCount(0);
@@ -154,7 +155,7 @@ test.describe('Personal Drive: a second, look-only sign-in', () => {
     expect(w.calls.filter((c) => c.method !== 'GET')).toEqual([]);
     // Back on a work page, every new call uses the work token.
     const n = w.calls.length;
-    await page.locator('#mainNav a[data-nav="bin"]').click();
+    await tabClick(page, '#mainNav a[data-nav="bin"]');
     await expect(page.locator('#hereTitle')).toHaveText('Bin');
     await page.waitForTimeout(300);
     for (const c of w.calls.slice(n)) expect(c.auth).toBe('Bearer FAKE-TEST-TOKEN');

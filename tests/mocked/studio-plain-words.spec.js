@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { build } = require('../fixtures/studio/state');
 
 const ctx = { window: {} };
@@ -102,7 +103,7 @@ test.describe('Studio plain words (Stage 8)', () => {
     for (const r of ROUTES) {
       let ok = false;
       for (const t of tabs) {
-        await page.locator(`nav.tabs a[data-nav="${t}"]`).click();
+        await tabClick(page, `nav.tabs a[data-nav="${t}"]`);
         await expect(page.locator('#view')).toHaveAttribute('data-view', t);
         if (t === r) { ok = true; break; }
         if (await page.locator(`a[href="#/${r}"]:visible`).count()) { ok = true; break; }
@@ -117,7 +118,7 @@ test.describe('Studio plain words (Stage 8)', () => {
     await open(page, guard, '#/me');
     const tabs = await page.locator('nav.tabs a[data-nav]').evaluateAll((l) => l.map((a) => a.getAttribute('data-nav')));
     for (const t of tabs) {
-      await page.locator(`nav.tabs a[data-nav="${t}"]`).click();
+      await tabClick(page, `nav.tabs a[data-nav="${t}"]`);
       await expect(page.locator('#view')).toHaveAttribute('data-view', t);
       await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
       const m = await page.evaluate(() => {

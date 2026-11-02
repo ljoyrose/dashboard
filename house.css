@@ -105,40 +105,108 @@ header [role="dialog"] :focus-visible { outline-color: var(--ink); }
 :focus-visible { outline: var(--house-focus) solid var(--ink); outline-offset: 2px; }
 header :focus-visible { outline-color: var(--frame-ink); }
 
-/* 6 Bottom tabs (.house-tabs): deep dark bar, light tab buttons with no ring or outline. Hover and selected only widen the
-   small colour bar above the label (same height, so nothing moves). The tab's colour is --tc. */
-.house-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--frame-foot); border-top: 0; }
-.house-tabs > a, .house-tabs > button { position: relative; background: var(--card); color: var(--ink); border: 0; border-radius: var(--radius);
-  font-size: 13px; font-weight: 600; text-decoration: none; text-align: center; cursor: pointer; min-width: 0;
-  min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 2px; }
-.house-tabs > a, .house-tabs > a:hover, .house-tabs > a[aria-current="page"], .house-tabs > button, .house-tabs > button:hover, .house-tabs > button[aria-current="page"] {
-  outline: none; box-shadow: none; border: 0; background: var(--card); }
-.house-tabs > :focus-visible { outline: var(--house-focus) solid var(--frame-ink); outline-offset: 2px; }
-.house-tabs .bar { display: block; min-width: 0; box-shadow: none; flex: none; width: var(--house-tab-bar); height: var(--house-tab-bar-h); border-radius: var(--radius); background: var(--tc, var(--c, var(--ljr-0))); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
-.house-tabs [aria-current="page"] .bar { width: var(--house-tab-bar-on); opacity: 1; }
-@media (hover: hover) { .house-tabs > :hover .bar { width: var(--house-tab-bar-on); opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .house-tabs .bar { transition: none; } }
-/* The tab count sits in the top-right corner on a desktop; on a phone it is in the flow beside the label (never over it). */
-.house-tabs .n, .house-tabs .cnt { position: absolute; top: 8px; right: 12px; }
-@media (max-width: 600px) {
-  .house-tabs > a, .house-tabs > button { min-height: 62px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; padding: 6px 2px; }
-  .house-tabs .bar { margin: 0 calc(50% - var(--house-tab-bar) / 2); }
-  .house-tabs [aria-current="page"] .bar { width: var(--house-tab-bar-phone); margin: 0 calc(50% - var(--house-tab-bar-phone) / 2); }
-  .house-tabs > * > :where(.ti, svg, .icon) { order: 1; }
-  .house-tabs .n, .house-tabs .cnt { position: static; order: 2; }
-  .house-tabs > * > :where(span, .lab):where(:not(.bar, .n, .cnt)) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }   /* low weight: a page with room puts the count beside the label */
+/* 6 Bottom tabs (Lisa's picks, 2 Nov 2026): the SAME bar on every page. One row, --house-tabs-h high on a desktop and a phone, at most
+   6 tabs, More always last (anything else goes in its menu), Main always first, Decide second where there is one. Each tab is an icon
+   above one word, on a light tab on the deep frame. NO fills anywhere: not the tab, not the icon's round place.
+   At rest: grey icon, no ring, a short grey line. Hover and selected are ONE movement: the icon takes the tab's colour and the line
+   widens (--house-tab-bar to --house-tab-bar-on). A 1px ring in the tab's colour shows round the icon only on hover, focus and press.
+   The tab's slot (data-slot="0".."7") sets --c (icon and ring: --ljr-N-icon) and --f (the line: the bright --ljr-N). Main = slot 1:
+   ink icon (light in dark looks) and every colour in its line. Counts sit in the tab's top-right corner: a ring, no fill, never moving;
+   grey ring = waiting, rose ring (.need) = late or due today. Markup (toolkit.js wires More):
+   <nav class="house-tabs"><a class="ht" data-slot="1" href="#/x" data-nav="x"><span class="bar"></span><span class="hic"><svg class="hi">..</svg></span>
+   <span class="htl">Main</span><span class="n"></span></a> ... <div class="ht-more"><button class="ht" data-slot="0" data-house-more
+   aria-expanded="false" aria-controls="houseMore">..More</button><div class="house-more" id="houseMore" hidden><a data-slot="0" ..>..</a></div></div></nav> */
+nav.house-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0; max-width: none; box-sizing: border-box;
+  display: flex; flex-wrap: nowrap; justify-content: center; align-items: stretch; gap: var(--house-tabs-gap); overflow: visible;
+  height: calc(var(--house-tabs-h) + env(safe-area-inset-bottom, 0px)); min-height: 0;
+  padding: var(--house-tabs-gap) var(--house-tabs-gap) calc(var(--house-tabs-gap) + env(safe-area-inset-bottom, 0px));
+  background: var(--frame-foot); border: 0; box-shadow: none; }
+nav.house-tabs.hidden, nav.house-tabs[hidden], nav.house-tabs:empty { display: none !important; }
+nav.house-tabs > .ht, nav.house-tabs > .ht-more { flex: 1 1 0; min-width: min-content; max-width: var(--house-tab-max); }
+nav.house-tabs > .ht-more { position: relative; display: flex; }
+nav.house-tabs > .ht-more > .ht { width: 100%; }
+nav.house-tabs .ht { --c: var(--ljr-0-icon); --f: var(--ljr-0); position: relative; box-sizing: border-box; width: auto; height: 100%; min-height: 0; margin: 0;
+  padding: 0 4px 8px; border: 0; border-radius: var(--radius); outline: none; box-shadow: none; background: var(--card); color: var(--ink);
+  font-family: inherit; font-size: 13px; font-weight: 600; line-height: 16px; text-decoration: none; text-align: center; cursor: pointer; transform: none;
+  display: flex; flex-direction: column; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 1px; overflow: hidden; }
+nav.house-tabs .ht:hover, nav.house-tabs .ht[aria-current="page"], nav.house-tabs .ht[aria-expanded="true"] { background: var(--card); border: 0; box-shadow: none; outline: none; }
+nav.house-tabs .ht > .hic { box-sizing: border-box; flex: none; width: var(--house-tab-disc); height: var(--house-tab-disc); border-radius: 50%; display: grid; place-items: center;
+  border: var(--house-line) solid transparent; background: transparent; color: var(--ljr-0-icon); }
+nav.house-tabs .ht > .hic > :is(svg, .ti, i) { width: var(--house-tab-icon); height: var(--house-tab-icon); font-size: var(--house-tab-icon); line-height: 1; color: inherit;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+nav.house-tabs .ht > .htl { display: block; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; order: 0; flex: none; color: var(--ink); }
+nav.house-tabs .ht > .bar { position: absolute; left: 50%; bottom: 2px; margin: 0; width: var(--house-tab-bar); height: var(--house-tab-bar-h); border-radius: 2px;
+  background: var(--ljr-0); opacity: .6; transform: translateX(-50%); transition: width .15s ease-out, opacity .15s ease-out; box-shadow: none; min-width: 0; max-width: none; overflow: visible; }
+/* Hover and selected: one movement (the colour arrives, the line widens). */
+nav.house-tabs .ht:is([aria-current="page"], [aria-expanded="true"]) > .hic, nav.house-tabs .ht-more:has(.house-more [aria-current="page"]) > .ht > .hic { color: var(--c); }
+nav.house-tabs .ht:is([aria-current="page"], [aria-expanded="true"]) > .bar, nav.house-tabs .ht-more:has(.house-more [aria-current="page"]) > .ht > .bar { width: var(--house-tab-bar-on); opacity: 1; background: var(--f); }
+nav.house-tabs .ht:active > .hic, nav.house-tabs .ht:focus-visible > .hic { color: var(--c); border-color: var(--c); }
+nav.house-tabs .ht:focus-visible > .bar { width: var(--house-tab-bar-on); opacity: 1; background: var(--f); }
+@media (hover: hover) {
+  nav.house-tabs .ht:hover > .hic { color: var(--c); border-color: var(--c); }
+  nav.house-tabs .ht:hover > .bar { width: var(--house-tab-bar-on); opacity: 1; background: var(--f); }
 }
-@media (max-width: 600px) and (hover: hover) { .house-tabs > :hover .bar { width: var(--house-tab-bar-phone); margin: 0 calc(50% - var(--house-tab-bar-phone) / 2); } }
+nav.house-tabs .ht[data-slot="1"]:is([aria-current="page"], :focus-visible) > .bar { background: var(--ljr-rainbow); }
+@media (hover: hover) { nav.house-tabs .ht[data-slot="1"]:hover > .bar { background: var(--ljr-rainbow); } }
+@media (prefers-reduced-motion: reduce) { nav.house-tabs .ht > .bar { transition: none; } }
+nav.house-tabs .ht:focus-visible { outline: var(--house-focus) solid var(--frame-ink); outline-offset: 2px; }
+/* The tab count: top-right corner, ring only (grey = waiting, rose = late or due today), no fill, never moves. */
+nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt { position: absolute; top: 3px; right: 3px; left: auto; margin: 0; order: 0; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-tab-count-h); height: var(--house-tab-count-h); min-height: var(--house-tab-count-h);
+  padding: 0 var(--house-tab-count-pad); border: var(--house-line) solid var(--house-ring); border-radius: calc(var(--house-tab-count-h) / 2); background: transparent; color: var(--ink);
+  font-size: 13px; font-weight: 600; line-height: var(--house-tab-count-lh); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: visible; }
+nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { border-color: var(--house-late); background: transparent; }
+nav.house-tabs .ht > .n:empty, nav.house-tabs .ht > .cnt:empty { display: none !important; }
+/* The More menu: opens above the bar, at its right end; the views that are not tabs. Same rules: grey icon at rest, the colour on hover
+   and where you are, no fills. */
+nav.house-tabs .house-more { position: absolute; right: 0; bottom: calc(100% + var(--house-tabs-gap) + 6px); z-index: 30; box-sizing: border-box;
+  width: max-content; min-width: 200px; max-width: calc(100vw - 16px); max-height: calc(100vh - var(--house-tabs-h) - var(--house-head) - 24px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px; padding: 6px; margin: 0; background: var(--card); color: var(--ink);
+  border: var(--house-line) solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); text-align: left; }
+nav.house-tabs .house-more[hidden] { display: none !important; }
+nav.house-tabs .house-more > :is(a, button):not([data-slot]) { --c: var(--ljr-0-icon); }
+nav.house-tabs .house-more > :is(a, button) { position: relative; box-sizing: border-box; display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: var(--house-btn); margin: 0; padding: 0 10px; border: 0; border-radius: var(--radius); outline: none; box-shadow: none;
+  background: transparent; color: var(--ink); font-family: inherit; font-size: var(--house-press-size); font-weight: 600; line-height: 1.2;
+  text-decoration: none; text-align: left; white-space: nowrap; cursor: pointer; }
+nav.house-tabs .house-more > :is(a, button) > :is(svg, .ti, i):first-child { flex: none; width: 20px; height: 20px; font-size: 20px; line-height: 1; color: var(--ljr-0-icon);
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+nav.house-tabs .house-more > [aria-current="page"] { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); }
+nav.house-tabs .house-more > [aria-current="page"] > :is(svg, .ti, i):first-child { color: var(--c); }
+@media (hover: hover) {
+  nav.house-tabs .house-more > :is(a, button):hover { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); background: transparent; }
+  nav.house-tabs .house-more > :is(a, button):hover > :is(svg, .ti, i):first-child { color: var(--c); }
+}
+nav.house-tabs .house-more > :focus-visible { outline: var(--house-focus) solid var(--ink); outline-offset: 0; }
+nav.house-tabs .house-more .n, nav.house-tabs .house-more .cnt { position: static; margin-left: auto; }
+nav.house-tabs .house-more .n.need, nav.house-tabs .house-more .cnt.need { background: transparent; }
+nav.house-tabs [data-slot="0"] { --c: var(--ljr-0-icon); --f: var(--ljr-0); }
+nav.house-tabs [data-slot="1"] { --c: var(--ljr-1-icon); --f: var(--ljr-1-icon); }
+nav.house-tabs [data-slot="2"] { --c: var(--ljr-2-icon); --f: var(--ljr-2); }
+nav.house-tabs [data-slot="3"] { --c: var(--ljr-3-icon); --f: var(--ljr-3); }
+nav.house-tabs [data-slot="4"] { --c: var(--ljr-4-icon); --f: var(--ljr-4); }
+nav.house-tabs [data-slot="5"] { --c: var(--ljr-5-icon); --f: var(--ljr-5); }
+nav.house-tabs [data-slot="6"] { --c: var(--ljr-6-icon); --f: var(--ljr-6); }
+nav.house-tabs [data-slot="7"] { --c: var(--ljr-7-icon); --f: var(--ljr-7); }
+nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon); }
+@media (max-width: 600px) {
+  nav.house-tabs { gap: 3px; padding-left: 3px; padding-right: 3px; }
+  nav.house-tabs > .ht, nav.house-tabs > .ht-more { max-width: none; }
+  nav.house-tabs .ht { padding-left: 2px; padding-right: 2px; }
+  nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt { top: 2px; right: 2px; }
+  nav.house-tabs .house-more > :is(a, button) { min-height: var(--house-btn-phone); }
+}
 
 /* 7 Counts: ONE exact box, so 1 and 2 digits match in any font: 30 x 22, line 20px, radius 11px, padding 0 3px.
    Only 3+ digits (class .wide) grow. Empty shows nothing (pages write "" for 0). "Needs you" = rose ring + tint. */
-.cnt, .house-tabs .n { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
+/* (The bottom tabs' counts are drawn in section 6.) */
+.cnt { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
   width: var(--house-count-w); min-width: var(--house-count-w); height: var(--house-count-h); min-height: var(--house-count-h);
   line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border: var(--house-line) solid var(--house-ring); border-radius: var(--house-count-r);
   font-size: 13px; font-weight: 600; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
-.cnt.wide, .house-tabs .n.wide { width: auto; padding: 0 6px; overflow: visible; }
+.cnt.wide { width: auto; padding: 0 6px; overflow: visible; }
 .cnt:empty, .n:empty { display: none !important; }
-.cnt.need, .house-tabs .n.need { border-color: var(--house-late); background: var(--house-late-tint); }
+.cnt.need { border-color: var(--house-late); background: var(--house-late-tint); }
 
 /* 8 Date pills: always ringed. Grey ring + muted words; late = rose ring + tint, soon = amber ring + tint (ink words). */
 .dpill, .datep, span.date { display: inline-flex; align-items: center; height: var(--house-pill); padding: 0 8px; font-size: 13px; white-space: nowrap;

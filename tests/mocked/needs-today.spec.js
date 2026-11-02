@@ -1,5 +1,6 @@
 // "Needs you today" on the Dashboard: one short list (at most 7) of what needs Lisa, from data already read.
 const { test, expect, buildWorld } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { IDS } = require('../support/world');
 
 const signIn = async (page) => {
@@ -51,7 +52,7 @@ test.describe('Needs you today', () => {
     await page.goto('./#/bin');
     await signIn(page);
     await expect(page.locator('[data-bin-list="ready"]').locator('[title="' + 'ZZ_DELETE_ready-for-needs.txt' + '"]')).toHaveCount(1);
-    await page.locator('nav.main a[data-nav="map"]').click();
+    await tabClick(page, 'nav.main a[data-nav="map"]');
     const row = page.locator('#needsToday li.n-bin');
     await expect(row).toContainText('1 file is ready to bin');
     await expect(row.locator('a')).toHaveAttribute('href', '#/bin');

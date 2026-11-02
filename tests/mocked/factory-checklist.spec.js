@@ -61,14 +61,15 @@ test.describe('Factory steps', () => {
   });
 });
 
-// Factory tab counts match Studio's needs-you counts (Lisa, 28 Oct 2026); the unread dot and switch knob stay solid on purpose.
+// Factory tab counts follow Lisa's tab picks (2 Nov 2026): an 18px ring in the tab's top-right corner, no fill; the unread dot and switch knob stay solid on purpose.
 test.describe('Factory tab counts', () => {
-  test('tab counts are an exact 30x22 amber ring with a tint and an ink number, never solid', async ({ page, guard }) => {
+  test('tab counts are an exact 18px ring with no fill and an ink number, never solid', async ({ page, guard }) => {
     await open(page, guard);
     const n = page.locator('#nMe');
     const st = await n.evaluate((e) => { const c = getComputedStyle(e), b = e.getBoundingClientRect(); return { w: Math.round(b.width * 100) / 100, h: Math.round(b.height), bw: c.borderTopWidth, bc: c.borderTopColor, bg: c.backgroundColor, col: c.color, ink: getComputedStyle(document.body).color }; });
-    expect([st.w, st.h, st.bw]).toEqual([30, 22, '1px']);
-    expect(st.bg).not.toBe(st.bc); // a tint, not a solid fill of the ring colour
+    expect([st.w >= 18, st.h, st.bw]).toEqual([true, 18, '1px']);
+    expect(st.bg).toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/); // ring only, no fill (Lisa's tab picks)
+    expect(st.bc).not.toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
     expect(st.col).toBe(st.ink);
   });
 });

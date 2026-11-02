@@ -1,3 +1,4 @@
+const { tabClick, tabTo } = require('../support/tabs');
 // JOB 34 (group D): Marketplace gaps not proved by marketplace.spec.js, house-look or phone.spec.js.
 // Sign out, unknown address, load errors in plain words, an expired sign-in, Refresh after a failure, a slow read,
 // the drop-off QR window, label sheet Close, the Stock round (shelves, tick, Round saved, no round open),
@@ -179,8 +180,10 @@ test.describe('Marketplace (JOB 34)', () => {
     await HUBS.marketplace.open(page);
     await page.locator('body').click({ position: { x: 1, y: 1 } });
     const seen = await tabWalk(page, 50);
-    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Home', 'Do now', 'Decide', 'Reply', 'Insights']) {
+    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Main', 'Decide', 'Do, ', 'Reply', 'New Stock', 'More']) {
       expect(seen.some((s) => s === name || s.startsWith(name)), `Tab reaches ${name}: ${seen.join(' | ')}`).toBe(true);
     }
+    // Insights sits under More (Lisa's tab picks, 2 Nov): Tab to More, Enter, then it is in the menu.
+    expect(await tabTo(page, 'nav.tabs a[data-nav="insights"]', 70), 'Tab reaches Insights under More').toBe(true);
   });
 });

@@ -53,7 +53,10 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
             const r = getComputedStyle(e).borderTopLeftRadius;
             if (r === '0px') return;
             const cls = e.classList;
-            const ok = r === '12px' || (r === '50%' && (cls.contains('dot') || cls.contains('info'))) || (r === '11px' && (cls.contains('cnt') || cls.contains('n')));
+            // The bottom tabs follow Lisa's tab picks (2 Nov): round icon ring, 2px line, 9px-round corner counts.
+            const tabN = e.matches('nav.house-tabs .ht > .n');
+            const tabShape = (r === '50%' && e.matches('nav.house-tabs .hic')) || (r === '2px' && e.matches('nav.house-tabs .bar')) || (r === '9px' && tabN);
+            const ok = tabShape || (r === '12px' && !tabN) || (r === '50%' && (cls.contains('dot') || cls.contains('info'))) || (r === '11px' && !tabN && (cls.contains('cnt') || cls.contains('n')));
             if (!ok) out.push('radius ' + r + ': ' + what(e));
           });
           // 1: pressables rest on the same clear line, 1px, 12px, 36px+, 14px 600; never ink at rest.
@@ -69,11 +72,13 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
             if (!inHeader && cs.borderTopColor !== ctl) out.push('press line colour ' + cs.borderTopColor + ' (want ' + ctl + '): ' + what(e));
             if (!inHeader && cs.borderTopColor === ink) out.push('press starts out ink: ' + what(e));
           });
-          // Count pills: one fixed size so 1 and 2 digits match.
+          // Count pills: one fixed size so 1 and 2 digits match. Tab counts: Lisa's 18px corner ring (tab picks, 2 Nov).
           document.querySelectorAll('.cnt, nav.main .n:not(:empty)').forEach((e) => {
             if (!seen(e)) return;
             const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
-            if (Math.round(r.height) !== 22 || (e.textContent.trim().length <= 2 && Math.round(r.width) !== 30)) out.push('count size ' + r.width + 'x' + r.height + ': ' + what(e));
+            if (e.matches('nav.house-tabs .ht > .n')) {
+              if (Math.round(r.height) !== 18 || r.width < 17.4 || cs.lineHeight !== '16px' || getComputedStyle(e).position !== 'absolute') out.push('tab count ' + r.width + 'x' + r.height + ' ' + cs.lineHeight + ': ' + what(e));
+            } else if (Math.round(r.height) !== 22 || (e.textContent.trim().length <= 2 && Math.round(r.width) !== 30)) out.push('count size ' + r.width + 'x' + r.height + ': ' + what(e));
             if (cs.borderTopWidth !== '1px') out.push('count line: ' + what(e));
           });
           // 2: date pills wear a 1px ring; late = rose, soon = amber, plain = the control line.
@@ -275,11 +280,14 @@ test.describe('Money Hub look: control line and count pills hold in every look',
       probe.innerHTML = '<span class="cnt">7</span><span class="cnt need">88</span><span class="cnt wide">999</span>';
       document.getElementById('view').appendChild(probe);
       return Array.from(probe.children).concat(Array.from(document.querySelectorAll('#view .cnt, nav.main .n:not(:empty)'))).filter((e) => e.getClientRects().length)
-        .map((e) => ({ t: e.textContent, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height }));
+        .map((e) => ({ t: e.textContent, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height, tab: e.matches('nav.house-tabs .ht > .n') }));
     });
+    expect(sizes.filter((s) => s.tab).length, 'the tab counts are measured too').toBeGreaterThan(0);
     for (const s of sizes) {
-      expect(s.h, `count "${s.t}" height`).toBe(22);
-      if (s.t.length <= 2) expect(s.w, `count "${s.t}" width`).toBe(30);
+      // Bottom-tab counts are Lisa's 18px corner ring (tab picks, 2 Nov); every other count is the 30 x 22 pill.
+      expect(s.h, `count "${s.t}" height`).toBe(s.tab ? 18 : 22);
+      if (s.tab) expect(s.w, `tab count "${s.t}" width`).toBeGreaterThanOrEqual(18);
+      else if (s.t.length <= 2) expect(s.w, `count "${s.t}" width`).toBe(30);
     }
     expect(sizes.find((s) => s.t === '999').w).toBeGreaterThan(30); // 3+ digits grow
   });

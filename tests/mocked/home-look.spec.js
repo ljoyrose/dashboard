@@ -2,6 +2,7 @@
 // nothing under 13px, two weights, no coloured words, no solid colour fills, dark frame, phone without sideways scroll,
 // dark mode contrast. Plus the home improvements: Needs you split, the Next card and the green-tick empty state.
 const { test, expect, buildWorld } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { settle } = require('../support/settle');
 
 const SHOTS = process.env.HOME_SHOTS; // folder for screenshots (optional; off in CI)
@@ -19,7 +20,7 @@ const noSidewaysScroll = async (page, where) => {
 };
 const VIEWS = [['map', 'Dashboard'], ['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent']];
 const goTab = async (page, key, title) => {
-  await page.locator(`#mainNav a[data-nav="${key}"]`).click();
+  await tabClick(page, `#mainNav a[data-nav="${key}"]`);
   await expect(page.locator('#hereTitle')).toHaveText(title);
 };
 
@@ -41,7 +42,8 @@ test.describe('Home: house look', () => {
   test('hover only turns the 1px edge ink: no element grows, shrinks or moves', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const sels = ['a.hometile >> nth=0', 'a.keytile >> nth=0', '#urgentOne a.btn', 'header #refreshBtn', '#mainNav a[data-nav="drives"]'];
+    // Drives, Bin and Changes sit under More now (Lisa's tab picks, 2 Nov): the bottom-bar check uses More itself.
+    const sels = ['a.hometile >> nth=0', 'a.keytile >> nth=0', '#urgentOne a.btn', 'header #refreshBtn', '#mainNav [data-house-more]'];
     for (const sel of sels) {
       const el = page.locator(sel);
       if (!(await el.count())) continue;
@@ -54,10 +56,12 @@ test.describe('Home: house look', () => {
       if (after.os !== 'none') expect(after.ow, sel + ': hover line').toBeLessThanOrEqual(1);
       expect(after.b.split(' ').every((v) => parseFloat(v) <= 1), sel + ': borders are 1px at most').toBe(true);
     }
-    // Bottom tab: no ring; the colour bar above the label widens instead (same height).
-    const tab = page.locator('#mainNav a[data-nav="bin"]');
+    // Bottom tab: no outline; the colour bar under the label widens instead (same height).
+    const tab = page.locator('#mainNav [data-house-more]');
     await page.mouse.move(2, 400);
+    await settle(tab); // the hover from the loop above has gone and the line is back to its resting width
     const bar0 = await tab.locator('.bar').boundingBox();
+    expect(bar0.width, 'short grey line at rest').toBeCloseTo(18, 0);
     await tab.hover(); await settle(tab); // the bar's width transition has finished
     const bar1 = await tab.locator('.bar').boundingBox();
     expect(bar1.width).toBeGreaterThan(bar0.width);
@@ -189,7 +193,7 @@ test.describe('Home: house look', () => {
       await goTab(page, key, title);
       const bad = await page.evaluate(() => Array.from(document.querySelectorAll('body *')).filter((e) => {
         if (e.offsetParent === null && getComputedStyle(e).position !== 'fixed') return false;
-        if (e.matches('.shape, .okring, .info, nav.main .bar, svg, svg *, .note.fail, .res.bad, .cnt, nav.main .n')) return false; // counts: 11px, their own fixed size
+        if (e.matches('.shape, .okring, .info, nav.main .bar, svg, svg *, .note.fail, .res.bad, .cnt, nav.main .n, nav.house-tabs .hic')) return false; // counts: their own fixed size; the tab icon ring is round (Lisa's tab picks)
         const c = getComputedStyle(e);
         const boxed = parseFloat(c.borderTopWidth) > 0 && c.borderTopStyle !== 'none' && c.borderTopColor !== 'rgba(0, 0, 0, 0)' && parseFloat(c.borderRightWidth) > 0;
         return boxed && c.borderTopLeftRadius !== '12px';
@@ -198,7 +202,7 @@ test.describe('Home: house look', () => {
     }
   });
 
-  test('every count pill is one fixed size: 1 and 2 digits match exactly (30 x 22, line 20px, radius 11px), even in a wider font', async ({ page }) => {
+  test('every count pill is one fixed size: 1 and 2 digits match exactly (30 x 22, line 20px, radius 11px), even in a wider font; tab counts are the 18px corner ring', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     // Fonts are not loaded in tests, so CI's fallback can be wider than Lexend: probe in the page font AND in a forced wide font.
@@ -209,9 +213,11 @@ test.describe('Home: house look', () => {
           const r = s.getBoundingClientRect(), c = getComputedStyle(s); const o = [r.width, r.height, c.lineHeight, c.borderTopLeftRadius]; s.remove(); box.remove(); return o; };
         return { c1: probe('1', 'cnt'), c2: probe('88', 'cnt'), n1: probe('1', 'n need'), n2: probe('88', 'n need'), c3: probe('888', 'cnt wide'), n3: probe('888', 'n need wide') };
       }, font);
-      for (const k of ['c1', 'c2', 'n1', 'n2']) expect(sizes[k], (font || 'page font') + ' ' + k).toEqual([30, 22, '20px', '11px']);
+      for (const k of ['c1', 'c2']) expect(sizes[k], (font || 'page font') + ' ' + k).toEqual([30, 22, '20px', '11px']);
+      // Tab counts follow Lisa's tab picks (2 Nov): 18 high, 16px line, 9px ends, at least 18 wide.
+      for (const k of ['n1', 'n2']) expect([sizes[k][0] >= 18, ...sizes[k].slice(1)], (font || 'page font') + ' ' + k).toEqual([true, 18, '16px', '9px']);
       expect(sizes.c3[0], '3 digits may grow').toBeGreaterThan(30);
-      expect(sizes.n3[0], '3 digits may grow').toBeGreaterThan(30);
+      expect(sizes.n3[0], '3 digits may grow').toBeGreaterThan(sizes.n1[0]);
     }
     // The real tab count gets .wide only at 3+ digits.
     const n = page.locator('#n-map');
@@ -253,22 +259,22 @@ test.describe('Home: house look', () => {
     }
   });
 
-  test('dark frame top and bottom; light tab buttons; counts are ring pills (Needs you count rose ring + tint)', async ({ page }) => {
+  test('dark frame top and bottom; light tab buttons; the Needs you tab count is a rose ring with no fill (Lisa\'s tab picks)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const head = await page.locator('header').evaluate((e) => getComputedStyle(e).backgroundColor);
     const foot = await page.locator('#mainNav').evaluate((e) => getComputedStyle(e).backgroundColor);
     expect(head).toBe('rgb(58, 54, 50)'); // #3A3632 warm charcoal, never black
     expect(foot).toBe('rgb(70, 65, 59)'); // #46413B one step lighter
-    const tab = await page.locator('#mainNav a[data-nav="drives"]').evaluate((e) => getComputedStyle(e).backgroundColor);
+    const tab = await page.locator('#mainNav a[data-nav="map"]').evaluate((e) => getComputedStyle(e).backgroundColor);
     expect(tab).toBe('rgb(255, 254, 251)');
     const n = page.locator('#n-map');
     if ((await n.textContent()).trim()) {
       const c = await n.evaluate((e) => { const s = getComputedStyle(e); return { b: s.borderTopWidth, bc: s.borderTopColor, bg: s.backgroundColor, h: e.getBoundingClientRect().height, w: e.getBoundingClientRect().width }; });
       expect(c.b).toBe('1px');
       expect(c.bc).toBe('rgb(230, 68, 61)'); // rose ring
-      expect(c.bg).toBe('rgb(252, 228, 224)'); // light rose tint
-      expect([c.h, c.w], 'count pill 22px high, 30px wide').toEqual([22, 30]);
+      expect(c.bg).toBe('rgba(0, 0, 0, 0)'); // ring only, no fill (Lisa's tab picks, 2 Nov)
+      expect([c.h, c.w >= 18], 'tab count 18px high, at least 18 wide').toEqual([18, true]);
     }
   });
 
@@ -344,7 +350,7 @@ for (const scheme of ['light', 'dark']) {
 
 test.describe('Home: phone (390 x 844)', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
-  test('no sideways scroll on any view; tab counts sit in flow beside the icon; press targets 44px', async ({ page }) => {
+  test('no sideways scroll on any view; tab counts sit in the tab\'s top-right corner; press targets 44px', async ({ page }) => {
     await page.goto('./');
     await noSidewaysScroll(page, 'signed out');
     await signIn(page);
@@ -354,7 +360,10 @@ test.describe('Home: phone (390 x 844)', () => {
     }
     await goTab(page, 'map', 'Dashboard');
     const n = page.locator('#n-map');
-    expect(await n.evaluate((e) => getComputedStyle(e).position)).toBe('static');
+    const c = await n.evaluate((e) => { const r = e.getBoundingClientRect(), t = e.parentElement.getBoundingClientRect(); return { pos: getComputedStyle(e).position, top: r.top - t.top, right: t.right - r.right }; });
+    expect(c.pos).toBe('absolute');
+    expect(c.top).toBeLessThanOrEqual(5);
+    expect(c.right).toBeLessThanOrEqual(5);
     // On a phone Sign out leaves the top bar for the Look menu (Lisa's pick A, 2 Nov); both are 44px there.
     await expect(page.locator('header #signOutBtn')).toBeHidden();
     await page.locator('header #houseLookBtn').click();

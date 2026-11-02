@@ -211,7 +211,7 @@
   .card.vision[class] { background: var(--surface); }
   .card.vision[class]:not(:hover) { border-color: var(--line); }
   a { color: inherit; }
-  .btn:active, nav.main a:active { transform: none; }
+  .btn:active { transform: none; }
   .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--muted); cursor: help; vertical-align: middle; }
   .info:hover { border-color: var(--muted); }
 
@@ -234,18 +234,8 @@
      Dashboard, Drive, Bin, Changes, More. Red number = things that need you. Nothing hides under the bar. */
   html { scroll-padding-bottom: 96px; }
   body { padding-bottom: 96px; }
-  nav.main { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
-             padding: 6px 8px 10px; margin: 0; background: var(--surface); border-top: 1px solid var(--line); }
-  nav.main a { position: relative; text-decoration: none; font-size: 13px; font-weight: 600; color: var(--ink); min-height: 54px; display: flex; flex-direction: column;
-               align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; background: transparent; }
-  nav.main a .icon { width: 20px; height: 20px; }
-  nav.main a:hover { border-color: var(--slot, var(--line)); }
-  /* Selected tab: one clean border all round plus its LJR7 tint fill (Lisa, 25 Oct: the selected pill had lost its colour). */
-  nav.main a[aria-current="page"] { border: 1.5px solid var(--ink); background: var(--tint, var(--s0-tint)); }
   /* "You are here" title: focus moves here on every screen change for screen readers; it must not draw a box. */
   #hereTitle, #hereTitle:focus, #hereTitle:focus-visible { outline: none; border: 0; box-shadow: none; }
-  nav.main .n { position: absolute; top: 2px; right: calc(50% - 28px); font-size: 13px; font-weight: 600; line-height: 18px; background: var(--ljr-2-solid); color: var(--ljr-2-on); border-radius: 999px; padding: 0 6px; min-width: 18px; }
-  nav.main .n:empty { display: none; }
   /* Home: Needs you: N, three big count tiles that open a tab, then the one most urgent thing. */
   .needsline { font-size: 26px; font-weight: 600; margin: 0; }
   .needsline .zero { color: var(--ljr-5-text); }
@@ -278,7 +268,7 @@
   .st-empty .shape, .st-idle .shape, .st-loading .shape { border-width: 1px; }
   .st-empty .shape { border-radius: 50%; }
   /* One radius on everything; only status dots are round. */
-  .banner, a.skip, .mtag, .chip, .stat, .scrollbox, .ment, a.keytile, .subnav a, .index .btn, .picker select, input.find, nav.main a, .info, .card { border-radius: var(--radius); }
+  .banner, a.skip, .mtag, .chip, .stat, .scrollbox, .ment, a.keytile, .subnav a, .index .btn, .picker select, input.find, .info, .card { border-radius: var(--radius); }
   a.skip { border-width: 1px; }
   .banner { border-style: solid; border-color: var(--ljr-2); }
   .banner.info { border-color: var(--line); }
@@ -303,9 +293,9 @@
   .mtag.fin { border-color: var(--ljr-3-text); background: var(--ljr-3-tint); color: var(--ink); }
   /* Count pills: ONE exact box so 1 and 2 digits match in any font: 30 x 22, line 20px, radius 11px.
      Only 3+ digits (and worded pills) get .wide and grow. */
-  .cnt, nav.main .n { width: 30px; min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 3px; border-radius: 11px; box-sizing: border-box;
+  .cnt { width: 30px; min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 3px; border-radius: 11px; box-sizing: border-box;
     display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; overflow: hidden; }
-  .cnt.wide, nav.main .n.wide { width: auto; padding: 0 6px; overflow: visible; }
+  .cnt.wide { width: auto; padding: 0 6px; overflow: visible; }
   .cnt { border: 1px solid var(--ctl); font-weight: 600; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .cnt.k-risk { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
   .cnt.k-fin { border-color: var(--ljr-3-text); background: var(--ljr-3-tint); }
@@ -350,32 +340,8 @@
   @media (hover: hover) { html.dash-locked header .btn:hover { outline-color: var(--ink); } }
   html.dash-locked body header :focus-visible { outline-color: var(--ink) !important; }
   html body header :focus-visible { outline-color: var(--frame-ink) !important; }
-  nav.main { background: var(--frame-foot); border-top: 0; gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  @media (min-width: 601px) { nav.main { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 220px)); justify-content: center; } }
-  /* Tabs: light buttons, no rings. Hover and selected = the small colour bar above the label widens (same height, nothing moves). */
-  nav.main a, nav.main a:hover, nav.main a[aria-current="page"] { border: 1px solid transparent; outline: none; box-shadow: none; background: var(--card); font-weight: 600; color: var(--ink); }
-  nav.main a { --tc: var(--slot, var(--ljr-0)); }
-  nav.main a.vision { --tc: var(--ink); } nav.main a.slot8 { --tc: var(--tc8); }
-  nav.main a .bar { display: block; width: 18px; height: 4px; border-radius: 2px; background: var(--tc); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
-  nav.main a[aria-current="page"] .bar { width: 40px; opacity: 1; }
-  @media (hover: hover) { nav.main a:hover .bar { width: 40px; opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { nav.main a .bar { transition: none; } }
-  html body nav.main a:focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
-  /* Counts: a 1px ring pill in the tab's top-right corner; "needs you" counts add a rose edge and a light rose tint. */
-  nav.main .n { position: absolute; top: 8px; right: 18px; left: auto;
-    font-weight: 600; color: var(--ink); background: transparent; border: 1px solid var(--ctl); }
-  nav.main .n.need { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
-  nav.main .n:empty { display: none; }
-  @media (max-width: 600px) {
-    /* Phone tabs: colour bar, then icon + count on one line (count in flow), then the label on its own line. */
-    nav.main a { min-height: 62px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; padding: 6px 2px; }
-    nav.main a .bar { margin: 0 calc(50% - 9px); }
-    nav.main a[aria-current="page"] .bar { width: 26px; margin: 0 calc(50% - 13px); }
-    nav.main a > .icon { order: 1; }
-    nav.main .n { position: static; order: 2; }
-    nav.main a > span:not(.bar):not(.n) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }
-  }
-  @media (max-width: 600px) and (hover: hover) { nav.main a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). Keys see the frame's light ring on the dark bar. */
+  html body nav.house-tabs .ht:focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
   html { scroll-padding-bottom: 104px; } body { padding-bottom: 104px; }
   /* House hover rule (Lisa, 28 Oct). Neutral controls: hover = 1px ink line inside + a pale muted tint. Meaning-coloured controls
      (rose delete/late, purple AI, copper money, a section's colour) keep THEIR colour: the same 1px line in that colour + a pale tint
@@ -433,10 +399,14 @@
 </main>
 
 <nav id="mainNav" class="main house-tabs hidden" aria-label="Sections">
-  <a href="#/map" data-nav="map" class="vision"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-map"/></svg><span>Dashboard</span><span class="n need" id="n-map"></span></a>
-  <a href="#/drives" data-nav="drives" class="slot0"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-drive"/></svg><span>Drives</span></a>
-  <a href="#/bin" data-nav="bin" class="slot8"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-bin"/></svg><span>Bin</span><span class="n need" id="n-bin"></span></a>
-  <a href="#/changes" data-nav="changes" class="slot7"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-changes"/></svg><span>Changes</span></a>
+  <a class="ht" data-slot="1" href="#/map" data-nav="map"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="n-map"></span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/drives" data-nav="drives" data-slot="0"><svg class="icon" aria-hidden="true"><use href="#i-drive"/></svg><span class="htl">Drives</span></a>
+      <a href="#/bin" data-nav="bin" data-slot="8"><svg class="icon" aria-hidden="true"><use href="#i-bin"/></svg><span class="htl">Bin</span><span class="n need" id="n-bin"></span></a>
+      <a href="#/changes" data-nav="changes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-changes"/></svg><span class="htl">Changes</span></a>
+    </div>
+  </div>
 </nav>
 
 <footer id="pageFoot" class="wrap hidden"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
@@ -2719,7 +2689,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
       if (a.getAttribute('data-nav') === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
-    tabBadge('map', nNeeds, 'Dashboard');
+    tabBadge('map', nNeeds, 'Main');
     tabBadge('bin', S.bin.data && S.bin.data.ready ? S.bin.data.ready.length : 0, 'Bin');
     if (changed && lastView !== null) {
       el.classList.add('fade');

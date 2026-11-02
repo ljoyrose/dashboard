@@ -5,6 +5,8 @@
 const RULES = {
   radius: 12, line: 1, bar: 3, marker: [3, 18], minFont: 13, weights: ['400', '600'],
   count: { w: 30, h: 22, r: 11, lh: 20, pad: 3 },
+  // A bottom tab's count (Lisa's tab picks, 2 Nov): a small ring in the tab's top-right corner, no fill, never in the flow.
+  tabCount: { h: 18, r: 9, lh: 16, pad: 5, corner: 5 },
   button: { desktop: 36, phone: 44 },
   // Control line, frame top and frame bottom, per background (warm/cool) and mode (light/dark).
   press: { 'warm-light': '#8A7F70', 'cool-light': '#7A8692', 'warm-dark': '#857B6E', 'cool-dark': '#7A8691' },
@@ -111,12 +113,25 @@ function audit(o) {
     if (!near(bc, press, 8)) add('control line', e, hex6(bc) + ' (want ' + hex6(press) + ')');
   }
   // 7 counts: a small ringed box holding only a number. 30 x 22, radius 11, line-height 20, padding 0 3px; .wide for 3+ digits.
+  // A bottom tab's count follows R.tabCount instead (Lisa's tab picks, 2 Nov).
   for (const e of document.querySelectorAll('body *')) {
     if (!seen(e) || e.children.length || e.matches(PRESS)) continue;
     const t = (e.textContent || '').trim(), s = getComputedStyle(e), r = e.getBoundingClientRect();
     const ringed = s.borderTopStyle !== 'none' && px(s.borderTopWidth) > 0 && rgb(s.borderTopColor)[3] > 0.3;
     if (!/^\d{1,4}\+?$/.test(t) || !ringed || r.height > 26 || r.width > 60) continue; // bigger ringed numbers are summary figures, not count pills
     if (t === '0') { add('count', e, '0 shows a ring'); continue; }
+    if (inTabs(e)) {
+      const T = R.tabCount, tab = e.parentElement.getBoundingClientRect();
+      if (Math.abs(r.height - T.h) > 0.6) add('count', e, 'tab count height ' + r.height + ' (want ' + T.h + ')');
+      if (r.width < T.h - 0.6) add('count', e, 'tab count width ' + r.width);
+      if (s.boxSizing !== 'border-box') add('count', e, s.boxSizing);
+      if (Math.abs(px(s.borderTopLeftRadius) - T.r) > 0.5) add('count', e, 'tab count radius ' + s.borderTopLeftRadius);
+      if (Math.abs(px(s.lineHeight) - T.lh) > 0.5) add('count', e, 'tab count line-height ' + s.lineHeight);
+      if (Math.abs(px(s.paddingLeft) - T.pad) > 0.5) add('count', e, 'tab count padding ' + s.paddingLeft);
+      if (s.position !== 'absolute' || tab.right - r.right > T.corner || r.top - tab.top > T.corner) add('count', e, 'tab count not in the top-right corner');
+      if (rgb(s.backgroundColor)[3] > 0.05) add('count', e, 'tab count has a fill ' + hex6(rgb(s.backgroundColor)));
+      continue;
+    }
     const wide = t.replace('+', '').length >= 3;
     if (Math.abs(r.height - R.count.h) > 0.6) add('count', e, 'height ' + r.height);
     if (!wide && Math.abs(r.width - R.count.w) > 0.6) add('count', e, 'width ' + r.width);
@@ -125,7 +140,6 @@ function audit(o) {
     if (Math.abs(px(s.borderTopLeftRadius) - R.count.r) > 0.5) add('count', e, 'radius ' + s.borderTopLeftRadius);
     if (Math.abs(px(s.lineHeight) - R.count.lh) > 0.5) add('count', e, 'line-height ' + s.lineHeight);
     if (!wide && Math.abs(px(s.paddingLeft) - R.count.pad) > 0.5) add('count', e, 'padding ' + s.paddingLeft);
-    if (o.phone && inTabs(e) && s.position === 'absolute') add('count', e, 'phone tab count not in the flow');
   }
   for (const e of document.querySelectorAll('.cnt, .n, .count, .badge')) {
     const t = (e.textContent || '').trim(), s = getComputedStyle(e);

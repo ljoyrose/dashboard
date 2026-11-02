@@ -62,10 +62,7 @@
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .top :focus-visible { outline-color: var(--frame-ink); }
 
-  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 180px)); justify-content: center; } }
-  @media (min-width: 601px) { nav.tabs a { min-height: 58px; gap: 3px; padding: 6px 2px; } }
-  nav.tabs .n { top: 6px; right: 10px; }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
 
   main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
   #view { display: flex; flex-direction: column; gap: 12px; }
@@ -116,11 +113,10 @@
   input.txtin:focus { border-color: var(--ink); }
   .queued { font-size: 14px; margin: 0; }
   @media (max-width: 544px) {
-    .btn, .chip, select.txtin, input.txtin, nav.tabs a, details.add > summary { min-height: 44px; }
+    .btn, .chip, select.txtin, input.txtin, details.add > summary { min-height: 44px; }
     .frow label { flex: 1 1 calc(50% - 4px); max-width: none; }
-    nav.tabs { gap: 6px; padding-left: 6px; padding-right: 6px; }
   }
-  #view :focus-visible, nav.tabs a:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  #view :focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
   header :focus-visible:not(.house-menu *) { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
 </style>
 </head>
@@ -148,11 +144,15 @@
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs" id="tabs" aria-label="Web Estate sections">
-  <a href="#/home" data-nav="home" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg><span>Estate</span><span class="n" id="n-home"></span></a>
-  <a href="#/look" data-nav="look" style="--tc:var(--ljr-2)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-alert"/></svg><span>Needs a look</span><span class="n need" id="n-look"></span></a>
-  <a href="#/unchecked" data-nav="unchecked" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span>Not checked</span><span class="n" id="n-unchecked"></span></a>
-  <a href="#/shops" data-nav="shops" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Shops &amp; ads</span><span class="n" id="n-shops"></span></a>
-  <a href="#/access" data-nav="access" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-key"/></svg><span>Access</span><span class="n" id="n-access"></span></a>
+  <a class="ht" data-slot="1" href="#/home" data-nav="home"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n" id="n-home"></span></a>
+  <a class="ht" data-slot="4" href="#/look" data-nav="look"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n need" id="n-look"></span></a>
+  <a class="ht" data-slot="6" href="#/shops" data-nav="shops"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-bag"/></svg></span><span class="htl">Shops</span><span class="n" id="n-shops"></span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/unchecked" data-nav="unchecked" data-slot="7"><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span class="htl">Unchecked</span><span class="n" id="n-unchecked"></span></a>
+      <a href="#/access" data-nav="access" data-slot="3"><svg class="i" aria-hidden="true"><use href="#i-key"/></svg><span class="htl">Access</span><span class="n" id="n-access"></span></a>
+    </div>
+  </div>
 </nav>
 <script>
 (function () {

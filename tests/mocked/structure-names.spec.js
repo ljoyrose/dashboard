@@ -16,12 +16,12 @@ const signIn = async (page) => {
 };
 
 test.describe('Structure: one name and one way back', () => {
-  test('the front page is called "Dashboard" in the tab, the title and the page name', async ({ page }) => {
+  test('the front page is called "Dashboard" in the title and the page name; its tab is Main (Lisa\'s tab picks, 2 Nov)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
     await expect(page).toHaveTitle(/Dashboard · Lisa Dashboard$/);
-    await expect(page.locator('nav.main a[data-nav="map"]')).toContainText('Dashboard');
+    await expect(page.locator('nav.main a[data-nav="map"]')).toContainText('Main');
     // No visible link to #/map is named "Map" or "Home".
     const names = await page.locator('a[href="#/map"]:visible').allInnerTexts();
     for (const n of names) expect(n.trim()).not.toMatch(/^(Map|Home)\b/);

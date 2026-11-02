@@ -106,40 +106,25 @@
   a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
   /* !important: focus always wins over the 1px hover / selected line, so the keyboard ring is never lost. */
   :focus-visible, label.date:has(input:focus-visible) { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
-  header :focus-visible:not(.house-menu *), nav.tabs a:focus-visible { outline-color: var(--frame-ink) !important; }
+  header :focus-visible:not(.house-menu *), nav.tabs .ht:focus-visible { outline-color: var(--frame-ink) !important; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ink); }
   .sbox:focus-within { border-color: var(--ink); }
 
-  /* Frame: dark bottom tab bar, light tab buttons with no rings. Hover and selected = the small colour bar above the label widens. */
-  /* The frame, light tab buttons, no ring, the widening colour bar: ../house.css (.house-tabs). Six across here. */
-  nav.tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 200px)); justify-content: center; gap: 8px;
-    padding: 8px 24px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  nav.tabs a { --tc: var(--ljr-0); font-size: 14px; }
-  @media (min-width: 601px) { nav.tabs a { min-height: 56px; } }
-  nav.tabs a > .ti { font-size: 18px; color: var(--muted); }
-  nav.tabs .n { top: 6px; right: 10px; }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
 
   /* Counts: ONE fixed box so 1 and 2 digits match (30 x 22, radius 11); only 3+ digits grow (.wide). Read-only: no hover.
-     Tab counts are an amber ring only (no fill); "needs you" counts in the page are a rose ring + tint. A count of 0 shows no pill. */
+     Tab counts: ../house.css section 6; "needs you" counts in the page are a rose ring + tint. A count of 0 shows no pill. */
   /* The count pill itself: ../house.css; the counts inside Filter and the fold titles use the same box. */
   .fbtn .n, .fdet > summary .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: var(--house-count-w); height: var(--house-count-h); padding: 0 var(--house-count-pad);
     border: 1px solid var(--ctl); border-radius: var(--house-count-r); font-size: 13px; font-weight: 600; line-height: var(--house-count-lh); color: var(--ink); background: transparent; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .cnt, nav.tabs .n, .fbtn .n, .fdet > summary .n { flex: none; vertical-align: middle; }
+  .cnt, .fbtn .n, .fdet > summary .n { flex: none; vertical-align: middle; }
   .fbtn .n.wide { width: auto; min-width: 30px; padding: 0 6px; }
-  nav.tabs .n { border-color: var(--r-warn); }
   .cnt.need { border-color: var(--r-risk); background: var(--t-risk); }
-  .cnt:empty, nav.tabs .n:empty, .fbtn .n:empty, .fdet > summary .n:empty { display: none; }
+  .cnt:empty, .fbtn .n:empty, .fdet > summary .n:empty { display: none; }
   @media (max-width: 600px) {
     .btn, button.pill, a.pill, .fbtn, .ch, .more, .undo, .copy, .tick, .stat, label.date, a.chip, a.need, details.arch > summary, .fdet > summary, .sbox, .fin, .ask input, .ask select { min-height: 44px; }
     .ico, .flagb, .opt, .mark, .plus, .lk { width: 44px; height: 44px; }
     .lk.off { width: auto; }
-    /* Phone: two rows of three tabs; the count sits in flow beside the label, never over it. */
-    nav.tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px)); }
-    nav.tabs a { min-height: 44px; flex-direction: row; flex-wrap: wrap; align-content: center; gap: 2px 6px; }
-    nav.tabs a .bar { flex: 0 0 auto; }
-    nav.tabs a > .ti { display: none; }
-    nav.tabs a > .tl { order: 1; flex: 0 1 auto; }   /* room here: the count sits in the flow beside the label */
-    nav.tabs .n { position: static; }
     html { scroll-padding-bottom: 150px; }
   }
 
@@ -381,12 +366,16 @@
   </div>
 </header>
 <nav class="tabs house-tabs" aria-label="Sections">
-  <a href="#/me" data-nav="me" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-user" aria-hidden="true"></i><span class="tl">Me</span><span class="n" id="nMe"></span></a>
-  <a href="#/rooms" data-nav="rooms" style="--tc:var(--ljr-0)"><span class="bar" aria-hidden="true"></span><i class="ti ti-building-factory-2" aria-hidden="true"></i><span class="tl">Rooms</span></a>
-  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-scale" aria-hidden="true"></i><span class="tl">Decide</span><span class="n" id="nDecide"></span></a>
-  <a href="#/do" data-nav="do" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-square-check" aria-hidden="true"></i><span class="tl">Do</span><span class="n" id="nDo"></span></a>
-  <a href="#/docs" data-nav="docs" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-file" aria-hidden="true"></i><span class="tl">Docs</span></a>
-  <a href="#/today" data-nav="today" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-calendar" aria-hidden="true"></i><span class="tl">Today</span></a>
+  <a class="ht" data-slot="1" href="#/me" data-nav="me"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n" id="nMe"></span></a>
+  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n" id="nDecide"></span></a>
+  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n" id="nDo"></span></a>
+  <a class="ht" data-slot="0" href="#/rooms" data-nav="rooms"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-room"/></svg></span><span class="htl">Rooms</span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/today" data-nav="today" data-slot="4"><i class="ti ti-calendar" aria-hidden="true"></i><span class="htl">Today</span></a>
+      <a href="#/docs" data-nav="docs" data-slot="6"><i class="ti ti-file" aria-hidden="true"></i><span class="htl">Docs</span></a>
+    </div>
+  </div>
 </nav>
 <main class="wrap" id="content">
   <div id="appMenu" class="appmenu hidden"></div>
