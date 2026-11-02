@@ -282,4 +282,6 @@ a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
 [data-open-row]:has(.house-open:focus-visible) { outline: var(--house-focus) solid var(--ink); outline-offset: 2px; }
 /* When the icon font cannot load, an icon-only button shows its name as a word (toolkit.js adds .house-iw). */
 .house-noicons button > i.ti:empty, .house-noicons a > i.ti:empty { display: none; }
-.house-iw { font-size: var(--fs-small); font-weight: 600; white-space: nowrap; }
+.house-iw { font-size: var(--fs-small); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+/* A square icon control grows to fit its word (never past its row), so the word never spills outside the page. */
+.house-noicons :is(a, button):has(> .house-iw) { width: auto; min-width: var(--house-ctl-h, 36px); max-width: 100%; padding-left: 8px; padding-right: 8px; }
