@@ -32,6 +32,8 @@ async function blankButtons(page) {
   }).map((b) => (b.outerHTML || '').slice(0, 120)));
 }
 
+test.describe.configure({ timeout: 90_000 });   // one test walks several views of a hub; CI machines are slower
+
 const VIEWS = {
   studio: ['me', 'do', 'decide'],
   money: ['now', 'todo'],
@@ -49,7 +51,7 @@ test.describe('Clickable info: every number, card and row opens what it counts',
       await HUBS[hub].open(page, guard);
       for (const v of views) {
         await go(page, v);
-        expect(await bare(page), `${hub} #/${v}`).toEqual([]);
+        await expect.poll(() => bare(page), { message: `${hub} #/${v}`, timeout: 10_000 }).toEqual([]);
       }
     });
   }
@@ -202,7 +204,8 @@ test.describe('No blank buttons: every visible button shows its word or icon', (
   for (const [hub, views] of Object.entries(ALL)) {
     test(`${hub}: no button with empty text and no icon (icon font blocked here, so words show instead)`, async ({ page, guard }) => {
       await HUBS[hub].open(page, guard);
-      for (const v of views) { await go(page, v); await page.waitForTimeout(150); expect(await blankButtons(page), `${hub} #/${v}`).toEqual([]); }
+      // The words appear once the page has found the icon font missing (after document.fonts.ready), so wait for them.
+      for (const v of views) { await go(page, v); await expect.poll(() => blankButtons(page), { message: `${hub} #/${v}`, timeout: 10_000 }).toEqual([]); }
     });
   }
 });
