@@ -1,0 +1,31 @@
+name: House lint
+
+# tools/lint/lint.mjs: plain Node, no packages, no secrets, read-only. JOB 38.
+# Fails only on NEW findings; today's are counted in tools/lint/known.json (lower a number when you fix one).
+# Workflows must pass outright: every action pinned to a full SHA, top-level permissions contents read only,
+# a timeout on every job, and a concurrency block. Not a required check.
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: House lint (no packages)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+      - name: Control cases (the lint proves it can still fail)
+        run: node tools/lint/lint.mjs --selftest
+      - name: Lint (new findings only)
+        run: node tools/lint/lint.mjs

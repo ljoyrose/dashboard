@@ -22,6 +22,7 @@ export const DEFAULT_DATA = join(HERE, 'gates.unified.json');
 // Underscores and spaces fold together, so "Leak design" and "Leak_design" are one name.
 const norm = (s) => String(s).toLowerCase().replace(/→/g, '->').replace(/[_\s]+/g, ' ').trim();
 
+/** Read and parse the gate data JSON file (default: gates.unified.json beside this script). */
 export function loadData(path = DEFAULT_DATA) {
   return JSON.parse(readFileSync(path, 'utf8'));
 }
@@ -35,6 +36,7 @@ export function aliasMap(data) {
   return map;
 }
 
+/** Normalise a transition name: lower case, arrows as '->', no spaces around the arrow. */
 export function normTransition(t) {
   return norm(t).replace(/\s*->\s*/g, '->');
 }
@@ -138,6 +140,7 @@ export function evalCard(card, toRaw, data) {
   return { transition: t.id, label: t.label, result, rows, universal };
 }
 
+/** Format one card report as plain text: a header, one line per gate check, then the overall result. */
 export function formatReport(rep) {
   const lines = [`TRANSITION ${rep.transition}  ${rep.label}`];
   for (const r of [...rep.rows, ...rep.universal]) lines.push(`  ${r.status.padEnd(10)} ${r.gate.padEnd(8)} ${r.reasons.join('; ')}`);
@@ -145,6 +148,7 @@ export function formatReport(rep) {
   return lines.join('\n');
 }
 
+/** Format the gate list as plain text: counts, one line per gate, then the open conflicts. */
 export function formatList(data) {
   const lines = [`${data.gates.length} gates, ${data.transitions.length} transitions, ${data.conflicts.length} conflicts`, ''];
   for (const g of data.gates) {
@@ -204,6 +208,10 @@ function parseArgs(argv) {
 
 const USAGE = 'usage: gate.mjs --card <file.json> --to <transition> | --list | --selftest   [--dry-run] [--json] [--data <gates.json>]';
 
+/**
+ * Command-line entry point. Parses arguments, runs --list, --selftest or a card check,
+ * and returns the exit code (0 on success; --dry-run forces 0 after a run).
+ */
 export function main(argv, io = { out: (s) => process.stdout.write(s + '\n'), err: (s) => process.stderr.write(s + '\n') }) {
   let exit = 1;
   try {
