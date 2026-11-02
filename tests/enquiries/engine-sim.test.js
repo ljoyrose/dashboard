@@ -156,3 +156,98 @@ test('Add by hand: one request file becomes one row and one Requests line; read 
   assert.equal(e.tab('Requests').length, 2);
   assert.ok(e.tab('People').some((p) => p.email === 'buyer.x@example.com' && p.phone_e164 === '+447700900209'));
 });
+
+// ---- Stage 6: people across sources, history, past deposits, contact gate ----------------------------------------
+const req = (id, channel, text, at) => { const b = C.addRequest({ channel, kind: 'puppy', text }, at || '2026-10-29T10:00:00.000Z'); return { id, name: b.name, text: JSON.stringify(b.body) }; };
+const setSetting = (e, name, value) => { const st = e.book().getSheetByName('Settings'); st.rows.forEach((r) => { if (r[0] === name) r[1] = value; }); };
+
+test('Stage 6: same full name by email and by phone is one person marked check; same first name, other phone stays apart', { skip }, () => {
+  const files = [
+    req('FILE-S6-1', 'facebook', 'From: Buyer Rsample\nAny girls? buyer.r@example.com', '2026-10-20T10:00:00.000Z'),
+    req('FILE-S6-2', 'whatsapp', 'From: Buyer Rsample\nStill keen\n07700 900381', '2026-10-22T10:00:00.000Z'),
+    req('FILE-S6-3', 'phone', 'From: Buyer\nRang about boys\n07700 900382'),
+    req('FILE-S6-4', 'phone', 'From: Buyer\nRang about girls\n07700 900383')
+  ];
+  const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, dryRun: false });
+  e.ctx.setup();
+  e.ctx.runOnce();
+  const enq = e.tab('Enquiries'), ppl = e.tab('People');
+  assert.equal(enq.length, 4);
+  assert.equal(ppl.length, 3, 'R joined across email and WhatsApp; the two "Buyer" callers stay two people');
+  const r = ppl.find((p) => p.email === 'buyer.r@example.com');
+  assert.equal(r.phone_e164, '+447700900381');
+  assert.ok(Number(r.match_confidence) < 0.9);
+  assert.match(String(r.check), /name match/);
+  assert.equal(r.sources, 'facebook, whatsapp');
+  assert.equal(r.touches, 2);
+  assert.equal(r.first_contact_uk, '2026-10-20T11:00:00'); // UK clock (BST)
+  assert.equal(r.last_touch_uk, '2026-10-22T11:00:00');
+  assert.match(r.ref, /^C-\d{4}$/);
+  const keys = enq.map((x) => x.person_key);
+  assert.equal(new Set(keys).size, 3);
+  e.ctx.runOnce();
+  assert.equal(e.tab('People').length, 3, 're-run adds no people');
+});
+
+test('Stage 6 ACCEPT: a do-not-contact person never gets a FollowUps row, on any of their enquiries', { skip }, () => {
+  // buyer.p is do-not-contact in ClickFunnels; the same address then arrives by hand on Facebook.
+  const files = [req('FILE-S6-5', 'facebook', 'From: Buyer P\nHello again buyer.p@example.com'), req('FILE-S6-6', 'email', 'From: Buyer Z Sample\nbuyer.z@example.com')];
+  const e = FAKE.load(src, { props: Object.assign({ ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, CF_PROPS), routes: cfRoutes('Australian Labradoodles/Cobberdogs'), files, dryRun: false });
+  e.ctx.setup();
+  e.ctx.runOnce();
+  const enq = e.tab('Enquiries');
+  const p = e.tab('People').find((x) => x.email === 'buyer.p@example.com');
+  assert.equal(p.do_not_contact, true);
+  const pEnq = enq.filter((x) => x.person_key === p.person_key);
+  assert.equal(pEnq.length, 2, 'ClickFunnels run and Facebook message are one person');
+  assert.ok(pEnq.every((x) => x.do_not_contact === true && x.consent === 'do-not-contact'), 'red chip on every enquiry of that person');
+  const z = enq.find((x) => x.source_ref === 'FILE-S6-6');
+  const items = enq.filter((x) => x.person_key === p.person_key || x === z).map((x, i) => ({ followup_key: 'F-S6-' + i, enquiry_key: x.key, person_key: x.person_key, rule: 'first-reply', try: 1, status: 'due' }));
+  const res = e.ctx.queueFollowUps_(items);
+  assert.deepEqual(JSON.parse(JSON.stringify(res)), { written: 1, blocked: 2 });
+  const fu = e.tab('FollowUps');
+  assert.equal(fu.length, 1);
+  assert.equal(fu[0].enquiry_key, z.key);
+  assert.ok(!fu.some((f) => f.person_key === p.person_key));
+  assert.ok(e.tab('Log').some((r) => r.step === 'contact-rule' && /blocked/.test(r.message)));
+});
+
+test('Stage 6: past deposit and repeat buyer from the allocation sheets, read only, hashed keys only', { skip }, () => {
+  const others = { 'ALLOC-SAMPLE': {
+    CURRENT: [['section', 'ref', 'name', 'status', 'deposit_date', 'whatsapp', 'email', 'ppf (colour/gender)', 'notes', 'provisional_pup'],
+      ['PUPS', 'r1', 'Buyer V Sample', 'deposit paid', '2026-09-10', '07700 900391', '', '', '', ''],
+      ['LDB-WAITING', 'r2', 'Buyer W Sample', 'lead', '', '07700 900392', '', '', '', '']],
+    'OLD_LDB_LIST_2026-10-22': [['xero_contact', 'xero_contact_id', 'first_deposit', 'deposit_total', 'old_22oct_stage', 'outcome_27oct', 'evidence', 'now_on_CURRENT_tab'],
+      ['Buyer Y Sample', 'X-1', '2025-03-01', '1', 'collected', 'went home', '', 'no']],
+    LESSONS: [['never read'], ['x']] } };
+  const files = [req('FILE-S6-7', 'whatsapp', 'From: Buyer V\n07700 900391'), req('FILE-S6-8', 'whatsapp', 'From: Buyer W\n07700 900392'), req('FILE-S6-9', 'email', 'From: Buyer Y Sample\nbuyer.y@example.com')];
+  const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, others, dryRun: false });
+  e.ctx.setup();
+  setSetting(e, 'allocation_sheet_ids', 'ALLOC-SAMPLE');
+  e.ctx.runOnce();
+  const ppl = e.tab('People');
+  const v = ppl.find((x) => x.phone_e164 === '+447700900391'), w = ppl.find((x) => x.phone_e164 === '+447700900392'), y = ppl.find((x) => x.email === 'buyer.y@example.com');
+  assert.equal(v.past_deposit, true); assert.equal(v.repeat_buyer, false);
+  assert.equal(w.past_deposit, false, 'a lead with no deposit');
+  assert.equal(y.past_deposit, true); assert.equal(y.repeat_buyer, true);
+  assert.match(String(y.check), /name only/);
+  assert.deepEqual(e.touched, [], 'nothing but reads on the allocation sheet');
+  assert.ok(e.tab('Log').some((r) => r.step === 'people' && /2 with a past deposit, 1 to check/.test(r.message)));
+  for (const t of Object.keys(e.book().sheets.reduce((a, s) => (a[s.name] = 1, a), {}))) {
+    const flat = JSON.stringify(e.book().getSheetByName(t).rows);
+    assert.ok(!/LDB-WAITING|"X-1"|deposit paid|2026-09-10|2025-03-01/.test(flat), 'no allocation-sheet text copied into ' + t);
+  }
+});
+
+test('Stage 6: setup() on an older sheet adds only the new settings and keeps Lisa\'s values', { skip }, () => {
+  const e = FAKE.load(src);
+  e.ctx.setup();
+  const st = e.book().getSheetByName('Settings');
+  st.rows.forEach((r) => { if (r[0] === 'gmail_days') r[1] = '30'; });
+  const n = st.rows.length;
+  st.rows.splice(st.rows.findIndex((r) => r[0] === 'name_match_min'), 1);
+  e.ctx.setup();
+  assert.equal(st.rows.length, n);
+  assert.equal(st.rows.find((r) => r[0] === 'gmail_days')[1], '30');
+  assert.ok(st.rows.some((r) => r[0] === 'name_match_min'));
+});

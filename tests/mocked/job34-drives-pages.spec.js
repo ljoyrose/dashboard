@@ -1,3 +1,4 @@
+const { tabClick } = require('../support/tabs');
 // JOB 34 (group A): Drives pages: paging, empty and missing drives, the picker's way back, Drive check downloads.
 // Pretend Google and Drive only. Every row and file is invented.
 const { test, expect } = require('../fixtures/job34/load');
@@ -64,7 +65,7 @@ test.describe('Drives: shared drive pages', () => {
     await page.goto('./#/drives/shared');
     await signIn(page);
     await expect(page.locator('#view')).toContainText('No shared drives found for this account.');
-    await page.locator('#mainNav a[data-nav="bin"]').click();
+    await tabClick(page, '#mainNav a[data-nav="bin"]');
     await expect(page.locator('#binCard')).toContainText('No shared drives found for this account.');
   });
 });
