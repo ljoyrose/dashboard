@@ -179,6 +179,16 @@ test.describe('Publishing waits for the tests @ci-guard', () => {
     expect(missing, 'hub folders missing from pages.yml (cp line or test line)').toEqual([]);
   });
 
+  // Cloudflare Pages runs tools/build-site/build.sh. It must publish exactly the pages.yml list: no tests, docs or tools.
+  test('the Cloudflare build publishes the same files as pages.yml and nothing else', () => {
+    const out = path.join(REPO, '_site');
+    execFileSync('sh', [path.join(REPO, 'tools/build-site/build.sh')], { stdio: 'pipe' });
+    const copied = /cp -r ([^\n]+) _site\//.exec(pages())[1].trim().split(/\s+/);
+    expect(fs.readdirSync(out).sort()).toEqual([...copied].sort());
+    LIVE_FILES.forEach((f) => expect(fs.existsSync(path.join(out, f)), f + ' must be built').toBe(true));
+    fs.rmSync(out, { recursive: true, force: true });
+  });
+
   test('every action in pages.yml is pinned to a full commit id', () => {
     const loose = [...pages().matchAll(/uses:\s*([^\s#]+)/g)].map((x) => x[1]).filter((u) => !/@[0-9a-f]{40}$/.test(u));
     expect(loose).toEqual([]);
