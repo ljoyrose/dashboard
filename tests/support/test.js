@@ -50,13 +50,39 @@ const test = base.test.extend({
         outside.push(url);
         return route.fulfill({ status: 200, contentType: 'text/plain', body: '' });
       });
+      // Studio's Owned tools list (Sheets values read): answered from an invented sample (added after the catch-all, so it wins), and every call remembered with
+      // whether it carried a sign-in token, so tests can prove it is only read after sign-in.
+      const ownedCalls = [];
+      const OWNED = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'owned-tools.json'), 'utf8'));
+      await context.route(/^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\/[^/]+\/values\/OWNED_TOOLS/, (route) => {
+        const req = route.request();
+        ownedCalls.push({ url: req.url(), auth: !!(req.headers().authorization || '').match(/^Bearer \S+/) });
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ range: 'OWNED_TOOLS!A1:E', majorDimension: 'ROWS', values: OWNED.values }) });
+      });
+
+      // Dashboard Main hub tiles (HubRead in index.html) read the GA book (Food) and the Marketplace tab, GET only. On the Dashboard page alone
+      // they get empty sheets (so the tiles show 0, no rows); a spec that wants numbers answers with page.route, which wins.
+      // Any other page calling Sheets still falls through to the catch-all above and fails the test.
+      const homePath = new RegExp('^' + require('./site').esc(require('./site').BASE) + '(index\\.html)?$');
+      await context.route(/^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\/[^/?]+\/values(:batchGet\?|\/Marketplace)/, (route) => {
+        let from = '';
+        try { from = new URL(route.request().frame().url()).pathname; } catch (e) { from = ''; }
+        if (!homePath.test(from)) return route.fallback();
+        const batch = /:batchGet\?/.test(route.request().url());
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(batch ? { valueRanges: [{}, {}, {}] } : { range: 'Marketplace!A2:L', majorDimension: 'ROWS' }) });
+      });
+      // Projects tile numbers (Projects Hub Sheet, INDEX tab): answered from invented rows, after the catch-all so it wins.
+      const PH_INDEX = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'projects-hub-index.json'), 'utf8'));
+      await context.route(/^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\/[^/]+\/values\/INDEX\?/, (route) =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ range: 'INDEX!A1:AH60', majorDimension: 'ROWS', values: PH_INDEX.values }) })
+      );
 
       page.on('console', (m) => {
         if (m.type() === 'error' || m.type() === 'warning') consoleSeen.push(`[${m.type()}] ${m.text()}`);
       });
       page.on('pageerror', (e) => problems.push('Page error: ' + e.message));
 
-      const guard = { outside, consoleSeen, problems, world };
+      const guard = { outside, consoleSeen, problems, world, ownedCalls };
       await use(guard);
 
       // Drift check: remember Drive calls the pretend Drive could not answer (counted in the Action summary).

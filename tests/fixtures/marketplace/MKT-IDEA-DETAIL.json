@@ -1,0 +1,63 @@
+{
+  "kind": "idea",
+  "v": 1,
+  "status": "screening",
+  "gate": 0,
+  "verdict": "maybe",
+  "intake": {
+    "link": "https://example.invalid/sample-pet-brush",
+    "barcode": "4006381333931",
+    "price_seen": "£4.50",
+    "where_seen": "SAMPLE shop",
+    "image_link": "",
+    "own_audience_fit": "SAMPLE: puppy buyers",
+    "note": ""
+  },
+  "classification": {
+    "product_type": "physical",
+    "buyer": "b2c",
+    "branding": "white_label",
+    "fulfilment": "hold_stock",
+    "source": "wholesaler"
+  },
+  "margin_est": {
+    "worst": 40,
+    "expected": 120,
+    "best": 210
+  },
+  "top3_risks": [
+    "SAMPLE risk one",
+    "SAMPLE risk two"
+  ],
+  "top3_unknowns": [
+    "SAMPLE trade price not public"
+  ],
+  "kill_rule": "Stop if no trade price by 30 Nov",
+  "next_step": "Ask SAMPLE wholesaler for a trade price",
+  "dropped_reason": "",
+  "unit_ex_p": 250,
+  "unit_inc_p": 300,
+  "profit_p": 120,
+  "sell": "£7.99",
+  "moq": 24,
+  "supplier": "SAMPLE Wholesale Ltd",
+  "lines": [
+    "▶ SAMPLE line"
+  ],
+  "terms": {
+    "min_order": "£100"
+  },
+  "evidence": [
+    {
+      "claim": "SAMPLE price seen £4.50",
+      "status": "verified",
+      "source": "SAMPLE shop page"
+    },
+    {
+      "claim": "SAMPLE trade price about £2.50",
+      "status": "assumed",
+      "source": ""
+    }
+  ],
+  "infinity_item": "https://app.startinfinity.com/SAMPLE-BOARD/SAMPLE-ITEM"
+}
