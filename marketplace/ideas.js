@@ -74,10 +74,12 @@
   /** What the engine puts on the card row from a request: the fresh detail JSON. */
   function newDetail(req) {
     var intake = {}; INTAKE_KEYS.forEach(function (k) { intake[k] = str(req[k]); });
-    return { kind: 'idea', v: V, status: 'new', gate: 0, verdict: '', intake: intake };
+    return { kind: 'idea', v: V, status: 'new', gate: 0, verdict: '', intake: intake, infinity_item: '' };
   }
   function cardRow(req) { return [cardKey(req.id), SECTION, 'Ideas', req.name, JSON.stringify(newDetail(req)), req.at, '', '', '', '', '', '']; }
 
+  /** The board item's link, or '' (not made yet, or not a startinfinity.com https link). The engine writes it; the hub card stays the master. */
+  function infinityLink(d) { var u = d && typeof d.infinity_item === 'string' ? d.infinity_item.trim() : ''; return /^https:\/\/([a-z0-9-]+\.)?startinfinity\.com\/[^\s]*$/i.test(u) && u.length <= 2000 ? u : ''; }
   var isNum = function (v) { return typeof v === 'number' && isFinite(v); };
   var isStrArr = function (v) { return Array.isArray(v) && v.every(function (x) { return typeof x === 'string'; }); };
   /** Check a card's detail JSON by value. Codes: MISSING, WRONG_TYPE, BAD_VALUE. Never returns a cell value. */
@@ -99,6 +101,7 @@
       if (!d.margin_est || typeof d.margin_est !== 'object') bad('WRONG_TYPE', 'margin_est', 'must be an object');
       else ['worst', 'expected', 'best'].forEach(function (k) { var v = d.margin_est[k]; if (v !== undefined && v !== null && !isNum(v)) bad('WRONG_TYPE', 'margin_est.' + k, 'must be a number (pence per unit) or null'); });
     }
+    if (d.infinity_item !== undefined) { if (typeof d.infinity_item !== 'string') bad('WRONG_TYPE', 'infinity_item', 'must be words (a link, or empty)'); else if (d.infinity_item && !infinityLink(d)) bad('BAD_VALUE', 'infinity_item', 'must be an https link on startinfinity.com, or empty'); }
     ['top3_risks', 'top3_unknowns', 'lines'].forEach(function (k) { if (d[k] !== undefined && !isStrArr(d[k])) bad('WRONG_TYPE', k, 'must be a list of words'); });
     ['top3_risks', 'top3_unknowns'].forEach(function (k) { if (isStrArr(d[k]) && d[k].length > 3) bad('BAD_VALUE', k, 'at most 3'); });
     ['gate1', 'gate2', 'gate3'].forEach(function (k) { if (d[k] !== undefined && (d[k] === null || typeof d[k] !== 'object')) bad('WRONG_TYPE', k, 'must be an object or list'); });
@@ -130,5 +133,5 @@
   }
 
   return { SECTION: SECTION, V: V, ENUMS: ENUMS, INTAKE_KEYS: INTAKE_KEYS, barcodeOk: barcodeOk, money: money, validateIntake: validateIntake, newId: newId, cardKey: cardKey, fileName: fileName,
-    buildRequest: buildRequest, newDetail: newDetail, cardRow: cardRow, checkDetail: checkDetail, goReady: goReady };
+    buildRequest: buildRequest, newDetail: newDetail, cardRow: cardRow, checkDetail: checkDetail, goReady: goReady, infinityLink: infinityLink };
 });

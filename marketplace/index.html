@@ -1068,7 +1068,8 @@
       (r.answer ? '<p class="what"><b>Your answer: ' + esc(r.answer) + '</b>' + (r.note ? ' · ' + esc(r.note) : '') + (r.applied_at ? ' · done' : '') + '</p>' : '') +
       (d.status === 'dropped' ? '<p class="what">Dropped: ' + esc(d.dropped_reason || 'no reason given') + '</p>' : '') +
       (probs.length ? '<p class="why red" role="alert">This card has problems (' + esc(probs.map(function (p) { return p.field || 'detail'; }).join(', ')) + '). Ask Steward.</p>' : '') +
-      '<div class="acts">' + linkBtn(it.link, 'Open link') + linkBtn(it.image_link, 'Open photo') + '</div>' +
+      '<div class="acts">' + linkBtn(it.link, 'Open link') + linkBtn(it.image_link, 'Open photo') + linkBtn(IDEAS.infinityLink(d), 'Open on board') + '</div>' +
+      (IDEAS.infinityLink(d) ? '' : '<p class="hint">Board item: not made yet. The engine adds it.</p>') +
       '<h3>What you gave</h3>' + (factsOf([['Barcode', it.barcode], ['Price seen', it.price_seen], ['Where seen', it.where_seen], ['Your buyers', it.own_audience_fit], ['Note', it.note]]) || '<p class="what">Only the name.</p>') +
       '<h3>What it is</h3>' + (factsOf(['product_type', 'buyer', 'branding', 'fulfilment', 'source'].map(function (k) { return [k.replace('_', ' '), c[k] ? word(c[k]) + (d.classification_assumed ? ' (assumed)' : '') : '']; })) || '<p class="what">Not worked out yet.</p>') +
       '<h3>Gate 0 · Quick screen</h3>' + (d.verdict || d.next_step ? factsOf([['Verdict', word(d.verdict)], ['Margin per unit, worst', m.worst === undefined ? '' : pd(m.worst)], ['Expected', m.expected === undefined ? '' : pd(m.expected)], ['Best', m.best === undefined ? '' : pd(m.best)], ['Stop rule', d.kill_rule], ['Next step', d.next_step]]) : '<p class="what">Not screened yet.</p>') +

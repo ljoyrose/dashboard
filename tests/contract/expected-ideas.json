@@ -28,7 +28,8 @@
       "gate1": "object",
       "gate2": "object",
       "gate3": "object",
-      "classification_assumed": "boolean"
+      "classification_assumed": "boolean",
+      "infinity_item": "string"
     },
     "fields": {
       "intake": {

@@ -55,6 +55,21 @@ test.describe('Ideas contract: each kind of change gives a named failure @contra
   test('wrong type: margin is not a number', () => { caught(values(edit((d) => { d.margin_est.worst = 'low'; })), 'WRONG_TYPE'); });
 });
 
+test.describe('Ideas: the board mirror (Infinity) and what stays out', () => {
+  test('a fresh card has an empty infinity_item (the engine fills it)', () => { expect(JSON.parse(I.cardRow(request())[4]).infinity_item).toBe(''); });
+  test('infinityLink only passes an https startinfinity.com link', () => {
+    expect(I.infinityLink(detail())).toBe('https://app.startinfinity.com/SAMPLE-BOARD/SAMPLE-ITEM');
+    ['', 'http://app.startinfinity.com/x', 'https://evil.example/startinfinity.com/x', 'https://startinfinity.com.evil.example/x', 'javascript:alert(1)'].forEach((u) => expect(I.infinityLink({ infinity_item: u })).toBe(''));
+    expect(I.infinityLink(null)).toBe('');
+  });
+  test('wrong type: infinity_item is a number', () => { caught(shape(edit((d) => { d.infinity_item = 7; })), 'WRONG_TYPE'); });
+  test('value: infinity_item on another site is refused', () => { caught(values(edit((d) => { d.infinity_item = 'https://evil.example/x'; })), 'BAD_VALUE'); });
+  test('the contract code never touches ClickUp, the Factory hub or AF-ENGINE', () => {
+    const src = fs.readFileSync(path.join(__dirname, '..', '..', 'marketplace', 'ideas.js'), 'utf8');
+    expect(src).not.toMatch(/clickup|AF-ENGINE|af-state|af-bridge|requestsFolderId/i);
+  });
+});
+
 test.describe('Ideas: the intake rules the Add idea form uses', () => {
   test('only the name is required', () => { const r = I.validateIntake({ name: 'SAMPLE x' }); expect(r.ok).toBe(true); expect(r.clean).toEqual({ name: 'SAMPLE x' }); });
   test('empty name is refused in plain words', () => { expect(I.validateIntake({ name: '  ' }).errors.name).toBe('Add a name'); });

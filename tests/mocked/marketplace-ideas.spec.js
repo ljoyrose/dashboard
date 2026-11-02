@@ -72,6 +72,24 @@ test.describe('Marketplace ideas: list and card', () => {
     await expect(v.locator('li', { hasText: 'Assumed: SAMPLE trade price' })).toContainText('Assumed');
     await expect(v.getByRole('link', { name: 'Open link' })).toHaveAttribute('href', 'https://example.invalid/sample-pet-brush');
   });
+  test('card page: Open on board shows only for an Infinity link; empty says not made yet; a stray link is never shown', async ({ page }) => {
+    await world(page, [row('IDEA-SAMPLE-1', 'SAMPLE has item', DETAIL), row('IDEA-SAMPLE-2', 'SAMPLE no item', { ...DETAIL, infinity_item: '' }), row('IDEA-SAMPLE-3', 'SAMPLE bad item', { ...DETAIL, infinity_item: 'https://evil.example/x' })]);
+    await open(page, '#/idea/IDEA-SAMPLE-1');
+    await expect(page.getByRole('link', { name: 'Open on board' })).toHaveAttribute('href', 'https://app.startinfinity.com/SAMPLE-BOARD/SAMPLE-ITEM');
+    await expect(page.locator('#view')).not.toContainText('not made yet');
+    for (const id of ['IDEA-SAMPLE-2', 'IDEA-SAMPLE-3']) {
+      await page.goto('marketplace/#/idea/' + id);
+      await expect(page.locator('#view')).toContainText('Board item: not made yet');
+      await expect(page.getByRole('link', { name: 'Open on board' })).toHaveCount(0);
+    }
+  });
+  test('the page never calls ClickUp, the Factory files or Infinity (the hub card is the master; only the engine talks to the board)', async ({ page }) => {
+    const calls = []; page.on('request', (r) => calls.push(r.url()));
+    await world(page, rowsFor()); await open(page, '#/idea/IDEA-SAMPLE-1');
+    await page.goto('marketplace/#/ideas/add'); await page.locator('#if-name').fill('SAMPLE x');
+    await page.getByRole('button', { name: 'Send' }).click(); await expect(page).toHaveURL(/#\/ideas$/);
+    expect(calls.filter((u) => /clickup|startinfinity|af-state|af-bridge/i.test(u))).toEqual([]);
+  });
   test('card page for a missing id says so', async ({ page }) => {
     await world(page, rowsFor()); await open(page, '#/idea/NOPE');
     await expect(page.locator('#view')).toContainText('Not found');
