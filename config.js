@@ -113,7 +113,11 @@
     // grants nothing on its own; Google limits the web app to her Workspace and the hub lets in only its EDITORS list.
     // The /a/macros/puppyclassroom.com/ form makes Google use the work account (the plain form loops when Chrome's
     // first account is a personal one, 2 Nov 2026).
+    // sheetId: the hub's own Sheet ("Projects Hub TEST", lisa@puppyclassroom.com). The Dashboard reads its INDEX tab with
+    // Lisa's read-only sign-in for the Projects tile's 3 numbers; it never writes. Empty = the tile shows no numbers.
     projectsHub: {
+      sheetId: '1ssFH6uTD6uEYbxio6iA3BlP9Op3l2d7MRf_ktusMcTU',
+      tab: 'INDEX',
       webAppUrl: 'https://script.google.com/a/macros/puppyclassroom.com/s/AKfycbx42JNrRiolxbf5JJEqnOwXy_GgYelx-6GKhQaNuQMyUsTW5e89P2VZBANP_yGSOxgj/exec'
     },
     money: {

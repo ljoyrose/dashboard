@@ -6,6 +6,7 @@
 // Real Drive and real disks are never reachable: outside addresses are blocked and a test fails if one is tried.
 const crypto = require('crypto');
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { IDS } = require('../support/world');
 
 const PCP = 'ZZ_DELETE_DRIVE_';
@@ -41,7 +42,7 @@ const askForWriteThen = async (page, action) => {
 const allow = (world, ids) => { world.byId(IDS.ledger).content = 'file_id\n' + ids.join('\n') + '\n'; };
 // Work My Drive (#/drives/work) only scans and lists; the rename and bin steps sit on #/bin (stage 2b).
 const toBin = async (page) => {
-  await page.locator('#mainNav a[data-nav="bin"]').click();
+  await tabClick(page, '#mainNav a[data-nav="bin"]');
   await expect(page.locator('#hereTitle')).toHaveText('Bin');
 };
 const tickAll = (page, group) => page.locator(`[data-action="selectall"][data-group="${group}"]`).click();

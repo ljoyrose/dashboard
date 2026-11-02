@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { BASE, esc, at } = require('../support/site');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -80,7 +81,7 @@ test.describe('Keyboard keys', () => {
     await expect.poll(() => guard.world.calls.filter((c) => c.path === '/drives').length).toBeGreaterThan(before);
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
     await page.goto('cdhub/'); // already signed in: the sign-in is shared between the pages
-    await page.locator('#nav button[data-go="dogs"]').click();
+    await tabClick(page, '#nav button[data-go="dogs"]');
     const box = page.locator('#main .srch input').first();
     await box.click();
     await page.keyboard.type('gb?');

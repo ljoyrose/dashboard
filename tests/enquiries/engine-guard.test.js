@@ -68,3 +68,19 @@ test('engine: setup() creates RR_ENQUIRIES with the 12 tabs of the shared contra
   assert.match(src, /var SHEET_NAME = 'RR_ENQUIRIES';/);
   assert.match(src, /function setup\(\)/);
 });
+
+test('engine: the allocation sheets are only read (Stage 6 past deposits)', { skip }, () => {
+  const m = code.match(/function depositKeys_\([\s\S]*?\n\}/);
+  assert.ok(m, 'depositKeys_ exists');
+  assert.ok(!/\.set[A-Z]\w*\(|\.append|\.insert|\.delete|\.clear|\.moveTo|\.copyTo|\.sort\(|\.protect/.test(m[0]), 'no write call on another book');
+  const opens = code.match(/SpreadsheetApp\.openById\(/g) || [];
+  assert.equal(opens.length, 3, 'openById only in book_(), setup() and depositKeys_()');
+});
+
+test('engine: FollowUps is written in one place, behind the contact gate', { skip }, () => {
+  const writes = code.match(/upsert_\(\s*'FollowUps'|appendRows_\(\s*'FollowUps'|writeRow_\(\s*'FollowUps'/g) || [];
+  assert.equal(writes.length, 1);
+  const q = code.match(/function queueFollowUps_\([\s\S]*?\n\}/)[0];
+  assert.match(q, /EnquiriesCore\.gateContact\(/);
+  assert.match(q, /upsert_\('FollowUps', 'followup_key', g\.keep\)/);
+});

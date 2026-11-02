@@ -1,9 +1,10 @@
+const { tabClick } = require('../support/tabs');
 // JOB 34 (group B): CD Hub buttons, links and states that no other spec proves yet.
 // Gap map: kept outside the repo. Every dog, litter and buyer here is invented (Test Dog One, Sample Buyer, @example.test).
 const { test, expect, HUBS, IDS, fixture, DRIVE } = require('../fixtures/job34/load');
 
 const tab = async (page, id) => {
-  await page.locator(`#nav button[data-go="${id}"]`).click();
+  await tabClick(page, `#nav button[data-go="${id}"]`);
   await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
 };
 const addTable = (world, name, content) => {

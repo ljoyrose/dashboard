@@ -1,3 +1,4 @@
+const { tabClick, tabTo } = require('../support/tabs');
 // JOB 34 (group C): Factory gaps only. Views reached by address that no other spec opens, the header buttons,
 // the New idea and Problem forms end to end, the Health switch, Today / Week, the Apps table, hub-specific
 // state-file messages, a failed write, links and keyboard reach. Invented data only (tests/fixtures/factory/state.js).
@@ -222,8 +223,7 @@ test.describe('JOB 34 Factory: keyboard', () => {
     await HUBS.factory.open(page, guard);
     for (const tab of ['me', 'rooms', 'decide', 'do', 'docs', 'today']) {
       const a = page.locator(`nav a[data-nav="${tab}"]`);
-      let reached = false;
-      for (let i = 0; i < 120 && !reached; i++) { await page.keyboard.press('Tab'); reached = await a.evaluate((el) => el === document.activeElement); }
+      const reached = await tabTo(page, a, 120);   // a view under More: Tab to More, Enter, then Tab inside its menu
       expect(reached, tab + ' reached by Tab').toBe(true);
       await page.keyboard.press('Enter');
       await expect(a).toHaveAttribute('aria-current', 'page');
