@@ -36,7 +36,11 @@
       cfFolderId: '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A',
       readFirstId: '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L',
       dbxFolderId: '0AEqV6Ky2jpmDUk9PVA', // Drive folder holding DROPBOX-TOTALS.json
-      dbxTotalsName: 'DROPBOX-TOTALS.json'
+      dbxTotalsName: 'DROPBOX-TOTALS.json',
+      // Bin page Log: the tidy engines' run history (RUN-LOG.csv, written by the private repo; columns in index.html
+      // above loadRunLog and in README.md). Placeholder: empty until the folder exists. Empty = "No runs logged yet".
+      runLogFolderId: '',
+      runLogName: 'RUN-LOG.csv'
     },
     cdhub: {
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
