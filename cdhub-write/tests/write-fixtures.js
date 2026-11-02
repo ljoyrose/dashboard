@@ -12,4 +12,3 @@ files['BLD-_pending.csv'] = fx.headerOnly(fx.PENDING_HEADER);
 files['BLD-staff.csv'] = fx.headerOnly(fx.STAFF_HEADER);
 files['BLD-occupancy_check.csv'] = fx.headerOnly(fx.OCCUPANCY_CHECK_HEADER);
 Object.keys(files).forEach((n) => fs.writeFileSync(path.join(dir, n), files[n]));
-console.log('wrote', Object.keys(files).length, 'fake fixture files to', dir);
