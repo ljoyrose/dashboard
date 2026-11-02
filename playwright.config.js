@@ -2,8 +2,10 @@
 const { defineConfig, devices } = require('@playwright/test');
 
 const PORT = Number(process.env.PORT || 4173);
-const LOCAL = `http://127.0.0.1:${PORT}/dashboard/`;
-const LIVE = 'https://ljoyrose.github.io/dashboard/';
+const { BASE } = require('./tests/support/site');
+const LOCAL = `http://127.0.0.1:${PORT}${BASE}`;
+// LIVE_URL lets the live check follow the site when it moves (GitHub Pages today, Cloudflare after cutover).
+const LIVE = process.env.LIVE_URL || 'https://ljoyrose.github.io/dashboard/';
 
 module.exports = defineConfig({
   testDir: './tests',
@@ -47,6 +49,6 @@ module.exports = defineConfig({
     command: 'node tests/support/static-server.js',
     url: LOCAL,
     reuseExistingServer: !process.env.CI,
-    env: { PORT: String(PORT) },
+    env: { PORT: String(PORT), SITE_BASE: BASE },
   },
 });

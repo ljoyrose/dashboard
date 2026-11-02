@@ -3,7 +3,7 @@
 // When the tries run out, every page says the same plain thing instead of an error code.
 const { test, expect } = require('../support/test');
 
-const BUSY = 'Google is busy right now (too many requests). The dashboard tried 4 times. Wait a minute, then try again.';
+const BUSY = 'Google is busy. Wait a minute, then try again.';
 
 test.describe('Google retries and the plain too-many-requests message', () => {
   test('home: two 429 answers in a row are retried and the page still reads normally @regression', async ({ page, guard, allowedConsole }) => {

@@ -1,6 +1,8 @@
 name: Dashboard tests
 
 # Runs the browser tests on every push, once a week, and on demand (Actions tab > Dashboard tests > Run workflow).
+# Once the repo is PRIVATE (Actions minutes are metered), pushes run only the no-browser checks; the browser suite
+# runs weekly and on demand, and on the Mac before every PR (tools/ci-local/run-all.sh). See docs-only.sh.
 # Google sign-in and Google Drive are pretend in these tests. No secrets are used or needed.
 # The job called "Browser tests (pretend Google and Drive)" is the one branch protection requires on main.
 # Do not rename it without also changing the branch protection rule (see TESTS.md).
@@ -24,12 +26,24 @@ jobs:
   tests:
     name: Browser tests (pretend Google and Drive)
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # 15 > 20 on 2 Nov 2026: the full suite already ran 14-15 minutes on main (one main run was cut off at 15), and the
+    # clickable-info checks (Lisa's clickable picks) add about a minute.
+    timeout-minutes: 20
     permissions:
       contents: read
       issues: write # only used to open/close the one "tests are red" issue on scheduled runs
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # to compare the whole branch with main
+
+      # Docs-only branch (only docs/ or *.md, never TESTS.md, .github/ or tests/): skip the browser, still run the
+      # no-browser checks (secret scan of every file, CI guards). main, schedules and hand-started runs always run everything.
+      - name: Docs-only branch? (the browser is skipped, the file checks still run)
+        id: scope
+        run: bash tools/ci-local/docs-only.sh
+        env:
+          REPO_PRIVATE: ${{ github.event.repository.private }}
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -40,6 +54,7 @@ jobs:
         run: npm ci
 
       - name: Remember the test browser between runs
+        if: steps.scope.outputs.browser == 'true'
         id: pw-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -47,16 +62,21 @@ jobs:
           key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install the test browser (first time, or after a version change)
-        if: steps.pw-cache.outputs.cache-hit != 'true'
+        if: steps.scope.outputs.browser == 'true' && steps.pw-cache.outputs.cache-hit != 'true'
         run: npx playwright install --with-deps chromium
 
       - name: Install the browser's system libraries (browser itself came from the cache)
-        if: steps.pw-cache.outputs.cache-hit == 'true'
+        if: steps.scope.outputs.browser == 'true' && steps.pw-cache.outputs.cache-hit == 'true'
         run: npx playwright install-deps chromium
 
       - name: Run tests (desktop suite, then the small phone-sized set)
+        if: steps.scope.outputs.browser == 'true'
         id: run
         run: npx playwright test --project=mocked --project=phone
+
+      - name: Docs-only branch or private-repo push - run the checks that need no browser (secret scan, CI guards)
+        if: steps.scope.outputs.browser == 'false'
+        run: npx playwright test --project=mocked tests/mocked/repo-hygiene.spec.js tests/mocked/ci-guards.spec.js
 
       - name: Write the short summary
         if: always()
