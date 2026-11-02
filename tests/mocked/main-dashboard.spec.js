@@ -1,5 +1,6 @@
 // Main dashboard: https://ljoyrose.github.io/dashboard/
 const { test, expect, buildWorld } = require('../support/test');
+const { at } = require('../support/site');
 
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled(); // the page found the (pretend) Google script
@@ -230,7 +231,7 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
     await page.goto('./');
     await signIn(page);
     const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a', { hasText: 'Open Money Hub' }).click()]); // opens in a new tab
-    await expect(tab).toHaveURL(/\/dashboard\/money\/$/);
+    await expect(tab).toHaveURL(at('money/'));
     await expect(tab.locator('h1')).toContainText('Money Hub');
   });
 
@@ -238,7 +239,7 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
     await page.goto('./');
     await signIn(page);
     const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a.keytile[href="money/"]').click()]); // opens in a new tab
-    await expect(tab).toHaveURL(/\/dashboard\/money\/$/);
+    await expect(tab).toHaveURL(at('money/'));
     await expect(tab).toHaveTitle(/Money Hub/);
   });
 
@@ -259,7 +260,7 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
   test('the Money Hub back link returns to the dashboard', async ({ page }) => {
     await page.goto('money/');
     await page.getByRole('link', { name: /Dashboard/ }).click();
-    await expect(page).toHaveURL(/\/dashboard\/(#\/map)?$/); // the dashboard adds #/map itself
+    await expect(page).toHaveURL(at('(#/map)?')); // the dashboard adds #/map itself
     await expect(page.locator('#signInBtn')).toBeVisible();
   });
 });

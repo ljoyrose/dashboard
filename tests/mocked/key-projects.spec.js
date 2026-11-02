@@ -15,6 +15,9 @@ const TILES = [
   ['Studio', 'studio/', true],
   ['Web Estate', 'estate/', true],
 ];
+// As shipped: config.js may hold the Projects Hub address; its tile then comes last.
+const PH = require('../support/world').IDS.projectsHub;
+const SHIPPED = PH ? TILES.concat([['Projects Hub', PH, true]]) : TILES;
 
 function pageFile(href) {
   const route = href.split('#')[0];
@@ -54,12 +57,12 @@ test.describe('Home: Key projects & docs', () => {
     expect(() => new URL(MOVE)).not.toThrow();
 
     const tiles = block.locator('a.keytile');
-    await expect(tiles).toHaveCount(TILES.length);
+    await expect(tiles).toHaveCount(SHIPPED.length);
     await expect(block.locator('a.keytile[href="#/drive"]')).toHaveCount(0);
     await expect(block.getByRole('link', { name: 'Drive', exact: true })).toHaveCount(0);
     await expect(page.locator('#mainNav a[data-nav="drives"]')).toHaveAttribute('href', '#/drives');
-    for (let i = 0; i < TILES.length; i++) {
-      const [label, href, blank] = TILES[i];
+    for (let i = 0; i < SHIPPED.length; i++) {
+      const [label, href, blank] = SHIPPED[i];
       const tile = tiles.nth(i);
       await expect(tile).toHaveText(label);
       await expect(tile).toHaveAttribute('href', href);
@@ -84,7 +87,9 @@ test.describe('Home: Key projects & docs', () => {
     }
 
     // Signing out removes the links again.
-    await page.locator('#signOutBtn').click();
+    // On a phone Sign out sits inside the Look menu (the top bar, Lisa's pick A).
+    await page.locator('#houseLookBtn').click();
+    await page.locator('#houseLook').getByRole('button', { name: 'Sign out', exact: true }).click();
     await expect(page.locator('#key-projects')).toHaveCount(0);
   });
 
@@ -92,6 +97,7 @@ test.describe('Home: Key projects & docs', () => {
   // The addresses below are invented (EXAMPLE), never a real deployment.
   for (const [what, url, shown] of [
     ['valid /exec address', 'https://script.google.com/macros/s/EXAMPLE-PROJECTS-HUB/exec', true],
+    ['valid work-account /exec address', 'https://script.google.com/a/macros/puppyclassroom.com/s/EXAMPLE-PROJECTS-HUB/exec', true],
     ['not an Apps Script address', 'https://example.com/projects', false],
   ]) {
     test('Projects Hub tile: ' + what, async ({ page }) => {

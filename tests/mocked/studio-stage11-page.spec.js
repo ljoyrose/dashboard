@@ -21,7 +21,8 @@ async function open(page, guard, change) {
   await page.goto('studio/#/assets');
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
-  await expect(page.locator('#enginePill')).toBeVisible();
+  await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
+  if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
 }
 async function details(page, id) {
   const d = page.locator(`[data-more="${id}"]`);

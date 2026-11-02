@@ -1,6 +1,8 @@
 name: Dashboard tests
 
 # Runs the browser tests on every push, once a week, and on demand (Actions tab > Dashboard tests > Run workflow).
+# Once the repo is PRIVATE (Actions minutes are metered), pushes run only the no-browser checks; the browser suite
+# runs weekly and on demand, and on the Mac before every PR (tools/ci-local/run-all.sh). See docs-only.sh.
 # Google sign-in and Google Drive are pretend in these tests. No secrets are used or needed.
 # The job called "Browser tests (pretend Google and Drive)" is the one branch protection requires on main.
 # Do not rename it without also changing the branch protection rule (see TESTS.md).
@@ -38,6 +40,8 @@ jobs:
       - name: Docs-only branch? (the browser is skipped, the file checks still run)
         id: scope
         run: bash tools/ci-local/docs-only.sh
+        env:
+          REPO_PRIVATE: ${{ github.event.repository.private }}
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -68,7 +72,7 @@ jobs:
         id: run
         run: npx playwright test --project=mocked --project=phone
 
-      - name: Docs-only branch - run the checks that need no browser (secret scan, CI guards)
+      - name: Docs-only branch or private-repo push - run the checks that need no browser (secret scan, CI guards)
         if: steps.scope.outputs.browser == 'false'
         run: npx playwright test --project=mocked tests/mocked/repo-hygiene.spec.js tests/mocked/ci-guards.spec.js
 
