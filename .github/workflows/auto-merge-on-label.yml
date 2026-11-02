@@ -5,10 +5,18 @@ on:
     types: [labeled]
   merge_group:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: auto-merge-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   auto-merge:
     if: github.event_name == 'pull_request' && github.event.label.name == 'merge-ready'
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     permissions:
       pull-requests: write
       contents: write
