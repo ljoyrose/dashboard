@@ -1,0 +1,101 @@
+{
+  "_about": "Field names and types inside the Product ideas files (card detail JSON and request file). Kept apart from expected-state.json so make-expected.js cannot overwrite it. Names and types only.",
+  "MKT-IDEA-DETAIL.json": {
+    "fixture": "tests/fixtures/marketplace/MKT-IDEA-DETAIL.json",
+    "top": {
+      "kind": "string",
+      "v": "number",
+      "status": "string",
+      "gate": "number",
+      "verdict": "string",
+      "intake": "object",
+      "classification": "object",
+      "margin_est": "object",
+      "top3_risks": "array",
+      "top3_unknowns": "array",
+      "kill_rule": "string",
+      "next_step": "string",
+      "dropped_reason": "string",
+      "unit_ex_p": "number",
+      "unit_inc_p": "number",
+      "profit_p": "number",
+      "sell": "string",
+      "moq": "number",
+      "supplier": "string",
+      "lines": "array",
+      "terms": "object",
+      "evidence": "array"
+    },
+    "fields": {
+      "intake": {
+        "link": "string",
+        "barcode": "string",
+        "price_seen": "string",
+        "where_seen": "string",
+        "image_link": "string",
+        "own_audience_fit": "string",
+        "note": "string"
+      },
+      "classification": {
+        "product_type": "string",
+        "buyer": "string",
+        "branding": "string",
+        "fulfilment": "string",
+        "source": "string"
+      },
+      "margin_est": {
+        "worst": "number",
+        "expected": "number",
+        "best": "number"
+      },
+      "evidence[]": {
+        "claim": "string",
+        "status": "string",
+        "source": "string"
+      }
+    },
+    "required": {
+      "": [
+        "kind",
+        "v",
+        "status",
+        "gate",
+        "verdict",
+        "intake"
+      ],
+      "evidence[]": [
+        "claim",
+        "status"
+      ]
+    }
+  },
+  "MKT-IDEA-REQ.json": {
+    "fixture": "tests/fixtures/marketplace/MKT-IDEA-REQ.json",
+    "top": {
+      "kind": "string",
+      "v": "number",
+      "id": "string",
+      "at": "string",
+      "by": "string",
+      "dry_run": "boolean",
+      "name": "string",
+      "link": "string",
+      "barcode": "string",
+      "price_seen": "string",
+      "where_seen": "string",
+      "image_link": "string",
+      "own_audience_fit": "string",
+      "note": "string"
+    },
+    "fields": {},
+    "required": {
+      "": [
+        "kind",
+        "v",
+        "id",
+        "at",
+        "name"
+      ]
+    }
+  }
+}

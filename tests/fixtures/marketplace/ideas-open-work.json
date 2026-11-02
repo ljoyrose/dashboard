@@ -1,0 +1,47 @@
+{
+  "_about": "Invented Open work tab with two idea cards, for the Product ideas contract. Every value is invented.",
+  "rows": [
+    [
+      "key",
+      "section",
+      "category",
+      "title",
+      "detail",
+      "created_at",
+      "answer",
+      "note",
+      "answered_at",
+      "answered_by",
+      "applied_at",
+      "applied_by"
+    ],
+    [
+      "IDEA|IDEA-20261102-1530-sam1",
+      "idea",
+      "Ideas",
+      "SAMPLE pet brush",
+      "{\"kind\": \"idea\", \"v\": 1, \"status\": \"screening\", \"gate\": 0, \"verdict\": \"maybe\", \"intake\": {\"link\": \"https://example.invalid/sample-pet-brush\", \"barcode\": \"4006381333931\", \"price_seen\": \"£4.50\", \"where_seen\": \"SAMPLE shop\", \"image_link\": \"\", \"own_audience_fit\": \"SAMPLE: puppy buyers\", \"note\": \"\"}, \"classification\": {\"product_type\": \"physical\", \"buyer\": \"b2c\", \"branding\": \"white_label\", \"fulfilment\": \"hold_stock\", \"source\": \"wholesaler\"}, \"margin_est\": {\"worst\": 40, \"expected\": 120, \"best\": 210}, \"top3_risks\": [\"SAMPLE risk one\", \"SAMPLE risk two\"], \"top3_unknowns\": [\"SAMPLE trade price not public\"], \"kill_rule\": \"Stop if no trade price by 30 Nov\", \"next_step\": \"Ask SAMPLE wholesaler for a trade price\", \"dropped_reason\": \"\", \"unit_ex_p\": 250, \"unit_inc_p\": 300, \"profit_p\": 120, \"sell\": \"£7.99\", \"moq\": 24, \"supplier\": \"SAMPLE Wholesale Ltd\", \"lines\": [\"▶ SAMPLE line\"], \"terms\": {\"min_order\": \"£100\"}, \"evidence\": [{\"claim\": \"SAMPLE price seen £4.50\", \"status\": \"verified\", \"source\": \"SAMPLE shop page\"}, {\"claim\": \"SAMPLE trade price about £2.50\", \"status\": \"assumed\", \"source\": \"\"}]}",
+      "2026-11-02T15:30:00Z",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ],
+    [
+      "IDEA|IDEA-20261102-1600-sam2",
+      "idea",
+      "Ideas",
+      "SAMPLE digital guide",
+      "{\"kind\": \"idea\", \"v\": 1, \"status\": \"new\", \"gate\": 0, \"verdict\": \"\", \"intake\": {\"note\": \"SAMPLE\"}}",
+      "2026-11-02T16:00:00Z",
+      "",
+      "",
+      "",
+      "",
+      "",
+      ""
+    ]
+  ]
+}
