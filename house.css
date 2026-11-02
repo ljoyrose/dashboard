@@ -147,7 +147,7 @@ nav.house-tabs > .ht, nav.house-tabs > .ht-more { flex: 1 1 0; min-width: min-co
 nav.house-tabs > .ht-more { position: relative; display: flex; }
 nav.house-tabs > .ht-more > .ht { width: 100%; }
 nav.house-tabs .ht { --c: var(--ljr-0-icon); --f: var(--ljr-0); position: relative; box-sizing: border-box; width: auto; height: 100%; min-height: 0; margin: 0;
-  padding: 0 4px 8px; border: 0; border-radius: var(--radius); outline: none; box-shadow: none; background: var(--card); color: var(--ink);
+  padding: 6px 4px 8px; border: 0; border-radius: var(--radius); outline: none; box-shadow: none; background: var(--card); color: var(--ink);
   font-family: inherit; font-size: var(--fs-small); font-weight: 600; line-height: 16px; text-decoration: none; text-align: center; cursor: pointer; transform: none;
   display: flex; flex-direction: column; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 1px; overflow: hidden; }
 nav.house-tabs .ht:hover, nav.house-tabs .ht[aria-current="page"], nav.house-tabs .ht[aria-expanded="true"] { background: var(--card); border: 0; box-shadow: none; outline: none; }

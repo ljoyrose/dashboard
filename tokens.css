@@ -76,7 +76,7 @@
   --house-bar: 3px;                /* left colour bars on cards and rows */
   --house-marker-w: 3px; --house-marker-h: 18px;   /* the column-title stage marker */
   /* The bottom tab bar (Lisa's picks, 2 Nov): ONE row, this high on every page, desktop and phone; at most 6 tabs, More last. */
-  --house-tabs-h: 64px; --house-tabs-gap: 5px; --house-tab-max: 128px;
+  --house-tabs-h: 70px; --house-tabs-gap: 5px; --house-tab-max: 128px;
   --house-tab-bar: 18px; --house-tab-bar-on: 40px; --house-tab-bar-h: 4px;   /* the short line under each tab: rest / hover and selected */
   --house-tab-disc: 28px; --house-tab-icon: 22px;   /* the round place for the icon; a 1px ring shows round it only on hover, focus and press */
   --house-tab-count-w: 24px; --house-tab-count-h: 24px; --house-tab-count-lh: 22px; --house-tab-count-pad: 0px;   /* a tab's count: a 14px number in a round ring in its top-right corner (1 and 2 digits one width) */

@@ -1,5 +1,5 @@
 // The bottom tab bar (Lisa's picks, 2 Nov 2026): the SAME bar on all 8 pages, at 1280 and at 390.
-// One row, 64px high, at most 6 tabs, Main first, Decide second where a hub has it, More always last (the other views sit in its
+// One row, 70px high, at most 6 tabs, Main first, Decide second where a hub has it, More always last (the other views sit in its
 // menu). Each tab is an icon above one word (or two capitalised words), a real link or button with a name. At rest: grey icon,
 // no ring, no fill, a short grey line. Hover and selected: the icon takes the tab's colour and the line widens; the 1px ring round
 // the icon shows only on hover, focus and press. Counts: top-right corner, ring only, no fill. Nothing scrolls sideways.
@@ -50,7 +50,7 @@ function measureBar() {
       return {
         tag: t.tagName, word: label.textContent.trim(), slot: t.getAttribute('data-slot'), name: t.getAttribute('aria-label') || t.textContent.trim(),
         more: t.hasAttribute('data-house-more'), top: r.top, bottom: r.bottom, left: r.left, right: r.right, height: r.height,
-        iconAbove: ir.bottom <= lr.top + 1, labelFits: label.scrollWidth <= label.clientWidth + 1, labelLines: Math.round(lr.height / parseFloat(cs(label).lineHeight)),
+        iconAbove: ir.bottom <= lr.top + 1, ringGap: ir.top - r.top, labelFits: label.scrollWidth <= label.clientWidth + 1, labelLines: Math.round(lr.height / parseFloat(cs(label).lineHeight)),
         bg: cs(t).backgroundColor, hicBg: cs(hic).backgroundColor, ring: cs(hic).borderTopColor, ringW: cs(hic).borderTopWidth,
         icon: cs(hic).color, barW: bar.getBoundingClientRect().width, barBg: cs(bar).backgroundImage !== 'none' ? 'gradient' : cs(bar).backgroundColor,
         selected: t.getAttribute('aria-current') === 'page' || !!(t.closest('.ht-more') && t.closest('.ht-more').querySelector('.house-more [aria-current="page"]')),
@@ -62,14 +62,14 @@ function measureBar() {
 
 for (const [hub, H] of Object.entries(ALL)) {
   for (const W of [1280, 390]) {
-    test(`${hub} at ${W}: one 64px row, at most 6 tabs, Main first, More last, no fills at rest, nothing sideways`, async ({ page, guard }) => {
+    test(`${hub} at ${W}: one 70px row, at most 6 tabs, Main first, More last, no fills at rest, nothing sideways`, async ({ page, guard }) => {
       await page.setViewportSize({ width: W, height: W > 600 ? 800 : 844 });
       await H.open(page, guard);
       await page.mouse.move(W / 2, 200);   // the pointer away from the bar: everything at rest
       const m = await page.evaluate(measureBar);
       expect(m, 'a bottom tab bar shows').not.toBeNull();
       expect(m.navs, 'one bar on the page').toBe(1);
-      expect(m.height, 'the bar is 64px high').toBeCloseTo(64, 0);
+      expect(m.height, 'the bar is 70px high').toBeCloseTo(70, 0);
       expect(Math.abs(m.bottom - m.win), 'the bar sits on the bottom edge').toBeLessThan(1);
       const words = m.tabs.map((t) => t.word);
       expect(words, 'the tabs, in order').toEqual(PLAN[hub].tabs);
@@ -84,6 +84,8 @@ for (const [hub, H] of Object.entries(ALL)) {
         expect(Math.abs(t.height - m.tabs[0].height), `${t.word} same height as the others`).toBeLessThan(1);
         expect(Math.abs(t.top - m.tabs[0].top), `${t.word} on the one row`).toBeLessThan(1);
         expect(t.iconAbove, `${t.word}: the icon sits above the word`).toBe(true);
+        // Lisa (2 Nov): the icon's ring needs clear space above it, at least 6px below the tab's top edge.
+        expect(t.ringGap, `${t.word}: at least 6px between the tab's top and the icon ring`).toBeGreaterThanOrEqual(6);
         expect(t.labelFits, `${t.word}: the word is not cut short`).toBe(true);
         expect(t.labelLines, `${t.word}: the word stays on one line`).toBe(1);
         expect(t.left, `${t.word} inside the screen`).toBeGreaterThanOrEqual(0);
