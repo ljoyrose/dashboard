@@ -3,7 +3,7 @@
 // When the tries run out, every page says the same plain thing instead of an error code.
 const { test, expect } = require('../support/test');
 
-const BUSY = 'Google is busy right now (too many requests). The dashboard tried 4 times. Wait a minute, then try again.';
+const BUSY = 'Google is busy. Wait a minute, then try again.';
 
 test.describe('Google retries and the plain too-many-requests message', () => {
   test('home: two 429 answers in a row are retried and the page still reads normally @regression', async ({ page, guard, allowedConsole }) => {
@@ -19,7 +19,7 @@ test.describe('Google retries and the plain too-many-requests message', () => {
     test.setTimeout(60_000);
     allowedConsole.push(/status of 429/);
     guard.world.failWith = { status: 429, reason: 'rateLimitExceeded', message: 'Sample busy' };
-    await page.goto('./#/drive');
+    await page.goto('./#/drives/shared');
     await page.locator('#signInBtn').click();
     await expect(page.locator('#view')).toContainText(BUSY, { timeout: 30_000 });
     const drives = guard.world.calls.filter((c) => c.path === '/drives');

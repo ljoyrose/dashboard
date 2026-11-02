@@ -20,6 +20,12 @@
   --ljr-6: #129FE7; --ljr-6-text: #0271A4; --ljr-6-tint: #DEF1F8; --ljr-6-solid: #129FE7; --ljr-6-on: #2C2C2A; /* 6 Sales */
   --ljr-7: #A570D1; --ljr-7-text: #8850B6; --ljr-7-tint: #F2EAF5; --ljr-7-solid: #8850B6; --ljr-7-on: #FFFFFF; /* 7 Ideas */
   --ljr-8: #141413; --ljr-8-text: #141413; --ljr-8-tint: #ECEAE6; --ljr-8-solid: #141413; --ljr-8-on: #FFFEFB;
+  /* --ljr-N-icon: the shade for an icon (and its ring) on a card, 3:1 or better (Lisa's pick 3e, 2 Nov). 1 = ink (the whole picture);
+     0 = the grey every tab icon rests in. Dark looks use the bright fill (below). */
+  --ljr-0-icon: #93856E; --ljr-1-icon: var(--ljr-ink); --ljr-2-icon: #E0251D; --ljr-3-icon: #B66A11; --ljr-4-icon: #A2890B;
+  --ljr-5-icon: #428C46; --ljr-6-icon: #0F82BC; --ljr-7-icon: #995DCB; --ljr-8-icon: #3A3632;   /* 8 = warm charcoal, never black */
+  /* Main's line: every colour = the whole picture (Lisa's pick 3i A). */
+  --ljr-rainbow: linear-gradient(90deg, var(--ljr-2), var(--ljr-3), var(--ljr-4), var(--ljr-5), var(--ljr-6), var(--ljr-7));
   /* Courier bands on Marketplace post cards (approximate brand colours, the same in dark mode; name always written too). */
   --ljr-cb-inpost: #FFCD00; --ljr-cb-inpost-on: #111111; --ljr-cb-evri: #00539F; --ljr-cb-rm: #DA202A; --ljr-cb-dpd: #A50034; --ljr-cb-yodel: #1E6B32; --ljr-cb-pf: #B5121B; --ljr-cb-none: #595959; --ljr-cb-on: #FFFFFF;
   /* Person badges on Marketplace cards (white initials on each; all pass 4.5:1). */
@@ -39,6 +45,7 @@
     --ljr-6-text: #32AEF0; --ljr-6-tint: #213134;
     --ljr-7-text: #BB93DD; --ljr-7-tint: #342A31;
     --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
+    --ljr-0-icon: #93856E; --ljr-1-icon: #F3EEE5; --ljr-2-icon: var(--ljr-2); --ljr-3-icon: var(--ljr-3); --ljr-4-icon: var(--ljr-4); --ljr-5-icon: var(--ljr-5); --ljr-6-icon: var(--ljr-6); --ljr-7-icon: var(--ljr-7); --ljr-8-icon: #CFCAC2;
   }
 }
 
@@ -56,6 +63,7 @@
   --ljr-6-text: #32AEF0; --ljr-6-tint: #213134;
   --ljr-7-text: #BB93DD; --ljr-7-tint: #342A31;
   --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
+  --ljr-0-icon: #93856E; --ljr-1-icon: #F3EEE5; --ljr-2-icon: var(--ljr-2); --ljr-3-icon: var(--ljr-3); --ljr-4-icon: var(--ljr-4); --ljr-5-icon: var(--ljr-5); --ljr-6-icon: var(--ljr-6); --ljr-7-icon: var(--ljr-7); --ljr-8-icon: #CFCAC2;
 }
 
 /* ===== House look (Lisa, 28 Oct 2026): the agreed rules as numbers, ONCE. house.css builds the shared parts from these;
@@ -67,12 +75,29 @@
   --house-line: 1px;               /* every line */
   --house-bar: 3px;                /* left colour bars on cards and rows */
   --house-marker-w: 3px; --house-marker-h: 18px;   /* the column-title stage marker */
-  --house-tab-bar: 18px; --house-tab-bar-on: 40px; --house-tab-bar-phone: 26px; --house-tab-bar-h: 4px;   /* bottom-tab colour bar: rest / hover and selected */
+  /* The bottom tab bar (Lisa's picks, 2 Nov): ONE row, this high on every page, desktop and phone; at most 6 tabs, More last. */
+  --house-tabs-h: 70px; --house-tabs-gap: 5px; --house-tab-max: 128px;
+  --house-tab-bar: 18px; --house-tab-bar-on: 40px; --house-tab-bar-h: 4px;   /* the short line under each tab: rest / hover and selected */
+  --house-tab-disc: 28px; --house-tab-icon: 22px;   /* the round place for the icon; a 1px ring shows round it only on hover, focus and press */
+  --house-tab-count-w: 24px; --house-tab-count-h: 24px; --house-tab-count-lh: 22px; --house-tab-count-pad: 0px;   /* a tab's count: a 14px number in a round ring in its top-right corner (1 and 2 digits one width) */
   --house-focus: 2px;              /* keyboard focus ring */
   --house-btn: 36px; --house-btn-phone: 44px;      /* everything you press */
+  --house-head: 56px;              /* the top bar (Lisa's pick A, 2 Nov): one row, this high on every page, desktop and phone */
+  --house-head-space: 8px;         /* between the things in the top bar */
+  --house-head-name: var(--fs-head); /* the hub's name in the top bar: 18px, like a heading */
+  --house-gutter: 24px;            /* the page frame (Lisa, 2 Nov): every page uses the full window with this side gap; 16px on a phone */
+  --house-read-size: var(--fs-small); /* the small read time in the top bar */
+  --house-icon: 20px;              /* an icon inside an icon-only button (24px outline icons, stroke 2) */
+  --house-icon-stroke: 2;
+  --house-menu-w: 300px;           /* the shared Look menu */
   --house-pill: 24px;              /* read-only pills (tags, dates, stamps) */
-  --house-count-w: 30px; --house-count-h: 22px; --house-count-r: 11px; --house-count-lh: 20px; --house-count-pad: 3px;
-  --house-font: Lexend, system-ui, sans-serif; --house-min: 13px; --house-press-size: 14px;
+  --house-count-w: 30px; --house-count-h: 24px; --house-count-r: 12px; --house-count-lh: 22px; --house-count-pad: 3px;   /* every ringed number: 14px in this one box */
+  /* Type (Lisa, 2 Nov 2026): ONE font, three weights (400 / 500 / 600), and only these sizes. A big number is never bigger than a heading. */
+  --fs-head: 18px;                 /* headings (h1-h4, card titles), the hub name in the top bar */
+  --fs-figure: 18px;               /* big numbers and summary figures */
+  --fs-body: 15px;                 /* body text */
+  --fs-small: 14px;                /* labels, tabs, counts and ringed numbers, pills, tags, notes, meta lines, tables, menus; nothing smaller */
+  --house-font: Lexend, system-ui, sans-serif; --house-min: 14px; --house-press-size: var(--fs-small);
   --house-gap: 12px;               /* between cards */
   --house-head-gap: 16px;          /* under a section header */
   --house-pad: 12px;               /* inside a card */
@@ -91,6 +116,7 @@
   --house-ok: var(--ljr-5-text); --house-ok-tint: var(--ljr-5-tint);
   --house-risk: var(--ljr-2-text); --house-risk-tint: var(--ljr-2-tint);
 }
+@media (max-width: 600px) { :root { --house-gutter: 16px; } }
 :root.look-cool {
   --house-paper: #F2F4F6; --house-canvas: #E4E9EE; --house-card: #FFFFFF; --house-ink: #2B3035; --house-muted: #5B646D;
   --house-soft-line: #B9C3CC; --house-soft: #D9E0E6; --house-press: #7A8692;
