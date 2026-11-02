@@ -15,9 +15,9 @@ const TILES = [
   ['Studio', 'studio/', true],
   ['Web Estate', 'estate/', true],
 ];
-// As shipped: config.js may hold the Projects Hub address; its tile then comes last.
+// As shipped: config.js may hold the Projects Hub address; its tile (with its 3 numbers) then comes first.
 const PH = require('../support/world').IDS.projectsHub;
-const SHIPPED = PH ? TILES.concat([['Projects Hub', PH, true]]) : TILES;
+const SHIPPED = PH ? [['Projects', PH, true]].concat(TILES) : TILES;
 
 function pageFile(href) {
   const route = href.split('#')[0];
@@ -64,7 +64,8 @@ test.describe('Home: Key projects & docs', () => {
     for (let i = 0; i < SHIPPED.length; i++) {
       const [label, href, blank] = SHIPPED[i];
       const tile = tiles.nth(i);
-      await expect(tile).toHaveText(label);
+      if (label === 'Projects') await expect(tile.locator('.phname')).toHaveText(label);
+      else await expect(tile).toHaveText(label);
       await expect(tile).toHaveAttribute('href', href);
       if (blank) await expect(tile).toHaveAttribute('target', '_blank');
       else expect(await tile.getAttribute('target')).toBeNull();
@@ -111,7 +112,7 @@ test.describe('Home: Key projects & docs', () => {
       await expect(page.locator('#readStamp')).toContainText(/^Read \d/); // reads finished: no more redraws
       const block = page.locator('#view > #key-projects');
       await expect(block).toBeVisible();
-      const tile = block.getByRole('link', { name: 'Projects Hub', exact: true });
+      const tile = block.locator('#ph-tile');
       if (!shown) { await expect(tile).toHaveCount(0); await expect(block.locator('a.keytile')).toHaveCount(TILES.length); return; }
       await expect(tile).toHaveAttribute('href', url);
       await expect(tile).toHaveAttribute('target', '_blank');
