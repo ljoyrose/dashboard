@@ -63,11 +63,7 @@
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }   /* keyboard ring: 2px ink, never the browser blue */
   .top :focus-visible { outline-color: var(--frame-ink); }
 
-  /* Bottom tabs (.house-tabs): five across. */
-  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 180px)); justify-content: center; } }
-  @media (min-width: 601px) { nav.tabs a { min-height: 58px; gap: 3px; padding: 6px 2px; } }
-  nav.tabs .n { top: 6px; right: 10px; }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
   .cnt.ok { border-color: var(--green); background: var(--green-tint); }
 
   main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
@@ -133,10 +129,9 @@
   @media (max-width: 544px) {
     .btn, .chip, .more, input.txtin { min-height: 44px; }
     input.txtin { flex: 1 1 160px; max-width: none; }   /* Search and Filter share one calm row */
-    nav.tabs { gap: 6px; padding-left: 6px; padding-right: 6px; }
   }
   /* Keyboard focus always stays the 2px ink ring, over any hover or selected line. */
-  #view :focus-visible, nav.tabs a:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  #view :focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
   header :focus-visible:not(.house-menu *) { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
 </style>
 </head>
@@ -164,11 +159,15 @@
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs hidden" id="tabs" aria-label="GA Hub sections">
-  <a href="#/home" data-nav="home" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-home"/></svg><span>Home</span><span class="n need" id="n-home"></span></a>
-  <a href="#/orders" data-nav="orders" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-box"/></svg><span>Orders</span><span class="n need" id="n-orders"></span></a>
-  <a href="#/invoices" data-nav="invoices" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bill"/></svg><span>Invoices</span><span class="n"></span></a>
-  <a href="#/products" data-nav="products" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Products</span><span class="n"></span></a>
-  <a href="#/ga" data-nav="ga" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span>GA</span><span class="n"></span></a>
+  <a class="ht" data-slot="1" href="#/home" data-nav="home"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="n-home"></span></a>
+  <a class="ht" data-slot="3" href="#/invoices" data-nav="invoices"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-money"/></svg></span><span class="htl">Invoices</span><span class="n"></span></a>
+  <a class="ht" data-slot="4" href="#/orders" data-nav="orders"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-box"/></svg></span><span class="htl">Orders</span><span class="n need" id="n-orders"></span></a>
+  <a class="ht" data-slot="6" href="#/products" data-nav="products"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-bag"/></svg></span><span class="htl">Products</span><span class="n"></span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/ga" data-nav="ga" data-slot="7"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span class="htl">GA</span></a>
+    </div>
+  </div>
 </nav>
 <script>
 (function () {

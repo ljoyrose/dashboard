@@ -1,3 +1,4 @@
+const { tabClick } = require('../support/tabs');
 // JOB 34b: Money Hub checks that no other spec makes yet (after money*, every-click, every-view-access, house-look,
 // tests/phone and job34-money-views). Each describe names the gap it fills. Pretend Google and Drive only; every row
 // used here is the existing invented sample data, emptied or changed in the test itself (no new fixture files).
@@ -54,7 +55,7 @@ test.describe('Money Hub: links and buttons go where their words say', () => {
     await HUBS.money.open(page, guard);
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-    await page.locator('nav.main a[data-nav="accountant"]').click();
+    await tabClick(page, 'nav.main a[data-nav="accountant"]');
     await expect(page.locator('#hereTitle')).toHaveText('Accountant');
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   });
@@ -201,7 +202,7 @@ test.describe('Money Hub: reads again on its own', () => {
 test.describe('Money Hub: keyboard only', () => {
   test('To-do sub-tabs are reached with Tab and open with Enter', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
-    await page.locator('nav.main a[data-nav="todo"]').click();
+    await tabClick(page, 'nav.main a[data-nav="todo"]');
     await expect(page.locator('#hereTitle')).toBeFocused();
     const seen = await tabWalk(page, 12);
     for (const t of ['Yours', 'Waiting on others', 'Watching', 'Closed']) expect(seen, t).toContain(t);
@@ -213,7 +214,7 @@ test.describe('Money Hub: keyboard only', () => {
 
   test('an entity card is reached with Tab from Money and opens with Enter', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
-    await page.locator('nav.main a[data-nav="money"]').click();
+    await tabClick(page, 'nav.main a[data-nav="money"]');
     await expect(page.locator('#hereTitle')).toBeFocused();
     let found = false;
     for (let i = 0; i < 15 && !found; i++) {

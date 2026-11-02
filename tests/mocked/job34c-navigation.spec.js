@@ -3,6 +3,7 @@
 // each hub survive sign-in; unknown addresses fall back to the hub's first view with its tab lit.
 // All data is the invented sample world from tests/support (pretend Google, Drive and Sheets).
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { HUBS, go } = require('../support/hubs');
 
 const signIn = async (page) => {
@@ -69,7 +70,7 @@ test.describe('Navigation across pages', () => {
     const steps = [['drives', 'Drives'], ['bin', 'Bin'], ['changes', /^Changes/], ['map', 'Dashboard']];
     const seen = [['map', 'Dashboard']];
     for (const [nav, title] of steps) {
-      await page.locator(`#mainNav a[data-nav="${nav}"]`).click();
+      await tabClick(page, `#mainNav a[data-nav="${nav}"]`);
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await expect(page.locator(`#mainNav a[data-nav="${nav}"]`)).toHaveAttribute('aria-current', 'page');
       seen.push([nav, title]);
@@ -89,7 +90,7 @@ test.describe('Navigation across pages', () => {
     await signIn(page);
     const href = await page.locator('#key-projects a.keytile', { hasText: 'Money Hub' }).getAttribute('href');
     expect(href).toBe('money/');
-    await page.locator('#mainNav a[data-nav="changes"]').click();
+    await tabClick(page, '#mainNav a[data-nav="changes"]');
     await expect(page.locator('#hereTitle')).toHaveText(/^Changes/);
     const changesUrl = page.url();
     await page.goto(new URL(href, page.url()).href);

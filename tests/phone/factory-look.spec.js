@@ -36,15 +36,15 @@ for (const scheme of ['light', 'dark']) {
           if (b.height < 43.5) out.push('press target ' + Math.round(b.height) + 'px: ' + e.className + ' "' + e.textContent.trim().slice(0, 20) + '"');
           if (b.right > W + 1 || b.left < -1) out.push('off screen: ' + e.className + ' "' + e.textContent.trim().slice(0, 20) + '"');
         });
-        document.querySelectorAll('nav.tabs a').forEach((a) => {
-          const b = a.getBoundingClientRect();
+        document.querySelectorAll('nav.tabs .ht').forEach((a) => {
+          const b = a.getBoundingClientRect(), ab = b;
           if (b.bottom > window.innerHeight + 1) out.push('tab below the screen: ' + a.textContent.trim());
-          const n = a.querySelector('.n'), l = a.querySelector('.tl');
+          const n = a.querySelector('.n'), l = a.querySelector('.htl');
           if (!n || !n.textContent) return;
           const nb = n.getBoundingClientRect(), lb = l.getBoundingClientRect();
           if (!(nb.right <= lb.left || nb.left >= lb.right || nb.bottom <= lb.top || nb.top >= lb.bottom)) out.push('count sits on the label: ' + l.textContent);
-          if (getComputedStyle(n).position !== 'static') out.push('count not in flow: ' + l.textContent);
-          if (Math.round(nb.width) !== 30 || Math.round(nb.height) !== 22) out.push('tab count ' + nb.width + 'x' + nb.height + ': ' + l.textContent);
+          if (getComputedStyle(n).position !== 'absolute' || ab.right - nb.right > 5 || nb.top - ab.top > 5) out.push('count not in the top-right corner: ' + l.textContent);   // Lisa's tab picks, 2 Nov
+          if (Math.round(nb.height) !== 18 || nb.width < 18) out.push('tab count ' + nb.width + 'x' + nb.height + ': ' + l.textContent);
         });
         return out.slice(0, 10);
       }, PRESS);

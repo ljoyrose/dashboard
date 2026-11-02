@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { build } = require('../fixtures/studio/state');
 
 const ctx = { window: {} };
@@ -104,7 +105,7 @@ test.describe('Studio page', () => {
     await open(page, guard, '#/me');
     await expect(page.locator('nav.tabs a')).toHaveCount(5);
     for (const key of ['me', 'decide', 'do', 'line', 'kits']) {
-      await page.locator(`nav.tabs a[data-nav="${key}"]`).click();
+      await tabClick(page, `nav.tabs a[data-nav="${key}"]`);
       await expect(page.locator('#view')).toHaveAttribute('data-view', key);
       await expect(page.locator('nav.tabs a[aria-current="page"]')).toHaveCount(1);
       await expect(page.locator(`nav.tabs a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
@@ -119,9 +120,9 @@ test.describe('Studio page', () => {
     await expect(page.locator('.crow[data-row="sa-lib"] a[href="#/new?from=sa-lib"]')).toBeVisible();
     await page.locator('.subnav a[data-sub="ideas"]').click();
     await expect(page.locator('#view')).toHaveAttribute('data-view', 'ideas');
-    await page.locator('nav.tabs a[data-nav="decide"]').click();
+    await tabClick(page, 'nav.tabs a[data-nav="decide"]');
     await expect(page.locator('[data-sect="gate"] .crow[data-row="sa-gate"]')).toBeVisible();
-    await page.locator('nav.tabs a[data-nav="do"]').click();
+    await tabClick(page, 'nav.tabs a[data-nav="do"]');
     await expect(page.locator('[data-sect="hand"] .crow[data-row="sa-hand"]')).toBeVisible();
   });
 
@@ -848,13 +849,13 @@ test.describe('Studio page', () => {
     await expect(r.locator('.panel')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)'); // no grey box under the card either
     for (const id of ['#lookBtn', '#refreshBtn', '#newBtn']) await expect(page.locator(id)).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)'); // the top bar's icon buttons sit on the dark frame
     await noSidewaysScroll(page, 'line board with details open');
-    // Tab counts sit in the top-right corner of the tab, clear of the label; the selected bar is 26px on the phone.
-    const tab = page.locator('nav.tabs a[data-nav="me"]'), tb = await tab.boundingBox(), nb = await tab.locator('.n').boundingBox(), lb = await tab.locator('span:not(.n):not(.bar)').boundingBox();
+    // Tab counts sit in the top-right corner of the tab, clear of the label; the selected line is 40px on the phone too (Lisa's tab picks, 2 Nov).
+    const tab = page.locator('nav.tabs a[data-nav="me"]'), tb = await tab.boundingBox(), nb = await tab.locator('.n').boundingBox(), lb = await tab.locator('.htl').boundingBox();
     expect(nb.x + nb.width).toBeLessThanOrEqual(tb.x + tb.width);
     expect(nb.y).toBeGreaterThanOrEqual(tb.y);
     const apart = nb.x >= lb.x + lb.width || nb.y + nb.height <= lb.y; // never on top of the label
     expect(apart, 'the count should not sit on the label').toBe(true);
-    await expect(page.locator('nav.tabs a[data-nav="line"] .bar')).toHaveCSS('width', '26px');
+    await expect(page.locator('nav.tabs a[data-nav="line"] .bar')).toHaveCSS('width', '40px');
     await go(page, 'decide');
     await noSidewaysScroll(page, 'decide list');
     await page.locator('[data-vmode="board"]').click();
@@ -994,13 +995,16 @@ test.describe('Studio page', () => {
     await openFilters(page);
     const ink = await page.evaluate(() => getComputedStyle(document.body).color);
     const look = (sel) => page.locator(sel).first().evaluate((e) => { const c = getComputedStyle(e); return { b: c.borderTopWidth + ' ' + c.borderTopStyle, bc: c.borderTopColor, bg: c.backgroundColor, w: c.fontWeight, r: c.borderTopLeftRadius, num: c.fontVariantNumeric }; });
-    for (const [k, sel] of Object.entries({ column: '.col-head .cnt', subnav: '.subnav .cnt', chip: '#fpanel [data-fx] .cnt', filter: '#filtersBtn .n', tab: 'nav.tabs #nLine' })) {
+    for (const [k, sel] of Object.entries({ column: '.col-head .cnt', subnav: '.subnav .cnt', chip: '#fpanel [data-fx] .cnt', filter: '#filtersBtn .n' })) {
       const l = await look(sel);
       expect(l, k).toMatchObject({ b: '1px solid', bc: ink, w: '600', num: 'tabular-nums' });
       expect(parseFloat(l.r), `${k} is a pill`).toBeGreaterThan(9);
     }
+    // Bottom-tab counts follow Lisa's tab picks (2 Nov): ring only, grey while waiting, rose when late; never a fill.
+    const tab = await look('nav.tabs #nLine');
+    expect(tab, 'tab').toMatchObject({ b: '1px solid', bc: 'rgb(138, 127, 112)', bg: 'rgba(0, 0, 0, 0)', w: '600', num: 'tabular-nums', r: '9px' }); // the grey read-only ring (--house-ring)
     const need = await look('nav.tabs #nMe');
-    expect(need).toMatchObject({ b: '1px solid', bc: 'rgb(230, 68, 61)', bg: 'rgb(252, 228, 224)', w: '600' }); // rose edge (--ljr-2) and tint, never solid
+    expect(need).toMatchObject({ b: '1px solid', bc: 'rgb(230, 68, 61)', bg: 'rgba(0, 0, 0, 0)', w: '600' }); // rose edge (--ljr-2), never a fill
     // Steps are words, not ringed numbers: the only ringed number in a column head is its count.
     await expect(page.locator('.col[data-stage="5"] .col-head .step')).toHaveText('Step 5:');
     await expect(page.locator('.col[data-stage="5"] .col-head .cnt')).toHaveAttribute('aria-label', /^\d+ items$/);
@@ -1039,7 +1043,8 @@ test.describe('Studio page', () => {
     await openFilters(page);
     const h = (sel) => page.locator(sel).first().evaluate((e) => Math.round(e.getBoundingClientRect().height));
     for (const sel of ['.crow .tag', '#stamp']) expect(await h(sel), sel).toBe(24);
-    for (const sel of ['.col-head .cnt:not(:empty)', '.subnav .cnt:not(:empty)', 'nav.tabs #nLine']) expect(await h(sel), sel).toBe(22); // counts: one fixed size (0 shows none)
+    for (const sel of ['.col-head .cnt:not(:empty)', '.subnav .cnt:not(:empty)']) expect(await h(sel), sel).toBe(22); // counts: one fixed size (0 shows none)
+    expect(await h('nav.tabs #nLine'), 'tab count').toBe(18); // Lisa's 18px corner ring on the bottom tabs (tab picks, 2 Nov)
     for (const sel of ['#newBtn', '#fpanel [data-fx]', '#filtersBtn', '#sortBtn', '.subnav a', '[data-vmode="list"]', '.crow .ico', '.crow .btn', '#enginePill']) expect(await h(sel), sel).toBe(36);
     // One corner radius (12px) on everything; circles only for status dots.
     const r = (sel) => page.locator(sel).first().evaluate((e) => getComputedStyle(e).borderTopLeftRadius);
@@ -1048,7 +1053,7 @@ test.describe('Studio page', () => {
     await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 390, height: 844 });
     for (const sel of ['#lookBtn', '#refreshBtn', '#filtersBtn', '.subnav a', '.crow .ico']) await expect.poll(() => h(sel), sel + ' on the phone').toBe(44); // the page redraws when it crosses into phone width
-    expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(22); // the house count is 30 x 22 on the phone too (in the flow beside the label)
+    expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(18); // the same 18px corner ring on the phone (Lisa's tab picks, 2 Nov)
   });
 
   test('two font weights only (400 and 600) on every tab', async ({ page, guard }) => {

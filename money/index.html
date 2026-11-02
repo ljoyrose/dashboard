@@ -65,20 +65,8 @@
   details[open] > summary { margin-bottom: 12px; }
   @media (hover: hover) { a.ent:hover, details > summary:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--hov); } }
 
-  /* Bottom tabs (.house-tabs): six across, a step apart. */
-  nav.main { display: grid; grid-template-columns: repeat(6, minmax(0, 200px)); justify-content: center; gap: 8px;
-    padding: 8px 24px calc(10px + env(safe-area-inset-bottom, 0px)); max-width: none; margin: 0; }
-  nav.main a { --tc: var(--c); }
-  nav.main a .icon { color: var(--muted); }
-  @media (max-width: 600px) {
-    /* Phone: two rows of three, the count in flow next to the label so no word can run into it. */
-    nav.main { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px 8px calc(8px + env(safe-area-inset-bottom, 0px)); }
-    nav.main a { min-height: 44px; flex-direction: row; flex-wrap: wrap; align-content: center; gap: 2px 4px; font-size: 14px; }
-    nav.main a .bar { flex: 0 0 auto; }
-    nav.main a .icon { display: none; }
-    nav.main a > .tl { order: 1; flex: 0 1 auto; }   /* room here: the count sits in the flow beside the label */
-    html { scroll-padding-bottom: 120px; }
-  }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
+  @media (max-width: 600px) { html { scroll-padding-bottom: 120px; } }
   .cnt { flex: none; }
 
   main { padding-top: 16px; padding-bottom: 120px; }
@@ -249,12 +237,16 @@
   <div id="view"></div>
 </main>
 <nav class="main house-tabs" aria-label="Sections">
-  <a href="#/now" data-nav="now" style="--c:var(--ljr-2)"><span class="bar" aria-hidden="true"></span><svg class="icon" aria-hidden="true"><use href="#i-now"/></svg><span class="tl">Now</span><span class="n need" id="nNow"></span></a>
-  <a href="#/money" data-nav="money" style="--c:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><svg class="icon" aria-hidden="true"><use href="#i-money"/></svg><span class="tl">Money</span><span class="n" id="nMoney"></span></a>
-  <a href="#/dates" data-nav="dates" style="--c:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><svg class="icon" aria-hidden="true"><use href="#i-dates"/></svg><span class="tl">Dates</span><span class="n" id="nDates"></span></a>
-  <a href="#/todo" data-nav="todo" style="--c:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><svg class="icon" aria-hidden="true"><use href="#i-todo"/></svg><span class="tl">To-do</span><span class="n need" id="nTodo"></span></a>
-  <a href="#/accountant" data-nav="accountant" style="--c:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><svg class="icon" aria-hidden="true"><use href="#i-acct"/></svg><span class="tl">Accountant</span><span class="n" id="nAcct"></span></a>
-  <a href="#/control" data-nav="control" style="--c:var(--ljr-0)"><span class="bar" aria-hidden="true"></span><svg class="icon" aria-hidden="true"><use href="#i-control"/></svg><span class="tl">Control</span><span class="n need" id="nControl"></span></a>
+  <a class="ht" data-slot="1" href="#/now" data-nav="now"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="nNow"></span></a>
+  <a class="ht" data-slot="3" href="#/money" data-nav="money"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-money"/></svg></span><span class="htl">Money</span><span class="n" id="nMoney"></span></a>
+  <a class="ht" data-slot="4" href="#/todo" data-nav="todo"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n need" id="nTodo"></span></a>
+  <a class="ht" data-slot="4" href="#/dates" data-nav="dates"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-cal"/></svg></span><span class="htl">Dates</span><span class="n" id="nDates"></span></a>
+  <a class="ht" data-slot="5" href="#/accountant" data-nav="accountant"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-user"/></svg></span><span class="htl">Accountant</span><span class="n" id="nAcct"></span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/control" data-nav="control" data-slot="0"><svg class="icon" aria-hidden="true"><use href="#i-control"/></svg><span class="htl">Control</span><span class="n need" id="nControl"></span></a>
+    </div>
+  </div>
 </nav>
 <footer class="wrap"><span class="info" tabindex="0" title="Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time">i<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap"> Read-only · live from the Money Hub CSVs · business and personal never added · not tax advice · UK time</span></span></footer>
 

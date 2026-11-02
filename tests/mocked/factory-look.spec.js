@@ -7,6 +7,7 @@
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { settle } = require('../support/settle');
 const { build } = require('../fixtures/factory/state');
 
@@ -84,11 +85,12 @@ test.describe('Factory look: rules by computed style on every view', () => {
             if (cs.textTransform === 'uppercase') out.push('uppercase: ' + F.what(e));
           });
           // 4: one radius. 12px; round only on dots and rings; count pills 11px; the thin colour bars 2px.
+          // The bottom tabs follow Lisa's tab picks (2 Nov): a round ring round the icon and 9px-round counts.
           document.querySelectorAll('body *').forEach((e) => {
             if (!F.seen(e) || e.closest('svg')) return;
             const r = getComputedStyle(e).borderTopLeftRadius;
             if (r === '0px') return;
-            const ok = r === '12px' || (r === '50%' && e.matches('.dot, .info, .new, .stage .n, .sw > i, .req')) || (r === '11px' && e.matches('.cnt, .n')) || (r === '2px' && e.matches('.bar'));
+            const ok = r === '12px' || (r === '50%' && e.matches('.dot, .info, .new, .stage .n, .sw > i, .req, nav.house-tabs .hic')) || (r === '11px' && e.matches('.cnt, .n') && !e.matches('nav.house-tabs .ht > .n')) || (r === '9px' && e.matches('nav.house-tabs .ht > .n')) || (r === '2px' && e.matches('.bar'));
             if (!ok) out.push('radius ' + r + ': ' + F.what(e));
           });
           // 3 + 12: pressables rest on ONE clear 1px line (the control line, or their own meaning colour), 12px, 36px.
@@ -102,18 +104,20 @@ test.describe('Factory look: rules by computed style on every view', () => {
             const want = e.matches(MEANING) ? meaning : [ctl];
             if (!e.matches('.stat') && !want.includes(cs.borderTopColor)) out.push('press line colour ' + cs.borderTopColor + ' (want ' + want.join(' or ') + '): ' + F.what(e));
           });
-          // 6: count pills one fixed size; tab counts an amber ring with no fill; no empty count rings.
+          // 6: count pills one fixed size; no empty count rings. Tab counts follow Lisa's tab picks (2 Nov):
+          // an 18px ring (16px line) with no fill, grey while waiting, rose when late.
           document.querySelectorAll('.cnt, nav.tabs .n, .fbtn .n').forEach((e) => {
             if (!F.seen(e)) return;
             const r = e.getBoundingClientRect(), cs = getComputedStyle(e), t = e.textContent.trim();
+            const tab = e.matches('nav.house-tabs .ht > .n'), H = tab ? 18 : 22, W = tab ? null : 30, LH = tab ? '16px' : '20px';
             if (!t) out.push('empty count ring: ' + F.what(e.parentElement));
-            if (Math.round(r.height) !== 22 || (t.length <= 2 && Math.round(r.width * 100) / 100 !== 30)) out.push('count size ' + r.width + 'x' + r.height + ': ' + F.what(e));
-            if (cs.boxSizing !== 'border-box' || cs.lineHeight !== '20px' || cs.borderTopWidth !== '1px') out.push('count box ' + cs.boxSizing + ' ' + cs.lineHeight + ': ' + F.what(e));
+            if (Math.round(r.height) !== H || (W && t.length <= 2 && Math.round(r.width * 100) / 100 !== W) || (!W && r.width < H - 0.6)) out.push('count size ' + r.width + 'x' + r.height + ': ' + F.what(e));
+            if (cs.boxSizing !== 'border-box' || cs.lineHeight !== LH || cs.borderTopWidth !== '1px') out.push('count box ' + cs.boxSizing + ' ' + cs.lineHeight + ': ' + F.what(e));
           });
           document.querySelectorAll('nav.tabs .n').forEach((e) => {
             if (!F.seen(e)) return;
-            const cs = getComputedStyle(e);
-            if (cs.borderTopColor !== F.tok('--r-warn') || cs.backgroundColor !== 'rgba(0, 0, 0, 0)') out.push('tab count not an amber ring only: ' + cs.borderTopColor + ' / ' + cs.backgroundColor);
+            const cs = getComputedStyle(e), want = e.classList.contains('need') ? F.tok('--house-late') : F.tok('--house-ring');
+            if (cs.borderTopColor !== want || cs.backgroundColor !== 'rgba(0, 0, 0, 0)') out.push('tab count not a ring only (' + want + '): ' + cs.borderTopColor + ' / ' + cs.backgroundColor);
           });
           // 9: every date pill wears a 1px ring: rose late, amber soon, the grey control line otherwise (grey words).
           document.querySelectorAll('label.date').forEach((e) => {
@@ -193,7 +197,8 @@ test.describe('Factory look: frame', () => {
       expect(s[3]).not.toBe(foot);
     }
     await expect(page.locator('nav.tabs a[aria-current="page"] .bar')).toHaveCSS('width', '40px');
-    const docs = page.locator('nav.tabs a[data-nav="docs"]');
+    // Docs now sits under More (Lisa's tab picks, 2 Nov); Rooms is a bottom tab that is not selected here.
+    const docs = page.locator('nav.tabs a[data-nav="rooms"]');
     await expect(docs.locator('.bar')).toHaveCSS('width', '18px');
     const b0 = await docs.boundingBox();
     await docs.hover();
@@ -354,12 +359,15 @@ test.describe('Factory look: counts and empty states', () => {
       probe.innerHTML = '<span class="cnt">7</span><span class="cnt need">88</span><span class="cnt wide">999</span>';
       document.getElementById('view').appendChild(probe);
       return Array.from(probe.children).concat(Array.from(document.querySelectorAll('#view .cnt, nav.tabs .n:not(:empty)'))).filter((e) => e.getClientRects().length)
-        .map((e) => ({ t: e.textContent, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height }));
+        .map((e) => ({ t: e.textContent, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height, tab: e.matches('nav.house-tabs .ht > .n') }));
     });
     expect(sizes.length).toBeGreaterThan(5);
+    expect(sizes.filter((s) => s.tab).length, 'the tab counts are measured too').toBeGreaterThan(0);
     for (const s of sizes) {
-      expect(s.h, `count "${s.t}" height`).toBe(22);
-      if (s.t.length <= 2) expect(s.w, `count "${s.t}" width`).toBe(30);
+      // Bottom-tab counts are Lisa's 18px corner ring (tab picks, 2 Nov); every other count is the 30 x 22 pill.
+      expect(s.h, `count "${s.t}" height`).toBe(s.tab ? 18 : 22);
+      if (s.tab) expect(s.w, `tab count "${s.t}" width`).toBeGreaterThanOrEqual(18);
+      else if (s.t.length <= 2) expect(s.w, `count "${s.t}" width`).toBe(30);
     }
     expect(sizes.find((s) => s.t === '999').w).toBeGreaterThan(30);
   });
@@ -396,6 +404,6 @@ test('find bar: Search, Factory on/off and Filter in one row; Filter is open by 
   await expect(page.locator('#nFilters')).toHaveText('1');
   await page.locator('#filterSum').click();
   await expect(page.locator('[data-fx="app"]').first()).toBeHidden();
-  await page.locator('nav.tabs a[data-nav="do"]').click();
+  await tabClick(page, 'nav.tabs a[data-nav="do"]');
   await expect(page.locator('details.fdet')).not.toHaveAttribute('open', ''); // your choice is kept
 });

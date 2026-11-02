@@ -35,14 +35,17 @@ test.describe('One way in', () => {
     for (const a of await page.locator('#key-projects a.keytile').all()) await expect(a).toHaveAttribute('target', '_blank');
   });
 
-  test('the bottom bar has the four agreed tabs and no More', async ({ page }) => {
+  test('the bottom bar has the agreed tabs: Main, then More holding Drives, Bin and Changes (Lisa\'s tab picks, 2 Nov)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const tabs = page.locator('#mainNav a');
     await expect(tabs).toHaveCount(4);
     expect(await tabs.evaluateAll((els) => els.map((a) => a.getAttribute('href')))).toEqual(['#/map', '#/drives', '#/bin', '#/changes']);
-    await expect(page.locator('#mainNav a[data-nav="map"]')).toContainText('Dashboard');
+    await expect(page.locator('#mainNav > .ht')).toHaveCount(1);
+    await expect(page.locator('#mainNav .house-more > a')).toHaveCount(3);
+    await expect(page.locator('#mainNav a[data-nav="map"]')).toContainText('Main');
     await expect(page.locator('#mainNav a[data-nav="drives"]')).toContainText('Drives');
+    await expect(page.locator('#mainNav [data-house-more]')).toHaveAccessibleName('More');
   });
 
   test('#/more and its old shortcuts land on the Dashboard', async ({ page }) => {
@@ -63,9 +66,10 @@ test.describe('Bin has a single entry (job file section 9)', () => {
     expect(lines.filter((x) => /out\.push\(/.test(x.l))).toHaveLength(2);
   });
 
-  test('the only visible way to the Bin on the front page is the tab (plus a Needs you row when files are ready)', async ({ page }) => {
+  test('the only visible way to the Bin on the front page is the tab under More (plus a Needs you row when files are ready)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
+    await page.locator('#mainNav [data-house-more]').click();
     const bins = await page.locator('a[href="#/bin"]:visible').evaluateAll((els) => els.map((a) => a.closest('#mainNav') ? 'tab' : a.closest('#urgentOne, #needsToday') ? 'needs' : 'other'));
     expect(bins).toContain('tab');
     expect(bins.filter((b) => b === 'other')).toEqual([]);
