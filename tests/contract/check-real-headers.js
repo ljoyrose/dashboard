@@ -30,6 +30,7 @@ function dryFolder() {
   const book = JSON.parse(fixture('food/book.json'));
   Object.keys(EXPECTED.food).forEach((tab) => fs.writeFileSync(path.join(d, 'RR_FOOD - ' + tab + '.csv'), csv(book[tab])));
   fs.writeFileSync(path.join(d, 'Open work - Marketplace.csv'), csv(JSON.parse(fixture('marketplace/open-work.json')).rows));
+  fs.writeFileSync(path.join(d, 'Open work - Ideas.csv'), csv(JSON.parse(fixture('marketplace/ideas.json')).rows));
   fs.writeFileSync(path.join(d, 'RR_LISTINGS.csv'), fixture('marketplace/RR_LISTINGS.csv'));
   fs.writeFileSync(path.join(d, 'MKT-WAKE-WEBAPP.json'), fixture('marketplace/MKT-WAKE-WEBAPP.json'));
   fs.writeFileSync(path.join(d, 'studio-state.json'), fixture('studio/contract-state.json'));
@@ -41,6 +42,7 @@ function hubEntryFor(name) {
   const tab = (/(?:^|[ -])([A-Za-z]+)\.csv$/i.exec(name) || [])[1];
   if (tab && /^RR_FOOD/i.test(name) && EXPECTED.food[tab]) return { group: 'food', name: tab, entry: EXPECTED.food[tab], key: EXPECTED.food[tab].columns[0] };
   if (/ - Marketplace\.csv$/i.test(name)) return { group: 'marketplace', name: 'Open work tab', entry: EXPECTED.marketplace['Open work tab'], key: 'key' };
+  if (/ - Ideas\.csv$/i.test(name)) return { group: 'marketplace', name: 'Ideas tab', entry: EXPECTED.marketplace['Ideas tab'], key: 'id' };
   if (name === 'RR_LISTINGS.csv') return { group: 'marketplace', name, entry: EXPECTED.marketplace[name], key: 'listing_id' };
   return null;
 }

@@ -242,6 +242,11 @@
       "key": "listing_id",
       "columns": ["listing_id", "image_url", "title", "platform", "url", "platform_item_id"],
       "read": ["listing_id", "image_url", "title", "platform", "url", "platform_item_id"]
+    },
+    "Ideas tab": {
+      "range": "Ideas!A2:Y",
+      "by": "position",
+      "columns": ["id", "created", "name", "link", "barcode", "price_seen", "where_seen", "note", "image_link", "product_type", "buyer", "branding", "fulfilment", "source", "status", "gate", "verdict", "margin_est", "risk_top3", "unknowns_top3", "kill_rule", "next_step", "owner", "updated", "dropped_reason"]
     }
   }
 }

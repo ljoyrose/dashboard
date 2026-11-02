@@ -53,7 +53,9 @@ constList(foodHtml, 'RANGES').forEach((range) => {
 const mktHtml = src('marketplace');
 out.marketplace = {
   'Open work tab': withRead('marketplace', { range: '<tab>!A2:L', by: 'position', columns: constList(mktHtml, 'COLS') }),
-  'RR_LISTINGS.csv': withRead('marketplace', { key: 'listing_id', columns: headOf(path.join(FIX, 'marketplace', 'RR_LISTINGS.csv'), 'listing_id') })
+  'RR_LISTINGS.csv': withRead('marketplace', { key: 'listing_id', columns: headOf(path.join(FIX, 'marketplace', 'RR_LISTINGS.csv'), 'listing_id') }),
+  // Product ideas: the Ideas tab by position. The columns live in marketplace/ideas-core.js (the page reads them from there).
+  'Ideas tab': { range: require('../../marketplace/ideas-core.js').RANGE, by: 'position', columns: require('../../marketplace/ideas-core.js').COLS }
 };
 fs.writeFileSync(path.join(__dirname, 'expected-headers.json'), JSON.stringify(out, null, 2).replace(/\[\s+("[^\]]*?)\s+\]/g, (m, inner) => '[' + inner.replace(/\s*\n\s*/g, ' ') + ']') + '\n');
 

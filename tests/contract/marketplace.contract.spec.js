@@ -12,6 +12,23 @@ const caught = (problems, code) => (RED ? expect(problems).toEqual([]) : expect(
 const { fns } = pageFns('marketplace', ['csvRows']); // the page's own CSV reader
 const openWork = () => JSON.parse(fixture('marketplace/open-work.json')).rows;
 const listings = () => fixture('marketplace/RR_LISTINGS.csv');
+const IDEAS = require('../../marketplace/ideas-core.js');
+const ideas = () => JSON.parse(fixture('marketplace/ideas.json')).rows;
+
+/** Ideas tab (product ideas): header in contract order (read by position), words in the pick-list columns from the allowed list,
+ *  and every invented id in the fixture says FAKE or SAMPLE. Names and types only. */
+function checkIdeas(values) {
+  const out = checkColumns('Ideas tab', E['Ideas tab'], values[0]);
+  if (out.some((x) => x.code === 'EMPTY')) return out;
+  const rows = values.slice(1).map((v) => Object.fromEntries(IDEAS.COLS.map((c, k) => [c, v[k] || ''])));
+  out.push(...checkRows('Ideas tab', rows));
+  rows.forEach((r, i) => {
+    Object.keys(IDEAS.ENUMS).forEach((c) => { if (r[c] && IDEAS.ENUMS[c].indexOf(r[c]) < 0) out.push({ code: 'WRONG_TYPE', msg: `Ideas row ${i + 1}: "${c}" is not one of the allowed words` }); });
+    if (!r.name) out.push({ code: 'WRONG_TYPE', msg: `Ideas row ${i + 1}: "name" is empty (the only required field)` });
+    if (!/FAKE|SAMPLE/.test(r.id)) out.push({ code: 'WRONG_TYPE', msg: `Ideas row ${i + 1}: an invented id must contain FAKE or SAMPLE` });
+  });
+  return out;
+}
 
 /** Open work: row 1 header in page order, rows mapped by position like the page, detail must be a JSON object. */
 function checkOpenWork(values) {
@@ -40,6 +57,12 @@ function checkListings(text) {
 test.describe('Marketplace contract: the invented files match the list @contract', () => {
   test('Open work tab: names, rows and detail JSON are clean', () => { expect(checkOpenWork(openWork())).toEqual([]); });
   test('RR_LISTINGS.csv: names and rows are clean, found below a junk first line', () => { expect(checkListings(listings())).toEqual([]); });
+  test('Ideas tab: 25 columns in order, allowed words, invented ids, the range matches', () => {
+    expect(checkIdeas(ideas())).toEqual([]);
+    expect(IDEAS.COLS.length).toBe(25);
+    expect(IDEAS.RANGE).toBe('Ideas!A2:Y');
+    expect(E['Ideas tab'].range).toBe(IDEAS.RANGE);
+  });
   test('wake file: the one field has the right type', () => { expect(checkState('MKT-WAKE-WEBAPP.json', WAKE, JSON.parse(fixture('marketplace/MKT-WAKE-WEBAPP.json')))).toEqual([]); });
   test("the page's own CSV reader keeps quoted commas and drops a start-of-file marker", () => {
     expect(fns.csvRows('﻿listing_id,title\r\nL-1,"Sample, with comma"\n')).toEqual([['listing_id', 'title'], ['L-1', 'Sample, with comma']]);
@@ -60,4 +83,14 @@ test.describe('Marketplace contract: each kind of change gives a named failure @
   test('empty file: RR_LISTINGS has nothing in it', () => { caught(checkListings(''), 'EMPTY'); });
   test('empty file: the wake file is {}', () => { caught(checkState('MKT-WAKE-WEBAPP.json', WAKE, {}), 'EMPTY'); });
   test('empty tab: Open work has no header row', () => { caught(checkOpenWork([]), 'EMPTY'); });
+  test('missing column: Ideas loses "dropped_reason"', () => { caught(checkIdeas(ideas().map((r) => r.slice(0, 24))), 'MISSING'); });
+  test('renamed by position: Ideas swaps "verdict" and "gate"', () => {
+    const v = ideas(); v[0] = v[0].map((c) => (c === 'verdict' ? 'gate' : c === 'gate' ? 'verdict' : c));
+    caught(checkIdeas(v), 'RENAMED');
+  });
+  test('extra column: Ideas gains "colour"', () => { caught(checkIdeas(ideas().map((r, i) => r.concat(i === 0 ? ['colour'] : ['blue']))), 'EXTRA'); });
+  test('wrong type: an Ideas "buyer" is not b2c or b2b', () => { const v = ideas(); v[1][IDEAS.COLS.indexOf('buyer')] = 'everyone'; caught(checkIdeas(v), 'WRONG_TYPE'); });
+  test('wrong type: an Ideas row with no name', () => { const v = ideas(); v[1][IDEAS.COLS.indexOf('name')] = ''; caught(checkIdeas(v), 'WRONG_TYPE'); });
+  test('wrong type: an invented Ideas id without FAKE or SAMPLE', () => { const v = ideas(); v[1][0] = 'IDEA-0001'; caught(checkIdeas(v), 'WRONG_TYPE'); });
+  test('empty tab: Ideas has no header row', () => { caught(checkIdeas([]), 'EMPTY'); });
 });
