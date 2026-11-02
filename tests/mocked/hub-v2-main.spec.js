@@ -1,6 +1,7 @@
-// Hub V2 on the main dashboard (25 Oct 2026, same layout as Marketplace): a bar at the bottom with
-// Home, Drive, Bin, Changes and More. Home opens with "Needs you: N", three big tiles and ONE most urgent card.
+// Hub V2 on the main dashboard (25 Oct 2026, same layout as Marketplace): a bar at the bottom. Since Lisa's tab picks (2 Nov 2026)
+// it is Main and More, with Drives, Bin and Changes under More. Home opens with "Needs you: N", three big tiles and ONE most urgent card.
 const { test, expect } = require('../support/test');
+const { tabClick, tabTo } = require('../support/tabs');
 
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
@@ -25,12 +26,13 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     expect(await bar.evaluate((e) => getComputedStyle(e).position)).toBe('fixed');
     const box = await bar.boundingBox();
     expect(Math.round(box.y + box.height)).toBe(844); // touches the bottom of the screen
-    const tabs = bar.locator('a');
-    await expect(tabs).toHaveCount(4);
+    const tabs = bar.locator('.ht');
+    // Main, Decide (slot 2) and Do (slot 4) were added on Dashboard Main (Lisa's picks, 2 Nov), then More.
+    await expect(tabs).toHaveText(['Main', 'Decide', 'Do', 'More'].map((t) => new RegExp('^' + t)));
     for (let i = 0; i < 4; i++) expect((await tabs.nth(i).boundingBox()).height).toBeGreaterThanOrEqual(44);
     await noSidewaysScroll(page, 'Dashboard');
-    for (const [key, title] of [['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['map', 'Dashboard']]) {
-      await bar.locator(`a[data-nav="${key}"]`).click();
+    for (const [key, title] of [['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['decide', 'Decide'], ['do', 'Do'], ['map', 'Dashboard']]) {
+      await tabClick(page, bar.locator(`a[data-nav="${key}"]`));
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await expect(bar.locator(`a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
       await expect(bar.locator('a[aria-current="page"]')).toHaveCount(1);
@@ -51,32 +53,34 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     if (total) await expect(top.locator('#urgentOne a.btn')).toHaveAttribute('href', /.+/);
   });
 
-  test('the More tab is gone: #/more opens the Dashboard, where every hub has one tile that opens its own tab', async ({ page }) => {
+  test('the More tab is gone: #/more opens the Dashboard, where every hub has one tile (Main hub tiles) that opens its own tab', async ({ page }) => {
     await page.goto('./#/more');
     await signIn(page);
     await expect(page).toHaveURL(/#\/map$/);
     await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
     await expect(page.locator('#mainNav a[data-nav="more"]')).toHaveCount(0);
-    for (const href of ['money/', 'cdhub/', 'factory/', 'marketplace/', 'food/', 'studio/']) {
-      const a = page.locator(`#view a.keytile[href="${href}"]`);
+    for (const href of ['estate/', 'money/', 'cdhub/', 'factory/', 'marketplace/', 'food/', 'studio/']) {
+      const a = page.locator(`#view #hubTiles .hubtile a.hgo[href="${href}"]`);
       await expect(a).toHaveCount(1);
       await expect(a).toHaveAttribute('target', '_blank');
     }
   });
 
-  test('the selected tab has one clean border and a colour fill; the "You are here" title has no box @regression', async ({ page }) => {
+  test('the selected view under More has one clean edge and no fill (the tab picks have no fills); the "You are here" title has no box @regression', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     for (const [via, key, title] of [['bar', 'drives', 'Drives'], ['bar', 'changes', 'Changes · Recent'], ['bar', 'bin', 'Bin']]) {
-      if (via === 'more') { await page.locator('#mainNav a[data-nav="more"]').click(); await page.locator(`#view a[data-nav="${key}"]`).click(); }
-      else await page.locator(`#mainNav a[data-nav="${key}"]`).click();
+      if (via === 'more') { await tabClick(page, '#mainNav a[data-nav="more"]'); await page.locator(`#view a[data-nav="${key}"]`).click(); }
+      else await tabClick(page, `#mainNav a[data-nav="${key}"]`);
       await expect(page.locator('#hereTitle')).toHaveText(title);
       const sel = page.locator('#mainNav a[aria-current="page"]');
       await expect(sel).toHaveCount(1);
       const st = await sel.evaluate((e) => { const c = getComputedStyle(e); return { bg: c.backgroundColor, l: c.borderLeftWidth + c.borderLeftColor, t: c.borderTopWidth + c.borderTopColor, r: c.borderRightWidth + c.borderRightColor, b: c.borderBottomWidth + c.borderBottomColor }; });
-      expect(st.bg, title + ': selected tab fill').not.toBe('rgba(0, 0, 0, 0)');
-      expect(st.bg).not.toBe('transparent');
+      expect(st.bg, title + ': no fill on the selected view').toBe('rgba(0, 0, 0, 0)');
       expect([st.t, st.r, st.b], title + ': one even border all round').toEqual([st.l, st.l, st.l]);
+      const o = await sel.evaluate((e) => { const c = getComputedStyle(e); return c.outlineStyle + ' ' + c.outlineWidth; });
+      expect(o, title + ': the selected view under More shows a 1px line').toBe('solid 1px');
+      await expect.poll(() => page.locator('#mainNav [data-house-more] .bar').evaluate((e) => e.getBoundingClientRect().width), { message: title + ': More shows where you are' }).toBeCloseTo(40, 0);
       await expect(page.locator('#hereTitle')).toBeFocused();
       const h = await page.locator('#hereTitle').evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineStyle, ow: c.outlineWidth, b: c.borderTopStyle + c.borderLeftStyle, sh: c.boxShadow }; });
       expect(h.o === 'none' || h.ow === '0px', title + ': heading outline ' + h.o + ' ' + h.ow).toBe(true);
@@ -98,7 +102,9 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
       await signIn(page);
       await expect(page).toHaveURL(new RegExp(hash.replace(/[/#]/g, (c) => '\\' + c)));
       await expect(page.locator(`#mainNav a[data-nav="${tab}"]`)).toHaveAttribute('aria-current', 'page');
-      await page.locator('#signOutBtn').click();
+      // On a phone Sign out sits inside the Look menu (the top bar, Lisa's pick A).
+      await page.locator('#houseLookBtn').click();
+      await page.locator('#houseLook').getByRole('button', { name: 'Sign out', exact: true }).click();
     }
   });
 });

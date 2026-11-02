@@ -1,0 +1,18 @@
+{
+  "_note": "Invented rows only. Shape of the Projects Hub Sheet's INDEX tab (header row + rows). Expected: Stuck 3, Waiting 2, Running 2.",
+  "values": [
+    ["number", "name", "slug", "kind", "colour_now", "stage", "brands", "entity", "owner_tag", "home_folder_id", "other_locations", "parent_number", "child_numbers", "merged_into", "status_u45", "claimed_by", "claimed_at_uk", "notes", "project_status"],
+    ["0001", "Sample hub index", "sample-0001", "reserved", "White", "", "", "", "White", "", "", "", "", "", "LIVE", "", "", "", "Running"],
+    ["0201", "Sample blocked one", "sample-0201", "project", "Red", "", "", "", "Red", "", "", "", "", "", "LIVE", "", "", "", "Blocked"],
+    ["0202", "Sample blocked two", "sample-0202", "project", "Oran", "", "", "", "Oran", "", "", "", "", "", "LIVE", "", "", "", "Blocked"],
+    ["0203", "Sample with no owner", "sample-0203", "project", "Yell", "", "", "", "NO OWNER", "", "", "", "", "", "LIVE", "", "", "", "Queued"],
+    ["0204", "Sample waiting one", "sample-0204", "project", "Blue", "", "", "", "Blue", "", "", "", "", "", "LIVE", "", "", "", "Waiting on Lisa"],
+    ["0205", "Sample waiting two", "sample-0205", "project", "Purp", "", "", "", "Purp", "", "", "", "", "", "LIVE", "", "", "", "Waiting on Lisa"],
+    ["0206", "Sample running one", "sample-0206", "project", "Yell", "", "", "", "Yell", "", "", "", "", "", "LIVE", "", "", "", "Running"],
+    ["0207", "Sample running two", "sample-0207", "project", "White", "", "", "", "White", "", "", "", "", "", "LIVE", "", "", "", "Running"],
+    ["0208", "Sample queued", "sample-0208", "project", "Green", "", "", "", "Green", "", "", "", "", "", "LIVE", "", "", "", "Queued"],
+    ["0209", "Sample done, blocked owner gone", "sample-0209", "project", "White", "", "", "", "", "", "", "", "", "", "LIVE", "", "", "", "Done"],
+    ["0210", "Sample parked", "sample-0210", "project", "White", "", "", "", "White", "", "", "", "", "", "LIVE", "", "", "", "Parked"],
+    ["0211", "Sample void", "sample-0211", "project", "White", "", "", "", "White", "", "", "", "", "", "VOID", "", "", "", "Blocked"]
+  ]
+}
