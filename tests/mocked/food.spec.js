@@ -52,7 +52,7 @@ async function sheets(page, b, opts = {}) {
 async function open(page, hash) {
   await page.goto('food/' + (hash || '#/home'));
   await page.locator('#view [data-action="signin"]').click();
-  await expect(page.locator('#view .needs')).toBeVisible();
+  await expect(page.locator('#view .needs, #view [data-hub-main]').first()).toBeVisible();
 }
 
 test.describe('GA Hub page', () => {

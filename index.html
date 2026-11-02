@@ -446,11 +446,19 @@
   svg.hico { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--hic, var(--muted)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .hks { display: grid; grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 4px 10px; }
   .hk { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 2px 4px; }
-  .hk b { font-size: var(--fs-figure); font-weight: 600; line-height: 24px; font-variant-numeric: tabular-nums; }
+  /* One group, one size (Lisa, 2 Nov): every number 18px / 600 on one baseline; a late one wears a rose ring sized to it, the
+     others the same box with no ring (so nothing shifts); 0 is never ringed. */
+  .hk b { box-sizing: border-box; display: inline-flex; align-items: center; height: 28px; padding: 0 6px; margin-left: -6px; border: var(--house-line) solid transparent; border-radius: var(--radius);
+    font-size: var(--fs-figure); font-weight: 600; line-height: 26px; font-variant-numeric: tabular-nums; }
+  .hk b.need { border-color: var(--house-late); }
   .hk > span:last-child, .hsub { font-size: var(--fs-small); color: var(--muted); line-height: 1.3; }
   .hubtile a.xml { font-size: var(--fs-small); font-weight: 600; padding: 0 4px; }
   /* Neutral house hover on every link in a tile: 1px ink line inside + a pale muted tint. */
-  @media (hover: hover) { .hubtile a:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); } }
+  /* Hover and press: a 1px ring in the tile's colour only; no fill, nothing moves. Keyboard focus: the 2px ink ring. */
+  .hubtile a, .hubtile a:hover, .hubtile a:active, .hubtile a:focus { background: transparent; box-shadow: none; }
+  .hubtile a:focus:not(:focus-visible) { outline: none; }
+  @media (hover: hover) { .hubtile a:hover { outline: 1px solid var(--sc, var(--ink)); outline-offset: -1px; } }
+  .hubtile a:active { outline: 1px solid var(--sc, var(--ink)); outline-offset: -1px; }
   .hubtile a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   /* Needs you, Decide and Do rows: the hub's icon and its 3px line down the row. */
   ol.hrows { list-style: none; margin: 8px 0 0; padding: 0; }
@@ -541,6 +549,11 @@
   .card[class]:hover, details.card[class]:hover, nav.card[class]:hover { border-left-color: var(--line); }
   .card.failed[class]:hover { border-left-color: var(--ljr-2); }
   .needs li[class], .needs li[class]:hover { border-left: 0; padding-left: 0; }
+  /* Needs you rows never move (Lisa, 2 Nov: "weird jumping"): one left edge, one icon x and the same box at rest, on hover, focus
+     and press; the bar is the shared .house-lbar, a straight 3px line down each row (square: no "(" bracket per row). */
+  .needs li.house-lbar[class], .needs li.house-lbar[class]:hover, .needs li.house-lbar[class]:focus-within, .needs li.house-lbar[class]:active,
+  ol.hrows > li, ol.hrows > li:hover, ol.hrows > li:focus-within, ol.hrows > li:active { margin: 0; padding: 6px 0 6px 12px; border: 0; border-radius: 0; }
+  .needs li.house-lbar::before, ol.hrows > li.house-lbar::before { border-radius: 0; }
   #view { gap: 12px; }
   .here h2 { font-size: var(--fs-head); }
   .card h3, .card h2.h3 { font-size: var(--fs-head); }
@@ -590,6 +603,8 @@
   .hsplit a.cnt, .nextcard a.more { text-decoration: none; color: var(--ink); }
   .nextcard .actions a.more { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; border: 0; background: transparent; box-shadow: none; text-decoration: underline; text-underline-offset: 2px; }
   @media (max-width: 600px) { .nextcard .actions a.more { min-height: 44px; } }
+  .needs a.needsmore { align-self: flex-start; display: inline-flex; align-items: center; min-height: 36px; color: var(--ink); font-size: var(--fs-small); text-decoration: underline; text-underline-offset: 2px; }
+  @media (max-width: 600px) { .needs a.needsmore { min-height: 44px; } }
   @media (hover: hover) { .hsplit a.cnt:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
     .hsplit a.cnt.k-risk:hover { outline-color: var(--ljr-2); background: var(--ljr-2-tint); } }
   .hsplit a.cnt:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -2498,13 +2513,14 @@
   // Every number opens the place in its hub where you act on it (Lisa, 2 Nov: every piece of info is clickable).
   var HUB_NUMS = {
     projects: [['Stuck', ''], ['Waiting', ''], ['Running', '']],
-    web: [['Down', '#/look'], ['Expiring', '#/look'], ['Live', '#/home']],
-    money: [['Overdue', '#/dates'], ['Due Soon', '#/dates'], ['Cash', '#/money']],
-    food: [['Late', '#/orders'], ['Owe GA', '#/invoices'], ['Today', '#/orders']],
-    dogs: [['Temps', '#/today'], ['Unplaced', '#/today'], ['Bitches', '#/dogs']],
-    apps: [['Questions', '#/decide'], ['Gates', '#/decide'], ['Live', '#/all']],
-    market: [['To Post', '#/do'], ['To Reply', '#/reply'], ['Sold', '#/numbers']],
-    studio: [['Approve', '#/review'], ['Due Today', '#/me'], ['Sold', '#/library']]
+    // The same filtered lists each hub's own Main numbers open (Hub Mains, 2 Nov 2026).
+    web: [['Down', '#/all?show=down'], ['Expiring', '#/all?show=expiring'], ['Live', '#/all?show=live']],
+    money: [['Overdue', '#/now/over'], ['Due Soon', '#/dates/soon'], ['Cash', '#/money/biz']],
+    food: [['Late', '#/orders?late'], ['Owe GA', '#/invoices?unpaid'], ['Today', '#/orders?today']],
+    dogs: [['Temps', '#/round'], ['Unplaced', '#/today/unplaced'], ['Bitches', '#/today/bitches']],
+    apps: [['Questions', '#/decide/questions'], ['Gates', '#/decide/gates'], ['Live', '#/all/live']],
+    market: [['To Post', '#/do?post'], ['To Reply', '#/reply'], ['Sold', '#/sold']],
+    studio: [['Approve', '#/review'], ['Due Today', '#/me/today'], ['Sold', '#/library']]
   };
   // Projects: the hub Sheet's INDEX tab (loadPh). Stuck above 0 is rose.
   function phNums() {
@@ -2520,12 +2536,11 @@
       var tab = h.key === 'projects' ? ' target="_blank" rel="noopener"' : HUB_TAB;
       var body = '<span class="hks"' + (h.key === 'projects' ? ' data-ph="' + (S.ph.data ? 'ok' : esc(S.ph.status)) + '"' : '') + '>' + HUB_NUMS[h.key].map(function (k, i) {
         var n = nums ? nums[i] : null, v = n && n[1] != null ? String(n[1]) : '–', late = !!(n && n[2]);
-        return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + '>' + (late ? '<span class="cnt need' + (v.length > 2 ? ' wide' : '') + '">' + esc(v) + '</span>' : '<b>' + esc(v) + '</b>') + '<span>' + esc(k[0]) + '</span></a>';
+        return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + '>' + '<b' + (late && v !== '0' ? ' class="need"' : '') + '>' + esc(v) + '</b>' + '<span>' + esc(k[0]) + '</span></a>';
       }).join('') + '</span>';
       var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders"' + HUB_TAB + '>✓ XML</a>' : '';
-      var sub = h.key === 'projects' ? '<span class="hsub">Opens in your work account</span>' : '';
       var why = h.key === 'projects' && S.ph.status === 'failed' ? ' title="Numbers could not be read. Tap to open the hub."' : '';
-      return '<div class="card house-lbar hubtile" data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo" href="' + esc(link) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + sub + body + '</div>';
+      return '<div class="card house-lbar hubtile" data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo" href="' + esc(link) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + body + '</div>';
     }).join('') + '</div></section>';
   }
 
@@ -2607,7 +2622,7 @@
       '<span class="mtag ' + (all.some(function (x) { return x.kind === 'risk'; }) ? 'risk' : all.length ? 'ops' : 'ok') + '">' + (reading ? 'Reading…' : all.length + (all.length === 1 ? ' thing' : ' things')) + '</span></div>';
     if (!all.length) return h + (reading ? '<p class="note">Reading from Google Drive…</p>' : '<div class="okstate"><span class="okring" aria-hidden="true">✓</span><p class="note">Nothing needs you today.</p></div>') + '</section>';
     h += '<ol>' + items.map(needRow).join('') + '</ol>';
-    if (all.length > items.length) h += '<p class="note">And ' + (all.length - items.length) + ' more. <a href="#/do">Open Do</a>.</p>';
+    if (all.length > items.length) h += '<a class="needsmore" data-needs-more href="#/do">+' + (all.length - items.length) + ' more</a>'; // plain "+N more" link to Do (Lisa, 2 Nov)
     return h + '</section>';
   }
 

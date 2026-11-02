@@ -67,7 +67,7 @@ test.describe('Factory find bar', () => {
   });
 
   test('kind chips: Send, Test, Fix, Decide, Research', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
     await chip(page, 'kind', 'send').click();
     await expect(rows(page)).toHaveCount(2);
     await chip(page, 'kind', 'send').click();
@@ -88,7 +88,7 @@ test.describe('Factory find bar', () => {
   });
 
   test('who: Me shows only what is tagged for Lisa; Claude and Grok on Rooms', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
     await panel(page);
     await chip(page, 'who', 'me').click();
     await expect(rows(page)).toHaveCount(2);
@@ -136,7 +136,7 @@ test.describe('Factory find bar', () => {
   });
 
   test('sort: Flag, Date, Oldest and Newest change the order', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
     await expect(rows(page).first()).toHaveAttribute('data-row', 'wrk000001'); // Me = newest first
     await panel(page);
     await chip(page, 'sort', 'age').click();
@@ -198,7 +198,7 @@ test.describe('Factory find bar', () => {
   });
 
   test('Me: first tab, counts what waits on Lisa across Decide and Do, newest first, by app', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
     await expect(page.locator('nav.tabs a').first()).toHaveAttribute('data-nav', 'me');
     await expect(page.locator('#nMe')).toHaveText('7');
     await expect(rows(page)).toHaveCount(7);

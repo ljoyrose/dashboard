@@ -376,9 +376,11 @@ test.describe('CD Hub house look', () => {
   test('read-only pills, counts and checklist marks never hover; bottom tabs have no ring, only the colour bar widens, nothing moves', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    // The three summary numbers open what they count (Lisa, 2 Nov), so they are links and do hover; see clickable-info.spec.js.
-    await expect(page.locator('#summary a.sum')).toHaveCount(3);
-    for (const sel of ['#needsCard h3 .cnt', '#checksCard .mk', '#nav .ht .n']) {
+    // Main's three numbers open what they count (Lisa, 2 Nov), so they are links and do hover; see hub-main-others.spec.js.
+    await expect(page.locator('[data-hub-main] a.hm-n')).toHaveCount(3);
+    // Needs you in full now sits on Do and the data checks on Tables (Hub Mains, 2 Nov 2026).
+    for (const [tab, sel] of [['work', '#needsCard h3 .cnt'], ['shape', '#checksCard .mk'], ['map', '#nav .ht .n']]) {
+      await openTab(page, tab);
       const el = page.locator(sel).first();
       await el.hover();
       expect(await el.evaluate((e) => getComputedStyle(e).outlineStyle), sel).toBe('none');
@@ -404,7 +406,7 @@ test.describe('CD Hub house look', () => {
     for (const wide of [false, true]) {
       if (wide) await page.addStyleTag({ content: '.cnt{font-family:Verdana,"DejaVu Sans",sans-serif!important;letter-spacing:.12em!important}' });
       const sizes = await measure();
-      expect(sizes.map((x) => x[0]), 'one- and two-digit counts on Live feed').toEqual(expect.arrayContaining(['16', '4']));
+      expect(sizes.map((x) => x[0]), 'one- and two-digit counts on Main').toEqual(expect.arrayContaining(['16']));
       // The tab counts are the corner ring (tab picks, 2 Nov) holding a 14px number (pick A): 24 x 24 whatever the font, the two digits on one line.
       const tc = await page.locator('#nav button[data-go="work"] .n').evaluate((e) => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.whiteSpace, s.fontSize]; });
       expect(tc, 'the Do tab count' + (wide ? ' (wider font)' : '')).toEqual(['12', 24, 24, '12px', 'nowrap', '14px']);
@@ -459,33 +461,39 @@ test.describe('CD Hub house look', () => {
 });
 
 test.describe('CD Hub Bloodline screens (built from what the page already reads)', () => {
-  test('Live feed: summary strip, Next card, Needs you today, On site, Litters, Temperatures today and Data checks', async ({ page }) => {
+  test('Main: Next, Needs you (5) and Temps · Unplaced · Bitches; the old Live cards sit on Do, Today and Tables', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    const sums = await page.locator('#summary .sum').allInnerTexts();
-    expect(sums.map((s) => s.replace(/\s+/g, ' ').trim())).toEqual(['4 On track', '5 Needs you', '0 Overdue']);
-    await expect(page.locator('#nextCard .bline')).toHaveText('Next');
-    await expect(page.locator('#nextCard .t')).toHaveText('Tables read needs a look');
-    await expect(page.locator('#needsCard .mrow')).toHaveCount(5);
-    await expect(page.locator('#needsCard h3 .cnt')).toHaveText('5');
-    await expect(page.locator('#needsCard h3 .cnt')).toHaveClass(/need/);
+    await expect(page.locator('#summary')).toHaveCount(0);   // the On track / Needs you / Overdue trio became the 3 numbers
+    await expect(page.locator('[data-hm="next"] .hm-what')).toHaveText('Tables read needs a look');
+    await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
+    await expect(page.locator('[data-hm="needs"] .hm-head .cnt')).toHaveText('5');
+    await expect(page.locator('[data-hm="nums"] .hm-n[data-k="Temps"] .hm-v')).toHaveText('0 of 2');
     await expect(page.locator('#nav button[data-go="map"] .n')).toHaveText('5');
     await expect(page.locator('#nav button[data-go="work"] .n')).toHaveText('1');
+    // Each row carries its action: the waiting item opens Do (Outstanding).
+    await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Sample item waiting on Lisa' }).locator('a[data-hm-act]').click();
+    await expect(page.locator('#nav button[data-go="work"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#needsCard .mrow')).toHaveCount(5);
+    await expect(page.locator('#needsCard h3 .cnt')).toHaveClass(/need/);
+    await openTab(page, 'today');
     await expect(page.locator('#onSiteCard .big')).toHaveText('3');
-    await expect(page.locator('#littersCard .okempty')).toHaveCount(0);   // one empty line per view (Lisa, 2 Nov): the Next card says it
     await expect(page.locator('#tempsCard')).toContainText('0 of 2');
     await expect(page.locator('#tempsCard')).toContainText('No reading today');
+    await openTab(page, 'shape');
     await expect(page.locator('#checksCard h3 .cnt')).toHaveText('4');
     await expect(page.locator('#checksCard .mk.bad')).toHaveCount(4);
-    // ONE action per row: the waiting item opens Outstanding
-    await page.locator('#needsCard .mrow', { hasText: 'Sample item waiting on Lisa' }).locator('button').click();
-    await expect(page.locator('#nav button[data-go="work"]')).toHaveAttribute('aria-current', 'page');
   });
 
-  test('Needs you today: date pills ring by urgency (late rose, soon amber), late first, Overdue counts it, Next is the most urgent; Litters card shows both', async ({ page, guard }) => {
+  test('Needs you: late first, then soon; Next is the most urgent and opens Today; Do keeps the date pills; Litters shows both', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-mating.csv', MATINGS());
     await page.goto('cdhub/');
     await signIn(page);
+    const main = page.locator('[data-hm="needs"] .hm-row');
+    await expect(main.nth(0)).toContainText('Test Dog One in whelp');
+    await expect(main.nth(0)).toHaveAttribute('data-kind', 'late');
+    await expect(page.locator('[data-hm="next"] .hm-what')).toHaveText('Test Dog One in whelp');
+    await openTab(page, 'work');
     const rows = page.locator('#needsCard .mrow');
     await expect(rows.nth(0)).toContainText('Test Dog One in whelp');
     await expect(rows.nth(0).locator('.dpill')).toHaveClass(/late/);
@@ -494,40 +502,44 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(rows.nth(2).locator('.dpill')).toHaveCount(0);   // undated rows carry no date pill
     const due = iso(-66 + 63).split('-');
     await expect(rows.nth(0).locator('.dpill')).toContainText(`${due[2]}/${due[1]}/${due[0].slice(2)}`);
-    await expect(page.locator('#summary .sum.over .big')).toHaveText('1');
-    await expect(page.locator('#nextCard .t')).toHaveText('Test Dog One in whelp');
-    await expect(page.locator('#littersCard h3 .cnt')).toHaveText('2');
-    await expect(page.locator('#littersCard .dpill.late')).toHaveCount(1);
-    await expect(page.locator('#littersCard .dpill.soon')).toHaveCount(1);
     const ring = (sel) => page.locator(sel).first().evaluate((e) => { const s = getComputedStyle(e); return [s.borderTopWidth, s.borderTopColor, s.backgroundColor]; });
     const late = await ring('#needsCard .dpill.late'), soon = await ring('#needsCard .dpill.soon');
-    expect(late[0]).toBe('1px'); expect(late[1]).toBe(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ljr-2').trim() && getComputedStyle(document.querySelector('.cnt.need')).borderTopColor));
+    expect(late[0]).toBe('1px'); expect(late[1]).toBe(await page.evaluate(() => getComputedStyle(document.querySelector('.cnt.need')).borderTopColor));
     expect(soon[1]).not.toBe(late[1]);
     // a date that is neither late nor soon still wears a plain 1px ring, no fill
     const plain = await page.evaluate(() => { const d = document.createElement('div'); d.innerHTML = dpill('2026-01-01', ''); document.querySelector('#main').appendChild(d); const s = getComputedStyle(d.firstChild); return [s.borderTopWidth, s.borderTopStyle, s.backgroundColor]; });
     expect(plain).toEqual(['1px', 'solid', 'rgba(0, 0, 0, 0)']);
-    await page.locator('#nextCard button').click();
+    await openTab(page, 'litters');
+    await expect(page.locator('#littersCard h3 .cnt')).toHaveText('2');
+    await expect(page.locator('#littersCard .dpill.late')).toHaveCount(1);
+    await expect(page.locator('#littersCard .dpill.soon')).toHaveCount(1);
+    await openTab(page, 'map');
+    await page.locator('[data-hm="next"] a[data-hm-act]').click();
     await expect(page.locator('#nav button[data-go="today"]')).toHaveAttribute('aria-current', 'page');
   });
 
-  test('Needs you today shows at most 7 rows; Show all opens the rest', async ({ page, guard }) => {
+  test('Main shows 5 and "+N more" opens Do, where Needs you shows 7 and Show all opens the rest', async ({ page, guard }) => {
     const rows = ['id,area,item,status,owner,blocked_on,evidence,note'];
     for (let i = 1; i <= 6; i++) rows.push(`W2${i},sample,Invented waiting ask ${i},BLOCKED,Lisa,,,`);
     setFile(guard.world, 'BLD-WORK.csv', rows.join('\n') + '\n');
     await page.goto('cdhub/');
     await signIn(page);
+    await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
+    await page.locator('[data-hm-more]').click();
     await expect(page.locator('#needsCard .mrow:visible')).toHaveCount(7);
     await expect(page.locator('#needsCard .mfoot')).toContainText('Showing 7 of 10');
     await page.locator('#needsCard [data-needall]').click();
     await expect(page.locator('#needsCard .mrow:visible')).toHaveCount(10);
   });
 
-  test('Temperatures today shows today\'s outdoor reading; a data check\'s Show opens its list on Today', async ({ page, guard }) => {
+  test('Temperatures today (on Today) shows today\'s outdoor reading; a data check\'s Show (on Tables) opens its list on Today', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-outdoor_temp.csv', `on_date,reading_kind,min_temp,max_temp,phrase,captured_at,source\n${iso(0)},forecast,8,14,invented mild day,${iso(0)}T07:00:00Z,invented\n`);
     await page.goto('cdhub/');
     await signIn(page);
+    await openTab(page, 'today');
     await expect(page.locator('#tempsCard')).toContainText('8–14 °C');
     await expect(page.locator('#tempsCard')).toContainText('invented mild day');
+    await openTab(page, 'shape');
     await page.locator('#checksCard button[data-list="nochip"]').click();
     await expect(page.locator('#nav button[data-go="today"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('#tpanel')).toContainText('No microchip recorded');

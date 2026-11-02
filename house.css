@@ -285,3 +285,52 @@ a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
 .house-iw { font-size: var(--fs-small); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
 /* A square icon control grows to fit its word (never past its row), so the word never spills outside the page. */
 .house-noicons :is(a, button):has(> .house-iw) { width: auto; min-width: var(--house-ctl-h, 36px); max-width: 100%; padding-left: 8px; padding-right: 8px; }
+
+/* 14 Hub Main (Lisa's house style, 2 Nov 2026): every hub's Main is Next, Needs you (at most 5 rows), then the hub's 3 numbers.
+   Built by toolkit.js DashKit.hubMain, so the seven hubs look and behave the same. Next is the white card with the 1px ink edge;
+   Needs you rows carry a 3px bar (rose late, amber today, grey waiting) and their action button; the numbers are 14px house counts
+   (late ones wear the rose ring, the others none). */
+.hm { display: flex; flex-direction: column; gap: var(--house-gap); min-width: 0; }
+.hm h3 { margin: 0; font-size: var(--fs-head); font-weight: 600; line-height: 1.3; }
+.hm .hm-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.hm .hm-head h3 a { color: inherit; text-decoration: none; }
+.hm-next[class] { border-color: var(--ink); background: var(--card); gap: 8px; }
+.hm-what { margin: 0; font-size: var(--fs-body); font-weight: 600; overflow-wrap: anywhere; }
+.hm-what a, .hm-t a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.hm-sub, .hm-t small { margin: 0; display: block; font-size: var(--fs-small); color: var(--muted); overflow-wrap: anywhere; }
+.hm-go { display: flex; gap: 8px; flex-wrap: wrap; }
+.hm .btn.hm-a { text-decoration: none; color: var(--ink); flex: none; }
+.hm-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.hm-row { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 0 6px 12px; border-radius: var(--radius); min-width: 0; }
+.hm-row.house-lbar { --house-lbar-out: 0px; --sc: var(--house-ring); }
+/* Inside a list the bar is a plain straight 3px line, never a "(" bracket per row (Lisa, 2 Nov): rows are square; and nothing moves
+   on hover, focus or press (the hover line is an outline, house section 13), so every row keeps one left edge. */
+.hm-row.house-lbar, .hm-row.house-lbar::before { border-radius: 0; }
+.hm-row, .hm-row:hover, .hm-row:focus-within, .hm-row:active { margin: 0; padding: 6px 0 6px 12px; border-width: 0; }
+.hm-row[data-kind="late"] { --sc: var(--house-late); }
+.hm-row[data-kind="today"] { --sc: var(--house-soon); }
+.hm-t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.hm-more { align-self: flex-start; color: var(--ink); font-size: var(--fs-small); text-decoration: underline; text-underline-offset: 2px; padding: 4px 0; }
+.hm-empty[class], .hm-fail[class] { flex-direction: row; align-items: center; gap: 12px; }
+.hm-fail[class] { flex-direction: column; align-items: flex-start; border-color: var(--house-risk); }
+.hm-fail .note { margin: 0; }
+.hm-ok { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: var(--house-line) solid var(--house-ok); background: var(--house-ok-tint); color: var(--ink); font-size: var(--fs-small); font-weight: 600; }
+.hm-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--house-gap); min-width: 0; }
+.hm-nums > :not(.hm-n) { grid-column: 1 / -1; }
+a.hm-n[class] { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 10px 12px; color: var(--ink); text-decoration: none; min-width: 0; }
+/* One group, one size (Lisa, 2 Nov): all three numbers 18px / 600 on one baseline, each in the same box; a late one (above 0) wears a
+   rose ring sized to that number, the others no ring. Hover and press: a 1px ring only (the hub's colour where it has one); no fill. */
+.hm-v { box-sizing: border-box; display: inline-flex; align-items: center; height: 28px; padding: 0 6px; margin-left: -6px; border: var(--house-line) solid transparent;
+  border-radius: var(--radius); font-size: var(--fs-figure); font-weight: 600; line-height: 26px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.hm-v.need { border-color: var(--house-late); }
+.hm a.hm-n[class], .hm a.hm-n[class]:hover, .hm a.hm-n[class]:focus, .hm a.hm-n[class]:active { background: var(--card); box-shadow: none; transform: none; }
+.hm a.hm-n[class]:focus:not(:focus-visible) { outline: none; }
+@media (hover: hover) { .hm a.hm-n[class]:hover { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); } }
+.hm a.hm-n[class]:active { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
+.hm-l { font-size: var(--fs-small); color: var(--muted); line-height: 1.3; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .hm-row { flex-wrap: wrap; }
+  .hm-t { flex-basis: calc(100% - 8px); }
+  .hm .btn.hm-a { min-height: 44px; }
+  a.hm-n[class] { padding: 8px; }
+}
