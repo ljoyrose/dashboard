@@ -1,0 +1,12 @@
+{
+  "_note": "Invented for JOB 34 tests. No real person, customer, buyer, member, family or money row.",
+  "people": [
+    { "name": "Sample Person", "email": "sample.person@example.test" },
+    { "name": "Test Buyer A", "email": "buyer.a@example.test" },
+    { "name": "Test Member B", "email": "member.b@example.test" }
+  ],
+  "apps": ["APP-A", "APP-B", "APP-C"],
+  "dogs": ["Test Dog A", "Test Dog B"],
+  "amounts": ["£100.00", "£250.00", "£1,000.00"],
+  "phone": "01632 960000"
+}
