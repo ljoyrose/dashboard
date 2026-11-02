@@ -52,11 +52,11 @@ def touches(files, prefixes):
     return [f for f in files if any(f == p or f.startswith(p) for p in prefixes)]
 
 
-def classify(pr, policy, open_heads, today):
+def classify(pr, policy, open_heads, today, auto_merge=True):
     """Return (action, reason). Actions: SKIP, WAIT, RETARGET, UPDATE, ARM, MERGE, DO."""
     if pr.get("isDraft"):
         return "SKIP", "draft"
-    if today > parse_date(policy["expires_on"]):
+    if policy.get("expires_on") and today > parse_date(policy["expires_on"]):
         return "DO", "approval lapsed: renew merge-policy.json"
     author = (pr.get("author") or {}).get("login", "")
     if author in policy["dependabot_authors"]:
@@ -82,6 +82,8 @@ def classify(pr, policy, open_heads, today):
     if state == "red":
         return "DO", "a check is red"
     if state == "pending":
+        if not auto_merge:
+            return "WAIT", "checks running (auto-merge not available on this repo: merged on a later run)"
         return "ARM", "checks running: arm auto-merge"
     ms = pr.get("mergeStateStatus")
     if ms == "CLEAN":
@@ -151,12 +153,12 @@ def build_body(rows, policy, today, applied, mode, now):
     auto = [(p, a, r) for (p, a, r) in rows if a in ("MERGE", "ARM", "UPDATE", "RETARGET")]
     wait = [(p, r) for (p, a, r) in rows if a == "WAIT"]
     ages = [(now - dt.datetime.fromisoformat(p["createdAt"].replace("Z", "+00:00"))).days for (p, _, _) in rows]
-    exp = parse_date(policy["expires_on"])
-    left = (exp - today).days
+    exp = parse_date(policy["expires_on"]) if policy.get("expires_on") else None
+    left = (exp - today).days if exp else None
     out = ["_Rewritten by the PR autopilot sweep. Mode: **%s**. Last run: %s UTC._" % (mode, now.strftime("%Y-%m-%d %H:%M")), ""]
-    if left < 0:
+    if left is not None and left < 0:
         out += ["**Standing approval has lapsed. Everything below needs your yes until you renew `merge-policy.json`.**", ""]
-    elif left <= policy["renew_warning_days"]:
+    elif left is not None and left <= policy.get("renew_warning_days", 7):
         out += ["**Renew standing approval (expires %s, %d days). Same wording?**" % (exp, left), ""]
     out += ["## Needs you (%d)" % len(do)]
     out += ["- #%d %s : %s" % (p["number"], p["title"], r) for p, r in do] or ["- nothing"]
@@ -200,11 +202,13 @@ def main():
                         "number,title,url,isDraft,baseRefName,headRefName,mergeable,mergeStateStatus,"
                         "statusCheckRollup,files,createdAt,author"))
     open_heads = {p["headRefName"]: p["number"] for p in prs}
+    private = gh("repo", "view", "--json", "isPrivate", "-q", ".isPrivate", check=False).strip() == "true"
+    auto_merge = not private  # free plan: auto-merge only on public repos
     now = dt.datetime.now(dt.timezone.utc)
     today = now.date()
     rows = []
     for pr in order(prs):
-        action, reason = classify(pr, policy, open_heads, today)
+        action, reason = classify(pr, policy, open_heads, today, auto_merge)
         rows.append((pr, action, reason))
         print("#%s %s: %s" % (pr["number"], action, reason))
         if mode == "apply" and action in ("RETARGET", "UPDATE", "ARM", "MERGE"):

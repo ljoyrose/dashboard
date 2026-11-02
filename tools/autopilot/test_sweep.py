@@ -61,7 +61,16 @@ class T(unittest.TestCase):
         self.assertEqual(cls(pr(mergeStateStatus="BEHIND")), "UPDATE")
 
     def test_lapsed_approval_asks_everything(self):
-        self.assertEqual(cls(pr(), today=dt.date(2027, 1, 1)), "DO")
+        dated = dict(POLICY, expires_on="2026-12-02")
+        self.assertEqual(cls(pr(), policy=dated, today=dt.date(2027, 1, 1)), "DO")
+
+    def test_no_expiry_holds_until_stop(self):
+        self.assertIsNone(POLICY["expires_on"])
+        self.assertEqual(cls(pr(), today=dt.date(2040, 1, 1)), "MERGE")
+
+    def test_private_repo_waits_instead_of_arming(self):
+        p = [{"name": "tests", "status": "IN_PROGRESS", "conclusion": ""}]
+        self.assertEqual(sweep.classify(pr(statusCheckRollup=p), POLICY, {}, TODAY, auto_merge=False)[0], "WAIT")
 
     def test_dependabot_never_automatic(self):
         self.assertEqual(cls(pr(author={"login": "dependabot[bot]"})), "DO")
