@@ -112,7 +112,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .cnt{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:var(--house-count-w);height:var(--house-count-h);padding:0 var(--house-count-pad);border-radius:var(--house-count-r);border:1px solid var(--ink);font-size:var(--fs-small);font-weight:600;line-height:var(--house-count-lh);white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink);background:transparent;flex:none}
 .cnt.wide{width:auto;min-width:30px;padding:0 6px}
 .cnt.need{border-color:var(--ljr-2);background:transparent}
-.cnt.ok{border-color:var(--ljr-5-text)}
+.cnt.ok{border-color:transparent}
 .card h4 .cnt,.card .hx4 .cnt,.mcard h3 .cnt{margin-left:auto}
 /* Every date pill wears a plain 1px ring; late = rose ring + tint; soon = amber ring + tint. */
 .dpill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border:1px solid var(--press);border-radius:var(--radius);font-size:var(--fs-small);color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums;flex:none}
@@ -901,7 +901,7 @@ function nextCard(){
 }
 function needsCard(){
  var n=needsToday();
- var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Needs you today'+cntPill(n.length,n.length?'need':'ok')+'</h3>';
+ var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Needs you today'+cntPill(n.length,n.length?'need':'ok')+'</h3>';
  if(!n.length) return h+'<p class="okempty">Nothing needs you</p></section>';
  h+=n.map(function(x,i){ return needRow(x,i>=7); }).join('');
  if(n.length>7) h+='<div class="mfoot"><span class="mut">Showing 7 of '+n.length+'</span><button type="button" class="btn" data-needall="1">Show all</button></div>';
@@ -911,7 +911,7 @@ function needsCard(){
 function onSiteCard(){
  var c=counts();
  var row=function(t,v,s){ return '<div class="mrow"><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
- return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
+ return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
   +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><span class="big">'+c.here.length+'</span><span class="mut">dogs on the premises today</span></div>'
   +row('Adults',c.adults.length,'6 months and over')+row('Under 6 months',c.pups.length,'')
   +row('Breeding bitches in law',c.bitches.length,'female, entire, 6 months and over')+row('Stud males',c.studs.length,'')
@@ -924,7 +924,7 @@ function littersCard(){
  var recent=(CD.litters||[]).filter(function(l){ var b=l.dob||l.born_on; var d=b?daysBetween(b,date):null; return d!==null&&d>=0&&d<=84; })
   .sort(function(a,b){ return (b.dob||b.born_on||'').localeCompare(a.dob||a.born_on||''); });
  var pups=litterPups(), n=w.length+recent.length;
- var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>Litters'+cntPill(n)+'</h3>';
+ var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>Litters'+cntPill(n)+'</h3>';
  h+=w.map(function(x){ var tone=x.day>63?'late':(x.day>=57?'soon':'');
    return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' of 57–72 · working due</small></span>'+dpill(x.due,tone)+'</div>'; }).join('');
  h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
@@ -940,7 +940,7 @@ function tempsCard(){
  var am=has('am'), pm=has('pm');
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
  var row=function(t,v,s,done){ return '<div class="mrow"><span class="ic'+(done?' ok':'')+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
- return '<section class="mcard" id="tempsCard" style="--hc:var(--ljr-4)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
+ return '<section class="mcard" id="tempsCard" style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning readings',am+' of '+N,'cabins with a reading',N&&am===N)+row('Evening readings',pm+' of '+N,'cabins with a reading',N&&pm===N)
   +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||out.kind||''),false)
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No outdoor reading on file for today</small></span></div>')
@@ -949,7 +949,7 @@ function tempsCard(){
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 function checksCard(){
  var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
- return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'need':'ok')+'</h3>'
+ return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'need':'ok')+'</h3>'
   +all.map(function(x){
    return '<div class="mrow ckrow'+(x.ok?' ok':' bad')+'"><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.ok?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
@@ -1023,7 +1023,7 @@ function todayChecklist(date,unplacedN){
   [!over,'No cabin over its headcount',over?over+' over':'all within'],
   [c.bitches.length===c.active.length,'Licence counts agree','law '+c.bitches.length+', your list '+c.active.length]];
  var done=L.filter(function(x){return x[0];}).length;
- return '<section class="mcard" id="todayChecklist" style="--hc:var(--ljr-4);margin-bottom:12px"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Today checklist<span class="mut" style="margin-left:auto;font-weight:400">'+done+' of '+L.length+' done</span></h3>'
+ return '<section class="mcard" id="todayChecklist" style="--hc:var(--ljr-4-icon);margin-bottom:12px"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Today checklist<span class="mut" style="margin-left:auto;font-weight:400">'+done+' of '+L.length+' done</span></h3>'
   +L.map(function(x){ return '<div class="mrow ckrow"><span class="mk'+(x[0]?'':' bad')+'" aria-hidden="true">'+(x[0]?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(x[1])+'<span class="sr">'+(x[0]?' done':' not done')+'</span><small>'+esc(x[2])+'</small></span></div>'; }).join('')
   +'<div class="mfoot"><span class="mut">'+(DB?'From the round.':'Saving is off, so the round shows the tables, not today’s ticks.')+'</span><button type="button" class="btn" data-go="round">Open The round</button></div></section>';

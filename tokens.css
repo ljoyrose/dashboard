@@ -45,7 +45,7 @@
     --ljr-6-text: #32AEF0; --ljr-6-tint: #213134;
     --ljr-7-text: #BB93DD; --ljr-7-tint: #342A31;
     --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
-    --ljr-1-icon: #F3EEE5; --ljr-2-icon: var(--ljr-2); --ljr-3-icon: var(--ljr-3); --ljr-4-icon: var(--ljr-4); --ljr-5-icon: var(--ljr-5); --ljr-6-icon: var(--ljr-6); --ljr-7-icon: var(--ljr-7); --ljr-8-icon: #CFCAC2;
+    --ljr-0-icon: #93856E; --ljr-1-icon: #F3EEE5; --ljr-2-icon: var(--ljr-2); --ljr-3-icon: var(--ljr-3); --ljr-4-icon: var(--ljr-4); --ljr-5-icon: var(--ljr-5); --ljr-6-icon: var(--ljr-6); --ljr-7-icon: var(--ljr-7); --ljr-8-icon: #CFCAC2;
   }
 }
 
@@ -63,7 +63,7 @@
   --ljr-6-text: #32AEF0; --ljr-6-tint: #213134;
   --ljr-7-text: #BB93DD; --ljr-7-tint: #342A31;
   --ljr-8: #8E8A84; --ljr-8-text: #CFCAC2; --ljr-8-tint: #2A2825; --ljr-8-solid: #3A3732; --ljr-8-on: #F3EEE5;
-  --ljr-1-icon: #F3EEE5; --ljr-2-icon: var(--ljr-2); --ljr-3-icon: var(--ljr-3); --ljr-4-icon: var(--ljr-4); --ljr-5-icon: var(--ljr-5); --ljr-6-icon: var(--ljr-6); --ljr-7-icon: var(--ljr-7); --ljr-8-icon: #CFCAC2;
+  --ljr-0-icon: #93856E; --ljr-1-icon: #F3EEE5; --ljr-2-icon: var(--ljr-2); --ljr-3-icon: var(--ljr-3); --ljr-4-icon: var(--ljr-4); --ljr-5-icon: var(--ljr-5); --ljr-6-icon: var(--ljr-6); --ljr-7-icon: var(--ljr-7); --ljr-8-icon: #CFCAC2;
 }
 
 /* ===== House look (Lisa, 28 Oct 2026): the agreed rules as numbers, ONCE. house.css builds the shared parts from these;

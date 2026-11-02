@@ -179,6 +179,14 @@ nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt { position: absolute; top: 3p
 nav.house-tabs .ht > .n.wide, nav.house-tabs .ht > .cnt.wide { width: auto; padding: 0 4px; }
 nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { border-color: var(--house-late); background: transparent; }
 nav.house-tabs .ht > .n:empty, nav.house-tabs .ht > .cnt:empty { display: none !important; }
+/* A tab with a count: the icon steps left just enough that its ring and the count's ring never touch (only on narrow tabs, e.g. a
+   phone; on a wide tab the shift works out to 0 and the icon stays centred). 50% = half the tab; the rest = half the icon's round
+   place + the count + 1px. It never steps past the tab's own left edge (the 2px phone padding is the most it uses). */
+/* ...and a tab with a count starts from room for both (icon + count + a gap), so even the narrowest phone tab fits them side by side. */
+nav.house-tabs > .ht:has(> .n:not(:empty), > .cnt:not(:empty)), nav.house-tabs > .ht-more:has(> .ht > .n:not(:empty), > .ht > .cnt:not(:empty)) {
+  flex-basis: calc(var(--house-tab-disc) + var(--house-tab-count-w) + 5px); }
+nav.house-tabs .ht:has(> .n:not(:empty), > .cnt:not(:empty)) > .hic { position: relative;
+  left: min(0px, max(calc(var(--house-tab-disc) / 2 - 50% - 2px), calc(50% - var(--house-tab-disc) / 2 - var(--house-tab-count-w) - 1px))); }
 /* The More menu: opens above the bar, at its right end; the views that are not tabs. Same rules: grey icon at rest, the colour on hover
    and where you are, no fills. */
 nav.house-tabs .house-more { position: absolute; right: 0; bottom: calc(100% + var(--house-tabs-gap) + 6px); z-index: 30; box-sizing: border-box;
@@ -240,9 +248,13 @@ nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon);
 .card { background: var(--card); border: var(--house-line) solid var(--line); border-radius: var(--radius); padding: var(--house-pad); min-width: 0; }
 .house-stack { display: flex; flex-direction: column; gap: var(--house-gap); }
 
-/* 10 Colour bars: 3px down the left of a card or row; the column-title stage marker is 3 x 18. */
+/* 10 Colour bars (Lisa's pick, 2 Nov): 3px down the WHOLE left edge of a card or row, curved with the card's corner. Drawn as a left
+   border on a layer over the card's own box (so nothing moves): it runs the full height and bends round the corners like the card does.
+   --sc = the colour. --house-lbar-out = how far the layer sits over the card's own line (1px card line; 0 for a row with no side line).
+   The column-title stage marker is 3 x 18. */
 .house-lbar { position: relative; }
-.house-lbar::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: var(--house-bar); border-radius: var(--radius); background: var(--sc, var(--ljr-0)); }
+.house-lbar::before { content: ""; position: absolute; inset: calc(-1 * var(--house-lbar-out, var(--house-line))); box-sizing: border-box; pointer-events: none;
+  border: 0 solid transparent; border-left: var(--house-bar) solid var(--sc, var(--ljr-0)); border-radius: inherit; background: none; }
 .house-marker { width: var(--house-marker-w); height: var(--house-marker-h); border-radius: var(--radius); background: var(--sc, var(--ljr-0)); flex: none; }
 
 /* 11 Brand logo slot: 20 x 20, the logo or the brand's initials on a pale tint of its colour. The ONE radius exception:

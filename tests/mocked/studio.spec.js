@@ -1381,8 +1381,9 @@ test.describe('Studio page', () => {
     await open(page, guard, '#/line');
     const colBar = await page.locator('.col[data-stage="5"] .col-head .sbar').evaluate((e) => getComputedStyle(e).backgroundColor);
     await page.locator('[data-vmode="list"]').click();
-    const bar = await page.locator('.crow[data-row="sa-make"]').evaluate((e) => { const c = getComputedStyle(e, '::before'); return { w: c.width, bg: c.backgroundColor, l: c.left }; });
-    expect(bar).toEqual({ w: '3px', bg: colBar, l: '0px' });
+    // Lisa's pick (2 Nov): the bar runs the row's full height, 3px, curved (../house.css section 10: a left border on a layer over the row).
+    const bar = await page.locator('.crow[data-row="sa-make"]').evaluate((e) => { const c = getComputedStyle(e, '::before'); return { w: c.borderLeftWidth, bg: c.borderLeftColor, l: c.left, full: Math.abs(parseFloat(c.height) - e.getBoundingClientRect().height) <= 1, curved: parseFloat(c.borderTopLeftRadius) >= 8 }; });
+    expect(bar).toEqual({ w: '3px', bg: colBar, l: '0px', full: true, curved: true });
     await page.locator('[data-vmode="board"]').click();
     expect(await page.locator('.crow[data-row="sa-make"]').evaluate((e) => getComputedStyle(e, '::before').content)).toBe('none'); // not on board cards
   });
