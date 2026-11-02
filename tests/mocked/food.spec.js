@@ -207,7 +207,7 @@ test.describe('GA Hub page', () => {
     // nothing to fix
     b = growBook([growRow('9351', 1, sub), growRow('9352', 2, sub)]);
     await page.unroute(/sheets/); await sheets(page, b); await page.locator('#refresh').click();
-    await expect(page.locator('#view .card.grow')).toContainText('Orders are holding up');
+    await expect(page.locator('#view .card.grow')).toHaveCount(0);   // one empty line per view (Lisa, 2 Nov): no gap, no Grow card
   });
   test('a GA statement on file: its balance is the Owed figure on Home and the first tile on Invoices', async ({ page }) => {
     const b = book(); b.statements = [['statement_date', 'total_outstanding', 'file_id'], ['2026-10-19', '1234.56', '']];
@@ -261,8 +261,24 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view')).toContainText('VAT invoices are off');
     await expect(page.locator('#view a[aria-label="Open SI-1000001"]')).toBeVisible();
   });
+  // Commercial invoices (engine v1.15 module, orders sent outside the UK) share the vat_inv_* columns, with inv_doc = COMMERCIAL. Invented values only.
+  test('Invoices: commercial invoices show a Commercial badge; saved = waiting for the GA SI number, drafted = draft to GA', async ({ page }) => {
+    const b = vatBook(true), h = b.orders[0]; h.push('other_lines', 'line_flag', 'inv_doc'); b.orders = [h].concat(b.orders.slice(1).map((r) => r.concat(['', '', ''])));
+    const set = (no, v) => { const r = b.orders.find((x) => x[0] === no); ['vat_inv_no', 'vat_inv_status', 'vat_inv_file_id', 'vat_inv_at', 'inv_doc'].forEach((c, i) => { r[h.indexOf(c)] = v[i]; }); };
+    set('9003', ['261030-9003', 'saved', 'FAKECI00000000000000000003', '2026-10-30', 'COMMERCIAL']);
+    set('9002', ['261030-9002', 'drafted', 'FAKECI00000000000000000002', '2026-10-30', 'COMMERCIAL']);
+    await sheets(page, b);
+    await open(page, '#/invoices');
+    const card = page.locator('#view .grp', { hasText: 'VAT invoices' }).locator('xpath=following-sibling::div[contains(@class,"card")][1]');
+    const r3 = card.locator('.row', { hasText: '261030-9003' }), r2 = card.locator('.row', { hasText: '261030-9002' }), r1 = card.locator('.row', { hasText: '261030-9001' });
+    await expect(r3).toContainText('Commercial'); await expect(r3).toContainText('Waiting for GA SI no.');
+    await expect(r2).toContainText('Commercial'); await expect(r2).toContainText('Draft to GA in Gmail');
+    await expect(r1).not.toContainText('Commercial'); await expect(r1).toContainText('Draft in Gmail');
+    await expect(page.locator('#view a[aria-label="Open 261030-9003"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/FAKECI00000000000000000003/view');
+    await page.screenshot({ path: 'test-results/food-commercial-invoices.png', fullPage: true });
+  });
   test('the page holds no Drive id for VAT invoices and reads the vat_inv_* columns by name', async () => {
-    expect(SRC).toContain("'Orders!A1:AK'");
+    expect(SRC).toContain("'Orders!A1:AZ'");
     expect(SRC).toMatch(/o\.vat_inv_file_id/);
     expect(SRC).not.toMatch(/drive\.google\.com\/file\/d\/[A-Za-z0-9_-]{20,}/);
   });
@@ -440,8 +456,10 @@ function audit() {
     const bw = ['Top', 'Right', 'Bottom', 'Left'].map((k) => parseFloat(s['border' + k + 'Width']) || 0);
     if (Math.max(...bw) > 1) out.line.push(name(el) + ' ' + bw.join('/'));
     const rad = s.borderTopLeftRadius;
-    const pill = el.matches('.cnt, nav.tabs .n');   // count pills: 22px high with full round ends (11px)
-    if (rad !== '0px' && !(rad === '12px' && !pill) && !(rad === '11px' && pill) && !(rad === '50%' && el.classList.contains('dot'))) out.radius.push(name(el) + ' ' + rad);
+    const tabN = el.matches('nav.house-tabs .ht > .n');   // bottom-tab counts: a 24 x 24 corner ring, 12px round ends (14px number, Lisa's pick A, 2 Nov)
+    const pill = el.matches('.cnt, nav.tabs .n') && !tabN;   // count pills: 24px high with full round ends (12px; 14px number, Lisa's pick A)
+    const tabShape = (rad === '12px' && tabN) || (rad === '50%' && el.matches('nav.house-tabs .hic')) || (rad === '2px' && el.matches('nav.house-tabs .bar'));
+    if (rad !== '0px' && !tabShape && !(rad === '12px' && !pill && !tabN) && !(rad === '12px' && pill) && !(rad === '50%' && el.classList.contains('dot'))) out.radius.push(name(el) + ' ' + rad);
     // Rings on things you press or read as a pill: 3:1 against what they sit on.
     if (el.matches('button:not([disabled]), .btn, .chip, .more, a.tile, input, .badge, .datep, .cnt, nav.tabs .n, .stamp, .row .amt.red, .row .amt.good') && bw[0] === 1) {
       const r = ratio(rgb(s.borderTopColor), bgOf(el.parentElement)); if (r < 3) out.ring.push(name(el) + ' ' + r.toFixed(2));
@@ -558,20 +576,25 @@ test.describe('GA Hub house look', () => {
     });
   }
 
-  test('count pills are one fixed size: 30 x 22px for 1 and 2 digits, centred, round ends', async ({ page }) => {
+  test('count pills are one fixed size: 30 x 24px for 1 and 2 digits, 14px, centred, round ends', async ({ page }) => {
     const b = book(); for (let i = 0; i < 10; i++) b.cards.push(['CHK-' + i, 'check', 'Orders', 'Sample check ' + i, '{}', ago(1)]);
     await sheets(page, b);
     await open(page, '#/products');
     await page.locator('[data-filter="all"]').click();
     const measure = () => page.evaluate(() => [...document.querySelectorAll('.cnt, nav.tabs .n')].filter((e) => e.getBoundingClientRect().width > 1).map((e) => {
-      const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.justifyContent, s.lineHeight, e.scrollWidth <= e.clientWidth]; }));
+      const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.justifyContent, s.lineHeight, e.scrollWidth <= e.clientWidth, e.matches('nav.house-tabs .ht > .n')]; }));
     let sizes = await measure();
     expect(sizes.map((x) => x[0]).sort()).toEqual(['1', '13', '2', '2']);   // product groups 2 and 1, Home 13 (two digits), Orders 2
-    for (const x of sizes) expect(x.slice(1), 'count ' + x[0]).toEqual([30, 22, '11px', 'center', '20px', true]);
-    // The same with a wider fallback font (as on a machine without Lexend): the box stays exactly 30 x 22 and two digits still fit.
+    // Bottom-tab counts (Home 13, Orders 2) are a corner ring (tab picks, 2 Nov) holding a 14px number (Lisa's pick A): 24 x 24 for 1 and 2
+    // digits, 12px ends, 22px line. Every other count is the 30 x 24 pill.
+    const check = (x, why) => x[7] ? (expect([x[2], x[1], x[3], x[4], x[5], x[6]], why + x[0]).toEqual([24, 24, '12px', 'center', '22px', true]))
+      : expect(x.slice(1, 7), why + x[0]).toEqual([30, 24, '12px', 'center', '22px', true]);
+    expect(sizes.filter((x) => x[7]).map((x) => x[0]).sort(), 'the tab counts').toEqual(['13', '2']);
+    for (const x of sizes) check(x, 'count ');
+    // The same with a wider fallback font (as on a machine without Lexend): the boxes keep their size and two digits still fit.
     await page.addStyleTag({ content: '.cnt, nav.tabs .n { font-family: "DejaVu Sans", Verdana, sans-serif !important; }' });
     sizes = await measure();
-    for (const x of sizes) expect(x.slice(1), 'wide font, count ' + x[0]).toEqual([30, 22, '11px', 'center', '20px', true]);
+    for (const x of sizes) check(x, 'wide font, count ');
   });
 
   for (const look of ['warm', 'cool']) {
@@ -659,7 +682,7 @@ test.describe('GA Hub house look', () => {
     await expect(page.locator('#view .empty')).toContainText('No products match');
   });
 
-  test('a phone (390px): no sideways scroll on any tab, every control is 44px tall, tab counts sit beside the icon', async ({ page }) => {
+  test('a phone (390px): no sideways scroll on any tab, every control is 44px tall, tab counts sit in the tab\'s top-right corner', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await sheets(page, book());
     await open(page);
@@ -671,6 +694,10 @@ test.describe('GA Hub house look', () => {
       const short = await page.evaluate(() => [...document.querySelectorAll('#view button, #view a.btn, #view .chip, header .btn')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, '#/' + tab).toEqual([]);
     }
-    expect(await page.locator('#n-home').evaluate((e) => getComputedStyle(e).position)).toBe('static');
+    // Lisa's tab picks (2 Nov): the count sits in the tab's top-right corner and never moves the icon or word.
+    const c = await page.locator('#n-home').evaluate((e) => { const r = e.getBoundingClientRect(), t = e.parentElement.getBoundingClientRect(); return { pos: getComputedStyle(e).position, top: r.top - t.top, right: t.right - r.right }; });
+    expect(c.pos).toBe('absolute');
+    expect(c.top).toBeLessThanOrEqual(5);
+    expect(c.right).toBeLessThanOrEqual(5);
   });
 });

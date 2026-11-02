@@ -35,7 +35,8 @@ async function hoverRule(page, phone) {
     const isMeaning = (e) => e.matches('.btn.yes, .btn.no, .btn.danger, .btn.ai') || !!getComputedStyle(e).getPropertyValue('--hmc').trim() || chroma(rgb(getComputedStyle(e).borderTopColor)) > 45;
     const neutral = all.filter((e) => !isMeaning(e)).slice(0, 3);
     const meaning = all.filter(isMeaning).slice(0, 2);
-    const ro = [...document.querySelectorAll('.cnt, .dpill, .datep, span.pill, span.tag, .stamp')].filter(seen).slice(0, 2);
+    // A count that is a link (the Needs you pills open Do, Lisa 2 Nov) is a control, not a read-only pill.
+    const ro = [...document.querySelectorAll('.cnt:not(a), .dpill, .datep, span.pill, span.tag, .stamp')].filter(seen).slice(0, 2);
     const tabs = nav ? [...nav.querySelectorAll('a, button')].filter((e) => e.getBoundingClientRect().width > 0 && e.getAttribute('aria-current') !== 'page' && !e.matches('.on, [aria-selected="true"]')).slice(0, 1) : [];
     let n = 0; const tag = (e, kind) => { e.setAttribute('data-hq', String(++n)); return { sel: '[data-hq="' + n + '"]', kind, ink: getComputedStyle(document.body).color }; };
     return [...neutral.map((e) => tag(e, 'neutral')), ...meaning.map((e) => tag(e, 'meaning')), ...ro.map((e) => tag(e, 'readonly')), ...tabs.map((e) => tag(e, 'tab'))];

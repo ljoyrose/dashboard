@@ -12,7 +12,8 @@ async function book(page, rows) {
   page.on('request', (req) => {
     if (!SHEETS.test(req.url())) return;
     if (req.method() === 'PUT') writes.push(decodeURIComponent(req.url()));
-    else if (/!A2:L$/.test(decodeURIComponent(req.url()))) reads += 1;
+    // Only the Open work list counts; the food Cards sheet (G7 fish postage, a second read-only source) has the same range.
+    else if (/!A2:L$/.test(decodeURIComponent(req.url())) && !/Cards!A2:L$/.test(decodeURIComponent(req.url()))) reads += 1;
   });
   await sheets(page, (url) => /!A2:L$/.test(url) ? { values: rows } : { values: [(rows[Number((/!A(\d+)/.exec(url) || [0, 2])[1]) - 2] || [])] });
   return { writes, reads: () => reads };

@@ -168,7 +168,7 @@ test.describe('Marketplace (JOB 34b): every button and link does what it says', 
     await book(page, []);
     await open(page, '#/numbers');
     await lit(page, 'insights');
-    await expect(page.locator('#view')).toContainText('The weekly review fills this on Monday.');
+    await expect(page.locator('#view')).toContainText('Fills on Monday.');
     await expect(page.locator('#view [data-tile]')).toHaveCount(0);
   });
 
