@@ -743,7 +743,7 @@
     var out = '<a class="mark" href="' + esc(t.url) + '" target="_blank" rel="noopener" aria-label="Open in ClickUp" title="ClickUp">' + CU_MARK + '</a>' +
       (drive ? '<a class="mark" href="' + esc(drive) + '/view" target="_blank" rel="noopener" aria-label="Open card in Drive" title="Drive">' + DRIVE_MARK + '</a>' : '');
     var detail = openPanel && openPanel.id === t.id && openPanel.k === 'all';
-    return '<div class="crow" data-row="' + esc(t.id) + '"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(t.id) + '">' + title + '</button>' +
+    return '<div class="crow" data-row="' + esc(t.id) + '" data-open-row><div class="l1"><button class="ttl house-open" type="button" data-panel="all" data-id="' + esc(t.id) + '">' + title + '</button>' +
       '<button class="flagb" type="button" data-panel="flag" data-id="' + esc(t.id) + '" aria-label="Flag ' + (p ? p.p : 'none') + '">' + flagIcon(p) + '</button></div>' +
       (detail ? why(t, true) : kind === 'decide' ? outcomes(t) : isSend || line(t, /^(Then|After):\s*/i) || blocked ? doLines(t, blocked) : '') + (gate ? sendInfo(t, gate) : '') + mineQ +
       '<div class="l2"><span class="icons">' + (gate ? gate.ok ? '<button class="copy" type="button" data-copy="' + esc(t.id) + '"><i class="ti ti-copy"></i> Copy</button>' : '<span class="gate" data-gate="' + esc(t.id) + '" title="Missing before a send"><i class="ti ti-lock"></i> ' + gate.miss.join(' · ') + '</span>' : '') + stat + icons + proofs(t, kind) +

@@ -207,7 +207,7 @@ test.describe('GA Hub page', () => {
     // nothing to fix
     b = growBook([growRow('9351', 1, sub), growRow('9352', 2, sub)]);
     await page.unroute(/sheets/); await sheets(page, b); await page.locator('#refresh').click();
-    await expect(page.locator('#view .card.grow')).toContainText('Orders are holding up');
+    await expect(page.locator('#view .card.grow')).toHaveCount(0);   // one empty line per view (Lisa, 2 Nov): no gap, no Grow card
   });
   test('a GA statement on file: its balance is the Owed figure on Home and the first tile on Invoices', async ({ page }) => {
     const b = book(); b.statements = [['statement_date', 'total_outstanding', 'file_id'], ['2026-10-19', '1234.56', '']];

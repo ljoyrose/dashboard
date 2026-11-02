@@ -1202,9 +1202,9 @@ test.describe('Studio page', () => {
     expect(await m.count()).toBeGreaterThan(0);
     expect(await m.count()).toBeLessThanOrEqual(7);
     await expect(m.first().locator('small')).toContainText('Step ');
-    await expect(m.first().locator('.ic')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
-    await m.first().hover();
-    expect(await m.first().locator('.ic').evaluate((e) => getComputedStyle(e).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)'); // takes the stage tint on hover
+    // Each row is a link to its item; no empty circle in front of it (Lisa, 2 Nov: it looked like a checkbox that did nothing).
+    await expect(m.first().locator('.ic')).toHaveCount(0);
+    await expect(m.first()).toHaveAttribute('href', /^#\/asset\//);
     await page.setViewportSize({ width: 390, height: 844 });
     const ys = await sums.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
     expect(new Set(ys).size, 'the three fit in one row').toBe(1);

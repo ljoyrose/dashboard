@@ -272,3 +272,14 @@ nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon);
   .house-filters.open { flex-basis: 100%; }
 }
 .house-frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* 13 Clickable info (Lisa, 2 Nov 2026): every number, card, chip and row that gives info opens what it counts. a.house-go = a number,
+   summary card or heading that is itself a link. [data-open-row] = a row or card whose one .house-open control opens it; a click
+   anywhere on it presses that control (toolkit.js). No fills: the pointer, the 1px hover line and the 2px keyboard ring only. */
+a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
+[data-open-row] { cursor: pointer; }
+@media (hover: hover) { a.house-go:hover, [data-open-row]:hover { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); } }
+[data-open-row]:has(.house-open:focus-visible) { outline: var(--house-focus) solid var(--ink); outline-offset: 2px; }
+/* When the icon font cannot load, an icon-only button shows its name as a word (toolkit.js adds .house-iw). */
+.house-noicons button > i.ti:empty, .house-noicons a > i.ti:empty { display: none; }
+.house-iw { font-size: var(--fs-small); font-weight: 600; white-space: nowrap; }

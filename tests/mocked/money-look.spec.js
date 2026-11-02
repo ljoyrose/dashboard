@@ -206,7 +206,8 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
       await el.scrollIntoViewIfNeeded();
       await el.hover();
       expect(await el.evaluate((e) => getComputedStyle(e).outlineStyle), sel).toBe('none');
-      expect(await el.evaluate((e) => getComputedStyle(e).cursor), sel).not.toBe('pointer');
+      // A pill inside a row or link that opens something takes that row's pointer (Lisa, 2 Nov: every row opens its item); a pill alone never does.
+      expect(await el.evaluate((e) => getComputedStyle(e).cursor === 'pointer' && !e.closest('a[href], button, [data-open-row]')), sel).toBe(false);
     }
   });
 
@@ -322,7 +323,9 @@ test.describe('Money Hub: summary strip, Next card and friendly empty states', (
     f.content = f.content.split('\n').filter((l, i) => i === 0 || !/^R\d/.test(l)).join('\n');
     await open(page, 'light');
     await go(page, 'todo');
-    await expect(page.locator('#view .empty').first()).toContainText('Nothing here.');
+    // One empty line per view (Lisa, 2 Nov): Yours with nothing ready or blocked says it once.
+    await expect(page.locator('#view .empty')).toHaveCount(1);
+    await expect(page.locator('#view .empty').first()).toContainText('Nothing needs you');
     const ring = await page.locator('#view .empty').first().evaluate((e) => getComputedStyle(e, '::before').borderTopWidth);
     expect(ring).toBe('1px');
   });

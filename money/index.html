@@ -126,6 +126,7 @@
 
   /* Summary strip: On track / Needs you / Overdue, each a big ringed number. */
   .three { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  a.sum { color: inherit; text-decoration: none; }
   .sum { display: flex; align-items: center; gap: 12px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 12px; min-width: 0; box-shadow: var(--shadow); }
   /* The summary rings (Lisa's pick A, 2 Nov): a 14px number, the same size as the words beside it, in the house count box.
      Ring only, no fill: rose = overdue, grey = waiting. */
@@ -351,14 +352,15 @@
     return h;
   }
   function itemLi(i) {
-    var t = i.href ? '<a href="' + esc(i.href) + '">' + esc(i.text) + '</a>' : esc(i.text);
-    return '<li>' + bline(i.ent) + '<div class="itext">' + t + '</div><div class="meta">' + tag(levelCls(i.level), i.tag) +
+    var t = i.href ? '<a class="house-open" href="' + esc(i.href) + '">' + esc(i.text) + '</a>' : esc(i.text);
+    return '<li' + (i.href ? ' data-open-row' : '') + '>' + bline(i.ent) + '<div class="itext">' + t + '</div><div class="meta">' + tag(levelCls(i.level), i.tag) +
       (i.when ? datePill(M.fmtDate(i.when, R.today), i.level === 'risk' ? 'late' : 'soon') : '') + plain([i.who, i.src]) + '</div></li>';
   }
   function dateLi(x) {
     var urg = x.gap ? '' : x.days !== null && x.days < 0 ? 'late' : x.sev === 'risk' ? 'late' : x.sev === 'soon' || (x.days !== null && x.days <= 14) ? 'soon' : '';
     var word = x.gap ? 'Date unknown' : x.days < 0 ? 'Overdue ' + (-x.days) + 'd' : x.days === 0 ? 'Today' : 'In ' + x.days + 'd';
-    return '<li>' + bline(x.r.entity) + '<div class="itext">' + esc(x.r.filing) + '</div><div class="meta">' + datePill(x.gap ? word : word + ' · ' + M.fmtDate(x.due, R.today), urg) +
+    var ent = String(x.r.entity || '').split(';')[0].trim();   // a date opens its entity's page (its Dates card); there is no page per date
+    return '<li data-open-row>' + bline(x.r.entity) + '<div class="itext"><a class="house-open" href="' + (ent && emoney(ent) ? '#/e/' + esc(ent) : '#/dates') + '">' + esc(x.r.filing) + '</a></div><div class="meta">' + datePill(x.gap ? word : word + ' · ' + M.fmtDate(x.due, R.today), urg) +
       (x.recurring ? chip('repeats') : '') + plain([x.r.owner, x.r.status, x.r.id]) + '</div></li>';
   }
   function turnLi(x) {
@@ -367,7 +369,7 @@
       .filter(function (p) { return p[1]; }).map(function (p) { return '<div><span class="lbl">' + esc(p[0]) + ':</span> ' + esc(p[1]) + '</div>'; }).join('');
     // One flag: urgent first, else whether it can start now. Everything else is plain grey words.
     var flag = urgent ? tag('c-risk', 'Urgent') : x.ready === 'ready' ? tag('c-ok', 'Ready') : tag('c-mute', x.ready);
-    return '<li id="row-' + esc(r.id) + '">' + bline(r.entity) + '<div class="itext">' + esc(r.subject) + '</div><div class="meta">' + flag +
+    return '<li id="row-' + esc(r.id) + '" data-open-row>' + bline(r.entity) + '<div class="itext"><a class="house-open" href="#/register/' + esc(r.id) + '">' + esc(r.subject) + '</a></div><div class="meta">' + flag +
       plain([urgent ? (x.ready === 'ready' ? 'Ready' : x.ready) : '', high ? 'High priority' : '', r.kind, r.owner, r.state, r.id]) + '</div>' +
       (body ? '<details><summary class="more">Details</summary>' + body + '</details>' : '') + '</li>';
   }
@@ -389,7 +391,8 @@
   function summary(items) {
     var over = items.filter(isOverdue).length, need = items.length - over;
     var fine = R.money.filter(function (m) { return !m.noData && !entBad(m); }).length;
-    var one = function (cls, n, label, sub) { return '<div class="sum ' + cls + '" data-sum="' + cls + '"><span class="num' + (n ? '' : ' zero') + '">' + n + '</span><span class="t">' + label + '</span></div>'; };
+    var go = { ok: '#/money/ok', need: '#/now/need', over: '#/now/over' };
+    var one = function (cls, n, label) { return '<a class="sum house-go ' + cls + '" data-sum="' + cls + '" href="' + go[cls] + '" aria-label="' + label + ': ' + n + '. Open the list"><span class="num' + (n ? '' : ' zero') + '">' + n + '</span><span class="t">' + label + '</span></a>'; };
     return '<div class="three" role="group" aria-label="Summary">' + one('ok', fine, 'On track') +
       one('need', need, 'Needs you') + one('over', over, 'Overdue') + '</div>';
   }
@@ -398,30 +401,41 @@
   }
   function nextCard(items) {
     var i = items[0];
-    if (!i) return '<section class="card next" data-next><h3 class="sr">Next</h3>' + empty('Nothing needs you.') + '</section>';
-    return '<section class="card next" data-next><h3 class="sr">Next</h3>' + bline(i.ent, 'Next') + '<p class="ntitle">' + esc(i.text) + '</p>' +
+    if (!i) return '';
+    return '<section class="card next" data-next' + (i.href ? ' data-open-row' : '') + '><h3 class="sr">Next</h3>' + bline(i.ent, 'Next') + '<p class="ntitle">' + esc(i.text) + '</p>' +
       '<div class="meta">' + tag(levelCls(i.level), i.tag) + (i.when ? datePill(M.fmtDate(i.when, R.today), i.level === 'risk' ? 'late' : 'soon') : '') + '</div>' +
-      (i.href ? '<div class="go"><a class="btn" href="' + esc(i.href) + '">' + esc(openWord(i.href)) + '</a></div>' : '') + '</section>';
+      (i.href ? '<div class="go"><a class="btn house-open" href="' + esc(i.href) + '">' + esc(openWord(i.href)) + '</a></div>' : '') + '</section>';
   }
+  function head(word, href, n, need, extra) { return '<div class="cardhead"><h3><a class="house-go" href="' + href + '" aria-label="' + word + (n != null ? ': ' + n : '') + '. Open the list">' + word + '</a></h3>' + (n != null ? '<a class="house-go" href="' + href + '" aria-label="' + word + ': ' + n + '. Open the list">' + cnt(n, need) + '</a>' : '') + (extra || '') + '</div>'; }
   function viewNow() {
     var items = M.needsNow(R.data, R.money, R.today);
     var risk = items.filter(function (i) { return i.level === 'risk'; }).length;
     var h = summary(items) + nextCard(items);
-    h += '<section class="card now ' + (risk ? 'c-risk' : 'c-ok') + '"><div class="cardhead"><h3>Needs you</h3>' + cnt(items.length, true) + '</div>';
-    h += items.length ? listWithMore(items, NOW_SHOW, itemLi, 'now-needs') : empty('Nothing needs you.');
-    h += src('', null) + '</section>';
-    h += '<section class="card c-fin"><div class="cardhead"><h3>Money by entity</h3></div>' + entGroups(R.money) + '</section>';
     var soon = M.overdueDates(R.data, R.today).concat(M.dueWithin(R.data, R.today, 14));
-    h += '<section class="card c-ops"><div class="cardhead"><h3>Dates</h3>' + cnt(soon.length, soon.some(function (x) { return x.days < 0; })) + '</div>' +
-      (soon.length ? listWithMore(soon, 6, dateLi, 'now-dates') : empty('Nothing due in the next 14 days.')) + '<div class="go"><a class="btn" href="#/dates">All dates</a></div>' + src('MON-DATES.csv', meta('dates')) + '</section>';
     var turn = M.yourTurn(R.data), readyN = turn.filter(function (x) { return x.ready === 'ready'; }).length;
-    h += '<section class="card c-ops"><div class="cardhead"><h3>Your turn</h3>' + tag(readyN ? 'c-ops' : 'c-mute', readyN + ' ready · ' + turn.length + ' open') + '</div>' +
-      (turn.length ? listWithMore(turn, TURN_SHOW, turnLi, 'now-turn') : empty('Nothing waiting.')) + '<div class="go"><a class="btn" href="#/todo">All ' + turn.length + ' to-dos</a></div>' + src('MON-REGISTER.csv', meta('register')) + '</section>';
+    // Nothing to do: ONE line says so and the empty sections are not drawn (Lisa, 2 Nov). The money cards always show.
+    if (!items.length && !soon.length && !turn.length) h += '<section class="card c-ok" data-empty-one>' + empty('Nothing needs you') + '</section>';
+    if (items.length) h += '<section class="card now ' + (risk ? 'c-risk' : 'c-ok') + '">' + head('Needs you', '#/now/all', items.length, true) + listWithMore(items, NOW_SHOW, itemLi, 'now-needs') + src('', null) + '</section>';
+    h += '<section class="card c-fin"><div class="cardhead"><h3><a class="house-go" href="#/money" aria-label="Money by entity. Open Money">Money by entity</a></h3></div>' + entGroups(R.money) + '</section>';
+    if (soon.length) h += '<section class="card c-ops">' + head('Dates', '#/dates', soon.length, soon.some(function (x) { return x.days < 0; })) +
+      listWithMore(soon, 6, dateLi, 'now-dates') + '<div class="go"><a class="btn" href="#/dates">All dates</a></div>' + src('MON-DATES.csv', meta('dates')) + '</section>';
+    if (turn.length) h += '<section class="card c-ops"><div class="cardhead"><h3><a class="house-go" href="#/todo" aria-label="Your turn: ' + readyN + ' ready, ' + turn.length + ' open. Open To-do">Your turn</a></h3><a class="house-go" href="#/todo" aria-label="' + readyN + ' ready, ' + turn.length + ' open. Open To-do">' + tag(readyN ? 'c-ops' : 'c-mute', readyN + ' ready · ' + turn.length + ' open') + '</a></div>' +
+      listWithMore(turn, TURN_SHOW, turnLi, 'now-turn') + '<div class="go"><a class="btn" href="#/todo">All ' + turn.length + ' to-dos</a></div>' + src('MON-REGISTER.csv', meta('register')) + '</section>';
     return h;
   }
+  // What a Now number counts, as its own list: #/now/need, #/now/over, #/now/all (Lisa, 2 Nov: every number opens what it counts).
+  function viewNowList(k) {
+    var items = M.needsNow(R.data, R.money, R.today), l = k === 'over' ? items.filter(isOverdue) : k === 'need' ? items.filter(function (i) { return !isOverdue(i); }) : items;
+    var word = k === 'over' ? 'Overdue' : 'Needs you';
+    return '<section class="card ' + (l.length ? 'c-risk' : 'c-ok') + '" data-nowlist="' + esc(k) + '"><div class="cardhead"><h3><a class="house-go" href="#/now" aria-label="Back to Main">Main</a> \u203a ' + word + '</h3>' + cnt(l.length, true) + '</div>' +
+      (l.length ? '<ul class="items">' + l.map(itemLi).join('') + '</ul>' : empty('Nothing here')) + '</section>';
+  }
 
-  function viewMoney() {
-    var h = '<section class="card c-fin"><div class="cardhead"><h3>Every entity</h3></div>' + entGroups(R.money) + '</section>';
+  function viewMoney(only) {
+    // #/money/ok: just the entities with nothing wrong (the On track number on Main).
+    var list = only === 'ok' ? R.money.filter(function (m) { return !m.noData && !entBad(m); }) : R.money;
+    var h = '<section class="card c-fin"><div class="cardhead"><h3>' + (only === 'ok' ? 'On track' : 'Every entity') + '</h3>' + (only === 'ok' ? cnt(list.length) : '') + '</div>' + (list.length ? entGroups(list) : empty('Nothing here')) + '</section>';
+    if (only === 'ok') return h;
     var rs = R.data.reports || [];
     if (rs.length) {
       var wk = rs.map(function (r) { return r.week_of; }).sort().slice(-1)[0];
@@ -602,7 +616,9 @@
     var mk = function (rows) { return rows.map(function (r) { return { r: r, ready: M.ready(r, reg) }; }); };
     if (sub === 'yours') {
       var t = M.yourTurn(R.data);
-      h += wrap('Ready now', 'c-ops', t.filter(function (x) { return x.ready === 'ready'; }), 8) + wrap('Blocked', 'c-mute', t.filter(function (x) { return x.ready !== 'ready'; }), 5);
+      var rdy = t.filter(function (x) { return x.ready === 'ready'; }), blk = t.filter(function (x) { return x.ready !== 'ready'; });
+      // One empty line per view (Lisa, 2 Nov): empty sections are not drawn.
+      h += t.length ? (rdy.length ? wrap('Ready now', 'c-ops', rdy, 8) : '') + (blk.length ? wrap('Blocked', 'c-mute', blk, 5) : '') : '<section class="card c-ok" data-empty-one>' + empty('Nothing needs you') + '</section>';
     } else if (sub === 'others') {
       h += wrap('Waiting on others', 'c-ok', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isLisa(r) && M.isTask(r); })));
     } else if (sub === 'watch') {
@@ -676,13 +692,14 @@
   function render() {
     var r = route(), html;
     if (!signedIn || !R || R.gate !== 'ok') html = notReady();
-    else if (r.view === 'money') html = viewMoney();
+    else if (r.view === 'money') html = viewMoney(r.a);
     else if (r.view === 'e') html = viewEntity(r.a);
     else if (r.view === 'dates') html = viewDates();
     else if (r.view === 'todo') html = viewTodo(r.a);
     else if (r.view === 'register') html = viewTodo(null, r.a);
     else if (r.view === 'accountant') html = viewAccountant();
     else if (r.view === 'control') html = viewControl();
+    else if (r.a) html = viewNowList(r.a);
     else html = viewNow();
     var v = $('view');
     v.innerHTML = html;

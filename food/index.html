@@ -300,7 +300,7 @@
       { n: g.reorder.length, name: 'Due to reorder', h: g.reorder.length + ' one-off order' + (g.reorder.length === 1 ? ' is' : 's are') + ' due a reorder', what: 'Paid over ' + g.due + ' days ago. Check each in Shopify (they may have ordered again) and draft a reminder there; nothing is sent from here.', href: '', act: 'reorder', btn: 'See who' },
       { n: g.subs < 50 ? g.oneOff : 0, name: 'Few subscriptions', h: 'Only ' + g.subs + '% of orders are subscriptions', what: g.oneOff + ' one-off order' + (g.oneOff === 1 ? '' : 's') + ' in the last 30 days. Draft a subscribe offer for Lisa to check; no discount is set from here.', href: shopAdmin('customers'), btn: 'Open Shopify customers' }
     ].filter(function (x) { return x.n > 0; }).sort(function (a, b) { return b.n - a.n; });
-    if (!gaps.length) return '<div class="card grow">' + empty('Orders are holding up') + '</div>';
+    if (!gaps.length) return '';   // one empty line per view (Lisa, 2 Nov): no gap, no card
     var x = gaps[0];
     return '<div class="card grow"><p class="bline"><span class="dot" style="--c:var(--ljr-4)" aria-hidden="true"></span>Grow orders: ' + esc(x.name) + '</p><h2>' + esc(x.h) + '</h2><p class="what">' + esc(x.what) + '</p>' +
       (x.act ? '<div class="acts"><button class="btn main" type="button" data-action="' + x.act + '">' + esc(x.btn) + '</button></div>'
@@ -310,15 +310,15 @@
     var g = growth(), mo = num(setting('MIN_ORDERS_MONTH')), d = g.last - g.prev;
     var h = '<section class="growth" aria-label="Grow orders"><p class="grp">Grow orders</p><div class="tiles">' +
       '<a class="tile" href="#/orders"><span class="k">Orders, last 30 days</span><span class="v' + (d < 0 ? ' red' : '') + '">' + g.last + '</span><span class="m">' + (d > 0 ? 'up ' + d : d < 0 ? 'down ' + (-d) : 'same as') + (d ? ' on' : '') + ' the 30 days before</span></a>' +
-      '<div class="tile"><span class="k">Repeat orders</span><span class="v">' + g.repeat + '%</span><span class="m">from customers on their 2nd order or more</span></div>' +
-      '<a class="tile" href="#/orders"><span class="k">Subscriptions</span><span class="v">' + g.subs + '%</span><span class="m">of orders, last 30 days</span></a>' +
+      '<a class="tile" href="#/orders" aria-label="Repeat orders: ' + g.repeat + '%. Open Orders"><span class="k">Repeat orders</span><span class="v">' + g.repeat + '%</span><span class="m">from customers on their 2nd order or more</span></a>' +
+      '<a class="tile" href="#/orders?sub"><span class="k">Subscriptions</span><span class="v">' + g.subs + '%</span><span class="m">of orders, last 30 days</span></a>' +
       // MIN_ORDERS_MONTH on the Settings tab: blank = no tile (Lisa, 30 Oct 2026); set = red when the last 30 days are under it.
       (mo ? '<a class="tile" href="#/orders"><span class="k">Orders this month (aim ' + mo + ')</span><span class="v' + (g.last < mo ? ' red' : '') + '">' + g.last + '</span></a>' : '') + '</div>';
     h += growCard(g);
-    h += '<div class="card" id="reorder"><p class="bline"><span class="dot" style="--c:var(--ljr-6)" aria-hidden="true"></span>Reorder due (over ' + g.due + ' days old)</p>' +
+    if (g.reorder.length) h += '<div class="card" id="reorder"><p class="bline"><span class="dot" style="--c:var(--ljr-6)" aria-hidden="true"></span>Reorder due (over ' + g.due + ' days old)</p>' +
       (g.reorder.length ? g.reorder.map(function (o) { return '<div class="row"><div class="txt"><div><b>Order #' + esc(o.order_no) + '</b></div><div class="m">' + esc(daysAgo(o.placed_at)) + (num(o.customer_orders) ? ' · customer\'s ' + esc(nth(num(o.customer_orders))) + ' order' : '') + '</div><div class="links">' + shopLink(o) + '</div></div></div>'; }).join('')
-        : empty('Nobody due to reorder')) + '</div></section>';
-    return h;
+        : '') + '</div>';
+    return h + '</section>';
   }
   // A friendly empty state: a small green-ring tick, a plain line, and what happens next.
   function empty(head, more) { return '<p class="empty"><span><b>' + esc(head) + '</b>' + (more ? '<span class="es">' + esc(more) + '</span>' : '') + '</span></p>'; }
@@ -353,7 +353,7 @@
     h += '<div class="tiles"><a class="tile" href="#/invoices"><span class="k">Owed to GA' + (st ? ' (statement ' + esc(ukDate(st.statement_date)) + ')' : '') + '</span><span class="v">' + money(st ? st.total_outstanding : owed) + '</span></a>' +
       '<a class="tile" href="#/invoices"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span>' + (due ? '<span class="datep' + dateCls(due) + '">' + esc(inDays(due)) + '</span>' : '') + '</a>' +
       '<a class="tile" href="#/orders?check"><span class="k">Not at GA yet</span><span class="v' + (late ? ' red' : '') + '">' + notAtGa + (late ? ' (' + late + ' late)' : '') + '</span></a>' +
-      '<a class="tile" href="#/orders"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a></div>';
+      '<a class="tile" href="#/orders?low"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a></div>';
     if (!w.length) {
       // Nothing to answer, but an order GA never got still comes first.
       if (late) return h + '<div class="card next"><p class="bline"><span class="dot" style="--c:var(--ljr-2)" aria-hidden="true"></span>Next: Order check</p><h2>' + late + ' order' + (late > 1 ? 's are' : ' is') + ' not at GA</h2><p class="what">Check the GA Portal and enter ' + (late > 1 ? 'them' : 'it') + ' by hand if needed.</p><div class="acts"><a class="btn main" href="#/orders?check">Open the orders</a></div></div>';
@@ -519,7 +519,7 @@
     q = e.target.value.trim().toLowerCase(); var pos = e.target.selectionStart; render();
     var box = document.querySelector('[data-find]'); if (box) { box.focus(); try { box.setSelectionRange(pos, pos); } catch (x) {} }
   });
-  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'home'; if (/\?check$/.test(location.hash)) ofilter = 'ga'; if (['home', 'orders', 'invoices', 'products', 'ga'].indexOf(view) < 0) view = 'home'; showAll = false; render(); }
+  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'home'; var oq = (/\?(\w+)$/.exec(location.hash) || [])[1]; /* #/orders?low etc: a Home tile opens Orders filtered to what it counts */ if (oq === 'check') ofilter = 'ga'; else if (oq && OFILTERS.some(function (f) { return f[0] === oq; })) ofilter = oq; if (['home', 'orders', 'invoices', 'products', 'ga'].indexOf(view) < 0) view = 'home'; showAll = false; render(); }
   window.addEventListener('hashchange', route);
 
   /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */

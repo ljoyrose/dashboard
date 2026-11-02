@@ -310,6 +310,43 @@
     if (b && !e.ctrlKey && !e.metaKey && !e.shiftKey && e.button === 0) backHome(e);
   });
 
+  // ---- Icon-font fallback: a few pages draw icons with the Tabler icon font from a CDN. If that font does not arrive, a button with
+  // only an icon would show nothing, so it shows its name (from aria-label or title) as a word instead. Never runs when icons draw.
+  function iconFontMissing() {
+    var d = root.document, p = d.createElement('i'); p.className = 'ti ti-check'; p.style.cssText = 'position:absolute;left:-99px;top:0';
+    d.body.appendChild(p); var c = root.getComputedStyle(p, '::before').content, w = p.getBoundingClientRect().width; d.body.removeChild(p);
+    return !c || c === 'none' || c === 'normal' || w < 1;
+  }
+  function wordForIcons() {
+    Array.prototype.forEach.call(root.document.querySelectorAll('button, a'), function (b) {
+      if (b.textContent.trim() || b.querySelector('svg, img, .house-iw')) return;
+      var i = b.querySelector('i.ti'), w = b.getAttribute('aria-label') || b.getAttribute('title');
+      if (!i || !w) return;
+      var s = root.document.createElement('span'); s.className = 'house-iw'; s.setAttribute('aria-hidden', 'true'); s.textContent = w.replace(/:.*$/, ''); b.appendChild(s);
+    });
+  }
+  function watchIconFont() {
+    var d = root.document; if (!d || !d.querySelector('link[href*="tabler-icons"]') || !root.MutationObserver) return;
+    var go = function () {
+      if (!iconFontMissing()) return;
+      d.documentElement.classList.add('house-noicons'); wordForIcons();
+      var t = 0; new root.MutationObserver(function () { if (!t) t = root.setTimeout(function () { t = 0; wordForIcons(); }, 0); }).observe(d.body, { childList: true, subtree: true });
+    };
+    if (d.fonts && d.fonts.ready) d.fonts.ready.then(go); else root.setTimeout(go, 0);
+  }
+  if (root.document) { if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', watchIconFont); else watchIconFont(); }
+
+  // ---- Clickable info (Lisa, 2 Nov 2026: "anywhere you give info should be clickable to get it") ----
+  // A row or card marked data-open-row opens what it shows: a click anywhere on it (its chips, pills, numbers, words) presses its one
+  // .house-open link or button. Its own buttons and links still do their own thing. Keyboard: the .house-open control is the tab stop.
+  if (root.document) root.document.addEventListener('click', function (e) {
+    var t = e.target; if (e.defaultPrevented || e.button !== 0 || !t || !t.closest) return;
+    var r = t.closest('[data-open-row]'); if (!r) return;
+    if (t.closest('a, button, summary, input, select, textarea, label, [contenteditable="true"]')) return;
+    if (root.getSelection && String(root.getSelection())) return;   // selecting words, not opening
+    var o = r.querySelector('.house-open'); if (o) o.click();
+  });
+
   // ---- Keyboard keys: g then a letter to go somewhere, r reread, / search, ? the list ----
   var KEYS = [
     ['g m', 'Dashboard', function () { go('./#/map'); }],
