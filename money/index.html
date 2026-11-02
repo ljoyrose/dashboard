@@ -414,13 +414,15 @@
     var soon = M.overdueDates(R.data, R.today).concat(M.dueWithin(R.data, R.today, 14));
     var turn = M.yourTurn(R.data), readyN = turn.filter(function (x) { return x.ready === 'ready'; }).length;
     // Nothing to do: ONE line says so and the empty sections are not drawn (Lisa, 2 Nov). The money cards always show.
-    if (!items.length && !soon.length && !turn.length) h += '<section class="card c-ok" data-empty-one>' + empty('Nothing needs you') + '</section>';
+    // A file that could not be read keeps its card, so the failure shows (never a calm "Nothing needs you" over a failed read).
+    var dErr = (meta('dates') || {}).error, rErr = (meta('register') || {}).error;
+    if (!items.length && !soon.length && !turn.length && !/fail/i.test((dErr || '') + ' ' + (rErr || ''))) h += '<section class="card c-ok" data-empty-one>' + empty('Nothing needs you') + '</section>';
     if (items.length) h += '<section class="card now ' + (risk ? 'c-risk' : 'c-ok') + '">' + head('Needs you', '#/now/all', items.length, true) + listWithMore(items, NOW_SHOW, itemLi, 'now-needs') + src('', null) + '</section>';
     h += '<section class="card c-fin"><div class="cardhead"><h3><a class="house-go" href="#/money" aria-label="Money by entity. Open Money">Money by entity</a></h3></div>' + entGroups(R.money) + '</section>';
-    if (soon.length) h += '<section class="card c-ops">' + head('Dates', '#/dates', soon.length, soon.some(function (x) { return x.days < 0; })) +
-      listWithMore(soon, 6, dateLi, 'now-dates') + '<div class="go"><a class="btn" href="#/dates">All dates</a></div>' + src('MON-DATES.csv', meta('dates')) + '</section>';
-    if (turn.length) h += '<section class="card c-ops"><div class="cardhead"><h3><a class="house-go" href="#/todo" aria-label="Your turn: ' + readyN + ' ready, ' + turn.length + ' open. Open To-do">Your turn</a></h3><a class="house-go" href="#/todo" aria-label="' + readyN + ' ready, ' + turn.length + ' open. Open To-do">' + tag(readyN ? 'c-ops' : 'c-mute', readyN + ' ready · ' + turn.length + ' open') + '</a></div>' +
-      listWithMore(turn, TURN_SHOW, turnLi, 'now-turn') + '<div class="go"><a class="btn" href="#/todo">All ' + turn.length + ' to-dos</a></div>' + src('MON-REGISTER.csv', meta('register')) + '</section>';
+    if (soon.length || dErr) h += '<section class="card c-ops">' + head('Dates', '#/dates', soon.length, soon.some(function (x) { return x.days < 0; })) +
+      (soon.length ? listWithMore(soon, 6, dateLi, 'now-dates') : '') + '<div class="go"><a class="btn" href="#/dates">All dates</a></div>' + src('MON-DATES.csv', meta('dates')) + '</section>';
+    if (turn.length || rErr) h += '<section class="card c-ops"><div class="cardhead"><h3><a class="house-go" href="#/todo" aria-label="Your turn: ' + readyN + ' ready, ' + turn.length + ' open. Open To-do">Your turn</a></h3><a class="house-go" href="#/todo" aria-label="' + readyN + ' ready, ' + turn.length + ' open. Open To-do">' + tag(readyN ? 'c-ops' : 'c-mute', readyN + ' ready · ' + turn.length + ' open') + '</a></div>' +
+      (turn.length ? listWithMore(turn, TURN_SHOW, turnLi, 'now-turn') : '') + '<div class="go"><a class="btn" href="#/todo">All ' + turn.length + ' to-dos</a></div>' + src('MON-REGISTER.csv', meta('register')) + '</section>';
     return h;
   }
   // What a Now number counts, as its own list: #/now/need, #/now/over, #/now/all (Lisa, 2 Nov: every number opens what it counts).
