@@ -2,6 +2,7 @@
 // Moving a file into the bin is allowed. Permanently deleting a shared-drive bin is not.
 // That old action was a DELETE to Drive's /trash endpoint (files.emptyTrash).
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { test: fileTest } = require('@playwright/test');
 const fs = require('fs');
 const path = require('path');
@@ -80,7 +81,7 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
   await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
-  const mainSections = ['#/map', '#/readfirst', '#/drive', '#/drive/drv-alpha1', '#/personal', '#/usb', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'];
+  const mainSections = ['#/map', '#/drives', '#/drives/shared', '#/drives/readfirst', '#/drives/shared/drv-alpha1', '#/drives/work', '#/drives/personal-drive', '#/drives/usb', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'];
   for (const hash of mainSections) {
     await page.evaluate((h) => { location.hash = h; }, hash);
     await expect(page.locator('#view')).toHaveAttribute('data-route', hash);
@@ -88,6 +89,7 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
   }
   // The bin list is where the old button lived. Open one shared drive's bin.
   await page.evaluate(() => { location.hash = '#/bin'; });
+  await page.locator('#binCard > summary').click(); // Already in the bin is folded closed by default (stage 5)
   const binJump = page.locator('[data-action="foldjump"][data-key="bin-drv-alpha1"]');
   await expect(binJump).toBeVisible();
   await binJump.click();
@@ -103,7 +105,7 @@ test('every page loads with no DELETE to a /trash endpoint, and its source has n
   }
   await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
   for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers']) {
-    await page.locator(`#nav button[data-go="${id}"]`).click();
+    await tabClick(page, `#nav button[data-go="${id}"]`);
     await expect(page).toHaveURL(new RegExp(`#/${id}$`));
     await assertClean('CD Hub ' + id);
   }

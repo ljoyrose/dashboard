@@ -6,7 +6,7 @@ const path = require('path');
 const ROOT = path.resolve(__dirname, '..', '..');
 const read = (f) => fs.readFileSync(path.join(ROOT, f), 'utf8');
 const HUBS = ['money', 'cdhub', 'factory', 'food', 'marketplace', 'studio'];
-const VIEWS = ['readfirst', 'drive', 'personal', 'usb', 'bin', 'changes', 'more'];
+const VIEWS = ['drives', 'drives/shared', 'drives/readfirst', 'drives/work', 'drives/personal-drive', 'drives/usb', 'bin', 'changes'];
 
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
@@ -16,12 +16,12 @@ const signIn = async (page) => {
 };
 
 test.describe('Structure: one name and one way back', () => {
-  test('the front page is called "Dashboard" in the tab, the title and the page name', async ({ page }) => {
+  test('the front page is called "Dashboard" in the title and the page name; its tab is Main (Lisa\'s tab picks, 2 Nov)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
-    await expect(page).toHaveTitle(/Dashboard · Lisa Dashboard$/);
-    await expect(page.locator('nav.main a[data-nav="map"]')).toContainText('Dashboard');
+    await expect(page).toHaveTitle(/^(\(\d+\) )?Dashboard$/); // the top bar and title say "Dashboard" (Lisa, 2 Nov)
+    await expect(page.locator('nav.main a[data-nav="map"]')).toContainText('Main');
     // No visible link to #/map is named "Map" or "Home".
     const names = await page.locator('a[href="#/map"]:visible').allInnerTexts();
     for (const n of names) expect(n.trim()).not.toMatch(/^(Map|Home)\b/);
@@ -56,13 +56,18 @@ test.describe('Structure: one name and one way back', () => {
     expect(read('toolkit.js')).toMatch(/\['g m', 'Dashboard'/);
   });
 
+  // The top bar (Lisa's pick A, 2 Nov 2026): the way back is the Home icon, first in the bar, named "Dashboard" for screen readers.
   for (const h of HUBS) {
-    test(`${h}/ has exactly one "← Dashboard" button with class "btn back"`, () => {
+    test(`${h}/ has exactly one Home icon link named "Dashboard" with class "btn back", first in the top bar`, () => {
       const s = read(h + '/index.html');
-      const btns = s.match(/<a [^>]*data-back-home[^>]*>[^<]*<\/a>/g) || [];
+      const btns = s.match(/<a [^>]*data-back-home[^>]*>(?:(?!<\/a>)[\s\S])*<\/a>/g) || [];
       const back = btns.filter((a) => /class="[^"]*\bbtn\b[^"]*\bback\b[^"]*"/.test(a));
       expect(back).toHaveLength(1);
-      expect(back[0]).toMatch(/>(←|&larr;) Dashboard<\/a>$/);
+      expect(back[0]).toMatch(/^<a id="backHome" class="btn back[^"]*\bhouse-ib\b[^"]*" href="\.\.\/" data-back-home aria-label="Dashboard" title="Dashboard">/);
+      expect(back[0]).toMatch(/><svg aria-hidden="true"><use href="#hi-home"\/><\/svg><\/a>$/);   // the icon only, no words on screen
+      const head = s.slice(s.indexOf('<header'), s.indexOf('</header>'));
+      expect(head.indexOf(back[0]), 'inside the top bar').toBeGreaterThan(-1);
+      expect(head.replace(/<header[^>]*>\s*<div[^>]*>\s*/, '').indexOf('<a id="backHome"'), 'first in the bar').toBe(0);
     });
   }
 });
