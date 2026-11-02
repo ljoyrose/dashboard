@@ -168,7 +168,7 @@ def build_body(rows, policy, today, applied, mode, now):
     out += ["- #%d : %s" % (p["number"], r) for p, r in wait] or ["- nothing"]
     out += ["", "## KPIs", "- open PRs: %d" % len(rows), "- oldest PR: %d days" % (max(ages) if ages else 0),
             "- waiting on Lisa: %d" % len(do), "- queued by autopilot: %d" % len(auto)]
-    mergeable = [(p, r) for p, r in do if "sensitive" in r or "dependabot" in r or "docs-only" in r]
+    mergeable = [(p, r) for p, r in do if "sensitive" in r or "docs-only" in r]  # dependabot/red/conflict are never in the merge task
     if mergeable:
         out += ["", "## If you say OK to the sensitive / outside-scope items, paste this to Chrome", "```", chrome_task(order_pairs(mergeable)), "```"]
     return "\n".join(out)

@@ -34,10 +34,11 @@ class T(unittest.TestCase):
         self.assertEqual(cls(pr(files=[{"path": ".github/workflows/x.yml"}])), "DO")
         self.assertEqual(cls(pr(files=[{"path": "merge-policy.json"}])), "DO")
 
-    def test_outside_docs_scope(self):
-        self.assertEqual(cls(pr(files=[{"path": "index.html"}])), "DO")
-        wide = dict(POLICY, scope="all")
-        self.assertEqual(cls(pr(files=[{"path": "index.html"}]), policy=wide), "MERGE")
+    def test_scope_all_merges_site_files_but_docs_only_asks(self):
+        self.assertEqual(POLICY["scope"], "all")
+        self.assertEqual(cls(pr(files=[{"path": "index.html"}])), "MERGE")
+        narrow = dict(POLICY, scope="docs-only")
+        self.assertEqual(cls(pr(files=[{"path": "index.html"}]), policy=narrow), "DO")
 
     def test_conflict_and_red(self):
         self.assertEqual(cls(pr(mergeable="CONFLICTING")), "DO")

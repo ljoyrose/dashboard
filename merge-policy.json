@@ -5,7 +5,7 @@
   "approved_on": "2026-11-02",
   "expires_on": null,
   "mode": "dry-run",
-  "scope": "docs-only",
+  "scope": "all",
   "default_branch": "main",
   "merge_method": "merge",
   "delete_head_after_merge": false,
@@ -17,15 +17,11 @@
   ],
   "sensitive_paths": [
     ".github/",
-    "cdhub-write/",
-    "money/",
-    "tools/privacy-guard/",
     "merge-policy.json",
     "tools/autopilot/",
-    "package.json",
-    "package-lock.json",
-    "config.js",
-    "auth.js"
+    "tools/privacy-guard/",
+    "cdhub-write/",
+    "money/"
   ],
   "dependabot_authors": [
     "dependabot[bot]",
