@@ -22,3 +22,6 @@ playwright-report/
 
 # The accessibility ratchet numbers (rule names and counts only: no personal data)
 !tests/mocked/*.known.json
+
+# Cloudflare Pages build output (tools/build-site)
+_site/

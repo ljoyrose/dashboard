@@ -91,7 +91,8 @@ test.describe('App Factory bridge (Stage 6)', () => {
     await page.goto('studio/#/ideas');
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
-    await expect(page.locator('#enginePill')).toBeVisible();
+    await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
+    if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
     const chip = page.locator('.crow[data-row="si-1"] [data-chip="from-app"]');
     await expect(chip).toHaveText('From app: APP-A');
     await expect(page.locator('[data-chip="from-app"]')).toHaveCount(1);

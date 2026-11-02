@@ -3,6 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
+const { BASE, esc, at } = require('../support/site');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const signIn = async (page) => {
@@ -48,7 +49,7 @@ test.describe('Install on your phone', () => {
         return out.sort();
       });
       expect(kept.length).toBeGreaterThan(5);
-      for (const p of kept) expect(p, 'kept: ' + p).toMatch(/^\/dashboard\/(|index\.html|auth\.js|config\.js|toolkit\.js|tokens\.css|house\.css|manifest\.webmanifest|sw\.js|icons\/icon[-\w]*\.(svg|png)|money\/|money\/index\.html|money\/core\.js|cdhub\/|cdhub\/index\.html|studio\/|studio\/index\.html|factory\/|factory\/index\.html|food\/|food\/index\.html|marketplace\/|marketplace\/index\.html)$/);
+      for (const p of kept) expect(p, 'kept: ' + p).toMatch(new RegExp('^' + esc(BASE) + /(|index\.html|auth\.js|config\.js|toolkit\.js|tokens\.css|house\.css|manifest\.webmanifest|sw\.js|icons\/icon[-\w]*\.(svg|png)|money\/|money\/index\.html|money\/core\.js|cdhub\/|cdhub\/index\.html|studio\/|studio\/index\.html|factory\/|factory\/index\.html|food\/|food\/index\.html|marketplace\/|marketplace\/index\.html)$/.source));
     });
   });
 });
@@ -91,7 +92,7 @@ test.describe('Keyboard keys', () => {
     await page.goto('cdhub/');
     await page.keyboard.press('g');
     await page.keyboard.press('f');
-    await expect(page).toHaveURL(/\/dashboard\/money\/$/);
+    await expect(page).toHaveURL(at('money/'));
   });
 });
 
