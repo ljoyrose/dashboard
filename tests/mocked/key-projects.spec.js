@@ -95,6 +95,7 @@ test.describe('Home: Key projects & docs', () => {
   // The addresses below are invented (EXAMPLE), never a real deployment.
   for (const [what, url, shown] of [
     ['valid /exec address', 'https://script.google.com/macros/s/EXAMPLE-PROJECTS-HUB/exec', true],
+    ['valid work-account /exec address', 'https://script.google.com/a/macros/puppyclassroom.com/s/EXAMPLE-PROJECTS-HUB/exec', true],
     ['not an Apps Script address', 'https://example.com/projects', false],
   ]) {
     test('Projects Hub tile: ' + what, async ({ page }) => {
