@@ -10,7 +10,10 @@ const { HUBS, go } = require('../support/hubs');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 337000, cdhub: 238300, factory: 232000, food: 140600 };
+const BYTES = { home: 337600, cdhub: 238300, factory: 233800, food: 140600 };
+// home 337000 > 337600 and factory 232000 > 233800 on 2 Nov 2026: phone tab counts become dots and every tab one size (Lisa's pick b)
+// add the tab names and the one-size measure to the shared toolkit.js (about 1.8 KB, comments trimmed to one line); measured 371133
+// and 256983 bytes.
 // home 329000 > 337000 on 2 Nov 2026 (TidyUp stage 7, #141): the Bin page Log reads RUN-LOG.csv (7-day run list, UK times, Lessons); measured 369795 bytes.
 // home 325000 > 329000 (+4000) and factory 229700 > 232000 (+2300) on 2 Nov 2026: every number and row opens what it counts and
 // the icon-font fallback (Lisa's clickable picks) add to the shared toolkit.js and house.css; measured 360921 and 254207 bytes.

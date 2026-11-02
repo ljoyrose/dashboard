@@ -942,6 +942,7 @@ function auditLook() {
   // Text: nothing under 13px, weights 400/600 only, contrast 4.5:1 on its own background.
   for (const el of document.querySelectorAll('body *')) {
     if (!vis(el) || /^(SCRIPT|STYLE|I|svg)$/i.test(el.tagName) || el.closest('.qr')) continue;
+    if (innerWidth < 768 && el.matches('nav.house-tabs .ht > .n')) continue;   // a phone's tab count is a dot, no number showing (checked below)
     const own = [...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim());
     if (!own) continue;
     const s = getComputedStyle(el);
@@ -972,13 +973,20 @@ function auditLook() {
   }
   if (lines.size > 1) out.push(`pressables rest on ${lines.size} different lines: ${[...lines].join(' | ')}`);
   // Read-only markers: counts, date pills, parcel numbers: never a solid colour fill (tints only).
+  const tabDot = (el) => innerWidth < 768 && el.matches('nav.house-tabs .ht > .n');   // a phone's tab count: a small status dot (Lisa's pick b, 2 Nov)
   for (const el of [...document.querySelectorAll('.cnt, nav.tabs .n, .date, .pid, .needs3 .v, .ava, .okring, .stamp, .readat')].filter(vis)) {
+    if (tabDot(el)) continue;
     const bg = rgb(getComputedStyle(el).backgroundColor), page = bgOf(el.parentElement);
     if (bg[3] > 0.5 && ratio(bg, page) > 1.6) out.push(`solid fill on marker ${name(el)}`);
   }
   // Counts: one fixed size (30 x 24, radius 12, a 14px number: Lisa's pick A, 2 Nov) so 1 and 2 digits match.
   // Bottom-tab counts are the corner ring instead (tab picks, 2 Nov): 24 x 24, 12px ends.
-  for (const el of [...document.querySelectorAll('nav.house-tabs .ht > .n')].filter(vis)) {
+  // On a phone (under 768px) the tab count is an 8px round dot instead, rose (late) or grey (waiting), no ring, no number.
+  for (const el of [...document.querySelectorAll('nav.house-tabs .ht > .n')].filter(vis).filter(tabDot)) {
+    const s = getComputedStyle(el), b = el.getBoundingClientRect(), tok = (v) => { const p = document.createElement('i'); document.body.appendChild(p); p.style.color = 'var(' + v + ')'; const c = getComputedStyle(p).color; p.remove(); return c; };
+    if (b.width !== 8 || b.height !== 8 || s.borderTopLeftRadius !== '50%' || s.borderTopWidth !== '0px' || s.fontSize !== '0px' || s.position !== 'absolute' || s.backgroundColor !== tok(el.classList.contains('need') ? '--house-late' : '--house-ring')) out.push(`tab dot ${b.width}x${b.height} r${s.borderTopLeftRadius} ${s.backgroundColor}: ${name(el)}`);
+  }
+  for (const el of [...document.querySelectorAll('nav.house-tabs .ht > .n')].filter(vis).filter((e) => !tabDot(e))) {
     const s = getComputedStyle(el), b = el.getBoundingClientRect();
     if (Math.round(b.height) !== 24 || (el.textContent.length < 3 && Math.round(b.width) !== 24) || s.borderTopLeftRadius !== '12px' || s.lineHeight !== '22px' || s.fontSize !== '14px' || s.position !== 'absolute') out.push(`tab count ${Math.round(b.width)}x${Math.round(b.height)} r${s.borderTopLeftRadius}: ${name(el)}`);
   }
