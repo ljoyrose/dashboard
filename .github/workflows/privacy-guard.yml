@@ -20,6 +20,12 @@ on:
 permissions:
   contents: read
 
+# A newer push to the same pull request cancels the older PR run (the new head is scanned in full).
+# Pushes, the daily count and hand-started runs are never cancelled. Never path-filtered.
+concurrency:
+  group: privacy-guard-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   guard:
     name: Privacy guard (public repo)

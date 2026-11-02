@@ -38,7 +38,7 @@ test.describe('Money: deadlines worked out from rules', () => {
     await page.goto('money/#/dates');
     await signIn(page);
     const card = page.locator('[data-rules="all"]');
-    await expect(card).toContainText('Worked out from the rules');
+    await expect(card).toContainText('From the rules');
     await expect(card).toContainText('Self Assessment: 2nd payment on account');
     await expect(card).toContainText('31 Jul');
     // 31 Jan 2027 is the deadline for the 2025-26 tax year (ended 5 Apr 2026)

@@ -49,6 +49,7 @@ ALLOW_FILE = "tools/privacy-guard/allow.txt"
 
 
 def git(*args, check=True):
+    """Run a git command and return its output; on failure with check=True, print the error and exit 2."""
     r = subprocess.run(["git", *args], capture_output=True)
     if check and r.returncode:
         sys.stderr.write(r.stderr.decode("utf8", "replace"))
@@ -57,16 +58,19 @@ def git(*args, check=True):
 
 
 def repo_root():
+    """Return the real path of the top folder of the current git repo."""
     return os.path.realpath(git("rev-parse", "--show-toplevel").strip())
 
 
 def inside_repo(p):
+    """Return True when the given path is the repo root or inside it."""
     root = repo_root()
     real = os.path.realpath(p)
     return real == root or real.startswith(root + os.sep)
 
 
 def load_denylist():
+    """Load denylist terms from the env var or env-named file and return them as case-insensitive regexes; exit 2 if none."""
     raw = os.environ.get("PRIVACY_DENYLIST", "")
     f = os.environ.get("PRIVACY_DENYLIST_FILE", "")
     if f:
@@ -98,6 +102,7 @@ def load_allow():
 
 
 def email_ok(addr, path, allow):
+    """Return True when an email-like match is a file reference, a safe or noreply address, or on the allow list."""
     a = addr.lower()
     if re.search(r"\.(tsx?|jsx?|mjs|py|md|html?|css|json|csv|ya?ml|svg|png)$", a):
         return True  # 'name@File.tsx' style references, not mail
@@ -116,6 +121,7 @@ def redact(path, deny):
 
 
 def scan_text(path, text, deny, allow, where, out):
+    """Scan one file's text and name for denylist terms, emails, Drive ids and phone numbers; append findings to out."""
     shown = redact(path, deny)
     if any(fnmatch.fnmatch(path, g) for g in allow["path"]):
         return
@@ -137,6 +143,7 @@ def scan_text(path, text, deny, allow, where, out):
 
 
 def scan_path(path, where, allow, out, deny=()):
+    """Append a PATH finding when the path matches a blocked pattern and is not allow-listed."""
     if any(fnmatch.fnmatch(path, g) for g in allow["path"]):
         return
     if any(fnmatch.fnmatch(path, g) for g in BLOCKED_PATHS):
@@ -157,6 +164,7 @@ def added_lines(diff):
 
 
 def scan_commit(sha, deny, allow, out):
+    """Scan one commit: author emails, message, changed paths and added lines; append findings to out."""
     where = f"{sha[:7]} "
     meta = git("show", "-s", "--format=%ae%n%ce%n%B", sha)
     ae, ce, msg = (meta.split("\n", 2) + ["", ""])[:3]
@@ -174,6 +182,7 @@ def scan_commit(sha, deny, allow, out):
 
 
 def summary(found):
+    """Return a one-line count of findings per rule."""
     counts = {r: 0 for r in RULES}
     for rule, _ in found:
         counts[rule] += 1
@@ -181,6 +190,7 @@ def summary(found):
 
 
 def main(argv):
+    """Command-line entry point: run the chosen scan mode and return the exit code."""
     args = list(argv[1:])
     report = None
     if len(args) >= 2 and args[-2] == "--report":
