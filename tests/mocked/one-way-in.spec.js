@@ -31,7 +31,7 @@ test.describe('One way in', () => {
   test('Key projects holds exactly MOVE and the hubs', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await expect(page.locator('#key-projects a.keytile')).toHaveText(['MOVE', 'Money Hub', 'CD Hub', 'Factory', 'Marketplace', 'GA Hub', 'Studio', 'Web Estate'].concat(PH ? ['Projects Hub'] : []));
+    await expect(page.locator('#key-projects a.keytile')).toHaveText((PH ? [/^Projects/] : []).concat(['MOVE', 'Money Hub', 'CD Hub', 'Factory', 'Marketplace', 'GA Hub', 'Studio', 'Web Estate']));
     for (const a of await page.locator('#key-projects a.keytile').all()) await expect(a).toHaveAttribute('target', '_blank');
   });
 

@@ -196,6 +196,17 @@
     line-height: 1.3; text-align: left; hyphens: manual; }
   a.keytile:hover { border-color: var(--ink); }
   a.keytile:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  /* Projects tile: whole picture, so a multi-colour line (full height, curved with the corner) and an ink icon. */
+  a.keytile.phtile { position: relative; overflow: hidden; flex-wrap: wrap; justify-content: space-between; gap: 8px 16px; padding-left: 19px; }
+  a.keytile.phtile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: linear-gradient(to bottom, var(--ljr-2), var(--ljr-3), var(--ljr-4), var(--ljr-5), var(--ljr-6), var(--ljr-7)); }
+  .phname { display: inline-flex; align-items: center; gap: 8px; }
+  .phname .icon { width: 22px; height: 22px; color: var(--ink); }
+  .phnums { display: inline-flex; gap: 8px; }
+  .phn { display: inline-flex; flex-direction: column; align-items: center; min-width: 56px; padding: 2px 6px; border: 1px solid transparent; border-radius: var(--radius); }
+  .phn b { font-size: 18px; font-weight: 600; line-height: 1.5; }
+  .phn span { font-size: 13px; font-weight: 400; line-height: 1.5; color: var(--muted); }
+  .phn.need { border-color: var(--house-late); background: var(--house-late-tint); }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
   footer p { margin: 0; color: var(--muted); font-size: 14px; }
@@ -398,6 +409,7 @@
 <body>
 <a class="skip" href="#content" data-skip="content">Skip to content</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M12 12v.01M3 13a20 20 0 0 0 18 0"/></symbol>
   <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
   <symbol id="i-read" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5z"/><path d="M4 19a2 2 0 0 1 2-2h13"/></symbol>
   <symbol id="i-drive" viewBox="0 0 24 24"><path d="M3 15h18l-3-9H6l-3 9z"/><path d="M3 15v4h18v-4"/><path d="M7 17h2"/></symbol>
@@ -519,13 +531,15 @@
   // Projects Hub tile: drawn only when config.js holds a valid Apps Script /exec address (same rule as the Bin guard).
   var PH_URL = (CFG.projectsHub || {}).webAppUrl || '';
   if (!BG_URL_RE.test(PH_URL)) PH_URL = '';
+  // Its 3 numbers come from the hub's own Sheet (INDEX tab), read with the same read-only sign-in. Never written.
+  var PH_SHEET = (CFG.projectsHub || {}).sheetId || '', PH_TAB = (CFG.projectsHub || {}).tab || 'INDEX';
 
   // Page state stays in memory. The sign-in token is the one thing shared, via auth.js.
   var accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
-  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank(), mins: blank() }; }
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank(), mins: blank(), ph: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
@@ -1024,6 +1038,30 @@
     };
   }
 
+  // ---- Projects tile numbers: the hub Sheet's INDEX tab, read by header name so a moved column cannot shift them. ----
+  function loadPh() {
+    return apiGet('https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(PH_SHEET) + '/values/' +
+      encodeURIComponent(PH_TAB) + '?majorDimension=ROWS').then(function (r) { return phCounts((r && r.values) || []); });
+  }
+  // Same rules as the hub's own page: LIVE numbered rows only, reserved rows left out, Done and Parked are not open.
+  // Stuck = Blocked, or open with no owner. Waiting = Waiting on Lisa. Running = being worked on now.
+  function phCounts(rows) {
+    var head = (rows[0] || []).map(function (h) { return String(h).trim(); });
+    var col = function (r, name) { var i = head.indexOf(name); return i < 0 ? '' : String(r[i] == null ? '' : r[i]).trim(); };
+    if (head.indexOf('project_status') < 0) throw new Error('The hub Sheet has no project_status column');
+    var out = { stuck: 0, waiting: 0, running: 0, open: 0 };
+    rows.slice(1).forEach(function (r) {
+      if (col(r, 'status_u45') !== 'LIVE' || col(r, 'kind') === 'reserved' || !/^\d+$/.test(col(r, 'number'))) return;
+      var st = col(r, 'project_status'), owner = col(r, 'owner_tag');
+      if (st === 'Done' || st === 'Parked') return;
+      out.open++;
+      if (st === 'Waiting on Lisa') out.waiting++;
+      else if (st === 'Blocked' || !owner || /^no owner$/i.test(owner)) out.stuck++;
+      if (st === 'Running') out.running++;
+    });
+    return out;
+  }
+
   // timed = the 5-minute refresh. It keeps your ticks, Show-more choices and Bin results;
   // only the Refresh button (or signing in) starts from clean.
   function loadAll(timed) {
@@ -1055,6 +1093,7 @@
       run('cf', getFolder(CF_FOLDER_ID).then(function (root) {
         return walkTree(CF_FOLDER_ID, root.name || 'Cf overskill').then(function (t) { t.folder = root; return t; });
       })),
+      PH_URL && PH_SHEET ? run('ph', loadPh()) : Promise.resolve(),
       window.MoneyCore ? run('money', window.MoneyCore.loadAll(function () { return accessToken; })) : Promise.resolve()
     ]).then(function () {
       loading = false;
@@ -2189,12 +2228,25 @@
       ['Studio', 'studio/', true],
       ['Web Estate', 'estate/', true]
     ];
-    if (PH_URL) tiles.push(['Projects Hub', PH_URL, true]);
     return '<section class="card" id="key-projects" aria-labelledby="key-projects-title">' +
       '<h2 id="key-projects-title">Key projects & docs</h2>' +
-      '<div class="keytiles">' + tiles.map(function (t) {
+      '<div class="keytiles">' + (PH_URL ? phTile() : '') + tiles.map(function (t) {
         return '<a class="keytile"' + (t[1] === MOVE_URL ? ' id="move-link"' : '') + ' href="' + esc(t[1]) + '"' + (t[2] ? (hubLink(t[1]) ? HUB_TAB : ' target="_blank" rel="noopener"') : '') + '>' + esc(t[0]) + '</a>';
       }).join('') + '</div></section>';
+  }
+
+  // Projects tile (first): briefcase, name, 3 numbers (2 to-do + 1 result). Opens the hub in the work account.
+  // No numbers (not read yet, or the read failed): the tile still shows and still opens the hub.
+  function phTile() {
+    var d = S.ph.data;
+    var num = function (label, n, warn) {
+      return '<span class="phn' + (warn && n > 0 ? ' need' : '') + '"><b>' + (d ? n : '–') + '</b><span>' + label + '</span></span>';
+    };
+    var nums = '<span class="phnums" data-ph="' + (d ? 'ok' : S.ph.status) + '">' + num('Stuck', d && d.stuck, true) +
+      num('Waiting', d && d.waiting) + num('Running', d && d.running) + '</span>';
+    return '<a class="keytile phtile" id="ph-tile" href="' + esc(PH_URL) + '" target="_blank" rel="noopener"' +
+      (S.ph.status === 'failed' ? ' title="Numbers could not be read. Tap to open the hub."' : '') + '>' +
+      '<span class="phname">' + icon('briefcase') + '<span>Projects</span></span>' + nums + '</a>';
   }
 
   // Signed out: nothing about the dashboard is shown, only the sign-in button.
