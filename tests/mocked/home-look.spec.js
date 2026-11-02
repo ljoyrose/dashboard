@@ -18,7 +18,7 @@ const noSidewaysScroll = async (page, where) => {
   expect(w.doc, `${where}: page is ${w.doc}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
   expect(w.body, `${where}: body is ${w.body}px wide on a ${w.screen}px screen`).toBeLessThanOrEqual(w.screen + 1);
 };
-const VIEWS = [['map', 'Dashboard'], ['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent']];
+const VIEWS = [['map', 'Dashboard'], ['money', 'Money'], ['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent']]; // Money moved off Main into More (Lisa, 2 Nov)
 const goTab = async (page, key, title) => {
   await tabClick(page, `#mainNav a[data-nav="${key}"]`);
   await expect(page.locator('#hereTitle')).toHaveText(title);
@@ -111,13 +111,25 @@ test.describe('Home: house look', () => {
         expect(o, sel + ' hover').toEqual(['solid', '1px', '-1px', true]);
       }
       // Read-only pills: hovering changes nothing.
-      for (const sel of ['#needsToday .mtag >> nth=0', '#needsSplit .cnt >> nth=0']) {
+      for (const sel of ['#needsToday .mtag >> nth=0']) {
         const el = page.locator(sel);
         if (!(await el.count())) continue;
         const before = await el.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineStyle, c.borderTopColor, c.backgroundColor].join('|'); });
         await el.hover(); await settle(el);
         const after = await el.evaluate((e) => { const c = getComputedStyle(e); return [c.outlineStyle, c.borderTopColor, c.backgroundColor].join('|'); });
         expect(after, sel + ' changed on hover').toBe(before);
+      }
+      // The Needs you pills open what they count (Lisa, 2 Nov): each is a link to Do for its group; hover = 1px line inside
+      // (rose for urgent, ink for the plain ones), never thicker, never moves.
+      for (const el of await page.locator('#needsSplit .cnt').all()) {
+        expect(await el.evaluate((e) => e.tagName)).toBe('A');
+        await expect(el).toHaveAttribute('href', /^#\/do\/(urgent|soon|todo)$/);
+        const box = await el.boundingBox();
+        await el.hover(); await settle(el);
+        const o = await el.evaluate((e) => { const c = getComputedStyle(e); return { o: [c.outlineStyle, c.outlineWidth, c.outlineOffset].join(' '), ink: c.outlineColor === getComputedStyle(document.body).color, risk: e.classList.contains('k-risk') }; });
+        expect(o.o).toBe('solid 1px -1px');
+        expect(o.ink, 'urgent keeps its rose line; the others turn ink').toBe(!o.risk);
+        expect(await el.boundingBox()).toEqual(box);
       }
     });
   }
@@ -155,12 +167,13 @@ test.describe('Home: house look', () => {
         expect(r.bg, name + ': not white / plain card').not.toBe(r.card);
         expect(r.pale, name + ': a pale tint ' + r.bg).toBe(true);
       } };
-      await run(coloured);
       for (const sel of ['#urgentOne a.btn', '.hubtile a.hgo']) { // the hub tiles replaced the Key projects buttons (Lisa, 2 Nov)
         const r = await check(sel, false);
         expect([r.outline, r.oc], sel + ': neutral hover = ink line').toEqual(['solid 1px -1px', r.ink]);
         expect(r.pale && r.bg !== r.card, sel + ': muted tint ' + r.bg).toBe(true);
       }
+      await goTab(page, 'money', 'Money'); // the money entity cards moved off Main into More (Lisa, 2 Nov)
+      await run(coloured);
       await goTab(page, 'bin', 'Bin');
       const allow = page.locator('[data-action="grantwrite"]');
       if (await allow.count()) { await page.locator('#view details.fold > summary').first().click().catch(() => {}); }
@@ -293,6 +306,23 @@ test.describe('Home: house look', () => {
     const split = page.locator('#needsSplit .cnt');
     const sum = (await split.allTextContents()).reduce((a, t) => a + Number(t.match(/^\d+/)[0]), 0);
     expect(sum, 'urgent + due soon + to do = Needs you').toBe(total);
+    // "+N more" is one short link to Do (Lisa, 2 Nov).
+    if (total > 1) {
+      const more = next.locator('a.more');
+      await expect(more).toHaveText('+' + (total - 1) + ' more');
+      await expect(more).toHaveAttribute('href', '#/do');
+    }
+    await expect(next).not.toContainText('in Needs you, below');
+    // Each pill opens Do showing exactly the rows it counted.
+    for (const el of await split.all()) {
+      const [n, word] = (await el.textContent()).match(/^(\d+) (.+)$/).slice(1);
+      await el.click();
+      await expect(page.locator('#view')).toHaveAttribute('data-view', 'do');
+      await expect(page.locator('#todoGroupTitle')).toHaveText('Do · ' + word);
+      await expect(page.locator('#todoGroup ol > li')).toHaveCount(Number(n));
+      await page.evaluate(() => { location.hash = '#/map'; });
+      await expect(page.locator('#view')).toHaveAttribute('data-view', 'map');
+    }
   });
 
   test('nothing needs you: a friendly empty state with a small green-ring tick', async ({ page, guard }) => {

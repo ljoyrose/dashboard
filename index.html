@@ -587,6 +587,12 @@
   .needsrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
   .needsline { font-size: var(--fs-figure); font-weight: 600; }
   .hsplit { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+  .hsplit a.cnt, .nextcard a.more { text-decoration: none; color: var(--ink); }
+  .nextcard a.more { display: inline-flex; align-items: center; min-height: 36px; text-decoration: underline; text-underline-offset: 2px; }
+  @media (max-width: 600px) { .nextcard a.more { min-height: 44px; } }
+  @media (hover: hover) { .hsplit a.cnt:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+    .hsplit a.cnt.k-risk:hover { outline-color: var(--ljr-2); background: var(--ljr-2-tint); } }
+  .hsplit a.cnt:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .nextcard[class] { border-color: var(--ink); background: var(--card); }
   .nextcard .actions { gap: 12px; }
   .nextcard .hint { flex: 1 1 180px; }
@@ -680,13 +686,14 @@
     <div class="house-more" id="houseMore" hidden>
       <a href="#/drives" data-nav="drives" data-slot="0"><svg class="icon" aria-hidden="true"><use href="#i-drive"/></svg><span class="htl">Drives</span></a>
       <a href="#/bin" data-nav="bin" data-slot="8"><svg class="icon" aria-hidden="true"><use href="#i-bin"/></svg><span class="htl">Bin</span><span class="n need" id="n-bin"></span></a>
+      <a href="#/money" data-nav="money" data-slot="3"><svg class="icon" aria-hidden="true"><use href="#i-money"/></svg><span class="htl">Money</span></a>
+      <a href="#/minutes" data-nav="minutes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="htl">Actions minutes</span></a>
       <a href="#/changes" data-nav="changes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-changes"/></svg><span class="htl">Changes</span></a>
       <a id="move-link" href="#" target="_blank" rel="noopener" data-slot="0" hidden><svg class="icon" aria-hidden="true"><use href="#i-read"/></svg><span class="htl">MOVE</span></a>
     </div>
   </div>
 </nav>
 
-<footer id="pageFoot" class="wrap house-page hidden"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
 
 <script>
 (function () {
@@ -2596,26 +2603,41 @@
   function needsPanel() {
     if (!signedIn) return '';
     var all = needsToday(), items = all.slice(0, NEEDS_MAX), reading = firstRead();
-    var label = { risk: 'risk', fin: 'fin', ops: 'ops', bin: 'bin' };
     var h = '<section class="card slot4 needs" id="needsToday" aria-labelledby="needsTitle"><div class="cardhead"><h3 id="needsTitle">Needs you</h3>' +
       '<span class="mtag ' + (all.some(function (x) { return x.kind === 'risk'; }) ? 'risk' : all.length ? 'ops' : 'ok') + '">' + (reading ? 'Reading…' : all.length + (all.length === 1 ? ' thing' : ' things')) + '</span></div>';
     if (!all.length) return h + (reading ? '<p class="note">Reading from Google Drive…</p>' : '<div class="okstate"><span class="okring" aria-hidden="true">✓</span><p class="note">Nothing needs you today.</p></div>') + '</section>';
-    h += '<ol>' + items.map(function (x) {
-      var hb = HUB[x.hub] || HUB.dash;
-      return '<li class="house-lbar n-' + x.kind + '" data-hub="' + hb.key + '"' + hubStyle(hb) + '>' + hubIcon(hb) + '<span class="mtag ' + label[x.kind] + '">' + esc(x.tag) + '</span><span class="nt"><a href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>' + esc(x.text) + '</a></span></li>';
-    }).join('') + '</ol>';
+    h += '<ol>' + items.map(needRow).join('') + '</ol>';
     if (all.length > items.length) h += '<p class="note">And ' + (all.length - items.length) + ' more. <a href="#/do">Open Do</a>.</p>';
     return h + '</section>';
   }
 
   // Home opens with what needs you: the count, then the ONE most urgent thing. No tiles repeat a tab (stage 2c).
+  // The 3 groups of Needs you: urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
+  var NEED_GROUPS = [
+    { key: 'urgent', kind: 'risk', word: 'urgent', has: function (x) { return x.kind === 'risk'; } },
+    { key: 'soon', kind: 'fin', word: 'due soon', has: function (x) { return x.kind === 'fin'; } },
+    { key: 'todo', kind: 'todo', word: 'to do', has: function (x) { return x.kind === 'ops' || x.kind === 'bin'; } }
+  ];
+  function needRow(x) {
+    var hb = HUB[x.hub] || HUB.dash, label = { risk: 'risk', fin: 'fin', ops: 'ops', bin: 'bin' };
+    return '<li class="house-lbar n-' + x.kind + '" data-hub="' + hb.key + '"' + hubStyle(hb) + '>' + hubIcon(hb) + '<span class="mtag ' + label[x.kind] + '">' + esc(x.tag) + '</span><span class="nt"><a href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>' + esc(x.text) + '</a></span></li>';
+  }
+  // Do, one group of Needs you (from the pills at the top of Main): exactly the rows that pill counted.
+  function viewDoGroup(key) {
+    var g = NEED_GROUPS.filter(function (x) { return x.key === key; })[0], rows = needsToday().filter(g.has), reading = firstRead();
+    var h = '<section class="card needs" id="todoGroup" data-group="' + g.key + '" aria-labelledby="todoGroupTitle"><div class="cardhead"><h3 id="todoGroupTitle">Do · ' + esc(g.word) + '</h3>' +
+      '<span class="cnt' + (g.kind === 'risk' && rows.length ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + (rows.length || '') + '</span></div>';
+    h += rows.length ? '<ol>' + rows.map(needRow).join('') + '</ol>' : '<p class="note">' + (reading ? 'Reading…' : 'Nothing ' + esc(g.word) + ' right now.') + '</p>';
+    return h + '<p class="note"><a href="#/do">All of Do</a></p></section>';
+  }
   function homeTop() {
     if (!signedIn) return '';
     var all = needsToday(), n = all.length, reading = firstRead();
     // Split by urgency (read pills): urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
-    var split = [['risk', 'urgent'], ['fin', 'due soon'], ['todo', 'to do']].map(function (k) {
-      var c = all.filter(function (x) { return k[0] === 'todo' ? (x.kind === 'ops' || x.kind === 'bin') : x.kind === k[0]; }).length;
-      return c ? '<span class="cnt wide k-' + k[0] + '">' + c + ' ' + k[1] + '</span>' : '';
+    // Each pill opens Do showing exactly what it counts (Lisa, 2 Nov: every piece of info opens what it counts).
+    var split = NEED_GROUPS.map(function (g) {
+      var c = all.filter(g.has).length;
+      return c ? '<a class="cnt wide k-' + g.kind + '" href="#/do/' + g.key + '" data-group="' + g.key + '">' + c + ' ' + g.word + '</a>' : '';
     }).join('');
     var h = '<section id="homeTop" aria-label="Next"><div class="needsrow"><p class="needsline">Needs you: ' + (reading ? '…' : n ? n : '<span class="zero">0</span>') + '</p>' +
       (split ? '<span class="hsplit" id="needsSplit">' + split + '</span>' : '') + '</div>';
@@ -2625,7 +2647,7 @@
       h += '<div class="card urgent nextcard" id="urgentOne"><div class="cardhead"><h3>Next</h3><span class="mtag ' + x.kind + '">' + esc(x.tag) + '</span></div>' +
         '<p class="what">' + esc(x.text) + '</p>' +
         '<div class="actions"><a class="btn" href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>Open it</a>' +
-        (n > 1 ? '<span class="hint">Then ' + (n - 1) + ' more in Needs you, below.</span>' : '') + '</div></div>';
+        (n > 1 ? '<a class="hint more" href="#/do">+' + (n - 1) + ' more</a>' : '') + '</div></div>';
     } else if (!reading) {
       h += '<div class="card urgent okstate" id="urgentOne"><span class="okring" aria-hidden="true">✓</span><div><h3>Nothing needs you</h3><p class="hint">All clear right now. New things show here when Drive or Money changes.</p></div></div>';
     }
@@ -2640,8 +2662,7 @@
         '<p class="note">Read-only. The Bin asks for more only when used.</p>' +
         '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
     }
-    html += moneyTile() + minsTile();
-    return html;
+    return html; // Main = Next, Needs you, hub tiles. The Money and Actions minutes cards live in More (Lisa, 2 Nov).
   }
 
   // Actions minutes card: private minutes used this month against the free allowance. Read only; sends nothing.
@@ -3009,7 +3030,7 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Dashboard', decide: 'Decide', do: 'Do', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
+  var VIEWS = { map: 'Dashboard', decide: 'Decide', do: 'Do', money: 'Money', minutes: 'Actions minutes', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
   // Every Drives page lights up the Drives tab.
   var TAB_OF = { drive: 'drives', readfirst: 'drives', personal: 'drives', pdrive: 'drives', usb: 'drives' };
   // Drives sub-menu: #/drives/<key> shows view <view>. The pills are the existing .subnav (as on Changes).
@@ -3047,11 +3068,12 @@
     if (parts[0] === 'drives') {
       var sub = DRIVES.filter(function (d) { return d.key === parts[1]; })[0];
       parts = parts[1] === 'readfirst' ? ['readfirst'].concat(parts.slice(2)) : sub ? [sub.view].concat(parts.slice(2)) : ['drives'].concat(parts.slice(1));
-    } else if (['map', 'bin', 'changes', 'decide', 'do'].indexOf(parts[0]) < 0) parts = [];
+    } else if (['map', 'bin', 'changes', 'decide', 'do', 'money', 'minutes'].indexOf(parts[0]) < 0) parts = [];
     var view = parts[0] && VIEWS[parts[0]] ? parts[0] : null;
     var r = { view: view, sub: null, page: 1 };
     parts.slice(1).forEach(function (x) {
       if (/^p\d+$/.test(x)) r.page = parseInt(x.slice(1), 10);
+      else if (view === 'do' && NEED_GROUPS.some(function (g) { return g.key === x; })) r.group = x;
       else if (view === 'changes' && SUBS.some(function (s) { return s.key === x; })) r.sub = x;
       else if ((view === 'drive' || view === 'drives') && /^[A-Za-z0-9_-]{5,}$/.test(x)) { if (!r.driveId) r.driveId = x; else if (!r.folderId) r.folderId = x; }
     });
@@ -3065,7 +3087,7 @@
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'decide' ? viewDecide() : r.view === 'do' ? viewDo() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : viewChanges(r);
+    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'decide' ? viewDecide() : r.view === 'do' ? (r.group ? viewDoGroup(r.group) : viewDo()) : r.view === 'money' ? moneyTile() : r.view === 'minutes' ? minsTile() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : viewChanges(r);
     if (signedIn && TAB_OF[r.view] === 'drives' || signedIn && r.view === 'drives') html = drivesNav(r) + drivesPurpose(r) + html;
     if (signedIn && r.view !== 'map') html = '<p><a class="btn back" href="#/map" data-back-home>← Dashboard</a></p>' + html;
     var routeKey = location.hash;
@@ -3113,7 +3135,7 @@
     $('refreshBtn').classList.toggle('hidden', !signedIn);
     $('signOutBtn').classList.toggle('hidden', !signedIn);
     $('signInBtn').classList.toggle('hidden', signedIn);
-    ['mainNav', 'hereBox', 'pageFoot'].forEach(function (id) { $(id).classList.toggle('hidden', !signedIn); });
+    ['mainNav', 'hereBox'].forEach(function (id) { $(id).classList.toggle('hidden', !signedIn); });
   }
 
   // ---- Banner ----

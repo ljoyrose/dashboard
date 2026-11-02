@@ -159,6 +159,10 @@ test.describe('Dashboard Main', () => {
     await seed(page, guard, { apps: false, studio: false });
     await signIn(page);
     await expect(page.locator('#key-projects')).toHaveCount(0);
+    // Main = Next, Needs you, hub tiles. Nothing else (Lisa, 2 Nov): Money and Actions minutes live in More, no footer explainer.
+    await expect(page.locator('#view > *')).toHaveCount(3);
+    expect(await page.locator('#view > *').evaluateAll((els) => els.map((e) => e.id))).toEqual(['homeTop', 'needsToday', 'hubTiles']);
+    await expect(page.locator('#moneyTile, #minsCard, #pageFoot')).toHaveCount(0);
     await expect(page.locator('a.keytile')).toHaveCount(0);
     await expect(page.locator('body')).not.toContainText('You are here');
     // The page name stays for screen readers only: a 1px box, clipped.

@@ -20,7 +20,7 @@ const ALL = {
 };
 // What each hub's bar shows, in order, and what sits under More (Lisa's picks; the first is Main, More is always last).
 const PLAN = {
-  home: { tabs: ['Main', 'Decide', 'Do', 'More'], more: ['Drives', 'Bin', 'Changes'], out: ['MOVE'] }, // Decide + Do: Dashboard Main (2 Nov); MOVE is a link out (new tab)
+  home: { tabs: ['Main', 'Decide', 'Do', 'More'], more: ['Drives', 'Bin', 'Money', 'Actions minutes', 'Changes'], out: ['MOVE'] }, // Decide + Do: Dashboard Main (2 Nov); Money + Actions minutes moved off Main; MOVE is a link out (new tab)
   money: { tabs: ['Main', 'Money', 'Do', 'Dates', 'Accountant', 'More'], more: ['Control'] },
   marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },

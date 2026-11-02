@@ -10,9 +10,9 @@ const { HUBS, go } = require('../support/hubs');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 323000, cdhub: 238300, factory: 229700, food: 140600 };
-// home 311500 > 323000 (+11500) on 2 Nov 2026: Dashboard Main (Lisa's hub tiles with 3 linked numbers each, Decide and Do, the inline hub
-// reader) measured 354589 bytes, over 311500 + 10%.
+const BYTES = { home: 325000, cdhub: 238300, factory: 229700, food: 140600 };
+// home 311500 > 325000 (+13500) on 2 Nov 2026: Dashboard Main (Lisa's hub tiles with 3 linked numbers each, Decide and Do, the inline hub
+// reader, clickable Needs you pills) measured 357051 bytes, over 311500 + 10%.
 // home 277000 > 311500, cdhub 211500 > 238300 and food 126600 > 140600 on 2 Nov 2026: the shared bottom tab bar (Lisa's tab picks) adds
 // the tab rules to house.css (about 7 KB), the tab colours to tokens.css (about 1.5 KB) and the tab icons and More menu to toolkit.js
 // (about 5 KB), which every hub loads, on top of their own growth since 30 Oct-1 Nov. Measured 311435, 238249 and 140530. Factory still fits.
