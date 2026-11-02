@@ -42,39 +42,33 @@
 
   /* Frame: dark top bar (never black). Buttons on it are outlined in the frame's own light colour. */
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
-  header .top, header .chips.people { max-width: 980px; margin: 0 auto; }
-  .top { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; padding: 12px 16px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; display: flex; gap: 8px; align-items: center; }
-  .top h1 a { color: inherit; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
-  .top h1 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ljr-6); flex: none; }
-  .stamp, .readat { font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; color: var(--frame-ink); font-variant-numeric: tabular-nums; }
-  .stamp:empty, .readat:empty { display: none; }
-  header .btn, header .chip { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
-  header .btn .ti { color: var(--frame-ink); }
+  header .top { max-width: 980px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+  .top h1 .dot { background: var(--ljr-6); }
+  .stamp { font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; color: var(--frame-ink); font-variant-numeric: tabular-nums; }
+  .stamp:empty { display: none; }
+  .readat { font-variant-numeric: tabular-nums; }
   /* Signed out the dark bar is hidden by the sign-in gate, so its buttons switch to page colours (still readable). */
   html.dash-locked header .btn { color: var(--ink); border-color: var(--ctl); }
-  html.dash-locked #backHome { margin-left: auto; }
 
   /* Buttons, chips, the hover rule (a meaning colour, --hmc, keeps its own colour), focus, the bottom tabs and the counts:
      ../house.css. Every pressable rests on the same clear line; Yes / No differ by their words, place and hover colour. */
-  #backHome { min-height: 44px; }
   .btn.big { width: 100%; justify-content: center; }
   .btn.saving, .btn.saving:hover { border-style: dashed; border-color: var(--muted); color: var(--muted); cursor: progress; }
   .btn:disabled:not(.saving) { opacity: .55; cursor: default; }
   .chip { padding: 0 14px; background: var(--surface); display: inline-flex; align-items: center; gap: 6px; }
   .chips { display: flex; gap: 8px; flex-wrap: wrap; }
-  .chips.people { padding: 0 16px 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .chips.people { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  /* .mkwho: whose items, the people chips (and the phone's one Filter button) at the top of the page, out of the top bar. */
+  .mkwho:has(> #people.hidden) { display: none; }
   .chip[aria-pressed="true"], .chip.on { outline: 1px solid var(--ink); outline-offset: -1px; background-color: var(--hov); }
-  header .chip[aria-pressed="true"] { outline-color: var(--frame-ink); background-color: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); }
   @media (hover: hover) {
     a.tile:hover, button.tile:hover, details > summary:hover, .pair figure > a:hover { outline: 1px solid var(--ink); outline-offset: -1px; background-color: var(--hov); }
-    header .chip:hover { outline-color: var(--frame-ink); background-color: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); }
     html.dash-locked header .btn:hover { outline-color: var(--ink); background-color: var(--hov); }
   }
   /* Keyboard focus: a 2px ink ring (the one exception to 1px). */
   a:focus, button:focus, summary:focus { outline: none; }
   :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-  header :focus-visible, header a:focus-visible, header button:focus-visible { outline-color: var(--frame-ink); }
+  header :focus-visible:not(.house-menu *), header a:focus-visible:not(.house-menu *), header button:focus-visible:not(.house-menu *) { outline-color: var(--frame-ink); }
   input:focus { outline: none; border-color: var(--ink); }
 
   /* Bottom tabs (.house-tabs): five across. */
@@ -215,23 +209,28 @@
   input.num.pidin { width: 9em; }
   input.txtin { width: 100%; }
   input::placeholder { color: var(--muted); opacity: 1; }
-  header:has(#people.hidden) [data-house-filter] { display: none !important; }   /* no Filter until the people row shows */
-  header .house-filters.open { padding-top: 0; }
   .qr { position: fixed; inset: 0; background: var(--ljr-paper); color: var(--ljr-ink); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
   .qr .code { font-size: 44px; font-weight: 600; letter-spacing: 3px; word-break: break-all; }
   .qr img { max-width: 90vw; max-height: 60vh; }
 </style>
 </head>
 <body>
-<header>
-  <div class="top"><h1><a href="#/me"><span class="dot" aria-hidden="true"></span>Marketplace</a></h1><span class="stamp" id="stamp">TEST</span><span class="readat" id="readAt" title="When the list was last read. It reads again every 5 minutes."></span>
-    <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh"><i class="ti ti-refresh"></i></button>
+<header class="house-head">
+  <div class="top house-row">
+    <a id="backHome" class="btn back house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
+    <h1><a href="#/me"><span class="dot" aria-hidden="true"></span>Marketplace</a></h1>
+    <span class="house-sp" aria-hidden="true"></span>
+    <span class="stamp" id="stamp">TEST</span><span class="readat house-read" id="readAt" data-house-read title="When the list was last read. It reads again every 5 minutes."></span>
+    <button class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh" id="refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap" data-house-look></span>
     <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
-    <button class="btn house-fbtn" type="button" data-house-filter="people sitef stockf" aria-controls="people" aria-expanded="false">Filter<span class="cnt" id="whoN"></span></button>
-    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
-  <div class="chips people house-filters hidden" id="people" role="group" aria-label="Whose items"></div>
+  </div>
 </header>
 <main class="wrap">
+  <div class="mkwho house-frow">
+    <button class="btn house-fbtn" type="button" data-house-filter="people sitef stockf" aria-controls="people" aria-expanded="false">Filter<span class="cnt" id="whoN"></span></button>
+    <div class="chips people house-filters hidden" id="people" role="group" aria-label="Whose items"></div>
+  </div>
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
 </main>
@@ -974,7 +973,7 @@
     return h + growthBlock() + switchCard();
   }
   function render() {
-    $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
+    DashKit.signButton($('signin'), !!token);
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);   // menu only after sign-in
     var on = TAB_OF[view] || view;
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });

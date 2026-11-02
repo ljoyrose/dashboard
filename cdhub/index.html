@@ -53,24 +53,15 @@ a{color:inherit;text-underline-offset:2px}
 
 /* ---- Frame: dark top bar ---- */
 header.top{background:var(--frame);color:var(--frame-ink);position:sticky;top:0;z-index:20}
-.hin{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding-top:12px;padding-bottom:12px}
-.brand{display:contents}
-.brand h1{font-size:22px;margin:0;display:flex;align-items:center;gap:8px}
-.brand h1 .dot{width:10px;height:10px;border-radius:50%;background:var(--ljr-5);display:inline-block}
-.brand .sl{font-size:14px;color:var(--frame-ink);opacity:.85;margin-right:auto}
+header h1 .dot{background:var(--ljr-5)}
 .live{font-size:13px;font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
 .live.ok{border-color:var(--ljr-5)}.live.bad{border-color:var(--ljr-2)}
 header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
 @media (hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
 header .btn:focus-visible{outline:2px solid var(--frame-ink);outline-offset:2px}
-.backhome{min-height:44px!important;text-decoration:none}
+.backhome{text-decoration:none}
 /* Signed out, the frame is hidden by the sign-in gate and only Dashboard shows, on the page colour: use page ink. */
-html.dash-locked header .backhome{color:var(--ink);border-color:var(--press);margin-left:auto}
-.morewrap{position:relative;display:none}
-#moreMenu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;width:220px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow),0 8px 24px rgba(0,0,0,.18);padding:8px;display:flex;flex-direction:column;gap:4px}
-#moreMenu.hidden{display:none}
-#moreMenu>*{font:inherit;font-size:15px;font-weight:600;color:var(--ink);background:transparent;border:1px solid transparent;border-radius:var(--radius);min-height:44px;padding:0 14px;display:flex;gap:8px;align-items:center;text-decoration:none;cursor:pointer;text-align:left}
-@media (hover:hover){#moreMenu>*:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}}
+html.dash-locked header .backhome{color:var(--ink);border-color:var(--press)}
 
 /* ---- Frame: dark bottom tab bar. Light buttons, no ring; hover/selected = the small colour bar above the label widens. ---- */
 nav#nav{z-index:20;display:grid;grid-template-columns:repeat(10,minmax(0,1fr)) repeat(2,minmax(0,.75fr));gap:8px;padding:8px 24px calc(10px + env(safe-area-inset-bottom,0px))}
@@ -90,10 +81,6 @@ nav#nav .cnt{position:absolute;top:6px;right:8px}
  nav#nav button.util{display:none}
  nav#nav button{min-height:56px;flex-direction:row;flex-wrap:wrap;align-content:center;gap:2px 4px;padding:4px 2px}
  nav#nav button .ti{order:1}nav#nav .cnt{position:static;order:2}nav#nav button .lab{order:3;flex:0 0 100%}
- html.cd-in .morewrap{display:inline-flex}
- html.cd-in header .srchbtn,html.cd-in header #backHome{display:none!important}
- .brand .sl{display:none}
- .brand h1{font-size:20px;margin-right:auto}
  .wrap{padding-bottom:170px}
 }
 
@@ -309,14 +296,15 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:14px}ul
 </head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3 8l4-16l3 8h4"/></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5-2.5M3.5 11.5l1.5 1.5l2.5-2.5M3.5 17.5l1.5 1.5l2.5-2.5M11 6h9M11 12h9M11 18h9"/></symbol><symbol id="i-sitemap" viewBox="0 0 24 24"><path d="M3 15h6v6H3zM15 15h6v6h-6zM9 3h6v6H9zM6 15v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1M12 9v3"/></symbol><symbol id="i-calendar-event" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM16 3v4M8 3v4M4 11h16M8 15h2v2H8z"/></symbol><symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-8a3.5 3.5 0 0 1 0-7H12"/></symbol><symbol id="i-paw" viewBox="0 0 24 24"><path d="M14.7 13.5c-1.1-2-1.4-2.5-2.7-2.5s-1.6.5-2.7 2.5c-1.1 2-3 2.1-3 4c0 1.5 1.2 2.5 2.7 2.5c1.2 0 2-.5 3-.5s1.8.5 3 .5c1.5 0 2.7-1 2.7-2.5c0-1.9-1.9-2-3-4z"/><circle cx="5" cy="10" r="1.6"/><circle cx="9" cy="5.5" r="1.6"/><circle cx="15" cy="5.5" r="1.6"/><circle cx="19" cy="10" r="1.6"/></symbol><symbol id="i-building-cottage" viewBox="0 0 24 24"><path d="M3 21h18M4 21V10l8-6l8 6v11M9 21v-6h6v6"/></symbol><symbol id="i-baby-carriage" viewBox="0 0 24 24"><circle cx="8" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M2 5h2.5l1.7 4H20a6 6 0 0 1-6 6H8.7M11 9V3a7 7 0 0 1 7 6"/></symbol><symbol id="i-stethoscope" viewBox="0 0 24 24"><path d="M6 4H5a1 1 0 0 0-1 1v3.5a5.5 5.5 0 0 0 11 0V5a1 1 0 0 0-1-1h-1M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></symbol><symbol id="i-world" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4l4 4M6 12h10"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7"/><path d="M21 21l-6-6"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M5 12H3l9-9l9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol><symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0zM10 9h4"/></symbol><symbol id="i-adjustments-horizontal" viewBox="0 0 24 24"><circle cx="14" cy="6" r="2"/><path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h11M19 18h1"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol></svg>
 <a class="skip" href="#main" data-skip="main">Skip to content</a>
-<header class="top"><div class="hin">
-<div class="brand"><h1><span class="dot" aria-hidden="true"></span>Cobberdog Hub</h1>
-<span class="sl">CurlyCwtch Australian Cobberdogs</span></div>
-<span class="live" id="livepill">connecting&hellip;</span>
-<button type="button" class="btn srchbtn" data-search-open aria-keyshortcuts="/" title="Search (press /)"><svg class="ti" aria-hidden="true"><use href="#i-search"/></svg>Search</button>
-<a id="backHome" class="btn back backhome" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
-<span class="morewrap" id="moreWrap"><button type="button" class="btn" id="moreBtn" data-more="toggle" aria-expanded="false" aria-controls="moreMenu">More<svg class="ti" aria-hidden="true"><use href="#i-dots"/></svg></button>
-<div id="moreMenu" class="hidden" role="menu" aria-label="More"><button type="button" role="menuitem" data-more="search"><svg class="ti" aria-hidden="true"><use href="#i-search"/></svg>Search</button><button type="button" role="menuitem" data-reload="1"><svg class="ti" aria-hidden="true"><use href="#i-refresh"/></svg>Reread</button><button type="button" role="menuitem" data-signout="1"><svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg>Sign out</button><a role="menuitem" href="../" data-back-home><svg class="ti" aria-hidden="true"><use href="#i-home"/></svg>Dashboard</a></div></span>
+<header class="top house-head"><div class="hin house-row">
+<a id="backHome" class="btn back backhome house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
+<h1><span class="dot" aria-hidden="true"></span>Cobberdog Hub</h1>
+<span class="house-sp" aria-hidden="true"></span>
+<span class="live" id="livepill" data-house-read>connecting&hellip;</span>
+<button type="button" class="btn srchbtn house-ib" data-search-open aria-keyshortcuts="/" aria-label="Search" title="Search (press /)"><svg aria-hidden="true"><use href="#hi-search"/></svg></button>
+<button type="button" class="btn house-ib hidden" id="cdRefresh" data-reload="1" aria-label="Refresh" title="Refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+<span class="lookwrap" data-house-look></span>
+<button type="button" class="btn house-ib hidden" id="cdSignout" data-signout="1" aria-label="Sign out" title="Sign out"><svg aria-hidden="true"><use href="#hi-logout"/></svg></button>
 </div></header>
 <div class="wrap"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
 <div class="next" id="next"></div></div>
@@ -1843,7 +1831,9 @@ function navHtml(){
 }
 function pill(){
  var p=document.getElementById('livepill');
+ p.removeAttribute('data-read');   // the phone's Look menu shows this read time (the pill leaves the bar there)
  if(LOAD.state==='ok'){ p.className='live ok';
+  if(LOAD.storedAt) p.setAttribute('data-read','Read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}));
   var w='live · read-only · '+(CD.counts?Object.keys(CD.counts).length:0)+' tables'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):'');
   // ✓ on screen; the words stay for screen readers (and the tests), and on hover.
   p.title=w+' · '+FOLDER_NAME; p.innerHTML='<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">'+esc(w)+'</span>\u2713'; }
@@ -1890,6 +1880,8 @@ function focusView(){
  h.setAttribute('tabindex','-1');
  h.focus({preventScroll:true});
 }
+// Signed in and read: the top bar shows Refresh and Sign out (on a phone Sign out sits in the Look menu).
+function cdIn(on){ document.documentElement.classList.toggle('cd-in',on); ['cdRefresh','cdSignout'].forEach(function(id){ document.getElementById(id).classList.toggle('hidden',!on); }); }
 function go(id,push){
  pill();
  var main=document.getElementById('main');
@@ -1898,7 +1890,7 @@ function go(id,push){
    +'<ul class="notes"><li>No data of its own. Read-only, live from '+esc(FOLDER_NAME)+'.</li><li>One sign-in for the whole site.</li></ul>'
    +(LOAD.err?'<p class="mut">'+esc(LOAD.err)+'</p>':'')
    +'<p style="margin-bottom:0"><button id="signinbtn" data-signin="1"'+(auth.ready()?'':' disabled')+'>'+(auth.ready()?'Sign in with Google':'Loading Google sign-in\u2026')+'</button></p></div>';
-  document.getElementById('nav').innerHTML=''; document.documentElement.classList.remove('cd-in'); return;
+  document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
  if(LOAD.state==='loading'){ return; }
  if(LOAD.state!=='ok'){
@@ -1910,10 +1902,10 @@ function go(id,push){
      :LOAD.state==='err'?esc(LOAD.err||'')+'. The tables live in '+esc(FOLDER_NAME)+'.'
      :'The tables live in '+esc(FOLDER_NAME)+'. Nothing is stored in this page, so there is nothing to show without them.')+'</p>'
    +'<p style="margin-bottom:0"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
-  document.getElementById('nav').innerHTML=''; document.documentElement.classList.remove('cd-in'); return;
+  document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }
  if(!PAGES[id]) id='map';
- document.documentElement.classList.add('cd-in');
+ cdIn(true);
  document.getElementById('nav').innerHTML=navHtml();
  main.innerHTML=PAGES[id]();
  Array.prototype.forEach.call(document.querySelectorAll('#nav button'),function(b){ if(b.dataset.go===id) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
@@ -2031,15 +2023,6 @@ document.addEventListener('click',function(e){
   if(document.getElementById('rdate')) go('round', false);
  }
 });
-// Phone header: one More menu (Search, Reread, Sign out, Dashboard) instead of a row of buttons that would wrap.
-function moreMenu(on){ var m=document.getElementById('moreMenu'), b=document.getElementById('moreBtn'); if(!m||!b) return;
- m.classList.toggle('hidden',!on); b.setAttribute('aria-expanded',String(!!on)); }
-document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('[data-more]');
- if(!t){ moreMenu(false); return; }
- if(t.dataset.more==='toggle'){ moreMenu(document.getElementById('moreMenu').classList.contains('hidden')); return; }
- moreMenu(false);
- if(t.dataset.more==='search'){ var s=document.querySelector('header [data-search-open]'); if(s) s.click(); } });
-document.addEventListener('keydown',function(e){ if(e.key==='Escape') moreMenu(false); });
 // Filter row: Filter opens its panel; a chip clears its own filter; Sort redraws.
 document.addEventListener('click',function(e){
  var f=e.target.closest&&e.target.closest('[data-fpanel]');

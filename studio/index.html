@@ -54,15 +54,10 @@
   header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
   header .top, header nav.tabs, main.wrap { max-width: 1600px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
   @media (max-width: 600px) { header .top, header nav.tabs, main.wrap { padding-left: 16px; padding-right: 16px; } }
-  .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; display: flex; gap: 8px; align-items: center; }
-  .top h1 a { text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
   .top h1 .dot { background: var(--me); }
   .stamp { font-size: 13px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; }
   .stamp:empty { display: none; }
   .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 14px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
-  #backHome { min-height: 44px; }
-  html.dash-locked #backHome { margin-left: auto; } /* signed out the title is hidden, so the button keeps its top-right place */
   .btn[disabled] { cursor: not-allowed; opacity: .55; }
   /* Five tabs in a bar at the bottom, like Marketplace (thumb reach on the phone); a sub-row of links inside Line, Decide and Kits. */
   /* Bottom tabs: the frame, light buttons, no ring, the colour bar that widens: ../house.css (.house-tabs). Layout only here. */
@@ -242,7 +237,6 @@
   /* Cool clear: neutral chips get a faint fill; the red and green outlines (needs you, On) stay as they are. */
   :root.look-cool .ch:not(.on):not(:hover), :root.look-cool .tag:not(:hover), :root.look-cool .fbtn:not(.on):not(:hover), :root.look-cool .pill:not(.on):not(:hover) { background: var(--chip); } /* not on hover, so the hover tint shows */
   /* Look menu (header palette button). Stored in localStorage 'dash-look' so other hubs can read it. */
-  .lookwrap { position: relative; }
   #lookMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(340px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
   #lookMenu .lrow { display: flex; flex-direction: column; gap: 4px; }
   .seg { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -292,29 +286,20 @@
   /* Frame (Lisa's choice): dark top bar and dark bottom tab bar, never black. The footer is a step lighter on purpose:
      thin strips between light buttons read darker than the solid top bar. Darker than the page in dark mode too. */
   header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
-  header .top { padding-top: 12px; padding-bottom: 12px; }
-  header .top > h1 a, header .top > .stamp, header .top > .pill, header .top > .btn, header .lookwrap > .btn, header .morewrap > .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
-  header .top > .pill .ti, header .top > .btn .ti, header .lookwrap > .btn .ti, header .morewrap > .btn .ti { color: var(--frame-ink); }
+  header .top > h1 a, header .top > .stamp, header .top > .pill, header .top > .btn, header .lookwrap > .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
+  header .top > .pill .ti { color: var(--frame-ink); }
   header .top > .btn.main { border-color: var(--frame-ink); }
   header .top > .pill.ok { border-color: var(--frame-ok); } header .top > .pill.ok .ti { color: var(--frame-ok); }
   header .top > .pill.warn { border-color: var(--frame-warn); } header .top > .pill.bad { border-color: var(--frame-bad); }
-  @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover, header .morewrap > .btn:hover { outline-color: var(--frame-ink); } } /* the same 1px line, in the frame's ink */
-  header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible, header .morewrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
+  @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover { outline-color: var(--frame-ink); } } /* the same 1px line, in the frame's ink */
+  header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
   /* The dark band spans the screen like the top bar; each tab button stays a sensible width. */
   @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 220px)); justify-content: center; } }
-  /* Phone header: dot + Studio, the status pills and one "More" menu (Refresh, Look, New, Sign out, Dashboard). Desktop unchanged. */
-  .morewrap { position: relative; display: none; margin-left: auto; }
-  #moreMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 25; width: 220px; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,.18); padding: 8px; display: flex; flex-direction: column; gap: 4px; }
-  #moreMenu.hidden { display: none; }
-  #moreMenu > * { font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: var(--radius); min-height: 44px; padding: 0 14px; display: flex; gap: 8px; align-items: center; text-decoration: none; cursor: pointer; text-align: left; }
-  #moreMenu > * .ti { color: var(--ink); }
-  @media (hover: hover) { #moreMenu > *:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
-  @media (max-width: 544px) {
-    html.signed-in .morewrap:not(.hidden) { display: inline-flex; }
-    html.signed-in header .top > #refreshBtn, html.signed-in header .top > #newBtn, html.signed-in header .top > #signOutBtn, html.signed-in header .top > #backHome, html.signed-in .lookwrap > #lookBtn { display: none !important; }
-    html.signed-in .lookwrap { position: static; }
-    html.signed-in #lookMenu { position: fixed; top: 64px; left: 8px; right: 8px; width: auto; }
-    header .top > .btn, header .top > .pill { min-height: 44px; }
+  /* Phone top bar: the engine and budget pills stay on a desktop only (the one 56px row has no room); Look opens full width. */
+  @media (max-width: 600px) {
+    header .top > #enginePill, header .top > #budgetPill { display: none !important; }
+    .lookwrap { position: static; }
+    #lookMenu { position: fixed; top: calc(var(--house-head) + 6px); left: 8px; right: 8px; width: auto; }
   }
   @media (max-width: 760px) {
     .board { scroll-snap-type: x mandatory; }
@@ -323,11 +308,10 @@
   /* Two pill sizes only. Small = things you read (counts, tags, the TEST stamp): 24px high, 13px text.
      Button = anything you press (buttons, filter and pick chips, sub-tabs, switches, menu items, icon buttons): 36px, 44px on the phone. */
   .tag, .stamp { height: 24px; min-height: 24px; min-width: 24px; font-size: 13px; line-height: 1; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
-  .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, #moreMenu > *, .fbar .sbox { min-height: 36px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; display: inline-flex; align-items: center; }
-  #moreMenu > * { display: flex; }
+  .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, .fbar .sbox { min-height: 36px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; display: inline-flex; align-items: center; }
   .lk, .ico { min-width: 36px; width: auto; height: 36px; }
   @media (max-width: 544px) {
-    .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, #moreMenu > *, .fbar .sbox { min-height: 44px; }
+    .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, .fbar .sbox { min-height: 44px; }
     .lk, .ico { min-width: 44px; height: 44px; }
     /* Phone tabs (colour bar · icon + count · label): ../house.css. */
   }
@@ -402,7 +386,7 @@
   .btn.yes, .acts .btn.yes { --hmc: var(--house-ok); border-color: var(--hmc); } .btn.no, .acts .btn.no { --hmc: var(--house-risk); border-color: var(--hmc); } /* rest on their own colour line and keep it on hover */
   .fbar .sbox { font-weight: 400; }
   @media (max-width: 544px) { .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { min-height: 44px; } .ico, .lk { min-width: 44px; height: 44px; } }
-  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover, #moreMenu > *:hover { outline: 1px solid var(--hmc, var(--sel-bd)); outline-offset: -1px; background-color: color-mix(in srgb, var(--hmc, var(--muted)) var(--house-tint), var(--card)); } }
+  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover { outline: 1px solid var(--hmc, var(--sel-bd)); outline-offset: -1px; background-color: color-mix(in srgb, var(--hmc, var(--muted)) var(--house-tint), var(--card)); } }
   /* Meaning-coloured buttons keep their colour on hover (the --hmc rule above, from ../house.css); icons keep it too. */
   .btn.yes .ti, .acts .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .acts .btn.no .ti { color: var(--ljr-2-text); }
   .fbtn .n.wide { width: auto; padding: 0 6px; }
@@ -445,27 +429,19 @@
   <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6"/><path d="M20 4v7h-7"/></symbol>
 </svg>
-<header>
-  <div class="top">
+<header class="house-head">
+  <div class="top house-row">
+    <a id="backHome" class="btn back house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
     <h1><a href="#/me"><span class="dot" aria-hidden="true"></span>Studio</a></h1>
+    <span class="house-sp" aria-hidden="true"></span>
     <span id="stamp" class="stamp"></span>
     <a id="enginePill" class="pill hidden" href="#/engine"></a>
     <a id="budgetPill" class="pill hidden" href="#/tools"></a>
-    <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again" title="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
-    <span class="lookwrap"><button id="lookBtn" class="btn" type="button" data-action="look" aria-label="Look" title="Look" aria-expanded="false" aria-controls="lookMenu"><i class="ti ti-palette" aria-hidden="true"></i>Look</button><div id="lookMenu" class="hidden" role="dialog" aria-label="Look"></div></span>
-    <a class="btn" href="#/new" data-nav="new" id="newBtn" aria-label="New idea"><i class="ti ti-plus"></i>New</a>
-    <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
+    <a class="btn house-ib" href="#/new" data-nav="new" id="newBtn" aria-label="New idea" title="New idea"><svg aria-hidden="true"><use href="#hi-plus"/></svg></a>
+    <button id="refreshBtn" class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap"><button id="lookBtn" class="btn house-ib" type="button" data-action="look" aria-label="Look" title="Look" aria-expanded="false" aria-controls="lookMenu"><svg aria-hidden="true"><use href="#hi-palette"/></svg></button><div id="lookMenu" class="hidden" role="dialog" aria-label="Look"></div></span>
+    <button id="signOutBtn" class="btn house-ib hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg aria-hidden="true"><use href="#hi-logout"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
-    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
-    <span class="morewrap hidden" id="moreWrap"><button id="moreBtn" class="btn" type="button" data-action="moremenu" aria-expanded="false" aria-controls="moreMenu">More<i class="ti ti-dots" aria-hidden="true"></i></button>
-      <div id="moreMenu" class="hidden" role="dialog" aria-label="More">
-        <button type="button" data-action="refresh"><i class="ti ti-refresh" aria-hidden="true"></i>Refresh</button>
-        <button type="button" data-action="lookmore"><i class="ti ti-palette" aria-hidden="true"></i>Look</button>
-        <a href="#/new"><i class="ti ti-plus" aria-hidden="true"></i>New</a>
-        <button type="button" data-action="signout"><i class="ti ti-logout" aria-hidden="true"></i>Sign out</button>
-        <a href="../" data-back-home><i class="ti ti-home" aria-hidden="true"></i>← Dashboard</a>
-        <button type="button" data-action="moredone">Done</button>
-      </div></span>
   </div>
 </header>
 <main class="wrap" id="content">
@@ -600,7 +576,7 @@
   function lookMenu() {
     return LOOKS.map(function (l) { return '<div class="lrow"><span class="flab">' + l[1] + '</span><div class="seg" role="group" aria-label="' + l[1] + '">' + l[2].map(function (x) { return '<button type="button" data-look="' + l[0] + '" data-val="' + x[0] + '" aria-pressed="' + (lookOf(l[0]) === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></div>'; }).join('');
   }
-  function showLook(on) { var m = document.getElementById('lookMenu'); if (on) m.innerHTML = lookMenu(); m.classList.toggle('hidden', !on); document.getElementById('lookBtn').setAttribute('aria-expanded', String(on)); }
+  function showLook(on) { var m = document.getElementById('lookMenu'); if (on) m.innerHTML = lookMenu() + DashKit.look.extras(); m.classList.toggle('hidden', !on); document.getElementById('lookBtn').setAttribute('aria-expanded', String(on)); }
   /* ---------- Board / List on Line and Decide: desktop starts on Board, the phone on List; the choice is kept per page ---------- */
   var vmode = (function () { try { var o = JSON.parse(localStorage.getItem('st-view') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } })();
   function phone() { return window.matchMedia('(max-width: 760px)').matches; }
@@ -1987,7 +1963,7 @@
     Array.prototype.forEach.call(document.querySelectorAll('nav.tabs [data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === grp ? 'page' : 'false'); });
     $('tabs').classList.toggle('hidden', !signedIn); $('newBtn').classList.toggle('hidden', !signedIn);
     $('signInBtn').classList.toggle('hidden', signedIn);
-    $('signOutBtn').classList.toggle('hidden', !signedIn); $('moreWrap').classList.toggle('hidden', !signedIn); document.documentElement.classList.toggle('signed-in', !!signedIn);
+    $('signOutBtn').classList.toggle('hidden', !signedIn); document.documentElement.classList.toggle('signed-in', !!signedIn);
     $('refreshBtn').classList.toggle('hidden', !signedIn);
     var ready = signedIn && S && !err;
     $('enginePill').classList.toggle('hidden', !ready); $('budgetPill').classList.toggle('hidden', !ready);
@@ -2031,8 +2007,7 @@
     if (f === 'fq') { var tb = barTab(); if (!tb) return; fsOf(tb).q = e.target.value; saveFs(); var p = e.target.selectionStart; render(); var b = document.querySelector('[data-f="fq"]'); if (b) { b.focus(); try { b.setSelectionRange(p, p); } catch (x) {} } }
   });
   document.addEventListener('click', function (e) {
-    if (!e.target.closest('.lookwrap, [data-action="lookmore"]') && !document.getElementById('lookMenu').classList.contains('hidden')) showLook(false);
-    if (!e.target.closest('#moreBtn') && !$('moreMenu').classList.contains('hidden')) showMore(false);
+    if (!e.target.closest('.lookwrap') && !document.getElementById('lookMenu').classList.contains('hidden')) showLook(false);
     var lk0 = e.target.closest('[data-look]'); if (lk0) { look[lk0.getAttribute('data-look')] = lk0.getAttribute('data-val'); try { localStorage.setItem('dash-look', JSON.stringify(look)); } catch (x) {} applyLook(); showLook(true); fitBoard(boardScroll()); return; }
     if ((filtersOpen || sortOpen) && !e.target.closest('.fpanel, #filtersBtn, #sortBtn, [data-fxoff]')) { closeF(true); }
     var fo = e.target.closest('[data-fxoff]'); if (fo) { var t4 = barTab(); if (t4) { var s4 = fsOf(t4), k4 = fo.getAttribute('data-fxoff'), i4 = s4[k4].indexOf(fo.getAttribute('data-val')); if (i4 >= 0) s4[k4].splice(i4, 1); saveFs(); } render(); var fb = $('filtersBtn'); if (fb) fb.focus(); return; }
@@ -2056,9 +2031,6 @@
     if (a && !a.disabled) {
       var k = a.getAttribute('data-action');
       if (k === 'look') { showLook(document.getElementById('lookMenu').classList.contains('hidden')); return; }
-      if (k === 'moremenu') { showMore($('moreMenu').classList.contains('hidden')); return; }
-      if (k === 'moredone') { showMore(false, true); return; }
-      if (k === 'lookmore') { showMore(false); showLook(true); var lf = document.querySelector('#lookMenu button'); if (lf) lf.focus(); return; }
       if (k === 'signin') auth.requestInteractive(CFG.money && CFG.money.owner ? { login_hint: CFG.money.owner } : {}); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'filters') { filtersOpen = !filtersOpen; sortOpen = false; render(); fFocus(); }
       else if (k === 'sort') { sortOpen = !sortOpen; filtersOpen = false; render(); fFocus(); }
@@ -2117,12 +2089,10 @@
   window.addEventListener('resize', function () { if (S && signedIn && phone() !== wasPhone) { wasPhone = phone(); render(); } else fitBoard(boardScroll()); });
   var wasPhone = phone();
   // Filter and Sort panels: focus goes in on open and back to the button on close (Done, Esc, a click outside).
-  // Phone "More" menu: focus goes to its first item on open and back to the button on close.
-  function showMore(on, back) { var m = $('moreMenu'); m.classList.toggle('hidden', !on); $('moreBtn').setAttribute('aria-expanded', String(on)); if (on) { var f = m.querySelector('button, a'); if (f) f.focus(); } else if (back) $('moreBtn').focus(); }
   function fFocus() { var p = document.querySelector('.fbar > .fpanel'); if (p) { var f = p.querySelector('.on, button'); if (f) f.focus(); } }
   function closeF(quiet) { var back = filtersOpen ? 'filtersBtn' : sortOpen ? 'sortBtn' : null; filtersOpen = sortOpen = false; render(); if (back && !quiet) { var b = $(back); if (b) b.focus(); } }
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (filtersOpen || sortOpen)) { closeF(); return; } if (e.key === 'Escape' && !$('moreMenu').classList.contains('hidden')) showMore(false, true); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('lookMenu').classList.contains('hidden')) { showLook(false); var lb0 = document.getElementById('lookBtn'); (lb0.offsetParent ? lb0 : $('moreBtn')).focus(); } });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (filtersOpen || sortOpen)) { closeF(); return; } });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('lookMenu').classList.contains('hidden')) { showLook(false); document.getElementById('lookBtn').focus(); } });
   window.addEventListener('hashchange', function () { openPanel = null; filtersOpen = sortOpen = false; formErr = {}; formNote = ''; fromUrl(); render(); window.scrollTo(0, 0); });
   // "/" puts the cursor in this page's search box (before toolkit.js's own search dialog).
   window.addEventListener('keydown', function (e) {

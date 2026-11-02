@@ -87,7 +87,9 @@ test.describe('Home: Key projects & docs', () => {
     }
 
     // Signing out removes the links again.
-    await page.locator('#signOutBtn').click();
+    // On a phone Sign out sits inside the Look menu (the top bar, Lisa's pick A).
+    await page.locator('#houseLookBtn').click();
+    await page.locator('#houseLook').getByRole('button', { name: 'Sign out', exact: true }).click();
     await expect(page.locator('#key-projects')).toHaveCount(0);
   });
 

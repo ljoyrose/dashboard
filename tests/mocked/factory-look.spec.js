@@ -226,14 +226,16 @@ test.describe('Factory look: frame', () => {
     expect(await lum('header')).toBeLessThan(await lum('nav.tabs') + 0.001);
   });
 
-  test('signed out: the dark bar keeps Sign in and Dashboard only, both on the right', async ({ page }) => {
+  test('signed out: the dark bar keeps Sign in and Dashboard only: the Home icon top left, Sign in on the right', async ({ page }) => {
     await page.goto('factory/');
     await expect(page.locator('html')).toHaveClass(/dash-locked/);
     await expect(page.locator('header')).toHaveCSS('visibility', 'visible');
-    for (const sel of ['#signInBtn', '#backHome']) {
-      const b = await page.locator(sel).boundingBox();
-      expect(b.x, sel).toBeGreaterThan(page.viewportSize().width / 2);
-    }
+    const vw = page.viewportSize().width;
+    expect((await page.locator('#signInBtn').boundingBox()).x, '#signInBtn').toBeGreaterThan(vw / 2);
+    const home = await page.locator('#backHome').boundingBox();
+    expect(home.x + home.width, '#backHome').toBeLessThan(vw / 4);
+    const shown = await page.locator('header').evaluate((h) => [...h.querySelectorAll('button, a')].filter((e) => !e.closest('h1') && e.getBoundingClientRect().width > 0 && getComputedStyle(e).visibility === 'visible').map((e) => e.id));
+    expect(shown.sort()).toEqual(['backHome', 'signInBtn']);   // (the title stays for screen readers only, 1px, as on every hub)
     await expect(page.locator('nav.tabs')).not.toBeVisible();
   });
 });

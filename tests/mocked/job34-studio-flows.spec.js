@@ -35,7 +35,8 @@ test.describe('JOB 34 Studio: header buttons', () => {
     const before = stateReads(guard);
     await page.locator('#refreshBtn').click();
     await expect.poll(() => stateReads(guard)).toBeGreaterThan(before);
-    await expect(page.locator('#enginePill')).toBeVisible();
+    await expect(page.locator('#enginePill')).not.toHaveClass(/\bhidden\b/); // drawn: Studio has read its state
+    if (page.viewportSize().width > 600) await expect(page.locator('#enginePill')).toBeVisible(); // the pill shows on a desktop only (no room in the 56px phone bar)
     await expect(page.locator('#banner')).toBeHidden();
     await page.locator('#signOutBtn').click();
     await expect(view(page).locator('[data-action="signin"]')).toBeVisible();
@@ -43,21 +44,23 @@ test.describe('JOB 34 Studio: header buttons', () => {
     expect(await page.evaluate(() => localStorage.getItem('st-idea'))).toBeNull();
   });
 
-  test('390px More menu: Refresh reads again, New opens the brief, Sign out signs out', async ({ page, guard }) => {
+  test('390px top bar (it replaced the More menu): Refresh reads again, New opens the brief, Sign out (inside Look) signs out', async ({ page, guard }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await HUBS.studio.open(page, guard);
-    const more = page.locator('#moreMenu');
+    await expect(page.locator('#moreBtn, #moreMenu')).toHaveCount(0);
+    const head = page.locator('header');
     const before = stateReads(guard);
-    await page.locator('#moreBtn').click();
-    await more.locator('[data-action="refresh"]').click();
+    await head.getByRole('button', { name: 'Refresh', exact: true }).click();
     await expect.poll(() => stateReads(guard)).toBeGreaterThan(before);
-    await expect(more).toBeHidden(); // a press outside the menu's own buttons closes it
-    await page.locator('#moreBtn').click();
-    await more.locator('a[href="#/new"]').click();
+    await head.getByRole('link', { name: 'New idea', exact: true }).click();
     await expect(view(page)).toHaveAttribute('data-view', 'new');
-    await page.locator('#moreBtn').click();
-    await more.locator('[data-action="signout"]').click();
+    await expect(head.getByRole('button', { name: 'Sign out', exact: true })).toBeHidden();
+    await head.getByRole('button', { name: 'Look', exact: true }).click();
+    const look = page.locator('#lookMenu');
+    await expect(look).toBeVisible();
+    await look.getByRole('button', { name: 'Sign out', exact: true }).click();
     await expect(view(page).locator('[data-action="signin"]')).toBeVisible();
+    await expect(look).toBeHidden(); // a press outside the menu's own buttons closes it
   });
 });
 

@@ -100,7 +100,7 @@ test.describe('Home sign-in: the paths around the button', () => {
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
   });
 
-  test('the Refresh button reads Drive again and shows "Reading…" while it does', async ({ page, guard }) => {
+  test('the Refresh button reads Drive again; while it does the button is off and the read time says "Reading…"', async ({ page, guard }) => {
     await page.goto('./');
     await signIn(page);
     const before = guard.world.calls.length;
@@ -109,12 +109,15 @@ test.describe('Home sign-in: the paths around the button', () => {
     await page.route(/^https:\/\/www\.googleapis\.com\/drive\/v3\/drives/, async (route) => { await held; return route.fallback(); });
     await page.locator('#refreshBtn').click();
     await expect(page.locator('#refreshBtn')).toBeDisabled();
-    await expect(page.locator('#refreshBtn')).toHaveText('Reading…');
+    // The top bar's Refresh is an icon (Lisa's pick A): its name stays "Refresh"; the read time says what is happening.
+    await expect(page.locator('#refreshBtn')).toHaveAccessibleName('Refresh');
+    await expect(page.locator('#refreshBtn')).toHaveText('');
     await expect(page.locator('#readStamp')).toHaveText('Reading…');
     release();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
     await expect(page.locator('#refreshBtn')).toBeEnabled();
-    await expect(page.locator('#refreshBtn')).toHaveText('Refresh');
+    await expect(page.locator('#refreshBtn')).toHaveAccessibleName('Refresh');
+    await expect(page.locator('#refreshBtn')).toHaveText('');
     expect(guard.world.calls.length).toBeGreaterThan(before);
   });
 });

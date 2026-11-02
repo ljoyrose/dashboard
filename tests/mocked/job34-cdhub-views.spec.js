@@ -191,11 +191,12 @@ test.describe('CD Hub: slow and failed reads', () => {
   });
 });
 
-test.describe('CD Hub: phone header More menu', () => {
+test.describe('CD Hub: phone top bar Look menu (it replaced the More menu, Lisa\'s pick A)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
-  test('More opens its menu; Escape and a tap outside both close it', async ({ page, guard }) => {
+  test('Look opens its menu; Escape and a tap outside both close it', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
-    const btn = page.locator('#moreBtn'), menu = page.locator('#moreMenu');
+    await expect(page.locator('#moreBtn, #moreMenu')).toHaveCount(0);
+    const btn = page.locator('#houseLookBtn'), menu = page.locator('#houseLook');
     await btn.click();
     await expect(menu).toBeVisible();
     await expect(btn).toHaveAttribute('aria-expanded', 'true');

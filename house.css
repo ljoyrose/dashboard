@@ -35,6 +35,42 @@ a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; 
 /* 3 The frame: deep dark top bar; its buttons wear the frame's own light line. */
 header { background: var(--frame); color: var(--frame-ink); }
 header .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
+/* 3a The top bar (Lisa's pick A, 2 Nov 2026): ONE row, --house-head high on every page, desktop and phone; it never wraps or grows.
+   Left to right: Home icon (not on home), the hub's dot + name (cut short with ... when there is no room), a spacer, the read time
+   (desktop), then icon-only buttons (Search, Refresh, Look, Sign out), each with a name for screen readers. Sign in stays a word
+   button. On a phone (600px or less) the read time and Sign out leave the bar and show inside the Look menu (toolkit.js builds
+   the menu and the one 24px outline icon set). */
+header.house-head { height: var(--house-head); min-height: var(--house-head); max-height: var(--house-head); padding-top: 0; padding-bottom: 0; }
+.house-row { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--house-head-space); height: var(--house-head); padding-top: 0; padding-bottom: 0; min-width: 0; }
+.house-row > * { flex: none; }
+.house-row > h1 { flex: 0 1 auto; min-width: 0; margin: 0; font-size: var(--house-head-name); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--frame-ink); }
+.house-row > h1 a { color: var(--frame-ink); text-decoration: none; }
+.house-row > h1 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: middle; position: relative; top: -2px; }
+.house-row > .house-sp { flex: 1 1 0; min-width: 0; }
+.house-row .house-read { font-size: var(--house-read-size); font-weight: 400; white-space: nowrap; color: var(--frame-ink); }
+.house-row .house-read:empty { display: none; }
+.house-row .btn { white-space: nowrap; }
+.btn.house-ib { width: var(--house-btn); min-width: var(--house-btn); height: var(--house-btn); padding: 0; gap: 0; justify-content: center; }
+.house-ib > svg { width: var(--house-icon); height: var(--house-icon); flex: none; fill: none; stroke: currentColor; stroke-width: var(--house-icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
+.lookwrap { position: relative; display: inline-flex; flex: none; }
+.house-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; width: min(var(--house-menu-w), calc(100vw - 32px)); background: var(--card); color: var(--ink);
+  border: var(--house-line) solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--house-pad); display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: 16px; }
+.house-menu[hidden] { display: none !important; }
+.house-menu .lrow { display: flex; flex-direction: column; gap: 4px; }
+.house-menu .flab { font-size: var(--house-min); font-weight: 600; color: var(--muted); }
+.house-menu .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.house-menu .seg button { background: var(--card); padding: 0 12px; display: inline-flex; align-items: center; }
+.house-menu .house-mread { margin: 0; font-size: var(--house-read-size); color: var(--muted); }
+header .btn.house-mitem { color: var(--ink); background: var(--card); border-color: var(--press); justify-content: flex-start; gap: 8px; }
+header .btn.house-mitem > svg { width: var(--house-icon); height: var(--house-icon); flex: none; }
+@media (hover: hover) { header .btn.house-mitem:hover { outline-color: var(--sel-bd); background-color: var(--hov); } }
+header [role="dialog"] :focus-visible { outline-color: var(--ink); }
+.house-phone { display: none !important; }
+@media (max-width: 600px) {
+  .btn.house-ib { width: var(--house-btn-phone); min-width: var(--house-btn-phone); height: var(--house-btn-phone); }
+  .house-row .house-read, .house-row [data-house-read], .house-row :is([data-action="signout"], [data-signout]) { display: none !important; }
+  .house-phone { display: flex !important; }
+}
 
 /* 4 Everything you press: one control line, 1px, 12px corners, 14px / 600, 36px (44px on a phone). Never starts out ink. */
 .btn, button.pill, a.pill, button.chip, a.chip, .ch, .fbtn, .achip, .more, .undo, .lk, .ico, .copy, .flagb, .subnav a, .seg button, .vsw button {

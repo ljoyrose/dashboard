@@ -28,13 +28,16 @@ const ROUND = [
 test.describe('Marketplace (JOB 34)', () => {
   test('Sign out in the header: back to the sign-in card; tabs, Refresh and the read time go', async ({ page }) => {
     await HUBS.marketplace.open(page);
-    await expect(page.locator('#signin')).toHaveText('Sign out');
+    // Signed in, the one header button is the Sign out icon: named for screen readers, no words on screen (Lisa's pick A).
+    await expect(page.locator('#signin')).toHaveAccessibleName('Sign out');
+    await expect(page.locator('#signin')).toHaveText('');
     await page.locator('#signin').click();
     await expect(page.locator('#view h2')).toHaveText('Sign in to see what needs you');
     await expect(page.locator('#tabs')).toBeHidden();
     await expect(page.locator('#refresh')).toBeHidden();
     await expect(page.locator('#readAt')).toHaveText('');
     await expect(page.locator('#signin')).toHaveText('Sign in');
+    await expect(page.locator('#signin')).toHaveAccessibleName('Sign in');
   });
 
   test('an unknown address opens Home; the Marketplace title goes Home; ← Dashboard points at the main dashboard', async ({ page }) => {
@@ -172,11 +175,11 @@ test.describe('Marketplace (JOB 34)', () => {
     expect(await sideScroll(page), 'numbers').toBe(false);
   });
 
-  test('keyboard: Tab reaches Refresh, Sign out, ← Dashboard and all five tabs', async ({ page }) => {
+  test('keyboard: Tab reaches Dashboard, Refresh, Look, Sign out and all five tabs', async ({ page }) => {
     await HUBS.marketplace.open(page);
     await page.locator('body').click({ position: { x: 1, y: 1 } });
     const seen = await tabWalk(page, 50);
-    for (const name of ['Refresh', 'Sign out', 'Dashboard home', 'Home', 'Do now', 'Decide', 'Reply', 'Insights']) {
+    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Home', 'Do now', 'Decide', 'Reply', 'Insights']) {
       expect(seen.some((s) => s === name || s.startsWith(name)), `Tab reaches ${name}: ${seen.join(' | ')}`).toBe(true);
     }
   });

@@ -70,6 +70,13 @@
   --house-tab-bar: 18px; --house-tab-bar-on: 40px; --house-tab-bar-phone: 26px; --house-tab-bar-h: 4px;   /* bottom-tab colour bar: rest / hover and selected */
   --house-focus: 2px;              /* keyboard focus ring */
   --house-btn: 36px; --house-btn-phone: 44px;      /* everything you press */
+  --house-head: 56px;              /* the top bar (Lisa's pick A, 2 Nov): one row, this high on every page, desktop and phone */
+  --house-head-space: 8px;         /* between the things in the top bar */
+  --house-head-name: 20px;         /* the hub's name in the top bar */
+  --house-read-size: 14px;         /* the small read time in the top bar */
+  --house-icon: 20px;              /* an icon inside an icon-only button (24px outline icons, stroke 2) */
+  --house-icon-stroke: 2;
+  --house-menu-w: 300px;           /* the shared Look menu */
   --house-pill: 24px;              /* read-only pills (tags, dates, stamps) */
   --house-count-w: 30px; --house-count-h: 22px; --house-count-r: 11px; --house-count-lh: 20px; --house-count-pad: 3px;
   --house-font: Lexend, system-ui, sans-serif; --house-min: 13px; --house-press-size: 14px;

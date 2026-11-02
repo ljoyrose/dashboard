@@ -355,7 +355,10 @@ test.describe('Home: phone (390 x 844)', () => {
     await goTab(page, 'map', 'Dashboard');
     const n = page.locator('#n-map');
     expect(await n.evaluate((e) => getComputedStyle(e).position)).toBe('static');
-    for (const sel of ['header #refreshBtn', 'header #signOutBtn', '#urgentOne a.btn']) {
+    // On a phone Sign out leaves the top bar for the Look menu (Lisa's pick A, 2 Nov); both are 44px there.
+    await expect(page.locator('header #signOutBtn')).toBeHidden();
+    await page.locator('header #houseLookBtn').click();
+    for (const sel of ['header #refreshBtn', 'header #houseLookBtn', '#houseLook [data-house-menu-signout]', '#urgentOne a.btn']) {
       const el = page.locator(sel);
       if (await el.count()) expect((await el.boundingBox()).height, sel).toBeGreaterThanOrEqual(44);
     }
