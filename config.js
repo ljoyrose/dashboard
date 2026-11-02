@@ -36,7 +36,11 @@
       cfFolderId: '1cTqxH8ROs0Fj2u5zDdZwaBsJmSrRxi_A',
       readFirstId: '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L',
       dbxFolderId: '0AEqV6Ky2jpmDUk9PVA', // Drive folder holding DROPBOX-TOTALS.json
-      dbxTotalsName: 'DROPBOX-TOTALS.json'
+      dbxTotalsName: 'DROPBOX-TOTALS.json',
+      // Bin page Log: the tidy engines' run history (RUN-LOG.csv, written by the private repo; columns in index.html
+      // above loadRunLog and in README.md). Placeholder: empty until the folder exists. Empty = "No runs logged yet".
+      runLogFolderId: '',
+      runLogName: 'RUN-LOG.csv'
     },
     cdhub: {
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
@@ -71,12 +75,27 @@
       requestsFolderId: '',
       live: false
     },
+    // Actions minutes card (Home). Reads ACTIONS-MINUTES.json (counts only) from folderId with Lisa's sign-in; the file is
+    // written by the private ACTIONS-MINUTES collector (Apps Script in Drive, read-only GitHub token in its Script Properties).
+    // folderId empty = the card shows invented example data with the EXAMPLE stamp and reads nothing.
+    // repoLabels: short labels only (the collector maps real repos to these); they set the row order. Never real repo names.
+    actionsMinutes: {
+      folderId: '',
+      fileName: 'ACTIONS-MINUTES.json',
+      freeMinutes: 2000,
+      amber: 0.75,
+      red: 0.90,
+      staleDays: 2,
+      repoLabels: [],
+      usageUrl: 'https://github.com/settings/billing/usage'
+    },
     marketplace: {
       openWorkId: '1ShYbYmY8W-MEWqm9kHFsIcS5uR4b2SG00uXle_yL76U', // RR_OPEN-WORK (00 AI Commons)
       tab: 'Marketplace',
       listingsFileId: '1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW', // RR_LISTINGS.csv: read only, for the second photo on "Same item?" cards
       wakeFolderId: '',
       wakeFile: 'MKT-WAKE-WEBAPP.json',
+      ideasRequestsFolderId: '', // Drive folder for Product ideas request files (MKT-IDEA-REQ-*.json). Empty = the Add idea form will not send.
       live: false
     },
     // App Factory page (factory/): reads af-state.json from logsFolderId (written by AF-ENGINE); writes request files into
@@ -93,6 +112,17 @@
       homeFolderId: '1HKAMkAER7ft-xMJYUQGzi_v6jV-3vQwk', // LD > *00 Current: the web app writes its address file here when first opened
       webAppFile: 'BIN-GUARD-WEBAPP.json',
       webAppUrl: '' // optional: paste the /exec address here instead. Left empty, the page reads it from webAppFile.
+    },
+    // Projects Hub (Apps Script web app in the private projects-hub repo). Lisa OK'd the address here (1 Nov 2026): it
+    // grants nothing on its own; Google limits the web app to her Workspace and the hub lets in only its EDITORS list.
+    // The /a/macros/puppyclassroom.com/ form makes Google use the work account (the plain form loops when Chrome's
+    // first account is a personal one, 2 Nov 2026).
+    // sheetId: the hub's own Sheet ("Projects Hub TEST", lisa@puppyclassroom.com). The Dashboard reads its INDEX tab with
+    // Lisa's read-only sign-in for the Projects tile's 3 numbers; it never writes. Empty = the tile shows no numbers.
+    projectsHub: {
+      sheetId: '1ssFH6uTD6uEYbxio6iA3BlP9Op3l2d7MRf_ktusMcTU',
+      tab: 'INDEX',
+      webAppUrl: 'https://script.google.com/a/macros/puppyclassroom.com/s/AKfycbx42JNrRiolxbf5JJEqnOwXy_GgYelx-6GKhQaNuQMyUsTW5e89P2VZBANP_yGSOxgj/exec'
     },
     money: {
       owner: 'lisa@puppyclassroom.com',

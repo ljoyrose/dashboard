@@ -1,5 +1,7 @@
 // Main dashboard: https://ljoyrose.github.io/dashboard/
 const { test, expect, buildWorld } = require('../support/test');
+const { tabClick } = require('../support/tabs');
+const { at } = require('../support/site');
 
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled(); // the page found the (pretend) Google script
@@ -12,13 +14,13 @@ test.describe('Main dashboard: loads', () => {
   test('page loads with HTTP 200 and shows only a sign-in button when signed out', async ({ page }) => {
     const res = await page.goto('./');
     expect(res.status()).toBe(200);
-    await expect(page).toHaveTitle(/Lisa Dashboard/);
+    await expect(page).toHaveTitle(/^Dashboard$/); // "Lisa Dashboard" became "Dashboard" (Lisa, 2 Nov: the phone cut it off)
     await expect(page.locator('#signInBtn')).toBeVisible();
     await expect(page.locator('#readStamp')).toHaveText('Not signed in');
     // README: signed out shows no tabs, labels or data
     await expect(page.locator('#mainNav')).toBeHidden();
     await expect(page.locator('#hereBox')).toBeHidden();
-    await expect(page.locator('#pageFoot')).toBeHidden();
+    await expect(page.locator('#pageFoot')).toHaveCount(0); // the footer explainer is gone (Lisa, 2 Nov)
   });
 
   test('sign-in button wakes up once the (pretend) Google script has loaded', async ({ page }) => {
@@ -39,14 +41,16 @@ test.describe('Main dashboard: sign-in (mocked)', () => {
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
 
-  test('after sign-in the Dashboard shows and the nav, header and footer appear', async ({ page }) => {
+  test('after sign-in the Dashboard shows and the nav and header appear; no footer explainer (Lisa, 2 Nov)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
     await expect(page.locator('#view')).toHaveAttribute('data-view', 'map');
     await expect(page.locator('#signOutBtn')).toBeVisible();
     await expect(page.locator('#signInBtn')).toBeHidden();
-    await expect(page.locator('#pageFoot')).toBeVisible();
+    await expect(page.locator('#mainNav')).toBeVisible();
+    await expect(page.locator('#pageFoot')).toHaveCount(0);
+    await expect(page.locator('body')).not.toContainText('Shared drives only. Browsing is read-only');
   });
 
   test('keeps only the shared sign-in, one key in this browser (no cookies, no refresh token)', async ({ page, context }) => {
@@ -90,9 +94,9 @@ test.describe('Main dashboard: navigation', () => {
       await page.goto('./');
       await signIn(page);
       if (how === 'tab') {
-        await page.locator(`#mainNav a[data-nav="${route}"]`).click();
+        await tabClick(page, `#mainNav a[data-nav="${route}"]`);
       } else {
-        await page.locator('#mainNav a[data-nav="drives"]').click();
+        await tabClick(page, '#mainNav a[data-nav="drives"]');
         await expect(page.locator('#hereTitle')).toHaveText('Drives');
         if (how === 'pin') await page.locator('#view [data-readfirst-pin] a').click();
         else await page.locator('#view nav.subnav a', { hasText: new RegExp(`^${label}$`) }).click();
@@ -107,9 +111,9 @@ test.describe('Main dashboard: navigation', () => {
   test('back button returns to the previous section (sections live in the URL)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await page.locator('#mainNav a[data-nav="bin"]').click();
+    await tabClick(page, '#mainNav a[data-nav="bin"]');
     await expect(page.locator('#hereTitle')).toHaveText('Bin');
-    await page.locator('#mainNav a[data-nav="drives"]').click();
+    await tabClick(page, '#mainNav a[data-nav="drives"]');
     await expect(page.locator('#hereTitle')).toHaveText('Drives');
     await page.goBack();
     await expect(page.locator('#hereTitle')).toHaveText('Bin');
@@ -215,9 +219,17 @@ test.describe('Main dashboard: reads Drive (mocked)', () => {
 });
 
 test.describe('Main dashboard: Money tile and links to /money/', () => {
+  const openMoney = async (page) => {
+    await expect(page.locator('#view #moneyTile')).toHaveCount(0);
+    await page.locator('#mainNav [data-house-more]').click();
+    await page.locator('#houseMore a[href="#/money"]').click();
+    await expect(page.locator('#view')).toHaveAttribute('data-view', 'money');
+    await expect(page.locator('#view #moneyTile')).toBeVisible();
+  };
   test('Money tile shows each entity separately, with cash, for Lisa', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
+    await openMoney(page); // the Money card moved off Main into More (Lisa, 2 Nov)
     const tile = page.locator('#view');
     await expect(tile).toContainText('TESTCO');
     await expect(tile).toContainText('TESTPERS');
@@ -229,22 +241,24 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
   test('"Open Money Hub" link goes to /money/ and that page loads', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
+    await openMoney(page); // the Money card moved off Main into More (Lisa, 2 Nov)
     const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a', { hasText: 'Open Money Hub' }).click()]); // opens in a new tab
-    await expect(tab).toHaveURL(/\/dashboard\/money\/$/);
+    await expect(tab).toHaveURL(at('money/'));
     await expect(tab.locator('h1')).toContainText('Money Hub');
   });
 
-  test('Key projects "Money Hub" tile goes to /money/', async ({ page }) => {
+  test('the Money hub tile goes to /money/', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a.keytile[href="money/"]').click()]); // opens in a new tab
-    await expect(tab).toHaveURL(/\/dashboard\/money\/$/);
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view #hubTiles .hubtile a.hgo[href="money/"]').click()]); // opens in a new tab
+    await expect(tab).toHaveURL(at('money/'));
     await expect(tab).toHaveTitle(/Money Hub/);
   });
 
   test('clicking an entity on the tile opens that entity in the Money Hub', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
+    await openMoney(page); // the Money card moved off Main into More (Lisa, 2 Nov)
     const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a.ment', { hasText: 'TESTCO' }).click()]); // opens in a new tab
     await expect(tab).toHaveURL(/\/money\/#\/e\/TESTCO$/);
   });
@@ -252,6 +266,7 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
   test('a to-do on the tile links to that row in the Money Hub', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
+    await openMoney(page); // the Money card moved off Main into More (Lisa, 2 Nov)
     const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a[href^="money/#/register/"]').first().click()]); // opens in a new tab
     await expect(tab).toHaveURL(/\/money\/#\/register\/R001$/);
   });
@@ -259,7 +274,7 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
   test('the Money Hub back link returns to the dashboard', async ({ page }) => {
     await page.goto('money/');
     await page.getByRole('link', { name: /Dashboard/ }).click();
-    await expect(page).toHaveURL(/\/dashboard\/(#\/map)?$/); // the dashboard adds #/map itself
+    await expect(page).toHaveURL(at('(#/map)?')); // the dashboard adds #/map itself
     await expect(page.locator('#signInBtn')).toBeVisible();
   });
 });
@@ -269,10 +284,10 @@ test.describe('Main dashboard: Bin', () => {
     await page.goto('./#/bin');
     await signIn(page);
     const view = page.locator('#view');
-    await expect(page.locator('#sweepCard h3')).toHaveText('Google Drive: ZZ_DELETE_ files ready to bin');
+    await expect(page.locator('#sweepCard h3')).toHaveText('Ready to bin');
     await expect(view.locator('[data-bin-list="rename"]')).toContainText('ZZ_sample-old-copy.txt');
     await expect(view.locator('[data-bin-list="rename"]')).toContainText('ZZ_sample-dupe.txt');
-    await expect(view).toContainText('Ready (0)');
+    await expect(page.locator('#sweepCard')).toContainText('Nothing is ready to bin.');
     await expect(page.locator('[data-action="sweep"]')).toBeDisabled();
     // the archive file must not appear anywhere on the Bin page
     await expect(view).not.toContainText('RR_sample-archive.txt');
@@ -289,13 +304,13 @@ test.describe('Main dashboard: Bin', () => {
     const sweep = page.locator('[data-action="sweep"]');
     await expect(sweep).toBeDisabled();
     await page.locator('[data-action="selectall"][data-group="bin"]').click();
-    await expect(sweep).toContainText('Move selected (1)');
+    await expect(sweep).toContainText('Allow access, then bin (1)');
     await sweep.click(); // first click only asks for the extra (pretend) permission
-    await expect(page.locator('#view')).toContainText(/Bin actions on|Move selected \(1\)/);
+    await expect(page.locator('[data-action="sweep"]')).toContainText('Bin these (1)');
     await page.locator('[data-action="sweep"]').click();
     await expect.poll(() => dialogs.length).toBe(1);
-    expect(dialogs[0]).toMatch(/Move 1 selected item to the bin/);
-    expect(dialogs[0]).toMatch(/RR_ names are never included/);
+    expect(dialogs[0]).toMatch(/^Bin 1 file\? It goes to the shared-drive bin and can be restored for 30 days\./);
+    expect(dialogs[0]).toMatch(/Protected and unready files are never included/);
     expect(guard.world.calls.filter((c) => c.method === 'PATCH')).toEqual([]);
     expect(guard.world.byId('zz-del-1').trashed).toBe(false);
     expect(guard.world.byId('zz-1').trashed).toBe(false);
@@ -328,11 +343,11 @@ test.describe('Main dashboard: Bin', () => {
     await expect(card).toContainText('Waiting to delete: 12 files (3.5 GB)');
     await expect(card).toContainText('Duplicates found: 40 files');
     await expect(card).toContainText('scan not finished');
-    const job = card.locator('a', { hasText: 'Delete marked files from DROPBOX only' });
+    const job = card.locator('a', { hasText: 'Delete marked files from Dropbox only' });
     await expect(job).toHaveAttribute('href', /^https:\/\/github\.com\/ljoyrose\/dropbox-cleanup\/actions\/workflows\//);
     await expect(job).toHaveAttribute('target', '_blank');
     await expect(job).toHaveAttribute('rel', /noopener/);
-    await expect(card.locator('a', { hasText: 'Empty DROPBOX trash' })).toHaveAttribute('href', 'https://www.dropbox.com/deleted_files');
+    await expect(card.locator('a', { hasText: 'Open Dropbox Deleted files (your own step)' })).toHaveAttribute('href', 'https://www.dropbox.com/deleted_files');
   });
 
   test('Dropbox line says nothing is published when no totals file exists, and the Dropbox links are present', async ({ page }) => {
