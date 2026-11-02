@@ -10,17 +10,25 @@ const signIn = async (page) => {
 const openBin = async (page) => {
   await page.goto('./#/bin');
   await signIn(page);
-  await expect(page.locator('#binCard .cardhead, #binCard summary .state').first()).not.toContainText('Reading');
-  await expect(page.locator('[data-action="foldjump"][data-key="bins"] .n')).not.toHaveText('reading…');
+  // The Bin page has no index strip since TidyUp stage 5 (05fc972); wait for the Already in the bin read to finish.
+  await expect(page.locator('#binCard > summary .state')).toHaveClass(/st-ok|st-empty/);
+};
+// "Already in the bin" is folded closed by design; open it the way a person would.
+const openBins = async (page) => {
+  await page.locator('#binCard > summary').click();
+  await expect(page.locator('#binCard')).toHaveAttribute('open', '');
 };
 
 test.describe('Bin: index and sections', () => {
-  test('each index button opens its section and puts the keyboard on that section\'s title', async ({ page }) => {
+  test('each "Needs you now" button opens its section and puts the keyboard on that section\'s title', async ({ page }) => {
     await openBin(page);
-    for (const key of ['check', 'sweep', 'dropbox', 'bins', 'access']) {
+    const keys = await page.locator('#needsNow [data-action="foldjump"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-key')));
+    expect(keys.slice(0, 2)).toEqual(['sweep', 'check']);
+    expect(keys).toHaveLength(3);
+    for (const key of keys) {
       // Close it first, so the button has something to do.
       await page.evaluate((k) => { const d = document.querySelector('[data-fold="' + k + '"]'); if (d) d.open = false; }, key);
-      await page.locator(`[data-action="foldjump"][data-key="${key}"]`).click();
+      await page.locator(`#needsNow [data-action="foldjump"][data-key="${key}"]`).click();
       const fold = page.locator(`details[data-fold="${key}"]`);
       await expect(fold, key + ' opens').toHaveAttribute('open', '');
       await expect(fold.locator('summary').first(), key + ' title has focus').toBeFocused();
@@ -29,6 +37,7 @@ test.describe('Bin: index and sections', () => {
 
   test('a drive button in the bins list opens that drive\'s bin and lists what was binned', async ({ page }) => {
     await openBin(page);
+    await openBins(page);
     const btn = page.locator('#binCard [data-action="foldjump"][data-key="bin-drv-alpha1"]');
     await expect(btn).toContainText('Test Drive Alpha');
     await btn.click();
@@ -45,6 +54,7 @@ test.describe('Bin: index and sections', () => {
       guard.world.file('trash-SAMPLE-' + i, 'binned-sample-' + i + '.txt', 'invented', { parents: [id], driveId: id, mimeType: 'text/plain', trashed: true, trashedTime: '2026-03-08T09:00:00.000Z' });
     }
     await openBin(page);
+    await openBins(page);
     const box = page.locator('#binFilter');
     await expect(box).toHaveAttribute('placeholder', /Find a shared drive \(9\)/);
     const buttons = page.locator('#binCard .index [data-action="foldjump"]');
@@ -63,7 +73,8 @@ test.describe('Bin: index and sections', () => {
     await openBin(page);
     await expect(page.locator('#binCard')).toContainText('Every shared drive has an empty bin.');
     await expect(page.locator('#binCard')).toContainText('3 shared drives have an empty bin');
-    await expect(page.locator('[data-action="foldjump"][data-key="bins"] .n')).toHaveText('0 in the bin');
+    // The "0 in the bin" index count went with the index strip; no drive buttons is the same fact.
+    await expect(page.locator('#binCard [data-action="foldjump"]')).toHaveCount(0);
   });
 
   test('Drive refuses the Bin read: the sections say "Read failed" and nothing can be ticked or moved', async ({ page, guard, allowedConsole }) => {
