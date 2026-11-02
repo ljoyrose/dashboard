@@ -112,13 +112,13 @@
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
 
   /* Counts: ONE fixed box so 1 and 2 digits match (30 x 22, radius 11); only 3+ digits grow (.wide). Read-only: no hover.
-     Tab counts: ../house.css section 6; "needs you" counts in the page are a rose ring + tint. A count of 0 shows no pill. */
+     Tab counts: ../house.css section 6; "needs you" counts in the page are a rose ring only, no fill. A count of 0 shows no pill. */
   /* The count pill itself: ../house.css; the counts inside Filter and the fold titles use the same box. */
   .fbtn .n, .fdet > summary .n { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: var(--house-count-w); height: var(--house-count-h); padding: 0 var(--house-count-pad);
     border: 1px solid var(--ctl); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; line-height: var(--house-count-lh); color: var(--ink); background: transparent; white-space: nowrap; font-variant-numeric: tabular-nums; }
   .cnt, .fbtn .n, .fdet > summary .n { flex: none; vertical-align: middle; }
   .fbtn .n.wide { width: auto; min-width: 30px; padding: 0 6px; }
-  .cnt.need { border-color: var(--r-risk); background: var(--t-risk); }
+  .cnt.need { border-color: var(--r-risk); background: transparent; }   /* ring only, no fill */
   .cnt:empty, .fbtn .n:empty, .fdet > summary .n:empty { display: none; }
   @media (max-width: 600px) {
     .btn, button.pill, a.pill, .fbtn, .ch, .more, .undo, .copy, .tick, .stat, label.date, a.chip, a.need, details.arch > summary, .fdet > summary, .sbox, .fin, .ask input, .ask select { min-height: 44px; }
@@ -153,7 +153,7 @@
 
   /* Rooms: a white card on the soft line, its stage colour as a 3px bar on the left (as Links). */
   .rooms { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-  .room { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 12px 12px 12px 15px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; box-shadow: inset 3px 0 0 var(--c); }
+  .room { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 12px 12px 12px 15px; display: flex; flex-direction: column; gap: 8px; min-height: 96px; --sc: var(--c); }   /* its colour bar: ../house.css section 10 */
   .room h2 { font-size: var(--fs-head); margin: 0; display: flex; gap: 8px; align-items: center; }
   .room .stn { font-size: var(--fs-small); color: var(--muted); margin-top: -4px; }
   .room h2 .ct { margin-left: auto; }
@@ -502,7 +502,7 @@
       enginePill() + ckPill() + '</div>' + docsStrip() }) + (A.length ? '' : emptyBox()) + '<div class="rooms">';
     ROOMS.forEach(function (r) {
       var inRoom = A.filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
-      html += '<section class="room" style="--c:' + col(r.slot) + '"><h2><a class="rlink" href="#/room/' + r.key + '"><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '</a><span class="ct">' + cnt(inRoom.length) + '</span></h2><span class="stn">' + esc(r.st.join(' · ')) + '</span>' +
+      html += '<section class="room house-lbar" style="--c:' + col(r.slot) + '"><h2><a class="rlink" href="#/room/' + r.key + '"><span class="dot"></span>' + r.name + (r.paid ? ' ' + ic('coin') : '') + '</a><span class="ct">' + cnt(inRoom.length) + '</span></h2><span class="stn">' + esc(r.st.join(' · ')) + '</span>' +
         inRoom.map(chipOf).join('') + (r.key === 'reception' ? newIdea() : '') + '</section>';
     });
     return html + '</div>';
@@ -740,7 +740,7 @@
     // Status: an icon in ClickUp's colour, shown only when it isn't plain "to do".
     var SI = { 'to do': 'circle-dashed', doing: 'progress', 'waiting lisa': 'player-pause', blocked: 'hand-stop', done: 'circle-check', cancelled: 'circle-x' };
     var stat = t._k === 'apps' || /^to do$/i.test(t.status) ? '' : '<button class="ico" type="button" data-panel="status" data-id="' + esc(t.id) + '" aria-label="Status ' + esc(cap(t.status)) + '" title="' + esc(cap(t.status)) + '" style="color:' + esc(t.color || 'inherit') + '"><i class="ti ti-' + (SI[String(t.status).toLowerCase()] || 'circle') + '"></i></button>';
-    var icons = iconsOf(t, kind).map(function (x) { return '<button class="ico' + (openPanel && openPanel.id === t.id && openPanel.k === x[0] ? ' on' : '') + '" type="button" data-panel="' + x[0] + '" data-id="' + esc(t.id) + '" aria-label="' + x[2] + '" style="--hc:var(--ljr-' + x[4] + '-text)">' + x[1] + (x[3] ? '<i class="new"></i>' : '') + '</button>'; }).join('');
+    var icons = iconsOf(t, kind).map(function (x) { return '<button class="ico' + (openPanel && openPanel.id === t.id && openPanel.k === x[0] ? ' on' : '') + '" type="button" data-panel="' + x[0] + '" data-id="' + esc(t.id) + '" aria-label="' + x[2] + '" style="--hc:var(--ljr-' + x[4] + '-icon)">' + x[1] + (x[3] ? '<i class="new"></i>' : '') + '</button>'; }).join('');
     var mineQ = asked[t.id] ? '<div class="why q">✎ ' + esc(asked[t.id].text) + ' · ✓ ' + hm(asked[t.id].at) + '</div>' : '';
     var date = '<label class="date' + (overdue(t) ? ' over' : soon(t) ? ' soon' : '') + '">' + (t.due ? dmy(t.due) : '<i class="ti ti-calendar"></i>') + '<input type="date" data-due="' + esc(t.id) + '" value="' + (t.due ? iso(t.due) : '') + '" aria-label="Due date"></label>';
     var drive = (String(t.desc).match(/https:\/\/drive\.google\.com\/file\/d\/[\w-]+/) || [])[0];

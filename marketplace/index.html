@@ -87,8 +87,7 @@
   .banner.info { border-color: var(--line); background: var(--surface); }
   .card { position: relative; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 3px var(--shade); } /* the house card (../house.css): 12px inside */
   /* A card's colour is a thin bar on its left edge, never a thick border or a fill. Rose = needs you now, green = right. */
-  .card.acc2::before, .card.acc5::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: var(--house-bar); border-radius: var(--radius); background: var(--ljr-2); } /* the 3px left colour bar */
-  .card.acc5::before { background: var(--ljr-5); }
+  .card.acc2 { --sc: var(--ljr-2); } .card.acc5 { --sc: var(--ljr-5); } /* the 3px left colour bar: ../house.css section 10 (.house-lbar, full height, curved) */
   .card.empty::before { content: none; }
   /* The "Next" card on Home: the one thing to do now, white with a 1px ink edge. */
   .card.next { border-color: var(--ink); }
@@ -508,7 +507,7 @@
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
     var nx = opts && opts.next;
-    var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
+    var h = '<div class="card ' + (red ? 'acc2 house-lbar' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
       '<div class="item">' + (isPair ? '' : thumb(d.photo, r.category)) + '<div class="t">' + nameLine(r, d) + '<div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([d.price, d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier].filter(Boolean).join(' · ')) + '</div>' + (r.section === 'post' && /^PO\|/.test(r.key) ? orderLine(r, d) : '') +
       postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m">' + datePill(d) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
       (isPair ? pair(r, d) : '') + (r.section === 'post' ? postGuide(r, d) : '') + (d.why && d.kind !== 'which_parcel' ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
@@ -710,7 +709,7 @@
     var h = '<p class="needs">Suppliers</p><p class="hint">Tap the account number to copy it, the phone to call. Change terms with Settings.</p>';
     if (!list.length) return h + '<div class="card"><p class="what">Suppliers appear after engine v11 is pasted and set up.</p></div>';
     list.forEach(function (r) { var d = detail(r);
-      h += '<div class="card' + (d.missing && d.missing.length ? ' acc2' : '') + '"><h2>' + esc(r.title) + '</h2>' +
+      h += '<div class="card' + (d.missing && d.missing.length ? ' acc2 house-lbar' : '') + '"><h2>' + esc(r.title) + '</h2>' +
         '<div class="acts">' + (d.account_no ? '<button class="btn" type="button" data-copycode="' + esc(d.account_no) + '">Account ' + esc(d.account_no) + '</button>' : '') +
         (/^[+\d ()-]{7,}$/.test(d.phone || '') ? '<a class="btn" href="tel:' + esc(String(d.phone).replace(/[^+\d]/g, '')) + '">Call ' + esc(d.phone) + '</a>' : '') +
         (/^[^@\s]+@[^@\s]+$/.test(d.order_email || '') ? '<a class="btn" href="mailto:' + esc(d.order_email) + '">Email orders</a>' : '') + linkBtn(d.website, 'Website') + '</div>' +
@@ -761,7 +760,7 @@
       return '<button class="chip" type="button" data-sfilter="' + c[0] + '" aria-pressed="' + (stockFilter === c[0]) + '">' + c[1] + '</button>'; }).join('') + '</div>';
     list.filter(function (r) { var d = detail(r); return stockFilter === 'all' || (stockFilter === 'low' && d.low) || (stockFilter === 'unknown' && d.unknown); }).forEach(function (r) {
       var d = detail(r);
-      h += '<div class="card stockrow' + (d.low ? ' acc2' : '') + '" data-text="' + esc((r.title + ' ' + d.item_sku + ' ' + (d.shelf || '')).toLowerCase()) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' +
+      h += '<div class="card stockrow' + (d.low ? ' acc2 house-lbar' : '') + '" data-text="' + esc((r.title + ' ' + d.item_sku + ' ' + (d.shelf || '')).toLowerCase()) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' +
         '<div class="m">' + esc([d.item_sku, d.shelf ? 'shelf ' + d.shelf : '', d.owner && d.owner !== 'Lisa' ? d.owner : '', d.listings + (d.listings === 1 ? ' listing' : ' listings')].filter(Boolean).join(' · ')) + '</div></div></div>' +
         '<div class="facts"><div class="fact"><span class="k">Have</span><span class="v' + (d.unknown ? ' red' : '') + '">' + (d.unknown ? '?' : esc(d.have)) + '</span></div><div class="fact"><span class="k">On order</span><span class="v">' + esc(d.on_order || 0) + '</span></div><div class="fact"><span class="k">Min</span><span class="v">' + (d.min === '' ? '–' : esc(d.min)) + '</span></div></div>' +
         priceLine(d);
@@ -911,13 +910,13 @@
   }
   function pageRound() {
     var items = byCat(rows.filter(function (r) { return r.section === 'round' && !r.applied_at; }));
-    if (!items.length) return '<p class="needs">Stock round</p><div class="card acc5"><h2>No round open</h2><p class="what">The monthly round starts on the first Monday. Until then, check or correct any count on the Stock page.</p><div class="acts"><a class="btn main" href="#/stock">Open Stock</a><a class="btn" href="#/insights">← Insights</a></div></div>';
+    if (!items.length) return '<p class="needs">Stock round</p><div class="card acc5 house-lbar"><h2>No round open</h2><p class="what">The monthly round starts on the first Monday. Until then, check or correct any count on the Stock page.</p><div class="acts"><a class="btn main" href="#/stock">Open Stock</a><a class="btn" href="#/insights">← Insights</a></div></div>';
     var shelves = []; items.forEach(function (r) { var s = detail(r).shelf || '?'; if (shelves.indexOf(s) < 0) shelves.push(s); });
     var at = Math.min(round.i || 0, shelves.length - 1), shelf = shelves[at];
     var h = '<p class="needs">Shelf ' + esc(shelf) + '</p><p class="what">' + (at + 1) + ' of ' + shelves.length + ' shelves. Tick if right, or type what is there.</p>';
     items.filter(function (r) { return (detail(r).shelf || '?') === shelf; }).forEach(function (r) {
       var d = detail(r), v = round[r.key] || {}, bad = v.n !== undefined && v.n !== '' && Number(v.n) !== Number(d.expected);
-      h += '<div class="card ' + (bad ? 'acc2' : (v.ok || r.answer ? 'acc5' : '')) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="m">expect ' + esc(d.expected) + '</div></div>' +
+      h += '<div class="card ' + (bad ? 'acc2 house-lbar' : (v.ok || r.answer ? 'acc5 house-lbar' : '')) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="m">expect ' + esc(d.expected) + '</div></div>' +
         (r.answer ? '' : '<button class="btn yes" type="button" data-tick="' + esc(r.key) + '" aria-label="Right">✓</button><input class="num" inputmode="numeric" data-count="' + esc(r.key) + '" value="' + esc(v.n === undefined ? '' : v.n) + '" aria-label="Counted">') + '</div>' +
         (bad ? '<div class="chips">' + ['sold', 'lost', 'found', 'damaged'].map(function (x) { return '<button class="chip' + (v.reason === x ? ' on' : '') + '" type="button" data-reason="' + esc(r.key) + '" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>' : '') +
         (r.answer ? sentLine(r) : '') + '</div>';

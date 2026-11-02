@@ -402,7 +402,8 @@
   /* List view: each row has a 3px bar in its stage colour down its left edge (the same colour as the column's bar); not on board cards. */
   .crow { position: relative; }
   .card .crow { padding-left: 14px; }
-  .card .crow::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--sc); }
+  .card .crow { --house-lbar-out: 0px; }   /* the bar itself: ../house.css section 10 (full height, 3px) */
+  .card .crow.house-lbar::before { border-radius: var(--radius); }   /* a row has square corners: the bar still curves like a card's */
   .col-list .crow::before { content: none; }
   /* Library: + New / Edit form and the Suggest box. */
   .libbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -1021,7 +1022,7 @@
   }
   function row(a, kind, withBrand) {
     var on = openPanel && openPanel.id === a.id, bo = brandOf(a), need = needOf(a), dp = datePill(a);
-    return '<div class="crow' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '" style="--sc:var(--ljr-' + stSlot(a.stage) + ')">' +
+    return '<div class="crow house-lbar' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '" style="--sc:var(--ljr-' + stSlot(a.stage) + ')">' +
       (withBrand || dp ? '<div class="bline">' + (withBrand ? brandMark(bo) + '<span class="bn">' + esc(bo.name) + '</span>' : '') + dp + '</div>' : '') +
       '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
       (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') + autoGateLine(a) +
