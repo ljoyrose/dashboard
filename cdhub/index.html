@@ -42,19 +42,18 @@
 html.text-lg body{zoom:1.12}html.text-xl body{zoom:1.25}html.space-roomy body{line-height:1.75}
 *{box-sizing:border-box}
 h1,h2,h3,h4,b,strong,th{font-weight:600}   /* two weights only: 400 and 600 */
-body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 Lexend,system-ui,sans-serif;-webkit-text-size-adjust:100%;hyphens:manual}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--fs-body)/1.5 var(--house-font);-webkit-text-size-adjust:100%;hyphens:manual}
 a{color:inherit;text-underline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .hidden{display:none!important}
-.wrap,.hin{max-width:1600px;margin:0 auto;padding-left:24px;padding-right:24px}
+.wrap,.hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
 .wrap{padding-bottom:140px}
-@media (max-width:600px){.wrap,.hin{padding-left:16px;padding-right:16px}}
 .ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}   /* line icons drawn in the page (no icon font) */
 
 /* ---- Frame: dark top bar ---- */
 header.top{background:var(--frame);color:var(--frame-ink);position:sticky;top:0;z-index:20}
 header h1 .dot{background:var(--ljr-5)}
-.live{font-size:13px;font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
+.live{font-size:var(--fs-small);font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
 .live.ok{border-color:var(--ljr-5)}.live.bad{border-color:var(--ljr-2)}
 header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
 @media (hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
@@ -63,40 +62,22 @@ header .btn:focus-visible{outline:2px solid var(--frame-ink);outline-offset:2px}
 /* Signed out, the frame is hidden by the sign-in gate and only Dashboard shows, on the page colour: use page ink. */
 html.dash-locked header .backhome{color:var(--ink);border-color:var(--press)}
 
-/* ---- Frame: dark bottom tab bar. Light buttons, no ring; hover/selected = the small colour bar above the label widens. ---- */
-nav#nav{z-index:20;display:grid;grid-template-columns:repeat(10,minmax(0,1fr)) repeat(2,minmax(0,.75fr));gap:8px;padding:8px 24px calc(10px + env(safe-area-inset-bottom,0px))}
-nav#nav:empty{display:none}
-/* The tab buttons and their widening colour bar: ../house.css (.house-tabs). */
-nav#nav button{font:inherit;font-size:13px}
-nav#nav button .ti{color:var(--muted)}
-nav#nav button .lab{line-height:1.2;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-nav#nav button .ls{display:none}
-nav#nav button.util .bar{visibility:hidden}
-nav#nav button:focus-visible{outline:2px solid var(--frame-ink);outline-offset:2px}
-nav#nav .cnt{position:absolute;top:6px;right:8px}
-@media (max-width:1180px){nav#nav{grid-template-columns:repeat(6,minmax(0,1fr))}}
-@media (max-width:900px){nav#nav button .lf{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}nav#nav button .ls{display:inline}}
-@media (max-width:544px){
- nav#nav{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;padding:6px 8px calc(8px + env(safe-area-inset-bottom,0px))}
- nav#nav button.util{display:none}
- nav#nav button{min-height:56px;flex-direction:row;flex-wrap:wrap;align-content:center;gap:2px 4px;padding:4px 2px}
- nav#nav button .ti{order:1}nav#nav .cnt{position:static;order:2}nav#nav button .lab{order:3;flex:0 0 100%}
- .wrap{padding-bottom:170px}
-}
+/* ---- Bottom tabs: ../house.css section 6 (the same bar on every page). ---- */
+@media (max-width:544px){ .wrap{padding-bottom:170px} }
 
 /* ---- Type ladder ---- */
-h2{font-size:26px;margin:24px 0 4px;line-height:1.3}
-h3{font-size:17px;margin:24px 0 12px;display:flex;align-items:center;gap:8px}
-.sub{color:var(--muted);font-size:15px;margin:0 0 16px;max-width:74ch}
-.mut{color:var(--muted);font-size:14px}
-.note{font-size:14px;color:var(--muted);margin:8px 0 12px}
-code{font-family:inherit;font-size:14px;font-variant-numeric:tabular-nums;background:transparent;padding:0}
+h2{font-size:var(--fs-head);margin:24px 0 4px;line-height:1.3}
+h3{font-size:var(--fs-head);margin:24px 0 12px;display:flex;align-items:center;gap:8px}
+.sub{color:var(--muted);font-size:var(--fs-body);margin:0 0 16px;max-width:74ch}
+.mut{color:var(--muted);font-size:var(--fs-small)}
+.note{font-size:var(--fs-small);color:var(--muted);margin:8px 0 12px}
+code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-nums;background:transparent;padding:0}
 
 /* ---- Cards: one white panel, 1px line, 12px step; read-only, so nothing happens on hover. ---- */
 .card{margin:0 0 12px;box-shadow:var(--shadow)} /* the house card (../house.css): 1px line, 12px inside */
 .card.dash{border-style:dashed}
-.card h4,.card .hx4{margin:0 0 12px;font-size:17px;font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:0;line-height:1.4}
-.card p{margin:0 0 8px;font-size:15px}.card p:last-child{margin-bottom:0}
+.card h4,.card .hx4{margin:0 0 12px;font-size:var(--fs-head);font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:0;line-height:1.4}
+.card p{margin:0 0 8px;font-size:var(--fs-body)}.card p:last-child{margin-bottom:0}
 /* attention / good cards: a small ring dot before the heading, never a coloured stripe */
 .card.acc2>:is(h4,.hx4):first-child::before,.card.acc5>:is(h4,.hx4):first-child::before{content:"";width:10px;height:10px;border-radius:50%;flex:none;border:1px solid var(--ljr-2);background:var(--ljr-2-tint)}
 .card.acc5>:is(h4,.hx4):first-child::before{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
@@ -104,7 +85,7 @@ code{font-family:inherit;font-size:14px;font-variant-numeric:tabular-nums;backgr
 
 /* ---- Pressables: ONE clear line (--press, 3:1), 1px, 12px, 36px (44px phone), 14px/600; never start ink. ---- */
 .btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{
- font-family:inherit;font-size:14px;font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);
+ font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);
  min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;box-sizing:border-box;line-height:1.2}
 .filt input,.sbox input,.tmp input,#rdate{font-weight:400;cursor:text}
 .filt select,.fpanel select,.sortsel{padding:0 10px}
@@ -116,44 +97,43 @@ code{font-family:inherit;font-size:14px;font-variant-numeric:tabular-nums;backgr
 /* Buttons with a meaning colour keep it on hover and when chosen: the same 1px line in that colour inside, plus a pale tint of it. Never ink. */
 /* They rest on the same control line as every pressable (house rule); the colour shows on hover. */
 @media (hover:hover){.btn.yes:hover{outline-color:var(--house-ok);background:color-mix(in srgb,var(--house-ok) 14%,var(--card))}.btn.no:hover{outline-color:var(--house-risk);background:color-mix(in srgb,var(--house-risk) 14%,var(--card))}}
-.dc .nl .st{border:0;padding:0;height:auto;font-size:13px}
+.dc .nl .st{border:0;padding:0;height:auto;font-size:var(--fs-small)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :focus-visible{outline:2px solid var(--ink)!important;outline-offset:2px}
 @media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{min-height:44px}}
 
 /* ---- Read-only pills, counts and dates: small (24px), 1px ring, no hover. ---- */
-.pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:13px;font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
+.pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
 .pill.ok{border-color:var(--ljr-5-text)}
 .pill.no{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .pill.w{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
 .pill.i{border-color:var(--press)}
 /* Counts: one fixed box so 1 and 2 digits match; only 3+ digits grow. "Needs you" = rose ring + light tint. */
-.cnt{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:30px;height:22px;padding:0 3px;border-radius:11px;border:1px solid var(--ink);font-size:13px;font-weight:600;line-height:20px;white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink);background:transparent;flex:none}
+.cnt{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:var(--house-count-w);height:var(--house-count-h);padding:0 var(--house-count-pad);border-radius:var(--house-count-r);border:1px solid var(--ink);font-size:var(--fs-small);font-weight:600;line-height:var(--house-count-lh);white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink);background:transparent;flex:none}
 .cnt.wide{width:auto;min-width:30px;padding:0 6px}
-.cnt.need{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
-.cnt.ok{border-color:var(--ljr-5-text)}
-nav#nav .cnt.need{background:var(--ljr-2-tint)}
+.cnt.need{border-color:var(--ljr-2);background:transparent}
+.cnt.ok{border-color:transparent}
 .card h4 .cnt,.card .hx4 .cnt,.mcard h3 .cnt{margin-left:auto}
 /* Every date pill wears a plain 1px ring; late = rose ring + tint; soon = amber ring + tint. */
-.dpill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border:1px solid var(--press);border-radius:var(--radius);font-size:13px;color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums;flex:none}
+.dpill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border:1px solid var(--press);border-radius:var(--radius);font-size:var(--fs-small);color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums;flex:none}
 .dpill.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .dpill.soon{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
 .pill:hover,.cnt:hover,.dpill:hover,.live:hover{outline:none}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c,var(--ljr-0));flex:none;vertical-align:0}
-.info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--press);border-radius:var(--radius);font-size:13px;font-weight:600;color:var(--muted);cursor:help;vertical-align:middle}
+.info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--press);border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;color:var(--muted);cursor:help;vertical-align:middle}
 
 /* ---- Tiles (big numbers). A tile you can press is a pressable; a read-only tile is a plain panel. ---- */
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 12px}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;text-align:left;font:inherit;color:var(--ink);min-width:0}
-.tile .n{font-size:28px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
-.tile .k{font-size:14px;font-weight:600;margin-top:2px}
-.tile .src{font-size:13px;color:var(--muted);margin-top:4px;line-height:1.4}
+.tile .n{font-size:var(--fs-figure);font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
+.tile .k{font-size:var(--fs-small);font-weight:600;margin-top:2px}
+.tile .src{font-size:var(--fs-small);color:var(--muted);margin-top:4px;line-height:1.4}
 button.tile{cursor:pointer;border-color:var(--press);display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;width:100%}
 @media (hover:hover){button.tile:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}}
 
 /* ---- Tables ---- */
 .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
-table{width:100%;border-collapse:collapse;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:var(--fs-small)}
 th{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--card)}
 td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:none}
@@ -164,35 +144,36 @@ tr:last-child td{border-bottom:none}
 .fbar{position:relative;margin:0 0 12px}
 .fbar .srow{margin:0}
 .sbox{flex:1 1 220px;max-width:420px;padding:0 12px;cursor:text}
-.sbox input{flex:1;min-width:0;border:0;outline:none;background:transparent;color:var(--ink);font:inherit;font-size:15px;font-weight:400;padding:6px 0}
+.sbox input{flex:1;min-width:0;border:0;outline:none;background:transparent;color:var(--ink);font:inherit;font-size:var(--fs-body);font-weight:400;padding:6px 0}
 .sbox .ti{color:var(--muted)}
 .sbox:focus-within{border-color:var(--ink)}
 .fpanel{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;padding:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
 .fgrp{display:flex;flex-direction:column;gap:4px;min-width:150px}
-.flab{font-size:13px;font-weight:600;color:var(--muted)}
+.flab{font-size:var(--fs-small);font-weight:600;color:var(--muted)}
 .achips{display:contents}
 .achip .ti{width:14px;height:14px}
 
 /* ---- Calm rows (Needs you today, checklists, cards on Live feed) ---- */
 .three{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
 .three .sum{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--card);border-radius:var(--radius);padding:8px 14px 8px 8px;font-weight:600}
-.three .sum .big{font-size:24px;min-width:40px;height:40px;display:inline-grid;place-items:center;border-radius:var(--radius);border:1px solid var(--ink);padding:0 8px;font-variant-numeric:tabular-nums}
-.three .sum.need .big{border-color:var(--ljr-3);background:var(--ljr-3-tint)}
-.three .sum.over .big{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
+/* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
+.three .sum .big{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:auto;min-width:var(--house-count-w);height:var(--house-count-h);line-height:var(--house-count-lh);padding:0 var(--house-count-pad);border-radius:var(--house-count-r);font-size:var(--fs-small);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;background:transparent;border:1px solid var(--house-ring)}
+.three .sum.over .big{border-color:var(--house-late)}
+.three .sum .big.zero{border-color:transparent}
 .mecards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;align-items:start;margin:0 0 12px}
 .mcard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);min-width:0}
-.mcard h3{margin:0 0 4px;font-size:17px;display:flex;align-items:center;gap:8px}
+.mcard h3{margin:0 0 4px;font-size:var(--fs-head);display:flex;align-items:center;gap:8px}
 .mcard h3 .ti{color:var(--muted)}
 @media (hover:hover){.mcard:hover h3 .ti{color:var(--hc,var(--muted))}}
 .mcard.nextc{border-color:var(--ink);background:linear-gradient(var(--ljr-6-tint),var(--ljr-6-tint)) var(--card)}
-.mcard.nextc .bline{font-size:13px;font-weight:600;color:var(--muted)}
-.mcard.nextc .t{font-size:20px;font-weight:600;margin:2px 0 4px;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.mcard.nextc .bline{font-size:var(--fs-small);font-weight:600;color:var(--muted)}
+.mcard.nextc .t{font-size:var(--fs-head);font-weight:600;margin:2px 0 4px;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
 .mcard.nextc .sub{margin:0 0 12px;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
-.mcard .big{font-size:32px;font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
+.mcard .big{font-size:var(--fs-figure);font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
 .mrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);color:inherit;text-decoration:none;min-width:0}
 .mcard h3+.mrow,.mcard .mrow:first-of-type{border-top:0;padding-top:16px}
 .mrow .t{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
-.mrow .t small{display:block;color:var(--muted);font-size:13px;font-weight:400;margin-top:2px}
+.mrow .t small{display:block;color:var(--muted);font-size:var(--fs-small);font-weight:400;margin-top:2px}
 .mrow .ic{width:12px;height:12px;flex:none;border-radius:50%;border:1px solid var(--press)}
 .mrow .ic.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .mrow .ic.soon{border-color:var(--ljr-3);background:var(--ljr-3-tint)}
@@ -202,17 +183,17 @@ tr:last-child td{border-bottom:none}
 /* foundation: empty state for a field that needs data CD Hub does not have. It names the Bloodline table that will feed it. */
 /* The card itself is the house card (../house.css .card) with CD Hub's dashed edge (.card.dash); only the layout is here. */
 .card.arrive{margin:0;box-shadow:none}.card.arrive h3{margin:0}
-.card.arrive .awhy{margin:4px 0 0;color:var(--muted);font-size:13px}
+.card.arrive .awhy{margin:4px 0 0;color:var(--muted);font-size:var(--fs-small)}
 .card.arrive .arrives{margin:8px 0 0;font-weight:600}
 .arrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--house-gap);margin:0 0 var(--house-gap)}
-.okempty{margin:12px 0 0;color:var(--muted);font-size:15px;display:flex;gap:8px;align-items:center}
+.okempty{margin:12px 0 0;color:var(--muted);font-size:var(--fs-body);display:flex;gap:8px;align-items:center}
 .okempty::before{content:"\2713";display:inline-grid;place-items:center;width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--ljr-5);background:var(--ljr-5-tint);color:var(--ink);font-size:13px}
 /* checklist ✓ / ✗ marks: status dots, so they are circles */
-.mk{display:inline-grid;place-items:center;width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--ljr-5);background:var(--ljr-5-tint);color:var(--ink);font-size:13px;font-weight:600}
+.mk{display:inline-grid;place-items:center;width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--ljr-5);background:var(--ljr-5-tint);color:var(--ink);font-size:var(--fs-small);font-weight:600}
 .mk.bad{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .mk.part{border-color:var(--ljr-3);background:var(--ljr-3-tint)}
 .ckrow .btn,.ckrow .ci{flex:none}
-@media (max-width:760px){.three{flex-wrap:nowrap;gap:6px}.three .sum{padding:4px 8px 4px 4px;gap:6px;font-size:13px;flex:1;min-width:0}.three .sum .big{font-size:17px;min-width:30px;height:30px;padding:0 6px}.mecards{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.three{flex-wrap:nowrap;gap:6px}.three .sum{padding:4px 8px 4px 4px;gap:6px;font-size:var(--fs-small);flex:1;min-width:0}.mecards{grid-template-columns:minmax(0,1fr)}}
 
 /* ---- Record cards (Dogs). Name line, then title (2 lines, then …); 44×44 thumbnail; who-has-it ring bottom-right. ---- */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
@@ -222,9 +203,9 @@ tr:last-child td{border-bottom:none}
 .ph{position:relative;flex:0 0 auto;width:44px;height:44px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted)}
 .ph .ti{width:24px;height:24px}
 .dc .tbr{flex:1;min-width:0}
-.dc .nl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--muted);min-width:0;overflow-wrap:anywhere}
-.dc .nm{font-weight:600;font-size:17px;line-height:1.35;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
-.dc .meta{font-size:14px;color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.dc .nl{display:flex;align-items:center;gap:6px;font-size:var(--fs-small);font-weight:600;color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.dc .nm{font-weight:600;font-size:var(--fs-head);line-height:1.35;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+.dc .meta{font-size:var(--fs-small);color:var(--muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap}
 .dc .age{margin-left:auto}
 .sexdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--unk);flex:none}
 .sexdot.me{background:var(--male)}.sexdot.fe{background:var(--female)}
@@ -232,47 +213,47 @@ tr:last-child td{border-bottom:none}
 .sexdot.u{background:transparent;border:1px dashed var(--unk)}
 .dc .chips{display:flex;flex-wrap:wrap;gap:4px}
 .cfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px;margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
-.whor{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--press);display:grid;place-items:center;font-size:13px;color:var(--muted)}
+.whor{flex:none;width:26px;height:26px;border-radius:50%;border:1px solid var(--press);display:grid;place-items:center;font-size:var(--fs-small);color:var(--muted)}
 .whor .ti{width:15px;height:15px}
 /* status (kit: animal): a status-colour dot + code + word, ink text, no fill */
-.st{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--radius);height:24px;padding:0 8px;white-space:nowrap}
+.st{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--radius);height:24px;padding:0 8px;white-space:nowrap}
 .st b{font-weight:600}
 .st::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--sc,var(--ljr-0));flex:none}
 .st-bi{--sc:#DB7FA2}.st-st{--sc:#1F6F96}.st-tr{--sc:var(--ljr-3)}.st-gr{--sc:var(--ljr-5)}.st-ce{--sc:#7FB8C9}.st-ln{--sc:var(--ljr-4)}.st-pu{--sc:#C9B2DB}
 .st-de{--sc:transparent}.st-de::before,.st-cl::before,.st-un::before{background:transparent;border:1px solid var(--muted)}
 .st-un::before{border-color:var(--ljr-2)}
-.sfb.st{height:auto;min-height:36px;border-color:var(--press);font-size:14px}
+.sfb.st{height:auto;min-height:36px;border-color:var(--press);font-size:var(--fs-small)}
 .st-all::before{display:none}
 @media (max-width:544px){.sfb.st{min-height:44px}}
-.neu{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:13px;border:1px dashed var(--press);color:var(--ink);margin-left:6px}
+.neu{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:var(--fs-small);border:1px dashed var(--press);color:var(--ink);margin-left:6px}
 .swwrap{position:relative;display:inline-block;flex:0 0 auto;line-height:0;vertical-align:-3px}
 .sw{display:block;width:16px;height:16px;border-radius:50%;border:1px solid var(--press)}
 .sw-none{background:repeating-linear-gradient(45deg,var(--soft) 0 3px,var(--line) 3px 6px)}
 .nose{position:absolute;right:-3px;bottom:-2px;width:8px;height:8px;border-radius:50%;border:1px solid var(--card)}
-.coat{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
-.wt{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted);flex-wrap:wrap}
-.wt .lb,.chipline .lb{font-size:13px;color:var(--muted)}
+.coat{display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted)}
+.wt{display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);flex-wrap:wrap}
+.wt .lb,.chipline .lb{font-size:var(--fs-small);color:var(--muted)}
 .wt b{color:var(--ink)}
 .wt .up,.wt .dn{color:var(--ink);font-weight:600}
 .wt.none{color:var(--muted)}
 .wtc{cursor:pointer;border-radius:var(--radius);padding:2px 4px;margin:-2px -4px;border:1px solid transparent}
 @media (hover:hover){.wtc:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}}
 .spk{color:var(--ljr-6);overflow:visible}
-.chipline{display:flex;align-items:baseline;gap:8px;font-size:14px;color:var(--muted)}
+.chipline{display:flex;align-items:baseline;gap:8px;font-size:var(--fs-small);color:var(--muted)}
 .chipline .vl{color:var(--ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .chipline .none{color:var(--ink)}
 .chipline .none::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;border:1px solid var(--ljr-2);background:var(--ljr-2-tint);margin-right:6px}
-.key{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:14px;color:var(--muted);margin:0 0 12px}
+.key{display:flex;gap:12px;flex-wrap:wrap;align-items:center;font-size:var(--fs-small);color:var(--muted);margin:0 0 12px}
 .key>span{display:inline-flex;align-items:center;gap:6px}
 .stf{gap:8px}
 
 /* ---- The round: temperatures ---- */
 .tmp{display:grid;grid-template-columns:auto repeat(2,minmax(0,160px)) minmax(0,1fr);gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
-.tmp .sl{font-size:13px;color:var(--muted);font-weight:600}
+.tmp .sl{font-size:var(--fs-small);color:var(--muted);font-weight:600}
 .tmp input{width:100%;text-align:right;padding:0 10px;font-variant-numeric:tabular-nums}
 .tmp input.bad{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
-.tmp .hd2{font-size:13px;color:var(--muted);text-align:right}
-.tmp .msg{font-size:13px;color:var(--muted);min-width:54px}
+.tmp .hd2{font-size:var(--fs-small);color:var(--muted);text-align:right}
+.tmp .msg{font-size:var(--fs-small);color:var(--muted);min-width:54px}
 .step{color:var(--muted);font-weight:600;white-space:nowrap}
 .rdel{cursor:pointer;margin-left:4px}
 
@@ -283,12 +264,12 @@ tr:last-child td{border-bottom:none}
 .cbs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
 .ct{min-width:152px}
 .sel{user-select:all;-webkit-user-select:all;word-break:break-all}
-ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:14px}ul.notes li{margin:2px 0}
+ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--fs-small)}ul.notes li{margin:2px 0}
 .skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
 .skip:focus{left:8px}
-.boot{padding:40px 0;text-align:center;color:var(--muted);font-size:15px}
-.boot .rows{margin-top:16px;font-size:14px;line-height:1.9}
-.map svg text{font-family:Lexend,system-ui,sans-serif}
+.boot{padding:40px 0;text-align:center;color:var(--muted);font-size:var(--fs-body)}
+.boot .rows{margin-top:16px;font-size:var(--fs-small);line-height:1.9}
+.map svg text{font-family:var(--house-font)}
 .map .scroll{border:0}
 .map svg{display:block;min-width:1180px}
 @media (max-width:544px){header.top{position:static}}
@@ -306,7 +287,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:14px}ul
 <span class="lookwrap" data-house-look></span>
 <button type="button" class="btn house-ib hidden" id="cdSignout" data-signout="1" aria-label="Sign out" title="Sign out"><svg aria-hidden="true"><use href="#hi-logout"/></svg></button>
 </div></header>
-<div class="wrap"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
+<div class="wrap house-page"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
 <div class="next" id="next"></div></div>
 <nav id="nav" class="house-tabs" aria-label="Sections"></nav>
 <script>
@@ -906,9 +887,9 @@ function summaryStrip(){
  var n=needsToday(), late=n.filter(function(x){return x.tone==='late';}).length;
  var ok=checks().filter(function(x){return x.ok && x.k!=='saving off';}).length;
  return '<div class="three" id="summary">'
-  +'<span class="sum" title="Checks that pass"><span class="big">'+ok+'</span>On track</span>'
-  +'<span class="sum need" title="Waiting on you, not late"><span class="big">'+(n.length-late)+'</span>Needs you</span>'
-  +'<span class="sum over" title="Late"><span class="big">'+late+'</span>Overdue</span></div>';
+  +'<span class="sum" title="Checks that pass"><span class="big'+(ok?'':' zero')+'">'+ok+'</span>On track</span>'
+  +'<span class="sum need" title="Waiting on you, not late"><span class="big'+(n.length-late?'':' zero')+'">'+(n.length-late)+'</span>Needs you</span>'
+  +'<span class="sum over" title="Late"><span class="big'+(late?'':' zero')+'">'+late+'</span>Overdue</span></div>';
 }
 /* foundation: next action (the one thing to do now, with one button) */
 function nextCard(){
@@ -920,7 +901,7 @@ function nextCard(){
 }
 function needsCard(){
  var n=needsToday();
- var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Needs you today'+cntPill(n.length,n.length?'need':'ok')+'</h3>';
+ var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Needs you today'+cntPill(n.length,n.length?'need':'ok')+'</h3>';
  if(!n.length) return h+'<p class="okempty">Nothing needs you</p></section>';
  h+=n.map(function(x,i){ return needRow(x,i>=7); }).join('');
  if(n.length>7) h+='<div class="mfoot"><span class="mut">Showing 7 of '+n.length+'</span><button type="button" class="btn" data-needall="1">Show all</button></div>';
@@ -930,7 +911,7 @@ function needsCard(){
 function onSiteCard(){
  var c=counts();
  var row=function(t,v,s){ return '<div class="mrow"><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
- return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
+ return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
   +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><span class="big">'+c.here.length+'</span><span class="mut">dogs on the premises today</span></div>'
   +row('Adults',c.adults.length,'6 months and over')+row('Under 6 months',c.pups.length,'')
   +row('Breeding bitches in law',c.bitches.length,'female, entire, 6 months and over')+row('Stud males',c.studs.length,'')
@@ -943,7 +924,7 @@ function littersCard(){
  var recent=(CD.litters||[]).filter(function(l){ var b=l.dob||l.born_on; var d=b?daysBetween(b,date):null; return d!==null&&d>=0&&d<=84; })
   .sort(function(a,b){ return (b.dob||b.born_on||'').localeCompare(a.dob||a.born_on||''); });
  var pups=litterPups(), n=w.length+recent.length;
- var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>Litters'+cntPill(n)+'</h3>';
+ var h='<section class="mcard" id="littersCard" style="--hc:var(--ljr-7-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-baby-carriage"/></svg>Litters'+cntPill(n)+'</h3>';
  h+=w.map(function(x){ var tone=x.day>63?'late':(x.day>=57?'soon':'');
    return '<div class="mrow"><span class="t">'+esc(x.dog.name)+' in whelp<small>Day '+x.day+' of 57–72 · working due</small></span>'+dpill(x.due,tone)+'</div>'; }).join('');
  h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
@@ -959,7 +940,7 @@ function tempsCard(){
  var am=has('am'), pm=has('pm');
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
  var row=function(t,v,s,done){ return '<div class="mrow"><span class="ic'+(done?' ok':'')+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
- return '<section class="mcard" id="tempsCard" style="--hc:var(--ljr-4)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
+ return '<section class="mcard" id="tempsCard" style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning readings',am+' of '+N,'cabins with a reading',N&&am===N)+row('Evening readings',pm+' of '+N,'cabins with a reading',N&&pm===N)
   +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||out.kind||''),false)
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No outdoor reading on file for today</small></span></div>')
@@ -968,7 +949,7 @@ function tempsCard(){
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 function checksCard(){
  var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
- return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'need':'ok')+'</h3>'
+ return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'need':'ok')+'</h3>'
   +all.map(function(x){
    return '<div class="mrow ckrow'+(x.ok?' ok':' bad')+'"><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.ok?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
@@ -1042,7 +1023,7 @@ function todayChecklist(date,unplacedN){
   [!over,'No cabin over its headcount',over?over+' over':'all within'],
   [c.bitches.length===c.active.length,'Licence counts agree','law '+c.bitches.length+', your list '+c.active.length]];
  var done=L.filter(function(x){return x[0];}).length;
- return '<section class="mcard" id="todayChecklist" style="--hc:var(--ljr-4);margin-bottom:12px"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Today checklist<span class="mut" style="margin-left:auto;font-weight:400">'+done+' of '+L.length+' done</span></h3>'
+ return '<section class="mcard" id="todayChecklist" style="--hc:var(--ljr-4-icon);margin-bottom:12px"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Today checklist<span class="mut" style="margin-left:auto;font-weight:400">'+done+' of '+L.length+' done</span></h3>'
   +L.map(function(x){ return '<div class="mrow ckrow"><span class="mk'+(x[0]?'':' bad')+'" aria-hidden="true">'+(x[0]?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(x[1])+'<span class="sr">'+(x[0]?' done':' not done')+'</span><small>'+esc(x[2])+'</small></span></div>'; }).join('')
   +'<div class="mfoot"><span class="mut">'+(DB?'From the round.':'Saving is off, so the round shows the tables, not today’s ticks.')+'</span><button type="button" class="btn" data-go="round">Open The round</button></div></section>';
@@ -1819,15 +1800,17 @@ var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sit
  round:['route','Round',4],dogs:['paw','Dogs',5],areas:['building-cottage','Areas',3],litters:['baby-carriage','Litters',7],
  vet:['stethoscope','Vet',5],buyers:['world','Assocs',6]};
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; } // 0 shows no ring
+// Bottom tabs (Lisa's picks, 2 Nov): Main, Do, Today, Dogs, Assocs, then More with the other views. Same bar as every hub
+// (../house.css section 6, ../toolkit.js builds the tab and More). Counts: rose ring = needs you today / waiting on you.
+var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['buyers','Assocs',6,'world']];
+var MORE_VIEWS=['shape','round','areas','litters','vet'];
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
  var counts={map:nd,work:wait};
- return SECTIONS.map(function(s){ var m=TABMETA[s[0]]||['point',s[1],0], n=counts[s[0]];
-   return '<button type="button" data-go="'+s[0]+'" style="--tc:var(--ljr-'+m[2]+')"><span class="bar" aria-hidden="true"></span>'
-    +'<svg class="ti" aria-hidden="true"><use href="#i-'+m[0]+'"/></svg>'+(n?cntPill(n,'need'):'')
-    +'<span class="lab"><span class="lf">'+esc(s[1])+'</span><span class="ls" aria-hidden="true">'+esc(m[1])+'</span></span></button>'; }).join('')
-  +'<button type="button" class="util" data-reload="1" title="Read the tables from Drive again"><span class="bar" aria-hidden="true"></span><svg class="ti" aria-hidden="true"><use href="#i-refresh"/></svg><span class="lab">Reread</span></button>'
-  +'<button type="button" class="util" data-signout="1"><span class="bar" aria-hidden="true"></span><svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg><span class="lab">Sign out</span></button>';
+ return TABS.map(function(t){ var n=counts[t[0]];
+   return DashKit.tabs.tab({go:t[0],slot:t[2],icon:'t-'+t[3],label:t[1],count:n?String(n):'',need:true}); }).join('')
+  +DashKit.tabs.more('houseMore',MORE_VIEWS.map(function(id){ var m=TABMETA[id];
+   return '<button type="button" data-go="'+id+'" data-slot="'+m[2]+'"><svg class="ti" aria-hidden="true"><use href="#i-'+m[0]+'"/></svg><span class="htl">'+esc(label(id))+'</span></button>'; }).join(''));
 }
 function pill(){
  var p=document.getElementById('livepill');
@@ -1908,7 +1891,7 @@ function go(id,push){
  cdIn(true);
  document.getElementById('nav').innerHTML=navHtml();
  main.innerHTML=PAGES[id]();
- Array.prototype.forEach.call(document.querySelectorAll('#nav button'),function(b){ if(b.dataset.go===id) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+ Array.prototype.forEach.call(document.querySelectorAll('#nav [data-go]'),function(b){ if(b.dataset.go===id) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
  labelControls(main);
  levelHeadings(main);
  document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');

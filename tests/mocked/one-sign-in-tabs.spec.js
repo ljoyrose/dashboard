@@ -2,6 +2,7 @@
 // app window started signed out. Now one sign-in (kept in this browser until it expires or you sign out)
 // covers every tab, and Money Hub and CD Hub open in their own tab with a "Dashboard" button.
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { at } = require('../support/site');
 
 const MOVE = require('../support/world').IDS.moveSheet; // read from config.js, never copied (this repo is public)
@@ -25,7 +26,7 @@ test.describe('One sign-in for every tab', () => {
       expect(await gisRequests(tab)).toBe(0);
       await tab.close();
     }
-    await page.locator('#mainNav a[data-nav="map"]').click();
+    await tabClick(page, '#mainNav a[data-nav="map"]');
     const [cd] = await Promise.all([context.waitForEvent('page'), page.locator('a.keytile[href="cdhub/"]').click()]);
     await expect(cd).toHaveURL(/\/cdhub\/$/);
     await expect(cd.locator('#nav button[data-go]').first()).toBeVisible();

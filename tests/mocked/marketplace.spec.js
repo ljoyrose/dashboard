@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const vm = require('vm');
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 
 const ctx = { window: {} };
 vm.createContext(ctx);
@@ -251,10 +252,13 @@ test.describe('Marketplace page', () => {
     ];
     await sheets(page, rows);
     await open(page);
-    await expect(page.locator('#tabs a')).toHaveText([/Home/, /Do now/, /Decide/, /New stock/, /Reply/, /Insights/]);
+    // Lisa's tab picks (2 Nov): Main · Decide · Do · Reply · New Stock, then Insights under More.
+    await expect(page.locator('#tabs a')).toHaveText([/^Main/, /^Decide/, /^Do/, /^Reply/, /^New Stock/, /^Insights/]);
+    await expect(page.locator('#tabs > a')).toHaveCount(5);
+    await expect(page.locator('#tabs .house-more > a')).toHaveText([/^Insights/]);
     await expect(page.locator('#view .needs3 a.tile')).toHaveText([/1\s*Do now/, /2\s*Decide/, /1\s*Reply/]);
     await expect(page.locator('#n-decide')).toHaveText('2');
-    await page.locator('#tabs a[data-nav="decide"]').click();
+    await tabClick(page, '#tabs a[data-nav="decide"]');
     await expect(page.locator('#view .needs')).toHaveText('Decide: 2');
     await expect(page.locator('#view > .card')).toHaveCount(1);               // one question at a time
     await expect(page.locator('#view .more')).toHaveText('1 of 2 · show all');
@@ -454,7 +458,7 @@ test.describe('Marketplace page', () => {
     await open(page, '#/decide');
     await expect(page.locator('#view .needs')).toHaveText('Decide: 1');                       // only current items
     await expect(page.locator('#n-newstock')).toHaveText('10');
-    await page.locator('#tabs a[data-nav="newstock"]').click();
+    await tabClick(page, '#tabs a[data-nav="newstock"]');
     await expect(page.locator('#view .needs')).toHaveText('New stock: 10');
     await expect(page.locator('#view details.npgroup')).toHaveCount(2);
     const g = page.locator('details.npgroup', { hasText: 'Sample Supplier A' });
@@ -972,17 +976,24 @@ function auditLook() {
     const bg = rgb(getComputedStyle(el).backgroundColor), page = bgOf(el.parentElement);
     if (bg[3] > 0.5 && ratio(bg, page) > 1.6) out.push(`solid fill on marker ${name(el)}`);
   }
-  // Counts: one fixed size (30 x 22, radius 11) so 1 and 2 digits match.
-  for (const el of [...document.querySelectorAll('.cnt, nav.tabs .n')].filter(vis)) {
+  // Counts: one fixed size (30 x 24, radius 12, a 14px number: Lisa's pick A, 2 Nov) so 1 and 2 digits match.
+  // Bottom-tab counts are the corner ring instead (tab picks, 2 Nov): 24 x 24, 12px ends.
+  for (const el of [...document.querySelectorAll('nav.house-tabs .ht > .n')].filter(vis)) {
     const s = getComputedStyle(el), b = el.getBoundingClientRect();
-    if (Math.round(b.height) !== 22 || (el.textContent.length < 3 && Math.round(b.width) !== 30) || s.borderTopLeftRadius !== '11px') out.push(`count pill ${Math.round(b.width)}x${Math.round(b.height)} r${s.borderTopLeftRadius}: ${name(el)}`);
+    if (Math.round(b.height) !== 24 || (el.textContent.length < 3 && Math.round(b.width) !== 24) || s.borderTopLeftRadius !== '12px' || s.lineHeight !== '22px' || s.fontSize !== '14px' || s.position !== 'absolute') out.push(`tab count ${Math.round(b.width)}x${Math.round(b.height)} r${s.borderTopLeftRadius}: ${name(el)}`);
+  }
+  for (const el of [...document.querySelectorAll('.cnt, nav.tabs .n')].filter(vis)) {
+    if (el.matches('nav.house-tabs .ht > .n')) continue;
+    const s = getComputedStyle(el), b = el.getBoundingClientRect();
+    if (Math.round(b.height) !== 24 || (el.textContent.length < 3 && Math.round(b.width) !== 30) || s.borderTopLeftRadius !== '12px' || s.fontSize !== '14px') out.push(`count pill ${Math.round(b.width)}x${Math.round(b.height)} r${s.borderTopLeftRadius}: ${name(el)}`);
   }
   // One radius: 12px on everything with corners; circles only for status dots and initial rings; counts 11px.
   for (const el of [...document.querySelectorAll('body *')].filter(vis)) {
     const r = getComputedStyle(el).borderTopLeftRadius; if (r === '0px') continue;
     if (el.matches('.sdot, .cdot, .ava, .okring, .h1dot, .top h1 .dot')) { if (r !== '50%' && parseFloat(r) < 4) out.push(`dot not round: ${name(el)}`); continue; }
     if (el.matches('.cnt, nav.tabs .n')) continue;
-    if (el.matches('nav.tabs .bar')) continue;   // the 4px colour bar above a tab label
+    if (el.matches('nav.tabs .bar')) continue;   // the 4px colour bar under a tab label
+    if (el.matches('nav.house-tabs .hic')) { if (r !== '50%') out.push(`tab icon ring not round: ${name(el)}`); continue; }   // the ring round a tab icon (Lisa's tab picks)
     if (r !== '12px') out.push(`radius ${r}: ${name(el)}`);
   }
   // Thumbnails: one size, 44 x 44.
@@ -1077,16 +1088,20 @@ test.describe('Marketplace house look', () => {
     expect(await cur.locator('.bar').evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(w0);
   });
 
-  test('count pills are one exact box (30 x 22) for 1 and 2 digits even in a wider fallback font; only 3+ digits grow', async ({ page }) => {
+  test('count pills are one exact box for 1 and 2 digits even in a wider fallback font; only 3+ digits grow (tab counts too: the 24 x 24 corner ring)', async ({ page }) => {
     const many = Array.from({ length: 88 }, (_, i) => ['GO|' + i, 'go', 'Treats', 'Sample ' + i, '{}', ago(5)]).concat(Array.from({ length: 120 }, (_, i) => ['RM|' + i, 'remove', 'Clothes', 'Sample ' + i, '{}', ago(5)]));
     await sheets(page, many.concat([['MSG|1', 'message', 'Clothes', 'Sample question', '{}', ago(5)]]));
     await open(page);
     await page.addStyleTag({ content: '* { font-family: "DejaVu Sans", Verdana, sans-serif !important; letter-spacing: .04em !important; }' });   // wider than Lexend
     const box = (sel) => page.locator(sel).evaluate((e) => { const b = e.getBoundingClientRect(); return [Math.round(b.width * 100) / 100, Math.round(b.height * 100) / 100]; });
-    expect(await box('#n-reply')).toEqual([30, 22]);    // 1 digit
-    expect(await box('#n-decide')).toEqual([30, 22]);   // 2 digits
+    // Bottom-tab counts are the corner ring (tab picks, 2 Nov) holding a 14px number (pick A): always 24 high, one 28px width for 1 and 2
+    // digits, only 3+ digits grow.
+    const one = await box('#n-reply');                  // 1 digit
+    const two = await box('#n-decide');                 // 2 digits
     const wide = await box('#n-do');                    // 3 digits grow
-    expect(wide[1]).toBe(22); expect(wide[0]).toBeGreaterThan(30);
+    expect([one[1], two[1], wide[1]]).toEqual([24, 24, 24]);
+    expect([one[0], two[0]]).toEqual([24, 24]);
+    expect(wide[0]).toBeGreaterThan(two[0]);
   });
 
   test('spacing: 12px between cards (Lisa chose 12px), 16px under a header line before its first card', async ({ page }) => {

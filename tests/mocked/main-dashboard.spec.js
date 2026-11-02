@@ -1,5 +1,6 @@
 // Main dashboard: https://ljoyrose.github.io/dashboard/
 const { test, expect, buildWorld } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { at } = require('../support/site');
 
 const signIn = async (page) => {
@@ -91,9 +92,9 @@ test.describe('Main dashboard: navigation', () => {
       await page.goto('./');
       await signIn(page);
       if (how === 'tab') {
-        await page.locator(`#mainNav a[data-nav="${route}"]`).click();
+        await tabClick(page, `#mainNav a[data-nav="${route}"]`);
       } else {
-        await page.locator('#mainNav a[data-nav="drives"]').click();
+        await tabClick(page, '#mainNav a[data-nav="drives"]');
         await expect(page.locator('#hereTitle')).toHaveText('Drives');
         if (how === 'pin') await page.locator('#view [data-readfirst-pin] a').click();
         else await page.locator('#view nav.subnav a', { hasText: new RegExp(`^${label}$`) }).click();
@@ -108,9 +109,9 @@ test.describe('Main dashboard: navigation', () => {
   test('back button returns to the previous section (sections live in the URL)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await page.locator('#mainNav a[data-nav="bin"]').click();
+    await tabClick(page, '#mainNav a[data-nav="bin"]');
     await expect(page.locator('#hereTitle')).toHaveText('Bin');
-    await page.locator('#mainNav a[data-nav="drives"]').click();
+    await tabClick(page, '#mainNav a[data-nav="drives"]');
     await expect(page.locator('#hereTitle')).toHaveText('Drives');
     await page.goBack();
     await expect(page.locator('#hereTitle')).toHaveText('Bin');

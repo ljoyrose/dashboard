@@ -2,7 +2,7 @@
 // 1 everything you press: the same clear 1px line (never ink at rest), 12px corners, 36px high, 14px 600; hover = 1px ink outline, nothing moves
 // 2 every date pill: a plain 1px ring; late = rose ring + tint, soon = amber ring + tint
 // 3 no text under 13px, weights 400 and 600 only, no coloured words
-// 4 one radius (12px); circles only for status dots; count pills one fixed size (30 x 22, radius 11px)
+// 4 one radius (12px); circles only for status dots; count pills one fixed size (30 x 24, radius 12px, a 14px number)
 // plus: no solid colour fills on markers, and 3:1 lines / 4.5:1 text in light and dark. Pretend Google and Drive.
 const { test, expect } = require('../support/test');
 
@@ -53,7 +53,10 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
             const r = getComputedStyle(e).borderTopLeftRadius;
             if (r === '0px') return;
             const cls = e.classList;
-            const ok = r === '12px' || (r === '50%' && (cls.contains('dot') || cls.contains('info'))) || (r === '11px' && (cls.contains('cnt') || cls.contains('n')));
+            // The bottom tabs follow Lisa's tab picks (2 Nov): round icon ring, 2px line, 12px-round corner counts.
+            const tabN = e.matches('nav.house-tabs .ht > .n');
+            const tabShape = (r === '50%' && e.matches('nav.house-tabs .hic')) || (r === '2px' && e.matches('nav.house-tabs .bar')) || (r === '12px' && tabN);
+            const ok = tabShape || (r === '12px' && !tabN) || (r === '50%' && (cls.contains('dot') || cls.contains('info')));
             if (!ok) out.push('radius ' + r + ': ' + what(e));
           });
           // 1: pressables rest on the same clear line, 1px, 12px, 36px+, 14px 600; never ink at rest.
@@ -69,12 +72,15 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
             if (!inHeader && cs.borderTopColor !== ctl) out.push('press line colour ' + cs.borderTopColor + ' (want ' + ctl + '): ' + what(e));
             if (!inHeader && cs.borderTopColor === ink) out.push('press starts out ink: ' + what(e));
           });
-          // Count pills: one fixed size so 1 and 2 digits match.
+          // Count pills: one fixed size so 1 and 2 digits match, a 14px number (Lisa's pick A, 2 Nov). Tab counts: the 24 x 24 corner ring.
           document.querySelectorAll('.cnt, nav.main .n:not(:empty)').forEach((e) => {
             if (!seen(e)) return;
             const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
-            if (Math.round(r.height) !== 22 || (e.textContent.trim().length <= 2 && Math.round(r.width) !== 30)) out.push('count size ' + r.width + 'x' + r.height + ': ' + what(e));
+            if (e.matches('nav.house-tabs .ht > .n')) {
+              if (Math.round(r.height) !== 24 || (e.textContent.trim().length <= 2 && Math.round(r.width) !== 24) || cs.lineHeight !== '22px' || getComputedStyle(e).position !== 'absolute') out.push('tab count ' + r.width + 'x' + r.height + ' ' + cs.lineHeight + ': ' + what(e));
+            } else if (Math.round(r.height) !== 24 || (e.textContent.trim().length <= 2 && Math.round(r.width) !== 30)) out.push('count size ' + r.width + 'x' + r.height + ': ' + what(e));
             if (cs.borderTopWidth !== '1px') out.push('count line: ' + what(e));
+            if (cs.fontSize !== '14px') out.push('count words ' + cs.fontSize + ': ' + what(e));
           });
           // 2: date pills wear a 1px ring; late = rose, soon = amber, plain = the control line.
           const rose = norm(root.getPropertyValue('--r-risk')), amber = norm(root.getPropertyValue('--r-warn'));
@@ -275,11 +281,13 @@ test.describe('Money Hub look: control line and count pills hold in every look',
       probe.innerHTML = '<span class="cnt">7</span><span class="cnt need">88</span><span class="cnt wide">999</span>';
       document.getElementById('view').appendChild(probe);
       return Array.from(probe.children).concat(Array.from(document.querySelectorAll('#view .cnt, nav.main .n:not(:empty)'))).filter((e) => e.getClientRects().length)
-        .map((e) => ({ t: e.textContent, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height }));
+        .map((e) => ({ t: e.textContent, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height, tab: e.matches('nav.house-tabs .ht > .n') }));
     });
+    expect(sizes.filter((s) => s.tab).length, 'the tab counts are measured too').toBeGreaterThan(0);
     for (const s of sizes) {
-      expect(s.h, `count "${s.t}" height`).toBe(22);
-      if (s.t.length <= 2) expect(s.w, `count "${s.t}" width`).toBe(30);
+      // Every count holds a 14px number (Lisa's pick A, 2 Nov): bottom-tab counts are the 24 x 24 corner ring, the rest the 30 x 24 pill.
+      expect(s.h, `count "${s.t}" height`).toBe(24);
+      if (s.t.length <= 2) expect(s.w, `${s.tab ? 'tab ' : ''}count "${s.t}" width`).toBe(s.tab ? 24 : 30);
     }
     expect(sizes.find((s) => s.t === '999').w).toBeGreaterThan(30); // 3+ digits grow
   });

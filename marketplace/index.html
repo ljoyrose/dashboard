@@ -33,18 +33,18 @@
   * { box-sizing: border-box; }
   h1, h2, h3, b, strong, th, summary { font-weight: 600; }   /* two weights only: 400 and 600 */
   html { scroll-padding-bottom: 96px; }   /* a button scrolled into view never hides under the tab bar */
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5; }
   .hidden { display: none !important; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   a.btn, nav.tabs a, a.tile { text-decoration: none; }
   .ti { line-height: 1; }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }   /* same width as Factory and the main dashboard */
+  .wrap { max-width: none; margin: 0 auto; padding: 0 var(--house-gutter); }   /* the full window, the house side gap, like every page */
 
   /* Frame: dark top bar (never black). Buttons on it are outlined in the frame's own light colour. */
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
-  header .top { max-width: 980px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+  header .top { margin: 0; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
   .top h1 .dot { background: var(--ljr-6); }
-  .stamp { font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; color: var(--frame-ink); font-variant-numeric: tabular-nums; }
+  .stamp { font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; color: var(--frame-ink); font-variant-numeric: tabular-nums; }
   .stamp:empty { display: none; }
   .readat { font-variant-numeric: tabular-nums; }
   /* Signed out the dark bar is hidden by the sign-in gate, so its buttons switch to page colours (still readable). */
@@ -71,46 +71,38 @@
   header :focus-visible:not(.house-menu *), header a:focus-visible:not(.house-menu *), header button:focus-visible:not(.house-menu *) { outline-color: var(--frame-ink); }
   input:focus { outline: none; border-color: var(--ink); }
 
-  /* Bottom tabs (.house-tabs): five across. */
-  nav.tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(6, minmax(0, 180px)); justify-content: center; } }
-  nav.tabs a { --tc: var(--ljr-0); }
-  @media (min-width: 601px) { nav.tabs a { min-height: 56px; } }
-  nav.tabs a > .ti { font-size: 18px; color: var(--ink); }
-  nav.tabs .n { top: 6px; }
-  @media (max-width: 544px) { nav.tabs { gap: 4px; padding-left: 6px; padding-right: 6px; } }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
 
   /* Work area. Spacing in 12px steps; 16px under a header line before the first item. */
-  main, main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }   /* .wrap alone would drop the room for the tab bar */
+  main, main.wrap { padding: 16px var(--house-gutter) 120px; display: flex; flex-direction: column; gap: 12px; }   /* .wrap alone would drop the room for the tab bar */
   #view { display: flex; flex-direction: column; gap: 12px; }   /* one 12px step between cards (Lisa chose 12px, 28 Oct) */
   #view > .grp, #view > .ghead { margin-top: 12px; margin-bottom: 4px; }   /* 16px under a header line before its first card (12px gap + 4px) */
-  .needs { font-size: 26px; font-weight: 600; margin: 0; line-height: 1.3; }   /* the page greeting */
+  .needs { font-size: var(--fs-figure); font-weight: 600; margin: 0; line-height: 1.3; }   /* the page greeting */
   .needs .zero { font-variant-numeric: tabular-nums; }
-  .hint { font-size: 14px; color: var(--muted); margin: 0; }
-  .grp { font-size: 16px; font-weight: 600; margin: 0; }
+  .hint { font-size: var(--fs-small); color: var(--muted); margin: 0; }
+  .grp { font-size: var(--fs-head); font-weight: 600; margin: 0; }
   .ghead { display: flex; gap: 8px; align-items: center; }
   .ghead .cnt { margin-left: auto; }
   .banner { border: 1px solid var(--need); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ink); }
   .banner.info { border-color: var(--line); background: var(--surface); }
   .card { position: relative; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 3px var(--shade); } /* the house card (../house.css): 12px inside */
   /* A card's colour is a thin bar on its left edge, never a thick border or a fill. Rose = needs you now, green = right. */
-  .card.acc2::before, .card.acc5::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: var(--house-bar); border-radius: var(--radius); background: var(--ljr-2); } /* the 3px left colour bar */
-  .card.acc5::before { background: var(--ljr-5); }
+  .card.acc2 { --sc: var(--ljr-2); } .card.acc5 { --sc: var(--ljr-5); } /* the 3px left colour bar: ../house.css section 10 (.house-lbar, full height, curved) */
   .card.empty::before { content: none; }
   /* The "Next" card on Home: the one thing to do now, white with a 1px ink edge. */
   .card.next { border-color: var(--ink); }
-  .nextlab { margin: 0 0 -8px; font-size: 13px; font-weight: 600; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .nextlab { margin: 0 0 -8px; font-size: var(--fs-small); font-weight: 600; color: var(--muted); display: flex; gap: 6px; align-items: center; }
   .nextlab .ti { font-size: 16px; color: var(--ink); }
-  .card h2 { font-size: 17px; margin: 0; line-height: 1.35; }
-  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
+  .card h2 { font-size: var(--fs-head); margin: 0; line-height: 1.35; }
+  .card .what { color: var(--muted); font-size: var(--fs-body); margin: 0; }
   .card .acts { margin-top: 4px; }
   .card.inner { padding: 0; border: 0; box-shadow: none; gap: 0; background: transparent; }   /* no box inside a box: rows split by 1px lines */
   .card > .row:first-of-type, .card.inner > .row:first-child { border-top: 0; }
   /* Friendly empty states: a small green-ring check and plain words. */
   .card.empty { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
   .card.empty > div { flex: 1; min-width: 0; }
-  .okring { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--ok); background: var(--ljr-5-tint); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: var(--ink); }
-  .card.empty h2 { font-size: 17px; }
+  .okring { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--ok); background: var(--ljr-5-tint); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+  .card.empty h2 { font-size: var(--fs-head); }
   .card.empty .what { margin-top: 2px; }
 
   /* Item block: 44×44 photo (or a line icon of the item type) left of the text; name line, then the title (2 lines, then …). */
@@ -119,15 +111,15 @@
   .ph { display: inline-flex; align-items: center; justify-content: center; }
   .ph .ti { font-size: 22px; color: var(--muted); }
   .item .t { flex: 1; min-width: 0; font-weight: 400; }
-  .bline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; }
+  .bline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; }
   .sdot { --c: var(--ljr-0); width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; display: inline-block; }
-  .ttl { font-size: 16px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
-  .item .m { font-size: 14px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .ttl { font-size: var(--fs-head); font-weight: 600; color: var(--ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .item .m { font-size: var(--fs-small); color: var(--muted); font-weight: 400; margin-top: 2px; }
   .m.post { font-weight: 600; color: var(--ink); display: flex; gap: 6px; align-items: center; }
   .m.post .ti { font-size: 16px; color: var(--muted); }
   /* Who a card belongs to: initials (or their photo) in a small ring of that person's colour, on the name line. */
   .ava { --ava: var(--ljr-ava-other); width: 24px; height: 24px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; flex: none;
-    border: 1px solid color-mix(in srgb, var(--ava) 70%, var(--ink)); background: color-mix(in srgb, var(--ava) 14%, var(--surface)); color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1; }
+    border: 1px solid color-mix(in srgb, var(--ava) 70%, var(--ink)); background: color-mix(in srgb, var(--ava) 14%, var(--surface)); color: var(--ink); font-size: var(--fs-small); font-weight: 600; line-height: 1; }
   .ava img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; display: block; }
   /* Date pill: its RING shows urgency (rose = late, amber = today or tomorrow). The words stay ink. */
   .date { gap: 6px; font-weight: 600; } /* the house date pill (../house.css): always ringed; rose late, amber soon */
@@ -135,20 +127,20 @@
   .red, .verdict.wait, .verdict.go, ul.money li.red { color: var(--ink); font-weight: 600; }
   .red::before, .verdict::before, ul.money li.red::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ljr-2); margin-right: 6px; vertical-align: 1px; }
   .verdict.wait::before { background: var(--ljr-3); } .verdict.go::before { background: var(--ljr-5); }
-  .verdict { margin: 0; font-size: 15px; }
+  .verdict { margin: 0; font-size: var(--fs-body); }
 
   .acts { display: flex; gap: 8px; flex-wrap: wrap; }
   .acts .btn { flex: 1; justify-content: center; }
   .row { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
   .row .txt { flex: 1; min-width: 0; }
-  .row .why { font-size: 14px; color: var(--muted); }
-  .steps { margin: 0; padding-left: 22px; font-size: 15px; }
+  .row .why { font-size: var(--fs-small); color: var(--muted); }
+  .steps { margin: 0; padding-left: 22px; font-size: var(--fs-body); }
   .steps li { margin: 4px 0; }
   .steps.words { list-style: none; padding-left: 0; }
   .steps.words li { display: flex; gap: 8px; align-items: baseline; }
   .steps.words .sn { flex: none; font-weight: 600; }
-  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 12px; min-height: 36px; cursor: pointer; align-self: flex-start; }
+  .sent { font-size: var(--fs-small); color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .more { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 12px; min-height: 36px; cursor: pointer; align-self: flex-start; }
   @media (max-width: 544px) { .more { min-height: 44px; } }
 
   /* Summary strip: big numbers in tabular figures, each tile a 1px edge; a "needs you" number wears the rose ring. */
@@ -156,29 +148,30 @@
   .tiles.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 12px; cursor: pointer; color: var(--ink); min-width: 0; }
   .tile.big { min-height: 88px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
-  .tile .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; } .tile .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-  .tile.big .v { font-size: 28px; line-height: 1.2; }
-  .needs3 .v { align-self: flex-start; min-width: 44px; padding: 0 10px; border: 1px solid var(--ctl); border-radius: var(--radius); text-align: center; }
-  .needs3 .v.need { border-color: var(--need); background: var(--ljr-2-tint); }
-  .tile .up, .tile .down, .tile .flat { color: var(--muted); font-size: 15px; }
+  .tile .k { font-size: var(--fs-small); color: var(--muted); overflow-wrap: anywhere; } .tile .v { font-size: var(--fs-figure); font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .tile.big .v { font-size: var(--fs-figure); line-height: 1.2; }
+  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
+  .needs3 .tile .v { align-self: flex-start; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--ctl); }
+  .needs3 .tile .v.need { border-color: var(--house-late); }
+  .tile .up, .tile .down, .tile .flat { color: var(--muted); font-size: var(--fs-body); }
   .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .fact { padding: 8px 12px; border-left: 1px solid var(--line); min-width: 0; }
   .fact:nth-child(3n + 1) { border-left: 0; padding-left: 0; }
-  .fact .k { display: block; font-size: 13px; color: var(--muted); } .fact .v { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-  ul.money, ul.asks { margin: 0; padding-left: 18px; font-size: 15px; display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
+  .fact .k { display: block; font-size: var(--fs-small); color: var(--muted); } .fact .v { font-size: var(--fs-figure); font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  ul.money, ul.asks { margin: 0; padding-left: 18px; font-size: var(--fs-body); display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
   ul.money { list-style: none; padding-left: 0; } ul.money li.head { font-weight: 600; }
 
   /* Post cards. Courier line: brand dot + name (always in words) + where to take it; the parcel number in a ring pill. */
-  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 -4px; padding: 0 0 12px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 16px; }
+  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 -4px; padding: 0 0 12px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: var(--fs-body); }
   .cband .cdot { width: 12px; height: 12px; border-radius: 50%; background: var(--cb); box-shadow: 0 0 0 1px var(--ctl); flex: none; }
-  .cband .pid { font-size: 17px; height: 28px; padding: 0 10px; border: 1px solid var(--ink); border-radius: var(--radius); display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
-  .cband .to { font-weight: 400; font-size: 15px; color: var(--muted); }
+  .cband .pid { font-size: var(--fs-figure); height: 28px; padding: 0 10px; border: 1px solid var(--ink); border-radius: var(--radius); display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
+  .cband .to { font-weight: 400; font-size: var(--fs-body); color: var(--muted); }
   .cb-inpost { --cb: var(--ljr-cb-inpost); } .cb-evri { --cb: var(--ljr-cb-evri); } .cb-rm { --cb: var(--ljr-cb-rm); } .cb-dpd { --cb: var(--ljr-cb-dpd); }
   .cb-yodel { --cb: var(--ljr-cb-yodel); } .cb-pf { --cb: var(--ljr-cb-pf); } .cb-none { --cb: var(--ljr-cb-none); }
-  .parcel { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .row .parcel { font-size: 17px; min-width: 44px; }
+  .parcel { font-size: var(--fs-figure); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .row .parcel { font-size: var(--fs-figure); min-width: 44px; }
   .dropcode { border: 1px dashed var(--ctl); border-radius: var(--radius); padding: 12px; text-align: center; }
-  .dropcode .code { display: block; font-size: 22px; font-weight: 600; letter-spacing: 2px; overflow-wrap: anywhere; }
+  .dropcode .code { display: block; font-size: var(--fs-figure); font-weight: 600; letter-spacing: 2px; overflow-wrap: anywhere; }
   .packbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
   .pidin { width: 9em; }
   /* Home: "To post" list, calm rows (photo, title, date pill), one button under it. Not a card, so Home keeps one Next card. */
@@ -186,7 +179,7 @@
   .prow { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); color: var(--ink); }
   .prow:first-child { border-top: 0; }
   .prow .pt { flex: 1; min-width: 0; display: flex; gap: 4px 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-  .prow .ttl { min-width: 0; font-size: 15px; }
+  .prow .ttl { min-width: 0; font-size: var(--fs-body); }
   .prow > img, .prow > .ph { width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); flex: none; background: var(--bg); }
   .plist .acts { margin-top: 4px; }
 
@@ -194,8 +187,8 @@
   .pair figure > a { display: block; border-radius: var(--radius); }
   .pair figure { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .pair img, .pair .nopic { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg); display: block; }
-  .pair .nopic { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
-  .pair figcaption { font-size: 13px; color: var(--muted); font-weight: 600; overflow-wrap: anywhere; }
+  .pair .nopic { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: var(--fs-small); }
+  .pair figcaption { font-size: var(--fs-small); color: var(--muted); font-weight: 600; overflow-wrap: anywhere; }
   .opbox { display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   label.qty { font-weight: 600; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; border-radius: var(--radius); }
@@ -203,14 +196,14 @@
   .buyfrom { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-weight: 600; } .buyfrom .k { color: var(--muted); font-weight: 600; }
   details.npgroup > summary { min-height: 56px; } details.npgroup[open] > *:not(summary) { margin-top: 12px; } details.npgroup .row .num { width: 72px; } details.npgroup input[type=checkbox] { width: 28px; height: 28px; }   /* v11.10 New stock */
   details.madeof { display: block; } details.madeof[open] > *:not(summary) { margin-top: 12px; } details.madeof label.qty { margin-top: 12px; }
-  input.num, input.txtin { font: inherit; font-size: 16px; min-height: 36px; padding: 4px 10px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); }
+  input.num, input.txtin { font: inherit; font-size: var(--fs-body); min-height: 36px; padding: 4px 10px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); }
   @media (max-width: 544px) { input.num, input.txtin { min-height: 44px; } }
   input.num { width: 72px; text-align: center; font-variant-numeric: tabular-nums; }
   input.num.pidin { width: 9em; }
   input.txtin { width: 100%; }
   input::placeholder { color: var(--muted); opacity: 1; }
   .qr { position: fixed; inset: 0; background: var(--ljr-paper); color: var(--ljr-ink); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
-  .qr .code { font-size: 44px; font-weight: 600; letter-spacing: 3px; word-break: break-all; }
+  .qr .code { font-size: var(--fs-figure); font-weight: 600; letter-spacing: 3px; word-break: break-all; }
   .qr img { max-width: 90vw; max-height: 60vh; }
 </style>
 </head>
@@ -226,7 +219,7 @@
     <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
   </div>
 </header>
-<main class="wrap">
+<main class="wrap house-page">
   <div class="mkwho house-frow">
     <button class="btn house-fbtn" type="button" data-house-filter="people sitef stockf" aria-controls="people" aria-expanded="false">Filter<span class="cnt" id="whoN"></span></button>
     <div class="chips people house-filters hidden" id="people" role="group" aria-label="Whose items"></div>
@@ -235,12 +228,16 @@
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs hidden" id="tabs" aria-label="Marketplace sections">
-  <a href="#/me" data-nav="me" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-home" aria-hidden="true"></i><span>Home</span><span class="n"></span></a>
-  <a href="#/do" data-nav="do" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-package" aria-hidden="true"></i><span>Do now</span><span class="n need" id="n-do"></span></a>
-  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-traffic-lights" aria-hidden="true"></i><span>Decide</span><span class="n need" id="n-decide"></span></a>
-  <a href="#/newstock" data-nav="newstock" style="--tc:var(--ljr-2)"><span class="bar" aria-hidden="true"></span><i class="ti ti-truck-delivery" aria-hidden="true"></i><span>New stock</span><span class="n need" id="n-newstock"></span></a>
-  <a href="#/reply" data-nav="reply" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-message" aria-hidden="true"></i><span>Reply</span><span class="n need" id="n-reply"></span></a>
-  <a href="#/insights" data-nav="insights" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-chart-bar" aria-hidden="true"></i><span>Insights</span><span class="n"></span></a>
+  <a class="ht" data-slot="1" href="#/me" data-nav="me"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n"></span></a>
+  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n need" id="n-decide"></span></a>
+  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n need" id="n-do"></span></a>
+  <a class="ht" data-slot="5" href="#/reply" data-nav="reply"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-chat"/></svg></span><span class="htl">Reply</span><span class="n need" id="n-reply"></span></a>
+  <a class="ht" data-slot="6" href="#/newstock" data-nav="newstock"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-truck"/></svg></span><span class="htl">New Stock</span><span class="n need" id="n-newstock"></span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/insights" data-nav="insights" data-slot="3"><i class="ti ti-chart-bar" aria-hidden="true"></i><span class="htl">Insights</span></a>
+    </div>
+  </div>
 </nav>
 <div id="qr" class="qr hidden" role="dialog" aria-label="Drop-off code"></div>
 <script>
@@ -510,7 +507,7 @@
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
     var nx = opts && opts.next;
-    var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
+    var h = '<div class="card ' + (red ? 'acc2 house-lbar' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
       '<div class="item">' + (isPair ? '' : thumb(d.photo, r.category)) + '<div class="t">' + nameLine(r, d) + '<div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([d.price, d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier].filter(Boolean).join(' · ')) + '</div>' + (r.section === 'post' && /^PO\|/.test(r.key) ? orderLine(r, d) : '') +
       postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m">' + datePill(d) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
       (isPair ? pair(r, d) : '') + (r.section === 'post' ? postGuide(r, d) : '') + (d.why && d.kind !== 'which_parcel' ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
@@ -712,7 +709,7 @@
     var h = '<p class="needs">Suppliers</p><p class="hint">Tap the account number to copy it, the phone to call. Change terms with Settings.</p>';
     if (!list.length) return h + '<div class="card"><p class="what">Suppliers appear after engine v11 is pasted and set up.</p></div>';
     list.forEach(function (r) { var d = detail(r);
-      h += '<div class="card' + (d.missing && d.missing.length ? ' acc2' : '') + '"><h2>' + esc(r.title) + '</h2>' +
+      h += '<div class="card' + (d.missing && d.missing.length ? ' acc2 house-lbar' : '') + '"><h2>' + esc(r.title) + '</h2>' +
         '<div class="acts">' + (d.account_no ? '<button class="btn" type="button" data-copycode="' + esc(d.account_no) + '">Account ' + esc(d.account_no) + '</button>' : '') +
         (/^[+\d ()-]{7,}$/.test(d.phone || '') ? '<a class="btn" href="tel:' + esc(String(d.phone).replace(/[^+\d]/g, '')) + '">Call ' + esc(d.phone) + '</a>' : '') +
         (/^[^@\s]+@[^@\s]+$/.test(d.order_email || '') ? '<a class="btn" href="mailto:' + esc(d.order_email) + '">Email orders</a>' : '') + linkBtn(d.website, 'Website') + '</div>' +
@@ -763,7 +760,7 @@
       return '<button class="chip" type="button" data-sfilter="' + c[0] + '" aria-pressed="' + (stockFilter === c[0]) + '">' + c[1] + '</button>'; }).join('') + '</div>';
     list.filter(function (r) { var d = detail(r); return stockFilter === 'all' || (stockFilter === 'low' && d.low) || (stockFilter === 'unknown' && d.unknown); }).forEach(function (r) {
       var d = detail(r);
-      h += '<div class="card stockrow' + (d.low ? ' acc2' : '') + '" data-text="' + esc((r.title + ' ' + d.item_sku + ' ' + (d.shelf || '')).toLowerCase()) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' +
+      h += '<div class="card stockrow' + (d.low ? ' acc2 house-lbar' : '') + '" data-text="' + esc((r.title + ' ' + d.item_sku + ' ' + (d.shelf || '')).toLowerCase()) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' +
         '<div class="m">' + esc([d.item_sku, d.shelf ? 'shelf ' + d.shelf : '', d.owner && d.owner !== 'Lisa' ? d.owner : '', d.listings + (d.listings === 1 ? ' listing' : ' listings')].filter(Boolean).join(' · ')) + '</div></div></div>' +
         '<div class="facts"><div class="fact"><span class="k">Have</span><span class="v' + (d.unknown ? ' red' : '') + '">' + (d.unknown ? '?' : esc(d.have)) + '</span></div><div class="fact"><span class="k">On order</span><span class="v">' + esc(d.on_order || 0) + '</span></div><div class="fact"><span class="k">Min</span><span class="v">' + (d.min === '' ? '–' : esc(d.min)) + '</span></div></div>' +
         priceLine(d);
@@ -913,13 +910,13 @@
   }
   function pageRound() {
     var items = byCat(rows.filter(function (r) { return r.section === 'round' && !r.applied_at; }));
-    if (!items.length) return '<p class="needs">Stock round</p><div class="card acc5"><h2>No round open</h2><p class="what">The monthly round starts on the first Monday. Until then, check or correct any count on the Stock page.</p><div class="acts"><a class="btn main" href="#/stock">Open Stock</a><a class="btn" href="#/insights">← Insights</a></div></div>';
+    if (!items.length) return '<p class="needs">Stock round</p><div class="card acc5 house-lbar"><h2>No round open</h2><p class="what">The monthly round starts on the first Monday. Until then, check or correct any count on the Stock page.</p><div class="acts"><a class="btn main" href="#/stock">Open Stock</a><a class="btn" href="#/insights">← Insights</a></div></div>';
     var shelves = []; items.forEach(function (r) { var s = detail(r).shelf || '?'; if (shelves.indexOf(s) < 0) shelves.push(s); });
     var at = Math.min(round.i || 0, shelves.length - 1), shelf = shelves[at];
     var h = '<p class="needs">Shelf ' + esc(shelf) + '</p><p class="what">' + (at + 1) + ' of ' + shelves.length + ' shelves. Tick if right, or type what is there.</p>';
     items.filter(function (r) { return (detail(r).shelf || '?') === shelf; }).forEach(function (r) {
       var d = detail(r), v = round[r.key] || {}, bad = v.n !== undefined && v.n !== '' && Number(v.n) !== Number(d.expected);
-      h += '<div class="card ' + (bad ? 'acc2' : (v.ok || r.answer ? 'acc5' : '')) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="m">expect ' + esc(d.expected) + '</div></div>' +
+      h += '<div class="card ' + (bad ? 'acc2 house-lbar' : (v.ok || r.answer ? 'acc5 house-lbar' : '')) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="m">expect ' + esc(d.expected) + '</div></div>' +
         (r.answer ? '' : '<button class="btn yes" type="button" data-tick="' + esc(r.key) + '" aria-label="Right">✓</button><input class="num" inputmode="numeric" data-count="' + esc(r.key) + '" value="' + esc(v.n === undefined ? '' : v.n) + '" aria-label="Counted">') + '</div>' +
         (bad ? '<div class="chips">' + ['sold', 'lost', 'found', 'damaged'].map(function (x) { return '<button class="chip' + (v.reason === x ? ' on' : '') + '" type="button" data-reason="' + esc(r.key) + '" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>' : '') +
         (r.answer ? sentLine(r) : '') + '</div>';

@@ -1,5 +1,6 @@
 // Money Hub: https://ljoyrose.github.io/dashboard/money/
 const { test, expect, buildWorld } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { at } = require('../support/site');
 const { IDS } = require('../support/world');
 
@@ -96,7 +97,7 @@ test.describe('Money Hub: navigation', () => {
     test(`nav "${title}" opens #/${key}`, async ({ page }) => {
       await page.goto('money/');
       await signIn(page);
-      await page.locator(`nav.main a[data-nav="${key}"]`).click();
+      await tabClick(page, `nav.main a[data-nav="${key}"]`);
       await expect(page).toHaveURL(new RegExp(`#/${key}$`));
       await expect(page.locator('#view')).toHaveAttribute('data-view', key);
       await expect(page.locator('#hereTitle')).toHaveText(title);

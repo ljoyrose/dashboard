@@ -1,3 +1,4 @@
+const { tabClick, tabTo } = require('../support/tabs');
 // JOB 34 (group B): Money Hub views, buttons and states that no other spec proves yet.
 // Every row is invented (tests/fixtures/job34/money/). Pretend Google and Drive only.
 const { test, expect, HUBS, fixture, DRIVE, sideScroll, tabWalk } = require('../fixtures/job34/load');
@@ -98,10 +99,13 @@ test.describe('Money Hub: addresses that point at nothing', () => {
 test.describe('Money Hub: keyboard', () => {
   test('changing view puts focus on the screen title; the bottom tabs are reachable with Tab and open with Enter', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
-    await page.locator('nav.main a[data-nav="dates"]').click();
+    await tabClick(page, 'nav.main a[data-nav="dates"]');
     await expect(page.locator('#hereTitle')).toBeFocused();
     const seen = await tabWalk(page, 80);
-    for (const t of ['Now', 'Money', 'Dates', 'To-do', 'Accountant', 'Control']) expect(seen.some((s) => s.startsWith(t)), t + ' reachable by Tab').toBe(true);
+    for (const t of ['Main', 'Money', 'Do', 'Dates', 'Accountant', 'More']) expect(seen.some((s) => s.startsWith(t)), t + ' reachable by Tab').toBe(true);
+    // Control sits under More (Lisa's tab picks, 2 Nov): Tab to More, Enter, then it is in the menu.
+    expect(await tabTo(page, 'nav.main a[data-nav="control"]', 90), 'Control reachable by Tab under More').toBe(true);
+    await page.keyboard.press('Escape');
     await page.locator('nav.main a[data-nav="accountant"]').focus();
     await page.keyboard.press('Enter');
     await expect(page).toHaveURL(/#\/accountant$/);
