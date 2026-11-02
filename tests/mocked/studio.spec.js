@@ -753,7 +753,7 @@ test.describe('Studio page', () => {
     expect(tick.slice(0, 2)).toEqual(['"✓"', '1px']);
     await go(page, 'decide');
     await page.locator('[data-bar="decide"] [data-f="fq"]').fill('zzzz-nothing');
-    await expect(page.locator('.col[data-sect="review"] .okempty')).toHaveText('All decided. Nothing waiting.');
+    await expect(page.locator('.col[data-sect="review"] .okempty')).toHaveText('All decided.');
     await page.locator('[data-bar="decide"] [data-f="fq"]').fill('');
     await go(page, 'line');
     const eh = (await empty.boundingBox()).height, fh = (await full.boundingBox()).height;
@@ -1183,10 +1183,9 @@ test.describe('Studio page', () => {
     await expect(page.locator('.crow[data-row="sa-gate"] [data-chip="need"]')).toHaveText('Gate');
   });
 
-  test('Me: greeting, three-number summary, Next with one button, Needs you today (7 at most); phone puts Needs first and the three in one row', async ({ page, guard }) => {
+  test('Me: no greeting, three-number summary, Next with one button, Needs you today (7 at most); phone puts Needs first and the three in one row', async ({ page, guard }) => {
     await open(page, guard, '#/me');
-    await expect(page.locator('.hello h2')).toHaveText(/^Good (morning|afternoon|evening), Lisa$/);
-    await expect(page.locator('.hello h2')).toHaveCSS('font-size', '18px');   // headings 18px (Lisa's type, 2 Nov)
+    await expect(page.locator('#view .hello'), 'no greeting (Lisa, 2 Nov: no unnecessary words)').toHaveCount(0);
     const sums = page.locator('[data-three] .sum');
     await expect(sums).toHaveText([/On track/, /Needs you/, /Overdue/]);
     // The three numbers are ringed 14px numbers, the same size as the words beside them; ring only, no fill (Lisa's pick A, 2 Nov).
@@ -1196,7 +1195,7 @@ test.describe('Studio page', () => {
     }
     const n = page.locator('[data-next]');
     await expect(n.locator('.btn')).toHaveCount(1);
-    await expect(n.locator('.btn')).toHaveText('Open it');
+    await expect(n.locator('.btn')).toHaveText('Open');
     await expect(n).toHaveCSS('border-top-color', await page.evaluate(() => getComputedStyle(document.body).color));
     expect(await n.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(255, 254, 251)'); // white card, no tint
     const m = page.locator('[data-needs] .mrow');
@@ -1207,7 +1206,6 @@ test.describe('Studio page', () => {
     await m.first().hover();
     expect(await m.first().locator('.ic').evaluate((e) => getComputedStyle(e).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)'); // takes the stage tint on hover
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.locator('.hello h2')).toHaveCSS('font-size', '18px');
     const ys = await sums.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
     expect(new Set(ys).size, 'the three fit in one row').toBe(1);
     // Read both positions in one go: the page redraws when it crosses into phone width.

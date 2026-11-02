@@ -298,10 +298,11 @@
   // Friendly empty state with a small green-ring check.
   function empty(text) { return '<p class="empty">' + esc(text) + '</p>'; }
   function src(name, m) {
-    var bits = ['From ' + (m && m.file && m.file.webViewLink ? '<a href="' + esc(m.file.webViewLink) + '" target="_blank" rel="noopener">' + esc(name) + '</a>' : esc(name))];
+    var bits = [];
     if (m && m.asOf) bits.push('data as of ' + d(m.asOf));
     if (m && m.error) bits.push('<b>' + esc(m.error) + '</b>');
     if (R) bits.push('read ' + esc(stampFmt.format(new Date(R.readAt))));
+    if (!bits.length) return '';
     return '<div class="source">' + bits.map(function (b) { return '<span>' + b + '</span>'; }).join('') + '</div>';
   }
   function meta(k) { return R && R.meta[k] || null; }
@@ -345,9 +346,8 @@
     var biz = withData.filter(function (m) { return m.company; }), ppl = withData.filter(function (m) { return !m.company; });
     var h = '';
     if (biz.length) h += '<h3 class="sec-h">Businesses</h3><div class="grid">' + biz.map(entCard).join('') + '</div>';
-    if (ppl.length) h += '<h3 class="sec-h">Personal · private to you</h3><div class="grid">' + ppl.map(entCard).join('') + '</div>';
+    if (ppl.length) h += '<h3 class="sec-h">Personal</h3><div class="grid">' + ppl.map(entCard).join('') + '</div>';
     if (none.length) h += '<p class="quiet">No statements yet: ' + none.map(function (m) { return '<a href="#/e/' + esc(m.code) + '">' + esc(m.code) + '</a>'; }).join(', ') + '.</p>';
-    h += '<p class="note">No grand total. Business and personal kept apart.</p>';
     return h;
   }
   function itemLi(i) {
@@ -376,10 +376,10 @@
     return '<ul class="items">' + items.slice(0, n).map(render1).join('') + '</ul>' + showBar(key || 'list', items.length, show);
   }
   function notReady() {
-    if (!signedIn) return '<div class="card c-ink now"><h3>Sign in to see your money</h3><p class="note">Read-only. One sign-in for the whole site.</p><div><button class="btn main" type="button" data-action="signin"><svg class="icon"><use href="#i-in"/></svg><span>Sign in with Google</span></button></div></div>';
+    if (!signedIn) return '<div class="card c-ink now"><h3>Sign in</h3><div><button class="btn main" type="button" data-action="signin"><svg class="icon"><use href="#i-in"/></svg><span>Sign in with Google</span></button></div></div>';
     if (err) return '<div class="card c-risk pending"><h3>Could not read Drive</h3><p class="note">' + esc(err) + '</p><div><button class="btn" type="button" data-action="refresh">Try again</button></div></div>';
     if (R && R.gate === 'denied') return '<div class="card c-risk"><h3>This page is for Lisa only</h3><p class="note">Signed in as ' + esc(R.email) + '. Sign out and sign in with Lisa\'s account.</p></div>';
-    return '<div class="card pending"><h3>Reading…</h3><p class="note">Reading the Money Hub files from Google Drive.</p></div>';
+    return '<div class="card pending"><h3>Reading…</h3></div>';
   }
 
   // ---- Views ----
@@ -389,16 +389,16 @@
   function summary(items) {
     var over = items.filter(isOverdue).length, need = items.length - over;
     var fine = R.money.filter(function (m) { return !m.noData && !entBad(m); }).length;
-    var one = function (cls, n, label, sub) { return '<div class="sum ' + cls + '" data-sum="' + cls + '"><span class="num' + (n ? '' : ' zero') + '">' + n + '</span><span class="t">' + label + '<small>' + sub + '</small></span></div>'; };
-    return '<div class="three" role="group" aria-label="Summary">' + one('ok', fine, 'On track', fine === 1 ? 'entity with nothing wrong' : 'entities with nothing wrong') +
-      one('need', need, 'Needs you', 'urgent or due in 14 days') + one('over', over, 'Overdue', 'past their date') + '</div>';
+    var one = function (cls, n, label, sub) { return '<div class="sum ' + cls + '" data-sum="' + cls + '"><span class="num' + (n ? '' : ' zero') + '">' + n + '</span><span class="t">' + label + '</span></div>'; };
+    return '<div class="three" role="group" aria-label="Summary">' + one('ok', fine, 'On track') +
+      one('need', need, 'Needs you') + one('over', over, 'Overdue') + '</div>';
   }
   function openWord(href) {
-    return /^#\/e\//.test(href) ? 'Open ' + href.slice(4) : /^#\/register\//.test(href) ? 'Open the to-do' : /^#\/dates/.test(href) ? 'Open Dates' : /^#\/control/.test(href) ? 'Open Control' : 'Open';
+    return /^#\/e\//.test(href) ? href.slice(4) : /^#\/register\//.test(href) ? 'To-do' : /^#\/dates/.test(href) ? 'Dates' : /^#\/control/.test(href) ? 'Control' : 'Open';
   }
   function nextCard(items) {
     var i = items[0];
-    if (!i) return '<section class="card next" data-next><h3 class="sr">Next</h3>' + empty('Nothing needs you right now.') + '</section>';
+    if (!i) return '<section class="card next" data-next><h3 class="sr">Next</h3>' + empty('Nothing needs you.') + '</section>';
     return '<section class="card next" data-next><h3 class="sr">Next</h3>' + bline(i.ent, 'Next') + '<p class="ntitle">' + esc(i.text) + '</p>' +
       '<div class="meta">' + tag(levelCls(i.level), i.tag) + (i.when ? datePill(M.fmtDate(i.when, R.today), i.level === 'risk' ? 'late' : 'soon') : '') + '</div>' +
       (i.href ? '<div class="go"><a class="btn" href="' + esc(i.href) + '">' + esc(openWord(i.href)) + '</a></div>' : '') + '</section>';
@@ -407,16 +407,16 @@
     var items = M.needsNow(R.data, R.money, R.today);
     var risk = items.filter(function (i) { return i.level === 'risk'; }).length;
     var h = summary(items) + nextCard(items);
-    h += '<section class="card now ' + (risk ? 'c-risk' : 'c-ok') + '"><div class="cardhead"><h3>What needs you now</h3>' + cnt(items.length, true) + '</div>';
-    h += items.length ? listWithMore(items, NOW_SHOW, itemLi, 'now-needs') : empty('Nothing needs you. Nothing overdue, urgent or due in the next 14 days.');
-    h += src('MON-DATES, MON-REGISTER, MON-INTAKE and the ledgers', null) + '</section>';
-    h += '<section class="card c-fin"><div class="cardhead"><h3>Money by entity</h3></div>' + entGroups(R.money) + src('BALANCES, OUTGOINGS-NEXT, FORECAST, LIABILITIES and XERO files per entity', null) + '</section>';
+    h += '<section class="card now ' + (risk ? 'c-risk' : 'c-ok') + '"><div class="cardhead"><h3>Needs you</h3>' + cnt(items.length, true) + '</div>';
+    h += items.length ? listWithMore(items, NOW_SHOW, itemLi, 'now-needs') : empty('Nothing needs you.');
+    h += src('', null) + '</section>';
+    h += '<section class="card c-fin"><div class="cardhead"><h3>Money by entity</h3></div>' + entGroups(R.money) + '</section>';
     var soon = M.overdueDates(R.data, R.today).concat(M.dueWithin(R.data, R.today, 14));
-    h += '<section class="card c-ops"><div class="cardhead"><h3>Dates: overdue and next 14 days</h3>' + cnt(soon.length, soon.some(function (x) { return x.days < 0; })) + '</div>' +
+    h += '<section class="card c-ops"><div class="cardhead"><h3>Dates</h3>' + cnt(soon.length, soon.some(function (x) { return x.days < 0; })) + '</div>' +
       (soon.length ? listWithMore(soon, 6, dateLi, 'now-dates') : empty('Nothing due in the next 14 days.')) + '<div class="go"><a class="btn" href="#/dates">All dates</a></div>' + src('MON-DATES.csv', meta('dates')) + '</section>';
     var turn = M.yourTurn(R.data), readyN = turn.filter(function (x) { return x.ready === 'ready'; }).length;
     h += '<section class="card c-ops"><div class="cardhead"><h3>Your turn</h3>' + tag(readyN ? 'c-ops' : 'c-mute', readyN + ' ready · ' + turn.length + ' open') + '</div>' +
-      (turn.length ? listWithMore(turn, TURN_SHOW, turnLi, 'now-turn') : empty('Nothing waiting on you.')) + '<div class="go"><a class="btn" href="#/todo">All ' + turn.length + ' to-dos</a></div>' + src('MON-REGISTER.csv', meta('register')) + '</section>';
+      (turn.length ? listWithMore(turn, TURN_SHOW, turnLi, 'now-turn') : empty('Nothing waiting.')) + '<div class="go"><a class="btn" href="#/todo">All ' + turn.length + ' to-dos</a></div>' + src('MON-REGISTER.csv', meta('register')) + '</section>';
     return h;
   }
 
@@ -431,7 +431,7 @@
           var pct = function (v) { return v === '' || isNaN(+v) ? '–' : (+v >= 0 ? '+' : '') + Math.round(+v) + '%'; };
           return '<tr><td><b>' + esc(r.entity) + '</b></td><td class="r">' + (r.cash_bank ? gbp(+r.cash_bank) + '<div class="lbl">' + d(r.cash_as_of) + '</div>' : '–') + '</td><td class="r">' + (r.net_month ? gbp(+r.net_month) + '<div class="lbl">' + esc(r.month) + '</div>' : '–') + '</td><td>' +
             (r.variance_flag ? tag('c-ops', r.variance_flag) : r.month ? 'in ' + pct(r.income_vs_avg_pct) + ' · out ' + pct(r.expense_vs_avg_pct) : '–') + '</td><td>' + (r.runs_dry_on ? (r.runs_dry_on < R.today ? tag('c-ops', 'Stale') + ' ' : '') + d(r.runs_dry_on) : r.month ? 'not in 90 days' : '–') + '</td></tr>';
-        }).join('') + '</table></div><p class="note">From the Monday pack job (paused). Cards above: live from the ledgers.</p>' + src('MON-REPORTS.csv', meta('reports')) + '</section>';
+        }).join('') + '</table></div>' + src('MON-REPORTS.csv', meta('reports')) + '</section>';
     }
     return h;
   }
@@ -449,7 +449,7 @@
   }
   function viewEntity(code) {
     var m = emoney(code);
-    if (!m) return '<div class="card c-risk"><h3>No entity called ' + esc(code) + '</h3><p class="note">Entities come from MON-SUBJECTS rows of kind entity.</p></div>';
+    if (!m) return '<div class="card c-risk"><h3>No entity called ' + esc(code) + '</h3></div>';
     var h = '';
     var stats = [];
     stats.push(['c-fin', m.bank != null ? gbp(m.bank) : '–', 'In the bank', m.bankAsOf ? 'as at ' + M.fmtDate(m.bankAsOf, R.today) + (m.bankStale ? ' · ' + ago(m.bankAge) : '') : 'no statement yet']);
@@ -463,7 +463,7 @@
     if (m.liab && m.liab.overdueTotal) stats.push(['c-risk', gbp(m.liab.overdueTotal, 2), 'Overdue tax or debt', m.liab.overdue[0].creditor]);
     h += '<section class="card ' + (m.company ? 'c-fin' : 'c-ideas') + '"><div class="cardhead"><h3>' + esc(m.name) + '</h3>' + chip(m.company ? 'Business' : 'Personal · private') + '</div>' +
       '<div class="stats">' + stats.map(function (s) { return '<div class="stat ' + s[0] + '"><div class="num">' + esc(s[1]) + '</div><div class="label">' + esc(s[2]) + '</div><div class="sub">' + esc(s[3]) + '</div></div>'; }).join('') + '</div>' +
-      (m.noData ? '<p class="note">No ledger files found for ' + esc(m.code) + ' yet. Drop statements into Drop / ' + esc(m.code) + ' and they will be filed into the ledger.</p>' : '') + '</section>';
+      (m.noData ? '<p class="note">No ledger yet. Drop statements in Drop / ' + esc(m.code) + '.</p>' : '') + '</section>';
     if (m.accounts && m.accounts.length) {
       var bal = efile(code, 'balances');
       h += '<section class="card c-fin"><h3>Accounts</h3><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Account</th><th class="r">Balance</th><th>As at</th></tr>' + bal.table.rows.map(function (a) {
@@ -478,13 +478,13 @@
         .sort(function (a, b) { return a.expected_on.localeCompare(b.expected_on); });
       var inn = M.sum(due.filter(function (r) { return r.direction === 'in'; }), function (r) { return r.amount; });
       var out = -M.sum(due.filter(function (r) { return r.direction === 'out'; }), function (r) { return r.amount; });
-      h += '<section class="card c-fin"><div class="cardhead"><h3>Expected in and out, next 30 days</h3>' + tag('c-ok', '+' + gbp(inn)) + tag('c-fin', '−' + gbp(out)) + '</div>' +
+      h += '<section class="card c-fin"><div class="cardhead"><h3>Next 30 days</h3>' + tag('c-ok', '+' + gbp(inn)) + tag('c-fin', '−' + gbp(out)) + '</div>' +
         (due.length ? '<details><summary class="more">' + due.length + ' expected items</summary><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Date</th><th>Who</th><th class="r">Amount</th><th>Sure?</th></tr>' + due.map(function (r) {
           return '<tr><td>' + d(r.expected_on) + '</td><td>' + esc(r.counterparty) + '</td><td class="r">' + gbp(M.n(r.amount) * (r.direction === 'out' && M.n(r.amount) > 0 ? -1 : 1), 2) + '</td><td>' + esc(r.confidence) + '</td></tr>';
-        }).join('') + '</table></div></details>' : '<p class="note">Nothing expected in this window.</p>') +
-        '<p class="note">Regular items only. Plan made ' + d(M.provDate(cf.table.prov)) + ': some may have happened.</p>' + src('CASHFLOW.csv · ' + code, cf) + '</section>';
+        }).join('') + '</table></div></details>' : '<p class="note">Nothing expected.</p>') +
+        '<p class="note">Plan made ' + d(M.provDate(cf.table.prov)) + '.</p>' + src('CASHFLOW.csv · ' + code, cf) + '</section>';
     }
-    if (m.months && m.months.length) h += '<section class="card c-fin"><h3>Month by month</h3>' + monthTable(m) + '<p class="note">Bank, cash basis. Top bar (green ring) = in. Lower bar (amber ring) = out.</p>' + src('MONTHLY.csv · ' + code, efile(code, 'monthly')) + '</section>';
+    if (m.months && m.months.length) h += '<section class="card c-fin"><h3>Month by month</h3>' + monthTable(m) + '<p class="note">Top bar in, lower bar out.</p>' + src('MONTHLY.csv · ' + code, efile(code, 'monthly')) + '</section>';
     var rec = efile(code, 'recurring');
     if (rec && rec.table) {
       var rr = rec.table.rows.slice().sort(function (a, b) { return Math.abs(M.n(b.amount_expected) || 0) - Math.abs(M.n(a.amount_expected) || 0); });
@@ -500,21 +500,21 @@
         return '<li>' + bline(r.creditor) + '<div class="itext">' + esc(gbp(M.n(r.amount), 2)) + ' · ' + esc(r.item) + '</div><div class="meta">' + tag(cls, r.status) +
           (M.isISO(r.due) ? datePill('due ' + M.fmtDate(r.due, R.today), r.status === 'overdue' ? 'late' : '') : plain([r.due])) + '</div>' +
           (r.note || r.plan ? '<div class="meta">' + esc([r.plan, r.note].filter(Boolean).join(' · ')) + '</div>' : '') + '</li>';
-      }).join('') + '</ul><p class="note">Plan rows repeat, not added up. Not tax advice.</p>' + src('LIABILITIES.csv · ' + code, lf) + '</section>';
+      }).join('') + '</ul><p class="note">Not tax advice.</p>' + src('LIABILITIES.csv · ' + code, lf) + '</section>';
     }
     h += xeroCards(code, m);
     var dts = M.datesView(R.data, R.today).filter(function (x) { return !x.done && (x.r.entity || '').split(';').indexOf(code) >= 0; });
-    if (dts.length) h += '<section class="card c-ops"><h3>Dates for ' + esc(code) + '</h3>' + listWithMore(dts, 5, dateLi, 'ent-dates-' + code) + src('MON-DATES.csv', meta('dates')) + '</section>';
+    if (dts.length) h += '<section class="card c-ops"><h3>Dates</h3>' + listWithMore(dts, 5, dateLi, 'ent-dates-' + code) + src('MON-DATES.csv', meta('dates')) + '</section>';
     var rules = M.ruleDeadlines(R.data, R.today).filter(function (x) { return x.ent === code; });
     if (rules.length) h += ruleCard(rules, code);
     var turn = M.yourTurn(R.data).filter(function (x) { return (x.r.entity || '').split(';').indexOf(code) >= 0; });
-    if (turn.length) h += '<section class="card c-ops"><h3>Your to-dos for ' + esc(code) + '</h3>' + listWithMore(turn, 5, turnLi, 'ent-turn-' + code) + src('MON-REGISTER.csv', meta('register')) + '</section>';
+    if (turn.length) h += '<section class="card c-ops"><h3>To-dos</h3>' + listWithMore(turn, 5, turnLi, 'ent-turn-' + code) + src('MON-REGISTER.csv', meta('register')) + '</section>';
     return h;
   }
   function xeroCards(code, m) {
     var h = '', pay = efile(code, 'pay'), recv = efile(code, 'recv'), pnl = efile(code, 'pnl'), inc = efile(code, 'income'), un = efile(code, 'unrec');
     if (!pay && !recv && !pnl) return '';
-    h += '<section class="card c-fin"><div class="cardhead"><h3>Xero</h3>' + chip('connector not configured here') + '</div><p class="note">From Xero exports. Matches the bank only once reconciled.</p>';
+    h += '<section class="card c-fin"><div class="cardhead"><h3>Xero</h3>' + chip('Not connected') + '</div>';
     if (pnl && pnl.table) {
       h += '<h4>Profit and loss by year</h4><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Year</th><th class="r">Income</th><th class="r">Expenses</th><th class="r">Net profit</th></tr>' + pnl.table.rows.map(function (r) {
         return '<tr><td>' + esc(r.fy) + '</td><td class="r">' + gbp(M.n(r.income)) + '</td><td class="r">' + gbp(M.n(r.expenses)) + '</td><td class="r">' + cash(M.n(r.net_profit)) + '</td></tr>';
@@ -568,9 +568,9 @@
       datePill((x.days === 0 ? 'Today' : 'In ' + x.days + 'd') + ' · ' + M.fmtDate(x.due, R.today), x.days <= 14 ? 'late' : x.days <= 45 ? 'soon' : '') + chip('check with accountant') + plain(['Rule: ' + x.rule]) + '</div></li>';
   }
   function ruleCard(list, key) {
-    var h = '<section class="card c-fin" data-rules="' + esc(key) + '"><div class="cardhead"><h3>Worked out from the rules</h3>' + cnt(list.length) + '</div>';
-    h += list.length ? listWithMore(list, 6, ruleLi, 'rules-' + key) : empty('Nothing worked out for this yet.');
-    return h + '<ul class="notes"><li>Usual UK deadlines, not from HMRC or Companies House. Check with your accountant. Not tax advice.</li><li>Already in MON-DATES (same entity, within 5 days): not repeated.</li><li>Company and VAT dates need <code>year_end</code> and <code>vat_quarter_end</code> (MM-DD) in MON-SUBJECTS.</li></ul></section>';
+    var h = '<section class="card c-fin" data-rules="' + esc(key) + '"><div class="cardhead"><h3>From the rules</h3>' + cnt(list.length) + '</div>';
+    h += list.length ? listWithMore(list, 6, ruleLi, 'rules-' + key) : empty('None yet.');
+    return h + '<ul class="notes"><li>Usual UK deadlines. Not tax advice.</li></ul></section>';
   }
 
   function viewDates() {
@@ -584,9 +584,9 @@
       ['Date not known yet', 'c-mute', all.filter(function (x) { return x.gap; })]
     ];
     var shown = groups.filter(function (g) { return g[2].length; });
-    return (shown.length ? '' : '<section class="card c-ok">' + empty('No dates waiting. Everything in MON-DATES is done.') + '</section>') + shown.map(function (g) {
+    return (shown.length ? '' : '<section class="card c-ok">' + empty('No dates waiting.') + '</section>') + shown.map(function (g) {
       return '<section class="card ' + g[1] + '"><div class="cardhead"><h3>' + esc(g[0]) + '</h3>' + cnt(g[2].length, g[0] === 'Overdue') + '</div>' + listWithMore(g[2], g[0] === 'Later' ? 5 : 8, dateLi, 'dates-' + g[0]) + '</section>';
-    }).join('') + '<p class="note">Repeating dates roll to their next day. Done rows are hidden.</p>' + src('MON-DATES.csv', meta('dates')) + ruleCard(M.ruleDeadlines(R.data, R.today), 'all');
+    }).join('') + src('MON-DATES.csv', meta('dates')) + ruleCard(M.ruleDeadlines(R.data, R.today), 'all');
   }
 
   var TODO_SUBS = [['yours', 'Yours'], ['others', 'Waiting on others'], ['watch', 'Watching'], ['closed', 'Closed']];
@@ -602,15 +602,15 @@
     var mk = function (rows) { return rows.map(function (r) { return { r: r, ready: M.ready(r, reg) }; }); };
     if (sub === 'yours') {
       var t = M.yourTurn(R.data);
-      h += wrap('Ready now', 'c-ops', t.filter(function (x) { return x.ready === 'ready'; }), 8) + wrap('Waiting on something first', 'c-mute', t.filter(function (x) { return x.ready !== 'ready'; }), 5);
+      h += wrap('Ready now', 'c-ops', t.filter(function (x) { return x.ready === 'ready'; }), 8) + wrap('Blocked', 'c-mute', t.filter(function (x) { return x.ready !== 'ready'; }), 5);
     } else if (sub === 'others') {
       h += wrap('Waiting on others', 'c-ok', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isLisa(r) && M.isTask(r); })));
     } else if (sub === 'watch') {
-      h += wrap('Conditions and checks being watched', 'c-ideas', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isTask(r); })));
+      h += wrap('Watching', 'c-ideas', mk(reg.filter(function (r) { return M.isOpen(r) && !M.isTask(r); })));
     } else {
       h += wrap('Closed', 'c-ok', mk(reg.filter(function (r) { return !M.isOpen(r); }).reverse()), 10);
     }
-    return h + '<p class="note">Answering here: off. Change rows in MON-REGISTER.csv.</p>' + src('MON-REGISTER.csv', meta('register'));
+    return h + src('MON-REGISTER.csv', meta('register'));
   }
 
   function viewAccountant() {
@@ -618,9 +618,8 @@
     var open = rows.filter(function (r) { return !r.answer; }), done = rows.filter(function (r) { return r.answer; });
     var li = function (r) { return '<li>' + bline(r.entity) + '<div class="itext">' + esc(r.question) + '</div><div class="meta">' + tag(r.answer ? 'c-ok' : /not yet/i.test(r.status) ? 'c-ops' : 'c-mute', r.answer ? 'Answered' : r.status) + plain([r.id]) + '</div>' +
       '<div class="meta"><span>About: ' + esc(r.about_document) + '</span><span>Asked ' + d(r.asked_on) + '</span></div>' + (r.answer ? '<div>' + esc(r.answer) + '</div>' : '') + '</li>'; };
-    return '<section class="card c-ok"><div class="cardhead"><h3>Questions waiting on the accountant</h3>' + cnt(open.length) + '</div>' + (open.length ? '<ul class="items">' + open.map(li).join('') + '</ul>' : empty('Nothing waiting on the accountant.')) + src('QUESTIONS-FOR-ACCOUNTANT.csv', meta('accountant')) + '</section>' +
-      (done.length ? '<section class="card c-ok"><h3>Answered</h3><ul class="items">' + done.map(li).join('') + '</ul></section>' : '') +
-      '<p class="note">Chasing: manual. Nothing is sent from here.</p>';
+    return '<section class="card c-ok"><div class="cardhead"><h3>Open questions</h3>' + cnt(open.length) + '</div>' + (open.length ? '<ul class="items">' + open.map(li).join('') + '</ul>' : empty('No open questions.')) + src('QUESTIONS-FOR-ACCOUNTANT.csv', meta('accountant')) + '</section>' +
+      (done.length ? '<section class="card c-ok"><h3>Answered</h3><ul class="items">' + done.map(li).join('') + '</ul></section>' : '');
   }
 
   function viewControl() {
@@ -628,7 +627,6 @@
     var bad = fc.filter(function (f) { return f.state === 'fail'; }), warn = fc.filter(function (f) { return f.state === 'warn'; });
     var h = '<section class="card ' + (bad.length ? 'c-risk' : warn.length ? 'c-ops' : 'c-ok') + '"><div class="cardhead"><h3>Files</h3>' +
       tag(bad.length ? 'c-risk' : 'c-ok', (fc.length - bad.length) + ' of ' + fc.length + ' found once') + '</div>' +
-      '<p class="note">Found by folder + exact title. Two copies or none = error. Never an old file id.</p>' +
       (bad.length || warn.length ? '' : '<details><summary class="more">Show all ' + fc.length + ' files</summary>') +
       '<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Where</th><th>File</th><th>State</th><th>Data as of</th></tr>' + fc.slice().sort(function (a, b) { var o = { fail: 0, warn: 1, wait: 2, ok: 3 }; return o[a.state] - o[b.state]; }).map(function (f) {
         return '<tr><td>' + esc(f.scope) + '</td><td>' + (f.link ? '<a href="' + esc(f.link) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name)) + '</td><td>' +
@@ -639,31 +637,31 @@
     var ks = Object.keys(latest).sort(function (a, b) { return a.localeCompare(b, 'en-GB', { numeric: true }); }).map(function (k) { return latest[k]; });
     var failing = ks.filter(function (c) { return !/^(PASS|INFO)/i.test(c.result || ''); });
     h += '<section class="card ' + (failing.length ? 'c-risk' : 'c-ok') + '"><div class="cardhead"><h3>Checks</h3>' + tag(failing.length ? 'c-risk' : 'c-ok', failing.length ? failing.length + ' failing' : 'None failing') + '</div>' +
-      '<p class="note">Latest run. PASS / INFO = not a failure.</p><ul class="items">' + ks.map(function (c) {
+      '<ul class="items">' + ks.map(function (c) {
         var ok = /^(PASS|INFO)/i.test(c.result || '');
         return '<li><div class="bline">' + esc(c.check_id) + '</div><div class="itext">' + esc(c.result) + '</div><div class="meta">' + tag(ok ? 'c-ok' : 'c-risk', ok ? (/^INFO/i.test(c.result) ? 'Info' : 'Pass') : 'Fail') + plain([whenOf(c.run_on), c.job]) + '</div></li>';
       }).join('') + '</ul>' + src('CHECK-LOG.csv', meta('checks')) + '</section>';
     var trig = (R.data.triggers || []).filter(function (t) { return t.hub === 'MON'; });
     var k14 = latest.K014, tm = meta('triggers');
     h += '<section class="card c-ops"><div class="cardhead"><h3>Scheduled jobs</h3>' + tag('c-ops', 'Paused') + '</div>' +
-      '<p>All scheduled money jobs are paused while you review the hub. ' + (k14 ? 'Last confirmed ' + esc(whenOf(k14.run_on)) + ': ' + esc(k14.result) : '') + '</p>' +
-      (trig.length ? '<details><summary class="more">' + trig.length + ' money jobs listed in TRIGGERS.csv</summary><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Job</th><th>When</th><th>Task id</th><th>File says</th></tr>' + trig.map(function (t) {
+      (k14 ? '<p>Last confirmed ' + esc(whenOf(k14.run_on)) + ': ' + esc(k14.result) + '</p>' : '') +
+      (trig.length ? '<details><summary class="more">' + trig.length + ' jobs</summary><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><tr><th>Job</th><th>When</th><th>Task id</th><th>File says</th></tr>' + trig.map(function (t) {
         return '<tr><td><b>' + esc(t.trigger_id) + '</b><div class="lbl">' + esc(String(t.name || '').replace(/^TR-\S+ · /, '')) + '</div></td><td>' + esc(t.cadence_uk) + '</td><td><code>' + esc(t.mechanism_id) + '</code></td><td>' + esc(t.status) + '</td></tr>';
-      }).join('') + '</table></div><p class="note">TRIGGERS.csv was last recounted ' + d(tm && tm.asOf) + ' and still says ENABLED for these; the pause check above is newer.</p></details>' : '<p class="note">TRIGGERS.csv not read' + (tm && tm.error ? ': ' + esc(tm.error) : '') + '.</p>') +
+      }).join('') + '</table></div></details>' : '<p class="note">TRIGGERS.csv not read' + (tm && tm.error ? ': ' + esc(tm.error) : '') + '.</p>') +
       src('TRIGGERS.csv', tm) + '</section>';
     var intake = R.data.intake || [], od = M.intakeOverdue(R.data, R.today).map(function (r) { return r.id; });
     var byE = {}; intake.forEach(function (r) { (byE[r.entity] = byE[r.entity] || []).push(r); });
     h += '<section class="card ' + (od.length ? 'c-ops' : 'c-ok') + '"><div class="cardhead"><h3>Statements to drop</h3>' + tag(od.length ? 'c-ops' : 'c-ok', od.length + ' past due') + '</div>' +
-      '<p class="note">Put files in the <a href="https://drive.google.com/drive/folders/' + esc(M.CFG.folders.drop) + '" target="_blank" rel="noopener">Drop folder</a> under the right entity. Uploading from this page is off for now.</p>' +
+      '<p class="note">Put them in the <a href="https://drive.google.com/drive/folders/' + esc(M.CFG.folders.drop) + '" target="_blank" rel="noopener">Drop folder</a>.</p>' +
       Object.keys(byE).map(function (e) {
         return '<h4>' + esc(e) + '</h4><ul class="items">' + byE[e].map(function (r) {
           var late = od.indexOf(r.id) >= 0;
           return '<li><div class="itext">' + esc(r.account) + '</div><div class="meta">' + tag(late ? 'c-ops' : r.status === 'live' ? 'c-ok' : r.last_received ? 'c-ok' : 'c-mute', late ? 'Due ' + M.fmtDate(r.next_due, R.today) : r.status === 'live' ? 'Live' : r.next_due ? 'Next ' + M.fmtDate(r.next_due, R.today) : r.status) + plain([r.cadence, r.last_received ? 'last ' + M.fmtDate(r.last_received, R.today) : 'never received']) + '</div></li>';
         }).join('') + '</ul>';
       }).join('') + src('MON-INTAKE.csv', meta('intake')) + '</section>';
-    h += '<section class="card c-mute"><h3>Connections and saving</h3><ul class="items">' +
-      '<li><div class="itext">Xero and PayPal</div><div class="meta">' + tag('c-mute', 'Not configured') + '</div><div class="meta">Xero figures come from the export files in Drive. Connecting either needs its keys kept in a secure store, never in this page.</div></li>' +
-      '<li><div class="itext">Saving and answers</div><div class="meta">' + tag('c-mute', 'Off') + '</div><div class="meta">This page only reads. Writing rows back needs either an Apps Script web app run as Lisa or the full Drive scope, plus the living-file rewrite rule.</div></li>' +
+    h += '<section class="card c-mute"><h3>Connections</h3><ul class="items">' +
+      '<li><div class="itext">Xero and PayPal</div><div class="meta">' + tag('c-mute', 'Not configured') + '</div></li>' +
+      '<li><div class="itext">Saving</div><div class="meta">' + tag('c-mute', 'Off') + '</div></li>' +
       '</ul></section>';
     return h;
   }

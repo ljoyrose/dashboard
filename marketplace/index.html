@@ -250,7 +250,7 @@
   var CATS = ['Clothes', 'Blades & grooming', 'Health & supplements', 'Treats', 'Crates & beds', 'Towels & textiles', 'Collars & accessories', 'Electronics & media', 'Other'];
   var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
   var SECTIONS = {
-    remove: { name: 'Remove from other sites', urgent: true, verb: 'Done', what: 'It sold. Take it off the site named on the card.' },
+    remove: { name: 'Remove from sites', urgent: true, verb: 'Done', what: 'It sold. Take it off the site named on the card.' },
     message: { name: 'Messages', urgent: true, verb: 'Done', what: 'A buyer wrote. Open your messages, answer there, then tap Done.' },
     post: { name: 'Post', urgent: true, verb: 'Posted', what: 'Find it, pack it, post it.' },
     go: { name: 'Go', verb: 'Go', no: 'Not this one', what: 'List this item.' },
@@ -507,7 +507,7 @@
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
     var nx = opts && opts.next;
-    var h = '<div class="card ' + (red ? 'acc2 house-lbar' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
+    var h = '<div class="card ' + (red ? 'acc2 house-lbar' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2>' : '') +
       '<div class="item">' + (isPair ? '' : thumb(d.photo, r.category)) + '<div class="t">' + nameLine(r, d) + '<div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([d.price, d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier].filter(Boolean).join(' · ')) + '</div>' + (r.section === 'post' && /^PO\|/.test(r.key) ? orderLine(r, d) : '') +
       postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m">' + datePill(d) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
       (isPair ? pair(r, d) : '') + (r.section === 'post' ? postGuide(r, d) : '') + (d.why && d.kind !== 'which_parcel' ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
@@ -526,7 +526,7 @@
     else if (r.section === 'check' && d.kind === 'new') {   // v11.5: say what eBay shows, and offer the item she probably already has
       h += factsOf([['eBay says for sale', d.qty === '' || d.qty === undefined ? '?' : String(d.qty)], ['Price', d.price || '']]);
       if (d.maybe_sku) h += '<div class="item">' + thumb(d.maybe_photo) + '<div class="t">Looks like: ' + esc(d.maybe_title) + '<div class="m">' + esc(d.maybe_sku + ' · ' + d.maybe_where) + '</div></div></div>';
-      h += '<label class="qty">How many do you have? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have"></label><p class="hint">Leave blank if you are not sure.' + (d.maybe_sku ? ' Same item keeps one count for both adverts, so a sale on one updates the other.' : '') + '</p>';
+      h += '<label class="qty">How many do you have? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have"></label>' + (d.maybe_sku ? '<p class="hint">Same item: one count for both adverts.</p>' : '');
       acts.push(linkBtn(d.url, 'Open on eBay'));
       if (d.maybe_sku) acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Same">Same item</button><button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">No, a new item</button>');
       else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Add it</button>');
@@ -539,10 +539,10 @@
         if (pairDiff[r.key]) {
           h += '<p class="what">Two separate items. How many of each do you have?</p>' +
             '<label class="qty">This one (' + esc(d.platform || 'Vinted') + ') <input class="num" inputmode="numeric" data-diffa="' + esc(r.key) + '" aria-label="How many of this one"></label>' +
-            '<label class="qty">The eBay one <input class="num" inputmode="numeric" data-diffb="' + esc(r.key) + '" aria-label="How many of the eBay one"></label><p class="hint">Leave a box blank if you are not sure.</p>';
+            '<label class="qty">The eBay one <input class="num" inputmode="numeric" data-diffb="' + esc(r.key) + '" aria-label="How many of the eBay one"></label>';
           acts.push('<button class="btn main no" type="button" data-ans="' + esc(r.key) + '" data-v="Different">Save: different items</button><button class="btn" type="button" data-diffback="' + esc(r.key) + '">Back</button>');
         } else {
-          h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Leave blank if you are not sure. Yes then keeps one count for both sites.</p>';
+          h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Yes keeps one count for both sites.</p>';
           acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes, same item</button><button class="btn no" type="button" data-diff="' + esc(r.key) + '">Different items</button>');
         }
       } else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">No</button>'); }
@@ -607,7 +607,7 @@
       return { h: h, acts: [linkBtn(d.file_url, 'Open receipt'), ansBtn(r, 'Yes', 'Add to stock', true), ansBtn(r, 'No', 'Not now')] };
     },
     supplier: function (r, d) {
-      if (d.kind === 'terms') return { h: '<ul class="asks">' + (d.asks || []).map(function (q) { return '<li>' + esc(q.ask) + '</li>'; }).join('') + '</ul>' + noteBox(r, d.example || 'min 100, free over 300, delivery 15', 'Terms') + '<p class="hint">Type what you know, in any order. Leave out what you do not know.</p>', acts: [ansBtn(r, 'Set', 'Save', true)] };
+      if (d.kind === 'terms') return { h: '<ul class="asks">' + (d.asks || []).map(function (q) { return '<li>' + esc(q.ask) + '</li>'; }).join('') + '</ul>' + noteBox(r, d.example || 'min 100, free over 300, delivery 15', 'Terms') + '', acts: [ansBtn(r, 'Set', 'Save', true)] };
       if (d.kind === 'terms_check') return { h: factsOf([['Min order', d.terms && d.terms.min_order], ['Free from', d.terms && d.terms.free_over], ['Delivery', d.terms && d.terms.delivery]]) + noteBox(r, 'only if changed: min 100, free over 300', 'Changes'), acts: [ansBtn(r, 'Yes', 'Still right', true), ansBtn(r, 'Set', 'Save changes')] };
       if (d.kind === 'link') return { h: d.subject ? '<p class="hint">Email: ' + esc(d.subject) + '</p>' : '', acts: [linkBtn(d.url, 'Open the link', true), linkBtn(d.folder, 'Open 6 TRADE'), ansBtn(r, 'Done', 'Dropped it in')] };
       return { h: '', acts: [linkBtn(d.file_url, 'Open file'), ansBtn(r, 'OK', 'OK', true)] };
@@ -617,7 +617,7 @@
       if (d.kind === 'found') return { h: h + factsOf([['Trade email', d.trade_email], ['Phone', d.trade_phone], ['Min order', d.min_order]]) + ((d.wholesalers || []).length ? '<p class="what">Wholesalers: ' + esc(d.wholesalers.map(function (w) { return w.name; }).join(', ')) + '</p>' : ''),
         acts: [mailBtn(d.ask && d.ask.mailto, 'Write the email'), linkBtn(d.trade_page, 'Trade page'), ansBtn(r, 'Ask', 'Sent it', true), ansBtn(r, 'No', 'Not now')] };
       if (d.kind === 'on_list') return { h: h, acts: [ansBtn(r, 'Use', 'Use that', true), ansBtn(r, 'No', 'Not now')] };
-      return { h: h + '<p class="hint">Find: the AI looks up their trade contact (a card for you if AI is off). Ask: write to them yourself.</p>', acts: [ansBtn(r, 'Find', 'Find a supplier', true), mailBtn(d.ask && d.ask.mailto, 'Write the email'), ansBtn(r, 'No', 'Not this one')] };
+      return { h: h + '', acts: [ansBtn(r, 'Find', 'Find a supplier', true), mailBtn(d.ask && d.ask.mailto, 'Write the email'), ansBtn(r, 'No', 'Not this one')] };
     },
     job: function (r, d) { return { h: String(d.file_ids || '').split(',').filter(Boolean).map(function (id) { return /^[\w-]{20,}$/.test(id) ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(id) + '/view" target="_blank" rel="noopener">Open file</a>' : ''; }).join('') + noteBox(r, 'What it says (optional)', 'What it says'), acts: [ansBtn(r, 'Done', 'Done', true)] }; },
     offer: function (r, d) {
@@ -679,8 +679,8 @@
   function cssKey(s) { return String(s).replace(/[^A-Za-z0-9]/g, '_'); }
   function pageNewStock() {
     var groups = npGroups(), total = waiting('newprod').length;
-    var h = '<p class="needs">New stock: ' + total + '</p><p class="hint">New items worth stocking, folded by supplier. Tick what you want, set how many, then Agree this order. That makes a DRAFT order for you to buy yourself: nothing is bought or sent.</p>' + siteChips();
-    if (!groups.length) return h + emptyCard('No new stock ideas', 'New items from supplier price lists show here.');
+    var h = '<p class="needs">New stock: ' + total + '</p><p class="hint">Agree makes a draft order. Nothing is bought or sent.</p>' + siteChips();
+    if (!groups.length) return h + emptyCard('No new stock ideas');
     groups.forEach(function (grp) { var lead = grp.rows[0], tm = grp.terms || {};
       h += '<details class="card npgroup"><summary><span><b>' + esc(grp.supplier) + '</b><br><span class="hint" data-npline="' + esc(cssKey(grp.supplier)) + '">' + esc(npLine(grp)) + '</span></span></summary>';
       h += factsOf([['Free postage from', tm.free_over ? '£' + tm.free_over : 'not known yet'], ['Min order', tm.min_order ? '£' + tm.min_order : ''], ['Delivery', tm.delivery ? '£' + tm.delivery : ''], ['Case', tm.case_rule]]);
@@ -706,7 +706,7 @@
   // Suppliers: one card per supplier. Account number copies, phone calls, terms, what is on the order list and the gap.
   function pageSuppliers() {
     var list = rows.filter(function (r) { return r.section === 'suppliers' && !r.applied_at; }).sort(function (a, b) { return a.title.localeCompare(b.title); });
-    var h = '<p class="needs">Suppliers</p><p class="hint">Tap the account number to copy it, the phone to call. Change terms with Settings.</p>';
+    var h = '<p class="needs">Suppliers</p>';
     if (!list.length) return h + '<div class="card"><p class="what">Suppliers appear after engine v11 is pasted and set up.</p></div>';
     list.forEach(function (r) { var d = detail(r);
       h += '<div class="card' + (d.missing && d.missing.length ? ' acc2 house-lbar' : '') + '"><h2>' + esc(r.title) + '</h2>' +
@@ -751,7 +751,7 @@
   function pageStock() {
     var list = byCat(rows.filter(function (r) { return r.section === 'stock' && !r.applied_at && shown(r); }));
     var low = list.filter(function (r) { return detail(r).low; }).length, unknown = list.filter(function (r) { return detail(r).unknown; }).length;
-    var h = '<p class="needs">Stock</p><p class="hint">What you have, what is on order, and when to buy. Counts change only your stock list until you go live.</p>';
+    var h = '<p class="needs">Stock</p>';
     if (!list.length) return h + '<div class="card"><p class="what">The stock list appears after the engine update is pasted and set up.</p></div>';
     h += '<input class="txtin" type="search" placeholder="Find an item or code" aria-label="Find an item or code" data-find>';
     codeTitle = {}; list.forEach(function (r) { codeTitle[detail(r).item_sku] = r.title; });   // one shared list for every "Add a part" box
@@ -782,9 +782,9 @@
     var rank = function (r) { var b = detail(r).buy_now; return b === true ? 0 : b === 'unknown' ? 1 : 2; };
     buys.sort(function (a, b) { return rank(a) - rank(b) || a.title.localeCompare(b.title); });
     var total = buys.reduce(function (n, r) { var d = detail(r), c = parseFloat(String(d.price_now || d.last_cost || '').replace(/[^\d.]/g, '')); return n + (isNaN(c) || !d.buy ? 0 : c * d.buy); }, 0);
-    var h = '<p class="needs">Temu order list: ' + buys.length + '</p><p class="hint">Temu cannot take orders from the system: tap Open on Temu, buy, then type how many and tap Ordered. Tap Arrived when it lands.</p>';
+    var h = '<p class="needs">Temu order list: ' + buys.length + '</p><p class="hint">Buy on Temu, then tap Ordered.</p>';
     if (total) h += '<p class="what">About £' + total.toFixed(2) + ' for everything below (last prices).</p>';
-    h += buys.length ? buys.map(function (r) { return itemCard(r); }).join('') : emptyCard('Nothing to buy', 'Items appear here when they reach their minimum.');
+    h += buys.length ? buys.map(function (r) { return itemCard(r); }).join('') : emptyCard('Nothing to buy');
     var cps = rows.filter(function (r) { return r.section === 'temu' && !r.applied_at && !r.answer && detail(r).kind === 'coupon'; });
     if (cps.length) h += '<p class="grp">Coupons and offers · ' + cps.length + '</p>' + cps.map(function (r) { return itemCard(r); }).join('');
     var cl = rows.filter(function (r) { return r.section === 'temu' && !r.applied_at && detail(r).kind !== 'coupon'; });
@@ -831,18 +831,17 @@
     h += '<div class="tiles three needs3">' + [['do', 'Do now'], ['decide', 'Decide'], ['reply', 'Reply']].map(function (t) {
       var n = tabCount(t[0]); return '<a class="tile big" href="#/' + t[0] + '"><span class="v' + (n ? ' need' : '') + '">' + n + '</span><span class="k">' + t[1] + '</span></a>'; }).join('') + '</div>';
     var first = null; ORDER.some(function (s) { if (SECTIONS[s].quiet) return false; var w = byCat(waiting(s)); if (w.length) { first = w[0]; return true; } return false; });
-    if (first) h += itemCard(first, { head: true, next: true }); else h += emptyCard('Nothing needs you', 'The engine is watching. New jobs show here when they come in.');
+    if (first) h += itemCard(first, { head: true, next: true }); else h += emptyCard('Nothing needs you');
     h += toPost(first && first.section === 'post' ? first : null) + ordersStrip();
     var just = rows.filter(function (r) { return r.answer && !r.applied_at && Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
     if (just.length) h += '<p class="grp">Just done</p>' + just.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '</div>' + sentLine(r) + '</div>'; }).join('');
     h += growthHome();
-    h += '<p class="hint"><i class="ti ti-camera"></i> New item? Put photos in <b>DROP › ' + esc(who === 'All' ? 'Lisa' : who) + ' › NEW to list</b>.</p>';
     return h + engineLine();
   }
   // A tab: its sections one after another. Do now and Reply show every job; Decide shows one question at a time.
   function pageTab(t) {
-    var names = { do: 'Do now', decide: 'Decide', reply: 'Reply' }, intro = { do: 'Jobs with your hands. Remove first, then post in shelf order.', decide: 'One question at a time. Undo for 10 minutes.', reply: 'Buyers who wrote. Reply on the site, then tap Done.' };
-    var h = '<p class="needs">' + names[t] + ': ' + tabCount(t) + '</p><p class="hint">' + intro[t] + '</p>' + siteChips();
+    var names = { do: 'Do now', decide: 'Decide', reply: 'Reply' };
+    var h = '<p class="needs">' + names[t] + ': ' + tabCount(t) + '</p>' + siteChips();
     if (t === 'do') { var p = posts().filter(function (r) { return !r.answer; }).length;
       if (p > 1) h += '<div class="acts"><button class="btn main" type="button" data-action="pack">Start packing (' + p + ')</button><button class="btn" type="button" data-action="sheet">Label sheet (' + p + ')</button></div>'; }
     // Answered cards leave the list at once (Lisa 27 Oct: "once decided then still at top of list"); they wait in "Just done" at the
@@ -850,7 +849,7 @@
     var list = [], done = []; TABS[t].forEach(function (s) { byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); })).forEach(function (r) {
       if (!r.answer || (r.section === 'post' && r.answer === 'Found')) list.push(r); else if (Date.now() < Date.parse(r.answered_at) + UNDO_MS) done.push(r); }); });
     var tail = done.length ? '<details class="justdone"><summary>Just done · ' + done.length + ' (Undo for 10 minutes)</summary>' + done.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '<div class="why">' + esc(r.answer) + '</div></div>' + sentLine(r) + '</div>'; }).join('') + '</details>' : '';
-    var EMPTY = { do: ['Nothing waiting', 'Sales to post and items to take off other sites show here.'], decide: ['All decided', 'New questions show here.'], reply: ['No one is waiting for a reply', 'Buyer messages show here.'] };
+    var EMPTY = { do: ['Nothing waiting', ''], decide: ['All decided', ''], reply: ['No one waiting', ''] };
     if (!list.length) return h + emptyCard(EMPTY[t][0], EMPTY[t][1]) + tail;
     var one = t === 'decide' && !showAll, sec = null;
     (one ? list.slice(0, 1) : list).forEach(function (r) { if (r.section !== sec) { sec = r.section; h += ghead(SECTIONS[sec].name, list.filter(function (x) { return x.section === sec; }).length, !SECTIONS[sec].quiet); } h += itemCard(r); });
@@ -860,7 +859,7 @@
   // Packing mode: one parcel at a time in shelf order. Found → the drop-off code shows once the engine has it → Posted.
   function pagePack() {
     var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found' || Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
-    if (!list.length) { return '<p class="needs">Packing</p>' + emptyCard('All packed', 'Nothing left to post.', '<button class="btn main big" type="button" data-action="stoppack">Back to Do now</button>'); }
+    if (!list.length) { return '<p class="needs">Packing</p>' + emptyCard('All packed', '', '<button class="btn main big" type="button" data-action="stoppack">Back to Do now</button>'); }
     var i = Math.min(pack.i, list.length - 1), r = list[i], d = detail(r);
     var h = '<div class="packbar"><span>Packing · ' + (i + 1) + ' of ' + list.length + '</span><button class="btn" type="button" data-action="stoppack">Stop</button></div>';
     h += '<div class="card acc4">' + courierBand(r, d) + '<div class="item">' + thumb(d.photo, r.category) + '<div class="t"><span class="parcel">#' + esc(r._no) + '</span><div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([owner(r), d.platform ? 'sold on ' + d.platform : ''].filter(Boolean).join(' · ')) + '</div>' + orderLine(r, d) + '<p class="what"><b>Next: ' + esc(nextStep(d)) + '</b></p></div></div>';
@@ -880,7 +879,7 @@
     var pdf = (rows.filter(function (r) { return r.section === 'post-head'; })[0] || {}), pd = detail(pdf).label_pdf;
     var h = '<div class="packbar"><span class="needs">Label sheet</span><button class="btn" type="button" data-action="closesheet">Close</button></div>';
     h += pd ? '<a class="btn main" href="https://drive.google.com/file/d/' + esc(pd) + '/view" target="_blank" rel="noopener">Open today’s PDF to print</a>' : '<p class="hint">The printable PDF is not made yet. Write each number on its parcel.</p>';
-    if (!list.length) return h + emptyCard('Nothing to post', 'Parcels show here when something sells.');
+    if (!list.length) return h + emptyCard('Nothing to post');
     Object.keys(by).sort().forEach(function (c) {
       h += '<p class="grp">' + esc(c) + ' · ' + by[c].length + (by[c].length === 1 ? ' parcel' : ' parcels') + '</p><div class="card">' + by[c].map(function (r) { var d = detail(r);
         return '<div class="row"><span class="parcel">#' + esc(r._no) + '</span>' + thumb(d.photo, r.category) + '<div class="txt"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="why">' + esc(['shelf ' + (d.shelf || '?'), owner(r), d.platform].filter(Boolean).join(' · ')) + '</div></div></div>'; }).join('') + '</div>';
@@ -959,7 +958,7 @@
   function growthHome() { var g = growthOf(), m = g && g.morning; return m && m.ok ? '<p class="hint" data-morning>' + esc(m.label + ': ' + m.value + ' (' + m.sub + ')') + ' · <a href="#/numbers">Numbers</a></p>' : ''; }
   function pageNumbers() {
     var k = rows.filter(function (r) { return r.section === 'kpi'; })[0];
-    if (!k) return '<p class="needs">Numbers</p>' + engineLine() + growthBlock() + switchCard() + '<div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
+    if (!k) return '<p class="needs">Numbers</p>' + engineLine() + growthBlock() + switchCard() + '<div class="card"><p class="what">Fills on Monday.</p></div>';
     var d = detail(k), ar = { up: '▲', down: '▼', flat: '–' };
     function show(t) { return typeof t.value === 'string' ? t.value : /_p$/.test(t.key) ? '£' + (Number(t.value) / 100).toFixed(2) : t.value; }   // v11.7: "£8.40 from 1 of 2 sales" or "?" come as text
     (d.tiles || []).forEach(function (t) { if (t.key === 'to_post') t.value = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; }).length + ' · ' + needsCount(); });   // v11.10: live, not Monday's

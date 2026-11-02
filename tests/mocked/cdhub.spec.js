@@ -472,7 +472,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#onSiteCard .big')).toHaveText('3');
     await expect(page.locator('#littersCard .okempty')).toHaveText('No litters on the go');
     await expect(page.locator('#tempsCard')).toContainText('0 of 2');
-    await expect(page.locator('#tempsCard')).toContainText('No outdoor reading on file for today');
+    await expect(page.locator('#tempsCard')).toContainText('No reading today');
     await expect(page.locator('#checksCard h3 .cnt')).toHaveText('4');
     await expect(page.locator('#checksCard .mk.bad')).toHaveCount(4);
     // ONE action per row: the waiting item opens Outstanding
