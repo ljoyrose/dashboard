@@ -46,10 +46,10 @@
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ljr-0)); flex: none; display: inline-block; }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  .wrap { max-width: none; margin: 0 auto; padding: 0 var(--house-gutter); }   /* the full window, the house side gap, like every page */
 
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
-  .top { max-width: 980px; margin: 0 auto; padding-left: 16px; padding-right: 16px; }
+  .top { margin: 0; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
   .stamp { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
@@ -64,7 +64,7 @@
 
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
 
-  main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
+  main.wrap { padding: 16px var(--house-gutter) 120px; display: flex; flex-direction: column; gap: 12px; }
   #view { display: flex; flex-direction: column; gap: 12px; }
   .banner { border: 1px solid var(--rose); border-radius: var(--radius); padding: 10px 14px; background: var(--rose-tint); color: var(--ink); }
   .banner.info { border-color: var(--ctl); background: var(--surface); }
@@ -139,7 +139,7 @@
     <button class="btn hidden" type="button" data-action="signin" id="signin">Sign in</button>
   </div>
 </header>
-<main class="wrap">
+<main class="wrap house-page">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
 </main>

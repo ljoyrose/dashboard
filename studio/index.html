@@ -52,8 +52,7 @@
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   a.pill, a.btn, a.lk, nav.tabs a, .grp a, a.cnt { text-decoration: none; color: inherit; }
   header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
-  header .top, header nav.tabs, main.wrap { max-width: 1600px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
-  @media (max-width: 600px) { header .top, header nav.tabs, main.wrap { padding-left: 16px; padding-right: 16px; } }
+  header .top, header nav.tabs, main.wrap { max-width: none; margin: 0 auto; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }   /* the full window, the house side gap */
   .top h1 .dot { background: var(--me); }
   .stamp { font-size: 13px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; }
   .stamp:empty { display: none; }
@@ -438,7 +437,7 @@
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
   </div>
 </header>
-<main class="wrap" id="content">
+<main class="wrap house-page" id="content">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="exBanner" class="banner ex hidden" role="status"><i class="ti ti-flask" aria-hidden="true"></i><span>Example data · Studio helper off</span></div>
   <div id="view"></div>

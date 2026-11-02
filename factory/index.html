@@ -44,8 +44,7 @@
   .muted { color: var(--muted); font-size: 14px; }
 
   /* One page width everywhere: the full window up to 1600px, 24px edge; phones 16px. */
-  .wrap, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; padding-left: 24px; padding-right: 24px; }
-  @media (max-width: 600px) { .wrap, .hin { padding-left: 16px; padding-right: 16px; } }
+  .wrap, .hin { max-width: none; margin-left: auto; margin-right: auto; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }   /* the full window, the house side gap */
 
   /* Frame: dark top bar (never black). Buttons on it are outlined in the frame's own light line. */
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
@@ -377,7 +376,7 @@
     </div>
   </div>
 </nav>
-<main class="wrap" id="content">
+<main class="wrap house-page" id="content">
   <div id="appMenu" class="appmenu hidden"></div>
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
