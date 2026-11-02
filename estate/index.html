@@ -39,20 +39,18 @@
   * { box-sizing: border-box; }
   h1, h2, h3, b, strong { font-weight: 600; }
   html { scroll-padding-bottom: 110px; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   a.btn, nav.tabs a, a.tile { text-decoration: none; }
   .hidden { display: none !important; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ljr-0)); flex: none; display: inline-block; }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  .wrap { max-width: none; margin: 0 auto; padding: 0 var(--house-gutter); }   /* the full window, the house side gap, like every page */
 
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
-  .top { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
-  .top h1 a { color: inherit; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
-  .stamp { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
+  .top { margin: 0; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
+  .stamp { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
   @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); } }
@@ -64,48 +62,46 @@
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .top :focus-visible { outline-color: var(--frame-ink); }
 
-  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 180px)); justify-content: center; } }
-  @media (min-width: 601px) { nav.tabs a { min-height: 58px; gap: 3px; padding: 6px 2px; } }
-  nav.tabs .n { top: 6px; right: 10px; }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
 
-  main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
+  main.wrap { padding: 16px var(--house-gutter) 120px; display: flex; flex-direction: column; gap: 12px; }
   #view { display: flex; flex-direction: column; gap: 12px; }
   .banner { border: 1px solid var(--rose); border-radius: var(--radius); padding: 10px 14px; background: var(--rose-tint); color: var(--ink); }
   .banner.info { border-color: var(--ctl); background: var(--surface); }
-  .needs { font-size: 26px; font-weight: 600; margin: 0; }
-  .hint { font-size: 14px; color: var(--muted); margin: 0; }
+  .needs { font-size: var(--fs-figure); font-weight: 600; margin: 0; }
+  .hint { font-size: var(--fs-small); color: var(--muted); margin: 0; }
 
   .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   @media (min-width: 760px) { .tiles { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
   .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; color: var(--ink); min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
-  .tile .k { font-size: 14px; color: var(--muted); }
-  .tile .v { font-size: 24px; font-weight: 600; align-self: flex-start; line-height: 1.3; }
-  .tile .v.red { border: 1px solid var(--rose); background: var(--rose-tint); border-radius: var(--radius); padding: 0 10px; }
-  .tile .v.amber { border: 1px solid var(--amber); background: var(--amber-tint); border-radius: var(--radius); padding: 0 10px; }
+  .tile .k { font-size: var(--fs-small); color: var(--muted); }
+  .tile .v { font-size: var(--fs-figure); font-weight: 600; align-self: flex-start; line-height: 1.3; }
+  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
+  .tile .v.red, .tile .v.amber { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--house-ring); }
+  .tile .v.red { border-color: var(--house-late); }
 
   .card { display: flex; flex-direction: column; gap: 12px; }
-  .grp { font-size: 16px; font-weight: 600; margin: 4px 0 0; display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
+  .grp { font-size: var(--fs-head); font-weight: 600; margin: 4px 0 0; display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
   .grp .cnt { margin-left: auto; }
   .prop { display: flex; flex-direction: column; gap: 6px; padding: 12px 0; border-top: 1px solid var(--line); min-width: 0; }
   .card > .prop:first-child { border-top: 0; padding-top: 0; }
   .prop:last-child { padding-bottom: 0; }
   .pline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; min-width: 0; }
   .pline .addr { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
-  .pline .m { font-size: 14px; color: var(--muted); }
+  .pline .m { font-size: var(--fs-small); color: var(--muted); }
   .badges { display: flex; gap: 4px; flex-wrap: wrap; }
-  .badge { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 400; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 8px; background: transparent; white-space: nowrap; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .badge { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 400; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 8px; background: transparent; white-space: nowrap; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .badge b { margin-right: 4px; font-weight: 600; }
   .badge.no { border-color: var(--rose); background: var(--rose-tint); }
   .badge.soon { border-color: var(--amber); background: var(--amber-tint); }
   .badge.ok { border-color: var(--green); background: var(--green-tint); }
   .badge.st { font-weight: 600; }
-  .empty { display: flex; gap: 12px; align-items: center; margin: 0; font-size: 15px; }
+  .empty { display: flex; gap: 12px; align-items: center; margin: 0; font-size: var(--fs-body); }
   .empty::before { content: "\2713"; flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--green); background: var(--green-tint); color: var(--ink); font-size: 13px; font-weight: 600; }
 
   .frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
-  .frow label { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--muted); flex: 1 1 140px; min-width: 0; max-width: 220px; }
-  select.txtin { font: inherit; font-size: 16px; padding: 0 8px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
+  .frow label { display: flex; flex-direction: column; gap: 2px; font-size: var(--fs-small); color: var(--muted); flex: 1 1 140px; min-width: 0; max-width: 220px; }
+  select.txtin { font: inherit; font-size: var(--fs-body); padding: 0 8px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
   select.txtin:focus { border-color: var(--ink); }
 
   details.add > summary { cursor: pointer; font-weight: 600; list-style: none; display: flex; align-items: center; gap: 8px; min-height: 36px; }
@@ -114,17 +110,15 @@
   details.add[open] > summary::before { content: "\2212"; }
   .addf { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
   .addf .frow label { max-width: none; }
-  input.txtin { font: inherit; font-size: 16px; padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
+  input.txtin { font: inherit; font-size: var(--fs-body); padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); width: 100%; min-width: 0; }
   input.txtin:focus { border-color: var(--ink); }
-  .queued { font-size: 14px; margin: 0; }
+  .queued { font-size: var(--fs-small); margin: 0; }
   @media (max-width: 544px) {
-    .btn, .chip, select.txtin, input.txtin, nav.tabs a, details.add > summary { min-height: 44px; }
+    .btn, .chip, select.txtin, input.txtin, details.add > summary { min-height: 44px; }
     .frow label { flex: 1 1 calc(50% - 4px); max-width: none; }
-    .top h1 { font-size: 20px; }
-    nav.tabs { gap: 6px; padding-left: 6px; padding-right: 6px; }
   }
-  #view :focus-visible, nav.tabs a:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
-  header :focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
+  #view :focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  header :focus-visible:not(.house-menu *) { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
 </style>
 </head>
 <body>
@@ -135,22 +129,31 @@
   <symbol id="i-key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3"/></symbol>
   <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
 </svg>
-<header>
-  <div class="top"><h1><a href="#/home"><span class="dot" style="--c:var(--ljr-5)" aria-hidden="true"></span>Web Estate</a></h1><span class="stamp" id="stamp">TEST</span>
-    <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh">↻</button>
+<header class="house-head">
+  <div class="top house-row">
+    <a id="backHome" class="btn back house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
+    <h1><a href="#/home"><span class="dot" style="--c:var(--ljr-5)" aria-hidden="true"></span>Web Estate</a></h1>
+    <span class="house-sp" aria-hidden="true"></span>
+    <span class="stamp" id="stamp">TEST</span>
+    <button class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh" id="refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap" data-house-look></span>
     <button class="btn hidden" type="button" data-action="signin" id="signin">Sign in</button>
-    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
+  </div>
 </header>
-<main class="wrap">
+<main class="wrap house-page">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs" id="tabs" aria-label="Web Estate sections">
-  <a href="#/home" data-nav="home" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg><span>Estate</span><span class="n" id="n-home"></span></a>
-  <a href="#/look" data-nav="look" style="--tc:var(--ljr-2)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-alert"/></svg><span>Needs a look</span><span class="n need" id="n-look"></span></a>
-  <a href="#/unchecked" data-nav="unchecked" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span>Not checked</span><span class="n" id="n-unchecked"></span></a>
-  <a href="#/shops" data-nav="shops" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Shops &amp; ads</span><span class="n" id="n-shops"></span></a>
-  <a href="#/access" data-nav="access" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-key"/></svg><span>Access</span><span class="n" id="n-access"></span></a>
+  <a class="ht" data-slot="1" href="#/home" data-nav="home"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n" id="n-home"></span></a>
+  <a class="ht" data-slot="4" href="#/look" data-nav="look"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n need" id="n-look"></span></a>
+  <a class="ht" data-slot="6" href="#/shops" data-nav="shops"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-bag"/></svg></span><span class="htl">Shops</span><span class="n" id="n-shops"></span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/unchecked" data-nav="unchecked" data-slot="7"><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span class="htl">Unchecked</span><span class="n" id="n-unchecked"></span></a>
+      <a href="#/access" data-nav="access" data-slot="3"><svg class="i" aria-hidden="true"><use href="#i-key"/></svg><span class="htl">Access</span><span class="n" id="n-access"></span></a>
+    </div>
+  </div>
 </nav>
 <script>
 (function () {
@@ -179,7 +182,7 @@
 
   /* ---------- reading ---------- */
   function load() {
-    if (example && token) { rows = EXAMPLE.slice(); loaded = true; banner('Example rows: the RR_WEB-ESTATE sheet is not set up yet, so nothing is read or sent. These addresses are invented.', true); return render(); }
+    if (example && token) { rows = EXAMPLE.slice(); loaded = true; banner('Example rows: sheet not set up yet.', true); return render(); }
     if (!token) { loaded = false; if (example) banner('Example rows after sign-in: the RR_WEB-ESTATE sheet is not set up yet, so nothing is read or sent.', true); return render(); }
     R.read({ sheetId: ES.sheetId, token: token }).then(function (out) {
       if (out.state === 'signed-out' || /sign-in expired/.test(out.problems[0] || '')) { token = null; DashAuth.markExpired(); }
@@ -210,11 +213,18 @@
     if (view === 'shops') return list.filter(function (r) { return r.kind === 'shop' || r.kind === 'funnel' || r.kind === 'ads-account'; });
     return list;
   }
-  function tile(k, v, cls) { return '<div class="tile"><span class="k">' + esc(k) + '</span><span class="v' + (v && cls ? ' ' + cls : '') + '" data-count="' + esc(k) + '">' + v + '</span></div>'; }
+  // Each tile opens the list of what it counts (Lisa, 2 Nov): #/<view>?show=down, kept with the filters already picked.
+  var SHOW = { live: ['Live', function (r) { return E.statusOf(r) === 'live'; }], down: ['Down', function (r) { return E.statusOf(r) === 'down'; }],
+    blocked: ['Blocked to scripts', function (r) { return E.statusOf(r) === 'blocked'; }], unchecked: ['Not checked', function (r) { var s = E.statusOf(r); return s === 'not checked' || s === 'parked'; }],
+    expiring: ['Expiring in 60 days', function (r) { return E.expiringSoon(r, today(), 60); }], email: ['Email checks failing', function (r) { return E.emailProblems(r).length > 0; }] };
+  function showOf() { var m = /[?&]show=(\w+)/.exec(location.hash); return m && SHOW[m[1]] ? m[1] : ''; }
+  function showHash(key) { var h = E.filterHash(view, filters); return h + (h.indexOf('?') < 0 ? '?' : '&') + 'show=' + key; }
+  function tile(k, v, cls, key) { var inner = '<span class="k">' + esc(k) + '</span><span class="v' + (v && cls ? ' ' + cls : '') + '" data-count="' + esc(k) + '">' + v + '</span>';
+    return key ? '<a class="tile" href="' + esc(showHash(key)) + '" data-show="' + key + '" aria-label="' + esc(k) + ': ' + v + '. Open the list">' + inner + '</a>' : '<div class="tile">' + inner + '</div>'; }
   function tiles(list) {
     var c = E.summarise(list, today());
-    return '<div class="tiles">' + tile('Live', c.live) + tile('Down', c.down, 'red') + tile('Blocked to scripts', c.blocked, 'amber') +
-      tile('Not checked', c.notChecked + c.parked) + tile('Expiring in 60 days', c.expiring, 'amber') + tile('Email checks failing', c.emailFailing, 'red') + '</div>';
+    return '<div class="tiles">' + tile('Live', c.live, '', 'live') + tile('Down', c.down, 'red', 'down') + tile('Blocked to scripts', c.blocked, 'amber', 'blocked') +
+      tile('Not checked', c.notChecked + c.parked, '', 'unchecked') + tile('Expiring in 60 days', c.expiring, 'amber', 'expiring') + tile('Email checks failing', c.emailFailing, 'red', 'email') + '</div>';
   }
   function filterRow() {
     return '<div class="frow" role="group" aria-label="Filters">' + E.FILTERS.map(function (k) {
@@ -233,8 +243,8 @@
   function prop(r) {
     var s = E.statusOf(r), mail = E.emailProblems(r), addr = r.url_or_domain || r.key;
     var stCls = s === 'down' ? ' no' : s === 'blocked' ? ' soon' : s === 'live' ? ' ok' : '';
-    var http = /^https?:\/\//.test(addr) && E.normaliseTarget(addr).ok ? '<a class="addr" href="' + esc(E.normaliseTarget(addr).url) + '" target="_blank" rel="noopener noreferrer">' + esc(addr.replace(/^https?:\/\//, '')) + '</a>' : '<span class="addr">' + esc(addr) + '</span>';
-    return '<div class="prop" data-key="' + esc(r.key) + '" data-status="' + s + '"><div class="pline"><span class="badge st' + stCls + '">' + E.STATUS_WORD[s] + '</span>' + http +
+    var http = /^https?:\/\//.test(addr) && E.normaliseTarget(addr).ok ? '<a class="addr house-open" href="' + esc(E.normaliseTarget(addr).url) + '" target="_blank" rel="noopener noreferrer">' + esc(addr.replace(/^https?:\/\//, '')) + '</a>' : '<span class="addr">' + esc(addr) + '</span>';
+    return '<div class="prop" data-key="' + esc(r.key) + '" data-status="' + s + '"' + (/house-open/.test(http) ? ' data-open-row' : '') + '><div class="pline"><span class="badge st' + stCls + '">' + E.STATUS_WORD[s] + '</span>' + http +
       '<span class="m">' + esc([r.kind, r.platform].filter(Boolean).join(' · ')) + '</span></div><div class="badges">' +
       check('HTTP', r.http_code, /^[45]/.test(r.http_code || '')) + expiryBadge('SSL', r.ssl_expires) + expiryBadge('Domain', r.domain_expires) + check('DNS', r.dns_host) +
       check('SPF', r.spf, /two|missing|fail/i.test(r.spf || '')) + check('DKIM', r.dkim, /^missing/i.test(r.dkim || '')) + check('DMARC', r.dmarc, /missing/i.test(r.dmarc || '')) +
@@ -292,7 +302,7 @@
         [['Platform', c.platform], ['Plan', c.plan], ['Currency', c.currency], ['Products', c.products], ['Channels', c.channels], ['Feed', c.feed], ['Merchant Center', c.merchant_center]]
           .map(function (b) { return '<span class="badge' + bad(b[1]) + '" data-f="' + b[0] + '"><b>' + b[0] + '</b>' + esc(b[1]) + '</span>'; }).join('') + '</div></div>';
     }).join('') : '<p class="empty">No shops with these filters.</p>';
-    h += '</div><p class="hint">Feed and Merchant Center come from the free listings job\'s report. Until it reports, they say "not reported".</p>';
+    h += '</div>';
     var ws = SH.funnelsByWorkspace(list);
     h += '<p class="grp">ClickFunnels funnels by workspace<span class="sr"> · </span><span class="cnt">' + ws.length + '</span></p><div class="card" data-card="funnels">' +
       (ws.length ? ws.map(function (w) { return '<div class="prop"><div class="pline"><span class="addr">' + esc(w.workspace) + '</span><span class="m">' + w.count + ' funnel' + (w.count > 1 ? 's' : '') + '</span></div><div class="badges"><span class="badge ok"><b>Live</b>' + w.live + '</span><span class="badge' + (w.down ? ' no' : '') + '"><b>Down</b>' + w.down + '</span></div></div>'; }).join('') : '<p class="empty">No funnels with these filters.</p>') + '</div>';
@@ -316,7 +326,7 @@
   function accessPage(list) {
     var acc = V.accessRows(list), by = {};
     list.forEach(function (r) { by[r.key] = r; });
-    var h = '<p class="needs">Access</p><p class="hint">Who holds each login role, by role name only. Passwords and email addresses are never shown here.</p>' + filterRow();
+    var h = '<p class="needs">Access</p>' + filterRow();
     h += '<div class="card" data-card="access">' + acc.map(function (a) {
       var r = by[a.key] || {}, roles = (r.owner_role ? ['you: ' + r.owner_role] : []).concat(a.roles);
       return '<div class="prop" data-access="' + esc(a.key) + '"><div class="pline"><span class="addr">' + esc((r.url_or_domain || a.key).replace(/^https?:\/\//, '')) + '</span><span class="m">' + esc(r.kind || '') + '</span></div><div class="badges">' +
@@ -324,12 +334,12 @@
         (a.hidden ? '<span class="badge soon">' + a.hidden + ' hidden (looked like a login)</span>' : '') + '</div></div>';
     }).join('') + '</div>';
     var clients = E.choices(list, 'client');
-    h += '<p class="grp">Client views<span class="sr"> · </span><span class="cnt">' + clients.length + '</span></p><div class="card" data-card="clients"><p class="hint">One client\'s properties only, with no other client, no other company and no internal notes: ready for a white-label or reseller report. Sharing a view is yours to do.</p><div class="acts">' +
+    h += '<p class="grp">Client views<span class="sr"> · </span><span class="cnt">' + clients.length + '</span></p><div class="card" data-card="clients"><div class="acts">' +
       (clients.length ? clients.map(function (c) { return '<a class="btn" href="#/client?client=' + encodeURIComponent(c) + '">' + esc(c) + '</a>'; }).join('') : '<p class="empty">No clients yet.</p>') + '</div></div>';
     var res = V.resellerReport(list, today());
     h += '<p class="grp">Resellers<span class="sr"> · </span><span class="cnt">' + res.length + '</span></p><div class="card" data-card="resellers">' +
       (res.length ? res.map(function (x) { return '<div class="prop"><div class="pline"><span class="addr">' + esc(x.url_or_domain || x.key) + '</span><span class="m">' + esc(x.reseller) + '</span></div><div class="badges">' + (x.fee_monthly ? '<span class="badge"><b>Monthly</b>' + esc(x.fee_monthly) + '</span>' : '') + (x.renewal ? '<span class="badge' + (x.days_to_go !== null && x.days_to_go <= 30 ? ' soon' : '') + '"><b>Renews</b>' + esc(x.renewal) + (x.days_to_go !== null ? ' (' + x.days_to_go + ' days)' : '') + '</span>' : '') + '</div></div>'; }).join('') : '<p class="empty">No resold properties noted.</p>') +
-      '</div><p class="hint">A report only: no billing here.</p>';
+      '</div>';
     return h;
   }
   // Client view: one client's rows, stripped of every internal field, with no filters that would name others.
@@ -346,20 +356,23 @@
   // Shown here only. Each becomes a suggested RR_OPEN-WORK row in the progress slip, never written by code.
   function alertsCard(list) {
     var al = AL.alerts(list, today());
-    if (!al.length) return '<div class="card" data-card="alerts"><p class="empty">No alerts.</p></div>';
+    if (!al.length) return '';   // one empty line per view (Lisa, 2 Nov): no alerts, no Alerts card
     return '<p class="grp">Alerts<span class="sr"> · </span><span class="cnt">' + al.length + '</span></p><div class="card" data-card="alerts">' + al.map(function (a) {
       return '<div class="prop" data-alert="' + esc(a.kind) + '" data-akey="' + esc(a.key) + '"><div class="pline"><span class="dot" style="--c:var(--ljr-' + (a.level === 'red' ? 2 : 3) + ')" aria-hidden="true"></span><span class="addr">' + esc(a.text) + '</span></div></div>';
     }).join('') + '</div>';
   }
   function page() {
-    var list = E.applyFilters(rows, filters), shown = inView(list);
+    var list = E.applyFilters(rows, filters), shown = inView(list), sk = showOf();
+    if (sk) shown = shown.filter(SHOW[sk][1]);
     if (view === 'access') return accessPage(E.applyFilters(rows, filters));
     if (view === 'client') return clientPage();
-    if (view === 'shops') return '<p class="needs">Shops &amp; ads</p><p class="hint">Shops, their feeds and channels, ClickFunnels funnels, tracked keywords and ads accounts. Read only.</p>' + filterRow() + shopsPage(E.applyFilters(rows, filters));
+    if (view === 'shops') return '<p class="needs">Shops &amp; ads</p>' + filterRow() + shopsPage(E.applyFilters(rows, filters));
     var title = view === 'look' ? 'Needs a look' : view === 'unchecked' ? 'Not checked' : 'Web Estate';
-    var hint = view === 'look' ? 'Down, expiring in 60 days, blocked to scripts or failing an email check.' : view === 'unchecked' ? 'Not scanned yet. The engine checks them once its daily scan is switched on.' : 'Every domain, site, funnel, shop and app. Read only: nothing here changes DNS or a site.';
-    var h = '<p class="needs">' + title + '</p><p class="hint">' + hint + '</p>' + (view === 'home' ? addBox() : '') + tiles(list) + filterRow() + (view === 'look' ? alertsCard(list) : '');
-    if (!shown.length) return h + '<div class="card"><p class="empty">' + (rows.length ? 'Nothing here with these filters.' : 'No properties yet.') + '</p></div>';
+    var hint = view === 'unchecked' ? 'Not scanned yet.' : '';
+    if (sk) hint = SHOW[sk][0] + ' only. <a href="' + esc(E.filterHash(view, filters)) + '">Show all</a>';
+    var al = view === 'look' && !sk ? alertsCard(list) : '';
+    var h = '<p class="needs">' + title + '</p>' + (hint ? '<p class="hint">' + hint + '</p>' : '') + (view === 'home' ? addBox() : '') + tiles(list) + filterRow() + al;
+    if (!shown.length) return h + (al ? '' : '<div class="card" data-empty-one><p class="empty">' + (sk || Object.keys(filters).length ? 'Nothing here' : view === 'look' ? 'Nothing needs you' : rows.length ? 'Nothing here' : 'No properties yet.') + '</p></div>');
     E.groupRows(shown, today()).forEach(function (g) {
       h += '<p class="grp">' + esc(g.name) + '<span class="sr"> · </span><span class="cnt">' + g.rows.length + '</span></p><div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>';
     });
@@ -372,8 +385,8 @@
     $('n-home').textContent = list.length || ''; $('n-shops').textContent = list.filter(function (r) { return r.kind === 'shop'; }).length || ''; $('n-look').textContent = look || ''; $('n-unchecked').textContent = unc || '';
     $('stamp').textContent = ES.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
-    $('signin').classList.toggle('hidden', !!token); $('signin').disabled = !ready;
-    $('refresh').classList.toggle('hidden', example || !token);
+    DashKit.signButton($('signin'), !!token); $('signin').classList.remove('hidden'); $('signin').disabled = !token && !ready;
+    $('refresh').classList.toggle('hidden', !token);
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the Web Estate</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
     if (!loaded && !rows.length) { $('view').innerHTML = '<div class="card"><p class="hint">Loading…</p></div>'; return; }
     $('view').innerHTML = page();
@@ -384,6 +397,7 @@
     var t = e.target.closest('button, a, summary'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(); }
+    if (a === 'signout') { token = null; DashAuth.clear(); rows = []; loaded = false; return render(); }
     if (a === 'refresh') return load();
     if (a === 'clear') { location.hash = E.filterHash(view, {}); }
     if (a === 'addtoggle') { e.preventDefault(); addOpen = !addOpen; return render(); }

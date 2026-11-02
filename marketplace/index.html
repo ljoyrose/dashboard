@@ -33,90 +33,77 @@
   * { box-sizing: border-box; }
   h1, h2, h3, b, strong, th, summary { font-weight: 600; }   /* two weights only: 400 and 600 */
   html { scroll-padding-bottom: 96px; }   /* a button scrolled into view never hides under the tab bar */
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5; }
   .hidden { display: none !important; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   a.btn, nav.tabs a, a.tile { text-decoration: none; }
   .ti { line-height: 1; }
-  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }   /* same width as Factory and the main dashboard */
+  .wrap { max-width: none; margin: 0 auto; padding: 0 var(--house-gutter); }   /* the full window, the house side gap, like every page */
 
   /* Frame: dark top bar (never black). Buttons on it are outlined in the frame's own light colour. */
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
-  header .top, header .chips.people { max-width: 980px; margin: 0 auto; }
-  .top { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; align-items: center; padding: 12px 16px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; display: flex; gap: 8px; align-items: center; }
-  .top h1 a { color: inherit; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
-  .top h1 .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ljr-6); flex: none; }
-  .stamp, .readat { font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; color: var(--frame-ink); font-variant-numeric: tabular-nums; }
-  .stamp:empty, .readat:empty { display: none; }
-  header .btn, header .chip { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
-  header .btn .ti { color: var(--frame-ink); }
+  header .top { margin: 0; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
+  .top h1 .dot { background: var(--ljr-6); }
+  .stamp { font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; height: 24px; display: inline-flex; align-items: center; color: var(--frame-ink); font-variant-numeric: tabular-nums; }
+  .stamp:empty { display: none; }
+  .readat { font-variant-numeric: tabular-nums; }
   /* Signed out the dark bar is hidden by the sign-in gate, so its buttons switch to page colours (still readable). */
   html.dash-locked header .btn { color: var(--ink); border-color: var(--ctl); }
-  html.dash-locked #backHome { margin-left: auto; }
 
   /* Buttons, chips, the hover rule (a meaning colour, --hmc, keeps its own colour), focus, the bottom tabs and the counts:
      ../house.css. Every pressable rests on the same clear line; Yes / No differ by their words, place and hover colour. */
-  #backHome { min-height: 44px; }
   .btn.big { width: 100%; justify-content: center; }
   .btn.saving, .btn.saving:hover { border-style: dashed; border-color: var(--muted); color: var(--muted); cursor: progress; }
   .btn:disabled:not(.saving) { opacity: .55; cursor: default; }
   .chip { padding: 0 14px; background: var(--surface); display: inline-flex; align-items: center; gap: 6px; }
   .chips { display: flex; gap: 8px; flex-wrap: wrap; }
-  .chips.people { padding: 0 16px 12px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .chips.people { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  /* .mkwho: whose items, the people chips (and the phone's one Filter button) at the top of the page, out of the top bar. */
+  .mkwho:has(> #people.hidden) { display: none; }
   .chip[aria-pressed="true"], .chip.on { outline: 1px solid var(--ink); outline-offset: -1px; background-color: var(--hov); }
-  header .chip[aria-pressed="true"] { outline-color: var(--frame-ink); background-color: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); }
   @media (hover: hover) {
     a.tile:hover, button.tile:hover, details > summary:hover, .pair figure > a:hover { outline: 1px solid var(--ink); outline-offset: -1px; background-color: var(--hov); }
-    header .chip:hover { outline-color: var(--frame-ink); background-color: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); }
     html.dash-locked header .btn:hover { outline-color: var(--ink); background-color: var(--hov); }
   }
   /* Keyboard focus: a 2px ink ring (the one exception to 1px). */
   a:focus, button:focus, summary:focus { outline: none; }
   :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
-  header :focus-visible, header a:focus-visible, header button:focus-visible { outline-color: var(--frame-ink); }
+  header :focus-visible:not(.house-menu *), header a:focus-visible:not(.house-menu *), header button:focus-visible:not(.house-menu *) { outline-color: var(--frame-ink); }
   input:focus { outline: none; border-color: var(--ink); }
 
-  /* Bottom tabs (.house-tabs): five across. */
-  nav.tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(6, minmax(0, 180px)); justify-content: center; } }
-  nav.tabs a { --tc: var(--ljr-0); }
-  @media (min-width: 601px) { nav.tabs a { min-height: 56px; } }
-  nav.tabs a > .ti { font-size: 18px; color: var(--ink); }
-  nav.tabs .n { top: 6px; }
-  @media (max-width: 544px) { nav.tabs { gap: 4px; padding-left: 6px; padding-right: 6px; } }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
 
   /* Work area. Spacing in 12px steps; 16px under a header line before the first item. */
-  main, main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }   /* .wrap alone would drop the room for the tab bar */
+  main, main.wrap { padding: 16px var(--house-gutter) 120px; display: flex; flex-direction: column; gap: 12px; }   /* .wrap alone would drop the room for the tab bar */
   #view { display: flex; flex-direction: column; gap: 12px; }   /* one 12px step between cards (Lisa chose 12px, 28 Oct) */
-  #view > .grp, #view > .ghead { margin-top: 12px; margin-bottom: 4px; }   /* 16px under a header line before its first card (12px gap + 4px) */
-  .needs { font-size: 26px; font-weight: 600; margin: 0; line-height: 1.3; }   /* the page greeting */
+  #view > .grp, #view > .ghead { margin-top: 12px; margin-bottom: 4px; }
+  #view > a.house-go { display: block; margin-top: 12px; margin-bottom: 4px; }   /* a group head that opens its list */   /* 16px under a header line before its first card (12px gap + 4px) */
+  .needs { font-size: var(--fs-figure); font-weight: 600; margin: 0; line-height: 1.3; }   /* the page greeting */
   .needs .zero { font-variant-numeric: tabular-nums; }
-  .hint { font-size: 14px; color: var(--muted); margin: 0; }
-  .grp { font-size: 16px; font-weight: 600; margin: 0; }
+  .hint { font-size: var(--fs-small); color: var(--muted); margin: 0; }
+  .grp { font-size: var(--fs-head); font-weight: 600; margin: 0; }
   .ghead { display: flex; gap: 8px; align-items: center; }
   .ghead .cnt { margin-left: auto; }
   .banner { border: 1px solid var(--need); border-radius: var(--radius); padding: 10px 14px; background: var(--ljr-2-tint); color: var(--ink); }
   .banner.info { border-color: var(--line); background: var(--surface); }
   .card { position: relative; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 1px 3px var(--shade); } /* the house card (../house.css): 12px inside */
   /* A card's colour is a thin bar on its left edge, never a thick border or a fill. Rose = needs you now, green = right. */
-  .card.acc2::before, .card.acc5::before { content: ""; position: absolute; left: -1px; top: 14px; bottom: 14px; width: var(--house-bar); border-radius: var(--radius); background: var(--ljr-2); } /* the 3px left colour bar */
-  .card.acc5::before { background: var(--ljr-5); }
+  .card.acc2 { --sc: var(--ljr-2); } .card.acc5 { --sc: var(--ljr-5); } /* the 3px left colour bar: ../house.css section 10 (.house-lbar, full height, curved) */
   .card.empty::before { content: none; }
   /* The "Next" card on Home: the one thing to do now, white with a 1px ink edge. */
   .card.next { border-color: var(--ink); }
-  .nextlab { margin: 0 0 -8px; font-size: 13px; font-weight: 600; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .nextlab { margin: 0 0 -8px; font-size: var(--fs-small); font-weight: 600; color: var(--muted); display: flex; gap: 6px; align-items: center; }
   .nextlab .ti { font-size: 16px; color: var(--ink); }
-  .card h2 { font-size: 17px; margin: 0; line-height: 1.35; }
-  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
+  .card h2 { font-size: var(--fs-head); margin: 0; line-height: 1.35; }
+  .card .what { color: var(--muted); font-size: var(--fs-body); margin: 0; }
   .card .acts { margin-top: 4px; }
   .card.inner { padding: 0; border: 0; box-shadow: none; gap: 0; background: transparent; }   /* no box inside a box: rows split by 1px lines */
   .card > .row:first-of-type, .card.inner > .row:first-child { border-top: 0; }
   /* Friendly empty states: a small green-ring check and plain words. */
   .card.empty { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 12px; }
   .card.empty > div { flex: 1; min-width: 0; }
-  .okring { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--ok); background: var(--ljr-5-tint); display: inline-flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 600; color: var(--ink); }
-  .card.empty h2 { font-size: 17px; }
+  .okring { flex: none; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--ok); background: var(--ljr-5-tint); display: inline-flex; align-items: center; justify-content: center; font-size: var(--fs-body); font-weight: 600; color: var(--ink); }
+  .card.empty h2 { font-size: var(--fs-head); }
   .card.empty .what { margin-top: 2px; }
 
   /* Item block: 44×44 photo (or a line icon of the item type) left of the text; name line, then the title (2 lines, then …). */
@@ -125,15 +112,15 @@
   .ph { display: inline-flex; align-items: center; justify-content: center; }
   .ph .ti { font-size: 22px; color: var(--muted); }
   .item .t { flex: 1; min-width: 0; font-weight: 400; }
-  .bline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; }
+  .bline { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; }
   .sdot { --c: var(--ljr-0); width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; display: inline-block; }
-  .ttl { font-size: 16px; font-weight: 600; color: var(--ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
-  .item .m { font-size: 14px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .ttl { font-size: var(--fs-head); font-weight: 600; color: var(--ink); overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .item .m { font-size: var(--fs-small); color: var(--muted); font-weight: 400; margin-top: 2px; }
   .m.post { font-weight: 600; color: var(--ink); display: flex; gap: 6px; align-items: center; }
   .m.post .ti { font-size: 16px; color: var(--muted); }
   /* Who a card belongs to: initials (or their photo) in a small ring of that person's colour, on the name line. */
   .ava { --ava: var(--ljr-ava-other); width: 24px; height: 24px; border-radius: 50%; overflow: hidden; display: inline-flex; align-items: center; justify-content: center; flex: none;
-    border: 1px solid color-mix(in srgb, var(--ava) 70%, var(--ink)); background: color-mix(in srgb, var(--ava) 14%, var(--surface)); color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1; }
+    border: 1px solid color-mix(in srgb, var(--ava) 70%, var(--ink)); background: color-mix(in srgb, var(--ava) 14%, var(--surface)); color: var(--ink); font-size: var(--fs-small); font-weight: 600; line-height: 1; }
   .ava img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 35%; display: block; }
   /* Date pill: its RING shows urgency (rose = late, amber = today or tomorrow). The words stay ink. */
   .date { gap: 6px; font-weight: 600; } /* the house date pill (../house.css): always ringed; rose late, amber soon */
@@ -141,20 +128,20 @@
   .red, .verdict.wait, .verdict.go, ul.money li.red { color: var(--ink); font-weight: 600; }
   .red::before, .verdict::before, ul.money li.red::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ljr-2); margin-right: 6px; vertical-align: 1px; }
   .verdict.wait::before { background: var(--ljr-3); } .verdict.go::before { background: var(--ljr-5); }
-  .verdict { margin: 0; font-size: 15px; }
+  .verdict { margin: 0; font-size: var(--fs-body); }
 
   .acts { display: flex; gap: 8px; flex-wrap: wrap; }
   .acts .btn { flex: 1; justify-content: center; }
   .row { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
   .row .txt { flex: 1; min-width: 0; }
-  .row .why { font-size: 14px; color: var(--muted); }
-  .steps { margin: 0; padding-left: 22px; font-size: 15px; }
+  .row .why { font-size: var(--fs-small); color: var(--muted); }
+  .steps { margin: 0; padding-left: 22px; font-size: var(--fs-body); }
   .steps li { margin: 4px 0; }
   .steps.words { list-style: none; padding-left: 0; }
   .steps.words li { display: flex; gap: 8px; align-items: baseline; }
   .steps.words .sn { flex: none; font-weight: 600; }
-  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 12px; min-height: 36px; cursor: pointer; align-self: flex-start; }
+  .sent { font-size: var(--fs-small); color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .more { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 12px; min-height: 36px; cursor: pointer; align-self: flex-start; }
   @media (max-width: 544px) { .more { min-height: 44px; } }
 
   /* Summary strip: big numbers in tabular figures, each tile a 1px edge; a "needs you" number wears the rose ring. */
@@ -162,29 +149,30 @@
   .tiles.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 12px; cursor: pointer; color: var(--ink); min-width: 0; }
   .tile.big { min-height: 88px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
-  .tile .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; } .tile .v { font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-  .tile.big .v { font-size: 28px; line-height: 1.2; }
-  .needs3 .v { align-self: flex-start; min-width: 44px; padding: 0 10px; border: 1px solid var(--ctl); border-radius: var(--radius); text-align: center; }
-  .needs3 .v.need { border-color: var(--need); background: var(--ljr-2-tint); }
-  .tile .up, .tile .down, .tile .flat { color: var(--muted); font-size: 15px; }
+  .tile .k { font-size: var(--fs-small); color: var(--muted); overflow-wrap: anywhere; } .tile .v { font-size: var(--fs-figure); font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .tile.big .v { font-size: var(--fs-figure); line-height: 1.2; }
+  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
+  .needs3 .tile .v { align-self: flex-start; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--ctl); }
+  .needs3 .tile .v.need { border-color: var(--house-late); }
+  .tile .up, .tile .down, .tile .flat { color: var(--muted); font-size: var(--fs-body); }
   .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
   .fact { padding: 8px 12px; border-left: 1px solid var(--line); min-width: 0; }
   .fact:nth-child(3n + 1) { border-left: 0; padding-left: 0; }
-  .fact .k { display: block; font-size: 13px; color: var(--muted); } .fact .v { font-size: 17px; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
-  ul.money, ul.asks { margin: 0; padding-left: 18px; font-size: 15px; display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
+  .fact .k { display: block; font-size: var(--fs-small); color: var(--muted); } .fact .v { font-size: var(--fs-figure); font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  ul.money, ul.asks { margin: 0; padding-left: 18px; font-size: var(--fs-body); display: flex; flex-direction: column; gap: 4px; font-variant-numeric: tabular-nums; }
   ul.money { list-style: none; padding-left: 0; } ul.money li.head { font-weight: 600; }
 
   /* Post cards. Courier line: brand dot + name (always in words) + where to take it; the parcel number in a ring pill. */
-  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 -4px; padding: 0 0 12px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: 16px; }
+  .cband { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 0 0 -4px; padding: 0 0 12px; border-bottom: 1px solid var(--line); font-weight: 600; font-size: var(--fs-body); }
   .cband .cdot { width: 12px; height: 12px; border-radius: 50%; background: var(--cb); box-shadow: 0 0 0 1px var(--ctl); flex: none; }
-  .cband .pid { font-size: 17px; height: 28px; padding: 0 10px; border: 1px solid var(--ink); border-radius: var(--radius); display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
-  .cband .to { font-weight: 400; font-size: 15px; color: var(--muted); }
+  .cband .pid { font-size: var(--fs-figure); height: 28px; padding: 0 10px; border: 1px solid var(--ink); border-radius: var(--radius); display: inline-flex; align-items: center; font-variant-numeric: tabular-nums; }
+  .cband .to { font-weight: 400; font-size: var(--fs-body); color: var(--muted); }
   .cb-inpost { --cb: var(--ljr-cb-inpost); } .cb-evri { --cb: var(--ljr-cb-evri); } .cb-rm { --cb: var(--ljr-cb-rm); } .cb-dpd { --cb: var(--ljr-cb-dpd); }
   .cb-yodel { --cb: var(--ljr-cb-yodel); } .cb-pf { --cb: var(--ljr-cb-pf); } .cb-none { --cb: var(--ljr-cb-none); }
-  .parcel { font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums; }
-  .row .parcel { font-size: 17px; min-width: 44px; }
+  .parcel { font-size: var(--fs-figure); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .row .parcel { font-size: var(--fs-figure); min-width: 44px; }
   .dropcode { border: 1px dashed var(--ctl); border-radius: var(--radius); padding: 12px; text-align: center; }
-  .dropcode .code { display: block; font-size: 22px; font-weight: 600; letter-spacing: 2px; overflow-wrap: anywhere; }
+  .dropcode .code { display: block; font-size: var(--fs-figure); font-weight: 600; letter-spacing: 2px; overflow-wrap: anywhere; }
   .packbar { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-weight: 600; }
   .pidin { width: 9em; }
   /* Home: "To post" list, calm rows (photo, title, date pill), one button under it. Not a card, so Home keeps one Next card. */
@@ -192,7 +180,7 @@
   .prow { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); color: var(--ink); }
   .prow:first-child { border-top: 0; }
   .prow .pt { flex: 1; min-width: 0; display: flex; gap: 4px 12px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-  .prow .ttl { min-width: 0; font-size: 15px; }
+  .prow .ttl { min-width: 0; font-size: var(--fs-body); }
   .prow > img, .prow > .ph { width: 44px; height: 44px; object-fit: cover; border-radius: var(--radius); border: 1px solid var(--line); flex: none; background: var(--bg); }
   .plist .acts { margin-top: 4px; }
 
@@ -200,8 +188,8 @@
   .pair figure > a { display: block; border-radius: var(--radius); }
   .pair figure { margin: 0; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .pair img, .pair .nopic { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: var(--radius); border: 1px solid var(--line); background: var(--bg); display: block; }
-  .pair .nopic { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 14px; }
-  .pair figcaption { font-size: 13px; color: var(--muted); font-weight: 600; overflow-wrap: anywhere; }
+  .pair .nopic { display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: var(--fs-small); }
+  .pair figcaption { font-size: var(--fs-small); color: var(--muted); font-weight: 600; overflow-wrap: anywhere; }
   .opbox { display: inline-flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   label.qty { font-weight: 600; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
   details summary { cursor: pointer; font-weight: 600; min-height: 44px; display: flex; align-items: center; border-radius: var(--radius); }
@@ -209,39 +197,48 @@
   .buyfrom { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; font-weight: 600; } .buyfrom .k { color: var(--muted); font-weight: 600; }
   details.npgroup > summary { min-height: 56px; } details.npgroup[open] > *:not(summary) { margin-top: 12px; } details.npgroup .row .num { width: 72px; } details.npgroup input[type=checkbox] { width: 28px; height: 28px; }   /* v11.10 New stock */
   details.madeof { display: block; } details.madeof[open] > *:not(summary) { margin-top: 12px; } details.madeof label.qty { margin-top: 12px; }
-  input.num, input.txtin { font: inherit; font-size: 16px; min-height: 36px; padding: 4px 10px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); }
+  input.num, input.txtin { font: inherit; font-size: var(--fs-body); min-height: 36px; padding: 4px 10px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); }
   @media (max-width: 544px) { input.num, input.txtin { min-height: 44px; } }
   input.num { width: 72px; text-align: center; font-variant-numeric: tabular-nums; }
   input.num.pidin { width: 9em; }
   input.txtin { width: 100%; }
   input::placeholder { color: var(--muted); opacity: 1; }
-  header:has(#people.hidden) [data-house-filter] { display: none !important; }   /* no Filter until the people row shows */
-  header .house-filters.open { padding-top: 0; }
   .qr { position: fixed; inset: 0; background: var(--ljr-paper); color: var(--ljr-ink); z-index: 20; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 24px; text-align: center; }
-  .qr .code { font-size: 44px; font-weight: 600; letter-spacing: 3px; word-break: break-all; }
+  .qr .code { font-size: var(--fs-figure); font-weight: 600; letter-spacing: 3px; word-break: break-all; }
   .qr img { max-width: 90vw; max-height: 60vh; }
 </style>
 </head>
 <body>
-<header>
-  <div class="top"><h1><a href="#/me"><span class="dot" aria-hidden="true"></span>Marketplace</a></h1><span class="stamp" id="stamp">TEST</span><span class="readat" id="readAt" title="When the list was last read. It reads again every 5 minutes."></span>
-    <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh"><i class="ti ti-refresh"></i></button>
+<header class="house-head">
+  <div class="top house-row">
+    <a id="backHome" class="btn back house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
+    <h1><a href="#/me"><span class="dot" aria-hidden="true"></span>Marketplace</a></h1>
+    <span class="house-sp" aria-hidden="true"></span>
+    <span class="stamp" id="stamp">TEST</span><span class="readat house-read" id="readAt" data-house-read title="When the list was last read. It reads again every 5 minutes."></span>
+    <button class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh" id="refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap" data-house-look></span>
     <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
-    <button class="btn house-fbtn" type="button" data-house-filter="people sitef stockf" aria-controls="people" aria-expanded="false">Filter<span class="cnt" id="whoN"></span></button>
-    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
-  <div class="chips people house-filters hidden" id="people" role="group" aria-label="Whose items"></div>
+  </div>
 </header>
-<main class="wrap">
+<main class="wrap house-page">
+  <div class="mkwho house-frow">
+    <button class="btn house-fbtn" type="button" data-house-filter="people sitef stockf" aria-controls="people" aria-expanded="false">Filter<span class="cnt" id="whoN"></span></button>
+    <div class="chips people house-filters hidden" id="people" role="group" aria-label="Whose items"></div>
+  </div>
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs hidden" id="tabs" aria-label="Marketplace sections">
-  <a href="#/me" data-nav="me" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-home" aria-hidden="true"></i><span>Home</span><span class="n"></span></a>
-  <a href="#/do" data-nav="do" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-package" aria-hidden="true"></i><span>Do now</span><span class="n need" id="n-do"></span></a>
-  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-traffic-lights" aria-hidden="true"></i><span>Decide</span><span class="n need" id="n-decide"></span></a>
-  <a href="#/newstock" data-nav="newstock" style="--tc:var(--ljr-2)"><span class="bar" aria-hidden="true"></span><i class="ti ti-truck-delivery" aria-hidden="true"></i><span>New stock</span><span class="n need" id="n-newstock"></span></a>
-  <a href="#/reply" data-nav="reply" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-message" aria-hidden="true"></i><span>Reply</span><span class="n need" id="n-reply"></span></a>
-  <a href="#/insights" data-nav="insights" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-chart-bar" aria-hidden="true"></i><span>Insights</span><span class="n"></span></a>
+  <a class="ht" data-slot="1" href="#/me" data-nav="me"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n"></span></a>
+  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n need" id="n-decide"></span></a>
+  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n need" id="n-do"></span></a>
+  <a class="ht" data-slot="5" href="#/reply" data-nav="reply"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-chat"/></svg></span><span class="htl">Reply</span><span class="n need" id="n-reply"></span></a>
+  <a class="ht" data-slot="6" href="#/newstock" data-nav="newstock"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-truck"/></svg></span><span class="htl">New Stock</span><span class="n need" id="n-newstock"></span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/insights" data-nav="insights" data-slot="3"><i class="ti ti-chart-bar" aria-hidden="true"></i><span class="htl">Insights</span></a>
+    </div>
+  </div>
 </nav>
 <div id="qr" class="qr hidden" role="dialog" aria-label="Drop-off code"></div>
 <script>
@@ -254,7 +251,7 @@
   var CATS = ['Clothes', 'Blades & grooming', 'Health & supplements', 'Treats', 'Crates & beds', 'Towels & textiles', 'Collars & accessories', 'Electronics & media', 'Other'];
   var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
   var SECTIONS = {
-    remove: { name: 'Remove from other sites', urgent: true, verb: 'Done', what: 'It sold. Take it off the site named on the card.' },
+    remove: { name: 'Remove from sites', urgent: true, verb: 'Done', what: 'It sold. Take it off the site named on the card.' },
     message: { name: 'Messages', urgent: true, verb: 'Done', what: 'A buyer wrote. Open your messages, answer there, then tap Done.' },
     post: { name: 'Post', urgent: true, verb: 'Posted', what: 'Find it, pack it, post it.' },
     go: { name: 'Go', verb: 'Go', no: 'Not this one', what: 'List this item.' },
@@ -395,23 +392,37 @@
     if (!M || !M.openWorkId) { banner('Not set up yet: the Marketplace settings are not in config.js.', true); return; }
     if (!token) { render(); return; }
     api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
-      rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
+      rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; }).concat(fishRows);
       $('banner').className = 'banner hidden'; $('readAt').textContent = 'Read ' + hm(Date.now()); render(); loadPics(); loadAvatars();
     }).catch(function (e) { banner('Could not load: ' + e.message); });
+    loadFish();
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
+  }
+  // G7 (30 Oct 2026): Fish Treats postage to-dos from the GA Hub's Cards tab (DASH_CONFIG.food.bookId, read-only second source;
+  // RR_FOOD-ENGINE owns them, never the Marketplace tab). Shown in Do now > Post; Posted writes only that Cards row's answer cells.
+  var fishRows = [];
+  function loadFish() {
+    var F = (window.DASH_CONFIG || {}).food; if (!F || !F.bookId) return;
+    api('https://sheets.googleapis.com/v4/spreadsheets/' + F.bookId + '/values/' + encodeURIComponent('Cards!A2:L')).then(function (j) {
+      fishRows = (j.values || []).map(function (v, i) { var o = { _row: i + 2, _book: F.bookId, _tab: 'Cards' }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; })
+        .filter(function (o) { return /^PACK-/.test(o.key) && !o.applied_at; })
+        .map(function (o) { var d = detail(o); d.kind = 'fish'; d.found = true; o.section = 'post'; o.category = 'Fish Treats'; o.detail = JSON.stringify(d); return o; });
+      rows = rows.filter(function (r) { return !r._book; }).concat(fishRows); render();
+    }).catch(function () {});   // no GA Hub access: the Marketplace list still works
   }
   // Write the 4 answer cells of the row with this key; check the key before and after, put the old values back if it moved.
   function answer(r, value, note) {
-    var rng = M.tab + '!A' + r._row + ':L' + r._row, at = value === '' ? '' : new Date().toISOString(), who = value === '' ? '' : me;
-    return api(sheetUrl(rng)).then(function (j) {
+    var url = r._book ? function (x) { return 'https://sheets.googleapis.com/v4/spreadsheets/' + r._book + '/values/' + encodeURIComponent(x); } : sheetUrl, tab = r._tab || M.tab;
+    var rng = tab + '!A' + r._row + ':L' + r._row, at = value === '' ? '' : new Date().toISOString(), who = value === '' ? '' : me;
+    return api(url(rng)).then(function (j) {
       var cur = (j.values || [[]])[0];
       if (cur[0] !== r.key) throw new Error('the list changed: refresh and tap again');
       var old = [cur[6] || '', cur[7] || '', cur[8] || '', cur[9] || ''];
-      var w = M.tab + '!G' + r._row + ':J' + r._row;
-      return api(sheetUrl(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [[value, note || '', at, who]] }) })
-        .then(function () { return api(sheetUrl(M.tab + '!A' + r._row)); })
-        .then(function (k) { if (((k.values || [[]])[0] || [])[0] !== r.key) return api(sheetUrl(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [old] }) }).then(function () { throw new Error('the list changed: refresh and tap again'); }); })
-        .then(function () { r.answer = value; r.note = note || ''; r.answered_at = at; r.answered_by = who; wake(); render(); });
+      var w = tab + '!G' + r._row + ':J' + r._row;
+      return api(url(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [[value, note || '', at, who]] }) })
+        .then(function () { return api(url(tab + '!A' + r._row)); })
+        .then(function (k) { if (((k.values || [[]])[0] || [])[0] !== r.key) return api(url(w) + '?valueInputOption=RAW', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ values: [old] }) }).then(function () { throw new Error('the list changed: refresh and tap again'); }); })
+        .then(function () { r.answer = value; r.note = note || ''; r.answered_at = at; r.answered_by = who; if (!r._book) wake(); render(); });
     }).catch(function (e) { banner('Not saved: ' + e.message); render(); });   // render puts the button back (no stuck "Saving…")
   }
   // Wake the engine (no data sent). The address is read from a Drive file, never kept in this public page.
@@ -470,6 +481,7 @@
       (n ? ' <b class="date">' + esc(n) + '</b>' : '') + '</div>';
   }
   function postGuide(r, d) {
+    if (d.kind === 'fish') return fishGuide(d);
     var eb = /ebay/i.test(d.platform), site = eb ? 'eBay' : /vinted/i.test(d.platform) ? 'Vinted' : (d.platform || 'the site');
     var order = eb && d.order_id ? 'https://www.ebay.co.uk/mesh/ord/details?orderid=' + encodeURIComponent(d.order_id) : '';
     var mail = d.email_url || (d.label_email ? MAIL + encodeURIComponent(d.label_email) : '');
@@ -484,10 +496,19 @@
       '<details class="allsteps"><summary class="btn">All ' + steps.length + ' steps</summary><ol class="steps words">' + steps.map(function (x, i) { return '<li><span class="sn">Step ' + (i + 1) + ':</span><span>' + esc(STEP[x.k]) + '</span></li>'; }).join('') + '</ol></details>' +
       ((order || mail) ? '<div class="acts">' + (order ? linkBtn(order, nx === STEP.buy ? STEP.buy : 'Open this order on eBay') : '') + (mail ? linkBtn(mail, d.label_pdf ? 'Open this order\u2019s label' : 'Open the label email') : '') + '</div>' : '');
   }
+  // G7: a Fish Treats to-do from the GA Hub. The address is in the Shopify order (Lisa's sign-in), never on this card or page.
+  function fishGuide(d) {
+    var shop = d.store && d.order ? 'https://admin.shopify.com/store/' + encodeURIComponent(d.store) + '/orders?query=' + encodeURIComponent(d.order) : '';
+    var steps = d.decide ? ['Decide how to send these ' + (d.units || '') + ' units (see below).', 'Send them that way.', 'Tap Posted.']
+      : ['Open the order in Shopify for the address.', 'Book ' + (d.courier || 'the postage') + (/parcel2go/i.test(d.courier) ? ' on parcel2go.com' : '') + ', pack ' + (d.units || '') + ' Fish Treat unit' + (d.units > 1 ? 's' : '') + ' and post it.', 'Tap Posted.'];
+    return '<p class="what"><b>Shop order #' + esc(d.order || '?') + ' · ' + esc(d.units || '?') + ' Fish Treat unit' + (d.units > 1 ? 's' : '') + (d.with_food ? ' · the food goes to GA' : '') + '.</b></p>' +
+      '<ol class="steps words">' + steps.map(function (x, i) { return '<li><span class="sn">Step ' + (i + 1) + ':</span><span>' + esc(x) + '</span></li>'; }).join('') + '</ol>' +
+      (shop ? '<div class="acts">' + linkBtn(shop, 'Open the order in Shopify') + '</div>' : '');
+  }
   function itemCard(r, opts) {
     var d = detail(r), s = SECTIONS[r.section] || {}, red = r.section === 'remove' || d.red, isPair = r.section === 'check' && /^LINK\|/.test(r.key);
     var nx = opts && opts.next;
-    var h = '<div class="card ' + (red ? 'acc2' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2><p class="what">' + esc(s.what) + '</p>' : '') +
+    var h = '<div class="card ' + (red ? 'acc2 house-lbar' : 'acc4') + (nx ? ' next' : '') + '">' + (nx ? '<p class="nextlab"><i class="ti ti-arrow-right" aria-hidden="true"></i>Next</p>' : '') + (r.section === 'post' ? courierBand(r, d) : '') + (opts && opts.head ? '<h2>' + esc(s.name) + '</h2>' : '') +
       '<div class="item">' + (isPair ? '' : thumb(d.photo, r.category)) + '<div class="t">' + nameLine(r, d) + '<div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([d.price, d.shelf ? 'shelf ' + d.shelf : '', /^unknown$/i.test(d.courier || '') ? '' : d.courier].filter(Boolean).join(' · ')) + '</div>' + (r.section === 'post' && /^PO\|/.test(r.key) ? orderLine(r, d) : '') +
       postLine(d) + (d.post_by && r.section !== 'post' ? '<div class="m">' + datePill(d) + '</div>' : '') + (d.label_expiry ? '<div class="m">Label valid until ' + esc(d.label_expiry) + '</div>' : '') + (d.sold ? '<div class="m red">' + esc(d.sold) + '</div>' : '') + stamp(r, d) + '</div></div>' +
       (isPair ? pair(r, d) : '') + (r.section === 'post' ? postGuide(r, d) : '') + (d.why && d.kind !== 'which_parcel' ? '<p class="what">' + esc(d.why) + '</p>' : '') + (d.quote ? '<p class="hint">It says: \u201c' + esc(d.quote) + '\u201d</p>' : '') + (Array.isArray(d.steps) && d.steps.length ? '<ol class="steps">' + d.steps.map(function (s) { return '<li>' + esc(String(s).replace(/^\d+\.\s*/, '')) + '</li>'; }).join('') + '</ol>' : '');
@@ -506,7 +527,7 @@
     else if (r.section === 'check' && d.kind === 'new') {   // v11.5: say what eBay shows, and offer the item she probably already has
       h += factsOf([['eBay says for sale', d.qty === '' || d.qty === undefined ? '?' : String(d.qty)], ['Price', d.price || '']]);
       if (d.maybe_sku) h += '<div class="item">' + thumb(d.maybe_photo) + '<div class="t">Looks like: ' + esc(d.maybe_title) + '<div class="m">' + esc(d.maybe_sku + ' · ' + d.maybe_where) + '</div></div></div>';
-      h += '<label class="qty">How many do you have? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have"></label><p class="hint">Leave blank if you are not sure.' + (d.maybe_sku ? ' Same item keeps one count for both adverts, so a sale on one updates the other.' : '') + '</p>';
+      h += '<label class="qty">How many do you have? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have"></label>' + (d.maybe_sku ? '<p class="hint">Same item: one count for both adverts.</p>' : '');
       acts.push(linkBtn(d.url, 'Open on eBay'));
       if (d.maybe_sku) acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Same">Same item</button><button class="btn" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">No, a new item</button>');
       else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Add it</button>');
@@ -519,10 +540,10 @@
         if (pairDiff[r.key]) {
           h += '<p class="what">Two separate items. How many of each do you have?</p>' +
             '<label class="qty">This one (' + esc(d.platform || 'Vinted') + ') <input class="num" inputmode="numeric" data-diffa="' + esc(r.key) + '" aria-label="How many of this one"></label>' +
-            '<label class="qty">The eBay one <input class="num" inputmode="numeric" data-diffb="' + esc(r.key) + '" aria-label="How many of the eBay one"></label><p class="hint">Leave a box blank if you are not sure.</p>';
+            '<label class="qty">The eBay one <input class="num" inputmode="numeric" data-diffb="' + esc(r.key) + '" aria-label="How many of the eBay one"></label>';
           acts.push('<button class="btn main no" type="button" data-ans="' + esc(r.key) + '" data-v="Different">Save: different items</button><button class="btn" type="button" data-diffback="' + esc(r.key) + '">Back</button>');
         } else {
-          h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Leave blank if you are not sure. Yes then keeps one count for both sites.</p>';
+          h += '<label class="qty">How many do you have in total? <input class="num" inputmode="numeric" data-qty="' + esc(r.key) + '" aria-label="How many you have in total"></label><p class="hint">Yes keeps one count for both sites.</p>';
           acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes, same item</button><button class="btn no" type="button" data-diff="' + esc(r.key) + '">Different items</button>');
         }
       } else acts.push('<button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="Yes">Yes</button><button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="No">No</button>'); }
@@ -567,7 +588,7 @@
   function factsOf(pairs) { pairs = pairs.filter(function (p) { return p[1] !== '' && p[1] !== undefined && p[1] !== null; }); return pairs.length ? '<div class="facts">' + pairs.map(function (p) { return '<div class="fact"><span class="k">' + esc(p[0]) + '</span><span class="v">' + esc(p[1]) + '</span></div>'; }).join('') + '</div>' : ''; }
   // Courier from the card ("Royal Mail 2nd Class", "InPost"...) -> band colour, short name and where to take it.
   var COURIERS = [[/inpost/i, 'cb-inpost', 'InPost', 'InPost locker or shop'], [/evri|hermes/i, 'cb-evri', 'Evri', 'Evri ParcelShop'], [/parcelforce/i, 'cb-pf', 'Parcelforce', 'Post Office'],
-    [/royal ?mail/i, 'cb-rm', 'Royal Mail', 'Post Office'], [/dpd/i, 'cb-dpd', 'DPD', 'DPD Pickup shop'], [/yodel/i, 'cb-yodel', 'Yodel', 'Yodel Store'], [/collect/i, 'cb-none', 'Collection', 'Buyer collects: no post']];
+    [/royal ?mail/i, 'cb-rm', 'Royal Mail', 'Post Office'], [/dpd/i, 'cb-dpd', 'DPD', 'DPD Pickup shop'], [/yodel/i, 'cb-yodel', 'Yodel', 'Yodel Store'], [/collect/i, 'cb-none', 'Collection', 'Buyer collects: no post'], [/parcel2go/i, 'cb-none', 'Parcel2Go', 'the drop-off on the Parcel2Go booking']];
   function courierOf(d) { var c = String(d.courier || ''); for (var i = 0; i < COURIERS.length; i++) if (COURIERS[i][0].test(c)) return { cls: COURIERS[i][1], name: COURIERS[i][2], to: COURIERS[i][3], full: c }; return null; }
   function courierBand(r, d) {
     var c = courierOf(d), pid = d.parcel_id || '';
@@ -587,7 +608,7 @@
       return { h: h, acts: [linkBtn(d.file_url, 'Open receipt'), ansBtn(r, 'Yes', 'Add to stock', true), ansBtn(r, 'No', 'Not now')] };
     },
     supplier: function (r, d) {
-      if (d.kind === 'terms') return { h: '<ul class="asks">' + (d.asks || []).map(function (q) { return '<li>' + esc(q.ask) + '</li>'; }).join('') + '</ul>' + noteBox(r, d.example || 'min 100, free over 300, delivery 15', 'Terms') + '<p class="hint">Type what you know, in any order. Leave out what you do not know.</p>', acts: [ansBtn(r, 'Set', 'Save', true)] };
+      if (d.kind === 'terms') return { h: '<ul class="asks">' + (d.asks || []).map(function (q) { return '<li>' + esc(q.ask) + '</li>'; }).join('') + '</ul>' + noteBox(r, d.example || 'min 100, free over 300, delivery 15', 'Terms') + '', acts: [ansBtn(r, 'Set', 'Save', true)] };
       if (d.kind === 'terms_check') return { h: factsOf([['Min order', d.terms && d.terms.min_order], ['Free from', d.terms && d.terms.free_over], ['Delivery', d.terms && d.terms.delivery]]) + noteBox(r, 'only if changed: min 100, free over 300', 'Changes'), acts: [ansBtn(r, 'Yes', 'Still right', true), ansBtn(r, 'Set', 'Save changes')] };
       if (d.kind === 'link') return { h: d.subject ? '<p class="hint">Email: ' + esc(d.subject) + '</p>' : '', acts: [linkBtn(d.url, 'Open the link', true), linkBtn(d.folder, 'Open 6 TRADE'), ansBtn(r, 'Done', 'Dropped it in')] };
       return { h: '', acts: [linkBtn(d.file_url, 'Open file'), ansBtn(r, 'OK', 'OK', true)] };
@@ -597,7 +618,7 @@
       if (d.kind === 'found') return { h: h + factsOf([['Trade email', d.trade_email], ['Phone', d.trade_phone], ['Min order', d.min_order]]) + ((d.wholesalers || []).length ? '<p class="what">Wholesalers: ' + esc(d.wholesalers.map(function (w) { return w.name; }).join(', ')) + '</p>' : ''),
         acts: [mailBtn(d.ask && d.ask.mailto, 'Write the email'), linkBtn(d.trade_page, 'Trade page'), ansBtn(r, 'Ask', 'Sent it', true), ansBtn(r, 'No', 'Not now')] };
       if (d.kind === 'on_list') return { h: h, acts: [ansBtn(r, 'Use', 'Use that', true), ansBtn(r, 'No', 'Not now')] };
-      return { h: h + '<p class="hint">Find: the AI looks up their trade contact (a card for you if AI is off). Ask: write to them yourself.</p>', acts: [ansBtn(r, 'Find', 'Find a supplier', true), mailBtn(d.ask && d.ask.mailto, 'Write the email'), ansBtn(r, 'No', 'Not this one')] };
+      return { h: h + '', acts: [ansBtn(r, 'Find', 'Find a supplier', true), mailBtn(d.ask && d.ask.mailto, 'Write the email'), ansBtn(r, 'No', 'Not this one')] };
     },
     job: function (r, d) { return { h: String(d.file_ids || '').split(',').filter(Boolean).map(function (id) { return /^[\w-]{20,}$/.test(id) ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(id) + '/view" target="_blank" rel="noopener">Open file</a>' : ''; }).join('') + noteBox(r, 'What it says (optional)', 'What it says'), acts: [ansBtn(r, 'Done', 'Done', true)] }; },
     offer: function (r, d) {
@@ -659,8 +680,8 @@
   function cssKey(s) { return String(s).replace(/[^A-Za-z0-9]/g, '_'); }
   function pageNewStock() {
     var groups = npGroups(), total = waiting('newprod').length;
-    var h = '<p class="needs">New stock: ' + total + '</p><p class="hint">New items worth stocking, folded by supplier. Tick what you want, set how many, then Agree this order. That makes a DRAFT order for you to buy yourself: nothing is bought or sent.</p>' + siteChips();
-    if (!groups.length) return h + emptyCard('No new stock ideas', 'New items from supplier price lists show here.');
+    var h = '<p class="needs">New stock: ' + total + '</p><p class="hint">Agree makes a draft order. Nothing is bought or sent.</p>' + siteChips();
+    if (!groups.length) return h + emptyCard('No new stock ideas');
     groups.forEach(function (grp) { var lead = grp.rows[0], tm = grp.terms || {};
       h += '<details class="card npgroup"><summary><span><b>' + esc(grp.supplier) + '</b><br><span class="hint" data-npline="' + esc(cssKey(grp.supplier)) + '">' + esc(npLine(grp)) + '</span></span></summary>';
       h += factsOf([['Free postage from', tm.free_over ? '£' + tm.free_over : 'not known yet'], ['Min order', tm.min_order ? '£' + tm.min_order : ''], ['Delivery', tm.delivery ? '£' + tm.delivery : ''], ['Case', tm.case_rule]]);
@@ -686,10 +707,10 @@
   // Suppliers: one card per supplier. Account number copies, phone calls, terms, what is on the order list and the gap.
   function pageSuppliers() {
     var list = rows.filter(function (r) { return r.section === 'suppliers' && !r.applied_at; }).sort(function (a, b) { return a.title.localeCompare(b.title); });
-    var h = '<p class="needs">Suppliers</p><p class="hint">Tap the account number to copy it, the phone to call. Change terms with Settings.</p>';
+    var h = '<p class="needs">Suppliers</p>';
     if (!list.length) return h + '<div class="card"><p class="what">Suppliers appear after engine v11 is pasted and set up.</p></div>';
     list.forEach(function (r) { var d = detail(r);
-      h += '<div class="card' + (d.missing && d.missing.length ? ' acc2' : '') + '"><h2>' + esc(r.title) + '</h2>' +
+      h += '<div class="card' + (d.missing && d.missing.length ? ' acc2 house-lbar' : '') + '"><h2>' + esc(r.title) + '</h2>' +
         '<div class="acts">' + (d.account_no ? '<button class="btn" type="button" data-copycode="' + esc(d.account_no) + '">Account ' + esc(d.account_no) + '</button>' : '') +
         (/^[+\d ()-]{7,}$/.test(d.phone || '') ? '<a class="btn" href="tel:' + esc(String(d.phone).replace(/[^+\d]/g, '')) + '">Call ' + esc(d.phone) + '</a>' : '') +
         (/^[^@\s]+@[^@\s]+$/.test(d.order_email || '') ? '<a class="btn" href="mailto:' + esc(d.order_email) + '">Email orders</a>' : '') + linkBtn(d.website, 'Website') + '</div>' +
@@ -731,7 +752,7 @@
   function pageStock() {
     var list = byCat(rows.filter(function (r) { return r.section === 'stock' && !r.applied_at && shown(r); }));
     var low = list.filter(function (r) { return detail(r).low; }).length, unknown = list.filter(function (r) { return detail(r).unknown; }).length;
-    var h = '<p class="needs">Stock</p><p class="hint">What you have, what is on order, and when to buy. Counts change only your stock list until you go live.</p>';
+    var h = '<p class="needs">Stock</p>';
     if (!list.length) return h + '<div class="card"><p class="what">The stock list appears after the engine update is pasted and set up.</p></div>';
     h += '<input class="txtin" type="search" placeholder="Find an item or code" aria-label="Find an item or code" data-find>';
     codeTitle = {}; list.forEach(function (r) { codeTitle[detail(r).item_sku] = r.title; });   // one shared list for every "Add a part" box
@@ -740,7 +761,7 @@
       return '<button class="chip" type="button" data-sfilter="' + c[0] + '" aria-pressed="' + (stockFilter === c[0]) + '">' + c[1] + '</button>'; }).join('') + '</div>';
     list.filter(function (r) { var d = detail(r); return stockFilter === 'all' || (stockFilter === 'low' && d.low) || (stockFilter === 'unknown' && d.unknown); }).forEach(function (r) {
       var d = detail(r);
-      h += '<div class="card stockrow' + (d.low ? ' acc2' : '') + '" data-text="' + esc((r.title + ' ' + d.item_sku + ' ' + (d.shelf || '')).toLowerCase()) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' +
+      h += '<div class="card stockrow' + (d.low ? ' acc2 house-lbar' : '') + '" data-text="' + esc((r.title + ' ' + d.item_sku + ' ' + (d.shelf || '')).toLowerCase()) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' +
         '<div class="m">' + esc([d.item_sku, d.shelf ? 'shelf ' + d.shelf : '', d.owner && d.owner !== 'Lisa' ? d.owner : '', d.listings + (d.listings === 1 ? ' listing' : ' listings')].filter(Boolean).join(' · ')) + '</div></div></div>' +
         '<div class="facts"><div class="fact"><span class="k">Have</span><span class="v' + (d.unknown ? ' red' : '') + '">' + (d.unknown ? '?' : esc(d.have)) + '</span></div><div class="fact"><span class="k">On order</span><span class="v">' + esc(d.on_order || 0) + '</span></div><div class="fact"><span class="k">Min</span><span class="v">' + (d.min === '' ? '–' : esc(d.min)) + '</span></div></div>' +
         priceLine(d);
@@ -762,9 +783,9 @@
     var rank = function (r) { var b = detail(r).buy_now; return b === true ? 0 : b === 'unknown' ? 1 : 2; };
     buys.sort(function (a, b) { return rank(a) - rank(b) || a.title.localeCompare(b.title); });
     var total = buys.reduce(function (n, r) { var d = detail(r), c = parseFloat(String(d.price_now || d.last_cost || '').replace(/[^\d.]/g, '')); return n + (isNaN(c) || !d.buy ? 0 : c * d.buy); }, 0);
-    var h = '<p class="needs">Temu order list: ' + buys.length + '</p><p class="hint">Temu cannot take orders from the system: tap Open on Temu, buy, then type how many and tap Ordered. Tap Arrived when it lands.</p>';
+    var h = '<p class="needs">Temu order list: ' + buys.length + '</p><p class="hint">Buy on Temu, then tap Ordered.</p>';
     if (total) h += '<p class="what">About £' + total.toFixed(2) + ' for everything below (last prices).</p>';
-    h += buys.length ? buys.map(function (r) { return itemCard(r); }).join('') : emptyCard('Nothing to buy', 'Items appear here when they reach their minimum.');
+    h += buys.length ? buys.map(function (r) { return itemCard(r); }).join('') : emptyCard('Nothing to buy');
     var cps = rows.filter(function (r) { return r.section === 'temu' && !r.applied_at && !r.answer && detail(r).kind === 'coupon'; });
     if (cps.length) h += '<p class="grp">Coupons and offers · ' + cps.length + '</p>' + cps.map(function (r) { return itemCard(r); }).join('');
     var cl = rows.filter(function (r) { return r.section === 'temu' && !r.applied_at && detail(r).kind !== 'coupon'; });
@@ -801,28 +822,28 @@
     if (!list.length) return '';
     var key = function (r) { var d = detail(r); return dueOf(d) === 'late' ? '0' : String(d.post_by || '9').slice(0, 10); };
     var top = list.slice().sort(function (a, b) { return key(a).localeCompare(key(b)); }).slice(0, 7);
-    return ghead('To post', list.length, true) + '<div class="plist">' + top.map(function (r) { var d = detail(r);
-      return '<div class="prow">' + thumb(d.photo, r.category) + '<div class="pt"><span class="ttl">' + esc(r.title) + '</span>' + datePill(d) + '</div></div>'; }).join('') +
+    // Every row and count opens where it is done (Lisa, 2 Nov). There is no page per parcel yet, so a row opens Do now, where its Found / Posted buttons are.
+    return '<a class="house-go" href="#/do" aria-label="To post: ' + list.length + '. Open Do now">' + ghead('To post', list.length, true) + '</a><div class="plist">' + top.map(function (r) { var d = detail(r);
+      return '<div class="prow" data-open-row>' + thumb(d.photo, r.category) + '<div class="pt"><a class="ttl house-open house-go" href="#/do" aria-label="' + esc(r.title) + '. Open Do now to post it">' + esc(r.title) + '</a>' + datePill(d) + '</div></div>'; }).join('') +
       (list.length > top.length ? '<p class="hint">And ' + (list.length - top.length) + ' more in Do now.</p>' : '') +
       '<div class="acts"><a class="btn" href="#/do?pack" data-gopack>Start packing (' + all.length + ')</a></div></div>';
   }
   function pageMe() {
-    var n = needsCount(), h = '<p class="needs">Needs you: ' + (n ? n : '<span class="zero">0</span>') + '</p>';
+    var n = needsCount(), h = '<p class="needs"><a class="house-go" href="#/do" aria-label="Needs you: ' + n + '. Open Do now">Needs you: ' + (n ? n : '<span class="zero">0</span>') + '</a></p>';
     h += '<div class="tiles three needs3">' + [['do', 'Do now'], ['decide', 'Decide'], ['reply', 'Reply']].map(function (t) {
       var n = tabCount(t[0]); return '<a class="tile big" href="#/' + t[0] + '"><span class="v' + (n ? ' need' : '') + '">' + n + '</span><span class="k">' + t[1] + '</span></a>'; }).join('') + '</div>';
     var first = null; ORDER.some(function (s) { if (SECTIONS[s].quiet) return false; var w = byCat(waiting(s)); if (w.length) { first = w[0]; return true; } return false; });
-    if (first) h += itemCard(first, { head: true, next: true }); else h += emptyCard('Nothing needs you', 'The engine is watching. New jobs show here when they come in.');
+    if (first) h += itemCard(first, { head: true, next: true }); else h += emptyCard('Nothing needs you');
     h += toPost(first && first.section === 'post' ? first : null) + ordersStrip();
     var just = rows.filter(function (r) { return r.answer && !r.applied_at && Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
     if (just.length) h += '<p class="grp">Just done</p>' + just.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '</div>' + sentLine(r) + '</div>'; }).join('');
     h += growthHome();
-    h += '<p class="hint"><i class="ti ti-camera"></i> New item? Put photos in <b>DROP › ' + esc(who === 'All' ? 'Lisa' : who) + ' › NEW to list</b>.</p>';
     return h + engineLine();
   }
   // A tab: its sections one after another. Do now and Reply show every job; Decide shows one question at a time.
   function pageTab(t) {
-    var names = { do: 'Do now', decide: 'Decide', reply: 'Reply' }, intro = { do: 'Jobs with your hands. Remove first, then post in shelf order.', decide: 'One question at a time. Undo for 10 minutes.', reply: 'Buyers who wrote. Reply on the site, then tap Done.' };
-    var h = '<p class="needs">' + names[t] + ': ' + tabCount(t) + '</p><p class="hint">' + intro[t] + '</p>' + siteChips();
+    var names = { do: 'Do now', decide: 'Decide', reply: 'Reply' };
+    var h = '<p class="needs">' + names[t] + ': ' + tabCount(t) + '</p>' + siteChips();
     if (t === 'do') { var p = posts().filter(function (r) { return !r.answer; }).length;
       if (p > 1) h += '<div class="acts"><button class="btn main" type="button" data-action="pack">Start packing (' + p + ')</button><button class="btn" type="button" data-action="sheet">Label sheet (' + p + ')</button></div>'; }
     // Answered cards leave the list at once (Lisa 27 Oct: "once decided then still at top of list"); they wait in "Just done" at the
@@ -830,7 +851,7 @@
     var list = [], done = []; TABS[t].forEach(function (s) { byCat(rows.filter(function (r) { return r.section === s && !r.applied_at && shown(r); })).forEach(function (r) {
       if (!r.answer || (r.section === 'post' && r.answer === 'Found')) list.push(r); else if (Date.now() < Date.parse(r.answered_at) + UNDO_MS) done.push(r); }); });
     var tail = done.length ? '<details class="justdone"><summary>Just done · ' + done.length + ' (Undo for 10 minutes)</summary>' + done.map(function (r) { return '<div class="row"><div class="txt">' + esc(r.title) + '<div class="why">' + esc(r.answer) + '</div></div>' + sentLine(r) + '</div>'; }).join('') + '</details>' : '';
-    var EMPTY = { do: ['Nothing waiting', 'Sales to post and items to take off other sites show here.'], decide: ['All decided', 'New questions show here.'], reply: ['No one is waiting for a reply', 'Buyer messages show here.'] };
+    var EMPTY = { do: ['Nothing waiting', ''], decide: ['All decided', ''], reply: ['No one waiting', ''] };
     if (!list.length) return h + emptyCard(EMPTY[t][0], EMPTY[t][1]) + tail;
     var one = t === 'decide' && !showAll, sec = null;
     (one ? list.slice(0, 1) : list).forEach(function (r) { if (r.section !== sec) { sec = r.section; h += ghead(SECTIONS[sec].name, list.filter(function (x) { return x.section === sec; }).length, !SECTIONS[sec].quiet); } h += itemCard(r); });
@@ -840,7 +861,7 @@
   // Packing mode: one parcel at a time in shelf order. Found → the drop-off code shows once the engine has it → Posted.
   function pagePack() {
     var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found' || Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
-    if (!list.length) { pack = null; return '<p class="needs">Packing</p>' + emptyCard('All packed', 'Nothing left to post.', '<button class="btn main big" type="button" data-action="stoppack">Back to Do now</button>'); }
+    if (!list.length) { return '<p class="needs">Packing</p>' + emptyCard('All packed', '', '<button class="btn main big" type="button" data-action="stoppack">Back to Do now</button>'); }
     var i = Math.min(pack.i, list.length - 1), r = list[i], d = detail(r);
     var h = '<div class="packbar"><span>Packing · ' + (i + 1) + ' of ' + list.length + '</span><button class="btn" type="button" data-action="stoppack">Stop</button></div>';
     h += '<div class="card acc4">' + courierBand(r, d) + '<div class="item">' + thumb(d.photo, r.category) + '<div class="t"><span class="parcel">#' + esc(r._no) + '</span><div class="ttl">' + esc(r.title) + '</div><div class="m">' + esc([owner(r), d.platform ? 'sold on ' + d.platform : ''].filter(Boolean).join(' · ')) + '</div>' + orderLine(r, d) + '<p class="what"><b>Next: ' + esc(nextStep(d)) + '</b></p></div></div>';
@@ -860,7 +881,7 @@
     var pdf = (rows.filter(function (r) { return r.section === 'post-head'; })[0] || {}), pd = detail(pdf).label_pdf;
     var h = '<div class="packbar"><span class="needs">Label sheet</span><button class="btn" type="button" data-action="closesheet">Close</button></div>';
     h += pd ? '<a class="btn main" href="https://drive.google.com/file/d/' + esc(pd) + '/view" target="_blank" rel="noopener">Open today’s PDF to print</a>' : '<p class="hint">The printable PDF is not made yet. Write each number on its parcel.</p>';
-    if (!list.length) return h + emptyCard('Nothing to post', 'Parcels show here when something sells.');
+    if (!list.length) return h + emptyCard('Nothing to post');
     Object.keys(by).sort().forEach(function (c) {
       h += '<p class="grp">' + esc(c) + ' · ' + by[c].length + (by[c].length === 1 ? ' parcel' : ' parcels') + '</p><div class="card">' + by[c].map(function (r) { var d = detail(r);
         return '<div class="row"><span class="parcel">#' + esc(r._no) + '</span>' + thumb(d.photo, r.category) + '<div class="txt"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="why">' + esc(['shelf ' + (d.shelf || '?'), owner(r), d.platform].filter(Boolean).join(' · ')) + '</div></div></div>'; }).join('') + '</div>';
@@ -890,13 +911,13 @@
   }
   function pageRound() {
     var items = byCat(rows.filter(function (r) { return r.section === 'round' && !r.applied_at; }));
-    if (!items.length) return '<p class="needs">Stock round</p><div class="card acc5"><h2>No round open</h2><p class="what">The monthly round starts on the first Monday. Until then, check or correct any count on the Stock page.</p><div class="acts"><a class="btn main" href="#/stock">Open Stock</a><a class="btn" href="#/insights">← Insights</a></div></div>';
+    if (!items.length) return '<p class="needs">Stock round</p><div class="card acc5 house-lbar"><h2>No round open</h2><p class="what">The monthly round starts on the first Monday. Until then, check or correct any count on the Stock page.</p><div class="acts"><a class="btn main" href="#/stock">Open Stock</a><a class="btn" href="#/insights">← Insights</a></div></div>';
     var shelves = []; items.forEach(function (r) { var s = detail(r).shelf || '?'; if (shelves.indexOf(s) < 0) shelves.push(s); });
     var at = Math.min(round.i || 0, shelves.length - 1), shelf = shelves[at];
     var h = '<p class="needs">Shelf ' + esc(shelf) + '</p><p class="what">' + (at + 1) + ' of ' + shelves.length + ' shelves. Tick if right, or type what is there.</p>';
     items.filter(function (r) { return (detail(r).shelf || '?') === shelf; }).forEach(function (r) {
       var d = detail(r), v = round[r.key] || {}, bad = v.n !== undefined && v.n !== '' && Number(v.n) !== Number(d.expected);
-      h += '<div class="card ' + (bad ? 'acc2' : (v.ok || r.answer ? 'acc5' : '')) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="m">expect ' + esc(d.expected) + '</div></div>' +
+      h += '<div class="card ' + (bad ? 'acc2 house-lbar' : (v.ok || r.answer ? 'acc5 house-lbar' : '')) + '"><div class="item">' + thumb(d.photo, r.category) + '<div class="t"><div class="ttl">' + esc(r.title) + '</div>' + '<div class="m">expect ' + esc(d.expected) + '</div></div>' +
         (r.answer ? '' : '<button class="btn yes" type="button" data-tick="' + esc(r.key) + '" aria-label="Right">✓</button><input class="num" inputmode="numeric" data-count="' + esc(r.key) + '" value="' + esc(v.n === undefined ? '' : v.n) + '" aria-label="Counted">') + '</div>' +
         (bad ? '<div class="chips">' + ['sold', 'lost', 'found', 'damaged'].map(function (x) { return '<button class="chip' + (v.reason === x ? ' on' : '') + '" type="button" data-reason="' + esc(r.key) + '" data-v="' + x + '">' + x + '</button>'; }).join('') + '</div>' : '') +
         (r.answer ? sentLine(r) : '') + '</div>';
@@ -939,7 +960,7 @@
   function growthHome() { var g = growthOf(), m = g && g.morning; return m && m.ok ? '<p class="hint" data-morning>' + esc(m.label + ': ' + m.value + ' (' + m.sub + ')') + ' · <a href="#/numbers">Numbers</a></p>' : ''; }
   function pageNumbers() {
     var k = rows.filter(function (r) { return r.section === 'kpi'; })[0];
-    if (!k) return '<p class="needs">Numbers</p>' + engineLine() + growthBlock() + switchCard() + '<div class="card"><p class="what">The weekly review fills this on Monday.</p></div>';
+    if (!k) return '<p class="needs">Numbers</p>' + engineLine() + growthBlock() + switchCard() + '<div class="card"><p class="what">Fills on Monday.</p></div>';
     var d = detail(k), ar = { up: '▲', down: '▼', flat: '–' };
     function show(t) { return typeof t.value === 'string' ? t.value : /_p$/.test(t.key) ? '£' + (Number(t.value) / 100).toFixed(2) : t.value; }   // v11.7: "£8.40 from 1 of 2 sales" or "?" come as text
     (d.tiles || []).forEach(function (t) { if (t.key === 'to_post') t.value = posts().filter(function (r) { return !r.answer || r.answer === 'Found'; }).length + ' · ' + needsCount(); });   // v11.10: live, not Monday's
@@ -950,7 +971,7 @@
     return h + growthBlock() + switchCard();
   }
   function render() {
-    $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
+    DashKit.signButton($('signin'), !!token);
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);   // menu only after sign-in
     var on = TAB_OF[view] || view;
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });

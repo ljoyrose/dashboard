@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
 <meta name="build" content="ljr-dash-v4-money-tile-2026-10-09">
-<title>Lisa Dashboard</title>
+<title>Dashboard</title>
 <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -19,6 +19,256 @@
 <script src="auth.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script src="money/core.js"></script>
+<script>
+// Dashboard Main: each hub's 3 numbers, its "needs you" rows and its Decide / Do rows, read with the Dashboard's own
+// look-only sign-in (drive.readonly; Sheets values are read with it too, GET only). Every number is worked out the way
+// that hub works it out (see the hub's own file, named at each reader). A hub that cannot be read gives ok: false and the
+// page shows "–": never a made-up number. Nothing here writes anything.
+// Row shape: { hub, kind: 'late' | 'soon' | 'wait', text, href, sort? }. Number shape: [label, value | null, late?].
+(function (root) {
+  'use strict';
+  var FILES = 'https://www.googleapis.com/drive/v3/files';
+  var SHEETS = 'https://sheets.googleapis.com/v4/spreadsheets/';
+  var DAY = 864e5;
+
+  function ukToday(now) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now || new Date()); }
+  function dayStart(off) { var d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime() + (off || 0) * DAY; }
+  function parseCSV(text) {
+    var rows = [], row = [], f = '', q = false, s = String(text || '').replace(/^﻿/, '');
+    for (var i = 0; i < s.length; i++) {
+      var c = s[i];
+      if (q) { if (c === '"' && s[i + 1] === '"') { f += '"'; i++; } else if (c === '"') q = false; else f += c; }
+      else if (c === '"') q = true;
+      else if (c === ',') { row.push(f); f = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && s[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+      else f += c;
+    }
+    if (f !== '' || row.length) { row.push(f); rows.push(row); }
+    var head = (rows.shift() || []).map(function (h) { return String(h).trim(); });
+    return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); }).map(function (r) {
+      var o = {}; head.forEach(function (h, k) { o[h] = String(r[k] == null ? '' : r[k]).trim(); }); return o;
+    });
+  }
+  function table(values) { // Sheets header row + rows -> objects (as Food does)
+    var v = values || [], head = (v[0] || []).map(function (h) { return String(h).trim(); });
+    return v.slice(1).filter(function (r) { return r.some(function (x) { return String(x).trim(); }); }).map(function (r) {
+      var o = {}; head.forEach(function (h, k) { o[h] = r[k] == null ? '' : String(r[k]); }); return o;
+    });
+  }
+  var CARD_COLS = ['key', 'section', 'category', 'title', 'detail', 'created_at', 'answer', 'note', 'answered_at', 'answered_by', 'applied_at', 'applied_by'];
+  function cards(values) { return (values || []).map(function (v) { var o = {}; CARD_COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; }); }
+  function detail(r) { try { return JSON.parse(r.detail || '{}') || {}; } catch (e) { return {}; } }
+  function num(v) { var n = Number(String(v == null ? '' : v).replace(/[£,]/g, '')); return isFinite(n) ? n : 0; }
+  function gbp(v) { return '£' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(1).replace(/\.0$/, '') + 'k' : String(Math.round(v))); }
+  function findFile(io, folder, name) {
+    var q = "'" + folder + "' in parents and name = '" + name.replace(/'/g, "\\'") + "' and trashed = false";
+    return io.get(FILES + '?q=' + encodeURIComponent(q) + '&fields=files(id,name,modifiedTime)&supportsAllDrives=true&includeItemsFromAllDrives=true').then(function (r) {
+      var f = r.files || [];
+      if (f.length !== 1) throw new Error(f.length ? 'two files' : 'no file');
+      return f[0];
+    });
+  }
+  function readJson(io, folder, name) { return findFile(io, folder, name).then(function (f) { return io.get(FILES + '/' + encodeURIComponent(f.id) + '?alt=media&supportsAllDrives=true'); }); }
+  function none() { return { ok: false }; }
+
+  // ---- Money (money/index.html summary + money/core.js). Overdue = the Main strip's overdue count; Due Soon = Dates due in
+  // the next 14 days; Cash = business bank balances added up (business and personal are never added together).
+  function money(d) {
+    var MC = root.MoneyCore;
+    if (!MC || !d || d.gate !== 'ok') return none();
+    var items = MC.needsNow(d.data, d.money, d.today);
+    var over = items.filter(function (i) { return i.level === 'risk' && /^Overdue/.test(i.tag); }).length;
+    var soon = MC.dueWithin(d.data, d.today, 14).length;
+    var biz = (d.money || []).filter(function (m) { return m.company && !m.noData && m.bank != null; });
+    var cash = biz.length ? biz.reduce(function (t, m) { return t + m.bank; }, 0) : null;
+    var decide = [], todo = [];
+    MC.yourTurn(d.data).filter(function (x) { return x.ready === 'ready'; }).forEach(function (x) {
+      var row = { hub: 'money', kind: /urgent/i.test(x.r.priority || '') ? 'late' : 'wait', text: x.r.subject, href: 'money/#/register/' + encodeURIComponent(x.r.id) };
+      (/^decision$/i.test(x.r.kind || '') ? decide : todo).push(row);
+    });
+    return { ok: true, nums: [['Overdue', over, over > 0], ['Due Soon', soon], ['Cash', cash == null ? null : (cash < 0 ? '−' : '') + gbp(Math.abs(cash))]], decide: decide, todo: todo, needs: [] };
+  }
+
+  // ---- Web (estate/core.js summarise + rank). Only read once the RR_WEB-ESTATE sheet id is set in config.js.
+  function web(io, cfg) {
+    var ES = cfg.estate || {};
+    if (!ES.sheetId || !io.need) return Promise.resolve(none());
+    return io.need(['estate/core.js', 'estate/reader.js']).then(function () {
+      var E = root.EstateCore;
+      return io.get(root.EstateReader.rangeUrl(ES.sheetId)).then(function (j) {
+        var rv = E.rowsFromValues(j.values);
+        if (!rv.ok) throw new Error('bad sheet');
+        var rows = rv.rows, now = new Date(), c = E.summarise(rows, now), needs = [], todo = [];
+        rows.forEach(function (r) {
+          var k = E.rank(r, now), label = r.url_or_domain || r.key;
+          if (k > 2 && !E.emailProblems(r).length) return;
+          var d = E.expiresIn(r, now);
+          var row = { hub: 'web', kind: k === 0 || (k === 1 && d != null && d <= 7) ? 'late' : k === 1 ? 'soon' : 'wait',
+            text: label + (k === 0 ? ': down' : k === 1 ? ': expires ' + (d < 0 ? (-d) + ' days ago' : 'in ' + d + ' days') : k === 2 ? ': blocked' : ': email checks'), href: 'estate/#/look', sort: d };
+          todo.push(row); if (row.kind !== 'wait') needs.push(row);
+        });
+        return { ok: true, nums: [['Down', c.down, c.down > 0], ['Expiring', c.expiring], ['Live', c.live]], needs: needs, todo: todo, decide: [] };
+      });
+    }).catch(none);
+  }
+
+  // ---- Food (food/index.html pageHome). Late = orders Not at GA; Owe GA = unpaid invoices; Today = orders placed today (UK).
+  function food(io, cfg, now) {
+    var F = cfg.food || {};
+    if (!F.bookId) return Promise.resolve(none());
+    var ranges = ['Cards!A2:L', 'Orders!A1:AZ', 'Invoices!A1:P'].map(function (r) { return 'ranges=' + encodeURIComponent(r); }).join('&');
+    return io.get(SHEETS + F.bookId + '/values:batchGet?' + ranges).then(function (j) {
+      var v = j.valueRanges || [];
+      if (v.length < 3) throw new Error('short');
+      var cs = cards(v[0].values), orders = table(v[1].values), inv = table(v[2].values), today = ukToday(now);
+      var late = orders.filter(function (o) { return o.check === 'Not at GA'; });
+      var owed = inv.filter(function (i) { return !i.paid_date && num(i.total) > 0; }).reduce(function (n, i) { return n + num(i.total); }, 0);
+      var placed = orders.filter(function (o) { var t = Date.parse(o.placed_at); return o.status !== 'Cancelled' && !isNaN(t) && ukToday(new Date(t)) === today; }).length;
+      var needs = late.map(function (o) { return { hub: 'food', kind: 'late', text: 'Order ' + o.order_no + ': not at GA, check the Portal', href: 'food/#/orders' }; });
+      var decide = cs.filter(function (r) { return r.key && !/^PACK-/.test(r.key) && !r.answer && !r.applied_at; }).map(function (r) {
+        return { hub: 'food', kind: detail(r).red ? 'late' : 'wait', text: r.title || r.key, href: 'food/#/home' };
+      });
+      return { ok: true, xml: late.length === 0, nums: [['Late', late.length, late.length > 0], ['Owe GA', '£' + owed.toFixed(2)], ['Today', placed]], needs: needs, decide: decide, todo: [], packs: cs };
+    }).catch(none);
+  }
+
+  // ---- Dogs (cdhub/index.html counts + needsToday). Temps: readings are not saved anywhere yet ("Saving off for now"), so "–".
+  var BLD = ['BLD-subject.csv', 'BLD-occupancy.csv', 'BLD-subject_status.csv', 'BLD-mating.csv', 'BLD-WORK.csv'];
+  function dogs(io, cfg, now) {
+    var C = cfg.cdhub || {};
+    if (!C.folderId) return Promise.resolve(none());
+    var q = "'" + C.folderId + "' in parents and trashed = false";
+    return io.get(FILES + '?q=' + encodeURIComponent(q) + '&fields=files(id,name,mimeType)&pageSize=1000&supportsAllDrives=true&includeItemsFromAllDrives=true&corpora=allDrives').then(function (r) {
+      var by = {};
+      (r.files || []).forEach(function (f) { if (BLD.indexOf(f.name) >= 0) { if (by[f.name]) throw new Error('two ' + f.name); by[f.name] = f; } });
+      if (!by['BLD-subject.csv'] || !by['BLD-occupancy.csv']) throw new Error('missing');
+      return Promise.all(BLD.map(function (n) {
+        var f = by[n]; if (!f) return [];
+        var url = f.mimeType === 'application/vnd.google-apps.spreadsheet' ? FILES + '/' + f.id + '/export?mimeType=text/csv' : FILES + '/' + f.id + '?alt=media&supportsAllDrives=true';
+        return io.text(url).then(parseCSV);
+      }));
+    }).then(function (T) {
+      var idx = function (rows, k) { var m = {}; rows.forEach(function (x) { m[x[k]] = x; }); return m; };
+      var OCC = idx(T[1], 'subject_id'), ST = idx(T[2], 'subject_id'), TODAY = now || new Date(), names = {};
+      var dogsAll = T[0].map(function (r) { var o = OCC[r.id] || {}; names[r.id] = r.name || r.id;
+        return { id: r.id, sex: r.sex, dob: r.dob, kind: r.kind, neuter: r.neuter_status, state: (ST[r.id] || {}).state || '', classification: o.classification || '', area_id: o.area_id || '', off: o.off_site_kind || '' }; });
+      function months(iso) { if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || '')) return null; var b = new Date(iso + 'T00:00:00'); if (isNaN(b)) return null;
+        var m = (TODAY.getFullYear() - b.getFullYear()) * 12 + (TODAY.getMonth() - b.getMonth()); if (TODAY.getDate() < b.getDate()) m--; return m < 0 ? null : m; }
+      function onPrem(d) { if (d.classification) return d.classification !== 'Collected' && !d.off; return d.kind === 'Pup' && !d.off && /^(active|in training)$/i.test(d.state || ''); }
+      var here = dogsAll.filter(onPrem);
+      var bitches = here.filter(function (d) { return months(d.dob) >= 6 && d.sex === 'Female' && (d.neuter || 'entire') !== 'neutered'; }).length;
+      var unplaced = here.filter(function (d) { return !d.area_id; }).length;
+      // In whelp (cdhub inWhelp + needsToday): first open mating per dam, shown from day 50; late after day 63, soon from day 57.
+      var today = TODAY.toISOString().slice(0, 10), bydam = {}, needs = [], todo = [];
+      T[3].forEach(function (m) { if (m.dam_subject_id) (bydam[m.dam_subject_id] = bydam[m.dam_subject_id] || []).push(m); });
+      Object.keys(bydam).forEach(function (dam) {
+        var open = bydam[dam].filter(function (m) { return !m.litter_id && String(m.produced_litter || '').toLowerCase() !== 'yes'; })
+          .sort(function (a, b) { return (a.mated_on || '') < (b.mated_on || '') ? -1 : 1; });
+        var first = open.filter(function (m) { return m.mated_on; })[0];
+        if (!open.length || !first || !names[dam]) return;
+        var day = Math.round((Date.parse(today) - Date.parse(first.mated_on)) / DAY);
+        if (!(day >= 50 && day <= 72)) return;
+        needs.push({ hub: 'dogs', kind: day > 63 ? 'late' : day >= 57 ? 'soon' : 'wait', text: names[dam] + ' in whelp: day ' + day, href: 'cdhub/#/today', sort: -day });
+      });
+      T[4].filter(function (r) { return r.status === 'BLOCKED' && r.owner === 'Lisa'; }).forEach(function (r) {
+        var row = { hub: 'dogs', kind: 'wait', text: r.item || r.id, href: 'cdhub/#/work' }; needs.push(row); todo.push(row);
+      });
+      return { ok: true, nums: [['Temps', null], ['Unplaced', unplaced], ['Bitches', bitches]], needs: needs, todo: todo, decide: [] };
+    }).catch(none);
+  }
+
+  // ---- Apps (factory/index.html decisions, mine, vAllApps "Live"). Questions = open decisions that are not gates.
+  function apps(io, cfg) {
+    var FC = cfg.factory || {};
+    if (!FC.logsFolderId) return Promise.resolve(none());
+    return readJson(io, FC.logsFolderId, 'af-state.json').then(function (S) {
+      var L = S.lists || {}, test = function (t) { return /^(TEST-|ZZ_DELETE_)/i.test(t.name || ''); };
+      var isOpen = function (t) { return !/^(done|closed|complete|cancelled|retired|killed|decided|verified|proved live|to decide done)$/i.test(t.status); };
+      var tags = function (t) { return t.tags || []; };
+      var dec = (L.decisions || []).filter(function (t) { return isOpen(t) && tags(t).indexOf('queued') < 0 && !test(t); });
+      var gates = dec.filter(function (t) { return tags(t).indexOf('gate') >= 0; });
+      var next = {};
+      (L.sends || []).filter(isOpen).forEach(function (t) {
+        var k = tags(t).filter(function (g) { return /^app-/.test(g); })[0] || t.id, n = +((String(t.name).match(/·\s*P(\d+)\s*·/) || [])[1] || 99);
+        if (!next[k] || n < next[k].n) next[k] = { n: n, t: t };
+      });
+      var sendIds = Object.keys(next).map(function (k) { return next[k].t.id; });
+      var mine = [].concat(L.work || [], L.sends || [], L.incidents || []).filter(function (t) {
+        return isOpen(t) && !test(t) && tags(t).indexOf('lisa-done') < 0 && tags(t).indexOf('queued') < 0 && (tags(t).indexOf('who-lisa') >= 0 || sendIds.indexOf(t.id) >= 0);
+      });
+      var stage = function (a) { var m = String(a.status || '').match(/^(\d)/); return m ? +m[1] : /^(rescue|operate)$/i.test(a.status) ? 8 : -1; };
+      var probe = (S.health || []).filter(function (h) { return h.job === 'leakProbe'; })[0];
+      var alarm = function (a) { return stage(a) >= 7 && ((probe && probe.result === 'FAILED') || tags(a).indexOf('leak') >= 0 || a.status === 'rescue' ||
+        (L.incidents || []).some(function (x) { return isOpen(x) && tags(x).indexOf('app-' + a.id) >= 0; })); };
+      var stuck = function (a) { return !/^(killed|retired|hold)$/i.test(a.status) && Date.now() - a.updated > 14 * DAY; };
+      var live = (L.apps || []).filter(function (a) { return !a.parent && !/^(killed|retired|hold|cancelled)$/i.test(a.status) && !alarm(a) && !stuck(a) && stage(a) >= 8; }).length;
+      var row = function (t) { var k = t.due && t.due < dayStart(0) ? 'late' : t.due && t.due < dayStart(3) ? 'soon' : 'wait';
+        return { hub: 'apps', kind: k, text: String(t.name).replace(/^TEST-/, ''), href: 'factory/#/item/' + encodeURIComponent(t.id), sort: t.due || 9e15 }; };
+      var decide = dec.map(row), todo = mine.map(row);
+      return { ok: true, nums: [['Questions', dec.length - gates.length], ['Gates', gates.length], ['Live', live]],
+        decide: decide, todo: todo, needs: decide.concat(todo).filter(function (x) { return x.kind !== 'wait'; }) };
+    }).catch(none);
+  }
+
+  // ---- Marketplace (marketplace/index.html posts, waiting, ordersStrip). Fish Treats cards from the GA book count as posts.
+  var MKT_DO = ['remove', 'post', 'vinted', 'job'], MKT_DECIDE = ['go', 'check', 'cost', 'offer', 'receipt', 'supplier', 'learn', 'vat'];
+  function market(io, cfg, packs) {
+    var M = cfg.marketplace || {};
+    if (!M.openWorkId) return Promise.resolve(none());
+    return io.get(SHEETS + M.openWorkId + '/values/' + encodeURIComponent((M.tab || 'Marketplace') + '!A2:L')).then(function (j) {
+      var rows = cards(j.values).concat((packs || []).filter(function (o) { return /^PACK-/.test(o.key) && !o.applied_at; }).map(function (o) {
+        var d = detail(o); d.kind = 'fish'; o = Object.assign({}, o, { section: 'post', category: 'Fish Treats', detail: JSON.stringify(d) }); return o; }));
+      var now = Date.now(), today = new Date(now).toISOString().slice(0, 10), tom = new Date(now + DAY).toISOString().slice(0, 10);
+      var due = function (d) { var day = String(d.post_by || '').slice(0, 10); if (isNaN(Date.parse(day))) return d.red ? 'late' : '';
+        return d.red || day < today ? 'late' : day === today ? 'today' : day === tom ? 'tomorrow' : ''; };
+      var po = rows.filter(function (r) { return r.section === 'post' && detail(r).kind !== 'which_parcel'; });
+      var toPost = po.filter(function (r) { return !r.applied_at && (!r.answer || r.answer === 'Found'); });
+      var wk = new Date(now - 6 * DAY).toISOString().slice(0, 10);
+      var sold = po.filter(function (r) { return String(detail(r).sold_at || r.created_at || '').slice(0, 10) >= wk; }).length;
+      var waiting = function (secs) { return rows.filter(function (r) { return secs.indexOf(r.section) >= 0 && !r.answer && !r.applied_at; }); };
+      var row = function (where) { return function (r) { var u = due(detail(r));
+        return { hub: 'market', kind: u === 'late' ? 'late' : u === 'today' ? 'soon' : 'wait', text: r.title || r.key, href: 'marketplace/#/' + where }; }; };
+      var todo = waiting(MKT_DO).map(row('do')), decide = waiting(MKT_DECIDE).map(row('decide')), reply = waiting(['message']).map(row('reply'));
+      var lateN = toPost.filter(function (r) { return due(detail(r)) === 'late'; }).length;
+      return { ok: true, nums: [['To Post', toPost.length, lateN > 0], ['To Reply', reply.length], ['Sold', sold]], decide: decide, todo: todo.concat(reply),
+        needs: todo.concat(reply).filter(function (x) { return x.kind !== 'wait'; }) };
+    }).catch(none);
+  }
+
+  // ---- Studio (studio/index.html reviews, gates, doItems, needOf). Sold: the state keeps running totals only, not dated sales, so "–".
+  function studio(io, cfg) {
+    var ST = cfg.studio || {};
+    if (!ST.logsFolderId) return Promise.resolve(none());
+    return readJson(io, ST.logsFolderId, ST.stateFile || 'studio-state.json').then(function (S) {
+      var seen = {}, all = [].concat(S.assets || [], S.ideas || []).filter(function (a) { if (seen[a.id]) return false; seen[a.id] = 1; return true; });
+      all.forEach(function (a) { a.flags = a.flags || []; if (a.stage == null) a.stage = 0; });
+      all = all.filter(function (a) { return !/^(TEST-|ZZ_DELETE_)/i.test(a.title || '') && a.flags.indexOf('test') < 0; });
+      var daysTo = function (iso) { var t = Date.parse(iso); return isNaN(t) ? null : Math.round((new Date(t).setHours(0, 0, 0, 0) - dayStart(0)) / DAY); };
+      var dd = function (a) { return a.dated && a.eventDate ? daysTo(a.eventDate) : null; };
+      var reviews = all.filter(function (a) { return a.stage === 7; });
+      var gates = all.filter(function (a) { return a.gate && a.gate.question && a.stage < 7; });
+      var hands = all.filter(function (a) { return a.fit === 'HAND' && a.who === 'lisa' && a.stage < 7 && !(a.gate && a.gate.question); });
+      var doIt = hands.concat(all.filter(function (a) { return hands.indexOf(a) < 0 && ((a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent') || (a.delivery && a.delivery.status === 'ready (not sent)')); }));
+      var dueToday = all.filter(function (a) { return a.stage < 8 && dd(a) === 0; }).length;
+      var row = function (a) { var d = dd(a), k = a.stage < 8 && d !== null && d < 0 ? 'late' : a.stage < 8 && d !== null && d <= 3 ? 'soon' : 'wait';
+        return { hub: 'studio', kind: k, text: String(a.title).replace(/^TEST-/, ''), href: 'studio/#/asset/' + encodeURIComponent(a.id), sort: d == null ? 9999 : d }; };
+      var decide = gates.concat(reviews).map(row), todo = doIt.map(row);
+      var needs = all.filter(function (a) { var d = dd(a); return a.stage < 8 && d !== null && d <= 3; }).map(row);
+      return { ok: true, nums: [['Approve', reviews.length], ['Due Today', dueToday, dueToday > 0], ['Sold', null]], decide: decide, todo: todo, needs: needs };
+    }).catch(none);
+  }
+
+  // io: { get(url) -> JSON, text(url) -> text, need([scripts]) -> loads site scripts }. Never rejects.
+  function load(io, cfg, now) {
+    var f = food(io, cfg, now);
+    return Promise.all([web(io, cfg), f, dogs(io, cfg, now), apps(io, cfg), f.then(function (x) { return market(io, cfg, x.packs); }), studio(io, cfg)]).then(function (r) {
+      return { web: r[0], food: r[1], dogs: r[2], apps: r[3], market: r[4], studio: r[5] };
+    });
+  }
+
+  root.HubRead = { load: load, money: money, parseCSV: parseCSV, ukToday: ukToday };
+})(typeof window !== 'undefined' ? window : this);
+</script>
 <link rel="stylesheet" href="tokens.css">
 <link rel="stylesheet" href="house.css">
 <style>
@@ -39,32 +289,29 @@
   html { -webkit-text-size-adjust: 100%; }
   body {
     margin: 0; background: var(--bg); color: var(--ink);
-    font-family: 'Lexend', sans-serif; font-size: 16px; line-height: 1.5;
+    font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5;
     text-align: left; hyphens: manual; -webkit-hyphens: manual;
     font-variant-numeric: tabular-nums;
   }
   button, input { font: inherit; color: inherit; }
   a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px; }
   a:hover { text-decoration-thickness: 2px; }
-  .wrap { max-width: calc(66ch + 32px); margin: 0 auto; padding: 0 16px; }
+  .wrap { margin: 0 auto; padding: 0 var(--house-gutter); }
   .icon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
   /* Header: the only fixed element (desktop only). */
   header { background: var(--surface); border-bottom: 1px solid var(--line); }
   @media (min-width: 700px) { header { position: sticky; top: 0; z-index: 2; } }
-  .top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-top: 12px; padding-bottom: 8px; text-align: left; }
-  .top h1 { font-size: 18px; font-weight: 600; margin: 0; flex: 1 1 auto; }
-  .readstamp { color: var(--muted); font-size: 14px; }
   .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: 12px;
-         border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 14px; text-decoration: none; }
+         border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: var(--fs-small); text-decoration: none; }
   .btn:hover { border-color: var(--muted); }
   .btn:disabled { opacity: .6; cursor: default; }
   .btn.vision { border: 1px solid var(--s1-edge); background: var(--s1); font-weight: 600; }
 
   main { padding-top: 16px; padding-bottom: 32px; }
-  .here { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; text-align: left; }
-  .here span { color: var(--muted); font-size: 14px; }
-  .here h2 { margin: 0; font-size: 22px; font-weight: 600; }
+  /* No "You are here" line on Main (Lisa's pick, 2 Nov): the page name stays for screen readers only (#hereTitle, class sr). */
+  .here { margin: 0; }
+  .here h2 { margin: 0; font-size: var(--fs-head); font-weight: 600; }
   #view { display: flex; flex-direction: column; gap: 16px; transition: opacity 150ms ease; }
   #view.fade { opacity: 0; }
   @media (prefers-reduced-motion: reduce) { #view { transition: none; } }
@@ -82,17 +329,17 @@
   .slot4 { --slot: var(--s4); --tint: var(--s4-tint); }
   .slot8 { --slot: var(--s8); --tint: var(--s8-tint); }
   .slotsales { --slot: var(--ljr-6); --tint: var(--ljr-6-tint); }
-  .card h3, .card h2.h3 { margin: 0; font-size: 18px; font-weight: 600; text-align: left; }
+  .card h3, .card h2.h3 { margin: 0; font-size: var(--fs-head); font-weight: 600; text-align: left; }
   .cardhead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .note { margin: 0; color: var(--muted); font-size: 14px; text-align: left; }
+  .note { margin: 0; color: var(--muted); font-size: var(--fs-small); text-align: left; }
   .note.fail { color: var(--fail); font-weight: 600; }
-  ul.notes { margin: 4px 0 8px; padding-left: 20px; color: var(--muted); font-size: 14px; }
+  ul.notes { margin: 4px 0 8px; padding-left: 20px; color: var(--muted); font-size: var(--fs-small); }
   ul.notes li { margin: 2px 0; }
-  .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); padding-top: 8px; text-align: left; }
+  .source { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--muted); font-size: var(--fs-small); border-top: 1px solid var(--line); padding-top: 8px; text-align: left; }
   .source a { color: var(--muted); }
 
   /* State badge: colour + shape + word. */
-  .state { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); white-space: nowrap; }
+  .state { display: inline-flex; align-items: center; gap: 8px; font-size: var(--fs-small); color: var(--muted); white-space: nowrap; }
   .shape { width: 12px; height: 12px; flex: none; display: inline-block; }
   .st-ok .shape { border-radius: 50%; background: var(--slot, var(--s0)); }
   .st-empty .shape { border: 2px solid var(--slot, var(--s0)); border-radius: 2px; }
@@ -101,31 +348,24 @@
   .st-failed { color: var(--fail); font-weight: 600; }
   .st-failed .shape { background: var(--fail); clip-path: polygon(20% 0, 50% 30%, 80% 0, 100% 20%, 70% 50%, 100% 80%, 80% 100%, 50% 70%, 20% 100%, 0 80%, 30% 50%, 0 20%); }
 
-  /* Figures: thing, then number, then action. */
-  .figs { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
-  .fig { gap: 4px; padding: 12px 16px; }
-  .fig .label { font-size: 14px; color: var(--muted); text-align: left; }
-  .fig .num { font-size: 32px; font-weight: 600; line-height: 1.2; }
-  .fig .meta { font-size: 14px; color: var(--muted); text-align: left; }
-  .fig .act { font-size: 14px; font-weight: 600; margin-top: 4px; }
 
   /* Lists */
   ul.files { list-style: none; margin: 0; padding: 0; }
   ul.files li { padding: 8px 0; border-top: 1px solid var(--line); text-align: left; }
   ul.files li:first-child { border-top: none; padding-top: 0; }
   .fname { font-weight: 600; overflow-wrap: anywhere; hyphens: none; }
-  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--muted); font-size: 14px; }
-  .chip { font-size: 13px; background: var(--tint, var(--s0-tint)); color: var(--ink); border-radius: 8px; padding: 0 8px; line-height: 1.6; overflow-wrap: anywhere; }
+  .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--muted); font-size: var(--fs-small); }
+  .chip { font-size: var(--fs-small); background: var(--tint, var(--s0-tint)); color: var(--ink); border-radius: 8px; padding: 0 8px; line-height: 1.6; overflow-wrap: anywhere; }
   .pager { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
-  .pager .count { font-size: 14px; color: var(--muted); }
+  .pager .count { font-size: var(--fs-small); color: var(--muted); }
   .pager .gap { width: 1px; }
   .subnav { display: flex; flex-wrap: wrap; gap: 8px; }
-  .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 3px solid var(--s7); background: var(--surface); text-decoration: none; font-size: 14px; }
+  .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 3px solid var(--s7); background: var(--surface); text-decoration: none; font-size: var(--fs-small); }
   .subnav a[aria-current="page"] { font-weight: 600; background: var(--s7-tint); border-color: var(--s7); }
   .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .stat { background: var(--tint, var(--s0-tint)); border-radius: 12px; padding: 8px 12px; text-align: left; }
-  .stat .num { font-size: 24px; font-weight: 600; }
-  .stat .label { font-size: 14px; color: var(--muted); }
+  .stat .num { font-size: var(--fs-figure); font-weight: 600; }
+  .stat .label { font-size: var(--fs-small); color: var(--muted); }
 
   /* Named next steps */
   .next { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; margin-top: 8px; }
@@ -136,12 +376,12 @@
   .banner.info { border-color: var(--line); background: var(--surface); }
   .banner p { margin: 0; flex: 1 1 200px; }
   /* Shared-drive picker and Bin */
-  .card h4 { margin: 0; font-size: 16px; font-weight: 600; text-align: left; overflow-wrap: anywhere; }
+  .card h4 { margin: 0; font-size: var(--fs-head); font-weight: 600; text-align: left; overflow-wrap: anywhere; }
   .picker { display: flex; flex-direction: column; gap: 4px; text-align: left; }
-  .picker label { font-size: 14px; color: var(--muted); }
-  .picker select { font: inherit; min-height: 40px; padding: 8px 12px; border-radius: 12px; border: 1px solid var(--line);
+  .picker label { font-size: var(--fs-small); color: var(--muted); }
+  .picker select { font: inherit; min-height: 40px; padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line);
                    background: var(--surface); color: var(--ink); width: 100%; max-width: 100%; }
-  .crumbs { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 14px; color: var(--muted); text-align: left; overflow-wrap: anywhere; }
+  .crumbs { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: var(--fs-small); color: var(--muted); text-align: left; overflow-wrap: anywhere; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .btn.danger { border-color: var(--risk-text); color: var(--risk-text); font-weight: 600; }
   .btn.danger.solid { background: var(--ljr-2-solid); color: var(--ljr-2-on); }
@@ -157,24 +397,24 @@
   .scrollbox { max-height: 280px; overflow: auto; border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
   .index { display: flex; flex-wrap: wrap; gap: 8px; }
   .index.top { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
-  .index .btn { font-size: 14px; padding: 4px 12px; }
+  .index .btn { font-size: var(--fs-small); padding: 4px 12px; }
   .index.top .btn { padding: 8px 12px; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left; }
   .index.top .btn b { font-weight: 600; }
-  .index .n { color: var(--muted); font-size: 13px; }
+  .index .n { color: var(--muted); font-size: var(--fs-small); }
   input.find { width: 100%; box-sizing: border-box; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); }
   .binsec { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 12px; }
   .binsec:first-of-type { border-top: none; padding-top: 0; }
   .hidden-by-filter { display: none !important; }
-  .res { font-size: 14px; text-align: left; margin: 0; }
+  .res { font-size: var(--fs-small); text-align: left; margin: 0; }
   .res.ok { color: var(--muted); }
   .res.bad { color: var(--fail); font-weight: 600; }
-  .skip { color: var(--fail); font-size: 14px; }
+  .skip { color: var(--fail); font-size: var(--fs-small); }
   label.tick { display: flex; align-items: flex-start; gap: 8px; text-align: left; font-weight: 600; }
   label.tick input { width: 18px; height: 18px; margin: 4px 0 0; flex: none; }
   label.tick span { overflow-wrap: anywhere; min-width: 0; }
   /* Money tile: Finances copper for money, Operations for to-dos and dates, Risks for overdue, Connections for on track. */
   .slotfin { --slot: var(--fin); --tint: var(--fin-tint); }
-  .mtag { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; background: var(--mt, var(--s0-tint)); border-radius: 8px; padding: 0 8px; white-space: nowrap; }
+  .mtag { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-small); font-weight: 600; background: var(--mt, var(--s0-tint)); border-radius: 8px; padding: 0 8px; white-space: nowrap; }
   .mtag::before { content: ''; width: 9px; height: 9px; background: var(--mc, var(--s0)); border-radius: 50%; flex: none; }
   .mtag.risk { --mc: var(--s2); --mt: var(--s2-tint); } .mtag.risk::before { border-radius: 0; clip-path: polygon(50% 0, 100% 100%, 0 100%); width: 10px; height: 10px; }
   .mtag.ops { --mc: var(--ops); --mt: var(--ops-tint); }
@@ -190,25 +430,39 @@
   .ments { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 12px; }
   .ment { background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--fin); border-radius: 12px; padding: 8px 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
   .ment.bad { background: var(--s2-tint); border-left-color: var(--s2); }
-  .ment .num { font-size: 26px; font-weight: 600; line-height: 1.2; }
+  .ment .num { font-size: var(--fs-figure); font-weight: 600; line-height: 1.2; }
   .ment .who { font-weight: 600; }
-  .ment .sub { font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
-  .mgroup { font-size: 13px; font-weight: 600; color: var(--muted); margin: 0; text-align: left; }
+  .ment .sub { font-size: var(--fs-small); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
+  .mgroup { font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 0; text-align: left; }
   .hidden { display: none !important; }
-  /* Home screen shortcuts. One tap each, tall enough for a thumb. */
-  #key-projects h2 { margin: 0; font-size: 20px; font-weight: 600; text-align: left; hyphens: manual; }
-  #key-projects .lead { margin: 0; font-size: 16px; text-align: left; color: var(--ink); hyphens: manual; }
-  #key-projects .lead a { font-weight: 600; }
-  .keytiles { display: grid; grid-template-columns: 1fr; gap: 8px; }
-  @media (min-width: 700px) { .keytiles { grid-template-columns: 1fr 1fr; } }
-  a.keytile { display: flex; align-items: center; min-height: 48px; padding: 12px 16px; border: 1px solid var(--line);
-    border-radius: 12px; background: var(--bg); color: var(--ink); text-decoration: none; font-size: 17px; font-weight: 600;
-    line-height: 1.3; text-align: left; hyphens: manual; }
-  a.keytile:hover { border-color: var(--ink); }
-  a.keytile:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  /* Main hub tiles (Lisa's picks, 2 Nov): icon + name + 3 numbers, no fills; colour only as the 3px line and the icon.
+     Numbers 18px, labels 14px; a number that means late is a 14px rose ring (.cnt.need). Each tile opens its hub. */
+  .hubgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--house-gap, 12px); }
+  .hubtile { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 6px 10px; color: var(--ink); text-align: left; box-shadow: none; }
+  .hubtile .hn { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--fs-body); line-height: 24px; }
+  .hubtile a { color: var(--ink); text-decoration: none; border-radius: var(--radius); }
+  .hubtile a.hgo { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 4px; }
+  .hubtile .hsub { padding: 0 4px; }
+  svg.hico { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--hic, var(--muted)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .hks { display: grid; grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 4px 10px; }
+  .hk { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 2px 4px; }
+  .hk b { font-size: var(--fs-figure); font-weight: 600; line-height: 24px; font-variant-numeric: tabular-nums; }
+  .hk > span:last-child, .hsub { font-size: var(--fs-small); color: var(--muted); line-height: 1.3; }
+  .hubtile a.xml { font-size: var(--fs-small); font-weight: 600; padding: 0 4px; }
+  /* Neutral house hover on every link in a tile: 1px ink line inside + a pale muted tint. */
+  @media (hover: hover) { .hubtile a:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); } }
+  .hubtile a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  /* Needs you, Decide and Do rows: the hub's icon and its 3px line down the row. */
+  ol.hrows { list-style: none; margin: 8px 0 0; padding: 0; }
+  .needs ol:has(> li.house-lbar), ol.hrows { display: flex; flex-direction: column; gap: 4px; }
+  .needs li.house-lbar[class], ol.hrows > li { --house-lbar-out: 0px; display: flex; gap: 8px; align-items: center; padding: 6px 0 6px 12px; border: 0; border-radius: var(--radius); }
+  ol.hrows .nt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  /* Projects tile: the whole picture, so a multi-colour line (full height, curved with the corner) and an ink icon (Lisa, 2 Nov). */
+  .hubtile[data-hub="projects"].house-lbar::before { border-left-color: transparent; background: linear-gradient(to bottom, var(--ljr-2), var(--ljr-3), var(--ljr-4), var(--ljr-5), var(--ljr-6), var(--ljr-7)) border-box;
+    -webkit-mask: linear-gradient(to right, var(--ink) 3px, transparent 3px) border-box; mask: linear-gradient(to right, var(--ink) 3px, transparent 3px) border-box; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
-  footer p { margin: 0; color: var(--muted); font-size: 14px; }
+  footer p { margin: 0; color: var(--muted); font-size: var(--fs-small); }
 
   /* ---- Calm layer (Lisa, 20 Oct 2026): one corner, faint lines, no fills on selected, colour only on hover or for attention, nothing moves. ---- */
   :root { --radius: 12px; }
@@ -221,13 +475,12 @@
   .card.vision[class] { background: var(--surface); }
   .card.vision[class]:not(:hover) { border-color: var(--line); }
   a { color: inherit; }
-  .btn:active, nav.main a:active { transform: none; }
-  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; font-weight: 600; color: var(--muted); cursor: help; vertical-align: middle; }
+  .btn:active { transform: none; }
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: var(--fs-small); font-weight: 600; color: var(--muted); cursor: help; vertical-align: middle; }
   .info:hover { border-color: var(--muted); }
 
-  /* One page width everywhere (Lisa, 20 Oct): the full window up to 1600px, 24px edge; phones 16px. No wasted space. */
-  .wrap, .wrap.wide, .wide, .hin { max-width: 1600px; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: 24px; padding-right: 24px; }
-  @media (max-width: 600px) { .wrap, .wide, .hin { padding-left: 16px; padding-right: 16px; } }
+  /* One page width everywhere (Lisa, 2 Nov): the full window, the house side gap (--house-gutter: 24px; phones 16px). */
+  .wrap, .wrap.wide, .wide, .hin { max-width: none; margin-left: auto; margin-right: auto; box-sizing: border-box; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
 
   /* Fewer scrolls: on wide screens file lists use 2-3 columns. */
   @media (min-width: 900px) { ul.files { display: grid; grid-template-columns: repeat(auto-fill, minmax(420px, 1fr)); gap: 8px 12px; } ul.files > li { margin: 0; } }
@@ -244,38 +497,16 @@
      Dashboard, Drive, Bin, Changes, More. Red number = things that need you. Nothing hides under the bar. */
   html { scroll-padding-bottom: 96px; }
   body { padding-bottom: 96px; }
-  nav.main { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 4px;
-             padding: 6px 8px 10px; margin: 0; background: var(--surface); border-top: 1px solid var(--line); }
-  nav.main a { position: relative; text-decoration: none; font-size: 13px; font-weight: 600; color: var(--ink); min-height: 54px; display: flex; flex-direction: column;
-               align-items: center; justify-content: center; gap: 2px; border-radius: var(--radius); border: 1.5px solid transparent; padding: 4px 2px; text-align: center; background: transparent; }
-  nav.main a .icon { width: 20px; height: 20px; }
-  nav.main a:hover { border-color: var(--slot, var(--line)); }
-  /* Selected tab: one clean border all round plus its LJR7 tint fill (Lisa, 25 Oct: the selected pill had lost its colour). */
-  nav.main a[aria-current="page"] { border: 1.5px solid var(--ink); background: var(--tint, var(--s0-tint)); }
   /* "You are here" title: focus moves here on every screen change for screen readers; it must not draw a box. */
   #hereTitle, #hereTitle:focus, #hereTitle:focus-visible { outline: none; border: 0; box-shadow: none; }
-  nav.main .n { position: absolute; top: 2px; right: calc(50% - 28px); font-size: 13px; font-weight: 600; line-height: 18px; background: var(--ljr-2-solid); color: var(--ljr-2-on); border-radius: 999px; padding: 0 6px; min-width: 18px; }
-  nav.main .n:empty { display: none; }
   /* Home: Needs you: N, three big count tiles that open a tab, then the one most urgent thing. */
-  .needsline { font-size: 26px; font-weight: 600; margin: 0; }
+  .needsline { font-size: var(--fs-figure); font-weight: 600; margin: 0; }
   .needsline .zero { color: var(--ljr-5-text); }
   #homeTop { display: flex; flex-direction: column; gap: 12px; }
-  .hometiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-  a.hometile { min-height: 88px; display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 10px 12px; text-decoration: none; color: var(--ink);
-               background: var(--surface); border: 1.5px solid var(--line); border-radius: var(--radius); min-width: 0; }
-  a.hometile:hover { border-color: var(--slot, var(--muted)); }
-  a.hometile .v { font-size: 28px; font-weight: 600; line-height: 1.2; }
-  a.hometile .k { font-size: 13px; color: var(--muted); overflow-wrap: anywhere; }
   .urgent { display: flex; flex-direction: column; gap: 8px; }
-  .urgent .what { margin: 0; font-size: 18px; font-weight: 600; overflow-wrap: anywhere; }
-  .urgent .btn { min-height: 52px; justify-content: center; font-size: 16px; font-weight: 600; }
-  .hint { margin: 0; font-size: 14px; color: var(--muted); }
-  /* More: the other sections and hubs, one big button each. */
-  .morelist { display: grid; grid-template-columns: 1fr; gap: var(--house-gap); }
-  @media (min-width: 700px) { .morelist { grid-template-columns: 1fr 1fr; } }
-  a.morelink { display: flex; flex-direction: row; align-items: center; gap: 10px; min-height: 56px; padding: 10px 16px; font-size: 17px; font-weight: 600; text-decoration: none; }
-  a.morelink .icon { width: 20px; height: 20px; }
-  a.morelink small { display: block; font-size: 13px; font-weight: 400; color: var(--muted); }
+  .urgent .what { margin: 0; font-size: var(--fs-head); font-weight: 600; overflow-wrap: anywhere; }
+  .urgent .btn { min-height: 52px; justify-content: center; font-size: var(--fs-body); font-weight: 600; }
+  .hint { margin: 0; font-size: var(--fs-small); color: var(--muted); }
 
   /* ==== House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio). Lexend 400/600, nothing under 13px, line height 1.5.
      1px lines; hover AND selected = the same 1px edge turns ink (outline over it), nothing moves; focus 2px ink. One radius, 12px.
@@ -290,7 +521,7 @@
   /* No coloured words: failures and warnings keep ink text and carry a small rose dot or ring instead. */
   .note.fail, .st-failed, .res.bad, .skip, .needsline .zero, .btn.danger { color: var(--ink); }
   /* Bin "why it is held" lines share the class name with the skip link and were pushed off screen with it; now they show. */
-  div.skip { position: static; left: auto; top: auto; z-index: auto; background: none; padding: 0; border: 0; border-radius: 0; font-size: 14px; color: var(--ink); }
+  div.skip { position: static; left: auto; top: auto; z-index: auto; background: none; padding: 0; border: 0; border-radius: 0; font-size: var(--fs-small); color: var(--ink); }
   .note.fail::before, .res.bad::before, div.skip::before { content: ''; display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; border: 1px solid var(--ljr-2); background: var(--ljr-2-tint); vertical-align: 1px; }
   /* No solid colour fills: the strong buttons are a light tint on the same clear line. */
   /* Meaning buttons rest on their own colour line (Lisa's approved picture, 28 Oct): delete rose, AI purple; hover keeps it. */
@@ -300,7 +531,7 @@
   .st-empty .shape, .st-idle .shape, .st-loading .shape { border-width: 1px; }
   .st-empty .shape { border-radius: 50%; }
   /* One radius on everything; only status dots are round. */
-  .banner, a.skip, .mtag, .chip, .stat, .scrollbox, .ment, a.hometile, a.keytile, .subnav a, .index .btn, .picker select, input.find, nav.main a, .info, .card { border-radius: var(--radius); }
+  .banner, a.skip, .mtag, .chip, .stat, .scrollbox, .ment, a.keytile, .subnav a, .index .btn, .picker select, input.find, .info, .card { border-radius: var(--radius); }
   a.skip { border-width: 1px; }
   .banner { border-style: solid; border-color: var(--ljr-2); }
   .banner.info { border-color: var(--line); }
@@ -311,67 +542,66 @@
   .card.failed[class]:hover { border-left-color: var(--ljr-2); }
   .needs li[class], .needs li[class]:hover { border-left: 0; padding-left: 0; }
   #view { gap: 12px; }
-  .here h2 { font-size: 26px; }
-  .card h3, .card h2.h3 { font-size: 17px; }
+  .here h2 { font-size: var(--fs-head); }
+  .card h3, .card h2.h3 { font-size: var(--fs-head); }
   /* Titles wrap to 2 lines, then … */
   .fname, .urgent .what, .needs .nt a { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
   html body .fname a:focus-visible, html body .needs .nt a:focus-visible { outline-offset: -2px !important; }
   /* Two pill sizes. Read (24px): chips, tags, counts. Press (36px desktop, 44px phone): buttons, sub-tabs, inputs. */
-  .chip, .mtag { height: 24px; min-height: 24px; display: inline-flex; align-items: center; box-sizing: border-box; font-size: 13px; line-height: 1; padding: 0 8px; }
+  .chip, .mtag { height: 24px; min-height: 24px; display: inline-flex; align-items: center; box-sizing: border-box; font-size: var(--fs-small); line-height: 1; padding: 0 8px; }
   /* Read pills (tags, dates): a plain 1px ring in the clear line, muted words. Late = rose ring + tint, soon = amber ring + tint (ink words).
      The small dot before the words keeps the slot colour. Read-only: no hover. */
   .mtag { background: transparent; border: 1px solid var(--ctl); color: var(--muted); font-weight: 600; }
   .mtag.risk { border-color: var(--ljr-2); background: var(--ljr-2-tint); color: var(--ink); }
   .mtag.fin { border-color: var(--ljr-3-text); background: var(--ljr-3-tint); color: var(--ink); }
-  /* Count pills: ONE exact box so 1 and 2 digits match in any font: 30 x 22, line 20px, radius 11px.
-     Only 3+ digits (and worded pills) get .wide and grow. */
-  .cnt, nav.main .n { width: 30px; min-width: 30px; height: 22px; min-height: 22px; line-height: 20px; padding: 0 3px; border-radius: 11px; box-sizing: border-box;
-    display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: 13px; white-space: nowrap; font-variant-numeric: tabular-nums; overflow: hidden; }
-  .cnt.wide, nav.main .n.wide { width: auto; padding: 0 6px; overflow: visible; }
+  /* Count pills: ONE exact box so 1 and 2 digits match in any font: 30 x 24, 14px words, line 22px, radius 12px (the house count tokens).
+     Only 3+ digits (and worded pills) get .wide and grow. Ring only, no fill: rose = late / risk, grey = waiting. */
+  .cnt { width: var(--house-count-w); min-width: var(--house-count-w); height: var(--house-count-h); min-height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); box-sizing: border-box;
+    display: inline-flex; align-items: center; justify-content: center; text-align: center; font-size: var(--fs-small); white-space: nowrap; font-variant-numeric: tabular-nums; overflow: hidden; }
+  .cnt.wide { width: auto; padding: 0 6px; overflow: visible; }
   .cnt { border: 1px solid var(--ctl); font-weight: 600; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .cnt.k-risk { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
-  .cnt.k-fin { border-color: var(--ljr-3-text); background: var(--ljr-3-tint); }
-  .btn, .subnav a, .index .btn, .index.top .btn, .picker select, input.find, .urgent .btn { min-height: 36px; font-size: 14px; font-weight: 600; }
+  .cnt.k-risk { border-color: var(--ljr-2); background: transparent; }
+  .cnt.k-fin { border-color: var(--ctl); background: transparent; }
+  .btn, .subnav a, .index .btn, .index.top .btn, .picker select, input.find, .urgent .btn { min-height: 36px; font-size: var(--fs-small); font-weight: 600; }
   .btn, .subnav a, .picker select, input.find { border-color: var(--ctl); }
   .subnav a { display: inline-flex; align-items: center; }
   @media (max-width: 600px) { .btn, .subnav a, .index .btn, .index.top .btn, .picker select, input.find, .urgent .btn { min-height: 44px; } }
   /* Hover = selected = the same 1px edge turns ink. An outline laid over the edge: never thicker, never moves. */
   .subnav a[aria-current="page"] { outline: 1px solid var(--ink); outline-offset: -1px; background: transparent; border-color: var(--ctl); }
   @media (hover: hover) {
-    .btn:hover, .subnav a:hover, a.keytile:hover, a.hometile:hover, a.card:hover, a.ment:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
-    .btn:hover, .subnav a:hover, a.keytile:hover, a.hometile:hover, a.ment:hover { border-color: var(--ctl); }
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.ment:hover { border-color: var(--ctl); }
     a.ment.bad:hover { border-color: var(--ljr-2); }
     a.card[class]:hover { border-color: var(--ctl); }
   }
   /* Everything you can press rests on the same clear line (--ctl); containers keep the softer --line. No button starts out ink. */
-  a.hometile, a.keytile { border-width: 1px; border-color: var(--ctl); background: var(--surface); }
+  a.keytile { border-width: 1px; border-color: var(--ctl); background: var(--surface); }
   a.card, a.card[class], a.card.vision[class], a.card.vision[class]:not(:hover) { border-color: var(--ctl); }
   .ment, .ment.bad { border: 1px solid var(--ctl); background: var(--surface); }
   .ment.bad { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
   /* Colour on hover only: a section's colour shows on its icon ring when pointed at. */
-  a.morelink > .icon { width: 36px; height: 36px; padding: 7px; box-sizing: border-box; border: 1px solid var(--line); border-radius: var(--radius); }
-  @media (hover: hover) { a.morelink:hover > .icon { border-color: var(--slot, var(--ink)); } }
   /* Keyboard focus: 2px ink ring (the one exception to 1px). The screen title keeps no box. */
   html body :focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
   html body #hereTitle, html body #hereTitle:focus, html body #hereTitle:focus-visible { outline: none !important; }
   /* Home: Needs you line with its urgency split, three tiles, then the Next card. */
   .needsrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
-  .needsline { font-size: 26px; font-weight: 600; }
+  .needsline { font-size: var(--fs-figure); font-weight: 600; }
   .hsplit { display: inline-flex; flex-wrap: wrap; gap: 8px; }
-  .hometiles { gap: 12px; }
-  a.hometile .v { font-size: 28px; font-weight: 600; }
+  .hsplit a.cnt, .nextcard a.more { text-decoration: none; color: var(--ink); }
+  .nextcard .actions a.more { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; border: 0; background: transparent; box-shadow: none; text-decoration: underline; text-underline-offset: 2px; }
+  @media (max-width: 600px) { .nextcard .actions a.more { min-height: 44px; } }
+  @media (hover: hover) { .hsplit a.cnt:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+    .hsplit a.cnt.k-risk:hover { outline-color: var(--ljr-2); background: var(--ljr-2-tint); } }
+  .hsplit a.cnt:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .nextcard[class] { border-color: var(--ink); background: var(--card); }
   .nextcard .actions { gap: 12px; }
   .nextcard .hint { flex: 1 1 180px; }
   /* Friendly empty state: a small green-ring check. */
   .okstate { display: flex; flex-direction: row; align-items: center; gap: 12px; }
   .okstate h3 { margin: 0; }
-  .okring { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--ljr-5); background: var(--ljr-5-tint); color: var(--ink); font-size: 15px; font-weight: 600; }
+  .okring { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--ljr-5); background: var(--ljr-5-tint); color: var(--ink); font-size: var(--fs-body); font-weight: 600; }
   /* Frame: dark top bar and dark bottom tab bar (never black); the bottom bar one step lighter so both read the same. */
   header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
-  .top { padding-top: 12px; padding-bottom: 12px; }
-  .top h1 { font-size: 20px; color: var(--frame-ink); }
-  .readstamp { color: var(--frame-ink); font-size: 14px; }
   header .btn, header .btn.vision { color: var(--frame-ink); background: transparent; border-color: var(--ctl); }
   @media (hover: hover) { header .btn:hover { outline-color: var(--frame-ink); border-color: var(--ctl); } }
   /* Signed out the sign-in gate hides the header box (and its dark frame), so the one Sign in button sits on the page: page colours. */
@@ -379,32 +609,8 @@
   @media (hover: hover) { html.dash-locked header .btn:hover { outline-color: var(--ink); } }
   html.dash-locked body header :focus-visible { outline-color: var(--ink) !important; }
   html body header :focus-visible { outline-color: var(--frame-ink) !important; }
-  nav.main { background: var(--frame-foot); border-top: 0; gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  @media (min-width: 601px) { nav.main { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 220px)); justify-content: center; } }
-  /* Tabs: light buttons, no rings. Hover and selected = the small colour bar above the label widens (same height, nothing moves). */
-  nav.main a, nav.main a:hover, nav.main a[aria-current="page"] { border: 1px solid transparent; outline: none; box-shadow: none; background: var(--card); font-weight: 600; color: var(--ink); }
-  nav.main a { --tc: var(--slot, var(--ljr-0)); }
-  nav.main a.vision { --tc: var(--ink); } nav.main a.slot8 { --tc: var(--tc8); }
-  nav.main a .bar { display: block; width: 18px; height: 4px; border-radius: 2px; background: var(--tc); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
-  nav.main a[aria-current="page"] .bar { width: 40px; opacity: 1; }
-  @media (hover: hover) { nav.main a:hover .bar { width: 40px; opacity: 1; } }
-  @media (prefers-reduced-motion: reduce) { nav.main a .bar { transition: none; } }
-  html body nav.main a:focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
-  /* Counts: a 1px ring pill in the tab's top-right corner; "needs you" counts add a rose edge and a light rose tint. */
-  nav.main .n { position: absolute; top: 8px; right: 18px; left: auto;
-    font-weight: 600; color: var(--ink); background: transparent; border: 1px solid var(--ctl); }
-  nav.main .n.need { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
-  nav.main .n:empty { display: none; }
-  @media (max-width: 600px) {
-    /* Phone tabs: colour bar, then icon + count on one line (count in flow), then the label on its own line. */
-    nav.main a { min-height: 62px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; padding: 6px 2px; }
-    nav.main a .bar { margin: 0 calc(50% - 9px); }
-    nav.main a[aria-current="page"] .bar { width: 26px; margin: 0 calc(50% - 13px); }
-    nav.main a > .icon { order: 1; }
-    nav.main .n { position: static; order: 2; }
-    nav.main a > span:not(.bar):not(.n) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }
-  }
-  @media (max-width: 600px) and (hover: hover) { nav.main a:hover .bar { width: 26px; margin: 0 calc(50% - 13px); } }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). Keys see the frame's light ring on the dark bar. */
+  html body nav.house-tabs .ht:focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
   html { scroll-padding-bottom: 104px; } body { padding-bottom: 104px; }
   /* House hover rule (Lisa, 28 Oct). Neutral controls: hover = 1px ink line inside + a pale muted tint. Meaning-coloured controls
      (rose delete/late, purple AI, copper money, a section's colour) keep THEIR colour: the same 1px line in that colour + a pale tint
@@ -413,15 +619,11 @@
   .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); --hmc: var(--ljr-7); }
   a.ment { --hc: var(--ljr-3); --hl: var(--ljr-3); }
   a.ment.bad { --hc: var(--ljr-2); --hl: var(--ljr-2); }
-  a.morelink.slotfin { --hc: var(--ljr-3); --hl: var(--ljr-3); }
-  a.morelink.slot4 { --hc: var(--ljr-4); --hl: var(--ljr-4-text); }
-  a.morelink.slot7, a.hometile.slot7 { --hc: var(--ljr-7); --hl: var(--ljr-7); }
-  a.morelink.slotsales { --hc: var(--ljr-6); --hl: var(--ljr-6); }
   .subnav a[aria-current="page"] { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
   @media (hover: hover) {
-    .btn:hover, .subnav a:hover, a.keytile:hover, a.hometile:hover, a.card:hover, a.ment:hover, details.fold > summary:hover, .index .btn:hover {
+    .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover, details.fold > summary:hover, .index .btn:hover {
       outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
-    .btn.danger:hover, .btn.ai:hover, a.ment[class]:hover, a.morelink.slotfin:hover, a.morelink.slot4:hover, a.morelink.slot7:hover, a.morelink.slotsales:hover, a.hometile.slot7:hover {
+    .btn.danger:hover, .btn.ai:hover, a.ment[class]:hover {
       outline: 1px solid var(--hl); outline-offset: -1px; background: color-mix(in srgb, var(--hc) 14%, var(--card)); }
     header .btn:hover { background: color-mix(in srgb, var(--frame-ink) 12%, var(--frame)); }
     html.dash-locked header .btn:hover { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
@@ -431,6 +633,7 @@
 <body>
 <a class="skip" href="#content" data-skip="content">Skip to content</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M12 12v.01M3 13a20 20 0 0 0 18 0"/></symbol>
   <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
   <symbol id="i-read" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5z"/><path d="M4 19a2 2 0 0 1 2-2h13"/></symbol>
   <symbol id="i-drive" viewBox="0 0 24 24"><path d="M3 15h18l-3-9H6l-3 9z"/><path d="M3 15v4h18v-4"/><path d="M7 17h2"/></symbol>
@@ -443,35 +646,54 @@
   <symbol id="i-shop" viewBox="0 0 24 24"><path d="M5 8h14l-1 12H6L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
   <symbol id="i-factory" viewBox="0 0 24 24"><path d="M3 20V10l5 3V10l5 3V10l5 3V4h3v16z"/><path d="M7 17h2M12 17h2"/></symbol>
   <symbol id="i-studio" viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.8-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5C21 6.4 17 3 12 3z"/><circle cx="7.5" cy="11.5" r="1"/><circle cx="10.5" cy="7.5" r="1"/><circle cx="15.5" cy="8.5" r="1"/></symbol>
-  <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="19" cy="12" r="1.5"/></symbol>
+  <!-- Hub icons for the Main tiles, Needs you and Decide / Do (Tabler outline shapes, Lisa's picks 2 Nov). -->
+  <symbol id="h-case" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7v-2a2 2 0 0 1 2 -2h4a2 2 0 0 1 2 2v2M3 13h18"/></symbol>
+  <symbol id="h-www" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18"/></symbol>
+  <symbol id="h-money" viewBox="0 0 24 24"><path d="M16.7 8a3 3 0 0 0 -2.7 -2h-4a3 3 0 0 0 0 6h4a3 3 0 0 1 0 6h-4a3 3 0 0 1 -2.7 -2M12 3v3M12 18v3"/></symbol>
+  <symbol id="h-bowl" viewBox="0 0 24 24"><path d="M4 11h16a8 8 0 0 1 -16 0z"/><path d="M9 7c0 -1.5 1 -1.5 1 -3M13 7c0 -1.5 1 -1.5 1 -3"/></symbol>
+  <symbol id="h-paw" viewBox="0 0 24 24"><circle cx="12" cy="15" r="4"/><circle cx="6" cy="9" r="2"/><circle cx="18" cy="9" r="2"/><circle cx="10" cy="5" r="2"/><circle cx="14" cy="5" r="2"/></symbol>
+  <symbol id="h-factory" viewBox="0 0 24 24"><path d="M3 21h18M5 21v-12l5 4v-4l5 4h4M19 21v-8l-1.4 -9h-2.2l-1.4 9"/></symbol>
+  <symbol id="h-store" viewBox="0 0 24 24"><path d="M3 21h18M4 21v-11M20 21v-11M3 10l2 -6h14l2 6zM9 21v-6h6v6"/></symbol>
+  <symbol id="h-brush" viewBox="0 0 24 24"><path d="M3 21v-4a4 4 0 1 1 4 4h-4"/><path d="M21 3a16 16 0 0 0 -12.8 10.2M21 3a16 16 0 0 1 -10.2 12.8"/></symbol>
   <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M11 8l4 4-4 4M15 12H4"/></symbol>
 </svg>
 
-<header>
-  <div class="wrap top">
-    <h1>Lisa Dashboard</h1>
-    <span id="readStamp" class="readstamp">Not read</span>
-    <button class="btn" type="button" data-search-open aria-keyshortcuts="/" title="Search (press /)"><svg class="icon" aria-hidden="true" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Search</span></button>
-    <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh"><svg class="icon"><use href="#i-refresh"/></svg><span>Refresh</span></button>
-    <button id="signOutBtn" class="btn hidden" type="button" data-action="signout"><svg class="icon"><use href="#i-out"/></svg><span>Sign out</span></button>
+<header class="house-head">
+  <div class="wrap top house-row">
+    <span class="house-slot" aria-hidden="true"></span>
+    <h1>Dashboard</h1>
+    <span class="house-sp" aria-hidden="true"></span>
+    <span id="readStamp" class="readstamp house-read" data-house-read>Not read</span>
+    <button class="btn house-ib" type="button" data-search-open aria-keyshortcuts="/" aria-label="Search" title="Search (press /)"><svg aria-hidden="true"><use href="#hi-search"/></svg></button>
+    <button id="refreshBtn" class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap" data-house-look></span>
+    <button id="signOutBtn" class="btn house-ib hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg aria-hidden="true"><use href="#hi-logout"/></svg></button>
     <button id="signInBtn" class="btn vision" type="button" data-action="signin" disabled><svg class="icon"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
   </div>
 </header>
 
-<main id="content" class="wrap">
+<main id="content" class="wrap house-page">
   <div id="banner" class="banner hidden" role="status"></div>
-  <div id="hereBox" class="here hidden"><span>You are here</span><h2 id="hereTitle" tabindex="-1">Dashboard</h2></div>
+  <div id="hereBox" class="here hidden"><h2 id="hereTitle" class="sr" tabindex="-1">Dashboard</h2></div>
   <div id="view" data-view="map"></div>
 </main>
 
 <nav id="mainNav" class="main house-tabs hidden" aria-label="Sections">
-  <a href="#/map" data-nav="map" class="vision"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-map"/></svg><span>Dashboard</span><span class="n need" id="n-map"></span></a>
-  <a href="#/drives" data-nav="drives" class="slot0"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-drive"/></svg><span>Drives</span></a>
-  <a href="#/bin" data-nav="bin" class="slot8"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-bin"/></svg><span>Bin</span><span class="n need" id="n-bin"></span></a>
-  <a href="#/changes" data-nav="changes" class="slot7"><span class="bar" aria-hidden="true"></span><svg class="icon"><use href="#i-changes"/></svg><span>Changes</span></a>
+  <a class="ht" data-slot="1" href="#/map" data-nav="map"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="n-map"></span></a>
+  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n" id="n-decide"></span></a>
+  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n" id="n-do"></span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/drives" data-nav="drives" data-slot="0"><svg class="icon" aria-hidden="true"><use href="#i-drive"/></svg><span class="htl">Drives</span></a>
+      <a href="#/bin" data-nav="bin" data-slot="8"><svg class="icon" aria-hidden="true"><use href="#i-bin"/></svg><span class="htl">Bin</span><span class="n need" id="n-bin"></span></a>
+      <a href="#/money" data-nav="money" data-slot="3"><svg class="icon" aria-hidden="true"><use href="#i-money"/></svg><span class="htl">Money</span></a>
+      <a href="#/minutes" data-nav="minutes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="htl">Actions minutes</span></a>
+      <a href="#/changes" data-nav="changes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-changes"/></svg><span class="htl">Changes</span></a>
+      <a id="move-link" href="#" target="_blank" rel="noopener" data-slot="0" hidden><svg class="icon" aria-hidden="true"><use href="#i-read"/></svg><span class="htl">MOVE</span></a>
+    </div>
+  </div>
 </nav>
 
-<footer id="pageFoot" class="wrap hidden"><p>Shared drives only. Browsing is read-only; the Bin changes Drive only when you click. UK time. Rereads every 5 minutes.</p></footer>
 
 <script>
 (function () {
@@ -543,18 +765,25 @@
   var FILE_FIELDS = 'id,name,mimeType,modifiedTime,webViewLink,parents,driveId,lastModifyingUser(displayName,emailAddress)';
   var DAY = 86400000;
   var MOVE_URL = CFG.urls.moveSheet;
+  // MOVE workbook: one link in More (the big Key projects buttons left Main, Lisa's pick 2 Nov).
+  (function (m) { if (m && MOVE_URL) { m.href = MOVE_URL; m.hidden = false; } })(document.getElementById('move-link'));
   // Bin guard: 00 CHECK holds what the guard took back out of a bin. This page only READS it; the changes
   // (ZZ_DELETE, Refer to AI) happen on the guard's own Google page, signed in as Lisa, after she presses its button.
   var BG_CFG = CFG.binGuard || {};
   var CHECK_FOLDER_ID = BG_CFG.checkFolderId;
   var BG_URL_RE = /^https:\/\/script\.google\.com\/(a\/macros\/puppyclassroom\.com\/|macros\/)s\/[A-Za-z0-9_-]+\/exec$/;
+  // Projects Hub tile: drawn only when config.js holds a valid Apps Script /exec address (same rule as the Bin guard).
+  var PH_URL = (CFG.projectsHub || {}).webAppUrl || '';
+  if (!BG_URL_RE.test(PH_URL)) PH_URL = '';
+  // Its 3 numbers come from the hub's own Sheet (INDEX tab), read with the same read-only sign-in. Never written.
+  var PH_SHEET = (CFG.projectsHub || {}).sheetId || '', PH_TAB = (CFG.projectsHub || {}).tab || 'INDEX';
 
   // Page state stays in memory. The sign-in token is the one thing shared, via auth.js.
   var accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
-  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank() }; }
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank(), mins: blank(), hubs: blank(), ph: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
@@ -1017,15 +1246,75 @@
     }));
   }
 
+  // ---- Actions minutes (counts only). ACTIONS-MINUTES.json is written by the private collector in Drive; empty folder id = example. ----
+  var MINS = CFG.actionsMinutes || {};
+  function loadMins() {
+    if (!signedIn || !accessToken) return;
+    if (!MINS.folderId) { S.mins = { status: 'ok', readAt: Date.now(), error: null, data: { example: true, state: minsExample(Date.now()) } }; render(); return; }
+    run('mins', driveList({
+      q: "'" + MINS.folderId + "' in parents and name = '" + MINS.fileName + "' and trashed = false",
+      corpora: 'allDrives', pageSize: '1', fields: 'files(id,name)'
+    }).then(function (r) {
+      if (!r.files || !r.files.length) return { none: true };
+      return apiGet(API + '/' + encodeURIComponent(r.files[0].id) + '?alt=media&supportsAllDrives=true').then(function (st) { return { state: st }; });
+    }));
+  }
+  // Invented numbers, shown with the Example tag until the collector exists. Labels are made up.
+  function minsExample(now) {
+    var d = new Date(now);
+    return {
+      generated_at: new Date(now - 3 * 3600e3).toISOString(), reset_at: new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 1)).toISOString(),
+      free_minutes: MINS.freeMinutes || 2000, used_minutes: 1240, source: 'billing',
+      repos: [{ label: 'Repo A', minutes: 910, last_run: { status: 'success' } }, { label: 'Repo B', minutes: 300, last_run: { status: 'failure' } }, { label: 'Repo C', minutes: 30, last_run: { status: 'none' } }],
+      workflows: [{ repo: 'Repo A', label: 'Nightly scan', minutes: 780, runs: 26 }, { repo: 'Repo A', label: 'Tests', minutes: 130, runs: 41 }, { repo: 'Repo B', label: 'Sync', minutes: 300, runs: 60 }]
+    };
+  }
+  // Level, days to reset and age, worked out from the file and config.js (amber 75%, red 90%, stale after 2 days).
+  function minsView(st, now) {
+    var free = st.free_minutes || MINS.freeMinutes || 2000, used = Number(st.used_minutes) || 0, r = free ? used / free : 0;
+    var reset = Date.parse(st.reset_at), age = now - Date.parse(st.generated_at);
+    return {
+      free: free, used: used, pct: Math.round(r * 100),
+      level: r >= (MINS.red || 0.9) ? 'red' : r >= (MINS.amber || 0.75) ? 'amber' : 'ok',
+      days: isNaN(reset) ? null : Math.max(0, Math.ceil((reset - now) / DAY)),
+      ageDays: isNaN(age) ? null : Math.floor(age / DAY),
+      stale: isNaN(age) || age > (MINS.staleDays || 2) * DAY
+    };
+  }
+
+  // ---- Projects tile numbers: the hub Sheet's INDEX tab, read by header name so a moved column cannot shift them. ----
+  function loadPh() {
+    return apiGet('https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(PH_SHEET) + '/values/' +
+      encodeURIComponent(PH_TAB) + '?majorDimension=ROWS').then(function (r) { return phCounts((r && r.values) || []); });
+  }
+  // Same rules as the hub's own page: LIVE numbered rows only, reserved rows left out, Done and Parked are not open.
+  // Stuck = Blocked, or open with no owner. Waiting = Waiting on Lisa. Running = being worked on now.
+  function phCounts(rows) {
+    var head = (rows[0] || []).map(function (h) { return String(h).trim(); });
+    var col = function (r, name) { var i = head.indexOf(name); return i < 0 ? '' : String(r[i] == null ? '' : r[i]).trim(); };
+    if (head.indexOf('project_status') < 0) throw new Error('The hub Sheet has no project_status column');
+    var out = { stuck: 0, waiting: 0, running: 0, open: 0 };
+    rows.slice(1).forEach(function (r) {
+      if (col(r, 'status_u45') !== 'LIVE' || col(r, 'kind') === 'reserved' || !/^\d+$/.test(col(r, 'number'))) return;
+      var st = col(r, 'project_status'), owner = col(r, 'owner_tag');
+      if (st === 'Done' || st === 'Parked') return;
+      out.open++;
+      if (st === 'Waiting on Lisa') out.waiting++;
+      else if (st === 'Blocked' || !owner || /^no owner$/i.test(owner)) out.stuck++;
+      if (st === 'Running') out.running++;
+    });
+    return out;
+  }
+
   // timed = the 5-minute refresh. It keeps your ticks, Show-more choices and Bin results;
   // only the Refresh button (or signing in) starts from clean.
   function loadAll(timed) {
     if (loading) return;
     if (!accessToken || Date.now() > tokenExpiresAt) { handleExpired(); return; }
     loading = true;
-    var b = $('refreshBtn'); b.disabled = true; b.querySelector('span').textContent = 'Reading…';
+    var b = $('refreshBtn'); b.disabled = true;
     clearBanner();
-    if (!timed) { F = {}; S.bin = blank(); S.check = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
+    if (!timed) { F = {}; S.bin = blank(); S.check = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
@@ -1048,15 +1337,28 @@
       run('cf', getFolder(CF_FOLDER_ID).then(function (root) {
         return walkTree(CF_FOLDER_ID, root.name || 'Cf overskill').then(function (t) { t.folder = root; return t; });
       })),
-      window.MoneyCore ? run('money', window.MoneyCore.loadAll(function () { return accessToken; })) : Promise.resolve()
+      PH_URL && PH_SHEET ? run('ph', loadPh()) : Promise.resolve(),
+      window.MoneyCore ? run('money', window.MoneyCore.loadAll(function () { return accessToken; })) : Promise.resolve(),
+      window.HubRead ? run('hubs', window.HubRead.load({ get: apiGet, text: apiText, need: needScripts }, CFG)) : Promise.resolve()
     ]).then(function () {
       loading = false;
-      b.disabled = false; b.querySelector('span').textContent = 'Refresh';
+      b.disabled = false;
       var expired = ['readfirst', 'drive', 'cf'].some(function (k) { return S[k].status === 'failed' && friendlyError(S[k].error).expired; });
       if (expired) handleExpired();
       render();
       ensureRoute();
     });
+  }
+
+  // Site scripts a hub reader needs only once that hub is set up (Web: estate/core.js then estate/reader.js, in that order).
+  var scriptsLoaded = {};
+  function needScripts(list) {
+    return list.reduce(function (p, src) {
+      return p.then(function () {
+        if (!scriptsLoaded[src]) scriptsLoaded[src] = new Promise(function (ok, bad) { var t = document.createElement('script'); t.src = src; t.onload = ok; t.onerror = bad; document.head.appendChild(t); });
+        return scriptsLoaded[src];
+      });
+    }, Promise.resolve());
   }
 
   // Lazy reads for the current route: a folder in a shared drive, or the Bin lists.
@@ -1066,6 +1368,7 @@
     if ((r.view === 'drive' || r.view === 'drives') && r.driveId && driveById(r.driveId) && !F[folderKey(r)]) loadFolder(r);
     if (r.view === 'bin' && S.bin.status === 'idle' && drives()) loadBin();
     if (r.view === 'bin' && S.check.status === 'idle' && CHECK_FOLDER_ID) loadCheck();
+    if (r.view === 'map' && S.mins.status === 'idle') loadMins();
     if (r.view === 'personal' || r.view === 'bin') loadPcpCandidates();
   }
   function folderKey(r) { return r.driveId + '/' + (r.folderId || ''); }
@@ -1242,37 +1545,47 @@
     R.check = { at: Date.now(), n: ids.length, action: action };
     render();
   }
+  // Bin > Check: put back by the bin guard (00 CHECK). Plain words; the internal detail sits in the "why" fold.
   function viewCheck() {
     var p = S.check, d = p.data, html = '';
-    var n = d ? d.items.length : null, picked = pickCount('check'), busyOrNoUrl = busy || !(d && d.url);
-    html += foldOpen('check', !!(d && n), 'card slot8' + cardClass(p), 'checkCard') + '<summary><h3>00 CHECK: taken back out of a bin</h3>' + stateBadge(p, n) + '</summary><div class="fbody">';
-    html += '<p class="note">Every day at about 8am the bin guard looks in the bins. Anything whose name does not start ZZ_DELETE_ or ZZ_SUPERSEDED_ is taken back out and put here. ' +
-      'Tick what you have checked. ZZ_DELETE renames it ZZ_DELETE_…, adds a tidy-ledger row and moves it to the bin (30-day recovery). Refer to AI marks it and wakes lcme-grok. ' +
-      'Both open the bin guard\'s own Google page with your ticks; nothing changes until you press the button there. RR_ names are never ticked.</p>';
+    var n = d ? d.items.length : null, picked = pickCount('check'), live = !!(d && d.url);
+    html += foldOpen('check', !!(d && n), 'card slot8' + cardClass(p), 'checkCard') + '<summary><h3>Check: put back by the bin guard</h3>' + stateBadge(p, n) + '</summary><div class="fbody">';
+    html += '<p class="note">Each morning the bin guard takes back out anything binned by mistake and puts it here. Tick what you have checked.</p>';
     html += failNote(p);
     if (d) {
-      if (!d.url) html += '<p class="note fail" data-check-nourl>The bin guard web app is not set up yet, so ZZ_DELETE and Refer to AI are off. It switches on by itself once Lisa deploys the web app and opens it once.</p>';
-      html += '<div class="actions" data-pick-bar="check">' +
-        '<button class="btn" type="button" data-action="selectall" data-group="check"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
-        '<button class="btn" type="button" data-action="clearpick" data-group="check"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
-        '<button class="btn danger solid" type="button" data-action="checkzz"' + (picked && !busyOrNoUrl ? '' : ' disabled') + '>' + icon('bin') + '<span>ZZ_DELETE selected (' + picked + ')</span></button>' +
-        '<button class="btn ai" type="button" data-action="checkai"' + (picked && !busyOrNoUrl ? '' : ' disabled') + '><span>Refer to AI selected (' + picked + ')</span></button>' +
-        (d.url ? '<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener"><span>Open the bin guard page</span></a>' : '') + '</div>';
-      if (!d.items.length) html += '<p class="note">00 CHECK is empty.</p>';
+      if (!live) html += '<div class="actions" data-check-nourl><button class="btn" type="button" disabled><span>Waiting for the tidy bot</span></button></div>';
+      else {
+        var tick = function (word) { return picked ? word + ' (' + picked + ')' : word + ': tick a file first'; };
+        html += '<p class="note">Opens a confirm page in a new tab; nothing changes until you press there.</p>' +
+          '<div class="actions" data-pick-bar="check">' +
+          '<button class="btn" type="button" data-action="selectall" data-group="check"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
+          '<button class="btn" type="button" data-action="clearpick" data-group="check"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
+          '<button class="btn" type="button" data-action="checkzz"' + (picked && !busy ? '' : ' disabled') + '>' + icon('bin') + '<span>' + tick('Approve binning') + '</span></button>' +
+          '<button class="btn ai" type="button" data-action="checkai"' + (picked && !busy ? '' : ' disabled') + '><span>' + tick('Ask the AI to sort') + '</span></button>' +
+          '<a class="btn" href="' + esc(d.url) + '" target="_blank" rel="noopener"><span>Open the confirm page</span></a></div>';
+      }
+      if (!d.items.length) html += '<p class="note">Nothing to check.</p>';
       else html += '<div data-bin-list="check">' + binList(d.items, function (f) {
-        var blocked = !!f._block;
         var nameHtml = f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener">' + esc(f.name) + '</a>' : esc(f.name);
         var refer = f.properties && f.properties.REFER_TO_AI;
-        return '<li data-id="' + esc(f.id) + '"' + (blocked ? ' data-blocked="1"' : '') + '>' + tickBox('check', f.id, blocked, nameHtml) +
-          '<div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' + (refer ? '<span class="chip" data-refer>Referred to AI</span>' : '') +
-          '<span>Changed ' + esc(fmtTime(f.modifiedTime) || 'date unknown') + '</span></div>' +
-          (f._block ? '<div class="skip">' + esc(f._block) + '</div>' : '') + '</li>';
+        var meta = '<div class="meta"><span class="chip">' + typeWord(f.mimeType) + '</span>' + (refer ? '<span class="chip" data-refer>Sent to the AI</span>' : '') +
+          '<span>Changed ' + esc(fmtTime(f.modifiedTime) || 'date unknown') + '</span></div>';
+        // A protected row has no tick box at all (never a disabled one); its reason sits in the tooltip.
+        if (f._block || !live) return '<li data-id="' + esc(f.id) + '"' + (f._block ? ' data-blocked="1" title="' + esc(f._block) + '"' : '') + '><div class="fname">' + nameHtml + '</div>' + meta +
+          (f._block ? '<p class="note">Protected, never binned</p>' : '') + '</li>';
+        return '<li data-id="' + esc(f.id) + '">' + tickBox('check', f.id, false, nameHtml) + meta + '</li>';
       }, 'check-list') + '</div>';
-      if (d.more) html += '<p class="note fail">Partial: 00 CHECK holds more than one read can show.</p>';
-      if (R.check) html += '<p class="note" data-check-sent>' + esc(stamp(R.check.at)) + ': opened the bin guard page for ' + num(R.check.n) + ' item' + (R.check.n === 1 ? '' : 's') + ' (' + (R.check.action === 'zzdelete' ? 'ZZ_DELETE' : 'Refer to AI') + '). Finish there, then press Refresh.</p>';
+      if (d.more) html += '<p class="note fail">Partial: there is more to check than one read can show.</p>';
     }
+    html += whyFold('checkwhy', 'Why are these here?', ['Every day at about 8am the bin guard looks in the bins. Anything whose name does not start ZZ_DELETE_ or ZZ_SUPERSEDED_ is taken back out and put in 00 CHECK.',
+      'Approve binning renames it ZZ_DELETE_…, adds a tidy-ledger row and moves it to the bin (30-day recovery).', 'Ask the AI to sort marks it and wakes lcme-grok.',
+      'Both open the bin guard\'s own Google page with your ticks.', 'RR_ names and money records (E02) are never ticked.']);
     html += sourceLine('00 CHECK', 'https://drive.google.com/drive/folders/' + CHECK_FOLDER_ID, p) + '</div></details>';
     return html;
+  }
+  function whyFold(key, title, notes) {
+    return foldOpen(key, false, 'subfold').replace('<details ', '<details data-why ') + '<summary><h4>' + esc(title) + '</h4></summary><div class="fbody"><ul class="notes">' +
+      notes.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ul></div></details>';
   }
   function loadBin() {
     var list = drives();
@@ -1484,24 +1797,31 @@
       return { ok: false, text: 'Not moved: ' + (err && err.status === 403 && !isScopeError(err) ? 'no permission to bin this.' : fr.text) };
     });
   }
+  // Bin these (n): one confirm for every ticked Ready row, shared drives and Work My Drive alike.
+  // Each side keeps its own safety re-checks (sweepItems, pcpBinItems); nothing moves before the confirm.
   function sweep() {
     if (busy) return;
-    var d = S.bin.data; if (!d || !d.ledgerOk) return;
-    var items = pickedItems('bin').filter(function (f) {
+    var d = S.bin.data;
+    var items = d && d.ledgerOk ? pickedItems('bin').filter(function (f) {
       return !isMoneyRollback(f, f._chain) && isDeleteName(f.name) && !nameHasRr(f.name) && !f._skip && !isZeroByte(f) && d.ledgerOk && d.ready.indexOf(f) !== -1;
-    });
-    if (!items.length) return;
+    }) : [];
+    var pItems = pcpPicked();
+    if (!items.length && !pItems.length) return;
     if (!writeGranted) { requestWrite(); return; }
-    var noun = items.length === 1 ? 'item' : 'items';
-    var ok = window.confirm('Dry run: ' + items.length + ' selected ' + noun + ' will move to the bin.\n\n' +
-      'Move ' + items.length + ' selected ' + noun + ' to the bin?\n\n' +
-      'Trash only. Nothing is deleted for good. Shared-drive bins keep items for 30 days.\n\n' +
-      'Only ticked names that start ZZ_DELETE_ and have a delete-ledger row are included. Zero-byte files are left as UNSURE. Odd prefix spellings are not binned. A folder is included only when every item inside is verified or junk. RR_ names are never included. Money rollback files are never included.\n\n' +
-      'Press OK to confirm. Cancel changes nothing.');
-    if (!ok) { R.sweep = { at: Date.now(), cancelled: true, items: [], moved: 0, skipped: 0, unsure: 0, failed: 0 }; render(); return; }
+    var n = items.length + pItems.length, where = pItems.length ? 'Drive bin' : 'shared-drive bin';
+    var ok = window.confirm('Bin ' + n + (n === 1 ? ' file? It goes to the ' : ' files? They go to the ') + where + ' and can be restored for 30 days. Protected and unready files are never included.');
+    FOLD.log = true;
+    if (!ok) {
+      if (items.length) R.sweep = { at: Date.now(), cancelled: true, items: [], moved: 0, skipped: 0, unsure: 0, failed: 0 };
+      if (pItems.length) P.binned = { done: 0, failed: 0, skipped: 0, unsure: 0, found: pItems.length, cancelled: true, notes: [] };
+      render(); return;
+    }
+    (pItems.length ? pcpBinItems(pItems) : Promise.resolve()).then(function () { if (items.length) return sweepItems(items); });
+  }
+  function sweepItems(items) {
     busy = true; render();
     var halted = false, counts = { moved: 0, skipped: 0, unsure: 0, failed: 0 };
-    mapLimit(items, 3, function (f) {
+    return mapLimit(items, 3, function (f) {
       var row = { name: f.name, path: f._path };
       if (halted) { row.ok = false; row.text = 'Skipped: sign-in expired.'; counts.skipped++; return row; }
       if (isMoneyRollback(f, f._chain) || isZeroByte(f) || f._skip || !isDeleteName(f.name) || nameHasRr(f.name)) {
@@ -1731,23 +2051,17 @@
       loadPcpCandidates();
     });
   }
-  function pcpBin() {
-    if (busy || !P.ledgerOk) return;
-    var items = pickedItems('pcpbin').filter(function (f) {
+  function pcpPicked() {
+    if (!P.ledgerOk) return [];
+    return pickedItems('pcpbin').filter(function (f) {
       return !f.blocked && !f._moneyHold && !isMoneyRollback(f, f._chain || []) && spellingOf(f.name, PCP_PREFIX) === 'exact' && !nameHasRr(f.name) && !isZeroByte(f);
     });
-    if (!items.length) return;
-    if (!writeGranted) { requestWrite(); return; }
-    var noun = items.every(function (f) { return f.mimeType !== FOLDER_MIME; }) ? 'file' : 'item';
-    var plural = items.length === 1 ? noun : noun + 's';
-    if (!window.confirm('Dry run: ' + items.length + ' selected personal ' + plural + ' will move to the bin.\n\nMove ' + items.length + ' selected personal ' + plural + ' to the bin?\n\nTrash only. Nothing is deleted for good. Drive keeps binned items for 30 days.\n\nOnly ticked files that start ' + PCP_PREFIX + ' and have a delete-ledger row are included. Zero-byte files are left as UNSURE. A folder is included only when every item inside is verified or junk. Names containing RR_ are never included.\n\nPress OK to confirm. Cancel changes nothing.')) {
-      P.binned = { done: 0, failed: 0, skipped: 0, unsure: 0, found: items.length, cancelled: true, notes: [] };
-      render();
-      return;
-    }
+  }
+  // Runs from Bin these (sweep) after its one confirm.
+  function pcpBinItems(items) {
     busy = true; P.binned = { done: 0, failed: 0, skipped: 0, unsure: 0, found: items.length, notes: [] }; render();
     var halted = false;
-    mapLimit(items, 4, function (f) {
+    return mapLimit(items, 4, function (f) {
       if (halted) { P.binned.skipped++; return; }
       if (f._moneyHold || isMoneyRollback(f, f._chain || []) || isZeroByte(f) || spellingOf(f.name, PCP_PREFIX) !== 'exact') { P.binned.failed++; P.binned.notes.push({ name: f.name, text: 'Not moved' }); return; }
       return recheckForBin(f, { prefix: PCP_PREFIX, requireOwned: true, personal: true }).then(function (chk) {
@@ -1787,7 +2101,7 @@
     }).join('') + '</ul>' + showBar(listKey, items.length, step);
   }
   // Drives > Work My Drive (slot 'work') and Drives > Personal Drive (slot 'personal'): look-only. Scan and list only;
-  // the rename and bin steps for the work account live on #/bin (pcpBinCard). The Personal Drive page can never change anything.
+  // the rename and bin steps for the work account live on #/bin (Ready to bin). The Personal Drive page can never change anything.
   function viewPersonal(slot) {
     var st = slotState(slot), running = st.status === 'running', personal = slot === 'personal';
     var title = personal ? 'Personal Drive' : 'Work My Drive';
@@ -1817,45 +2131,6 @@
     return html + '</section>';
   }
   // Bin > Work My Drive: rename exact copies (from the last Work My Drive scan) and bin marked files. Bin stage 5 folds this into Ready to bin.
-  function pcpBinCard() {
-    var html = '<section class="card slot4" id="pcpTidy"><div class="cardhead"><h3>Work My Drive: files to tidy</h3><span class="mtag">Work My Drive</span></div>' +
-      '<ul class="notes"><li>Finds personal files already in a shared drive (exact copy).</li><li>PC-Personal = the business Google account. lisah Personal = the personal Gmail account.</li><li>Nothing changes until you click Rename.</li></ul>';
-    if (P.status !== 'done') html += '<p class="note">Scan <a href="#/drives/work">Work My Drive</a> to find exact copies to rename.</p>';
-    else {
-      if (P.matches.length) {
-        html += '<div data-bin-list="pcp-rename"><h4>Rename matches</h4>' + pickButtons('pcpmark', 'pcpmark', 'Rename') + tickList('pcpmark', P.matches, function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : (isZeroByte(f) ? 'UNSURE: zero-byte file, left alone.' : (isMoneyRollback(f, f._chain || []) ? E02_LABEL : '')); }, 'pcp-rename') + '</div>';
-      }
-    }
-    if (P.marked) html += '<p class="res ' + (P.marked.failed ? 'bad' : 'ok') + '">Renamed ' + num(P.marked.done) + ' to ' + esc(PCP_PREFIX) + '…' + (P.marked.failed ? ', ' + P.marked.failed + ' failed' : '') + (P.marked.skipped ? ', ' + P.marked.skipped + ' skipped' : '') + '.</p>';
-    if (P.binned) {
-      html += '<p class="res ' + (P.binned.failed || P.binned.error ? 'bad' : 'ok') + '">' + (P.binned.cancelled ? 'Cancelled. Nothing binned.' : P.binned.error ? esc(P.binned.error) : 'Found ' + num(P.binned.found) + ', moved ' + num(P.binned.done) + ' to the bin' + (P.binned.failed ? ', ' + P.binned.failed + ' failed' : '') + (P.binned.skipped ? ', ' + P.binned.skipped + ' skipped' : '') + (P.binned.unsure ? ', ' + P.binned.unsure + ' UNSURE' : '') + '.') + '</p>';
-      if (P.binned.notes && P.binned.notes.length) html += '<ul class="files">' + P.binned.notes.map(function (n) {
-        return '<li><div class="fname">' + esc(n.name) + '</div><p class="res bad">' + esc(n.text) + '</p></li>';
-      }).join('') + '</ul>';
-    }
-    html += '<div data-bin-list="pcp-bin"><h4>Personal files starting ZZ_DELETE_DRIVE_</h4>';
-    if (P.ledgerNote) html += '<p class="note fail">' + esc(P.ledgerNote) + '</p>';
-    if (P.binStatus !== 'ok') html += '<p class="note">Reading marked personal files…</p>';
-    else {
-      var heldP = P.candidates.filter(function (f) { return f.reason === 'No ledger row.'; });
-      var leftP = P.candidates.filter(function (f) { return nameHasRr(f.name); });
-      var unsureP = P.candidates.filter(function (f) { return /^UNSURE/.test(f.reason || ''); });
-      var oddP = P.candidates.filter(function (f) { return /Odd prefix/.test(f.reason || ''); });
-      var otherP = P.candidates.filter(function (f) { return f.blocked && f.reason !== 'No ledger row.' && !nameHasRr(f.name) && unsureP.indexOf(f) === -1 && oddP.indexOf(f) === -1; });
-      html += '<p class="note" data-pcp-dry>Dry run: ' + num(allowedItems('pcpbin').length) + ' ready to bin, ' + num(heldP.length) + ' held, ' + num(unsureP.length) + ' UNSURE, ' + num(oddP.length) + ' odd prefix, ' + num(otherP.length) + ' not ready. Trash only, after you confirm.</p>';
-      html += pickButtons('pcpbin', 'pcpbin', 'Move');
-      html += '<h4>Ready to bin (' + num(allowedItems('pcpbin').length) + ')</h4>' + tickList('pcpbin', allowedItems('pcpbin'), function () { return ''; }, 'pcp-ready');
-      html += '<h4>Held: no ledger row (' + num(heldP.length) + ')</h4>' + tickList('pcpbin', heldP, function (f) { return f.reason; }, 'pcp-held');
-      if (unsureP.length) html += '<h4>UNSURE: zero-byte (' + num(unsureP.length) + ')</h4>' + tickList('pcpbin', unsureP, function (f) { return f.reason; }, 'pcp-unsure');
-      if (oddP.length) html += '<h4>Rename needed: odd prefix (' + num(oddP.length) + ')</h4>' + tickList('pcpbin', oddP, function (f) { return f.reason; }, 'pcp-odd');
-      if (leftP.length) html += '<h4>Left out (name contains RR_) (' + num(leftP.length) + ')</h4>' + tickList('pcpbin', leftP, function (f) { return f.reason; }, 'pcp-left');
-      if (otherP.length) html += '<h4>Not ready (' + num(otherP.length) + ')</h4>' + tickList('pcpbin', otherP, function (f) { return f.reason; }, 'pcp-other');
-      if (!P.candidates.length) html += '<p class="note">No personal files starting ZZ_DELETE_DRIVE_.</p>';
-    }
-    html += '</div><ul class="notes"><li>Tick, press, confirm. Nothing changes before.</li><li>Select all = only the files you can see.</li><li>RR_ names: never ticked.</li><li>Bin only: ZZ_DELETE_DRIVE_ + ledger row.</li><li>A folder is binned only when every item inside is verified or junk.</li><li>Zero-byte files are UNSURE and are never marked or binned.</li><li>Trash only. Nothing is deleted for good.</li><li>Shared-drive copy: never changed.</li></ul></section>';
-    return html;
-  }
-
   // ---- Streaming MD5 (browsers have no built-in MD5). Matches Google Drive's md5Checksum. ----
   var MD5_K = [], MD5_S = [7, 12, 17, 22, 5, 9, 14, 20, 4, 11, 16, 23, 6, 10, 15, 21];
   for (var mi = 0; mi < 64; mi++) MD5_K[mi] = Math.floor(Math.abs(Math.sin(mi + 1)) * 4294967296) >>> 0;
@@ -2197,23 +2472,92 @@
     return h + foot + '</section>';
   }
 
-  // Big one-tap links for the home screen: the MOVE workbook and one tile per hub (each opens its own tab).
-  function keyProjects() {
-    var tiles = [
-      ['MOVE', MOVE_URL, true],
-      ['Money Hub', 'money/', true],
-      ['CD Hub', 'cdhub/', true],
-      ['Factory', 'factory/', true],
-      ['Marketplace', 'marketplace/', true],
-      ['GA Hub', 'food/', true],
-      ['Studio', 'studio/', true]
-    ];
-    return '<section class="card" id="key-projects" aria-labelledby="key-projects-title">' +
-      '<h2 id="key-projects-title">Key projects & docs</h2>' +
-      '<div class="keytiles">' + tiles.map(function (t) {
-        return '<a class="keytile"' + (t[1] === MOVE_URL ? ' id="move-link"' : '') + ' href="' + esc(t[1]) + '"' + (t[2] ? (hubLink(t[1]) ? HUB_TAB : ' target="_blank" rel="noopener"') : '') + '>' + esc(t[0]) + '</a>';
-      }).join('') + '</div></section>';
+  // ---- Main: one tile per hub (Lisa's picks, 2 Nov): icon, name, 3 numbers; the tile opens the hub (the hub menu). ----
+  // Order and colours are Lisa's: Projects multi-colour, Web red, Money orange, Food / Dogs / Apps yellow, Marketplace blue, Studio purple.
+  var HUBS = [
+    { key: 'projects', name: 'Projects', icon: 'case', line: 'var(--ljr-0)', ic: 'var(--ink)' }, // multi-colour line: see the CSS
+    { key: 'web', name: 'Web', icon: 'www', slot: 2, href: 'estate/' },
+    { key: 'money', name: 'Money', icon: 'money', slot: 3, href: 'money/' },
+    { key: 'food', name: 'Food', icon: 'bowl', slot: 4, href: 'food/' },
+    { key: 'dogs', name: 'Dogs', icon: 'paw', slot: 4, href: 'cdhub/' },
+    { key: 'apps', name: 'Apps', icon: 'factory', slot: 4, href: 'factory/' },
+    { key: 'market', name: 'Marketplace', icon: 'store', slot: 6, href: 'marketplace/' },
+    { key: 'studio', name: 'Studio', icon: 'brush', slot: 7, href: 'studio/' }
+  ];
+  var HUB = {}; HUBS.forEach(function (h) { HUB[h.key] = h; });
+  // The Dashboard's own rows (the Bin, a failed read) use the Bin's slot 8 and the Main icon.
+  HUB.dash = { key: 'dash', name: 'Dashboard', icon: 'dash', slot: 8 };
+  function hubStyle(h) { return ' style="--sc:' + (h.line || 'var(--ljr-' + h.slot + ')') + ';--hic:' + (h.ic || 'var(--ljr-' + h.slot + '-icon)') + '"'; }
+  function hubIcon(h) { return h.icon === 'dash' ? '<svg class="hico" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg>' : h.icon === 'case' ? '<svg class="hico" aria-hidden="true" focusable="false"><use href="#i-briefcase"/></svg>' : '<svg class="hico" aria-hidden="true" focusable="false"><use href="#h-' + h.icon + '"/></svg>'; }
+  function hubData() {
+    var d = S.hubs && S.hubs.data ? S.hubs.data : {}, out = {};
+    Object.keys(d).forEach(function (k) { out[k] = d[k]; });
+    out.money = window.HubRead ? HubRead.money(S.money.data) : { ok: false };
+    return out;
   }
+  // Every number opens the place in its hub where you act on it (Lisa, 2 Nov: every piece of info is clickable).
+  var HUB_NUMS = {
+    projects: [['Stuck', ''], ['Waiting', ''], ['Running', '']],
+    web: [['Down', '#/look'], ['Expiring', '#/look'], ['Live', '#/home']],
+    money: [['Overdue', '#/dates'], ['Due Soon', '#/dates'], ['Cash', '#/money']],
+    food: [['Late', '#/orders'], ['Owe GA', '#/invoices'], ['Today', '#/orders']],
+    dogs: [['Temps', '#/today'], ['Unplaced', '#/today'], ['Bitches', '#/dogs']],
+    apps: [['Questions', '#/decide'], ['Gates', '#/decide'], ['Live', '#/all']],
+    market: [['To Post', '#/do'], ['To Reply', '#/reply'], ['Sold', '#/numbers']],
+    studio: [['Approve', '#/review'], ['Due Today', '#/me'], ['Sold', '#/library']]
+  };
+  // Projects: the hub Sheet's INDEX tab (loadPh). Stuck above 0 is rose.
+  function phNums() {
+    var d = S.ph.data;
+    return d ? [['Stuck', d.stuck, d.stuck > 0], ['Waiting', d.waiting], ['Running', d.running]] : null;
+  }
+  function hubTiles() {
+    var D = hubData();
+    return '<section id="hubTiles" aria-label="Hubs"><div class="hubgrid">' + HUBS.map(function (h) {
+      var link = h.key === 'projects' ? PH_URL : h.href;
+      if (!link) return '';
+      var x = D[h.key] || { ok: false }, nums = h.key === 'projects' ? phNums() : x.ok ? x.nums : null;
+      var tab = h.key === 'projects' ? ' target="_blank" rel="noopener"' : HUB_TAB;
+      var body = '<span class="hks"' + (h.key === 'projects' ? ' data-ph="' + (S.ph.data ? 'ok' : esc(S.ph.status)) + '"' : '') + '>' + HUB_NUMS[h.key].map(function (k, i) {
+        var n = nums ? nums[i] : null, v = n && n[1] != null ? String(n[1]) : '–', late = !!(n && n[2]);
+        return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + '>' + (late ? '<span class="cnt need' + (v.length > 2 ? ' wide' : '') + '">' + esc(v) + '</span>' : '<b>' + esc(v) + '</b>') + '<span>' + esc(k[0]) + '</span></a>';
+      }).join('') + '</span>';
+      var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders"' + HUB_TAB + '>✓ XML</a>' : '';
+      var sub = h.key === 'projects' ? '<span class="hsub">Opens in your work account</span>' : '';
+      var why = h.key === 'projects' && S.ph.status === 'failed' ? ' title="Numbers could not be read. Tap to open the hub."' : '';
+      return '<div class="card house-lbar hubtile" data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo" href="' + esc(link) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + sub + body + '</div>';
+    }).join('') + '</div></section>';
+  }
+
+  // ---- Decide and Do (Lisa's tab plan): every hub's rows that wait on Lisa's decision (Decide) or are hers to do (Do). ----
+  // Built only from what each hub already lists: Money (register decisions / to-dos), Food (answer cards), Apps (decisions / Lisa's tasks),
+  // Marketplace (decide / do and reply cards), Studio (gates and reviews / hand tasks), Web and Dogs (Do only; they have no Decide list).
+  var KIND_RANK = { late: 0, soon: 1, wait: 2 };
+  function hubRows(which) {
+    var D = hubData(), out = [];
+    HUBS.forEach(function (h) { var x = D[h.key]; if (x && x.ok) (x[which] || []).forEach(function (r) { out.push(r); }); });
+    return out;
+  }
+  function sortRows(rows) {
+    return rows.map(function (r, i) { r._i = i; return r; }).sort(function (a, b) { return KIND_RANK[a.kind] - KIND_RANK[b.kind] || (a.sort != null && b.sort != null ? a.sort - b.sort : 0) || a._i - b._i; });
+  }
+  function rowHtml(r) {
+    var h = HUB[r.hub] || HUB.dash, ext = hubLink(r.href);
+    return '<li class="house-lbar hrow k-' + r.kind + '" data-hub="' + h.key + '"' + hubStyle(h) + '>' + hubIcon(h) + '<span class="nt"><a href="' + esc(r.href) + '"' + (ext ? HUB_TAB : '') + '>' + esc(r.text) + '</a></span>' +
+      (r.kind === 'late' ? '<span class="dpill late">Late</span>' : r.kind === 'soon' ? '<span class="dpill soon">Soon</span>' : '') + '</li>';
+  }
+  function hubListView(which, title, empty) {
+    var rows = sortRows(hubRows(which)), D = hubData(), reading = S.hubs.status === 'loading' && !S.hubs.data;
+    var notRead = HUBS.filter(function (h) { return h.key !== 'projects' && !(D[h.key] && D[h.key].ok); }).map(function (h) { return h.name; });
+    var h = '<section class="card hublist" id="' + which + 'List" aria-labelledby="' + which + 'Title"><div class="cardhead"><h3 id="' + which + 'Title">' + esc(title) + '</h3>' +
+      '<span class="cnt' + (rows.some(function (r) { return r.kind === 'late'; }) ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + (rows.length || '') + '</span></div>';
+    if (!rows.length) h += '<p class="note">' + (reading ? 'Reading the hubs…' : esc(empty)) + '</p>';
+    else h += '<ol class="hrows">' + rows.map(rowHtml).join('') + '</ol>';
+    if (notRead.length && !reading) h += '<p class="note" data-not-read>Not read: ' + esc(notRead.join(', ')) + '.</p>';
+    return h + '</section>';
+  }
+  function viewDecide() { return hubListView('decide', 'Decide', 'Nothing waiting on your decision.'); }
+  function viewDo() { return hubListView('todo', 'Do', 'Nothing to do.'); }
 
   // Signed out: nothing about the dashboard is shown, only the sign-in button.
   // The key links are drawn by viewMap, which only runs after sign-in.
@@ -2224,8 +2568,9 @@
       '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
   }
 
-  // ---- Needs you today (at most 7 rows). Read-only: built from what this page has already read. ----
-  var NEEDS_MAX = 7;
+  // ---- Needs you (at most 5 rows, Lisa's pick): the most urgent across all hubs, late first, then due soon, then waiting.
+  // Read-only: built from what this page and each hub's own lists already hold (HubRead, the script at the top). ----
+  var NEEDS_MAX = 5;
   function withEnt(ent, text) { text = String(text || ''); ent = String(ent || '').split(';')[0]; return ent && text.indexOf(ent + ':') !== 0 ? ent + ': ' + text : text; }
   function needsToday() {
     var MC = window.MoneyCore, out = [], d = S.money.data;
@@ -2233,10 +2578,10 @@
       MC.needsNow(d.data, d.money, d.today).forEach(function (x) {
         var soon = /^In (\d+)/.exec(x.tag || '');
         if (x.level !== 'risk' && soon && +soon[1] > 7) return; // "today" means this week at most
-        out.push({ kind: x.level === 'risk' ? 'risk' : /^(Today|In \d)/.test(x.tag || '') ? 'fin' : 'ops', tag: x.tag || '', text: withEnt(x.ent, x.text), href: 'money/' + (x.href || ''), src: x.src || '' });
+        out.push({ hub: 'money', kind: x.level === 'risk' ? 'risk' : /^(Today|In \d)/.test(x.tag || '') ? 'fin' : 'ops', tag: x.tag || '', text: withEnt(x.ent, x.text), href: 'money/' + (x.href || ''), src: x.src || '' });
       });
       MC.yourTurn(d.data).filter(function (x) { return x.ready === 'ready' && !/urgent/i.test(x.r.priority || ''); }).forEach(function (x) {
-        out.push({ kind: 'ops', tag: 'Your turn', text: x.r.subject, href: 'money/#/register/' + encodeURIComponent(x.r.id), src: 'MON-REGISTER ' + x.r.id });
+        out.push({ hub: 'money', kind: 'ops', tag: 'Your turn', text: x.r.subject, href: 'money/#/register/' + encodeURIComponent(x.r.id), src: 'MON-REGISTER ' + x.r.id });
       });
     }
     var b = S.bin.data;
@@ -2245,36 +2590,56 @@
     ['readfirst', 'drive', 'cf', 'money'].forEach(function (k) {
       if (S[k].status === 'failed') out.push({ kind: 'risk', tag: 'Read failed', text: ({ readfirst: 'Read first', drive: 'Shared drives', cf: 'Cf project', money: 'Money Hub files' })[k] + ': ' + friendlyError(S[k].error).text, href: k === 'money' ? 'money/' : '#/' + (k === 'cf' ? 'changes' : k), src: '' });
     });
+    var KIND = { late: 'risk', soon: 'fin', wait: 'ops' }, WORD = { late: 'Late', soon: 'Due soon', wait: 'Waiting' };
+    sortRows(hubRows('needs')).forEach(function (r) { out.push({ hub: r.hub, kind: KIND[r.kind], tag: WORD[r.kind], text: HUB[r.hub].name + ': ' + r.text, href: r.href, src: '' }); });
     var rank = { risk: 0, fin: 1, ops: 2, bin: 3 };
-    out.sort(function (a, b2) { return rank[a.kind] - rank[b2.kind]; });
+    out = out.map(function (x, i) { x._i = i; return x; }).sort(function (a, b2) { return rank[a.kind] - rank[b2.kind] || a._i - b2._i; });
     return out;
   }
-  function hubLink(href) { return /^(money|cdhub|factory|marketplace|food|studio)\//.test(String(href || '')); }
+  function hubLink(href) { return /^(money|cdhub|factory|marketplace|food|studio|estate)\//.test(String(href || '')); }
+  // The first reads after sign-in are still running (a 5-minute reread keeps the last numbers instead).
+  function firstRead() { return ['readfirst', 'drive', 'cf', 'money', 'hubs'].some(function (k) { return S[k].status === 'loading' && !S[k].data; }); }
   function needsCount() { return signedIn ? needsToday().length : 0; }
   function needsPanel() {
     if (!signedIn) return '';
-    var all = needsToday(), items = all.slice(0, NEEDS_MAX), reading = S.money.status === 'loading' && !S.money.data;
-    var label = { risk: 'risk', fin: 'fin', ops: 'ops', bin: 'bin' };
-    var h = '<section class="card slot4 needs" id="needsToday" aria-labelledby="needsTitle"><div class="cardhead"><h3 id="needsTitle">Needs you today</h3>' +
+    var all = needsToday(), items = all.slice(0, NEEDS_MAX), reading = firstRead();
+    var h = '<section class="card slot4 needs" id="needsToday" aria-labelledby="needsTitle"><div class="cardhead"><h3 id="needsTitle">Needs you</h3>' +
       '<span class="mtag ' + (all.some(function (x) { return x.kind === 'risk'; }) ? 'risk' : all.length ? 'ops' : 'ok') + '">' + (reading ? 'Reading…' : all.length + (all.length === 1 ? ' thing' : ' things')) + '</span></div>';
     if (!all.length) return h + (reading ? '<p class="note">Reading from Google Drive…</p>' : '<div class="okstate"><span class="okring" aria-hidden="true">✓</span><p class="note">Nothing needs you today.</p></div>') + '</section>';
-    h += '<ol>' + items.map(function (x) {
-      return '<li class="n-' + x.kind + '"><span class="mtag ' + label[x.kind] + '">' + esc(x.tag) + '</span><span class="nt"><a href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>' + esc(x.text) + '</a></span></li>';
-    }).join('') + '</ol>';
-    if (all.length > items.length) h += '<p class="note">And ' + (all.length - items.length) + ' more. <a href="money/#/now"' + HUB_TAB + '>See them all in Money Hub</a>.</p>';
+    h += '<ol>' + items.map(needRow).join('') + '</ol>';
+    if (all.length > items.length) h += '<p class="note">And ' + (all.length - items.length) + ' more. <a href="#/do">Open Do</a>.</p>';
     return h + '</section>';
   }
 
   // Home opens with what needs you: the count, then the ONE most urgent thing. No tiles repeat a tab (stage 2c).
+  // The 3 groups of Needs you: urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
+  var NEED_GROUPS = [
+    { key: 'urgent', kind: 'risk', word: 'urgent', has: function (x) { return x.kind === 'risk'; } },
+    { key: 'soon', kind: 'fin', word: 'due soon', has: function (x) { return x.kind === 'fin'; } },
+    { key: 'todo', kind: 'todo', word: 'to do', has: function (x) { return x.kind === 'ops' || x.kind === 'bin'; } }
+  ];
+  function needRow(x) {
+    var hb = HUB[x.hub] || HUB.dash, label = { risk: 'risk', fin: 'fin', ops: 'ops', bin: 'bin' };
+    return '<li class="house-lbar n-' + x.kind + '" data-hub="' + hb.key + '"' + hubStyle(hb) + '>' + hubIcon(hb) + '<span class="mtag ' + label[x.kind] + '">' + esc(x.tag) + '</span><span class="nt"><a href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>' + esc(x.text) + '</a></span></li>';
+  }
+  // Do, one group of Needs you (from the pills at the top of Main): exactly the rows that pill counted.
+  function viewDoGroup(key) {
+    var g = NEED_GROUPS.filter(function (x) { return x.key === key; })[0], rows = needsToday().filter(g.has), reading = firstRead();
+    var h = '<section class="card needs" id="todoGroup" data-group="' + g.key + '" aria-labelledby="todoGroupTitle"><div class="cardhead"><h3 id="todoGroupTitle">Do · ' + esc(g.word) + '</h3>' +
+      '<span class="cnt' + (g.kind === 'risk' && rows.length ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + (rows.length || '') + '</span></div>';
+    h += rows.length ? '<ol>' + rows.map(needRow).join('') + '</ol>' : '<p class="note">' + (reading ? 'Reading…' : 'Nothing ' + esc(g.word) + ' right now.') + '</p>';
+    return h + '<p class="note"><a href="#/do">All of Do</a></p></section>';
+  }
   function homeTop() {
     if (!signedIn) return '';
-    var all = needsToday(), n = all.length, reading = S.money.status === 'loading' && !S.money.data;
+    var all = needsToday(), n = all.length, reading = firstRead();
     // Split by urgency (read pills): urgent = overdue or a broken read, due soon = dated this week, to do = the rest.
-    var split = [['risk', 'urgent'], ['fin', 'due soon'], ['todo', 'to do']].map(function (k) {
-      var c = all.filter(function (x) { return k[0] === 'todo' ? (x.kind === 'ops' || x.kind === 'bin') : x.kind === k[0]; }).length;
-      return c ? '<span class="cnt wide k-' + k[0] + '">' + c + ' ' + k[1] + '</span>' : '';
+    // Each pill opens Do showing exactly what it counts (Lisa, 2 Nov: every piece of info opens what it counts).
+    var split = NEED_GROUPS.map(function (g) {
+      var c = all.filter(g.has).length;
+      return c ? '<a class="cnt wide k-' + g.kind + '" href="#/do/' + g.key + '" data-group="' + g.key + '">' + c + ' ' + g.word + '</a>' : '';
     }).join('');
-    var h = '<section id="homeTop" aria-label="Needs you"><div class="needsrow"><p class="needsline">Needs you: ' + (n ? n : reading ? '…' : '<span class="zero">0</span>') + '</p>' +
+    var h = '<section id="homeTop" aria-label="Next"><div class="needsrow"><p class="needsline">Needs you: ' + (reading ? '…' : n ? n : '<span class="zero">0</span>') + '</p>' +
       (split ? '<span class="hsplit" id="needsSplit">' + split + '</span>' : '') + '</div>';
     if (n) {
       var x = all[0];
@@ -2282,23 +2647,54 @@
       h += '<div class="card urgent nextcard" id="urgentOne"><div class="cardhead"><h3>Next</h3><span class="mtag ' + x.kind + '">' + esc(x.tag) + '</span></div>' +
         '<p class="what">' + esc(x.text) + '</p>' +
         '<div class="actions"><a class="btn" href="' + esc(x.href) + '"' + (hubLink(x.href) ? HUB_TAB : '') + '>Open it</a>' +
-        (n > 1 ? '<span class="hint">Then ' + (n - 1) + ' more in Needs you today, below.</span>' : '') + '</div></div>';
+        (n > 1 ? '<a class="hint more" href="#/do">+' + (n - 1) + ' more</a>' : '') + '</div></div>';
     } else if (!reading) {
       h += '<div class="card urgent okstate" id="urgentOne"><span class="okring" aria-hidden="true">✓</span><div><h3>Nothing needs you</h3><p class="hint">All clear right now. New things show here when Drive or Money changes.</p></div></div>';
     }
     return h + '</section>';
   }
   function viewMap() {
-    // Home: what needs you first (homeTop), then Key projects, then the full Needs you today list.
-    var html = homeTop() + keyProjects() + needsPanel();
+    // Main: what needs you first (homeTop: the count and the Next card), then Needs you (5 rows), then the hub tiles.
+    var html = homeTop() + needsPanel() + hubTiles();
     if (!signedIn) {
       html += '<div class="card vision pending"><div class="cardhead"><h3>Not signed in</h3>' +
         '<span class="state st-idle"><span class="shape"></span>No reads</span></div>' +
         '<p class="note">Read-only. The Bin asks for more only when used.</p>' +
         '<div><button class="btn vision" type="button" data-action="signin">' + icon('in') + '<span>Sign in with Google</span></button></div></div>';
     }
-    html += moneyTile();
-    return html;
+    return html; // Main = Next, Needs you, hub tiles. The Money and Actions minutes cards live in More (Lisa, 2 Nov).
+  }
+
+  // Actions minutes card: private minutes used this month against the free allowance. Read only; sends nothing.
+  function minsTile() {
+    var p = S.mins, d = p.data, st = d && d.state;
+    var tag = d && d.example ? '<span class="mtag" data-example>Example</span>' : '';
+    var head = '<div class="cardhead"><h3>Actions minutes</h3>' + tag + stateBadge(p, d && d.none ? 0 : null) + '</div>';
+    var foot = sourceLine(d && d.example ? 'Example data' : MINS.fileName, MINS.folderId ? folderUrl(MINS.folderId) : MINS.usageUrl, p) + '</section>';
+    var open = '<section class="card slot7' + cardClass(p) + '" id="minsCard">';
+    if (!d) return open + head + failNote(p) + foot;
+    if (d.none) return open + head + '<p class="note">No minutes file yet. The collector has not written one.</p>' + foot;
+    var v = minsView(st, Date.now()), lvl = { ok: ['ok', 'Under 75%'], amber: ['ops', 'Over 75%'], red: ['risk', 'Over 90%'] }[v.level];
+    var chip = { success: ['ok', 'Passed'], failure: ['risk', 'Failed'], running: ['ops', 'Running'], cancelled: ['', 'Cancelled'], none: ['', 'No runs'] };
+    var h = open + head;
+    if (d.example) h += '<p class="note">Example numbers. Real ones appear once the collector is installed.</p>';
+    h += '<div class="stats"><div class="stat" data-mins-used><div class="num">' + num(v.used) + ' / ' + num(v.free) + '</div><div class="label">Private minutes used this month (' + v.pct + '%)</div></div>' +
+      '<div class="stat" data-mins-reset><div class="num">' + (v.days == null ? '–' : v.days) + '</div><div class="label">Days to the monthly reset</div></div></div>';
+    h += '<div class="meta" data-mins-level="' + v.level + '"><span class="mtag ' + lvl[0] + '">' + lvl[1] + '</span>' +
+      (v.stale ? '<span class="mtag ops" data-mins-stale>Stale: ' + (v.ageDays == null ? 'no date' : v.ageDays + ' days old') + '</span>' : '<span>Updated ' + esc(stamp(Date.parse(st.generated_at))) + '</span>') +
+      (st.source === 'estimate' ? '<span>Estimated from run times</span>' : '') + (st.partial ? '<span>Partial count</span>' : '') + '</div>';
+    if (v.level === 'red') h += '<p class="note" data-mins-diet>Ask SYS-CD for a minutes diet</p>';
+    var repos = st.repos || [];
+    h += '<div class="cardhead"><h4>Per repo</h4></div><ul class="files" data-mins-repos>' + repos.map(function (x) {
+      var c = chip[(x.last_run && x.last_run.status) || 'none'] || chip.none;
+      return '<li><div class="fname">' + esc(x.label) + '</div><div class="meta"><span>' + num(x.minutes) + ' min</span><span class="mtag' + (c[0] ? ' ' + c[0] : '') + '">' + c[1] + '</span></div></li>';
+    }).join('') + '</ul>';
+    var wf = st.workflows || [], wfN = listShown('mins-wf', wf.length, 5);
+    h += '<div class="cardhead"><h4>Per workflow</h4></div>' + (wf.length ? '<ul class="files" data-mins-workflows>' + wf.slice(0, wfN).map(function (x) {
+      return '<li><div class="fname">' + esc(x.label) + '</div><div class="meta"><span>' + esc(x.repo) + '</span><span>' + num(x.minutes) + ' min</span><span>' + num(x.runs) + ' runs</span></div></li>';
+    }).join('') + '</ul>' + showBar('mins-wf', wf.length, 5) : '<p class="note">No workflow runs this month.</p>');
+    h += '<div class="actions"><a class="btn" href="' + esc(MINS.usageUrl) + '" target="_blank" rel="noopener" data-mins-usage><span>Check usage on GitHub</span></a></div>';
+    return h + foot;
   }
 
   function viewReadFirst(r) {
@@ -2388,69 +2784,177 @@
         (f._block ? '<div class="skip">' + esc(f._block) + '</div>' : '') + '</li>';
     }, listKey);
   }
-  function viewBin() {
-    var p = S.bin, d = p.data, html = '';
-    // Index: every section on one line, with its count
-    var readyN = d ? d.ready.length : null, dxd = S.dbx.data, binsN = d ? d.per.reduce(function (t, x) { return t + x.trash.length; }, 0) : null;
-    var cnt = function (n, word) { return n == null ? 'reading…' : num(n) + ' ' + word; };
-    html += '<nav class="card slot8" aria-label="Bin index"><div class="index top">' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="check"><b>00 CHECK</b><span class="n">' + cnt(S.check.data ? S.check.data.items.length : null, 'to check') + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="sweep"><b>Google Drive: ZZ_DELETE_ files</b><span class="n">' + cnt(readyN, 'ready to bin') + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="dropbox"><b>Dropbox: marked files</b><span class="n">' + (dxd && dxd.marked_files != null ? num(dxd.marked_files) + ' at last scan' : 'delete, then empty trash') + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="bins"><b>Google Drive: bins</b><span class="n">' + cnt(binsN, 'in the bin') + '</span></button>' +
-      '<button class="btn" type="button" data-action="foldjump" data-key="access"><b>Permission</b><span class="n">' + (writeGranted ? 'bin actions on' : 'allow bin actions') + '</span></button></div></nav>';
-    // Access card
-    html += foldOpen('access', !writeGranted, 'card slot2' + (signedIn && writeGranted ? '' : ' pending')) + '<summary><h3>Permission to use the bin</h3>' +
-      (writeGranted ? '<span class="state st-ok"><span class="shape"></span>Bin actions on</span>' : '<span class="state st-idle"><span class="shape"></span>Read-only</span>') + '</summary><div class="fbody">' +
-      '<ul class="notes"><li>Read-only until you tick.</li><li>Moving needs full Drive access: asked here only, kept until sign-out.</li><li>Shared-drive bins: never emptied.</li></ul>' +
-      (signedIn && !writeGranted ? '<div class="actions"><button class="btn danger" type="button" data-action="grantwrite">' + icon('in') + '<span>Allow Bin actions</span></button></div>' : '') +
-      '</div></details>';
-    html += viewCheck();
-    // ZZ_DELETE_ sweep. Only ticked ready items can move. Nothing moves until Lisa confirms.
-    var listed = d ? d.ready.length + d.held.length + d.rename.length + d.leftout.length + d.blocked.length + (d.e02 ? d.e02.length : 0) + (d.unsure ? d.unsure.length : 0) : null;
-    html += foldOpen('sweep', !!(d && listed), 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Google Drive: ZZ_DELETE_ files ready to bin</h3>' + stateBadge(p, listed) + '</summary><div class="fbody">';
-    html += '<ul class="notes"><li>Tickable: ZZ_DELETE_ + ledger row.</li><li>No ledger row: held.</li><li>Other ZZ_ (incl. retired ZZ_SUPERSEDED_): Rename needed, never binned.</li><li>Odd prefix spellings (case, spaces, hyphens): Rename needed, never binned.</li><li>Zero-byte files: UNSURE, never binned.</li><li>A folder is binned only when every item inside is verified or junk.</li><li>RR_ (name, folder, or inside): left out.</li><li>Money rollback (0.1 - Index, 4 - Ops by id): held, never touched.</li><li>Trash only, after a confirm. Nothing is deleted for good.</li><li>Select all = only rows you can see.</li></ul>';
+  // ---- Bin page (job file section 8): Needs you now, Ready to bin, Check, Not ready yet, Already in the bin, Log, Dropbox ----
+  // Plain words lead; internal names sit in tooltips or a "why" fold. Only "Bin these" is a red button.
+  var WMD = 'Work My Drive';
+  function plainName(name) {
+    var s = String(name || '');
+    if (s.indexOf(PCP_PREFIX) === 0) return s.slice(PCP_PREFIX.length);
+    if (s.indexOf(DELETE_PREFIX) === 0) return s.slice(DELETE_PREFIX.length);
+    return s;
+  }
+  function binReadyN() {
+    var d = S.bin.data;
+    if (!d) return null;
+    return (d.ledgerOk ? d.ready.length : 0) + (P.binStatus === 'ok' ? allowedItems('pcpbin').length : 0);
+  }
+  function binProblems() {
+    var d = S.bin.data, out = [];
+    if (S.bin.status === 'failed') out.push('sweep');
+    if (d && d.ledgerNote) out.push('sweep');
+    if (P.ledgerNote) out.push('sweep');
+    if (S.check.status === 'failed') out.push('check');
+    if (S.dbx.status === 'failed') out.push('dropbox');
+    return out;
+  }
+  function needsNowCard() {
+    var readyN = binReadyN(), checkN = S.check.data ? S.check.data.items.length : null, probs = binProblems();
+    var jump = function (key, n, one, many) {
+      return '<button class="btn" type="button" data-action="foldjump" data-key="' + key + '"><span class="n">' + (n == null ? '…' : num(n)) + '</span> <span>' + (n === 1 ? one : many) + '</span></button>';
+    };
+    return '<section class="card slot8" id="needsNow" aria-labelledby="needsNowT"><h3 id="needsNowT">Needs you now</h3><div class="index top">' +
+      jump('sweep', readyN, 'file ready for you to approve', 'files ready for you to approve') +
+      jump('check', checkN, 'item to check', 'items to check') +
+      jump(probs[0] || 'log', probs.length, 'problem', 'problems') + '</div></section>';
+  }
+  function readyRow(group, f, place) {
+    var full = f.name || f.path || '';
+    var nm = f.webViewLink ? '<a href="' + esc(f.webViewLink) + '" target="_blank" rel="noopener" title="' + esc(full) + '">' + esc(plainName(full)) + '</a>' : '<span title="' + esc(full) + '">' + esc(plainName(full)) + '</span>';
+    return '<li data-id="' + esc(f.id) + '" data-group="' + group + '">' + tickBox(group, itemKey(group, f), false, nm) +
+      '<div class="meta"><span class="mtag" title="' + esc(f._path || place) + '">' + esc(place) + '</span><span class="chip">' + typeWord(f.mimeType) + '</span></div></li>';
+  }
+  function readyCard() {
+    var p = S.bin, d = p.data, n = pickCount('bin') + pickCount('pcpbin');
+    // Same rows pickedItems() counts: the visible slice of each list, allowed rows only, so no tick box is ever disabled.
+    var shared = d && d.ledgerOk ? visibleRows('bin').filter(function (f) { return rowAllowed('bin', f); }) : [];
+    var work = P.binStatus === 'ok' ? visibleRows('pcpbin').filter(function (f) { return rowAllowed('pcpbin', f); }) : [];
+    var total = binReadyN();
+    var html = foldOpen('sweep', true, 'card slot2' + cardClass(p), 'sweepCard') + '<summary><h3>Ready to bin</h3>' + stateBadge(p, total) + '</summary><div class="fbody">';
     html += failNote(p);
+    if (d && d.ledgerNote) html += '<p class="note fail">' + esc(d.ledgerNote) + '</p>';
+    if (P.ledgerNote) html += '<p class="note fail">' + esc(P.ledgerNote) + '</p>';
     if (d) {
-      if (d.ledgerNote) html += '<p class="note fail">' + esc(d.ledgerNote) + '</p>';
-      html += '<p class="note" data-bin-dry>Dry run: ' + num(d.ready.length) + ' ready to bin, ' + num(d.held.length) + ' held, ' + num(d.unsure ? d.unsure.length : 0) + ' UNSURE, ' + num(d.rename.length) + ' rename needed, ' + num(d.blocked.length) + ' left alone. Trash only, after you confirm.</p>';
-      html += pickButtons('bin', 'sweep', 'Move');
-      if (d.e02 && d.e02.length) html += '<div data-bin-list="e02"><h4>' + esc(E02_LABEL) + ' (' + num(d.e02.length) + ')</h4>' + binTickItems('bin-e02', d.e02) + '</div>';
-      html += '<div data-bin-list="ready"><h4>Ready (' + num(d.ready.length) + ')</h4>' + binTickItems('bin-ready', d.ready) + '</div>';
-      if (d.unsure && d.unsure.length) html += '<div data-bin-list="unsure"><h4>UNSURE: zero-byte (' + num(d.unsure.length) + ')</h4>' + binTickItems('bin-unsure', d.unsure) + '</div>';
-      html += '<div data-bin-list="held"><h4>Held: no ledger row (' + num(d.held.length) + ')</h4>' + binTickItems('bin-held', d.held) + '</div>';
-      html += '<div data-bin-list="rename"><h4>Rename needed (' + num(d.rename.length) + ')</h4>' + binTickItems('bin-rename', d.rename) + '</div>';
-      if (d.leftout.length) html += '<div data-bin-list="leftout"><h4>Left out (name contains RR_) (' + num(d.leftout.length) + ')</h4>' + binTickItems('bin-leftout', d.leftout) + '</div>';
-      if (d.blocked.length) html += '<div data-bin-list="blocked"><h4>Left alone (' + num(d.blocked.length) + ')</h4>' + binTickItems('bin-blocked', d.blocked) + '</div>';
-      if (d.zzMore) html += '<p class="note fail">Partial: some drives have more matches than one read can hold. Nothing extra is binned from an unread page.</p>';
+      if (!shared.length && !work.length) html += '<p class="note">Nothing is ready to bin.</p>';
+      else html += '<div data-bin-list="ready"><div class="scrollbox"><ul class="files">' +
+        shared.map(function (f) { return readyRow('bin', f, f._drive || 'Shared drive'); }).join('') +
+        work.map(function (f) { return readyRow('pcpbin', f, WMD); }).join('') + '</ul></div>' +
+        showBar('bin-ready', d.ledgerOk ? d.ready.length : 0, BIN_SHOW) + (P.binStatus === 'ok' ? showBar('pcp-ready', listForGroup('pcpbin').length, 30) : '') + '</div>';
+      var label = !n ? 'Bin these: tick a file first' : writeGranted ? 'Bin these (' + n + ')' : 'Allow access, then bin (' + n + ')';
+      html += '<div class="actions" data-pick-bar="ready">' +
+        '<button class="btn" type="button" data-action="selectall" data-group="bin" data-also="pcpbin"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
+        '<button class="btn" type="button" data-action="clearpick" data-group="bin" data-also="pcpbin"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
+        '<button class="btn' + (writeGranted ? ' danger solid' : '') + '" type="button" data-action="sweep"' + (n && !busy ? '' : ' disabled') + '>' + icon('bin') + '<span>' + label + '</span></button></div>' +
+        '<p class="note">Goes to the shared-drive bin. You can get it back for 30 days.</p>';
     }
+    if (P.binStatus !== 'ok' && signedIn) html += '<p class="note">Reading ' + WMD + '…</p>';
+    html += renameBlock() + '</div></details>';
+    return html;
+  }
+  // Work My Drive exact copies: renaming them gets them ready to bin. A neutral button; nothing is binned here.
+  function renameBlock() {
+    if (P.status !== 'done') return '<p class="note">Scan <a href="#/drives/work">' + WMD + '</a> to find exact copies to tidy.</p>';
+    var rows = visibleRows('pcpmark').filter(function (f) { return rowAllowed('pcpmark', f); }), n = pickCount('pcpmark');
+    var html = '';
+    if (P.matches.length) {
+      html += '<div data-bin-list="pcp-rename"><h4>Exact copies in ' + WMD + ': rename them to get them ready</h4>';
+      html += rows.length ? '<ul class="files">' + rows.map(function (f) {
+        return '<li data-id="' + esc(f.id) + '">' + tickBox('pcpmark', f.id, false, esc(f.name)) + '</li>';
+      }).join('') + '</ul>' + showBar('pcp-rename', P.matches.length, 30) : '<p class="note">None can be renamed.</p>';
+      html += '<div class="actions" data-pick-bar="pcpmark">' +
+        '<button class="btn" type="button" data-action="selectall" data-group="pcpmark"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
+        '<button class="btn" type="button" data-action="clearpick" data-group="pcpmark"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
+        '<button class="btn" type="button" data-action="pcpmark"' + (n && !busy ? '' : ' disabled') + '><span>' + (n ? 'Rename these (' + n + ')' : 'Rename these: tick a file first') + '</span></button></div></div>';
+    }
+    return html;
+  }
+  function notReadyCard() {
+    var d = S.bin.data, groups = [], count = 0;
+    var WAIT = 'Waiting for the tidy bot to log it', NAME = 'Name needs fixing by the tidy bot', EMPTY = 'Empty file, left for a person to check', KEEP = 'Protected, never binned';
+    function add(key, title, list, owner, place, whyOf) {
+      if (!list || !list.length) return;
+      count += list.length;
+      groups.push('<div data-bin-list="' + key + '"><h4>' + esc(title) + ' (' + num(list.length) + ')</h4>' + binList(list, function (f) {
+        var why = whyOf ? whyOf(f) : (f._block || f.reason || f._skip || '');
+        var who = typeof owner === 'function' ? owner(f) : owner;
+        return '<li data-id="' + esc(f.id) + '"' + (why ? ' title="' + esc(why) + '"' : '') + '><div class="fname">' + esc(f.name || '') + '</div>' +
+          '<div class="meta"><span class="mtag" title="' + esc(f._path || '') + '">' + esc(place || f._drive || 'Shared drive') + '</span></div><p class="note">' + esc(who) + '</p></li>';
+      }, 'nr-' + key) + '</div>');
+    }
+    if (d) {
+      add('held', 'Waiting to be logged', d.held, WAIT);
+      add('rename', 'Names to fix', d.rename, NAME);
+      add('unsure', 'Empty files', d.unsure || [], EMPTY);
+      add('leftout', 'Protected: archive names', d.leftout, KEEP);
+      add('blocked', 'Left alone', d.blocked, function (f) { return f._block === 'Ledger could not be read.' ? WAIT : KEEP; });
+      add('e02', 'Protected: money records', d.e02 || [], KEEP);
+    }
+    if (P.binStatus === 'ok') {
+      var c = P.candidates;
+      var unsureP = c.filter(function (f) { return /^UNSURE/.test(f.reason || ''); });
+      var oddP = c.filter(function (f) { return /Odd prefix/.test(f.reason || ''); });
+      add('pcp-held', WMD + ': waiting to be logged', c.filter(function (f) { return f.reason === 'No ledger row.'; }), WAIT, WMD);
+      add('pcp-unsure', WMD + ': empty files', unsureP, EMPTY, WMD);
+      add('pcp-odd', WMD + ': names to fix', oddP, NAME, WMD);
+      add('pcp-left', WMD + ': protected', c.filter(function (f) { return nameHasRr(f.name); }), KEEP, WMD);
+      add('pcp-other', WMD + ': left alone', c.filter(function (f) { return f.blocked && f.reason !== 'No ledger row.' && !nameHasRr(f.name) && unsureP.indexOf(f) === -1 && oddP.indexOf(f) === -1; }), KEEP, WMD);
+    }
+    if (P.status === 'done') add('pcp-keep', WMD + ': copies left as they are', P.matches.filter(function (f) { return !rowAllowed('pcpmark', f) && !isZzFamilyName(f.name); }), function (f) { return isZeroByte(f) ? EMPTY : KEEP; }, WMD,
+      function (f) { return nameHasRr(f.name) ? 'Name contains RR_, left out.' : isZeroByte(f) ? 'UNSURE: zero-byte file, left alone.' : isMoneyRollback(f, f._chain || []) ? E02_LABEL : ''; });
+    var html = foldOpen('notready', false, 'card slot4' + cardClass(S.bin), 'notReadyCard') + '<summary><h3>Not ready yet: nothing for you to do</h3>' + stateBadge(S.bin, d ? count : null) + '</summary><div class="fbody">';
+    html += groups.length ? groups.join('') : (d ? '<p class="note">Nothing waiting.</p>' : '');
+    if (d && d.zzMore) html += '<p class="note fail">Partial: some drives have more matches than one read can hold. Nothing extra is binned from an unread page.</p>';
+    html += whyFold('binwhy', "Why can't these be binned?", ['Tickable: ZZ_DELETE_ + ledger row.', 'No ledger row: held.', 'Other ZZ_ (incl. retired ZZ_SUPERSEDED_): Rename needed, never binned.',
+      'Odd prefix spellings (case, spaces, hyphens): Rename needed, never binned.', 'Zero-byte files: UNSURE, never binned.', 'A folder is binned only when every item inside is verified or junk.',
+      'RR_ (name, folder, or inside): left out.', 'Money rollback (0.1 - Index, 4 - Ops by id): held, never touched (E02).', 'Work My Drive: bin only ZZ_DELETE_DRIVE_ + ledger row; the shared-drive copy is never changed.',
+      'Trash only, after a confirm. Nothing is deleted for good.', 'Select all = only rows you can see.']);
+    return html + '</div></details>';
+  }
+  function logCard() {
+    var html = foldOpen('log', false, 'card slot8', 'logCard') + '<summary><h3>Log</h3></summary><div class="fbody">', any = false;
     if (R.sweep) {
-      html += '<div id="sweepResults"><h4>Last sweep · ' + esc(stamp(R.sweep.at)) + '</h4>' + (R.sweep.cancelled ? '<p class="res ok">Cancelled. Nothing moved.</p>' :
-        '<p class="res ' + (R.sweep.failed ? 'bad' : 'ok') + '">Moved ' + num(R.sweep.moved) + ' to the bin. Skipped ' + num(R.sweep.skipped) + '. UNSURE ' + num(R.sweep.unsure) + '. Failed ' + num(R.sweep.failed) + '.</p>' +
+      any = true;
+      html += '<div id="sweepResults"><h4>Last bin · ' + esc(stamp(R.sweep.at)) + '</h4>' + (R.sweep.cancelled ? '<p class="res ok">Cancelled. Nothing moved.</p>' :
+        '<p class="res ' + (R.sweep.failed ? 'bad' : 'ok') + '">Moved ' + num(R.sweep.moved) + ' to the bin. Skipped ' + num(R.sweep.skipped) + '. Empty files left ' + num(R.sweep.unsure) + '. Failed ' + num(R.sweep.failed) + '.</p>' +
         '<ul class="files">' + R.sweep.items.map(function (x) {
           return '<li><div class="fname">' + esc(x.name) + '</div><p class="res ' + (x.ok ? 'ok' : 'bad') + '">' + esc(x.text) + ' · ' + esc(x.path) + '</p></li>';
         }).join('') + '</ul>') + '</div>';
     }
-    html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
-    html += pcpBinCard();
-    // Dropbox (counts only)
+    if (P.binned) {
+      any = true;
+      html += '<div id="pcpResults"><h4>Last ' + WMD + ' bin</h4><p class="res ' + (P.binned.failed || P.binned.error ? 'bad' : 'ok') + '">' + (P.binned.cancelled ? 'Cancelled. Nothing binned.' : P.binned.error ? esc(P.binned.error) : 'Found ' + num(P.binned.found) + ', moved ' + num(P.binned.done) + ' to the bin' + (P.binned.failed ? ', ' + P.binned.failed + ' failed' : '') + (P.binned.skipped ? ', ' + P.binned.skipped + ' skipped' : '') + (P.binned.unsure ? ', ' + P.binned.unsure + ' empty files left' : '') + '.') + '</p>';
+      if (P.binned.notes && P.binned.notes.length) html += '<ul class="files">' + P.binned.notes.map(function (n) {
+        return '<li><div class="fname">' + esc(n.name) + '</div><p class="res bad">' + esc(n.text) + '</p></li>';
+      }).join('') + '</ul>';
+      html += '</div>';
+    }
+    if (P.marked) { any = true; html += '<p class="res ' + (P.marked.failed ? 'bad' : 'ok') + '" data-pcp-marked>Renamed ' + num(P.marked.done) + ' to ' + esc(PCP_PREFIX) + '…' + (P.marked.failed ? ', ' + P.marked.failed + ' failed' : '') + (P.marked.skipped ? ', ' + P.marked.skipped + ' skipped' : '') + '.</p>'; }
+    if (R.check) { any = true; html += '<p class="note" data-check-sent>' + esc(stamp(R.check.at)) + ': opened the confirm page for ' + num(R.check.n) + ' item' + (R.check.n === 1 ? '' : 's') + ' (' + (R.check.action === 'zzdelete' ? 'Approve binning' : 'Ask the AI to sort') + '). Finish there, then press Refresh.</p>'; }
+    if (!any) html += '<p class="note">Nothing done yet this visit.</p>';
+    html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', S.bin);
+    return html + '</div></details>';
+  }
+  function dropboxCard() {
     var dx = S.dbx, dd = dx.data;
-    html += foldOpen('dropbox', true, 'card slot2' + cardClass(dx), 'dropboxCard') + '<summary><h3>Dropbox: delete marked files</h3>' + stateBadge(dx, null) + '</summary><div class="fbody">';
+    var html = foldOpen('dropbox', false, 'card slot2' + cardClass(dx), 'dropboxCard') + '<summary><h3>Dropbox (being emptied)</h3>' + stateBadge(dx, null) + '</summary><div class="fbody">';
+    html += '<p class="note">Dropbox is being emptied. A Dropbox copy never counts as a safe copy.</p>';
     if (dd && dd.notConnected) html += '<p class="note">Dropbox counts are not connected yet.</p>';
     else if (dd && dd.none) html += '<p class="note">No Dropbox scan published yet. Nothing is waiting.</p>';
     else if (dx.status === 'failed') html += failNote(dx);
     else if (dd) {
-      html += '<p class="note">Waiting to delete: <strong>' + num(dd.marked_files || 0) + '</strong> files (' + num(dd.marked_gb || 0) + ' GB) named ZZ_DELETE_DROPBOX_ (Dropbox copies only).</p>' +
+      html += '<p class="note">Waiting to delete: <strong>' + num(dd.marked_files || 0) + '</strong> files (' + num(dd.marked_gb || 0) + ' GB) marked in Dropbox (Dropbox copies only).</p>' +
         '<p class="note">Duplicates found: ' + num(dd.duplicate_files || 0) + ' files, ' + num(dd.wasted_gb || 0) + ' GB wasted' +
         (dd.complete === false ? ' (scan not finished)' : '') + '. Scan ' + esc(fmtTime(dd.generated) || 'date unknown') + '.</p>';
     }
-    html += '<div class="actions"><a class="btn danger" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>Step 1: Delete marked files from DROPBOX only</span></a>' +
-      '<a class="btn danger" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener">' + icon('bin') + '<span>Step 2: Empty DROPBOX trash</span></a></div>' +
-      '<ul class="notes"><li>1: GitHub workflow 3. Empty box = dry run. Type DELETE to run.</li><li>Moves only ZZ_DELETE_DROPBOX_ files (recoverable for a while). Drive never changed.</li></ul>' +
-      '<ul class="notes"><li>2: Dropbox Deleted files. Select all, Permanently delete.</li><li>Dropbox only. Cannot be automated (personal account).</li></ul>';
-    html += sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</div></details>';
-    // Bin per shared drive: indexed, drives with items first, each folded; empty bins grouped.
-    html += foldOpen('bins', true, 'card slot2' + cardClass(p), 'binCard') + '<summary><h3>Google Drive: shared-drive bins</h3>' + stateBadge(p, d ? d.per.length : null) + '</summary><div class="fbody">';
+    html += '<div class="actions"><a class="btn" href="' + esc(DBX_JOB_URL) + '" target="_blank" rel="noopener"><span>Step 1: Delete marked files from Dropbox only</span></a>' +
+      '<a class="btn" href="' + esc(DBX_TRASH_URL) + '" target="_blank" rel="noopener"><span>Open Dropbox Deleted files (your own step)</span></a></div>' +
+      '<ul class="notes"><li>1: opens the clean-up job on GitHub. Leave the box empty for a dry run; type DELETE to run. Google Drive is never changed.</li>' +
+      '<li>2: in Dropbox Deleted files, select all, then Permanently delete. Yours to do; it cannot be automated on a personal account.</li></ul>';
+    return html + sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</div></details>';
+  }
+  function binsCard() {
+    var p = S.bin, d = p.data, html = '';
+    // Already in the bin: per shared drive, read only, folded.
+    html += foldOpen('bins', false, 'card slot2' + cardClass(p), 'binCard') + '<summary><h3>Already in the bin</h3>' + stateBadge(p, d ? d.per.length : null) + '</summary><div class="fbody">';
     html += failNote(p);
     if (d) {
       if (!d.per.length) html += '<p class="note">No shared drives found for this account.</p>';
@@ -2477,6 +2981,10 @@
     }
     html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
     return html;
+  }
+
+  function viewBin() {
+    return needsNowCard() + readyCard() + viewCheck() + notReadyCard() + binsCard() + logCard() + dropboxCard();
   }
 
   var SUBS = [
@@ -2522,7 +3030,7 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Dashboard', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
+  var VIEWS = { map: 'Dashboard', decide: 'Decide', do: 'Do', money: 'Money', minutes: 'Actions minutes', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
   // Every Drives page lights up the Drives tab.
   var TAB_OF = { drive: 'drives', readfirst: 'drives', personal: 'drives', pdrive: 'drives', usb: 'drives' };
   // Drives sub-menu: #/drives/<key> shows view <view>. The pills are the existing .subnav (as on Changes).
@@ -2560,11 +3068,12 @@
     if (parts[0] === 'drives') {
       var sub = DRIVES.filter(function (d) { return d.key === parts[1]; })[0];
       parts = parts[1] === 'readfirst' ? ['readfirst'].concat(parts.slice(2)) : sub ? [sub.view].concat(parts.slice(2)) : ['drives'].concat(parts.slice(1));
-    } else if (parts[0] !== 'map' && parts[0] !== 'bin' && parts[0] !== 'changes') parts = [];
+    } else if (['map', 'bin', 'changes', 'decide', 'do', 'money', 'minutes'].indexOf(parts[0]) < 0) parts = [];
     var view = parts[0] && VIEWS[parts[0]] ? parts[0] : null;
     var r = { view: view, sub: null, page: 1 };
     parts.slice(1).forEach(function (x) {
       if (/^p\d+$/.test(x)) r.page = parseInt(x.slice(1), 10);
+      else if (view === 'do' && NEED_GROUPS.some(function (g) { return g.key === x; })) r.group = x;
       else if (view === 'changes' && SUBS.some(function (s) { return s.key === x; })) r.sub = x;
       else if ((view === 'drive' || view === 'drives') && /^[A-Za-z0-9_-]{5,}$/.test(x)) { if (!r.driveId) r.driveId = x; else if (!r.folderId) r.folderId = x; }
     });
@@ -2578,7 +3087,7 @@
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : viewChanges(r);
+    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'decide' ? viewDecide() : r.view === 'do' ? (r.group ? viewDoGroup(r.group) : viewDo()) : r.view === 'money' ? moneyTile() : r.view === 'minutes' ? minsTile() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : viewChanges(r);
     if (signedIn && TAB_OF[r.view] === 'drives' || signedIn && r.view === 'drives') html = drivesNav(r) + drivesPurpose(r) + html;
     if (signedIn && r.view !== 'map') html = '<p><a class="btn back" href="#/map" data-back-home>← Dashboard</a></p>' + html;
     var routeKey = location.hash;
@@ -2588,12 +3097,16 @@
     $('hereTitle').textContent = VIEWS[r.view] + (r.view === 'changes' ? ' · ' + SUBS.filter(function (s) { return s.key === r.sub; })[0].label : '') +
       ((r.view === 'drive' || r.view === 'drives') && r.driveId ? ' · ' + driveName(r.driveId) : '');
     var nNeeds = needsCount();
-    document.title = (nNeeds ? '(' + nNeeds + ') ' : '') + VIEWS[r.view] + ' · Lisa Dashboard';
+    document.title = (nNeeds ? '(' + nNeeds + ') ' : '') + (r.view === 'map' ? 'Dashboard' : VIEWS[r.view] + ' · Dashboard');
     var tab = TAB_OF[r.view] || r.view;
     Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
       if (a.getAttribute('data-nav') === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
-    tabBadge('map', nNeeds, 'Dashboard');
+    tabBadge('map', nNeeds, 'Main');
+    var nDec = signedIn ? hubRows('decide') : [], nDo = signedIn ? hubRows('todo') : [];
+    tabBadge('decide', nDec.length, 'Decide');
+    tabBadge('do', nDo.length, 'Do');
+    $('n-do').classList.toggle('need', nDo.some(function (x) { return x.kind === 'late'; }));
     tabBadge('bin', S.bin.data && S.bin.data.ready ? S.bin.data.ready.length : 0, 'Bin');
     if (changed && lastView !== null) {
       el.classList.add('fade');
@@ -2622,7 +3135,7 @@
     $('refreshBtn').classList.toggle('hidden', !signedIn);
     $('signOutBtn').classList.toggle('hidden', !signedIn);
     $('signInBtn').classList.toggle('hidden', signedIn);
-    ['mainNav', 'hereBox', 'pageFoot'].forEach(function (id) { $(id).classList.toggle('hidden', !signedIn); });
+    ['mainNav', 'hereBox'].forEach(function (id) { $(id).classList.toggle('hidden', !signedIn); });
   }
 
   // ---- Banner ----
@@ -2734,8 +3247,8 @@
     else if (a === 'signout') signOut();
     else if (a === 'refresh') loadAll(false);
     else if (a === 'grantwrite') requestWrite();
-    else if (a === 'selectall') { selectAll(t.getAttribute('data-group')); render(); }
-    else if (a === 'clearpick') { clearPick(t.getAttribute('data-group')); render(); }
+    else if (a === 'selectall') { selectAll(t.getAttribute('data-group')); if (t.getAttribute('data-also')) selectAll(t.getAttribute('data-also')); render(); }
+    else if (a === 'clearpick') { clearPick(t.getAttribute('data-group')); if (t.getAttribute('data-also')) clearPick(t.getAttribute('data-also')); render(); }
     else if (a === 'showmore') {
       var listKey = t.getAttribute('data-list');
       var step = parseInt(t.getAttribute('data-step'), 10) || BIN_SHOW;
@@ -2761,7 +3274,6 @@
     else if (a === 'pcpresume') pcpScan('continue', t.getAttribute('data-slot') || 'work');
     else if (a === 'psignin') personalAuth.request();
     else if (a === 'pcpmark') pcpMark();
-    else if (a === 'pcpbin') pcpBin();
     else if (a === 'usbscan') usbScan();
     else if (a === 'usbcontinue') usbContinue();
     else if (a === 'usbstop') { U.stop = true; }
