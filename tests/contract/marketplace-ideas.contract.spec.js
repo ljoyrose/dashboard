@@ -70,6 +70,35 @@ test.describe('Ideas: the board mirror (Infinity) and what stays out', () => {
   });
 });
 
+test.describe('Ideas: the investigator result and the worked example', () => {
+  const example = () => JSON.parse(/```json\n([\s\S]*?)\n```/.exec(fs.readFileSync(path.join(__dirname, '..', '..', 'docs', 'marketplace-ideas', 'EXAMPLE-GATE0.md'), 'utf8'))[1]);
+  const fresh = () => I.newDetail(request());
+  test('the worked example is a clean result file and gives a clean Gate 0 card when merged', () => {
+    const r = I.mergeResult(fresh(), example());
+    expect(r.problems).toEqual([]); expect(r.ok).toBe(true); expect(r.rejected).toEqual([]);
+    expect(r.detail.verdict).toBe('maybe'); expect(r.detail.intake.barcode).toBe('4006381333931'); expect(r.detail.infinity_item).toBe('');
+    expect(r.detail.top3_risks).toHaveLength(3); expect(r.detail.top3_unknowns).toHaveLength(3);
+    expect(r.detail.evidence.every((e) => e.status !== 'verified' || e.source)).toBe(true);
+    expect(I.goReady(r.detail).ok).toBe(false);
+  });
+  test('the investigator cannot change the intake, the board link, kind or version', () => {
+    const res = example(); res.patch.intake = { note: 'changed' }; res.patch.infinity_item = 'https://app.startinfinity.com/x'; res.patch.kind = 'other'; res.patch.v = 9; res.patch.surprise = 1;
+    const r = I.mergeResult(fresh(), res);
+    expect(r.rejected.sort()).toEqual(['infinity_item', 'intake', 'kind', 'surprise', 'v']);
+    expect(r.detail.intake.barcode).toBe('4006381333931'); expect(r.detail.infinity_item).toBe(''); expect(r.detail.kind).toBe('idea'); expect(r.detail.v).toBe(1);
+  });
+  test('a bad result changes nothing (all or nothing)', () => {
+    const res = example(); res.patch.gate = 7;
+    const before = fresh(), r = I.mergeResult(before, res);
+    expect(r.ok).toBe(false); expect(r.detail).toBe(before); expect(codes(r.problems)).toEqual(['BAD_VALUE']);
+  });
+  test('not a result file is refused', () => { expect(I.mergeResult(fresh(), { kind: 'mkt-idea', patch: {} }).ok).toBe(false); expect(I.mergeResult(fresh(), null).ok).toBe(false); });
+  test('the saved investigator prompt keeps its key lines word for word', () => {
+    const t = fs.readFileSync(path.join(__dirname, '..', '..', 'docs', 'marketplace-ideas', 'INVESTIGATOR-PROMPT.md'), 'utf8');
+    ['ROLE: Marketplace product idea investigator for Lisa.', 'GATE 0, QUICK SCREEN (every time, then STOP with Go / Maybe / No)', 'OWN AUDIENCE AND RANGE FIT', 'A kill rule: "stop if ... by ..."', 'GATE 3, LAUNCH AND MONITOR', 'Do not buy, list, send or change anything: drafts and recommendations only.', 'End with a one-page Idea Card'].forEach((l) => expect(t).toContain(l));
+  });
+});
+
 test.describe('Ideas: the intake rules the Add idea form uses', () => {
   test('only the name is required', () => { const r = I.validateIntake({ name: 'SAMPLE x' }); expect(r.ok).toBe(true); expect(r.clean).toEqual({ name: 'SAMPLE x' }); });
   test('empty name is refused in plain words', () => { expect(I.validateIntake({ name: '  ' }).errors.name).toBe('Add a name'); });
