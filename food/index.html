@@ -300,7 +300,7 @@
       { n: g.reorder.length, name: 'Due to reorder', h: g.reorder.length + ' one-off order' + (g.reorder.length === 1 ? ' is' : 's are') + ' due a reorder', what: 'Paid over ' + g.due + ' days ago. Check each in Shopify (they may have ordered again) and draft a reminder there; nothing is sent from here.', href: '', act: 'reorder', btn: 'See who' },
       { n: g.subs < 50 ? g.oneOff : 0, name: 'Few subscriptions', h: 'Only ' + g.subs + '% of orders are subscriptions', what: g.oneOff + ' one-off order' + (g.oneOff === 1 ? '' : 's') + ' in the last 30 days. Draft a subscribe offer for Lisa to check; no discount is set from here.', href: shopAdmin('customers'), btn: 'Open Shopify customers' }
     ].filter(function (x) { return x.n > 0; }).sort(function (a, b) { return b.n - a.n; });
-    if (!gaps.length) return '<div class="card grow">' + empty('Orders are holding up', 'No fall on the 30 days before, nobody due to reorder, and most orders are subscriptions.') + '</div>';
+    if (!gaps.length) return '<div class="card grow">' + empty('Orders are holding up') + '</div>';
     var x = gaps[0];
     return '<div class="card grow"><p class="bline"><span class="dot" style="--c:var(--ljr-4)" aria-hidden="true"></span>Grow orders: ' + esc(x.name) + '</p><h2>' + esc(x.h) + '</h2><p class="what">' + esc(x.what) + '</p>' +
       (x.act ? '<div class="acts"><button class="btn main" type="button" data-action="' + x.act + '">' + esc(x.btn) + '</button></div>'
@@ -315,9 +315,9 @@
       // MIN_ORDERS_MONTH on the Settings tab: blank = no tile (Lisa, 30 Oct 2026); set = red when the last 30 days are under it.
       (mo ? '<a class="tile" href="#/orders"><span class="k">Orders this month (aim ' + mo + ')</span><span class="v' + (g.last < mo ? ' red' : '') + '">' + g.last + '</span></a>' : '') + '</div>';
     h += growCard(g);
-    h += '<div class="card" id="reorder"><p class="bline"><span class="dot" style="--c:var(--ljr-6)" aria-hidden="true"></span>Reorder due (one-off orders over ' + g.due + ' days old)</p>' +
+    h += '<div class="card" id="reorder"><p class="bline"><span class="dot" style="--c:var(--ljr-6)" aria-hidden="true"></span>Reorder due (over ' + g.due + ' days old)</p>' +
       (g.reorder.length ? g.reorder.map(function (o) { return '<div class="row"><div class="txt"><div><b>Order #' + esc(o.order_no) + '</b></div><div class="m">' + esc(daysAgo(o.placed_at)) + (num(o.customer_orders) ? ' · customer\'s ' + esc(nth(num(o.customer_orders))) + ' order' : '') + '</div><div class="links">' + shopLink(o) + '</div></div></div>'; }).join('')
-        : empty('Nobody due to reorder', 'One-off orders show here ' + g.due + ' days after they were paid (REORDER_DUE_DAYS on the Settings tab).')) + '</div></section>';
+        : empty('Nobody due to reorder')) + '</div></section>';
     return h;
   }
   // A friendly empty state: a small green-ring tick, a plain line, and what happens next.
@@ -357,7 +357,7 @@
     if (!w.length) {
       // Nothing to answer, but an order GA never got still comes first.
       if (late) return h + '<div class="card next"><p class="bline"><span class="dot" style="--c:var(--ljr-2)" aria-hidden="true"></span>Next: Order check</p><h2>' + late + ' order' + (late > 1 ? 's are' : ' is') + ' not at GA</h2><p class="what">Check the GA Portal and enter ' + (late > 1 ? 'them' : 'it') + ' by hand if needed.</p><div class="acts"><a class="btn main" href="#/orders?check">Open the orders</a></div></div>';
-      return h + '<div class="card">' + empty('Nothing needs you', 'Nothing from GA needs you. The engine checks GA\'s emails every 15 minutes.') + '</div>';
+      return h + '<div class="card">' + empty('Nothing needs you') + '</div>';
     }
     h += cardHtml(w[0], true);
     if (w.length > 1) h += showAll ? w.slice(1).map(function (r) { return cardHtml(r); }).join('') : '<button class="more" type="button" data-action="all">Show ' + (w.length - 1) + ' more</button>';
@@ -374,7 +374,7 @@
       return ofilter === 'all' || (ofilter === 'check' && CHECK[o.check] && CHECK[o.check][1]) || (ofilter === 'ga' && /^(Waiting for GA|Not at GA)$/.test(o.check))
         || (ofilter === 'sub' && /^sub/i.test(o.order_type)) || (ofilter === 'low' && o.profit_est !== '' && num(o.profit_est) < min); });
     var chips = '<div class="house-frow">' + DashKit.filterButton('ofilters', ofilter !== 'all' ? 1 : 0) + '<div class="chips house-filters" id="ofilters" role="group" aria-label="Which orders">' + OFILTERS.map(function (f) { return '<button class="chip" type="button" data-ofilter="' + f[0] + '" aria-pressed="' + (ofilter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
-    var h = '<p class="needs">Orders</p><p class="hint">From GA\'s shipping reports and invoices. 📦 Track opens DPD; 🛍 Shopify opens the order (customer details stay in Shopify). Each order is checked: paid in the shop → shipped by GA → same items on GA\'s invoice.</p>' + chips;
+    var h = '<p class="needs">Orders</p>' + chips;
     var none = { all: ['No orders yet', 'They appear after GA\'s next shipping report or invoice.'], check: ['No orders need a look', 'Every order matches what GA shipped.'], ga: ['Every order is at GA', 'Nothing waiting to reach GA.'],
       sub: ['No subscription orders', ''], low: ['No low-profit orders', 'Every order made at least £' + min + '.'] }[ofilter];
     if (!list.length) return h + '<div class="card">' + empty(none[0], none[1]) + '</div>';
@@ -385,7 +385,7 @@
         checkBadge(o) + (links ? '<div class="links">' + links + '</div>' : '') + '</div>' +
         '<div class="amt ' + (p === '' ? '' : p < min ? 'red' : 'good') + '">' + (p === '' ? '' : money(p)) + '</div></div>'; }).join('') + '</div>';
     if (list.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
-    return h + '<p class="hint">Profit is ex VAT, after GA food, delivery, card fee and running cost: from the Shopify price paid where known, otherwise estimated at shop prices.</p>';
+    return h + '<p class="hint">Profit is ex VAT, after all costs.</p>';
   }
   function pageInvoices() {
     var inv = data.invoices.slice().sort(function (a, b) { return String(b.invoice_date).localeCompare(String(a.invoice_date)); });
@@ -401,10 +401,9 @@
       '<div class="tile"><span class="k">VAT to reclaim (' + esc(fy || 'year') + ')</span><span class="v">' + money(sum(thisFy, 'vat')) + '</span></div>' +
       (dd ? '<div class="tile"><span class="k">Last GA direct debit ' + esc(ukDate(dd.date)) + '</span><span class="v">' + money(dd.amount) + '</span></div>'
         : '<div class="tile"><span class="k">Paid by</span><span class="v">' + esc(setting('GA_PAYMENT') || 'Not set') + '</span></div>') +
-      (dd ? '<div class="tile"><span class="k">Paid to GA since ' + esc(ukDate(fyStart)) + ' (bank)</span><span class="v">' + money(paidFy) + '</span></div>' : '') + '</div>' +
-      (dd || setting('BANK_FOLDER_ID') || setting('BANK_LEDGER_FILE_ID') ? '' : '<p class="hint">Paid dates fill in once the bank is linked (BANK_FOLDER_ID on the Settings tab).</p>');
+      (dd ? '<div class="tile"><span class="k">Paid to GA since ' + esc(ukDate(fyStart)) + ' (bank)</span><span class="v">' + money(paidFy) + '</span></div>' : '') + '</div>';
     h += vatInvoices() + '<p class="grp">GA invoices</p>';
-    if (!inv.length) return h + '<div class="card">' + empty('No GA invoices yet', 'They are saved here when the next one arrives by email.') + '</div>';
+    if (!inv.length) return h + '<div class="card">' + empty('No GA invoices yet') + '</div>';
     var shown = showAll ? inv : inv.slice(0, 30);
     h += '<div class="card">' + shown.map(function (i) {
       var open1 = !i.paid_date && i.due_date;   // unpaid: the due date is a pill whose ring shows how close it is
@@ -412,7 +411,7 @@
         (open1 ? '<div class="badges"><span class="datep' + dateCls(i.due_date) + '">due ' + esc(ukDate(i.due_date)) + '</span></div>' : '') + '</div>' +
         '<div class="amt">' + money(i.total) + '</div>' + (i.file_id ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(i.file_id) + '/view" target="_blank" rel="noopener" aria-label="Open ' + esc(i.si_no) + '">PDF</a>' : '') + '</div>'; }).join('') + '</div>';
     if (inv.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + inv.length + '</button>';
-    return h + '<p class="hint">Saved in Drive by financial year. Paid dates come later from the bank (Money Hub).</p>';
+    return h;
   }
   // VAT invoices the food engine made for buyers ticked VAT-INVOICE in Shopify (Orders tab vat_inv_* columns: numbers only, no buyer details).
   // Commercial invoices (inv_doc COMMERCIAL, orders sent outside the UK) share the columns: saved = waiting for GA's SI number, drafted = draft to GA in Gmail.
@@ -424,7 +423,7 @@
       .sort(function (a, b) { return num(b.order_no) - num(a.order_no); });
     var waiting = rows.filter(function (o) { return /^(dry-run|held)/.test(o.vat_inv_status); }).length, on = setting('VAT_INVOICES') === 'ON';
     var h = '<p class="grp">VAT invoices' + (waiting ? '<span class="sr"> · </span><span class="cnt' + wide(waiting) + '" title="Ticked orders waiting">' + waiting + '</span>' : '') + '</p>';
-    if (!rows.length) return h + '<div class="card">' + empty(on ? 'No VAT invoices yet' : 'VAT invoices are off', on ? 'Made when a buyer tagged VAT-INVOICE in Shopify has paid in full.' : 'Turn on with VAT_INVOICES on the Settings tab of RR_FOOD.') + '</div>';
+    if (!rows.length) return h + '<div class="card">' + empty(on ? 'No VAT invoices yet' : 'VAT invoices are off', on ? '' : 'Turn on: VAT_INVOICES in Settings.') + '</div>';
     return h + '<div class="card">' + rows.slice(0, 10).map(function (o) {
       var st = String(o.vat_inv_status), ci = o.inv_doc === 'COMMERCIAL', c = (ci && CI_CHIP[st]) || VAT_CHIP[st.split(':')[0]] || [st, ''];
       return '<div class="row"><div class="txt"><b>' + esc(o.vat_inv_no || 'Not made yet') + '</b> · order #' + esc(o.order_no) + '<div class="m">' + esc(st.indexOf(':') > 0 ? (VAT_HELD[st.slice(st.indexOf(':') + 1).trim()] || st.slice(st.indexOf(':') + 1).trim()) : ukDate(o.vat_inv_at)) + '</div>' +
@@ -448,7 +447,7 @@
   }
   function pageProducts() {
     var list = data.products.filter(inFilter).filter(function (p) { return !q || [p.ddf_name, p.recipe, p.tla, p.full_ga_code, p.range].join(' ').toLowerCase().indexOf(q) >= 0; });
-    var h = '<p class="needs">Products</p><p class="hint">Every GA recipe and size, by range: GA cost, your price and profit for one bag in one box. A rose ring on a badge shows why one can\'t be DDF.</p>' +
+    var h = '<p class="needs">Products</p>' +
       '<div class="frow"><input class="txtin" type="search" placeholder="Find a recipe, name or code" aria-label="Find a product" data-find value="' + esc(q) + '">' + DashKit.filterButton('pfilters', filter !== FILTERS[0][0] ? 1 : 0) +
       '<div class="chips house-filters" id="pfilters" role="group" aria-label="Which products">' + FILTERS.map(function (f) { return '<button class="chip" type="button" data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
     if (!list.length) return h + '<div class="card">' + empty(q ? 'No products match "' + q + '"' : 'No products here', 'Try All, or a shorter search.') + '</div>';
@@ -472,7 +471,7 @@
       ['XML orders go to', 'GA_ORDER_TO', 'mail'], ['XML contact', 'GA_XML_CONTACT', 'mail'], ['We send XML orders from', 'GA_ORDER_FROM', 'mail'],
       ['Shipping reports come from', 'GA_SHIP_FROM', 'mail'], ['Invoices come from', 'GA_INVOICE_FROM', 'mail'], ['Commercial invoices (Jersey) to', 'COMMERCIAL_INVOICE_TO', 'mail'],
       ['Minimum profit per order', 'MIN_PROFIT', 'money'], ['Subscription discount', 'SUB_DISCOUNT', 'money']];
-    var h = '<p class="needs">GA</p><p class="hint">GA Pet Food Partners: makes and ships the food. Change these on the Settings tab of RR_FOOD.</p><div class="card">';
+    var h = '<p class="needs">GA</p><div class="card">';
     rows.forEach(function (r) { var v = setting(r[1]); if (!v) return;
       var shown = r[2] === 'link' ? '<a href="' + esc(v) + '" target="_blank" rel="noopener">' + esc(v.replace(/^https?:\/\//, '')) + '</a>' : r[2] === 'tel' ? telLink(mailLink(esc(v))) : r[2] === 'mail' ? mailLink(esc(v)) : r[2] === 'money' ? money(v) : esc(v);
       h += '<div class="row"><div class="txt"><div class="m">' + esc(r[0]) + '</div>' + shown + '</div>' + (r[2] === 'copy' ? '<button class="btn" type="button" data-copy="' + esc(v) + '">Copy</button>' : '') + '</div>'; });
@@ -482,7 +481,7 @@
       h += '<p class="grp">Order reference on the GA Portal</p><div class="card"><p class="what"><b>Customers see this reference</b>, so only the brand is readable. Type <b>BRAND-CODE-NUMBER</b>, e.g. <b>DDF-KQ-1234</b>. A plain number (5375) is a DDF Shopify order; PC-1001 is a Puppy Classroom Shopify order. Wholesale adds the partner: DDF-TB-R01-0007. A resend adds -R1.</p>' +
         kinds.map(function (k) { var list = data.codes.filter(function (c) { return c.kind === k[0]; }); if (!list.length) return '';
           return '<div class="row"><div class="txt"><div class="m">' + esc(k[1]) + '</div><div class="badges">' + list.map(function (c) { return '<span class="badge"><b>' + esc(c.code) + '</b> ' + esc(c.name) + '</span>'; }).join('') + '</div></div></div>'; }).join('') +
-        '<p class="hint">Add a brand, shop or partner on the Codes tab of RR_FOOD. An unknown code on the Portal turns into a red card.</p></div>';
+        '</div>';
     }
     return h;
   }

@@ -61,7 +61,7 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#tabs')).toBeVisible();
     await expect(page.locator('#view .needs')).toHaveText('Needs you: 2');
     await expect(page.locator('#view > .card')).toHaveCount(1);
-    await expect(page.locator('#view > .card h2')).toHaveText('Remove from other sites');
+    await expect(page.locator('#view > .card h2')).toHaveText('Remove from sites');
     await expect(page.locator('#view > .card a.btn')).toHaveText('Open on Vinted');
     await expect(page.locator('#n-do')).toHaveText('2');   // Do now = remove + post
     await expect(page.locator('#stamp')).toHaveText('TEST');
@@ -1168,7 +1168,7 @@ test.describe('Marketplace house look', () => {
     await sheets(page, []);
     await open(page);
     await expect(page.locator('#readAt')).toHaveText(/^Read \d\d:\d\d$/);
-    for (const [hash, words] of [['#/me', 'Nothing needs you'], ['#/do', 'Nothing waiting'], ['#/decide', 'All decided'], ['#/reply', 'No one is waiting for a reply']]) {
+    for (const [hash, words] of [['#/me', 'Nothing needs you'], ['#/do', 'Nothing waiting'], ['#/decide', 'All decided'], ['#/reply', 'No one waiting']]) {
       await page.evaluate((x) => { location.hash = x; }, hash);
       const e = page.locator('#view .card.empty');
       await expect(e.locator('h2')).toHaveText(words);

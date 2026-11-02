@@ -169,7 +169,6 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     await expect(v).toContainText('TESTPERS');
     await expect(v).toContainText('£12,000'); // BALANCES.csv, the account with a balance
     await expect(v).toContainText('£3,000');
-    await expect(v).toContainText('No grand total');
     await expect(v).not.toContainText('OLDCO'); // retired in MON-SUBJECTS.csv
     await expect(v).not.toContainText('£15,000'); // never summed across entities
   });
@@ -212,7 +211,7 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     const ready = page.locator('section', { hasText: 'Ready now' }).first();
     await expect(ready).toContainText('Sample task ready now');
     await expect(ready).not.toContainText('Sample task waiting on R001');
-    await expect(page.locator('section', { hasText: 'Waiting on something first' }).first()).toContainText('Sample task waiting on R001');
+    await expect(page.locator('section', { hasText: 'Blocked' }).first()).toContainText('Sample task waiting on R001');
   });
 
   test('Accountant: open and answered questions are separated', async ({ page }) => {
@@ -238,10 +237,11 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     await expect(v).toContainText('Statements to drop');
   });
 
-  test('every panel names its source file and when it was read', async ({ page }) => {
+  test('every panel says when it was read (no "From file" footer: Lisa, 2 Nov)', async ({ page }) => {
     await page.goto('money/#/dates');
     await signIn(page);
-    await expect(page.locator('#view .source')).toContainText('MON-DATES.csv');
+    await expect(page.locator('#view .source')).toContainText(/data as of \d/);
+    await expect(page.locator('#view .source')).not.toContainText(/From /);
     await expect(page.locator('#view .source')).toContainText(/read \d\d:\d\d/);
   });
 });

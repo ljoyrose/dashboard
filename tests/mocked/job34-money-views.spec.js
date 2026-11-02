@@ -51,7 +51,7 @@ test.describe('Money Hub: what each To-do tab holds', () => {
     await expect(page.locator('#view')).not.toContainText('Sample watched check');
     await hashTo(page, 'todo/watch');
     await expect(page.locator('.subnav a[href="#/todo/watch"]')).toHaveAttribute('aria-current', 'page');
-    await expect(page.locator('#view h3', { hasText: 'Conditions and checks being watched' })).toBeVisible();
+    await expect(page.locator('#view h3', { hasText: 'Watching' })).toBeVisible();
     await expect(page.locator('#view')).toContainText('Sample watched check');
     await expect(page.locator('#view')).not.toContainText('Sample ready task 01');
     await hashTo(page, 'todo/closed');

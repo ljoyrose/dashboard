@@ -511,17 +511,13 @@
   // The front door: the Idea Form (AF-ENGINE writes the card and the ClickUp task, even with the factory OFF).
   var FORM = FC.ideaFormUrl || '';
   function newIdea() { return '<a class="plus" href="#/new" aria-label="New idea"><i class="ti ti-plus"></i></a>'; }
-  var ROOM_DO = { reception: 'New ideas. You say Yes at Screen.', research: 'Grok researches. You judge Merit, then Lock the features.',
-    rig: 'Schema and data set up (Claude + Grok). No-stamp gates.', reactor: 'Prompts in OverSkill: you send, Happy Hour each time. Costs credits.',
-    runway: 'Launch checks. You say go live.', radar: 'Live. Checked every day.', rescue: 'Something broke. Fix, then back to Radar.',
-    recovery: 'On hold or killed.', recycle: 'Retired.' };
   function vRoom(key) {
     var r = ROOMS.filter(function (x) { return x.key === key; })[0];
     if (!r) return '<div class="card">Not found. <a href="#/rooms">Rooms</a></div>';
     var inRoom = apps().filter(function (t) { return r.st.indexOf(String(t.status).toLowerCase()) >= 0; });
     var ids = inRoom.map(function (t) { return t.id; });
     var asks = decisions().filter(function (d) { return ids.some(function (id) { return String(d.desc).indexOf('GATE: ' + id + ' ') >= 0; }); });
-    return '<div class="card"><div class="hero" style="--c:' + col(r.slot) + '"><div><h2><span class="dot" aria-hidden="true"></span>' + esc(r.name) + (r.paid ? ' ' + ic('coin') : '') + ' ' + cnt(inRoom.length) + '</h2><p>' + esc(ROOM_DO[key] || '') + '</p></div></div>' +
+    return '<div class="card"><div class="hero" style="--c:' + col(r.slot) + '"><div><h2><span class="dot" aria-hidden="true"></span>' + esc(r.name) + (r.paid ? ' ' + ic('coin') : '') + ' ' + cnt(inRoom.length) + '</h2></div></div>' +
       '<p class="muted">' + esc(r.st.join(' · ')) + '</p>' + (key === 'reception' ? '<p>' + newIdea() + '</p>' : '') +
       '<div class="pills">' + (inRoom.length ? inRoom.map(chipOf).join('') : '<p class="empty">No apps in this room right now.</p>') + '</div>' +
       (asks.length ? '<p><a class="btn" href="#/decide">' + ic('stamp') + asks.length + ' to decide here</a></p>' : '') +

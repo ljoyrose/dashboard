@@ -335,7 +335,7 @@ var CLIENT_ID=window.DASH_CONFIG.clientId;
 var SCOPE=window.DASH_CONFIG.scopes.read;
 var DRIVE=window.DASH_CONFIG.urls.files;
 var TOKEN=null, TOKEN_EXP=0;
-var SAVE_OFF='Saving off for now. Round, cabin access and flags are read-only. Nothing written to Drive or kept in this browser.';
+var SAVE_OFF='Saving off. Read-only.';
 LOAD.state='signin'; DBERR=SAVE_OFF;
 function DriveErr(status,msg){ var e=new Error(msg); e.status=status;
   e.code=status===429?DashKit.BUSY_TEXT:status===401?'Sign-in expired':status===403?('Google refused access'+(msg?' ('+msg+')':'')):status===404?'Folder not found, or this account cannot see it':('Drive error '+status+(msg?' ('+msg+')':''));
@@ -895,9 +895,9 @@ function summaryStrip(){
 function nextCard(){
  var x=needsToday()[0];
  if(!x) return '<section class="mcard nextc" id="nextCard"><div class="bline">Next</div><p class="okempty">Nothing needs you</p>'
-  +'<p class="sub" style="margin-top:8px">Checks pass. Nothing is waiting on you.</p><button type="button" class="btn" data-go="today">Open Today</button></section>';
+  +'<p class="sub" style="margin-top:8px">Nothing waiting.</p><button type="button" class="btn" data-go="today">Today</button></section>';
  return '<section class="mcard nextc" id="nextCard"><div class="bline">Next</div><div class="t">'+esc(x.title)+'</div>'
-  +'<p class="sub">'+esc(x.sub||'')+(x.date?' · '+esc(dmy(x.date)):'')+'</p>'+goBtn(x,'Open '+label(x.go))+'</section>';
+  +'<p class="sub">'+esc(x.sub||'')+(x.date?' · '+esc(dmy(x.date)):'')+'</p>'+goBtn(x,label(x.go))+'</section>';
 }
 function needsCard(){
  var n=needsToday();
@@ -912,11 +912,11 @@ function onSiteCard(){
  var c=counts();
  var row=function(t,v,s){ return '<div class="mrow"><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
  return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
-  +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><span class="big">'+c.here.length+'</span><span class="mut">dogs on the premises today</span></div>'
-  +row('Adults',c.adults.length,'6 months and over')+row('Under 6 months',c.pups.length,'')
+  +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><span class="big">'+c.here.length+'</span></div>'
+  +row('Adults',c.adults.length,'')+row('Under 6 months',c.pups.length,'')
   +row('Breeding bitches in law',c.bitches.length,'female, entire, 6 months and over')+row('Stud males',c.studs.length,'')
-  +row('Off site',c.offsite.length,'owned by family, still tracked')
-  +'<div class="mfoot"><span class="mut">'+CD.dogs.length+' records and '+CD.counts.weight+' weighings on file in total, archive, not today.</span><button type="button" class="btn" data-go="dogs">Open Dogs</button></div></section>';
+  +row('Off site',c.offsite.length,'')
+  +'<div class="mfoot"><span class="mut"></span><button type="button" class="btn" data-go="dogs">Dogs</button></div></section>';
 }
 /* kit: animal (Litters card: pregnancies from the mating rows, and litters born in the last 12 weeks) */
 function littersCard(){
@@ -931,7 +931,7 @@ function littersCard(){
    return '<div class="mrow"><span class="t">'+esc(l.pairing||((nameOf(l.dam_subject_id)||'?')+' × '+(nameOf(l.sire_subject_id)||'?')))
     +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
  if(!n) h+='<p class="okempty">No litters on the go</p>';
- return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span><button type="button" class="btn" data-go="litters">Open Litters</button></div></section>';
+ return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span><button type="button" class="btn" data-go="litters">Litters</button></div></section>';
 }
 /* foundation: readings against a rule band (temperature per place, per round slot) */
 function tempsCard(){
@@ -941,10 +941,10 @@ function tempsCard(){
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
  var row=function(t,v,s,done){ return '<div class="mrow"><span class="ic'+(done?' ok':'')+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
  return '<section class="mcard" id="tempsCard" style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
-  +row('Morning readings',am+' of '+N,'cabins with a reading',N&&am===N)+row('Evening readings',pm+' of '+N,'cabins with a reading',N&&pm===N)
+  +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
   +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||out.kind||''),false)
-       :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No outdoor reading on file for today</small></span></div>')
-  +'<div class="mfoot"><span class="mut">'+(DB?'Kept as typed, to two decimal places.':'Saving is off, so readings are not kept yet.')+'</span><button type="button" class="btn" data-go="round">Open The round</button></div></section>';
+       :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
+  +'<div class="mfoot"><span class="mut">'+(DB?'':'Saving off.')+'</span><button type="button" class="btn" data-go="round">The round</button></div></section>';
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 function checksCard(){
@@ -1004,7 +1004,7 @@ function pageToday(){
   +'<p style="margin-bottom:0">'+(gap>0?'<b>'+gap+' retired-but-entire bitches still count in law.</b> Only spaying or rehoming moves that number.'
    :(gap<0?'<b>'+Math.abs(gap)+' in your list fail the statutory test.</b>'
    :'They part the moment a bitch is retired and kept entire. Both are shown; never reconcile them into one figure.'))+'</p></div>'
- +'<div class="mut">Tap any number to see the dogs behind it. If one is wrong, tap the dog and flag it \u2014 I pick the flags up and correct the tables.</div>';
+ +'';
  return h;
 }
 /* foundation: checklist instance for today's round. Each line is a check on the round's places (✓ done / ✗ not yet),
@@ -1026,7 +1026,7 @@ function todayChecklist(date,unplacedN){
  return '<section class="mcard" id="todayChecklist" style="--hc:var(--ljr-4-icon);margin-bottom:12px"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Today checklist<span class="mut" style="margin-left:auto;font-weight:400">'+done+' of '+L.length+' done</span></h3>'
   +L.map(function(x){ return '<div class="mrow ckrow"><span class="mk'+(x[0]?'':' bad')+'" aria-hidden="true">'+(x[0]?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(x[1])+'<span class="sr">'+(x[0]?' done':' not done')+'</span><small>'+esc(x[2])+'</small></span></div>'; }).join('')
-  +'<div class="mfoot"><span class="mut">'+(DB?'From the round.':'Saving is off, so the round shows the tables, not today’s ticks.')+'</span><button type="button" class="btn" data-go="round">Open The round</button></div></section>';
+  +'<div class="mfoot"><span class="mut">'+(DB?'':'Saving off.')+'</span><button type="button" class="btn" data-go="round">The round</button></div></section>';
 }
 // A tile that opens another section (e.g. the temperature tile opens The round, where temperatures are entered).
 function tileGo(c,n,k,s,to){
@@ -1269,7 +1269,7 @@ function pageAreas(){
  var order=Object.keys(fam).sort(function(a,b){return famSort(a)-famSort(b);});
  var set=CD.areas.filter(function(a){return accessOf(a.id);}).length;
  var both=CD.areas.filter(function(a){return modesOf(a).length===2;}).length;
- var h='<h2>Areas</h2><p class="sub">One card per cabin, in walk order.</p>'
+ var h='<h2>Areas</h2>'
  +'<div class="tiles">'+tile('b4',CD.areas.length,'cabins','BLD-area.csv')
  +tile('b6',CD.areas.filter(function(a){return a.m2ok==='NO';}).length,'m\u00b2 unconfirmed','two figures were on record for one room')
  +tile(set===CD.areas.length?'b5':'b2',set,'have a mode chosen','of '+CD.areas.length)
@@ -1380,7 +1380,7 @@ function pageVet(){
  var here=CD.vetlink.filter(function(l){ var d=byId[l.subject_id]; if(!d || d.vetRec!==l) return false;
    var c=statusOf(d).code; return c!=='CL' && c!=='DE'; });
  var hidden=CD.vetlink.length-here.length;
- var h='<h2>Vet link</h2><p class="sub">Chip → Animana patient ID → weight history. The chip is the join.</p>'
+ var h='<h2>Vet link</h2>'
  +'<div class="tiles">'+tile('b5',here.length,'active dogs linked','collected and deceased excluded')+tile('b0',hidden,'linked but not here','still in the map file')
  +tile('b6',CD.counts.weight,'weighings','BLD-weight.csv')
  +tile('b4',here.filter(function(l){return (byId[l.subject_id].weights||[]).length;}).length,'of these have weights','')+'</div>'
@@ -1399,7 +1399,7 @@ function flag(iso){ iso=(iso||'').toUpperCase();
 function pageBuyers(){
  var live=CD.assoc.filter(function(a){return a.status!=='DEFUNCT';});
  var cob=live.filter(function(a){return a.recognises_cobberdog==='true';});
- var h='<h2>Assocs</h2><p class="sub">Who could take the lines on. Associations first.</p>'
+ var h='<h2>Assocs</h2>'
  +'<div class="tiles">'+tile('b6',CD.prospects.length,'prospects logged','BLD-prospect.csv')
  +tile('b5',live.length,'live associations','BLD-association.csv')
  +tile('b2',cob.length,'recognise the Cobberdog','of '+live.length)
@@ -1528,7 +1528,7 @@ function pageRound(){
  var placed={}; Object.keys(ROUND).forEach(function(k){ if(k.indexOf(date+'__')===0)
    (ROUND[k].subjects||[]).forEach(function(sid){ placed[sid]=ROUND[k].areaId; }); });
  var unplaced=dogs.filter(function(d){ return !placed[d.id]; });
- var h='<h2>The round</h2><p class="sub">Cabins in order: who is in, how it is run, temperatures.</p>'
+ var h='<h2>The round</h2>'
  +'<div class="filt"><label class="mut" for="rdate">date</label><input id="rdate" type="date" value="'+date+'">'
  +'<span class="mut" id="rstat">'+(DB?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'read-only \u2014 saving is off for now')+'</span></div>';
  if(!DB) h+='<div class="arrow">'+arrives('reading')+'</div>';   /* foundation: kept readings, not held yet */
