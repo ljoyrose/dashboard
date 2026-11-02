@@ -588,8 +588,8 @@
   .needsline { font-size: var(--fs-figure); font-weight: 600; }
   .hsplit { display: inline-flex; flex-wrap: wrap; gap: 8px; }
   .hsplit a.cnt, .nextcard a.more { text-decoration: none; color: var(--ink); }
-  .nextcard a.more { display: inline-flex; align-items: center; min-height: 36px; text-decoration: underline; text-underline-offset: 2px; }
-  @media (max-width: 600px) { .nextcard a.more { min-height: 44px; } }
+  .nextcard .actions a.more { flex: 0 0 auto; display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; border: 0; background: transparent; box-shadow: none; text-decoration: underline; text-underline-offset: 2px; }
+  @media (max-width: 600px) { .nextcard .actions a.more { min-height: 44px; } }
   @media (hover: hover) { .hsplit a.cnt:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
     .hsplit a.cnt.k-risk:hover { outline-color: var(--ljr-2); background: var(--ljr-2-tint); } }
   .hsplit a.cnt:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

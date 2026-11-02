@@ -311,6 +311,8 @@ test.describe('Home: house look', () => {
       const more = next.locator('a.more');
       await expect(more).toHaveText('+' + (total - 1) + ' more');
       await expect(more).toHaveAttribute('href', '#/do');
+      const mb = await more.evaluate((e) => { const c = getComputedStyle(e); return [c.borderTopWidth, c.textDecorationLine]; });
+      expect(mb, '+N more is a plain text link, not a box').toEqual(['0px', 'underline']);
     }
     await expect(next).not.toContainText('in Needs you, below');
     // Each pill opens Do showing exactly the rows it counted.
