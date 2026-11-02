@@ -52,9 +52,6 @@
   /* Header: the only fixed element (desktop only). */
   header { background: var(--surface); border-bottom: 1px solid var(--line); }
   @media (min-width: 700px) { header { position: sticky; top: 0; z-index: 2; } }
-  .top { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding-top: 12px; padding-bottom: 8px; text-align: left; }
-  .top h1 { font-size: 18px; font-weight: 600; margin: 0; flex: 1 1 auto; }
-  .readstamp { color: var(--muted); font-size: 14px; }
   .btn { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 12px; border-radius: 12px;
          border: 1px solid var(--line); background: var(--surface); cursor: pointer; font-size: 14px; text-decoration: none; }
   .btn:hover { border-color: var(--muted); }
@@ -346,9 +343,6 @@
   .okring { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: 1px solid var(--ljr-5); background: var(--ljr-5-tint); color: var(--ink); font-size: 15px; font-weight: 600; }
   /* Frame: dark top bar and dark bottom tab bar (never black); the bottom bar one step lighter so both read the same. */
   header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
-  .top { padding-top: 12px; padding-bottom: 12px; }
-  .top h1 { font-size: 20px; color: var(--frame-ink); }
-  .readstamp { color: var(--frame-ink); font-size: 14px; }
   header .btn, header .btn.vision { color: var(--frame-ink); background: transparent; border-color: var(--ctl); }
   @media (hover: hover) { header .btn:hover { outline-color: var(--frame-ink); border-color: var(--ctl); } }
   /* Signed out the sign-in gate hides the header box (and its dark frame), so the one Sign in button sits on the page: page colours. */
@@ -419,13 +413,15 @@
   <symbol id="i-in" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M11 8l4 4-4 4M15 12H4"/></symbol>
 </svg>
 
-<header>
-  <div class="wrap top">
+<header class="house-head">
+  <div class="wrap top house-row">
     <h1>Lisa Dashboard</h1>
-    <span id="readStamp" class="readstamp">Not read</span>
-    <button class="btn" type="button" data-search-open aria-keyshortcuts="/" title="Search (press /)"><svg class="icon" aria-hidden="true" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 L14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span>Search</span></button>
-    <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh"><svg class="icon"><use href="#i-refresh"/></svg><span>Refresh</span></button>
-    <button id="signOutBtn" class="btn hidden" type="button" data-action="signout"><svg class="icon"><use href="#i-out"/></svg><span>Sign out</span></button>
+    <span class="house-sp" aria-hidden="true"></span>
+    <span id="readStamp" class="readstamp house-read" data-house-read>Not read</span>
+    <button class="btn house-ib" type="button" data-search-open aria-keyshortcuts="/" aria-label="Search" title="Search (press /)"><svg aria-hidden="true"><use href="#hi-search"/></svg></button>
+    <button id="refreshBtn" class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap" data-house-look></span>
+    <button id="signOutBtn" class="btn house-ib hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg aria-hidden="true"><use href="#hi-logout"/></svg></button>
     <button id="signInBtn" class="btn vision" type="button" data-action="signin" disabled><svg class="icon"><use href="#i-in"/></svg><span>Loading sign-in…</span></button>
   </div>
 </header>
@@ -1034,7 +1030,7 @@
     if (loading) return;
     if (!accessToken || Date.now() > tokenExpiresAt) { handleExpired(); return; }
     loading = true;
-    var b = $('refreshBtn'); b.disabled = true; b.querySelector('span').textContent = 'Reading…';
+    var b = $('refreshBtn'); b.disabled = true;
     clearBanner();
     if (!timed) { F = {}; S.bin = blank(); S.check = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
     var since = new Date(Date.now() - DAY).toISOString();
@@ -1062,7 +1058,7 @@
       window.MoneyCore ? run('money', window.MoneyCore.loadAll(function () { return accessToken; })) : Promise.resolve()
     ]).then(function () {
       loading = false;
-      b.disabled = false; b.querySelector('span').textContent = 'Refresh';
+      b.disabled = false;
       var expired = ['readfirst', 'drive', 'cf'].some(function (k) { return S[k].status === 'failed' && friendlyError(S[k].error).expired; });
       if (expired) handleExpired();
       render();

@@ -49,17 +49,12 @@
 
   /* Frame: dark top bar (never black). Buttons on it are outlined in the frame's own light line. */
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
-  .top { display: flex; gap: 8px 12px; align-items: center; flex-wrap: wrap; padding-top: 12px; padding-bottom: 12px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
-  .top h1 a { color: var(--frame-ink); text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
-  .top h1 .dot { --c: var(--ljr-4); width: 10px; height: 10px; }
+  .top h1 .dot { --c: var(--ljr-4); }
   .stamp { font-size: 13px; font-weight: 600; color: var(--frame-ink); border: 1px solid var(--frame-line); border-radius: var(--radius); height: 24px; padding: 0 8px; display: inline-flex; align-items: center; }
   .stamp:empty { display: none; }
   header .btn { background: transparent; color: var(--frame-ink); border-color: var(--frame-line); }
-  #backHome { min-height: 44px; }   /* the shared Dashboard button rule: 44px on every page */
-  /* Signed out (auth.js hides the page): the dark bar stays, so Sign in and Dashboard keep their frame, both on the right. */
+  /* Signed out (auth.js hides the page): the dark bar stays, so Sign in and Dashboard keep their frame. */
   html.dash-locked header { visibility: visible; }
-  html.dash-locked .top > #signInBtn { margin-left: auto; }
 
   /* Everything you press: the same clear 1px line (--ctl), 12px corners, 36px on a desktop / 44px on a phone, 14px 600. */
   .btn, button.pill, a.pill, .fbtn, .ch, .more, .undo, .copy, .tick, .stat, label.date, a.chip, a.need, details.arch > summary, .fdet > summary {
@@ -111,7 +106,7 @@
   a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
   /* !important: focus always wins over the 1px hover / selected line, so the keyboard ring is never lost. */
   :focus-visible, label.date:has(input:focus-visible) { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
-  header :focus-visible, nav.tabs a:focus-visible { outline-color: var(--frame-ink) !important; }
+  header :focus-visible:not(.house-menu *), nav.tabs a:focus-visible { outline-color: var(--frame-ink) !important; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ink); }
   .sbox:focus-within { border-color: var(--ink); }
 
@@ -372,15 +367,17 @@
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M4 12l16-8-6 16-2-6Z"/></symbol>
   <symbol id="i-stamp" viewBox="0 0 24 24"><path d="M9 4h6v6l3 3v3H6v-3l3-3Z"/><path d="M5 20h14"/></symbol>
 </svg>
-<header>
-  <div class="top wrap">
+<header class="house-head">
+  <div class="top wrap house-row">
+    <a id="backHome" class="btn back house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
     <h1><a href="#/rooms"><span class="dot" aria-hidden="true"></span>Factory</a></h1>
-    <button id="appPick" class="btn hidden" type="button" data-action="apppick" aria-label="Apps" aria-expanded="false"><i class="ti ti-apps"></i></button>
+    <span class="house-sp" aria-hidden="true"></span>
     <span id="stamp" class="stamp"></span>
-    <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
-    <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
+    <button id="appPick" class="btn house-ib hidden" type="button" data-action="apppick" aria-label="Apps" title="Apps" aria-expanded="false"><svg aria-hidden="true"><use href="#hi-apps"/></svg></button>
+    <button id="refreshBtn" class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap" data-house-look></span>
+    <button id="signOutBtn" class="btn house-ib hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg aria-hidden="true"><use href="#hi-logout"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
-    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
   </div>
 </header>
 <nav class="tabs house-tabs" aria-label="Sections">

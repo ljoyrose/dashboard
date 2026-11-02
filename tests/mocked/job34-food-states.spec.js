@@ -14,12 +14,15 @@ async function signIn(page) {
 test.describe('GA Hub (JOB 34)', () => {
   test('Sign out in the header: back to the sign-in card, tabs and Refresh hidden, the button says Sign in again', async ({ page }) => {
     await HUBS.food.open(page);
-    await expect(page.locator('#signin')).toHaveText('Sign out');
+    // Signed in, the one header button is the Sign out icon: named for screen readers, no words on screen (Lisa's pick A).
+    await expect(page.locator('#signin')).toHaveAccessibleName('Sign out');
+    await expect(page.locator('#signin')).toHaveText('');
     await page.locator('#signin').click();
     await expect(page.locator('#view h2')).toHaveText('Sign in to see the GA Hub');
     await expect(page.locator('#tabs')).toBeHidden();
     await expect(page.locator('#refresh')).toBeHidden();
     await expect(page.locator('#signin')).toHaveText('Sign in');
+    await expect(page.locator('#signin')).toHaveAccessibleName('Sign in');
     await expect(page.locator('#n-home')).toHaveText('');
   });
 
@@ -162,11 +165,11 @@ test.describe('GA Hub (JOB 34)', () => {
     }
   });
 
-  test('keyboard: Tab reaches Refresh, Sign out, ← Dashboard and all five tabs', async ({ page }) => {
+  test('keyboard: Tab reaches Dashboard, Refresh, Look, Sign out and all five tabs', async ({ page }) => {
     await HUBS.food.open(page);
     await page.locator('body').click({ position: { x: 1, y: 1 } });
     const seen = await tabWalk(page, 40);
-    for (const name of ['Refresh', 'Sign out', 'Dashboard home', 'Home', 'Orders', 'Invoices', 'Products', 'GA']) {
+    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Home', 'Orders', 'Invoices', 'Products', 'GA']) {
       expect(seen.some((s) => s === name || s.startsWith(name)), `Tab reaches ${name}: ${seen.join(' | ')}`).toBe(true);
     }
   });

@@ -10,7 +10,9 @@ const { HUBS, go } = require('../support/hubs');
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (job35b-audit.spec.js). Allowed: +10%.
 // marketplace re-measured 31 Oct 2026 after Marketplace v11.10 (#221: post cards, supplier costs, New stock tab).
-const BYTES = { marketplace: 178600, money: 160500, studio: 297000, privacy: 13300 };
+const BYTES = { marketplace: 197100, money: 179700, studio: 297000, privacy: 13300 };
+// marketplace 178600 > 197100 and money 160500 > 179700 on 2 Nov 2026: the shared top bar (Lisa's pick A) adds the Look menu and the
+// one icon set to toolkit.js, which every hub loads (about 7 KB), on top of their own growth since 30-31 Oct. Measured 197089 and 179634.
 // Known axe problems kept on purpose: { 'page:view': { ruleId: places } }. Empty: all four pages are clean today.
 const KNOWN = {};
 const PAGES = [

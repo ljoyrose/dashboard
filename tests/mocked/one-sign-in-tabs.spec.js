@@ -125,19 +125,20 @@ test.describe('One sign-in for every tab', () => {
 
 test.describe('Dashboard button (every page except home)', () => {
   for (const [url, ready] of [['money/', '#signInBtn'], ['cdhub/', '#main'], ['marketplace/', '#signin'], ['studio/', '#signInBtn']]) {
-    test(`${url}: top-right "Dashboard" button is always shown, keyboard reachable, and goes home`, async ({ page }) => {
+    test(`${url}: top-left Home "Dashboard" button is always shown, keyboard reachable, and goes home`, async ({ page }) => {
       await page.goto(url);
       await expect(page.locator(ready)).toBeVisible();
       const b = page.locator('#backHome');
       await expect(b).toBeVisible(); // signed out too
-      await expect(b).toHaveAttribute('aria-label', 'Dashboard home');
-      await expect(b).toHaveText(/^← Dashboard$/);
+      await expect(b).toHaveAttribute('aria-label', 'Dashboard');
+      await expect(b).toHaveText('');   // the Home icon only (Lisa's pick A, 2 Nov)
+      await expect(b.locator('svg use')).toHaveAttribute('href', '#hi-home');
       await expect(b).toHaveAttribute('href', '../');
       const box = await b.boundingBox();
       const vw = page.viewportSize().width;
-      expect(box.y).toBeLessThan(80);
-      expect(box.x + box.width).toBeGreaterThan(vw * 0.75);
-      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.y).toBeLessThan(56);
+      expect(box.x + box.width).toBeLessThan(vw * 0.25);   // top left
+      expect(box.height).toBe(vw <= 600 ? 44 : 36);   // the house button size
       await b.focus();
       await expect(b).toBeFocused();
       await page.keyboard.press('Enter');
