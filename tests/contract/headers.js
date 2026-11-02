@@ -57,7 +57,9 @@ function readsColumn(source, col) {
 /** The page code that reads each group of files. */
 function pageSource(group) {
   const r = (f) => fs.readFileSync(path.join(REPO, f), 'utf8');
-  return group === 'money' ? r('money/core.js') + r('money/index.html') + r('index.html') : r('cdhub/index.html');
+  if (group === 'money') return r('money/core.js') + r('money/index.html') + r('index.html');
+  if (group === 'food' || group === 'marketplace' || group === 'studio') return r(group + '/index.html');
+  return r('cdhub/index.html');
 }
 
 module.exports = { readsColumn, pageSource, EXPECTED, REPO, moneyCore, headerOf, compareHeader, entryFor };

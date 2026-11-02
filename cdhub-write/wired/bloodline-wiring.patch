@@ -1,0 +1,43 @@
+--- a/index.html
++++ b/index.html
+@@ -187,6 +187,13 @@
+ </div>
+ 
+ <script src="bld-schema.js"></script>
++<link rel="stylesheet" href="screens/bld-save.css">
++<script src="client/bands.js"></script>
++<script src="client/bld-save.js"></script>
++<script src="client/occupancy.js"></script>
++<script src="client/drive-lookups.js"></script>
++<script src="screens/screens.js"></script>
++<script src="wired/bloodline-wire.js"></script>
+ <script>
+ /* ---------------- BLD hub. Hub code BLD. Base files would be BLD-*.csv. ----------------
+    STORE: collection "answers", one doc per question id. Named reader: Claude, when Lisa
+@@ -327,6 +334,9 @@
+ var STAGES=[
+  ['map','Map','Where this build is'],
+  ['dash','The dashboard','What you see when you open it'],
++ ['confirm','Where is everyone?','Daily location check. Saving is off until Lisa switches it on'],
++ ['entertemp','Enter temperatures','Staff entry. Saving is off until Lisa switches it on'],
++ ['staffin','Staff input','Roster. Owner only, every entry goes into the approvals queue'],
+  ['tablemap','The table map','every table, grouped so they fit in your head'],
+  ['relations','How the tables join up','which table points at which \u2014 derived, not typed'],
+  ['guidance','Guidance in, rules out','The white-label mechanism \u2014 and what Wales actually says'],
+@@ -1067,7 +1077,7 @@
+   return h;
+ }
+ 
+-var PAGES={relations:pageRelations,map:pageMap,planner:pagePlanner,guidance:pageGuidance,dash:pageDash,tablemap:pageTablemap,fields:pageFields,licensing:pageLicensing,juris:pageJuris,dogrecord:pageDogrecord,vet:pageVet,pipeline:pagePipeline,inspector:pageInspector,settled:pageSettled,donors:pageDonors,questions:pageQuestions,schema:pageSchema,blocked:pageBlocked,cost:pageCost};
++var PAGES={confirm:function(){return BLDWire.pageConfirm();},entertemp:function(){return BLDWire.pageTemp();},staffin:function(){return BLDWire.pageStaff();},relations:pageRelations,map:pageMap,planner:pagePlanner,guidance:pageGuidance,dash:pageDash,tablemap:pageTablemap,fields:pageFields,licensing:pageLicensing,juris:pageJuris,dogrecord:pageDogrecord,vet:pageVet,pipeline:pagePipeline,inspector:pageInspector,settled:pageSettled,donors:pageDonors,questions:pageQuestions,schema:pageSchema,blocked:pageBlocked,cost:pageCost};
+ 
+ function nextSteps(){
+   var order=STAGES.map(function(s){return s[0];});
+@@ -1091,6 +1101,7 @@
+   document.querySelectorAll('[data-prov]').forEach(function(b){ b.onclick=function(){ PFILT=b.dataset.prov; render(); }; });
+   document.querySelectorAll('[data-save]').forEach(function(b){ b.onclick=function(){ saveAnswer(b.dataset.save); }; });
+   restoreDrafts();
++  if(window.BLDWire) BLDWire.mount(CUR);
+ }
+ 
+ boot();

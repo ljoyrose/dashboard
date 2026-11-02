@@ -3,6 +3,7 @@
 // (the shared guard in tests/support/test.js does that on every test), and nothing scrolls sideways.
 // Google sign-in and Drive are pretend here too.
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 
 // Sideways scroll = the page is wider than the screen. 1px of slack for rounding.
 const noSidewaysScroll = async (page, where) => {
@@ -20,7 +21,7 @@ test.describe('Phone: Main dashboard', () => {
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
     await noSidewaysScroll(page, 'Dashboard');
     for (const [key, title] of [['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['map', 'Dashboard']]) {
-      await page.locator(`#mainNav a[data-nav="${key}"]`).click();
+      await tabClick(page, `#mainNav a[data-nav="${key}"]`);
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await noSidewaysScroll(page, title);
     }
@@ -36,7 +37,7 @@ test.describe('Phone: CD Hub', () => {
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
     await noSidewaysScroll(page, 'first section');
     for (const id of ['dogs', 'litters', 'work', 'map']) {
-      await page.locator(`#nav button[data-go="${id}"]`).click();
+      await tabClick(page, `#nav button[data-go="${id}"]`);
       await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
       await noSidewaysScroll(page, id);
     }
@@ -54,26 +55,28 @@ test.describe('Phone: CD Hub menu', () => {
 });
 
 test.describe('Phone: CD Hub house look', () => {
-  test('every section: no sideways scroll, controls 44px tall, bottom tabs in two rows on screen, header uses one More menu', async ({ page }) => {
+  test('every section: no sideways scroll, controls 44px tall, bottom tabs in one row on screen, one 56px top bar with the Home icon and Look', async ({ page }) => {
     await page.goto('cdhub/');
     await page.locator('#signinbtn').click();
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
     for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers']) {
-      await page.locator(`#nav button[data-go="${id}"]`).click();
+      await tabClick(page, `#nav button[data-go="${id}"]`);
       await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
       await noSidewaysScroll(page, id);
       const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #next button, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, id + ': controls under 44px').toEqual([]);
     }
-    const rows = await page.evaluate(() => new Set([...document.querySelectorAll('#nav button[data-go]')].map((b) => Math.round(b.getBoundingClientRect().top))).size);
-    expect(rows, 'bottom tabs: two rows').toBe(2);
-    await expect(page.locator('#moreBtn')).toBeVisible();
-    await expect(page.locator('#backHome')).toBeHidden();
+    const rows = await page.evaluate(() => new Set([...document.querySelectorAll('#nav .ht')].map((b) => Math.round(b.getBoundingClientRect().top))).size);
+    expect(rows, 'bottom tabs: one row (Lisa\'s tab picks, 2 Nov)').toBe(1);
+    expect(Math.round((await page.locator('header').boundingBox()).height), 'top bar height').toBe(56);
+    await expect(page.locator('#moreBtn')).toHaveCount(0);
+    await expect(page.locator('#backHome')).toBeVisible();
+    await expect(page.locator('#houseLookBtn')).toBeVisible();
   });
 });
 
 test.describe('Phone: Marketplace', () => {
-  test('loads, signs in, every tab works, no sideways scroll, every button 44px, tab counts in flow beside the icon', async ({ page }) => {
+  test('loads, signs in, every tab works, no sideways scroll, every button 44px, tab counts in the top-right corner', async ({ page }) => {
     const ago = new Date(Date.now() - 5 * 60000).toISOString();
     const rows = [
       ['RM|1', 'remove', 'Clothes', 'Sample jacket with a long title that wraps onto a second line on a phone screen', JSON.stringify({ platform: 'Vinted', price: '£18.00', url: 'https://www.vinted.co.uk/items/1', owner: 'CY' }), ago],
@@ -86,15 +89,17 @@ test.describe('Phone: Marketplace', () => {
     await page.locator('#view [data-action="signin"]').click();
     await expect(page.locator('#view .needs')).toHaveText('Needs you: 3');
     for (const key of ['do', 'decide', 'reply', 'insights', 'me']) {
-      await page.locator(`#tabs a[data-nav="${key}"]`).click();
+      await tabClick(page, `#tabs a[data-nav="${key}"]`);
       await expect(page.locator(`#tabs a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
       await noSidewaysScroll(page, key);
       const small = await page.evaluate(() => [...document.querySelectorAll('#view button, #view a.btn, #view .chip, header .btn')].filter((b) => b.offsetParent).filter((b) => b.getBoundingClientRect().height < 44).map((b) => b.textContent.trim()));
       expect(small, `${key}: buttons under 44px`).toEqual([]);
     }
-    const n = await page.locator('#n-do').boundingBox(), icon = await page.locator('#tabs a[data-nav="do"] .ti').boundingBox(), label = await page.locator('#tabs a[data-nav="do"] span:not(.bar):not(.n)').boundingBox();
-    expect(Math.abs((n.y + n.height / 2) - (icon.y + icon.height / 2)), 'count sits on the icon line').toBeLessThan(6);
-    expect(label.y, 'label has its own line below the count').toBeGreaterThanOrEqual(n.y + n.height - 1);
+    // Lisa's tab picks (2 Nov): the count sits in the tab's top-right corner, clear of the word below the icon.
+    const n = await page.locator('#n-do').boundingBox(), tab = await page.locator('#tabs a[data-nav="do"]').boundingBox(), label = await page.locator('#tabs a[data-nav="do"] .htl').boundingBox();
+    expect(tab.x + tab.width - (n.x + n.width), 'count in the top-right corner').toBeLessThan(5);
+    expect(n.y - tab.y, 'count in the top-right corner').toBeLessThan(5);
+    expect(label.y, 'the word sits below the count').toBeGreaterThanOrEqual(n.y + n.height - 1);
   });
 });
 
@@ -107,7 +112,7 @@ test.describe('Phone: Money Hub', () => {
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
     await noSidewaysScroll(page, 'Now');
     for (const [key, title] of [['money', 'Money'], ['dates', 'Dates'], ['todo', 'To-do'], ['control', 'Control'], ['now', 'Now']]) {
-      await page.locator(`nav.main a[data-nav="${key}"]`).click();
+      await tabClick(page, `nav.main a[data-nav="${key}"]`);
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await noSidewaysScroll(page, title);
     }
@@ -128,7 +133,7 @@ test.describe('Phone: GA Hub', () => {
     await page.locator('#view [data-action="signin"]').click();
     await expect(page.locator('#view .needs')).toBeVisible();
     for (const key of ['orders', 'invoices', 'products', 'ga', 'home']) {
-      await page.locator(`nav.tabs a[data-nav="${key}"]`).click();
+      await tabClick(page, `nav.tabs a[data-nav="${key}"]`);
       await expect(page.locator(`nav.tabs a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
       await noSidewaysScroll(page, key);
       const short = await page.evaluate(() => [...document.querySelectorAll('#view button, #view a.btn, #view .chip, header .btn')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
