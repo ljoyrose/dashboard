@@ -10,7 +10,7 @@ const { HUBS, go } = require('../support/hubs');
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (job35b-audit.spec.js). Allowed: +10%.
 // marketplace re-measured 31 Oct 2026 after Marketplace v11.10 (#221: post cards, supplier costs, New stock tab).
-const BYTES = { marketplace: 217800, money: 197700, studio: 334100, privacy: 15000 };
+const BYTES = { marketplace: 247600, money: 197700, studio: 334100, privacy: 15000 };
 // studio 297000 > 334100 and privacy 13300 > 15000 on 2 Nov 2026: the shared bottom tab bar (Lisa's tab picks) adds the tab rules to
 // house.css and the tab colours to tokens.css (privacy loads both), and the tab icons and More menu to toolkit.js, on top of studio's
 // own growth since 30 Oct. Measured 334013 and 14917. Marketplace and money still fit.
@@ -21,6 +21,8 @@ const BYTES = { marketplace: 217800, money: 197700, studio: 334100, privacy: 150
 // marketplace 197100 > 217800 on 2 Nov 2026: one type scale (Lisa's picks: Lexend, 400/500/600, 14/15/18px) writes every size as a
 // token and adds the type tokens to tokens.css and house.css, on top of growth since 31 Oct that was already near the +10% line.
 // Measured 217712. Money, studio and privacy still fit.
+// marketplace 217800 > 247600 on 2 Nov 2026: Product ideas (list, Add idea form, card page, board link: about 20 KB in index.html + 10 KB ideas.js)
+// on top of the type-scale baseline. Measured 247530. Shrinking option: load the form and card code only when #/ideas is opened.
 // Known axe problems kept on purpose: { 'page:view': { ruleId: places } }. Empty: all four pages are clean today.
 const KNOWN = {};
 const PAGES = [

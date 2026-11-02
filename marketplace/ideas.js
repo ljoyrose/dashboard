@@ -104,6 +104,8 @@
     if (d.infinity_item !== undefined) { if (typeof d.infinity_item !== 'string') bad('WRONG_TYPE', 'infinity_item', 'must be words (a link, or empty)'); else if (d.infinity_item && !infinityLink(d)) bad('BAD_VALUE', 'infinity_item', 'must be an https link on startinfinity.com, or empty'); }
     ['top3_risks', 'top3_unknowns', 'lines'].forEach(function (k) { if (d[k] !== undefined && !isStrArr(d[k])) bad('WRONG_TYPE', k, 'must be a list of words'); });
     ['top3_risks', 'top3_unknowns'].forEach(function (k) { if (isStrArr(d[k]) && d[k].length > 3) bad('BAD_VALUE', k, 'at most 3'); });
+    ['gate1', 'gate2', 'gate3'].forEach(function (k) { if (d[k] !== undefined && (d[k] === null || typeof d[k] !== 'object')) bad('WRONG_TYPE', k, 'must be an object or list'); });
+    if (d.classification_assumed !== undefined && typeof d.classification_assumed !== 'boolean') bad('WRONG_TYPE', 'classification_assumed', 'must be true or false');
     ['kill_rule', 'next_step', 'dropped_reason', 'sell', 'supplier'].forEach(function (k) { if (d[k] !== undefined && typeof d[k] !== 'string') bad('WRONG_TYPE', k, 'must be words'); });
     ['unit_ex_p', 'unit_inc_p', 'profit_p', 'moq'].forEach(function (k) { if (d[k] !== undefined && d[k] !== null && !isNum(d[k])) bad('WRONG_TYPE', k, 'must be a number'); });
     if (d.terms !== undefined && (!d.terms || typeof d.terms !== 'object' || Array.isArray(d.terms))) bad('WRONG_TYPE', 'terms', 'must be an object');

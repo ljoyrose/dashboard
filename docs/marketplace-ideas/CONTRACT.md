@@ -48,6 +48,8 @@ Consequence to know: until A exists, a sent request just sits in the folder. The
 | gate | 0..3 | required |
 | verdict | "" / go / maybe / no | required |
 | intake | object | required: link, barcode, price_seen, where_seen, image_link, own_audience_fit, note |
+| classification_assumed | true/false | true until Lisa corrects the classification |
+| gate1, gate2, gate3 | object | free-form results of each later gate (sourcing, test plan, launch); shown as headed lists |
 | classification | object | product_type physical/digital; buyer b2c/b2b; branding white_label/own_brand/supplier_brand/resell; fulfilment hold_stock/dropship/made_to_order/digital; source maker/wholesaler/distributor/licence |
 | margin_est | object | worst, expected, best: pence per unit, or null |
 | top3_risks, top3_unknowns | list of words | at most 3 each |
@@ -63,7 +65,7 @@ Go to New stock needs: verdict go, `unit_inc_p`, `profit_p`, `supplier` (`goRead
 
 ## 4. Answers Lisa gives on an idea card
 
-`Investigate`, `Go`, `Maybe`, `No` (note = why). Same cells as every card (G:J). Engine support for these on section `idea` is open question 2 in the slip.
+`Go` (note `to=newstock`), `Maybe`, `No` (note = why, required). Same cells as every card (G:J). `Investigate` is NOT an answer (one answer per row): it is a separate request, proposed in stage 3. Engine support for these on section `idea` is open question 2 in the slip.
 
 ## 5. Tests
 

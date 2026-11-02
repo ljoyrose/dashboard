@@ -59,5 +59,9 @@
       "source": ""
     }
   ],
+  "classification_assumed": true,
+  "gate1": {
+    "sourcing": "SAMPLE: ask SAMPLE Wholesale Ltd for a price list"
+  },
   "infinity_item": "https://app.startinfinity.com/SAMPLE-BOARD/SAMPLE-ITEM"
 }
