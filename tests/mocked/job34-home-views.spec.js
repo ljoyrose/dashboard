@@ -31,7 +31,7 @@ test.describe('Home: views and states', () => {
       ['drives/work', 'Work My Drive'], ['drives/personal-drive', 'Personal Drive'], ['drives/usb', 'Drive check'], ['map', 'Dashboard']];
     for (const [h, name] of want) {
       await page.evaluate((x) => { location.hash = '#/' + x; }, h);
-      await expect(page).toHaveTitle(new RegExp('^(\\(\\d+\\) )?' + name + ' · Lisa Dashboard$'));
+      await expect(page).toHaveTitle(new RegExp('^(\\(\\d+\\) )?' + name + ' · Dashboard$'));
     }
   });
 

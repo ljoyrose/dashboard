@@ -1,4 +1,4 @@
-// Home (Lisa Dashboard) in the house look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026): 1px lines, hover never moves anything,
+// Home (the Dashboard) in the house look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026): 1px lines, hover never moves anything,
 // nothing under 13px, two weights, no coloured words, no solid colour fills, dark frame, phone without sideways scroll,
 // dark mode contrast. Plus the home improvements: Needs you split, the Next card and the green-tick empty state.
 const { test, expect, buildWorld } = require('../support/test');
@@ -156,7 +156,7 @@ test.describe('Home: house look', () => {
         expect(r.pale, name + ': a pale tint ' + r.bg).toBe(true);
       } };
       await run(coloured);
-      for (const sel of ['#urgentOne a.btn', 'a.keytile']) {
+      for (const sel of ['#urgentOne a.btn', 'a.hubtile']) { // the hub tiles replaced the Key projects buttons (Lisa, 2 Nov)
         const r = await check(sel, false);
         expect([r.outline, r.oc], sel + ': neutral hover = ink line').toEqual(['solid 1px -1px', r.ink]);
         expect(r.pale && r.bg !== r.card, sel + ': muted tint ' + r.bg).toBe(true);

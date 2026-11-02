@@ -43,11 +43,11 @@ async function openAt(page, guard, hub, hash) {
 }
 
 test.describe('Navigation across pages', () => {
-  test('every Key projects hub tile loads in the same tab, and its Dashboard button brings Home back still signed in', async ({ page }) => {
+  test('every hub tile on Main loads in the same tab, and its Dashboard button brings Home back still signed in', async ({ page }) => {
     test.setTimeout(30_000);
     await page.goto('./');
     await signIn(page);
-    const hrefs = await page.locator('#key-projects a.keytile').evaluateAll((els) => els.map((a) => a.getAttribute('href')).filter((h) => !/^https?:/.test(h)));
+    const hrefs = await page.locator('#hubTiles a.hubtile').evaluateAll((els) => els.map((a) => a.getAttribute('href')).filter((h) => !/^https?:/.test(h)));
     expect(hrefs.sort()).toEqual(Object.keys(LANDED).sort());
     const home = page.url().replace(/#.*$/, '');
     for (const href of hrefs) {
@@ -88,7 +88,7 @@ test.describe('Navigation across pages', () => {
   test('browser history spans pages: Home Changes > Money Hub > Back lands on Home Changes, Forward on Money', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const href = await page.locator('#key-projects a.keytile', { hasText: 'Money Hub' }).getAttribute('href');
+    const href = await page.locator('#hubTiles a.hubtile[data-hub="money"]').getAttribute('href');
     expect(href).toBe('money/');
     await tabClick(page, '#mainNav a[data-nav="changes"]');
     await expect(page.locator('#hereTitle')).toHaveText(/^Changes/);

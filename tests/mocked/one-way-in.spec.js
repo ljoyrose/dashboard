@@ -1,11 +1,12 @@
 // Stage 2c: one way into each area. The front page keeps the Needs you row and the Next card; nothing else on it
-// points at a tab. Key projects = MOVE + one tile per hub. Four bottom tabs. The Bin has one entry (section 9).
+// points at a tab. Main = one tile per hub (MOVE moved to More, 2 Nov). Main, Decide, Do and More. The Bin has one entry (section 9).
 const { test, expect } = require('../support/test');
 const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const PH = require('../support/world').IDS.projectsHub; // Projects Hub tile only when config.js holds its address
+const MOVE = require('../support/world').IDS.moveSheet;
 const signIn = async (page) => {
   await expect(page.locator('#signInBtn')).toBeEnabled();
   await page.locator('#signInBtn').click();
@@ -28,21 +29,23 @@ test.describe('One way in', () => {
     await expect(page.locator('#view .figs, #view .fig')).toHaveCount(0);
   });
 
-  test('Key projects holds exactly MOVE and the hubs', async ({ page }) => {
+  test('Main holds exactly the hub tiles (Lisa\'s order, 2 Nov) and MOVE sits in More', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    await expect(page.locator('#key-projects a.keytile')).toHaveText(['MOVE', 'Money Hub', 'CD Hub', 'Factory', 'Marketplace', 'GA Hub', 'Studio', 'Web Estate'].concat(PH ? ['Projects Hub'] : []));
-    for (const a of await page.locator('#key-projects a.keytile').all()) await expect(a).toHaveAttribute('target', '_blank');
+    await expect(page.locator('#key-projects')).toHaveCount(0);
+    await expect(page.locator('#hubTiles a.hubtile .hn')).toHaveText((PH ? ['Projects'] : []).concat(['Web', 'Money', /^Food/, 'Dogs', 'Apps', 'Marketplace', 'Studio']));
+    for (const a of await page.locator('#hubTiles a.hubtile').all()) await expect(a).toHaveAttribute('target', '_blank');
+    await expect(page.locator('#houseMore #move-link')).toHaveText('MOVE');
   });
 
-  test('the bottom bar has the agreed tabs: Main, then More holding Drives, Bin and Changes (Lisa\'s tab picks, 2 Nov)', async ({ page }) => {
+  test('the bottom bar has the agreed tabs: Main, Decide, Do, then More holding Drives, Bin, Changes and MOVE (Lisa\'s tab picks, 2 Nov)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const tabs = page.locator('#mainNav a');
-    await expect(tabs).toHaveCount(4);
-    expect(await tabs.evaluateAll((els) => els.map((a) => a.getAttribute('href')))).toEqual(['#/map', '#/drives', '#/bin', '#/changes']);
-    await expect(page.locator('#mainNav > .ht')).toHaveCount(1);
-    await expect(page.locator('#mainNav .house-more > a')).toHaveCount(3);
+    await expect(tabs).toHaveCount(7);
+    expect(await tabs.evaluateAll((els) => els.map((a) => a.getAttribute('href')))).toEqual(['#/map', '#/decide', '#/do', '#/drives', '#/bin', '#/changes', MOVE]);
+    await expect(page.locator('#mainNav > .ht')).toHaveCount(3);
+    await expect(page.locator('#mainNav .house-more > a')).toHaveCount(4);
     await expect(page.locator('#mainNav a[data-nav="map"]')).toContainText('Main');
     await expect(page.locator('#mainNav a[data-nav="drives"]')).toContainText('Drives');
     await expect(page.locator('#mainNav [data-house-more]')).toHaveAccessibleName('More');

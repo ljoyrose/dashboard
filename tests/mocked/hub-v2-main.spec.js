@@ -27,10 +27,11 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     const box = await bar.boundingBox();
     expect(Math.round(box.y + box.height)).toBe(844); // touches the bottom of the screen
     const tabs = bar.locator('.ht');
-    await expect(tabs).toHaveText(['Main5', 'More'].map((t) => new RegExp('^' + t.replace(/\d+$/, '') )));
-    for (let i = 0; i < 2; i++) expect((await tabs.nth(i).boundingBox()).height).toBeGreaterThanOrEqual(44);
+    // Main, Decide (slot 2) and Do (slot 4) were added on Dashboard Main (Lisa's picks, 2 Nov), then More.
+    await expect(tabs).toHaveText(['Main', 'Decide', 'Do', 'More'].map((t) => new RegExp('^' + t)));
+    for (let i = 0; i < 4; i++) expect((await tabs.nth(i).boundingBox()).height).toBeGreaterThanOrEqual(44);
     await noSidewaysScroll(page, 'Dashboard');
-    for (const [key, title] of [['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['map', 'Dashboard']]) {
+    for (const [key, title] of [['drives', 'Drives'], ['bin', 'Bin'], ['changes', 'Changes · Recent'], ['decide', 'Decide'], ['do', 'Do'], ['map', 'Dashboard']]) {
       await tabClick(page, bar.locator(`a[data-nav="${key}"]`));
       await expect(page.locator('#hereTitle')).toHaveText(title);
       await expect(bar.locator(`a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
@@ -52,14 +53,14 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     if (total) await expect(top.locator('#urgentOne a.btn')).toHaveAttribute('href', /.+/);
   });
 
-  test('the More tab is gone: #/more opens the Dashboard, where every hub has one tile that opens its own tab', async ({ page }) => {
+  test('the More tab is gone: #/more opens the Dashboard, where every hub has one tile (Main hub tiles) that opens its own tab', async ({ page }) => {
     await page.goto('./#/more');
     await signIn(page);
     await expect(page).toHaveURL(/#\/map$/);
     await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
     await expect(page.locator('#mainNav a[data-nav="more"]')).toHaveCount(0);
-    for (const href of ['money/', 'cdhub/', 'factory/', 'marketplace/', 'food/', 'studio/']) {
-      const a = page.locator(`#view a.keytile[href="${href}"]`);
+    for (const href of ['estate/', 'money/', 'cdhub/', 'factory/', 'marketplace/', 'food/', 'studio/']) {
+      const a = page.locator(`#view #hubTiles a.hubtile[href="${href}"]`);
       await expect(a).toHaveCount(1);
       await expect(a).toHaveAttribute('target', '_blank');
     }

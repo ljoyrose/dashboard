@@ -20,7 +20,7 @@ const ALL = {
 };
 // What each hub's bar shows, in order, and what sits under More (Lisa's picks; the first is Main, More is always last).
 const PLAN = {
-  home: { tabs: ['Main', 'More'], more: ['Drives', 'Bin', 'Changes'] },
+  home: { tabs: ['Main', 'Decide', 'Do', 'More'], more: ['Drives', 'Bin', 'Changes'], out: ['MOVE'] }, // Decide + Do: Dashboard Main (2 Nov); MOVE is a link out (new tab)
   money: { tabs: ['Main', 'Money', 'Do', 'Dates', 'Accountant', 'More'], more: ['Control'] },
   marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },
@@ -130,7 +130,9 @@ for (const [hub, H] of Object.entries(ALL)) {
     await expect(menu).toBeVisible();
     const items = menu.locator(':scope > a, :scope > button');
     // A view may carry its count after the word (e.g. "Kits1"): the word itself must match exactly.
-    await expect(items).toHaveText(PLAN[hub].more.map((w) => new RegExp('^' + w + '\\d*$')));
+    await expect(items).toHaveText(PLAN[hub].more.concat(PLAN[hub].out || []).map((w) => new RegExp('^' + w + '\\d*$')));
+    // A link out of the site (not a view) opens a new tab and so never shows "where you are".
+    for (const w of PLAN[hub].out || []) await expect(menu.locator(':scope > a', { hasText: w })).toHaveAttribute('target', '_blank');
     // Each view in the menu takes its own colour in its icon on hover (grey only for slot 0).
     for (const it of await items.all()) {
       if ((await it.getAttribute('data-slot')) === '0') continue;

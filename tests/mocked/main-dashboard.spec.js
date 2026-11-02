@@ -14,7 +14,7 @@ test.describe('Main dashboard: loads', () => {
   test('page loads with HTTP 200 and shows only a sign-in button when signed out', async ({ page }) => {
     const res = await page.goto('./');
     expect(res.status()).toBe(200);
-    await expect(page).toHaveTitle(/Lisa Dashboard/);
+    await expect(page).toHaveTitle(/^Dashboard$/); // "Lisa Dashboard" became "Dashboard" (Lisa, 2 Nov: the phone cut it off)
     await expect(page.locator('#signInBtn')).toBeVisible();
     await expect(page.locator('#readStamp')).toHaveText('Not signed in');
     // README: signed out shows no tabs, labels or data
@@ -236,10 +236,10 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
     await expect(tab.locator('h1')).toContainText('Money Hub');
   });
 
-  test('Key projects "Money Hub" tile goes to /money/', async ({ page }) => {
+  test('the Money hub tile goes to /money/', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view a.keytile[href="money/"]').click()]); // opens in a new tab
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view #hubTiles a.hubtile[href="money/"]').click()]); // opens in a new tab
     await expect(tab).toHaveURL(at('money/'));
     await expect(tab).toHaveTitle(/Money Hub/);
   });
