@@ -33,8 +33,8 @@ test.describe('One way in', () => {
     await page.goto('./');
     await signIn(page);
     await expect(page.locator('#key-projects')).toHaveCount(0);
-    await expect(page.locator('#hubTiles a.hubtile .hn')).toHaveText((PH ? ['Projects'] : []).concat(['Web', 'Money', /^Food/, 'Dogs', 'Apps', 'Marketplace', 'Studio']));
-    for (const a of await page.locator('#hubTiles a.hubtile').all()) await expect(a).toHaveAttribute('target', '_blank');
+    await expect(page.locator('#hubTiles .hubtile a.hgo')).toHaveText((PH ? ['Projects'] : []).concat(['Web', 'Money', /^Food/, 'Dogs', 'Apps', 'Marketplace', 'Studio']));
+    for (const a of await page.locator('#hubTiles .hubtile a').all()) await expect(a).toHaveAttribute('target', '_blank');
     await expect(page.locator('#houseMore #move-link')).toHaveText('MOVE');
   });
 

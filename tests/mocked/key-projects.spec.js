@@ -15,7 +15,7 @@ const TILES = [
   ['Marketplace', 'marketplace/', true],
   ['Studio', 'studio/', true],
 ];
-// As shipped: config.js may hold the Projects Hub address; its tile then comes first.
+// As shipped: config.js may hold the Projects Hub address; its tile (with its 3 numbers) then comes first.
 const PH = require('../support/world').IDS.projectsHub;
 const SHIPPED = PH ? [['Projects', PH, true]].concat(TILES) : TILES;
 
@@ -37,7 +37,7 @@ test.describe('Home: hub tiles (were Key projects & docs)', () => {
     // Signed out: the links are not drawn at all, only the sign-in card.
     await expect(page.locator('#hubTiles')).toHaveCount(0);
     await expect(page.locator('#move-link')).toBeHidden();
-    await expect(page.locator('a.hubtile')).toHaveCount(0);
+    await expect(page.locator('.hubtile')).toHaveCount(0);
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
     await expect(page.locator('#mainNav')).toBeVisible();
@@ -54,7 +54,7 @@ test.describe('Home: hub tiles (were Key projects & docs)', () => {
     await expect(move).toHaveAttribute('target', '_blank');
     expect(() => new URL(MOVE)).not.toThrow();
 
-    const tiles = block.locator('a.hubtile');
+    const tiles = block.locator('.hubtile');
     await expect(tiles).toHaveCount(SHIPPED.length);
     await expect(block.locator('a[href="#/drive"]')).toHaveCount(0);
     await expect(page.locator('#mainNav a[data-nav="drives"]')).toHaveAttribute('href', '#/drives');
@@ -62,9 +62,10 @@ test.describe('Home: hub tiles (were Key projects & docs)', () => {
       const [label, href, blank] = SHIPPED[i];
       const tile = tiles.nth(i);
       await expect(tile.locator('.hn')).toHaveText(new RegExp('^' + label + '( ✓ XML)?$'));
-      await expect(tile).toHaveAttribute('href', href);
-      if (blank) await expect(tile).toHaveAttribute('target', '_blank');
-      else expect(await tile.getAttribute('target')).toBeNull();
+      const go = tile.locator('a.hgo');
+      await expect(go).toHaveAttribute('href', href);
+      if (blank) await expect(go).toHaveAttribute('target', '_blank');
+      else expect(await go.getAttribute('target')).toBeNull();
 
       const box = await tile.boundingBox();
       expect(box.height, label).toBeGreaterThanOrEqual(48);
@@ -106,12 +107,12 @@ test.describe('Home: hub tiles (were Key projects & docs)', () => {
       await expect(page.locator('#readStamp')).toContainText(/^Read \d/); // reads finished: no more redraws
       const block = page.locator('#view > #hubTiles');
       await expect(block).toBeVisible();
-      const tile = block.locator('a.hubtile[data-hub="projects"]');
-      if (!shown) { await expect(tile).toHaveCount(0); await expect(block.locator('a.hubtile')).toHaveCount(TILES.length); return; }
+      const tile = block.locator('.hubtile[data-hub="projects"] a.hgo');
+      if (!shown) { await expect(tile).toHaveCount(0); await expect(block.locator('.hubtile')).toHaveCount(TILES.length); return; }
       await expect(tile).toHaveAttribute('href', url);
       await expect(tile).toHaveAttribute('target', '_blank');
-      await expect(block.locator('a.hubtile')).toHaveCount(TILES.length + 1);
-      await expect(tile).toContainText('Opens in your work account');
+      await expect(block.locator('.hubtile')).toHaveCount(TILES.length + 1);
+      await expect(block.locator('.hubtile[data-hub="projects"]')).toContainText('Opens in your work account');
       await expect(tile).toBeVisible();
       const box = await tile.boundingBox();
       expect(box.height).toBeGreaterThanOrEqual(48);

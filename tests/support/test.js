@@ -71,6 +71,11 @@ const test = base.test.extend({
         const batch = /:batchGet\?/.test(route.request().url());
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(batch ? { valueRanges: [{}, {}, {}] } : { range: 'Marketplace!A2:L', majorDimension: 'ROWS' }) });
       });
+      // Projects tile numbers (Projects Hub Sheet, INDEX tab): answered from invented rows, after the catch-all so it wins.
+      const PH_INDEX = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'fixtures', 'projects-hub-index.json'), 'utf8'));
+      await context.route(/^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\/[^/]+\/values\/INDEX\?/, (route) =>
+        route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ range: 'INDEX!A1:AH60', majorDimension: 'ROWS', values: PH_INDEX.values }) })
+      );
 
       page.on('console', (m) => {
         if (m.type() === 'error' || m.type() === 'warning') consoleSeen.push(`[${m.type()}] ${m.text()}`);

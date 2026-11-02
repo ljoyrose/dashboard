@@ -18,7 +18,7 @@ test.describe('One sign-in for every tab', () => {
     await page.goto('./');
     await signIn(page);
 
-    for (const [sel, url] of [['#hubTiles a.hubtile[href="money/"]', /\/money\/$/]]) {
+    for (const [sel, url] of [['#hubTiles .hubtile a.hgo[href="money/"]', /\/money\/$/]]) {
       const [tab] = await Promise.all([context.waitForEvent('page'), page.locator(sel).click()]);
       await expect(tab).toHaveURL(url);
       await expect(tab.locator('#readStamp')).toContainText(/^Read \d/);
@@ -27,7 +27,7 @@ test.describe('One sign-in for every tab', () => {
       await tab.close();
     }
     await tabClick(page, '#mainNav a[data-nav="map"]');
-    const [cd] = await Promise.all([context.waitForEvent('page'), page.locator('#hubTiles a.hubtile[href="cdhub/"]').click()]);
+    const [cd] = await Promise.all([context.waitForEvent('page'), page.locator('#hubTiles .hubtile a.hgo[href="cdhub/"]').click()]);
     await expect(cd).toHaveURL(/\/cdhub\/$/);
     await expect(cd.locator('#nav button[data-go]').first()).toBeVisible();
     await expect(cd.locator('#signinbtn')).toHaveCount(0);
@@ -150,7 +150,7 @@ test.describe('Dashboard button (every page except home)', () => {
     test(`${url}: opened from the dashboard, "Dashboard" brings the dashboard tab back and closes this one`, async ({ page, context }) => {
       await page.goto('./');
       await signIn(page);
-      const link = '#hubTiles a.hubtile[href="' + url + '"]';
+      const link = '#hubTiles .hubtile a.hgo[href="' + url + '"]';
       const [tab] = await Promise.all([context.waitForEvent('page'), page.locator(link).click()]);
       await expect(tab.locator('#backHome')).toBeVisible();
       // The tab can close before click() returns; that close is the point, not an error.

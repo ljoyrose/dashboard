@@ -156,7 +156,7 @@ test.describe('Home: house look', () => {
         expect(r.pale, name + ': a pale tint ' + r.bg).toBe(true);
       } };
       await run(coloured);
-      for (const sel of ['#urgentOne a.btn', 'a.hubtile']) { // the hub tiles replaced the Key projects buttons (Lisa, 2 Nov)
+      for (const sel of ['#urgentOne a.btn', '.hubtile a.hgo']) { // the hub tiles replaced the Key projects buttons (Lisa, 2 Nov)
         const r = await check(sel, false);
         expect([r.outline, r.oc], sel + ': neutral hover = ink line').toEqual(['solid 1px -1px', r.ink]);
         expect(r.pale && r.bg !== r.card, sel + ': muted tint ' + r.bg).toBe(true);

@@ -239,7 +239,7 @@ test.describe('Main dashboard: Money tile and links to /money/', () => {
   test('the Money hub tile goes to /money/', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view #hubTiles a.hubtile[href="money/"]').click()]); // opens in a new tab
+    const [tab] = await Promise.all([page.context().waitForEvent('page'), page.locator('#view #hubTiles .hubtile a.hgo[href="money/"]').click()]); // opens in a new tab
     await expect(tab).toHaveURL(at('money/'));
     await expect(tab).toHaveTitle(/Money Hub/);
   });

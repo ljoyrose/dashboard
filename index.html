@@ -438,21 +438,28 @@
   /* Main hub tiles (Lisa's picks, 2 Nov): icon + name + 3 numbers, no fills; colour only as the 3px line and the icon.
      Numbers 18px, labels 14px; a number that means late is a 14px rose ring (.cnt.need). Each tile opens its hub. */
   .hubgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--house-gap, 12px); }
-  a.hubtile { display: flex; flex-direction: column; gap: 6px; padding: 8px 10px 8px 12px; color: var(--ink); text-decoration: none; text-align: left; box-shadow: none; }
-  a.hubtile .hn { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--fs-body); line-height: 24px; }
+  .hubtile { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 6px 10px; color: var(--ink); text-align: left; box-shadow: none; }
+  .hubtile .hn { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--fs-body); line-height: 24px; }
+  .hubtile a { color: var(--ink); text-decoration: none; border-radius: var(--radius); }
+  .hubtile a.hgo { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 4px; }
+  .hubtile .hsub { padding: 0 4px; }
   svg.hico { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--hic, var(--muted)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .hks { display: grid; grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 4px 10px; }
-  .hk { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+  .hk { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 2px 4px; }
   .hk b { font-size: var(--fs-figure); font-weight: 600; line-height: 24px; font-variant-numeric: tabular-nums; }
   .hk > span:last-child, .hsub { font-size: var(--fs-small); color: var(--muted); line-height: 1.3; }
-  .hubtile .xml { font-size: var(--fs-small); font-weight: 600; margin-left: 4px; }
-  @media (hover: hover) { a.hubtile:hover { outline: 1px solid var(--ink); outline-offset: -1px; } }
-  a.hubtile:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .hubtile a.xml { font-size: var(--fs-small); font-weight: 600; padding: 0 4px; }
+  /* Neutral house hover on every link in a tile: 1px ink line inside + a pale muted tint. */
+  @media (hover: hover) { .hubtile a:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); } }
+  .hubtile a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   /* Needs you, Decide and Do rows: the hub's icon and its 3px line down the row. */
   ol.hrows { list-style: none; margin: 8px 0 0; padding: 0; }
   .needs ol:has(> li.house-lbar), ol.hrows { display: flex; flex-direction: column; gap: 4px; }
   .needs li.house-lbar[class], ol.hrows > li { --house-lbar-out: 0px; display: flex; gap: 8px; align-items: center; padding: 6px 0 6px 12px; border: 0; border-radius: var(--radius); }
   ol.hrows .nt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  /* Projects tile: the whole picture, so a multi-colour line (full height, curved with the corner) and an ink icon (Lisa, 2 Nov). */
+  .hubtile[data-hub="projects"].house-lbar::before { border-left-color: transparent; background: linear-gradient(to bottom, var(--ljr-2), var(--ljr-3), var(--ljr-4), var(--ljr-5), var(--ljr-6), var(--ljr-7)) border-box;
+    -webkit-mask: linear-gradient(to right, #000 3px, transparent 3px) border-box; mask: linear-gradient(to right, #000 3px, transparent 3px) border-box; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
   footer p { margin: 0; color: var(--muted); font-size: var(--fs-small); }
@@ -620,6 +627,7 @@
 <body>
 <a class="skip" href="#content" data-skip="content">Skip to content</a>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-briefcase" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M12 12v.01M3 13a20 20 0 0 0 18 0"/></symbol>
   <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></symbol>
   <symbol id="i-read" viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2V5z"/><path d="M4 19a2 2 0 0 1 2-2h13"/></symbol>
   <symbol id="i-drive" viewBox="0 0 24 24"><path d="M3 15h18l-3-9H6l-3 9z"/><path d="M3 15v4h18v-4"/><path d="M7 17h2"/></symbol>
@@ -760,13 +768,15 @@
   // Projects Hub tile: drawn only when config.js holds a valid Apps Script /exec address (same rule as the Bin guard).
   var PH_URL = (CFG.projectsHub || {}).webAppUrl || '';
   if (!BG_URL_RE.test(PH_URL)) PH_URL = '';
+  // Its 3 numbers come from the hub's own Sheet (INDEX tab), read with the same read-only sign-in. Never written.
+  var PH_SHEET = (CFG.projectsHub || {}).sheetId || '', PH_TAB = (CFG.projectsHub || {}).tab || 'INDEX';
 
   // Page state stays in memory. The sign-in token is the one thing shared, via auth.js.
   var accessToken = null, tokenExpiresAt = 0, refreshTimer = null, loading = false;
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
-  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank(), mins: blank(), hubs: blank() }; }
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank(), mins: blank(), hubs: blank(), ph: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
@@ -1265,6 +1275,30 @@
     };
   }
 
+  // ---- Projects tile numbers: the hub Sheet's INDEX tab, read by header name so a moved column cannot shift them. ----
+  function loadPh() {
+    return apiGet('https://sheets.googleapis.com/v4/spreadsheets/' + encodeURIComponent(PH_SHEET) + '/values/' +
+      encodeURIComponent(PH_TAB) + '?majorDimension=ROWS').then(function (r) { return phCounts((r && r.values) || []); });
+  }
+  // Same rules as the hub's own page: LIVE numbered rows only, reserved rows left out, Done and Parked are not open.
+  // Stuck = Blocked, or open with no owner. Waiting = Waiting on Lisa. Running = being worked on now.
+  function phCounts(rows) {
+    var head = (rows[0] || []).map(function (h) { return String(h).trim(); });
+    var col = function (r, name) { var i = head.indexOf(name); return i < 0 ? '' : String(r[i] == null ? '' : r[i]).trim(); };
+    if (head.indexOf('project_status') < 0) throw new Error('The hub Sheet has no project_status column');
+    var out = { stuck: 0, waiting: 0, running: 0, open: 0 };
+    rows.slice(1).forEach(function (r) {
+      if (col(r, 'status_u45') !== 'LIVE' || col(r, 'kind') === 'reserved' || !/^\d+$/.test(col(r, 'number'))) return;
+      var st = col(r, 'project_status'), owner = col(r, 'owner_tag');
+      if (st === 'Done' || st === 'Parked') return;
+      out.open++;
+      if (st === 'Waiting on Lisa') out.waiting++;
+      else if (st === 'Blocked' || !owner || /^no owner$/i.test(owner)) out.stuck++;
+      if (st === 'Running') out.running++;
+    });
+    return out;
+  }
+
   // timed = the 5-minute refresh. It keeps your ticks, Show-more choices and Bin results;
   // only the Refresh button (or signing in) starts from clean.
   function loadAll(timed) {
@@ -1296,6 +1330,7 @@
       run('cf', getFolder(CF_FOLDER_ID).then(function (root) {
         return walkTree(CF_FOLDER_ID, root.name || 'Cf overskill').then(function (t) { t.folder = root; return t; });
       })),
+      PH_URL && PH_SHEET ? run('ph', loadPh()) : Promise.resolve(),
       window.MoneyCore ? run('money', window.MoneyCore.loadAll(function () { return accessToken; })) : Promise.resolve(),
       window.HubRead ? run('hubs', window.HubRead.load({ get: apiGet, text: apiText, need: needScripts }, CFG)) : Promise.resolve()
     ]).then(function () {
@@ -2431,9 +2466,9 @@
   }
 
   // ---- Main: one tile per hub (Lisa's picks, 2 Nov): icon, name, 3 numbers; the tile opens the hub (the hub menu). ----
-  // Order and colours are Lisa's: Projects grey, Web red, Money orange, Food / Dogs / Apps yellow, Marketplace blue, Studio purple.
+  // Order and colours are Lisa's: Projects multi-colour, Web red, Money orange, Food / Dogs / Apps yellow, Marketplace blue, Studio purple.
   var HUBS = [
-    { key: 'projects', name: 'Projects', icon: 'case', line: '#8A7F70', ic: '#8A7F70' },
+    { key: 'projects', name: 'Projects', icon: 'case', line: 'var(--ljr-0)', ic: 'var(--ink)' }, // multi-colour line: see the CSS
     { key: 'web', name: 'Web', icon: 'www', slot: 2, href: 'estate/' },
     { key: 'money', name: 'Money', icon: 'money', slot: 3, href: 'money/' },
     { key: 'food', name: 'Food', icon: 'bowl', slot: 4, href: 'food/' },
@@ -2446,28 +2481,44 @@
   // The Dashboard's own rows (the Bin, a failed read) use the Bin's slot 8 and the Main icon.
   HUB.dash = { key: 'dash', name: 'Dashboard', icon: 'dash', slot: 8 };
   function hubStyle(h) { return ' style="--sc:' + (h.line || 'var(--ljr-' + h.slot + ')') + ';--hic:' + (h.ic || 'var(--ljr-' + h.slot + '-icon)') + '"'; }
-  function hubIcon(h) { return h.icon === 'dash' ? '<svg class="hico" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg>' : '<svg class="hico" aria-hidden="true" focusable="false"><use href="#h-' + h.icon + '"/></svg>'; }
+  function hubIcon(h) { return h.icon === 'dash' ? '<svg class="hico" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg>' : h.icon === 'case' ? '<svg class="hico" aria-hidden="true" focusable="false"><use href="#i-briefcase"/></svg>' : '<svg class="hico" aria-hidden="true" focusable="false"><use href="#h-' + h.icon + '"/></svg>'; }
   function hubData() {
     var d = S.hubs && S.hubs.data ? S.hubs.data : {}, out = {};
     Object.keys(d).forEach(function (k) { out[k] = d[k]; });
     out.money = window.HubRead ? HubRead.money(S.money.data) : { ok: false };
     return out;
   }
+  // Every number opens the place in its hub where you act on it (Lisa, 2 Nov: every piece of info is clickable).
+  var HUB_NUMS = {
+    projects: [['Stuck', ''], ['Waiting', ''], ['Running', '']],
+    web: [['Down', '#/look'], ['Expiring', '#/look'], ['Live', '#/home']],
+    money: [['Overdue', '#/dates'], ['Due Soon', '#/dates'], ['Cash', '#/money']],
+    food: [['Late', '#/orders'], ['Owe GA', '#/invoices'], ['Today', '#/orders']],
+    dogs: [['Temps', '#/today'], ['Unplaced', '#/today'], ['Bitches', '#/dogs']],
+    apps: [['Questions', '#/decide'], ['Gates', '#/decide'], ['Live', '#/all']],
+    market: [['To Post', '#/do'], ['To Reply', '#/reply'], ['Sold', '#/numbers']],
+    studio: [['Approve', '#/review'], ['Due Today', '#/me'], ['Sold', '#/library']]
+  };
+  // Projects: the hub Sheet's INDEX tab (loadPh). Stuck above 0 is rose.
+  function phNums() {
+    var d = S.ph.data;
+    return d ? [['Stuck', d.stuck, d.stuck > 0], ['Waiting', d.waiting], ['Running', d.running]] : null;
+  }
   function hubTiles() {
     var D = hubData();
     return '<section id="hubTiles" aria-label="Hubs"><div class="hubgrid">' + HUBS.map(function (h) {
       var link = h.key === 'projects' ? PH_URL : h.href;
       if (!link) return '';
-      var x = D[h.key] || { ok: false }, nums = h.key === 'projects' ? null : x.ok ? x.nums : null;
-      var labels = { web: ['Down', 'Expiring', 'Live'], money: ['Overdue', 'Due Soon', 'Cash'], food: ['Late', 'Owe GA', 'Today'], dogs: ['Temps', 'Unplaced', 'Bitches'],
-        apps: ['Questions', 'Gates', 'Live'], market: ['To Post', 'To Reply', 'Sold'], studio: ['Approve', 'Due Today', 'Sold'] }[h.key];
-      var body = h.key === 'projects' ? '<span class="hsub">Opens in your work account</span>' : '<span class="hks">' + labels.map(function (lab, i) {
-        var n = nums ? nums[i] : null, v = n && n[1] != null ? String(n[1]) : '–', late = !!(n && n[2]);
-        return '<span class="hk" data-k="' + esc(lab) + '">' + (late ? '<span class="cnt need' + (v.length > 2 ? ' wide' : '') + '">' + esc(v) + '</span>' : '<b>' + esc(v) + '</b>') + '<span>' + esc(lab) + '</span></span>';
-      }).join('') + '</span>';
-      var tick = h.key === 'food' && x.ok && x.xml ? ' <span class="xml" data-xml>✓ XML</span>' : '';
+      var x = D[h.key] || { ok: false }, nums = h.key === 'projects' ? phNums() : x.ok ? x.nums : null;
       var tab = h.key === 'projects' ? ' target="_blank" rel="noopener"' : HUB_TAB;
-      return '<a class="card house-lbar hubtile" data-hub="' + h.key + '" href="' + esc(link) + '"' + tab + hubStyle(h) + '><span class="hn">' + hubIcon(h) + '<span>' + esc(h.name) + tick + '</span></span>' + body + '</a>';
+      var body = '<span class="hks"' + (h.key === 'projects' ? ' data-ph="' + (S.ph.data ? 'ok' : esc(S.ph.status)) + '"' : '') + '>' + HUB_NUMS[h.key].map(function (k, i) {
+        var n = nums ? nums[i] : null, v = n && n[1] != null ? String(n[1]) : '–', late = !!(n && n[2]);
+        return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + '>' + (late ? '<span class="cnt need' + (v.length > 2 ? ' wide' : '') + '">' + esc(v) + '</span>' : '<b>' + esc(v) + '</b>') + '<span>' + esc(k[0]) + '</span></a>';
+      }).join('') + '</span>';
+      var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders"' + HUB_TAB + '>✓ XML</a>' : '';
+      var sub = h.key === 'projects' ? '<span class="hsub">Opens in your work account</span>' : '';
+      var why = h.key === 'projects' && S.ph.status === 'failed' ? ' title="Numbers could not be read. Tap to open the hub."' : '';
+      return '<div class="card house-lbar hubtile" data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo" href="' + esc(link) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + sub + body + '</div>';
     }).join('') + '</div></section>';
   }
 

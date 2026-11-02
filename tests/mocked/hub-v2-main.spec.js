@@ -60,7 +60,7 @@ test.describe('Main dashboard: Hub V2 bottom bar', () => {
     await expect(page.locator('#hereTitle')).toHaveText('Dashboard');
     await expect(page.locator('#mainNav a[data-nav="more"]')).toHaveCount(0);
     for (const href of ['estate/', 'money/', 'cdhub/', 'factory/', 'marketplace/', 'food/', 'studio/']) {
-      const a = page.locator(`#view #hubTiles a.hubtile[href="${href}"]`);
+      const a = page.locator(`#view #hubTiles .hubtile a.hgo[href="${href}"]`);
       await expect(a).toHaveCount(1);
       await expect(a).toHaveAttribute('target', '_blank');
     }

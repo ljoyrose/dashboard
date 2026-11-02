@@ -47,7 +47,7 @@ test.describe('Navigation across pages', () => {
     test.setTimeout(30_000);
     await page.goto('./');
     await signIn(page);
-    const hrefs = await page.locator('#hubTiles a.hubtile').evaluateAll((els) => els.map((a) => a.getAttribute('href')).filter((h) => !/^https?:/.test(h)));
+    const hrefs = await page.locator('#hubTiles .hubtile a.hgo').evaluateAll((els) => els.map((a) => a.getAttribute('href')).filter((h) => !/^https?:/.test(h)));
     expect(hrefs.sort()).toEqual(Object.keys(LANDED).sort());
     const home = page.url().replace(/#.*$/, '');
     for (const href of hrefs) {
@@ -88,7 +88,7 @@ test.describe('Navigation across pages', () => {
   test('browser history spans pages: Home Changes > Money Hub > Back lands on Home Changes, Forward on Money', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
-    const href = await page.locator('#hubTiles a.hubtile[data-hub="money"]').getAttribute('href');
+    const href = await page.locator('#hubTiles .hubtile[data-hub="money"] a.hgo').getAttribute('href');
     expect(href).toBe('money/');
     await tabClick(page, '#mainNav a[data-nav="changes"]');
     await expect(page.locator('#hereTitle')).toHaveText(/^Changes/);
