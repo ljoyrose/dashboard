@@ -13,7 +13,9 @@
     scopes: {
       read: 'https://www.googleapis.com/auth/drive.readonly',
       // Full Drive scope: asked for only when the Bin actions are used (incremental consent).
-      write: 'https://www.googleapis.com/auth/drive'
+      write: 'https://www.googleapis.com/auth/drive',
+      // Personal Drive page only: a second, look-only sign-in. Its token stays in memory and is never used for work calls.
+      personal: 'https://www.googleapis.com/auth/drive.metadata.readonly'
     },
     // Ids only, derived from cleanup.excludedDrives. Kept so older checks still find them.
     excludedDrives: EXCLUDED.map(function (d) { return d.id; }),
@@ -47,7 +49,6 @@
     // (RR_DDF folder), which the RR_FOOD-ENGINE Apps Script fills. The page writes only the 4 answer cells of a Cards row.
     food: {
       bookId: '1Lags6XfdNhvxwxGNgEKwfoosHr6ci9rzG-QXulgCfxU', // RR_FOOD (RR_DDF folder)
-      owner: 'lisa@puppyclassroom.com', // sign-in hint (config.js is the only place private addresses live)
       live: false
     },
     // Studio page (studio/): asset hub. Reads studio-state.json from logsFolderId (written by the STUDIO-ENGINE Apps Script);
@@ -58,7 +59,31 @@
       requestsFolderId: '13KclIUhOej1bmoQznfbrUiHtoab-FnDV', // the page writes request JSON files here
       inboxFolderId: '1poaewHMRwrOcXwXa0PrMZhnmhyn66BzL', // Ideas > Inbox - drop files here
       stateFile: 'studio-state.json',
+      // Owned tools list (Tools page): read with the signed-in token only. The tool data lives in the sheet, never in this repo.
+      ownedTools: { sheetId: '1iwlUFBeFOAUxlHlr8FsCIxpmhqSWzq3038OEDN-Zfz8', tab: 'OWNED_TOOLS' }, // STUDIO-CONTROL sheet, Owned Tools tab
       live: false
+    },
+    // Web Estate Hub (estate/): reads the private RR_WEB-ESTATE sheet (Properties tab) with Lisa's sign-in; Add drops one
+    // request file into requestsFolderId for the RR_WEB-ESTATE engine. Both ids stay empty until Lisa installs the engine:
+    // until then the page shows invented example rows and sends nothing. Read only: nothing here changes DNS or a site.
+    estate: {
+      sheetId: '',
+      requestsFolderId: '',
+      live: false
+    },
+    // Actions minutes card (Home). Reads ACTIONS-MINUTES.json (counts only) from folderId with Lisa's sign-in; the file is
+    // written by the private ACTIONS-MINUTES collector (Apps Script in Drive, read-only GitHub token in its Script Properties).
+    // folderId empty = the card shows invented example data with the EXAMPLE stamp and reads nothing.
+    // repoLabels: short labels only (the collector maps real repos to these); they set the row order. Never real repo names.
+    actionsMinutes: {
+      folderId: '',
+      fileName: 'ACTIONS-MINUTES.json',
+      freeMinutes: 2000,
+      amber: 0.75,
+      red: 0.90,
+      staleDays: 2,
+      repoLabels: [],
+      usageUrl: 'https://github.com/settings/billing/usage'
     },
     marketplace: {
       openWorkId: '1ShYbYmY8W-MEWqm9kHFsIcS5uR4b2SG00uXle_yL76U', // RR_OPEN-WORK (00 AI Commons)
@@ -68,13 +93,31 @@
       wakeFile: 'MKT-WAKE-WEBAPP.json',
       live: false
     },
-    // Bin guard (Apps Script, owned by lisa@puppyclassroom.com). Restores binned items that are not ZZ_DELETE_/ZZ_SUPERSEDED_
-    // into 00 CHECK. The web app is domain-only, so its address is not needed by anyone outside puppyclassroom.com.
+    // App Factory page (factory/): reads af-state.json from logsFolderId (written by AF-ENGINE); writes request files into
+    // requestsFolderId. The Idea Form is the front door (AF-ENGINE writes the card and the ClickUp task).
+    factory: {
+      logsFolderId: '1e04LM9qA2lXpy63Qfcd7x9HEEjhsMj9k',
+      requestsFolderId: '1Z1Iuc_rRFq7cy12ELM0seZ-onpCSfDQ2',
+      ideaFormUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSfzzTnlyNWeXzFEz9NfYxNXsCFN6KwV8RxFyIRTJZ-WrH15nw/viewform'
+    },
+    // Bin guard (Apps Script, owned by the business account). Restores binned items that are not ZZ_DELETE_/ZZ_SUPERSEDED_
+    // into 00 CHECK. The web app is domain-only, so its address is not needed by anyone outside the business domain.
     binGuard: {
       checkFolderId: '1o7ag4AndYA20h7aOmPsm0x69q3f2PqaZ', // LD > *00 Current > 00 CHECK
       homeFolderId: '1HKAMkAER7ft-xMJYUQGzi_v6jV-3vQwk', // LD > *00 Current: the web app writes its address file here when first opened
       webAppFile: 'BIN-GUARD-WEBAPP.json',
       webAppUrl: '' // optional: paste the /exec address here instead. Left empty, the page reads it from webAppFile.
+    },
+    // Projects Hub (Apps Script web app in the private projects-hub repo). Lisa OK'd the address here (1 Nov 2026): it
+    // grants nothing on its own; Google limits the web app to her Workspace and the hub lets in only its EDITORS list.
+    // The /a/macros/puppyclassroom.com/ form makes Google use the work account (the plain form loops when Chrome's
+    // first account is a personal one, 2 Nov 2026).
+    // sheetId: the hub's own Sheet ("Projects Hub TEST", lisa@puppyclassroom.com). The Dashboard reads its INDEX tab with
+    // Lisa's read-only sign-in for the Projects tile's 3 numbers; it never writes. Empty = the tile shows no numbers.
+    projectsHub: {
+      sheetId: '1ssFH6uTD6uEYbxio6iA3BlP9Op3l2d7MRf_ktusMcTU',
+      tab: 'INDEX',
+      webAppUrl: 'https://script.google.com/a/macros/puppyclassroom.com/s/AKfycbx42JNrRiolxbf5JJEqnOwXy_GgYelx-6GKhQaNuQMyUsTW5e89P2VZBANP_yGSOxgj/exec'
     },
     money: {
       owner: 'lisa@puppyclassroom.com',
