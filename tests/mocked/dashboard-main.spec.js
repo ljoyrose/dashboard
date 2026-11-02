@@ -15,9 +15,14 @@ const SHEETS = /^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\//;
 const CFG = (() => { const c = { window: {} }; vm.createContext(c); vm.runInContext(fs.readFileSync(path.join(ROOT, 'config.js'), 'utf8'), c); return c.window.DASH_CONFIG; })();
 const SHOTS = process.env.MAIN_SHOTS || '';
 
-// Lisa's order, colour (the 3px line) and link for each tile. Projects opens config.js projectsHub.webAppUrl.
+// Every number is its own link to the place in the hub where Lisa acts on it (Projects: the hub itself).
+const ROUTES = {
+  projects: ['', '', ''], web: ['#/look', '#/look', '#/home'], money: ['#/dates', '#/dates', '#/money'], food: ['#/orders', '#/invoices', '#/orders'],
+  dogs: ['#/today', '#/today', '#/dogs'], apps: ['#/decide', '#/decide', '#/all'], market: ['#/do', '#/reply', '#/numbers'], studio: ['#/review', '#/me', '#/library'],
+};
+// Lisa's order, colour (the 3px line; Projects has the rainbow line) and link for each tile. Projects opens config.js projectsHub.webAppUrl.
 const TILES = [
-  ['projects', 'Projects', 'rgb(138, 127, 112)', CFG.projectsHub.webAppUrl, []],
+  ['projects', 'Projects', 'gradient', CFG.projectsHub.webAppUrl, ['Stuck', 'Waiting', 'Running']],
   ['web', 'Web', 'rgb(230, 68, 61)', 'estate/', ['Down', 'Expiring', 'Live']],
   ['money', 'Money', 'rgb(231, 134, 21)', 'money/', ['Overdue', 'Due Soon', 'Cash']],
   ['food', 'Food', 'rgb(243, 216, 78)', 'food/', ['Late', 'Owe GA', 'Today']],
@@ -68,21 +73,31 @@ test.describe('Dashboard Main', () => {
   test('tiles: Lisa\'s order, colours and links; every hub tile has 3 labelled numbers worked out as the hub does', async ({ page, guard }) => {
     await seed(page, guard);
     await signIn(page);
-    const tiles = page.locator('#view #hubTiles a.hubtile');
+    const tiles = page.locator('#view #hubTiles .hubtile');
     await expect(tiles).toHaveCount(TILES.length);
     for (let i = 0; i < TILES.length; i++) {
       const [key, name, colour, href, labels] = TILES[i];
       const t = tiles.nth(i);
       await expect(t).toHaveAttribute('data-hub', key);
-      await expect(t.locator('.hn')).toContainText(name);
-      await expect(t).toHaveAttribute('href', href);
-      await expect(t).toHaveAttribute('target', '_blank');
+      const go = t.locator('a.hgo');
+      await expect(go).toContainText(name);
+      await expect(go).toHaveAttribute('href', href);
       expect(href.startsWith('https://ljoyrose.github.io'), 'relative links only').toBe(false);
-      const look = await t.evaluate((el) => { const b = getComputedStyle(el, '::before'); const c = getComputedStyle(el); return { line: b.borderLeftColor, w: b.borderLeftWidth, bg: c.backgroundColor, card: getComputedStyle(document.body).getPropertyValue('--card') }; });
-      expect(look.line, name + ' line colour').toBe(colour);
+      // Every piece of info is clickable: the name and each number are links, all opening in a new tab.
+      for (const a of await t.locator('a').all()) await expect(a).toHaveAttribute('target', '_blank');
+      const ks = t.locator('a.hk');
+      await expect(ks).toHaveCount(3);
+      for (let j = 0; j < 3; j++) {
+        await expect(ks.nth(j), name + ' number ' + j).toHaveAttribute('href', href + ROUTES[key][j]);
+        expect((await ks.nth(j).boundingBox()).height, name + ' number tap height').toBeGreaterThanOrEqual(24);
+      }
+      expect((await go.boundingBox()).height, name + ' name tap height').toBeGreaterThanOrEqual(48);
+      const look = await t.evaluate((el) => { const b = getComputedStyle(el, '::before'); const c = getComputedStyle(el); return { line: b.borderLeftColor, img: b.backgroundImage, w: b.borderLeftWidth, bg: c.backgroundColor, card: getComputedStyle(document.body).getPropertyValue('--card') }; });
+      if (colour === 'gradient') expect(look.img, name + ' rainbow line').toMatch(/linear-gradient/);
+      else expect(look.line, name + ' line colour').toBe(colour);
       expect(look.w).toBe('3px');
       await expect(t.locator('svg.hico use')).toHaveCount(1);
-      if (key === 'projects') { await expect(t).toContainText('Opens in your work account'); await expect(t.locator('.hk')).toHaveCount(0); continue; }
+      if (key === 'projects') await expect(t).toContainText('Opens in your work account');
       expect((await nums(page, key)).map((n) => n[0]), name + ' labels').toEqual(labels);
       for (const lab of labels) expect(lab.split(' ').length, 'labels are 1-2 words').toBeLessThanOrEqual(2);
     }
@@ -198,7 +213,7 @@ test.describe('Dashboard Main', () => {
           expect(w[1], v + ' body width').toBeLessThanOrEqual(w[2]);
         }
         await page.evaluate(() => { location.hash = '#/map'; });
-        const lines = await page.locator('#hubTiles a.hubtile').evaluateAll((ts) => ts.map((t) => getComputedStyle(t, '::before').borderLeftColor));
+        const lines = await page.locator('#hubTiles .hubtile').evaluateAll((ts) => ts.map((t) => { const b = getComputedStyle(t, '::before'); return /linear-gradient/.test(b.backgroundImage) ? 'gradient' : b.borderLeftColor; }));
         expect(lines).toEqual(TILES.map((t) => t[2]));
         const ink = await page.locator('#hubTiles .hubtile[data-hub="apps"] .hk b').first().evaluate((b) => [getComputedStyle(b).color, getComputedStyle(document.body).backgroundColor]);
         expect(ink[0]).not.toBe(ink[1]);

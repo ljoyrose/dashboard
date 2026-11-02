@@ -441,7 +441,7 @@
   .hubtile { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 6px 10px; color: var(--ink); text-align: left; box-shadow: none; }
   .hubtile .hn { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--fs-body); line-height: 24px; }
   .hubtile a { color: var(--ink); text-decoration: none; border-radius: var(--radius); }
-  .hubtile a.hgo { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 4px; }
+  .hubtile a.hgo { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 4px; }
   .hubtile .hsub { padding: 0 4px; }
   svg.hico { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--hic, var(--muted)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .hks { display: grid; grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 4px 10px; }
@@ -459,7 +459,7 @@
   ol.hrows .nt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   /* Projects tile: the whole picture, so a multi-colour line (full height, curved with the corner) and an ink icon (Lisa, 2 Nov). */
   .hubtile[data-hub="projects"].house-lbar::before { border-left-color: transparent; background: linear-gradient(to bottom, var(--ljr-2), var(--ljr-3), var(--ljr-4), var(--ljr-5), var(--ljr-6), var(--ljr-7)) border-box;
-    -webkit-mask: linear-gradient(to right, #000 3px, transparent 3px) border-box; mask: linear-gradient(to right, #000 3px, transparent 3px) border-box; }
+    -webkit-mask: linear-gradient(to right, var(--ink) 3px, transparent 3px) border-box; mask: linear-gradient(to right, var(--ink) 3px, transparent 3px) border-box; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   footer { padding-bottom: 32px; text-align: left; }
   footer p { margin: 0; color: var(--muted); font-size: var(--fs-small); }

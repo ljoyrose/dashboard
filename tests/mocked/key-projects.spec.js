@@ -61,7 +61,7 @@ test.describe('Home: hub tiles (were Key projects & docs)', () => {
     for (let i = 0; i < SHIPPED.length; i++) {
       const [label, href, blank] = SHIPPED[i];
       const tile = tiles.nth(i);
-      await expect(tile.locator('.hn')).toHaveText(new RegExp('^' + label + '( ✓ XML)?$'));
+      await expect(tile.locator('.hn')).toHaveText(new RegExp('^' + label + '( ?✓ XML)?$'));
       const go = tile.locator('a.hgo');
       await expect(go).toHaveAttribute('href', href);
       if (blank) await expect(go).toHaveAttribute('target', '_blank');
