@@ -62,7 +62,7 @@
   details > summary::after { content: "\25BE"; font-size: 13px; color: var(--muted); }
   details[open] > summary::after { content: "\25B4"; }
   details[open] > summary { margin-bottom: 12px; }
-  @media (hover: hover) { a.ent:hover, details > summary:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--hov); } }
+  @media (hover: hover) { a.ent:hover, details > summary:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
 
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
   @media (max-width: 600px) { html { scroll-padding-bottom: 120px; } }
@@ -240,14 +240,14 @@
   <div id="view"></div>
 </main>
 <nav class="main house-tabs" aria-label="Sections">
-  <a class="ht" data-slot="1" href="#/now" data-nav="now"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="nNow"></span></a>
+  <a class="ht" data-slot="1" href="#/now" data-nav="now"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n" id="nNow"></span></a>
   <a class="ht" data-slot="3" href="#/money" data-nav="money"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-money"/></svg></span><span class="htl">Money</span><span class="n" id="nMoney"></span></a>
-  <a class="ht" data-slot="4" href="#/todo" data-nav="todo"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n need" id="nTodo"></span></a>
+  <a class="ht" data-slot="4" href="#/todo" data-nav="todo"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n" id="nTodo"></span></a>
   <a class="ht" data-slot="4" href="#/dates" data-nav="dates"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-cal"/></svg></span><span class="htl">Dates</span><span class="n" id="nDates"></span></a>
   <a class="ht" data-slot="5" href="#/accountant" data-nav="accountant"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-user"/></svg></span><span class="htl">Accountant</span><span class="n" id="nAcct"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
-      <a href="#/control" data-nav="control" data-slot="0"><svg class="icon" aria-hidden="true"><use href="#i-control"/></svg><span class="htl">Control</span><span class="n need" id="nControl"></span></a>
+      <a href="#/control" data-nav="control" data-slot="0"><svg class="icon" aria-hidden="true"><use href="#i-control"/></svg><span class="htl">Control</span><span class="n" id="nControl"></span></a>
     </div>
   </div>
 </nav>
@@ -651,12 +651,12 @@
     }
     sub = sub || 'yours';
     var h = '<nav class="subnav" aria-label="To-do views">' + TODO_SUBS.map(function (s) { return '<a class="c-ops" href="#/todo/' + s[0] + '"' + (s[0] === sub ? ' aria-current="page"' : '') + '>' + esc(s[1]) + '</a>'; }).join('') + '</nav>';
-    var wrap = function (title, cls, list, show) { return '<section class="card ' + cls + '"><div class="cardhead"><h3>' + esc(title) + '</h3>' + cnt(list.length, title === 'Ready now') + '</div>' + (list.length ? listWithMore(list, show || 10, turnLi, 'todo-' + sub + '-' + title) : empty('Nothing here.')) + '</section>'; };
+    var wrap = function (title, cls, list, show) { return '<section class="card ' + cls + '"><div class="cardhead"><h3>' + esc(title) + '</h3>' + cnt(list.length, false) + '</div>' + (list.length ? listWithMore(list, show || 10, turnLi, 'todo-' + sub + '-' + title) : empty('Nothing here.')) + '</section>'; };
     var mk = function (rows) { return rows.map(function (r) { return { r: r, ready: M.ready(r, reg) }; }); };
     if (sub === 'yours') {
       var t = M.yourTurn(R.data), nn = M.needsNow(R.data, R.money, R.today);
       // Every Needs you item (Main shows the first 5), moved here from Main (Hub Mains, 2 Nov 2026).
-      if (nn.length) h += '<section class="card now ' + (nn.some(function (i) { return i.level === 'risk'; }) ? 'c-risk' : 'c-ok') + '" data-needs-all>' + head('Needs you', '#/now/all', nn.length, true) + listWithMore(nn, NOW_SHOW, itemLi, 'todo-needs') + '</section>';
+      if (nn.length) h += '<section class="card now ' + (nn.some(function (i) { return i.level === 'risk'; }) ? 'c-risk' : 'c-ok') + '" data-needs-all>' + head('Needs you', '#/now/all', nn.length, nn.some(isOverdue)) + listWithMore(nn, NOW_SHOW, itemLi, 'todo-needs') + '</section>';
       var rdy = t.filter(function (x) { return x.ready === 'ready'; }), blk = t.filter(function (x) { return x.ready !== 'ready'; });
       // One empty line per view (Lisa, 2 Nov): empty sections are not drawn.
       h += t.length ? (rdy.length ? wrap('Ready now', 'c-ops', rdy, 8) : '') + (blk.length ? wrap('Blocked', 'c-mute', blk, 5) : '') : nn.length ? '' : '<section class="card c-ok" data-empty-one>' + empty('Nothing needs you') + '</section>';
@@ -759,18 +759,20 @@
     $('signOutBtn').classList.toggle('hidden', !signedIn);
     $('signInBtn').classList.toggle('hidden', signedIn);
   }
-  // Counts in the tab corners: what needs you (rose ring) and plain totals (grey ring). Empty = hidden.
+  // Counts in the tab corners: rose ring = something counted is late; grey ring = waiting. Empty = hidden.
   function tabCounts() {
     var ok = signedIn && R && R.gate === 'ok', set = function (id, n, need) { var e = $(id); e.textContent = ok && n ? String(n) : ''; e.classList.toggle('need', !!need); e.classList.toggle('wide', String(n).length > 2); };
     if (!ok) { ['nNow', 'nMoney', 'nDates', 'nTodo', 'nAcct', 'nControl'].forEach(function (id) { set(id, 0); }); return; }
     var over = M.overdueDates(R.data, R.today).length, soon = M.dueWithin(R.data, R.today, 14).length;
     var fc = M.fileChecks(R), bad = fc.filter(function (f) { return f.state === 'fail'; }).length;
-    set('nNow', M.needsNow(R.data, R.money, R.today).length, true);
+    // Rose = late only (Lisa's sweep, 3 Nov 2026; a rose count is read out as "N late"): Now is rose when one is overdue.
+    var now = M.needsNow(R.data, R.money, R.today);
+    set('nNow', now.length, now.some(isOverdue));
     set('nMoney', 0);
     set('nDates', over + soon, over > 0);
-    set('nTodo', M.yourTurn(R.data).filter(function (x) { return x.ready === 'ready'; }).length, true);
+    set('nTodo', M.yourTurn(R.data).filter(function (x) { return x.ready === 'ready'; }).length, false);
     set('nAcct', (R.data.accountant || []).filter(function (q) { return !q.answer; }).length, false);
-    set('nControl', bad, true);
+    set('nControl', bad, false);
   }
   var lastHash = location.hash;
   window.addEventListener('hashchange', function () {

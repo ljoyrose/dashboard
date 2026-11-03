@@ -89,13 +89,13 @@
   label.date.over, label.date.soon { background: color-mix(in srgb, var(--mc) 10%, var(--surface)); }
 
   /* Hover = selected: a 1px line drawn inside (nothing moves). Neutral = ink line + muted tint; meaning = its own colour + its tint. */
-  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { outline: 1px solid var(--ink); outline-offset: -1px; }
   @media (hover: hover) {
     .btn:hover, button.pill:hover, a.pill:hover, .fbtn:hover, .ch:hover, .more:hover, .undo:hover, .copy:hover, .tick:hover, label.date:hover, a.chip:hover, details.arch > summary:hover,
-    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
     .btn.yes:hover, .btn.no:hover, .lk.off:hover, a.need:hover, a.chip.stuck:hover, a.pill.alert.has:hover, label.date.over:hover, label.date.soon:hover, .stat:hover {
-      outline: 1px solid var(--mc); outline-offset: -1px; background: color-mix(in srgb, var(--mc) 14%, var(--surface)); }
-    header .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 10%, var(--frame)); }
+      outline: 1px solid var(--mc); outline-offset: -1px; }
+    header .btn:hover { outline-color: var(--frame-ink); }
     .ico:hover { color: var(--hc, var(--ink)); }
     .mark:hover svg { filter: none; opacity: 1; }
     .crow .ttl:hover, .room h2 .rlink:hover { text-decoration: underline; }
@@ -498,7 +498,7 @@
     var html = findBar('rooms', all, APP, [], { side: sw, extra: '<div class="pills">' +
       // Every count is a link: it opens the list it counts.
       '<a class="pill" href="#/all" title="Apps"><i class="ti ti-apps"></i> Apps ' + cnt(A.length) + '</a>' +
-      '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> Stuck ' + cnt(A.filter(stuck).length, true) + '</a>' +
+      '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> Stuck ' + cnt(A.filter(stuck).length, false) + '</a>' +
       '<a class="pill" href="#/room/reactor" title="Build slots"><i class="ti ti-hammer"></i> ' + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + '/3</a>' +
       people().map(function (w) { return '<a class="pill" href="#/queue/' + encodeURIComponent(w) + '">' + esc(w) + ' ' + cnt(queue(w).length) + '</a>'; }).join('') +
       enginePill() + ckPill() + '</div>' + docsStrip() }) + (A.length ? '' : emptyBox()) + '<div class="rooms">';
@@ -1456,7 +1456,7 @@
       return h.result !== 'OK' || !(now - last < WINDOW_H[h.job] * 36e5);
     }).map(function (h) { return (JOB[h.job] || h.job) + ' ' + word(h); });
     if (now - Date.parse(S.generated_at) > 45 * 6e4) bad.unshift('Data old');
-    return bad.length ? '<a class="pill alert has" href="#/health" title="' + esc(bad.join(' · ')) + '"><i class="ti ti-alert-triangle"></i> Engine ' + cnt(bad.length, true) + '</a>' :
+    return bad.length ? '<a class="pill alert has" href="#/health" title="' + esc(bad.join(' · ')) + '"><i class="ti ti-alert-triangle"></i> Engine ' + cnt(bad.length, false) + '</a>' :
       '<a class="pill" href="#/health" title="Engine"><i class="ti ti-check"></i> Engine</a>';
   }
   var JOB = { syncState: 'Screen sync', dailyDigest: 'Daily email', staleCheck: 'Stuck check', weeklyBackup: 'Backup', leakProbe: 'Live-app check', onIdeaSubmit: 'Idea Form' };

@@ -61,10 +61,10 @@
   .chips.people { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   /* .mkwho: whose items, the people chips (and the phone's one Filter button) at the top of the page, out of the top bar. */
   .mkwho:has(> #people.hidden) { display: none; }
-  .chip[aria-pressed="true"], .chip.on { outline: 1px solid var(--ink); outline-offset: -1px; background-color: var(--hov); }
+  .chip[aria-pressed="true"], .chip.on { outline: 1px solid var(--ink); outline-offset: -1px; }
   @media (hover: hover) {
-    a.tile:hover, button.tile:hover, details > summary:hover, .pair figure > a:hover { outline: 1px solid var(--ink); outline-offset: -1px; background-color: var(--hov); }
-    html.dash-locked header .btn:hover { outline-color: var(--ink); background-color: var(--hov); }
+    a.tile:hover, button.tile:hover, details > summary:hover, .pair figure > a:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    html.dash-locked header .btn:hover { outline-color: var(--ink); }
   }
   /* Keyboard focus: a 2px ink ring (the one exception to 1px). */
   a:focus, button:focus, summary:focus { outline: none; }
@@ -232,10 +232,10 @@
 </main>
 <nav class="tabs house-tabs hidden" id="tabs" aria-label="Marketplace sections">
   <a class="ht" data-slot="1" href="#/me" data-nav="me"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n"></span></a>
-  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n need" id="n-decide"></span></a>
-  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n need" id="n-do"></span></a>
-  <a class="ht" data-slot="5" href="#/reply" data-nav="reply"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-chat"/></svg></span><span class="htl">Reply</span><span class="n need" id="n-reply"></span></a>
-  <a class="ht" data-slot="6" href="#/newstock" data-nav="newstock"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-truck"/></svg></span><span class="htl">New Stock</span><span class="n need" id="n-newstock"></span></a>
+  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n" id="n-decide"></span></a>
+  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n" id="n-do"></span></a>
+  <a class="ht" data-slot="5" href="#/reply" data-nav="reply"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-chat"/></svg></span><span class="htl">Reply</span><span class="n" id="n-reply"></span></a>
+  <a class="ht" data-slot="6" href="#/newstock" data-nav="newstock"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-truck"/></svg></span><span class="htl">New Stock</span><span class="n" id="n-newstock"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
       <a href="#/insights" data-nav="insights" data-slot="3"><i class="ti ti-chart-bar" aria-hidden="true"></i><span class="htl">Insights</span></a>
@@ -447,6 +447,9 @@
   function siteOf(r) { var p = String(detail(r).platform || '').toLowerCase(); return SITE_NAMES[p] || (p ? p.charAt(0).toUpperCase() + p.slice(1) : ''); }
   function shown(r) { return (who === 'All' || owner(r) === who) && (site === 'All' || siteOf(r).toLowerCase() === site.toLowerCase()); }
   function waiting(sec) { return rows.filter(function (r) { return r.section === sec && !r.answer && !r.applied_at && shown(r); }); }
+  // A rose count means late (Lisa's sweep, 3 Nov 2026; read out as "N late"): only when something it counts is past its post-by date.
+  function isLate(r) { return dueOf(detail(r)) === 'late'; }
+  function tabLate(t) { return TABS[t].filter(function (s) { return !SECTIONS[s].quiet; }).some(function (s) { return waiting(s).some(isLate); }); }
   function tabCount(t) { return TABS[t].filter(function (s) { return !SECTIONS[s].quiet; }).reduce(function (n, s) { return n + waiting(s).length; }, 0); }
   function needsCount() { return ORDER.filter(function (s) { return !SECTIONS[s].quiet; }).reduce(function (n, s) { return n + waiting(s).length; }, 0); }
   // Posts in packing order: shelf, then title. The parcel number is the engine's when it sends one, else the place in this list.
@@ -882,7 +885,7 @@
     var EMPTY = { do: ['Nothing waiting', ''], decide: ['All decided', ''], reply: ['No one waiting', ''] };
     if (!list.length) return h + emptyCard(EMPTY[t][0], EMPTY[t][1]) + tail;
     var one = t === 'decide' && !showAll, sec = null;
-    (one ? list.slice(0, 1) : list).forEach(function (r) { if (r.section !== sec) { sec = r.section; h += ghead(SECTIONS[sec].name, list.filter(function (x) { return x.section === sec; }).length, !SECTIONS[sec].quiet); } h += itemCard(r); });
+    (one ? list.slice(0, 1) : list).forEach(function (r) { if (r.section !== sec) { sec = r.section; h += ghead(SECTIONS[sec].name, list.filter(function (x) { return x.section === sec; }).length, list.some(function (x) { return x.section === sec && isLate(x); })); } h += itemCard(r); });
     if (t === 'decide' && list.length > 1) h += '<button class="more" type="button" data-action="all">' + (showAll ? 'Show one at a time' : '1 of ' + list.length + ' · show all') + '</button>';
     return h + tail;
   }
@@ -1003,7 +1006,7 @@
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);   // menu only after sign-in
     var on = TAB_OF[view] || view;
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === on) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    ['do', 'decide', 'newstock', 'reply'].forEach(function (t) { var n = tabCount(t); $('n-' + t).textContent = n || ''; $('n-' + t).classList.toggle('wide', n > 99); $('n-' + t).parentNode.setAttribute('aria-label', $('n-' + t).previousSibling.textContent + (n ? ', ' + n + ' waiting' : '')); });
+    ['do', 'decide', 'newstock', 'reply'].forEach(function (t) { var n = tabCount(t); $('n-' + t).textContent = n || ''; $('n-' + t).classList.toggle('wide', n > 99); var late = !!n && tabLate(t); $('n-' + t).classList.toggle('need', late); $('n-' + t).parentNode.setAttribute('aria-label', $('n-' + t).previousSibling.textContent + (n ? ', ' + n + (late ? ' late' : ' waiting') : '')); });
     $('people').classList.toggle('hidden', !token || !rows.some(function (r) { return detail(r).owner && detail(r).owner !== 'Lisa'; }));
     $('whoN').textContent = ((who !== 'All') + (site !== 'All') + (stockFilter !== 'all')) || '';   // the phone's one Filter button counts the filters that are on
     $('people').innerHTML = PEOPLE.map(function (p) { return '<button class="chip" type="button" data-who="' + p + '" aria-pressed="' + (who === p) + '">' + p + '</button>'; }).join('');

@@ -1058,7 +1058,7 @@ test.describe('Marketplace house look', () => {
       ink: probe('var(--ink)'), ok: probe('var(--ok)'), need: probe('var(--need)'), tc: probe('var(--tc)'), surface: getComputedStyle(document.querySelector('#view .card') || document.body).backgroundColor };
   });
   const chan = (c) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)/.exec(c); return m ? [m[1] * 255, m[2] * 255, m[3] * 255] : (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number); };
-  test('hover: neutral controls get a 1px ink line inside + a muted tint; nothing moves or resizes; read-only pills have no hover', async ({ page }) => {
+  test('hover: neutral controls get a 1px ink line inside and no fill (Lisa\'s sweep, 3 Nov); nothing moves or resizes; read-only pills have no hover', async ({ page }) => {
     await lookSheets(page);
     await open(page, '#/do');
     for (const sel of ['#view a.btn[href*="vinted"]', '#view [data-action="pack"]', '#view .chip[data-site]:not([aria-pressed="true"])']) {
@@ -1068,7 +1068,7 @@ test.describe('Marketplace house look', () => {
       const h = await hoverLook(el);
       expect([h.style, h.width, h.offset], sel).toEqual(['solid', '1px', '-1px']);
       expect(h.line, `${sel}: neutral hover line is ink`).toBe(h.ink);
-      expect(h.bg, `${sel}: a muted tint appears`).not.toBe(rest.bg);
+      expect(h.bg, `${sel}: no fill on hover`).toBe(rest.bg);
       expect(await el.boundingBox(), `${sel} moved or resized on hover`).toEqual(before);
     }
     // Selected looks the same as hover.
@@ -1081,7 +1081,7 @@ test.describe('Marketplace house look', () => {
     }
   });
 
-  test('hover: meaning-coloured controls keep their OWN colour (line + pale tint of it, never ink): green Yes, rose No', async ({ page }) => {
+  test('hover: meaning-coloured controls keep their OWN colour (line, never ink, no fill): green Yes, rose No', async ({ page }) => {
     await lookSheets(page);
     await open(page, '#/decide');
     for (const [s, key, lean] of [['[data-ans="GO|1"][data-v="Yes"]', 'ok', 'green'], ['[data-ans="GO|1"][data-v="No"]', 'need', 'red']]) {
@@ -1091,9 +1091,9 @@ test.describe('Marketplace house look', () => {
       expect([h.style, h.width, h.offset], s).toEqual(['solid', '1px', '-1px']);
       expect(h.line, `${s}: line keeps its colour`).toBe(h[key]);
       expect(h.line, `${s}: never ink`).not.toBe(h.ink);
-      expect(h.bg, `${s}: a tint appears`).not.toBe(rest.bg);
-      const [r, g] = chan(h.bg);
-      if (lean === 'green') expect(g, `${s}: tint is green`).toBeGreaterThan(r); else expect(r, `${s}: tint is rose`).toBeGreaterThan(g);
+      expect(h.bg, `${s}: no fill on hover`).toBe(rest.bg);
+      const [r, g] = chan(h.line);
+      if (lean === 'green') expect(g, `${s}: line is green`).toBeGreaterThan(r); else expect(r, `${s}: line is rose`).toBeGreaterThan(g);
       expect(await el.boundingBox(), `${s} moved`).toEqual(before);
     }
   });

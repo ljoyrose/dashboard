@@ -53,10 +53,10 @@
   .stamp { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
-  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); } }
+  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); } }
 
   .btn.big { width: 100%; justify-content: center; min-height: 44px; }
-  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); } }
+  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   input:focus, select:focus { outline: none; }
   a:focus, button:focus { outline: none; }
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -76,8 +76,9 @@
   .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; color: var(--ink); min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
   .tile .k { font-size: var(--fs-small); color: var(--muted); }
   .tile .v { font-size: var(--fs-figure); font-weight: 600; align-self: flex-start; line-height: 1.3; }
-  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
-  .tile .v.red, .tile .v.amber { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--house-ring); }
+  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting.
+     Every tile's number wears the box (sweep, 3 Nov: numbers side by side in one group are one size), so Live and Down match. */
+  .tile .v { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--house-ring); }
   .tile .v.red { border-color: var(--house-late); }
 
   .card { display: flex; flex-direction: column; gap: 12px; }

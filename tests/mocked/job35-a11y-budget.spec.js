@@ -10,7 +10,10 @@ const { HUBS, go } = require('../support/hubs');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 367100, cdhub: 255700, factory: 261500, food: 169800 };
+const BYTES = { home: 371900, cdhub: 260500, factory: 266100, food: 174900 };
+// home 367100 > 371900 (+4800), cdhub 255700 > 260500 (+4800), factory 261500 > 266100 (+4600) and food 169800 > 174900 (+5100) on
+// 3 Nov 2026: the style sweep (Lisa) adds the house style sheet's token index and new tokens to tokens.css (about 3.6 KB) and the
+// 16px typing-box rule to house.css, which every page loads. Measured 409078, 286548, 292699 and 192283.
 // home 352000 > 367100 (+15100), cdhub 239700 > 255700 (+16000), factory 245400 > 261500 (+16100) and food 153800 > 169800 (+16000)
 // on 3 Nov 2026: the fold control on every section heading (Lisa, 2 Nov) adds DashKit.fold to toolkit.js (about 12.9 KB) and its rules
 // to house.css (about 4.2 KB), which every page loads. Measured 403424, 280922, 287302 and 186447.
