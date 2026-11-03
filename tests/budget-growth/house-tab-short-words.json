@@ -1,0 +1,2 @@
+{"home": 400, "cdhub": 400, "factory": 400, "food": 400, "marketplace": 400, "money": 400, "studio": 400,
+ "why": "Phone tab words (Lisa, 2 Nov 2026), PR for claude/house-tab-short-words: .htl-long/.htl-short rules in house.css and the full-word tab name in toolkit.js (about 300 bytes), which every hub loads; Money and Marketplace pages add the short-word spans."}

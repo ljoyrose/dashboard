@@ -258,7 +258,7 @@
       var w = t.querySelector(':scope > .htl'), n = t.querySelector(':scope > .n, :scope > .cnt'), s; if (!w) return;
       s = root.getComputedStyle(w); fit = Math.max(fit, Math.ceil(w.scrollWidth + parseFloat(s.marginLeft) * 2));
       if (!n) return;
-      var c = n.textContent.trim(), name = w.textContent.trim() + (c ? ', ' + c + (n.classList.contains('need') ? ' late' : ' waiting') : '');
+      var c = n.textContent.trim(), name = (w.querySelector(':scope > .htl-long') || w).textContent.trim() + (c ? ', ' + c + (n.classList.contains('need') ? ' late' : ' waiting') : '');
       if (t.getAttribute('aria-label') !== name) t.setAttribute('aria-label', name);
     });
     if (nav.style.getPropertyValue('--house-tab-fit') !== (fit ? fit + 'px' : '')) nav.style.setProperty('--house-tab-fit', fit ? fit + 'px' : '');

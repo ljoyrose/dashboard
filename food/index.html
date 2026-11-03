@@ -233,6 +233,7 @@
   function load() {
     if (!F || !F.bookId) { banner('Not set up yet: the GA Hub settings are not in config.js.', true); return; }
     if (!token) { render(); return; }
+    if (!loaded) render();   // J34-F61: say it is reading while the first read runs, not the sign-in card again
     api(base() + ':batchGet?' + RANGES.map(function (r) { return 'ranges=' + encodeURIComponent(r); }).join('&')).then(function (j) {
       var vr = (j.valueRanges || []).map(function (x) { return x.values || []; });
       data.cards = (vr[0] || []).map(function (v, i) { var o = { _row: i + 2 }; CARD_COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; })
@@ -257,7 +258,7 @@
       return put([value, '', at, who]).then(function () { return api(url('Cards!A' + r._row)); })
         .then(function (k) { if (((k.values || [[]])[0] || [])[0] !== r.key) return put(old).then(function () { throw new Error('the list changed: refresh and tap again'); }); })
         .then(function () { r.answer = value; r.answered_at = at; r.answered_by = who; render(); });
-    }).catch(function (e) { banner('Not saved: ' + e.message); });
+    }).catch(function (e) { banner('Not saved: ' + e.message); render(); });   // J34-F60: redraw so the button can be tapped again
   }
 
   /* ---------- views ---------- */
@@ -505,10 +506,11 @@
       ['XML orders go to', 'GA_ORDER_TO', 'mail'], ['XML contact', 'GA_XML_CONTACT', 'mail'], ['We send XML orders from', 'GA_ORDER_FROM', 'mail'],
       ['Shipping reports come from', 'GA_SHIP_FROM', 'mail'], ['Invoices come from', 'GA_INVOICE_FROM', 'mail'], ['Commercial invoices (Jersey) to', 'COMMERCIAL_INVOICE_TO', 'mail'],
       ['Minimum profit per order', 'MIN_PROFIT', 'money'], ['Subscription discount', 'SUB_DISCOUNT', 'money']];
-    var h = '<p class="needs">GA</p><div class="card">';
-    rows.forEach(function (r) { var v = setting(r[1]); if (!v) return;
+    var h = '<p class="needs">GA</p><div class="card">', shownN = 0;
+    rows.forEach(function (r) { var v = setting(r[1]); if (!v) return; shownN++;
       var shown = r[2] === 'link' ? '<a href="' + esc(v) + '" target="_blank" rel="noopener">' + esc(v.replace(/^https?:\/\//, '')) + '</a>' : r[2] === 'tel' ? telLink(mailLink(esc(v))) : r[2] === 'mail' ? mailLink(esc(v)) : r[2] === 'money' ? money(v) : esc(v);
       h += '<div class="row"><div class="txt"><div class="m">' + esc(r[0]) + '</div>' + shown + '</div>' + (r[2] === 'copy' ? '<button class="btn" type="button" data-copy="' + esc(v) + '">Copy</button>' : '') + '</div>'; });
+    if (!shownN) h += '<p class="what">No GA details yet. Add them in the Settings tab of the workbook.</p>';   // J34-F62
     h += '</div>';
     if (data.codes.length) {
       var kinds = [['brand', 'Brand'], ['channel', 'Code for where it was sold (means nothing to customers)'], ['partner_type', 'Partner type (+ 2 digits, e.g. R01)'], ['partner', 'Partners'], ['suffix', 'Ending (+ a number)']];
@@ -530,6 +532,7 @@
     var ready = typeof auth !== 'undefined' && auth.ready();
     $('signin').disabled = !token && !ready;
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the GA Hub</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
+    if (!loaded && !failed) { $('view').innerHTML = '<div class="card"><p class="what">Reading the GA workbook…</p></div>'; return; }
     $('view').innerHTML = view === 'orders' ? pageOrders() : view === 'invoices' ? pageInvoices() : view === 'products' ? pageProducts() : view === 'ga' ? pageGa() : view === 'do' ? pageDo() : view === 'review' ? pageReview() : pageHome();
     var f = focusKey && view === 'do' && document.querySelector('#view .card.focus'); if (f && f.scrollIntoView) f.scrollIntoView({ block: 'start' });
   }
