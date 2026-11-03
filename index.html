@@ -3048,6 +3048,19 @@
     html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', S.bin);
     return html + '</div></details>';
   }
+  // Other apps (TidyUp Apps 5): read-only list from CFG.tidyApps. Placed before Dropbox, which stays the last card.
+  var APP_STATUS = { 'bot-and-browser': 'Bot moves, you empty', 'bot-capable': 'Bot can tidy, nothing marked', 'browser-only': 'By hand', 'nothing': 'Nothing to do' };
+  function appsCard() {
+    var rows = (CFG.tidyApps || []).filter(function (r) { return r && r.app; });
+    if (!rows.length) return '';
+    var html = foldOpen('apps', false, 'card slot8', 'appsCard') + '<summary><h3>Other apps</h3><span class="chip">' + num(rows.length) + '</span></summary><div class="fbody">';
+    html += '<ul class="files" data-apps-list>' + rows.map(function (r) {
+      return '<li data-app="' + esc(r.app) + '"><div class="fname">' + esc(r.app) + '</div><div class="meta"><span class="chip">' + esc(APP_STATUS[r.status] || 'Not set') + '</span></div>' +
+        '<p class="note">' + esc(r.how || '') + '</p></li>';
+    }).join('') + '</ul>';
+    html += '<ul class="notes"><li>Archive or move to the bin only. Nothing is deleted for good.</li></ul>';
+    return html + '</div></details>';
+  }
   function dropboxCard() {
     var dx = S.dbx, dd = dx.data;
     var html = foldOpen('dropbox', false, 'card slot2' + cardClass(dx), 'dropboxCard') + '<summary><h3>Dropbox (being emptied)</h3>' + stateBadge(dx, null) + '</summary><div class="fbody">';
@@ -3099,7 +3112,7 @@
   }
 
   function viewBin() {
-    return needsNowCard() + readyCard() + viewCheck() + notReadyCard() + binsCard() + logCard() + dropboxCard();
+    return needsNowCard() + readyCard() + viewCheck() + notReadyCard() + binsCard() + logCard() + appsCard() + dropboxCard();
   }
 
   var SUBS = [
