@@ -98,6 +98,13 @@
       ideasRequestsFolderId: '', // Drive folder for Product ideas request files (MKT-IDEA-REQ-*.json). Empty = the Add idea form will not send.
       live: false
     },
+    // Puppy Enquiries Hub (enquiries/): reads the private RR_ENQUIRIES sheet (filled by the enquiries engine) with Lisa's
+    // sign-in; a tap drops one request file into requestsFolderId. Both empty = example mode: invented rows, nothing sent.
+    enquiries: {
+      sheetId: '',
+      requestsFolderId: '',
+      live: false
+    },
     // App Factory page (factory/): reads af-state.json from logsFolderId (written by AF-ENGINE); writes request files into
     // requestsFolderId. The Idea Form is the front door (AF-ENGINE writes the card and the ClickUp task).
     factory: {
