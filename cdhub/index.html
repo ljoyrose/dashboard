@@ -1493,10 +1493,12 @@ function drawBuyers(){
   if(!q) return true;
   return ((p.kennel_name||'')+' '+(p.contact_name||'')+' '+(p.mdba_number||'')+' '+(p.region||'')).toLowerCase().indexOf(q)>=0;});
  var RK={'VERY STRONG':0,'STRONG':1,'MODERATE':2,'UNKNOWN':3};
+// J34-F20: VERY STRONG is 0, so ||9 sank it to the bottom; only a missing rank counts as last.
+function rk(x){ return x in RK ? RK[x] : 9; }
  var so=v('bsort');
  if(so==='name') list.sort(function(a,b){ return (a.kennel_name||'').localeCompare(b.kennel_name||''); });
  else if(so==='country') list.sort(function(a,b){ return (a.country||'').localeCompare(b.country||'') || (a.kennel_name<b.kennel_name?-1:1); });
- else list.sort(function(a,b){ return (RK[a.buyer_signal]||9)-(RK[b.buyer_signal]||9) || (a.kennel_name<b.kennel_name?-1:1); });
+ else list.sort(function(a,b){ return rk(a.buyer_signal)-rk(b.buyer_signal) || (a.kennel_name<b.kennel_name?-1:1); });
  var el=document.getElementById('brows'); if(!el) return;
  el.innerHTML=list.map(function(p){
   var sig=p.buyer_signal==='VERY STRONG'?'ok':(p.buyer_signal==='STRONG'?'i':(p.buyer_signal==='UNKNOWN'?'':'w'));
