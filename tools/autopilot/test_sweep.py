@@ -34,10 +34,11 @@ class T(unittest.TestCase):
         self.assertEqual(cls(pr(files=[{"path": ".github/workflows/x.yml"}])), "DO")
         self.assertEqual(cls(pr(files=[{"path": "merge-policy.json"}])), "DO")
 
-    def test_outside_docs_scope(self):
-        self.assertEqual(cls(pr(files=[{"path": "index.html"}])), "DO")
-        wide = dict(POLICY, scope="all")
-        self.assertEqual(cls(pr(files=[{"path": "index.html"}]), policy=wide), "MERGE")
+    def test_scope_all_merges_site_files_but_docs_only_asks(self):
+        self.assertEqual(POLICY["scope"], "all")
+        self.assertEqual(cls(pr(files=[{"path": "index.html"}])), "MERGE")
+        narrow = dict(POLICY, scope="docs-only")
+        self.assertEqual(cls(pr(files=[{"path": "index.html"}]), policy=narrow), "DO")
 
     def test_conflict_and_red(self):
         self.assertEqual(cls(pr(mergeable="CONFLICTING")), "DO")
@@ -61,7 +62,16 @@ class T(unittest.TestCase):
         self.assertEqual(cls(pr(mergeStateStatus="BEHIND")), "UPDATE")
 
     def test_lapsed_approval_asks_everything(self):
-        self.assertEqual(cls(pr(), today=dt.date(2027, 1, 1)), "DO")
+        dated = dict(POLICY, expires_on="2026-12-02")
+        self.assertEqual(cls(pr(), policy=dated, today=dt.date(2027, 1, 1)), "DO")
+
+    def test_no_expiry_holds_until_stop(self):
+        self.assertIsNone(POLICY["expires_on"])
+        self.assertEqual(cls(pr(), today=dt.date(2040, 1, 1)), "MERGE")
+
+    def test_private_repo_waits_instead_of_arming(self):
+        p = [{"name": "tests", "status": "IN_PROGRESS", "conclusion": ""}]
+        self.assertEqual(sweep.classify(pr(statusCheckRollup=p), POLICY, {}, TODAY, auto_merge=False)[0], "WAIT")
 
     def test_dependabot_never_automatic(self):
         self.assertEqual(cls(pr(author={"login": "dependabot[bot]"})), "DO")
