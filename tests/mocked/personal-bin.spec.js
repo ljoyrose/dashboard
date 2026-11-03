@@ -73,6 +73,23 @@ test.describe('Personal Drive bin (TidyUp Apps 3)', () => {
     expect(stored).not.toContain('FAKE-PERSONAL');
   });
 
+  test('lazy-loaded: estate/pbin.js is fetched only after Allow personal bin actions, and once', async ({ page }) => {
+    const got = [];
+    page.on('request', (r) => { if (/estate\/pbin\.js/.test(r.url())) got.push(r.url()); });
+    await page.goto('./#/bin');
+    await expect(page.locator('#signInBtn')).toBeEnabled();
+    await page.locator('#signInBtn').click();
+    await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
+    await page.evaluate(() => { location.hash = '#/drives/personal-drive'; });
+    await page.locator('#view [data-action="psignin"]').click();
+    await expect(page.locator('#view [data-action="pbinallow"]')).toBeVisible();
+    expect(got).toEqual([]);
+    expect(await page.evaluate(() => typeof window.PBin)).toBe('undefined');
+    await page.locator('#view [data-action="pbinallow"]').click();
+    await expect(page.locator('[data-q-list="ready"]')).toBeVisible();
+    expect(got.length).toBe(1);
+  });
+
   test('dry run (the default): lists what would go, no tick boxes, no bin button, nothing written', async ({ page, guard }) => {
     await open(page, { scan: true });
     await expect(view(page).locator('[data-qbin-dry]')).toBeVisible();

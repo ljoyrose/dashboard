@@ -860,8 +860,7 @@
   }
 
   // ---- Drive API. GETs for browsing; PATCH/DELETE only from the Bin buttons. ----
-  // tok: only the Personal Drive page passes its own token; everything else uses the work token. The personal token is
-  // GET-only unless it is the one Lisa opted in with "Allow personal bin actions" (personalAuth.binToken()).
+  // tok: only the Personal Drive page passes its own look-only token (GETs only); everything else uses the work token.
   function apiCall(method, url, body, tok) {
     if (tok !== undefined) {
       if (!tok || (method !== 'GET' && tok !== personalAuth.binToken())) return Promise.reject(new ApiError(401, 'Personal sign-in expired', 'authError'));
@@ -1520,8 +1519,8 @@
     if (cell.length || row.length) { row.push(cell); rows.push(row); }
     return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); });
   }
-  // surf (optional): filled with { <surface>: { <file_id>: true } } when the file has a surface column.
-  function idsFromLedgerCsv(text, surf) {
+  var ledgerSurf = {}; // 'surface file_id' keys, e.g. 'drive-personal 1abc'
+  function idsFromLedgerCsv(text) {
     var rows = parseCsv(text);
     // The ledger may start with one note line such as "COUNT: 232 rows. …" (or "CURRENT: …") above the header.
     // Only that one note line is skipped; anything else without a file_id header still fails safe (nothing binned).
@@ -1533,10 +1532,8 @@
     var ids = {};
     for (var i = 1; i < rows.length; i++) {
       var id = String(rows[i][col] || '').trim();
-      if (!id) continue;
-      ids[id] = true;
-      var su = sc < 0 || !surf ? '' : String(rows[i][sc] || '').trim().toLowerCase();
-      if (su) { if (!surf[su]) surf[su] = {}; surf[su][id] = true; }
+      if (id) ids[id] = true;
+      if (id && sc >= 0) ledgerSurf[String(rows[i][sc] || '').trim().toLowerCase() + ' ' + id] = 1;
     }
     return ids;
   }
@@ -1549,7 +1546,7 @@
       return apiText(url);
     });
   }
-  function findSlipIds(surf) {
+  function findSlipIds() {
     var known = drives();
     return (known ? Promise.resolve(known) : listDrives()).then(function (list) {
       return mapLimit(list, 3, function (d) {
@@ -1567,7 +1564,7 @@
         });
         return mapLimit(files, 3, function (f) {
           return readDriveText(f.id).then(function (text) {
-            var ids = idsFromLedgerCsv(text, surf);
+            var ids = idsFromLedgerCsv(text);
             if (!ids) throw new Error('slip');
             return ids;
           });
@@ -1581,17 +1578,16 @@
   }
   function loadLedgerSet() {
     if (ledgerCache) return ledgerCache;
-    // surface: ids per ledger surface (e.g. 'drive-personal'), from the ledger and the slips alike.
     ledgerCache = readDriveText(LEDGER_FILE_ID).then(function (text) {
-      var surf = {};
-      var ids = idsFromLedgerCsv(text, surf);
-      if (!ids) return { ok: false, ids: {}, surface: {}, note: LEDGER_FAIL };
-      return findSlipIds(surf).then(function (extra) {
-        if (!extra.ok) return { ok: false, ids: {}, surface: {}, note: LEDGER_FAIL };
+      ledgerSurf = {};
+      var ids = idsFromLedgerCsv(text);
+      if (!ids) return { ok: false, ids: {}, note: LEDGER_FAIL };
+      return findSlipIds().then(function (extra) {
+        if (!extra.ok) return { ok: false, ids: {}, note: LEDGER_FAIL };
         Object.keys(extra.ids).forEach(function (id) { ids[id] = true; });
-        return { ok: true, ids: ids, surface: surf, note: '' };
+        return { ok: true, ids: ids, note: '' };
       });
-    }, function () { return { ok: false, ids: {}, surface: {}, note: LEDGER_FAIL }; });
+    }, function () { return { ok: false, ids: {}, note: LEDGER_FAIL }; });
     return ledgerCache;
   }
   function classifyBinItem(f, led) {
@@ -1824,8 +1820,6 @@
     if (group === 'check') return 'check-list';
     if (group === 'pcpmark') return 'pcp-rename';
     if (group === 'pcpbin') return 'pcp-ready';
-    if (group === 'qmark') return 'q-rename';
-    if (group === 'qbin') return 'q-ready';
     if (group === 'usb') return 'usb-matches';
     return group;
   }
@@ -1835,8 +1829,7 @@
     if (group === 'check') return (S.check.data && S.check.data.items) || [];
     if (group === 'pcpmark') return P.matches || [];
     if (group === 'pcpbin') return (P.candidates || []).filter(function (f) { return !f.blocked; });
-    if (group === 'qmark') return Q.matches || [];
-    if (group === 'qbin') return (Q.candidates || []).filter(function (f) { return !f.blocked; });
+    if (group[0] === 'q') return window.PBin ? PBin.list(group) : [];
     if (group === 'usb') return U.matches || [];
     return [];
   }
@@ -1848,9 +1841,7 @@
     if (group === 'bin') return !!(S.bin.data && S.bin.data.ledgerOk && isDeleteName(it.name) && !nameHasRr(it.name) && !it._skip && !isZeroByte(it));
     if (group === 'pcpmark') return !nameHasRr(it.name) && !isZeroByte(it) && !isZzFamilyName(it.name);
     if (group === 'pcpbin') return !it.blocked && String(it.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(it.name) && !isZeroByte(it);
-    // Personal Drive: nothing can be ticked in a dry run or before "Allow personal bin actions".
-    if (group === 'qmark') return qLive() && !nameHasRr(it.name) && !isZeroByte(it) && !isZzFamilyName(it.name);
-    if (group === 'qbin') return qLive() && Q.ledgerOk && !it.blocked && spellingOf(it.name, PCP_PREFIX) === 'exact' && !nameHasRr(it.name) && !isZeroByte(it) && it.mimeType !== FOLDER_MIME;
+    if (group[0] === 'q') return !!window.PBin && PBin.allowed(group, it);
     return false;
   }
   function visibleRows(group) {
@@ -1891,14 +1882,11 @@
     else if (/^Skipped/.test(row.text || '')) bag.skipped++;
     else bag.failed++;
   }
-  // opt.tok: the Personal Drive bin token. Then the item must be a file in that personal My Drive (no folders).
   function recheckForBin(f, opt) {
     opt = opt || {};
     return apiGet(API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=' + LIVE_FIELDS, opt.tok).then(function (live) {
       if (!live || live.id !== f.id) return { ok: false, text: 'Skipped: could not re-read the item.' };
       if (live.trashed) return { ok: false, text: 'Skipped: already in the bin.' };
-      if (opt.tok !== undefined && live.driveId) return { ok: false, text: 'Skipped: not in your personal Drive.' };
-      if (opt.tok !== undefined && live.mimeType === FOLDER_MIME) return { ok: false, text: 'Not moved: folders are left alone here.' };
       if (excludedDrive(live.driveId)) return { ok: false, text: 'Skipped: excluded shared drive.' };
       if (opt.requireOwned && live.ownedByMe === false) return { ok: false, text: 'Skipped: owned by someone else.' };
       if (opt.requireDrive && !live.driveId) return { ok: false, text: 'Skipped: not in a shared drive.' };
@@ -2008,8 +1996,7 @@
     binScope: CFG.scopes.write,
     onToken: function () { Q = pcpFresh('idle', ''); render(); },
     onError: function () { Q = pcpFresh('idle', ''); Q.error = 'Personal sign-in did not complete.'; render(); },
-    // Scan results stay; only the bin list is read again with the new token.
-    onBin: function () { Q.error = ''; Q.binStatus = 'idle'; render(); loadQCandidates(); },
+    onBin: function () { Q.error = ''; Q.binStatus = 'idle'; loadPBin(); },
     onBinError: function () { Q.error = 'Bin actions were not allowed. The page stays look-only.'; render(); }
   });
   function slotState(slot) { return slot === 'personal' ? Q : P; }
@@ -2227,179 +2214,16 @@
       busy = false; render();
     });
   }
-  // ---- Personal Drive bin (TidyUp Apps 3): the same Rename and Bin steps as Work My Drive, for the personal account. ----
-  // Look-only until Lisa presses "Allow personal bin actions" (full Drive scope for the personal account, token in memory
-  // only, cleared on sign-out). DRY_RUN (config personalBin.dryRun, default true) lists and changes nothing. A file can be
-  // binned only if it starts ZZ_DELETE_DRIVE_, is a file (not a folder) in that personal My Drive, and has a ledger row
-  // with surface personalBin.surface. Before each move: recheckForBin (md5 + size + not trashed), then trashOnly().
-  var PB = CFG.personalBin || {};
-  var PB_DRY = PB.dryRun !== false;
-  var PB_SURFACE = String(PB.surface || 'drive-personal').toLowerCase();
-  var qLoadGen = 0;
-  function qLive() { return !PB_DRY && !!personalAuth.binToken(); }
-  function qExpired() {
-    personalAuth.clear();
-    Q = pcpFresh('idle', '');
-    Q.error = 'Personal sign-in expired. Sign in again.';
-  }
-  function loadQCandidates() {
-    var tok = personalAuth.token();
-    if (!tok || !personalAuth.binToken() || !signedIn) return;
-    if (Q.binStatus === 'loading' || Q.binStatus === 'ok') return;
-    var gen = ++qLoadGen, found = [], seen = {};
-    Q.binStatus = 'loading'; render();
-    function take(files) {
-      files.forEach(function (f) {
-        if (!keepPersonalCandidate(f) || seen[f.id]) return;
-        seen[f.id] = 1;
-        f._moneyHold = isMoneyRollback(f, []);
-        found.push(f);
-      });
-    }
-    var fields = 'nextPageToken,files(id,name,parents,mimeType,size,md5Checksum,modifiedTime,ownedByMe,driveId)';
-    var q = " and 'me' in owners and trashed = false";
-    pcpAllPages({ corpora: 'user', q: "name contains '" + PCP_PREFIX + "'" + q, pageSize: '1000', fields: fields }, take, tok)
-      .then(function () { return pcpAllPages({ corpora: 'user', q: "name contains 'ZZ-DELETE'" + q, pageSize: '200', fields: fields }, take, tok); })
-      .then(function () { return pcpAllPages({ corpora: 'user', q: "name contains 'ZZ DELETE'" + q, pageSize: '200', fields: fields }, take, tok); })
-      .then(function () { return loadLedgerSet(); })
-      .then(function (led) {
-        if (gen !== qLoadGen) return;
-        var mine = (led.surface && led.surface[PB_SURFACE]) || {};
-        Q.ledgerOk = !!led.ok;
-        Q.ledgerNote = led.ok ? '' : (led.note || LEDGER_FAIL);
-        Q.candidates = found.map(function (f) {
-          var c = classifyPcp(f, { ok: led.ok, ids: mine });
-          if (!c.blocked && f.mimeType === FOLDER_MIME) { c.blocked = true; c.reason = 'Folder, left alone.'; }
-          if (!c.blocked && f.driveId) { c.blocked = true; c.reason = 'Not in your personal Drive.'; }
-          return c;
-        });
-        Q.binStatus = 'ok';
-      }, function (err) {
-        if (gen !== qLoadGen) return;
-        var fr = friendlyError(err);
-        if (fr.expired) { qExpired(); return; }
-        Q.ledgerOk = false; Q.ledgerNote = 'Could not read the personal bin list: ' + fr.text; Q.candidates = []; Q.binStatus = 'ok';
-      }).then(function () { if (gen === qLoadGen) render(); });
-  }
-  function qRefresh() { Q.binStatus = 'idle'; qLoadGen++; render(); loadQCandidates(); }
-  function qNewName(f) { return PCP_PREFIX + f.name; }
-  function qMark() {
-    if (busy || !qLive()) return;
-    var items = pickedItems('qmark');
-    if (!items.length) return;
-    var ok = window.confirm('Rename ' + items.length + ' selected personal file' + (items.length === 1 ? '' : 's') + ' to start ' + PCP_PREFIX + '?\n\nEach one already exists identically in a shared drive. Nothing is deleted yet. Names containing RR_ are not included. Zero-byte files are not included.');
-    if (!ok) return;
-    var tok = personalAuth.binToken();
-    if (!tok) return;
-    busy = true; Q.marked = { done: 0, failed: 0, skipped: 0 }; render();
-    var doneIds = {}, halted = false;
-    mapLimit(items, 4, function (f) {
-      if (halted) { Q.marked.skipped++; return; }
-      return apiGet(API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=' + LIVE_FIELDS, tok).then(function (live) {
-        if (!live || live.trashed || live.ownedByMe === false || live.driveId || isZeroByte(live) || nameHasRr(live.name) || isZzFamilyName(live.name) || live.name !== f.name) { Q.marked.skipped++; return; }
-        if (String(live.size) !== String(f.size) || (live.md5Checksum || '') !== (f.md5Checksum || '')) { Q.marked.skipped++; return; }
-        return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: qNewName(f) }, tok).then(function () { Q.marked.done++; doneIds[f.id] = true; }, function () { Q.marked.failed++; });
-      }, function (err) {
-        if (friendlyError(err).expired) halted = true;
-        Q.marked.failed++;
-      });
-    }).then(function () {
-      busy = false; PICK.qmark = {};
-      if (halted) { var m = Q.marked; qExpired(); Q.marked = m; render(); return; }
-      Q.matches = Q.matches.filter(function (f) { return !doneIds[f.id]; });
-      Q.matchBytes = Q.matches.reduce(function (t, f) { return t + (f.size || 0); }, 0);
-      qRefresh();
-    });
-  }
-  function qBin() {
-    if (busy || !qLive() || !Q.ledgerOk) return;
-    var items = pickedItems('qbin');
-    if (!items.length) return;
-    var ok = window.confirm('Bin ' + items.length + ' personal file' + (items.length === 1 ? '? It goes to' : 's? They go to') + ' your personal Drive bin and can be restored for 30 days. Nothing is deleted for good.');
-    if (!ok) { Q.binned = { done: 0, failed: 0, skipped: 0, unsure: 0, found: items.length, cancelled: true, notes: [] }; render(); return; }
-    var tok = personalAuth.binToken();
-    if (!tok) return;
-    busy = true; Q.binned = { done: 0, failed: 0, skipped: 0, unsure: 0, found: items.length, notes: [] }; render();
-    var halted = false;
-    mapLimit(items, 3, function (f) {
-      if (halted) { Q.binned.skipped++; return; }
-      if (f._moneyHold || isMoneyRollback(f, f._chain || []) || isZeroByte(f) || spellingOf(f.name, PCP_PREFIX) !== 'exact' || nameHasRr(f.name)) { Q.binned.failed++; Q.binned.notes.push({ name: f.name, text: 'Not moved' }); return; }
-      return recheckForBin(f, { prefix: PCP_PREFIX, requireOwned: true, personal: true, tok: tok }).then(function (chk) {
-        if (chk.expired) { halted = true; Q.binned.skipped++; return; }
-        if (!chk.ok) {
-          Q.binned.notes.push({ name: f.name, text: chk.text });
-          if (/^UNSURE/.test(chk.text || '')) Q.binned.unsure++;
-          else if (/^Skipped/.test(chk.text || '')) Q.binned.skipped++;
-          else Q.binned.failed++;
-          return;
-        }
-        return trashOnly(f, tok).then(function (res) {
-          if (res.expired) { halted = true; Q.binned.skipped++; return; }
-          if (res.ok) Q.binned.done++; else { Q.binned.failed++; Q.binned.notes.push({ name: f.name, text: res.text }); }
-        });
-      });
-    }).then(function () {
-      busy = false; PICK.qbin = {};
-      if (halted) { var b = Q.binned; qExpired(); Q.binned = b; render(); return; }
-      qRefresh();
-    });
-  }
-  // The opted-in part of the Personal Drive page: Rename (exact copies from the last scan) and Ready to bin.
-  function qBinBlock() {
-    var html = '<div data-qbin-block>';
-    if (PB_DRY) html += '<p class="note" data-qbin-dry>Dry run: nothing is renamed or binned. Switching it on is your call.</p>';
-    if (Q.marked) html += '<p class="res ' + (Q.marked.failed ? 'bad' : 'ok') + '" data-q-marked>Renamed ' + num(Q.marked.done) + (Q.marked.failed ? ', ' + Q.marked.failed + ' failed' : '') + (Q.marked.skipped ? ', ' + Q.marked.skipped + ' skipped' : '') + '.</p>';
-    if (Q.binned) {
-      var b = Q.binned;
-      html += b.cancelled ? '<p class="res" data-q-binned>Cancelled. Nothing binned.</p>'
-        : '<p class="res ' + (b.failed ? 'bad' : 'ok') + '" data-q-binned>Found ' + num(b.found) + ', moved ' + num(b.done) + ' to the bin' + (b.skipped ? ', ' + b.skipped + ' skipped' : '') + (b.unsure ? ', ' + b.unsure + ' left for a person' : '') + (b.failed ? ', ' + b.failed + ' not moved' : '') + '.</p>' +
-          (b.notes.length ? '<ul class="files">' + b.notes.slice(0, 30).map(function (n) { return '<li><div class="fname">' + esc(n.name) + '</div><p class="note">' + esc(n.text) + '</p></li>'; }).join('') + '</ul>' : '');
-    }
-    // Rename
-    if (Q.status === 'done' && Q.matches.length) {
-      var mrows = visibleRows('qmark'), nm = pickCount('qmark');
-      html += '<div data-q-list="rename"><h4>Rename to get them ready (' + num(Q.matches.length) + ')</h4><ul class="files">' + mrows.map(function (f) {
-        return '<li data-id="' + esc(f.id) + '">' + (rowAllowed('qmark', f) ? tickBox('qmark', f.id, false, esc(f.name)) : '<div class="fname">' + esc(f.name) + '</div>') + '</li>';
-      }).join('') + '</ul>' + showBar('q-rename', Q.matches.length, 30);
-      if (!PB_DRY) html += '<div class="actions" data-pick-bar="qmark">' +
-        '<button class="btn" type="button" data-action="selectall" data-group="qmark"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
-        '<button class="btn" type="button" data-action="clearpick" data-group="qmark"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
-        '<button class="btn" type="button" data-action="qmark"' + (nm && !busy ? '' : ' disabled') + '><span>' + (nm ? 'Rename these (' + nm + ')' : 'Rename these: tick a file first') + '</span></button></div>';
-      html += '</div>';
-    }
-    // Ready to bin
-    html += '<div data-q-list="ready"><h4>Ready to bin</h4>';
-    if (Q.binStatus !== 'ok') html += '<p class="note">Reading your personal bin list…</p>';
-    else {
-      if (Q.ledgerNote) html += '<p class="note fail">' + esc(Q.ledgerNote) + '</p>';
-      var ready = Q.candidates.filter(function (f) { return !f.blocked; }), held = Q.candidates.filter(function (f) { return f.blocked; });
-      var brows = visibleRows('qbin'), nb = pickCount('qbin');
-      if (!ready.length) html += '<p class="note">Nothing is ready to bin.</p>';
-      else {
-        if (PB_DRY) html += '<p class="note" data-qbin-would>Dry run: ' + num(ready.length) + ' would go to the bin.</p>';
-        html += '<ul class="files">' + brows.map(function (f) {
-          return '<li data-id="' + esc(f.id) + '">' + (rowAllowed('qbin', f) ? tickBox('qbin', f.id, false, esc(f.name)) : '<div class="fname">' + esc(f.name) + '</div>') + '</li>';
-        }).join('') + '</ul>' + showBar('q-ready', ready.length, 30);
-      }
-      if (!PB_DRY && ready.length) html += '<div class="actions" data-pick-bar="qbin">' +
-        '<button class="btn" type="button" data-action="selectall" data-group="qbin"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
-        '<button class="btn" type="button" data-action="clearpick" data-group="qbin"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
-        '<button class="btn danger solid" type="button" data-action="qbin"' + (nb && !busy ? '' : ' disabled') + '>' + icon('bin') + '<span>' + (nb ? 'Bin these (' + nb + ')' : 'Bin these: tick a file first') + '</span></button></div>' +
-        '<p class="note">Goes to your personal Drive bin. You can get it back for 30 days.</p>';
-      if (held.length) html += '<div data-q-list="held"><h4>Not ready (' + num(held.length) + ')</h4><ul class="files">' + held.slice(0, listShown('q-held', held.length, 30)).map(function (f) {
-        return '<li data-id="' + esc(f.id) + '" title="' + esc(f.reason) + '"><div class="fname">' + esc(f.name) + '</div><p class="note">' + esc(qWhy(f.reason)) + '</p></li>';
-      }).join('') + '</ul>' + showBar('q-held', held.length, 30) + '</div>';
-    }
-    return html + '</div></div>';
-  }
-  // Plain words for why a personal file is not ready.
-  function qWhy(reason) {
-    if (/ledger row/i.test(reason)) return 'Waiting for the tidy bot to log it';
-    if (/Ledger could not/i.test(reason)) return 'The log could not be read';
-    if (/UNSURE|zero-byte/i.test(reason)) return 'Empty file, left for a person to check';
-    if (/Rename needed|does not start/i.test(reason)) return 'Name needs fixing';
-    if (/RR_|E02|money|protected/i.test(reason)) return 'Protected, never binned';
-    return reason;
+  // Personal Drive bin steps (estate/pbin.js): fetched only once bin actions are allowed.
+  function loadPBin() {
+    if (window.PBin) { PBin.load(); return; }
+    if (scriptsLoaded.pb) return;
+    scriptsLoaded.pb = 1;
+    needScripts(['estate/pbin.js']).then(function () {
+      PBin.init({ Q: function () { return Q; }, setQ: function (v) { Q = v; }, busy: function () { return busy; }, setBusy: function (b) { busy = b; }, pick: function () { return PICK; }, signedIn: function () { return signedIn; }, surf: function () { return ledgerSurf; },
+        personalAuth, pcpFresh, keepPersonalCandidate, isMoneyRollback, pcpAllPages, loadLedgerSet, classifyPcp, friendlyError, render, pickedItems, apiGet, apiCall, isZeroByte, nameHasRr, isZzFamilyName, mapLimit, spellingOf, recheckForBin, trashOnly, num, esc, visibleRows, pickCount, rowAllowed, tickBox, showBar, listShown, icon, CFG, API, LIVE_FIELDS, FOLDER_MIME, PCP_PREFIX, LEDGER_FAIL });
+      render(); PBin.load();
+    }).catch(function () { scriptsLoaded.pb = 0; });
   }
   function tickList(group, items, reasonOf, listKey) {
     var step = 30;
@@ -2415,8 +2239,7 @@
     }).join('') + '</ul>' + showBar(listKey, items.length, step);
   }
   // Drives > Work My Drive (slot 'work') and Drives > Personal Drive (slot 'personal'): look-only. Scan and list only;
-  // the rename and bin steps for the work account live on #/bin (Ready to bin). The Personal Drive page changes nothing
-  // until Lisa presses "Allow personal bin actions"; then its own Rename and Ready to bin steps show (qBinBlock).
+  // the rename and bin steps for the work account live on #/bin (Ready to bin). The Personal Drive page can never change anything.
   function viewPersonal(slot) {
     var st = slotState(slot), running = st.status === 'running', personal = slot === 'personal';
     var title = personal ? 'Personal Drive' : 'Work My Drive';
@@ -2424,8 +2247,7 @@
       '<span class="state ' + (st.status === 'done' ? 'st-ok' : st.status === 'failed' ? 'st-failed' : running ? 'st-loading' : 'st-idle') + '"><span class="shape"></span>' +
       (st.status === 'done' ? 'Scanned' : st.status === 'failed' ? 'Failed' : running ? 'Reading…' : 'Not scanned') + '</span></div>';
     var qOn = personal && !!personalAuth.binToken();
-    if (personal && !qOn) html += '<ul class="notes"><li>Look only: this page never renames, moves or bins until you press Allow personal bin actions.</li><li>Uses its own read-only sign-in, kept only while this tab is open and never used for work.</li></ul>';
-    if (qOn) html += '<ul class="notes"><li>Bin actions allowed for your personal account until you sign out or close this tab.</li><li>Only renames, and moves to the bin after a fresh check. Nothing is deleted for good.</li></ul>';
+    if (personal && !qOn) html += '<ul class="notes"><li>Look only: this page never renames, moves or bins.</li><li>Uses its own read-only sign-in, kept only while this tab is open and never used for work.</li></ul>';
     else html += '<ul class="notes"><li>Finds files in your work My Drive that already sit in a shared drive (exact copy).</li><li>Look only here. Rename and bin them in Bin.</li></ul>';
     if (st.log) html += '<p class="note">' + esc(st.log) + '</p>';
     if (st.error) html += '<p class="note fail">Stopped: ' + esc(st.error) + '</p>';
@@ -2445,7 +2267,7 @@
       html += '<div class="actions"><button class="btn" type="button" data-action="pcpscan" data-slot="' + slot + '"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>Scan this Drive vs shared drives</span></button>' +
         (st.failedDrives && st.failedDrives.length && !busy ? '<button class="btn" type="button" data-action="pcpresume" data-slot="' + slot + '"><span>Continue: read the missed shared drives</span></button>' : '') +
         (personal && !qOn ? '<button class="btn" type="button" data-action="pbinallow"' + (busy ? ' disabled' : '') + '><span>Allow personal bin actions</span></button>' : '') + '</div>';
-      if (qOn) html += qBinBlock();
+      if (qOn) html += window.PBin ? PBin.block() : '<p class="note">Loading the bin steps…</p>';
     }
     return html + '</section>';
   }
@@ -3650,8 +3472,7 @@
     else if (a === 'psignin') personalAuth.request();
     else if (a === 'pcpmark') pcpMark();
     else if (a === 'pbinallow') personalAuth.requestBin();
-    else if (a === 'qmark') qMark();
-    else if (a === 'qbin') qBin();
+    else if ((a === 'qmark' || a === 'qbin') && window.PBin) PBin[a]();
     else if (a === 'usbscan') usbScan();
     else if (a === 'usbcontinue') usbContinue();
     else if (a === 'usbstop') { U.stop = true; }
