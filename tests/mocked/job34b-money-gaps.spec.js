@@ -269,11 +269,8 @@ test.describe('Money Hub phone: the problem screens fit at 390px', () => {
     expect(await sideScroll(page), 'Lisa-only card').toBe(false);
   });
 
-  // J34b-F20: the "Signed in as <address>." line on the Lisa-only card has no word wrapping (money/index.html:396,
-  // .card .note has no overflow-wrap), so a long Google address pushes the page wider than a 390px phone.
-  // DECISION NEEDED: wrap the address (overflow-wrap: anywhere on that note), or accept sideways scroll on this card.
-  // OWNER: Lisa (page owner) BY 2026-11-13
-  test.fixme('J34b-F20: the Lisa-only card with a long address still fits a 390px phone', async ({ page, guard }) => {
+  // J34b-F20 (fixed): a long address on the Lisa-only card wraps instead of pushing the page sideways.
+  test('J34b-F20: the Lisa-only card with a long address still fits a 390px phone', async ({ page, guard }) => {
     guard.world.email = 'someone.else.with.a.very.long.sample.address@example.test';
     await page.goto('money/');
     await signInHeader(page);

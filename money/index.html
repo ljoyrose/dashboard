@@ -94,6 +94,7 @@
   .sec-h { margin: 4px 0 0; font-size: var(--fs-body); color: var(--muted); }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .actions .note { margin-right: auto; }
+  .gate-note { overflow-wrap: anywhere; } /* J34b-F20: a long signed-in address wraps on a phone */
   .go { display: flex; flex-wrap: wrap; gap: 8px; }
 
   /* Flags and small pills: 24px, 13px, a 1px ring that shows the meaning, light tint, ink words. Read-only: no hover. */
@@ -380,7 +381,7 @@
   function notReady() {
     if (!signedIn) return '<div class="card c-ink now"><h3>Sign in</h3><div><button class="btn main" type="button" data-action="signin"><svg class="icon"><use href="#i-in"/></svg><span>Sign in with Google</span></button></div></div>';
     if (err) return '<div class="card c-risk pending"><h3>Could not read Drive</h3><p class="note">' + esc(err) + '</p><div><button class="btn" type="button" data-action="refresh">Try again</button></div></div>';
-    if (R && R.gate === 'denied') return '<div class="card c-risk"><h3>This page is for Lisa only</h3><p class="note">Signed in as ' + esc(R.email) + '. Sign out and sign in with Lisa\'s account.</p></div>';
+    if (R && R.gate === 'denied') return '<div class="card c-risk"><h3>This page is for Lisa only</h3><p class="note gate-note">Signed in as ' + esc(R.email) + '. Sign out and sign in with Lisa\'s account.</p></div>';
     return '<div class="card pending"><h3>Reading…</h3></div>';
   }
 

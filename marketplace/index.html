@@ -886,9 +886,15 @@
     if (t === 'decide' && list.length > 1) h += '<button class="more" type="button" data-action="all">' + (showAll ? 'Show one at a time' : '1 of ' + list.length + ' · show all') + '</button>';
     return h + tail;
   }
+  // The drop-off code window (J34b-F41): Close takes focus on open, Escape shuts it, focus goes back to the Show QR that opened it.
+  var qrFrom = null;
+  function closeQr() { $('qr').className = 'qr hidden'; var b = qrFrom && document.querySelector('[data-qr="' + CSS.escape(qrFrom) + '"]'); qrFrom = null; if (b) b.focus(); }
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('qr').classList.contains('hidden')) { e.preventDefault(); closeQr(); } });
   // Packing mode: one parcel at a time in shelf order. Found → the drop-off code shows once the engine has it → Posted.
+  // The parcels packing mode steps through: unposted, found, or posted within the undo window. Skip wraps on this list too (J34b-F40).
+  function packList() { return posts().filter(function (r) { return !r.answer || r.answer === 'Found' || Date.now() < Date.parse(r.answered_at) + UNDO_MS; }); }
   function pagePack() {
-    var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found' || Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
+    var list = packList();
     if (!list.length) { return '<p class="needs">Packing</p>' + emptyCard('All packed', '', '<button class="btn main big" type="button" data-action="stoppack">Back to Do now</button>'); }
     var i = Math.min(pack.i, list.length - 1), r = list[i], d = detail(r);
     var h = '<div class="packbar"><span>Packing · ' + (i + 1) + ' of ' + list.length + '</span><button class="btn" type="button" data-action="stoppack">Stop</button></div>';
@@ -1123,7 +1129,7 @@
     if (t.hasAttribute('data-who')) { who = t.getAttribute('data-who'); try { localStorage.setItem('mkt.who', who); } catch (x) {} return render(); }
     if (t.hasAttribute('data-site')) { site = t.getAttribute('data-site'); return render(); }
     if (a === 'pack') { pack = { i: 0 }; sheet = false; return render(); }
-    if (a === 'nextpack') { pack.i += 1; if (pack.i >= posts().length) pack.i = 0; return render(); }
+    if (a === 'nextpack') { pack.i += 1; if (pack.i >= packList().length) pack.i = 0; return render(); }
     if (a === 'stoppack') { pack = null; if (/\?pack\b/.test(location.hash)) { location.hash = '#/do'; return; } return render(); }
     if (a === 'sheet') { sheet = true; pack = null; return render(); }
     if (a === 'closesheet') { sheet = false; return render(); }
@@ -1187,8 +1193,8 @@
       if (!(n >= 0)) return banner('Type how many arrived, then tap Arrived.'); t.disabled = true; return answer(ar, 'Arrived ' + n, ''); }
     if (t.hasAttribute('data-undo')) { var u = find(t.getAttribute('data-undo')); if (Date.now() < Date.parse(u.answered_at) + UNDO_MS) answer(u, '', ''); return; }
     if (t.hasAttribute('data-copy')) { var c = find(t.getAttribute('data-copy')); navigator.clipboard.writeText(detail(c).text || '').then(function () { t.textContent = 'Copied'; }); return; }
-    if (t.hasAttribute('data-qr')) { var q = detail(find(t.getAttribute('data-qr'))); $('qr').innerHTML = (q.qr_image ? '<img alt="QR code" src="' + esc(q.qr_image) + '">' : '') + '<div class="code">' + esc(q.qr) + '</div><button class="btn big" type="button" data-action="closeqr">Close</button>'; $('qr').className = 'qr'; return; }
-    if (a === 'closeqr') { $('qr').className = 'qr hidden'; return; }
+    if (t.hasAttribute('data-qr')) { var q = detail(find(t.getAttribute('data-qr'))); $('qr').innerHTML = (q.qr_image ? '<img alt="QR code" src="' + esc(q.qr_image) + '">' : '') + '<div class="code">' + esc(q.qr) + '</div><button class="btn big" type="button" data-action="closeqr">Close</button>'; $('qr').className = 'qr'; qrFrom = t.getAttribute('data-qr'); $('qr').querySelector('[data-action="closeqr"]').focus(); return; }
+    if (a === 'closeqr') { closeQr(); return; }
     if (t.hasAttribute('data-tile')) { open.tile = open.tile === t.getAttribute('data-tile') ? null : t.getAttribute('data-tile'); return render(); }
     if (t.hasAttribute('data-tick')) { var k = t.getAttribute('data-tick'); round[k] = { ok: true, n: '' }; return render(); }
     if (t.hasAttribute('data-reason')) { var kk = t.getAttribute('data-reason'); round[kk] = Object.assign(round[kk] || {}, { reason: t.getAttribute('data-v') }); return render(); }
