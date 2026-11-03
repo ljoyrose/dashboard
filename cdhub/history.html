@@ -50,7 +50,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .yr-btn.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
 .tab-row{display:flex;gap:2px;background:var(--soft);padding:3px;border-radius:calc(var(--radius) + 3px);width:max-content;margin:0 0 16px}
 .tab{padding:6px 16px;border:none;background:transparent;border-radius:var(--radius);cursor:pointer;font:600 var(--fs-small)/1 var(--house-font);color:var(--muted)}
-.tab.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.tab.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
 @media(hover:hover){.tab:not(.on):hover{color:var(--ink)}}
 .view{display:none}.view.on{display:block}
 
@@ -75,6 +75,22 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .d.future{background:var(--paper);border:1px solid var(--line);opacity:.35}
 .d.cold{background:var(--ljr-6)}.d.ok{background:var(--ljr-5)}.d.hot{background:var(--ljr-2)}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
+/* indoor corner dot */
+.d{position:relative}
+.d-dot{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;pointer-events:none}
+.d-dot.idot-flag{background:#ef4444}.d-dot.idot-warn{background:#f59e0b}
+/* compliance mode — cells */
+.d.comp-flag{background:#ef4444;opacity:.8}.d.comp-warn{background:#f59e0b;opacity:.85}.d.comp-ok{background:var(--ljr-5);opacity:.85}.d.comp-nd{background:var(--soft)}
+.sd.comp-flag{background:#ef4444;opacity:.8}.sd.comp-warn{background:#f59e0b;opacity:.85}.sd.comp-ok{background:var(--ljr-5);opacity:.85}.sd.comp-nd{background:var(--soft)}
+/* view mode toggle */
+.vt-wrap{display:flex;gap:2px;background:var(--soft);border-radius:calc(var(--radius) + 2px);padding:2px;width:max-content;margin-bottom:12px}
+.vt-btn{padding:4px 12px;border:none;background:transparent;border-radius:var(--radius);font:600 var(--fs-small)/1.4 var(--house-font);color:var(--muted);cursor:pointer}
+.vt-btn.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+/* compact indoor table in drill panel */
+.itable{width:100%;border-collapse:collapse;font-size:var(--fs-small);margin-top:4px}
+.itable th{padding:4px 6px;text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
+.itable td{padding:5px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;vertical-align:middle}
+.itable tr:last-child td{border-bottom:none}
 
 /* Strip view */
 .strip{display:flex;flex-direction:column;gap:3px;margin-bottom:20px}
@@ -151,6 +167,10 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
   <div class="dr"><span>Wind</span><span id="d-wind">—</span></div>
   <p class="dsec">Record</p>
   <div class="dr"><span>Source</span><span id="d-src">—</span></div>
+  <div id="d-areas" style="display:none">
+    <p class="dsec">Indoor areas</p>
+    <div id="d-areas-inner"></div>
+  </div>
 </aside>
 
 <script>
@@ -162,6 +182,13 @@ var CLIENT_ID=window.DASH_CONFIG.clientId;
 var SCOPE=window.DASH_CONFIG.scopes.read;
 var TOKEN=null,TOKEN_EXP=0;
 var DAYS={};  /* ISO date -> row */
+var FOLDER_ID=window.DASH_CONFIG.cdhub.folderId;
+var DRIVE_API=window.DASH_CONFIG.urls.files;
+var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
+var AREA_NAMES={};  /* areaId -> display name/code */
+var ROUND_DATE=null;
+var VIEW_MODE='outdoor'; /* 'outdoor' | 'compliance' */
+var AREA_RANGES={};     /* areaId -> {min,max} acceptable indoor range */
 
 /* ---- helpers ---- */
 var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -191,6 +218,82 @@ function gget(url){
   return fetch(url,{headers:{'Authorization':'Bearer '+TOKEN}})
     .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
 }
+function gjson(url){
+  return fetch(url,{headers:{'Authorization':'Bearer '+TOKEN}})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});
+}
+function findDriveFile(name){
+  var q="'"+FOLDER_ID+"' in parents and name='"+name+"' and trashed=false";
+  var url=DRIVE_API+'?q='+encodeURIComponent(q)+'&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true';
+  return gjson(url).then(function(r){var f=r.files||[];return f.length?f[0].id:null;});
+}
+function getDriveFile(id){
+  return fetch(DRIVE_API+'/'+encodeURIComponent(id)+'?alt=media&supportsAllDrives=true',
+    {headers:{'Authorization':'Bearer '+TOKEN}})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
+}
+function areaStatus(isoDate){
+  var dayAreas=AREA_DAYS[isoDate];
+  if(!dayAreas||!Object.keys(dayAreas).length)return'';
+  var hasFlag=false,hasWarn=false;
+  Object.keys(dayAreas).forEach(function(aid){
+    var ar=dayAreas[aid],range=AREA_RANGES[aid]||{min:15,max:25};
+    ['am','pm'].forEach(function(slot){
+      var t=ar[slot];if(!t)return;
+      var lo=parseFloat(t.min),hi=parseFloat(t.max);
+      if(!isNaN(lo)&&!isNaN(hi)&&lo>hi){hasFlag=true;return;}
+      if(!isNaN(lo)&&lo<range.min)hasWarn=true;
+      if(!isNaN(hi)&&hi>range.max)hasWarn=true;
+    });
+  });
+  return hasFlag?'flag':hasWarn?'warn':'ok';
+}
+function areaStatusForArea(ar,range){
+  range=range||{min:15,max:25};
+  var hasFlag=false,hasWarn=false;
+  ['am','pm'].forEach(function(slot){
+    var t=ar[slot];if(!t)return;
+    var lo=parseFloat(t.min),hi=parseFloat(t.max);
+    if(!isNaN(lo)&&!isNaN(hi)&&lo>hi){hasFlag=true;return;}
+    if(!isNaN(lo)&&lo<range.min)hasWarn=true;
+    if(!isNaN(hi)&&hi>range.max)hasWarn=true;
+  });
+  return hasFlag?'flag':hasWarn?'warn':'ok';
+}
+function tempCls(min,max){
+  var lo=parseFloat(min),hi=parseFloat(max);
+  if(isNaN(lo)&&isNaN(hi))return'';
+  if(!isNaN(lo)&&lo<10)return'cold';
+  if(!isNaN(hi)&&hi>27)return'hot';
+  return'ok';
+}
+async function loadAreaData(){
+  try{
+    var rid=await findDriveFile('BLD-area_reading.csv');
+    if(rid){
+      var txt=await getDriveFile(rid);
+      var rows=parseCSV(txt);
+      AREA_DAYS={};
+      rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
+        var at=String(r.taken_at||'');if(!r.area_id||at.length<10)return;
+        var date=at.slice(0,10),hr=parseInt(at.slice(11,13),10),slot=(isNaN(hr)||hr<12)?'am':'pm';
+        if(!AREA_DAYS[date])AREA_DAYS[date]={};
+        if(!AREA_DAYS[date][r.area_id])AREA_DAYS[date][r.area_id]={};
+        AREA_DAYS[date][r.area_id][slot]={min:r.min_c,max:r.max_c};
+      });
+    }
+    var aid=await findDriveFile('BLD-area.csv');
+    if(aid){
+      var atxt=await getDriveFile(aid);
+      parseCSV(atxt).forEach(function(a){
+        if(a.id){
+          AREA_NAMES[a.id]=a.code||a.name||a.id;
+          if(a.min_c||a.max_c)AREA_RANGES[a.id]={min:parseFloat(a.min_c)||15,max:parseFloat(a.max_c)||25};
+        }
+      });
+    }
+  }catch(e){console.warn('Area data load failed:',e);}
+}
 
 async function loadData(){
   pill('loading…');
@@ -199,8 +302,9 @@ async function loadData(){
     var rows=parseCSV(txt);
     DAYS={};
     rows.forEach(function(r){if(r.on_date)DAYS[r.on_date]=r;});
-    var n=Object.keys(DAYS).length;
-    pill(n+' days','ok');
+    await loadAreaData();
+    var n=Object.keys(DAYS).length,an=Object.keys(AREA_DAYS).length;
+    pill(n+' days'+(an?' · '+an+' area days':''),'ok');
     el('cdSignout').classList.remove('hidden');
     renderPage();
   }catch(e){
@@ -210,7 +314,9 @@ async function loadData(){
       var rows2=parseCSV(txt2);
       DAYS={};
       rows2.forEach(function(r){if(r.on_date)DAYS[r.on_date]=r;});
-      pill(Object.keys(DAYS).length+' days','ok');
+      await loadAreaData();
+      var n2=Object.keys(DAYS).length,an2=Object.keys(AREA_DAYS).length;
+      pill(n2+' days'+(an2?' · '+an2+' area days':''),'ok');
       el('cdSignout').classList.remove('hidden');
       renderPage();
     }catch(e2){
@@ -295,6 +401,43 @@ function openDrill(isoDate){
   el('d-cloud').textContent=r.cloud_cover_pct!==undefined&&r.cloud_cover_pct!==''?r.cloud_cover_pct+'%':'—';
   el('d-wind').textContent=r.wind_kmh!==undefined&&r.wind_kmh!==''?r.wind_kmh+' km/h':'—';
   el('d-src').textContent=r.reading_kind||'—';
+  /* indoor area readings */
+  var dayAreas=AREA_DAYS[isoDate]||{};
+  var areaIds=Object.keys(dayAreas).sort();
+  var areasEl=el('d-areas');
+  if(areaIds.length){
+    el('d-areas-inner').innerHTML='<table class="itable"><thead><tr>'
+      +'<th>Area</th><th>AM</th><th>PM</th><th>Status</th>'
+      +'</tr></thead><tbody>'
+      +areaIds.map(function(aid){
+        var ar=dayAreas[aid],am=ar.am||{},pm=ar.pm||{};
+        var name=AREA_NAMES[aid]||aid.replace(/^area-/,'').replace(/-/g,' ');
+        var range=AREA_RANGES[aid]||{min:15,max:25};
+        var fmtSlot=function(t){
+          if(!t||(!t.min&&!t.max))return'<span style="color:var(--muted)">—</span>';
+          var lo=parseFloat(t.min),hi=parseFloat(t.max);
+          var err=!isNaN(lo)&&!isNaN(hi)&&lo>hi;
+          var warn=(!isNaN(lo)&&lo<range.min)||(!isNaN(hi)&&hi>range.max);
+          var color=err?'#ef4444':warn?'#f59e0b':'var(--ink)';
+          return'<span style="color:'+color+'">'+esc((t.min||'?')+' – '+(t.max||'?')+'°C')+'</span>';
+        };
+        var ast=areaStatusForArea(ar,range);
+        var pill=ast==='flag'?'<span class="pill ph">flag</span>'
+          :ast==='warn'?'<span class="pill" style="border-color:#f59e0b;color:#a16207">warn</span>'
+          :'<span class="pill po">ok</span>';
+        return'<tr>'
+          +'<td style="font-weight:600;text-transform:capitalize">'+esc(name)+'</td>'
+          +'<td>'+fmtSlot(am)+'</td>'
+          +'<td>'+fmtSlot(pm)+'</td>'
+          +'<td>'+pill+'</td>'
+          +'</tr>';
+      }).join('')
+      +'</tbody></table>';
+    areasEl.style.display='';
+  }else{
+    areasEl.style.display='none';
+    el('d-areas-inner').innerHTML='';
+  }
   el('drill').classList.add('open');
 }
 function closeDrill(){el('drill').classList.remove('open');}
@@ -313,7 +456,10 @@ function buildHeatMap(y){
     for(var d=1;d<=md[mi];d++){
       var date=ds(y,mi,d),cls=dayClass(date),today=date===TODAY_STR;
       var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
-      h+='<button class="d '+cls+(today?' today':'')+'\" title="'+d+' '+mn+' '+y+' — '+(cls==='future'?'future':cls==='nd'?'no data':cls)+'"'+clk+'></button>';
+      var ist=date<=TODAY_STR?areaStatus(date):'';
+      var dotHtml=ist==='flag'?'<span class="d-dot idot-flag"></span>':ist==='warn'?'<span class="d-dot idot-warn"></span>':'';
+      var cellCls=VIEW_MODE==='compliance'&&date<=TODAY_STR?(ist?'comp-'+ist:'comp-nd'):cls;
+      h+='<button class="d '+cellCls+(today?' today':'')+'" title="'+d+' '+mn+' '+y+' — '+(cls==='future'?'future':cls==='nd'?'no data':cls)+'"'+clk+'>'+dotHtml+'</button>';
     }
     h+='</div></div>';
   });
@@ -333,7 +479,9 @@ function buildStrip(y){
         if((new Date(y,mi,d).getDay()+6)%7===di){
           var date=ds(y,mi,d),cls=dayClass(date);
           var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
-          h+='<div class="sd '+cls+'" title="'+d+' '+MONTHS[mi]+'"'+clk+'></div>';
+          var ist2=date<=TODAY_STR?areaStatus(date):'';
+          var scls=VIEW_MODE==='compliance'&&date<=TODAY_STR?(ist2?'comp-'+ist2:'comp-nd'):cls;
+          h+='<div class="sd '+scls+'" title="'+d+' '+MONTHS[mi]+'"'+clk+'></div>';
         }
       }
     }
@@ -371,12 +519,67 @@ function buildMonthCards(y){
 }
 
 function legend(){
+  if(VIEW_MODE==='compliance'){
+    return'<div class="legend">'
+      +'<div class="leg"><div class="leg-sq" style="background:#ef4444"></div>Data error</div>'
+      +'<div class="leg"><div class="leg-sq" style="background:#f59e0b"></div>Out of range</div>'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>All ok</div>'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--soft)"></div>No data</div>'
+      +'</div>';
+  }
   return '<div class="legend">'
     +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-6)"></div>&lt;10°C (cold)</div>'
     +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>10–27°C (ok)</div>'
     +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-2)"></div>&gt;27°C (hot)</div>'
     +'<div class="leg"><div class="leg-sq" style="background:var(--soft)"></div>No data</div>'
     +'</div>';
+}
+function setViewMode(mode){
+  VIEW_MODE=mode;
+  document.querySelectorAll('.vt-btn').forEach(function(b){b.classList.toggle('on',b.dataset.vm===mode);});
+  el('view-a').innerHTML=buildHeatMap(YEAR);
+  el('view-b').innerHTML=buildStrip(YEAR);
+  var lw=el('legend-wrap');if(lw)lw.innerHTML=legend();
+}
+
+function buildRound(dateStr){
+  var dayAreas=AREA_DAYS[dateStr]||{};
+  var aids=Object.keys(dayAreas).sort();
+  var dateInput='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px">'
+    +'<label for="rdate" style="font-size:var(--fs-small);color:var(--muted)">Date</label>'
+    +'<input id="rdate" type="date" value="'+esc(dateStr)+'" onchange="setRoundDate(this.value)"'
+    +' style="border:1px solid var(--press);border-radius:var(--radius);padding:4px 10px;font:inherit;font-size:var(--fs-small);background:var(--card);color:var(--ink);cursor:text">'
+    +'<span style="font-size:var(--fs-small);color:var(--muted)">'+aids.length+' area'+(aids.length!==1?'s':'')+' with readings</span>'
+    +'</div>';
+  if(!aids.length){
+    return dateInput+'<p style="color:var(--muted);font-size:var(--fs-small)">No indoor readings on record for this date.</p>';
+  }
+  var th='<th style="padding:6px 10px;text-align:left;font-size:var(--fs-small);border-bottom:1px solid var(--soft)">';
+  var h=dateInput
+    +'<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:var(--fs-small)">'
+    +'<thead><tr>'+th+'Area</th>'+th+'AM min</th>'+th+'AM max</th>'+th+'PM min</th>'+th+'PM max</th></tr></thead>'
+    +'<tbody>';
+  aids.forEach(function(aid){
+    var ar=dayAreas[aid]||{},am=ar.am||{},pm=ar.pm||{};
+    var name=AREA_NAMES[aid]||aid.replace(/^area-/,'').replace(/-/g,' ');
+    var amCls=tempCls(am.min,am.max),pmCls=tempCls(pm.min,pm.max);
+    var color=function(cls){return cls==='cold'?'var(--ljr-6)':cls==='hot'?'var(--ljr-2)':cls==='ok'?'var(--ljr-5)':'var(--muted)';};
+    var td='style="padding:4px 10px;font-variant-numeric:tabular-nums"';
+    var tdc=function(val,cls){return'<td '+td+' style="padding:4px 10px;font-variant-numeric:tabular-nums;color:'+color(cls)+'">'+esc(val||'—')+'</td>';};
+    h+='<tr>'
+      +'<td style="padding:4px 10px;font-weight:600;text-transform:capitalize">'+esc(name)+'</td>'
+      +tdc(am.min,amCls)+tdc(am.max,amCls)
+      +tdc(pm.min,pmCls)+tdc(pm.max,pmCls)
+      +'</tr>';
+  });
+  h+='</tbody></table></div>';
+  return h;
+}
+function setRoundDate(dateStr){
+  ROUND_DATE=dateStr;
+  var v=el('view-d');
+  if(v)v.innerHTML=buildRound(dateStr);
+  closeDrill();
 }
 
 var CUR_VIEW='a';
@@ -399,15 +602,21 @@ function setYear(y){
 }
 
 function renderPage(){
+  ROUND_DATE=ROUND_DATE||TODAY_STR;
   var n=Object.keys(DAYS).length;
   /* date range */
   var dates=Object.keys(DAYS).sort();
   var from=dates[0]||'',to=dates[dates.length-1]||'';
   var sub=n+' days on record · Dinas Powys'+(from&&to?' · '+from.slice(0,4)+' – '+to.slice(0,7):'');
+  var hasAreas=Object.keys(AREA_DAYS).length>0;
   el('main').innerHTML=
-    '<h2 class="ph">Outdoor temperature history</h2>'
+    '<h2 class="ph">Temperature history</h2>'
     +'<p class="sub">'+esc(sub)+'</p>'
-    +legend()
+    +(hasAreas?'<div class="vt-wrap">'
+      +'<button class="vt-btn on" data-vm="outdoor" onclick="setViewMode(\'outdoor\')">Outdoor temps</button>'
+      +'<button class="vt-btn" data-vm="compliance" onclick="setViewMode(\'compliance\')">Compliance</button>'
+      +'</div>':'')
+    +'<div id="legend-wrap">'+legend()+'</div>'
     +'<div class="yr-row">'
     +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'
     +'<button class="btn yr-btn on" data-yr="2026" onclick="setYear(2026)">2026</button>'
@@ -416,10 +625,12 @@ function renderPage(){
     +'<button class="tab on" onclick="setView(\'a\',this)">Heat map</button>'
     +'<button class="tab" onclick="setView(\'b\',this)">Year strip</button>'
     +'<button class="tab" onclick="setView(\'c\',this)">Month cards</button>'
+    +'<button class="tab" onclick="setView(\'d\',this)">The round</button>'
     +'</div>'
     +'<div id="view-a" class="view on">'+buildHeatMap(2026)+'</div>'
     +'<div id="view-b" class="view">'+buildStrip(2026)+'</div>'
-    +'<div id="view-c" class="view">'+buildMonthCards(2026)+'</div>';
+    +'<div id="view-c" class="view">'+buildMonthCards(2026)+'</div>'
+    +'<div id="view-d" class="view">'+buildRound(ROUND_DATE)+'</div>';
 }
 </script>
 </body></html>
