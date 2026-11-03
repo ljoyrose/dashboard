@@ -180,6 +180,9 @@ tr:last-child td{border-bottom:none}
 .mrow .ic.soon{border-color:var(--ljr-3);background:var(--ljr-3-tint)}
 .mrow .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
 .mrow .ic.cold{border-color:var(--ljr-6);background:var(--ljr-6-tint)}
+#kept-readings .kt{width:100%;border-collapse:collapse}#kept-readings th,#kept-readings td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--press)}
+#kept-readings .ic{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1px solid var(--press)}
+#kept-readings .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}#kept-readings .ic.cold{border-color:var(--ljr-6);background:var(--ljr-6-tint)}#kept-readings .ic.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .mrow .v{font-weight:600;font-variant-numeric:tabular-nums}
 .mfoot{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 /* foundation: empty state for a field that needs data CD Hub does not have. It names the Bloodline table that will feed it. */
@@ -1538,6 +1541,18 @@ function hereNow(){ return CD.dogs.filter(function(d){
  }).sort(function(a,b){ return (a.name||'')<(b.name||'')?-1:1; }); }
 
 function roundKey(date,areaId){ return date+'__'+areaId; }
+function keptReadings(date){
+ var rows=(CD.areas||[]).map(function(ar){ var r=ROUND[roundKey(date,ar.id)]||{};
+   return {a:ar, am:r.t_am, pm:r.t_pm}; }).filter(function(x){ return x.am||x.pm; });
+ var cell=function(t){ if(!t) return '<span class="mut">—</span>'; var st=tempState(t.min,t.max);
+   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C</span>'; };
+ return '<section class="card" id="kept-readings"><h3>Kept readings</h3>'
+  +(rows.length
+    ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
+      +rows.map(function(x){ return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am)+'</td><td>'+cell(x.pm)+'</td></tr>'; }).join('')
+      +'</tbody></table>'
+    :'<p class="mut">No readings for '+esc(date)+'.</p>')
+  +'<p class="mut" style="margin-bottom:0">From BLD-area_reading.csv. Blue under 10 °C, green 10–27 °C, red over 27 °C.</p></section>'; }
 /* indoor: BLD-area_reading.csv rows -> ROUND[date__area].t_am / t_pm (before 12:00 = morning). A later row for the same slot wins (corrections). */
 function foldAreaReadings(rows){
  rows.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
@@ -1562,7 +1577,7 @@ function pageRound(){
  var h='<h2>The round</h2>'
  +'<div class="filt"><label class="mut" for="rdate">date</label><input id="rdate" type="date" value="'+date+'">'
  +'<span class="mut" id="rstat">'+(DB?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'read-only \u2014 saving is off for now')+'</span></div>';
- if(!DB) h+='<div class="arrow">'+arrives('reading')+'</div>';   /* foundation: kept readings, not held yet */
+ h+=keptReadings(date);   /* kept readings: read from BLD-area_reading.csv (blue < 10, green 10-27, red > 27) */
  if(!DB) h+='<div class="card acc2"><h4>Saving off</h4><p style="margin-bottom:0">'
   +esc(DBERR||'No store: a tick could not be trusted.')+'</p></div>';
  else h+='<div class="card acc4"><h4>Where this saves</h4><p style="margin-bottom:0">'
