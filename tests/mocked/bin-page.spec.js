@@ -132,6 +132,8 @@ test.describe('Bin page: section 8 order and plain words (stage 5)', () => {
     await openBin(page, guard);
     await page.locator('#sweepCard li:has([title="ZZ_DELETE_ready.txt"]) input').check();
     await page.locator('#sweepCard li:has([title="' + PCP + 'old-invoice.pdf"]) input').check();
+    // The note under the button matches the confirm once a Work My Drive file is ticked.
+    await expect(page.locator('#sweepCard')).toContainText('Goes to the Drive bin. You can get it back for 30 days.');
     const btn = page.locator('#sweepCard [data-action="sweep"]');
     await btn.click();
     await expect.poll(() => page.evaluate(() => window.__GIS_CALLS.request)).toBeGreaterThan(1);

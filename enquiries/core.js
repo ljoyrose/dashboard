@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
 
-  var VERSION = 'enquiries-core 1.8.0 (2026-10-30)';
+  var VERSION = 'enquiries-core 1.14.0 (2026-10-30)';
 
   // ---- Phone numbers -------------------------------------------------------------------------------------------
   // Calling codes to country. Longest prefix wins, so +44 1534 is Jersey and +44 7700 is the United Kingdom.
@@ -384,6 +384,135 @@
     return { past_deposit: !!hit, repeat_buyer: !!(hit && hit.sold), check: check };
   }
 
+  // ---- Deposits and balances report (Stage 11) ------------------------------------------------------------------
+  // Report only. Amounts come from the allocation sheets and a Xero invoice CSV EXPORT that Lisa or the Money Hub drops
+  // into the private requests folder; nothing here makes an invoice, a payment link or a reminder, and nothing is ever
+  // written to Xero, Activepieces or an allocation sheet. Amounts per person live only in the private Deposits tab.
+  function money(v) {
+    var s = String(v == null ? '' : v).replace(/[£€$,\s]|GBP|EUR/gi, '');
+    return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN;
+  }
+  // A date cell to YYYY-MM-DD: 2026-08-01, 01/08/2026 (UK order), 1 Aug 2026 or a Date. '' when unreadable.
+  function isoDate(v) {
+    if (v instanceof Date) return isNaN(v.getTime()) ? '' : v.toISOString().slice(0, 10);
+    var s = String(v == null ? '' : v).trim(), m;
+    if ((m = s.match(/^(\d{4})-(\d{2})-(\d{2})/))) return m[1] + '-' + m[2] + '-' + m[3];
+    if ((m = s.match(/^(\d{1,2})[\/.](\d{1,2})[\/.](\d{4})$/))) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+    if ((m = s.match(/^(\d{1,2})\s+([A-Za-z]{3})[a-z]*\s+(\d{4})$/)) && MONTHS.indexOf(m[2].toLowerCase()) >= 0)
+      return m[3] + '-' + ('0' + (MONTHS.indexOf(m[2].toLowerCase()) + 1)).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+    return '';
+  }
+  // CSV text (RFC 4180: quotes, doubled quotes, CRLF, a leading BOM) to rows of strings. Blank lines are dropped.
+  function parseCsv(text) {
+    var t = String(text || '').replace(/^﻿/, ''), rows = [], row = [], cell = '', q = false;
+    for (var i = 0; i < t.length; i++) {
+      var c = t[i];
+      if (q) {
+        if (c === '"') { if (t[i + 1] === '"') { cell += '"'; i++; } else q = false; } else cell += c;
+      } else if (c === '"') q = true;
+      else if (c === ',') { row.push(cell); cell = ''; }
+      else if (c === '\n' || c === '\r') { if (c === '\r' && t[i + 1] === '\n') i++; row.push(cell); rows.push(row); row = []; cell = ''; }
+      else cell += c;
+    }
+    if (cell !== '' || row.length) { row.push(cell); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); });
+  }
+  // Allocation tab (header first) to Deposits rows: one per person whose deposit date or amount is filled. People are
+  // carried as hashed person keys only. opts as litterRowsFrom: { personKeyOf, litterRef, source, defaultCode }.
+  var LEDGER_COLS = { section: /^section$/i, ref: /^(ref|xero_contact_id)$/i, status: /^status$/i, outcome: /^(outcome.*|old_.*stage)$/i,
+    date: /^(deposit_date|first_deposit)$/i, amount: /^(deposit|deposit_total|deposit_amount)$/i, due: /^balance(_due)?$/i,
+    paid: /^balance_paid$/i, collect: /^(collection|collection_date|collect(ion)?_on|go_home)$/i, pup: /^(provisional_pup|pup|pup_ref)$/i,
+    litter: /^litter(_ref)?$/i, email: /^e-?mail$/i, phone: /^(whatsapp|phone|mobile)$/i };
+  function depositLedgerFrom(values, opts) {
+    opts = opts || {};
+    var v = values || [], head = (v[0] || []).map(function (h) { return String(h == null ? '' : h).trim(); }), at = {}, out = [];
+    Object.keys(LEDGER_COLS).forEach(function (f) { at[f] = -1; head.forEach(function (h, i) { if (at[f] < 0 && LEDGER_COLS[f].test(h)) at[f] = i; }); });
+    function cell(r, f) { return at[f] < 0 || r[at[f]] == null ? '' : r[at[f]] instanceof Date ? r[at[f]] : String(r[at[f]]).trim(); }
+    v.slice(1).forEach(function (r, n) {
+      var section = String(cell(r, 'section')), date = isoDate(cell(r, 'date')) || String(cell(r, 'date')), amount = String(cell(r, 'amount'));
+      if (/^pups?$/i.test(section) || (!date && !amount)) return;
+      var words = [cell(r, 'status'), cell(r, 'outcome')].join(' '), pup = String(cell(r, 'pup'));
+      var status = /refund/i.test(words) ? 'refunded' : REPEAT_WORDS.test(words) ? 'collected' : isClosedList(section) ? 'closed' : 'held';
+      var pk = opts.personKeyOf ? opts.personKeyOf(String(cell(r, 'email')), String(cell(r, 'phone'))) : '', check = '';
+      if (!pk) {
+        var id = emailKey(String(cell(r, 'email'))) || phoneKey(String(cell(r, 'phone')), opts.defaultCode);
+        pk = id ? 'P-' + hash(id) : 'P-' + hash('alloc|' + (opts.source || '') + '|' + (cell(r, 'ref') || n));
+        check = 'not matched to an enquiry yet';
+      }
+      if (amount && isNaN(money(amount))) check = (check ? check + '; ' : '') + 'deposit amount unreadable';
+      out.push({ deposit_key: 'D-' + hash(['alloc', opts.source || '', cell(r, 'ref') || n, pk].join('|')),
+        litter_ref: opts.litterRef || String(cell(r, 'litter')) || (pup.indexOf('-') > 0 ? pup.slice(0, pup.indexOf('-')) : ''),
+        pup_ref: pup, person_key: pk, deposit_date: date, deposit: amount, balance_due: String(cell(r, 'due')), balance_paid: String(cell(r, 'paid')),
+        collection_date: isoDate(cell(r, 'collect')) || String(cell(r, 'collect')), status: status, basis: 'allocation sheet', check: check });
+    });
+    return out;
+  }
+  // Held, due and overdue totals from Deposits rows, overall and by litter. Only 'held' rows count (a suggested Xero
+  // match waits for Lisa's tap). A balance is due when the collection date falls within dueDays (30) from now and the
+  // balance is not paid; overdue when the collection date has passed and it is still not paid.
+  function depositTotals(rows, now, opts) {
+    opts = opts || {};
+    var t = now == null ? Date.now() : toMs(now), days = opts.dueDays || 30, all = blank(), by = {};
+    function blank() { return { held_count: 0, held: 0, due_count: 0, due: 0, overdue_count: 0, overdue: 0, undated: 0, unreadable: 0, suggested: 0 }; }
+    (rows || []).forEach(function (r) {
+      var lr = r.litter_ref || '(no litter)', b = by[lr] = by[lr] || blank();
+      [all, b].forEach(function (o) {
+        if (r.status === 'suggested') { o.suggested++; return; }
+        if (r.status !== 'held') return;
+        var d = money(r.deposit), due = money(r.balance_due), paid = money(r.balance_paid);
+        o.held_count++;
+        if (String(r.deposit || '').trim() && isNaN(d)) o.unreadable++; else if (!isNaN(d)) o.held += d;
+        if (String(r.balance_due || '').trim() && isNaN(due)) o.unreadable++;
+        var owed = isNaN(due) ? 0 : Math.max(0, due - (isNaN(paid) ? 0 : paid));
+        var settled = String(r.balance_due || '').trim() ? owed === 0 : String(r.balance_paid || '').trim() !== '';
+        var c = toMs(r.collection_date);
+        if (isNaN(c)) { o.undated++; return; }
+        if (settled) return;
+        if (c < t) { o.overdue_count++; o.overdue += owed; } else if (c - t <= days * 86400000) { o.due_count++; o.due += owed; }
+      });
+    });
+    return { all: all, byLitter: by };
+  }
+  // Xero invoice CSV export rows (header first) to paid invoices: { invoice_key, email, date, amount }. Only the
+  // email, number, date and paid amount are read: no name, address or line text is kept.
+  var XERO_COLS = { email: /^(email ?address|e-?mail|\*?emailaddress)$/i, number: /^\*?invoice ?number$/i,
+    date: /^(\*?invoice ?date|payment ?date|paid ?date|date)$/i, paid: /^(invoice ?amount ?paid|amount ?paid|paid)$/i,
+    total: /^(\*?total|invoice ?total|amount)$/i, owed: /^(invoice ?amount ?due|amount ?due|due)$/i, status: /^status$/i };
+  function xeroInvoicesFrom(values) {
+    var v = values || [], head = (v[0] || []).map(function (h) { return String(h == null ? '' : h).trim(); }), at = {}, out = [];
+    Object.keys(XERO_COLS).forEach(function (f) { at[f] = -1; head.forEach(function (h, i) { if (at[f] < 0 && XERO_COLS[f].test(h)) at[f] = i; }); });
+    function cell(r, f) { return at[f] < 0 || r[at[f]] == null ? '' : String(r[at[f]]).trim(); }
+    v.slice(1).forEach(function (r) {
+      var st = cell(r, 'status'), amt = at.paid >= 0 ? money(cell(r, 'paid')) : money(cell(r, 'total')), owed = money(cell(r, 'owed'));
+      var paid = st ? /^paid$/i.test(st) : at.owed >= 0 ? owed === 0 : at.paid >= 0;
+      var em = normaliseEmail(cell(r, 'email'));
+      if (!paid || isNaN(amt) || amt <= 0 || !em) return;
+      out.push({ invoice_key: 'X-' + hash([cell(r, 'number'), em, cell(r, 'date'), amt].join('|')), email: em, date: isoDate(cell(r, 'date')), amount: amt.toFixed(2) });
+    });
+    return out;
+  }
+  // Suggest Xero invoices as deposits: the email must match an open enquiry AND the amount must equal one of the
+  // deposit amounts in Settings. Same email, other amount: refused. Returns { suggested, refused, unmatched }.
+  function matchInvoices(invoices, candidates, amounts) {
+    var ok = (amounts || []).map(money).filter(function (n) { return !isNaN(n); }), byEm = {}, out = { suggested: [], refused: [], unmatched: 0 };
+    (candidates || []).forEach(function (c) { var em = normaliseEmail(c.email); if (em && !byEm[em]) byEm[em] = c; });
+    (invoices || []).forEach(function (iv) {
+      var c = byEm[normaliseEmail(iv.email)], amt = money(iv.amount);
+      if (!c) { out.unmatched++; return; }
+      if (!ok.some(function (a) { return Math.abs(a - amt) < 0.005; })) { out.refused.push({ invoice_key: iv.invoice_key, enquiry_key: c.enquiry_key, why: 'amount is not a deposit amount' }); return; }
+      out.suggested.push({ invoice_key: iv.invoice_key, enquiry_key: c.enquiry_key, person_key: c.person_key, litter_ref: c.litter_ref || '', date: iv.date, amount: amt.toFixed(2) });
+    });
+    return out;
+  }
+  // The page's "deposit paid" tap (request-file pattern). Never carries an amount. depositKey confirms a suggested row.
+  function depositPaidRequest(enquiryKey, depositKey, nowIso) {
+    if (!/^K-[0-9a-f]{16}$/.test(String(enquiryKey || ''))) return { ok: false, error: 'Unknown enquiry.' };
+    if (depositKey && !/^D-[0-9a-f]{16}$/.test(String(depositKey))) return { ok: false, error: 'Unknown deposit row.' };
+    var at = nowIso || new Date().toISOString();
+    return { ok: true, name: 'ENQ-deposit-paid-' + at.replace(/[^0-9]/g, '').slice(0, 14) + '-' + String(enquiryKey).slice(2, 8) + '.json',
+      body: { v: 1, kind: 'deposit-paid', enquiry_key: enquiryKey, deposit_key: depositKey || '', at: at } };
+  }
+
   // ---- What they asked for (Stage 7) ---------------------------------------------------------------------------
   // Sex, size, colour, coat and breed words in free text. Only fills what the enquiry row leaves blank.
   var PREF_WORDS = {
@@ -511,7 +640,8 @@
   var UK_PET_TRAVEL = 'https://www.gov.uk/taking-your-pet-abroad';
   var BRAND_LINE = 'Australian Labradoodles/Cobberdogs, www.cobberdogs.com';
   var STOP_LINE = "If you would rather not hear from me again, reply STOP and I won't contact you again.";
-  var CASES = ['first-uk', 'first-abroad', 'after-call', 'waiting-list', 'pup-offer', 'no-fit-now', 'adult-dog', 'breeder', 'missed', 'gentle-close'];
+  var CASES = ['first-uk', 'first-abroad', 'after-call', 'waiting-list', 'pup-offer', 'no-fit-now', 'adult-dog', 'breeder', 'missed', 'gentle-close',
+    'check-in', 'call-check-in', 'offer-check-in', 'waiting-check-in'];
   // Cases the engine may pick by itself. A pup offer is Lisa's alone: it is only ever drafted when she asks for it.
   var AUTO_CASES = ['first-uk', 'first-abroad', 'after-call', 'no-fit-now', 'adult-dog', 'breeder', 'missed', 'gentle-close'];
 
@@ -619,6 +749,31 @@
         body = [hi, '', 'I just wanted to check in. If you\'re still looking for a puppy I\'d love to help, and if your plans have changed that\'s absolutely fine.', '',
           'The breed pages are here if useful:', '', list];
         wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking in: if you\'re still looking I\'d love to help, and if plans have changed that\'s fine. ' + links[0];
+        break;
+      // Stage 12 follow-ups: short check-ins. Never a price, never a new offer (offers are Lisa's alone).
+      case 'check-in':
+        subject = 'Just checking in';
+        body = [hi, '', 'I just wanted to check my last message reached you. If you\'re still looking for a puppy I\'d love to help, and if now isn\'t the right time that\'s absolutely fine.', '',
+          'The breed pages are here if useful:', '', list];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking my last message reached you. If you\'re still looking I\'d love to help. ' + links[0];
+        break;
+      case 'call-check-in':
+        subject = 'Following up on our call';
+        body = [hi, '', 'Thank you again for your time on the call. I just wanted to see if you had any questions after reading the pages I sent.', '',
+          'They are here again if useful:', '', list, '', 'Just reply, or message me on WhatsApp, and I\'ll help with the next step.'];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Following up on our call: any questions after reading ' + links[0] + '? Happy to help with the next step.';
+        break;
+      case 'offer-check-in':
+        subject = 'The puppy I mentioned';
+        body = [hi, '', 'I just wanted to check you saw my message about the puppy. There\'s no pressure at all: just let me know either way when you can, so I can keep my list fair to everyone.', '',
+          'The breed pages are here if useful:', '', list];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa. Just checking you saw my message about the puppy. No pressure: let me know either way when you can. ' + links[0];
+        break;
+      case 'waiting-check-in':
+        subject = 'News from our waiting list';
+        body = [hi, '', 'A quick hello from our waiting list. [Lisa: litter news, or "no news yet"]. You are still on our list, and I\'ll be in touch as soon as I have more.', '',
+          'The breed pages are here if useful:', '', list, '', 'If anything has changed for you, just reply and let me know.'];
+        wa = (fn ? 'Hi ' + fn : 'Hi') + ', it\'s Lisa with a quick waiting-list hello: [Lisa: litter news]. You are still on our list. Breed info: ' + links[0];
         break;
       default: return null;
     }
@@ -732,6 +887,132 @@
       body: { v: 1, kind: 'call-held', enquiry_key: enquiryKey, note: n, at: at } };
   }
 
+  // ---- Waiting list and litters (Stage 10) ----------------------------------------------------------------------
+  // The allocation sheet's current tab, read only, turned into Litters rows: one row per pup (person_key blank) and
+  // one row per person on a list (pup_ref = their provisional pup, if any). People are carried as hashed person keys
+  // only: no name, email or number from the allocation sheet is ever written anywhere.
+  //   values: the tab, header first (section, ref, name, status, deposit_date, whatsapp, email, ppf, notes, provisional_pup)
+  //   opts: { personKeyOf(email, phone) -> person_key, litterRef, source, defaultCode }
+  var LIT_COLS = { section: /^section$/i, ref: /^ref$/i, status: /^status$/i, deposit: /^deposit_date$/i, phone: /^(whatsapp|phone)$/i,
+    email: /^e-?mail$/i, pref: /^ppf\b/i, notes: /^notes$/i, pup: /^provisional_pup$/i };
+  function litterRowsFrom(values, opts) {
+    opts = opts || {};
+    var v = values || [], head = (v[0] || []).map(function (h) { return String(h == null ? '' : h).trim(); }), at = {}, out = [], order = {};
+    Object.keys(LIT_COLS).forEach(function (f) { at[f] = -1; head.forEach(function (h, i) { if (at[f] < 0 && LIT_COLS[f].test(h)) at[f] = i; }); });
+    function cell(r, f) { return at[f] < 0 || r[at[f]] == null ? '' : String(r[at[f]]).trim(); }
+    var lref = opts.litterRef || '';
+    v.slice(1).forEach(function (r) {
+      var section = cell(r, 'section'), ref = cell(r, 'ref');
+      if (!section && !ref) return;
+      var prefs = extractPrefs([cell(r, 'pref'), cell(r, 'notes')].join(' '), {});
+      if (/^pups?$/i.test(section)) {
+        var lr = lref || (ref.indexOf('-') > 0 ? ref.slice(0, ref.indexOf('-')) : '');
+        out.push({ litter_ref: lr, pup_ref: ref, sex: prefs.sex, colour: prefs.colour, size: prefs.size, coat: prefs.coat,
+          status: cell(r, 'status').toLowerCase(), person_key: '', list: 'pups', list_order: '', deposit_date: '', source_sheet: opts.source || '' });
+        return;
+      }
+      var list = section.toLowerCase();
+      order[list] = (order[list] || 0) + 1;
+      var pk = opts.personKeyOf ? opts.personKeyOf(cell(r, 'email'), cell(r, 'phone')) : '';
+      if (!pk) { var id = emailKey(cell(r, 'email')) || phoneKey(cell(r, 'phone'), opts.defaultCode); pk = id ? 'P-' + hash(id) : 'P-' + hash('alloc|' + (opts.source || '') + '|' + ref); }
+      out.push({ litter_ref: lref, pup_ref: cell(r, 'pup'), sex: prefs.sex, colour: prefs.colour, size: prefs.size, coat: prefs.coat,
+        status: cell(r, 'status').toLowerCase(), person_key: pk, list: list, list_order: order[list], deposit_date: cell(r, 'deposit'), source_sheet: opts.source || '' });
+    });
+    out.forEach(function (o) { o.litter_key = 'L-' + hash([o.source_sheet, o.list, o.pup_ref, o.person_key].join('|')); });
+    if (!lref) { var any = out.filter(function (o) { return o.litter_ref; })[0]; if (any) out.forEach(function (o) { if (!o.litter_ref) o.litter_ref = any.litter_ref; }); }
+    return out;
+  }
+  var OPEN_PUP = /^(open|available|for sale)$/i;
+  function isClosedList(list) { return /closed|lost|refund/i.test(String(list || '')); }
+  // Waiting people matched to open pups by sex, colour, size and coat. Deposit holders come first, then each list in
+  // its own order. A person already holding a pup is not matched again. Returns [{ pup_ref, person_key, list, list_order }].
+  function matchLitter(rows) {
+    var pups = (rows || []).filter(function (r) { return r.list === 'pups' && OPEN_PUP.test(r.status); });
+    var waiting = (rows || []).filter(function (r) { return r.list !== 'pups' && !isClosedList(r.list) && !r.pup_ref; })
+      .sort(function (a, b) { return (b.deposit_date ? 1 : 0) - (a.deposit_date ? 1 : 0) || String(a.list).localeCompare(String(b.list)) || a.list_order - b.list_order; });
+    var out = [];
+    pups.forEach(function (p) {
+      waiting.forEach(function (w) { if (pupFits(w, p)) out.push({ pup_ref: p.pup_ref, person_key: w.person_key, list: w.list, list_order: w.list_order }); });
+    });
+    return out;
+  }
+  // Flags Lisa should see. now: a time; offerDays: 3. Returns [{ litter_key, pup_ref, person_key, flag }].
+  function litterFlags(rows, now, offerDays) {
+    rows = rows || []; offerDays = offerDays || 3;
+    var t = now == null ? Date.now() : toMs(now), out = [], lists = {};
+    var held = {}; rows.forEach(function (r) { if (r.list !== 'pups' && r.pup_ref && !isClosedList(r.list)) held[r.pup_ref] = 1; });
+    rows.forEach(function (r) {
+      if (r.list === 'pups') {
+        if (OPEN_PUP.test(r.status) && !held[r.pup_ref]) out.push({ litter_key: r.litter_key, pup_ref: r.pup_ref, person_key: '', flag: 'open pup, no offer' });
+        if (/^offered$/i.test(r.status) && r.status_since_uk && (t - toMs(r.status_since_uk)) / 86400000 > offerDays)
+          out.push({ litter_key: r.litter_key, pup_ref: r.pup_ref, person_key: '', flag: 'offered more than ' + offerDays + ' days, no answer' });
+        return;
+      }
+      if (isClosedList(r.list)) return;
+      if (r.deposit_date && !r.pup_ref) out.push({ litter_key: r.litter_key, pup_ref: '', person_key: r.person_key, flag: 'deposit holder with no pup' });
+      (lists[r.person_key] = lists[r.person_key] || []).push(r);
+    });
+    Object.keys(lists).forEach(function (pk) {
+      var l = lists[pk], names = l.map(function (r) { return r.list; }).filter(function (x, i, a) { return a.indexOf(x) === i; });
+      if (names.length > 1 || l.length > 1) l.forEach(function (r) { out.push({ litter_key: r.litter_key, pup_ref: r.pup_ref, person_key: pk, flag: 'on two lists (double deposits note)' }); });
+    });
+    return out;
+  }
+
+  // ---- Adult-dog sale (Stage 10) --------------------------------------------------------------------------------
+  // From the Sale sheet only three things are read: the sale group, the dog's name and the Status column. Price,
+  // COI and every other column are never read, so they can never reach a card.
+  var SALE_COLS = { group: /^sale ?group$/i, dog: /^(name|dog|dog name)$/i, status: /^status$/i };
+  function saleDogsFrom(values) {
+    var v = values || [], head = (v[0] || []).map(function (h) { return String(h == null ? '' : h).trim(); }), at = {};
+    Object.keys(SALE_COLS).forEach(function (f) { at[f] = -1; head.forEach(function (h, i) { if (at[f] < 0 && SALE_COLS[f].test(h)) at[f] = i; }); });
+    if (at.group < 0 || at.dog < 0) return [];
+    return v.slice(1).map(function (r) {
+      return { group_ref: String(r[at.group] == null ? '' : r[at.group]).trim(), dog_ref: String(r[at.dog] == null ? '' : r[at.dog]).trim(),
+        sale_status: at.status < 0 ? '' : String(r[at.status] == null ? '' : r[at.status]).trim() };
+    }).filter(function (d) { return d.group_ref && d.dog_ref; });
+  }
+  // Adult-dog and breeding-set enquiries joined to a sale group by the dog's name or "group <n>" in what they wrote.
+  var REPLY_KIND = { asked: 'reply', 'details-sent': 'reply', viewing: 'viewing', agreed: 'agreed', 'handed-over': 'agreed' };
+  function saleReplyRows(enquiries, dogs) {
+    var out = [];
+    (enquiries || []).forEach(function (e) {
+      if (e.kind !== 'adult-dog' && e.kind !== 'breeding-set') return;
+      var t = String(e.question_summary || ''), hit = {};
+      (dogs || []).forEach(function (d) {
+        var byName = new RegExp('\\b' + d.dog_ref.split('/')[0].replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'i').test(t);
+        var m = t.match(/\b(?:group|set)\s*(\d{1,2})\b/i), byGroup = m && String(d.group_ref).split(/[^0-9]+/).indexOf(m[1]) >= 0;
+        if (byName || byGroup) hit[d.group_ref + '|' + (byName ? d.dog_ref : '')] = d;
+      });
+      Object.keys(hit).forEach(function (k) {
+        var d = hit[k], dog = k.split('|')[1];
+        out.push({ reply_key: 'R-' + hash(e.key + '|' + k), group_ref: d.group_ref, dog_ref: dog, enquiry_key: e.key, person_key: e.person_key || '',
+          reply_kind: REPLY_KIND[e.stage] || 'reply', at_uk: e.received_uk || '', sale_status: dog ? d.sale_status : '' });
+      });
+    });
+    return out;
+  }
+  // One card per sale group: its dogs and their sale status, and counts of replies, viewings and agreed. Price on
+  // request only; never a price or a COI value.
+  function saleGroupCards(dogs, replies) {
+    var by = {};
+    (dogs || []).forEach(function (d) { (by[d.group_ref] = by[d.group_ref] || { group_ref: d.group_ref, dogs: [], replies: 0, viewings: 0, agreed: 0, price: 'price on request' }).dogs.push({ dog_ref: d.dog_ref, sale_status: d.sale_status || 'no status' }); });
+    var seen = {};
+    (replies || []).forEach(function (r) {
+      var c = by[r.group_ref]; if (!c) return;
+      var k = r.group_ref + '|' + r.enquiry_key; if (seen[k]) return; seen[k] = 1;
+      c.replies++; if (r.reply_kind === 'viewing') c.viewings++; if (r.reply_kind === 'agreed') c.agreed++;
+    });
+    return Object.keys(by).map(function (k) { return by[k]; });
+  }
+  // A card is refused if any text in it looks like a price or a COI value.
+  function checkCard(card) {
+    var t = JSON.stringify(card || {}), why = [];
+    if (PRICE_RE.test(t) || /"price":"(?!price on request")/.test(t)) why.push('a price');
+    if (/\bCOI\b|inbreeding/i.test(t)) why.push('a COI value');
+    return why;
+  }
+
   // ---- Do-not-contact gate (Stage 6; used by every draft and follow-up writer) ---------------------------------
   // A person or enquiry marked do-not-contact or unsubscribed is never drafted to and never gets a follow-up.
   function mayContact(person, enquiry) {
@@ -748,6 +1029,96 @@
       if (g.ok) keep.push(it); else blocked.push({ item: it, why: g.why });
     });
     return { keep: keep, blocked: blocked };
+  }
+
+  // ---- Follow-ups (Stage 12) ------------------------------------------------------------------------------------
+  // Rules from Settings (followup_rules): days to each follow-up, and tries before the hub suggests lost.
+  var FU_DEFAULTS = { 'first-reply': 2, 'after-call': 1, offer: 3, 'waiting-list': 30, 'lost-after': 3 };
+  function followUpRules(text) {
+    var o = {}, k;
+    for (k in FU_DEFAULTS) o[k] = FU_DEFAULTS[k];
+    String(text || '').split(/[,;\n]/).forEach(function (part) {
+      var m = part.match(/^\s*([a-z-]+)\s*=\s*(\d+(?:\.\d+)?)\s*$/i);
+      if (m && Object.prototype.hasOwnProperty.call(FU_DEFAULTS, m[1].toLowerCase())) o[m[1].toLowerCase()] = Number(m[2]);
+    });
+    return o;
+  }
+  // Which rule an enquiry's stage follows, and the Events type that starts its clock. Other stages have no follow-up.
+  var FU_RULE = { replied: 'first-reply', 'call-held': 'after-call', offered: 'offer', deposit: 'waiting-list' };
+  var FU_EVENT = { 'first-reply': 'replied', 'after-call': 'call-held', offer: 'offered', 'waiting-list': 'deposit-paid' };
+  var FU_CASE = { 'first-reply': 'check-in', 'after-call': 'call-check-in', offer: 'offer-check-in', 'waiting-list': 'waiting-check-in' };
+  function followUpCase(rule) { return FU_CASE[rule] || ''; }
+  var FU_OPEN = { waiting: 1, due: 1, snoozed: 1, 'suggest-lost': 1 };
+  // Move a time out of UK quiet hours ('21:00-08:00'): a time inside them goes to the end of them, UK clock.
+  function outOfQuiet(ms, quiet) {
+    var m = String(quiet || '').match(/^\s*(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})\s*$/);
+    if (!m || isNaN(ms)) return ms;
+    var a = +m[1] * 60 + +m[2], b = +m[3] * 60 + +m[4], uk = toUk(ms), mins = +uk.slice(11, 13) * 60 + +uk.slice(14, 16);
+    var inside = a > b ? mins >= a || mins < b : mins >= a && mins < b;
+    if (!inside) return ms;
+    var day = uk.slice(0, 10);
+    if (a > b && mins >= a) day = toUk(toMs(day + 'T12:00:00') + 86400000).slice(0, 10);
+    return toMs(day + 'T' + ('0' + m[3]).slice(-2) + ':' + m[4] + ':00');
+  }
+  // FollowUps rows for every enquiry: one open row per enquiry and rule (try n), closed when the enquiry moves on,
+  // suggest-lost after the last try (the waiting-list check-in repeats and is never lost). The clock starts at the
+  // stage's event (or the row's own update), or at Lisa's last "done" for the next try. A snooze moves the due time.
+  //   opts: { now, rules: followUpRules(...), quiet: '21:00-08:00' }
+  function planFollowUps(enquiries, events, existing, opts) {
+    opts = opts || {};
+    var now = opts.now == null ? Date.now() : toMs(opts.now), rules = opts.rules || followUpRules(''), out = [], byEnq = {}, last = {};
+    (existing || []).forEach(function (f) { (byEnq[f.enquiry_key] = byEnq[f.enquiry_key] || []).push(f); });
+    (events || []).forEach(function (v) {
+      var k = v.enquiry_key + '|' + v.type, t = toMs(v.at_uk);
+      if (!isNaN(t) && !(last[k] >= t)) last[k] = t;
+    });
+    (enquiries || []).forEach(function (e) {
+      var rule = FU_RULE[e.stage], mine = byEnq[e.key] || [];
+      mine.forEach(function (f) {
+        if (f.rule !== rule && FU_OPEN[f.status]) out.push(row(f, { status: 'closed' }));
+      });
+      if (!rule) return;
+      var done = mine.filter(function (f) { return f.rule === rule && f.status === 'done'; });
+      var n = done.length + 1, key = 'F-' + hash([e.key, rule, n].join('|')), open = mine.filter(function (f) { return f.followup_key === key; })[0] || {};
+      var base = last[e.key + '|' + FU_EVENT[rule]];
+      if (base == null || isNaN(base)) base = toMs(e.updated_uk || e.received_uk);
+      done.forEach(function (f) { var t = toMs(f.updated_uk || f.due_uk); if (!isNaN(t) && !(base >= t)) base = t; });
+      var it = { followup_key: key, enquiry_key: e.key, person_key: e.person_key || '', rule: rule, try: n, snoozed_to_uk: open.snoozed_to_uk || '', draft_key: open.draft_key || '' };
+      if (rule !== 'waiting-list' && done.length >= (rules['lost-after'] || 3)) { out.push(row(it, { due_uk: '', status: 'suggest-lost' })); return; }
+      if (isNaN(base)) return;
+      var due = outOfQuiet(base + (rules[rule] == null ? FU_DEFAULTS[rule] : rules[rule]) * 86400000, opts.quiet), status = due <= now ? 'due' : 'waiting';
+      var sn = toMs(open.snoozed_to_uk);
+      if (open.status === 'snoozed' && !isNaN(sn)) { due = outOfQuiet(sn, opts.quiet); status = due <= now ? 'due' : 'snoozed'; }
+      out.push(row(it, { due_uk: toUk(due), status: status }));
+    });
+    function row(f, o) {
+      var r = { followup_key: f.followup_key, enquiry_key: f.enquiry_key, person_key: f.person_key || '', rule: f.rule, try: f.try,
+        due_uk: f.due_uk || '', status: f.status, snoozed_to_uk: f.snoozed_to_uk || '', draft_key: f.draft_key || '' };
+      for (var k in o) r[k] = o[k];
+      return r;
+    }
+    return out;
+  }
+  // The page's follow-up taps (request-file pattern): Lisa replied herself; snooze a follow-up; done (sent), or done and lost.
+  function stamp(at) { return at.replace(/[^0-9]/g, '').slice(0, 14); }
+  function repliedRequest(enquiryKey, nowIso) {
+    if (!/^K-[0-9a-f]{16}$/.test(String(enquiryKey || ''))) return { ok: false, error: 'Unknown enquiry.' };
+    var at = nowIso || new Date().toISOString();
+    return { ok: true, name: 'ENQ-replied-' + stamp(at) + '-' + String(enquiryKey).slice(2, 8) + '.json', body: { v: 1, kind: 'replied', enquiry_key: enquiryKey, at: at } };
+  }
+  function snoozeRequest(followupKey, untilUk, nowIso) {
+    if (!/^F-[0-9a-f]{16}$/.test(String(followupKey || ''))) return { ok: false, error: 'Unknown follow-up.' };
+    var at = nowIso || new Date().toISOString(), t = toMs(untilUk);
+    if (isNaN(t)) return { ok: false, error: 'Pick a date and time.' };
+    if (t <= toMs(at)) return { ok: false, error: 'Pick a time in the future.' };
+    return { ok: true, name: 'ENQ-snooze-' + stamp(at) + '-' + String(followupKey).slice(2, 8) + '.json',
+      body: { v: 1, kind: 'snooze', followup_key: followupKey, until_uk: toUk(t), at: at } };
+  }
+  function doneRequest(followupKey, lost, nowIso) {
+    if (!/^F-[0-9a-f]{16}$/.test(String(followupKey || ''))) return { ok: false, error: 'Unknown follow-up.' };
+    var at = nowIso || new Date().toISOString();
+    return { ok: true, name: 'ENQ-done-' + stamp(at) + '-' + String(followupKey).slice(2, 8) + '.json',
+      body: { v: 1, kind: 'done', followup_key: followupKey, lost: lost === true, at: at } };
   }
 
   // ---- Merging one enquiry row ---------------------------------------------------------------------------------
@@ -847,17 +1218,21 @@
     Events: ['event_key', 'enquiry_key', 'person_key', 'at_uk', 'channel', 'type', 'detail', 'source_ref'],
     Drafts: ['draft_key', 'enquiry_key', 'person_key', 'case', 'version', 'text', 'links', 'made_uk', 'status', 'blocked_by'],
     FollowUps: ['followup_key', 'enquiry_key', 'person_key', 'rule', 'try', 'due_uk', 'status', 'snoozed_to_uk', 'draft_key', 'updated_uk'],
-    Litters: ['litter_ref', 'pup_ref', 'sex', 'colour', 'size', 'coat', 'status', 'person_key', 'list', 'list_order',
-      'deposit_date', 'source_sheet', 'read_uk'],
-    'Sale Replies': ['group_ref', 'dog_ref', 'enquiry_key', 'person_key', 'reply_kind', 'at_uk', 'sale_status', 'read_uk'],
-    Deposits: ['litter_ref', 'pup_ref', 'person_key', 'deposit_date', 'deposit', 'balance_due', 'balance_paid',
-      'collection_date', 'basis', 'read_uk'],
+    Litters: ['litter_key', 'litter_ref', 'pup_ref', 'sex', 'colour', 'size', 'coat', 'status', 'status_since_uk', 'person_key',
+      'list', 'list_order', 'deposit_date', 'flag', 'source_sheet', 'read_uk'],
+    'Sale Replies': ['reply_key', 'group_ref', 'dog_ref', 'enquiry_key', 'person_key', 'reply_kind', 'at_uk', 'sale_status', 'read_uk'],
+    // Stage 11: deposit_key, status (held, suggested, collected, refunded, closed) and check added. Private amounts.
+    Deposits: ['deposit_key', 'litter_ref', 'pup_ref', 'person_key', 'deposit_date', 'deposit', 'balance_due', 'balance_paid',
+      'collection_date', 'status', 'basis', 'check', 'read_uk'],
     Sources: ['source', 'lands_where', 'machine_readable', 'reader', 'last_read_uk', 'last_count', 'status', 'note'],
     Settings: ['setting', 'value', 'note'],
     Requests: ['request_file', 'kind', 'enquiry_key', 'received_uk', 'applied_uk', 'result'],
     Log: ['at_uk', 'level', 'step', 'message', 'count', 'dry_run', 'engine_version'],
     // Stage 8: Lisa's own sent replies with names, emails and numbers stripped, read by styleSample(). Private.
-    Style: ['style_key', 'sent_uk', 'words', 'greeting', 'sign_off', 'links', 'text', 'read_uk']
+    Style: ['style_key', 'sent_uk', 'words', 'greeting', 'sign_off', 'links', 'text', 'read_uk'],
+    // Stage 14: counts only, one row per month and source (and 'all'). basis: live, hubspot-history or deposit-list.
+    Results: ['result_key', 'month', 'source', 'basis', 'enquiries', 'calls_booked', 'calls_held', 'offers', 'deposits', 'balances',
+      'collected', 'lost', 'junk', 'adult_sale', 'median_reply_h', 'lost_reasons', 'made_uk']
   };
   var CHANNELS = ['email', 'calendly', 'web-form', 'cf-website-optin', 'cf-breeding', 'cf-waiting-list', 'hubspot',
     'hubspot-legacy', 'pets4homes', 'whatsapp', 'facebook', 'instagram', 'phone', 'manual'];
@@ -1230,6 +1605,476 @@
     return { name: name, email: normaliseEmail(em), phone_e164: ph.valid ? ph.e164 : '', message: f.message || t.trim() };
   }
 
+  // ---- The enquiries page (Stage 13) ------------------------------------------------------------------------------
+  // Pure logic for enquiries/index.html: order, counts, filters kept in the URL hash, the detail view, and the local
+  // copy of a tap (the engine does the real work from the request file; the page shows the result at once).
+  var BAND_RANK = { hot: 0, warm: 1, cool: 2, 'not-a-fit': 3 };
+  var DONE_STAGES = { lost: 1, parked: 1, collected: 1, 'handed-over': 1 };
+  var PAGE_FILTERS = ['source', 'band', 'stage', 'litter', 'country'];
+  function ukDay(v) { return toUk(v).slice(0, 10); }
+  // Newest and hottest first: band (hot, warm, cool, not-a-fit, blank), then newest received, then key.
+  function sortEnquiries(rows) {
+    return (rows || []).slice().sort(function (a, b) {
+      var ra = BAND_RANK[a.band] == null ? 4 : BAND_RANK[a.band], rb = BAND_RANK[b.band] == null ? 4 : BAND_RANK[b.band];
+      return ra - rb || (toMs(b.received_uk) || 0) - (toMs(a.received_uk) || 0) || String(a.key).localeCompare(String(b.key));
+    });
+  }
+  // '#/list?band=hot&country=Spain' -> { view: 'list', key: '', f: { band: 'hot', country: 'Spain' } }; '#/e/K-...' opens one.
+  function filtersFromHash(h) {
+    var s = String(h || '').replace(/^#\/?/, ''), q = s.indexOf('?'), path = q < 0 ? s : s.slice(0, q), f = {};
+    (q < 0 ? '' : s.slice(q + 1)).split('&').forEach(function (p) {
+      var i = p.indexOf('='); if (i < 1) return;
+      var k = decodeURIComponent(p.slice(0, i)), v = decodeURIComponent(p.slice(i + 1).replace(/\+/g, ' '));
+      if (PAGE_FILTERS.indexOf(k) >= 0 && v) f[k] = v;
+    });
+    var parts = path.split('/'), view = parts[0] || 'home', key = '';
+    if (view === 'e') key = parts[1] || '';
+    return { view: view, key: key, f: f };
+  }
+  function hashFor(view, f) {
+    var q = PAGE_FILTERS.filter(function (k) { return f && f[k]; }).map(function (k) { return k + '=' + encodeURIComponent(f[k]); }).join('&');
+    return '#/' + (view || 'home') + (q ? '?' + q : '');
+  }
+  function filterEnquiries(rows, f) {
+    f = f || {};
+    return (rows || []).filter(function (e) {
+      return (!f.source || e.source === f.source || e.channel === f.source) && (!f.band || e.band === f.band) && (!f.stage || e.stage === f.stage)
+        && (!f.litter || e.litter_ref === f.litter) && (!f.country || e.country === f.country);
+    });
+  }
+  // The choices each filter offers: the words found in the rows, sorted, blanks left out.
+  function filterOptions(rows) {
+    var out = {}, col = { source: 'source', band: 'band', stage: 'stage', litter: 'litter_ref', country: 'country' };
+    PAGE_FILTERS.forEach(function (k) {
+      var seen = {}; (rows || []).forEach(function (e) { var v = String(e[col[k]] || '').trim(); if (v) seen[v] = 1; });
+      out[k] = Object.keys(seen).sort(k === 'band' ? function (a, b) { return (BAND_RANK[a] || 0) - (BAND_RANK[b] || 0); } : undefined);
+    });
+    return out;
+  }
+  function openPupRows(litters) { return (litters || []).filter(function (r) { return r.list === 'pups' && OPEN_PUP.test(String(r.status || '').trim()); }); }
+  // Everything the front of the page shows. tabs: { Enquiries, People, Events, Drafts, FollowUps, Litters, 'Sale Replies',
+  // Deposits, Settings } as row lists (parseTab rows); opts: { now, dueDays }. Nothing here writes anywhere.
+  function hubView(tabs, opts) {
+    tabs = tabs || {}; opts = opts || {};
+    var now = opts.now == null ? Date.now() : toMs(opts.now), today = ukDay(now);
+    var enq = sortEnquiries(tabs.Enquiries), people = {}, open = openPupRows(tabs.Litters), byKey = {};
+    (tabs.People || []).forEach(function (p) { people[p.person_key] = p; });
+    enq.forEach(function (e) { byKey[e.key] = e; });
+    var live = enq.filter(function (e) { return !DONE_STAGES[e.stage]; });
+    var calls = live.filter(function (e) { var t = toMs(e.next_due_uk); return e.stage === 'call-booked' && !isNaN(t) && t >= now - 3600000 && t <= now + 48 * 3600000; })
+      .sort(function (a, b) { return toMs(a.next_due_uk) - toMs(b.next_due_uk); });
+    var fus = gateContact((tabs.FollowUps || []).filter(function (f) {
+      var t = toMs(f.status === 'snoozed' ? f.snoozed_to_uk : f.due_uk);
+      return byKey[f.enquiry_key] && (f.status === 'due' || ((f.status === 'waiting' || f.status === 'snoozed') && !isNaN(t) && t <= now));
+    }), people, byKey).keep.sort(function (a, b) { return String(a.due_uk).localeCompare(String(b.due_uk)); });
+    var prep = calls.map(function (e) {
+      return callPrep(e, { now: now, person: people[e.person_key], openPups: open, events: tabs.Events || [] });
+    }).filter(Boolean);
+    var lits = {}, flags = litterFlags(tabs.Litters || [], now);
+    (tabs.Litters || []).forEach(function (r) {
+      var l = lits[r.litter_ref || '(no litter)'] = lits[r.litter_ref || '(no litter)'] || { litter_ref: r.litter_ref || '(no litter)', open: [], lists: {}, flags: [] };
+      if (r.list === 'pups') { if (OPEN_PUP.test(String(r.status || '').trim())) l.open.push(r.pup_ref); return; }
+      if (isClosedList(r.list)) return;
+      l.lists[r.list] = (l.lists[r.list] || 0) + 1;
+    });
+    flags.forEach(function (fl) {
+      var r = (tabs.Litters || []).filter(function (x) { return x.litter_key === fl.litter_key; })[0], l = r && lits[r.litter_ref || '(no litter)'];
+      if (l && l.flags.indexOf(fl.flag) < 0) l.flags.push(fl.flag);
+    });
+    var dogs = (tabs['Sale Replies'] || []).map(function (r) { return { group_ref: r.group_ref, dog_ref: r.dog_ref, sale_status: r.sale_status }; }).filter(function (d) { return d.dog_ref; });
+    return {
+      enquiries: enq,
+      counts: { newToday: enq.filter(function (e) { return ukDay(e.received_uk) === today; }).length,
+        hot: live.filter(function (e) { return e.band === 'hot'; }).length, calls48: calls.length, followupsDue: fus.length, openPups: open.length },
+      today: { calls: prep, followups: fus },
+      fresh: live.filter(function (e) { return e.stage === 'new'; }),
+      hot: live.filter(function (e) { return e.band === 'hot'; }),
+      waiting: Object.keys(lits).sort().map(function (k) { return lits[k]; }),
+      deposits: depositTotals(tabs.Deposits || [], now, { dueDays: opts.dueDays }),
+      sale: saleGroupCards(dogs, tabs['Sale Replies'] || []),
+      options: filterOptions(enq)
+    };
+  }
+  // One enquiry opened: score reasons, touches, the draft to copy (none when a contact rule says no), the prep card,
+  // its follow-ups and the actions that fit its stage.
+  function enquiryDetail(tabs, key, opts) {
+    tabs = tabs || {}; opts = opts || {};
+    var e = (tabs.Enquiries || []).filter(function (x) { return x.key === key; })[0];
+    if (!e) return null;
+    var person = (tabs.People || []).filter(function (p) { return p.person_key && p.person_key === e.person_key; })[0] || {};
+    var gate = mayContact(person, e);
+    var drafts = (tabs.Drafts || []).filter(function (d) { return d.enquiry_key === key && !d.blocked_by && d.status !== 'sent' && d.status !== 'blocked'; })
+      .sort(function (a, b) { return String(b.made_uk).localeCompare(String(a.made_uk)); });
+    var draft = gate.ok && drafts[0] && !checkDraft(drafts[0].text).length ? drafts[0] : null;
+    var touches = (tabs.Events || []).filter(function (v) { return v.enquiry_key === key || (e.person_key && v.person_key === e.person_key); })
+      .sort(function (a, b) { return String(b.at_uk).localeCompare(String(a.at_uk)); });
+    var fus = (tabs.FollowUps || []).filter(function (f) { return f.enquiry_key === key && FU_OPEN[f.status]; });
+    var acts = [];
+    if (e.stage === 'call-booked') acts.push('call-held');
+    if (stageRank(e.stage) >= stageRank('call-held') && stageRank(e.stage) < stageRank('deposit') && FLOW.indexOf(e.stage) >= 0) acts.push('deposit-paid');
+    if (e.stage === 'new' && gate.ok) acts.push('replied');
+    if (fus.length && gate.ok) acts.push('snooze', 'done');
+    return {
+      enquiry: e, person: { ref: person.ref || '', touches: person.touches || '', repeat_buyer: truthy(person.repeat_buyer) },
+      reasons: String(e.score_reasons || '').split(' | ').filter(Boolean), touches: touches, contact: gate,
+      draft: draft, prep: callPrep(e, { now: opts.now, person: person, openPups: openPupRows(tabs.Litters), events: tabs.Events || [] }),
+      followups: fus, actions: acts
+    };
+  }
+  // The page's own copy of a tap, applied at once so Lisa sees the result; the engine makes it real from the request
+  // file. built: what a *Request() function returned. Changes tabs in place and returns it.
+  function applyRequest(tabs, built, nowIso) {
+    if (!tabs || !built || !built.ok) return tabs;
+    var b = built.body, at = toUk(nowIso || b.at || Date.now());
+    var e = (tabs.Enquiries || []).filter(function (x) { return x.key === b.enquiry_key; })[0];
+    var f = (tabs.FollowUps || []).filter(function (x) { return x.followup_key === b.followup_key; })[0];
+    function ev(type) { (tabs.Events = tabs.Events || []).push({ event_key: 'V-' + hash(b.enquiry_key + '|' + type + '|' + at), enquiry_key: e.key, person_key: e.person_key || '', at_uk: at, channel: 'page', type: type, detail: '', source_ref: built.name }); }
+    if (b.kind === 'call-held' && e) {
+      e.stage = 'call-held'; e.updated_uk = at; ev('call-held');
+      var person = (tabs.People || []).filter(function (p) { return p.person_key === e.person_key; })[0] || {};
+      var has = (tabs.Drafts || []).some(function (d) { return d.enquiry_key === e.key && d.case === 'after-call'; });
+      if (!has && mayContact(person, e).ok) {
+        var d = buildDraft('after-call', { name: person.name, country: e.country, prefs: extractPrefs(e.question_summary, e) });
+        (tabs.Drafts = tabs.Drafts || []).push({ draft_key: 'DR-' + hash(e.key + '|after-call'), enquiry_key: e.key, person_key: e.person_key || '', case: 'after-call',
+          version: 1, text: d.whatsapp, links: d.links.join(' '), made_uk: at, status: 'ready', blocked_by: '' });
+      }
+    } else if (b.kind === 'deposit-paid' && e) { e.stage = 'deposit'; e.updated_uk = at; ev('deposit-paid'); }
+    else if (b.kind === 'replied' && e) { if (e.stage === 'new') e.stage = 'replied'; e.updated_uk = at; ev('replied'); }
+    else if (b.kind === 'snooze' && f) { f.status = 'snoozed'; f.snoozed_to_uk = b.until_uk; f.due_uk = b.until_uk; f.updated_uk = at; }
+    else if (b.kind === 'done' && f) {
+      f.status = 'done'; f.updated_uk = at;
+      var fe = (tabs.Enquiries || []).filter(function (x) { return x.key === f.enquiry_key; })[0];
+      if (b.lost && fe) fe.stage = 'lost';
+    }
+    return tabs;
+  }
+
+  // ---- Results (Stage 14) --------------------------------------------------------------------------------------
+  // Counts per month (the month an enquiry came in, UK) and source (its channel). An enquiry counts at every step up to
+  // the furthest it reached, from its stage or its Events (a lost row keeps the steps its Events show), so each step
+  // is a subset of the one before. Junk rows (flag junk?) are counted as junk and nowhere else. A rate with nothing
+  // under it is null and shows "no data", never 0%. Counts only: no names, no amounts.
+  var RESULT_COUNTS = ['enquiries', 'calls_booked', 'calls_held', 'offers', 'deposits', 'balances', 'collected', 'lost', 'junk', 'adult_sale'];
+  // The conversion chain in the order a sale moves (FLOW: the deposit comes before the offer).
+  var RESULT_STEPS = ['enquiries', 'calls_booked', 'calls_held', 'deposits', 'offers', 'balances', 'collected'];
+  var STEP_OF_STAGE = { 'call-booked': 1, 'call-held': 2, deposit: 3, offered: 4, balance: 5, collected: 6 };
+  var STEP_OF_EVENT = { booked: 1, rescheduled: 1, 'call-held': 2, 'deposit-paid': 3 };
+  var REPLY_EVENTS = { replied: 1, 'call-held': 1 };
+  function median(list) {
+    var a = (list || []).filter(function (x) { return typeof x === 'number' && !isNaN(x); }).sort(function (x, y) { return x - y; });
+    if (!a.length) return null;
+    var m = Math.floor(a.length / 2);
+    return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
+  }
+  function rate(n, of) { return of > 0 ? n / of : null; }
+  function pct(r) { return r == null ? 'no data' : Math.round(r * 100) + '%'; }
+  function emptyResult(month, source, basis) {
+    var r = { result_key: 'R-' + month + '-' + source + (basis && basis !== 'live' ? '-' + basis : ''), month: month, source: source, basis: basis || 'live' };
+    RESULT_COUNTS.forEach(function (k) { r[k] = 0; });
+    r.median_reply_h = ''; r.lost_reasons = '';
+    return r;
+  }
+  function reasonsText(tally) {
+    return Object.keys(tally).sort(function (a, b) { return tally[b] - tally[a] || a.localeCompare(b); }).map(function (k) { return k + ':' + tally[k]; }).join(' | ');
+  }
+  function reasonsTally(text, into) {
+    into = into || {};
+    String(text || '').split(' | ').forEach(function (p) { var i = p.lastIndexOf(':'); if (i > 0) into[p.slice(0, i)] = (into[p.slice(0, i)] || 0) + (Number(p.slice(i + 1)) || 0); });
+    return into;
+  }
+  // One enquiry's furthest step (0 to 6), whether it is lost, and hours to Lisa's first reply (null if none yet).
+  function resultOf(e, evs) {
+    var adult = e.kind === 'adult-dog' || ADULT_STAGES.indexOf(e.stage) >= 0;
+    var step = adult ? 0 : (STEP_OF_STAGE[e.stage] || 0), first = null;
+    (evs || []).forEach(function (v) {
+      if (!adult && STEP_OF_EVENT[v.type] > step) step = STEP_OF_EVENT[v.type];
+      if (REPLY_EVENTS[v.type]) { var t = toMs(v.at_uk); if (!isNaN(t) && (first == null || t < first)) first = t; }
+    });
+    var got = toMs(e.received_uk), h = first != null && !isNaN(got) && first >= got ? Math.round((first - got) / 360000) / 10 : null;
+    return { step: step, lost: e.stage === 'lost', reply_h: h };
+  }
+  // Live Results rows from the Enquiries, Events and Sale Replies tabs: per month x source, plus source 'all'.
+  // opts: { from: 'YYYY-MM-DD' } leaves out enquiries received before it.
+  function resultsRows(tabs, opts) {
+    tabs = tabs || {}; opts = opts || {};
+    var from = opts.from ? String(opts.from).slice(0, 7) : '', evs = {}, sale = {}, cells = {}, hours = {}, lost = {};
+    (tabs.Events || []).forEach(function (v) { (evs[v.enquiry_key] = evs[v.enquiry_key] || []).push(v); });
+    (tabs['Sale Replies'] || []).forEach(function (r) { if (r.enquiry_key) sale[r.enquiry_key] = 1; });
+    (tabs.Enquiries || []).forEach(function (e) {
+      var month = ukDay(e.received_uk).slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(month) || (from && month < from)) return;
+      [e.channel || 'unknown', 'all'].forEach(function (src) {
+        var id = month + '|' + src, r = cells[id] = cells[id] || emptyResult(month, src);
+        if (/junk/.test(String(e.flag || ''))) { r.junk++; return; }
+        var o = resultOf(e, evs[e.key]);
+        r.enquiries++;
+        for (var i = 1; i <= o.step; i++) r[RESULT_STEPS[i]]++;
+        if (o.lost) { r.lost++; var why = String(e.lost_reason || '').trim().toLowerCase() || 'no reason given'; (lost[id] = lost[id] || {})[why] = (lost[id][why] || 0) + 1; }
+        if (e.kind === 'adult-dog' || sale[e.key]) r.adult_sale++;
+        if (o.reply_h != null) (hours[id] = hours[id] || []).push(o.reply_h);
+      });
+    });
+    return Object.keys(cells).sort().map(function (id) {
+      var r = cells[id], m = median(hours[id]);
+      r.median_reply_h = m == null ? '' : m; r.lost_reasons = lost[id] ? reasonsText(lost[id]) : '';
+      return r;
+    });
+  }
+  // Rates for one Results row: conversion at each step of the chain, deposits per 10 calls held, median reply hours.
+  function resultRates(r) {
+    r = r || {};
+    var n = function (k) { return Number(r[k]) || 0; }, steps = [];
+    for (var i = 1; i < RESULT_STEPS.length; i++) {
+      var a = RESULT_STEPS[i - 1], b = RESULT_STEPS[i];
+      steps.push({ from: a, to: b, n: n(b), of: n(a), rate: rate(n(b), n(a)) });
+    }
+    var dep10 = n('calls_held') > 0 ? Math.round(n('deposits') / n('calls_held') * 100) / 10 : null;
+    var med = r.median_reply_h === '' || r.median_reply_h == null || isNaN(Number(r.median_reply_h)) ? null : Number(r.median_reply_h);
+    return { steps: steps, overall: rate(n('collected'), n('enquiries')), lost: rate(n('lost'), n('enquiries')), deposits_per_10_calls: dep10, median_reply_h: med };
+  }
+  // Months from 'YYYY-MM' to 'YYYY-MM', newest first.
+  function monthsBetween(from, to) {
+    var out = [], y = Number(String(from).slice(0, 4)), m = Number(String(from).slice(5, 7)), ty = Number(String(to).slice(0, 4)), tm = Number(String(to).slice(5, 7));
+    if (!y || !m || !ty || !tm) return out;
+    while ((y < ty || (y === ty && m <= tm)) && out.length < 240) { out.push(y + '-' + ('0' + m).slice(-2)); m++; if (m > 12) { m = 1; y++; } }
+    return out.reverse();
+  }
+  // What the Results card and tab show. Live rows are computed from the tabs; history rows (basis not live) come from
+  // the Results tab and are added to the same month and source. Every month from opts.from to now is listed, so a
+  // month with nothing in it shows "no data". opts: { now, from }.
+  function resultsView(tabs, opts) {
+    tabs = tabs || {}; opts = opts || {};
+    var now = opts.now == null ? Date.now() : toMs(opts.now), from = String(opts.from || '2026-05-01').slice(0, 7);
+    var rows = resultsRows(tabs, { from: from }).concat((tabs.Results || []).filter(function (r) { return r.basis && r.basis !== 'live'; }));
+    var cells = {}, sources = {}, reasons = {};
+    rows.forEach(function (r) {
+      var month = String(r.month || '').slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(month)) return;
+      var src = r.source || 'unknown', id = month + '|' + src, c = cells[id] = cells[id] || emptyResult(month, src, 'view');
+      RESULT_COUNTS.forEach(function (k) { c[k] += Number(r[k]) || 0; });
+      if ((r.basis || 'live') === 'live' && r.median_reply_h !== '' && r.median_reply_h != null) c.median_reply_h = Number(r.median_reply_h);
+      c.lost_reasons = reasonsText(reasonsTally(r.lost_reasons, reasonsTally(c.lost_reasons)));
+      if (src !== 'all') sources[src] = 1;
+      if (r.basis && r.basis !== 'live') {
+        // History rows have no 'all' row of their own: add them to it.
+        var aid = month + '|all', a = cells[aid] = cells[aid] || emptyResult(month, 'all', 'view');
+        RESULT_COUNTS.forEach(function (k) { a[k] += Number(r[k]) || 0; });
+        a.lost_reasons = reasonsText(reasonsTally(r.lost_reasons, reasonsTally(a.lost_reasons)));
+      }
+    });
+    var first = Object.keys(cells).map(function (id) { return id.slice(0, 7); }).sort()[0];
+    var months = monthsBetween(first && first < from ? first : from, ukDay(now).slice(0, 7)).map(function (mo) {
+      var all = cells[mo + '|all'] || emptyResult(mo, 'all', 'view');
+      var by = Object.keys(sources).sort().filter(function (s) { return cells[mo + '|' + s]; }).map(function (s) { return { row: cells[mo + '|' + s], rates: resultRates(cells[mo + '|' + s]) }; });
+      reasonsTally(all.lost_reasons, reasons);
+      return { month: mo, total: all, rates: resultRates(all), bySource: by, empty: !(all.enquiries || all.deposits || all.junk) };
+    });
+    var sum = emptyResult('all', 'all', 'view');
+    months.forEach(function (m) { RESULT_COUNTS.forEach(function (k) { sum[k] += m.total[k]; }); });
+    return { months: months, current: months[0] || null, total: sum, totalRates: resultRates(sum), sources: Object.keys(sources).sort(),
+      lostReasons: reasonsText(reasons), medianReplyAll: medianReplyHours(tabs, from), adultSale: sum.adult_sale };
+  }
+  function medianReplyHours(tabs, from) {
+    var evs = {}, hs = [];
+    (tabs.Events || []).forEach(function (v) { (evs[v.enquiry_key] = evs[v.enquiry_key] || []).push(v); });
+    (tabs.Enquiries || []).forEach(function (e) {
+      var mo = ukDay(e.received_uk).slice(0, 7);
+      if (/junk/.test(String(e.flag || '')) || !/^\d{4}-\d{2}$/.test(mo) || (from && mo < from)) return;
+      var h = resultOf(e, evs[e.key]).reply_h; if (h != null) hs.push(h);
+    });
+    return median(hs);
+  }
+
+  // ---- History import (Stage 14, one-off) ---------------------------------------------------------------------
+  // Old HubSpot deals and contacts from an EXPORT CSV that Lisa drops in the private requests folder (HubSpot is never
+  // written). Header names are matched loosely. Stages are mapped to the hub's; spam and test entries (junkReasons)
+  // are counted as junk and left out; a contact whose email is on a deal counts once. Only rows created before
+  // opts.before are counted, so nothing the live readers already hold is counted twice. Returns counts only.
+  var HUBSPOT_STAGE_MAP = [
+    [/closed ?won|collected|completed|went home|customer/i, 'collected'], [/closed ?lost|\blost\b|not interested|unqualified/i, 'lost'],
+    [/balance|contract ?sent/i, 'balance'], [/offer|presentation|decision ?maker/i, 'offered'], [/deposit/i, 'deposit'],
+    [/call ?(held|done)|qualified ?to ?buy|opportunity|sales ?qualified/i, 'call-held'], [/appointment|call ?booked|scheduled/i, 'call-booked']
+  ];
+  function hubspotStage(text) {
+    var s = String(text || '').trim();
+    for (var i = 0; i < HUBSPOT_STAGE_MAP.length; i++) if (HUBSPOT_STAGE_MAP[i][0].test(s)) return HUBSPOT_STAGE_MAP[i][1];
+    return 'new';
+  }
+  function csvObjects(rows) {
+    var head = (rows && rows[0]) || [];
+    return (rows || []).slice(1).map(function (r) { var o = {}; head.forEach(function (h, i) { o[String(h).trim().toLowerCase()] = r[i] == null ? '' : String(r[i]); }); return o; });
+  }
+  function pick(o, res) {
+    var ks = Object.keys(o);
+    for (var i = 0; i < res.length; i++) for (var j = 0; j < ks.length; j++) if (res[i].test(ks[j]) && String(o[ks[j]]).trim()) return String(o[ks[j]]).trim();
+    return '';
+  }
+  // rows: parseCsv output of one export (deals or contacts; told apart by a deal stage column).
+  // Returns { rows: Results rows (basis hubspot-history, source hubspot-legacy), read, counted, junk, later, undated, stages }.
+  function hubspotHistoryFrom(exportsRows, opts) {
+    opts = opts || {};
+    var before = opts.before ? String(opts.before).slice(0, 10) : '', seen = {}, recs = [];
+    var out = { rows: [], read: 0, counted: 0, junk: 0, later: 0, undated: 0, stages: {} };
+    var lists = (exportsRows || []).map(csvObjects);
+    lists.sort(function (a, b) { return (a[0] && pick(a[0], [/deal ?stage/]) ? 0 : 1) - (b[0] && pick(b[0], [/deal ?stage/]) ? 0 : 1); });
+    lists.forEach(function (list) {
+      list.forEach(function (o) {
+        out.read++;
+        var deal = !!pick(o, [/deal ?stage/]);
+        var name = [pick(o, [/^first ?name$/]), pick(o, [/^last ?name$/])].filter(Boolean).join(' ') || (deal ? '' : pick(o, [/^name$/]));
+        var email = pick(o, [/^e-?mail$/, /e-?mail/]), phone = pick(o, [/phone/, /mobile/]), dealName = pick(o, [/deal ?name/]);
+        if (junkReasons({ name: name, email: email, phone: phone }, opts).length || /^test\b|\btest$/i.test(dealName)) { out.junk++; return; }
+        var ek = emailKey(email);
+        if (ek && seen[ek]) return;
+        if (ek) seen[ek] = 1;
+        var day = isoDate(pick(o, [/^create ?date/, /created/, /^date/])) || ukDay(pick(o, [/^create ?date/, /created/]));
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) { out.undated++; return; }
+        if (before && day >= before) { out.later++; return; }
+        var stage = hubspotStage(deal ? pick(o, [/deal ?stage/]) : pick(o, [/lifecycle ?stage/, /lead ?status/]));
+        out.stages[stage] = (out.stages[stage] || 0) + 1;
+        recs.push({ month: day.slice(0, 7), stage: stage, why: pick(o, [/lost ?reason/]) });
+      });
+    });
+    var cells = {};
+    recs.forEach(function (x) {
+      var r = cells[x.month] = cells[x.month] || emptyResult(x.month, 'hubspot-legacy', 'hubspot-history');
+      var step = STEP_OF_STAGE[x.stage] || 0;
+      r.enquiries++; for (var i = 1; i <= step; i++) r[RESULT_STEPS[i]]++;
+      if (x.stage === 'lost') { r.lost++; var t = reasonsTally(r.lost_reasons), w = String(x.why || '').toLowerCase() || 'no reason given'; t[w] = (t[w] || 0) + 1; r.lost_reasons = reasonsText(t); }
+      out.counted++;
+    });
+    out.rows = Object.keys(cells).sort().map(function (k) { return cells[k]; });
+    return out;
+  }
+  // The old deposit list (a sheet tab, header first): deposits counted per month of the deposit date. Counts only:
+  // nothing about the person is kept. Rows on or after opts.before are left to the live hub.
+  function depositHistoryFrom(values, opts) {
+    opts = opts || {};
+    var before = opts.before ? String(opts.before).slice(0, 10) : '', head = ((values && values[0]) || []).map(function (h) { return String(h).trim(); });
+    var col = -1;
+    head.forEach(function (h, i) { if (col < 0 && /^(deposit_date|first_deposit|deposit date|date paid|date)$/i.test(h)) col = i; });
+    var out = { rows: [], read: 0, counted: 0, undated: 0, later: 0, nodate_column: col < 0 }, cells = {};
+    if (col < 0) return out;
+    (values || []).slice(1).forEach(function (r) {
+      if (!r.some(function (x) { return String(x == null ? '' : x).trim(); })) return;
+      out.read++;
+      var day = isoDate(r[col]);
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day || '')) { out.undated++; return; }
+      if (before && day >= before) { out.later++; return; }
+      var c = cells[day.slice(0, 7)] = cells[day.slice(0, 7)] || emptyResult(day.slice(0, 7), 'deposit-list', 'deposit-list');
+      c.deposits++; out.counted++;
+    });
+    out.rows = Object.keys(cells).sort().map(function (k) { return cells[k]; });
+    return out;
+  }
+
+  // ---- Alerts (Stage 15) ---------------------------------------------------------------------------------------
+  // Things Lisa should look at, worked out from the tabs on every read. Shown on the page and listed in the run slip as
+  // suggested RR_OPEN-WORK rows; nothing here (or in the engine) writes an alert anywhere. Refs only: no names, no amounts.
+  // opts: { now, replyHours: 24, prepHours: 2, runHours: 3, offerDays: 3, silentDays: 14 }.
+  var ALERT_KINDS = ['hot-no-reply', 'blank-run', 'contact-blocked', 'call-no-prep', 'pup-no-offer', 'balance-overdue', 'source-silent'];
+  var ALERT_TODO = {
+    'hot-no-reply': 'Reply to this hot enquiry today.', 'blank-run': 'Open the engine Log and check the readers and keys.',
+    'contact-blocked': 'Check the contact rule is right; no draft is made while it stands.', 'call-no-prep': 'Read the enquiry before the call: the booking form gave nothing to prepare from.',
+    'pup-no-offer': 'Offer this pup to the next person on the list.', 'balance-overdue': 'Chase or record the balance.',
+    'source-silent': 'Check this source still lands enquiries (form, forwarding, keys).'
+  };
+  var READER_STEPS = { calendly: 1, gmail: 1, clickfunnels: 1, hubspot: 1, requests: 1 };
+  var QUIET_SOURCE = /^(off|retired|paused|manual|closed)$/i;
+  function makeAlert(kind, key, o) {
+    var a = { kind: kind, key: 'A-' + kind + '-' + key, ref: '', enquiry_key: '', pup_ref: '', source: '', since_uk: '', text: '', todo: ALERT_TODO[kind] };
+    for (var k in o) a[k] = o[k];
+    return a;
+  }
+  // The last finished engine run, from the Log rows in sheet order: { start, done, read, errors } or null.
+  function lastRun(log) {
+    log = log || [];
+    for (var i = log.length - 1; i >= 0; i--) {
+      if (log[i].step !== 'run' || !/^done\b/.test(String(log[i].message || ''))) continue;
+      var j = i - 1; while (j >= 0 && !(log[j].step === 'run' && /^start\b/.test(String(log[j].message || '')))) j--;
+      var read = 0, readers = 0, errors = 0;
+      for (var k = j + 1; k < i; k++) {
+        var r = log[k], step = String(r.step || '').replace(/_$/, '').replace(/^read/i, '').toLowerCase();
+        if (r.level === 'ERROR') errors++;
+        if (READER_STEPS[step] && r.level === 'INFO') { readers++; var n = Number(r.count); if (!isNaN(n)) read += n; }
+      }
+      return { start: j >= 0 ? log[j].at_uk : '', done: log[i].at_uk, read: read, readers: readers, errors: errors };
+    }
+    return null;
+  }
+  // tabs as hubView takes them, plus Log and Sources. Returns the alerts, oldest first within each kind.
+  function alertsView(tabs, opts) {
+    tabs = tabs || {}; opts = opts || {};
+    var now = opts.now == null ? Date.now() : toMs(opts.now), H = 3600000, out = [];
+    var replyH = opts.replyHours || 24, prepH = opts.prepHours || 2, runH = opts.runHours || 3, offerD = opts.offerDays || 3, silentD = opts.silentDays || 14;
+    var people = {}, replied = {}, enq = tabs.Enquiries || [];
+    (tabs.People || []).forEach(function (p) { people[p.person_key] = p; });
+    (tabs.Events || []).forEach(function (v) { if (REPLY_EVENTS[v.type]) replied[v.enquiry_key] = 1; });
+    var live = enq.filter(function (e) { return !DONE_STAGES[e.stage] && !/junk/.test(String(e.flag || '')); });
+    // 1. A hot enquiry still at "new" with no reply event, received replyHours or more ago (contactable only).
+    live.forEach(function (e) {
+      var h = hoursSince(e.received_uk, now);
+      if (e.band !== 'hot' || e.stage !== 'new' || replied[e.key] || h == null || h < replyH || !mayContact(people[e.person_key], e).ok) return;
+      out.push(makeAlert('hot-no-reply', e.key, { ref: e.ref || '', enquiry_key: e.key, since_uk: e.received_uk, text: (e.ref || 'An enquiry') + ': hot, no reply for ' + h + ' h' }));
+    });
+    // 2. The engine's last run read nothing from any reader, or no run has finished for runHours (Log read only when given).
+    if (tabs.Log && tabs.Log.length) {
+      var run = lastRun(tabs.Log), ago = run ? hoursSince(run.done, now) : null;
+      if (!run) out.push(makeAlert('blank-run', 'none', { text: 'The engine has started but never finished a run' }));
+      else if (ago != null && ago >= runH) out.push(makeAlert('blank-run', 'stale', { since_uk: run.done, text: 'No engine run for ' + ago + ' h' }));
+      else if (!run.read) out.push(makeAlert('blank-run', String(run.done), { since_uk: run.done, text: 'The last run read nothing from any source' + (run.errors ? ' (' + run.errors + ' errors)' : '') }));
+    }
+    // 3. A live enquiry a contact rule blocks while it still waits on a reply or a follow-up (so no draft is made).
+    live.forEach(function (e) {
+      var g = mayContact(people[e.person_key], e);
+      if (g.ok || ['new', 'replied', 'call-held', 'offered'].indexOf(e.stage) < 0) return;
+      out.push(makeAlert('contact-blocked', e.key, { ref: e.ref || '', enquiry_key: e.key, since_uk: e.updated_uk || e.received_uk, text: (e.ref || 'An enquiry') + ': draft blocked (' + g.why + ')' }));
+    });
+    // 4. A call starting within prepHours with no prep card, or a prep card with nothing from the booking form.
+    live.forEach(function (e) {
+      var t = toMs(e.next_due_uk);
+      if (e.stage !== 'call-booked' || isNaN(t) || t < now || t > now + prepH * H) return;
+      var p = callPrep(e, { now: now, person: people[e.person_key], openPups: openPupRows(tabs.Litters), events: tabs.Events || [] });
+      if (p && String(e.question_summary || '').trim()) return;
+      out.push(makeAlert('call-no-prep', e.key, { ref: e.ref || '', enquiry_key: e.key, since_uk: e.next_due_uk, text: (e.ref || 'A call') + ': call at ' + toUk(t).slice(11, 16) + ', nothing to prepare from' }));
+    });
+    // 5. An open pup nobody holds, open for more than offerDays (an unreadable or blank date counts as long enough).
+    var since = {};
+    (tabs.Litters || []).forEach(function (r) { if (r.list === 'pups') since[r.litter_key] = r.status_since_uk; });
+    litterFlags(tabs.Litters || [], now, offerD).forEach(function (f) {
+      if (f.flag !== 'open pup, no offer') return;
+      var s = toMs(since[f.litter_key]);
+      if (!isNaN(s) && now - s <= offerD * 86400000) return;
+      out.push(makeAlert('pup-no-offer', f.pup_ref || f.litter_key, { pup_ref: f.pup_ref, since_uk: since[f.litter_key] || '', text: (f.pup_ref || 'A pup') + ': open, no offer' }));
+    });
+    // 6. A held deposit whose collection date has passed with balance still owed (no amount shown).
+    (tabs.Deposits || []).forEach(function (r) {
+      if (r.status !== 'held') return;
+      var due = money(r.balance_due), paid = money(r.balance_paid), c = toMs(r.collection_date);
+      var owed = String(r.balance_due || '').trim() ? (isNaN(due) ? 0 : Math.max(0, due - (isNaN(paid) ? 0 : paid))) : (String(r.balance_paid || '').trim() ? 0 : 1);
+      if (isNaN(c) || c >= now || owed <= 0) return;
+      out.push(makeAlert('balance-overdue', r.deposit_key || r.pup_ref, { pup_ref: r.pup_ref || '', since_uk: String(r.collection_date), text: (r.pup_ref || r.litter_ref || 'A deposit') + ': balance overdue since ' + ukDay(c) }));
+    });
+    // 7. A source on the Sources tab (not off, retired, paused or manual) with no enquiry for silentDays.
+    var last = {};
+    enq.forEach(function (e) { var t = toMs(e.received_uk); if (isNaN(t)) return; [e.source, e.channel].forEach(function (s) { s = String(s || '').toLowerCase(); if (s && !(last[s] >= t)) last[s] = t; }); });
+    (tabs.Sources || []).forEach(function (s) {
+      var name = String(s.source || '').trim();
+      if (!name || QUIET_SOURCE.test(String(s.status || '').trim())) return;
+      var t = last[name.toLowerCase()];
+      if (t != null && now - t < silentD * 86400000) return;
+      out.push(makeAlert('source-silent', name, { source: name, since_uk: t == null ? '' : toUk(t), text: name + (t == null ? ': no enquiry yet' : ': no enquiry for ' + Math.floor((now - t) / 86400000) + ' days') }));
+    });
+    return out.sort(function (a, b) { return ALERT_KINDS.indexOf(a.kind) - ALERT_KINDS.indexOf(b.kind) || String(a.since_uk).localeCompare(String(b.since_uk)); });
+  }
+  // Alerts as suggested RR_OPEN-WORK rows for the run slip (never written by code). Refs only.
+  function openWorkRows(alerts, nowIso) {
+    var at = toUk(nowIso || Date.now());
+    return (alerts || []).map(function (a) {
+      return { key: a.key, area: 'Puppy Enquiries Hub', item: a.text, next_step: a.todo, owner: 'Lisa', raised_uk: at, source: 'enquiries alerts (' + a.kind + ')' };
+    });
+  }
+
   var api = {
     VERSION: VERSION, CALLING: CALLING, STAGES: STAGES, ADULT_STAGES: ADULT_STAGES, KINDS: KIND_ORDER.slice(),
     normalisePhone: normalisePhone, countryFromPhone: countryFromPhone, countryFromTimezone: countryFromTimezone,
@@ -1248,7 +2093,18 @@
     extractPrefs: extractPrefs, pupFits: pupFits, timingMonths: timingMonths, scoreEnquiry: scoreEnquiry, WEIGHTS: WEIGHTS, BAND_AT: BAND_AT,
     DRAFT_CASES: CASES, AUTO_CASES: AUTO_CASES, LINKS: LINKS, firstName: firstName, linksFor: linksFor, importLine: importLine,
     chooseCase: chooseCase, buildDraft: buildDraft, checkDraft: checkDraft, stripForStyle: stripForStyle,
-    questionsToAsk: questionsToAsk, callPrep: callPrep, callHeldRequest: callHeldRequest
+    questionsToAsk: questionsToAsk, callPrep: callPrep, callHeldRequest: callHeldRequest,
+    litterRowsFrom: litterRowsFrom, matchLitter: matchLitter, litterFlags: litterFlags, saleDogsFrom: saleDogsFrom,
+    saleReplyRows: saleReplyRows, saleGroupCards: saleGroupCards, checkCard: checkCard, isClosedList: isClosedList,
+    money: money, isoDate: isoDate, parseCsv: parseCsv, depositLedgerFrom: depositLedgerFrom, depositTotals: depositTotals,
+    xeroInvoicesFrom: xeroInvoicesFrom, matchInvoices: matchInvoices, depositPaidRequest: depositPaidRequest,
+    followUpRules: followUpRules, followUpCase: followUpCase, planFollowUps: planFollowUps, outOfQuiet: outOfQuiet,
+    repliedRequest: repliedRequest, snoozeRequest: snoozeRequest, doneRequest: doneRequest,
+    sortEnquiries: sortEnquiries, filtersFromHash: filtersFromHash, hashFor: hashFor, filterEnquiries: filterEnquiries, filterOptions: filterOptions,
+    hubView: hubView, enquiryDetail: enquiryDetail, applyRequest: applyRequest, PAGE_FILTERS: PAGE_FILTERS,
+    RESULT_COUNTS: RESULT_COUNTS, RESULT_STEPS: RESULT_STEPS, median: median, pct: pct, resultsRows: resultsRows, resultRates: resultRates,
+    monthsBetween: monthsBetween, resultsView: resultsView, hubspotStage: hubspotStage, hubspotHistoryFrom: hubspotHistoryFrom,
+    depositHistoryFrom: depositHistoryFrom, ALERT_KINDS: ALERT_KINDS, lastRun: lastRun, alertsView: alertsView, openWorkRows: openWorkRows
   };
   root.EnquiriesCore = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
