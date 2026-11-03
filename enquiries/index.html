@@ -261,11 +261,21 @@
           }).join('') + '</ul>' : '') + '</div>';
       }).join('');
   }
+  // Stage 15: alerts, worked out from the tabs on every read (Core.alertsView). Shown here only: nothing is written.
+  var ALERT_LABEL = { 'hot-no-reply': 'Hot, no reply', 'blank-run': 'Engine', 'contact-blocked': 'Contact rule', 'call-no-prep': 'Call soon',
+    'pup-no-offer': 'Pup, no offer', 'balance-overdue': 'Balance overdue', 'source-silent': 'Source silent' };
+  function alertsCard(list) {
+    return '<div class="card" data-card="alerts"><h2>Alerts ' + cnt(list.length) + '</h2>' + (list.length ? list.map(function (a) {
+      var body = '<span class="txt"><b>' + esc(a.text) + '</b><span class="m"><br>' + esc(a.todo) + '</span><span class="badges"><span class="badge warm">' + esc(ALERT_LABEL[a.kind] || a.kind) + '</span></span></span>';
+      return a.enquiry_key ? '<a class="erow" href="#/e/' + esc(a.enquiry_key) + '" data-alert="' + esc(a.kind) + '">' + body + '</a>'
+        : '<div class="erow" data-alert="' + esc(a.kind) + '">' + body + '</div>';
+    }).join('') : '<p class="empty">Nothing needs you.</p>') + '</div>';
+  }
   function pageHome(v) {
     var c = v.counts, t = function (k, n, href, id) { return '<a class="tile" href="' + href + '" data-count="' + id + '"><span class="k">' + k + '</span><span class="v">' + n + '</span></a>'; };
     return '<div class="tiles">' + t('New today', c.newToday, '#/list', 'newToday') + t('Hot', c.hot, Core.hashFor('list', { band: 'hot' }), 'hot') +
       t('Calls next 48 h', c.calls48, '#/today', 'calls48') + t('Follow-ups due', c.followupsDue, '#/today', 'followupsDue') + t('Open pups', c.openPups, '#/litters', 'openPups') + '</div>' +
-      pageToday(v) +
+      alertsCard(Core.alertsView(tabs, {})) + pageToday(v) +
       '<div class="card" data-card="new"><h2>New ' + cnt(v.fresh.length) + '</h2>' + list(v.fresh, 'Nothing new waiting for a reply.') + '</div>' +
       '<div class="card" data-card="hot"><h2>Hot ' + cnt(v.hot.length) + '</h2>' + list(v.hot, 'No hot enquiries open.') + '</div>' +
       resultsCard(Core.resultsView(tabs, {})) + waitingCard(v.waiting) + depositsCard(v.deposits) + saleCard(v.sale) +

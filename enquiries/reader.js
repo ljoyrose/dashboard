@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
   var Core = root.EnquiriesCore || (typeof require === 'function' ? require('./core.js') : null);
-  var TABS = ['Enquiries', 'People', 'Events', 'Drafts', 'FollowUps', 'Litters', 'Sale Replies', 'Deposits', 'Sources', 'Settings', 'Results'];
+  var TABS = ['Enquiries', 'People', 'Events', 'Drafts', 'FollowUps', 'Litters', 'Sale Replies', 'Deposits', 'Sources', 'Settings', 'Results', 'Log'];
   var API = 'https://sheets.googleapis.com/v4/spreadsheets/';
 
   function rangeOf(tab) { return "'" + tab.replace(/'/g, "''") + "'!A1:AZ"; }
