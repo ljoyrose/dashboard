@@ -7,16 +7,17 @@
 const { test, expect } = require('../support/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 const { HUBS, go } = require('../support/hubs');
+const { withGrowth } = require('../support/budgets');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 354500, cdhub: 242200, factory: 248000, food: 156400 };
-// home 352000 > 354500, cdhub 240000 > 242200, factory 245800 > 248000, food 154200 > 156400 on 3 Nov 2026 (TidyUp Apps 5, #274): this change adds
-// 2742 bytes on home and 1624 on every other hub (config.js tidyApps). Set from the session's measured load / 1.1 (home 389888, cdhub 266354,
-// factory 272734, food 171977), which reads a few hundred bytes above CI.
+// From 3 Nov 2026 a PR that adds weight adds a file in tests/budget-growth/ (see tests/support/budgets.js) instead of editing this line.
+const BYTES = withGrowth({ home: 353000, cdhub: 240000, factory: 245800, food: 154200 });
 // cdhub 239700 > 240000, factory 245400 > 245800, food 153800 > 154200 (+300 to +400 each) on 3 Nov 2026: config.js grew 336 bytes (TidyUp stage 9, #142), and every page loads it.
 // Measured 263882, 270262 and 169407.
 // home 348100 > 352000 on 3 Nov 2026 (TidyUp stage 9, #142): look-only Dropbox, iCloud and Mac pages under Drives add 3100 bytes; measured 386766.
+// home 352000 > 353000 (+1000) on 3 Nov 2026: the Do page's Standing approvals card is its own file (estate/donq.js, fetched only on the Do page);
+// index.html keeps only the hooks that fetch and call it.
 // home 337600 > 348100 (+10500), cdhub 238300 > 239700 (+1400), factory 233800 > 245400 (+11600) and food 140600 > 153800 (+13200)
 // on 2 Nov 2026: Hub Mains (Lisa's house style: every hub's Main is Next, Needs you and 3 numbers) add DashKit.hubMain to toolkit.js
 // and its rules to house.css, which every hub loads, and the moved sections keep their code in their new tabs.
