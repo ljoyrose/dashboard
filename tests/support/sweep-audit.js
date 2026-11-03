@@ -73,7 +73,8 @@ function drawn() {
 
   // 2 Number groups: numbers side by side (same row, siblings of one kind) share one size and weight.
   const NUM = /^(–|-|[£$€]?\s?[\d.,]+\s?[kKmM%]?|\d+\s+of\s+\d+)$/;
-  const leaves = [...document.querySelectorAll('body *')].filter((e) => !e.children.length && seen(e) && NUM.test((e.textContent || '').trim()) && !e.closest('nav.house-tabs, header, svg, .cnt, .n, .dpill, .date, .tag, .pill, table, time, label, button.house-fold'));
+  // Cheap tests first (no children, a number's text), then the drawn ones: big pages have thousands of elements.
+  const leaves = [...document.querySelectorAll('body *')].filter((e) => !e.children.length && NUM.test((e.textContent || '').trim()) && seen(e) && !e.closest('nav.house-tabs, header, svg, .cnt, .n, .dpill, .date, .tag, .pill, table, time, label, button.house-fold'));
   const groups = new Map();
   for (const e of leaves) {
     // The unit that repeats: a number that is itself one of several like siblings, or the number inside one of several like siblings.

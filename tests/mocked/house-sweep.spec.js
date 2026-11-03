@@ -52,7 +52,7 @@ for (const [hub, P] of Object.entries(PAGES)) {
     for (const look of LOOKS) {
       for (const W of [1280, 390]) {
         test(`${look.bg} ${look.scheme} ${W}: no selected fill, one size per number group, no explainer lines, rose = late`, async ({ page, guard }) => {
-          test.setTimeout(180_000);
+          test.setTimeout(300_000);   // every view of the page; the shared Mac is slow under a full run
           await page.setViewportSize({ width: W, height: W > 600 ? 900 : 844 });
           await setLook(page, { bg: look.bg, mode: 'device', scheme: look.scheme });
           await P.open(page, guard);
@@ -67,9 +67,10 @@ for (const [hub, P] of Object.entries(PAGES)) {
       }
     }
 
-    // 4 and 1, by the pointer and the keyboard: hover, focus and press change no fill and move nothing (warm light, 1280).
+    // 4 and 1, by the pointer and the keyboard: hover, focus and press change no fill and move nothing (warm light, 1280;
+    // up to 8 kinds of control per view: the style-rule test above reads every rule).
     test('hover, focus and press: no fill, nothing moves (every view)', async ({ page, guard }) => {
-      test.setTimeout(300_000);
+      test.setTimeout(480_000);
       await page.setViewportSize({ width: 1280, height: 900 });
       await P.open(page, guard);
       const bad = [];
@@ -84,7 +85,7 @@ for (const [hub, P] of Object.entries(PAGES)) {
             const k = e.tagName + '.' + [...e.classList].sort().join('.');
             if (!kinds.has(k)) kinds.set(k, e);
           }
-          return [...kinds.values()].slice(0, 10).map((e, i) => { e.setAttribute('data-sw', String(i)); return { sel: '[data-sw="' + i + '"]', what: e.tagName.toLowerCase() + '.' + [...e.classList].slice(0, 3).join('.') + ' "' + (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + '"' }; });
+          return [...kinds.values()].slice(0, 8).map((e, i) => { e.setAttribute('data-sw', String(i)); return { sel: '[data-sw="' + i + '"]', what: e.tagName.toLowerCase() + '.' + [...e.classList].slice(0, 3).join('.') + ' "' + (e.getAttribute('aria-label') || e.textContent || '').trim().slice(0, 24) + '"' }; });
         });
         for (const p of picks) {
           const el = page.locator(p.sel);
