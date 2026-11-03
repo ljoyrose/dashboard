@@ -29,21 +29,22 @@
      4 Yellow Action, operations  5 Green Connection   6 Blue Sales, marketing   7 Purple Creative, ideas   8 Black Superseded, bin
    For each slot:
      --ljr-N        the fill: stripes, dots, borders, bars
-     --ljr-N-text   the same colour dark enough to READ as text (4.5:1 or better on white, the cream page and the tinted cards)
+     --ljr-N-text   the same colour dark enough to READ as text: 4.6:1 or better on every background text sits on (white card,
+                    cream, tints, and the darker page paper / canvas / soft in both looks; Lisa, 3 Nov 2026; tests/mocked/house-text-contrast)
      --ljr-N-tint   a pale background for cards and chips of that slot
      --ljr-N-solid  the fill to use BEHIND text (red and purple use their darker text colour so white text passes)
      --ljr-N-on     the text colour to put on --ljr-N-solid (ink on orange, yellow, green and blue; white on red and purple)
    To try another palette, change only the --ljr-N lines (and their -text/-tint) below. */
 :root {
-  --ljr-ink: #2C2C2A; --ljr-paper: #FFFEFB; --ljr-cream: #FAF7F2; --ljr-muted: #6B645C;
-  --ljr-0: #C7C0B4; --ljr-0-text: #6B645C; --ljr-0-tint: #F0ECE5; --ljr-0-solid: #C7C0B4; --ljr-0-on: #2C2C2A;
+  --ljr-ink: #2C2C2A; --ljr-paper: #FFFEFB; --ljr-cream: #FAF7F2; --ljr-muted: #615A53;
+  --ljr-0: #C7C0B4; --ljr-0-text: #615A53; --ljr-0-tint: #F0ECE5; --ljr-0-solid: #C7C0B4; --ljr-0-on: #2C2C2A;
   --ljr-1: #FFFEFB; --ljr-1-text: #2C2C2A; --ljr-1-tint: #FFFEFB; --ljr-1-edge: #2C2C2A; --ljr-1-solid: #FFFEFB; --ljr-1-on: #2C2C2A;
-  --ljr-2: #E6443D; --ljr-2-text: #C32924; --ljr-2-tint: #FCE4E0; --ljr-2-solid: #C32924; --ljr-2-on: #FFFFFF; /* 2 Risk */
-  --ljr-3: #E78615; --ljr-3-text: #9E5802; --ljr-3-tint: #FCEDDB; --ljr-3-solid: #E78615; --ljr-3-on: #2C2C2A; /* 3 Money */
-  --ljr-4: #F3D84E; --ljr-4-text: #817002; --ljr-4-tint: #FDF9E3; --ljr-4-solid: #F3D84E; --ljr-4-on: #2C2C2A; /* 4 Ops */
-  --ljr-5: #51AD57; --ljr-5-text: #217A2D; --ljr-5-tint: #E7F3E4; --ljr-5-solid: #51AD57; --ljr-5-on: #2C2C2A; /* 5 Connect */
-  --ljr-6: #129FE7; --ljr-6-text: #0271A4; --ljr-6-tint: #DEF1F8; --ljr-6-solid: #129FE7; --ljr-6-on: #2C2C2A; /* 6 Sales */
-  --ljr-7: #A570D1; --ljr-7-text: #8850B6; --ljr-7-tint: #F2EAF5; --ljr-7-solid: #8850B6; --ljr-7-on: #FFFFFF; /* 7 Ideas */
+  --ljr-2: #E6443D; --ljr-2-text: #AF2420; --ljr-2-tint: #FCE4E0; --ljr-2-solid: #AF2420; --ljr-2-on: #FFFFFF; /* 2 Risk */
+  --ljr-3: #E78615; --ljr-3-text: #894C01; --ljr-3-tint: #FCEDDB; --ljr-3-solid: #E78615; --ljr-3-on: #2C2C2A; /* 3 Money */
+  --ljr-4: #F3D84E; --ljr-4-text: #695B01; --ljr-4-tint: #FDF9E3; --ljr-4-solid: #F3D84E; --ljr-4-on: #2C2C2A; /* 4 Ops */
+  --ljr-5: #51AD57; --ljr-5-text: #1C6A27; --ljr-5-tint: #E7F3E4; --ljr-5-solid: #51AD57; --ljr-5-on: #2C2C2A; /* 5 Connect */
+  --ljr-6: #129FE7; --ljr-6-text: #01628E; --ljr-6-tint: #DEF1F8; --ljr-6-solid: #129FE7; --ljr-6-on: #2C2C2A; /* 6 Sales */
+  --ljr-7: #A570D1; --ljr-7-text: #76459E; --ljr-7-tint: #F2EAF5; --ljr-7-solid: #76459E; --ljr-7-on: #FFFFFF; /* 7 Ideas */
   --ljr-8: #141413; --ljr-8-text: #141413; --ljr-8-tint: #ECEAE6; --ljr-8-solid: #141413; --ljr-8-on: #FFFEFB;
   /* --ljr-N-icon: the shade for an icon (and its ring) on a card, 3:1 or better (Lisa's pick 3e, 2 Nov). 1 = ink (the whole picture);
      0 = the grey every tab icon rests in. Dark looks use the bright fill (below). */
