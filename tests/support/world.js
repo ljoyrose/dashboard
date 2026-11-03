@@ -40,6 +40,8 @@ const IDS = {
   excludedDrive: (CONF.cleanup.excludedDrives.find((d) => d.name === 'Karen - SHARED') || {}).id, // hard rule 14, found by name
   moveSheet: CONF.urls.moveSheet,
   projectsHub: (CONF.projectsHub || {}).webAppUrl || '', // the Projects Hub tile's /exec address ('' = no tile)
+  doQueue: 'test-do-queue', // invented ids; the page finds the queue by name (estate/donq.js)
+  doQueueFolder: 'test-changes-folder',
   factoryLogs: CONF.factory.logsFolderId, // the folder the Factory page reads af-state.json from
 };
 const WANT_BLD = (() => {
@@ -53,6 +55,8 @@ const iso = (offsetMs) => new Date(Date.now() + offsetMs).toISOString();
 /** Main dashboard shared drives (invented names). */
 function addMainDashboard(d) {
   d.addDrive('drv-alpha1', 'Test Drive Alpha').addDrive('drv-bravo2', 'Test Drive Bravo');
+  // Standing approvals queue: header only (no open rows) unless a test fills it.
+  d.file(IDS.doQueue, 'AA_CJ-DO-QUEUE-drive.csv', 'date,session,action,target,why blocked,status\n', { parents: [IDS.doQueueFolder], driveId: 'drv-alpha1', mimeType: 'text/csv' });
   // "Read first" folder
   d.folder(IDS.readFirst, 'Read first (sample)', { parents: ['drv-alpha1'], driveId: 'drv-alpha1' });
   d.file('rf-1', 'READ-ME-FIRST sample.txt', 'invented', { parents: [IDS.readFirst], driveId: 'drv-alpha1', mimeType: 'text/plain' });
