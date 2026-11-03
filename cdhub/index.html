@@ -179,6 +179,7 @@ tr:last-child td{border-bottom:none}
 .mrow .ic.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .mrow .ic.soon{border-color:var(--ljr-3);background:var(--ljr-3-tint)}
 .mrow .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
+.mrow .ic.cold{border-color:var(--ljr-6);background:var(--ljr-6-tint)}
 .mrow .v{font-weight:600;font-variant-numeric:tabular-nums}
 .mfoot{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 /* foundation: empty state for a field that needs data CD Hub does not have. It names the Bloodline table that will feed it. */
@@ -299,7 +300,7 @@ var WANT=['BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_p
  'BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-microchip_registration.csv','BLD-weight.csv',
  'BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-association.csv','BLD-prospect.csv','BLD-export_route.csv','BLD-breeder_category.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv',
  'BLD-occupancy.csv','BLD-MAP-animana.csv','BLD-MAP-animana-client.csv','BLD-visit.csv','BLD-reminder.csv','BLD-medicinal_product.csv','BLD-stock_level.csv','BLD-clinical_note.csv','BLD-dispense.csv',
- 'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-WORK.csv',
+ 'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-area_reading.csv','BLD-WORK.csv',
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
  'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv'];
@@ -436,6 +437,7 @@ async function load(){
   }
   LOAD.state='ok'; LOAD.files=done;
   DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF;
+  foldAreaReadings(T['BLD-area_reading.csv']||[]);
   build(); render();
 }
 var CD={};
@@ -925,10 +927,14 @@ function tempsCard(){
  var has=function(slot){ return (CD.areas||[]).filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
  var am=has('am'), pm=has('pm');
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
- var row=function(t,v,s,state){ var cls=state===true?' ok':state==='late'?' late':state==='soon'?' soon':''; return '<div class="mrow"><span class="ic'+cls+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
- var outState=function(r){ if(!r) return false; var lo=parseFloat(r.min),hi=parseFloat(r.max),cur=lo||hi; if(isNaN(cur)) return false; if(lo<10||hi<10) return 'late'; if(lo>27||hi>27) return 'soon'; return false; };
+ var row=function(t,v,s,state){ var cls=state===true||state==='ok'?' ok':state==='cold'?' cold':state==='hot'?' late':''; return '<div class="mrow"><span class="ic'+cls+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
+ var outState=function(r){ return r?tempState(r.min,r.max):''; };
+ var cold=0, hot=0; (CD.areas||[]).forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{};
+   ['am','pm'].forEach(function(s){ var st=r['t_'+s]?tempState(r['t_'+s].min,r['t_'+s].max):''; if(st==='cold') cold++; if(st==='hot') hot++; }); });
+ var inState=(am||pm)?(hot?'hot':cold?'cold':'ok'):'';
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
+  +((am||pm)?row('Rooms',(hot?hot+' too hot':cold?cold+' too cold':'all 10–27')+' °C',(hot&&cold?cold+' too cold too':''),inState):'')
   +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||out.kind||''),outState(out))
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
   +'<div class="mfoot"><span class="mut">'+(DB?'':'Saving off.')+'</span><button type="button" class="btn house-open" data-go="round">The round</button></div></section>';
@@ -1267,7 +1273,7 @@ async function accessSave(aid,mode,msgEl){
  catch(e){ var c=(e&&(e.code||e.message))||'error'; if(msgEl) msgEl.textContent='NOT saved \u2014 '+c; console.log('access save failed',e); }
 }
 
-function inCabin(aid,date){ var k=roundKey(date||todayISO(),aid); if(ROUND[k]) return (ROUND[k].subjects||[]);
+function inCabin(aid,date){ var k=roundKey(date||todayISO(),aid); if(ROUND[k]&&ROUND[k].subjects) return ROUND[k].subjects;
  return (CD.dogs||[]).filter(function(d){return d.area_id===aid;}).map(function(d){return d.id;}); }
 
 function pageAreas(){
@@ -1532,6 +1538,21 @@ function hereNow(){ return CD.dogs.filter(function(d){
  }).sort(function(a,b){ return (a.name||'')<(b.name||'')?-1:1; }); }
 
 function roundKey(date,areaId){ return date+'__'+areaId; }
+/* indoor: BLD-area_reading.csv rows -> ROUND[date__area].t_am / t_pm (before 12:00 = morning). A later row for the same slot wins (corrections). */
+function foldAreaReadings(rows){
+ rows.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
+  var at=String(r.taken_at||''); if(!r.area_id||at.length<10) return;
+  var k=roundKey(at.slice(0,10),r.area_id), hr=parseInt(at.slice(11,13),10);
+  var cur=ROUND[k]||(ROUND[k]={areaId:r.area_id,date:at.slice(0,10),subjects:null,access:''});
+  cur['t_'+(isNaN(hr)||hr<12?'am':'pm')]={min:r.min_c,max:r.max_c};
+ });
+ Object.keys(ROUND).forEach(function(k){ if(ROUND[k].subjects===null) delete ROUND[k].subjects; });
+}
+/* temperature colour: blue below 10, green 10-27, red above 27 (Lisa, 3 Nov) */
+var TEMP_LOW=10, TEMP_HIGH=27;
+function tempState(min,max){ var lo=parseFloat(min), hi=parseFloat(max);
+ if(isNaN(lo)&&isNaN(hi)) return '';
+ if(!isNaN(lo)&&lo<TEMP_LOW) return 'cold'; if(!isNaN(hi)&&hi>TEMP_HIGH) return 'hot'; return 'ok'; }
 function pageRound(){
  var date=(CD._roundDate||todayISO());
  var w=walkList(), dogs=hereNow();
@@ -1554,7 +1575,7 @@ function pageRound(){
  w.forEach(function(c){
   var a=c.area, aid=a.id;
   var k=roundKey(date,aid), r=ROUND[k]||{}, sel=r.subjects||[];
-  if(!ROUND[k]){ var lives=CD.dogs.filter(function(d){return d.area_id===aid;}).map(function(d){return d.id;});
+  if(!ROUND[k]||!ROUND[k].subjects){ var lives=CD.dogs.filter(function(d){return d.area_id===aid;}).map(function(d){return d.id;});
     if(lives.length) sel=lives; }
   var acc=r.access||accessOf(aid), fromArea=!r.access&&!!acc;
    var m2=a.m2;
