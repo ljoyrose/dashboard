@@ -410,3 +410,37 @@ test('Stage 11: Deposits from the allocation sheet and a Xero CSV export, read o
   assert.equal(e.tab('Enquiries').find((x) => x.key === e1.key).stage, 'deposit');
   assert.equal(e.tab('Deposits').length, dep.length, 'a re-run adds nothing');
 });
+
+// ---- Stage 12: follow-ups ----------------------------------------------------------------------------------------
+test('Stage 12: a replied enquiry gets a due follow-up and two drafts; snooze moves it; done and lost stop it', { skip }, () => {
+  const files = [req('FILE-S12-1', 'email', 'From: Buyer F One\nA puppy please f1@example.com', '2026-10-01T09:00:00.000Z')];
+  const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, dryRun: false });
+  e.ctx.setup();
+  e.ctx.runOnce();
+  const k = e.tab('Enquiries')[0].key;
+  assert.equal(e.tab('FollowUps').length, 0, 'a new enquiry has no follow-up');
+  const rep = C.repliedRequest(k, '2026-10-02T10:00:00.000Z');
+  files.push({ id: 'FILE-S12-2', name: rep.name, text: JSON.stringify(rep.body) });
+  e.ctx.runOnce();
+  let fu = e.tab('FollowUps');
+  assert.equal(fu.length, 1);
+  assert.deepEqual([fu[0].rule, fu[0].status, fu[0].due_uk], ['first-reply', 'due', '2026-10-04T11:00:00'], 'replied 10:00Z = 11:00 BST; due 2 days later, UK clock');
+  const dr = e.tab('Drafts').filter((d) => d.case === 'check-in');
+  assert.equal(dr.length, 2, 'one email and one WhatsApp check-in draft');
+  assert.ok(dr.every((d) => d.text && !d.blocked_by));
+  assert.ok(e.tab('Log').some((r) => r.step === 'followups' && /1 due, 0 waiting/.test(r.message)));
+  const sn = C.snoozeRequest(fu[0].followup_key, '2099-01-05T09:00:00', '2026-10-30T10:00:00.000Z');
+  files.push({ id: 'FILE-S12-3', name: sn.name, text: JSON.stringify(sn.body) });
+  e.ctx.runOnce();
+  fu = e.tab('FollowUps');
+  assert.deepEqual([fu[0].status, fu[0].due_uk], ['snoozed', '2099-01-05T09:00:00']);
+  const dn = C.doneRequest(fu[0].followup_key, true, '2026-10-30T11:00:00.000Z');
+  files.push({ id: 'FILE-S12-4', name: dn.name, text: JSON.stringify(dn.body) });
+  e.ctx.runOnce();
+  assert.equal(e.tab('Enquiries')[0].stage, 'lost');
+  assert.deepEqual(e.tab('FollowUps').map((f) => f.status), ['done']);
+  const drafts = e.tab('Drafts').length;
+  e.ctx.runOnce();
+  assert.equal(e.tab('Drafts').length, drafts, 'a lost enquiry gets no further drafts');
+  assert.ok(e.tab('Requests').every((r) => !/refused/.test(r.result)));
+});
