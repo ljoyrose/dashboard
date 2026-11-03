@@ -2277,6 +2277,7 @@
       }).then(function () { if (gen === qLoadGen) render(); });
   }
   function qRefresh() { Q.binStatus = 'idle'; qLoadGen++; render(); loadQCandidates(); }
+  function qNewName(f) { return PCP_PREFIX + f.name; }
   function qMark() {
     if (busy || !qLive()) return;
     var items = pickedItems('qmark');
@@ -2292,7 +2293,7 @@
       return apiGet(API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=' + LIVE_FIELDS, tok).then(function (live) {
         if (!live || live.trashed || live.ownedByMe === false || live.driveId || isZeroByte(live) || nameHasRr(live.name) || isZzFamilyName(live.name) || live.name !== f.name) { Q.marked.skipped++; return; }
         if (String(live.size) !== String(f.size) || (live.md5Checksum || '') !== (f.md5Checksum || '')) { Q.marked.skipped++; return; }
-        return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: PCP_PREFIX + f.name }, tok).then(function () { Q.marked.done++; doneIds[f.id] = true; }, function () { Q.marked.failed++; });
+        return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id', { name: qNewName(f) }, tok).then(function () { Q.marked.done++; doneIds[f.id] = true; }, function () { Q.marked.failed++; });
       }, function (err) {
         if (friendlyError(err).expired) halted = true;
         Q.marked.failed++;
