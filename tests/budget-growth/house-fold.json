@@ -1,0 +1,2 @@
+{"home": 14900, "cdhub": 15700, "factory": 15700, "food": 15600, "marketplace": 8800, "money": 15600, "studio": 11100,
+ "why": "Fold (Lisa, 2 Nov 2026), PR 275: DashKit.fold in toolkit.js (about 12.9 KB) and its rules in house.css section 15 (about 4.2 KB), which every page loads. Measured home 404682, cdhub 280922, factory 287302, food 186447, marketplace 281977, money 238505, studio 379318."}

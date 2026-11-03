@@ -540,7 +540,9 @@ test.describe('GA Hub house look', () => {
         const hv = await el.evaluate((e) => { const s = getComputedStyle(e); return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, bw: s.borderTopWidth, coloured: e.matches('.yes, .no'), bg: s.backgroundColor, card: getComputedStyle(e.closest('.card, #view')).backgroundColor }; });
         expect({ ow: hv.ow, os: hv.os, oo: hv.oo, bw: hv.bw }).toEqual({ ow: '1px', os: 'solid', oo: '-1px', bw: '1px' });
         if (hv.coloured) { expect(hv.oc).not.toBe(ink); expect(hv.oc, 'keeps its resting colour line').toBe(st.c); } else expect(hv.oc).toBe(ink);
-        expect(isTint(hv.bg, 'light'), `${tab}: hover fill ${hv.bg}`).toBe(true);
+        // The fold chevron (Lisa, 2 Nov: "no new fills") hovers with the line only; every other control adds the pale tint.
+        if (await el.evaluate((e) => e.matches('.house-fold'))) expect(hv.bg, `${tab}: fold has no fill on hover`).toBe('rgba(0, 0, 0, 0)');
+        else expect(isTint(hv.bg, 'light'), `${tab}: hover fill ${hv.bg}`).toBe(true);
         const after = await el.boundingBox();
         expect(after).toEqual(before);
       }

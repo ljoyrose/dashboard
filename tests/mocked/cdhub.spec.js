@@ -361,7 +361,9 @@ test.describe('CD Hub house look', () => {
         await el.hover();
         const hv = await el.evaluate((e) => { const s = getComputedStyle(e); return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, bw: s.borderTopWidth, bg: s.backgroundColor }; });
         expect({ ow: hv.ow, os: hv.os, oo: hv.oo, oc: hv.oc, bw: hv.bw }, `${tab} control ${i}`).toEqual({ ow: '1px', os: 'solid', oo: '-1px', oc: ink, bw: '1px' });
-        expect(hv.bg, `${tab} control ${i}: pale fill on hover`).not.toBe(st.bg);
+        // The fold chevron (Lisa, 2 Nov: "no new fills") hovers with the line only; every other control adds the pale fill.
+        if (await el.evaluate((e) => e.matches('.house-fold'))) expect(hv.bg, `${tab} fold ${i}: no fill on hover`).toBe(st.bg);
+        else expect(hv.bg, `${tab} control ${i}: pale fill on hover`).not.toBe(st.bg);
         expect(await where(), `${tab} control ${i}: nothing moves`).toEqual(before);
         await page.mouse.move(0, 0);
       }

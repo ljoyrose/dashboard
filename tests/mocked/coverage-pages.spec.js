@@ -25,13 +25,14 @@ const signIn = async (page) => {
 
 const lookOnly = async (view) => {
   for (const a of ACTIONS) await expect(view.locator(`[data-action="${a}"]`)).toHaveCount(0);
-  await expect(view.locator('button')).toHaveCount(0);
+  // The fold chevron (toolkit.js, Lisa 2 Nov) only folds a section on screen; it changes nothing, so a look-only page may have it.
+  await expect(view.locator('button:not(.house-fold)')).toHaveCount(0);
   await expect(view.locator('.btn.danger')).toHaveCount(0);
   await expect(view.locator('input[type="checkbox"]')).toHaveCount(0);
   // The only button-styled link is "← Dashboard".
   await expect(view.locator('a.btn')).toHaveCount(1);
   await expect(view.locator('a.btn')).toHaveText('← Dashboard');
-  await expect(view.locator('a.btn, button')).not.toHaveText(/\b(bin|move|rename|delete)\b/i);
+  await expect(view.locator('a.btn, button:not(.house-fold)')).not.toHaveText(/\b(bin|move|rename|delete)\b/i);
 };
 
 test.describe('Stage 9: Dropbox, iCloud and Mac pages (look only)', () => {
