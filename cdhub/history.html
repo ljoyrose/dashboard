@@ -1,0 +1,425 @@
+<!doctype html><html lang="en-GB"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Temperature History · CD Hub</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<meta name="theme-color" content="#2C2C2A">
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
+<script src="../auth.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+(function(){var o={};try{o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{};}catch(e){o={};}
+ var r=document.documentElement,c=r.classList;
+ c.toggle('look-cool',o.bg==='cool');c.toggle('sel-soft',o.sel==='soft');
+ c.toggle('text-lg',o.text==='lg');c.toggle('text-xl',o.text==='xl');c.toggle('space-roomy',o.space==='roomy');
+ if(o.mode==='light'||o.mode==='dark')r.setAttribute('data-theme',o.mode);})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../house.css">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--fs-body)/1.5 var(--house-font);-webkit-text-size-adjust:100%}
+a{color:inherit;text-underline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{padding-left:var(--house-gutter);padding-right:var(--house-gutter);padding-bottom:60px}
+.hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
+.ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
+.skip:focus{left:8px}
+header.top{background:var(--frame);color:var(--frame-ink);position:sticky;top:0;z-index:20}
+h1,h2,h3,b,strong{font-weight:600}
+.btn{font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;line-height:1.2}
+header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
+@media(hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
+@media(max-width:544px){.btn{min-height:44px}header.top{position:static}}
+.boot{padding:48px 0;text-align:center;color:var(--muted)}
+.live{font-size:var(--fs-small);font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
+.live.ok{border-color:var(--ljr-5)}
+
+/* Year / view controls */
+h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
+.sub{color:var(--muted);font-size:var(--fs-body);margin:0 0 16px}
+.yr-row{display:flex;gap:6px;margin:0 0 12px;align-items:center;flex-wrap:wrap}
+.yr-btn{min-height:30px;font-size:var(--fs-small);font-weight:600;padding:0 12px}
+.yr-btn.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.tab-row{display:flex;gap:2px;background:var(--soft);padding:3px;border-radius:calc(var(--radius) + 3px);width:max-content;margin:0 0 16px}
+.tab{padding:6px 16px;border:none;background:transparent;border-radius:var(--radius);cursor:pointer;font:600 var(--fs-small)/1 var(--house-font);color:var(--muted)}
+.tab.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+@media(hover:hover){.tab:not(.on):hover{color:var(--ink)}}
+.view{display:none}.view.on{display:block}
+
+/* Legend */
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.leg{display:flex;align-items:center;gap:5px;font-size:var(--fs-small);color:var(--muted)}
+.leg-sq{width:11px;height:11px;border-radius:2px;flex:none}
+
+/* Heat-map calendar */
+.month-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:780px){.month-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:540px){.month-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:340px){.month-grid{grid-template-columns:1fr}}
+.mc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px;box-shadow:var(--shadow)}
+.mn{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin-bottom:6px}
+.dg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dh{font-size:8px;color:var(--muted);text-align:center;padding-bottom:2px;user-select:none}
+.d{width:100%;aspect-ratio:1;border-radius:3px;border:none;font-size:0;background:var(--soft);cursor:default}
+.d:not(.empty):not(.future):not(.nd){cursor:pointer}
+@media(hover:hover){.d:not(.empty):not(.future):not(.nd):hover{transform:scale(1.35);z-index:2;position:relative}}
+.d.empty{background:transparent}
+.d.future{background:var(--paper);border:1px solid var(--line);opacity:.35}
+.d.cold{background:var(--ljr-6)}.d.ok{background:var(--ljr-5)}.d.hot{background:var(--ljr-2)}
+.d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
+
+/* Strip view */
+.strip{display:flex;flex-direction:column;gap:3px;margin-bottom:20px}
+.srow{display:flex;align-items:center;gap:6px}
+.slbl{font-size:10px;color:var(--muted);width:24px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+.sdays{display:flex;gap:1px;flex:1;overflow-x:auto;padding-bottom:1px}
+.sd{height:14px;min-width:3px;flex:1;border-radius:2px;cursor:default;background:var(--soft)}
+.sd:not(.future):not(.nd){cursor:pointer}
+@media(hover:hover){.sd:not(.future):not(.nd):hover{transform:scaleY(1.5);z-index:2}}
+.sd.cold{background:var(--ljr-6)}.sd.ok{background:var(--ljr-5)}.sd.hot{background:var(--ljr-2)}
+.sd.future{background:var(--paper);border:1px solid var(--line);opacity:.3;cursor:default}
+.smlbls{display:flex;gap:1px;padding-left:30px;margin-bottom:3px}
+.sml{flex:1;font-size:9px;color:var(--muted);text-align:center}
+
+/* Month card list */
+.mlist{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.mitem{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow)}
+.mitem-head{display:flex;justify-content:space-between;align-items:baseline}
+.mitem-name{font-size:var(--fs-body);font-weight:600}
+.mitem-stats{display:flex;gap:12px;font-size:var(--fs-small);color:var(--muted);margin-top:3px;flex-wrap:wrap}
+.spill{display:flex;align-items:center;gap:4px}
+.sdot{width:8px;height:8px;border-radius:50%;flex:none}
+.comp-bar{height:3px;background:var(--soft);border-radius:2px;margin-top:8px;overflow:hidden}
+.comp-fill{height:100%;border-radius:2px;background:var(--ljr-5)}
+.chev{font-size:14px;color:var(--muted)}
+
+/* Drill panel */
+#drill{display:none;position:fixed;top:0;right:0;width:290px;height:100%;background:var(--card);border-left:1px solid var(--line);z-index:100;padding:16px;overflow-y:auto;box-shadow:var(--shadow)}
+#drill.open{display:block}
+.dclose{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);float:right;line-height:1;padding:0}
+.dtitle{font-size:var(--fs-head);font-weight:600;margin:0 0 2px;clear:right}
+.dsub{font-size:var(--fs-small);color:var(--muted);margin:0 0 14px}
+.dr{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:var(--fs-small)}
+.dr:last-child{border-bottom:none}
+.dsec{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin:14px 0 2px;letter-spacing:.04em}
+.pill{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid;white-space:nowrap}
+.pc{border-color:var(--ljr-6)}.po{border-color:var(--ljr-5)}.ph{border-color:var(--ljr-2)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M5 12H3l9-9 9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></symbol>
+</svg>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top house-head"><div class="hin house-row">
+  <a class="btn house-ib" href="./index.html" aria-label="CD Hub" title="Back to CD Hub">
+    <svg class="ti" aria-hidden="true"><use href="#i-home"/></svg>
+  </a>
+  <h1><span class="dot" aria-hidden="true" style="background:var(--ljr-6)"></span>Temperature history</h1>
+  <span class="house-sp" aria-hidden="true"></span>
+  <span class="live" id="livepill">loading…</span>
+  <button type="button" class="btn house-ib hidden" id="cdSignout" aria-label="Sign out" title="Sign out" onclick="signOut()">
+    <svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg>
+  </button>
+</div></header>
+
+<div class="wrap"><main id="main">
+  <div class="boot" id="boot"><p>Loading temperature history…</p></div>
+</main></div>
+
+<!-- Drill panel -->
+<aside id="drill" role="complementary" aria-label="Day detail">
+  <button class="dclose" onclick="closeDrill()" aria-label="Close">✕</button>
+  <p class="dtitle" id="d-title">—</p>
+  <p class="dsub" id="d-sub">—</p>
+  <p class="dsec">Temperatures</p>
+  <div class="dr"><span>Max</span><span id="d-max">—</span></div>
+  <div class="dr"><span>Min</span><span id="d-min">—</span></div>
+  <div class="dr"><span>Feels like (max)</span><span id="d-feels">—</span></div>
+  <p class="dsec">Conditions</p>
+  <div class="dr"><span>Rain</span><span id="d-rain">—</span></div>
+  <div class="dr"><span>Cloud cover</span><span id="d-cloud">—</span></div>
+  <div class="dr"><span>Wind</span><span id="d-wind">—</span></div>
+  <p class="dsec">Record</p>
+  <div class="dr"><span>Source</span><span id="d-src">—</span></div>
+</aside>
+
+<script>
+/* ---- config ---- */
+var SHEET_ID='1utmtG6V2q4kLQT15LtHg_AyncNObeBSyXyV86MaV8o0';
+var EXPORT_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&sheet=readings';
+var DRIVE_EXPORT='https://www.googleapis.com/drive/v3/files/'+SHEET_ID+'/export?mimeType=text%2Fcsv';
+var CLIENT_ID=window.DASH_CONFIG.clientId;
+var SCOPE=window.DASH_CONFIG.scopes.read;
+var TOKEN=null,TOKEN_EXP=0;
+var DAYS={};  /* ISO date -> row */
+
+/* ---- helpers ---- */
+var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var TODAY_STR=(function(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'-'+(d.getDate()<10?'0':'')+d.getDate();})();
+
+function el(id){return document.getElementById(id);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function pill(msg,cls){var p=el('livepill');if(p){p.textContent=msg;p.className='live'+(cls?' '+cls:'');}}
+
+function parseCSV(text){
+  text=String(text||'').replace(/\r/g,'');
+  var rows=[],row=[],f='',q=false,c,i;
+  for(i=0;i<text.length;i++){c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
+    else if(c==='"')q=true;
+    else if(c===','){row.push(f);f='';}
+    else if(c==='\n'){row.push(f.trimEnd());rows.push(row);row=[];f='';}
+    else f+=c;}
+  if(f||row.length){row.push(f.trimEnd());rows.push(row);}
+  rows=rows.filter(function(r){return r.some(function(v){return v.trim();});});
+  if(!rows.length)return[];
+  var hdr=rows[0].map(function(h){return h.trim();});
+  return rows.slice(1).map(function(r){var o={};hdr.forEach(function(h,i){o[h]=(r[i]||'').trim();});return o;});
+}
+
+function gget(url){
+  return fetch(url,{headers:{'Authorization':'Bearer '+TOKEN}})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
+}
+
+async function loadData(){
+  pill('loading…');
+  try{
+    var txt=await gget(EXPORT_URL);
+    var rows=parseCSV(txt);
+    DAYS={};
+    rows.forEach(function(r){if(r.on_date)DAYS[r.on_date]=r;});
+    var n=Object.keys(DAYS).length;
+    pill(n+' days','ok');
+    el('cdSignout').classList.remove('hidden');
+    renderPage();
+  }catch(e){
+    /* try Drive API export (first sheet) as fallback */
+    try{
+      var txt2=await gget(DRIVE_EXPORT);
+      var rows2=parseCSV(txt2);
+      DAYS={};
+      rows2.forEach(function(r){if(r.on_date)DAYS[r.on_date]=r;});
+      pill(Object.keys(DAYS).length+' days','ok');
+      el('cdSignout').classList.remove('hidden');
+      renderPage();
+    }catch(e2){
+      pill('failed','bad');
+      el('main').innerHTML='<div class="boot"><p>Could not load data: '+esc(e&&e.message||String(e))+'</p>'
+        +'<button class="btn" style="margin-top:12px" onclick="loadData()">Retry</button></div>';
+    }
+  }
+}
+
+/* ---- auth ---- */
+function onToken(resp){
+  if(resp.error){pill('sign in needed');showSignIn();return;}
+  if(!google.accounts.oauth2.hasGrantedAllScopes(resp,SCOPE)){pill('access denied','bad');showSignIn();return;}
+  TOKEN=resp.access_token;TOKEN_EXP=DashAuth.expiryFrom(resp.expires_in);
+  DashAuth.save(TOKEN,TOKEN_EXP,resp.scope||SCOPE);
+  loadData();
+}
+function onError(){pill('sign-in failed','bad');showSignIn();}
+function onSilentFail(){}
+var auth=DashAuth.bind({clientId:CLIENT_ID,scope:SCOPE,onToken:onToken,onError:onError,onSilentFail:onSilentFail});
+function signIn(){auth.requestInteractive();}
+function signOut(){
+  var t=TOKEN;TOKEN=null;TOKEN_EXP=0;DashAuth.clear();
+  if(t&&window.google&&google.accounts&&google.accounts.oauth2)google.accounts.oauth2.revoke(t,function(){});
+  DAYS={};pill('signed out');el('cdSignout').classList.add('hidden');showSignIn();
+}
+function showSignIn(){
+  el('main').innerHTML='<div class="boot"><p>Sign in with Google to view temperature history.</p>'
+    +'<button class="btn" style="margin-top:12px" onclick="signIn()" id="signinbtn"'+(auth.ready()?'':' disabled')+'>Sign in with Google</button></div>';
+}
+
+/* restore shared token */
+(function(){
+  var saved=DashAuth&&DashAuth.valid&&DashAuth.valid();
+  if(saved&&DashAuth.hasScope(saved,SCOPE)){
+    TOKEN=saved.access_token;TOKEN_EXP=saved.expires_at;
+    loadData();return;
+  }
+  /* wait for Google then show sign-in */
+  var n=0;
+  (function wait(){
+    if(auth.init()){if(!auth.ready())showSignIn();return;}
+    if(n++<80)setTimeout(wait,100);else showSignIn();
+  })();
+})();
+
+if(window.DashAuth&&DashAuth.onChange)DashAuth.onChange(function(saved){
+  if(!saved||!DashAuth.hasScope(saved,SCOPE)){if(TOKEN){TOKEN=null;TOKEN_EXP=0;DAYS={};showSignIn();}return;}
+  var had=TOKEN;TOKEN=saved.access_token;TOKEN_EXP=saved.expires_at;
+  if(!had)loadData();
+});
+
+/* ---- calendar logic ---- */
+function mdays(y){var leap=(y%4===0&&(y%100!==0||y%400===0));return[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];}
+function ds(y,m,d){return y+'-'+(m<9?'0':'')+(m+1)+'-'+(d<10?'0':'')+d;}
+
+function dayClass(isoDate){
+  if(isoDate>TODAY_STR)return'future';
+  var r=DAYS[isoDate];
+  if(!r)return'nd';
+  var t=parseFloat(r.max_temp);
+  if(isNaN(t))return'nd';
+  if(t<10)return'cold';
+  if(t>27)return'hot';
+  return'ok';
+}
+
+function openDrill(isoDate){
+  var r=DAYS[isoDate]||{};
+  var parts=isoDate.split('-');
+  var dLabel=parseInt(parts[2],10)+' '+MONTHS[parseInt(parts[1],10)-1]+' '+parts[0];
+  el('d-title').textContent=dLabel;
+  el('d-sub').textContent='Source: '+(r.reading_kind||'—');
+  var cls=dayClass(isoDate);
+  var pCls=cls==='cold'?'pc':cls==='hot'?'ph':'po';
+  var maxT=r.max_temp!==undefined&&r.max_temp!==''?r.max_temp+'°C':'—';
+  el('d-max').innerHTML=cls!=='nd'&&cls!=='future'?'<span class="pill '+pCls+'">'+esc(maxT)+'</span>':esc(maxT);
+  el('d-min').textContent=r.min_temp!==undefined&&r.min_temp!==''?r.min_temp+'°C':'—';
+  el('d-feels').textContent=r.realfeel_max_temp!==undefined&&r.realfeel_max_temp!==''?r.realfeel_max_temp+'°C':'—';
+  el('d-rain').textContent=r.rain_value!==undefined&&r.rain_value!==''?r.rain_value+' mm':'—';
+  el('d-cloud').textContent=r.cloud_cover_pct!==undefined&&r.cloud_cover_pct!==''?r.cloud_cover_pct+'%':'—';
+  el('d-wind').textContent=r.wind_kmh!==undefined&&r.wind_kmh!==''?r.wind_kmh+' km/h':'—';
+  el('d-src').textContent=r.reading_kind||'—';
+  el('drill').classList.add('open');
+}
+function closeDrill(){el('drill').classList.remove('open');}
+
+/* ---- views ---- */
+var YEAR=2026;
+
+function buildHeatMap(y){
+  var md=mdays(y);
+  var h='<div class="month-grid">';
+  MONTHS.forEach(function(mn,mi){
+    h+='<div class="mc"><div class="mn">'+mn+'</div><div class="dg">';
+    h+='<div class="dh">M</div><div class="dh">T</div><div class="dh">W</div><div class="dh">T</div><div class="dh">F</div><div class="dh">S</div><div class="dh">S</div>';
+    var firstDow=(new Date(y,mi,1).getDay()+6)%7;
+    for(var i=0;i<firstDow;i++)h+='<span class="d empty"></span>';
+    for(var d=1;d<=md[mi];d++){
+      var date=ds(y,mi,d),cls=dayClass(date),today=date===TODAY_STR;
+      var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
+      h+='<button class="d '+cls+(today?' today':'')+'\" title="'+d+' '+mn+' '+y+' — '+(cls==='future'?'future':cls==='nd'?'no data':cls)+'"'+clk+'></button>';
+    }
+    h+='</div></div>';
+  });
+  return h+'</div>';
+}
+
+function buildStrip(y){
+  var md=mdays(y);
+  var DOWS=['Mo','Tu','We','Th','Fr','Sa','Su'];
+  var h='<div class="smlbls">';
+  MONTHS.forEach(function(m){h+='<div class="sml">'+m[0]+'</div>';});
+  h+='</div><div class="strip">';
+  DOWS.forEach(function(dow,di){
+    h+='<div class="srow"><div class="slbl">'+dow+'</div><div class="sdays">';
+    for(var mi=0;mi<12;mi++){
+      for(var d=1;d<=md[mi];d++){
+        if((new Date(y,mi,d).getDay()+6)%7===di){
+          var date=ds(y,mi,d),cls=dayClass(date);
+          var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
+          h+='<div class="sd '+cls+'" title="'+d+' '+MONTHS[mi]+'"'+clk+'></div>';
+        }
+      }
+    }
+    h+='</div></div>';
+  });
+  return h+'</div>';
+}
+
+function buildMonthCards(y){
+  var md=mdays(y);
+  var h='<div class="mlist">';
+  MONTHS.forEach(function(mn,mi){
+    var cold=0,ok=0,hot=0,nd=0,fut=0;
+    for(var d=1;d<=md[mi];d++){
+      var cls=dayClass(ds(y,mi,d));
+      if(cls==='cold')cold++;else if(cls==='ok')ok++;else if(cls==='hot')hot++;
+      else if(cls==='future')fut++;else nd++;
+    }
+    var total=md[mi]-fut;
+    var pct=total>0?Math.round((ok/total)*100):0;
+    h+='<div class="mitem"><div class="mitem-head"><span class="mitem-name">'+mn+' '+y+'</span><span class="chev">›</span></div>';
+    if(total===0){
+      h+='<div class="mitem-stats"><span style="color:var(--muted)">No data yet</span></div>';
+    }else{
+      h+='<div class="mitem-stats">';
+      if(cold)h+='<span class="spill"><span class="sdot" style="background:var(--ljr-6)"></span>'+cold+' cold</span>';
+      if(ok)h+='<span class="spill"><span class="sdot" style="background:var(--ljr-5)"></span>'+ok+' ok</span>';
+      if(hot)h+='<span class="spill"><span class="sdot" style="background:var(--ljr-2)"></span>'+hot+' hot</span>';
+      if(nd)h+='<span class="spill"><span class="sdot" style="background:var(--soft)"></span>'+nd+' no data</span>';
+      h+='</div><div class="comp-bar"><div class="comp-fill" style="width:'+pct+'%"></div></div>';
+    }
+    h+='</div>';
+  });
+  return h+'</div>';
+}
+
+function legend(){
+  return '<div class="legend">'
+    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-6)"></div>&lt;10°C (cold)</div>'
+    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>10–27°C (ok)</div>'
+    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-2)"></div>&gt;27°C (hot)</div>'
+    +'<div class="leg"><div class="leg-sq" style="background:var(--soft)"></div>No data</div>'
+    +'</div>';
+}
+
+var CUR_VIEW='a';
+function setView(id,btn){
+  CUR_VIEW=id;
+  document.querySelectorAll('.view').forEach(function(v){v.classList.remove('on');});
+  document.querySelectorAll('.tab').forEach(function(t){t.classList.remove('on');});
+  el('view-'+id).classList.add('on');
+  btn.classList.add('on');
+  closeDrill();
+}
+
+function setYear(y){
+  YEAR=y;
+  document.querySelectorAll('.yr-btn').forEach(function(b){b.classList.toggle('on',+b.dataset.yr===y);});
+  el('view-a').innerHTML=buildHeatMap(y);
+  el('view-b').innerHTML=buildStrip(y);
+  el('view-c').innerHTML=buildMonthCards(y);
+  closeDrill();
+}
+
+function renderPage(){
+  var n=Object.keys(DAYS).length;
+  /* date range */
+  var dates=Object.keys(DAYS).sort();
+  var from=dates[0]||'',to=dates[dates.length-1]||'';
+  var sub=n+' days on record · Dinas Powys'+(from&&to?' · '+from.slice(0,4)+' – '+to.slice(0,7):'');
+  el('main').innerHTML=
+    '<h2 class="ph">Outdoor temperature history</h2>'
+    +'<p class="sub">'+esc(sub)+'</p>'
+    +legend()
+    +'<div class="yr-row">'
+    +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'
+    +'<button class="btn yr-btn on" data-yr="2026" onclick="setYear(2026)">2026</button>'
+    +'</div>'
+    +'<div class="tab-row">'
+    +'<button class="tab on" onclick="setView(\'a\',this)">Heat map</button>'
+    +'<button class="tab" onclick="setView(\'b\',this)">Year strip</button>'
+    +'<button class="tab" onclick="setView(\'c\',this)">Month cards</button>'
+    +'</div>'
+    +'<div id="view-a" class="view on">'+buildHeatMap(2026)+'</div>'
+    +'<div id="view-b" class="view">'+buildStrip(2026)+'</div>'
+    +'<div id="view-c" class="view">'+buildMonthCards(2026)+'</div>';
+}
+</script>
+</body></html>
