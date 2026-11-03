@@ -7,18 +7,12 @@
 const { test, expect } = require('../support/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 const { HUBS, go } = require('../support/hubs');
+const { withGrowth } = require('../support/budgets');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 372900, cdhub: 260500, factory: 266100, food: 174900 };
-// home 367800 > 372900 (+5100), cdhub 255700 > 260500 (+4800), factory 261500 > 266100 (+4600) and food 169800 > 174900 (+5100) on
-// 3 Nov 2026: the style sweep (Lisa) adds the house style sheet's token index and new tokens to tokens.css (about 3.6 KB) and the
-// 16px typing-box rule to house.css, which every page loads. Measured 410150, 286548, 292699 and 192283.
-// home 367100 > 367800 (+700) on 3 Nov 2026: main's Standing approvals card on Do (#269, which raised home 352000 > 353000) on top of
-// the fold. Measured 404496.
-// home 352000 > 367100 (+15100), cdhub 239700 > 255700 (+16000), factory 245400 > 261500 (+16100) and food 153800 > 169800 (+16000)
-// on 3 Nov 2026: the fold control on every section heading (Lisa, 2 Nov) adds DashKit.fold to toolkit.js (about 12.9 KB) and its rules
-// to house.css (about 4.2 KB), which every page loads. Measured 403424, 280922, 287302 and 186447.
+// From 3 Nov 2026 a PR that adds weight adds a file in tests/budget-growth/ (see tests/support/budgets.js) instead of editing this line.
+const BYTES = withGrowth({ home: 353000, cdhub: 240000, factory: 245800, food: 154200 });
 // cdhub 239700 > 240000, factory 245400 > 245800, food 153800 > 154200 (+300 to +400 each) on 3 Nov 2026: config.js grew 336 bytes (TidyUp stage 9, #142), and every page loads it.
 // Measured 263882, 270262 and 169407.
 // home 348100 > 352000 on 3 Nov 2026 (TidyUp stage 9, #142): look-only Dropbox, iCloud and Mac pages under Drives add 3100 bytes; measured 386766.

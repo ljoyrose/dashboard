@@ -101,10 +101,8 @@ test.describe('Home (job34b): empty, error, slow and signed-out states', () => {
     await expect(page.locator('#binCard')).toContainText('Every shared drive has an empty bin.');
   });
 
-  // DECISION NEEDED: when the shared-drive list cannot be read, should the Bin cards say "Read failed" (like every
-  // other card) instead of "Not read yet"? Today the Bin never starts its read, so its cards look untouched.
-  // OWNER: Lisa (Home hub). BY 2026-11-17
-  test.fixme('J34b-F01 Drive answers 500 on the Bin: the Bin cards say "Read failed", not "Not read yet"', async ({ page, guard, allowedConsole }) => {
+  // J34b-F01 fixed: a failed shared-drive list read now marks the Bin card "Read failed" with a plain note.
+  test('J34b-F01 Drive answers 500 on the Bin: the Bin cards say "Read failed", not "Not read yet"', async ({ page, guard, allowedConsole }) => {
     test.setTimeout(60_000);
     allowedConsole.push(/Failed to load resource: the server responded with a status of 500/);
     guard.world.failWith = { status: 500, reason: 'backendError', message: 'Sample failure' };

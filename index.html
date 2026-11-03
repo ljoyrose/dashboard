@@ -1485,6 +1485,7 @@
     var r = parseRoute();
     if ((r.view === 'drive' || r.view === 'drives') && r.driveId && driveById(r.driveId) && !F[folderKey(r)]) loadFolder(r);
     if (r.view === 'bin' && S.bin.status === 'idle' && drives()) loadBin();
+    else if (r.view === 'bin' && S.bin.status === 'idle' && S.drive.status === 'failed') run('bin', Promise.reject(S.drive.error)); // J34b-F01: no drive list, so the Bin read fails too
     if (r.view === 'bin' && S.check.status === 'idle' && CHECK_FOLDER_ID) loadCheck();
     if (r.view === 'map' && S.mins.status === 'idle') loadMins();
     if (r.view === 'personal' || r.view === 'bin') loadPcpCandidates();
