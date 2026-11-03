@@ -146,7 +146,7 @@ test('the heading row folds; the heading link still opens Do; a row still opens 
   }
 });
 
-test('the chevron: grey outline icon, no fill and nothing moves on hover, focus and press; still with reduced motion', async ({ page, guard }) => {
+test('the chevron: grey outline icon in a house control (1px line), no fill and nothing moves on hover, focus and press; still with reduced motion', async ({ page, guard }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await HUBS.money.open(page, guard);
   await page.goto('money/#/now');
@@ -155,7 +155,7 @@ test('the chevron: grey outline icon, no fill and nothing moves on hover, focus 
     return { bg: s.backgroundColor, box: [r.x, r.y, r.width, r.height].map(Math.round).join(','), border: s.borderTopStyle === 'none' ? 0 : parseFloat(s.borderTopWidth), shadow: s.boxShadow, iw: i.getBoundingClientRect().width, fill: is.fill, stroke: is.stroke, ink: getComputedStyle(document.body).color, motion: is.transitionDuration, ow: s.outlineWidth, os: s.outlineStyle }; });
   const rest = await read();
   expect(rest.bg).toBe('rgba(0, 0, 0, 0)');
-  expect(rest.border).toBe(0);
+  expect(rest.border, 'rests on the one 1px control line').toBe(1);
   expect(rest.shadow).toBe('none');
   expect(rest.iw).toBeGreaterThanOrEqual(14); expect(rest.iw).toBeLessThanOrEqual(18);
   expect(rest.fill).toBe('none');

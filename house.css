@@ -342,14 +342,16 @@ a.hm-n[class] { display: flex; flex-direction: column; align-items: flex-start; 
 }
 
 /* 15 Fold (Lisa, 2 Nov 2026): every card or section with a heading folds down to its heading row (toolkit.js DashKit.fold adds the
-   button after every redraw). The chevron is a grey 16px outline icon (Tabler chevron-down) in a 24px button with no line and no fill
-   at rest; hover and press draw the 1px line inside, focus the 2px ink ring; nothing moves and nothing fills. Folded, it turns a
+   button after every redraw). The chevron is a grey 16px outline icon (Tabler chevron-down) in a house control (36px, 44px on a phone, the
+   one 1px control line, no fill) at rest; hover and press draw the 1px line inside, focus the 2px ink ring; nothing moves and nothing fills. Folded, it turns a
    quarter (not with reduced motion). In a flex heading row it is the row's last part; otherwise it sits over the row's right end
    (.house-fold-abs, its place set by toolkit.js) and the row keeps that room free (.house-fold-pad). The heading row's count ring and
    links stay in view when folded. On a phone a list of more than 5 rows shows 3 and a "+N more" button.
    The :not(#hf-a):not(#hf-b) only lifts these rules above a page's own "#main button" styles; no element has those ids. */
-button.house-fold:not(#hf-a):not(#hf-b) { box-sizing: border-box; flex: none; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; min-width: 24px; min-height: 0;
-  margin: 0; padding: 0; border: 0; border-radius: var(--radius); background: transparent; color: var(--muted); box-shadow: none; transform: none; cursor: pointer; line-height: 1; }
+button.house-fold:not(#hf-a):not(#hf-b) { box-sizing: border-box; flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--house-btn); height: var(--house-btn); min-width: var(--house-btn); min-height: var(--house-btn);
+  margin: 0; padding: 0; border: var(--house-line) solid var(--press); border-radius: var(--radius); background: transparent; color: var(--muted); box-shadow: none; transform: none; cursor: pointer; line-height: 1;
+  font-size: var(--house-press-size); font-weight: 600; }
+@media (max-width: 767.98px) { button.house-fold:not(#hf-a):not(#hf-b) { width: var(--house-btn-phone); height: var(--house-btn-phone); min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); } }
 button.house-fold:not(#hf-a):not(#hf-b):hover, button.house-fold:not(#hf-a):not(#hf-b):focus, button.house-fold:not(#hf-a):not(#hf-b):active { background: transparent; box-shadow: none; transform: none; color: var(--muted); }
 button.house-fold:not(#hf-a):not(#hf-b):focus:not(:focus-visible) { outline: none; }
 @media (hover: hover) { button.house-fold:not(#hf-a):not(#hf-b):hover { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); } }
@@ -360,7 +362,8 @@ button.house-fold[aria-expanded="false"] > svg { transform: rotate(-90deg); }
 @media (prefers-reduced-motion: reduce) { button.house-fold > svg { transition: none; } }
 button.house-fold.house-fold-abs:not(#hf-a):not(#hf-b) { position: absolute; z-index: 1; }
 .house-fold-rel { position: relative; }
-.house-fold-pad[class] { padding-right: 32px; }
+.house-fold-pad[class] { padding-right: calc(var(--house-btn) + 8px); }
+@media (max-width: 767.98px) { .house-fold-pad[class] { padding-right: calc(var(--house-btn-phone) + 8px); } }
 .house-fold-row > .house-fold-h { margin-right: auto; }
 [data-fold-row] { cursor: pointer; }
 [data-house-folded] > [data-fold-part], [data-fold-extra] { display: none !important; }

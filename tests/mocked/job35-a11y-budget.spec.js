@@ -10,7 +10,10 @@ const { HUBS, go } = require('../support/hubs');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 348100, cdhub: 239700, factory: 245400, food: 153800 };
+const BYTES = { home: 364200, cdhub: 255700, factory: 261500, food: 169800 };
+// home 348100 > 364200 (+16100), cdhub 239700 > 255700 (+16000), factory 245400 > 261500 (+16100) and food 153800 > 169800 (+16000)
+// on 3 Nov 2026: the fold control on every section heading (Lisa, 2 Nov) adds DashKit.fold to toolkit.js (about 12.9 KB) and its rules
+// to house.css (about 4.2 KB), which every page loads. Measured 400238, 280922, 287302 and 186447.
 // home 337600 > 348100 (+10500), cdhub 238300 > 239700 (+1400), factory 233800 > 245400 (+11600) and food 140600 > 153800 (+13200)
 // on 2 Nov 2026: Hub Mains (Lisa's house style: every hub's Main is Next, Needs you and 3 numbers) add DashKit.hubMain to toolkit.js
 // and its rules to house.css, which every hub loads, and the moved sections keep their code in their new tabs.

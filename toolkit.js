@@ -380,7 +380,7 @@
   // and section in localStorage 'dash-fold'. Default open; on a phone (under 768px) a list of more than 5 rows starts at its
   // first 3 rows with a "+N more" button that opens the rest (remembered too). Not here: <details> folds pages already draw,
   // header, the bottom tabs, menus, dialogs, link cards, and anything marked data-no-fold.
-  var FOLD_KEY = 'dash-fold', FOLD_MAX = 400, FOLD_ROWS = 5, FOLD_SHOW = 3, FOLD_BTN = 24;
+  var FOLD_KEY = 'dash-fold', FOLD_MAX = 400, FOLD_ROWS = 5, FOLD_SHOW = 3;
   var FOLD_SKIP = 'header, nav, dialog, details, summary, [role="dialog"], .house-menu, .house-more, a, button, [data-no-fold]';
   var FOLD_HOT = 'a, button, input, select, textarea, label, summary, [tabindex], [contenteditable="true"], [data-action], [data-go], [role="button"], [onclick]';
   var FOLD_NOTNAME = '.cnt, .n, .ct, .count, .badge, .dpill, .tag, .chip, .mtag, .state, .pill, svg, .ti, .sr, [aria-hidden="true"], .house-fold';
@@ -446,9 +446,9 @@
       // Level with the heading's first line, at the card's inner right edge (read from the drawn page; kept while it is not drawn).
       var ccs = root.getComputedStyle(c), hcs = root.getComputedStyle(hd.h), hr = hd.h.getBoundingClientRect(), cr = c.getBoundingClientRect();
       if (hr.height && cr.height) {
-        var lh = parseFloat(hcs.lineHeight) || parseFloat(hcs.fontSize) * 1.3 || FOLD_BTN;
-        if (hd.h.firstElementChild && /flex/.test(hcs.display)) lh = Math.max(lh, Math.min(hr.height - (parseFloat(hcs.paddingTop) || 0) - (parseFloat(hcs.paddingBottom) || 0), FOLD_BTN + 12));
-        var top = Math.round(hr.top - cr.top - c.clientTop + (parseFloat(hcs.paddingTop) || 0) + Math.max(0, (lh - FOLD_BTN) / 2)) + 'px';
+        var bh = b.offsetHeight || 36, lh = parseFloat(hcs.lineHeight) || parseFloat(hcs.fontSize) * 1.3 || bh;
+        if (hd.h.firstElementChild && /flex/.test(hcs.display)) lh = Math.max(lh, Math.min(hr.height - (parseFloat(hcs.paddingTop) || 0) - (parseFloat(hcs.paddingBottom) || 0), bh + 12));
+        var top = Math.round(hr.top - cr.top - c.clientTop + (parseFloat(hcs.paddingTop) || 0) + Math.max(0, (lh - bh) / 2)) + 'px';
         var right = (parseFloat(ccs.paddingRight) || 0) + 'px';
         if (b.style.top !== top) b.style.top = top; if (b.style.right !== right) b.style.right = right;
       }
@@ -512,7 +512,7 @@
       if (b) { e.stopPropagation(); e.preventDefault(); shutMores(null); foldToggleBtn(b); return; }
       var m = t.closest('.house-fold-more');
       if (m) {
-        e.stopPropagation(); e.preventDefault();
+        e.stopPropagation(); e.preventDefault(); shutMores(null);
         var l = root.document.getElementById(m.getAttribute('aria-controls') || ''), first = l && l.querySelector(':scope > li[data-fold-extra]');
         foldSave(m.getAttribute('data-fold-rows'), 1); foldAll();
         var f = first && first.querySelector('a[href], button, [tabindex]'); if (f) f.focus(); else if (l) { l.setAttribute('tabindex', '-1'); l.focus(); }
@@ -523,7 +523,7 @@
       var c = row.parentNode; if (!c || !c.matches('[data-fold-box]') || c.closest('[data-open-row]')) return;   // a row that opens its item keeps doing that
       if (root.getSelection && String(root.getSelection())) return;   // selecting words, not folding
       var fb = c.querySelector(':scope > .house-fold, :scope > * > .house-fold'); if (!fb) return;
-      e.stopPropagation(); foldToggleBtn(fb);
+      e.stopPropagation(); shutMores(null); foldToggleBtn(fb);   // a tap outside an open More menu still shuts it
     }, true);
     var foldStart = function () {
       foldAll();
