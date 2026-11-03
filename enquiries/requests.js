@@ -26,7 +26,10 @@
   // The "Add by hand" box: check, build and send one request. Returns the same promise as send().
   function addByHand(o, form) { return send(o, Core.addRequest(form)); }
 
-  var api = { send: send, addByHand: addByHand, UPLOAD: UPLOAD };
+  // The one-tap "call held" after a WhatsApp call (Stage 9). The engine moves the stage and makes the after-call draft.
+  function callHeld(o, enquiryKey, note) { return send(o, Core.callHeldRequest(enquiryKey, null, note)); }
+
+  var api = { send: send, addByHand: addByHand, callHeld: callHeld, UPLOAD: UPLOAD };
   root.EnquiriesRequests = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
