@@ -10,14 +10,20 @@ const { HUBS, go } = require('../support/hubs');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 371900, cdhub: 260500, factory: 266100, food: 174900 };
-// home 367100 > 371900 (+4800), cdhub 255700 > 260500 (+4800), factory 261500 > 266100 (+4600) and food 169800 > 174900 (+5100) on
+const BYTES = { home: 372900, cdhub: 260500, factory: 266100, food: 174900 };
+// home 367800 > 372900 (+5100), cdhub 255700 > 260500 (+4800), factory 261500 > 266100 (+4600) and food 169800 > 174900 (+5100) on
 // 3 Nov 2026: the style sweep (Lisa) adds the house style sheet's token index and new tokens to tokens.css (about 3.6 KB) and the
-// 16px typing-box rule to house.css, which every page loads. Measured 409078, 286548, 292699 and 192283.
+// 16px typing-box rule to house.css, which every page loads. Measured 410150, 286548, 292699 and 192283.
+// home 367100 > 367800 (+700) on 3 Nov 2026: main's Standing approvals card on Do (#269, which raised home 352000 > 353000) on top of
+// the fold. Measured 404496.
 // home 352000 > 367100 (+15100), cdhub 239700 > 255700 (+16000), factory 245400 > 261500 (+16100) and food 153800 > 169800 (+16000)
 // on 3 Nov 2026: the fold control on every section heading (Lisa, 2 Nov) adds DashKit.fold to toolkit.js (about 12.9 KB) and its rules
 // to house.css (about 4.2 KB), which every page loads. Measured 403424, 280922, 287302 and 186447.
+// cdhub 239700 > 240000, factory 245400 > 245800, food 153800 > 154200 (+300 to +400 each) on 3 Nov 2026: config.js grew 336 bytes (TidyUp stage 9, #142), and every page loads it.
+// Measured 263882, 270262 and 169407.
 // home 348100 > 352000 on 3 Nov 2026 (TidyUp stage 9, #142): look-only Dropbox, iCloud and Mac pages under Drives add 3100 bytes; measured 386766.
+// home 352000 > 353000 (+1000) on 3 Nov 2026: the Do page's Standing approvals card is its own file (estate/donq.js, fetched only on the Do page);
+// index.html keeps only the hooks that fetch and call it.
 // home 337600 > 348100 (+10500), cdhub 238300 > 239700 (+1400), factory 233800 > 245400 (+11600) and food 140600 > 153800 (+13200)
 // on 2 Nov 2026: Hub Mains (Lisa's house style: every hub's Main is Next, Needs you and 3 numbers) add DashKit.hubMain to toolkit.js
 // and its rules to house.css, which every hub loads, and the moved sections keep their code in their new tabs.
