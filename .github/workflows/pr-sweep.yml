@@ -1,0 +1,40 @@
+name: PR autopilot sweep
+
+# Daily, no AI. Reads open PRs, applies merge-policy.json, rewrites the
+# "DO: needs Lisa" issue. Dry-run unless the policy says apply or this
+# workflow is run by hand with apply ticked. Kill switch: add a file named
+# autopilot-off at the repo root.
+
+on:
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: 'Perform the safe actions (otherwise dry-run)'
+        type: boolean
+        default: false
+
+concurrency:
+  group: pr-autopilot
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Sweep
+        run: python3 tools/autopilot/sweep.py
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          APPLY: ${{ inputs.apply }}

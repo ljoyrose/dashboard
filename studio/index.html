@@ -47,37 +47,29 @@
   html.space-roomy body { line-height: 1.75; } html.space-roomy .crow { padding-top: 14px; padding-bottom: 14px; } html.space-roomy .col-list { gap: 16px; }
   * { box-sizing: border-box; }
   h1, h2, h3, h4, b, strong, th { font-weight: 600; } /* two weights only: 400 and 600 */
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5; }
   .hidden { display: none !important; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   a.pill, a.btn, a.lk, nav.tabs a, .grp a, a.cnt { text-decoration: none; color: inherit; }
   header { position: sticky; top: 0; z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
-  header .top, header nav.tabs, main.wrap { max-width: 1600px; margin: 0 auto; padding-left: 24px; padding-right: 24px; }
-  @media (max-width: 600px) { header .top, header nav.tabs, main.wrap { padding-left: 16px; padding-right: 16px; } }
-  .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; display: flex; gap: 8px; align-items: center; }
-  .top h1 a { text-decoration: none; display: inline-flex; align-items: center; gap: 8px; }
+  header .top, header nav.tabs, main.wrap { max-width: none; margin: 0 auto; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }   /* the full window, the house side gap */
   .top h1 .dot { background: var(--me); }
-  .stamp { font-size: 13px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; }
+  .stamp { font-size: var(--fs-small); font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: var(--radius); padding: 0 6px; }
   .stamp:empty { display: none; }
-  .btn { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 14px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
-  #backHome { min-height: 44px; }
-  html.dash-locked #backHome { margin-left: auto; } /* signed out the title is hidden, so the button keeps its top-right place */
+  .btn { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 7px 14px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 6px; align-items: center; }
   .btn[disabled] { cursor: not-allowed; opacity: .55; }
   /* Five tabs in a bar at the bottom, like Marketplace (thumb reach on the phone); a sub-row of links inside Line, Decide and Kits. */
-  /* Bottom tabs: the frame, light buttons, no ring, the colour bar that widens: ../house.css (.house-tabs). Layout only here. */
-  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
   html { scroll-padding-bottom: 96px; }
   .subnav { display: flex; gap: 6px; flex-wrap: wrap; }
-  .subnav a { text-decoration: none; font-size: 14px; font-weight: 600; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
+  .subnav a { text-decoration: none; font-size: var(--fs-small); font-weight: 600; padding: 7px 14px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 6px; align-items: center; color: var(--ink); min-height: 44px; box-sizing: border-box; }
   /* One line rule (like Links and HubSpot): every edge is 1px; hover = selected = that same 1px edge turns ink (an outline laid exactly over it), so it darkens, never thickens or moves. Keyboard focus keeps the 2px ink ring. */
   .subnav a[aria-current="page"], .pill.on, .ch.on, .fbtn.on, .vsw button[aria-pressed="true"], .seg button[aria-pressed="true"] { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); }
   @media (hover: hover) { .pill:hover, .btn:hover, .ch:hover, .lk:hover, .more:hover, .undo:hover, .fbtn:hover, .subnav a:hover, .vsw button:hover, .seg button:hover, .achip:hover, .ico:hover, a.tag:hover, .chk li button:hover, .room:hover, .col-list .crow:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   .n:empty { display: none; }
   /* Counts: the house count pill (../house.css, 30 x 22). Studio's counts wear an ink ring; "needs you" counts the rose ring + tint. */
-  .cnt, nav.tabs .n, .fbtn .n:not(:empty) { border-color: var(--ink); }
-  .fbtn .n:not(:empty) { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border: 1px solid var(--ink); border-radius: var(--house-count-r); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
-  nav.tabs .n.need { border-color: var(--house-late); }
+  .cnt, .fbtn .n:not(:empty) { border-color: var(--ink); }
+  .fbtn .n:not(:empty) { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border: 1px solid var(--ink); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .ti { font-size: 18px; line-height: 1; color: var(--muted); }
   svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   main.wrap { padding-top: 16px; padding-bottom: 110px; display: flex; flex-direction: column; gap: var(--house-gap); }
@@ -87,15 +79,15 @@
   .banner.ex { border-color: var(--me); }
   .banner.ex .ti { color: var(--ljr-7-text); }
   .card { border-color: var(--bd); box-shadow: var(--shadow); } /* the house card (../house.css): 12px inside */
-  .muted { color: var(--muted); font-size: 14px; }
+  .muted { color: var(--muted); font-size: var(--fs-small); }
   .pills { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-  .pill { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); border-radius: var(--radius); padding: 3px 10px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
+  .pill { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--ink); border-radius: var(--radius); padding: 3px 10px; border: 1px solid var(--line); background: var(--surface); display: inline-flex; gap: 5px; align-items: center; cursor: pointer; }
   .pill.warn { border-color: var(--ljr-3); } .pill.bad { border-color: var(--ljr-2); } .pill.ok .ti { color: var(--ljr-5-text); }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c); flex: none; display: inline-block; }
-  .grp { font-size: 16px; font-weight: 600; margin: 0 0 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-  .grp .st { font-size: 13px; font-weight: 600; color: var(--muted); }
+  .grp { font-size: var(--fs-head); font-weight: 600; margin: 0 0 4px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .grp .st { font-size: var(--fs-small); font-weight: 600; color: var(--muted); }
   .grp .cnt { margin-left: auto; }
-  .sect { font-size: 14px; font-weight: 600; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 10px 0 0; }
+  .sect { font-size: var(--fs-small); font-weight: 600; color: var(--muted); display: flex; gap: 8px; align-items: center; margin: 10px 0 0; }
   .sect:first-child { margin-top: 0; }
   .sect a { color: var(--ink); text-decoration: none; }
   /* Rows (the Factory calm row): type icon · title · flag; icons; actions; stage strip. */
@@ -104,50 +96,50 @@
   .card > .crow:last-child { padding-bottom: 16px; }
   .crow .l1 { display: flex; gap: 8px; align-items: flex-start; }
   .crow .type { flex: none; width: 28px; display: inline-flex; justify-content: center; }
-  .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-size: 16px; font-weight: 600; overflow-wrap: anywhere;
+  .crow .ttl { all: unset; flex: 1; min-width: 0; cursor: pointer; font-size: var(--fs-head); font-weight: 600; overflow-wrap: anywhere;
     display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; } /* titles wrap to 2 lines, then … */
   /* Brand on its own small line above the title; never run together with it. */
-  .crow .bline { display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; overflow-wrap: anywhere; }
+  .crow .bline { display: flex; gap: 6px; align-items: center; font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin-bottom: 2px; min-width: 0; overflow-wrap: anywhere; }
   .crow .bline .dot { width: 8px; height: 8px; }
   .crow .ttl:focus-visible { text-decoration: underline; }
   .crow .l2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
   .crow .icons { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; flex: 1; min-width: 0; }
   .crow .acts { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-  .q1 { font-size: 15px; margin: 4px 0 0; }
+  .q1 { font-size: var(--fs-body); margin: 4px 0 0; }
   .crow .l3 { display: flex; align-items: center; gap: 4px; margin-top: 4px; }
   .crow .l3 .grow { flex: 1; }
-  .date { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .date { font-size: var(--fs-small); color: var(--muted); white-space: nowrap; }
   .room { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-  .room .grp { margin: 0; font-size: 15px; }
-  .room .stn { font-size: 13px; color: var(--muted); margin-top: -6px; }
+  .room .grp { margin: 0; font-size: var(--fs-body); }
+  .room .stn { font-size: var(--fs-small); color: var(--muted); margin-top: -6px; }
   .hero { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; }
-  .hero h2 { margin: 0; font-size: 20px; }
-  .hero p { margin: 0; color: var(--muted); font-size: 14px; }
+  .hero h2 { margin: 0; font-size: var(--fs-head); }
+  .hero p { margin: 0; color: var(--muted); font-size: var(--fs-small); }
   .stage { display: flex; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); }
   /* Steps: outlined, never solid. Done = green ring + tint + ✓; current = purple ring + tint, label bold; future = grey ring, muted number. */
-  .stage .n { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; background: transparent; border: 1px solid var(--line); color: var(--muted); flex: none; }
+  .stage .n { width: 20px; height: 20px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: var(--fs-small); font-weight: 600; background: transparent; border: 1px solid var(--line); color: var(--muted); flex: none; }
   .stage.d .n { background: var(--ljr-5-tint); border-color: var(--ljr-5); color: var(--ink); }
   .stage.c .n { background: var(--ljr-7-tint); border-color: var(--ljr-7); color: var(--ink); }
   .stage.c { font-weight: 600; }
-  .ico { position: relative; background: none; border: 1px solid transparent; border-radius: var(--radius); min-width: 32px; height: 32px; padding: 0 4px; display: inline-flex; gap: 3px; align-items: center; justify-content: center; cursor: pointer; color: var(--ink); font: inherit; font-size: 13px; }
-  .tag { font-size: 13px; color: var(--ink); display: inline-flex; gap: 3px; align-items: center; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--radius); }
+  .ico { position: relative; background: none; border: 1px solid transparent; border-radius: var(--radius); min-width: 32px; height: 32px; padding: 0 4px; display: inline-flex; gap: 3px; align-items: center; justify-content: center; cursor: pointer; color: var(--ink); font: inherit; font-size: var(--fs-small); }
+  .tag { font-size: var(--fs-small); color: var(--ink); display: inline-flex; gap: 3px; align-items: center; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--radius); }
   .tag.over { border-color: var(--ljr-2); }
   .lk { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border: 1px solid var(--line); border-radius: var(--radius); }
   .lk.no { border-style: dashed; opacity: .7; }
   .acts .btn { padding: 4px 12px; }
-  .sent { font-size: 14px; color: var(--muted); }
-  .undo { font: inherit; font-size: 14px; padding: 2px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); cursor: pointer; margin-left: 6px; display: inline-flex; gap: 4px; align-items: center; }
+  .sent { font-size: var(--fs-small); color: var(--muted); }
+  .undo { font: inherit; font-size: var(--fs-small); padding: 2px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); cursor: pointer; margin-left: 6px; display: inline-flex; gap: 4px; align-items: center; }
   .strip { display: grid; grid-template-columns: repeat(9, 1fr); gap: 3px; margin: 8px 0 2px; }
   .strip i { height: 8px; border-radius: var(--radius); background: transparent; box-shadow: inset 0 0 0 1px var(--line); }
   .strip i.d { background: var(--ljr-5-tint); box-shadow: inset 0 0 0 1px var(--ljr-5); } .strip i.c { background: var(--ljr-7-tint); box-shadow: inset 0 0 0 1px var(--ljr-7); }
   .strip.b6 { grid-template-columns: repeat(6, 1fr); }
-  .panel { margin: 8px 0 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: 14px; display: flex; flex-direction: column; gap: 6px; }
-  .kv { display: grid; grid-template-columns: max-content 1fr; column-gap: 12px; font-size: 14px; margin: 0; }
+  .panel { margin: 8px 0 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); font-size: var(--fs-small); display: flex; flex-direction: column; gap: 6px; }
+  .kv { display: grid; grid-template-columns: max-content 1fr; column-gap: 12px; font-size: var(--fs-small); margin: 0; }
   .kv dt { color: var(--muted); } .kv dd { margin: 0; overflow-wrap: anywhere; }
   /* Key/value rows: a 1px divider between rows, none before the first or after the last. */
   .kv dt, .kv dd { padding: 6px 0; border-top: 1px solid var(--line); } .kv dt:first-of-type, .kv dd:first-of-type { border-top: 0; }
-  .more { font: inherit; font-size: 14px; font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 4px 10px; margin-top: 4px; cursor: pointer; }
-  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: 13px; color: var(--muted); cursor: help; margin-left: 4px; vertical-align: 1px; }
+  .more { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--muted); background: none; border: 1px solid transparent; border-radius: var(--radius); padding: 4px 10px; margin-top: 4px; cursor: pointer; }
+  .info { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border: 1px solid var(--line); border-radius: 50%; font-size: var(--fs-small); color: var(--muted); cursor: help; margin-left: 4px; vertical-align: 1px; }
   /* Find bar: Search · Brand · Type always; Stage · Who · Fit · Timing · Flags · Sort · TEST behind Filter. */
   .fbar { display: flex; flex-direction: column; gap: 8px; position: relative; }
   .srow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -155,7 +147,7 @@
   .fbar .sbox input { padding: 4px 0; }
   .fbar .fbtn { min-height: 32px; padding: 4px 12px; }
   .fbtn .n:not(:empty) { margin-left: 2px; }
-  .achip { font: inherit; font-size: 13px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 2px 10px; min-height: 28px; display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
+  .achip { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 2px 10px; min-height: 28px; display: inline-flex; gap: 4px; align-items: center; cursor: pointer; }
   .fbar > .fpanel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 15; width: min(640px, 100%); max-height: min(70vh, 560px); overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,.12); padding: 14px; gap: 12px; }
   .fbar > .fpanel.sortp { width: min(420px, 100%); }
   .fgrp { display: flex; flex-direction: column; gap: 6px; }
@@ -167,18 +159,18 @@
   }
   .sbox { flex: 1; min-width: 0; display: flex; gap: 8px; align-items: center; border: 1px solid var(--line); border-radius: var(--radius); padding: 0 12px; background: var(--surface); }
   .sbox:focus-within { border-color: var(--muted); }
-  .sbox input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: 15px; padding: 8px 0; }
-  .fbtn { font: inherit; font-size: 14px; font-weight: 600; display: inline-flex; gap: 4px; align-items: center; padding: 7px 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
+  .sbox input { flex: 1; min-width: 0; border: 0; outline: none; background: transparent; color: var(--ink); font: inherit; font-size: var(--fs-body); padding: 8px 0; }
+  .fbtn { font: inherit; font-size: var(--fs-small); font-weight: 600; display: inline-flex; gap: 4px; align-items: center; padding: 7px 12px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
   .fpanel { display: flex; flex-direction: column; gap: 8px; }
-  .flab { font-size: 13px; font-weight: 600; color: var(--muted); min-width: 52px; }
+  .flab { font-size: var(--fs-small); font-weight: 600; color: var(--muted); min-width: 52px; }
   .sw { display: inline-block; width: 28px; height: 16px; border-radius: var(--radius); border: 1px solid var(--muted); position: relative; vertical-align: middle; }
   .sw i { position: absolute; top: 2px; left: 2px; width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
   .sw.on { border-color: var(--ljr-5); } .sw.on i { left: 14px; background: var(--ljr-5-tint); box-shadow: inset 0 0 0 1px var(--ljr-5); }
   .empty { display: flex; gap: 12px; align-items: center; }
   /* Brands */
   .bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
-  .blab { font-size: 14px; font-weight: 600; margin-top: -4px; }
-  .chk { list-style: none; margin: 8px 0 0; padding: 0; font-size: 14px; }
+  .blab { font-size: var(--fs-small); font-weight: 600; margin-top: -4px; }
+  .chk { list-style: none; margin: 8px 0 0; padding: 0; font-size: var(--fs-small); }
   .chk li { display: flex; gap: 6px; align-items: center; padding: 2px 0; }
   .chk li.ok .ti { color: var(--ljr-5-text); }
   /* Tools: credit meters */
@@ -188,20 +180,20 @@
   .meter .txt { flex: 1; min-width: 0; }
   .meter .track { height: 10px; border-radius: var(--radius); background: transparent; box-shadow: inset 0 0 0 1px var(--line); margin: 6px 0; overflow: hidden; }
   .meter .track i { display: block; height: 100%; background: color-mix(in srgb, var(--c) 22%, transparent); box-shadow: inset 0 0 0 1px var(--c); border-radius: var(--radius); }
-  .meter .nums { display: flex; gap: 10px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
-  .meter .why { font-size: 14px; display: flex; gap: 6px; align-items: center; margin-top: 4px; }
+  .meter .nums { display: flex; gap: 10px; flex-wrap: wrap; font-size: var(--fs-small); color: var(--muted); }
+  .meter .why { font-size: var(--fs-small); display: flex; gap: 6px; align-items: center; margin-top: 4px; }
   .meter .why .ti { color: var(--c); }
   /* Form */
   .fq { padding: 10px 0; border-top: 1px solid var(--line); }
   .fq:first-of-type { border-top: 0; }
-  .fq .qt { font-size: 15px; margin: 0 0 6px; position: relative; padding-right: 22px; }
+  .fq .qt { font-size: var(--fs-body); margin: 0 0 6px; position: relative; padding-right: 22px; }
   .fq .req { position: absolute; right: 0; top: 0; color: var(--ink); font-weight: 600; } /* no coloured words: the star stays ink */
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
-  .ch { font: inherit; font-size: 14px; padding: 5px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
+  .ch { font: inherit; font-size: var(--fs-small); padding: 5px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); cursor: pointer; display: inline-flex; gap: 5px; align-items: center; }
   .ch .dot { width: 9px; height: 9px; }
-  .fin { width: 100%; font: inherit; font-size: 15px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); }
+  .fin { width: 100%; font: inherit; font-size: var(--fs-body); padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: transparent; color: var(--ink); }
   textarea.fin { min-height: 72px; resize: vertical; }
-  .ferr { font-size: 14px; margin-top: 4px; }
+  .ferr { font-size: var(--fs-small); margin-top: 4px; }
   .ferr::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; border: 1px solid var(--ljr-2); margin-right: 6px; }
   .frow { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-top: 12px; flex-wrap: wrap; }
   .ask { display: flex; gap: 8px; }
@@ -217,36 +209,35 @@
   .row:first-of-type { border-top: 0; }
   .row .bar { width: 3px; align-self: stretch; border-radius: var(--radius); background: color-mix(in srgb, var(--c) 18%, transparent); box-shadow: inset 0 0 0 1px var(--c); flex: none; }
   .row .txt { flex: 1; min-width: 0; }
-  .row .meta { font-size: 14px; color: var(--muted); text-align: right; }
+  .row .meta { font-size: var(--fs-small); color: var(--muted); text-align: right; }
   /* Calm focus: one line, a shade darker. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus, button:focus { outline: none; }
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; } /* never the browser blue */
   a:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-color: var(--ink) !important; }
-  footer { color: var(--muted); font-size: 13px; padding: 0 16px 24px; }
+  footer { color: var(--muted); font-size: var(--fs-small); padding: 0 16px 24px; }
   /* v0.2: Kits tab (playbooks by outcome, packs, kits, styles, formats), sources, gaps, tool form */
   a.tag { text-decoration: none; }
   .ogrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-  .steps { margin: 0; padding-left: 22px; font-size: 14px; }
+  .steps { margin: 0; padding-left: 22px; font-size: var(--fs-small); }
   .steps li { padding: 1px 0; }
   .steps li .ti { font-size: 15px; vertical-align: -2px; margin-right: 3px; }
   .pb { padding: 6px 0; border-top: 1px solid var(--line); }
   .pb:first-of-type { border-top: 0; }
-  .pb b { display: block; font-size: 15px; }
-  .when { font-size: 14px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .pb b { display: block; font-size: var(--fs-body); }
+  .when { font-size: var(--fs-small); color: var(--muted); display: flex; gap: 6px; align-items: center; }
   .src { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-top: 1px dashed var(--line); }
   .src:first-child { border-top: 0; }
-  .src .ask .fin { font-size: 14px; }
+  .src .ask .fin { font-size: var(--fs-small); }
   .chk li button { all: unset; display: inline-flex; gap: 6px; align-items: center; cursor: pointer; border: 1px solid transparent; border-radius: var(--radius); padding: 0 4px; }
-  .fsub { font-size: 13px; font-weight: 600; color: var(--muted); margin: 6px 0 4px; }
+  .fsub { font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 6px 0 4px; }
   /* Cool clear: neutral chips get a faint fill; the red and green outlines (needs you, On) stay as they are. */
   :root.look-cool .ch:not(.on):not(:hover), :root.look-cool .tag:not(:hover), :root.look-cool .fbtn:not(.on):not(:hover), :root.look-cool .pill:not(.on):not(:hover) { background: var(--chip); } /* not on hover, so the hover tint shows */
   /* Look menu (header palette button). Stored in localStorage 'dash-look' so other hubs can read it. */
-  .lookwrap { position: relative; }
   #lookMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; width: min(340px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
   #lookMenu .lrow { display: flex; flex-direction: column; gap: 4px; }
   .seg { display: flex; flex-wrap: wrap; gap: 4px; }
-  .seg button, .vsw button { font: inherit; font-size: 14px; font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 12px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
+  .seg button, .vsw button { font: inherit; font-size: var(--fs-small); font-weight: 600; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 5px 12px; min-height: 36px; cursor: pointer; display: inline-flex; gap: 4px; align-items: center; }
   /* Board / List switch at the top of Line and Decide. */
   .vtop { display: flex; gap: 8px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
   .vsw { display: inline-flex; gap: 4px; margin-left: auto; }
@@ -265,14 +256,14 @@
   .col-head .cnt { margin-left: auto; }
   .col-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 16px 12px 12px; display: flex; flex-direction: column; gap: 12px; scrollbar-width: thin; }
   .col-list .crow, .col-list .row { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: 12px; box-shadow: var(--shadow); position: relative; }
-  .col-list .crow .ttl { font-weight: 600; font-size: 16px; }
+  .col-list .crow .ttl { font-weight: 600; font-size: var(--fs-head); }
   .col-list .crow.sel { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: linear-gradient(var(--sel-fill), var(--sel-fill)) var(--card); }
   /* An empty column shrinks to one short line; full columns keep the full height. */
   .col.col-empty { align-self: flex-start; }
   .col.col-empty .col-list { flex: none; }
-  .cempty { font-size: 13px; }
-  a.site { font-size: 13px; color: var(--ink); white-space: nowrap; }
-  .col-foot { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 45px; padding: 4px 12px; font-size: 14px; line-height: 18px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); }
+  .cempty { font-size: var(--fs-small); }
+  a.site { font-size: var(--fs-small); color: var(--ink); white-space: nowrap; }
+  .col-foot { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; height: 45px; padding: 4px 12px; font-size: var(--fs-small); line-height: 18px; color: var(--muted); background: var(--band); border-top: 1px solid var(--bd); }
   .col-foot b { color: var(--ink); }
   .side { flex: 0 0 380px; min-width: 0; overflow-y: auto; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
   .side .shead { display: flex; gap: 8px; align-items: flex-start; font-weight: 600; }
@@ -281,8 +272,7 @@
   /* HubSpot sizing (CRM UI spec, s3/4/6/7/15/16). Corners: ONE radius token, --radius (12px), on everything; circles only for status dots. */
   .btn, .vsw button, .lk, .ico { border-radius: var(--radius); }
   .pill { padding: 4px 12px; min-height: 28px; }
-  nav.tabs a, .subnav a { border-radius: var(--radius); }
-  nav.tabs .n { right: 18px; }
+  .subnav a { border-radius: var(--radius); }
   .subnav { gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
   .vtop .subnav { flex: 1 1 auto; }
   .subnav a, :root.look-cool .subnav a { border-color: transparent; background: transparent; }
@@ -292,29 +282,18 @@
   /* Frame (Lisa's choice): dark top bar and dark bottom tab bar, never black. The footer is a step lighter on purpose:
      thin strips between light buttons read darker than the solid top bar. Darker than the page in dark mode too. */
   header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
-  header .top { padding-top: 12px; padding-bottom: 12px; }
-  header .top > h1 a, header .top > .stamp, header .top > .pill, header .top > .btn, header .lookwrap > .btn, header .morewrap > .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
-  header .top > .pill .ti, header .top > .btn .ti, header .lookwrap > .btn .ti, header .morewrap > .btn .ti { color: var(--frame-ink); }
+  header .top > h1 a, header .top > .stamp, header .top > .pill, header .top > .btn, header .lookwrap > .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
+  header .top > .pill .ti { color: var(--frame-ink); }
   header .top > .btn.main { border-color: var(--frame-ink); }
   header .top > .pill.ok { border-color: var(--frame-ok); } header .top > .pill.ok .ti { color: var(--frame-ok); }
   header .top > .pill.warn { border-color: var(--frame-warn); } header .top > .pill.bad { border-color: var(--frame-bad); }
-  @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover, header .morewrap > .btn:hover { outline-color: var(--frame-ink); } } /* the same 1px line, in the frame's ink */
-  header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible, header .morewrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
-  /* The dark band spans the screen like the top bar; each tab button stays a sensible width. */
-  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 220px)); justify-content: center; } }
-  /* Phone header: dot + Studio, the status pills and one "More" menu (Refresh, Look, New, Sign out, Dashboard). Desktop unchanged. */
-  .morewrap { position: relative; display: none; margin-left: auto; }
-  #moreMenu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 25; width: 220px; background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); box-shadow: var(--shadow), 0 8px 24px rgba(0,0,0,.18); padding: 8px; display: flex; flex-direction: column; gap: 4px; }
-  #moreMenu.hidden { display: none; }
-  #moreMenu > * { font: inherit; font-size: 15px; font-weight: 600; color: var(--ink); background: transparent; border: 1px solid transparent; border-radius: var(--radius); min-height: 44px; padding: 0 14px; display: flex; gap: 8px; align-items: center; text-decoration: none; cursor: pointer; text-align: left; }
-  #moreMenu > * .ti { color: var(--ink); }
-  @media (hover: hover) { #moreMenu > *:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
-  @media (max-width: 544px) {
-    html.signed-in .morewrap:not(.hidden) { display: inline-flex; }
-    html.signed-in header .top > #refreshBtn, html.signed-in header .top > #newBtn, html.signed-in header .top > #signOutBtn, html.signed-in header .top > #backHome, html.signed-in .lookwrap > #lookBtn { display: none !important; }
-    html.signed-in .lookwrap { position: static; }
-    html.signed-in #lookMenu { position: fixed; top: 64px; left: 8px; right: 8px; width: auto; }
-    header .top > .btn, header .top > .pill { min-height: 44px; }
+  @media (hover: hover) { header .top > .pill:hover, header .top > .btn:hover, header .lookwrap > .btn:hover { outline-color: var(--frame-ink); } } /* the same 1px line, in the frame's ink */
+  header .top > a:focus-visible, header .top > button:focus-visible, header .lookwrap > button:focus-visible { outline-color: var(--frame-ink); border-color: var(--frame-ink) !important; }
+  /* Phone top bar: the engine and budget pills stay on a desktop only (the one 56px row has no room); Look opens full width. */
+  @media (max-width: 600px) {
+    header .top > #enginePill, header .top > #budgetPill { display: none !important; }
+    .lookwrap { position: static; }
+    #lookMenu { position: fixed; top: calc(var(--house-head) + 6px); left: 8px; right: 8px; width: auto; }
   }
   @media (max-width: 760px) {
     .board { scroll-snap-type: x mandatory; }
@@ -322,14 +301,12 @@
   }
   /* Two pill sizes only. Small = things you read (counts, tags, the TEST stamp): 24px high, 13px text.
      Button = anything you press (buttons, filter and pick chips, sub-tabs, switches, menu items, icon buttons): 36px, 44px on the phone. */
-  .tag, .stamp { height: 24px; min-height: 24px; min-width: 24px; font-size: 13px; line-height: 1; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
-  .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, #moreMenu > *, .fbar .sbox { min-height: 36px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; display: inline-flex; align-items: center; }
-  #moreMenu > * { display: flex; }
+  .tag, .stamp { height: 24px; min-height: 24px; min-width: 24px; font-size: var(--fs-small); line-height: 1; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
+  .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, .fbar .sbox { min-height: 36px; box-sizing: border-box; padding-top: 0; padding-bottom: 0; display: inline-flex; align-items: center; }
   .lk, .ico { min-width: 36px; width: auto; height: 36px; }
   @media (max-width: 544px) {
-    .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, #moreMenu > *, .fbar .sbox { min-height: 44px; }
+    .btn, .pill, .fbtn, .fbar .fbtn, .ch, .achip, .seg button, .vsw button, .subnav a, .undo, .more, .fbar .sbox { min-height: 44px; }
     .lk, .ico { min-width: 44px; height: 44px; }
-    /* Phone tabs (colour bar · icon + count · label): ../house.css. */
   }
   /* Control edges (things you press or read as a chip) use --ctl: the line colour in light, a 3:1 line in dark so every ring shows. */
   .btn, .pill, .ch, .fbtn, .achip, .fbar .sbox, .tag, .seg button, .vsw button, .undo, .lk, .stage .n, .stamp { border-color: var(--ctl); }
@@ -338,8 +315,8 @@
   .crow .bline .bn { min-width: 0; overflow-wrap: anywhere; }
   .bmark { width: 20px; height: 20px; flex: none; border-radius: 4px; box-sizing: border-box; display: inline-grid; place-items: center; }
   img.blogo { object-fit: contain; }
-  .bav { border: 1px solid var(--c, var(--press)); background: color-mix(in srgb, var(--c, var(--press)) 14%, var(--card)); color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1; letter-spacing: -.02em; }
-  .dpill { margin-left: auto; font-size: 13px; font-weight: 400; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; height: 24px; display: inline-flex; align-items: center; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); } /* every date wears a plain 1px ring */
+  .bav { border: 1px solid var(--c, var(--press)); background: color-mix(in srgb, var(--c, var(--press)) 14%, var(--card)); color: var(--ink); font-size: var(--fs-small); font-weight: 600; line-height: 1; letter-spacing: -.02em; }
+  .dpill { margin-left: auto; font-size: var(--fs-small); font-weight: 400; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; height: 24px; display: inline-flex; align-items: center; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); } /* every date wears a plain 1px ring */
   .dpill.late { color: var(--ink); border-color: var(--ljr-2); background: var(--ljr-2-tint); }
   .dpill.soon { color: var(--ink); border-color: var(--ljr-3); background: var(--ljr-3-tint); }
   .needl { margin-top: 6px; }
@@ -349,60 +326,54 @@
   .crow .l1 .ttl { flex: 0 1 auto; }
   .selmark { font-weight: 600; color: var(--ink); flex: none; } /* the selected tick sits right after the title text */
   .cfoot { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 26px; margin-top: 6px; }
-  .whor { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--ctl); display: grid; place-items: center; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .whor { flex: none; width: 26px; height: 26px; border-radius: 50%; border: 1px solid var(--ctl); display: grid; place-items: center; font-size: var(--fs-small); font-weight: 600; color: var(--muted); }
   .whor.me { border-color: var(--ink); color: var(--ink); }
   .pthumb { flex: none; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--muted); }
   .pthumb { width: 56px; }
   .pthumb svg, .pthumb .pimg { width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 10px; background: var(--soft); display: block; object-fit: cover; }
-  .pthumb .fmt { font-size: 13px; line-height: 1.2; color: var(--muted); text-align: center; overflow-wrap: anywhere; }
+  .pthumb .fmt { font-size: var(--fs-small); line-height: 1.2; color: var(--muted); text-align: center; overflow-wrap: anywhere; }
   .tag.need { border-color: var(--ljr-2); background: var(--ljr-2-tint); color: var(--ink); }
   .more-d { display: flex; flex-direction: column; gap: 8px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
   .more-d .icons { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   .more-d .l3 { display: flex; align-items: center; gap: 8px; }
-  .more-d .type { display: inline-flex; gap: 4px; align-items: center; font-size: 13px; color: var(--muted); }
-  .more-d .lk { width: auto; padding: 0 10px; gap: 4px; font-size: 13px; text-decoration: none; }
-  /* Me: greeting, summary strip, Next, Needs you today; friendly empty states. */
-  .hello { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  /* Stage 8: a closed 3-line "How Studio works" fold under the greeting; plain text, no fill. */
-  .howto { margin: 8px 0 12px; } .howto > summary { list-style: none; width: max-content; max-width: 100%; } .howto > summary::-webkit-details-marker { display: none; } .howto[open] > summary { margin-bottom: 8px; }
-  .howto ol { margin: 0 0 4px; padding-left: 22px; color: var(--muted); } .howto li { margin: 2px 0; }
-  .hello h2 { margin: 0; font-size: 26px; font-weight: 600; } .hello .sub { margin: 0; color: var(--muted); }
+  .more-d .type { display: inline-flex; gap: 4px; align-items: center; font-size: var(--fs-small); color: var(--muted); }
+  .more-d .lk { width: auto; padding: 0 10px; gap: 4px; font-size: var(--fs-small); text-decoration: none; }
+  /* Me: summary strip, Next, Needs you today; friendly empty states. */
   .three { display: flex; gap: 8px; flex-wrap: wrap; }
   .three .sum { display: inline-flex; align-items: center; gap: 10px; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); padding: 8px 14px 8px 8px; font-weight: 600; }
-  .three .sum .big { font-size: 24px; min-width: 40px; height: 40px; display: inline-grid; place-items: center; border-radius: 999px; border: 1px solid var(--ink); padding: 0 8px; font-variant-numeric: tabular-nums; }
-  .three .sum.need .big { border-color: var(--ljr-3); background: var(--ljr-3-tint); }
-  .three .sum.over .big { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
+  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
+  .three .sum .big { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--house-ring); }
+  .three .sum.over .big { border-color: var(--house-late); }
+  .three .sum .big.zero { border-color: transparent; }   /* 0 shows no ring (house rule) */
   .mecards { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; align-items: start; }
   .mcard { background: var(--card); border: 1px solid var(--bd); border-radius: var(--radius); padding: var(--house-pad); box-shadow: var(--shadow); min-width: 0; }
-  .mcard h3 { margin: 0 0 8px; font-size: 17px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .mcard h3 { margin: 0 0 8px; font-size: var(--fs-head); font-weight: 600; display: flex; align-items: center; gap: 8px; }
   .mcard h3 .cnt { margin-left: auto; }
   .mcard.next { border-color: var(--ink); }
-  .mcard.next .t { font-size: 20px; font-weight: 600; margin: 2px 0 4px; overflow-wrap: anywhere; }
+  .mcard.next .t { font-size: var(--fs-head); font-weight: 600; margin: 2px 0 4px; overflow-wrap: anywhere; }
   .mcard.next .sub { margin: 0 0 12px; color: var(--muted); }
   .mrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
   .mrow:first-of-type { border-top: 0; }
-  .mrow .ic { width: 32px; height: 32px; flex: none; border-radius: 50%; border: 1px solid var(--ctl); }
-  .mrow .t { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; } .mrow .t small { display: block; color: var(--muted); font-size: 13px; font-weight: 400; }
+  .mrow .t { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; } .mrow .t small { display: block; color: var(--muted); font-size: var(--fs-small); font-weight: 400; }
   .mrow .dpill { margin-left: 0; }
-  @media (hover: hover) { .mrow:hover .ic { border-color: var(--sc); background: var(--tint); } .mrow:hover .t { text-decoration: underline; text-underline-offset: 3px; } }
-  .okempty { margin: 0; color: var(--muted); font-size: 14px; display: flex; gap: 8px; align-items: center; }
+  @media (hover: hover) { .mrow:hover .t { text-decoration: underline; text-underline-offset: 3px; } }
+  .okempty { margin: 0; color: var(--muted); font-size: var(--fs-small); display: flex; gap: 8px; align-items: center; }
   .okempty::before { content: "\2713"; display: inline-grid; place-items: center; width: 22px; height: 22px; flex: none; border-radius: 50%; border: 1px solid var(--ljr-5); background: var(--ljr-5-tint); color: var(--ink); font-size: 13px; }
   @media (max-width: 760px) {
-    .hello h2 { font-size: 22px; }
-    .three { flex-wrap: nowrap; gap: 6px; } .three .sum { padding: 4px 8px 4px 4px; gap: 6px; font-size: 13px; flex: 1; min-width: 0; } .three .sum .big { font-size: 17px; min-width: 30px; height: 30px; padding: 0 6px; }
+    .three { flex-wrap: nowrap; gap: 6px; } .three .sum { padding: 4px 8px 4px 4px; gap: 6px; font-size: var(--fs-small); flex: 1; min-width: 0; }
     .mecards .need-card { order: -1; }
   }
   /* Consistency (Lisa, 28 Oct): everything you can press rests on ONE clear line (--press, 3:1 on the card), 1px, 12px radius,
      36px (44px phone), 14px/600, and hovers with the same 1px ink line. Yes = green line, destructive = rose line. Nothing starts ink.
      Read-only things (status, counts, dates, label chips) never hover. Containers keep the softer --line. */
-  .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { border: 1px solid var(--press); display: inline-flex; align-items: center; border-radius: var(--radius); font-size: 14px; font-weight: 600; min-height: 36px; box-sizing: border-box; }
+  .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { border: 1px solid var(--press); display: inline-flex; align-items: center; border-radius: var(--radius); font-size: var(--fs-small); font-weight: 600; min-height: 36px; box-sizing: border-box; }
   .ico, .lk { min-width: 36px; height: 36px; justify-content: center; }
   .chk li button, button.tag, a.tag { padding: 0 12px; height: auto; }
   .more { color: var(--ink); }
   .btn.yes, .acts .btn.yes { --hmc: var(--house-ok); border-color: var(--hmc); } .btn.no, .acts .btn.no { --hmc: var(--house-risk); border-color: var(--hmc); } /* rest on their own colour line and keep it on hover */
   .fbar .sbox { font-weight: 400; }
   @media (max-width: 544px) { .btn, a.pill, button.pill, .ch, .fbtn, .achip, .seg button, .vsw button, .undo, .lk, .ico, .more, .chk li button, button.tag, a.tag, .fbar .sbox { min-height: 44px; } .ico, .lk { min-width: 44px; height: 44px; } }
-  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover, #moreMenu > *:hover { outline: 1px solid var(--hmc, var(--sel-bd)); outline-offset: -1px; background-color: color-mix(in srgb, var(--hmc, var(--muted)) var(--house-tint), var(--card)); } }
+  @media (hover: hover) { .btn:hover, a.pill:hover, button.pill:hover, .ch:hover, .fbtn:hover, .achip:hover, .seg button:hover, .vsw button:hover, .undo:hover, .lk:hover, .ico:hover, .more:hover, .chk li button:hover, button.tag:hover, a.tag:hover, .col-list .crow:hover, .subnav a:hover { outline: 1px solid var(--hmc, var(--sel-bd)); outline-offset: -1px; background-color: color-mix(in srgb, var(--hmc, var(--muted)) var(--house-tint), var(--card)); } }
   /* Meaning-coloured buttons keep their colour on hover (the --hmc rule above, from ../house.css); icons keep it too. */
   .btn.yes .ti, .acts .btn.yes .ti { color: var(--ljr-5-text); } .btn.no .ti, .acts .btn.no .ti { color: var(--ljr-2-text); }
   .fbtn .n.wide { width: auto; padding: 0 6px; }
@@ -415,16 +386,17 @@
   .cm { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 10px; background: var(--card); }
   .cm.cl { border-color: var(--ctl); }
   .cm.pend { opacity: .8; }
-  .cmh { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+  .cmh { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: var(--fs-small); }
   .cmh .cwhen { margin-left: auto; color: var(--muted); }
-  .cm p { margin: 4px 0 0; overflow-wrap: anywhere; font-size: 14px; }
-  .cvis { margin: 0; font-size: 13px; font-weight: 600; display: flex; gap: 6px; align-items: center; }
+  .cm p { margin: 4px 0 0; overflow-wrap: anywhere; font-size: var(--fs-small); }
+  .cvis { margin: 0; font-size: var(--fs-small); font-weight: 600; display: flex; gap: 6px; align-items: center; }
   .cform { display: flex; gap: 8px; align-items: flex-end; }
   .cform textarea { flex: 1; min-width: 0; min-height: 44px; resize: vertical; }
   /* List view: each row has a 3px bar in its stage colour down its left edge (the same colour as the column's bar); not on board cards. */
   .crow { position: relative; }
   .card .crow { padding-left: 14px; }
-  .card .crow::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: 3px; border-radius: 2px; background: var(--sc); }
+  .card .crow { --house-lbar-out: 0px; }   /* the bar itself: ../house.css section 10 (full height, 3px) */
+  .card .crow.house-lbar::before { border-radius: 0; }   /* a row has square corners, so its bar is a straight 3px line, never a "(" (Lisa, 2 Nov) */
   .col-list .crow::before { content: none; }
   /* Library: + New / Edit form and the Suggest box. */
   .libbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
@@ -433,9 +405,10 @@
   .libform .req { color: var(--ink); }
   .libsug .ask { align-items: flex-end; }
   .rights { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; border-bottom: 1px solid var(--line); }
-  .tick { font-size: 13px; color: var(--muted); } .tick.ok { color: var(--ink); }
-  .rrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; } .rlab { min-width: 120px; color: var(--muted); font-size: 14px; }
-  .pline { font-size: 13px; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .tick { font-size: var(--fs-small); color: var(--muted); } .tick.ok { color: var(--ink); }
+  .steps ol { list-style: none; margin: 0 0 8px; padding: 0; } .steps li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 0; border-top: 1px solid var(--line); font-size: var(--fs-small); } .steps li:first-child { border-top: 0; } .steps .tx { flex: 1 1 10em; min-width: 0; overflow-wrap: anywhere; } .steps .tw { font-size: var(--fs-small); color: var(--muted); } .steps li[data-status="skipped"] .tx { color: var(--muted); text-decoration: line-through; }
+  .rrow { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; } .rlab { min-width: 120px; color: var(--muted); font-size: var(--fs-small); }
+  .pline { font-size: var(--fs-small); color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -444,40 +417,36 @@
   <symbol id="i-out" viewBox="0 0 24 24"><path d="M15 4h4v16h-4"/><path d="M10 8l-4 4 4 4M6 12h10"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6"/><path d="M20 4v7h-7"/></symbol>
 </svg>
-<header>
-  <div class="top">
+<header class="house-head">
+  <div class="top house-row">
+    <a id="backHome" class="btn back house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
     <h1><a href="#/me"><span class="dot" aria-hidden="true"></span>Studio</a></h1>
+    <span class="house-sp" aria-hidden="true"></span>
     <span id="stamp" class="stamp"></span>
     <a id="enginePill" class="pill hidden" href="#/engine"></a>
     <a id="budgetPill" class="pill hidden" href="#/tools"></a>
-    <button id="refreshBtn" class="btn hidden" type="button" data-action="refresh" aria-label="Read again" title="Read again"><svg class="i"><use href="#i-refresh"/></svg></button>
-    <span class="lookwrap"><button id="lookBtn" class="btn" type="button" data-action="look" aria-label="Look" title="Look" aria-expanded="false" aria-controls="lookMenu"><i class="ti ti-palette" aria-hidden="true"></i>Look</button><div id="lookMenu" class="hidden" role="dialog" aria-label="Look"></div></span>
-    <a class="btn" href="#/new" data-nav="new" id="newBtn" aria-label="New idea"><i class="ti ti-plus"></i>New</a>
-    <button id="signOutBtn" class="btn hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg class="i"><use href="#i-out"/></svg></button>
+    <a class="btn house-ib" href="#/new" data-nav="new" id="newBtn" aria-label="New idea" title="New idea"><svg aria-hidden="true"><use href="#hi-plus"/></svg></a>
+    <button id="refreshBtn" class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap"><button id="lookBtn" class="btn house-ib" type="button" data-action="look" aria-label="Look" title="Look" aria-expanded="false" aria-controls="lookMenu"><svg aria-hidden="true"><use href="#hi-palette"/></svg></button><div id="lookMenu" class="hidden" role="dialog" aria-label="Look"></div></span>
+    <button id="signOutBtn" class="btn house-ib hidden" type="button" data-action="signout" aria-label="Sign out" title="Sign out"><svg aria-hidden="true"><use href="#hi-logout"/></svg></button>
     <button id="signInBtn" class="btn main" type="button" data-action="signin" disabled><svg class="i"><use href="#i-in"/></svg><span>Loading…</span></button>
-    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a>
-    <span class="morewrap hidden" id="moreWrap"><button id="moreBtn" class="btn" type="button" data-action="moremenu" aria-expanded="false" aria-controls="moreMenu">More<i class="ti ti-dots" aria-hidden="true"></i></button>
-      <div id="moreMenu" class="hidden" role="dialog" aria-label="More">
-        <button type="button" data-action="refresh"><i class="ti ti-refresh" aria-hidden="true"></i>Refresh</button>
-        <button type="button" data-action="lookmore"><i class="ti ti-palette" aria-hidden="true"></i>Look</button>
-        <a href="#/new"><i class="ti ti-plus" aria-hidden="true"></i>New</a>
-        <button type="button" data-action="signout"><i class="ti ti-logout" aria-hidden="true"></i>Sign out</button>
-        <a href="../" data-back-home><i class="ti ti-home" aria-hidden="true"></i>← Dashboard</a>
-        <button type="button" data-action="moredone">Done</button>
-      </div></span>
   </div>
 </header>
-<main class="wrap" id="content">
+<main class="wrap house-page" id="content">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="exBanner" class="banner ex hidden" role="status"><i class="ti ti-flask" aria-hidden="true"></i><span>Example data · Studio helper off</span></div>
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs" id="tabs" aria-label="Sections">
-  <a href="#/me" data-nav="me" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><i class="ti ti-user"></i><span>Me</span><span class="n need" id="nMe"></span></a>
-  <a href="#/decide" data-nav="decide" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><i class="ti ti-traffic-lights"></i><span>Decide</span><span class="n need" id="nDecide"></span></a>
-  <a href="#/do" data-nav="do" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><i class="ti ti-hand-finger"></i><span>Do</span><span class="n need" id="nDo"></span></a>
-  <a href="#/line" data-nav="line" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><i class="ti ti-timeline"></i><span>Line</span><span class="n" id="nLine"></span></a>
-  <a href="#/kits" data-nav="kits" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><i class="ti ti-box"></i><span>Kits</span><span class="n" id="nKits"></span></a>
+  <a class="ht" data-slot="1" href="#/me" data-nav="me"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="nMe"></span></a>
+  <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n need" id="nDecide"></span></a>
+  <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n need" id="nDo"></span></a>
+  <a class="ht" data-slot="7" href="#/line" data-nav="line"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-line"/></svg></span><span class="htl">Line</span><span class="n" id="nLine"></span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/kits" data-nav="kits" data-slot="5"><i class="ti ti-box" aria-hidden="true"></i><span class="htl">Kits</span><span class="n" id="nKits"></span></a>
+    </div>
+  </div>
 </nav>
 
 <script>
@@ -520,7 +489,11 @@
  *              gate: { question, at: ISO } | null   (a gate waiting on Lisa: GO · HOLD · RESHAPE · REFINE · KILL · RECYCLE),
  *              kitId, groupId, playbookId, outcome: 'attract'|'convert'|'deliver'|'keep'|'reuse'|null, frameworkId, voiceId, lookId,
  *              formatIds: [id], language, length, masterId (variant of), purpose: 'refresh'|'rebrand'|'reformat'|'translate'|'test'|null,
- *              test (A/B group id), result, sourceIds: [id], lineCardUrl (the item's Studio Line card in Infinity, https) }],   (ids are null when not set)
+ *              test (A/B group id), result, sourceIds: [id], lineCardUrl (the item's Studio Line card in Infinity, https),
+ *              claim: { by: 'grok'|'claude', at: ISO } | null (a bot is making it), checkNotes: string | null (the automatic check's reasons),
+ *              appRef: { id, slug, alias } | null }],   (ids are null when not set; appRef = the App Factory app that asked
+ *              for it (Stage 6): AF app id + 6-letter slug; the page shows only alias (or slug), never the id)
+ *              flags may include 'auto-approved' · 'check-failed' · 'check-wait' (the automatic check); studio.maker: { claimMinutes, pieceCapGBP, autoApprove, aiDisclosure, inProgressFolderId }
  *   ideas:  [same shape as assets, stage 0],
  *   playbooks: [{ id, name, outcome, steps: [{ kind: 'pack'|'kit'|'action', id|null, text }], notes }],   (WHAT ladder: Brick › Kit › Pack › Playbook)
  *   packs:  [{ id, name, kind (e.g. funnel), kitIds: [id], notes }],
@@ -597,7 +570,7 @@
   function lookMenu() {
     return LOOKS.map(function (l) { return '<div class="lrow"><span class="flab">' + l[1] + '</span><div class="seg" role="group" aria-label="' + l[1] + '">' + l[2].map(function (x) { return '<button type="button" data-look="' + l[0] + '" data-val="' + x[0] + '" aria-pressed="' + (lookOf(l[0]) === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></div>'; }).join('');
   }
-  function showLook(on) { var m = document.getElementById('lookMenu'); if (on) m.innerHTML = lookMenu(); m.classList.toggle('hidden', !on); document.getElementById('lookBtn').setAttribute('aria-expanded', String(on)); }
+  function showLook(on) { var m = document.getElementById('lookMenu'); if (on) m.innerHTML = lookMenu() + DashKit.look.extras(); m.classList.toggle('hidden', !on); document.getElementById('lookBtn').setAttribute('aria-expanded', String(on)); }
   /* ---------- Board / List on Line and Decide: desktop starts on Board, the phone on List; the choice is kept per page ---------- */
   var vmode = (function () { try { var o = JSON.parse(localStorage.getItem('st-view') || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; } })();
   function phone() { return window.matchMedia('(max-width: 760px)').matches; }
@@ -810,7 +783,7 @@
 
   /* ---------- Find bar (the Factory model). Each tab keeps its own filters (st-fs), and the address carries them. ---------- */
   var BAR_TABS = /^(me|decide|do|line|ideas|assets|review|library)$/;
-  var FLAG_W = { 'needs-input': 'Needs input', refresh: 'Refresh', overdue: 'Overdue', blocked: 'Blocked', 'over-budget': 'Over budget', stale: 'Stale', test: 'Test' };
+  var FLAG_W = { 'needs-input': 'Needs input', refresh: 'Refresh', overdue: 'Overdue', blocked: 'Blocked', 'over-budget': 'Over budget', stale: 'Stale', test: 'Test', 'auto-approved': 'Approved by check', 'check-failed': 'Check failed', 'check-wait': 'Waiting for check' };
   var SORTS = [['date', 'calendar', 'Changed'], ['due', 'calendar-event', 'Due date'], ['priority', 'flag', 'Priority'], ['stage', 'stairs', 'Stage'], ['brand', 'tag', 'Brand'], ['name', 'sort-a-z', 'Name'], ['results', 'chart-bar', 'Results']];
   var LIST_KEYS = ['grp', 'acct', 'brand', 'type', 'st', 'who', 'fit', 'ev', 'f', 'dest', 'series', 'kit'];
   var filtersOpen = false;
@@ -896,6 +869,8 @@
     }
     return html + '</div>';
   }
+  // One empty line for a whole view (Lisa, 2 Nov); with a search or filter on, the Clear box instead.
+  function oneEmpty(tab) { var s = fsOf(tab); return s.q || fOnCount(tab) ? emptyBox() : '<div class="card" data-empty-one><p class="okempty">Nothing needs you</p></div>'; }
   function emptyBox() { return '<div class="card empty" data-empty>' + cnt(0) + '<button class="pill" type="button" data-action="clearf">' + I('filter-off') + ' Clear</button></div>'; }
   function hashParts() { var h = (location.hash || '#/me').slice(2), i = h.indexOf('?'); return { path: (i < 0 ? h : h.slice(0, i)).split('/'), q: new URLSearchParams(i < 0 ? '' : h.slice(i + 1)) }; }
   function barTab() { var r = hashParts().path[0] || 'me'; return BAR_TABS.test(r) ? r : null; }
@@ -929,7 +904,8 @@
     if (a.size) out += '<span class="tag" title="Size">' + esc(a.size) + '</span>';
     if (a.dated && a.eventDate) { var d = daysTo(a.eventDate); out += '<span class="tag' + (d !== null && d < 0 ? ' over' : '') + '" title="Dated">' + I('calendar-event') + dmy(Date.parse(a.eventDate)) + '</span>'; }
     else out += '<span class="tag" title="Evergreen">' + I('leaf') + '</span>';
-    a.flags.filter(function (f) { return f !== 'test'; }).forEach(function (f) { out += '<span class="tag" title="Flag">' + I('flag') + esc(FLAG_W[f] || f) + '</span>'; });
+    a.flags.filter(function (f) { return f !== 'test' && !CHECK_CHIP[f]; }).forEach(function (f) { out += '<span class="tag" title="Flag">' + I('flag') + esc(FLAG_W[f] || f) + '</span>'; });
+    out += checkChips(a);
     var pr = product(a.productId); if (pr) out += '<span class="tag" title="Product">' + I('box') + esc(pr.name) + '</span>';
     var fw = byIdIn('frameworks', a.frameworkId); if (fw) out += '<span class="tag" data-chip="framework" title="Framework">' + I('stack-2') + esc(fw.name) + '</span>';
     a.formatIds.forEach(function (f) { var x = byIdIn('formats', f); out += '<span class="tag" data-chip="format" title="' + esc(x ? x.name : f) + '">' + I('aspect-ratio') + esc(fmtLabel(f)) + '</span>'; });
@@ -980,7 +956,7 @@
     if (k === 'redo') body = '<form class="ask" data-redo="' + esc(a.id) + '"><input class="fin" id="note-' + esc(a.id) + '" data-draft="' + esc(a.id) + '" value="' + esc(drafts[a.id] || '') + '" aria-label="What to change" required><button class="btn" type="submit" aria-label="Send redo"' + dis() + '>' + I('send') + '</button></form>';
     if (k === 'fb') { var fd = fbDraft[a.id] = fbDraft[a.id] || { stars: 0, reasons: [] };
       body = '<div class="chips" data-stars="' + esc(a.id) + '">' + [1, 2, 3, 4, 5].map(function (n) { return '<button class="ch' + (fd.stars >= n ? ' on' : '') + '" type="button" data-star="' + n + '" data-id="' + esc(a.id) + '" aria-label="' + n + ' stars" aria-pressed="' + (fd.stars === n) + '">' + I(fd.stars >= n ? 'star-filled' : 'star') + '</button>'; }).join('') + '</div>' +
-        '<div class="chips">' + REASONS.map(function (r) { var on = fd.reasons.indexOf(r[0]) >= 0; return '<button class="ch' + (on ? ' on' : '') + '" type="button" data-reason="' + r[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + on + '">' + I(r[1]) + r[2] + '</button>'; }).join('') + '</div><p class="muted">Goes with Approve, Redo or Bin.</p>'; }
+        '<div class="chips">' + REASONS.map(function (r) { var on = fd.reasons.indexOf(r[0]) >= 0; return '<button class="ch' + (on ? ' on' : '') + '" type="button" data-reason="' + r[0] + '" data-id="' + esc(a.id) + '" aria-pressed="' + on + '">' + I(r[1]) + r[2] + '</button>'; }).join('') + '</div>'; }
     if (k === 'part') body = '<form class="ask" data-part="' + esc(a.id) + '"><input class="fin" id="pname-' + esc(a.id) + '" maxlength="200" aria-label="Part name" placeholder="Chapter name" required><input class="fin" id="pwords-' + esc(a.id) + '" type="number" min="0" step="100" style="max-width:7.5em" aria-label="Target words" placeholder="Words"><button class="btn" type="submit" aria-label="Add part"' + dis() + '>' + I('plus') + '</button></form>';
     if (k === 'where') { var ls = S.legalSets.filter(function (x) { return !a.legal || !a.legal.entity || x.entity === a.legal.entity || (x.brandIds || []).some(function (b) { return a.brandIds.indexOf(b) >= 0; }); });
       body = '<div class="fsub">' + I('building') + esc((a.legal && a.legal.entity) || 'Company not recorded') + '</div>' +
@@ -1019,7 +995,7 @@
         ['Board', infinityLink(a)]].filter(function (x) { return x[1]; });
       var inStep = Math.max(0, Math.floor((Date.now() - (Date.parse(a.stageSince) || a._t || Date.now())) / 864e5)), wo = waitingOn(a), acc = account(a.accountId);
       kv.unshift(['With', wo.w], [isClient(a) ? 'Client' : 'Brand owner', isClient(a) ? esc(acc.name) : 'Own brand'], ['In this step', inStep + (inStep === 1 ? ' day' : ' days') + (inStep > 3 && a.stage < 8 ? ' \u00b7 stuck?' : '')]);
-      body = rowMore(a) + comments(a) + rightsRows(a) + deliveryRows(a) + saveAsKit(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
+      body = rowMore(a) + stepsList(a) + comments(a) + rightsRows(a) + deliveryRows(a) + saveAsKit(a) + (a.thumbUrl ? '<a href="' + safeUrl(a.reviewLink || a.docLink || a.thumbUrl) + '" target="_blank" rel="noopener"><img class="thumb" src="' + safeUrl(a.thumbUrl) + '" alt="Preview of ' + esc(bare(a)) + '" loading="lazy"></a>' : '') + '<dl class="kv">' + kv.map(function (x) { return '<dt>' + x[0] + '</dt><dd>' + x[1] + '</dd>'; }).join('') + '</dl><a href="#/asset/' + encodeURIComponent(a.id) + '">All stages</a>';
     }
     return '<div class="panel" data-panelbox="' + esc(a.id) + '">' + body + '</div>';
   }
@@ -1037,6 +1013,18 @@
     if (a.stage <= 3 && a.stage >= 1 && !(a.legal && a.legal.setId)) return 'Legal set?';
     return '';
   }
+  // Bot maker loop (engine v0.2.24): who is making it, the automatic check's verdict and reasons. Nothing when absent.
+  var CHECK_CHIP = { 'auto-approved': ['circle-check', 'Approved by check'], 'check-failed': ['circle-x', 'Check failed'], 'check-wait': ['hourglass', 'Waiting for check'] };
+  function checkChips(a) { return a.flags.filter(function (f) { return CHECK_CHIP[f]; }).map(function (f) { return '<span class="tag" data-chip="' + f + '" title="Automatic check">' + I(CHECK_CHIP[f][0]) + CHECK_CHIP[f][1] + '</span>'; }).join(''); }
+  function claimLine(a) {
+    var c = a.claim, w = c && { grok: 'Grok', claude: 'Claude' }[c.by], t = c && Date.parse(c.at);
+    return w && a.stage < 8 ? '<div class="needl muted" data-claim="' + c.by + '">' + w + ' is making this' + (t ? ' \u00b7 since ' + hm(t) : '') + '</div>' : '';
+  }
+  function checkLine(a) { return a.checkNotes && a.stage >= 5 && a.stage <= 7 ? '<div class="needl muted" data-check>Check: ' + esc(String(a.checkNotes)) + '</div>' : ''; }
+  function makerLine() {
+    var m = (S.studio || {}).maker;
+    return m && typeof m === 'object' ? '<p class="muted" data-maker>Bots: auto-approve ' + (m.autoApprove ? 'on' : 'off') + (m.pieceCapGBP != null && m.pieceCapGBP !== '' ? ' \u00b7 ' + money(m.pieceCapGBP) + ' a piece' : '') + '</p>' : '';
+  }
   function datePill(a) {
     if (!(a.dated && a.eventDate)) return '';
     var d = daysTo(a.eventDate), late = d !== null && d < 0 && a.stage < 8, soon = !late && d !== null && d <= 3 && a.stage < 8;
@@ -1044,12 +1032,14 @@
   }
   function row(a, kind, withBrand) {
     var on = openPanel && openPanel.id === a.id, bo = brandOf(a), need = needOf(a), dp = datePill(a);
-    return '<div class="crow' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '" style="--sc:var(--ljr-' + stSlot(a.stage) + ')">' +
+    return '<div class="crow house-lbar' + (on ? ' sel' : '') + '" data-row="' + esc(a.id) + '" data-open-row style="--sc:var(--ljr-' + stSlot(a.stage) + ')">' +
       (withBrand || dp ? '<div class="bline">' + (withBrand ? brandMark(bo) + '<span class="bn">' + esc(bo.name) + '</span>' : '') + dp + '</div>' : '') +
-      '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
-      (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') +
+      '<div class="tb">' + pthumb(a) + '<div class="tbr"><div class="l1"><button class="ttl house-open" type="button" data-panel="all" data-id="' + esc(a.id) + '">' + esc(bare(a)) + '</button>' + (on ? '<span class="selmark" aria-hidden="true">\u2713</span>' : '') + '</div>' +
+      (kind === 'gate' ? '<div class="q1">' + esc(a.gate.question) + '</div>' : '') + autoGateLine(a) +
       (a.protect === 'yes' && a.stage < 8 ? '<div class="needl"><span class="tag" data-chip="proof" title="Clients see a view-only proof">Proof \u00b7 view only</span></div>' : '') +
+      (a.appRef && (a.appRef.alias || a.appRef.slug) ? '<div class="needl"><span class="tag" data-chip="from-app" title="Asked for by App Factory">From app: ' + esc(a.appRef.alias || a.appRef.slug) + '</span></div>' : '') +
       (isCM(a) ? '<div class="needl"><span class="tag" data-chip="client-only" title="The client owns this; it is never reused">Client-only \u00b7 never reused</span></div>' : '') +
+      claimLine(a) + checkLine(a) +
       '</div></div><div class="cfoot">' + (need ? '<span class="tag need" data-chip="need">' + esc(need) + '</span>' : '<span></span>') + whoRing(a) + '</div>' +
       (function (x) { return x ? '<div class="l2"><span class="acts">' + x + '</span></div>' : ''; })(actsFor(a, kind) + (a.parts && a.parts.total && a.parts.approved === a.parts.total && a.stage < 7 && !sent[a.id] ? '<button class="btn yes" type="button" data-act="assemble" data-id="' + esc(a.id) + '" aria-label="Assemble"' + dis() + '>' + I('books') + 'Assemble</button>' : '')) +
       (on && !(sideOn && openPanel.k === 'all') ? panelOf(a, openPanel.k) : '') + '</div>';
@@ -1134,6 +1124,23 @@
       (link ? '<a class="lk" href="' + safeUrl(link) + '" target="_blank" rel="noopener" aria-label="Preview" title="' + ({ canva: 'Open in Canva', gdoc: 'Open the Google file', drive: 'Open in Drive', clickfunnels: 'Open in ClickFunnels' }[a.linkKind] || 'Preview') + '">' + I('eye') + 'Preview</a>' : '') +
       '<span class="grow"></span><span class="date" title="Changed">' + (a._t ? dmy(a._t) : '') + '</span></div></div>';
   }
+  // Steps (engine v0.2.24): the playbook steps copied onto this piece, in order. Only when the engine sends item.tasks.
+  var TASK_WHO = { lisa: 'Lisa', claude: 'Claude', grok: 'Grok', engine: 'Studio helper' };
+  function stepsList(a) {
+    if (!Array.isArray(a.tasks) || !a.tasks.length) return '';
+    return '<div class="steps" data-steps="' + esc(a.id) + '"><div class="fsub">' + I('list-check') + 'Steps</div><ol>' + a.tasks.map(function (t) {
+      var st = t.status === 'done' || t.status === 'skipped' ? t.status : 'open';
+      return '<li data-task="' + esc(t.n) + '" data-status="' + st + '"><span class="tn">' + esc(t.n) + '.</span><span class="tx">' + esc(t.step) + '</span><span class="tw" data-twho="' + esc(t.who) + '">' + esc(TASK_WHO[t.who] || t.who || '') + '</span>' +
+        (t.fit ? '<span class="tag" data-chip="fit">' + (t.fit === 'HAND' ? 'HAND' : 'AUTO') + '</span>' : '') +
+        (st === 'done' ? '<span class="tick ok" data-done title="Done">\u2713<span class="sr"> done</span></span>' : st === 'skipped' ? '<span class="tick" data-skipped>Skipped</span>' : '') + '</li>';
+    }).join('') + '</ol></div>';
+  }
+  // Auto gate (engine v0.2.24): at the merit (stage 0) and approve (stage 7) gates, whether it passes by itself or stays with Lisa.
+  function autoGateLine(a) {
+    var g = a.autoGate;
+    if (!g || typeof g !== 'object' || (a.stage !== 0 && a.stage !== 7)) return '';
+    return '<div class="needl muted" data-autogate="' + (g.auto === true ? 'auto' : 'you') + '">' + (g.auto === true ? 'Passes by itself' : 'Stays with you' + (g.why ? ': ' + esc(g.why) : '')) + '</div>';
+  }
   function cards(list, kindOf) {
     var groups = [], by = {};
     list.forEach(function (a) { var g = brandOf(a).id; if (!by[g]) { by[g] = []; groups.push(g); } by[g].push(a); });
@@ -1155,29 +1162,45 @@
   function urgency(a) { var d = a.dated && a.eventDate ? daysTo(a.eventDate) : 9999; return (lateOf(a) ? -1e5 : 0) + d; }
   // Stage 8: "Open in Infinity" when the engine has given the item its Studio Line card link (https on startinfinity.com only).
   function infinityLink(a) { var u = String(a.lineCardUrl || '').trim(); return /^https:\/\/([a-z0-9-]+\.)*startinfinity\.com\//i.test(u) ? '<a href="' + safeUrl(u) + '" target="_blank" rel="noopener" data-infinity>Open in Infinity</a>' : ''; }
-  function vMe() {
-    var s = fsOf('me'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
-    var R = keep(reviews()), G = keep(gates()), H = keep(hands());
+  // Main (Lisa's house style, 2 Nov 2026): Next, Needs you (at most 5 rows from Decide and Do), then Studio's 3 numbers, the same as its
+  // Dashboard tile (root index.html HubRead studio). Built by ../toolkit.js DashKit.hubMain. What used to sit here moved:
+  // the On track / Needs you / Overdue lists and Needs you today -> the links at the top of Do (#/me/ok, #/me/need, #/me/over);
+  // Approve -> Decide › Review; Gates and Suggestions -> Decide; Tasks -> Do; the find bar -> Decide and Do (each has its own).
+  function dueIn(a) { return a.dated && a.eventDate ? daysTo(a.eventDate) : null; }
+  function dueTodayL() { return all().filter(function (a) { return !isTest(a) && a.stage < 8 && dueIn(a) === 0; }); }
+  var ME_ACT = { gate: 'Decide', review: 'Approve', hand: 'Do it', asks: 'Send', deliver: 'Send' };
+  function mainRows() {
+    var seen = {}, out = [], live = function (a) { return !isTest(a) && !sent[a.id] && !seen[a.id]; };
+    var add = function (l, kind) { l.filter(live).forEach(function (a) {
+      seen[a.id] = 1; var d = dueIn(a), k = a.stage < 8 && d !== null && d < 0 ? 'late' : a.stage < 8 && d === 0 ? 'today' : 'wait';
+      var n = needOf(a) || (kind === 'asks' ? 'Question to send' : kind === 'deliver' ? 'Ready to send' : '');
+      out.push({ kind: k, text: bare(a), href: '#/asset/' + encodeURIComponent(a.id), act: ME_ACT[kind], sort: d == null ? 9999 : d,
+        sub: [n, a.dated && a.eventDate ? 'due ' + dmy(Date.parse(a.eventDate)) : ''].filter(Boolean).join(' · '), pill: k === 'late' ? 'Late' : k === 'today' ? 'Today' : '' });
+    }); };
+    add(gates(), 'gate'); add(reviews(), 'review'); add(hands(), 'hand');
+    add(all().filter(function (a) { return a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent'; }), 'asks');
+    add(all().filter(function (a) { return a.delivery && a.delivery.status === 'ready (not sent)'; }), 'deliver');
+    return out;
+  }
+  // Approve = pieces waiting at stage 7; Due Today = dated pieces due today (no ring: due today is not late); Sold (this week): Studio's state keeps
+  // running sales totals only (results.sales), never dated sales, so it is "–" until the engine sends dated sales. Never invented.
+  function mainNums(ok) {
+    var rv = ok ? reviews().filter(function (a) { return !isTest(a); }).length : null, dt = ok ? dueTodayL().length : null;
+    return [{ label: 'Approve', value: rv, href: '#/review' }, { label: 'Due Today', value: dt, href: '#/me/today' },
+      { label: 'Sold', value: null, href: '#/library', aria: 'Sold this week: not recorded by date yet. Open the Library' }];
+  }
+  function vMe(error) {
+    if (error) return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'studio', rows: [], nums: mainNums(false), doHref: '#/do', error: error });
+    return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'studio', rows: mainRows(), nums: mainNums(true), doHref: '#/do' });
+  }
+  // Main's numbers and section heads open their own list (Lisa, 2 Nov: "anywhere you give info should be clickable to get it").
+  var ME_LISTS = { ok: 'On track', need: 'Needs you', over: 'Overdue', gate: 'Gates', hand: 'Tasks', today: 'Due today' };
+  function meList(k) {
     var live = all().filter(function (a) { return !isTest(a) && !sent[a.id] && a.stage < 8; });
-    var needs = live.filter(function (a) { return needOf(a); }).sort(function (a, b) { return urgency(a) - urgency(b); });
-    var over = live.filter(lateOf).length, onTrack = live.filter(function (a) { return a.stage >= 1 && !needOf(a); }).length;
-    var h = new Date().getHours(), hello = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
-    var today = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
-    var ok = function (t) { return '<p class="okempty">' + t + '</p>'; };
-    var sect = function (icon, word, href, l, kind, none) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + '<a href="' + href + '">' + word + '</a> ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : ok(none || 'Nothing waiting.')) + '</div>'; };
-    var mrow = function (a) { var sl = stSlot(a.stage); return '<a class="mrow" data-mrow="' + esc(a.id) + '" href="#/asset/' + encodeURIComponent(a.id) + '" style="--sc:var(--ljr-' + sl + ');--tint:var(--ljr-' + sl + '-tint)"><span class="ic" aria-hidden="true"></span><span class="t">' + esc(bare(a)) + '<small>' + esc(needOf(a)) + ' · Step ' + a.stage + ': ' + esc(STAGES[a.stage]) + '</small></span>' + datePill(a) + '</a>'; };
-    var nx = needs[0];
-    return '<div class="hello"><h2>' + hello + ', Lisa</h2><p class="sub">' + esc(today) + '</p></div>' +
-      '<details class="card howto" data-howto><summary class="btn">' + I('info-circle') + 'How Studio works</summary><ol>' +
-        '<li>An idea moves along the Line, one step at a time.</li>' +
-        '<li>The Studio helper, Claude and Grok make the pieces; you decide at the gates.</li>' +
-        '<li>Nothing is sent, shared or paid for without your own tap.</li></ol></details>' +
-      '<div class="three" data-three><span class="sum" data-sum="ok"><span class="big">' + onTrack + '</span>On track</span><span class="sum need" data-sum="need"><span class="big">' + needs.length + '</span>Needs you</span><span class="sum over" data-sum="over"><span class="big">' + over + '</span>Overdue</span></div>' +
-      '<div class="mecards">' +
-      '<section class="mcard next" data-next>' + '<h3>Next</h3>' + (nx ? '<div class="t">' + esc(bare(nx)) + '</div><p class="sub">' + esc(needOf(nx)) + (nx.dated && nx.eventDate ? ' · due ' + dmy(Date.parse(nx.eventDate)) : '') + '</p><a class="btn" href="#/asset/' + encodeURIComponent(nx.id) + '">Open it</a>' : ok('Nothing needs you.')) + '</section>' +
-      '<section class="mcard need-card" data-needs><h3>Needs you today ' + icnt(needs.length) + '</h3>' + (needs.length ? needs.slice(0, 7).map(mrow).join('') : ok('Nothing needs you.')) + '</section>' +
-      '</div>' +
-      findBar('me', meItems()) + sect('eye-check', 'Approve', '#/review', R, 'review', 'All decided. Nothing waiting.') + sect('traffic-lights', 'Gates', '#/assets', G, 'gate') + sect('hand-finger', 'Tasks', '#/assets?fit=hand', H, 'hand') + vSuggest();
+    var l = k === 'ok' ? live.filter(function (a) { return a.stage >= 1 && !needOf(a); }) : k === 'need' ? live.filter(function (a) { return needOf(a); }).sort(function (a, b) { return urgency(a) - urgency(b); }) :
+      k === 'over' ? live.filter(lateOf) : k === 'gate' ? gates() : k === 'hand' ? hands() : k === 'today' ? dueTodayL() : [];
+    return '<div class="card" data-melist="' + esc(k) + '"><div class="sect"><a class="house-go" href="#/me" aria-label="Back to Main">Main</a> \u203a ' + esc(ME_LISTS[k] || k) + ' ' + cnt(l.length) + '</div>' +
+      (l.length ? l.map(function (a) { return row(a, kindFor(a), true); }).join('') : '<p class="okempty">Nothing here</p>') + '</div>';
   }
   // Studio's own suggestions from the learning loop: nothing changes until Lisa accepts.
   function vSuggest() {
@@ -1249,23 +1272,32 @@
   // Decide: everything only Lisa can decide. Do: everything only Lisa can do.
   function vDecide() {
     var s = fsOf('decide'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
-    var sect = function (icon, word, l, kind) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + '</div>' + (l.length ? l.map(function (a) { return row(a, kind, true); }).join('') : '<p class="okempty">' + (kind === 'review' ? 'All decided. Nothing waiting.' : 'Nothing waiting.') + '</p>') + '</div>'; };
+    var sect = function (icon, word, l, kind) { return l.length ? '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + '</div>' + l.map(function (a) { return row(a, kind, true); }).join('') + '</div>' : ''; };
     if (viewOf('decide') === 'board') {
       var G = keep(gates()), R = keep(reviews()), L = S.suggestions.filter(function (g) { return !pend['sug|' + g.id]; });
       return findBar('decide', gates().concat(reviews())) + board('decide', [
         { attr: 'data-sect="gate"', slot: 4, badge: I('traffic-lights'), name: 'Gates', items: G, body: G.map(function (a) { return row(a, 'gate', true); }).join('') },
-        { attr: 'data-sect="review"', slot: 6, badge: I('eye-check'), name: 'Review', items: R, none: 'All decided. Nothing waiting.', body: R.map(function (a) { return row(a, 'review', true); }).join('') }
+        { attr: 'data-sect="review"', slot: 6, badge: I('eye-check'), name: 'Review', items: R, none: 'All decided.', body: R.map(function (a) { return row(a, 'review', true); }).join('') }
       ].concat(L.length ? [{ attr: 'data-sect="suggest"', slot: 7, badge: I('bulb'), name: 'Suggestions', items: [], n: L.length, need: L.length, body: sugRows(L) }] : []));
     }
-    return findBar('decide', gates().concat(reviews())) + sect('traffic-lights', 'Gates', keep(gates()), 'gate') + sect('eye-check', 'Review', keep(reviews()), 'review') + vSuggest();
+    var body = sect('traffic-lights', 'Gates', keep(gates()), 'gate') + sect('eye-check', 'Review', keep(reviews()), 'review') + vSuggest();
+    return findBar('decide', gates().concat(reviews())) + (body || oneEmpty('decide'));
+  }
+  // The lists that were Main's summary (On track / Needs you / Overdue, and Needs you today) now open from the top of Do.
+  function meLinks() {
+    var live = all().filter(function (a) { return !isTest(a) && !sent[a.id] && a.stage < 8; });
+    var n = { need: live.filter(function (a) { return needOf(a); }).length, ok: live.filter(function (a) { return a.stage >= 1 && !needOf(a); }).length, over: live.filter(lateOf).length };
+    return '<div class="pills" data-melinks>' + [['need', 'Needs you'], ['over', 'Overdue'], ['ok', 'On track']].map(function (x) {
+      return '<a class="pill" href="#/me/' + x[0] + '" data-melink="' + x[0] + '" aria-label="' + x[1] + ': ' + n[x[0]] + '. Open the list">' + x[1] + ' ' + (x[0] === 'over' && n.over ? '<span class="cnt need">' + n.over + '</span>' : cnt(n[x[0]])) + '</a>'; }).join('') + '</div>';
   }
   function doItems() { var out = hands().slice(); all().forEach(function (a) { if (out.indexOf(a) < 0 && ((a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent') || (a.delivery && a.delivery.status === 'ready (not sent)'))) out.push(a); }); return out; }
   function vDo() {
     var s = fsOf('do'), keep = function (l) { return sortA(l.filter(function (a) { return hit(a, s); }), s.sort); };
     var H = keep(hands()), A = all().filter(function (a) { return a.ask && a.ask.status && a.ask.status !== 'answered' && a.ask.status !== 'sent'; }), D = all().filter(function (a) { return a.delivery && a.delivery.status === 'ready (not sent)'; }), Rz = library().filter(function (a) { return !a.results || !a.results.last; });
-    var sect = function (icon, word, l, kind, note) { return '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + (note ? info(note) : '') + '</div>' + (l.length ? l.map(function (a) { return row(a, kind === 'hand' ? 'hand' : kindFor(a), true); }).join('') : '<p class="okempty">Nothing waiting.</p>') + '</div>'; };
+    var sect = function (icon, word, l, kind, note) { return l.length ? '<div class="card" data-sect="' + kind + '"><div class="sect">' + I(icon) + word + ' ' + cnt(l.length) + (note ? info(note) : '') + '</div>' + l.map(function (a) { return row(a, kind === 'hand' ? 'hand' : kindFor(a), true); }).join('') + '</div>' : ''; };
     A = keep(A); D = keep(D); Rz = keep(Rz);
-    return findBar('do', doItems().concat(Rz)) + sect('hand-finger', 'Tasks', H, 'hand') + sect('message-question', 'Questions to send', A, 'asks', 'Studio helper off or email off: send the link yourself') + sect('package-export', 'Ready to send', D, 'deliver', 'Email off: send the link yourself') + sect('chart-bar', 'Results to add', Rz, 'results');
+    var body = sect('hand-finger', 'Tasks', H, 'hand') + sect('message-question', 'Questions to send', A, 'asks', 'Studio helper off or email off: send the link yourself') + sect('package-export', 'Ready to send', D, 'deliver', 'Email off: send the link yourself') + sect('chart-bar', 'Results to add', Rz, 'results');
+    return meLinks() + findBar('do', doItems().concat(Rz)) + (body || oneEmpty('do'));
   }
   function vIdeas() {
     var inbox = ST.inboxFolderId ? '<a class="pill" href="https://drive.google.com/drive/folders/' + esc(ST.inboxFolderId) + '" target="_blank" rel="noopener" title="Inbox: drop files here" style="--hc:var(--ljr-7-text)">' + I('inbox') + 'Inbox</a>' : '';
@@ -1275,7 +1307,7 @@
     var a = byId(id); if (!a) return '<div class="card">Not found. <a href="#/assets">Assets</a></div>';
     var b = brandOf(a);
     return '<div class="card appcard"><div class="hero"><div><h2>' + esc(bare(a)) + '</h2><p>' + esc(b.name) + ' · <span class="step">Step ' + esc(+a.stage) + ':</span> ' + esc(STAGES[a.stage]) + (infinityLink(a) ? ' · ' + infinityLink(a) : '') + '</p></div></div>' +
-      row(a, kindFor(a)) +
+      row(a, kindFor(a)) + stepsList(a) +
       STAGES.map(function (name, i) { return '<div class="stage ' + (i < a.stage ? 'd' : i === a.stage ? 'c' : '') + '"><span class="n" aria-hidden="true">' + (i < a.stage ? '\u2713' : i === a.stage ? '\u25cf' : '') + '</span><span class="step">Step ' + i + ':</span> ' + name + (i < a.stage ? ' <span class="sr">done</span>' : i === a.stage ? ' <span class="sr">now</span>' : '') + '</div>'; }).join('') +
       '<p><a href="#/assets">← Assets</a></p></div>';
   }
@@ -1559,7 +1591,7 @@
   }
   function libSuggest(table) {
     var key = 'ls|' + table;
-    return '<div class="card libsug" data-libsuggest="' + table + '"><div class="sect">' + I('bulb') + 'Suggest a change</div><p class="muted">Anyone on the team can suggest. It waits for Lisa to accept.</p>' +
+    return '<div class="card libsug" data-libsuggest="' + table + '"><div class="sect">' + I('bulb') + 'Suggest a change</div>' +
       '<form class="ask" data-libsug="' + table + '"><textarea class="fin" id="lsbox-' + table + '" data-draft="' + key + '" maxlength="1000" rows="2" aria-label="Suggestion" placeholder="What should change, or what should we add?" required>' + esc(drafts[key] || '') + '</textarea><button class="btn" type="submit"' + dis() + '>' + I('send') + 'Suggest</button></form>' +
       (libSent['s|' + table] ? '<p class="sent" data-libsent>' + esc(libSent['s|' + table]) + '</p>' : '') + '</div>';
   }
@@ -1641,7 +1673,7 @@
   function vEngine() {
     var on = studioOn(), h = S.health || {};
     return '<div class="card"><div class="grp">' + I('engine') + 'Studio helper<button class="pill" type="button" data-action="studio" aria-label="Studio on or off" aria-pressed="' + on + '"' + dis() + own() + '><span class="sw' + (on ? ' on' : '') + '"><i></i></span>' + (on ? 'On' : 'Off') + '</button></div>' +
-      '<p class="muted">' + (h.lastRun ? 'Last run ' + dmy(Date.parse(h.lastRun)) + ' ' + hm(Date.parse(h.lastRun)) : 'Never run') + (S.generated_at ? ' · read ' + hm(Date.parse(S.generated_at)) : '') + '</p>' +
+      makerLine() + '<p class="muted">' + (h.lastRun ? 'Last run ' + dmy(Date.parse(h.lastRun)) + ' ' + hm(Date.parse(h.lastRun)) : 'Never run') + (S.generated_at ? ' · read ' + hm(Date.parse(S.generated_at)) : '') + '</p>' +
       (h.jobs || []).map(function (j) { var ok = j.result === 'OK'; return '<div class="row" style="--c:var(--ljr-' + (ok ? 5 : 2) + ')"><span class="bar"></span><div class="txt"><b>' + esc(j.job) + '</b>' + (j.note ? '<div class="muted">' + esc(String(j.note).slice(0, 80)) + '</div>' : '') + '</div><span class="meta">' + esc(ok ? 'OK' : j.result) + '<br>' + (Date.parse(j.last) ? hm(Date.parse(j.last)) : '') + '</span></div>'; }).join('') +
       (ST.rootFolderId ? '<p><a href="https://drive.google.com/drive/folders/' + esc(ST.rootFolderId) + '" target="_blank" rel="noopener">Studio folder</a></p>' : '') + '</div>';
   }
@@ -1966,14 +1998,14 @@
     Array.prototype.forEach.call(document.querySelectorAll('nav.tabs [data-nav]'), function (a) { a.setAttribute('aria-current', a.getAttribute('data-nav') === grp ? 'page' : 'false'); });
     $('tabs').classList.toggle('hidden', !signedIn); $('newBtn').classList.toggle('hidden', !signedIn);
     $('signInBtn').classList.toggle('hidden', signedIn);
-    $('signOutBtn').classList.toggle('hidden', !signedIn); $('moreWrap').classList.toggle('hidden', !signedIn); document.documentElement.classList.toggle('signed-in', !!signedIn);
+    $('signOutBtn').classList.toggle('hidden', !signedIn); document.documentElement.classList.toggle('signed-in', !!signedIn);
     $('refreshBtn').classList.toggle('hidden', !signedIn);
     var ready = signedIn && S && !err;
     $('enginePill').classList.toggle('hidden', !ready); $('budgetPill').classList.toggle('hidden', !ready);
     $('exBanner').classList.toggle('hidden', !(ready && EX));
     var v = $('view');
     if (!signedIn) { $('stamp').textContent = ''; v.innerHTML = '<div class="card"><b>Studio</b> <button class="btn main" type="button" data-action="signin"><svg class="i"><use href="#i-in"/></svg>Sign in with Google</button></div>'; return; }
-    if (err) { v.innerHTML = '<div class="banner">' + esc(err) + '</div>'; return; }
+    if (err) { v.innerHTML = '<div class="banner">' + esc(err) + '</div>' + (!route[0] || route[0] === 'me' && !route[1] ? vMe(String(err)) : ''); return; }
     if (!S) { v.innerHTML = '<div class="card muted">Reading…</div>'; return; }
     headerPills();
     var waiting = function (tab) { return function (a) { return !sent[a.id] && (fsOf(tab).test || !isTest(a)); }; };
@@ -1990,7 +2022,7 @@
     sideOn = !!bt && viewOf(bt) === 'board' && !phone();
     v.innerHTML = route[0] === 'ideas' ? vIdeas() : route[0] === 'assets' ? list('assets', inProgress(), kindFor) : route[0] === 'review' ? list('review', reviews(), function () { return 'review'; }) :
       route[0] === 'brands' ? vBrands() : route[0] === 'library' ? list('library', library(), function () { return 'lib'; }) : route[0] === 'kits' ? vKits() : route[0] === 'tools' ? vTools() : route[0] === 'new' ? vNew() :
-      route[0] === 'asset' ? vAsset(decodeURIComponent(route[1] || '')) : route[0] === 'engine' ? vEngine() : route[0] === 'decide' ? vDecide() : route[0] === 'do' ? vDo() : route[0] === 'line' ? vLine() : vMe();
+      route[0] === 'asset' ? vAsset(decodeURIComponent(route[1] || '')) : route[0] === 'engine' ? vEngine() : route[0] === 'decide' ? vDecide() : route[0] === 'do' ? vDo() : route[0] === 'line' ? vLine() : route[0] === 'me' && route[1] ? meList(route[1]) : vMe();
     var sn = subNav(route[0]); if (sn) v.insertAdjacentHTML('afterbegin', bt ? '<div class="vtop">' + sn + vswitch(bt) + '</div>' : sn);
     fitBoard(keep);
   }
@@ -2010,8 +2042,7 @@
     if (f === 'fq') { var tb = barTab(); if (!tb) return; fsOf(tb).q = e.target.value; saveFs(); var p = e.target.selectionStart; render(); var b = document.querySelector('[data-f="fq"]'); if (b) { b.focus(); try { b.setSelectionRange(p, p); } catch (x) {} } }
   });
   document.addEventListener('click', function (e) {
-    if (!e.target.closest('.lookwrap, [data-action="lookmore"]') && !document.getElementById('lookMenu').classList.contains('hidden')) showLook(false);
-    if (!e.target.closest('#moreBtn') && !$('moreMenu').classList.contains('hidden')) showMore(false);
+    if (!e.target.closest('.lookwrap') && !document.getElementById('lookMenu').classList.contains('hidden')) showLook(false);
     var lk0 = e.target.closest('[data-look]'); if (lk0) { look[lk0.getAttribute('data-look')] = lk0.getAttribute('data-val'); try { localStorage.setItem('dash-look', JSON.stringify(look)); } catch (x) {} applyLook(); showLook(true); fitBoard(boardScroll()); return; }
     if ((filtersOpen || sortOpen) && !e.target.closest('.fpanel, #filtersBtn, #sortBtn, [data-fxoff]')) { closeF(true); }
     var fo = e.target.closest('[data-fxoff]'); if (fo) { var t4 = barTab(); if (t4) { var s4 = fsOf(t4), k4 = fo.getAttribute('data-fxoff'), i4 = s4[k4].indexOf(fo.getAttribute('data-val')); if (i4 >= 0) s4[k4].splice(i4, 1); saveFs(); } render(); var fb = $('filtersBtn'); if (fb) fb.focus(); return; }
@@ -2035,9 +2066,6 @@
     if (a && !a.disabled) {
       var k = a.getAttribute('data-action');
       if (k === 'look') { showLook(document.getElementById('lookMenu').classList.contains('hidden')); return; }
-      if (k === 'moremenu') { showMore($('moreMenu').classList.contains('hidden')); return; }
-      if (k === 'moredone') { showMore(false, true); return; }
-      if (k === 'lookmore') { showMore(false); showLook(true); var lf = document.querySelector('#lookMenu button'); if (lf) lf.focus(); return; }
       if (k === 'signin') auth.requestInteractive(CFG.money && CFG.money.owner ? { login_hint: CFG.money.owner } : {}); else if (k === 'signout') signOut(); else if (k === 'refresh') load();
       else if (k === 'filters') { filtersOpen = !filtersOpen; sortOpen = false; render(); fFocus(); }
       else if (k === 'sort') { sortOpen = !sortOpen; filtersOpen = false; render(); fFocus(); }
@@ -2096,12 +2124,10 @@
   window.addEventListener('resize', function () { if (S && signedIn && phone() !== wasPhone) { wasPhone = phone(); render(); } else fitBoard(boardScroll()); });
   var wasPhone = phone();
   // Filter and Sort panels: focus goes in on open and back to the button on close (Done, Esc, a click outside).
-  // Phone "More" menu: focus goes to its first item on open and back to the button on close.
-  function showMore(on, back) { var m = $('moreMenu'); m.classList.toggle('hidden', !on); $('moreBtn').setAttribute('aria-expanded', String(on)); if (on) { var f = m.querySelector('button, a'); if (f) f.focus(); } else if (back) $('moreBtn').focus(); }
   function fFocus() { var p = document.querySelector('.fbar > .fpanel'); if (p) { var f = p.querySelector('.on, button'); if (f) f.focus(); } }
   function closeF(quiet) { var back = filtersOpen ? 'filtersBtn' : sortOpen ? 'sortBtn' : null; filtersOpen = sortOpen = false; render(); if (back && !quiet) { var b = $(back); if (b) b.focus(); } }
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (filtersOpen || sortOpen)) { closeF(); return; } if (e.key === 'Escape' && !$('moreMenu').classList.contains('hidden')) showMore(false, true); });
-  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('lookMenu').classList.contains('hidden')) { showLook(false); var lb0 = document.getElementById('lookBtn'); (lb0.offsetParent ? lb0 : $('moreBtn')).focus(); } });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && (filtersOpen || sortOpen)) { closeF(); return; } });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !document.getElementById('lookMenu').classList.contains('hidden')) { showLook(false); document.getElementById('lookBtn').focus(); } });
   window.addEventListener('hashchange', function () { openPanel = null; filtersOpen = sortOpen = false; formErr = {}; formNote = ''; fromUrl(); render(); window.scrollTo(0, 0); });
   // "/" puts the cursor in this page's search box (before toolkit.js's own search dialog).
   window.addEventListener('keydown', function (e) {

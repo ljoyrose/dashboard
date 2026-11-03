@@ -46,6 +46,7 @@ If any of these breaks, the tick turns red and says which page.
 | PC-Personal and Drive check (rename, then bin) | `#/personal`, `#/usb` | 14 |
 | Clean-up safety (keepers, folders, resume) | `#/bin`, `#/personal`, `#/usb`, `#/changes` | 13 |
 | Header contract (column names) | list of expected columns | 12 |
+| Hub data contracts (Food, Marketplace, Studio: names, types, red/green) | `tests/contract/*.contract.spec.js`, run by `tests/mocked/hub-contracts.spec.js` | 47 |
 | Dark mode, accessibility, smallest text | all three pages | 18 |
 | Phone-sized screen (390 × 844) | all three pages | 3 |
 | Learning loop and alarm wiring (the safety net checks itself) | this file, `.github`, `tests/` | 10 |
@@ -148,6 +149,13 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - The file `tests/contract/expected-headers.json` lists the **column names** (names only, no figures) each Drive file should have.
 - The robot checks that the sample files, the page code and that list all agree, and that the pages still read the columns they read before. A column renamed in the page or in the samples turns the tick red.
 - This is how a renamed column gets noticed even though the pretend Drive can never rename one. To check your **real** files, see "Check your real column names".
+
+**Hub data contracts (Food, Marketplace, Studio)**
+- `tests/contract/expected-headers.json` also lists the RR_FOOD tabs and the Marketplace Open work tab and RR_LISTINGS.csv. `tests/contract/expected-state.json` lists the field names and types inside `studio-state.json` and the Marketplace wake file.
+- Each hub has invented sample data. If an engine drops, renames or adds a column or field, puts the wrong kind of value in it, or writes an empty file, the robot names the kind of change: MISSING, RENAMED, EXTRA, WRONG_TYPE or EMPTY.
+- The checks run each page's own reading code on the samples. `CONTRACT_PROVE_RED=1` flips every failure case, so you can see each one go red.
+- Product ideas (card detail and request file): `tests/contract/marketplace-ideas.contract.spec.js`, field lists in `tests/contract/expected-ideas.json`, rules in `marketplace/ideas.js`. See `docs/marketplace-ideas/CONTRACT.md`.
+- Rebuild the lists after a deliberate change: `node tests/contract/make-expected.js`, then read the diff.
 
 **Reading CSV files**
 - Commas inside quotes, quotes inside quotes, line breaks inside quotes.
@@ -254,6 +262,7 @@ The pretend Drive cannot tell us if a column was renamed in your real files. Thi
 1. In Google Drive, download the files to check (for example the Money index files and the `BLD-app-tables` files) into one folder on your computer.
 2. In a terminal in the `dashboard` folder: `node tests/contract/check-real-headers.js /path/to/that/folder`
 3. It prints `ok` or `PROBLEM` per file and names any missing or renamed column. It reads only the top of each file, prints column names only, never values, and sends nothing anywhere.
+4. Food, Marketplace and Studio too: download each RR_FOOD tab as CSV (`RR_FOOD - Orders.csv` and so on), the Open work tab (`… - Marketplace.csv`), `RR_LISTINGS.csv`, `MKT-WAKE-WEBAPP.json` and `studio-state.json` into the same folder. Add `--counts` to print counts only. `--dry-run` tries it on the invented samples.
 
 GitHub does not run this one, on purpose: it would need a Google key stored in GitHub, and none is stored.
 
@@ -287,7 +296,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 18 Oct 2026 | The teeth check showed the "RR_ item inside a ZZ_ folder" guard could be removed without any test noticing (a second, wider check hid it) | "an RR_ item deep inside a ZZ_DELETE_ folder keeps the whole folder out of the bin, even with Select all" |
 | 18 Oct 2026 | Same for the "ZZ_ item inside an RR_ folder" guard | "a ZZ_DELETE_ item anywhere below an RR_ folder is left alone, even with a ledger row" |
 | 18 Oct 2026 | Changing screen left keyboard focus on the old menu item, so screen readers did not say where you were | "home: clicking a menu item puts focus on the screen title" |
-| 18 Oct 2026 | The Map led with links and counts, so what needed Lisa today was spread over several cards | "shows at most 7 rows, overdue (red) first, each row a link, and the tab title carries the count" |
+| 18 Oct 2026 | The Map led with links and counts, so what needed Lisa today was spread over several cards | "shows at most 5 rows, overdue (red) first, each row a link, and the tab title carries the count" |
 | 18 Oct 2026 | Money only said "runs dry on X" in words, so a forecast dip was easy to miss | "a forecast that goes below zero marks the runs-dry date in red" |
 | 20 Oct 2026 | Factory: a send named "Links · …" for the app "LJR7 Links" was filed under "Factory", so Lisa could not find it in Do | "a send named Links · P5 sits under its app Sample Links…" |
 | 20 Oct 2026 | Factory: the selected tab and chip showed a double line (a focus ring around the tab, an inner shadow inside the chip). House look, 28 Oct: a selected chip is the 1px line drawn inside, the tab only widens its bar, focus is a 2px ring | "after clicking a tab and a chip: selected chips wear the 1px inside line, the tab only its wider bar; focus is 2px" |
@@ -296,7 +305,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 19 Oct 2026 | Lisa still signed in twice: the sign-in lived in one tab only, so Money in a new tab or window, or the installed app, asked again | "sign in on home, open Money Hub and CD Hub: each opens in a new tab already signed in, no prompt" |
 | 19 Oct 2026 | CD Hub Today: "0 of 23 cabins with a temperature" did nothing when clicked (a button with no action) | "CD Hub Today: the temperature tile opens The round, where temperatures are entered" |
 | 19 Oct 2026 | Hard rule 14: the Bin (and Drive, Changes, search) listed Karen - SHARED | "is in config, never queried and never shown on Map, Drive, Bin, Changes, PC-Personal or search" |
-| 25 Oct 2026 | Main dashboard: the selected menu pill had lost its colour fill and showed an odd left edge, and the "You are here" title showed a square focus box after each screen change | "the selected tab has one clean border and a colour fill; the "You are here" title has no box" |
+| 25 Oct 2026 | Main dashboard: the selected menu pill had lost its colour fill and showed an odd left edge, and the "You are here" title showed a square focus box after each screen change | "the selected view under More has one clean edge and no fill (the tab picks have no fills); the "You are here" title has no box" (renamed 2 Nov 2026: Lisa's tab picks drop the fill) |
 | 25 Oct 2026 | Marketplace V2: the bottom tab bar covered the last button on long pages (the page's bottom space was lost to the `.wrap` rule) | "the last button on a long page can always be scrolled clear of the bottom tab bar @regression" |
 | 29 Oct 2026 | Marketplace: the public pages (hub and privacy policy) showed a personal email address (sign-in hint, Gmail link, contact) | "public pages hold no email address: no "@" address, no login_hint, no authuser (Stage 0A, D1 = B) @regression" |
 | 29 Oct 2026 | Marketplace: the same check on what the page actually shows (text and links), signed out, on every tab and on the privacy page | "signed out, signed in on every tab, and the privacy page: no email address in the shown text or any link @regression" |
@@ -355,6 +364,7 @@ Each entity page draws its `FORECAST.csv` as a line, with a dashed £0 line, the
 
 - The agreed rules (Lisa, 28 Oct 2026) are written once: the numbers and colours in `tokens.css` (including Look › Dark), the shared parts in `house.css` (buttons, pills, counts, date pills, the hover rule, bottom tabs, bars, cards, the phone Filter button). Every hub loads `tokens.css`, then `house.css`, then its own layout.
 - `tests/mocked/house-look.spec.js` holds every hub to the same rules by computed style, on every view. `HOUSE_AUDIT=<file>` runs every combination (light and dark, warm and cool, 1280 and 390, Look › Dark) and writes each deviation to that file instead of failing.
+- Type (Lisa, 2 Nov 2026): one font (Lexend), weights 400 / 500 / 600, and only three sizes, as tokens in `tokens.css`: 18px headings, card titles, big numbers and the hub name; 15px body; 14px everything else (labels, tabs, counts, pills, tables, menus). Every ringed number is 14px in one box (30 x 24 on the page, 24 x 24 on a bottom tab), ring only. `tests/mocked/fonts.spec.js` reads every word on all 8 pages at 1280 and 390, on a few views and the open More and Look menus.
 - Checks that read a value after a hover use one shared helper, `tests/support/settle.js`, which waits for the colour-bar transition to finish instead of a fixed pause.
 
 ## Phone install and keyboard keys
@@ -376,7 +386,7 @@ A quote in the words is escaped before it reaches Drive. Signed out, nothing is 
 
 A Google Apps Script owned by the business account (the "bin guard", code kept in Drive, not in this public repo) looks in the bins every day at about 8am UK. Anything whose name does not start `ZZ_DELETE_` or `ZZ_SUPERSEDED_` is taken back out and put in **LD > *00 Current > 00 CHECK**. It never deletes for good and never empties a bin.
 
-The Bin page shows 00 CHECK with ticks, **Select all**, **Clear**, **ZZ_DELETE** and **Refer to AI**. The page only **reads** 00 CHECK. The two buttons open the guard's own Google page (a web app that only puppyclassroom.com accounts can open, and only Lisa can use) with the ticked ids; nothing changes until Lisa presses the button there. RR_ names are never ticked. The buttons stay off until the web app exists: it writes its address into `BIN-GUARD-WEBAPP.json` in *00 Current the first time Lisa opens it, or you can put the address in `config.js` (`binGuard.webAppUrl`). Only a `https://script.google.com/.../exec` address is accepted. Tests: `tests/mocked/bin-guard.spec.js`.
+The Bin page shows 00 CHECK ("Check: put back by the bin guard") with ticks, **Select all**, **Clear**, **Approve binning** and **Ask the AI to sort**. The page only **reads** 00 CHECK. The two buttons open the guard's own Google page (a web app that only puppyclassroom.com accounts can open, and only Lisa can use) with the ticked ids; nothing changes until Lisa presses the button there. RR_ names have no tick box. Until the web app exists the card shows **Waiting for the tidy bot** instead of the buttons: it writes its address into `BIN-GUARD-WEBAPP.json` in *00 Current the first time Lisa opens it, or you can put the address in `config.js` (`binGuard.webAppUrl`). Only a `https://script.google.com/.../exec` address is accepted. Tests: `tests/mocked/bin-guard.spec.js`.
 
 ## Where things live
 
@@ -392,3 +402,26 @@ The Bin page shows 00 CHECK with ticks, **Select all**, **Clear**, **ZZ_DELETE**
 | Settings | `playwright.config.js`, `package.json` |
 
 Nothing in the dashboard pages themselves was changed to add these tests (Job 6 or Job 6b).
+
+## Bin page order (TidyUp stage 5)
+
+`tests/mocked/bin-page.spec.js` checks the Bin page follows the job file's section 8: Needs you now, Ready to bin (first card, open), Check, Not ready yet, Already in the bin, Log, Dropbox (closed, last). Only **Bin these** is red; no disabled tick boxes; no internal names (ZZ_, ledger, RR_, E02, UNSURE, lcme-grok) in the visible text outside file names, tooltips and the "why" fold; one confirm of at most 40 words bins a shared-drive row and a Work My Drive row together, and Cancel bins nothing.
+
+## Bin page Log reads RUN-LOG (TidyUp stage 7)
+
+`tests/mocked/bin-log.spec.js` checks the Log reads `RUN-LOG.csv` from the folder in `config.js` and shows only the last 7 days of runs, newest first, with the time in UK time (GMT or BST, including a `date_uk` cell with no offset), the engine, Dry run or Live, the counts and the result, plus the distinct lessons. A Google Sheet of the same name is read the same way. With the shipped placeholder (no folder id), no file, only old runs, or no `date_uk` column it says "No runs logged yet". A failed read shows the same neutral text, counts no problem, and Bin these still bins. The page only reads the file.
+
+RUN-LOG.csv column contract (the private repo writes it; header row first; columns matched by name in any order; extra columns ignored):
+
+| Column | What goes in it |
+|---|---|
+| `date_uk` | When the run ended, ISO 8601. With an offset (`2026-10-30T14:05:00+00:00` or `Z`) preferred; without one it is read as UK time. Required. |
+| `job` (or `engine`) | Which engine ran, e.g. `bin-engine`, `bin-guard`. |
+| `place` | The shared drive, Work My Drive or Dropbox the run looked at. |
+| `mode` | `dry` for a dry run; `mark`, `trash` or `live` for a live run. |
+| `found` | Candidates looked at (whole number). |
+| `changed` | Items renamed or binned (whole number; 0 on a dry run). |
+| `ledger_rows_added` | Delete-ledger rows written (whole number). |
+| `errors` | Errors in the run (whole number). |
+| `result` | `ok`, `partial` or `failed`. Blank = ok when errors is 0, else partial. |
+| `lesson` | One short line, or blank. |

@@ -1,18 +1,19 @@
 // Factory house look (Lisa's rules, 28 Oct 2026), checked by computed style on every view, light and dark.
 // 1 no solid colour fills (tint inside a 1px line; the new-comment dot and the switch knob are the two allowed solids)
 // 2 no coloured words   3 1px lines; every pressable rests on one clear control line (3:1)   4 one 12px radius
-// 5 dark frame top and bottom; light tabs with no ring, a colour bar that widens   6 counts are a fixed 30 x 22 pill
+// 5 dark frame top and bottom; light tabs with no ring, a colour bar that widens   6 counts are a fixed 30 x 24 pill (14px number)
 // 7 Lexend 400/600, nothing under 13px   9 date pills always ringed   10 hover: neutral = ink line + tint; meaning = own colour
 // 13 friendly empty states. Plus: no colour written in the page. Pretend Google and Drive; invented data only.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { settle } = require('../support/settle');
 const { build } = require('../fixtures/factory/state');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'factory', 'index.html'), 'utf8');
 const LOGS = require('../support/world').IDS.factoryLogs;
-const VIEWS = ['rooms', 'me', 'decide', 'do', 'docs', 'today', 'card/869fjxpc2', 'room/rig', 'item/869fk9d1r', 'app/links', 'health', 'all', 'stuck', 'new'];
+const VIEWS = ['rooms', 'me', 'me/all', 'decide', 'do', 'docs', 'today', 'card/869fjxpc2', 'room/rig', 'item/869fk9d1r', 'app/links', 'health', 'all', 'stuck', 'new'];
 const PRESS = '#view .btn, #view button.pill, #view a.pill, #view .fbtn, #view .ch, #view .more, #view .copy, #view .undo, #view label.date, #view a.chip, #view a.need, ' +
   '#view .ico, #view .flagb, #view .mark, #view .plus, #view a.lk, #view button.lk, #view .sbox, #appMenu a.pill';
 // Meaning buttons (Yes / No / Off) and status pills that are links rest on their own colour line (Lisa's approved picture, 28 Oct).
@@ -73,22 +74,23 @@ test.describe('Factory look: rules by computed style on every view', () => {
           const F = window.__fx, out = [];
           const ink = F.tok('--ink'), muted = F.tok('--muted'), frameInk = F.tok('--frame-ink'), ctl = F.tok('--ctl');
           const meaning = ['--r-risk', '--r-warn', '--r-ok', '--r-ops'].map(F.tok);
-          // 2 + 7: every element that holds words: 13px or more, weight 400 or 600, ink / grey (frame ink on the frame).
+          // 2 + 7: every element that holds words: 14 / 15 / 18px only, weight 400 / 500 / 600 (Lisa's type, 2 Nov), ink / grey (frame ink on the frame).
           document.querySelectorAll('body *').forEach((e) => {
             if (!F.seen(e) || e.closest('svg')) return;
             if (!Array.from(e.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) return;
             const cs = getComputedStyle(e);
-            if (parseFloat(cs.fontSize) < 13) out.push('under 13px: ' + F.what(e) + ' ' + cs.fontSize);
-            if (!['400', '600'].includes(cs.fontWeight)) out.push('weight ' + cs.fontWeight + ': ' + F.what(e));
+            if (![14, 15, 18].includes(parseFloat(cs.fontSize))) out.push('size ' + cs.fontSize + ': ' + F.what(e));
+            if (!['400', '500', '600'].includes(cs.fontWeight)) out.push('weight ' + cs.fontWeight + ': ' + F.what(e));
             if (![ink, muted, frameInk].includes(cs.color)) out.push('coloured words ' + cs.color + ': ' + F.what(e));
             if (cs.textTransform === 'uppercase') out.push('uppercase: ' + F.what(e));
           });
-          // 4: one radius. 12px; round only on dots and rings; count pills 11px; the thin colour bars 2px.
+          // 4: one radius. 12px (count pills too, 24px high so their ends are round); round only on dots and rings; the thin colour bars 2px.
+          // The bottom tabs follow Lisa's tab picks (2 Nov): a round ring round the icon.
           document.querySelectorAll('body *').forEach((e) => {
             if (!F.seen(e) || e.closest('svg')) return;
             const r = getComputedStyle(e).borderTopLeftRadius;
             if (r === '0px') return;
-            const ok = r === '12px' || (r === '50%' && e.matches('.dot, .info, .new, .stage .n, .sw > i, .req')) || (r === '11px' && e.matches('.cnt, .n')) || (r === '2px' && e.matches('.bar'));
+            const ok = r === '12px' || (r === '50%' && e.matches('.dot, .info, .new, .stage .n, .sw > i, .req, nav.house-tabs .hic')) || (r === '2px' && e.matches('.bar'));
             if (!ok) out.push('radius ' + r + ': ' + F.what(e));
           });
           // 3 + 12: pressables rest on ONE clear 1px line (the control line, or their own meaning colour), 12px, 36px.
@@ -102,18 +104,20 @@ test.describe('Factory look: rules by computed style on every view', () => {
             const want = e.matches(MEANING) ? meaning : [ctl];
             if (!e.matches('.stat') && !want.includes(cs.borderTopColor)) out.push('press line colour ' + cs.borderTopColor + ' (want ' + want.join(' or ') + '): ' + F.what(e));
           });
-          // 6: count pills one fixed size; tab counts an amber ring with no fill; no empty count rings.
+          // 6: count pills one fixed size (30 x 24, a 14px number: Lisa's pick A, 2 Nov); no empty count rings. Tab counts follow Lisa's
+          // tab picks: a 24 x 24 round ring (22px line) with no fill, grey while waiting, rose when late.
           document.querySelectorAll('.cnt, nav.tabs .n, .fbtn .n').forEach((e) => {
             if (!F.seen(e)) return;
             const r = e.getBoundingClientRect(), cs = getComputedStyle(e), t = e.textContent.trim();
+            const tab = e.matches('nav.house-tabs .ht > .n'), H = 24, W = tab ? 24 : 30, LH = '22px';
             if (!t) out.push('empty count ring: ' + F.what(e.parentElement));
-            if (Math.round(r.height) !== 22 || (t.length <= 2 && Math.round(r.width * 100) / 100 !== 30)) out.push('count size ' + r.width + 'x' + r.height + ': ' + F.what(e));
-            if (cs.boxSizing !== 'border-box' || cs.lineHeight !== '20px' || cs.borderTopWidth !== '1px') out.push('count box ' + cs.boxSizing + ' ' + cs.lineHeight + ': ' + F.what(e));
+            if (Math.round(r.height) !== H || (W && t.length <= 2 && Math.round(r.width * 100) / 100 !== W)) out.push('count size ' + r.width + 'x' + r.height + ': ' + F.what(e));
+            if (cs.boxSizing !== 'border-box' || cs.lineHeight !== LH || cs.borderTopWidth !== '1px') out.push('count box ' + cs.boxSizing + ' ' + cs.lineHeight + ': ' + F.what(e));
           });
           document.querySelectorAll('nav.tabs .n').forEach((e) => {
             if (!F.seen(e)) return;
-            const cs = getComputedStyle(e);
-            if (cs.borderTopColor !== F.tok('--r-warn') || cs.backgroundColor !== 'rgba(0, 0, 0, 0)') out.push('tab count not an amber ring only: ' + cs.borderTopColor + ' / ' + cs.backgroundColor);
+            const cs = getComputedStyle(e), want = e.classList.contains('need') ? F.tok('--house-late') : F.tok('--house-ring');
+            if (cs.borderTopColor !== want || cs.backgroundColor !== 'rgba(0, 0, 0, 0)') out.push('tab count not a ring only (' + want + '): ' + cs.borderTopColor + ' / ' + cs.backgroundColor);
           });
           // 9: every date pill wears a 1px ring: rose late, amber soon, the grey control line otherwise (grey words).
           document.querySelectorAll('label.date').forEach((e) => {
@@ -130,7 +134,7 @@ test.describe('Factory look: rules by computed style on every view', () => {
   }
 
   test('the sample has what the rules talk about: rose and amber dates, Yes / No, an unread dot, the Factory switch', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');
     await expect(page.locator('#view label.date.over')).toHaveCount(1);
     await expect(page.locator('#view label.date.soon')).toHaveCount(1);
     await expect(page.locator('#view .btn.yes').first()).toBeVisible();
@@ -166,7 +170,7 @@ test.describe('Factory look: rules by computed style on every view', () => {
     expect(knob.w).toBeGreaterThanOrEqual(10);
     expect(knob.bg).toMatch(/^rgb\(/); // solid, no transparency
     expect(await page.evaluate((k) => window.__fx.ratio(k.bg, k.page), knob), 'knob against the button').toBeGreaterThanOrEqual(3);
-    await go(page, 'me');
+    await go(page, 'me/all');
     const dot = page.locator('#view .ico .new');
     await expect(dot).toBeVisible();
     const d = await dot.evaluate((e) => { const b = e.getBoundingClientRect(), p = e.parentElement.getBoundingClientRect(); return { w: b.width, inside: b.left >= p.left && b.right <= p.right && b.top >= p.top && b.bottom <= p.bottom, bg: getComputedStyle(e).backgroundColor, under: window.__fx.bgOf(e.parentElement) }; });
@@ -179,21 +183,23 @@ test.describe('Factory look: rules by computed style on every view', () => {
 test.describe('Factory look: frame', () => {
   const close = (got, hex) => { const want = hex.match(/../g).map((x) => parseInt(x, 16)); const g0 = got.match(/[\d.]+/g).map(Number), g = /^color\(/.test(got) ? g0.map((x) => x * 255) : g0; return want.every((v, i) => Math.abs(v - g[i]) <= 4); };
   test('dark top and bottom frame (Deep 3A3632 / 46413B), light tab buttons with no ring, bar widens on hover and when selected', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me'); // Main selected, so every link in the bar and its More menu is at rest
     const bg = (sel) => page.locator(sel).first().evaluate((e) => getComputedStyle(e).backgroundColor);
     const top = await bg('header'), foot = await bg('nav.tabs');
     expect(close(top, '3A3632'), 'top frame ' + top).toBe(true);
     expect(close(foot, '46413B'), 'bottom frame ' + foot).toBe(true);
     const tabs = page.locator('nav.tabs a');
-    await expect(tabs).toHaveCount(6);
-    for (let i = 0; i < 6; i++) {
+    // Main, Decide, Do, Rooms, then under More: Today, Docs and Mine (the old Main list, 2 Nov).
+    await expect(tabs).toHaveCount(7);
+    for (let i = 0; i < 7; i++) {
       const t = tabs.nth(i);
       const s = await t.evaluate((e) => { const c = getComputedStyle(e); return [c.borderTopStyle, c.outlineStyle, c.boxShadow, c.backgroundColor]; });
       expect(s.slice(0, 3), 'tab has no ring').toEqual(['none', 'none', 'none']);
       expect(s[3]).not.toBe(foot);
     }
     await expect(page.locator('nav.tabs a[aria-current="page"] .bar')).toHaveCSS('width', '40px');
-    const docs = page.locator('nav.tabs a[data-nav="docs"]');
+    // Docs now sits under More (Lisa's tab picks, 2 Nov); Rooms is a bottom tab that is not selected here.
+    const docs = page.locator('nav.tabs a[data-nav="rooms"]');
     await expect(docs.locator('.bar')).toHaveCSS('width', '18px');
     const b0 = await docs.boundingBox();
     await docs.hover();
@@ -216,7 +222,7 @@ test.describe('Factory look: frame', () => {
 
   test('cool look (Studio\'s Look setting) and dark mode keep a dark frame', async ({ page, guard }) => {
     await page.addInitScript(() => { try { localStorage.setItem('dash-look', JSON.stringify({ bg: 'cool' })); } catch (e) {} });
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');
     await expect(page.locator('html')).toHaveClass(/look-cool/);
     const lum = (sel) => page.locator(sel).first().evaluate((e) => { const m = getComputedStyle(e).backgroundColor.match(/[\d.]+/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; });
     expect(await lum('header')).toBeLessThan(0.35);
@@ -226,14 +232,16 @@ test.describe('Factory look: frame', () => {
     expect(await lum('header')).toBeLessThan(await lum('nav.tabs') + 0.001);
   });
 
-  test('signed out: the dark bar keeps Sign in and Dashboard only, both on the right', async ({ page }) => {
+  test('signed out: the dark bar keeps Sign in and Dashboard only: the Home icon top left, Sign in on the right', async ({ page }) => {
     await page.goto('factory/');
     await expect(page.locator('html')).toHaveClass(/dash-locked/);
     await expect(page.locator('header')).toHaveCSS('visibility', 'visible');
-    for (const sel of ['#signInBtn', '#backHome']) {
-      const b = await page.locator(sel).boundingBox();
-      expect(b.x, sel).toBeGreaterThan(page.viewportSize().width / 2);
-    }
+    const vw = page.viewportSize().width;
+    expect((await page.locator('#signInBtn').boundingBox()).x, '#signInBtn').toBeGreaterThan(vw / 2);
+    const home = await page.locator('#backHome').boundingBox();
+    expect(home.x + home.width, '#backHome').toBeLessThan(vw / 4);
+    const shown = await page.locator('header').evaluate((h) => [...h.querySelectorAll('button, a')].filter((e) => !e.closest('h1') && e.getBoundingClientRect().width > 0 && getComputedStyle(e).visibility === 'visible').map((e) => e.id));
+    expect(shown.sort()).toEqual(['backHome', 'signInBtn']);   // (the title stays for screen readers only, 1px, as on every hub)
     await expect(page.locator('nav.tabs')).not.toBeVisible();
   });
 });
@@ -241,7 +249,7 @@ test.describe('Factory look: frame', () => {
 test.describe('Factory look: hover = a 1px line inside + a pale tint; nothing moves', () => {
   for (const scheme of ['light', 'dark']) {
     test(`${scheme}: neutral controls turn an ink line and a muted tint; meaning controls keep their own colour`, async ({ page, guard }) => {
-      await open(page, guard, '#/me', { scheme });
+      await open(page, guard, '#/me/all', { scheme });
       await page.evaluate(HELP);
       const ink = await page.evaluate(() => getComputedStyle(document.body).color);
       const look = (el) => el.evaluate((e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e), i = e.querySelector('.ti');
@@ -352,12 +360,14 @@ test.describe('Factory look: counts and empty states', () => {
       probe.innerHTML = '<span class="cnt">7</span><span class="cnt need">88</span><span class="cnt wide">999</span>';
       document.getElementById('view').appendChild(probe);
       return Array.from(probe.children).concat(Array.from(document.querySelectorAll('#view .cnt, nav.tabs .n:not(:empty)'))).filter((e) => e.getClientRects().length)
-        .map((e) => ({ t: e.textContent, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height }));
+        .map((e) => ({ t: e.textContent, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height, tab: e.matches('nav.house-tabs .ht > .n') }));
     });
     expect(sizes.length).toBeGreaterThan(5);
+    expect(sizes.filter((s) => s.tab).length, 'the tab counts are measured too').toBeGreaterThan(0);
     for (const s of sizes) {
-      expect(s.h, `count "${s.t}" height`).toBe(22);
-      if (s.t.length <= 2) expect(s.w, `count "${s.t}" width`).toBe(30);
+      // Every count holds a 14px number (Lisa's pick A, 2 Nov): bottom-tab counts are the 24 x 24 corner ring, the rest the 30 x 24 pill.
+      expect(s.h, `count "${s.t}" height`).toBe(24);
+      if (s.t.length <= 2) expect(s.w, `${s.tab ? 'tab ' : ''}count "${s.t}" width`).toBe(s.tab ? 24 : 30);
     }
     expect(sizes.find((s) => s.t === '999').w).toBeGreaterThan(30);
   });
@@ -394,6 +404,6 @@ test('find bar: Search, Factory on/off and Filter in one row; Filter is open by 
   await expect(page.locator('#nFilters')).toHaveText('1');
   await page.locator('#filterSum').click();
   await expect(page.locator('[data-fx="app"]').first()).toBeHidden();
-  await page.locator('nav.tabs a[data-nav="do"]').click();
+  await tabClick(page, 'nav.tabs a[data-nav="do"]');
   await expect(page.locator('details.fdet')).not.toHaveAttribute('open', ''); // your choice is kept
 });

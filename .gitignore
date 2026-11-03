@@ -22,3 +22,10 @@ playwright-report/
 
 # The accessibility ratchet numbers (rule names and counts only: no personal data)
 !tests/mocked/*.known.json
+
+# Cloudflare Pages build output (tools/build-site)
+_site/
+
+# PR autopilot standing approval (Lisa-owned, no data)
+!merge-policy.json
+__pycache__/

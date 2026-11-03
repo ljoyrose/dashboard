@@ -6,6 +6,7 @@ const fs = require('fs');
 const { test } = require('../support/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 const { HUBS, go } = require('../support/hubs');
+const { BASE } = require('../support/site');
 
 const OUT = process.env.JOB35B_AUDIT;
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
@@ -37,7 +38,7 @@ for (const p of PAGES) {
       const load = await page.evaluate(() => ({ fcp: Math.round((performance.getEntriesByName('first-contentful-paint')[0] || {}).startTime || 0), cls: +window.__cls.toFixed(3), longTask: Math.round(window.__long) }));
       const local = reqs.filter((r) => r.url.includes('127.0.0.1'));
       const rows = [{ page: p.key, width, view: '(load)', requests: local.length, bytes: local.reduce((a, r) => a + r.bytes, 0),
-        scripts: local.filter((r) => r.type === 'script').map((r) => `${r.url.split('/dashboard/')[1]}:${r.bytes}`), ...load }];
+        scripts: local.filter((r) => r.type === 'script').map((r) => `${new URL(r.url).pathname.slice(BASE.length)}:${r.bytes}`), ...load }];
       for (const v of p.hub.views) {
         if (v) await go(page, v);
         const res = await new AxeBuilder({ page }).withTags(TAGS).options({ preload: false }).analyze();
