@@ -139,15 +139,9 @@ test.describe('Navigation across pages', () => {
     });
   }
 
-  const FALLBACK_BUGS = {
-    marketplace: 'J34c-F01: Marketplace draws the Me page for an unknown address but lights no tab',
-    factory: 'J34c-F02: Factory draws the Rooms page for an unknown address but lights no tab',
-  };
   for (const [hub, , home] of DEEP) {
     test(`${hub}: an unknown address shows the first view with its tab lit, without errors`, async ({ page, guard }) => {
-      // FIX-REQUEST J34c-F01 (marketplace) and J34c-F02 (factory): an unknown address draws the first view but lights no tab.
-      // DECISION NEEDED: fix the page (light the first tab on fallback) or accept. OWNER: Marketplace / Factory hub owner. BY 2026-11-13
-      test.fixme(!!FALLBACK_BUGS[hub], FALLBACK_BUGS[hub]);
+      // J34c-F01 (marketplace) and J34c-F02 (factory) fixed: the first view's tab is lit for an unknown address.
       await openAt(page, guard, hub, '#/no-such-view');
       await expect(page.locator('#view, main').first()).toBeVisible();
       await expect.poll(() => current(page)).toContain(home);
