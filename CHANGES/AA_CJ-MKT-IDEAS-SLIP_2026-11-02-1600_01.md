@@ -38,3 +38,9 @@ OQ8,Engine addition C: read MKT-IDEA-RESULT-*.json and merge the patch (rules in
 OQ9,Confirm the Infinity plan allows an Item created automation (only needed if option B is ever wanted),Lisa
 OQ10,Pick how the investigator wakes: A daily pass (recommended) or B Infinity web address,Lisa
 OQ11,Merge order: #246 then #248 then #252 then stage 4 PR; each says Do not merge until Lisa OKs it,Lisa
+
+## Final state (2 Nov 2026, evening)
+13. All four PRs are MERGED to main by Lisa's side (auto-merge): #246 contract, #248 page, #252 investigator brief, #253 tests. Items 6, 8 and OQ11 above describe them as open; read that as history.
+14. What is live on main: the Product ideas page in TEST mode (marketplace.live is false, so every request is marked dry_run), the contract, the investigator prompt/README/example, and the tests. Nothing real is created until the engine side exists and the Drive folder id is set.
+15. Page-weight budget for the Marketplace hub was re-baselined twice (221300, then 247600 after main's own change). Lazy-loading the form and card code would shrink it; not done.
+16. Still open, unchanged (rows above): OQ1 and OQ7 engine card + board item, OQ2 answers/Go hand-off, OQ3 Drive folder id, OQ4 Drive write scope, OQ6 board columns (Lisa), OQ8 result-file merge, OQ9 Infinity plan check, OQ10 how the investigator wakes (A recommended).

@@ -51,13 +51,13 @@
   .stamp { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }   /* the frame's own clear line (3:1 on the dark bar) */
-  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); } }
+  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); } }
 
   /* Things you press, the hover rule (meaning colour = --hmc), focus, the bottom tabs and the counts: ../house.css. Layout only here. */
   .btn.big { width: 100%; justify-content: center; min-height: 44px; }
   .chip { padding: 0 14px; background: var(--surface); display: inline-flex; align-items: center; }
   .more { background: transparent; padding: 0 14px; align-self: flex-start; }
-  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); } }
+  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   input:focus { outline: none; }
   a:focus, button:focus { outline: none; }
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }   /* keyboard ring: 2px ink, never the browser blue */
@@ -90,7 +90,9 @@
 
   /* Cards: a name line (dot + what kind), then the title (2 lines, then …). */
   .card { display: flex; flex-direction: column; gap: 12px; } /* the house card (../house.css): 1px line, 12px inside */
-  .card.next { border-color: var(--ink); }   /* Next: the one thing to do now; white with a 1px ink edge */
+  .card.next { border-color: var(--ink); }
+  /* Main's ✓ XML tick (Lisa, 2 Nov): every order reached GA. A plain link under the 3 numbers. */
+  .hm-xml { justify-self: start; display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; color: var(--ink); font-size: var(--fs-small); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }   /* Next: the one thing to do now; white with a 1px ink edge */
   .bline { display: flex; gap: 8px; align-items: center; font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 0 0 -8px; }
   .bline .dot { width: 8px; height: 8px; }
   .card h2 { font-size: var(--fs-head); margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
@@ -160,12 +162,14 @@
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs hidden" id="tabs" aria-label="GA Hub sections">
-  <a class="ht" data-slot="1" href="#/home" data-nav="home"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="n-home"></span></a>
+  <a class="ht" data-slot="1" href="#/home" data-nav="home"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n" id="n-home"></span></a>
   <a class="ht" data-slot="3" href="#/invoices" data-nav="invoices"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-money"/></svg></span><span class="htl">Invoices</span><span class="n"></span></a>
-  <a class="ht" data-slot="4" href="#/orders" data-nav="orders"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-box"/></svg></span><span class="htl">Orders</span><span class="n need" id="n-orders"></span></a>
+  <a class="ht" data-slot="4" href="#/orders" data-nav="orders"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-box"/></svg></span><span class="htl">Orders</span><span class="n" id="n-orders"></span></a>
   <a class="ht" data-slot="6" href="#/products" data-nav="products"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-bag"/></svg></span><span class="htl">Products</span><span class="n"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
+      <a href="#/do" data-nav="do" data-slot="4"><svg class="i" aria-hidden="true"><use href="#i-box"/></svg><span class="htl">Do</span></a>
+      <a href="#/review" data-nav="review" data-slot="6"><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span class="htl">Review</span></a>
       <a href="#/ga" data-nav="ga" data-slot="7"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span class="htl">GA</span></a>
     </div>
   </div>
@@ -190,7 +194,7 @@
     pack: { name: 'Pack at home', yes: 'Packed', what: 'Fish Treats you send yourself: Parcel2Go for 1-2 units, InPost for 3-4.' },
     alert: { name: 'Engine problem', yes: 'Seen', what: 'The food engine hit a problem. It keeps trying every 15 minutes.' }
   };
-  var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }, view = 'home', filter = 'sale', q = '', showAll = false;
+  var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }, view = 'home', filter = 'sale', q = '', showAll = false, loaded = false, failed = '', focusKey = '';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
@@ -238,8 +242,8 @@
       data.statements = table(vr[5]).sort(function (a, b) { return String(b.statement_date).localeCompare(String(a.statement_date)); });
       data.codes = table(vr[7]).filter(function (c) { return String(c.active).toUpperCase() !== 'N'; });
       data.dds = table(vr[6]).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
-      $('banner').className = 'banner hidden'; render();
-    }).catch(function (e) { banner('Could not load: ' + e.message); });
+      loaded = true; failed = ''; $('banner').className = 'banner hidden'; render();
+    }).catch(function (e) { failed = e.message; banner('Could not load: ' + e.message); render(); });
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
   }
   // Write the 4 answer cells of the card with this key; check the key before and after, put the old values back if it moved.
@@ -332,7 +336,7 @@
   // A card: a name line (dot + what kind; "Next" on the first one), then the title. The first card on Home is the Next card.
   function cardHtml(r, next) {
     var s = SECTIONS[r.section] || SECTIONS.check, d = detail(r);
-    var h = '<div class="card' + (next === true ? ' next' : '') + '"><p class="bline"><span class="dot" style="--c:var(--ljr-' + (d.red ? 2 : 3) + ')" aria-hidden="true"></span>' + (next === true ? 'Next: ' : '') + esc(s.name) + '</p><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.why || s.what) + '</p>';
+    var h = '<div class="card' + (next === true ? ' next' : '') + (r.key === focusKey ? ' focus' : '') + '" data-key="' + esc(r.key) + '"><p class="bline"><span class="dot" style="--c:var(--ljr-' + (d.red ? 2 : 3) + ')" aria-hidden="true"></span>' + (next === true ? 'Next: ' : '') + esc(s.name) + '</p><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.why || s.what) + '</p>';
     var on = /^(?:LOWPROFIT|MISSING|MISMATCH|UNKNOWN)-(.+)$/.exec(r.key), o = on && data.orders.filter(function (x) { return String(x.order_no) === on[1]; })[0];
     if (o) { var ol = orderLinks(o); h += (orderFacts(o) ? '<p class="what"><b>' + esc(orderFacts(o)) + '</b></p>' : '') + (ol || /^MISSING|^UNKNOWN/.test(r.key) ? '<div class="acts">' + ol + (/^MISSING|^UNKNOWN/.test(r.key) && /^https:/.test(setting('GA_PORTAL')) ? '<a class="btn" href="' + esc(setting('GA_PORTAL')) + '" target="_blank" rel="noopener">GA Portal</a>' : '') + '</div>' : ''); }
     if (d.file) h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(d.file) + '/view" target="_blank" rel="noopener">Open the PDF</a></div>';
@@ -342,40 +346,64 @@
     return h + '<div class="acts"><button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="' + esc(s.yes) + '">' + esc(s.yes) + '</button>' +
       (s.no ? '<button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="' + esc(s.no) + '">' + esc(s.no) + '</button>' : '') + '</div></div>';
   }
+  // Main (Lisa's house style, 2 Nov 2026): Next, Needs you (at most 5), then the 3 numbers, the same as the Dashboard's Food tile
+  // (../index.html HubRead food): Late = orders Not at GA, Owe GA = unpaid GA invoices, Today = orders placed today (UK), and the
+  // "✓ XML" tick when no order is Not at GA. Low profit stays off Main (a weekly or monthly review: Orders > Low profit, and Review).
+  function ukToday(t) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(t || new Date()); }
+  function lateOrders() { return data.orders.filter(function (o) { return o.check === 'Not at GA'; }); }
+  function placedToday(o) { var t = Date.parse(o.placed_at); return o.status !== 'Cancelled' && !isNaN(t) && ukToday(new Date(t)) === ukToday(); }
+  function mainRows() {
+    var portal = /^https:/.test(setting('GA_PORTAL')) ? setting('GA_PORTAL') : '';
+    var rows = lateOrders().map(function (o) {
+      return { kind: 'late', text: 'Order #' + o.order_no + ': not at GA', sub: 'Check the GA Portal and enter it by hand if needed', href: '#/orders?late',
+        act: portal ? 'GA Portal' : 'Open', actHref: portal, actExt: !!portal, sort: num(o.order_no) };
+    });
+    waiting().filter(function (r) { return r.section !== 'profit'; }).sort(byUrgency).forEach(function (r) {
+      rows.push({ kind: detail(r).red ? 'late' : 'wait', text: r.title, sub: (SECTIONS[r.section] || SECTIONS.check).name, href: '#/do/' + encodeURIComponent(r.key), act: 'Answer' });
+    });
+    return rows;
+  }
   function pageHome() {
+    if (!loaded && !failed) return '<div class="card"><p class="note">Reading the GA Hub workbook…</p></div>';
+    var late = lateOrders().length, owed = unpaid().reduce(function (n, i) { return n + num(i.total); }, 0);
+    var nums = [
+      { label: 'Late', value: loaded ? late : null, late: late > 0, href: '#/orders?late', aria: loaded ? 'Late: ' + late + ' orders not at GA. Open them' : '' },
+      { label: 'Owe GA', value: loaded ? '£' + owed.toFixed(2) : null, href: '#/invoices?unpaid', aria: loaded ? 'Owe GA: £' + owed.toFixed(2) + '. Open the unpaid invoices' : '' },
+      { label: 'Today', value: loaded ? data.orders.filter(placedToday).length : null, href: '#/orders?today', aria: loaded ? 'Today: ' + data.orders.filter(placedToday).length + ' orders placed today. Open them' : '' }];
+    var xml = loaded && !late ? '<a class="hm-xml" data-xml href="#/orders?ga" aria-label="✓ XML: every order reached GA. Open Not at GA yet">✓ XML</a>' : '';
+    return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'food', rows: loaded ? mainRows() : [], nums: nums, doHref: '#/do', extra: xml, error: loaded ? '' : 'The GA Hub workbook: ' + failed });
+  }
+  // Do (More): every card waiting on Lisa, with its safe buttons (Apply / Seen / Send, Undo for 10 minutes), and the order GA never got.
+  function pageDo() {
     // Answered cards stay on screen until the engine applies them (Undo for 10 minutes), then drop off.
-    var w = data.cards.filter(function (r) { return !r.applied_at && (!r.answer || Date.now() < Date.parse(r.answered_at) + APPLY_MS); }).sort(byUrgency), need = waiting().length, owed = unpaid().reduce(function (n, i) { return n + num(i.total); }, 0);
-    var due = unpaid().map(function (i) { return i.due_date; }).filter(Boolean).sort()[0];
-    var notAtGa = data.orders.filter(function (o) { return /^(Waiting for GA|Not at GA)$/.test(o.check); }).length, late = data.orders.filter(function (o) { return o.check === 'Not at GA'; }).length;
+    var w = data.cards.filter(function (r) { return !r.applied_at && (!r.answer || Date.now() < Date.parse(r.answered_at) + APPLY_MS); }).sort(byUrgency), need = waiting().length;
+    var late = lateOrders().length;
+    var h = '<p class="needs">Do <span class="cnt' + (need ? '' : ' ok') + wide(need) + '">' + need + '</span></p>';   // grey: a rose count means late
+    if (late) h += '<div class="card"><p class="bline"><span class="dot" style="--c:var(--ljr-2)" aria-hidden="true"></span>Order check</p><h2>' + late + ' order' + (late > 1 ? 's are' : ' is') + ' not at GA</h2><p class="what">Check the GA Portal and enter ' + (late > 1 ? 'them' : 'it') + ' by hand if needed.</p><div class="acts"><a class="btn main" href="#/orders?late">Open the orders</a></div></div>';
+    if (!w.length) return late ? h : h + '<div class="card">' + empty('Nothing needs you') + '</div>';
+    return h + w.map(function (r) { return cardHtml(r); }).join('');
+  }
+  // Review (More): order growth (trend, repeat, subscriptions, reorder due) and the low-profit orders, for the weekly or monthly look.
+  function pageReview() {
     var min = minProfit(), low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
-    var h = growthHtml() + '<p class="needs">Needs you: ' + '<span class="cnt ' + (need ? 'need' : 'ok') + wide(need) + '">' + need + '</span></p>';
-    var st = data.statements[0];   // GA's own weekly statement beats our sum of the invoices we have seen
-    h += '<div class="tiles"><a class="tile" href="#/invoices"><span class="k">Owed to GA' + (st ? ' (statement ' + esc(ukDate(st.statement_date)) + ')' : '') + '</span><span class="v">' + money(st ? st.total_outstanding : owed) + '</span></a>' +
-      '<a class="tile" href="#/invoices"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span>' + (due ? '<span class="datep' + dateCls(due) + '">' + esc(inDays(due)) + '</span>' : '') + '</a>' +
-      '<a class="tile" href="#/orders?check"><span class="k">Not at GA yet</span><span class="v' + (late ? ' red' : '') + '">' + notAtGa + (late ? ' (' + late + ' late)' : '') + '</span></a>' +
-      '<a class="tile" href="#/orders?low"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a></div>';
-    if (!w.length) {
-      // Nothing to answer, but an order GA never got still comes first.
-      if (late) return h + '<div class="card next"><p class="bline"><span class="dot" style="--c:var(--ljr-2)" aria-hidden="true"></span>Next: Order check</p><h2>' + late + ' order' + (late > 1 ? 's are' : ' is') + ' not at GA</h2><p class="what">Check the GA Portal and enter ' + (late > 1 ? 'them' : 'it') + ' by hand if needed.</p><div class="acts"><a class="btn main" href="#/orders?check">Open the orders</a></div></div>';
-      return h + '<div class="card">' + empty('Nothing needs you') + '</div>';
-    }
-    h += cardHtml(w[0], true);
-    if (w.length > 1) h += showAll ? w.slice(1).map(function (r) { return cardHtml(r); }).join('') : '<button class="more" type="button" data-action="all">Show ' + (w.length - 1) + ' more</button>';
-    return h;
+    return '<p class="needs">Review</p>' + growthHtml() + '<p class="grp">Profit</p><div class="tiles"><a class="tile" href="#/orders?low"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a></div>';
   }
   // The order check: did every shop order reach GA, and did GA send the same items?
   var CHECK = { 'Matched': ['✅ Matched with GA', ''], 'Shipped': ['🚚 Shipped by GA', ''], 'Waiting for GA': ['⏳ Waiting for GA', ''], 'At GA': ['📥 At GA (confirmed)', ''], 'At GA, not shipped': ['⚠️ At GA but not shipped', 'no'], 'Not at GA': ['❌ Not at GA: check the Portal', 'no'],
     'Items differ': ['⚠️ GA sent different items', 'no'], 'Not in Shopify': ['❓ Not in Shopify: check the reference', 'no'], 'No GA items': ['📭 No GA items: see its card', ''], 'Pack at home': ['🏠 Pack at home: tap Packed once posted', ''], 'Packed at home': ['🏠 Packed at home', ''], 'Cancelled': ['✖ Cancelled', ''],
     'Replacement': ['🔁 Replacement, sent again', ''], 'Split box': ['📦 Extra box of the same order', ''] };
   function checkBadge(o) { var c = CHECK[o.check]; return c ? '<div class="badges"><span class="badge' + (c[1] ? ' ' + c[1] : '') + '">' + esc(c[0]) + '</span></div>' : ''; }
-  var OFILTERS = [['all', 'All'], ['check', 'Needs a look'], ['ga', 'Not at GA yet'], ['sub', 'Subscriptions'], ['low', 'Low profit']], ofilter = 'all';
+  var OFILTERS = [['all', 'All'], ['check', 'Needs a look'], ['late', 'Not at GA'], ['ga', 'Not at GA yet'], ['today', 'Today'], ['sub', 'Subscriptions'], ['low', 'Low profit']], ofilter = 'all';
   function pageOrders() {
     var min = minProfit(), list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); }).filter(function (o) {
-      return ofilter === 'all' || (ofilter === 'check' && CHECK[o.check] && CHECK[o.check][1]) || (ofilter === 'ga' && /^(Waiting for GA|Not at GA)$/.test(o.check))
+      return ofilter === 'all' || (ofilter === 'check' && CHECK[o.check] && CHECK[o.check][1]) || (ofilter === 'ga' && /^(Waiting for GA|Not at GA)$/.test(o.check)) || (ofilter === 'late' && o.check === 'Not at GA') || (ofilter === 'today' && placedToday(o))
         || (ofilter === 'sub' && /^sub/i.test(o.order_type)) || (ofilter === 'low' && o.profit_est !== '' && num(o.profit_est) < min); });
     var chips = '<div class="house-frow">' + DashKit.filterButton('ofilters', ofilter !== 'all' ? 1 : 0) + '<div class="chips house-filters" id="ofilters" role="group" aria-label="Which orders">' + OFILTERS.map(function (f) { return '<button class="chip" type="button" data-ofilter="' + f[0] + '" aria-pressed="' + (ofilter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
-    var h = '<p class="needs">Orders</p>' + chips;
+    var notAtGa = data.orders.filter(function (o) { return /^(Waiting for GA|Not at GA)$/.test(o.check); }).length, late = lateOrders().length;
+    // Not at GA yet (moved from the old Home, 2 Nov): waiting + late, opens the list.
+    var h = '<p class="needs">Orders</p><div class="tiles"><a class="tile" href="#/orders?check"><span class="k">Not at GA yet</span><span class="v' + (late ? ' red' : '') + '">' + notAtGa + (late ? ' (' + late + ' late)' : '') + '</span></a></div>' + chips;
     var none = { all: ['No orders yet', 'They appear after GA\'s next shipping report or invoice.'], check: ['No orders need a look', 'Every order matches what GA shipped.'], ga: ['Every order is at GA', 'Nothing waiting to reach GA.'],
+      late: ['No order is late', 'Every order reached GA.'], today: ['No orders today', 'Orders placed today (UK) show here.'],
       sub: ['No subscription orders', ''], low: ['No low-profit orders', 'Every order made at least £' + min + '.'] }[ofilter];
     if (!list.length) return h + '<div class="card">' + empty(none[0], none[1]) + '</div>';
     var shown = showAll ? list : list.slice(0, 30);
@@ -387,8 +415,10 @@
     if (list.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
     return h + '<p class="hint">Profit is ex VAT, after all costs.</p>';
   }
+  var IFILTERS = [['all', 'All'], ['unpaid', 'Unpaid']], ifilter = 'all';
   function pageInvoices() {
     var inv = data.invoices.slice().sort(function (a, b) { return String(b.invoice_date).localeCompare(String(a.invoice_date)); });
+    var due = unpaid().map(function (i) { return i.due_date; }).filter(Boolean).sort()[0];
     var fy = inv.length ? inv[0].fy : '', thisFy = inv.filter(function (i) { return i.fy === fy; });
     var sum = function (list, k) { return list.reduce(function (n, i) { return n + num(i[k]); }, 0); }, open = unpaid();
     var st = data.statements[0], dd = data.dds[0], fyStart = fyStartYmd(), paidFy = data.dds.filter(function (d) { return String(d.date) >= fyStart; }).reduce(function (n, d) { return n + num(d.amount); }, 0);   // newest GA direct debit out of the Starling account
@@ -396,14 +426,18 @@
       (st ? '<div class="tile"><span class="k">GA statement ' + esc(ukDate(st.statement_date)) + '</span><span class="v">' + money(st.total_outstanding) + '</span></div>' : '') +
       '<div class="tile"><span class="k">Owed to GA</span><span class="v">' + money(sum(open, 'total')) + '</span></div>' +
       '<div class="tile"><span class="k">Unpaid invoices</span><span class="v">' + open.length + '</span></div>' +
+      // Next GA payment due (moved from the old Home, 2 Nov).
+      '<a class="tile" href="#/invoices?unpaid"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span>' + (due ? '<span class="datep' + dateCls(due) + '">' + esc(inDays(due)) + '</span>' : '') + '</a>' +
       '<div class="tile"><span class="k">' + esc(fy || 'This year') + ' food</span><span class="v">' + money(sum(thisFy, 'goods')) + '</span></div>' +
       '<div class="tile"><span class="k">' + esc(fy || 'This year') + ' delivery</span><span class="v">' + money(sum(thisFy, 'delivery')) + '</span></div>' +
       '<div class="tile"><span class="k">VAT to reclaim (' + esc(fy || 'year') + ')</span><span class="v">' + money(sum(thisFy, 'vat')) + '</span></div>' +
       (dd ? '<div class="tile"><span class="k">Last GA direct debit ' + esc(ukDate(dd.date)) + '</span><span class="v">' + money(dd.amount) + '</span></div>'
         : '<div class="tile"><span class="k">Paid by</span><span class="v">' + esc(setting('GA_PAYMENT') || 'Not set') + '</span></div>') +
       (dd ? '<div class="tile"><span class="k">Paid to GA since ' + esc(ukDate(fyStart)) + ' (bank)</span><span class="v">' + money(paidFy) + '</span></div>' : '') + '</div>';
-    h += vatInvoices() + '<p class="grp">GA invoices</p>';
-    if (!inv.length) return h + '<div class="card">' + empty('No GA invoices yet') + '</div>';
+    h += vatInvoices() + '<p class="grp">GA invoices</p><div class="house-frow">' + DashKit.filterButton('ifilters', ifilter !== 'all' ? 1 : 0) + '<div class="chips house-filters" id="ifilters" role="group" aria-label="Which invoices">' +
+      IFILTERS.map(function (f) { return '<button class="chip" type="button" data-ifilter="' + f[0] + '" aria-pressed="' + (ifilter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
+    if (ifilter === 'unpaid') inv = inv.filter(function (i) { return !i.paid_date && num(i.total) > 0; });
+    if (!inv.length) return h + '<div class="card">' + empty(ifilter === 'unpaid' ? 'Nothing owed to GA' : 'No GA invoices yet') + '</div>';
     var shown = showAll ? inv : inv.slice(0, 30);
     h += '<div class="card">' + shown.map(function (i) {
       var open1 = !i.paid_date && i.due_date;   // unpaid: the due date is a pill whose ring shows how close it is
@@ -478,7 +512,7 @@
     h += '</div>';
     if (data.codes.length) {
       var kinds = [['brand', 'Brand'], ['channel', 'Code for where it was sold (means nothing to customers)'], ['partner_type', 'Partner type (+ 2 digits, e.g. R01)'], ['partner', 'Partners'], ['suffix', 'Ending (+ a number)']];
-      h += '<p class="grp">Order reference on the GA Portal</p><div class="card"><p class="what"><b>Customers see this reference</b>, so only the brand is readable. Type <b>BRAND-CODE-NUMBER</b>, e.g. <b>DDF-KQ-1234</b>. A plain number (5375) is a DDF Shopify order; PC-1001 is a Puppy Classroom Shopify order. Wholesale adds the partner: DDF-TB-R01-0007. A resend adds -R1.</p>' +
+      h += '<p class="grp">Order reference on the GA Portal</p><div class="card"><p class="what">Type the <b>Shopify order number only, digits</b>, e.g. <b>5382</b>. Customers see this reference in their tracking only (it is not on the label), so never add names, codes, prices or notes. Search the Portal first: never enter an order twice.</p><p class="hint">Other shops (later): ClickFunnels orders are DDF-KQ-number; a resend adds -R1. The engine reads the codes below.</p>' +
         kinds.map(function (k) { var list = data.codes.filter(function (c) { return c.kind === k[0]; }); if (!list.length) return '';
           return '<div class="row"><div class="txt"><div class="m">' + esc(k[1]) + '</div><div class="badges">' + list.map(function (c) { return '<span class="badge"><b>' + esc(c.code) + '</b> ' + esc(c.name) + '</span>'; }).join('') + '</div></div></div>'; }).join('') +
         '</div>';
@@ -489,13 +523,15 @@
     DashKit.signButton($('signin'), !!token);
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    var n = waiting().length; $('n-home').textContent = n || ''; $('n-home').classList.toggle('wide', n >= 100);
-    var look = data.orders.filter(needsLook).length; $('n-orders').textContent = look || ''; $('n-orders').classList.toggle('wide', look >= 100);   // orders that need a look, on every page
+    // Rose = late only (Lisa's sweep, 3 Nov 2026; read out as "N late").
+    var mr = loaded ? mainRows() : [], n = mr.length; $('n-home').textContent = n || ''; $('n-home').classList.toggle('wide', n >= 100); $('n-home').classList.toggle('need', mr.some(function (r) { return r.kind === 'late'; }));
+    var look = data.orders.filter(needsLook).length; $('n-orders').textContent = look || ''; $('n-orders').classList.toggle('wide', look >= 100); $('n-orders').classList.toggle('need', lateOrders().length > 0);   // orders that need a look, on every page
     $('stamp').textContent = F && F.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
     $('signin').disabled = !token && !ready;
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the GA Hub</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
-    $('view').innerHTML = view === 'orders' ? pageOrders() : view === 'invoices' ? pageInvoices() : view === 'products' ? pageProducts() : view === 'ga' ? pageGa() : pageHome();
+    $('view').innerHTML = view === 'orders' ? pageOrders() : view === 'invoices' ? pageInvoices() : view === 'products' ? pageProducts() : view === 'ga' ? pageGa() : view === 'do' ? pageDo() : view === 'review' ? pageReview() : pageHome();
+    var f = focusKey && view === 'do' && document.querySelector('#view .card.focus'); if (f && f.scrollIntoView) f.scrollIntoView({ block: 'start' });
   }
 
   /* ---------- taps ---------- */
@@ -504,10 +540,11 @@
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
     if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(OWNER ? { login_hint: OWNER } : {}); }
-    if (a === 'signout') { token = null; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }; return render(); }
+    if (a === 'signout') { token = null; loaded = false; failed = ''; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }; return render(); }
     if (a === 'refresh') return load();
     if (a === 'reorder') { var ro = $('reorder'); if (ro) ro.scrollIntoView({ block: 'start' }); return; }
     if (a === 'all') { showAll = !showAll; return render(); }
+    if (t.hasAttribute('data-ifilter')) { ifilter = t.getAttribute('data-ifilter'); showAll = false; return render(); }
     if (t.hasAttribute('data-ofilter')) { ofilter = t.getAttribute('data-ofilter'); showAll = false; return render(); }
     if (t.hasAttribute('data-filter')) { filter = t.getAttribute('data-filter'); showAll = false; return render(); }
     if (t.hasAttribute('data-ans')) { var r = find(t.getAttribute('data-ans')); t.disabled = true; return answer(r, t.getAttribute('data-v')); }
@@ -519,7 +556,15 @@
     q = e.target.value.trim().toLowerCase(); var pos = e.target.selectionStart; render();
     var box = document.querySelector('[data-find]'); if (box) { box.focus(); try { box.setSelectionRange(pos, pos); } catch (x) {} }
   });
-  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'home'; var oq = (/\?(\w+)$/.exec(location.hash) || [])[1]; /* #/orders?low etc: a Home tile opens Orders filtered to what it counts */ if (oq === 'check') ofilter = 'ga'; else if (oq && OFILTERS.some(function (f) { return f[0] === oq; })) ofilter = oq; if (['home', 'orders', 'invoices', 'products', 'ga'].indexOf(view) < 0) view = 'home'; showAll = false; render(); }
+  // #/orders?late etc: a Main number opens its list filtered to what it counts; #/do/<card key> opens Do at that card.
+  function route() {
+    var path = location.hash.replace(/^#\//, '').split('?')[0], parts = path.split('/'), oq = (/\?(\w+)$/.exec(location.hash) || [])[1];
+    view = parts[0] || 'home'; focusKey = view === 'do' && parts[1] ? decodeURIComponent(parts[1]) : '';
+    if (view === 'orders') { if (oq === 'check') ofilter = 'ga'; else if (oq && OFILTERS.some(function (f) { return f[0] === oq; })) ofilter = oq; }
+    if (view === 'invoices' && oq === 'unpaid') ifilter = 'unpaid';
+    if (['home', 'orders', 'invoices', 'products', 'ga', 'do', 'review'].indexOf(view) < 0) view = 'home';
+    showAll = false; render();
+  }
   window.addEventListener('hashchange', route);
 
   /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */

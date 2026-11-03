@@ -1,0 +1,2 @@
+{"home": 5200, "cdhub": 4800, "factory": 4600, "food": 5100, "marketplace": 5300, "money": 5000, "studio": 4900, "privacy": 3500,
+ "why": "Style sweep (Lisa, 3 Nov 2026), PR for claude/house-sweep: tokens.css becomes the house style sheet (token index A-J and the new state, look-swap, fold, +N more and --fs-input tokens, about 3.6 KB) and house.css section 16 sets typing boxes to 16px; every page loads both, privacy too. Measured 3 Nov: home 410336, marketplace 287839, money 244310."}

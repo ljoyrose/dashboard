@@ -47,11 +47,11 @@ async function sheets(page, rows, opts = {}) {
 async function open(page, hash) {
   await page.goto('marketplace/' + (hash || '#/me'));
   await page.locator('#view [data-action="signin"]').click();
-  await expect(page.locator('#view .needs')).toBeVisible();
+  await expect(page.locator('#view .needs, #view [data-hub-main="marketplace"]').first()).toBeVisible();   // Main (house style, 2 Nov) has no .needs line
 }
 
 test.describe('Marketplace page', () => {
-  test('signed out it shows only a sign-in button; signed in: "Needs you: 2" and one main card, most urgent first', async ({ page }) => {
+  test('signed out it shows only a sign-in button; signed in: Main says 2 need you with one Next card, most urgent first; Do now opens on Remove', async ({ page }) => {
     await sheets(page, sampleRows());
     await page.goto('marketplace/');
     await expect(page.locator('#view')).toContainText('Sign in to see what needs you');
@@ -59,22 +59,27 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#tabs')).toBeHidden();          // the menu stays behind the sign-in
     await page.locator('#view [data-action="signin"]').click();
     await expect(page.locator('#tabs')).toBeVisible();
-    await expect(page.locator('#view .needs')).toHaveText('Needs you: 2');
-    await expect(page.locator('#view > .card')).toHaveCount(1);
-    await expect(page.locator('#view > .card h2')).toHaveText('Remove from sites');
-    await expect(page.locator('#view > .card a.btn')).toHaveText('Open on Vinted');
+    await expect(page.locator('#view [data-hm="needs"] .cnt')).toHaveText('2');
+    await expect(page.locator('#view [data-hm="next"]')).toHaveCount(1);
+    await expect(page.locator('#view [data-hm="next"]')).toHaveAttribute('data-kind', 'late');      // the late parcel goes first
+    await expect(page.locator('#view [data-hm="next"] .hm-what')).toHaveText('Sample bath sheet');
     await expect(page.locator('#n-do')).toHaveText('2');   // Do now = remove + post
+    await page.evaluate(() => { location.hash = '#/do'; });
+    await expect(page.locator('#view .needs')).toHaveText('Do now: 2');
+    await expect(page.locator('#view .ghead .grp').first()).toHaveText('Remove from sites');
+    await expect(page.locator('#view .card', { hasText: 'Sample blade 10' }).locator('a.btn')).toHaveText('Open on Vinted');
     await expect(page.locator('#stamp')).toHaveText('TEST');
   });
 
   test('a tap writes only the 4 answer cells (G:J) of that row, with Lisa\'s email; Undo clears them', async ({ page, guard }) => {
     const writes = await sheets(page, sampleRows());
-    await open(page);
+    await open(page, '#/do');
     await page.locator('[data-ans="MKT-1"]').click();
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].range).toBe('Marketplace!G2:J2');
     const [v] = writes[0].body.values;
     expect(v[0]).toBe('Done'); expect(v[3]).toBe(guard.world.email); expect(Date.parse(v[2])).toBeGreaterThan(Date.now() - 60000);
+    await page.evaluate(() => { location.hash = '#/insights'; });   // Just done moved from Main to Insights (2 Nov)
     await expect(page.locator('#view')).toContainText('Just done');
     await page.locator('[data-undo="MKT-1"]').first().click();
     await expect.poll(() => writes.length).toBe(2);
@@ -83,7 +88,7 @@ test.describe('Marketplace page', () => {
 
   test('if the row moved since the page read it, nothing is written and Lisa is told to refresh', async ({ page }) => {
     const writes = await sheets(page, sampleRows(), { moved: true });
-    await open(page);
+    await open(page, '#/do');
     await page.locator('[data-ans="MKT-1"]').click();
     await expect(page.locator('#banner')).toContainText('Not saved');
     expect(writes).toEqual([]);
@@ -136,6 +141,9 @@ test.describe('Marketplace page', () => {
     await sheets(page, sampleRows());
     await open(page);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    await page.evaluate(() => { location.hash = '#/do'; });   // the answer buttons live on Do now
+    await expect(page.locator('#view .needs')).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const box = await page.locator('[data-ans="MKT-1"]').boundingBox();
     expect(box.height).toBeGreaterThanOrEqual(44);
   });
@@ -153,8 +161,11 @@ test.describe('Marketplace page', () => {
     const rows = [['MSG|ebay|m1', 'message', 'Blades & grooming', 'eBay message: Sample blade', JSON.stringify({ platform: 'eBay', url: 'https://www.ebay.co.uk/cnt/ViewMessage' }), ago(5)]];
     const writes = await sheets(page, rows);
     await open(page);
-    await expect(page.locator('#view .needs')).toHaveText('Needs you: 1');
-    await expect(page.locator('#view > .card h2')).toHaveText('Messages');
+    await expect(page.locator('#view [data-hm="needs"] .cnt')).toHaveText('1');
+    await expect(page.locator('#view [data-hm="next"] .hm-what')).toHaveText('eBay message: Sample blade');
+    await expect(page.locator('#view [data-hm="next"] a[data-hm-act]')).toHaveAttribute('href', 'https://www.ebay.co.uk/cnt/ViewMessage');
+    await page.evaluate(() => { location.hash = '#/reply'; });
+    await expect(page.locator('#view .ghead .grp')).toHaveText('Messages');
     await expect(page.locator('#view a', { hasText: 'Open messages' })).toHaveAttribute('href', 'https://www.ebay.co.uk/cnt/ViewMessage');
     await page.locator('[data-ans="MSG|ebay|m1"]').click();
     await expect.poll(() => writes.length).toBe(1);
@@ -189,7 +200,7 @@ test.describe('Marketplace page', () => {
     await page.goto('marketplace/#/me');
     expect(await shown(), 'signed out').not.toMatch(ADDR);
     await open(page, '#/me');
-    for (const tab of ['#/me', '#/do', '#/decide', '#/reply', '#/insights']) {
+    for (const tab of ['#/me', '#/do', '#/do?post', '#/decide', '#/reply', '#/insights', '#/sold']) {
       await page.goto('marketplace/' + tab);
       await expect(page.locator('#view')).toBeVisible();
       expect(await shown(), tab).not.toMatch(ADDR);
@@ -243,7 +254,7 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#view .item img[src*="drive.google.com/thumbnail?id=1AbCdEfGhIjKlMnOpQrStUvWxYz"]')).toHaveCount(1);
     await expect(page.locator('#view img[src*="evil.example"]')).toHaveCount(0);
   });
-  test('V2 tabs: Home shows Do now / Decide / Reply counts; old links still open and light up their tab', async ({ page }) => {
+  test('V2 tabs: the tabs show Do now / Decide / Reply counts; old links still open and light up their tab', async ({ page }) => {
     const rows = [
       ['RM|L1', 'remove', 'Clothes', 'Sample jumper', JSON.stringify({ platform: 'eBay' }), ago(5)],
       ['LINK|L2|L3', 'check', 'Clothes', 'Sample coat', JSON.stringify({ platform: 'Vinted', why: 'Same item?' }), ago(5)],
@@ -256,7 +267,11 @@ test.describe('Marketplace page', () => {
     await expect(page.locator('#tabs a')).toHaveText([/^Main/, /^Decide/, /^Do/, /^Reply/, /^New Stock/, /^Insights/]);
     await expect(page.locator('#tabs > a')).toHaveCount(5);
     await expect(page.locator('#tabs .house-more > a')).toHaveText([/^Insights/]);
-    await expect(page.locator('#view .needs3 a.tile')).toHaveText([/1\s*Do now/, /2\s*Decide/, /1\s*Reply/]);
+    // The Do now / Decide / Reply counts are the tab counts; Main shows all 4 in Needs you and the 1 message as To Reply.
+    await expect(page.locator('#view [data-hm="needs"] .cnt')).toHaveText('4');
+    await expect(page.locator('#view a.hm-n[data-k="To Reply"] .hm-v')).toHaveText('1');
+    await expect(page.locator('#n-do')).toHaveText('1');
+    await expect(page.locator('#n-reply')).toHaveText('1');
     await expect(page.locator('#n-decide')).toHaveText('2');
     await tabClick(page, '#tabs a[data-nav="decide"]');
     await expect(page.locator('#view .needs')).toHaveText('Decide: 2');
@@ -540,9 +555,11 @@ test('v11.10 Fix 5: the same item sold twice = two cards, each with its order no
     await expect(page.locator('#view .nextstep')).toHaveText('Next: Pack it, write the parcel number on it, post it, tap Posted');
     await expect(page.locator('[data-action="pack"]')).toHaveCount(0);
     await page.evaluate(() => { location.hash = '#/me'; });
-    await expect(page.locator('#view .needs')).toBeVisible();
+    await expect(page.locator('#view [data-hub-main]')).toBeVisible();
     await expect(page.locator('#view')).not.toContainText('L-02');
-    await expect(page.locator('#view .card', { hasText: 'Sample tracked lead' })).toHaveCount(1);   // the Next card, not again in a list
+    await expect(page.locator('#view [data-hm="next"]', { hasText: 'Sample tracked lead' })).toHaveCount(1);   // the Next card
+    await expect(page.locator('#view [data-hm="needs"] .hm-row', { hasText: 'Sample tracked lead' })).toHaveCount(1);   // and one row, not twice
+    await expect(page.locator('#view a.hm-n[data-k="To Post"] .hm-v')).toHaveText('1');   // the shipped order is not counted
     await expect(page.locator('#view .plist')).toHaveCount(0);
   });
 
@@ -747,15 +764,15 @@ test('v11.10 Fix 5: the same item sold twice = two cards, each with its order no
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].body.values[0].slice(0, 2)).toEqual(['Set', 'link https://www.amazon.co.uk/dp/B01']);
   });
-  test('v11.5 cards explain themselves: sold where and when with steps and the eBay order link; Which parcel? says it is not a sale; Add it shows eBay count, the likely match and Same item; Home shows Orders; every card has its owner badge', async ({ page }) => {
+  test('v11.5 cards explain themselves: sold where and when with steps and the eBay order link; Which parcel? says it is not a sale; Add it shows eBay count, the likely match and Same item; Insights shows Orders; every card has its owner badge', async ({ page }) => {
     const today = new Date().toISOString().slice(0, 10);
     const rows = [['PO|ebay|12-9', 'post', 'Blades & grooming', 'Sample case', JSON.stringify({ platform: 'ebay', order_id: '12-9', parcel_id: 'L-02', courier: 'Unknown', owner: 'CY', sold_at: today, price: '£9.99' }), ago(5)],
       ['WP|vinted|JJD9', 'post', 'Other', 'Which parcel? InPost label', JSON.stringify({ kind: 'which_parcel', courier: 'InPost', tracking: 'JJD9', qr: '123', email_url: 'https://mail.google.com/mail/u/#all/abc' }), ago(5)],
       ['NEW|ebay|999', 'check', 'Other', 'Sample bottle', JSON.stringify({ kind: 'new', item_id: '999', qty: 3, price: '£23.37', url: 'https://www.ebay.co.uk/itm/999', maybe_sku: 'SKU-0049', maybe_title: 'Sample crate bottle', maybe_where: 'Vinted · L0049', why: 'It looks like an item you already have' }), ago(5)]];
     const writes = await sheets(page, rows);
-    await open(page, '#/me');
+    await open(page, '#/insights');   // the Orders strip moved from Main to Insights (2 Nov)
     await expect(page.locator('#view')).toContainText('Orders');
-    await expect(page.locator('#view .tiles:not(.needs3) a.tile').first()).toContainText('1');
+    await expect(page.locator('#view .tiles a.tile').first()).toContainText('1');
     await page.evaluate(() => { location.hash = '#/do'; });
     const card = page.locator('.card', { hasText: 'Sample case' });
     await expect(card).toContainText('Sold on eBay'); await expect(card).toContainText('Buy postage on the eBay order');
@@ -812,7 +829,7 @@ test('v11.10 Fix 5: the same item sold twice = two cards, each with its order no
     await card.locator('[data-v="Business"]').click();
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].body.values[0][0]).toBe('Business');
-    await page.goto('marketplace/#/me'); await expect(page.locator('#view .needs')).toHaveText('Needs you: 2');
+    await page.goto('marketplace/#/me'); await expect(page.locator('#view [data-hm="needs"] .cnt')).toHaveText('2');
   });
   test('the last button on a long page can always be scrolled clear of the bottom tab bar @regression', async ({ page }) => {
     const rows = Array.from({ length: 12 }, (_, i) => ['RM|L' + i, 'remove', 'Clothes', 'Sample item ' + i, JSON.stringify({ platform: 'Vinted' }), ago(5)]);
@@ -827,33 +844,34 @@ test('v11.10 Fix 5: the same item sold twice = two cards, each with its order no
   const growth = (o) => ['GROWTH|numbers', 'growth', '', 'Growth numbers', JSON.stringify(Object.assign({ kind: 'growth', version: 'MKT-34 v2', refunds_read: true,
     morning: { ok: true, label: 'Takings, last 7 days (after refunds)', value: '£27.00', sub: 'cost known 1/2', mode: 'takings' },
     kpis: [{ k: 'Takings 7 days', v: '£30.00' }, { k: 'Takings 30 days', v: '£120.00' }, { k: 'Sales 30 days', v: '9' }, { k: 'Average sale', v: '£13.33' }, { k: 'Cost known', v: '5/9' }] }, o || {})), ago(3)];
-  test('v11.11 L-10: Home and Numbers show one engine line: version, TEST, last run, no errors; an error or a stale run shows in red', async ({ page }) => {
+  test('v11.11 L-10: Insights and Numbers show one engine line: version, TEST, last run, no errors; an error or a stale run shows in red', async ({ page }) => {
     await sheets(page, [status(), ...sampleRows()]);
     await open(page);
+    await expect(page.locator('#view [data-hm="needs"] .cnt')).toHaveText('2');   // the status row never counts as a job
+    await page.evaluate(() => { location.hash = '#/insights'; });   // the engine line moved from Main to Insights (2 Nov)
     const line = page.locator('#view [data-engine]');
     await expect(line).toHaveCount(1);
     await expect(line).toContainText(/^Engine v11\.11 · TEST · last run \d\d:\d\d · no errors$/);
     await expect(line.locator('.red')).toHaveCount(0);
-    await expect(page.locator('#view .needs')).toHaveText('Needs you: 2');   // the status row never counts as a job
     await page.evaluate(() => { location.hash = '#/numbers'; });
     await expect(page.locator('#view [data-engine]')).toContainText('Engine v11.11 · TEST');
   });
   test('v11.11 L-10: the last error and a run over 40 minutes old are named in red; no status row says so', async ({ page }) => {
     await sheets(page, [status({ last_run: ago(90), last_error: '2026-10-31T09:00 SAMPLE error text' }), ...sampleRows()]);
-    await open(page);
+    await open(page, '#/insights');
     const line = page.locator('#view [data-engine]');
     await expect(line.locator('.why.red')).toHaveText(['no run for over 40 minutes', 'Last error: 2026-10-31T09:00 SAMPLE error text']);
     await expect(line).not.toContainText('no errors');
   });
   test('v11.11 L-10: with no status row the line says so', async ({ page }) => {
     await sheets(page, sampleRows());
-    await open(page);
+    await open(page, '#/insights');
     await expect(page.locator('#view [data-engine]')).toHaveText('Engine: no status yet');
   });
-  test('v11.11 B/E/F: Numbers shows the morning number and KPI tiles in the house tiles, the A note and the ads line; Home shows the morning line', async ({ page }) => {
+  test('v11.11 B/E/F: Numbers shows the morning number and KPI tiles in the house tiles, the A note and the ads line; Insights shows the morning line', async ({ page }) => {
     const note = ['NOTE|baselines-A', 'note', '', 'SAMPLE baseline note', JSON.stringify({ kind: 'note', item: 'A', text: 'SAMPLE: baselines agree, £1,072.42 net 5 Aug–27 Oct.' }), ago(3)];
     await sheets(page, [status(), growth({ ads: { fees: '£3.00', pct: 12.5, over: true } }), note, ...sampleRows()]);
-    await open(page);
+    await open(page, '#/insights');   // the morning line moved from Main to Insights (2 Nov)
     await expect(page.locator('#view [data-morning]')).toHaveText('Takings, last 7 days (after refunds): £27.00 (cost known 1/2) · Numbers');
     await page.evaluate(() => { location.hash = '#/numbers'; });
     const tiles = page.locator('#view [data-growth] .tile');
@@ -863,9 +881,9 @@ test('v11.10 Fix 5: the same item sold twice = two cards, each with its order no
     await expect(page.locator('#view [data-anote]')).toContainText('£1,072.42');
     await expect(page.locator('#view p.what.red', { hasText: 'Ads: £3.00 = 12.5% of known profit' })).toHaveCount(1);
   });
-  test('v11.11 B: before item A is agreed the morning number waits and says why; Home shows nothing for it', async ({ page }) => {
+  test('v11.11 B: before item A is agreed the morning number waits and says why; Insights shows no morning line for it', async ({ page }) => {
     await sheets(page, [growth({ morning: { ok: false, why: 'Waits for item A (baselines agree)' } }), ...sampleRows()]);
-    await open(page);
+    await open(page, '#/insights');
     await expect(page.locator('#view [data-morning]')).toHaveCount(0);
     await page.evaluate(() => { location.hash = '#/numbers'; });
     await expect(page.locator('#view')).toContainText('Morning number: Waits for item A (baselines agree)');
@@ -1021,9 +1039,9 @@ test.describe('Marketplace house look', () => {
         await page.setViewportSize({ width: w, height: h });
         await lookSheets(page);
         await open(page);
-        for (const hash of ['#/me', '#/do', '#/decide', '#/reply', '#/insights']) {
+        for (const hash of ['#/me', '#/do', '#/do?post', '#/decide', '#/reply', '#/insights', '#/sold']) {
           await page.evaluate((x) => { location.hash = x; }, hash);
-          await expect(page.locator('#view .needs, #view .tiles').first()).toBeVisible();
+          await expect(page.locator(hash === '#/me' ? '#view [data-hub-main]' : '#view .needs, #view .tiles').first()).toBeVisible();
           expect(await page.evaluate(auditLook), `${scheme} ${w} ${hash}`).toEqual([]);
           const sw = await page.evaluate(() => [document.documentElement.scrollWidth, innerWidth]);
           expect(sw[0], `${hash}: page wider than the screen`).toBeLessThanOrEqual(sw[1]);
@@ -1040,7 +1058,7 @@ test.describe('Marketplace house look', () => {
       ink: probe('var(--ink)'), ok: probe('var(--ok)'), need: probe('var(--need)'), tc: probe('var(--tc)'), surface: getComputedStyle(document.querySelector('#view .card') || document.body).backgroundColor };
   });
   const chan = (c) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)/.exec(c); return m ? [m[1] * 255, m[2] * 255, m[3] * 255] : (c.match(/[\d.]+/g) || []).slice(0, 3).map(Number); };
-  test('hover: neutral controls get a 1px ink line inside + a muted tint; nothing moves or resizes; read-only pills have no hover', async ({ page }) => {
+  test('hover: neutral controls get a 1px ink line inside and no fill (Lisa\'s sweep, 3 Nov); nothing moves or resizes; read-only pills have no hover', async ({ page }) => {
     await lookSheets(page);
     await open(page, '#/do');
     for (const sel of ['#view a.btn[href*="vinted"]', '#view [data-action="pack"]', '#view .chip[data-site]:not([aria-pressed="true"])']) {
@@ -1050,7 +1068,7 @@ test.describe('Marketplace house look', () => {
       const h = await hoverLook(el);
       expect([h.style, h.width, h.offset], sel).toEqual(['solid', '1px', '-1px']);
       expect(h.line, `${sel}: neutral hover line is ink`).toBe(h.ink);
-      expect(h.bg, `${sel}: a muted tint appears`).not.toBe(rest.bg);
+      expect(h.bg, `${sel}: no fill on hover`).toBe(rest.bg);
       expect(await el.boundingBox(), `${sel} moved or resized on hover`).toEqual(before);
     }
     // Selected looks the same as hover.
@@ -1063,7 +1081,7 @@ test.describe('Marketplace house look', () => {
     }
   });
 
-  test('hover: meaning-coloured controls keep their OWN colour (line + pale tint of it, never ink): green Yes, rose No', async ({ page }) => {
+  test('hover: meaning-coloured controls keep their OWN colour (line, never ink, no fill): green Yes, rose No', async ({ page }) => {
     await lookSheets(page);
     await open(page, '#/decide');
     for (const [s, key, lean] of [['[data-ans="GO|1"][data-v="Yes"]', 'ok', 'green'], ['[data-ans="GO|1"][data-v="No"]', 'need', 'red']]) {
@@ -1073,9 +1091,9 @@ test.describe('Marketplace house look', () => {
       expect([h.style, h.width, h.offset], s).toEqual(['solid', '1px', '-1px']);
       expect(h.line, `${s}: line keeps its colour`).toBe(h[key]);
       expect(h.line, `${s}: never ink`).not.toBe(h.ink);
-      expect(h.bg, `${s}: a tint appears`).not.toBe(rest.bg);
-      const [r, g] = chan(h.bg);
-      if (lean === 'green') expect(g, `${s}: tint is green`).toBeGreaterThan(r); else expect(r, `${s}: tint is rose`).toBeGreaterThan(g);
+      expect(h.bg, `${s}: no fill on hover`).toBe(rest.bg);
+      const [r, g] = chan(h.line);
+      if (lean === 'green') expect(g, `${s}: line is green`).toBeGreaterThan(r); else expect(r, `${s}: line is rose`).toBeGreaterThan(g);
       expect(await el.boundingBox(), `${s} moved`).toEqual(before);
     }
   });
@@ -1132,7 +1150,7 @@ test.describe('Marketplace house look', () => {
 
   test('keyboard focus is a 2px ink ring', async ({ page }) => {
     await lookSheets(page);
-    await open(page);
+    await open(page, '#/do');
     await page.locator('[data-ans="RM|1"]').focus();
     await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
     const s = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineStyle, c.outlineWidth, c.outlineColor === getComputedStyle(document.body).color]; });
@@ -1141,30 +1159,39 @@ test.describe('Marketplace house look', () => {
 
   test('date pills: plain 1px ring at rest; late = rose ring + tint, today or tomorrow = amber ring + tint; words say it too', async ({ page }) => {
     await lookSheets(page);
-    await open(page);
-    const pills = page.locator('#view .plist .date');
-    await expect(pills).toHaveCount(3);
-    await expect(pills.nth(0)).toContainText('late'); await expect(pills.nth(0)).toHaveClass(/late/);
-    await expect(pills.nth(1)).toContainText('today'); await expect(pills.nth(1)).toHaveClass(/soon/);
-    await expect(pills.nth(2)).not.toHaveClass(/late|soon/);
-    const look = await pills.evaluateAll((els) => els.map((e) => { const s = getComputedStyle(e); return [s.borderTopWidth, s.borderTopColor, s.backgroundColor]; }));
+    await open(page, '#/do?post');   // the To post list moved from Main to Do now › To post (2 Nov)
+    await expect(page.locator('#view .date')).toHaveCount(3);
+    const pills = [page.locator('#view .card', { hasText: 'Sample jumper' }).locator('.date'), page.locator('#view .card', { hasText: 'Sample lead' }).locator('.date'), page.locator('#view .card', { hasText: 'Sample blade' }).locator('.date')];
+    await expect(pills[0]).toContainText('late'); await expect(pills[0]).toHaveClass(/late/);
+    await expect(pills[1]).toContainText('today'); await expect(pills[1]).toHaveClass(/soon/);
+    await expect(pills[2]).not.toHaveClass(/late|soon/);
+    const look = await Promise.all(pills.map((p) => p.evaluate((e) => { const s = getComputedStyle(e); return [s.borderTopWidth, s.borderTopColor, s.backgroundColor]; })));
     expect(look.map((l) => l[0])).toEqual(['1px', '1px', '1px']);
     expect(look[0][1]).not.toBe(look[2][1]); expect(look[1][1]).not.toBe(look[2][1]); expect(look[0][1]).not.toBe(look[1][1]);
     expect(look[2][2]).toBe('rgba(0, 0, 0, 0)');   // the plain one has no tint
   });
 
-  test('Home: a Next card with a 1px ink edge, a "To post" list (late first, at most 7) and Start packing that opens packing mode', async ({ page }) => {
+  test('Main: a Next card with a 1px ink edge, late first; To Post opens the parcel list; the Next card\'s Pack opens packing mode', async ({ page }) => {
     await lookSheets(page);
     await open(page);
-    const next = page.locator('#view > .card.next');
+    const next = page.locator('#view [data-hm="next"]');
     await expect(next).toHaveCount(1);
-    await expect(next.locator('.nextlab')).toHaveText('Next');
+    await expect(next.locator('h3')).toHaveText('Next');
     expect(await next.evaluate((e) => getComputedStyle(e).borderTopColor === getComputedStyle(document.body).color)).toBe(true);
-    await expect(page.locator('#view .ghead', { hasText: 'To post' }).locator('.cnt.need')).toHaveText('3');
-    await expect(page.locator('#view .plist .ttl')).toHaveText(['Sample jumper', 'Sample lead', 'Sample blade']);
-    await expect(page.locator('#view .plist img')).toHaveCount(1);          // the real photo where there is one
-    await expect(page.locator('#view .plist .ph .ti-shirt')).toHaveCount(1); // else a line icon of the item type
-    await page.locator('#view [data-gopack]').click();
+    await expect(next.locator('.hm-what')).toHaveText('Sample jumper');   // late first, then today
+    await expect(page.locator('#view [data-hm="needs"] .hm-row .hm-t > a').nth(1)).toHaveText('Sample lead');
+    await expect(page.locator('#view a.hm-n[data-k="To Post"] .hm-v.need')).toHaveText('3');   // rose: one is late
+    // The To post list (moved from Main, 2 Nov) is Do now › Post, opened by the To Post number.
+    await page.locator('#view a.hm-n[data-k="To Post"]').click();
+    await expect(page).toHaveURL(/#\/do\?post$/);
+    await expect(page.locator('#tabs a[data-nav="do"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#view .ghead', { hasText: 'Post' }).locator('.cnt.need')).toHaveText('3');
+    await expect(page.locator('#view .card .ttl')).toHaveText(['Sample jumper', 'Sample blade', 'Sample lead']);   // Do now's category order
+    await expect(page.locator('#view .item img')).toHaveCount(1);          // the real photo where there is one
+    await expect(page.locator('#view .item .ph .ti-shirt')).toHaveCount(1); // else a line icon of the item type
+    await expect(page.locator('#view [data-action="pack"]')).toHaveText('Start packing (3)');
+    await page.evaluate(() => { location.hash = '#/me'; });
+    await page.locator('#view [data-hm="next"] a[data-hm-act]').click();   // Pack
     await expect(page.locator('#view .packbar')).toContainText('Packing · 1 of 3');
     await expect(page.locator('#tabs a[data-nav="do"]')).toHaveAttribute('aria-current', 'page');
     await page.locator('[data-action="stoppack"]').click();
@@ -1176,12 +1203,13 @@ test.describe('Marketplace house look', () => {
     await sheets(page, []);
     await open(page);
     await expect(page.locator('#readAt')).toHaveText(/^Read \d\d:\d\d$/);
+    // Main is the shared house Main: its one empty card is [data-hm="empty"] with the .hm-ok ring.
     for (const [hash, words] of [['#/me', 'Nothing needs you'], ['#/do', 'Nothing waiting'], ['#/decide', 'All decided'], ['#/reply', 'No one waiting']]) {
       await page.evaluate((x) => { location.hash = x; }, hash);
-      const e = page.locator('#view .card.empty');
-      await expect(e.locator('h2')).toHaveText(words);
-      await expect(e.locator('.okring')).toHaveText('✓');
-      const ok = await e.locator('.okring').evaluate((x) => { const s = getComputedStyle(x); return [s.borderTopWidth, s.borderTopLeftRadius]; });
+      const main = hash === '#/me', e = page.locator(main ? '#view [data-hm="empty"]' : '#view .card.empty'), ring = e.locator(main ? '.hm-ok' : '.okring');
+      await expect(e.locator(main ? 'h3' : 'h2')).toHaveText(words);
+      await expect(ring).toHaveText('✓');
+      const ok = await ring.evaluate((x) => { const s = getComputedStyle(x); return [s.borderTopWidth, s.borderTopLeftRadius]; });
       expect(ok).toEqual(['1px', '50%']);
     }
     await page.locator('#signin').click();
@@ -1194,7 +1222,7 @@ test.describe('Marketplace house look', () => {
       for (const look of ['warm', 'cool']) {
         await page.emulateMedia({ colorScheme: scheme });
         await page.evaluate((lk) => { try { localStorage.setItem('dash-look', JSON.stringify({ bg: lk })); } catch (e) {} }, look).catch(() => {});
-        if (scheme === 'light' && look === 'warm') await open(page);
+        if (scheme === 'light' && look === 'warm') await open(page, '#/insights');   // Insights has every sampled part (card, hint, button); Main has no hint
         else { await page.reload(); await expect(page.locator('#view .needs')).toBeVisible(); }
         const c = await page.evaluate(() => {
           const rgb = (x) => { const m = /color\(srgb ([\d.e-]+) ([\d.e-]+) ([\d.e-]+)/.exec(x); return m ? [m[1] * 255, m[2] * 255, m[3] * 255] : (x.match(/[\d.]+/g) || []).slice(0, 3).map(Number); };

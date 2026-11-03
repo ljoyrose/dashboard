@@ -20,8 +20,10 @@ async function withSheet(page, values) {
   });
   return seen;
 }
+// The old Home list (count tiles, filters, Add, every property) is the All tab since Hub Mains (2 Nov 2026); Main is Next,
+// Needs you and Down · Expiring · Live (tests/mocked/hub-main-others.spec.js).
 async function signIn(page, hash) {
-  await page.goto('estate/' + (hash || '#/home'));
+  await page.goto('estate/' + (hash || '#/all'));
   await page.locator('#view [data-action="signin"]').click();
 }
 const count = (page, k) => page.locator(`.tile [data-count="${k}"]`);
@@ -30,7 +32,7 @@ test.describe('Web Estate page', () => {
   test('not set up: invented example rows, a plain note, and nothing read or sent', async ({ page }) => {
     const sheets = [];
     await page.route(SHEETS, (route) => { sheets.push(route.request().url()); return route.abort(); });
-    await page.goto('estate/');
+    await page.goto('estate/#/all');
     await page.locator('#view [data-action="signin"]').click();
     await expect(page.locator('#banner')).toContainText('Example rows');
     await expect(page.locator('.prop').first()).toHaveAttribute('data-status', 'down');
@@ -80,7 +82,7 @@ test.describe('Web Estate page', () => {
     await withSheet(page, F.values());
     await signIn(page);
     await page.locator('select[data-filter="kind"]').selectOption('shop');
-    await expect(page).toHaveURL(/#\/home\?kind=shop$/);
+    await expect(page).toHaveURL(/#\/all\?kind=shop$/);
     await expect(page.locator('.prop')).toHaveCount(1);
     await page.reload();
     await expect(page.locator('select[data-filter="kind"]')).toHaveValue('shop');

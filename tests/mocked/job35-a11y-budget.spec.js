@@ -7,12 +7,21 @@
 const { test, expect } = require('../support/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 const { HUBS, go } = require('../support/hubs');
+const { withGrowth } = require('../support/budgets');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 337800, cdhub: 238300, factory: 234000, food: 140600 };
-// home 337600 > 337800 and factory 233800 > 234000 on 2 Nov 2026: phone words for long tab names (Lisa: Accountant = Acct, New Stock
-// = Stock) add the short-word rules to house.css and the full-word name to toolkit.js (about 300 bytes); measured 371465 and 257315.
+// From 3 Nov 2026 a PR that adds weight adds a file in tests/budget-growth/ (see tests/support/budgets.js) instead of editing this line.
+const BYTES = withGrowth({ home: 353000, cdhub: 240000, factory: 245800, food: 154200 });
+// cdhub 239700 > 240000, factory 245400 > 245800, food 153800 > 154200 (+300 to +400 each) on 3 Nov 2026: config.js grew 336 bytes (TidyUp stage 9, #142), and every page loads it.
+// Measured 263882, 270262 and 169407.
+// home 348100 > 352000 on 3 Nov 2026 (TidyUp stage 9, #142): look-only Dropbox, iCloud and Mac pages under Drives add 3100 bytes; measured 386766.
+// home 352000 > 353000 (+1000) on 3 Nov 2026: the Do page's Standing approvals card is its own file (estate/donq.js, fetched only on the Do page);
+// index.html keeps only the hooks that fetch and call it.
+// home 337600 > 348100 (+10500), cdhub 238300 > 239700 (+1400), factory 233800 > 245400 (+11600) and food 140600 > 153800 (+13200)
+// on 2 Nov 2026: Hub Mains (Lisa's house style: every hub's Main is Next, Needs you and 3 numbers) add DashKit.hubMain to toolkit.js
+// and its rules to house.css, which every hub loads, and the moved sections keep their code in their new tabs.
+// Measured 382818, 263546, 269890 and 169071.
 // home 337000 > 337600 and factory 232000 > 233800 on 2 Nov 2026: phone tab counts become dots and every tab one size (Lisa's pick b)
 // add the tab names and the one-size measure to the shared toolkit.js (about 1.8 KB, comments trimmed to one line); measured 371133
 // and 256983 bytes.

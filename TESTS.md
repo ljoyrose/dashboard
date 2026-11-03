@@ -425,3 +425,7 @@ RUN-LOG.csv column contract (the private repo writes it; header row first; colum
 | `errors` | Errors in the run (whole number). |
 | `result` | `ok`, `partial` or `failed`. Blank = ok when errors is 0, else partial. |
 | `lesson` | One short line, or blank. |
+
+## Dropbox, iCloud and Mac pages (TidyUp stage 9)
+
+`tests/mocked/coverage-pages.spec.js` checks the three look-only Drives pills (Dropbox, iCloud, Mac): each page opens with one purpose line, marks its own pill current, has no bin, move or rename button (only "← Dashboard"), and says "No report yet." (not a failure) until its engine writes a dry-run report. With a report, it shows the counts and "Nothing was renamed or moved." Dropbox reads the same DROPBOX-TOTALS.json as the Bin Dropbox fold; its delete steps stay in Bin. No page makes a write call.
