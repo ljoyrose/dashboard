@@ -27,16 +27,16 @@ const calendlyRoutes = () => {
   ];
 };
 
-test('setup() makes RR_ENQUIRIES with 13 tabs, Settings and Sources, and no extra tab', { skip }, () => {
+test('setup() makes RR_ENQUIRIES with 14 tabs, Settings and Sources, and no extra tab', { skip }, () => {
   const e = FAKE.load(src);
   e.ctx.setup();
   const names = e.book().getSheets().map((s) => s.name);
-  assert.deepEqual(names.sort(), ['Deposits', 'Drafts', 'Enquiries', 'Events', 'FollowUps', 'Litters', 'Log', 'People', 'Requests', 'Sale Replies', 'Settings', 'Sources', 'Style'].sort());
+  assert.deepEqual(names.sort(), ['Deposits', 'Drafts', 'Enquiries', 'Events', 'FollowUps', 'Litters', 'Log', 'People', 'Requests', 'Sale Replies', 'Settings', 'Sources', 'Style', 'Results'].sort());
   assert.equal(e.props.ENQ_SHEET_ID, 'SAMPLE-BOOK-ID');
   assert.ok(e.tab('Settings').some((r) => r.setting === 'calendly_event_name' && r.value === 'Whatsapp Call'));
   assert.equal(e.tab('Sources').length, 12);
   e.ctx.setup(); // safe to run twice
-  assert.equal(e.book().getSheets().length, 13);
+  assert.equal(e.book().getSheets().length, 14);
   assert.ok(e.tab('Settings').length >= 10);
   const n = e.tab('Settings').length; e.ctx.setup(); assert.equal(e.tab('Settings').length, n);
 });
@@ -443,4 +443,47 @@ test('Stage 12: a replied enquiry gets a due follow-up and two drafts; snooze mo
   e.ctx.runOnce();
   assert.equal(e.tab('Drafts').length, drafts, 'a lost enquiry gets no further drafts');
   assert.ok(e.tab('Requests').every((r) => !/refused/.test(r.result)));
+});
+
+// ---- Stage 14: results ------------------------------------------------------------------------------------------
+// The engine runs the real junk check, where example.com IS a test domain, so the people meant to count carry an
+// invented 07700 900xxx number and no address.
+const HS_DEALS = ['Deal Name,Deal Stage,Create Date,Phone Number,First Name,Last Name', 'Pup for Sam,closedwon,2025-11-03 10:00,07700 900111,Sam,Rivers',
+  'XkQwPzLmRt,closedlost,2025-11-04 10:00,07700 900112,XkQwPzLmRt,', 'Pup for Max,appointmentscheduled,2026-06-01 10:00,07700 900113,Max,Yew'].join('\n');
+const HS_CONTACTS = ['First Name,Last Name,Email,Phone Number,Create Date,Lifecycle Stage', 'Pat,Bay,,07700 900222,2025-12-05,lead',
+  'Lee,Fir,lee.fir@example.test,,2025-11-05,customer', 'Ok,Person,ok.person@example.com,,2025-11-06,lead'].join('\n');
+test('Stage 14: results_() fills the Results tab with counts only; history is imported once; a re-run adds nothing', { skip }, () => {
+  const files = [req('FILE-S14-1', 'email', 'From: Buyer R One\nA puppy please r1@example.com', '2026-10-01T09:00:00.000Z'),
+    req('FILE-S14-2', 'whatsapp', 'From: Buyer R Two\nA puppy please r2@example.com', '2026-10-02T09:00:00.000Z'),
+    { id: 'FILE-S14-H1', name: 'hubspot-deals-export.csv', text: HS_DEALS }, { id: 'FILE-S14-H2', name: 'hubspot-contacts-export.csv', text: HS_CONTACTS }];
+  const others = { 'OLD-DEP-SAMPLE': { Deposits: [['name', 'deposit_date'], ['Person A', '2025-10-02'], ['Person B', '2025-10-20'], ['Person C', '2026-07-01']] } };
+  const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, others, dryRun: false });
+  e.ctx.setup();
+  setSetting(e, 'old_deposit_list_id', 'OLD-DEP-SAMPLE');
+  e.ctx.runOnce();
+  const res = e.tab('Results');
+  const oct = res.find((r) => r.month === '2026-10' && r.source === 'all');
+  assert.equal(oct.enquiries, 2); assert.equal(oct.basis, 'live');
+  assert.equal(res.find((r) => r.month === '2026-10' && r.source === 'whatsapp').enquiries, 1);
+  const hs = res.filter((r) => r.basis === 'hubspot-history');
+  assert.deepEqual(hs.map((r) => [r.month, r.enquiries, r.collected]), [['2025-11', 1, 1], ['2025-12', 1, 0]], 'random name, two test domains and the after-cut deal left out');
+  assert.deepEqual(res.filter((r) => r.basis === 'deposit-list').map((r) => [r.month, r.deposits]), [['2025-10', 2]]);
+  assert.ok(e.tab('Log').some((r) => r.step === 'results' && /2 files, 6 rows read, 2 counted, 3 spam or test left out, 1 on or after 2026-05-01/.test(r.message)
+    && /old deposit list: 3 rows read, 2 deposits counted/.test(r.message)));
+  assert.doesNotMatch(JSON.stringify(e.book().getSheetByName('Results').rows), /Buyer|Person|Sam|Rivers|example\.|7700/, 'counts only');
+  assert.deepEqual(e.touched, [], 'nothing but reads on the old deposit list');
+  const n = e.tab('Results').length;
+  e.ctx.runOnce();
+  assert.equal(e.tab('Results').length, n, 'a re-run adds nothing');
+  assert.ok(e.tab('Log').some((r) => r.step === 'results' && /HubSpot history already imported; old deposit list already counted/.test(r.message)));
+  assert.equal(e.tab('Results').filter((r) => r.basis === 'hubspot-history').reduce((s, r) => s + r.enquiries, 0), 2, 'history not counted twice');
+});
+
+test('Stage 14: in DRY_RUN results_() writes nothing but the Log', { skip }, () => {
+  const files = [req('FILE-S14-D', 'email', 'From: Buyer R Three\nA puppy please r3@example.com', '2026-10-03T09:00:00.000Z')];
+  const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files });
+  e.ctx.setup();
+  e.ctx.runOnce();
+  assert.equal(e.tab('Results').length, 0);
+  assert.ok(e.tab('Log').some((r) => r.step === 'results'));
 });

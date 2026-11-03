@@ -7,7 +7,7 @@
   var K = function (n) { return 'K-a' + String(n).padStart(15, '0'); };
   var F = function (n) { return 'F-f' + String(n).padStart(15, '0'); };
 
-  // build(now) -> { Enquiries, People, Events, Drafts, FollowUps, Litters, 'Sale Replies', Deposits } as page rows.
+  // build(now) -> { Enquiries, People, Events, Drafts, FollowUps, Litters, 'Sale Replies', Deposits, Results } as page rows.
   function build(now) {
     var t = now == null ? Date.now() : Core.toMs(now);
     var uk = function (hours) { return Core.toUk(t + hours * 3600000); };
@@ -72,6 +72,13 @@
       Deposits: [
         { deposit_key: 'D-x7', litter_ref: 'L-EX1', pup_ref: 'L-EX1-3', person_key: 'P-x7', deposit_date: day(-20, '10:00').slice(0, 10), deposit: '500', balance_due: '1500',
           balance_paid: '', collection_date: day(14, '10:00').slice(0, 10), status: 'held', basis: 'example', check: '' }
+      ],
+      // Stage 14: invented history counts (as the one-off HubSpot import writes them), before the live months.
+      Results: [
+        { result_key: 'R-2026-03-hubspot-legacy-hubspot-history', month: '2026-03', source: 'hubspot-legacy', basis: 'hubspot-history', enquiries: 10, calls_booked: 6,
+          calls_held: 4, offers: 1, deposits: 2, balances: 1, collected: 1, lost: 3, junk: 4, adult_sale: 0, median_reply_h: '', lost_reasons: 'timing:2 | went elsewhere:1', made_uk: uk(-1) },
+        { result_key: 'R-2026-04-deposit-list-deposit-list', month: '2026-04', source: 'deposit-list', basis: 'deposit-list', enquiries: 0, calls_booked: 0,
+          calls_held: 0, offers: 0, deposits: 3, balances: 0, collected: 0, lost: 0, junk: 0, adult_sale: 0, median_reply_h: '', lost_reasons: '', made_uk: uk(-1) }
       ]
     };
   }
