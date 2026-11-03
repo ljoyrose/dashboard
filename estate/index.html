@@ -59,7 +59,7 @@
   @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   input:focus, select:focus { outline: none; }
   a:focus, button:focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  :focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
   .top :focus-visible { outline-color: var(--frame-ink); }
 
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
@@ -118,8 +118,8 @@
     .btn, .chip, select.txtin, input.txtin, details.add > summary { min-height: 44px; }
     .frow label { flex: 1 1 calc(50% - 4px); max-width: none; }
   }
-  #view :focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
-  header :focus-visible:not(.house-menu *) { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
+  #view :focus-visible { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
+  header :focus-visible:not(.house-menu *) { outline: 1px solid var(--frame-ink) !important; outline-offset: -1px !important; }
 </style>
 </head>
 <body>

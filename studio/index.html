@@ -213,8 +213,8 @@
   /* Calm focus: one line, a shade darker. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus, button:focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; } /* never the browser blue */
-  a:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-color: var(--ink) !important; }
+  :focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; } /* never the browser blue */
+  a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; border-color: var(--ink) !important; }
   footer { color: var(--muted); font-size: var(--fs-small); padding: 0 16px 24px; }
   /* v0.2: Kits tab (playbooks by outcome, packs, kits, styles, formats), sources, gaps, tool form */
   a.tag { text-decoration: none; }

@@ -108,7 +108,7 @@
   --house-tab-disc: 28px; --house-tab-icon: 22px;   /* the round place for the icon; a 1px ring shows round it only on hover, focus and press */
   --house-tab-count-w: 24px; --house-tab-count-h: 24px; --house-tab-count-lh: 22px; --house-tab-count-pad: 0px;   /* a tab's count: a 14px number in a round ring in its top-right corner (1 and 2 digits one width) */
   --house-tab-dot: 8px; --house-tab-dot-top: 6px;   /* on a phone (under 768px) a tab's count is this dot, off the icon's top-right corner */
-  --house-focus: 2px;              /* keyboard focus ring */
+  --house-focus: 1px;              /* keyboard focus: ONE 1px ink line inside (offset -1px), never a ring outside (Lisa, 3 Nov 2026) */
   --house-btn: 36px; --house-btn-phone: 44px;      /* everything you press */
   --house-head: 56px;              /* the top bar (Lisa's pick A, 2 Nov): one row, this high on every page, desktop and phone */
   --house-head-space: 8px;         /* between the things in the top bar */
@@ -131,7 +131,9 @@
   --house-pad: 12px;               /* inside a card */
   --house-logo: 20px;              /* brand logo slot (initials when there is no logo) */
   /* D  States (Lisa's sweep, 3 Nov 2026): hover, focus, press and selected draw ONE 1px line inside (outline, offset -1px) in ink, or in the
-     control's meaning colour; NEVER a fill and nothing moves. Keyboard focus adds the --house-focus ring. Only typing boxes may change fill. */
+     control's meaning colour; NEVER a fill and nothing moves. Every line is 1px and INSIDE the box: keyboard focus is the --house-focus
+     line (1px, offset -1px) in ink (frame ink on the frame; the --on colour inside a filled control), never a 2px ring, a ring outside,
+     a second line or a box-shadow. Typing boxes on focus change only their border colour. Only typing boxes may change fill. */
   --house-state-line: var(--house-line);   /* the one line a state draws */
   --house-state-fill: transparent;         /* the fill a state adds: none */
   --house-tint: 14%;               /* the pale tint for a badge's own colour (brand initials); never a state */

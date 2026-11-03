@@ -54,7 +54,7 @@ for (const hub of Object.keys(HUBS)) {
 
 // FIX-REQUEST J34-F85 (house.css:78-80): ".house-tabs > a[aria-current=page]" sets outline: none and is more specific than
 // ".house-tabs > :focus-visible", so the bottom tab for the page you are on shows NO focus ring when Tab lands on it
-// (every hub; seen on Money "Now", Marketplace "Home", Studio "Me"). Other tabs show the 2px ring.
+// (every hub; seen on Money "Now", Marketplace "Home", Studio "Me"). Other tabs show the 1px focus line.
 // DECISION NEEDED: fix the page (see FIX-REQUEST above) or accept it. OWNER: Lisa. BY 2026-11-06
 test.fixme('J34-F85 money: the current bottom tab shows a focus ring when Tab lands on it', async ({ page, guard }) => {
   await openByKeyboard(page, guard, 'money');

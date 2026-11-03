@@ -60,7 +60,7 @@
   @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   input:focus { outline: none; }
   a:focus, button:focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }   /* keyboard ring: 2px ink, never the browser blue */
+  :focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }   /* keyboard focus: 1px ink inside, never the browser blue */
   .top :focus-visible { outline-color: var(--frame-ink); }
 
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
@@ -133,9 +133,9 @@
     .btn, .chip, .more, input.txtin { min-height: 44px; }
     input.txtin { flex: 1 1 160px; max-width: none; }   /* Search and Filter share one calm row */
   }
-  /* Keyboard focus always stays the 2px ink ring, over any hover or selected line. */
-  #view :focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
-  header :focus-visible:not(.house-menu *) { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
+  /* Keyboard focus always stays the 1px ink line inside, over any hover or selected line. */
+  #view :focus-visible { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
+  header :focus-visible:not(.house-menu *) { outline: 1px solid var(--frame-ink) !important; outline-offset: -1px !important; }
 </style>
 </head>
 <body>
