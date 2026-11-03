@@ -933,9 +933,10 @@ function tempsCard(){
   +'<div class="mfoot"><span class="mut">'+(DB?'':'Saving off.')+'</span><button type="button" class="btn house-open" data-go="round">The round</button></div></section>';
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
+// A failed data check is broken: its count is the black badge (../toolkit.js DashKit.count), read out as "N failed".
 function checksCard(){
  var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
- return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'':'ok')+'</h3>'
+ return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?DashKit.count.cls(bad,'failed').trim():'ok')+(bad?'<span class="sr"> failed</span>':'')+'</h3>'
   +all.map(function(x){
    return '<div class="mrow ckrow'+(x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.ok?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
@@ -1808,8 +1809,8 @@ var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sit
  vet:['stethoscope','Vet',5],buyers:['world','Assocs',6]};
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; } // 0 shows no ring
 // Bottom tabs (Lisa's picks, 2 Nov): Main, Do, Today, Dogs, Assocs, then More with the other views. Same bar as every hub
-// (../house.css section 6, ../toolkit.js builds the tab and More). Counts: grey ring = waiting; rose ring only when one is late
-// (Lisa's sweep, 3 Nov 2026: a rose count is read out as "N late").
+// (../house.css section 6, ../toolkit.js builds the tab and More). Counts: grey ring = waiting; rose ring = one is late (read out as
+// "N late"); black badge = broken (Lisa, 3 Nov 2026; ../toolkit.js DashKit.count).
 var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['buyers','Assocs',6,'world']];
 var MORE_VIEWS=['shape','round','areas','litters','vet'];
 function navHtml(){

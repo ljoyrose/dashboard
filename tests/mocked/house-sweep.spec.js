@@ -4,7 +4,8 @@
 //  2 numbers side by side in one group are the same size;
 //  3 no explainer lines or sub-lines that restate a label;
 //  4 nothing moves on hover or focus;
-//  5 a rose count means late only (a tab's rose count is read out as "N late"), everything else is grey.
+//  5 a rose count means late only (a tab's rose count is read out as "N late"); a black count means broken (down, expired, stuck,
+//    failed: Lisa, 3 Nov 2026, read out with that word); everything else is grey.
 // Pretend Google, Drive and Sheets; every row is invented (tests/support/hubs.js).
 //
 // SWEEP_AUDIT=<file> adds every finding to that file (one per line) instead of failing: the before / after list in the pull request.
@@ -51,7 +52,7 @@ for (const [hub, P] of Object.entries(PAGES)) {
 
     for (const look of LOOKS) {
       for (const W of [1280, 390]) {
-        test(`${look.bg} ${look.scheme} ${W}: no selected fill, one size per number group, no explainer lines, rose = late`, async ({ page, guard }) => {
+        test(`${look.bg} ${look.scheme} ${W}: no selected fill, one size per number group, no explainer lines, rose = late, black = broken`, async ({ page, guard }) => {
           test.setTimeout(300_000);   // every view of the page; the shared Mac is slow under a full run
           await page.setViewportSize({ width: W, height: W > 600 ? 900 : 844 });
           await setLook(page, { bg: look.bg, mode: 'device', scheme: look.scheme });
@@ -60,7 +61,7 @@ for (const [hub, P] of Object.entries(PAGES)) {
           for (const v of P.views) {
             await go(page, v);
             const d = await page.evaluate(drawn);
-            for (const k of ['selected', 'groups', 'explainers', 'rose']) all.push(...d[k].map((x) => `#/${v} ${k}: ${x}`));
+            for (const k of ['selected', 'groups', 'explainers', 'rose', 'broken']) all.push(...d[k].map((x) => `#/${v} ${k}: ${x}`));
           }
           report([...new Set(all)], `${hub} ${look.bg}-${look.scheme} ${W}`);
         });
@@ -112,8 +113,9 @@ for (const [hub, P] of Object.entries(PAGES)) {
       report([...new Set(bad)], hub + ' hover / focus / press');
     });
 
-    // 5 A bottom tab whose count is rose (read out as "N late") opens on something late.
-    test('a rose tab count opens on something late', async ({ page, guard }) => {
+    // 5 A bottom tab whose count is rose (read out as "N late") opens on something late; a black one (broken) on something
+    // down, expired, stuck or failed, and its name says that word, never "late".
+    test('a rose tab count opens on something late; a black one on something broken', async ({ page, guard }) => {
       test.setTimeout(120_000);
       await page.setViewportSize({ width: 1280, height: 900 });
       await P.open(page, guard);
@@ -122,7 +124,8 @@ for (const [hub, P] of Object.entries(PAGES)) {
       for (const t of tabs) {
         if (!/^#\//.test(t.href)) continue;
         await go(page, t.href.slice(2));
-        if (!(await page.evaluate(lateShown))) bad.push(`${t.word} (${t.n}): rose count, but nothing on ${t.href} is late`);
+        if (t.broken && !/ (down|expired|stuck|failed)$/.test(t.label)) bad.push(`${t.word} (${t.n}): black count named "${t.label}", not what is broken`);
+        if (!(await page.evaluate(lateShown, t.broken))) bad.push(`${t.word} (${t.n}): ${t.broken ? 'black' : 'rose'} count, but nothing on ${t.href} is ${t.broken ? 'broken' : 'late'}`);
       }
       report(bad, hub + ' tab counts');
     });
