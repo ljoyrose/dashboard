@@ -8,7 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
-const { HUBS, setLook, go } = require('../support/hubs');
+const { HUBS, setLook, go, settle } = require('../support/hubs');
 const { textContrast } = require('../support/sweep-audit');
 
 const AUDIT = process.env.CONTRAST_AUDIT;
@@ -34,26 +34,31 @@ const LOOKS = [
   { bg: 'cool', scheme: 'light' }, { bg: 'cool', scheme: 'dark' },
 ];
 
+// One page load per hub and width; on each view the four looks are switched in place, the way the Look menu does it
+// (html.look-cool, and the device's light or dark), so the suite stays inside the CI time limit.
 for (const [hub, P] of Object.entries(PAGES)) {
   test.describe(hub, () => {
-    for (const look of LOOKS) {
-      for (const W of [1280, 390]) {
-        test(`${look.bg} ${look.scheme} ${W}: all text 4.5:1 or better on what it sits on`, async ({ page, guard }) => {
-          test.setTimeout(300_000);   // every view of the page; the shared Mac is slow under a full run
-          await page.setViewportSize({ width: W, height: W > 600 ? 900 : 844 });
-          await setLook(page, { bg: look.bg, mode: 'device', scheme: look.scheme });
-          await P.open(page, guard);
-          const all = [];
-          for (const v of P.views) {
-            await go(page, v);
-            all.push(...(await page.evaluate(textContrast, MIN)).map((x) => `#/${v} ${x}`));
+    for (const W of [1280, 390]) {
+      test(`${W}, all four looks: all text 4.5:1 or better on what it sits on`, async ({ page, guard }) => {
+        test.setTimeout(300_000);   // every view of the page in four looks; the shared Mac is slow under a full run
+        await page.setViewportSize({ width: W, height: W > 600 ? 900 : 844 });
+        await setLook(page, { bg: 'warm', mode: 'device', scheme: 'light' });
+        await P.open(page, guard);
+        const all = [];
+        for (const v of P.views) {
+          await go(page, v);
+          for (const look of LOOKS) {
+            await page.emulateMedia({ colorScheme: look.scheme });
+            await page.evaluate((cool) => document.documentElement.classList.toggle('look-cool', cool), look.bg === 'cool');
+            await settle(page.locator('body'));
+            all.push(...(await page.evaluate(textContrast, MIN)).map((x) => `${look.bg}-${look.scheme} #/${v} ${x}`));
           }
-          const list = [...new Set(all)];
-          const where = `${hub} ${look.bg}-${look.scheme} ${W}`;
-          if (AUDIT) { if (list.length) fs.appendFileSync(AUDIT, list.map((x) => where + ': ' + x + '\n').join('')); return; }
-          expect(list, where).toEqual([]);
-        });
-      }
+        }
+        const list = [...new Set(all)];
+        const where = `${hub} ${W}`;
+        if (AUDIT) { if (list.length) fs.appendFileSync(AUDIT, list.map((x) => where + ': ' + x + '\n').join('')); return; }
+        expect(list, where).toEqual([]);
+      });
     }
   });
 }

@@ -90,7 +90,7 @@ for (const [hub, P] of Object.entries(PAGES)) {
         await page.setViewportSize({ width: W, height: W > 600 ? 900 : 844 });
         await setLook(page, { bg: 'warm', mode: 'device', scheme: 'light' });
         await P.open(page, guard);
-        const bad = [];
+        const bad = [], hovered = new Set();
         for (const v of P.views) {
           await go(page, v);
           // A key press first, so programmatic focus counts as keyboard focus (:focus-visible), as a Tab would.
@@ -100,19 +100,21 @@ for (const [hub, P] of Object.entries(PAGES)) {
             const b = judge(f.rest, f.now, f.typing);
             if (b.length && !kinds.has(f.kind + b.join())) { kinds.add(f.kind + b.join()); bad.push(`#/${v} ${f.what}: focus ${b.join(', ')}`); }
           }
-          // Hover: one of each kind of control in view (the pointer cannot reach what is scrolled away).
-          const picks = await page.evaluate(() => {
+          // Hover: one of each kind of control (tag and classes) on the page, on the first view that shows it: hover rules go by kind,
+          // and once per kind keeps the suite inside the CI time limit.
+          const picks = await page.evaluate((done) => {
             document.querySelectorAll('[data-hl]').forEach((e) => e.removeAttribute('data-hl'));
             const kinds = new Map();
             for (const e of document.querySelectorAll('a[href], button, summary, input:not([type="hidden"]), textarea, select, [role="button"], [role="tab"], [role="switch"], [tabindex="0"]')) {
               const r = e.getBoundingClientRect();
               if (!(r.width > 0 && r.height > 0) || e.disabled || getComputedStyle(e).visibility !== 'visible') continue;
               const k = e.tagName + '.' + [...e.classList].sort().join('.');
-              if (!kinds.has(k)) kinds.set(k, e);
+              if (!kinds.has(k) && !done.includes(k)) kinds.set(k, e);
             }
-            return [...kinds.values()].map((e, i) => { e.setAttribute('data-hl', String(i)); return { sel: '[data-hl="' + i + '"]', what: e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + [...e.classList].slice(0, 3).map((c) => '.' + c).join('') + ' "' + (e.getAttribute('aria-label') || e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 24) + '"' }; });
-          });
+            return [...kinds.entries()].map(([k, e], i) => { e.setAttribute('data-hl', String(i)); return { k, sel: '[data-hl="' + i + '"]', what: e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + [...e.classList].slice(0, 3).map((c) => '.' + c).join('') + ' "' + (e.getAttribute('aria-label') || e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 24) + '"' }; });
+          }, [...hovered]);
           for (const p of picks) {
+            hovered.add(p.k);
             const el = page.locator(p.sel);
             await page.mouse.move(1, 1);
             let rest;
