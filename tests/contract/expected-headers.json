@@ -168,6 +168,10 @@
       "columns": ["id", "name"],
       "read": ["id", "name"]
     },
+    "BLD-area_reading.csv": {
+      "columns": ["id", "tenant_id", "area_id", "reading_type", "min_c", "max_c", "spot_c", "precision_dp", "period_start", "taken_at", "taken_by", "device_id", "reset_after_reading", "applied_limit_id", "in_range", "compliant", "mitigation_required", "corrects_id", "mitigation_note"],
+      "read": ["area_id", "min_c", "max_c", "taken_at"]
+    },
     "BLD-weight.csv": {
       "columns": ["subject_id", "performed_on", "weight_kg", "unit", "body_condition_score", "bcs_scale", "source"],
       "read": ["subject_id", "performed_on", "weight_kg", "unit", "body_condition_score", "bcs_scale", "source"]

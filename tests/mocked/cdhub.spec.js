@@ -17,7 +17,7 @@ test.describe('CD Hub: loads', () => {
     const res = await page.goto('cdhub/');
     expect(res.status()).toBe(200);
     await expect(page).toHaveTitle(/CD Hub/);
-    await expect(page.locator('h1')).toHaveText('Cobberdog Hub');
+    await expect(page.locator('h1')).toHaveText('Canine Hub');
     await expect(page.locator('#main')).toContainText('Sign in to see the tables');
     await expect(page.locator('#livepill')).toHaveText('signed out');
     await expect(page.locator('#nav button')).toHaveCount(0);
@@ -689,10 +689,25 @@ test.describe('CD Hub: In whelp reads the parsed mating rows (the #111 fix), inv
   });
 });
 
+test('CD Hub: The round shows a Kept readings card (from BLD-area_reading.csv), not a Bloodline placeholder', async ({ page }) => {
+  await page.goto('cdhub/');
+  await signIn(page);
+  await openTab(page, 'round');
+  await expect(page.locator('#kept-readings h3')).toHaveText('Kept readings');
+  await expect(page.locator('#arrive-reading')).toHaveCount(0);
+  await page.locator('#rdate').fill('2026-01-15');
+  await page.locator('#rdate').dispatchEvent('change');
+  const rows = page.locator('#kept-readings tbody tr');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0).locator('td').nth(1).locator('.ic')).toHaveClass(/cold/);   // 8.50 min: blue
+  await expect(rows.nth(0).locator('td').nth(2).locator('.ic')).toHaveClass(/late/);   // 28.50 max: red
+  await expect(rows.nth(1).locator('td').nth(1).locator('.ic')).toHaveClass(/ok/);     // 12-20: green
+});
+
 test.describe('CD Hub: screens that need data CD Hub does not hold say which Bloodline table will feed them', () => {
   const WANT = [
     ['dogs', 'media', 'Photos', 'media', 'media'], ['dogs', 'person', 'Who has it, by name', 'person', 'person'],
-    ['work', 'due', 'Due dates on Outstanding', 'work item', 'work_item'], ['round', 'reading', 'Temperatures that are kept', 'reading', 'reading'],
+    ['work', 'due', 'Due dates on Outstanding', 'work item', 'work_item'],
     ['litters', 'stage', 'Litter stage', 'litter stage', 'birth_group_stage']];
   test('each empty state names its Bloodline table, in words, on its own tab', async ({ page }) => {
     await page.goto('cdhub/');
