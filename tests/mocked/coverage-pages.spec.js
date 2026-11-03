@@ -12,7 +12,7 @@ const PAGES = [
   ['iCloud', 'drives/icloud', 'icloud'],
   ['Mac', 'drives/mac', 'mac'],
 ];
-// Same names as config.js home.coverageReports.
+// Same names as REPORT_NAMES in index.html.
 const REPORTS = { icloud: 'ICLOUD-REPORT.json', mac: 'MAC-REPORT.json' };
 const ACTIONS = ['pcpmark', 'pcpbin', 'selectall', 'clearpick', 'sweep', 'usbmark', 'pcpscan', 'usbscan'];
 

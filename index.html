@@ -1251,7 +1251,8 @@
   var DBX_JOB_URL = 'https://github.com/ljoyrose/dropbox-cleanup/actions/workflows/dropbox-delete.yml';   // workflow 3 (press Run workflow there)
   var DBX_TRASH_URL = 'https://www.dropbox.com/deleted_files';   // Dropbox cannot empty this by API on a personal account
   // iCloud and Mac dry-run reports (stage 9): written by the private engines into the same Drive folder. Look only.
-  var REPORT_NAMES = CFG.home.coverageReports || {};
+  // iCloud and Mac dry-run reports, written by the private engines into the Dropbox-totals folder (look only).
+  var REPORT_NAMES = { icloud: 'ICLOUD-REPORT.json', mac: 'MAC-REPORT.json' };
   function loadReport(key, name) {
     if (!signedIn || !accessToken) return;
     if (!DBX_FOLDER_ID || !name) { S[key] = { status: 'ok', readAt: Date.now(), error: null, data: { notConnected: true } }; render(); return; }

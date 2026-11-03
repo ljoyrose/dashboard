@@ -37,8 +37,6 @@
       readFirstId: '1HnnW5du3PxNbg-42C6mT79dHOo_RZS-L',
       dbxFolderId: '0AEqV6Ky2jpmDUk9PVA', // Drive folder holding DROPBOX-TOTALS.json
       dbxTotalsName: 'DROPBOX-TOTALS.json',
-      // Stage 9: iCloud and Mac dry-run reports, written by the private engines into the same folder (look only).
-      coverageReports: { icloud: 'ICLOUD-REPORT.json', mac: 'MAC-REPORT.json' },
       // Bin page Log: the tidy engines' run history (RUN-LOG.csv, written by the private repo; columns in index.html
       // above loadRunLog and in README.md). Placeholder: empty until the folder exists. Empty = "No runs logged yet".
       runLogFolderId: '',
