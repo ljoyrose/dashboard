@@ -891,8 +891,10 @@
   function closeQr() { $('qr').className = 'qr hidden'; var b = qrFrom && document.querySelector('[data-qr="' + CSS.escape(qrFrom) + '"]'); qrFrom = null; if (b) b.focus(); }
   document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !$('qr').classList.contains('hidden')) { e.preventDefault(); closeQr(); } });
   // Packing mode: one parcel at a time in shelf order. Found → the drop-off code shows once the engine has it → Posted.
+  // The parcels packing mode steps through: unposted, found, or posted within the undo window. Skip wraps on this list too (J34b-F40).
+  function packList() { return posts().filter(function (r) { return !r.answer || r.answer === 'Found' || Date.now() < Date.parse(r.answered_at) + UNDO_MS; }); }
   function pagePack() {
-    var list = posts().filter(function (r) { return !r.answer || r.answer === 'Found' || Date.now() < Date.parse(r.answered_at) + UNDO_MS; });
+    var list = packList();
     if (!list.length) { return '<p class="needs">Packing</p>' + emptyCard('All packed', '', '<button class="btn main big" type="button" data-action="stoppack">Back to Do now</button>'); }
     var i = Math.min(pack.i, list.length - 1), r = list[i], d = detail(r);
     var h = '<div class="packbar"><span>Packing · ' + (i + 1) + ' of ' + list.length + '</span><button class="btn" type="button" data-action="stoppack">Stop</button></div>';
@@ -1127,7 +1129,7 @@
     if (t.hasAttribute('data-who')) { who = t.getAttribute('data-who'); try { localStorage.setItem('mkt.who', who); } catch (x) {} return render(); }
     if (t.hasAttribute('data-site')) { site = t.getAttribute('data-site'); return render(); }
     if (a === 'pack') { pack = { i: 0 }; sheet = false; return render(); }
-    if (a === 'nextpack') { pack.i += 1; if (pack.i >= posts().length) pack.i = 0; return render(); }
+    if (a === 'nextpack') { pack.i += 1; if (pack.i >= packList().length) pack.i = 0; return render(); }
     if (a === 'stoppack') { pack = null; if (/\?pack\b/.test(location.hash)) { location.hash = '#/do'; return; } return render(); }
     if (a === 'sheet') { sheet = true; pack = null; return render(); }
     if (a === 'closesheet') { sheet = false; return render(); }
