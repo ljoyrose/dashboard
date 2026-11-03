@@ -1432,7 +1432,7 @@
     loading = true;
     var b = $('refreshBtn'); b.disabled = true;
     clearBanner();
-    if (!timed) { F = {}; S.bin = blank(); S.check = blank(); S.runlog = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
+    if (!timed) { F = {}; S.bin = blank(); S.check = blank(); S.runlog = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; if (window.DoQ) DoQ.reset(); if (window.DoQ) DoQ.reset(); }
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
@@ -2675,7 +2675,17 @@
     return h + '</section>';
   }
   function viewDecide() { return hubListView('decide', 'Decide', 'Nothing waiting on your decision.'); }
-  function viewDo() { return hubListView('todo', 'Do', 'Nothing to do.'); }
+  function viewDo() { return hubListView('todo', 'Do', 'Nothing to do.') + (window.DoQ ? DoQ.card() : ''); }
+  // Standing approvals card: its code (estate/donq.js) is fetched only when the Do page opens.
+  function loadDoQ() {
+    if (window.DoQ || scriptsLoaded.dq) return;
+    scriptsLoaded.dq = 1;
+    needScripts(['estate/donq.js']).then(function () {
+      DoQ.init({ esc: esc, tick: tickBox, list: driveList, text: apiText, api: API, csv: parseCsv, fetch: KIT.googleFetch, token: function () { return accessToken; }, write: function () { return writeGranted; },
+        busy: function () { return busy; }, setBusy: function (b) { busy = b; }, banner: showBanner, render: render, askWrite: requestWrite, pick: function () { return PICK; } });
+      render();
+    }).catch(function () {});
+  }
 
   // Signed out: nothing about the dashboard is shown, only the sign-in button.
   // The key links are drawn by viewMap, which only runs after sign-in.
@@ -3249,7 +3259,7 @@
     tabBadge('map', nNeeds, 'Main');
     var nDec = signedIn ? hubRows('decide') : [], nDo = signedIn ? hubRows('todo') : [];
     tabBadge('decide', nDec.length, 'Decide');
-    tabBadge('do', nDo.length, 'Do');
+    tabBadge('do', nDo.length + (window.DoQ ? DoQ.open() : 0), 'Do');
     $('n-do').classList.toggle('need', nDo.some(function (x) { return x.kind === 'late'; }));
     tabBadge('bin', S.bin.data && S.bin.data.ready ? S.bin.data.ready.length : 0, 'Bin');
     if (changed && lastView !== null) {
@@ -3263,6 +3273,7 @@
     lastView = routeKey;
     applyBinFilter();
     updateHeader();
+    if (r.view === 'do' && signedIn) loadDoQ();
     if ((r.view === 'bin' || r.view === 'dropbox') && S.dbx.status === 'idle') loadDbx();
     if ((r.view === 'icloud' || r.view === 'mac') && S[r.view].status === 'idle') loadReport(r.view, REPORT_NAMES[r.view]);
     if (r.view === 'bin' && S.runlog.status === 'idle') loadRunLog();
@@ -3303,6 +3314,7 @@
   }
   function onToken(resp) {
     var askedWrite = wantWrite; wantWrite = false;
+    var goDq = window.DoQ && DoQ.afterWrite; if (window.DoQ) DoQ.afterWrite = false;
     if (resp.error) { showBanner(askedWrite ? 'Bin access not granted. Browsing still works.' : 'Sign-in did not complete.', false, !askedWrite); return; }
     var g = google.accounts.oauth2;
     var hasWrite = g.hasGrantedAllScopes(resp, WRITE_SCOPE);
@@ -3311,7 +3323,7 @@
     rememberToken(resp, hasWrite);
     if (askedWrite && !hasWrite) showBanner('Bin access not granted. Browsing still works.', false, false); else clearBanner();
     startTimer();
-    if (upgrade) { render(); ensureRoute(); } else loadAll();
+    if (upgrade) { render(); ensureRoute(); if (goDq && hasWrite) setTimeout(DoQ.approve, 0); } else loadAll();
   }
   function startTimer() {
     stopTimer();
@@ -3345,7 +3357,7 @@
     if (window.DashAuth && otherTab !== true) DashAuth.clear();
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     S = freshState();
-    F = {}; R = { sweep: null, check: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++;
+    F = {}; R = { sweep: null, check: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; if (window.DoQ) DoQ.reset(); pcpLoadGen++;
     P = pcpFresh('idle', ''); Q = pcpFresh('idle', ''); U = usbBlank();
     personalAuth.clear();
     if (window.MoneyCore) window.MoneyCore.clearCache();
@@ -3393,6 +3405,7 @@
     else if (a === 'signout') signOut();
     else if (a === 'refresh') loadAll(false);
     else if (a === 'grantwrite') requestWrite();
+    else if (a === 'dqapprove') DoQ.approve();
     else if (a === 'selectall') { selectAll(t.getAttribute('data-group')); if (t.getAttribute('data-also')) selectAll(t.getAttribute('data-also')); render(); }
     else if (a === 'clearpick') { clearPick(t.getAttribute('data-group')); if (t.getAttribute('data-also')) clearPick(t.getAttribute('data-also')); render(); }
     else if (a === 'showmore') {
