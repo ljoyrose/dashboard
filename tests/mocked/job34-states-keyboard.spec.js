@@ -62,3 +62,13 @@ test.fixme('J34-F85 money: the current bottom tab shows a focus ring when Tab la
   expect(cur).not.toBeNull();
   expect(cur.ring, JSON.stringify(cur)).toBe(true);
 });
+// J34-F85 (fixed on main by house.css "nav.house-tabs .ht:focus-visible"): the bottom tab for the page you are on once showed
+// NO focus ring when Tab landed on it, because the aria-current rule set outline: none. Checked on the three hubs it was seen on.
+for (const hub of ['money', 'marketplace', 'studio']) {
+  test(`J34-F85 ${hub}: the current bottom tab shows a focus ring when Tab lands on it`, async ({ page, guard }) => {
+    await openByKeyboard(page, guard, hub);
+    const cur = await tabTo(page, '!!el.closest("nav.house-tabs") && el.getAttribute("aria-current") === "page"', 250);
+    expect(cur, `${hub}: Tab never reached the current tab`).not.toBeNull();
+    expect(cur.ring, JSON.stringify(cur)).toBe(true);
+  });
+}

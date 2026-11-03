@@ -1,0 +1,4 @@
+id,tenant_id,area_id,reading_type,min_c,max_c,spot_c,precision_dp,period_start,taken_at,taken_by,device_id,reset_after_reading,applied_limit_id,in_range,compliant,mitigation_required,corrects_id,mitigation_note
+rdg-0001,ten-test,area-1,temperature,8.50,14.00,,2,,2026-01-15T08:00,invented,,,,,,,,
+rdg-0002,ten-test,area-1,temperature,15.00,28.50,,2,,2026-01-15T18:00,invented,,,,,,,,
+rdg-0003,ten-test,area-2,temperature,12.00,20.00,,2,,2026-01-15T08:10,invented,,,,,,,,
