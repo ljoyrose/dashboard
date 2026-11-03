@@ -799,7 +799,7 @@
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
-  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), check: blank(), runlog: blank(), mins: blank(), hubs: blank(), ph: blank() }; }
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), canva: blank(), check: blank(), runlog: blank(), mins: blank(), hubs: blank(), ph: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
@@ -1428,7 +1428,7 @@
     loading = true;
     var b = $('refreshBtn'); b.disabled = true;
     clearBanner();
-    if (!timed) { F = {}; S.bin = blank(); S.check = blank(); S.runlog = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
+    if (!timed) { F = {}; S.bin = blank(); S.canva = blank(); S.check = blank(); S.runlog = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
@@ -1514,19 +1514,20 @@
     if (cell.length || row.length) { row.push(cell); rows.push(row); }
     return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); });
   }
-  function idsFromLedgerCsv(text) {
+  function idsFromLedgerCsv(text, info) {
     var rows = parseCsv(text);
     // The ledger may start with one note line such as "COUNT: 232 rows. …" (or "CURRENT: …") above the header.
     // Only that one note line is skipped; anything else without a file_id header still fails safe (nothing binned).
     if (rows.length && rows[0].length === 1 && /^\s*(COUNT|CURRENT)\s*:/i.test(rows[0][0])) rows = rows.slice(1);
     if (!rows.length) return null;
     var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
-    var col = head.indexOf('file_id');
+    var col = head.indexOf('file_id'), mcol = head.indexOf('merged_into');
     if (col < 0) return null;
     var ids = {};
     for (var i = 1; i < rows.length; i++) {
       var id = String(rows[i][col] || '').trim();
       if (id) ids[id] = true;
+      if (id && info && mcol >= 0) info[id] = String(rows[i][mcol] || '');
     }
     return ids;
   }
@@ -1555,16 +1556,17 @@
             if (String(f.name || '').indexOf(SLIP_PREFIX) === 0) files.push(f);
           });
         });
+        var info = {};
         return mapLimit(files, 3, function (f) {
           return readDriveText(f.id).then(function (text) {
-            var ids = idsFromLedgerCsv(text);
+            var ids = idsFromLedgerCsv(text, info);
             if (!ids) throw new Error('slip');
             return ids;
           });
         }).then(function (sets) {
           var ids = {};
           sets.forEach(function (s) { Object.keys(s).forEach(function (id) { ids[id] = true; }); });
-          return { ok: true, ids: ids };
+          return { ok: true, ids: ids, info: info };
         });
       });
     }).catch(function () { return { ok: false, ids: {} }; });
@@ -1572,12 +1574,14 @@
   function loadLedgerSet() {
     if (ledgerCache) return ledgerCache;
     ledgerCache = readDriveText(LEDGER_FILE_ID).then(function (text) {
-      var ids = idsFromLedgerCsv(text);
+      var info = {};
+      var ids = idsFromLedgerCsv(text, info);
       if (!ids) return { ok: false, ids: {}, note: LEDGER_FAIL };
       return findSlipIds().then(function (extra) {
         if (!extra.ok) return { ok: false, ids: {}, note: LEDGER_FAIL };
         Object.keys(extra.ids).forEach(function (id) { ids[id] = true; });
-        return { ok: true, ids: ids, note: '' };
+        Object.keys(extra.info).forEach(function (id) { info[id] = extra.info[id]; });
+        return { ok: true, ids: ids, info: info, note: '' };
       });
     }, function () { return { ok: false, ids: {}, note: LEDGER_FAIL }; });
     return ledgerCache;
@@ -1822,6 +1826,7 @@
     if (group === 'pcpmark') return P.matches || [];
     if (group === 'pcpbin') return (P.candidates || []).filter(function (f) { return !f.blocked; });
     if (group === 'usb') return U.matches || [];
+    if (group === 'canvalog' || group === 'canvamove') return canvaRows(group);
     return [];
   }
   function rowAllowed(group, it) {
@@ -1832,6 +1837,8 @@
     if (group === 'bin') return !!(S.bin.data && S.bin.data.ledgerOk && isDeleteName(it.name) && !nameHasRr(it.name) && !it._skip && !isZeroByte(it));
     if (group === 'pcpmark') return !nameHasRr(it.name) && !isZeroByte(it) && !isZzFamilyName(it.name);
     if (group === 'pcpbin') return !it.blocked && String(it.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(it.name) && !isZeroByte(it);
+    if (group === 'canvalog') return !CANVA_DRY && !!it._log && isDeleteName(it.name);
+    if (group === 'canvamove') return !CANVA_DRY && !!it._ready && isDeleteName(it.name);
     return false;
   }
   function visibleRows(group) {
@@ -2919,6 +2926,7 @@
     if (P.ledgerNote) out.push('sweep');
     if (S.check.status === 'failed') out.push('check');
     if (S.dbx.status === 'failed') out.push('dropbox');
+    if (S.canva.status === 'failed') out.push('canva');
     return out;
   }
   function needsNowCard() {
@@ -2929,6 +2937,7 @@
     return '<section class="card slot8" id="needsNow" aria-labelledby="needsNowT"><h3 id="needsNowT">Needs you now</h3><div class="index top">' +
       jump('sweep', readyN, 'file ready for you to approve', 'files ready for you to approve') +
       jump('check', checkN, 'item to check', 'items to check') +
+      jump('canva', canvaCount(), 'Canva design marked', 'Canva designs marked') +
       jump(probs[0] || 'log', probs.length, 'problem', 'problems') + '</div></section>';
   }
   function readyRow(group, f, place) {
@@ -3066,6 +3075,165 @@
       '<li>2: in Dropbox Deleted files, select all, then Permanently delete. Yours to do; it cannot be automated on a personal account.</li></ul>';
     return html + sourceLine('Dropbox totals', DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', dx) + '</div></details>';
   }
+  // ---- Canva: ZZ_ designs (TidyUp Apps stage 1). The page never calls Canva: there is no Canva token in a public page
+  // and Canva has no trash API. It reads CANVA-BIN-STATE.json (written by the register-listed CANVA-BIN bot) from
+  // CFG.canvaBin.folderId; a design can be ticked only with a ledger row (same rule as ZZ_DELETE_ on Drive). With dryRun
+  // off and after a confirm it writes (a) pending ledger rows as one SLIP_PREFIX slip (surface canva-<label>) and
+  // (b) one CANVA-BIN-REQUEST_<UK time>.json per account. The bot re-reads each design live and moves it to ZZ_BIN only
+  // if the title, last-modified time and page count still match the ledger row; Lisa trashes in Canva. Contract:
+  // docs/CANVA-BIN.md.
+  var CANVA = CFG.canvaBin || {};
+  var CANVA_DRY = CANVA.dryRun !== false;
+  var CANVA_ACCOUNTS = CANVA.accounts || [];
+  // UNVERIFIED against Canva's docs: Canva publishes no URL scheme. Folder links follow what the Canva web app shows.
+  var CANVA_PROJECTS_URL = 'https://www.canva.com/projects';
+  function canvaFolderUrl(id) { return /^[A-Za-z0-9_-]{6,}$/.test(String(id || '')) ? 'https://www.canva.com/folder/' + id : CANVA_PROJECTS_URL; }
+  function ukNameStamp(ms) { // 2026-11-03-1405 (UK time), for file names
+    var p = {}; ukParts.formatToParts(new Date(ms)).forEach(function (x) { p[x.type] = x.value; });
+    return p.year + '-' + p.month + '-' + p.day + '-' + p.hour + p.minute;
+  }
+  // The check the bot repeats before a move, kept in the ledger row's merged_into: "check: modified=<ISO>; pages=<n>".
+  function canvaCheckText(f) { return 'check: modified=' + f.modified + '; pages=' + f.pages; }
+  function canvaCheckOf(text) {
+    var m = /modified=([^;\s]+)/.exec(text || ''), n = /pages=(\d+)/.exec(text || '');
+    return m && n ? { modified: m[1], pages: parseInt(n[1], 10) } : null;
+  }
+  function sameTime(a, b) { var x = Date.parse(a), y = Date.parse(b); return !isNaN(x) && x === y; }
+  function canvaClassify(state, led) {
+    var all = (state && state.accounts) || {};
+    return {
+      accounts: CANVA_ACCOUNTS.map(function (label) {
+        var a = all[label], acc = { label: label, missing: !a, generated: a && a.generated || '', zzBin: a && a.zz_bin_folder || null, ready: [], held: [], rename: [] };
+        ((a && a.items) || []).forEach(function (it) {
+          var f = { id: String(it.design_id || ''), name: String(it.title || ''), type: String(it.type || ''), pages: parseInt(it.pages, 10), modified: String(it.last_modified || ''), folder: String(it.folder || ''), account: label };
+          if (!f.id) return;
+          if (!isDeleteName(f.name)) { f._block = 'Name needs fixing: only ZZ_DELETE_ designs can move.'; f._say = 'Name needs fixing by the tidy bot'; acc.rename.push(f); return; }
+          if (!led.ok) { f._block = 'Ledger could not be read.'; f._say = 'Waiting: the log could not be read'; acc.held.push(f); return; }
+          if (!led.ids[f.id]) { f._block = 'No ledger row.'; f._say = 'Not logged yet: tick it to log it'; f._log = true; acc.held.push(f); return; }
+          var chk = canvaCheckOf((led.info || {})[f.id]);
+          if (!chk || !sameTime(chk.modified, f.modified) || chk.pages !== f.pages) { f._block = 'Last-modified time or page count differs from the ledger row.'; f._say = 'Changed since it was logged: held'; acc.held.push(f); return; }
+          f._ready = true; acc.ready.push(f);
+        });
+        return acc;
+      }),
+      ledgerOk: led.ok
+    };
+  }
+  function loadCanva() {
+    if (!signedIn || !accessToken) return;
+    if (!CANVA.folderId) { S.canva = { status: 'ok', readAt: Date.now(), error: null, data: { notConnected: true } }; render(); return; }
+    run('canva', driveList({
+      q: "'" + CANVA.folderId + "' in parents and name = '" + CANVA.stateFile + "' and trashed = false",
+      corpora: 'allDrives', pageSize: '1', fields: 'files(id,name)'
+    }).then(function (r) {
+      if (!r.files || !r.files.length) return { none: true };
+      return Promise.all([apiGet(API + '/' + encodeURIComponent(r.files[0].id) + '?alt=media&supportsAllDrives=true'), loadLedgerSet()])
+        .then(function (x) { return canvaClassify(x[0], x[1]); });
+    }));
+  }
+  function canvaRows(group) {
+    var d = S.canva.data, out = [];
+    if (!d || !d.accounts) return out;
+    d.accounts.forEach(function (a) { out = out.concat(group === 'canvamove' ? a.ready : a.held.filter(function (f) { return f._log; })); });
+    return out;
+  }
+  function canvaCount() {
+    var d = S.canva.data;
+    if (!d) return null;
+    if (!d.accounts) return 0;
+    return d.accounts.reduce(function (n, a) { return n + a.ready.length + a.held.length + a.rename.length; }, 0);
+  }
+  function driveUpload(name, mime, text) {
+    var meta = { name: name, parents: [CANVA.folderId], mimeType: mime }, b = 'cv' + Date.now();
+    var body = '--' + b + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(meta) + '\r\n--' + b + '\r\nContent-Type: ' + mime + '\r\n\r\n' + text + '\r\n--' + b + '--';
+    return KIT.googleFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&supportsAllDrives=true&fields=id,name', {
+      method: 'POST', headers: { Authorization: 'Bearer ' + accessToken, 'Content-Type': 'multipart/related; boundary=' + b }, body: body
+    }).then(function (res) { if (!res.ok) throw new ApiError(res.status, 'Upload failed', ''); return res.json(); });
+  }
+  function csvCell(v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; }
+  function canvaLog() {
+    var items = pickedItems('canvalog');
+    if (busy || CANVA_DRY || !items.length) return;
+    if (!writeGranted) { requestWrite(); return; }
+    FOLD.canva = true;
+    if (!window.confirm('Write ' + items.length + ' ledger row' + (items.length === 1 ? '' : 's') + ' for these Canva designs? Nothing moves yet. The rows record the last-modified time and page count the tidy bot checks before any move.')) return;
+    var now = Date.now(), day = ukNameStamp(now).slice(0, 10);
+    var text = 'date,old_name,file_id,merged_into,agent,surface\n' + items.map(function (f) {
+      return [day, f.name, f.id, 'Canva ZZ_BIN (bot move), then Canva trash by Lisa (30 days); ' + canvaCheckText(f), 'dashboard Canva card', 'canva-' + f.account].map(csvCell).join(',');
+    }).join('\n') + '\n';
+    busy = true; render();
+    driveUpload(SLIP_PREFIX + ukNameStamp(now) + '_01.csv', 'text/csv', text).then(function () {
+      R.canva = { at: now, ok: true, text: 'Wrote ' + items.length + ' ledger row' + (items.length === 1 ? '' : 's') + '. Nothing moved.' };
+    }, function (err) {
+      R.canva = { at: now, ok: false, text: 'Not written: ' + friendlyError(err).text };
+    }).then(function () { busy = false; PICK.canvalog = {}; ledgerCache = null; S.canva = blank(); render(); });
+  }
+  function canvaMove() {
+    var items = pickedItems('canvamove').filter(function (f) { return f._ready && isDeleteName(f.name); });
+    if (busy || CANVA_DRY || !items.length) return;
+    if (!writeGranted) { requestWrite(); return; }
+    FOLD.canva = true;
+    if (!window.confirm('Ask the tidy bot to move ' + items.length + ' Canva design' + (items.length === 1 ? '' : 's') + ' to ZZ_BIN? It checks each one again first and skips any that changed. Nothing is deleted; you trash them in Canva yourself.')) return;
+    var now = Date.now(), by = {};
+    items.forEach(function (f) { (by[f.account] = by[f.account] || []).push(f); });
+    busy = true; render();
+    var labels = Object.keys(by);
+    mapLimit(labels, 1, function (label) {
+      var req = { kind: 'CANVA-BIN-REQUEST', v: 1, action: 'move to ZZ_BIN', account: label, requested_at: new Date(now).toISOString(),
+        items: by[label].map(function (f) { return { design_id: f.id, title: f.name, last_modified: f.modified, pages: f.pages }; }) };
+      return driveUpload('CANVA-BIN-REQUEST_' + ukNameStamp(now) + (labels.length > 1 ? '_' + label : '') + '.json', 'application/json', JSON.stringify(req, null, 2));
+    }).then(function () {
+      R.canva = { at: now, ok: true, text: 'Asked the tidy bot to move ' + items.length + ' to ZZ_BIN. Press Refresh after it runs.' };
+    }, function (err) {
+      R.canva = { at: now, ok: false, text: 'Not sent: ' + friendlyError(err).text };
+    }).then(function () { busy = false; PICK.canvamove = {}; render(); });
+  }
+  function canvaRow(group, f) {
+    var label = esc(f.name);
+    var meta = '<div class="meta"><span class="chip">' + esc(f.type || 'Design') + '</span><span class="chip">' + num(f.pages || 0) + (f.pages === 1 ? ' page' : ' pages') + '</span>' +
+      (f.modified ? '<span>Changed ' + esc(fmtTime(f.modified)) + '</span>' : '') + (f.folder ? '<span class="mtag">' + esc(f.folder) + '</span>' : '') + '</div>';
+    // In a dry run, or when the row cannot be acted on, there is no tick box at all (never a disabled one).
+    var tick = group && rowAllowed(group, f);
+    return '<li data-id="' + esc(f.id) + '" data-group="' + esc(group || 'held') + '"' + (f._block ? ' title="' + esc(f._block) + '"' : '') + '>' +
+      (tick ? tickBox(group, f.id, false, label) : '<div class="fname">' + label + '</div>') + meta +
+      (f._say ? '<p class="note">' + esc(f._say) + '</p>' : '') + '</li>';
+  }
+  function canvaCard() {
+    var p = S.canva, d = p.data;
+    var html = foldOpen('canva', false, 'card slot2' + cardClass(p), 'canvaCard') + '<summary><h3>Canva: designs marked to delete</h3>' + stateBadge(p, d ? canvaCount() : null) + '</summary><div class="fbody">';
+    html += failNote(p);
+    if (d && d.notConnected) html += '<p class="note">Canva is not connected yet.</p>';
+    else if (d && d.none) html += '<p class="note">No Canva list published yet. Nothing is waiting.</p>';
+    else if (d && d.accounts) {
+      var ready = canvaRows('canvamove').length;
+      html += CANVA_DRY ? '<p class="note" data-canva-dry>Dry run: ' + num(ready) + ' would move to the bin folder. Nothing changes.</p>'
+        : '<p class="note">' + num(ready) + ' ready to move to the bin folder.</p>';
+      if (!d.ledgerOk) html += '<p class="note fail">' + esc(LEDGER_FAIL) + '</p>';
+      d.accounts.forEach(function (a) {
+        html += '<div data-canva-account="' + esc(a.label) + '"><h4>Canva ' + esc(a.label) + '</h4>';
+        if (a.missing) html += '<p class="note">Not in the list yet.</p>';
+        else {
+          html += '<p class="note">Listed ' + esc(fmtTime(a.generated) || 'date unknown') + '.</p>';
+          var rows = a.ready.map(function (f) { return canvaRow('canvamove', f); })
+            .concat(a.held.map(function (f) { return canvaRow(f._log ? 'canvalog' : '', f); }))
+            .concat(a.rename.map(function (f) { return canvaRow('', f); }));
+          html += rows.length ? '<div class="scrollbox"><ul class="files">' + rows.join('') + '</ul></div>' : '<p class="note">No marked designs.</p>';
+        }
+        html += '<div class="actions"><a class="btn" href="' + esc(a.zzBin ? canvaFolderUrl(a.zzBin) : CANVA_PROJECTS_URL) + '" target="_blank" rel="noopener" data-canva-trash="' + esc(a.label) + '"><span>Step 2: Trash in Canva (' + esc(a.label) + ')</span></a></div></div>';
+      });
+      var nLog = pickCount('canvalog'), nMove = pickCount('canvamove');
+      html += '<div class="actions" data-pick-bar="canva">' +
+        '<button class="btn" type="button" data-action="canvalog"' + (nLog && !busy ? '' : ' disabled') + '><span>' + (nLog ? 'Log these (' + nLog + ')' : CANVA_DRY ? 'Log these: dry run' : 'Log these: tick a design first') + '</span></button>' +
+        '<button class="btn" type="button" data-action="canvamove"' + (nMove && !busy ? '' : ' disabled') + '><span>' + (nMove ? 'Move to the bin folder (' + nMove + ')' : CANVA_DRY ? 'Move to the bin folder: dry run' : 'Move to the bin folder: tick a design first') + '</span></button></div>';
+    }
+    if (R.canva) html += '<p class="res ' + (R.canva.ok ? 'ok' : 'bad') + '" data-canva-result>' + esc(stamp(R.canva.at)) + ': ' + esc(R.canva.text) + '</p>';
+    html += '<ul class="notes"><li>1: the tidy bot moves logged designs to a bin folder in that Canva account, after checking each one again.</li>' +
+      '<li>2: you trash them in Canva. Canva Trash keeps them 30 days. Only you empty it.</li><li>The page never calls Canva.</li></ul>' +
+      whyFold('canvawhy', 'How the Canva bin works', ['Only ZZ_DELETE_ designs can move. Other ZZ_ names: name needs fixing, never moved.', 'Each design needs a ledger row first (surface canva-main or canva-book), written as an AA_DELETE-LEDGER-ROWS_ slip.',
+        'The row keeps the last-modified time and page count. Canva shows no size or checksum, so those two are the check.', 'Move: the page drops one CANVA-BIN-REQUEST_ file. The tidy bot re-reads each design and moves it to ZZ_BIN only if the name, time and pages still match.',
+        'Dry run is on until Lisa switches it off. In a dry run nothing is written.', 'Step 2 links are not checked against Canva docs (UNVERIFIED).']);
+    return html + sourceLine('Canva list', CANVA.folderId ? folderUrl(CANVA.folderId) : 'https://drive.google.com/drive/shared-drives', p) + '</div></details>';
+  }
   function binsCard() {
     var p = S.bin, d = p.data, html = '';
     // Already in the bin: per shared drive, read only, folded.
@@ -3099,7 +3267,7 @@
   }
 
   function viewBin() {
-    return needsNowCard() + readyCard() + viewCheck() + notReadyCard() + binsCard() + logCard() + dropboxCard();
+    return needsNowCard() + readyCard() + viewCheck() + notReadyCard() + binsCard() + logCard() + canvaCard() + dropboxCard();
   }
 
   var SUBS = [
@@ -3235,6 +3403,7 @@
     applyBinFilter();
     updateHeader();
     if (r.view === 'bin' && S.dbx.status === 'idle') loadDbx();
+    if (r.view === 'bin' && S.canva.status === 'idle') loadCanva();
     if (r.view === 'bin' && S.runlog.status === 'idle') loadRunLog();
   }
   function tabBadge(key, n, label) {
@@ -3376,6 +3545,8 @@
     }
     else if (a === 'showall') { SHOW[t.getAttribute('data-list')] = 'all'; render(); }
     else if (a === 'sweep') sweep();
+    else if (a === 'canvalog') canvaLog();
+    else if (a === 'canvamove') canvaMove();
     else if (a === 'checkzz') openGuard('zzdelete');
     else if (a === 'checkai') openGuard('refer');
     else if (a === 'foldjump') {
