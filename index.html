@@ -2958,7 +2958,6 @@
         '<button class="btn" type="button" data-action="selectall" data-group="bin" data-also="pcpbin"' + (busy ? ' disabled' : '') + '><span>Select all</span></button>' +
         '<button class="btn" type="button" data-action="clearpick" data-group="bin" data-also="pcpbin"' + (busy ? ' disabled' : '') + '><span>Clear</span></button>' +
         '<button class="btn' + (writeGranted ? ' danger solid' : '') + '" type="button" data-action="sweep"' + (n && !busy ? '' : ' disabled') + '>' + icon('bin') + '<span>' + label + '</span></button></div>' +
-        // Same words as the one confirm: a ticked Work My Drive file goes to the Drive bin, not only the shared-drive bin.
         '<p class="note">Goes to the ' + (pickCount('pcpbin') ? 'Drive' : 'shared-drive') + ' bin. You can get it back for 30 days.</p>';
     }
     if (P.binStatus !== 'ok' && signedIn) html += '<p class="note">Reading ' + WMD + '…</p>';
