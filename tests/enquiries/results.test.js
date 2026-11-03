@@ -31,8 +31,8 @@ const MAY = {
 };
 const row = (rows, month, source) => rows.find((r) => r.month === month && r.source === source);
 
-test('version is 1.13.0 and Results is the 14th tab', () => {
-  assert.match(C.VERSION, /^enquiries-core 1\.13\.0 /);
+test('version is 1.14.0 and Results is the 14th tab', () => {
+  assert.match(C.VERSION, /^enquiries-core 1\.14\.0 /);
   assert.equal(Object.keys(C.COLUMNS).length, 14);
   assert.equal(Object.keys(C.COLUMNS)[13], 'Results');
 });
