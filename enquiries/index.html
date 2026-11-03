@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="light dark">
+<meta name="build" content="ljr-enquiries-2026-10-30-v1">
+<title>Enquiries</title>
+<!-- Puppy Enquiries Hub (JOB 13 Stage 13). PUBLIC repo: no data, no secrets. Every enquiry from every source in one list,
+     newest and hottest first, read from the private RR_ENQUIRIES sheet (id in ../config.js) with Lisa's Google sign-in.
+     Drafts only: copy boxes, Lisa sends herself. A tap drops one request file (requests.js); the engine does the work.
+     Until the ids are in config.js the page shows invented example rows and sends nothing. Pure logic: core.js. -->
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap">
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
+<script src="../auth.js"></script>
+<script src="core.js"></script>
+<script src="reader.js"></script>
+<script src="requests.js"></script>
+<script src="examples.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../house.css">
+<style>
+  /* House look, the same as food/ and studio/: colours from ../tokens.css only, Lexend 400/600, 1px lines, one radius. */
+  :root { --rose: var(--house-risk); --rose-tint: var(--house-risk-tint); --amber: var(--house-soon); --amber-tint: var(--house-soon-tint);
+    --green: var(--house-ok); --green-tint: var(--house-ok-tint); }
+  * { box-sizing: border-box; }
+  h1, h2, h3, b, strong { font-weight: 600; }
+  html { scroll-padding-bottom: 110px; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; overflow-x: hidden; }
+  a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  a.btn, nav.tabs a, a.tile, a.erow { text-decoration: none; }
+  .hidden { display: none !important; }
+  svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ljr-0)); flex: none; display: inline-block; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
+  .top { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; }
+  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
+  .top h1 a { color: inherit; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
+  .stamp { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
+  .stamp:empty { display: none; }
+  .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
+  .btn.big { width: 100%; justify-content: center; min-height: 44px; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .top :focus-visible { outline-color: var(--frame-ink); }
+  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 180px)); justify-content: center; } }
+  nav.tabs .n { top: 6px; right: 10px; }
+  main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
+  #view { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .banner { border: 1px solid var(--rose); border-radius: var(--radius); padding: 10px 14px; background: var(--rose-tint); color: var(--ink); }
+  .banner.info { border-color: var(--ctl); background: var(--surface); }
+  .hint { font-size: 14px; color: var(--muted); margin: 0; }
+  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  @media (min-width: 760px) { .tiles { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+  .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--ctl); border-radius: var(--radius); padding: 12px; color: var(--ink); min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
+  .tile .k { font-size: 14px; color: var(--muted); }
+  .tile .v { font-size: 24px; font-weight: 600; line-height: 1.3; }
+  .card { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .card h2 { font-size: 17px; margin: 0; overflow-wrap: anywhere; display: flex; gap: 8px; align-items: center; }
+  .card h2 .cnt { margin-left: auto; }
+  .card .what { color: var(--muted); font-size: 15px; margin: 0; overflow-wrap: anywhere; }
+  .card .what b { color: var(--ink); }
+  .erow { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); color: var(--ink); min-height: 44px; }
+  .card > .erow:first-of-type, h2 + .erow { border-top: 0; padding-top: 4px; }
+  .erow .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .erow .m { font-size: 14px; color: var(--muted); }
+  .badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+  .badge { display: inline-flex; align-items: center; min-height: 24px; font-size: 13px; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 8px; color: var(--ink); max-width: 100%; overflow-wrap: anywhere; }
+  .badge.no { border-color: var(--rose); background: var(--rose-tint); font-weight: 600; }
+  .badge.hot { border-color: var(--rose); }
+  .badge.warm { border-color: var(--amber); }
+  .badge.ok { border-color: var(--green); background: var(--green-tint); }
+  .score { font-weight: 600; white-space: nowrap; font-size: 15px; }
+  .acts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .acts .btn { flex: 1 1 140px; justify-content: center; min-height: 44px; }
+  .empty { margin: 0; font-size: 15px; color: var(--muted); }
+  ul.plain { margin: 0; padding-left: 20px; }
+  ul.plain li { overflow-wrap: anywhere; }
+  .frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  select.sel, textarea.txt, input.txtin { font: inherit; font-size: 16px; min-height: 44px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); min-width: 0; }
+  select.sel { padding: 0 8px; flex: 1 1 140px; max-width: 100%; }
+  textarea.txt { width: 100%; padding: 8px 12px; min-height: 160px; resize: vertical; }
+  input.txtin { padding: 0 12px; flex: 1 1 200px; }
+  .prep { border-color: var(--ink); }
+  @media (max-width: 544px) {
+    .btn, .chip, select.sel, input.txtin { min-height: 44px; }
+    .top h1 { font-size: 20px; }
+    nav.tabs { gap: 6px; padding-left: 6px; padding-right: 6px; }
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7"/><path d="M6 10v10h12V10"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><path d="M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><path d="M4 6h16v14H4z"/><path d="M4 10h16M8 3v4M16 3v4"/></symbol>
+  <symbol id="i-paw" viewBox="0 0 24 24"><circle cx="7" cy="9" r="2"/><circle cx="12" cy="6" r="2"/><circle cx="17" cy="9" r="2"/><path d="M7 17c0-3 2.5-5 5-5s5 2 5 5c0 2-2 3-5 3s-5-1-5-3z"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+</svg>
+<header>
+  <div class="top"><h1><a href="#/home"><span class="dot" style="--c:var(--ljr-2)" aria-hidden="true"></span>Enquiries</a></h1><span class="stamp" id="stamp">TEST</span>
+    <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh">↻</button>
+    <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
+    <a id="backHome" class="btn back" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
+</header>
+<main class="wrap">
+  <div id="banner" class="banner hidden" role="status"></div>
+  <div id="view"></div>
+</main>
+<nav class="tabs house-tabs hidden" id="tabs" aria-label="Enquiries sections">
+  <a href="#/home" data-nav="home" style="--tc:var(--ljr-2)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-home"/></svg><span>Home</span><span class="n need" id="n-home"></span></a>
+  <a href="#/today" data-nav="today" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-cal"/></svg><span>Today</span><span class="n need" id="n-today"></span></a>
+  <a href="#/list" data-nav="list" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-list"/></svg><span>All</span><span class="n"></span></a>
+  <a href="#/litters" data-nav="litters" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-paw"/></svg><span>Litters</span><span class="n"></span></a>
+  <a href="#/add" data-nav="add" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-plus"/></svg><span>Add</span><span class="n"></span></a>
+</nav>
+<script>
+(function () {
+  'use strict';
+  var CFG = window.DASH_CONFIG || {}, E = CFG.enquiries || {}, Core = window.EnquiriesCore, Reader = window.EnquiriesReader, Req = window.EnquiriesRequests;
+  var CLIENT_ID = CFG.clientId, READ = (CFG.scopes || {}).read, WRITE = (CFG.scopes || {}).write, SHEETS = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+  var SCOPE = [READ, SHEETS, WRITE].filter(Boolean).join(' ');
+  var EXAMPLE = !E.sheetId;
+  var BAND_DOT = { hot: 2, warm: 3, cool: 6, 'not-a-fit': 0 };
+  var ACT = { 'call-held': 'Call held', 'deposit-paid': 'Deposit paid', replied: 'Replied', snooze: 'Snooze', done: 'Done' };
+  var token = null, tabs = null, route = { view: 'home', key: '', f: {} }, auth = null;
+
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
+  function when(uk) { var s = String(uk || ''); if (!s) return ''; var d = s.slice(0, 10), t = s.slice(11, 16), today = Core.toUk(Date.now()).slice(0, 10), tom = Core.toUk(Date.now() + 864e5).slice(0, 10);
+    return (d === today ? 'today' : d === tom ? 'tomorrow' : d.slice(8, 10) + '/' + d.slice(5, 7)) + (t && t !== '00:00' ? ' ' + t : ''); }
+  function money(n) { return '£' + Number(n || 0).toFixed(0); }
+  function cnt(n) { return '<span class="cnt' + (n >= 100 ? ' wide' : '') + '">' + n + '</span>'; }
+
+  /* ---------- data ---------- */
+  function load() {
+    if (!token) { tabs = null; return render(); }
+    if (EXAMPLE) { tabs = EnquiriesExamples.build(); banner('Example mode: invented rows, nothing is sent. The page reads the real list once the sheet id is in config.js.', true); return render(); }
+    Reader.load({ sheetId: E.sheetId, token: token }).then(function (r) {
+      if (!r.ok) { banner('Could not read the list: ' + r.problems.join('; ')); return; }
+      tabs = {}; Object.keys(r.tabs).forEach(function (t) { tabs[t] = r.tabs[t].rows; });
+      if (r.problems.length) banner('Some tabs could not be read: ' + r.problems.join('; ')); else $('banner').className = 'banner hidden';
+      render();
+    }).catch(function (e) { banner('Could not load: ' + e.message); });
+  }
+  function opts() { return { folderId: E.requestsFolderId, token: token }; }
+  // One tap: send the request file (nothing in example mode), then show the result at once from the page's own copy.
+  function tap(built, done) {
+    if (!built || !built.ok) return banner((built && built.error) || 'Nothing to send.');
+    Req.send(opts(), built).then(function (r) {
+      Core.applyRequest(tabs, built);
+      banner(r.example ? 'Example mode: nothing was sent.' : 'Sent. The enquiries engine picks it up within 10 minutes.', true);
+      if (done) done(); render();
+    }).catch(function (e) { banner('Not sent: ' + e.message); });
+  }
+
+  /* ---------- pieces ---------- */
+  function erow(e) {
+    var dnc = Core.mayContact({}, e).ok ? '' : '<span class="badge no">Do not contact</span>';
+    return '<a class="erow" href="#/e/' + esc(e.key) + '" data-enq="' + esc(e.key) + '"><span class="dot" style="--c:var(--ljr-' + (BAND_DOT[e.band] || 0) + ')" aria-hidden="true"></span>' +
+      '<span class="txt"><b>' + esc(e.ref || e.key) + '</b> · ' + esc(e.source || e.channel) + (e.country ? ' · ' + esc(e.country) : '') +
+      '<span class="m"><br>' + esc(Core.summary(e.question_summary || e.kind, 90)) + '</span>' +
+      '<span class="badges"><span class="badge ' + esc(e.band) + '">' + esc(e.band || 'no band') + '</span><span class="badge">' + esc(e.stage) + '</span>' +
+      (e.next_step ? '<span class="badge">' + esc(e.next_step) + (e.next_due_uk ? ' · ' + esc(when(e.next_due_uk)) : '') + '</span>' : '') + dnc + '</span></span>' +
+      '<span class="score" aria-label="score">' + esc(e.score) + '</span></a>';
+  }
+  function prepCard(p) {
+    return '<div class="card prep" data-prep="' + esc(p.enquiry_key) + '"><h2><span class="dot" style="--c:var(--ljr-3)" aria-hidden="true"></span>Call ' + esc(when(p.call_uk)) + ' · ' + esc(p.ref) + '</h2>' +
+      '<p class="what"><b>' + esc(p.band) + ' ' + esc(p.score) + '</b> · ' + esc(p.country) + (p.their_time ? ' · ' + esc(p.their_time) : '') + (p.repeat_buyer ? ' · bought before' : '') + '</p>' +
+      '<p class="what"><b>Asked:</b> ' + esc(p.asked) + '</p>' +
+      '<p class="what"><b>Pups that fit:</b> <span data-pups>' + (p.pups.length ? p.pups.map(esc).join(', ') : 'none open now') + '</span></p>' +
+      (p.flags.length ? '<p class="what"><b>Flags:</b> ' + p.flags.map(esc).join(', ') + '</p>' : '') +
+      '<p class="what"><b>Ask:</b></p><ul class="plain">' + p.questions.map(function (q) { return '<li>' + esc(q) + '</li>'; }).join('') + '</ul>' +
+      (p.touches.length ? '<p class="what"><b>Last touches:</b> ' + p.touches.map(esc).join('; ') + '</p>' : '') +
+      '<div class="acts"><a class="btn" href="#/e/' + esc(p.enquiry_key) + '">Open</a><button class="btn" type="button" data-act="call-held" data-key="' + esc(p.enquiry_key) + '">Call held</button></div></div>';
+  }
+  function fuRow(f) {
+    var e = tabs.Enquiries.filter(function (x) { return x.key === f.enquiry_key; })[0] || {};
+    return '<a class="erow" href="#/e/' + esc(f.enquiry_key) + '" data-fu="' + esc(f.followup_key) + '"><span class="txt"><b>Follow up ' + esc(e.ref || f.enquiry_key) + '</b>' +
+      '<span class="m"><br>' + esc(f.rule) + ', try ' + esc(f.try) + ' · due ' + esc(when(f.due_uk)) + '</span></span></a>';
+  }
+  function list(rows, none) { return rows.length ? rows.map(erow).join('') : '<p class="empty">' + esc(none) + '</p>'; }
+  function depositsCard(d) {
+    var a = d.all, lits = Object.keys(d.byLitter).sort();
+    return '<div class="card" data-card="deposits"><h2>Deposits ' + cnt(a.held_count) + '</h2>' +
+      '<p class="what"><b>' + money(a.held) + '</b> held · <b>' + a.due_count + '</b> balance' + (a.due_count === 1 ? '' : 's') + ' due (' + money(a.due) + ') · <b>' + a.overdue_count + '</b> overdue' + (a.overdue_count ? ' (' + money(a.overdue) + ')' : '') + '</p>' +
+      (a.suggested ? '<p class="what">' + a.suggested + ' Xero match' + (a.suggested === 1 ? '' : 'es') + ' wait for your tap.</p>' : '') +
+      (a.undated || a.unreadable ? '<p class="hint">' + a.undated + ' with no collection date, ' + a.unreadable + ' unreadable amount' + (a.unreadable === 1 ? '' : 's') + '.</p>' : '') +
+      lits.map(function (k) { var b = d.byLitter[k]; return '<p class="what"><b>' + esc(k) + '</b>: ' + b.held_count + ' held, ' + money(b.held) + (b.overdue_count ? ', ' + b.overdue_count + ' overdue' : '') + '</p>'; }).join('') + '</div>';
+  }
+  function waitingCard(w) {
+    return '<div class="card" data-card="waiting"><h2>Waiting list by litter</h2>' + (w.length ? w.map(function (l) {
+      return '<div class="erow" data-litter="' + esc(l.litter_ref) + '"><span class="txt"><b>' + esc(l.litter_ref) + '</b><span class="m"><br>Open pups: ' + (l.open.length ? l.open.map(esc).join(', ') : 'none') + '</span>' +
+        '<span class="badges">' + Object.keys(l.lists).map(function (k) { return '<span class="badge">' + esc(k) + ' ' + l.lists[k] + '</span>'; }).join('') +
+        l.flags.map(function (f) { return '<span class="badge warm">' + esc(f) + '</span>'; }).join('') + '</span></span></div>';
+    }).join('') : '<p class="empty">No litters read yet.</p>') + '</div>';
+  }
+  function saleCard(s) {
+    if (!s.length) return '';
+    return '<div class="card" data-card="sale"><h2>Adult-dog sale</h2>' + s.map(function (g) {
+      return '<p class="what"><b>' + esc(g.group_ref) + '</b>: ' + g.dogs.map(function (d) { return esc(d.dog_ref) + ' (' + esc(d.sale_status) + ')'; }).join(', ') +
+        ' · ' + g.replies + ' repl' + (g.replies === 1 ? 'y' : 'ies') + ', ' + g.viewings + ' viewing' + (g.viewings === 1 ? '' : 's') + ', ' + g.agreed + ' agreed · price on request</p>';
+    }).join('') + '</div>';
+  }
+
+  /* ---------- views ---------- */
+  function pageHome(v) {
+    var c = v.counts, t = function (k, n, href, id) { return '<a class="tile" href="' + href + '" data-count="' + id + '"><span class="k">' + k + '</span><span class="v">' + n + '</span></a>'; };
+    return '<div class="tiles">' + t('New today', c.newToday, '#/list', 'newToday') + t('Hot', c.hot, Core.hashFor('list', { band: 'hot' }), 'hot') +
+      t('Calls next 48 h', c.calls48, '#/today', 'calls48') + t('Follow-ups due', c.followupsDue, '#/today', 'followupsDue') + t('Open pups', c.openPups, '#/litters', 'openPups') + '</div>' +
+      pageToday(v) +
+      '<div class="card" data-card="new"><h2>New ' + cnt(v.fresh.length) + '</h2>' + list(v.fresh, 'Nothing new waiting for a reply.') + '</div>' +
+      '<div class="card" data-card="hot"><h2>Hot ' + cnt(v.hot.length) + '</h2>' + list(v.hot, 'No hot enquiries open.') + '</div>' +
+      waitingCard(v.waiting) + depositsCard(v.deposits) + saleCard(v.sale) +
+      '<a class="btn big" href="#/add" data-add>Add by hand</a>';
+  }
+  function pageToday(v) {
+    var n = v.today.calls.length + v.today.followups.length;
+    return '<div class="card" data-card="today"><h2>Today ' + cnt(n) + '</h2>' + (n ? '' : '<p class="empty">No calls in the next 48 hours and no follow-ups due.</p>') +
+      v.today.followups.map(fuRow).join('') + '</div>' + v.today.calls.map(prepCard).join('');
+  }
+  function pageList(v) {
+    var f = route.f, names = { source: 'Source', band: 'Band', stage: 'Stage', litter: 'Litter', country: 'Country' };
+    var rows = Core.filterEnquiries(v.enquiries, f);
+    return '<div class="card"><h2>All enquiries ' + cnt(rows.length) + '</h2><div class="frow" role="group" aria-label="Filters">' + Core.PAGE_FILTERS.map(function (k) {
+      return '<select class="sel" data-filter="' + k + '" aria-label="' + names[k] + '"><option value="">' + names[k] + ': all</option>' +
+        v.options[k].map(function (o) { return '<option value="' + esc(o) + '"' + (f[k] === o ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+    }).join('') + '</div>' + list(rows, 'No enquiry matches these filters.') + '</div>';
+  }
+  function pageLitters(v) { return waitingCard(v.waiting) + depositsCard(v.deposits) + saleCard(v.sale); }
+  function pageAdd() {
+    return '<div class="card" data-card="add"><h2>Add by hand</h2><p class="what">Paste a message that came by WhatsApp, Facebook, Instagram, phone or Pets4Homes. The engine adds it within 10 minutes.</p>' +
+      '<div class="frow"><select class="sel" id="addChannel" aria-label="Where it came from"><option value="">Where it came from</option>' +
+      Core.HAND_CHANNELS.map(function (c) { return '<option value="' + c + '">' + c + '</option>'; }).join('') + '</select></div>' +
+      '<textarea class="txt" id="addText" aria-label="The message" maxlength="' + Core.HAND_MAX + '"></textarea>' +
+      '<button class="btn big" type="button" data-action="add">Add</button></div>';
+  }
+  function pageDetail() {
+    var d = Core.enquiryDetail(tabs, route.key, {});
+    if (!d) return '<div class="card"><h2>Not found</h2><p class="what">This enquiry is not in the list. <a href="#/list">See all</a></p></div>';
+    var e = d.enquiry, h = '<p><a class="btn" href="#/list">← All enquiries</a></p>';
+    h += '<div class="card" data-detail="' + esc(e.key) + '"><h2><span class="dot" style="--c:var(--ljr-' + (BAND_DOT[e.band] || 0) + ')" aria-hidden="true"></span>' + esc(e.ref || e.key) + '</h2>' +
+      '<div class="badges"><span class="badge ' + esc(e.band) + '">' + esc(e.band) + ' ' + esc(e.score) + '</span><span class="badge" data-stage>' + esc(e.stage) + '</span><span class="badge">' + esc(e.source || e.channel) + '</span>' +
+      (e.country ? '<span class="badge">' + esc(e.country) + '</span>' : '') + '<span class="badge">' + esc(e.kind) + '</span>' + (d.contact.ok ? '' : '<span class="badge no" data-dnc>Do not contact</span>') + '</div>' +
+      '<p class="what"><b>Wants:</b> ' + esc(e.question_summary || '(nothing written)') + '</p>' +
+      (e.next_step ? '<p class="what"><b>Next:</b> ' + esc(e.next_step) + (e.next_due_uk ? ', ' + esc(when(e.next_due_uk)) : '') + '</p>' : '') +
+      '<p class="what"><b>Why this score:</b></p><ul class="plain" data-reasons>' + (d.reasons.length ? d.reasons : ['no reasons written yet']).map(function (r) { return '<li>' + esc(r) + '</li>'; }).join('') + '</ul></div>';
+    if (d.prep) h += prepCard(d.prep);
+    if (d.contact.ok) {
+      h += '<div class="card" data-card="draft"><h2>Reply draft</h2>' + (d.draft ?
+        '<p class="hint">' + esc(d.draft.case) + ' · you send it yourself</p><textarea class="txt" id="draftText" readonly aria-label="Reply draft">' + esc(d.draft.text) + '</textarea>' +
+        '<button class="btn big" type="button" data-copy>Copy</button>' : '<p class="empty">No draft waiting for this enquiry.</p>') + '</div>';
+    }
+    if (d.actions.length) {
+      h += '<div class="card"><h2>After you act</h2>' + (d.actions.indexOf('snooze') >= 0 ? '<div class="frow"><input class="txtin" type="datetime-local" id="snoozeTo" aria-label="Snooze until" value="' + esc(Core.toUk(Date.now() + 864e5).slice(0, 11) + '09:00') + '"></div>' : '') +
+        '<div class="acts">' + d.actions.map(function (a) { return '<button class="btn" type="button" data-act="' + a + '" data-key="' + esc(e.key) + '"' + (d.followups[0] ? ' data-fu="' + esc(d.followups[0].followup_key) + '"' : '') + '>' + ACT[a] + '</button>'; }).join('') + '</div></div>';
+    }
+    h += '<div class="card"><h2>Touches ' + cnt(d.touches.length) + '</h2>' + (d.touches.length ? '<ul class="plain" data-touches>' + d.touches.map(function (t) { return '<li>' + esc(String(t.at_uk).slice(0, 16).replace('T', ' ')) + ' · ' + esc(t.channel) + ' · ' + esc(t.type) + '</li>'; }).join('') + '</ul>' : '<p class="empty">No touches yet.</p>') + '</div>';
+    return h;
+  }
+
+  function render() {
+    var nav = route.view === 'e' ? 'list' : route.view;
+    document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === nav) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    $('stamp').textContent = E.live ? '' : (EXAMPLE ? 'EXAMPLE' : 'TEST');
+    $('refresh').classList.toggle('hidden', !tabs); $('tabs').classList.toggle('hidden', !token);
+    $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
+    var ready = !!(auth && auth.ready()); $('signin').disabled = !token && !ready;
+    if (!tabs) { $('view').innerHTML = token ? '' : '<div class="card"><h2>Sign in to see enquiries</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
+    var v = Core.hubView(tabs, {});
+    $('n-home').textContent = v.counts.hot || ''; $('n-today').textContent = (v.counts.calls48 + v.counts.followupsDue) || '';
+    $('view').innerHTML = route.view === 'e' ? pageDetail() : route.view === 'today' ? pageToday(v) : route.view === 'list' ? pageList(v)
+      : route.view === 'litters' ? pageLitters(v) : route.view === 'add' ? pageAdd() : pageHome(v);
+  }
+
+  /* ---------- taps ---------- */
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('button, a'); if (!t) return;
+    var a = t.getAttribute('data-action'), act = t.getAttribute('data-act');
+    if (a === 'signin') { if (!auth || !auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(); }
+    if (a === 'signout') { token = null; tabs = null; DashAuth.clear(); return render(); }
+    if (a === 'refresh') return load();
+    if (t.hasAttribute('data-copy')) {
+      var txt = $('draftText').value;
+      return navigator.clipboard.writeText(txt).then(function () { t.textContent = 'Copied'; }, function () { $('draftText').select(); banner('Copy did not work here: the draft is selected, copy it by hand.'); });
+    }
+    if (a === 'add') {
+      t.disabled = true;
+      return Req.addByHand(opts(), { channel: $('addChannel').value, text: $('addText').value }).then(function (r) {
+        banner(r.example ? 'Example mode: nothing was sent.' : 'Added. The engine picks it up within 10 minutes.', true); $('addText').value = ''; t.disabled = false;
+      }).catch(function (e) { banner('Not added: ' + e.message); t.disabled = false; });
+    }
+    if (act) {
+      var key = t.getAttribute('data-key'), fu = t.getAttribute('data-fu');
+      t.disabled = true;
+      if (act === 'call-held') return tap(Core.callHeldRequest(key));
+      if (act === 'deposit-paid') return tap(Core.depositPaidRequest(key));
+      if (act === 'replied') return tap(Core.repliedRequest(key));
+      if (act === 'snooze') return tap(Core.snoozeRequest(fu, ($('snoozeTo') || {}).value));
+      if (act === 'done') return tap(Core.doneRequest(fu, false));
+    }
+  });
+  document.addEventListener('change', function (ev) {
+    var k = ev.target.getAttribute && ev.target.getAttribute('data-filter'); if (!k) return;
+    var f = Object.assign({}, route.f); if (ev.target.value) f[k] = ev.target.value; else delete f[k];
+    location.hash = Core.hashFor('list', f);
+  });
+  function onHash() { route = Core.filtersFromHash(location.hash); if (['home', 'today', 'list', 'litters', 'add', 'e'].indexOf(route.view) < 0) route.view = 'home'; render(); window.scrollTo(0, 0); }
+  window.addEventListener('hashchange', onHash);
+
+  /* ---------- sign-in: the shared DashAuth, as on every hub (example mode too: the house gate locks the page) ---------- */
+  {
+    auth = DashAuth.bind({ clientId: CLIENT_ID, scope: SCOPE,
+      onToken: function (resp) {
+        if (resp.error) return banner('Sign-in did not complete.');
+        token = resp.access_token; DashAuth.save(token, DashAuth.expiryFrom(resp.expires_in), resp.scope || SCOPE); load();
+      },
+      onError: function () { banner('Sign-in did not complete.'); }, onSilentFail: function () {} });
+    var saved = DashAuth.valid(); if (saved && DashAuth.hasScope(saved, SCOPE)) token = saved.access_token;
+    var tries = 0;
+    (function wait() { if (auth.init()) { render(); return; } if (++tries > 100) { banner('Google sign-in did not load.'); return; } setTimeout(wait, 100); })();
+  }
+  route = Core.filtersFromHash(location.hash); load(); onHash();
+})();
+</script>
+</body>
+</html>
