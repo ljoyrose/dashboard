@@ -50,7 +50,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .yr-btn.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
 .tab-row{display:flex;gap:2px;background:var(--soft);padding:3px;border-radius:calc(var(--radius) + 3px);width:max-content;margin:0 0 16px}
 .tab{padding:6px 16px;border:none;background:transparent;border-radius:var(--radius);cursor:pointer;font:600 var(--fs-small)/1 var(--house-font);color:var(--muted)}
-.tab.on{background:var(--card);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+.tab.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
 @media(hover:hover){.tab:not(.on):hover{color:var(--ink)}}
 .view{display:none}.view.on{display:block}
 
@@ -155,7 +155,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 
 <script>
 /* ---- config ---- */
-var SHEET_ID='1utmtG6V2q4kLQT15LtHg_AyncNObeBSyXyV86MaV8o0';
+var SHEET_ID=window.DASH_CONFIG.cdhub.readingsSheetId;
 var EXPORT_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&sheet=readings';
 var DRIVE_EXPORT='https://www.googleapis.com/drive/v3/files/'+SHEET_ID+'/export?mimeType=text%2Fcsv';
 var CLIENT_ID=window.DASH_CONFIG.clientId;
