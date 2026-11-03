@@ -13,6 +13,7 @@ const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 const BYTES = { marketplace: 255900, money: 217100, studio: 345200, privacy: 15000 };
 // marketplace 247600 > 255900 (+8300), money 201100 > 217100 (+16000) and studio 334100 > 345200 (+11100) on 3 Nov 2026: the fold
 // control (DashKit.fold in toolkit.js, about 12.9 KB, and house.css, about 4.2 KB). Measured 281148, 238505 and 379318.
+// money 201100 > 201500 (+400) on 3 Nov 2026: config.js grew 336 bytes (TidyUp stage 9, #142), and every page loads it. Measured 221465.
 // money 197700 > 201100 (+3400) on 2 Nov 2026: Hub Mains (DashKit.hubMain in toolkit.js and house.css, Main's numbers and the moved
 // sections' routes), on top of the shared tab-dots growth. Measured 221129.
 // studio 297000 > 334100 and privacy 13300 > 15000 on 2 Nov 2026: the shared bottom tab bar (Lisa's tab picks) adds the tab rules to

@@ -14,6 +14,8 @@ const BYTES = { home: 367100, cdhub: 255700, factory: 261500, food: 169800 };
 // home 352000 > 367100 (+15100), cdhub 239700 > 255700 (+16000), factory 245400 > 261500 (+16100) and food 153800 > 169800 (+16000)
 // on 3 Nov 2026: the fold control on every section heading (Lisa, 2 Nov) adds DashKit.fold to toolkit.js (about 12.9 KB) and its rules
 // to house.css (about 4.2 KB), which every page loads. Measured 403424, 280922, 287302 and 186447.
+// cdhub 239700 > 240000, factory 245400 > 245800, food 153800 > 154200 (+300 to +400 each) on 3 Nov 2026: config.js grew 336 bytes (TidyUp stage 9, #142), and every page loads it.
+// Measured 263882, 270262 and 169407.
 // home 348100 > 352000 on 3 Nov 2026 (TidyUp stage 9, #142): look-only Dropbox, iCloud and Mac pages under Drives add 3100 bytes; measured 386766.
 // home 337600 > 348100 (+10500), cdhub 238300 > 239700 (+1400), factory 233800 > 245400 (+11600) and food 140600 > 153800 (+13200)
 // on 2 Nov 2026: Hub Mains (Lisa's house style: every hub's Main is Next, Needs you and 3 numbers) add DashKit.hubMain to toolkit.js
