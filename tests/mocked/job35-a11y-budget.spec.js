@@ -10,8 +10,9 @@ const { HUBS, go } = require('../support/hubs');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 349600, cdhub: 239700, factory: 245400, food: 153800 };
-// home 348100 > 349600 (+1500) on 3 Nov 2026: the Do page's Standing approvals card is its own file (estate/donq.js, fetched only on the Do page);
+const BYTES = { home: 353000, cdhub: 239700, factory: 245400, food: 153800 };
+// home 348100 > 352000 on 3 Nov 2026 (TidyUp stage 9, #142): look-only Dropbox, iCloud and Mac pages under Drives add 3100 bytes; measured 386766.
+// home 352000 > 353000 (+1000) on 3 Nov 2026: the Do page's Standing approvals card is its own file (estate/donq.js, fetched only on the Do page);
 // index.html keeps only the hooks that fetch and call it.
 // home 337600 > 348100 (+10500), cdhub 238300 > 239700 (+1400), factory 233800 > 245400 (+11600) and food 140600 > 153800 (+13200)
 // on 2 Nov 2026: Hub Mains (Lisa's house style: every hub's Main is Next, Needs you and 3 numbers) add DashKit.hubMain to toolkit.js
