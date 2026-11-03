@@ -394,6 +394,7 @@
   function load() {
     if (!M || !M.openWorkId) { banner('Not set up yet: the Marketplace settings are not in config.js.', true); return; }
     if (!token) { render(); return; }
+    if (!readDone) render();   // J34-F70 / F82: show "Reading…" while the first read runs, not the sign-in card again
     api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
       rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; }).concat(fishRows);
       readErr = null; readDone = true;

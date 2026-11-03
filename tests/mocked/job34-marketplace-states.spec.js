@@ -89,14 +89,14 @@ test.describe('Marketplace (JOB 34)', () => {
     await expect(page.locator('#view [data-hm="next"]')).toBeVisible();
   });
 
-  // FIX-REQUEST J34-F70 (marketplace/index.html:392-399, :929). DECISION NEEDED: fix the page (Marketplace owner) or accept. OWNER: Marketplace owner. BY 2026-11-06
-  test.fixme('J34-F70 while the list is being read after sign-in, the page says it is reading (not the sign-in card again)', async ({ page }) => {
+  // J34-F70 (fixed in marketplace/index.html).
+  test('J34-F70 while the list is being read after sign-in, the page says it is reading (not the sign-in card again)', async ({ page }) => {
     await page.route(SHEETS, async (route) => { await new Promise((r) => setTimeout(r, 2500)); route.fulfill({ status: 200, contentType: 'application/json', body: '{"values":[]}' }); });
     await page.goto('marketplace/');
     await page.locator('#view [data-action="signin"]').click();
     await page.waitForTimeout(400);
     // Read once, mid-load: today the header says "Sign in" and the view is the sign-in card for the whole read.
-    expect(await page.locator('#signin').textContent(), 'header button mid-read').toBe('Sign out');
+    expect(await page.locator('#signin').getAttribute('aria-label'), 'header button mid-read').toBe('Sign out');
     expect(await page.locator('#view').innerText(), 'view mid-read').not.toContain('Sign in to see what needs you');
   });
 
