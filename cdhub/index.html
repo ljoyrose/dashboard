@@ -1084,12 +1084,25 @@ function showList(key){
    +'<td><span class="st '+st.cls+'"><b>'+st.code+'</b>'+esc(st.label)+'</span></td>'
    +'<td>'+esc(areaName[d.area_id]||'\u2014')+'</td>'
    +'<td class="mut">'+esc(d.classification||'')+'</td>'
-   +'<td><button class="cb flagb" data-dog="'+esc(d.id)+'">flag</button></td></tr>'; });
+   +(key==='nochip'?'<td><input class="cb chinp" type="text" placeholder="chip #" style="width:120px"> '+'<button class="cb savchipb" data-dog="'+esc(d.id)+'" data-sub="'+esc(d.sub||d.id)+'">Save</button></td>':key==='noarea'?(function(){var aopts=CD.areas.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.code)+'</option>';}).join('');return '<td><select class="cb areasel">'+aopts+'</select> <button class="cb saveareab" data-dog="'+esc(d.id)+'" data-sub="'+esc(d.sub||d.id)+'">Save</button></td>';})():'<td><button class="cb flagb" data-dog="'+esc(d.id)+'">flag</button></td>')+'</tr>'; });
  h+='</tbody></table></div><button id="tclose" class="cb" style="margin-top:8px">close</button></div>';
  el.innerHTML=h;
  var cl=document.getElementById('tclose'); if(cl) cl.addEventListener('click',function(){ el.innerHTML=''; });
  Array.prototype.forEach.call(document.querySelectorAll('.flagb'),function(b){
   b.addEventListener('click',function(){ flagDog(b.dataset.dog,b); }); });
+ el.querySelectorAll('.savchipb').forEach(function(b){
+  b.addEventListener('click',function(){
+   var inp=b.previousElementSibling;
+   if(!inp.value.trim()){inp.focus();return;}
+   saveChip(b.dataset.dog,b.dataset.sub,inp.value.trim(),b);
+  });
+ });
+ el.querySelectorAll('.saveareab').forEach(function(b){
+  b.addEventListener('click',function(){
+   var sel=b.previousElementSibling;
+   saveArea(b.dataset.dog,b.dataset.sub,sel.value,b);
+  });
+ });
 }
 async function flagDog(id,btn){
  if(!DB){ btn.textContent='saving off'; return; }
@@ -1097,6 +1110,40 @@ async function flagDog(id,btn){
  try{ await DB.doc('flag/'+id).set({subject_id:id,at:new Date().toISOString(),note:'flagged from Today'});
       btn.textContent='flagged'; btn.disabled=true; }
  catch(e){ btn.textContent='NOT saved \u2014 '+((e&&e.code)||'error'); }
+}
+async function saveChip(dogId,subjectId,chipVal,btn){
+ if(!window.TOKEN){btn.textContent='no auth';return;}
+ btn.textContent='saving…';btn.disabled=true;
+ var fileId=window.DASH_CONFIG.cdhub.microchipFileId;
+ var nameSlug=subjectId.replace('sub-','');
+ var newRow='mc-'+nameSlug+',ten-dynamicdogs,'+subjectId+','+chipVal+',,,,,false,,,dashboard';
+ try{
+  var existing=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+window.TOKEN}}).then(function(r){return r.text();});
+  var updated=existing.trimEnd()+'\n'+newRow;
+  var boundary='cdhub_bnd';
+  var meta=JSON.stringify({name:'BLD-microchip.csv',mimeType:'text/csv'});
+  var body='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
+  var res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart&supportsAllDrives=true',{method:'PATCH',headers:{Authorization:'Bearer '+window.TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
+  if(res.ok){btn.textContent='saved ✓';btn.closest('tr').style.opacity='0.4';}
+  else{btn.textContent='error';btn.disabled=false;}
+ }catch(e){btn.textContent='error';btn.disabled=false;}
+}
+async function saveArea(dogId,subjectId,areaId,btn){
+ if(!window.TOKEN){btn.textContent='no auth';return;}
+ btn.textContent='saving…';btn.disabled=true;
+ var fileId=window.DASH_CONFIG.cdhub.occupancyFileId;
+ var nameSlug=subjectId.replace('sub-','');
+ var newRow='occ-'+nameSlug+',ten-dynamicdogs,'+subjectId+','+areaId+',,,,dashboard,';
+ try{
+  var existing=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+window.TOKEN}}).then(function(r){return r.text();});
+  var updated=existing.trimEnd()+'\n'+newRow;
+  var boundary='cdhub_bnd';
+  var meta=JSON.stringify({name:'BLD-occupancy.csv',mimeType:'text/csv'});
+  var body='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
+  var res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart&supportsAllDrives=true',{method:'PATCH',headers:{Authorization:'Bearer '+window.TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
+  if(res.ok){btn.textContent='saved ✓';btn.closest('tr').style.opacity='0.4';}
+  else{btn.textContent='error';btn.disabled=false;}
+ }catch(e){btn.textContent='error';btn.disabled=false;}
 }
 
 /* foundation: list view filter row (one row: Search, Filter panel, Sort, removable chips). Used by Dogs, Litters and Buyers. */

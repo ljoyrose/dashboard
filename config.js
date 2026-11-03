@@ -60,7 +60,10 @@
     },
     cdhub: {
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
-      folderName: '*01 SLA Inspections / BLD-app-tables'
+      folderName: '*01 SLA Inspections / BLD-app-tables',
+      // Write targets for inline dashboard edits (chip and area saves)
+      microchipFileId: '1GnL88Xtf0tlcXjFf_P2ML-Vfglz08-Ee',
+      occupancyFileId: '18z1oJMhx01EoKDeL4fi4KGBuiSLtgcj-'
     },
     // Marketplace page: the "Marketplace" tab of RR_OPEN-WORK (filled by the RR_MKT-ENGINE Apps Script). Taps write only the
     // answer cells. wakeFolderId/wakeFile: optional Drive file holding the engine's web-app address (empty = the engine's
