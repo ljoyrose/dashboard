@@ -10,7 +10,9 @@ const { HUBS, go } = require('../support/hubs');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (JOB 35.2 audit). Allowed: +10%.
-const BYTES = { home: 337600, cdhub: 238300, factory: 233800, food: 140600 };
+const BYTES = { home: 337800, cdhub: 238300, factory: 234000, food: 140600 };
+// home 337600 > 337800 and factory 233800 > 234000 on 2 Nov 2026: phone words for long tab names (Lisa: Accountant = Acct, New Stock
+// = Stock) add the short-word rules to house.css and the full-word name to toolkit.js (about 300 bytes); measured 371465 and 257315.
 // home 337000 > 337600 and factory 232000 > 233800 on 2 Nov 2026: phone tab counts become dots and every tab one size (Lisa's pick b)
 // add the tab names and the one-size measure to the shared toolkit.js (about 1.8 KB, comments trimmed to one line); measured 371133
 // and 256983 bytes.

@@ -22,14 +22,15 @@ const ALL = {
 // What each hub's bar shows, in order, and what sits under More (Lisa's picks; the first is Main, More is always last).
 const PLAN = {
   home: { tabs: ['Main', 'Decide', 'Do', 'More'], more: ['Drives', 'Bin', 'Money', 'Actions minutes', 'Changes'], out: ['MOVE'] }, // Decide + Do: Dashboard Main (2 Nov); Money + Actions minutes moved off Main; MOVE is a link out (new tab)
-  money: { tabs: ['Main', 'Money', 'Do', 'Dates', 'Accountant', 'More'], more: ['Control'] },
-  marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], more: ['Insights'] },
+  money: { tabs: ['Main', 'Money', 'Do', 'Dates', 'Accountant', 'More'], phone: ['Main', 'Money', 'Do', 'Dates', 'Acct', 'More'], more: ['Control'] },
+  marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], phone: ['Main', 'Decide', 'Do', 'Reply', 'Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },
   factory: { tabs: ['Main', 'Decide', 'Do', 'Rooms', 'More'], more: ['Today', 'Docs'] },
   cdhub: { tabs: ['Main', 'Do', 'Today', 'Dogs', 'Assocs', 'More'], more: ['Table map', 'The round', 'Areas', 'Litters', 'Vet link'] },
   food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['GA'] },
   estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['Unchecked', 'Access'] },
 };
+// phone: the words a phone shows where Lisa chose a short one (2 Nov 2026: Accountant = Acct, New Stock = Stock); the name keeps the full word.
 // Each tab's colour (Lisa's LJR7 slots): Main 1, Decide 2 (red), Do 4 (yellow), More 0 (grey).
 const SLOT = { Main: '1', Decide: '2', Do: '4', More: '0', Orders: '4', Assocs: '6' };
 const TRANSPARENT = /^(transparent|rgba\(0, 0, 0, 0\))$/;
@@ -49,7 +50,7 @@ function measureBar() {
       const r = t.getBoundingClientRect(), hic = t.querySelector(':scope > .hic'), label = t.querySelector(':scope > .htl'), bar = t.querySelector(':scope > .bar'), n = t.querySelector(':scope > .n, :scope > .cnt');
       const lr = label.getBoundingClientRect(), ir = hic.getBoundingClientRect();
       return {
-        tag: t.tagName, word: label.textContent.trim(), slot: t.getAttribute('data-slot'), name: t.getAttribute('aria-label') || t.textContent.trim(),
+        tag: t.tagName, word: label.innerText.trim(), full: (label.querySelector(':scope > .htl-long') || label).textContent.trim(), slot: t.getAttribute('data-slot'), name: t.getAttribute('aria-label') || t.textContent.trim(),
         more: t.hasAttribute('data-house-more'), top: r.top, bottom: r.bottom, left: r.left, right: r.right, height: r.height,
         iconAbove: ir.bottom <= lr.top + 1, ringGap: ir.top - r.top, labelFits: label.scrollWidth <= label.clientWidth + 1, labelLines: Math.round(lr.height / parseFloat(cs(label).lineHeight)),
         bg: cs(t).backgroundColor, hicBg: cs(hic).backgroundColor, ring: cs(hic).borderTopColor, ringW: cs(hic).borderTopWidth,
@@ -74,14 +75,14 @@ for (const [hub, H] of Object.entries(ALL)) {
       expect(m.height, 'the bar is 70px high').toBeCloseTo(70, 0);
       expect(Math.abs(m.bottom - m.win), 'the bar sits on the bottom edge').toBeLessThan(1);
       const words = m.tabs.map((t) => t.word);
-      expect(words, 'the tabs, in order').toEqual(PLAN[hub].tabs);
+      expect(words, 'the tabs, in order').toEqual(W < 768 && PLAN[hub].phone || PLAN[hub].tabs);
       expect(m.tabs.length, 'at most 6 tabs').toBeLessThanOrEqual(6);
       expect(words[0], 'Main first').toBe('Main');
       expect(m.tabs[m.tabs.length - 1].more, 'More last, and it is the More button').toBe(true);
       if (words.includes('Decide')) expect(words.indexOf('Decide'), 'Decide second').toBe(1);
       for (const t of m.tabs) {
         expect(['A', 'BUTTON'], `${t.word} is a real link or button`).toContain(t.tag);
-        expect(t.name, `${t.word} has a name`).toMatch(new RegExp('^' + t.word));
+        expect(t.name, `${t.word} has a name`).toMatch(new RegExp('^' + t.full));
         expect(t.word, `${t.word}: one word, or two words each capitalised`).toMatch(/^[A-Z][a-z]+( [A-Z][a-z]+)?$/);
         expect(Math.abs(t.height - m.tabs[0].height), `${t.word} same height as the others`).toBeLessThan(1);
         expect(Math.abs(t.top - m.tabs[0].top), `${t.word} on the one row`).toBeLessThan(1);
