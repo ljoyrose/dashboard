@@ -26,7 +26,18 @@
   // The "Add by hand" box: check, build and send one request. Returns the same promise as send().
   function addByHand(o, form) { return send(o, Core.addRequest(form)); }
 
-  var api = { send: send, addByHand: addByHand, UPLOAD: UPLOAD };
+  // The one-tap "call held" after a WhatsApp call (Stage 9). The engine moves the stage and makes the after-call draft.
+  function callHeld(o, enquiryKey, note) { return send(o, Core.callHeldRequest(enquiryKey, null, note)); }
+
+  // Lisa's "deposit paid" tap (Stage 11). Never carries an amount; depositKey confirms a suggested Xero row.
+  function depositPaid(o, enquiryKey, depositKey) { return send(o, Core.depositPaidRequest(enquiryKey, depositKey)); }
+
+  // Follow-up taps (Stage 12): Lisa replied herself; snooze to a UK time; done (sent), or done and lost.
+  function replied(o, enquiryKey) { return send(o, Core.repliedRequest(enquiryKey)); }
+  function snooze(o, followupKey, untilUk) { return send(o, Core.snoozeRequest(followupKey, untilUk)); }
+  function done(o, followupKey, lost) { return send(o, Core.doneRequest(followupKey, lost)); }
+
+  var api = { send: send, addByHand: addByHand, callHeld: callHeld, depositPaid: depositPaid, replied: replied, snooze: snooze, done: done, UPLOAD: UPLOAD };
   root.EnquiriesRequests = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

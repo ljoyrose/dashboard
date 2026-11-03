@@ -235,7 +235,10 @@ test('Stage 6: past deposit and repeat buyer from the allocation sheets, read on
   assert.ok(e.tab('Log').some((r) => r.step === 'people' && /2 with a past deposit, 1 to check/.test(r.message)));
   for (const t of Object.keys(e.book().sheets.reduce((a, s) => (a[s.name] = 1, a), {}))) {
     const flat = JSON.stringify(e.book().getSheetByName(t).rows);
-    assert.ok(!/LDB-WAITING|"X-1"|deposit paid|2026-09-10|2025-03-01/.test(flat), 'no allocation-sheet text copied into ' + t);
+    // Litters (Stage 10) mirrors list names, statuses and deposit dates by design, and Deposits (Stage 11, private)
+    // deposit dates; names, ids and numbers never.
+    const never = t === 'Litters' ? /Buyer W|"X-1"|7700 9003/ : t === 'Deposits' ? /Buyer|LDB-WAITING|"X-1"|deposit paid|7700 9003/ : /LDB-WAITING|"X-1"|deposit paid|2026-09-10|2025-03-01/;
+    assert.ok(!never.test(flat), 'no allocation-sheet text copied into ' + t);
   }
 });
 
@@ -312,4 +315,132 @@ test('Stage 8: styleSample() keeps only Lisa\'s own stripped replies in the Styl
   assert.doesNotMatch(JSON.stringify(st), /Buyerina|7700|example\.com|Do you have puppies/);
   assert.equal(st[0].links, 'https://doc.labradoodles.co.uk/breed');
   assert.ok(e.http.every((h) => h.method === 'get'));
+});
+
+// ---- Stage 9: call held ----------------------------------------------------------------------------------------------
+test('Stage 9: "call held" moves the stage to call-held and makes exactly one after-call WhatsApp draft', { skip }, () => {
+  const files = [];
+  const e = FAKE.load(src, { props: { CALENDLY_TOKEN: 'test-token-not-real', ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, routes: calendlyRoutes(), files, dryRun: false });
+  e.ctx.setup();
+  e.ctx.runOnce();
+  const booked = e.tab('Enquiries').find((x) => x.stage === 'call-booked');
+  assert.ok(booked, 'a booked call from the invented Calendly data');
+  const r = C.callHeldRequest(booked.key, '2026-10-29T11:00:00.000Z');
+  files.push({ id: 'FILE-S9-1', name: r.name, text: JSON.stringify(r.body) });
+  const bad = C.callHeldRequest('K-' + 'f'.repeat(16), '2026-10-29T11:00:00.000Z');
+  files.push({ id: 'FILE-S9-2', name: bad.name, text: JSON.stringify(bad.body) });
+  e.ctx.runOnce();
+  const now = e.tab('Enquiries').find((x) => x.key === booked.key);
+  assert.equal(now.stage, 'call-held');
+  const after = e.tab('Drafts').filter((d) => d.enquiry_key === booked.key && d.case === 'after-call');
+  assert.equal(after.length, 1);
+  assert.equal(after[0].version, 'whatsapp');
+  assert.equal(after[0].status, 'ready');
+  assert.ok(e.tab('Events').some((v) => v.enquiry_key === booked.key && v.type === 'call-held'));
+  const req = e.tab('Requests');
+  assert.match(req.find((x) => x.request_file === 'FILE-S9-2').result, /refused: unknown enquiry/);
+  assert.equal(e.tab('Enquiries').filter((x) => x.key === bad.body.enquiry_key).length, 0, 'no row made for an unknown key');
+  e.ctx.runOnce();
+  assert.equal(e.tab('Drafts').filter((d) => d.enquiry_key === booked.key && d.case === 'after-call').length, 1, 'still one after a re-run');
+  assert.equal(e.tab('Enquiries').find((x) => x.key === booked.key).stage, 'call-held');
+});
+
+// ---- Stage 10: litters and the adult-dog sale ---------------------------------------------------------------------
+const LIT = require('../fixtures/enquiries/litter.js');
+test('Stage 10: Litters mirrors the allocation sheet read only, with matches and flags; Sale Replies never carry a price', { skip }, () => {
+  const others = { 'ALLOC-SAMPLE': { CURRENT: LIT.current, LESSONS: [['x'], ['never read']] }, 'SALE-SAMPLE': { Sheet1: LIT.sale } };
+  const files = [req('FILE-S10-1', 'facebook', 'From: Buyer D1\nAny news on our girl? d1@example.com'),
+    req('FILE-S10-2', 'email', 'From: Breeder Sample\nCould we come and see Dog Charlie? breeder.s10@example.com')];
+  files[1].text = JSON.stringify(Object.assign(JSON.parse(files[1].text), { enquiry_kind: 'adult-dog' }));
+  const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, others, dryRun: false });
+  e.ctx.setup();
+  setSetting(e, 'allocation_sheet_ids', 'ALLOC-SAMPLE');
+  setSetting(e, 'sale_sheet_id', 'SALE-SAMPLE');
+  e.ctx.runOnce();
+  const lit = e.tab('Litters');
+  assert.equal(lit.filter((r) => r.list === 'pups').length, 7);
+  assert.equal(lit.filter((r) => r.list === 'litter-a').length, 8);
+  const d1 = e.tab('People').find((p) => p.email === 'd1@example.com');
+  assert.ok(lit.some((r) => r.person_key === d1.person_key && r.list === 'litter-a'), 'a known person is carried by their own person key');
+  assert.match(lit.find((r) => r.pup_ref === 'xx26-01' && r.list === 'pups').flag, /open pup, no offer/);
+  assert.ok(lit.filter((r) => /two lists/.test(r.flag)).length === 2);
+  assert.doesNotMatch(JSON.stringify(e.book().getSheetByName('Litters').rows), /Buyer|example\.com|7700/, 'no allocation-sheet names or numbers copied');
+  assert.ok(e.tab('Log').some((r) => r.step === 'litters' && /7 pups \(2 open\), 8 deposit holders, 4 matches/.test(r.message)));
+  const sr = e.tab('Sale Replies');
+  assert.equal(sr.length, 1);
+  assert.equal(sr[0].group_ref, '1'); assert.equal(sr[0].dog_ref, 'Dog Charlie'); assert.equal(sr[0].sale_status, 'Viewing booked');
+  assert.doesNotMatch(JSON.stringify(e.book().getSheetByName('Sale Replies').rows), /9999|%|COI/);
+  assert.deepEqual(e.touched, [], 'nothing but reads on the allocation and Sale sheets');
+  // A second run keeps when each status started, and adds nothing.
+  const since = lit.find((r) => r.pup_ref === 'xx26-03' && r.list === 'pups').status_since_uk;
+  e.ctx.runOnce();
+  assert.equal(e.tab('Litters').length, lit.length);
+  assert.equal(e.tab('Litters').find((r) => r.pup_ref === 'xx26-03' && r.list === 'pups').status_since_uk, since);
+  // Open pups now feed the score: Buyer D1's enquiry gets fit points.
+  assert.ok(e.tab('Enquiries').find((x) => x.source_ref === 'FILE-S10-1').score > 0);
+});
+
+// ---- Stage 11: deposits and balances report ----------------------------------------------------------------------
+const DEP = require('../fixtures/enquiries/deposits.js');
+test('Stage 11: Deposits from the allocation sheet and a Xero CSV export, read only; a tap confirms a suggestion', { skip }, () => {
+  const others = { 'ALLOC-SAMPLE': { CURRENT: DEP.ledger } };
+  const files = [req('FILE-S11-1', 'email', 'From: Buyer E One\nA puppy please e1@example.com'), req('FILE-S11-2', 'email', 'From: Buyer E Two\nA puppy please e2@example.com'),
+    { id: 'FILE-S11-X', name: 'xero-invoices-2026-10.csv', text: DEP.xeroCsv }];
+  const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, others, dryRun: false });
+  e.ctx.setup();
+  setSetting(e, 'allocation_sheet_ids', 'ALLOC-SAMPLE');
+  setSetting(e, 'deposit_tabs', 'CURRENT');
+  setSetting(e, 'deposit_amounts', '500');
+  e.ctx.runOnce();
+  const dep = e.tab('Deposits');
+  assert.equal(dep.filter((d) => d.basis === 'allocation sheet').length, 7);
+  const sug = dep.filter((d) => d.status === 'suggested');
+  assert.equal(sug.length, 1, 'e1 (500) suggested; e2 (250) refused; the unpaid and the unknown invoice left out');
+  const e1 = e.tab('Enquiries').find((x) => x.source_ref === 'FILE-S11-1');
+  assert.match(sug[0].check, new RegExp(e1.key));
+  assert.ok(e.tab('Log').some((r) => r.step === 'deposits' && /5 deposits held, 1 balances due in 30 days/.test(r.message) && /3 paid invoices, 1 suggested, 1 refused \(amount\), 1 for nobody known/.test(r.message)));
+  assert.deepEqual(e.touched, [], 'nothing but reads on the allocation sheet');
+  assert.doesNotMatch(JSON.stringify(e.book().getSheetByName('Deposits').rows), /Buyer|example\.com|7700|INV-9/, 'no name, email, number or invoice number copied');
+  // Lisa taps "deposit paid" on the suggestion: it becomes held, confirmed by her, and the stage moves to deposit.
+  const tap = C.depositPaidRequest(e1.key, sug[0].deposit_key, '2026-10-30T09:00:00.000Z');
+  files.push({ id: 'FILE-S11-3', name: tap.name, text: JSON.stringify(tap.body) });
+  e.ctx.runOnce();
+  const conf = e.tab('Deposits').find((d) => d.deposit_key === sug[0].deposit_key);
+  assert.equal(conf.status, 'held'); assert.match(conf.basis, /confirmed by Lisa/);
+  assert.equal(e.tab('Enquiries').find((x) => x.key === e1.key).stage, 'deposit');
+  assert.equal(e.tab('Deposits').length, dep.length, 'a re-run adds nothing');
+});
+
+// ---- Stage 12: follow-ups ----------------------------------------------------------------------------------------
+test('Stage 12: a replied enquiry gets a due follow-up and two drafts; snooze moves it; done and lost stop it', { skip }, () => {
+  const files = [req('FILE-S12-1', 'email', 'From: Buyer F One\nA puppy please f1@example.com', '2026-10-01T09:00:00.000Z')];
+  const e = FAKE.load(src, { props: { ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, files, dryRun: false });
+  e.ctx.setup();
+  e.ctx.runOnce();
+  const k = e.tab('Enquiries')[0].key;
+  assert.equal(e.tab('FollowUps').length, 0, 'a new enquiry has no follow-up');
+  const rep = C.repliedRequest(k, '2026-10-02T10:00:00.000Z');
+  files.push({ id: 'FILE-S12-2', name: rep.name, text: JSON.stringify(rep.body) });
+  e.ctx.runOnce();
+  let fu = e.tab('FollowUps');
+  assert.equal(fu.length, 1);
+  assert.deepEqual([fu[0].rule, fu[0].status, fu[0].due_uk], ['first-reply', 'due', '2026-10-04T11:00:00'], 'replied 10:00Z = 11:00 BST; due 2 days later, UK clock');
+  const dr = e.tab('Drafts').filter((d) => d.case === 'check-in');
+  assert.equal(dr.length, 2, 'one email and one WhatsApp check-in draft');
+  assert.ok(dr.every((d) => d.text && !d.blocked_by));
+  assert.ok(e.tab('Log').some((r) => r.step === 'followups' && /1 due, 0 waiting/.test(r.message)));
+  const sn = C.snoozeRequest(fu[0].followup_key, '2099-01-05T09:00:00', '2026-10-30T10:00:00.000Z');
+  files.push({ id: 'FILE-S12-3', name: sn.name, text: JSON.stringify(sn.body) });
+  e.ctx.runOnce();
+  fu = e.tab('FollowUps');
+  assert.deepEqual([fu[0].status, fu[0].due_uk], ['snoozed', '2099-01-05T09:00:00']);
+  const dn = C.doneRequest(fu[0].followup_key, true, '2026-10-30T11:00:00.000Z');
+  files.push({ id: 'FILE-S12-4', name: dn.name, text: JSON.stringify(dn.body) });
+  e.ctx.runOnce();
+  assert.equal(e.tab('Enquiries')[0].stage, 'lost');
+  assert.deepEqual(e.tab('FollowUps').map((f) => f.status), ['done']);
+  const drafts = e.tab('Drafts').length;
+  e.ctx.runOnce();
+  assert.equal(e.tab('Drafts').length, drafts, 'a lost enquiry gets no further drafts');
+  assert.ok(e.tab('Requests').every((r) => !/refused/.test(r.result)));
 });
