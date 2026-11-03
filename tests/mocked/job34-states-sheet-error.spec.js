@@ -23,11 +23,9 @@ for (const hub of Object.keys(HUBS)) {
   });
 }
 
-// FIX-REQUEST J34-F80 (money/index.html:416 and :715): when every Drive read fails, the Now view still says
-// "Nothing needs you right now" and the header stamp says "Read hh:mm" instead of "Read failed"; the failure shows only
-// as small "folder read failed" source notes and a Control count. It reads as all clear when nothing was read.
-// DECISION NEEDED: fix the page (see FIX-REQUEST above) or accept it. OWNER: Lisa. BY 2026-11-06
-test.fixme('J34-F80 money: every Drive read failing must not say "Nothing needs you" and the stamp must say Read failed', async ({ page, guard, allowedConsole }) => {
+// J34-F80 (fixed in money/index.html): when every Drive read fails, the stamp says "Read failed" and Main lists the
+// unread files first, never a calm "Nothing needs you".
+test('J34-F80 money: every Drive read failing must not say "Nothing needs you" and the stamp must say Read failed', async ({ page, guard, allowedConsole }) => {
   await openFailing(page, guard, allowedConsole, 'money');
   await expect(page.locator('#readStamp')).toHaveText(/Read failed/, { timeout: 45_000 });
   await expect(page.locator('#view')).not.toContainText('Nothing needs you');
