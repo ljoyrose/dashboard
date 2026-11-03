@@ -13,3 +13,4 @@ Counts: axe findings 2 rules (1 fixed, 1 FIX-REQUEST); speed fixes 1; KNOWN 3.
 Parked: full manual keyboard walk (JOB 35.3). This PR is stacked on #214 (CD Hub fix), so its guard expects CD Hub clean.
 CI note: CI fonts are wider than the session's, so more tables overflow there; #212 fixes the same fault on Money for that reason.
 Next step: JOB 35.3 only if Lisa wants the manual keyboard walk; otherwise job complete pending merges.
+JOB 35.3b (merge-main, 31 Oct 2026): #215 main merged in (42091e6, no force-push), clean, gate 70/70, privacy guard clean. #215 merged 31 Oct 21:31 UTC. DONE.
