@@ -429,8 +429,6 @@ async function load(){
   for(var i=0;i<WANT.length;i++){
     var title=WANT[i];
     if(!byTitle[title]){ T[title]=[]; continue; }
-    setBoot('Reading the tables from Drive…',
-      WANT.slice(0,i+1).map(function(t,j){ return (j<=i-1?'✓ ':'· ')+t; }).join('<br>'));
     try{
       var txt=await readDriveFile(byTitle[title][0]);
       txt=String(txt||'').replace(/^\uFEFF/,'');
