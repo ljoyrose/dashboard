@@ -274,7 +274,9 @@ test.describe('Home: house look', () => {
         const v = (n) => { const d = document.createElement('i'); d.style.color = root.getPropertyValue(n).trim(); document.body.appendChild(d); const c = getComputedStyle(d).color; d.remove(); return c; };
         const allowed = new Set([v('--ink'), v('--muted'), v('--frame-ink')]);
         const fills = new Set(['--ljr-2', '--ljr-3', '--ljr-4', '--ljr-5', '--ljr-6', '--ljr-7', '--ljr-8', '--ljr-2-solid', '--ljr-7-solid', '--ljr-8-solid', '--ljr-2-text', '--ljr-7-text'].map(v));
-        const words = L.visibleText().filter((e) => !allowed.has(getComputedStyle(e).color)).map((e) => getComputedStyle(e).color + ' "' + e.textContent.trim().slice(0, 30) + '"');
+        // The one exception (Lisa, 3 Nov 2026): a broken count is the black badge, its number --house-broken-ink on --house-broken-fill.
+        const badge = (e) => e.matches('.broken') && getComputedStyle(e).color === v('--house-broken-ink') && getComputedStyle(e).backgroundColor === v('--house-broken-fill');
+        const words = L.visibleText().filter((e) => !allowed.has(getComputedStyle(e).color) && !badge(e)).map((e) => getComputedStyle(e).color + ' "' + e.textContent.trim().slice(0, 30) + '"');
         const solid = Array.from(document.querySelectorAll('.mtag, .cnt, .chip, .btn, nav.main .n, .stat, a.hometile, a.keytile, .ment, .banner'))
           .filter((e) => e.offsetParent !== null || getComputedStyle(e).position === 'fixed')
           .filter((e) => fills.has(getComputedStyle(e).backgroundColor)).map((e) => e.className + ' ' + getComputedStyle(e).backgroundColor);

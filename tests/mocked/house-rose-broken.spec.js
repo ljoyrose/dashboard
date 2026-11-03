@@ -129,7 +129,7 @@ for (const scheme of ['light', 'dark']) {
 test.describe('Search dialog (390px)', () => {
   test.use({ viewport: { width: 390, height: 844 } });
 
-  test('the hint follows every key: shown under 2 letters, gone from the 2nd letter on, back when the box is cleared', async ({ page }) => {
+  test('the hint follows every key: shown under 2 letters, gone from the 2nd letter on, back when the box is cleared @regression', async ({ page }) => {
     await home(page);
     await page.locator('[data-search-open]').first().click();
     const hint = page.locator('#dashSearchHint'), box = page.locator('#dashSearchBox');
@@ -149,7 +149,7 @@ test.describe('Search dialog (390px)', () => {
   });
 
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: Close is a house button: 1px line, 12px corners, Lexend 14px/600, no fill; hover a 1px line inside, focus the ring`, async ({ page }) => {
+    test(`${scheme}: Close is a house button: 1px line, 12px corners, Lexend 14px/600, no fill; hover a 1px line inside, focus the ring @regression`, async ({ page }) => {
       await setLook(page, { scheme });
       await home(page);
       await page.locator('[data-search-open]').first().click();
