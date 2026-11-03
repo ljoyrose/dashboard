@@ -14,7 +14,7 @@ async function setUp(page, ids = true) {
     body: ids ? CONFIG.replace(/estate: \{\s*sheetId: '',\s*requestsFolderId: ''/, "estate: {\n      sheetId: 'SHEET_TEST',\n      requestsFolderId: 'REQ_FOLDER_TEST'") : CONFIG }));
   await page.route(/^https:\/\/sheets\.googleapis\.com\//, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: F.values() }) }));
   await page.route(UPLOAD, (route) => { uploads.push(route.request().postData()); return route.fulfill({ status: 200, contentType: 'application/json', body: '{"id":"NEWFILE"}' }); });
-  await page.goto('estate/#/home');
+  await page.goto('estate/#/all');   // Add sits on All since Hub Mains (2 Nov 2026)
   await page.locator('#view [data-action="signin"]').click();
   await page.locator('summary[data-action="addtoggle"]').click();
   return uploads;

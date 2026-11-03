@@ -1,5 +1,6 @@
 // Money Hub: https://ljoyrose.github.io/dashboard/money/
 const { test, expect, buildWorld } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { at } = require('../support/site');
 const { IDS } = require('../support/world');
 
@@ -96,7 +97,7 @@ test.describe('Money Hub: navigation', () => {
     test(`nav "${title}" opens #/${key}`, async ({ page }) => {
       await page.goto('money/');
       await signIn(page);
-      await page.locator(`nav.main a[data-nav="${key}"]`).click();
+      await tabClick(page, `nav.main a[data-nav="${key}"]`);
       await expect(page).toHaveURL(new RegExp(`#/${key}$`));
       await expect(page.locator('#view')).toHaveAttribute('data-view', key);
       await expect(page.locator('#hereTitle')).toHaveText(title);
@@ -115,7 +116,7 @@ test.describe('Money Hub: navigation', () => {
     await page.goto('money/');
     await page.locator('a.back').click();
     await expect(page).toHaveURL(at('(#/map)?'));
-    await expect(page).toHaveTitle(/Lisa Dashboard|Map/);
+    await expect(page).toHaveTitle(/^(\(\d+\) )?Dashboard$/);
   });
 
   for (const [hash, check] of [
@@ -135,10 +136,11 @@ test.describe('Money Hub: navigation', () => {
   test('links on the Now page lead to Dates and To-do', async ({ page }) => {
     await page.goto('money/');
     await signIn(page);
-    await page.locator('#view a', { hasText: 'All dates' }).click();
-    await expect(page).toHaveURL(/#\/dates$/);
+    // Main's Due Soon number opens the dates due soon; the Needs you heading opens To-do (Hub Mains, 2 Nov 2026).
+    await page.locator('#view [data-hm="nums"] a.hm-n', { hasText: 'Due Soon' }).click();
+    await expect(page).toHaveURL(/#\/dates\/soon$/);
     await page.goBack();
-    await page.locator('#view a', { hasText: /^All \d+ to-dos$/ }).click();
+    await page.locator('#view [data-hm="needs"] h3 a', { hasText: 'Needs you' }).click();
     await expect(page).toHaveURL(/#\/todo$/);
   });
 
@@ -168,7 +170,6 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     await expect(v).toContainText('TESTPERS');
     await expect(v).toContainText('£12,000'); // BALANCES.csv, the account with a balance
     await expect(v).toContainText('£3,000');
-    await expect(v).toContainText('No grand total');
     await expect(v).not.toContainText('OLDCO'); // retired in MON-SUBJECTS.csv
     await expect(v).not.toContainText('£15,000'); // never summed across entities
   });
@@ -201,8 +202,12 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     await page.goto('money/');
     await signIn(page);
     const v = page.locator('#view');
-    await expect(v.locator('section.now')).toContainText('Sample overdue filing');
-    await expect(v.locator('section.now')).toContainText(/TESTCO: 1 overdue on Sample tax body/);
+    // Main shows the first five; the full list lives on To-do (Hub Mains, 2 Nov 2026).
+    await expect(v.locator('[data-hub-main]')).toContainText('Sample overdue filing');
+    await expect(v.locator('[data-hub-main]')).toContainText(/TESTCO: 1 overdue on Sample tax body/);
+    await page.evaluate(() => { location.hash = '#/todo'; });
+    await expect(v.locator('section.now[data-needs-all]')).toContainText('Sample overdue filing');
+    await expect(v.locator('section.now[data-needs-all]')).toContainText(/TESTCO: 1 overdue on Sample tax body/);
   });
 
   test('To-do: tasks waiting on another task are held back until it is closed', async ({ page }) => {
@@ -211,7 +216,7 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     const ready = page.locator('section', { hasText: 'Ready now' }).first();
     await expect(ready).toContainText('Sample task ready now');
     await expect(ready).not.toContainText('Sample task waiting on R001');
-    await expect(page.locator('section', { hasText: 'Waiting on something first' }).first()).toContainText('Sample task waiting on R001');
+    await expect(page.locator('section', { hasText: 'Blocked' }).first()).toContainText('Sample task waiting on R001');
   });
 
   test('Accountant: open and answered questions are separated', async ({ page }) => {
@@ -237,10 +242,11 @@ test.describe('Money Hub: sample CSVs are read and understood (mocked)', () => {
     await expect(v).toContainText('Statements to drop');
   });
 
-  test('every panel names its source file and when it was read', async ({ page }) => {
+  test('every panel says when it was read (no "From file" footer: Lisa, 2 Nov)', async ({ page }) => {
     await page.goto('money/#/dates');
     await signIn(page);
-    await expect(page.locator('#view .source')).toContainText('MON-DATES.csv');
+    await expect(page.locator('#view .source')).toContainText(/data as of \d/);
+    await expect(page.locator('#view .source')).not.toContainText(/From /);
     await expect(page.locator('#view .source')).toContainText(/read \d\d:\d\d/);
   });
 });
@@ -287,8 +293,9 @@ test.describe('Money Hub: missing, duplicate or wrong files are shown as errors 
     await page.goto('money/');
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
-    await expect(page.locator('#view')).toContainText('Could not read Drive');
-    await expect(page.locator('#view')).toContainText('Google Drive refused access (forbidden)');
+    await expect(page.locator('#view [data-hm="fail"]')).toContainText('Could not read');
+    await expect(page.locator('#view [data-hm="fail"]')).toContainText('Google Drive refused access (forbidden)');
+    await expect(page.locator('#view [data-hm="nums"] .hm-v')).toHaveText(['–', '–', '–']);
     await expect(page.locator('#readStamp')).toHaveText('Read failed');
     await expect(page.locator('#view')).not.toContainText('£');
   });

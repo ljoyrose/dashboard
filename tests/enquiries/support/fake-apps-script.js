@@ -33,10 +33,23 @@ function makeBook(name) {
   };
 }
 
+// A book the engine may only READ (a litter allocation sheet): { tabName: [[header], [row] ...] }. Reading works;
+// any other call on the book or its tabs is recorded in touched and throws, so a test sees an attempted write.
+function readOnlyBook(id, tabs, touched) {
+  const guard = (obj, what) => new Proxy(obj, { get: (t, k) => {
+    if (k in t) return t[k];
+    if (typeof k === 'symbol' || k === 'then') return undefined;
+    return () => { touched.push(what + '.' + String(k)); throw new Error('read-only ' + what + ': ' + String(k)); };
+  } });
+  const sheets = Object.keys(tabs).map((n) => guard({ getName: () => n, getDataRange: () => guard({ getValues: () => tabs[n].map((r) => r.slice()) }, 'range') }, 'sheet ' + n));
+  return guard({ getId: () => id, getName: () => 'allocation ' + id, getSheets: () => sheets, getSheetByName: (n) => sheets.find((s) => s.getName() === n) || null }, 'book ' + id);
+}
+
 // routes: [[RegExp, (url, opt) => jsonObject]]. Unmatched URLs throw, so a test sees any unexpected call.
-function load(engineSource, { props = {}, routes = [], dryRun, gmail = [] } = {}) {
+// others: { bookId: { tabName: values } } read-only books (allocation sheets). touched lists any write tried on them.
+function load(engineSource, { props = {}, routes = [], dryRun, gmail = [], files = [], others = {} } = {}) {
   const store = Object.assign({}, props);
-  const http = [];
+  const http = [], touched = [];
   let book = null;
   const ctx = {
     console: { log: () => {} },
@@ -44,9 +57,17 @@ function load(engineSource, { props = {}, routes = [], dryRun, gmail = [] } = {}
     PropertiesService: { getScriptProperties: () => ({ getProperty: (k) => (k in store ? store[k] : null), setProperty: (k, v) => { store[k] = v; } }) },
     SpreadsheetApp: {
       create: (n) => { book = makeBook(n); return book; },
-      openById: (id) => { if (!book || id !== 'SAMPLE-BOOK-ID') throw new Error('no such book ' + id); return book; }
+      openById: (id) => {
+        if (others[id]) return readOnlyBook(id, others[id], touched);
+        if (!book || id !== 'SAMPLE-BOOK-ID') throw new Error('no such book ' + id);
+        return book;
+      }
     },
-    DriveApp: { getFileById: () => ({ moveTo: () => {} }), getFolderById: () => ({}) },
+    // files: [{ id, name, text, created }] in the requests folder. Read only: no move, trash or delete is offered.
+    DriveApp: { getFileById: () => ({ moveTo: () => {} }), getFolderById: () => {
+      let i = 0;
+      return { getFiles: () => ({ hasNext: () => i < files.length, next: () => { const f = files[i++]; return { getId: () => f.id, getName: () => f.name, getDateCreated: () => new Date(f.created || '2026-10-29T10:00:00Z'), getBlob: () => ({ getDataAsString: () => f.text }) }; } }) };
+    } },
     Utilities: { formatDate: (d) => d.toISOString().slice(0, 19), sleep: () => {} },
     ScriptApp: { getProjectTriggers: () => [], newTrigger: () => ({ timeBased: () => ({ everyHours: () => ({ create: () => {} }) }) }) },
     // gmail: [{ id, from, to, subject, body, date, labels }] -> read-only thread objects. Every call is recorded.
@@ -72,7 +93,7 @@ function load(engineSource, { props = {}, routes = [], dryRun, gmail = [] } = {}
   if (dryRun === false) src = src.replace('var DRY_RUN = true;', 'var DRY_RUN = false;');
   vm.runInContext(src, ctx, { filename: 'Code.gs' });
   return {
-    ctx, http, props: store,
+    ctx, http, touched, props: store,
     book: () => book,
     tab: (n) => { const s = book && book.getSheetByName(n); if (!s) return []; const [h, ...rs] = s.rows; return rs.map((r) => Object.fromEntries(h.map((c, i) => [c, r[i]]))); }
   };

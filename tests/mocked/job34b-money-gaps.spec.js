@@ -1,3 +1,4 @@
+const { tabClick } = require('../support/tabs');
 // JOB 34b: Money Hub checks that no other spec makes yet (after money*, every-click, every-view-access, house-look,
 // tests/phone and job34-money-views). Each describe names the gap it fills. Pretend Google and Drive only; every row
 // used here is the existing invented sample data, emptied or changed in the test itself (no new fixture files).
@@ -19,6 +20,7 @@ const emptyCsv = (world, name) => {
 test.describe('Money Hub: links and buttons go where their words say', () => {
   test('an entity card in "Money by entity" opens that entity; the Money tab stays selected', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
+    await hashTo(page, 'money'); // Money by entity moved from Main to Money (Hub Mains, 2 Nov 2026)
     await page.locator('#view a.ent[href="#/e/TESTCO"]').first().click();
     await expect(page).toHaveURL(/#\/e\/TESTCO$/);
     await expect(page.locator('#hereTitle')).toHaveText('TESTCO');
@@ -26,13 +28,15 @@ test.describe('Money Hub: links and buttons go where their words say', () => {
     await expect(page).toHaveTitle('TESTCO · Money Hub');
   });
 
-  test('every link in "What needs you now" opens the screen it points at', async ({ page, guard }) => {
+  test('every link in "Needs you" opens the screen it points at', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
-    const card = page.locator('#view section.card.now', { has: page.locator('h3', { hasText: 'What needs you now' }) });
+    await hashTo(page, 'todo'); // the full Needs you list moved from Main to To-do (Hub Mains, 2 Nov 2026)
+    const card = page.locator('#view section.card.now', { has: page.locator('h3', { hasText: 'Needs you' }) });
+    await expect(card).toBeVisible();
     const hrefs = await card.locator('ul.items a[href^="#/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
     expect(hrefs.length, 'the sample data has links in this list').toBeGreaterThan(0);
     for (const href of [...new Set(hrefs)]) {
-      await hashTo(page, 'now');
+      await hashTo(page, 'todo');
       await card.locator(`ul.items a[href="${href}"]`).first().click();
       await expect(page).toHaveURL(new RegExp(href.replace(/[/#]/g, (c) => '\\' + c) + '$'));
       const view = href.slice(2).split('/')[0];
@@ -54,7 +58,7 @@ test.describe('Money Hub: links and buttons go where their words say', () => {
     await HUBS.money.open(page, guard);
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
     expect(await page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
-    await page.locator('nav.main a[data-nav="accountant"]').click();
+    await tabClick(page, 'nav.main a[data-nav="accountant"]');
     await expect(page.locator('#hereTitle')).toHaveText('Accountant');
     await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
   });
@@ -64,7 +68,7 @@ test.describe('Money Hub: signed out on a deep link', () => {
   test('#/accountant signed out shows only the sign-in card; its own "Sign in with Google" button opens Accountant', async ({ page, guard }) => {
     await page.goto('money/#/accountant');
     await expect(page.locator('#signInBtn')).toBeEnabled();
-    const card = page.locator('#view .card', { hasText: 'Sign in to see your money' });
+    const card = page.locator('#view .card', { has: page.locator('h3', { hasText: /^Sign in$/ }) });
     await expect(card).toBeVisible();
     await expect(page.locator('#view')).not.toContainText('Sample open question');
     await expect(page.locator('#refreshBtn')).toBeHidden();
@@ -114,7 +118,8 @@ test.describe('Money Hub: sign-in that goes wrong, then "Sign in again"', () => 
     await page.locator('#banner button', { hasText: 'Sign in again' }).click();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
     await expect(page.locator('#banner')).toBeHidden();
-    await expect(page.locator('#view')).not.toContainText('Could not read Drive');
+    await expect(page.locator('#view')).not.toContainText('Could not read');
+    await hashTo(page, 'money');
     await expect(page.locator('#view a.ent', { hasText: 'TESTCO' }).first()).toBeVisible();
   });
 
@@ -149,30 +154,33 @@ test.describe('Money Hub: someone else\'s account on every screen', () => {
 });
 
 test.describe('Money Hub: empty files say so in plain words', () => {
-  test('MON-DATES with no rows: Dates says nothing is waiting, Now says nothing due in 14 days, Dates tab has no count', async ({ page, guard }) => {
+  test('MON-DATES with no rows: Dates says nothing is waiting, Now draws no empty Dates card, Dates tab has no count', async ({ page, guard }) => {
     emptyCsv(guard.world, 'MON-DATES.csv');
     await HUBS.money.open(page, guard);
-    await expect(page.locator('#view')).toContainText('Nothing due in the next 14 days.');
+    // Lisa, 2 Nov: an empty section is not drawn on Now (one "Nothing needs you" line only when everything is empty).
+    await expect(page.locator('#view .cardhead h3', { hasText: /^Dates$/ })).toHaveCount(0);
+    await expect(page.locator('#view')).not.toContainText('Nothing due in the next 14 days.');
     await expect(page.locator('#nDates')).toHaveText('');
     await hashTo(page, 'dates');
-    await expect(page.locator('#view')).toContainText('No dates waiting. Everything in MON-DATES is done.');
+    await expect(page.locator('#view')).toContainText('No dates waiting.');
     await expect(page.locator('#view h3', { hasText: 'Overdue' })).toHaveCount(0);
   });
 
-  test('accountant file with no rows: "Nothing waiting on the accountant.", no Answered card, no tab count', async ({ page, guard }) => {
+  test('accountant file with no rows: "No open questions.", no Answered card, no tab count', async ({ page, guard }) => {
     emptyCsv(guard.world, 'QUESTIONS-FOR-ACCOUNTANT.csv');
     await HUBS.money.open(page, guard);
     await expect(page.locator('#nAcct')).toHaveText('');
     await hashTo(page, 'accountant');
-    await expect(page.locator('#view')).toContainText('Nothing waiting on the accountant.');
+    await expect(page.locator('#view')).toContainText('No open questions.');
     await expect(page.locator('#view h3', { hasText: 'Answered' })).toHaveCount(0);
   });
 
-  test('register with no rows: Now says "Nothing waiting on you." and the To-do button says "All 0 to-dos"', async ({ page, guard }) => {
+  test('register with no rows: Now draws no empty Your turn card and no "All 0 to-dos" button', async ({ page, guard }) => {
     emptyCsv(guard.world, 'MON-REGISTER.csv');
     await HUBS.money.open(page, guard);
-    await expect(page.locator('#view')).toContainText('Nothing waiting on you.');
-    await expect(page.locator('#view a.btn', { hasText: /^All 0 to-dos$/ })).toHaveAttribute('href', '#/todo');
+    await expect(page.locator('#view .cardhead h3', { hasText: /^Your turn$/ })).toHaveCount(0);
+    await expect(page.locator('#view')).not.toContainText('Nothing waiting.');
+    await expect(page.locator('#view a.btn', { hasText: /^All 0 to-dos$/ })).toHaveCount(0);
     await expect(page.locator('#nTodo')).toHaveText('');
   });
 });
@@ -201,7 +209,7 @@ test.describe('Money Hub: reads again on its own', () => {
 test.describe('Money Hub: keyboard only', () => {
   test('To-do sub-tabs are reached with Tab and open with Enter', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
-    await page.locator('nav.main a[data-nav="todo"]').click();
+    await tabClick(page, 'nav.main a[data-nav="todo"]');
     await expect(page.locator('#hereTitle')).toBeFocused();
     const seen = await tabWalk(page, 12);
     for (const t of ['Yours', 'Waiting on others', 'Watching', 'Closed']) expect(seen, t).toContain(t);
@@ -213,7 +221,7 @@ test.describe('Money Hub: keyboard only', () => {
 
   test('an entity card is reached with Tab from Money and opens with Enter', async ({ page, guard }) => {
     await HUBS.money.open(page, guard);
-    await page.locator('nav.main a[data-nav="money"]').click();
+    await tabClick(page, 'nav.main a[data-nav="money"]');
     await expect(page.locator('#hereTitle')).toBeFocused();
     let found = false;
     for (let i = 0; i < 15 && !found; i++) {
@@ -246,7 +254,7 @@ test.describe('Money Hub phone: the problem screens fit at 390px', () => {
     guard.world.failWith = { status: 403, reason: 'forbidden', message: 'Sample refusal', includeAbout: true };
     await page.goto('money/');
     await signInHeader(page);
-    await expect(page.locator('#view')).toContainText('Could not read Drive');
+    await expect(page.locator('#view [data-hm="fail"]')).toContainText('Could not read');
     expect(await sideScroll(page)).toBe(false);
     const b = await page.locator('#view button', { hasText: 'Try again' }).boundingBox();
     expect(b.x).toBeGreaterThanOrEqual(0);

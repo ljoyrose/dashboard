@@ -1,3 +1,4 @@
+const { tabClick, tabTo } = require('../support/tabs');
 // JOB 34 (group C): Studio gaps only. studio.spec.js already covers tabs, find bar, forms, writes and looks;
 // this adds what it never presses or opens: Sign out and a working Read again (desktop and the phone More menu),
 // the Engine switch write (and a refused write), unknown addresses, two state files, every link, keyboard reach.
@@ -139,8 +140,7 @@ test.describe('JOB 34 Studio: addresses and state', () => {
     await HUBS.studio.open(page, guard);
     for (const tab of ['me', 'decide', 'do', 'line', 'kits']) {
       const a = page.locator(`nav.tabs a[data-nav="${tab}"]`);
-      let reached = false;
-      for (let i = 0; i < 150 && !reached; i++) { await page.keyboard.press('Tab'); reached = await a.evaluate((el) => el === document.activeElement); }
+      const reached = await tabTo(page, a, 150);   // a view under More: Tab to More, Enter, then Tab inside its menu
       expect(reached, tab + ' reached by Tab').toBe(true);
       await page.keyboard.press('Enter');
       await expect(a).toHaveAttribute('aria-current', 'page');

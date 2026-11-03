@@ -1,0 +1,43 @@
+id,tenant_id,table_name,field_name,audience_id,visible,condition,redaction,set_by,set_on,reason
+fv-p001,ten-REPLACE-ME,area,id,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p002,ten-REPLACE-ME,area,code,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p003,ten-REPLACE-ME,area,grouping,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p004,ten-REPLACE-ME,area,group_sort,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p005,ten-REPLACE-ME,area,*,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,every row of this kennel (rows rule)
+fv-p006,ten-REPLACE-ME,subject,id,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p007,ten-REPLACE-ME,subject,name,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p008,ten-REPLACE-ME,subject,*,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,every row of this kennel (rows rule)
+fv-p009,ten-REPLACE-ME,subject_status,subject_id,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p010,ten-REPLACE-ME,subject_status,state,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p011,ten-REPLACE-ME,subject_status,*,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,every row of this kennel (rows rule)
+fv-p012,ten-REPLACE-ME,occupancy,subject_id,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p013,ten-REPLACE-ME,occupancy,area_id,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p014,ten-REPLACE-ME,occupancy,off_site_kind,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p015,ten-REPLACE-ME,occupancy,moved_in,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p016,ten-REPLACE-ME,occupancy,classification,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,daily location check: needed to list dogs and rooms
+fv-p017,ten-REPLACE-ME,occupancy,*,aud-staff,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,every row of this kennel (rows rule)
+fv-p025,ten-REPLACE-ME,area,id,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p026,ten-REPLACE-ME,area,code,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p027,ten-REPLACE-ME,area,grouping,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p028,ten-REPLACE-ME,area,group_sort,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p029,ten-REPLACE-ME,area,*,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,every row of this kennel (rows rule)
+fv-p030,ten-REPLACE-ME,subject,id,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p031,ten-REPLACE-ME,subject,name,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p032,ten-REPLACE-ME,subject,*,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,every row of this kennel (rows rule)
+fv-p033,ten-REPLACE-ME,subject_status,subject_id,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p034,ten-REPLACE-ME,subject_status,state,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p035,ten-REPLACE-ME,subject_status,*,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,every row of this kennel (rows rule)
+fv-p036,ten-REPLACE-ME,occupancy,subject_id,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p037,ten-REPLACE-ME,occupancy,area_id,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p038,ten-REPLACE-ME,occupancy,off_site_kind,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p039,ten-REPLACE-ME,occupancy,moved_in,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p040,ten-REPLACE-ME,occupancy,classification,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner code: same lists as staff
+fv-p041,ten-REPLACE-ME,occupancy,*,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,every row of this kennel (rows rule)
+fv-p042,ten-REPLACE-ME,area_reading,id,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner sees the whole temperature log
+fv-p043,ten-REPLACE-ME,area_reading,area_id,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner sees the whole temperature log
+fv-p044,ten-REPLACE-ME,area_reading,min_c,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner sees the whole temperature log
+fv-p045,ten-REPLACE-ME,area_reading,max_c,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner sees the whole temperature log
+fv-p046,ten-REPLACE-ME,area_reading,taken_at,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner sees the whole temperature log
+fv-p047,ten-REPLACE-ME,area_reading,taken_by,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner sees the whole temperature log
+fv-p048,ten-REPLACE-ME,area_reading,mitigation_note,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner sees the whole temperature log
+fv-p049,ten-REPLACE-ME,area_reading,*,aud-admin,yes,,,PROPOSED - claude-job4 - Lisa to approve,2026-10-16,owner: every row

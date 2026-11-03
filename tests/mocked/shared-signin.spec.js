@@ -19,7 +19,7 @@ test.describe('Shared sign-in', () => {
     expect(await page.evaluate(() => window.__GIS_CALLS.request)).toBe(0);
 
     await page.locator('a.back').click();
-    await expect(page).toHaveTitle(/Lisa Dashboard|Map/);
+    await expect(page).toHaveTitle(/^(\(\d+\) )?Dashboard$/);
     await expect(page.locator('#signInBtn')).toBeHidden();
     await expect(page.locator('#mainNav')).toBeVisible();
     expect(await page.evaluate(() => window.__GIS_CALLS.request)).toBe(0);

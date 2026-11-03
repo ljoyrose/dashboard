@@ -1,5 +1,7 @@
-// "Needs you today" on the Dashboard: one short list (at most 7) of what needs Lisa, from data already read.
+// "Needs you" on the Dashboard: one short list of what needs Lisa across all hubs, from data already read.
+// At most 5 rows since Dashboard Main (Lisa's pick, 2 Nov; it was 7), late first, then due soon, then waiting.
 const { test, expect, buildWorld } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { IDS } = require('../support/world');
 
 const signIn = async (page) => {
@@ -9,31 +11,32 @@ const signIn = async (page) => {
 };
 
 test.describe('Needs you today', () => {
-  test('signed out there is no panel; signed in it comes straight after Needs you and Key projects on the Dashboard', async ({ page }) => {
+  test('signed out there is no panel; signed in it comes straight after the Next card, before the hub tiles', async ({ page }) => {
     await page.goto('./');
     await expect(page.locator('#needsToday')).toHaveCount(0);
     await signIn(page);
     const panel = page.locator('#needsToday');
     await expect(panel).toBeVisible();
-    await expect(panel.locator('h3')).toHaveText('Needs you today');
+    await expect(panel.locator('h3')).toHaveText('Needs you');
     const order = await page.locator('#view > *').evaluateAll((els) => els.map((e) => e.id));
-    expect(order.slice(0, 3)).toEqual(['homeTop', 'key-projects', 'needsToday']);
+    expect(order.slice(0, 3)).toEqual(['homeTop', 'needsToday', 'hubTiles']);
   });
 
-  test('shows at most 7 rows, overdue (red) first, each row a link, and the tab title carries the count @regression', async ({ page }) => {
+  test('shows at most 5 rows, overdue (red) first, each row a link, and the tab title carries the count @regression', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const rows = page.locator('#needsToday li');
     const n = await rows.count();
     expect(n).toBeGreaterThan(0);
-    expect(n).toBeLessThanOrEqual(7);
-    const kinds = await rows.evaluateAll((ls) => ls.map((l) => l.className));
+    expect(n).toBeLessThanOrEqual(5);
+    const kinds = await rows.evaluateAll((ls) => ls.map((l) => (l.className.match(/\bn-(risk|fin|ops|bin)\b/) || [])[0]));
     const rank = { 'n-risk': 0, 'n-fin': 1, 'n-ops': 2, 'n-bin': 3 };
     for (let i = 1; i < kinds.length; i++) expect(rank[kinds[i]]).toBeGreaterThanOrEqual(rank[kinds[i - 1]]);
     for (let i = 0; i < n; i++) await expect(rows.nth(i).locator('a')).toHaveAttribute('href', /.+/);
     const total = Number((await page.locator('#needsToday .cardhead .mtag').textContent()).match(/\d+/)[0]);
     await expect(page).toHaveTitle(new RegExp('^\\(' + total + '\\) Dashboard'));
-    if (total > 7) await expect(page.locator('#needsToday')).toContainText('And ' + (total - 7) + ' more.');
+    // The rest open Do from one plain "+N more" link (Lisa, 2 Nov).
+    if (total > 5) await expect(page.locator('#needsToday a[data-needs-more]')).toHaveText('+' + (total - 5) + ' more');
   });
 
   test('a failed read shows up as a red row, so a broken read is never silent', async ({ page, guard, allowedConsole }) => {
@@ -46,12 +49,14 @@ test.describe('Needs you today', () => {
 
   test('after the Bin is read, files ready to bin are one row that opens the Bin', async ({ page, guard }) => {
     const w = guard.world;
+    // Someone other than the Money owner: no money rows, so the Bin row (it ranks last) fits in the 5.
+    w.email = buildWorld({ email: 'someone.else@example.test' }).email;
     w.file('zz-ready-n', 'ZZ_DELETE_ready-for-needs.txt', 'invented', { parents: ['drv-alpha1'], driveId: 'drv-alpha1', mimeType: 'text/plain' });
     w.byId(IDS.ledger).content = 'file_id\nzz-ready-n\n';
     await page.goto('./#/bin');
     await signIn(page);
     await expect(page.locator('[data-bin-list="ready"]').locator('[title="' + 'ZZ_DELETE_ready-for-needs.txt' + '"]')).toHaveCount(1);
-    await page.locator('nav.main a[data-nav="map"]').click();
+    await tabClick(page, 'nav.main a[data-nav="map"]');
     const row = page.locator('#needsToday li.n-bin');
     await expect(row).toContainText('1 file is ready to bin');
     await expect(row.locator('a')).toHaveAttribute('href', '#/bin');

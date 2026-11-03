@@ -1,3 +1,4 @@
+const { tabClick, tabTo } = require('../support/tabs');
 // JOB 34 (group D): GA Hub gaps not proved by food.spec.js, house-look or phone.spec.js.
 // Sign out, unknown address, header links, "Show N more", Copy, load errors in plain words, an expired sign-in,
 // a failed save, a slow read, keyboard reach. Pretend Google and Sheets only; every row is invented.
@@ -29,26 +30,33 @@ test.describe('GA Hub (JOB 34)', () => {
   test('an unknown address opens Home; the GA Hub title goes Home; ← Dashboard points at the main dashboard', async ({ page }) => {
     await HUBS.food.open(page);
     await go(page, 'nope');
-    await expect(page.locator('#view .needs')).toContainText('Needs you');
+    await expect(page.locator('#view [data-hub-main="food"] [data-hm="needs"]')).toContainText('Needs you');
     await expect(page.locator('nav.tabs a[data-nav="home"]')).toHaveAttribute('aria-current', 'page');
     await go(page, 'ga');
     await page.locator('header h1 a').click();
     await expect(page).toHaveURL(/#\/home$/);
-    await expect(page.locator('#view .needs')).toBeVisible();
+    await expect(page.locator('#view [data-hub-main="food"] [data-hm="needs"]')).toBeVisible();
     await expect(page.locator('#backHome')).toHaveAttribute('href', '../');
   });
 
-  test('Home: "Show 2 more" opens the other two cards; tapping a tab closes them again', async ({ page }) => {
+  // Hub Mains (Lisa, 2 Nov): Main shows Next and at most 5 Needs you rows, never the answer cards; the cards with Apply live on
+  // More > Do, one tap away from the Needs you heading. Moving to a tab and back draws the same short Main again.
+  test('Main: Needs you holds at most 5 rows and no answer cards; its heading opens Do with every card; a tab and back keeps Main short', async ({ page }) => {
     await HUBS.food.open(page);
-    await expect(page.locator('#view .card h2')).toHaveCount(1);
-    await page.locator('#view [data-action="all"]').click();
+    const needs = page.locator('#view [data-hub-main="food"] [data-hm="needs"]');
+    const rows = needs.locator('.hm-row');
+    expect(await rows.count()).toBeGreaterThan(0);
+    expect(await rows.count()).toBeLessThanOrEqual(5);
+    await expect(page.locator('#view [data-ans]')).toHaveCount(0);
+    await needs.locator('.hm-head h3 a').click();
+    await expect(page).toHaveURL(/#\/do$/);
     await expect(page.locator('#view [data-ans]').first()).toBeVisible();
     await expect(page.locator('#view')).toContainText('Order #9001');
     await expect(page.locator('#view')).toContainText('New GA price list');
-    await expect(page.locator('#view [data-action="all"]')).toHaveCount(0);
-    await page.locator('nav.tabs a[data-nav="orders"]').click();
-    await page.locator('nav.tabs a[data-nav="home"]').click();
-    await expect(page.locator('#view [data-action="all"]')).toHaveText('Show 2 more');
+    await tabClick(page, 'nav.tabs a[data-nav="orders"]');
+    await tabClick(page, 'nav.tabs a[data-nav="home"]');
+    await expect(page.locator('#view [data-hub-main="food"]')).toBeVisible();
+    await expect(page.locator('#view [data-ans]')).toHaveCount(0);
   });
 
   test('GA tab: Copy puts the account code on the clipboard and says Copied', async ({ page, context }) => {
@@ -95,7 +103,7 @@ test.describe('GA Hub (JOB 34)', () => {
     broken = false;
     await page.locator('#refresh').click();
     await expect(page.locator('#banner')).toBeHidden();
-    await expect(page.locator('#view .needs')).toContainText('3');
+    await expect(page.locator('#view [data-hub-main="food"] [data-hm="needs"] .hm-head .cnt')).toHaveText('3');
   });
 
   // FIX-REQUEST J34-F60 (food/index.html:244, :439). DECISION NEEDED: fix the page (GA Hub owner) or accept. OWNER: GA Hub owner. BY 2026-11-06
@@ -130,8 +138,9 @@ test.describe('GA Hub (JOB 34)', () => {
   test('an empty workbook: Orders, Invoices and Products each say so in plain words', async ({ page }) => {
     await page.route(SHEETS, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY8) }));
     await signIn(page);
-    // Home now carries more than one empty card (growth cards); pick the one by its words.
-    await expect(page.locator('#view .empty', { hasText: 'Nothing needs you' })).toBeVisible();
+    // Main says it once, in its own empty card (the 3 numbers stay below it).
+    await expect(page.locator('#view [data-hub-main="food"] [data-hm="empty"]')).toContainText('Nothing needs you');
+    await expect(page.locator('#view').getByText('Nothing needs you', { exact: true })).toHaveCount(1);
     for (const [view, words] of [['orders', 'No orders yet'], ['invoices', 'No GA invoices yet'], ['products', 'No products here']]) {
       await go(page, view);
       await expect(page.locator('#view .empty', { hasText: words }).first(), view).toBeVisible();
@@ -155,7 +164,7 @@ test.describe('GA Hub (JOB 34)', () => {
     const body = { valueRanges: [{ values: [] }, { values: orders }, { values: invoices }, { values: products }, { values: [] }, { values: [] }, { values: [] }, { values: [] }] };
     await page.route(SHEETS, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) }));
     await signIn(page);
-    await expect(page.locator('#view .needs')).toBeVisible();
+    await expect(page.locator('#view [data-hub-main="food"]')).toBeVisible();
     for (const [view, first, all, row] of [['orders', 30, 31, '#view .card .row'], ['invoices', 30, 31, '#view .card .row'], ['products', 40, 41, '#view .card .row']]) {
       await go(page, view);
       await expect(page.locator(row), view + ' first page').toHaveCount(first);
@@ -169,8 +178,10 @@ test.describe('GA Hub (JOB 34)', () => {
     await HUBS.food.open(page);
     await page.locator('body').click({ position: { x: 1, y: 1 } });
     const seen = await tabWalk(page, 40);
-    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Home', 'Orders', 'Invoices', 'Products', 'GA']) {
+    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Main', 'Invoices', 'Orders', 'Products', 'More']) {
       expect(seen.some((s) => s === name || s.startsWith(name)), `Tab reaches ${name}: ${seen.join(' | ')}`).toBe(true);
     }
+    // GA sits under More (Lisa's tab picks, 2 Nov): Tab to More, Enter, and it is in the menu.
+    expect(await tabTo(page, 'nav.tabs a[data-nav="ga"]', 60), 'Tab reaches GA under More').toBe(true);
   });
 });

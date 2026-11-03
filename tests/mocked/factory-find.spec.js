@@ -4,6 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
+const { tabClick } = require('../support/tabs');
 const { build } = require('../fixtures/factory/state');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'factory', 'index.html'), 'utf8');
@@ -66,7 +67,7 @@ test.describe('Factory find bar', () => {
   });
 
   test('kind chips: Send, Test, Fix, Decide, Research', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
     await chip(page, 'kind', 'send').click();
     await expect(rows(page)).toHaveCount(2);
     await chip(page, 'kind', 'send').click();
@@ -87,7 +88,7 @@ test.describe('Factory find bar', () => {
   });
 
   test('who: Me shows only what is tagged for Lisa; Claude and Grok on Rooms', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
     await panel(page);
     await chip(page, 'who', 'me').click();
     await expect(rows(page)).toHaveCount(2);
@@ -135,7 +136,7 @@ test.describe('Factory find bar', () => {
   });
 
   test('sort: Flag, Date, Oldest and Newest change the order', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
     await expect(rows(page).first()).toHaveAttribute('data-row', 'wrk000001'); // Me = newest first
     await panel(page);
     await chip(page, 'sort', 'age').click();
@@ -197,7 +198,7 @@ test.describe('Factory find bar', () => {
   });
 
   test('Me: first tab, counts what waits on Lisa across Decide and Do, newest first, by app', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');   // the Decide + Do list left Main for More > Mine (Hub Mains, 2 Nov 2026)
     await expect(page.locator('nav.tabs a').first()).toHaveAttribute('data-nav', 'me');
     await expect(page.locator('#nMe')).toHaveText('7');
     await expect(rows(page)).toHaveCount(7);
@@ -304,13 +305,13 @@ test.describe('Factory send gate', () => {
     await expect(page.locator('[data-copy="869fk9d1r"]')).not.toContainText('Copied');
   });
 
-  test('good stamp: READY, dated today, hash of the exact text: Copy copies it', async ({ page, guard }) => {
+  test('good stamp: READY, dated today, hash of the trimmed text (as the checker writes it): Copy copies it', async ({ page, guard }) => {
     await page.context().grantPermissions(['clipboard-read', 'clipboard-write']);
-    guard.world.file(PROMPT_DOC, 'prompt-sample.md', PROMPT_TEXT, { mimeType: 'text/markdown' });
-    await open(page, guard, '#/item/869fk9d1r', { change: (st) => stamp(st, 'presend: READY sha256:' + sha(PROMPT_TEXT) + ' ' + today()) });
+    guard.world.file(PROMPT_DOC, 'prompt-sample.md', PROMPT_TEXT + '\n\n', { mimeType: 'text/markdown' }); // blank lines at the end never break the match
+    await open(page, guard, '#/item/869fk9d1r', { change: (st) => stamp(st, 'presend: READY sha256:' + sha(PROMPT_TEXT.trim()) + ' ' + today()) });
     await page.locator('[data-copy="869fk9d1r"]').click();
     await expect(page.locator('[data-copy="869fk9d1r"]')).toContainText('Copied');
-    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(PROMPT_TEXT);
+    expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(PROMPT_TEXT + '\n\n');
   });
 
   test('Prompts: the next send per app on top with its checker state, then waiting; sent and rules folded away; reached from Do', async ({ page, guard }) => {
@@ -367,11 +368,15 @@ test.describe('Factory selected and focus lines', () => {
 
   test('after clicking a tab and a chip: selected chips wear the 1px inside line, the tab only its wider bar; focus is 2px @regression', async ({ page, guard }) => {
     await open(page, guard, '#/do');
-    await page.locator('nav.tabs a[data-nav="me"]').click();
+    await tabClick(page, 'nav.tabs a[data-nav="me"]');
     const tab = page.locator('nav.tabs a[aria-current="page"]');
     await expect(tab).toHaveAttribute('data-nav', 'me');
     expect((await st(tab))[0].s).toBe('none');
     await expect(tab.locator('.bar')).toHaveCSS('width', '40px');
+    // The app chips moved with the old Main list to More > Mine (#/me/all) when Main became the hub Main (Lisa, 2 Nov).
+    await page.locator('nav.tabs [data-house-more]').click();
+    await page.locator('nav.tabs a[href="#/me/all"]').click();
+    await expect(page).toHaveURL(/#\/me\/all$/);
     await chip(page, 'app', 'kennel-book').click();
     await chip(page, 'app', '').click();
     await expect(chip(page, 'app', '')).toHaveClass(/\bon\b/);

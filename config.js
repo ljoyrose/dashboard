@@ -38,7 +38,11 @@
       dbxFolderId: '0AEqV6Ky2jpmDUk9PVA', // Drive folder holding DROPBOX-TOTALS.json
       dbxTotalsName: 'DROPBOX-TOTALS.json',
       // Stage 9: iCloud and Mac dry-run reports, written by the private engines into the same folder (look only).
-      coverageReports: { icloud: 'ICLOUD-REPORT.json', mac: 'MAC-REPORT.json' }
+      coverageReports: { icloud: 'ICLOUD-REPORT.json', mac: 'MAC-REPORT.json' },
+      // Bin page Log: the tidy engines' run history (RUN-LOG.csv, written by the private repo; columns in index.html
+      // above loadRunLog and in README.md). Placeholder: empty until the folder exists. Empty = "No runs logged yet".
+      runLogFolderId: '',
+      runLogName: 'RUN-LOG.csv'
     },
     cdhub: {
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
@@ -93,6 +97,7 @@
       listingsFileId: '1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW', // RR_LISTINGS.csv: read only, for the second photo on "Same item?" cards
       wakeFolderId: '',
       wakeFile: 'MKT-WAKE-WEBAPP.json',
+      ideasRequestsFolderId: '', // Drive folder for Product ideas request files (MKT-IDEA-REQ-*.json). Empty = the Add idea form will not send.
       live: false
     },
     // App Factory page (factory/): reads af-state.json from logsFolderId (written by AF-ENGINE); writes request files into
@@ -114,7 +119,11 @@
     // grants nothing on its own; Google limits the web app to her Workspace and the hub lets in only its EDITORS list.
     // The /a/macros/puppyclassroom.com/ form makes Google use the work account (the plain form loops when Chrome's
     // first account is a personal one, 2 Nov 2026).
+    // sheetId: the hub's own Sheet ("Projects Hub TEST", lisa@puppyclassroom.com). The Dashboard reads its INDEX tab with
+    // Lisa's read-only sign-in for the Projects tile's 3 numbers; it never writes. Empty = the tile shows no numbers.
     projectsHub: {
+      sheetId: '1ssFH6uTD6uEYbxio6iA3BlP9Op3l2d7MRf_ktusMcTU',
+      tab: 'INDEX',
       webAppUrl: 'https://script.google.com/a/macros/puppyclassroom.com/s/AKfycbx42JNrRiolxbf5JJEqnOwXy_GgYelx-6GKhQaNuQMyUsTW5e89P2VZBANP_yGSOxgj/exec'
     },
     money: {

@@ -1,3 +1,4 @@
+const { tabClick, tabTo } = require('../support/tabs');
 // JOB 34 (group D): Marketplace gaps not proved by marketplace.spec.js, house-look or phone.spec.js.
 // Sign out, unknown address, load errors in plain words, an expired sign-in, Refresh after a failure, a slow read,
 // the drop-off QR window, label sheet Close, the Stock round (shelves, tick, Round saved, no round open),
@@ -43,7 +44,7 @@ test.describe('Marketplace (JOB 34)', () => {
   test('an unknown address opens Home; the Marketplace title goes Home; ← Dashboard points at the main dashboard', async ({ page }) => {
     await HUBS.marketplace.open(page);
     await go(page, 'nope');
-    await expect(page.locator('#view .card.next')).toBeVisible();
+    await expect(page.locator('#view [data-hm="next"]')).toBeVisible();
     await go(page, 'insights');
     await page.locator('header h1 a').click();
     await expect(page).toHaveURL(/#\/me$/);
@@ -85,7 +86,7 @@ test.describe('Marketplace (JOB 34)', () => {
     broken = false;
     await page.locator('#refresh').click();
     await expect(page.locator('#banner')).toBeHidden();
-    await expect(page.locator('#view .card.next')).toBeVisible();
+    await expect(page.locator('#view [data-hm="next"]')).toBeVisible();
   });
 
   // FIX-REQUEST J34-F70 (marketplace/index.html:392-399, :929). DECISION NEEDED: fix the page (Marketplace owner) or accept. OWNER: Marketplace owner. BY 2026-11-06
@@ -179,8 +180,10 @@ test.describe('Marketplace (JOB 34)', () => {
     await HUBS.marketplace.open(page);
     await page.locator('body').click({ position: { x: 1, y: 1 } });
     const seen = await tabWalk(page, 50);
-    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Home', 'Do now', 'Decide', 'Reply', 'Insights']) {
+    for (const name of ['Dashboard', 'Refresh', 'Look', 'Sign out', 'Main', 'Decide', 'Do, ', 'Reply', 'New Stock', 'More']) {
       expect(seen.some((s) => s === name || s.startsWith(name)), `Tab reaches ${name}: ${seen.join(' | ')}`).toBe(true);
     }
+    // Insights sits under More (Lisa's tab picks, 2 Nov): Tab to More, Enter, then it is in the menu.
+    expect(await tabTo(page, 'nav.tabs a[data-nav="insights"]', 70), 'Tab reaches Insights under More').toBe(true);
   });
 });

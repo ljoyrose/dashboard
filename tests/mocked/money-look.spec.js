@@ -2,7 +2,7 @@
 // 1 everything you press: the same clear 1px line (never ink at rest), 12px corners, 36px high, 14px 600; hover = 1px ink outline, nothing moves
 // 2 every date pill: a plain 1px ring; late = rose ring + tint, soon = amber ring + tint
 // 3 no text under 13px, weights 400 and 600 only, no coloured words
-// 4 one radius (12px); circles only for status dots; count pills one fixed size (30 x 22, radius 11px)
+// 4 one radius (12px); circles only for status dots; count pills one fixed size (30 x 24, radius 12px, a 14px number)
 // plus: no solid colour fills on markers, and 3:1 lines / 4.5:1 text in light and dark. Pretend Google and Drive.
 const { test, expect } = require('../support/test');
 
@@ -53,7 +53,10 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
             const r = getComputedStyle(e).borderTopLeftRadius;
             if (r === '0px') return;
             const cls = e.classList;
-            const ok = r === '12px' || (r === '50%' && (cls.contains('dot') || cls.contains('info'))) || (r === '11px' && (cls.contains('cnt') || cls.contains('n')));
+            // The bottom tabs follow Lisa's tab picks (2 Nov): round icon ring, 2px line, 12px-round corner counts.
+            const tabN = e.matches('nav.house-tabs .ht > .n');
+            const tabShape = (r === '50%' && e.matches('nav.house-tabs .hic')) || (r === '2px' && e.matches('nav.house-tabs .bar')) || (r === '12px' && tabN);
+            const ok = tabShape || (r === '12px' && !tabN) || (r === '50%' && (cls.contains('dot') || cls.contains('info')));
             if (!ok) out.push('radius ' + r + ': ' + what(e));
           });
           // 1: pressables rest on the same clear line, 1px, 12px, 36px+, 14px 600; never ink at rest.
@@ -69,12 +72,15 @@ test.describe('Money Hub look: rules 1-4 by computed style', () => {
             if (!inHeader && cs.borderTopColor !== ctl) out.push('press line colour ' + cs.borderTopColor + ' (want ' + ctl + '): ' + what(e));
             if (!inHeader && cs.borderTopColor === ink) out.push('press starts out ink: ' + what(e));
           });
-          // Count pills: one fixed size so 1 and 2 digits match.
+          // Count pills: one fixed size so 1 and 2 digits match, a 14px number (Lisa's pick A, 2 Nov). Tab counts: the 24 x 24 corner ring.
           document.querySelectorAll('.cnt, nav.main .n:not(:empty)').forEach((e) => {
             if (!seen(e)) return;
             const r = e.getBoundingClientRect(), cs = getComputedStyle(e);
-            if (Math.round(r.height) !== 22 || (e.textContent.trim().length <= 2 && Math.round(r.width) !== 30)) out.push('count size ' + r.width + 'x' + r.height + ': ' + what(e));
+            if (e.matches('nav.house-tabs .ht > .n')) {
+              if (Math.round(r.height) !== 24 || (e.textContent.trim().length <= 2 && Math.round(r.width) !== 24) || cs.lineHeight !== '22px' || getComputedStyle(e).position !== 'absolute') out.push('tab count ' + r.width + 'x' + r.height + ' ' + cs.lineHeight + ': ' + what(e));
+            } else if (Math.round(r.height) !== 24 || (e.textContent.trim().length <= 2 && Math.round(r.width) !== 30)) out.push('count size ' + r.width + 'x' + r.height + ': ' + what(e));
             if (cs.borderTopWidth !== '1px') out.push('count line: ' + what(e));
+            if (cs.fontSize !== '14px') out.push('count words ' + cs.fontSize + ': ' + what(e));
           });
           // 2: date pills wear a 1px ring; late = rose, soon = amber, plain = the control line.
           const rose = norm(root.getPropertyValue('--r-risk')), amber = norm(root.getPropertyValue('--r-warn'));
@@ -130,7 +136,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
   // (Meaning-coloured controls would keep their own colour + tint; this page has none today.)
   // The bottom tabs are EXEMPT (Lisa's tab rule): no ring, no outline, no fill; only the colour bar above the label widens.
   const CASES = [
-    ['light', 'now', 'main .btn', 'neutral'], ['light', 'now', 'main details > summary', 'neutral'], ['light', 'now', 'a.ent', 'neutral'],
+    ['light', 'now', 'main .btn', 'neutral'], ['light', 'todo', 'main details > summary', 'neutral'], ['light', 'money', 'a.ent', 'neutral'],
     ['light', 'todo', '.subnav a:not([aria-current])', 'neutral'], ['light', 'now', 'header .btn', 'frame'],
     ['light', 'now', 'nav.main a[data-nav="dates"]', 'tab'], ['light', 'now', 'nav.main a[data-nav="accountant"]', 'tab'],
     ['dark', 'now', 'main .btn', 'neutral'], ['dark', 'now', 'nav.main a[data-nav="todo"]', 'tab'],
@@ -195,12 +201,14 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
 
   test('read-only pills (flags, dates, counts, the read stamp) have no hover', async ({ page }) => {
     await open(page, 'light');
+    await go(page, 'todo'); // Main holds no flags or date pills now; To-do has all three
     for (const sel of ['#view .tag', '#view .date', '#view .cnt', '#readStamp']) {
       const el = page.locator(sel).first();
       await el.scrollIntoViewIfNeeded();
       await el.hover();
       expect(await el.evaluate((e) => getComputedStyle(e).outlineStyle), sel).toBe('none');
-      expect(await el.evaluate((e) => getComputedStyle(e).cursor), sel).not.toBe('pointer');
+      // A pill inside a row or link that opens something takes that row's pointer (Lisa, 2 Nov: every row opens its item); a pill alone never does.
+      expect(await el.evaluate((e) => getComputedStyle(e).cursor === 'pointer' && !e.closest('a[href], button, [data-open-row]')), sel).toBe(false);
     }
   });
 
@@ -275,28 +283,33 @@ test.describe('Money Hub look: control line and count pills hold in every look',
       probe.innerHTML = '<span class="cnt">7</span><span class="cnt need">88</span><span class="cnt wide">999</span>';
       document.getElementById('view').appendChild(probe);
       return Array.from(probe.children).concat(Array.from(document.querySelectorAll('#view .cnt, nav.main .n:not(:empty)'))).filter((e) => e.getClientRects().length)
-        .map((e) => ({ t: e.textContent, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height }));
+        .map((e) => ({ t: e.textContent, w: e.getBoundingClientRect().width, h: e.getBoundingClientRect().height, tab: e.matches('nav.house-tabs .ht > .n') }));
     });
+    expect(sizes.filter((s) => s.tab).length, 'the tab counts are measured too').toBeGreaterThan(0);
     for (const s of sizes) {
-      expect(s.h, `count "${s.t}" height`).toBe(22);
-      if (s.t.length <= 2) expect(s.w, `count "${s.t}" width`).toBe(30);
+      // Every count holds a 14px number (Lisa's pick A, 2 Nov): bottom-tab counts are the 24 x 24 corner ring, the rest the 30 x 24 pill.
+      expect(s.h, `count "${s.t}" height`).toBe(24);
+      if (s.t.length <= 2) expect(s.w, `${s.tab ? 'tab ' : ''}count "${s.t}" width`).toBe(s.tab ? 24 : 30);
     }
     expect(sizes.find((s) => s.t === '999').w).toBeGreaterThan(30); // 3+ digits grow
   });
 });
 
 test.describe('Money Hub: summary strip, Next card and friendly empty states', () => {
-  test('Now opens with On track / Needs you / Overdue and one Next card with one button', async ({ page }) => {
+  test('Money opens with On track / Needs you / Overdue, and Main has one Next card with one button', async ({ page }) => {
     await open(page, 'light');
+    // The trio moved from Main to the top of Money (Hub Mains, 2 Nov 2026).
+    await go(page, 'money');
     const three = page.locator('#view .three');
     await expect(three.locator('.sum')).toHaveText([/^\d+\s*On track/, /^\d+\s*Needs you/, /^\d+\s*Overdue/]);
     await expect(three.locator('[data-sum="over"] .num')).toHaveText('2'); // the overdue filing and the overdue tax
     await expect(three.locator('[data-sum="need"] .num')).toHaveText('2');
-    const next = page.locator('#view [data-next]');
+    await go(page, 'now');
+    const next = page.locator('#view [data-hm="next"]');
     await expect(next).toContainText('Sample overdue filing');
     await expect(next.locator('a.btn')).toHaveCount(1);
     await next.locator('a.btn').click();
-    await expect(page).toHaveURL(/#\/dates$/);
+    await expect(page).toHaveURL(/#\/e\/TESTCO$/); // a dated row opens its entity's Dates card
   });
 
   test('tab counts: needs-you counts wear the rose ring, totals the grey one', async ({ page }) => {
@@ -312,9 +325,18 @@ test.describe('Money Hub: summary strip, Next card and friendly empty states', (
   test('an empty list says so in plain words with a green-ring check', async ({ page, guard }) => {
     const f = guard.world.files.find((x) => x.name === 'MON-REGISTER.csv');
     f.content = f.content.split('\n').filter((l, i) => i === 0 || !/^R\d/.test(l)).join('\n');
+    // Yours also lists every Needs you item now (Hub Mains, 2 Nov 2026), so nothing may be overdue or due either.
+    const dates = guard.world.files.find((x) => x.name === 'MON-DATES.csv');
+    dates.content = dates.content.split('\n').filter((l) => !/^D\d/.test(l)).join('\n');
+    const liab = guard.world.files.find((x) => x.id === 'l-co-LIABILITIES.csv');
+    liab.content = liab.content.split('\n').filter((l) => !/,overdue$/.test(l)).join('\n');
+    const intake = guard.world.files.find((x) => x.name === 'MON-INTAKE.csv');
+    intake.content = intake.content.split('\n').filter((l) => !/^I\d/.test(l)).join('\n');
     await open(page, 'light');
     await go(page, 'todo');
-    await expect(page.locator('#view .empty').first()).toContainText('Nothing here.');
+    // One empty line per view (Lisa, 2 Nov): Yours with nothing ready or blocked says it once.
+    await expect(page.locator('#view .empty')).toHaveCount(1);
+    await expect(page.locator('#view .empty').first()).toContainText('Nothing needs you');
     const ring = await page.locator('#view .empty').first().evaluate((e) => getComputedStyle(e, '::before').borderTopWidth);
     expect(ring).toBe('1px');
   });

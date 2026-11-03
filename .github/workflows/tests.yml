@@ -26,7 +26,9 @@ jobs:
   tests:
     name: Browser tests (pretend Google and Drive)
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    # 15 > 20 on 2 Nov 2026: the full suite already ran 14-15 minutes on main (one main run was cut off at 15), and the
+    # clickable-info checks (Lisa's clickable picks) add about a minute.
+    timeout-minutes: 20
     permissions:
       contents: read
       issues: write # only used to open/close the one "tests are red" issue on scheduled runs

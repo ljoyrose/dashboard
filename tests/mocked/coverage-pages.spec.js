@@ -3,6 +3,7 @@
 // writes a dry-run report. Any action stays in Bin.
 const { test, expect } = require('../support/test');
 const { IDS, FIX } = require('../support/world');
+const { tabClick } = require('../support/tabs');
 const fs = require('fs');
 const path = require('path');
 
@@ -73,7 +74,7 @@ test.describe('Stage 9: Dropbox, iCloud and Mac pages (look only)', () => {
     await expect(card.locator('[data-no-report]')).toHaveCount(0);
     await lookOnly(page.locator('#view'));
     // The delete steps stay in Bin.
-    await page.locator('#mainNav a[data-nav="bin"]').click();
+    await tabClick(page, '#mainNav a[data-nav="bin"]');
     await expect(page.locator('#dropboxCard')).toContainText('Waiting to delete: 12 files (3.5 GB)');
     expect(guard.world.calls.filter((c) => c.method !== 'GET')).toEqual([]);
   });
