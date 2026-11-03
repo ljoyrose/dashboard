@@ -338,7 +338,7 @@ test.describe('CD Hub house look', () => {
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
 
-  test('controls: every one rests on the same clear 1px line (never ink, 3:1), 12px corners, 14px/600, 36px tall; hover = 1px ink line inside plus a pale fill, nothing moves', async ({ page }) => {
+  test('controls: every one rests on the same clear 1px line (never ink, 3:1), 12px corners, 14px/600, 36px tall; hover = 1px ink line inside and never a fill, nothing moves', async ({ page }) => {
     test.setTimeout(120_000);
     await page.goto('cdhub/');
     await signIn(page);
@@ -353,7 +353,8 @@ test.describe('CD Hub house look', () => {
         const el = ctls.nth(i);
         const st = await el.evaluate((e) => { const s = getComputedStyle(e); return { w: s.borderTopWidth, c: s.borderTopColor, r: s.borderTopLeftRadius, fs: s.fontSize, fw: s.fontWeight, h: e.getBoundingClientRect().height, bg: s.backgroundColor, sel: e.getAttribute('aria-pressed') === 'true' }; });
         expect(st.w).toBe('1px'); expect(st.r).toBe('12px'); expect(st.c).not.toBe(ink); expect(st.h).toBeGreaterThanOrEqual(36);
-        expect(st.fs).toBe('14px'); expect(st.fw).toBe('600');
+        // A select is a typing box: 16px on every page so a phone never zooms in on it (Lisa, 3 Nov 2026); every other control is 14px.
+        expect(st.fs).toBe((await el.evaluate((e) => e.tagName)) === 'SELECT' ? '16px' : '14px'); expect(st.fw).toBe('600');
         lines.add(st.c);
         if (st.sel) continue;
         const where = () => el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x + scrollX, r.y + scrollY, r.width, r.height]; });   // page position, so a scroll is not a move
@@ -361,9 +362,9 @@ test.describe('CD Hub house look', () => {
         await el.hover();
         const hv = await el.evaluate((e) => { const s = getComputedStyle(e); return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, bw: s.borderTopWidth, bg: s.backgroundColor }; });
         expect({ ow: hv.ow, os: hv.os, oo: hv.oo, oc: hv.oc, bw: hv.bw }, `${tab} control ${i}`).toEqual({ ow: '1px', os: 'solid', oo: '-1px', oc: ink, bw: '1px' });
-        // The fold chevron (Lisa, 2 Nov: "no new fills") hovers with the line only; every other control adds the pale fill.
-        if (await el.evaluate((e) => e.matches('.house-fold'))) expect(hv.bg, `${tab} fold ${i}: no fill on hover`).toBe(st.bg);
-        else expect(hv.bg, `${tab} control ${i}: pale fill on hover`).not.toBe(st.bg);
+        // Lisa's sweep (3 Nov 2026): every control, the fold chevron too, hovers with the line only, never a fill.
+        // (a select is a typing box, the one thing that may change its fill)
+        if ((await el.evaluate((e) => e.tagName)) !== 'SELECT') expect(hv.bg, `${tab} control ${i}: no fill on hover`).toBe(st.bg);
         expect(await where(), `${tab} control ${i}: nothing moves`).toEqual(before);
         await page.mouse.move(0, 0);
       }
@@ -477,7 +478,9 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Sample item waiting on Lisa' }).locator('a[data-hm-act]').click();
     await expect(page.locator('#nav button[data-go="work"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('#needsCard .mrow')).toHaveCount(5);
-    await expect(page.locator('#needsCard h3 .cnt')).toHaveClass(/need/);
+    // Rose = late only (Lisa's sweep, 3 Nov 2026): the count is rose exactly when one of its rows is late.
+    const anyLate = (await page.locator('#needsCard .mrow .ic.late').count()) > 0;
+    if (anyLate) await expect(page.locator('#needsCard h3 .cnt')).toHaveClass(/need/); else await expect(page.locator('#needsCard h3 .cnt')).not.toHaveClass(/need/);
     await openTab(page, 'today');
     await expect(page.locator('#onSiteCard .big')).toHaveText('3');
     await expect(page.locator('#tempsCard')).toContainText('0 of 2');

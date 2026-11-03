@@ -362,7 +362,7 @@
   .pager .gap { width: 1px; }
   .subnav { display: flex; flex-wrap: wrap; gap: 8px; }
   .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 3px solid var(--s7); background: var(--surface); text-decoration: none; font-size: var(--fs-small); }
-  .subnav a[aria-current="page"] { font-weight: 600; background: var(--s7-tint); border-color: var(--s7); }
+  .subnav a[aria-current="page"] { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); font-weight: 600; border-color: var(--s7); }
   .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .stat { background: var(--tint, var(--s0-tint)); border-radius: 12px; padding: 8px 12px; text-align: left; }
   .stat .num { font-size: var(--fs-figure); font-weight: 600; }
@@ -478,7 +478,7 @@
   .btn, .card, .pill, .chip, .tile, .note, input, select, textarea, details, summary, .panel, .keytile { border-radius: var(--radius); }
   .subnav a { border-radius: 999px; }
   .subnav a, .subnav a[aria-current="page"] { font-weight: 600; background: transparent; border-width: 1px; border-color: var(--line); }
-  .subnav a:hover, .subnav a[aria-current="page"], .btn:hover, a.keytile:hover { border-color: var(--muted); background: transparent; }
+  .subnav a:hover, .subnav a[aria-current="page"], .btn:hover, a.keytile:hover { border-color: var(--muted); }
   .card, .card[class] { border-left-color: var(--line); box-shadow: none; }
   .card[class]:hover { border-left-color: var(--slot, var(--c, var(--muted))); }
   .card.vision[class] { background: var(--surface); }
@@ -606,8 +606,8 @@
   @media (max-width: 600px) { .nextcard .actions a.more { min-height: 44px; } }
   .needs a.needsmore { align-self: flex-start; display: inline-flex; align-items: center; min-height: 36px; color: var(--ink); font-size: var(--fs-small); text-decoration: underline; text-underline-offset: 2px; }
   @media (max-width: 600px) { .needs a.needsmore { min-height: 44px; } }
-  @media (hover: hover) { .hsplit a.cnt:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
-    .hsplit a.cnt.k-risk:hover { outline-color: var(--ljr-2); background: var(--ljr-2-tint); } }
+  @media (hover: hover) { .hsplit a.cnt:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    .hsplit a.cnt.k-risk:hover { outline-color: var(--ljr-2); } }
   .hsplit a.cnt:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .nextcard[class] { border-color: var(--ink); background: var(--card); }
   .nextcard .actions { gap: 12px; }
@@ -635,14 +635,14 @@
   .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); --hmc: var(--ljr-7); }
   a.ment { --hc: var(--ljr-3); --hl: var(--ljr-3); }
   a.ment.bad { --hc: var(--ljr-2); --hl: var(--ljr-2); }
-  .subnav a[aria-current="page"] { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+  .subnav a[aria-current="page"] { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
   @media (hover: hover) {
     .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover, details.fold > summary:hover, .index .btn:hover {
-      outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+      outline: 1px solid var(--ink); outline-offset: -1px; }
     .btn.danger:hover, .btn.ai:hover, a.ment[class]:hover {
-      outline: 1px solid var(--hl); outline-offset: -1px; background: color-mix(in srgb, var(--hc) 14%, var(--card)); }
-    header .btn:hover { background: color-mix(in srgb, var(--frame-ink) 12%, var(--frame)); }
-    html.dash-locked header .btn:hover { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+      outline: 1px solid var(--hl); outline-offset: -1px; }
+    header .btn:hover { outline-color: var(--frame-ink); }
+    html.dash-locked header .btn:hover { outline-color: var(--frame-ink); }
   }
 </style>
 </head>
@@ -695,13 +695,13 @@
 </main>
 
 <nav id="mainNav" class="main house-tabs hidden" aria-label="Sections">
-  <a class="ht" data-slot="1" href="#/map" data-nav="map"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="n-map"></span></a>
+  <a class="ht" data-slot="1" href="#/map" data-nav="map"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n" id="n-map"></span></a>
   <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n" id="n-decide"></span></a>
   <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n" id="n-do"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
       <a href="#/drives" data-nav="drives" data-slot="0"><svg class="icon" aria-hidden="true"><use href="#i-drive"/></svg><span class="htl">Drives</span></a>
-      <a href="#/bin" data-nav="bin" data-slot="8"><svg class="icon" aria-hidden="true"><use href="#i-bin"/></svg><span class="htl">Bin</span><span class="n need" id="n-bin"></span></a>
+      <a href="#/bin" data-nav="bin" data-slot="8"><svg class="icon" aria-hidden="true"><use href="#i-bin"/></svg><span class="htl">Bin</span><span class="n" id="n-bin"></span></a>
       <a href="#/money" data-nav="money" data-slot="3"><svg class="icon" aria-hidden="true"><use href="#i-money"/></svg><span class="htl">Money</span></a>
       <a href="#/minutes" data-nav="minutes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="htl">Actions minutes</span></a>
       <a href="#/changes" data-nav="changes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-changes"/></svg><span class="htl">Changes</span></a>
@@ -2626,10 +2626,10 @@
     market: [['To Post', '#/do?post'], ['To Reply', '#/reply'], ['Sold', '#/sold']],
     studio: [['Approve', '#/review'], ['Due Today', '#/me/today'], ['Sold', '#/library']]
   };
-  // Projects: the hub Sheet's INDEX tab (loadPh). Stuck above 0 is rose.
+  // Projects: the hub Sheet's INDEX tab (loadPh). All grey: stuck is not late (a rose number means late).
   function phNums() {
     var d = S.ph.data;
-    return d ? [['Stuck', d.stuck, d.stuck > 0], ['Waiting', d.waiting], ['Running', d.running]] : null;
+    return d ? [['Stuck', d.stuck], ['Waiting', d.waiting], ['Running', d.running]] : null;
   }
   function hubTiles() {
     var D = hubData();
@@ -2725,6 +2725,8 @@
     out = out.map(function (x, i) { x._i = i; return x; }).sort(function (a, b2) { return rank[a.kind] - rank[b2.kind] || a._i - b2._i; });
     return out;
   }
+  // A rose count means late (Lisa's sweep, 3 Nov 2026; read out as "N late"). A failed read or the Bin ledger is rose-lined (risk) but not late.
+  function isLateNeed(x) { return x.tag === 'Late'; }
   function hubLink(href) { return /^(money|cdhub|factory|marketplace|food|studio|estate)\//.test(String(href || '')); }
   // The first reads after sign-in are still running (a 5-minute reread keeps the last numbers instead).
   function firstRead() { return ['readfirst', 'drive', 'cf', 'money', 'hubs'].some(function (k) { return S[k].status === 'loading' && !S[k].data; }); }
@@ -2755,7 +2757,7 @@
   function viewDoGroup(key) {
     var g = NEED_GROUPS.filter(function (x) { return x.key === key; })[0], rows = needsToday().filter(g.has), reading = firstRead();
     var h = '<section class="card needs" id="todoGroup" data-group="' + g.key + '" aria-labelledby="todoGroupTitle"><div class="cardhead"><h3 id="todoGroupTitle">Do · ' + esc(g.word) + '</h3>' +
-      '<span class="cnt' + (g.kind === 'risk' && rows.length ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + (rows.length || '') + '</span></div>';
+      '<span class="cnt' + (rows.some(isLateNeed) ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + (rows.length || '') + '</span></div>';
     h += rows.length ? '<ol>' + rows.map(needRow).join('') + '</ol>' : '<p class="note">' + (reading ? 'Reading…' : 'Nothing ' + esc(g.word) + ' right now.') + '</p>';
     return h + '<p class="note"><a href="#/do">All of Do</a></p></section>';
   }
@@ -3209,7 +3211,7 @@
     { key: 'mac', view: 'mac', label: 'Mac', purpose: 'See what the last Mac check found. Nothing is changed here.' }
   ];
   var DRIVES_PURPOSE = "See what's where, spot what changed, and send anything to tidy to Bin.";
-  var READFIRST_PURPOSE = 'Open the folder the AIs read first.';
+  var READFIRST_PURPOSE = 'The folder the AIs read first, and what is in it.';
   // Old addresses keep working: #/drive(/drive/folder), #/readfirst, #/personal and #/usb move under #/drives;
   // #/more (the old fifth tab) opens the Dashboard, which holds the hub tiles.
   function redirectOld(hash) {
@@ -3270,11 +3272,10 @@
     Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
       if (a.getAttribute('data-nav') === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
-    tabBadge('map', nNeeds, 'Main');
+    tabBadge('map', nNeeds, 'Main', signedIn && needsToday().some(isLateNeed));
     var nDec = signedIn ? hubRows('decide') : [], nDo = signedIn ? hubRows('todo') : [];
     tabBadge('decide', nDec.length, 'Decide');
-    tabBadge('do', nDo.length + (window.DoQ ? DoQ.open() : 0), 'Do');
-    $('n-do').classList.toggle('need', nDo.some(function (x) { return x.kind === 'late'; }));
+    tabBadge('do', nDo.length + (window.DoQ ? DoQ.open() : 0), 'Do', nDo.some(function (x) { return x.kind === 'late'; }));
     tabBadge('bin', S.bin.data && S.bin.data.ready ? S.bin.data.ready.length : 0, 'Bin');
     if (changed && lastView !== null) {
       el.classList.add('fade');
@@ -3292,11 +3293,12 @@
     if ((r.view === 'icloud' || r.view === 'mac') && S[r.view].status === 'idle') loadReport(r.view, REPORT_NAMES[r.view]);
     if (r.view === 'bin' && S.runlog.status === 'idle') loadRunLog();
   }
-  function tabBadge(key, n, label) {
+  function tabBadge(key, n, label, late) {
     var b = $('n-' + key); if (!b) return;
     b.textContent = n ? String(n) : '';
     b.classList.toggle('wide', String(n).length > 2); // count pills: exact 30px box for 1-2 digits, only 3+ grow
-    b.parentNode.setAttribute('aria-label', label + (n ? ', ' + n + ' waiting' : ''));
+    b.classList.toggle('need', !!(n && late));         // rose = late only; everything else waits in grey
+    b.parentNode.setAttribute('aria-label', label + (n ? ', ' + n + (n && late ? ' late' : ' waiting') : ''));
   }
   function updateHeader() {
     var times = ['readfirst', 'drive', 'cf'].map(function (k) { return S[k].status === 'ok' ? S[k].readAt : null; }).filter(Boolean);

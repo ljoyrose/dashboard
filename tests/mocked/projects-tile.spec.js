@@ -32,8 +32,7 @@ test.describe('Home: Projects tile numbers', () => {
     const nums = tile.locator('a.hk');
     await expect(nums).toHaveText(['3Stuck', '2Waiting', '2Running']);
     for (const a of await nums.all()) { await expect(a).toHaveAttribute('href', IDS.projectsHub); await expect(a).toHaveAttribute('target', '_blank'); }
-    await expect(nums.nth(0).locator('b.need')).toHaveCount(1); // Stuck above 0 = rose
-    await expect(tile.locator('b.need')).toHaveCount(1);
+    await expect(nums.locator('b.need')).toHaveCount(0); // grey: stuck is not late, and a rose number means late (Lisa's sweep, 3 Nov 2026)
     // Only GET reads, each with the sign-in token; the Projects Hub Sheet is read only at its INDEX tab.
     expect(PH_SHEET).toBeTruthy();
     const ph = calls.filter((c) => c.url.includes('/spreadsheets/' + PH_SHEET + '/'));

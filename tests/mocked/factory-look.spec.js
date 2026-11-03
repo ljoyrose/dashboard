@@ -246,9 +246,9 @@ test.describe('Factory look: frame', () => {
   });
 });
 
-test.describe('Factory look: hover = a 1px line inside + a pale tint; nothing moves', () => {
+test.describe('Factory look: hover = a 1px line inside, never a fill (Lisa\'s sweep, 3 Nov 2026); nothing moves', () => {
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: neutral controls turn an ink line and a muted tint; meaning controls keep their own colour`, async ({ page, guard }) => {
+    test(`${scheme}: neutral controls turn an ink line, no fill; meaning controls keep their own colour`, async ({ page, guard }) => {
       await open(page, guard, '#/me/all', { scheme });
       await page.evaluate(HELP);
       const ink = await page.evaluate(() => getComputedStyle(document.body).color);
@@ -273,16 +273,12 @@ test.describe('Factory look: hover = a 1px line inside + a pale tint; nothing mo
         a.box = a2.box;
         expect(b.box, `${k} must not move`).toEqual(a.box);
         expect([b.ow, b.os, b.oo], `${k} hover line`).toEqual(['1px', 'solid', '-1px']);
-        expect(b.bg, `${k} hover adds a tint`).not.toBe(a.bg);
+        expect(b.bg, `${k} hover adds no fill`).toBe(a.bg);
         if (k in meaning) {
           expect(b.oc, `${k} keeps its own colour`).toBe(a.mc);
           expect(a.bc, `${k} rests on its own colour line`).toBe(a.mc);
           expect(b.oc, `${k} never turns ink`).not.toBe(ink);
           expect(b.icon, `${k} icon keeps its colour`).toBe(a.icon);
-          // The tint is that colour mixed into the card: lighter than the line in light mode, darker in dark mode.
-          const [tl, ll] = await page.evaluate(([bg, line]) => [window.__fx.L(bg), window.__fx.L(line)], [b.bg, b.bc]);
-          const ml = await page.evaluate((c) => window.__fx.L(c), b.oc);
-          if (scheme === 'light') expect(tl, `${k} pale tint`).toBeGreaterThan(ml); else expect(tl, `${k} dark tint`).toBeLessThan(ml);
         } else {
           expect(b.oc, `${k} hover line is ink`).toBe(ink);
         }

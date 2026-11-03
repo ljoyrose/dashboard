@@ -975,18 +975,19 @@ test.describe('Studio page', () => {
       expect(await el.boundingBox(), `${k} must not move`).toEqual(b0);
       if (k === 'pill') { await page.mouse.move(0, 400); await page.keyboard.press('Escape'); } // close the Filter panel so it covers nothing
     }
-    // Neutral hover also lays a pale grey tint; meaning-coloured buttons keep their own colour (line and tint), never ink.
+    // Never a fill on hover (Lisa's sweep, 3 Nov 2026); meaning-coloured buttons keep their own colour line, never ink.
     await page.locator('#filtersBtn').hover();
-    expect(await page.locator('#filtersBtn').evaluate((e) => getComputedStyle(e).backgroundColor)).not.toBe(await page.locator('#sortBtn').evaluate((e) => getComputedStyle(e).backgroundColor));
+    expect(await page.locator('#filtersBtn').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(await page.locator('#sortBtn').evaluate((e) => getComputedStyle(e).backgroundColor));
     await go(page, 'review');
     const yes = page.locator('.crow[data-row="sa-rev1"] [data-act="approve"]'), no = page.locator('.crow[data-row="sa-rev1"] [data-act="bin"]');
     const y0 = await yes.boundingBox();
+    const yRest = await yes.evaluate((e) => getComputedStyle(e).backgroundColor);
     await yes.hover();
     const ys = await yes.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor, w: c.outlineWidth, bg: c.backgroundColor }; });
     expect(ys.o).toBe(ys.b); // rests on its green line and keeps it on hover (Lisa's approved picture), never ink
     expect(ys.o).not.toBe(ink);
     expect(ys.w).toBe('1px');
-    expect(ys.bg).not.toBe('rgba(0, 0, 0, 0)');
+    expect(ys.bg, 'no fill on hover').toBe(yRest);
     expect(await yes.boundingBox()).toEqual(y0);
     await no.hover();
     const ns = await no.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor }; });
@@ -997,7 +998,7 @@ test.describe('Studio page', () => {
     expect(sel).toBe('1px');
   });
 
-  test('numbers: every standalone count wears the same 1px ink ring; needs-you tab counts add a rose edge and tint; steps keep their stage circle', async ({ page, guard }) => {
+  test('numbers: every standalone count wears the same 1px ink ring; a tab count is rose only when one is late (sweep, 3 Nov); steps keep their stage circle', async ({ page, guard }) => {
     await open(page, guard, '#/line?brand=sb-north');
     await openFilters(page);
     const ink = await page.evaluate(() => getComputedStyle(document.body).color);
@@ -1011,7 +1012,9 @@ test.describe('Studio page', () => {
     const tab = await look('nav.tabs #nLine');
     expect(tab, 'tab').toMatchObject({ b: '1px solid', bc: 'rgb(138, 127, 112)', bg: 'rgba(0, 0, 0, 0)', w: '600', num: 'tabular-nums', r: '12px', fs: '14px' }); // the grey read-only ring (--house-ring); a 14px number (Lisa's pick A, 2 Nov)
     const need = await look('nav.tabs #nMe');
-    expect(need).toMatchObject({ b: '1px solid', bc: 'rgb(230, 68, 61)', bg: 'rgba(0, 0, 0, 0)', w: '600' }); // rose edge (--ljr-2), never a fill
+    // Rose = late only (Lisa's sweep, 3 Nov 2026: a rose count is read out as "N late"): rose edge (--ljr-2) when one is late, else grey.
+    const late = await page.locator('nav.tabs #nMe').evaluate((e) => e.classList.contains('need'));
+    expect(need).toMatchObject({ b: '1px solid', bc: late ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)', bg: 'rgba(0, 0, 0, 0)', w: '600' }); // never a fill
     // Steps are words, not ringed numbers: the only ringed number in a column head is its count.
     await expect(page.locator('.col[data-stage="5"] .col-head .step')).toHaveText('Step 5:');
     await expect(page.locator('.col[data-stage="5"] .col-head .cnt')).toHaveAttribute('aria-label', /^\d+ items$/);
