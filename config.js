@@ -25,6 +25,13 @@
       excludedDrives: EXCLUDED,
       sharedDriveAllowIds: []
     },
+    // Personal Drive page bin (TidyUp Apps stage 3). The page stays look-only until Lisa presses "Allow personal bin
+    // actions". A file can be binned only if it starts ZZ_DELETE_DRIVE_ and has a ledger row whose surface is `surface`.
+    // dryRun true = the page lists what would be renamed or binned and changes nothing; switching it off is Lisa's call.
+    personalBin: {
+      surface: 'drive-personal',
+      dryRun: true
+    },
     urls: {
       files: 'https://www.googleapis.com/drive/v3/files',
       drives: 'https://www.googleapis.com/drive/v3/drives',
