@@ -106,11 +106,12 @@ test.describe('GA Hub (JOB 34)', () => {
     await expect(page.locator('#view [data-hub-main="food"] [data-hm="needs"] .hm-head .cnt')).toHaveText('3');
   });
 
-  // FIX-REQUEST J34-F60 (food/index.html:244, :439). DECISION NEEDED: fix the page (GA Hub owner) or accept. OWNER: GA Hub owner. BY 2026-11-06
-  test.fixme('J34-F60 a save Google refuses says "Not saved" and the button can be tapped again', async ({ page, allowedConsole }) => {
+  // J34-F60 (fixed in food/index.html).
+  test('J34-F60 a save Google refuses says "Not saved" and the button can be tapped again', async ({ page, allowedConsole }) => {
     allowedConsole.push(/status of 500/);
     await HUBS.food.open(page);
     await page.route(SHEETS, (route) => route.request().method() === 'PUT' ? route.fulfill({ status: 500, contentType: 'application/json', body: '{}' }) : route.fallback());
+    await go(page, 'do'); // answer cards live on Do (Main holds no answer cards)
     const apply = page.locator('#view [data-ans]').first();
     await apply.click();
     await expect(page.locator('#banner')).toContainText('Not saved: Google said 500');
@@ -125,13 +126,13 @@ test.describe('GA Hub (JOB 34)', () => {
     await expect(page.locator('#view')).toContainText('Nothing needs you', { timeout: 6000 }); // the empty workbook, once read
   });
 
-  // FIX-REQUEST J34-F61 (food/index.html:218-231, :456). DECISION NEEDED: fix the page (GA Hub owner) or accept. OWNER: GA Hub owner. BY 2026-11-06
-  test.fixme('J34-F61 while the workbook is being read after sign-in, the page says it is reading (not the sign-in card again)', async ({ page }) => {
+  // J34-F61 (fixed in food/index.html).
+  test('J34-F61 while the workbook is being read after sign-in, the page says it is reading (not the sign-in card again)', async ({ page }) => {
     await page.route(SHEETS, async (route) => { await new Promise((r) => setTimeout(r, 2500)); route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY8) }); });
     await signIn(page);
     await page.waitForTimeout(400);
     // Read once, mid-load (no waiting): today both still say "Sign in" for the whole read, inviting a second sign-in.
-    expect(await page.locator('#signin').textContent(), 'header button mid-read').toBe('Sign out');
+    expect(await page.locator('#signin').getAttribute('aria-label'), 'header button mid-read').toBe('Sign out');
     expect(await page.locator('#view').innerText(), 'view mid-read').not.toContain('Sign in to see the GA Hub');
   });
 
@@ -147,8 +148,8 @@ test.describe('GA Hub (JOB 34)', () => {
     }
   });
 
-  // FIX-REQUEST J34-F62 (food/index.html:394-405). DECISION NEEDED: fix the page (GA Hub owner) or accept. OWNER: GA Hub owner. BY 2026-11-06
-  test.fixme('J34-F62 an empty Settings tab: the GA tab says there are no GA details yet (not an empty box)', async ({ page }) => {
+  // J34-F62 (fixed in food/index.html).
+  test('J34-F62 an empty Settings tab: the GA tab says there are no GA details yet (not an empty box)', async ({ page }) => {
     await page.route(SHEETS, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(EMPTY8) }));
     await signIn(page);
     await go(page, 'ga');
