@@ -3,7 +3,8 @@
 // one 12px radius (dots round), 1px lines (3px left colour bars), Lexend 400/600 at 13px or more, sentence case, no coloured
 // words, one control line, 36px buttons (44px on a phone), counts a fixed 30 x 22 pill, date pills ringed, deep frame top and
 // bottom with light tab buttons, 12px card padding and gaps, no solid fills, and the hover rule (a meaning colour keeps its own
-// colour; neutral = 1px ink line + muted tint; nothing moves; read-only pills never hover; bottom tabs only widen their bar).
+// colour; neutral = 1px ink line; never a fill (Lisa's sweep, 3 Nov 2026); nothing moves; read-only pills never hover; bottom tabs
+// only widen their bar).
 // Pretend Google, Drive and Sheets; every row is invented (tests/support/hubs.js).
 //
 // HOUSE_AUDIT=<file.json> runs every combination (light/dark x warm/cool x 1280/390, plus Look > Dark) and writes every
@@ -71,7 +72,7 @@ async function hoverRule(page, phone) {
       if (p.kind === 'meaning' && after.os !== 'none' && near(after.oc, p.ink)) add('hover line', 'meaning control turned ink');
       if (p.kind === 'meaning' && after.os !== 'none' && !(chroma(after.oc) > 45)) add('hover line', 'meaning line ' + after.oc + ' is not a colour');
       if (p.kind === 'meaning' && after.os !== 'none' && !near(after.oc, before.border)) add('hover line', 'meaning hover line ' + after.oc + ' is not its resting line ' + before.border);
-      if (after.bg === before.bg) add('hover tint', 'no tint: ' + after.bg);
+      if (after.bg !== before.bg) add('hover fill', 'hover fills: ' + before.bg + ' > ' + after.bg);   // the sweep (3 Nov 2026): a line, never a fill
     }
     if (p.kind === 'readonly' && (after.os !== 'none' && after.ow !== '0px') && after.outline !== before.outline) add('read-only hover', after.outline);
     if (p.kind === 'tab') {

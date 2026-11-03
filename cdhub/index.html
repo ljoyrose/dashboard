@@ -90,13 +90,14 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .filt input,.sbox input,.tmp input,#rdate{font-weight:400;cursor:text}
 .filt select,.fpanel select,.sortsel{padding:0 10px}
 .btn[disabled],#main button[disabled]{cursor:not-allowed;opacity:.6}
-@media (hover:hover){.btn:hover,.cb:hover,.ci:hover,.tl:hover,.next button:hover,.sfb:hover,.achip:hover,#main button:not(.tile):not(.ttl):hover,.filt select:hover,.fpanel select:hover,.sortsel:hover,.mrow.go:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}}
+@media (hover:hover){.filt select:hover, .fpanel select:hover {outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}
+.btn:hover, .cb:hover, .ci:hover, .tl:hover, .next button:hover, .sfb:hover, .achip:hover, #main button:not(.tile):not(.ttl):hover, .sortsel:hover, .mrow.go:hover {outline:1px solid var(--sel-bd);outline-offset:-1px;}}
 .tile.tl:hover,.ci:hover{border-color:var(--press)}
-.sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}
+.sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{outline:1px solid var(--sel-bd);outline-offset:-1px;}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
 /* Buttons with a meaning colour keep it on hover and when chosen: the same 1px line in that colour inside, plus a pale tint of it. Never ink. */
 /* They rest on the same control line as every pressable (house rule); the colour shows on hover. */
-@media (hover:hover){.btn.yes:hover{outline-color:var(--house-ok);background:color-mix(in srgb,var(--house-ok) 14%,var(--card))}.btn.no:hover{outline-color:var(--house-risk);background:color-mix(in srgb,var(--house-risk) 14%,var(--card))}}
+@media (hover:hover){.btn.yes:hover{outline-color:var(--house-ok);}.btn.no:hover{outline-color:var(--house-risk);}}
 .dc .nl .st{border:0;padding:0;height:auto;font-size:var(--fs-small)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :focus-visible{outline:2px solid var(--ink)!important;outline-offset:2px}
@@ -129,7 +130,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .tile .k{font-size:var(--fs-small);font-weight:600;margin-top:2px}
 .tile .src{font-size:var(--fs-small);color:var(--muted);margin-top:4px;line-height:1.4}
 button.tile{cursor:pointer;border-color:var(--press);display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;width:100%}
-@media (hover:hover){button.tile:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}}
+@media (hover:hover){button.tile:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;}}
 
 /* ---- Tables ---- */
 .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
@@ -237,7 +238,7 @@ tr:last-child td{border-bottom:none}
 .wt .up,.wt .dn{color:var(--ink);font-weight:600}
 .wt.none{color:var(--muted)}
 .wtc{cursor:pointer;border-radius:var(--radius);padding:2px 4px;margin:-2px -4px;border:1px solid transparent}
-@media (hover:hover){.wtc:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;background:var(--hov-fill)}}
+@media (hover:hover){.wtc:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;}}
 .spk{color:var(--ljr-6);overflow:visible}
 .chipline{display:flex;align-items:baseline;gap:8px;font-size:var(--fs-small);color:var(--muted)}
 .chipline .vl{color:var(--ink);font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
@@ -886,7 +887,7 @@ function arrives(k){ var a=ARRIVES[k];   // a = [Bloodline table, the words show
 function needsCard(){
  var n=needsToday();
  if(!n.length) return '';   // one empty line per view (Lisa, 2 Nov): Main already says Nothing needs you
- var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Needs you today'+cntPill(n.length,'need')+'</h3>';
+ var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Needs you today'+cntPill(n.length,n.some(function(x){return x.tone==='late';})?'need':'')+'</h3>';
  h+=n.map(function(x,i){ return needRow(x,i>=7); }).join('');
  if(n.length>7) h+='<div class="mfoot"><span class="mut">Showing 7 of '+n.length+'</span><button type="button" class="btn" data-needall="1">Show all</button></div>';
  return h+'</section>';
@@ -934,7 +935,7 @@ function tempsCard(){
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 function checksCard(){
  var all=checks(), bad=all.filter(function(x){return !x.ok;}).length;
- return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'need':'ok')+'</h3>'
+ return '<section class="mcard" id="checksCard" style="--hc:var(--ljr-6-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-check"/></svg>Data checks'+cntPill(bad,bad?'':'ok')+'</h3>'
   +all.map(function(x){
    return '<div class="mrow ckrow'+(x.ok?' ok':' bad')+'"'+(x.list?' data-open-row':'')+'><span class="mk'+(x.ok?'':' bad')+'" aria-hidden="true">'+(x.ok?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(CHECKNAME[x.k]||capFirst(x.k))+'<span class="sr">'+(x.ok?' passes':' fails')+'</span><small>'+esc(x.msg)+'</small></span>'
@@ -1671,7 +1672,7 @@ function pageWork(){
   var rows=by[g[0]]||[]; if(!rows.length) return;
   rows.sort(function(a,b){return (a.area||'')<(b.area||'')?-1:1;});
   /* foundation: work records grouped by who they wait on */
-  h+='<div class="card '+g[1]+'"><h4>'+g[2]+cntPill(rows.length,g[0]==='BLOCKED'?'need':'')+'</h4>'
+  h+='<div class="card '+g[1]+'"><h4>'+g[2]+cntPill(rows.length,'')+'</h4>'
    +'<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>#</th><th>area</th><th>item</th><th>'+(g[0]==='DONE'?'evidence':'waiting on')+'</th></tr></thead><tbody>'
    +rows.map(function(r){
      return '<tr><td class="mut">'+esc(r.id)+'</td><td><span class="pill i">'+esc(r.area)+'</span></td>'
@@ -1807,14 +1808,15 @@ var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sit
  vet:['stethoscope','Vet',5],buyers:['world','Assocs',6]};
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; } // 0 shows no ring
 // Bottom tabs (Lisa's picks, 2 Nov): Main, Do, Today, Dogs, Assocs, then More with the other views. Same bar as every hub
-// (../house.css section 6, ../toolkit.js builds the tab and More). Counts: rose ring = needs you today / waiting on you.
+// (../house.css section 6, ../toolkit.js builds the tab and More). Counts: grey ring = waiting; rose ring only when one is late
+// (Lisa's sweep, 3 Nov 2026: a rose count is read out as "N late").
 var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['buyers','Assocs',6,'world']];
 var MORE_VIEWS=['shape','round','areas','litters','vet'];
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
- var counts={map:nd,work:wait};
+ var counts={map:nd,work:wait}, late={map:needsToday().some(function(x){return x.tone==='late';}),work:false};
  return TABS.map(function(t){ var n=counts[t[0]];
-   return DashKit.tabs.tab({go:t[0],slot:t[2],icon:'t-'+t[3],label:t[1],count:n?String(n):'',need:true}); }).join('')
+   return DashKit.tabs.tab({go:t[0],slot:t[2],icon:'t-'+t[3],label:t[1],count:n?String(n):'',need:!!(n&&late[t[0]])}); }).join('')
   +DashKit.tabs.more('houseMore',MORE_VIEWS.map(function(id){ var m=TABMETA[id];
    return '<button type="button" data-go="'+id+'" data-slot="'+m[2]+'"><svg class="ti" aria-hidden="true"><use href="#i-'+m[0]+'"/></svg><span class="htl">'+esc(label(id))+'</span></button>'; }).join(''));
 }

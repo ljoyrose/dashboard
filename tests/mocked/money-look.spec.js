@@ -149,6 +149,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
         const el = page.locator(sel).first();
         await el.scrollIntoViewIfNeeded();
         const before = await el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; });
+        const restBg = await el.evaluate((e) => getComputedStyle(e).backgroundColor);
         await el.hover();
         await settle(el);
         const got = await el.evaluate((e, kind) => {
@@ -158,8 +159,8 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
           const want = kind === 'tab'
             ? { line: null, fill: probe('backgroundColor', 'var(--card)') }
             : kind === 'frame'
-              ? { line: probe('color', 'var(--frame-ink)'), fill: probe('backgroundColor', 'color-mix(in srgb, var(--frame-ink) 14%, var(--frame))') }
-              : { line: probe('color', 'var(--ink)'), fill: probe('backgroundColor', 'color-mix(in srgb, var(--muted) 14%, var(--card))') };
+              ? { line: probe('color', 'var(--frame-ink)') }
+              : { line: probe('color', 'var(--ink)') };
           return { box: [r.x, r.y, r.width, r.height], ow: cs.outlineWidth, os: cs.outlineStyle, oo: cs.outlineOffset, oc: cs.outlineColor, bg: cs.backgroundColor, want, ink: probe('color', 'var(--ink)') };
         }, kind);
         const where = `${sel} (${scheme})`;
@@ -172,12 +173,12 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
         }
         expect([got.os, got.ow, got.oo], `${where} hover line`).toEqual(['solid', '1px', '-1px']);
         expect(got.oc, `${where} hover line colour`).toBe(got.want.line);
-        expect(got.bg, `${where} hover tint`).toBe(got.want.fill);
+        expect(got.bg, `${where} hover adds no fill (Lisa's sweep, 3 Nov 2026)`).toBe(restBg);
       }
     });
   }
 
-  test('selected: sub-tab looks like hover (ink + muted tint); the selected bottom tab only widens its colour bar', async ({ page }) => {
+  test('selected: sub-tab looks like hover (ink line, no fill: the same fill as the sub-tabs beside it); the selected bottom tab only widens its colour bar', async ({ page }) => {
     await open(page, 'light');
     await go(page, 'todo');
     const look = (sel) => page.locator(sel).evaluate((e) => { const cs = getComputedStyle(e); return [cs.outlineStyle, cs.outlineWidth, cs.outlineOffset, cs.outlineColor, cs.backgroundColor]; });
@@ -191,7 +192,8 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
     });
     const want = await page.evaluate(() => {
       const p = (prop, val) => { const d = document.createElement('i'); d.style[prop] = val; document.body.appendChild(d); const o = getComputedStyle(d)[prop]; d.remove(); return o; };
-      return [p('color', 'var(--ink)'), p('backgroundColor', 'color-mix(in srgb, var(--muted) 14%, var(--card))')];
+      const other = document.querySelector('.subnav a:not([aria-current="page"])');
+      return [p('color', 'var(--ink)'), getComputedStyle(other).backgroundColor];
     });
     expect(sub).toEqual(['solid', '1px', '-1px', ...want]);
     expect(tab.os).toBe('none');

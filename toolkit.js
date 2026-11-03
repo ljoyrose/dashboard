@@ -593,7 +593,7 @@
     d.style.cssText = 'width:min(640px,94vw);max-height:80vh;border:1px solid currentColor;border-radius:12px;padding:14px 16px;background:Canvas;color:CanvasText;font:inherit';
     d.innerHTML = '<h2 id="dashSearchTitle" style="margin:0 0 8px;font-size:var(--fs-head)">Search</h2>' +
       '<label for="dashSearchBox" style="display:block;font-size:var(--fs-small)">Drive file names, Money to-dos and dates, CD Hub dogs and litters (what this page has read)</label>' +
-      '<input id="dashSearchBox" type="search" autocomplete="off" style="width:100%;font:inherit;padding:8px 10px;margin:6px 0;border:1px solid currentColor;border-radius:12px">' +
+      '<input id="dashSearchBox" type="search" autocomplete="off" style="width:100%;font-family:inherit;font-size:var(--fs-input,16px);padding:8px 10px;margin:6px 0;border:1px solid currentColor;border-radius:12px">' +
       '<p id="dashSearchStatus" role="status" style="margin:4px 0;font-size:var(--fs-small)">Type at least 2 letters.</p>' +
       '<div id="dashSearchResults"></div><form method="dialog" style="margin-top:8px"><button type="submit">Close</button></form>';
     doc.body.appendChild(d);
@@ -674,7 +674,7 @@
         '<div class="hm-go">' + hmAct(x, 'hm-a') + '</div></section>';
       var late = rows.some(function (r) { return kind(r) === 'late'; });
       h += '<section class="card hm-needs" data-hm="needs" aria-labelledby="hmNeedsT"><div class="hm-head"><h3 id="hmNeedsT"><a class="house-go" href="' + doHref + '" aria-label="Needs you: ' + rows.length + '. Open Do">Needs you</a></h3>' +
-        '<a class="house-go" href="' + doHref + '" aria-label="' + rows.length + ' need you. Open Do"><span class="cnt' + (late ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + rows.length + '</span></a></div>' +
+        '<a class="house-go" href="' + doHref + '" aria-label="' + rows.length + ' need you' + (late ? ', some late' : '') + '. Open Do"><span class="cnt' + (late ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + rows.length + '</span></a></div>' +
         '<ol class="hm-rows">' + shown.map(function (r) {
           return '<li class="hm-row house-lbar" data-open-row data-kind="' + kind(r) + '"><span class="hm-t"><a class="house-open" href="' + escHtml(r.href) + '"' + hmTarget(r, r.ext) + ' aria-label="' + escHtml(r.text) + '">' + escHtml(r.text) + '</a>' +
             (r.sub ? '<small>' + escHtml(r.sub) + '</small>' : '') + '</span>' + hmPill(r) + hmAct(r, 'hm-a') + '</li>';
@@ -683,7 +683,7 @@
     h += '<section class="hm-nums" data-hm="nums" aria-label="Numbers">' + (spec.nums || []).map(function (n) {
       var v = n.value == null || n.value === '' ? '–' : String(n.value), late = !!n.late && n.value != null;
       return '<a class="card hm-n house-go" data-k="' + escHtml(n.label) + '" href="' + escHtml(n.href) + '"' + (n.ext ? ' target="_blank" rel="noopener"' : '') +
-        ' aria-label="' + escHtml(n.aria || (n.label + ': ' + (v === '–' ? 'could not be read' : v) + '. Open the list')) + '"><span class="hm-v' + (late && v !== '0' ? ' need' : '') + '">' + escHtml(v) + '</span><span class="hm-l">' + escHtml(n.label) + '</span></a>';
+        ' aria-label="' + escHtml(n.aria || (n.label + ': ' + (v === '–' ? 'could not be read' : v) + (late && v !== '0' ? ', some late' : '') + '. Open the list')) + '"><span class="hm-v' + (late && v !== '0' ? ' need' : '') + '">' + escHtml(v) + '</span><span class="hm-l">' + escHtml(n.label) + '</span></a>';
     }).join('') + (spec.extra || '') + '</section>';
     return '<div class="hm" data-hub-main="' + escHtml(spec.hub || '') + '">' + h + '</div>';
   }
