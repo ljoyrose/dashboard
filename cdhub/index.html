@@ -940,6 +940,15 @@ function tempsCard(){
   +((am||pm)?row('Rooms',(hot?hot+' too hot':cold?cold+' too cold':'all 10–27')+' °C',(hot&&cold?cold+' too cold too':''),inState):'')
   +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||out.kind||''),outState(out))
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
+  +(function(){
+    var fc=(CD.outdoor||[]).filter(function(r){ return r.kind==='forecast'; })
+      .sort(function(a,b){ return a.on<b.on?-1:a.on>b.on?1:0; }).slice(0,7);
+    if(!fc.length) return '';
+    return fc.map(function(r){
+      var day=new Date(r.on+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short'});
+      return row(day,esc((r.min||'?')+'–'+(r.max||'?'))+' °C','',outState(r));
+    }).join('');
+  })()
   +'<div class="mfoot"><span class="mut">'+(DB?'':'Saving off.')+'</span><button type="button" class="btn house-open" data-go="round">The round</button></div></section>';
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
@@ -986,7 +995,7 @@ function pageToday(){
  var cabins=CD.areas.length;
  var unplaced=c.here.filter(function(d){ return !placed[d.id] && !d.area_id; });
  var ft=Math.ceil(c.adults.length/20), pt=Math.ceil(c.adults.length/10);
- var h='<h2>Today</h2><p class="sub">'+esc(dmy(date))+'</p>'
+ var h='<h2>Today: '+esc(dmy(date))+'</h2>'
  +todayChecklist(date,unplaced.length)
  +'<div class="mecards">'+onSiteCard()+tempsCard()+'</div>'
  +'<div class="tiles">'
