@@ -3391,6 +3391,8 @@
     onToken: onToken,
     onError: function (e) {
       var type = e && e.type ? e.type : '';
+      // J34-F01: the Bin permission window closing is a "no" to the Bin, not a failed sign-in; the person is still signed in.
+      if (wantWrite) { wantWrite = false; if (signedIn) { showBanner('Bin access not granted. Browsing still works.', false, false); return; } }
       showBanner(type === 'popup_failed_to_open' ? 'Sign-in window blocked by browser.' : type === 'popup_closed' ? 'Sign-in window closed early.' : 'Sign-in did not complete.', false, true);
     },
     onSilentFail: onSilentFail
