@@ -32,6 +32,22 @@
       surface: 'drive-personal',
       dryRun: true
     },
+    // TidyUp Apps stage 5: one row per app outside Drive and Dropbox. status: 'bot-and-browser' | 'bot-capable' |
+    // 'browser-only' | 'nothing'. how = the only tidy route allowed; never = API actions no bot may call for that app.
+    // Archive or trash only, never a permanent delete. No emails or ids here. The Bin page lists these under Other apps.
+    tidyApps: [
+      { app: 'Canva', status: 'bot-and-browser', how: 'The tidy bot moves marked designs to a bin folder; you empty it in Canva (kept 30 days).', never: ['delete', 'trash by bot'] },
+      { app: 'Gmail', status: 'bot-capable', how: 'Nothing marked yet. A bot may archive or trash only.', never: ['delete_label', 'delete'] },
+      { app: 'ClickUp', status: 'bot-capable', how: 'Nothing marked yet. A bot may archive or trash only.', never: ['delete_task'] },
+      { app: 'Shopify', status: 'bot-capable', how: 'Nothing marked yet. A bot may archive only.', never: ['delete'] },
+      { app: 'ClickFunnels', status: 'bot-capable', how: 'Nothing marked yet. A bot may archive or trash only.', never: ['destroy'] },
+      { app: 'Figma', status: 'browser-only', how: 'By hand in the browser.', never: [] },
+      { app: 'Descript', status: 'browser-only', how: 'By hand in the browser.', never: [] },
+      { app: 'Runway', status: 'browser-only', how: 'By hand in the browser.', never: [] },
+      { app: 'Animoto', status: 'browser-only', how: 'By hand in the browser.', never: [] },
+      { app: 'GitHub', status: 'nothing', how: 'Nothing to tidy.', never: [] },
+      { app: 'Vercel', status: 'nothing', how: 'Nothing to tidy.', never: [] }
+    ],
     urls: {
       files: 'https://www.googleapis.com/drive/v3/files',
       drives: 'https://www.googleapis.com/drive/v3/drives',
