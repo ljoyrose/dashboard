@@ -36,21 +36,19 @@
   * { box-sizing: border-box; }
   h1, h2, h3, b, strong { font-weight: 600; }   /* two weights only: 400 and 600 */
   html { scroll-padding-bottom: 110px; }
-  body { margin: 0; background: var(--bg); color: var(--ink); font-family: Lexend, system-ui, sans-serif; font-size: 16px; line-height: 1.5; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5; }
   a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
   a.btn, nav.tabs a, a.tile { text-decoration: none; }
   .hidden { display: none !important; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   svg.i { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--c, var(--ljr-0)); flex: none; display: inline-block; }   /* the only round thing */
-  .wrap { max-width: 980px; margin: 0 auto; padding: 0 16px; }
+  .wrap { max-width: none; margin: 0 auto; padding: 0 var(--house-gutter); }   /* the full window, the house side gap, like every page */
 
   /* Frame: dark top bar and dark bottom tab bar around a light work area. */
   header { position: sticky; top: 0; z-index: 5; background: var(--frame); color: var(--frame-ink); }
-  .top { max-width: 980px; margin: 0 auto; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px; }
-  .top h1 { font-size: 22px; margin: 0 auto 0 0; }
-  .top h1 a { color: inherit; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; }
-  .stamp { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
+  .top { margin: 0; padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
+  .stamp { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }   /* the frame's own clear line (3:1 on the dark bar) */
   @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); } }
@@ -65,67 +63,68 @@
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }   /* keyboard ring: 2px ink, never the browser blue */
   .top :focus-visible { outline-color: var(--frame-ink); }
 
-  /* Bottom tabs (.house-tabs): five across. */
-  nav.tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; padding: 8px 8px calc(10px + env(safe-area-inset-bottom, 0px)); }
-  @media (min-width: 601px) { nav.tabs { padding-left: 24px; padding-right: 24px; grid-template-columns: repeat(5, minmax(0, 180px)); justify-content: center; } }
-  @media (min-width: 601px) { nav.tabs a { min-height: 58px; gap: 3px; padding: 6px 2px; } }
-  nav.tabs .n { top: 6px; right: 10px; }
-  .cnt.ok { border-color: var(--green); background: var(--green-tint); }
+  /* Bottom tabs: ../house.css section 6 (the same bar on every page). */
+  .cnt.ok { border-color: transparent; background: transparent; }   /* 0 = no ring, no fill */
 
-  main.wrap { padding: 16px 16px 120px; display: flex; flex-direction: column; gap: 12px; }
+  main.wrap { padding: 16px var(--house-gutter) 120px; display: flex; flex-direction: column; gap: 12px; }
   #view { display: flex; flex-direction: column; gap: 12px; }   /* one 12px step: tiles, cards and lists never touch */
+  .growth { display: flex; flex-direction: column; gap: 12px; }   /* Grow orders leads the Home, same 12px step */
+  .tile .m { font-size: var(--fs-small); color: var(--muted); }
   .banner { border: 1px solid var(--rose); border-radius: var(--radius); padding: 10px 14px; background: var(--rose-tint); color: var(--ink); }
   .banner.info { border-color: var(--ctl); background: var(--surface); }
-  .needs { font-size: 26px; font-weight: 600; margin: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
-  .hint { font-size: 14px; color: var(--muted); margin: 0; }
+  .needs { font-size: var(--fs-figure); font-weight: 600; margin: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .hint { font-size: var(--fs-small); color: var(--muted); margin: 0; }
 
   /* Summary strip: big numbers, a ring + tint only where something needs you. */
   .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
   @media (min-width: 760px) { .tiles { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
   .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; color: var(--ink); min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
   a.tile { border-color: var(--ctl); }   /* a tile you can press rests on the control line */
-  .tile .k { font-size: 14px; color: var(--muted); }
-  .tile .v { font-size: 24px; font-weight: 600; overflow-wrap: anywhere; align-self: flex-start; line-height: 1.3; }
-  .tile .v.red { border: 1px solid var(--rose); background: var(--rose-tint); border-radius: var(--radius); padding: 0 10px; }
+  .tile .k { font-size: var(--fs-small); color: var(--muted); }
+  .tile .v { font-size: var(--fs-figure); font-weight: 600; overflow-wrap: anywhere; align-self: flex-start; line-height: 1.3; }
+  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
+  .tile .v.red { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--house-late); }
   .tile .datep { align-self: flex-start; }
   /* A date pill: its RING shows urgency (rose = late, amber = soon). The words stay ink. */
   .datep { font-weight: 600; } /* the house date pill (../house.css): always ringed; rose late, amber soon */
 
   /* Cards: a name line (dot + what kind), then the title (2 lines, then …). */
   .card { display: flex; flex-direction: column; gap: 12px; } /* the house card (../house.css): 1px line, 12px inside */
-  .card.next { border-color: var(--ink); }   /* Next: the one thing to do now; white with a 1px ink edge */
-  .bline { display: flex; gap: 8px; align-items: center; font-size: 13px; font-weight: 600; color: var(--muted); margin: 0 0 -8px; }
+  .card.next { border-color: var(--ink); }
+  /* Main's ✓ XML tick (Lisa, 2 Nov): every order reached GA. A plain link under the 3 numbers. */
+  .hm-xml { justify-self: start; display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; color: var(--ink); font-size: var(--fs-small); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }   /* Next: the one thing to do now; white with a 1px ink edge */
+  .bline { display: flex; gap: 8px; align-items: center; font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 0 0 -8px; }
   .bline .dot { width: 8px; height: 8px; }
-  .card h2 { font-size: 17px; margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
-  .card .what { color: var(--muted); font-size: 15px; margin: 0; }
+  .card h2 { font-size: var(--fs-head); margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+  .card .what { color: var(--muted); font-size: var(--fs-body); margin: 0; }
   .card .what b { color: var(--ink); }
   .acts { display: flex; gap: 8px; flex-wrap: wrap; }
   .acts .btn { flex: 1; justify-content: center; }
-  .empty { display: flex; gap: 12px; align-items: center; margin: 0; font-size: 15px; }
+  .empty { display: flex; gap: 12px; align-items: center; margin: 0; font-size: var(--fs-body); }
   .empty::before { content: "\2713"; flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--green); background: var(--green-tint); color: var(--ink); font-size: 13px; font-weight: 600; }
-  .empty b { font-size: 16px; }
-  .empty .es { display: block; color: var(--muted); font-size: 14px; }
+  .empty b { font-size: var(--fs-body); }
+  .empty .es { display: block; color: var(--muted); font-size: var(--fs-small); }
 
   /* Calm rows: title, one flag, date, one action; 1px lines between rows, 16px under a header line. */
   .row { display: flex; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
   .card > .row:first-of-type { border-top: 0; padding-top: 4px; }
   .row .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  .row .m { font-size: 14px; color: var(--muted); }
-  .row .amt { font-weight: 600; text-align: right; white-space: nowrap; font-size: 15px; }
-  .row .amt.red, .row .amt.good { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); font-size: 13px; }
+  .row .m { font-size: var(--fs-small); color: var(--muted); }
+  .row .amt { font-weight: 600; text-align: right; white-space: nowrap; font-size: var(--fs-body); }
+  .row .amt.red, .row .amt.good { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); font-size: var(--fs-small); }
   .row .amt.red { border-color: var(--rose); background: var(--rose-tint); }
   .row .links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
-  .row .links .btn { font-size: 14px; padding: 0 12px; }
+  .row .links .btn { font-size: var(--fs-small); padding: 0 12px; }
   .badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
-  .badge { display: inline-flex; align-items: center; height: 24px; font-size: 13px; font-weight: 400; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 8px; background: transparent; white-space: nowrap; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .badge { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 400; border: 1px solid var(--ctl); border-radius: var(--radius); padding: 0 8px; background: transparent; white-space: nowrap; color: var(--ink); max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   .badge b { margin-right: 4px; }
   .badge.no { border-color: var(--rose); background: var(--rose-tint); }
-  .grp { font-size: 16px; font-weight: 600; margin: 4px 0 0; display: flex; gap: 8px; align-items: center; }
+  .grp { font-size: var(--fs-head); font-weight: 600; margin: 4px 0 0; display: flex; gap: 8px; align-items: center; }
   .grp .cnt { margin-left: auto; }
-  .sent { font-size: 14px; color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sent { font-size: var(--fs-small); color: var(--muted); display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
   .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }   /* one filter row: Search, then the choices */
-  input.txtin { font: inherit; font-size: 16px; padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); flex: 1 1 240px; min-width: 0; max-width: 420px; }
+  input.txtin { font: inherit; font-size: var(--fs-body); padding: 0 12px; min-height: 36px; border-radius: var(--radius); border: 1px solid var(--ctl); background: var(--surface); color: var(--ink); flex: 1 1 240px; min-width: 0; max-width: 420px; }
   input.txtin:focus { border-color: var(--ink); }
   input.txtin::placeholder { color: var(--muted); opacity: 1; }
 
@@ -133,12 +132,10 @@
   @media (max-width: 544px) {
     .btn, .chip, .more, input.txtin { min-height: 44px; }
     input.txtin { flex: 1 1 160px; max-width: none; }   /* Search and Filter share one calm row */
-    .top h1 { font-size: 20px; }
-    nav.tabs { gap: 6px; padding-left: 6px; padding-right: 6px; }
   }
   /* Keyboard focus always stays the 2px ink ring, over any hover or selected line. */
-  #view :focus-visible, nav.tabs a:focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
-  header :focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
+  #view :focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  header :focus-visible:not(.house-menu *) { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
 </style>
 </head>
 <body>
@@ -149,31 +146,44 @@
   <symbol id="i-bag" viewBox="0 0 24 24"><path d="M6 8h12l-1 13H7z"/><path d="M9 8V6a3 3 0 0 1 6 0v2"/></symbol>
   <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></symbol>
 </svg>
-<header>
-  <div class="top"><h1><a href="#/home"><span class="dot" style="--c:var(--ljr-4)" aria-hidden="true"></span>GA Hub</a></h1><span class="stamp" id="stamp">TEST</span>
-    <button class="btn hidden" type="button" data-action="refresh" aria-label="Refresh" id="refresh">↻</button>
+<header class="house-head">
+  <div class="top house-row">
+    <a id="backHome" class="btn back house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
+    <h1><a href="#/home"><span class="dot" style="--c:var(--ljr-4)" aria-hidden="true"></span>GA Hub</a></h1>
+    <span class="house-sp" aria-hidden="true"></span>
+    <span class="stamp" id="stamp">TEST</span>
+    <button class="btn house-ib hidden" type="button" data-action="refresh" aria-label="Refresh" title="Refresh" id="refresh"><svg aria-hidden="true"><use href="#hi-refresh"/></svg></button>
+    <span class="lookwrap" data-house-look></span>
     <button class="btn" type="button" data-action="signin" id="signin">Sign in</button>
-    <a id="backHome" class="btn" href="../" data-back-home aria-label="Dashboard home">← Dashboard</a></div>
+  </div>
 </header>
-<main class="wrap">
+<main class="wrap house-page">
   <div id="banner" class="banner hidden" role="status"></div>
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs hidden" id="tabs" aria-label="GA Hub sections">
-  <a href="#/home" data-nav="home" style="--tc:var(--ljr-4)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-home"/></svg><span>Home</span><span class="n need" id="n-home"></span></a>
-  <a href="#/orders" data-nav="orders" style="--tc:var(--ljr-6)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-box"/></svg><span>Orders</span><span class="n need" id="n-orders"></span></a>
-  <a href="#/invoices" data-nav="invoices" style="--tc:var(--ljr-3)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bill"/></svg><span>Invoices</span><span class="n"></span></a>
-  <a href="#/products" data-nav="products" style="--tc:var(--ljr-5)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span>Products</span><span class="n"></span></a>
-  <a href="#/ga" data-nav="ga" style="--tc:var(--ljr-7)"><span class="bar" aria-hidden="true"></span><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span>GA</span><span class="n"></span></a>
+  <a class="ht" data-slot="1" href="#/home" data-nav="home"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="n-home"></span></a>
+  <a class="ht" data-slot="3" href="#/invoices" data-nav="invoices"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-money"/></svg></span><span class="htl">Invoices</span><span class="n"></span></a>
+  <a class="ht" data-slot="4" href="#/orders" data-nav="orders"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-box"/></svg></span><span class="htl">Orders</span><span class="n need" id="n-orders"></span></a>
+  <a class="ht" data-slot="6" href="#/products" data-nav="products"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-bag"/></svg></span><span class="htl">Products</span><span class="n"></span></a>
+  <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
+    <div class="house-more" id="houseMore" hidden>
+      <a href="#/do" data-nav="do" data-slot="4"><svg class="i" aria-hidden="true"><use href="#i-box"/></svg><span class="htl">Do</span></a>
+      <a href="#/review" data-nav="review" data-slot="6"><svg class="i" aria-hidden="true"><use href="#i-bag"/></svg><span class="htl">Review</span></a>
+      <a href="#/ga" data-nav="ga" data-slot="7"><svg class="i" aria-hidden="true"><use href="#i-info"/></svg><span class="htl">GA</span></a>
+    </div>
+  </div>
 </nav>
 <script>
 (function () {
   'use strict';
   var CFG = window.DASH_CONFIG || {}, F = CFG.food || null;
+  // Owner sign-in address: read from config.js (DASH_CONFIG.money.owner), never written in this page.
+  var OWNER = String((CFG.money || {}).owner || '');
   var CLIENT_ID = CFG.clientId, READ = (CFG.scopes || {}).read, SHEETS = 'https://www.googleapis.com/auth/spreadsheets';
   var SCOPE = READ + ' ' + SHEETS;
   var CARD_COLS = ['key', 'section', 'category', 'title', 'detail', 'created_at', 'answer', 'note', 'answered_at', 'answered_by', 'applied_at', 'applied_by'];
-  var RANGES = ['Cards!A2:L', 'Orders!A1:AD', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E', 'DirectDebits!A1:G', 'Codes!A1:F'];
+  var RANGES = ['Cards!A2:L', 'Orders!A1:AZ', 'Invoices!A1:P', 'Products!A2:AE', 'Settings!A1:C', 'Statements!A1:E', 'DirectDebits!A1:G', 'Codes!A1:F'];
   var UNDO_MS = 10 * 60000, APPLY_MS = 11 * 60000;
   var SECTIONS = {
     price: { name: 'GA price changed', yes: 'Apply', no: 'Not now', what: 'Apply updates your product list and the suggested shop and subscription prices. Shops are not changed.' },
@@ -184,7 +194,7 @@
     pack: { name: 'Pack at home', yes: 'Packed', what: 'Fish Treats you send yourself: Parcel2Go for 1-2 units, InPost for 3-4.' },
     alert: { name: 'Engine problem', yes: 'Seen', what: 'The food engine hit a problem. It keeps trying every 15 minutes.' }
   };
-  var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }, view = 'home', filter = 'sale', q = '', showAll = false;
+  var token = null, me = '', data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }, view = 'home', filter = 'sale', q = '', showAll = false, loaded = false, failed = '', focusKey = '';
   function $(id) { return document.getElementById(id); }
   function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function banner(t, info) { var b = $('banner'); b.textContent = t; b.className = 'banner' + (info ? ' info' : ''); }
@@ -198,6 +208,11 @@
   function table(values, skip) { var v = (values || []).slice(skip || 0), h = (v[0] || []).map(String);
     return v.slice(1).filter(function (r) { return r.some(String); }).map(function (r) { var o = {}; h.forEach(function (c, i) { o[c] = r[i] === undefined ? '' : r[i]; }); return o; }); }
   function setting(k) { return (data.settings[k] || {}).value || ''; }
+  // Low-profit line: MIN_PROFIT on the Settings tab; £8 when the cell is blank (Lisa, 30 Oct 2026).
+  function minProfit() { return num(setting('MIN_PROFIT')) || 8; }
+  // Shop orders paid between `from` and `to` days ago (cancelled ones left out), from placed_at on the Orders tab.
+  function ordersBetween(from, to) { var now = Date.now();
+    return data.orders.filter(function (o) { var t = Date.parse(o.placed_at); return o.status !== 'Cancelled' && isFinite(t) && t <= now - from * 864e5 && t > now - to * 864e5; }); }
 
   /* ---------- Google Sheets ---------- */
   function api(url, init) {
@@ -210,7 +225,7 @@
   }
   function why(status, msg) {
     if (/insufficient|scope/i.test(msg)) return 'Google did not give this page spreadsheet access. Sign out, sign in again and tick every box Google shows.';
-    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the RR_FOOD workbook. Sign in as lisa@puppyclassroom.com.';
+    if (/permission|forbidden|caller does not have/i.test(msg)) return 'this Google account cannot open the RR_FOOD workbook. Sign in as ' + (OWNER || 'the owner account') + '.';
     if (/Unable to parse range/i.test(msg)) return 'the RR_FOOD workbook is missing a tab. Run "setup" once in the food engine.';
     return 'Google said ' + status + (msg ? ': ' + msg : '');
   }
@@ -220,14 +235,15 @@
     if (!token) { render(); return; }
     api(base() + ':batchGet?' + RANGES.map(function (r) { return 'ranges=' + encodeURIComponent(r); }).join('&')).then(function (j) {
       var vr = (j.valueRanges || []).map(function (x) { return x.values || []; });
-      data.cards = (vr[0] || []).map(function (v, i) { var o = { _row: i + 2 }; CARD_COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; });
+      data.cards = (vr[0] || []).map(function (v, i) { var o = { _row: i + 2 }; CARD_COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; })
+        .filter(function (o) { return !/^PACK-/.test(o.key); });   // G7: Fish Treats postage to-dos live in the Marketplace hub (Do now > Post), not told twice
       data.orders = table(vr[1]); data.invoices = table(vr[2]); data.products = table(vr[3]);
       data.settings = {}; table(vr[4]).forEach(function (s) { data.settings[s.key] = s; });
       data.statements = table(vr[5]).sort(function (a, b) { return String(b.statement_date).localeCompare(String(a.statement_date)); });
       data.codes = table(vr[7]).filter(function (c) { return String(c.active).toUpperCase() !== 'N'; });
       data.dds = table(vr[6]).sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
-      $('banner').className = 'banner hidden'; render();
-    }).catch(function (e) { banner('Could not load: ' + e.message); });
+      loaded = true; failed = ''; $('banner').className = 'banner hidden'; render();
+    }).catch(function (e) { failed = e.message; banner('Could not load: ' + e.message); render(); });
     if (!me) api('https://www.googleapis.com/drive/v3/about?fields=user(emailAddress)').then(function (j) { me = (j.user && j.user.emailAddress) || ''; }).catch(function () {});
   }
   // Write the 4 answer cells of the card with this key; check the key before and after, put the old values back if it moved.
@@ -263,7 +279,50 @@
   function orderLinks(o) {
     var shop = setting('SHOPIFY_STORE');
     return (/^https:\/\/(www\.)?dpd\.co\.uk\//.test(o.tracking) ? '<a class="btn" href="' + esc(o.tracking) + '" target="_blank" rel="noopener" aria-label="Track order ' + esc(o.order_no) + ' with DPD">📦 Track</a>' : '') +
-      (shop && o.source === 'Shopify' ? '<a class="btn" href="https://admin.shopify.com/store/' + encodeURIComponent(shop) + '/orders?query=' + encodeURIComponent(o.order_no) + '" target="_blank" rel="noopener" aria-label="Open order ' + esc(o.order_no) + ' in Shopify">🛍 Shopify</a>' : '');
+      shopLink(o);
+  }
+  function shopLink(o) { var shop = setting('SHOPIFY_STORE');
+    return shop && o.source === 'Shopify' ? '<a class="btn" href="https://admin.shopify.com/store/' + encodeURIComponent(shop) + '/orders?query=' + encodeURIComponent(o.order_no) + '" target="_blank" rel="noopener" aria-label="Open order ' + esc(o.order_no) + ' in Shopify">🛍 Shopify</a>' : ''; }
+  function shopAdmin(where) { var shop = setting('SHOPIFY_STORE'); return shop ? 'https://admin.shopify.com/store/' + encodeURIComponent(shop) + '/' + where : ''; }
+  // Grow orders (Lisa, 30 Oct 2026): the Home leads with order growth. All from the Orders tab at run time; nothing here
+  // sends, emails, discounts or changes a price. Any reminder or offer is Lisa's own draft in Shopify.
+  function growth() {
+    var last = ordersBetween(0, 30), prev = ordersBetween(30, 60), due = num(setting('REORDER_DUE_DAYS')) || 35;
+    var pct = function (n) { return last.length ? Math.round(n * 100 / last.length) : 0; };
+    var repeat = last.filter(function (o) { return num(o.customer_orders) >= 2; }).length, subs = last.filter(function (o) { return /^sub/i.test(o.order_type); }).length;
+    // Reorder due: one-off shop orders paid REORDER_DUE_DAYS to 30 days beyond that ago, oldest first (subscribers reorder by themselves).
+    var reorder = ordersBetween(due, due + 30).filter(function (o) { return o.source === 'Shopify' && /^one-off/i.test(o.order_type); })
+      .sort(function (a, b) { return Date.parse(a.placed_at) - Date.parse(b.placed_at); });
+    return { last: last.length, prev: prev.length, repeat: pct(repeat), subs: pct(subs), oneOff: last.length - subs, reorder: reorder, due: due };
+  }
+  function nth(k) { var v = k % 100; return k + (v > 10 && v < 14 ? 'th' : ['th', 'st', 'nd', 'rd'][k % 10] || 'th'); }
+  function daysAgo(at) { var d = Math.floor((Date.now() - Date.parse(at)) / 864e5); return d + ' day' + (d === 1 ? '' : 's') + ' ago'; }
+  // The Next step: the biggest gap wins (fewer orders than the 30 days before, customers due to reorder, few subscriptions).
+  function growCard(g) {
+    var gaps = [
+      { n: g.prev - g.last, name: 'Orders are falling', h: 'Orders are down ' + (g.prev - g.last) + ' on the 30 days before', what: g.last + ' in the last 30 days against ' + g.prev + '. Look at what changed in Shopify (stock, prices, ads).', href: shopAdmin('orders'), btn: 'Open Shopify orders' },
+      { n: g.reorder.length, name: 'Due to reorder', h: g.reorder.length + ' one-off order' + (g.reorder.length === 1 ? ' is' : 's are') + ' due a reorder', what: 'Paid over ' + g.due + ' days ago. Check each in Shopify (they may have ordered again) and draft a reminder there; nothing is sent from here.', href: '', act: 'reorder', btn: 'See who' },
+      { n: g.subs < 50 ? g.oneOff : 0, name: 'Few subscriptions', h: 'Only ' + g.subs + '% of orders are subscriptions', what: g.oneOff + ' one-off order' + (g.oneOff === 1 ? '' : 's') + ' in the last 30 days. Draft a subscribe offer for Lisa to check; no discount is set from here.', href: shopAdmin('customers'), btn: 'Open Shopify customers' }
+    ].filter(function (x) { return x.n > 0; }).sort(function (a, b) { return b.n - a.n; });
+    if (!gaps.length) return '';   // one empty line per view (Lisa, 2 Nov): no gap, no card
+    var x = gaps[0];
+    return '<div class="card grow"><p class="bline"><span class="dot" style="--c:var(--ljr-4)" aria-hidden="true"></span>Grow orders: ' + esc(x.name) + '</p><h2>' + esc(x.h) + '</h2><p class="what">' + esc(x.what) + '</p>' +
+      (x.act ? '<div class="acts"><button class="btn main" type="button" data-action="' + x.act + '">' + esc(x.btn) + '</button></div>'
+        : x.href ? '<div class="acts"><a class="btn main" href="' + esc(x.href) + '" target="_blank" rel="noopener">' + esc(x.btn) + '</a></div>' : '') + '</div>';
+  }
+  function growthHtml() {
+    var g = growth(), mo = num(setting('MIN_ORDERS_MONTH')), d = g.last - g.prev;
+    var h = '<section class="growth" aria-label="Grow orders"><p class="grp">Grow orders</p><div class="tiles">' +
+      '<a class="tile" href="#/orders"><span class="k">Orders, last 30 days</span><span class="v' + (d < 0 ? ' red' : '') + '">' + g.last + '</span><span class="m">' + (d > 0 ? 'up ' + d : d < 0 ? 'down ' + (-d) : 'same as') + (d ? ' on' : '') + ' the 30 days before</span></a>' +
+      '<a class="tile" href="#/orders" aria-label="Repeat orders: ' + g.repeat + '%. Open Orders"><span class="k">Repeat orders</span><span class="v">' + g.repeat + '%</span><span class="m">from customers on their 2nd order or more</span></a>' +
+      '<a class="tile" href="#/orders?sub"><span class="k">Subscriptions</span><span class="v">' + g.subs + '%</span><span class="m">of orders, last 30 days</span></a>' +
+      // MIN_ORDERS_MONTH on the Settings tab: blank = no tile (Lisa, 30 Oct 2026); set = red when the last 30 days are under it.
+      (mo ? '<a class="tile" href="#/orders"><span class="k">Orders this month (aim ' + mo + ')</span><span class="v' + (g.last < mo ? ' red' : '') + '">' + g.last + '</span></a>' : '') + '</div>';
+    h += growCard(g);
+    if (g.reorder.length) h += '<div class="card" id="reorder"><p class="bline"><span class="dot" style="--c:var(--ljr-6)" aria-hidden="true"></span>Reorder due (over ' + g.due + ' days old)</p>' +
+      (g.reorder.length ? g.reorder.map(function (o) { return '<div class="row"><div class="txt"><div><b>Order #' + esc(o.order_no) + '</b></div><div class="m">' + esc(daysAgo(o.placed_at)) + (num(o.customer_orders) ? ' · customer\'s ' + esc(nth(num(o.customer_orders))) + ' order' : '') + '</div><div class="links">' + shopLink(o) + '</div></div></div>'; }).join('')
+        : '') + '</div>';
+    return h + '</section>';
   }
   // A friendly empty state: a small green-ring tick, a plain line, and what happens next.
   function empty(head, more) { return '<p class="empty"><span><b>' + esc(head) + '</b>' + (more ? '<span class="es">' + esc(more) + '</span>' : '') + '</span></p>'; }
@@ -277,7 +336,7 @@
   // A card: a name line (dot + what kind; "Next" on the first one), then the title. The first card on Home is the Next card.
   function cardHtml(r, next) {
     var s = SECTIONS[r.section] || SECTIONS.check, d = detail(r);
-    var h = '<div class="card' + (next === true ? ' next' : '') + '"><p class="bline"><span class="dot" style="--c:var(--ljr-' + (d.red ? 2 : 3) + ')" aria-hidden="true"></span>' + (next === true ? 'Next: ' : '') + esc(s.name) + '</p><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.why || s.what) + '</p>';
+    var h = '<div class="card' + (next === true ? ' next' : '') + (r.key === focusKey ? ' focus' : '') + '" data-key="' + esc(r.key) + '"><p class="bline"><span class="dot" style="--c:var(--ljr-' + (d.red ? 2 : 3) + ')" aria-hidden="true"></span>' + (next === true ? 'Next: ' : '') + esc(s.name) + '</p><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.why || s.what) + '</p>';
     var on = /^(?:LOWPROFIT|MISSING|MISMATCH|UNKNOWN)-(.+)$/.exec(r.key), o = on && data.orders.filter(function (x) { return String(x.order_no) === on[1]; })[0];
     if (o) { var ol = orderLinks(o); h += (orderFacts(o) ? '<p class="what"><b>' + esc(orderFacts(o)) + '</b></p>' : '') + (ol || /^MISSING|^UNKNOWN/.test(r.key) ? '<div class="acts">' + ol + (/^MISSING|^UNKNOWN/.test(r.key) && /^https:/.test(setting('GA_PORTAL')) ? '<a class="btn" href="' + esc(setting('GA_PORTAL')) + '" target="_blank" rel="noopener">GA Portal</a>' : '') + '</div>' : ''); }
     if (d.file) h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(d.file) + '/view" target="_blank" rel="noopener">Open the PDF</a></div>';
@@ -287,40 +346,64 @@
     return h + '<div class="acts"><button class="btn main yes" type="button" data-ans="' + esc(r.key) + '" data-v="' + esc(s.yes) + '">' + esc(s.yes) + '</button>' +
       (s.no ? '<button class="btn no" type="button" data-ans="' + esc(r.key) + '" data-v="' + esc(s.no) + '">' + esc(s.no) + '</button>' : '') + '</div></div>';
   }
+  // Main (Lisa's house style, 2 Nov 2026): Next, Needs you (at most 5), then the 3 numbers, the same as the Dashboard's Food tile
+  // (../index.html HubRead food): Late = orders Not at GA, Owe GA = unpaid GA invoices, Today = orders placed today (UK), and the
+  // "✓ XML" tick when no order is Not at GA. Low profit stays off Main (a weekly or monthly review: Orders > Low profit, and Review).
+  function ukToday(t) { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(t || new Date()); }
+  function lateOrders() { return data.orders.filter(function (o) { return o.check === 'Not at GA'; }); }
+  function placedToday(o) { var t = Date.parse(o.placed_at); return o.status !== 'Cancelled' && !isNaN(t) && ukToday(new Date(t)) === ukToday(); }
+  function mainRows() {
+    var portal = /^https:/.test(setting('GA_PORTAL')) ? setting('GA_PORTAL') : '';
+    var rows = lateOrders().map(function (o) {
+      return { kind: 'late', text: 'Order #' + o.order_no + ': not at GA', sub: 'Check the GA Portal and enter it by hand if needed', href: '#/orders?late',
+        act: portal ? 'GA Portal' : 'Open', actHref: portal, actExt: !!portal, sort: num(o.order_no) };
+    });
+    waiting().filter(function (r) { return r.section !== 'profit'; }).sort(byUrgency).forEach(function (r) {
+      rows.push({ kind: detail(r).red ? 'late' : 'wait', text: r.title, sub: (SECTIONS[r.section] || SECTIONS.check).name, href: '#/do/' + encodeURIComponent(r.key), act: 'Answer' });
+    });
+    return rows;
+  }
   function pageHome() {
+    if (!loaded && !failed) return '<div class="card"><p class="note">Reading the GA Hub workbook…</p></div>';
+    var late = lateOrders().length, owed = unpaid().reduce(function (n, i) { return n + num(i.total); }, 0);
+    var nums = [
+      { label: 'Late', value: loaded ? late : null, late: late > 0, href: '#/orders?late', aria: loaded ? 'Late: ' + late + ' orders not at GA. Open them' : '' },
+      { label: 'Owe GA', value: loaded ? '£' + owed.toFixed(2) : null, href: '#/invoices?unpaid', aria: loaded ? 'Owe GA: £' + owed.toFixed(2) + '. Open the unpaid invoices' : '' },
+      { label: 'Today', value: loaded ? data.orders.filter(placedToday).length : null, href: '#/orders?today', aria: loaded ? 'Today: ' + data.orders.filter(placedToday).length + ' orders placed today. Open them' : '' }];
+    var xml = loaded && !late ? '<a class="hm-xml" data-xml href="#/orders?ga" aria-label="✓ XML: every order reached GA. Open Not at GA yet">✓ XML</a>' : '';
+    return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'food', rows: loaded ? mainRows() : [], nums: nums, doHref: '#/do', extra: xml, error: loaded ? '' : 'The GA Hub workbook: ' + failed });
+  }
+  // Do (More): every card waiting on Lisa, with its safe buttons (Apply / Seen / Send, Undo for 10 minutes), and the order GA never got.
+  function pageDo() {
     // Answered cards stay on screen until the engine applies them (Undo for 10 minutes), then drop off.
-    var w = data.cards.filter(function (r) { return !r.applied_at && (!r.answer || Date.now() < Date.parse(r.answered_at) + APPLY_MS); }).sort(byUrgency), need = waiting().length, owed = unpaid().reduce(function (n, i) { return n + num(i.total); }, 0);
-    var due = unpaid().map(function (i) { return i.due_date; }).filter(Boolean).sort()[0];
-    var notAtGa = data.orders.filter(function (o) { return /^(Waiting for GA|Not at GA)$/.test(o.check); }).length, late = data.orders.filter(function (o) { return o.check === 'Not at GA'; }).length;
-    var min = num(setting('MIN_PROFIT')) || 15, low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
-    var h = '<p class="needs">Needs you: ' + '<span class="cnt ' + (need ? 'need' : 'ok') + wide(need) + '">' + need + '</span></p>';
-    var st = data.statements[0];   // GA's own weekly statement beats our sum of the invoices we have seen
-    h += '<div class="tiles"><a class="tile" href="#/invoices"><span class="k">Owed to GA' + (st ? ' (statement ' + esc(ukDate(st.statement_date)) + ')' : '') + '</span><span class="v">' + money(st ? st.total_outstanding : owed) + '</span></a>' +
-      '<a class="tile" href="#/invoices"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span>' + (due ? '<span class="datep' + dateCls(due) + '">' + esc(inDays(due)) + '</span>' : '') + '</a>' +
-      '<a class="tile" href="#/orders?check"><span class="k">Not at GA yet</span><span class="v' + (late ? ' red' : '') + '">' + notAtGa + (late ? ' (' + late + ' late)' : '') + '</span></a>' +
-      '<a class="tile" href="#/orders"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a></div>';
-    if (!w.length) {
-      // Nothing to answer, but an order GA never got still comes first.
-      if (late) return h + '<div class="card next"><p class="bline"><span class="dot" style="--c:var(--ljr-2)" aria-hidden="true"></span>Next: Order check</p><h2>' + late + ' order' + (late > 1 ? 's are' : ' is') + ' not at GA</h2><p class="what">Check the GA Portal and enter ' + (late > 1 ? 'them' : 'it') + ' by hand if needed.</p><div class="acts"><a class="btn main" href="#/orders?check">Open the orders</a></div></div>';
-      return h + '<div class="card">' + empty('Nothing needs you', 'Nothing from GA needs you. The engine checks GA\'s emails every 15 minutes.') + '</div>';
-    }
-    h += cardHtml(w[0], true);
-    if (w.length > 1) h += showAll ? w.slice(1).map(function (r) { return cardHtml(r); }).join('') : '<button class="more" type="button" data-action="all">Show ' + (w.length - 1) + ' more</button>';
-    return h;
+    var w = data.cards.filter(function (r) { return !r.applied_at && (!r.answer || Date.now() < Date.parse(r.answered_at) + APPLY_MS); }).sort(byUrgency), need = waiting().length;
+    var late = lateOrders().length;
+    var h = '<p class="needs">Do <span class="cnt ' + (need ? 'need' : 'ok') + wide(need) + '">' + need + '</span></p>';
+    if (late) h += '<div class="card"><p class="bline"><span class="dot" style="--c:var(--ljr-2)" aria-hidden="true"></span>Order check</p><h2>' + late + ' order' + (late > 1 ? 's are' : ' is') + ' not at GA</h2><p class="what">Check the GA Portal and enter ' + (late > 1 ? 'them' : 'it') + ' by hand if needed.</p><div class="acts"><a class="btn main" href="#/orders?late">Open the orders</a></div></div>';
+    if (!w.length) return late ? h : h + '<div class="card">' + empty('Nothing needs you') + '</div>';
+    return h + w.map(function (r) { return cardHtml(r); }).join('');
+  }
+  // Review (More): order growth (trend, repeat, subscriptions, reorder due) and the low-profit orders, for the weekly or monthly look.
+  function pageReview() {
+    var min = minProfit(), low = data.orders.filter(function (o) { return o.profit_est !== '' && num(o.profit_est) < min; }).length;
+    return '<p class="needs">Review</p>' + growthHtml() + '<p class="grp">Profit</p><div class="tiles"><a class="tile" href="#/orders?low"><span class="k">Under £' + min + ' profit</span><span class="v' + (low ? ' red' : '') + '">' + low + '</span></a></div>';
   }
   // The order check: did every shop order reach GA, and did GA send the same items?
   var CHECK = { 'Matched': ['✅ Matched with GA', ''], 'Shipped': ['🚚 Shipped by GA', ''], 'Waiting for GA': ['⏳ Waiting for GA', ''], 'At GA': ['📥 At GA (confirmed)', ''], 'At GA, not shipped': ['⚠️ At GA but not shipped', 'no'], 'Not at GA': ['❌ Not at GA: check the Portal', 'no'],
-    'Items differ': ['⚠️ GA sent different items', 'no'], 'Not in Shopify': ['❓ Not in Shopify: check the reference', 'no'], 'No GA items': ['🏠 Packed at home (no GA items)', ''], 'Cancelled': ['✖ Cancelled', ''],
+    'Items differ': ['⚠️ GA sent different items', 'no'], 'Not in Shopify': ['❓ Not in Shopify: check the reference', 'no'], 'No GA items': ['📭 No GA items: see its card', ''], 'Pack at home': ['🏠 Pack at home: tap Packed once posted', ''], 'Packed at home': ['🏠 Packed at home', ''], 'Cancelled': ['✖ Cancelled', ''],
     'Replacement': ['🔁 Replacement, sent again', ''], 'Split box': ['📦 Extra box of the same order', ''] };
   function checkBadge(o) { var c = CHECK[o.check]; return c ? '<div class="badges"><span class="badge' + (c[1] ? ' ' + c[1] : '') + '">' + esc(c[0]) + '</span></div>' : ''; }
-  var OFILTERS = [['all', 'All'], ['check', 'Needs a look'], ['ga', 'Not at GA yet'], ['sub', 'Subscriptions'], ['low', 'Low profit']], ofilter = 'all';
+  var OFILTERS = [['all', 'All'], ['check', 'Needs a look'], ['late', 'Not at GA'], ['ga', 'Not at GA yet'], ['today', 'Today'], ['sub', 'Subscriptions'], ['low', 'Low profit']], ofilter = 'all';
   function pageOrders() {
-    var min = num(setting('MIN_PROFIT')) || 15, list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); }).filter(function (o) {
-      return ofilter === 'all' || (ofilter === 'check' && CHECK[o.check] && CHECK[o.check][1]) || (ofilter === 'ga' && /^(Waiting for GA|Not at GA)$/.test(o.check))
+    var min = minProfit(), list = data.orders.slice().sort(function (a, b) { return num(b.order_no) - num(a.order_no); }).filter(function (o) {
+      return ofilter === 'all' || (ofilter === 'check' && CHECK[o.check] && CHECK[o.check][1]) || (ofilter === 'ga' && /^(Waiting for GA|Not at GA)$/.test(o.check)) || (ofilter === 'late' && o.check === 'Not at GA') || (ofilter === 'today' && placedToday(o))
         || (ofilter === 'sub' && /^sub/i.test(o.order_type)) || (ofilter === 'low' && o.profit_est !== '' && num(o.profit_est) < min); });
     var chips = '<div class="house-frow">' + DashKit.filterButton('ofilters', ofilter !== 'all' ? 1 : 0) + '<div class="chips house-filters" id="ofilters" role="group" aria-label="Which orders">' + OFILTERS.map(function (f) { return '<button class="chip" type="button" data-ofilter="' + f[0] + '" aria-pressed="' + (ofilter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
-    var h = '<p class="needs">Orders</p><p class="hint">From GA\'s shipping reports and invoices. 📦 Track opens DPD; 🛍 Shopify opens the order (customer details stay in Shopify). Each order is checked: paid in the shop → shipped by GA → same items on GA\'s invoice.</p>' + chips;
+    var notAtGa = data.orders.filter(function (o) { return /^(Waiting for GA|Not at GA)$/.test(o.check); }).length, late = lateOrders().length;
+    // Not at GA yet (moved from the old Home, 2 Nov): waiting + late, opens the list.
+    var h = '<p class="needs">Orders</p><div class="tiles"><a class="tile" href="#/orders?check"><span class="k">Not at GA yet</span><span class="v' + (late ? ' red' : '') + '">' + notAtGa + (late ? ' (' + late + ' late)' : '') + '</span></a></div>' + chips;
     var none = { all: ['No orders yet', 'They appear after GA\'s next shipping report or invoice.'], check: ['No orders need a look', 'Every order matches what GA shipped.'], ga: ['Every order is at GA', 'Nothing waiting to reach GA.'],
+      late: ['No order is late', 'Every order reached GA.'], today: ['No orders today', 'Orders placed today (UK) show here.'],
       sub: ['No subscription orders', ''], low: ['No low-profit orders', 'Every order made at least £' + min + '.'] }[ofilter];
     if (!list.length) return h + '<div class="card">' + empty(none[0], none[1]) + '</div>';
     var shown = showAll ? list : list.slice(0, 30);
@@ -330,10 +413,12 @@
         checkBadge(o) + (links ? '<div class="links">' + links + '</div>' : '') + '</div>' +
         '<div class="amt ' + (p === '' ? '' : p < min ? 'red' : 'good') + '">' + (p === '' ? '' : money(p)) + '</div></div>'; }).join('') + '</div>';
     if (list.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
-    return h + '<p class="hint">Profit is ex VAT, after GA food, delivery, card fee and running cost: from the Shopify price paid where known, otherwise estimated at shop prices.</p>';
+    return h + '<p class="hint">Profit is ex VAT, after all costs.</p>';
   }
+  var IFILTERS = [['all', 'All'], ['unpaid', 'Unpaid']], ifilter = 'all';
   function pageInvoices() {
     var inv = data.invoices.slice().sort(function (a, b) { return String(b.invoice_date).localeCompare(String(a.invoice_date)); });
+    var due = unpaid().map(function (i) { return i.due_date; }).filter(Boolean).sort()[0];
     var fy = inv.length ? inv[0].fy : '', thisFy = inv.filter(function (i) { return i.fy === fy; });
     var sum = function (list, k) { return list.reduce(function (n, i) { return n + num(i[k]); }, 0); }, open = unpaid();
     var st = data.statements[0], dd = data.dds[0], fyStart = fyStartYmd(), paidFy = data.dds.filter(function (d) { return String(d.date) >= fyStart; }).reduce(function (n, d) { return n + num(d.amount); }, 0);   // newest GA direct debit out of the Starling account
@@ -341,14 +426,18 @@
       (st ? '<div class="tile"><span class="k">GA statement ' + esc(ukDate(st.statement_date)) + '</span><span class="v">' + money(st.total_outstanding) + '</span></div>' : '') +
       '<div class="tile"><span class="k">Owed to GA</span><span class="v">' + money(sum(open, 'total')) + '</span></div>' +
       '<div class="tile"><span class="k">Unpaid invoices</span><span class="v">' + open.length + '</span></div>' +
+      // Next GA payment due (moved from the old Home, 2 Nov).
+      '<a class="tile" href="#/invoices?unpaid"><span class="k">Next GA payment due</span><span class="v">' + esc(due ? ukDate(due) : 'None') + '</span>' + (due ? '<span class="datep' + dateCls(due) + '">' + esc(inDays(due)) + '</span>' : '') + '</a>' +
       '<div class="tile"><span class="k">' + esc(fy || 'This year') + ' food</span><span class="v">' + money(sum(thisFy, 'goods')) + '</span></div>' +
       '<div class="tile"><span class="k">' + esc(fy || 'This year') + ' delivery</span><span class="v">' + money(sum(thisFy, 'delivery')) + '</span></div>' +
       '<div class="tile"><span class="k">VAT to reclaim (' + esc(fy || 'year') + ')</span><span class="v">' + money(sum(thisFy, 'vat')) + '</span></div>' +
       (dd ? '<div class="tile"><span class="k">Last GA direct debit ' + esc(ukDate(dd.date)) + '</span><span class="v">' + money(dd.amount) + '</span></div>'
         : '<div class="tile"><span class="k">Paid by</span><span class="v">' + esc(setting('GA_PAYMENT') || 'Not set') + '</span></div>') +
-      (dd ? '<div class="tile"><span class="k">Paid to GA since ' + esc(ukDate(fyStart)) + ' (bank)</span><span class="v">' + money(paidFy) + '</span></div>' : '') + '</div>' +
-      (dd || setting('BANK_FOLDER_ID') || setting('BANK_LEDGER_FILE_ID') ? '' : '<p class="hint">Paid dates fill in once the bank is linked (BANK_FOLDER_ID on the Settings tab).</p>');
-    if (!inv.length) return h + '<div class="card">' + empty('No GA invoices yet', 'They are saved here when the next one arrives by email.') + '</div>';
+      (dd ? '<div class="tile"><span class="k">Paid to GA since ' + esc(ukDate(fyStart)) + ' (bank)</span><span class="v">' + money(paidFy) + '</span></div>' : '') + '</div>';
+    h += vatInvoices() + '<p class="grp">GA invoices</p><div class="house-frow">' + DashKit.filterButton('ifilters', ifilter !== 'all' ? 1 : 0) + '<div class="chips house-filters" id="ifilters" role="group" aria-label="Which invoices">' +
+      IFILTERS.map(function (f) { return '<button class="chip" type="button" data-ifilter="' + f[0] + '" aria-pressed="' + (ifilter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
+    if (ifilter === 'unpaid') inv = inv.filter(function (i) { return !i.paid_date && num(i.total) > 0; });
+    if (!inv.length) return h + '<div class="card">' + empty(ifilter === 'unpaid' ? 'Nothing owed to GA' : 'No GA invoices yet') + '</div>';
     var shown = showAll ? inv : inv.slice(0, 30);
     h += '<div class="card">' + shown.map(function (i) {
       var open1 = !i.paid_date && i.due_date;   // unpaid: the due date is a pill whose ring shows how close it is
@@ -356,7 +445,25 @@
         (open1 ? '<div class="badges"><span class="datep' + dateCls(i.due_date) + '">due ' + esc(ukDate(i.due_date)) + '</span></div>' : '') + '</div>' +
         '<div class="amt">' + money(i.total) + '</div>' + (i.file_id ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(i.file_id) + '/view" target="_blank" rel="noopener" aria-label="Open ' + esc(i.si_no) + '">PDF</a>' : '') + '</div>'; }).join('') + '</div>';
     if (inv.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + inv.length + '</button>';
-    return h + '<p class="hint">Saved in Drive by financial year. Paid dates come later from the bank (Money Hub).</p>';
+    return h;
+  }
+  // VAT invoices the food engine made for buyers ticked VAT-INVOICE in Shopify (Orders tab vat_inv_* columns: numbers only, no buyer details).
+  // Commercial invoices (inv_doc COMMERCIAL, orders sent outside the UK) share the columns: saved = waiting for GA's SI number, drafted = draft to GA in Gmail.
+  var VAT_CHIP = { 'dry-run': ['Dry run', ''], drafted: ['Draft in Gmail', ''], saved: ['Saved', ''], held: ['Held', 'no'] };
+  var VAT_HELD = { NO_TAX: 'Shopify gave no tax lines', MISMATCH: 'Figures do not add up', NO_PAYMENT: 'No payment found', NO_BUYER: 'No address on the order', 'no email': 'No email: send it by hand', 'part refunded': 'Part refunded first: make it by hand', TAX_CHARGED: 'Shopify added tax to an export order', NO_LINES: 'No lines on the order' };
+  var CI_CHIP = { saved: ['Waiting for GA SI no.', ''], drafted: ['Draft to GA in Gmail', ''] };
+  function vatInvoices() {
+    var rows = data.orders.filter(function (o) { return o.vat_inv_status && !/^none/.test(o.vat_inv_status); })
+      .sort(function (a, b) { return num(b.order_no) - num(a.order_no); });
+    var waiting = rows.filter(function (o) { return /^(dry-run|held)/.test(o.vat_inv_status); }).length, on = setting('VAT_INVOICES') === 'ON';
+    var h = '<p class="grp">VAT invoices' + (waiting ? '<span class="sr"> · </span><span class="cnt' + wide(waiting) + '" title="Ticked orders waiting">' + waiting + '</span>' : '') + '</p>';
+    if (!rows.length) return h + '<div class="card">' + empty(on ? 'No VAT invoices yet' : 'VAT invoices are off', on ? '' : 'Turn on: VAT_INVOICES in Settings.') + '</div>';
+    return h + '<div class="card">' + rows.slice(0, 10).map(function (o) {
+      var st = String(o.vat_inv_status), ci = o.inv_doc === 'COMMERCIAL', c = (ci && CI_CHIP[st]) || VAT_CHIP[st.split(':')[0]] || [st, ''];
+      return '<div class="row"><div class="txt"><b>' + esc(o.vat_inv_no || 'Not made yet') + '</b> · order #' + esc(o.order_no) + '<div class="m">' + esc(st.indexOf(':') > 0 ? (VAT_HELD[st.slice(st.indexOf(':') + 1).trim()] || st.slice(st.indexOf(':') + 1).trim()) : ukDate(o.vat_inv_at)) + '</div>' +
+        '<div class="badges">' + (ci ? '<span class="badge">Commercial</span>' : '') + '<span class="badge' + (c[1] ? ' ' + c[1] : '') + '">' + esc(c[0]) + '</span></div></div>' +
+        (o.vat_inv_file_id ? '<a class="btn" href="https://drive.google.com/file/d/' + esc(o.vat_inv_file_id) + '/view" target="_blank" rel="noopener" aria-label="Open ' + esc(o.vat_inv_no) + '">Open</a>' : '') + '</div>'; }).join('') + '</div>' +
+      '<p class="hint">' + (waiting ? waiting + ' ticked order' + (waiting > 1 ? 's' : '') + ' waiting (dry run or held). ' : '') + 'Drafts wait in Gmail for you to read and send.</p>';
   }
   var FILTERS = [['sale', 'On sale'], ['eligible', 'Could add'], ['cat', 'Cat'], ['not', 'Not DDF'], ['all', 'All']];
   function inFilter(p) { var s = String(p.ddf_status || '');
@@ -374,11 +481,11 @@
   }
   function pageProducts() {
     var list = data.products.filter(inFilter).filter(function (p) { return !q || [p.ddf_name, p.recipe, p.tla, p.full_ga_code, p.range].join(' ').toLowerCase().indexOf(q) >= 0; });
-    var h = '<p class="needs">Products</p><p class="hint">Every GA recipe and size, by range: GA cost, your price and profit for one bag in one box. A rose ring on a badge shows why one can\'t be DDF.</p>' +
+    var h = '<p class="needs">Products</p>' +
       '<div class="frow"><input class="txtin" type="search" placeholder="Find a recipe, name or code" aria-label="Find a product" data-find value="' + esc(q) + '">' + DashKit.filterButton('pfilters', filter !== FILTERS[0][0] ? 1 : 0) +
       '<div class="chips house-filters" id="pfilters" role="group" aria-label="Which products">' + FILTERS.map(function (f) { return '<button class="chip" type="button" data-filter="' + f[0] + '" aria-pressed="' + (filter === f[0]) + '">' + f[1] + '</button>'; }).join('') + '</div></div>';
     if (!list.length) return h + '<div class="card">' + empty(q ? 'No products match "' + q + '"' : 'No products here', 'Try All, or a shorter search.') + '</div>';
-    var shown = showAll ? list : list.slice(0, 40), min = num(setting('MIN_PROFIT')) || 15, groups = [], by = {};
+    var shown = showAll ? list : list.slice(0, 40), min = minProfit(), groups = [], by = {};
     shown.forEach(function (p) { var r = p.range && p.range !== '(price list only)' ? p.range : 'Price list only (not on the Portal)'; if (!by[r]) { by[r] = []; groups.push(r); } by[r].push(p); });
     groups.forEach(function (g) {
       h += '<p class="grp">' + esc(g) + '<span class="sr"> · </span><span class="cnt' + wide(by[g].length) + '">' + by[g].length + '</span></p><div class="card">' + by[g].map(function (p) { var pr = p.profit_ex_vat_1bag_1box;
@@ -398,7 +505,7 @@
       ['XML orders go to', 'GA_ORDER_TO', 'mail'], ['XML contact', 'GA_XML_CONTACT', 'mail'], ['We send XML orders from', 'GA_ORDER_FROM', 'mail'],
       ['Shipping reports come from', 'GA_SHIP_FROM', 'mail'], ['Invoices come from', 'GA_INVOICE_FROM', 'mail'], ['Commercial invoices (Jersey) to', 'COMMERCIAL_INVOICE_TO', 'mail'],
       ['Minimum profit per order', 'MIN_PROFIT', 'money'], ['Subscription discount', 'SUB_DISCOUNT', 'money']];
-    var h = '<p class="needs">GA</p><p class="hint">GA Pet Food Partners: makes and ships the food. Change these on the Settings tab of RR_FOOD.</p><div class="card">';
+    var h = '<p class="needs">GA</p><div class="card">';
     rows.forEach(function (r) { var v = setting(r[1]); if (!v) return;
       var shown = r[2] === 'link' ? '<a href="' + esc(v) + '" target="_blank" rel="noopener">' + esc(v.replace(/^https?:\/\//, '')) + '</a>' : r[2] === 'tel' ? telLink(mailLink(esc(v))) : r[2] === 'mail' ? mailLink(esc(v)) : r[2] === 'money' ? money(v) : esc(v);
       h += '<div class="row"><div class="txt"><div class="m">' + esc(r[0]) + '</div>' + shown + '</div>' + (r[2] === 'copy' ? '<button class="btn" type="button" data-copy="' + esc(v) + '">Copy</button>' : '') + '</div>'; });
@@ -408,21 +515,22 @@
       h += '<p class="grp">Order reference on the GA Portal</p><div class="card"><p class="what">Type the <b>Shopify order number only, digits</b>, e.g. <b>5382</b>. Customers see this reference in their tracking only (it is not on the label), so it never holds names, partner codes, prices or notes. Search the Portal for the number first: never enter an order twice.</p><p class="hint">Other shops (later): ClickFunnels orders are DDF-KQ-number; a resend adds -R1. The codes below are what the engine reads.</p>' +
         kinds.map(function (k) { var list = data.codes.filter(function (c) { return c.kind === k[0]; }); if (!list.length) return '';
           return '<div class="row"><div class="txt"><div class="m">' + esc(k[1]) + '</div><div class="badges">' + list.map(function (c) { return '<span class="badge"><b>' + esc(c.code) + '</b> ' + esc(c.name) + '</span>'; }).join('') + '</div></div></div>'; }).join('') +
-        '<p class="hint">A reference the engine cannot read turns into a red card.</p></div>';
+        '</div>';
     }
     return h;
   }
   function render() {
-    $('signin').textContent = token ? 'Sign out' : 'Sign in'; $('signin').setAttribute('data-action', token ? 'signout' : 'signin');
+    DashKit.signButton($('signin'), !!token);
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    var n = waiting().length; $('n-home').textContent = n || ''; $('n-home').classList.toggle('wide', n >= 100);
+    var n = loaded ? mainRows().length : 0; $('n-home').textContent = n || ''; $('n-home').classList.toggle('wide', n >= 100);
     var look = data.orders.filter(needsLook).length; $('n-orders').textContent = look || ''; $('n-orders').classList.toggle('wide', look >= 100);   // orders that need a look, on every page
     $('stamp').textContent = F && F.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
     $('signin').disabled = !token && !ready;
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the GA Hub</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
-    $('view').innerHTML = view === 'orders' ? pageOrders() : view === 'invoices' ? pageInvoices() : view === 'products' ? pageProducts() : view === 'ga' ? pageGa() : pageHome();
+    $('view').innerHTML = view === 'orders' ? pageOrders() : view === 'invoices' ? pageInvoices() : view === 'products' ? pageProducts() : view === 'ga' ? pageGa() : view === 'do' ? pageDo() : view === 'review' ? pageReview() : pageHome();
+    var f = focusKey && view === 'do' && document.querySelector('#view .card.focus'); if (f && f.scrollIntoView) f.scrollIntoView({ block: 'start' });
   }
 
   /* ---------- taps ---------- */
@@ -430,10 +538,12 @@
   document.addEventListener('click', function (e) {
     var t = e.target.closest('button, a'); if (!t) return;
     var a = t.getAttribute('data-action');
-    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive({ login_hint: 'lisa@puppyclassroom.com' }); }
-    if (a === 'signout') { token = null; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }; return render(); }
+    if (a === 'signin') { if (!auth.ready()) return banner('Google sign-in is still loading. Try again in a moment.'); return auth.requestInteractive(OWNER ? { login_hint: OWNER } : {}); }
+    if (a === 'signout') { token = null; loaded = false; failed = ''; DashAuth.clear(); data = { cards: [], orders: [], invoices: [], products: [], settings: {}, statements: [], dds: [], codes: [] }; return render(); }
     if (a === 'refresh') return load();
+    if (a === 'reorder') { var ro = $('reorder'); if (ro) ro.scrollIntoView({ block: 'start' }); return; }
     if (a === 'all') { showAll = !showAll; return render(); }
+    if (t.hasAttribute('data-ifilter')) { ifilter = t.getAttribute('data-ifilter'); showAll = false; return render(); }
     if (t.hasAttribute('data-ofilter')) { ofilter = t.getAttribute('data-ofilter'); showAll = false; return render(); }
     if (t.hasAttribute('data-filter')) { filter = t.getAttribute('data-filter'); showAll = false; return render(); }
     if (t.hasAttribute('data-ans')) { var r = find(t.getAttribute('data-ans')); t.disabled = true; return answer(r, t.getAttribute('data-v')); }
@@ -445,7 +555,15 @@
     q = e.target.value.trim().toLowerCase(); var pos = e.target.selectionStart; render();
     var box = document.querySelector('[data-find]'); if (box) { box.focus(); try { box.setSelectionRange(pos, pos); } catch (x) {} }
   });
-  function route() { view = (location.hash.replace(/^#\//, '').split('?')[0]) || 'home'; if (/\?check$/.test(location.hash)) ofilter = 'ga'; if (['home', 'orders', 'invoices', 'products', 'ga'].indexOf(view) < 0) view = 'home'; showAll = false; render(); }
+  // #/orders?late etc: a Main number opens its list filtered to what it counts; #/do/<card key> opens Do at that card.
+  function route() {
+    var path = location.hash.replace(/^#\//, '').split('?')[0], parts = path.split('/'), oq = (/\?(\w+)$/.exec(location.hash) || [])[1];
+    view = parts[0] || 'home'; focusKey = view === 'do' && parts[1] ? decodeURIComponent(parts[1]) : '';
+    if (view === 'orders') { if (oq === 'check') ofilter = 'ga'; else if (oq && OFILTERS.some(function (f) { return f[0] === oq; })) ofilter = oq; }
+    if (view === 'invoices' && oq === 'unpaid') ifilter = 'unpaid';
+    if (['home', 'orders', 'invoices', 'products', 'ga', 'do', 'review'].indexOf(view) < 0) view = 'home';
+    showAll = false; render();
+  }
   window.addEventListener('hashchange', route);
 
   /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */

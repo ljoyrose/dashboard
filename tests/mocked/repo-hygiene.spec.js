@@ -72,11 +72,10 @@ test('the pages pull in scripts, styles and images only from Google sign-in and 
   expect(bad).toEqual([]);
 });
 
-test('no personal email addresses in the docs (this repo is public)', () => {
-  // The pages themselves name Lisa's business sign-in address on purpose. The docs must not carry personal ones.
+test('no personal email addresses anywhere in the repo (this repo is public)', () => {
+  // No allow-list: personal addresses are never allowed. The privacy guard (tools/privacy-guard) is the main check; this is the backstop.
   const PERSONAL = /[\w.+-]+@(?:me\.com|icloud\.com|gmail\.com|googlemail\.com|outlook\.com|hotmail\.com|yahoo\.[a-z.]+)/gi;
-  const ALREADY_ON_THE_PAGES = ['lisahcarson@gmail.com']; // named in the main page's PC-Personal text by Lisa's choice
   const bad = [];
-  files.filter((f) => /\.md$/.test(f)).forEach((f) => (read(f).match(PERSONAL) || []).filter((m) => !ALREADY_ON_THE_PAGES.includes(m.toLowerCase())).forEach((m) => bad.push(`${f}: ${m}`)));
+  files.forEach((f) => (read(f).match(PERSONAL) || []).forEach((m) => bad.push(`${f}: a personal address (not shown: logs are public)`)));
   expect(bad).toEqual([]);
 });

@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: issue-fire-drill
+  cancel-in-progress: false # it opens and closes issues: let a started run finish
+
 jobs:
   drill:
     name: Alarm fire drill (opens, reuses, closes one test issue)

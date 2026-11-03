@@ -1,5 +1,6 @@
 // CD Hub: https://ljoyrose.github.io/dashboard/cdhub/
 const { test, expect, buildWorld } = require('../support/test');
+const { tabClick, tabTo } = require('../support/tabs');
 const { IDS, WANT_BLD, FIX } = require('../support/world');
 const fs = require('fs');
 const path = require('path');
@@ -31,7 +32,7 @@ test.describe('CD Hub: loads', () => {
     expect(stores.session).toBe(0);
     expect(Object.keys(stores.saved).sort()).toEqual(['access_token', 'expires_at', 'scope']); // no refresh token, no secret
     expect(await context.cookies()).toEqual([]);
-    await page.locator('#nav button[data-signout]').click();
+    await page.locator('header button[data-signout]').click();
     expect(await page.evaluate(() => sessionStorage.length + localStorage.length)).toBe(0);
   });
 });
@@ -67,7 +68,7 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
   test('the sample CSVs are parsed into the right things on the Dogs page', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await page.locator('#nav button[data-go="dogs"]').click();
+    await tabClick(page, '#nav button[data-go="dogs"]');
     const main = page.locator('#main');
     await expect(main).toContainText('Test Dog One');
     await expect(main).toContainText('Test Dog Two');
@@ -78,20 +79,20 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
   test('joined tables work: cabins show their dogs, litters show dam and sire, weighings are counted @regression', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await page.locator('#nav button[data-go="round"]').click();
+    await tabClick(page, '#nav button[data-go="round"]');
     await expect(page.locator('#main')).toContainText('Test Cabin A');
     await expect(page.locator('#main')).toContainText('Test Dog One');
-    await page.locator('#nav button[data-go="litters"]').click();
+    await tabClick(page, '#nav button[data-go="litters"]');
     await expect(page.locator('#main')).toContainText('Test Dog One'); // dam
     await expect(page.locator('#main')).toContainText('Test Dog Two'); // sire
-    await page.locator('#nav button[data-go="vet"]').click();
+    await tabClick(page, '#nav button[data-go="vet"]');
     await expect(page.locator('#main')).toContainText('3'); // three sample weighings
   });
 
   test('the Outstanding page reads BLD-WORK.csv', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await page.locator('#nav button[data-go="work"]').click();
+    await tabClick(page, '#nav button[data-go="work"]');
     await expect(page.locator('#main')).toContainText('Sample item waiting on Lisa');
     await expect(page.locator('#main')).toContainText('Sample finished item');
   });
@@ -108,25 +109,40 @@ test.describe('CD Hub: navigation', () => {
     test(`section button "${id}" opens that section`, async ({ page }) => {
       await page.goto('cdhub/');
       await signIn(page);
-      await page.locator(`#nav button[data-go="${id}"]`).click();
+      await tabClick(page, `#nav button[data-go="${id}"]`);
       await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
       await expect(page.locator('#main')).not.toBeEmpty();
       await expect(page.locator('#main')).not.toContainText('Sign in to see the tables');
     });
   }
 
-  test('all ten sections plus Reread and Sign out are in the menu', async ({ page }) => {
+  test('all ten sections are in the bar: five tabs, then the other five under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     await expect(page.locator('#nav button[data-go]')).toHaveCount(10);
-    await expect(page.locator('#nav button[data-reload]')).toHaveCount(1);
-    await expect(page.locator('#nav button[data-signout]')).toHaveCount(1);
+    await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
+    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(5);
+    await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
+    await expect(page.locator('header button[data-reload]')).toHaveCount(1);
+    await expect(page.locator('header button[data-signout]')).toHaveCount(1);
+  });
+
+  test('the associations button is labelled Assocs and still opens #/buyers', async ({ page }) => {
+    await page.goto('cdhub/');
+    await signIn(page);
+    const tab = page.locator('#nav button[data-go="buyers"]');
+    await expect(tab).toHaveAccessibleName('Assocs');
+    await expect(tab).not.toContainText('Buyers');
+    await tab.click();
+    await expect(page).toHaveURL(/#\/buyers$/);
+    await expect(page.locator('#main h2')).toHaveText('Assocs');
+    await expect(page.locator('#next')).toContainText('Next: Dogs');
   });
 
   test('the "Next:" buttons at the bottom lead to other sections', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await page.locator('#nav button[data-go="today"]').click();
+    await tabClick(page, '#nav button[data-go="today"]');
     const next = page.locator('#next button[data-go]').first();
     const target = await next.getAttribute('data-go');
     await next.click();
@@ -137,7 +153,7 @@ test.describe('CD Hub: navigation', () => {
     await page.goto('cdhub/');
     await signIn(page);
     const before = guard.world.calls.filter((c) => c.path === '/files' && c.query.includes(IDS.bld)).length;
-    await page.locator('#nav button[data-reload]').click();
+    await page.locator('header button[data-reload]').click();
     await expect(page.locator('#livepill')).toContainText('live');
     await expect.poll(() => guard.world.calls.filter((c) => c.path === '/files' && c.query.includes(IDS.bld)).length).toBe(before + 1);
   });
@@ -145,7 +161,7 @@ test.describe('CD Hub: navigation', () => {
   test('Sign out forgets everything and shows the sign-in card again', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await page.locator('#nav button[data-signout]').click();
+    await page.locator('header button[data-signout]').click();
     await expect(page.locator('#main')).toContainText('Sign in to see the tables');
     await expect(page.locator('#livepill')).toHaveText('signed out');
     await expect(page.locator('#main')).not.toContainText('Test Dog One');
@@ -155,7 +171,7 @@ test.describe('CD Hub: navigation', () => {
   test('saving is switched off and says so', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await page.locator('#nav button[data-go="round"]').click();
+    await tabClick(page, '#nav button[data-go="round"]');
     await expect(page.locator('#main')).toContainText('Saving off');
   });
 });
@@ -226,10 +242,26 @@ const setFile = (world, name, content) => {
   if (f) { f.content = content; f.size = String(content.length); }
   else world.file('bld-extra-' + name, name, content, { parents: [IDS.bld], driveId: 'drv-alpha1' });
 };
+// Writes the three Moxiclear columns on the invented subject table. Addresses stay example.test.
+const setRx = (world, byId) => {
+  const f = world.files.find((x) => x.name === 'BLD-subject.csv');
+  const lines = f.content.replace(/\r/g, '').replace(/\n$/, '').split('\n');
+  const head = lines[0].split(',');
+  const ix = { date: head.indexOf('rx_moxi_date'), exp: head.indexOf('rx_moxi_expiry'), url: head.indexOf('rx_moxi_file_url') };
+  const rows = lines.slice(1).filter(Boolean).map((line) => {
+    const c = line.split(',');
+    while (c.length < head.length) c.push('');
+    const rx = byId[c[0]];
+    if (rx) { c[ix.date] = rx.date || ''; c[ix.exp] = rx.exp || ''; c[ix.url] = rx.url || ''; }
+    return c.join(',');
+  });
+  f.content = [lines[0], ...rows].join('\n') + '\n';
+  f.size = String(f.content.length);
+};
 const MATINGS = () => 'id,dam_subject_id,sire_subject_id,mated_on,mating_no,method,is_first_of_season,due_from_this_mating,litter_id,produced_litter,notes\n'
   + `mat-x1,sub-test-dog-1,sub-test-dog-2,${iso(-66)},1,natural,yes,,,,invented\nmat-x2,sub-test-pup-1,sub-test-dog-2,${iso(-58)},1,natural,yes,,,,invented\n`;
 const openTab = async (page, id) => {
-  await page.locator(`#nav button[data-go="${id}"]`).click();
+  await tabClick(page, `#nav button[data-go="${id}"]`);
   await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
 };
 // Walks every visible element and returns plain-English problems, one list per rule.
@@ -256,7 +288,7 @@ function cdAudit() {
     const bw = ['Top', 'Right', 'Bottom', 'Left'].map((k) => parseFloat(s['border' + k + 'Width']) || 0);
     if (Math.max(...bw) > 1) out.line.push(name(el) + ' ' + bw.join('/'));
     const rad = s.borderTopLeftRadius;
-    const okRad = rad === '0px' || rad === '12px' || (rad === '11px' && el.matches('.cnt')) || (rad === '50%' && el.matches(ROUND)) || (rad === '12px' && el.matches('nav#nav .bar'));
+    const okRad = rad === '0px' || rad === '12px' || (rad === '50%' && el.matches(ROUND)) || (rad === '2px' && el.matches('nav#nav .bar')) || (rad === '50%' && el.matches('nav#nav .hic'));   // the bottom tabs (Lisa's picks, 2 Nov): a rounded line, a round count ring, the icon's round place
     if (!okRad) out.radius.push(name(el) + ' ' + rad);
     // Rings on things you press or read as a pill: 3:1 against what they sit on.
     if (el.matches('#main button:not([disabled]), #main select, .btn, .pill, .dpill, .cnt, .achip, .sfb') && bw[0] === 1 && s.borderTopStyle !== 'none') {
@@ -344,7 +376,11 @@ test.describe('CD Hub house look', () => {
   test('read-only pills, counts and checklist marks never hover; bottom tabs have no ring, only the colour bar widens, nothing moves', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    for (const sel of ['#needsCard h3 .cnt', '#summary .sum', '#checksCard .mk', '#nav .cnt']) {
+    // Main's three numbers open what they count (Lisa, 2 Nov), so they are links and do hover; see hub-main-others.spec.js.
+    await expect(page.locator('[data-hub-main] a.hm-n')).toHaveCount(3);
+    // Needs you in full now sits on Do and the data checks on Tables (Hub Mains, 2 Nov 2026).
+    for (const [tab, sel] of [['work', '#needsCard h3 .cnt'], ['shape', '#checksCard .mk'], ['map', '#nav .ht .n']]) {
+      await openTab(page, tab);
       const el = page.locator(sel).first();
       await el.hover();
       expect(await el.evaluate((e) => getComputedStyle(e).outlineStyle), sel).toBe('none');
@@ -359,7 +395,7 @@ test.describe('CD Hub house look', () => {
     await expect.poll(() => page.locator('#nav button[data-go="map"] .bar').evaluate((e) => e.getBoundingClientRect().width)).toBe(40);   // selected
   });
 
-  test('count pills are one fixed box: 30 x 22px for 1 and 2 digits, even with a wider font; 3 digits grow', async ({ page, guard }) => {
+  test('count pills are one fixed box: 30 x 24px for 1 and 2 digits (a 14px number), even with a wider font; 3 digits grow', async ({ page, guard }) => {
     const rows = ['id,area,item,status,owner,blocked_on,evidence,note'];
     for (let i = 1; i <= 12; i++) rows.push(`W1${i},sample,Invented ask ${i},BLOCKED,Lisa,,,`);
     setFile(guard.world, 'BLD-WORK.csv', rows.join('\n') + '\n');
@@ -370,11 +406,14 @@ test.describe('CD Hub house look', () => {
     for (const wide of [false, true]) {
       if (wide) await page.addStyleTag({ content: '.cnt{font-family:Verdana,"DejaVu Sans",sans-serif!important;letter-spacing:.12em!important}' });
       const sizes = await measure();
-      expect(sizes.map((x) => x[0]), 'one- and two-digit counts on Live feed').toEqual(expect.arrayContaining(['12', '16', '4']));
-      for (const x of sizes) expect(x.slice(1), `count ${x[0]}${wide ? ' (wider font)' : ''}`).toEqual([30, 22, '11px', 'nowrap', 'tabular-nums']);
+      expect(sizes.map((x) => x[0]), 'one- and two-digit counts on Main').toEqual(expect.arrayContaining(['16']));
+      // The tab counts are the corner ring (tab picks, 2 Nov) holding a 14px number (pick A): 24 x 24 whatever the font, the two digits on one line.
+      const tc = await page.locator('#nav button[data-go="work"] .n').evaluate((e) => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.whiteSpace, s.fontSize]; });
+      expect(tc, 'the Do tab count' + (wide ? ' (wider font)' : '')).toEqual(['12', 24, 24, '12px', 'nowrap', '14px']);
+      for (const x of sizes) expect(x.slice(1), `count ${x[0]}${wide ? ' (wider font)' : ''}`).toEqual([30, 24, '12px', 'nowrap', 'tabular-nums']);
     }
     const big = await page.evaluate(() => { const h = document.createElement('div'); h.innerHTML = cntPill(123); document.querySelector('#main').appendChild(h); const r = h.firstChild.getBoundingClientRect(); return [r.width, r.height]; });
-    expect(big[0]).toBeGreaterThan(30); expect(big[1]).toBe(22);
+    expect(big[0]).toBeGreaterThan(30); expect(big[1]).toBe(24);
   });
 
   test('no solid colour fills: counts, pills, date pills, checklist marks, summary numbers, tabs and chosen chips are rings or light tints', async ({ page, guard }) => {
@@ -389,7 +428,7 @@ test.describe('CD Hub house look', () => {
     for (const tab of ['dogs', 'today', 'round', 'work']) { await openTab(page, tab); expect(await fills(), tab).toEqual([]); }
   });
 
-  test('a phone (390px): no sideways scroll on any tab, every control 44px tall, header uses one More menu, tab counts sit in flow', async ({ page }) => {
+  test('a phone (390px): no sideways scroll on any tab, every control 44px tall, the one 56px top bar (Look holds Sign out), tab counts in the top-right corner', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('cdhub/');
     await signIn(page);
@@ -400,47 +439,61 @@ test.describe('CD Hub house look', () => {
       const short = await page.evaluate(() => [...document.querySelectorAll('#main button, #main select, #next button, header .btn, #nav button')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, '#/' + tab).toEqual([]);
     }
-    await expect(page.locator('#backHome')).toBeHidden();
-    await expect(page.locator('header .srchbtn')).toBeHidden();
+    // The top bar (Lisa's pick A): one 56px row with Home, Search, Refresh and Look; Sign out and the read time sit inside Look.
+    expect(Math.round((await page.locator('header').boundingBox()).height)).toBe(56);
+    await expect(page.locator('#backHome')).toBeVisible();
+    await expect(page.locator('#backHome')).toHaveAttribute('href', '../');
     await expect(page.locator('#nav button[data-reload]')).toBeHidden();
-    await page.locator('#moreBtn').click();
-    await expect(page.locator('#moreMenu')).toBeVisible();
-    await expect(page.locator('#moreMenu')).toContainText('Reread');
-    await expect(page.locator('#moreMenu a[data-back-home]')).toHaveAttribute('href', '../');
-    await page.locator('#moreMenu [data-more="search"]').click();
+    await expect(page.locator('header button[data-reload]')).toHaveAttribute('aria-label', 'Refresh');
+    await expect(page.locator('header button[data-reload]')).toBeVisible();
+    await expect(page.locator('header button[data-signout]')).toBeHidden();
+    await page.locator('#houseLookBtn').click();
+    await expect(page.locator('#houseLook')).toBeVisible();
+    await expect(page.locator('#houseLook [data-house-mread]')).toHaveText(/^Read \d\d:\d\d$/);
+    await expect(page.locator('#houseLook').getByRole('button', { name: 'Sign out', exact: true })).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#houseLook')).toBeHidden();
+    await expect(page.locator('header .srchbtn')).toBeVisible();
+    await page.locator('header .srchbtn').click();
     await expect(page.locator('#dashSearch')).toBeVisible();
-    expect(await page.locator('#nav .cnt').first().evaluate((e) => getComputedStyle(e).position)).toBe('static');
+    expect(await page.locator('#nav .ht .n').first().evaluate((e) => getComputedStyle(e).position)).toBe('absolute');   // Lisa's tab picks: the count sits in the tab's top-right corner
   });
 });
 
 test.describe('CD Hub Bloodline screens (built from what the page already reads)', () => {
-  test('Live feed: summary strip, Next card, Needs you today, On site, Litters, Temperatures today and Data checks', async ({ page }) => {
+  test('Main: Next, Needs you (5) and Temps · Unplaced · Bitches; the old Live cards sit on Do, Today and Tables', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    const sums = await page.locator('#summary .sum').allInnerTexts();
-    expect(sums.map((s) => s.replace(/\s+/g, ' ').trim())).toEqual(['4 On track', '5 Needs you', '0 Overdue']);
-    await expect(page.locator('#nextCard .bline')).toHaveText('Next');
-    await expect(page.locator('#nextCard .t')).toHaveText('Tables read needs a look');
+    await expect(page.locator('#summary')).toHaveCount(0);   // the On track / Needs you / Overdue trio became the 3 numbers
+    await expect(page.locator('[data-hm="next"] .hm-what')).toHaveText('Tables read needs a look');
+    await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
+    await expect(page.locator('[data-hm="needs"] .hm-head .cnt')).toHaveText('5');
+    await expect(page.locator('[data-hm="nums"] .hm-n[data-k="Temps"] .hm-v')).toHaveText('0 of 2');
+    await expect(page.locator('#nav button[data-go="map"] .n')).toHaveText('5');
+    await expect(page.locator('#nav button[data-go="work"] .n')).toHaveText('1');
+    // Each row carries its action: the waiting item opens Do (Outstanding).
+    await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Sample item waiting on Lisa' }).locator('a[data-hm-act]').click();
+    await expect(page.locator('#nav button[data-go="work"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('#needsCard .mrow')).toHaveCount(5);
-    await expect(page.locator('#needsCard h3 .cnt')).toHaveText('5');
     await expect(page.locator('#needsCard h3 .cnt')).toHaveClass(/need/);
-    await expect(page.locator('#nav button[data-go="map"] .cnt')).toHaveText('5');
-    await expect(page.locator('#nav button[data-go="work"] .cnt')).toHaveText('1');
+    await openTab(page, 'today');
     await expect(page.locator('#onSiteCard .big')).toHaveText('3');
-    await expect(page.locator('#littersCard .okempty')).toHaveText('No litters on the go');
     await expect(page.locator('#tempsCard')).toContainText('0 of 2');
-    await expect(page.locator('#tempsCard')).toContainText('No outdoor reading on file for today');
+    await expect(page.locator('#tempsCard')).toContainText('No reading today');
+    await openTab(page, 'shape');
     await expect(page.locator('#checksCard h3 .cnt')).toHaveText('4');
     await expect(page.locator('#checksCard .mk.bad')).toHaveCount(4);
-    // ONE action per row: the waiting item opens Outstanding
-    await page.locator('#needsCard .mrow', { hasText: 'Sample item waiting on Lisa' }).locator('button').click();
-    await expect(page.locator('#nav button[data-go="work"]')).toHaveAttribute('aria-current', 'page');
   });
 
-  test('Needs you today: date pills ring by urgency (late rose, soon amber), late first, Overdue counts it, Next is the most urgent; Litters card shows both', async ({ page, guard }) => {
+  test('Needs you: late first, then soon; Next is the most urgent and opens Today; Do keeps the date pills; Litters shows both', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-mating.csv', MATINGS());
     await page.goto('cdhub/');
     await signIn(page);
+    const main = page.locator('[data-hm="needs"] .hm-row');
+    await expect(main.nth(0)).toContainText('Test Dog One in whelp');
+    await expect(main.nth(0)).toHaveAttribute('data-kind', 'late');
+    await expect(page.locator('[data-hm="next"] .hm-what')).toHaveText('Test Dog One in whelp');
+    await openTab(page, 'work');
     const rows = page.locator('#needsCard .mrow');
     await expect(rows.nth(0)).toContainText('Test Dog One in whelp');
     await expect(rows.nth(0).locator('.dpill')).toHaveClass(/late/);
@@ -449,40 +502,44 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(rows.nth(2).locator('.dpill')).toHaveCount(0);   // undated rows carry no date pill
     const due = iso(-66 + 63).split('-');
     await expect(rows.nth(0).locator('.dpill')).toContainText(`${due[2]}/${due[1]}/${due[0].slice(2)}`);
-    await expect(page.locator('#summary .sum.over .big')).toHaveText('1');
-    await expect(page.locator('#nextCard .t')).toHaveText('Test Dog One in whelp');
-    await expect(page.locator('#littersCard h3 .cnt')).toHaveText('2');
-    await expect(page.locator('#littersCard .dpill.late')).toHaveCount(1);
-    await expect(page.locator('#littersCard .dpill.soon')).toHaveCount(1);
     const ring = (sel) => page.locator(sel).first().evaluate((e) => { const s = getComputedStyle(e); return [s.borderTopWidth, s.borderTopColor, s.backgroundColor]; });
     const late = await ring('#needsCard .dpill.late'), soon = await ring('#needsCard .dpill.soon');
-    expect(late[0]).toBe('1px'); expect(late[1]).toBe(await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue('--ljr-2').trim() && getComputedStyle(document.querySelector('.cnt.need')).borderTopColor));
+    expect(late[0]).toBe('1px'); expect(late[1]).toBe(await page.evaluate(() => getComputedStyle(document.querySelector('.cnt.need')).borderTopColor));
     expect(soon[1]).not.toBe(late[1]);
     // a date that is neither late nor soon still wears a plain 1px ring, no fill
     const plain = await page.evaluate(() => { const d = document.createElement('div'); d.innerHTML = dpill('2026-01-01', ''); document.querySelector('#main').appendChild(d); const s = getComputedStyle(d.firstChild); return [s.borderTopWidth, s.borderTopStyle, s.backgroundColor]; });
     expect(plain).toEqual(['1px', 'solid', 'rgba(0, 0, 0, 0)']);
-    await page.locator('#nextCard button').click();
+    await openTab(page, 'litters');
+    await expect(page.locator('#littersCard h3 .cnt')).toHaveText('2');
+    await expect(page.locator('#littersCard .dpill.late')).toHaveCount(1);
+    await expect(page.locator('#littersCard .dpill.soon')).toHaveCount(1);
+    await openTab(page, 'map');
+    await page.locator('[data-hm="next"] a[data-hm-act]').click();
     await expect(page.locator('#nav button[data-go="today"]')).toHaveAttribute('aria-current', 'page');
   });
 
-  test('Needs you today shows at most 7 rows; Show all opens the rest', async ({ page, guard }) => {
+  test('Main shows 5 and "+N more" opens Do, where Needs you shows 7 and Show all opens the rest', async ({ page, guard }) => {
     const rows = ['id,area,item,status,owner,blocked_on,evidence,note'];
     for (let i = 1; i <= 6; i++) rows.push(`W2${i},sample,Invented waiting ask ${i},BLOCKED,Lisa,,,`);
     setFile(guard.world, 'BLD-WORK.csv', rows.join('\n') + '\n');
     await page.goto('cdhub/');
     await signIn(page);
+    await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
+    await page.locator('[data-hm-more]').click();
     await expect(page.locator('#needsCard .mrow:visible')).toHaveCount(7);
     await expect(page.locator('#needsCard .mfoot')).toContainText('Showing 7 of 10');
     await page.locator('#needsCard [data-needall]').click();
     await expect(page.locator('#needsCard .mrow:visible')).toHaveCount(10);
   });
 
-  test('Temperatures today shows today\'s outdoor reading; a data check\'s Show opens its list on Today', async ({ page, guard }) => {
+  test('Temperatures today (on Today) shows today\'s outdoor reading; a data check\'s Show (on Tables) opens its list on Today', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-outdoor_temp.csv', `on_date,reading_kind,min_temp,max_temp,phrase,captured_at,source\n${iso(0)},forecast,8,14,invented mild day,${iso(0)}T07:00:00Z,invented\n`);
     await page.goto('cdhub/');
     await signIn(page);
+    await openTab(page, 'today');
     await expect(page.locator('#tempsCard')).toContainText('8–14 °C');
     await expect(page.locator('#tempsCard')).toContainText('invented mild day');
+    await openTab(page, 'shape');
     await page.locator('#checksCard button[data-list="nochip"]').click();
     await expect(page.locator('#nav button[data-go="today"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('#tpanel')).toContainText('No microchip recorded');
@@ -538,6 +595,46 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const r = await card.evaluate((e) => { const c = e.getBoundingClientRect(), w = e.querySelector('.whor').getBoundingClientRect(); return [Math.round(c.right - w.right), Math.round(c.bottom - w.bottom)]; });
     expect(r[0]).toBeLessThanOrEqual(14); expect(r[1]).toBeLessThanOrEqual(14);   // bottom-right
     expect(await card.locator('.nm').evaluate((e) => getComputedStyle(e).webkitLineClamp)).toBe('2');
+  });
+
+  test('Dogs: Moxiclear Rx expiry and the Rx link are read from the subject table', async ({ page, guard }) => {
+    setRx(guard.world, {
+      'sub-test-dog-1': { date: '2026-10-01', exp: '2026-11-06', url: 'https://example.test/rx/sample-one' },
+      'sub-test-dog-2': { exp: '', url: 'https://example.test/rx/sample-two' },
+      'sub-test-pup-1': { exp: '2026-03-02', url: '' },
+    });
+    await page.goto('cdhub/');
+    await signIn(page);
+    await openTab(page, 'dogs');
+    const card = (name) => page.locator('.dc', { has: page.locator('.nm', { hasText: name }) });
+    const one = card('Test Dog One');
+    await expect(one.locator('.wt', { hasText: 'Moxiclear' })).toContainText('6 Nov 2026');
+    const rx = one.getByRole('link', { name: 'Rx' });
+    await expect(rx).toHaveAttribute('href', 'https://example.test/rx/sample-one');
+    await expect(rx).toHaveAttribute('target', '_blank');
+    await expect(rx).toHaveAttribute('rel', 'noopener');
+    const look = await rx.evaluate((e) => {
+      const s = getComputedStyle(e);
+      return { h: e.getBoundingClientRect().height, fs: s.fontSize, fw: s.fontWeight, r: s.borderTopLeftRadius, bw: s.borderTopWidth };
+    });
+    expect(look).toEqual({ h: 36, fs: '14px', fw: '600', r: '12px', bw: '1px' });
+    const two = card('Test Dog Two');
+    await expect(two.getByRole('link', { name: 'Rx' })).toHaveAttribute('href', 'https://example.test/rx/sample-two');
+    await expect(two.locator('.wt', { hasText: 'Moxiclear' })).not.toContainText(/\d/);
+    const pup = card('Test Pup One');
+    await expect(pup.locator('.wt', { hasText: 'Moxiclear' })).toContainText('2 Mar 2026');
+    await expect(pup.getByRole('link', { name: 'Rx' })).toHaveCount(0);
+
+    setRx(guard.world, {
+      'sub-test-dog-1': { exp: '', url: '' },
+      'sub-test-dog-2': { exp: '', url: 'javascript:alert(1)' },
+      'sub-test-pup-1': { exp: 'not-a-date', url: 'not a url' },
+    });
+    await page.locator('header button[data-reload]').click();
+    await expect(page.locator('#nav button[data-go="dogs"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('.dc a', { hasText: 'Rx' })).toHaveCount(0);
+    await expect(page.locator('#rows')).not.toContainText('Moxiclear');
+    await expect(page.locator('#rows')).not.toContainText('javascript:');
   });
 
   test('Litters: the same filter row; Sort changes the order', async ({ page, guard }) => {

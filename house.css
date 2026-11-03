@@ -1,10 +1,10 @@
 /* House look: the shared parts every hub uses (Lisa, 28 Oct 2026). ONE file; the numbers and colours come from tokens.css.
    Load order on every hub: tokens.css, then this file, then the page's own <style> (layout and anything only that page has).
-   Rules: one 12px radius (dots and rings round); 1px lines, 3px left colour bars; Lexend 400/600, nothing under 13px, no coloured
+   Rules: one 12px radius (dots and rings round); 1px lines, 3px left colour bars; Lexend 400/500/600 at 14 / 15 / 18px only, no coloured
    words, sentence case; one control line; buttons 36px (44px on a phone); hover = selected = a 1px line drawn inside plus a pale
    tint (a meaning colour keeps its own colour, neutral = ink line + muted tint), nothing ever moves, focus = 2px ink ring;
    read-only pills never hover; bottom tabs only widen their colour bar; no solid fills (small status dots and switch knobs only);
-   counts one fixed 30 x 22 pill; date pills always ringed; 12px between cards, 16px under a section header, 12px inside a card;
+   counts one fixed 30 x 24 pill (14px); date pills always ringed; 12px between cards, 16px under a section header, 12px inside a card;
    deep dark frame top and bottom with light tab buttons. No colour is written here: every colour is a token from tokens.css. */
 
 /* 1 Names. Every hub reads these short names; they point at the house tokens, so a look change is one edit in tokens.css. */
@@ -24,10 +24,14 @@
 /* A control's meaning colour (green yes, rose no / delete, purple AI...). Set on the control itself, never inherited. */
 @property --hmc { syntax: '*'; inherits: false; }
 
-/* 2 Type: Lexend, two weights, nothing under 13px, sentence case. */
+/* 2 Type: Lexend, weights 400 / 500 / 600, sizes from the tokens only (18 / 15 / 14), sentence case. */
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: 16px; line-height: 1.5; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--house-font); font-size: var(--fs-body); line-height: 1.5; }
 h1, h2, h3, h4, h5, h6, b, strong, th, summary { font-weight: 600; }
+/* Type (Lisa, 2 Nov 2026): Lexend everywhere, 400 / 500 / 600, sizes 18 (headings, big numbers) / 15 (body) / 14 (the rest) only. */
+h1, h2, h3, h4 { font-size: var(--fs-head); }
+h5, h6, small, sub, sup, table, caption, label, legend, option, optgroup { font-size: var(--fs-small); }
+sub, sup { vertical-align: baseline; }
 button, input, select, textarea { font: inherit; color: inherit; }
 code, kbd, samp, pre { font-family: var(--house-font); }
 a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; }
@@ -35,6 +39,59 @@ a { color: inherit; text-decoration-thickness: 1px; text-underline-offset: 3px; 
 /* 3 The frame: deep dark top bar; its buttons wear the frame's own light line. */
 header { background: var(--frame); color: var(--frame-ink); }
 header .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
+/* 3a The top bar (Lisa's pick A, 2 Nov 2026): ONE row, --house-head high on every page, desktop and phone; it never wraps or grows.
+   Left to right: Home icon (an empty place the same size on home), the hub's dot + name (centred from 768px up, see below; cut
+   short with ... when there is no room), a spacer (phones), the read time
+   (desktop), then icon-only buttons (Search, Refresh, Look, Sign out), each with a name for screen readers. Sign in stays a word
+   button. On a phone (600px or less) the read time and Sign out leave the bar and show inside the Look menu (toolkit.js builds
+   the menu and the one 24px outline icon set). */
+header.house-head { height: var(--house-head); min-height: var(--house-head); max-height: var(--house-head); padding-top: 0; padding-bottom: 0; }
+.house-row { display: flex; flex-wrap: nowrap; align-items: center; gap: var(--house-head-space); height: var(--house-head); padding-top: 0; padding-bottom: 0; min-width: 0; }
+.house-row > * { flex: none; }
+.house-row > h1 { flex: 0 1 auto; min-width: 0; margin: 0; font-size: var(--house-head-name); line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--frame-ink); }
+.house-row > h1 a { color: var(--frame-ink); text-decoration: none; }
+.house-row > h1 .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 8px; vertical-align: middle; position: relative; top: -2px; }
+.house-row > .house-sp { flex: 1 1 0; min-width: 0; }
+.house-slot { flex: none; width: var(--house-btn); height: var(--house-btn); }   /* the Dashboard has no Home icon: an empty place the same size */
+.house-row .house-read { font-size: var(--house-read-size); font-weight: 400; white-space: nowrap; color: var(--frame-ink); }
+.house-row .house-read:empty { display: none; }
+.house-row .btn { white-space: nowrap; }
+.btn.house-ib { width: var(--house-btn); min-width: var(--house-btn); height: var(--house-btn); padding: 0; gap: 0; justify-content: center; }
+.house-ib > svg { width: var(--house-icon); height: var(--house-icon); flex: none; fill: none; stroke: currentColor; stroke-width: var(--house-icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
+.lookwrap { position: relative; display: inline-flex; flex: none; }
+.house-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 40; width: min(var(--house-menu-w), calc(100vw - 32px)); background: var(--card); color: var(--ink);
+  border: var(--house-line) solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: var(--house-pad); display: flex; flex-direction: column; gap: 10px; text-align: left; font-size: var(--fs-body); }
+.house-menu[hidden] { display: none !important; }
+.house-menu .lrow { display: flex; flex-direction: column; gap: 4px; }
+.house-menu .flab { font-size: var(--house-min); font-weight: 600; color: var(--muted); }
+.house-menu .seg { display: flex; flex-wrap: wrap; gap: 4px; }
+.house-menu .seg button { background: var(--card); padding: 0 12px; display: inline-flex; align-items: center; }
+.house-menu .house-mread { margin: 0; font-size: var(--house-read-size); color: var(--muted); }
+header .btn.house-mitem { color: var(--ink); background: var(--card); border-color: var(--press); justify-content: flex-start; gap: 8px; }
+header .btn.house-mitem > svg { width: var(--house-icon); height: var(--house-icon); flex: none; }
+@media (hover: hover) { header .btn.house-mitem:hover { outline-color: var(--sel-bd); background-color: var(--hov); } }
+header [role="dialog"] :focus-visible { outline-color: var(--ink); }
+.house-phone { display: none !important; }
+/* The name's place (Lisa's pick A, 2 Nov 2026): on a laptop or tablet (768px and up) the hub's name sits in the middle of the bar,
+   the same spot on every page whatever icons sit left and right. It takes the room between them (so it can never overlap them,
+   and is cut short with ... first); toolkit.js pads its short side (--house-name-pl / -pr, used only here) so the words centre on the whole bar. On a phone it stays
+   left, straight after the Home icon (or the Dashboard's empty .house-slot). */
+@media (min-width: 768px) {
+  .house-row > h1 { flex: 1 1 0; box-sizing: border-box; text-align: center; padding-left: var(--house-name-pl, 0px); padding-right: var(--house-name-pr, 0px); }
+  html:not(.dash-locked) .house-row > .house-sp { display: none; }   /* signed out, auth.js hides the name off-screen: the spacer keeps Sign in right */
+}
+@media (max-width: 600px) {
+  .house-slot { width: var(--house-btn-phone); height: var(--house-btn-phone); }
+  .btn.house-ib { width: var(--house-btn-phone); min-width: var(--house-btn-phone); height: var(--house-btn-phone); }
+  .house-row .house-read, .house-row [data-house-read], .house-row :is([data-action="signout"], [data-signout]) { display: none !important; }
+  .house-phone { display: flex !important; }
+}
+
+/* 3b The page frame (Lisa, 2 Nov 2026): every page uses the full window. The top bar's row and each page's frame (.house-page)
+   keep the same side gap, --house-gutter (24px; 16px on a phone), so the bar, the page and the bottom tabs line up to the same
+   edges on every page. Inside, grids reflow; long text may keep a sensible line length inside its card. */
+header.house-head > .house-row, .house-page.house-page { box-sizing: border-box; width: auto; max-width: none; margin-left: 0; margin-right: 0;
+  padding-left: var(--house-gutter); padding-right: var(--house-gutter); }
 
 /* 4 Everything you press: one control line, 1px, 12px corners, 14px / 600, 36px (44px on a phone). Never starts out ink. */
 .btn, button.pill, a.pill, button.chip, a.chip, .ch, .fbtn, .achip, .more, .undo, .lk, .ico, .copy, .flagb, .subnav a, .seg button, .vsw button {
@@ -69,43 +126,121 @@ header .btn { color: var(--frame-ink); background: transparent; border-color: va
 :focus-visible { outline: var(--house-focus) solid var(--ink); outline-offset: 2px; }
 header :focus-visible { outline-color: var(--frame-ink); }
 
-/* 6 Bottom tabs (.house-tabs): deep dark bar, light tab buttons with no ring or outline. Hover and selected only widen the
-   small colour bar above the label (same height, so nothing moves). The tab's colour is --tc. */
-.house-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--frame-foot); border-top: 0; }
-.house-tabs > a, .house-tabs > button { position: relative; background: var(--card); color: var(--ink); border: 0; border-radius: var(--radius);
-  font-size: 13px; font-weight: 600; text-decoration: none; text-align: center; cursor: pointer; min-width: 0;
-  min-height: 54px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; padding: 4px 2px; }
-.house-tabs > a, .house-tabs > a:hover, .house-tabs > a[aria-current="page"], .house-tabs > button, .house-tabs > button:hover, .house-tabs > button[aria-current="page"] {
-  outline: none; box-shadow: none; border: 0; background: var(--card); }
-.house-tabs > :focus-visible { outline: var(--house-focus) solid var(--frame-ink); outline-offset: 2px; }
-.house-tabs .bar { display: block; min-width: 0; box-shadow: none; flex: none; width: var(--house-tab-bar); height: var(--house-tab-bar-h); border-radius: var(--radius); background: var(--tc, var(--c, var(--ljr-0))); opacity: .55; transition: width .15s ease-out, opacity .15s ease-out; }
-.house-tabs [aria-current="page"] .bar { width: var(--house-tab-bar-on); opacity: 1; }
-@media (hover: hover) { .house-tabs > :hover .bar { width: var(--house-tab-bar-on); opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .house-tabs .bar { transition: none; } }
-/* The tab count sits in the top-right corner on a desktop; on a phone it is in the flow beside the label (never over it). */
-.house-tabs .n, .house-tabs .cnt { position: absolute; top: 8px; right: 12px; }
-@media (max-width: 600px) {
-  .house-tabs > a, .house-tabs > button { min-height: 62px; flex-direction: row; flex-wrap: wrap; justify-content: center; align-content: center; gap: 4px; padding: 6px 2px; }
-  .house-tabs .bar { margin: 0 calc(50% - var(--house-tab-bar) / 2); }
-  .house-tabs [aria-current="page"] .bar { width: var(--house-tab-bar-phone); margin: 0 calc(50% - var(--house-tab-bar-phone) / 2); }
-  .house-tabs > * > :where(.ti, svg, .icon) { order: 1; }
-  .house-tabs .n, .house-tabs .cnt { position: static; order: 2; }
-  .house-tabs > * > :where(span, .lab):where(:not(.bar, .n, .cnt)) { order: 3; flex: 0 0 100%; text-align: center; line-height: 1.2; }   /* low weight: a page with room puts the count beside the label */
+/* 6 Bottom tabs (Lisa's picks, 2 Nov 2026): the SAME bar on every page. One row, --house-tabs-h high on a desktop and a phone, at most
+   6 tabs, More always last (anything else goes in its menu), Main always first, Decide second where there is one. Each tab is an icon
+   above one word, on a light tab on the deep frame. NO fills anywhere: not the tab, not the icon's round place.
+   At rest: grey icon, no ring, a short grey line. Hover and selected are ONE movement: the icon takes the tab's colour and the line
+   widens (--house-tab-bar to --house-tab-bar-on). A 1px ring in the tab's colour shows round the icon only on hover, focus and press.
+   The tab's slot (data-slot="0".."7") sets --c (icon and ring: --ljr-N-icon) and --f (the line: the bright --ljr-N). Main = slot 1:
+   ink icon (light in dark looks) and every colour in its line. Counts (768px and up) sit in the tab's top-right corner: a ring, no
+   fill, never moving; grey ring = waiting, rose ring (.need) = late or due today. On a phone a count is a dot (below). Markup (toolkit.js wires More):
+   <nav class="house-tabs"><a class="ht" data-slot="1" href="#/x" data-nav="x"><span class="bar"></span><span class="hic"><svg class="hi">..</svg></span>
+   <span class="htl">Main</span><span class="n"></span></a> ... <div class="ht-more"><button class="ht" data-slot="0" data-house-more
+   aria-expanded="false" aria-controls="houseMore">..More</button><div class="house-more" id="houseMore" hidden><a data-slot="0" ..>..</a></div></div></nav> */
+nav.house-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; margin: 0; max-width: none; box-sizing: border-box;
+  display: flex; flex-wrap: nowrap; justify-content: center; align-items: stretch; gap: var(--house-tabs-gap); overflow: visible;
+  height: calc(var(--house-tabs-h) + env(safe-area-inset-bottom, 0px)); min-height: 0;
+  padding: var(--house-tabs-gap) var(--house-tabs-gap) calc(var(--house-tabs-gap) + env(safe-area-inset-bottom, 0px));
+  background: var(--frame-foot); border: 0; box-shadow: none; }
+nav.house-tabs.hidden, nav.house-tabs[hidden], nav.house-tabs:empty { display: none !important; }
+nav.house-tabs > .ht, nav.house-tabs > .ht-more { flex: 1 1 var(--house-tab-max); min-width: min-content; max-width: var(--house-tab-max); }   /* one start size for all, so all grow and shrink alike */
+nav.house-tabs > .ht-more { position: relative; display: flex; }
+nav.house-tabs > .ht-more > .ht { width: 100%; }
+nav.house-tabs .ht { --c: var(--ljr-0-icon); --f: var(--ljr-0); position: relative; box-sizing: border-box; width: auto; height: 100%; min-height: 0; margin: 0;
+  padding: 6px 0 8px; border: 0; border-radius: var(--radius); outline: none; box-shadow: none; background: var(--card); color: var(--ink);
+  font-family: inherit; font-size: var(--fs-small); font-weight: 600; line-height: 16px; text-decoration: none; text-align: center; cursor: pointer; transform: none;
+  display: flex; flex-direction: column; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 1px; overflow: hidden; }
+nav.house-tabs .ht:hover, nav.house-tabs .ht[aria-current="page"], nav.house-tabs .ht[aria-expanded="true"] { background: var(--card); border: 0; box-shadow: none; outline: none; }
+nav.house-tabs .ht > .hic { box-sizing: border-box; flex: none; width: var(--house-tab-disc); height: var(--house-tab-disc); border-radius: 50%; display: grid; place-items: center;
+  border: var(--house-line) solid transparent; background: transparent; color: var(--ljr-0-icon); }
+nav.house-tabs .ht > .hic > :is(svg, .ti, i) { width: var(--house-tab-icon); height: var(--house-tab-icon); font-size: var(--house-tab-icon); line-height: 1; color: inherit;
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
+nav.house-tabs .ht > .htl { --px: 4px; display: block; margin: 0 var(--px); max-width: calc(100% - 2 * var(--px)); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; order: 0; flex: none; color: var(--ink); }
+nav.house-tabs .ht > .bar { position: absolute; left: 50%; bottom: 2px; margin: 0; width: var(--house-tab-bar); height: var(--house-tab-bar-h); border-radius: 2px;
+  background: var(--ljr-0); opacity: .6; transform: translateX(-50%); transition: width .15s ease-out, opacity .15s ease-out; box-shadow: none; min-width: 0; max-width: none; overflow: visible; }
+/* Hover and selected: one movement (the colour arrives, the line widens). */
+nav.house-tabs .ht:is([aria-current="page"], [aria-expanded="true"]) > .hic, nav.house-tabs .ht-more:has(.house-more [aria-current="page"]) > .ht > .hic { color: var(--c); }
+nav.house-tabs .ht:is([aria-current="page"], [aria-expanded="true"]) > .bar, nav.house-tabs .ht-more:has(.house-more [aria-current="page"]) > .ht > .bar { width: var(--house-tab-bar-on); opacity: 1; background: var(--f); }
+nav.house-tabs .ht:active > .hic, nav.house-tabs .ht:focus-visible > .hic { color: var(--c); border-color: var(--c); }
+nav.house-tabs .ht:focus-visible > .bar { width: var(--house-tab-bar-on); opacity: 1; background: var(--f); }
+@media (hover: hover) {
+  nav.house-tabs .ht:hover > .hic { color: var(--c); border-color: var(--c); }
+  nav.house-tabs .ht:hover > .bar { width: var(--house-tab-bar-on); opacity: 1; background: var(--f); }
 }
-@media (max-width: 600px) and (hover: hover) { .house-tabs > :hover .bar { width: var(--house-tab-bar-phone); margin: 0 calc(50% - var(--house-tab-bar-phone) / 2); } }
+nav.house-tabs .ht[data-slot="1"]:is([aria-current="page"], :focus-visible) > .bar { background: var(--ljr-rainbow); }
+@media (hover: hover) { nav.house-tabs .ht[data-slot="1"]:hover > .bar { background: var(--ljr-rainbow); } }
+@media (prefers-reduced-motion: reduce) { nav.house-tabs .ht > .bar { transition: none; } }
+nav.house-tabs .ht:focus-visible { outline: var(--house-focus) solid var(--frame-ink); outline-offset: 2px; }
+/* The tab count: top-right corner, ring only (grey = waiting, rose = late or due today), no fill, never moves. */
+nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt { position: absolute; top: 3px; right: 3px; left: auto; margin: 0; order: 0; box-sizing: border-box;
+  display: inline-flex; align-items: center; justify-content: center; width: var(--house-tab-count-w); min-width: var(--house-tab-count-w); height: var(--house-tab-count-h); min-height: var(--house-tab-count-h);
+  padding: 0 var(--house-tab-count-pad); border: var(--house-line) solid var(--house-ring); border-radius: calc(var(--house-tab-count-h) / 2); background: transparent; color: var(--ink);
+  font-size: var(--fs-small); font-weight: 600; line-height: var(--house-tab-count-lh); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: visible; }
+nav.house-tabs .ht > .n.wide, nav.house-tabs .ht > .cnt.wide { width: auto; padding: 0 4px; }
+nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { border-color: var(--house-late); background: transparent; }
+nav.house-tabs .ht > .n:empty, nav.house-tabs .ht > .cnt:empty { display: none !important; }
+/* Tabs are one size (Lisa's pick b, 2 Nov 2026); a tab never widens for its count. Phone (under 768px): close to square (at most the
+   bar's inner height, or the longest word's room, --house-tab-fit from toolkit.js, for every tab) and the count is a dot by the
+   icon's top-right corner: rose = late, grey = waiting, none at 0 (the tab's name says the number). */
+@media (max-width: 767.98px) {
+  nav.house-tabs > .ht, nav.house-tabs > .ht-more { max-width: max(calc(var(--house-tabs-h) - 2 * var(--house-tabs-gap)), var(--house-tab-fit, 0px)); }
+  nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt, nav.house-tabs .ht > .n.wide, nav.house-tabs .ht > .cnt.wide {
+    top: var(--house-tab-dot-top); right: auto; left: calc(50% + var(--house-tab-disc) / 2 + 1px);
+    width: var(--house-tab-dot); min-width: var(--house-tab-dot); height: var(--house-tab-dot); min-height: var(--house-tab-dot);
+    padding: 0; border: 0; border-radius: 50%; background: var(--house-ring); color: transparent; font-size: 0; line-height: 0; overflow: hidden; }
+  nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { background: var(--house-late); }
+}
+/* The More menu: opens above the bar, at its right end; the views that are not tabs. Same rules: grey icon at rest, the colour on hover
+   and where you are, no fills. */
+nav.house-tabs .house-more { position: absolute; right: 0; bottom: calc(100% + var(--house-tabs-gap) + 6px); z-index: 30; box-sizing: border-box;
+  width: max-content; min-width: 200px; max-width: calc(100vw - 16px); max-height: calc(100vh - var(--house-tabs-h) - var(--house-head) - 24px); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px; padding: 6px; margin: 0; background: var(--card); color: var(--ink);
+  border: var(--house-line) solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); text-align: left; }
+nav.house-tabs .house-more[hidden] { display: none !important; }
+nav.house-tabs .house-more > :is(a, button):not([data-slot]) { --c: var(--ljr-0-icon); }
+nav.house-tabs .house-more > :is(a, button) { position: relative; box-sizing: border-box; display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: var(--house-btn); margin: 0; padding: 0 10px; border: 0; border-radius: var(--radius); outline: none; box-shadow: none;
+  background: transparent; color: var(--ink); font-family: inherit; font-size: var(--house-press-size); font-weight: 600; line-height: 1.2;
+  text-decoration: none; text-align: left; white-space: nowrap; cursor: pointer; }
+nav.house-tabs .house-more > :is(a, button) > :is(svg, .ti, i):first-child { flex: none; width: 20px; height: 20px; font-size: 20px; line-height: 1; color: var(--ljr-0-icon);
+  fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+nav.house-tabs .house-more > [aria-current="page"] { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); }
+nav.house-tabs .house-more > [aria-current="page"] > :is(svg, .ti, i):first-child { color: var(--c); }
+@media (hover: hover) {
+  nav.house-tabs .house-more > :is(a, button):hover { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); background: transparent; }
+  nav.house-tabs .house-more > :is(a, button):hover > :is(svg, .ti, i):first-child { color: var(--c); }
+}
+nav.house-tabs .house-more > :focus-visible { outline: var(--house-focus) solid var(--ink); outline-offset: 0; }
+nav.house-tabs .house-more .n, nav.house-tabs .house-more .cnt { position: static; margin-left: auto; }
+nav.house-tabs .house-more .n.need, nav.house-tabs .house-more .cnt.need { background: transparent; }
+nav.house-tabs [data-slot="0"] { --c: var(--ljr-0-icon); --f: var(--ljr-0); }
+nav.house-tabs [data-slot="1"] { --c: var(--ljr-1-icon); --f: var(--ljr-1-icon); }
+nav.house-tabs [data-slot="2"] { --c: var(--ljr-2-icon); --f: var(--ljr-2); }
+nav.house-tabs [data-slot="3"] { --c: var(--ljr-3-icon); --f: var(--ljr-3); }
+nav.house-tabs [data-slot="4"] { --c: var(--ljr-4-icon); --f: var(--ljr-4); }
+nav.house-tabs [data-slot="5"] { --c: var(--ljr-5-icon); --f: var(--ljr-5); }
+nav.house-tabs [data-slot="6"] { --c: var(--ljr-6-icon); --f: var(--ljr-6); }
+nav.house-tabs [data-slot="7"] { --c: var(--ljr-7-icon); --f: var(--ljr-7); }
+nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon); }
+@media (max-width: 600px) {
+  nav.house-tabs { gap: 3px; padding-left: 3px; padding-right: 3px; }
+  nav.house-tabs .ht > .htl { --px: 2px; }
+  nav.house-tabs .house-more > :is(a, button) { min-height: var(--house-btn-phone); }
+}
 
-/* 7 Counts: ONE exact box, so 1 and 2 digits match in any font: 30 x 22, line 20px, radius 11px, padding 0 3px.
-   Only 3+ digits (class .wide) grow. Empty shows nothing (pages write "" for 0). "Needs you" = rose ring + tint. */
-.cnt, .house-tabs .n { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
+/* 7 Counts: ONE exact box, so 1 and 2 digits match in any font: 30 x 24, 14px words, line 22px, radius 12px, padding 0 3px.
+   Only 3+ digits (class .wide) grow. Empty shows nothing (pages write "" for 0). Ring only, no fill: grey = waiting, rose = late / needs you. */
+/* (The bottom tabs' counts are drawn in section 6.) */
+.cnt { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
   width: var(--house-count-w); min-width: var(--house-count-w); height: var(--house-count-h); min-height: var(--house-count-h);
   line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border: var(--house-line) solid var(--house-ring); border-radius: var(--house-count-r);
-  font-size: 13px; font-weight: 600; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
-.cnt.wide, .house-tabs .n.wide { width: auto; padding: 0 6px; overflow: visible; }
+  font-size: var(--fs-small); font-weight: 600; color: var(--ink); background: transparent; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; }
+.cnt.wide { width: auto; padding: 0 6px; overflow: visible; }
 .cnt:empty, .n:empty { display: none !important; }
-.cnt.need, .house-tabs .n.need { border-color: var(--house-late); background: var(--house-late-tint); }
+.cnt.need { border-color: var(--house-late); background: transparent; }
 
 /* 8 Date pills: always ringed. Grey ring + muted words; late = rose ring + tint, soon = amber ring + tint (ink words). */
-.dpill, .datep, span.date { display: inline-flex; align-items: center; height: var(--house-pill); padding: 0 8px; font-size: 13px; white-space: nowrap;
+.dpill, .datep, span.date { display: inline-flex; align-items: center; height: var(--house-pill); padding: 0 8px; font-size: var(--fs-small); white-space: nowrap;
   border: var(--house-line) solid var(--house-ring); border-radius: var(--radius); color: var(--muted); background: transparent; font-variant-numeric: tabular-nums; }
 :is(.dpill, .datep, span.date, label.date).late, :is(.dpill, .datep, span.date, label.date).over { border-color: var(--house-late); background: var(--house-late-tint); color: var(--ink); }
 :is(.dpill, .datep, span.date, label.date).soon { border-color: var(--house-soon); background: var(--house-soon-tint); color: var(--ink); }
@@ -114,15 +249,19 @@ header :focus-visible { outline-color: var(--frame-ink); }
 .card { background: var(--card); border: var(--house-line) solid var(--line); border-radius: var(--radius); padding: var(--house-pad); min-width: 0; }
 .house-stack { display: flex; flex-direction: column; gap: var(--house-gap); }
 
-/* 10 Colour bars: 3px down the left of a card or row; the column-title stage marker is 3 x 18. */
+/* 10 Colour bars (Lisa's pick, 2 Nov): 3px down the WHOLE left edge of a card or row, curved with the card's corner. Drawn as a left
+   border on a layer over the card's own box (so nothing moves): it runs the full height and bends round the corners like the card does.
+   --sc = the colour. --house-lbar-out = how far the layer sits over the card's own line (1px card line; 0 for a row with no side line).
+   The column-title stage marker is 3 x 18. */
 .house-lbar { position: relative; }
-.house-lbar::before { content: ""; position: absolute; left: 0; top: 10px; bottom: 10px; width: var(--house-bar); border-radius: var(--radius); background: var(--sc, var(--ljr-0)); }
+.house-lbar::before { content: ""; position: absolute; inset: calc(-1 * var(--house-lbar-out, var(--house-line))); box-sizing: border-box; pointer-events: none;
+  border: 0 solid transparent; border-left: var(--house-bar) solid var(--sc, var(--ljr-0)); border-radius: inherit; background: none; }
 .house-marker { width: var(--house-marker-w); height: var(--house-marker-h); border-radius: var(--radius); background: var(--sc, var(--ljr-0)); flex: none; }
 
 /* 11 Brand logo slot: 20 x 20, the logo or the brand's initials on a pale tint of its colour. The ONE radius exception:
    a 20 x 20 logo keeps a 4px corner (12px would turn it into a circle and crop square logos). */
 .bmark { width: var(--house-logo); height: var(--house-logo); flex: none; border-radius: 4px; display: inline-grid; place-items: center; }
-.bav { border: var(--house-line) solid var(--c, var(--press)); background: color-mix(in srgb, var(--c, var(--press)) var(--house-tint), var(--card)); color: var(--ink); font-size: 13px; font-weight: 600; line-height: 1; }
+.bav { border: var(--house-line) solid var(--c, var(--press)); background: color-mix(in srgb, var(--c, var(--press)) var(--house-tint), var(--card)); color: var(--ink); font-size: var(--fs-small); font-weight: 600; line-height: 1; }
 
 /* 12 Phone filters: one calm row. On a phone each filter group (.house-filters) folds behind one Filter button (.house-fbtn,
    toolkit.js opens it); on a desktop the button is hidden and the choices show inline. */
@@ -134,3 +273,65 @@ header :focus-visible { outline-color: var(--frame-ink); }
   .house-filters.open { flex-basis: 100%; }
 }
 .house-frow { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+/* 13 Clickable info (Lisa, 2 Nov 2026): every number, card, chip and row that gives info opens what it counts. a.house-go = a number,
+   summary card or heading that is itself a link. [data-open-row] = a row or card whose one .house-open control opens it; a click
+   anywhere on it presses that control (toolkit.js). No fills: the pointer, the 1px hover line and the 2px keyboard ring only. */
+a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
+[data-open-row] { cursor: pointer; }
+@media (hover: hover) { a.house-go:hover, [data-open-row]:hover { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); } }
+[data-open-row]:has(.house-open:focus-visible) { outline: var(--house-focus) solid var(--ink); outline-offset: 2px; }
+/* When the icon font cannot load, an icon-only button shows its name as a word (toolkit.js adds .house-iw). */
+.house-noicons button > i.ti:empty, .house-noicons a > i.ti:empty { display: none; }
+.house-iw { font-size: var(--fs-small); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
+/* A square icon control grows to fit its word (never past its row), so the word never spills outside the page. */
+.house-noicons :is(a, button):has(> .house-iw) { width: auto; min-width: var(--house-ctl-h, 36px); max-width: 100%; padding-left: 8px; padding-right: 8px; }
+
+/* 14 Hub Main (Lisa's house style, 2 Nov 2026): every hub's Main is Next, Needs you (at most 5 rows), then the hub's 3 numbers.
+   Built by toolkit.js DashKit.hubMain, so the seven hubs look and behave the same. Next is the white card with the 1px ink edge;
+   Needs you rows carry a 3px bar (rose late, amber today, grey waiting) and their action button; the numbers are 14px house counts
+   (late ones wear the rose ring, the others none). */
+.hm { display: flex; flex-direction: column; gap: var(--house-gap); min-width: 0; }
+.hm > .card, .hm .hm-nums > .card { margin: 0; } /* the flex gap is the one 12px between cards (a hub's own .card margin would double it) */
+.hm h3 { margin: 0; font-size: var(--fs-head); font-weight: 600; line-height: 1.3; }
+.hm .hm-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.hm .hm-head h3 a { color: inherit; text-decoration: none; }
+.hm-next[class] { border-color: var(--ink); background: var(--card); gap: 8px; }
+.hm-what { margin: 0; font-size: var(--fs-body); font-weight: 600; overflow-wrap: anywhere; }
+.hm-what a, .hm-t a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.hm-sub, .hm-t small { margin: 0; display: block; font-size: var(--fs-small); color: var(--muted); overflow-wrap: anywhere; }
+.hm-go { display: flex; gap: 8px; flex-wrap: wrap; }
+.hm .btn.hm-a { text-decoration: none; color: var(--ink); flex: none; }
+.hm-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.hm-row { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 0 6px 12px; border-radius: var(--radius); min-width: 0; }
+.hm-row.house-lbar { --house-lbar-out: 0px; --sc: var(--house-ring); }
+/* Inside a list the bar is a plain straight 3px line, never a "(" bracket per row (Lisa, 2 Nov): rows are square; and nothing moves
+   on hover, focus or press (the hover line is an outline, house section 13), so every row keeps one left edge. */
+.hm-row.house-lbar, .hm-row.house-lbar::before { border-radius: 0; }
+.hm-row, .hm-row:hover, .hm-row:focus-within, .hm-row:active { margin: 0; padding: 6px 0 6px 12px; border-width: 0; }
+.hm-row[data-kind="late"] { --sc: var(--house-late); }
+.hm-row[data-kind="today"] { --sc: var(--house-soon); }
+.hm-t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.hm-more { align-self: flex-start; color: var(--ink); font-size: var(--fs-small); text-decoration: underline; text-underline-offset: 2px; padding: 4px 0; }
+.hm-empty[class], .hm-fail[class] { flex-direction: row; align-items: center; gap: 12px; }
+.hm-fail[class] { flex-direction: column; align-items: flex-start; border-color: var(--house-risk); }
+.hm-fail .note { margin: 0; }
+.hm-ok { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: var(--house-line) solid var(--house-ok); background: var(--house-ok-tint); color: var(--ink); font-size: var(--fs-small); font-weight: 600; }
+.hm-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--house-gap); min-width: 0; }
+.hm-nums > :not(.hm-n) { grid-column: 1 / -1; }
+a.hm-n[class] { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: var(--house-pad); color: var(--ink); text-decoration: none; min-width: 0; }
+/* One group, one size (Lisa, 2 Nov): all three numbers 18px / 600 on one baseline, each in the same box; a late one (above 0) wears a
+   rose ring sized to that number, the others no ring. Hover and press: a 1px ring only (the hub's colour where it has one); no fill. */
+.hm-v { box-sizing: border-box; display: inline-flex; align-items: center; height: 28px; padding: 0 6px; margin-left: -6px; border: var(--house-line) solid transparent;
+  border-radius: var(--radius); font-size: var(--fs-figure); font-weight: 600; line-height: 26px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.hm-v.need { border-color: var(--house-late); }
+.hm a.hm-n[class], .hm a.hm-n[class]:hover, .hm a.hm-n[class]:focus, .hm a.hm-n[class]:active { background: var(--card); box-shadow: none; transform: none; }
+.hm a.hm-n[class]:focus:not(:focus-visible) { outline: none; }
+@media (hover: hover) { .hm a.hm-n[class]:hover { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); } }
+.hm a.hm-n[class]:active { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
+.hm-l { font-size: var(--fs-small); color: var(--muted); line-height: 1.3; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .hm-row { flex-wrap: wrap; }
+  .hm-t { flex-basis: calc(100% - 8px); }
+  .hm .btn.hm-a { min-height: 44px; }
+}

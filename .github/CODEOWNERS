@@ -1,0 +1,12 @@
+# Delete-code paths (TidyUp Hub stage 1). A change here needs the owner's review
+# once branch protection turns on "Require review from Code Owners" (Lisa's or SYS-CD's setting).
+# Bin and ledger code lives in index.html; the safety specs guard it.
+/index.html                                  @ljoyrose
+/tests/mocked/bin-safety.spec.js             @ljoyrose
+/tests/mocked/bin-guard.spec.js              @ljoyrose
+/tests/mocked/cleanup-safety.spec.js         @ljoyrose
+/tests/mocked/excluded-drive.spec.js         @ljoyrose
+/tests/mocked/no-empty-trash.spec.js         @ljoyrose
+/tests/mocked/personal-and-drive-check.spec.js @ljoyrose
+/tests/mocked/codeowners.spec.js             @ljoyrose
+/.github/CODEOWNERS                          @ljoyrose

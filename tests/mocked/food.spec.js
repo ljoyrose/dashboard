@@ -52,30 +52,43 @@ async function sheets(page, b, opts = {}) {
 async function open(page, hash) {
   await page.goto('food/' + (hash || '#/home'));
   await page.locator('#view [data-action="signin"]').click();
-  await expect(page.locator('#view .needs')).toBeVisible();
+  await expect(page.locator('#view .needs, #view [data-hub-main]').first()).toBeVisible();
 }
 
 test.describe('GA Hub page', () => {
-  test('signed out: only a sign-in button, no tabs; signed in: "Needs you: 3", tiles, and one main card (price change first)', async ({ page }) => {
+  test('privacy: no email address in food/index.html; the sign-in hint comes from config.js', async ({ page }) => {
+    expect(SRC.match(/[\w.+-]+@[\w-]+\.[\w.-]+/g) || []).toEqual([]);
+    await sheets(page, book());
+    await page.goto('food/');
+    await page.locator('#view [data-action="signin"]').click();
+    await expect(page.locator('#tabs')).toBeVisible();
+    const req = await page.evaluate(() => window.__GIS_LAST_REQUEST);
+    const owner = await page.evaluate(() => (window.DASH_CONFIG.money || {}).owner);
+    expect(req.login_hint).toBe(owner);
+  });
+  test('signed out: only a sign-in button, no tabs; signed in: Main with Owe GA, Do lists the 3 cards (price change first), payment date on Invoices', async ({ page }) => {
     await sheets(page, book());
     await page.goto('food/');
     await expect(page.locator('#view')).toContainText('Sign in to see the GA Hub');
     await expect(page.locator('#tabs')).toBeHidden();
     await page.locator('#view [data-action="signin"]').click();
     await expect(page.locator('#tabs')).toBeVisible();
-    await expect(page.locator('#view .needs')).toHaveText('Needs you: 3');
+    await expect(page.locator('#view [data-hub-main="food"]')).toBeVisible();
     await expect(page.locator('#n-home')).toHaveText('3');
-    await expect(page.locator('#view > .card')).toHaveCount(1);
-    await expect(page.locator('#view > .card h2')).toContainText('GA price up');
-    await expect(page.locator('#view .tile').first()).toContainText('£50.42');   // owed: the unpaid invoice only
-    await expect(page.locator('#view .tiles')).toContainText('06/12/2026');
+    await expect(page.locator('#view a.hm-n[data-k="Owe GA"] .hm-v')).toHaveText('£50.42');   // owed: the unpaid invoice only
     await expect(page.locator('#stamp')).toHaveText('TEST');
+    await page.goto('food/#/do');
+    await expect(page.locator('#view .needs')).toHaveText(/^Do\s*3$/);
+    await expect(page.locator('#view > .card[data-key]')).toHaveCount(3);
+    await expect(page.locator('#view > .card[data-key] h2').first()).toContainText('GA price up');
+    await page.goto('food/#/invoices');
+    await expect(page.locator('#view a.tile', { hasText: 'Next GA payment due' })).toContainText('06/12/2026');
   });
 
   test('Apply writes ONLY the 4 answer cells of that row (answer, note, when, who), then Undo clears them', async ({ page }) => {
     const writes = await sheets(page, book());
-    await open(page);
-    await page.locator('#view > .card button[data-v="Apply"]').click();
+    await open(page, '#/do');
+    await page.locator('#view .card[data-key^="PRICE-"] button[data-v="Apply"]').click();
     await expect(page.locator('#view .sent')).toContainText('Apply');
     expect(writes).toHaveLength(1);
     expect(writes[0].range).toBe('Cards!G2:J2');
@@ -88,8 +101,8 @@ test.describe('GA Hub page', () => {
 
   test('a moved row is not overwritten: the old values go back and the page says refresh', async ({ page }) => {
     const writes = await sheets(page, book(), { moved: true });
-    await open(page);
-    await page.locator('#view > .card button[data-v="Apply"]').click();
+    await open(page, '#/do');
+    await page.locator('#view .card[data-key^="PRICE-"] button[data-v="Apply"]').click();
     await expect(page.locator('#banner')).toContainText('the list changed');
     expect(writes).toHaveLength(0);
   });
@@ -103,14 +116,120 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('nav.tabs a[data-nav="orders"]')).toHaveAttribute('aria-current', 'page');
   });
 
-  test('a GA statement on file: its balance is the Owed figure on Home and the first tile on Invoices', async ({ page }) => {
+  // G1 (Lisa, 30 Oct 2026): the low-profit warning is under £8. The value is read from MIN_PROFIT; a blank cell means 8.
+  test('low profit: blank MIN_PROFIT means £8; under 8 is flagged, exactly 8 and over are not; a typed value still wins', async ({ page }) => {
+    const b = book(), row = (no, p) => [no, 'Shopify', 'DDF', 'GA', 'Invoiced', '', '', '1', '', '', '', '', '', p, '', '', '', '', '', '', '', 'One-off (Online Store)', '', '', '', '[]', 'Matched'];
+    b.orders = [b.orders[0], row('9101', '7.99'), row('9102', '8.00'), row('9103', '8.01')];
+    b.settings = b.settings.filter((s) => s[0] !== 'MIN_PROFIT');
+    await sheets(page, b);
+    await open(page, '#/review');
+    await expect(page.locator('#view > .tiles')).toContainText('Under £8 profit');
+    await expect(page.locator('#view .tile', { hasText: 'Under £8 profit' }).locator('.v')).toHaveText('1');
+    await page.goto('food/#/orders');
+    await page.locator('[data-ofilter="low"]').click();
+    await expect(page.locator('#view .row')).toHaveCount(1);
+    await expect(page.locator('#view .row')).toContainText('#9101');
+    await expect(page.locator('#view .row .amt.red')).toHaveText('£7.99');
+  });
+  test('low profit: MIN_PROFIT typed as 8 gives the same line; typed as 10 moves it (never hard-coded)', async ({ page }) => {
+    const b = book(), row = (no, p) => [no, 'Shopify', 'DDF', 'GA', 'Invoiced', '', '', '1', '', '', '', '', '', p, '', '', '', '', '', '', '', 'One-off (Online Store)', '', '', '', '[]', 'Matched'];
+    b.orders = [b.orders[0], row('9101', '7.99'), row('9102', '8.00'), row('9103', '9.50')];
+    b.settings = b.settings.map((s) => (s[0] === 'MIN_PROFIT' ? ['MIN_PROFIT', '8', ''] : s));
+    await sheets(page, b);
+    await open(page, '#/review');
+    await expect(page.locator('#view .tile', { hasText: 'Under £8 profit' }).locator('.v')).toHaveText('1');
+    b.settings = b.settings.map((s) => (s[0] === 'MIN_PROFIT' ? ['MIN_PROFIT', '10', ''] : s));
+    await page.locator('#refresh').click();
+    await expect(page.locator('#view .tile', { hasText: 'Under £10 profit' }).locator('.v')).toHaveText('3');
+  });
+  // G2 (Lisa, 30 Oct 2026): MIN_ORDERS_MONTH blank = no orders warning; set = an "Orders this month" tile, red when under it.
+  test('orders this month: blank MIN_ORDERS_MONTH shows no tile; set, it counts paid orders in the last 30 days (not cancelled, not older) and goes red under the aim', async ({ page }) => {
+    const day = (n) => new Date(Date.now() - n * 864e5).toISOString();
+    const row = (no, at, status) => [no, 'Shopify', 'DDF', 'GA', status || 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '', '1', at, '[]', 'Waiting for GA'];
+    const b = book();
+    b.orders = [b.orders[0], row('9201', day(2)), row('9202', day(29)), row('9203', day(31)), row('9204', day(5), 'Cancelled')];
+    await sheets(page, b);
+    await open(page, '#/review');
+    await expect(page.locator('#view .tile', { hasText: 'Orders this month' })).toHaveCount(0);
+    b.settings = b.settings.concat([['MIN_ORDERS_MONTH', '3', '']]);
+    await page.locator('#refresh').click();
+    const tile = page.locator('#view .tile', { hasText: 'Orders this month' });
+    await expect(tile).toContainText('aim 3');
+    await expect(tile.locator('.v')).toHaveText('2');
+    await expect(tile.locator('.v')).toHaveClass(/red/);
+    b.settings = b.settings.map((x) => (x[0] === 'MIN_ORDERS_MONTH' ? ['MIN_ORDERS_MONTH', '2', ''] : x));
+    await page.locator('#refresh').click();
+    await expect(tile).toContainText('aim 2');
+    await expect(tile.locator('.v')).not.toHaveClass(/red/);
+  });
+  // G3 (Lisa, 30 Oct 2026): order growth leads (on Review since the Hub Mains, 2 Nov 2026). Invented orders only; nothing is written, sent or discounted.
+  const growRow = (no, daysAgo, type, nth, status) => [no, 'Shopify', 'DDF', 'GA', status || 'Shipped', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', type, '', String(nth || 1), new Date(Date.now() - daysAgo * 864e5).toISOString(), '[]', 'Shipped'];
+  function growBook(rows, extra) { const b = book(); b.orders = [b.orders[0]].concat(rows); b.settings = b.settings.concat(extra || []); return b; }
+  test('grow orders leads Review: trend on the 30 days before, repeat and subscription share, all from the Orders tab', async ({ page }) => {
+    const writes = await sheets(page, growBook([
+      growRow('9301', 1, 'Subscription (PayWhirl)', 4), growRow('9302', 3, 'One-off (Online Store)', 2), growRow('9303', 10, 'One-off (Online Store)', 1), growRow('9304', 20, 'Subscription (PayWhirl)', 3),
+      growRow('9305', 35, 'One-off (Online Store)', 1), growRow('9306', 50, 'One-off (Online Store)', 1), growRow('9307', 2, 'One-off (Online Store)', 1, 'Cancelled')]));
+    await open(page, '#/review');
+    const first = page.locator('#view > .needs + *');   // the first thing under the Review heading
+    await expect(first).toHaveClass(/growth/);
+    const tiles = page.locator('#view .growth .tile');
+    await expect(tiles.nth(0)).toContainText('Orders, last 30 days4up 2 on the 30 days before');
+    await expect(tiles.nth(0).locator('.v')).not.toHaveClass(/red/);
+    await expect(tiles.nth(1)).toContainText('Repeat orders75%');   // 3 of 4 from customers on their 2nd order or more
+    await expect(tiles.nth(2)).toContainText('Subscriptions50%');
+    expect(writes).toHaveLength(0);
+  });
+  test('reorder due: one-off orders over REORDER_DUE_DAYS (default 35) old, oldest first, each with only the Shopify button; subscriptions and recent orders left out', async ({ page }) => {
+    const b = growBook([growRow('9311', 36, 'One-off (Online Store)', 1), growRow('9312', 50, 'One-off (Online Store)', 2), growRow('9313', 40, 'Subscription (PayWhirl)', 3), growRow('9314', 20, 'One-off (Online Store)', 1), growRow('9315', 70, 'One-off (Online Store)', 1)]);
+    b.orders[1][20] = 'https://www.dpd.co.uk/service/tracking?parcel=SAMPLE';
+    await sheets(page, b);
+    await open(page, '#/review');
+    const rows = page.locator('#reorder .row');
+    await expect(rows).toHaveCount(2);
+    await expect(rows.nth(0)).toContainText('Order #9312');
+    await expect(rows.nth(0)).toContainText("50 days ago · customer's 2nd order");
+    await expect(rows.nth(1)).toContainText('Order #9311');
+    await expect(rows.nth(1).locator('a.btn')).toHaveCount(1);   // no Track button: the Shopify button only
+    await expect(rows.nth(1).locator('a.btn')).toHaveAttribute('href', 'https://admin.shopify.com/store/samplestore/orders?query=9311');
+    b.settings = b.settings.concat([['REORDER_DUE_DAYS', '45', '']]);
+    await page.locator('#refresh').click();
+    await expect(page.locator('#reorder')).toContainText('over 45 days old');
+    await expect(rows).toHaveCount(2);   // the window moves to 45-75 days: #9315 (70) comes in, #9311 (36) drops out
+    await expect(rows.nth(0)).toContainText('Order #9315');
+    await expect(rows.nth(1)).toContainText('Order #9312');
+  });
+  test('the Grow orders card picks the biggest gap: falling orders, then customers due to reorder, then few subscriptions; See who goes to the list', async ({ page }) => {
+    const one = 'One-off (Online Store)', sub = 'Subscription (PayWhirl)';
+    // falling: 1 now against 4 before (gap 3) beats 1 customer due to reorder and 1 one-off order
+    let b = growBook([growRow('9321', 5, one), growRow('9322', 36, one), growRow('9323', 40, sub), growRow('9324', 45, sub), growRow('9325', 50, sub)]);
+    await sheets(page, b);
+    await open(page, '#/review');
+    await expect(page.locator('#view .card.grow h2')).toHaveText('Orders are down 3 on the 30 days before');
+    await expect(page.locator('#view .card.grow a.btn')).toHaveAttribute('href', 'https://admin.shopify.com/store/samplestore/orders');
+    // reorder: 3 due, no fall
+    b = growBook([growRow('9331', 2, sub), growRow('9332', 3, sub), growRow('9333', 4, one), growRow('9334', 36, one), growRow('9335', 37, one), growRow('9336', 38, one)]);
+    await page.unroute(/sheets/); await sheets(page, b); await page.locator('#refresh').click();
+    await expect(page.locator('#view .card.grow h2')).toHaveText('3 one-off orders are due a reorder');
+    await page.locator('#view .card.grow [data-action="reorder"]').click();
+    await expect(page.locator('#reorder')).toBeInViewport();
+    // few subscriptions: 4 one-off orders now, none before, nobody due
+    b = growBook([growRow('9341', 1, one), growRow('9342', 2, one), growRow('9343', 3, one), growRow('9344', 4, one)]);
+    await page.unroute(/sheets/); await sheets(page, b); await page.locator('#refresh').click();
+    await expect(page.locator('#view .card.grow h2')).toHaveText('Only 0% of orders are subscriptions');
+    await expect(page.locator('#view .card.grow a.btn')).toHaveAttribute('href', 'https://admin.shopify.com/store/samplestore/customers');
+    // nothing to fix
+    b = growBook([growRow('9351', 1, sub), growRow('9352', 2, sub)]);
+    await page.unroute(/sheets/); await sheets(page, b); await page.locator('#refresh').click();
+    await expect(page.locator('#view .card.grow')).toHaveCount(0);   // one empty line per view (Lisa, 2 Nov): no gap, no Grow card
+  });
+  test('a GA statement on file: its balance is the first tile on Invoices; Main\'s Owe GA stays the unpaid invoices', async ({ page }) => {
     const b = book(); b.statements = [['statement_date', 'total_outstanding', 'file_id'], ['2026-10-19', '1234.56', '']];
     await sheets(page, b);
     await open(page);
-    await expect(page.locator('#view .tile').first()).toContainText('£1234.56');
-    await expect(page.locator('#view .tile').first()).toContainText('statement 19/10/2026');
+    await expect(page.locator('#view a.hm-n[data-k="Owe GA"] .hm-v')).toHaveText('£50.42');   // the same figure as the Dashboard's Food tile
     await page.goto('food/#/invoices');
     await expect(page.locator('#view .tile').first()).toContainText('GA statement 19/10/2026');
+    await expect(page.locator('#view .tile').first()).toContainText('£1234.56');
   });
 
   test('Invoices: owed, unpaid count, the year totals, and a PDF link to Drive', async ({ page }) => {
@@ -120,6 +239,61 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view .tile').nth(1)).toContainText('1');
     await expect(page.locator('#view .tiles')).toContainText('Direct debit');
     await expect(page.locator('#view a[aria-label="Open SI-1000001"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/FILE000000000000000000001/view');
+  });
+
+  // VAT invoices (engine v1.15): numbers, order numbers, status chips and an Open button built from the sheet's file id. Every value is invented.
+  function vatBook(on) {
+    const b = book(), h = b.orders[0].concat(['sent_at', 'order_route', 'xml_status', 'vat_inv_no', 'vat_inv_status', 'vat_inv_file_id', 'vat_inv_at']), pad = (r) => r.concat(Array(h.length - r.length).fill(''));
+    b.orders = [h].concat(b.orders.slice(1).map(pad));
+    const set = (no, v) => { const r = b.orders.find((x) => x[0] === no); h.slice(-4).forEach((c, i) => { r[h.indexOf(c)] = v[i]; }); };
+    set('9001', ['261030-9001', 'drafted', 'FAKEVAT0000000000000000001', '2026-10-30']);
+    set('9002', ['', 'dry-run', '', '2026-10-30']);
+    set('9003', ['', 'held: NO_TAX', '', '2026-10-30']);
+    set('9004', ['', 'none: refunded', '', '2026-10-30']);
+    b.settings = b.settings.concat([['VAT_INVOICES', on ? 'ON' : 'OFF', '']]);
+    return b;
+  }
+  test('Invoices: VAT invoices card lists numbers and order numbers with status chips, Open uses the sheet file id, waiting count', async ({ page }) => {
+    await sheets(page, vatBook(true));
+    await open(page, '#/invoices');
+    const grp = page.locator('#view .grp', { hasText: 'VAT invoices' });
+    await expect(grp).toBeVisible(); await expect(grp.locator('.cnt')).toHaveText('2');
+    const card = grp.locator('xpath=following-sibling::div[contains(@class,"card")][1]');
+    await expect(card.locator('.row')).toHaveCount(3);   // "none: refunded" is not listed
+    await expect(card.locator('.row').nth(0)).toContainText('Held'); await expect(card.locator('.row').nth(0)).toContainText('Shopify gave no tax lines');
+    await expect(card.locator('.row').nth(1)).toContainText('Dry run'); await expect(card.locator('.row').nth(1)).toContainText('order #9002');
+    await expect(card.locator('.row').nth(2)).toContainText('261030-9001'); await expect(card.locator('.row').nth(2)).toContainText('Draft in Gmail');
+    await expect(page.locator('#view a[aria-label="Open 261030-9001"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/FAKEVAT0000000000000000001/view');
+    await expect(card.locator('a.btn')).toHaveCount(1);
+    await expect(page.locator('#view')).toContainText('2 ticked orders waiting');
+    await page.screenshot({ path: 'test-results/food-vat-invoices.png', fullPage: true });
+  });
+  test('Invoices: VAT invoices off and none made -> one plain "off" line; the GA invoices below are unchanged', async ({ page }) => {
+    await sheets(page, book());
+    await open(page, '#/invoices');
+    await expect(page.locator('#view')).toContainText('VAT invoices are off');
+    await expect(page.locator('#view a[aria-label="Open SI-1000001"]')).toBeVisible();
+  });
+  // Commercial invoices (engine v1.15 module, orders sent outside the UK) share the vat_inv_* columns, with inv_doc = COMMERCIAL. Invented values only.
+  test('Invoices: commercial invoices show a Commercial badge; saved = waiting for the GA SI number, drafted = draft to GA', async ({ page }) => {
+    const b = vatBook(true), h = b.orders[0]; h.push('other_lines', 'line_flag', 'inv_doc'); b.orders = [h].concat(b.orders.slice(1).map((r) => r.concat(['', '', ''])));
+    const set = (no, v) => { const r = b.orders.find((x) => x[0] === no); ['vat_inv_no', 'vat_inv_status', 'vat_inv_file_id', 'vat_inv_at', 'inv_doc'].forEach((c, i) => { r[h.indexOf(c)] = v[i]; }); };
+    set('9003', ['261030-9003', 'saved', 'FAKECI00000000000000000003', '2026-10-30', 'COMMERCIAL']);
+    set('9002', ['261030-9002', 'drafted', 'FAKECI00000000000000000002', '2026-10-30', 'COMMERCIAL']);
+    await sheets(page, b);
+    await open(page, '#/invoices');
+    const card = page.locator('#view .grp', { hasText: 'VAT invoices' }).locator('xpath=following-sibling::div[contains(@class,"card")][1]');
+    const r3 = card.locator('.row', { hasText: '261030-9003' }), r2 = card.locator('.row', { hasText: '261030-9002' }), r1 = card.locator('.row', { hasText: '261030-9001' });
+    await expect(r3).toContainText('Commercial'); await expect(r3).toContainText('Waiting for GA SI no.');
+    await expect(r2).toContainText('Commercial'); await expect(r2).toContainText('Draft to GA in Gmail');
+    await expect(r1).not.toContainText('Commercial'); await expect(r1).toContainText('Draft in Gmail');
+    await expect(page.locator('#view a[aria-label="Open 261030-9003"]')).toHaveAttribute('href', 'https://drive.google.com/file/d/FAKECI00000000000000000003/view');
+    await page.screenshot({ path: 'test-results/food-commercial-invoices.png', fullPage: true });
+  });
+  test('the page holds no Drive id for VAT invoices and reads the vat_inv_* columns by name', async () => {
+    expect(SRC).toContain("'Orders!A1:AZ'");
+    expect(SRC).toMatch(/o\.vat_inv_file_id/);
+    expect(SRC).not.toMatch(/drive\.google\.com\/file\/d\/[A-Za-z0-9_-]{20,}/);
   });
 
   test('Products: filter chips and search', async ({ page }) => {
@@ -144,8 +318,7 @@ test.describe('GA Hub page', () => {
     await expect(row.locator('a', { hasText: 'Track' })).toHaveAttribute('href', 'https://www.dpd.co.uk/service/tracking?postcode=AA11AA&sendersRef=S1000001');
     await expect(row.locator('a', { hasText: 'Shopify' })).toHaveAttribute('href', 'https://admin.shopify.com/store/samplestore/orders?query=9001');
     await expect(page.locator('#view .row', { hasText: '#9002' }).locator('a', { hasText: 'Track' })).toHaveCount(0);   // no tracking link yet
-    await page.goto('food/#/home');
-    await page.locator('#view .more').click();
+    await page.goto('food/#/do');
     await expect(page.locator('#view .card', { hasText: 'Order #9001' })).toContainText('Subscription (PayWhirl)');
   });
 
@@ -164,19 +337,21 @@ test.describe('GA Hub page', () => {
   });
 
   test('spacing: tiles, cards and headings in the view never touch (same 14px gap as the main column)', async ({ page }) => {
-    await sheets(page, book());
-    await open(page);
-    const gap = await page.evaluate(() => { const t = document.querySelector('#view .tiles').getBoundingClientRect(), c = document.querySelector('#view > .card').getBoundingClientRect(); return c.top - t.bottom; });
+    const one = 'One-off (Online Store)';
+    await sheets(page, growBook([growRow('9361', 1, one), growRow('9362', 2, one)]));   // few subscriptions: a Grow card under the tiles
+    await open(page, '#/review');
+    const gap = await page.evaluate(() => { const t = document.querySelector('#view .growth > .tiles'), c = t.nextElementSibling; return c && c.classList.contains('card') ? c.getBoundingClientRect().top - t.getBoundingClientRect().bottom : null; });
+    expect(gap).not.toBeNull();
     expect(gap).toBeGreaterThanOrEqual(12);
   });
 
-  test('order check: every order shows if it reached GA; Home counts the ones not at GA (late in red); filters; a missing order card has a Portal button', async ({ page }) => {
+  test('order check: every order shows if it reached GA; Orders counts the ones not at GA (late in red); filters; a missing order card has a Portal button', async ({ page }) => {
     const b = book(); b.cards.push(['MISSING-9003', 'check', 'Orders', 'Order #9003: not shipped by GA', JSON.stringify({ red: true }), ago(5)]);
     await sheets(page, b);
-    await open(page);
+    await open(page, '#/orders');
     await expect(page.locator('#view a.tile[href="#/orders?check"]')).toContainText('2 (1 late)');
     await expect(page.locator('#view a.tile[href="#/orders?check"] .v')).toHaveClass(/red/);
-    await page.locator('#view .more').click();
+    await page.goto('food/#/do');
     const card = page.locator('#view .card', { hasText: 'Order #9003' });
     await expect(card.locator('a', { hasText: 'GA Portal' })).toHaveAttribute('href', 'https://partners.example.test');
     await page.goto('food/#/orders');
@@ -190,6 +365,19 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view .row')).toHaveCount(2);   // waiting + late
     await page.locator('[data-ofilter="sub"]').click();
     await expect(page.locator('#view .row')).toHaveCount(1);
+  });
+
+  test('Fish Treats (engine v1.14.1): a fish-only order waits as "Pack at home" until Lisa taps Packed; "No GA items" no longer claims it was packed', async ({ page }) => {
+    const b = book(), blank = n => Array(n).fill('');
+    b.orders.push(['9201', 'Shopify', 'DDF', 'GA', 'Placed', ...blank(19), '2026-10-30T10:00:00Z', '[]', 'Pack at home']);
+    b.orders.push(['9202', 'Shopify', 'DDF', 'GA', 'Placed', ...blank(19), '2026-10-30T10:00:00Z', '[]', 'Packed at home']);
+    b.orders.push(['9203', 'Shopify', 'DDF', 'GA', 'Placed', ...blank(19), '2026-10-30T10:00:00Z', '[]', 'No GA items']);
+    await sheets(page, b);
+    await open(page, '#/orders');
+    await expect(page.locator('#view .row', { hasText: '#9201' }).locator('.badge')).toHaveText('🏠 Pack at home: tap Packed once posted');
+    await expect(page.locator('#view .row', { hasText: '#9202' }).locator('.badge')).toHaveText('🏠 Packed at home');
+    await expect(page.locator('#view .row', { hasText: '#9203' }).locator('.badge')).toHaveText('📭 No GA items: see its card');
+    await expect(page.locator('#view')).not.toContainText('Packed at home (no GA items)');
   });
 
   test('order codes: a partner shows by name (or its type), a resend shows as a replacement, and the GA tab lists the codes to type on the Portal', async ({ page }) => {
@@ -217,9 +405,9 @@ test.describe('GA Hub page', () => {
   test('a "Send to GA?" card: Send writes only the 4 answer cells with the answer "Send"', async ({ page }) => {
     const b = book(); b.cards = [['SEND-9100', 'send', 'Orders', 'Send order #9100 to GA?', JSON.stringify({ why: '1 x AAA0012KZPSXZZZ' }), ago(5)]];
     const writes = await sheets(page, b);
-    await open(page);
-    await expect(page.locator('#view > .card h2')).toHaveText('Send order #9100 to GA?');
-    await page.locator('#view > .card button[data-v="Send"]').click();
+    await open(page, '#/do');
+    await expect(page.locator('#view > .card[data-key] h2')).toHaveText('Send order #9100 to GA?');
+    await page.locator('#view .card[data-key="SEND-9100"] button[data-v="Send"]').click();
     await expect.poll(() => writes.length).toBe(1);
     expect(writes[0].range).toBe('Cards!G2:J2');
     expect(writes[0].body.values[0][0]).toBe('Send');
@@ -286,8 +474,10 @@ function audit() {
     const bw = ['Top', 'Right', 'Bottom', 'Left'].map((k) => parseFloat(s['border' + k + 'Width']) || 0);
     if (Math.max(...bw) > 1) out.line.push(name(el) + ' ' + bw.join('/'));
     const rad = s.borderTopLeftRadius;
-    const pill = el.matches('.cnt, nav.tabs .n');   // count pills: 22px high with full round ends (11px)
-    if (rad !== '0px' && !(rad === '12px' && !pill) && !(rad === '11px' && pill) && !(rad === '50%' && el.classList.contains('dot'))) out.radius.push(name(el) + ' ' + rad);
+    const tabN = el.matches('nav.house-tabs .ht > .n');   // bottom-tab counts: a 24 x 24 corner ring, 12px round ends (14px number, Lisa's pick A, 2 Nov)
+    const pill = el.matches('.cnt, nav.tabs .n') && !tabN;   // count pills: 24px high with full round ends (12px; 14px number, Lisa's pick A)
+    const tabShape = (rad === '12px' && tabN) || (rad === '50%' && el.matches('nav.house-tabs .hic')) || (rad === '2px' && el.matches('nav.house-tabs .bar'));
+    if (rad !== '0px' && !tabShape && !(rad === '12px' && !pill && !tabN) && !(rad === '12px' && pill) && !(rad === '50%' && el.classList.contains('dot'))) out.radius.push(name(el) + ' ' + rad);
     // Rings on things you press or read as a pill: 3:1 against what they sit on.
     if (el.matches('button:not([disabled]), .btn, .chip, .more, a.tile, input, .badge, .datep, .cnt, nav.tabs .n, .stamp, .row .amt.red, .row .amt.good') && bw[0] === 1) {
       const r = ratio(rgb(s.borderTopColor), bgOf(el.parentElement)); if (r < 3) out.ring.push(name(el) + ' ' + r.toFixed(2));
@@ -385,7 +575,7 @@ test.describe('GA Hub house look', () => {
     test(`${scheme}: meaning-coloured controls (Apply, Not now) keep their OWN colour on hover: own-colour 1px line inside + a pale tint, never ink (tabs are exempt)`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await sheets(page, book());
-      await open(page);
+      await open(page, '#/do');
       const ink = await page.evaluate(() => getComputedStyle(document.body).color);
       const look = (el) => el.evaluate((e) => { const s = getComputedStyle(e), own = s.getPropertyValue('--hmc').trim(); // the house meaning colour (house.css)
         const probe = document.createElement('i'); probe.style.color = own; e.appendChild(probe); const oc = getComputedStyle(probe).color; probe.remove();
@@ -398,26 +588,31 @@ test.describe('GA Hub house look', () => {
         expect(isTint(l.bg, scheme), `${what}: fill ${l.bg} is a pale tint`).toBe(true);
       };
       for (const v of ['Apply', 'Not now']) {
-        const b = page.locator(`#view > .card button[data-v="${v}"]`);
+        const b = page.locator(`#view .card[data-key^="PRICE-"] button[data-v="${v}"]`);
         await b.hover(); check(await look(b), v);
       }
     });
   }
 
-  test('count pills are one fixed size: 30 x 22px for 1 and 2 digits, centred, round ends', async ({ page }) => {
+  test('count pills are one fixed size: 30 x 24px for 1 and 2 digits, 14px, centred, round ends', async ({ page }) => {
     const b = book(); for (let i = 0; i < 10; i++) b.cards.push(['CHK-' + i, 'check', 'Orders', 'Sample check ' + i, '{}', ago(1)]);
     await sheets(page, b);
     await open(page, '#/products');
     await page.locator('[data-filter="all"]').click();
     const measure = () => page.evaluate(() => [...document.querySelectorAll('.cnt, nav.tabs .n')].filter((e) => e.getBoundingClientRect().width > 1).map((e) => {
-      const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.justifyContent, s.lineHeight, e.scrollWidth <= e.clientWidth]; }));
+      const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.justifyContent, s.lineHeight, e.scrollWidth <= e.clientWidth, e.matches('nav.house-tabs .ht > .n')]; }));
     let sizes = await measure();
     expect(sizes.map((x) => x[0]).sort()).toEqual(['1', '13', '2', '2']);   // product groups 2 and 1, Home 13 (two digits), Orders 2
-    for (const x of sizes) expect(x.slice(1), 'count ' + x[0]).toEqual([30, 22, '11px', 'center', '20px', true]);
-    // The same with a wider fallback font (as on a machine without Lexend): the box stays exactly 30 x 22 and two digits still fit.
+    // Bottom-tab counts (Home 13, Orders 2) are a corner ring (tab picks, 2 Nov) holding a 14px number (Lisa's pick A): 24 x 24 for 1 and 2
+    // digits, 12px ends, 22px line. Every other count is the 30 x 24 pill.
+    const check = (x, why) => x[7] ? (expect([x[2], x[1], x[3], x[4], x[5], x[6]], why + x[0]).toEqual([24, 24, '12px', 'center', '22px', true]))
+      : expect(x.slice(1, 7), why + x[0]).toEqual([30, 24, '12px', 'center', '22px', true]);
+    expect(sizes.filter((x) => x[7]).map((x) => x[0]).sort(), 'the tab counts').toEqual(['13', '2']);
+    for (const x of sizes) check(x, 'count ');
+    // The same with a wider fallback font (as on a machine without Lexend): the boxes keep their size and two digits still fit.
     await page.addStyleTag({ content: '.cnt, nav.tabs .n { font-family: "DejaVu Sans", Verdana, sans-serif !important; }' });
     sizes = await measure();
-    for (const x of sizes) expect(x.slice(1), 'wide font, count ' + x[0]).toEqual([30, 22, '11px', 'center', '20px', true]);
+    for (const x of sizes) check(x, 'wide font, count ');
   });
 
   for (const look of ['warm', 'cool']) {
@@ -468,33 +663,45 @@ test.describe('GA Hub house look', () => {
     expect(await fills()).toEqual([]);
   });
 
-  test('Home: the first card is the Next card (1px ink edge, "Next:" name line), tab counts are rose rings, the payment date pill shows how close it is', async ({ page }) => {
+  test('Main: the first card is the Next card (1px ink edge, the late order first), tab counts are rose rings, the payment date pill on Invoices shows how close it is', async ({ page }) => {
     const b = book(); const soon = new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10); b.invoices[1][8] = soon;
     await sheets(page, b);
     await open(page);
-    const next = page.locator('#view > .card.next');
+    const next = page.locator('#view [data-hm="next"]');
     await expect(next).toHaveCount(1);
-    await expect(next.locator('.bline')).toHaveText('Next: GA price changed');
+    await expect(next.locator('h3')).toHaveText('Next');
+    await expect(next.locator('.hm-what')).toHaveText('Order #9003: not at GA');   // late beats waiting
     expect(await next.evaluate((e) => getComputedStyle(e).borderTopColor)).toBe(await page.evaluate(() => getComputedStyle(document.body).color));
-    await expect(page.locator('#view .needs .cnt.need')).toHaveText('3');
+    await expect(page.locator('#view [data-hm="needs"] .hm-head .cnt.need')).toHaveText('3');
     await expect(page.locator('#n-orders')).toHaveText('2');   // Items differ + Not at GA
+    await page.goto('food/#/invoices');
     const tile = page.locator('#view a.tile', { hasText: 'Next GA payment due' });
     await expect(tile.locator('.datep')).toHaveText('in 3 days');
     await expect(tile.locator('.datep')).toHaveClass(/soon/);
   });
 
-  test('friendly empty states: nothing to answer shows a green-ring tick, unless an order never reached GA (then that is the Next card)', async ({ page }) => {
+  test('friendly empty states: nothing to answer shows ONE "Nothing needs you", unless an order never reached GA (then that is the Next card)', async ({ page }) => {
     const b = book(); b.cards = [];
     await sheets(page, b);
     await open(page);
+    await expect(page.locator('#view [data-hm="next"] .hm-what')).toHaveText('Order #9003: not at GA');
+    await expect(page.locator('#view [data-hm="next"] .hm-what a')).toHaveAttribute('href', '#/orders?late');
+    await expect(page.locator('#view [data-hm="empty"]')).toHaveCount(0);
+    await page.goto('food/#/do');
     await expect(page.locator('#view .needs .cnt.ok')).toHaveText('0');
-    await expect(page.locator('#view > .card.next')).toContainText('1 order is not at GA');
-    await expect(page.locator('#view > .card.next a.btn')).toHaveAttribute('href', '#/orders?check');
+    await expect(page.locator('#view > .card').first()).toContainText('1 order is not at GA');
+    await expect(page.locator('#view > .card').first().locator('a.btn')).toHaveAttribute('href', '#/orders?late');
+    await expect(page.locator('#view .empty')).toHaveCount(0);
     const c = book(); c.cards = []; c.orders = c.orders.filter((o, i) => i === 0 || o[26] !== 'Not at GA');
     await page.unroute(SHEETS);
     await sheets(page, c);
+    await page.goto('food/#/home');
     await page.locator('#refresh').click();
-    await expect(page.locator('#view .empty')).toContainText('Nothing needs you');
+    await expect(page.locator('#view [data-hm="empty"]')).toHaveCount(1);
+    await expect(page.locator('#view [data-hm="empty"]')).toContainText('Nothing needs you');
+    await expect(page.locator('#view [data-hm="next"]')).toHaveCount(0);
+    await page.goto('food/#/do');
+    await expect(page.locator('#view > .card .empty')).toContainText('Nothing needs you');
     await page.goto('food/#/orders');
     await page.locator('[data-ofilter="low"]').click();
     await page.locator('[data-ofilter="sub"]').click();
@@ -505,7 +712,7 @@ test.describe('GA Hub house look', () => {
     await expect(page.locator('#view .empty')).toContainText('No products match');
   });
 
-  test('a phone (390px): no sideways scroll on any tab, every control is 44px tall, tab counts sit beside the icon', async ({ page }) => {
+  test('a phone (390px): no sideways scroll on any tab, every control is 44px tall, tab counts are a dot at the icon\'s top right', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await sheets(page, book());
     await open(page);
@@ -517,6 +724,15 @@ test.describe('GA Hub house look', () => {
       const short = await page.evaluate(() => [...document.querySelectorAll('#view button, #view a.btn, #view .chip, header .btn')].filter((e) => e.getBoundingClientRect().width > 1 && e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
       expect(short, '#/' + tab).toEqual([]);
     }
-    expect(await page.locator('#n-home').evaluate((e) => getComputedStyle(e).position)).toBe('static');
+    // Lisa's pick b (2 Nov): on a phone the count is an 8px dot just off the icon's top-right corner, and never moves the icon or word.
+    const c = await page.locator('#n-home').evaluate((e) => { const r = e.getBoundingClientRect(), t = e.parentElement.getBoundingClientRect(), i = e.parentElement.querySelector('.hic').getBoundingClientRect();
+      return { pos: getComputedStyle(e).position, w: r.width, h: r.height, gap: r.left - i.right, top: r.top - i.top, inside: r.right <= t.right, iconMid: Math.abs((i.left + i.right) / 2 - (t.left + t.right) / 2) }; });
+    expect(c.pos).toBe('absolute');
+    expect([c.w, c.h]).toEqual([8, 8]);
+    expect(c.gap).toBeGreaterThanOrEqual(0);
+    expect(c.gap).toBeLessThanOrEqual(3);
+    expect(Math.abs(c.top)).toBeLessThanOrEqual(2);
+    expect(c.inside).toBe(true);
+    expect(c.iconMid, 'the icon stays centred').toBeLessThan(1);
   });
 });

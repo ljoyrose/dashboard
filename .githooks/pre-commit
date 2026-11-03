@@ -1,0 +1,4 @@
+#!/bin/sh
+# Public repo: block private terms, emails, Drive ids and data paths before they are committed.
+# Needs the denylist OUTSIDE the repo: export PRIVACY_DENYLIST_FILE=$HOME/.config/repo-privacy/denylist.txt
+exec python3 "$(git rev-parse --show-toplevel)/tools/privacy-guard/privacy_guard.py" --staged

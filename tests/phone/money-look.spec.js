@@ -1,5 +1,5 @@
 // Money Hub on a phone (390 x 844): every view, no sideways scroll, 44px press targets, bottom tabs on screen
-// with their counts in flow (never over a label). Pretend Google and Drive.
+// with their counts in the top-right corner (never over a label; Lisa's tab picks, 2 Nov). Pretend Google and Drive.
 const { test, expect } = require('../support/test');
 
 const VIEWS = ['now', 'money', 'dates', 'todo', 'todo/others', 'todo/closed', 'accountant', 'control', 'e/TESTCO', 'e/TESTPERS', 'register/R001'];
@@ -19,19 +19,22 @@ for (const scheme of ['light', 'dark']) {
         const out = [], W = window.innerWidth;
         if (document.documentElement.scrollWidth > W + 1) out.push('page is ' + document.documentElement.scrollWidth + 'px wide');
         if (document.body.scrollWidth > W + 1) out.push('body is ' + document.body.scrollWidth + 'px wide');
-        document.querySelectorAll('main .btn, main details > summary, main .subnav a, header .btn, nav.main a').forEach((e) => {
+        document.querySelectorAll('main .btn, main details > summary, main .subnav a, header .btn, nav.main .ht').forEach((e) => {
           if (!e.getClientRects().length) return;
           const b = e.getBoundingClientRect();
           if (b.height < 43.5) out.push('press target ' + Math.round(b.height) + 'px: ' + e.textContent.trim().slice(0, 20));
           if (b.right > W + 1 || b.left < -1) out.push('off screen: ' + e.textContent.trim().slice(0, 20));
         });
-        document.querySelectorAll('nav.main a').forEach((a) => {
-          const n = a.querySelector('.n'), l = a.querySelector('.tl');
+        document.querySelectorAll('nav.main .ht').forEach((a) => {
+          const n = a.querySelector('.n'), l = a.querySelector('.htl'), ab = a.getBoundingClientRect();
           if (!n || !n.textContent) return;
           const nb = n.getBoundingClientRect(), lb = l.getBoundingClientRect();
           const overlap = !(nb.right <= lb.left || nb.left >= lb.right || nb.bottom <= lb.top || nb.top >= lb.bottom);
           if (overlap) out.push('count sits on the label: ' + l.textContent);
-          if (getComputedStyle(n).position !== 'static') out.push('count not in flow: ' + l.textContent);
+          // On a phone a tab count is an 8px dot just off the icon's top-right corner (Lisa's pick b, 2 Nov).
+          const ib = a.querySelector('.hic').getBoundingClientRect();
+          if (getComputedStyle(n).position !== 'absolute' || nb.left < ib.right || nb.left - ib.right > 3 || Math.abs(nb.top - ib.top) > 2 || nb.right > ab.right) out.push('count not at the icon\'s top right: ' + l.textContent);
+          if (nb.height !== 8 || nb.width !== 8) out.push('tab count ' + nb.width + 'x' + nb.height + ' (want an 8px dot): ' + l.textContent);
         });
         return out;
       });
