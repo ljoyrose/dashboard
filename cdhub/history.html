@@ -78,10 +78,10 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 /* indoor corner dot */
 .d{position:relative}
 .d-dot{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;pointer-events:none}
-.d-dot.idot-flag{background:#ef4444}.d-dot.idot-warn{background:#f59e0b}
+.d-dot.idot-flag{background:var(--ljr-2)}.d-dot.idot-warn{background:var(--ljr-3)}
 /* compliance mode — cells */
-.d.comp-flag{background:#ef4444;opacity:.8}.d.comp-warn{background:#f59e0b;opacity:.85}.d.comp-ok{background:var(--ljr-5);opacity:.85}.d.comp-nd{background:var(--soft)}
-.sd.comp-flag{background:#ef4444;opacity:.8}.sd.comp-warn{background:#f59e0b;opacity:.85}.sd.comp-ok{background:var(--ljr-5);opacity:.85}.sd.comp-nd{background:var(--soft)}
+.d.comp-flag{background:var(--ljr-2);opacity:.8}.d.comp-warn{background:var(--ljr-3);opacity:.85}.d.comp-ok{background:var(--ljr-5);opacity:.85}.d.comp-nd{background:var(--soft)}
+.sd.comp-flag{background:var(--ljr-2);opacity:.8}.sd.comp-warn{background:var(--ljr-3);opacity:.85}.sd.comp-ok{background:var(--ljr-5);opacity:.85}.sd.comp-nd{background:var(--soft)}
 /* view mode toggle */
 .vt-wrap{display:flex;gap:2px;background:var(--soft);border-radius:calc(var(--radius) + 2px);padding:2px;width:max-content;margin-bottom:12px}
 .vt-btn{padding:4px 12px;border:none;background:transparent;border-radius:var(--radius);font:600 var(--fs-small)/1.4 var(--house-font);color:var(--muted);cursor:pointer}
@@ -418,12 +418,12 @@ function openDrill(isoDate){
           var lo=parseFloat(t.min),hi=parseFloat(t.max);
           var err=!isNaN(lo)&&!isNaN(hi)&&lo>hi;
           var warn=(!isNaN(lo)&&lo<range.min)||(!isNaN(hi)&&hi>range.max);
-          var color=err?'#ef4444':warn?'#f59e0b':'var(--ink)';
+          var color=err?'var(--ljr-2)':warn?'var(--ljr-3)':'var(--ink)';
           return'<span style="color:'+color+'">'+esc((t.min||'?')+' – '+(t.max||'?')+'°C')+'</span>';
         };
         var ast=areaStatusForArea(ar,range);
         var pill=ast==='flag'?'<span class="pill ph">flag</span>'
-          :ast==='warn'?'<span class="pill" style="border-color:#f59e0b;color:#a16207">warn</span>'
+          :ast==='warn'?'<span class="pill" style="border-color:var(--ljr-3);color:var(--ljr-3-text)">warn</span>'
           :'<span class="pill po">ok</span>';
         return'<tr>'
           +'<td style="font-weight:600;text-transform:capitalize">'+esc(name)+'</td>'
@@ -521,8 +521,8 @@ function buildMonthCards(y){
 function legend(){
   if(VIEW_MODE==='compliance'){
     return'<div class="legend">'
-      +'<div class="leg"><div class="leg-sq" style="background:#ef4444"></div>Data error</div>'
-      +'<div class="leg"><div class="leg-sq" style="background:#f59e0b"></div>Out of range</div>'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-2)"></div>Data error</div>'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-3)"></div>Out of range</div>'
       +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>All ok</div>'
       +'<div class="leg"><div class="leg-sq" style="background:var(--soft)"></div>No data</div>'
       +'</div>';
