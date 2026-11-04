@@ -168,11 +168,12 @@ test.describe('CD Hub: navigation', () => {
     expect(await page.evaluate(() => window.__GIS_CALLS.revoke)).toBe(1);
   });
 
-  test('saving is switched off and says so', async ({ page }) => {
+  test('saving is off: The round loads without a saving-off notice', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     await tabClick(page, '#nav button[data-go="round"]');
-    await expect(page.locator('#main')).toContainText('Saving off');
+    await expect(page.locator('#rstat')).toHaveText('');
+    await expect(page.locator('#main')).not.toContainText('Saving off');
   });
 });
 
