@@ -1521,6 +1521,7 @@
   function doFoot() { var n = sendsAll().filter(isOpen).length; return n ? '<p class="muted" style="margin:0"><a href="#/prompts" data-prompts-link><i class="ti ti-send"></i> Prompts ' + cnt(n) + '</a></p>' : ''; }
   function render() {
     var route = hashParts().path;
+    if (!/^(me|item|app|today|prompts|queue|card|room|health|stuck|docs|all|new|problem|decide|do|rooms)$/.test(route[0])) route = ['rooms'];   // J34c-F02: an unknown address is Rooms, tab lit
     Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { var here = route[0] === 'me' && route[1] === 'all' ? 'mine' : route[0]; a.setAttribute('aria-current', a.getAttribute('data-nav') === here || (/^(card|room|health|stuck|all|queue|new|problem)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
     $('appPick').classList.toggle('hidden', !signedIn || !S); $('appPick').setAttribute('aria-expanded', appMenu ? 'true' : 'false');
     $('appMenu').classList.toggle('hidden', !appMenu || !S); if (appMenu && S) $('appMenu').innerHTML = vAppMenu();

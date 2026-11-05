@@ -157,6 +157,8 @@ nav.house-tabs .ht > .hic { box-sizing: border-box; flex: none; width: var(--hou
 nav.house-tabs .ht > .hic > :is(svg, .ti, i) { width: var(--house-tab-icon); height: var(--house-tab-icon); font-size: var(--house-tab-icon); line-height: 1; color: inherit;
   fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
 nav.house-tabs .ht > .htl { --px: 4px; display: block; margin: 0 var(--px); max-width: calc(100% - 2 * var(--px)); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; order: 0; flex: none; color: var(--ink); }
+/* .htl-long / .htl-short: the phone shows the short word (Lisa, 2 Nov 2026); the name keeps the long one. */
+nav.house-tabs .ht > .htl > .htl-short { display: none; }
 nav.house-tabs .ht > .bar { position: absolute; left: 50%; bottom: 2px; margin: 0; width: var(--house-tab-bar); height: var(--house-tab-bar-h); border-radius: 2px;
   background: var(--ljr-0); opacity: .6; transform: translateX(-50%); transition: width .15s ease-out, opacity .15s ease-out; box-shadow: none; min-width: 0; max-width: none; overflow: visible; }
 /* Hover and selected: one movement (the colour arrives, the line widens). */
@@ -190,6 +192,8 @@ nav.house-tabs .ht > .n:empty, nav.house-tabs .ht > .cnt:empty { display: none !
     width: var(--house-tab-dot); min-width: var(--house-tab-dot); height: var(--house-tab-dot); min-height: var(--house-tab-dot);
     padding: 0; border: 0; border-radius: 50%; background: var(--house-ring); color: transparent; font-size: 0; line-height: 0; overflow: hidden; }
   nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { background: var(--house-late); }
+  nav.house-tabs .ht > .htl > .htl-long { display: none; }
+  nav.house-tabs .ht > .htl > .htl-short { display: inline; }
 }
 /* The More menu: opens above the bar, at its right end; the views that are not tabs. Same rules: grey icon at rest, the colour on hover
    and where you are, no fills. */

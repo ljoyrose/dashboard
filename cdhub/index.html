@@ -179,6 +179,10 @@ tr:last-child td{border-bottom:none}
 .mrow .ic.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .mrow .ic.soon{border-color:var(--ljr-3);background:var(--ljr-3-tint)}
 .mrow .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
+.mrow .ic.cold{border-color:var(--ljr-6);background:var(--ljr-6-tint)}
+#kept-readings .kt{width:100%;border-collapse:collapse}#kept-readings th,#kept-readings td{text-align:left;padding:4px 6px;border-bottom:1px solid var(--press)}
+#kept-readings .ic{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1px solid var(--press)}
+#kept-readings .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}#kept-readings .ic.cold{border-color:var(--ljr-6);background:var(--ljr-6-tint)}#kept-readings .ic.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .mrow .v{font-weight:600;font-variant-numeric:tabular-nums}
 .mfoot{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 /* foundation: empty state for a field that needs data CD Hub does not have. It names the Bloodline table that will feed it. */
@@ -280,7 +284,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 <a class="skip" href="#main" data-skip="main">Skip to content</a>
 <header class="top house-head"><div class="hin house-row">
 <a id="backHome" class="btn back backhome house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
-<h1><span class="dot" aria-hidden="true"></span>Cobberdog Hub</h1>
+<h1><span class="dot" aria-hidden="true"></span>Canine Hub</h1>
 <span class="house-sp" aria-hidden="true"></span>
 <span class="live" id="livepill" data-house-read>connecting&hellip;</span>
 <button type="button" class="btn srchbtn house-ib" data-search-open aria-keyshortcuts="/" aria-label="Search" title="Search (press /)"><svg aria-hidden="true"><use href="#hi-search"/></svg></button>
@@ -299,7 +303,7 @@ var WANT=['BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_p
  'BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-microchip_registration.csv','BLD-weight.csv',
  'BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-association.csv','BLD-prospect.csv','BLD-export_route.csv','BLD-breeder_category.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv',
  'BLD-occupancy.csv','BLD-MAP-animana.csv','BLD-MAP-animana-client.csv','BLD-visit.csv','BLD-reminder.csv','BLD-medicinal_product.csv','BLD-stock_level.csv','BLD-clinical_note.csv','BLD-dispense.csv',
- 'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-WORK.csv',
+ 'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-area_reading.csv','BLD-WORK.csv',
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
  'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv'];
@@ -425,8 +429,6 @@ async function load(){
   for(var i=0;i<WANT.length;i++){
     var title=WANT[i];
     if(!byTitle[title]){ T[title]=[]; continue; }
-    setBoot('Reading the tables from Drive…',
-      WANT.slice(0,i+1).map(function(t,j){ return (j<=i-1?'✓ ':'· ')+t; }).join('<br>'));
     try{
       var txt=await readDriveFile(byTitle[title][0]);
       txt=String(txt||'').replace(/^\uFEFF/,'');
@@ -436,6 +438,7 @@ async function load(){
   }
   LOAD.state='ok'; LOAD.files=done;
   DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF;
+  foldAreaReadings(T['BLD-area_reading.csv']||[]);
   build(); render();
 }
 var CD={};
@@ -925,12 +928,27 @@ function tempsCard(){
  var has=function(slot){ return (CD.areas||[]).filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
  var am=has('am'), pm=has('pm');
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
- var row=function(t,v,s,done){ return '<div class="mrow"><span class="ic'+(done?' ok':'')+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
+ var row=function(t,v,s,state){ var cls=state===true||state==='ok'?' ok':state==='cold'?' cold':state==='hot'?' late':''; return '<div class="mrow"><span class="ic'+cls+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
+ var outState=function(r){ return r?tempState(r.min,r.max):''; };
+ var cold=0, hot=0; (CD.areas||[]).forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{};
+   ['am','pm'].forEach(function(s){ var st=r['t_'+s]?tempState(r['t_'+s].min,r['t_'+s].max):''; if(st==='cold') cold++; if(st==='hot') hot++; }); });
+ var inState=(am||pm)?(hot?'hot':cold?'cold':'ok'):'';
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
-  +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||out.kind||''),false)
+  +((am||pm)?row('Rooms',(hot?hot+' too hot':cold?cold+' too cold':'all 10–27')+' °C',(hot&&cold?cold+' too cold too':''),inState):'')
+  +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||out.kind||''),outState(out))
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
-  +'<div class="mfoot"><span class="mut">'+(DB?'':'Saving off.')+'</span><button type="button" class="btn house-open" data-go="round">The round</button></div></section>';
+  +(function(){
+    var fc=(CD.outdoor||[]).filter(function(r){ return r.kind==='forecast'; })
+      .sort(function(a,b){ return a.on<b.on?-1:a.on>b.on?1:0; }).slice(0,7);
+    if(!fc.length) return '';
+    return fc.map(function(r){
+      var day=new Date(r.on+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short'});
+      return row(day,esc((r.min||'?')+'–'+(r.max||'?'))+' °C','',outState(r));
+    }).join('');
+  })()
+  +'<div class="mfoot"><span class="mut">'+(DB?'':'Saving off.')+'</span><a class="btn" href="./history.html" data-skip>Temperature history</a><button type="button" class="btn house-open" data-go="round">The round</button></div></section>';
+  +'<div class="mfoot"><span class="mut"></span><button type="button" class="btn house-open" data-go="round">The round</button></div></section>';
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 function checksCard(){
@@ -976,7 +994,7 @@ function pageToday(){
  var cabins=CD.areas.length;
  var unplaced=c.here.filter(function(d){ return !placed[d.id] && !d.area_id; });
  var ft=Math.ceil(c.adults.length/20), pt=Math.ceil(c.adults.length/10);
- var h='<h2>Today</h2><p class="sub">'+esc(dmy(date))+'</p>'
+ var h='<h2>Today: '+esc(dmy(date))+'</h2>'
  +todayChecklist(date,unplaced.length)
  +'<div class="mecards">'+onSiteCard()+tempsCard()+'</div>'
  +'<div class="tiles">'
@@ -1032,7 +1050,7 @@ function todayChecklist(date,unplacedN){
  return '<section class="mcard" id="todayChecklist" style="--hc:var(--ljr-4-icon);margin-bottom:12px"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Today checklist<span class="mut" style="margin-left:auto;font-weight:400">'+done+' of '+L.length+' done</span></h3>'
   +L.map(function(x){ return '<div class="mrow ckrow"><span class="mk'+(x[0]?'':' bad')+'" aria-hidden="true">'+(x[0]?'✓':'✗')+'</span>'
     +'<span class="t">'+esc(x[1])+'<span class="sr">'+(x[0]?' done':' not done')+'</span><small>'+esc(x[2])+'</small></span></div>'; }).join('')
-  +'<div class="mfoot"><span class="mut">'+(DB?'':'Saving off.')+'</span><button type="button" class="btn" data-go="round">The round</button></div></section>';
+  +'<div class="mfoot"><span class="mut"></span><button type="button" class="btn" data-go="round">The round</button></div></section>';
 }
 // A tile that opens another section (e.g. the temperature tile opens The round, where temperatures are entered).
 function tileGo(c,n,k,s,to){
@@ -1067,12 +1085,25 @@ function showList(key){
    +'<td><span class="st '+st.cls+'"><b>'+st.code+'</b>'+esc(st.label)+'</span></td>'
    +'<td>'+esc(areaName[d.area_id]||'\u2014')+'</td>'
    +'<td class="mut">'+esc(d.classification||'')+'</td>'
-   +'<td><button class="cb flagb" data-dog="'+esc(d.id)+'">flag</button></td></tr>'; });
+   +(key==='nochip'?'<td><input class="cb chinp" type="text" placeholder="chip #" style="width:120px"> '+'<button class="cb savchipb" data-dog="'+esc(d.id)+'" data-sub="'+esc(d.sub||d.id)+'">Save</button></td>':key==='noarea'?(function(){var aopts=CD.areas.map(function(a){return '<option value="'+esc(a.id)+'">'+esc(a.code)+'</option>';}).join('');return '<td><select class="cb areasel">'+aopts+'</select> <button class="cb saveareab" data-dog="'+esc(d.id)+'" data-sub="'+esc(d.sub||d.id)+'">Save</button></td>';})():'<td><button class="cb flagb" data-dog="'+esc(d.id)+'">flag</button></td>')+'</tr>'; });
  h+='</tbody></table></div><button id="tclose" class="cb" style="margin-top:8px">close</button></div>';
  el.innerHTML=h;
  var cl=document.getElementById('tclose'); if(cl) cl.addEventListener('click',function(){ el.innerHTML=''; });
  Array.prototype.forEach.call(document.querySelectorAll('.flagb'),function(b){
   b.addEventListener('click',function(){ flagDog(b.dataset.dog,b); }); });
+ el.querySelectorAll('.savchipb').forEach(function(b){
+  b.addEventListener('click',function(){
+   var inp=b.previousElementSibling;
+   if(!inp.value.trim()){inp.focus();return;}
+   saveChip(b.dataset.dog,b.dataset.sub,inp.value.trim(),b);
+  });
+ });
+ el.querySelectorAll('.saveareab').forEach(function(b){
+  b.addEventListener('click',function(){
+   var sel=b.previousElementSibling;
+   saveArea(b.dataset.dog,b.dataset.sub,sel.value,b);
+  });
+ });
 }
 async function flagDog(id,btn){
  if(!DB){ btn.textContent='saving off'; return; }
@@ -1080,6 +1111,40 @@ async function flagDog(id,btn){
  try{ await DB.doc('flag/'+id).set({subject_id:id,at:new Date().toISOString(),note:'flagged from Today'});
       btn.textContent='flagged'; btn.disabled=true; }
  catch(e){ btn.textContent='NOT saved \u2014 '+((e&&e.code)||'error'); }
+}
+async function saveChip(dogId,subjectId,chipVal,btn){
+ if(!window.TOKEN){btn.textContent='no auth';return;}
+ btn.textContent='saving…';btn.disabled=true;
+ var fileId=window.DASH_CONFIG.cdhub.microchipFileId;
+ var nameSlug=subjectId.replace('sub-','');
+ var newRow='mc-'+nameSlug+',ten-dynamicdogs,'+subjectId+','+chipVal+',,,,,false,,,dashboard';
+ try{
+  var existing=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+window.TOKEN}}).then(function(r){return r.text();});
+  var updated=existing.trimEnd()+'\n'+newRow;
+  var boundary='cdhub_bnd';
+  var meta=JSON.stringify({name:'BLD-microchip.csv',mimeType:'text/csv'});
+  var body='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
+  var res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart&supportsAllDrives=true',{method:'PATCH',headers:{Authorization:'Bearer '+window.TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
+  if(res.ok){btn.textContent='saved ✓';btn.closest('tr').style.opacity='0.4';}
+  else{btn.textContent='error';btn.disabled=false;}
+ }catch(e){btn.textContent='error';btn.disabled=false;}
+}
+async function saveArea(dogId,subjectId,areaId,btn){
+ if(!window.TOKEN){btn.textContent='no auth';return;}
+ btn.textContent='saving…';btn.disabled=true;
+ var fileId=window.DASH_CONFIG.cdhub.occupancyFileId;
+ var nameSlug=subjectId.replace('sub-','');
+ var newRow='occ-'+nameSlug+',ten-dynamicdogs,'+subjectId+','+areaId+',,,,dashboard,';
+ try{
+  var existing=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media&supportsAllDrives=true',{headers:{Authorization:'Bearer '+window.TOKEN}}).then(function(r){return r.text();});
+  var updated=existing.trimEnd()+'\n'+newRow;
+  var boundary='cdhub_bnd';
+  var meta=JSON.stringify({name:'BLD-occupancy.csv',mimeType:'text/csv'});
+  var body='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
+  var res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart&supportsAllDrives=true',{method:'PATCH',headers:{Authorization:'Bearer '+window.TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
+  if(res.ok){btn.textContent='saved ✓';btn.closest('tr').style.opacity='0.4';}
+  else{btn.textContent='error';btn.disabled=false;}
+ }catch(e){btn.textContent='error';btn.disabled=false;}
 }
 
 /* foundation: list view filter row (one row: Search, Filter panel, Sort, removable chips). Used by Dogs, Litters and Buyers. */
@@ -1266,7 +1331,7 @@ async function accessSave(aid,mode,msgEl){
  catch(e){ var c=(e&&(e.code||e.message))||'error'; if(msgEl) msgEl.textContent='NOT saved \u2014 '+c; console.log('access save failed',e); }
 }
 
-function inCabin(aid,date){ var k=roundKey(date||todayISO(),aid); if(ROUND[k]) return (ROUND[k].subjects||[]);
+function inCabin(aid,date){ var k=roundKey(date||todayISO(),aid); if(ROUND[k]&&ROUND[k].subjects) return ROUND[k].subjects;
  return (CD.dogs||[]).filter(function(d){return d.area_id===aid;}).map(function(d){return d.id;}); }
 
 function pageAreas(){
@@ -1493,10 +1558,12 @@ function drawBuyers(){
   if(!q) return true;
   return ((p.kennel_name||'')+' '+(p.contact_name||'')+' '+(p.mdba_number||'')+' '+(p.region||'')).toLowerCase().indexOf(q)>=0;});
  var RK={'VERY STRONG':0,'STRONG':1,'MODERATE':2,'UNKNOWN':3};
+// J34-F20: VERY STRONG is 0, so ||9 sank it to the bottom; only a missing rank counts as last.
+function rk(x){ return x in RK ? RK[x] : 9; }
  var so=v('bsort');
  if(so==='name') list.sort(function(a,b){ return (a.kennel_name||'').localeCompare(b.kennel_name||''); });
  else if(so==='country') list.sort(function(a,b){ return (a.country||'').localeCompare(b.country||'') || (a.kennel_name<b.kennel_name?-1:1); });
- else list.sort(function(a,b){ return (RK[a.buyer_signal]||9)-(RK[b.buyer_signal]||9) || (a.kennel_name<b.kennel_name?-1:1); });
+ else list.sort(function(a,b){ return rk(a.buyer_signal)-rk(b.buyer_signal) || (a.kennel_name<b.kennel_name?-1:1); });
  var el=document.getElementById('brows'); if(!el) return;
  el.innerHTML=list.map(function(p){
   var sig=p.buyer_signal==='VERY STRONG'?'ok':(p.buyer_signal==='STRONG'?'i':(p.buyer_signal==='UNKNOWN'?'':'w'));
@@ -1529,6 +1596,33 @@ function hereNow(){ return CD.dogs.filter(function(d){
  }).sort(function(a,b){ return (a.name||'')<(b.name||'')?-1:1; }); }
 
 function roundKey(date,areaId){ return date+'__'+areaId; }
+function keptReadings(date){
+ var rows=(CD.areas||[]).map(function(ar){ var r=ROUND[roundKey(date,ar.id)]||{};
+   return {a:ar, am:r.t_am, pm:r.t_pm}; }).filter(function(x){ return x.am||x.pm; });
+ var cell=function(t){ if(!t) return '<span class="mut">—</span>'; var st=tempState(t.min,t.max);
+   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C</span>'; };
+ return '<section class="card" id="kept-readings"><h3>Kept readings</h3>'
+  +(rows.length
+    ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
+      +rows.map(function(x){ return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am)+'</td><td>'+cell(x.pm)+'</td></tr>'; }).join('')
+      +'</tbody></table>'
+    :'<p class="mut">No readings for '+esc(date)+'.</p>')
+  +'<p class="mut" style="margin-bottom:0">From BLD-area_reading.csv. Blue under 10 °C, green 10–27 °C, red over 27 °C.</p></section>'; }
+/* indoor: BLD-area_reading.csv rows -> ROUND[date__area].t_am / t_pm (before 12:00 = morning). A later row for the same slot wins (corrections). */
+function foldAreaReadings(rows){
+ rows.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
+  var at=String(r.taken_at||''); if(!r.area_id||at.length<10) return;
+  var k=roundKey(at.slice(0,10),r.area_id), hr=parseInt(at.slice(11,13),10);
+  var cur=ROUND[k]||(ROUND[k]={areaId:r.area_id,date:at.slice(0,10),subjects:null,access:''});
+  cur['t_'+(isNaN(hr)||hr<12?'am':'pm')]={min:r.min_c,max:r.max_c};
+ });
+ Object.keys(ROUND).forEach(function(k){ if(ROUND[k].subjects===null) delete ROUND[k].subjects; });
+}
+/* temperature colour: blue below 10, green 10-27, red above 27 (Lisa, 3 Nov) */
+var TEMP_LOW=10, TEMP_HIGH=27;
+function tempState(min,max){ var lo=parseFloat(min), hi=parseFloat(max);
+ if(isNaN(lo)&&isNaN(hi)) return '';
+ if(!isNaN(lo)&&lo<TEMP_LOW) return 'cold'; if(!isNaN(hi)&&hi>TEMP_HIGH) return 'hot'; return 'ok'; }
 function pageRound(){
  var date=(CD._roundDate||todayISO());
  var w=walkList(), dogs=hereNow();
@@ -1537,11 +1631,9 @@ function pageRound(){
  var unplaced=dogs.filter(function(d){ return !placed[d.id]; });
  var h='<h2>The round</h2>'
  +'<div class="filt"><label class="mut" for="rdate">date</label><input id="rdate" type="date" value="'+date+'">'
- +'<span class="mut" id="rstat">'+(DB?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'read-only \u2014 saving is off for now')+'</span></div>';
- if(!DB) h+='<div class="arrow">'+arrives('reading')+'</div>';   /* foundation: kept readings, not held yet */
- if(!DB) h+='<div class="card acc2"><h4>Saving off</h4><p style="margin-bottom:0">'
-  +esc(DBERR||'No store: a tick could not be trusted.')+'</p></div>';
- else h+='<div class="card acc4"><h4>Where this saves</h4><p style="margin-bottom:0">'
+ +'<span class="mut" id="rstat">'+(DB?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'')+'</span></div>';
+ h+=keptReadings(date);   /* kept readings: read from BLD-area_reading.csv (blue < 10, green 10-27, red > 27) */
+ if(DB) h+='<div class="card acc4"><h4>Where this saves</h4><p style="margin-bottom:0">'
   +'Into the page\u2019s own store, <b>not into the Drive tables</b>. It shows here and to anyone else with the page open. '
   +'I fold it into <code>BLD-occupancy.csv</code> <code>BLD-area_access.csv</code> and <code>BLD-area_reading.csv</code> when you ask. <b>Temperatures are kept exactly as typed, to two decimal places</b> \u2014 a rounded reading cannot be un-rounded.</p></div>';
  var unN=unplacedShown==='all'?unplaced.length:Math.min(unplaced.length, Math.max(40, unplacedShown));
@@ -1551,7 +1643,7 @@ function pageRound(){
  w.forEach(function(c){
   var a=c.area, aid=a.id;
   var k=roundKey(date,aid), r=ROUND[k]||{}, sel=r.subjects||[];
-  if(!ROUND[k]){ var lives=CD.dogs.filter(function(d){return d.area_id===aid;}).map(function(d){return d.id;});
+  if(!ROUND[k]||!ROUND[k].subjects){ var lives=CD.dogs.filter(function(d){return d.area_id===aid;}).map(function(d){return d.id;});
     if(lives.length) sel=lives; }
   var acc=r.access||accessOf(aid), fromArea=!r.access&&!!acc;
    var m2=a.m2;

@@ -245,7 +245,7 @@
   <a class="ht" data-slot="3" href="#/money" data-nav="money"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-money"/></svg></span><span class="htl">Money</span><span class="n" id="nMoney"></span></a>
   <a class="ht" data-slot="4" href="#/todo" data-nav="todo"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n" id="nTodo"></span></a>
   <a class="ht" data-slot="4" href="#/dates" data-nav="dates"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-cal"/></svg></span><span class="htl">Dates</span><span class="n" id="nDates"></span></a>
-  <a class="ht" data-slot="5" href="#/accountant" data-nav="accountant"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-user"/></svg></span><span class="htl">Accountant</span><span class="n" id="nAcct"></span></a>
+  <a class="ht" data-slot="5" href="#/accountant" data-nav="accountant"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-user"/></svg></span><span class="htl"><span class="htl-long">Accountant</span><span class="htl-short">Acct</span></span><span class="n" id="nAcct"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
       <a href="#/control" data-nav="control" data-slot="0"><svg class="icon" aria-hidden="true"><use href="#i-control"/></svg><span class="htl">Control</span><span class="n" id="nControl"></span></a>
@@ -308,6 +308,8 @@
     return '<div class="source">' + bits.map(function (b) { return '<span>' + b + '</span>'; }).join('') + '</div>';
   }
   function meta(k) { return R && R.meta[k] || null; }
+  // Every file read failed (e.g. Drive down): the stamp must not look like a good read (J34-F80).
+  function allReadsFailed() { var ks = R && R.meta ? Object.keys(R.meta) : []; return ks.length > 0 && ks.every(function (k) { return /fail/i.test(R.meta[k].error || ''); }); }
   function emoney(code) { return R ? R.money.filter(function (m) { return m.code === code; })[0] : null; }
   function efile(code, k) { return R && R.files[code] && R.files[code][k] || null; }
   function ago(days) { return days === 0 ? 'today' : days === 1 ? '1 day old' : days + ' days old'; }
@@ -755,7 +757,7 @@
       if (a.getAttribute('data-nav') === nav) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
     tabCounts();
-    $('readStamp').textContent = !signedIn ? 'Not signed in' : loading ? 'Reading…' : err ? 'Read failed' : R ? 'Read ' + stampFmt.format(new Date(R.readAt)) : 'Not read';
+    $('readStamp').textContent = !signedIn ? 'Not signed in' : loading ? 'Reading…' : err || allReadsFailed() ? 'Read failed' : R ? 'Read ' + stampFmt.format(new Date(R.readAt)) : 'Not read';
     $('refreshBtn').classList.toggle('hidden', !signedIn);
     $('signOutBtn').classList.toggle('hidden', !signedIn);
     $('signInBtn').classList.toggle('hidden', signedIn);

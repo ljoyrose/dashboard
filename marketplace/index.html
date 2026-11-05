@@ -235,7 +235,7 @@
   <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n" id="n-decide"></span></a>
   <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n" id="n-do"></span></a>
   <a class="ht" data-slot="5" href="#/reply" data-nav="reply"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-chat"/></svg></span><span class="htl">Reply</span><span class="n" id="n-reply"></span></a>
-  <a class="ht" data-slot="6" href="#/newstock" data-nav="newstock"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-truck"/></svg></span><span class="htl">New Stock</span><span class="n" id="n-newstock"></span></a>
+  <a class="ht" data-slot="6" href="#/newstock" data-nav="newstock"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-truck"/></svg></span><span class="htl"><span class="htl-long">New Stock</span><span class="htl-short">Stock</span></span><span class="n" id="n-newstock"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
       <a href="#/insights" data-nav="insights" data-slot="3"><i class="ti ti-chart-bar" aria-hidden="true"></i><span class="htl">Insights</span></a>
@@ -1218,7 +1218,8 @@
     todo.reduce(function (p, r) { var v = round[r.key]; return p.then(function () { return answer(r, v.ok || v.n === '' || v.n === undefined ? 'ok' : String(Number(v.n)) + ' ' + v.reason, ''); }); }, Promise.resolve())
       .then(function () { banner('Round saved. The engine applies it after 10 minutes.', true); });
   }
-  function route() { var seg = (location.hash.replace(/^#\//, '').split('?')[0]) || 'me', sl = seg.indexOf('/'); view = sl < 0 ? seg : seg.slice(0, sl); viewArg = sl < 0 ? '' : seg.slice(sl + 1); showAll = false; pack = view === 'do' && /\?pack\b/.test(location.hash) ? { i: 0 } : null; postOnly = view === 'do' && /\?post\b/.test(location.hash); sheet = false; render(); }
+  // J34c-F01: an unknown address is Me, with its tab lit.
+  function route() { var seg = (location.hash.replace(/^#\//, '').split('?')[0]) || 'me', sl = seg.indexOf('/'); view = sl < 0 ? seg : seg.slice(0, sl); viewArg = sl < 0 ? '' : seg.slice(sl + 1); if (!/^(me|sold|do|round|numbers|insights|stock|temu|suppliers|newstock|ideas|idea)$/.test(view) && !TABS[view] && !SECTIONS[view]) { view = 'me'; viewArg = ''; } showAll = false; pack = view === 'do' && /\?pack\b/.test(location.hash) ? { i: 0 } : null; postOnly = view === 'do' && /\?post\b/.test(location.hash); sheet = false; render(); }
   window.addEventListener('hashchange', route);
 
   /* ---------- sign-in: same shared DashAuth as every dashboard page ---------- */
