@@ -551,6 +551,27 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#tpanel')).toContainText('No microchip recorded');
   });
 
+  test('Today temperatures footer has no Saving off notice, and Temperature history opens its page @regression', async ({ page }) => {
+    await page.goto('cdhub/');
+    await signIn(page);
+    await openTab(page, 'today');
+    const card = page.locator('#tempsCard');
+    await expect(card).not.toContainText('Saving off');
+    await expect(card.locator('.mfoot')).toHaveCount(1);
+    const hist = card.locator('a', { hasText: 'Temperature history' });
+    await expect(hist).toHaveAttribute('href', './history.html');
+    expect(await hist.getAttribute('data-skip')).toBeNull();
+    await expect(card.locator('button.house-open')).toHaveText('The round');
+    // A stand-in page: the real history page reads a sheet, and this only proves the click is not swallowed.
+    await page.route('**/history.html', (route) => route.fulfill({
+      status: 200, contentType: 'text/html; charset=utf-8',
+      body: '<!doctype html><html><head><title>Temperature History</title></head><body><p>Temperature history</p></body></html>',
+    }));
+    await hist.click();
+    await expect(page).toHaveURL(/\/cdhub\/history\.html$/);
+    await expect(page).toHaveTitle('Temperature History');
+  });
+
   test('Today checklist: one line per check on the round, a tick or a cross, and how many are done', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);

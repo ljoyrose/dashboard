@@ -9,7 +9,8 @@ const ROUTES = [
   ['cdhub/', ['#/map', '#/work', '#/shape', '#/today', '#/round', '#/dogs', '#/areas', '#/litters', '#/vet', '#/buyers'], '#signinbtn'],
 ];
 // Not clicked here (each has its own test): signing out ends the session for the rest of the crawl.
-const SKIP = '[data-action="signout"], [data-signout], #signOutBtn, [data-skip], .skip';
+// history.html is its own page. The crawl still checks that address returns 200; the Today card test checks the click.
+const SKIP = '[data-action="signout"], [data-signout], #signOutBtn, [data-skip], .skip, a[href*="history.html"]';
 
 async function ready(page, base) {
   if (base === 'cdhub/') await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
