@@ -1,1 +1,6 @@
-{"home": 2000, "why": "Whole hub tile is the tap target and Needs-you row shells use the 12px corner (index.html and house.css)."}
+{
+  "home": 2000,
+  "food": 500,
+  "money": 500,
+  "why": "Whole hub tile tap + rounded Needs-you rows (index.html, house.css); Food order Profit label (food/index.html). PR 311."
+}
