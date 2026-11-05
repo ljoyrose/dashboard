@@ -592,6 +592,30 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#needsCard .mrow:visible')).toHaveCount(10);
   });
 
+  test('Temperatures today: no saving-off notice, and Temperature history opens history.html @regression', async ({ page }) => {
+    await page.goto('cdhub/');
+    await signIn(page);
+    await openTab(page, 'today');
+    const card = page.locator('#tempsCard');
+    await expect(card).not.toContainText('Saving off');
+    await expect(page.locator('#todayChecklist')).not.toContainText('Saving off');
+    await expect(card).toHaveAttribute('data-open-row', '');
+    const foot = card.locator('.mfoot');
+    await expect(foot).toHaveCount(1);
+    const link = foot.getByRole('link', { name: 'Temperature history' });
+    await expect(link).toHaveAttribute('href', /^\.?\/?history\.html$/);
+    await expect(link).not.toHaveAttribute('data-skip');
+    await expect(foot.getByRole('button', { name: 'The round' })).toHaveClass(/house-open/);
+    await expect(foot.getByRole('button', { name: 'The round' })).toHaveAttribute('data-go', 'round');
+    expect(await page.locator('[data-skip]').evaluateAll((els) => els.map((e) => e.getAttribute('data-skip')))).toEqual(['main']);
+    // The history page reads a spreadsheet CSV export. Answer it here so the click is a real navigation.
+    await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export/, (route) =>
+      route.fulfill({ status: 200, contentType: 'text/csv', body: 'on_date\n' }));
+    await link.click();
+    await expect(page).toHaveURL(/\/history\.html$/);
+    await expect(page.locator('h1')).toContainText('Temperature history');
+  });
+
   test('Temperatures today (on Today) shows today\'s outdoor reading; a data check\'s Show (on Tables) opens its list on Today', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-outdoor_temp.csv', `on_date,reading_kind,min_temp,max_temp,phrase,captured_at,source\n${iso(0)},forecast,8,14,invented mild day,${iso(0)}T07:00:00Z,invented\n`);
     await page.goto('cdhub/');

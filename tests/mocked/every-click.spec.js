@@ -51,6 +51,12 @@ for (const [base, hashes, signBtn] of ROUTES) {
       guard.allowedConsole = guard.allowedConsole || [];
       // The Drive check opens the computer's folder picker; here it answers "not allowed" so the page shows its message.
       await page.addInitScript(() => { window.showDirectoryPicker = () => Promise.reject(Object.assign(new Error('test'), { name: 'NotAllowedError' })); });
+      // Temperature history is a real page link (cdhub/history.html). It reads a spreadsheet CSV export on load.
+      // Answer that export here so the crawl can follow the link. data-skip stays for skip-to-content only.
+      if (base === 'cdhub/') {
+        await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export/, (route) =>
+          route.fulfill({ status: 200, contentType: 'text/csv', body: 'on_date\n' }));
+      }
       // Folds are remembered (toolkit.js 'dash-fold'): every fresh copy of the screen starts with nothing folded, so a fold clicked
       // earlier never hides the buttons under it from the rest of the crawl.
       await page.addInitScript(() => { try { localStorage.removeItem('dash-fold'); } catch (e) {} });
