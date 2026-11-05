@@ -17,7 +17,7 @@ test.describe('CD Hub: loads', () => {
     const res = await page.goto('cdhub/');
     expect(res.status()).toBe(200);
     await expect(page).toHaveTitle(/CD Hub/);
-    await expect(page.locator('h1')).toHaveText('Canine Hub');
+    await expect(page.locator('h1')).toHaveText('Cobberdog Hub');
     await expect(page.locator('#main')).toContainText('Sign in to see the tables');
     await expect(page.locator('#livepill')).toHaveText('signed out');
     await expect(page.locator('#nav button')).toHaveCount(0);
