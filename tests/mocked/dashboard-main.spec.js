@@ -160,6 +160,77 @@ test.describe('Dashboard Main', () => {
     await expect(page.locator('#hubTiles .hubtile[data-hub="food"] [data-xml]')).toHaveAttribute('href', 'food/#/orders?ga');
   });
 
+  // The square was only a link on the name. A tap on the card (not a number, not the tick) must open the hub.
+  test('the whole hub tile opens the hub; numbers and the Food tick keep their own pages @regression', async ({ page, guard }) => {
+    await seed(page, guard, { foodAnswer: food(false) });
+    await signIn(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const web = page.locator('#hubTiles .hubtile[data-hub="web"]');
+    await web.scrollIntoViewIfNeeded();
+    const hit = await web.evaluate((tile) => {
+      const box = tile.getBoundingClientRect();
+      const head = tile.querySelector('.hn').getBoundingClientRect();
+      const go = tile.querySelector('a.hgo').getBoundingClientRect();
+      const hk = tile.querySelector('a.hk').getBoundingClientRect();
+      const at = (x, y) => {
+        const el = document.elementFromPoint(x, y);
+        const a = el && el.closest ? el.closest('a') : null;
+        return { x, y, href: a ? a.getAttribute('href') : '', cls: a ? a.className : '' };
+      };
+      return {
+        tile: { w: box.width, h: box.height },
+        headH: head.height,
+        goH: go.height,
+        hk: { w: hk.width, h: hk.height },
+        header: at(box.right - 18, head.top + head.height / 2),
+        foot: at(box.left + box.width / 2, box.bottom - 3),
+        num: at(hk.left + hk.width / 2, hk.top + hk.height / 2),
+      };
+    });
+    expect(hit.tile.w, 'tile width').toBeGreaterThanOrEqual(44);
+    expect(hit.tile.h, 'tile height').toBeGreaterThanOrEqual(44);
+    expect(hit.headH, 'header zone').toBeGreaterThanOrEqual(44);
+    expect(hit.goH, 'name link').toBeGreaterThanOrEqual(44);
+    expect(hit.hk.w, 'number width').toBeGreaterThanOrEqual(44);
+    expect(hit.hk.h, 'number height').toBeGreaterThanOrEqual(44);
+    expect(hit.header, 'empty header opens the hub').toMatchObject({ href: 'estate/', cls: expect.stringContaining('hgo') });
+    expect(hit.foot, 'card foot opens the hub').toMatchObject({ href: 'estate/' });
+    expect(hit.num, 'a number keeps its filtered list').toMatchObject({ href: 'estate/#/all?show=down', cls: expect.stringContaining('hk') });
+
+    const [hubTab] = await Promise.all([
+      page.context().waitForEvent('page'),
+      page.mouse.click(hit.header.x, hit.header.y),
+    ]);
+    await expect(hubTab).toHaveURL(/\/estate\/?$/);
+    await hubTab.close();
+
+    const hkBox = await web.locator('a.hk').first().boundingBox();
+    const [kpiTab] = await Promise.all([
+      page.context().waitForEvent('page'),
+      page.mouse.click(hkBox.x + hkBox.width / 2, hkBox.y + hkBox.height / 2),
+    ]);
+    await expect(kpiTab).toHaveURL(/\/estate\/#\/all\?show=down$/);
+    await kpiTab.close();
+
+    const foodTile = page.locator('#hubTiles .hubtile[data-hub="food"]');
+    await foodTile.scrollIntoViewIfNeeded();
+    const tick = await foodTile.locator('a.xml').evaluate((a) => {
+      const r = a.getBoundingClientRect();
+      const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      const hitA = el && el.closest('a');
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height, href: hitA ? hitA.getAttribute('href') : '', cls: hitA ? hitA.className : '' };
+    });
+    expect(tick.w, 'Food tick width').toBeGreaterThanOrEqual(44);
+    expect(tick.h, 'Food tick height').toBeGreaterThanOrEqual(44);
+    expect(tick).toMatchObject({ href: 'food/#/orders?ga', cls: expect.stringContaining('xml') });
+    const [xmlTab] = await Promise.all([
+      page.context().waitForEvent('page'),
+      page.mouse.click(tick.x, tick.y),
+    ]);
+    await expect(xmlTab).toHaveURL(/\/food\/#\/orders\?ga$/);
+    await xmlTab.close();
+  });
+
   test('Needs you: at most 5 rows across the hubs, late first, then due soon, then waiting; each row has its hub icon and line', async ({ page, guard }) => {
     await seed(page, guard);
     await signIn(page);
