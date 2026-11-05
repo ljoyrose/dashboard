@@ -272,8 +272,23 @@ tr:last-child td{border-bottom:none}
 ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--fs-small)}ul.notes li{margin:2px 0}
 .skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
 .skip:focus{left:8px}
-.boot{padding:40px 0;text-align:center;color:var(--muted);font-size:var(--fs-body)}
-.boot .rows{margin-top:16px;font-size:var(--fs-small);line-height:1.9}
+.boot{padding:40px 0;text-align:center;color:var(--ink);font-size:var(--fs-body)}
+.boot .bootline{margin:14px 0 0;color:var(--ink);font-weight:400}
+.boot .rows{margin-top:14px;font-size:var(--fs-small);line-height:1.9;min-height:8px}
+.bootmark{display:inline-flex;color:var(--ink)}
+.bootspin{width:48px;height:48px;display:block}
+.botring{fill:none;stroke:var(--ljr-5);stroke-width:1.5;stroke-linecap:round;stroke-dasharray:34 98;transform-box:fill-box;transform-origin:center;animation:bootspin 1.1s linear infinite}
+.boothouse{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.bootdots{display:inline-flex;gap:6px;height:8px;align-items:center}
+.bootdots i{width:6px;height:6px;box-sizing:border-box;border:1px solid var(--muted);border-radius:50%;display:block;animation:bootdot 1.1s ease-in-out infinite}
+.bootdots i:nth-child(2){animation-delay:.18s}
+.bootdots i:nth-child(3){animation-delay:.36s}
+@keyframes bootspin{to{transform:rotate(360deg)}}
+@keyframes bootdot{0%,100%{opacity:.28}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){
+ .botring,.bootdots i{animation:none}
+ .botring{stroke-dasharray:none}
+}
 .map svg text{font-family:var(--house-font)}
 .map .scroll{border:0}
 .map svg{display:block;min-width:1180px}
@@ -284,7 +299,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 <a class="skip" href="#main" data-skip="main">Skip to content</a>
 <header class="top house-head"><div class="hin house-row">
 <a id="backHome" class="btn back backhome house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
-<h1><span class="dot" aria-hidden="true"></span>Canine Hub</h1>
+<h1><span class="dot" aria-hidden="true"></span>Cobberdog Hub</h1>
 <span class="house-sp" aria-hidden="true"></span>
 <span class="live" id="livepill" data-house-read>connecting&hellip;</span>
 <button type="button" class="btn srchbtn house-ib" data-search-open aria-keyshortcuts="/" aria-label="Search" title="Search (press /)"><svg aria-hidden="true"><use href="#hi-search"/></svg></button>
@@ -292,13 +307,12 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 <span class="lookwrap" data-house-look></span>
 <button type="button" class="btn house-ib hidden" id="cdSignout" data-signout="1" aria-label="Sign out" title="Sign out"><svg aria-hidden="true"><use href="#hi-logout"/></svg></button>
 </div></header>
-<div class="wrap house-page"><main id="main"><div class="boot" id="boot">Getting ready&hellip;<div class="rows" id="bootrows"></div></div></main>
+<div class="wrap house-page"><main id="main"><div class="boot" id="boot" role="status" aria-live="polite" aria-busy="true"><span class="bootmark" aria-hidden="true"><svg class="bootspin" viewBox="0 0 48 48" width="48" height="48"><circle class="botring" cx="24" cy="24" r="21"></circle><path class="boothouse" d="M15 33h18M16 33V22l8-6 8 6v11M21 33v-6h6v6"></path></svg></span><p class="bootline">Getting things ready&hellip;</p><div class="rows" id="bootrows"><span class="bootdots" aria-hidden="true"><i></i><i></i><i></i></span></div></div></main>
 <div class="next" id="next"></div></div>
 <nav id="nav" class="house-tabs" aria-label="Sections"></nav>
 <script>
 
-var FOLDER=window.DASH_CONFIG.cdhub.folderId;   
-var FOLDER_NAME=window.DASH_CONFIG.cdhub.folderName;
+var FOLDER=window.DASH_CONFIG.cdhub.folderId;
 var WANT=['BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
  'BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-microchip_registration.csv','BLD-weight.csv',
  'BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-association.csv','BLD-prospect.csv','BLD-export_route.csv','BLD-breeder_category.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv',
@@ -331,10 +345,14 @@ function parseCSV(text){
   var head=rows[0].map(function(h){return h.trim();});
   return rows.slice(1).map(function(r){ var o={}; head.forEach(function(h,i){o[h]=(r[i]==null?'':r[i]).trim();}); return o; });
 }
-function setBoot(msg,rows){
-  var b=document.getElementById('boot'); if(!b) return;
-  b.firstChild.nodeValue=msg;
-  if(rows!=null) document.getElementById('bootrows').innerHTML=rows;
+/* Friendly boot only. Never list file names, folder names or where the pages are kept. */
+function bootHtml(){
+  return '<div class="boot" id="boot" role="status" aria-live="polite" aria-busy="true">'
+    +'<span class="bootmark" aria-hidden="true"><svg class="bootspin" viewBox="0 0 48 48" width="48" height="48">'
+    +'<circle class="botring" cx="24" cy="24" r="21"></circle>'
+    +'<path class="boothouse" d="M15 33h18M16 33V22l8-6 8 6v11M21 33v-6h6v6"></path></svg></span>'
+    +'<p class="bootline">Getting things ready\u2026</p>'
+    +'<div class="rows" id="bootrows"><span class="bootdots" aria-hidden="true"><i></i><i></i><i></i></span></div></div>';
 }
 var CLIENT_ID=window.DASH_CONFIG.clientId;
 var SCOPE=window.DASH_CONFIG.scopes.read;
@@ -343,7 +361,7 @@ var TOKEN=null, TOKEN_EXP=0;
 var SAVE_OFF='Saving off. Read-only.';
 LOAD.state='signin'; DBERR=SAVE_OFF;
 function DriveErr(status,msg){ var e=new Error(msg); e.status=status;
-  e.code=status===429?DashKit.BUSY_TEXT:status===401?'Sign-in expired':status===403?('Google refused access'+(msg?' ('+msg+')':'')):status===404?'Folder not found, or this account cannot see it':('Drive error '+status+(msg?' ('+msg+')':''));
+  e.code=status===429?DashKit.BUSY_TEXT:status===401?'Sign-in expired':status===403?('Google refused access'+(msg?' ('+msg+')':'')):status===404?'Folder not found, or this account cannot see it':('Could not be read ('+status+(msg?': '+msg:'')+')');
   return e; }
 function gget(url,asText){
   if(!TOKEN||Date.now()>TOKEN_EXP) return Promise.reject(DriveErr(401,''));
@@ -370,7 +388,7 @@ function readDriveFile(f){
 }
 function onCdToken(resp){
   if(resp.error){ LOAD.state='signin'; LOAD.err='Sign-in did not complete.'; render(); return; }
-  if(!google.accounts.oauth2.hasGrantedAllScopes(resp,SCOPE)){ LOAD.state='signin'; LOAD.err='Drive read access was not granted, so the tables cannot be read.'; render(); return; }
+  if(!google.accounts.oauth2.hasGrantedAllScopes(resp,SCOPE)){ LOAD.state='signin'; LOAD.err='Read access was not granted, so nothing can be shown yet.'; render(); return; }
   TOKEN=resp.access_token; TOKEN_EXP=DashAuth.expiryFrom(resp.expires_in);
   DashAuth.save(TOKEN, TOKEN_EXP, resp.scope||SCOPE);
   load();
@@ -411,10 +429,34 @@ if(window.DashAuth) DashAuth.onChange(function(saved){
 });
 (function waitGoogle(n){ if(!initGoogle() && n<100) setTimeout(function(){ waitGoogle(n+1); },100);
   else if(!auth.ready()){ LOAD.err='Google sign-in could not load. Check the connection and reload the page.'; render(); } })(0);
+/* READ_AT_ONCE: present files are read together, this many at a time, after the one folder list.
+   Do not put await readDriveFile back inside a for-loop: that waited on every file in turn.
+   The mocked boot test fails if this becomes one-by-one or an unlimited burst. Boot copy stays the friendly line only. */
+var READ_AT_ONCE=6;
+function readPool(items,limit,fn){
+  var next=0, running=0;
+  return new Promise(function(resolve){
+    if(!items.length){ resolve(); return; }
+    function kick(){
+      while(running<limit && next<items.length){
+        running++;
+        (function(item){
+          Promise.resolve().then(function(){ return fn(item); }).then(done, done);
+        })(items[next++]);
+      }
+    }
+    function done(){
+      running--;
+      if(next>=items.length && running===0) resolve();
+      else kick();
+    }
+    kick();
+  });
+}
 async function load(){
   T={}; LOAD={state:'loading',err:null,storedAt:null,notes:[]};
   document.getElementById('nav').innerHTML=''; pill();
-  document.getElementById('main').innerHTML='<div class="boot" id="boot">Reading the tables from Drive&hellip;<div class="rows" id="bootrows"></div></div>';
+  document.getElementById('main').innerHTML=bootHtml();
   var files;
   try{ files=await listFolder(); }
   catch(e){ LOAD.state='err'; LOAD.err=(e&&e.code)||String(e&&e.message||e); render(); return; }
@@ -425,17 +467,20 @@ async function load(){
   if(dup.length){ LOAD.state='ambiguous'; LOAD.err=dup.join(', '); render(); return; }
   var missing=WANT.filter(function(t){return !byTitle[t];});
   if(missing.length) LOAD.notes.push(missing.length+' file(s) not in the folder: '+missing.join(', '));
+  var present=WANT.filter(function(t){ return byTitle[t]; });
+  WANT.forEach(function(t){ if(!byTitle[t]) T[t]=[]; });
+  var got={};
+  await readPool(present, READ_AT_ONCE, function(title){
+    return readDriveFile(byTitle[title][0]).then(function(txt){ got[title]={ok:true,txt:txt}; }, function(e){ got[title]={ok:false,e:e}; });
+  });
   var done=0;
-  for(var i=0;i<WANT.length;i++){
-    var title=WANT[i];
-    if(!byTitle[title]){ T[title]=[]; continue; }
-    try{
-      var txt=await readDriveFile(byTitle[title][0]);
-      txt=String(txt||'').replace(/^\uFEFF/,'');
-      if(title==='BLD-_MANIFEST.csv' && !/^"?file,/i.test(txt)){ var nl=txt.indexOf('\n'); LOAD.manifestLine=txt.slice(0,nl<0?txt.length:nl).replace(/^"|"\s*$/g,'').trim(); txt=nl<0?'':txt.slice(nl+1); }
-      T[title]=parseCSV(txt); done++;
-    }catch(e){ T[title]=[]; LOAD.notes.push(title+': '+((e&&e.code)||'read failed')); }
-  }
+  present.forEach(function(title){
+    var r=got[title];
+    if(!r||!r.ok){ T[title]=[]; LOAD.notes.push(title+': '+((r&&r.e&&r.e.code)||'read failed')); return; }
+    var txt=String(r.txt||'').replace(/^\uFEFF/,'');
+    if(title==='BLD-_MANIFEST.csv' && !/^"?file,/i.test(txt)){ var nl=txt.indexOf('\n'); LOAD.manifestLine=txt.slice(0,nl<0?txt.length:nl).replace(/^"|"\s*$/g,'').trim(); txt=nl<0?'':txt.slice(nl+1); }
+    T[title]=parseCSV(txt); done++;
+  });
   LOAD.state='ok'; LOAD.files=done;
   DB=null; ROUND={}; ACCESS={}; DBERR=SAVE_OFF;
   foldAreaReadings(T['BLD-area_reading.csv']||[]);
@@ -1917,9 +1962,9 @@ function pill(){
  p.removeAttribute('data-read');   // the phone's Look menu shows this read time (the pill leaves the bar there)
  if(LOAD.state==='ok'){ p.className='live ok';
   if(LOAD.storedAt) p.setAttribute('data-read','Read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}));
-  var w='live · read-only · '+(CD.counts?Object.keys(CD.counts).length:0)+' tables'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):'');
+  var w='live · read-only'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):'');
   // ✓ on screen; the words stay for screen readers (and the tests), and on hover.
-  p.title=w+' · '+FOLDER_NAME; p.innerHTML='<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">'+esc(w)+'</span>\u2713'; }
+  p.title=w; p.innerHTML='<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">'+esc(w)+'</span>\u2713'; }
  else if(LOAD.state==='signin'){ p.className='live bad'; p.textContent='signed out'; }
  else if(LOAD.state==='loading'){ p.className='live'; p.textContent='\u2026'; }
  else if(LOAD.state==='ambiguous'){ p.className='live bad'; p.textContent='duplicate file titles'; }
@@ -1972,7 +2017,7 @@ function go(id,push){
  var main=document.getElementById('main');
  if(LOAD.state==='signin'){
   main.innerHTML='<div class="card acc4" style="margin-top:24px"><h2 class="hx4">Sign in to see the tables</h2>'
-   +'<ul class="notes"><li>No data of its own. Read-only, live from '+esc(FOLDER_NAME)+'.</li><li>One sign-in for the whole site.</li></ul>'
+   +'<ul class="notes"><li>Read-only. One sign-in for the whole site.</li></ul>'
    +(LOAD.err?'<p class="mut">'+esc(LOAD.err)+'</p>':'')
    +'<p style="margin-bottom:0"><button id="signinbtn" data-signin="1"'+(auth.ready()?'':' disabled')+'>'+(auth.ready()?'Sign in with Google':'Loading Google sign-in\u2026')+'</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
@@ -1981,8 +2026,8 @@ function go(id,push){
  if(LOAD.state!=='ok'){
   // A failed read: Main's three parts, the failure in place of Next and Needs you, every number "–" (never a made-up one).
   main.innerHTML='<div style="margin-top:24px"><h2 class="sr">Main</h2>'+DashKit.hubMain({hub:'cdhub',error:(LOAD.state==='ambiguous'?'More than one file shares a title. Refusing to guess which is current: '+(LOAD.err||'')
-     :LOAD.state==='err'?'The folder could not be read. '+(LOAD.err||'')+'. The tables live in '+FOLDER_NAME+'.'
-     :'Loading. The tables live in '+FOLDER_NAME+'. Nothing is stored in this page, so there is nothing to show without them.'),nums:mainNums(false),doHref:'#/work'})
+     :LOAD.state==='err'?'The folder could not be read. '+(LOAD.err||'')+'.'
+     :'Getting things ready. Nothing is stored in this page, so there is nothing to show yet.'),nums:mainNums(false),doHref:'#/work'})
    +'<p class="cd-retry"><button data-signin="1">Sign in again</button> <button data-reload="1">Try again</button></p></div>';
   document.getElementById('nav').innerHTML=''; cdIn(false); return;
  }

@@ -17,7 +17,7 @@ test.describe('CD Hub: loads', () => {
     const res = await page.goto('cdhub/');
     expect(res.status()).toBe(200);
     await expect(page).toHaveTitle(/CD Hub/);
-    await expect(page.locator('h1')).toHaveText('Canine Hub');
+    await expect(page.locator('h1')).toHaveText('Cobberdog Hub');
     await expect(page.locator('#main')).toContainText('Sign in to see the tables');
     await expect(page.locator('#livepill')).toHaveText('signed out');
     await expect(page.locator('#nav button')).toHaveCount(0);
@@ -25,7 +25,8 @@ test.describe('CD Hub: loads', () => {
 
   test('holds no table data; only the shared sign-in is kept, one key in this browser', async ({ page, context }) => {
     await page.goto('cdhub/');
-    await expect(page.locator('#main')).toContainText('No data of its own');
+    await expect(page.locator('#main')).toContainText('Read-only. One sign-in for the whole site.');
+    await expect(page.locator('#main')).not.toContainText(/from Drive|live from/i);
     await signIn(page);
     const stores = await page.evaluate(() => ({ local: Object.keys(localStorage), session: sessionStorage.length, key: window.DashAuth.KEY, saved: JSON.parse(localStorage.getItem(window.DashAuth.KEY)) }));
     expect(stores.local).toEqual([stores.key]);
@@ -58,11 +59,54 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     expect(reads.length).toBe(sampleCount);
   });
 
-  test('live pill shows live, read-only, and the number of tables', async ({ page }) => {
+  test('live pill shows live and read-only, without a table count or a folder name', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#livepill')).toContainText(/^live · read-only · \d+ tables · read \d\d:\d\d/);
+    await expect(page.locator('#livepill')).toContainText(/^live · read-only · read \d\d:\d\d/);
+    const leak = await page.evaluate(() => {
+      const p = document.getElementById('livepill');
+      const blob = (p.textContent || '') + ' ' + (p.getAttribute('title') || '');
+      const folder = (window.DASH_CONFIG.cdhub && window.DASH_CONFIG.cdhub.folderName) || '';
+      return /from Drive|\d+ tables|BLD-/i.test(blob) || (folder && blob.indexOf(folder) !== -1);
+    });
+    expect(leak).toBe(false);
     expect(WANT_BLD.length).toBeGreaterThan(40);
+  });
+
+  // Load stays concurrent (READ_AT_ONCE in cdhub/index.html). One-by-one reads, or naming files on the boot line, fail this.
+  test('boot stays friendly and present files are read together @regression', async ({ page }) => {
+    await page.goto('cdhub/');
+    await expect(page.locator('#signinbtn')).toBeEnabled();
+    await page.evaluate(() => {
+      const orig = window.fetch;
+      let inflight = 0;
+      window.__cdReads = { max: 0, n: 0 };
+      window.fetch = function (url) {
+        const u = String(url || '');
+        const read = /\/files\/[^/?]+/.test(u) && /alt=media|\/export/.test(u);
+        const self = this, args = arguments;
+        if (!read) return orig.apply(self, args);
+        window.__cdReads.n++;
+        inflight++;
+        window.__cdReads.max = Math.max(window.__cdReads.max, inflight);
+        return new Promise((res) => setTimeout(res, 250)).then(() => orig.apply(self, args)).finally(() => { inflight--; });
+      };
+    });
+    await page.locator('#signinbtn').click();
+    const boot = page.locator('#boot');
+    await expect(boot).toBeVisible();
+    await expect(boot.locator('.bootline')).toHaveText('Getting things ready…');
+    await expect(boot.locator('.bootspin')).toBeVisible();
+    await expect(boot.locator('#bootrows .bootdots i')).toHaveCount(3);
+    const bootText = await boot.innerText();
+    expect(bootText).not.toMatch(/Drive|BLD-|\.csv/i);
+    await expect(page.locator('header button[data-reload]')).toHaveAttribute('title', 'Refresh');
+    await expect(page.locator('#livepill')).toContainText('live', { timeout: 20_000 });
+    const stats = await page.evaluate(() => window.__cdReads);
+    expect(stats.n).toBeGreaterThan(6);
+    expect(stats.max).toBeGreaterThan(1);
+    expect(stats.max).toBeLessThanOrEqual(6);
+    await expect(page.locator('#boot')).toHaveCount(0);
   });
 
   test('the sample CSVs are parsed into the right things on the Dogs page', async ({ page }) => {
@@ -195,6 +239,11 @@ test.describe('CD Hub: things that go wrong', () => {
     await page.locator('#signinbtn').click();
     await expect(page.locator('#main')).toContainText('The folder could not be read');
     await expect(page.locator('#main')).toContainText('Google refused access');
+    const named = await page.evaluate(() => {
+      const folder = (window.DASH_CONFIG.cdhub && window.DASH_CONFIG.cdhub.folderName) || '';
+      return folder && document.getElementById('main').innerText.indexOf(folder) !== -1;
+    });
+    expect(named).toBe(false);
     await expect(page.locator('#livepill')).toHaveText('read failed');
   });
 
@@ -211,7 +260,8 @@ test.describe('CD Hub: things that go wrong', () => {
     test('explains the tables cannot be read', async ({ page }) => {
       await page.goto('cdhub/');
       await page.locator('#signinbtn').click();
-      await expect(page.locator('#main')).toContainText('Drive read access was not granted');
+      await expect(page.locator('#main')).toContainText('Read access was not granted');
+      await expect(page.locator('#main')).not.toContainText(/Drive/i);
     });
   });
   test.describe('Sign-in window closed', () => {
