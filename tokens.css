@@ -20,6 +20,12 @@
      J  Looks (colours) ....... --house-paper  --house-canvas  --house-card  --house-ink  --house-muted  --house-soft-line  --house-soft
                                --house-press  --house-ring  --house-frame  --house-foot  --house-frame-ink  --house-frame-line  --house-shadow
                                --house-late(-tint)  --house-soon(-tint)  --house-ok(-tint)  --house-risk(-tint)
+     K  Counts (Lisa, 3 Nov 2026) ONE rule for every page, toolkit.js DashKit.count (why / kind / cls / say):
+                               grey ring (--house-ring) = waiting, to-do, the Bin;  rose ring (.need, --house-late) = LATE (late, overdue);
+                               black badge (.broken) = BROKEN (site down, domain expired, project stuck, check failed, engine error):
+                               --house-broken-fill  --house-broken-ink  (near-black + white; inverted in the dark looks: light ink + near-black).
+                               The ONE deliberate exception to "no fills, no black". Same box as the ring, so nothing shifts; on a phone tab
+                               the dot is black (light ink in dark). Late and broken together: broken wins. Words: "2 late", "1 down", "3 stuck", "4 failed".
    Looks: "Warm clear" (default) and "Cool clear" (html.look-cool), each light and dark (device dark mode, or [data-theme="dark"]). ===== */
 
 /* A  LJR7 slots. */
@@ -151,7 +157,9 @@
   --house-frame: #3A3632; --house-foot: #46413B; --house-frame-ink: #F6F1E8; --house-frame-line: #9C9285;
   --house-shadow: 0 1px 3px rgba(60,48,32,.14), 0 2px 10px rgba(60,48,32,.08);
   /* Meaning lines (3:1 or better on a card): date pills, yes / no, needs-you. Tints are the slot tints. */
-  --house-late: var(--ljr-2); --house-late-tint: var(--ljr-2-tint);
+  --house-late: var(--ljr-2); --house-late-tint: var(--ljr-2-tint);   /* rose ring: late only (DashKit.count in toolkit.js) */
+  /* K  Broken counts (Lisa, 3 Nov 2026): the black badge, the one fill a count may have. */
+  --house-broken-fill: #1E1C1A; --house-broken-ink: #FFFFFF;
   --house-soon: var(--ljr-3-text); --house-soon-tint: var(--ljr-3-tint);
   --house-ok: var(--ljr-5-text); --house-ok-tint: var(--ljr-5-tint);
   --house-risk: var(--ljr-2-text); --house-risk-tint: var(--ljr-2-tint);
@@ -165,6 +173,7 @@
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
+    --house-broken-fill: #EFECE6; --house-broken-ink: #1E1C1A;   /* K  broken, inverted */
     --house-paper: #181613; --house-canvas: #1F1C18; --house-card: #27231E; --house-ink: #F3EEE5; --house-muted: #B3AA9D;
     --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E;
     --house-frame: #2A2622; --house-foot: #34302B; --house-shadow: 0 1px 3px rgba(0,0,0,.4);
@@ -176,6 +185,7 @@
   }
 }
 :root[data-theme="dark"] {
+  --house-broken-fill: #EFECE6; --house-broken-ink: #1E1C1A;   /* K  broken, inverted */
   --house-paper: #181613; --house-canvas: #1F1C18; --house-card: #27231E; --house-ink: #F3EEE5; --house-muted: #B3AA9D;
   --house-soft-line: #3E372F; --house-soft: #2F2A24; --house-press: #857B6E;
   --house-frame: #2A2622; --house-foot: #34302B; --house-shadow: 0 1px 3px rgba(0,0,0,.4);

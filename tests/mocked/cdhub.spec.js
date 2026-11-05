@@ -489,6 +489,10 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await openTab(page, 'shape');
     await expect(page.locator('#checksCard h3 .cnt')).toHaveText('4');
     await expect(page.locator('#checksCard .mk.bad')).toHaveCount(4);
+    // Failed checks are broken: the black badge, never rose, read out as "4 failed" (Lisa, 3 Nov 2026).
+    await expect(page.locator('#checksCard h3 .cnt')).toHaveClass(/\bbroken\b/);
+    await expect(page.locator('#checksCard h3 .cnt')).not.toHaveClass(/\bneed\b/);
+    await expect(page.locator('#checksCard h3')).toContainText('4 failed');
   });
 
   test('Needs you: late first, then soon; Next is the most urgent and opens Today; Do keeps the date pills; Litters shows both', async ({ page, guard }) => {

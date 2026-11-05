@@ -107,7 +107,7 @@
             text: label + (k === 0 ? ': down' : k === 1 ? ': expires ' + (d < 0 ? (-d) + ' days ago' : 'in ' + d + ' days') : k === 2 ? ': blocked' : ': email checks'), href: 'estate/#/look', sort: d };
           todo.push(row); if (row.kind !== 'wait') needs.push(row);
         });
-        return { ok: true, nums: [['Down', c.down, c.down > 0], ['Expiring', c.expiring], ['Live', c.live]], needs: needs, todo: todo, decide: [] };
+        return { ok: true, nums: [['Down', c.down, 'down'], ['Expiring', c.expiring], ['Live', c.live]], needs: needs, todo: todo, decide: [] };
       });
     }).catch(none);
   }
@@ -2626,10 +2626,10 @@
     market: [['To Post', '#/do?post'], ['To Reply', '#/reply'], ['Sold', '#/sold']],
     studio: [['Approve', '#/review'], ['Due Today', '#/me/today'], ['Sold', '#/library']]
   };
-  // Projects: the hub Sheet's INDEX tab (loadPh). All grey: stuck is not late (a rose number means late).
+  // Projects: the hub Sheet's INDEX tab (loadPh). Stuck above 0 is broken: the black badge (DashKit.count); Waiting and Running stay grey.
   function phNums() {
     var d = S.ph.data;
-    return d ? [['Stuck', d.stuck], ['Waiting', d.waiting], ['Running', d.running]] : null;
+    return d ? [['Stuck', d.stuck, 'stuck'], ['Waiting', d.waiting], ['Running', d.running]] : null;
   }
   function hubTiles() {
     var D = hubData();
@@ -2639,8 +2639,9 @@
       var x = D[h.key] || { ok: false }, nums = h.key === 'projects' ? phNums() : x.ok ? x.nums : null;
       var tab = h.key === 'projects' ? ' target="_blank" rel="noopener"' : HUB_TAB;
       var body = '<span class="hks"' + (h.key === 'projects' ? ' data-ph="' + (S.ph.data ? 'ok' : esc(S.ph.status)) + '"' : '') + '>' + HUB_NUMS[h.key].map(function (k, i) {
-        var n = nums ? nums[i] : null, v = n && n[1] != null ? String(n[1]) : '–', late = !!(n && n[2]);
-        return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + '>' + '<b' + (late && v !== '0' ? ' class="need"' : '') + '>' + esc(v) + '</b>' + '<span>' + esc(k[0]) + '</span></a>';
+        // n[2]: true = late (rose ring), or the broken word 'down' / 'stuck' / 'failed' (black badge): DashKit.count, the one rule.
+        var n = nums ? nums[i] : null, v = n && n[1] != null ? String(n[1]) : '–', why = DashKit.count.why(v, n && n[2]);
+        return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + (why ? ' aria-label="' + esc(h.name + ', ' + k[0] + ': ' + v + ' ' + why) + '"' : '') + '>' + '<b' + (why ? ' class="' + DashKit.count.cls(v, n[2]).trim() + '"' : '') + '>' + esc(v) + '</b>' + '<span>' + esc(k[0]) + '</span></a>';
       }).join('') + '</span>';
       var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders"' + HUB_TAB + '>✓ XML</a>' : '';
       var why = h.key === 'projects' && S.ph.status === 'failed' ? ' title="Numbers could not be read. Tap to open the hub."' : '';
