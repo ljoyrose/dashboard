@@ -174,6 +174,10 @@ tr:last-child td{border-bottom:none}
 .mrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);color:inherit;text-decoration:none;min-width:0}
 .mcard h3+.mrow,.mcard .mrow:first-of-type{border-top:0;padding-top:16px}
 .mrow .t{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
+/* SOP rows: the name takes the spare room; the form hint wraps instead of widening the page. */
+#sopcard .mrow:first-child{border-top:0;padding-top:0}
+#sopcard .mrow .mut{flex:0 1 11em;overflow-wrap:anywhere}
+#sopcard .mrow .cb{flex:none;padding:0 10px}
 .mrow .t small{display:block;color:var(--muted);font-size:var(--fs-small);font-weight:400;margin-top:2px}
 .mrow .ic{width:12px;height:12px;flex:none;border-radius:50%;border:1px solid var(--press)}
 .mrow .ic.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
@@ -295,7 +299,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 @media (max-width:544px){header.top{position:static}}
 </style>
 </head><body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3 8l4-16l3 8h4"/></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5-2.5M3.5 11.5l1.5 1.5l2.5-2.5M3.5 17.5l1.5 1.5l2.5-2.5M11 6h9M11 12h9M11 18h9"/></symbol><symbol id="i-sitemap" viewBox="0 0 24 24"><path d="M3 15h6v6H3zM15 15h6v6h-6zM9 3h6v6H9zM6 15v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1M12 9v3"/></symbol><symbol id="i-calendar-event" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM16 3v4M8 3v4M4 11h16M8 15h2v2H8z"/></symbol><symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-8a3.5 3.5 0 0 1 0-7H12"/></symbol><symbol id="i-paw" viewBox="0 0 24 24"><path d="M14.7 13.5c-1.1-2-1.4-2.5-2.7-2.5s-1.6.5-2.7 2.5c-1.1 2-3 2.1-3 4c0 1.5 1.2 2.5 2.7 2.5c1.2 0 2-.5 3-.5s1.8.5 3 .5c1.5 0 2.7-1 2.7-2.5c0-1.9-1.9-2-3-4z"/><circle cx="5" cy="10" r="1.6"/><circle cx="9" cy="5.5" r="1.6"/><circle cx="15" cy="5.5" r="1.6"/><circle cx="19" cy="10" r="1.6"/></symbol><symbol id="i-building-cottage" viewBox="0 0 24 24"><path d="M3 21h18M4 21V10l8-6l8 6v11M9 21v-6h6v6"/></symbol><symbol id="i-baby-carriage" viewBox="0 0 24 24"><circle cx="8" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M2 5h2.5l1.7 4H20a6 6 0 0 1-6 6H8.7M11 9V3a7 7 0 0 1 7 6"/></symbol><symbol id="i-stethoscope" viewBox="0 0 24 24"><path d="M6 4H5a1 1 0 0 0-1 1v3.5a5.5 5.5 0 0 0 11 0V5a1 1 0 0 0-1-1h-1M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></symbol><symbol id="i-world" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4l4 4M6 12h10"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7"/><path d="M21 21l-6-6"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M5 12H3l9-9l9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol><symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0zM10 9h4"/></symbol><symbol id="i-adjustments-horizontal" viewBox="0 0 24 24"><circle cx="14" cy="6" r="2"/><path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h11M19 18h1"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol></svg>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3 8l4-16l3 8h4"/></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5-2.5M3.5 11.5l1.5 1.5l2.5-2.5M3.5 17.5l1.5 1.5l2.5-2.5M11 6h9M11 12h9M11 18h9"/></symbol><symbol id="i-sitemap" viewBox="0 0 24 24"><path d="M3 15h6v6H3zM15 15h6v6h-6zM9 3h6v6H9zM6 15v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1M12 9v3"/></symbol><symbol id="i-calendar-event" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM16 3v4M8 3v4M4 11h16M8 15h2v2H8z"/></symbol><symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-8a3.5 3.5 0 0 1 0-7H12"/></symbol><symbol id="i-paw" viewBox="0 0 24 24"><path d="M14.7 13.5c-1.1-2-1.4-2.5-2.7-2.5s-1.6.5-2.7 2.5c-1.1 2-3 2.1-3 4c0 1.5 1.2 2.5 2.7 2.5c1.2 0 2-.5 3-.5s1.8.5 3 .5c1.5 0 2.7-1 2.7-2.5c0-1.9-1.9-2-3-4z"/><circle cx="5" cy="10" r="1.6"/><circle cx="9" cy="5.5" r="1.6"/><circle cx="15" cy="5.5" r="1.6"/><circle cx="19" cy="10" r="1.6"/></symbol><symbol id="i-building-cottage" viewBox="0 0 24 24"><path d="M3 21h18M4 21V10l8-6l8 6v11M9 21v-6h6v6"/></symbol><symbol id="i-baby-carriage" viewBox="0 0 24 24"><circle cx="8" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M2 5h2.5l1.7 4H20a6 6 0 0 1-6 6H8.7M11 9V3a7 7 0 0 1 7 6"/></symbol><symbol id="i-stethoscope" viewBox="0 0 24 24"><path d="M6 4H5a1 1 0 0 0-1 1v3.5a5.5 5.5 0 0 0 11 0V5a1 1 0 0 0-1-1h-1M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></symbol><symbol id="i-world" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4l4 4M6 12h10"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7"/><path d="M21 21l-6-6"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M5 12H3l9-9l9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol><symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0zM10 9h4"/></symbol><symbol id="i-adjustments-horizontal" viewBox="0 0 24 24"><circle cx="14" cy="6" r="2"/><path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h11M19 18h1"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol><symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2"/></symbol></svg>
 <a class="skip" href="#main" data-skip="main">Skip to content</a>
 <header class="top house-head"><div class="hin house-row">
 <a id="backHome" class="btn back backhome house-ib" href="../" data-back-home aria-label="Dashboard" title="Dashboard"><svg aria-hidden="true"><use href="#hi-home"/></svg></a>
@@ -327,6 +331,49 @@ var DB=null, ROUND={}, ACCESS={}, DBERR=null;
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 // Links that come from the tables: only plain web addresses are allowed (never javascript:, data: etc.).
 function safeUrl(u){ u=String(u==null?'':u).trim(); return /^https?:\/\/[^\s"'<>]+$/i.test(u)?u:''; }
+// Public SOP index (cdhub/sop-index.json). Name labels only. A form opens only when the row says it has one
+// and the row carries a real https address. This seed has no addresses, so nothing here invents one.
+var SOP={rows:null,err:'',pending:null};
+var SOP_COLOURS=['White','Red','Orange','Yellow','Green','Blue'];
+var SOP_FREQS=['Daily','Weekly','Monthly','Annual','Breeding','As needed','Ongoing'];
+var SOP_DOT={White:'--ljr-0',Red:'--ljr-2',Orange:'--ljr-3',Yellow:'--ljr-4',Green:'--ljr-5',Blue:'--ljr-6'};
+function sopDot(c){ return SOP_DOT[c]||'--ljr-0'; }
+function sopLabel(r){ return r.colour+' \u2013 '+r.frequency+': '+r.short_name; }
+function sopNorm(r){
+ if(!r||typeof r!=='object') return null;
+ var colour=String(r.colour||'').trim(), frequency=String(r.frequency||'').trim(), short_name=String(r.short_name||'').trim();
+ if(!colour||!frequency||!short_name) return null;
+ var has=String(r.has_form||'').toUpperCase()==='Y'?'Y':'N';
+ var raw=String(r.form_url||'').trim();
+ var form_url=(has==='Y'&&/^https:\/\/[^\s"'<>]+$/i.test(raw))?raw:'';
+ return {colour:colour,frequency:frequency,short_name:short_name,has_form:has,form_url:form_url};
+}
+function sopOrder(vals,pref){
+ return vals.slice().sort(function(a,b){
+  var ia=pref.indexOf(a), ib=pref.indexOf(b);
+  if(ia<0) ia=999; if(ib<0) ib=999;
+  return ia-ib||(a<b?-1:a>b?1:0);
+ });
+}
+function sopStart(){
+ if(SOP.rows||SOP.err||SOP.pending) return SOP.pending||Promise.resolve();
+ var path=location.pathname.replace(/[^/]*$/,'')+'sop-index.json';
+ SOP.pending=fetch(path,{cache:'no-store'}).then(function(res){
+  if(!res.ok) throw new Error('read failed');
+  return res.json();
+ }).then(function(data){
+  if(!Array.isArray(data)) throw new Error('not a list');
+  var rows=data.map(sopNorm);
+  if(!rows.length||rows.some(function(r){return !r;})) throw new Error('bad row');
+  SOP.rows=rows;
+ }).catch(function(){
+  SOP.err='The SOP list could not be read.';
+ }).then(function(){
+  if(LOAD.state==='ok' && /^#\/sops(?:$|\?)/.test(location.hash||'') && !document.getElementById('soprows')) go('sops',false);
+ });
+ return SOP.pending;
+}
+sopStart();
 function unesc(s){ return String(s||''); }
 function parseCSV(text){
   text=unesc(text).replace(/[ \t]+\n/g,'\n').replace(/\r/g,'');
@@ -1935,20 +1982,65 @@ function pageShape(){
  return h;
 }
 
-var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,vet:pageVet,buyers:pageBuyers};
-var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Assocs']];
-var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','vet'],areas:['today','litters'],litters:['dogs','vet'],vet:['dogs','buyers'],buyers:['dogs','map']};
+function pageSops(){
+ if(SOP.err) return '<h2>SOPs</h2><div class="card dash"><h3 class="hx4">The SOP list could not be read</h3><p style="margin-bottom:0" class="mut">'+esc(SOP.err)+'</p></div>';
+ if(!SOP.rows) return '<h2>SOPs</h2><p class="note">Reading the SOP list\u2026</p>';
+ var colours=sopOrder(SOP.rows.map(function(r){return r.colour;}).filter(function(c,i,a){return a.indexOf(c)===i;}), SOP_COLOURS);
+ var freqs=sopOrder(SOP.rows.map(function(r){return r.frequency;}).filter(function(c,i,a){return a.indexOf(c)===i;}), SOP_FREQS);
+ return '<h2>SOPs</h2>'
+  +fbar({id:'sops',what:'SOPs',q:'sopq',count:'sopcnt',clear:'sopclr',sort:['sopsort',[['','name A to Z'],['colour','colour'],['frequency','frequency']]],
+    groups:[['Colour',fsel('sopcol','Colour',colours.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join(''))],
+     ['Frequency',fsel('sopfr','Frequency',freqs.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+'</option>';}).join(''))]]})
+  +'<div class="card" id="sopcard"><div id="soprows"></div><p class="note hidden" id="sopempty">Nothing matches.</p></div>';
+}
+function drawSops(){
+ var rows=SOP.rows||[];
+ var v=function(i){ var e=document.getElementById(i); return e?(e.value||''):''; };
+ var q=v('sopq'), col=v('sopcol'), fr=v('sopfr'), so=v('sopsort');
+ var list=rows.filter(function(r){
+  if(col && r.colour!==col) return false;
+  if(fr && r.frequency!==fr) return false;
+  if(!q) return true;
+  var hay=(sopLabel(r)+' '+r.short_name).toLowerCase();
+  return q.toLowerCase().split(/\s+/).filter(Boolean).every(function(w){ return hay.indexOf(w)>=0; });
+ });
+ var byLabel=function(a,b){ return sopLabel(a).localeCompare(sopLabel(b)); };
+ var rank=function(pref,key){ return function(a,b){
+  var ia=pref.indexOf(a[key]), ib=pref.indexOf(b[key]);
+  if(ia<0) ia=999; if(ib<0) ib=999;
+  return ia-ib||byLabel(a,b);
+ }; };
+ if(so==='colour') list.sort(rank(SOP_COLOURS,'colour'));
+ else if(so==='frequency') list.sort(rank(SOP_FREQS,'frequency'));
+ else list.sort(byLabel);
+ var el=document.getElementById('soprows'); if(!el) return;
+ el.innerHTML=list.map(function(r){
+  var label=sopLabel(r);
+  var form=r.form_url
+    ? '<a class="cb" href="'+esc(r.form_url)+'" target="_blank" rel="noopener" aria-label="Open form: '+esc(label)+'"><svg class="ti" aria-hidden="true"><use href="#i-clipboard"/></svg></a>'
+    : '<span class="mut">form not on hub yet</span>';
+  return '<div class="mrow" data-sop="'+esc(r.short_name)+'"><span class="dot" style="--c:var('+sopDot(r.colour)+')" aria-hidden="true"></span><span class="t">'+esc(label)+'</span>'+form+'</div>';
+ }).join('');
+ var empty=document.getElementById('sopempty');
+ if(empty) empty.classList.toggle('hidden', !!list.length);
+ var cnt=document.getElementById('sopcnt');
+ if(cnt) cnt.textContent=list.length+' of '+rows.length;
+ fchips('sops',['sopcol','sopfr']);
+}
+var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,vet:pageVet,buyers:pageBuyers,sops:pageSops};
+var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Assocs'],['sops','SOPs']];
+var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','vet'],areas:['today','litters'],litters:['dogs','vet'],vet:['dogs','buyers'],buyers:['dogs','map'],sops:['dogs','buyers']};
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 // Bottom tab bar: icon, short label (narrow screens) and the tab's colour (shown only in the small bar above the label).
 var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sitemap','Tables',0],today:['calendar-event','Today',4],
  round:['route','Round',4],dogs:['paw','Dogs',5],areas:['building-cottage','Areas',3],litters:['baby-carriage','Litters',7],
- vet:['stethoscope','Vet',5],buyers:['world','Assocs',6]};
+ vet:['stethoscope','Vet',5],buyers:['world','Assocs',6],sops:['clipboard','SOPs',6]};
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; } // 0 shows no ring
-// Bottom tabs (Lisa's picks, 2 Nov): Main, Do, Today, Dogs, Assocs, then More with the other views. Same bar as every hub
+// Bottom tabs: Main, Do, Today, Dogs, SOPs. Assocs sits under More with the other views. Same bar as every hub
 // (../house.css section 6, ../toolkit.js builds the tab and More). Counts: grey ring = waiting; rose ring only when one is late
-// (Lisa's sweep, 3 Nov 2026: a rose count is read out as "N late").
-var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['buyers','Assocs',6,'world']];
-var MORE_VIEWS=['shape','round','areas','litters','vet'];
+// (a rose count is read out as "N late").
+var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['sops','SOPs',6,'line']];
+var MORE_VIEWS=['shape','round','areas','litters','vet','buyers'];
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
  var counts={map:nd,work:wait}, late={map:needsToday().some(function(x){return x.tone==='late';}),work:false};
@@ -2085,6 +2177,14 @@ function go(id,push){
    b.addEventListener('click',function(){ showList(b.dataset.list); }); });
   if(sub&&LISTNAME[sub]) showList(sub);
  }
+ if(id==='sops'){
+  ['sopq','sopcol','sopfr','sopsort'].forEach(function(i){ var e=document.getElementById(i);
+    if(e){ e.addEventListener('input',drawSops); e.addEventListener('change',drawSops); } });
+  var sc=document.getElementById('sopclr');
+  if(sc) sc.addEventListener('click',function(){ ['sopq','sopcol','sopfr'].forEach(function(i){
+    var e=document.getElementById(i); if(e) e.value=''; }); drawSops(); });
+  drawSops();
+ }
  if(id==='buyers'){
   ['bq','bcat','bctry','bapp','bsig','bmd','bem','bch','bsort'].forEach(function(i){ var e=document.getElementById(i);
     if(e){ e.addEventListener('input',drawBuyers); e.addEventListener('change',drawBuyers); } });
@@ -2178,7 +2278,9 @@ DashKit.search.register(function(q){
  });
  return out;
 });
-window.addEventListener('popstate',function(){ if(LOAD.state==='ok'){ go((location.hash||'#/map').replace('#/',''),false); focusView(); } });
+function followHash(){ if(LOAD.state==='ok'){ go((location.hash||'#/map').replace('#/',''),false); focusView(); } }
+window.addEventListener('popstate',followHash);
+window.addEventListener('hashchange',followHash);
 render();
 </script>
 <script>

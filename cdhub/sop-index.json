@@ -1,0 +1,278 @@
+[
+  {
+    "colour": "White",
+    "frequency": "Annual",
+    "short_name": "Microchip Audit",
+    "has_form": "Y"
+  },
+  {
+    "colour": "White",
+    "frequency": "Annual",
+    "short_name": "Sign-Off",
+    "has_form": "N"
+  },
+  {
+    "colour": "White",
+    "frequency": "As needed",
+    "short_name": "Read-and-Sign",
+    "has_form": "Y"
+  },
+  {
+    "colour": "White",
+    "frequency": "Breeding",
+    "short_name": "Breeding Schedule",
+    "has_form": "Y"
+  },
+  {
+    "colour": "White",
+    "frequency": "Ongoing",
+    "short_name": "Record Keeping",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Red",
+    "frequency": "As needed",
+    "short_name": "Accident Report",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Red",
+    "frequency": "As needed",
+    "short_name": "Euthanasia",
+    "has_form": "N"
+  },
+  {
+    "colour": "Red",
+    "frequency": "As needed",
+    "short_name": "Evacuation",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Red",
+    "frequency": "As needed",
+    "short_name": "Inspections",
+    "has_form": "N"
+  },
+  {
+    "colour": "Red",
+    "frequency": "As needed",
+    "short_name": "Lost Dog",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Red",
+    "frequency": "As needed",
+    "short_name": "Outbreak Response",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Red",
+    "frequency": "Ongoing",
+    "short_name": "Emergency Display",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Red",
+    "frequency": "Ongoing",
+    "short_name": "Licence Display",
+    "has_form": "N"
+  },
+  {
+    "colour": "Red",
+    "frequency": "Ongoing",
+    "short_name": "Site Security",
+    "has_form": "N"
+  },
+  {
+    "colour": "Red",
+    "frequency": "Ongoing",
+    "short_name": "Workplace Safety",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Orange",
+    "frequency": "Breeding",
+    "short_name": "Health Screening",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Daily",
+    "short_name": "Care Rounds",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Daily",
+    "short_name": "Cleaning",
+    "has_form": "N"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Daily",
+    "short_name": "Feeding",
+    "has_form": "N"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Daily",
+    "short_name": "Health Check",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Weekly",
+    "short_name": "Deep Clean",
+    "has_form": "N"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Weekly",
+    "short_name": "Pest Checks",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Monthly",
+    "short_name": "Condition Scoring",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Monthly",
+    "short_name": "Monthly Care",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Monthly",
+    "short_name": "Monthly Clean",
+    "has_form": "N"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Annual",
+    "short_name": "Annual Care",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "As needed",
+    "short_name": "Dog Intake",
+    "has_form": "N"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "As needed",
+    "short_name": "Isolation",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "As needed",
+    "short_name": "Isolation Release",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "As needed",
+    "short_name": "Occupant Clean",
+    "has_form": "N"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "As needed",
+    "short_name": "Parasite Control",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "As needed",
+    "short_name": "Transport",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "As needed",
+    "short_name": "Vaccinations",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Breeding",
+    "short_name": "Breeding",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Breeding",
+    "short_name": "Ovulation Testing",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Breeding",
+    "short_name": "Season Tracking",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Breeding",
+    "short_name": "Whelping",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Ongoing",
+    "short_name": "Hygiene",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Ongoing",
+    "short_name": "Pest Control",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Green",
+    "frequency": "Weekly",
+    "short_name": "Staff Rota",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Green",
+    "frequency": "As needed",
+    "short_name": "Induction",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Green",
+    "frequency": "Ongoing",
+    "short_name": "Staff Training",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Green",
+    "frequency": "Ongoing",
+    "short_name": "Staffing Ratio",
+    "has_form": "N"
+  },
+  {
+    "colour": "Blue",
+    "frequency": "As needed",
+    "short_name": "Collections",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Blue",
+    "frequency": "Breeding",
+    "short_name": "Puppy Handover",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Blue",
+    "frequency": "Breeding",
+    "short_name": "Socialisation",
+    "has_form": "Y"
+  }
+]
