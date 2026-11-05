@@ -204,15 +204,18 @@ function gjson(url){
   return fetch(url,{headers:{'Authorization':'Bearer '+TOKEN}})
     .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});
 }
+/* First non-trashed match (the query already sets trashed=false). Returns the file, including mimeType. */
 function findDriveFile(name){
   var q="'"+FOLDER_ID+"' in parents and name='"+name+"' and trashed=false";
-  var url=DRIVE_API+'?q='+encodeURIComponent(q)+'&fields=files(id,name)&supportsAllDrives=true&includeItemsFromAllDrives=true';
-  return gjson(url).then(function(r){var f=r.files||[];return f.length?f[0].id:null;});
+  var url=DRIVE_API+'?q='+encodeURIComponent(q)+'&fields=files(id,name,mimeType)&supportsAllDrives=true&includeItemsFromAllDrives=true';
+  return gjson(url).then(function(r){var f=r.files||[];return f.length?f[0]:null;});
 }
-function getDriveFile(id){
-  return fetch(DRIVE_API+'/'+encodeURIComponent(id)+'?alt=media&supportsAllDrives=true',
-    {headers:{'Authorization':'Bearer '+TOKEN}})
-    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
+/* A Google Sheet of that title is exported as CSV. A real CSV file is read as media. Same errors as gget. */
+function readDriveFile(f){
+  var id=encodeURIComponent(f.id);
+  if(f.mimeType==='application/vnd.google-apps.spreadsheet')
+    return gget(DRIVE_API+'/'+id+'/export?mimeType='+encodeURIComponent('text/csv')+'&supportsAllDrives=true');
+  return gget(DRIVE_API+'/'+id+'?alt=media&supportsAllDrives=true');
 }
 function tempCls(min,max){
   var lo=parseFloat(min),hi=parseFloat(max);
@@ -223,9 +226,9 @@ function tempCls(min,max){
 }
 async function loadAreaData(){
   try{
-    var rid=await findDriveFile('BLD-area_reading.csv');
-    if(rid){
-      var txt=await getDriveFile(rid);
+    var rf=await findDriveFile('BLD-area_reading.csv');
+    if(rf){
+      var txt=await readDriveFile(rf);
       var rows=parseCSV(txt);
       AREA_DAYS={};
       rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
@@ -236,9 +239,9 @@ async function loadAreaData(){
         AREA_DAYS[date][r.area_id][slot]={min:r.min_c,max:r.max_c};
       });
     }
-    var aid=await findDriveFile('BLD-area.csv');
-    if(aid){
-      var atxt=await getDriveFile(aid);
+    var af=await findDriveFile('BLD-area.csv');
+    if(af){
+      var atxt=await readDriveFile(af);
       parseCSV(atxt).forEach(function(a){if(a.id)AREA_NAMES[a.id]=a.code||a.name||a.id;});
     }
   }catch(e){console.warn('Area data load failed:',e);}
