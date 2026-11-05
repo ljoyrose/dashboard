@@ -546,7 +546,7 @@
     ['g c', 'Changes', function () { go('./#/changes'); }],
     ['g f', 'Money Hub', function () { go('money/'); }],
     ['g h', 'CD Hub', function () { go('cdhub/'); }],
-    ['r', 'Read again from Drive', function () { var b = root.document.querySelector('[data-action="refresh"]:not(.hidden):not([disabled]), [data-reload]'); if (b) b.click(); }],
+    ['r', 'Read again', function () { var b = root.document.querySelector('[data-action="refresh"]:not(.hidden):not([disabled]), [data-reload]'); if (b) b.click(); }],
     ['/', 'Search', function () { openSearch(); }],
     ['?', 'Show these keys', function () { help(); }]
   ];
