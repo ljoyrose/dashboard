@@ -28,7 +28,9 @@ jobs:
     runs-on: ubuntu-24.04
     # 15 > 20 on 2 Nov 2026: the full suite already ran 14-15 minutes on main (one main run was cut off at 15), and the
     # clickable-info checks (Lisa's clickable picks) add about a minute.
-    timeout-minutes: 20
+    # 20 > 30 on 4 Nov 2026 (Lisa, Q5 A): the suite now runs 17-20+ minutes; four JOB 34 fix PRs were cut off at 20 with every test passing.
+    # 30 > 35 on 5 Nov 2026: runs take about 18-21 min, so 30 leaves too little headroom.
+    timeout-minutes: 35
     permissions:
       contents: read
       issues: write # only used to open/close the one "tests are red" issue on scheduled runs
