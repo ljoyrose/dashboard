@@ -13,15 +13,9 @@
   },
   {
     "colour": "White",
-    "frequency": "As needed",
-    "short_name": "Read-and-Sign",
-    "has_form": "Y"
-  },
-  {
-    "colour": "White",
-    "frequency": "Breeding",
-    "short_name": "Breeding Schedule",
-    "has_form": "Y"
+    "frequency": "Ongoing",
+    "short_name": "Licence Display",
+    "has_form": "N"
   },
   {
     "colour": "White",
@@ -30,39 +24,15 @@
     "has_form": "Y"
   },
   {
-    "colour": "Red",
-    "frequency": "As needed",
-    "short_name": "Accident Report",
+    "colour": "White",
+    "frequency": "Ad hoc",
+    "short_name": "Read-and-Sign",
     "has_form": "Y"
   },
   {
-    "colour": "Red",
-    "frequency": "As needed",
-    "short_name": "Euthanasia",
-    "has_form": "N"
-  },
-  {
-    "colour": "Red",
-    "frequency": "As needed",
-    "short_name": "Evacuation",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Red",
-    "frequency": "As needed",
-    "short_name": "Inspections",
-    "has_form": "N"
-  },
-  {
-    "colour": "Red",
-    "frequency": "As needed",
-    "short_name": "Lost Dog",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Red",
-    "frequency": "As needed",
-    "short_name": "Outbreak Response",
+    "colour": "White",
+    "frequency": "Breeding",
+    "short_name": "Mating Plan",
     "has_form": "Y"
   },
   {
@@ -74,12 +44,6 @@
   {
     "colour": "Red",
     "frequency": "Ongoing",
-    "short_name": "Licence Display",
-    "has_form": "N"
-  },
-  {
-    "colour": "Red",
-    "frequency": "Ongoing",
     "short_name": "Site Security",
     "has_form": "N"
   },
@@ -87,6 +51,42 @@
     "colour": "Red",
     "frequency": "Ongoing",
     "short_name": "Workplace Safety",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Red",
+    "frequency": "Ad hoc",
+    "short_name": "Accident Report",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Red",
+    "frequency": "Ad hoc",
+    "short_name": "Euthanasia",
+    "has_form": "N"
+  },
+  {
+    "colour": "Red",
+    "frequency": "Ad hoc",
+    "short_name": "Evacuation",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Red",
+    "frequency": "Ad hoc",
+    "short_name": "Inspections",
+    "has_form": "N"
+  },
+  {
+    "colour": "Red",
+    "frequency": "Ad hoc",
+    "short_name": "Lost Dog",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Red",
+    "frequency": "Ad hoc",
+    "short_name": "Outbreak Response",
     "has_form": "Y"
   },
   {
@@ -134,91 +134,25 @@
   {
     "colour": "Yellow",
     "frequency": "Monthly",
+    "short_name": "Care Check",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Monthly",
     "short_name": "Condition Scoring",
     "has_form": "Y"
   },
   {
     "colour": "Yellow",
     "frequency": "Monthly",
-    "short_name": "Monthly Care",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "Monthly",
-    "short_name": "Monthly Clean",
+    "short_name": "Full Clean",
     "has_form": "N"
   },
   {
     "colour": "Yellow",
     "frequency": "Annual",
-    "short_name": "Annual Care",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "As needed",
-    "short_name": "Dog Intake",
-    "has_form": "N"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "As needed",
-    "short_name": "Isolation",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "As needed",
-    "short_name": "Isolation Release",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "As needed",
-    "short_name": "Occupant Clean",
-    "has_form": "N"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "As needed",
-    "short_name": "Parasite Control",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "As needed",
-    "short_name": "Transport",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "As needed",
-    "short_name": "Vaccinations",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "Breeding",
-    "short_name": "Breeding",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "Breeding",
-    "short_name": "Ovulation Testing",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "Breeding",
-    "short_name": "Season Tracking",
-    "has_form": "Y"
-  },
-  {
-    "colour": "Yellow",
-    "frequency": "Breeding",
-    "short_name": "Whelping",
+    "short_name": "Fitness Review",
     "has_form": "Y"
   },
   {
@@ -234,15 +168,75 @@
     "has_form": "Y"
   },
   {
-    "colour": "Green",
-    "frequency": "Weekly",
-    "short_name": "Staff Rota",
+    "colour": "Yellow",
+    "frequency": "Per litter",
+    "short_name": "Whelping",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Ad hoc",
+    "short_name": "Dog Intake",
+    "has_form": "N"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Ad hoc",
+    "short_name": "Isolation",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Ad hoc",
+    "short_name": "Isolation Release",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Ad hoc",
+    "short_name": "Occupant Clean",
+    "has_form": "N"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Ad hoc",
+    "short_name": "Parasites and Zoonoses",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Ad hoc",
+    "short_name": "Transport",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Ad hoc",
+    "short_name": "Vaccinations",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Breeding",
+    "short_name": "Mating and Retirement",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Breeding",
+    "short_name": "Ovulation Testing",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Breeding",
+    "short_name": "Season Tracking",
     "has_form": "Y"
   },
   {
     "colour": "Green",
-    "frequency": "As needed",
-    "short_name": "Induction",
+    "frequency": "Weekly",
+    "short_name": "Staff Rota",
     "has_form": "Y"
   },
   {
@@ -258,21 +252,39 @@
     "has_form": "N"
   },
   {
-    "colour": "Blue",
-    "frequency": "As needed",
-    "short_name": "Collections",
+    "colour": "Green",
+    "frequency": "Ad hoc",
+    "short_name": "Induction",
     "has_form": "Y"
   },
   {
     "colour": "Blue",
-    "frequency": "Breeding",
+    "frequency": "Per litter",
     "short_name": "Puppy Handover",
     "has_form": "Y"
   },
   {
     "colour": "Blue",
-    "frequency": "Breeding",
+    "frequency": "Per litter",
+    "short_name": "Puppy Packs",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Blue",
+    "frequency": "Per litter",
     "short_name": "Socialisation",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Blue",
+    "frequency": "Ad hoc",
+    "short_name": "Collections",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Purple",
+    "frequency": "Ongoing",
+    "short_name": "Signs/Posters Index",
     "has_form": "Y"
   }
 ]

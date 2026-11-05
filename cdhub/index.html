@@ -334,9 +334,9 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); return /^https?:\/\/[^\s"'<>
 // Public SOP index (cdhub/sop-index.json). Name labels only. A form opens only when the row says it has one
 // and the row carries a real https address. This seed has no addresses, so nothing here invents one.
 var SOP={rows:null,err:'',pending:null};
-var SOP_COLOURS=['White','Red','Orange','Yellow','Green','Blue'];
-var SOP_FREQS=['Daily','Weekly','Monthly','Annual','Breeding','As needed','Ongoing'];
-var SOP_DOT={White:'--ljr-0',Red:'--ljr-2',Orange:'--ljr-3',Yellow:'--ljr-4',Green:'--ljr-5',Blue:'--ljr-6'};
+var SOP_COLOURS=['White','Red','Orange','Yellow','Green','Blue','Purple'];
+var SOP_FREQS=['Daily','Weekly','Monthly','Quarterly','Annual','Ongoing','Per litter','Ad hoc','Breeding'];
+var SOP_DOT={White:'--ljr-0',Red:'--ljr-2',Orange:'--ljr-3',Yellow:'--ljr-4',Green:'--ljr-5',Blue:'--ljr-6',Purple:'--ljr-7'};
 function sopDot(c){ return SOP_DOT[c]||'--ljr-0'; }
 function sopLabel(r){ return r.colour+' \u2013 '+r.frequency+': '+r.short_name; }
 function sopNorm(r){
@@ -348,12 +348,13 @@ function sopNorm(r){
  var form_url=(has==='Y'&&/^https:\/\/[^\s"'<>]+$/i.test(raw))?raw:'';
  return {colour:colour,frequency:frequency,short_name:short_name,has_form:has,form_url:form_url};
 }
-function sopOrder(vals,pref){
- return vals.slice().sort(function(a,b){
-  var ia=pref.indexOf(a), ib=pref.indexOf(b);
-  if(ia<0) ia=999; if(ib<0) ib=999;
-  return ia-ib||(a<b?-1:a>b?1:0);
- });
+// Listed colours and frequencies always appear, in this order, even when a frequency has no row yet.
+// Any extra value that turns up in the index is added after the list.
+function sopChoices(present, pref){
+ var seen={}, extra=[];
+ present.forEach(function(v){ if(v && !seen[v]){ seen[v]=1; if(pref.indexOf(v)<0) extra.push(v); } });
+ extra.sort();
+ return pref.concat(extra);
 }
 function sopStart(){
  if(SOP.rows||SOP.err||SOP.pending) return SOP.pending||Promise.resolve();
@@ -1985,8 +1986,8 @@ function pageShape(){
 function pageSops(){
  if(SOP.err) return '<h2>SOPs</h2><div class="card dash"><h3 class="hx4">The SOP list could not be read</h3><p style="margin-bottom:0" class="mut">'+esc(SOP.err)+'</p></div>';
  if(!SOP.rows) return '<h2>SOPs</h2><p class="note">Reading the SOP list\u2026</p>';
- var colours=sopOrder(SOP.rows.map(function(r){return r.colour;}).filter(function(c,i,a){return a.indexOf(c)===i;}), SOP_COLOURS);
- var freqs=sopOrder(SOP.rows.map(function(r){return r.frequency;}).filter(function(c,i,a){return a.indexOf(c)===i;}), SOP_FREQS);
+ var colours=sopChoices(SOP.rows.map(function(r){return r.colour;}), SOP_COLOURS);
+ var freqs=sopChoices(SOP.rows.map(function(r){return r.frequency;}), SOP_FREQS);
  return '<h2>SOPs</h2>'
   +fbar({id:'sops',what:'SOPs',q:'sopq',count:'sopcnt',clear:'sopclr',sort:['sopsort',[['','name A to Z'],['colour','colour'],['frequency','frequency']]],
     groups:[['Colour',fsel('sopcol','Colour',colours.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join(''))],
