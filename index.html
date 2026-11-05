@@ -2599,7 +2599,8 @@
     { key: 'money', name: 'Money', icon: 'money', slot: 3, href: 'money/' },
     { key: 'food', name: 'Food', icon: 'bowl', slot: 4, href: 'food/' },
     { key: 'dogs', name: 'Dogs', icon: 'paw', slot: 4, href: 'cdhub/' },
-    { key: 'apps', name: 'Apps', icon: 'factory', slot: 4, href: 'factory/' },
+    // href is the folder the KPI hashes are appended to. main is the header only: a bare factory/ opens Rooms, Main is #/me.
+    { key: 'apps', name: 'Apps', icon: 'factory', slot: 4, href: 'factory/', main: 'factory/#/me' },
     { key: 'market', name: 'Marketplace', icon: 'store', slot: 6, href: 'marketplace/' },
     { key: 'studio', name: 'Studio', icon: 'brush', slot: 7, href: 'studio/' }
   ];
@@ -2634,7 +2635,8 @@
   function hubTiles() {
     var D = hubData();
     return '<section id="hubTiles" aria-label="Hubs"><div class="hubgrid">' + HUBS.map(function (h) {
-      var link = h.key === 'projects' ? PH_URL : h.href;
+      var link = h.key === 'projects' ? PH_URL : h.href; // KPI base: hashes append here, so a header hash must not live on href
+      var head = h.main || link; // header opens that hub's Main
       if (!link) return '';
       var x = D[h.key] || { ok: false }, nums = h.key === 'projects' ? phNums() : x.ok ? x.nums : null;
       var tab = h.key === 'projects' ? ' target="_blank" rel="noopener"' : HUB_TAB;
@@ -2642,9 +2644,10 @@
         var n = nums ? nums[i] : null, v = n && n[1] != null ? String(n[1]) : '–', late = !!(n && n[2]);
         return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + '>' + '<b' + (late && v !== '0' ? ' class="need"' : '') + '>' + esc(v) + '</b>' + '<span>' + esc(k[0]) + '</span></a>';
       }).join('') + '</span>';
-      var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders"' + HUB_TAB + '>✓ XML</a>' : '';
+      // Same target as the Food hub's own tick: orders filtered to "Not at GA yet".
+      var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders?ga"' + HUB_TAB + '>✓ XML</a>' : '';
       var why = h.key === 'projects' && S.ph.status === 'failed' ? ' title="Numbers could not be read. Tap to open the hub."' : '';
-      return '<div class="card house-lbar hubtile" data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo" href="' + esc(link) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + body + '</div>';
+      return '<div class="card house-lbar hubtile" data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo" href="' + esc(head) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + body + '</div>';
     }).join('') + '</div></section>';
   }
 

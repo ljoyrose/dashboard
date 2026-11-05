@@ -22,14 +22,16 @@ const ROUTES = {
   food: ['#/orders?late', '#/invoices?unpaid', '#/orders?today'], dogs: ['#/round', '#/today/unplaced', '#/today/bitches'],
   apps: ['#/decide/questions', '#/decide/gates', '#/all/live'], market: ['#/do?post', '#/reply', '#/sold'], studio: ['#/review', '#/me/today', '#/library'],
 };
-// Lisa's order, colour (the 3px line; Projects has the rainbow line) and link for each tile. Projects opens config.js projectsHub.webAppUrl.
+// Order, colour (the 3px line; Projects has the rainbow line) and link for each tile. Projects opens config.js projectsHub.webAppUrl.
+// The 4th field is the folder the three numbers append their hash to. The header uses that same link, except when a 6th field
+// names Main separately (Apps: factory/#/me). Putting Main on the folder field would make Questions/Gates/Live factory/#/me#/….
 const TILES = [
   ['projects', 'Projects', 'gradient', CFG.projectsHub.webAppUrl, ['Stuck', 'Waiting', 'Running']],
   ['web', 'Web', 'rgb(230, 68, 61)', 'estate/', ['Down', 'Expiring', 'Live']],
   ['money', 'Money', 'rgb(231, 134, 21)', 'money/', ['Overdue', 'Due Soon', 'Cash']],
   ['food', 'Food', 'rgb(243, 216, 78)', 'food/', ['Late', 'Owe GA', 'Today']],
   ['dogs', 'Dogs', 'rgb(243, 216, 78)', 'cdhub/', ['Temps', 'Unplaced', 'Bitches']],
-  ['apps', 'Apps', 'rgb(243, 216, 78)', 'factory/', ['Questions', 'Gates', 'Live']],
+  ['apps', 'Apps', 'rgb(243, 216, 78)', 'factory/', ['Questions', 'Gates', 'Live'], 'factory/#/me'],
   ['market', 'Marketplace', 'rgb(18, 159, 231)', 'marketplace/', ['To Post', 'To Reply', 'Sold']],
   ['studio', 'Studio', 'rgb(165, 112, 209)', 'studio/', ['Approve', 'Due Today', 'Sold']],
 ];
@@ -78,12 +80,13 @@ test.describe('Dashboard Main', () => {
     const tiles = page.locator('#view #hubTiles .hubtile');
     await expect(tiles).toHaveCount(TILES.length);
     for (let i = 0; i < TILES.length; i++) {
-      const [key, name, colour, href, labels] = TILES[i];
+      const [key, name, colour, href, labels, header] = TILES[i];
+      const head = header || href;
       const t = tiles.nth(i);
       await expect(t).toHaveAttribute('data-hub', key);
       const go = t.locator('a.hgo');
       await expect(go).toContainText(name);
-      await expect(go).toHaveAttribute('href', href);
+      await expect(go).toHaveAttribute('href', head);
       expect(href.startsWith('https://ljoyrose.github.io'), 'relative links only').toBe(false);
       // Every piece of info is clickable: the name and each number are links, all opening in a new tab.
       for (const a of await t.locator('a').all()) await expect(a).toHaveAttribute('target', '_blank');
@@ -134,13 +137,27 @@ test.describe('Dashboard Main', () => {
   test('Food ✓ XML tick: on when no order is Not at GA, off when one is', async ({ page, guard }) => {
     await seed(page, guard, { foodAnswer: food(false) });
     await signIn(page);
-    await expect(page.locator('#hubTiles .hubtile[data-hub="food"] [data-xml]')).toHaveText('✓ XML');
+    const tick = page.locator('#hubTiles .hubtile[data-hub="food"] [data-xml]');
+    await expect(tick).toHaveText('✓ XML');
+    await expect(tick).toHaveAttribute('href', 'food/#/orders?ga');
     expect((await nums(page, 'food'))[0]).toEqual(['Late', '0', false]);
     await page.unroute(SHEETS);
     await seed(page, guard, { foodAnswer: food(true), apps: false, studio: false });
     await page.locator('#refreshBtn').click();
     await expect(page.locator('#hubTiles .hubtile[data-hub="food"] .hk').first()).toContainText('1');
     await expect(page.locator('#hubTiles [data-xml]')).toHaveCount(0);
+  });
+
+  test('Apps tile header opens Factory Main, and Food tick opens Not at GA yet @regression', async ({ page, guard }) => {
+    await seed(page, guard, { foodAnswer: food(false) });
+    await signIn(page);
+    const apps = page.locator('#hubTiles .hubtile[data-hub="apps"]');
+    await expect(apps.locator('a.hgo')).toHaveAttribute('href', 'factory/#/me');
+    await expect(apps.locator('a.hk')).toHaveCount(3);
+    for (const hash of ['#/decide/questions', '#/decide/gates', '#/all/live']) {
+      await expect(apps.locator('a.hk[href="factory/' + hash + '"]')).toHaveCount(1);
+    }
+    await expect(page.locator('#hubTiles .hubtile[data-hub="food"] [data-xml]')).toHaveAttribute('href', 'food/#/orders?ga');
   });
 
   test('Needs you: at most 5 rows across the hubs, late first, then due soon, then waiting; each row has its hub icon and line', async ({ page, guard }) => {

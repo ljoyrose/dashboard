@@ -11,7 +11,7 @@ const TILES = [
   ['Money', 'money/', true],
   ['Food', 'food/', true],
   ['Dogs', 'cdhub/', true],
-  ['Apps', 'factory/', true],
+  ['Apps', 'factory/#/me', true],
   ['Marketplace', 'marketplace/', true],
   ['Studio', 'studio/', true],
 ];
