@@ -436,24 +436,28 @@
   .ment .sub { font-size: var(--fs-small); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
   .mgroup { font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 0; text-align: left; }
   .hidden { display: none !important; }
-  /* Main hub tiles (Lisa's picks, 2 Nov): icon + name + 3 numbers, no fills; colour only as the 3px line and the icon.
-     Numbers 18px, labels 14px; a number that means late is a 14px rose ring (.cnt.need). Each tile opens its hub. */
+  /* Main hub tiles: icon + name + 3 numbers, no fills; colour only as the 3px line and the icon.
+     Numbers 18px, labels 14px; a number that means late is a rose ring. The whole square opens the hub
+     (the name link stretches under the card). Each number and the Food tick sit above it and keep their own page.
+     Phone: the square, the name and those links are at least 44px (--house-btn-phone). */
   .hubgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--house-gap, 12px); }
-  .hubtile { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 6px 10px; color: var(--ink); text-align: left; box-shadow: none; }
-  .hubtile .hn { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--fs-body); line-height: 24px; }
+  .hubtile { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 6px 10px; min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); color: var(--ink); text-align: left; box-shadow: none; }
+  .hubtile .hn { display: flex; align-items: center; gap: 6px; min-height: var(--house-btn-phone); font-weight: 600; font-size: var(--fs-body); line-height: 24px; pointer-events: none; }
+  .hubtile .hks { pointer-events: none; }
   .hubtile a { color: var(--ink); text-decoration: none; border-radius: var(--radius); }
-  .hubtile a.hgo { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 4px; }
+  .hubtile a.hgo { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 4px; pointer-events: auto; }
+  .hubtile a.hgo::after { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
   .hubtile .hsub { padding: 0 4px; }
   svg.hico { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--hic, var(--muted)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .hks { display: grid; grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 4px 10px; }
-  .hk { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 2px 4px; }
+  .hk { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; min-width: 0; min-height: var(--house-btn-phone); box-sizing: border-box; padding: 2px 4px; pointer-events: auto; }
   /* One group, one size (Lisa, 2 Nov): every number 18px / 600 on one baseline; a late one wears a rose ring sized to it, the
      others the same box with no ring (so nothing shifts); 0 is never ringed. */
   .hk b { box-sizing: border-box; display: inline-flex; align-items: center; height: 28px; padding: 0 6px; margin-left: -6px; border: var(--house-line) solid transparent; border-radius: var(--radius);
     font-size: var(--fs-figure); font-weight: 600; line-height: 26px; font-variant-numeric: tabular-nums; }
   .hk b.need { border-color: var(--house-late); }
   .hk > span:last-child, .hsub { font-size: var(--fs-small); color: var(--muted); line-height: 1.3; }
-  .hubtile a.xml { font-size: var(--fs-small); font-weight: 600; padding: 0 4px; }
+  .hubtile a.xml { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); font-size: var(--fs-small); font-weight: 600; padding: 0 4px; pointer-events: auto; }
   /* Neutral house hover on every link in a tile: 1px ink line inside + a pale muted tint. */
   /* Hover and press: a 1px ring in the tile's colour only; no fill, nothing moves. Keyboard focus: the 2px ink ring. */
   .hubtile a, .hubtile a:hover, .hubtile a:active, .hubtile a:focus { background: transparent; box-shadow: none; }
@@ -550,10 +554,11 @@
   .card[class]:hover, details.card[class]:hover, nav.card[class]:hover { border-left-color: var(--line); }
   .card.failed[class]:hover { border-left-color: var(--ljr-2); }
   .needs li[class], .needs li[class]:hover { border-left: 0; padding-left: 0; }
-  /* Needs you rows never move (Lisa, 2 Nov: "weird jumping"): one left edge, one icon x and the same box at rest, on hover, focus
-     and press; the bar is the shared .house-lbar, a straight 3px line down each row (square: no "(" bracket per row). */
+  /* Needs you rows never move: one left edge, one icon x and the same box at rest, on hover, focus and press.
+     The row shell is rounded (Lisa, 5 Nov); the shared .house-lbar stays a straight 3px line, not a "(" bracket.
+     This supersedes 2 Nov "rows are square" for the row shell only. */
   .needs li.house-lbar[class], .needs li.house-lbar[class]:hover, .needs li.house-lbar[class]:focus-within, .needs li.house-lbar[class]:active,
-  ol.hrows > li, ol.hrows > li:hover, ol.hrows > li:focus-within, ol.hrows > li:active { margin: 0; padding: 6px 0 6px 12px; border: 0; border-radius: 0; }
+  ol.hrows > li, ol.hrows > li:hover, ol.hrows > li:focus-within, ol.hrows > li:active { margin: 0; padding: 6px 0 6px 12px; border: 0; border-radius: var(--radius); }
   .needs li.house-lbar::before, ol.hrows > li.house-lbar::before { border-radius: 0; }
   #view { gap: 12px; }
   .here h2 { font-size: var(--fs-head); }
@@ -2591,7 +2596,7 @@
     return h + foot + '</section>';
   }
 
-  // ---- Main: one tile per hub (Lisa's picks, 2 Nov): icon, name, 3 numbers; the tile opens the hub (the hub menu). ----
+  // ---- Main: one tile per hub: icon, name, 3 numbers. The whole square opens that hub's Main; each number and the Food tick keep their own page. ----
   // Order and colours are Lisa's: Projects multi-colour, Web red, Money orange, Food / Dogs / Apps yellow, Marketplace blue, Studio purple.
   var HUBS = [
     { key: 'projects', name: 'Projects', icon: 'case', line: 'var(--ljr-0)', ic: 'var(--ink)' }, // multi-colour line: see the CSS
@@ -2647,7 +2652,7 @@
       // Same target as the Food hub's own tick: orders filtered to "Not at GA yet".
       var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders?ga"' + HUB_TAB + '>✓ XML</a>' : '';
       var why = h.key === 'projects' && S.ph.status === 'failed' ? ' title="Numbers could not be read. Tap to open the hub."' : '';
-      return '<div class="card house-lbar hubtile" data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo" href="' + esc(head) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + body + '</div>';
+      return '<div class="card house-lbar hubtile" data-open-row data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo house-open" href="' + esc(head) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + body + '</div>';
     }).join('') + '</div></section>';
   }
 
