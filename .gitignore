@@ -23,6 +23,9 @@ playwright-report/
 # The accessibility ratchet numbers (rule names and counts only: no personal data)
 !tests/mocked/*.known.json
 
+# Page-size growth files (a page name, a byte count and a reason: no personal data). Without this line git add silently skips them.
+!tests/budget-growth/*.json
+
 # Cloudflare Pages build output (tools/build-site)
 _site/
 
