@@ -26,6 +26,9 @@ playwright-report/
 # Page-size growth files (a page name, a byte count and a reason: no personal data). Without this line git add silently skips them.
 !tests/budget-growth/*.json
 
+# Public SOP name index for CD Hub (colour, frequency, short name, has_form). No addresses.
+!cdhub/sop-index.json
+
 # Cloudflare Pages build output (tools/build-site)
 _site/
 

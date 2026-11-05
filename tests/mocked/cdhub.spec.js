@@ -5,7 +5,7 @@ const { IDS, WANT_BLD, FIX } = require('../support/world');
 const fs = require('fs');
 const path = require('path');
 
-const SECTIONS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers'];
+const SECTIONS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
 const signIn = async (page) => {
   await expect(page.locator('#signinbtn')).toBeEnabled();
   await page.locator('#signinbtn').click();
@@ -116,23 +116,27 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('all ten sections are in the bar: five tabs, then the other five under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('all eleven sections are in the bar: five tabs, then the other six under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(10);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(5);
+    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(6);
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
   });
 
-  test('the associations button is labelled Assocs and still opens #/buyers', async ({ page }) => {
+  test('Assocs sits under More and still opens #/buyers', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    const tab = page.locator('#nav button[data-go="buyers"]');
-    await expect(tab).toHaveAccessibleName('Assocs');
+    await expect(page.locator('#nav > button.ht[data-go="buyers"]')).toHaveCount(0);
+    await expect(page.locator('#nav > button.ht[data-go="sops"]')).toHaveAccessibleName('SOPs');
+    const tab = page.locator('#nav .house-more button[data-go="buyers"]');
+    await expect(tab).toHaveText('Assocs');
     await expect(tab).not.toContainText('Buyers');
+    await page.locator('nav.house-tabs [data-house-more]').click();
+    await expect(tab).toHaveAccessibleName('Assocs');
     await tab.click();
     await expect(page).toHaveURL(/#\/buyers$/);
     await expect(page.locator('#main h2')).toHaveText('Assocs');
@@ -236,7 +240,7 @@ test.describe('CD Hub: things that go wrong', () => {
 // House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026) and the Bloodline screens, by computed style.
 // Invented data only: the sample BLD tables, plus rows added inside a test (invented names, no real dogs or buyers).
 // ---------------------------------------------------------------------------------------------------------------
-const LOOK_TABS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers'];
+const LOOK_TABS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
 const iso = (days) => new Date(Date.now() + days * 864e5).toISOString().slice(0, 10);
 const setFile = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
