@@ -315,6 +315,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 5 Nov 2026 | Home Apps tile header opened Factory Rooms (`factory/`) instead of Main, and the Food ✓ XML tick opened unfiltered orders | "Apps tile header opens Factory Main, and" |
 | 5 Nov 2026 | Main hub tiles: only the name was a link, so a tap on the rest of the square did nothing | "the whole hub tile opens the hub; numbers and the Food tick keep their own pages @regression" |
 | 5 Nov 2026 | CD Hub boot said it was reading tables from Drive and waited on each file in turn | "boot stays friendly and present files are read together @regression" |
+| 5 Nov 2026 | CD Hub Temperatures today showed "Saving off." again, and Temperature history did not open (a bare data-skip blocked the link) | "Temperatures today: no saving-off notice, and Temperature history opens history.html @regression" (tests/mocked/cdhub.spec.js) |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
@@ -361,6 +362,7 @@ Each entity page draws its `FORECAST.csv` as a line, with a dashed £0 line, the
 - Every visible button, tile and link: has a label; internal links answer 200; outside links are https and open a new tab.
 - Each one is clicked on a fresh copy of the screen. It must go somewhere, open a tab, change the page or ask a question. A dead click fails.
 - Not clicked: Sign out and the skip link (own tests). Outside links are checked, not opened.
+- Temperature history on CD Hub Today is a real page link. The crawl follows it. That page's spreadsheet export is answered with an empty CSV so the click stays inside the pretend network.
 - A link that opens a new tab (like "Sample task ready now" on the Map, which opens Money Hub) waits for that tab to open, however long it takes under four workers. It used to give it 700ms and sometimes called it a dead click.
 
 ## The house look, once
