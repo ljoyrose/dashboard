@@ -75,6 +75,22 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .d.future{background:var(--paper);border:1px solid var(--line);opacity:.35}
 .d.cold{background:var(--ljr-6)}.d.ok{background:var(--ljr-5)}.d.hot{background:var(--ljr-2)}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
+/* indoor corner dot */
+.d{position:relative}
+.d-dot{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;pointer-events:none}
+.d-dot.idot-flag{background:var(--ljr-2)}.d-dot.idot-warn{background:var(--ljr-3)}
+/* compliance mode — cells */
+.d.comp-flag{background:var(--ljr-2);opacity:.8}.d.comp-warn{background:var(--ljr-3);opacity:.85}.d.comp-ok{background:var(--ljr-5);opacity:.85}.d.comp-nd{background:var(--soft)}
+.sd.comp-flag{background:var(--ljr-2);opacity:.8}.sd.comp-warn{background:var(--ljr-3);opacity:.85}.sd.comp-ok{background:var(--ljr-5);opacity:.85}.sd.comp-nd{background:var(--soft)}
+/* view mode toggle */
+.vt-wrap{display:flex;gap:2px;background:var(--soft);border-radius:calc(var(--radius) + 2px);padding:2px;width:max-content;margin-bottom:12px}
+.vt-btn{padding:4px 12px;border:none;background:transparent;border-radius:var(--radius);font:600 var(--fs-small)/1.4 var(--house-font);color:var(--muted);cursor:pointer}
+.vt-btn.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+/* compact indoor table in drill panel */
+.itable{width:100%;border-collapse:collapse;font-size:var(--fs-small);margin-top:4px}
+.itable th{padding:4px 6px;text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
+.itable td{padding:5px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;vertical-align:middle}
+.itable tr:last-child td{border-bottom:none}
 
 /* Strip view */
 .strip{display:flex;flex-direction:column;gap:3px;margin-bottom:20px}
@@ -171,6 +187,8 @@ var DRIVE_API=window.DASH_CONFIG.urls.files;
 var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
 var AREA_NAMES={};  /* areaId -> display name/code */
 var ROUND_DATE=null;
+var VIEW_MODE='outdoor'; /* 'outdoor' | 'compliance' */
+var AREA_RANGES={};     /* areaId -> {min,max} acceptable indoor range */
 
 /* ---- helpers ---- */
 var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -214,6 +232,34 @@ function getDriveFile(id){
     {headers:{'Authorization':'Bearer '+TOKEN}})
     .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
 }
+function areaStatus(isoDate){
+  var dayAreas=AREA_DAYS[isoDate];
+  if(!dayAreas||!Object.keys(dayAreas).length)return'';
+  var hasFlag=false,hasWarn=false;
+  Object.keys(dayAreas).forEach(function(aid){
+    var ar=dayAreas[aid],range=AREA_RANGES[aid]||{min:15,max:25};
+    ['am','pm'].forEach(function(slot){
+      var t=ar[slot];if(!t)return;
+      var lo=parseFloat(t.min),hi=parseFloat(t.max);
+      if(!isNaN(lo)&&!isNaN(hi)&&lo>hi){hasFlag=true;return;}
+      if(!isNaN(lo)&&lo<range.min)hasWarn=true;
+      if(!isNaN(hi)&&hi>range.max)hasWarn=true;
+    });
+  });
+  return hasFlag?'flag':hasWarn?'warn':'ok';
+}
+function areaStatusForArea(ar,range){
+  range=range||{min:15,max:25};
+  var hasFlag=false,hasWarn=false;
+  ['am','pm'].forEach(function(slot){
+    var t=ar[slot];if(!t)return;
+    var lo=parseFloat(t.min),hi=parseFloat(t.max);
+    if(!isNaN(lo)&&!isNaN(hi)&&lo>hi){hasFlag=true;return;}
+    if(!isNaN(lo)&&lo<range.min)hasWarn=true;
+    if(!isNaN(hi)&&hi>range.max)hasWarn=true;
+  });
+  return hasFlag?'flag':hasWarn?'warn':'ok';
+}
 function tempCls(min,max){
   var lo=parseFloat(min),hi=parseFloat(max);
   if(isNaN(lo)&&isNaN(hi))return'';
@@ -239,7 +285,12 @@ async function loadAreaData(){
     var aid=await findDriveFile('BLD-area.csv');
     if(aid){
       var atxt=await getDriveFile(aid);
-      parseCSV(atxt).forEach(function(a){if(a.id)AREA_NAMES[a.id]=a.code||a.name||a.id;});
+      parseCSV(atxt).forEach(function(a){
+        if(a.id){
+          AREA_NAMES[a.id]=a.code||a.name||a.id;
+          if(a.min_c||a.max_c)AREA_RANGES[a.id]={min:parseFloat(a.min_c)||15,max:parseFloat(a.max_c)||25};
+        }
+      });
     }
   }catch(e){console.warn('Area data load failed:',e);}
 }
@@ -355,19 +406,33 @@ function openDrill(isoDate){
   var areaIds=Object.keys(dayAreas).sort();
   var areasEl=el('d-areas');
   if(areaIds.length){
-    el('d-areas-inner').innerHTML=areaIds.map(function(aid){
-      var ar=dayAreas[aid],am=ar.am||{},pm=ar.pm||{};
-      var name=AREA_NAMES[aid]||aid.replace(/^area-/,'').replace(/-/g,' ');
-      var fmt=function(t){
-        if(!t||(!t.min&&!t.max))return'<span style="color:var(--muted)">—</span>';
-        var cls=tempCls(t.min,t.max);
-        var pCls=cls==='cold'?'pc':cls==='hot'?'ph':cls==='ok'?'po':'';
-        return'<span class="pill '+(pCls||'')+'">'+esc((t.min||'?')+' – '+(t.max||'?')+'°C')+'</span>';
-      };
-      return'<div class="dr" style="margin-top:4px"><strong style="font-size:var(--fs-small)">'+esc(name)+'</strong></div>'
-        +'<div class="dr"><span>AM</span>'+fmt(am)+'</div>'
-        +'<div class="dr"><span>PM</span>'+fmt(pm)+'</div>';
-    }).join('');
+    el('d-areas-inner').innerHTML='<table class="itable"><thead><tr>'
+      +'<th>Area</th><th>AM</th><th>PM</th><th>Status</th>'
+      +'</tr></thead><tbody>'
+      +areaIds.map(function(aid){
+        var ar=dayAreas[aid],am=ar.am||{},pm=ar.pm||{};
+        var name=AREA_NAMES[aid]||aid.replace(/^area-/,'').replace(/-/g,' ');
+        var range=AREA_RANGES[aid]||{min:15,max:25};
+        var fmtSlot=function(t){
+          if(!t||(!t.min&&!t.max))return'<span style="color:var(--muted)">—</span>';
+          var lo=parseFloat(t.min),hi=parseFloat(t.max);
+          var err=!isNaN(lo)&&!isNaN(hi)&&lo>hi;
+          var warn=(!isNaN(lo)&&lo<range.min)||(!isNaN(hi)&&hi>range.max);
+          var color=err?'var(--ljr-2)':warn?'var(--ljr-3)':'var(--ink)';
+          return'<span style="color:'+color+'">'+esc((t.min||'?')+' – '+(t.max||'?')+'°C')+'</span>';
+        };
+        var ast=areaStatusForArea(ar,range);
+        var pill=ast==='flag'?'<span class="pill ph">flag</span>'
+          :ast==='warn'?'<span class="pill" style="border-color:var(--ljr-3);color:var(--ljr-3-text)">warn</span>'
+          :'<span class="pill po">ok</span>';
+        return'<tr>'
+          +'<td style="font-weight:600;text-transform:capitalize">'+esc(name)+'</td>'
+          +'<td>'+fmtSlot(am)+'</td>'
+          +'<td>'+fmtSlot(pm)+'</td>'
+          +'<td>'+pill+'</td>'
+          +'</tr>';
+      }).join('')
+      +'</tbody></table>';
     areasEl.style.display='';
   }else{
     areasEl.style.display='none';
@@ -391,7 +456,10 @@ function buildHeatMap(y){
     for(var d=1;d<=md[mi];d++){
       var date=ds(y,mi,d),cls=dayClass(date),today=date===TODAY_STR;
       var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
-      h+='<button class="d '+cls+(today?' today':'')+'\" title="'+d+' '+mn+' '+y+' — '+(cls==='future'?'future':cls==='nd'?'no data':cls)+'"'+clk+'></button>';
+      var ist=date<=TODAY_STR?areaStatus(date):'';
+      var dotHtml=ist==='flag'?'<span class="d-dot idot-flag"></span>':ist==='warn'?'<span class="d-dot idot-warn"></span>':'';
+      var cellCls=VIEW_MODE==='compliance'&&date<=TODAY_STR?(ist?'comp-'+ist:'comp-nd'):cls;
+      h+='<button class="d '+cellCls+(today?' today':'')+'" title="'+d+' '+mn+' '+y+' — '+(cls==='future'?'future':cls==='nd'?'no data':cls)+'"'+clk+'>'+dotHtml+'</button>';
     }
     h+='</div></div>';
   });
@@ -411,7 +479,9 @@ function buildStrip(y){
         if((new Date(y,mi,d).getDay()+6)%7===di){
           var date=ds(y,mi,d),cls=dayClass(date);
           var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
-          h+='<div class="sd '+cls+'" title="'+d+' '+MONTHS[mi]+'"'+clk+'></div>';
+          var ist2=date<=TODAY_STR?areaStatus(date):'';
+          var scls=VIEW_MODE==='compliance'&&date<=TODAY_STR?(ist2?'comp-'+ist2:'comp-nd'):cls;
+          h+='<div class="sd '+scls+'" title="'+d+' '+MONTHS[mi]+'"'+clk+'></div>';
         }
       }
     }
@@ -449,12 +519,27 @@ function buildMonthCards(y){
 }
 
 function legend(){
+  if(VIEW_MODE==='compliance'){
+    return'<div class="legend">'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-2)"></div>Data error</div>'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-3)"></div>Out of range</div>'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>All ok</div>'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--soft)"></div>No data</div>'
+      +'</div>';
+  }
   return '<div class="legend">'
     +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-6)"></div>&lt;10°C (cold)</div>'
     +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>10–27°C (ok)</div>'
     +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-2)"></div>&gt;27°C (hot)</div>'
     +'<div class="leg"><div class="leg-sq" style="background:var(--soft)"></div>No data</div>'
     +'</div>';
+}
+function setViewMode(mode){
+  VIEW_MODE=mode;
+  document.querySelectorAll('.vt-btn').forEach(function(b){b.classList.toggle('on',b.dataset.vm===mode);});
+  el('view-a').innerHTML=buildHeatMap(YEAR);
+  el('view-b').innerHTML=buildStrip(YEAR);
+  var lw=el('legend-wrap');if(lw)lw.innerHTML=legend();
 }
 
 function buildRound(dateStr){
@@ -523,10 +608,15 @@ function renderPage(){
   var dates=Object.keys(DAYS).sort();
   var from=dates[0]||'',to=dates[dates.length-1]||'';
   var sub=n+' days on record · Dinas Powys'+(from&&to?' · '+from.slice(0,4)+' – '+to.slice(0,7):'');
+  var hasAreas=Object.keys(AREA_DAYS).length>0;
   el('main').innerHTML=
-    '<h2 class="ph">Outdoor temperature history</h2>'
+    '<h2 class="ph">Temperature history</h2>'
     +'<p class="sub">'+esc(sub)+'</p>'
-    +legend()
+    +(hasAreas?'<div class="vt-wrap">'
+      +'<button class="vt-btn on" data-vm="outdoor" onclick="setViewMode(\'outdoor\')">Outdoor temps</button>'
+      +'<button class="vt-btn" data-vm="compliance" onclick="setViewMode(\'compliance\')">Compliance</button>'
+      +'</div>':'')
+    +'<div id="legend-wrap">'+legend()+'</div>'
     +'<div class="yr-row">'
     +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'
     +'<button class="btn yr-btn on" data-yr="2026" onclick="setYear(2026)">2026</button>'
