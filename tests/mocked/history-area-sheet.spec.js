@@ -42,7 +42,7 @@ async function openHistory(page) {
   const seen = [];
   page.on('request', (req) => seen.push(req.url()));
   await page.goto('cdhub/history.html');
-  await expect(page.locator('#livepill')).toContainText('area days');
+  await expect(page.locator('#livepill')).toHaveText('Up to date');
   return seen;
 }
 
@@ -51,8 +51,9 @@ async function showRound(page) {
   await page.locator('#rdate').fill('2026-01-15');
   await page.locator('#rdate').dispatchEvent('change');
   await expect(page.locator('#view-d')).toContainText('Test Cabin A');
-  await expect(page.locator('#view-d')).toContainText('8.50');
-  await expect(page.locator('#view-d')).toContainText('28.50');
+  await expect(page.locator('#view-d')).toContainText('8.5');
+  await expect(page.locator('#view-d')).toContainText('28.5');
+  await expect(page.locator('#view-d')).not.toContainText('8.50');
   await expect(page.locator('#view-d')).toContainText('Test Cabin B');
   await expect(page.locator('#view-d')).not.toContainText('NOT-A-READING');
   await expect(page.locator('#view-d')).not.toContainText('ZZ-TWIN-NOT-READ');
@@ -139,7 +140,8 @@ test.describe('Temperature history reads area files by mime type', () => {
     expect(tokens).toBeGreaterThan(-1);
     expect(house).toBeGreaterThan(tokens);
     expect(look.houseHead).toBe(true);
-    expect(look.title).toContain('Temperature history');
+    expect(look.title).toBe('Temperatures');
+    expect(look.title.toLowerCase().startsWith('outdoor')).toBe(false);
     expect(look.font.toLowerCase()).toContain('lexend');
     expect(look.radius).toBe('12px');
     expect(look.border).toBe('1px');
@@ -147,5 +149,94 @@ test.describe('Temperature history reads area files by mime type', () => {
     expect(look.h).toBe(36);
     expect(look.headH).toBe(look.headToken);
     expect(look.frame).not.toBe('rgba(0, 0, 0, 0)');
+  });
+
+  test('year chips run current first, and a day detail does not show Source or the reading kind @regression', async ({ page }) => {
+    await openHistory(page);
+    const years = page.locator('.yr-btn');
+    await expect(years).toHaveText(['2026', '2025', '2024']);
+    await expect(years.first()).toHaveClass(/on/);
+    await expect(page.locator('#view-a .mn').first()).toHaveText('Jan');
+    await years.nth(2).click();
+    await expect(years.nth(2)).toHaveClass(/on/);
+    await expect(years.first()).not.toHaveClass(/on/);
+    await years.first().click();
+    await expect(years.first()).toHaveClass(/on/);
+    await page.getByRole('button', { name: 'Heat map' }).click();
+    await page.locator('button.dout[title*="15 Jan 2026"]').click();
+    const drill = page.locator('#drill');
+    await expect(drill).toBeVisible();
+    await expect(drill.locator('#d-max')).toContainText('12');
+    await expect(drill.locator('#d-src')).toHaveCount(0);
+    await expect(drill.locator('#d-sub')).toHaveCount(0);
+    await expect(drill).not.toContainText(/source/i);
+    await expect(drill).not.toContainText(/\bactual/i);
+    await expect(drill).not.toContainText('sample');
+  });
+
+  test('Archive opens its own page and does not read another sheet', async ({ page, guard }) => {
+    await openHistory(page);
+    const before = guard.world.calls.length;
+    const extra = [];
+    page.on('request', (req) => extra.push(req.url()));
+    await page.getByRole('link', { name: 'Archive' }).click();
+    await expect(page).toHaveURL(/\/history-archive\.html$/);
+    await expect(page.locator('h1')).toHaveText('Temperature archive');
+    await expect(page.locator('#main')).toContainText('Older years live on Archive.');
+    await expect(page.locator('body')).not.toContainText(/source|actual/i);
+    expect(extra.filter((u) => /spreadsheets|\/drive\/v3\//i.test(u))).toEqual([]);
+    expect(guard.world.calls.length).toBe(before);
+    await page.getByRole('link', { name: 'Temperatures', exact: true }).click();
+    await expect(page).toHaveURL(/\/history\.html$/);
+    await expect(page.locator('.yr-btn').first()).toHaveText('2026');
+  });
+
+  test('The round opens first with tiles, then a condensed °C table in walk order', async ({ page, guard }) => {
+    const put = (name, content) => {
+      const f = guard.world.files.find((x) => x.name === name);
+      f.content = content;
+      f.size = String(content.length);
+    };
+    put('BLD-area.csv', 'id,code\narea-h2,H2\narea-h1,H1\narea-tr,3S.T1\narea-4,4A\narea-z,Test Cabin Z\n');
+    put('BLD-area_reading.csv', [
+      'id,area_id,taken_at,min_c,max_c',
+      'a,area-h1,2026-01-15T08:00,8.24,14.0',
+      'b,area-h2,2026-01-15T08:00,11.0,16.0',
+      'c,area-tr,2026-01-15T18:00,20,28.55',
+      'd,area-4,2026-01-15T08:00,12,18',
+    ].join('\n') + '\n');
+    await openHistory(page);
+    await expect(page.locator('h1')).toHaveText('Temperatures');
+    await expect(page).toHaveTitle(/^Temperatures/);
+    await expect(page.locator('#main')).not.toContainText('Outdoor temperature history');
+    await expect(page.locator('#main')).not.toContainText('Dinas');
+    await expect(page.locator('#livepill')).not.toContainText(/day/);
+    await expect(page.locator('.tab').first()).toHaveText('The round');
+    await expect(page.locator('.tab').first()).toHaveClass(/on/);
+    await expect(page.locator('#view-d')).toBeVisible();
+    await page.locator('#rdate').fill('2026-01-15');
+    await page.locator('#rdate').dispatchEvent('change');
+    const round = page.locator('#view-d');
+    await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3S.TR', '4A', 'Test Cabin Z']);
+    await expect(round.locator('.rtable th')).toHaveText(['Area', 'AM min °C', 'AM max °C', 'PM min °C', 'PM max °C']);
+    await expect(round.locator('.rtile').first()).toContainText('8.2');
+    await expect(round.locator('.rtile').first()).toContainText('Cold');
+    await expect(round.locator('.rtile').first()).toContainText('Out of range');
+    await expect(round.locator('.rtile').first()).toContainText('Submitted');
+    await expect(round.locator('.rtile', { hasText: 'Test Cabin Z' })).toContainText('Missed');
+    const pad = await round.locator('.rtable td').first().evaluate((e) => parseFloat(getComputedStyle(e).paddingTop));
+    expect(pad).toBeLessThanOrEqual(4);
+    await expect(round.locator('h3').nth(0)).toHaveText('Indoors');
+    await expect(round.locator('h3').nth(1)).toHaveText('Outside');
+    const tileBox = await round.locator('.rtile').first().boundingBox();
+    const tableBox = await round.locator('.rtable').boundingBox();
+    expect(tileBox.y).toBeLessThan(tableBox.y);
+    await expect(round).not.toContainText(/\bactual/i);
+    await expect(round).not.toContainText(/source/i);
+    await page.getByRole('button', { name: 'Month cards' }).click();
+    await expect(page.locator('#view-c')).toContainText('out of range');
+    await expect(page.locator('#view-c')).toContainText('Highest');
+    await expect(page.locator('#view-c')).toContainText('rounds missed');
+    await expect(page.locator('#view-c')).not.toContainText('cold days');
   });
 });

@@ -110,6 +110,7 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - Missing files are reported, not hidden.
 - Saving stays switched off.
 - Sign out forgets everything.
+- Temperatures today keeps Morning, Evening, Rooms and Outside today as rows. The next outdoor days sit in one sideways strip (weekday, min–max, Cold / OK / Hot, rain none / light / wet, and Windy only from 40 km/h). Today is named Today. Outside uses the phrase only. The hub page does not scroll sideways. The history page is titled Temperatures. The round is the first tab: indoor tiles, then a short °C table in kennel walk order, then Outside. It does not show Source or the reading kind. Year chips run 2026, 2025, 2024, with 2026 open. Archive is its own page. (`tests/mocked/cdhub.spec.js`, `tests/mocked/history-area-sheet.spec.js`)
 
 **Money Hub**
 - Opens, then needs a sign-in.
@@ -316,6 +317,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 5 Nov 2026 | Main hub tiles: only the name was a link, so a tap on the rest of the square did nothing | "the whole hub tile opens the hub; numbers and the Food tick keep their own pages @regression" |
 | 5 Nov 2026 | CD Hub boot said it was reading tables from Drive and waited on each file in turn | "boot stays friendly and present files are read together @regression" |
 | 5 Nov 2026 | CD Hub Temperatures today showed "Saving off." again, and Temperature history did not open (a bare data-skip blocked the link) | "Temperatures today: no saving-off notice, and Temperature history opens history.html @regression" (tests/mocked/cdhub.spec.js) |
+| 6 Nov 2026 | Temperatures showed "Source:" and the reading kind, including the word actual, on history and on Outside today when the phrase was empty | "Outside today does not show the reading kind when the phrase is empty @regression" and "year chips run current first, and a day detail does not show Source or the reading kind @regression" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
