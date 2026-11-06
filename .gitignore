@@ -28,6 +28,8 @@ playwright-report/
 
 # Public SOP name index for CD Hub (colour, frequency, short name, has_form). No addresses.
 !cdhub/sop-index.json
+# Public file-type and file-format labels for the SOP page. Codes and labels only.
+!cdhub/asset-types.json
 
 # Cloudflare Pages build output (tools/build-site)
 _site/

@@ -6,7 +6,10 @@ const { test, expect } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 
 const SEED = path.resolve(__dirname, '..', '..', 'cdhub', 'sop-index.json');
+const TYPES = path.resolve(__dirname, '..', '..', 'cdhub', 'asset-types.json');
+const ICONS = path.resolve(__dirname, '..', '..', 'cdhub', 'asset-type-icons.svg');
 const rows = () => JSON.parse(fs.readFileSync(SEED, 'utf8'));
+const typeCfg = () => JSON.parse(fs.readFileSync(TYPES, 'utf8'));
 const label = (r) => `${r.colour} – ${r.frequency}: ${r.short_name}`;
 
 const signIn = async (page) => {
@@ -167,6 +170,7 @@ test('a clipboard opens only when the row has a form and a real https address', 
 test('phone width: the SOP list stays on the screen', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openSops(page);
+  await expect(page.locator('#soptypes [data-type-code]')).toHaveCount(21);
   const w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, body: document.body.scrollWidth, screen: window.innerWidth }));
   expect(w.doc).toBeLessThanOrEqual(w.screen + 1);
   expect(w.body).toBeLessThanOrEqual(w.screen + 1);
@@ -174,4 +178,132 @@ test('phone width: the SOP list stays on the screen', async ({ page }) => {
   expect(short).toEqual([]);
   await page.locator('#sopq').fill('Care Rounds');
   await expect(page.locator('#soprows [data-sop]')).toHaveCount(1);
+});
+
+test('the file-type seed is 21 types and 4 formats, with a matching icon for each', () => {
+  const cfg = typeCfg();
+  const typeCodes = ['poster', 'sign', 'checklist', 'form', 'log', 'register', 'certificate', 'policy', 'map_plan', 'rota', 'training_record', 'datasheet', 'inspection_report', 'declaration', 'risk_assessment', 'emergency_plan', 'competency_sheet', 'index_pointer', 'schedule', 'programme', 'agreement'];
+  const formatCodes = ['photo', 'scan', 'pdf', 'plain_upload'];
+  expect(cfg.do_not_remap).toEqual(expect.arrayContaining(['other', 'sheet']));
+  expect(cfg.types.map((t) => t.type_code)).toEqual(typeCodes);
+  expect(cfg.formats.map((f) => f.format_code)).toEqual(formatCodes);
+  expect(cfg.types.every((t) => t.icon_key === t.type_code && t.approval_status === 'approved' && t.enabled === true && t.label)).toBe(true);
+  expect(cfg.types.find((t) => t.type_code === 'poster')).toMatchObject({ requires_sop_link: true, allow_unlinked_reconciliation: true });
+  expect(cfg.types.find((t) => t.type_code === 'checklist')).toMatchObject({ requires_sop_link: false });
+  expect(cfg.formats.map((f) => f.icon_key)).toEqual(['fmt_photo', 'fmt_scan', 'fmt_pdf', 'fmt_upload']);
+  expect(cfg.formats.find((f) => f.format_code === 'plain_upload').mime_allowlist).toEqual([]);
+  expect(cfg.formats.find((f) => f.format_code === 'pdf').mime_allowlist).toEqual(['application/pdf']);
+  for (const banned of ['other', 'sheet', 'sds', 'photo', 'scan', 'pdf', 'plain_upload']) {
+    expect(cfg.types.map((t) => t.type_code)).not.toContain(banned);
+  }
+  const svg = fs.readFileSync(ICONS, 'utf8');
+  for (const key of [...cfg.types.map((t) => t.icon_key), ...cfg.formats.map((f) => f.icon_key)]) {
+    expect(svg).toContain(`id="i-${key}"`);
+  }
+  expect(JSON.stringify(cfg)).not.toMatch(/https?:|@|drive\.google|\b0\d{9,}\b/i);
+  expect(svg.replace('xmlns="http://www.w3.org/2000/svg"', '')).not.toMatch(/https?:|@|drive\.google|\b0\d{9,}\b/i);
+});
+
+test('#/sops names every file type and file format with its icon', async ({ page }) => {
+  const cfg = typeCfg();
+  await openSops(page);
+  await expect(page).toHaveURL(/#\/sops$/);
+  await expect(page.locator('#soptypes [data-type-code]')).toHaveCount(21);
+  await expect(page.locator('#soptypes .atype-lab')).toHaveText(cfg.types.map((t) => t.label));
+  for (const t of cfg.types) {
+    const item = page.locator(`#soptypes [data-type-code="${t.type_code}"]`);
+    await expect(item).toHaveAttribute('aria-label', t.label);
+    await expect(item).toHaveAttribute('data-icon-key', t.icon_key);
+    await expect(item.locator('use')).toHaveAttribute('href', `#i-${t.icon_key}`);
+    await expect(item.locator('svg')).toHaveAttribute('aria-hidden', 'true');
+  }
+  await expect(page.locator('#sopformats [data-format-code]')).toHaveCount(4);
+  await expect(page.locator('#sopformats .atype-lab')).toHaveText(cfg.formats.map((f) => f.label));
+  for (const f of cfg.formats) {
+    const item = page.locator(`#sopformats [data-format-code="${f.format_code}"]`);
+    await expect(item).toHaveAttribute('aria-label', f.label);
+    await expect(item.locator('use')).toHaveAttribute('href', `#i-${f.icon_key}`);
+  }
+  await expect(page.locator('#soptypes [data-format-code]')).toHaveCount(0);
+  await expect(page.locator('#sopformats [data-type-code]')).toHaveCount(0);
+  await expect(page.locator('#soprows [data-type-code]')).toHaveCount(0);
+  await expect(page.locator('#soprows [data-sop]')).toHaveCount(48);
+  await expect(page.locator('#soprows a')).toHaveCount(0);
+  await expect(page.locator('input[type="file"]')).toHaveCount(0);
+  const read = await page.evaluate(() => ({
+    unmap: ASSET.unmap,
+    mime: ASSET.formats.map((f) => [f.format_code, f.mime_allowlist]),
+  }));
+  expect(read.unmap).toEqual(expect.arrayContaining(['other', 'sheet']));
+  expect(read.mime).toEqual(cfg.formats.map((f) => [f.format_code, f.mime_allowlist]));
+  const drawn = await page.locator('#soptypes [data-type-code="poster"] svg').evaluate((el) => {
+    const s = getComputedStyle(el);
+    const r = el.getBoundingClientRect();
+    const use = el.querySelector('use');
+    const box = use && use.getBoundingClientRect();
+    return { w: r.width, h: r.height, stroke: s.stroke, fill: s.fill, uw: box ? box.width : 0, uh: box ? box.height : 0 };
+  });
+  expect(drawn.w).toBeGreaterThan(10);
+  expect(drawn.h).toBeGreaterThan(10);
+  expect(drawn.uw).toBeGreaterThan(10);
+});
+
+test('other and sheet are not remapped; a real type code keeps its icon and the old form link', async ({ page }) => {
+  const sops = JSON.stringify([
+    { colour: 'Purple', frequency: 'Ongoing', short_name: 'Signs/Posters Index', has_form: 'Y', form_url: 'https://example.com/posters', type_code: 'index_pointer' },
+    { colour: 'Yellow', frequency: 'Daily', short_name: 'Care Rounds', has_form: 'Y', kind: 'checklist', form_url: 'https://example.com/care-form' },
+    { colour: 'White', frequency: 'Ad hoc', short_name: 'Read-and-Sign', has_form: 'N', kind: 'other' },
+    { colour: 'White', frequency: 'Ongoing', short_name: 'Record Keeping', has_form: 'N', kind: 'sheet' },
+    { colour: 'Orange', frequency: 'Breeding', short_name: 'Health Screening', has_form: 'N', kind: 'sds' },
+    { colour: 'Red', frequency: 'Ongoing', short_name: 'Emergency Display', has_form: 'Y', kind: 'sheet', type_code: 'poster', form_url: 'https://example.com/poster' },
+    { colour: 'Blue', frequency: 'Ad hoc', short_name: 'Transport', has_form: 'N', kind: 'photo' },
+  ]);
+  const types = JSON.stringify({
+    do_not_remap: ['other', 'sheet'],
+    types: [
+      { type_code: 'checklist', label: 'Checklist', icon_key: 'checklist', approval_status: 'approved', enabled: true, sort: 1 },
+      { type_code: 'poster', label: 'Poster', icon_key: 'poster', approval_status: 'approved', enabled: true, sort: 2, requires_sop_link: true },
+      { type_code: 'index_pointer', label: 'Index', icon_key: 'index_pointer', approval_status: 'approved', enabled: true, sort: 3 },
+      { type_code: 'sign', label: 'Sign', icon_key: 'sign', approval_status: 'proposed', enabled: true, sort: 4 },
+      { type_code: 'form', label: 'Form', icon_key: 'form', approval_status: 'approved', enabled: false, sort: 5 },
+      { type_code: 'other', label: 'Other', icon_key: 'other', approval_status: 'approved', enabled: true, sort: 6 },
+    ],
+    formats: [
+      { format_code: 'photo', label: 'Photo', icon_key: 'fmt_photo', mime_allowlist: ['image/jpeg'], sort: 1 },
+      { format_code: 'scan', label: 'Scan of print', icon_key: 'fmt_scan', mime_allowlist: ['image/jpeg', 'image/png', 'application/pdf'], sort: 2 },
+    ],
+  });
+  await page.route('**/sop-index.json', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: sops }));
+  await page.route('**/asset-types.json', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: types }));
+  await page.goto('cdhub/#/sops');
+  await signIn(page);
+  await expect(page.locator('#soptypes .atype-lab')).toHaveText(['Checklist', 'Poster', 'Index']);
+  await expect(page.locator('#soptypes')).not.toContainText('Sign');
+  await expect(page.locator('#soptypes')).not.toContainText('Form');
+  await expect(page.locator('#sopformats .atype-lab')).toHaveText(['Photo', 'Scan of print']);
+  const row = (name) => page.locator(`#soprows [data-sop="${name}"]`);
+  await expect(row('Care Rounds').locator('.atype-row')).toHaveAttribute('aria-label', 'Checklist');
+  await expect(row('Care Rounds').locator('.atype-row use')).toHaveAttribute('href', '#i-checklist');
+  await expect(row('Care Rounds').locator('a')).toHaveAttribute('href', 'https://example.com/care-form');
+  await expect(row('Care Rounds').locator('a use')).toHaveAttribute('href', '#i-clipboard');
+  await expect(row('Signs/Posters Index').locator('.atype-row')).toHaveAttribute('aria-label', 'Index');
+  await expect(row('Signs/Posters Index').locator('a')).toHaveAttribute('href', 'https://example.com/posters');
+  await expect(row('Emergency Display').locator('.atype-row')).toHaveAttribute('aria-label', 'Poster');
+  await expect(row('Emergency Display').locator('a')).toHaveAttribute('href', 'https://example.com/poster');
+  for (const name of ['Read-and-Sign', 'Record Keeping', 'Health Screening', 'Transport']) {
+    await expect(row(name).locator('[data-type-code]')).toHaveCount(0);
+  }
+  await expect(row('Health Screening')).not.toContainText('Data sheet');
+  await expect(row('Transport')).not.toContainText('Photo');
+  await expect(row('Read-and-Sign')).toContainText('form not on hub yet');
+  await expect(page.locator('#soprows .t')).toHaveText([
+    'Blue – Ad hoc: Transport',
+    'Orange – Breeding: Health Screening',
+    'Purple – Ongoing: Signs/Posters Index',
+    'Red – Ongoing: Emergency Display',
+    'White – Ad hoc: Read-and-Sign',
+    'White – Ongoing: Record Keeping',
+    'Yellow – Daily: Care Rounds',
+  ]);
+  await expect(page.locator('input[type="file"]')).toHaveCount(0);
 });
