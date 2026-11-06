@@ -349,24 +349,33 @@ var DB=null, ROUND={}, ACCESS={}, DBERR=null;
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
 // Links that come from the tables: only plain web addresses are allowed (never javascript:, data: etc.).
 function safeUrl(u){ u=String(u==null?'':u).trim(); return /^https?:\/\/[^\s"'<>]+$/i.test(u)?u:''; }
-// Public SOP index (cdhub/sop-index.json). Name labels only. A form opens only when the row says it has one
-// and the row carries a real https address. This seed has no addresses, so nothing here invents one.
+// Public SOP index (cdhub/sop-index.json). Colour, frequency, category, role code and short name.
+// A form opens only when the row says it has one and the row carries a real https address.
+// This seed has no addresses, so nothing here invents one. Roles are codes, never person names.
 var SOP={rows:null,err:'',pending:null};
 var SOP_COLOURS=['White','Red','Orange','Yellow','Green','Blue','Purple'];
 var SOP_FREQS=['Daily','Weekly','Monthly','Quarterly','Annual','Ongoing','Per litter','Ad hoc','Breeding'];
+// Locked 6 Nov 2026. These seven always show. Any later category shows only once a row has it.
+var SOP_CATEGORIES=['Breeding health','Daily care & premises','Emergency & safety','Licence & records','Puppy sale & handover','Signs & posters','Staff'];
+// Closed codes for the public filter. inspector_view stays off this list until a row uses it.
+var SOP_ROLES=['licence_holder','manager','kennel_staff','all_staff'];
+var SOP_ROLE_RANK=SOP_ROLES.concat(['inspector_view']);
+var SOP_ROLE_LABEL={licence_holder:'Licence holder',manager:'Manager',kennel_staff:'Kennel staff',all_staff:'All staff',inspector_view:'Inspector view'};
 var SOP_DOT={White:'--ljr-0',Red:'--ljr-2',Orange:'--ljr-3',Yellow:'--ljr-4',Green:'--ljr-5',Blue:'--ljr-6',Purple:'--ljr-7'};
 function sopDot(c){ return SOP_DOT[c]||'--ljr-0'; }
 function sopLabel(r){ return r.colour+' \u2013 '+r.frequency+': '+r.short_name; }
+function sopRoleLabel(code){ return SOP_ROLE_LABEL[code]||code||''; }
 function sopNorm(r){
  if(!r||typeof r!=='object') return null;
  var colour=String(r.colour||'').trim(), frequency=String(r.frequency||'').trim(), short_name=String(r.short_name||'').trim();
  if(!colour||!frequency||!short_name) return null;
+ var category=String(r.category||'').trim(), role=String(r.role||'').trim();
  var has=String(r.has_form||'').toUpperCase()==='Y'?'Y':'N';
  var raw=String(r.form_url||'').trim();
  var form_url=(has==='Y'&&/^https:\/\/[^\s"'<>]+$/i.test(raw))?raw:'';
  var type_code=assetCode(r.type_code);
  var kind=assetCode(String(r.kind||'').toLowerCase());
- return {colour:colour,frequency:frequency,short_name:short_name,has_form:has,form_url:form_url,type_code:type_code,kind:kind};
+ return {colour:colour,frequency:frequency,category:category,role:role,short_name:short_name,has_form:has,form_url:form_url,type_code:type_code,kind:kind};
 }
 // File types (semantic) and file formats (how a file is stored) live in cdhub/asset-types.json.
 // Loaded only on the SOP page. Legacy kind other/sheet is never turned into a type. sds is not a type code.
@@ -2139,10 +2148,14 @@ function pageSops(){
  if(!SOP.rows) return '<h2>SOPs</h2><p class="note">Reading the SOP list\u2026</p>';
  var colours=sopChoices(SOP.rows.map(function(r){return r.colour;}), SOP_COLOURS);
  var freqs=sopChoices(SOP.rows.map(function(r){return r.frequency;}), SOP_FREQS);
+ var cats=sopChoices(SOP.rows.map(function(r){return r.category;}), SOP_CATEGORIES);
+ var roles=sopChoices(SOP.rows.map(function(r){return r.role;}), SOP_ROLES);
  return '<h2>SOPs</h2>'
-  +fbar({id:'sops',what:'SOPs',q:'sopq',count:'sopcnt',clear:'sopclr',sort:['sopsort',[['','name A to Z'],['colour','colour'],['frequency','frequency']]],
+  +fbar({id:'sops',what:'SOPs',q:'sopq',count:'sopcnt',clear:'sopclr',sort:['sopsort',[['','name A to Z'],['colour','colour'],['frequency','frequency'],['category','category'],['role','role']]],
     groups:[['Colour',fsel('sopcol','Colour',colours.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join(''))],
-     ['Frequency',fsel('sopfr','Frequency',freqs.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+'</option>';}).join(''))]]})
+     ['Frequency',fsel('sopfr','Frequency',freqs.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+'</option>';}).join(''))],
+     ['Category',fsel('sopcat','Category',cats.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join(''))],
+     ['Role',fsel('soprole','Role',roles.map(function(code){return '<option value="'+esc(code)+'">'+esc(sopRoleLabel(code))+'</option>';}).join(''))]]})
   +'<div class="card" id="sopcard"><div id="soprows"></div><p class="note hidden" id="sopempty">Nothing matches.</p></div>'
   +'<h3>File types</h3><div class="card" id="soptypes"></div>'
   +'<h3>File formats</h3><div class="card" id="sopformats"></div>';
@@ -2150,10 +2163,12 @@ function pageSops(){
 function drawSops(){
  var rows=SOP.rows||[];
  var v=function(i){ var e=document.getElementById(i); return e?(e.value||''):''; };
- var q=v('sopq'), col=v('sopcol'), fr=v('sopfr'), so=v('sopsort');
+ var q=v('sopq'), col=v('sopcol'), fr=v('sopfr'), cat=v('sopcat'), role=v('soprole'), so=v('sopsort');
  var list=rows.filter(function(r){
   if(col && r.colour!==col) return false;
   if(fr && r.frequency!==fr) return false;
+  if(cat && r.category!==cat) return false;
+  if(role && r.role!==role) return false;
   if(!q) return true;
   var hay=(sopLabel(r)+' '+r.short_name).toLowerCase();
   return q.toLowerCase().split(/\s+/).filter(Boolean).every(function(w){ return hay.indexOf(w)>=0; });
@@ -2166,6 +2181,8 @@ function drawSops(){
  }; };
  if(so==='colour') list.sort(rank(SOP_COLOURS,'colour'));
  else if(so==='frequency') list.sort(rank(SOP_FREQS,'frequency'));
+ else if(so==='category') list.sort(rank(SOP_CATEGORIES,'category'));
+ else if(so==='role') list.sort(rank(SOP_ROLE_RANK,'role'));
  else list.sort(byLabel);
  var el=document.getElementById('soprows'); if(!el) return;
  el.innerHTML=list.map(function(r){
@@ -2185,7 +2202,7 @@ function drawSops(){
  if(empty) empty.classList.toggle('hidden', !!list.length);
  var cnt=document.getElementById('sopcnt');
  if(cnt) cnt.textContent=list.length+' of '+rows.length;
- fchips('sops',['sopcol','sopfr']);
+ fchips('sops',['sopcol','sopfr','sopcat','soprole']);
 }
 var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,vet:pageVet,buyers:pageBuyers,sops:pageSops};
 var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Assocs'],['sops','SOPs']];
@@ -2338,10 +2355,10 @@ function go(id,push){
   if(sub&&LISTNAME[sub]) showList(sub);
  }
  if(id==='sops'){
-  ['sopq','sopcol','sopfr','sopsort'].forEach(function(i){ var e=document.getElementById(i);
+  ['sopq','sopcol','sopfr','sopcat','soprole','sopsort'].forEach(function(i){ var e=document.getElementById(i);
     if(e){ e.addEventListener('input',drawSops); e.addEventListener('change',drawSops); } });
   var sc=document.getElementById('sopclr');
-  if(sc) sc.addEventListener('click',function(){ ['sopq','sopcol','sopfr'].forEach(function(i){
+  if(sc) sc.addEventListener('click',function(){ ['sopq','sopcol','sopfr','sopcat','soprole'].forEach(function(i){
     var e=document.getElementById(i); if(e) e.value=''; }); drawSops(); });
   drawSops();
   assetStart();
