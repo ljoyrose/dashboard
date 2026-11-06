@@ -25,7 +25,7 @@
 <style>
 /* ==== House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio).
    Lexend 400/600, nothing under 13px, line height 1.5, no uppercase. 1px lines. Hover AND selected = the same 1px edge
-   turns ink (outline over it), nothing moves; keyboard focus 2px ink. ONE radius, 12px (circles only for status dots and
+   turns ink (outline over it), nothing moves; keyboard focus 1px ink inside. ONE radius, 12px (circles only for status dots and
    who rings). No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints.
    Dark frame top and bottom. Greys follow Warm clear (default) or Cool clear, read from Studio's Look ('dash-look', read only).
    Screens are built on generic Bloodline foundation concepts (record, round, check, rule, place, person, document);
@@ -57,7 +57,7 @@ header h1 .dot{background:var(--ljr-5)}
 .live.ok{border-color:var(--ljr-5)}.live.bad{border-color:var(--ljr-2)}
 header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
 @media (hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
-header .btn:focus-visible{outline:2px solid var(--frame-ink);outline-offset:2px}
+header .btn:focus-visible{outline: 1px solid var(--frame-ink);outline-offset: -1px}
 .backhome{text-decoration:none}
 /* Signed out, the frame is hidden by the sign-in gate and only Dashboard shows, on the page colour: use page ink. */
 html.dash-locked header .backhome{color:var(--ink);border-color:var(--press)}
@@ -100,7 +100,7 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 @media (hover:hover){.btn.yes:hover{outline-color:var(--house-ok);}.btn.no:hover{outline-color:var(--house-risk);}}
 .dc .nl .st{border:0;padding:0;height:auto;font-size:var(--fs-small)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
-:focus-visible{outline:2px solid var(--ink)!important;outline-offset:2px}
+:focus-visible{outline: 1px solid var(--ink)!important;outline-offset: -1px}
 @media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{min-height:44px}}
 
 /* ---- Read-only pills, counts and dates: small (24px), 1px ring, no hover. ---- */

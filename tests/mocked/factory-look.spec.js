@@ -286,7 +286,7 @@ test.describe('Factory look: hover = a 1px line inside, never a fill (Lisa\'s sw
     });
   }
 
-  test('selected looks the same as hover; keyboard focus is a 2px ink ring', async ({ page, guard }) => {
+  test('selected looks the same as hover; keyboard focus is a 1px ink line inside', async ({ page, guard }) => {
     await open(page, guard, '#/do');
     const ink = await page.evaluate(() => getComputedStyle(document.body).color);
     await page.mouse.move(0, 0);
@@ -295,8 +295,8 @@ test.describe('Factory look: hover = a 1px line inside, never a fill (Lisa\'s sw
     await page.locator('#filtersBtn').focus();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
-    const f = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineWidth, c.outlineStyle, c.outlineColor]; });
-    expect(f).toEqual(['2px', 'solid', ink]);
+    const f = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineWidth, c.outlineStyle, c.outlineOffset, c.outlineColor]; });
+    expect(f).toEqual(['1px', 'solid', '-1px', ink]);
   });
 
   test('read-only pills (counts, Test, missing lines, codes, age) have no hover', async ({ page, guard }) => {

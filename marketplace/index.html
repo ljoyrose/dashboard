@@ -66,9 +66,9 @@
     a.tile:hover, button.tile:hover, details > summary:hover, .pair figure > a:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
     html.dash-locked header .btn:hover { outline-color: var(--ink); }
   }
-  /* Keyboard focus: a 2px ink ring (the one exception to 1px). */
+  /* Keyboard focus: the 1px ink line inside (Lisa, 3 Nov 2026: no exception to 1px). */
   a:focus, button:focus, summary:focus { outline: none; }
-  :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  :focus-visible, a:focus-visible, button:focus-visible, summary:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
   header :focus-visible:not(.house-menu *), header a:focus-visible:not(.house-menu *), header button:focus-visible:not(.house-menu *) { outline-color: var(--frame-ink); }
   input:focus { outline: none; border-color: var(--ink); }
 

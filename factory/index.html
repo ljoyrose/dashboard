@@ -102,10 +102,10 @@
   }
   .ico.on { color: var(--hc, var(--ink)); }
   .mark svg { filter: grayscale(1); opacity: .55; }
-  /* Keyboard focus: a 2px ink ring (the one exception to 1px). */
+  /* Keyboard focus: the 1px ink line inside (Lisa, 3 Nov 2026: no exception to 1px). */
   a:focus, button:focus, [tabindex]:focus, summary:focus { outline: none; }
   /* !important: focus always wins over the 1px hover / selected line, so the keyboard ring is never lost. */
-  :focus-visible, label.date:has(input:focus-visible) { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  :focus-visible, label.date:has(input:focus-visible) { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
   header :focus-visible:not(.house-menu *), nav.tabs .ht:focus-visible { outline-color: var(--frame-ink) !important; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--ink); }
   .sbox:focus-within { border-color: var(--ink); }

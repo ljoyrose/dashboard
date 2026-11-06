@@ -26,7 +26,7 @@
      share them. Only Studio's own extras live here: its colour (--me), the column band and chip fills, the coloured-word set and
      the status colours on the dark frame. */
   :root { --me: var(--ljr-7); --bd: var(--line); --band: var(--card); --chip: transparent;
-    --w2: #C32924; --w3: #9E5802; --w4: #766602; --w5: #217A2D; --w6: #0271A4; --w7: #8850B6;
+    --w2: #AF2420; --w3: #894C01; --w4: #695B01; --w5: #1C6A27; --w6: #01628E; --w7: #76459E;
     --frame-ok: #8BCF8F; --frame-bad: #F28B85; --frame-warn: #F2A65A; }
   :root.look-cool { --bd: #C3CCD4; --band: #FFFFFF; --chip: #F5F7F9; }
   @media (prefers-color-scheme: light) { :root.words-light:not([data-theme="dark"]) { --w2: #D93732; --w3: #AD6202; --w4: #877402; --w5: #258631; --w6: #027BB5; --w7: #915CBC; } }
@@ -213,8 +213,8 @@
   /* Calm focus: one line, a shade darker. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
   a:focus, button:focus { outline: none; }
-  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; } /* never the browser blue */
-  a:focus-visible, button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-color: var(--ink) !important; }
+  :focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; } /* never the browser blue */
+  a:focus-visible, button:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; border-color: var(--ink) !important; }
   footer { color: var(--muted); font-size: var(--fs-small); padding: 0 16px 24px; }
   /* v0.2: Kits tab (playbooks by outcome, packs, kits, styles, formats), sources, gaps, tool form */
   a.tag { text-decoration: none; }
@@ -284,6 +284,7 @@
   header { background: var(--frame); color: var(--frame-ink); border-bottom: 0; }
   header .top > h1 a, header .top > .stamp, header .top > .pill, header .top > .btn, header .lookwrap > .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
   header .top > .pill .ti { color: var(--frame-ink); }
+  :root.look-cool header .top > .pill { background: transparent; } /* the cool look's chip fill must not reach the top bar: white words on it were 1.07:1 */
   header .top > .btn.main { border-color: var(--frame-ink); }
   header .top > .pill.ok { border-color: var(--frame-ok); } header .top > .pill.ok .ti { color: var(--frame-ok); }
   header .top > .pill.warn { border-color: var(--frame-warn); } header .top > .pill.bad { border-color: var(--frame-bad); }

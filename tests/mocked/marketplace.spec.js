@@ -1148,13 +1148,13 @@ test.describe('Marketplace house look', () => {
     expect([...new Set(gaps.head)]).toEqual([16]);
   });
 
-  test('keyboard focus is a 2px ink ring', async ({ page }) => {
+  test('keyboard focus is a 1px ink line inside', async ({ page }) => {
     await lookSheets(page);
     await open(page, '#/do');
     await page.locator('[data-ans="RM|1"]').focus();
     await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
-    const s = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineStyle, c.outlineWidth, c.outlineColor === getComputedStyle(document.body).color]; });
-    expect(s).toEqual(['solid', '2px', true]);
+    const s = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineStyle, c.outlineWidth, c.outlineOffset, c.outlineColor === getComputedStyle(document.body).color]; });
+    expect(s).toEqual(['solid', '1px', '-1px', true]);
   });
 
   test('date pills: plain 1px ring at rest; late = rose ring + tint, today or tomorrow = amber ring + tint; words say it too', async ({ page }) => {

@@ -214,13 +214,14 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
     }
   });
 
-  test('keyboard focus is a 2px ink ring', async ({ page }) => {
+  test('keyboard focus is a 1px ink line inside', async ({ page }) => {
     await open(page, 'light');
     await page.locator('#view a.btn').first().focus();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
-    const f = await page.evaluate(() => { const cs = getComputedStyle(document.activeElement); return [cs.outlineWidth, cs.outlineStyle, cs.outlineColor, getComputedStyle(document.body).color]; });
-    expect(f[0]).toBe('2px');
+    const f = await page.evaluate(() => { const cs = getComputedStyle(document.activeElement); return [cs.outlineWidth, cs.outlineStyle, cs.outlineColor, getComputedStyle(document.body).color, cs.outlineOffset]; });
+    expect(f[0]).toBe('1px');
+    expect(f[4]).toBe('-1px');
     expect(f[1]).toBe('solid');
     expect(f[2]).toBe(f[3]);
   });
