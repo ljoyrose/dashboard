@@ -178,6 +178,14 @@ tr:last-child td{border-bottom:none}
 #sopcard .mrow:first-child{border-top:0;padding-top:0}
 #sopcard .mrow .mut{flex:0 1 11em;overflow-wrap:anywhere}
 #sopcard .mrow .cb{flex:none;padding:0 10px}
+/* File types and file formats on the SOP page: same line icons and 12px radius as the rest of the house. */
+.atype-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,148px),1fr));gap:8px;margin:0;padding:0;list-style:none}
+.atype{display:flex;align-items:center;gap:8px;min-width:0;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:transparent}
+.atype .ti{width:22px;height:22px;color:var(--ink)}
+.atype-lab{font-size:var(--fs-small);font-weight:600;overflow-wrap:anywhere;line-height:1.3}
+.atype-row{display:inline-flex;align-items:center;gap:4px;flex:none;max-width:11em;font-size:var(--fs-small);font-weight:600;color:var(--ink)}
+.atype-row .ti{width:18px;height:18px}
+#sopformats .mut{display:block;margin:0 0 8px}
 .mrow .t small{display:block;color:var(--muted);font-size:var(--fs-small);font-weight:400;margin-top:2px}
 .mrow .ic{width:12px;height:12px;flex:none;border-radius:50%;border:1px solid var(--press)}
 .mrow .ic.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
@@ -356,7 +364,97 @@ function sopNorm(r){
  var has=String(r.has_form||'').toUpperCase()==='Y'?'Y':'N';
  var raw=String(r.form_url||'').trim();
  var form_url=(has==='Y'&&/^https:\/\/[^\s"'<>]+$/i.test(raw))?raw:'';
- return {colour:colour,frequency:frequency,short_name:short_name,has_form:has,form_url:form_url};
+ var type_code=assetCode(r.type_code);
+ var kind=assetCode(String(r.kind||'').toLowerCase());
+ return {colour:colour,frequency:frequency,short_name:short_name,has_form:has,form_url:form_url,type_code:type_code,kind:kind};
+}
+// File types (semantic) and file formats (how a file is stored) live in cdhub/asset-types.json.
+// Loaded only on the SOP page. Legacy kind other/sheet is never turned into a type. sds is not a type code.
+var ASSET={types:null,formats:null,unmap:['other','sheet'],err:'',pending:null};
+function assetCode(s){ s=String(s==null?'':s).trim(); return /^[a-z][a-z0-9_]{0,40}$/.test(s)?s:''; }
+function assetOn(r){ return !r || r.enabled!==false; }
+function assetNormType(r){
+ if(!r||typeof r!=='object') return null;
+ var code=assetCode(r.type_code), label=String(r.label||'').trim(), key=assetCode(r.icon_key);
+ if(!code||!label||!key||key.indexOf('fmt_')===0) return null;
+ if(code==='other'||code==='sheet') return null;
+ if(r.approval_status!=='approved') return null;
+ if(!assetOn(r)) return null;
+ return {type_code:code,label:label,icon_key:key,requires_sop_link:r.requires_sop_link===true,allow_unlinked_reconciliation:r.allow_unlinked_reconciliation===true,sort:Number(r.sort)||0};
+}
+function assetNormFormat(r){
+ if(!r||typeof r!=='object') return null;
+ var code=assetCode(r.format_code), label=String(r.label||'').trim(), key=assetCode(r.icon_key);
+ if(!code||!label||!key||key.indexOf('fmt_')!==0) return null;
+ if(code==='other'||code==='sheet') return null;
+ var mime=Array.isArray(r.mime_allowlist)?r.mime_allowlist.map(function(m){return String(m||'').trim();}).filter(function(m){return /^[a-z0-9.+-]+\/[a-z0-9.+-]+$/.test(m);}):[];
+ return {format_code:code,label:label,icon_key:key,mime_allowlist:mime,sort:Number(r.sort)||0};
+}
+function mountAssetIcons(svgText){
+ if(document.getElementById('asset-type-icons')) return true;
+ var doc=new DOMParser().parseFromString(svgText,'image/svg+xml');
+ if(!doc||doc.querySelector('parsererror')) return false;
+ var syms=doc.querySelectorAll('symbol'), holder=document.createElementNS('http://www.w3.org/2000/svg','svg');
+ holder.setAttribute('id','asset-type-icons'); holder.setAttribute('width','0'); holder.setAttribute('height','0');
+ holder.setAttribute('aria-hidden','true'); holder.style.position='absolute';
+ for(var i=0;i<syms.length;i++){
+  var s=document.importNode(syms[i],true), id=s.getAttribute('id')||'';
+  if(!/^i-[a-z][a-z0-9_]*$/.test(id)||document.getElementById(id)) continue;
+  holder.appendChild(s);
+ }
+ if(!holder.firstChild) return false;
+ document.body.appendChild(holder);
+ return true;
+}
+function assetStart(){
+ if(ASSET.types||ASSET.err||ASSET.pending) return ASSET.pending||Promise.resolve();
+ var base=location.pathname.replace(/[^/]*$/,'');
+ ASSET.pending=Promise.all([
+  fetch(base+'asset-types.json',{cache:'no-store'}).then(function(res){ if(!res.ok) throw new Error('read failed'); return res.json(); }),
+  fetch(base+'asset-type-icons.svg',{cache:'no-store'}).then(function(res){ if(!res.ok) throw new Error('icons'); return res.text(); })
+ ]).then(function(pair){
+  var data=pair[0];
+  if(!data||!Array.isArray(data.types)||!Array.isArray(data.formats)) throw new Error('not a list');
+  if(!mountAssetIcons(pair[1])) throw new Error('icons');
+  var unmap=(Array.isArray(data.do_not_remap)?data.do_not_remap:[]).map(function(x){return assetCode(String(x||'').toLowerCase());}).filter(Boolean);
+  if(unmap.indexOf('other')<0) unmap.push('other');
+  if(unmap.indexOf('sheet')<0) unmap.push('sheet');
+  var types=data.types.map(assetNormType).filter(Boolean).filter(function(t){return unmap.indexOf(t.type_code)<0;});
+  var formats=data.formats.map(assetNormFormat).filter(Boolean);
+  if(!types.length||!formats.length) throw new Error('bad row');
+  types.sort(function(a,b){ return a.sort-b.sort||a.label.localeCompare(b.label); });
+  formats.sort(function(a,b){ return a.sort-b.sort||a.label.localeCompare(b.label); });
+  ASSET.unmap=unmap; ASSET.types=types; ASSET.formats=formats;
+ }).catch(function(){ ASSET.err='File types could not be read.'; })
+  .then(function(){ if(document.getElementById('soptypes')){ drawAssetTypes(); drawSops(); } });
+ return ASSET.pending;
+}
+function sopShownType(r){
+ if(!r||!ASSET.types) return null;
+ var by={}; ASSET.types.forEach(function(t){ by[t.type_code]=t; });
+ if(r.type_code && by[r.type_code]) return by[r.type_code];
+ if(!r.kind || ASSET.unmap.indexOf(r.kind)>=0 || !by[r.kind]) return null;
+ return by[r.kind];
+}
+function assetItem(attr, code, key, label){
+ var id='i-'+key;
+ var icon=document.getElementById(id)?'<svg class="ti" aria-hidden="true"><use href="#'+id+'"/></svg>':'';
+ return '<li class="atype" '+attr+'="'+esc(code)+'" data-icon-key="'+esc(key)+'" aria-label="'+esc(label)+'">'+icon+'<span class="atype-lab">'+esc(label)+'</span></li>';
+}
+function drawAssetTypes(){
+ var box=document.getElementById('soptypes'), fmt=document.getElementById('sopformats'); if(!box) return;
+ if(ASSET.err){
+  box.innerHTML='<p class="mut">'+esc(ASSET.err)+'</p>';
+  if(fmt) fmt.innerHTML='<p class="mut">'+esc(ASSET.err)+'</p>';
+  return;
+ }
+ if(!ASSET.types){
+  box.innerHTML='<p class="mut">Reading file types\u2026</p>';
+  if(fmt) fmt.innerHTML='<p class="mut">Reading file formats\u2026</p>';
+  return;
+ }
+ box.innerHTML='<ul class="atype-grid">'+ASSET.types.map(function(t){ return assetItem('data-type-code',t.type_code,t.icon_key,t.label); }).join('')+'</ul>';
+ if(fmt) fmt.innerHTML='<p class="mut">How a file is stored. Separate from the type.</p><ul class="atype-grid">'+ASSET.formats.map(function(f){ return assetItem('data-format-code',f.format_code,f.icon_key,f.label); }).join('')+'</ul>';
 }
 // Listed colours and frequencies always appear, in this order, even when a frequency has no row yet.
 // Any extra value that turns up in the index is added after the list.
@@ -2045,7 +2143,9 @@ function pageSops(){
   +fbar({id:'sops',what:'SOPs',q:'sopq',count:'sopcnt',clear:'sopclr',sort:['sopsort',[['','name A to Z'],['colour','colour'],['frequency','frequency']]],
     groups:[['Colour',fsel('sopcol','Colour',colours.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join(''))],
      ['Frequency',fsel('sopfr','Frequency',freqs.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+'</option>';}).join(''))]]})
-  +'<div class="card" id="sopcard"><div id="soprows"></div><p class="note hidden" id="sopempty">Nothing matches.</p></div>';
+  +'<div class="card" id="sopcard"><div id="soprows"></div><p class="note hidden" id="sopempty">Nothing matches.</p></div>'
+  +'<h3>File types</h3><div class="card" id="soptypes"></div>'
+  +'<h3>File formats</h3><div class="card" id="sopformats"></div>';
 }
 function drawSops(){
  var rows=SOP.rows||[];
@@ -2070,10 +2170,16 @@ function drawSops(){
  var el=document.getElementById('soprows'); if(!el) return;
  el.innerHTML=list.map(function(r){
   var label=sopLabel(r);
+  var type=sopShownType(r);
+  var badge=type
+    ? '<span class="atype-row" data-type-code="'+esc(type.type_code)+'" data-icon-key="'+esc(type.icon_key)+'" aria-label="'+esc(type.label)+'">'
+      +(document.getElementById('i-'+type.icon_key)?'<svg class="ti" aria-hidden="true"><use href="#i-'+type.icon_key+'"/></svg>':'')
+      +'<span>'+esc(type.label)+'</span></span>'
+    : '';
   var form=r.form_url
     ? '<a class="cb" href="'+esc(r.form_url)+'" target="_blank" rel="noopener" aria-label="Open form: '+esc(label)+'"><svg class="ti" aria-hidden="true"><use href="#i-clipboard"/></svg></a>'
     : '<span class="mut">form not on hub yet</span>';
-  return '<div class="mrow" data-sop="'+esc(r.short_name)+'"><span class="dot" style="--c:var('+sopDot(r.colour)+')" aria-hidden="true"></span><span class="t">'+esc(label)+'</span>'+form+'</div>';
+  return '<div class="mrow" data-sop="'+esc(r.short_name)+'"><span class="dot" style="--c:var('+sopDot(r.colour)+')" aria-hidden="true"></span><span class="t">'+esc(label)+'</span>'+badge+form+'</div>';
  }).join('');
  var empty=document.getElementById('sopempty');
  if(empty) empty.classList.toggle('hidden', !!list.length);
@@ -2238,6 +2344,8 @@ function go(id,push){
   if(sc) sc.addEventListener('click',function(){ ['sopq','sopcol','sopfr'].forEach(function(i){
     var e=document.getElementById(i); if(e) e.value=''; }); drawSops(); });
   drawSops();
+  assetStart();
+  drawAssetTypes();
  }
  if(id==='buyers'){
   ['bq','bcat','bctry','bapp','bsig','bmd','bem','bch','bsort'].forEach(function(i){ var e=document.getElementById(i);
