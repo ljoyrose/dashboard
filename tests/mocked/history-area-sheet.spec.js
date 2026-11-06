@@ -148,4 +148,43 @@ test.describe('Temperature history reads area files by mime type', () => {
     expect(look.headH).toBe(look.headToken);
     expect(look.frame).not.toBe('rgba(0, 0, 0, 0)');
   });
+
+  test('year chips run current first, and a day detail does not show Source or the reading kind @regression', async ({ page }) => {
+    await openHistory(page);
+    const years = page.locator('.yr-btn');
+    await expect(years).toHaveText(['2026', '2025', '2024']);
+    await expect(years.first()).toHaveClass(/on/);
+    await expect(page.locator('#view-a .mn').first()).toHaveText('Jan');
+    await years.nth(2).click();
+    await expect(years.nth(2)).toHaveClass(/on/);
+    await expect(years.first()).not.toHaveClass(/on/);
+    await years.first().click();
+    await expect(years.first()).toHaveClass(/on/);
+    await page.locator('button.d[title*="15 Jan 2026"]').click();
+    const drill = page.locator('#drill');
+    await expect(drill).toBeVisible();
+    await expect(drill.locator('#d-max')).toContainText('12');
+    await expect(drill.locator('#d-src')).toHaveCount(0);
+    await expect(drill.locator('#d-sub')).toHaveCount(0);
+    await expect(drill).not.toContainText(/source/i);
+    await expect(drill).not.toContainText(/\bactual/i);
+    await expect(drill).not.toContainText('sample');
+  });
+
+  test('Archive opens its own page and does not read another sheet', async ({ page, guard }) => {
+    await openHistory(page);
+    const before = guard.world.calls.length;
+    const extra = [];
+    page.on('request', (req) => extra.push(req.url()));
+    await page.getByRole('link', { name: 'Archive' }).click();
+    await expect(page).toHaveURL(/\/history-archive\.html$/);
+    await expect(page.locator('h1')).toHaveText('Temperature archive');
+    await expect(page.locator('#main')).toContainText('Older years live on Archive.');
+    await expect(page.locator('body')).not.toContainText(/source|actual/i);
+    expect(extra.filter((u) => /spreadsheets|\/drive\/v3\//i.test(u))).toEqual([]);
+    expect(guard.world.calls.length).toBe(before);
+    await page.getByRole('link', { name: 'Temperature history', exact: true }).click();
+    await expect(page).toHaveURL(/\/history\.html$/);
+    await expect(page.locator('.yr-btn').first()).toHaveText('2026');
+  });
 });

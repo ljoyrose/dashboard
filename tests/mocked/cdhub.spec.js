@@ -616,6 +616,80 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('h1')).toContainText('Temperature history');
   });
 
+  test('Temperatures today shows the next 7 outdoor days across, with words for cold, rain and wind', async ({ page, guard }) => {
+    const head = 'on_date,reading_kind,min_temp,max_temp,rain_value,wind_kmh,phrase,cloud_cover_pct,source';
+    const line = (days, kind, min, max, rain, wind, phrase) =>
+      `${iso(days)},${kind},${min},${max},${rain},${wind},${phrase},40,invented`;
+    setFile(guard.world, 'BLD-outdoor_temp.csv', [
+      head,
+      line(-3, 'forecast', 1, 2, 0, 10, 'old forecast phrase'),
+      line(2, 'forecast', 1, 2, 0, 5, 'stale twin phrase'),
+      line(0, 'forecast', 8, 10, 1.2, 23, 'invented long phrase for outside only'),
+      line(1, 'forecast', 20, 29, 0, 10, 'hot day phrase'),
+      line(2, 'forecast', 12, 18, 15, 41, 'wet windy phrase'),
+      line(3, 'forecast', 11, 16, 4, 39, 'light day phrase'),
+      line(4, 'forecast', 10, 14, 0, 0, 'dry day phrase'),
+      line(5, 'forecast', 9, 12, 9.9, 40, 'edge day phrase'),
+      line(6, 'forecast', 10, 13, 10, 39, 'ten mm phrase'),
+      line(7, 'forecast', 1, 2, 0, 99, 'eighth day phrase'),
+    ].join('\n') + '\n');
+    await page.goto('cdhub/');
+    await signIn(page);
+    await openTab(page, 'today');
+    const card = page.locator('#tempsCard');
+    const strip = card.locator('.wk');
+    const cells = strip.locator('.wkday');
+    await expect(cells).toHaveCount(7);
+    await expect(card.locator('.mrow')).toHaveCount(3);
+    await expect(card.locator('.mrow', { hasText: 'Outside' })).toContainText('invented long phrase for outside only');
+    await expect(card.locator('.mrow', { hasText: 'Morning' })).toBeVisible();
+    await expect(card.locator('.mrow', { hasText: 'Evening' })).toBeVisible();
+    const wd = (days) => new Date(`${iso(days)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short' });
+    await expect(cells.nth(0)).toContainText(wd(0));
+    await expect(cells.nth(0)).toContainText('Today');
+    await expect(cells.nth(0)).toContainText('8–10°');
+    await expect(cells.nth(0)).toContainText('Cold');
+    await expect(cells.nth(0)).toContainText('light');
+    await expect(cells.nth(0)).not.toContainText('Windy');
+    await expect(cells.nth(1)).toContainText('Hot');
+    await expect(cells.nth(1)).toContainText('none');
+    await expect(cells.nth(1)).not.toContainText('Windy');
+    await expect(cells.nth(2)).toContainText('12–18°');
+    await expect(cells.nth(2)).toContainText('OK');
+    await expect(cells.nth(2)).toContainText('wet 15mm');
+    await expect(cells.nth(2)).toContainText('Windy');
+    await expect(cells.nth(3)).toContainText('light');
+    await expect(cells.nth(3)).not.toContainText('Windy');
+    await expect(cells.nth(4)).toContainText('none');
+    await expect(cells.nth(4)).toContainText('OK');
+    await expect(cells.nth(5)).toContainText('Cold');
+    await expect(cells.nth(5)).toContainText('light');
+    await expect(cells.nth(5)).toContainText('Windy');
+    await expect(cells.nth(6)).toContainText('wet 10mm');
+    await expect(cells.nth(6)).not.toContainText('Windy');
+    await expect(strip).not.toContainText('old forecast phrase');
+    await expect(strip).not.toContainText('stale twin phrase');
+    await expect(strip).not.toContainText('eighth day phrase');
+    await expect(strip).not.toContainText('invented long phrase');
+    await expect(strip).not.toContainText('invented');
+    await expect(strip).not.toContainText('Saving off');
+    await expect(strip).not.toContainText('forecast');
+    await expect(card).not.toContainText(/\bactual/i);
+    await expect(card).not.toContainText('Source');
+    const foot = card.locator('.mfoot');
+    await expect(foot.getByRole('link', { name: 'Temperature history' })).toHaveAttribute('href', /^\.?\/?history\.html$/);
+    await expect(foot.getByRole('button', { name: 'The round' })).toHaveAttribute('data-go', 'round');
+    const box = await cells.first().boundingBox();
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    expect(await strip.evaluate((el) => el.scrollWidth > el.clientWidth + 1)).toBe(true);
+    await expect(strip).toHaveAttribute('tabindex', '0');
+    await strip.focus();
+    await expect(strip).toBeFocused();
+  });
+
   test('Temperatures today (on Today) shows today\'s outdoor reading; a data check\'s Show (on Tables) opens its list on Today', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-outdoor_temp.csv', `on_date,reading_kind,min_temp,max_temp,phrase,captured_at,source\n${iso(0)},forecast,8,14,invented mild day,${iso(0)}T07:00:00Z,invented\n`);
     await page.goto('cdhub/');
@@ -623,10 +697,24 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await openTab(page, 'today');
     await expect(page.locator('#tempsCard')).toContainText('8–14 °C');
     await expect(page.locator('#tempsCard')).toContainText('invented mild day');
+    await expect(page.locator('#tempsCard')).not.toContainText(/\bactual/i);
+    await expect(page.locator('#tempsCard')).not.toContainText('Source');
     await openTab(page, 'shape');
     await page.locator('#checksCard button[data-list="nochip"]').click();
     await expect(page.locator('#nav button[data-go="today"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('#tpanel')).toContainText('No microchip recorded');
+  });
+
+  test('Outside today does not show the reading kind when the phrase is empty @regression', async ({ page, guard }) => {
+    setFile(guard.world, 'BLD-outdoor_temp.csv', `on_date,reading_kind,min_temp,max_temp,phrase,captured_at,source\n${iso(0)},actual,8,14,,${iso(0)}T07:00:00Z,invented\n`);
+    await page.goto('cdhub/');
+    await signIn(page);
+    await openTab(page, 'today');
+    const outside = page.locator('#tempsCard .mrow', { hasText: 'Outside' });
+    await expect(outside).toContainText('8–14 °C');
+    await expect(outside).not.toContainText(/\bactual/i);
+    await expect(page.locator('#tempsCard')).not.toContainText(/source/i);
+    await expect(page.locator('#tempsCard .wk')).toHaveCount(0);
   });
 
   test('Today checklist: one line per check on the round, a tick or a cross, and how many are done', async ({ page }) => {

@@ -188,6 +188,16 @@ tr:last-child td{border-bottom:none}
 #kept-readings .ic{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1px solid var(--press)}
 #kept-readings .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}#kept-readings .ic.cold{border-color:var(--ljr-6);background:var(--ljr-6-tint)}#kept-readings .ic.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .mrow .v{font-weight:600;font-variant-numeric:tabular-nums}
+/* Outdoor week: seven days across. This row scrolls; the hub page does not. */
+.wk{display:flex;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;width:100%;min-width:0;max-width:100%;margin-top:4px;padding:2px 0 4px}
+.wkday{flex:0 0 auto;box-sizing:border-box;min-width:72px;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:transparent;color:var(--ink);display:flex;flex-direction:column;justify-content:center;gap:2px}
+.wkday.is-today{border-color:var(--ink)}
+.wkday .wd,.wkday .wtag,.wkday .wt,.wkday .wb,.wkday .wr,.wkday .ww{font-size:var(--fs-small);font-weight:600;line-height:1.3}
+.wkday .wt{font-variant-numeric:tabular-nums}
+.wkday .ic{display:inline-block;width:10px;height:10px;margin-right:4px;border-radius:50%;border:1px solid var(--press);vertical-align:-1px;background:transparent}
+.wkday .ic.cold{border-color:var(--ljr-6);background:var(--ljr-6-tint)}
+.wkday .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
+.wkday .ic.hot{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .mfoot{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
 /* foundation: empty state for a field that needs data CD Hub does not have. It names the Bloodline table that will feed it. */
 /* The card itself is the house card (../house.css .card) with CD Hub's dashed edge (.card.dash); only the layout is here. */
@@ -555,7 +565,8 @@ function build(){
       copies:r.copies,interp:r.interpretation,need:r.ruling_needed,lab:r.lab||'',on:r.tested_on||''}); });
   CD.dna=DNA;
   CD.outdoor=(T['BLD-outdoor_temp.csv']||[]).map(function(r){ return {on:r.on_date,kind:r.reading_kind,
-    min:r.min_temp,max:r.max_temp,phrase:r.phrase,cap:r.captured_at,src:r.source}; });
+    min:r.min_temp,max:r.max_temp,phrase:r.phrase,cap:r.captured_at,src:r.source,
+    rain:r.rain_value,wind:r.wind_kmh}; });
   CD.docTypes=(T['BLD-doc_type.csv']||[]);
   CD.work=(T['BLD-WORK.csv']||[]);
   
@@ -1015,6 +1026,55 @@ function littersCard(){
  // no "No litters" line: one empty line per view (Lisa, 2 Nov); the footer still says how many are on file
  return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span><button type="button" class="btn" data-go="litters">Litters</button></div></section>';
 }
+/* Outdoor week strip. Cold if the low is under 10, Hot if the high is over 27, otherwise OK.
+   Rain: none at 0 mm, light under 10 mm, wet from 10 mm. Windy only at 40 km/h or more. */
+function outdoorBandWord(min,max){
+ var st=tempState(min,max);
+ return st==='cold'?'Cold':st==='hot'?'Hot':st==='ok'?'OK':'';
+}
+function outdoorRainCue(v){
+ if(v==null||String(v).trim()==='') return '';
+ var n=parseFloat(v); if(isNaN(n)) return '';
+ if(n<=0) return 'none';
+ if(n<10) return 'light';
+ var mm=Math.round(n*10)/10;
+ return 'wet '+String(mm).replace(/\.0$/,'')+'mm';
+}
+function outdoorWindy(v){ var n=parseFloat(v); return !isNaN(n)&&n>=40; }
+function outdoorDeg(min,max){
+ var bit=function(v){ return v==null||String(v).trim()===''?'?':String(v).trim(); };
+ return bit(min)+'\u2013'+bit(max)+'\u00b0';
+}
+function outdoorWeek(date){
+ var by={};
+ (CD.outdoor||[]).forEach(function(r){
+  if(r.kind!=='forecast') return;
+  var on=String(r.on||'').slice(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(on)||on<date) return;
+  by[on]=r;
+ });
+ return Object.keys(by).sort().slice(0,7).map(function(on){ return {on:on,row:by[on]}; });
+}
+function outdoorStrip(date){
+ var days=outdoorWeek(date);
+ if(!days.length) return '';
+ return '<div class="wk" tabindex="0" role="region" aria-label="Outdoor forecast for the next 7 days. Scroll sideways for more.">'
+  +days.map(function(d){
+    var r=d.row, today=d.on===date;
+    var wd=new Date(d.on+'T12:00:00').toLocaleDateString('en-GB',{weekday:'short'});
+    var band=outdoorBandWord(r.min,r.max);
+    var tone=band==='Cold'?'cold':band==='Hot'?'hot':band==='OK'?'ok':'';
+    var rain=outdoorRainCue(r.rain), windy=outdoorWindy(r.wind);
+    return '<div class="wkday'+(today?' is-today':'')+'">'
+     +(wd?'<span class="wd">'+esc(wd)+'</span>':'')
+     +(today?'<span class="wtag">Today</span>':'')
+     +'<span class="wt">'+esc(outdoorDeg(r.min,r.max))+'</span>'
+     +(band?'<span class="wb"><span class="ic '+tone+'" aria-hidden="true"></span>'+band+'</span>':'')
+     +(rain?'<span class="wr">'+esc(rain)+'</span>':'')
+     +(windy?'<span class="ww">Windy</span>':'')
+     +'</div>';
+  }).join('')+'</div>';
+}
 /* foundation: readings against a rule band (temperature per place, per round slot) */
 function tempsCard(){
  var date=CD._roundDate||todayISO(), N=(CD.areas||[]).length;
@@ -1029,17 +1089,9 @@ function tempsCard(){
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
   +((am||pm)?row('Rooms',(hot?hot+' too hot':cold?cold+' too cold':'all 10–27')+' °C',(hot&&cold?cold+' too cold too':''),inState):'')
-  +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||out.kind||''),outState(out))
+  +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||''),outState(out))
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
-  +(function(){
-    var fc=(CD.outdoor||[]).filter(function(r){ return r.kind==='forecast'; })
-      .sort(function(a,b){ return a.on<b.on?-1:a.on>b.on?1:0; }).slice(0,7);
-    if(!fc.length) return '';
-    return fc.map(function(r){
-      var day=new Date(r.on+'T00:00:00').toLocaleDateString('en-GB',{weekday:'short'});
-      return row(day,esc((r.min||'?')+'–'+(r.max||'?'))+' °C','',outState(r));
-    }).join('');
-  })()
+  +outdoorStrip(date)
   +'<div class="mfoot"><span class="mut"></span><a class="btn" href="./history.html">Temperature history</a><button type="button" class="btn house-open" data-go="round">The round</button></div></section>';
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */

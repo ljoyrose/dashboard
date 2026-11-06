@@ -140,7 +140,6 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 <aside id="drill" role="complementary" aria-label="Day detail">
   <button class="dclose" onclick="closeDrill()" aria-label="Close">✕</button>
   <p class="dtitle" id="d-title">—</p>
-  <p class="dsub" id="d-sub">—</p>
   <p class="dsec">Temperatures</p>
   <div class="dr"><span>Max</span><span id="d-max">—</span></div>
   <div class="dr"><span>Min</span><span id="d-min">—</span></div>
@@ -149,8 +148,6 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
   <div class="dr"><span>Rain</span><span id="d-rain">—</span></div>
   <div class="dr"><span>Cloud cover</span><span id="d-cloud">—</span></div>
   <div class="dr"><span>Wind</span><span id="d-wind">—</span></div>
-  <p class="dsec">Record</p>
-  <div class="dr"><span>Source</span><span id="d-src">—</span></div>
   <div id="d-areas" style="display:none">
     <p class="dsec">Indoor areas</p>
     <div id="d-areas-inner"></div>
@@ -342,7 +339,6 @@ function openDrill(isoDate){
   var parts=isoDate.split('-');
   var dLabel=parseInt(parts[2],10)+' '+MONTHS[parseInt(parts[1],10)-1]+' '+parts[0];
   el('d-title').textContent=dLabel;
-  el('d-sub').textContent='Source: '+(r.reading_kind||'—');
   var cls=dayClass(isoDate);
   var pCls=cls==='cold'?'pc':cls==='hot'?'ph':'po';
   var maxT=r.max_temp!==undefined&&r.max_temp!==''?r.max_temp+'°C':'—';
@@ -352,7 +348,6 @@ function openDrill(isoDate){
   el('d-rain').textContent=r.rain_value!==undefined&&r.rain_value!==''?r.rain_value+' mm':'—';
   el('d-cloud').textContent=r.cloud_cover_pct!==undefined&&r.cloud_cover_pct!==''?r.cloud_cover_pct+'%':'—';
   el('d-wind').textContent=r.wind_kmh!==undefined&&r.wind_kmh!==''?r.wind_kmh+' km/h':'—';
-  el('d-src').textContent=r.reading_kind||'—';
   /* indoor area readings */
   var dayAreas=AREA_DAYS[isoDate]||{};
   var areaIds=Object.keys(dayAreas).sort();
@@ -531,8 +526,10 @@ function renderPage(){
     +'<p class="sub">'+esc(sub)+'</p>'
     +legend()
     +'<div class="yr-row">'
-    +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'
     +'<button class="btn yr-btn on" data-yr="2026" onclick="setYear(2026)">2026</button>'
+    +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'
+    +'<button class="btn yr-btn" data-yr="2024" onclick="setYear(2024)">2024</button>'
+    +'<a class="btn" href="./history-archive.html">Archive</a>'
     +'</div>'
     +'<div class="tab-row">'
     +'<button class="tab on" onclick="setView(\'a\',this)">Heat map</button>'
