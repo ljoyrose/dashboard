@@ -110,7 +110,7 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - Missing files are reported, not hidden.
 - Saving stays switched off.
 - Sign out forgets everything.
-- Temperatures today keeps Morning, Evening, Rooms and Outside today as rows. The next outdoor days sit in one sideways strip (weekday, min–max, Cold / OK / Hot, rain none / light / wet, and Windy only from 40 km/h). Today is named Today. Outside uses the phrase only. The hub page does not scroll sideways. Temperature history and The round stay under the strip. History does not show Source or the reading kind. Year chips run 2026, 2025, 2024, with 2026 open. Archive is its own page. (`tests/mocked/cdhub.spec.js`, `tests/mocked/history-area-sheet.spec.js`)
+- Temperatures today keeps Morning, Evening, Rooms and Outside today as rows. The next outdoor days sit in one sideways strip (weekday, min–max, Cold / OK / Hot, rain none / light / wet, and Windy only from 40 km/h). Today is named Today. Outside uses the phrase only. The hub page does not scroll sideways. The history page is titled Temperatures. The round is the first tab: indoor tiles, then a short °C table in kennel walk order, then Outside. It does not show Source or the reading kind. Year chips run 2026, 2025, 2024, with 2026 open. Archive is its own page. (`tests/mocked/cdhub.spec.js`, `tests/mocked/history-area-sheet.spec.js`)
 
 **Money Hub**
 - Opens, then needs a sign-in.

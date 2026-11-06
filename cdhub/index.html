@@ -1041,10 +1041,12 @@ function outdoorRainCue(v){
  return 'wet '+String(mm).replace(/\.0$/,'')+'mm';
 }
 function outdoorWindy(v){ var n=parseFloat(v); return !isNaN(n)&&n>=40; }
-function outdoorDeg(min,max){
- var bit=function(v){ return v==null||String(v).trim()===''?'?':String(v).trim(); };
- return bit(min)+'\u2013'+bit(max)+'\u00b0';
+function outdoorBit(v){
+ if(v==null||String(v).trim()==='') return '?';
+ var n=parseFloat(v); if(isNaN(n)) return String(v).trim();
+ return (Math.round(n*10)/10).toFixed(1).replace(/\.0$/,'');
 }
+function outdoorDeg(min,max){ return outdoorBit(min)+'\u2013'+outdoorBit(max)+'\u00b0'; }
 function outdoorWeek(date){
  var by={};
  (CD.outdoor||[]).forEach(function(r){
@@ -1089,7 +1091,7 @@ function tempsCard(){
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
   +((am||pm)?row('Rooms',(hot?hot+' too hot':cold?cold+' too cold':'all 10–27')+' °C',(hot&&cold?cold+' too cold too':''),inState):'')
-  +(out?row('Outside',esc((out.min||'?')+'–'+(out.max||'?'))+' °C',esc(out.phrase||''),outState(out))
+  +(out?row('Outside',esc(outdoorBit(out.min)+'\u2013'+outdoorBit(out.max))+' °C',esc(out.phrase||''),outState(out))
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
   +outdoorStrip(date)
   +'<div class="mfoot"><span class="mut"></span><a class="btn" href="./history.html">Temperature history</a><button type="button" class="btn house-open" data-go="round">The round</button></div></section>';

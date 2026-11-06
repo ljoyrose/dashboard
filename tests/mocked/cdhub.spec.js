@@ -613,7 +613,8 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
       route.fulfill({ status: 200, contentType: 'text/csv', body: 'on_date\n' }));
     await link.click();
     await expect(page).toHaveURL(/\/history\.html$/);
-    await expect(page.locator('h1')).toContainText('Temperature history');
+    await expect(page.locator('h1')).toHaveText('Temperatures');
+    await expect(page.locator('h1')).not.toContainText(/outdoor/i);
   });
 
   test('Temperatures today shows the next 7 outdoor days across, with words for cold, rain and wind', async ({ page, guard }) => {
