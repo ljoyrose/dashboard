@@ -232,12 +232,12 @@ tr:last-child td{border-bottom:none}
 @media (max-width:760px){.three{flex-wrap:nowrap;gap:6px}.three .sum{padding:4px 8px 4px 4px;gap:6px;font-size:var(--fs-small);flex:1;min-width:0}.mecards{grid-template-columns:minmax(0,1fr)}}
 
 /* ---- Record cards (Dogs). Name line, then title (2 lines, then …); 44×44 thumbnail; who-has-it ring bottom-right. ---- */
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .dc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;box-shadow:var(--shadow);min-width:0;overflow:hidden;position:relative}
 .dc .bd{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 .dc .hd{display:flex;align-items:flex-start;gap:10px;min-width:0}
-.ph{position:relative;flex:0 0 auto;width:72px;height:72px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
-.ph .ti{width:32px;height:32px}
+.ph{position:relative;flex:0 0 auto;width:110px;height:120px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
+.ph .ti{width:40px;height:40px}
 .ph .gicon{position:absolute;bottom:3px;right:3px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center}
 .ph .gicon svg{width:11px;height:11px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round}
 .ph .gicon.f{background:var(--female)}
@@ -338,6 +338,25 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .map .scroll{border:0}
 .map svg{display:block;min-width:1180px}
 @media (max-width:544px){header.top{position:static}}
+
+/* dog card accordion layout */
+.dc .dc-top{display:flex;gap:10px;align-items:flex-start;padding:10px 12px 8px}
+.dc .dc-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.dc-sects{border-top:1px solid var(--line)}
+.dcs{border-bottom:1px solid var(--line)}
+.dcs>summary{display:flex;align-items:center;gap:7px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;font-size:.82rem;color:var(--muted);min-width:0}
+.dcs>summary::-webkit-details-marker{display:none}
+.dcs>summary .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dcs>summary::after{content:'\25BA';margin-left:auto;font-size:.6rem;transition:transform .15s;display:inline-block;flex:0 0 auto}
+.dcs[open]>summary::after{transform:rotate(90deg)}
+.dcs-bd{padding:8px 12px 10px;display:flex;flex-direction:column;gap:5px;font-size:.82rem}
+.dcs-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
+.dcs-form{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
+.dcs-form input,.dcs-form select{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:4px 7px;font-size:.82rem;color:var(--ink);width:100%;box-sizing:border-box}
+.dcs-form label{font-size:.75rem;color:var(--muted);display:flex;flex-direction:column;gap:2px;flex:1}
+.dcs-form .dcs-row{gap:6px;align-items:flex-end}
+.dcs-form button{background:#4a7fe5;color:#fff;border:none;border-radius:4px;padding:5px 12px;font-size:.82rem;cursor:pointer;align-self:flex-end;margin-top:2px}
+.dcs-form button:disabled{opacity:.5}
 </style>
 </head><body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l3 8l4-16l3 8h4"/></symbol><symbol id="i-list-check" viewBox="0 0 24 24"><path d="M3.5 5.5l1.5 1.5l2.5-2.5M3.5 11.5l1.5 1.5l2.5-2.5M3.5 17.5l1.5 1.5l2.5-2.5M11 6h9M11 12h9M11 18h9"/></symbol><symbol id="i-sitemap" viewBox="0 0 24 24"><path d="M3 15h6v6H3zM15 15h6v6h-6zM9 3h6v6H9zM6 15v-1a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1M12 9v3"/></symbol><symbol id="i-calendar-event" viewBox="0 0 24 24"><path d="M4 7a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2zM16 3v4M8 3v4M4 11h16M8 15h2v2H8z"/></symbol><symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M12 19h4.5a3.5 3.5 0 0 0 0-7h-8a3.5 3.5 0 0 1 0-7H12"/></symbol><symbol id="i-paw" viewBox="0 0 24 24"><path d="M14.7 13.5c-1.1-2-1.4-2.5-2.7-2.5s-1.6.5-2.7 2.5c-1.1 2-3 2.1-3 4c0 1.5 1.2 2.5 2.7 2.5c1.2 0 2-.5 3-.5s1.8.5 3 .5c1.5 0 2.7-1 2.7-2.5c0-1.9-1.9-2-3-4z"/><circle cx="5" cy="10" r="1.6"/><circle cx="9" cy="5.5" r="1.6"/><circle cx="15" cy="5.5" r="1.6"/><circle cx="19" cy="10" r="1.6"/></symbol><symbol id="i-building-cottage" viewBox="0 0 24 24"><path d="M3 21h18M4 21V10l8-6l8 6v11M9 21v-6h6v6"/></symbol><symbol id="i-baby-carriage" viewBox="0 0 24 24"><circle cx="8" cy="19" r="2"/><circle cx="18" cy="19" r="2"/><path d="M2 5h2.5l1.7 4H20a6 6 0 0 1-6 6H8.7M11 9V3a7 7 0 0 1 7 6"/></symbol><symbol id="i-stethoscope" viewBox="0 0 24 24"><path d="M6 4H5a1 1 0 0 0-1 1v3.5a5.5 5.5 0 0 0 11 0V5a1 1 0 0 0-1-1h-1M8 15a6 6 0 1 0 12 0v-3"/><circle cx="20" cy="10" r="2"/></symbol><symbol id="i-world" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/></symbol><symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2 6M20 4v7h-7"/></symbol><symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4l4 4M6 12h10"/></symbol><symbol id="i-dots" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></symbol><symbol id="i-search" viewBox="0 0 24 24"><circle cx="10" cy="10" r="7"/><path d="M21 21l-6-6"/></symbol><symbol id="i-home" viewBox="0 0 24 24"><path d="M5 12H3l9-9l9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12l5 5L20 7"/></symbol><symbol id="i-thermometer" viewBox="0 0 24 24"><path d="M10 13.5a4 4 0 1 0 4 0V5a2 2 0 0 0-4 0zM10 9h4"/></symbol><symbol id="i-adjustments-horizontal" viewBox="0 0 24 24"><circle cx="14" cy="6" r="2"/><path d="M4 6h8M16 6h4M4 12h2M10 12h10M4 18h11M19 18h1"/><circle cx="8" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></symbol><symbol id="i-clipboard" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2"/></symbol><symbol id="i-female" viewBox="0 0 24 24"><circle cx="12" cy="9" r="5"/><path d="M12 14v7M9 18h6"/></symbol><symbol id="i-male" viewBox="0 0 24 24"><circle cx="10" cy="14" r="5"/><path d="M19 5l-5.5 5.5M19 5h-5M19 5v5"/></symbol><symbol id="i-neuter" viewBox="0 0 24 24"><circle cx="12" cy="10" r="5"/><path d="M12 15v6M9 18h6M4 4l16 16" stroke-linecap="round"/></symbol><symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M9 7V4M12 7V4M15 7V4M9 20v-3M12 20v-3M15 20v-3M4 9h3M4 12h3M4 15h3M17 9h3M17 12h3M17 15h3"/></symbol><symbol id="i-scale" viewBox="0 0 24 24"><path d="M12 3v1M6 7l-3 7h6l-3-7zM18 7l-3 7h6l-3-7zM3 20h18M12 4a2 2 0 0 0-2 2M12 4a2 2 0 0 1 2 2M6 14c0 1.1-.9 2-2 2s-2-.9-2-2M18 14c0 1.1.9 2 2 2s2-.9 2-2"/></symbol><symbol id="i-pill" viewBox="0 0 24 24"><path d="M4.5 12.5l8-8a4.95 4.95 0 1 1 7 7l-8 8a4.95 4.95 0 1 1-7-7zM12 12l-3.5-3.5"/></symbol></svg>
@@ -650,7 +669,8 @@ async function load(){
   catch(e){ LOAD.state='err'; LOAD.err=(e&&e.code)||String(e&&e.message||e); render(); return; }
   LOAD.storedAt=new Date().toISOString();
   var byTitle={};
-  files.forEach(function(f){ (byTitle[f.name]=byTitle[f.name]||[]).push(f); });
+  window._driveIds={};
+  files.forEach(function(f){ (byTitle[f.name]=byTitle[f.name]||[]).push(f); window._driveIds[f.name]=f.id; });
   var dup=Object.keys(byTitle).filter(function(t){return byTitle[t].length>1;});
   if(dup.length){ LOAD.state='ambiguous'; LOAD.err=dup.join(', '); render(); return; }
   var missing=WANT.filter(function(t){return !byTitle[t];});
@@ -1204,12 +1224,12 @@ function outdoorStrip(date){
      +(wd?'<span class="wd">'+esc(wd)+'</span>':'')
      +'<span class="wdate">'+dm+'</span>'
      +'<span class="wt">'+esc(outdoorDeg(r.min,r.max))+'</span>'
-     +(tone?'<span class="wb"><span class="ic '+tone+'" aria-hidden="true"></span></span>':'')
+     +(tone?'<span class="wb"><span class="ic '+tone+'" aria-hidden="true"></span>'+band+'</span>':'')
      +'<span class="wr'+(rain?' wr-'+rain:'')+'">'+
        (rain
          ?'<svg width="7" height="9" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2 0 4.5 0 6.3a3.5 3.5 0 0 0 7 0C7 4.5 5 2 3.5 0Z"/></svg>'
-           +(rain==='wet'&&rainMm?rainMm+'mm':'')
-         :'')
+           +(rain==='wet'&&rainMm?'wet '+rainMm+'mm':rain)
+         :'none')
      +'</span>'
      +(windy?'<span class="ww"><svg width="9" height="7" viewBox="0 0 9 7" aria-hidden="true"><path d="M0 1h7M0 3.5h9M0 6h5" stroke-width="1.5" stroke-linecap="round"/></svg>Windy'+(windKph?'<span class="wdet sr-only"> '+windKph+' km/h</span>':'')+'</span>':'')
      +'</div>';
@@ -1430,6 +1450,33 @@ async function saveArea(dogId,subjectId,areaId,btn){
   else{btn.textContent='error';btn.disabled=false;}
  }catch(e){btn.textContent='error';btn.disabled=false;}
 }
+async function saveMed(evt,dogId,nameSlug,form){
+ evt.preventDefault();
+ var btn=form.querySelector('button[type=submit]');
+ if(!window.TOKEN){btn.textContent='no auth';return false;}
+ btn.textContent='saving…';btn.disabled=true;
+ var fields={given_on:form.on.value,product:form.product.value,dose_volume:form.dose.value,
+   route:form.route.value,note:form.note.value,subject_id:'sub-'+nameSlug,source:'dashboard'};
+ try{
+  var fileId=window._driveIds&&window._driveIds['BLD-dispense.csv'];
+  if(!fileId){btn.textContent='no file';btn.disabled=false;return false;}
+  var existing=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media&supportsAllDrives=true',
+    {headers:{Authorization:'Bearer '+window.TOKEN}}).then(function(r){return r.text();});
+  var lines=existing.trimEnd().split('\n');
+  var cols=lines[0].split(',').map(function(c){return c.replace(/^"|"$/g,'').trim();});
+  function csvVal(v){v=String(v===undefined||v===null?'':v);return(v.indexOf(',')>=0||v.indexOf('"')>=0||v.indexOf('\n')>=0)?'"'+v.replace(/"/g,'""')+'"':v;}
+  var row=cols.map(function(c){return csvVal(fields[c]);}).join(',');
+  var updated=existing.trimEnd()+'\n'+row;
+  var boundary='cdhub_bnd';
+  var meta=JSON.stringify({name:'BLD-dispense.csv',mimeType:'text/csv'});
+  var body='--'+boundary+'\r\nContent-Type: application/json\r\n\r\n'+meta+'\r\n--'+boundary+'\r\nContent-Type: text/csv\r\n\r\n'+updated+'\r\n--'+boundary+'--';
+  var res=await fetch('https://www.googleapis.com/upload/drive/v3/files/'+fileId+'?uploadType=multipart&supportsAllDrives=true',
+    {method:'PATCH',headers:{Authorization:'Bearer '+window.TOKEN,'Content-Type':'multipart/related; boundary="'+boundary+'"'},body:body});
+  if(res.ok){btn.textContent='saved ✓';btn.disabled=true;}
+  else{btn.textContent='error';btn.disabled=false;}
+ }catch(e){btn.textContent='error';btn.disabled=false;}
+ return false;
+}
 
 /* foundation: list view filter row (one row: Search, Filter panel, Sort, removable chips). Used by Dogs, Litters and Buyers. */
 function fbar(o){
@@ -1560,62 +1607,97 @@ function drawDogs(){
    var gSex=d.sex==='Female'?(isEntire(d)?'f':'fn'):d.sex==='Male'?(isEntire(d)?'m':'mn'):'u';
    var gSym=d.sex==='Female'?'#i-female':d.sex==='Male'?'#i-male':'#i-paw';
    var gTitle=(d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered/spayed');
-   h+='<article class="dc '+cls+'"><div class="bd">'
-   +'<div class="hd">'
-   // photo + gender badge
-   +'<div class="ph" aria-hidden="true"><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>'
-   +'<span class="gicon '+gSex+'" title="'+esc(gTitle)+'"><svg><use href="'+gSym+'"/></svg></span></div>'
-   // name + status + age
-   +'<div class="tbr">'
-   +'<div class="nl"><span class="st '+st.cls+'" title="'+esc(d.where||'location not recorded')+'"><b>'+st.code+'</b>'+esc(st.label)+'</span>'
-   +(nEd?'<span class="neu"><svg class="ti" aria-hidden="true"><use href="#i-neuter"/></svg>'+(d.sex==='Female'?'spayed':'neutered')+'</span>':'')
-   +'</div>'
-   +'<div class="nm">'+esc(d.name||'—')+'</div>'
-   +'<div class="meta">'
-   +'<span class="age">'+age+'</span>'
-   +(d.size?'<span class="mut">· '+esc(d.size)+'</span>':'')
-   +((d.breed&&d.breed!=='Australian Cobberdog')?'<span class="mut">· <b>'+esc(d.breed)+'</b></span>':'')
-   +'</div>'
-   +'</div></div>'// end hd
-   // colour
-   +'<div class="coat">'+swatch(d)+'<span>'+esc(colourLabel(d))+'</span></div>'
-   // weight row
-   +(w?'<div class="dcrow tap wtc" data-dog="'+esc(d.id)+'" title="Tap for full weight history">'
-      +'<svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg>'
-      +'<b>'+w.kg+' kg</b>'
-      +(w.delta!==null?'<span class="'+(w.delta>0?'up':(w.delta<0?'dn':''))+'">'+((w.delta>0?'↑':(w.delta<0?'↓':''))+' '+Math.abs(w.delta).toFixed(1))+'</span>':'')
-      +(lastB?'<span class="pill '+(lastB.bcs==="5"?'ok':(parseInt(lastB.bcs,10)>5?'w':'no'))+'" title="BCS '+esc(lastB.bcs)+'/9">'+esc(lastB.bcs)+'</span>':'')
-      +spark(d.weights,48,13)
-      +'<span class="mut">'+esc(dmy(w.on))+'</span>'
+   h+='<article class="dc '+cls+'">'
+  // TOP ROW: big photo + static info panel
+  +'<div class="dc-top">'
+    +'<div class="ph" aria-hidden="true">'
+      +'<svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>'
+      +'<span class="gicon '+gSex+'" title="'+esc(gTitle)+'"><svg><use href="'+gSym+'"/></svg></span>'
+    +'</div>'
+    +'<div class="dc-info">'
+      +'<div class="nl">'
+        +'<span class="st '+st.cls+'" title="'+esc(d.where||'location not recorded')+'"><b>'+st.code+'</b>'+esc(st.label)+'</span>'
+        +(nEd?'<span class="neu"><svg class="ti" aria-hidden="true"><use href="#i-neuter"/></svg>'+(d.sex==='Female'?'spayed':'neutered')+'</span>':'')
       +'</div>'
-     :'<div class="dcrow"><svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg><span class="mut">no weight</span></div>')
-   // findings
-   +(d.findings.length?'<div class="chips">'+d.findings.map(function(f){
-      return '<span class="pill '+(f.certainty==='possible'?'w':(f.certainty==='clear'?'ok':'no'))+'" title="'+esc(f.from_text)+'">'
-      +esc(f.test)+(f.grade?' '+esc(f.grade):'')+(f.certainty==='possible'?'?':'')+'</span>';}).join('')+'</div>':'')
-   // meds row
-   +(d.treats.length?'<div class="dcrow tap trc" data-dog="'+esc(d.id)+'" title="Tap for all treatments">'
+      +'<div class="nm">'+esc(d.name||'—')+'</div>'
+      +'<div class="meta">'
+        +'<span class="age">'+age+'</span>'
+        +(d.size?'<span class="mut">· '+esc(d.size)+'</span>':'')
+        +((d.breed&&d.breed!=='Australian Cobberdog')?'<span class="mut">· <b>'+esc(d.breed)+'</b></span>':'')
+      +'</div>'
+      +'<div class="coat">'+swatch(d)+'<span>'+esc(colourLabel(d))+'</span></div>'
+      +'<div class="meta">'
+        +'<svg class="ricon" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg>'
+        +'<span class="mut">'+esc(d.where||(d.off?'off site':'—'))+'</span>'
+      +'</div>'
+    +'</div>'
+  +'</div>'
+  // EXPANDABLE SECTIONS
+  +'<div class="dc-sects">'
+    // Weight section
+    +'<details class="dcs"><summary>'
+      +'<svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg>'
+      +'<span class="dcs-label">'+(w?'<b>'+w.kg+' kg</b> <span class="mut">'+esc(dmy(w.on))+'</span>':'<span class="mut">no weight</span>')+'</span>'
+    +'</summary><div class="dcs-bd">'
+      +(d.weights.length?d.weights.slice().reverse().map(function(ww){
+        return '<div class="dcs-row"><span class="mut">'+esc(dmy(ww.on))+'</span><b>'+ww.kg+' kg</b>'
+          +(ww.bcs?'<span class="pill">BCS '+esc(ww.bcs)+'</span>':'')+'</div>';
+      }).join(''):'<span class="mut">No records</span>')
+      +(d.weights.length>1?'<div class="dcs-row" style="margin-top:4px">'+spark(d.weights,160,30)+'</div>':'')
+    +'</div></details>'
+    // Medications section with entry form
+    +'<details class="dcs"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-pill"/></svg>'
-      +'<b>'+d.treats.filter(function(x){return !/NOT STATED/.test(x.product||'');}).length+'</b>'
-      +(d.treats.some(function(x){return /NOT STATED/.test(x.product||'');})?'<span class="pill no">+unnamed</span>':'')
-      +'<span class="mut">last '+esc(dmy(d.treats[d.treats.length-1].on))+'</span>'
-      +'</div>':'')
-   // moxiclear
-   +moxiLine(d)
-   // chip row
-   +'<div class="dcrow">'
-   +'<svg class="ricon" aria-hidden="true"><use href="#i-chip"/></svg>'
-   +(d.chip?'<span style="font-variant-numeric:tabular-nums;overflow-wrap:anywhere;color:var(--ink)">'+esc(d.chip)+'</span>'
-           :'<span class="mut">no chip recorded</span>')
-   +'</div>'
-   // cabin row
-   +'<div class="dcrow">'
-   +'<svg class="ricon" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg>'
-   +'<span class="'+(away?'mut':'mut')+'">'+esc(d.where||(d.off?'off site':'cabin not recorded'))+'</span>'
-   +'</div>'
-   +'</div>'
-   +'<span class="whor" role="img" aria-label="'+esc(who)+'"><svg class="ti" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span>'
-   +'</article>';});
+      +'<span class="dcs-label">'+(d.treats.length?'<b>'+d.treats.length+'</b> medication'+(d.treats.length!==1?'s':''):'<span class="mut">no medications</span>')+'</span>'
+    +'</summary><div class="dcs-bd">'
+      +d.treats.map(function(t){
+        return '<div class="dcs-row"><span class="mut">'+esc(dmy(t.on))+'</span><b>'+esc(t.product||'unnamed')+'</b>'
+          +(t.dose?'<span class="mut">'+esc(t.dose)+'</span>':'')
+          +(t.route?'<span class="pill">'+esc(t.route)+'</span>':'')
+        +'</div>';
+      }).join('')
+      +'<form class="dcs-form" onsubmit="return saveMed(event,\''+esc(d.id)+'\',\''+esc(d.id.replace(/^sub-/,''))+'\',this)">'
+        +'<div class="dcs-row">'
+          +'<label>Date<input type="date" name="on" value="'+new Date().toISOString().slice(0,10)+'"></label>'
+          +'<label style="flex:2">Product<input type="text" name="product" placeholder="e.g. Nexgard" required></label>'
+        +'</div>'
+        +'<div class="dcs-row">'
+          +'<label>Dose<input type="text" name="dose" placeholder="e.g. 1 tablet"></label>'
+          +'<label>Route<select name="route"><option value="">—</option><option>Oral</option><option>Topical</option><option>Injection</option><option>Other</option></select></label>'
+        +'</div>'
+        +'<label>Note (optional)<input type="text" name="note" placeholder="e.g. with food"></label>'
+        +'<button type="submit">Add medication</button>'
+      +'</form>'
+    +'</div></details>'
+    // Findings section (conditional)
+    +(d.findings.length?
+      '<details class="dcs"><summary>'
+        +'<svg class="ricon" aria-hidden="true"><use href="#i-stethoscope"/></svg>'
+        +'<span class="dcs-label"><b>'+d.findings.length+'</b> health finding'+(d.findings.length!==1?'s':'')+'</span>'
+      +'</summary><div class="dcs-bd">'
+        +d.findings.map(function(f){
+          return '<span class="pill '+(f.certainty==='possible'?'w':(f.certainty==='clear'?'ok':'no'))+'" title="'+esc(f.from_text)+'">'
+            +esc(f.test)+(f.grade?' '+esc(f.grade):'')+(f.certainty==='possible'?'?':'')+'</span>';
+        }).join('')
+      +'</div></details>'
+    :'')
+    // Chip section
+    +'<details class="dcs"><summary>'
+      +'<svg class="ricon" aria-hidden="true"><use href="#i-chip"/></svg>'
+      +'<span class="dcs-label">'+(d.chip?esc(d.chip):'<span class="mut">no chip recorded</span>')+'</span>'
+    +'</summary><div class="dcs-bd"><b>'+esc(d.chip||'not recorded')+'</b></div></details>'
+    // Moxiclear / Rx section (conditional)
+    +(d.rxExpiry||d.rxUrl?
+      '<details class="dcs"><summary>'
+        +'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'
+        +'<span class="dcs-label">Moxiclear'+(d.rxExpiry?' · <b>'+esc(ukDate(d.rxExpiry))+'</b>':'')+'</span>'
+      +'</summary><div class="dcs-bd">'
+        +(d.rxUrl?'<a class="cb" href="'+esc(safeUrl(d.rxUrl))+'" target="_blank" rel="noopener">View prescription</a>':'<span class="mut">No Rx link</span>')
+      +'</div></details>'
+    :'')
+  +'</div>'
+  +'<span class="whor" role="img" aria-label="'+esc(who)+'"><svg class="ti" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span>'
++'</article>';});
  if(dogN<list.length) h+='<div class="filt" data-show-bar="dogs"><p class="mut">Showing '+dogN+' of '+list.length+'.</p>'
   +'<button type="button" class="cb" data-dogshow="more">Show more</button>'
   +'<button type="button" class="cb" data-dogshow="all">Show all</button></div>';
