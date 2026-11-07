@@ -616,7 +616,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('h1')).not.toContainText(/outdoor/i);
   });
 
-  test('Temperatures today shows the next 7 outdoor days across, with words for cold, rain and wind', async ({ page, guard }) => {
+  test('Temperatures today shows the next 6 outdoor days across, with words for cold, rain and wind', async ({ page, guard }) => {
     const head = 'on_date,reading_kind,min_temp,max_temp,rain_value,wind_kmh,phrase,cloud_cover_pct,source';
     const line = (days, kind, min, max, rain, wind, phrase) =>
       `${iso(days)},${kind},${min},${max},${rain},${wind},${phrase},40,invented`;
@@ -645,28 +645,24 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(card.locator('.mrow', { hasText: 'Morning' })).toBeVisible();
     await expect(card.locator('.mrow', { hasText: 'Evening' })).toBeVisible();
     const wd = (days) => new Date(`${iso(days)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short' });
-    await expect(cells.nth(0)).toContainText(wd(0));
-    await expect(cells.nth(0)).toContainText('Today');
-    await expect(cells.nth(0)).toContainText('8–10°');
-    await expect(cells.nth(0)).toContainText('Cold');
-    await expect(cells.nth(0)).toContainText('light');
+    await expect(cells.nth(0)).toContainText(wd(1));
+    await expect(cells.nth(0)).toContainText('20–29°');
+    await expect(cells.nth(0)).toContainText('Hot');
+    await expect(cells.nth(0)).toContainText('none');
     await expect(cells.nth(0)).not.toContainText('Windy');
-    await expect(cells.nth(1)).toContainText('Hot');
-    await expect(cells.nth(1)).toContainText('none');
-    await expect(cells.nth(1)).not.toContainText('Windy');
-    await expect(cells.nth(2)).toContainText('12–18°');
-    await expect(cells.nth(2)).toContainText('OK');
-    await expect(cells.nth(2)).toContainText('wet 15mm');
-    await expect(cells.nth(2)).toContainText('Windy');
-    await expect(cells.nth(3)).toContainText('light');
-    await expect(cells.nth(3)).not.toContainText('Windy');
-    await expect(cells.nth(4)).toContainText('none');
-    await expect(cells.nth(4)).toContainText('OK');
-    await expect(cells.nth(5)).toContainText('Cold');
-    await expect(cells.nth(5)).toContainText('light');
-    await expect(cells.nth(5)).toContainText('Windy');
-    await expect(cells.nth(6)).toContainText('wet 10mm');
-    await expect(cells.nth(6)).not.toContainText('Windy');
+    await expect(cells.nth(1)).toContainText('12–18°');
+    await expect(cells.nth(1)).toContainText('OK');
+    await expect(cells.nth(1)).toContainText('wet 15mm');
+    await expect(cells.nth(1)).toContainText('Windy');
+    await expect(cells.nth(2)).toContainText('light');
+    await expect(cells.nth(2)).not.toContainText('Windy');
+    await expect(cells.nth(3)).toContainText('none');
+    await expect(cells.nth(3)).toContainText('OK');
+    await expect(cells.nth(4)).toContainText('Cold');
+    await expect(cells.nth(4)).toContainText('light');
+    await expect(cells.nth(4)).toContainText('Windy');
+    await expect(cells.nth(5)).toContainText('wet 10mm');
+    await expect(cells.nth(5)).not.toContainText('Windy');
     await expect(strip).not.toContainText('old forecast phrase');
     await expect(strip).not.toContainText('stale twin phrase');
     await expect(strip).not.toContainText('eighth day phrase');
