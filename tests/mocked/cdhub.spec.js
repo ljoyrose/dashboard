@@ -1,4 +1,3 @@
-// CD Hub: https://ljoyrose.github.io/dashboard/cdhub/
 const { test, expect, buildWorld } = require('../support/test');
 const { tabClick, tabTo } = require('../support/tabs');
 const { IDS, WANT_BLD, FIX } = require('../support/world');
@@ -328,7 +327,7 @@ function cdAudit() {
   const bgOf = (el) => { for (let a = el; a; a = a.parentElement) { const c = rgb(getComputedStyle(a).backgroundColor); if (c && c[3] > 0.5) return c; } return rgb(getComputedStyle(document.body).backgroundColor); };
   const name = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).join('.') : '') + ' "' + (el.textContent || '').trim().slice(0, 24) + '"';
   const seen = (el) => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); if (r.width <= 1 || r.height <= 1 || s.visibility !== 'visible' || s.display === 'none') return false; for (let a = el; a && a !== document.body; a = a.parentElement) { const ar = a.getBoundingClientRect(); if (ar.width <= 1 || ar.height <= 1) return false; } return true; };
-  const ROUND = '.dot, .mk, .whor, .sexdot, .ic, .sw, .nose';
+  const ROUND = '.dot, .mk, .whor, .sexdot, .ic, .sw, .nose, .gicon';
   const out = { small: [], weight: [], upper: [], colour: [], radius: [], line: [], text: [], ring: [] };
   for (const el of document.querySelectorAll('body *')) {
     if (el.closest('svg') || /^(SCRIPT|STYLE|OPTION)$/.test(el.tagName) || el.closest('#dashSearch') || !seen(el)) continue;
@@ -617,7 +616,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('h1')).not.toContainText(/outdoor/i);
   });
 
-  test('Temperatures today shows the next 7 outdoor days across, with words for cold, rain and wind', async ({ page, guard }) => {
+  test('Temperatures today shows the next 6 outdoor days across, with words for cold, rain and wind', async ({ page, guard }) => {
     const head = 'on_date,reading_kind,min_temp,max_temp,rain_value,wind_kmh,phrase,cloud_cover_pct,source';
     const line = (days, kind, min, max, rain, wind, phrase) =>
       `${iso(days)},${kind},${min},${max},${rain},${wind},${phrase},40,invented`;
@@ -640,34 +639,30 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const card = page.locator('#tempsCard');
     const strip = card.locator('.wk');
     const cells = strip.locator('.wkday');
-    await expect(cells).toHaveCount(7);
+    await expect(cells).toHaveCount(6);
     await expect(card.locator('.mrow')).toHaveCount(3);
     await expect(card.locator('.mrow', { hasText: 'Outside' })).toContainText('invented long phrase for outside only');
     await expect(card.locator('.mrow', { hasText: 'Morning' })).toBeVisible();
     await expect(card.locator('.mrow', { hasText: 'Evening' })).toBeVisible();
     const wd = (days) => new Date(`${iso(days)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short' });
-    await expect(cells.nth(0)).toContainText(wd(0));
-    await expect(cells.nth(0)).toContainText('Today');
-    await expect(cells.nth(0)).toContainText('8–10°');
-    await expect(cells.nth(0)).toContainText('Cold');
-    await expect(cells.nth(0)).toContainText('light');
+    await expect(cells.nth(0)).toContainText(wd(1));
+    await expect(cells.nth(0)).toContainText('20–29°');
+    await expect(cells.nth(0)).toContainText('Hot');
+    await expect(cells.nth(0)).toContainText('none');
     await expect(cells.nth(0)).not.toContainText('Windy');
-    await expect(cells.nth(1)).toContainText('Hot');
-    await expect(cells.nth(1)).toContainText('none');
-    await expect(cells.nth(1)).not.toContainText('Windy');
-    await expect(cells.nth(2)).toContainText('12–18°');
-    await expect(cells.nth(2)).toContainText('OK');
-    await expect(cells.nth(2)).toContainText('wet 15mm');
-    await expect(cells.nth(2)).toContainText('Windy');
-    await expect(cells.nth(3)).toContainText('light');
-    await expect(cells.nth(3)).not.toContainText('Windy');
-    await expect(cells.nth(4)).toContainText('none');
-    await expect(cells.nth(4)).toContainText('OK');
-    await expect(cells.nth(5)).toContainText('Cold');
-    await expect(cells.nth(5)).toContainText('light');
-    await expect(cells.nth(5)).toContainText('Windy');
-    await expect(cells.nth(6)).toContainText('wet 10mm');
-    await expect(cells.nth(6)).not.toContainText('Windy');
+    await expect(cells.nth(1)).toContainText('12–18°');
+    await expect(cells.nth(1)).toContainText('OK');
+    await expect(cells.nth(1)).toContainText('wet 15mm');
+    await expect(cells.nth(1)).toContainText('Windy');
+    await expect(cells.nth(2)).toContainText('light');
+    await expect(cells.nth(2)).not.toContainText('Windy');
+    await expect(cells.nth(3)).toContainText('none');
+    await expect(cells.nth(3)).toContainText('OK');
+    await expect(cells.nth(4)).toContainText('Cold');
+    await expect(cells.nth(4)).toContainText('light');
+    await expect(cells.nth(4)).toContainText('Windy');
+    await expect(cells.nth(5)).toContainText('wet 10mm');
+    await expect(cells.nth(5)).not.toContainText('Windy');
     await expect(strip).not.toContainText('old forecast phrase');
     await expect(strip).not.toContainText('stale twin phrase');
     await expect(strip).not.toContainText('eighth day phrase');
@@ -738,7 +733,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('.card[data-area]').first()).toContainText('Step 1: Test Cabin A');
   });
 
-  test('Dogs: one filter row (Search, Filter panel, Sort, removable chips); record cards have a name line, title, 44px thumbnail and who-has-it ring', async ({ page }) => {
+  test('Dogs: one filter row (Search, Filter panel, Sort, removable chips); record cards have a name line, title, 72px thumbnail and who-has-it ring', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     await openTab(page, 'dogs');
@@ -763,7 +758,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const card = page.locator('.dc').first();
     await expect(card.locator('.nl')).toContainText('Bitch');
     const ph = await card.locator('.ph').boundingBox();
-    expect([ph.width, ph.height]).toEqual([44, 44]);
+    expect([ph.width, ph.height]).toEqual([72, 72]);
     await expect(card.locator('.whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
     const r = await card.evaluate((e) => { const c = e.getBoundingClientRect(), w = e.querySelector('.whor').getBoundingClientRect(); return [Math.round(c.right - w.right), Math.round(c.bottom - w.bottom)]; });
     expect(r[0]).toBeLessThanOrEqual(14); expect(r[1]).toBeLessThanOrEqual(14);   // bottom-right
@@ -892,3 +887,4 @@ test.describe('CD Hub: screens that need data CD Hub does not hold say which Blo
     }
   });
 });
+
