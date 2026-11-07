@@ -1,5 +1,7 @@
-// CD Hub SOPs (Stage A): bottom tab, Assocs under More, name labels, colour and frequency filters.
+// CD Hub SOPs (Stage A + S2 + file types): bottom tab, Assocs under More, name labels,
+// colour, frequency, category and role filters, and the labelled type icons with the format legend.
 // The seed is the public index only. It has no form addresses, so every row says the form is not on the hub yet.
+// A row shows a type icon only when its type is already one of the 21. other, sheet and sds stay unmapped.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
@@ -25,14 +27,33 @@ const openSops = async (page) => {
   await expect(page.locator('#soprows [data-sop]')).toHaveCount(48);
 };
 
+const CATEGORIES = ['Breeding health', 'Daily care & premises', 'Emergency & safety', 'Licence & records', 'Puppy sale & handover', 'Signs & posters', 'Staff'];
+const ROLES = ['licence_holder', 'manager', 'kennel_staff', 'all_staff'];
+
 test('the public seed is 48 name rows and carries no form address', () => {
   const list = rows();
   expect(list).toHaveLength(48);
   const keys = [...new Set(list.flatMap((r) => Object.keys(r)))].sort();
-  expect(keys).toEqual(['colour', 'frequency', 'has_form', 'short_name']);
-  for (const r of list) expect(['Y', 'N']).toContain(r.has_form);
+  expect(keys).toEqual(['category', 'colour', 'frequency', 'has_form', 'role', 'short_name']);
+  for (const r of list) {
+    expect(['Y', 'N']).toContain(r.has_form);
+    expect(CATEGORIES).toContain(r.category);
+    expect(ROLES).toContain(r.role);
+  }
   const text = JSON.stringify(list);
-  expect(text).not.toMatch(/https?:|@|\b\d+\.\d+\b/);
+  expect(text).not.toMatch(/https?:|@|\b\d+\.\d+\b|docs\.google|drive\.google|spreadsheet/i);
+  expect(text).not.toMatch(/inspector_view|Internal only/);
+  const tally = (key) => list.reduce((m, r) => { m[r[key]] = (m[r[key]] || 0) + 1; return m; }, {});
+  expect(tally('category')).toEqual({
+    'Licence & records': 6,
+    'Emergency & safety': 9,
+    'Breeding health': 1,
+    'Daily care & premises': 23,
+    Staff: 4,
+    'Puppy sale & handover': 4,
+    'Signs & posters': 1,
+  });
+  expect(tally('role')).toEqual({ kennel_staff: 20, manager: 12, licence_holder: 9, all_staff: 7 });
   expect(list.filter((r) => r.short_name === 'Care Rounds')).toHaveLength(1);
   expect(list.map((r) => r.frequency)).not.toContain('As needed');
   const byName = Object.fromEntries(list.map((r) => [r.short_name, r]));
@@ -43,7 +64,9 @@ test('the public seed is 48 name rows and carries no form address', () => {
   expect(byName['Parasites and Zoonoses']).toMatchObject({ colour: 'Yellow', frequency: 'Ad hoc' });
   expect(byName['Mating and Retirement']).toMatchObject({ colour: 'Yellow', frequency: 'Breeding' });
   expect(byName['Licence Display']).toMatchObject({ colour: 'White', frequency: 'Ongoing' });
-  expect(byName['Signs/Posters Index']).toMatchObject({ colour: 'Purple', frequency: 'Ongoing' });
+  expect(byName['Signs/Posters Index']).toMatchObject({ colour: 'Purple', frequency: 'Ongoing', category: 'Signs & posters', role: 'all_staff' });
+  expect(byName['Pest Checks']).toMatchObject({ category: 'Daily care & premises', role: 'all_staff' });
+  expect(byName['Pest Control']).toMatchObject({ category: 'Daily care & premises', role: 'kennel_staff' });
   for (const name of ['Whelping', 'Puppy Handover', 'Socialisation', 'Puppy Packs']) {
     expect(byName[name].frequency, name).toBe('Per litter');
   }
@@ -126,6 +149,90 @@ test('#/sops lists all 48 labels; colour and frequency filters and search work',
   await expect(page.locator('#soprows [data-sop]')).toHaveCount(0);
   await expect(page.locator('#sopempty')).toBeVisible();
   await expect(page.locator('#sopempty')).toHaveText('Nothing matches.');
+});
+
+test('category and role filters combine with colour, frequency, search and sort', async ({ page }) => {
+  await openSops(page);
+  await expect(page.locator('#soptypes [data-type-code]')).toHaveCount(21);
+  await expect(page.locator('#sopformats [data-format-code]')).toHaveCount(4);
+  await expect(page.locator('#soprows [data-type-code]')).toHaveCount(0);
+  await expect(page.locator('input[type="file"]')).toHaveCount(0);
+  await page.locator('[data-fpanel="fp-sops"]').click();
+  await expect(page.locator('#fp-sops .flab')).toHaveText(['Colour', 'Frequency', 'Category', 'Role']);
+  const opt = (id) => page.locator(`#${id} option`).evaluateAll((els) => els.map((e) => e.value).filter(Boolean));
+  const text = (id) => page.locator(`#${id} option`).evaluateAll((els) => els.map((e) => e.textContent).filter((t) => t && t !== 'Any'));
+  expect(await opt('sopcat')).toEqual(CATEGORIES);
+  expect(await opt('soprole')).toEqual(ROLES);
+  expect(await text('soprole')).toEqual(['Licence holder', 'Manager', 'Kennel staff', 'All staff']);
+  expect(await opt('soprole')).not.toContain('inspector_view');
+
+  await page.locator('#sopcat').selectOption('Daily care & premises');
+  await expect(page.locator('#sopcnt')).toHaveText('23 of 48');
+  await page.locator('#soprole').selectOption('kennel_staff');
+  await expect(page.locator('#sopcnt')).toHaveText('17 of 48');
+  await page.locator('#sopcol').selectOption('Yellow');
+  await page.locator('#sopfr').selectOption('Daily');
+  const daily = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
+  expect(daily).toEqual(['Care Rounds', 'Cleaning', 'Feeding', 'Health Check']);
+  await expect(page.locator('#ach-sops .achip')).toHaveText([
+    'Colour: Yellow ×',
+    'Frequency: Daily ×',
+    'Category: Daily care & premises ×',
+    'Role: Kennel staff ×',
+  ]);
+
+  await page.locator('#sopclr').click();
+  await expect(page.locator('#soprows [data-sop]')).toHaveCount(48);
+  await page.locator('#sopcat').selectOption('Staff');
+  await page.locator('#soprole').selectOption('manager');
+  const staff = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
+  expect(staff).toEqual(['Induction', 'Staff Training', 'Staff Rota']);
+  await page.locator('.achip[data-fclear="soprole"]').click();
+  await expect(page.locator('#soprows [data-sop]')).toHaveCount(4);
+  await page.locator('#sopq').fill('rota');
+  await expect(page.locator('#soprows .t')).toHaveText('Green – Weekly: Staff Rota');
+
+  await page.locator('#sopclr').click();
+  await page.locator('#soprole').selectOption('all_staff');
+  const allStaff = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
+  expect(allStaff).toContain('Pest Checks');
+  expect(allStaff).not.toContain('Pest Control');
+  expect(allStaff).toHaveLength(7);
+  await page.locator('#soprole').selectOption('kennel_staff');
+  const kennel = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
+  expect(kennel).toContain('Pest Control');
+  expect(kennel).not.toContain('Pest Checks');
+
+  await page.locator('#sopclr').click();
+  await page.locator('#sopsort').selectOption('category');
+  await expect(page.locator('#soprows .t').first()).toHaveText('Orange – Breeding: Health Screening');
+  await page.locator('#sopsort').selectOption('role');
+  await expect(page.locator('#soprows .t').first()).toHaveText('Green – Ongoing: Staffing Ratio');
+  await page.locator('#sopcat').selectOption('Staff');
+  await page.locator('#sopcol').selectOption('Yellow');
+  await expect(page.locator('#soprows [data-sop]')).toHaveCount(0);
+  await expect(page.locator('#sopempty')).toHaveText('Nothing matches.');
+  await expect(page.locator('#soptypes [data-type-code]')).toHaveCount(21);
+  await expect(page.locator('#sopformats [data-format-code]')).toHaveCount(4);
+});
+
+test('inspector view is a role filter only when a row uses that code', async ({ page }) => {
+  const body = JSON.stringify([
+    { colour: 'White', frequency: 'Annual', category: 'Licence & records', role: 'inspector_view', short_name: 'Inspector Note', has_form: 'N' },
+    { colour: 'White', frequency: 'Annual', category: 'Licence & records', role: 'manager', short_name: 'Microchip Audit', has_form: 'Y' },
+  ]);
+  await page.route('**/sop-index.json', (route) => route.fulfill({ status: 200, contentType: 'application/json', body }));
+  await page.goto('cdhub/#/sops');
+  await signIn(page);
+  await expect(page.locator('#soprows [data-sop]')).toHaveCount(2);
+  await page.locator('[data-fpanel="fp-sops"]').click();
+  const withRow = await page.locator('#soprole option').evaluateAll((els) => els.map((e) => ({ value: e.value, text: e.textContent })).filter((o) => o.value));
+  expect(withRow.map((o) => o.value)).toEqual(ROLES.concat(['inspector_view']));
+  expect(withRow.map((o) => o.text)).toContain('Inspector view');
+  await page.locator('#soprole').selectOption('inspector_view');
+  await expect(page.locator('#soprows .t')).toHaveText('White – Annual: Inspector Note');
+  await expect(page.locator('#ach-sops .achip')).toHaveText(['Role: Inspector view ×']);
+  await expect(page.locator('#soprows')).not.toContainText('inspector_view');
 });
 
 test('no form address in the seed: every row shows the grey hint and no link', async ({ page }) => {
@@ -251,7 +358,7 @@ test('#/sops names every file type and file format with its icon', async ({ page
 test('other and sheet are not remapped; a real type code keeps its icon and the old form link', async ({ page }) => {
   const sops = JSON.stringify([
     { colour: 'Purple', frequency: 'Ongoing', short_name: 'Signs/Posters Index', has_form: 'Y', form_url: 'https://example.com/posters', type_code: 'index_pointer' },
-    { colour: 'Yellow', frequency: 'Daily', short_name: 'Care Rounds', has_form: 'Y', kind: 'checklist', form_url: 'https://example.com/care-form' },
+    { colour: 'Yellow', frequency: 'Daily', short_name: 'Care Rounds', has_form: 'Y', kind: 'checklist', category: 'Daily care & premises', role: 'kennel_staff', form_url: 'https://example.com/care-form' },
     { colour: 'White', frequency: 'Ad hoc', short_name: 'Read-and-Sign', has_form: 'N', kind: 'other' },
     { colour: 'White', frequency: 'Ongoing', short_name: 'Record Keeping', has_form: 'N', kind: 'sheet' },
     { colour: 'Orange', frequency: 'Breeding', short_name: 'Health Screening', has_form: 'N', kind: 'sds' },
@@ -296,6 +403,13 @@ test('other and sheet are not remapped; a real type code keeps its icon and the 
   await expect(row('Health Screening')).not.toContainText('Data sheet');
   await expect(row('Transport')).not.toContainText('Photo');
   await expect(row('Read-and-Sign')).toContainText('form not on hub yet');
+  await page.locator('[data-fpanel="fp-sops"]').click();
+  await page.locator('#soprole').selectOption('kennel_staff');
+  await expect(page.locator('#soprows [data-sop]')).toHaveCount(1);
+  await expect(row('Care Rounds').locator('.atype-row')).toHaveAttribute('aria-label', 'Checklist');
+  await expect(row('Care Rounds').locator('a')).toHaveAttribute('href', 'https://example.com/care-form');
+  await expect(page.locator('#soptypes [data-type-code]')).toHaveCount(3);
+  await page.locator('#sopclr').click();
   await expect(page.locator('#soprows .t')).toHaveText([
     'Blue – Ad hoc: Transport',
     'Orange – Breeding: Health Screening',
