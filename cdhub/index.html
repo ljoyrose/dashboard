@@ -352,7 +352,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs-bd{padding:8px 12px 10px;display:flex;flex-direction:column;gap:5px;font-size:14px}
 .dcs-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
 .dcs-form{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
-.dcs-form input,.dcs-form select{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:4px 7px;font-size:14px;color:var(--ink);width:100%;box-sizing:border-box}
+.dcs-form input,.dcs-form select{background:var(--bg);border:1px solid var(--press);border-radius:var(--radius);padding:4px 7px;font-size:14px;color:var(--ink);width:100%;box-sizing:border-box}
 .dcs-form label{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:2px;flex:1}
 .dcs-form .dcs-row{gap:6px;align-items:flex-end}
 .dcs-form button{background:var(--ljr-6);color:var(--ljr-6-on);border:none;border-radius:var(--radius);padding:5px 12px;font-size:14px;cursor:pointer;align-self:flex-end;margin-top:2px}
@@ -1224,12 +1224,12 @@ function outdoorStrip(date){
      +(wd?'<span class="wd">'+esc(wd)+'</span>':'')
      +'<span class="wdate">'+dm+'</span>'
      +'<span class="wt">'+esc(outdoorDeg(r.min,r.max))+'</span>'
-     +(tone?'<span class="wb"><span class="ic '+tone+'" aria-hidden="true"></span>'+band+'</span>':'')
+     +(tone?'<span class="wb"><span class="ic '+tone+'" aria-hidden="true"></span></span>':'')
      +'<span class="wr'+(rain?' wr-'+rain:'')+'">'+
        (rain
          ?'<svg width="7" height="9" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2 0 4.5 0 6.3a3.5 3.5 0 0 0 7 0C7 4.5 5 2 3.5 0Z"/></svg>'
-           +(rain==='wet'&&rainMm?'wet '+rainMm+'mm':rain)
-         :'none')
+           +(rain==='wet'&&rainMm?rainMm+'mm':'')
+         :'')
      +'</span>'
      +(windy?'<span class="ww"><svg width="9" height="7" viewBox="0 0 9 7" aria-hidden="true"><path d="M0 1h7M0 3.5h9M0 6h5" stroke-width="1.5" stroke-linecap="round"/></svg>Windy'+(windKph?'<span class="wdet sr-only"> '+windKph+' km/h</span>':'')+'</span>':'')
      +'</div>';
@@ -1688,7 +1688,7 @@ function drawDogs(){
     +'</summary><div class="dcs-bd"><b>'+esc(d.chip||'not recorded')+'</b></div></details>'
     // Moxiclear / Rx section (conditional)
     +(d.rxExpiry||d.rxUrl?
-      '<details class="dcs"><summary>'
+      '<details class="dcs wt"><summary>'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'
         +'<span class="dcs-label">Moxiclear'+(d.rxExpiry?' · <b>'+esc(ukDate(d.rxExpiry))+'</b>':'')+'</span>'
         +(d.rxUrl?'<a class="cb" href="'+esc(safeUrl(d.rxUrl))+'" target="_blank" rel="noopener" aria-label="'+esc('Rx for '+(d.name||'this dog'))+'">Rx</a>':'')
