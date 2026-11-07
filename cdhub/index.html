@@ -1686,14 +1686,15 @@ function drawDogs(){
       +'<svg class="ricon" aria-hidden="true"><use href="#i-chip"/></svg>'
       +'<span class="dcs-label">'+(d.chip?esc(d.chip):'<span class="mut">no chip recorded</span>')+'</span>'
     +'</summary><div class="dcs-bd"><b>'+esc(d.chip||'not recorded')+'</b></div></details>'
-    // Moxiclear / Rx section (conditional)
-    +(d.rxExpiry||d.rxUrl?
-      '<details class="dcs wt"'+(d.rxUrl?' open':'')+' ><summary>'
+    // Moxiclear / Rx section (conditional — use validated values to guard against invalid inputs)
+    +(function(){var rxWhen=ukDate(d.rxExpiry),rxHref=safeUrl(d.rxUrl);return(rxWhen||rxHref?
+      '<details class="dcs wt"'+(rxHref?' open':'')+' ><summary>'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'
-        +'<span class="dcs-label">Moxiclear'+(d.rxExpiry?' · <b>'+esc(ukDate(d.rxExpiry))+'</b>':'')+'</span>'
+        +'<span class="dcs-label">Moxiclear'+(rxWhen?' · <b>'+esc(rxWhen)+'</b>':'')+'</span>'
       +'</summary><div class="dcs-bd">'
-        +(d.rxUrl?'<a class="cb" href="'+esc(safeUrl(d.rxUrl))+'" target="_blank" rel="noopener" aria-label="'+esc('Rx for '+(d.name||'this dog'))+'">Rx</a>':'<span class="mut">No Rx link</span>')
+        +(rxHref?'<a class="cb" href="'+esc(rxHref)+'" target="_blank" rel="noopener" aria-label="'+esc('Rx for '+(d.name||'this dog'))+'">Rx</a>':'<span class="mut">No Rx link</span>')
       +'</div></details>'
+    :'');}())
     :'')
   +'</div>'
   +'<span class="whor" role="img" aria-label="'+esc(who)+'"><svg class="ti" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span>'
