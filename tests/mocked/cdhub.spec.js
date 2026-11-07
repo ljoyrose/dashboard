@@ -327,7 +327,7 @@ function cdAudit() {
   const bgOf = (el) => { for (let a = el; a; a = a.parentElement) { const c = rgb(getComputedStyle(a).backgroundColor); if (c && c[3] > 0.5) return c; } return rgb(getComputedStyle(document.body).backgroundColor); };
   const name = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).join('.') : '') + ' "' + (el.textContent || '').trim().slice(0, 24) + '"';
   const seen = (el) => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); if (r.width <= 1 || r.height <= 1 || s.visibility !== 'visible' || s.display === 'none') return false; for (let a = el; a && a !== document.body; a = a.parentElement) { const ar = a.getBoundingClientRect(); if (ar.width <= 1 || ar.height <= 1) return false; } return true; };
-  const ROUND = '.dot, .mk, .whor, .sexdot, .ic, .sw, .nose';
+  const ROUND = '.dot, .mk, .whor, .sexdot, .ic, .sw, .nose, .gicon';
   const out = { small: [], weight: [], upper: [], colour: [], radius: [], line: [], text: [], ring: [] };
   for (const el of document.querySelectorAll('body *')) {
     if (el.closest('svg') || /^(SCRIPT|STYLE|OPTION)$/.test(el.tagName) || el.closest('#dashSearch') || !seen(el)) continue;
