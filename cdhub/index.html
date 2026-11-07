@@ -1,4 +1,4 @@
-<!doctype html><html lang="en-GB"><head><meta charset="utf-8">
+<html lang="en-GB"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CD Hub</title>
 <meta name="robots" content="noindex,nofollow">
@@ -23,34 +23,27 @@
 <link rel="stylesheet" href="../tokens.css">
 <link rel="stylesheet" href="../house.css">
 <style>
-/* ==== House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio).
-   Lexend 400/600, nothing under 13px, line height 1.5, no uppercase. 1px lines. Hover AND selected = the same 1px edge
-   turns ink (outline over it), nothing moves; keyboard focus 2px ink. ONE radius, 12px (circles only for status dots and
-   who rings). No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints.
-   Dark frame top and bottom. Greys follow Warm clear (default) or Cool clear, read from Studio's Look ('dash-look', read only).
-   Screens are built on generic Bloodline foundation concepts (record, round, check, rule, place, person, document);
-   animal-only parts are marked "kit: animal". ==== */
-/* Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule: ../tokens.css through ../house.css,
-   the same on every hub. CD Hub's own names below: the LJR7 slots, the kit (sex) colours and the old short names. */
+
+
 :root{--sel-fill:transparent;--hov-fill:var(--hov);
- /* LJR7 slots (tokens.css). --male/--female are kit colours (sex), shown only as dots. */
+ 
  --p0:var(--ljr-0);--p2:var(--ljr-2);--p3:var(--ljr-3);--p4:var(--ljr-4);--p5:var(--ljr-5);--p6:var(--ljr-6);--p7:var(--ljr-7);--p8:var(--ljr-8);
  --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:var(--ljr-0);
- /* old names kept so every rule below reads one set of tokens */
+ 
  --fg:var(--ink);--ln:var(--line);--sub:var(--muted);}
 :root.sel-soft{--sel-fill:var(--soft);}
 html.text-lg body{zoom:1.12}html.text-xl body{zoom:1.25}html.space-roomy body{line-height:1.75}
 *{box-sizing:border-box}
-h1,h2,h3,h4,b,strong,th{font-weight:600}   /* two weights only: 400 and 600 */
+h1,h2,h3,h4,b,strong,th{font-weight:600}   
 body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--fs-body)/1.5 var(--house-font);-webkit-text-size-adjust:100%;hyphens:manual}
 a{color:inherit;text-underline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .hidden{display:none!important}
 .wrap,.hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
 .wrap{padding-bottom:140px}
-.ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}   /* line icons drawn in the page (no icon font) */
+.ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}   
 
-/* ---- Frame: dark top bar ---- */
+
 header.top{background:var(--frame);color:var(--frame-ink);position:sticky;top:0;z-index:20}
 header h1 .dot{background:var(--ljr-5)}
 .live{font-size:var(--fs-small);font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
@@ -59,13 +52,13 @@ header .btn{color:var(--frame-ink);background:transparent;border-color:var(--fra
 @media (hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
 header .btn:focus-visible{outline:2px solid var(--frame-ink);outline-offset:2px}
 .backhome{text-decoration:none}
-/* Signed out, the frame is hidden by the sign-in gate and only Dashboard shows, on the page colour: use page ink. */
+
 html.dash-locked header .backhome{color:var(--ink);border-color:var(--press)}
 
-/* ---- Bottom tabs: ../house.css section 6 (the same bar on every page). ---- */
+
 @media (max-width:544px){ .wrap{padding-bottom:170px} }
 
-/* ---- Type ladder ---- */
+
 h2{font-size:var(--fs-head);margin:24px 0 4px;line-height:1.3}
 h3{font-size:var(--fs-head);margin:24px 0 12px;display:flex;align-items:center;gap:8px}
 .sub{color:var(--muted);font-size:var(--fs-body);margin:0 0 16px;max-width:74ch}
@@ -73,17 +66,17 @@ h3{font-size:var(--fs-head);margin:24px 0 12px;display:flex;align-items:center;g
 .note{font-size:var(--fs-small);color:var(--muted);margin:8px 0 12px}
 code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-nums;background:transparent;padding:0}
 
-/* ---- Cards: one white panel, 1px line, 12px step; read-only, so nothing happens on hover. ---- */
-.card{margin:0 0 12px;box-shadow:var(--shadow)} /* the house card (../house.css): 1px line, 12px inside */
+
+.card{margin:0 0 12px;box-shadow:var(--shadow)} 
 .card.dash{border-style:dashed}
 .card h4,.card .hx4{margin:0 0 12px;font-size:var(--fs-head);font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:0;line-height:1.4}
 .card p{margin:0 0 8px;font-size:var(--fs-body)}.card p:last-child{margin-bottom:0}
-/* attention / good cards: a small ring dot before the heading, never a coloured stripe */
+
 .card.acc2>:is(h4,.hx4):first-child::before,.card.acc5>:is(h4,.hx4):first-child::before{content:"";width:10px;height:10px;border-radius:50%;flex:none;border:1px solid var(--ljr-2);background:var(--ljr-2-tint)}
 .card.acc5>:is(h4,.hx4):first-child::before{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
 .card .card{box-shadow:none}
 
-/* ---- Pressables: ONE clear line (--press, 3:1), 1px, 12px, 36px (44px phone), 14px/600; never start ink. ---- */
+
 .btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{
  font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);
  min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;box-sizing:border-box;line-height:1.2}
@@ -95,27 +88,27 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .tile.tl:hover,.ci:hover{border-color:var(--press)}
 .sfb[aria-pressed="true"],.fbtn[aria-expanded="true"]{outline:1px solid var(--sel-bd);outline-offset:-1px;}
 .sfb[aria-pressed="true"]::after{content:"\2713";margin-left:2px}
-/* Buttons with a meaning colour keep it on hover and when chosen: the same 1px line in that colour inside, plus a pale tint of it. Never ink. */
-/* They rest on the same control line as every pressable (house rule); the colour shows on hover. */
+
+
 @media (hover:hover){.btn.yes:hover{outline-color:var(--house-ok);}.btn.no:hover{outline-color:var(--house-risk);}}
 .dc .nl .st{border:0;padding:0;height:auto;font-size:var(--fs-small)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :focus-visible{outline:2px solid var(--ink)!important;outline-offset:2px}
 @media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{min-height:44px}}
 
-/* ---- Read-only pills, counts and dates: small (24px), 1px ring, no hover. ---- */
+
 .pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
 .pill.ok{border-color:var(--ljr-5-text);box-sizing:border-box;width:var(--house-count-w);padding:0 var(--house-count-pad);line-height:var(--house-count-lh);justify-content:center;flex:none}
 .pill.no{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .pill.w{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
 .pill.i{border-color:var(--press)}
-/* Counts: one fixed box so 1 and 2 digits match; only 3+ digits grow. "Needs you" = rose ring + light tint. */
+
 .cnt{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:var(--house-count-w);height:var(--house-count-h);padding:0 var(--house-count-pad);border-radius:var(--house-count-r);border:1px solid var(--ink);font-size:var(--fs-small);font-weight:600;line-height:var(--house-count-lh);white-space:nowrap;font-variant-numeric:tabular-nums;color:var(--ink);background:transparent;flex:none}
 .cnt.wide{width:auto;min-width:30px;padding:0 6px}
 .cnt.need{border-color:var(--ljr-2);background:transparent}
 .cnt.ok{border-color:transparent}
 .card h4 .cnt,.card .hx4 .cnt,.mcard h3 .cnt{margin-left:auto}
-/* Every date pill wears a plain 1px ring; late = rose ring + tint; soon = amber ring + tint. */
+
 .dpill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border:1px solid var(--press);border-radius:var(--radius);font-size:var(--fs-small);color:var(--ink);white-space:nowrap;font-variant-numeric:tabular-nums;flex:none}
 .dpill.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .dpill.soon{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
@@ -123,7 +116,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 .dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--c,var(--ljr-0));flex:none;vertical-align:0}
 .info{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:1px solid var(--press);border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;color:var(--muted);cursor:help;vertical-align:middle}
 
-/* ---- Tiles (big numbers). A tile you can press is a pressable; a read-only tile is a plain panel. ---- */
+
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:0 0 12px}
 .tile{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 16px;text-align:left;font:inherit;color:var(--ink);min-width:0}
 .tile .n{font-size:var(--fs-figure);font-weight:600;line-height:1.2;font-variant-numeric:tabular-nums}
@@ -132,14 +125,14 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 button.tile{cursor:pointer;border-color:var(--press);display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;width:100%}
 @media (hover:hover){button.tile:hover{outline:1px solid var(--sel-bd);outline-offset:-1px;}}
 
-/* ---- Tables ---- */
+
 .scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
 table{width:100%;border-collapse:collapse;font-size:var(--fs-small)}
 th{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);white-space:nowrap;position:sticky;top:0;background:var(--card)}
 td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
 tr:last-child td{border-bottom:none}
 
-/* ---- One filter row: Search, Filter (panel), Sort, removable chips. ---- */
+
 .filt,.srow{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px;align-items:center}
 .filt input{min-width:190px}
 .fbar{position:relative;margin:0 0 12px}
@@ -154,10 +147,10 @@ tr:last-child td{border-bottom:none}
 .achips{display:contents}
 .achip .ti{width:14px;height:14px}
 
-/* ---- Calm rows (Needs you today, checklists, cards on Live feed) ---- */
+
 .three{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
 .three .sum{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line);background:var(--card);border-radius:var(--radius);padding:8px 14px 8px 8px;font-weight:600}
-/* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
+
 .three .sum .big{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;width:auto;min-width:var(--house-count-w);height:var(--house-count-h);line-height:var(--house-count-lh);padding:0 var(--house-count-pad);border-radius:var(--house-count-r);font-size:var(--fs-small);font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;background:transparent;border:1px solid var(--house-ring)}
 .three .sum.over .big{border-color:var(--house-late)}
 .three .sum .big.zero{border-color:transparent}
@@ -174,11 +167,11 @@ tr:last-child td{border-bottom:none}
 .mrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);color:inherit;text-decoration:none;min-width:0}
 .mcard h3+.mrow,.mcard .mrow:first-of-type{border-top:0;padding-top:16px}
 .mrow .t{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
-/* SOP rows: the name takes the spare room; the form hint wraps instead of widening the page. */
+
 #sopcard .mrow:first-child{border-top:0;padding-top:0}
 #sopcard .mrow .mut{flex:0 1 11em;overflow-wrap:anywhere}
 #sopcard .mrow .cb{flex:none;padding:0 10px}
-/* File types and file formats on the SOP page: same line icons and 12px radius as the rest of the house. */
+
 .atype-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,148px),1fr));gap:8px;margin:0;padding:0;list-style:none}
 .atype{display:flex;align-items:center;gap:8px;min-width:0;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:transparent}
 .atype .ti{width:22px;height:22px;color:var(--ink)}
@@ -196,7 +189,7 @@ tr:last-child td{border-bottom:none}
 #kept-readings .ic{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:1px solid var(--press)}
 #kept-readings .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}#kept-readings .ic.cold{border-color:var(--ljr-6);background:var(--ljr-6-tint)}#kept-readings .ic.late{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .mrow .v{font-weight:600;font-variant-numeric:tabular-nums}
-/* Outdoor week: six upcoming days in a grid. Today is shown separately above. */
+
 .wk{display:grid;grid-template-columns:repeat(6,1fr);gap:0;width:100%;min-width:0;max-width:100%;margin-top:4px;padding:0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
 .wkday{box-sizing:border-box;padding:6px 4px;border-right:1px solid var(--line);background:transparent;color:var(--ink);display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
 .wkday:last-child{border-right:none}
@@ -216,22 +209,22 @@ tr:last-child td{border-bottom:none}
 .wkday .ww svg{display:block;stroke:var(--muted);fill:none}
 .wkday .wdet{font-size:var(--fs-small);font-weight:400;color:var(--muted);line-height:1}
 .mfoot{display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
-/* foundation: empty state for a field that needs data CD Hub does not have. It names the Bloodline table that will feed it. */
-/* The card itself is the house card (../house.css .card) with CD Hub's dashed edge (.card.dash); only the layout is here. */
+
+
 .card.arrive{margin:0;box-shadow:none}.card.arrive h3{margin:0}
 .card.arrive .awhy{margin:4px 0 0;color:var(--muted);font-size:var(--fs-small)}
 .card.arrive .arrives{margin:8px 0 0;font-weight:600}
 .arrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:var(--house-gap);margin:0 0 var(--house-gap)}
 .okempty{margin:12px 0 0;color:var(--muted);font-size:var(--fs-body);display:flex;gap:8px;align-items:center}
 .okempty::before{content:"\2713";display:inline-grid;place-items:center;width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--ljr-5);background:var(--ljr-5-tint);color:var(--ink);font-size:13px}
-/* checklist ✓ / ✗ marks: status dots, so they are circles */
+
 .mk{display:inline-grid;place-items:center;width:22px;height:22px;flex:none;border-radius:50%;border:1px solid var(--ljr-5);background:var(--ljr-5-tint);color:var(--ink);font-size:var(--fs-small);font-weight:600}
 .mk.bad{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .mk.part{border-color:var(--ljr-3);background:var(--ljr-3-tint)}
 .ckrow .btn,.ckrow .ci{flex:none}
 @media (max-width:760px){.three{flex-wrap:nowrap;gap:6px}.three .sum{padding:4px 8px 4px 4px;gap:6px;font-size:var(--fs-small);flex:1;min-width:0}.mecards{grid-template-columns:minmax(0,1fr)}}
 
-/* ---- Record cards (Dogs). Name line, then title (2 lines, then …); 44×44 thumbnail; who-has-it ring bottom-right. ---- */
+
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
 .dc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;box-shadow:var(--shadow);min-width:0;overflow:hidden;position:relative}
 .dc .bd{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
@@ -250,12 +243,12 @@ tr:last-child td{border-bottom:none}
 .dc .nm{font-weight:600;font-size:var(--fs-head);line-height:1.25;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
 .dc .meta{font-size:var(--fs-small);color:var(--muted);display:flex;align-items:center;gap:5px;flex-wrap:wrap}
 .dc .age{font-size:var(--fs-small);color:var(--muted)}
-.sexdot{display:none}/* replaced by .ph .gicon */
+.sexdot{display:none}
 .dc .chips{display:flex;flex-wrap:wrap;gap:4px}
 .cfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:26px;margin-top:auto;padding-top:8px;border-top:1px solid var(--line)}
 .whor{position:absolute;right:8px;bottom:8px;width:26px;height:26px;border-radius:50%;border:1px solid var(--press);display:grid;place-items:center;font-size:var(--fs-small);color:var(--muted)}
 .whor .ti{width:15px;height:15px}
-/* status (kit: animal): a status-colour dot + code + word, ink text, no fill */
+
 .st{display:inline-flex;align-items:center;gap:6px;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--radius);height:24px;padding:0 8px;white-space:nowrap}
 .st b{font-weight:600}
 .st::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--sc,var(--ljr-0));flex:none}
@@ -272,7 +265,7 @@ tr:last-child td{border-bottom:none}
 .sw-none{background:repeating-linear-gradient(45deg,var(--soft) 0 3px,var(--line) 3px 6px)}
 .nose{position:absolute;right:-3px;bottom:-2px;width:8px;height:8px;border-radius:50%;border:1px solid var(--card)}
 .coat{display:flex;align-items:center;gap:6px;font-size:var(--fs-small);color:var(--muted)}
-/* icon rows on dog card */
+
 .dcrow{display:flex;align-items:center;gap:6px;font-size:var(--fs-small);color:var(--muted);min-height:22px}
 .dcrow .ricon{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dcrow b{color:var(--ink);font-weight:600}
@@ -297,7 +290,7 @@ tr:last-child td{border-bottom:none}
 .key>span{display:inline-flex;align-items:center;gap:6px}
 .stf{gap:8px}
 
-/* ---- The round: temperatures ---- */
+
 .tmp{display:grid;grid-template-columns:auto repeat(2,minmax(0,160px)) minmax(0,1fr);gap:8px;align-items:center;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
 .tmp .sl{font-size:var(--fs-small);color:var(--muted);font-weight:600}
 .tmp input{width:100%;text-align:right;padding:0 10px;font-variant-numeric:tabular-nums}
@@ -307,7 +300,7 @@ tr:last-child td{border-bottom:none}
 .step{color:var(--muted);font-weight:600;white-space:nowrap}
 .rdel{cursor:pointer;margin-left:4px}
 
-/* ---- Bits ---- */
+
 .bar{height:8px;background:transparent;box-shadow:inset 0 0 0 1px var(--line);border-radius:var(--radius);overflow:hidden;min-width:60px}
 .bar i{display:block;height:100%;background:var(--ljr-6-tint);box-shadow:inset 0 0 0 1px var(--ljr-6)}
 .next{display:flex;gap:12px;flex-wrap:wrap;margin-top:24px;padding-top:16px;border-top:1px solid var(--line)}
@@ -339,7 +332,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .map svg{display:block;min-width:1180px}
 @media (max-width:544px){header.top{position:static}}
 
-/* dog card accordion layout */
+
 .dc .dc-top{display:flex;gap:10px;align-items:flex-start;padding:10px 12px 8px}
 .dc .dc-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .dc-sects{border-top:1px solid var(--line)}
@@ -391,17 +384,17 @@ var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
 
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
-// Links that come from the tables: only plain web addresses are allowed (never javascript:, data: etc.).
+
 function safeUrl(u){ u=String(u==null?'':u).trim(); return /^https?:\/\/[^\s"'<>]+$/i.test(u)?u:''; }
-// Public SOP index (cdhub/sop-index.json). Colour, frequency, category, role code and short name.
-// A form opens only when the row says it has one and the row carries a real https address.
-// This seed has no addresses, so nothing here invents one. Roles are codes, never person names.
+
+
+
 var SOP={rows:null,err:'',pending:null};
 var SOP_COLOURS=['White','Red','Orange','Yellow','Green','Blue','Purple'];
 var SOP_FREQS=['Daily','Weekly','Monthly','Quarterly','Annual','Ongoing','Per litter','Ad hoc','Breeding'];
-// Locked 6 Nov 2026. These seven always show. Any later category shows only once a row has it.
+
 var SOP_CATEGORIES=['Breeding health','Daily care & premises','Emergency & safety','Licence & records','Puppy sale & handover','Signs & posters','Staff'];
-// Closed codes for the public filter. inspector_view stays off this list until a row uses it.
+
 var SOP_ROLES=['licence_holder','manager','kennel_staff','all_staff'];
 var SOP_ROLE_RANK=SOP_ROLES.concat(['inspector_view']);
 var SOP_ROLE_LABEL={licence_holder:'Licence holder',manager:'Manager',kennel_staff:'Kennel staff',all_staff:'All staff',inspector_view:'Inspector view'};
@@ -421,8 +414,8 @@ function sopNorm(r){
  var kind=assetCode(String(r.kind||'').toLowerCase());
  return {colour:colour,frequency:frequency,category:category,role:role,short_name:short_name,has_form:has,form_url:form_url,type_code:type_code,kind:kind};
 }
-// File types (semantic) and file formats (how a file is stored) live in cdhub/asset-types.json.
-// Loaded only on the SOP page. Legacy kind other/sheet is never turned into a type. sds is not a type code.
+
+
 var ASSET={types:null,formats:null,unmap:['other','sheet'],err:'',pending:null};
 function assetCode(s){ s=String(s==null?'':s).trim(); return /^[a-z][a-z0-9_]{0,40}$/.test(s)?s:''; }
 function assetOn(r){ return !r || r.enabled!==false; }
@@ -509,8 +502,8 @@ function drawAssetTypes(){
  box.innerHTML='<ul class="atype-grid">'+ASSET.types.map(function(t){ return assetItem('data-type-code',t.type_code,t.icon_key,t.label); }).join('')+'</ul>';
  if(fmt) fmt.innerHTML='<p class="mut">How a file is stored. Separate from the type.</p><ul class="atype-grid">'+ASSET.formats.map(function(f){ return assetItem('data-format-code',f.format_code,f.icon_key,f.label); }).join('')+'</ul>';
 }
-// Listed colours and frequencies always appear, in this order, even when a frequency has no row yet.
-// Any extra value that turns up in the index is added after the list.
+
+
 function sopChoices(present, pref){
  var seen={}, extra=[];
  present.forEach(function(v){ if(v && !seen[v]){ seen[v]=1; if(pref.indexOf(v)<0) extra.push(v); } });
@@ -630,7 +623,7 @@ function restoreShared(){
   load();
 }
 restoreShared();
-// Another tab signed in, refreshed the token, or signed out.
+
 if(window.DashAuth) DashAuth.onChange(function(saved){
   if(!saved||!DashAuth.hasScope(saved,SCOPE)){ if(TOKEN){ TOKEN=null; TOKEN_EXP=0; T={}; CD={}; LOAD={state:'signin',err:'Signed out in another tab.',storedAt:null,notes:[]}; render(); } return; }
   var was=TOKEN; TOKEN=saved.access_token; TOKEN_EXP=saved.expires_at;
@@ -775,7 +768,7 @@ function build(){
   CD.tempActions=(T['BLD-temperature_action.csv']||[]).map(function(r){
     return {dir:r.direction,at:parseFloat(r.threshold_c),action:r.action,source:r.source};
   }).sort(function(a,b){return b.at-a.at;});
-  CD.litters=T['BLD-litter.csv']||[];   // CD.matings stays the parsed rows from above (it was overwritten with the raw rows, so In whelp found nothing)
+  CD.litters=T['BLD-litter.csv']||[];
   CD.vetlink=T['BLD-MAP-animana.csv']||[]; CD.manifest=T['BLD-_MANIFEST.csv']||[];
   var MCN={}; (T['BLD-microchip.csv']||[]).forEach(function(r){ if(r.subject_id&&r.chip_number) MCN[r.subject_id]=r.chip_number; });
   var vmScore=function(m){ var sc=0, st=String(m.vet_status||''), nm=String(m.vet_name||''), cl=String(m.vet_client||'');
@@ -814,7 +807,7 @@ function months(iso){ if(!iso||!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return null;
 function isEntire(d){ return (d.neuter||'entire')!=='neutered'; }
 function onPrem(d){
  if(d.classification) return d.classification!=='Collected' && !d.off;
- // a live pup with no occupancy row yet (new litter) is still here
+
  return d.kind==='Pup' && !d.off && /^(active|in training)$/i.test(d.state||''); }
 var STATUS=[['BI','Bitch','st-bi',null],['ST','Stud','st-st',null],
  ['TR','Training','st-tr',null],['CE','Cerys','st-ce',null],['GR','Grace','st-gr',null],
@@ -1025,7 +1018,7 @@ function daysBetween(a,b){ var x=(a||'').split('-'),y=(b||'').split('-');
  return Math.round((Date.UTC(+y[0],+y[1]-1,+y[2])-Date.UTC(+x[0],+x[1]-1,+x[2]))/86400000); }
 function inWhelp(onISO){
  var today=onISO||new Date().toISOString().slice(0,10), out=[], bydam={};
- // CD.matings holds the parsed rows (dam/sire/on). Raw rows (dam_subject_id/mated_on) are still read, so a caller can pass either shape.
+
  (CD.matings||[]).map(function(m){ return m.dam!==undefined?m:{dam:m.dam_subject_id,sire:m.sire_subject_id,on:m.mated_on,litter:m.litter_id||'',produced:m.produced_litter||'',method:m.method||''}; })
   .forEach(function(m){ if(!m.dam) return; (bydam[m.dam]=bydam[m.dam]||[]).push(m); });
  Object.keys(bydam).forEach(function(dam){
@@ -1082,7 +1075,7 @@ function checks(){
 }
 function strip(){
  return '<div class="chk">'+checks().map(function(x){
-  // Only a check with a list to open is a button. The others are status chips (the reason is in the title and the card below).
+
   if(!x.list) return '<span class="ci ci-s'+(x.ok?' ok':' bad')+'" title="'+esc(x.msg)+'"><i></i>'+esc(x.k)+'</span>';
   return '<button type="button" class="ci'+(x.ok?' ok':' bad')+'" data-list="'+x.list+'" title="'+esc(x.msg)+'">'
    +'<i></i>'+esc(x.k)+'</button>'; }).join('')+'</div>';
@@ -1128,7 +1121,7 @@ function goBtn(x,text){
  return '<button type="button" class="btn house-open" data-go="'+esc(x.go)+'" aria-label="'+esc(lab)+'">'+esc(t)+'</button>';
 }
 function needRow(x,hide){
- return '<div class="mrow'+(hide?' hidden':'')+'" data-open-row'+(hide?' data-needmore="1"':'')+'>'+(x.tone?'<span class="ic '+x.tone+'" aria-hidden="true"></span>':'')   // a plain empty circle meant nothing: only late/soon show a dot (Lisa, 2 Nov)
+ return '<div class="mrow'+(hide?' hidden':'')+'" data-open-row'+(hide?' data-needmore="1"':'')+'>'+(x.tone?'<span class="ic '+x.tone+'" aria-hidden="true"></span>':'')
   +'<span class="t">'+esc(x.title)+'<small>'+esc(x.sub||'')+'</small></span>'+dpill(x.date,x.tone)+goBtn(x)+'</div>';
 }
 /* foundation: empty state that names its source. Used where a screen needs data that only the Bloodline app will hold.
@@ -1139,13 +1132,13 @@ var ARRIVES={
  due:['work_item','work item','Due dates on Outstanding','BLD-WORK.csv has no date column, so these rows carry no date pill.'],
  reading:['reading','reading','Temperatures that are kept','Readings typed on The round are not saved here. Kept readings need their own table.'],
  stage:['birth_group_stage','litter stage','Litter stage','Born, weaning, ready: a litter\u2019s stage is recorded, not guessed from its age.']};
-function arrives(k){ var a=ARRIVES[k];   // a = [Bloodline table, the words shown, heading, why]
+function arrives(k){ var a=ARRIVES[k];
  return '<section class="card dash arrive" id="arrive-'+k+'" data-arrives="'+esc(a[0])+'"><h3>'+esc(a[2])+'</h3>'
   +'<p class="arrives">Arrives with Bloodline: '+esc(a[1])+'</p><p class="awhy">'+esc(a[3])+'</p></section>'; }
-// Every row that needs Lisa, in full (Main shows the top 5; its "+N more" opens this, on Do).
+
 function needsCard(){
  var n=needsToday();
- if(!n.length) return '';   // one empty line per view (Lisa, 2 Nov): Main already says Nothing needs you
+ if(!n.length) return '';
  var h='<section class="mcard need-card" id="needsCard" style="--hc:var(--ljr-2-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-list-check"/></svg>Needs you today'+cntPill(n.length,n.some(function(x){return x.tone==='late';})?'need':'')+'</h3>';
  h+=n.map(function(x,i){ return needRow(x,i>=7); }).join('');
  if(n.length>7) h+='<div class="mfoot"><span class="mut">Showing 7 of '+n.length+'</span><button type="button" class="btn" data-needall="1">Show all</button></div>';
@@ -1154,7 +1147,7 @@ function needsCard(){
 /* foundation: place occupancy (who is on site). The words are the animal kit's labels. */
 function onSiteCard(){
  var c=counts();
- // Each count opens its list of dogs on Today (Lisa, 2 Nov).
+
  var row=function(t,v,s,k){ return '<a class="mrow go" href="#/today" data-golist="'+k+'" aria-label="'+t+': '+v+'. Open the list"><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></a>'; };
  return '<section class="mcard" id="onSiteCard" style="--hc:var(--ljr-5-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>On site</h3>'
   +'<div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap"><a class="big house-go" href="#/today" data-golist="here" aria-label="On site: '+c.here.length+'. Open the list">'+c.here.length+'</a></div>'
@@ -1175,7 +1168,7 @@ function littersCard(){
  h+=recent.map(function(l){ var b=l.dob||l.born_on, d=daysBetween(b,date), p=pups[l.id]||0;
    return '<div class="mrow"><span class="t">'+esc(l.pairing||((nameOf(l.dam_subject_id)||'?')+' × '+(nameOf(l.sire_subject_id)||'?')))
     +'<small>Day '+d+(p?' · '+p+' pup'+(p===1?'':'s')+' linked':'')+'</small></span>'+dpill(b,'')+'</div>'; }).join('');
- // no "No litters" line: one empty line per view (Lisa, 2 Nov); the footer still says how many are on file
+
  return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span><button type="button" class="btn" data-go="litters">Litters</button></div></section>';
 }
 /* Outdoor week strip. Cold if the low is under 10, Hot if the high is over 27, otherwise OK.
@@ -1266,21 +1259,21 @@ function checksCard(){
     +(x.list?'<button type="button" class="btn ci house-open" data-list="'+x.list+'" aria-label="Show the dogs: '+esc(CHECKNAME[x.k]||x.k)+'" title="'+esc(x.msg)+'">Show</button>':'')+'</div>'; }).join('')
   +'</section>';
 }
-// Main (Lisa's house style, 2 Nov 2026): Next, Needs you (5 at most, from needsToday: checks, in whelp, headcounts, waiting on you)
-// and the hub's 3 numbers, the same as the Dogs tile on the Dashboard. The old Main cards moved: Needs you in full > Do,
-// On site and Temperatures today > Today, Litters > Litters, Data checks > Tables.
+
+
+
 var MAIN_ACT={work:'Do',round:'The round',today:'Today',shape:'Tables'};
 function mainRows(){
  var today=todayISO();
  return needsToday().map(function(x){
   var href=x.list?'#/today/'+x.list:'#/'+x.go;
   return {kind:x.tone==='late'?'late':(x.date===today?'today':'wait'),pill:x.tone==='soon'?'Soon':(x.date&&x.tone!=='late'&&x.date!==today?dmy(x.date):''),
-   // A long note (e.g. 43 missing file names) keeps only its lead on Main; the full text stays on the page it opens.
+
    text:x.title,sub:String(x.sub||'').split(' \u00b7 ').map(function(p){ return p.length>60?p.replace(/:.*$/,''):p; }).join(' \u00b7 '),href:href,act:x.list?'Show the dogs':(MAIN_ACT[x.go]||label(x.go))};
  });
 }
-// Temps: cabins with a temperature today ("x of y"), Unplaced: dogs on site not in a cabin, Bitches: breeding bitches in law
-// (rose when the law's count and her working list differ). ok false (a failed read): "–" for all three.
+
+
 function mainNums(ok){
  var c=ok?counts():null, date=CD._roundDate||todayISO(), N=ok?(CD.areas||[]).length:0;
  var t=ok?Object.keys(ROUND).filter(function(k){ return k.indexOf(date+'__')===0 && (ROUND[k].t_am||ROUND[k].t_pm); }).length:0;
@@ -1358,7 +1351,7 @@ function todayChecklist(date,unplacedN){
     +'<span class="t">'+esc(x[1])+'<span class="sr">'+(x[0]?' done':' not done')+'</span><small>'+esc(x[2])+'</small></span></div>'; }).join('')
   +'<div class="mfoot"><span class="mut"></span><button type="button" class="btn" data-go="round">The round</button></div></section>';
 }
-// A tile that opens another section (e.g. the temperature tile opens The round, where temperatures are entered).
+
 function tileGo(c,n,k,s,to){
  return '<button type="button" class="tile tl '+c+'" data-go="'+to+'"><div class="n">'+n+'</div>'
   +'<div class="k">'+k+'</div>'+(s?'<div class="src">'+s+'</div>':'')+'</button>';
@@ -1491,7 +1484,7 @@ function fbar(o){
   +'<div class="fgrp" style="justify-content:flex-end"><button type="button" class="btn" id="'+o.clear+'">Clear filters</button></div></div>'
   +(o.hidden||'')+'</div>';
 }
-function quiet(x){ return capFirst(String(x||'').toLowerCase()); }   // data written in capitals is shown in sentence case
+function quiet(x){ return capFirst(String(x||'').toLowerCase()); }
 function fsel(id,name,opts){ return '<select id="'+id+'" aria-label="'+esc(name)+'" data-fname="'+esc(name)+'"><option value="">Any</option>'+(opts||'')+'</select>'; }
 function fchips(id,ids){
  var box=document.getElementById('ach-'+id); if(!box) return;
@@ -1567,7 +1560,7 @@ function showTreats(id){
  if(el.scrollIntoView) el.scrollIntoView({behavior:'smooth',block:'nearest'});
 }
 var dogShown=300, unplacedShown=40;
-// Moxiclear prescription: expiry from the subject table, and the latest file only when that table gives a real web address.
+
 function moxiLine(d){
  var when=ukDate(d.rxExpiry), url=safeUrl(d.rxUrl);
  if(!when && !url) return '';
@@ -1605,12 +1598,12 @@ function drawDogs(){
        delta:d.weights.length>1?(d.weights[d.weights.length-1].kg-d.weights[d.weights.length-2].kg):null}:null;
   var away=!!d.off||st.code==='CL'||st.code==='DE';
   var who=st.code==='DE'?'Deceased':(st.code==='CL'?'Collected, with a new owner':(d.off?'Off site: '+d.off:(d.where?'On site, '+d.where:'On site, cabin not recorded')));
-  // gender icon: class + symbol
+
    var gSex=d.sex==='Female'?(isEntire(d)?'f':'fn'):d.sex==='Male'?(isEntire(d)?'m':'mn'):'u';
    var gSym=d.sex==='Female'?'#i-female':d.sex==='Male'?'#i-male':'#i-paw';
    var gTitle=(d.sex||'sex not recorded')+', '+(isEntire(d)?'entire':'neutered/spayed');
    h+='<article class="dc '+cls+'">'
-  // TOP ROW: big photo + static info panel
+
   +'<div class="dc-top">'
     +'<div class="ph" aria-hidden="true">'
       +'<svg class="ti" aria-hidden="true"><use href="#i-paw"/></svg>'
@@ -1634,9 +1627,9 @@ function drawDogs(){
       +'</div>'
     +'</div>'
   +'</div>'
-  // EXPANDABLE SECTIONS
+
   +'<div class="dc-sects">'
-    // Weight section
+
     +'<details class="dcs wtc" data-dog="'+esc(d.id)+'"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg>'
       +'<span class="dcs-label">'+(w?'<b>'+w.kg+' kg</b> <span class="mut">'+esc(dmy(w.on))+'</span>':'<span class="mut">no weight</span>')+'</span>'
@@ -1647,7 +1640,7 @@ function drawDogs(){
       }).join(''):'<span class="mut">No records</span>')
       +(d.weights.length>1?'<div class="dcs-row" style="margin-top:4px">'+spark(d.weights,160,30)+'</div>':'')
     +'</div></details>'
-    // Medications section with entry form
+
     +'<details class="dcs"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-pill"/></svg>'
       +'<span class="dcs-label">'+(d.treats.length?'<b>'+d.treats.length+'</b> medication'+(d.treats.length!==1?'s':''):'<span class="mut">no medications</span>')+'</span>'
@@ -1671,7 +1664,7 @@ function drawDogs(){
         +'<button type="submit">Add medication</button>'
       +'</form>'
     +'</div></details>'
-    // Findings section (conditional)
+
     +(d.findings.length?
       '<details class="dcs"><summary>'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-stethoscope"/></svg>'
@@ -1683,12 +1676,12 @@ function drawDogs(){
         }).join('')
       +'</div></details>'
     :'')
-    // Chip section
+
     +'<details class="dcs"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-chip"/></svg>'
       +'<span class="dcs-label">'+(d.chip?esc(d.chip):'<span class="mut">no chip recorded</span>')+'</span>'
     +'</summary><div class="dcs-bd"><b>'+esc(d.chip||'not recorded')+'</b></div></details>'
-    // Moxiclear / Rx section (conditional — use validated values to guard against invalid inputs)
+
     +(function(){var rxWhen=ukDate(d.rxExpiry),rxHref=safeUrl(d.rxUrl);return(rxWhen||rxHref?
       '<details class="dcs wt"'+(rxHref?' open':'')+' ><summary>'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'
@@ -1936,7 +1929,7 @@ function contactLinks(p){
  if(safeUrl(p.instagram)) o.push('<a class="cb" href="'+esc(safeUrl(p.instagram))+'" target="_blank" rel="noopener">Instagram</a>');
  if(safeUrl(p.linkedin)) o.push('<a class="cb" href="'+esc(safeUrl(p.linkedin))+'" target="_blank" rel="noopener">LinkedIn</a>');
  if(!o.length && ok(p.website) && p.website.indexOf('SITE')<0)
-   o.push('<a class="cb" href="https://'+esc(p.website.replace(/^https?:\/\//,''))+'" target="_blank" rel="noopener">Website form</a>');
+   o.push('<a class="cb" href="https://'+esc(p.website.replace(/^https?:\/\
  var det='';
  if(ok(p.email)) det+='<div class="mut sel">'+esc(p.email)+'</div>';
  if(ok(p.phone)) det+='<div class="mut sel">'+esc(p.phone)+'</div>';
@@ -1958,7 +1951,7 @@ function drawBuyers(){
   if(!q) return true;
   return ((p.kennel_name||'')+' '+(p.contact_name||'')+' '+(p.mdba_number||'')+' '+(p.region||'')).toLowerCase().indexOf(q)>=0;});
  var RK={'VERY STRONG':0,'STRONG':1,'MODERATE':2,'UNKNOWN':3};
-// J34-F20: VERY STRONG is 0, so ||9 sank it to the bottom; only a missing rank counts as last.
+
 function rk(x){ return x in RK ? RK[x] : 9; }
  var so=v('bsort');
  if(so==='name') list.sort(function(a,b){ return (a.kennel_name||'').localeCompare(b.kennel_name||''); });
@@ -1969,7 +1962,7 @@ function rk(x){ return x in RK ? RK[x] : 9; }
   var sig=p.buyer_signal==='VERY STRONG'?'ok':(p.buyer_signal==='STRONG'?'i':(p.buyer_signal==='UNKNOWN'?'':'w'));
   var apc=(p.upgrade_appetite==='HIGHEST'||p.upgrade_appetite==='HIGH')?'ok':(p.upgrade_appetite==='LOW'?'':'w');
   return '<tr><td><b>'+esc(p.kennel_name)+'</b>'+(p.contact_name&&p.contact_name!=='unknown'?'<div class="mut">'+esc(p.contact_name)+'</div>':'')
-   +(p.website&&p.website.indexOf('SITE')<0?'<div><a href="https://'+esc(p.website.replace(/^https?:\/\//,''))+'" target="_blank" rel="noopener">'+esc(p.website)+' \u2197</a></div>':(p.website?'<div class="mut">'+esc(p.website)+'</div>':''))+'</td>'
+   +(p.website&&p.website.indexOf('SITE')<0?'<div><a href="https://'+esc(p.website.replace(/^https?:\/\
    +'<td>'+flag(p.country_iso)+' '+esc(p.country)+(p.region&&p.region!=='unknown'?'<div class="mut">'+esc(p.region)+'</div>':'')+'</td>'
    +'<td>'+(p.mdba_number&&p.mdba_number!=='unknown'?'<code>'+esc(p.mdba_number)+'</code>':'<span class="mut">\u2014</span>')+'</td>'
    +'<td>'+(p.categories||'').split('; ').filter(Boolean).map(function(x){return '<span class="pill">'+esc(x)+'</span>';}).join(' ')+'</td>'
@@ -2227,7 +2220,7 @@ function pageShape(){
    +'</g>';
  }
  var g='';
- // spine
+
  var spineY={}, sy=100;
  SPINE.forEach(function(t){
   if(!N[t]) return;
@@ -2237,17 +2230,17 @@ function pageShape(){
      'fill="none" style="stroke:var(--ljr-2)" stroke-width="1"');
   sy+=h+30;
  });
- // lookups left
+
  var lookY={};
  look.forEach(function(t,i){ var y=100+i*STEP; lookY[t]=y+BH/2;
   g+=box(colL,y,200,BH,t,N[t].rows+' rows','fill="none" style="stroke:var(--press)" stroke-width="1"'); });
- // events right
+
  var evY={};
  ev.forEach(function(t,i){ var y=100+i*STEP; evY[t]=y+BH/2;
   g+=box(colE,y,250,BH,t,N[t].rows+' rows','fill="none" style="stroke:var(--ljr-5)" stroke-width="1"'); });
 
  function yOf(t){ return spineY[t]!==undefined?spineY[t]:(lookY[t]!==undefined?lookY[t]:evY[t]); }
- // edges: weight and dash carry the FILL RATE
+
  E.forEach(function(e){
   var y1=yOf(e.from), y2=yOf(e.to); if(y1===undefined||y2===undefined) return;
   var x1,x2;
@@ -2355,14 +2348,14 @@ var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageT
 var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Assocs'],['sops','SOPs']];
 var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','vet'],areas:['today','litters'],litters:['dogs','vet'],vet:['dogs','buyers'],buyers:['dogs','map'],sops:['dogs','buyers']};
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
-// Bottom tab bar: icon, short label (narrow screens) and the tab's colour (shown only in the small bar above the label).
+
 var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sitemap','Tables',0],today:['calendar-event','Today',4],
  round:['route','Round',4],dogs:['paw','Dogs',5],areas:['building-cottage','Areas',3],litters:['baby-carriage','Litters',7],
  vet:['stethoscope','Vet',5],buyers:['world','Assocs',6],sops:['clipboard','SOPs',6]};
-function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; } // 0 shows no ring
-// Bottom tabs: Main, Do, Today, Dogs, SOPs. Assocs sits under More with the other views. Same bar as every hub
-// (../house.css section 6, ../toolkit.js builds the tab and More). Counts: grey ring = waiting; rose ring only when one is late
-// (a rose count is read out as "N late").
+function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
+
+
+
 var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['sops','SOPs',6,'line']];
 var MORE_VIEWS=['shape','round','areas','litters','vet','buyers'];
 function navHtml(){
@@ -2375,19 +2368,19 @@ function navHtml(){
 }
 function pill(){
  var p=document.getElementById('livepill');
- p.removeAttribute('data-read');   // the phone's Look menu shows this read time (the pill leaves the bar there)
+ p.removeAttribute('data-read');
  if(LOAD.state==='ok'){ p.className='live ok';
   if(LOAD.storedAt) p.setAttribute('data-read','Read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}));
   var w='live · read-only'+(LOAD.storedAt?' · read '+new Date(LOAD.storedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/London'}):'');
-  // ✓ on screen; the words stay for screen readers (and the tests), and on hover.
+
   p.title=w; p.innerHTML='<span style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap">'+esc(w)+'</span>\u2713'; }
  else if(LOAD.state==='signin'){ p.className='live bad'; p.textContent='signed out'; }
  else if(LOAD.state==='loading'){ p.className='live'; p.textContent='\u2026'; }
  else if(LOAD.state==='ambiguous'){ p.className='live bad'; p.textContent='duplicate file titles'; }
  else if(LOAD.state==='err'){ p.className='live bad'; p.textContent='read failed'; }
 }
-// Every dropdown and box gets a name a screen reader can say: its first "choose…" option or its placeholder,
-// plus the cabin name when the dropdown belongs to one cabin.
+
+
 function labelControls(root){
  Array.prototype.forEach.call(root.querySelectorAll('select,input'),function(el){
   if(el.getAttribute('aria-label')||(el.id&&root.querySelector('label[for="'+el.id+'"]'))||el.closest('label')) return;
@@ -2400,8 +2393,8 @@ function labelControls(root){
  });
 }
 function render(){ go((location.hash||'#/map').replace('#/',''),false); }
-// Headings must not skip a level (h2 then h4). A card heading (h4) with no h3 above it since the last h2
-// becomes an h3 that looks the same, so screen-reader heading lists make sense on every screen.
+
+
 function levelHeadings(root){
  var seen3=false;
  Array.prototype.slice.call(root.querySelectorAll('h1,h2,h3,h4')).forEach(function(h){
@@ -2416,15 +2409,15 @@ function levelHeadings(root){
   h.parentNode.replaceChild(n,h);
  });
 }
-// After a screen change, move keyboard focus to the new screen's title (without scrolling),
-// so a screen reader announces where you are and Tab carries on from the top of the new screen.
+
+
 function focusView(){
  var h=document.querySelector('#main h2')||document.querySelector('#main h3,#main h4');
  if(!h) return;
  h.setAttribute('tabindex','-1');
  h.focus({preventScroll:true});
 }
-// Signed in and read: the top bar shows Refresh and Sign out (on a phone Sign out sits in the Look menu).
+
 function cdIn(on){ document.documentElement.classList.toggle('cd-in',on); ['cdRefresh','cdSignout'].forEach(function(id){ document.getElementById(id).classList.toggle('hidden',!on); }); }
 function go(id,push){
  pill();
@@ -2440,7 +2433,7 @@ function go(id,push){
  }
  if(LOAD.state==='loading'){ return; }
  if(LOAD.state!=='ok'){
-  // A failed read: Main's three parts, the failure in place of Next and Needs you, every number "–" (never a made-up one).
+
   main.innerHTML='<div style="margin-top:24px"><h2 class="sr">Main</h2>'+DashKit.hubMain({hub:'cdhub',error:(LOAD.state==='ambiguous'?'More than one file shares a title. Refusing to guess which is current: '+(LOAD.err||'')
      :LOAD.state==='err'?'The folder could not be read. '+(LOAD.err||'')+'.'
      :'Getting things ready. Nothing is stored in this page, so there is nothing to show yet.'),nums:mainNums(false),doHref:'#/work'})
@@ -2564,7 +2557,7 @@ document.addEventListener('click',function(e){
  if(na){ Array.prototype.forEach.call(document.querySelectorAll('[data-needmore]'),function(r){ r.classList.remove('hidden'); });
   var f=na.closest('.mfoot'); if(f) f.remove(); }
 });
-// Skip link: jump to the content without touching the #/section address.
+
 document.addEventListener('click',function(e){ var k=e.target.closest&&e.target.closest('[data-skip]'); if(!k) return; e.preventDefault(); var m=document.getElementById(k.dataset.skip); if(m){ m.setAttribute('tabindex','-1'); m.focus(); } });
 document.addEventListener('click',function(e){
  var b=e.target.closest&&e.target.closest('[data-dogshow],[data-unshow]'); if(!b) return;
@@ -2578,7 +2571,7 @@ document.addEventListener('click',function(e){
   if(document.getElementById('rdate')) go('round', false);
  }
 });
-// Filter row: Filter opens its panel; a chip clears its own filter; Sort redraws.
+
 document.addEventListener('click',function(e){
  var f=e.target.closest&&e.target.closest('[data-fpanel]');
  if(f){ var p=document.getElementById(f.dataset.fpanel); if(p){ var open=p.classList.contains('hidden'); p.classList.toggle('hidden',!open); f.setAttribute('aria-expanded',String(open)); } return; }
@@ -2589,7 +2582,7 @@ document.addEventListener('click',function(e){
 document.addEventListener('click',function(e){ var t=e.target.closest&&e.target.closest('[data-signin],[data-signout],[data-reload]'); if(!t||t.disabled) return;
  if(t.dataset.signin) signIn(); else if(t.dataset.signout) signOut();
  else if(t.dataset.reload){ if(TOKEN&&Date.now()<TOKEN_EXP) load(); else auth.requestSilent(); } });
-// Search (press /): dogs (name, chip, id) and litters (id, dam, sire, born) from the tables already read.
+
 DashKit.search.register(function(q){
  if(LOAD.state!=='ok') return [];
  var hit=DashKit.search.matches(q), out=[], byId=CD._byId||{};
@@ -2616,7 +2609,7 @@ render();
     document.querySelectorAll('ul.notes:not([data-calm])').forEach(function (ul) {
       var t = Array.prototype.map.call(ul.querySelectorAll('li'), function (li) { return li.textContent.trim(); }).join(' · ');
       var s = document.createElement('span'); s.className = 'info'; s.title = t; s.setAttribute('tabindex', '0'); s.textContent = 'i';
-      var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h); // screen readers (and tests) still get the words
+      var h = document.createElement('span'); h.textContent = ' ' + t; h.style.cssText = 'position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap'; s.appendChild(h);
       ul.setAttribute('data-calm', '1'); ul.replaceWith(s);
     });
   }
