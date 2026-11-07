@@ -344,18 +344,18 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dc .dc-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .dc-sects{border-top:1px solid var(--line)}
 .dcs{border-bottom:1px solid var(--line)}
-.dcs>summary{display:flex;align-items:center;gap:7px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;font-size:14px;color:var(--muted);min-width:0}
+.dcs>summary{display:flex;align-items:center;gap:7px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;font-size:var(--fs-small);color:var(--muted);min-width:0}
 .dcs>summary::-webkit-details-marker{display:none}
 .dcs>summary .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs>summary::after{content:'\25BA';margin-left:auto;font-size:.6rem;transition:transform .15s;display:inline-block;flex:0 0 auto}
 .dcs[open]>summary::after{transform:rotate(90deg)}
-.dcs-bd{padding:8px 12px 10px;display:flex;flex-direction:column;gap:5px;font-size:14px}
+.dcs-bd{padding:8px 12px 10px;display:flex;flex-direction:column;gap:5px;font-size:var(--fs-small)}
 .dcs-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
 .dcs-form{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
-.dcs-form input,.dcs-form select{background:var(--bg);border:1px solid var(--press);border-radius:var(--radius);padding:4px 7px;font-size:14px;color:var(--ink);width:100%;box-sizing:border-box}
-.dcs-form label{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:2px;flex:1}
+.dcs-form input,.dcs-form select{background:var(--bg);border:1px solid var(--press);border-radius:var(--radius);padding:4px 7px;font-size:var(--fs-small);color:var(--ink);width:100%;box-sizing:border-box;min-height:44px}
+.dcs-form label{font-size:var(--fs-small);color:var(--muted);display:flex;flex-direction:column;gap:2px;flex:1}
 .dcs-form .dcs-row{gap:6px;align-items:flex-end}
-.dcs-form button{background:var(--ljr-6);color:var(--ljr-6-on);border:none;border-radius:var(--radius);padding:5px 12px;font-size:14px;cursor:pointer;align-self:flex-end;margin-top:2px}
+.dcs-form button{background:var(--ljr-6);color:var(--ljr-6-on);border:none;border-radius:var(--radius);padding:5px 12px;font-size:var(--fs-small);cursor:pointer;align-self:flex-end;margin-top:2px;min-height:44px}
 .dcs-form button:disabled{opacity:.5}
 </style>
 </head><body>
@@ -1691,7 +1691,7 @@ function drawDogs(){
       '<details class="dcs wt"><summary>'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'
         +'<span class="dcs-label">Moxiclear'+(d.rxExpiry?' · <b>'+esc(ukDate(d.rxExpiry))+'</b>':'')+'</span>'
-        +(d.rxUrl?'<a class="cb" href="'+esc(safeUrl(d.rxUrl))+'" target="_blank" rel="noopener" aria-label="'+esc('Rx for '+(d.name||'this dog'))+'">Rx</a>':'')
+        +''
       +'</summary><div class="dcs-bd">'
         +(d.rxUrl?'<a class="cb" href="'+esc(safeUrl(d.rxUrl))+'" target="_blank" rel="noopener">View prescription</a>':'<span class="mut">No Rx link</span>')
       +'</div></details>'
