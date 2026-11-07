@@ -1688,12 +1688,11 @@ function drawDogs(){
     +'</summary><div class="dcs-bd"><b>'+esc(d.chip||'not recorded')+'</b></div></details>'
     // Moxiclear / Rx section (conditional)
     +(d.rxExpiry||d.rxUrl?
-      '<details class="dcs wt"><summary>'
+      '<details class="dcs wt"'+(d.rxUrl?' open':'')+' ><summary>'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'
         +'<span class="dcs-label">Moxiclear'+(d.rxExpiry?' · <b>'+esc(ukDate(d.rxExpiry))+'</b>':'')+'</span>'
-        +''
       +'</summary><div class="dcs-bd">'
-        +(d.rxUrl?'<a class="cb" href="'+esc(safeUrl(d.rxUrl))+'" target="_blank" rel="noopener">View prescription</a>':'<span class="mut">No Rx link</span>')
+        +(d.rxUrl?'<a class="cb" href="'+esc(safeUrl(d.rxUrl))+'" target="_blank" rel="noopener" aria-label="'+esc('Rx for '+(d.name||'this dog'))+'">Rx</a>':'<span class="mut">No Rx link</span>')
       +'</div></details>'
     :'')
   +'</div>'
