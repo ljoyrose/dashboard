@@ -714,6 +714,7 @@
   function load() {
     if (!accessToken) return;
     if (OT.st !== 'loading') OT.st = 'idle'; // Refresh re-reads the Owned Tools tab too
+    if (!S) render();   // J34-F84: show "Reading…" while the first read runs, not the sign-in card again
     findFile(ST.logsFolderId, ST.stateFile).then(function (f) {
       if (!f) return null;
       return media(f.id).then(function (r) { return r.json(); });

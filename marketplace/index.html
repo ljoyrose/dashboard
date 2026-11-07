@@ -394,6 +394,7 @@
   function load() {
     if (!M || !M.openWorkId) { banner('Not set up yet: the Marketplace settings are not in config.js.', true); return; }
     if (!token) { render(); return; }
+    if (!readDone) render();   // J34-F70 / F82: show "Reading…" while the first read runs, not the sign-in card again
     api(sheetUrl(M.tab + '!A2:L')).then(function (j) {
       rows = (j.values || []).map(function (v, i) { var o = { _row: i + 2 }; COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; }).concat(fishRows);
       readErr = null; readDone = true;
@@ -1021,6 +1022,7 @@
     $('signin').disabled = !token && !ready;
     if (!token) $('readAt').textContent = '';
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see what needs you</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
+    if (!readDone && !readErr) { $('view').innerHTML = '<div class="card"><p class="what">Reading…</p></div>'; return; }   // every page, not only Main: no "Do now: 0" before the first read lands
     var fa = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-iform'), fpos = fa ? document.activeElement.selectionStart : 0;   // keep the cursor in the Add idea form across a refresh
     $('view').innerHTML = pack && view === 'do' ? pagePack() : sheet && view === 'do' ? pageSheet() : view === 'me' ? pageMe() : view === 'sold' ? pageSold() : view === 'do' && postOnly ? pageTab('do', 'post') : view === 'round' ? pageRound() : view === 'numbers' ? pageNumbers()
       : view === 'insights' ? pageInsights() : view === 'stock' ? pageStock() : view === 'temu' ? pageTemu() : view === 'suppliers' ? pageSuppliers() : view === 'newstock' ? pageNewStock() : view === 'ideas' ? pageIdeas() : view === 'idea' ? pageIdea() : TABS[view] ? pageTab(view) : SECTIONS[view] ? pageList(view) : pageMe();
