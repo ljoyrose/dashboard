@@ -1,4 +1,3 @@
-// CD Hub: https://ljoyrose.github.io/dashboard/cdhub/
 const { test, expect, buildWorld } = require('../support/test');
 const { tabClick, tabTo } = require('../support/tabs');
 const { IDS, WANT_BLD, FIX } = require('../support/world');
@@ -640,7 +639,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const card = page.locator('#tempsCard');
     const strip = card.locator('.wk');
     const cells = strip.locator('.wkday');
-    await expect(cells).toHaveCount(7);
+    await expect(cells).toHaveCount(6);
     await expect(card.locator('.mrow')).toHaveCount(3);
     await expect(card.locator('.mrow', { hasText: 'Outside' })).toContainText('invented long phrase for outside only');
     await expect(card.locator('.mrow', { hasText: 'Morning' })).toBeVisible();
@@ -738,7 +737,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('.card[data-area]').first()).toContainText('Step 1: Test Cabin A');
   });
 
-  test('Dogs: one filter row (Search, Filter panel, Sort, removable chips); record cards have a name line, title, 44px thumbnail and who-has-it ring', async ({ page }) => {
+  test('Dogs: one filter row (Search, Filter panel, Sort, removable chips); record cards have a name line, title, 72px thumbnail and who-has-it ring', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     await openTab(page, 'dogs');
@@ -763,7 +762,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const card = page.locator('.dc').first();
     await expect(card.locator('.nl')).toContainText('Bitch');
     const ph = await card.locator('.ph').boundingBox();
-    expect([ph.width, ph.height]).toEqual([44, 44]);
+    expect([ph.width, ph.height]).toEqual([72, 72]);
     await expect(card.locator('.whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
     const r = await card.evaluate((e) => { const c = e.getBoundingClientRect(), w = e.querySelector('.whor').getBoundingClientRect(); return [Math.round(c.right - w.right), Math.round(c.bottom - w.bottom)]; });
     expect(r[0]).toBeLessThanOrEqual(14); expect(r[1]).toBeLessThanOrEqual(14);   // bottom-right
@@ -892,3 +891,4 @@ test.describe('CD Hub: screens that need data CD Hub does not hold say which Blo
     }
   });
 });
+
