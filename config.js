@@ -115,7 +115,7 @@
       listingsFileId: '1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW', // RR_LISTINGS.csv: read only, for the second photo on "Same item?" cards
       wakeFolderId: '',
       wakeFile: 'MKT-WAKE-WEBAPP.json',
-      ideasRequestsFolderId: '', // Drive folder for Product ideas request files (MKT-IDEA-REQ-*.json). Empty = the Add idea form will not send.
+      ideasRequestsFolderId: '1cd3vZwUYB0pNFUTQzSOMkYwuOeATG7Rv', // Drive folder for Product ideas request files (MKT-IDEA-REQ-*.json). Empty = the Add idea form will not send.
       live: false
     },
     // Puppy Enquiries Hub (enquiries/): reads the private RR_ENQUIRIES sheet (filled by the enquiries engine) with Lisa's

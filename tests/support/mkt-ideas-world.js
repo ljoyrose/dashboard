@@ -18,7 +18,7 @@ async function world(page, rows, opts = {}) {
   const out = { writes: [], uploads: [] };
   await page.route('**/config.js', async (route) => {
     const res = await route.fetch(); const body = await res.text();
-    await route.fulfill({ response: res, body: body + (opts.noFolder ? '' : `\nwindow.DASH_CONFIG.marketplace.ideasRequestsFolderId='${FOLDER}';`) });
+    await route.fulfill({ response: res, body: body + `\nwindow.DASH_CONFIG.marketplace.ideasRequestsFolderId='${opts.noFolder ? '' : FOLDER}';` });
   });
   await page.route(/googleapis\.com\/drive\/v3\/files\/[\w-]+\?alt=media/, (r) => r.fulfill({ status: 200, contentType: 'text/csv', body: 'listing_id,image_url\n' }));
   await page.route(/googleapis\.com\/upload\/drive\/v3\/files/, async (route) => {
