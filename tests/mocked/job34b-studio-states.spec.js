@@ -135,6 +135,7 @@ test.describe('JOB 34b Studio: signed out', () => {
     await page.goto('studio/#/decide');
     await expect(view(page).locator('[data-action="signin"]')).toBeVisible();
     for (const id of ['#tabs', '#newBtn', '#refreshBtn', '#signOutBtn', '#enginePill', '#budgetPill']) await expect(page.locator(id)).toBeHidden();
+    await expect(page.locator('#signInBtn')).toBeEnabled(); // Google sign-in has loaded; a click before that does nothing
     await view(page).locator('[data-action="signin"]').click();
     await expect(page.locator('#enginePill')).toBeVisible();
     await expect(view(page)).toHaveAttribute('data-view', 'decide');

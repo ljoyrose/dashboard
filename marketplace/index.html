@@ -1022,6 +1022,7 @@
     $('signin').disabled = !token && !ready;
     if (!token) $('readAt').textContent = '';
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see what needs you</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
+    if (!readDone && !readErr) { $('view').innerHTML = '<div class="card"><p class="what">Reading…</p></div>'; return; }   // every page, not only Main: no "Do now: 0" before the first read lands
     var fa = document.activeElement && document.activeElement.getAttribute && document.activeElement.getAttribute('data-iform'), fpos = fa ? document.activeElement.selectionStart : 0;   // keep the cursor in the Add idea form across a refresh
     $('view').innerHTML = pack && view === 'do' ? pagePack() : sheet && view === 'do' ? pageSheet() : view === 'me' ? pageMe() : view === 'sold' ? pageSold() : view === 'do' && postOnly ? pageTab('do', 'post') : view === 'round' ? pageRound() : view === 'numbers' ? pageNumbers()
       : view === 'insights' ? pageInsights() : view === 'stock' ? pageStock() : view === 'temu' ? pageTemu() : view === 'suppliers' ? pageSuppliers() : view === 'newstock' ? pageNewStock() : view === 'ideas' ? pageIdeas() : view === 'idea' ? pageIdea() : TABS[view] ? pageTab(view) : SECTIONS[view] ? pageList(view) : pageMe();
