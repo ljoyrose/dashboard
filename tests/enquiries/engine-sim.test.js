@@ -277,8 +277,10 @@ test('Stage 7: every enquiry is scored with a band, 1 to 3 reasons and flags; pr
 });
 
 // ---- Stage 8: reply drafts -----------------------------------------------------------------------------------------
+// FILE-S8-1 is dated an hour ago: the engine reads the real clock, and an enquiry over 7 days old rightly gets the
+// missed-enquiry apology instead of first-uk (this test went red on 5 Nov with a fixed 29 Oct date).
 test('Stage 8: drafts in the Drafts tab only (email + WhatsApp), none for do-not-contact, every one passes the check', { skip }, () => {
-  const files = [req('FILE-S8-1', 'email', 'From: Buyer U Sample\nA chocolate girl please buyer.u@example.com'),
+  const files = [req('FILE-S8-1', 'email', 'From: Buyer U Sample\nA chocolate girl please buyer.u@example.com', new Date(Date.now() - 3600000).toISOString()),
     req('FILE-S8-2', 'facebook', 'From: Buyer P\nHello again buyer.p@example.com')];
   const e = FAKE.load(src, { props: Object.assign({ ENQ_REQUESTS_FOLDER_ID: 'FOLDER-SAMPLE' }, CF_PROPS), routes: cfRoutes('Australian Labradoodles/Cobberdogs'), files, dryRun: false });
   e.ctx.setup();
