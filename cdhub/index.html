@@ -1923,7 +1923,7 @@ function keptReadings(date){
       +rows.map(function(x){ return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am)+'</td><td>'+cell(x.pm)+'</td></tr>'; }).join('')
       +'</tbody></table>'
     :'<p class="mut">No readings for '+esc(date)+'.</p>')
-  +'<p class="mut" style="margin-bottom:0">From BLD-area_reading.csv. Blue under 10 °C, green 10–27 °C, red over 27 °C.</p></section>'; }
+  +'</section>'; }
 /* indoor: BLD-area_reading.csv rows -> ROUND[date__area].t_am / t_pm (before 12:00 = morning). A later row for the same slot wins (corrections). */
 function foldAreaReadings(rows){
  rows.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
