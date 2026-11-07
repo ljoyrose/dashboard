@@ -97,10 +97,10 @@
     },
     // Actions minutes card (Home). Reads ACTIONS-MINUTES.json (counts only) from folderId with Lisa's sign-in; the file is
     // written by the private ACTIONS-MINUTES collector (Apps Script in Drive, read-only GitHub token in its Script Properties).
-    // folderId empty = the card shows invented example data with the EXAMPLE stamp and reads nothing.
+    // folderId: the folder that also holds DROPBOX-TOTALS.json. Empty = invented example data with the Example tag, reads nothing.
     // repoLabels: short labels only (the collector maps real repos to these); they set the row order. Never real repo names.
     actionsMinutes: {
-      folderId: '',
+      folderId: '0AEqV6Ky2jpmDUk9PVA',
       fileName: 'ACTIONS-MINUTES.json',
       freeMinutes: 2000,
       amber: 0.75,
