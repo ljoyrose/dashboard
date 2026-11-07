@@ -105,7 +105,7 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 
 /* ---- Read-only pills, counts and dates: small (24px), 1px ring, no hover. ---- */
 .pill{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid var(--press);white-space:nowrap;color:var(--ink);background:transparent;vertical-align:middle}
-.pill.ok{border-color:var(--ljr-5-text);box-sizing:border-box;width:var(--house-count-w);padding:0;justify-content:center}
+.pill.ok{border-color:var(--ljr-5-text);box-sizing:border-box;width:var(--house-count-w);padding:0;justify-content:center;flex:none}
 .pill.no{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
 .pill.w{border-color:var(--ljr-3-text);background:var(--ljr-3-tint)}
 .pill.i{border-color:var(--press)}
@@ -279,7 +279,7 @@ tr:last-child td{border-bottom:none}
 .dcrow .mut{color:var(--muted)}
 .dcrow .up{font-weight:600}
 .dcrow .dn{font-weight:600}
-.dcrow.tap{cursor:pointer;border-radius:4px;padding:1px 3px;margin-left:-3px}
+.dcrow.tap{cursor:pointer;border-radius:0px;padding:1px 3px;margin-left:-3px}
 .dcrow.tap:focus-visible{outline:2px solid var(--press)}
 .wt{display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);flex-wrap:wrap}
 .wt .lb,.chipline .lb{font-size:var(--fs-small);color:var(--muted)}
@@ -1195,9 +1195,14 @@ function outdoorStrip(date){
      +(wd?'<span class="wd">'+esc(wd)+'</span>':'')
      +'<span class="wdate">'+dm+'</span>'
      +'<span class="wt">'+esc(outdoorDeg(r.min,r.max))+'</span>'
-     +(tone?'<span class="wb"><span class="ic '+tone+'" aria-hidden="true"></span></span>':'')
-     +(rain?'<span class="wr wr-'+rain+'" aria-label="Rain: '+rain+(rainMm?', '+rainMm+'mm':'')+'"><svg width="7" height="9" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2 0 4.5 0 6.3a3.5 3.5 0 0 0 7 0C7 4.5 5 2 3.5 0Z"/></svg>'+(rainMm?'<span class="wdet">'+rainMm+'</span>':'')+'</span>':'')
-     +(windy?'<span class="ww" aria-label="Windy'+(windKph?': '+windKph+' km/h':'')+'"><svg width="9" height="7" viewBox="0 0 9 7" aria-hidden="true"><path d="M0 1h7M0 3.5h9M0 6h5" stroke-width="1.5" stroke-linecap="round"/></svg>'+(windKph?'<span class="wdet">'+windKph+'</span>':'')+'</span>':'')
+     +(tone?'<span class="wb"><span class="ic '+tone+'" aria-hidden="true"></span>'+band+'</span>':'')
+     +'<span class="wr'+(rain?' wr-'+rain:'')+'">'+
+       (rain
+         ?'<svg width="7" height="9" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2 0 4.5 0 6.3a3.5 3.5 0 0 0 7 0C7 4.5 5 2 3.5 0Z"/></svg>'
+           +(rain==='wet'&&rainMm?'wet '+rainMm+'mm':rain)
+         :'none')
+     +'</span>'
+     +(windy?'<span class="ww"><svg width="9" height="7" viewBox="0 0 9 7" aria-hidden="true"><path d="M0 1h7M0 3.5h9M0 6h5" stroke-width="1.5" stroke-linecap="round"/></svg>Windy'+(windKph?'<span class="wdet sr-only"> '+windKph+' km/h</span>':'')+'</span>':'')
      +'</div>';
   }).join('')+'</div>';
 }
@@ -1600,7 +1605,7 @@ function drawDogs(){
    +'<span class="'+(away?'mut':'mut')+'">'+esc(d.where||(d.off?'off site':'cabin not recorded'))+'</span>'
    +'</div>'
    +'</div>'
-   +'<span class="whor" aria-label="'+esc(who)+'"><svg class="ti" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span>'
+   +'<span class="whor" role="img" aria-label="'+esc(who)+'"><svg class="ti" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span>'
    +'</article>';});
  if(dogN<list.length) h+='<div class="filt" data-show-bar="dogs"><p class="mut">Showing '+dogN+' of '+list.length+'.</p>'
   +'<button type="button" class="cb" data-dogshow="more">Show more</button>'
