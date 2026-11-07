@@ -26,22 +26,22 @@
 
 
 :root{--sel-fill:transparent;--hov-fill:var(--hov);
- 
+
  --p0:var(--ljr-0);--p2:var(--ljr-2);--p3:var(--ljr-3);--p4:var(--ljr-4);--p5:var(--ljr-5);--p6:var(--ljr-6);--p7:var(--ljr-7);--p8:var(--ljr-8);
  --male:#2E86B0;--male-n:#9CC6DA;--female:#C85C87;--female-n:#EBB6CB;--unk:var(--ljr-0);
- 
+
  --fg:var(--ink);--ln:var(--line);--sub:var(--muted);}
 :root.sel-soft{--sel-fill:var(--soft);}
 html.text-lg body{zoom:1.12}html.text-xl body{zoom:1.25}html.space-roomy body{line-height:1.75}
 *{box-sizing:border-box}
-h1,h2,h3,h4,b,strong,th{font-weight:600}   
+h1,h2,h3,h4,b,strong,th{font-weight:600}
 body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--fs-body)/1.5 var(--house-font);-webkit-text-size-adjust:100%;hyphens:manual}
 a{color:inherit;text-underline-offset:2px}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .hidden{display:none!important}
 .wrap,.hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
 .wrap{padding-bottom:140px}
-.ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}   
+.ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 
 
 header.top{background:var(--frame);color:var(--frame-ink);position:sticky;top:0;z-index:20}
@@ -67,7 +67,7 @@ h3{font-size:var(--fs-head);margin:24px 0 12px;display:flex;align-items:center;g
 code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-nums;background:transparent;padding:0}
 
 
-.card{margin:0 0 12px;box-shadow:var(--shadow)} 
+.card{margin:0 0 12px;box-shadow:var(--shadow)}
 .card.dash{border-style:dashed}
 .card h4,.card .hx4{margin:0 0 12px;font-size:var(--fs-head);font-weight:600;display:flex;align-items:center;gap:8px;flex-wrap:wrap;letter-spacing:0;line-height:1.4}
 .card p{margin:0 0 8px;font-size:var(--fs-body)}.card p:last-child{margin-bottom:0}
@@ -703,7 +703,7 @@ function build(){
       reason:r.reason,src:r.source,need:r.ruling_needed,note:r.note}); });
   Object.keys(DSP).forEach(function(k){ DSP[k].sort(function(a,b){return a.on<b.on?-1:1;}); });
   CD.dispense=DSP;
-  
+
   CD.markers={}; (T['BLD-dna_marker.csv']||[]).forEach(function(r){ CD.markers[r.code]=r; });
   var DNA={}; (T['BLD-dna_result.csv']||[]).forEach(function(r){
     (DNA[r.subject_id]=DNA[r.subject_id]||[]).push({code:r.marker_code,genotype:r.genotype,
@@ -714,7 +714,7 @@ function build(){
     rain:r.rain_value,wind:r.wind_kmh}; });
   CD.docTypes=(T['BLD-doc_type.csv']||[]);
   CD.work=(T['BLD-WORK.csv']||[]);
-  
+
   CD.matings=(T['BLD-mating.csv']||[]).map(function(r){ return {id:r.id,dam:r.dam_subject_id,
     sire:r.sire_subject_id,on:r.mated_on,no:r.mating_no,method:r.method||'',
     first:r.is_first_of_season==='yes',due:r.due_from_this_mating||'',
@@ -732,7 +732,7 @@ function build(){
     var lits=LITBYDAM[r.id]||[];
     return {id:r.id,name:r.name,sex:r.sex,dob:r.dob,size:r.size_band,coat:r.coat_type,kind:r.kind,
       neuter:r.neuter_status,state:s.state||'',classification:o.classification||'',area_id:o.area_id||'',birthLitter:r.birth_litter_id||'',
-      
+
       where:'',off:o.off_site_kind||'',
       treats:DSP[r.id]||[], dna:DNA[r.id]||[],
       chip:m.chip_number||'',source:r.source,
@@ -742,8 +742,8 @@ function build(){
       pat:p?p.name:'',pig:g?{name:g.name,code:g.code,hex:g.swatch_hex}:null,
       weights:W[r.id]||[],findings:HS[r.id]||[],littersAsDam:lits};
   });
-  
-  
+
+
   CD.areas=(T['BLD-area.csv']||[]).map(function(r){ return {id:r.id,code:r.code,cabin:r.code,
     grouping:r.grouping||'other',group_sort:r.group_sort||'99',
     m2:r.area_value||'',m2ok:r.m2_confirmed||'',m2note:r.m2_note||''}; });
@@ -752,7 +752,7 @@ function build(){
     (a[r.access_type]||(a[r.access_type]={}))[r.size_band]={n:r.max_dogs,basis:r.basis||''}; });
   CD.cap=CAP;
   CD.accessCsv={}; (T['BLD-area_access.csv']||[]).forEach(function(r){ CD.accessCsv[r.area_id]=r; });
-  
+
   var _an={}; (T['BLD-area.csv']||[]).forEach(function(a){ _an[a.id]=a.code||a.id; });
   CD.dogs.forEach(function(d){
    d.where = d.area_id ? (_an[d.area_id]||d.area_id) : (d.off ? ('off site \u2014 '+d.off) : '');
@@ -830,26 +830,26 @@ function siredCount(id){ _breeders(); return (id&&_SIRE[id])||0; }
 function whelpedCount(id){ _breeders(); return (id&&_DAM[id])||0; }
 function statusOf(d){
  var w=d.classification||'';
- 
+
  if(d.dod) return {code:'DE',label:'Deceased',cls:'st-de'};
  var here=/^(active|in training)$/i.test(d.state||'');
  if(w==='Collected' || (!here && (/otherowner/i.test(d.vetStatus||'') || (d.vetActive||'')==='false')))
    return {code:'CL',label:'Collected',cls:'st-cl'};
- 
+
  if(/^cerys/i.test(d.off||'') || /^Cerys/i.test(w)) return {code:'CE',label:'Cerys',cls:'st-ce'};
  if(/owned_by_family/i.test(d.off||'') || /Owned by (GC|CC)/i.test(w))
    return {code:'GR',label:'Grace',cls:'st-gr'};
- 
+
  var m=months(d.dob);
  if(d.kind==='Pup' || (m!==null && m<6)) return {code:'PU',label:'Puppy',cls:'st-pu'};
- 
- 
+
+
  if(/breeding|brood|bitch/i.test(d.kind||'') || /Breeding Bitch/i.test(d.classification||'') || hasWhelped(d.id))
    return {code:'BI',label:'Bitch',cls:'st-bi'};
  if(/stud/i.test(d.kind||'') || /Stud/i.test(d.classification||'') || hasSired(d.id))
    return {code:'ST',label:'Stud',cls:'st-st'};
  if(/training/i.test(d.state||'')|| /Training/i.test(w)) return {code:'TR',label:'Training',cls:'st-tr'};
- 
+
  if(/Breeding Bitch/i.test(w)) return {code:'BI',label:'Bitch',cls:'st-bi'};
  if(/Stud Boy/i.test(w))       return {code:'ST',label:'Stud',cls:'st-st'};
  if(/Litters/i.test(w))        return {code:'LN',label:'Litter no mum',cls:'st-ln'};
@@ -905,7 +905,7 @@ var REFMAP={subject_id:'BLD-subject.csv',dam_subject_id:'BLD-subject.csv',sire_s
  dam_id:'BLD-subject.csv',sire_id:'BLD-subject.csv',birth_litter_id:'BLD-litter.csv',litter_id:'BLD-litter.csv',
  area_id:'BLD-area.csv',coat_colour_id:'BLD-coat_colour.csv',coat_pattern_id:'BLD-coat_pattern.csv',
  nose_pigment_id:'BLD-nose_pigment.csv',
- 
+
  person_id:'BLD-person.csv',client_id:'BLD-person.csv',document_id:'BLD-document.csv',
  media_id:'BLD-media.csv',staff_id:'BLD-person.csv',sop_version_id:'BLD-sop_version.csv',
  supplier_id:'BLD-supplier.csv',prescription_id:'BLD-prescription.csv'};
@@ -915,14 +915,14 @@ function refAudit(){
  Object.keys(REFMAP).forEach(function(c){ var f=REFMAP[c];
   if(idsOf[f]||absent[f]) return;
   var rows=T[f];
-  if(!rows||!rows.length){ absent[f]=1; return; }   
+  if(!rows||!rows.length){ absent[f]=1; return; }
   var s={}; rows.forEach(function(r){ if(r.id) s[r.id]=1; }); idsOf[f]=s; });
  var seen={};
  Object.keys(T||{}).forEach(function(f){
   var rows=T[f]; if(!rows||!rows.length) return;
   Object.keys(rows[0]).forEach(function(c){
    var tgt=REFMAP[c]; if(!tgt) return;
-   
+
    if(absent[tgt]){
     var used=0; for(var z=0;z<rows.length;z++){ if((rows[z][c]||'').trim()) used++; }
     if(used){ var kk=f.replace(/^BLD-|\.csv$/g,'')+'.'+c;
@@ -962,7 +962,7 @@ function ruleAudit(){
     else if(addDays(pt,1)!==f) bad.push(k+': gap between '+pt+' and '+f+' - a record dated in it resolves to nothing'); }
   }
   if(open>1) bad.push(k+' has '+open+' versions still open');
-  
+
   var nums=v.map(function(x){return parseInt(x.version,10);}).filter(function(x){return x>0;}).sort(function(a,b){return a-b;});
   if(nums.length!==v.length) bad.push(k+' has a version with no number - the sequence cannot be checked');
   else{
@@ -973,7 +973,7 @@ function ruleAudit(){
    }
   }
  });
- 
+
  var orph=0, checked=0;
  Object.keys(T||{}).forEach(function(f){
   var rows=T[f]; if(!rows||!rows.length||!rows[0].hasOwnProperty('declaration_id')) return;
@@ -990,7 +990,7 @@ function ruleAudit(){
  if(orph) bad.push(orph+' record(s) point at a declaration that did not cover their own date');
  return {bad:bad,n:D.length,keys:nk,checked:checked};
 }
-function addDays(iso,n){ var d=new Date(iso+'T00:00:00Z'); if(isNaN(d)) return ''; 
+function addDays(iso,n){ var d=new Date(iso+'T00:00:00Z'); if(isNaN(d)) return '';
  d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
 function dateAudit(){
  var bad=[], n=0, t=0;
@@ -1031,7 +1031,7 @@ function inWhelp(onISO){
     out.push({dog:d,dam:dam,matings:open.length,on:'',due:'',from:'',to:'',day:null,unknown:true});
     return; }
   var day=daysBetween(first.on,today);
-  if(day===null||day<0||day>72) return;          
+  if(day===null||day<0||day>72) return;
   out.push({dog:d,dam:dam,matings:open.length,on:first.on,
     due:addDays(first.on,63),from:addDays(first.on,57),to:addDays(first.on,72),day:day,
     sires:open.map(function(m){var x=CD._byId[m.sire];return x?x.name:(m.sire||'?');}),
@@ -1056,7 +1056,7 @@ function checks(){
    msg:c.nochip.length?c.nochip.length+' here have no chip recorded':'every dog here has one',list:'nochip'});
  out.push({k:'placed in an area',ok:!c.noarea.length,
    msg:c.noarea.length?c.noarea.length+' here are not in a cabin':'every dog here is placed',list:'noarea'});
- 
+
 
  var rc=refAudit();
  out.push({k:'joins',ok:!rc.bad.length,
@@ -1574,7 +1574,7 @@ function drawDogs(){
  var q=v('q').toLowerCase(),fs=v('fs'),fn=v('fn'),fa=v('fa'),fst=v('fst'),fc=v('fc'),ft=v('ft');
  var list=CD.dogs.filter(function(d){
   var sc=statusOf(d).code;
-  if(!fst && (sc==='CL'||sc==='DE')) return false;      
+  if(!fst && (sc==='CL'||sc==='DE')) return false;
   if(fs==='__none'){ if(d.sex) return false; } else if(fs&&d.sex!==fs) return false;
   if(fn){ var e=isEntire(d); if(fn==='e'&&!e) return false; if(fn==='n'&&e) return false; }
   if(fa&&ageBand(months(d.dob))!==fa) return false;
@@ -1762,7 +1762,7 @@ function pageAreas(){
           +(m==='free'?'free access \u2014 flap open':'limited \u2014 flap shut')+'</option>';}).join('')
     +'</select><span class="mut asave" data-area="'+a.id+'"></span>'
     +'<span class="mut">'+esc(accessReason(a.id))+'</span></div>';
-   
+
    {
     var modes = cur ? [cur] : ['free','limited'];
     h+='<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>flap</th>'+BANDS.map(function(b){return '<th>'+esc(b)+'</th>';}).join('')+'</tr></thead><tbody>'
@@ -2040,7 +2040,7 @@ function pageRound(){
     if(lives.length) sel=lives; }
   var acc=r.access||accessOf(aid), fromArea=!r.access&&!!acc;
    var m2=a.m2;
-  var cap=capFor(aid,'10-25kg (medium)',acc);   
+  var cap=capFor(aid,'10-25kg (medium)',acc);
   var over=(cap!=null && sel.length>parseInt(cap,10));
   h+='<div class="card '+(over?'acc2':(sel.length?'acc5':''))+'" data-area="'+aid+'">'
    +'<h4><span class="step">Step '+c.step+':</span> '+esc(c.cabin)
