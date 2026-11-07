@@ -236,7 +236,7 @@ tr:last-child td{border-bottom:none}
 .dc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);display:flex;flex-direction:column;box-shadow:var(--shadow);min-width:0;overflow:hidden;position:relative}
 .dc .bd{padding:10px 12px;display:flex;flex-direction:column;gap:6px;flex:1;min-width:0}
 .dc .hd{display:flex;align-items:flex-start;gap:10px;min-width:0}
-.ph{position:relative;flex:0 0 auto;width:110px;height:120px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
+.ph{position:relative;flex:0 0 auto;width:72px;height:72px;border-radius:var(--radius);background:var(--soft);border:1px solid var(--line);display:grid;place-items:center;color:var(--muted);overflow:hidden}
 .ph .ti{width:40px;height:40px}
 .ph .gicon{position:absolute;bottom:3px;right:3px;width:16px;height:16px;border-radius:50%;display:grid;place-items:center}
 .ph .gicon svg{width:11px;height:11px;stroke:white;fill:none;stroke-width:2;stroke-linecap:round}
@@ -344,18 +344,18 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dc .dc-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
 .dc-sects{border-top:1px solid var(--line)}
 .dcs{border-bottom:1px solid var(--line)}
-.dcs>summary{display:flex;align-items:center;gap:7px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;font-size:.82rem;color:var(--muted);min-width:0}
+.dcs>summary{display:flex;align-items:center;gap:7px;padding:7px 12px;cursor:pointer;list-style:none;user-select:none;font-size:14px;color:var(--muted);min-width:0}
 .dcs>summary::-webkit-details-marker{display:none}
 .dcs>summary .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs>summary::after{content:'\25BA';margin-left:auto;font-size:.6rem;transition:transform .15s;display:inline-block;flex:0 0 auto}
 .dcs[open]>summary::after{transform:rotate(90deg)}
-.dcs-bd{padding:8px 12px 10px;display:flex;flex-direction:column;gap:5px;font-size:.82rem}
+.dcs-bd{padding:8px 12px 10px;display:flex;flex-direction:column;gap:5px;font-size:14px}
 .dcs-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;min-width:0}
 .dcs-form{display:flex;flex-direction:column;gap:6px;border-top:1px solid var(--line);padding-top:8px;margin-top:4px}
-.dcs-form input,.dcs-form select{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:4px 7px;font-size:.82rem;color:var(--ink);width:100%;box-sizing:border-box}
-.dcs-form label{font-size:.75rem;color:var(--muted);display:flex;flex-direction:column;gap:2px;flex:1}
+.dcs-form input,.dcs-form select{background:var(--bg);border:1px solid var(--line);border-radius:4px;padding:4px 7px;font-size:14px;color:var(--ink);width:100%;box-sizing:border-box}
+.dcs-form label{font-size:14px;color:var(--muted);display:flex;flex-direction:column;gap:2px;flex:1}
 .dcs-form .dcs-row{gap:6px;align-items:flex-end}
-.dcs-form button{background:var(--ljr-6);color:var(--ljr-6-on);border:none;border-radius:4px;padding:5px 12px;font-size:.82rem;cursor:pointer;align-self:flex-end;margin-top:2px}
+.dcs-form button{background:var(--ljr-6);color:var(--ljr-6-on);border:none;border-radius:4px;padding:5px 12px;font-size:14px;cursor:pointer;align-self:flex-end;margin-top:2px}
 .dcs-form button:disabled{opacity:.5}
 </style>
 </head><body>
@@ -1635,7 +1635,7 @@ function drawDogs(){
   // EXPANDABLE SECTIONS
   +'<div class="dc-sects">'
     // Weight section
-    +'<details class="dcs"><summary>'
+    +'<details class="dcs wtc" data-dog="'+esc(d.id)+'"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg>'
       +'<span class="dcs-label">'+(w?'<b>'+w.kg+' kg</b> <span class="mut">'+esc(dmy(w.on))+'</span>':'<span class="mut">no weight</span>')+'</span>'
     +'</summary><div class="dcs-bd">'
@@ -1691,6 +1691,7 @@ function drawDogs(){
       '<details class="dcs"><summary>'
         +'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'
         +'<span class="dcs-label">Moxiclear'+(d.rxExpiry?' · <b>'+esc(ukDate(d.rxExpiry))+'</b>':'')+'</span>'
+        +(d.rxUrl?'<a class="cb" href="'+esc(safeUrl(d.rxUrl))+'" target="_blank" rel="noopener" aria-label="'+esc('Rx for '+(d.name||'this dog'))+'">Rx</a>':'')
       +'</summary><div class="dcs-bd">'
         +(d.rxUrl?'<a class="cb" href="'+esc(safeUrl(d.rxUrl))+'" target="_blank" rel="noopener">View prescription</a>':'<span class="mut">No Rx link</span>')
       +'</div></details>'
