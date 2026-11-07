@@ -112,7 +112,9 @@ test.describe('GA Hub page', () => {
     await open(page, '#/orders');
     await expect(page.locator('#view .row')).toHaveCount(5);
     await expect(page.locator('#view .row').first()).toContainText('#9005');
-    await expect(page.locator('#view .row .amt.red')).toHaveText('£8.17');
+    await expect(page.locator('#view .row .amt.red')).toHaveText('Profit £8.17');
+    await expect(page.locator('#view .row .amt.good').first()).toHaveText(/^Profit £/);
+    await expect(page.locator('#view .hint')).toHaveText('Profit is ex VAT, after all costs.');
     await expect(page.locator('nav.tabs a[data-nav="orders"]')).toHaveAttribute('aria-current', 'page');
   });
 
@@ -129,7 +131,7 @@ test.describe('GA Hub page', () => {
     await page.locator('[data-ofilter="low"]').click();
     await expect(page.locator('#view .row')).toHaveCount(1);
     await expect(page.locator('#view .row')).toContainText('#9101');
-    await expect(page.locator('#view .row .amt.red')).toHaveText('£7.99');
+    await expect(page.locator('#view .row .amt.red')).toHaveText('Profit £7.99');
   });
   test('low profit: MIN_PROFIT typed as 8 gives the same line; typed as 10 moves it (never hard-coded)', async ({ page }) => {
     const b = book(), row = (no, p) => [no, 'Shopify', 'DDF', 'GA', 'Invoiced', '', '', '1', '', '', '', '', '', p, '', '', '', '', '', '', '', 'One-off (Online Store)', '', '', '', '[]', 'Matched'];
