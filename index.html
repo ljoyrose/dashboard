@@ -868,7 +868,7 @@
   // tok: only the Personal Drive page passes its own look-only token (GETs only); everything else uses the work token.
   function apiCall(method, url, body, tok) {
     if (tok !== undefined) {
-      if (!tok || method !== 'GET') return Promise.reject(new ApiError(401, 'Personal sign-in expired', 'authError'));
+      if (!tok || (method !== 'GET' && tok !== personalAuth.binToken())) return Promise.reject(new ApiError(401, 'Personal sign-in expired', 'authError'));
     } else if (!accessToken || Date.now() > tokenExpiresAt) return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
     var opt = { method: method, headers: { Authorization: 'Bearer ' + (tok !== undefined ? tok : accessToken) } };
     if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
@@ -1524,6 +1524,7 @@
     if (cell.length || row.length) { row.push(cell); rows.push(row); }
     return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); });
   }
+  var ledgerSurf = {}; // 'surface file_id' keys, e.g. 'drive-personal 1abc'
   function idsFromLedgerCsv(text) {
     var rows = parseCsv(text);
     // The ledger may start with one note line such as "COUNT: 232 rows. …" (or "CURRENT: …") above the header.
@@ -1531,12 +1532,13 @@
     if (rows.length && rows[0].length === 1 && /^\s*(COUNT|CURRENT)\s*:/i.test(rows[0][0])) rows = rows.slice(1);
     if (!rows.length) return null;
     var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
-    var col = head.indexOf('file_id');
+    var col = head.indexOf('file_id'), sc = head.indexOf('surface');
     if (col < 0) return null;
     var ids = {};
     for (var i = 1; i < rows.length; i++) {
       var id = String(rows[i][col] || '').trim();
       if (id) ids[id] = true;
+      if (id && sc >= 0) ledgerSurf[String(rows[i][sc] || '').trim().toLowerCase() + ' ' + id] = 1;
     }
     return ids;
   }
@@ -1582,6 +1584,7 @@
   function loadLedgerSet() {
     if (ledgerCache) return ledgerCache;
     ledgerCache = readDriveText(LEDGER_FILE_ID).then(function (text) {
+      ledgerSurf = {};
       var ids = idsFromLedgerCsv(text);
       if (!ids) return { ok: false, ids: {}, note: LEDGER_FAIL };
       return findSlipIds().then(function (extra) {
@@ -1831,6 +1834,7 @@
     if (group === 'check') return (S.check.data && S.check.data.items) || [];
     if (group === 'pcpmark') return P.matches || [];
     if (group === 'pcpbin') return (P.candidates || []).filter(function (f) { return !f.blocked; });
+    if (group[0] === 'q') return window.PBin ? PBin.list(group) : [];
     if (group === 'usb') return U.matches || [];
     return [];
   }
@@ -1842,6 +1846,7 @@
     if (group === 'bin') return !!(S.bin.data && S.bin.data.ledgerOk && isDeleteName(it.name) && !nameHasRr(it.name) && !it._skip && !isZeroByte(it));
     if (group === 'pcpmark') return !nameHasRr(it.name) && !isZeroByte(it) && !isZzFamilyName(it.name);
     if (group === 'pcpbin') return !it.blocked && String(it.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(it.name) && !isZeroByte(it);
+    if (group[0] === 'q') return !!window.PBin && PBin.allowed(group, it);
     return false;
   }
   function visibleRows(group) {
@@ -1884,7 +1889,7 @@
   }
   function recheckForBin(f, opt) {
     opt = opt || {};
-    return apiGet(API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=' + LIVE_FIELDS).then(function (live) {
+    return apiGet(API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=' + LIVE_FIELDS, opt.tok).then(function (live) {
       if (!live || live.id !== f.id) return { ok: false, text: 'Skipped: could not re-read the item.' };
       if (live.trashed) return { ok: false, text: 'Skipped: already in the bin.' };
       if (excludedDrive(live.driveId)) return { ok: false, text: 'Skipped: excluded shared drive.' };
@@ -1912,8 +1917,8 @@
       return { ok: false, text: 'Not moved: ' + fr.text };
     });
   }
-  function trashOnly(f) {
-    return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }).then(function (res) {
+  function trashOnly(f, tok) {
+    return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }, tok).then(function (res) {
       return { ok: res.trashed === true, text: res.trashed === true ? 'Moved to bin' : 'Not moved' };
     }, function (err) {
       var fr = friendlyError(err);
@@ -1993,8 +1998,11 @@
   var personalAuth = DashAuth.personal({
     clientId: CLIENT_ID,
     scope: CFG.scopes.personal,
+    binScope: CFG.scopes.write,
     onToken: function () { Q = pcpFresh('idle', ''); render(); },
-    onError: function () { Q = pcpFresh('idle', ''); Q.error = 'Personal sign-in did not complete.'; render(); }
+    onError: function () { Q = pcpFresh('idle', ''); Q.error = 'Personal sign-in did not complete.'; render(); },
+    onBin: function () { Q.error = ''; Q.binStatus = 'idle'; loadPBin(); },
+    onBinError: function () { Q.error = 'Bin actions were not allowed. The page stays look-only.'; render(); }
   });
   function slotState(slot) { return slot === 'personal' ? Q : P; }
   function readPersonal(seen, slot) {
@@ -2211,6 +2219,17 @@
       busy = false; render();
     });
   }
+  // Personal Drive bin steps (estate/pbin.js): fetched only once bin actions are allowed.
+  function loadPBin() {
+    if (window.PBin) { PBin.load(); return; }
+    if (scriptsLoaded.pb) return;
+    scriptsLoaded.pb = 1;
+    needScripts(['estate/pbin.js']).then(function () {
+      PBin.init({ Q: function () { return Q; }, setQ: function (v) { Q = v; }, busy: function () { return busy; }, setBusy: function (b) { busy = b; }, pick: function () { return PICK; }, signedIn: function () { return signedIn; }, surf: function () { return ledgerSurf; },
+        personalAuth, pcpFresh, keepPersonalCandidate, isMoneyRollback, pcpAllPages, loadLedgerSet, classifyPcp, friendlyError, render, pickedItems, apiGet, apiCall, isZeroByte, nameHasRr, isZzFamilyName, mapLimit, spellingOf, recheckForBin, trashOnly, num, esc, visibleRows, pickCount, rowAllowed, tickBox, showBar, listShown, icon, CFG, API, LIVE_FIELDS, FOLDER_MIME, PCP_PREFIX, LEDGER_FAIL });
+      render(); PBin.load();
+    }).catch(function () { scriptsLoaded.pb = 0; });
+  }
   function tickList(group, items, reasonOf, listKey) {
     var step = 30;
     var n = listShown(listKey, items.length, step);
@@ -2232,7 +2251,8 @@
     var html = '<section class="card slot4' + (st.status === 'done' ? '' : st.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + title + '</h3>' +
       '<span class="state ' + (st.status === 'done' ? 'st-ok' : st.status === 'failed' ? 'st-failed' : running ? 'st-loading' : 'st-idle') + '"><span class="shape"></span>' +
       (st.status === 'done' ? 'Scanned' : st.status === 'failed' ? 'Failed' : running ? 'Reading…' : 'Not scanned') + '</span></div>';
-    if (personal) html += '<ul class="notes"><li>Look only: this page never renames, moves or bins.</li><li>Uses its own read-only sign-in, kept only while this tab is open and never used for work.</li></ul>';
+    var qOn = personal && !!personalAuth.binToken();
+    if (personal && !qOn) html += '<ul class="notes"><li>Look only: this page never renames, moves or bins.</li><li>Uses its own read-only sign-in, kept only while this tab is open and never used for work.</li></ul>';
     else html += '<ul class="notes"><li>Finds files in your work My Drive that already sit in a shared drive (exact copy).</li><li>Look only here. Rename and bin them in Bin.</li></ul>';
     if (st.log) html += '<p class="note">' + esc(st.log) + '</p>';
     if (st.error) html += '<p class="note fail">Stopped: ' + esc(st.error) + '</p>';
@@ -2250,7 +2270,9 @@
       html += '<div class="actions"><button class="btn" type="button" data-action="psignin">' + icon('in') + '<span>Sign in to your personal Google account (read-only)</span></button></div>';
     } else {
       html += '<div class="actions"><button class="btn" type="button" data-action="pcpscan" data-slot="' + slot + '"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>Scan this Drive vs shared drives</span></button>' +
-        (st.failedDrives && st.failedDrives.length && !busy ? '<button class="btn" type="button" data-action="pcpresume" data-slot="' + slot + '"><span>Continue: read the missed shared drives</span></button>' : '') + '</div>';
+        (st.failedDrives && st.failedDrives.length && !busy ? '<button class="btn" type="button" data-action="pcpresume" data-slot="' + slot + '"><span>Continue: read the missed shared drives</span></button>' : '') +
+        (personal && !qOn ? '<button class="btn" type="button" data-action="pbinallow"' + (busy ? ' disabled' : '') + '><span>Allow personal bin actions</span></button>' : '') + '</div>';
+      if (qOn) html += window.PBin ? PBin.block() : '<p class="note">Loading the bin steps…</p>';
     }
     return html + '</section>';
   }
@@ -3457,6 +3479,8 @@
     else if (a === 'pcpresume') pcpScan('continue', t.getAttribute('data-slot') || 'work');
     else if (a === 'psignin') personalAuth.request();
     else if (a === 'pcpmark') pcpMark();
+    else if (a === 'pbinallow') personalAuth.requestBin();
+    else if ((a === 'qmark' || a === 'qbin') && window.PBin) PBin[a]();
     else if (a === 'usbscan') usbScan();
     else if (a === 'usbcontinue') usbContinue();
     else if (a === 'usbstop') { U.stop = true; }
