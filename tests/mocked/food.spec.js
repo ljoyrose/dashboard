@@ -118,6 +118,22 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('nav.tabs a[data-nav="orders"]')).toHaveAttribute('aria-current', 'page');
   });
 
+  // Lisa, 8 Nov 2026: the order row shows what was bought and has its own Send button while the SEND- card waits; after the send it says so.
+  test('order row: items, species and sale; Send writes the SEND- card answer; a sent order says waiting for GA', async ({ page }) => {
+    const b = book(), h = b.orders[0].concat(['sent_at', 'species']), row = (no, sent) => [no, 'Shopify', 'DDF', 'GA', 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '70.00', '1', '2026-11-07T09:00:00Z', JSON.stringify([{ code: 'AAA0012KZPSXZZZ', qty: 2 }]), 'Waiting for GA', sent, 'Dog'];
+    b.orders = [h, row('9201', ''), row('9202', '2026-11-08T07:05:00Z')];
+    b.cards = [['SEND-9201', 'send', 'Orders', 'Send order #9201 to GA?', '{}', ago(30)]];
+    const writes = await sheets(page, b);
+    await open(page, '#/orders');
+    const first = page.locator('#view .row', { hasText: '#9202' }), second = page.locator('#view .row', { hasText: '#9201' });
+    await expect(second).toContainText('placed 07/11/2026 · 2 × Sample Doodle 12kg · Dog · sale £70.00');
+    await expect(first).toContainText('📤 Sent by XML 08/11/2026: waiting for GA');
+    await second.locator('button[data-v="Send"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Cards!G2:J2');
+    expect(writes[0].body.values[0][0]).toBe('Send');
+  });
+
   // G1 (Lisa, 30 Oct 2026): the low-profit warning is under £8. The value is read from MIN_PROFIT; a blank cell means 8.
   test('low profit: blank MIN_PROFIT means £8; under 8 is flagged, exactly 8 and over are not; a typed value still wins', async ({ page }) => {
     const b = book(), row = (no, p) => [no, 'Shopify', 'DDF', 'GA', 'Invoiced', '', '', '1', '', '', '', '', '', p, '', '', '', '', '', '', '', 'One-off (Online Store)', '', '', '', '[]', 'Matched'];
