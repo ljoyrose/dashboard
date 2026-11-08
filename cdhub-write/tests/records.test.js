@@ -8,7 +8,7 @@ const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
 const GUEST_HEADER = ['id', 'tenant_id', 'area_id', 'min_c', 'max_c', 'spot_c', 'precision_dp', 'period_start', 'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'mitigation_note', 'note'];
-const TYPE_HEADER = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope'];
+const TYPE_HEADER = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas'];
 const LOG_HEADER = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded'];
 
 const env0 = () => {
@@ -247,7 +247,8 @@ test('check_type: job columns are saved and checked', () => {
   assert.match(bad({ includes: 'Not A Key' }).fields.includes, /separated by/);
   assert.match(bad({ includes: 'k_x|nails' }).fields.includes, /cannot include itself/);
   assert.equal(bad({ evidence: 'maybe' }).code, 'INVALID');
-  assert.match(bad({ site_scope: 'per_dog' }).fields.site_scope, /whole-site/);
+  assert.match(bad({ site_scope: 'per_dog', not_in_areas: 'none' }).fields.site_scope, /whole-site/);
+  assert.match(bad({ target: 'none', site_scope: 'per_dog' }).fields.not_in_areas, /isolation rooms/);
 });
 
 test('check_type: a job with no new columns is as needed, no evidence, and whole-site scope is allowed', () => {
@@ -272,4 +273,66 @@ test('qr_tag: a site code can be made for the premises; an unknown kind cannot',
   const send2 = (kind, tag) => save(env, req(env, { code: env.codes.owner, table: 'qr_tag', fields: { tag, kind, ref_id: 'premises' } }));
   assert.equal(send2('site', 'Ab3dEf7h').ok, true);
   assert.equal(send2('planet', 'Zz3dEf7h').code, 'INVALID');
+});
+
+// ---- whole-site tap (fake rooms and dogs from fixtures: A is in area-t2, B in area-t1, C sold, D with a family, E has no room)
+const siteEnv = () => { const env = env0(); return env; };
+const siteTap = (env, f, code) => save(env, req(env, { code: code || env.codes.staff, table: 'check_log', action: 'add_site', fields: f }));
+const allDogs = (env) => recs(env, 'BLD-subject.csv').map((r) => r.id).join('|');
+
+test('site tap: a job about a place stays one line, whoever is on site', () => {
+  const env = siteEnv(); const id = addType(env, 'bowls', { target: 'none', site_scope: 'one_line' });
+  const r = siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: allDogs(env) });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].subject_id, '');
+  assert.equal(rows[0].how_recorded, 'site_tap');
+});
+
+test('site tap: a job about dogs writes one line per dog, and isolation, off-site and unknown-room dogs are never covered', () => {
+  const env = siteEnv(); const id = addType(env, 'walk', { target: 'none', site_scope: 'per_dog', not_in_areas: 'area-t2' });
+  const r = siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: allDogs(env) });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.result.saved, 1);
+  assert.equal(JSON.stringify(r.result.left_out), JSON.stringify({ isolation: 1, no_room: 1, off_site: 2, repeat: 0 }));
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.deepEqual(rows.map((x) => x.subject_id), ['sub-test-b']);
+  assert.equal(rows[0].how_recorded, 'site_tap');
+  assert.ok(rows[0].taken_by);
+});
+
+test('site tap: a repeat tap saves nothing new; no one eligible is refused', () => {
+  const env = siteEnv(); const id = addType(env, 'walk', { target: 'none', site_scope: 'per_dog', not_in_areas: 'none' });
+  assert.equal(siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-a|sub-test-b' }).result.saved, 2);
+  assert.equal(siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-a|sub-test-b' }).code, 'DUPLICATE');
+  assert.equal(recs(env, 'BLD-check_log.csv').length, 2);
+  assert.equal(siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-c|sub-test-e' }).code, 'INVALID');
+});
+
+test('site tap: refused for a dog or room job, an unknown dog, a guest, or another table', () => {
+  const env = siteEnv(); const dogJob = addType(env, 'nails'); const id = addType(env, 'walk', { target: 'none', site_scope: 'per_dog', not_in_areas: 'none' });
+  assert.equal(siteTap(env, { check_type_id: dogJob, outcome: 'ok', dog_ids: 'sub-test-a' }).code, 'INVALID');
+  assert.equal(siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-nope' }).code, 'INVALID');
+  assert.equal(siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-a' }, env.guest).code, 'NOT_ALLOWED');
+  assert.equal(save(env, req(env, { code: env.codes.staff, table: 'qr_tag', action: 'add_site', fields: {} })).ok, false);
+  assert.equal(recs(env, 'BLD-check_log.csv').length, 0);
+});
+
+test('site tap on a Sheet: all rows are added as plain text, and a failed read-back takes them all out again', () => {
+  const asSheet = (env, title) => { const f = env.file(title)[0]; f.sheet = env.ctx.csvParse_(f.content).filter((r) => !(r.length === 1 && r[0] === '')); f.fmt = {}; f.maxRows = 3; delete f.content; };
+  const env = siteEnv(); const id = addType(env, 'walk', { target: 'none', site_scope: 'per_dog', not_in_areas: 'none' });
+  asSheet(env, 'BLD-check_log.csv');
+  assert.equal(siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-a|sub-test-b' }).result.saved, 2);
+  const f = env.file('BLD-check_log.csv')[0];
+  assert.equal(f.sheet.length, 3);
+  assert.equal(f.fmt[2], '@'); assert.equal(f.fmt[3], '@');
+
+  const id2 = addType(env, 'run', { target: 'none', site_scope: 'per_dog', not_in_areas: 'none' });
+  const realFlush = env.ctx.SpreadsheetApp.flush; let n = 0;
+  env.ctx.SpreadsheetApp.flush = () => { if (++n === 1) f.sheet[f.sheet.length - 1][0] = 'garbled'; return realFlush && realFlush(); };
+  const bad = siteTap(env, { check_type_id: id2, outcome: 'ok', dog_ids: 'sub-test-a|sub-test-b' });
+  env.ctx.SpreadsheetApp.flush = realFlush;
+  assert.equal(bad.code, 'VERIFY_FAILED');
+  assert.equal(f.sheet.length, 3);
 });

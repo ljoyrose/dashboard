@@ -130,9 +130,9 @@ var TABLES = {
     file: 'BLD-check_type.csv',
     idPrefix: 'cty',
     columns: ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope'],
+              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas'],
     proposedColumns: ['type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope'],
+                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope', 'not_in_areas'],
     computedColumns: [],
     lookups: [],
     perms: { add: ['OWNER'], correct: [] },
@@ -160,7 +160,8 @@ var TABLES = {
       includes:       { type: 'text' },                                             // type_keys this job also covers, separated by |
       sop:            { type: 'text' },                                             // the SOP's short name
       evidence:       { type: 'enum', values: ['none', 'optional', 'required'], dflt: 'none' },
-      site_scope:     { type: 'enum', values: ['one_line', 'per_dog'] }             // target none only: what one whole-site tap writes
+      site_scope:     { type: 'enum', values: ['one_line', 'per_dog'] },            // target none only: what one whole-site tap writes
+      not_in_areas:   { type: 'text' }                                              // per_dog: room ids a whole-site tap never covers (isolation), by |, or none
     },
     dupKey: ['type_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
@@ -177,6 +178,9 @@ var TABLES = {
         else row.includes = keys.join('|');
       }
       if (!errors.site_scope && row.site_scope !== '' && row.target !== 'none') errors.site_scope = 'Only for a whole-site check.';
+      if (!errors.not_in_areas && row.site_scope === 'per_dog' && row.not_in_areas === '') {
+        errors.not_in_areas = 'List the isolation rooms this tap must never cover, separated by |, or type none.';
+      }
     },
     checkAgainst: function (clean, records, errors) {
       if (errors.type_key || errors.effective_from) return;
@@ -221,7 +225,7 @@ var TABLES = {
       happened_at:   { type: 'datetime' },
       note:          { type: 'text' },
       photo:         { type: 'text' },                                              // where the photo is kept; a saved photo is evidence, a scan is not
-      how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed'] }       // scanned = opened from a tag: it says which screen, not that anyone was there
+      how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed', 'site_tap'] }       // scanned = opened from a tag: it says which screen, not that anyone was there
     },
     dupKey: ['check_type_id', 'area_id', 'subject_id', 'item'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
