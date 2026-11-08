@@ -654,8 +654,9 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(cells.nth(0)).not.toContainText('Windy');
     await expect(cells.nth(1)).toContainText('12–18°');
     await expect(cells.nth(1)).not.toContainText('OK');
-    await expect(cells.nth(1)).toContainText('15mm');
-    await expect(cells.nth(1)).not.toContainText('wet 15mm');
+    // Lisa, 8 Nov 2026: the rain amount in mm is removed from the week strip; the drop icon alone says it is wet.
+    await expect(cells.nth(1).locator('.wr svg')).toHaveCount(1);
+    await expect(cells.nth(1)).not.toContainText('mm');
     await expect(cells.nth(1)).toContainText('Windy');
     await expect(cells.nth(2)).not.toContainText('light');
     await expect(cells.nth(2)).not.toContainText('Windy');
@@ -664,8 +665,8 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(cells.nth(4)).not.toContainText('Cold');
     await expect(cells.nth(4)).not.toContainText('light');
     await expect(cells.nth(4)).toContainText('Windy');
-    await expect(cells.nth(5)).toContainText('10mm');
-    await expect(cells.nth(5)).not.toContainText('wet 10mm');
+    await expect(cells.nth(5).locator('.wr svg')).toHaveCount(1);
+    await expect(cells.nth(5)).not.toContainText('mm');
     await expect(cells.nth(5)).not.toContainText('Windy');
     await expect(strip).not.toContainText('old forecast phrase');
     await expect(strip).not.toContainText('stale twin phrase');
