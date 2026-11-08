@@ -216,6 +216,20 @@ test.describe('GA Hub page', () => {
     await expect(rows.nth(0)).toContainText('Order #9315');
     await expect(rows.nth(1)).toContainText('Order #9312');
   });
+  test('reorder due with engine v1.15.3 keys: a customer who ordered again for the same species drops out; another species, a cancelled reorder and unkeyed orders do not change it @regression', async ({ page }) => {
+    const kRow = (no, d, key, sp, status) => growRow(no, d, 'One-off (Online Store)', 1, status).concat([key, sp]);   // invented keys
+    const b = growBook([kRow('9321', 50, 'CSAMPLE01', 'Dog'), kRow('9322', 10, 'CSAMPLE01', 'Dog'), kRow('9323', 40, 'CSAMPLE01', 'Cat'),
+      kRow('9324', 45, 'CSAMPLE02', 'Dog'), kRow('9326', 5, 'CSAMPLE02', 'Dog', 'Cancelled'), growRow('9325', 38, 'One-off (Online Store)', 1)]);
+    b.orders[0] = b.orders[0].concat(['customer_key', 'species']);
+    await sheets(page, b);
+    await open(page, '#/review');
+    const rows = page.locator('#reorder .row');
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(0)).toContainText('Order #9324 · Dog');
+    await expect(rows.nth(1)).toContainText('Order #9323 · Cat');
+    await expect(rows.nth(2)).toContainText('Order #9325');
+    await expect(page.locator('#reorder')).not.toContainText('#9321');   // the same customer ordered dog food again 10 days ago
+  });
   test('the Grow orders card picks the biggest gap: falling orders, then customers due to reorder, then few subscriptions; See who goes to the list', async ({ page }) => {
     const one = 'One-off (Online Store)', sub = 'Subscription (PayWhirl)';
     // falling: 1 now against 4 before (gap 3) beats 1 customer due to reorder and 1 one-off order
