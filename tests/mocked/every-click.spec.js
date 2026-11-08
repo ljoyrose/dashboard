@@ -6,7 +6,7 @@ const { test, expect } = require('../support/test');
 const ROUTES = [
   ['./', ['#/map', '#/drives', '#/drives/shared', '#/drives/readfirst', '#/drives/shared/drv-alpha1', '#/drives/work', '#/drives/personal-drive', '#/drives/usb', '#/drives/dropbox', '#/drives/icloud', '#/drives/mac', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'], '#signInBtn'],
   ['money/', ['#/now', '#/money', '#/dates', '#/todo', '#/accountant', '#/control', '#/e/TESTCO', '#/register/R001'], '#signInBtn'],
-  ['cdhub/', ['#/map', '#/work', '#/shape', '#/today', '#/round', '#/dogs', '#/areas', '#/litters', '#/vet', '#/buyers'], '#signinbtn'],
+  ['cdhub/', ['#/map', '#/work', '#/shape', '#/today', '#/round', '#/dogs', '#/areas', '#/litters', '#/vet', '#/buyers', '#/sops'], '#signinbtn'],
 ];
 // Not clicked here (each has its own test): signing out ends the session for the rest of the crawl.
 const SKIP = '[data-action="signout"], [data-signout], #signOutBtn, [data-skip], .skip';
@@ -51,6 +51,12 @@ for (const [base, hashes, signBtn] of ROUTES) {
       guard.allowedConsole = guard.allowedConsole || [];
       // The Drive check opens the computer's folder picker; here it answers "not allowed" so the page shows its message.
       await page.addInitScript(() => { window.showDirectoryPicker = () => Promise.reject(Object.assign(new Error('test'), { name: 'NotAllowedError' })); });
+      // Temperature history is a real page link (cdhub/history.html). It reads a spreadsheet CSV export on load.
+      // Answer that export here so the crawl can follow the link. data-skip stays for skip-to-content only.
+      if (base === 'cdhub/') {
+        await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export/, (route) =>
+          route.fulfill({ status: 200, contentType: 'text/csv', body: 'on_date\n' }));
+      }
       // Folds are remembered (toolkit.js 'dash-fold'): every fresh copy of the screen starts with nothing folded, so a fold clicked
       // earlier never hides the buttons under it from the rest of the crawl.
       await page.addInitScript(() => { try { localStorage.removeItem('dash-fold'); } catch (e) {} });

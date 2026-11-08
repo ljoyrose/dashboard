@@ -59,7 +59,7 @@ test.describe('Phone: CD Hub house look', () => {
     await page.goto('cdhub/');
     await page.locator('#signinbtn').click();
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
-    for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers']) {
+    for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops']) {
       await tabClick(page, `#nav button[data-go="${id}"]`);
       await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
       await noSidewaysScroll(page, id);

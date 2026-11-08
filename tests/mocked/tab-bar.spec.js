@@ -26,13 +26,13 @@ const PLAN = {
   marketplace: { tabs: ['Main', 'Decide', 'Do', 'Reply', 'New Stock', 'More'], phone: ['Main', 'Decide', 'Do', 'Reply', 'Stock', 'More'], more: ['Insights'] },
   studio: { tabs: ['Main', 'Decide', 'Do', 'Line', 'More'], more: ['Kits'] },
   factory: { tabs: ['Main', 'Decide', 'Do', 'Rooms', 'More'], more: ['Today', 'Docs', 'Mine'] }, // Mine: the old Main list (#/me/all) after Main became the hub Main (Lisa, 2 Nov)
-  cdhub: { tabs: ['Main', 'Do', 'Today', 'Dogs', 'Assocs', 'More'], more: ['Table map', 'The round', 'Areas', 'Litters', 'Vet link'] },
+  cdhub: { tabs: ['Main', 'Do', 'Today', 'Dogs', 'SOPs', 'More'], more: ['Table map', 'The round', 'Areas', 'Litters', 'Vet link', 'Assocs'] },
   food: { tabs: ['Main', 'Invoices', 'Orders', 'Products', 'More'], more: ['Do', 'Review', 'GA'] }, // Do + Review: the cards and growth moved off Main (2 Nov)
   estate: { tabs: ['Main', 'Do', 'Shops', 'More'], more: ['All', 'Unchecked', 'Access'] }, // All: the old Home list after Main became the hub Main (2 Nov)
 };
 // phone: the words a phone shows where Lisa chose a short one (2 Nov 2026: Accountant = Acct, New Stock = Stock); the name keeps the full word.
 // Each tab's colour (Lisa's LJR7 slots): Main 1, Decide 2 (red), Do 4 (yellow), More 0 (grey).
-const SLOT = { Main: '1', Decide: '2', Do: '4', More: '0', Orders: '4', Assocs: '6' };
+const SLOT = { Main: '1', Decide: '2', Do: '4', More: '0', Orders: '4', SOPs: '6' };
 const TRANSPARENT = /^(transparent|rgba\(0, 0, 0, 0\))$/;
 
 function measureBar() {
@@ -83,7 +83,7 @@ for (const [hub, H] of Object.entries(ALL)) {
       for (const t of m.tabs) {
         expect(['A', 'BUTTON'], `${t.word} is a real link or button`).toContain(t.tag);
         expect(t.name, `${t.word} has a name`).toMatch(new RegExp('^' + t.full));
-        expect(t.word, `${t.word}: one word, or two words each capitalised`).toMatch(/^[A-Z][a-z]+( [A-Z][a-z]+)?$/);
+        expect(t.word, `${t.word}: one word, or two words each capitalised`).toMatch(/^[A-Z][a-z]+( [A-Z][a-z]+)?$|^SOPs$/);
         expect(Math.abs(t.height - m.tabs[0].height), `${t.word} same height as the others`).toBeLessThan(1);
         expect(Math.abs(t.top - m.tabs[0].top), `${t.word} on the one row`).toBeLessThan(1);
         expect(t.iconAbove, `${t.word}: the icon sits above the word`).toBe(true);

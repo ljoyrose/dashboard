@@ -1,7 +1,8 @@
 // Counts and colour lines (Lisa's house-style picks, 2 Nov 2026), on all 8 pages:
 //  - a ringed count is a ring only: never a fill or tint behind the number (rose ring = late, grey ring = waiting, 0 = no ring);
-//  - a coloured left line on a card or row runs the WHOLE height of it, 3px wide, curved with a card's corner and straight on
-//    a square row (no short stub floating in the middle, no inset shadow);
+//  - a coloured left line on a card or row runs the WHOLE height of it, 3px wide, curved with a card's corner.
+//    A Needs-you row shell is rounded (12px); its bar stays a straight 3px line, not a "(" bracket
+//    (no short stub floating in the middle, no inset shadow);
 //  - icon shades are the --ljr-N-icon tokens (slots 0 to 7, light and dark looks);
 //  - a bottom tab's count never overlaps the tab's icon, on a phone (390, a dot beside the icon's top-right corner, Lisa's pick b)
 //    or a laptop (1280, the ring), and on a wide tab the icon stays centred.
@@ -77,11 +78,15 @@ for (const [hub, H] of Object.entries(ALL)) {
       for (const l of m.lines) {
         expect(l.w, `${hub} #/${v} ${l.what}: the line is 3px`).toBeCloseTo(3, 1);
         expect(Math.abs(l.h - l.host), `${hub} #/${v} ${l.what}: the line runs the full height (${l.h} vs ${l.host})`).toBeLessThanOrEqual(1);
-        // A card's line curves with the card's corner; a row inside a card has square corners, so its line is straight
-        // (Lisa, 2 Nov 2026: rows use a straight 3px .house-lbar, never a "(" bracket).
-        if (l.hostRadius > 0) expect(l.radius, `${hub} #/${v} ${l.what}: the line curves with the card's corner`).toBeGreaterThanOrEqual(Math.max(8, l.hostRadius - 0.5));
-        else expect(l.radius, `${hub} #/${v} ${l.what}: a row's line is straight`).toBe(0);
-        expect(l.radiusB, `${hub} #/${v} ${l.what}: both ends curve`).toBeCloseTo(l.radius, 1);
+        // A card's line curves with the card's corner. A Needs-you row shell is rounded (12px) and its bar stays straight
+        // (5 Nov: rounded rows; the bar is not a "(" bracket). A host with square corners keeps a straight line.
+        const rowShell = /(?:^|\.)hm-row(?:\.|$)/.test(l.what) || (/^li\./.test(l.what) && /(?:^|\.)house-lbar(?:\.|$)/.test(l.what));
+        if (rowShell) {
+          expect(l.hostRadius, `${hub} #/${v} ${l.what}: the row shell is rounded`).toBeCloseTo(12, 1);
+          expect(l.radius, `${hub} #/${v} ${l.what}: the bar stays straight`).toBe(0);
+        } else if (l.hostRadius > 0) expect(l.radius, `${hub} #/${v} ${l.what}: the line curves with the card's corner`).toBeGreaterThanOrEqual(Math.max(8, l.hostRadius - 0.5));
+        else expect(l.radius, `${hub} #/${v} ${l.what}: a square host's line is straight`).toBe(0);
+        expect(l.radiusB, `${hub} #/${v} ${l.what}: both ends match`).toBeCloseTo(l.radius, 1);
       }
       found += m.lines.length;
     }

@@ -1,0 +1,4 @@
+{
+  "cdhub": 12000,
+  "why": "SOPs bottom tab and the public name index (cdhub/sop-index.json, read with the page). Measured cdhub load 307720, over 269500 + 10%."
+}
