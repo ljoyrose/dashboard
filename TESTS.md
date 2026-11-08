@@ -318,6 +318,7 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 5 Nov 2026 | CD Hub boot said it was reading tables from Drive and waited on each file in turn | "boot stays friendly and present files are read together @regression" |
 | 5 Nov 2026 | CD Hub Temperatures today showed "Saving off." again, and Temperature history did not open (a bare data-skip blocked the link) | "Temperatures today: no saving-off notice, and Temperature history opens history.html @regression" (tests/mocked/cdhub.spec.js) |
 | 6 Nov 2026 | Temperatures showed "Source:" and the reading kind, including the word actual, on history and on Outside today when the phrase was empty | "Outside today does not show the reading kind when the phrase is empty @regression" and "year chips run current first, and a day detail does not show Source or the reading kind @regression" |
+| 8 Nov 2026 | Food Reorder due listed customers who had already reordered (the page could not tell customers apart; Lisa) | "reorder due with engine v1.15.3 keys: a customer who ordered again…" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.

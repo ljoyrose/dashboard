@@ -292,9 +292,16 @@
     var pct = function (n) { return last.length ? Math.round(n * 100 / last.length) : 0; };
     var repeat = last.filter(function (o) { return num(o.customer_orders) >= 2; }).length, subs = last.filter(function (o) { return /^sub/i.test(o.order_type); }).length;
     // Reorder due: one-off shop orders paid REORDER_DUE_DAYS to 30 days beyond that ago, oldest first (subscribers reorder by themselves).
-    var reorder = ordersBetween(due, due + 30).filter(function (o) { return o.source === 'Shopify' && /^one-off/i.test(o.order_type); })
+    var reorder = ordersBetween(due, due + 30).filter(function (o) { return o.source === 'Shopify' && /^one-off/i.test(o.order_type) && latestFor(o); })
       .sort(function (a, b) { return Date.parse(a.placed_at) - Date.parse(b.placed_at); });
     return { last: last.length, prev: prev.length, repeat: pct(repeat), subs: pct(subs), oneOff: last.length - subs, reorder: reorder, due: due };
+  }
+  // Engine v1.15.3 writes customer_key (a one-way code, never the email) and species on each order. An order counts as
+  // "due" only if it is that customer's latest order for that species; one without a key is kept, as before (Lisa, 8 Nov 2026).
+  function latestFor(o) {
+    if (!o.customer_key) return true;
+    var sp = String(o.species || ''), t = Date.parse(o.placed_at);
+    return !data.orders.some(function (x) { return x !== o && x.customer_key === o.customer_key && String(x.species || '') === sp && x.status !== 'Cancelled' && Date.parse(x.placed_at) > t; });
   }
   function nth(k) { var v = k % 100; return k + (v > 10 && v < 14 ? 'th' : ['th', 'st', 'nd', 'rd'][k % 10] || 'th'); }
   function daysAgo(at) { var d = Math.floor((Date.now() - Date.parse(at)) / 864e5); return d + ' day' + (d === 1 ? '' : 's') + ' ago'; }
@@ -321,7 +328,7 @@
       (mo ? '<a class="tile" href="#/orders"><span class="k">Orders this month (aim ' + mo + ')</span><span class="v' + (g.last < mo ? ' red' : '') + '">' + g.last + '</span></a>' : '') + '</div>';
     h += growCard(g);
     if (g.reorder.length) h += '<div class="card" id="reorder"><p class="bline"><span class="dot" style="--c:var(--ljr-6)" aria-hidden="true"></span>Reorder due (over ' + g.due + ' days old)</p>' +
-      (g.reorder.length ? g.reorder.map(function (o) { return '<div class="row"><div class="txt"><div><b>Order #' + esc(o.order_no) + '</b></div><div class="m">' + esc(daysAgo(o.placed_at)) + (num(o.customer_orders) ? ' · customer\'s ' + esc(nth(num(o.customer_orders))) + ' order' : '') + '</div><div class="links">' + shopLink(o) + '</div></div></div>'; }).join('')
+      (g.reorder.length ? g.reorder.map(function (o) { return '<div class="row"><div class="txt"><div><b>Order #' + esc(o.order_no) + '</b>' + (o.species ? ' · ' + esc(o.species) : '') + '</div><div class="m">' + esc(daysAgo(o.placed_at)) + (num(o.customer_orders) ? ' · customer\'s ' + esc(nth(num(o.customer_orders))) + ' order' : '') + '</div><div class="links">' + shopLink(o) + '</div></div></div>'; }).join('')
         : '') + '</div>';
     return h + '</section>';
   }
