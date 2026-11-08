@@ -333,8 +333,13 @@ test.describe('Dashboard Main', () => {
           expect(w[1], v + ' body width').toBeLessThanOrEqual(w[2]);
         }
         await page.evaluate(() => { location.hash = '#/map'; });
-        const lines = await page.locator('#hubTiles .hubtile').evaluateAll((ts) => ts.map((t) => { const b = getComputedStyle(t, '::before'); return /linear-gradient/.test(b.backgroundImage) ? 'gradient' : b.borderLeftColor; }));
-        expect(lines).toEqual(TILES.map((t) => t[2]));
+        await expect(page.locator('#view')).toHaveAttribute('data-view', 'map');
+        // Wait for the tiles to be drawn with their line class before reading colours (read too early, every colour came back
+        // blank about 1 run in 6: the map re-renders after the hash change).
+        const tiles = page.locator('#hubTiles .hubtile.house-lbar');
+        await expect(tiles).toHaveCount(TILES.length);
+        await expect.poll(() => tiles.evaluateAll((ts) => ts.map((t) => { const b = getComputedStyle(t, '::before'); return /linear-gradient/.test(b.backgroundImage) ? 'gradient' : b.borderLeftColor; })))
+          .toEqual(TILES.map((t) => t[2]));
         const ink = await page.locator('#hubTiles .hubtile[data-hub="apps"] .hk b').first().evaluate((b) => [getComputedStyle(b).color, getComputedStyle(document.body).backgroundColor]);
         expect(ink[0]).not.toBe(ink[1]);
       });
