@@ -159,12 +159,12 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('all eleven sections are in the bar: five tabs, then the other six under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('all twelve sections are in the bar: five tabs, then the other seven under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(6);
+    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(7);
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
@@ -463,7 +463,7 @@ test.describe('CD Hub house look', () => {
     for (const wide of [false, true]) {
       if (wide) await page.addStyleTag({ content: '.cnt{font-family:Verdana,"DejaVu Sans",sans-serif!important;letter-spacing:.12em!important}' });
       const sizes = await measure();
-      expect(sizes.map((x) => x[0]), 'one- and two-digit counts on Main').toEqual(expect.arrayContaining(['16']));
+      expect(sizes.map((x) => x[0]), 'one- and two-digit counts on Main').toEqual(expect.arrayContaining(['17']));
       // The tab counts are the corner ring (tab picks, 2 Nov) holding a 14px number (pick A): 24 x 24 whatever the font, the two digits on one line.
       const tc = await page.locator('#nav button[data-go="work"] .n').evaluate((e) => { const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.whiteSpace, s.fontSize]; });
       expect(tc, 'the Do tab count' + (wide ? ' (wider font)' : '')).toEqual(['12', 24, 24, '12px', 'nowrap', '14px']);
@@ -524,14 +524,16 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#summary')).toHaveCount(0);   // the On track / Needs you / Overdue trio became the 3 numbers
     await expect(page.locator('[data-hm="next"] .hm-what')).toHaveText('Tables read needs a look');
     await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
-    await expect(page.locator('[data-hm="needs"] .hm-head .cnt')).toHaveText('5');
+    await expect(page.locator('[data-hm="needs"] .hm-head .cnt')).toHaveText('6');   // + Breeding rules not set (8 Nov 2026)
     await expect(page.locator('[data-hm="nums"] .hm-n[data-k="Temps"] .hm-v')).toHaveText('0 of 2');
-    await expect(page.locator('#nav button[data-go="map"] .n')).toHaveText('5');
+    await expect(page.locator('#nav button[data-go="map"] .n')).toHaveText('6');
     await expect(page.locator('#nav button[data-go="work"] .n')).toHaveText('1');
-    // Each row carries its action: the waiting item opens Do (Outstanding).
-    await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Sample item waiting on Lisa' }).locator('a[data-hm-act]').click();
-    await expect(page.locator('#nav button[data-go="work"]')).toHaveAttribute('aria-current', 'page');
-    await expect(page.locator('#needsCard .mrow')).toHaveCount(5);
+    // Each row carries its action: unset breeding rules open Compliance (8 Nov 2026); the waiting item now sits on Do (Outstanding).
+    await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Breeding rules' }).locator('a[data-hm-act]').click();
+    await expect(page.locator('#nav button[data-go="compliance"]')).toHaveAttribute('aria-current', 'page');
+    await openTab(page, 'work');
+    await expect(page.locator('#needsCard .mrow')).toHaveCount(6);
+    await expect(page.locator('#needsCard')).toContainText('Sample item waiting on Lisa');
     // Rose = late only (Lisa's sweep, 3 Nov 2026): the count is rose exactly when one of its rows is late.
     const anyLate = (await page.locator('#needsCard .mrow .ic.late').count()) > 0;
     if (anyLate) await expect(page.locator('#needsCard h3 .cnt')).toHaveClass(/need/); else await expect(page.locator('#needsCard h3 .cnt')).not.toHaveClass(/need/);
@@ -540,8 +542,8 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#tempsCard')).toContainText('0 of 2');
     await expect(page.locator('#tempsCard')).toContainText('No reading today');
     await openTab(page, 'shape');
-    await expect(page.locator('#checksCard h3 .cnt')).toHaveText('4');
-    await expect(page.locator('#checksCard .mk.bad')).toHaveCount(4);
+    await expect(page.locator('#checksCard h3 .cnt')).toHaveText('5');
+    await expect(page.locator('#checksCard .mk.bad')).toHaveCount(5);
   });
 
   test('Needs you: late first, then soon; Next is the most urgent and opens Today; Do keeps the date pills; Litters shows both', async ({ page, guard }) => {
@@ -586,9 +588,9 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
     await page.locator('[data-hm-more]').click();
     await expect(page.locator('#needsCard .mrow:visible')).toHaveCount(7);
-    await expect(page.locator('#needsCard .mfoot')).toContainText('Showing 7 of 10');
+    await expect(page.locator('#needsCard .mfoot')).toContainText('Showing 7 of 11');
     await page.locator('#needsCard [data-needall]').click();
-    await expect(page.locator('#needsCard .mrow:visible')).toHaveCount(10);
+    await expect(page.locator('#needsCard .mrow:visible')).toHaveCount(11);
   });
 
   test('Temperatures today: no saving-off notice, and Temperature history opens history.html @regression', async ({ page }) => {

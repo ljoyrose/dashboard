@@ -74,11 +74,11 @@ test('banner follows what the script reports', async () => {
 test('page checks mirror the server and give plain messages', () => {
   const s = mk(fakeServer());
   s.setLookups({ area: [{ id: 'area-t1' }] });
-  assert.equal(s.validate('area_reading', { area_id: 'area-t1', min_c: '21.47', max_c: '24' }).ok, true);
+  assert.equal(s.validate('area_reading', { area_id: 'area-t1', min_c: '21.4', max_c: '24' }).ok, true);
   const e = s.validate('area_reading', { area_id: 'area-zz', min_c: '25', max_c: '20', spot_c: '1.234', mitigation_note: '=SUM(A1)' }).errors;
   assert.match(e.area_id, /Not found/);
   assert.match(e.min_c, /lowest cannot be higher/);
-  assert.match(e.spot_c, /2 decimals/);
+  assert.match(e.spot_c, /1 decimal/);
   assert.match(e.mitigation_note, /do not start with/);
   const none = mk(fakeServer());
   assert.match(none.validate('area_reading', { area_id: 'area-t1', min_c: '1', max_c: '2' }).errors.area_id, /list is not loaded/);
@@ -88,7 +88,7 @@ test('submit sends one POST as plain text with the code in the body, never in th
   const srv = fakeServer();
   const s = mk(srv, { scriptUrl: GOOD_URL });
   await s.checkStatus(); s.setLookups({ area: [{ id: 'area-t1' }] }); s.setCode('SECRETCODE1');
-  const r = await s.submit('area_reading', { area_id: 'area-t1', min_c: '21.47', max_c: '24.10' });
+  const r = await s.submit('area_reading', { area_id: 'area-t1', min_c: '21.4', max_c: '24.1' });
   assert.equal(r.ok, true);
   assert.equal(r.status, 'queued');
   assert.match(r.message, /approvals queue/);
@@ -160,12 +160,12 @@ test('config file in Drive: only a clean, single, switched-on file with a real S
 
 // ------------------------------------------------------------------ bands
 const BANDS = BLDBands.parseBands([
-  { id: 'tb-u4', band: 'under four weeks', age_from_days: '0', age_to_days: '28', min_temp: '26.00', max_temp: '28.00' },
-  { id: 'tb-o4', band: 'four weeks and over', age_from_days: '29', age_to_days: '', min_temp: '10.00', max_temp: '26.00' }
+  { id: 'tb-u4', band: 'under four weeks', age_from_days: '0', age_to_days: '28', min_temp: '26.0', max_temp: '28.0' },
+  { id: 'tb-o4', band: 'four weeks and over', age_from_days: '29', age_to_days: '', min_temp: '10.0', max_temp: '26.0' }
 ]);
 const ACTIONS = BLDBands.parseActions([
-  { direction: 'below', threshold_c: '10.00', action: 'EMERGENCY' }, { direction: 'above', threshold_c: '25.00', action: 'shade' },
-  { direction: 'above', threshold_c: '26.00', action: 'fans' }, { direction: 'above', threshold_c: '28.00', action: 'hose' }
+  { direction: 'below', threshold_c: '10.0', action: 'EMERGENCY' }, { direction: 'above', threshold_c: '25.0', action: 'shade' },
+  { direction: 'above', threshold_c: '26.0', action: 'fans' }, { direction: 'above', threshold_c: '28.0', action: 'hose' }
 ]);
 
 test('bands: the youngest dog sets the band; no dogs or no dates is said plainly', () => {
@@ -179,9 +179,9 @@ test('bands: the youngest dog sets the band; no dogs or no dates is said plainly
 
 test('bands: verdicts and the action ladder', () => {
   const adult = BANDS[1];
-  assert.equal(BLDBands.verdict('21.47', adult), 'ok');
-  assert.equal(BLDBands.verdict('9.99', adult), 'low');
-  assert.equal(BLDBands.verdict('26.01', adult), 'high');
+  assert.equal(BLDBands.verdict('21.4', adult), 'ok');
+  assert.equal(BLDBands.verdict('9.9', adult), 'low');
+  assert.equal(BLDBands.verdict('26.1', adult), 'high');
   assert.equal(BLDBands.verdict('', adult), '');
   assert.equal(BLDBands.verdict('20', null), '');
   assert.equal(BLDBands.actionFor('9', ACTIONS), 'EMERGENCY');
@@ -236,9 +236,9 @@ domTest('temperature screen: save, show the result, no staff correction path, "W
   const [minIn, maxIn] = card.querySelectorAll('.bs-pair .bs-in');
   const btn = card.querySelector('.bs-btn');
   assert.equal(btn.disabled, false);
-  assert.match(card.querySelector('.bs-band').textContent, /Band: four weeks and over, 10.00 to 26.00/);
+  assert.match(card.querySelector('.bs-band').textContent, /Band: four weeks and over, 10.0 to 26.0/);
 
-  minIn.value = '21.47'; maxIn.value = '27.5';
+  minIn.value = '21.4'; maxIn.value = '27.5';
   maxIn.dispatchEvent(new (doc.defaultView.Event)('input'));
   const noteField = [...card.querySelectorAll('.bs-field')].find((f) => /What was done/.test(f.textContent));
   assert.equal(noteField.hidden, false);
@@ -382,14 +382,14 @@ domTest('Bloodline: pasting a wrong address is refused; a right one turns saving
   d.querySelector('input[type=password]').value = 'CODE123456';
   d.querySelector('input[type=password]').dispatchEvent(new w.Event('input'));
   const [mn, mx] = card.querySelectorAll('.bs-pair .bs-in');
-  mn.value = '21.47'; mx.value = '24.10';
+  mn.value = '21.4'; mx.value = '24.1';
   card.querySelector('.bs-btn').click();
   await tick();
   assert.match(card.querySelector('.bs-result').textContent, /approvals queue/);
   const post = calls.find((c) => c.init.method === 'POST');
   const body = JSON.parse(post.init.body);
   assert.equal(body.table, 'area_reading');
-  assert.equal(body.fields.min_c, '21.47');
+  assert.equal(body.fields.min_c, '21.4');
   assert.equal(body.code, 'CODE123456');
   assert.ok(!post.url.includes('CODE123456'));
 });
@@ -735,7 +735,7 @@ domTest('location check look: The Board\'s fonts and tokens are in the styleshee
   const css = read('screens/bld-save.css');
   assert.match(css, /Bricolage Grotesque/); assert.match(css, /Figtree/);
   assert.match(css, /\.bs\.bs-board\{/);
-  assert.match(css, /--bs-accent:#e39a2d/);                       // the Board's amber
+  assert.match(css, /--bs-accent:var\(--ljr-3,#E78615\)/);       // the Board's amber, now the house token
   assert.match(css, /min-height:60px/);                          // big yes/no taps
   assert.match(css, /prefers-color-scheme:dark/);
 });
@@ -791,7 +791,7 @@ domTest('Bloodline: staff load the dogs with their personal code, no Google sign
 
 test('rooms and bands: after a move the dog is in its NEW room only (the old row is never closed, so it must not count)', () => {
   const T = fakeTables();
-  T['BLD-temperature_band.csv'] = [{ id: 'b1', band: 'four weeks and over', age_from_days: '29', age_to_days: '', min_temp: '10.00', max_temp: '26.00' }];
+  T['BLD-temperature_band.csv'] = [{ id: 'b1', band: 'four weeks and over', age_from_days: '29', age_to_days: '', min_temp: '10.0', max_temp: '26.0' }];
   const before = BLDLook.fromTables(T, '2026-10-15');
   assert.equal(before.bandForArea('area-t2').dogId, 'sub-test-a');                      // Test A is in T2 (latest row)
   assert.equal(before.bandForArea('area-t1').dogId, 'sub-test-b');                      // T1 has Test B (undated legacy row)
