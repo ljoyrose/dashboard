@@ -5,7 +5,7 @@
  * Every limit comes from the owner's own rows (BLD-area_capacity: area_id, access_type, size_band, max_dogs).
  * A room's rows are ALTERNATIVES, not an allowance per size (Lisa, 8 Nov 2026): "3 small or 2 medium" means one or
  * the other, so 1 medium and 2 small is over. Every dog must fit the alternative for its size, so the room is held to
- * the alternative of its largest dog. A small dog can share within the medium alternative: 1 medium and 1 small fits "2 medium".
+ * the alternative of its largest dog. Being under is fine (Lisa, 8 Nov 2026): 1 medium and 1 small fits "2 medium".
  * A puppy with its dam in the same room is not counted; the dam then uses the "+ pups" alternative.
  */
 (function (root, factory) {
@@ -83,7 +83,7 @@
     if (!counted.length) res.status = 'ok';
     else if (limit !== null && counted.length > limit) res.status = 'over';
     else res.status = noSize || missing.length || limit === null ? 'unknown' : 'ok';
-    if (res.status === 'over') res.message = (res.mix || counted.length + ' dogs') + ' is over the limit. This room takes ' + (res.alternatives || 'no dogs of this size') + (res.alternatives.indexOf(' or ') > 0 ? ', one or the other, not a mix.' : '.');
+    if (res.status === 'over') res.message = (res.mix || counted.length + ' dogs') + ' is over the limit. This room takes ' + (res.alternatives || 'no dogs of this size') + (res.alternatives.indexOf(' or ') > 0 ? ', one or the other. Every dog counts as the largest size here.' : '.');
     else res.message = res.notes.join(' ');
     return res;
   }

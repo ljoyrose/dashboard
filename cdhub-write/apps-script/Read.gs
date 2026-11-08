@@ -104,6 +104,7 @@ function sinkRead_(req) {
   if (!Object.prototype.hasOwnProperty.call(READABLE, key)) {
     throw err_('FILE_NOT_ALLOWED', 'That is not a list the system can show you.');
   }
+  if (who.role === ROLE_GUEST && key !== 'area') throw err_('NOT_ALLOWED', 'Lisa has not allowed you to see this list.');
   var rd = READABLE[key];
   var audiences = { role: audienceFor_(who.role), person: who.id ? 'person:' + who.id : '' };
   var denied = err_('NOT_ALLOWED', 'Lisa has not allowed you to see this list.');
