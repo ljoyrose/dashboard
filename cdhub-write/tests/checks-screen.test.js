@@ -125,3 +125,10 @@ test('the four approved checks, one after another, each save with their own word
   assert.deepEqual(rows.map((r) => r.outcome), ['ok', 'ok', 'ok', 'recorded']);
   assert.equal(rows[3].area_id + rows[3].subject_id, '');
 });
+
+test('published checks page: its copy of the screen matches, and it loads only published files', () => {
+  const fs = require('node:fs'), path = require('node:path'), root = path.join(__dirname, '..', '..');
+  assert.equal(fs.readFileSync(path.join(root, 'cdhub/checks/checks.js'), 'utf8'), fs.readFileSync(path.join(root, 'cdhub-write/records/checks.js'), 'utf8'));
+  const html = fs.readFileSync(path.join(root, 'cdhub/checks/index.html'), 'utf8');
+  for (const m of html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)) assert.ok(fs.existsSync(path.join(root, 'cdhub/checks', m[1])), m[1]);
+});
