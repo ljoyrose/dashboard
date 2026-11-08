@@ -8,6 +8,7 @@ Phone page for staff. No Google sign-in. Published at `cdhub/staff/`. Holds no d
 
 1. Lisa opens `print/` on her own set-up device and shows **Phone set-up QR**. It carries the save address, built on her device; the address is never in this repo.
 2. The person scans it and types their own staff code once. It stays on that phone. Lisa switching the code off wipes it on the next read or save.
+   Or, with no typing: **Private set-up QR** on `print/`. Lisa pastes one person's code and it is drawn on her screen only, for 2 minutes (`#join=<code>&url=<save address>`, in the # part so it never reaches a server). Nothing is saved, printed or logged. The phone removes it from the address bar and history before anything else runs, and keeps the code only if the script accepts it. Printed room, dog and litter QRs never carry a code: they only open a screen, and a scan is not proof that anyone was there.
 
 ## QR codes
 

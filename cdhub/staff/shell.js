@@ -9,7 +9,7 @@
  */
 (function () {
   'use strict';
-  var CODE_KEY = 'bld.device.code', SCAN_PREFIX = 's/', SETUP_PREFIX = 'setup=', TAG_RE = /^[A-Z2-9]{4,12}$/;
+  var CODE_KEY = 'bld.device.code', SCAN_PREFIX = 's/', SETUP_PREFIX = 'setup=', JOIN_PREFIX = 'join=', JOIN_URL = '&url=', TAG_RE = /^[A-Z2-9]{4,12}$/;
   var FILES = ['modules/moves.js', 'modules/where.js', 'modules/temperature/module.js'];
   var ICONS = {
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>',
@@ -21,7 +21,18 @@
   var screen = document.getElementById('screen'), tabs = document.getElementById('tabs');
   var save = BLDSave.create({});
   save.deviceCode = true;
-  var modules = [], cleanup = null, dataP = null, started = false;
+  var modules = [], cleanup = null, dataP = null, started = false, join = null;
+
+  /** Private set-up QR (#join=<code>&url=<save address>): take it out of the address bar and history before anything else runs. */
+  function takeJoin() {
+    var raw = (location.hash || '').slice(1);
+    if (raw.indexOf(JOIN_PREFIX) !== 0) return;
+    history.replaceState(null, '', location.pathname);
+    var at = raw.indexOf(JOIN_URL), c = '', u = '';
+    if (at > 0) { try { c = decodeURIComponent(raw.slice(JOIN_PREFIX.length, at)).trim(); u = decodeURIComponent(raw.slice(at + JOIN_URL.length)); } catch (e) { c = ''; } }
+    join = { code: c, url: u };
+  }
+  takeJoin();
 
   function storeGet(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }
   function storeSet(k, v) { try { if (v) localStorage.setItem(k, v); else localStorage.removeItem(k); return true; } catch (e) { return false; } }
@@ -104,6 +115,23 @@
     screen.appendChild(code); screen.appendChild(btn); screen.appendChild(msg);
   }
 
+  /** Check the code from a private set-up QR. It is only remembered if the save script accepts it. */
+  function runJoin(j) {
+    clearScreen(); tabs.hidden = true;
+    screen.appendChild(h('h1', { text: 'Set up this phone' }));
+    var msg = h('p', { class: 'msg', role: 'status', text: 'Checking...' });
+    screen.appendChild(msg);
+    function fail(t) { save.clearCode(); msg.className = 'msg bad'; msg.textContent = t; }
+    var r = j.code ? save.setScriptUrl(j.url, true) : { ok: false };
+    if (!r.ok) { fail('That set-up QR was not right. Ask Lisa for a new one.'); return; }
+    save.setCode(j.code, false);
+    save.checkStatus().then(function () { return rawRead('area'); }).then(function (res) {
+      if (!res.ok) { fail(res.code === 'BAD_CODE' ? 'That code was not accepted. Ask Lisa for a new QR.' : (res.message || 'That did not work. Ask Lisa for a new QR.')); return; }
+      if (!storeSet(CODE_KEY, j.code)) { fail('This browser will not remember the code. Turn off private browsing and scan again.'); return; }
+      dataP = null; go('home');
+    });
+  }
+
   function drawHome() {
     clearScreen(); setTabs('home');
     screen.appendChild(h('h1', { text: 'The Board' }));
@@ -114,6 +142,9 @@
         h('div', { class: 'nm' }, [h('span', { class: 'ic', html: m.icon || ICONS.dogs }), m.title]), m.desc ? h('div', { class: 'ds', text: m.desc }) : null
       ]));
     });
+    list.appendChild(h('a', { class: 'card go', href: '../checks/', 'data-link': 'checks' }, [
+      h('div', { class: 'nm' }, [h('span', { class: 'ic', html: ICONS.dogs }), 'Staff checks']), h('div', { class: 'ds', text: 'Record the daily checks' })
+    ]));
     screen.appendChild(list);
   }
   function drawDevice() {
@@ -134,6 +165,8 @@
 
   /** Called on every address change. A scan on a phone that is not set up shows nothing but the set-up screen. */
   function route() {
+    takeJoin();
+    if (join) { var j = join; join = null; runJoin(j); return; }
     var hash = decodeURIComponent((location.hash || '').slice(1));
     if (hash.indexOf(SETUP_PREFIX) === 0) {
       var r = save.setScriptUrl(hash.slice(SETUP_PREFIX.length), true);
