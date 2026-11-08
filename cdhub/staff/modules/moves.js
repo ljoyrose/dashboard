@@ -46,8 +46,9 @@
       }
       function checkRoom(areaId, ids) { return BLDCapacity.check({ areaId: areaId, access: BLDCapacity.accessOf(access, areaId), capacity: capacity, dogs: ids.map(fact) }); }
       function capLine(r) {
-        if (r.limit === null) return 'Limit: not known. ' + r.notes.join(' ');
-        return r.count + ' of ' + r.limit + ' dogs' + (r.access ? ' (' + r.access + ' access)' : '') + (r.notes.length ? '. ' + r.notes.join(' ') : '');
+        var takes = r.alternatives ? 'Takes ' + r.alternatives + (r.access ? ' with ' + r.access + ' access' : '') + '. ' : '';
+        if (r.limit === null) return takes + (r.count ? r.count + ' here. ' : '') + r.notes.join(' ');
+        return takes + r.count + ' of ' + r.limit + ' now.' + (r.notes.length ? ' ' + r.notes.join(' ') : '');
       }
 
       function drawHome() {
@@ -119,7 +120,7 @@
         if (r.status !== 'over') { send(''); return; }
         host.appendChild(h('div', { class: 'card', role: 'alert', style: 'border-color:var(--bad);border-left:3px solid var(--bad)' }, [
           h('div', { class: 'nm', text: '⚠ Over the licence limit' }),
-          h('p', { text: 'Moving ' + names + ' puts ' + r.count + ' dogs in ' + room.label + '. The limit is ' + r.limit + (r.access ? ' with ' + r.access + ' access.' : '.') })
+          h('p', { text: 'Moving ' + names + ' to ' + room.label + ': ' + r.message })
         ]));
         if (action === 'refuse') { host.appendChild(say('This move has not been saved. Ask Lisa.', 'bad')); return; }
         var why = h('input', { class: 'inp', type: 'text', maxlength: '500', 'aria-label': 'Why this move is needed', placeholder: 'Why is this move needed?' });
