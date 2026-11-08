@@ -454,6 +454,7 @@
   function media(id) { return drive(CFG.urls.files + '/' + id + '?alt=media&supportsAllDrives=true', { cache: 'no-store' }); }
   function load() {
     if (!accessToken) return;
+    if (!S) render();   // J34-F83: show "Reading…" while the first read runs, not the sign-in card again
     findFile(F.logs, F.state).then(function (f) { return media(f.id).then(function (r) { return r.json(); }); })
       .then(function (j) { S = j; err = null; allTasks(); applyPend(); var nf = 0; (j.failed || []).forEach(function (f) { if (sent[f.taskId]) { delete sent[f.taskId]; nf++; } }); if (nf) { saveSent(); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); } $('stamp').textContent = String(j.mode).toUpperCase() === 'LIVE' ? '' : 'Test'; render(); })
       .catch(function (e) { err = e.message; render(); });

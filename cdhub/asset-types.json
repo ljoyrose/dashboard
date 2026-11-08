@@ -1,0 +1,32 @@
+{
+  "do_not_remap": ["other", "sheet"],
+  "types": [
+    {"type_code": "poster", "label": "Poster", "icon_key": "poster", "requires_sop_link": true, "allow_unlinked_reconciliation": true, "enabled": true, "approval_status": "approved", "sort": 1},
+    {"type_code": "sign", "label": "Sign", "icon_key": "sign", "requires_sop_link": true, "allow_unlinked_reconciliation": true, "enabled": true, "approval_status": "approved", "sort": 2},
+    {"type_code": "checklist", "label": "Checklist", "icon_key": "checklist", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 3},
+    {"type_code": "form", "label": "Form", "icon_key": "form", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 4},
+    {"type_code": "log", "label": "Log", "icon_key": "log", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 5},
+    {"type_code": "register", "label": "Register", "icon_key": "register", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 6},
+    {"type_code": "certificate", "label": "Certificate", "icon_key": "certificate", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 7},
+    {"type_code": "policy", "label": "Policy", "icon_key": "policy", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 8},
+    {"type_code": "map_plan", "label": "Map / site plan", "icon_key": "map_plan", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 9},
+    {"type_code": "rota", "label": "Rota", "icon_key": "rota", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 10},
+    {"type_code": "training_record", "label": "Training record", "icon_key": "training_record", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 11},
+    {"type_code": "datasheet", "label": "Data sheet (SDS)", "icon_key": "datasheet", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 12},
+    {"type_code": "inspection_report", "label": "Inspection report", "icon_key": "inspection_report", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 13},
+    {"type_code": "declaration", "label": "Declaration", "icon_key": "declaration", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 14},
+    {"type_code": "risk_assessment", "label": "Risk assessment", "icon_key": "risk_assessment", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 15},
+    {"type_code": "emergency_plan", "label": "Emergency plan", "icon_key": "emergency_plan", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 16},
+    {"type_code": "competency_sheet", "label": "Competency sheet", "icon_key": "competency_sheet", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 17},
+    {"type_code": "index_pointer", "label": "Index", "icon_key": "index_pointer", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 18},
+    {"type_code": "schedule", "label": "Schedule", "icon_key": "schedule", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 19},
+    {"type_code": "programme", "label": "Programme", "icon_key": "programme", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 20},
+    {"type_code": "agreement", "label": "Agreement / contract copy", "icon_key": "agreement", "requires_sop_link": false, "allow_unlinked_reconciliation": false, "enabled": true, "approval_status": "approved", "sort": 21}
+  ],
+  "formats": [
+    {"format_code": "photo", "label": "Photo", "icon_key": "fmt_photo", "mime_allowlist": ["image/jpeg", "image/png", "image/webp"], "sort": 1},
+    {"format_code": "scan", "label": "Scan of print", "icon_key": "fmt_scan", "mime_allowlist": ["image/jpeg", "image/png", "application/pdf"], "sort": 2},
+    {"format_code": "pdf", "label": "PDF file", "icon_key": "fmt_pdf", "mime_allowlist": ["application/pdf"], "sort": 3},
+    {"format_code": "plain_upload", "label": "Other allowed file", "icon_key": "fmt_upload", "mime_allowlist": [], "sort": 4}
+  ]
+}

@@ -151,7 +151,7 @@ nav.house-tabs .ht { --c: var(--ljr-0-icon); --f: var(--ljr-0); position: relati
   padding: 6px 0 8px; border: 0; border-radius: var(--radius); outline: none; box-shadow: none; background: var(--card); color: var(--ink);
   font-family: inherit; font-size: var(--fs-small); font-weight: 600; line-height: 16px; text-decoration: none; text-align: center; cursor: pointer; transform: none;
   display: flex; flex-direction: column; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 1px; overflow: hidden; }
-nav.house-tabs .ht:hover, nav.house-tabs .ht[aria-current="page"], nav.house-tabs .ht[aria-expanded="true"] { background: var(--card); border: 0; box-shadow: none; outline: none; }
+nav.house-tabs .ht:hover, nav.house-tabs .ht[aria-current="page"], nav.house-tabs .ht[aria-expanded="true"] { background: var(--card); border: 0; border-radius: var(--radius); box-shadow: none; outline: none; }
 nav.house-tabs .ht > .hic { box-sizing: border-box; flex: none; width: var(--house-tab-disc); height: var(--house-tab-disc); border-radius: 50%; display: grid; place-items: center;
   border: var(--house-line) solid transparent; background: transparent; color: var(--ljr-0-icon); }
 nav.house-tabs .ht > .hic > :is(svg, .ti, i) { width: var(--house-tab-icon); height: var(--house-tab-icon); font-size: var(--house-tab-icon); line-height: 1; color: inherit;
@@ -309,10 +309,10 @@ a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
 .hm .btn.hm-a { text-decoration: none; color: var(--ink); flex: none; }
 .hm-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .hm-row { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 0 6px 12px; border-radius: var(--radius); min-width: 0; }
-.hm-row.house-lbar { --house-lbar-out: 0px; --sc: var(--house-ring); }
-/* Inside a list the bar is a plain straight 3px line, never a "(" bracket per row (Lisa, 2 Nov): rows are square; and nothing moves
-   on hover, focus or press (the hover line is an outline, house section 13), so every row keeps one left edge. */
-.hm-row.house-lbar, .hm-row.house-lbar::before { border-radius: 0; }
+.hm-row.house-lbar { --house-lbar-out: 0px; --sc: var(--house-ring); border-radius: var(--radius); }
+/* The row shell is rounded like a house card (Lisa, 5 Nov). The left colour bar stays a straight 3px line, not a "(" bracket.
+   This supersedes 2 Nov "rows are square" for the row shell only. Nothing moves on hover, focus or press (the hover line is an outline). */
+.hm-row.house-lbar::before { border-radius: 0; }
 .hm-row, .hm-row:hover, .hm-row:focus-within, .hm-row:active { margin: 0; padding: 6px 0 6px 12px; border-width: 0; }
 .hm-row[data-kind="late"] { --sc: var(--house-late); }
 .hm-row[data-kind="today"] { --sc: var(--house-soon); }
