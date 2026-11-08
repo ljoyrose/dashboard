@@ -78,7 +78,7 @@
     clear(host);
     host.classList.add('bs');
     host.appendChild(el(doc, 'h2', { class: 'bs-h', text: 'Room temperatures' }));
-    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Read the min/max thermometer, then type both numbers to 2 decimal places exactly as shown. A saved reading is never edited. Wrong entry? Tell the owner \u2013 she can fix it.' }));
+    host.appendChild(el(doc, 'p', { class: 'bs-sub', text: 'Read the min/max thermometer, then type both numbers to 1 decimal place exactly as shown. A saved reading is never edited. Wrong entry? Tell the owner \u2013 she can fix it.' }));
 
     var cards = el(doc, 'div', { class: 'bs-cards' });
     var header = mountHeader(doc, host, save, 'area_reading', refreshButtons);
@@ -98,8 +98,8 @@
     }
 
     areas.forEach(function (a) {
-      var minIn = el(doc, 'input', { class: 'bs-in', inputmode: 'decimal', autocomplete: 'off', placeholder: '00.00', 'aria-label': a.label + ' lowest' });
-      var maxIn = el(doc, 'input', { class: 'bs-in', inputmode: 'decimal', autocomplete: 'off', placeholder: '00.00', 'aria-label': a.label + ' highest' });
+      var minIn = el(doc, 'input', { class: 'bs-in', inputmode: 'decimal', autocomplete: 'off', placeholder: '00.0', 'aria-label': a.label + ' lowest' });
+      var maxIn = el(doc, 'input', { class: 'bs-in', inputmode: 'decimal', autocomplete: 'off', placeholder: '00.0', 'aria-label': a.label + ' highest' });
       var spotIn = el(doc, 'input', { class: 'bs-in', inputmode: 'decimal', autocomplete: 'off', placeholder: 'optional', 'aria-label': a.label + ' spot reading' });
       var noteIn = el(doc, 'input', { class: 'bs-in', type: 'text', maxlength: '500', placeholder: 'e.g. fans on, doors open' });
       var errs = { min_c: el(doc, 'span', { class: 'bs-err' }), max_c: el(doc, 'span', { class: 'bs-err' }), spot_c: el(doc, 'span', { class: 'bs-err' }), mitigation_note: el(doc, 'span', { class: 'bs-err' }), area_id: el(doc, 'span', { class: 'bs-err' }) };
@@ -112,7 +112,7 @@
       buttons.push(btn);
 
       var band = o.bandForArea ? o.bandForArea(a.id) : null;
-      if (band && band.band) bandNote.textContent = 'Band: ' + band.band.band + ', ' + Number(band.band.min).toFixed(2) + ' to ' + Number(band.band.max).toFixed(2) + ' C (set by the youngest dog in the room, ' + band.days + ' days old).';
+      if (band && band.band) bandNote.textContent = 'Band: ' + band.band.band + ', ' + Number(band.band.min).toFixed(1) + ' to ' + Number(band.band.max).toFixed(1) + ' C (set by the youngest dog in the room, ' + band.days + ' days old).';
       else if (band && band.reason) bandNote.textContent = 'No band: ' + band.reason + '.';
 
       function outOfBand() {
@@ -130,7 +130,7 @@
         var oob = outOfBand();
         noteRow.hidden = !oob;
         bandNote.setAttribute('data-oob', oob ? 'yes' : 'no');
-        if (oob) bandNote.textContent = (band.band ? 'Band: ' + band.band.band + ', ' + Number(band.band.min).toFixed(2) + ' to ' + Number(band.band.max).toFixed(2) + ' C. ' : '') + 'This reading is ' + oob + '.';
+        if (oob) bandNote.textContent = (band.band ? 'Band: ' + band.band.band + ', ' + Number(band.band.min).toFixed(1) + ' to ' + Number(band.band.max).toFixed(1) + ' C. ' : '') + 'This reading is ' + oob + '.';
       }
       [minIn, maxIn].forEach(function (i) { i.addEventListener('input', onType); });
 

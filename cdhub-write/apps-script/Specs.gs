@@ -22,7 +22,8 @@ var TABLES = {
     // id + tenant_id are the standard first two columns on every live BLD table.
     columns: [
       'id', 'tenant_id',
-      'area_id', 'reading_type', 'min_c', 'max_c', 'spot_c', 'precision_dp',
+      // '' = the live Sheet's 7th column, which has no name and holds max_c - min_c (Lisa to name it; see PR)
+      'area_id', 'reading_type', 'min_c', 'max_c', '', 'spot_c', 'precision_dp',
       'period_start', 'taken_at', 'taken_by', 'device_id', 'reset_after_reading',
       'applied_limit_id', 'in_range', 'compliant', 'mitigation_required',
       'corrects_id',        // PROPOSED: pointer to the row this one corrects
@@ -48,10 +49,12 @@ var TABLES = {
       reset_after_reading: { type: 'bool' },
       mitigation_note:     { type: 'text' }
     },
-    // duplicate guard: same tenant + same area within DUP_WINDOW_MIN of taken_at
-    dupKey: ['area_id'], dupTimeCol: 'taken_at',
+    // duplicate guard: same tenant + same area + same period (morning/afternoon slot sent by the hub) within
+    // DUP_WINDOW_MIN of taken_at. Without period_start this is the old rule: same room inside the window.
+    dupKey: ['area_id', 'period_start'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) {
-      row.precision_dp = '2';
+      row.precision_dp = '1';   // Lisa 7 Nov 2026: room temperatures are kept to 1 decimal place
+      if (row.min_c !== '' && row.max_c !== '') row[''] = (parseFloat(row.max_c) - parseFloat(row.min_c)).toFixed(1);
       row.taken_at = ctx.nowIso;
       row.taken_by = ctx.who;
     },
@@ -137,7 +140,62 @@ var TABLES = {
     dupKey: ['dog_ids'], dupTimeCol: 'confirmed_at',
     stamp: function (row, ctx) { row.confirmed_at = ctx.nowIso; row.confirmed_by = ctx.whoId || ctx.who; },
     checkRow: function () {}
+  },
+
+  // ---------------------------------------------------------------- breeding_rule
+  // The breeder's own breeding limits (Lisa 8 Nov 2026): typed in by the OWNER when setting up the app, never
+  // hard-coded, because they differ by country, licence and kennel club. NEW table: Lisa creates BLD-breeding_rule
+  // (header row only); own switch TABLE_ON_breeding_rule, OFF by default.
+  // A change is a NEW row with its own effective_from, never an edit, so an old litter is judged by the rule in
+  // force on its own date. The rule for a date = the row for that key with the latest effective_from on or before it.
+  breeding_rule: {
+    key: 'breeding_rule',
+    file: 'BLD-breeding_rule.csv',
+    idPrefix: 'brl',
+    columns: ['id', 'tenant_id', 'rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
+    proposedColumns: ['rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      rule_key:       { type: 'enum', values: ['min_dam_age_months', 'max_litters_per_dam', 'min_months_between_litters'], required: true },
+      value:          { type: 'count', required: true },
+      effective_from: { type: 'date', required: true },
+      source:         { type: 'text' },
+      note:           { type: 'text' }
+    },
+    // the same rule given twice from the same date is a repeat tap
+    dupKey: ['rule_key', 'effective_from'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      var lim = BREEDING_RULE_LIMITS_[row.rule_key];
+      if (lim && !errors.value && row.value !== '') {
+        var n = parseInt(row.value, 10);
+        if (n < lim[0] || n > lim[1]) errors.value = 'Use a number from ' + lim[0] + ' to ' + lim[1] + ' ' + lim[2] + '.';
+      }
+    },
+    // a new version must start after the latest one already saved for that rule (history is never rewritten)
+    checkAgainst: function (clean, records, errors) {
+      if (errors.rule_key || errors.effective_from) return;
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        if (r.rule_key === clean.rule_key && (r.effective_from || '') >= clean.effective_from) {
+          errors.effective_from = 'This rule already has a version from ' + r.effective_from + '. A change must start after that date.';
+          return;
+        }
+      }
+    }
   }
+};
+
+/** Sensible bounds for each breeding rule, so a typo (e.g. 120 months) is refused: [lowest, highest, unit]. */
+var BREEDING_RULE_LIMITS_ = {
+  min_dam_age_months:          [6, 48, 'months'],
+  max_litters_per_dam:         [1, 20, 'litters'],
+  min_months_between_litters:  [1, 36, 'months']
 };
 
 /** Permanently not on site (Lisa 16 Oct, S02-7): sold, owned_by_family, Collected or deceased. Such a dog is never asked to move. */
@@ -274,5 +332,6 @@ var READABLE = {
   subject_status:  { file: 'BLD-subject_status.csv',  vis: 'subject_status',  authorCol: '',            dateCol: '' },
   occupancy:       { file: 'BLD-occupancy.csv',       vis: 'occupancy',       authorCol: '',            dateCol: '' },
   area_reading:    { file: 'BLD-area_reading.csv',    vis: 'area_reading',    authorCol: 'taken_by',    dateCol: 'taken_at' },
-  occupancy_check: { file: 'BLD-occupancy_check.csv', vis: 'occupancy_check', authorCol: 'confirmed_by', dateCol: 'confirmed_at' }
+  occupancy_check: { file: 'BLD-occupancy_check.csv', vis: 'occupancy_check', authorCol: 'confirmed_by', dateCol: 'confirmed_at' },
+  breeding_rule:   { file: 'BLD-breeding_rule.csv',   vis: 'breeding_rule',   authorCol: 'set_by',      dateCol: 'set_at' }
 };
