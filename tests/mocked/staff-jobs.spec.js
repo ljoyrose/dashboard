@@ -119,3 +119,12 @@ test('Report is on every screen and carries the dog just scanned', async ({ page
   await expect(page.getByText('Sent.')).toBeVisible();
   expect(sent[0]).toMatchObject({ action: 'add', fields: { check_type_id: 'cty-report', subject_id: 'dog-1', outcome: 'recorded', note: 'Pretend note' } });
 });
+
+test('jobs are listed A-Z, with a group where its name falls, whatever is late', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/DOG2TAG2');
+  await expect(page.locator('[data-group="Grooming"]')).toBeVisible();
+  await expect(page.locator('.job .nm')).toHaveText(['Grooming', 'Weigh']);
+  await page.goto('cdhub/staff/#s/SITETAG2');
+  await expect(page.locator('.job .nm')).toHaveText(['Bowls', 'Walk']);
+});

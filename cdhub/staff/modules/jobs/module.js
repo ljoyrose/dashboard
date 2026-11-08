@@ -17,6 +17,8 @@
   }
   function isDue(j) { return j.status === 'late' || j.status === 'today' || j.status === 'never'; }
   function byRank(a, b) { return (RANK[a.status] - RANK[b.status]) || String(a.label).localeCompare(String(b.label)); }
+  /* A-Z, matching the printed card; a group sits where its name falls */
+  function aToZ(a, b) { return String(a.group || a.label).localeCompare(String(b.group || b.label)) || String(a.label).localeCompare(String(b.label)); }
   function worst(list) { return list.slice().sort(byRank)[0]; }
   function isOn(r) { return String(r.active).toLowerCase() !== 'false'; }
 
@@ -112,7 +114,7 @@
       }
 
       function draw() {
-        var jobs = BLDDue.forTarget(types, view(), target, today).sort(byRank);
+        var jobs = BLDDue.forTarget(types, view(), target, today).sort(aToZ);
         list.textContent = '';
         if (group) {
           list.appendChild(h('button', { class: 'back', type: 'button', text: '← All jobs', onclick: function () { group = ''; say(''); draw(); } }));
