@@ -100,6 +100,22 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .d.future{background:var(--paper);border:1px solid var(--line);opacity:.35}
 .d.cold{background:var(--ljr-6)}.d.ok{background:var(--ljr-5)}.d.hot{background:var(--ljr-2)}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
+/* indoor corner dot */
+.d{position:relative}
+.d-dot{position:absolute;top:1px;right:1px;width:5px;height:5px;border-radius:50%;pointer-events:none}
+.d-dot.idot-flag{background:var(--ljr-2)}.d-dot.idot-warn{background:var(--ljr-3)}
+/* compliance mode cells */
+.d.comp-flag{background:var(--ljr-2);opacity:.8}.d.comp-warn{background:var(--ljr-3);opacity:.85}.d.comp-ok{background:var(--ljr-5);opacity:.85}.d.comp-nd{background:var(--soft)}
+.sd.comp-flag{background:var(--ljr-2);opacity:.8}.sd.comp-warn{background:var(--ljr-3);opacity:.85}.sd.comp-ok{background:var(--ljr-5);opacity:.85}.sd.comp-nd{background:var(--soft)}
+/* view mode toggle */
+.vt-wrap{display:flex;gap:2px;background:var(--soft);border-radius:calc(var(--radius) + 2px);padding:2px;width:max-content;margin-bottom:12px}
+.vt-btn{padding:4px 12px;border:none;background:transparent;border-radius:var(--radius);font:600 var(--fs-small)/1.4 var(--house-font);color:var(--muted);cursor:pointer}
+.vt-btn.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+/* compact indoor table in drill panel */
+.itable{width:100%;border-collapse:collapse;font-size:var(--fs-small);margin-top:4px}
+.itable th{padding:4px 6px;text-align:left;color:var(--muted);font-weight:600;border-bottom:1px solid var(--line)}
+.itable td{padding:5px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;vertical-align:middle}
+.itable tr:last-child td{border-bottom:none}
 
 /* Strip view */
 .strip{display:flex;flex-direction:column;gap:3px;margin-bottom:20px}
@@ -165,6 +181,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 <aside id="drill" role="complementary" aria-label="Day detail">
   <button class="dclose" onclick="closeDrill()" aria-label="Close">✕</button>
   <p class="dtitle" id="d-title">—</p>
+  <p class="dsub" id="d-sub"></p>
   <p class="dsec">Outside</p>
   <div class="dgrid">
   <div class="dr"><span>Max °C</span><span id="d-max">—</span></div>
@@ -175,7 +192,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
   <div class="dr"><span>Wind</span><span id="d-wind">—</span></div>
   </div>
   <div id="d-areas" style="display:none">
-    <p class="dsec">Indoors</p>
+    <p class="dsec">Indoor areas</p>
     <div id="d-areas-inner"></div>
   </div>
 </aside>
@@ -194,6 +211,8 @@ var DRIVE_API=window.DASH_CONFIG.urls.files;
 var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
 var AREA_NAMES={};  /* areaId -> display name/code */
 var ROUND_DATE=null;
+var VIEW_MODE='outdoor'; /* 'outdoor' | 'compliance' */
+var AREA_RANGES={};     /* areaId -> {min,max} acceptable indoor range */
 
 /* ---- helpers ---- */
 var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -265,7 +284,12 @@ async function loadAreaData(){
     var af=await findDriveFile('BLD-area.csv');
     if(af){
       var atxt=await readDriveFile(af);
-      parseCSV(atxt).forEach(function(a){if(a.id)AREA_NAMES[a.id]=a.code||a.name||a.id;});
+      parseCSV(atxt).forEach(function(a){
+        if(a.id){
+          AREA_NAMES[a.id]=a.code||a.name||a.id;
+          if(a.min_c||a.max_c)AREA_RANGES[a.id]={min:parseFloat(a.min_c)||15,max:parseFloat(a.max_c)||25};
+        }
+      });
     }
   }catch(e){console.warn('Area data load failed:',e);}
 }
@@ -363,6 +387,7 @@ function openDrill(isoDate){
   var parts=isoDate.split('-');
   var dLabel=parseInt(parts[2],10)+' '+MONTHS[parseInt(parts[1],10)-1]+' '+parts[0];
   el('d-title').textContent=dLabel;
+  el('d-sub').textContent=r.reading_kind?'Source: '+r.reading_kind:'';
   var show=function(v){var s=dpOutdoor(v);return s?s+'°C':'—';};
   el('d-max').textContent=show(r.max_temp);
   el('d-min').textContent=show(r.min_temp);
@@ -374,10 +399,32 @@ function openDrill(isoDate){
   var areaIds=areasInWalk(Object.keys(dayAreas));
   var areasEl=el('d-areas');
   if(areaIds.length){
-    el('d-areas-inner').innerHTML=areaIds.map(function(aid){
-      var ar=dayAreas[aid]||{};
-      return '<div class="dr"><span>'+esc(areaName(aid))+'</span><span>'+esc(slotLine('AM',ar.am))+' · '+esc(slotLine('PM',ar.pm))+'</span></div>';
-    }).join('');
+    el('d-areas-inner').innerHTML='<table class="itable"><thead><tr>'
+      +'<th>Area</th><th>AM</th><th>PM</th><th>Status</th>'
+      +'</tr></thead><tbody>'
+      +areaIds.map(function(aid){
+        var ar=dayAreas[aid]||{},am=ar.am||{},pm=ar.pm||{};
+        var range=AREA_RANGES[aid]||{min:15,max:25};
+        var fmtSlot=function(t){
+          if(!t||(!t.min&&!t.max))return'<span style="color:var(--muted)">—</span>';
+          var lo=parseFloat(t.min),hi=parseFloat(t.max);
+          var err=!isNaN(lo)&&!isNaN(hi)&&lo>hi;
+          var warn=(!isNaN(lo)&&lo<range.min)||(!isNaN(hi)&&hi>range.max);
+          var color=err?'var(--ljr-2)':warn?'var(--ljr-3)':'var(--ink)';
+          return'<span style="color:'+color+'">'+esc((t.min||'?')+' – '+(t.max||'?')+'°C')+'</span>';
+        };
+        var ast=areaStatusForArea(ar,range);
+        var spill=ast==='flag'?'<span class="pill ph">flag</span>'
+          :ast==='warn'?'<span class="pill" style="border-color:var(--ljr-3);color:var(--ljr-3-text)">warn</span>'
+          :'<span class="pill po">ok</span>';
+        return'<tr>'
+          +'<td style="font-weight:600;text-transform:capitalize">'+esc(areaName(aid))+'</td>'
+          +'<td>'+fmtSlot(am)+'</td>'
+          +'<td>'+fmtSlot(pm)+'</td>'
+          +'<td>'+spill+'</td>'
+          +'</tr>';
+      }).join('')
+      +'</tbody></table>';
     areasEl.style.display='';
   }else{
     areasEl.style.display='none';
@@ -429,6 +476,41 @@ function slotLine(label,t){
 function stateWord(cls){
   return cls==='future'?'Later':cls==='nd'?'No reading':cls==='cold'?'Cold':cls==='hot'?'Hot':cls==='ok'?'OK':cls;
 }
+function areaStatus(isoDate){
+  var dayAreas=AREA_DAYS[isoDate];
+  if(!dayAreas||!Object.keys(dayAreas).length)return'';
+  var hasFlag=false,hasWarn=false;
+  Object.keys(dayAreas).forEach(function(aid){
+    var ar=dayAreas[aid],range=AREA_RANGES[aid]||{min:15,max:25};
+    ['am','pm'].forEach(function(slot){
+      var t=ar[slot];if(!t)return;
+      var lo=parseFloat(t.min),hi=parseFloat(t.max);
+      if(!isNaN(lo)&&!isNaN(hi)&&lo>hi){hasFlag=true;return;}
+      if(!isNaN(lo)&&lo<range.min)hasWarn=true;
+      if(!isNaN(hi)&&hi>range.max)hasWarn=true;
+    });
+  });
+  return hasFlag?'flag':hasWarn?'warn':'ok';
+}
+function areaStatusForArea(ar,range){
+  range=range||{min:15,max:25};
+  var hasFlag=false,hasWarn=false;
+  ['am','pm'].forEach(function(slot){
+    var t=ar[slot];if(!t)return;
+    var lo=parseFloat(t.min),hi=parseFloat(t.max);
+    if(!isNaN(lo)&&!isNaN(hi)&&lo>hi){hasFlag=true;return;}
+    if(!isNaN(lo)&&lo<range.min)hasWarn=true;
+    if(!isNaN(hi)&&hi>range.max)hasWarn=true;
+  });
+  return hasFlag?'flag':hasWarn?'warn':'ok';
+}
+function setViewMode(mode){
+  VIEW_MODE=mode;
+  document.querySelectorAll('.vt-btn').forEach(function(b){b.classList.toggle('on',b.dataset.vm===mode);});
+  el('view-a').innerHTML=buildHeatMap(YEAR);
+  el('view-b').innerHTML=buildStrip(YEAR);
+  var lw=el('legend-wrap');if(lw)lw.innerHTML=legend();
+}
 function indoorDayClass(isoDate){
   if(isoDate>TODAY_STR) return 'future';
   var day=AREA_DAYS[isoDate]; if(!day) return 'nd';
@@ -457,7 +539,10 @@ function monthCal(y, classOf, kind){
       var date=ds(y,mi,d), cls=classOf(date), today=date===TODAY_STR, word=stateWord(cls);
       var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
       var extra=kind==='out'?' dout':'';
-      h+='<button type="button" class="d '+cls+(today?' today':'')+extra+'" title="'+d+' '+mn+' '+y+' '+kind+' — '+word+'" aria-label="'+d+' '+mn+' '+y+' '+word+'"'+clk+'></button>';
+      var ist=date<=TODAY_STR?areaStatus(date):'';
+      var dotHtml=(kind==='out')?(ist==='flag'?'<span class="d-dot idot-flag"></span>':ist==='warn'?'<span class="d-dot idot-warn"></span>':''):'';
+      var cellCls=(kind==='out'&&VIEW_MODE==='compliance'&&date<=TODAY_STR)?(ist?'comp-'+ist:'comp-nd'):cls;
+      h+='<button type="button" class="d '+cellCls+(today?' today':'')+extra+'" title="'+d+' '+mn+' '+y+' '+kind+' — '+word+'" aria-label="'+d+' '+mn+' '+y+' '+word+'"'+clk+'>'+dotHtml+'</button>';
     }
     h+='</div></div>';
   });
@@ -476,7 +561,9 @@ function stripBody(y, classOf, kind){
         if((new Date(y,mi,d).getDay()+6)%7===di){
           var date=ds(y,mi,d), cls=classOf(date), word=stateWord(cls);
           var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
-          h+='<div class="sd '+cls+(kind==='out'?' dout':'')+'" title="'+d+' '+MONTHS[mi]+' '+kind+' — '+word+'"'+clk+'></div>';
+          var ist2=date<=TODAY_STR?areaStatus(date):'';
+          var scls=(kind==='out'&&VIEW_MODE==='compliance'&&date<=TODAY_STR)?(ist2?'comp-'+ist2:'comp-nd'):cls;
+          h+='<div class="sd '+scls+(kind==='out'?' dout':'')+'" title="'+d+' '+MONTHS[mi]+' '+kind+' — '+word+'"'+clk+'></div>';
         }
       }
     }
@@ -591,6 +678,14 @@ function setYear(y){
   closeDrill();
 }
 function legend(){
+  if(VIEW_MODE==='compliance'){
+    return'<div class="legend">'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-2)"></div>Data error</div>'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-3)"></div>Out of range</div>'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>All ok</div>'
+      +'<div class="leg"><div class="leg-sq" style="background:var(--soft)"></div>No data</div>'
+      +'</div>';
+  }
   return '<div class="legend">'
     +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-6)"></div>&lt;10°C Cold</div>'
     +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>10–27°C OK</div>'
@@ -600,8 +695,13 @@ function legend(){
 }
 function renderPage(){
   ROUND_DATE=ROUND_DATE||TODAY_STR;
+  var hasAreas=Object.keys(AREA_DAYS).length>0;
   el('main').innerHTML=
-    legend()
+    (hasAreas?'<div class="vt-wrap">'
+      +'<button class="vt-btn on" data-vm="outdoor" onclick="setViewMode(\'outdoor\')">Outdoor temps</button>'
+      +'<button class="vt-btn" data-vm="compliance" onclick="setViewMode(\'compliance\')">Compliance</button>'
+      +'</div>':'')
+    +'<div id="legend-wrap">'+legend()+'</div>'
     +'<div class="yr-row">'
     +'<button class="btn yr-btn on" data-yr="2026" onclick="setYear(2026)">2026</button>'
     +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'
