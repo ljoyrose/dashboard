@@ -872,6 +872,30 @@ test('CD Hub: The round shows a Kept readings card (from BLD-area_reading.csv), 
   await expect(rows.nth(1).locator('td').nth(1).locator('.ic')).toHaveClass(/ok/);     // 12-20: green
 });
 
+test('CD Hub: temperature limits come from the band rows; puppies use their own row; no row is unknown', async ({ page }) => {
+  await page.goto('cdhub/');
+  await signIn(page);
+  await openTab(page, 'round');
+  const r = await page.evaluate(() => {
+    const out = {};
+    out.adult26 = tempState('15', '26.0');
+    out.adultHot = tempState('15', '26.1');
+    out.adultCold = tempState('9.9', '20');
+    CD._byId.tpup = { id: 'tpup', dob: '2026-01-01' };
+    CD.dogs.push({ id: 'tpup', area_id: 'test-pup-room', dob: '2026-01-01' });
+    const pup = roomBand('test-pup-room', '2026-01-10');
+    out.pupOk = tempState('26.5', '27.5', pup);
+    out.pupCold = tempState('22', '24', pup);
+    CD.dogs.push({ id: 'tnodob', area_id: 'test-nodob-room', dob: '' });
+    CD._byId.tnodob = { id: 'tnodob', dob: '' };
+    out.noDob = tempState('15', '20', roomBand('test-nodob-room', '2026-01-10'));
+    CD.tempBands = [];
+    out.noRows = tempState('15', '20');
+    return out;
+  });
+  expect(r).toEqual({ adult26: 'ok', adultHot: 'hot', adultCold: 'cold', pupOk: 'ok', pupCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
+});
+
 test.describe('CD Hub: screens that need data CD Hub does not hold say which Bloodline table will feed them', () => {
   const WANT = [
     ['dogs', 'media', 'Photos', 'media', 'media'], ['dogs', 'person', 'Who has it, by name', 'person', 'person'],
