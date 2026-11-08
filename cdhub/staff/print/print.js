@@ -7,7 +7,7 @@
   var CODE_KEY = 'bld.device.code', ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', LEN = 8;
   var screen = document.getElementById('screen'), save = BLDSave.create({});
   var base = location.origin + location.pathname.replace(/print\/(index\.html)?$/, '');
-  save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
+  save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
   function h(t, a, k) { var e = document.createElement(t); Object.keys(a || {}).forEach(function (x) { if (x === 'text') e.textContent = a[x]; else if (x === 'class') e.className = a[x]; else if (x === 'html') e.innerHTML = a[x]; else if (x.slice(0, 2) === 'on') e.addEventListener(x.slice(2), a[x]); else e.setAttribute(x, a[x]); }); (k || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
   function newTag() { var a = new Uint8Array(LEN), s = ''; crypto.getRandomValues(a); for (var i = 0; i < LEN; i++) s += ALPHABET.charAt(a[i] % ALPHABET.length); return s; }
   function say(t, k) { msg.className = 'msg ' + (k || ''); msg.textContent = t; }
@@ -73,6 +73,7 @@
   load().then(function (ok) {
     if (!ok) return;
     var onSite = {}; (T.occupancy || []).forEach(function (o) { if (!o.moved_out) onSite[o.subject_id] = true; });
+    opts.appendChild(btn('Whole-site code', function () { make('site', [{ id: 'site', label: 'Today' }]); }));
     opts.appendChild(btn('Room signs', function () { make('area', T.area.map(function (a) { return { id: a.id, label: a.code || a.id }; })); }));
     opts.appendChild(btn('Dog kennel cards', function () { make('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id }; })); }));
     opts.appendChild(btn('Litter cards', function () {

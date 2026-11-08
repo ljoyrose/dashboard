@@ -10,8 +10,9 @@
 (function () {
   'use strict';
   var CODE_KEY = 'bld.device.code', SCAN_PREFIX = 's/', SETUP_PREFIX = 'setup=', JOIN_PREFIX = 'join=', JOIN_URL = '&url=', TAG_RE = /^[A-Z2-9]{4,12}$/;
-  var FILES = ['modules/moves.js', 'modules/where.js', 'modules/temperature/module.js'];
+  var FILES = ['lib/due.js', '../checks/checks.js', 'modules/moves.js', 'modules/where.js', 'modules/temperature/module.js', 'modules/jobs/module.js'];
   var ICONS = {
+    report: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l10 18H2zM12 10v5M12 18v.5"/></svg>',
     home: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11l9-7 9 7v9a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1z"/></svg>',
     scan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8V5a1 1 0 011-1h3M16 4h3a1 1 0 011 1v3M20 16v3a1 1 0 01-1 1h-3M8 20H5a1 1 0 01-1-1v-3M4 12h16"/></svg>',
     gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>',
@@ -85,7 +86,7 @@
 
   function setTabs(cur) {
     tabs.hidden = false; tabs.textContent = '';
-    [['home', 'Home', 'home'], ['scan', 'Scan', 'scan'], ['device', 'Phone', 'gear']].forEach(function (t) {
+    [['home', 'Home', 'home'], ['scan', 'Scan', 'scan'], ['m/report', 'Report', 'report'], ['device', 'Phone', 'gear']].forEach(function (t) {
       tabs.appendChild(h('button', { type: 'button', 'aria-current': cur === t[0] ? 'page' : false, onclick: function () { go(t[0]); } }, [h('span', { class: 'ring', html: ICONS[t[2]] }), t[1]]));
     });
   }
@@ -133,11 +134,11 @@
   }
 
   function drawHome() {
-    clearScreen(); setTabs('home');
+    clearScreen(); setTabs('home'); delete ctx.reportFor;
     screen.appendChild(h('h1', { text: 'The Board' }));
     screen.appendChild(h('p', { class: 'sub', text: new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' }) }));
     var list = h('div', { class: 'cards' });
-    modules.slice().sort(function (a, b) { return (a.order || 50) - (b.order || 50); }).forEach(function (m) {
+    modules.filter(function (m) { return !m.hidden; }).sort(function (a, b) { return (a.order || 50) - (b.order || 50); }).forEach(function (m) {
       list.appendChild(h('button', { class: 'card go', type: 'button', 'data-module': m.id, onclick: function () { go('m/' + m.id); } }, [
         h('div', { class: 'nm' }, [h('span', { class: 'ic', html: m.icon || ICONS.dogs }), m.title]), m.desc ? h('div', { class: 'ds', text: m.desc }) : null
       ]));
@@ -163,6 +164,11 @@
     if (typeof r === 'function') cleanup = r;
   }
 
+  /** While a room is being filled (moves.js remembers it for 30 minutes), every scan carries on moving dogs. */
+  function fillingRoom() {
+    try { var r = JSON.parse(storeGet('bld.move.room') || 'null'); return !!r && Date.now() - r.at < 30 * 60000; } catch (e) { return false; }
+  }
+
   /** Called on every address change. A scan on a phone that is not set up shows nothing but the set-up screen. */
   function route() {
     takeJoin();
@@ -179,9 +185,10 @@
     save.setCode(storeGet(CODE_KEY), false);
     if (hash.indexOf(SCAN_PREFIX) === 0) {
       var tag = hash.slice(SCAN_PREFIX.length).toUpperCase();
-      if (TAG_RE.test(tag)) { openModule('moves', { tag: tag, tab: 'scan' }); return; }
+      if (TAG_RE.test(tag)) { openModule(fillingRoom() ? 'moves' : 'jobs', { tag: tag, tab: 'scan' }); return; }
       go('home'); return;
     }
+    if (hash.indexOf('mv/') === 0 && TAG_RE.test(hash.slice(3))) { openModule('moves', { tag: hash.slice(3), tab: 'scan' }); return; }
     if (hash === 'scan') { openModule('moves', { tab: 'scan' }); return; }
     if (hash === 'device') { drawDevice(); return; }
     if (hash.indexOf('m/') === 0) { openModule(hash.slice(2)); return; }

@@ -30,3 +30,8 @@ h1{font-size:28px}h2{font-size:24px}
 .tabs button[aria-current="page"]{color:var(--accent)}
 .tabs button[aria-current="page"] .ring{border-color:var(--accent)}
 .bs-board,.bs{--phone:var(--bg)}
+
+.job{border-left:3px solid var(--line)}.job.s-late{border-left-color:var(--bad)}.job.s-today,.job.s-never{border-left-color:var(--warn)}.job.s-ok{border-left-color:var(--good)}
+.job-head{display:flex;align-items:center;gap:10px}.job-txt{flex:1;min-width:0}
+.job-prob{border:0;background:transparent;color:var(--mut);font-weight:600;min-height:44px;padding:0}
+.job-btns{display:flex;gap:8px;flex-wrap:wrap}.job-move{margin-top:14px}
