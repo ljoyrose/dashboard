@@ -1,7 +1,6 @@
-/* The Board's look, for staff phones. Every colour is a token; dark mode follows the phone. */
-:root{--bg:#f6f7f3;--card:#fff;--ink:#18201b;--mut:#5d6860;--line:#dde2da;--accent:#e39a2d;--accent-ink:#1d1406;--good:#2e7d4f;--warn:#b26a00;--bad:#c2402b;--chip:#eef1ea;
- --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;--body:"Figtree",ui-sans-serif,system-ui,-apple-system,sans-serif;color-scheme:light}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#141a16;--card:#1c241f;--ink:#e8ede6;--mut:#9aa69d;--line:#2a342d;--accent:#f0ad46;--good:#5fc28a;--warn:#e7a43c;--bad:#ec7a63;--chip:#232c26;color-scheme:dark}}
+/* The Board's layout in the house colours (tokens.css); dark mode comes from tokens.css. */
+:root{--bg:var(--ljr-cream);--card:var(--ljr-paper);--ink:var(--ljr-ink);--mut:var(--ljr-muted);--line:var(--house-soft-line);--accent:var(--ljr-3-text);--accent-ink:var(--ljr-3-on);--good:var(--ljr-5-text);--warn:var(--ljr-3-text);--bad:var(--ljr-2-text);--chip:var(--ljr-0-tint);
+ --display:"Bricolage Grotesque",ui-sans-serif,system-ui,sans-serif;--body:"Figtree",ui-sans-serif,system-ui,-apple-system,sans-serif}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.4 var(--body)}
 button,input,select{font:inherit;color:inherit}

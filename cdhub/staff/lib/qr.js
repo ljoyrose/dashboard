@@ -80,7 +80,7 @@
   function svg(text, label) {
     var q = encode(text), z = 4, n = q.size + z * 2, d = '';
     for (var r = 0; r < q.size; r++) for (var c = 0; c < q.size; c++) if (q.modules[r][c]) d += 'M' + (c + z) + ' ' + (r + z) + 'h1v1h-1z';
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + n + ' ' + n + '" shape-rendering="crispEdges" role="img" aria-label="' + (label || 'QR code') + '"><rect width="' + n + '" height="' + n + '" fill="#fff"/><path d="' + d + '" fill="#000"/></svg>';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + n + ' ' + n + '" shape-rendering="crispEdges" role="img" aria-label="' + (label || 'QR code') + '"><rect width="' + n + '" height="' + n + '" fill="#fff"/><path d="' + d + '" fill="#141413"/></svg>';
   }
   return { encode: encode, svg: svg };
 }));
