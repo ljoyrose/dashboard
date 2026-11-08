@@ -110,7 +110,8 @@ test.describe('Marketplace (JOB 34b): states', () => {
   test('empty list: Insights shows zero tiles; Stock, Temu and Suppliers each say in plain words why they are empty', async ({ page }) => {
     await book(page, []);
     await open(page, '#/insights');
-    await expect(page.locator('#view a.tile .v')).toHaveText(['0', '0', '0']);
+    // Insights now opens with the Orders strip (moved from Main), then the three stock tiles: all zero.
+    await expect(page.locator('#view a.tile .v')).toHaveText(['0', '0', '0', '0', '0', '0']);
     await expect(page.locator('#view .acts a.btn', { hasText: 'Suppliers' })).toHaveCount(0);
     for (const [v, words] of [
       ['stock', 'The stock list appears after the engine update is pasted and set up.'],

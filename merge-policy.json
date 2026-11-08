@@ -1,0 +1,32 @@
+{
+  "_readme": "Standing approval for the PR autopilot. Only Lisa changes this file. An agent must never edit it (any change to it is a Do-card item).",
+  "approval_wording": "Lisa pre-approves: merge commit only, when every check is green, there is no conflict, no sensitive path is touched and the privacy guard passes. Also: update branches, retarget a child PR to main once its parent has merged, and delete the head branch after a merge. Never squash, never rebase, never delete an unmerged branch.",
+  "approved_by": "Lisa",
+  "approved_on": "2026-11-02",
+  "expires_on": null,
+  "mode": "dry-run",
+  "scope": "all",
+  "default_branch": "main",
+  "merge_method": "merge",
+  "delete_head_after_merge": false,
+  "docs_paths": [
+    "docs/",
+    "CHANGES/",
+    "README.md",
+    "TESTS.md"
+  ],
+  "sensitive_paths": [
+    ".github/",
+    "merge-policy.json",
+    "tools/autopilot/",
+    "tools/privacy-guard/",
+    "cdhub-write/",
+    "money/"
+  ],
+  "dependabot_authors": [
+    "dependabot[bot]",
+    "app/dependabot"
+  ],
+  "stale_days": 14,
+  "renewal": "Holds until Lisa says stop. Renewal is raised only if an internal policy rule requires it (scope widened, new repo type, privacy rule change); then ONE bulk Do card, never one per PR. Handover and new sessions carry this clause."
+}

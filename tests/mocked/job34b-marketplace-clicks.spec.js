@@ -26,33 +26,37 @@ async function lit(page, tab) {
 }
 
 test.describe('Marketplace (JOB 34b): every button and link does what it says', () => {
-  test('Home: the Do now / Decide / Reply tiles open their tabs; the Orders tiles and the Latest link open Do now', async ({ page }) => {
+  test('Main: Needs you opens Do now, a row opens its tab, To Reply opens Reply; the Orders tiles and the Latest link on Insights open Do now', async ({ page }) => {
     await HUBS.marketplace.open(page);
-    for (const [key, name] of [['do', 'Do now'], ['decide', 'Decide'], ['reply', 'Reply']]) {
+    // The Do now / Decide / Reply tiles left Main (2 Nov): the Needs you head opens Do now, and a row opens the tab it is done in.
+    for (const [key, name, link] of [['do', 'Do now', page.locator('#view [data-hm="needs"] h3 a')],
+      ['decide', 'Decide', page.locator('#view [data-hm="needs"] .hm-row', { hasText: 'Sample treats' }).locator('.hm-t > a')],
+      ['reply', 'Reply', page.locator('#view a.hm-n[data-k="To Reply"]')]]) {   // the message is the 6th row, past the 5 shown
       await go(page, 'me');
-      await page.locator('#view .needs3 a.tile', { hasText: name }).click();
+      await link.click();
       await expect(page).toHaveURL(new RegExp(`#/${key}$`));
       await lit(page, key);
       await expect(page.locator('#view .needs')).toContainText(name + ':');
     }
+    // The Orders strip moved from Main to Insights.
     for (const label of ['New today', 'Last 7 days', 'To post']) {
-      await go(page, 'me');
+      await go(page, 'insights');
       await page.locator('#view a.tile', { hasText: label }).click();
       await expect(page).toHaveURL(/#\/do$/);
       await lit(page, 'do');
     }
-    await go(page, 'me');
+    await go(page, 'insights');
     await expect(page.locator('#view .hint', { hasText: 'Latest:' })).toBeVisible();
     await page.locator('#view .hint', { hasText: 'Latest:' }).locator('a').click();
     await expect(page).toHaveURL(/#\/do$/);
   });
 
-  test('Home Orders strip: counts today\'s and this week\'s parcels and their money; late ones are named', async ({ page }) => {
+  test('Insights Orders strip (moved from Main): counts today\'s and this week\'s parcels and their money; late ones are named', async ({ page }) => {
     await book(page, [
       ['PO|1', 'post', 'Clothes', 'Sample scarf', JSON.stringify({ platform: 'ebay', shelf: 'A1', price: '£20.00', sold_at: today(), red: true }), ago(5)],
       ['PO|2', 'post', 'Clothes', 'Sample hat', JSON.stringify({ platform: 'vinted', shelf: 'A2', price: '£10.00', sold_at: ago(3 * 1440) }), ago(5)],
     ]);
-    await open(page);
+    await open(page, '#/insights');
     await expect(page.locator('#view a.tile', { hasText: 'New today' }).locator('.v')).toHaveText('1');
     await expect(page.locator('#view a.tile', { hasText: 'Last 7 days' })).toContainText('2Last 7 days · £30.00');
     await expect(page.locator('#view a.tile', { hasText: 'To post' })).toContainText('1 late');
@@ -102,9 +106,8 @@ test.describe('Marketplace (JOB 34b): every button and link does what it says', 
     await expect(page.locator('#view')).toContainText('The drop-off code shows here after the engine’s next run.');
   });
 
-  // FIX-REQUEST J34b-F40 (marketplace/index.html:858 nextpack wraps on posts().length, but pagePack at :744-746 lists fewer parcels).
-  // DECISION NEEDED: fix the page (wrap on the packing list's own length) or accept. OWNER: Marketplace owner. BY 2026-11-06
-  test.fixme('J34b-F40 packing: Skip for now still wraps to the first parcel when an older parcel was already marked Posted', async ({ page }) => {
+  // J34b-F40 fixed: nextpack now wraps on the same packing list pagePack shows.
+  test('J34b-F40 packing: Skip for now still wraps to the first parcel when an older parcel was already marked Posted', async ({ page }) => {
     await book(page, [
       ['PO|0', 'post', 'Clothes', 'Sample old parcel', JSON.stringify({ shelf: 'A0', courier: 'Evri' }), ago(60), 'Posted', '', ago(30), 'sample@example.test'],
       ['PO|1', 'post', 'Clothes', 'Sample mitt', JSON.stringify({ shelf: 'A1', courier: 'Evri' }), ago(5)],

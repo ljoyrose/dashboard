@@ -83,9 +83,8 @@ test.describe('CD Hub: Buyers prospects (invented rows)', () => {
     await expect(rows.first()).toContainText('Sample Kennel Alpha');
   });
 
-  // FIX-REQUEST J34-F20: cdhub/index.html:1509 ranks with (RK[x]||9); RK['VERY STRONG'] is 0, so the strongest lead falls to the bottom.
-  // DECISION NEEDED: fix the sort (CD Hub owner) or accept. OWNER: CD Hub owner. BY 2026-11-06
-  test.fixme('J34-F20 default Sort "strongest signal" puts a VERY STRONG lead above a MODERATE one', async ({ page, guard }) => {
+  // J34-F20 (fixed): RK['VERY STRONG'] is 0, so (RK[x]||9) once sank the strongest lead to the bottom.
+  test('J34-F20 default Sort "strongest signal" puts a VERY STRONG lead above a MODERATE one', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-prospect.csv', fixture('cdhub', 'BLD-prospect.csv'));
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'buyers');
@@ -175,7 +174,7 @@ test.describe('CD Hub: slow and failed reads', () => {
     await expect(page.locator('#livepill')).toHaveText('…');
     await expect(page.locator('#nav button[data-go]')).toHaveCount(0);
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(10);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
   });
 
   test('after a failed read, Try again reads the folder again and the tables load', async ({ page, guard, allowedConsole }) => {
@@ -188,7 +187,7 @@ test.describe('CD Hub: slow and failed reads', () => {
     guard.world.failWith = null;
     await page.locator('#main button[data-reload]').click();
     await expect(page.locator('#livepill')).toContainText('live');
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(10);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
   });
 });
 

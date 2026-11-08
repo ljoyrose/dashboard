@@ -69,7 +69,7 @@ header.house-head { height: var(--house-head); min-height: var(--house-head); ma
 .house-menu .house-mread { margin: 0; font-size: var(--house-read-size); color: var(--muted); }
 header .btn.house-mitem { color: var(--ink); background: var(--card); border-color: var(--press); justify-content: flex-start; gap: 8px; }
 header .btn.house-mitem > svg { width: var(--house-icon); height: var(--house-icon); flex: none; }
-@media (hover: hover) { header .btn.house-mitem:hover { outline-color: var(--sel-bd); background-color: var(--hov); } }
+@media (hover: hover) { header .btn.house-mitem:hover { outline-color: var(--sel-bd); } }
 header [role="dialog"] :focus-visible { outline-color: var(--ink); }
 .house-phone { display: none !important; }
 /* The name's place (Lisa's pick A, 2 Nov 2026): on a laptop or tablet (768px and up) the hub's name sits in the middle of the bar,
@@ -109,17 +109,18 @@ header.house-head > .house-row, .house-page.house-page { box-sizing: border-box;
 .btn.yes, .btn.no, .btn.danger { border-color: var(--hmc); }
 .btn.yes > :is(.ti, svg, .icon) { color: var(--ljr-5-text); } .btn.no > :is(.ti, svg, .icon), .btn.danger > :is(.ti, svg, .icon) { color: var(--ljr-2-text); }
 
-/* 5 The hover rule. Hover = selected: a 1px line drawn inside (outline, offset -1px) plus a pale tint mixed into the card colour.
-   Neutral: ink line + muted tint. Meaning colour (--hmc): its own line + a 14% tint of it, never ink. Nothing moves. */
+/* 5 The hover rule (Lisa, 3 Nov 2026 sweep): hover, focus, press and selected draw ONE 1px line inside (outline, offset -1px) and
+   NEVER a fill; nothing moves. Neutral: the ink line. Meaning colour (--hmc): its own line, never ink. Only typing boxes (input,
+   textarea, select) may change their background. Keyboard focus adds the 2px ring (below). */
 .btn[aria-pressed="true"], button.pill.on, a.pill.on, button.chip[aria-pressed="true"], button.chip.on, .ch.on, .fbtn.on, .achip.on, .subnav a[aria-current="page"], .seg button[aria-pressed="true"], .vsw button[aria-pressed="true"] {
-  outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line));
-  background-color: color-mix(in srgb, var(--hmc, var(--house-muted)) var(--house-tint), var(--card)); }
+  outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
 @media (hover: hover) {
   .btn:hover, button.pill:hover, a.pill:hover, button.chip:hover, a.chip:hover, .ch:hover, .fbtn:hover, .achip:hover, .more:hover, .undo:hover, .lk:hover, .ico:hover, .copy:hover, .flagb:hover, .subnav a:hover, .seg button:hover, .vsw button:hover, a.card:hover {
-    outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line));
-    background-color: color-mix(in srgb, var(--hmc, var(--house-muted)) var(--house-tint), var(--card)); }
-  header .btn:hover { outline-color: var(--frame-ink); background-color: color-mix(in srgb, var(--frame-ink) var(--house-tint), var(--frame)); }
+    outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
+  header .btn:hover { outline-color: var(--frame-ink); }
 }
+.btn:active, button.pill:active, a.pill:active, button.chip:active, a.chip:active, .ch:active, .fbtn:active, .achip:active, .more:active, .undo:active, .lk:active, .ico:active, .copy:active, .flagb:active, .subnav a:active, .seg button:active, .vsw button:active, a.card:active {
+  outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); transform: none; }
 /* Read-only pills (counts, dates, tags, stamps) never hover. */
 .cnt:hover, .dpill:hover, .datep:hover, span.date:hover, span.pill:hover, span.tag:hover, .stamp:hover { outline: none; }
 /* Keyboard focus: the 2px ink ring (frame ink on the frame), never the browser blue. */
@@ -132,8 +133,8 @@ header :focus-visible { outline-color: var(--frame-ink); }
    At rest: grey icon, no ring, a short grey line. Hover and selected are ONE movement: the icon takes the tab's colour and the line
    widens (--house-tab-bar to --house-tab-bar-on). A 1px ring in the tab's colour shows round the icon only on hover, focus and press.
    The tab's slot (data-slot="0".."7") sets --c (icon and ring: --ljr-N-icon) and --f (the line: the bright --ljr-N). Main = slot 1:
-   ink icon (light in dark looks) and every colour in its line. Counts sit in the tab's top-right corner: a ring, no fill, never moving;
-   grey ring = waiting, rose ring (.need) = late or due today. Markup (toolkit.js wires More):
+   ink icon (light in dark looks) and every colour in its line. Counts (768px and up) sit in the tab's top-right corner: a ring, no
+   fill, never moving; grey ring = waiting, rose ring (.need) = late or due today. On a phone a count is a dot (below). Markup (toolkit.js wires More):
    <nav class="house-tabs"><a class="ht" data-slot="1" href="#/x" data-nav="x"><span class="bar"></span><span class="hic"><svg class="hi">..</svg></span>
    <span class="htl">Main</span><span class="n"></span></a> ... <div class="ht-more"><button class="ht" data-slot="0" data-house-more
    aria-expanded="false" aria-controls="houseMore">..More</button><div class="house-more" id="houseMore" hidden><a data-slot="0" ..>..</a></div></div></nav> */
@@ -143,19 +144,21 @@ nav.house-tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; mar
   padding: var(--house-tabs-gap) var(--house-tabs-gap) calc(var(--house-tabs-gap) + env(safe-area-inset-bottom, 0px));
   background: var(--frame-foot); border: 0; box-shadow: none; }
 nav.house-tabs.hidden, nav.house-tabs[hidden], nav.house-tabs:empty { display: none !important; }
-nav.house-tabs > .ht, nav.house-tabs > .ht-more { flex: 1 1 0; min-width: min-content; max-width: var(--house-tab-max); }
+nav.house-tabs > .ht, nav.house-tabs > .ht-more { flex: 1 1 var(--house-tab-max); min-width: min-content; max-width: var(--house-tab-max); }   /* one start size for all, so all grow and shrink alike */
 nav.house-tabs > .ht-more { position: relative; display: flex; }
 nav.house-tabs > .ht-more > .ht { width: 100%; }
 nav.house-tabs .ht { --c: var(--ljr-0-icon); --f: var(--ljr-0); position: relative; box-sizing: border-box; width: auto; height: 100%; min-height: 0; margin: 0;
-  padding: 6px 4px 8px; border: 0; border-radius: var(--radius); outline: none; box-shadow: none; background: var(--card); color: var(--ink);
+  padding: 6px 0 8px; border: 0; border-radius: var(--radius); outline: none; box-shadow: none; background: var(--card); color: var(--ink);
   font-family: inherit; font-size: var(--fs-small); font-weight: 600; line-height: 16px; text-decoration: none; text-align: center; cursor: pointer; transform: none;
   display: flex; flex-direction: column; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 1px; overflow: hidden; }
-nav.house-tabs .ht:hover, nav.house-tabs .ht[aria-current="page"], nav.house-tabs .ht[aria-expanded="true"] { background: var(--card); border: 0; box-shadow: none; outline: none; }
+nav.house-tabs .ht:hover, nav.house-tabs .ht[aria-current="page"], nav.house-tabs .ht[aria-expanded="true"] { background: var(--card); border: 0; border-radius: var(--radius); box-shadow: none; outline: none; }
 nav.house-tabs .ht > .hic { box-sizing: border-box; flex: none; width: var(--house-tab-disc); height: var(--house-tab-disc); border-radius: 50%; display: grid; place-items: center;
   border: var(--house-line) solid transparent; background: transparent; color: var(--ljr-0-icon); }
 nav.house-tabs .ht > .hic > :is(svg, .ti, i) { width: var(--house-tab-icon); height: var(--house-tab-icon); font-size: var(--house-tab-icon); line-height: 1; color: inherit;
   fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
-nav.house-tabs .ht > .htl { display: block; max-width: 100%; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; order: 0; flex: none; color: var(--ink); }
+nav.house-tabs .ht > .htl { --px: 4px; display: block; margin: 0 var(--px); max-width: calc(100% - 2 * var(--px)); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; order: 0; flex: none; color: var(--ink); }
+/* .htl-long / .htl-short: the phone shows the short word (Lisa, 2 Nov 2026); the name keeps the long one. */
+nav.house-tabs .ht > .htl > .htl-short { display: none; }
 nav.house-tabs .ht > .bar { position: absolute; left: 50%; bottom: 2px; margin: 0; width: var(--house-tab-bar); height: var(--house-tab-bar-h); border-radius: 2px;
   background: var(--ljr-0); opacity: .6; transform: translateX(-50%); transition: width .15s ease-out, opacity .15s ease-out; box-shadow: none; min-width: 0; max-width: none; overflow: visible; }
 /* Hover and selected: one movement (the colour arrives, the line widens). */
@@ -179,14 +182,19 @@ nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt { position: absolute; top: 3p
 nav.house-tabs .ht > .n.wide, nav.house-tabs .ht > .cnt.wide { width: auto; padding: 0 4px; }
 nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { border-color: var(--house-late); background: transparent; }
 nav.house-tabs .ht > .n:empty, nav.house-tabs .ht > .cnt:empty { display: none !important; }
-/* A tab with a count: the icon steps left just enough that its ring and the count's ring never touch (only on narrow tabs, e.g. a
-   phone; on a wide tab the shift works out to 0 and the icon stays centred). 50% = half the tab; the rest = half the icon's round
-   place + the count + 1px. It never steps past the tab's own left edge (the 2px phone padding is the most it uses). */
-/* ...and a tab with a count starts from room for both (icon + count + a gap), so even the narrowest phone tab fits them side by side. */
-nav.house-tabs > .ht:has(> .n:not(:empty), > .cnt:not(:empty)), nav.house-tabs > .ht-more:has(> .ht > .n:not(:empty), > .ht > .cnt:not(:empty)) {
-  flex-basis: calc(var(--house-tab-disc) + var(--house-tab-count-w) + 5px); }
-nav.house-tabs .ht:has(> .n:not(:empty), > .cnt:not(:empty)) > .hic { position: relative;
-  left: min(0px, max(calc(var(--house-tab-disc) / 2 - 50% - 2px), calc(50% - var(--house-tab-disc) / 2 - var(--house-tab-count-w) - 1px))); }
+/* Tabs are one size (Lisa's pick b, 2 Nov 2026); a tab never widens for its count. Phone (under 768px): close to square (at most the
+   bar's inner height, or the longest word's room, --house-tab-fit from toolkit.js, for every tab) and the count is a dot by the
+   icon's top-right corner: rose = late, grey = waiting, none at 0 (the tab's name says the number). */
+@media (max-width: 767.98px) {
+  nav.house-tabs > .ht, nav.house-tabs > .ht-more { max-width: max(calc(var(--house-tabs-h) - 2 * var(--house-tabs-gap)), var(--house-tab-fit, 0px)); }
+  nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt, nav.house-tabs .ht > .n.wide, nav.house-tabs .ht > .cnt.wide {
+    top: var(--house-tab-dot-top); right: auto; left: calc(50% + var(--house-tab-disc) / 2 + 1px);
+    width: var(--house-tab-dot); min-width: var(--house-tab-dot); height: var(--house-tab-dot); min-height: var(--house-tab-dot);
+    padding: 0; border: 0; border-radius: 50%; background: var(--house-ring); color: transparent; font-size: 0; line-height: 0; overflow: hidden; }
+  nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { background: var(--house-late); }
+  nav.house-tabs .ht > .htl > .htl-long { display: none; }
+  nav.house-tabs .ht > .htl > .htl-short { display: inline; }
+}
 /* The More menu: opens above the bar, at its right end; the views that are not tabs. Same rules: grey icon at rest, the colour on hover
    and where you are, no fills. */
 nav.house-tabs .house-more { position: absolute; right: 0; bottom: calc(100% + var(--house-tabs-gap) + 6px); z-index: 30; box-sizing: border-box;
@@ -221,9 +229,7 @@ nav.house-tabs [data-slot="7"] { --c: var(--ljr-7-icon); --f: var(--ljr-7); }
 nav.house-tabs [data-slot="8"] { --c: var(--ljr-8-icon); --f: var(--ljr-8-icon); }
 @media (max-width: 600px) {
   nav.house-tabs { gap: 3px; padding-left: 3px; padding-right: 3px; }
-  nav.house-tabs > .ht, nav.house-tabs > .ht-more { max-width: none; }
-  nav.house-tabs .ht { padding-left: 2px; padding-right: 2px; }
-  nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt { top: 0; right: 0; }   /* tight in the corner, clear of the icon */
+  nav.house-tabs .ht > .htl { --px: 2px; }
   nav.house-tabs .house-more > :is(a, button) { min-height: var(--house-btn-phone); }
 }
 
@@ -285,3 +291,92 @@ a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
 .house-iw { font-size: var(--fs-small); font-weight: 600; line-height: 1.2; overflow-wrap: anywhere; }
 /* A square icon control grows to fit its word (never past its row), so the word never spills outside the page. */
 .house-noicons :is(a, button):has(> .house-iw) { width: auto; min-width: var(--house-ctl-h, 36px); max-width: 100%; padding-left: 8px; padding-right: 8px; }
+
+/* 14 Hub Main (Lisa's house style, 2 Nov 2026): every hub's Main is Next, Needs you (at most 5 rows), then the hub's 3 numbers.
+   Built by toolkit.js DashKit.hubMain, so the seven hubs look and behave the same. Next is the white card with the 1px ink edge;
+   Needs you rows carry a 3px bar (rose late, amber today, grey waiting) and their action button; the numbers are 14px house counts
+   (late ones wear the rose ring, the others none). */
+.hm { display: flex; flex-direction: column; gap: var(--house-gap); min-width: 0; }
+.hm > .card, .hm .hm-nums > .card { margin: 0; } /* the flex gap is the one 12px between cards (a hub's own .card margin would double it) */
+.hm h3 { margin: 0; font-size: var(--fs-head); font-weight: 600; line-height: 1.3; }
+.hm .hm-head { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.hm .hm-head h3 a { color: inherit; text-decoration: none; }
+.hm-next[class] { border-color: var(--ink); background: var(--card); gap: 8px; }
+.hm-what { margin: 0; font-size: var(--fs-body); font-weight: 600; overflow-wrap: anywhere; }
+.hm-what a, .hm-t a { color: var(--ink); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.hm-sub, .hm-t small { margin: 0; display: block; font-size: var(--fs-small); color: var(--muted); overflow-wrap: anywhere; }
+.hm-go { display: flex; gap: 8px; flex-wrap: wrap; }
+.hm .btn.hm-a { text-decoration: none; color: var(--ink); flex: none; }
+.hm-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.hm-row { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 0 6px 12px; border-radius: var(--radius); min-width: 0; }
+.hm-row.house-lbar { --house-lbar-out: 0px; --sc: var(--house-ring); border-radius: var(--radius); }
+/* The row shell is rounded like a house card (Lisa, 5 Nov). The left colour bar stays a straight 3px line, not a "(" bracket.
+   This supersedes 2 Nov "rows are square" for the row shell only. Nothing moves on hover, focus or press (the hover line is an outline). */
+.hm-row.house-lbar::before { border-radius: 0; }
+.hm-row, .hm-row:hover, .hm-row:focus-within, .hm-row:active { margin: 0; padding: 6px 0 6px 12px; border-width: 0; }
+.hm-row[data-kind="late"] { --sc: var(--house-late); }
+.hm-row[data-kind="today"] { --sc: var(--house-soon); }
+.hm-t { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
+.hm-more { align-self: flex-start; color: var(--ink); font-size: var(--fs-small); text-decoration: underline; text-underline-offset: 2px; padding: 4px 0; }
+.hm-empty[class], .hm-fail[class] { flex-direction: row; align-items: center; gap: 12px; }
+.hm-fail[class] { flex-direction: column; align-items: flex-start; border-color: var(--house-risk); }
+.hm-fail .note { margin: 0; }
+.hm-ok { flex: none; width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; border: var(--house-line) solid var(--house-ok); background: var(--house-ok-tint); color: var(--ink); font-size: var(--fs-small); font-weight: 600; }
+.hm-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--house-gap); min-width: 0; }
+.hm-nums > :not(.hm-n) { grid-column: 1 / -1; }
+a.hm-n[class] { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: var(--house-pad); color: var(--ink); text-decoration: none; min-width: 0; }
+/* One group, one size (Lisa, 2 Nov): all three numbers 18px / 600 on one baseline, each in the same box; a late one (above 0) wears a
+   rose ring sized to that number, the others no ring. Hover and press: a 1px ring only (the hub's colour where it has one); no fill. */
+.hm-v { box-sizing: border-box; display: inline-flex; align-items: center; height: 28px; padding: 0 6px; margin-left: -6px; border: var(--house-line) solid transparent;
+  border-radius: var(--radius); font-size: var(--fs-figure); font-weight: 600; line-height: 26px; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+.hm-v.need { border-color: var(--house-late); }
+.hm a.hm-n[class], .hm a.hm-n[class]:hover, .hm a.hm-n[class]:focus, .hm a.hm-n[class]:active { background: var(--card); box-shadow: none; transform: none; }
+.hm a.hm-n[class]:focus:not(:focus-visible) { outline: none; }
+@media (hover: hover) { .hm a.hm-n[class]:hover { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); } }
+.hm a.hm-n[class]:active { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
+.hm-l { font-size: var(--fs-small); color: var(--muted); line-height: 1.3; overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  .hm-row { flex-wrap: wrap; }
+  .hm-t { flex-basis: calc(100% - 8px); }
+  .hm .btn.hm-a { min-height: 44px; }
+}
+/* On a phone, Main's row titles and Next's title stop at 2 lines with "…" (Lisa, 2 Nov 2026); the whole title stays in the link's
+   name (aria-label) and on the item it opens. */
+@media (max-width: 767.98px) {
+  .hm-what > a.house-open, .hm-t > a.house-open { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+}
+
+/* 15 Fold (Lisa, 2 Nov 2026): every card or section with a heading folds down to its heading row (toolkit.js DashKit.fold adds the
+   button after every redraw). The chevron is a grey 16px outline icon (Tabler chevron-down) in a house control (36px, 44px on a phone, the
+   one 1px control line, no fill) at rest; hover and press draw the 1px line inside, focus the 2px ink ring; nothing moves and nothing fills. Folded, it turns a
+   quarter (not with reduced motion). In a flex heading row it is the row's last part; otherwise it sits over the row's right end
+   (.house-fold-abs, its place set by toolkit.js) and the row keeps that room free (.house-fold-pad). The heading row's count ring and
+   links stay in view when folded. On a phone a list of more than 5 rows shows 3 and a "+N more" button.
+   The :not(#hf-a):not(#hf-b) only lifts these rules above a page's own "#main button" styles; no element has those ids. */
+button.house-fold:not(#hf-a):not(#hf-b) { box-sizing: border-box; flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--house-btn); height: var(--house-btn); min-width: var(--house-btn); min-height: var(--house-btn);
+  margin: 0; padding: 0; border: var(--house-line) solid var(--press); border-radius: var(--radius); background: transparent; color: var(--muted); box-shadow: none; transform: none; cursor: pointer; line-height: 1;
+  font-size: var(--house-press-size); font-weight: 600; }
+@media (max-width: 767.98px) { button.house-fold:not(#hf-a):not(#hf-b) { width: var(--house-btn-phone); height: var(--house-btn-phone); min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); } }
+button.house-fold:not(#hf-a):not(#hf-b):hover, button.house-fold:not(#hf-a):not(#hf-b):focus, button.house-fold:not(#hf-a):not(#hf-b):active { background: transparent; box-shadow: none; transform: none; color: var(--muted); }
+button.house-fold:not(#hf-a):not(#hf-b):focus:not(:focus-visible) { outline: none; }
+@media (hover: hover) { button.house-fold:not(#hf-a):not(#hf-b):hover { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); } }
+button.house-fold:not(#hf-a):not(#hf-b):active { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); }
+button.house-fold:not(#hf-a):not(#hf-b):focus-visible { outline: var(--house-focus) solid var(--ink); outline-offset: 2px; }
+button.house-fold > svg { display: block; width: var(--house-fold-icon); height: var(--house-fold-icon); flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s ease-out; }
+button.house-fold[aria-expanded="false"] > svg { transform: rotate(var(--house-fold-turn)); }
+@media (prefers-reduced-motion: reduce) { button.house-fold > svg { transition: none; } }
+button.house-fold.house-fold-abs:not(#hf-a):not(#hf-b) { position: absolute; z-index: 1; }
+.house-fold-rel { position: relative; }
+.house-fold-pad[class] { padding-right: calc(var(--house-btn) + 8px); }
+@media (max-width: 767.98px) { .house-fold-pad[class] { padding-right: calc(var(--house-btn-phone) + 8px); } }
+.house-fold-row > .house-fold-h { margin-right: auto; }
+[data-fold-row] { cursor: pointer; }
+[data-house-folded] > [data-fold-part], [data-fold-extra] { display: none !important; }
+button.house-fold-more:not(#hf-a):not(#hf-b) { align-self: flex-start; display: inline-flex; align-items: center; min-height: 0; margin: 0; padding: 4px 0; border: 0; border-radius: var(--radius);
+  background: transparent; color: var(--ink); font-size: var(--fs-small); font-weight: 400; line-height: 1.3; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+button.house-fold-more:not(#hf-a):not(#hf-b):hover, button.house-fold-more:not(#hf-a):not(#hf-b):active { background: transparent; box-shadow: none; transform: none; }
+/* 16 Typing boxes (Lisa, 3 Nov 2026): every input, textarea, select and contenteditable is 16px (--fs-input) on every page, so a phone
+   (iPhone Safari) never zooms in when one is tapped. Only the typed words change size; nothing else does. Ticks, radios, sliders and
+   buttons are not typing boxes. The :not(#ti-a):not(#ti-b) only lifts this above a page's own input rules; no element has those ids. */
+:is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="image"]),
+  textarea, select, [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]):not(#ti-a):not(#ti-b) { font-size: var(--fs-input); }

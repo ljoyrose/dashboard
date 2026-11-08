@@ -110,6 +110,7 @@ That is 668 checks that must pass (mocked + phone, 31 Oct 2026, Studio plain wor
 - Missing files are reported, not hidden.
 - Saving stays switched off.
 - Sign out forgets everything.
+- Temperatures today keeps Morning, Evening, Rooms and Outside today as rows. The next outdoor days sit in one sideways strip (weekday, min–max, Cold / OK / Hot, rain none / light / wet, and Windy only from 40 km/h). Today is named Today. Outside uses the phrase only. The hub page does not scroll sideways. The history page is titled Temperatures. The round is the first tab: indoor tiles, then a short °C table in kennel walk order, then Outside. It does not show Source or the reading kind. Year chips run 2026, 2025, 2024, with 2026 open. Archive is its own page. (`tests/mocked/cdhub.spec.js`, `tests/mocked/history-area-sheet.spec.js`)
 
 **Money Hub**
 - Opens, then needs a sign-in.
@@ -312,6 +313,11 @@ Each line is a bug that got past the tests once, and the test that now stops it.
 | 30 Oct 2026 | Phone install: Factory, Food and Marketplace were not on the service worker list, so they did not open offline | "@regression every published hub page is on the service worker list" (tests/mocked/pwa-and-keys.spec.js) |
 | 30 Oct 2026 | Money Hub on a phone: sideways-scrolling tables could not be reached by keyboard (axe scrollable-region-focusable; CI fonts made the table overflow) | "@regression Money Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-money-scroll.spec.js) |
 | 30 Oct 2026 | CD Hub on a phone: sideways-scrolling tables and the table map could not be reached by keyboard (axe scrollable-region-focusable) | "@regression CD Hub 390px: every sideways-scroll box can be reached by keyboard" (tests/mocked/job35-cdhub-scroll.spec.js) |
+| 5 Nov 2026 | Home Apps tile header opened Factory Rooms (`factory/`) instead of Main, and the Food ✓ XML tick opened unfiltered orders | "Apps tile header opens Factory Main, and" |
+| 5 Nov 2026 | Main hub tiles: only the name was a link, so a tap on the rest of the square did nothing | "the whole hub tile opens the hub; numbers and the Food tick keep their own pages @regression" |
+| 5 Nov 2026 | CD Hub boot said it was reading tables from Drive and waited on each file in turn | "boot stays friendly and present files are read together @regression" |
+| 5 Nov 2026 | CD Hub Temperatures today showed "Saving off." again, and Temperature history did not open (a bare data-skip blocked the link) | "Temperatures today: no saving-off notice, and Temperature history opens history.html @regression" (tests/mocked/cdhub.spec.js) |
+| 6 Nov 2026 | Temperatures showed "Source:" and the reading kind, including the word actual, on history and on Outside today when the phrase was empty | "Outside today does not show the reading kind when the phrase is empty @regression" and "year chips run current first, and a day detail does not show Source or the reading kind @regression" |
 
 **Recipe when a bug is fixed:**
 1. Write a test that **fails** on the broken page and **passes** on the fixed one.
@@ -358,6 +364,7 @@ Each entity page draws its `FORECAST.csv` as a line, with a dashed £0 line, the
 - Every visible button, tile and link: has a label; internal links answer 200; outside links are https and open a new tab.
 - Each one is clicked on a fresh copy of the screen. It must go somewhere, open a tab, change the page or ask a question. A dead click fails.
 - Not clicked: Sign out and the skip link (own tests). Outside links are checked, not opened.
+- Temperature history on CD Hub Today is a real page link. The crawl follows it. That page's spreadsheet export is answered with an empty CSV so the click stays inside the pretend network.
 - A link that opens a new tab (like "Sample task ready now" on the Map, which opens Money Hub) waits for that tab to open, however long it takes under four workers. It used to give it 700ms and sometimes called it a dead click.
 
 ## The house look, once
@@ -425,3 +432,7 @@ RUN-LOG.csv column contract (the private repo writes it; header row first; colum
 | `errors` | Errors in the run (whole number). |
 | `result` | `ok`, `partial` or `failed`. Blank = ok when errors is 0, else partial. |
 | `lesson` | One short line, or blank. |
+
+## Dropbox, iCloud and Mac pages (TidyUp stage 9)
+
+`tests/mocked/coverage-pages.spec.js` checks the three look-only Drives pills (Dropbox, iCloud, Mac): each page opens with one purpose line, marks its own pill current, has no bin, move or rename button (only "← Dashboard"), and says "No report yet." (not a failure) until its engine writes a dry-run report. With a report, it shows the counts and "Nothing was renamed or moved." Dropbox reads the same DROPBOX-TOTALS.json as the Bin Dropbox fold; its delete steps stay in Bin. No page makes a write call.

@@ -127,9 +127,8 @@ test.describe('Marketplace (JOB 34b): keyboard only', () => {
     await expect(page.locator('#qr')).toBeHidden();
   });
 
-  // FIX-REQUEST J34b-F41 (marketplace/index.html:902-903; #qr at :244 is role="dialog" but focus stays behind it).
-  // DECISION NEEDED: fix the page (move focus to Close on open, Escape shuts, focus back to Show QR) or accept. OWNER: Marketplace owner. BY 2026-11-06
-  test.fixme('J34b-F41 drop-off code window takes the keyboard: focus moves into it on open and Escape shuts it', async ({ page }) => {
+  // J34b-F41 fixed: the drop-off code window takes focus on open, Escape shuts it, focus returns to Show QR.
+  test('J34b-F41 drop-off code window takes the keyboard: focus moves into it on open and Escape shuts it', async ({ page }) => {
     await book(page);
     await open(page, '#/do');
     await page.locator('#view .needs').click();

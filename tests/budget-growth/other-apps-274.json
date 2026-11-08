@@ -1,0 +1,1 @@
+{"home": 2800, "cdhub": 2000, "factory": 2000, "food": 2000, "money": 2000, "marketplace": 2000, "studio": 2000, "why": "Other apps list (TidyUp Apps 5, PR 274): index.html +1,118 bytes; config.js tidyApps +1,624, loaded by every hub (2,000 with headroom). marketplace and studio added by PR 284 (3 Nov): they load config.js too, and main measured them over (283601 and 381028)."}

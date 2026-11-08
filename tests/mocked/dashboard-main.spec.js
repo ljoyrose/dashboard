@@ -8,6 +8,7 @@ const vm = require('vm');
 const { test, expect } = require('../support/test');
 const { foodBook, marketRows, setLook } = require('../support/hubs');
 const { tabClick } = require('../support/tabs');
+const { steadyRows, numberGroup } = require('../support/hub-main');
 const { IDS } = require('../support/world');
 
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -17,17 +18,20 @@ const SHOTS = process.env.MAIN_SHOTS || '';
 
 // Every number is its own link to the place in the hub where Lisa acts on it (Projects: the hub itself).
 const ROUTES = {
-  projects: ['', '', ''], web: ['#/look', '#/look', '#/home'], money: ['#/dates', '#/dates', '#/money'], food: ['#/orders', '#/invoices', '#/orders'],
-  dogs: ['#/today', '#/today', '#/dogs'], apps: ['#/decide', '#/decide', '#/all'], market: ['#/do', '#/reply', '#/numbers'], studio: ['#/review', '#/me', '#/library'],
+  projects: ['', '', ''], web: ['#/all?show=down', '#/all?show=expiring', '#/all?show=live'], money: ['#/now/over', '#/dates/soon', '#/money/biz'],
+  food: ['#/orders?late', '#/invoices?unpaid', '#/orders?today'], dogs: ['#/round', '#/today/unplaced', '#/today/bitches'],
+  apps: ['#/decide/questions', '#/decide/gates', '#/all/live'], market: ['#/do?post', '#/reply', '#/sold'], studio: ['#/review', '#/me/today', '#/library'],
 };
-// Lisa's order, colour (the 3px line; Projects has the rainbow line) and link for each tile. Projects opens config.js projectsHub.webAppUrl.
+// Order, colour (the 3px line; Projects has the rainbow line) and link for each tile. Projects opens config.js projectsHub.webAppUrl.
+// The 4th field is the folder the three numbers append their hash to. The header uses that same link, except when a 6th field
+// names Main separately (Apps: factory/#/me). Putting Main on the folder field would make Questions/Gates/Live factory/#/me#/….
 const TILES = [
   ['projects', 'Projects', 'gradient', CFG.projectsHub.webAppUrl, ['Stuck', 'Waiting', 'Running']],
   ['web', 'Web', 'rgb(230, 68, 61)', 'estate/', ['Down', 'Expiring', 'Live']],
   ['money', 'Money', 'rgb(231, 134, 21)', 'money/', ['Overdue', 'Due Soon', 'Cash']],
   ['food', 'Food', 'rgb(243, 216, 78)', 'food/', ['Late', 'Owe GA', 'Today']],
   ['dogs', 'Dogs', 'rgb(243, 216, 78)', 'cdhub/', ['Temps', 'Unplaced', 'Bitches']],
-  ['apps', 'Apps', 'rgb(243, 216, 78)', 'factory/', ['Questions', 'Gates', 'Live']],
+  ['apps', 'Apps', 'rgb(243, 216, 78)', 'factory/', ['Questions', 'Gates', 'Live'], 'factory/#/me'],
   ['market', 'Marketplace', 'rgb(18, 159, 231)', 'marketplace/', ['To Post', 'To Reply', 'Sold']],
   ['studio', 'Studio', 'rgb(165, 112, 209)', 'studio/', ['Approve', 'Due Today', 'Sold']],
 ];
@@ -76,12 +80,13 @@ test.describe('Dashboard Main', () => {
     const tiles = page.locator('#view #hubTiles .hubtile');
     await expect(tiles).toHaveCount(TILES.length);
     for (let i = 0; i < TILES.length; i++) {
-      const [key, name, colour, href, labels] = TILES[i];
+      const [key, name, colour, href, labels, header] = TILES[i];
+      const head = header || href;
       const t = tiles.nth(i);
       await expect(t).toHaveAttribute('data-hub', key);
       const go = t.locator('a.hgo');
       await expect(go).toContainText(name);
-      await expect(go).toHaveAttribute('href', href);
+      await expect(go).toHaveAttribute('href', head);
       expect(href.startsWith('https://ljoyrose.github.io'), 'relative links only').toBe(false);
       // Every piece of info is clickable: the name and each number are links, all opening in a new tab.
       for (const a of await t.locator('a').all()) await expect(a).toHaveAttribute('target', '_blank');
@@ -97,11 +102,11 @@ test.describe('Dashboard Main', () => {
       else expect(look.line, name + ' line colour').toBe(colour);
       expect(look.w).toBe('3px');
       await expect(t.locator('svg.hico use')).toHaveCount(1);
-      if (key === 'projects') await expect(t).toContainText('Opens in your work account');
+      await expect(t, name + ': no explainer line').not.toContainText('Opens in your work account');
       expect((await nums(page, key)).map((n) => n[0]), name + ' labels').toEqual(labels);
       for (const lab of labels) expect(lab.split(' ').length, 'labels are 1-2 words').toBeLessThanOrEqual(2);
     }
-    // Sizes: numbers 18px, labels 14px; a late number is a 14px rose ring.
+    // Sizes: every number 18px (late ones too, in a rose ring sized to them), labels 14px.
     const sz = await page.locator('#hubTiles .hubtile[data-hub="apps"] .hk').first().evaluate((k) => [getComputedStyle(k.firstElementChild).fontSize, getComputedStyle(k.lastElementChild).fontSize]);
     expect(sz).toEqual(['18px', '14px']);
     // The numbers, from the shared samples (see each hub's own spec for the same rules).
@@ -113,7 +118,7 @@ test.describe('Dashboard Main', () => {
     const money = await nums(page, 'money');
     expect(money.map((n) => n[0])).toEqual(['Overdue', 'Due Soon', 'Cash']);
     expect(money[2][1]).toMatch(/^−?£[\d.]+k?$/);
-    await expect(page.locator('#hubTiles .cnt.need').first()).toHaveCSS('font-size', '14px');
+    await expect(page.locator('#hubTiles .hk b.need').first()).toHaveCSS('font-size', '18px');
     // Web: the RR_WEB-ESTATE sheet id is empty in config.js, so nothing is read and every number is "–".
     expect(await nums(page, 'web')).toEqual([['Down', '–', false], ['Expiring', '–', false], ['Live', '–', false]]);
   });
@@ -132,13 +137,98 @@ test.describe('Dashboard Main', () => {
   test('Food ✓ XML tick: on when no order is Not at GA, off when one is', async ({ page, guard }) => {
     await seed(page, guard, { foodAnswer: food(false) });
     await signIn(page);
-    await expect(page.locator('#hubTiles .hubtile[data-hub="food"] [data-xml]')).toHaveText('✓ XML');
+    const tick = page.locator('#hubTiles .hubtile[data-hub="food"] [data-xml]');
+    await expect(tick).toHaveText('✓ XML');
+    await expect(tick).toHaveAttribute('href', 'food/#/orders?ga');
     expect((await nums(page, 'food'))[0]).toEqual(['Late', '0', false]);
     await page.unroute(SHEETS);
     await seed(page, guard, { foodAnswer: food(true), apps: false, studio: false });
     await page.locator('#refreshBtn').click();
     await expect(page.locator('#hubTiles .hubtile[data-hub="food"] .hk').first()).toContainText('1');
     await expect(page.locator('#hubTiles [data-xml]')).toHaveCount(0);
+  });
+
+  test('Apps tile header opens Factory Main, and Food tick opens Not at GA yet @regression', async ({ page, guard }) => {
+    await seed(page, guard, { foodAnswer: food(false) });
+    await signIn(page);
+    const apps = page.locator('#hubTiles .hubtile[data-hub="apps"]');
+    await expect(apps.locator('a.hgo')).toHaveAttribute('href', 'factory/#/me');
+    await expect(apps.locator('a.hk')).toHaveCount(3);
+    for (const hash of ['#/decide/questions', '#/decide/gates', '#/all/live']) {
+      await expect(apps.locator('a.hk[href="factory/' + hash + '"]')).toHaveCount(1);
+    }
+    await expect(page.locator('#hubTiles .hubtile[data-hub="food"] [data-xml]')).toHaveAttribute('href', 'food/#/orders?ga');
+  });
+
+  // The square was only a link on the name. A tap on the card (not a number, not the tick) must open the hub.
+  test('the whole hub tile opens the hub; numbers and the Food tick keep their own pages @regression', async ({ page, guard }) => {
+    await seed(page, guard, { foodAnswer: food(false) });
+    await signIn(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    const web = page.locator('#hubTiles .hubtile[data-hub="web"]');
+    await web.scrollIntoViewIfNeeded();
+    const hit = await web.evaluate((tile) => {
+      const box = tile.getBoundingClientRect();
+      const head = tile.querySelector('.hn').getBoundingClientRect();
+      const go = tile.querySelector('a.hgo').getBoundingClientRect();
+      const hk = tile.querySelector('a.hk').getBoundingClientRect();
+      const at = (x, y) => {
+        const el = document.elementFromPoint(x, y);
+        const a = el && el.closest ? el.closest('a') : null;
+        return { x, y, href: a ? a.getAttribute('href') : '', cls: a ? a.className : '' };
+      };
+      return {
+        tile: { w: box.width, h: box.height },
+        headH: head.height,
+        goH: go.height,
+        hk: { w: hk.width, h: hk.height },
+        header: at(box.right - 18, head.top + head.height / 2),
+        foot: at(box.left + box.width / 2, box.bottom - 3),
+        num: at(hk.left + hk.width / 2, hk.top + hk.height / 2),
+      };
+    });
+    expect(hit.tile.w, 'tile width').toBeGreaterThanOrEqual(44);
+    expect(hit.tile.h, 'tile height').toBeGreaterThanOrEqual(44);
+    expect(hit.headH, 'header zone').toBeGreaterThanOrEqual(44);
+    expect(hit.goH, 'name link').toBeGreaterThanOrEqual(44);
+    expect(hit.hk.w, 'number width').toBeGreaterThanOrEqual(44);
+    expect(hit.hk.h, 'number height').toBeGreaterThanOrEqual(44);
+    expect(hit.header, 'empty header opens the hub').toMatchObject({ href: 'estate/', cls: expect.stringContaining('hgo') });
+    expect(hit.foot, 'card foot opens the hub').toMatchObject({ href: 'estate/' });
+    expect(hit.num, 'a number keeps its filtered list').toMatchObject({ href: 'estate/#/all?show=down', cls: expect.stringContaining('hk') });
+
+    const [hubTab] = await Promise.all([
+      page.context().waitForEvent('page'),
+      page.mouse.click(hit.header.x, hit.header.y),
+    ]);
+    await expect(hubTab).toHaveURL(/\/estate\/?$/);
+    await hubTab.close();
+
+    const hkBox = await web.locator('a.hk').first().boundingBox();
+    const [kpiTab] = await Promise.all([
+      page.context().waitForEvent('page'),
+      page.mouse.click(hkBox.x + hkBox.width / 2, hkBox.y + hkBox.height / 2),
+    ]);
+    await expect(kpiTab).toHaveURL(/\/estate\/#\/all\?show=down$/);
+    await kpiTab.close();
+
+    const foodTile = page.locator('#hubTiles .hubtile[data-hub="food"]');
+    await foodTile.scrollIntoViewIfNeeded();
+    const tick = await foodTile.locator('a.xml').evaluate((a) => {
+      const r = a.getBoundingClientRect();
+      const el = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      const hitA = el && el.closest('a');
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height, href: hitA ? hitA.getAttribute('href') : '', cls: hitA ? hitA.className : '' };
+    });
+    expect(tick.w, 'Food tick width').toBeGreaterThanOrEqual(44);
+    expect(tick.h, 'Food tick height').toBeGreaterThanOrEqual(44);
+    expect(tick).toMatchObject({ href: 'food/#/orders?ga', cls: expect.stringContaining('xml') });
+    const [xmlTab] = await Promise.all([
+      page.context().waitForEvent('page'),
+      page.mouse.click(tick.x, tick.y),
+    ]);
+    await expect(xmlTab).toHaveURL(/\/food\/#\/orders\?ga$/);
+    await xmlTab.close();
   });
 
   test('Needs you: at most 5 rows across the hubs, late first, then due soon, then waiting; each row has its hub icon and line', async ({ page, guard }) => {
@@ -152,7 +242,20 @@ test.describe('Dashboard Main', () => {
     for (const g of got) { expect(g.icon).toBe(true); expect(g.line).toBe('3px'); expect(g.hub).toBeTruthy(); }
     expect(new Set(got.map((g) => g.hub)).size, 'rows come from more than one hub').toBeGreaterThan(1);
     expect(got[0].k).toBe('risk');
-    await expect(page.locator('#needsToday')).toContainText(/And \d+ more\. Open Do\./);
+    await expect(page.locator('#needsToday a[data-needs-more]')).toHaveText(/^\+\d+ more$/);
+    await expect(page.locator('#needsToday a[data-needs-more]')).toHaveAttribute('href', '#/do');
+    await expect(page.locator('#needsToday')).not.toContainText('Open Do');
+  });
+
+  test('Needs you rows never jump: the same box and icon x on hover and focus, one left edge, a straight 3px bar', async ({ page, guard }) => {
+    await seed(page, guard);
+    await signIn(page);
+    await expect(page.locator('#needsToday li').first()).toBeVisible();
+    await steadyRows(page, '#needsToday ol > li', '.hico');
+    // Each tile's 3 numbers: one size, a rose ring only on a late one, ring-only hover and focus (Lisa, 2 Nov: the Projects tile).
+    for (const hub of ['apps', 'food', 'money']) await numberGroup(page, '#hubTiles .hubtile[data-hub="' + hub + '"] a.hk', 'b');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await steadyRows(page, '#needsToday ol > li', '.hico');
   });
 
   test('the big hub buttons and "You are here" are gone; the top bar says Dashboard', async ({ page, guard }) => {

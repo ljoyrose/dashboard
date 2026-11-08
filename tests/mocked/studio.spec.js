@@ -89,10 +89,14 @@ test.describe('Studio page', () => {
     await expect(page.locator('#enginePill')).toContainText('On · 10:00');
     await expect(page.locator('#budgetPill')).toHaveText('£20 / £50');
     await expect(page.locator('#budgetPill')).toHaveAttribute('href', '#/tools');
+    await expect(page.locator('#nMe')).toHaveText('4');
+    // Main is the house Main (Next, Needs you, 3 numbers); Review and Gates live on Decide, Tasks on Do (Lisa, 2 Nov).
+    await expect(page.locator('[data-hub-main="studio"]')).toBeVisible();
+    await go(page, 'decide');
     await expect(page.locator('[data-sect="review"] .crow')).toHaveCount(2);
     await expect(page.locator('[data-sect="gate"] .crow[data-row="sa-gate"]')).toContainText('Lock the spec?');
+    await go(page, 'do');
     await expect(page.locator('[data-sect="hand"] .crow[data-row="sa-hand"]')).toBeVisible();
-    await expect(page.locator('#nMe')).toHaveText('4');
     // TEST items stay out of lists and counts until the TEST switch is on.
     await go(page, 'assets');
     await expect(page.locator('.crow[data-row="sa-test"]')).toHaveCount(0);
@@ -172,7 +176,7 @@ test.describe('Studio page', () => {
 
   test('a gate verdict and a new idea each write one request file', async ({ page, guard }) => {
     const got = await uploads(page, guard);
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/decide'); // Gates moved from Main to Decide (Lisa, 2 Nov)
     await page.locator('.crow[data-row="sa-gate"] [data-act="gate"][data-verdict="RESHAPE"]').click();
     await expect(page.locator('.crow[data-row="sa-gate"] [data-sent]')).toBeVisible();
     expect(got[0].body).toMatchObject({ kind: 'gate', assetId: 'sa-gate', verdict: 'RESHAPE' });
@@ -482,7 +486,7 @@ test.describe('Studio page', () => {
 
   test('Me: Done on a Task writes done with creditsUsed (tool + units); Undo is offered', async ({ page, guard }) => {
     const got = await uploads(page, guard);
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/do'); // Tasks moved from Main to Do (Lisa, 2 Nov)
     const r = page.locator('[data-sect="hand"] .crow[data-row="sa-hand"]');
     await r.locator('[data-panel="done"]').click();
     await expect(r.locator('[data-dtool="Sample video tool"]')).toHaveCount(0); // not owned
@@ -522,7 +526,7 @@ test.describe('Studio page', () => {
 
   test('hardening: an engine last run over an hour ago turns the pill red; a failed refresh keeps the page', async ({ page, guard, allowedConsole }) => {
     allowedConsole.push(/Failed to load resource|ERR_FAILED|net::/);
-    await open(page, guard, '#/me', { change: (s) => { s.health.lastRun = new Date(NOW.getTime() - 3 * 36e5).toISOString(); } });
+    await open(page, guard, '#/decide', { change: (s) => { s.health.lastRun = new Date(NOW.getTime() - 3 * 36e5).toISOString(); } });
     await expect(page.locator('#enginePill')).toHaveClass(/bad/);
     await page.route(/googleapis\.com\/drive\/v3\/files\?/, (route) => route.abort());
     await page.locator('#refreshBtn').click();
@@ -576,22 +580,25 @@ test.describe('Studio page', () => {
 
   test('spec: an early item with no legal set shows Legal?; the Where panel sets destination and legal set (same company only) with one set request each', async ({ page, guard }) => {
     const got = await uploads(page, guard);
-    await open(page, guard, '#/me', { change: (s) => {
+    await open(page, guard, '#/decide', { change: (s) => { // Gates moved from Main to Decide (Lisa, 2 Nov)
       s.legalSets = [{ id: 'LS-N', name: 'North website', kind: 'brand website', entity: 'Sample Ltd', brandIds: ['sb-north'], status: 'live' },
         { id: 'LS-APP', name: 'Sample app', kind: 'app', entity: 'Sample Ltd', brandIds: [], status: 'live' },
         { id: 'LS-X', name: 'Other company', kind: 'brand website', entity: 'Other Ltd', brandIds: ['sb-other'], status: 'live' }];
       const g = s.assets.filter((a) => a.id === 'sa-gate')[0]; g.brandIds = ['sb-north']; g.legal = { entity: 'Sample Ltd', setId: null };
     } });
-    const r = page.locator('[data-sect="gate"] .crow[data-row="sa-gate"]');
+    // On Decide the item's details open beside the list, so the Where tools and their chips are found by the item's id.
+    await expect(page.locator('[data-sect="gate"] .crow[data-row="sa-gate"]')).toBeVisible();
+    const where = async () => (await details(page, 'sa-gate')).locator('[data-panel="where"]').click();
+    const chip = (f, v) => page.locator(`[data-set="${f}"][data-id="sa-gate"]` + (v ? `[data-val="${v}"]` : ''));
     await expect((await details(page, 'sa-gate')).locator('[data-chip="legal-missing"]')).toBeVisible();
-    await r.locator('[data-panel="where"]').click();
-    await expect(r.locator('[data-set="legalSetId"]')).toHaveCount(2);
-    await r.locator('[data-set="destination"][data-val="funnel"]').click();
+    await where();
+    await expect(chip('legalSetId')).toHaveCount(2);
+    await chip('destination', 'funnel').click();
     await expect.poll(() => got.length).toBe(1);
     expect(got[0].body).toMatchObject({ kind: 'set', assetId: 'sa-gate', destination: 'funnel' });
     await expect((await details(page, 'sa-gate')).locator('[data-chip="dest"]')).toContainText('Funnel');
-    await r.locator('[data-panel="where"]').click();
-    await r.locator('[data-set="legalSetId"][data-val="LS-APP"]').click();
+    await where();
+    await chip('legalSetId', 'LS-APP').click();
     await expect.poll(() => got.length).toBe(2);
     expect(got[1].body).toMatchObject({ kind: 'set', assetId: 'sa-gate', legalSetId: 'LS-APP' });
     await expect((await details(page, 'sa-gate')).locator('[data-chip="legal"]')).toContainText('Sample app');
@@ -968,18 +975,19 @@ test.describe('Studio page', () => {
       expect(await el.boundingBox(), `${k} must not move`).toEqual(b0);
       if (k === 'pill') { await page.mouse.move(0, 400); await page.keyboard.press('Escape'); } // close the Filter panel so it covers nothing
     }
-    // Neutral hover also lays a pale grey tint; meaning-coloured buttons keep their own colour (line and tint), never ink.
+    // Never a fill on hover (Lisa's sweep, 3 Nov 2026); meaning-coloured buttons keep their own colour line, never ink.
     await page.locator('#filtersBtn').hover();
-    expect(await page.locator('#filtersBtn').evaluate((e) => getComputedStyle(e).backgroundColor)).not.toBe(await page.locator('#sortBtn').evaluate((e) => getComputedStyle(e).backgroundColor));
+    expect(await page.locator('#filtersBtn').evaluate((e) => getComputedStyle(e).backgroundColor)).toBe(await page.locator('#sortBtn').evaluate((e) => getComputedStyle(e).backgroundColor));
     await go(page, 'review');
     const yes = page.locator('.crow[data-row="sa-rev1"] [data-act="approve"]'), no = page.locator('.crow[data-row="sa-rev1"] [data-act="bin"]');
     const y0 = await yes.boundingBox();
+    const yRest = await yes.evaluate((e) => getComputedStyle(e).backgroundColor);
     await yes.hover();
     const ys = await yes.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor, w: c.outlineWidth, bg: c.backgroundColor }; });
     expect(ys.o).toBe(ys.b); // rests on its green line and keeps it on hover (Lisa's approved picture), never ink
     expect(ys.o).not.toBe(ink);
     expect(ys.w).toBe('1px');
-    expect(ys.bg).not.toBe('rgba(0, 0, 0, 0)');
+    expect(ys.bg, 'no fill on hover').toBe(yRest);
     expect(await yes.boundingBox()).toEqual(y0);
     await no.hover();
     const ns = await no.evaluate((e) => { const c = getComputedStyle(e); return { o: c.outlineColor, b: c.borderTopColor }; });
@@ -990,7 +998,7 @@ test.describe('Studio page', () => {
     expect(sel).toBe('1px');
   });
 
-  test('numbers: every standalone count wears the same 1px ink ring; needs-you tab counts add a rose edge and tint; steps keep their stage circle', async ({ page, guard }) => {
+  test('numbers: every standalone count wears the same 1px ink ring; a tab count is rose only when one is late (sweep, 3 Nov); steps keep their stage circle', async ({ page, guard }) => {
     await open(page, guard, '#/line?brand=sb-north');
     await openFilters(page);
     const ink = await page.evaluate(() => getComputedStyle(document.body).color);
@@ -1004,7 +1012,9 @@ test.describe('Studio page', () => {
     const tab = await look('nav.tabs #nLine');
     expect(tab, 'tab').toMatchObject({ b: '1px solid', bc: 'rgb(138, 127, 112)', bg: 'rgba(0, 0, 0, 0)', w: '600', num: 'tabular-nums', r: '12px', fs: '14px' }); // the grey read-only ring (--house-ring); a 14px number (Lisa's pick A, 2 Nov)
     const need = await look('nav.tabs #nMe');
-    expect(need).toMatchObject({ b: '1px solid', bc: 'rgb(230, 68, 61)', bg: 'rgba(0, 0, 0, 0)', w: '600' }); // rose edge (--ljr-2), never a fill
+    // Rose = late only (Lisa's sweep, 3 Nov 2026: a rose count is read out as "N late"): rose edge (--ljr-2) when one is late, else grey.
+    const late = await page.locator('nav.tabs #nMe').evaluate((e) => e.classList.contains('need'));
+    expect(need).toMatchObject({ b: '1px solid', bc: late ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)', bg: 'rgba(0, 0, 0, 0)', w: '600' }); // never a fill
     // Steps are words, not ringed numbers: the only ringed number in a column head is its count.
     await expect(page.locator('.col[data-stage="5"] .col-head .step')).toHaveText('Step 5:');
     await expect(page.locator('.col[data-stage="5"] .col-head .cnt')).toHaveAttribute('aria-label', /^\d+ items$/);
@@ -1053,7 +1063,8 @@ test.describe('Studio page', () => {
     await page.keyboard.press('Escape');
     await page.setViewportSize({ width: 390, height: 844 });
     for (const sel of ['#lookBtn', '#refreshBtn', '#filtersBtn', '.subnav a', '.crow .ico']) await expect.poll(() => h(sel), sel + ' on the phone').toBe(44); // the page redraws when it crosses into phone width
-    expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(24); // the same corner ring on the phone (Lisa's pick A, 2 Nov)
+    expect(await h('nav.tabs #nLine'), 'tab count on the phone').toBe(8); // on the phone the count is an 8px dot (Lisa's pick b, 2 Nov)
+    expect(await page.locator('nav.tabs #nLine').evaluate((e) => getComputedStyle(e).borderTopLeftRadius), 'the dot is round').toBe('50%');
   });
 
   test('two font weights only (400 and 600) on every tab', async ({ page, guard }) => {
@@ -1183,34 +1194,33 @@ test.describe('Studio page', () => {
     await expect(page.locator('.crow[data-row="sa-gate"] [data-chip="need"]')).toHaveText('Gate');
   });
 
-  test('Me: no greeting, three-number summary, Next with one button, Needs you today (7 at most); phone puts Needs first and the three in one row', async ({ page, guard }) => {
+  test('Main: no greeting, Next with one button, Needs you (5 at most, each opens its item), Approve · Due Today · Sold; phone keeps the three in one row', async ({ page, guard }) => {
+    // Main is the house Main (Lisa, 2 Nov 2026); the old three (On track / Needs you / Overdue) open from the top of Do, and the
+    // fuller late-first, "–" and empty cases are in hub-main-studio.spec.js. This checks Main with the real sample state.
     await open(page, guard, '#/me');
     await expect(page.locator('#view .hello'), 'no greeting (Lisa, 2 Nov: no unnecessary words)').toHaveCount(0);
-    const sums = page.locator('[data-three] .sum');
-    await expect(sums).toHaveText([/On track/, /Needs you/, /Overdue/]);
-    // The three numbers are ringed 14px numbers, the same size as the words beside them; ring only, no fill (Lisa's pick A, 2 Nov).
-    for (const k of ['ok', 'need', 'over']) {
-      const b = await page.locator(`[data-sum="${k}"] .big`).evaluate((e) => { const c = getComputedStyle(e); return [c.fontSize, c.backgroundColor, e.getBoundingClientRect().height]; });
-      expect(b, k).toEqual(['14px', 'rgba(0, 0, 0, 0)', 24]);
+    const nums = page.locator('[data-hm="nums"] a.hm-n');
+    await expect(nums.locator('.hm-l')).toHaveText(['Approve', 'Due Today', 'Sold']);
+    await expect(nums.nth(0).locator('.hm-v')).toHaveText('2'); // the two pieces waiting at Review
+    await expect(nums.nth(2).locator('.hm-v')).toHaveText('–'); // no dated sales: never invented
+    for (let i = 0; i < 3; i++) {
+      const b = await nums.nth(i).locator('.hm-v').evaluate((e) => { const c = getComputedStyle(e); return [c.fontSize, c.fontWeight, c.backgroundColor]; });
+      expect(b, 'number ' + i).toEqual(['18px', '600', 'rgba(0, 0, 0, 0)']);
     }
-    const n = page.locator('[data-next]');
-    await expect(n.locator('.btn')).toHaveCount(1);
-    await expect(n.locator('.btn')).toHaveText('Open');
-    await expect(n).toHaveCSS('border-top-color', await page.evaluate(() => getComputedStyle(document.body).color));
-    expect(await n.evaluate((e) => getComputedStyle(e).backgroundColor)).toBe('rgb(255, 254, 251)'); // white card, no tint
-    const m = page.locator('[data-needs] .mrow');
+    const n = page.locator('[data-hm="next"]');
+    await expect(n.locator('a.btn')).toHaveCount(1);
+    await expect(n.locator('a.btn')).toHaveAttribute('href', /^#\/asset\//);
+    const m = page.locator('[data-hm="needs"] .hm-row');
     expect(await m.count()).toBeGreaterThan(0);
-    expect(await m.count()).toBeLessThanOrEqual(7);
-    await expect(m.first().locator('small')).toContainText('Step ');
-    // Each row is a link to its item; no empty circle in front of it (Lisa, 2 Nov: it looked like a checkbox that did nothing).
+    expect(await m.count()).toBeLessThanOrEqual(5);
+    // Each row is a link to its item, with its action; no empty circle in front of it (Lisa, 2 Nov: it looked like a checkbox).
     await expect(m.first().locator('.ic')).toHaveCount(0);
-    await expect(m.first()).toHaveAttribute('href', /^#\/asset\//);
+    await expect(m.first().locator('.hm-t a')).toHaveAttribute('href', /^#\/asset\//);
+    await expect(m.first().locator('a[data-hm-act]')).toHaveCount(1);
     await page.setViewportSize({ width: 390, height: 844 });
-    const ys = await sums.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
+    const ys = await nums.evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top)));
     expect(new Set(ys).size, 'the three fit in one row').toBe(1);
-    // Read both positions in one go: the page redraws when it crosses into phone width.
-    await expect.poll(() => page.evaluate(() => { const a = document.querySelector('[data-needs]'), b = document.querySelector('[data-next]'); return !!(a && b) && a.getBoundingClientRect().top < b.getBoundingClientRect().top; })).toBe(true);
-    await noSidewaysScroll(page, 'Me on the phone');
+    await noSidewaysScroll(page, 'Main on the phone');
   });
 
   test('who has it: a ring on every card (L ink = waiting on you, C grey = Claude, client initial = waiting on the client); parts under the thumb; details say how long in this step', async ({ page, guard }) => {
@@ -1379,9 +1389,9 @@ test.describe('Studio page', () => {
     await open(page, guard, '#/line');
     const colBar = await page.locator('.col[data-stage="5"] .col-head .sbar').evaluate((e) => getComputedStyle(e).backgroundColor);
     await page.locator('[data-vmode="list"]').click();
-    // Lisa's pick (2 Nov): the bar runs the row's full height, 3px, curved (../house.css section 10: a left border on a layer over the row).
-    const bar = await page.locator('.crow[data-row="sa-make"]').evaluate((e) => { const c = getComputedStyle(e, '::before'); return { w: c.borderLeftWidth, bg: c.borderLeftColor, l: c.left, full: Math.abs(parseFloat(c.height) - e.getBoundingClientRect().height) <= 1, curved: parseFloat(c.borderTopLeftRadius) >= 8 }; });
-    expect(bar).toEqual({ w: '3px', bg: colBar, l: '0px', full: true, curved: true });
+    // Lisa's pick (2 Nov): the bar runs the row's full height, 3px, and a square row's bar is straight, never a "(" (../house.css section 10).
+    const bar = await page.locator('.crow[data-row="sa-make"]').evaluate((e) => { const c = getComputedStyle(e, '::before'); return { w: c.borderLeftWidth, bg: c.borderLeftColor, l: c.left, full: Math.abs(parseFloat(c.height) - e.getBoundingClientRect().height) <= 1, straight: parseFloat(c.borderTopLeftRadius) === 0 && parseFloat(c.borderBottomLeftRadius) === 0 }; });
+    expect(bar).toEqual({ w: '3px', bg: colBar, l: '0px', full: true, straight: true });
     await page.locator('[data-vmode="board"]').click();
     expect(await page.locator('.crow[data-row="sa-make"]').evaluate((e) => getComputedStyle(e, '::before').content)).toBe('none'); // not on board cards
   });

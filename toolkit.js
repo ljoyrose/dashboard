@@ -82,7 +82,9 @@
     't-line': '<path d="M4 12h16M7 8v8M12 8v8M17 8v8"/>',
     't-room': '<path d="M4 20v-10l8-6l8 6v10z"/>',
     't-world': '<circle cx="12" cy="12" r="9"/><path d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 0 0 0 18M12.5 3a17 17 0 0 1 0 18"/>',
-    't-more': '<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>'
+    't-more': '<circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/>',
+    // The fold chevron on every section heading (Lisa, 2 Nov): Tabler chevron-down, grey; it turns a quarter when the section is folded.
+    chev: '<path d="M6 9l6 6l6-6"/>'
   };
   function addIcons() {
     var doc = root.document; if (!doc || !doc.body || doc.getElementById('houseIcons')) return;
@@ -249,6 +251,29 @@
     if (root.addEventListener) root.addEventListener('hashchange', function () { shutMores(null); });
   }
 
+  // ---- Tab names say the count ("Do, 3 waiting" / "Do, 1 late"; a phone shows only a dot), and --house-tab-fit = the longest word's room, so every phone tab is one size (house.css).
+  function nameTabs(nav) {
+    var fit = 0;
+    Array.prototype.forEach.call(nav.querySelectorAll(':scope > .ht, :scope > .ht-more > .ht'), function (t) {
+      var w = t.querySelector(':scope > .htl'), n = t.querySelector(':scope > .n, :scope > .cnt'), s; if (!w) return;
+      s = root.getComputedStyle(w); fit = Math.max(fit, Math.ceil(w.scrollWidth + parseFloat(s.marginLeft) * 2));
+      if (!n) return;
+      var c = n.textContent.trim(), name = (w.querySelector(':scope > .htl-long') || w).textContent.trim() + (c ? ', ' + c + (n.classList.contains('need') ? ' late' : ' waiting') : '');
+      if (t.getAttribute('aria-label') !== name) t.setAttribute('aria-label', name);
+    });
+    if (nav.style.getPropertyValue('--house-tab-fit') !== (fit ? fit + 'px' : '')) nav.style.setProperty('--house-tab-fit', fit ? fit + 'px' : '');
+  }
+  function watchTabs() {
+    var navs = root.document.querySelectorAll('nav.house-tabs'), all = function () { Array.prototype.forEach.call(navs, nameTabs); };
+    Array.prototype.forEach.call(navs, function (nav) {
+      nameTabs(nav);
+      if (root.MutationObserver) new root.MutationObserver(function () { nameTabs(nav); }).observe(nav, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['class', 'aria-label'] });
+    });
+    if (root.document.fonts) root.document.fonts.ready.then(all);   // words change width when the web font arrives
+    root.addEventListener('resize', all);
+  }
+  if (root.document) { if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', watchTabs); else watchTabs(); }
+
   // ---- Phone filters: one calm row. Filter groups (.house-filters, each with an id) fold behind ONE Filter button
   // (.house-fbtn, data-house-filter="<id> [<id>...]") on a phone; on a desktop the button is hidden and the chips show inline (house.css).
   // The open / shut state survives the page redrawing its chips (pages redraw on every tap).
@@ -347,6 +372,172 @@
     var o = r.querySelector('.house-open'); if (o) o.click();
   });
 
+  // ---- Fold (Lisa, 2 Nov 2026): every card or section with a heading folds down to its heading row, on every page and tab.
+  // One enhancer, run after every redraw (a MutationObserver on <body>), so no page writes its own: a .card or <section> whose first
+  // part is an h2 / h3 (or a heading row holding one) gets ONE real button, the grey chevron, with aria-expanded and aria-controls.
+  // Tapping the heading row (not a link or button in it) or the chevron folds and opens; Enter and Space work on the chevron.
+  // Whatever sits in the heading row (its count ring, its link) stays in view when folded. Each fold is remembered per page, view
+  // and section in localStorage 'dash-fold'. Default open; on a phone (under 768px) a list of more than 5 rows starts at its
+  // first 3 rows with a "+N more" button that opens the rest (remembered too). Not here: <details> folds pages already draw,
+  // header, the bottom tabs, menus, dialogs, link cards, and anything marked data-no-fold.
+  var FOLD_KEY = 'dash-fold', FOLD_MAX = 400, FOLD_ROWS = 5, FOLD_SHOW = 3;
+  var FOLD_SKIP = 'header, nav, dialog, details, summary, [role="dialog"], .house-menu, .house-more, a, button, [data-no-fold]';
+  var FOLD_HOT = 'a, button, input, select, textarea, label, summary, [tabindex], [contenteditable="true"], [data-action], [data-go], [role="button"], [onclick]';
+  var FOLD_NOTNAME = '.cnt, .n, .ct, .count, .badge, .dpill, .tag, .chip, .mtag, .state, .pill, svg, .ti, .sr, [aria-hidden="true"], .house-fold';
+  var foldMem = null, foldSeq = 0;
+  function foldStore() {
+    if (foldMem) return foldMem;
+    try { foldMem = JSON.parse(root.localStorage.getItem(FOLD_KEY) || '{}'); } catch (e) { foldMem = {}; }
+    if (!foldMem || typeof foldMem !== 'object' || Array.isArray(foldMem)) foldMem = {};
+    return foldMem;
+  }
+  function foldSave(k, v) {
+    var m = foldStore(); delete m[k]; if (v != null) m[k] = v;   // the newest goes last; the oldest go first past FOLD_MAX
+    var ks = Object.keys(m); while (ks.length > FOLD_MAX) delete m[ks.shift()];
+    try { root.localStorage.setItem(FOLD_KEY, JSON.stringify(m)); } catch (e) { /* private window: the fold still works on this page */ }
+  }
+  function foldPhone() { return !!(root.matchMedia && root.matchMedia('(max-width: 767.98px)').matches); }
+  function foldPage() { var h = String(root.location.hash || '').split('?')[0]; return root.location.pathname + (h || '#'); }
+  // The heading's own words (not its count, pills or icons): the button's name and the remembered key.
+  function foldName(h) {
+    var s = '';
+    (function walk(n) { for (var x = n.firstChild; x; x = x.nextSibling) { if (x.nodeType === 3) s += x.nodeValue; else if (x.nodeType === 1 && !x.matches(FOLD_NOTNAME)) walk(x); } })(h);
+    return s.replace(/\s+/g, ' ').trim();
+  }
+  // The heading row: one of the card's first two parts (our own button aside) that is an h2 / h3 / h4 or holds one as its own child.
+  // A short line before it (a label line, a mark) stays in view with it.
+  function foldHead(c) {
+    for (var k = c.firstElementChild, n = 0; k && n < 2; k = k.nextElementSibling) {
+      if (k.classList.contains('house-fold') || k.getAttribute('aria-hidden') === 'true') continue;
+      n++;
+      if (k.matches('h2, h3, h4')) return { row: k, h: k };
+      var h = k.matches('div, header, hgroup') && k.querySelector(':scope > h2, :scope > h3, :scope > h4');
+      if (h) return { row: k, h: h };
+    }
+    return null;
+  }
+  function foldIcon() { return '<svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-chev"/></svg>'; }
+  function foldIdOf(e) { if (!e.id) e.id = 'hfp-' + (++foldSeq); return e.id; }
+  function setAttr(e, k, v) { if (v == null) { if (e.hasAttribute(k)) e.removeAttribute(k); } else if (e.getAttribute(k) !== v) e.setAttribute(k, v); }
+  function foldUndo(c) {
+    var b = c.querySelector(':scope > .house-fold, :scope > * > .house-fold'); if (b) b.remove();
+    c.classList.remove('house-fold-rel'); setAttr(c, 'data-house-folded', null); setAttr(c, 'data-fold-box', null);
+    Array.prototype.forEach.call(c.querySelectorAll(':scope > [data-fold-part], :scope > [data-fold-row]'), function (e) { setAttr(e, 'data-fold-part', null); setAttr(e, 'data-fold-row', null); e.classList.remove('house-fold-row', 'house-fold-pad'); });
+    Array.prototype.forEach.call(c.querySelectorAll('.house-fold-h'), function (h) { if (h.parentNode === c || h.parentNode.parentNode === c) h.classList.remove('house-fold-h'); });
+  }
+  function foldOne(c, key, phone) {
+    var hd = foldHead(c), row = hd && hd.row, parts = [];
+    if (row) for (var e = row.nextElementSibling; e; e = e.nextElementSibling) if (!e.classList.contains('house-fold')) parts.push(e);
+    if (!parts.length) { if (c.hasAttribute('data-fold-box')) foldUndo(c); return; }
+    var name = foldName(hd.h), cs = root.getComputedStyle(row), inRow = row !== hd.h && /flex/.test(cs.display) && !/column/.test(cs.flexDirection);
+    var b = c.querySelector(':scope > .house-fold, :scope > * > .house-fold');
+    if (!b) {
+      b = root.document.createElement('button');
+      b.type = 'button'; b.className = 'house-fold'; b.setAttribute('data-house', 'text'); b.innerHTML = foldIcon();
+    }
+    // In a heading row that is already a flex row, the chevron is its last part; otherwise it sits over the row's right end.
+    if (inRow) { if (b.parentNode !== row || b !== row.lastElementChild) row.appendChild(b); }
+    else if (b.parentNode !== c || b.nextElementSibling !== row) c.insertBefore(b, row);
+    b.classList.toggle('house-fold-abs', !inRow);
+    row.classList.toggle('house-fold-row', inRow); row.classList.toggle('house-fold-pad', !inRow);
+    if (inRow) { b.style.top = ''; b.style.right = ''; c.classList.remove('house-fold-rel'); hd.h.classList.add('house-fold-h'); }
+    else {
+      if (!c.classList.contains('house-fold-rel') && root.getComputedStyle(c).position === 'static') c.classList.add('house-fold-rel');
+      // Level with the heading's first line, at the card's inner right edge (read from the drawn page; kept while it is not drawn).
+      var ccs = root.getComputedStyle(c), hcs = root.getComputedStyle(hd.h), hr = hd.h.getBoundingClientRect(), cr = c.getBoundingClientRect();
+      if (hr.height && cr.height) {
+        var bh = b.offsetHeight || 36, lh = parseFloat(hcs.lineHeight) || parseFloat(hcs.fontSize) * 1.3 || bh;
+        if (hd.h.firstElementChild && /flex/.test(hcs.display)) lh = Math.max(lh, Math.min(hr.height - (parseFloat(hcs.paddingTop) || 0) - (parseFloat(hcs.paddingBottom) || 0), bh + 12));
+        var top = Math.round(hr.top - cr.top - c.clientTop + (parseFloat(hcs.paddingTop) || 0) + Math.max(0, (lh - bh) / 2)) + 'px';
+        var right = (parseFloat(ccs.paddingRight) || 0) + 'px';
+        if (b.style.top !== top) b.style.top = top; if (b.style.right !== right) b.style.right = right;
+      }
+      hd.h.classList.remove('house-fold-h');
+    }
+    var folded = foldStore()[key] === 1;
+    setAttr(c, 'data-fold-box', key); setAttr(row, 'data-fold-row', ''); setAttr(c, 'data-house-folded', folded ? '' : null);
+    parts.forEach(function (p) { setAttr(p, 'data-fold-part', ''); foldIdOf(p); });
+    setAttr(b, 'aria-expanded', String(!folded)); setAttr(b, 'aria-controls', parts.map(function (p) { return p.id; }).join(' '));
+    setAttr(b, 'aria-label', 'Fold ' + (name || 'this section'));
+    foldLists(c, key, phone && !folded);
+  }
+  // Phone: a list of more than 5 rows shows its first 3 rows and "+N more" (the rest open with one tap, remembered).
+  function foldLists(c, key, phone) {
+    var n = 0;
+    Array.prototype.forEach.call(c.querySelectorAll('ul, ol'), function (l) {
+      if (l.parentElement.closest('[data-fold-box]') !== c || l.closest('nav, details, dialog, .house-menu, .house-more, table')) return;
+      var lis = Array.prototype.filter.call(l.children, function (x) { return x.tagName === 'LI'; }), lk = key + '|rows' + (n++);
+      var more = l.nextElementSibling && l.nextElementSibling.classList.contains('house-fold-more') ? l.nextElementSibling : null;
+      var on = phone && lis.length > FOLD_ROWS && foldStore()[lk] !== 1;
+      if (on && !more) {   // only a list of rows (stacked) folds, never a line of chips; it must be drawn to tell
+        var r = lis.slice(0, FOLD_SHOW).map(function (x) { return x.getBoundingClientRect(); });
+        on = r[2].height > 0 && r[1].top >= r[0].bottom - 1 && r[2].top >= r[1].bottom - 1;
+      }
+      lis.forEach(function (x, i) { setAttr(x, 'data-fold-extra', on && i >= FOLD_SHOW ? '' : null); });
+      if (!on) { if (more) more.remove(); return; }
+      if (!more) {
+        more = root.document.createElement('button'); more.type = 'button'; more.className = 'house-fold-more'; more.setAttribute('data-house', 'text');
+        l.parentNode.insertBefore(more, l.nextSibling);
+      }
+      var t = '+' + (lis.length - FOLD_SHOW) + ' more';
+      if (more.textContent !== t) more.textContent = t;
+      setAttr(more, 'data-fold-rows', lk); setAttr(more, 'aria-controls', foldIdOf(l)); setAttr(more, 'aria-expanded', 'false');
+    });
+  }
+  function foldAll() {
+    var doc = root.document; if (!doc || !doc.body) return;
+    var page = foldPage(), phone = foldPhone(), seen = {};
+    Array.prototype.forEach.call(doc.querySelectorAll('.card, section'), function (c) {
+      if (c.closest(FOLD_SKIP)) { if (c.hasAttribute('data-fold-box')) foldUndo(c); return; }
+      var hd = foldHead(c); if (!hd) { if (c.hasAttribute('data-fold-box')) foldUndo(c); return; }
+      var id = c.getAttribute('data-fold-id') || (c.id && c.id.indexOf('hfp-') !== 0 ? '#' + c.id : '') || c.getAttribute('data-card') || foldName(hd.h).replace(/\d+/g, '#').slice(0, 80);
+      var key = page + '|' + id;
+      seen[key] = (seen[key] || 0) + 1; if (seen[key] > 1) key += '~' + seen[key];
+      foldOne(c, key, phone);
+    });
+  }
+  function foldSet(c, folded) {
+    var key = c.getAttribute('data-fold-box'); if (!key) return;
+    foldSave(key, folded ? 1 : null); foldAll();
+  }
+  function foldToggleBtn(b) {
+    var c = b.closest('[data-fold-box]'); if (!c) return;
+    foldSet(c, b.getAttribute('aria-expanded') === 'true');
+  }
+  if (root.document) {
+    // Capture, so a page's own click handlers on the card never also act on a fold.
+    root.document.addEventListener('click', function (e) {
+      var t = e.target; if (!t || !t.closest) return;
+      var b = t.closest('.house-fold');
+      if (b) { e.stopPropagation(); e.preventDefault(); shutMores(null); foldToggleBtn(b); return; }
+      var m = t.closest('.house-fold-more');
+      if (m) {
+        e.stopPropagation(); e.preventDefault(); shutMores(null);
+        var l = root.document.getElementById(m.getAttribute('aria-controls') || ''), first = l && l.querySelector(':scope > li[data-fold-extra]');
+        foldSave(m.getAttribute('data-fold-rows'), 1); foldAll();
+        var f = first && first.querySelector('a[href], button, [tabindex]'); if (f) f.focus(); else if (l) { l.setAttribute('tabindex', '-1'); l.focus(); }
+        return;
+      }
+      if (e.button !== 0 || e.defaultPrevented) return;
+      var row = t.closest('[data-fold-row]'); if (!row || t.closest(FOLD_HOT)) return;
+      var c = row.parentNode; if (!c || !c.matches('[data-fold-box]') || c.closest('[data-open-row]')) return;   // a row that opens its item keeps doing that
+      if (root.getSelection && String(root.getSelection())) return;   // selecting words, not folding
+      var fb = c.querySelector(':scope > .house-fold, :scope > * > .house-fold'); if (!fb) return;
+      e.stopPropagation(); shutMores(null); foldToggleBtn(fb);   // a tap outside an open More menu still shuts it
+    }, true);
+    var foldStart = function () {
+      foldAll();
+      if (root.MutationObserver) new root.MutationObserver(function (recs) {
+        // Our own changes settle in one more pass (foldAll only writes what differs), so this never loops.
+        for (var i = 0; i < recs.length; i++) { var t = recs[i].target; if (!(t.closest && t.closest('header, nav.house-tabs'))) { foldAll(); return; } }
+      }).observe(root.document.body, { childList: true, subtree: true });
+      root.addEventListener('hashchange', foldAll);
+      if (root.matchMedia) { var mq = root.matchMedia('(max-width: 767.98px)'); if (mq.addEventListener) mq.addEventListener('change', foldAll); }
+      root.addEventListener('storage', function (e) { if (e.key === FOLD_KEY) { foldMem = null; foldAll(); } });
+    };
+    if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', foldStart); else foldStart();
+  }
+
   // ---- Keyboard keys: g then a letter to go somewhere, r reread, / search, ? the list ----
   var KEYS = [
     ['g m', 'Dashboard', function () { go('./#/map'); }],
@@ -355,7 +546,7 @@
     ['g c', 'Changes', function () { go('./#/changes'); }],
     ['g f', 'Money Hub', function () { go('money/'); }],
     ['g h', 'CD Hub', function () { go('cdhub/'); }],
-    ['r', 'Read again from Drive', function () { var b = root.document.querySelector('[data-action="refresh"]:not(.hidden):not([disabled]), [data-reload]'); if (b) b.click(); }],
+    ['r', 'Read again', function () { var b = root.document.querySelector('[data-action="refresh"]:not(.hidden):not([disabled]), [data-reload]'); if (b) b.click(); }],
     ['/', 'Search', function () { openSearch(); }],
     ['?', 'Show these keys', function () { help(); }]
   ];
@@ -402,7 +593,7 @@
     d.style.cssText = 'width:min(640px,94vw);max-height:80vh;border:1px solid currentColor;border-radius:12px;padding:14px 16px;background:Canvas;color:CanvasText;font:inherit';
     d.innerHTML = '<h2 id="dashSearchTitle" style="margin:0 0 8px;font-size:var(--fs-head)">Search</h2>' +
       '<label for="dashSearchBox" style="display:block;font-size:var(--fs-small)">Drive file names, Money to-dos and dates, CD Hub dogs and litters (what this page has read)</label>' +
-      '<input id="dashSearchBox" type="search" autocomplete="off" style="width:100%;font:inherit;padding:8px 10px;margin:6px 0;border:1px solid currentColor;border-radius:12px">' +
+      '<input id="dashSearchBox" type="search" autocomplete="off" style="width:100%;font-family:inherit;font-size:var(--fs-input,16px);padding:8px 10px;margin:6px 0;border:1px solid currentColor;border-radius:12px">' +
       '<p id="dashSearchStatus" role="status" style="margin:4px 0;font-size:var(--fs-small)">Type at least 2 letters.</p>' +
       '<div id="dashSearchResults"></div><form method="dialog" style="margin-top:8px"><button type="submit">Close</button></form>';
     doc.body.appendChild(d);
@@ -444,5 +635,58 @@
   /** Returns a test function: true when a text contains every word of q (case-insensitive). */
   function matches(q) { var words = String(q).toLowerCase().split(/\s+/).filter(Boolean); return function (text) { text = String(text || '').toLowerCase(); return words.every(function (w) { return text.indexOf(w) >= 0; }); }; }
 
-  root.DashKit = { applyLook: applyLook, icon: icon, tabs: { tab: tabHtml, more: moreHtml, shut: function () { shutMores(null); } }, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help };
+  // ---- Hub Main (Lisa's house style, 2 Nov 2026): EVERY hub's Main is exactly three parts, in this order:
+  // 1 Next: the one most urgent thing, its action one tap away. 2 Needs you: at most 5 rows from the hub's Do and Decide,
+  // late first (rose), then due today, then waiting; "+N more" opens Do. Every row carries its action.
+  // 3 The hub's 3 numbers (the same ones its Dashboard tile shows), each a link to its filtered list; "–" when it cannot be read.
+  // Nothing needs you: Next and Needs you fold into ONE "Nothing needs you"; the numbers stay. A failed read says so instead.
+  // spec: { hub, rows: [{ kind: 'late'|'today'|'wait', text, href, act?, actHref?, sub?, pill?, ext?, sort? }],
+  //         nums: [{ label, value (null = "–"), href, late?, aria? }] x3, doHref, extra? (html after the numbers), error? (text) }
+  var HM_RANK = { late: 0, today: 1, wait: 2 };
+  function hmSort(rows) {
+    return (rows || []).map(function (r, i) { return { r: r, i: i }; }).sort(function (a, b) {
+      return (HM_RANK[a.r.kind] == null ? 2 : HM_RANK[a.r.kind]) - (HM_RANK[b.r.kind] == null ? 2 : HM_RANK[b.r.kind]) ||
+        (a.r.sort != null && b.r.sort != null ? a.r.sort - b.r.sort : 0) || a.i - b.i;
+    }).map(function (x) { return x.r; });
+  }
+  function hmTarget(r, ext) { return ext ? ' target="_blank" rel="noopener"' : ''; }
+  function hmPill(r) {
+    var k = HM_RANK[r.kind] == null ? 'wait' : r.kind, t = r.pill || (k === 'late' ? 'Late' : k === 'today' ? 'Today' : '');
+    return t ? '<span class="dpill' + (k === 'late' ? ' late' : k === 'today' ? ' soon' : '') + '">' + escHtml(t) + '</span>' : '';
+  }
+  function hmAct(r, cls) {
+    var href = r.actHref || r.href;
+    return href ? '<a class="btn ' + cls + '" data-hm-act href="' + escHtml(href) + '"' + hmTarget(r, r.actHref ? r.actExt : r.ext) +
+      ' aria-label="' + escHtml((r.act || 'Open') + ': ' + r.text) + '">' + escHtml(r.act || 'Open') + '</a>' : '';
+  }
+  function hubMain(spec) {
+    var rows = hmSort(spec.rows), max = spec.max || 5, shown = rows.slice(0, max), more = rows.length - shown.length, h = '';
+    var kind = function (r) { return HM_RANK[r.kind] == null ? 'wait' : r.kind; };
+    var doHref = escHtml(spec.doHref || '#/do');
+    if (spec.error) {
+      h += '<section class="card hm-fail" data-hm="fail" role="status"><h3>Could not read</h3><p class="note">' + escHtml(spec.error) + '</p></section>';
+    } else if (!rows.length) {
+      h += '<section class="card hm-empty" data-hm="empty"><span class="hm-ok" aria-hidden="true">✓</span><h3>Nothing needs you</h3></section>';
+    } else {
+      var x = rows[0];
+      h += '<section class="card hm-next" data-open-row data-hm="next" data-kind="' + kind(x) + '" aria-labelledby="hmNextT"><div class="hm-head"><h3 id="hmNextT">Next</h3>' + hmPill(x) + '</div>' +
+        '<p class="hm-what"><a class="house-open" href="' + escHtml(x.href) + '"' + hmTarget(x, x.ext) + ' aria-label="' + escHtml(x.text) + '">' + escHtml(x.text) + '</a></p>' + (x.sub ? '<p class="hm-sub">' + escHtml(x.sub) + '</p>' : '') +
+        '<div class="hm-go">' + hmAct(x, 'hm-a') + '</div></section>';
+      var late = rows.some(function (r) { return kind(r) === 'late'; });
+      h += '<section class="card hm-needs" data-hm="needs" aria-labelledby="hmNeedsT"><div class="hm-head"><h3 id="hmNeedsT"><a class="house-go" href="' + doHref + '" aria-label="Needs you: ' + rows.length + '. Open Do">Needs you</a></h3>' +
+        '<a class="house-go" href="' + doHref + '" aria-label="' + rows.length + ' need you' + (late ? ', some late' : '') + '. Open Do"><span class="cnt' + (late ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + rows.length + '</span></a></div>' +
+        '<ol class="hm-rows">' + shown.map(function (r) {
+          return '<li class="hm-row house-lbar" data-open-row data-kind="' + kind(r) + '"><span class="hm-t"><a class="house-open" href="' + escHtml(r.href) + '"' + hmTarget(r, r.ext) + ' aria-label="' + escHtml(r.text) + '">' + escHtml(r.text) + '</a>' +
+            (r.sub ? '<small>' + escHtml(r.sub) + '</small>' : '') + '</span>' + hmPill(r) + hmAct(r, 'hm-a') + '</li>';
+        }).join('') + '</ol>' + (more > 0 ? '<a class="hm-more" data-hm-more href="' + doHref + '">+' + more + ' more</a>' : '') + '</section>';
+    }
+    h += '<section class="hm-nums" data-hm="nums" aria-label="Numbers">' + (spec.nums || []).map(function (n) {
+      var v = n.value == null || n.value === '' ? '–' : String(n.value), late = !!n.late && n.value != null;
+      return '<a class="card hm-n house-go" data-k="' + escHtml(n.label) + '" href="' + escHtml(n.href) + '"' + (n.ext ? ' target="_blank" rel="noopener"' : '') +
+        ' aria-label="' + escHtml(n.aria || (n.label + ': ' + (v === '–' ? 'could not be read' : v) + (late && v !== '0' ? ', some late' : '') + '. Open the list')) + '"><span class="hm-v' + (late && v !== '0' ? ' need' : '') + '">' + escHtml(v) + '</span><span class="hm-l">' + escHtml(n.label) + '</span></a>';
+    }).join('') + (spec.extra || '') + '</section>';
+    return '<div class="hm" data-hub-main="' + escHtml(spec.hub || '') + '">' + h + '</div>';
+  }
+
+  root.DashKit = { applyLook: applyLook, icon: icon, tabs: { tab: tabHtml, more: moreHtml, shut: function () { shutMores(null); } }, signButton: signButton, look: { extras: lookExtras, open: showHouseLook, set: setLook }, filterButton: filterButton, filterOpen: function (id) { return !!openFilters[id]; }, search: { register: registerSearch, open: openSearch, run: runSearch, matches: matches }, googleFetch: googleFetch, isBusy: isBusy, BUSY_TEXT: BUSY_TEXT, TRIES: TRIES, WAITS: WAITS.slice(), KEYS: KEYS.map(function (k) { return [k[0], k[1]]; }), SITE: SITE, showKeys: help, hubMain: hubMain, hubMainSort: hmSort, fold: { run: foldAll, key: FOLD_KEY } };
 })(typeof window !== 'undefined' ? window : this);

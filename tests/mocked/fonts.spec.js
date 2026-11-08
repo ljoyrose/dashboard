@@ -49,6 +49,8 @@ function readType({ sizes, weights }) {
   let n = 0;
   for (const e of document.querySelectorAll('body *')) {
     if (!seen(e) || icon(e) || e.closest('#credential_picker_container, .sr')) continue;
+    // A phone's bottom-tab count is a dot with no number showing (Lisa's pick b; tab-dots.spec.js pins it): not words.
+    if (innerWidth < 768 && e.matches('nav.house-tabs .ht > .n, nav.house-tabs .ht > .cnt')) continue;
     if (![...e.childNodes].some((x) => x.nodeType === 3 && x.textContent.trim())) continue;
     n++;
     const s = getComputedStyle(e), px = Math.round(parseFloat(s.fontSize) * 100) / 100;
@@ -62,7 +64,8 @@ function readType({ sizes, weights }) {
     const px = parseFloat(getComputedStyle(h).fontSize);
     if (px !== 18) bad.add('heading ' + px + 'px: ' + name(h));
   }
-  // Ringed numbers: a ringed box holding only a number is 14px, one size; 1 and 2 digits the same width; no fill.
+  // Ringed numbers: a ringed box holding only a number is 14px, one size; 1 and 2 digits the same width; no fill. (Except a
+  // number in a group of 3, which is 18px like the rest of its group.)
   const rgbA = (c) => { const m = /rgba?\(([^)]+)\)/.exec(c); if (!m) return 1; const p = m[1].split(',').map(Number); return p.length > 3 ? p[3] : 1; };
   const rings = [];
   for (const e of document.querySelectorAll('body *')) {
@@ -76,6 +79,9 @@ function readType({ sizes, weights }) {
     const r = box.getBoundingClientRect();
     if (r.width > 80 || r.height > 60) continue; // a card with a number in it, not a ring
     const px = parseFloat(s.fontSize);
+    // A number in a group of 3 (a hub Main's or a Dashboard tile's numbers) is 18px like its neighbours, ringed or not (Lisa, 2 Nov:
+    // "sizes in one group must match"); its ring is sized to it, so it is checked here and not with the 14px count rings.
+    if (box.matches('.hm-v, .hk b')) { if (px !== 18) bad.add('group number ' + px + 'px: ' + name(e)); continue; }
     if (px !== 14) bad.add('ringed number ' + px + 'px: ' + name(e));
     rings.push({ w: Math.round(r.width * 10) / 10, h: Math.round(r.height * 10) / 10, digits: t.replace('+', '').length, what: name(box), tab: !!box.closest('nav.house-tabs') });
   }

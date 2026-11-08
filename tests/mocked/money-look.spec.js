@@ -136,7 +136,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
   // (Meaning-coloured controls would keep their own colour + tint; this page has none today.)
   // The bottom tabs are EXEMPT (Lisa's tab rule): no ring, no outline, no fill; only the colour bar above the label widens.
   const CASES = [
-    ['light', 'now', 'main .btn', 'neutral'], ['light', 'now', 'main details > summary', 'neutral'], ['light', 'now', 'a.ent', 'neutral'],
+    ['light', 'now', 'main .btn', 'neutral'], ['light', 'todo', 'main details > summary', 'neutral'], ['light', 'money', 'a.ent', 'neutral'],
     ['light', 'todo', '.subnav a:not([aria-current])', 'neutral'], ['light', 'now', 'header .btn', 'frame'],
     ['light', 'now', 'nav.main a[data-nav="dates"]', 'tab'], ['light', 'now', 'nav.main a[data-nav="accountant"]', 'tab'],
     ['dark', 'now', 'main .btn', 'neutral'], ['dark', 'now', 'nav.main a[data-nav="todo"]', 'tab'],
@@ -149,6 +149,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
         const el = page.locator(sel).first();
         await el.scrollIntoViewIfNeeded();
         const before = await el.evaluate((e) => { const r = e.getBoundingClientRect(); return [r.x, r.y, r.width, r.height]; });
+        const restBg = await el.evaluate((e) => getComputedStyle(e).backgroundColor);
         await el.hover();
         await settle(el);
         const got = await el.evaluate((e, kind) => {
@@ -158,8 +159,8 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
           const want = kind === 'tab'
             ? { line: null, fill: probe('backgroundColor', 'var(--card)') }
             : kind === 'frame'
-              ? { line: probe('color', 'var(--frame-ink)'), fill: probe('backgroundColor', 'color-mix(in srgb, var(--frame-ink) 14%, var(--frame))') }
-              : { line: probe('color', 'var(--ink)'), fill: probe('backgroundColor', 'color-mix(in srgb, var(--muted) 14%, var(--card))') };
+              ? { line: probe('color', 'var(--frame-ink)') }
+              : { line: probe('color', 'var(--ink)') };
           return { box: [r.x, r.y, r.width, r.height], ow: cs.outlineWidth, os: cs.outlineStyle, oo: cs.outlineOffset, oc: cs.outlineColor, bg: cs.backgroundColor, want, ink: probe('color', 'var(--ink)') };
         }, kind);
         const where = `${sel} (${scheme})`;
@@ -172,12 +173,12 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
         }
         expect([got.os, got.ow, got.oo], `${where} hover line`).toEqual(['solid', '1px', '-1px']);
         expect(got.oc, `${where} hover line colour`).toBe(got.want.line);
-        expect(got.bg, `${where} hover tint`).toBe(got.want.fill);
+        expect(got.bg, `${where} hover adds no fill (Lisa's sweep, 3 Nov 2026)`).toBe(restBg);
       }
     });
   }
 
-  test('selected: sub-tab looks like hover (ink + muted tint); the selected bottom tab only widens its colour bar', async ({ page }) => {
+  test('selected: sub-tab looks like hover (ink line, no fill: the same fill as the sub-tabs beside it); the selected bottom tab only widens its colour bar', async ({ page }) => {
     await open(page, 'light');
     await go(page, 'todo');
     const look = (sel) => page.locator(sel).evaluate((e) => { const cs = getComputedStyle(e); return [cs.outlineStyle, cs.outlineWidth, cs.outlineOffset, cs.outlineColor, cs.backgroundColor]; });
@@ -191,7 +192,8 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
     });
     const want = await page.evaluate(() => {
       const p = (prop, val) => { const d = document.createElement('i'); d.style[prop] = val; document.body.appendChild(d); const o = getComputedStyle(d)[prop]; d.remove(); return o; };
-      return [p('color', 'var(--ink)'), p('backgroundColor', 'color-mix(in srgb, var(--muted) 14%, var(--card))')];
+      const other = document.querySelector('.subnav a:not([aria-current="page"])');
+      return [p('color', 'var(--ink)'), getComputedStyle(other).backgroundColor];
     });
     expect(sub).toEqual(['solid', '1px', '-1px', ...want]);
     expect(tab.os).toBe('none');
@@ -201,6 +203,7 @@ test.describe('Money Hub look: house hover rule (hover = selected; nothing ever 
 
   test('read-only pills (flags, dates, counts, the read stamp) have no hover', async ({ page }) => {
     await open(page, 'light');
+    await go(page, 'todo'); // Main holds no flags or date pills now; To-do has all three
     for (const sel of ['#view .tag', '#view .date', '#view .cnt', '#readStamp']) {
       const el = page.locator(sel).first();
       await el.scrollIntoViewIfNeeded();
@@ -295,17 +298,20 @@ test.describe('Money Hub look: control line and count pills hold in every look',
 });
 
 test.describe('Money Hub: summary strip, Next card and friendly empty states', () => {
-  test('Now opens with On track / Needs you / Overdue and one Next card with one button', async ({ page }) => {
+  test('Money opens with On track / Needs you / Overdue, and Main has one Next card with one button', async ({ page }) => {
     await open(page, 'light');
+    // The trio moved from Main to the top of Money (Hub Mains, 2 Nov 2026).
+    await go(page, 'money');
     const three = page.locator('#view .three');
     await expect(three.locator('.sum')).toHaveText([/^\d+\s*On track/, /^\d+\s*Needs you/, /^\d+\s*Overdue/]);
     await expect(three.locator('[data-sum="over"] .num')).toHaveText('2'); // the overdue filing and the overdue tax
     await expect(three.locator('[data-sum="need"] .num')).toHaveText('2');
-    const next = page.locator('#view [data-next]');
+    await go(page, 'now');
+    const next = page.locator('#view [data-hm="next"]');
     await expect(next).toContainText('Sample overdue filing');
     await expect(next.locator('a.btn')).toHaveCount(1);
     await next.locator('a.btn').click();
-    await expect(page).toHaveURL(/#\/dates$/);
+    await expect(page).toHaveURL(/#\/e\/TESTCO$/); // a dated row opens its entity's Dates card
   });
 
   test('tab counts: needs-you counts wear the rose ring, totals the grey one', async ({ page }) => {
@@ -321,6 +327,13 @@ test.describe('Money Hub: summary strip, Next card and friendly empty states', (
   test('an empty list says so in plain words with a green-ring check', async ({ page, guard }) => {
     const f = guard.world.files.find((x) => x.name === 'MON-REGISTER.csv');
     f.content = f.content.split('\n').filter((l, i) => i === 0 || !/^R\d/.test(l)).join('\n');
+    // Yours also lists every Needs you item now (Hub Mains, 2 Nov 2026), so nothing may be overdue or due either.
+    const dates = guard.world.files.find((x) => x.name === 'MON-DATES.csv');
+    dates.content = dates.content.split('\n').filter((l) => !/^D\d/.test(l)).join('\n');
+    const liab = guard.world.files.find((x) => x.id === 'l-co-LIABILITIES.csv');
+    liab.content = liab.content.split('\n').filter((l) => !/,overdue$/.test(l)).join('\n');
+    const intake = guard.world.files.find((x) => x.name === 'MON-INTAKE.csv');
+    intake.content = intake.content.split('\n').filter((l) => !/^I\d/.test(l)).join('\n');
     await open(page, 'light');
     await go(page, 'todo');
     // One empty line per view (Lisa, 2 Nov): Yours with nothing ready or blocked says it once.

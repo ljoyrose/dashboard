@@ -13,7 +13,7 @@ const { build } = require('../fixtures/factory/state');
 
 const SRC = fs.readFileSync(path.join(__dirname, '..', '..', 'factory', 'index.html'), 'utf8');
 const LOGS = require('../support/world').IDS.factoryLogs;
-const VIEWS = ['rooms', 'me', 'decide', 'do', 'docs', 'today', 'card/869fjxpc2', 'room/rig', 'item/869fk9d1r', 'app/links', 'health', 'all', 'stuck', 'new'];
+const VIEWS = ['rooms', 'me', 'me/all', 'decide', 'do', 'docs', 'today', 'card/869fjxpc2', 'room/rig', 'item/869fk9d1r', 'app/links', 'health', 'all', 'stuck', 'new'];
 const PRESS = '#view .btn, #view button.pill, #view a.pill, #view .fbtn, #view .ch, #view .more, #view .copy, #view .undo, #view label.date, #view a.chip, #view a.need, ' +
   '#view .ico, #view .flagb, #view .mark, #view .plus, #view a.lk, #view button.lk, #view .sbox, #appMenu a.pill';
 // Meaning buttons (Yes / No / Off) and status pills that are links rest on their own colour line (Lisa's approved picture, 28 Oct).
@@ -134,7 +134,7 @@ test.describe('Factory look: rules by computed style on every view', () => {
   }
 
   test('the sample has what the rules talk about: rose and amber dates, Yes / No, an unread dot, the Factory switch', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');
     await expect(page.locator('#view label.date.over')).toHaveCount(1);
     await expect(page.locator('#view label.date.soon')).toHaveCount(1);
     await expect(page.locator('#view .btn.yes').first()).toBeVisible();
@@ -170,7 +170,7 @@ test.describe('Factory look: rules by computed style on every view', () => {
     expect(knob.w).toBeGreaterThanOrEqual(10);
     expect(knob.bg).toMatch(/^rgb\(/); // solid, no transparency
     expect(await page.evaluate((k) => window.__fx.ratio(k.bg, k.page), knob), 'knob against the button').toBeGreaterThanOrEqual(3);
-    await go(page, 'me');
+    await go(page, 'me/all');
     const dot = page.locator('#view .ico .new');
     await expect(dot).toBeVisible();
     const d = await dot.evaluate((e) => { const b = e.getBoundingClientRect(), p = e.parentElement.getBoundingClientRect(); return { w: b.width, inside: b.left >= p.left && b.right <= p.right && b.top >= p.top && b.bottom <= p.bottom, bg: getComputedStyle(e).backgroundColor, under: window.__fx.bgOf(e.parentElement) }; });
@@ -183,14 +183,15 @@ test.describe('Factory look: rules by computed style on every view', () => {
 test.describe('Factory look: frame', () => {
   const close = (got, hex) => { const want = hex.match(/../g).map((x) => parseInt(x, 16)); const g0 = got.match(/[\d.]+/g).map(Number), g = /^color\(/.test(got) ? g0.map((x) => x * 255) : g0; return want.every((v, i) => Math.abs(v - g[i]) <= 4); };
   test('dark top and bottom frame (Deep 3A3632 / 46413B), light tab buttons with no ring, bar widens on hover and when selected', async ({ page, guard }) => {
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me'); // Main selected, so every link in the bar and its More menu is at rest
     const bg = (sel) => page.locator(sel).first().evaluate((e) => getComputedStyle(e).backgroundColor);
     const top = await bg('header'), foot = await bg('nav.tabs');
     expect(close(top, '3A3632'), 'top frame ' + top).toBe(true);
     expect(close(foot, '46413B'), 'bottom frame ' + foot).toBe(true);
     const tabs = page.locator('nav.tabs a');
-    await expect(tabs).toHaveCount(6);
-    for (let i = 0; i < 6; i++) {
+    // Main, Decide, Do, Rooms, then under More: Today, Docs and Mine (the old Main list, 2 Nov).
+    await expect(tabs).toHaveCount(7);
+    for (let i = 0; i < 7; i++) {
       const t = tabs.nth(i);
       const s = await t.evaluate((e) => { const c = getComputedStyle(e); return [c.borderTopStyle, c.outlineStyle, c.boxShadow, c.backgroundColor]; });
       expect(s.slice(0, 3), 'tab has no ring').toEqual(['none', 'none', 'none']);
@@ -221,7 +222,7 @@ test.describe('Factory look: frame', () => {
 
   test('cool look (Studio\'s Look setting) and dark mode keep a dark frame', async ({ page, guard }) => {
     await page.addInitScript(() => { try { localStorage.setItem('dash-look', JSON.stringify({ bg: 'cool' })); } catch (e) {} });
-    await open(page, guard, '#/me');
+    await open(page, guard, '#/me/all');
     await expect(page.locator('html')).toHaveClass(/look-cool/);
     const lum = (sel) => page.locator(sel).first().evaluate((e) => { const m = getComputedStyle(e).backgroundColor.match(/[\d.]+/g).map(Number); return (0.2126 * m[0] + 0.7152 * m[1] + 0.0722 * m[2]) / 255; });
     expect(await lum('header')).toBeLessThan(0.35);
@@ -245,10 +246,10 @@ test.describe('Factory look: frame', () => {
   });
 });
 
-test.describe('Factory look: hover = a 1px line inside + a pale tint; nothing moves', () => {
+test.describe('Factory look: hover = a 1px line inside, never a fill (Lisa\'s sweep, 3 Nov 2026); nothing moves', () => {
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: neutral controls turn an ink line and a muted tint; meaning controls keep their own colour`, async ({ page, guard }) => {
-      await open(page, guard, '#/me', { scheme });
+    test(`${scheme}: neutral controls turn an ink line, no fill; meaning controls keep their own colour`, async ({ page, guard }) => {
+      await open(page, guard, '#/me/all', { scheme });
       await page.evaluate(HELP);
       const ink = await page.evaluate(() => getComputedStyle(document.body).color);
       const look = (el) => el.evaluate((e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e), i = e.querySelector('.ti');
@@ -272,16 +273,12 @@ test.describe('Factory look: hover = a 1px line inside + a pale tint; nothing mo
         a.box = a2.box;
         expect(b.box, `${k} must not move`).toEqual(a.box);
         expect([b.ow, b.os, b.oo], `${k} hover line`).toEqual(['1px', 'solid', '-1px']);
-        expect(b.bg, `${k} hover adds a tint`).not.toBe(a.bg);
+        expect(b.bg, `${k} hover adds no fill`).toBe(a.bg);
         if (k in meaning) {
           expect(b.oc, `${k} keeps its own colour`).toBe(a.mc);
           expect(a.bc, `${k} rests on its own colour line`).toBe(a.mc);
           expect(b.oc, `${k} never turns ink`).not.toBe(ink);
           expect(b.icon, `${k} icon keeps its colour`).toBe(a.icon);
-          // The tint is that colour mixed into the card: lighter than the line in light mode, darker in dark mode.
-          const [tl, ll] = await page.evaluate(([bg, line]) => [window.__fx.L(bg), window.__fx.L(line)], [b.bg, b.bc]);
-          const ml = await page.evaluate((c) => window.__fx.L(c), b.oc);
-          if (scheme === 'light') expect(tl, `${k} pale tint`).toBeGreaterThan(ml); else expect(tl, `${k} dark tint`).toBeLessThan(ml);
         } else {
           expect(b.oc, `${k} hover line is ink`).toBe(ink);
         }

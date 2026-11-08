@@ -1,10 +1,11 @@
 // Counts and colour lines (Lisa's house-style picks, 2 Nov 2026), on all 8 pages:
 //  - a ringed count is a ring only: never a fill or tint behind the number (rose ring = late, grey ring = waiting, 0 = no ring);
-//  - a coloured left line on a card or row runs the WHOLE height of it, 3px wide, curved with the card's corner (no short stub
-//    floating in the middle, no inset shadow);
+//  - a coloured left line on a card or row runs the WHOLE height of it, 3px wide, curved with a card's corner.
+//    A Needs-you row shell is rounded (12px); its bar stays a straight 3px line, not a "(" bracket
+//    (no short stub floating in the middle, no inset shadow);
 //  - icon shades are the --ljr-N-icon tokens (slots 0 to 7, light and dark looks);
-//  - a bottom tab's count ring never overlaps the tab's icon, on a phone (390) or a laptop (1280), and on a wide tab the icon
-//    stays centred.
+//  - a bottom tab's count never overlaps the tab's icon, on a phone (390, a dot beside the icon's top-right corner, Lisa's pick b)
+//    or a laptop (1280, the ring), and on a wide tab the icon stays centred.
 // Pretend Google, Drive and Sheets; every row is invented (tests/support/hubs.js).
 const fs = require('fs');
 const path = require('path');
@@ -77,8 +78,15 @@ for (const [hub, H] of Object.entries(ALL)) {
       for (const l of m.lines) {
         expect(l.w, `${hub} #/${v} ${l.what}: the line is 3px`).toBeCloseTo(3, 1);
         expect(Math.abs(l.h - l.host), `${hub} #/${v} ${l.what}: the line runs the full height (${l.h} vs ${l.host})`).toBeLessThanOrEqual(1);
-        expect(l.radius, `${hub} #/${v} ${l.what}: the line curves with the card's corner`).toBeGreaterThanOrEqual(Math.max(8, l.hostRadius - 0.5));
-        expect(l.radiusB, `${hub} #/${v} ${l.what}: both ends curve`).toBeCloseTo(l.radius, 1);
+        // A card's line curves with the card's corner. A Needs-you row shell is rounded (12px) and its bar stays straight
+        // (5 Nov: rounded rows; the bar is not a "(" bracket). A host with square corners keeps a straight line.
+        const rowShell = /(?:^|\.)hm-row(?:\.|$)/.test(l.what) || (/^li\./.test(l.what) && /(?:^|\.)house-lbar(?:\.|$)/.test(l.what));
+        if (rowShell) {
+          expect(l.hostRadius, `${hub} #/${v} ${l.what}: the row shell is rounded`).toBeCloseTo(12, 1);
+          expect(l.radius, `${hub} #/${v} ${l.what}: the bar stays straight`).toBe(0);
+        } else if (l.hostRadius > 0) expect(l.radius, `${hub} #/${v} ${l.what}: the line curves with the card's corner`).toBeGreaterThanOrEqual(Math.max(8, l.hostRadius - 0.5));
+        else expect(l.radius, `${hub} #/${v} ${l.what}: a square host's line is straight`).toBe(0);
+        expect(l.radiusB, `${hub} #/${v} ${l.what}: both ends match`).toBeCloseTo(l.radius, 1);
       }
       found += m.lines.length;
     }
@@ -105,15 +113,22 @@ for (const [hub, H] of Object.entries(ALL)) {
           const r = t.getBoundingClientRect(), a = t.querySelector(':scope > .hic').getBoundingClientRect(), b = t.querySelector(':scope > .n, :scope > .cnt').getBoundingClientRect();
           const l = t.querySelector(':scope > .htl').getBoundingClientRect();
           const cs = getComputedStyle(t.querySelector(':scope > .n, :scope > .cnt'));
-          return { word: l.width ? t.querySelector(':scope > .htl').textContent.trim() : '?', tab: [r.left, r.right], icon: [a.left, a.top, a.right, a.bottom], count: [b.left, b.top, b.right, b.bottom], bg: cs.backgroundColor,
+          return { word: l.width ? t.querySelector(':scope > .htl').textContent.trim() : '?', need: t.querySelector(':scope > .n, :scope > .cnt').classList.contains('need'), tab: [r.left, r.right], icon: [a.left, a.top, a.right, a.bottom], count: [b.left, b.top, b.right, b.bottom], bg: cs.backgroundColor,
             overlap: !(b.right <= a.left || b.left >= a.right || b.bottom <= a.top || b.top >= a.bottom) };
         });
       });
       for (const t of m) {
         expect(t.overlap, `${t.word}: count ${t.count.map(Math.round)} clear of the icon ${t.icon.map(Math.round)}`).toBe(false);
-        expect(t.bg, `${t.word}: the count has no fill`).toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
+        if (W === 1280) expect(t.bg, `${t.word}: the count has no fill`).toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
+        // On a phone the count is a dot (Lisa's pick b, 2 Nov): filled rose or grey, beside the icon's top-right corner.
+        else {
+          expect(t.bg, `${t.word}: the dot is rose (late) or grey (waiting)`).toBe(t.need ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)');
+          expect(t.count[0] - t.icon[2], `${t.word}: the dot sits right beside the icon's right edge`).toBeLessThanOrEqual(3);
+          expect(Math.abs(t.count[1] - t.icon[1]), `${t.word}: level with the icon's top`).toBeLessThanOrEqual(2);
+          expect(t.count[2], `${t.word}: the dot stays inside its tab`).toBeLessThanOrEqual(t.tab[1]);
+        }
         expect(t.icon[0], `${t.word}: the icon stays inside its tab`).toBeGreaterThanOrEqual(t.tab[0]);
-        if (W === 1280) expect(Math.abs((t.icon[0] + t.icon[2]) / 2 - (t.tab[0] + t.tab[1]) / 2), `${t.word}: on a wide tab the icon stays centred`).toBeLessThan(1);
+        expect(Math.abs((t.icon[0] + t.icon[2]) / 2 - (t.tab[0] + t.tab[1]) / 2), `${t.word}: the icon stays centred in its tab (phone too: the dot needs no room)`).toBeLessThan(1);
       }
     });
   }

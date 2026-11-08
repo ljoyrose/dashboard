@@ -11,7 +11,7 @@ const TILES = [
   ['Money', 'money/', true],
   ['Food', 'food/', true],
   ['Dogs', 'cdhub/', true],
-  ['Apps', 'factory/', true],
+  ['Apps', 'factory/#/me', true],
   ['Marketplace', 'marketplace/', true],
   ['Studio', 'studio/', true],
 ];
@@ -112,7 +112,7 @@ test.describe('Home: hub tiles (were Key projects & docs)', () => {
       await expect(tile).toHaveAttribute('href', url);
       await expect(tile).toHaveAttribute('target', '_blank');
       await expect(block.locator('.hubtile')).toHaveCount(TILES.length + 1);
-      await expect(block.locator('.hubtile[data-hub="projects"]')).toContainText('Opens in your work account');
+      await expect(block.locator('.hubtile[data-hub="projects"]')).not.toContainText('Opens in your work account');
       await expect(tile).toBeVisible();
       const box = await tile.boundingBox();
       expect(box.height).toBeGreaterThanOrEqual(48);

@@ -132,6 +132,18 @@
     return { ok: !miss.length, missing: miss };
   }
 
+  /** What the investigator may write back. Never the intake, the board link, kind or version: those are not its to change. */
+  var RESULT_KEYS = ['status', 'gate', 'verdict', 'classification', 'classification_assumed', 'margin_est', 'top3_risks', 'top3_unknowns', 'kill_rule', 'next_step', 'dropped_reason', 'evidence', 'gate1', 'gate2', 'gate3', 'unit_ex_p', 'unit_inc_p', 'profit_p', 'sell', 'moq', 'supplier', 'lines', 'terms'];
+  /** Merge one result file's patch into a card's detail. All or nothing: if the merged card would not pass checkDetail, the old detail is kept. */
+  function mergeResult(detail, result) {
+    var patch = result && result.patch, rejected = [], merged = {};
+    if (!result || result.kind !== 'mkt-idea-result' || !patch || typeof patch !== 'object' || Array.isArray(patch)) return { ok: false, detail: detail, rejected: [], problems: [{ code: 'WRONG_TYPE', field: 'patch', msg: 'not a result file' }] };
+    Object.keys(detail || {}).forEach(function (k) { merged[k] = detail[k]; });
+    Object.keys(patch).forEach(function (k) { if (RESULT_KEYS.indexOf(k) < 0) rejected.push(k); else merged[k] = patch[k]; });
+    var problems = checkDetail(merged);
+    return problems.length ? { ok: false, detail: detail, rejected: rejected, problems: problems } : { ok: true, detail: merged, rejected: rejected, problems: [] };
+  }
+
   return { SECTION: SECTION, V: V, ENUMS: ENUMS, INTAKE_KEYS: INTAKE_KEYS, barcodeOk: barcodeOk, money: money, validateIntake: validateIntake, newId: newId, cardKey: cardKey, fileName: fileName,
-    buildRequest: buildRequest, newDetail: newDetail, cardRow: cardRow, checkDetail: checkDetail, goReady: goReady, infinityLink: infinityLink };
+    buildRequest: buildRequest, newDetail: newDetail, cardRow: cardRow, checkDetail: checkDetail, goReady: goReady, infinityLink: infinityLink, mergeResult: mergeResult, RESULT_KEYS: RESULT_KEYS };
 });

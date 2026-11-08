@@ -1,0 +1,4 @@
+{
+  "cdhub": 5000,
+  "why": "SOP hub S2: category and role on the public 48-row index, plus Category and Role filters on #/sops. Measured cdhub load 318150, over 285400 + 10%."
+}

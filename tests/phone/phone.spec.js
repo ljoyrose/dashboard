@@ -59,7 +59,7 @@ test.describe('Phone: CD Hub house look', () => {
     await page.goto('cdhub/');
     await page.locator('#signinbtn').click();
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
-    for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers']) {
+    for (const id of ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops']) {
       await tabClick(page, `#nav button[data-go="${id}"]`);
       await expect(page.locator(`#nav button[data-go="${id}"]`)).toHaveAttribute('aria-current', 'page');
       await noSidewaysScroll(page, id);
@@ -76,7 +76,7 @@ test.describe('Phone: CD Hub house look', () => {
 });
 
 test.describe('Phone: Marketplace', () => {
-  test('loads, signs in, every tab works, no sideways scroll, every button 44px, tab counts in the top-right corner', async ({ page }) => {
+  test('loads, signs in, every tab works, no sideways scroll, every button 44px, tab counts a dot at the icon\'s top right', async ({ page }) => {
     const ago = new Date(Date.now() - 5 * 60000).toISOString();
     const rows = [
       ['RM|1', 'remove', 'Clothes', 'Sample jacket with a long title that wraps onto a second line on a phone screen', JSON.stringify({ platform: 'Vinted', price: '£18.00', url: 'https://www.vinted.co.uk/items/1', owner: 'CY' }), ago],
@@ -87,7 +87,8 @@ test.describe('Phone: Marketplace', () => {
     expect((await page.goto('marketplace/')).status()).toBe(200);
     await noSidewaysScroll(page, 'signed out');
     await page.locator('#view [data-action="signin"]').click();
-    await expect(page.locator('#view .needs')).toHaveText('Needs you: 3');
+    // The "Needs you: N" line is now the Needs you heading on the hub Main (2 Nov), with its count.
+    await expect(page.locator('#view [data-hm="needs"] h3 a')).toHaveAttribute('aria-label', 'Needs you: 3. Open Do');
     for (const key of ['do', 'decide', 'reply', 'insights', 'me']) {
       await tabClick(page, `#tabs a[data-nav="${key}"]`);
       await expect(page.locator(`#tabs a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
@@ -95,10 +96,14 @@ test.describe('Phone: Marketplace', () => {
       const small = await page.evaluate(() => [...document.querySelectorAll('#view button, #view a.btn, #view .chip, header .btn')].filter((b) => b.offsetParent).filter((b) => b.getBoundingClientRect().height < 44).map((b) => b.textContent.trim()));
       expect(small, `${key}: buttons under 44px`).toEqual([]);
     }
-    // Lisa's tab picks (2 Nov): the count sits in the tab's top-right corner, clear of the word below the icon.
+    // Lisa's pick b (2 Nov): on a phone the count is an 8px dot just off the icon's top-right corner, clear of the word below.
     const n = await page.locator('#n-do').boundingBox(), tab = await page.locator('#tabs a[data-nav="do"]').boundingBox(), label = await page.locator('#tabs a[data-nav="do"] .htl').boundingBox();
-    expect(tab.x + tab.width - (n.x + n.width), 'count in the top-right corner').toBeLessThan(5);
-    expect(n.y - tab.y, 'count in the top-right corner').toBeLessThan(5);
+    const icon = await page.locator('#tabs a[data-nav="do"] .hic').boundingBox();
+    expect([n.width, n.height], 'an 8px dot').toEqual([8, 8]);
+    expect(n.x - (icon.x + icon.width), 'the dot beside the icon\'s right edge').toBeGreaterThanOrEqual(0);
+    expect(n.x - (icon.x + icon.width), 'the dot beside the icon\'s right edge').toBeLessThanOrEqual(3);
+    expect(Math.abs(n.y - icon.y), 'level with the icon\'s top').toBeLessThanOrEqual(2);
+    expect(n.x + n.width, 'inside the tab').toBeLessThanOrEqual(tab.x + tab.width);
     expect(label.y, 'the word sits below the count').toBeGreaterThanOrEqual(n.y + n.height - 1);
   });
 });
@@ -131,8 +136,8 @@ test.describe('Phone: GA Hub', () => {
     expect((await page.goto('food/')).status()).toBe(200);
     await noSidewaysScroll(page, 'signed out');
     await page.locator('#view [data-action="signin"]').click();
-    await expect(page.locator('#view .needs')).toBeVisible();
-    for (const key of ['orders', 'invoices', 'products', 'ga', 'home']) {
+    await expect(page.locator('#view [data-hub-main]')).toBeVisible(); // Main is the hub Main (2 Nov)
+    for (const key of ['orders', 'invoices', 'products', 'do', 'review', 'ga', 'home']) { // Do + Review: the cards and growth moved off Main
       await tabClick(page, `nav.tabs a[data-nav="${key}"]`);
       await expect(page.locator(`nav.tabs a[data-nav="${key}"]`)).toHaveAttribute('aria-current', 'page');
       await noSidewaysScroll(page, key);

@@ -43,8 +43,10 @@ for (const scheme of ['light', 'dark']) {
           if (!n || !n.textContent) return;
           const nb = n.getBoundingClientRect(), lb = l.getBoundingClientRect();
           if (!(nb.right <= lb.left || nb.left >= lb.right || nb.bottom <= lb.top || nb.top >= lb.bottom)) out.push('count sits on the label: ' + l.textContent);
-          if (getComputedStyle(n).position !== 'absolute' || ab.right - nb.right > 5 || nb.top - ab.top > 5) out.push('count not in the top-right corner: ' + l.textContent);   // Lisa's tab picks, 2 Nov
-          if (Math.round(nb.height) !== 24 || Math.round(nb.width) !== 24) out.push('tab count ' + nb.width + 'x' + nb.height + ': ' + l.textContent);
+          // On a phone a tab count is an 8px dot just off the icon's top-right corner (Lisa's pick b, 2 Nov).
+          const ib = a.querySelector('.hic').getBoundingClientRect();
+          if (getComputedStyle(n).position !== 'absolute' || nb.left < ib.right || nb.left - ib.right > 3 || Math.abs(nb.top - ib.top) > 2 || nb.right > ab.right) out.push('count not at the icon\'s top right: ' + l.textContent);
+          if (nb.height !== 8 || nb.width !== 8) out.push('tab count ' + nb.width + 'x' + nb.height + ' (want an 8px dot): ' + l.textContent);
         });
         return out.slice(0, 10);
       }, PRESS);

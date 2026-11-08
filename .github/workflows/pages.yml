@@ -31,7 +31,7 @@ jobs:
     # GitHub Pages is only for the public repo. Once private, the site is on Cloudflare and this costs minutes for nothing.
     if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 20 # one run hit 15 (26 Oct 2026); the suite itself takes about 7
+    timeout-minutes: 35 # 1,777 tests now take about 18-21 min; 20 cut off every publish after #297 (3 Nov 2026)
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -94,9 +94,9 @@ jobs:
         if: steps.ready.outputs.ready == 'true'
         run: |
           mkdir _site
-          cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio estate _site/
+          cp -r index.html auth.js config.js toolkit.js tokens.css house.css manifest.webmanifest sw.js icons cdhub money factory marketplace food studio estate enquiries _site/
           ls -R _site
-          test -f _site/index.html && test -f _site/cdhub/index.html && test -f _site/money/index.html && test -f _site/money/core.js && test -f _site/factory/index.html && test -f _site/marketplace/index.html && test -f _site/food/index.html && test -f _site/studio/index.html && test -f _site/estate/index.html && test -f _site/estate/core.js && test -f _site/auth.js && test -f _site/tokens.css && test -f _site/house.css
+          test -f _site/index.html && test -f _site/cdhub/index.html && test -f _site/money/index.html && test -f _site/money/core.js && test -f _site/factory/index.html && test -f _site/marketplace/index.html && test -f _site/food/index.html && test -f _site/studio/index.html && test -f _site/estate/index.html && test -f _site/estate/core.js && test -f _site/enquiries/index.html && test -f _site/enquiries/core.js && test -f _site/auth.js && test -f _site/tokens.css && test -f _site/house.css
       - name: Package the site
         if: steps.ready.outputs.ready == 'true'
         uses: actions/upload-pages-artifact@7b1f4a764d45c48632c6b24a0339c27f5614fb0b # v4.0.0

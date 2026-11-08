@@ -4,9 +4,9 @@
 const { test, expect } = require('../support/test');
 
 const ROUTES = [
-  ['./', ['#/map', '#/drives', '#/drives/shared', '#/drives/readfirst', '#/drives/shared/drv-alpha1', '#/drives/work', '#/drives/personal-drive', '#/drives/usb', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'], '#signInBtn'],
+  ['./', ['#/map', '#/drives', '#/drives/shared', '#/drives/readfirst', '#/drives/shared/drv-alpha1', '#/drives/work', '#/drives/personal-drive', '#/drives/usb', '#/drives/dropbox', '#/drives/icloud', '#/drives/mac', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'], '#signInBtn'],
   ['money/', ['#/now', '#/money', '#/dates', '#/todo', '#/accountant', '#/control', '#/e/TESTCO', '#/register/R001'], '#signInBtn'],
-  ['cdhub/', ['#/map', '#/work', '#/shape', '#/today', '#/round', '#/dogs', '#/areas', '#/litters', '#/vet', '#/buyers'], '#signinbtn'],
+  ['cdhub/', ['#/map', '#/work', '#/shape', '#/today', '#/round', '#/dogs', '#/areas', '#/litters', '#/vet', '#/buyers', '#/sops'], '#signinbtn'],
 ];
 // Not clicked here (each has its own test): signing out ends the session for the rest of the crawl.
 const SKIP = '[data-action="signout"], [data-signout], #signOutBtn, [data-skip], .skip';
@@ -35,6 +35,7 @@ function tag(withChrome) {
     item.sig = [item.tag, item.name, item.href || '', el.getAttribute('data-action') || '', el.getAttribute('data-go') || '', el.getAttribute('data-list') || ''].join('|');
     item.k = seen.filter((x) => x.sig === item.sig).length; // which copy of the same thing
     // A plain in-page link (#/..., no data-* behaviour of its own): another one with the same address goes to the same place.
+    item.fold = el.matches('button.house-fold');
     item.plain = el.tagName === 'A' && /^#\//.test(item.href || '') && !el.getAttributeNames().some((n) => n.startsWith('data-') && n !== 'data-audit') && !el.getAttribute('target');
     seen.push(item);
   });
@@ -50,6 +51,15 @@ for (const [base, hashes, signBtn] of ROUTES) {
       guard.allowedConsole = guard.allowedConsole || [];
       // The Drive check opens the computer's folder picker; here it answers "not allowed" so the page shows its message.
       await page.addInitScript(() => { window.showDirectoryPicker = () => Promise.reject(Object.assign(new Error('test'), { name: 'NotAllowedError' })); });
+      // Temperature history is a real page link (cdhub/history.html). It reads a spreadsheet CSV export on load.
+      // Answer that export here so the crawl can follow the link. data-skip stays for skip-to-content only.
+      if (base === 'cdhub/') {
+        await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export/, (route) =>
+          route.fulfill({ status: 200, contentType: 'text/csv', body: 'on_date\n' }));
+      }
+      // Folds are remembered (toolkit.js 'dash-fold'): every fresh copy of the screen starts with nothing folded, so a fold clicked
+      // earlier never hides the buttons under it from the rest of the crawl.
+      await page.addInitScript(() => { try { localStorage.removeItem('dash-fold'); } catch (e) {} });
       page.on('dialog', (d) => { page.__dialog = (page.__dialog || 0) + 1; d.dismiss().catch(() => {}); });
       await page.goto(base);
       await expect(page.locator(signBtn)).toBeEnabled();
@@ -79,9 +89,18 @@ for (const [base, hashes, signBtn] of ROUTES) {
       // Every number and row now opens what it counts (Lisa, 2 Nov), so a screen can hold several plain links to one list.
       // The first is clicked and must land there; the others with the same address are the same link (each was checked above
       // to have a label and an address that loads). This keeps the crawl inside its time on slower machines.
+      // Each section's fold chevron (toolkit.js, Lisa 2 Nov) is checked where it stands, not with a reload each: a click folds
+      // (aria-expanded false), a second opens again. Then the crawl below leaves them out.
+      for (const it of items.filter((x) => x.fold)) {
+        const b = page.locator(`[data-audit="${it.i}"]`);
+        await b.click({ timeout: 3000 });
+        await expect(b, `${it.name}: folds`).toHaveAttribute('aria-expanded', 'false');
+        await b.click({ timeout: 3000 });
+        await expect(b, `${it.name}: opens again`).toHaveAttribute('aria-expanded', 'true');
+      }
       const landed = new Set();
       for (const it of items) {
-        if (it.disabled) continue;
+        if (it.disabled || it.fold) continue;
         if (it.plain && landed.has(it.href)) continue;
         if (it.tag === 'a' && it.href && /^(https?:|mailto|tel)/.test(it.href) && !it.href.startsWith('http://127.0.0.1')) continue;
         // A fresh copy of the starting screen for each click (a click may have changed screen or opened a box).

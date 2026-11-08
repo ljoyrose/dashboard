@@ -137,7 +137,7 @@ test.describe('Home: house look', () => {
   // House hover rule (28 Oct): a meaning-coloured control keeps its own colour on hover (1px line inside + pale tint of it), never ink;
   // a neutral control gets the 1px ink line + a pale muted tint. Checked in light and dark.
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: hover keeps a coloured control in its own colour (line + pale tint, never ink); neutral = ink line + muted tint`, async ({ page }) => {
+    test(`${scheme}: hover keeps a coloured control in its own colour (line, never ink); neutral = ink line; never a fill (Lisa\'s sweep, 3 Nov)`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await page.goto('./');
       await signIn(page);
@@ -146,16 +146,17 @@ test.describe('Home: house look', () => {
         const el = page.locator(sel).first();
         await expect(el, sel).toBeVisible();
         await el.scrollIntoViewIfNeeded();
+        await page.mouse.move(0, 0); await settle(el);
+        const rest = await el.evaluate((e) => getComputedStyle(e).backgroundColor);
         await el.hover(); await settle(el);
-        return el.evaluate((e, coloured) => {
+        return el.evaluate((e, [coloured, rest]) => {
           const L = window.__look, c = getComputedStyle(e), root = getComputedStyle(document.documentElement);
           const col = (v) => { const d = document.createElement('i'); d.style.color = v; document.body.appendChild(d); const x = getComputedStyle(d).color; d.remove(); return x; };
           const ink = getComputedStyle(document.body).color, card = col(root.getPropertyValue('--card').trim());
           const hc = col(c.getPropertyValue('--hc').trim() || 'transparent');
-          const bg = L.rgb(c.backgroundColor), cardRgb = L.rgb(card);
           return { outline: c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineOffset, oc: c.outlineColor, ink, bg: c.backgroundColor, card, hc,
-            pale: bg.a === 1 && c.backgroundColor !== card && L.ratio(bg, cardRgb) < 1.6, coloured };
-        }, coloured);
+            rest, coloured };
+        }, [coloured, rest]);
       };
       // Stage 2c: the home tiles and the More tab are gone, so the coloured and neutral checks use what remains.
       const coloured = [['a.ment.bad', 'rose money entity'], ['a.ment:not(.bad)', 'copper money entity']];
@@ -163,14 +164,26 @@ test.describe('Home: house look', () => {
         const r = await check(sel, true);
         expect(r.outline, name).toBe('solid 1px -1px');
         expect(r.oc, name + ': hover line is not ink').not.toBe(r.ink);
-        expect(r.bg, name + ': not solid').not.toBe(r.hc);
-        expect(r.bg, name + ': not white / plain card').not.toBe(r.card);
-        expect(r.pale, name + ': a pale tint ' + r.bg).toBe(true);
+        expect(r.bg, name + ': no fill on hover').toBe(r.rest);
       } };
-      for (const sel of ['#urgentOne a.btn', '.hubtile a.hgo']) { // the hub tiles replaced the Key projects buttons (Lisa, 2 Nov)
+      for (const sel of ['#urgentOne a.btn']) {
         const r = await check(sel, false);
         expect([r.outline, r.oc], sel + ': neutral hover = ink line').toEqual(['solid 1px -1px', r.ink]);
-        expect(r.pale && r.bg !== r.card, sel + ': muted tint ' + r.bg).toBe(true);
+        expect(r.bg, sel + ': no fill on hover').toBe(r.rest);
+      }
+      // A hub tile's links (its name and its 3 numbers) take the tile's own colour on hover: a 1px ring only, no fill (Lisa, 2 Nov).
+      for (const sel of ['.hubtile a.hgo', '.hubtile a.hk']) {
+        const el = page.locator(sel).first();
+        await el.scrollIntoViewIfNeeded();
+        await el.hover(); await settle(el);
+        const r = await el.evaluate((e) => {
+          const c = getComputedStyle(e), d = document.createElement('i');
+          d.style.color = getComputedStyle(e.closest('.hubtile')).getPropertyValue('--sc').trim() || getComputedStyle(document.body).color;
+          document.body.appendChild(d); const sc = getComputedStyle(d).color; d.remove();
+          return { outline: c.outlineStyle + ' ' + c.outlineWidth + ' ' + c.outlineOffset, oc: c.outlineColor, sc, bg: c.backgroundColor };
+        });
+        expect([r.outline, r.oc], sel + ': hover = 1px ring in the tile colour').toEqual(['solid 1px -1px', r.sc]);
+        expect(r.bg, sel + ': no fill on hover').toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
       }
       await goTab(page, 'money', 'Money'); // the money entity cards moved off Main into More (Lisa, 2 Nov)
       await run(coloured);
@@ -272,7 +285,7 @@ test.describe('Home: house look', () => {
     }
   });
 
-  test('dark frame top and bottom; light tab buttons; the Needs you tab count is a rose ring with no fill (Lisa\'s tab picks)', async ({ page }) => {
+  test('dark frame top and bottom; light tab buttons; the Main tab count is a ring with no fill: rose only when one is late, else grey (Lisa\'s tab picks; sweep 3 Nov)', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const head = await page.locator('header').evaluate((e) => getComputedStyle(e).backgroundColor);
@@ -285,7 +298,10 @@ test.describe('Home: house look', () => {
     if ((await n.textContent()).trim()) {
       const c = await n.evaluate((e) => { const s = getComputedStyle(e); return { b: s.borderTopWidth, bc: s.borderTopColor, bg: s.backgroundColor, h: e.getBoundingClientRect().height, w: e.getBoundingClientRect().width }; });
       expect(c.b).toBe('1px');
-      expect(c.bc).toBe('rgb(230, 68, 61)'); // rose ring
+      // Rose = late only (Lisa's sweep, 3 Nov 2026): a rose count is read out as "N late", so it is rose only when it says late.
+      const late = await n.evaluate((e) => e.classList.contains('need'));
+      expect(c.bc).toBe(late ? 'rgb(230, 68, 61)' : 'rgb(138, 127, 112)'); // rose ring (late) or the grey read-only ring
+      await expect(page.locator('#mainNav a[data-nav="map"]')).toHaveAttribute('aria-label', late ? /late$/ : /waiting$/);
       expect(c.bg).toBe('rgba(0, 0, 0, 0)'); // ring only, no fill (Lisa's tab picks, 2 Nov)
       expect([c.h, c.w], 'tab count 24 x 24 (a 14px number, Lisa\'s pick A)').toEqual([24, 24]);
     }
@@ -382,7 +398,7 @@ for (const scheme of ['light', 'dark']) {
 
 test.describe('Home: phone (390 x 844)', () => {
   test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
-  test('no sideways scroll on any view; tab counts sit in the tab\'s top-right corner; press targets 44px', async ({ page }) => {
+  test('no sideways scroll on any view; tab counts are a dot at the icon\'s top right; press targets 44px', async ({ page }) => {
     await page.goto('./');
     await noSidewaysScroll(page, 'signed out');
     await signIn(page);
@@ -392,10 +408,15 @@ test.describe('Home: phone (390 x 844)', () => {
     }
     await goTab(page, 'map', 'Dashboard');
     const n = page.locator('#n-map');
-    const c = await n.evaluate((e) => { const r = e.getBoundingClientRect(), t = e.parentElement.getBoundingClientRect(); return { pos: getComputedStyle(e).position, top: r.top - t.top, right: t.right - r.right }; });
+    // Lisa's pick b (2 Nov): on a phone the count is an 8px dot just off the icon's top-right corner, inside the tab.
+    const c = await n.evaluate((e) => { const r = e.getBoundingClientRect(), t = e.parentElement.getBoundingClientRect(), i = e.parentElement.querySelector('.hic').getBoundingClientRect();
+      return { pos: getComputedStyle(e).position, w: r.width, h: r.height, gap: r.left - i.right, top: r.top - i.top, inside: r.right <= t.right }; });
     expect(c.pos).toBe('absolute');
-    expect(c.top).toBeLessThanOrEqual(5);
-    expect(c.right).toBeLessThanOrEqual(5);
+    expect([c.w, c.h]).toEqual([8, 8]);
+    expect(c.gap).toBeGreaterThanOrEqual(0);
+    expect(c.gap).toBeLessThanOrEqual(3);
+    expect(Math.abs(c.top)).toBeLessThanOrEqual(2);
+    expect(c.inside).toBe(true);
     // On a phone Sign out leaves the top bar for the Look menu (Lisa's pick A, 2 Nov); both are 44px there.
     await expect(page.locator('header #signOutBtn')).toBeHidden();
     await page.locator('header #houseLookBtn').click();

@@ -1,47 +1,6 @@
 // Marketplace "Product ideas" page (MKT-IDEAS stage 2). Pretend Google only; every row is invented (SAMPLE).
-const fs = require('fs');
-const path = require('path');
 const { test, expect } = require('../support/test');
-
-const FIX = path.join(__dirname, '..', 'fixtures', 'marketplace');
-const SHEETS = /^https:\/\/sheets\.googleapis\.com\/v4\/spreadsheets\//;
-const DETAIL = JSON.parse(fs.readFileSync(path.join(FIX, 'MKT-IDEA-DETAIL.json'), 'utf8'));
-const FOLDER = 'FAKE-IDEAS-FOLDER-0000';
-const row = (id, title, d, ans) => ['IDEA|' + id, 'idea', 'Ideas', title, JSON.stringify(d), '2026-11-02T15:30:00Z', ans || '', '', '', '', '', ''];
-const rowsFor = () => [
-  row('IDEA-SAMPLE-1', 'SAMPLE pet brush', DETAIL),
-  row('IDEA-SAMPLE-2', 'SAMPLE digital guide', { kind: 'idea', v: 1, status: 'new', gate: 0, verdict: '', intake: { note: 'SAMPLE' } }),
-  row('IDEA-SAMPLE-3', 'SAMPLE dropped thing', { kind: 'idea', v: 1, status: 'dropped', gate: 0, verdict: 'no', dropped_reason: 'SAMPLE too thin', intake: {} }),
-];
-// Pretend Sheets + pretend Drive. Records every sheet write and every file upload. Config gets the invented idea folder.
-async function world(page, rows, opts = {}) {
-  const out = { writes: [], uploads: [] };
-  await page.route('**/config.js', async (route) => {
-    const res = await route.fetch(); const body = await res.text();
-    await route.fulfill({ response: res, body: body + (opts.noFolder ? '' : `\nwindow.DASH_CONFIG.marketplace.ideasRequestsFolderId='${FOLDER}';`) });
-  });
-  await page.route(/googleapis\.com\/drive\/v3\/files\/[\w-]+\?alt=media/, (r) => r.fulfill({ status: 200, contentType: 'text/csv', body: 'listing_id,image_url\n' }));
-  await page.route(/googleapis\.com\/upload\/drive\/v3\/files/, async (route) => {
-    out.uploads.push(route.request().postData());
-    if (opts.uploadFails) return route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":{"message":"boom"}}' });
-    return route.fulfill({ status: 200, contentType: 'application/json', body: '{"id":"FAKE-FILE-0000"}' });
-  });
-  await page.route(/googleapis\.com\/drive\/v3\/about/, (r) => r.fulfill({ status: 200, contentType: 'application/json', body: '{"user":{"emailAddress":"sample@example.com"}}' }));
-  await page.route(SHEETS, async (route) => {
-    const req = route.request(), url = decodeURIComponent(req.url());
-    if (req.method() === 'PUT') { out.writes.push({ range: /values\/([^?]+)/.exec(url)[1], body: JSON.parse(req.postData()) }); return route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }); }
-    if (opts.loadFails) return route.fulfill({ status: 500, contentType: 'application/json', body: '{"error":{"message":"down"}}' });
-    if (/!A2:L$/.test(url)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: rows }) });
-    const n = Number(/!A(\d+)/.exec(url)[1]);
-    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ values: [(rows[n - 2] || []).slice()] }) });
-  });
-  return out;
-}
-async function open(page, hash) {
-  await page.goto('marketplace/' + (hash || '#/ideas'));
-  await page.locator('#view [data-action="signin"]').click();
-  await expect(page.locator('#tabs')).toBeVisible();
-}
+const { DETAIL, FOLDER, row, rowsFor, world, open } = require('../support/mkt-ideas-world');
 
 test.describe('Marketplace ideas: list and card', () => {
   test('list shows open ideas with status, gate, verdict and next step; the nav counts the waiting ones', async ({ page }) => {
@@ -159,5 +118,128 @@ test.describe('Marketplace ideas: answers and the New stock hand-off', () => {
     await page.getByRole('button', { name: 'No', exact: true }).click();
     await expect.poll(() => w.writes.length).toBe(1);
     expect(w.writes[0].body.values[0].slice(0, 2)).toEqual(['No', 'SAMPLE too thin']);
+  });
+});
+
+test.describe('Marketplace ideas: empty, error and edge states', () => {
+  test('no ideas at all: says so and offers Add idea; the nav shows no count', async ({ page }) => {
+    await world(page, []); await open(page);
+    await expect(page.locator('#view')).toContainText('No ideas yet');
+    await expect(page.getByRole('link', { name: 'Add idea' })).toBeVisible();
+    await expect(page.locator('#n-newstock')).toHaveText('');
+  });
+  test('a filter with nothing in it says "Nothing here", not "No ideas yet"', async ({ page }) => {
+    await world(page, rowsFor()); await open(page);
+    await page.locator('[data-ifilter="go"]').click();
+    await expect(page.locator('#view')).toContainText('Nothing here');
+  });
+  test('the sheet cannot be read: a plain banner, no crash', async ({ page, allowedConsole }) => {
+    allowedConsole.push(/status of 500/);
+    await world(page, rowsFor(), { loadFails: true }); await page.goto('marketplace/#/ideas');
+    await page.locator('#view [data-action="signin"]').click();
+    await expect(page.locator('#banner')).toContainText('Could not load');
+  });
+  test('a sent idea with no card yet: waits quietly, then warns after 30 minutes; once the card exists it is not shown twice', async ({ page }) => {
+    await world(page, [row('IDEA-SAMPLE-9', 'SAMPLE arrived', DETAIL)]);
+    await page.addInitScript(() => localStorage.setItem('mkt.ideas.sent', JSON.stringify([
+      { id: 'IDEA-SAMPLE-8', name: 'SAMPLE just sent', t: Date.now() - 60000, dry: false },
+      { id: 'IDEA-SAMPLE-7', name: 'SAMPLE long wait', t: Date.now() - 40 * 60000, dry: false },
+      { id: 'IDEA-SAMPLE-9', name: 'SAMPLE arrived', t: Date.now() - 20 * 60000, dry: false }])));
+    await open(page);
+    await expect(page.locator('#view')).toContainText('The card shows in about 10 minutes.');
+    await expect(page.locator('#view')).toContainText('no card yet. The engine may be off');
+    await expect(page.locator('#view .card', { hasText: 'SAMPLE arrived' })).toHaveCount(1);   // the real card only, not a "sent" note as well
+  });
+  test('a card the engine wrote badly shows a problem note, not a blank page', async ({ page }) => {
+    await world(page, [row('IDEA-SAMPLE-1', 'SAMPLE broken', { kind: 'idea', v: 1, status: 'new', gate: 9, verdict: '', intake: {} })]);
+    await open(page, '#/idea/IDEA-SAMPLE-1');
+    await expect(page.locator('#view')).toContainText('This card has problems (gate)');
+  });
+  test('a dropped idea shows why', async ({ page }) => {
+    await world(page, rowsFor()); await open(page, '#/idea/IDEA-SAMPLE-3');
+    await expect(page.locator('#view')).toContainText('Dropped: SAMPLE too thin');
+  });
+});
+
+test.describe('Marketplace ideas: answers, undo, keyboard', () => {
+  test('Maybe writes only the 4 answer cells', async ({ page }) => {
+    const w = await world(page, rowsFor()); await open(page, '#/idea/IDEA-SAMPLE-1');
+    await page.getByRole('button', { name: 'Maybe' }).click();
+    await expect.poll(() => w.writes.length).toBe(1);
+    expect(w.writes[0].range).toBe('Marketplace!G2:J2'); expect(w.writes[0].body.values[0][0]).toBe('Maybe'); expect(w.uploads).toHaveLength(0);
+  });
+  test('an answered idea shows the answer with Undo; Undo clears the 4 cells; once the engine applied it there is no Undo', async ({ page }) => {
+    const answered = row('IDEA-SAMPLE-1', 'SAMPLE pet brush', DETAIL, 'Go'), applied = row('IDEA-SAMPLE-2', 'SAMPLE done', DETAIL, 'Maybe');
+    applied[10] = '2026-11-02T16:00:00Z'; applied[11] = 'engine';
+    const w = await world(page, [answered, applied]); await open(page, '#/idea/IDEA-SAMPLE-1');
+    await expect(page.locator('#view')).toContainText('Your answer: Go');
+    await expect(page.getByRole('button', { name: 'Move to New stock' })).toHaveCount(0);   // cannot be sent twice
+    await page.getByRole('button', { name: 'Undo' }).click();
+    await expect.poll(() => w.writes.length).toBe(1);
+    expect(w.writes[0].body.values[0].slice(0, 4)).toEqual(['', '', '', '']);
+    await page.goto('marketplace/#/idea/IDEA-SAMPLE-2');
+    await expect(page.locator('#view')).toContainText('Your answer: Maybe');
+    await expect(page.getByRole('button', { name: 'Undo' })).toHaveCount(0);
+  });
+  test('Add idea by keyboard only: every box has a label, Tab reaches Send, Enter on Send sends once', async ({ page }) => {
+    const w = await world(page, rowsFor()); await open(page, '#/ideas/add');
+    for (const label of ['Name (needed)', 'Barcode', 'Link', 'Price you saw', 'Where you saw it', 'Photo link', 'Who of yours might buy it', 'Note']) await expect(page.getByLabel(label, { exact: true })).toBeVisible();
+    await page.getByLabel('Name (needed)', { exact: true }).fill('SAMPLE keys');
+    await page.getByLabel('Note', { exact: true }).focus();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Send' })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/#\/ideas$/);
+    expect(w.uploads).toHaveLength(1);
+  });
+  test('a double tap on Send writes ONE request', async ({ page }) => {
+    const w = await world(page, rowsFor()); await open(page, '#/ideas/add');
+    await page.locator('#if-name').fill('SAMPLE twice');
+    await page.getByRole('button', { name: 'Send' }).dblclick();
+    await expect(page).toHaveURL(/#\/ideas$/);
+    expect(w.uploads).toHaveLength(1);
+  });
+  test('typing survives a refresh of the list in the background (cursor stays in the box)', async ({ page }) => {
+    await world(page, rowsFor()); await open(page, '#/ideas/add');
+    await page.locator('#if-name').fill('SAMPLE typing');
+    await page.getByRole('button', { name: 'Refresh' }).first().click().catch(() => {});
+    await page.evaluate(() => document.querySelector('[data-action="refresh"]') && document.querySelector('[data-action="refresh"]').click());
+    await expect(page.locator('#if-name')).toHaveValue('SAMPLE typing');
+  });
+  test('error text is tied to its box for screen readers', async ({ page }) => {
+    await world(page, rowsFor()); await open(page, '#/ideas/add');
+    await page.getByRole('button', { name: 'Send' }).click();
+    await expect(page.locator('#if-name')).toHaveAttribute('aria-invalid', 'true');
+    await expect(page.locator('#if-name')).toHaveAttribute('aria-describedby', 'if-name-e');
+    await page.locator('#if-name').fill('x');
+    await expect(page.locator('#if-name-e')).toHaveCount(0);   // typing clears the message
+  });
+});
+
+test.describe('Marketplace ideas: loaded on demand', () => {
+  test('the first screen does not load the Ideas code, the nav count still shows, and opening Ideas loads it once', async ({ page }) => {
+    const seen = []; page.on('request', (r) => { if (/\/marketplace\/ideas(-page)?\.js/.test(r.url())) seen.push(r.url().split('/').pop()); });
+    await world(page, rowsFor()); await open(page, '#/me');
+    await expect(page.locator('#n-newstock')).toHaveText('3');
+    expect(seen).toEqual([]);
+    await page.evaluate(() => { location.hash = '#/ideas'; });
+    await expect(page.locator('#view .needs')).toHaveText('Ideas: 3');
+    expect(seen.slice().sort()).toEqual(['ideas-page.js', 'ideas.js']);
+    await page.evaluate(() => { location.hash = '#/newstock'; });
+    await page.evaluate(() => { location.hash = '#/ideas'; });
+    await expect(page.locator('#view .needs')).toHaveText('Ideas: 3');
+    expect(seen).toHaveLength(2);   // not fetched again
+  });
+  test('the Ideas code cannot load: a plain message, the rest of the hub still works', async ({ page, allowedConsole }) => {
+    allowedConsole.push(/Failed to load resource/);
+    await page.route(/\/marketplace\/ideas-page\.js/, (route) => route.abort());
+    await world(page, rowsFor()); await open(page, '#/ideas');
+    await expect(page.locator('#view')).toContainText('Could not open Ideas');
+    await page.evaluate(() => { location.hash = '#/newstock'; });
+    await expect(page.locator('#view .needs')).toContainText('New stock');
+  });
+  test('a direct link to one idea loads the code and shows the card', async ({ page }) => {
+    await world(page, rowsFor()); await open(page, '#/idea/IDEA-SAMPLE-1');
+    await expect(page.locator('#view h2').first()).toHaveText('SAMPLE pet brush');
   });
 });

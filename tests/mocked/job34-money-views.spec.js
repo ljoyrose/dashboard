@@ -131,11 +131,12 @@ test.describe('Money Hub: slow and failed reads', () => {
     await page.goto('money/');
     await expect(page.locator('#signInBtn')).toBeEnabled();
     await page.locator('#signInBtn').click();
-    await expect(page.locator('#view')).toContainText('Could not read Drive');
+    await expect(page.locator('#view [data-hm="fail"]')).toContainText('Could not read');
     guard.world.failWith = null;
     await page.locator('#view button[data-action="refresh"]', { hasText: 'Try again' }).click();
     await expect(page.locator('#readStamp')).toContainText(/^Read \d/);
-    await expect(page.locator('#view')).not.toContainText('Could not read Drive');
+    await expect(page.locator('#view [data-hm="fail"]')).toHaveCount(0);
+    await expect(page.locator('#view')).not.toContainText('Could not read');
     await hashTo(page, 'money');
     await expect(page.locator('a.ent', { hasText: 'TESTCO' })).toBeVisible();
   });

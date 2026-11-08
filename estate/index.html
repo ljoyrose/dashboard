@@ -53,10 +53,10 @@
   .stamp { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }
-  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); } }
+  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); } }
 
   .btn.big { width: 100%; justify-content: center; min-height: 44px; }
-  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); } }
+  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   input:focus, select:focus { outline: none; }
   a:focus, button:focus { outline: none; }
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
@@ -76,8 +76,9 @@
   .tile { font: inherit; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; color: var(--ink); min-height: 84px; display: flex; flex-direction: column; justify-content: center; gap: 4px; min-width: 0; }
   .tile .k { font-size: var(--fs-small); color: var(--muted); }
   .tile .v { font-size: var(--fs-figure); font-weight: 600; align-self: flex-start; line-height: 1.3; }
-  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting. */
-  .tile .v.red, .tile .v.amber { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--house-ring); }
+  /* Ringed numbers (Lisa's pick A, 2 Nov): 14px, the same as the words beside them, in the house count box; ring only, rose = late, grey = waiting.
+     Every tile's number wears the box (sweep, 3 Nov: numbers side by side in one group are one size), so Live and Down match. */
+  .tile .v { box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: var(--house-count-w); height: var(--house-count-h); line-height: var(--house-count-lh); padding: 0 var(--house-count-pad); border-radius: var(--house-count-r); font-size: var(--fs-small); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; background: transparent; border: 1px solid var(--house-ring); }
   .tile .v.red { border-color: var(--house-late); }
 
   .card { display: flex; flex-direction: column; gap: 12px; }
@@ -150,6 +151,7 @@
   <a class="ht" data-slot="6" href="#/shops" data-nav="shops"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-bag"/></svg></span><span class="htl">Shops</span><span class="n" id="n-shops"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
+      <a href="#/all" data-nav="all" data-slot="5"><svg class="i" aria-hidden="true"><use href="#i-globe"/></svg><span class="htl">All</span><span class="n" id="n-all"></span></a>
       <a href="#/unchecked" data-nav="unchecked" data-slot="7"><svg class="i" aria-hidden="true"><use href="#i-clock"/></svg><span class="htl">Unchecked</span><span class="n" id="n-unchecked"></span></a>
       <a href="#/access" data-nav="access" data-slot="3"><svg class="i" aria-hidden="true"><use href="#i-key"/></svg><span class="htl">Access</span><span class="n" id="n-access"></span></a>
     </div>
@@ -160,7 +162,7 @@
   'use strict';
   var CFG = window.DASH_CONFIG || {}, ES = CFG.estate || {}, E = window.EstateCore, R = window.EstateReader, SH = window.EstateShop, KW = window.EstateKeywords, V = window.EstateViews, AL = window.EstateAlerts;
   var CLIENT_ID = CFG.clientId, SCOPE = (CFG.scopes || {}).read, WRITE = (CFG.scopes || {}).write, A = window.EstateAdd;
-  var VIEWS = ['home', 'look', 'unchecked', 'shops', 'access', 'client'];
+  var VIEWS = ['home', 'all', 'look', 'unchecked', 'shops', 'access', 'client'];
   var FILTER_WORD = { company: 'Company', brand: 'Brand', client: 'Client', kind: 'Kind', platform: 'Platform', flag: 'Flag' };
   // Invented rows shown until the sheet id is in config.js. Nothing is read or sent while these show.
   var EXAMPLE = [
@@ -170,7 +172,7 @@
     { key: 'app.example.test', kind: 'app', company: 'Example Ltd', client: 'Client A', url_or_domain: 'https://app.example.test', platform: 'Example app builder', live_status: 'blocked to scripts', http_code: '403', source: 'example' },
     { key: 'email-domain:example.com', kind: 'email-domain', company: 'Example Co', url_or_domain: 'example.com', spf: 'two records', dkim: 'not found', dmarc: 'missing', source: 'example' }
   ];
-  var token = null, rows = [], loaded = false, view = 'home', filters = {}, example = !ES.sheetId;
+  var token = null, rows = [], loaded = false, readProblem = '', view = 'home', filters = {}, example = !ES.sheetId;
   var extra = { Shops: [], Keywords: [] }, extraMissing = { Shops: true, Keywords: true };
   var addOpen = false, addMsg = '', addBusy = false, addDraft = { input: '', company: '', brand: '', client: '', kind: '' }, pendingWrite = null;
   function day(n) { return new Date(Date.now() + n * 864e5).toISOString().slice(0, 10); }
@@ -186,7 +188,7 @@
     if (!token) { loaded = false; if (example) banner('Example rows after sign-in: the RR_WEB-ESTATE sheet is not set up yet, so nothing is read or sent.', true); return render(); }
     R.read({ sheetId: ES.sheetId, token: token }).then(function (out) {
       if (out.state === 'signed-out' || /sign-in expired/.test(out.problems[0] || '')) { token = null; DashAuth.markExpired(); }
-      rows = out.rows; loaded = out.ok;
+      rows = out.rows; loaded = out.ok; readProblem = out.ok ? '' : (out.problems.join('. ') || 'the sheet could not be read');
       if (out.ok) loadExtra();
       banner(out.ok ? (out.problems.length ? out.problems.join('. ') + '.' : '') : 'Could not show the estate: ' + out.problems.join('. ') + '.', out.ok);
       render();
@@ -217,6 +219,8 @@
   var SHOW = { live: ['Live', function (r) { return E.statusOf(r) === 'live'; }], down: ['Down', function (r) { return E.statusOf(r) === 'down'; }],
     blocked: ['Blocked to scripts', function (r) { return E.statusOf(r) === 'blocked'; }], unchecked: ['Not checked', function (r) { var s = E.statusOf(r); return s === 'not checked' || s === 'parked'; }],
     expiring: ['Expiring in 60 days', function (r) { return E.expiringSoon(r, today(), 60); }], email: ['Email checks failing', function (r) { return E.emailProblems(r).length > 0; }] };
+  // One property, opened from a Main row: #/look?key=<key> shows just that row.
+  function keyOf() { var m = /[?&]key=([^&]+)/.exec(location.hash); return m ? decodeURIComponent(m[1]) : ''; }
   function showOf() { var m = /[?&]show=(\w+)/.exec(location.hash); return m && SHOW[m[1]] ? m[1] : ''; }
   function showHash(key) { var h = E.filterHash(view, filters); return h + (h.indexOf('?') < 0 ? '?' : '&') + 'show=' + key; }
   function tile(k, v, cls, key) { var inner = '<span class="k">' + esc(k) + '</span><span class="v' + (v && cls ? ' ' + cls : '') + '" data-count="' + esc(k) + '">' + v + '</span>';
@@ -361,18 +365,47 @@
       return '<div class="prop" data-alert="' + esc(a.kind) + '" data-akey="' + esc(a.key) + '"><div class="pline"><span class="dot" style="--c:var(--ljr-' + (a.level === 'red' ? 2 : 3) + ')" aria-hidden="true"></span><span class="addr">' + esc(a.text) + '</span></div></div>';
     }).join('') + '</div>';
   }
+  // Main (Lisa's house style, 2 Nov 2026): Next, Needs you (at most 5), then Down · Expiring · Live, built by DashKit.hubMain.
+  // Rows and numbers are worked out as the Dashboard's Web tile does (index.html HubRead web): down and expiring within 7 days
+  // are late, the rest of Do (expiring later, blocked, email checks) waits. Numbers are "–" when the sheet is not set up or not read.
+  function mainRows() {
+    var now = today(), out = [];
+    rows.forEach(function (r) {
+      var k = E.rank(r, now), label = r.url_or_domain || r.key;
+      if (k > 2 && !E.emailProblems(r).length) return;
+      var d = E.expiresIn(r, now), addr = E.normaliseTarget(label), site = /^https?:\/\//.test(label) && addr.ok ? addr.url : '';
+      var row = '#/look?key=' + encodeURIComponent(r.key);
+      out.push({ kind: k === 0 || (k === 1 && d != null && d <= 7) ? 'late' : k === 1 && d === 0 ? 'today' : 'wait', sort: d,
+        text: label.replace(/^https?:\/\//, '') + (k === 0 ? ': down' : k === 1 ? ': expires ' + (d < 0 ? (-d) + ' days ago' : d === 0 ? 'today' : 'in ' + d + ' days') : k === 2 ? ': blocked' : ': email checks'),
+        sub: k === 3 || (k < 3 && E.emailProblems(r).length) ? E.emailProblems(r).join(', ') : [r.company, r.brand].filter(Boolean).join(' · '),
+        href: row, act: k === 0 || k === 2 ? 'Check site' : k === 1 ? 'Renew' : 'Fix email', actHref: (k === 0 || k === 2) && site ? site : row, actExt: !!((k === 0 || k === 2) && site) });
+    });
+    return out;
+  }
+  function mainPage() {
+    var ok = !example && loaded, c = ok ? E.summarise(rows, today()) : null;
+    var v = function (k) { return c ? c[k] : null; };
+    return DashKit.hubMain({ hub: 'web', doHref: '#/look', rows: ok ? mainRows() : [],
+      error: example ? 'The RR_WEB-ESTATE sheet is not set up yet, so there is nothing real to count. The example rows are in All.' : !loaded ? 'Could not read the estate: ' + readProblem + '.' : '',
+      nums: [{ label: 'Down', value: v('down'), late: c && c.down > 0, href: '#/all?show=down' },
+        { label: 'Expiring', value: v('expiring'), href: '#/all?show=expiring' },
+        { label: 'Live', value: v('live'), href: '#/all?show=live' }] });
+  }
   function page() {
+    if (view === 'home') return mainPage();
     var list = E.applyFilters(rows, filters), shown = inView(list), sk = showOf();
     if (sk) shown = shown.filter(SHOW[sk][1]);
+    var kk = keyOf(); if (kk) shown = shown.filter(function (r) { return r.key === kk; });
     if (view === 'access') return accessPage(E.applyFilters(rows, filters));
     if (view === 'client') return clientPage();
     if (view === 'shops') return '<p class="needs">Shops &amp; ads</p>' + filterRow() + shopsPage(E.applyFilters(rows, filters));
-    var title = view === 'look' ? 'Needs a look' : view === 'unchecked' ? 'Not checked' : 'Web Estate';
+    var title = view === 'look' ? 'Needs a look' : view === 'unchecked' ? 'Not checked' : 'All';
     var hint = view === 'unchecked' ? 'Not scanned yet.' : '';
+    if (kk) hint = 'One property. <a href="' + esc(E.filterHash(view, filters)) + '">Show all</a>';
     if (sk) hint = SHOW[sk][0] + ' only. <a href="' + esc(E.filterHash(view, filters)) + '">Show all</a>';
-    var al = view === 'look' && !sk ? alertsCard(list) : '';
-    var h = '<p class="needs">' + title + '</p>' + (hint ? '<p class="hint">' + hint + '</p>' : '') + (view === 'home' ? addBox() : '') + tiles(list) + filterRow() + al;
-    if (!shown.length) return h + (al ? '' : '<div class="card" data-empty-one><p class="empty">' + (sk || Object.keys(filters).length ? 'Nothing here' : view === 'look' ? 'Nothing needs you' : rows.length ? 'Nothing here' : 'No properties yet.') + '</p></div>');
+    var al = view === 'look' && !sk && !kk ? alertsCard(list) : '';
+    var h = '<p class="needs">' + title + '</p>' + (hint ? '<p class="hint">' + hint + '</p>' : '') + (view === 'all' ? addBox() : '') + tiles(list) + filterRow() + al;
+    if (!shown.length) return h + (al ? '' : '<div class="card" data-empty-one><p class="empty">' + (sk || kk || Object.keys(filters).length ? 'Nothing here' : view === 'look' ? 'Nothing needs you' : rows.length ? 'Nothing here' : 'No properties yet.') + '</p></div>');
     E.groupRows(shown, today()).forEach(function (g) {
       h += '<p class="grp">' + esc(g.name) + '<span class="sr"> · </span><span class="cnt">' + g.rows.length + '</span></p><div class="card" data-group="' + esc(g.name) + '">' + g.rows.map(prop).join('') + '</div>';
     });
@@ -382,13 +415,13 @@
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
     var list = E.applyFilters(rows, filters), look = list.filter(needsLook).length, unc = list.filter(function (r) { return E.statusOf(r) === 'not checked'; }).length;
     $('tabs').classList.toggle('hidden', view === 'client');
-    $('n-home').textContent = list.length || ''; $('n-shops').textContent = list.filter(function (r) { return r.kind === 'shop'; }).length || ''; $('n-look').textContent = look || ''; $('n-unchecked').textContent = unc || '';
+    $('n-all').textContent = list.length || ''; $('n-shops').textContent = list.filter(function (r) { return r.kind === 'shop'; }).length || ''; $('n-look').textContent = look || ''; $('n-unchecked').textContent = unc || '';
     $('stamp').textContent = ES.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
     DashKit.signButton($('signin'), !!token); $('signin').classList.remove('hidden'); $('signin').disabled = !token && !ready;
     $('refresh').classList.toggle('hidden', !token);
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the Web Estate</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
-    if (!loaded && !rows.length) { $('view').innerHTML = '<div class="card"><p class="hint">Loading…</p></div>'; return; }
+    if (!loaded && !rows.length && (view !== 'home' || !readProblem)) { $('view').innerHTML = '<div class="card"><p class="hint">Loading…</p></div>'; return; }
     $('view').innerHTML = page();
   }
 

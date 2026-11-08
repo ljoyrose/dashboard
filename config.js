@@ -25,6 +25,29 @@
       excludedDrives: EXCLUDED,
       sharedDriveAllowIds: []
     },
+    // Personal Drive page bin (TidyUp Apps stage 3). The page stays look-only until Lisa presses "Allow personal bin
+    // actions". A file can be binned only if it starts ZZ_DELETE_DRIVE_ and has a ledger row whose surface is `surface`.
+    // dryRun true = the page lists what would be renamed or binned and changes nothing; switching it off is Lisa's call.
+    personalBin: {
+      surface: 'drive-personal',
+      dryRun: true
+    },
+    // TidyUp Apps stage 5: one row per app outside Drive and Dropbox. status: 'bot-and-browser' | 'bot-capable' |
+    // 'browser-only' | 'nothing'. how = the only tidy route allowed; never = API actions no bot may call for that app.
+    // Archive or trash only, never a permanent delete. No emails or ids here. The Bin page lists these under Other apps.
+    tidyApps: [
+      { app: 'Canva', status: 'bot-and-browser', how: 'The tidy bot moves marked designs to a bin folder; you empty it in Canva (kept 30 days).', never: ['delete', 'trash by bot'] },
+      { app: 'Gmail', status: 'bot-capable', how: 'Nothing marked yet. A bot may archive or trash only.', never: ['delete_label', 'delete'] },
+      { app: 'ClickUp', status: 'bot-capable', how: 'Nothing marked yet. A bot may archive or trash only.', never: ['delete_task'] },
+      { app: 'Shopify', status: 'bot-capable', how: 'Nothing marked yet. A bot may archive only.', never: ['delete'] },
+      { app: 'ClickFunnels', status: 'bot-capable', how: 'Nothing marked yet. A bot may archive or trash only.', never: ['destroy'] },
+      { app: 'Figma', status: 'browser-only', how: 'By hand in the browser.', never: [] },
+      { app: 'Descript', status: 'browser-only', how: 'By hand in the browser.', never: [] },
+      { app: 'Runway', status: 'browser-only', how: 'By hand in the browser.', never: [] },
+      { app: 'Animoto', status: 'browser-only', how: 'By hand in the browser.', never: [] },
+      { app: 'GitHub', status: 'nothing', how: 'Nothing to tidy.', never: [] },
+      { app: 'Vercel', status: 'nothing', how: 'Nothing to tidy.', never: [] }
+    ],
     urls: {
       files: 'https://www.googleapis.com/drive/v3/files',
       drives: 'https://www.googleapis.com/drive/v3/drives',
@@ -44,7 +67,11 @@
     },
     cdhub: {
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
-      folderName: '*01 SLA Inspections / BLD-app-tables'
+      folderName: '*01 SLA Inspections / BLD-app-tables',
+      readingsSheetId: '1utmtG6V2q4kLQT15LtHg_AyncNObeBSyXyV86MaV8o0', // BLD-outdoor_temp readings sheet
+      // Write targets for inline dashboard edits (chip and area saves)
+      microchipFileId: '1GnL88Xtf0tlcXjFf_P2ML-Vfglz08-Ee',
+      occupancyFileId: '18z1oJMhx01EoKDeL4fi4KGBuiSLtgcj-'
     },
     // Marketplace page: the "Marketplace" tab of RR_OPEN-WORK (filled by the RR_MKT-ENGINE Apps Script). Taps write only the
     // answer cells. wakeFolderId/wakeFile: optional Drive file holding the engine's web-app address (empty = the engine's
@@ -95,7 +122,14 @@
       listingsFileId: '1JkewFinU42nKX7JDEwRHZY0I-FKdBhdW', // RR_LISTINGS.csv: read only, for the second photo on "Same item?" cards
       wakeFolderId: '',
       wakeFile: 'MKT-WAKE-WEBAPP.json',
-      ideasRequestsFolderId: '', // Drive folder for Product ideas request files (MKT-IDEA-REQ-*.json). Empty = the Add idea form will not send.
+      ideasRequestsFolderId: '1cd3vZwUYB0pNFUTQzSOMkYwuOeATG7Rv', // Drive folder for Product ideas request files (MKT-IDEA-REQ-*.json). Empty = the Add idea form will not send.
+      live: false
+    },
+    // Puppy Enquiries Hub (enquiries/): reads the private RR_ENQUIRIES sheet (filled by the enquiries engine) with Lisa's
+    // sign-in; a tap drops one request file into requestsFolderId. Both empty = example mode: invented rows, nothing sent.
+    enquiries: {
+      sheetId: '',
+      requestsFolderId: '',
       live: false
     },
     // App Factory page (factory/): reads af-state.json from logsFolderId (written by AF-ENGINE); writes request files into
