@@ -65,6 +65,15 @@
       runLogFolderId: '',
       runLogName: 'RUN-LOG.csv'
     },
+    // Bin page Canva card (TidyUp Apps stage 1). The page never calls Canva. It reads stateFile from folderId (00 AI Commons >
+    // CHANGES), written by the CANVA-BIN bot, and writes ledger slips and CANVA-BIN-REQUEST_ files there. accounts are
+    // labels only (no emails). dryRun true = the card lists and changes nothing; switching it off is Lisa's call.
+    canvaBin: {
+      folderId: '11J2IuEGBT6fThCFD3UCN86J_9ZbiGhrF',
+      stateFile: 'CANVA-BIN-STATE.json',
+      accounts: ['main', 'book'],
+      dryRun: true
+    },
     cdhub: {
       folderId: '10m8HauOLAdj2QStgNJ2T3b3W599VXWro',
       folderName: '*01 SLA Inspections / BLD-app-tables',
