@@ -130,9 +130,9 @@ var TABLES = {
     file: 'BLD-check_type.csv',
     idPrefix: 'cty',
     columns: ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
+              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope'],
     proposedColumns: ['type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
-                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
+                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope'],
     computedColumns: [],
     lookups: [],
     perms: { add: ['OWNER'], correct: [] },
@@ -154,7 +154,13 @@ var TABLES = {
       active:         { type: 'bool', dflt: 'true' },
       effective_from: { type: 'date', required: true },
       source:         { type: 'text' },
-      note:           { type: 'text' }
+      note:           { type: 'text' },
+      every_days:     { type: 'count' },                                            // days between jobs; blank = as needed
+      group:          { type: 'text' },                                             // the phone button it sits under, e.g. a sub-menu
+      includes:       { type: 'text' },                                             // type_keys this job also covers, separated by |
+      sop:            { type: 'text' },                                             // the SOP's short name
+      evidence:       { type: 'enum', values: ['none', 'optional', 'required'], dflt: 'none' },
+      site_scope:     { type: 'enum', values: ['one_line', 'per_dog'] }             // target none only: what one whole-site tap writes
     },
     dupKey: ['type_key', 'effective_from'], dupTimeCol: null,
     stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
@@ -162,6 +168,15 @@ var TABLES = {
       if (!errors.type_key && row.type_key !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row.type_key)) {
         errors.type_key = 'Use lower-case letters, numbers and underscores, e.g. feeding.';
       }
+      if (!errors.every_days && row.every_days === '0') errors.every_days = 'Use 1 or more, or leave blank for as needed.';
+      if (!errors.includes && row.includes !== '') {
+        var keys = row.includes.split('|').map(function (k) { return k.trim(); }).filter(String), bad = false, self = false;
+        keys.forEach(function (k) { if (!/^[a-z][a-z0-9_]{1,39}$/.test(k)) bad = true; if (k === row.type_key) self = true; });
+        if (bad) errors.includes = 'List check names separated by |, e.g. nails|ears.';
+        else if (self) errors.includes = 'A check cannot include itself.';
+        else row.includes = keys.join('|');
+      }
+      if (!errors.site_scope && row.site_scope !== '' && row.target !== 'none') errors.site_scope = 'Only for a whole-site check.';
     },
     checkAgainst: function (clean, records, errors) {
       if (errors.type_key || errors.effective_from) return;
@@ -184,9 +199,9 @@ var TABLES = {
     file: 'BLD-check_log.csv',
     idPrefix: 'clg',
     columns: ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-              'note', 'taken_at', 'taken_by', 'corrects_id'],
+              'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded'],
     proposedColumns: ['check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
-                      'note', 'taken_at', 'taken_by', 'corrects_id'],
+                      'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded'],
     computedColumns: [],
     lookups: [
       { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
@@ -204,7 +219,9 @@ var TABLES = {
       amount:        { type: 'text' },
       outcome:       { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded'], required: true },   // recorded = a report, such as an incident, with no pass or fail
       happened_at:   { type: 'datetime' },
-      note:          { type: 'text' }
+      note:          { type: 'text' },
+      photo:         { type: 'text' },                                              // where the photo is kept; a saved photo is evidence, a scan is not
+      how_recorded:  { type: 'enum', values: ['scanned', 'tapped', 'typed'] }       // scanned = opened from a tag: it says which screen, not that anyone was there
     },
     dupKey: ['check_type_id', 'area_id', 'subject_id', 'item'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
@@ -341,7 +358,7 @@ var TABLES = {
     defaultMode: 'direct',
     input: {
       tag:    { type: 'text', required: true },
-      kind:   { type: 'enum', values: ['area', 'subject', 'litter'], required: true },
+      kind:   { type: 'enum', values: ['area', 'subject', 'litter', 'site'], required: true },   // site = the one premises code
       ref_id: { type: 'text', required: true }
     },
     dupKey: ['tag'], dupTimeCol: null,
