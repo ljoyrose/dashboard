@@ -47,6 +47,29 @@
     }());
   }
   function btn(text, fn) { return h('button', { class: 'btn', type: 'button', text: text, onclick: fn }); }
+  /** Draws one person's code as a QR on this screen only: nothing is saved, printed, logged or sent. */
+  function privateQr() {
+    var url = '', timer = 0; try { url = localStorage.getItem('bld.scriptUrl') || ''; } catch (e) { /* none */ }
+    sheet.textContent = ''; say('');
+    var box = h('div', { class: 'qcard big noprint', 'data-private': '1' });
+    var input = h('input', { class: 'inp', type: 'password', autocomplete: 'off', 'aria-label': 'Their staff code', placeholder: 'Paste their staff code' });
+    var holder = h('div');
+    function clear() { clearTimeout(timer); window.removeEventListener('beforeprint', clear); input.value = ''; holder.textContent = ''; say('QR removed.'); }
+    var show = h('button', { class: 'btn', type: 'button', text: 'Show QR', onclick: function () {
+      var c = input.value.trim(), link = base + '#join=' + encodeURIComponent(c) + '&url=' + url;
+      input.value = '';
+      if (!c) { say('Paste their staff code first.', 'bad'); return; }
+      try { holder.innerHTML = BLDQr.svg(link, 'Private set-up QR'); } catch (e) { holder.textContent = ''; say('That is too long for a QR code. Use the normal set-up QR.', 'bad'); return; }
+      link = ''; c = '';
+      clearTimeout(timer); timer = setTimeout(clear, 120000);
+      window.addEventListener('beforeprint', clear);
+      say('They scan this once. It disappears in 2 minutes.', 'good');
+    } });
+    box.appendChild(h('b', { text: 'Private set-up' }));
+    box.appendChild(h('small', { text: 'This QR holds their code. Do not screenshot, photograph or message it.' }));
+    [input, show, holder, h('button', { class: 'btn quiet', type: 'button', text: 'Remove QR', onclick: clear })].forEach(function (n) { box.appendChild(n); });
+    sheet.appendChild(box);
+  }
   load().then(function (ok) {
     if (!ok) return;
     var onSite = {}; (T.occupancy || []).forEach(function (o) { if (!o.moved_out) onSite[o.subject_id] = true; });
@@ -63,5 +86,6 @@
       sheet.appendChild(h('div', { class: 'qcard big' }, [h('div', { html: BLDQr.svg(base + '#setup=' + encodeURIComponent(url), 'Phone set-up QR') }), h('b', { text: 'Set up a phone' }), h('small', { text: 'Show on screen. Do not pin up or photograph.' })]));
       say('Staff scan this once, then type their own code.', 'good');
     }));
+    opts.appendChild(btn('Private set-up QR', privateQr));
   });
 }());
