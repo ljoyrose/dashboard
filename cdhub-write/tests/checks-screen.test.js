@@ -132,3 +132,25 @@ test('published checks page: its copy of the screen matches, and it loads only p
   const html = fs.readFileSync(path.join(root, 'cdhub/checks/index.html'), 'utf8');
   for (const m of html.matchAll(/(?:src|href)="([^"]+\.(?:js|css))"/g)) assert.ok(fs.existsSync(path.join(root, 'cdhub/checks', m[1])), m[1]);
 });
+
+test('published checks page: a refused code brings the code box back, and typing is sent in capitals', async () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const { JSDOM } = require('jsdom');
+  const html = fs.readFileSync(path.join(__dirname, '..', '..', 'cdhub/checks/index.html'), 'utf8').replace(/<script src="[^"]+"><\/script>/g, '');
+  const codes = [];
+  const fake = { getScriptUrlSet: () => true, setCode: (c) => codes.push(c), clearCode: () => codes.push('') };
+  const dom = new JSDOM(html, { url: 'https://example.test/cdhub/checks/', runScripts: 'outside-only' });
+  const w = dom.window;
+  w.BLDSave = { create: () => fake };
+  w.BLDChecks = { mount: () => Promise.resolve({ ok: false, reason: 'read' }) };
+  w.eval(dom.window.document.querySelector('script').textContent);
+  const gate = w.document.getElementById('gate'), code = w.document.getElementById('code');
+  assert.equal(gate.hidden, false);
+  code.value = 'abc234';
+  gate.dispatchEvent(new w.Event('submit', { cancelable: true }));
+  assert.equal(gate.hidden, true);
+  await new Promise((r) => setTimeout(r, 0));
+  assert.deepEqual(codes, ['ABC234', '']);
+  assert.equal(gate.hidden, false);
+  assert.equal(code.value, '');
+});
