@@ -9,8 +9,15 @@
  * sends a table key (or the exact file name), never a path.
  */
 var ROLE_ALL = ['OWNER', 'STAFF', 'VET', 'TRAINER'];
+/**
+ * A visitor's code (an inspector, say). Deliberately NOT in ROLE_ALL: it may only add rows to guest_reading.
+ * It always expires (Auth.gs) and can never read anything. adminAddGuestCode (Auth.gs) is the only way to make one.
+ */
+var ROLE_GUEST = 'GUEST';
 
 /** The default allow-list: the temperature log (plus the approvals queue, see Config.gs PENDING_FILE). */
+var READ_METHODS_ = ['camera', 'typed'];
+
 var TABLES = {
 
   // ---------------------------------------------------------------- area_reading
@@ -27,9 +34,11 @@ var TABLES = {
       'period_start', 'taken_at', 'taken_by', 'device_id', 'reset_after_reading',
       'applied_limit_id', 'in_range', 'compliant', 'mitigation_required',
       'corrects_id',        // PROPOSED: pointer to the row this one corrects
-      'mitigation_note'     // PROPOSED: what was done when a reading is out of band
+      'mitigation_note',    // PROPOSED: what was done when a reading is out of band
+      'read_method',        // PROPOSED 8 Nov 2026: 'camera' or 'typed'
+      'camera_value_changed' // PROPOSED 8 Nov 2026: 'true' if staff changed the number the camera read
     ],
-    proposedColumns: ['corrects_id', 'mitigation_note'],
+    proposedColumns: ['corrects_id', 'mitigation_note', 'read_method', 'camera_value_changed'],
     computedColumns: ['applied_limit_id', 'in_range', 'compliant', 'mitigation_required'],
     lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
     // Lisa 16 Oct (S02-4): staff see NO past entries, so they cannot point at one. A wrong entry is reported to
@@ -47,7 +56,9 @@ var TABLES = {
       spot_c:              { type: 'temp' },
       period_start:        { type: 'datetime' },
       reset_after_reading: { type: 'bool' },
-      mitigation_note:     { type: 'text' }
+      mitigation_note:     { type: 'text' },
+      read_method:         { type: 'enum', values: READ_METHODS_ },
+      camera_value_changed: { type: 'bool' }
     },
     // duplicate guard: same tenant + same area + same period (morning/afternoon slot sent by the hub) within
     // DUP_WINDOW_MIN of taken_at. Without period_start this is the old rule: same room inside the window.
@@ -62,6 +73,138 @@ var TABLES = {
       if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
           parseFloat(row.min_c) > parseFloat(row.max_c)) {
         errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
+      }
+      checkReadMethod_(row, errors);
+    }
+  },
+
+  // ---------------------------------------------------------------- guest_reading
+  // A visitor's own temperature readings (8 Nov 2026). A separate file on purpose: a guest reading can never count
+  // as, block, or overwrite a staff reading, because it never touches BLD-area_reading. Only a GUEST code can add
+  // here and a GUEST code can add nowhere else. Lisa creates the file (header row only); own switch, OFF by default.
+  // taken_by is the guest's label and public code id. The area comes from the QR code: guests cannot read lists.
+  guest_reading: {
+    key: 'guest_reading',
+    file: 'BLD-guest_reading.csv',
+    idPrefix: 'grd',
+    columns: ['id', 'tenant_id', 'area_id', 'min_c', 'max_c', 'spot_c', 'precision_dp', 'period_start',
+              'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'note'],
+    proposedColumns: ['id', 'tenant_id', 'area_id', 'min_c', 'max_c', 'spot_c', 'precision_dp', 'period_start',
+                      'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'note'],
+    computedColumns: [],
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    perms: { add: [ROLE_GUEST], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      area_id:              { type: 'ref', lookup: 'area', required: true },
+      min_c:                { type: 'temp', required: true },
+      max_c:                { type: 'temp', required: true },
+      spot_c:               { type: 'temp' },
+      period_start:         { type: 'datetime' },
+      read_method:          { type: 'enum', values: READ_METHODS_ },
+      camera_value_changed: { type: 'bool' },
+      note:                 { type: 'text' }
+    },
+    dupKey: ['area_id', 'period_start'], dupTimeCol: 'taken_at',
+    stamp: function (row, ctx) { row.precision_dp = '1'; row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.min_c && !errors.max_c && row.min_c !== '' && row.max_c !== '' &&
+          parseFloat(row.min_c) > parseFloat(row.max_c)) {
+        errors.min_c = 'The lowest reading cannot be higher than the highest reading.';
+      }
+      checkReadMethod_(row, errors);
+    }
+  },
+
+  // ---------------------------------------------------------------- check_type
+  // The kennel's own list of staff checks (feeding, medicine, cleaning...): entered by the OWNER as rows, never
+  // hard-coded, because they differ by kennel. NEW table, own switch, OFF by default. A change is a new row with a
+  // later effective_from, so an old entry keeps pointing at the version in force when it was made. target tells the
+  // screen what to ask for: a room, a dog, either, or neither. active=false retires a check from that date.
+  check_type: {
+    key: 'check_type',
+    file: 'BLD-check_type.csv',
+    idPrefix: 'cty',
+    columns: ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'asks_amount', 'amount_unit', 'frequency',
+              'active', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
+    proposedColumns: ['type_key', 'label', 'target', 'asks_item', 'asks_amount', 'amount_unit', 'frequency',
+                      'active', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      type_key:       { type: 'text', required: true },
+      label:          { type: 'text', required: true },
+      target:         { type: 'enum', values: ['area', 'dog', 'either', 'none'], required: true },
+      asks_item:      { type: 'bool', dflt: 'false' },
+      asks_amount:    { type: 'bool', dflt: 'false' },
+      amount_unit:    { type: 'text' },
+      frequency:      { type: 'text' },
+      active:         { type: 'bool', dflt: 'true' },
+      effective_from: { type: 'date', required: true },
+      source:         { type: 'text' },
+      note:           { type: 'text' }
+    },
+    dupKey: ['type_key', 'effective_from'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.set_at = ctx.nowIso; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function (row, errors) {
+      if (!errors.type_key && row.type_key !== '' && !/^[a-z][a-z0-9_]{1,39}$/.test(row.type_key)) {
+        errors.type_key = 'Use lower-case letters, numbers and underscores, e.g. feeding.';
+      }
+    },
+    checkAgainst: function (clean, records, errors) {
+      if (errors.type_key || errors.effective_from) return;
+      for (var i = 0; i < records.length; i++) {
+        var r = records[i];
+        if (r.type_key === clean.type_key && (r.effective_from || '') >= clean.effective_from) {
+          errors.effective_from = 'This check already has a version from ' + r.effective_from + '. A change must start after that date.';
+          return;
+        }
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------- check_log
+  // One staff record against one check_type row. One table for every check, so a new check is a new row in
+  // check_type and needs no code. item/amount hold what the check asks for (a medicine and dose, a food and weight,
+  // a visitor's name). NEW table, own switch, OFF by default. Wrong entries are corrected by the owner, as for temperatures.
+  check_log: {
+    key: 'check_log',
+    file: 'BLD-check_log.csv',
+    idPrefix: 'clg',
+    columns: ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
+              'note', 'taken_at', 'taken_by', 'corrects_id'],
+    proposedColumns: ['check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at',
+                      'note', 'taken_at', 'taken_by', 'corrects_id'],
+    computedColumns: [],
+    lookups: [
+      { name: 'check_type', file: 'BLD-check_type.csv', idCol: 'id' },
+      { name: 'area', file: 'BLD-area.csv', idCol: 'id' },
+      { name: 'subject', file: 'BLD-subject.csv', idCol: 'id' }
+    ],
+    perms: { add: ['OWNER', 'STAFF'], correct: ['OWNER'] },
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      check_type_id: { type: 'ref', lookup: 'check_type', required: true },
+      area_id:       { type: 'ref', lookup: 'area' },
+      subject_id:    { type: 'ref', lookup: 'subject' },
+      item:          { type: 'text' },
+      amount:        { type: 'text' },
+      outcome:       { type: 'enum', values: ['ok', 'concern', 'not_done'], required: true },
+      happened_at:   { type: 'datetime' },
+      note:          { type: 'text' }
+    },
+    dupKey: ['check_type_id', 'area_id', 'subject_id', 'item'], dupTimeCol: 'taken_at',
+    stamp: function (row, ctx) { row.taken_at = ctx.nowIso; row.taken_by = ctx.who; },
+    checkRow: function (row, errors) {
+      if ((row.outcome === 'concern' || row.outcome === 'not_done') && row.note === '' && !errors.note) {
+        errors.note = 'Say briefly what the concern is or why it was not done.';
       }
     }
   },
@@ -190,6 +333,13 @@ var TABLES = {
     }
   }
 };
+
+/** A reading's camera fields: the "changed" flag only makes sense for a camera reading. */
+function checkReadMethod_(row, errors) {
+  if (row.camera_value_changed === 'true' && row.read_method !== 'camera' && !errors.read_method) {
+    errors.camera_value_changed = 'Only a camera reading can have its number changed.';
+  }
+}
 
 /** Sensible bounds for each breeding rule, so a typo (e.g. 120 months) is refused: [lowest, highest, unit]. */
 var BREEDING_RULE_LIMITS_ = {
@@ -333,5 +483,8 @@ var READABLE = {
   occupancy:       { file: 'BLD-occupancy.csv',       vis: 'occupancy',       authorCol: '',            dateCol: '' },
   area_reading:    { file: 'BLD-area_reading.csv',    vis: 'area_reading',    authorCol: 'taken_by',    dateCol: 'taken_at' },
   occupancy_check: { file: 'BLD-occupancy_check.csv', vis: 'occupancy_check', authorCol: 'confirmed_by', dateCol: 'confirmed_at' },
-  breeding_rule:   { file: 'BLD-breeding_rule.csv',   vis: 'breeding_rule',   authorCol: 'set_by',      dateCol: 'set_at' }
+  breeding_rule:   { file: 'BLD-breeding_rule.csv',   vis: 'breeding_rule',   authorCol: 'set_by',      dateCol: 'set_at' },
+  guest_reading:   { file: 'BLD-guest_reading.csv',   vis: 'guest_reading',   authorCol: 'taken_by',    dateCol: 'taken_at' },
+  check_type:      { file: 'BLD-check_type.csv',      vis: 'check_type',      authorCol: 'set_by',      dateCol: 'set_at' },
+  check_log:       { file: 'BLD-check_log.csv',       vis: 'check_log',       authorCol: 'taken_by',    dateCol: 'taken_at' }
 };
