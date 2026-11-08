@@ -17,7 +17,7 @@
   <p id="note" class="sub" role="status"></p>
   <form id="gate" hidden>
     <label for="code">Your staff code</label>
-    <input id="code" class="inp" type="password" autocomplete="off">
+    <input id="code" class="inp" type="password" autocomplete="off" autocapitalize="characters" spellcheck="false">
     <button class="btn" type="submit">Open checks</button>
   </form>
   <div id="app"></div>
@@ -29,12 +29,17 @@
   (function () {
     var save = BLDSave.create(), type = new URLSearchParams(location.search).get('t') || '';
     var gate = document.getElementById('gate'), note = document.getElementById('note'), device = '';
-    function open() { gate.hidden = true; note.textContent = ''; BLDChecks.mount(document.getElementById('app'), save, { type: type }); }
+    function open() {
+      gate.hidden = true; note.textContent = '';
+      return BLDChecks.mount(document.getElementById('app'), save, { type: type }).then(function (r) {
+        if (r && r.reason === 'read') { save.clearCode(); document.getElementById('code').value = ''; gate.hidden = false; }
+      });
+    }
     if (!save.getScriptUrlSet()) { note.textContent = 'This phone is not set up. Open The Board and set it up first.'; return; }
     try { device = localStorage.getItem('bld.device.code') || ''; } catch (e) { device = ''; }
-    if (device) { save.setCode(device, false); open(); return; }
-    gate.hidden = false;
-    gate.addEventListener('submit', function (ev) { ev.preventDefault(); save.setCode(document.getElementById('code').value, false); open(); });
+    gate.hidden = !!device;
+    if (device) { save.setCode(device, false); open(); }
+    gate.addEventListener('submit', function (ev) { ev.preventDefault(); save.setCode(document.getElementById('code').value.toUpperCase(), false); open(); });
   })();
 </script>
 </body>
