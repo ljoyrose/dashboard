@@ -69,7 +69,7 @@ header.house-head { height: var(--house-head); min-height: var(--house-head); ma
 .house-menu .house-mread { margin: 0; font-size: var(--house-read-size); color: var(--muted); }
 header .btn.house-mitem { color: var(--ink); background: var(--card); border-color: var(--press); justify-content: flex-start; gap: 8px; }
 header .btn.house-mitem > svg { width: var(--house-icon); height: var(--house-icon); flex: none; }
-@media (hover: hover) { header .btn.house-mitem:hover { outline-color: var(--sel-bd); background-color: var(--hov); } }
+@media (hover: hover) { header .btn.house-mitem:hover { outline-color: var(--sel-bd); } }
 header [role="dialog"] :focus-visible { outline-color: var(--ink); }
 .house-phone { display: none !important; }
 /* The name's place (Lisa's pick A, 2 Nov 2026): on a laptop or tablet (768px and up) the hub's name sits in the middle of the bar,
@@ -109,17 +109,18 @@ header.house-head > .house-row, .house-page.house-page { box-sizing: border-box;
 .btn.yes, .btn.no, .btn.danger { border-color: var(--hmc); }
 .btn.yes > :is(.ti, svg, .icon) { color: var(--ljr-5-text); } .btn.no > :is(.ti, svg, .icon), .btn.danger > :is(.ti, svg, .icon) { color: var(--ljr-2-text); }
 
-/* 5 The hover rule. Hover = selected: a 1px line drawn inside (outline, offset -1px) plus a pale tint mixed into the card colour.
-   Neutral: ink line + muted tint. Meaning colour (--hmc): its own line + a 14% tint of it, never ink. Nothing moves. */
+/* 5 The hover rule (Lisa, 3 Nov 2026 sweep): hover, focus, press and selected draw ONE 1px line inside (outline, offset -1px) and
+   NEVER a fill; nothing moves. Neutral: the ink line. Meaning colour (--hmc): its own line, never ink. Only typing boxes (input,
+   textarea, select) may change their background. Keyboard focus adds the 2px ring (below). */
 .btn[aria-pressed="true"], button.pill.on, a.pill.on, button.chip[aria-pressed="true"], button.chip.on, .ch.on, .fbtn.on, .achip.on, .subnav a[aria-current="page"], .seg button[aria-pressed="true"], .vsw button[aria-pressed="true"] {
-  outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line));
-  background-color: color-mix(in srgb, var(--hmc, var(--house-muted)) var(--house-tint), var(--card)); }
+  outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
 @media (hover: hover) {
   .btn:hover, button.pill:hover, a.pill:hover, button.chip:hover, a.chip:hover, .ch:hover, .fbtn:hover, .achip:hover, .more:hover, .undo:hover, .lk:hover, .ico:hover, .copy:hover, .flagb:hover, .subnav a:hover, .seg button:hover, .vsw button:hover, a.card:hover {
-    outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line));
-    background-color: color-mix(in srgb, var(--hmc, var(--house-muted)) var(--house-tint), var(--card)); }
-  header .btn:hover { outline-color: var(--frame-ink); background-color: color-mix(in srgb, var(--frame-ink) var(--house-tint), var(--frame)); }
+    outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
+  header .btn:hover { outline-color: var(--frame-ink); }
 }
+.btn:active, button.pill:active, a.pill:active, button.chip:active, a.chip:active, .ch:active, .fbtn:active, .achip:active, .more:active, .undo:active, .lk:active, .ico:active, .copy:active, .flagb:active, .subnav a:active, .seg button:active, .vsw button:active, a.card:active {
+  outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); transform: none; }
 /* Read-only pills (counts, dates, tags, stamps) never hover. */
 .cnt:hover, .dpill:hover, .datep:hover, span.date:hover, span.pill:hover, span.tag:hover, .stamp:hover { outline: none; }
 /* Keyboard focus: the 2px ink ring (frame ink on the frame), never the browser blue. */
@@ -150,12 +151,14 @@ nav.house-tabs .ht { --c: var(--ljr-0-icon); --f: var(--ljr-0); position: relati
   padding: 6px 0 8px; border: 0; border-radius: var(--radius); outline: none; box-shadow: none; background: var(--card); color: var(--ink);
   font-family: inherit; font-size: var(--fs-small); font-weight: 600; line-height: 16px; text-decoration: none; text-align: center; cursor: pointer; transform: none;
   display: flex; flex-direction: column; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 1px; overflow: hidden; }
-nav.house-tabs .ht:hover, nav.house-tabs .ht[aria-current="page"], nav.house-tabs .ht[aria-expanded="true"] { background: var(--card); border: 0; box-shadow: none; outline: none; }
+nav.house-tabs .ht:hover, nav.house-tabs .ht[aria-current="page"], nav.house-tabs .ht[aria-expanded="true"] { background: var(--card); border: 0; border-radius: var(--radius); box-shadow: none; outline: none; }
 nav.house-tabs .ht > .hic { box-sizing: border-box; flex: none; width: var(--house-tab-disc); height: var(--house-tab-disc); border-radius: 50%; display: grid; place-items: center;
   border: var(--house-line) solid transparent; background: transparent; color: var(--ljr-0-icon); }
 nav.house-tabs .ht > .hic > :is(svg, .ti, i) { width: var(--house-tab-icon); height: var(--house-tab-icon); font-size: var(--house-tab-icon); line-height: 1; color: inherit;
   fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; display: block; }
 nav.house-tabs .ht > .htl { --px: 4px; display: block; margin: 0 var(--px); max-width: calc(100% - 2 * var(--px)); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; order: 0; flex: none; color: var(--ink); }
+/* .htl-long / .htl-short: the phone shows the short word (Lisa, 2 Nov 2026); the name keeps the long one. */
+nav.house-tabs .ht > .htl > .htl-short { display: none; }
 nav.house-tabs .ht > .bar { position: absolute; left: 50%; bottom: 2px; margin: 0; width: var(--house-tab-bar); height: var(--house-tab-bar-h); border-radius: 2px;
   background: var(--ljr-0); opacity: .6; transform: translateX(-50%); transition: width .15s ease-out, opacity .15s ease-out; box-shadow: none; min-width: 0; max-width: none; overflow: visible; }
 /* Hover and selected: one movement (the colour arrives, the line widens). */
@@ -189,6 +192,8 @@ nav.house-tabs .ht > .n:empty, nav.house-tabs .ht > .cnt:empty { display: none !
     width: var(--house-tab-dot); min-width: var(--house-tab-dot); height: var(--house-tab-dot); min-height: var(--house-tab-dot);
     padding: 0; border: 0; border-radius: 50%; background: var(--house-ring); color: transparent; font-size: 0; line-height: 0; overflow: hidden; }
   nav.house-tabs .ht > .n.need, nav.house-tabs .ht > .cnt.need { background: var(--house-late); }
+  nav.house-tabs .ht > .htl > .htl-long { display: none; }
+  nav.house-tabs .ht > .htl > .htl-short { display: inline; }
 }
 /* The More menu: opens above the bar, at its right end; the views that are not tabs. Same rules: grey icon at rest, the colour on hover
    and where you are, no fills. */
@@ -304,10 +309,10 @@ a.house-go { color: inherit; text-decoration: none; cursor: pointer; }
 .hm .btn.hm-a { text-decoration: none; color: var(--ink); flex: none; }
 .hm-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .hm-row { position: relative; display: flex; align-items: center; gap: 8px; padding: 6px 0 6px 12px; border-radius: var(--radius); min-width: 0; }
-.hm-row.house-lbar { --house-lbar-out: 0px; --sc: var(--house-ring); }
-/* Inside a list the bar is a plain straight 3px line, never a "(" bracket per row (Lisa, 2 Nov): rows are square; and nothing moves
-   on hover, focus or press (the hover line is an outline, house section 13), so every row keeps one left edge. */
-.hm-row.house-lbar, .hm-row.house-lbar::before { border-radius: 0; }
+.hm-row.house-lbar { --house-lbar-out: 0px; --sc: var(--house-ring); border-radius: var(--radius); }
+/* The row shell is rounded like a house card (Lisa, 5 Nov). The left colour bar stays a straight 3px line, not a "(" bracket.
+   This supersedes 2 Nov "rows are square" for the row shell only. Nothing moves on hover, focus or press (the hover line is an outline). */
+.hm-row.house-lbar::before { border-radius: 0; }
 .hm-row, .hm-row:hover, .hm-row:focus-within, .hm-row:active { margin: 0; padding: 6px 0 6px 12px; border-width: 0; }
 .hm-row[data-kind="late"] { --sc: var(--house-late); }
 .hm-row[data-kind="today"] { --sc: var(--house-soon); }
@@ -335,3 +340,43 @@ a.hm-n[class] { display: flex; flex-direction: column; align-items: flex-start; 
   .hm-t { flex-basis: calc(100% - 8px); }
   .hm .btn.hm-a { min-height: 44px; }
 }
+/* On a phone, Main's row titles and Next's title stop at 2 lines with "…" (Lisa, 2 Nov 2026); the whole title stays in the link's
+   name (aria-label) and on the item it opens. */
+@media (max-width: 767.98px) {
+  .hm-what > a.house-open, .hm-t > a.house-open { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+}
+
+/* 15 Fold (Lisa, 2 Nov 2026): every card or section with a heading folds down to its heading row (toolkit.js DashKit.fold adds the
+   button after every redraw). The chevron is a grey 16px outline icon (Tabler chevron-down) in a house control (36px, 44px on a phone, the
+   one 1px control line, no fill) at rest; hover and press draw the 1px line inside, focus the 2px ink ring; nothing moves and nothing fills. Folded, it turns a
+   quarter (not with reduced motion). In a flex heading row it is the row's last part; otherwise it sits over the row's right end
+   (.house-fold-abs, its place set by toolkit.js) and the row keeps that room free (.house-fold-pad). The heading row's count ring and
+   links stay in view when folded. On a phone a list of more than 5 rows shows 3 and a "+N more" button.
+   The :not(#hf-a):not(#hf-b) only lifts these rules above a page's own "#main button" styles; no element has those ids. */
+button.house-fold:not(#hf-a):not(#hf-b) { box-sizing: border-box; flex: none; display: inline-flex; align-items: center; justify-content: center; width: var(--house-btn); height: var(--house-btn); min-width: var(--house-btn); min-height: var(--house-btn);
+  margin: 0; padding: 0; border: var(--house-line) solid var(--press); border-radius: var(--radius); background: transparent; color: var(--muted); box-shadow: none; transform: none; cursor: pointer; line-height: 1;
+  font-size: var(--house-press-size); font-weight: 600; }
+@media (max-width: 767.98px) { button.house-fold:not(#hf-a):not(#hf-b) { width: var(--house-btn-phone); height: var(--house-btn-phone); min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); } }
+button.house-fold:not(#hf-a):not(#hf-b):hover, button.house-fold:not(#hf-a):not(#hf-b):focus, button.house-fold:not(#hf-a):not(#hf-b):active { background: transparent; box-shadow: none; transform: none; color: var(--muted); }
+button.house-fold:not(#hf-a):not(#hf-b):focus:not(:focus-visible) { outline: none; }
+@media (hover: hover) { button.house-fold:not(#hf-a):not(#hf-b):hover { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); } }
+button.house-fold:not(#hf-a):not(#hf-b):active { outline: var(--house-line) solid var(--sel-bd); outline-offset: calc(-1 * var(--house-line)); }
+button.house-fold:not(#hf-a):not(#hf-b):focus-visible { outline: var(--house-focus) solid var(--ink); outline-offset: 2px; }
+button.house-fold > svg { display: block; width: var(--house-fold-icon); height: var(--house-fold-icon); flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; transition: transform .15s ease-out; }
+button.house-fold[aria-expanded="false"] > svg { transform: rotate(var(--house-fold-turn)); }
+@media (prefers-reduced-motion: reduce) { button.house-fold > svg { transition: none; } }
+button.house-fold.house-fold-abs:not(#hf-a):not(#hf-b) { position: absolute; z-index: 1; }
+.house-fold-rel { position: relative; }
+.house-fold-pad[class] { padding-right: calc(var(--house-btn) + 8px); }
+@media (max-width: 767.98px) { .house-fold-pad[class] { padding-right: calc(var(--house-btn-phone) + 8px); } }
+.house-fold-row > .house-fold-h { margin-right: auto; }
+[data-fold-row] { cursor: pointer; }
+[data-house-folded] > [data-fold-part], [data-fold-extra] { display: none !important; }
+button.house-fold-more:not(#hf-a):not(#hf-b) { align-self: flex-start; display: inline-flex; align-items: center; min-height: 0; margin: 0; padding: 4px 0; border: 0; border-radius: var(--radius);
+  background: transparent; color: var(--ink); font-size: var(--fs-small); font-weight: 400; line-height: 1.3; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+button.house-fold-more:not(#hf-a):not(#hf-b):hover, button.house-fold-more:not(#hf-a):not(#hf-b):active { background: transparent; box-shadow: none; transform: none; }
+/* 16 Typing boxes (Lisa, 3 Nov 2026): every input, textarea, select and contenteditable is 16px (--fs-input) on every page, so a phone
+   (iPhone Safari) never zooms in when one is tapped. Only the typed words change size; nothing else does. Ticks, radios, sliders and
+   buttons are not typing boxes. The :not(#ti-a):not(#ti-b) only lifts this above a page's own input rules; no element has those ids. */
+:is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="image"]),
+  textarea, select, [contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]):not(#ti-a):not(#ti-b) { font-size: var(--fs-input); }

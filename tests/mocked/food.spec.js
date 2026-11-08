@@ -112,7 +112,9 @@ test.describe('GA Hub page', () => {
     await open(page, '#/orders');
     await expect(page.locator('#view .row')).toHaveCount(5);
     await expect(page.locator('#view .row').first()).toContainText('#9005');
-    await expect(page.locator('#view .row .amt.red')).toHaveText('£8.17');
+    await expect(page.locator('#view .row .amt.red')).toHaveText('Profit £8.17');
+    await expect(page.locator('#view .row .amt.good').first()).toHaveText(/^Profit £/);
+    await expect(page.locator('#view .hint')).toHaveText('Profit is ex VAT, after all costs.');
     await expect(page.locator('nav.tabs a[data-nav="orders"]')).toHaveAttribute('aria-current', 'page');
   });
 
@@ -129,7 +131,7 @@ test.describe('GA Hub page', () => {
     await page.locator('[data-ofilter="low"]').click();
     await expect(page.locator('#view .row')).toHaveCount(1);
     await expect(page.locator('#view .row')).toContainText('#9101');
-    await expect(page.locator('#view .row .amt.red')).toHaveText('£7.99');
+    await expect(page.locator('#view .row .amt.red')).toHaveText('Profit £7.99');
   });
   test('low profit: MIN_PROFIT typed as 8 gives the same line; typed as 10 moves it (never hard-coded)', async ({ page }) => {
     const b = book(), row = (no, p) => [no, 'Shopify', 'DDF', 'GA', 'Invoiced', '', '', '1', '', '', '', '', '', p, '', '', '', '', '', '', '', 'One-off (Online Store)', '', '', '', '[]', 'Matched'];
@@ -391,9 +393,13 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view .row', { hasText: '#9001 ' }).first()).toContainText('🤝 Breeder or breeder club 07');
     await expect(page.locator('#view .row', { hasText: '#9001-R1' }).locator('.badge')).toHaveText('🔁 Replacement, sent again');
     await page.goto('food/#/ga');
-    const codes = page.locator('#view .card', { hasText: 'BRAND-CODE-NUMBER' });
+    const codes = page.locator('#view .card', { hasText: 'Shopify order number only, digits' });
     await expect(codes).toContainText('DDF Designer Dog Foods');
-    await expect(codes).toContainText('Customers see this reference');
+    await expect(codes).toContainText('in their tracking only (it is not on the label)');
+    await expect(codes).not.toContainText('BRAND-CODE-NUMBER');
+    await expect(codes).not.toContainText('add the code on the Codes tab');
+    await expect(codes).not.toContainText('Add a brand, shop or partner on the Codes tab of RR_FOOD');   // the sentence #122 removed, word for word
+    await expect(codes).not.toContainText('Codes tab');
     await expect(codes).toContainText('R01 Sample Pet Shop');
     await expect(codes).not.toContainText('Old shop');   // inactive codes are hidden
   });
@@ -439,12 +445,6 @@ test.describe('GA Hub page', () => {
 });
 
 
-// A computed colour as [r, g, b, a] (0-255), from rgb()/rgba() or color(srgb ...).
-function rgbOf(s) { const m = /\(srgb ([^)]+)\)|\(([^)]+)\)/.exec(s), v = (m[1] || m[2]).split(/[ ,/]+/).filter(Boolean).map(Number), k = m[1] ? 255 : 1; return [v[0] * k, v[1] * k, v[2] * k, v[3] === undefined ? 1 : v[3]]; }
-// A pale tint: opaque, not plain white/black, light in light mode and dark in dark mode (mixed into the card), never a solid colour.
-function isTint(s, scheme) { const c = rgbOf(s), avg = (c[0] + c[1] + c[2]) / 3; if (c[3] < 0.5) return false;
-  if (Math.min(c[0], c[1], c[2]) >= 252) return false;   // white
-  return scheme === 'dark' ? avg > 20 && avg < 110 : avg > 200 && avg < 252; }
 // House look (LINKS-COMFORT-BRIEF v3 + Lisa's control rules, 28 Oct 2026), checked by computed style in the browser.
 // audit() walks every visible element and returns plain-English problems; each test below asserts its own kind.
 const TABS = ['home', 'orders', 'invoices', 'products', 'ga'];
@@ -513,7 +513,7 @@ test.describe('GA Hub house look', () => {
     expect(blue(cool[0])).toBeGreaterThan(0); expect(blue(cool[1])).toBeGreaterThan(0);  // cool: blue over red
   });
 
-  test('controls: every one rests on the same clear 1px line (never ink), 12px corners, 14px/600, 36px tall; hover = 1px line inside + a pale tint (ink + muted tint when neutral) and nothing moves', async ({ page }) => {
+  test('controls: every one rests on the same clear 1px line (never ink), 12px corners, 14px/600, 36px tall; hover = 1px line inside (ink when neutral), never a fill, and nothing moves', async ({ page }) => {
     await sheets(page, book());
     await open(page);
     for (const tab of ['home', 'orders', 'products', 'ga']) {
@@ -532,11 +532,14 @@ test.describe('GA Hub house look', () => {
         if (!(await el.evaluate((e) => e.matches('.yes, .no')))) lines.add(st.c); // meaning buttons rest on their own colour line
         await el.scrollIntoViewIfNeeded();
         const before = await el.boundingBox();
+        await page.mouse.move(0, 0);
+        const restBg = await el.evaluate((e) => getComputedStyle(e).backgroundColor);
         await el.hover();
         const hv = await el.evaluate((e) => { const s = getComputedStyle(e); return { ow: s.outlineWidth, os: s.outlineStyle, oo: s.outlineOffset, oc: s.outlineColor, bw: s.borderTopWidth, coloured: e.matches('.yes, .no'), bg: s.backgroundColor, card: getComputedStyle(e.closest('.card, #view')).backgroundColor }; });
         expect({ ow: hv.ow, os: hv.os, oo: hv.oo, bw: hv.bw }).toEqual({ ow: '1px', os: 'solid', oo: '-1px', bw: '1px' });
         if (hv.coloured) { expect(hv.oc).not.toBe(ink); expect(hv.oc, 'keeps its resting colour line').toBe(st.c); } else expect(hv.oc).toBe(ink);
-        expect(isTint(hv.bg, 'light'), `${tab}: hover fill ${hv.bg}`).toBe(true);
+        // Lisa's sweep (3 Nov 2026): every control hovers with the line only, never a fill.
+        expect(hv.bg, `${tab}: no fill on hover`).toBe(restBg);
         const after = await el.boundingBox();
         expect(after).toEqual(before);
       }
@@ -568,7 +571,7 @@ test.describe('GA Hub house look', () => {
   });
 
   for (const scheme of ['light', 'dark']) {
-    test(`${scheme}: meaning-coloured controls (Apply, Not now) keep their OWN colour on hover: own-colour 1px line inside + a pale tint, never ink (tabs are exempt)`, async ({ page }) => {
+    test(`${scheme}: meaning-coloured controls (Apply, Not now) keep their OWN colour on hover: own-colour 1px line inside, never ink, never a fill (tabs are exempt)`, async ({ page }) => {
       await page.emulateMedia({ colorScheme: scheme });
       await sheets(page, book());
       await open(page, '#/do');
@@ -580,12 +583,12 @@ test.describe('GA Hub house look', () => {
         expect({ ow: l.ow, os: l.os, oo: l.oo }, what).toEqual({ ow: '1px', os: 'solid', oo: '-1px' });
         expect(l.oc, what + ': line is not ink').not.toBe(ink);
         expect(l.oc, what + ': line is its own colour').toBe(l.own);
-        expect(l.bg, what + ': not a solid fill of its colour').not.toBe(l.oc);
-        expect(isTint(l.bg, scheme), `${what}: fill ${l.bg} is a pale tint`).toBe(true);
+        expect(l.bg, what + ': no fill on hover (Lisa\'s sweep, 3 Nov 2026)').toBe(l.rest);
       };
       for (const v of ['Apply', 'Not now']) {
         const b = page.locator(`#view .card[data-key^="PRICE-"] button[data-v="${v}"]`);
-        await b.hover(); check(await look(b), v);
+        await page.mouse.move(0, 0); const rest = await b.evaluate((e) => getComputedStyle(e).backgroundColor);
+        await b.hover(); check({ ...(await look(b)), rest }, v);
       }
     });
   }

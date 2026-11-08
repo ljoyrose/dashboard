@@ -89,13 +89,13 @@
   label.date.over, label.date.soon { background: color-mix(in srgb, var(--mc) 10%, var(--surface)); }
 
   /* Hover = selected: a 1px line drawn inside (nothing moves). Neutral = ink line + muted tint; meaning = its own colour + its tint. */
-  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+  .btn.on, button.pill.on, a.pill.on, .fbtn.on, .ch.on, .ico.on, button.pill[aria-pressed="true"] { outline: 1px solid var(--ink); outline-offset: -1px; }
   @media (hover: hover) {
     .btn:hover, button.pill:hover, a.pill:hover, .fbtn:hover, .ch:hover, .more:hover, .undo:hover, .copy:hover, .tick:hover, label.date:hover, a.chip:hover, details.arch > summary:hover,
-    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: var(--hov); }
+    .ico:hover, .flagb:hover, .opt:hover, .mark:hover, .plus:hover, a.lk:hover, button.lk:hover, .sbox:hover, .stage:hover, .fdet > summary:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
     .btn.yes:hover, .btn.no:hover, .lk.off:hover, a.need:hover, a.chip.stuck:hover, a.pill.alert.has:hover, label.date.over:hover, label.date.soon:hover, .stat:hover {
-      outline: 1px solid var(--mc); outline-offset: -1px; background: color-mix(in srgb, var(--mc) 14%, var(--surface)); }
-    header .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 10%, var(--frame)); }
+      outline: 1px solid var(--mc); outline-offset: -1px; }
+    header .btn:hover { outline-color: var(--frame-ink); }
     .ico:hover { color: var(--hc, var(--ink)); }
     .mark:hover svg { filter: none; opacity: 1; }
     .crow .ttl:hover, .room h2 .rlink:hover { text-decoration: underline; }
@@ -454,6 +454,7 @@
   function media(id) { return drive(CFG.urls.files + '/' + id + '?alt=media&supportsAllDrives=true', { cache: 'no-store' }); }
   function load() {
     if (!accessToken) return;
+    if (!S) render();   // J34-F83: show "Reading…" while the first read runs, not the sign-in card again
     findFile(F.logs, F.state).then(function (f) { return media(f.id).then(function (r) { return r.json(); }); })
       .then(function (j) { S = j; err = null; allTasks(); applyPend(); var nf = 0; (j.failed || []).forEach(function (f) { if (sent[f.taskId]) { delete sent[f.taskId]; nf++; } }); if (nf) { saveSent(); banner(nf + ' click' + (nf > 1 ? 's' : '') + ' not applied. Click again.'); } $('stamp').textContent = String(j.mode).toUpperCase() === 'LIVE' ? '' : 'Test'; render(); })
       .catch(function (e) { err = e.message; render(); });
@@ -498,7 +499,7 @@
     var html = findBar('rooms', all, APP, [], { side: sw, extra: '<div class="pills">' +
       // Every count is a link: it opens the list it counts.
       '<a class="pill" href="#/all" title="Apps"><i class="ti ti-apps"></i> Apps ' + cnt(A.length) + '</a>' +
-      '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> Stuck ' + cnt(A.filter(stuck).length, true) + '</a>' +
+      '<a class="pill alert' + (A.filter(stuck).length ? ' has' : '') + '" href="#/stuck" title="Stuck"><i class="ti ti-hourglass"></i> Stuck ' + cnt(A.filter(stuck).length, false) + '</a>' +
       '<a class="pill" href="#/room/reactor" title="Build slots"><i class="ti ti-hammer"></i> ' + Math.max(0, 3 - A.filter(function (t) { return /^6 /.test(t.status); }).length) + '/3</a>' +
       people().map(function (w) { return '<a class="pill" href="#/queue/' + encodeURIComponent(w) + '">' + esc(w) + ' ' + cnt(queue(w).length) + '</a>'; }).join('') +
       enginePill() + ckPill() + '</div>' + docsStrip() }) + (A.length ? '' : emptyBox()) + '<div class="rooms">';
@@ -1456,7 +1457,7 @@
       return h.result !== 'OK' || !(now - last < WINDOW_H[h.job] * 36e5);
     }).map(function (h) { return (JOB[h.job] || h.job) + ' ' + word(h); });
     if (now - Date.parse(S.generated_at) > 45 * 6e4) bad.unshift('Data old');
-    return bad.length ? '<a class="pill alert has" href="#/health" title="' + esc(bad.join(' · ')) + '"><i class="ti ti-alert-triangle"></i> Engine ' + cnt(bad.length, true) + '</a>' :
+    return bad.length ? '<a class="pill alert has" href="#/health" title="' + esc(bad.join(' · ')) + '"><i class="ti ti-alert-triangle"></i> Engine ' + cnt(bad.length, false) + '</a>' :
       '<a class="pill" href="#/health" title="Engine"><i class="ti ti-check"></i> Engine</a>';
   }
   var JOB = { syncState: 'Screen sync', dailyDigest: 'Daily email', staleCheck: 'Stuck check', weeklyBackup: 'Backup', leakProbe: 'Live-app check', onIdeaSubmit: 'Idea Form' };
@@ -1521,6 +1522,7 @@
   function doFoot() { var n = sendsAll().filter(isOpen).length; return n ? '<p class="muted" style="margin:0"><a href="#/prompts" data-prompts-link><i class="ti ti-send"></i> Prompts ' + cnt(n) + '</a></p>' : ''; }
   function render() {
     var route = hashParts().path;
+    if (!/^(me|item|app|today|prompts|queue|card|room|health|stuck|docs|all|new|problem|decide|do|rooms)$/.test(route[0])) route = ['rooms'];   // J34c-F02: an unknown address is Rooms, tab lit
     Array.prototype.forEach.call(document.querySelectorAll('[data-nav]'), function (a) { var here = route[0] === 'me' && route[1] === 'all' ? 'mine' : route[0]; a.setAttribute('aria-current', a.getAttribute('data-nav') === here || (/^(card|room|health|stuck|all|queue|new|problem)$/.test(route[0]) && a.getAttribute('data-nav') === 'rooms') ? 'page' : 'false'); });
     $('appPick').classList.toggle('hidden', !signedIn || !S); $('appPick').setAttribute('aria-expanded', appMenu ? 'true' : 'false');
     $('appMenu').classList.toggle('hidden', !appMenu || !S); if (appMenu && S) $('appMenu').innerHTML = vAppMenu();

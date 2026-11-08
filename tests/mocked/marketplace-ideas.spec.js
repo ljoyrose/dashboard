@@ -215,3 +215,31 @@ test.describe('Marketplace ideas: answers, undo, keyboard', () => {
     await expect(page.locator('#if-name-e')).toHaveCount(0);   // typing clears the message
   });
 });
+
+test.describe('Marketplace ideas: loaded on demand', () => {
+  test('the first screen does not load the Ideas code, the nav count still shows, and opening Ideas loads it once', async ({ page }) => {
+    const seen = []; page.on('request', (r) => { if (/\/marketplace\/ideas(-page)?\.js/.test(r.url())) seen.push(r.url().split('/').pop()); });
+    await world(page, rowsFor()); await open(page, '#/me');
+    await expect(page.locator('#n-newstock')).toHaveText('3');
+    expect(seen).toEqual([]);
+    await page.evaluate(() => { location.hash = '#/ideas'; });
+    await expect(page.locator('#view .needs')).toHaveText('Ideas: 3');
+    expect(seen.slice().sort()).toEqual(['ideas-page.js', 'ideas.js']);
+    await page.evaluate(() => { location.hash = '#/newstock'; });
+    await page.evaluate(() => { location.hash = '#/ideas'; });
+    await expect(page.locator('#view .needs')).toHaveText('Ideas: 3');
+    expect(seen).toHaveLength(2);   // not fetched again
+  });
+  test('the Ideas code cannot load: a plain message, the rest of the hub still works', async ({ page, allowedConsole }) => {
+    allowedConsole.push(/Failed to load resource/);
+    await page.route(/\/marketplace\/ideas-page\.js/, (route) => route.abort());
+    await world(page, rowsFor()); await open(page, '#/ideas');
+    await expect(page.locator('#view')).toContainText('Could not open Ideas');
+    await page.evaluate(() => { location.hash = '#/newstock'; });
+    await expect(page.locator('#view .needs')).toContainText('New stock');
+  });
+  test('a direct link to one idea loads the code and shows the card', async ({ page }) => {
+    await world(page, rowsFor()); await open(page, '#/idea/IDEA-SAMPLE-1');
+    await expect(page.locator('#view h2').first()).toHaveText('SAMPLE pet brush');
+  });
+});

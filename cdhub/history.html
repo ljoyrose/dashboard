@@ -1,0 +1,623 @@
+<!doctype html><html lang="en-GB"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Temperatures · CD Hub</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<meta name="theme-color" content="#2C2C2A">
+<script src="../config.js"></script>
+<script src="../toolkit.js"></script>
+<script src="../auth.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+(function(){var o={};try{o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{};}catch(e){o={};}
+ var r=document.documentElement,c=r.classList;
+ c.toggle('look-cool',o.bg==='cool');c.toggle('sel-soft',o.sel==='soft');
+ c.toggle('text-lg',o.text==='lg');c.toggle('text-xl',o.text==='xl');c.toggle('space-roomy',o.space==='roomy');
+ if(o.mode==='light'||o.mode==='dark')r.setAttribute('data-theme',o.mode);})();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../house.css">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--fs-body)/1.5 var(--house-font);-webkit-text-size-adjust:100%}
+a{color:inherit;text-underline-offset:2px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.wrap{padding-left:var(--house-gutter);padding-right:var(--house-gutter);padding-bottom:60px}
+.hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
+.ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
+.skip:focus{left:8px}
+header.top{background:var(--frame);color:var(--frame-ink);position:sticky;top:0;z-index:20}
+h1,h2,h3,b,strong{font-weight:600}
+.btn{font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;line-height:1.2}
+header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
+@media(hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
+@media(max-width:544px){.btn{min-height:44px}header.top{position:static}}
+.boot{padding:40px 0;text-align:center;color:var(--ink);font-size:var(--fs-body)}
+.bootline{margin:14px 0 0;color:var(--ink);font-weight:400}
+.bootmark{display:inline-flex;color:var(--ink)}
+.bootspin{width:48px;height:48px;display:block}
+.botring{fill:none;stroke:var(--ljr-5);stroke-width:1.5;stroke-linecap:round;stroke-dasharray:34 98;transform-box:fill-box;transform-origin:center;animation:bootspin 1.1s linear infinite}
+.boothouse{fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+@keyframes bootspin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.botring{animation:none;stroke-dasharray:none}}
+.live{font-size:var(--fs-small);font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
+.live.ok{border-color:var(--ljr-5)}
+.live.bad{border-color:var(--ljr-2)}
+.sec h3{font-size:var(--fs-head);margin:0 0 8px}
+.sec+.sec{margin-top:20px;padding-top:12px;border-top:1px solid var(--line)}
+.rdate{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.rdate label{font-size:var(--fs-small);color:var(--muted)}
+.rdate input{border:1px solid var(--press);border-radius:var(--radius);padding:4px 10px;font:inherit;font-size:var(--fs-small);background:var(--card);color:var(--ink);min-height:36px}
+.rtiles{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}
+.rtile{flex:1 1 168px;max-width:280px;min-height:44px;box-sizing:border-box;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:transparent;color:var(--ink)}
+.rtile .rn{font-size:var(--fs-small);font-weight:600}
+.rtile .rs{font-size:var(--fs-small);line-height:1.35}
+.rscroll{overflow-x:auto;max-width:100%;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+.rtable{width:100%;border-collapse:collapse;font-size:var(--fs-small)}
+.rtable th,.rtable td{text-align:left;padding:2px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;line-height:1.3;font-weight:400;white-space:nowrap}
+.rtable th{font-weight:600;color:var(--ink)}
+.rtable td.nm{font-weight:600;white-space:normal}
+.rtable tr:last-child td{border-bottom:0}
+.dgrid{display:flex;flex-wrap:wrap;gap:8px 16px}
+.dgrid .dr{border:0;padding:0;min-width:7.5em;justify-content:flex-start;gap:6px}
+
+/* Year / view controls */
+h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
+.sub{color:var(--muted);font-size:var(--fs-body);margin:0 0 16px}
+.yr-row{display:flex;gap:6px;margin:0 0 12px;align-items:center;flex-wrap:wrap}
+.yr-btn{min-height:30px;font-size:var(--fs-small);font-weight:600;padding:0 12px}
+.yr-btn.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+.tab-row{display:flex;flex-wrap:wrap;gap:2px;background:var(--soft);padding:3px;border-radius:calc(var(--radius) + 3px);width:auto;max-width:100%;margin:0 0 16px}
+.tab{padding:6px 16px;border:none;background:transparent;border-radius:var(--radius);cursor:pointer;font:600 var(--fs-small)/1 var(--house-font);color:var(--muted)}
+.tab.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
+@media(hover:hover){.tab:not(.on):hover{color:var(--ink)}}
+.view{display:none}.view.on{display:block}
+
+/* Legend */
+.legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+.leg{display:flex;align-items:center;gap:5px;font-size:var(--fs-small);color:var(--muted)}
+.leg-sq{width:11px;height:11px;border-radius:2px;flex:none}
+
+/* Heat-map calendar */
+.month-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
+@media(max-width:780px){.month-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:540px){.month-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:340px){.month-grid{grid-template-columns:1fr}}
+.mc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px;box-shadow:var(--shadow)}
+.mn{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin-bottom:6px}
+.dg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.dh{font-size:8px;color:var(--muted);text-align:center;padding-bottom:2px;user-select:none}
+.d{width:100%;aspect-ratio:1;border-radius:3px;border:none;font-size:0;background:var(--soft);cursor:default}
+.d:not(.empty):not(.future):not(.nd){cursor:pointer}
+@media(hover:hover){.d:not(.empty):not(.future):not(.nd):hover{transform:scale(1.35);z-index:2;position:relative}}
+.d.empty{background:transparent}
+.d.future{background:var(--paper);border:1px solid var(--line);opacity:.35}
+.d.cold{background:var(--ljr-6)}.d.ok{background:var(--ljr-5)}.d.hot{background:var(--ljr-2)}
+.d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
+
+/* Strip view */
+.strip{display:flex;flex-direction:column;gap:3px;margin-bottom:20px}
+.srow{display:flex;align-items:center;gap:6px}
+.slbl{font-size:10px;color:var(--muted);width:24px;text-align:right;flex-shrink:0;font-variant-numeric:tabular-nums}
+.sdays{display:flex;gap:1px;flex:1;overflow-x:auto;padding-bottom:1px}
+.sd{height:14px;min-width:3px;flex:1;border-radius:2px;cursor:default;background:var(--soft)}
+.sd:not(.future):not(.nd){cursor:pointer}
+@media(hover:hover){.sd:not(.future):not(.nd):hover{transform:scaleY(1.5);z-index:2}}
+.sd.cold{background:var(--ljr-6)}.sd.ok{background:var(--ljr-5)}.sd.hot{background:var(--ljr-2)}
+.sd.future{background:var(--paper);border:1px solid var(--line);opacity:.3;cursor:default}
+.smlbls{display:flex;gap:1px;padding-left:30px;margin-bottom:3px}
+.sml{flex:1;font-size:9px;color:var(--muted);text-align:center}
+
+/* Month card list */
+.mlist{display:flex;flex-direction:column;gap:6px;margin-bottom:20px}
+.mitem{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow)}
+.mitem-head{display:flex;justify-content:space-between;align-items:baseline}
+.mitem-name{font-size:var(--fs-body);font-weight:600}
+.mitem-stats{display:flex;gap:12px;font-size:var(--fs-small);color:var(--muted);margin-top:3px;flex-wrap:wrap}
+.spill{display:flex;align-items:center;gap:4px}
+.sdot{width:8px;height:8px;border-radius:50%;flex:none}
+.comp-bar{height:3px;background:var(--soft);border-radius:2px;margin-top:8px;overflow:hidden}
+.comp-fill{height:100%;border-radius:2px;background:var(--ljr-5)}
+.chev{font-size:14px;color:var(--muted)}
+
+/* Drill panel */
+#drill{display:none;position:fixed;top:0;right:0;width:290px;height:100%;background:var(--card);border-left:1px solid var(--line);z-index:100;padding:16px;overflow-y:auto;box-shadow:var(--shadow)}
+#drill.open{display:block}
+.dclose{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);float:right;line-height:1;padding:0}
+.dtitle{font-size:var(--fs-head);font-weight:600;margin:0 0 2px;clear:right}
+.dsub{font-size:var(--fs-small);color:var(--muted);margin:0 0 14px}
+.dr{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:var(--fs-small)}
+.dr:last-child{border-bottom:none}
+.dsec{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin:14px 0 2px;letter-spacing:.04em}
+.pill{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid;white-space:nowrap}
+.pc{border-color:var(--ljr-6)}.po{border-color:var(--ljr-5)}.ph{border-color:var(--ljr-2)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M5 12H3l9-9 9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24"><path d="M15 4h4v16h-4M10 8l-4 4 4 4M6 12h10"/></symbol>
+</svg>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top house-head"><div class="hin house-row">
+  <a class="btn house-ib" href="./index.html" aria-label="CD Hub" title="Back to CD Hub">
+    <svg class="ti" aria-hidden="true"><use href="#i-home"/></svg>
+  </a>
+  <h1><span class="dot" aria-hidden="true" style="background:var(--ljr-6)"></span>Temperatures</h1>
+  <span class="house-sp" aria-hidden="true"></span>
+  <span class="live" id="livepill">Live</span>
+  <button type="button" class="btn house-ib hidden" id="cdSignout" aria-label="Sign out" title="Sign out" onclick="signOut()">
+    <svg class="ti" aria-hidden="true"><use href="#i-logout"/></svg>
+  </button>
+</div></header>
+
+<div class="wrap"><main id="main">
+  <div class="boot" id="boot" role="status" aria-live="polite" aria-busy="true"><span class="bootmark" aria-hidden="true"><svg class="bootspin" viewBox="0 0 48 48" width="48" height="48"><circle class="botring" cx="24" cy="24" r="21"></circle><path class="boothouse" d="M15 33h18M16 33V22l8-6 8 6v11M21 33v-6h6v6"></path></svg></span><p class="bootline">Getting temperatures…</p></div>
+</main></div>
+
+<!-- Drill panel -->
+<aside id="drill" role="complementary" aria-label="Day detail">
+  <button class="dclose" onclick="closeDrill()" aria-label="Close">✕</button>
+  <p class="dtitle" id="d-title">—</p>
+  <p class="dsec">Outside</p>
+  <div class="dgrid">
+  <div class="dr"><span>Max °C</span><span id="d-max">—</span></div>
+  <div class="dr"><span>Min °C</span><span id="d-min">—</span></div>
+  <div class="dr"><span>Feels like °C</span><span id="d-feels">—</span></div>
+  <div class="dr"><span>Rain</span><span id="d-rain">—</span></div>
+  <div class="dr"><span>Cloud</span><span id="d-cloud">—</span></div>
+  <div class="dr"><span>Wind</span><span id="d-wind">—</span></div>
+  </div>
+  <div id="d-areas" style="display:none">
+    <p class="dsec">Indoors</p>
+    <div id="d-areas-inner"></div>
+  </div>
+</aside>
+
+<script>
+/* ---- config ---- */
+var SHEET_ID=window.DASH_CONFIG.cdhub.readingsSheetId;
+var EXPORT_URL='https://docs.google.com/spreadsheets/d/'+SHEET_ID+'/export?format=csv&sheet=readings';
+var DRIVE_EXPORT='https://www.googleapis.com/drive/v3/files/'+SHEET_ID+'/export?mimeType=text%2Fcsv';
+var CLIENT_ID=window.DASH_CONFIG.clientId;
+var SCOPE=window.DASH_CONFIG.scopes.read;
+var TOKEN=null,TOKEN_EXP=0;
+var DAYS={};  /* ISO date -> row */
+var FOLDER_ID=window.DASH_CONFIG.cdhub.folderId;
+var DRIVE_API=window.DASH_CONFIG.urls.files;
+var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
+var AREA_NAMES={};  /* areaId -> display name/code */
+var ROUND_DATE=null;
+
+/* ---- helpers ---- */
+var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var TODAY_STR=(function(){var d=new Date();return d.getFullYear()+'-'+(d.getMonth()<9?'0':'')+(d.getMonth()+1)+'-'+(d.getDate()<10?'0':'')+d.getDate();})();
+
+function el(id){return document.getElementById(id);}
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function pill(msg,cls){var p=el('livepill');if(p){p.textContent=msg;p.className='live'+(cls?' '+cls:'');}}
+
+function parseCSV(text){
+  text=String(text||'').replace(/\r/g,'');
+  var rows=[],row=[],f='',q=false,c,i;
+  for(i=0;i<text.length;i++){c=text[i];
+    if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++;}else q=false;}else f+=c;}
+    else if(c==='"')q=true;
+    else if(c===','){row.push(f);f='';}
+    else if(c==='\n'){row.push(f.trimEnd());rows.push(row);row=[];f='';}
+    else f+=c;}
+  if(f||row.length){row.push(f.trimEnd());rows.push(row);}
+  rows=rows.filter(function(r){return r.some(function(v){return v.trim();});});
+  if(!rows.length)return[];
+  var hdr=rows[0].map(function(h){return h.trim();});
+  return rows.slice(1).map(function(r){var o={};hdr.forEach(function(h,i){o[h]=(r[i]||'').trim();});return o;});
+}
+
+function gget(url){
+  return fetch(url,{headers:{'Authorization':'Bearer '+TOKEN}})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text();});
+}
+function gjson(url){
+  return fetch(url,{headers:{'Authorization':'Bearer '+TOKEN}})
+    .then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json();});
+}
+/* First non-trashed match (the query already sets trashed=false). Returns the file, including mimeType. */
+function findDriveFile(name){
+  var q="'"+FOLDER_ID+"' in parents and name='"+name+"' and trashed=false";
+  var url=DRIVE_API+'?q='+encodeURIComponent(q)+'&fields=files(id,name,mimeType)&supportsAllDrives=true&includeItemsFromAllDrives=true';
+  return gjson(url).then(function(r){var f=r.files||[];return f.length?f[0]:null;});
+}
+/* A Google Sheet of that title is exported as CSV. A real CSV file is read as media. Same errors as gget. */
+function readDriveFile(f){
+  var id=encodeURIComponent(f.id);
+  if(f.mimeType==='application/vnd.google-apps.spreadsheet')
+    return gget(DRIVE_API+'/'+id+'/export?mimeType='+encodeURIComponent('text/csv')+'&supportsAllDrives=true');
+  return gget(DRIVE_API+'/'+id+'?alt=media&supportsAllDrives=true');
+}
+function tempCls(min,max){
+  var lo=parseFloat(min),hi=parseFloat(max);
+  if(isNaN(lo)&&isNaN(hi))return'';
+  if(!isNaN(lo)&&lo<10)return'cold';
+  if(!isNaN(hi)&&hi>27)return'hot';
+  return'ok';
+}
+async function loadAreaData(){
+  try{
+    var rf=await findDriveFile('BLD-area_reading.csv');
+    if(rf){
+      var txt=await readDriveFile(rf);
+      var rows=parseCSV(txt);
+      AREA_DAYS={};
+      rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
+        var at=String(r.taken_at||'');if(!r.area_id||at.length<10)return;
+        var date=at.slice(0,10),hr=parseInt(at.slice(11,13),10),slot=(isNaN(hr)||hr<12)?'am':'pm';
+        if(!AREA_DAYS[date])AREA_DAYS[date]={};
+        if(!AREA_DAYS[date][r.area_id])AREA_DAYS[date][r.area_id]={};
+        AREA_DAYS[date][r.area_id][slot]={min:r.min_c,max:r.max_c};
+      });
+    }
+    var af=await findDriveFile('BLD-area.csv');
+    if(af){
+      var atxt=await readDriveFile(af);
+      parseCSV(atxt).forEach(function(a){if(a.id)AREA_NAMES[a.id]=a.code||a.name||a.id;});
+    }
+  }catch(e){console.warn('Area data load failed:',e);}
+}
+
+async function loadData(){
+  pill('Live');
+  try{
+    var txt=await gget(EXPORT_URL);
+    var rows=parseCSV(txt);
+    DAYS={};
+    rows.forEach(function(r){if(r.on_date)DAYS[r.on_date]=r;});
+    await loadAreaData();
+    pill('Up to date','ok');
+    el('cdSignout').classList.remove('hidden');
+    renderPage();
+  }catch(e){
+    /* try Drive API export (first sheet) as fallback */
+    try{
+      var txt2=await gget(DRIVE_EXPORT);
+      var rows2=parseCSV(txt2);
+      DAYS={};
+      rows2.forEach(function(r){if(r.on_date)DAYS[r.on_date]=r;});
+      await loadAreaData();
+      pill('Up to date','ok');
+      el('cdSignout').classList.remove('hidden');
+      renderPage();
+    }catch(e2){
+      pill('Couldn\u2019t load','bad');
+      el('main').innerHTML='<div class="boot"><p class="bootline">Couldn\u2019t load temperatures. Try again.</p>'
+        +'<button class="btn" style="margin-top:12px" onclick="loadData()">Try again</button></div>';
+    }
+  }
+}
+
+/* ---- auth ---- */
+function onToken(resp){
+  if(resp.error){pill('sign in needed');showSignIn();return;}
+  if(!google.accounts.oauth2.hasGrantedAllScopes(resp,SCOPE)){pill('access denied','bad');showSignIn();return;}
+  TOKEN=resp.access_token;TOKEN_EXP=DashAuth.expiryFrom(resp.expires_in);
+  DashAuth.save(TOKEN,TOKEN_EXP,resp.scope||SCOPE);
+  loadData();
+}
+function onError(){pill('sign-in failed','bad');showSignIn();}
+function onSilentFail(){}
+var auth=DashAuth.bind({clientId:CLIENT_ID,scope:SCOPE,onToken:onToken,onError:onError,onSilentFail:onSilentFail});
+function signIn(){auth.requestInteractive();}
+function signOut(){
+  var t=TOKEN;TOKEN=null;TOKEN_EXP=0;DashAuth.clear();
+  if(t&&window.google&&google.accounts&&google.accounts.oauth2)google.accounts.oauth2.revoke(t,function(){});
+  DAYS={};pill('signed out');el('cdSignout').classList.add('hidden');showSignIn();
+}
+function showSignIn(){
+  el('main').innerHTML='<div class="boot"><p class="bootline">Sign in to see temperatures.</p>'
+    +'<button class="btn" style="margin-top:12px" onclick="signIn()" id="signinbtn"'+(auth.ready()?'':' disabled')+'>Sign in with Google</button></div>';
+}
+
+/* restore shared token */
+(function(){
+  var saved=DashAuth&&DashAuth.valid&&DashAuth.valid();
+  if(saved&&DashAuth.hasScope(saved,SCOPE)){
+    TOKEN=saved.access_token;TOKEN_EXP=saved.expires_at;
+    loadData();return;
+  }
+  /* wait for Google then show sign-in */
+  var n=0;
+  (function wait(){
+    if(auth.init()){if(!auth.ready())showSignIn();return;}
+    if(n++<80)setTimeout(wait,100);else showSignIn();
+  })();
+})();
+
+if(window.DashAuth&&DashAuth.onChange)DashAuth.onChange(function(saved){
+  if(!saved||!DashAuth.hasScope(saved,SCOPE)){if(TOKEN){TOKEN=null;TOKEN_EXP=0;DAYS={};showSignIn();}return;}
+  var had=TOKEN;TOKEN=saved.access_token;TOKEN_EXP=saved.expires_at;
+  if(!had)loadData();
+});
+
+/* ---- calendar logic ---- */
+function mdays(y){var leap=(y%4===0&&(y%100!==0||y%400===0));return[31,leap?29:28,31,30,31,30,31,31,30,31,30,31];}
+function ds(y,m,d){return y+'-'+(m<9?'0':'')+(m+1)+'-'+(d<10?'0':'')+d;}
+
+function dayClass(isoDate){
+  if(isoDate>TODAY_STR)return'future';
+  var r=DAYS[isoDate];
+  if(!r)return'nd';
+  var t=parseFloat(r.max_temp);
+  if(isNaN(t))return'nd';
+  if(t<10)return'cold';
+  if(t>27)return'hot';
+  return'ok';
+}
+
+function openDrill(isoDate){
+  var r=DAYS[isoDate]||{};
+  var parts=isoDate.split('-');
+  var dLabel=parseInt(parts[2],10)+' '+MONTHS[parseInt(parts[1],10)-1]+' '+parts[0];
+  el('d-title').textContent=dLabel;
+  var show=function(v){var s=dpOutdoor(v);return s?s+'°C':'—';};
+  el('d-max').textContent=show(r.max_temp);
+  el('d-min').textContent=show(r.min_temp);
+  el('d-feels').textContent=show(r.realfeel_max_temp);
+  el('d-rain').textContent=r.rain_value!==undefined&&r.rain_value!==''?dpOutdoor(r.rain_value)+' mm':'—';
+  el('d-cloud').textContent=r.cloud_cover_pct!==undefined&&r.cloud_cover_pct!==''?r.cloud_cover_pct+'%':'—';
+  el('d-wind').textContent=r.wind_kmh!==undefined&&r.wind_kmh!==''?dpOutdoor(r.wind_kmh)+' km/h':'—';
+  var dayAreas=AREA_DAYS[isoDate]||{};
+  var areaIds=areasInWalk(Object.keys(dayAreas));
+  var areasEl=el('d-areas');
+  if(areaIds.length){
+    el('d-areas-inner').innerHTML=areaIds.map(function(aid){
+      var ar=dayAreas[aid]||{};
+      return '<div class="dr"><span>'+esc(areaName(aid))+'</span><span>'+esc(slotLine('AM',ar.am))+' · '+esc(slotLine('PM',ar.pm))+'</span></div>';
+    }).join('');
+    areasEl.style.display='';
+  }else{
+    areasEl.style.display='none';
+    el('d-areas-inner').innerHTML='';
+  }
+  el('drill').classList.add('open');
+}
+function closeDrill(){el('drill').classList.remove('open');}
+
+/* ---- views ---- */
+var YEAR=2026;
+/* Capacity walk. 3S.T1 is shown as 3S.TR. Nearby rooms sit beside their neighbours. */
+var ROUND_WALK=['H1','H2','H2-iso','H3','H4','H5','H5-6','H6','3A','3B','3C','3S.TR','3S.2','3S.2-iso','3S.3','3S.3-iso','4A','4B','4.1','4.2','4.3'];
+function areaLabel(code){ var c=String(code||''); return c==='3S.T1'?'3S.TR':c; }
+function areaName(aid){ return areaLabel(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')); }
+function walkRank(label){
+  var i=ROUND_WALK.indexOf(label);
+  if(i<0) return 'z'+label;
+  return (i<10?'00':i<100?'0':'')+i;
+}
+function areasInWalk(extra){
+  var ids={};
+  Object.keys(AREA_NAMES).forEach(function(id){ ids[id]=1; });
+  (extra||[]).forEach(function(id){ if(id) ids[id]=1; });
+  return Object.keys(ids).sort(function(a,b){
+    var la=areaName(a), lb=areaName(b), ra=walkRank(la), rb=walkRank(lb);
+    if(ra<rb) return -1; if(ra>rb) return 1;
+    return la<lb?-1:la>lb?1:0;
+  });
+}
+function dpIndoor(v){
+  if(v==null||String(v).trim()==='') return '';
+  var n=parseFloat(v); if(isNaN(n)) return '';
+  return (Math.round(n*10)/10).toFixed(1);
+}
+function dpOutdoor(v){ return dpIndoor(v).replace(/\.0$/,''); }
+function bandWord(cls){ return cls==='cold'?'Cold':cls==='hot'?'Hot':cls==='ok'?'OK':''; }
+function slotState(t){
+  if(!t||((t.min==null||String(t.min).trim()==='')&&(t.max==null||String(t.max).trim()===''))) return {miss:true};
+  var cls=tempCls(t.min,t.max)||'ok';
+  var lo=dpIndoor(t.min), hi=dpIndoor(t.max);
+  return {miss:false, cls:cls, word:bandWord(cls)||'OK', range:(lo||'–')+'–'+(hi||'–')+'°C', inn:cls==='ok'};
+}
+function slotLine(label,t){
+  var s=slotState(t);
+  if(s.miss) return label+' Missed';
+  return label+' '+s.range+' · '+s.word+' · '+(s.inn?'In range':'Out of range')+' · Submitted';
+}
+function stateWord(cls){
+  return cls==='future'?'Later':cls==='nd'?'No reading':cls==='cold'?'Cold':cls==='hot'?'Hot':cls==='ok'?'OK':cls;
+}
+function indoorDayClass(isoDate){
+  if(isoDate>TODAY_STR) return 'future';
+  var day=AREA_DAYS[isoDate]; if(!day) return 'nd';
+  var any=false, hot=false, cold=false;
+  Object.keys(day).forEach(function(aid){
+    ['am','pm'].forEach(function(slot){
+      var s=slotState((day[aid]||{})[slot]);
+      if(s.miss) return;
+      any=true; if(s.cls==='hot') hot=true; else if(s.cls==='cold') cold=true;
+    });
+  });
+  if(!any) return 'nd';
+  if(hot) return 'hot';
+  if(cold) return 'cold';
+  return 'ok';
+}
+function monthCal(y, classOf, kind){
+  var md=mdays(y);
+  var h='<div class="month-grid" data-cal="'+kind+'">';
+  MONTHS.forEach(function(mn,mi){
+    h+='<div class="mc"><div class="mn">'+mn+'</div><div class="dg">';
+    h+='<div class="dh">M</div><div class="dh">T</div><div class="dh">W</div><div class="dh">T</div><div class="dh">F</div><div class="dh">S</div><div class="dh">S</div>';
+    var firstDow=(new Date(y,mi,1).getDay()+6)%7;
+    for(var i=0;i<firstDow;i++) h+='<span class="d empty"></span>';
+    for(var d=1;d<=md[mi];d++){
+      var date=ds(y,mi,d), cls=classOf(date), today=date===TODAY_STR, word=stateWord(cls);
+      var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
+      var extra=kind==='out'?' dout':'';
+      h+='<button type="button" class="d '+cls+(today?' today':'')+extra+'" title="'+d+' '+mn+' '+y+' '+kind+' — '+word+'" aria-label="'+d+' '+mn+' '+y+' '+word+'"'+clk+'></button>';
+    }
+    h+='</div></div>';
+  });
+  return h+'</div>';
+}
+function stripBody(y, classOf, kind){
+  var md=mdays(y);
+  var DOWS=['Mo','Tu','We','Th','Fr','Sa','Su'];
+  var h='<div class="smlbls">';
+  MONTHS.forEach(function(m){ h+='<div class="sml">'+m[0]+'</div>'; });
+  h+='</div><div class="strip" data-cal="'+kind+'">';
+  DOWS.forEach(function(dow,di){
+    h+='<div class="srow"><div class="slbl">'+dow+'</div><div class="sdays">';
+    for(var mi=0;mi<12;mi++){
+      for(var d=1;d<=md[mi];d++){
+        if((new Date(y,mi,d).getDay()+6)%7===di){
+          var date=ds(y,mi,d), cls=classOf(date), word=stateWord(cls);
+          var clk=(cls!=='future'&&cls!=='nd')?' onclick="openDrill(\''+date+'\')"':'';
+          h+='<div class="sd '+cls+(kind==='out'?' dout':'')+'" title="'+d+' '+MONTHS[mi]+' '+kind+' — '+word+'"'+clk+'></div>';
+        }
+      }
+    }
+    h+='</div></div>';
+  });
+  return h+'</div>';
+}
+function buildHeatMap(y){
+  return '<section class="sec"><h3>Indoors</h3>'+monthCal(y, indoorDayClass, 'indoors')+'</section>'
+    +'<section class="sec"><h3>Outside</h3>'+monthCal(y, dayClass, 'out')+'</section>';
+}
+function buildStrip(y){
+  return '<section class="sec"><h3>Indoors</h3>'+stripBody(y, indoorDayClass, 'indoors')+'</section>'
+    +'<section class="sec"><h3>Outside</h3>'+stripBody(y, dayClass, 'out')+'</section>';
+}
+function buildMonthCards(y){
+  var mdn=mdays(y);
+  var h='<div class="mlist">';
+  MONTHS.forEach(function(mn,mi){
+    var outN=0, missed=0, hi=null, lo=null, any=false;
+    var known=areasInWalk([]);
+    for(var d=1;d<=mdn[mi];d++){
+      var date=ds(y,mi,d);
+      if(date>TODAY_STR) continue;
+      var day=AREA_DAYS[date]||{};
+      var use=known.length?known:Object.keys(day);
+      use.forEach(function(aid){
+        var ar=day[aid]||{};
+        ['am','pm'].forEach(function(slot){
+          var t=ar[slot], s=slotState(t);
+          if(s.miss){ missed++; return; }
+          any=true;
+          if(!s.inn) outN++;
+          var mx=parseFloat(t.max), mn2=parseFloat(t.min), name=areaName(aid);
+          if(!isNaN(mx)&&(hi==null||mx>hi.v)) hi={v:mx,name:name};
+          if(!isNaN(mn2)&&(lo==null||mn2<lo.v)) lo={v:mn2,name:name};
+        });
+      });
+    }
+    h+='<div class="mitem"><div class="mitem-head"><span class="mitem-name">'+mn+' '+y+'</span></div><div class="mitem-stats">';
+    if(!any && !missed) h+='<span>No indoor readings</span>';
+    else if(!any) h+='<span>'+missed+' rounds missed</span>';
+    else{
+      h+='<span>'+outN+' out of range</span>';
+      if(hi) h+='<span>Highest '+esc(hi.name)+' '+dpIndoor(hi.v)+'°C</span>';
+      if(lo) h+='<span>Lowest '+esc(lo.name)+' '+dpIndoor(lo.v)+'°C</span>';
+      h+='<span>'+missed+' rounds missed</span>';
+    }
+    h+='</div></div>';
+  });
+  return h+'</div>';
+}
+function outsideBlock(dateStr){
+  var r=DAYS[dateStr];
+  if(!r) return '<p class="sub">No outside reading for this date.</p>';
+  var lo=dpOutdoor(r.min_temp), hi=dpOutdoor(r.max_temp);
+  var word=bandWord(tempCls(r.min_temp, r.max_temp));
+  var bits=[];
+  if(lo||hi) bits.push((lo||'–')+'–'+(hi||'–')+'°C');
+  if(word) bits.push(word);
+  var rain=dpOutdoor(r.rain_value);
+  if(rain) bits.push(parseFloat(r.rain_value)>0?rain+' mm rain':'No rain');
+  var wind=parseFloat(r.wind_kmh);
+  if(!isNaN(wind)&&wind>=40) bits.push('Windy');
+  return '<p>'+esc(bits.join(' · '))+'</p>';
+}
+function buildRound(dateStr){
+  var day=AREA_DAYS[dateStr]||{};
+  var ids=areasInWalk(Object.keys(day));
+  var dateInput='<div class="rdate"><label for="rdate">Date</label><input id="rdate" type="date" value="'+esc(dateStr)+'" onchange="setRoundDate(this.value)"></div>';
+  var tiles='<div class="rtiles">', rows='';
+  ids.forEach(function(aid){
+    var ar=day[aid]||{}, name=areaName(aid);
+    var pair=function(t){
+      var s=slotState(t);
+      if(s.miss) return '<td>—</td><td>—</td>';
+      return '<td>'+esc(dpIndoor(t.min)||'—')+'</td><td>'+esc(dpIndoor(t.max)||'—')+'</td>';
+    };
+    tiles+='<div class="rtile"><div class="rn">'+esc(name)+'</div><div class="rs">'+esc(slotLine('AM',ar.am))+'</div><div class="rs">'+esc(slotLine('PM',ar.pm))+'</div></div>';
+    rows+='<tr><td class="nm">'+esc(name)+'</td>'+pair(ar.am)+pair(ar.pm)+'</tr>';
+  });
+  tiles+='</div>';
+  var table=ids.length
+    ?'<div class="rscroll" tabindex="0" role="region" aria-label="Indoor temperatures in degrees C. Scroll sideways for more."><table class="rtable"><thead><tr><th>Area</th><th>AM min °C</th><th>AM max °C</th><th>PM min °C</th><th>PM max °C</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    :'<p class="sub">No indoor readings on record for this date.</p>';
+  return dateInput
+    +'<section class="sec"><h3>Indoors</h3>'+(ids.length?tiles:'')+table+'</section>'
+    +'<section class="sec"><h3>Outside</h3>'+outsideBlock(dateStr)+'</section>';
+}
+function setRoundDate(dateStr){
+  ROUND_DATE=dateStr;
+  var v=el('view-d');
+  if(v) v.innerHTML=buildRound(dateStr);
+  closeDrill();
+}
+
+var CUR_VIEW='d';
+function setView(id,btn){
+  CUR_VIEW=id;
+  document.querySelectorAll('.view').forEach(function(v){ v.classList.remove('on'); });
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('on'); });
+  el('view-'+id).classList.add('on');
+  btn.classList.add('on');
+  closeDrill();
+}
+function setYear(y){
+  YEAR=y;
+  document.querySelectorAll('.yr-btn').forEach(function(b){ b.classList.toggle('on',+b.dataset.yr===y); });
+  el('view-a').innerHTML=buildHeatMap(y);
+  el('view-b').innerHTML=buildStrip(y);
+  el('view-c').innerHTML=buildMonthCards(y);
+  closeDrill();
+}
+function legend(){
+  return '<div class="legend">'
+    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-6)"></div>&lt;10°C Cold</div>'
+    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>10–27°C OK</div>'
+    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-2)"></div>&gt;27°C Hot</div>'
+    +'<div class="leg"><div class="leg-sq" style="background:var(--soft);border:1px solid var(--line)"></div>No reading</div>'
+    +'</div>';
+}
+function renderPage(){
+  ROUND_DATE=ROUND_DATE||TODAY_STR;
+  el('main').innerHTML=
+    legend()
+    +'<div class="yr-row">'
+    +'<button class="btn yr-btn on" data-yr="2026" onclick="setYear(2026)">2026</button>'
+    +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'
+    +'<button class="btn yr-btn" data-yr="2024" onclick="setYear(2024)">2024</button>'
+    +'<a class="btn" href="./history-archive.html">Archive</a>'
+    +'</div>'
+    +'<div class="tab-row">'
+    +'<button class="tab on" onclick="setView(\'d\',this)">The round</button>'
+    +'<button class="tab" onclick="setView(\'a\',this)">Heat map</button>'
+    +'<button class="tab" onclick="setView(\'b\',this)">Year strip</button>'
+    +'<button class="tab" onclick="setView(\'c\',this)">Month cards</button>'
+    +'</div>'
+    +'<div id="view-d" class="view on">'+buildRound(ROUND_DATE)+'</div>'
+    +'<div id="view-a" class="view">'+buildHeatMap(YEAR)+'</div>'
+    +'<div id="view-b" class="view">'+buildStrip(YEAR)+'</div>'
+    +'<div id="view-c" class="view">'+buildMonthCards(YEAR)+'</div>';
+}
+</script>
+</body></html>

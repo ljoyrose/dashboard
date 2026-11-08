@@ -106,9 +106,8 @@ test.describe('Marketplace (JOB 34b): every button and link does what it says', 
     await expect(page.locator('#view')).toContainText('The drop-off code shows here after the engine’s next run.');
   });
 
-  // FIX-REQUEST J34b-F40 (marketplace/index.html:858 nextpack wraps on posts().length, but pagePack at :744-746 lists fewer parcels).
-  // DECISION NEEDED: fix the page (wrap on the packing list's own length) or accept. OWNER: Marketplace owner. BY 2026-11-06
-  test.fixme('J34b-F40 packing: Skip for now still wraps to the first parcel when an older parcel was already marked Posted', async ({ page }) => {
+  // J34b-F40 fixed: nextpack now wraps on the same packing list pagePack shows.
+  test('J34b-F40 packing: Skip for now still wraps to the first parcel when an older parcel was already marked Posted', async ({ page }) => {
     await book(page, [
       ['PO|0', 'post', 'Clothes', 'Sample old parcel', JSON.stringify({ shelf: 'A0', courier: 'Evri' }), ago(60), 'Posted', '', ago(30), 'sample@example.test'],
       ['PO|1', 'post', 'Clothes', 'Sample mitt', JSON.stringify({ shelf: 'A1', courier: 'Evri' }), ago(5)],

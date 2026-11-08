@@ -362,7 +362,7 @@
   .pager .gap { width: 1px; }
   .subnav { display: flex; flex-wrap: wrap; gap: 8px; }
   .subnav a { padding: 4px 12px; border-radius: 12px; border: 1px solid var(--line); border-left: 3px solid var(--s7); background: var(--surface); text-decoration: none; font-size: var(--fs-small); }
-  .subnav a[aria-current="page"] { font-weight: 600; background: var(--s7-tint); border-color: var(--s7); }
+  .subnav a[aria-current="page"] { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); font-weight: 600; border-color: var(--s7); }
   .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
   .stat { background: var(--tint, var(--s0-tint)); border-radius: 12px; padding: 8px 12px; text-align: left; }
   .stat .num { font-size: var(--fs-figure); font-weight: 600; }
@@ -436,24 +436,28 @@
   .ment .sub { font-size: var(--fs-small); color: var(--muted); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; }
   .mgroup { font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 0; text-align: left; }
   .hidden { display: none !important; }
-  /* Main hub tiles (Lisa's picks, 2 Nov): icon + name + 3 numbers, no fills; colour only as the 3px line and the icon.
-     Numbers 18px, labels 14px; a number that means late is a 14px rose ring (.cnt.need). Each tile opens its hub. */
+  /* Main hub tiles: icon + name + 3 numbers, no fills; colour only as the 3px line and the icon.
+     Numbers 18px, labels 14px; a number that means late is a rose ring. The whole square opens the hub
+     (the name link stretches under the card). Each number and the Food tick sit above it and keep their own page.
+     Phone: the square, the name and those links are at least 44px (--house-btn-phone). */
   .hubgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: var(--house-gap, 12px); }
-  .hubtile { display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 6px 10px; color: var(--ink); text-align: left; box-shadow: none; }
-  .hubtile .hn { display: flex; align-items: center; gap: 6px; font-weight: 600; font-size: var(--fs-body); line-height: 24px; }
+  .hubtile { position: relative; display: flex; flex-direction: column; gap: 4px; padding: 6px 8px 6px 10px; min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); color: var(--ink); text-align: left; box-shadow: none; }
+  .hubtile .hn { display: flex; align-items: center; gap: 6px; min-height: var(--house-btn-phone); font-weight: 600; font-size: var(--fs-body); line-height: 24px; pointer-events: none; }
+  .hubtile .hks { pointer-events: none; }
   .hubtile a { color: var(--ink); text-decoration: none; border-radius: var(--radius); }
-  .hubtile a.hgo { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 4px; }
+  .hubtile a.hgo { display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 0 4px; pointer-events: auto; }
+  .hubtile a.hgo::after { content: ""; position: absolute; inset: 0; z-index: 0; border-radius: inherit; }
   .hubtile .hsub { padding: 0 4px; }
   svg.hico { width: 20px; height: 20px; flex: none; fill: none; stroke: var(--hic, var(--muted)); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
   .hks { display: grid; grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 4px 10px; }
-  .hk { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: 2px 4px; }
+  .hk { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; min-width: 0; min-height: var(--house-btn-phone); box-sizing: border-box; padding: 2px 4px; pointer-events: auto; }
   /* One group, one size (Lisa, 2 Nov): every number 18px / 600 on one baseline; a late one wears a rose ring sized to it, the
      others the same box with no ring (so nothing shifts); 0 is never ringed. */
   .hk b { box-sizing: border-box; display: inline-flex; align-items: center; height: 28px; padding: 0 6px; margin-left: -6px; border: var(--house-line) solid transparent; border-radius: var(--radius);
     font-size: var(--fs-figure); font-weight: 600; line-height: 26px; font-variant-numeric: tabular-nums; }
   .hk b.need { border-color: var(--house-late); }
   .hk > span:last-child, .hsub { font-size: var(--fs-small); color: var(--muted); line-height: 1.3; }
-  .hubtile a.xml { font-size: var(--fs-small); font-weight: 600; padding: 0 4px; }
+  .hubtile a.xml { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); font-size: var(--fs-small); font-weight: 600; padding: 0 4px; pointer-events: auto; }
   /* Neutral house hover on every link in a tile: 1px ink line inside + a pale muted tint. */
   /* Hover and press: a 1px ring in the tile's colour only; no fill, nothing moves. Keyboard focus: the 2px ink ring. */
   .hubtile a, .hubtile a:hover, .hubtile a:active, .hubtile a:focus { background: transparent; box-shadow: none; }
@@ -478,7 +482,7 @@
   .btn, .card, .pill, .chip, .tile, .note, input, select, textarea, details, summary, .panel, .keytile { border-radius: var(--radius); }
   .subnav a { border-radius: 999px; }
   .subnav a, .subnav a[aria-current="page"] { font-weight: 600; background: transparent; border-width: 1px; border-color: var(--line); }
-  .subnav a:hover, .subnav a[aria-current="page"], .btn:hover, a.keytile:hover { border-color: var(--muted); background: transparent; }
+  .subnav a:hover, .subnav a[aria-current="page"], .btn:hover, a.keytile:hover { border-color: var(--muted); }
   .card, .card[class] { border-left-color: var(--line); box-shadow: none; }
   .card[class]:hover { border-left-color: var(--slot, var(--c, var(--muted))); }
   .card.vision[class] { background: var(--surface); }
@@ -550,10 +554,11 @@
   .card[class]:hover, details.card[class]:hover, nav.card[class]:hover { border-left-color: var(--line); }
   .card.failed[class]:hover { border-left-color: var(--ljr-2); }
   .needs li[class], .needs li[class]:hover { border-left: 0; padding-left: 0; }
-  /* Needs you rows never move (Lisa, 2 Nov: "weird jumping"): one left edge, one icon x and the same box at rest, on hover, focus
-     and press; the bar is the shared .house-lbar, a straight 3px line down each row (square: no "(" bracket per row). */
+  /* Needs you rows never move: one left edge, one icon x and the same box at rest, on hover, focus and press.
+     The row shell is rounded (Lisa, 5 Nov); the shared .house-lbar stays a straight 3px line, not a "(" bracket.
+     This supersedes 2 Nov "rows are square" for the row shell only. */
   .needs li.house-lbar[class], .needs li.house-lbar[class]:hover, .needs li.house-lbar[class]:focus-within, .needs li.house-lbar[class]:active,
-  ol.hrows > li, ol.hrows > li:hover, ol.hrows > li:focus-within, ol.hrows > li:active { margin: 0; padding: 6px 0 6px 12px; border: 0; border-radius: 0; }
+  ol.hrows > li, ol.hrows > li:hover, ol.hrows > li:focus-within, ol.hrows > li:active { margin: 0; padding: 6px 0 6px 12px; border: 0; border-radius: var(--radius); }
   .needs li.house-lbar::before, ol.hrows > li.house-lbar::before { border-radius: 0; }
   #view { gap: 12px; }
   .here h2 { font-size: var(--fs-head); }
@@ -606,8 +611,8 @@
   @media (max-width: 600px) { .nextcard .actions a.more { min-height: 44px; } }
   .needs a.needsmore { align-self: flex-start; display: inline-flex; align-items: center; min-height: 36px; color: var(--ink); font-size: var(--fs-small); text-decoration: underline; text-underline-offset: 2px; }
   @media (max-width: 600px) { .needs a.needsmore { min-height: 44px; } }
-  @media (hover: hover) { .hsplit a.cnt:hover { outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
-    .hsplit a.cnt.k-risk:hover { outline-color: var(--ljr-2); background: var(--ljr-2-tint); } }
+  @media (hover: hover) { .hsplit a.cnt:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
+    .hsplit a.cnt.k-risk:hover { outline-color: var(--ljr-2); } }
   .hsplit a.cnt:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
   .nextcard[class] { border-color: var(--ink); background: var(--card); }
   .nextcard .actions { gap: 12px; }
@@ -635,14 +640,14 @@
   .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); --hmc: var(--ljr-7); }
   a.ment { --hc: var(--ljr-3); --hl: var(--ljr-3); }
   a.ment.bad { --hc: var(--ljr-2); --hl: var(--ljr-2); }
-  .subnav a[aria-current="page"] { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+  .subnav a[aria-current="page"] { outline: var(--house-line) solid var(--hmc, var(--sel-bd)); outline-offset: calc(-1 * var(--house-line)); }
   @media (hover: hover) {
     .btn:hover, .subnav a:hover, a.keytile:hover, a.card:hover, a.ment:hover, details.fold > summary:hover, .index .btn:hover {
-      outline: 1px solid var(--ink); outline-offset: -1px; background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+      outline: 1px solid var(--ink); outline-offset: -1px; }
     .btn.danger:hover, .btn.ai:hover, a.ment[class]:hover {
-      outline: 1px solid var(--hl); outline-offset: -1px; background: color-mix(in srgb, var(--hc) 14%, var(--card)); }
-    header .btn:hover { background: color-mix(in srgb, var(--frame-ink) 12%, var(--frame)); }
-    html.dash-locked header .btn:hover { background: color-mix(in srgb, var(--muted) 12%, var(--card)); }
+      outline: 1px solid var(--hl); outline-offset: -1px; }
+    header .btn:hover { outline-color: var(--frame-ink); }
+    html.dash-locked header .btn:hover { outline-color: var(--frame-ink); }
   }
 </style>
 </head>
@@ -695,13 +700,13 @@
 </main>
 
 <nav id="mainNav" class="main house-tabs hidden" aria-label="Sections">
-  <a class="ht" data-slot="1" href="#/map" data-nav="map"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="n-map"></span></a>
+  <a class="ht" data-slot="1" href="#/map" data-nav="map"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n" id="n-map"></span></a>
   <a class="ht" data-slot="2" href="#/decide" data-nav="decide"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-decide"/></svg></span><span class="htl">Decide</span><span class="n" id="n-decide"></span></a>
   <a class="ht" data-slot="4" href="#/do" data-nav="do"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-do"/></svg></span><span class="htl">Do</span><span class="n" id="n-do"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
       <a href="#/drives" data-nav="drives" data-slot="0"><svg class="icon" aria-hidden="true"><use href="#i-drive"/></svg><span class="htl">Drives</span></a>
-      <a href="#/bin" data-nav="bin" data-slot="8"><svg class="icon" aria-hidden="true"><use href="#i-bin"/></svg><span class="htl">Bin</span><span class="n need" id="n-bin"></span></a>
+      <a href="#/bin" data-nav="bin" data-slot="8"><svg class="icon" aria-hidden="true"><use href="#i-bin"/></svg><span class="htl">Bin</span><span class="n" id="n-bin"></span></a>
       <a href="#/money" data-nav="money" data-slot="3"><svg class="icon" aria-hidden="true"><use href="#i-money"/></svg><span class="htl">Money</span></a>
       <a href="#/minutes" data-nav="minutes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-refresh"/></svg><span class="htl">Actions minutes</span></a>
       <a href="#/changes" data-nav="changes" data-slot="7"><svg class="icon" aria-hidden="true"><use href="#i-changes"/></svg><span class="htl">Changes</span></a>
@@ -799,7 +804,7 @@
   var signedIn = false, writeGranted = false, wantWrite = false, busy = false;
   function blank() { return { status: 'idle', readAt: null, error: null, data: null }; }
   // One place that builds the empty page state, so sign-out can never forget a slot (it once forgot dbx).
-  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), canva: blank(), check: blank(), runlog: blank(), mins: blank(), hubs: blank(), ph: blank() }; }
+  function freshState() { return { readfirst: blank(), drive: blank(), cf: blank(), bin: blank(), money: blank(), dbx: blank(), canva: blank(), icloud: blank(), mac: blank(), check: blank(), runlog: blank(), mins: blank(), hubs: blank(), ph: blank() }; }
   var S = freshState();
   var F = {};                       // folder listings, key driveId/folderId
   var R = { sweep: null, check: null }; // results of Bin actions, kept until sign-out
@@ -863,7 +868,7 @@
   // tok: only the Personal Drive page passes its own look-only token (GETs only); everything else uses the work token.
   function apiCall(method, url, body, tok) {
     if (tok !== undefined) {
-      if (!tok || method !== 'GET') return Promise.reject(new ApiError(401, 'Personal sign-in expired', 'authError'));
+      if (!tok || (method !== 'GET' && tok !== personalAuth.binToken())) return Promise.reject(new ApiError(401, 'Personal sign-in expired', 'authError'));
     } else if (!accessToken || Date.now() > tokenExpiresAt) return Promise.reject(new ApiError(401, 'Token expired', 'authError'));
     var opt = { method: method, headers: { Authorization: 'Bearer ' + (tok !== undefined ? tok : accessToken) } };
     if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
@@ -1250,17 +1255,21 @@
   var DBX_TOTALS_NAME = CFG.home.dbxTotalsName;  // written by the private Dropbox scan job
   var DBX_JOB_URL = 'https://github.com/ljoyrose/dropbox-cleanup/actions/workflows/dropbox-delete.yml';   // workflow 3 (press Run workflow there)
   var DBX_TRASH_URL = 'https://www.dropbox.com/deleted_files';   // Dropbox cannot empty this by API on a personal account
-  function loadDbx() {
+  // iCloud and Mac dry-run reports (stage 9): written by the private engines into the same Drive folder. Look only.
+  // iCloud and Mac dry-run reports, written by the private engines into the Dropbox-totals folder (look only).
+  var REPORT_NAMES = { icloud: 'ICLOUD-REPORT.json', mac: 'MAC-REPORT.json' };
+  function loadReport(key, name) {
     if (!signedIn || !accessToken) return;
-    if (!DBX_FOLDER_ID) { S.dbx = { status: 'ok', readAt: Date.now(), error: null, data: { notConnected: true } }; render(); return; }
-    run('dbx', driveList({
-      q: "'" + DBX_FOLDER_ID + "' in parents and name = '" + DBX_TOTALS_NAME + "' and trashed = false",
+    if (!DBX_FOLDER_ID || !name) { S[key] = { status: 'ok', readAt: Date.now(), error: null, data: { notConnected: true } }; render(); return; }
+    run(key, driveList({
+      q: "'" + DBX_FOLDER_ID + "' in parents and name = '" + name + "' and trashed = false",
       corpora: 'allDrives', pageSize: '1', fields: 'files(id,name)'
     }).then(function (r) {
       if (!r.files || !r.files.length) return { none: true };
       return apiGet(API + '/' + encodeURIComponent(r.files[0].id) + '?alt=media&supportsAllDrives=true');
     }));
   }
+  function loadDbx() { loadReport('dbx', DBX_TOTALS_NAME); }
 
   // ---- Bin page Log: run history (RUN-LOG.csv). Read only; this page never writes it. ----
   // RUN-LOG.csv column contract (the private repo's engines write it; one row per run; header row first;
@@ -1428,7 +1437,7 @@
     loading = true;
     var b = $('refreshBtn'); b.disabled = true;
     clearBanner();
-    if (!timed) { F = {}; S.bin = blank(); S.canva = blank(); S.check = blank(); S.runlog = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; }
+    if (!timed) { F = {}; S.bin = blank(); S.canva = blank(); S.check = blank(); S.runlog = blank(); S.mins = blank(); metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; if (window.DoQ) DoQ.reset(); if (window.DoQ) DoQ.reset(); }
     var since = new Date(Date.now() - DAY).toISOString();
     Promise.all([
       run('readfirst', Promise.all([
@@ -1481,6 +1490,7 @@
     var r = parseRoute();
     if ((r.view === 'drive' || r.view === 'drives') && r.driveId && driveById(r.driveId) && !F[folderKey(r)]) loadFolder(r);
     if (r.view === 'bin' && S.bin.status === 'idle' && drives()) loadBin();
+    else if (r.view === 'bin' && S.bin.status === 'idle' && S.drive.status === 'failed') run('bin', Promise.reject(S.drive.error)); // J34b-F01: no drive list, so the Bin read fails too
     if (r.view === 'bin' && S.check.status === 'idle' && CHECK_FOLDER_ID) loadCheck();
     if (r.view === 'map' && S.mins.status === 'idle') loadMins();
     if (r.view === 'personal' || r.view === 'bin') loadPcpCandidates();
@@ -1514,6 +1524,7 @@
     if (cell.length || row.length) { row.push(cell); rows.push(row); }
     return rows.filter(function (r) { return r.some(function (x) { return String(x).trim(); }); });
   }
+  var ledgerSurf = {}; // 'surface file_id' keys, e.g. 'drive-personal 1abc'
   function idsFromLedgerCsv(text, info) {
     var rows = parseCsv(text);
     // The ledger may start with one note line such as "COUNT: 232 rows. …" (or "CURRENT: …") above the header.
@@ -1521,13 +1532,14 @@
     if (rows.length && rows[0].length === 1 && /^\s*(COUNT|CURRENT)\s*:/i.test(rows[0][0])) rows = rows.slice(1);
     if (!rows.length) return null;
     var head = rows[0].map(function (c) { return String(c).trim().toLowerCase(); });
-    var col = head.indexOf('file_id'), mcol = head.indexOf('merged_into');
+    var col = head.indexOf('file_id'), sc = head.indexOf('surface'), mcol = head.indexOf('merged_into');
     if (col < 0) return null;
     var ids = {};
     for (var i = 1; i < rows.length; i++) {
       var id = String(rows[i][col] || '').trim();
       if (id) ids[id] = true;
       if (id && info && mcol >= 0) info[id] = String(rows[i][mcol] || '');
+      if (id && sc >= 0) ledgerSurf[String(rows[i][sc] || '').trim().toLowerCase() + ' ' + id] = 1;
     }
     return ids;
   }
@@ -1574,6 +1586,7 @@
   function loadLedgerSet() {
     if (ledgerCache) return ledgerCache;
     ledgerCache = readDriveText(LEDGER_FILE_ID).then(function (text) {
+      ledgerSurf = {};
       var info = {};
       var ids = idsFromLedgerCsv(text, info);
       if (!ids) return { ok: false, ids: {}, note: LEDGER_FAIL };
@@ -1825,6 +1838,7 @@
     if (group === 'check') return (S.check.data && S.check.data.items) || [];
     if (group === 'pcpmark') return P.matches || [];
     if (group === 'pcpbin') return (P.candidates || []).filter(function (f) { return !f.blocked; });
+    if (group[0] === 'q') return window.PBin ? PBin.list(group) : [];
     if (group === 'usb') return U.matches || [];
     if (group === 'canvalog' || group === 'canvamove') return canvaRows(group);
     return [];
@@ -1839,6 +1853,7 @@
     if (group === 'pcpbin') return !it.blocked && String(it.name || '').indexOf(PCP_PREFIX) === 0 && !nameHasRr(it.name) && !isZeroByte(it);
     if (group === 'canvalog') return !CANVA_DRY && !!it._log && isDeleteName(it.name);
     if (group === 'canvamove') return !CANVA_DRY && !!it._ready && isDeleteName(it.name);
+    if (group[0] === 'q') return !!window.PBin && PBin.allowed(group, it);
     return false;
   }
   function visibleRows(group) {
@@ -1881,7 +1896,7 @@
   }
   function recheckForBin(f, opt) {
     opt = opt || {};
-    return apiGet(API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=' + LIVE_FIELDS).then(function (live) {
+    return apiGet(API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=' + LIVE_FIELDS, opt.tok).then(function (live) {
       if (!live || live.id !== f.id) return { ok: false, text: 'Skipped: could not re-read the item.' };
       if (live.trashed) return { ok: false, text: 'Skipped: already in the bin.' };
       if (excludedDrive(live.driveId)) return { ok: false, text: 'Skipped: excluded shared drive.' };
@@ -1909,8 +1924,8 @@
       return { ok: false, text: 'Not moved: ' + fr.text };
     });
   }
-  function trashOnly(f) {
-    return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }).then(function (res) {
+  function trashOnly(f, tok) {
+    return apiCall('PATCH', API + '/' + encodeURIComponent(f.id) + '?supportsAllDrives=true&fields=id,trashed', { trashed: true }, tok).then(function (res) {
       return { ok: res.trashed === true, text: res.trashed === true ? 'Moved to bin' : 'Not moved' };
     }, function (err) {
       var fr = friendlyError(err);
@@ -1990,8 +2005,11 @@
   var personalAuth = DashAuth.personal({
     clientId: CLIENT_ID,
     scope: CFG.scopes.personal,
+    binScope: CFG.scopes.write,
     onToken: function () { Q = pcpFresh('idle', ''); render(); },
-    onError: function () { Q = pcpFresh('idle', ''); Q.error = 'Personal sign-in did not complete.'; render(); }
+    onError: function () { Q = pcpFresh('idle', ''); Q.error = 'Personal sign-in did not complete.'; render(); },
+    onBin: function () { Q.error = ''; Q.binStatus = 'idle'; loadPBin(); },
+    onBinError: function () { Q.error = 'Bin actions were not allowed. The page stays look-only.'; render(); }
   });
   function slotState(slot) { return slot === 'personal' ? Q : P; }
   function readPersonal(seen, slot) {
@@ -2208,6 +2226,17 @@
       busy = false; render();
     });
   }
+  // Personal Drive bin steps (estate/pbin.js): fetched only once bin actions are allowed.
+  function loadPBin() {
+    if (window.PBin) { PBin.load(); return; }
+    if (scriptsLoaded.pb) return;
+    scriptsLoaded.pb = 1;
+    needScripts(['estate/pbin.js']).then(function () {
+      PBin.init({ Q: function () { return Q; }, setQ: function (v) { Q = v; }, busy: function () { return busy; }, setBusy: function (b) { busy = b; }, pick: function () { return PICK; }, signedIn: function () { return signedIn; }, surf: function () { return ledgerSurf; },
+        personalAuth, pcpFresh, keepPersonalCandidate, isMoneyRollback, pcpAllPages, loadLedgerSet, classifyPcp, friendlyError, render, pickedItems, apiGet, apiCall, isZeroByte, nameHasRr, isZzFamilyName, mapLimit, spellingOf, recheckForBin, trashOnly, num, esc, visibleRows, pickCount, rowAllowed, tickBox, showBar, listShown, icon, CFG, API, LIVE_FIELDS, FOLDER_MIME, PCP_PREFIX, LEDGER_FAIL });
+      render(); PBin.load();
+    }).catch(function () { scriptsLoaded.pb = 0; });
+  }
   function tickList(group, items, reasonOf, listKey) {
     var step = 30;
     var n = listShown(listKey, items.length, step);
@@ -2229,7 +2258,8 @@
     var html = '<section class="card slot4' + (st.status === 'done' ? '' : st.status === 'failed' ? ' failed' : ' pending') + '"><div class="cardhead"><h3>' + title + '</h3>' +
       '<span class="state ' + (st.status === 'done' ? 'st-ok' : st.status === 'failed' ? 'st-failed' : running ? 'st-loading' : 'st-idle') + '"><span class="shape"></span>' +
       (st.status === 'done' ? 'Scanned' : st.status === 'failed' ? 'Failed' : running ? 'Reading…' : 'Not scanned') + '</span></div>';
-    if (personal) html += '<ul class="notes"><li>Look only: this page never renames, moves or bins.</li><li>Uses its own read-only sign-in, kept only while this tab is open and never used for work.</li></ul>';
+    var qOn = personal && !!personalAuth.binToken();
+    if (personal && !qOn) html += '<ul class="notes"><li>Look only: this page never renames, moves or bins.</li><li>Uses its own read-only sign-in, kept only while this tab is open and never used for work.</li></ul>';
     else html += '<ul class="notes"><li>Finds files in your work My Drive that already sit in a shared drive (exact copy).</li><li>Look only here. Rename and bin them in Bin.</li></ul>';
     if (st.log) html += '<p class="note">' + esc(st.log) + '</p>';
     if (st.error) html += '<p class="note fail">Stopped: ' + esc(st.error) + '</p>';
@@ -2247,7 +2277,9 @@
       html += '<div class="actions"><button class="btn" type="button" data-action="psignin">' + icon('in') + '<span>Sign in to your personal Google account (read-only)</span></button></div>';
     } else {
       html += '<div class="actions"><button class="btn" type="button" data-action="pcpscan" data-slot="' + slot + '"' + (busy ? ' disabled' : '') + '>' + icon('refresh') + '<span>Scan this Drive vs shared drives</span></button>' +
-        (st.failedDrives && st.failedDrives.length && !busy ? '<button class="btn" type="button" data-action="pcpresume" data-slot="' + slot + '"><span>Continue: read the missed shared drives</span></button>' : '') + '</div>';
+        (st.failedDrives && st.failedDrives.length && !busy ? '<button class="btn" type="button" data-action="pcpresume" data-slot="' + slot + '"><span>Continue: read the missed shared drives</span></button>' : '') +
+        (personal && !qOn ? '<button class="btn" type="button" data-action="pbinallow"' + (busy ? ' disabled' : '') + '><span>Allow personal bin actions</span></button>' : '') + '</div>';
+      if (qOn) html += window.PBin ? PBin.block() : '<p class="note">Loading the bin steps…</p>';
     }
     return html + '</section>';
   }
@@ -2593,7 +2625,7 @@
     return h + foot + '</section>';
   }
 
-  // ---- Main: one tile per hub (Lisa's picks, 2 Nov): icon, name, 3 numbers; the tile opens the hub (the hub menu). ----
+  // ---- Main: one tile per hub: icon, name, 3 numbers. The whole square opens that hub's Main; each number and the Food tick keep their own page. ----
   // Order and colours are Lisa's: Projects multi-colour, Web red, Money orange, Food / Dogs / Apps yellow, Marketplace blue, Studio purple.
   var HUBS = [
     { key: 'projects', name: 'Projects', icon: 'case', line: 'var(--ljr-0)', ic: 'var(--ink)' }, // multi-colour line: see the CSS
@@ -2601,7 +2633,8 @@
     { key: 'money', name: 'Money', icon: 'money', slot: 3, href: 'money/' },
     { key: 'food', name: 'Food', icon: 'bowl', slot: 4, href: 'food/' },
     { key: 'dogs', name: 'Dogs', icon: 'paw', slot: 4, href: 'cdhub/' },
-    { key: 'apps', name: 'Apps', icon: 'factory', slot: 4, href: 'factory/' },
+    // href is the folder the KPI hashes are appended to. main is the header only: a bare factory/ opens Rooms, Main is #/me.
+    { key: 'apps', name: 'Apps', icon: 'factory', slot: 4, href: 'factory/', main: 'factory/#/me' },
     { key: 'market', name: 'Marketplace', icon: 'store', slot: 6, href: 'marketplace/' },
     { key: 'studio', name: 'Studio', icon: 'brush', slot: 7, href: 'studio/' }
   ];
@@ -2628,15 +2661,16 @@
     market: [['To Post', '#/do?post'], ['To Reply', '#/reply'], ['Sold', '#/sold']],
     studio: [['Approve', '#/review'], ['Due Today', '#/me/today'], ['Sold', '#/library']]
   };
-  // Projects: the hub Sheet's INDEX tab (loadPh). Stuck above 0 is rose.
+  // Projects: the hub Sheet's INDEX tab (loadPh). All grey: stuck is not late (a rose number means late).
   function phNums() {
     var d = S.ph.data;
-    return d ? [['Stuck', d.stuck, d.stuck > 0], ['Waiting', d.waiting], ['Running', d.running]] : null;
+    return d ? [['Stuck', d.stuck], ['Waiting', d.waiting], ['Running', d.running]] : null;
   }
   function hubTiles() {
     var D = hubData();
     return '<section id="hubTiles" aria-label="Hubs"><div class="hubgrid">' + HUBS.map(function (h) {
-      var link = h.key === 'projects' ? PH_URL : h.href;
+      var link = h.key === 'projects' ? PH_URL : h.href; // KPI base: hashes append here, so a header hash must not live on href
+      var head = h.main || link; // header opens that hub's Main
       if (!link) return '';
       var x = D[h.key] || { ok: false }, nums = h.key === 'projects' ? phNums() : x.ok ? x.nums : null;
       var tab = h.key === 'projects' ? ' target="_blank" rel="noopener"' : HUB_TAB;
@@ -2644,9 +2678,10 @@
         var n = nums ? nums[i] : null, v = n && n[1] != null ? String(n[1]) : '–', late = !!(n && n[2]);
         return '<a class="hk" data-k="' + esc(k[0]) + '" href="' + esc(link + k[1]) + '"' + tab + '>' + '<b' + (late && v !== '0' ? ' class="need"' : '') + '>' + esc(v) + '</b>' + '<span>' + esc(k[0]) + '</span></a>';
       }).join('') + '</span>';
-      var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders"' + HUB_TAB + '>✓ XML</a>' : '';
+      // Same target as the Food hub's own tick: orders filtered to "Not at GA yet".
+      var tick = h.key === 'food' && x.ok && x.xml ? '<a class="xml" data-xml href="food/#/orders?ga"' + HUB_TAB + '>✓ XML</a>' : '';
       var why = h.key === 'projects' && S.ph.status === 'failed' ? ' title="Numbers could not be read. Tap to open the hub."' : '';
-      return '<div class="card house-lbar hubtile" data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo" href="' + esc(link) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + body + '</div>';
+      return '<div class="card house-lbar hubtile" data-open-row data-hub="' + h.key + '"' + hubStyle(h) + '><span class="hn"><a class="hgo house-open" href="' + esc(head) + '"' + tab + why + '>' + hubIcon(h) + '<span>' + esc(h.name) + '</span></a>' + tick + '</span>' + body + '</div>';
     }).join('') + '</div></section>';
   }
 
@@ -2678,7 +2713,17 @@
     return h + '</section>';
   }
   function viewDecide() { return hubListView('decide', 'Decide', 'Nothing waiting on your decision.'); }
-  function viewDo() { return hubListView('todo', 'Do', 'Nothing to do.'); }
+  function viewDo() { return hubListView('todo', 'Do', 'Nothing to do.') + (window.DoQ ? DoQ.card() : ''); }
+  // Standing approvals card: its code (estate/donq.js) is fetched only when the Do page opens.
+  function loadDoQ() {
+    if (window.DoQ || scriptsLoaded.dq) return;
+    scriptsLoaded.dq = 1;
+    needScripts(['estate/donq.js']).then(function () {
+      DoQ.init({ esc: esc, tick: tickBox, list: driveList, text: apiText, api: API, csv: parseCsv, fetch: KIT.googleFetch, token: function () { return accessToken; }, write: function () { return writeGranted; },
+        busy: function () { return busy; }, setBusy: function (b) { busy = b; }, banner: showBanner, render: render, askWrite: requestWrite, pick: function () { return PICK; } });
+      render();
+    }).catch(function () {});
+  }
 
   // Signed out: nothing about the dashboard is shown, only the sign-in button.
   // The key links are drawn by viewMap, which only runs after sign-in.
@@ -2717,6 +2762,8 @@
     out = out.map(function (x, i) { x._i = i; return x; }).sort(function (a, b2) { return rank[a.kind] - rank[b2.kind] || a._i - b2._i; });
     return out;
   }
+  // A rose count means late (Lisa's sweep, 3 Nov 2026; read out as "N late"). A failed read or the Bin ledger is rose-lined (risk) but not late.
+  function isLateNeed(x) { return x.tag === 'Late'; }
   function hubLink(href) { return /^(money|cdhub|factory|marketplace|food|studio|estate)\//.test(String(href || '')); }
   // The first reads after sign-in are still running (a 5-minute reread keeps the last numbers instead).
   function firstRead() { return ['readfirst', 'drive', 'cf', 'money', 'hubs'].some(function (k) { return S[k].status === 'loading' && !S[k].data; }); }
@@ -2747,7 +2794,7 @@
   function viewDoGroup(key) {
     var g = NEED_GROUPS.filter(function (x) { return x.key === key; })[0], rows = needsToday().filter(g.has), reading = firstRead();
     var h = '<section class="card needs" id="todoGroup" data-group="' + g.key + '" aria-labelledby="todoGroupTitle"><div class="cardhead"><h3 id="todoGroupTitle">Do · ' + esc(g.word) + '</h3>' +
-      '<span class="cnt' + (g.kind === 'risk' && rows.length ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + (rows.length || '') + '</span></div>';
+      '<span class="cnt' + (rows.some(isLateNeed) ? ' need' : '') + (String(rows.length).length > 2 ? ' wide' : '') + '">' + (rows.length || '') + '</span></div>';
     h += rows.length ? '<ol>' + rows.map(needRow).join('') + '</ol>' : '<p class="note">' + (reading ? 'Reading…' : 'Nothing ' + esc(g.word) + ' right now.') + '</p>';
     return h + '<p class="note"><a href="#/do">All of Do</a></p></section>';
   }
@@ -3057,6 +3104,19 @@
     html += sourceLine('Shared drives', 'https://drive.google.com/drive/shared-drives', S.bin);
     return html + '</div></details>';
   }
+  // Other apps (TidyUp Apps 5): read-only list from CFG.tidyApps. Placed before Dropbox, which stays the last card.
+  var APP_STATUS = { 'bot-and-browser': 'Bot moves, you empty', 'bot-capable': 'Bot can tidy, nothing marked', 'browser-only': 'By hand', 'nothing': 'Nothing to do' };
+  function appsCard() {
+    var rows = (CFG.tidyApps || []).filter(function (r) { return r && r.app; });
+    if (!rows.length) return '';
+    var html = foldOpen('apps', false, 'card slot8', 'appsCard') + '<summary><h3>Other apps</h3><span class="chip">' + num(rows.length) + '</span></summary><div class="fbody">';
+    html += '<ul class="files" data-apps-list>' + rows.map(function (r) {
+      return '<li data-app="' + esc(r.app) + '"><div class="fname">' + esc(r.app) + '</div><div class="meta"><span class="chip">' + esc(APP_STATUS[r.status] || 'Not set') + '</span></div>' +
+        '<p class="note">' + esc(r.how || '') + '</p></li>';
+    }).join('') + '</ul>';
+    html += '<ul class="notes"><li>Archive or move to the bin only. Nothing is deleted for good.</li></ul>';
+    return html + '</div></details>';
+  }
   function dropboxCard() {
     var dx = S.dbx, dd = dx.data;
     var html = foldOpen('dropbox', false, 'card slot2' + cardClass(dx), 'dropboxCard') + '<summary><h3>Dropbox (being emptied)</h3>' + stateBadge(dx, null) + '</summary><div class="fbody">';
@@ -3266,8 +3326,29 @@
     return html;
   }
 
+  // ---- Dropbox, iCloud and Mac (Drives sub-menu, stage 9): look only, counts from each engine's dry-run report ----
+  function viewCoverage(view) {
+    var key = view === 'dropbox' ? 'dbx' : view, p = S[key], d = p.data, label = VIEWS[view];
+    var html = '<section class="card slot4' + cardClass(p) + '" id="coverageCard" data-coverage="' + view + '"><div class="cardhead"><h3>' +
+      (view === 'dropbox' ? 'Dropbox totals' : label + ' report') + '</h3>' + stateBadge(p, null) + '</div>';
+    if (p.status === 'failed' || !d) html += failNote(p);
+    else if (d.notConnected || d.none) html += '<p class="note" data-no-report>No report yet.</p>';
+    else if (view === 'dropbox') {
+      html += '<p class="note">Marked to delete: <strong>' + num(d.marked_files || 0) + '</strong> files (' + num(d.marked_gb || 0) + ' GB).</p>' +
+        '<p class="note">Duplicates found: ' + num(d.duplicate_files || 0) + ' files, ' + num(d.wasted_gb || 0) + ' GB wasted.</p>';
+    } else {
+      html += '<p class="note">Looked at: <strong>' + num(d.files || 0) + '</strong> files (' + num(d.gb || 0) + ' GB).</p>' +
+        '<p class="note">Exact copies found: ' + num(d.duplicate_files || 0) + ' files, ' + num(d.wasted_gb || 0) + ' GB.</p>';
+    }
+    if (d && !d.notConnected && !d.none && p.status !== 'failed')
+      html += '<p class="note">' + (view === 'dropbox' ? 'Scan' : 'Dry run') + ' ' + esc(fmtTime(d.generated) || 'date unknown') + (d.complete === false ? ' (not finished)' : '') + '. Nothing was renamed or moved.</p>';
+    html += '<p class="note" data-bin-pointer>Anything to tidy is done in Bin.</p>';  // text only: Bin keeps one way in
+    var name = view === 'dropbox' ? 'Dropbox totals' : label + ' report';
+    return html + sourceLine(name, DBX_FOLDER_ID ? folderUrl(DBX_FOLDER_ID) : 'https://drive.google.com/drive/shared-drives', p) + '</section>';
+  }
+
   function viewBin() {
-    return needsNowCard() + readyCard() + viewCheck() + notReadyCard() + binsCard() + logCard() + canvaCard() + dropboxCard();
+    return needsNowCard() + readyCard() + viewCheck() + notReadyCard() + binsCard() + logCard() + appsCard() + canvaCard() + dropboxCard();
   }
 
   var SUBS = [
@@ -3313,18 +3394,22 @@
   }
 
   // ---- Router: #/section[/sub][/pN]; history entries via normal links ----
-  var VIEWS = { map: 'Dashboard', decide: 'Decide', do: 'Do', money: 'Money', minutes: 'Actions minutes', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', bin: 'Bin', changes: 'Changes' };
+  var VIEWS = { map: 'Dashboard', decide: 'Decide', do: 'Do', money: 'Money', minutes: 'Actions minutes', drives: 'Drives', readfirst: 'Read first', drive: 'Shared drives', personal: 'Work My Drive', pdrive: 'Personal Drive', usb: 'Drive check', dropbox: 'Dropbox', icloud: 'iCloud', mac: 'Mac', bin: 'Bin', changes: 'Changes' };
   // Every Drives page lights up the Drives tab.
-  var TAB_OF = { drive: 'drives', readfirst: 'drives', personal: 'drives', pdrive: 'drives', usb: 'drives' };
+  var TAB_OF = { drive: 'drives', readfirst: 'drives', personal: 'drives', pdrive: 'drives', usb: 'drives', dropbox: 'drives', icloud: 'drives', mac: 'drives' };
   // Drives sub-menu: #/drives/<key> shows view <view>. The pills are the existing .subnav (as on Changes).
   var DRIVES = [
     { key: 'shared', view: 'drive', label: 'Shared drives', purpose: 'Browse the shared drives and see what changed in 24 hours.' },
     { key: 'work', view: 'personal', label: 'Work My Drive', purpose: 'Find files in your work My Drive that already sit in a shared drive.' },
     { key: 'personal-drive', view: 'pdrive', label: 'Personal Drive', purpose: 'See which files in your personal Google Drive already sit in a shared drive.' },
-    { key: 'usb', view: 'usb', label: 'Drive check', purpose: 'Check a plugged-in drive against the shared drives before you clear it.' }
+    { key: 'usb', view: 'usb', label: 'Drive check', purpose: 'Check a plugged-in drive against the shared drives before you clear it.' },
+    // Stage 9, look only: each shows its engine's dry-run report. Any action sits in Bin.
+    { key: 'dropbox', view: 'dropbox', label: 'Dropbox', purpose: 'See how much is still in Dropbox and what is marked to delete.' },
+    { key: 'icloud', view: 'icloud', label: 'iCloud', purpose: 'See what the last iCloud check found. Nothing is changed here.' },
+    { key: 'mac', view: 'mac', label: 'Mac', purpose: 'See what the last Mac check found. Nothing is changed here.' }
   ];
   var DRIVES_PURPOSE = "See what's where, spot what changed, and send anything to tidy to Bin.";
-  var READFIRST_PURPOSE = 'Open the folder the AIs read first.';
+  var READFIRST_PURPOSE = 'The folder the AIs read first, and what is in it.';
   // Old addresses keep working: #/drive(/drive/folder), #/readfirst, #/personal and #/usb move under #/drives;
   // #/more (the old fifth tab) opens the Dashboard, which holds the hub tiles.
   function redirectOld(hash) {
@@ -3370,7 +3455,7 @@
     var r = parseRoute();
     if (!r.view) { history.replaceState(null, '', '#/map'); r = parseRoute(); }
     var el = $('view');
-    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'decide' ? viewDecide() : r.view === 'do' ? (r.group ? viewDoGroup(r.group) : viewDo()) : r.view === 'money' ? moneyTile() : r.view === 'minutes' ? minsTile() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : viewChanges(r);
+    var html = !signedIn ? viewGate() : r.view === 'map' ? viewMap() : r.view === 'decide' ? viewDecide() : r.view === 'do' ? (r.group ? viewDoGroup(r.group) : viewDo()) : r.view === 'money' ? moneyTile() : r.view === 'minutes' ? minsTile() : r.view === 'readfirst' ? viewReadFirst(r) : r.view === 'drive' || r.view === 'drives' ? viewDrive(r) : r.view === 'bin' ? viewBin() : r.view === 'personal' ? viewPersonal('work') : r.view === 'pdrive' ? viewPersonal('personal') : r.view === 'usb' ? viewUsb() : r.view === 'dropbox' || r.view === 'icloud' || r.view === 'mac' ? viewCoverage(r.view) : viewChanges(r);
     if (signedIn && TAB_OF[r.view] === 'drives' || signedIn && r.view === 'drives') html = drivesNav(r) + drivesPurpose(r) + html;
     if (signedIn && r.view !== 'map') html = '<p><a class="btn back" href="#/map" data-back-home>← Dashboard</a></p>' + html;
     var routeKey = location.hash;
@@ -3385,11 +3470,10 @@
     Array.prototype.forEach.call(document.querySelectorAll('nav.main a'), function (a) {
       if (a.getAttribute('data-nav') === tab) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
     });
-    tabBadge('map', nNeeds, 'Main');
+    tabBadge('map', nNeeds, 'Main', signedIn && needsToday().some(isLateNeed));
     var nDec = signedIn ? hubRows('decide') : [], nDo = signedIn ? hubRows('todo') : [];
     tabBadge('decide', nDec.length, 'Decide');
-    tabBadge('do', nDo.length, 'Do');
-    $('n-do').classList.toggle('need', nDo.some(function (x) { return x.kind === 'late'; }));
+    tabBadge('do', nDo.length + (window.DoQ ? DoQ.open() : 0), 'Do', nDo.some(function (x) { return x.kind === 'late'; }));
     tabBadge('bin', S.bin.data && S.bin.data.ready ? S.bin.data.ready.length : 0, 'Bin');
     if (changed && lastView !== null) {
       el.classList.add('fade');
@@ -3402,15 +3486,18 @@
     lastView = routeKey;
     applyBinFilter();
     updateHeader();
-    if (r.view === 'bin' && S.dbx.status === 'idle') loadDbx();
+    if (r.view === 'do' && signedIn) loadDoQ();
+    if ((r.view === 'bin' || r.view === 'dropbox') && S.dbx.status === 'idle') loadDbx();
+    if ((r.view === 'icloud' || r.view === 'mac') && S[r.view].status === 'idle') loadReport(r.view, REPORT_NAMES[r.view]);
     if (r.view === 'bin' && S.canva.status === 'idle') loadCanva();
     if (r.view === 'bin' && S.runlog.status === 'idle') loadRunLog();
   }
-  function tabBadge(key, n, label) {
+  function tabBadge(key, n, label, late) {
     var b = $('n-' + key); if (!b) return;
     b.textContent = n ? String(n) : '';
     b.classList.toggle('wide', String(n).length > 2); // count pills: exact 30px box for 1-2 digits, only 3+ grow
-    b.parentNode.setAttribute('aria-label', label + (n ? ', ' + n + ' waiting' : ''));
+    b.classList.toggle('need', !!(n && late));         // rose = late only; everything else waits in grey
+    b.parentNode.setAttribute('aria-label', label + (n ? ', ' + n + (n && late ? ' late' : ' waiting') : ''));
   }
   function updateHeader() {
     var times = ['readfirst', 'drive', 'cf'].map(function (k) { return S[k].status === 'ok' ? S[k].readAt : null; }).filter(Boolean);
@@ -3442,6 +3529,7 @@
   }
   function onToken(resp) {
     var askedWrite = wantWrite; wantWrite = false;
+    var goDq = window.DoQ && DoQ.afterWrite; if (window.DoQ) DoQ.afterWrite = false;
     if (resp.error) { showBanner(askedWrite ? 'Bin access not granted. Browsing still works.' : 'Sign-in did not complete.', false, !askedWrite); return; }
     var g = google.accounts.oauth2;
     var hasWrite = g.hasGrantedAllScopes(resp, WRITE_SCOPE);
@@ -3450,7 +3538,7 @@
     rememberToken(resp, hasWrite);
     if (askedWrite && !hasWrite) showBanner('Bin access not granted. Browsing still works.', false, false); else clearBanner();
     startTimer();
-    if (upgrade) { render(); ensureRoute(); } else loadAll();
+    if (upgrade) { render(); ensureRoute(); if (goDq && hasWrite) setTimeout(DoQ.approve, 0); } else loadAll();
   }
   function startTimer() {
     stopTimer();
@@ -3484,7 +3572,7 @@
     if (window.DashAuth && otherTab !== true) DashAuth.clear();
     if (t && window.google && google.accounts && google.accounts.oauth2) google.accounts.oauth2.revoke(t, function () {});
     S = freshState();
-    F = {}; R = { sweep: null, check: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; pcpLoadGen++;
+    F = {}; R = { sweep: null, check: null }; metaCache = {}; ledgerCache = null; PICK = {}; SHOW = {}; if (window.DoQ) DoQ.reset(); pcpLoadGen++;
     P = pcpFresh('idle', ''); Q = pcpFresh('idle', ''); U = usbBlank();
     personalAuth.clear();
     if (window.MoneyCore) window.MoneyCore.clearCache();
@@ -3532,6 +3620,7 @@
     else if (a === 'signout') signOut();
     else if (a === 'refresh') loadAll(false);
     else if (a === 'grantwrite') requestWrite();
+    else if (a === 'dqapprove') DoQ.approve();
     else if (a === 'selectall') { selectAll(t.getAttribute('data-group')); if (t.getAttribute('data-also')) selectAll(t.getAttribute('data-also')); render(); }
     else if (a === 'clearpick') { clearPick(t.getAttribute('data-group')); if (t.getAttribute('data-also')) clearPick(t.getAttribute('data-also')); render(); }
     else if (a === 'showmore') {
@@ -3561,6 +3650,8 @@
     else if (a === 'pcpresume') pcpScan('continue', t.getAttribute('data-slot') || 'work');
     else if (a === 'psignin') personalAuth.request();
     else if (a === 'pcpmark') pcpMark();
+    else if (a === 'pbinallow') personalAuth.requestBin();
+    else if ((a === 'qmark' || a === 'qbin') && window.PBin) PBin[a]();
     else if (a === 'usbscan') usbScan();
     else if (a === 'usbcontinue') usbContinue();
     else if (a === 'usbstop') { U.stop = true; }

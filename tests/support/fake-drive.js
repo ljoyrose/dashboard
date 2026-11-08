@@ -111,7 +111,8 @@ class FakeDrive {
       this.calls.push({ method: req.method(), path: p, query: params.get('q') || '', url: req.url(), auth });
       const json = (status, body) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
       // The Personal Drive page's look-only token is accepted for reads only (it sees the same pretend Drive).
-      if (auth !== 'Bearer FAKE-TEST-TOKEN' && !(auth === 'Bearer FAKE-PERSONAL-TOKEN' && req.method() === 'GET')) return json(401, { error: { code: 401, message: 'Invalid Credentials', errors: [{ reason: 'authError' }] } });
+      // Its opted-in bin token (FAKE-PERSONAL-BIN-TOKEN) may also write.
+      if (auth !== 'Bearer FAKE-TEST-TOKEN' && auth !== 'Bearer FAKE-PERSONAL-BIN-TOKEN' && !(auth === 'Bearer FAKE-PERSONAL-TOKEN' && req.method() === 'GET')) return json(401, { error: { code: 401, message: 'Invalid Credentials', errors: [{ reason: 'authError' }] } });
       let failNow = this.failWith && (p !== '/about' || this.failWith.includeAbout) && (!this.failFor || req.url().includes(this.failFor));
       if (failNow && typeof this.failWith.times === 'number') { // fail only the first N matching calls, then answer normally
         if (this.failWith.times <= 0) failNow = false; else this.failWith.times--;

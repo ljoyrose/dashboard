@@ -6,12 +6,14 @@
 const { test, expect } = require('../support/test');
 const AxeBuilder = require('@axe-core/playwright').default;
 const { HUBS, go } = require('../support/hubs');
+const { withGrowth } = require('../support/budgets');
 
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Body bytes of the page's own files on first load, measured 30 Oct 2026 (job35b-audit.spec.js). Allowed: +10%.
 // marketplace re-measured 31 Oct 2026 after Marketplace v11.10 (#221: post cards, supplier costs, New stock tab).
-const BYTES = { marketplace: 247600, money: 201900, studio: 334100, privacy: 15000 };
-// money 201100 > 201900 on 3 Nov 2026 (TidyUp Apps 1, #271): the canvaBin block adds 533 bytes to config.js, which money loads; CI measured 221998.
+// From 3 Nov 2026 a PR that adds weight adds a file in tests/budget-growth/ (see tests/support/budgets.js) instead of editing this line.
+const BYTES = withGrowth({ marketplace: 226000, money: 201500, studio: 334100, privacy: 15000 });
+// money 201100 > 201500 (+400) on 3 Nov 2026: config.js grew 336 bytes (TidyUp stage 9, #142), and every page loads it. Measured 221465.
 // money 197700 > 201100 (+3400) on 2 Nov 2026: Hub Mains (DashKit.hubMain in toolkit.js and house.css, Main's numbers and the moved
 // sections' routes), on top of the shared tab-dots growth. Measured 221129.
 // studio 297000 > 334100 and privacy 13300 > 15000 on 2 Nov 2026: the shared bottom tab bar (Lisa's tab picks) adds the tab rules to
@@ -26,6 +28,8 @@ const BYTES = { marketplace: 247600, money: 201900, studio: 334100, privacy: 150
 // Measured 217712. Money, studio and privacy still fit.
 // marketplace 217800 > 247600 on 2 Nov 2026: Product ideas (list, Add idea form, card page, board link: about 20 KB in index.html + 10 KB ideas.js)
 // on top of the type-scale baseline. Measured 247530. Shrinking option: load the form and card code only when #/ideas is opened.
+// marketplace base 247600 > 226000 on 7 Nov 2026: the Product ideas code (form, list, card page, about 27 KB) now loads only when Ideas is opened.
+// First load measured 266642 (was about 290600). Budget = base + growth files (16500) = 242500, +10% allowed.
 // Known axe problems kept on purpose: { 'page:view': { ruleId: places } }. Empty: all four pages are clean today.
 const KNOWN = {};
 const PAGES = [

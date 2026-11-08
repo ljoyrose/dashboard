@@ -51,13 +51,13 @@
   .stamp { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-small); font-weight: 600; border: 1px solid var(--frame-line); border-radius: var(--radius); padding: 0 8px; }
   .stamp:empty { display: none; }
   .top .btn { color: var(--frame-ink); background: transparent; border-color: var(--frame-line); }   /* the frame's own clear line (3:1 on the dark bar) */
-  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); background: color-mix(in srgb, var(--frame-ink) 14%, var(--frame)); } }
+  @media (hover: hover) { .top .btn:hover { outline-color: var(--frame-ink); } }
 
   /* Things you press, the hover rule (meaning colour = --hmc), focus, the bottom tabs and the counts: ../house.css. Layout only here. */
   .btn.big { width: 100%; justify-content: center; min-height: 44px; }
   .chip { padding: 0 14px; background: var(--surface); display: inline-flex; align-items: center; }
   .more { background: transparent; padding: 0 14px; align-self: flex-start; }
-  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; background: var(--sel-fill); } }
+  @media (hover: hover) { a.tile:hover { outline: 1px solid var(--sel-bd); outline-offset: -1px; } }
   input:focus { outline: none; }
   a:focus, button:focus { outline: none; }
   :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }   /* keyboard ring: 2px ink, never the browser blue */
@@ -111,7 +111,7 @@
   .row .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .row .m { font-size: var(--fs-small); color: var(--muted); }
   .row .amt { font-weight: 600; text-align: right; white-space: nowrap; font-size: var(--fs-body); }
-  .row .amt.red, .row .amt.good { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); font-size: var(--fs-small); }
+  .row .amt.red, .row .amt.good { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); font-size: var(--fs-small); white-space: nowrap; }
   .row .amt.red { border-color: var(--rose); background: var(--rose-tint); }
   .row .links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
   .row .links .btn { font-size: var(--fs-small); padding: 0 12px; }
@@ -162,9 +162,9 @@
   <div id="view"></div>
 </main>
 <nav class="tabs house-tabs hidden" id="tabs" aria-label="GA Hub sections">
-  <a class="ht" data-slot="1" href="#/home" data-nav="home"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n need" id="n-home"></span></a>
+  <a class="ht" data-slot="1" href="#/home" data-nav="home"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-main"/></svg></span><span class="htl">Main</span><span class="n" id="n-home"></span></a>
   <a class="ht" data-slot="3" href="#/invoices" data-nav="invoices"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-money"/></svg></span><span class="htl">Invoices</span><span class="n"></span></a>
-  <a class="ht" data-slot="4" href="#/orders" data-nav="orders"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-box"/></svg></span><span class="htl">Orders</span><span class="n need" id="n-orders"></span></a>
+  <a class="ht" data-slot="4" href="#/orders" data-nav="orders"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-box"/></svg></span><span class="htl">Orders</span><span class="n" id="n-orders"></span></a>
   <a class="ht" data-slot="6" href="#/products" data-nav="products"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-bag"/></svg></span><span class="htl">Products</span><span class="n"></span></a>
   <div class="ht-more"><button type="button" class="ht" data-slot="0" data-house-more aria-expanded="false" aria-controls="houseMore"><span class="bar" aria-hidden="true"></span><span class="hic" aria-hidden="true"><svg class="hi" aria-hidden="true" focusable="false"><use href="#hi-t-more"/></svg></span><span class="htl">More</span></button>
     <div class="house-more" id="houseMore" hidden>
@@ -233,6 +233,7 @@
   function load() {
     if (!F || !F.bookId) { banner('Not set up yet: the GA Hub settings are not in config.js.', true); return; }
     if (!token) { render(); return; }
+    if (!loaded) render();   // J34-F61: say it is reading while the first read runs, not the sign-in card again
     api(base() + ':batchGet?' + RANGES.map(function (r) { return 'ranges=' + encodeURIComponent(r); }).join('&')).then(function (j) {
       var vr = (j.valueRanges || []).map(function (x) { return x.values || []; });
       data.cards = (vr[0] || []).map(function (v, i) { var o = { _row: i + 2 }; CARD_COLS.forEach(function (c, k) { o[c] = v[k] || ''; }); return o; })
@@ -257,7 +258,7 @@
       return put([value, '', at, who]).then(function () { return api(url('Cards!A' + r._row)); })
         .then(function (k) { if (((k.values || [[]])[0] || [])[0] !== r.key) return put(old).then(function () { throw new Error('the list changed: refresh and tap again'); }); })
         .then(function () { r.answer = value; r.answered_at = at; r.answered_by = who; render(); });
-    }).catch(function (e) { banner('Not saved: ' + e.message); });
+    }).catch(function (e) { banner('Not saved: ' + e.message); render(); });   // J34-F60: redraw so the button can be tapped again
   }
 
   /* ---------- views ---------- */
@@ -378,7 +379,7 @@
     // Answered cards stay on screen until the engine applies them (Undo for 10 minutes), then drop off.
     var w = data.cards.filter(function (r) { return !r.applied_at && (!r.answer || Date.now() < Date.parse(r.answered_at) + APPLY_MS); }).sort(byUrgency), need = waiting().length;
     var late = lateOrders().length;
-    var h = '<p class="needs">Do <span class="cnt ' + (need ? 'need' : 'ok') + wide(need) + '">' + need + '</span></p>';
+    var h = '<p class="needs">Do <span class="cnt' + (need ? '' : ' ok') + wide(need) + '">' + need + '</span></p>';   // grey: a rose count means late
     if (late) h += '<div class="card"><p class="bline"><span class="dot" style="--c:var(--ljr-2)" aria-hidden="true"></span>Order check</p><h2>' + late + ' order' + (late > 1 ? 's are' : ' is') + ' not at GA</h2><p class="what">Check the GA Portal and enter ' + (late > 1 ? 'them' : 'it') + ' by hand if needed.</p><div class="acts"><a class="btn main" href="#/orders?late">Open the orders</a></div></div>';
     if (!w.length) return late ? h : h + '<div class="card">' + empty('Nothing needs you') + '</div>';
     return h + w.map(function (r) { return cardHtml(r); }).join('');
@@ -411,7 +412,7 @@
       var links = orderLinks(o);
       return '<div class="row"><div class="txt"><b>#' + esc(o.order_no) + '</b> · ' + esc(o.status) + (orderFacts(o) ? '<div class="m">' + esc(orderFacts(o)) + '</div>' : '') + '<div class="m">' + esc([o.s_no, o.boxes ? o.boxes + ' box' + (num(o.boxes) > 1 ? 'es' : '') : '', o.shipped_date ? 'shipped ' + ukDate(o.shipped_date) : '', o.ga_total ? 'GA ' + money(o.ga_total) : ''].filter(Boolean).join(' · ')) + '</div>' +
         checkBadge(o) + (links ? '<div class="links">' + links + '</div>' : '') + '</div>' +
-        '<div class="amt ' + (p === '' ? '' : p < min ? 'red' : 'good') + '">' + (p === '' ? '' : money(p)) + '</div></div>'; }).join('') + '</div>';
+        '<div class="amt ' + (p === '' ? '' : p < min ? 'red' : 'good') + '">' + (p === '' ? '' : 'Profit ' + money(p)) + '</div></div>'; }).join('') + '</div>';
     if (list.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
     return h + '<p class="hint">Profit is ex VAT, after all costs.</p>';
   }
@@ -505,14 +506,15 @@
       ['XML orders go to', 'GA_ORDER_TO', 'mail'], ['XML contact', 'GA_XML_CONTACT', 'mail'], ['We send XML orders from', 'GA_ORDER_FROM', 'mail'],
       ['Shipping reports come from', 'GA_SHIP_FROM', 'mail'], ['Invoices come from', 'GA_INVOICE_FROM', 'mail'], ['Commercial invoices (Jersey) to', 'COMMERCIAL_INVOICE_TO', 'mail'],
       ['Minimum profit per order', 'MIN_PROFIT', 'money'], ['Subscription discount', 'SUB_DISCOUNT', 'money']];
-    var h = '<p class="needs">GA</p><div class="card">';
-    rows.forEach(function (r) { var v = setting(r[1]); if (!v) return;
+    var h = '<p class="needs">GA</p><div class="card">', shownN = 0;
+    rows.forEach(function (r) { var v = setting(r[1]); if (!v) return; shownN++;
       var shown = r[2] === 'link' ? '<a href="' + esc(v) + '" target="_blank" rel="noopener">' + esc(v.replace(/^https?:\/\//, '')) + '</a>' : r[2] === 'tel' ? telLink(mailLink(esc(v))) : r[2] === 'mail' ? mailLink(esc(v)) : r[2] === 'money' ? money(v) : esc(v);
       h += '<div class="row"><div class="txt"><div class="m">' + esc(r[0]) + '</div>' + shown + '</div>' + (r[2] === 'copy' ? '<button class="btn" type="button" data-copy="' + esc(v) + '">Copy</button>' : '') + '</div>'; });
+    if (!shownN) h += '<p class="what">No GA details yet. Add them in the Settings tab of the workbook.</p>';   // J34-F62
     h += '</div>';
     if (data.codes.length) {
       var kinds = [['brand', 'Brand'], ['channel', 'Code for where it was sold (means nothing to customers)'], ['partner_type', 'Partner type (+ 2 digits, e.g. R01)'], ['partner', 'Partners'], ['suffix', 'Ending (+ a number)']];
-      h += '<p class="grp">Order reference on the GA Portal</p><div class="card"><p class="what"><b>Customers see this reference</b>, so only the brand is readable. Type <b>BRAND-CODE-NUMBER</b>, e.g. <b>DDF-KQ-1234</b>. A plain number (5375) is a DDF Shopify order; PC-1001 is a Puppy Classroom Shopify order. Wholesale adds the partner: DDF-TB-R01-0007. A resend adds -R1.</p>' +
+      h += '<p class="grp">Order reference on the GA Portal</p><div class="card"><p class="what">Type the <b>Shopify order number only, digits</b>, e.g. <b>5382</b>. Customers see this reference in their tracking only (it is not on the label), so never add names, codes, prices or notes. Search the Portal first: never enter an order twice.</p><p class="hint">Other shops (later): ClickFunnels orders are DDF-KQ-number; a resend adds -R1. The engine reads the codes below.</p>' +
         kinds.map(function (k) { var list = data.codes.filter(function (c) { return c.kind === k[0]; }); if (!list.length) return '';
           return '<div class="row"><div class="txt"><div class="m">' + esc(k[1]) + '</div><div class="badges">' + list.map(function (c) { return '<span class="badge"><b>' + esc(c.code) + '</b> ' + esc(c.name) + '</span>'; }).join('') + '</div></div></div>'; }).join('') +
         '</div>';
@@ -523,12 +525,14 @@
     DashKit.signButton($('signin'), !!token);
     $('tabs').classList.toggle('hidden', !token); $('refresh').classList.toggle('hidden', !token);
     document.querySelectorAll('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-nav') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
-    var n = loaded ? mainRows().length : 0; $('n-home').textContent = n || ''; $('n-home').classList.toggle('wide', n >= 100);
-    var look = data.orders.filter(needsLook).length; $('n-orders').textContent = look || ''; $('n-orders').classList.toggle('wide', look >= 100);   // orders that need a look, on every page
+    // Rose = late only (Lisa's sweep, 3 Nov 2026; read out as "N late").
+    var mr = loaded ? mainRows() : [], n = mr.length; $('n-home').textContent = n || ''; $('n-home').classList.toggle('wide', n >= 100); $('n-home').classList.toggle('need', mr.some(function (r) { return r.kind === 'late'; }));
+    var look = data.orders.filter(needsLook).length; $('n-orders').textContent = look || ''; $('n-orders').classList.toggle('wide', look >= 100); $('n-orders').classList.toggle('need', lateOrders().length > 0);   // orders that need a look, on every page
     $('stamp').textContent = F && F.live ? '' : 'TEST';
     var ready = typeof auth !== 'undefined' && auth.ready();
     $('signin').disabled = !token && !ready;
     if (!token) { $('view').innerHTML = '<div class="card"><h2>Sign in to see the GA Hub</h2><button class="btn main big" type="button" data-action="signin"' + (ready ? '' : ' disabled') + '>Sign in</button></div>'; return; }
+    if (!loaded && !failed) { $('view').innerHTML = '<div class="card"><p class="what">Reading the GA workbook…</p></div>'; return; }
     $('view').innerHTML = view === 'orders' ? pageOrders() : view === 'invoices' ? pageInvoices() : view === 'products' ? pageProducts() : view === 'ga' ? pageGa() : view === 'do' ? pageDo() : view === 'review' ? pageReview() : pageHome();
     var f = focusKey && view === 'do' && document.querySelector('#view .card.focus'); if (f && f.scrollIntoView) f.scrollIntoView({ block: 'start' });
   }

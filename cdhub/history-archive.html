@@ -1,0 +1,55 @@
+<!doctype html><html lang="en-GB"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Temperature archive · CD Hub</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="icon" href="../icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="../icons/icon-180.png">
+<meta name="theme-color" content="#2C2C2A">
+<script>
+(function(){var o={};try{o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{};}catch(e){o={};}
+ var r=document.documentElement,c=r.classList;
+ c.toggle('look-cool',o.bg==='cool');c.toggle('sel-soft',o.sel==='soft');
+ c.toggle('text-lg',o.text==='lg');c.toggle('text-xl',o.text==='xl');c.toggle('space-roomy',o.space==='roomy');
+ if(o.mode==='light'||o.mode==='dark')r.setAttribute('data-theme',o.mode);})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<link rel="stylesheet" href="../house.css">
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 var(--fs-body)/1.5 var(--house-font);-webkit-text-size-adjust:100%}
+a{color:inherit;text-underline-offset:2px}
+.wrap{padding-left:var(--house-gutter);padding-right:var(--house-gutter);padding-bottom:60px}
+.hin{max-width:none;margin:0 auto;padding-left:var(--house-gutter);padding-right:var(--house-gutter)}
+.ti{width:18px;height:18px;flex:none;display:inline-block;vertical-align:middle;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+h1,h2{font-weight:600}
+h2{font-size:var(--fs-head);margin:24px 0 8px}
+p{margin:0 0 16px}
+.btn{font-family:inherit;font-size:var(--fs-small);font-weight:600;color:var(--ink);background:var(--card);border:1px solid var(--press);border-radius:var(--radius);min-height:36px;padding:0 14px;display:inline-flex;align-items:center;gap:6px;cursor:pointer;text-decoration:none;line-height:1.2}
+header .btn{color:var(--frame-ink);background:transparent;border-color:var(--frame-line)}
+@media(hover:hover){header .btn:hover{outline:1px solid var(--frame-ink);outline-offset:-1px}}
+@media(max-width:544px){.btn{min-height:44px}header.top{position:static}}
+.skip{position:absolute;left:-999px;top:8px;z-index:50;background:var(--card);color:var(--ink);padding:8px 14px;border-radius:var(--radius);border:1px solid var(--ink)}
+.skip:focus{left:8px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M5 12H3l9-9 9 9h-2M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7M9 21v-6a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v6"/></symbol>
+</svg>
+<a class="skip" href="#main">Skip to content</a>
+<header class="top house-head"><div class="hin house-row">
+  <a class="btn house-ib" href="./history.html" aria-label="Back to temperature history" title="Back to temperature history">
+    <svg class="ti" aria-hidden="true"><use href="#i-home"/></svg>
+  </a>
+  <h1>Temperature archive</h1>
+</div></header>
+<div class="wrap"><main id="main">
+  <h2>Archive</h2>
+  <p>Older years live on Archive.</p>
+  <p><a class="btn" href="./history.html">Temperatures</a></p>
+</main></div>
+</body></html>
