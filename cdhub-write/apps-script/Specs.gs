@@ -11,7 +11,7 @@
 var ROLE_ALL = ['OWNER', 'STAFF', 'VET', 'TRAINER'];
 /**
  * A visitor's code (an inspector, say). Deliberately NOT in ROLE_ALL: it may only add rows to guest_reading.
- * It always expires (Auth.gs) and can never read anything. adminAddGuestCode (Auth.gs) is the only way to make one.
+ * It always expires (Auth.gs) and can read the room list only (Read.gs). adminAddGuestCode (Auth.gs) is the only way to make one.
  */
 var ROLE_GUEST = 'GUEST';
 
@@ -82,15 +82,15 @@ var TABLES = {
   // A visitor's own temperature readings (8 Nov 2026). A separate file on purpose: a guest reading can never count
   // as, block, or overwrite a staff reading, because it never touches BLD-area_reading. Only a GUEST code can add
   // here and a GUEST code can add nowhere else. Lisa creates the file (header row only); own switch, OFF by default.
-  // taken_by is the guest's label and public code id. The area comes from the QR code: guests cannot read lists.
+  // taken_by is the guest's label and public code id. A guest can read the room list and nothing else (Read.gs).
   guest_reading: {
     key: 'guest_reading',
     file: 'BLD-guest_reading.csv',
     idPrefix: 'grd',
     columns: ['id', 'tenant_id', 'area_id', 'min_c', 'max_c', 'spot_c', 'precision_dp', 'period_start',
-              'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'note'],
+              'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'mitigation_note', 'note'],
     proposedColumns: ['id', 'tenant_id', 'area_id', 'min_c', 'max_c', 'spot_c', 'precision_dp', 'period_start',
-                      'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'note'],
+                      'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'mitigation_note', 'note'],
     computedColumns: [],
     lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
     perms: { add: [ROLE_GUEST], correct: [] },
@@ -105,6 +105,7 @@ var TABLES = {
       period_start:         { type: 'datetime' },
       read_method:          { type: 'enum', values: READ_METHODS_ },
       camera_value_changed: { type: 'bool' },
+      mitigation_note:      { type: 'text' },
       note:                 { type: 'text' }
     },
     dupKey: ['area_id', 'period_start'], dupTimeCol: 'taken_at',
@@ -238,7 +239,8 @@ var TABLES = {
     defaultMode: 'pending',
     input: {
       subject_id: { type: 'ref', lookup: 'subject', required: true },
-      area_id:    { type: 'ref', lookup: 'area', required: true }
+      area_id:    { type: 'ref', lookup: 'area', required: true },
+      classification_note: { type: 'text' }   // the reason given for a move over the room's limit
     },
     // same dog into the same room twice on one day is a repeat tap, not a second move
     dupKey: ['subject_id', 'area_id'], dupTimeCol: null, dupDayCol: 'moved_in',
@@ -254,6 +256,92 @@ var TABLES = {
         errors.area_id = 'That dog is already recorded in that room, so it has not moved.';
       }
     }
+  },
+
+  // ---------------------------------------------------------------- occupancy_out
+  // A dog taken out of its room (staff page, 8 Nov 2026). A second way in to BLD-occupancy.csv: the same file and
+  // columns, area_id blank, moved_in = today. Every one waits for Lisa, because a dog recorded as gone stops being asked about.
+  occupancy_out: {
+    key: 'occupancy_out',
+    file: 'BLD-occupancy.csv',
+    idPrefix: 'occ',
+    columns: ['id', 'tenant_id', 'subject_id', 'area_id', 'off_site_kind', 'moved_in', 'moved_out', 'classification', 'classification_note'],
+    proposedColumns: [],
+    computedColumns: [],
+    lookups: [{ name: 'subject', file: 'BLD-subject.csv', idCol: 'id' }],
+    perms: { add: ['OWNER', 'STAFF'], correct: [] },
+    noCorrect: true,
+    alwaysPending: true,
+    defaultMode: 'pending',
+    input: {
+      subject_id:          { type: 'ref', lookup: 'subject', required: true },
+      off_site_kind:       { type: 'enum', values: ['temporary', 'sold', 'owned_by_family', 'deceased'], required: true },
+      classification_note: { type: 'text' }
+    },
+    dupKey: ['subject_id', 'off_site_kind'], dupTimeCol: null, dupDayCol: 'moved_in',
+    stamp: function (row, ctx) { row.moved_in = ctx.today; },
+    checkRow: function () {},
+    checkAgainst: function (clean, records, errors) {
+      if (errors.subject_id) return;
+      if (permanentlyGone_(occupancyLatest_(records, clean.subject_id))) {
+        errors.subject_id = 'This dog is already recorded as no longer on site.';
+      }
+    }
+  },
+
+  // ---------------------------------------------------------------- area_access
+  // Whether a room's flap is free or limited (staff page). LIVE table, existing columns. A change appends a row and
+  // the newest row with a value wins. dupKey 'id' never matches, so free, limited, free on one day all save; a
+  // repeat tap is caught by checkAgainst instead. Own switch, OFF by default.
+  area_access: {
+    key: 'area_access',
+    file: 'BLD-area_access.csv',
+    idPrefix: 'acc',
+    columns: ['id', 'tenant_id', 'area_id', 'access_type', 'from_date', 'to_date', 'reason', 'set_by'],
+    proposedColumns: [],
+    computedColumns: [],
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    perms: { add: ['OWNER', 'STAFF'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      area_id:     { type: 'ref', lookup: 'area', required: true },
+      access_type: { type: 'enum', values: ['free', 'limited'], required: true }
+    },
+    dupKey: ['id'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.from_date = ctx.today; row.set_by = ctx.whoId || ctx.who; },
+    checkRow: function () {},
+    checkAgainst: function (clean, records, errors) {
+      if (errors.area_id || errors.access_type) return;
+      var cur = '';
+      records.forEach(function (r) { if (r.area_id === clean.area_id && r.access_type) cur = r.access_type; });
+      if (cur === clean.access_type) errors.access_type = 'That room is already recorded as ' + cur + '.';
+    }
+  },
+
+  // ---------------------------------------------------------------- qr_tag
+  // What each QR code means: a random tag, never a name or health detail. NEW table, own switch, OFF by default.
+  qr_tag: {
+    key: 'qr_tag',
+    file: 'BLD-qr_tag.csv',
+    idPrefix: 'qrt',
+    columns: ['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by'],
+    proposedColumns: ['tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by'],
+    computedColumns: [],
+    lookups: [],
+    perms: { add: ['OWNER'], correct: [] },
+    noCorrect: true,
+    alwaysPending: false,
+    defaultMode: 'direct',
+    input: {
+      tag:    { type: 'text', required: true },
+      kind:   { type: 'enum', values: ['area', 'subject', 'litter'], required: true },
+      ref_id: { type: 'text', required: true }
+    },
+    dupKey: ['tag'], dupTimeCol: null,
+    stamp: function (row, ctx) { row.active = 'true'; row.made_at = ctx.nowIso; row.made_by = ctx.whoId || ctx.who; },
+    checkRow: function () {}
   },
 
   // ---------------------------------------------------------------- occupancy_check
@@ -467,7 +555,7 @@ function specFor_(keyOrFile) {
 /** The complete list of file names the sink can ever write to (proposed tables are NOT in it). */
 function allowedFiles_() {
   var out = [BLD.PENDING_FILE];
-  for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k)) out.push(TABLES[k].file);
+  for (var k in TABLES) if (Object.prototype.hasOwnProperty.call(TABLES, k) && out.indexOf(TABLES[k].file) < 0) out.push(TABLES[k].file);
   return out;
 }
 
@@ -486,5 +574,11 @@ var READABLE = {
   breeding_rule:   { file: 'BLD-breeding_rule.csv',   vis: 'breeding_rule',   authorCol: 'set_by',      dateCol: 'set_at' },
   guest_reading:   { file: 'BLD-guest_reading.csv',   vis: 'guest_reading',   authorCol: 'taken_by',    dateCol: 'taken_at' },
   check_type:      { file: 'BLD-check_type.csv',      vis: 'check_type',      authorCol: 'set_by',      dateCol: 'set_at' },
-  check_log:       { file: 'BLD-check_log.csv',       vis: 'check_log',       authorCol: 'taken_by',    dateCol: 'taken_at' }
+  check_log:       { file: 'BLD-check_log.csv',       vis: 'check_log',       authorCol: 'taken_by',    dateCol: 'taken_at' },
+  qr_tag:          { file: 'BLD-qr_tag.csv',          vis: 'qr_tag',          authorCol: '',            dateCol: '' },
+  area_capacity:   { file: 'BLD-area_capacity.csv',   vis: 'area_capacity',   authorCol: '',            dateCol: '' },
+  area_access:     { file: 'BLD-area_access.csv',     vis: 'area_access',     authorCol: '',            dateCol: '' },
+  litter:          { file: 'BLD-litter.csv',          vis: 'litter',          authorCol: '',            dateCol: '' },
+  // the owner types rows here in the Sheet (over_capacity_action = refuse or reason); no row = a reason is required
+  capacity_setting: { file: 'BLD-capacity_setting.csv', vis: 'capacity_setting', authorCol: '',          dateCol: '' }
 };

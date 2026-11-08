@@ -67,7 +67,7 @@ function authStaff_(code) {
     throw err_('BAD_CODE', 'That staff code was not recognised.');
   }
   if (entry.role === ROLE_GUEST) {
-    if (guestExpired_(entry)) throw err_('CODE_EXPIRED', 'This visitor code has ended. Ask Lisa for a new one.');
+    if (guestExpired_(entry)) throw err_('BAD_CODE', 'This visitor code has ended. Ask Lisa for a new one.');
     // id stays empty so no person:<id> permission row can ever open a list to a guest; the label carries the id instead
     return { who: entry.who + ' (' + entry.id + ')', role: entry.role, id: '' };
   }
@@ -100,6 +100,7 @@ function adminEmail_() {
 function audienceFor_(role) {
   if (role === 'OWNER') return 'aud-admin';
   if (role === 'STAFF') return 'aud-staff';
+  if (role === ROLE_GUEST) return 'aud-guest';   // Read.gs also holds a guest to the room list, whatever the rows say
   return '';
 }
 
@@ -156,7 +157,7 @@ function sinkRevokeCode_(codeId, adminEmail) {
 
 /**
  * OWNER: edit LABEL and DAYS, then press Run in the Apps Script editor. Prints a visitor code ONCE, in the Execution log.
- * It saves temperatures to the guest list only, ends by itself after DAYS days, and can be switched off sooner on the
+ * It saves temperatures to the guest list only, can see the room list and nothing else, ends by itself after DAYS days, and can be switched off sooner on the
  * approvals page like any code. LABEL is a description such as 'Council visit Nov 2026': it is written on every reading.
  */
 function adminAddGuestCode() {

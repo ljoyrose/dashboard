@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
-const GUEST_HEADER = ['id', 'tenant_id', 'area_id', 'min_c', 'max_c', 'spot_c', 'precision_dp', 'period_start', 'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'note'];
+const GUEST_HEADER = ['id', 'tenant_id', 'area_id', 'min_c', 'max_c', 'spot_c', 'precision_dp', 'period_start', 'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'mitigation_note', 'note'];
 const TYPE_HEADER = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'asks_amount', 'amount_unit', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by'];
 const LOG_HEADER = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id'];
 
@@ -60,13 +60,22 @@ test('guest: a guest reading and a staff reading for the same room both save; ne
   assert.equal(recs(env, 'BLD-guest_reading.csv').length, 1);
 });
 
-test('guest: cannot read any list, even with a person permission row for its id', () => {
+test('guest: sees only what the rows allow of the room list, and no other list even with rows for it', () => {
   const env = env0();
-  const id = JSON.stringify(env.ctx.sinkStaffList_().filter((p) => p.role === 'GUEST')[0].id).replace(/"/g, '');
   const vis = env.file('BLD-field_visibility.csv')[0];
-  vis.content += `v-x,${fx.TENANT},area,id,person:${id},yes,,\r\n`;
-  assert.throws(() => env.ctx.sinkRead_({ code: env.guest, table: 'area' }), (e) => e.code === 'NOT_ALLOWED');
+  const row = (t, f) => `v-${t}-${f},${fx.TENANT},${t},${f},aud-guest,yes,,,,,\r\n`;
+  vis.content += row('area', '*') + row('area', 'id') + row('area', 'code') + row('subject', '*') + row('subject', 'name');
+  const out = env.ctx.sinkRead_({ code: env.guest, table: 'area' });
+  assert.deepEqual([...out.fields].sort(), ['code', 'id']);
   assert.throws(() => env.ctx.sinkRead_({ code: env.guest, table: 'subject' }), (e) => e.code === 'NOT_ALLOWED');
+  assert.throws(() => env.ctx.sinkRead_({ code: env.guest, table: 'occupancy' }), (e) => e.code === 'NOT_ALLOWED');
+});
+
+test('guest: a person permission row cannot open anything to a guest', () => {
+  const env = env0();
+  const id = env.ctx.sinkStaffList_().filter((p) => p.role === 'GUEST')[0].id;
+  env.file('BLD-field_visibility.csv')[0].content += `v-x,${fx.TENANT},area,*,person:${id},yes,,,,,\r\nv-y,${fx.TENANT},area,id,person:${id},yes,,,,,\r\n`;
+  assert.throws(() => env.ctx.sinkRead_({ code: env.guest, table: 'area' }), (e) => e.code === 'NOT_ALLOWED');
 });
 
 test('guest: the code ends by itself after 7 days', () => {
@@ -74,7 +83,7 @@ test('guest: the code ends by itself after 7 days', () => {
   env.nowMs += 7 * 86400000 - 60000;
   assert.equal(reading(env, env.guest, 'guest_reading').ok, true);
   env.nowMs += 120000;
-  assert.equal(reading(env, env.guest, 'guest_reading', { min_c: '15.0' }).code, 'CODE_EXPIRED');
+  assert.equal(reading(env, env.guest, 'guest_reading', { min_c: '15.0' }).code, 'BAD_CODE');
   const p = env.ctx.sinkStaffList_().filter((x) => x.role === 'GUEST')[0];
   assert.equal(p.active, false);
   assert.match(p.revoked_at, /^ended /);
@@ -91,7 +100,7 @@ test('guest: a code with no end date is refused; the owner can switch one off ea
   const reg = JSON.parse(env2.props.STAFF_REGISTRY);
   Object.keys(reg).forEach((h) => { if (reg[h].role === 'GUEST') delete reg[h].expires_at; });
   env2.props.STAFF_REGISTRY = JSON.stringify(reg);
-  assert.equal(reading(env2, env2.guest, 'guest_reading').code, 'CODE_EXPIRED');
+  assert.equal(reading(env2, env2.guest, 'guest_reading').code, 'BAD_CODE');
 });
 
 test('guest: the ordinary add-a-code tool cannot make a GUEST code', () => {
@@ -157,4 +166,72 @@ test('new tables are off until their own switch is on', () => {
   env.addFile('BLD-check_type.csv', fx.headerOnly(TYPE_HEADER));
   const r = save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: { type_key: 'feeding', label: 'x', target: 'dog', effective_from: '2026-01-01' } }));
   assert.equal(r.code, 'TABLE_OFF');
+});
+
+// ---- staff page requests (W1)
+const ACCESS_H = ['id', 'tenant_id', 'area_id', 'access_type', 'from_date', 'to_date', 'reason', 'set_by'];
+const QR_H = ['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by'];
+const OCC_ON = { TABLE_ON_occupancy: 'true', TABLE_ON_occupancy_out: 'true', TABLE_ON_area_access: 'true', TABLE_ON_qr_tag: 'true' };
+const env1 = () => { const env = standardEnv({ email: 'owner@example.test', props: OCC_ON });
+  env.addFile('BLD-area_access.csv', fx.headerOnly(ACCESS_H)); env.addFile('BLD-qr_tag.csv', fx.headerOnly(QR_H));
+  if (!env.file('BLD-occupancy.csv').length) env.addFile('BLD-occupancy.csv', fx.headerOnly(fx.OCCUPANCY_HEADER));
+  return env; };
+const send = (env, table, fields, code) => save(env, req(env, { code: code || env.codes.staff, table, fields }));
+
+test('area_access: staff set the flap, newest row wins, free-limited-free works in one day, a repeat tap is refused', () => {
+  const env = env1(); const a = area(env);
+  assert.equal(send(env, 'area_access', { area_id: a, access_type: 'free' }).ok, true);
+  assert.equal(send(env, 'area_access', { area_id: a, access_type: 'limited' }).ok, true);
+  assert.equal(send(env, 'area_access', { area_id: a, access_type: 'free' }).ok, true);
+  const again = send(env, 'area_access', { area_id: a, access_type: 'free' });
+  assert.equal(again.code, 'INVALID'); assert.match(again.fields.access_type, /already recorded/);
+  const rows = recs(env, 'BLD-area_access.csv');
+  assert.equal(rows.length, 3);
+  assert.ok(rows[0].from_date && rows[0].set_by);
+});
+
+test('qr_tag: owner only, stamped active, the same tag twice is refused', () => {
+  const env = env1(); const f = { tag: 'Ab3dEf7h', kind: 'area', ref_id: area(env) };
+  assert.equal(send(env, 'qr_tag', f).code, 'NOT_ALLOWED');
+  assert.equal(send(env, 'qr_tag', f, env.codes.owner).ok, true);
+  assert.equal(send(env, 'qr_tag', f, env.codes.owner).code, 'DUPLICATE');
+  assert.equal(recs(env, 'BLD-qr_tag.csv')[0].active, 'true');
+});
+
+test('occupancy: a move can carry the over-limit reason', () => {
+  const env = env1();
+  const r = send(env, 'occupancy', { subject_id: dog(env), area_id: area(env), classification_note: 'Short stay' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(JSON.parse(env.ctx.sinkPendingList_()[0] ? JSON.stringify(env.ctx.sinkPendingList_()[0].row) : '{}').classification_note, 'Short stay');
+});
+
+test('occupancy_out: waits for approval, then is written to the occupancy file with no room', () => {
+  const env = env1();
+  const before = recs(env, 'BLD-occupancy.csv').length;
+  const r = send(env, 'occupancy_out', { subject_id: dog(env), off_site_kind: 'sold' });
+  assert.equal(r.result.status, 'queued', JSON.stringify(r));
+  assert.equal(recs(env, 'BLD-occupancy.csv').length, before);
+  env.ctx.sinkDecide_(r.result.pending_id, 'approve', '', 'owner@example.test');
+  const rows = recs(env, 'BLD-occupancy.csv');
+  assert.equal(rows.length, before + 1);
+  assert.equal(rows[before].off_site_kind, 'sold');
+  assert.equal(rows[before].area_id, '');
+  assert.ok(rows[before].moved_in);
+});
+
+test('occupancy_out: a bad kind, a repeat tap and a dog already gone are refused', () => {
+  const env = env1(); const d = dog(env);
+  assert.equal(send(env, 'occupancy_out', { subject_id: d, off_site_kind: 'lost' }).code, 'INVALID');
+  assert.equal(send(env, 'occupancy_out', { subject_id: d, off_site_kind: 'temporary' }).ok, true);
+  assert.equal(send(env, 'occupancy_out', { subject_id: d, off_site_kind: 'temporary' }).code, 'DUPLICATE');
+  const other = recs(env, 'BLD-subject.csv')[1].id;
+  const r = send(env, 'occupancy_out', { subject_id: other, off_site_kind: 'sold' });
+  env.ctx.sinkDecide_(r.result.pending_id, 'approve', '', 'owner@example.test');
+  assert.equal(send(env, 'occupancy_out', { subject_id: other, off_site_kind: 'deceased' }).code, 'INVALID');
+});
+
+test('the allow-list names each file once, though two tables share the occupancy file', () => {
+  const list = Array.from(env1().ctx.allowedFiles_());
+  assert.equal(new Set(list).size, list.length);
+  assert.equal(env1().ctx.specFor_('BLD-occupancy.csv').key, 'occupancy');
 });
