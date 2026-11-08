@@ -148,6 +148,19 @@ test.describe('Dashboard Main', () => {
     await expect(page.locator('#hubTiles [data-xml]')).toHaveCount(0);
   });
 
+  test('Food tile: an order waiting for its Send tap shows "1 to send" (to Do), never ✓ XML; a Send card for an order already at GA does not count @regression', async ({ page, guard }) => {
+    const ans = food(false);   // no order Not at GA: before 8 Nov this alone showed ✓ XML
+    ans.valueRanges[0].values = ans.valueRanges[0].values.concat([
+      ['SEND-9010', 'send', 'Orders', 'Send order #9010 to GA?', JSON.stringify({ why: '1 x AAA0012KZPSXZZZ' }), new Date().toISOString()],
+      ['SEND-9001', 'send', 'Orders', 'Send order #9001 to GA?', JSON.stringify({ why: '1 x AAA0012KZPSXZZZ' }), new Date().toISOString()]]);   // 9001 already has S1000001
+    await seed(page, guard, { foodAnswer: ans });
+    await signIn(page);
+    const tile = page.locator('#hubTiles .hubtile[data-hub="food"]');
+    await expect(tile.locator('[data-send]')).toHaveText('1 to send');
+    await expect(tile.locator('[data-send]')).toHaveAttribute('href', 'food/#/do');
+    await expect(tile.locator('[data-xml]')).toHaveCount(0);
+  });
+
   test('Apps tile header opens Factory Main, and Food tick opens Not at GA yet @regression', async ({ page, guard }) => {
     await seed(page, guard, { foodAnswer: food(false) });
     await signIn(page);

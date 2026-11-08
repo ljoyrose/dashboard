@@ -92,6 +92,7 @@
   .card { display: flex; flex-direction: column; gap: 12px; } /* the house card (../house.css): 1px line, 12px inside */
   .card.next { border-color: var(--ink); }
   /* Main's ✓ XML tick (Lisa, 2 Nov): every order reached GA. A plain link under the 3 numbers. */
+  .hm-xml.need { border: 1px solid var(--house-late); border-radius: 999px; padding: 0 8px; text-decoration: none; }
   .hm-xml { justify-self: start; display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; color: var(--ink); font-size: var(--fs-small); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }   /* Next: the one thing to do now; white with a 1px ink edge */
   .bline { display: flex; gap: 8px; align-items: center; font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 0 0 -8px; }
   .bline .dot { width: 8px; height: 8px; }
@@ -378,7 +379,10 @@
       { label: 'Late', value: loaded ? late : null, late: late > 0, href: '#/orders?late', aria: loaded ? 'Late: ' + late + ' orders not at GA. Open them' : '' },
       { label: 'Owe GA', value: loaded ? '£' + owed.toFixed(2) : null, href: '#/invoices?unpaid', aria: loaded ? 'Owe GA: £' + owed.toFixed(2) + '. Open the unpaid invoices' : '' },
       { label: 'Today', value: loaded ? data.orders.filter(placedToday).length : null, href: '#/orders?today', aria: loaded ? 'Today: ' + data.orders.filter(placedToday).length + ' orders placed today. Open them' : '' }];
-    var xml = loaded && !late ? '<a class="hm-xml" data-xml href="#/orders?ga" aria-label="✓ XML: every order reached GA. Open Not at GA yet">✓ XML</a>' : '';
+    var hasS = {}; data.orders.forEach(function (o) { if (o.s_no) hasS[String(o.order_no)] = true; });
+    var toSend = waiting().filter(function (r) { return /^SEND-/.test(r.key) && !hasS[r.key.slice(5)]; }).length;   // waiting for Lisa's Send tap (8 Nov 2026)
+    var xml = loaded && !late && !toSend ? '<a class="hm-xml" data-xml href="#/orders?ga" aria-label="✓ XML: every order reached GA. Open Not at GA yet">✓ XML</a>'
+      : loaded && toSend ? '<a class="hm-xml need" data-send href="#/do" aria-label="' + toSend + ' order' + (toSend > 1 ? 's' : '') + ' waiting for your Send tap. Open them">' + toSend + ' to send</a>' : '';
     return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'food', rows: loaded ? mainRows() : [], nums: nums, doHref: '#/do', extra: xml, error: loaded ? '' : 'The GA Hub workbook: ' + failed });
   }
   // Do (More): every card waiting on Lisa, with its safe buttons (Apply / Seen / Send, Undo for 10 minutes), and the order GA never got.
@@ -400,6 +404,14 @@
   var CHECK = { 'Matched': ['✅ Matched with GA', ''], 'Shipped': ['🚚 Shipped by GA', ''], 'Waiting for GA': ['⏳ Waiting for GA', ''], 'At GA': ['📥 At GA (confirmed)', ''], 'At GA, not shipped': ['⚠️ At GA but not shipped', 'no'], 'Not at GA': ['❌ Not at GA: check the Portal', 'no'],
     'Items differ': ['⚠️ GA sent different items', 'no'], 'Not in Shopify': ['❓ Not in Shopify: check the reference', 'no'], 'No GA items': ['📭 No GA items: see its card', ''], 'Pack at home': ['🏠 Pack at home: tap Packed once posted', ''], 'Packed at home': ['🏠 Packed at home', ''], 'Cancelled': ['✖ Cancelled', ''],
     'Replacement': ['🔁 Replacement, sent again', ''], 'Split box': ['📦 Extra box of the same order', ''] };
+  // The order row says what was bought and where its XML send stands (Lisa, 8 Nov 2026): Send button while the SEND- card waits, then sent / waiting for GA.
+  function orderItems(o) { var l; try { l = JSON.parse(o.shop_lines || '[]'); } catch (e) { l = []; }
+    return l.map(function (x) { var p = data.products.filter(function (q) { return q.full_ga_code === x.code; })[0]; return x.qty + ' × ' + (p ? (p.ddf_name || p.recipe) + ' ' + p.pack : x.code); }).join(', '); }
+  function sendState(o) { if (o.s_no) return ''; var c = find('SEND-' + o.order_no), at = String(o.sent_at || '');
+    if (/^\d{4}-/.test(at)) return '<span class="badge">📤 Sent by XML ' + esc(ukDate(at)) + ': waiting for GA</span>';
+    if (c && !c.applied_at && !c.answer) return '<button class="btn main yes" type="button" data-ans="' + esc(c.key) + '" data-v="Send">Send to GA</button>';
+    if (c && c.answer === 'Send') return '<span class="badge">📤 Send tapped: goes to GA within about 10 minutes</span>';
+    return at === 'held' ? '<span class="badge no">✋ Held: see its card in Do</span>' : ''; }
   function checkBadge(o) { var c = CHECK[o.check]; return c ? '<div class="badges"><span class="badge' + (c[1] ? ' ' + c[1] : '') + '">' + esc(c[0]) + '</span></div>' : ''; }
   var OFILTERS = [['all', 'All'], ['check', 'Needs a look'], ['late', 'Not at GA'], ['ga', 'Not at GA yet'], ['today', 'Today'], ['sub', 'Subscriptions'], ['low', 'Low profit']], ofilter = 'all';
   function pageOrders() {
@@ -417,8 +429,9 @@
     var shown = showAll ? list : list.slice(0, 30);
     h += '<div class="card">' + shown.map(function (o) { var p = o.profit_est === '' ? '' : num(o.profit_est);
       var links = orderLinks(o);
-      return '<div class="row"><div class="txt"><b>#' + esc(o.order_no) + '</b> · ' + esc(o.status) + (orderFacts(o) ? '<div class="m">' + esc(orderFacts(o)) + '</div>' : '') + '<div class="m">' + esc([o.s_no, o.boxes ? o.boxes + ' box' + (num(o.boxes) > 1 ? 'es' : '') : '', o.shipped_date ? 'shipped ' + ukDate(o.shipped_date) : '', o.ga_total ? 'GA ' + money(o.ga_total) : ''].filter(Boolean).join(' · ')) + '</div>' +
-        checkBadge(o) + (links ? '<div class="links">' + links + '</div>' : '') + '</div>' +
+      var buy = [o.placed_at ? 'placed ' + ukDate(o.placed_at) : '', orderItems(o), o.species, o.sale_inc_vat ? 'sale ' + money(o.sale_inc_vat) : ''].filter(Boolean).join(' · '), sent = sendState(o);
+      return '<div class="row"><div class="txt"><b>#' + esc(o.order_no) + '</b> · ' + esc(o.status) + (orderFacts(o) ? '<div class="m">' + esc(orderFacts(o)) + '</div>' : '') + (buy ? '<div class="m">' + esc(buy) + '</div>' : '') + '<div class="m">' + esc([o.s_no, o.boxes ? o.boxes + ' box' + (num(o.boxes) > 1 ? 'es' : '') : '', o.shipped_date ? 'shipped ' + ukDate(o.shipped_date) : '', o.ga_total ? 'GA ' + money(o.ga_total) : ''].filter(Boolean).join(' · ')) + '</div>' +
+        (sent ? '<div class="badges">' + sent + '</div>' : checkBadge(o)) + (links ? '<div class="links">' + links + '</div>' : '') + '</div>' +
         '<div class="amt ' + (p === '' ? '' : p < min ? 'red' : 'good') + '">' + (p === '' ? '' : 'Profit ' + money(p)) + '</div></div>'; }).join('') + '</div>';
     if (list.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
     return h + '<p class="hint">Profit is ex VAT, after all costs.</p>';
