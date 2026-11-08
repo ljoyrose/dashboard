@@ -61,14 +61,11 @@ test.describe('Home sign-in: the paths around the button', () => {
     expect(guard.world.calls.filter((c) => c.method === 'PATCH')).toEqual([]);
   });
 
-  // J34-F01 FIX-REQUEST (index.html onError ~line 2832 and requestWrite ~line 1386): the Bin permission window closing is
-  // reported as a failed sign-in, and wantWrite is never reset. DECISION NEEDED: fix the page (JOB 4 TidyUp) or accept.
-  // OWNER: JOB 4 TidyUp lead. BY 2026-11-06
-  test.fixme('J34-F01 closing the Bin permission window says the Bin was not allowed, not "Sign in again" while still signed in', async ({ page, guard }) => {
+  // J34-F01 (fixed): the Bin permission window closing was reported as a failed sign-in, and wantWrite was never reset.
+  test('J34-F01 closing the Bin permission window says the Bin was not allowed, not "Sign in again" while still signed in', async ({ page, guard }) => {
     const allow = await tickReady(page, guard);
     await page.evaluate(() => { window.__GIS_MODE = 'popup-closed'; });
     await allow.click();
-    // Today: "Sign-in window closed early." with a "Sign in again" button, although the person is signed in.
     await expect(page.locator('#banner')).toContainText('Bin access not granted');
     await expect(page.locator('#banner [data-action="signin"]')).toHaveCount(0);
     // A later ordinary sign-in must not be treated as a Bin permission answer.
