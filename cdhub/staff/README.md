@@ -16,6 +16,10 @@ Each QR is `<site>/cdhub/staff/#s/XXXXXXXX`: a random id, never a name or health
 
 Any phone camera works: the room being filled is remembered on the phone for 30 minutes between scans.
 
+## Jobs
+
+A scan opens `modules/jobs/`: the `BLD-check_type` rows for that dog or room, with **Move dogs** underneath. A `site` tag, or **Today** on Home, shows whole-site jobs that are due. While a room is being filled, scans stay on Move dogs. If job rows, reads or saving are not on, a scan goes to Move dogs as before. **Report** needs a `check_type` row with `type_key` `report` and `target` `optional`.
+
 ## Adding a screen (module)
 
 Put it in `modules/<name>/module.js` and add the path to `FILES` in `shell.js`. `modules/temperature/module.js` is already in the list, and the page copes if it is missing.
