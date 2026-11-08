@@ -8,8 +8,8 @@ const { standardEnv, req, save } = require('./harness');
 const fx = require('./fixtures');
 
 const GUEST_HEADER = ['id', 'tenant_id', 'area_id', 'min_c', 'max_c', 'spot_c', 'precision_dp', 'period_start', 'taken_at', 'taken_by', 'read_method', 'camera_value_changed', 'mitigation_note', 'note'];
-const TYPE_HEADER = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by'];
-const LOG_HEADER = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id'];
+const TYPE_HEADER = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by', 'every_days', 'group', 'includes', 'sop', 'evidence', 'site_scope'];
+const LOG_HEADER = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id', 'photo', 'how_recorded'];
 
 const env0 = () => {
   const env = standardEnv({ props: { TABLE_ON_guest_reading: 'true', TABLE_ON_check_type: 'true', TABLE_ON_check_log: 'true', READ_ENABLED: 'true' } });
@@ -234,4 +234,42 @@ test('the allow-list names each file once, though two tables share the occupancy
   const list = Array.from(env1().ctx.allowedFiles_());
   assert.equal(new Set(list).size, list.length);
   assert.equal(env1().ctx.specFor_('BLD-occupancy.csv').key, 'occupancy');
+});
+
+test('check_type: job columns are saved and checked', () => {
+  const env = env0();
+  addType(env, 'full_groom', { every_days: '84', group: 'Grooming', includes: 'nails | ears', sop: 'Care Check', evidence: 'optional' });
+  const [row] = recs(env, 'BLD-check_type.csv');
+  assert.equal(row.every_days, '84'); assert.equal(row.group, 'Grooming'); assert.equal(row.includes, 'nails|ears');
+  assert.equal(row.sop, 'Care Check'); assert.equal(row.evidence, 'optional');
+  const bad = (f) => save(env, req(env, { code: env.codes.owner, table: 'check_type', fields: Object.assign({ type_key: 'k_x', label: 'x', target: 'dog', effective_from: '2026-02-01' }, f) }));
+  assert.match(bad({ every_days: '0' }).fields.every_days, /1 or more/);
+  assert.match(bad({ includes: 'Not A Key' }).fields.includes, /separated by/);
+  assert.match(bad({ includes: 'k_x|nails' }).fields.includes, /cannot include itself/);
+  assert.equal(bad({ evidence: 'maybe' }).code, 'INVALID');
+  assert.match(bad({ site_scope: 'per_dog' }).fields.site_scope, /whole-site/);
+});
+
+test('check_type: a job with no new columns is as needed, no evidence, and whole-site scope is allowed', () => {
+  const env = env0();
+  addType(env, 'bowls', { target: 'none', site_scope: 'one_line' });
+  const [row] = recs(env, 'BLD-check_type.csv');
+  assert.equal(row.every_days, ''); assert.equal(row.evidence, 'none'); assert.equal(row.site_scope, 'one_line');
+});
+
+test('check_log: says how it was recorded and can point at a photo; anything else is refused', () => {
+  const env = env0(); const id = addType(env, 'feeding');
+  const send1 = (f) => save(env, req(env, { code: env.codes.staff || env.codes.owner, table: 'check_log', fields: Object.assign({ check_type_id: id, subject_id: dog(env), outcome: 'ok' }, f) }));
+  assert.equal(send1({ how_recorded: 'verified' }).code, 'INVALID');
+  assert.equal(send1({ how_recorded: 'scanned', photo: 'photo-ref-1' }).ok, true);
+  const [row] = recs(env, 'BLD-check_log.csv');
+  assert.equal(row.how_recorded, 'scanned'); assert.equal(row.photo, 'photo-ref-1');
+});
+
+test('qr_tag: a site code can be made for the premises; an unknown kind cannot', () => {
+  const env = standardEnv({ props: { TABLE_ON_qr_tag: 'true' } });
+  env.addFile('BLD-qr_tag.csv', fx.headerOnly(['id', 'tenant_id', 'tag', 'kind', 'ref_id', 'active', 'made_at', 'made_by']));
+  const send2 = (kind, tag) => save(env, req(env, { code: env.codes.owner, table: 'qr_tag', fields: { tag, kind, ref_id: 'premises' } }));
+  assert.equal(send2('site', 'Ab3dEf7h').ok, true);
+  assert.equal(send2('planet', 'Zz3dEf7h').code, 'INVALID');
 });
