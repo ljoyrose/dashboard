@@ -34,7 +34,10 @@ module.exports = `
           }
           if (m === 'error') { cfg.callback({ error: 'access_denied' }); return; }
           // The Personal Drive page's own look-only sign-in gets a different pretend token, so tests can tell the two apart.
-          var tok = cfg.scope === 'https://www.googleapis.com/auth/drive.metadata.readonly' ? 'FAKE-PERSONAL-TOKEN' : 'FAKE-TEST-TOKEN';
+          // Its opt-in for bin actions (full Drive scope added) gets 'FAKE-PERSONAL-BIN-TOKEN'.
+          var personalClient = cfg.scope === 'https://www.googleapis.com/auth/drive.metadata.readonly';
+          var fullDrive = String(scope).split(' ').indexOf('https://www.googleapis.com/auth/drive') >= 0;
+          var tok = personalClient ? (fullDrive ? 'FAKE-PERSONAL-BIN-TOKEN' : 'FAKE-PERSONAL-TOKEN') : 'FAKE-TEST-TOKEN';
           cfg.callback({ access_token: tok, expires_in: 3600, scope: m === 'denied-scope' ? 'openid' : scope, token_type: 'Bearer' });
         }, 0);
       } };

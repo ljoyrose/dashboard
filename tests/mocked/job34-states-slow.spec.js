@@ -37,7 +37,7 @@ async function holdData(page) {
 const showsLoading = (hub, s) => !!s && (s.busy || s.signInDisabled || new RegExp(H[hub].loading).test(s.text));
 
 // Hubs whose sign-in screen stays exactly as it was while the first data call is held (no loading state at all).
-const NO_LOADING = { marketplace: 'J34-F82', factory: 'J34-F83', studio: 'J34-F84' };
+const NO_LOADING = {};   // J34-F81..F84 all fixed: every hub now shows a loading state
 
 for (const hub of Object.keys(HUBS)) {
   test(`${hub}: data calls held 3 s${NO_LOADING[hub] ? '' : ', a loading state shows'}, then the page loads`, async ({ page, guard }) => {
@@ -47,16 +47,5 @@ for (const hub of Object.keys(HUBS)) {
     expect(seen.t0, `${hub} made no data call`).toBeGreaterThan(0);
     expect(Date.now() - t, `${hub} loaded before the hold ended`).toBeGreaterThanOrEqual(HOLD - 200);
     if (!NO_LOADING[hub]) expect(showsLoading(hub, seen.snap), `${hub}: nothing says it is loading: "${seen.snap && seen.snap.text.slice(0, 200)}"`).toBe(true);
-  });
-}
-
-// FIX-REQUEST J34-F82..F84 (J34-F81 Food fixed): after Sign in is pressed and while the first data call is held, these hubs keep showing the
-// signed-out sign-in screen unchanged (enabled Sign in button, no "Reading…", no busy marker) for the whole hold.
-for (const [hub, id] of Object.entries(NO_LOADING)) {
-  // DECISION NEEDED: fix the page (see FIX-REQUEST above) or accept it. OWNER: Lisa. BY 2026-11-06
-  test.fixme(`${id} ${hub}: while data calls are held a loading state shows`, async ({ page, guard }) => {
-    const seen = await holdData(page);
-    await HUBS[hub].open(page, guard);
-    expect(showsLoading(hub, seen.snap)).toBe(true);
   });
 }
