@@ -17,7 +17,7 @@ const LANDED = {
   'money/': '#signInBtn, #readStamp',
   'cdhub/': '#signinbtn, #nav button[data-go]',
   'estate/': '#view',
-  'factory/': '#view',
+  'factory/#/me': '#view',
   'marketplace/': '#view',
   'food/': '#view',
   'studio/': '#signInBtn, #enginePill',

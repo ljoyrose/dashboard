@@ -50,7 +50,7 @@ test.describe('Install on your phone', () => {
         return out.sort();
       });
       expect(kept.length).toBeGreaterThan(5);
-      for (const p of kept) expect(p, 'kept: ' + p).toMatch(new RegExp('^' + esc(BASE) + /(|index\.html|auth\.js|config\.js|toolkit\.js|tokens\.css|house\.css|manifest\.webmanifest|sw\.js|icons\/icon[-\w]*\.(svg|png)|money\/|money\/index\.html|money\/core\.js|cdhub\/|cdhub\/index\.html|studio\/|studio\/index\.html|factory\/|factory\/index\.html|food\/|food\/index\.html|marketplace\/|marketplace\/index\.html)$/.source));
+      for (const p of kept) expect(p, 'kept: ' + p).toMatch(new RegExp('^' + esc(BASE) + /(|index\.html|auth\.js|config\.js|toolkit\.js|tokens\.css|house\.css|manifest\.webmanifest|sw\.js|icons\/icon[-\w]*\.(svg|png)|money\/|money\/index\.html|money\/core\.js|cdhub\/|cdhub\/index\.html|cdhub\/sop-index\.json|cdhub\/asset-types\.json|cdhub\/asset-type-icons\.svg|studio\/|studio\/index\.html|factory\/|factory\/index\.html|food\/|food\/index\.html|marketplace\/|marketplace\/index\.html)$/.source));
     });
   });
 });

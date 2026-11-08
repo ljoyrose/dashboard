@@ -111,7 +111,7 @@
   .row .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .row .m { font-size: var(--fs-small); color: var(--muted); }
   .row .amt { font-weight: 600; text-align: right; white-space: nowrap; font-size: var(--fs-body); }
-  .row .amt.red, .row .amt.good { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); font-size: var(--fs-small); }
+  .row .amt.red, .row .amt.good { display: inline-flex; align-items: center; height: 24px; padding: 0 8px; border: 1px solid var(--ctl); border-radius: var(--radius); font-size: var(--fs-small); white-space: nowrap; }
   .row .amt.red { border-color: var(--rose); background: var(--rose-tint); }
   .row .links { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
   .row .links .btn { font-size: var(--fs-small); padding: 0 12px; }
@@ -412,7 +412,7 @@
       var links = orderLinks(o);
       return '<div class="row"><div class="txt"><b>#' + esc(o.order_no) + '</b> · ' + esc(o.status) + (orderFacts(o) ? '<div class="m">' + esc(orderFacts(o)) + '</div>' : '') + '<div class="m">' + esc([o.s_no, o.boxes ? o.boxes + ' box' + (num(o.boxes) > 1 ? 'es' : '') : '', o.shipped_date ? 'shipped ' + ukDate(o.shipped_date) : '', o.ga_total ? 'GA ' + money(o.ga_total) : ''].filter(Boolean).join(' · ')) + '</div>' +
         checkBadge(o) + (links ? '<div class="links">' + links + '</div>' : '') + '</div>' +
-        '<div class="amt ' + (p === '' ? '' : p < min ? 'red' : 'good') + '">' + (p === '' ? '' : money(p)) + '</div></div>'; }).join('') + '</div>';
+        '<div class="amt ' + (p === '' ? '' : p < min ? 'red' : 'good') + '">' + (p === '' ? '' : 'Profit ' + money(p)) + '</div></div>'; }).join('') + '</div>';
     if (list.length > 30 && !showAll) h += '<button class="more" type="button" data-action="all">Show all ' + list.length + '</button>';
     return h + '<p class="hint">Profit is ex VAT, after all costs.</p>';
   }

@@ -44,3 +44,17 @@ OQ11,Merge order: #246 then #248 then #252 then stage 4 PR; each says Do not mer
 14. What is live on main: the Product ideas page in TEST mode (marketplace.live is false, so every request is marked dry_run), the contract, the investigator prompt/README/example, and the tests. Nothing real is created until the engine side exists and the Drive folder id is set.
 15. Page-weight budget for the Marketplace hub was re-baselined twice (221300, then 247600 after main's own change). Lazy-loading the form and card code would shrink it; not done.
 16. Still open, unchanged (rows above): OQ1 and OQ7 engine card + board item, OQ2 answers/Go hand-off, OQ3 Drive folder id, OQ4 Drive write scope, OQ6 board columns (Lisa), OQ8 result-file merge, OQ9 Infinity plan check, OQ10 how the investigator wakes (A recommended).
+
+## Update 7 Nov 2026 (after Lisa's pre-approval for Drive and PRs)
+17. GOOGLE: made the Drive folder RR_MKT-IDEA-REQUESTS in 00 AI Commons (next to RR_OPEN-WORK). Checked it exists. Its id is in config.js (marketplace.ideasRequestsFolderId). OQ3 is done.
+18. SCRIPT (Infinity API, Lisa said yes): added columns to the board "Marketplace - Product ideas": Status, Gate (number), Verdict, Next step, Hub card link (text: Infinity refused a link type), Idea ID (text, added so each item can point back to its hub card). Checked by listing the columns. The board still has 0 items. OQ6 is done.
+19. SCRIPT: PR #327 merged: the Product ideas code (list, form, card) now loads only when Ideas is opened. Marketplace first load about 290.6 KB down to 266.6 KB; base budget lowered 247600 to 226000. New tests prove nothing from Ideas loads on the first screen. 545 local tests passed, 0 failed; all CI checks green before merge.
+20. Requests are still marked dry_run (marketplace.live is false), so the form can now write its test file into the folder but no card is made until the engine side exists.
+
+## Still open
+OQ1/OQ7 engine: make the card plus Infinity item and write infinity_item (Steward; engine repo was not readable to this session, Lisa asked 7 Nov whether to try access again).
+OQ2 engine: Go / Maybe / No answers on idea cards and the Go hand-off (Steward).
+OQ8 engine: merge the investigator result file (Steward).
+OQ9 Infinity plan: does it allow an Item created automation (only needed for wake option B).
+OQ10 how the investigator wakes: A daily pass (recommended), B Infinity web address, or C an email like the one Lisa mentioned for Grok (Lisa to say if that exists).
+New board column ids are not recorded here; the engine reads them from the board by name.

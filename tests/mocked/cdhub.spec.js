@@ -1,11 +1,10 @@
-// CD Hub: https://ljoyrose.github.io/dashboard/cdhub/
 const { test, expect, buildWorld } = require('../support/test');
 const { tabClick, tabTo } = require('../support/tabs');
 const { IDS, WANT_BLD, FIX } = require('../support/world');
 const fs = require('fs');
 const path = require('path');
 
-const SECTIONS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers'];
+const SECTIONS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
 const signIn = async (page) => {
   await expect(page.locator('#signinbtn')).toBeEnabled();
   await page.locator('#signinbtn').click();
@@ -17,7 +16,7 @@ test.describe('CD Hub: loads', () => {
     const res = await page.goto('cdhub/');
     expect(res.status()).toBe(200);
     await expect(page).toHaveTitle(/CD Hub/);
-    await expect(page.locator('h1')).toHaveText('Canine Hub');
+    await expect(page.locator('h1')).toHaveText('Cobberdog Hub');
     await expect(page.locator('#main')).toContainText('Sign in to see the tables');
     await expect(page.locator('#livepill')).toHaveText('signed out');
     await expect(page.locator('#nav button')).toHaveCount(0);
@@ -25,7 +24,8 @@ test.describe('CD Hub: loads', () => {
 
   test('holds no table data; only the shared sign-in is kept, one key in this browser', async ({ page, context }) => {
     await page.goto('cdhub/');
-    await expect(page.locator('#main')).toContainText('No data of its own');
+    await expect(page.locator('#main')).toContainText('Read-only. One sign-in for the whole site.');
+    await expect(page.locator('#main')).not.toContainText(/from Drive|live from/i);
     await signIn(page);
     const stores = await page.evaluate(() => ({ local: Object.keys(localStorage), session: sessionStorage.length, key: window.DashAuth.KEY, saved: JSON.parse(localStorage.getItem(window.DashAuth.KEY)) }));
     expect(stores.local).toEqual([stores.key]);
@@ -58,11 +58,54 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     expect(reads.length).toBe(sampleCount);
   });
 
-  test('live pill shows live, read-only, and the number of tables', async ({ page }) => {
+  test('live pill shows live and read-only, without a table count or a folder name', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#livepill')).toContainText(/^live · read-only · \d+ tables · read \d\d:\d\d/);
+    await expect(page.locator('#livepill')).toContainText(/^live · read-only · read \d\d:\d\d/);
+    const leak = await page.evaluate(() => {
+      const p = document.getElementById('livepill');
+      const blob = (p.textContent || '') + ' ' + (p.getAttribute('title') || '');
+      const folder = (window.DASH_CONFIG.cdhub && window.DASH_CONFIG.cdhub.folderName) || '';
+      return /from Drive|\d+ tables|BLD-/i.test(blob) || (folder && blob.indexOf(folder) !== -1);
+    });
+    expect(leak).toBe(false);
     expect(WANT_BLD.length).toBeGreaterThan(40);
+  });
+
+  // Load stays concurrent (READ_AT_ONCE in cdhub/index.html). One-by-one reads, or naming files on the boot line, fail this.
+  test('boot stays friendly and present files are read together @regression', async ({ page }) => {
+    await page.goto('cdhub/');
+    await expect(page.locator('#signinbtn')).toBeEnabled();
+    await page.evaluate(() => {
+      const orig = window.fetch;
+      let inflight = 0;
+      window.__cdReads = { max: 0, n: 0 };
+      window.fetch = function (url) {
+        const u = String(url || '');
+        const read = /\/files\/[^/?]+/.test(u) && /alt=media|\/export/.test(u);
+        const self = this, args = arguments;
+        if (!read) return orig.apply(self, args);
+        window.__cdReads.n++;
+        inflight++;
+        window.__cdReads.max = Math.max(window.__cdReads.max, inflight);
+        return new Promise((res) => setTimeout(res, 250)).then(() => orig.apply(self, args)).finally(() => { inflight--; });
+      };
+    });
+    await page.locator('#signinbtn').click();
+    const boot = page.locator('#boot');
+    await expect(boot).toBeVisible();
+    await expect(boot.locator('.bootline')).toHaveText('Getting things ready…');
+    await expect(boot.locator('.bootspin')).toBeVisible();
+    await expect(boot.locator('#bootrows .bootdots i')).toHaveCount(3);
+    const bootText = await boot.innerText();
+    expect(bootText).not.toMatch(/Drive|BLD-|\.csv/i);
+    await expect(page.locator('header button[data-reload]')).toHaveAttribute('title', 'Refresh');
+    await expect(page.locator('#livepill')).toContainText('live', { timeout: 20_000 });
+    const stats = await page.evaluate(() => window.__cdReads);
+    expect(stats.n).toBeGreaterThan(6);
+    expect(stats.max).toBeGreaterThan(1);
+    expect(stats.max).toBeLessThanOrEqual(6);
+    await expect(page.locator('#boot')).toHaveCount(0);
   });
 
   test('the sample CSVs are parsed into the right things on the Dogs page', async ({ page }) => {
@@ -116,23 +159,27 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('all ten sections are in the bar: five tabs, then the other five under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('all eleven sections are in the bar: five tabs, then the other six under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(10);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(11);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(5);
+    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(6);
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
   });
 
-  test('the associations button is labelled Assocs and still opens #/buyers', async ({ page }) => {
+  test('Assocs sits under More and still opens #/buyers', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    const tab = page.locator('#nav button[data-go="buyers"]');
-    await expect(tab).toHaveAccessibleName('Assocs');
+    await expect(page.locator('#nav > button.ht[data-go="buyers"]')).toHaveCount(0);
+    await expect(page.locator('#nav > button.ht[data-go="sops"]')).toHaveAccessibleName('SOPs');
+    const tab = page.locator('#nav .house-more button[data-go="buyers"]');
+    await expect(tab).toHaveText('Assocs');
     await expect(tab).not.toContainText('Buyers');
+    await page.locator('nav.house-tabs [data-house-more]').click();
+    await expect(tab).toHaveAccessibleName('Assocs');
     await tab.click();
     await expect(page).toHaveURL(/#\/buyers$/);
     await expect(page.locator('#main h2')).toHaveText('Assocs');
@@ -195,6 +242,11 @@ test.describe('CD Hub: things that go wrong', () => {
     await page.locator('#signinbtn').click();
     await expect(page.locator('#main')).toContainText('The folder could not be read');
     await expect(page.locator('#main')).toContainText('Google refused access');
+    const named = await page.evaluate(() => {
+      const folder = (window.DASH_CONFIG.cdhub && window.DASH_CONFIG.cdhub.folderName) || '';
+      return folder && document.getElementById('main').innerText.indexOf(folder) !== -1;
+    });
+    expect(named).toBe(false);
     await expect(page.locator('#livepill')).toHaveText('read failed');
   });
 
@@ -211,7 +263,8 @@ test.describe('CD Hub: things that go wrong', () => {
     test('explains the tables cannot be read', async ({ page }) => {
       await page.goto('cdhub/');
       await page.locator('#signinbtn').click();
-      await expect(page.locator('#main')).toContainText('Drive read access was not granted');
+      await expect(page.locator('#main')).toContainText('Read access was not granted');
+      await expect(page.locator('#main')).not.toContainText(/Drive/i);
     });
   });
   test.describe('Sign-in window closed', () => {
@@ -236,7 +289,7 @@ test.describe('CD Hub: things that go wrong', () => {
 // House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026) and the Bloodline screens, by computed style.
 // Invented data only: the sample BLD tables, plus rows added inside a test (invented names, no real dogs or buyers).
 // ---------------------------------------------------------------------------------------------------------------
-const LOOK_TABS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers'];
+const LOOK_TABS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
 const iso = (days) => new Date(Date.now() + days * 864e5).toISOString().slice(0, 10);
 const setFile = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
@@ -274,7 +327,7 @@ function cdAudit() {
   const bgOf = (el) => { for (let a = el; a; a = a.parentElement) { const c = rgb(getComputedStyle(a).backgroundColor); if (c && c[3] > 0.5) return c; } return rgb(getComputedStyle(document.body).backgroundColor); };
   const name = (el) => el.tagName.toLowerCase() + (el.id ? '#' + el.id : '') + (typeof el.className === 'string' && el.className ? '.' + el.className.trim().split(/\s+/).join('.') : '') + ' "' + (el.textContent || '').trim().slice(0, 24) + '"';
   const seen = (el) => { const r = el.getBoundingClientRect(), s = getComputedStyle(el); if (r.width <= 1 || r.height <= 1 || s.visibility !== 'visible' || s.display === 'none') return false; for (let a = el; a && a !== document.body; a = a.parentElement) { const ar = a.getBoundingClientRect(); if (ar.width <= 1 || ar.height <= 1) return false; } return true; };
-  const ROUND = '.dot, .mk, .whor, .sexdot, .ic, .sw, .nose';
+  const ROUND = '.dot, .mk, .whor, .sexdot, .ic, .sw, .nose, .gicon';
   const out = { small: [], weight: [], upper: [], colour: [], radius: [], line: [], text: [], ring: [] };
   for (const el of document.querySelectorAll('body *')) {
     if (el.closest('svg') || /^(SCRIPT|STYLE|OPTION)$/.test(el.tagName) || el.closest('#dashSearch') || !seen(el)) continue;
@@ -542,6 +595,103 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#needsCard .mrow:visible')).toHaveCount(10);
   });
 
+  test('Temperatures today: no saving-off notice, and Temperature history opens history.html @regression', async ({ page }) => {
+    await page.goto('cdhub/');
+    await signIn(page);
+    await openTab(page, 'today');
+    const card = page.locator('#tempsCard');
+    await expect(card).not.toContainText('Saving off');
+    await expect(page.locator('#todayChecklist')).not.toContainText('Saving off');
+    await expect(card).toHaveAttribute('data-open-row', '');
+    const foot = card.locator('.mfoot');
+    await expect(foot).toHaveCount(1);
+    const link = foot.getByRole('link', { name: 'Temperature history' });
+    await expect(link).toHaveAttribute('href', /^\.?\/?history\.html$/);
+    await expect(link).not.toHaveAttribute('data-skip');
+    await expect(foot.getByRole('button', { name: 'The round' })).toHaveClass(/house-open/);
+    await expect(foot.getByRole('button', { name: 'The round' })).toHaveAttribute('data-go', 'round');
+    expect(await page.locator('[data-skip]').evaluateAll((els) => els.map((e) => e.getAttribute('data-skip')))).toEqual(['main']);
+    // The history page reads a spreadsheet CSV export. Answer it here so the click is a real navigation.
+    await page.route(/https:\/\/docs\.google\.com\/spreadsheets\/d\/[^/]+\/export/, (route) =>
+      route.fulfill({ status: 200, contentType: 'text/csv', body: 'on_date\n' }));
+    await link.click();
+    await expect(page).toHaveURL(/\/history\.html$/);
+    await expect(page.locator('h1')).toHaveText('Temperatures');
+    await expect(page.locator('h1')).not.toContainText(/outdoor/i);
+  });
+
+  test('Temperatures today shows the next 6 outdoor days across, with words for cold, rain and wind', async ({ page, guard }) => {
+    const head = 'on_date,reading_kind,min_temp,max_temp,rain_value,wind_kmh,phrase,cloud_cover_pct,source';
+    const line = (days, kind, min, max, rain, wind, phrase) =>
+      `${iso(days)},${kind},${min},${max},${rain},${wind},${phrase},40,invented`;
+    setFile(guard.world, 'BLD-outdoor_temp.csv', [
+      head,
+      line(-3, 'forecast', 1, 2, 0, 10, 'old forecast phrase'),
+      line(2, 'forecast', 1, 2, 0, 5, 'stale twin phrase'),
+      line(0, 'forecast', 8, 10, 1.2, 23, 'invented long phrase for outside only'),
+      line(1, 'forecast', 20, 29, 0, 10, 'hot day phrase'),
+      line(2, 'forecast', 12, 18, 15, 41, 'wet windy phrase'),
+      line(3, 'forecast', 11, 16, 4, 39, 'light day phrase'),
+      line(4, 'forecast', 10, 14, 0, 0, 'dry day phrase'),
+      line(5, 'forecast', 9, 12, 9.9, 40, 'edge day phrase'),
+      line(6, 'forecast', 10, 13, 10, 39, 'ten mm phrase'),
+      line(7, 'forecast', 1, 2, 0, 99, 'eighth day phrase'),
+    ].join('\n') + '\n');
+    await page.goto('cdhub/');
+    await signIn(page);
+    await openTab(page, 'today');
+    const card = page.locator('#tempsCard');
+    const strip = card.locator('.wk');
+    const cells = strip.locator('.wkday');
+    await expect(cells).toHaveCount(6);
+    await expect(card.locator('.mrow')).toHaveCount(3);
+    await expect(card.locator('.mrow', { hasText: 'Outside' })).toContainText('invented long phrase for outside only');
+    await expect(card.locator('.mrow', { hasText: 'Morning' })).toBeVisible();
+    await expect(card.locator('.mrow', { hasText: 'Evening' })).toBeVisible();
+    const wd = (days) => new Date(`${iso(days)}T12:00:00`).toLocaleDateString('en-GB', { weekday: 'short' });
+    await expect(cells.nth(0)).toContainText(wd(1));
+    await expect(cells.nth(0)).toContainText('20–29°');
+    await expect(cells.nth(0)).not.toContainText('Hot');
+    await expect(cells.nth(0)).not.toContainText('none');
+    await expect(cells.nth(0)).not.toContainText('Windy');
+    await expect(cells.nth(1)).toContainText('12–18°');
+    await expect(cells.nth(1)).not.toContainText('OK');
+    await expect(cells.nth(1)).toContainText('15mm');
+    await expect(cells.nth(1)).not.toContainText('wet 15mm');
+    await expect(cells.nth(1)).toContainText('Windy');
+    await expect(cells.nth(2)).not.toContainText('light');
+    await expect(cells.nth(2)).not.toContainText('Windy');
+    await expect(cells.nth(3)).not.toContainText('none');
+    await expect(cells.nth(3)).not.toContainText('OK');
+    await expect(cells.nth(4)).not.toContainText('Cold');
+    await expect(cells.nth(4)).not.toContainText('light');
+    await expect(cells.nth(4)).toContainText('Windy');
+    await expect(cells.nth(5)).toContainText('10mm');
+    await expect(cells.nth(5)).not.toContainText('wet 10mm');
+    await expect(cells.nth(5)).not.toContainText('Windy');
+    await expect(strip).not.toContainText('old forecast phrase');
+    await expect(strip).not.toContainText('stale twin phrase');
+    await expect(strip).not.toContainText('eighth day phrase');
+    await expect(strip).not.toContainText('invented long phrase');
+    await expect(strip).not.toContainText('invented');
+    await expect(strip).not.toContainText('Saving off');
+    await expect(strip).not.toContainText('forecast');
+    await expect(card).not.toContainText(/\bactual/i);
+    await expect(card).not.toContainText('Source');
+    const foot = card.locator('.mfoot');
+    await expect(foot.getByRole('link', { name: 'Temperature history' })).toHaveAttribute('href', /^\.?\/?history\.html$/);
+    await expect(foot.getByRole('button', { name: 'The round' })).toHaveAttribute('data-go', 'round');
+    const box = await cells.first().boundingBox();
+    expect(box.width).toBeGreaterThanOrEqual(44);
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    await page.setViewportSize({ width: 390, height: 844 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(0);
+    expect(await strip.evaluate((el) => el.scrollWidth > el.clientWidth + 1)).toBe(true);
+    await expect(strip).toHaveAttribute('tabindex', '0');
+    await strip.focus();
+    await expect(strip).toBeFocused();
+  });
+
   test('Temperatures today (on Today) shows today\'s outdoor reading; a data check\'s Show (on Tables) opens its list on Today', async ({ page, guard }) => {
     setFile(guard.world, 'BLD-outdoor_temp.csv', `on_date,reading_kind,min_temp,max_temp,phrase,captured_at,source\n${iso(0)},forecast,8,14,invented mild day,${iso(0)}T07:00:00Z,invented\n`);
     await page.goto('cdhub/');
@@ -549,10 +699,24 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await openTab(page, 'today');
     await expect(page.locator('#tempsCard')).toContainText('8–14 °C');
     await expect(page.locator('#tempsCard')).toContainText('invented mild day');
+    await expect(page.locator('#tempsCard')).not.toContainText(/\bactual/i);
+    await expect(page.locator('#tempsCard')).not.toContainText('Source');
     await openTab(page, 'shape');
     await page.locator('#checksCard button[data-list="nochip"]').click();
     await expect(page.locator('#nav button[data-go="today"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('#tpanel')).toContainText('No microchip recorded');
+  });
+
+  test('Outside today does not show the reading kind when the phrase is empty @regression', async ({ page, guard }) => {
+    setFile(guard.world, 'BLD-outdoor_temp.csv', `on_date,reading_kind,min_temp,max_temp,phrase,captured_at,source\n${iso(0)},actual,8,14,,${iso(0)}T07:00:00Z,invented\n`);
+    await page.goto('cdhub/');
+    await signIn(page);
+    await openTab(page, 'today');
+    const outside = page.locator('#tempsCard .mrow', { hasText: 'Outside' });
+    await expect(outside).toContainText('8–14 °C');
+    await expect(outside).not.toContainText(/\bactual/i);
+    await expect(page.locator('#tempsCard')).not.toContainText(/source/i);
+    await expect(page.locator('#tempsCard .wk')).toHaveCount(0);
   });
 
   test('Today checklist: one line per check on the round, a tick or a cross, and how many are done', async ({ page }) => {
@@ -575,7 +739,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('.card[data-area]').first()).toContainText('Step 1: Test Cabin A');
   });
 
-  test('Dogs: one filter row (Search, Filter panel, Sort, removable chips); record cards have a name line, title, 44px thumbnail and who-has-it ring', async ({ page }) => {
+  test('Dogs: one filter row (Search, Filter panel, Sort, removable chips); record cards have a name line, title, 72px thumbnail and who-has-it ring', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
     await openTab(page, 'dogs');
@@ -600,7 +764,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const card = page.locator('.dc').first();
     await expect(card.locator('.nl')).toContainText('Bitch');
     const ph = await card.locator('.ph').boundingBox();
-    expect([ph.width, ph.height]).toEqual([44, 44]);
+    expect([ph.width, ph.height]).toEqual([72, 72]);
     await expect(card.locator('.whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
     const r = await card.evaluate((e) => { const c = e.getBoundingClientRect(), w = e.querySelector('.whor').getBoundingClientRect(); return [Math.round(c.right - w.right), Math.round(c.bottom - w.bottom)]; });
     expect(r[0]).toBeLessThanOrEqual(14); expect(r[1]).toBeLessThanOrEqual(14);   // bottom-right
@@ -729,3 +893,4 @@ test.describe('CD Hub: screens that need data CD Hub does not hold say which Blo
     }
   });
 });
+

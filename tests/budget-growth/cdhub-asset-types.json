@@ -1,0 +1,4 @@
+{
+  "cdhub": 7000,
+  "why": "SOP page file-type and file-format labels in cdhub/index.html. Measured cdhub load 320265, over 285400 + 10%."
+}
