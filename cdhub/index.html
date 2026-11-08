@@ -1796,7 +1796,7 @@ function accessOf(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return d.access_
 function accessReason(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return 'set here '+(d.at?d.at.slice(0,10):'');
  var r=CD.accessCsv[aid]; return (r&&r.reason)||''; }
 function modesOf(a){ return ['free','limited']; }
-/* ROOM LIMITS (Lisa, 8 Nov 2026). A room's rows are alternatives ("3 small or 2 medium", not a mix). One calculation, shared with the staff page. */
+/* ROOM LIMITS (Lisa, 8 Nov 2026). A room's rows are alternatives ("3 small or 2 medium"; every dog counts as the largest size in the room). One calculation, shared with the staff page. */
 function roomDogs(ids){ var dam={}; (CD.litters||[]).forEach(function(l){ dam[l.id]=l.dam_subject_id; });
  return ids.map(function(id){ var d=CD._byId[id]||{}; return {id:id,size:d.size,damId:dam[d.birthLitter]||''}; }); }
 function roomCheck(aid,ids,acc){ return BLDCapacity.check({areaId:aid,access:acc,capacity:T['BLD-area_capacity.csv']||[],dogs:roomDogs(ids)}); }
@@ -2508,7 +2508,7 @@ function pageCompliance(){
    :(unset.length<3?'<p class="mut">Nothing breaks the rules you have set.</p>':'');
  h+='</section>';
  var rl=roomAudit(today);
- h+='<section class="card" id="compRooms"><h3>Room limits'+cntPill(rl.over.length)+'</h3><p class="mut">A room takes one alternative, e.g. 3 small or 2 medium, not a mix. Uses the limits in BLD-area_capacity and the flap setting.</p>'
+ h+='<section class="card" id="compRooms"><h3>Room limits'+cntPill(rl.over.length)+'</h3><p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses the limits in BLD-area_capacity and the flap setting.</p>'
   +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
   +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
   +'<p><a href="#/areas">Open Areas</a></p></section>';
