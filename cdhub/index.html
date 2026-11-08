@@ -1929,7 +1929,7 @@ function contactLinks(p){
  if(safeUrl(p.instagram)) o.push('<a class="cb" href="'+esc(safeUrl(p.instagram))+'" target="_blank" rel="noopener">Instagram</a>');
  if(safeUrl(p.linkedin)) o.push('<a class="cb" href="'+esc(safeUrl(p.linkedin))+'" target="_blank" rel="noopener">LinkedIn</a>');
  if(!o.length && ok(p.website) && p.website.indexOf('SITE')<0)
-   o.push('<a class="cb" href="https://'+esc(p.website.replace(/^https?:\/\
+   o.push('<a class="cb" href="https://'+esc(p.website.replace(/^https?:\/\//,''))+'" target="_blank" rel="noopener">Website form</a>');
  var det='';
  if(ok(p.email)) det+='<div class="mut sel">'+esc(p.email)+'</div>';
  if(ok(p.phone)) det+='<div class="mut sel">'+esc(p.phone)+'</div>';
@@ -1962,7 +1962,7 @@ function rk(x){ return x in RK ? RK[x] : 9; }
   var sig=p.buyer_signal==='VERY STRONG'?'ok':(p.buyer_signal==='STRONG'?'i':(p.buyer_signal==='UNKNOWN'?'':'w'));
   var apc=(p.upgrade_appetite==='HIGHEST'||p.upgrade_appetite==='HIGH')?'ok':(p.upgrade_appetite==='LOW'?'':'w');
   return '<tr><td><b>'+esc(p.kennel_name)+'</b>'+(p.contact_name&&p.contact_name!=='unknown'?'<div class="mut">'+esc(p.contact_name)+'</div>':'')
-   +(p.website&&p.website.indexOf('SITE')<0?'<div><a href="https://'+esc(p.website.replace(/^https?:\/\
+   +(p.website&&p.website.indexOf('SITE')<0?'<div><a href="https://'+esc(p.website.replace(/^https?:\/\//,''))+'" target="_blank" rel="noopener">'+esc(p.website)+' \u2197</a></div>':(p.website?'<div class="mut">'+esc(p.website)+'</div>':''))+'</td>'
    +'<td>'+flag(p.country_iso)+' '+esc(p.country)+(p.region&&p.region!=='unknown'?'<div class="mut">'+esc(p.region)+'</div>':'')+'</td>'
    +'<td>'+(p.mdba_number&&p.mdba_number!=='unknown'?'<code>'+esc(p.mdba_number)+'</code>':'<span class="mut">\u2014</span>')+'</td>'
    +'<td>'+(p.categories||'').split('; ').filter(Boolean).map(function(x){return '<span class="pill">'+esc(x)+'</span>';}).join(' ')+'</td>'
