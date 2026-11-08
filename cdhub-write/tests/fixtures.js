@@ -73,7 +73,7 @@ function csvFiles() {
 }
 
 const AREA_READING_HEADER = [
-  'id', 'tenant_id', 'area_id', 'reading_type', 'min_c', 'max_c', 'spot_c', 'precision_dp',
+  'id', 'tenant_id', 'area_id', 'reading_type', 'min_c', 'max_c', '', 'spot_c', 'precision_dp',
   'period_start', 'taken_at', 'taken_by', 'device_id', 'reset_after_reading',
   'applied_limit_id', 'in_range', 'compliant', 'mitigation_required', 'corrects_id', 'mitigation_note'
 ];
@@ -86,5 +86,6 @@ const STAFF_HEADER = ['id', 'tenant_id', 'person_id', 'role', 'employment', 'sta
 const headerOnly = (cols) => cols.join(',') + '\r\n';
 
 const OCCUPANCY_CHECK_HEADER = ['id', 'tenant_id', 'confirmed_at', 'confirmed_by', 'dog_ids', 'moved_count', 'note'];
+const BREEDING_RULE_HEADER = ['id', 'tenant_id', 'rule_key', 'value', 'effective_from', 'source', 'note', 'set_at', 'set_by'];
 
-module.exports = { TENANT, csvFiles, AREA_READING_HEADER, PENDING_HEADER, STAFF_HEADER, OCCUPANCY_HEADER, OCCUPANCY_CHECK_HEADER, VIS_HEADER, headerOnly };
+module.exports = { TENANT, csvFiles, AREA_READING_HEADER, PENDING_HEADER, STAFF_HEADER, OCCUPANCY_HEADER, OCCUPANCY_CHECK_HEADER, BREEDING_RULE_HEADER, VIS_HEADER, headerOnly };

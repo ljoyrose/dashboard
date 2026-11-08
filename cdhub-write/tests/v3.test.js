@@ -74,7 +74,7 @@ test('staff cannot read any past temperature entry, not even their own, with the
   assert.equal(save(env, req(env, { fields: { area_id: 'area-t1', min_c: '20', max_c: '22' } })).ok, true);
   const r = read(env, { table: 'area_reading' });
   assert.equal(r.code, 'NOT_ALLOWED');
-  assert.equal(JSON.stringify(r).includes('20.00'), false);
+  assert.equal(JSON.stringify(r).includes('20.0'), false);
   assert.equal(read(env, { table: 'area_reading', code: env.codes.owner }).result.count, 1);   // the owner sees it
 });
 

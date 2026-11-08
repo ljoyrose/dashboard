@@ -9,7 +9,7 @@ function err_(code, message, extra) {
   return e;
 }
 
-var TEMP_RE_ = /^-?\d{1,2}(\.\d{1,2})?$/;
+var TEMP_RE_ = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (Lisa, 7 Nov 2026)
 var ID_RE_ = /^[A-Za-z0-9][A-Za-z0-9_.\-]{0,80}$/;
 var DATE_RE_ = /^\d{4}-\d{2}-\d{2}$/;
 var ISO_DT_RE_ = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d{1,3})?)?(Z|[+\-]\d{2}:\d{2})$/;
@@ -60,11 +60,11 @@ function validateInput_(spec, fields, lookups, nowMs) {
         break;
       case 'temp':
         if (!TEMP_RE_.test(v)) {
-          errors[name] = 'Type a temperature in degrees C with at most 2 decimals, e.g. 21.47.';
+          errors[name] = 'Type a temperature in degrees C with at most 1 decimal, e.g. 21.4.';
         } else {
           var n = parseFloat(v);
           if (n < BLD.LIMITS.TEMP_MIN || n > BLD.LIMITS.TEMP_MAX) errors[name] = 'That is outside ' + BLD.LIMITS.TEMP_MIN + ' to ' + BLD.LIMITS.TEMP_MAX + ' C. Check the number.';
-          else clean[name] = n.toFixed(2);
+          else clean[name] = n.toFixed(1);
         }
         break;
       case 'bool':

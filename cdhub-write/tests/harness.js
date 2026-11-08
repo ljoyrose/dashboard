@@ -52,8 +52,42 @@ function makeEnv(opts = {}) {
   env.file = (title) => env.drive.filter((f) => f.title === title);
   env.text = (title) => env.file(title)[0].content;
 
+  // A fake Google Sheet: f.sheet is an array of rows (arrays of strings, as shown in the cells).
+  const SHEET_MIME = 'application/vnd.google-apps.spreadsheet';
+  const addSheet = (title, rows) => { const f = { id: 'sheet' + (++idc), title, sheet: rows.map((r) => r.map(String)), fmt: {}, maxRows: Math.max(rows.length, 1) }; env.drive.push(f); return f; };
+  env.addSheet = addSheet;
+  env.rows = (title) => env.file(title)[0].sheet;
+  env.sheetWrites = [];
+  const lastRow = (f) => { for (let i = f.sheet.length - 1; i >= 0; i--) if ((f.sheet[i] || []).some((x) => x !== '')) return i + 1; return 0; };
+  const lastCol = (f) => f.sheet.reduce((m, r) => { let c = 0; (r || []).forEach((x, j) => { if (x !== '') c = j + 1; }); return Math.max(m, c); }, 0);
+  const tabOf = (f) => ({
+    getLastRow: () => lastRow(f), getLastColumn: () => lastCol(f), getMaxRows: () => Math.max(f.maxRows, f.sheet.length),
+    insertRowsAfter: (after, n) => { f.maxRows = Math.max(f.maxRows, after + n); },
+    deleteRow: (n) => { f.sheet.splice(n - 1, 1); },
+    setName: (n) => { f.tabName = n; },
+    getRange: (r, c, nr, nc) => ({
+      getDisplayValues: () => { const out = []; for (let i = 0; i < nr; i++) { const row = []; for (let j = 0; j < nc; j++) row.push(((f.sheet[r - 1 + i] || [])[c - 1 + j]) || ''); out.push(row); } return out; },
+      setNumberFormat: (fm) => { for (let i = 0; i < nr; i++) f.fmt[r + i] = fm; },
+      clearContent: () => { for (let i = 0; i < nr; i++) if (f.sheet[r - 1 + i]) f.sheet[r - 1 + i] = f.sheet[r - 1 + i].map(() => ''); },
+      setValues: (vals) => {
+        env.sheetWrites.push({ title: f.title, row: r, vals });
+        const hit = !env.breakTitle || env.breakTitle === f.title;
+        const bad = hit && (env.breakSetValues === true || (env.breakSetValues === 'once' && !env.brokeOnce && (env.brokeOnce = true)));
+        for (let i = 0; i < nr; i++) {
+          while (f.sheet.length < r + i) f.sheet.push([]);
+          const row = f.sheet[r - 1 + i];
+          for (let j = 0; j < nc; j++) row[c - 1 + j] = String(vals[i][j]);
+          if (bad && i === 0) row[c - 1] = row[c - 1] + 'X';
+        }
+      }
+    })
+  });
+  env.tabOf = tabOf;
+
   const wrap = (f) => ({
     getName: () => f.title, getId: () => f.id,
+    getMimeType: () => (f.sheet ? SHEET_MIME : 'text/csv'),
+    moveTo(dest) { f.parent = 'folder'; return this; },
     getSize: () => Buffer.byteLength(f.content, 'utf8'),
     getBlob: () => ({ getDataAsString: () => f.content }),
     setContent(s) {
@@ -101,7 +135,15 @@ function makeEnv(opts = {}) {
     },
     LockService: { getScriptLock: () => ({ waitLock() { if (env.lockBusy) throw new Error('lock busy'); }, releaseLock() {} }) },
     Session: { getActiveUser: () => ({ getEmail: () => env.email }) },
-    DriveApp: { getFolderById: (id) => { if (id !== 'FOLDER-TEST') throw new Error('no folder'); return folder; } },
+    DriveApp: {
+      getFolderById: (id) => { if (id !== 'FOLDER-TEST') throw new Error('no folder'); return folder; },
+      getFileById: (id) => { const f = env.drive.find((x) => x.id === id); if (!f) throw new Error('no file'); return wrap(f); }
+    },
+    SpreadsheetApp: {
+      flush() {},
+      openById: (id) => { const f = env.drive.find((x) => x.id === id && x.sheet); if (!f) throw new Error('no sheet'); return { getSheets: () => [tabOf(f)], getId: () => f.id }; },
+      create: (title, rows, cols) => { env.created.push(title); const f = addSheet(title, []); f.maxRows = rows; return { getSheets: () => [tabOf(f)], getId: () => f.id }; }
+    },
     ContentService: {
       MimeType: { JSON: 'json' },
       createTextOutput: (s) => ({ text: s, setMimeType() { return this; }, getContent() { return s; } })
@@ -170,7 +212,7 @@ const nextRid = () => 'req-test-' + String(++rid).padStart(6, '0');
 function req(env, over = {}) {
   return Object.assign({
     v: 1, request_id: nextRid(), code: env.codes.staff, table: 'area_reading', action: 'add',
-    fields: { area_id: 'area-t1', min_c: '21.47', max_c: '24.1' }
+    fields: { area_id: 'area-t1', min_c: '21.4', max_c: '24.1' }
   }, over);
 }
 
