@@ -48,6 +48,7 @@
       return b;
     }
     host.appendChild(banner);
+    if (save.deviceCode) codeRow.hidden = true;   // the staff page: this phone was set up once, so no box to type in
     host.appendChild(codeRow);
     paint();
     return { paint: paint, codeRow: codeRow };
