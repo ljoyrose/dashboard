@@ -181,7 +181,6 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 <aside id="drill" role="complementary" aria-label="Day detail">
   <button class="dclose" onclick="closeDrill()" aria-label="Close">✕</button>
   <p class="dtitle" id="d-title">—</p>
-  <p class="dsub" id="d-sub"></p>
   <p class="dsec">Outside</p>
   <div class="dgrid">
   <div class="dr"><span>Max °C</span><span id="d-max">—</span></div>
@@ -387,7 +386,6 @@ function openDrill(isoDate){
   var parts=isoDate.split('-');
   var dLabel=parseInt(parts[2],10)+' '+MONTHS[parseInt(parts[1],10)-1]+' '+parts[0];
   el('d-title').textContent=dLabel;
-  el('d-sub').textContent=r.reading_kind?'Source: '+r.reading_kind:'';
   var show=function(v){var s=dpOutdoor(v);return s?s+'°C':'—';};
   el('d-max').textContent=show(r.max_temp);
   el('d-min').textContent=show(r.min_temp);
@@ -399,6 +397,9 @@ function openDrill(isoDate){
   var areaIds=areasInWalk(Object.keys(dayAreas));
   var areasEl=el('d-areas');
   if(areaIds.length){
+    var dSub=el('d-sub');
+    if(!dSub){dSub=document.createElement('p');dSub.className='dsub';dSub.id='d-sub';el('d-areas').parentNode.insertBefore(dSub,el('d-areas'));}
+    dSub.textContent=r.reading_kind?'Indoor areas · source: '+r.reading_kind:'Indoor areas';
     el('d-areas-inner').innerHTML='<table class="itable"><thead><tr>'
       +'<th>Area</th><th>AM</th><th>PM</th><th>Status</th>'
       +'</tr></thead><tbody>'
@@ -429,6 +430,7 @@ function openDrill(isoDate){
   }else{
     areasEl.style.display='none';
     el('d-areas-inner').innerHTML='';
+    var dSubEl=el('d-sub');if(dSubEl)dSubEl.parentNode.removeChild(dSubEl);
   }
   el('drill').classList.add('open');
 }
