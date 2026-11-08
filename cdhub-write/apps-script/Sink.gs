@@ -113,7 +113,7 @@ function sinkHandle_(req) {
 
   if (!saveEnabled_()) throw err_('SAVE_OFF', 'Saving is switched off.');
   if (!req || typeof req !== 'object') throw err_('BAD_REQUEST', 'That request was not understood.');
-  if (req.action !== 'add' && req.action !== 'correct') throw err_('BAD_REQUEST', 'Unknown action.');
+  if (req.action !== 'add' && req.action !== 'correct' && req.action !== 'add_site') throw err_('BAD_REQUEST', 'Unknown action.');
   var rid = String(req.request_id || '');
   if (!/^[A-Za-z0-9_\-]{8,64}$/.test(rid)) throw err_('BAD_REQUEST', 'The request had no valid reference.');
 
@@ -128,15 +128,74 @@ function sinkHandle_(req) {
   if (req.action === 'correct' && spec.noCorrect) {
     throw err_('CORRECT_NOT_SUPPORTED', 'This list has no way to point at an earlier row. Fix a wrong room by moving the dog again.');
   }
-  if (spec.perms[req.action].indexOf(who.role) < 0) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
+  if (req.action === 'add_site' && spec.key !== 'check_log') throw err_('BAD_REQUEST', 'A whole-site tap only applies to staff checks.');
+  if (spec.perms[req.action === 'add_site' ? 'add' : req.action].indexOf(who.role) < 0) throw err_('NOT_ALLOWED', 'Your role is not allowed to do this. Ask Lisa.');
 
   var cache = CacheService.getScriptCache();
   var cached = cache.get('rid:' + rid);
   if (cached) { var again = JSON.parse(cached); again.repeat = true; return again; }
 
-  var result = withLock_(function () { return sinkProcess_(spec, req, who, now, nowMs); });
+  var result = withLock_(function () { return req.action === 'add_site' ? sinkSiteProcess_(spec, req, who, now, nowMs) : sinkProcess_(spec, req, who, now, nowMs); });
   cache.put('rid:' + rid, JSON.stringify(result), BLD.LIMITS.REQUEST_CACHE_SEC);
   return result;
+}
+
+/**
+ * One whole-site tap on a staff check. A job about a place (bowls) stays one line. A job about dogs (site_scope per_dog)
+ * writes one line per dog named in fields.dog_ids, in one append: all of them or none. A dog is left out, and counted in
+ * the answer, if it is in a room the check's not_in_areas lists, has no known room (so it cannot be shown not to be in
+ * isolation), is off site, or already has this check inside the repeat-tap window.
+ */
+function sinkSiteProcess_(spec, req, who, now, nowMs) {
+  var tenant = prop_(BLD.PROP.TENANT_ID);
+  if (!tenant) throw err_('NOT_CONFIGURED', 'The tenant id has not been set up in the script (TENANT_ID).');
+  var f = req.fields && typeof req.fields === 'object' ? req.fields : {};
+  var typeRead = store_read_(TABLES.check_type.file, true);
+  var type = typeRead.records.filter(function (r) { return r.id === String(f.check_type_id || '') && r.tenant_id === tenant; })[0];
+  if (!type) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check was not found.' } });
+  if (type.target !== 'none') throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check is not a whole-site check.' } });
+
+  var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: 'site_tap' };
+  if (type.site_scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
+
+  var target = store_read_(spec.file, true);
+  if (!sameHeader_(target.header, spec.columns)) {
+    throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+  }
+  var lookups = store_lookups_(spec, tenant);
+  var v = validateInput_(spec, fields, lookups, nowMs);
+  var dogs = validateInput_({ input: { dog_ids: { type: 'idlist', lookup: 'subject', required: true } } }, { dog_ids: f.dog_ids }, lookups, nowMs);
+  var errors = v.errors;
+  if (dogs.errors.dog_ids) errors.dog_ids = dogs.errors.dog_ids;
+  if (Object.keys(errors).length) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: errors });
+
+  var never = {};
+  String(type.not_in_areas || '').split('|').forEach(function (a) { a = a.trim(); if (a) never[a] = true; });
+  var occ = store_read_(TABLES.occupancy.file, true).records.filter(function (r) { return r.tenant_id === tenant; });
+  var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
+  var ids = {}, rows = [], made = [], left = { isolation: 0, no_room: 0, off_site: 0, repeat: 0 };
+  target.records.forEach(function (r) { ids[r.id] = true; });
+  dogs.clean.dog_ids.split('|').forEach(function (dog) {
+    var at = occupancyLatest_(occ, dog);
+    if (at && (String(at.off_site_kind || '') !== '' || permanentlyGone_(at))) { left.off_site++; return; }
+    if (!at || !at.area_id) { left.no_room++; return; }
+    if (never[at.area_id]) { left.isolation++; return; }
+    var clean = {}; for (var k in v.clean) if (Object.prototype.hasOwnProperty.call(v.clean, k)) clean[k] = v.clean[k];
+    clean.subject_id = dog;
+    if (findDuplicate_(spec, clean, target.records, nowMs, today)) { left.repeat++; return; }
+    var rowId = newId_(spec.idPrefix, now);
+    while (ids[rowId]) rowId = newId_(spec.idPrefix, now);
+    ids[rowId] = true;
+    var row = buildRow_(spec, clean, { rowId: rowId, tenantId: tenant, nowIso: londonIso_(now), today: today, who: who.who, whoId: who.id || '', correctsId: '' });
+    made.push(row); rows.push(rowValues_(spec.columns, row));
+  });
+  if (!rows.length) {
+    if (left.repeat) throw err_('DUPLICATE', 'This looks like the same entry as one already saved. If that one is wrong, tell the owner.', { duplicate_of: '' });
+    throw err_('INVALID', 'None of those dogs can be covered by a whole-site tap.', { fields: { dog_ids: 'Record these dogs one at a time.' } });
+  }
+  try { store_appendMany_(spec.file, spec.columns, rows, target); }
+  catch (e) { logWriteFailure_(e, spec, made[0].id, who.who, now); throw e; }
+  return { status: 'saved', table: spec.key, file: spec.file, id: made[0].id, ids: made.map(function (r) { return r.id; }), saved: made.length, left_out: left, at: made[0].taken_at };
 }
 
 function sinkProcess_(spec, req, who, now, nowMs) {

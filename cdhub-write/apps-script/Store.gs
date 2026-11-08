@@ -184,6 +184,44 @@ function textHash_(text) {
  *  4. if step 3 fails, the EXACT old text is written back and checked by hash. The error says whether
  *     the restore worked. The caller logs it in the approvals queue.
  */
+/** Several rows in one write: all of them are saved or none are. Same guards and read-back as store_append_. */
+function store_appendMany_(title, expectedHeader, rows, read) {
+  if (allowedFiles_().indexOf(title) < 0) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
+  if (!sameHeader_(read.header, expectedHeader)) {
+    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+  }
+  if (read.kind === 'sheet') return store_appendManySheet_(title, rows, read);
+  var file = read.file, before = read.text, beforeHash = textHash_(before);
+  if (textHash_(file.getBlob().getDataAsString('UTF-8')) !== beforeHash) throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
+  var eol = csvEol_(before), base = before;
+  if (base.length && !/(\r\n|\n)$/.test(base)) base += eol;
+  var after = base + rows.map(function (r) { return csvLine_(r) + eol; }).join('');
+  return store_commit_(file, title, before, beforeHash, after, function (check) { return check.indexOf(before) === 0; });
+}
+
+function store_appendManySheet_(title, rows, read) {
+  var sh = read.tab, beforeHash = textHash_(read.text), now = store_sheetRows_(sh);
+  if (textHash_(store_rowsText_(now.rows)) !== beforeHash || sh.getLastRow() !== read.lastRow) throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
+  var w = read.width, n = rows.length, at = read.lastRow + 1;
+  var vals = rows.map(function (r) { var v = r.slice(0, w).map(function (x) { return x === null || x === undefined ? '' : String(x); }); while (v.length < w) v.push(''); return v; });
+  if (sh.getMaxRows() < at + n - 1) sh.insertRowsAfter(sh.getMaxRows(), at + n - 1 - sh.getMaxRows());
+  var rg = sh.getRange(at, 1, n, w);
+  rg.setNumberFormat('@');
+  rg.setValues(vals);
+  SpreadsheetApp.flush();
+  var text = read.text + vals.map(function (v) { return csvLine_(v) + '\r\n'; }).join('');
+  if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === textHash_(text)) return text;
+  var restored = false;
+  try {
+    for (var i = n - 1; i >= 0; i--) { if (sh.getLastRow() === at + i) sh.deleteRow(at + i); else sh.getRange(at + i, 1, 1, w).clearContent(); }
+    SpreadsheetApp.flush();
+    restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash;
+  } catch (e) { restored = false; }
+  throw err_('VERIFY_FAILED', restored
+    ? 'The table did not read back as expected after saving, so the added rows were taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
+    : 'The table did not read back as expected after saving and could not be put back. Do not save again. Tell Lisa.');
+}
+
 function store_append_(title, expectedHeader, rowValues, read) {
   if (allowedFiles_().indexOf(title) < 0) {
     throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
