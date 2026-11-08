@@ -9,7 +9,7 @@ const BLDSave = require('../client/bld-save.js');
 const BLDChecks = require('../records/checks.js');
 
 const URL_OK = 'https://script.google.com/macros/s/AKfycbxTEST/exec';
-const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'asks_amount', 'amount_unit', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by'];
+const TYPE_H = ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency', 'active', 'effective_from', 'source', 'note', 'set_at', 'set_by'];
 const LOG_H = ['id', 'tenant_id', 'check_type_id', 'area_id', 'subject_id', 'item', 'amount', 'outcome', 'happened_at', 'note', 'taken_at', 'taken_by', 'corrects_id'];
 const flush = () => new Promise((r) => setTimeout(r, 15));
 
@@ -19,7 +19,7 @@ function world() {
   env.addFile('BLD-check_log.csv', fx.headerOnly(LOG_H));
   // the permissions Lisa would add: staff may see the three lists the screen needs
   const vis = env.file('BLD-field_visibility.csv')[0];
-  [['check_type', ['id', 'type_key', 'label', 'target', 'asks_item', 'asks_amount', 'amount_unit', 'active', 'effective_from']], ['area', ['id', 'code']], ['subject', ['id', 'name']]].forEach(([t, cols]) => {
+  [['check_type', ['id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'active', 'effective_from']], ['area', ['id', 'code']], ['subject', ['id', 'name']]].forEach(([t, cols]) => {
     vis.content += `v-${t}*,${fx.TENANT},${t},*,aud-staff,yes,,,,,,\r\n`;
     cols.forEach((c) => { vis.content += `v-${t}-${c},${fx.TENANT},${t},${c},aud-staff,yes,,,,,\r\n`; });
   });
@@ -47,7 +47,7 @@ test('checks screen: feeding saves end to end, as the staff member, to the check
   assert.equal(d.getElementById('chk-area_id').closest('.bs-field').hidden, true);
   fill(d, 'subject_id', 'sub-test-a'); fill(d, 'item', 'Dry food'); fill(d, 'amount', '250'); fill(d, 'outcome', 'ok');
   press(w); await flush();
-  assert.equal(w.host.querySelector('.bs-result').textContent, 'Saved.');
+  assert.equal(w.host.querySelector('.bs-result').textContent, 'Saved. Feeding, Test A, Dry food, 250.');
   const rows = logRows(w.env);
   assert.equal(rows.length, 1);
   assert.equal(rows[0].subject_id, 'sub-test-a');
@@ -89,4 +89,39 @@ test('checks screen: stays closed while the table is off', async () => {
   const w = world();
   w.env.props.TABLE_ON_check_log = 'false';
   assert.equal((await BLDChecks.mount(w.host, w.s, opts)).reason, 'off');
+});
+
+test('the four approved checks, one after another, each save with their own wording and rules', async () => {
+  const w = world(), d = w.dom.window.document;
+  const add = (f) => assert.equal(save(w.env, req(w.env, { code: w.env.codes.owner, table: 'check_type', fields: Object.assign({ effective_from: '2026-01-01' }, f) })).ok, true);
+  add({ type_key: 'medicine', label: 'Medicine given', target: 'dog', asks_item: 'true', item_label: 'Medicine', asks_amount: 'true', amount_unit: 'dose' });
+  add({ type_key: 'cleaning', label: 'Cleaning', target: 'area' });
+  add({ type_key: 'incident', label: 'Incident or near miss', target: 'optional', note_label: 'What happened?', note_required: 'true', asks_outcome: 'false' });
+  await BLDChecks.mount(w.host, w.s, opts);
+  const pick = (k) => { fill(d, 'check', k); d.getElementById('chk-check').dispatchEvent(new w.dom.window.Event('change')); };
+  const go = async () => { press(w); await flush(); return w.host.querySelector('.bs-result').textContent; };
+  pick('feeding'); fill(d, 'subject_id', 'sub-test-a'); fill(d, 'item', 'Dry'); fill(d, 'amount', '250'); fill(d, 'outcome', 'ok');
+  assert.match(await go(), /^Saved/);
+  pick('medicine');
+  assert.equal(d.querySelector('label[for=chk-item]').textContent, 'Medicine');
+  fill(d, 'subject_id', 'sub-test-a'); fill(d, 'outcome', 'ok');
+  await go();
+  assert.match(w.host.textContent, /This is needed/);
+  fill(d, 'item', 'Wormer'); fill(d, 'amount', '1');
+  assert.match(await go(), /^Saved/);
+  pick('cleaning'); fill(d, 'area_id', 'area-t1'); fill(d, 'outcome', 'not_done');
+  await go();
+  assert.match(w.host.textContent, /why it was not done/);
+  fill(d, 'outcome', 'ok');
+  assert.match(await go(), /^Saved/);
+  pick('incident');
+  assert.equal(d.getElementById('chk-outcome').closest('.bs-field').hidden, true);
+  await go();
+  assert.match(w.host.textContent, /This is needed/);
+  fill(d, 'note', 'Gate left open, no harm');
+  assert.match(await go(), /^Saved/);
+  const rows = logRows(w.env);
+  assert.equal(rows.length, 4);
+  assert.deepEqual(rows.map((r) => r.outcome), ['ok', 'ok', 'ok', 'recorded']);
+  assert.equal(rows[3].area_id + rows[3].subject_id, '');
 });

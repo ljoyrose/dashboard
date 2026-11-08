@@ -18,7 +18,7 @@
       subject_id: { type: 'text', label: 'Dog' },
       item: { type: 'text', label: 'What' },
       amount: { type: 'text', label: 'Amount' },
-      outcome: { type: 'enum', values: ['ok', 'concern', 'not_done'], required: true, label: 'Outcome' },
+      outcome: { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded'], required: true, label: 'Outcome' },
       note: { type: 'text', label: 'Note' }
     }
   };
@@ -38,8 +38,10 @@
 
   function askedFields(type) {
     return {
-      area: type.target === 'area' || type.target === 'either',
-      dog: type.target === 'dog' || type.target === 'either',
+      area: type.target === 'area' || type.target === 'either' || type.target === 'optional',
+      dog: type.target === 'dog' || type.target === 'either' || type.target === 'optional',
+      outcome: type.asks_outcome !== 'false',
+      noteRequired: type.note_required === 'true',
       item: type.asks_item === 'true',
       amount: type.asks_amount === 'true'
     };
@@ -55,6 +57,7 @@
     if (a.amount && !entry.amount) e.amount = 'This is needed.';
     if (!entry.outcome) e.outcome = 'Choose one.';
     if ((entry.outcome === 'concern' || entry.outcome === 'not_done') && !entry.note) e.note = 'Say briefly what the concern is or why it was not done.';
+    else if (a.noteRequired && !entry.note) e.note = 'This is needed.';
     return e;
   }
 
@@ -130,12 +133,20 @@
     function showErrors(e) { Object.keys(e || {}).forEach(function (k) { if (errs[k]) errs[k].textContent = e[k]; }); }
     function reset() { requestId = null; ['area_id', 'subject_id', 'item', 'amount', 'outcome', 'note'].forEach(function (k) { inputs[k].value = ''; }); }
 
+    function nameOf(list, id, col) { var hit = list.filter(function (x) { return x.id === id; })[0]; return hit ? (hit[col] || id) : ''; }
+    function savedWhat(t, entry) {
+      return [t.label, nameOf(dogs, entry.subject_id, 'name'), nameOf(areas, entry.area_id, 'code'), entry.item, entry.amount].filter(String).join(', ') + '.';
+    }
+
     function choose(key) {
       type = types.filter(function (t) { return t.type_key === key; })[0] || types[0];
       inputs.check.value = type.type_key;
       var a = askedFields(type);
       rows.area_id.hidden = !a.area; rows.subject_id.hidden = !a.dog; rows.item.hidden = !a.item; rows.amount.hidden = !a.amount;
+      rows.outcome.hidden = !a.outcome;
+      rows.item.querySelector('label').textContent = type.item_label || 'What';
       rows.amount.querySelector('label').textContent = type.amount_unit ? 'Amount (' + type.amount_unit + ')' : 'Amount';
+      rows.note.querySelector('label').textContent = type.note_label || 'Note';
       clearErrors(); result.textContent = ''; reset();
     }
 
@@ -145,7 +156,7 @@
     form.addEventListener('submit', function (ev) {
       ev.preventDefault();
       clearErrors(); result.textContent = '';
-      var a = askedFields(type), entry = { check_type_id: type.id, outcome: inputs.outcome.value };
+      var a = askedFields(type), entry = { check_type_id: type.id, outcome: a.outcome ? inputs.outcome.value : 'recorded' };
       if (a.area) entry.area_id = inputs.area_id.value;
       if (a.dog) entry.subject_id = inputs.subject_id.value;
       if (a.item) entry.item = inputs.item.value.trim();
@@ -157,7 +168,7 @@
       send.disabled = true; result.textContent = 'Saving...';
       return save.submit('check_log', entry, { requestId: requestId }).then(function (r) {
         send.disabled = false;
-        if (r.ok) { reset(); result.textContent = r.message; return; }
+        if (r.ok) { reset(); result.textContent = r.message + ' ' + savedWhat(type, entry); return; }
         result.textContent = r.message;
         showErrors(r.fields);
         if (r.code !== 'NETWORK') requestId = null;

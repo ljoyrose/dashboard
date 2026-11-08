@@ -123,14 +123,15 @@ var TABLES = {
   // The kennel's own list of staff checks (feeding, medicine, cleaning...): entered by the OWNER as rows, never
   // hard-coded, because they differ by kennel. NEW table, own switch, OFF by default. A change is a new row with a
   // later effective_from, so an old entry keeps pointing at the version in force when it was made. target tells the
-  // screen what to ask for: a room, a dog, either, or neither. active=false retires a check from that date.
+  // screen what to ask for: a room, a dog, either, optional (may name one, need not), or neither. The label, note and
+  // outcome columns set the wording and what is compulsory, so a new kind of check needs no code. active=false retires a check from that date.
   check_type: {
     key: 'check_type',
     file: 'BLD-check_type.csv',
     idPrefix: 'cty',
-    columns: ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'asks_amount', 'amount_unit', 'frequency',
+    columns: ['id', 'tenant_id', 'type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
               'active', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
-    proposedColumns: ['type_key', 'label', 'target', 'asks_item', 'asks_amount', 'amount_unit', 'frequency',
+    proposedColumns: ['type_key', 'label', 'target', 'asks_item', 'item_label', 'asks_amount', 'amount_unit', 'note_label', 'note_required', 'asks_outcome', 'frequency',
                       'active', 'effective_from', 'source', 'note', 'set_at', 'set_by'],
     computedColumns: [],
     lookups: [],
@@ -141,10 +142,14 @@ var TABLES = {
     input: {
       type_key:       { type: 'text', required: true },
       label:          { type: 'text', required: true },
-      target:         { type: 'enum', values: ['area', 'dog', 'either', 'none'], required: true },
+      target:         { type: 'enum', values: ['area', 'dog', 'either', 'optional', 'none'], required: true },
       asks_item:      { type: 'bool', dflt: 'false' },
       asks_amount:    { type: 'bool', dflt: 'false' },
+      item_label:     { type: 'text' },
       amount_unit:    { type: 'text' },
+      note_label:     { type: 'text' },
+      note_required:  { type: 'bool', dflt: 'false' },
+      asks_outcome:   { type: 'bool', dflt: 'true' },
       frequency:      { type: 'text' },
       active:         { type: 'bool', dflt: 'true' },
       effective_from: { type: 'date', required: true },
@@ -197,7 +202,7 @@ var TABLES = {
       subject_id:    { type: 'ref', lookup: 'subject' },
       item:          { type: 'text' },
       amount:        { type: 'text' },
-      outcome:       { type: 'enum', values: ['ok', 'concern', 'not_done'], required: true },
+      outcome:       { type: 'enum', values: ['ok', 'concern', 'not_done', 'recorded'], required: true },   // recorded = a report, such as an incident, with no pass or fail
       happened_at:   { type: 'datetime' },
       note:          { type: 'text' }
     },
