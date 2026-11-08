@@ -10,6 +10,7 @@
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
+<script src="staff/lib/capacity.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
@@ -1134,6 +1135,11 @@ function checks(){
  out.push({k:'breeding rules',ok:!unset.length,
    msg:unset.length? unset.length+' of 3 not set yet: '+unset.join(', ')+'. Set them on Compliance.':'all 3 set; litters and matings are checked against the version in force on their own date'});
  
+ var rl=roomAudit(todayISO());
+ out.push({k:'room limits',ok:!rl.over.length&&!rl.unknown.length,
+   msg:rl.over.length? rl.over.length+' room'+(rl.over.length===1?' is':'s are')+' over: '+rl.over.slice(0,5).map(function(x){ return x.label+' ('+x.mix+', takes '+x.alternatives+')'; }).join(', ')+(rl.over.length>5?' \u2026':'')
+     :rl.unknown.length? rl.unknown.length+' occupied room'+(rl.unknown.length===1?'':'s')+' cannot be checked: '+rl.unknown.slice(0,5).map(function(x){ return x.label; }).join(', ')+(rl.unknown.length>5?' \u2026':'')
+     :'every occupied room is within its limit'});
  var rc=refAudit();
  out.push({k:'joins',ok:!rc.bad.length,
    msg:rc.bad.length? rc.n+' references do not resolve: '+rc.bad.slice(0,5).join(', ')+(rc.bad.length>5?' \u2026':'')
@@ -1182,8 +1188,8 @@ function needsToday(){
   out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+' · window '+dmy(x.from)+' to '+dmy(x.to),date:x.due,
    tone:x.day>63?'late':(x.day>=57?'soon':''),go:'today',kind:'kit'}); });
  /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
- (CD.areas||[]).forEach(function(a){ var acc=accessOf(a.id), cap=capFor(a.id,'10-25kg (medium)',acc), n=inCabin(a.id,date).length;
-  if(cap!=null && n>parseInt(cap,10)) out.push({title:a.code+' is over its headcount',sub:n+' in, '+cap+' permitted ('+acc+')',date:date,tone:'late',go:'round',kind:'rule'}); });
+ (CD.areas||[]).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id));
+  if(r.status==='over') out.push({title:a.code+' is over its limit',sub:r.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
  /* foundation: work record (an open item waiting on the owner) */
  (CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).forEach(function(r){
   out.push({title:r.item||r.id,sub:'Outstanding'+(r.area?' · '+r.area:'')+(r.blocked_on?' · '+r.blocked_on:''),go:'work',tone:'',kind:'record'}); });
@@ -1413,7 +1419,7 @@ function todayChecklist(date,unplacedN){
  var A=CD.areas||[], N=A.length;
  var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
  var am=has('am'), pm=has('pm'), modes=A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.access||accessOf(a.id); }).length;
- var over=A.filter(function(a){ var acc=(ROUND[roundKey(date,a.id)]||{}).access||accessOf(a.id), cap=capFor(a.id,'10-25kg (medium)',acc); return cap!=null&&inCabin(a.id,date).length>parseInt(cap,10); }).length;
+ var over=A.filter(function(a){ var acc=(ROUND[roundKey(date,a.id)]||{}).access||accessOf(a.id); return roomCheck(a.id,inCabin(a.id,date),acc).status==='over'; }).length;
  var c=counts();
  var L=[
   [!unplacedN,'Every dog on site is in a cabin',unplacedN?unplacedN+' not yet placed':'all placed'],
@@ -1790,6 +1796,15 @@ function accessOf(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return d.access_
 function accessReason(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return 'set here '+(d.at?d.at.slice(0,10):'');
  var r=CD.accessCsv[aid]; return (r&&r.reason)||''; }
 function modesOf(a){ return ['free','limited']; }
+/* ROOM LIMITS (Lisa, 8 Nov 2026). A room's rows are alternatives ("3 small or 2 medium"; every dog counts as the largest size in the room). One calculation, shared with the staff page. */
+function roomDogs(ids){ var dam={}; (CD.litters||[]).forEach(function(l){ dam[l.id]=l.dam_subject_id; });
+ return ids.map(function(id){ var d=CD._byId[id]||{}; return {id:id,size:d.size,damId:dam[d.birthLitter]||''}; }); }
+function roomCheck(aid,ids,acc){ return BLDCapacity.check({areaId:aid,access:acc,capacity:T['BLD-area_capacity.csv']||[],dogs:roomDogs(ids)}); }
+function roomReasons(ids){ var R=[], occ=T['BLD-occupancy.csv']||[];
+ ids.forEach(function(id){ var last=null; occ.forEach(function(o){ if(o.subject_id===id&&(!last||(o.moved_in||'')>=(last.moved_in||''))) last=o; });
+  if(last&&last.classification_note) R.push((nameOf(id)||id)+': '+last.classification_note); }); return R; }
+function roomAudit(date){ return BLDCapacity.audit((CD.areas||[]).map(function(a){ var ids=inCabin(a.id,date);
+ return {areaId:a.id,label:a.code,access:accessOf(a.id),dogs:roomDogs(ids),reasons:roomReasons(ids)}; }),T['BLD-area_capacity.csv']||[]); }
 function capFor(aid,band,access){ var a=CD.cap[aid]; if(!a||!access) return null;
  var c=(a[access]||{})[band]; return (c && c.n!=='' && c.n!=null)?c.n:null; }
 async function accessSave(aid,mode,msgEl){
@@ -1853,8 +1868,8 @@ function pageAreas(){
      +'<div class="mut" style="margin-top:6px">in here on '+esc(date)+': '
      +(who.length?who.map(function(sid){var d=CD._byId[sid];return '<span class="pill i">'+esc(d?d.name:sid)+'</span>';}).join(' ')
        :'<span class="mut">empty</span>')
-     +(function(){ var n=who.length, c=capFor(a.id,'10-25kg (medium)',cur);
-        return (c!=null && n>parseInt(c,10))?' <span class="pill no">over the 10-25 kg figure</span>':''; })()
+     +(function(){ var r=roomCheck(a.id,who,cur);
+        return r.status==='over'?' <span class="pill no" title="'+esc(r.message)+'">over its limit</span>':''; })()
      +'</div>';
    }
    h+='</div>';});});
@@ -2121,8 +2136,7 @@ function pageRound(){
     if(lives.length) sel=lives; }
   var acc=r.access||accessOf(aid), fromArea=!r.access&&!!acc;
    var m2=a.m2;
-  var cap=capFor(aid,'10-25kg (medium)',acc);
-  var over=(cap!=null && sel.length>parseInt(cap,10));
+  var roomR=roomCheck(aid,sel,acc), over=roomR.status==='over';
   h+='<div class="card '+(over?'acc2':(sel.length?'acc5':''))+'" data-area="'+aid+'">'
    +'<h4><span class="step">Step '+c.step+':</span> '+esc(c.cabin)
    +' <span class="mut" style="font-weight:400">'+esc(m2)+' m\u00b2</span>'
@@ -2493,6 +2507,11 @@ function pageCompliance(){
  h+=probs.length?'<ul class="notes">'+probs.map(function(p){ return '<li><b>'+esc(nameOf(p.who)||p.who)+'</b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
    :(unset.length<3?'<p class="mut">Nothing breaks the rules you have set.</p>':'');
  h+='</section>';
+ var rl=roomAudit(today);
+ h+='<section class="card" id="compRooms"><h3>Room limits'+cntPill(rl.over.length)+'</h3><p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses the limits in BLD-area_capacity and the flap setting.</p>'
+  +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
+  +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
+  +'<p><a href="#/areas">Open Areas</a></p></section>';
  h+='<section class="card" id="compRules"><h3>Your breeding rules</h3><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
   +BREED_RULES.map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);
    return '<tr data-rule="'+b[0]+'"><td><b>'+esc(b[1])+'</b></td><td>'+(cur?'<b>'+esc(cur.value)+'</b> '+esc(b[2]):'<span class="pill w">not set</span>')+'</td>'
