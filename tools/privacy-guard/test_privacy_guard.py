@@ -250,6 +250,16 @@ class T(unittest.TestCase):
         self.assertNotRegex(wf, r"upload-artifact", "report-only runs upload nothing")
         self.assertNotRegex(wf, r'\[ -n "\$t" \] &&', "a blank denylist line must not fail the mask step under bash -e")
 
+    def test_dependabot_skips_only_the_terms_rule_everyone_else_fails_closed(self):
+        with open(os.path.join(REPO, ".github", "workflows", "privacy-guard.yml"), encoding="utf8") as fh: wf = fh.read()
+        self.assertIn("github.actor == 'dependabot[bot]'", wf)
+        self.assertIn("startsWith(github.head_ref, 'dependabot/')", wf)
+        self.assertIn("github.event_name == 'pull_request'", wf.split("IS_DEPENDABOT:")[1].split("\n")[0])
+        self.assertIn("secret missing: failing closed", wf, "a non-Dependabot run with no secret must still exit 2")
+        self.assertEqual(wf.count("DEPENDABOT-PLACEHOLDER"), 1, "the placeholder is set in one place only")
+        scan = wf.split("- name: Scan")[1]
+        self.assertLess(scan.index('IS_DEPENDABOT" = "true"'), scan.index("failing closed"), "Dependabot branch comes before the fail-closed exit")
+
     def test_no_fake_term_literal_in_repo_files(self):
         hits = subprocess.run(["git", "grep", "-l", "-i", "-e", T1, "-e", T2], cwd=REPO, capture_output=True, text=True).stdout.split()
         self.assertEqual(hits, [], "fake terms are only built at run time inside this test")
