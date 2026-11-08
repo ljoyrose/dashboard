@@ -4,6 +4,17 @@ Phone page for staff. No Google sign-in. Published at `cdhub/staff/`. Holds no d
 
 `lib/` holds copies of `cdhub-write/client/{bld-save,occupancy}.js` and `cdhub-write/screens/*`, because only `cdhub/` is published. Copy again after changing those.
 
+## How a phone gets in
+
+1. Lisa opens `print/` on her own set-up device and shows **Phone set-up QR**. It carries the save address, built on her device; the address is never in this repo.
+2. The person scans it and types their own staff code once. It stays on that phone. Lisa switching the code off wipes it on the next read or save.
+
+## QR codes
+
+Each QR is `<site>/cdhub/staff/#s/XXXXXXXX`: a random id, never a name or health detail. `BLD-qr_tag` says what it means, read with the phone's code, so a phone that is not set up sees only the set-up screen. Printed cards depend on the site address; moving the site means reprinting or redirecting.
+
+Any phone camera works: the room being filled is remembered on the phone for 30 minutes between scans.
+
 ## Adding a screen (module)
 
 Put it in `modules/<name>/module.js` and add the path to `FILES` in `shell.js`. `modules/temperature/module.js` is already in the list, and the page copes if it is missing.
