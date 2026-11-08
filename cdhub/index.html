@@ -1273,7 +1273,7 @@ function littersCard(){
 
  return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span><button type="button" class="btn" data-go="litters">Litters</button></div></section>';
 }
-/* Outdoor week strip. Cold if the low is under 10, Hot if the high is over 27, otherwise OK.
+/* Outdoor week strip. Cold or Hot against the adult band, otherwise OK.
    Rain: none at 0 mm, light under 10 mm, wet from 10 mm. Windy only at 40 km/h or more. */
 function outdoorBandWord(min,max){
  var st=tempState(min,max);
@@ -1340,12 +1340,12 @@ function tempsCard(){
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
  var row=function(t,v,s,state){ var cls=state===true||state==='ok'?' ok':state==='cold'?' cold':state==='hot'?' late':''; return '<div class="mrow"><span class="ic'+cls+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
  var outState=function(r){ return r?tempState(r.min,r.max):''; };
- var cold=0, hot=0, swap=0; (CD.areas||[]).forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{};
-   ['am','pm'].forEach(function(s){ var st=r['t_'+s]?tempState(r['t_'+s].min,r['t_'+s].max):''; if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap') swap++; }); });
- var inState=(am||pm)?(swap||hot?'hot':cold?'cold':'ok'):'';
+ var cold=0, hot=0, swap=0, unk=0; (CD.areas||[]).forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{}, bd=roomBand(a.id,date);
+   ['am','pm'].forEach(function(s){ var st=r['t_'+s]?tempState(r['t_'+s].min,r['t_'+s].max,bd):''; if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap') swap++; if(st==='unknown') unk++; }); });
+ var inState=(am||pm)?(swap||hot?'hot':cold?'cold':unk?'':'ok'):'';
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
-  +((am||pm)?row('Rooms',swap?swap+' max lower than min':(hot?hot+' too hot':cold?cold+' too cold':'all 10–27')+' °C',swap?'typed the wrong way round? check and correct':(hot&&cold?cold+' too cold too':''),inState):'')
+  +((am||pm)?row('Rooms',swap?swap+' max lower than min':(hot?hot+' too hot':cold?cold+' too cold':unk?unk+' with no limit set':'all in range'),swap?'typed the wrong way round? check and correct':(hot&&cold?cold+' too cold too':''),inState):'')
   +(out?row('Outside',esc(outdoorBit(out.min)+'\u2013'+outdoorBit(out.max))+' °C',esc(out.phrase||''),outState(out))
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
   +outdoorStrip(date)
@@ -2105,12 +2105,12 @@ function roundKey(date,areaId){ return date+'__'+areaId; }
 function keptReadings(date){
  var rows=(CD.areas||[]).map(function(ar){ var r=ROUND[roundKey(date,ar.id)]||{};
    return {a:ar, am:r.t_am, pm:r.t_pm}; }).filter(function(x){ return x.am||x.pm; });
- var cell=function(t){ if(!t) return '<span class="mut">—</span>'; var st=tempState(t.min,t.max), sw=st==='swap'; if(sw) st='hot';
-   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':'')+'</span>'; };
+ var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; var st=tempState(t.min,t.max,bd), sw=st==='swap', unk=st==='unknown'; if(sw) st='hot';
+   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+'</span>'; };
  return '<section class="card" id="kept-readings"><h3>Kept readings</h3>'
   +(rows.length
     ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
-      +rows.map(function(x){ return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am)+'</td><td>'+cell(x.pm)+'</td></tr>'; }).join('')
+      +rows.map(function(x){ var bd=roomBand(x.a.id,date); return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am,bd)+'</td><td>'+cell(x.pm,bd)+'</td></tr>'; }).join('')
       +'</tbody></table>'
     :'<p class="mut">No readings for '+esc(date)+'.</p>')
   +'<p class="mut" style="margin-bottom:0">From BLD-area_reading.csv. Blue under 10 °C, green 10–27 °C, red over 27 °C.</p></section>'; }
@@ -2127,12 +2127,18 @@ function foldAreaReadings(rows){
  });
  Object.keys(ROUND).forEach(function(k){ if(ROUND[k].subjects===null) delete ROUND[k].subjects; });
 }
-/* temperature colour: blue below 10, green 10-27, red above 27 (Lisa, 3 Nov) */
-var TEMP_LOW=10, TEMP_HIGH=27;
-function tempState(min,max){ var lo=parseFloat(min), hi=parseFloat(max);
+/* limits come from BLD-temperature_band; no readable row = 'unknown' */
+function bandReadable(b){ return !!b&&b.min!==null&&b.max!==null&&!isNaN(b.min)&&!isNaN(b.max); }
+function generalBand(){ return (CD.tempBands||[]).filter(function(b){ return b.to>=99999&&bandReadable(b); })[0]||null; }
+function roomBand(areaId,date){ var r=ROUND[roundKey(date,areaId)]||{};
+ var ids=(r.subjects&&r.subjects.length)?r.subjects:(CD.dogs||[]).filter(function(d){ return d.area_id===areaId; }).map(function(d){ return d.id; });
+ if(!ids.length) return generalBand();
+ var f=bandFor(ids,date); return f&&bandReadable(f.b)?f.b:null; }
+function tempState(min,max,band){ var lo=parseFloat(min), hi=parseFloat(max); if(arguments.length<3) band=generalBand();
  if(isNaN(lo)&&isNaN(hi)) return '';
  if(tempSwapped(min,max)) return 'swap';   /* max lower than min: wrong way round, checked before hot/cold */
- if(!isNaN(lo)&&lo<TEMP_LOW) return 'cold'; if(!isNaN(hi)&&hi>TEMP_HIGH) return 'hot'; return 'ok'; }
+ if(!band) return 'unknown';
+ if(!isNaN(lo)&&lo<band.min) return 'cold'; if(!isNaN(hi)&&hi>band.max) return 'hot'; return 'ok'; }
 function pageRound(){
  var date=(CD._roundDate||todayISO());
  var w=walkList(), dogs=hereNow();

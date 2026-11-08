@@ -98,6 +98,7 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 @media(hover:hover){.d:not(.empty):not(.future):not(.nd):hover{transform:scale(1.35);z-index:2;position:relative}}
 .d.empty{background:transparent}
 .d.future{background:var(--paper);border:1px solid var(--line);opacity:.35}
+.d.unknown,.sd.unknown{background:var(--soft);border:1px dashed var(--line)}
 .d.cold{background:var(--ljr-6)}.d.ok{background:var(--ljr-5)}.d.hot{background:var(--ljr-2)}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
 
@@ -240,14 +241,29 @@ function readDriveFile(f){
     return gget(DRIVE_API+'/'+id+'/export?mimeType='+encodeURIComponent('text/csv')+'&supportsAllDrives=true');
   return gget(DRIVE_API+'/'+id+'?alt=media&supportsAllDrives=true');
 }
+/* Limits come from the open-ended (adult) row of BLD-temperature_band. No readable row = 'unknown'. */
+var BAND=null;
 function tempCls(min,max){
   var lo=parseFloat(min),hi=parseFloat(max);
   if(isNaN(lo)&&isNaN(hi))return'';
-  if(!isNaN(lo)&&lo<10)return'cold';
-  if(!isNaN(hi)&&hi>27)return'hot';
+  if(!BAND)return'unknown';
+  if(!isNaN(lo)&&lo<BAND.min)return'cold';
+  if(!isNaN(hi)&&hi>BAND.max)return'hot';
   return'ok';
 }
+async function loadBand(){
+  BAND=null;
+  try{
+    var f=await findDriveFile('BLD-temperature_band.csv');
+    if(!f)return;
+    parseCSV(await readDriveFile(f)).forEach(function(r){
+      var lo=parseFloat(r.min_temp),hi=parseFloat(r.max_temp);
+      if(!r.age_to_days&&!isNaN(lo)&&!isNaN(hi))BAND={min:lo,max:hi};
+    });
+  }catch(e){console.warn('Temperature limits load failed:',e);}
+}
 async function loadAreaData(){
+  await loadBand();
   try{
     var rf=await findDriveFile('BLD-area_reading.csv');
     if(rf){
@@ -353,8 +369,9 @@ function dayClass(isoDate){
   if(!r)return'nd';
   var t=parseFloat(r.max_temp);
   if(isNaN(t))return'nd';
-  if(t<10)return'cold';
-  if(t>27)return'hot';
+  if(!BAND)return'unknown';
+  if(t<BAND.min)return'cold';
+  if(t>BAND.max)return'hot';
   return'ok';
 }
 
@@ -414,7 +431,7 @@ function dpIndoor(v){
   return (Math.round(n*10)/10).toFixed(1);
 }
 function dpOutdoor(v){ return dpIndoor(v).replace(/\.0$/,''); }
-function bandWord(cls){ return cls==='cold'?'Cold':cls==='hot'?'Hot':cls==='ok'?'OK':''; }
+function bandWord(cls){ return cls==='cold'?'Cold':cls==='hot'?'Hot':cls==='ok'?'OK':cls==='unknown'?'No limit set':''; }
 function slotState(t){
   if(!t||((t.min==null||String(t.min).trim()==='')&&(t.max==null||String(t.max).trim()===''))) return {miss:true};
   var cls=tempCls(t.min,t.max)||'ok';
@@ -424,26 +441,26 @@ function slotState(t){
 function slotLine(label,t){
   var s=slotState(t);
   if(s.miss) return label+' Missed';
-  return label+' '+s.range+' · '+s.word+' · '+(s.inn?'In range':'Out of range')+' · Submitted';
+  return label+' '+s.range+' · '+s.word+' · '+(s.inn?'In range':s.cls==='unknown'?'Not judged':'Out of range')+' · Submitted';
 }
 function stateWord(cls){
-  return cls==='future'?'Later':cls==='nd'?'No reading':cls==='cold'?'Cold':cls==='hot'?'Hot':cls==='ok'?'OK':cls;
+  return cls==='future'?'Later':cls==='nd'?'No reading':cls==='unknown'?'No limit set':cls==='cold'?'Cold':cls==='hot'?'Hot':cls==='ok'?'OK':cls;
 }
 function indoorDayClass(isoDate){
   if(isoDate>TODAY_STR) return 'future';
   var day=AREA_DAYS[isoDate]; if(!day) return 'nd';
-  var any=false, hot=false, cold=false;
+  var any=false, hot=false, cold=false, unk=false;
   Object.keys(day).forEach(function(aid){
     ['am','pm'].forEach(function(slot){
       var s=slotState((day[aid]||{})[slot]);
       if(s.miss) return;
-      any=true; if(s.cls==='hot') hot=true; else if(s.cls==='cold') cold=true;
+      any=true; if(s.cls==='hot') hot=true; else if(s.cls==='cold') cold=true; else if(s.cls==='unknown') unk=true;
     });
   });
   if(!any) return 'nd';
   if(hot) return 'hot';
   if(cold) return 'cold';
-  return 'ok';
+  return unk?'unknown':'ok';
 }
 function monthCal(y, classOf, kind){
   var md=mdays(y);
@@ -592,10 +609,11 @@ function setYear(y){
 }
 function legend(){
   return '<div class="legend">'
-    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-6)"></div>&lt;10°C Cold</div>'
-    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>10–27°C OK</div>'
-    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-2)"></div>&gt;27°C Hot</div>'
+    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-6)"></div>'+(BAND?'&lt;'+BAND.min+'°C Cold':'No limits loaded')+'</div>'
+    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>'+(BAND?BAND.min+'–'+BAND.max+'°C OK':'Limits unknown')+'</div>'
+    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-2)"></div>'+(BAND?'&gt;'+BAND.max+'°C Hot':'Limits unknown')+'</div>'
     +'<div class="leg"><div class="leg-sq" style="background:var(--soft);border:1px solid var(--line)"></div>No reading</div>'
+    +'<div class="leg">Adult limits; puppy rooms are judged on The round</div>'
     +'</div>';
 }
 function renderPage(){
