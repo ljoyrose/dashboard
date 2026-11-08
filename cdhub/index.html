@@ -2130,7 +2130,6 @@ function foldAreaReadings(rows){
 /* limits come from BLD-temperature_band; no readable row = 'unknown' */
 function bandReadable(b){ return !!b&&b.min!==null&&b.max!==null&&!isNaN(b.min)&&!isNaN(b.max); }
 function generalBand(){ return (CD.tempBands||[]).filter(function(b){ return b.to>=99999&&bandReadable(b); })[0]||null; }
-/* youngest dog decides; empty room = adult row */
 function roomBand(areaId,date){ var r=ROUND[roundKey(date,areaId)]||{};
  var ids=(r.subjects&&r.subjects.length)?r.subjects:(CD.dogs||[]).filter(function(d){ return d.area_id===areaId; }).map(function(d){ return d.id; });
  if(!ids.length) return generalBand();
