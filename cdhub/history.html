@@ -147,7 +147,6 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 #drill.open{display:block}
 .dclose{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);float:right;line-height:1;padding:0}
 .dtitle{font-size:var(--fs-head);font-weight:600;margin:0 0 2px;clear:right}
-.dsub{font-size:var(--fs-small);color:var(--muted);margin:0 0 14px}
 .dr{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:var(--fs-small)}
 .dr:last-child{border-bottom:none}
 .dsec{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin:14px 0 2px;letter-spacing:.04em}
@@ -397,9 +396,6 @@ function openDrill(isoDate){
   var areaIds=areasInWalk(Object.keys(dayAreas));
   var areasEl=el('d-areas');
   if(areaIds.length){
-    var dSub=el('d-sub');
-    if(!dSub){dSub=document.createElement('p');dSub.className='dsub';dSub.id='d-sub';el('d-areas').parentNode.insertBefore(dSub,el('d-areas'));}
-    dSub.textContent=r.reading_kind?'Indoor areas · source: '+r.reading_kind:'Indoor areas';
     el('d-areas-inner').innerHTML='<table class="itable"><thead><tr>'
       +'<th>Area</th><th>AM</th><th>PM</th><th>Status</th>'
       +'</tr></thead><tbody>'
@@ -430,7 +426,6 @@ function openDrill(isoDate){
   }else{
     areasEl.style.display='none';
     el('d-areas-inner').innerHTML='';
-    var dSubEl=el('d-sub');if(dSubEl)dSubEl.parentNode.removeChild(dSubEl);
   }
   el('drill').classList.add('open');
 }
