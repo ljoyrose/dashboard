@@ -44,5 +44,9 @@ test.describe('CD Hub: jobs', () => {
     await expect(hist).toContainText('opened from tag');
     await expect(hist).toContainText('pretend note');
     await expect(hist).not.toContainText(/verified|attended/i);
+    expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Care Check'))).toContain('Pretend nails');
+    expect(await page.evaluate(() => BLDJobsView.sopHtml(jobsV(), 'Nothing here'))).toBe('');
+    await tab(page, 'areas');
+    await expect(page.locator('[data-history]').first()).toContainText('no job records');
   });
 });
