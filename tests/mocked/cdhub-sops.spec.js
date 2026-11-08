@@ -1,11 +1,12 @@
 // CD Hub SOPs (Stage A + S2 + file types): bottom tab, Assocs under More, name labels,
 // colour, frequency, category and role filters, and the labelled type icons with the format legend.
-// The seed is the public index only. It has no form addresses, so every row says the form is not on the hub yet.
+// The seed is the public index only. It has no form addresses, so a row with a form says the form is not on the hub yet.
 // A row shows a type icon only when its type is already one of the 21. other, sheet and sds stay unmapped.
 const fs = require('fs');
 const path = require('path');
 const { test, expect } = require('../support/test');
 const { tabClick } = require('../support/tabs');
+const { IDS } = require('../support/world');
 
 const SEED = path.resolve(__dirname, '..', '..', 'cdhub', 'sop-index.json');
 const TYPES = path.resolve(__dirname, '..', '..', 'cdhub', 'asset-types.json');
@@ -24,15 +25,15 @@ const openSops = async (page) => {
   await page.goto('cdhub/#/sops');
   await signIn(page);
   await expect(page.locator('#main h2')).toHaveText('SOPs');
-  await expect(page.locator('#soprows [data-sop]')).toHaveCount(48);
+  await expect(page.locator('#soprows [data-sop]')).toHaveCount(49);
 };
 
 const CATEGORIES = ['Breeding health', 'Daily care & premises', 'Emergency & safety', 'Licence & records', 'Puppy sale & handover', 'Signs & posters', 'Staff'];
 const ROLES = ['licence_holder', 'manager', 'kennel_staff', 'all_staff'];
 
-test('the public seed is 48 name rows and carries no form address', () => {
+test('the public seed is 49 name rows and carries no form address', () => {
   const list = rows();
-  expect(list).toHaveLength(48);
+  expect(list).toHaveLength(49);
   const keys = [...new Set(list.flatMap((r) => Object.keys(r)))].sort();
   expect(keys).toEqual(['category', 'colour', 'frequency', 'has_form', 'role', 'short_name']);
   for (const r of list) {
@@ -48,12 +49,12 @@ test('the public seed is 48 name rows and carries no form address', () => {
     'Licence & records': 6,
     'Emergency & safety': 9,
     'Breeding health': 1,
-    'Daily care & premises': 23,
+    'Daily care & premises': 24,
     Staff: 4,
     'Puppy sale & handover': 4,
     'Signs & posters': 1,
   });
-  expect(tally('role')).toEqual({ kennel_staff: 20, manager: 12, licence_holder: 9, all_staff: 7 });
+  expect(tally('role')).toEqual({ kennel_staff: 21, manager: 12, licence_holder: 9, all_staff: 7 });
   expect(list.filter((r) => r.short_name === 'Care Rounds')).toHaveLength(1);
   expect(list.map((r) => r.frequency)).not.toContain('As needed');
   const byName = Object.fromEntries(list.map((r) => [r.short_name, r]));
@@ -88,11 +89,11 @@ test('bottom bar is Main, Do, Today, Dogs, SOPs; Assocs is only under More', asy
   await expect(page.locator('#main h2')).toHaveText('SOPs');
 });
 
-test('#/sops lists all 48 labels; colour and frequency filters and search work', async ({ page }) => {
+test('#/sops lists all 49 labels; colour and frequency filters and search work', async ({ page }) => {
   await openSops(page);
   const want = rows().map(label).sort((a, b) => a.localeCompare(b));
   await expect(page.locator('#soprows .t')).toHaveText(want);
-  await expect(page.locator('#sopcnt')).toHaveText('48 of 48');
+  await expect(page.locator('#sopcnt')).toHaveText('49 of 49');
 
   await page.locator('[data-fpanel="fp-sops"]').click();
   const opt = (id) => page.locator(`#${id} option`).evaluateAll((els) => els.map((e) => e.value).filter(Boolean));
@@ -104,10 +105,10 @@ test('#/sops lists all 48 labels; colour and frequency filters and search work',
   await expect(page.locator('#soprows [data-sop]')).toHaveCount(4);
   const daily = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
   expect(daily).toEqual(['Care Rounds', 'Cleaning', 'Feeding', 'Health Check']);
-  await expect(page.locator('#sopcnt')).toHaveText('4 of 48');
+  await expect(page.locator('#sopcnt')).toHaveText('4 of 49');
 
   await page.locator('#sopclr').click();
-  await expect(page.locator('#soprows [data-sop]')).toHaveCount(48);
+  await expect(page.locator('#soprows [data-sop]')).toHaveCount(49);
 
   await page.locator('#sopfr').selectOption('Per litter');
   const litter = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
@@ -167,9 +168,9 @@ test('category and role filters combine with colour, frequency, search and sort'
   expect(await opt('soprole')).not.toContain('inspector_view');
 
   await page.locator('#sopcat').selectOption('Daily care & premises');
-  await expect(page.locator('#sopcnt')).toHaveText('23 of 48');
+  await expect(page.locator('#sopcnt')).toHaveText('24 of 49');
   await page.locator('#soprole').selectOption('kennel_staff');
-  await expect(page.locator('#sopcnt')).toHaveText('17 of 48');
+  await expect(page.locator('#sopcnt')).toHaveText('18 of 49');
   await page.locator('#sopcol').selectOption('Yellow');
   await page.locator('#sopfr').selectOption('Daily');
   const daily = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
@@ -182,7 +183,7 @@ test('category and role filters combine with colour, frequency, search and sort'
   ]);
 
   await page.locator('#sopclr').click();
-  await expect(page.locator('#soprows [data-sop]')).toHaveCount(48);
+  await expect(page.locator('#soprows [data-sop]')).toHaveCount(49);
   await page.locator('#sopcat').selectOption('Staff');
   await page.locator('#soprole').selectOption('manager');
   const staff = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
@@ -207,7 +208,7 @@ test('category and role filters combine with colour, frequency, search and sort'
   await page.locator('#sopsort').selectOption('category');
   await expect(page.locator('#soprows .t').first()).toHaveText('Orange – Breeding: Health Screening');
   await page.locator('#sopsort').selectOption('role');
-  await expect(page.locator('#soprows .t').first()).toHaveText('Green – Ongoing: Staffing Ratio');
+  await expect(page.locator('#soprows .t').first()).toHaveText('Green – Ongoing: Staffing Ratio and Cover');
   await page.locator('#sopcat').selectOption('Staff');
   await page.locator('#sopcol').selectOption('Yellow');
   await expect(page.locator('#soprows [data-sop]')).toHaveCount(0);
@@ -235,10 +236,10 @@ test('inspector view is a role filter only when a row uses that code', async ({ 
   await expect(page.locator('#soprows')).not.toContainText('inspector_view');
 });
 
-test('no form address in the seed: every row shows the grey hint and no link', async ({ page }) => {
+test('no form address in the seed: rows with a form show the grey hint and no link', async ({ page }) => {
   await openSops(page);
   await expect(page.locator('#soprows a')).toHaveCount(0);
-  await expect(page.locator('#soprows .mut')).toHaveCount(48);
+  await expect(page.locator('#soprows .mut')).toHaveCount(rows().filter((r) => r.has_form === 'Y').length);
   await expect(page.locator('#soprows .mut').first()).toHaveText('form not on hub yet');
   const tone = await page.locator('#soprows .mut').first().evaluate((e) => {
     const rgb = (s) => (s.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
@@ -269,7 +270,7 @@ test('a clipboard opens only when the row has a form and a real https address', 
   await expect(open).toHaveAttribute('target', '_blank');
   await expect(open.locator('use')).toHaveAttribute('href', '#i-clipboard');
   await expect(page.locator('#soprows [data-sop="Care Rounds"] .t')).toHaveText('Yellow – Daily: Care Rounds');
-  await expect(page.locator('#soprows .mut')).toHaveCount(4);
+  await expect(page.locator('#soprows .mut')).toHaveCount(3);
   await expect(page.locator('#soprows')).not.toContainText('javascript:');
   await expect(page.locator('#soprows')).not.toContainText('http://example.com');
 });
@@ -334,7 +335,7 @@ test('#/sops names every file type and file format with its icon', async ({ page
   await expect(page.locator('#soptypes [data-format-code]')).toHaveCount(0);
   await expect(page.locator('#sopformats [data-type-code]')).toHaveCount(0);
   await expect(page.locator('#soprows [data-type-code]')).toHaveCount(0);
-  await expect(page.locator('#soprows [data-sop]')).toHaveCount(48);
+  await expect(page.locator('#soprows [data-sop]')).toHaveCount(49);
   await expect(page.locator('#soprows a')).toHaveCount(0);
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
   const read = await page.evaluate(() => ({
@@ -402,7 +403,8 @@ test('other and sheet are not remapped; a real type code keeps its icon and the 
   }
   await expect(row('Health Screening')).not.toContainText('Data sheet');
   await expect(row('Transport')).not.toContainText('Photo');
-  await expect(row('Read-and-Sign')).toContainText('form not on hub yet');
+  await expect(row('Read-and-Sign')).not.toContainText('form not on hub yet');
+  await expect(row('Care Rounds')).not.toContainText('form not on hub yet');
   await page.locator('[data-fpanel="fp-sops"]').click();
   await page.locator('#soprole').selectOption('kennel_staff');
   await expect(page.locator('#soprows [data-sop]')).toHaveCount(1);
@@ -420,4 +422,115 @@ test('other and sheet are not remapped; a real type code keeps its icon and the 
     'Yellow – Daily: Care Rounds',
   ]);
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
+});
+
+// The wording is private and lives in a Drive file read after sign-in. These tests use made-up text.
+const CARD_FILE = 'BLD-sop_cards.json';
+const CARDS = {
+  source: 'test',
+  cards: [
+    {
+      short_name: 'Care Rounds', colour: 'Yellow',
+      intro: [{ t: 'p', x: 'Example **intro** <img src=x onerror=alert(1)>' }],
+      sections: [{ h: 'Steps', blocks: [{ t: 'ol', items: ['First step', 'Second step'] }, { t: 'p', x: 'A note' }] }, { h: 'Empty heading', blocks: [] }],
+      links: [
+        { type_code: 'sign', label: 'B.2 Example Sign', url: 'https://example.com/sign-b2' },
+        { type_code: 'sign', label: 'D.1 No File', url: '' },
+        { type_code: 'sign', label: 'D.2 Bad Link', url: 'javascript:alert(1)' },
+      ],
+    },
+    { short_name: 'Signs/Posters Index', colour: 'Purple', intro: [{ t: 'p', x: 'Index intro' }], sections: [], links: [{ type_code: 'index_pointer', label: 'Example Index', url: 'https://example.com/index' }] },
+  ],
+};
+const addCards = (world, id = 'sop-cards', body = JSON.stringify(CARDS)) =>
+  world.file(id, CARD_FILE, body, { parents: [IDS.bld], driveId: 'drv-alpha1', mimeType: 'application/json' });
+const sopRow = (page, name) => page.locator(`#soprows [data-sop="${name}"]`);
+const tapSop = (page, name) => sopRow(page, name).locator('.sopopen').click();
+const sopBody = (page, name) => page.locator(`#soprows [data-sop-body="${name}"]`);
+
+test('tapping a SOP opens its private wording, folded sections, and closes again', async ({ page, world }) => {
+  addCards(world);
+  await openSops(page);
+  const btn = sopRow(page, 'Care Rounds').locator('.sopopen');
+  await expect(btn).toHaveAttribute('aria-expanded', 'false');
+  await tapSop(page, 'Care Rounds');
+  await expect(btn).toHaveAttribute('aria-expanded', 'true');
+  const body = sopBody(page, 'Care Rounds');
+  await expect(body.locator('p').first()).toHaveText('Example intro <img src=x onerror=alert(1)>');
+  await expect(body.locator('p b').first()).toHaveText('intro');
+  await expect(body.locator('img')).toHaveCount(0);
+  await expect(body.locator('.sopmeta')).toContainText('Applies to: Kennel staff');
+  const sec = body.locator('details.sopsec');
+  await expect(sec.locator('summary')).toHaveText('Steps 3');
+  await expect(sec.locator('ol li').first()).toBeHidden();
+  await sec.locator('summary').click();
+  await expect(sec.locator('ol li')).toHaveText(['First step', 'Second step']);
+  await tapSop(page, 'Signs/Posters Index');
+  await expect(body).toHaveCount(0);
+  await expect(sopBody(page, 'Signs/Posters Index')).toContainText('Index intro');
+  await tapSop(page, 'Signs/Posters Index');
+  await expect(page.locator('#soprows [data-sop-body]')).toHaveCount(0);
+});
+
+test('linked signs show their icon on the row and open only from a real https address', async ({ page, world }) => {
+  addCards(world);
+  await openSops(page);
+  const badge = sopRow(page, 'Care Rounds').locator('.sopsigns');
+  await expect(badge).toHaveAttribute('aria-label', '3 linked signs');
+  await expect(badge.locator('use')).toHaveAttribute('href', '#i-sign');
+  await tapSop(page, 'Care Rounds');
+  const body = sopBody(page, 'Care Rounds');
+  await expect(body.locator('.soplink use').first()).toHaveAttribute('href', '#i-sign');
+  const link = body.locator('a.soplink');
+  await expect(link).toHaveCount(1);
+  await expect(link).toHaveAttribute('href', 'https://example.com/sign-b2');
+  await expect(link).toHaveAttribute('target', '_blank');
+  await expect(link).toHaveAttribute('rel', 'noopener');
+  await expect(body.locator('span.soplink')).toHaveText([/D\.1 No File/, /D\.2 Bad Link/]);
+  await tapSop(page, 'Signs/Posters Index');
+  await expect(sopBody(page, 'Signs/Posters Index').locator('a.soplink use')).toHaveAttribute('href', '#i-index_pointer');
+});
+
+test('a SOP with no wording in the master says it is not written yet', async ({ page, world }) => {
+  addCards(world);
+  await openSops(page);
+  await tapSop(page, 'Staff Rota');
+  await expect(sopBody(page, 'Staff Rota')).toContainText('Not written yet');
+});
+
+test('no wording file: the SOP says the file is missing', async ({ page }) => {
+  await openSops(page);
+  await tapSop(page, 'Care Rounds');
+  await expect(sopBody(page, 'Care Rounds')).toContainText('not in the Drive folder yet');
+});
+
+test('two wording files: the hub refuses to guess and names the file', async ({ page, world }) => {
+  addCards(world, 'sop-cards-1');
+  addCards(world, 'sop-cards-2');
+  await page.goto('cdhub/#/sops');
+  await expect(page.locator('#signinbtn')).toBeEnabled();
+  await page.locator('#signinbtn').click();
+  await expect(page.locator('#main')).toContainText(CARD_FILE);
+  await expect(page.locator('#soprows')).toHaveCount(0);
+});
+
+test('a broken wording file shows a message, not a crash', async ({ page, world }) => {
+  addCards(world, 'sop-cards', 'not json');
+  await openSops(page);
+  await tapSop(page, 'Care Rounds');
+  await expect(sopBody(page, 'Care Rounds')).toContainText('could not be read');
+});
+
+test('phone width: an open SOP stays on the screen and every target is 44px', async ({ page, world }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  addCards(world);
+  await openSops(page);
+  await tapSop(page, 'Care Rounds');
+  await sopBody(page, 'Care Rounds').locator('summary').click();
+  const w = await page.evaluate(() => ({ doc: document.documentElement.scrollWidth, screen: window.innerWidth }));
+  expect(w.doc).toBeLessThanOrEqual(w.screen + 1);
+  const short = await page.evaluate(() => [...document.querySelectorAll('#soprows button, #soprows a, #soprows summary')].filter((e) => e.getBoundingClientRect().height < 44).map((e) => e.textContent.trim()));
+  expect(short).toEqual([]);
+  const line = await sopBody(page, 'Care Rounds').evaluate((e) => getComputedStyle(e).borderLeftWidth);
+  expect(line).toBe('3px');
 });

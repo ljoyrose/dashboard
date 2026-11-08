@@ -172,6 +172,24 @@ tr:last-child td{border-bottom:none}
 #sopcard .mrow:first-child{border-top:0;padding-top:0}
 #sopcard .mrow .mut{flex:0 1 11em;overflow-wrap:anywhere}
 #sopcard .mrow .cb{flex:none;padding:0 10px}
+#sopcard .sopopen{display:flex;flex:1;align-items:center;gap:12px;min-width:0;min-height:44px;padding:0 10px;color:inherit;font:inherit;text-align:left;cursor:pointer}
+#sopcard .mrow:has(.sopopen){flex-wrap:wrap}
+#sopcard .sopopen{flex:1 1 100%}
+#sopcard .sopopen .t{white-space:normal;overflow:visible}
+.sopsigns{display:inline-flex;align-items:center;gap:4px;flex:none;font-size:var(--fs-small);font-weight:600}
+.sopsigns .ti{width:18px;height:18px}
+.sopbody{margin:0 0 12px;padding:4px 0 4px 12px;border-left:3px solid var(--hc,var(--line));border-radius:var(--radius);overflow-wrap:anywhere}
+.sopbody p,.sopbody ol,.sopbody ul{margin:6px 0}
+.sopbody ol,.sopbody ul{padding-left:20px}
+.sopbody .sopmeta{display:flex;align-items:center;gap:6px;font-size:var(--fs-small);color:var(--muted);margin:4px 0}
+.sopbody .sopmeta .ti{width:18px;height:18px}
+.sopbody ul.soplinks{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;padding:0;list-style:none}
+.soplink{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:var(--radius);color:inherit;font-size:var(--fs-small);font-weight:600;text-decoration:none}
+.soplink .ti{width:18px;height:18px}
+.soplink.none{color:var(--muted);font-weight:400}
+.sopsec{border-top:1px solid var(--line)}
+.sopsec>summary{min-height:44px;display:flex;align-items:center;gap:6px;font-weight:600;cursor:pointer}
+.sopsec>summary .n{color:var(--muted);font-weight:400;font-size:var(--fs-small)}
 
 .atype-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,148px),1fr));gap:8px;margin:0;padding:0;list-style:none}
 .atype{display:flex;align-items:center;gap:8px;min-width:0;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:transparent}
@@ -393,7 +411,8 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); return /^https?:\/\/[^\s"'<>
 
 
 
-var SOP={rows:null,err:'',pending:null};
+var SOP={rows:null,err:'',pending:null,cards:null,cardsErr:'',cardsPending:null,open:''};
+var SOP_CARDS_FILE='BLD-sop_cards.json';
 var SOP_COLOURS=['White','Red','Orange','Yellow','Green','Blue','Purple'];
 var SOP_FREQS=['Daily','Weekly','Monthly','Quarterly','Annual','Ongoing','Per litter','Ad hoc','Breeding'];
 
@@ -2448,8 +2467,55 @@ function pageSops(){
   +'<h3>File types</h3><div class="card" id="soptypes"></div>'
   +'<h3>File formats</h3><div class="card" id="sopformats"></div>';
 }
+/* SOP wording is private: it is read after sign-in from a file in the Drive folder, never from this public site. */
+function sopCardsLoad(){
+ if(SOP.cards||SOP.cardsPending) return SOP.cardsPending||Promise.resolve();
+ SOP.cardsErr='';
+ SOP.cardsPending=listFolder().then(function(files){
+  var hits=files.filter(function(f){ return f.name===SOP_CARDS_FILE; });
+  if(hits.length!==1) throw new Error(hits.length?'more than one':'missing');
+  return readDriveFile(hits[0]);
+ }).then(function(txt){
+  var by={}; (JSON.parse(txt).cards||[]).forEach(function(c){ if(c&&c.short_name) by[c.short_name]=c; });
+  SOP.cards=by;
+ }).catch(function(e){ var m=e&&e.message; SOP.cardsErr=m==='missing'?'The SOP wording file is not in the Drive folder yet.':m==='more than one'?'There are two SOP wording files in the Drive folder, so neither is shown. Remove the extra one.':'The SOP wording could not be read. Close this and tap again.'; })
+ .then(function(){ SOP.cardsPending=null; drawSops(); });
+ return SOP.cardsPending;
+}
+function sopText(s){ return esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>'); }
+function sopBlocks(list){
+ return (list||[]).map(function(b){
+  if(b.t==='p') return '<p>'+sopText(b.x)+'</p>';
+  if(b.t==='ol'||b.t==='ul') return '<'+b.t+'>'+(b.items||[]).map(function(i){ return '<li>'+sopText(i)+'</li>'; }).join('')+'</'+b.t+'>';
+  return '';
+ }).join('');
+}
+function sopTypeOf(code){ return (ASSET.types||[]).filter(function(t){ return t.type_code===code; })[0]||null; }
+function sopIcon(key){ return document.getElementById('i-'+key)?'<svg class="ti" aria-hidden="true"><use href="#i-'+esc(key)+'"/></svg>':''; }
+function sopLinks(c){
+ if(!c.links||!c.links.length) return '';
+ return '<ul class="soplinks">'+c.links.map(function(l){
+  var t=sopTypeOf(l.type_code), lab=String(l.label||''), icon=t?sopIcon(t.icon_key):'';
+  var attr='data-type-code="'+esc(l.type_code||'')+'"';
+  if(/^https:\/\/[^\s"'<>]+$/i.test(String(l.url||''))) return '<li><a class="soplink" '+attr+' href="'+esc(l.url)+'" target="_blank" rel="noopener" aria-label="Open '+esc((t?t.label+': ':'')+lab)+'">'+icon+esc(lab)+'</a></li>';
+  return '<li><span class="soplink none" '+attr+'>'+icon+esc(lab)+' (no file linked)</span></li>';
+ }).join('')+'</ul>';
+}
+function sopCardHtml(r){
+ var head=r.role?'<div class="sopmeta">'+sopIcon('user')+'Applies to: '+esc(sopRoleLabel(r.role))+'</div>':'';
+ if(SOP.cardsErr) return head+'<p class="note">'+esc(SOP.cardsErr)+'</p>';
+ if(!SOP.cards) return head+'<p class="note">Reading the SOP…</p>';
+ var c=SOP.cards[r.short_name];
+ if(!c) return head+'<p class="note">Not written yet: this SOP has no text in the master.</p>';
+ return head+sopLinks(c)+sopBlocks(c.intro)+(c.sections||[]).map(function(s){
+  var n=(s.blocks||[]).reduce(function(a,b){ return a+(b.items?b.items.length:1); },0);
+  if(!n) return '';
+  return '<details class="sopsec"><summary>'+esc(s.h)+' <span class="n">'+n+'</span></summary>'+sopBlocks(s.blocks)+'</details>';
+ }).join('');
+}
 function drawSops(){
  var rows=SOP.rows||[];
+ if(!SOP.cards&&!SOP.cardsErr&&!SOP.cardsPending) sopCardsLoad();
  var v=function(i){ var e=document.getElementById(i); return e?(e.value||''):''; };
  var q=v('sopq'), col=v('sopcol'), fr=v('sopfr'), cat=v('sopcat'), role=v('soprole'), so=v('sopsort');
  var list=rows.filter(function(r){
@@ -2483,8 +2549,13 @@ function drawSops(){
     : '';
   var form=r.form_url
     ? '<a class="cb" href="'+esc(r.form_url)+'" target="_blank" rel="noopener" aria-label="Open form: '+esc(label)+'"><svg class="ti" aria-hidden="true"><use href="#i-clipboard"/></svg></a>'
-    : '<span class="mut">form not on hub yet</span>';
-  return '<div class="mrow" data-sop="'+esc(r.short_name)+'"><span class="dot" style="--c:var('+sopDot(r.colour)+')" aria-hidden="true"></span><span class="t">'+esc(label)+'</span>'+badge+form+'</div>';
+    : (r.has_form==='Y'?'<span class="mut">form not on hub yet</span>':'');
+  var card=SOP.cards&&SOP.cards[r.short_name], signs=card&&card.links?card.links.filter(function(l){ return l.type_code==='sign'||l.type_code==='poster'; }):[];
+  var signType=signs.length?sopTypeOf(signs[0].type_code):null;
+  var signBadge=signType?'<span class="sopsigns" data-type-code="'+esc(signType.type_code)+'" aria-label="'+signs.length+' linked '+esc(signType.label.toLowerCase())+(signs.length>1?'s':'')+'">'+sopIcon(signType.icon_key)+signs.length+'</span>':'';
+  var isOpen=SOP.open===r.short_name, pid='sopb-'+list.indexOf(r);
+  return '<div class="mrow" data-sop="'+esc(r.short_name)+'"><button type="button" class="sopopen" data-sop-open="'+esc(r.short_name)+'" aria-expanded="'+isOpen+'"'+(isOpen?' aria-controls="'+pid+'"':'')+'><span class="dot" style="--c:var('+sopDot(r.colour)+')" aria-hidden="true"></span><span class="t">'+esc(label)+'</span></button>'+badge+signBadge+form+'</div>'
+   +(isOpen?'<div class="sopbody" id="'+pid+'" style="--hc:var('+sopDot(r.colour)+')" data-sop-body="'+esc(r.short_name)+'">'+sopCardHtml(r)+'</div>':'');
  }).join('');
  var empty=document.getElementById('sopempty');
  if(empty) empty.classList.toggle('hidden', !!list.length);
@@ -2702,6 +2773,15 @@ function go(id,push){
   var sc=document.getElementById('sopclr');
   if(sc) sc.addEventListener('click',function(){ ['sopq','sopcol','sopfr','sopcat','soprole'].forEach(function(i){
     var e=document.getElementById(i); if(e) e.value=''; }); drawSops(); });
+  var sr=document.getElementById('soprows');
+  if(sr) sr.addEventListener('click',function(ev){
+   var b=ev.target.closest('[data-sop-open]'); if(!b) return;
+   var name=b.getAttribute('data-sop-open');
+   SOP.open=SOP.open===name?'':name;
+   if(SOP.open&&SOP.cardsErr){ SOP.cardsErr=''; }
+   drawSops();
+   var again=sr.querySelector('[data-sop-open="'+CSS.escape(name)+'"]'); if(again) again.focus();
+  });
   drawSops();
   assetStart();
   drawAssetTypes();
