@@ -2497,6 +2497,7 @@ function sopCardHtml(r){
  if(!c) return head+'<p class="note">Not written yet: this SOP has no text in the master.</p>';
  return head+sopLinks(c)+sopBlocks(c.intro)+(c.sections||[]).map(function(s){
   var n=(s.blocks||[]).reduce(function(a,b){ return a+(b.items?b.items.length:1); },0);
+  if(!n) return '';
   return '<details class="sopsec"><summary>'+esc(s.h)+' <span class="n">'+n+'</span></summary>'+sopBlocks(s.blocks)+'</details>';
  }).join('');
 }

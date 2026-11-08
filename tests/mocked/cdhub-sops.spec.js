@@ -432,7 +432,7 @@ const CARDS = {
     {
       short_name: 'Care Rounds', colour: 'Yellow',
       intro: [{ t: 'p', x: 'Example **intro** <img src=x onerror=alert(1)>' }],
-      sections: [{ h: 'Steps', blocks: [{ t: 'ol', items: ['First step', 'Second step'] }, { t: 'p', x: 'A note' }] }],
+      sections: [{ h: 'Steps', blocks: [{ t: 'ol', items: ['First step', 'Second step'] }, { t: 'p', x: 'A note' }] }, { h: 'Empty heading', blocks: [] }],
       links: [
         { type_code: 'sign', label: 'B.2 Example Sign', url: 'https://example.com/sign-b2' },
         { type_code: 'sign', label: 'D.1 No File', url: '' },
