@@ -25,7 +25,7 @@ test.describe('Bin: index and sections', () => {
     await openBin(page);
     const keys = await page.locator('#needsNow [data-action="foldjump"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-key')));
     expect(keys.slice(0, 2)).toEqual(['sweep', 'check']);
-    expect(keys).toHaveLength(3);
+    expect(keys).toHaveLength(4); // ready, check, Canva (TidyUp Apps 1), problems
     for (const key of keys) {
       // Close it first, so the button has something to do.
       await page.evaluate((k) => { const d = document.querySelector('[data-fold="' + k + '"]'); if (d) d.open = false; }, key);
