@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Staff checks</title>
+<link rel="stylesheet" href="../screens/bld-save.css">
+<style>
+  body{margin:0;padding:16px;background:#FAF7F2;color:#2C2C2A;font:16px/1.5 system-ui,sans-serif}
+  main{max-width:560px;margin:0 auto}
+  h1{font-size:22px;margin:0 0 12px}
+  input,select{width:100%;box-sizing:border-box;min-height:44px;padding:8px 10px;font:inherit}
+  [hidden]{display:none!important}
+  #gate{display:grid;gap:8px;margin-bottom:14px}
+  button{min-height:44px;font:inherit;font-weight:700}
+</style>
+</head>
+<body>
+<main>
+  <h1>Staff checks</h1>
+  <form id="gate">
+    <label for="code">Your staff code</label>
+    <input id="code" type="password" autocomplete="off">
+    <button type="submit">Open checks</button>
+  </form>
+  <div id="app"></div>
+</main>
+<script src="../client/bld-save.js"></script>
+<script src="checks.js"></script>
+<script>
+  // The Script URL is the one already kept on this device by BLDSave. ?t=feeding on a QR code opens that check.
+  var save = BLDSave.create();
+  var type = new URLSearchParams(location.search).get('t') || '';
+  document.getElementById('gate').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    save.setCode(document.getElementById('code').value);
+    document.getElementById('gate').hidden = true;
+    BLDChecks.mount(document.getElementById('app'), save, { type: type });
+  });
+</script>
+</body>
+</html>

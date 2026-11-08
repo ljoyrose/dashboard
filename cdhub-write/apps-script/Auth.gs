@@ -66,7 +66,18 @@ function authStaff_(code) {
     authNoteFailure_();
     throw err_('BAD_CODE', 'That staff code was not recognised.');
   }
+  if (entry.role === ROLE_GUEST) {
+    if (guestExpired_(entry)) throw err_('BAD_CODE', 'This visitor code has ended. Ask Lisa for a new one.');
+    // id stays empty so no person:<id> permission row can ever open a list to a guest; the label carries the id instead
+    return { who: entry.who + ' (' + entry.id + ')', role: entry.role, id: '' };
+  }
   return { who: entry.who, role: entry.role, id: String(entry.id || '') };
+}
+
+/** A guest code with no readable end date counts as ended (the safe side). */
+function guestExpired_(entry) {
+  var end = Date.parse(entry.expires_at || '');
+  return isNaN(end) || new Date().getTime() >= end;
 }
 
 /** Is the signed-in Google account (approval deployment) one of the owners? */
@@ -89,6 +100,7 @@ function adminEmail_() {
 function audienceFor_(role) {
   if (role === 'OWNER') return 'aud-admin';
   if (role === 'STAFF') return 'aud-staff';
+  if (role === ROLE_GUEST) return 'aud-guest';   // Read.gs also holds a guest to the room list, whatever the rows say
   return '';
 }
 
@@ -110,10 +122,10 @@ function newCodeId_() {
 function sinkStaffList_() {
   var reg = registry_(), out = [];
   Object.keys(reg).forEach(function (h) {
-    var e = reg[h];
+    var e = reg[h], guest = e.role === ROLE_GUEST, ended = guest && guestExpired_(e), off = e.active === false || !!e.revoked_at;
     out.push({
-      id: String(e.id || ''), who: e.who, role: e.role, added: e.added || '',
-      active: !(e.active === false || e.revoked_at), revoked_at: e.revoked_at || '', revoked_by: e.revoked_by || ''
+      id: String(e.id || ''), who: guest ? e.who + ' (ends ' + (e.expires_at || 'unknown') + ')' : e.who, role: e.role, added: e.added || '',
+      active: !off && !ended, revoked_at: e.revoked_at || (ended ? 'ended ' + (e.expires_at || '') : ''), revoked_by: e.revoked_by || ''
     });
   });
   return out;
@@ -141,4 +153,25 @@ function sinkRevokeCode_(codeId, adminEmail) {
     } catch (e) { logged = false; Logger.log('Revoked ' + id + ' but could not log it: ' + (e && e.message)); }
     return { status: 'revoked', id: id, who: reg[hash].who, logged: logged };
   });
+}
+
+/**
+ * OWNER: edit LABEL and DAYS, then press Run in the Apps Script editor. Prints a visitor code ONCE, in the Execution log.
+ * It saves temperatures to the guest list only, can see the room list and nothing else, ends by itself after DAYS days, and can be switched off sooner on the
+ * approvals page like any code. LABEL is a description such as 'Council visit Nov 2026': it is written on every reading.
+ */
+function adminAddGuestCode() {
+  var LABEL = 'Example visit';    // <- change this
+  var DAYS = 7;                   // <- whole days, 1 to 30
+  if (!(DAYS >= 1 && DAYS <= 30) || Math.floor(DAYS) !== DAYS) throw new Error('DAYS must be a whole number from 1 to 30.');
+  var salt = prop_(BLD.PROP.SALT);
+  if (!salt) throw new Error('Run adminSetup first.');
+  var alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', raw = (Utilities.getUuid() + Utilities.getUuid()).replace(/-/g, ''), code = '';
+  for (var i = 0; i < 12; i++) code += alphabet.charAt(parseInt(raw.substr(i * 2, 2), 16) % alphabet.length);
+  var now = new Date(), reg = registry_(), id = newCodeId_(), ends = londonIso_(new Date(now.getTime() + DAYS * 86400000));
+  reg[hashCode_(code, salt)] = { id: id, who: 'Guest - ' + LABEL, role: ROLE_GUEST, active: true, added: londonIso_(now), expires_at: ends };
+  setProp_(BLD.PROP.REGISTRY, JSON.stringify(reg));
+  Logger.log('Visitor code for ' + LABEL + ': ' + code + '   (public id ' + id + ', ends ' + ends + ')');
+  Logger.log('Give it to the visitor now. It is stored only as a one-way hash, so it cannot be shown again.');
+  return code;
 }
