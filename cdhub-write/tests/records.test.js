@@ -302,6 +302,20 @@ test('site tap: a job about dogs writes one line per dog, and isolation, off-sit
   assert.ok(rows[0].taken_by);
 });
 
+test('room tap: a room job about dogs writes one line per ticked dog in that room, as scanned', () => {
+  const env = siteEnv(); const id = addType(env, 'exercise', { target: 'area', site_scope: 'per_dog' });
+  const r = siteTap(env, { check_type_id: id, area_id: 'area-t1', outcome: 'ok', how_recorded: 'scanned', dog_ids: 'sub-test-a|sub-test-b' });
+  assert.equal(r.ok, true, JSON.stringify(r));
+  assert.equal(r.result.saved, 1);
+  assert.equal(r.result.left_out.no_room, 1);
+  const rows = recs(env, 'BLD-check_log.csv');
+  assert.deepEqual(rows.map((x) => x.subject_id), ['sub-test-b']);
+  assert.equal(rows[0].area_id, 'area-t1'); assert.equal(rows[0].how_recorded, 'scanned');
+  assert.equal(siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-b' }).code, 'INVALID');
+  const clean = addType(env, 'cleaned', { target: 'area' });
+  assert.equal(siteTap(env, { check_type_id: clean, area_id: 'area-t1', outcome: 'ok', dog_ids: 'sub-test-b' }).code, 'INVALID');
+});
+
 test('site tap: a repeat tap saves nothing new; no one eligible is refused', () => {
   const env = siteEnv(); const id = addType(env, 'walk', { target: 'none', site_scope: 'per_dog', not_in_areas: 'none' });
   assert.equal(siteTap(env, { check_type_id: id, outcome: 'ok', dog_ids: 'sub-test-a|sub-test-b' }).result.saved, 2);

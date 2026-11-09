@@ -145,6 +145,8 @@ function sinkHandle_(req) {
  * writes one line per dog named in fields.dog_ids, in one append: all of them or none. A dog is left out, and counted in
  * the answer, if it is in a room the check's not_in_areas lists, has no known room (so it cannot be shown not to be in
  * isolation), is off site, or already has this check inside the repeat-tap window.
+ * A room job about dogs (target area, site_scope per_dog) works the same way for the dogs ticked in that room; a dog
+ * whose latest room is another room is left out, so a tap can only cover dogs the records place there.
  */
 function sinkSiteProcess_(spec, req, who, now, nowMs) {
   var tenant = prop_(BLD.PROP.TENANT_ID);
@@ -153,9 +155,12 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   var typeRead = store_read_(TABLES.check_type.file, true);
   var type = typeRead.records.filter(function (r) { return r.id === String(f.check_type_id || '') && r.tenant_id === tenant; })[0];
   if (!type) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check was not found.' } });
-  if (type.target !== 'none') throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check is not a whole-site check.' } });
+  var room = type.target === 'area' && type.site_scope === 'per_dog';
+  if (type.target !== 'none' && !room) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { check_type_id: 'That check is not a whole-site check.' } });
+  if (room && !f.area_id) throw err_('INVALID', 'Some details need fixing before this can be saved.', { fields: { area_id: 'Say which room.' } });
 
-  var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: 'site_tap' };
+  var fields = { check_type_id: f.check_type_id, item: f.item, amount: f.amount, outcome: f.outcome, note: f.note, happened_at: f.happened_at, photo: f.photo, how_recorded: room ? f.how_recorded : 'site_tap' };
+  if (room) fields.area_id = f.area_id;
   if (type.site_scope !== 'per_dog') { req.fields = fields; req.action = 'add'; return sinkProcess_(spec, req, who, now, nowMs); }
 
   var target = store_read_(spec.file, true);
@@ -179,6 +184,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
     var at = occupancyLatest_(occ, dog);
     if (at && (String(at.off_site_kind || '') !== '' || permanentlyGone_(at))) { left.off_site++; return; }
     if (!at || !at.area_id) { left.no_room++; return; }
+    if (room && at.area_id !== v.clean.area_id) { left.no_room++; return; }
     if (never[at.area_id]) { left.isolation++; return; }
     var clean = {}; for (var k in v.clean) if (Object.prototype.hasOwnProperty.call(v.clean, k)) clean[k] = v.clean[k];
     clean.subject_id = dog;
@@ -191,7 +197,7 @@ function sinkSiteProcess_(spec, req, who, now, nowMs) {
   });
   if (!rows.length) {
     if (left.repeat) throw err_('DUPLICATE', 'This looks like the same entry as one already saved. If that one is wrong, tell the owner.', { duplicate_of: '' });
-    throw err_('INVALID', 'None of those dogs can be covered by a whole-site tap.', { fields: { dog_ids: 'Record these dogs one at a time.' } });
+    throw err_('INVALID', room ? 'None of those dogs are shown in this room.' : 'None of those dogs can be covered by a whole-site tap.', { fields: { dog_ids: 'Record these dogs one at a time.' } });
   }
   try { store_appendMany_(spec.file, spec.columns, rows, target); }
   catch (e) { logWriteFailure_(e, spec, made[0].id, who.who, now); throw e; }
