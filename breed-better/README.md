@@ -6,7 +6,7 @@ Works out one animal's score from rows. It knows no species, breed, test or shee
 - `tests/`: invented animals only. Run with `node --test breed-better/tests/score.test.js`.
 
 Rules it always keeps:
-- One verdict: any fail is Fail; otherwise anything missing or expired is Unproven; only all clear is Pass.
+- One verdict: any fail is Fail; otherwise anything missing or expired is Unverified; only all clear is Pass.
 - Missing evidence can never count as a pass.
 - An answer with no matching rule is flagged, never scored 0.
 
