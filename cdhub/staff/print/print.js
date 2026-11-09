@@ -72,7 +72,7 @@
   }
   load().then(function (ok) {
     if (!ok) return;
-    var onSite = {}; (T.occupancy || []).forEach(function (o) { if (!o.moved_out) onSite[o.subject_id] = true; });
+    var onSite = {}; BLDOccupancy.dailyList(T).dogs.forEach(function (d) { onSite[d.id] = true; });   // same list as The Board: not dogs that have left
     opts.appendChild(btn('Whole-site code', function () { make('site', [{ id: 'site', label: 'Today' }]); }));
     opts.appendChild(btn('Room signs', function () { make('area', T.area.map(function (a) { return { id: a.id, label: a.code || a.id }; })); }));
     opts.appendChild(btn('Dog kennel cards', function () { make('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id }; })); }));

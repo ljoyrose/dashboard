@@ -54,3 +54,26 @@ test('the print page draws the QR on screen only and keeps nothing', async ({ pa
   await box.getByRole('button', { name: 'Remove QR' }).click();
   await expect(box.locator('svg')).toHaveCount(0);
 });
+
+test('dog kennel cards are only for dogs on site: none for a dog that has left', async ({ page }) => {
+  const dog = (id) => ({ id, name: 'Test ' + id });
+  const tag = (ref, t) => ({ tag: t, kind: 'subject', ref_id: ref, active: 'true' });
+  const tables = {
+    area: [{ id: 'area-t1', code: 'T1' }], subject: [dog('here'), dog('offsite'), dog('sold'), dog('died')], subject_status: [], litter: [],
+    occupancy: [
+      { subject_id: 'here', area_id: 'area-t1', moved_in: '2026-10-01' },
+      { subject_id: 'offsite', area_id: 'area-t1', moved_in: '2026-10-01' }, { subject_id: 'offsite', off_site_kind: 'temporary', moved_in: '2026-10-09' },
+      { subject_id: 'sold', area_id: 'area-t1', moved_in: '2026-10-01' }, { subject_id: 'sold', off_site_kind: 'sold', moved_in: '2026-10-09' },
+      { subject_id: 'died', area_id: 'area-t1', moved_in: '2026-10-01' }, { subject_id: 'died', off_site_kind: 'deceased', moved_in: '2026-10-09' }
+    ],
+    qr_tag: [tag('here', 'AAAAAAAA'), tag('offsite', 'BBBBBBBB'), tag('sold', 'CCCCCCCC'), tag('died', 'DDDDDDDD')]
+  };
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[JSON.parse(route.request().postData()).table] || [] } } });
+  });
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.goto('cdhub/staff/print/');
+  await page.getByRole('button', { name: 'Dog kennel cards' }).click();
+  await expect(page.locator('.qcard b')).toHaveText(['Test here', 'Test offsite']);
+});
