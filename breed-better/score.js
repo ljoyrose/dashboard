@@ -96,7 +96,7 @@
       rows.forEach(function (p) {
         if (!parseMatch(p.answer_match)) errors.push(p.id + ': answer rule "' + p.answer_match + '" is not understood');
         if (band.kind === 'gate' && OUTCOMES.indexOf(text(p.gate_outcome)) < 0) errors.push(p.id + ': a gate answer needs pass, fail or unverified');
-        if (band.kind === 'points' && !/^\d+(\.\d+)?$/.test(text(p.points))) errors.push(p.id + ': a points answer needs a number');
+        if (band.kind === 'points' && text(p.gate_outcome) !== 'unverified' && !/^\d+(\.\d+)?$/.test(text(p.points))) errors.push(p.id + ': a points answer needs a number');
       });
     });
     return errors;
@@ -127,6 +127,8 @@
         (!dateField || !isDate(r[dateField]) || r[dateField] <= asOf);
     });
     var reads = text(c.reads) || 'latest';
+    /* a count is of things that happened: a row with no date (a mating that took, say, or a blank line) is not one */
+    if (reads === 'count' && dateField) found = found.filter(function (r) { return isDate(r[dateField]); });
     if (reads === 'count') return { answer: String(found.length), row: null, count: true };
     if (!found.length) return { reason: 'no_record' };
     var chosen;
@@ -198,7 +200,12 @@
         var max = maxPoints(ruleRows);
         line.points_max = max;
         available += max;
-        if (rule) {
+        if (rule && text(rule.gate_outcome) === 'unverified') {
+          /* the record exists but says nothing that can be scored, such as NOT RECORDED: never 0 */
+          line.unknown_reason = 'recorded_unverified';
+          unverified += max;
+          unknownCount++;
+        } else if (rule) {
           line.points = Number(rule.points) || 0;
           earned += line.points;
         } else if (when === 'zero' || when === 'fail') {

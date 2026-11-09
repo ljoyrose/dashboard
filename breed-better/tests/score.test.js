@@ -162,3 +162,22 @@ test('small helpers', () => {
   assert.equal(parseMatch('nonsense'), null);
   assert.throws(() => score(Object.assign({}, DOG, { subject: { id: 'a' }, asOf: 'today' })), /asOf/);
 });
+
+test('a count ignores rows with no date', () => {
+  const set = { scheme: { id: 's' }, bands: [{ id: 'b', kind: 'gate' }],
+    criteria: [{ id: 'c', band_id: 'b', evidence_source: 'births', subject_field: 'mother', date_field: 'on', reads: 'count' }],
+    points: [{ id: 'p', criterion_id: 'c', answer_match: 'range:0-1', gate_outcome: 'pass' }, { id: 'q', criterion_id: 'c', answer_match: 'any', gate_outcome: 'fail' }] };
+  const births = [{ id: '1', mother: 'a', on: '2025-01-01' }, { id: '2', mother: 'a', on: '' }, { id: '3', mother: 'a', on: '' }];
+  assert.equal(score(Object.assign({}, set, { subject: { id: 'a' }, asOf: '2026-01-01', evidence: { births } })).gate_result, 'pass');
+});
+
+test('a recorded answer that cannot be scored is unverified, never 0', () => {
+  const set = { scheme: { id: 's' }, bands: [{ id: 'b', kind: 'points' }],
+    criteria: [{ id: 'c', band_id: 'b', evidence_source: 'exam', answer_field: 'r', date_field: 'on' }],
+    points: [{ id: 'p', criterion_id: 'c', answer_match: 'is:NOT RECORDED', gate_outcome: 'unverified' }, { id: 'q', criterion_id: 'c', answer_match: 'is:good', points: '5' }, { id: 'z', criterion_id: 'c', answer_match: 'any', points: '0' }] };
+  const r = score(Object.assign({}, set, { subject: { id: 'a' }, asOf: '2026-01-01', evidence: { exam: [{ id: 'e', subject_id: 'a', r: 'NOT RECORDED', on: '2025-01-01' }] } }));
+  assert.equal(r.points_earned, 0);
+  assert.equal(r.points_unverified, 5);
+  assert.equal(r.lines[0].unknown_reason, 'recorded_unverified');
+});
+
