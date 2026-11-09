@@ -43,7 +43,8 @@
   /**
    * The daily list: every dog on site, with the room it was last recorded in.
    * A dog is NOT listed when its latest occupancy row says sold / owned_by_family / collected / deceased, or when
-   * its status says Sold / Collected / Deceased. A dog whose status is off_site_temp IS listed, flagged `away: true`:
+   * its status says Sold / Collected / Deceased. A dog whose status is off_site_temp IS listed, flagged `away: true`
+   * (as is one whose latest occupancy row has off_site_kind temporary, also flagged `out: true`, shown as Off-site):
    * it keeps its room and is not asked to move. A dog with no occupancy row at all is listed (room not recorded)
    * only when a status row says it is not sold or collected; otherwise it is counted in `skipped`.
    * @return {{dogs:Array<{id,label,areaId,areaLabel,known,lastMovedIn,away}>, skipped:number, areas:Array}}
@@ -65,11 +66,12 @@
       if (offSite(row)) return;
       if (!row && st === null) { skipped++; return; }
       var a = row && row.area_id ? areaById[row.area_id] : null;
+      var out = !!row && String(row.off_site_kind || '').toLowerCase() === 'temporary';   // latest row says Off-site: no room
       dogs.push({
         id: s.id, label: s.name || s.id,
         areaId: a ? a.id : '', areaLabel: a ? a.label : '', known: !!a,
         lastMovedIn: row ? (row.moved_in || '') : '',
-        away: st === AWAY_STATE
+        away: st === AWAY_STATE || out, out: out
       });
     });
     // dogs whose room is not recorded come first (they need a person to pick), then by room, then name; Away dogs last

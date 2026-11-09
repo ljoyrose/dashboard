@@ -152,7 +152,7 @@
       }
 
       function removeBox(id) {
-        var why = h('select', { class: 'inp', 'aria-label': 'Why is this dog leaving' }, [['', 'Choose why'], ['temporary', 'Away for now (vet, groomer)'], ['sold', 'Sold'], ['owned_by_family', 'Gone to family'], ['deceased', 'Died']].map(function (o) { return h('option', { value: o[0], text: o[1] }); }));
+        var why = h('select', { class: 'inp', 'aria-label': 'Why is this dog leaving' }, [['', 'Choose why'], ['temporary', 'Off-site'], ['sold', 'Sold'], ['owned_by_family', 'Gone to family'], ['deceased', 'Died']].map(function (o) { return h('option', { value: o[0], text: o[1] }); }));
         var msg = say('');
         var box = h('details', { class: 'card', style: 'margin-top:14px' }, [h('summary', { text: 'Take this dog out of its room' }), why,
           h('button', { class: 'btn quiet', type: 'button', text: 'Save', onclick: function () {
