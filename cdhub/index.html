@@ -11,6 +11,8 @@
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
 <script src="staff/lib/capacity.js"></script>
+<script src="staff/lib/due.js"></script>
+<script src="jobs-view.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
@@ -359,6 +361,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs{border-bottom:1px solid var(--line)}
 .dcs>summary{display:flex;align-items:center;gap:7px;padding:0 12px;cursor:pointer;list-style:none;user-select:none;font-size:var(--fs-small);color:var(--muted);min-width:0;height:var(--house-btn);overflow:hidden;border-top:1px solid var(--press);box-sizing:border-box}
 .dcs>summary::-webkit-details-marker{display:none}
+@media (hover:hover){.dcs>summary:hover{outline:var(--house-line) solid var(--sel-bd);outline-offset:calc(-1 * var(--house-line))}}
 .dcs>summary svg{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dcs>summary .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs>summary::after{content:'\25BA';margin-left:auto;font-size:.6rem;transition:transform .15s;display:inline-block;flex:0 0 auto}
@@ -392,7 +395,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 <script>
 
 var FOLDER=window.DASH_CONFIG.cdhub.folderId;
-var WANT=['BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
+var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
  'BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-microchip_registration.csv','BLD-weight.csv',
  'BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-association.csv','BLD-prospect.csv','BLD-export_route.csv','BLD-breeder_category.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv',
  'BLD-occupancy.csv','BLD-MAP-animana.csv','BLD-MAP-animana-client.csv','BLD-visit.csv','BLD-reminder.csv','BLD-medicinal_product.csv','BLD-stock_level.csv','BLD-clinical_note.csv','BLD-dispense.csv',
@@ -401,7 +404,9 @@ var WANT=['BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_p
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
  'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
-var OPTIONAL_FILES={'BLD-breeding_rule.csv':1};
+var OPTIONAL_FILES={'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
+function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy}; }
+function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
 
@@ -1732,6 +1737,8 @@ function drawDogs(){
 
   +'<div class="dc-sects">'
 
+    +jobsHist({subject_id:d.id})
+
     +'<details class="dcs wtc" data-dog="'+esc(d.id)+'"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg>'
       +'<span class="dcs-label">'+(w?'<b>'+w.kg+' kg</b> <span class="mut">'+esc(dmy(w.on))+'</span>':'<span class="mut">no weight</span>')+'</span>'
@@ -1872,7 +1879,7 @@ function pageAreas(){
         return '<option value="'+m+'"'+(cur===m?' selected':'')+'>'
           +(m==='free'?'free access \u2014 flap open':'limited \u2014 flap shut')+'</option>';}).join('')
     +'</select><span class="mut asave" data-area="'+a.id+'"></span>'
-    +'<span class="mut">'+esc(accessReason(a.id))+'</span></div>';
+    +'<span class="mut">'+esc(accessReason(a.id))+'</span></div>'+jobsHist({area_id:a.id});
 
    {
     var modes = cur ? [cur] : ['free','limited'];
@@ -2508,7 +2515,7 @@ function sopLinks(c){
  }).join('')+'</ul>';
 }
 function sopCardHtml(r){
- var head=r.role?'<div class="sopmeta">'+sopIcon('user')+'Applies to: '+esc(sopRoleLabel(r.role))+'</div>':'';
+ var head=(r.role?'<div class="sopmeta">'+sopIcon('user')+'Applies to: '+esc(sopRoleLabel(r.role))+'</div>':'')+BLDJobsView.sopHtml(jobsV(),r.short_name);
  if(SOP.cardsErr) return head+'<p class="note">'+esc(SOP.cardsErr)+'</p>';
  if(!SOP.cards) return head+'<p class="note">Reading the SOP…</p>';
  var c=SOP.cards[r.short_name];
@@ -2589,6 +2596,7 @@ function pageCompliance(){
   +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
   +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
   +'<p><a href="#/areas">Open Areas</a></p></section>';
+ h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
  h+='<section class="card" id="compRules"><h3>Your breeding rules</h3><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
   +BREED_RULES.map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);
    return '<tr data-rule="'+b[0]+'"><td><b>'+esc(b[1])+'</b></td><td>'+(cur?'<b>'+esc(cur.value)+'</b> '+esc(b[2]):'<span class="pill w">not set</span>')+'</td>'

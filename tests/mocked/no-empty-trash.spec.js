@@ -45,7 +45,7 @@ function isTrashDelete(method, urlOrPath) {
 
 fileTest('source files have no empty-bin wording and no DELETE to a /trash endpoint', () => {
   const files = pageSources();
-  expect(files).toEqual(['cdhub/history-archive.html', 'cdhub/history.html', 'cdhub/index.html', 'index.html', 'money/core.js', 'money/index.html']);
+  expect(files).toEqual(['cdhub/history-archive.html', 'cdhub/history.html', 'cdhub/index.html', 'cdhub/jobs-view.js', 'index.html', 'money/core.js', 'money/index.html']);
   const bad = [];
   for (const file of files) {
     const hits = sourceHits(fs.readFileSync(path.join(ROOT, file), 'utf8'));
