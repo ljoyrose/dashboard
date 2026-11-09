@@ -72,6 +72,12 @@
     return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/London', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now || new Date());
   }
 
+  /** The dogs on site now, A-Z: the same list as The Board, so dogs that have left are not offered. */
+  function onSite(t) {
+    if (typeof BLDOccupancy === 'undefined') return t.subject || [];
+    return BLDOccupancy.dailyList(t).dogs.map(function (d) { return { id: d.id, name: d.label }; })
+      .sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
   function register(save) { if (!save.TABLES.check_log) save.TABLES.check_log = CHECK_LOG; }
 
   /** Draw the form. opts.type = a type_key to open that check directly (from a QR code). Returns a promise. */
@@ -89,11 +95,11 @@
       var b = save.banner('check_log');
       msg.textContent = b.text;
       if (!b.canSave) return { ok: false, reason: 'off' };
-      return save.readMany(['check_type', 'area', 'subject'], ['subject']).then(function (all) {
+      return save.readMany(['check_type', 'area', 'subject', 'occupancy', 'subject_status'], ['subject', 'occupancy', 'subject_status']).then(function (all) {
         if (!all.ok) { msg.textContent = all.message; return { ok: false, reason: 'read' }; }
         var types = currentTypes(all.tables.check_type, londonToday(opts.now));
         if (!types.length) { msg.textContent = 'No checks have been set up yet. Ask Lisa.'; return { ok: false, reason: 'none' }; }
-        draw(host, save, types, all.tables.area, all.tables.subject, opts.type, msg);
+        draw(host, save, types, all.tables.area, onSite(all.tables), opts.type, msg);
         return { ok: true, types: types.length };
       });
     });

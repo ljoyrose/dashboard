@@ -4,6 +4,16 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const D = require('../records/due.js');
 
+test('a room job saved per dog shows done for the room, and for each dog only when counting every dog', () => {
+  const types = [{ id: 'c1', type_key: 'run', label: 'run', target: 'area', every_days: 1, site_scope: 'per_dog', active: 'true', effective_from: '2026-01-01' }];
+  const logs = [{ id: 'l1', check_type_id: 'c1', area_id: 'r1', subject_id: 'd1', outcome: 'ok', taken_at: '2026-03-02T09:00:00Z' }];
+  const day = '2026-03-02';
+  assert.equal(D.forTarget(types, logs, { area_id: 'r1' }, day)[0].status, 'ok');
+  assert.equal(D.forTarget(types, logs, { subject_id: 'd1' }, day).length, 0);
+  assert.equal(D.forTarget(types, logs, { subject_id: 'd1', everyDog: true }, day)[0].status, 'ok');
+  assert.equal(D.forTarget(types, logs, { subject_id: 'd2', everyDog: true }, day)[0].status, 'never');
+});
+
 const T = (key, target, every, extra) => Object.assign({ id: 'cty-' + key + '-1', type_key: key, label: key, target, every_days: every, active: 'true', effective_from: '2026-01-01' }, extra);
 const dog = { subject_id: 'd1' };
 let n = 0;

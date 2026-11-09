@@ -154,3 +154,18 @@ test('published checks page: a refused code brings the code box back, and typing
   assert.equal(gate.hidden, false);
   assert.equal(code.value, '');
 });
+
+test('the dog list is only dogs on site, A-Z: a dog that has left is not offered', async () => {
+  global.BLDOccupancy = require('../client/occupancy.js');
+  try {
+    const w = world(), d = w.dom.window.document;
+    const occ = w.env.file('BLD-occupancy.csv')[0];
+    const h = w.env.ctx.csvParse_(occ.content)[0], row = (o) => h.map((c) => o[c] || '').join(',') + '\r\n';
+    occ.content += row({ id: 'occ-left', tenant_id: fx.TENANT, subject_id: 'sub-test-a', off_site_kind: 'sold', moved_in: '2026-11-01' });
+    await BLDChecks.mount(w.host, w.s, opts); await flush();
+    const names = [...d.getElementById('chk-subject_id').options].map((o) => o.value).filter(Boolean);
+    assert.equal(names.includes('sub-test-a'), false);
+    assert.ok(names.length > 0);
+    assert.deepEqual(names, names.slice().sort());
+  } finally { delete global.BLDOccupancy; }
+});

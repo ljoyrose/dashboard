@@ -18,10 +18,12 @@
     var key = v.today + '|' + v.logs.length + '|' + v.types.length + '|' + v.dogs.length + '|' + v.areas.length;
     if (memo && memo.key === key) return memo.rows;
     var site = v.logs.map(function (l) { return l.how_recorded === 'site_tap' ? Object.assign({}, l, { subject_id: '' }) : l; });
-    var rows = {};
+    var rows = {}, perDog = {};
+    v.types.forEach(function (t) { if (Due.perDogRoom(t)) perDog[t.type_key] = true; });
     function add(targets, logs) {
       targets.forEach(function (t) {
         Due.forTarget(v.types, logs, t, v.today).forEach(function (j) {
+          if (t.area_id && perDog[j.type_key]) return;   // counted dog by dog instead
           var r = rows[j.type_key] = rows[j.type_key] || { key: j.type_key, label: j.label, late: 0, due: 0, ok: 0, as_needed: 0, last_done: '' };
           if (j.status === 'late') r.late++;
           else if (j.status === 'today' || j.status === 'never') r.due++;
@@ -30,7 +32,7 @@
         });
       });
     }
-    add(v.dogs.map(function (d) { return { subject_id: d.id }; }), v.logs);
+    add(v.dogs.map(function (d) { return { subject_id: d.id, everyDog: true }; }), v.logs);
     add(v.areas.map(function (a) { return { area_id: a.id }; }), v.logs);
     add([{}], site);
     var list = Due.jobsInForce(v.types, v.today).filter(function (t) { return rows[t.type_key]; }).map(function (t) {

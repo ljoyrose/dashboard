@@ -14,6 +14,7 @@ const TYPES = [
   J('bowls', 'Bowls', 'none', { every_days: '1', site_scope: 'one_line' }),
   J('walk', 'Walk', 'none', { every_days: '1', site_scope: 'per_dog', not_in_areas: 'none' }),
   J('toys', 'Toys', 'none'),
+  J('exercise', 'Exercise', 'area', { every_days: '1', site_scope: 'per_dog' }),
   J('report', 'Report', 'optional', { note_label: 'What happened?' })
 ];
 const TABLES = {
@@ -127,4 +128,18 @@ test('jobs are listed A-Z, with a group where its name falls, whatever is late',
   await expect(page.locator('.job .nm')).toHaveText(['Grooming', 'Weigh']);
   await page.goto('cdhub/staff/#s/SITETAG2');
   await expect(page.locator('.job .nm')).toHaveText(['Bowls', 'Walk']);
+});
+
+test('a room job about dogs lists the room\'s dogs ticked and saves only those left ticked', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  const card = page.locator('[data-job="exercise"]');
+  await expect(card.getByRole('checkbox')).toHaveCount(2);
+  await card.getByRole('checkbox', { name: 'Pretend B' }).uncheck();
+  await card.getByRole('button', { name: /^Done/ }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].action).toBe('add_site');
+  expect(sent[0].fields.dog_ids).toBe('dog-1');
+  expect(sent[0].fields.area_id).toBe('area-1');
+  expect(sent[0].fields.how_recorded).toBe('scanned');
 });
