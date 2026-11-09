@@ -1118,10 +1118,10 @@ function breedRulesMissing(){ return BREED_RULES.filter(function(b){ return !bre
 function checks(){
  var c=counts(), out=[];
  var man=CD.manifest||[], mism=[];
- man.forEach(function(r){ var live=CD.counts[r.table]; if(live!=null && String(live)!==String(r.rows)) mism.push(r.table); });
+ man.forEach(function(r){ var live=CD.counts[r.table]; if(live!=null && +live < +r.rows) mism.push(r.table); });  // saves add rows; only a table that has lost rows needs a look
  out.push({k:'tables',ok:!mism.length&&!LOAD.notes.length,
-   msg:mism.length?mism.length+' tables disagree with the manifest: '+mism.join(', ')
-     :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, all match')});
+   msg:mism.length?mism.length+' tables have fewer rows than the manifest: '+mism.join(', ')
+     :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, none has lost rows')});
  out.push({k:'law vs yours',ok:c.bitches.length===c.active.length,
    msg:c.bitches.length===c.active.length?'both counts agree at '+c.bitches.length
      :'law says '+c.bitches.length+', your list says '+c.active.length,list:'bitches'});
