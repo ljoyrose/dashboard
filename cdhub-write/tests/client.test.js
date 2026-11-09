@@ -731,9 +731,9 @@ domTest('away and gone dogs in the daily list (browser side): off_site_temp is A
   assert.ok(lk.dogs.some((x) => x.away));
 });
 
-domTest('location check look: The Board\'s fonts and tokens are in the stylesheet, scoped to this screen', () => {
+domTest('location check look: the CD Hub font and tokens are in the stylesheet, scoped to this screen', () => {
   const css = read('screens/bld-save.css');
-  assert.match(css, /Bricolage Grotesque/); assert.match(css, /Figtree/);
+  assert.match(css, /--bs-display:var\(--house-font,inherit\)/); assert.match(css, /--bs-body:var\(--house-font,inherit\)/);
   assert.match(css, /\.bs\.bs-board\{/);
   assert.match(css, /--bs-accent:var\(--ljr-3,#E78615\)/);       // the Board's amber, now the house token
   assert.match(css, /min-height:60px/);                          // big yes/no taps
