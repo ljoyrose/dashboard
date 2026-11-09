@@ -4,6 +4,6 @@ StaffPage.register({ id: 'where', title: 'Where is everyone?', desc: 'Daily chec
   c.data().then(function (d) {
     host.textContent = '';
     if (!d.ok) { host.appendChild(c.h('p', { class: 'msg bad', text: d.message })); return; }
-    BLDScreens.locationConfirm(host, { save: c.save, dogs: d.dogs, areas: d.areas, skipped: d.skipped });
+    BLDScreens.locationConfirm(host, { save: c.save, dogs: d.dogs, areas: d.areas, skipped: d.skipped, offSite: true });
   });
 } });
