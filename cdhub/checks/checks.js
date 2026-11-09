@@ -74,7 +74,16 @@
 
   function register(save) { if (!save.TABLES.check_log) save.TABLES.check_log = CHECK_LOG; }
 
-  /** Draw the form. opts.type = a type_key to open that check directly (from a QR code). Returns a promise. */
+  /** Only dogs still on site, by name, using the staff page's own rule (BLDOccupancy). With no rule available, no dogs: never the whole history. */
+  function onSiteDogs(tables, occupancy) {
+    var rule = occupancy || (typeof BLDOccupancy !== 'undefined' ? BLDOccupancy : null);
+    if (!rule) return [];
+    return rule.dailyList(tables).dogs
+      .map(function (d) { return { id: d.id, name: d.label }; })
+      .sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+  }
+
+  /** Draw the form. opts.type =a type_key to open that check directly (from a QR code). Returns a promise. */
   function mount(host, save, opts) {
     opts = opts || {};
     var doc = host.ownerDocument;
@@ -89,11 +98,11 @@
       var b = save.banner('check_log');
       msg.textContent = b.text;
       if (!b.canSave) return { ok: false, reason: 'off' };
-      return save.readMany(['check_type', 'area', 'subject'], ['subject']).then(function (all) {
+      return save.readMany(['check_type', 'area', 'subject', 'occupancy', 'subject_status'], ['subject', 'occupancy', 'subject_status']).then(function (all) {
         if (!all.ok) { msg.textContent = all.message; return { ok: false, reason: 'read' }; }
         var types = currentTypes(all.tables.check_type, londonToday(opts.now));
         if (!types.length) { msg.textContent = 'No checks have been set up yet. Ask Lisa.'; return { ok: false, reason: 'none' }; }
-        draw(host, save, types, all.tables.area, all.tables.subject, opts.type, msg);
+        draw(host, save, types, all.tables.area, onSiteDogs(all.tables, opts.occupancy), opts.type, msg);
         return { ok: true, types: types.length };
       });
     });
@@ -179,5 +188,5 @@
     choose(startKey);
   }
 
-  return { mount: mount, currentTypes: currentTypes, askedFields: askedFields, checkEntry: checkEntry, register: register, CHECK_LOG: CHECK_LOG };
+  return { mount: mount, currentTypes: currentTypes, onSiteDogs: onSiteDogs, askedFields: askedFields, checkEntry: checkEntry, register: register, CHECK_LOG: CHECK_LOG };
 }));

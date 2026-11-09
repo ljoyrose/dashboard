@@ -36,9 +36,21 @@ function world() {
   return { env, s, dom, host: dom.window.document.getElementById('a') };
 }
 const logRows = (env) => { const [h, ...rows] = env.ctx.csvParse_(env.file('BLD-check_log.csv')[0].content).filter((r) => r.length > 1); return rows.map((r) => Object.fromEntries(h.map((c, i) => [c, r[i] || '']))); };
-const opts = { type: 'feeding', now: new Date('2026-11-08T10:00:00Z') };
+const everyone = { dailyList: (T) => ({ dogs: T.subject.map((s) => ({ id: s.id, label: s.name })) }) };   // these tests are about saving, not who is on site
+const opts = { type: 'feeding', now: new Date('2026-11-08T10:00:00Z'), occupancy: everyone };
 const fill = (d, id, v) => { d.getElementById('chk-' + id).value = v; };
 const press = (w) => w.host.querySelector('form').dispatchEvent(new w.dom.window.Event('submit', { cancelable: true, bubbles: true }));
+
+test('checks screen: the dog list is only dogs still on site, by name', () => {
+  const rule = require('../../cdhub/staff/lib/occupancy.js');
+  const tables = {
+    area: [], subject_status: [],
+    subject: [{ id: 'z', name: 'Zed' }, { id: 'a', name: 'Amy' }, { id: 'old', name: 'Retired long ago' }, { id: 'none', name: 'Never placed' }],
+    occupancy: [{ subject_id: 'z', area_id: 'r1' }, { subject_id: 'a', area_id: 'r1' }, { subject_id: 'old', off_site_kind: 'sold' }]
+  };
+  assert.deepEqual(BLDChecks.onSiteDogs(tables, rule).map((d) => d.name), ['Amy', 'Zed']);
+  assert.deepEqual(BLDChecks.onSiteDogs(tables, null), [], 'no rule means no dogs, never the whole history');
+});
 
 test('checks screen: feeding saves end to end, as the staff member, to the check log', async () => {
   const w = world(), d = w.dom.window.document;
