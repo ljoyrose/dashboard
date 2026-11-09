@@ -1681,7 +1681,7 @@ function drawDogs(){
  var q=v('q').toLowerCase(),fs=v('fs'),fn=v('fn'),fa=v('fa'),fst=v('fst'),fc=v('fc'),ft=v('ft');
  var list=CD.dogs.filter(function(d){
   var sc=statusOf(d).code;
-  if(!fst && (sc==='CL'||sc==='DE')) return false;
+  if(!fst && !(/^active$/i.test(d.state||'') && (sc==='BI'||sc==='ST'))) return false; // default list: the kennel's own active breeding dogs; the Status filter shows the rest
   if(fs==='__none'){ if(d.sex) return false; } else if(fs&&d.sex!==fs) return false;
   if(fn){ var e=isEntire(d); if(fn==='e'&&!e) return false; if(fn==='n'&&e) return false; }
   if(fa&&ageBand(months(d.dob))!==fa) return false;
