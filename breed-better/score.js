@@ -15,7 +15,7 @@
 
   var WHEN_MISSING = ['unknown', 'zero', 'fail'];
   var READS = ['latest', 'lowest', 'count'];
-  var OUTCOMES = ['pass', 'fail', 'unproven'];
+  var OUTCOMES = ['pass', 'fail', 'unverified'];
   var JUDGED = 'judged';
 
   function text(v) { return v === undefined || v === null ? '' : String(v).trim(); }
@@ -95,7 +95,7 @@
       if (band.kind !== 'status' && !rows.length) errors.push(c.id + ': has no answers');
       rows.forEach(function (p) {
         if (!parseMatch(p.answer_match)) errors.push(p.id + ': answer rule "' + p.answer_match + '" is not understood');
-        if (band.kind === 'gate' && OUTCOMES.indexOf(text(p.gate_outcome)) < 0) errors.push(p.id + ': a gate answer needs pass, fail or unproven');
+        if (band.kind === 'gate' && OUTCOMES.indexOf(text(p.gate_outcome)) < 0) errors.push(p.id + ': a gate answer needs pass, fail or unverified');
         if (band.kind === 'points' && !/^\d+(\.\d+)?$/.test(text(p.points))) errors.push(p.id + ': a points answer needs a number');
       });
     });
@@ -164,8 +164,8 @@
     input.bands.forEach(function (b) { bands[b.id] = b; });
     var evidence = input.evidence || {};
     var judgements = input.judgements || {};
-    var lines = [], gates = { pass: 0, fail: 0, unproven: 0 };
-    var earned = 0, available = 0, unproven = 0, unknownCount = 0;
+    var lines = [], gates = { pass: 0, fail: 0, unverified: 0 };
+    var earned = 0, available = 0, unverified = 0, unknownCount = 0;
 
     input.criteria.forEach(function (c) {
       var band = bands[c.band_id];
@@ -188,12 +188,12 @@
       if (band.kind === 'gate') {
         var outcome;
         if (rule) outcome = rule.gate_outcome;
-        else if (ev.reason === 'expired') outcome = 'unproven';
+        else if (ev.reason === 'expired') outcome = 'unverified';
         else if (when === 'fail') outcome = 'fail';
-        else outcome = 'unproven';
+        else outcome = 'unverified';
         line.gate_outcome = outcome;
         gates[outcome]++;
-        if (outcome === 'unproven') unknownCount++;
+        if (outcome === 'unverified') unknownCount++;
       } else {
         var max = maxPoints(ruleRows);
         line.points_max = max;
@@ -204,18 +204,18 @@
         } else if (when === 'zero' || when === 'fail') {
           line.points = 0;
         } else {
-          unproven += max;
+          unverified += max;
           unknownCount++;
         }
       }
       lines.push(line);
     });
 
-    var gateResult = gates.fail ? 'fail' : (gates.unproven ? 'unproven' : 'pass');
+    var gateResult = gates.fail ? 'fail' : (gates.unverified ? 'unverified' : 'pass');
     return {
       subject_id: input.subject.id, scheme_id: input.scheme.id, as_of: input.asOf,
       gate_result: gateResult, points_earned: earned, points_available: available,
-      points_unproven: unproven, unknown_count: unknownCount, lines: lines
+      points_unverified: unverified, unknown_count: unknownCount, lines: lines
     };
   }
 

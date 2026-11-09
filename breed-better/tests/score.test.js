@@ -38,42 +38,42 @@ test('three unlike species score with no code change, only different rows', () =
   }
 });
 
-test('verdict: any fail is Fail, even beside an unproven gate', () => {
+test('verdict: any fail is Fail, even beside an unverified gate', () => {
   const set = Object.assign({}, DOG, { criteria: DOG.criteria.concat(crit('elbow', 'g')), points: DOG.points.concat(pt('5', 'elbow', 'is:ok', '', 'pass')) });
   const r = score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01', evidence: { exam: [exam('e1', 'a1', 'hip', 'poor', '2026-01-01')] } }));
   assert.equal(r.gate_result, 'fail');
 });
 
-test('verdict: missing evidence is Unproven, never Pass and never Fail', () => {
+test('verdict: missing evidence is Unverified, never Pass and never Fail', () => {
   const r = score(dogInput([]));
-  assert.equal(r.gate_result, 'unproven');
+  assert.equal(r.gate_result, 'unverified');
   assert.equal(r.lines[0].unknown_reason, 'no_record');
   assert.equal(r.unknown_count, 2);
 });
 
-test('verdict: expired evidence is Unproven even when the answer was a pass', () => {
+test('verdict: expired evidence is Unverified even when the answer was a pass', () => {
   const r = score(dogInput([exam('e1', 'a1', 'hip', 'sound', '2025-01-01')]));
-  assert.equal(r.gate_result, 'unproven');
+  assert.equal(r.gate_result, 'unverified');
   assert.equal(r.lines[0].unknown_reason, 'expired');
 });
 
 test('evidence on its last valid day still counts; the day after it does not', () => {
   const rows = [exam('e1', 'a1', 'hip', 'sound', '2025-06-01')];
   assert.equal(score(dogInput(rows, { asOf: '2026-06-01' })).gate_result, 'pass');
-  assert.equal(score(dogInput(rows, { asOf: '2026-06-02' })).gate_result, 'unproven');
+  assert.equal(score(dogInput(rows, { asOf: '2026-06-02' })).gate_result, 'unverified');
 });
 
 test('an undated record cannot satisfy a gate that expires', () => {
   const r = score(dogInput([exam('e1', 'a1', 'hip', 'sound', '')]));
-  assert.equal(r.gate_result, 'unproven');
+  assert.equal(r.gate_result, 'unverified');
   assert.equal(r.lines[0].unknown_reason, 'undated');
 });
 
 test('an answer with no matching rule is flagged, not scored zero', () => {
   const set = Object.assign({}, DOG, { points: [pt('1', 'hip', 'is:sound', '', 'pass'), pt('3', 'eye', 'is:clear', 10)] });
   const r = score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01', evidence: { exam: [exam('e1', 'a1', 'hip', 'odd', '2026-01-01'), exam('e2', 'a1', 'eye', 'odd', '2026-01-01')] } }));
-  assert.equal(r.gate_result, 'unproven');
-  assert.equal(r.points_unproven, 10);
+  assert.equal(r.gate_result, 'unverified');
+  assert.equal(r.points_unverified, 10);
   assert.equal(r.lines[1].unknown_reason, 'no_rule_for_answer');
 });
 
@@ -91,7 +91,7 @@ test('latest record wins; a later record dated after the score date is ignored',
 });
 
 test('another animal\'s records are never used', () => {
-  assert.equal(score(dogInput([exam('e1', 'b2', 'hip', 'sound', '2026-01-01')])).gate_result, 'unproven');
+  assert.equal(score(dogInput([exam('e1', 'b2', 'hip', 'sound', '2026-01-01')])).gate_result, 'unverified');
 });
 
 test('lowest reads the worst of several rows', () => {
@@ -120,10 +120,10 @@ test('a rule that applies to one sex is skipped for the other and not counted as
   assert.equal(r.lines.length, 0);
 });
 
-test('a judged item records who judged it, and is unproven until judged', () => {
+test('a judged item records who judged it, and is unverified until judged', () => {
   const set = { scheme: { id: 's' }, bands: [band('p', 'points')], criteria: [{ id: 'j', band_id: 'p', label: 'j', evidence_source: 'judged' }], points: [pt('1', 'j', 'is:yes', 5), pt('2', 'j', 'any', 0)] };
   const base = Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01' });
-  assert.equal(score(base).points_unproven, 5);
+  assert.equal(score(base).points_unverified, 5);
   const r = score(Object.assign({}, base, { judgements: { j: { answer: 'yes', by: 'person_1' } } }));
   assert.equal(r.points_earned, 5);
   assert.equal(r.lines[0].judged_by, 'person_1');
