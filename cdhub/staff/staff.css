@@ -40,4 +40,5 @@ textarea.inp{padding:10px 14px}
 .job{border-left:3px solid var(--line)}.job.s-late{border-left-color:var(--bad)}.job.s-today,.job.s-never{border-left-color:var(--warn)}.job.s-ok{border-left-color:var(--good)}
 .job-head{display:flex;align-items:center;gap:10px}.job-txt{flex:1;min-width:0}
 .job-prob{border:0;background:transparent;color:var(--muted);font-weight:600;font-size:var(--fs-small);min-height:44px;padding:0}
+.job-dogs{margin-top:8px}.job-dog{display:flex;align-items:center;gap:10px;min-height:44px}.job-dog input{width:22px;height:22px;flex:none}
 .job-btns{display:flex;gap:8px;flex-wrap:wrap}.job-move{margin-top:14px}

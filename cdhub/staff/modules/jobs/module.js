@@ -43,6 +43,7 @@
         if (row.kind === 'area') { target.area_id = row.ref_id; title = ((d.areas.filter(function (x) { return x.id === row.ref_id; })[0]) || {}).label || 'Room'; }
       }
       ctx0.reportFor = target;
+      var roomDogs = target.area_id ? d.dogs.filter(function (x) { return x.areaId === target.area_id && !x.away; }) : [];
 
       var today = c.today(), types = typesRead.rows, inForce = BLDDue.jobsInForce(types, today), byKey = {};
       inForce.forEach(function (t) { byKey[t.type_key] = t; });
@@ -69,6 +70,11 @@
         var bad = BLDChecks.checkEntry(t, check), first = Object.keys(bad)[0];
         if (first) { panelMsg.className = 'msg bad'; panelMsg.textContent = bad[first]; return; }
         var opts = { requestId: state.rid = state.rid || c.save.newRequestId() };
+        if (state.ticks) {
+          var ticked = state.ticks.filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
+          if (!ticked.length) { panelMsg.className = 'msg bad'; panelMsg.textContent = 'Tick a dog.'; return; }
+          opts.action = 'add_site'; entry.dog_ids = ticked.join('|');
+        }
         if (site) { opts.action = 'add_site'; entry.how_recorded = 'site_tap'; if (t.site_scope === 'per_dog') entry.dog_ids = d.dogs.filter(function (x) { return !x.away; }).map(function (x) { return x.id; }).join('|'); }
         panelMsg.className = 'msg'; panelMsg.textContent = 'Saving...';
         c.save.submit('check_log', entry, opts).then(function (r) {
@@ -87,7 +93,11 @@
         if (a.item) input('item', t.item_label || 'What');
         if (a.amount) input('amount', t.amount_unit ? 'Amount (' + t.amount_unit + ')' : 'Amount');
         input('note', t.note_label || 'Note');
-        var done = a.outcome ? 'ok' : 'recorded';
+        var done = a.outcome ? 'ok' : 'recorded', roomList = null;
+        if (BLDDue.perDogRoom(t) && target.area_id) {   // all ticked: untick only a dog that missed out
+          state.ticks = roomDogs.map(function (x) { return h('input', { type: 'checkbox', value: x.id, checked: true, onchange: function () { state.rid = null; } }); });
+          roomList = h('div', { class: 'job-dogs' }, roomDogs.length ? roomDogs.map(function (x, i) { return h('label', { class: 'job-dog' }, [state.ticks[i], h('span', { text: x.label })]); }) : [h('p', { class: 'sub', text: 'No dogs here.' })]);
+        }
         var problems = h('div', { class: 'job-btns', hidden: true }, [
           h('button', { class: 'btn quiet', type: 'button', text: 'Concern', onclick: function () { send(job, t, 'concern', inputs, panelMsg, state); } }),
           h('button', { class: 'btn quiet', type: 'button', text: 'Not done', onclick: function () { send(job, t, 'not_done', inputs, panelMsg, state); } })
@@ -97,10 +107,11 @@
           h('div', { class: 'job-txt' }, [h('div', { class: 'nm', text: job.label }), h('div', { class: 'ds', text: dueLine(job) })]),
           h('button', { class: 'btn', type: 'button', text: site ? 'Yes' : 'Done', 'aria-label': (site ? 'Yes, done: ' : 'Done: ') + job.label, onclick: function () {
             if (needs && panel.hidden) { panel.hidden = false; return; }
+            if (roomList) panel.hidden = false;
             send(job, t, done, inputs, panelMsg, state);
           } })
         ]);
-        var kids = [head];
+        var kids = roomList ? [head, roomList] : [head];
         if (a.outcome) kids.push(h('button', { class: 'job-prob', type: 'button', text: 'Problem', 'aria-label': 'Problem: ' + job.label, onclick: function () { panel.hidden = false; problems.hidden = false; } }));
         kids.push(panel);
         return h('div', { class: 'card job s-' + job.status, 'data-job': job.type_key }, kids);

@@ -160,7 +160,7 @@ var TABLES = {
       includes:       { type: 'text' },                                             // type_keys this job also covers, separated by |
       sop:            { type: 'text' },                                             // the SOP's short name
       evidence:       { type: 'enum', values: ['none', 'optional', 'required'], dflt: 'none' },
-      site_scope:     { type: 'enum', values: ['one_line', 'per_dog'] },            // target none only: what one whole-site tap writes
+      site_scope:     { type: 'enum', values: ['one_line', 'per_dog'] },            // target none or area: what one tap writes
       not_in_areas:   { type: 'text' }                                              // per_dog: room ids a whole-site tap never covers (isolation), by |, or none
     },
     dupKey: ['type_key', 'effective_from'], dupTimeCol: null,
@@ -177,8 +177,8 @@ var TABLES = {
         else if (self) errors.includes = 'A check cannot include itself.';
         else row.includes = keys.join('|');
       }
-      if (!errors.site_scope && row.site_scope !== '' && row.target !== 'none') errors.site_scope = 'Only for a whole-site check.';
-      if (!errors.not_in_areas && row.site_scope === 'per_dog' && row.not_in_areas === '') {
+      if (!errors.site_scope && row.site_scope !== '' && row.target !== 'none' && row.target !== 'area') errors.site_scope = 'Only for a whole-site or room check.';
+      if (!errors.not_in_areas && row.target === 'none' && row.site_scope === 'per_dog' && row.not_in_areas === '') {
         errors.not_in_areas = 'List the isolation rooms this tap must never cover, separated by |, or type none.';
       }
     },
