@@ -361,6 +361,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs{border-bottom:1px solid var(--line)}
 .dcs>summary{display:flex;align-items:center;gap:7px;padding:0 12px;cursor:pointer;list-style:none;user-select:none;font-size:var(--fs-small);color:var(--muted);min-width:0;height:var(--house-btn);overflow:hidden;border-top:1px solid var(--press);box-sizing:border-box}
 .dcs>summary::-webkit-details-marker{display:none}
+@media (hover:hover){.dcs>summary:hover{outline:var(--house-line) solid var(--sel-bd);outline-offset:calc(-1 * var(--house-line))}}
 .dcs>summary svg{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dcs>summary .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs>summary::after{content:'\25BA';margin-left:auto;font-size:.6rem;transition:transform .15s;display:inline-block;flex:0 0 auto}
