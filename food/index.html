@@ -99,6 +99,14 @@
   .card h2 { font-size: var(--fs-head); margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
   .card .what { color: var(--muted); font-size: var(--fs-body); margin: 0; }
   .card .what b { color: var(--ink); }
+  /* Send cards (10 Nov 2026): the Marketplace hub's facts grid, 3 across (2 on a phone); a rose dot marks a fact that needs a look. */
+  .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .fact { padding: 8px 12px; border-left: 1px solid var(--line); min-width: 0; }
+  .fact:nth-child(3n + 1) { border-left: 0; padding-left: 0; }
+  .fact .k { display: block; font-size: var(--fs-small); color: var(--muted); } .fact .v { display: block; font-weight: 600; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+  .fact .v.red::before, .card .warn::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ljr-2); margin-right: 6px; vertical-align: middle; }
+  .card .warn { margin: 0; font-size: var(--fs-body); }
+  @media (max-width: 600px) { .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); } .fact:nth-child(3n + 1) { border-left: 1px solid var(--line); padding-left: 12px; } .fact:nth-child(2n + 1) { border-left: 0; padding-left: 0; } }
   .acts { display: flex; gap: 8px; flex-wrap: wrap; }
   .acts .btn { flex: 1; justify-content: center; }
   .empty { display: flex; gap: 12px; align-items: center; margin: 0; font-size: var(--fs-body); }
@@ -342,10 +350,68 @@
   function inDays(ymd) { var d = daysTo(ymd); return d === null ? '' : d < 0 ? (-d) + ' day' + (d === -1 ? '' : 's') + ' late' : d === 0 ? 'today' : d === 1 ? 'tomorrow' : 'in ' + d + ' days'; }
   function wide(n) { return n >= 100 ? ' wide' : ''; }   // count pills: 1-2 digits keep the exact 30px box, 3+ digits grow
   function needsLook(o) { return !!(CHECK[o.check] && CHECK[o.check][1]); }
+  // Send cards (Lisa, 10 Nov 2026: "this tells me nothing"). Everything needed to decide Send without leaving the card, read
+  // from the Orders row, Products, Codes and Settings: where the order came from (channel, brand, affiliate), who it is for (new or
+  // returning customer, one-off or subscription, dog or cat), what is in it (food or treats, names, kg, GA boxes, pallet over
+  // MAX_ORDER_WEIGHT_KG) and whether it pays (profit against MIN_PROFIT). Before GA's invoice the profit is an estimate, made the
+  // engine's way: sale ex VAT - GA price x qty - GA delivery per box - card fee - overhead. No customer name or address is shown:
+  // the sheet never holds them (Shopify holds them; the Shopify button opens the order).
+  function setNum(k, d) { var v = setting(k); return v === '' ? d : num(v); }
+  function codeKg(code) { var n = Number(String(code || '').substr(3, 4)); return n > 0 ? n : 0; }
+  function productOf(code) { return data.products.filter(function (q) { return q.full_ga_code === code; })[0] ||
+    data.products.filter(function (q) { return q.tla && q.tla === String(code).substr(0, 3) && q.pack === codeKg(code) + 'kg'; })[0]; }
+  function brandName(code) { var c = data.codes.filter(function (x) { return x.kind === 'brand' && String(x.code).toUpperCase() === String(code || '').toUpperCase(); })[0]; return c ? c.name : String(code || ''); }
+  function orderOf(no) { return data.orders.filter(function (x) { return String(x.order_no) === String(no); })[0]; }
+  function sendInfo(r) {
+    var no = r.key.replace(/^SEND-/, ''), o = orderOf(no) || {}, lines = [];
+    try { lines = JSON.parse(o.shop_lines || '[]'); } catch (e) { lines = []; }
+    if (!lines.length) String(detail(r).why || '').replace(/(\d+)\s*x\s*([A-Z0-9]{8,})/g, function (m, q, c) { lines.push({ qty: num(q), code: c }); return m; });
+    var kg = 0, badKg = false, ga = 0, gaOk = lines.length > 0, treats = 0, food = 0, sheets = {};
+    lines.forEach(function (l) { var p = productOf(l.code), w = codeKg(l.code), q = num(l.qty) || 1;
+      if (/^TT/.test(l.code)) treats += q; else food += q;
+      if (w) kg += w * q; else badKg = true;
+      var price = p && num(p.ga_price_ex_vat_portal_oct26 || p.ga_price_ex_vat_list_aug25); if (price) ga += price * q; else gaOk = false;
+      if (p && /^https:\/\//.test(p.data_sheet_url || '')) sheets[p.data_sheet_url] = p.ddf_name || p.recipe || l.code; });
+    var other = []; try { other = JSON.parse(o.other_lines || '[]'); } catch (e) { other = o.other_lines ? [o.other_lines] : []; }
+    if (other.length) treats += other.length;
+    var boxKg = setNum('GA_BOX_KG', 27), boxes = kg ? Math.ceil(kg / boxKg) : 0, maxKg = setNum('MAX_ORDER_WEIGHT_KG', 270);
+    var inc = num(o.sale_inc_vat), ex = num(o.sale_ex_vat) || num(o.sale_ex_vat_est) || (inc ? inc / 1.2 : 0), min = minProfit();
+    var profit = '', est = false;
+    if (o.profit_est !== undefined && o.profit_est !== '') profit = num(o.profit_est);
+    else if (ex && gaOk && boxes) { est = true;
+      profit = Math.round((ex - ga - setNum('DELIVERY_FIRST_BOX', 10.82) - (boxes - 1) * setNum('DELIVERY_NEXT_BOX', 8.79) - (inc || ex * 1.2) * setNum('CARD_FEE_PCT', 2) / 100 - setNum('CARD_FEE_FIXED', 0.25) - setNum('OVERHEAD_PER_ORDER', 0.8)) * 100) / 100; }
+    var n = num(o.customer_orders), t = String(o.order_type || '');
+    var who = (n === 1 ? 'New customer' : n > 1 ? nth(n) + ' order' : 'Customer not known') + (t ? ' · ' + (/^sub/i.test(t) ? 'subscription' : 'one-off') : '');
+    var warn = [];
+    if (profit !== '' && profit < min) warn.push('Profit ' + money(profit) + ' is under your £' + min + ' minimum');
+    if (kg > maxKg) warn.push(kg + 'kg is a pallet order (over ' + maxKg + 'kg): order it on the GA Portal, not by XML');
+    if (badKg) warn.push('A pack weight could not be read from its GA code: check the boxes');
+    if (lines.length && !gaOk) warn.push('A GA price is missing on the Products tab, so profit cannot be estimated');
+    if (o.line_flag) warn.push(String(o.line_flag));
+    return { no: no, o: o, lines: lines, kg: kg, boxes: boxes, pallet: kg > maxKg, food: food, treats: treats, profit: profit, est: est, min: min, who: who, warn: warn, sheets: sheets,
+      channel: [o.source || 'Source not known', o.brand ? brandName(o.brand) : '', o.partner ? 'via ' + partnerName(o.partner) : ''].filter(Boolean).join(' · '),
+      kind: food && treats ? 'Food + treats' : treats ? 'Treats only' : food ? 'Food' : '–' };
+  }
+  function sendSummary(r) { var x = sendInfo(r);
+    return [x.channel, x.kg ? x.kg + 'kg' : '', x.profit === '' ? '' : (x.est ? 'est. ' : '') + money(x.profit) + ' profit'].filter(Boolean).join(' · '); }
+  function sendBody(r) {
+    var x = sendInfo(r), o = x.o, items = o.order_no ? orderItems(o) : x.lines.map(function (l) { var p = productOf(l.code); return l.qty + ' × ' + (p ? (p.ddf_name || p.recipe) + ' ' + p.pack : l.code); }).join(', ');
+    var facts = [['Customer', x.who], ['For', o.species || '–'], ['What', x.kind],
+      ['Weight', x.kg ? x.kg + 'kg · ' + (x.pallet ? 'pallet' : x.boxes + ' GA box' + (x.boxes > 1 ? 'es' : '')) : '–', x.pallet],
+      ['Sale (inc VAT)', o.sale_inc_vat ? money(o.sale_inc_vat) : '–'],
+      [x.est ? 'Est. profit' : 'Profit', x.profit === '' ? '–' : money(x.profit), x.profit !== '' && x.profit < x.min]];
+    var links = (o.order_no ? shopLink(o) : '') + Object.keys(x.sheets).map(function (u) { return '<a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Data sheet: ' + esc(x.sheets[u]) + '</a>'; }).join('');
+    return '<p class="what"><b>' + esc(x.channel) + '</b>' + (o.placed_at ? ' · placed ' + esc(ukDate(o.placed_at)) + ', ' + esc(daysAgo(o.placed_at)) : '') + '</p>' +
+      (items ? '<p class="what">' + esc(items) + '</p>' : '') +
+      '<div class="facts">' + facts.map(function (f) { return '<div class="fact"><span class="k">' + esc(f[0]) + '</span><span class="v' + (f[2] ? ' red' : '') + '">' + esc(f[1]) + '</span></div>'; }).join('') + '</div>' +
+      x.warn.map(function (w) { return '<p class="warn">' + esc(w) + '</p>'; }).join('') +
+      (x.est ? '<p class="hint">Estimate at today\'s GA prices and delivery; the real profit comes with GA\'s invoice. Minimum £' + x.min + ' (MIN_PROFIT).</p>' : '') +
+      (links ? '<div class="acts">' + links + '</div>' : '');
+  }
   // A card: a name line (dot + what kind; "Next" on the first one), then the title. The first card on Home is the Next card.
   function cardHtml(r, next) {
     var s = SECTIONS[r.section] || SECTIONS.check, d = detail(r);
-    var h = '<div class="card' + (next === true ? ' next' : '') + (r.key === focusKey ? ' focus' : '') + '" data-key="' + esc(r.key) + '"><p class="bline"><span class="dot" style="--c:var(--ljr-' + (d.red ? 2 : 3) + ')" aria-hidden="true"></span>' + (next === true ? 'Next: ' : '') + esc(s.name) + '</p><h2>' + esc(r.title) + '</h2><p class="what">' + esc(d.why || s.what) + '</p>';
+    var h = '<div class="card' + (next === true ? ' next' : '') + (r.key === focusKey ? ' focus' : '') + '" data-key="' + esc(r.key) + '"><p class="bline"><span class="dot" style="--c:var(--ljr-' + (d.red ? 2 : 3) + ')" aria-hidden="true"></span>' + (next === true ? 'Next: ' : '') + esc(s.name) + '</p><h2>' + esc(r.title) + '</h2>' + (r.section === 'send' && /^SEND-/.test(r.key) ? sendBody(r) : '<p class="what">' + esc(d.why || s.what) + '</p>');
     var on = /^(?:LOWPROFIT|MISSING|MISMATCH|UNKNOWN)-(.+)$/.exec(r.key), o = on && data.orders.filter(function (x) { return String(x.order_no) === on[1]; })[0];
     if (o) { var ol = orderLinks(o); h += (orderFacts(o) ? '<p class="what"><b>' + esc(orderFacts(o)) + '</b></p>' : '') + (ol || /^MISSING|^UNKNOWN/.test(r.key) ? '<div class="acts">' + ol + (/^MISSING|^UNKNOWN/.test(r.key) && /^https:/.test(setting('GA_PORTAL')) ? '<a class="btn" href="' + esc(setting('GA_PORTAL')) + '" target="_blank" rel="noopener">GA Portal</a>' : '') + '</div>' : ''); }
     if (d.file) h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(d.file) + '/view" target="_blank" rel="noopener">Open the PDF</a></div>';
@@ -368,7 +434,7 @@
         act: portal ? 'GA Portal' : 'Open', actHref: portal, actExt: !!portal, sort: num(o.order_no) };
     });
     waiting().filter(function (r) { return r.section !== 'profit'; }).sort(byUrgency).forEach(function (r) {
-      rows.push({ kind: detail(r).red ? 'late' : 'wait', text: r.title, sub: (SECTIONS[r.section] || SECTIONS.check).name, href: '#/do/' + encodeURIComponent(r.key), act: 'Answer' });
+      rows.push({ kind: detail(r).red ? 'late' : 'wait', text: r.title, sub: /^SEND-/.test(r.key) ? sendSummary(r) : (SECTIONS[r.section] || SECTIONS.check).name, href: '#/do/' + encodeURIComponent(r.key), act: 'Answer' });
     });
     return rows;
   }
