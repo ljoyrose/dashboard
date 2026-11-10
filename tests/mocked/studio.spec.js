@@ -798,9 +798,10 @@ test.describe('Studio page', () => {
     // Keyboard focus is an ink ring like hover, never the browser blue.
     await page.locator('[data-vmode="list"]').focus();
     await page.keyboard.press('Shift+Tab'); await page.keyboard.press('Tab');
-    const ring = await page.evaluate(() => { const e = document.activeElement, c = getComputedStyle(e); return { o: c.outlineColor, w: c.outlineWidth, ink: getComputedStyle(document.body).color }; });
+    const ring = await page.evaluate(() => { const e = document.activeElement, c = getComputedStyle(e); return { o: c.outlineColor, w: c.outlineWidth, off: c.outlineOffset, ink: getComputedStyle(document.body).color }; });
     expect(ring.o).toBe(ring.ink);
-    expect(ring.w).toBe('2px');
+    expect(ring.w).toBe('1px');   // one 1px line inside (Lisa, 3 Nov 2026)
+    expect(ring.off).toBe('-1px');
     await page.locator('.side [aria-label="Close details"]').click();
     await expect(page.locator('.side')).toHaveCount(0);
     // Bottom tabs: no ring; the colour bar above the label grows on the selected tab and on hover, and nothing moves.
