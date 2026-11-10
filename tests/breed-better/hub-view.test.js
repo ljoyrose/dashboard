@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert');
-const View = require('../hub-view.js');
+const View = require('../../breed-better/hub-view.js');
 
 const esc = (s) => String(s).replace(/[&<>"]/g, '');
 function tables(extra) {

@@ -2,7 +2,7 @@
 /** Breed Better calculator. All animals, tests and grades here are invented. */
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { score, pickScheme, validateScheme, parseMatch, addMonths } = require('../score');
+const { score, pickScheme, validateScheme, parseMatch, addMonths } = require('../../breed-better/score');
 
 const band = (id, kind) => ({ id, kind });
 const crit = (id, band_id, extra) => Object.assign({ id, band_id, label: id, evidence_source: 'exam', evidence_match: 'kind=' + id, answer_field: 'result', date_field: 'on' }, extra);
