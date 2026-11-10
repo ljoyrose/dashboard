@@ -122,7 +122,7 @@ test('#/sops lists all 49 labels; colour and frequency filters and search work',
   await page.locator('#sopclr').click();
   await page.locator('#sopcol').selectOption('Purple');
   await expect(page.locator('#soprows .t .n')).toHaveText('Signs/Posters Index');
-  const purple = await page.locator('#soprows [data-sop]').evaluate((e) => getComputedStyle(e).borderLeftColor);
+  const purple = await page.locator('#soprows [data-sop]').evaluate((e) => getComputedStyle(e, '::before').borderLeftColor);
   expect(purple).toBe('rgb(165, 112, 209)');
 
   await page.locator('#sopclr').click();
@@ -247,8 +247,9 @@ test('each SOP is a card with its colour as a 3px full-height line; the search b
   await openSops(page);
   const card = page.locator('#soprows [data-sop="Care Rounds"]');
   await expect(card.locator('.t small')).toHaveText('Daily');
-  const look = await card.evaluate((e) => { const s = getComputedStyle(e); return { left: s.borderLeftWidth, radius: parseFloat(s.borderTopLeftRadius) > 0 }; });
-  expect(look).toEqual({ left: '3px', radius: true });
+  const look = await card.evaluate((e) => { const s = getComputedStyle(e), b = getComputedStyle(e, '::before'); return { left: s.borderLeftWidth, bar: b.borderLeftWidth, same: b.borderLeftColor !== s.borderTopColor, radius: parseFloat(s.borderTopLeftRadius) > 0 }; });
+  // Every line is 1px (house look); the colour is the house bar (house.css 10), 3px down the whole left edge, curved.
+  expect(look).toEqual({ left: '1px', bar: '3px', same: true, radius: true });  // same = the bar is its own colour, not the card line
   await page.locator('#sopq').focus();
   expect(await page.locator('#sopq').evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
 });
