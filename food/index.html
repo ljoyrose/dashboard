@@ -96,6 +96,7 @@
   .hm-xml { justify-self: start; display: inline-flex; align-items: center; min-height: 36px; padding: 0 4px; color: var(--ink); font-size: var(--fs-small); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }   /* Next: the one thing to do now; white with a 1px ink edge */
   .bline { display: flex; gap: 8px; align-items: center; font-size: var(--fs-small); font-weight: 600; color: var(--muted); margin: 0 0 -8px; }
   .bline .dot { width: 8px; height: 8px; }
+  .bline .brand { margin-left: auto; height: 20px; font-weight: 600; }   /* the order's brand, on every order card in Do */
   .card h2 { font-size: var(--fs-head); margin: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
   .card .what { color: var(--muted); font-size: var(--fs-body); margin: 0; }
   .card .what b { color: var(--ink); }
@@ -411,7 +412,7 @@
   // A card: a name line (dot + what kind; "Next" on the first one), then the title. The first card on Home is the Next card.
   function cardHtml(r, next) {
     var s = SECTIONS[r.section] || SECTIONS.check, d = detail(r);
-    var h = '<div class="card' + (next === true ? ' next' : '') + (r.key === focusKey ? ' focus' : '') + '" data-key="' + esc(r.key) + '"><p class="bline"><span class="dot" style="--c:var(--ljr-' + (d.red ? 2 : 3) + ')" aria-hidden="true"></span>' + (next === true ? 'Next: ' : '') + esc(s.name) + '</p><h2>' + esc(r.title) + '</h2>' + (r.section === 'send' && /^SEND-/.test(r.key) ? sendBody(r) : '<p class="what">' + esc(d.why || s.what) + '</p>');
+    var h = '<div class="card' + (next === true ? ' next' : '') + (r.key === focusKey ? ' focus' : '') + '" data-key="' + esc(r.key) + '"><p class="bline"><span class="dot" style="--c:var(--ljr-' + (d.red ? 2 : 3) + ')" aria-hidden="true"></span>' + (next === true ? 'Next: ' : '') + esc(s.name) + (cardTags(r).br ? '<span class="badge brand">' + esc(brandName(cardTags(r).br)) + '</span>' : '') + '</p><h2>' + esc(r.title) + '</h2>' + (r.section === 'send' && /^SEND-/.test(r.key) ? sendBody(r) : '<p class="what">' + esc(d.why || s.what) + '</p>');
     var on = /^(?:LOWPROFIT|MISSING|MISMATCH|UNKNOWN)-(.+)$/.exec(r.key), o = on && data.orders.filter(function (x) { return String(x.order_no) === on[1]; })[0];
     if (o) { var ol = orderLinks(o); h += (orderFacts(o) ? '<p class="what"><b>' + esc(orderFacts(o)) + '</b></p>' : '') + (ol || /^MISSING|^UNKNOWN/.test(r.key) ? '<div class="acts">' + ol + (/^MISSING|^UNKNOWN/.test(r.key) && /^https:/.test(setting('GA_PORTAL')) ? '<a class="btn" href="' + esc(setting('GA_PORTAL')) + '" target="_blank" rel="noopener">GA Portal</a>' : '') + '</div>' : ''); }
     if (d.file) h += '<div class="acts"><a class="btn" href="https://drive.google.com/file/d/' + esc(d.file) + '/view" target="_blank" rel="noopener">Open the PDF</a></div>';
@@ -452,6 +453,22 @@
     return '<h2 class="sr">Main</h2>' + DashKit.hubMain({ hub: 'food', rows: loaded ? mainRows() : [], nums: nums, doHref: '#/do', extra: xml, error: loaded ? '' : 'The GA Hub workbook: ' + failed });
   }
   // Do (More): every card waiting on Lisa, with its safe buttons (Apply / Seen / Send, Undo for 10 minutes), and the order GA never got.
+  // Do filters (roadmap 1, 10 Nov 2026): one chip per channel and per brand among the order cards waiting, so Lisa can work one
+  // shop or one white-label brand at a time. Shown only when there are 2 or more to choose between. Cards with no order (price
+  // lists, checks) show under All only.
+  var dfilter = 'all';
+  function cardOrder(r) { var m = /^(?:SEND|LOWPROFIT|MISSING|MISMATCH|UNKNOWN)-(.+)$/.exec(r.key); return m ? orderOf(m[1]) : null; }
+  function cardTags(r) { var o = cardOrder(r); return o ? { ch: String(o.source || ''), br: String(o.brand || '').toUpperCase() } : { ch: '', br: '' }; }
+  function doChips(w) {
+    var ch = {}, br = {}; w.forEach(function (r) { var t = cardTags(r); if (t.ch) ch[t.ch] = (ch[t.ch] || 0) + 1; if (t.br) br[t.br] = (br[t.br] || 0) + 1; });
+    var opts = (Object.keys(ch).length > 1 ? Object.keys(ch).sort().map(function (k) { return ['ch:' + k, k, ch[k]]; }) : [])
+      .concat(Object.keys(br).length > 1 ? Object.keys(br).sort().map(function (k) { return ['br:' + k, brandName(k), br[k]]; }) : []);
+    if (!opts.length) { dfilter = 'all'; return ''; }
+    if (dfilter !== 'all' && !opts.some(function (f) { return f[0] === dfilter; })) dfilter = 'all';
+    return '<div class="house-frow">' + DashKit.filterButton('dfilters', dfilter !== 'all' ? 1 : 0) + '<div class="chips house-filters" id="dfilters" role="group" aria-label="Which channel or brand">' +
+      [['all', 'All', w.length]].concat(opts).map(function (f) { return '<button class="chip" type="button" data-dfilter="' + esc(f[0]) + '" aria-pressed="' + (dfilter === f[0]) + '">' + esc(f[1]) + ' (' + f[2] + ')</button>'; }).join('') + '</div></div>';
+  }
+  function dMatch(r) { if (dfilter === 'all') return true; var t = cardTags(r); return dfilter === 'ch:' + t.ch || dfilter === 'br:' + t.br; }
   function pageDo() {
     // Answered cards stay on screen until the engine applies them (Undo for 10 minutes), then drop off.
     var w = data.cards.filter(function (r) { return !r.applied_at && (!r.answer || Date.now() < Date.parse(r.answered_at) + APPLY_MS); }).sort(byUrgency), need = waiting().length;
@@ -459,7 +476,8 @@
     var h = '<p class="needs">Do <span class="cnt' + (need ? '' : ' ok') + wide(need) + '">' + need + '</span></p>';   // grey: a rose count means late
     if (late) h += '<div class="card"><p class="bline"><span class="dot" style="--c:var(--ljr-2)" aria-hidden="true"></span>Order check</p><h2>' + late + ' order' + (late > 1 ? 's are' : ' is') + ' not at GA</h2><p class="what">Check the GA Portal and enter ' + (late > 1 ? 'them' : 'it') + ' by hand if needed.</p><div class="acts"><a class="btn main" href="#/orders?late">Open the orders</a></div></div>';
     if (!w.length) return late ? h : h + '<div class="card">' + empty('Nothing needs you') + '</div>';
-    return h + w.map(function (r) { return cardHtml(r); }).join('');
+    h += doChips(w); var shown = w.filter(dMatch);
+    return h + (shown.length ? shown.map(function (r) { return cardHtml(r); }).join('') : '<div class="card">' + empty('Nothing for this one', 'Tap All to see every card.') + '</div>');
   }
   // Review (More): order growth (trend, repeat, subscriptions, reorder due) and the low-profit orders, for the weekly or monthly look.
   function pageReview() {
@@ -634,6 +652,7 @@
     if (a === 'reorder') { var ro = $('reorder'); if (ro) ro.scrollIntoView({ block: 'start' }); return; }
     if (a === 'all') { showAll = !showAll; return render(); }
     if (t.hasAttribute('data-ifilter')) { ifilter = t.getAttribute('data-ifilter'); showAll = false; return render(); }
+    if (t.hasAttribute('data-dfilter')) { dfilter = t.getAttribute('data-dfilter'); return render(); }
     if (t.hasAttribute('data-ofilter')) { ofilter = t.getAttribute('data-ofilter'); showAll = false; return render(); }
     if (t.hasAttribute('data-filter')) { filter = t.getAttribute('data-filter'); showAll = false; return render(); }
     if (t.hasAttribute('data-ans')) { var r = find(t.getAttribute('data-ans')); t.disabled = true; return answer(r, t.getAttribute('data-v')); }
