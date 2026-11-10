@@ -18,6 +18,18 @@ const TYPES = csv(TYPE_H, [
 ]);
 
 test.describe('CD Hub: jobs', () => {
+  test('the manifest check warns only when a table has fewer rows than listed', async ({ page, guard }) => {
+    await HUBS.cdhub.open(page, guard);
+    const msg = (live, listed) => page.evaluate(([l, r]) => {
+      CD.counts.pretend = l; CD.manifest = [{ file: 'BLD-pretend.csv', table: 'pretend', rows: r }];
+      return checks().filter((c) => c.k === 'tables')[0];
+    }, [live, listed]);
+    expect((await msg(12, '10')).msg).not.toContain('fewer rows');
+    const fewer = await msg(9, '10');
+    expect(fewer.ok).toBe(false);
+    expect(fewer.msg).toContain('1 tables have fewer rows than the manifest: pretend');
+  });
+
   test('no job files yet: the page still loads and says so', async ({ page, guard }) => {
     await HUBS.cdhub.open(page, guard);
     await tab(page, 'compliance');
