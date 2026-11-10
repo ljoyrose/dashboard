@@ -407,7 +407,7 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
 var OPTIONAL_FILES={'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
-BBHubView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});
+if(typeof BBHubView!=='undefined') BBHubView.FILES.forEach(function(f){WANT.push(f);OPTIONAL_FILES[f]=1;});
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy}; }
 function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
@@ -1803,7 +1803,7 @@ function drawDogs(){
       +'</div></details>'
     :'');}())
   +'</div>'
-  +BBHubView.chip(bbV(),d.id)
+  +(typeof BBHubView!=='undefined'?BBHubView.chip(bbV(),d.id):'')
   +'<span class="whor" role="img" aria-label="'+esc(who)+'"><svg class="ti" aria-hidden="true"><use href="#i-'+(away?'user':'home')+'"/></svg></span>'
 +'</article>';});
  if(dogN<list.length) h+='<div class="filt" data-show-bar="dogs"><p class="mut">Showing '+dogN+' of '+list.length+'.</p>'
@@ -2648,7 +2648,8 @@ var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sit
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
 var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['sops','SOPs',6,'line']];
 var MORE_VIEWS=['compliance','shape','round','areas','litters','vet','buyers'];
-function bbV(){return {T:T,today:todayISO(),esc:esc};} PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','litters']; TABMETA.breed=['check','Breed Better',5]; MORE_VIEWS.push('breed');
+function bbV(){return {T:T,today:todayISO(),esc:esc};}
+if(typeof BBHubView!=='undefined'){ PAGES.breed=function(){return BBHubView.page(bbV());}; SECTIONS.push(['breed','Breed Better']); NEXT.breed=['dogs','litters']; TABMETA.breed=['check','Breed Better',5]; MORE_VIEWS.push('breed'); }
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
  var counts={map:nd,work:wait}, late={map:needsToday().some(function(x){return x.tone==='late';}),work:false};
