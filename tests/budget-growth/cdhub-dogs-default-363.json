@@ -1,0 +1,1 @@
+{"cdhub": 1000, "why": "CD Hub Dogs default list + manifest check (PRs #363, #366) merged without a growth file; main was 19 bytes over the cdhub budget (10 Nov 2026)."}
