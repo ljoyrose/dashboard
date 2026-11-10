@@ -159,12 +159,12 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('all twelve sections are in the bar: five tabs, then the other seven under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('all thirteen sections are in the bar: five tabs, then the other eight under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(13);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(7);
+    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(8);
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
