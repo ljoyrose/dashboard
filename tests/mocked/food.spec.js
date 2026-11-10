@@ -465,6 +465,28 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('#view')).toContainText('Shopify · Designer Dog Foods · via Sample Affiliate FAKE · 24kg · est. £39.60 profit');
   });
 
+  // Engine v1.16 (10 Nov 2026): the Orders row carries ship_country, delivery_charged, channel and min_profit; the Send card shows them.
+  test('Send card (engine v1.16): ships to and which invoice, delivery paid against GA, channel, the order\'s own minimum', async ({ page }) => {
+    const b = book(), extra = ['species', 'ship_country', 'delivery_charged', 'channel', 'min_profit'], h = b.orders[0].concat(extra.filter((c) => !b.orders[0].includes(c)));
+    const row = (no, cc, del, ch, min) => { const r = h.map(() => ''); const set = (c, v) => { r[h.indexOf(c)] = v; };
+      set('order_no', no); set('source', 'Shopify'); set('brand', 'DDF'); set('supplier', 'GA'); set('status', 'Placed'); set('sale_inc_vat', '140.00'); set('customer_orders', '1');
+      set('placed_at', '2026-11-09T09:00:00Z'); set('shop_lines', JSON.stringify([{ code: 'AAA0012KZPSXZZZ', qty: 2 }])); set('check', 'Waiting for GA');
+      set('ship_country', cc); set('delivery_charged', del); set('channel', ch); set('min_profit', min); return r; };
+    b.orders = [h, row('9501', 'JE', '21.65', 'ClickFunnels', '45'), row('9502', 'GB', '0', 'Shopify (website)', ''), row('9503', 'FR', '', '', '')];
+    b.cards = ['9501', '9502', '9503'].map((n, i) => ['SEND-' + n, 'send', 'Orders', 'Send order #' + n + ' to GA?', JSON.stringify({ why: '2 x AAA0012KZPSXZZZ' }), ago(5 - i)]);
+    await sheets(page, b);
+    await open(page, '#/do');
+    const a = page.locator('#view .card[data-key="SEND-9501"]'), c = page.locator('#view .card[data-key="SEND-9502"]'), d = page.locator('#view .card[data-key="SEND-9503"]');
+    await expect(a.locator('.fact', { hasText: 'Ships to' })).toContainText('Jersey · commercial invoice');
+    await expect(a.locator('.fact', { hasText: 'Delivery' })).toContainText('£21.65 paid · GA about £10.82');
+    await expect(a).toContainText('ClickFunnels · DDF');   // channel from the engine, not the source
+    await expect(a.locator('.warn')).toContainText('under your £45 minimum');   // the order's own min_profit, not the £15 on Settings
+    await expect(c.locator('.fact', { hasText: 'Ships to' })).toContainText('UK · VAT invoice');
+    await expect(c.locator('.fact', { hasText: 'Delivery' }).locator('.v.red')).toHaveText('Free paid · GA about £10.82');
+    await expect(d.locator('.warn')).toContainText('Ships to FR: GA does not deliver there');
+    await expect(d.locator('.fact', { hasText: 'Delivery' })).toContainText('–');
+  });
+
   test('a "Send to GA?" card: Send writes only the 4 answer cells with the answer "Send"', async ({ page }) => {
     const b = book(); b.cards = [['SEND-9100', 'send', 'Orders', 'Send order #9100 to GA?', JSON.stringify({ why: '1 x AAA0012KZPSXZZZ' }), ago(5)]];
     const writes = await sheets(page, b);
