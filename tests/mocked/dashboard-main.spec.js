@@ -1,5 +1,5 @@
 // Dashboard Main (Lisa's house-style picks, 2 Nov 2026): one tile per hub in her order and colours, 3 labelled numbers each
-// (worked out the way each hub does, "–" when a hub cannot be read), the Food ✓ XML tick, Needs you (at most 5, late first),
+// (worked out the way each hub does, "–" when a hub cannot be read), the Food ✓ XML tick, Needs you as folded hub colour cards,
 // no big hub buttons and no "You are here", and the Decide and Do tabs with their views. Pretend Google, Drive and Sheets only;
 // every row is invented (the hub fixtures in tests/fixtures and tests/support/hubs.js).
 const fs = require('fs');
@@ -244,31 +244,42 @@ test.describe('Dashboard Main', () => {
     await xmlTab.close();
   });
 
-  test('Needs you: at most 5 rows across the hubs, late first, then due soon, then waiting; each row has its hub icon and line', async ({ page, guard }) => {
+  test('Needs you: folded hub colour cards, late first inside a card; each row has its hub icon and line', async ({ page, guard }) => {
     await seed(page, guard);
     await signIn(page);
-    const rows = page.locator('#needsToday ol > li');
-    await expect(rows).toHaveCount(5);
-    const got = await rows.evaluateAll((ls) => ls.map((l) => ({ k: (l.className.match(/n-(risk|fin|ops|bin)/) || [])[1], hub: l.getAttribute('data-hub'), icon: !!l.querySelector('svg.hico use'), line: getComputedStyle(l, '::before').borderLeftWidth })));
+    const cards = page.locator('#needsToday details[data-need-card="needs"]');
+    await expect(cards.first()).toBeVisible();
+    await expect(page.locator('#needsToday details[open]')).toHaveCount(0);
+    await expect(page.locator('#urgentOne details[open]')).toHaveCount(0);
+    expect(await page.locator('#urgentOne').innerText()).not.toMatch(/Overdue\s+\d+\s+day/i);
+    const hubs = await cards.evaluateAll((els) => els.map((e) => e.getAttribute('data-hub')));
+    expect(new Set(hubs).size, 'cards come from more than one hub').toBeGreaterThan(1);
+    const order = ['projects', 'web', 'money', 'food', 'dogs', 'apps', 'market', 'studio', 'dash'];
+    for (let i = 1; i < hubs.length; i++) expect(order.indexOf(hubs[i])).toBeGreaterThan(order.indexOf(hubs[i - 1]));
     const rank = { risk: 0, fin: 1, ops: 2, bin: 3 };
-    for (let i = 1; i < got.length; i++) expect(rank[got[i].k]).toBeGreaterThanOrEqual(rank[got[i - 1].k]);
-    for (const g of got) { expect(g.icon).toBe(true); expect(g.line).toBe('3px'); expect(g.hub).toBeTruthy(); }
-    expect(new Set(got.map((g) => g.hub)).size, 'rows come from more than one hub').toBeGreaterThan(1);
-    expect(got[0].k).toBe('risk');
-    await expect(page.locator('#needsToday a[data-needs-more]')).toHaveText(/^\+\d+ more$/);
-    await expect(page.locator('#needsToday a[data-needs-more]')).toHaveAttribute('href', '#/do');
+    const n = await cards.count();
+    for (let i = 0; i < n; i++) {
+      await cards.nth(i).locator('summary').click();
+      const got = await cards.nth(i).locator('ol > li').evaluateAll((ls) => ls.map((l) => ({ k: (l.className.match(/n-(risk|fin|ops|bin)/) || [])[1], hub: l.getAttribute('data-hub'), icon: !!l.querySelector('svg.hico use'), line: getComputedStyle(l, '::before').borderLeftWidth })));
+      expect(got.length).toBeGreaterThan(0);
+      for (let j = 1; j < got.length; j++) expect(rank[got[j].k]).toBeGreaterThanOrEqual(rank[got[j - 1].k]);
+      for (const g of got) { expect(g.icon).toBe(true); expect(g.line).toBe('3px'); expect(g.hub).toBe(hubs[i]); }
+      await cards.nth(i).locator('summary').click();
+    }
+    await expect(page.locator('#needsToday a[data-needs-more]')).toHaveCount(0);
     await expect(page.locator('#needsToday')).not.toContainText('Open Do');
   });
 
   test('Needs you rows never jump: the same box and icon x on hover and focus, one left edge, a straight 3px bar', async ({ page, guard }) => {
     await seed(page, guard);
     await signIn(page);
-    await expect(page.locator('#needsToday li').first()).toBeVisible();
-    await steadyRows(page, '#needsToday ol > li', '.hico');
+    await page.locator('#needsToday details[data-need-card] summary').first().click();
+    await expect(page.locator('#needsToday details[open] li').first()).toBeVisible();
+    await steadyRows(page, '#needsToday details[open] ol > li', '.hico');
     // Each tile's 3 numbers: one size, a rose ring only on a late one, ring-only hover and focus (Lisa, 2 Nov: the Projects tile).
     for (const hub of ['apps', 'food', 'money']) await numberGroup(page, '#hubTiles .hubtile[data-hub="' + hub + '"] a.hk', 'b');
     await page.setViewportSize({ width: 390, height: 844 });
-    await steadyRows(page, '#needsToday ol > li', '.hico');
+    await steadyRows(page, '#needsToday details[open] ol > li', '.hico');
   });
 
   test('the big hub buttons and "You are here" are gone; the top bar says Dashboard', async ({ page, guard }) => {

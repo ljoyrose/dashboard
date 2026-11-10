@@ -227,7 +227,7 @@ test.describe('on a phone (390px)', () => {
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'dashboard-main-390-open.png'), fullPage: true });
     await page.locator('#urgentOne button.house-fold').click();
     await needs.locator('button.house-fold').click();
-    await expect(needs.locator('ol')).toBeHidden();
+    await expect(needs.locator('ol:visible')).toHaveCount(0);
     await expect(needs.locator('.cardhead .mtag')).toBeVisible();
     if (SHOTS) await page.screenshot({ path: path.join(SHOTS, 'dashboard-main-390-folded.png'), fullPage: true });
   });

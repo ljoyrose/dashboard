@@ -1,6 +1,6 @@
 // Home (the Dashboard) in the house look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026): 1px lines, hover never moves anything,
 // nothing under 13px, two weights, no coloured words, no solid colour fills, dark frame, phone without sideways scroll,
-// dark mode contrast. Plus the home improvements: Needs you split, the Next card and the green-tick empty state.
+// dark mode contrast. Plus the home improvements: Needs you split, folded hub colour cards for Next, and the green-tick empty state.
 const { test, expect, buildWorld } = require('../support/test');
 const { tabClick } = require('../support/tabs');
 const { settle } = require('../support/settle');
@@ -43,7 +43,7 @@ test.describe('Home: house look', () => {
     await page.goto('./');
     await signIn(page);
     // Drives, Bin and Changes sit under More now (Lisa's tab picks, 2 Nov): the bottom-bar check uses More itself.
-    const sels = ['a.hometile >> nth=0', 'a.keytile >> nth=0', '#urgentOne a.btn', 'header #refreshBtn', '#mainNav [data-house-more]'];
+    const sels = ['a.hometile >> nth=0', 'a.keytile >> nth=0', '#urgentOne summary >> nth=0', 'header #refreshBtn', '#mainNav [data-house-more]'];
     for (const sel of sels) {
       const el = page.locator(sel);
       if (!(await el.count())) continue;
@@ -103,7 +103,7 @@ test.describe('Home: house look', () => {
       }
       await goTab(page, 'map', 'Dashboard');
       // Hover: the same 1px edge turns ink (an outline over it), on a button, a tile and a link card.
-      for (const sel of ['#urgentOne a.btn', 'a.hometile >> nth=0', 'a.keytile >> nth=0']) {
+      for (const sel of ['#urgentOne summary >> nth=0', 'a.hometile >> nth=0', 'a.keytile >> nth=0']) {
         const el = page.locator(sel);
         if (!(await el.count())) continue;
         await el.hover(); await settle(el);
@@ -166,7 +166,7 @@ test.describe('Home: house look', () => {
         expect(r.oc, name + ': hover line is not ink').not.toBe(r.ink);
         expect(r.bg, name + ': no fill on hover').toBe(r.rest);
       } };
-      for (const sel of ['#urgentOne a.btn']) {
+      for (const sel of ['#urgentOne summary']) {
         const r = await check(sel, false);
         expect([r.outline, r.oc], sel + ': neutral hover = ink line').toEqual(['solid 1px -1px', r.ink]);
         expect(r.bg, sel + ': no fill on hover').toBe(r.rest);
@@ -307,29 +307,24 @@ test.describe('Home: house look', () => {
     }
   });
 
-  test('Next card: white, 1px ink edge, one button; Needs you shows its urgency split', async ({ page }) => {
+  test('Next is folded hub colour cards; Needs you shows its urgency split and not an open money row', async ({ page }) => {
     await page.goto('./');
     await signIn(page);
     const next = page.locator('#urgentOne');
     const total = Number((await page.locator('.needsline').textContent()).match(/\d+/)[0]);
     test.skip(!total, 'sample data has nothing that needs you');
-    await expect(next.locator('h3')).toHaveText('Next');
-    await expect(next.locator('a.btn')).toHaveCount(1);
-    const st = await next.evaluate((e) => { const c = getComputedStyle(e); return { w: c.borderTopWidth, c: c.borderTopColor, ink: getComputedStyle(document.body).color, bg: c.backgroundColor }; });
+    await expect(next.locator('#nextTitle')).toHaveText('Next');
+    const cards = next.locator('details[data-need-card="next"]');
+    await expect(cards.first()).toBeVisible();
+    await expect(next.locator('details[open]')).toHaveCount(0);
+    await expect(next.locator('.mtag:visible')).toHaveCount(0);
+    expect(await next.innerText()).not.toMatch(/Overdue\s+\d+\s+day/i);
+    const st = await next.evaluate((e) => { const c = getComputedStyle(e); return { w: c.borderTopWidth, bg: c.backgroundColor }; });
     expect(st.w).toBe('1px');
-    expect(st.c).toBe(st.ink);
     expect(st.bg).toBe('rgb(255, 254, 251)');
     const split = page.locator('#needsSplit .cnt');
     const sum = (await split.allTextContents()).reduce((a, t) => a + Number(t.match(/^\d+/)[0]), 0);
     expect(sum, 'urgent + due soon + to do = Needs you').toBe(total);
-    // "+N more" is one short link to Do (Lisa, 2 Nov).
-    if (total > 1) {
-      const more = next.locator('a.more');
-      await expect(more).toHaveText('+' + (total - 1) + ' more');
-      await expect(more).toHaveAttribute('href', '#/do');
-      const mb = await more.evaluate((e) => { const c = getComputedStyle(e); return [c.borderTopWidth, c.textDecorationLine]; });
-      expect(mb, '+N more is a plain text link, not a box').toEqual(['0px', 'underline']);
-    }
     await expect(next).not.toContainText('in Needs you, below');
     // Each pill opens Do showing exactly the rows it counted.
     for (const el of await split.all()) {
@@ -420,9 +415,9 @@ test.describe('Home: phone (390 x 844)', () => {
     // On a phone Sign out leaves the top bar for the Look menu (Lisa's pick A, 2 Nov); both are 44px there.
     await expect(page.locator('header #signOutBtn')).toBeHidden();
     await page.locator('header #houseLookBtn').click();
-    for (const sel of ['header #refreshBtn', 'header #houseLookBtn', '#houseLook [data-house-menu-signout]', '#urgentOne a.btn']) {
-      const el = page.locator(sel);
-      if (await el.count()) expect((await el.boundingBox()).height, sel).toBeGreaterThanOrEqual(44);
+    for (const sel of ['header #refreshBtn', 'header #houseLookBtn', '#houseLook [data-house-menu-signout]', '#urgentOne summary']) {
+      const el = page.locator(sel).first();
+      if (await page.locator(sel).count()) expect((await el.boundingBox()).height, sel).toBeGreaterThanOrEqual(44);
     }
   });
 });
