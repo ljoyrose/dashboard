@@ -106,6 +106,10 @@ code{font-family:inherit;font-size:var(--fs-small);font-variant-numeric:tabular-
 .dc .nl .st{border:0;padding:0;height:auto;font-size:var(--fs-small)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink)}
 :focus-visible{outline: 1px solid var(--ink)!important;outline-offset: -1px}
+/* Typing boxes: one 1px line inside the rounded box; focus recolours that line. Never a second square ring. */
+:is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),select,textarea):is(:focus,:focus-visible){outline:none!important;border-color:var(--ink)}
+.sbox input:is(:focus,:focus-visible){outline:none!important}
+.sbox:focus-within{border-color:var(--ink)}
 @media (max-width:544px){.btn,.cb,.ci,.tl,.next button,.sfb,.achip,#main button:not(.tile):not(.ttl):not(.rdel),.filt select,.fpanel select,.filt input,.sbox,.sortsel,.tmp input,#rdate{min-height:44px}}
 
 
@@ -180,13 +184,19 @@ tr:last-child td{border-bottom:none}
 .mcard h3+.mrow,.mcard .mrow:first-of-type{border-top:0;padding-top:16px}
 .mrow .t{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
 
-#sopcard .mrow:first-child{border-top:0;padding-top:0}
+#sopcard .mrow,#sopcard .mrow:first-child{border:1px solid var(--line);border-left:3px solid var(--c,var(--line));box-shadow:none;border-radius:var(--radius);background:var(--card);padding:0;margin:0 0 8px}
+@media (hover:hover){#sopcard .mrow:has(.sopopen:hover){border-color:var(--sel-bd);border-left-color:var(--c,var(--sel-bd))}}
+#sopcard .mrow .sopopen:hover,#sopcard .mrow .sopopen:focus,#sopcard .mrow .sopopen:focus-visible{outline:none!important}
+#sopcard .mrow:has(.sopopen:focus-visible){border-color:var(--ink);border-left-color:var(--c,var(--ink))}
+/* The card is the frame. The button is the words inside it, so it is not a second one-line control. */
+#main #sopcard button.sopopen{background:transparent;border:0;border-radius:0;box-shadow:none;min-height:44px;height:auto;padding:10px 12px;width:100%;min-width:0;display:flex;align-items:flex-start;text-align:left;cursor:pointer;color:inherit;font-weight:600}
+#sopcard .sopopen .t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;white-space:normal;overflow:visible;-webkit-line-clamp:unset;line-clamp:unset}
+#sopcard .sopopen .t .n{font-size:var(--fs-small);font-weight:600;line-height:1.2}
+#sopcard .sopopen .t small{display:block;font-size:var(--fs-small);font-weight:400;line-height:1.2;color:var(--ink)}
 #sopcard .mrow .mut{flex:0 1 11em;overflow-wrap:anywhere}
 #sopcard .mrow .cb{flex:none;padding:0 10px}
-#sopcard .sopopen{display:flex;flex:1;align-items:center;gap:12px;min-width:0;min-height:44px;padding:0 10px;color:inherit;font:inherit;text-align:left;cursor:pointer}
 #sopcard .mrow:has(.sopopen){flex-wrap:wrap}
 #sopcard .sopopen{flex:1 1 100%}
-#sopcard .sopopen .t{white-space:normal;overflow:visible}
 .sopsigns{display:inline-flex;align-items:center;gap:4px;flex:none;font-size:var(--fs-small);font-weight:600}
 .sopsigns .ti{width:18px;height:18px}
 .sopbody{margin:0 0 12px;padding:4px 0 4px 12px;border-left:3px solid var(--hc,var(--line));border-radius:var(--radius);overflow-wrap:anywhere}
@@ -2485,7 +2495,7 @@ function pageSops(){
      ['Frequency',fsel('sopfr','Frequency',freqs.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+'</option>';}).join(''))],
      ['Category',fsel('sopcat','Category',cats.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join(''))],
      ['Role',fsel('soprole','Role',roles.map(function(code){return '<option value="'+esc(code)+'">'+esc(sopRoleLabel(code))+'</option>';}).join(''))]]})
-  +'<div class="card" id="sopcard"><div id="soprows"></div><p class="note hidden" id="sopempty">Nothing matches.</p></div>'
+  +'<div id="sopcard"><div id="soprows"></div><p class="note hidden" id="sopempty">Nothing matches.</p></div>'
   +'<h3>File types</h3><div class="card" id="soptypes"></div>'
   +'<h3>File formats</h3><div class="card" id="sopformats"></div>';
 }
@@ -2549,7 +2559,7 @@ function drawSops(){
   var hay=(sopLabel(r)+' '+r.short_name).toLowerCase();
   return q.toLowerCase().split(/\s+/).filter(Boolean).every(function(w){ return hay.indexOf(w)>=0; });
  });
- var byLabel=function(a,b){ return sopLabel(a).localeCompare(sopLabel(b)); };
+ var byLabel=function(a,b){ return a.short_name.localeCompare(b.short_name); };
  var rank=function(pref,key){ return function(a,b){
   var ia=pref.indexOf(a[key]), ib=pref.indexOf(b[key]);
   if(ia<0) ia=999; if(ib<0) ib=999;
@@ -2571,12 +2581,12 @@ function drawSops(){
     : '';
   var form=r.form_url
     ? '<a class="cb" href="'+esc(r.form_url)+'" target="_blank" rel="noopener" aria-label="Open form: '+esc(label)+'"><svg class="ti" aria-hidden="true"><use href="#i-clipboard"/></svg></a>'
-    : (r.has_form==='Y'?'<span class="mut">form not on hub yet</span>':'');
+    : '';
   var card=SOP.cards&&SOP.cards[r.short_name], signs=card&&card.links?card.links.filter(function(l){ return l.type_code==='sign'||l.type_code==='poster'; }):[];
   var signType=signs.length?sopTypeOf(signs[0].type_code):null;
   var signBadge=signType?'<span class="sopsigns" data-type-code="'+esc(signType.type_code)+'" aria-label="'+signs.length+' linked '+esc(signType.label.toLowerCase())+(signs.length>1?'s':'')+'">'+sopIcon(signType.icon_key)+signs.length+'</span>':'';
   var isOpen=SOP.open===r.short_name, pid='sopb-'+list.indexOf(r);
-  return '<div class="mrow" data-sop="'+esc(r.short_name)+'"><button type="button" class="sopopen" data-sop-open="'+esc(r.short_name)+'" aria-expanded="'+isOpen+'"'+(isOpen?' aria-controls="'+pid+'"':'')+'><span class="dot" style="--c:var('+sopDot(r.colour)+')" aria-hidden="true"></span><span class="t">'+esc(label)+'</span></button>'+badge+signBadge+form+'</div>'
+  return '<div class="mrow" data-sop="'+esc(r.short_name)+'" style="--c:var('+sopDot(r.colour)+')"><button type="button" class="sopopen" data-house="text" data-sop-open="'+esc(r.short_name)+'" aria-expanded="'+isOpen+'"'+(isOpen?' aria-controls="'+pid+'"':'')+'><span class="t"><span class="n">'+esc(r.short_name)+'</span><small>'+esc(r.frequency)+'</small></span><span class="sr">'+esc(r.colour)+'</span></button>'+badge+signBadge+form+'</div>'
    +(isOpen?'<div class="sopbody" id="'+pid+'" style="--hc:var('+sopDot(r.colour)+')" data-sop-body="'+esc(r.short_name)+'">'+sopCardHtml(r)+'</div>':'');
  }).join('');
  var empty=document.getElementById('sopempty');
