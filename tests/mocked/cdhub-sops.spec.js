@@ -13,7 +13,7 @@ const TYPES = path.resolve(__dirname, '..', '..', 'cdhub', 'asset-types.json');
 const ICONS = path.resolve(__dirname, '..', '..', 'cdhub', 'asset-type-icons.svg');
 const rows = () => JSON.parse(fs.readFileSync(SEED, 'utf8'));
 const typeCfg = () => JSON.parse(fs.readFileSync(TYPES, 'utf8'));
-const label = (r) => `${r.colour} – ${r.frequency}: ${r.short_name}`;
+const label = (r) => r.short_name;   // the colour is the card's line and the frequency sits underneath
 
 const signIn = async (page) => {
   await expect(page.locator('#signinbtn')).toBeEnabled();
@@ -92,7 +92,7 @@ test('bottom bar is Main, Do, Today, Dogs, SOPs; Assocs is only under More', asy
 test('#/sops lists all 49 labels; colour and frequency filters and search work', async ({ page }) => {
   await openSops(page);
   const want = rows().map(label).sort((a, b) => a.localeCompare(b));
-  await expect(page.locator('#soprows .t')).toHaveText(want);
+  await expect(page.locator('#soprows .t .n')).toHaveText(want);
   await expect(page.locator('#sopcnt')).toHaveText('49 of 49');
 
   await page.locator('[data-fpanel="fp-sops"]').click();
@@ -117,12 +117,12 @@ test('#/sops lists all 49 labels; colour and frequency filters and search work',
   await page.locator('#sopclr').click();
   await page.locator('#sopfr').selectOption('Breeding');
   const breeding = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
-  expect(breeding).toEqual(['Health Screening', 'Mating Plan', 'Mating and Retirement', 'Ovulation Testing', 'Season Tracking']);
+  expect(breeding).toEqual(['Health Screening', 'Mating and Retirement', 'Mating Plan', 'Ovulation Testing', 'Season Tracking']);
 
   await page.locator('#sopclr').click();
   await page.locator('#sopcol').selectOption('Purple');
-  await expect(page.locator('#soprows .t')).toHaveText('Purple – Ongoing: Signs/Posters Index');
-  const purple = await page.locator('#soprows .dot').evaluate((e) => getComputedStyle(e).backgroundColor);
+  await expect(page.locator('#soprows .t .n')).toHaveText('Signs/Posters Index');
+  const purple = await page.locator('#soprows [data-sop]').evaluate((e) => getComputedStyle(e).borderLeftColor);
   expect(purple).toBe('rgb(165, 112, 209)');
 
   await page.locator('#sopclr').click();
@@ -133,15 +133,15 @@ test('#/sops lists all 49 labels; colour and frequency filters and search work',
   const find = async (q, text) => {
     await page.locator('#sopclr').click();
     await page.locator('#sopq').fill(q);
-    await expect(page.locator('#soprows .t')).toHaveText(text);
+    await expect(page.locator('#soprows .t .n')).toHaveText(text);
   };
-  await find('Care Check', 'Yellow – Monthly: Care Check');
-  await find('Mating Plan', 'White – Breeding: Mating Plan');
-  await find('Full Clean', 'Yellow – Monthly: Full Clean');
-  await find('Fitness Review', 'Yellow – Annual: Fitness Review');
-  await find('Parasites and Zoonoses', 'Yellow – Ad hoc: Parasites and Zoonoses');
-  await find('Mating and Retirement', 'Yellow – Breeding: Mating and Retirement');
-  await find('Care Rounds', 'Yellow – Daily: Care Rounds');
+  await find('Care Check', 'Care Check');
+  await find('Mating Plan', 'Mating Plan');
+  await find('Full Clean', 'Full Clean');
+  await find('Fitness Review', 'Fitness Review');
+  await find('Parasites and Zoonoses', 'Parasites and Zoonoses');
+  await find('Mating and Retirement', 'Mating and Retirement');
+  await find('Care Rounds', 'Care Rounds');
 
   await page.locator('#sopq').fill('Per litter');
   await expect(page.locator('#soprows [data-sop]')).toHaveCount(4);
@@ -187,11 +187,11 @@ test('category and role filters combine with colour, frequency, search and sort'
   await page.locator('#sopcat').selectOption('Staff');
   await page.locator('#soprole').selectOption('manager');
   const staff = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
-  expect(staff).toEqual(['Induction', 'Staff Training', 'Staff Rota']);
+  expect(staff).toEqual(['Induction', 'Staff Rota', 'Staff Training']);
   await page.locator('.achip[data-fclear="soprole"]').click();
   await expect(page.locator('#soprows [data-sop]')).toHaveCount(4);
   await page.locator('#sopq').fill('rota');
-  await expect(page.locator('#soprows .t')).toHaveText('Green – Weekly: Staff Rota');
+  await expect(page.locator('#soprows .t .n')).toHaveText('Staff Rota');
 
   await page.locator('#sopclr').click();
   await page.locator('#soprole').selectOption('all_staff');
@@ -206,9 +206,9 @@ test('category and role filters combine with colour, frequency, search and sort'
 
   await page.locator('#sopclr').click();
   await page.locator('#sopsort').selectOption('category');
-  await expect(page.locator('#soprows .t').first()).toHaveText('Orange – Breeding: Health Screening');
+  await expect(page.locator('#soprows .t .n').first()).toHaveText('Health Screening');
   await page.locator('#sopsort').selectOption('role');
-  await expect(page.locator('#soprows .t').first()).toHaveText('Green – Ongoing: Staffing Ratio and Cover');
+  await expect(page.locator('#soprows .t .n').first()).toHaveText('Euthanasia');
   await page.locator('#sopcat').selectOption('Staff');
   await page.locator('#sopcol').selectOption('Yellow');
   await expect(page.locator('#soprows [data-sop]')).toHaveCount(0);
@@ -231,25 +231,26 @@ test('inspector view is a role filter only when a row uses that code', async ({ 
   expect(withRow.map((o) => o.value)).toEqual(ROLES.concat(['inspector_view']));
   expect(withRow.map((o) => o.text)).toContain('Inspector view');
   await page.locator('#soprole').selectOption('inspector_view');
-  await expect(page.locator('#soprows .t')).toHaveText('White – Annual: Inspector Note');
+  await expect(page.locator('#soprows .t .n')).toHaveText('Inspector Note');
   await expect(page.locator('#ach-sops .achip')).toHaveText(['Role: Inspector view ×']);
   await expect(page.locator('#soprows')).not.toContainText('inspector_view');
 });
 
-test('no form address in the seed: rows with a form show the grey hint and no link', async ({ page }) => {
+test('no form address in the seed: no link and no "form not on hub yet" noise', async ({ page }) => {
   await openSops(page);
   await expect(page.locator('#soprows a')).toHaveCount(0);
-  await expect(page.locator('#soprows .mut')).toHaveCount(rows().filter((r) => r.has_form === 'Y').length);
-  await expect(page.locator('#soprows .mut').first()).toHaveText('form not on hub yet');
-  const tone = await page.locator('#soprows .mut').first().evaluate((e) => {
-    const rgb = (s) => (s.match(/[\d.]+/g) || []).slice(0, 3).map(Number);
-    const hint = rgb(getComputedStyle(e).color);
-    const ink = rgb(getComputedStyle(document.body).color);
-    const chroma = Math.max(...hint) - Math.min(...hint);
-    return { grey: chroma < 40, notInk: hint.join() !== ink.join() };
-  });
-  expect(tone).toEqual({ grey: true, notInk: true });
+  await expect(page.locator('#soprows')).not.toContainText('form not on hub yet');
   await expect(page.locator('#main')).not.toContainText('📋');
+});
+
+test('each SOP is a card with its colour as a 3px full-height line; the search box has no square focus ring', async ({ page }) => {
+  await openSops(page);
+  const card = page.locator('#soprows [data-sop="Care Rounds"]');
+  await expect(card.locator('.t small')).toHaveText('Daily');
+  const look = await card.evaluate((e) => { const s = getComputedStyle(e); return { left: s.borderLeftWidth, radius: parseFloat(s.borderTopLeftRadius) > 0 }; });
+  expect(look).toEqual({ left: '3px', radius: true });
+  await page.locator('#sopq').focus();
+  expect(await page.locator('#sopq').evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
 });
 
 test('a clipboard opens only when the row has a form and a real https address', async ({ page }) => {
@@ -269,8 +270,8 @@ test('a clipboard opens only when the row has a form and a real https address', 
   await expect(open).toHaveAttribute('href', 'https://example.com/care-form');
   await expect(open).toHaveAttribute('target', '_blank');
   await expect(open.locator('use')).toHaveAttribute('href', '#i-clipboard');
-  await expect(page.locator('#soprows [data-sop="Care Rounds"] .t')).toHaveText('Yellow – Daily: Care Rounds');
-  await expect(page.locator('#soprows .mut')).toHaveCount(3);
+  await expect(page.locator('#soprows [data-sop="Care Rounds"] .t .n')).toHaveText('Care Rounds');
+  await expect(page.locator('#soprows')).not.toContainText('form not on hub yet');
   await expect(page.locator('#soprows')).not.toContainText('javascript:');
   await expect(page.locator('#soprows')).not.toContainText('http://example.com');
 });
@@ -412,14 +413,14 @@ test('other and sheet are not remapped; a real type code keeps its icon and the 
   await expect(row('Care Rounds').locator('a')).toHaveAttribute('href', 'https://example.com/care-form');
   await expect(page.locator('#soptypes [data-type-code]')).toHaveCount(3);
   await page.locator('#sopclr').click();
-  await expect(page.locator('#soprows .t')).toHaveText([
-    'Blue – Ad hoc: Transport',
-    'Orange – Breeding: Health Screening',
-    'Purple – Ongoing: Signs/Posters Index',
-    'Red – Ongoing: Emergency Display',
-    'White – Ad hoc: Read-and-Sign',
-    'White – Ongoing: Record Keeping',
-    'Yellow – Daily: Care Rounds',
+  await expect(page.locator('#soprows .t .n')).toHaveText([
+    'Care Rounds',
+    'Emergency Display',
+    'Health Screening',
+    'Read-and-Sign',
+    'Record Keeping',
+    'Signs/Posters Index',
+    'Transport',
   ]);
   await expect(page.locator('input[type="file"]')).toHaveCount(0);
 });
