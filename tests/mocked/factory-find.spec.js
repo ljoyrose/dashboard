@@ -361,7 +361,7 @@ test.describe('Factory send gate', () => {
 });
 
 // Selected and focus (house look, 28 Oct 2026, replaces the 20 Oct "single line" rule): a selected chip is the same 1px line
-// drawn inside (outline 1px, offset -1px, nothing moves); a selected bottom tab only widens its colour bar (no ring); keyboard focus is a 2px ink ring.
+// drawn inside (outline 1px, offset -1px, nothing moves); a selected bottom tab only widens its colour bar (no ring); keyboard focus is a 1px ink line inside.
 test.describe('Factory selected and focus lines', () => {
   const st = (loc) => loc.evaluateAll((els) => els.map((e) => { const c = getComputedStyle(e); return { w: c.outlineWidth, s: c.outlineStyle, o: c.outlineOffset, shadow: c.boxShadow }; }));
   const selected = async (loc) => { const all = await st(loc); expect(all.length).toBeGreaterThan(0); all.forEach((x) => { expect(x).toEqual({ w: '1px', s: 'solid', o: '-1px', shadow: 'none' }); }); };
@@ -385,8 +385,8 @@ test.describe('Factory selected and focus lines', () => {
     await chip(page, 'app', '').focus();
     await page.keyboard.press('Shift+Tab');
     await page.keyboard.press('Tab');
-    const f = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineWidth, c.outlineStyle]; });
-    expect(f).toEqual(['2px', 'solid']);
+    const f = await page.evaluate(() => { const c = getComputedStyle(document.activeElement); return [c.outlineWidth, c.outlineStyle, c.outlineOffset]; });
+    expect(f).toEqual(['1px', 'solid', '-1px']);
     await panel(page);
     await page.locator('.fpanel [data-fx="st"]').first().click();
     await page.mouse.move(0, 0);

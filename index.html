@@ -390,6 +390,8 @@
   .btn.danger { border-color: var(--risk-text); color: var(--risk-text); font-weight: 600; }
   .btn.danger.solid { background: var(--ljr-2-solid); color: var(--ljr-2-on); }
   .btn.ai { border-color: var(--ljr-7-solid); background: var(--ljr-7-solid); color: var(--ljr-7-on); font-weight: 600; }
+  /* A filled control's focus line is its own text colour, 1px inside, so it shows on the fill. */
+  html body .btn.danger.solid:focus-visible { outline-color: var(--ljr-2-on) !important; } html body .btn.ai:focus-visible { outline-color: var(--ljr-7-on) !important; }
   /* Folded cards: summary always shows title + count; body opens on click and stays open across redraws. */
   details.fold > summary { cursor: pointer; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 32px; }
   details.fold > summary::-webkit-details-marker { display: none; }
@@ -463,12 +465,12 @@
   .hubtile a.xml.need { border: 1px solid var(--house-late); border-radius: 999px; padding: 0 8px; }
   .hubtile a.xml { position: relative; z-index: 1; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: var(--house-btn-phone); min-height: var(--house-btn-phone); font-size: var(--fs-small); font-weight: 600; padding: 0 4px; pointer-events: auto; }
   /* Neutral house hover on every link in a tile: 1px ink line inside + a pale muted tint. */
-  /* Hover and press: a 1px ring in the tile's colour only; no fill, nothing moves. Keyboard focus: the 2px ink ring. */
+  /* Hover and press: a 1px ring in the tile's colour only; no fill, nothing moves. Keyboard focus: the 1px ink line inside. */
   .hubtile a, .hubtile a:hover, .hubtile a:active, .hubtile a:focus { background: transparent; box-shadow: none; }
   .hubtile a:focus:not(:focus-visible) { outline: none; }
   @media (hover: hover) { .hubtile a:hover { outline: 1px solid var(--sc, var(--ink)); outline-offset: -1px; } }
   .hubtile a:active { outline: 1px solid var(--sc, var(--ink)); outline-offset: -1px; }
-  .hubtile a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .hubtile a:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
   /* Needs you, Decide and Do rows: the hub's icon and its 3px line down the row. */
   ol.hrows { list-style: none; margin: 8px 0 0; padding: 0; }
   .needs ol:has(> li.house-lbar), ol.hrows { display: flex; flex-direction: column; gap: 4px; }
@@ -508,7 +510,7 @@
 
   /* Calm focus: no browser colour ring; a typing box shows a slightly darker faint line, keys still see a grey ring. */
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--muted); }
-  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--muted); outline-offset: 2px; }
+  a:focus-visible, button:focus-visible, [tabindex]:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
 
   /* Hub V2 (25 Oct 2026, same layout as Marketplace): five sections in a bar at the bottom, in thumb reach on the phone.
      Dashboard, Drive, Bin, Changes, More. Red number = things that need you. Nothing hides under the bar. */
@@ -526,7 +528,7 @@
   .hint { margin: 0; font-size: var(--fs-small); color: var(--muted); }
 
   /* ==== House look (LINKS-COMFORT-BRIEF v3, 28 Oct 2026; same as Studio). Lexend 400/600, nothing under 13px, line height 1.5.
-     1px lines; hover AND selected = the same 1px edge turns ink (outline over it), nothing moves; focus 2px ink. One radius, 12px.
+     1px lines; hover AND selected = the same 1px edge turns ink (outline over it), nothing moves; focus 1px ink inside. One radius, 12px.
      No coloured words, no solid colour fills: colour lives in dots, thin bars, 1px rings and light tints. Dark frame top and bottom. ==== */
   /* Greys, lines, frame, radius, the control line, counts, date pills, tabs and the hover rule: ../tokens.css through ../house.css.
      Home's own: the Bin tab colour (slot 8 as warm charcoal, never black). */
@@ -603,8 +605,8 @@
   .ment, .ment.bad { border: 1px solid var(--ctl); background: var(--surface); }
   .ment.bad { border-color: var(--ljr-2); background: var(--ljr-2-tint); }
   /* Colour on hover only: a section's colour shows on its icon ring when pointed at. */
-  /* Keyboard focus: 2px ink ring (the one exception to 1px). The screen title keeps no box. */
-  html body :focus-visible { outline: 2px solid var(--ink) !important; outline-offset: 2px !important; }
+  /* Keyboard focus: the 1px ink line inside (Lisa, 3 Nov 2026: no exception to 1px). The screen title keeps no box. */
+  html body :focus-visible { outline: 1px solid var(--ink) !important; outline-offset: -1px !important; }
   html body #hereTitle, html body #hereTitle:focus, html body #hereTitle:focus-visible { outline: none !important; }
   /* Home: Needs you line with its urgency split, three tiles, then the Next card. */
   .needsrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
@@ -617,7 +619,7 @@
   @media (max-width: 600px) { .needs a.needsmore { min-height: 44px; } }
   @media (hover: hover) { .hsplit a.cnt:hover { outline: 1px solid var(--ink); outline-offset: -1px; }
     .hsplit a.cnt.k-risk:hover { outline-color: var(--ljr-2); } }
-  .hsplit a.cnt:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .hsplit a.cnt:focus-visible { outline: 1px solid var(--ink); outline-offset: -1px; }
   .nextcard[class] { border-color: var(--ink); background: var(--card); }
   .nextcard .actions { gap: 12px; }
   .nextcard .hint { flex: 1 1 180px; }
@@ -635,11 +637,11 @@
   html.dash-locked body header :focus-visible { outline-color: var(--ink) !important; }
   html body header :focus-visible { outline-color: var(--frame-ink) !important; }
   /* Bottom tabs: ../house.css section 6 (the same bar on every page). Keys see the frame's light ring on the dark bar. */
-  html body nav.house-tabs .ht:focus-visible { outline: 2px solid var(--frame-ink) !important; outline-offset: 2px !important; }
+  html body nav.house-tabs .ht:focus-visible { outline: 1px solid var(--frame-ink) !important; outline-offset: -1px !important; }
   html { scroll-padding-bottom: 104px; } body { padding-bottom: 104px; }
   /* House hover rule (Lisa, 28 Oct). Neutral controls: hover = 1px ink line inside + a pale muted tint. Meaning-coloured controls
      (rose delete/late, purple AI, copper money, a section's colour) keep THEIR colour: the same 1px line in that colour + a pale tint
-     of it (about 14% into the card colour, dark card in dark mode). Never ink. Selected = the same look. Focus stays the 2px ink ring. */
+     of it (about 14% into the card colour, dark card in dark mode). Never ink. Selected = the same look. Focus stays the 1px ink line inside. */
   .btn.danger { --hc: var(--ljr-2); --hl: var(--ljr-2); --hmc: var(--ljr-2); }
   .btn.ai { --hc: var(--ljr-7); --hl: var(--ljr-7); --hmc: var(--ljr-7); }
   a.ment { --hc: var(--ljr-3); --hl: var(--ljr-3); }

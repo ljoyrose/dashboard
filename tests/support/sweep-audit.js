@@ -148,4 +148,58 @@ function lateShown() {
   return /(?<![a-z])(late|overdue|down|expired|past (its|their) due)(?![a-z])/i.test(v.innerText || '');
 }
 
-module.exports = { stateRules, drawn, roseTabs, lateShown };
+// Text contrast (Lisa, 3 Nov 2026): every piece of text holds 4.5:1 or better on what it actually sits on.
+// Runs in the page: walks the visible text nodes, finds the colour behind each one (up through the parents to the first
+// solid background, blending any see-through layers on the way), and returns one line per element under 4.5:1.
+// Skipped: disabled controls (WCAG excuses them), aria-hidden text (decorative), text over a picture or gradient
+// (no single colour behind it to measure), and text clipped to nothing (screen-reader-only labels).
+function textContrast(min = 4.5) {
+  const rgba = (c) => { const m = (c || '').match(/rgba?\(([^)]+)\)/); if (!m) return null; const p = m[1].split(/[,/ ]+/).filter(Boolean).map(Number); return [p[0], p[1], p[2], p.length > 3 ? p[3] : 1]; };
+  const over = (top, under) => { const a = top[3]; return [0, 1, 2].map((i) => top[i] * a + under[i] * (1 - a)).concat(1); };
+  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
+  const name = (e) => e.tagName.toLowerCase() + (e.id ? '#' + e.id : '') + ([...e.classList].slice(0, 3).map((c) => '.' + c).join('')) + ' "' + (e.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 28) + '"';
+  const hex = (c) => '#' + c.slice(0, 3).map((v) => Math.round(v).toString(16).padStart(2, '0')).join('').toUpperCase();
+  // The colour behind e: see-through layers are kept and laid over the first solid one; a picture or gradient means "unknown".
+  const behind = (e) => {
+    const layers = [];
+    for (let x = e; x && x.nodeType === 1; x = x.parentElement) {
+      const s = getComputedStyle(x);
+      if (s.backgroundImage && s.backgroundImage !== 'none') return null;
+      const c = rgba(s.backgroundColor);
+      if (c && c[3] > 0) { layers.push(c); if (c[3] >= 1) break; }
+    }
+    let base = layers.length && layers[layers.length - 1][3] >= 1 ? layers.pop() : rgba(getComputedStyle(document.documentElement).backgroundColor) || [255, 255, 255, 1];
+    if (base[3] < 1) base = over(base, [255, 255, 255, 1]);
+    while (layers.length) base = over(layers.pop(), base);
+    return base;
+  };
+  const out = new Map();
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (!n.nodeValue.trim()) continue;
+    const e = n.parentElement;
+    if (!e || out.has(e) || e.closest('svg, script, style, noscript, template, [aria-hidden="true"], [hidden]')) continue;
+    if (e.closest(':disabled, [aria-disabled="true"], fieldset:disabled')) continue;
+    const r = e.getBoundingClientRect();
+    if (r.width <= 1 || r.height <= 1 || !e.getClientRects().length) continue;
+    const s = getComputedStyle(e);
+    if (s.visibility !== 'visible' || /rect\(0(px)?,? 0(px)?,? 0(px)?,? 0(px)?\)|inset\(50%\)/.test(s.clip + ' ' + s.clipPath)) continue;
+    // A faded parent (opacity under 1) fades its text too: counted as a see-through text colour.
+    let fade = 1;
+    for (let x = e; x && x.nodeType === 1; x = x.parentElement) fade *= +getComputedStyle(x).opacity;
+    if (fade === 0) continue;
+    // The text's own box must be on the page (a scroller's hidden part still counts: it scrolls into view).
+    const range = document.createRange(); range.selectNodeContents(n);
+    const tr = range.getBoundingClientRect(); if (tr.width < 1 || tr.height < 1) continue;
+    const bg = behind(e); if (!bg) continue;
+    const fg0 = rgba(s.color); if (!fg0 || fg0[3] === 0) continue;
+    fg0[3] *= fade;
+    const fg = fg0[3] < 1 ? over(fg0, bg) : fg0;
+    const k = ratio(fg, bg);
+    if (k < min - 1e-9) out.set(e, name(e) + ': ' + hex(fg) + ' on ' + hex(bg) + ' = ' + k.toFixed(2) + ':1');
+  }
+  return [...out.values()];
+}
+
+module.exports = { stateRules, drawn, roseTabs, lateShown, textContrast };
