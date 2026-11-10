@@ -5,6 +5,6 @@ const path = require('node:path');
 
 test('Breed Better calculator tests pass', () => {
   const root = path.resolve(__dirname, '..', '..');
-  const run = spawnSync(process.execPath, ['--test', 'breed-better/tests/score.test.js'], { cwd: root, encoding: 'utf8' });
+  const run = spawnSync(process.execPath, ['--test', 'tests/breed-better/score.test.js'], { cwd: root, encoding: 'utf8' });
   expect(run.status, run.stdout + run.stderr).toBe(0);
 });
