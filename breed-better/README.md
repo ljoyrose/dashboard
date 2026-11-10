@@ -4,7 +4,7 @@ Works out one animal's score from rows. It knows no species, breed, test or shee
 
 - `score.js`: the calculator. No clock and no network.
 - `hub-view.js`: the CD Hub page and dog-card score. Reads rows and draws; writes nothing.
-- `tests/`: invented animals only. Run with `node --test breed-better/tests/score.test.js breed-better/tests/hub-view.test.js`.
+- `../tests/breed-better/`: invented animals only. Run with `node --test tests/breed-better/score.test.js tests/breed-better/hub-view.test.js`.
 
 Rules it always keeps:
 - One verdict: any fail is Fail; otherwise anything missing or expired is Unverified; only all clear is Pass.
