@@ -247,8 +247,9 @@ test('each SOP is a card with its colour as a 3px full-height line; the search b
   await openSops(page);
   const card = page.locator('#soprows [data-sop="Care Rounds"]');
   await expect(card.locator('.t small')).toHaveText('Daily');
-  const look = await card.evaluate((e) => { const s = getComputedStyle(e); return { left: s.borderLeftWidth, radius: parseFloat(s.borderTopLeftRadius) > 0 }; });
-  expect(look).toEqual({ left: '3px', radius: true });
+  const look = await card.evaluate((e) => { const s = getComputedStyle(e); return { left: s.borderLeftWidth, inner: /inset/.test(s.boxShadow) && /\b2px 0px 0px\b/.test(s.boxShadow), same: s.borderLeftColor === s.boxShadow.match(/rgba?\([^)]*\)/)[0], radius: parseFloat(s.borderTopLeftRadius) > 0 }; });
+  // Every line is 1px (house look); the 1px colour line plus a 2px inner line reads as one 3px curved line.
+  expect(look).toEqual({ left: '1px', inner: true, same: true, radius: true });
   await page.locator('#sopq').focus();
   expect(await page.locator('#sopq').evaluate((e) => getComputedStyle(e).outlineStyle)).toBe('none');
 });
