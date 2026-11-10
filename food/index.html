@@ -362,6 +362,9 @@
   function productOf(code) { return data.products.filter(function (q) { return q.full_ga_code === code; })[0] ||
     data.products.filter(function (q) { return q.tla && q.tla === String(code).substr(0, 3) && q.pack === codeKg(code) + 'kg'; })[0]; }
   function brandName(code) { var c = data.codes.filter(function (x) { return x.kind === 'brand' && String(x.code).toUpperCase() === String(code || '').toUpperCase(); })[0]; return c ? c.name : String(code || ''); }
+  // Engine v1.16 adds ship_country, delivery_charged, channel and min_profit to the Orders row; older rows have none and the card
+  // falls back as before. JE, GG and IE orders need a commercial invoice; GB and IM a VAT invoice (IM is in the UK VAT area).
+  var COUNTRY = { GB: ['UK', 'VAT invoice'], IM: ['Isle of Man', 'VAT invoice'], JE: ['Jersey', 'commercial invoice'], GG: ['Guernsey', 'commercial invoice'], IE: ['Ireland', 'commercial invoice'] };
   function orderOf(no) { return data.orders.filter(function (x) { return String(x.order_no) === String(no); })[0]; }
   function sendInfo(r) {
     var no = r.key.replace(/^SEND-/, ''), o = orderOf(no) || {}, lines = [];
@@ -376,11 +379,11 @@
     var other = []; try { other = JSON.parse(o.other_lines || '[]'); } catch (e) { other = o.other_lines ? [o.other_lines] : []; }
     if (other.length) treats += other.length;
     var boxKg = setNum('GA_BOX_KG', 27), boxes = kg ? Math.ceil(kg / boxKg) : 0, maxKg = setNum('MAX_ORDER_WEIGHT_KG', 270);
-    var inc = num(o.sale_inc_vat), ex = num(o.sale_ex_vat) || num(o.sale_ex_vat_est) || (inc ? inc / 1.2 : 0), min = minProfit();
-    var profit = '', est = false;
+    var inc = num(o.sale_inc_vat), ex = num(o.sale_ex_vat) || num(o.sale_ex_vat_est) || (inc ? inc / 1.2 : 0), min = o.min_profit !== undefined && o.min_profit !== '' && !isNaN(Number(o.min_profit)) ? num(o.min_profit) : minProfit();
+    var profit = '', est = false, gaDel = boxes ? setNum('DELIVERY_FIRST_BOX', 10.82) + (boxes - 1) * setNum('DELIVERY_NEXT_BOX', 8.79) : 0;
     if (o.profit_est !== undefined && o.profit_est !== '') profit = num(o.profit_est);
     else if (ex && gaOk && boxes) { est = true;
-      profit = Math.round((ex - ga - setNum('DELIVERY_FIRST_BOX', 10.82) - (boxes - 1) * setNum('DELIVERY_NEXT_BOX', 8.79) - (inc || ex * 1.2) * setNum('CARD_FEE_PCT', 2) / 100 - setNum('CARD_FEE_FIXED', 0.25) - setNum('OVERHEAD_PER_ORDER', 0.8)) * 100) / 100; }
+      profit = Math.round((ex - ga - gaDel - (inc || ex * 1.2) * setNum('CARD_FEE_PCT', 2) / 100 - setNum('CARD_FEE_FIXED', 0.25) - setNum('OVERHEAD_PER_ORDER', 0.8)) * 100) / 100; }
     var n = num(o.customer_orders), t = String(o.order_type || '');
     var who = (n === 1 ? 'New customer' : n > 1 ? nth(n) + ' order' : 'Customer not known') + (t ? ' · ' + (/^sub/i.test(t) ? 'subscription' : 'one-off') : '');
     var warn = [];
@@ -389,8 +392,11 @@
     if (badKg) warn.push('A pack weight could not be read from its GA code: check the boxes');
     if (lines.length && !gaOk) warn.push('A GA price is missing on the Products tab, so profit cannot be estimated');
     if (o.line_flag) warn.push(String(o.line_flag));
+    var cc = String(o.ship_country || '').toUpperCase(), ctry = COUNTRY[cc], del = o.delivery_charged === undefined || o.delivery_charged === '' ? null : num(o.delivery_charged);
+    if (cc && !ctry) warn.push('Ships to ' + cc + ': GA does not deliver there. Check the address');
     return { no: no, o: o, lines: lines, kg: kg, boxes: boxes, pallet: kg > maxKg, food: food, treats: treats, profit: profit, est: est, min: min, who: who, warn: warn, sheets: sheets,
-      channel: [o.source || 'Source not known', o.brand ? brandName(o.brand) : '', o.partner ? 'via ' + partnerName(o.partner) : ''].filter(Boolean).join(' · '),
+      ship: cc ? (ctry ? ctry[0] + ' · ' + ctry[1] : cc) : '', paper: ctry ? ctry[1] : '', del: del, gaDel: gaDel,
+      channel: [o.channel || o.source || 'Source not known', o.brand ? brandName(o.brand) : '', o.partner ? 'via ' + partnerName(o.partner) : ''].filter(Boolean).join(' · '),
       kind: food && treats ? 'Food + treats' : treats ? 'Treats only' : food ? 'Food' : '–' };
   }
   function sendSummary(r) { var x = sendInfo(r);
@@ -399,6 +405,8 @@
     var x = sendInfo(r), o = x.o, items = o.order_no ? orderItems(o) : x.lines.map(function (l) { var p = productOf(l.code); return l.qty + ' × ' + (p ? (p.ddf_name || p.recipe) + ' ' + p.pack : l.code); }).join(', ');
     var facts = [['Customer', x.who], ['For', o.species || '–'], ['What', x.kind],
       ['Weight', x.kg ? x.kg + 'kg · ' + (x.pallet ? 'pallet' : x.boxes + ' GA box' + (x.boxes > 1 ? 'es' : '')) : '–', x.pallet],
+      ['Ships to', x.ship || '–', !!(x.ship && !x.paper)],
+      ['Delivery', x.del === null ? '–' : (x.del ? money(x.del) : 'Free') + ' paid' + (x.gaDel ? ' · GA about ' + money(x.gaDel) : ''), x.del !== null && x.gaDel > 0 && x.del < x.gaDel],
       ['Sale (inc VAT)', o.sale_inc_vat ? money(o.sale_inc_vat) : '–'],
       [x.est ? 'Est. profit' : 'Profit', x.profit === '' ? '–' : money(x.profit), x.profit !== '' && x.profit < x.min]];
     var links = (o.order_no ? shopLink(o) : '') + Object.keys(x.sheets).map(function (u) { return '<a class="btn" href="' + esc(u) + '" target="_blank" rel="noopener">Data sheet: ' + esc(x.sheets[u]) + '</a>'; }).join('');
