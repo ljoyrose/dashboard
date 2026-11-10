@@ -29,13 +29,132 @@ function store_findOne_(title) {
   return found.length ? found[0] : null;
 }
 
-/** Read a CSV file. If `must` and it is missing, say so plainly. */
+/* ------------------------------------------------------------------------------------------------------------
+ * Google Sheets (7 Nov 2026: every BLD table became a Google Sheet that keeps its ".csv" name).
+ * A Sheet is read as text the same way a CSV is, so every check above and in Sink.gs is unchanged:
+ *   - the first tab is the table; the header is row 1 with trailing empty cells dropped;
+ *   - each row is read as the text shown in the cell (getDisplayValues), cut to the header's width;
+ *   - `text` is those rows written out as CSV, so the same hash proves nothing changed while saving.
+ * Writing adds ONE row under the last row, stored as plain text ("@") so Sheets never turns 18.5 into a number,
+ * a date into its own format or a microchip number into 9.8E+14. The read-back check and the exact undo work the
+ * same way as for a CSV: if the check fails, the added row is removed again (or, for an edit, the old values are
+ * put back) and the result is checked by hash. Sheets also keeps its own version history.
+ * ---------------------------------------------------------------------------------------------------------- */
+var SHEET_MIME_ = 'application/vnd.google-apps.spreadsheet';
+
+function store_isSheet_(file) { return !!(file && file.getMimeType && file.getMimeType() === SHEET_MIME_); }
+
+function store_tab_(file) { return SpreadsheetApp.openById(file.getId()).getSheets()[0]; }
+
+/** All rows of the tab as text, cut to the header width. Returns {rows, rowNums, width}. Blank rows are skipped. */
+function store_sheetRows_(sh) {
+  var lr = sh.getLastRow(), lc = sh.getLastColumn();
+  if (!lr || !lc) return { rows: [], rowNums: [], width: 0 };
+  var all = sh.getRange(1, 1, lr, lc).getDisplayValues();
+  var head = all[0].slice();
+  while (head.length && head[head.length - 1] === '') head.pop();
+  var w = head.length, rows = [], nums = [];
+  for (var i = 0; i < all.length; i++) {
+    var r = all[i].slice(0, w);
+    if (i > 0 && r.every(function (x) { return x === ''; })) continue;
+    while (r.length < w) r.push('');
+    rows.push(r); nums.push(i + 1);
+  }
+  return { rows: rows, rowNums: nums, width: w };
+}
+
+function store_rowsText_(rows) { return rows.map(csvLine_).join('\r\n') + (rows.length ? '\r\n' : ''); }
+
+function store_readSheet_(file) {
+  var sh = store_tab_(file), got = store_sheetRows_(sh);
+  var header = got.rows.length ? got.rows[0] : [];
+  var records = got.rows.slice(1).map(function (r) {
+    var o = {};
+    for (var i = 0; i < header.length; i++) o[header[i]] = r[i] === undefined ? '' : r[i];
+    return o;
+  });
+  var text = store_rowsText_(got.rows);
+  return { file: file, kind: 'sheet', tab: sh, text: text, size: text.length, header: header, records: records,
+           rowNums: got.rowNums, width: got.width, lastRow: sh.getLastRow() };
+}
+
+/** Same as the CSV append, for a Sheet. `read` is store_readSheet_ taken inside the same lock. */
+function store_appendSheet_(title, rowValues, read) {
+  var sh = read.tab, beforeHash = textHash_(read.text);
+  var now = store_sheetRows_(sh);
+  if (textHash_(store_rowsText_(now.rows)) !== beforeHash || sh.getLastRow() !== read.lastRow) {
+    throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
+  }
+  var w = read.width, vals = rowValues.slice(0, w).map(function (v) { return v === null || v === undefined ? '' : String(v); });
+  while (vals.length < w) vals.push('');
+  var at = read.lastRow + 1;
+  if (sh.getMaxRows() < at) sh.insertRowsAfter(sh.getMaxRows(), 1);
+  var rg = sh.getRange(at, 1, 1, w);
+  rg.setNumberFormat('@');
+  rg.setValues([vals]);
+  SpreadsheetApp.flush();
+  var want = textHash_(read.text + csvLine_(vals) + '\r\n');
+  var check = store_sheetRows_(sh);
+  if (textHash_(store_rowsText_(check.rows)) === want) return read.text + csvLine_(vals) + '\r\n';
+  var restored = false;
+  try {
+    if (sh.getLastRow() === at) sh.deleteRow(at);
+    else sh.getRange(at, 1, 1, w).clearContent();
+    SpreadsheetApp.flush();
+    restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash;
+  } catch (e) { restored = false; }
+  throw err_('VERIFY_FAILED',
+    restored
+      ? 'The table did not read back as expected after saving, so the added row was taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
+      : 'The table did not read back as expected after saving AND taking the row out again could not be confirmed. Tell Lisa now; do not save again. The earlier version is in the Sheet\'s version history.',
+    { restored: restored, file: title });
+}
+
+/** Same as the CSV in-place edit, for a Sheet: ONE row's values change, every other cell must be identical. */
+function store_replaceSheetRow_(title, index, rowValues, read) {
+  var sh = read.tab, beforeHash = textHash_(read.text);
+  if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) !== beforeHash) {
+    throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was changed. Try again.');
+  }
+  if (index < 0 || index >= read.records.length) {
+    throw err_('UNEXPECTED_LAYOUT', title + ' is laid out in a way the edit cannot handle safely, so nothing was changed.');
+  }
+  var rowNum = read.rowNums[index + 1], w = read.width;
+  var vals = rowValues.slice(0, w).map(function (v) { return v === null || v === undefined ? '' : String(v); });
+  while (vals.length < w) vals.push('');
+  var rg = sh.getRange(rowNum, 1, 1, w), old = rg.getDisplayValues();
+  rg.setNumberFormat('@');
+  rg.setValues([vals]);
+  SpreadsheetApp.flush();
+  var rows = csvRecordsRows_(read);
+  rows[index + 1] = vals;
+  var want = textHash_(store_rowsText_(rows));
+  if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === want) return store_rowsText_(rows);
+  var restored = false;
+  try {
+    rg.setValues(old); SpreadsheetApp.flush();
+    restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash;
+  } catch (e) { restored = false; }
+  throw err_('VERIFY_FAILED',
+    restored
+      ? 'The table did not read back as expected after the edit, so the old values were put back and nothing was changed. Try again; if it repeats, tell Lisa.'
+      : 'The table did not read back as expected after the edit AND putting the old values back could not be confirmed. Tell Lisa now. The earlier version is in the Sheet\'s version history.',
+    { restored: restored, file: title });
+}
+
+/** The rows a Sheet read was made from (header first), rebuilt from the read so nothing is fetched again. */
+function csvRecordsRows_(read) {
+  return [read.header.slice()].concat(read.records.map(function (rec) { return read.header.map(function (h) { return rec[h]; }); }));
+}
+
+/** Read a table (Google Sheet or CSV). If `must` and it is missing, say so plainly. */
 function store_read_(title, must) {
   var file = store_findOne_(title);
   if (!file) {
     if (must) throw err_('FILE_MISSING', title + ' does not exist yet. Lisa needs to create it before this can be saved.');
     return null;
   }
+  if (store_isSheet_(file)) return store_readSheet_(file);
   var text = file.getBlob().getDataAsString('UTF-8');
   var parsed = csvRecords_(text);
   return { file: file, text: text, size: file.getSize(), header: parsed.header, records: parsed.records };
@@ -65,6 +184,44 @@ function textHash_(text) {
  *  4. if step 3 fails, the EXACT old text is written back and checked by hash. The error says whether
  *     the restore worked. The caller logs it in the approvals queue.
  */
+/** Several rows in one write: all of them are saved or none are. Same guards and read-back as store_append_. */
+function store_appendMany_(title, expectedHeader, rows, read) {
+  if (allowedFiles_().indexOf(title) < 0) throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
+  if (!sameHeader_(read.header, expectedHeader)) {
+    throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
+  }
+  if (read.kind === 'sheet') return store_appendManySheet_(title, rows, read);
+  var file = read.file, before = read.text, beforeHash = textHash_(before);
+  if (textHash_(file.getBlob().getDataAsString('UTF-8')) !== beforeHash) throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
+  var eol = csvEol_(before), base = before;
+  if (base.length && !/(\r\n|\n)$/.test(base)) base += eol;
+  var after = base + rows.map(function (r) { return csvLine_(r) + eol; }).join('');
+  return store_commit_(file, title, before, beforeHash, after, function (check) { return check.indexOf(before) === 0; });
+}
+
+function store_appendManySheet_(title, rows, read) {
+  var sh = read.tab, beforeHash = textHash_(read.text), now = store_sheetRows_(sh);
+  if (textHash_(store_rowsText_(now.rows)) !== beforeHash || sh.getLastRow() !== read.lastRow) throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was saved. Try again.');
+  var w = read.width, n = rows.length, at = read.lastRow + 1;
+  var vals = rows.map(function (r) { var v = r.slice(0, w).map(function (x) { return x === null || x === undefined ? '' : String(x); }); while (v.length < w) v.push(''); return v; });
+  if (sh.getMaxRows() < at + n - 1) sh.insertRowsAfter(sh.getMaxRows(), at + n - 1 - sh.getMaxRows());
+  var rg = sh.getRange(at, 1, n, w);
+  rg.setNumberFormat('@');
+  rg.setValues(vals);
+  SpreadsheetApp.flush();
+  var text = read.text + vals.map(function (v) { return csvLine_(v) + '\r\n'; }).join('');
+  if (textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === textHash_(text)) return text;
+  var restored = false;
+  try {
+    for (var i = n - 1; i >= 0; i--) { if (sh.getLastRow() === at + i) sh.deleteRow(at + i); else sh.getRange(at + i, 1, 1, w).clearContent(); }
+    SpreadsheetApp.flush();
+    restored = textHash_(store_rowsText_(store_sheetRows_(sh).rows)) === beforeHash;
+  } catch (e) { restored = false; }
+  throw err_('VERIFY_FAILED', restored
+    ? 'The table did not read back as expected after saving, so the added rows were taken out again and nothing was saved. Try again; if it repeats, tell Lisa.'
+    : 'The table did not read back as expected after saving and could not be put back. Do not save again. Tell Lisa.');
+}
+
 function store_append_(title, expectedHeader, rowValues, read) {
   if (allowedFiles_().indexOf(title) < 0) {
     throw err_('FILE_NOT_ALLOWED', 'That file is not one the save system is allowed to change.');
@@ -72,6 +229,7 @@ function store_append_(title, expectedHeader, rowValues, read) {
   if (!sameHeader_(read.header, expectedHeader)) {
     throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
+  if (read.kind === 'sheet') return store_appendSheet_(title, rowValues, read);
   var file = read.file;
   var before = read.text;
   var beforeHash = textHash_(before);
@@ -122,6 +280,7 @@ function store_replaceRow_(title, expectedHeader, index, rowValues, read) {
   if (!sameHeader_(read.header, expectedHeader)) {
     throw err_('HEADER_MISMATCH', title + ' does not have the columns the save system expects, so nothing was changed. Lisa needs to check the file header.');
   }
+  if (read.kind === 'sheet') return store_replaceSheetRow_(title, index, rowValues, read);
   var file = read.file, before = read.text, beforeHash = textHash_(before);
   if (textHash_(file.getBlob().getDataAsString('UTF-8')) !== beforeHash) {
     throw err_('CHANGED_DURING_WRITE', title + ' changed while saving. Nothing was changed. Try again.');
@@ -138,11 +297,21 @@ function store_replaceRow_(title, expectedHeader, index, rowValues, read) {
   });
 }
 
-/** Create a header-only file. Used ONLY by adminCreateEmptyTables (Lisa, from the editor). */
+/**
+ * Create a header-only table. Used ONLY by adminCreateEmptyTables (Lisa, from the editor).
+ * A new table is a Google Sheet with the ".csv" name, every cell plain text, like the rest of BLD-app-tables.
+ */
 function store_createEmpty_(title, header) {
   if (allowedFiles_().indexOf(title) < 0) throw err_('FILE_NOT_ALLOWED', 'Not on the allow-list.');
   if (store_findOne_(title)) throw err_('ALREADY_EXISTS', title + ' already exists. Nothing was changed.');
-  return store_folder_().createFile(title, csvLine_(header) + '\r\n', 'text/csv');
+  var ss = SpreadsheetApp.create(title, 100, header.length), sh = ss.getSheets()[0];
+  sh.setName(title.replace(/\.csv$/, ''));
+  sh.getRange(1, 1, sh.getMaxRows(), header.length).setNumberFormat('@');
+  sh.getRange(1, 1, 1, header.length).setValues([header]);
+  SpreadsheetApp.flush();
+  var file = DriveApp.getFileById(ss.getId());
+  file.moveTo(store_folder_());
+  return file;
 }
 
 /** Load id sets for the lookup tables a spec needs. Missing lookup file => null (honest "cannot check"). */

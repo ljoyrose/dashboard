@@ -1,0 +1,1 @@
+{"factory": 460, "why": "Copy picks the prompt doc, never the Prediction doc: promptDoc() adds 459 bytes to factory/index.html (PR 184)"}

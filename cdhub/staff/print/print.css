@@ -1,0 +1,6 @@
+.sheet{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:14px}
+.qcard{background:#fff;color:#141413;border:1px solid #C7C0B4;border-radius:10px;padding:10px;text-align:center;break-inside:avoid}
+.qcard b{display:block;font-size:18px}.qcard small{display:block;font-size:11px}
+.qcard.big{grid-column:1/-1;max-width:320px;margin:0 auto}.qcard.big b{font-size:34px}
+.opts{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+@media print{.noprint{display:none!important}body{background:#fff}.screen{max-width:none;padding:0}.sheet{grid-template-columns:repeat(3,1fr)}}

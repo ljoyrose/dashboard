@@ -118,6 +118,22 @@ test.describe('GA Hub page', () => {
     await expect(page.locator('nav.tabs a[data-nav="orders"]')).toHaveAttribute('aria-current', 'page');
   });
 
+  // Lisa, 8 Nov 2026: the order row shows what was bought and has its own Send button while the SEND- card waits; after the send it says so.
+  test('order row: items, species and sale; Send writes the SEND- card answer; a sent order says waiting for GA', async ({ page }) => {
+    const b = book(), h = b.orders[0].concat(['sent_at', 'species']), row = (no, sent) => [no, 'Shopify', 'DDF', 'GA', 'Placed', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', '', 'One-off (Online Store)', '70.00', '1', '2026-11-07T09:00:00Z', JSON.stringify([{ code: 'AAA0012KZPSXZZZ', qty: 2 }]), 'Waiting for GA', sent, 'Dog'];
+    b.orders = [h, row('9201', ''), row('9202', '2026-11-08T07:05:00Z')];
+    b.cards = [['SEND-9201', 'send', 'Orders', 'Send order #9201 to GA?', '{}', ago(30)]];
+    const writes = await sheets(page, b);
+    await open(page, '#/orders');
+    const first = page.locator('#view .row', { hasText: '#9202' }), second = page.locator('#view .row', { hasText: '#9201' });
+    await expect(second).toContainText('placed 07/11/2026 · 2 × Sample Doodle 12kg · Dog · sale £70.00');
+    await expect(first).toContainText('📤 Sent by XML 08/11/2026: waiting for GA');
+    await second.locator('button[data-v="Send"]').click();
+    await expect.poll(() => writes.length).toBe(1);
+    expect(writes[0].range).toBe('Cards!G2:J2');
+    expect(writes[0].body.values[0][0]).toBe('Send');
+  });
+
   // G1 (Lisa, 30 Oct 2026): the low-profit warning is under £8. The value is read from MIN_PROFIT; a blank cell means 8.
   test('low profit: blank MIN_PROFIT means £8; under 8 is flagged, exactly 8 and over are not; a typed value still wins', async ({ page }) => {
     const b = book(), row = (no, p) => [no, 'Shopify', 'DDF', 'GA', 'Invoiced', '', '', '1', '', '', '', '', '', p, '', '', '', '', '', '', '', 'One-off (Online Store)', '', '', '', '[]', 'Matched'];
@@ -199,6 +215,20 @@ test.describe('GA Hub page', () => {
     await expect(rows).toHaveCount(2);   // the window moves to 45-75 days: #9315 (70) comes in, #9311 (36) drops out
     await expect(rows.nth(0)).toContainText('Order #9315');
     await expect(rows.nth(1)).toContainText('Order #9312');
+  });
+  test('reorder due with engine v1.15.3 keys: a customer who ordered again for the same species drops out; another species, a cancelled reorder and unkeyed orders do not change it @regression', async ({ page }) => {
+    const kRow = (no, d, key, sp, status) => growRow(no, d, 'One-off (Online Store)', 1, status).concat([key, sp]);   // invented keys
+    const b = growBook([kRow('9321', 50, 'CSAMPLE01', 'Dog'), kRow('9322', 10, 'CSAMPLE01', 'Dog'), kRow('9323', 40, 'CSAMPLE01', 'Cat'),
+      kRow('9324', 45, 'CSAMPLE02', 'Dog'), kRow('9326', 5, 'CSAMPLE02', 'Dog', 'Cancelled'), growRow('9325', 38, 'One-off (Online Store)', 1)]);
+    b.orders[0] = b.orders[0].concat(['customer_key', 'species']);
+    await sheets(page, b);
+    await open(page, '#/review');
+    const rows = page.locator('#reorder .row');
+    await expect(rows).toHaveCount(3);
+    await expect(rows.nth(0)).toContainText('Order #9324 · Dog');
+    await expect(rows.nth(1)).toContainText('Order #9323 · Cat');
+    await expect(rows.nth(2)).toContainText('Order #9325');
+    await expect(page.locator('#reorder')).not.toContainText('#9321');   // the same customer ordered dog food again 10 days ago
   });
   test('the Grow orders card picks the biggest gap: falling orders, then customers due to reorder, then few subscriptions; See who goes to the list', async ({ page }) => {
     const one = 'One-off (Online Store)', sub = 'Subscription (PayWhirl)';

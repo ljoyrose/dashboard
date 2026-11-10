@@ -2,7 +2,18 @@
 
 Written 16 Oct 2026 by claude-job4. Replaces the v2 handover (the v2 copy stays in the Drive folder `JOB4_CDHUB-WRITEPATH_v2` until the archive checklist below is done).
 
-## State
+## Current state (corrected 8 Nov 2026; replaces "Nothing is on" below)
+
+The rest of this file is the 16 Oct record and is kept as history.
+
+- **The save system is live on real Google.** Apps Script project "BLD save" is deployed: the save web app (runs as the owner) and an owner-only approvals page. The addresses are not stored in this repository.
+- **Switches ON since 8 Nov:** `SAVE_ENABLED`, `TABLE_ON_breeding_rule`, `TABLE_ON_area_reading`, `TABLE_ON_occupancy`, `TABLE_ON_occupancy_check`, `READ_ENABLED`, `OWNER_EDIT_ENABLED`, `BACKUP_ON`.
+- **Moves queue for approval** until `MOVES_QUEUE_UNTIL` (2026-11-21). A nightly backup runs at about 03:00.
+- **Staff codes are active**, one per person, and can be switched off on the approvals page. Codes are credentials and never appear here.
+- **Staff cannot use their codes yet**, because the live hub needs Google sign-in before any page opens. A staff page that needs no Google sign-in is in progress.
+- **Not saved yet:** flap free/limited and dog removal.
+
+## State (16 Oct 2026, out of date)
 
 - **Built and tested on FAKE data: 139 tests pass, 0 skipped** (`npm install && npm test`; the same number the last run printed). Test files: `tests/sink.test.js`, `tests/client.test.js`, `tests/v3.test.js`, `tests/backfill.test.js`.
 - **Nothing is on.** No Script URL, no switches, no file created on Drive, no live CSV touched. Saving, staff reading, owner edit and the new daily check log are all OFF. Drive was read-only for this run.

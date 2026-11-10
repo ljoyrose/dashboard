@@ -10,6 +10,9 @@
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
+<script src="staff/lib/capacity.js"></script>
+<script src="staff/lib/due.js"></script>
+<script src="jobs-view.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 /* Look: read Studio's saved choice ('dash-look', read only; this page never writes it). Background, Selected, Text, Spacing, Mode. */
@@ -180,6 +183,24 @@ tr:last-child td{border-bottom:none}
 #sopcard .mrow:first-child{border-top:0;padding-top:0}
 #sopcard .mrow .mut{flex:0 1 11em;overflow-wrap:anywhere}
 #sopcard .mrow .cb{flex:none;padding:0 10px}
+#sopcard .sopopen{display:flex;flex:1;align-items:center;gap:12px;min-width:0;min-height:44px;padding:0 10px;color:inherit;font:inherit;text-align:left;cursor:pointer}
+#sopcard .mrow:has(.sopopen){flex-wrap:wrap}
+#sopcard .sopopen{flex:1 1 100%}
+#sopcard .sopopen .t{white-space:normal;overflow:visible}
+.sopsigns{display:inline-flex;align-items:center;gap:4px;flex:none;font-size:var(--fs-small);font-weight:600}
+.sopsigns .ti{width:18px;height:18px}
+.sopbody{margin:0 0 12px;padding:4px 0 4px 12px;border-left:3px solid var(--hc,var(--line));border-radius:var(--radius);overflow-wrap:anywhere}
+.sopbody p,.sopbody ol,.sopbody ul{margin:6px 0}
+.sopbody ol,.sopbody ul{padding-left:20px}
+.sopbody .sopmeta{display:flex;align-items:center;gap:6px;font-size:var(--fs-small);color:var(--muted);margin:4px 0}
+.sopbody .sopmeta .ti{width:18px;height:18px}
+.sopbody ul.soplinks{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0;padding:0;list-style:none}
+.soplink{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:var(--radius);color:inherit;font-size:var(--fs-small);font-weight:600;text-decoration:none}
+.soplink .ti{width:18px;height:18px}
+.soplink.none{color:var(--muted);font-weight:400}
+.sopsec{border-top:1px solid var(--line)}
+.sopsec>summary{min-height:44px;display:flex;align-items:center;gap:6px;font-weight:600;cursor:pointer}
+.sopsec>summary .n{color:var(--muted);font-weight:400;font-size:var(--fs-small)}
 
 .atype-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,148px),1fr));gap:8px;margin:0;padding:0;list-style:none}
 .atype{display:flex;align-items:center;gap:8px;min-width:0;min-height:44px;padding:8px 10px;border:1px solid var(--line);border-radius:var(--radius);background:transparent}
@@ -206,7 +227,7 @@ tr:last-child td{border-bottom:none}
 .wkday .wdate{font-size:var(--fs-small);font-weight:600;color:var(--ink);line-height:1.2}
 .wkday .wt{font-size:var(--fs-base);font-weight:600;line-height:1.3;font-variant-numeric:tabular-nums}
 .wkday .wb,.wkday .wr,.wkday .ww{font-size:var(--fs-small);font-weight:600;line-height:1.3}
-.wkday .ic{display:inline-block;width:10px;height:10px;margin-right:0;border-radius:50%;border:1px solid var(--press);vertical-align:-1px;background:transparent}
+.wkday .ic{display:inline-block;width:14px;height:14px;margin-right:0;border-radius:50%;border:1px solid var(--press);vertical-align:-1px;background:transparent}
 .wkday .ic.cold{border-color:var(--ljr-6);background:var(--ljr-6-tint)}
 .wkday .ic.ok{border-color:var(--ljr-5);background:var(--ljr-5-tint)}
 .wkday .ic.hot{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
@@ -282,7 +303,7 @@ tr:last-child td{border-bottom:none}
 .dcrow .up{font-weight:600}
 .dcrow .dn{font-weight:600}
 .dcrow.tap{cursor:pointer;border-radius:0px;padding:1px 3px;margin-left:-3px}
-.dcrow.tap:focus-visible{outline:2px solid var(--press)}
+.dcrow.tap:focus-visible{outline:1px solid var(--press);outline-offset:-1px}
 .wt{display:flex;align-items:center;gap:8px;font-size:var(--fs-small);color:var(--muted);flex-wrap:wrap}
 .wt .lb,.chipline .lb{font-size:var(--fs-small);color:var(--muted)}
 .wt b{color:var(--ink)}
@@ -304,6 +325,7 @@ tr:last-child td{border-bottom:none}
 .tmp .sl{font-size:var(--fs-small);color:var(--muted);font-weight:600}
 .tmp input{width:100%;text-align:right;padding:0 10px;font-variant-numeric:tabular-nums}
 .tmp input.bad{border-color:var(--ljr-2);background:var(--ljr-2-tint)}
+.tmp .msg.swapalert{font-weight:600;border:1px solid var(--ljr-2);background:var(--ljr-2-tint);border-radius:6px;padding:2px 6px}
 .tmp .hd2{font-size:var(--fs-small);color:var(--muted);text-align:right}
 .tmp .msg{font-size:var(--fs-small);color:var(--muted);min-width:54px}
 .step{color:var(--muted);font-weight:600;white-space:nowrap}
@@ -348,6 +370,7 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 .dcs{border-bottom:1px solid var(--line)}
 .dcs>summary{display:flex;align-items:center;gap:7px;padding:0 12px;cursor:pointer;list-style:none;user-select:none;font-size:var(--fs-small);color:var(--muted);min-width:0;height:var(--house-btn);overflow:hidden;border-top:1px solid var(--press);box-sizing:border-box}
 .dcs>summary::-webkit-details-marker{display:none}
+@media (hover:hover){.dcs>summary:hover{outline:var(--house-line) solid var(--sel-bd);outline-offset:calc(-1 * var(--house-line))}}
 .dcs>summary svg{flex:none;width:14px;height:14px;stroke:var(--muted);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .dcs>summary .dcs-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dcs>summary::after{content:'\25BA';margin-left:auto;font-size:.6rem;transition:transform .15s;display:inline-block;flex:0 0 auto}
@@ -381,14 +404,18 @@ ul.notes{margin:4px 0 8px;padding-left:20px;color:var(--muted);font-size:var(--f
 <script>
 
 var FOLDER=window.DASH_CONFIG.cdhub.folderId;
-var WANT=['BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
+var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tenant.csv','BLD-coat_colour.csv','BLD-coat_pattern.csv','BLD-nose_pigment.csv',
  'BLD-subject.csv','BLD-subject_status.csv','BLD-microchip.csv','BLD-microchip_registration.csv','BLD-weight.csv',
  'BLD-area.csv','BLD-area_capacity.csv','BLD-area_access.csv','BLD-temperature_band.csv','BLD-temperature_action.csv','BLD-association.csv','BLD-prospect.csv','BLD-export_route.csv','BLD-breeder_category.csv','BLD-litter.csv','BLD-mating.csv','BLD-health_screen.csv',
  'BLD-occupancy.csv','BLD-MAP-animana.csv','BLD-MAP-animana-client.csv','BLD-visit.csv','BLD-reminder.csv','BLD-medicinal_product.csv','BLD-stock_level.csv','BLD-clinical_note.csv','BLD-dispense.csv',
  'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-area_reading.csv','BLD-WORK.csv',
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
- 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv'];
+ 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv'];
+/* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
+var OPTIONAL_FILES={'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
+function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy}; }
+function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
 
@@ -398,7 +425,8 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); return /^https?:\/\/[^\s"'<>
 
 
 
-var SOP={rows:null,err:'',pending:null};
+var SOP={rows:null,err:'',pending:null,cards:null,cardsErr:'',cardsPending:null,open:''};
+var SOP_CARDS_FILE='BLD-sop_cards.json';
 var SOP_COLOURS=['White','Red','Orange','Yellow','Green','Blue','Purple'];
 var SOP_FREQS=['Daily','Weekly','Monthly','Quarterly','Annual','Ongoing','Per litter','Ad hoc','Breeding'];
 
@@ -677,7 +705,7 @@ async function load(){
   files.forEach(function(f){ (byTitle[f.name]=byTitle[f.name]||[]).push(f); window._driveIds[f.name]=f.id; });
   var dup=Object.keys(byTitle).filter(function(t){return byTitle[t].length>1;});
   if(dup.length){ LOAD.state='ambiguous'; LOAD.err=dup.join(', '); render(); return; }
-  var missing=WANT.filter(function(t){return !byTitle[t];});
+  var missing=WANT.filter(function(t){return !byTitle[t] && !OPTIONAL_FILES[t];});
   if(missing.length) LOAD.notes.push(missing.length+' file(s) not in the folder: '+missing.join(', '));
   var present=WANT.filter(function(t){ return byTitle[t]; });
   WANT.forEach(function(t){ if(!byTitle[t]) T[t]=[]; });
@@ -1048,13 +1076,61 @@ function inWhelp(onISO){
  });
  return out.sort(function(a,b){ return (a.due||'9')<(b.due||'9')?-1:1; });
 }
+/* BREEDING RULES (Lisa, 8 Nov 2026). The breeder types her own limits on Compliance; nothing is hard-coded, because
+   they differ by country, licence and kennel club. Each change is a new row in BLD-breeding_rule from a later date, so a
+   litter or mating is judged by the version in force on ITS OWN date. No rule set = that check is not run (and says so). */
+var BREED_RULES=[
+ ['min_dam_age_months','Youngest age a bitch can be mated','months'],
+ ['max_litters_per_dam','Most litters per bitch','litters'],
+ ['min_months_between_litters','Shortest time between litters','months']];
+function breedRuleRows(key){ return (T['BLD-breeding_rule.csv']||[]).filter(function(r){ return r.rule_key===key && /^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||'') && /^\d+$/.test(r.value||''); })
+ .sort(function(a,b){ return a.effective_from<b.effective_from?-1:(a.effective_from>b.effective_from?1:((a.set_at||'')<(b.set_at||'')?-1:1)); }); }
+/* the version in force on a date: latest effective_from on or before it (null = no rule yet on that date) */
+function breedRule(key,iso){ var v=null; breedRuleRows(key).forEach(function(r){ if(r.effective_from<=iso) v=r; }); return v; }
+function addMonths(iso,n){ var y=+iso.slice(0,4), m=+iso.slice(5,7)-1+n, d=+iso.slice(8,10);
+ y+=Math.floor(m/12); m=((m%12)+12)%12; var last=new Date(Date.UTC(y,m+1,0)).getUTCDate();
+ return y+'-'+('0'+(m+1)).slice(-2)+'-'+('0'+Math.min(d,last)).slice(-2); }
+function litDob(l){ return isoDay(l&&(l.dob||l.born_on)); }
+function isoDay(v){ return /^\d{4}-\d{2}-\d{2}/.test(v||'')?v.slice(0,10):''; }
+/* born litters by dam, oldest first (a litter with no DOB - planned or missed - is not a litter born) */
+function littersByDam(){ var by={}; (CD.litters||[]).forEach(function(l){ var d=litDob(l); if(l.dam_subject_id&&d) (by[l.dam_subject_id]=by[l.dam_subject_id]||[]).push(l); });
+ Object.keys(by).forEach(function(k){ by[k].sort(function(x,y){ return litDob(x)<litDob(y)?-1:(litDob(x)>litDob(y)?1:0); }); }); return by; }
+/* Litters by one dam closer together than the rule in force when the later one was born. */
+function litterGaps(){
+ var by=littersByDam(), out=[];
+ Object.keys(by).forEach(function(d){ var a=by[d];
+  for(var i=1;i<a.length;i++){
+   var p=litDob(a[i-1]), n=litDob(a[i]), r=breedRule('min_months_between_litters',n); if(!r) continue;
+   if(n<addMonths(p,+r.value)) out.push({dam:d,prev:a[i-1],next:a[i],months:+r.value,rule:r,days:Math.round((Date.parse(n)-Date.parse(p))/864e5)});
+  }});
+ return out;
+}
+/* A bitch mated younger than the rule allows. Uses the mating date; a born litter with no mating row uses DOB - 63 days (marked estimated). */
+function damAgeBreaches(){
+ var dob={}; (T['BLD-subject.csv']||[]).forEach(function(r){ if(isoDay(r.dob)) dob[r.id]=isoDay(r.dob); });
+ var out=[], hadMating={};
+ (T['BLD-mating.csv']||[]).forEach(function(m){ var on=isoDay(m.mated_on), d=m.dam_subject_id; if(m.litter_id) hadMating[m.litter_id]=1;
+  if(!on||!dob[d]) return; var r=breedRule('min_dam_age_months',on); if(!r) return;
+  if(on<addMonths(dob[d],+r.value)) out.push({dam:d,on:on,dob:dob[d],months:+r.value,rule:r,est:false,what:'mating '+(m.id||'')}); });
+ (CD.litters||[]).forEach(function(l){ var b=litDob(l), d=l.dam_subject_id; if(!b||!dob[d]||hadMating[l.id]) return;
+  var on=addDays(b,-63), r=breedRule('min_dam_age_months',on); if(!r) return;
+  if(on<addMonths(dob[d],+r.value)) out.push({dam:d,on:on,dob:dob[d],months:+r.value,rule:r,est:true,what:l.pairing||l.id}); });
+ return out;
+}
+/* The litter that takes a bitch past the most litters allowed (counted on the date that litter was born). */
+function litterCountBreaches(){
+ var by=littersByDam(), out=[];
+ Object.keys(by).forEach(function(d){ by[d].forEach(function(l,i){ var r=breedRule('max_litters_per_dam',litDob(l)); if(r&&i+1>+r.value) out.push({dam:d,litter:l,n:i+1,max:+r.value,rule:r}); }); });
+ return out;
+}
+function breedRulesMissing(){ return BREED_RULES.filter(function(b){ return !breedRuleRows(b[0]).length; }); }
 function checks(){
  var c=counts(), out=[];
  var man=CD.manifest||[], mism=[];
- man.forEach(function(r){ var live=CD.counts[r.table]; if(live!=null && String(live)!==String(r.rows)) mism.push(r.table); });
+ man.forEach(function(r){ var live=CD.counts[r.table]; if(live!=null && +live < +r.rows) mism.push(r.table); });  // saves add rows; only a table that has lost rows needs a look
  out.push({k:'tables',ok:!mism.length&&!LOAD.notes.length,
-   msg:mism.length?mism.length+' tables disagree with the manifest: '+mism.join(', ')
-     :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, all match')});
+   msg:mism.length?mism.length+' tables have fewer rows than the manifest: '+mism.join(', ')
+     :(LOAD.notes.length?LOAD.notes.join(' \u00b7 '):(CD.manifest.length||0)+' tables read, none has lost rows')});
  out.push({k:'law vs yours',ok:c.bitches.length===c.active.length,
    msg:c.bitches.length===c.active.length?'both counts agree at '+c.bitches.length
      :'law says '+c.bitches.length+', your list says '+c.active.length,list:'bitches'});
@@ -1065,8 +1141,38 @@ function checks(){
    msg:c.nochip.length?c.nochip.length+' here have no chip recorded':'every dog here has one',list:'nochip'});
  out.push({k:'placed in an area',ok:!c.noarea.length,
    msg:c.noarea.length?c.noarea.length+' here are not in a cabin':'every dog here is placed',list:'noarea'});
-
-
+ var sw=CD.tempSwaps||[];
+ out.push({k:'room temps',ok:!sw.length,
+   msg:sw.length? sw.length+' reading'+(sw.length===1?' has':'s have')+' max lower than min (typed the wrong way round?): '
+     +sw.slice(0,5).map(function(x){ return x.area.replace(/^area-/,'')+' '+x.date+' '+x.min+'\u2013'+x.max; }).join(', ')+(sw.length>5?' \u2026':'')
+     :'every saved reading has max at or above min'});
+ var unset=breedRulesMissing().map(function(b){ return b[1].toLowerCase(); });
+ var lg=litterGaps();
+ out.push({k:'litter gap',ok:!lg.length,
+   msg:!breedRuleRows('min_months_between_litters').length?'not checked: set the shortest time between litters on Compliance'
+     :lg.length? lg.length+' litter'+(lg.length===1?' is':'s are')+' closer to the same dam’s last one than your rule allows (check the date or a duplicate): '
+     +lg.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' '+litDob(x.prev)+' → '+litDob(x.next)+(x.days===0?' (same day)':' ('+x.days+' days, rule '+x.months+' months)'); }).join(', ')+(lg.length>5?' …':'')
+     :'every dam’s litters meet your rule on time between litters'});
+ var da=damAgeBreaches();
+ out.push({k:'dam age',ok:!da.length,
+   msg:!breedRuleRows('min_dam_age_months').length?'not checked: set the youngest age a bitch can be mated on Compliance'
+     :da.length? da.length+' mating'+(da.length===1?' was':'s were')+' younger than your rule allows: '
+     +da.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' mated '+x.on+(x.est?' (estimated)':'')+', born '+x.dob+' (rule '+x.months+' months)'; }).join(', ')+(da.length>5?' …':'')
+     :'every mating meets your rule on the youngest age'});
+ var lc=litterCountBreaches();
+ out.push({k:'litter count',ok:!lc.length,
+   msg:!breedRuleRows('max_litters_per_dam').length?'not checked: set the most litters per bitch on Compliance'
+     :lc.length? lc.length+' litter'+(lc.length===1?' takes a bitch':'s take bitches')+' past your most litters: '
+     +lc.slice(0,5).map(function(x){ return (nameOf(x.dam)||x.dam)+' litter '+x.n+' of '+x.max+' allowed ('+litDob(x.litter)+')'; }).join(', ')+(lc.length>5?' …':'')
+     :'no bitch is over your most litters'});
+ out.push({k:'breeding rules',ok:!unset.length,
+   msg:unset.length? unset.length+' of 3 not set yet: '+unset.join(', ')+'. Set them on Compliance.':'all 3 set; litters and matings are checked against the version in force on their own date'});
+ 
+ var rl=roomAudit(todayISO());
+ out.push({k:'room limits',ok:!rl.over.length&&!rl.unknown.length,
+   msg:rl.over.length? rl.over.length+' room'+(rl.over.length===1?' is':'s are')+' over: '+rl.over.slice(0,5).map(function(x){ return x.label+' ('+x.mix+', takes '+x.alternatives+')'; }).join(', ')+(rl.over.length>5?' \u2026':'')
+     :rl.unknown.length? rl.unknown.length+' occupied room'+(rl.unknown.length===1?'':'s')+' cannot be checked: '+rl.unknown.slice(0,5).map(function(x){ return x.label; }).join(', ')+(rl.unknown.length>5?' \u2026':'')
+     :'every occupied room is within its limit'});
  var rc=refAudit();
  out.push({k:'joins',ok:!rc.bad.length,
    msg:rc.bad.length? rc.n+' references do not resolve: '+rc.bad.slice(0,5).join(', ')+(rc.bad.length>5?' \u2026':'')
@@ -1079,7 +1185,7 @@ function checks(){
  out.push({k:'rule changes',ok:!ra.bad.length,
    msg:ra.bad.length? ra.bad.slice(0,4).join('; ')+(ra.bad.length>4?' \u2026':'')
      :ra.keys+' declaration(s) version cleanly; '+ra.checked+' record(s) still resolve to the rule in force on their own date'});
- out.push({k:'saving off',ok:true,msg:DBERR||'saving is off in this web version'});
+ out.push({k:sinkOn()?'saving':'saving off',ok:true,msg:sinkOn()?'Round saves go to the save script (one row added, nothing changed or deleted).':'Read-only on this device. Set up saving on the Round page.'});
  return out;
 }
 function strip(){
@@ -1092,7 +1198,8 @@ function strip(){
 
 
 /* ---------- Live feed: the Bloodline home screens, built only from what this page already reads. ---------- */
-var CHECKNAME={'tables':'Tables read','law vs yours':'Licence counts','date of birth':'Date of birth','microchip':'Microchip',
+var BREED_CHECKS={'litter gap':1,'dam age':1,'litter count':1,'breeding rules':1};
+var CHECKNAME={'room temps':'Room temperatures','litter gap':'Time between litters','dam age':'Age at mating','litter count':'Litters per bitch','breeding rules':'Breeding rules','tables':'Tables read','law vs yours':'Licence counts','date of birth':'Date of birth','microchip':'Microchip',
  'placed in an area':'Placed in a cabin','joins':'Joins','dates':'Dates','rule changes':'Rule changes','saving off':'Saving'};
 function capFirst(s){ s=String(s||''); return s.charAt(0).toUpperCase()+s.slice(1); }
 function dmyShort(iso){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||''); return m? m[3]+'/'+m[2]+'/'+m[1].slice(2) : (iso||''); }
@@ -1106,7 +1213,7 @@ function needsToday(){
  var out=[];
  /* foundation: check (a data check that fails) */
  checks().forEach(function(x){ if(x.ok||x.k==='saving off') return;
-  out.push({title:(CHECKNAME[x.k]||capFirst(x.k))+' needs a look',sub:x.msg,go:x.list?'today':(x.k==='law vs yours'?'today':'shape'),list:x.list||'',tone:'',kind:'check'}); });
+  out.push({title:(CHECKNAME[x.k]||capFirst(x.k))+' needs a look',sub:x.msg,go:x.list?'today':(x.k==='law vs yours'?'today':(BREED_CHECKS[x.k]?'compliance':'shape')),list:x.list||'',tone:'',kind:'check'}); });
  /* kit: animal (a pregnancy getting close to its whelping window, from the mating rows) */
  inWhelp(date).forEach(function(x){
   if(x.unknown){ out.push({title:x.dog.name+': mating date not recorded',sub:'No due date can be worked out',go:'today',tone:'',kind:'kit'}); return; }
@@ -1114,8 +1221,8 @@ function needsToday(){
   out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+' · window '+dmy(x.from)+' to '+dmy(x.to),date:x.due,
    tone:x.day>63?'late':(x.day>=57?'soon':''),go:'today',kind:'kit'}); });
  /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
- (CD.areas||[]).forEach(function(a){ var acc=accessOf(a.id), cap=capFor(a.id,'10-25kg (medium)',acc), n=inCabin(a.id,date).length;
-  if(cap!=null && n>parseInt(cap,10)) out.push({title:a.code+' is over its headcount',sub:n+' in, '+cap+' permitted ('+acc+')',date:date,tone:'late',go:'round',kind:'rule'}); });
+ (CD.areas||[]).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id));
+  if(r.status==='over') out.push({title:a.code+' is over its limit',sub:r.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
  /* foundation: work record (an open item waiting on the owner) */
  (CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).forEach(function(r){
   out.push({title:r.item||r.id,sub:'Outstanding'+(r.area?' · '+r.area:'')+(r.blocked_on?' · '+r.blocked_on:''),go:'work',tone:'',kind:'record'}); });
@@ -1180,11 +1287,11 @@ function littersCard(){
 
  return h+'<div class="mfoot"><span class="mut">'+(CD.litters||[]).length+' litters on file</span><button type="button" class="btn" data-go="litters">Litters</button></div></section>';
 }
-/* Outdoor week strip. Cold if the low is under 10, Hot if the high is over 27, otherwise OK.
+/* Outdoor week strip. Cold or Hot against the adult band, otherwise OK.
    Rain: none at 0 mm, light under 10 mm, wet from 10 mm. Windy only at 40 km/h or more. */
 function outdoorBandWord(min,max){
  var st=tempState(min,max);
- return st==='cold'?'Cold':st==='hot'?'Hot':st==='ok'?'OK':'';
+ return st==='cold'?'Cold':st==='hot'?'Hot':st==='swap'?'Check':st==='ok'?'OK':'';
 }
 function outdoorRainCue(v){
  if(v==null||String(v).trim()==='') return '';
@@ -1231,8 +1338,8 @@ function outdoorStrip(date){
      +(tone?'<span class="wb"><span class="ic '+tone+'" aria-hidden="true"></span></span>':'')
      +'<span class="wr'+(rain?' wr-'+rain:'')+'">'+
        (rain
-         ?'<svg width="7" height="9" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2 0 4.5 0 6.3a3.5 3.5 0 0 0 7 0C7 4.5 5 2 3.5 0Z"/></svg>'
-           +(rain==='wet'&&rainMm?rainMm+'mm':'')
+         ?'<svg width="12" height="16" viewBox="0 0 7 9" aria-hidden="true"><path d="M3.5 0C2 2 0 4.5 0 6.3a3.5 3.5 0 0 0 7 0C7 4.5 5 2 3.5 0Z"/></svg>'
+           +''
          :'')
      +'</span>'
      +(windy?'<span class="ww"><svg width="9" height="7" viewBox="0 0 9 7" aria-hidden="true"><path d="M0 1h7M0 3.5h9M0 6h5" stroke-width="1.5" stroke-linecap="round"/></svg>Windy'+(windKph?'<span class="wdet sr-only"> '+windKph+' km/h</span>':'')+'</span>':'')
@@ -1247,12 +1354,12 @@ function tempsCard(){
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
  var row=function(t,v,s,state){ var cls=state===true||state==='ok'?' ok':state==='cold'?' cold':state==='hot'?' late':''; return '<div class="mrow"><span class="ic'+cls+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
  var outState=function(r){ return r?tempState(r.min,r.max):''; };
- var cold=0, hot=0; (CD.areas||[]).forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{};
-   ['am','pm'].forEach(function(s){ var st=r['t_'+s]?tempState(r['t_'+s].min,r['t_'+s].max):''; if(st==='cold') cold++; if(st==='hot') hot++; }); });
- var inState=(am||pm)?(hot?'hot':cold?'cold':'ok'):'';
+ var cold=0, hot=0, swap=0, unk=0; (CD.areas||[]).forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{}, bd=roomBand(a.id,date);
+   ['am','pm'].forEach(function(s){ var st=r['t_'+s]?tempState(r['t_'+s].min,r['t_'+s].max,bd):''; if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap') swap++; if(st==='unknown') unk++; }); });
+ var inState=(am||pm)?(swap||hot?'hot':cold?'cold':unk?'':'ok'):'';
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
-  +((am||pm)?row('Rooms',(hot?hot+' too hot':cold?cold+' too cold':'all 10–27')+' °C',(hot&&cold?cold+' too cold too':''),inState):'')
+  +((am||pm)?row('Rooms',swap?swap+' max lower than min':(hot?hot+' too hot':cold?cold+' too cold':unk?unk+' with no limit set':'all in range'),swap?'typed the wrong way round? check and correct':(hot&&cold?cold+' too cold too':''),inState):'')
   +(out?row('Outside',esc(outdoorBit(out.min)+'\u2013'+outdoorBit(out.max))+' °C',esc(out.phrase||''),outState(out))
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
   +outdoorStrip(date)
@@ -1345,7 +1452,7 @@ function todayChecklist(date,unplacedN){
  var A=CD.areas||[], N=A.length;
  var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
  var am=has('am'), pm=has('pm'), modes=A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.access||accessOf(a.id); }).length;
- var over=A.filter(function(a){ var acc=(ROUND[roundKey(date,a.id)]||{}).access||accessOf(a.id), cap=capFor(a.id,'10-25kg (medium)',acc); return cap!=null&&inCabin(a.id,date).length>parseInt(cap,10); }).length;
+ var over=A.filter(function(a){ var acc=(ROUND[roundKey(date,a.id)]||{}).access||accessOf(a.id); return roomCheck(a.id,inCabin(a.id,date),acc).status==='over'; }).length;
  var c=counts();
  var L=[
   [!unplacedN,'Every dog on site is in a cabin',unplacedN?unplacedN+' not yet placed':'all placed'],
@@ -1639,6 +1746,8 @@ function drawDogs(){
 
   +'<div class="dc-sects">'
 
+    +jobsHist({subject_id:d.id})
+
     +'<details class="dcs wtc" data-dog="'+esc(d.id)+'"><summary>'
       +'<svg class="ricon" aria-hidden="true"><use href="#i-scale"/></svg>'
       +'<span class="dcs-label">'+(w?'<b>'+w.kg+' kg</b> <span class="mut">'+esc(dmy(w.on))+'</span>':'<span class="mut">no weight</span>')+'</span>'
@@ -1722,6 +1831,15 @@ function accessOf(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return d.access_
 function accessReason(aid){ var d=ACCESS[aid]; if(d&&d.access_type) return 'set here '+(d.at?d.at.slice(0,10):'');
  var r=CD.accessCsv[aid]; return (r&&r.reason)||''; }
 function modesOf(a){ return ['free','limited']; }
+/* ROOM LIMITS (Lisa, 8 Nov 2026). A room's rows are alternatives ("3 small or 2 medium"; every dog counts as the largest size in the room). One calculation, shared with the staff page. */
+function roomDogs(ids){ var dam={}; (CD.litters||[]).forEach(function(l){ dam[l.id]=l.dam_subject_id; });
+ return ids.map(function(id){ var d=CD._byId[id]||{}; return {id:id,size:d.size,damId:dam[d.birthLitter]||''}; }); }
+function roomCheck(aid,ids,acc){ return BLDCapacity.check({areaId:aid,access:acc,capacity:T['BLD-area_capacity.csv']||[],dogs:roomDogs(ids)}); }
+function roomReasons(ids){ var R=[], occ=T['BLD-occupancy.csv']||[];
+ ids.forEach(function(id){ var last=null; occ.forEach(function(o){ if(o.subject_id===id&&(!last||(o.moved_in||'')>=(last.moved_in||''))) last=o; });
+  if(last&&last.classification_note) R.push((nameOf(id)||id)+': '+last.classification_note); }); return R; }
+function roomAudit(date){ return BLDCapacity.audit((CD.areas||[]).map(function(a){ var ids=inCabin(a.id,date);
+ return {areaId:a.id,label:a.code,access:accessOf(a.id),dogs:roomDogs(ids),reasons:roomReasons(ids)}; }),T['BLD-area_capacity.csv']||[]); }
 function capFor(aid,band,access){ var a=CD.cap[aid]; if(!a||!access) return null;
  var c=(a[access]||{})[band]; return (c && c.n!=='' && c.n!=null)?c.n:null; }
 async function accessSave(aid,mode,msgEl){
@@ -1770,7 +1888,7 @@ function pageAreas(){
         return '<option value="'+m+'"'+(cur===m?' selected':'')+'>'
           +(m==='free'?'free access \u2014 flap open':'limited \u2014 flap shut')+'</option>';}).join('')
     +'</select><span class="mut asave" data-area="'+a.id+'"></span>'
-    +'<span class="mut">'+esc(accessReason(a.id))+'</span></div>';
+    +'<span class="mut">'+esc(accessReason(a.id))+'</span></div>'+jobsHist({area_id:a.id});
 
    {
     var modes = cur ? [cur] : ['free','limited'];
@@ -1785,8 +1903,8 @@ function pageAreas(){
      +'<div class="mut" style="margin-top:6px">in here on '+esc(date)+': '
      +(who.length?who.map(function(sid){var d=CD._byId[sid];return '<span class="pill i">'+esc(d?d.name:sid)+'</span>';}).join(' ')
        :'<span class="mut">empty</span>')
-     +(function(){ var n=who.length, c=capFor(a.id,'10-25kg (medium)',cur);
-        return (c!=null && n>parseInt(c,10))?' <span class="pill no">over the 10-25 kg figure</span>':''; })()
+     +(function(){ var r=roomCheck(a.id,who,cur);
+        return r.status==='over'?' <span class="pill no" title="'+esc(r.message)+'">over its limit</span>':''; })()
      +'</div>';
    }
    h+='</div>';});});
@@ -1838,8 +1956,10 @@ function drawLitters(){
  if(so==='pair') list.sort(function(a,b){ return (a.pairing||'').localeCompare(b.pairing||''); });
  else if(so==='old') list.sort(function(a,b){ return (a.dob||'9')<(b.dob||'9')?-1:1; });
  else list.sort(function(a,b){return (b.dob||'')>(a.dob||'')?1:-1;});
+ var gapOf={}; litterGaps().forEach(function(x){ gapOf[x.next.id]=x; gapOf[x.prev.id]=gapOf[x.prev.id]||x; });
  document.getElementById('lrows').innerHTML=list.map(function(l){
-  return '<tr><td><b>'+esc(l.pairing)+'</b></td><td class="mut"><code>'+esc(l.raw_name||'—')+'</code></td>'
+  var g=gapOf[l.id];
+  return '<tr><td><b>'+esc(l.pairing)+'</b>'+(g?' <span class="pill w" title="'+esc((g.days===0?'Same date as ':g.days+' days from ')+(g.next.id===l.id?g.prev.pairing:g.next.pairing)+'. Your rule: '+g.months+' months.')+'">too close to another litter — check</span>':'')+'</td><td class="mut"><code>'+esc(l.raw_name||'—')+'</code></td>'
    +'<td>'+esc(nameOf(l.dam_subject_id)||'—')+'</td>'
    +'<td>'+esc(nameOf(l.sire_subject_id)||'—')+'</td>'
    +'<td>'+(l.dob?esc(dmy(l.dob)):'<span class="pill w">no DOB</span>')+'</td>'
@@ -2001,30 +2121,40 @@ function roundKey(date,areaId){ return date+'__'+areaId; }
 function keptReadings(date){
  var rows=(CD.areas||[]).map(function(ar){ var r=ROUND[roundKey(date,ar.id)]||{};
    return {a:ar, am:r.t_am, pm:r.t_pm}; }).filter(function(x){ return x.am||x.pm; });
- var cell=function(t){ if(!t) return '<span class="mut">—</span>'; var st=tempState(t.min,t.max);
-   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C</span>'; };
+ var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; var st=tempState(t.min,t.max,bd), sw=st==='swap', unk=st==='unknown'; if(sw) st='hot';
+   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+'</span>'; };
  return '<section class="card" id="kept-readings"><h3>Kept readings</h3>'
   +(rows.length
     ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
-      +rows.map(function(x){ return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am)+'</td><td>'+cell(x.pm)+'</td></tr>'; }).join('')
+      +rows.map(function(x){ var bd=roomBand(x.a.id,date); return '<tr><td>'+esc(x.a.code||x.a.id)+'</td><td>'+cell(x.am,bd)+'</td><td>'+cell(x.pm,bd)+'</td></tr>'; }).join('')
       +'</tbody></table>'
     :'<p class="mut">No readings for '+esc(date)+'.</p>')
   +'<p class="mut" style="margin-bottom:0">From BLD-area_reading.csv. Blue under 10 °C, green 10–27 °C, red over 27 °C.</p></section>'; }
 /* indoor: BLD-area_reading.csv rows -> ROUND[date__area].t_am / t_pm (before 12:00 = morning). A later row for the same slot wins (corrections). */
+function tempSwapped(min,max){ var lo=parseFloat(min), hi=parseFloat(max); return !isNaN(lo)&&!isNaN(hi)&&hi<lo; }
 function foldAreaReadings(rows){
+ CD.tempSwaps=rows.filter(function(r){ return tempSwapped(r.min_c,r.max_c); })
+  .map(function(r){ return {id:r.id||'',area:r.area_id||'',date:String(r.period_start||r.taken_at||'').slice(0,10),min:r.min_c,max:r.max_c}; });
  rows.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
-  var at=String(r.taken_at||''); if(!r.area_id||at.length<10) return;
+  var at=String(r.period_start||r.taken_at||''); if(!r.area_id||at.length<10) return;   /* period_start = the slot the Round saved (Nov 2026) */
   var k=roundKey(at.slice(0,10),r.area_id), hr=parseInt(at.slice(11,13),10);
   var cur=ROUND[k]||(ROUND[k]={areaId:r.area_id,date:at.slice(0,10),subjects:null,access:''});
-  cur['t_'+(isNaN(hr)||hr<12?'am':'pm')]={min:r.min_c,max:r.max_c};
+  cur['t_'+(isNaN(hr)||hr<12?'am':'pm')]={min:r.min_c,max:r.max_c,at:r.taken_at||''};
  });
  Object.keys(ROUND).forEach(function(k){ if(ROUND[k].subjects===null) delete ROUND[k].subjects; });
 }
-/* temperature colour: blue below 10, green 10-27, red above 27 (Lisa, 3 Nov) */
-var TEMP_LOW=10, TEMP_HIGH=27;
-function tempState(min,max){ var lo=parseFloat(min), hi=parseFloat(max);
+/* limits come from BLD-temperature_band; no readable row = 'unknown' */
+function bandReadable(b){ return !!b&&b.min!==null&&b.max!==null&&!isNaN(b.min)&&!isNaN(b.max); }
+function generalBand(){ return (CD.tempBands||[]).filter(function(b){ return b.to>=99999&&bandReadable(b); })[0]||null; }
+function roomBand(areaId,date){ var r=ROUND[roundKey(date,areaId)]||{};
+ var ids=(r.subjects&&r.subjects.length)?r.subjects:(CD.dogs||[]).filter(function(d){ return d.area_id===areaId; }).map(function(d){ return d.id; });
+ if(!ids.length) return generalBand();
+ var f=bandFor(ids,date); return f&&bandReadable(f.b)?f.b:null; }
+function tempState(min,max,band){ var lo=parseFloat(min), hi=parseFloat(max); if(arguments.length<3) band=generalBand();
  if(isNaN(lo)&&isNaN(hi)) return '';
- if(!isNaN(lo)&&lo<TEMP_LOW) return 'cold'; if(!isNaN(hi)&&hi>TEMP_HIGH) return 'hot'; return 'ok'; }
+ if(tempSwapped(min,max)) return 'swap';   /* max lower than min: wrong way round, checked before hot/cold */
+ if(!band) return 'unknown';
+ if(!isNaN(lo)&&lo<band.min) return 'cold'; if(!isNaN(hi)&&hi>band.max) return 'hot'; return 'ok'; }
 function pageRound(){
  var date=(CD._roundDate||todayISO());
  var w=walkList(), dogs=hereNow();
@@ -2033,11 +2163,9 @@ function pageRound(){
  var unplaced=dogs.filter(function(d){ return !placed[d.id]; });
  var h='<h2>The round</h2>'
  +'<div class="filt"><label class="mut" for="rdate">date</label><input id="rdate" type="date" value="'+date+'">'
- +'<span class="mut" id="rstat">'+(DB?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'')+'</span></div>';
+ +'<span class="mut" id="rstat">'+(sinkOn()?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'')+'</span></div>';
+ h+=sinkCard();
  h+=keptReadings(date);   /* kept readings: read from BLD-area_reading.csv (blue < 10, green 10-27, red > 27) */
- if(DB) h+='<div class="card acc4"><h4>Where this saves</h4><p style="margin-bottom:0">'
-  +'Into the page\u2019s own store, <b>not into the Drive tables</b>. It shows here and to anyone else with the page open. '
-  +'I fold it into <code>BLD-occupancy.csv</code> <code>BLD-area_access.csv</code> and <code>BLD-area_reading.csv</code> when you ask. <b>Temperatures are kept exactly as typed, to two decimal places</b> \u2014 a rounded reading cannot be un-rounded.</p></div>';
  var unN=unplacedShown==='all'?unplaced.length:Math.min(unplaced.length, Math.max(40, unplacedShown));
  h+='<div class="card '+(unplaced.length?'acc2':'acc5')+'"><h4>'+(unplaced.length?unplaced.length+' dogs not yet placed':'Every dog on the premises is placed')+'</h4>'
   +(unplaced.length?'<p style="margin-bottom:0" class="mut">'+unplaced.slice(0,unN).map(function(d){return esc(d.name);}).join(' \u00b7 ')+(unN<unplaced.length?' \u2026':'')+'</p>'
@@ -2049,8 +2177,7 @@ function pageRound(){
     if(lives.length) sel=lives; }
   var acc=r.access||accessOf(aid), fromArea=!r.access&&!!acc;
    var m2=a.m2;
-  var cap=capFor(aid,'10-25kg (medium)',acc);
-  var over=(cap!=null && sel.length>parseInt(cap,10));
+  var roomR=roomCheck(aid,sel,acc), over=roomR.status==='over';
   h+='<div class="card '+(over?'acc2':(sel.length?'acc5':''))+'" data-area="'+aid+'">'
    +'<h4><span class="step">Step '+c.step+':</span> '+esc(c.cabin)
    +' <span class="mut" style="font-weight:400">'+esc(m2)+' m\u00b2</span>'
@@ -2073,7 +2200,7 @@ function pageRound(){
      :'<span class="mut">empty</span>')+'</div>'
    +(function(){ var bd=bandFor(sel,date);
        if(!bd) return sel.length?'<div class="mut">no date of birth for anyone in here \u2014 no band can be set</div>':'';
-       return '<div class="mut"><span class="pill '+(bd.b.stated?'i':'w')+'">'+bd.b.min.toFixed(2)+'\u2013'+bd.b.max.toFixed(2)+' \u00b0C</span> '
+       return '<div class="mut"><span class="pill '+(bd.b.stated?'i':'w')+'">'+bd.b.min.toFixed(1)+'\u2013'+bd.b.max.toFixed(1)+' \u00b0C</span> '
          +esc(bd.b.band)+' \u2014 set by '+esc(bd.dog.name)+', the youngest in here at '+bd.days+' days'
          +'</div>'; })()
    +'<div class="tmp">'
@@ -2088,7 +2215,7 @@ function pageRound(){
       return '<span class="sl">'+slot+'</span>'
        +'<input class="tmin'+(vmin&&vmin!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal"  value="'+esc(t.min||'')+'">'
        +'<input class="tmax'+(vmax&&vmax!=='ok'?' bad':'')+'" data-area="'+aid+'" data-slot="'+slot+'" inputmode="decimal"  value="'+esc(t.max||'')+'">'
-       +'<span class="msg tmsg" data-area="'+aid+'" data-slot="'+slot+'">'+(t.at?'saved':'')+flag(vmin,t.min)+flag(vmax,t.max)+'</span>'; }).join('')
+       +'<span class="msg tmsg" data-area="'+aid+'" data-slot="'+slot+'">'+(t.at?'saved':'')+(tempSwapped(t.min,t.max)?' <span class="pill no">max lower than min \u2014 tell Lisa</span>':flag(vmin,t.min)+flag(vmax,t.max))+'</span>'; }).join('')
    +'</div>'
    +'<div class="mut">'+(acc?('permitted in '+acc+' mode, 10\u201325 kg: '+(cap==null?'not recorded':cap)+' \u00b7 in here: '+sel.length)
                             :'choose how it is being run and the capacity check can run')
@@ -2123,35 +2250,88 @@ function tempVerdict(val,band){
  var n=parseFloat(val); if(isNaN(n)) return '';
  if(n<band.b.min) return 'low'; if(n>band.b.max) return 'high'; return 'ok';
 }
-function temp2dp(v){ v=String(v==null?'':v).trim(); if(!v) return {ok:true,val:''};
- if(!/^-?\d{1,2}(\.\d{1,2})?$/.test(v)) return {ok:false};
- var n=parseFloat(v); if(n<-30||n>60) return {ok:false};
- return {ok:true,val:n.toFixed(2)}; }
-async function tempSave(areaId,slot,which,raw,el,msgEl){
- var c=temp2dp(raw);
- if(!c.ok){ if(el&&el.classList) el.classList.add('bad'); if(msgEl) msgEl.textContent='2 dp only'; return; }
- if(el&&el.classList) el.classList.remove('bad');
- if(!DB){ if(msgEl) msgEl.textContent='saving off'; return; }
- var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId);
- var cur=ROUND[k]||{areaId:areaId,date:date,subjects:[],access:''};
- var t={}; var prev=cur['t_'+slot]||{}; for(var q in prev) t[q]=prev[q];
- t[which]=c.val; t.at=new Date().toISOString();
- var next={}; for(var q2 in cur) next[q2]=cur[q2];
- next['t_'+slot]=t; next.areaId=areaId; next.date=date;
- if(msgEl) msgEl.textContent='saving...';
- try{ await DB.doc('round/'+k).set(next); ROUND[k]=next; if(msgEl) msgEl.textContent='saved'; if(el) el.value=c.val; }
- catch(e){ var c2=(e&&(e.code||e.message))||'error'; if(msgEl) msgEl.textContent='NOT saved \u2014 '+c2; console.log('temp save failed',e); }
+/* ROUND SAVING (Nov 2026). Saves go to the cdhub-write save script (Apps Script web app), which adds ONE row to the
+   Google Sheet and never edits or deletes. The script address and the staff code are typed on the Round page and kept
+   on this device only (localStorage); neither is ever in this file. Room temperatures are 1 decimal place (Lisa, 7 Nov). */
+var SINK_URL_KEY='cdhub.sink.url', SINK_CODE_KEY='cdhub.sink.code';
+function sinkGet(k){ try{ return localStorage.getItem(k)||''; }catch(e){ return ''; } }
+function sinkSet(k,v){ try{ if(v) localStorage.setItem(k,v); else localStorage.removeItem(k); return true; }catch(e){ return false; } }
+function sinkOn(){ return /^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(sinkGet(SINK_URL_KEY)) && !!sinkGet(SINK_CODE_KEY); }
+function sinkRid(){ var a=new Uint8Array(12); (window.crypto||{getRandomValues:function(x){ for(var i=0;i<x.length;i++) x[i]=Math.floor(Math.random()*256); return x; }}).getRandomValues(a);
+ return 'cd'+Array.prototype.map.call(a,function(b){ return ('0'+b.toString(16)).slice(-2); }).join(''); }
+/* One POST. Sent as text/plain so the browser needs no pre-flight. Returns {ok, result} or {ok:false, code, message, fields}. */
+async function sinkPost(table,fields){
+ if(!sinkOn()) return {ok:false,code:'SAVE_OFF',message:'Saving is not set up on this device.'};
+ try{
+  var res=await fetch(sinkGet(SINK_URL_KEY),{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+    body:JSON.stringify({v:1,request_id:sinkRid(),code:sinkGet(SINK_CODE_KEY),table:table,action:'add',fields:fields})});
+  return await res.json();
+ }catch(e){ return {ok:false,code:'NETWORK',message:'Could not reach the save script. Nothing is known to be saved: check your connection and try again.'}; }
 }
-async function roundSave(areaId,patch,msgEl){
- if(!DB){ if(msgEl) msgEl.textContent='saving off'; return; }
- var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId);
- var cur=ROUND[k]||{areaId:areaId,date:date,subjects:[],access:''};
- var next={areaId:areaId,date:date,subjects:patch.subjects!=null?patch.subjects:(cur.subjects||[]),
-           access:patch.access!=null?patch.access:(cur.access||''),at:new Date().toISOString()};
+function sinkMsg(r){
+ if(r.ok&&r.result&&r.result.status==='saved') return 'saved \u2713';
+ if(r.ok&&r.result&&r.result.status==='queued') return 'sent \u2014 waiting for approval';
+ var f=r.fields?Object.keys(r.fields).map(function(k){ return r.fields[k]; }).join(' '):'';
+ return 'NOT saved \u2014 '+(f||r.message||r.code||'error');
+}
+/* a time on the round's date, with this device's offset, e.g. 2026-11-07T12:00:00+00:00 */
+function isoAt(dateISO,hh){ var d=new Date(dateISO+'T'+hh+':00:00'), off=-d.getTimezoneOffset(), sg=off<0?'-':'+'; off=Math.abs(off);
+ return dateISO+'T'+hh+':00:00'+sg+('0'+Math.floor(off/60)).slice(-2)+':'+('0'+(off%60)).slice(-2); }
+function temp1dp(v){ v=String(v==null?'':v).trim(); if(!v) return {ok:true,val:''};
+ if(!/^-?\d{1,2}(\.\d)?$/.test(v)) return {ok:false};
+ var n=parseFloat(v); if(n<-30||n>60) return {ok:false};
+ return {ok:true,val:n.toFixed(1)}; }
+var TYPED={};   /* min/max typed on this page but not yet saved as a pair: TYPED[date__area__slot]={min,max} */
+async function tempSave(areaId,slot,which,raw,el,msgEl){
+ var c=temp1dp(raw);
+ if(!c.ok){ if(el&&el.classList) el.classList.add('bad'); if(msgEl) msgEl.textContent='1 decimal place only, e.g. 18.5'; return; }
+ if(el&&el.classList) el.classList.remove('bad');
+ var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), tk=k+'__'+slot;
+ var have=(ROUND[k]&&ROUND[k]['t_'+slot])||{};
+ var t=TYPED[tk]||(TYPED[tk]={min:'',max:''});
+ if(!have.at){ t[which]=c.val; if(el) el.value=c.val; }
+ /* max lower than min = typed the wrong way round: say so loudly, mark both boxes, save nothing (Lisa, 7 Nov 2026) */
+ var pair=document.querySelectorAll('.tmin[data-area="'+areaId+'"][data-slot="'+slot+'"], .tmax[data-area="'+areaId+'"][data-slot="'+slot+'"]');
+ var sw=!have.at&&t.min!==''&&t.max!==''&&tempSwapped(t.min,t.max);
+ Array.prototype.forEach.call(pair,function(b){ if(!sw&&b.classList.contains('swap')) b.classList.remove('bad'); b.classList.toggle('swap',sw); if(sw) b.classList.add('bad'); });
+ if(msgEl){ msgEl.classList.toggle('swapalert',sw); if(sw) msgEl.setAttribute('role','alert'); else msgEl.removeAttribute('role'); }
+ if(sw){ if(msgEl) msgEl.textContent='\u26a0 max ('+t.max+') is lower than min ('+t.min+'). Wrong way round? Check the thermometer and type them again. Not saved.'; return; }
+ if(!sinkOn()){ if(msgEl) msgEl.textContent='saving off \u2014 set it up at the top of this page'; return; }
+ if(have.at){ if(msgEl) msgEl.textContent='already saved. Wrong? Tell Lisa \u2014 a saved reading is never changed here'; return; }
+ if(t.min===''||t.max===''){ if(msgEl) msgEl.textContent='type '+(t.min===''?'min':'max')+' too, then it saves'; return; }
+ var startH=slot==='am'?'00':'12', ps=isoAt(date,startH);
+ if(Date.parse(ps)>Date.now()){ if(msgEl) msgEl.textContent='the afternoon reading can be saved from 12:00'; return; }
+ if(t.busy) return; t.busy=true;
  if(msgEl) msgEl.textContent='saving\u2026';
- try{ await DB.doc('round/'+k).set(next); ROUND[k]=next; if(msgEl) msgEl.textContent='saved';
-      go('round',false); }
- catch(e){ var c=(e&&(e.code||e.message))||'error'; if(msgEl) msgEl.textContent='NOT saved \u2014 '+c; console.log('round save failed',e); }
+ var r=await sinkPost('area_reading',{area_id:areaId,min_c:t.min,max_c:t.max,period_start:ps});
+ t.busy=false;
+ if(msgEl) msgEl.textContent=sinkMsg(r);
+ if(r.ok&&r.result&&(r.result.status==='saved'||r.result.status==='queued')){
+  var cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
+  cur['t_'+slot]={min:t.min,max:t.max,at:r.result.at||new Date().toISOString()}; delete TYPED[tk]; }
+}
+/* add a dog to a cabin = one move row in BLD-occupancy (the dog's cabin is its newest row) */
+async function roundSave(areaId,patch,msgEl){
+ if(patch.access!=null){ if(msgEl) msgEl.textContent='how a cabin is run is not saved yet'; return; }
+ if(!sinkOn()){ if(msgEl) msgEl.textContent='saving off \u2014 set it up at the top of this page'; return; }
+ if(!patch.add){ if(msgEl) msgEl.textContent='to take a dog out, add it to the cabin it moved to'; return; }
+ if(msgEl) msgEl.textContent='saving\u2026';
+ var r=await sinkPost('occupancy',{subject_id:patch.add,area_id:areaId});
+ if(msgEl) msgEl.textContent=sinkMsg(r);
+ if(r.ok&&r.result&&r.result.status==='saved'){ var d=CD._byId[patch.add]; if(d) d.area_id=areaId;
+  var date=(CD._roundDate||todayISO()), k=roundKey(date,areaId), cur=ROUND[k]||(ROUND[k]={areaId:areaId,date:date,access:''});
+  cur.subjects=(cur.subjects||CD.dogs.filter(function(x){ return x.area_id===areaId&&x.id!==patch.add; }).map(function(x){ return x.id; })).concat([patch.add]);
+  go('round',false); }
+}
+function sinkCard(){
+ var on=sinkOn();
+ return '<div class="card '+(on?'acc5':'acc2')+'" id="sinkcard"><h4>Saving on this device: '+(on?'on':'off')+'</h4>'
+  +'<p class="mut">Readings and moves go to the save script, which adds one row to the Google Sheet and never changes or deletes a row. '
+  +'Temperatures are kept to 1 decimal place. The address and your code stay on this device only.</p>'
+  +'<div class="filt"><input id="sinkurl" type="url" autocomplete="off" placeholder="https://script.google.com/macros/s/\u2026/exec" aria-label="Save script address" value="'+esc(sinkGet(SINK_URL_KEY))+'">'
+  +'<input id="sinkcode" type="password" autocomplete="off" placeholder="your staff code" aria-label="Your staff code" value="'+(sinkGet(SINK_CODE_KEY)?'\u2022\u2022\u2022\u2022\u2022\u2022':'')+'">'
+  +'<button type="button" class="btn" id="sinkon">Use these</button> <button type="button" class="btn" id="sinkoff">Switch off here</button>'
+  +'<span class="mut" id="sinkmsg" role="status"></span></div></div>';
 }
 function pageWork(){
  var W=CD.work||[];
@@ -2309,8 +2489,55 @@ function pageSops(){
   +'<h3>File types</h3><div class="card" id="soptypes"></div>'
   +'<h3>File formats</h3><div class="card" id="sopformats"></div>';
 }
+/* SOP wording is private: it is read after sign-in from a file in the Drive folder, never from this public site. */
+function sopCardsLoad(){
+ if(SOP.cards||SOP.cardsPending) return SOP.cardsPending||Promise.resolve();
+ SOP.cardsErr='';
+ SOP.cardsPending=listFolder().then(function(files){
+  var hits=files.filter(function(f){ return f.name===SOP_CARDS_FILE; });
+  if(hits.length!==1) throw new Error(hits.length?'more than one':'missing');
+  return readDriveFile(hits[0]);
+ }).then(function(txt){
+  var by={}; (JSON.parse(txt).cards||[]).forEach(function(c){ if(c&&c.short_name) by[c.short_name]=c; });
+  SOP.cards=by;
+ }).catch(function(e){ var m=e&&e.message; SOP.cardsErr=m==='missing'?'The SOP wording file is not in the Drive folder yet.':m==='more than one'?'There are two SOP wording files in the Drive folder, so neither is shown. Remove the extra one.':'The SOP wording could not be read. Close this and tap again.'; })
+ .then(function(){ SOP.cardsPending=null; drawSops(); });
+ return SOP.cardsPending;
+}
+function sopText(s){ return esc(s).replace(/\*\*([^*]+)\*\*/g,'<b>$1</b>'); }
+function sopBlocks(list){
+ return (list||[]).map(function(b){
+  if(b.t==='p') return '<p>'+sopText(b.x)+'</p>';
+  if(b.t==='ol'||b.t==='ul') return '<'+b.t+'>'+(b.items||[]).map(function(i){ return '<li>'+sopText(i)+'</li>'; }).join('')+'</'+b.t+'>';
+  return '';
+ }).join('');
+}
+function sopTypeOf(code){ return (ASSET.types||[]).filter(function(t){ return t.type_code===code; })[0]||null; }
+function sopIcon(key){ return document.getElementById('i-'+key)?'<svg class="ti" aria-hidden="true"><use href="#i-'+esc(key)+'"/></svg>':''; }
+function sopLinks(c){
+ if(!c.links||!c.links.length) return '';
+ return '<ul class="soplinks">'+c.links.map(function(l){
+  var t=sopTypeOf(l.type_code), lab=String(l.label||''), icon=t?sopIcon(t.icon_key):'';
+  var attr='data-type-code="'+esc(l.type_code||'')+'"';
+  if(/^https:\/\/[^\s"'<>]+$/i.test(String(l.url||''))) return '<li><a class="soplink" '+attr+' href="'+esc(l.url)+'" target="_blank" rel="noopener" aria-label="Open '+esc((t?t.label+': ':'')+lab)+'">'+icon+esc(lab)+'</a></li>';
+  return '<li><span class="soplink none" '+attr+'>'+icon+esc(lab)+' (no file linked)</span></li>';
+ }).join('')+'</ul>';
+}
+function sopCardHtml(r){
+ var head=(r.role?'<div class="sopmeta">'+sopIcon('user')+'Applies to: '+esc(sopRoleLabel(r.role))+'</div>':'')+BLDJobsView.sopHtml(jobsV(),r.short_name);
+ if(SOP.cardsErr) return head+'<p class="note">'+esc(SOP.cardsErr)+'</p>';
+ if(!SOP.cards) return head+'<p class="note">Reading the SOP…</p>';
+ var c=SOP.cards[r.short_name];
+ if(!c) return head+'<p class="note">Not written yet: this SOP has no text in the master.</p>';
+ return head+sopLinks(c)+sopBlocks(c.intro)+(c.sections||[]).map(function(s){
+  var n=(s.blocks||[]).reduce(function(a,b){ return a+(b.items?b.items.length:1); },0);
+  if(!n) return '';
+  return '<details class="sopsec"><summary>'+esc(s.h)+' <span class="n">'+n+'</span></summary>'+sopBlocks(s.blocks)+'</details>';
+ }).join('');
+}
 function drawSops(){
  var rows=SOP.rows||[];
+ if(!SOP.cards&&!SOP.cardsErr&&!SOP.cardsPending) sopCardsLoad();
  var v=function(i){ var e=document.getElementById(i); return e?(e.value||''):''; };
  var q=v('sopq'), col=v('sopcol'), fr=v('sopfr'), cat=v('sopcat'), role=v('soprole'), so=v('sopsort');
  var list=rows.filter(function(r){
@@ -2344,8 +2571,13 @@ function drawSops(){
     : '';
   var form=r.form_url
     ? '<a class="cb" href="'+esc(r.form_url)+'" target="_blank" rel="noopener" aria-label="Open form: '+esc(label)+'"><svg class="ti" aria-hidden="true"><use href="#i-clipboard"/></svg></a>'
-    : '<span class="mut">form not on hub yet</span>';
-  return '<div class="mrow" data-sop="'+esc(r.short_name)+'"><span class="dot" style="--c:var('+sopDot(r.colour)+')" aria-hidden="true"></span><span class="t">'+esc(label)+'</span>'+badge+form+'</div>';
+    : (r.has_form==='Y'?'<span class="mut">form not on hub yet</span>':'');
+  var card=SOP.cards&&SOP.cards[r.short_name], signs=card&&card.links?card.links.filter(function(l){ return l.type_code==='sign'||l.type_code==='poster'; }):[];
+  var signType=signs.length?sopTypeOf(signs[0].type_code):null;
+  var signBadge=signType?'<span class="sopsigns" data-type-code="'+esc(signType.type_code)+'" aria-label="'+signs.length+' linked '+esc(signType.label.toLowerCase())+(signs.length>1?'s':'')+'">'+sopIcon(signType.icon_key)+signs.length+'</span>':'';
+  var isOpen=SOP.open===r.short_name, pid='sopb-'+list.indexOf(r);
+  return '<div class="mrow" data-sop="'+esc(r.short_name)+'"><button type="button" class="sopopen" data-sop-open="'+esc(r.short_name)+'" aria-expanded="'+isOpen+'"'+(isOpen?' aria-controls="'+pid+'"':'')+'><span class="dot" style="--c:var('+sopDot(r.colour)+')" aria-hidden="true"></span><span class="t">'+esc(label)+'</span></button>'+badge+signBadge+form+'</div>'
+   +(isOpen?'<div class="sopbody" id="'+pid+'" style="--hc:var('+sopDot(r.colour)+')" data-sop-body="'+esc(r.short_name)+'">'+sopCardHtml(r)+'</div>':'');
  }).join('');
  var empty=document.getElementById('sopempty');
  if(empty) empty.classList.toggle('hidden', !!list.length);
@@ -2353,20 +2585,74 @@ function drawSops(){
  if(cnt) cnt.textContent=list.length+' of '+rows.length;
  fchips('sops',['sopcol','sopfr','sopcat','soprole']);
 }
-var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,vet:pageVet,buyers:pageBuyers,sops:pageSops};
-var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Assocs'],['sops','SOPs']];
-var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','vet'],areas:['today','litters'],litters:['dogs','vet'],vet:['dogs','buyers'],buyers:['dogs','map'],sops:['dogs','buyers']};
+/* COMPLIANCE (under More). First screen: the breeder's own breeding rules (Lisa, 8 Nov 2026). Problems first, then the
+   rules in force with their history, then the box to add a rule or a change. Only an OWNER code can save a rule (the save
+   script refuses any other), and a change is a new row from a later date: nothing already saved is edited. */
+function pageCompliance(){
+ var today=todayISO(), lg=litterGaps(), da=damAgeBreaches(), lc=litterCountBreaches(), unset=breedRulesMissing();
+ var probs=[];
+ lg.forEach(function(x){ probs.push({who:x.dam,t:'Litters too close: '+(x.days===0?'same day':x.days+' days apart'),s:(x.prev.pairing||x.prev.id)+' ('+litDob(x.prev)+') → '+(x.next.pairing||x.next.id)+' ('+litDob(x.next)+'). Your rule: '+x.months+' months.'}); });
+ da.forEach(function(x){ probs.push({who:x.dam,t:'Mated too young',s:'Mated '+x.on+(x.est?' (estimated from the litter, no mating row)':'')+', born '+x.dob+'. Your rule: '+x.months+' months.'}); });
+ lc.forEach(function(x){ probs.push({who:x.dam,t:'Too many litters',s:'Litter '+x.n+' ('+(x.litter.pairing||x.litter.id)+', '+litDob(x.litter)+'). Your rule: '+x.max+'.'}); });
+ var h='<h2>Compliance</h2><p class="sub">Breeding rules. You set them; every litter and mating is checked against the version in force on its own date.</p>';
+ h+='<section class="card" id="compProblems"><h3>Needs a look'+cntPill(probs.length)+'</h3>';
+ if(unset.length) h+='<p><span class="pill w">'+unset.length+' of 3 rules not set</span> '+esc(unset.map(function(b){return b[1].toLowerCase();}).join(', '))+'. Those checks are not run until you set them.</p>';
+ h+=probs.length?'<ul class="notes">'+probs.map(function(p){ return '<li><b>'+esc(nameOf(p.who)||p.who)+'</b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
+   :(unset.length<3?'<p class="mut">Nothing breaks the rules you have set.</p>':'');
+ h+='</section>';
+ var rl=roomAudit(today);
+ h+='<section class="card" id="compRooms"><h3>Room limits'+cntPill(rl.over.length)+'</h3><p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses the limits in BLD-area_capacity and the flap setting.</p>'
+  +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
+  +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
+  +'<p><a href="#/areas">Open Areas</a></p></section>';
+ h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
+ h+='<section class="card" id="compRules"><h3>Your breeding rules</h3><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
+  +BREED_RULES.map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);
+   return '<tr data-rule="'+b[0]+'"><td><b>'+esc(b[1])+'</b></td><td>'+(cur?'<b>'+esc(cur.value)+'</b> '+esc(b[2]):'<span class="pill w">not set</span>')+'</td>'
+    +'<td>'+(cur?esc(dmy(cur.effective_from)):'—')+'</td><td class="mut">'+esc(cur&&cur.source||'—')+'</td>'
+    +'<td class="mut">'+(all.length>1?all.map(function(r){ return esc(r.value)+' from '+esc(dmy(r.effective_from)); }).join(' → '):(all.length?'1 version':'—'))+'</td></tr>'; }).join('')
+  +'</tbody></table></div>'+((T['BLD-breeding_rule.csv']||[]).length?'':'<p class="mut">No rules saved yet. The file BLD-breeding_rule must exist in the folder (header row only) and its save switch be on.</p>')+'</section>';
+ h+='<section class="card" id="compAdd"><h3>Add a rule or a change</h3>'
+  +'<p class="mut">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only an owner code can save.</p>'
+  +'<div class="frow"><select id="brKey"><option value="">choose a rule…</option>'+BREED_RULES.map(function(b){ return '<option value="'+b[0]+'">'+esc(b[1])+' ('+b[2]+')</option>'; }).join('')+'</select> '
+  +'<input id="brVal" type="number" inputmode="numeric" min="1" max="48" step="1" placeholder="number" aria-label="number" style="width:7em"> '
+  +'<input id="brFrom" type="date" value="'+today+'" aria-label="in force from"> '
+  +'<input id="brSrc" type="text" placeholder="source, e.g. licence condition" aria-label="source" style="min-width:14em"> '
+  +'<button type="button" id="brSave">Save rule</button></div><p id="brMsg" class="mut" aria-live="polite"></p></section>';
+ return h;
+}
+function bindCompliance(){
+ var b=document.getElementById('brSave'); if(!b) return;
+ b.addEventListener('click',async function(){
+  var key=document.getElementById('brKey').value, val=String(document.getElementById('brVal').value||'').trim(),
+   from=document.getElementById('brFrom').value, src=document.getElementById('brSrc').value.trim(), msg=document.getElementById('brMsg');
+  if(!key){ msg.textContent='Choose a rule.'; return; }
+  if(!/^\d{1,3}$/.test(val)||+val<1){ msg.textContent='Type a whole number.'; return; }
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(from)){ msg.textContent='Choose the date it is in force from.'; return; }
+  var last=breedRuleRows(key).slice(-1)[0];
+  if(last&&last.effective_from>=from){ msg.textContent='This rule already has a version from '+dmy(last.effective_from)+'. A change must start after that date.'; return; }
+  if(!sinkOn()){ msg.textContent='saving off — set it up at the top of The round'; return; }
+  b.disabled=true; msg.textContent='saving…';
+  var r=await sinkPost('breeding_rule',{rule_key:key,value:val,effective_from:from,source:src});
+  b.disabled=false; msg.textContent=sinkMsg(r);
+  if(r.ok&&r.result&&r.result.status==='saved'){
+   (T['BLD-breeding_rule.csv']=T['BLD-breeding_rule.csv']||[]).push({id:r.result.id||'',rule_key:key,value:String(+val),effective_from:from,source:src,set_at:r.result.at||''});
+   CD._built=(CD._built||0)+1; go('compliance',false);
+   var m2=document.getElementById('brMsg'); if(m2) m2.textContent='saved ✓';
+  }
+ });
+}
+var PAGES={work:pageWork,shape:pageShape,map:pageMap,round:pageRound,today:pageToday,dogs:pageDogs,areas:pageAreas,litters:pageLitters,vet:pageVet,buyers:pageBuyers,sops:pageSops,compliance:pageCompliance};
+var SECTIONS=[['map','Live feed'],['work','Outstanding'],['shape','Table map'],['today','Today'],['round','The round'],['dogs','Dogs'],['areas','Areas'],['litters','Litters'],['vet','Vet link'],['buyers','Assocs'],['sops','SOPs'],['compliance','Compliance']];
+var NEXT={work:['today','dogs'],shape:['dogs','areas'],map:['today','work'],today:['round','dogs'],round:['areas','dogs'],dogs:['litters','vet'],areas:['today','litters'],litters:['dogs','vet'],vet:['dogs','buyers'],buyers:['dogs','map'],sops:['dogs','buyers'],compliance:['litters','dogs']};
 function label(id){ for(var i=0;i<SECTIONS.length;i++) if(SECTIONS[i][0]===id) return SECTIONS[i][1]; return id; }
 
 var TABMETA={map:['activity','Live',6],work:['list-check','To do',2],shape:['sitemap','Tables',0],today:['calendar-event','Today',4],
  round:['route','Round',4],dogs:['paw','Dogs',5],areas:['building-cottage','Areas',3],litters:['baby-carriage','Litters',7],
- vet:['stethoscope','Vet',5],buyers:['world','Assocs',6],sops:['clipboard','SOPs',6]};
+ vet:['stethoscope','Vet',5],buyers:['world','Assocs',6],sops:['clipboard','SOPs',6],compliance:['list-check','Compliance',2]};
 function cntPill(n,cls){ return '<span class="cnt'+(String(n).length>2?' wide':'')+(cls?' '+cls:'')+'">'+(n===0||n==='0'?'':n)+'</span>'; }
-
-
-
 var TABS=[['map','Main',1,'main'],['work','Do',4,'do'],['today','Today',4,'cal'],['dogs','Dogs',5,'paw'],['sops','SOPs',6,'line']];
-var MORE_VIEWS=['shape','round','areas','litters','vet','buyers'];
+var MORE_VIEWS=['compliance','shape','round','areas','litters','vet','buyers'];
 function navHtml(){
  var nd=needsToday().length, wait=(CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).length;
  var counts={map:nd,work:wait}, late={map:needsToday().some(function(x){return x.tone==='late';}),work:false};
@@ -2457,6 +2743,7 @@ function go(id,push){
  labelControls(main);
  levelHeadings(main);
  document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
+ if(id==='compliance') bindCompliance();
  if(id==='dogs'){
   var fst=document.getElementById('fst');
   STATUS.forEach(function(x){ var o=document.createElement('option'); o.value=x[0]; o.textContent=x[1]; fst.appendChild(o); });
@@ -2509,6 +2796,15 @@ function go(id,push){
   var sc=document.getElementById('sopclr');
   if(sc) sc.addEventListener('click',function(){ ['sopq','sopcol','sopfr','sopcat','soprole'].forEach(function(i){
     var e=document.getElementById(i); if(e) e.value=''; }); drawSops(); });
+  var sr=document.getElementById('soprows');
+  if(sr) sr.addEventListener('click',function(ev){
+   var b=ev.target.closest('[data-sop-open]'); if(!b) return;
+   var name=b.getAttribute('data-sop-open');
+   SOP.open=SOP.open===name?'':name;
+   if(SOP.open&&SOP.cardsErr){ SOP.cardsErr=''; }
+   drawSops();
+   var again=sr.querySelector('[data-sop-open="'+CSS.escape(name)+'"]'); if(again) again.focus();
+  });
   drawSops();
   assetStart();
   drawAssetTypes();
@@ -2537,11 +2833,17 @@ function go(id,push){
   Array.prototype.forEach.call(document.querySelectorAll('.radd'),function(el){
    el.addEventListener('change',function(){
     if(!el.value) return;
-    var k=roundKey(CD._roundDate||todayISO(),el.dataset.area);
-    var cur=((ROUND[k]||{}).subjects||[]).slice();
-    if(cur.indexOf(el.value)<0) cur.push(el.value);
     var msg=document.querySelector('.rsave[data-area="'+el.dataset.area+'"]');
-    roundSave(el.dataset.area,{subjects:cur},msg); }); });
+    roundSave(el.dataset.area,{add:el.value},msg); }); });
+  var sOn=document.getElementById('sinkon'), sOff=document.getElementById('sinkoff');
+  if(sOn) sOn.addEventListener('click',function(){
+   var u=(document.getElementById('sinkurl').value||'').trim(), c=document.getElementById('sinkcode').value||'', m=document.getElementById('sinkmsg');
+   if(!/^https:\/\/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+\/exec$/.test(u)){ m.textContent='That is not a save script address (it ends in /exec).'; return; }
+   if(c&&c.indexOf('\u2022')<0) sinkSet(SINK_CODE_KEY,c);
+   if(!sinkGet(SINK_CODE_KEY)){ m.textContent='Type your staff code too.'; return; }
+   if(!sinkSet(SINK_URL_KEY,u)){ m.textContent='This browser will not keep it (private window?).'; return; }
+   go('round',false); });
+  if(sOff) sOff.addEventListener('click',function(){ sinkSet(SINK_URL_KEY,''); sinkSet(SINK_CODE_KEY,''); go('round',false); });
   Array.prototype.forEach.call(document.querySelectorAll('.tmin, .tmax'),function(el){
    var which=(el.className.indexOf('tmin')>=0)?'min':'max';
    var msg=document.querySelector('.tmsg[data-area="'+el.dataset.area+'"][data-slot="'+el.dataset.slot+'"]');

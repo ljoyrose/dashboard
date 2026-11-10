@@ -23,6 +23,20 @@ Words used here:
 - **Staff code** = a personal password-like code for each person. No Google sign-in is needed for staff. Each code also has a short public **code id** (like `sc-k3f9ab`); it is not secret and cannot be used to sign in. It is how a permission row names one person.
 - **Approvals queue** = the list of entries waiting for you (`BLD-_pending.csv`). Approve adds one line; Reject adds nothing.
 
+## 7 Nov 2026 update: the tables are Google Sheets now, and CD Hub's **The round** page saves
+
+Read this first; it changes a few steps below.
+
+- **Every BLD table is now a Google Sheet that keeps its `.csv` name.** The program reads and adds to Sheets the same way it did to CSV files: one new row at the bottom, stored as plain text, checked straight after; if the check fails the new row is taken out again and a `write_check_failed` line goes in `BLD-_pending.csv`. A table that is still a real CSV file keeps working the old way.
+- **`BLD-area_reading.csv` already exists** (as a Sheet), so step 7 only needs to make `BLD-_pending.csv` (and `BLD-occupancy_check.csv` if you want the daily check). New files are now made as Sheets.
+- **Room temperatures are 1 decimal place** (for example `21.4`). Two decimals are refused. Each reading also fills the unnamed 7th column (max minus min), as in your live Sheet. If you ever give that column a name, the program stops saving until its list is changed to match (it refuses rather than guesses).
+- **CD Hub, The round page:** at the top is **Saving on this device**. Paste the step 10 address and your own staff code, press **Turn saving on**. Then:
+  - a temperature saves once **both** min and max are typed (morning slot = from midnight, afternoon = from 12:00). Once saved it is never changed from the hub; a wrong one is fixed in section G.
+  - **add a dog** to a cabin saves one move. For a dog that moved, add it to the cabin it moved to (the × does not save).
+  - **how a cabin is run** (flap open or shut) does not save yet: the hub says so.
+- **For you only, so your own moves do not queue for yourself:** set `MODE_occupancy` = `direct`. Leave it unset if you want 14 days of checking first (step 13).
+- **Your own code:** make one with `ROLE` = `OWNER` (step 6) and use it on The round page.
+
 ---
 
 ## A. Make the program
@@ -72,6 +86,8 @@ The temperature log, the daily check log and the approvals queue do not exist ye
 15. Tell the screens: open Bloodline, go to **Where is everyone?** (or **Enter temperatures**), find **Turn saving on**, paste the step 10 URL, press **Use this address**. The banner changes to "Saving is on." Repeat on each device. Staff then type their code and press **Load the dogs**.
 16. Try it: load the dogs, tap **Moved** on one, pick a room, **Save move**, open your approvals page, press **Approve**, check the new line at the bottom of `BLD-occupancy.csv`.
 17. Press **All the rest unmoved**. One new line appears at the bottom of `BLD-occupancy_check.csv`: the code id of the person, the time, and every dog that did not move. Dogs with no recorded room, and dogs that are **Away** (at the vet, groomer and so on), are not in the list.
+
+18. **Breeding rules (Compliance, under More in CD Hub).** Make a new Sheet named `BLD-breeding_rule.csv` in the BLD folder with this header row only: `id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by`. Add the Script Property `TABLE_ON_breeding_rule` = `true` (off by default). Then open CD Hub, **More**, **Compliance**, and with your **owner** code enter your three rules (for example 12 months between litters, at most 6 litters, youngest age at mating 12 months), each with the date it is in force from and where it comes from. Only an owner code can save a rule. A change is a **new line from a later date**; nothing saved is ever edited, and older litters stay judged by the rule in force on their own date. Until a rule is set, its check says "not checked".
 
 ## F. Day to day
 

@@ -25,7 +25,7 @@
   var TIMEOUT_MS = 20000;
 
   /* ----- mirror of the server rules, for instant feedback only. The server is the judge. ----- */
-  var TEMP_RE = /^-?\d{1,2}(\.\d{1,2})?$/;
+  var TEMP_RE = /^-?\d{1,2}(\.\d)?$/;   // 1 decimal place (Lisa, 7 Nov 2026)
   var TABLES = {
     area_reading: {
       label: 'Room temperatures', file: 'BLD-area_reading.csv',
@@ -152,7 +152,7 @@
         var def = spec.fields[name], raw = fields[name], v = (raw === undefined || raw === null) ? '' : (Array.isArray(raw) ? raw.join('|') : String(raw)).trim();
         if (v === '') { if (def.required) errors[name] = 'This is needed.'; return; }
         if (def.type === 'temp') {
-          if (!TEMP_RE.test(v)) errors[name] = 'Type degrees C with at most 2 decimals, e.g. 21.47.';
+          if (!TEMP_RE.test(v)) errors[name] = 'Type degrees C with at most 1 decimal, e.g. 21.4.';
           else if (parseFloat(v) < -30 || parseFloat(v) > 60) errors[name] = 'That is outside -30 to 60 C. Check the number.';
         } else if (def.type === 'text') {
           if (v.length > 500) errors[name] = 'Too long (500 characters at most).';
@@ -210,7 +210,7 @@
       if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       var v = validate(tableKey, fields);
       if (!v.ok) return Promise.resolve({ ok: false, code: 'INVALID', message: 'Some details need fixing before this can be sent.', fields: v.errors });
-      var action = o.action === 'correct' ? 'correct' : 'add';
+      var action = o.action === 'correct' || o.action === 'add_site' ? o.action : 'add';
       var body = {
         v: 1, request_id: o.requestId || newRequestId(), code: getCode(), table: tableKey, action: action, fields: fields
       };

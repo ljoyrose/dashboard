@@ -332,7 +332,7 @@
     "frequency": "Ongoing",
     "category": "Staff",
     "role": "licence_holder",
-    "short_name": "Staffing Ratio",
+    "short_name": "Staffing Ratio and Cover",
     "has_form": "N"
   },
   {
@@ -381,6 +381,14 @@
     "category": "Signs & posters",
     "role": "all_staff",
     "short_name": "Signs/Posters Index",
+    "has_form": "Y"
+  },
+  {
+    "colour": "Yellow",
+    "frequency": "Ongoing",
+    "category": "Daily care & premises",
+    "role": "kennel_staff",
+    "short_name": "Medicines",
     "has_form": "Y"
   }
 ]
