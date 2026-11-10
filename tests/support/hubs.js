@@ -90,7 +90,7 @@ const HUBS = {
     },
   },
   food: {
-    url: 'food/', views: ['home', 'orders', 'invoices', 'products', 'ga', 'do', 'review'],
+    url: 'food/', views: ['home', 'orders', 'invoices', 'products', 'ga', 'do', 'review', 'brands'],
     async open(page) {
       const b = foodBook();
       await sheets(page, (url) => /:batchGet/.test(url)
