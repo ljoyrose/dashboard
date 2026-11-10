@@ -487,6 +487,31 @@ test.describe('GA Hub page', () => {
     await expect(d.locator('.fact', { hasText: 'Delivery' })).toContainText('–');
   });
 
+  // Roadmap 1 (10 Nov 2026): Do has one chip per channel and per brand when there is a choice, and each order card names its brand.
+  test('Do: channel and brand chips filter the order cards; each order card shows its brand', async ({ page }) => {
+    const b = book(), extra = ['species'], h = b.orders[0].concat(extra.filter((c) => !b.orders[0].includes(c)));
+    const row = (no, source, brand) => { const r = h.map(() => ''); const set = (c, v) => { r[h.indexOf(c)] = v; };
+      set('order_no', no); set('source', source); set('brand', brand); set('supplier', 'GA'); set('status', 'Placed'); set('sale_inc_vat', '65.00'); set('customer_orders', '1');
+      set('placed_at', '2026-11-09T09:00:00Z'); set('shop_lines', JSON.stringify([{ code: 'AAA0012KZPSXZZZ', qty: 1 }])); set('check', 'Waiting for GA'); return r; };
+    b.orders = [h, row('9401', 'Shopify', 'DDF'), row('9402', 'ClickFunnels', 'SWL'), row('9403', 'Shopify', 'SWL')];
+    b.codes = [['kind', 'code', 'name', 'discount_codes', 'notes', 'active'], ['brand', 'DDF', 'Designer Dog Foods', '', '', 'Y'], ['brand', 'SWL', 'Sample White Label FAKE', '', '', 'Y']];
+    b.cards = ['9401', '9402', '9403'].map((n, i) => ['SEND-' + n, 'send', 'Orders', 'Send order #' + n + ' to GA?', JSON.stringify({ why: '1 x AAA0012KZPSXZZZ' }), ago(5 - i)]);
+    await sheets(page, b);
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await open(page, '#/do');
+    const chips = page.locator('#dfilters button');
+    await expect(chips).toHaveText(['All (3)', 'ClickFunnels (1)', 'Shopify (2)', 'Designer Dog Foods (1)', 'Sample White Label FAKE (2)']);
+    await expect(page.locator('#view .card[data-key="SEND-9402"] .bline .brand')).toHaveText('Sample White Label FAKE');
+    await page.locator('#dfilters button', { hasText: 'Sample White Label FAKE' }).click();
+    await expect(page.locator('#view .card[data-key]')).toHaveCount(2);
+    await expect(page.locator('#view .card[data-key="SEND-9401"]')).toHaveCount(0);
+    await page.locator('#dfilters button', { hasText: 'ClickFunnels' }).click();
+    await expect(page.locator('#view .card[data-key]')).toHaveCount(1);
+    await expect(page.locator('#view .card[data-key="SEND-9402"]')).toBeVisible();
+    await page.locator('#dfilters button', { hasText: 'All' }).click();
+    await expect(page.locator('#view .card[data-key]')).toHaveCount(3);
+  });
+
   test('a "Send to GA?" card: Send writes only the 4 answer cells with the answer "Send"', async ({ page }) => {
     const b = book(); b.cards = [['SEND-9100', 'send', 'Orders', 'Send order #9100 to GA?', JSON.stringify({ why: '1 x AAA0012KZPSXZZZ' }), ago(5)]];
     const writes = await sheets(page, b);
