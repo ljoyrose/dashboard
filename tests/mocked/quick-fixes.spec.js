@@ -38,7 +38,7 @@ test.describe('CD Hub: table text can never become code', () => {
     await page.goto('cdhub/');
     await page.locator('#signinbtn').click();
     await expect(page.locator('#nav button[data-go]').first()).toBeVisible();
-    for (const go of ['dogs', 'round', 'areas', 'litters']) {
+    for (const go of ['dogs', 'round', 'areas', 'compliance']) {
       await tabClick(page, `#nav button[data-go="${go}"]`);
       expect(await page.locator('[onmouseover]').count(), go).toBe(0);
     }

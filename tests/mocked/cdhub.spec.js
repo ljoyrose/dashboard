@@ -4,7 +4,7 @@ const { IDS, WANT_BLD, FIX } = require('../support/world');
 const fs = require('fs');
 const path = require('path');
 
-const SECTIONS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
+const SECTIONS = ['map', 'work', 'today', 'round', 'dogs', 'areas', 'sops', 'compliance'];
 const signIn = async (page) => {
   await expect(page.locator('#signinbtn')).toBeEnabled();
   await page.locator('#signinbtn').click();
@@ -115,8 +115,11 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     const main = page.locator('#main');
     await expect(main).toContainText('Test Dog One');
     await expect(main).toContainText('Test Dog Two');
+    await expect(main).not.toContainText('Test Pup One');
+    await expect(main).toContainText('2 of 3');
+    await page.locator('.sfb[data-code="PU"]').click();
     await expect(main).toContainText('Test Pup One');
-    await expect(main).toContainText('3 of 3');
+    await expect(main).toContainText('1 of 3');
   });
 
   test('joined tables work: cabins show their dogs, litters show dam and sire, weighings are counted @regression', async ({ page }) => {
@@ -125,11 +128,11 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
     await tabClick(page, '#nav button[data-go="round"]');
     await expect(page.locator('#main')).toContainText('Test Cabin A');
     await expect(page.locator('#main')).toContainText('Test Dog One');
-    await tabClick(page, '#nav button[data-go="litters"]');
-    await expect(page.locator('#main')).toContainText('Test Dog One'); // dam
-    await expect(page.locator('#main')).toContainText('Test Dog Two'); // sire
-    await tabClick(page, '#nav button[data-go="vet"]');
-    await expect(page.locator('#main')).toContainText('3'); // three sample weighings
+    const joined = await page.evaluate(() => {
+      const lit = (CD.litters || [])[0] || {};
+      return { dam: nameOf(lit.dam_subject_id), sire: nameOf(lit.sire_subject_id), weights: (CD.dogs || []).reduce((n, d) => n + (d.weights || []).length, 0) };
+    });
+    expect(joined).toEqual({ dam: 'Test Dog One', sire: 'Test Dog Two', weights: 3 });
   });
 
   test('the Outstanding page reads BLD-WORK.csv', async ({ page }) => {
@@ -143,7 +146,8 @@ test.describe('CD Hub: sign-in and reading the BLD tables (mocked)', () => {
   test('tables missing from the folder are reported, not hidden', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#main')).toContainText(/\d+ file\(s\) not in the folder/);
+    await openTab(page, 'compliance');
+    await expect(page.locator('#checksCard')).toContainText(/\d+ file\(s\) not in the folder/);
   });
 });
 
@@ -159,31 +163,27 @@ test.describe('CD Hub: navigation', () => {
     });
   }
 
-  test('all twelve sections are in the bar: five tabs, then the other seven under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
+  test('eight sections are in the bar: five tabs, then three under More; Refresh and Sign out sit in the top bar', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav button[data-go]')).toHaveCount(12);
+    await expect(page.locator('#nav button[data-go]')).toHaveCount(8);
     await expect(page.locator('#nav > button.ht[data-go]')).toHaveCount(5);
-    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(7);
+    await expect(page.locator('#nav .house-more button[data-go]')).toHaveCount(3);
     await expect(page.locator('#nav button[data-reload], #nav button[data-signout]')).toHaveCount(0);
     await expect(page.locator('header button[data-reload]')).toHaveCount(1);
     await expect(page.locator('header button[data-signout]')).toHaveCount(1);
   });
 
-  test('Assocs sits under More and still opens #/buyers', async ({ page }) => {
+  test('hidden sections are not in the menu, and old addresses fall back to Main', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#nav > button.ht[data-go="buyers"]')).toHaveCount(0);
-    await expect(page.locator('#nav > button.ht[data-go="sops"]')).toHaveAccessibleName('SOPs');
-    const tab = page.locator('#nav .house-more button[data-go="buyers"]');
-    await expect(tab).toHaveText('Assocs');
-    await expect(tab).not.toContainText('Buyers');
     await page.locator('nav.house-tabs [data-house-more]').click();
-    await expect(tab).toHaveAccessibleName('Assocs');
-    await tab.click();
-    await expect(page).toHaveURL(/#\/buyers$/);
-    await expect(page.locator('#main h2')).toHaveText('Assocs');
-    await expect(page.locator('#next')).toContainText('Next: Dogs');
+    await expect(page.locator('#houseMore button .htl')).toHaveText(['Compliance', 'The round', 'Areas']);
+    for (const [hash, word] of [['#/shape', 'Table map'], ['#/vet', 'Vet link'], ['#/buyers', 'Assocs'], ['#/litters', 'Litters']]) {
+      await page.goto('cdhub/' + hash);
+      await expect(page.locator('#nav button[data-go="map"]')).toHaveAttribute('aria-current', 'page');
+      await expect(page.locator('#main h2')).not.toHaveText(word);
+    }
   });
 
   test('the "Next:" buttons at the bottom lead to other sections', async ({ page }) => {
@@ -289,7 +289,7 @@ test.describe('CD Hub: things that go wrong', () => {
 // House look (Master design rules, LINKS-COMFORT-BRIEF v3, 28 Oct 2026) and the Bloodline screens, by computed style.
 // Invented data only: the sample BLD tables, plus rows added inside a test (invented names, no real dogs or buyers).
 // ---------------------------------------------------------------------------------------------------------------
-const LOOK_TABS = ['map', 'work', 'shape', 'today', 'round', 'dogs', 'areas', 'litters', 'vet', 'buyers', 'sops'];
+const LOOK_TABS = ['map', 'work', 'today', 'round', 'dogs', 'areas', 'sops'];
 const iso = (days) => new Date(Date.now() + days * 864e5).toISOString().slice(0, 10);
 const setFile = (world, name, content) => {
   const f = world.files.find((x) => x.name === name);
@@ -398,7 +398,7 @@ test.describe('CD Hub house look', () => {
     await signIn(page);
     const ink = await page.evaluate(() => getComputedStyle(document.body).color);
     const lines = new Set();
-    for (const tab of ['map', 'today', 'round', 'dogs', 'litters', 'areas']) {
+    for (const tab of ['map', 'today', 'round', 'dogs', 'areas', 'sops']) {
       await openTab(page, tab);
       const ctls = page.locator('#main button:visible:not(.tile), #main select:visible, #next button:visible');
       const n = await ctls.count();
@@ -436,7 +436,7 @@ test.describe('CD Hub house look', () => {
     // Main's three numbers open what they count (Lisa, 2 Nov), so they are links and do hover; see hub-main-others.spec.js.
     await expect(page.locator('[data-hub-main] a.hm-n')).toHaveCount(3);
     // Needs you in full now sits on Do and the data checks on Tables (Hub Mains, 2 Nov 2026).
-    for (const [tab, sel] of [['work', '#needsCard h3 .cnt'], ['shape', '#checksCard .mk'], ['map', '#nav .ht .n']]) {
+    for (const [tab, sel] of [['work', '#needsCard h3 .cnt'], ['compliance', '#checksCard .mk'], ['map', '#nav .ht .n']]) {
       await openTab(page, tab);
       const el = page.locator(sel).first();
       await el.hover();
@@ -458,6 +458,7 @@ test.describe('CD Hub house look', () => {
     setFile(guard.world, 'BLD-WORK.csv', rows.join('\n') + '\n');
     await page.goto('cdhub/');
     await signIn(page);
+    await openTab(page, 'work');
     const measure = () => page.evaluate(() => [...document.querySelectorAll('.cnt')].filter((e) => e.getBoundingClientRect().width > 1).map((e) => {
       const r = e.getBoundingClientRect(), s = getComputedStyle(e); return [e.textContent, r.width, r.height, s.borderTopLeftRadius, s.whiteSpace, s.fontVariantNumeric]; }));
     for (const wide of [false, true]) {
@@ -518,32 +519,32 @@ test.describe('CD Hub house look', () => {
 });
 
 test.describe('CD Hub Bloodline screens (built from what the page already reads)', () => {
-  test('Main: Next, Needs you (5) and Temps · Unplaced · Bitches; the old Live cards sit on Do, Today and Tables', async ({ page }) => {
+  test('Main stays on today\'s work; licence counts and data checks sit on Compliance', async ({ page }) => {
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('#summary')).toHaveCount(0);   // the On track / Needs you / Overdue trio became the 3 numbers
-    await expect(page.locator('[data-hm="next"] .hm-what')).toHaveText('Tables read needs a look');
-    await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
-    await expect(page.locator('[data-hm="needs"] .hm-head .cnt')).toHaveText('7');   // + Breeding rules not set (8 Nov 2026)
+    await expect(page.locator('#summary')).toHaveCount(0);
+    await expect(page.locator('[data-hm="next"] .hm-what')).not.toContainText('needs a look');
+    await expect(page.locator('[data-hm="next"] .hm-what')).toContainText('not yet placed');
+    await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(2);
     await expect(page.locator('[data-hm="nums"] .hm-n[data-k="Temps"] .hm-v')).toHaveText('0 of 2');
-    await expect(page.locator('#nav button[data-go="map"] .n')).toHaveText('7');
+    await expect(page.locator('#nav button[data-go="map"] .n')).toHaveText('2');
     await expect(page.locator('#nav button[data-go="work"] .n')).toHaveText('1');
-    // Each row carries its action: unset breeding rules open Compliance (8 Nov 2026); the waiting item now sits on Do (Outstanding).
-    await page.locator('[data-hm="needs"] .hm-row', { hasText: 'Breeding rules' }).locator('a[data-hm-act]').click();
+    await page.locator('.hm-links button[data-go="compliance"]').click();
     await expect(page.locator('#nav button[data-go="compliance"]')).toHaveAttribute('aria-current', 'page');
+    await expect(page.locator('#main')).toContainText('The licence counts');
+    await expect(page.locator('#checksCard h3 .cnt')).toHaveText('6');
+    await expect(page.locator('#checksCard .mk.bad')).toHaveCount(6);
     await openTab(page, 'work');
     await expect(page.locator('#needsCard .mrow')).toHaveCount(7);
     await expect(page.locator('#needsCard')).toContainText('Sample item waiting on Lisa');
-    // Rose = late only (Lisa's sweep, 3 Nov 2026): the count is rose exactly when one of its rows is late.
     const anyLate = (await page.locator('#needsCard .mrow .ic.late').count()) > 0;
     if (anyLate) await expect(page.locator('#needsCard h3 .cnt')).toHaveClass(/need/); else await expect(page.locator('#needsCard h3 .cnt')).not.toHaveClass(/need/);
     await openTab(page, 'today');
     await expect(page.locator('#onSiteCard .big')).toHaveText('3');
     await expect(page.locator('#tempsCard')).toContainText('0 of 2');
     await expect(page.locator('#tempsCard')).toContainText('No reading today');
-    await openTab(page, 'shape');
-    await expect(page.locator('#checksCard h3 .cnt')).toHaveText('6');
-    await expect(page.locator('#checksCard .mk.bad')).toHaveCount(6);
+    await expect(page.locator('#main')).not.toContainText('The licence counts');
+    await expect(page.locator('#main')).toContainText('Licence counts are on Compliance');
   });
 
   test('Needs you: late first, then soon; Next is the most urgent and opens Today; Do keeps the date pills; Litters shows both', async ({ page, guard }) => {
@@ -570,27 +571,22 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     // a date that is neither late nor soon still wears a plain 1px ring, no fill
     const plain = await page.evaluate(() => { const d = document.createElement('div'); d.innerHTML = dpill('2026-01-01', ''); document.querySelector('#main').appendChild(d); const s = getComputedStyle(d.firstChild); return [s.borderTopWidth, s.borderTopStyle, s.backgroundColor]; });
     expect(plain).toEqual(['1px', 'solid', 'rgba(0, 0, 0, 0)']);
-    await openTab(page, 'litters');
-    await expect(page.locator('#littersCard h3 .cnt')).toHaveText('2');
-    await expect(page.locator('#littersCard .dpill.late')).toHaveCount(1);
-    await expect(page.locator('#littersCard .dpill.soon')).toHaveCount(1);
     await openTab(page, 'map');
     await page.locator('[data-hm="next"] a[data-hm-act]').click();
     await expect(page.locator('#nav button[data-go="today"]')).toHaveAttribute('aria-current', 'page');
   });
 
-  test('Main shows 5 and "+N more" opens Do, where Needs you shows 7 and Show all opens the rest', async ({ page, guard }) => {
+  test('Outstanding keeps the waiting list, and Show all opens the rest', async ({ page, guard }) => {
     const rows = ['id,area,item,status,owner,blocked_on,evidence,note'];
     for (let i = 1; i <= 6; i++) rows.push(`W2${i},sample,Invented waiting ask ${i},BLOCKED,Lisa,,,`);
     setFile(guard.world, 'BLD-WORK.csv', rows.join('\n') + '\n');
     await page.goto('cdhub/');
     await signIn(page);
-    await expect(page.locator('[data-hm="needs"] .hm-row')).toHaveCount(5);
-    await page.locator('[data-hm-more]').click();
-    await expect(page.locator('#needsCard .mrow:visible')).toHaveCount(7);
-    await expect(page.locator('#needsCard .mfoot')).toContainText('Showing 7 of 12');
+    await expect(page.locator('[data-hm="needs"]')).not.toContainText('Invented waiting ask');
+    await openTab(page, 'work');
+    await expect(page.locator('#needsCard .mfoot')).toContainText(/Showing 7 of /);
     await page.locator('#needsCard [data-needall]').click();
-    await expect(page.locator('#needsCard .mrow:visible')).toHaveCount(12);
+    await expect(page.locator('#needsCard')).toContainText('Invented waiting ask 6');
   });
 
   test('Temperatures today: no saving-off notice, and Temperature history opens history.html @regression', async ({ page }) => {
@@ -700,7 +696,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#tempsCard')).toContainText('invented mild day');
     await expect(page.locator('#tempsCard')).not.toContainText(/\bactual/i);
     await expect(page.locator('#tempsCard')).not.toContainText('Source');
-    await openTab(page, 'shape');
+    await openTab(page, 'compliance');
     await page.locator('#checksCard button[data-list="nochip"]').click();
     await expect(page.locator('#nav button[data-go="today"]')).toHaveAttribute('aria-current', 'page');
     await expect(page.locator('#tpanel')).toContainText('No microchip recorded');
@@ -745,25 +741,36 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#fp-dogs')).toBeHidden();
     await page.locator('[data-fpanel="fp-dogs"]').click();
     await expect(page.locator('[data-fpanel="fp-dogs"]')).toHaveAttribute('aria-expanded', 'true');
-    await page.locator('#fa').selectOption('j');
-    await expect(page.locator('#cnt')).toHaveText('1 of 3');
-    await expect(page.locator('#ach-dogs .achip')).toHaveText(/Age: 6m to 12m/);
-    await expect(page.locator('[data-fpanel="fp-dogs"] .cnt')).toHaveText('1');
+    await expect(page.locator('.sfb')).toHaveText(['Bitch', 'Stud', 'Litter', 'Puppy']);
+    await expect(page.locator('.sfb[data-code=""]')).toHaveCount(0);
+    await expect(page.locator('#ft, .key .info, #arrive-media, #arrive-person')).toHaveCount(0);
+    await expect(page.locator('#main')).not.toContainText('entire male');
+    await expect(page.locator('#main')).not.toContainText('sex recorded');
+    await expect(page.locator('#fp-dogs')).not.toContainText('Screening');
+    await page.locator('#fa').selectOption('a');
+    await expect(page.locator('#cnt')).toHaveText('2 of 3');
+    await expect(page.locator('#ach-dogs .achip')).toHaveText(/Age: 1 to 7y/);
     await page.locator('#ach-dogs .achip').click();
-    await expect(page.locator('#cnt')).toHaveText('3 of 3');
-    await expect(page.locator('#ach-dogs .achip')).toHaveCount(0);
+    await expect(page.locator('#cnt')).toHaveText('2 of 3');
+    await expect(page.locator('.sfb[aria-pressed="true"]')).toHaveCount(0);
     await page.locator('.sfb[data-code="ST"]').click();
     await expect(page.locator('#ach-dogs .achip')).toHaveText(/Status: Stud/);
-    await page.locator('#ach-dogs .achip').click();
-    await expect(page.locator('.sfb[data-code=""]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.locator('.dc .nm')).toHaveText(['Test Dog Two']);
+    await page.locator('.sfb[data-code="ST"]').click();
+    await expect(page.locator('.sfb[aria-pressed="true"]')).toHaveCount(0);
+    await expect(page.locator('#cnt')).toHaveText('2 of 3');
+    await page.locator('.sfb[data-code="PU"]').click();
+    await expect(page.locator('.dc .nm')).toHaveText(['Test Pup One']);
+    await page.locator('.sfb[data-code="PU"]').click();
     await page.locator('#dsort').selectOption('young');
-    await expect(page.locator('.dc .nm').first()).toHaveText('Test Pup One');
+    await expect(page.locator('.dc .nm').first()).toHaveText('Test Dog One');
     await page.locator('#dsort').selectOption('name');
-    expect(await page.locator('.dc .nm').allInnerTexts()).toEqual(['Test Dog One', 'Test Dog Two', 'Test Pup One']);
+    expect(await page.locator('.dc .nm').allInnerTexts()).toEqual(['Test Dog One', 'Test Dog Two']);
     const card = page.locator('.dc').first();
     await expect(card.locator('.nl')).toContainText('Bitch');
     const ph = await card.locator('.ph').boundingBox();
     expect([ph.width, ph.height]).toEqual([72, 72]);
+    await expect(card.locator('.meta svg')).toHaveCount(0);
     await expect(card.locator('.whor')).toHaveAttribute('aria-label', 'On site, Test Cabin A');
     const r = await card.evaluate((e) => { const c = e.getBoundingClientRect(), w = e.querySelector('.whor').getBoundingClientRect(); return [Math.round(c.right - w.right), Math.round(c.bottom - w.bottom)]; });
     expect(r[0]).toBeLessThanOrEqual(14); expect(r[1]).toBeLessThanOrEqual(14);   // bottom-right
@@ -794,6 +801,7 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     const two = card('Test Dog Two');
     await expect(two.getByRole('link', { name: 'Rx' })).toHaveAttribute('href', 'https://example.test/rx/sample-two');
     await expect(two.locator('.wt', { hasText: 'Moxiclear' })).not.toContainText(/\d/);
+    await page.locator('.sfb[data-code="PU"]').click();
     const pup = card('Test Pup One');
     await expect(pup.locator('.wt', { hasText: 'Moxiclear' })).toContainText('2 Mar 2026');
     await expect(pup.getByRole('link', { name: 'Rx' })).toHaveCount(0);
@@ -810,19 +818,6 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('#rows')).not.toContainText('javascript:');
   });
 
-  test('Litters: the same filter row; Sort changes the order', async ({ page, guard }) => {
-    setFile(guard.world, 'BLD-litter.csv', 'id,dam_subject_id,sire_subject_id,dob,pairing,status,notes\nlit-a,sub-test-dog-1,sub-test-dog-2,2025-02-01,Alpha pairing,born,invented\nlit-b,sub-test-dog-1,sub-test-dog-2,2026-02-01,Beta pairing,born,invented\n');
-    await page.goto('cdhub/');
-    await signIn(page);
-    await openTab(page, 'litters');
-    await expect(page.locator('#lrows tr').first()).toContainText('Beta pairing');
-    await page.locator('#lsort').selectOption('old');
-    await expect(page.locator('#lrows tr').first()).toContainText('Alpha pairing');
-    await page.locator('[data-fpanel="fp-litters"]').click();
-    await page.locator('#ly').selectOption('2025');
-    await expect(page.locator('#lcnt')).toHaveText('1 of 2');
-    await expect(page.locator('#ach-litters .achip')).toHaveText(/Year: 2025/);
-  });
 });
 
 test.describe('CD Hub: In whelp reads the parsed mating rows (the #111 fix), invented fixture data', () => {
@@ -896,24 +891,12 @@ test('CD Hub: temperature limits come from the band rows; puppies use their own 
   expect(r).toEqual({ adult26: 'ok', adultHot: 'hot', adultCold: 'cold', pupOk: 'ok', pupCold: 'cold', noDob: 'unknown', noRows: 'unknown' });
 });
 
-test.describe('CD Hub: screens that need data CD Hub does not hold say which Bloodline table will feed them', () => {
-  const WANT = [
-    ['dogs', 'media', 'Photos', 'media', 'media'], ['dogs', 'person', 'Who has it, by name', 'person', 'person'],
-    ['work', 'due', 'Due dates on Outstanding', 'work item', 'work_item'],
-    ['litters', 'stage', 'Litter stage', 'litter stage', 'birth_group_stage']];
-  test('each empty state names its Bloodline table, in words, on its own tab', async ({ page }) => {
-    await page.goto('cdhub/');
-    await signIn(page);
-    for (const [tab, k, title, words, table] of WANT) {
-      await openTab(page, tab);
-      const card = page.locator(`#arrive-${k}`);
-      await expect(card).toBeVisible();
-      await expect(card.locator('h3')).toHaveText(title);
-      await expect(card.locator('.arrives')).toHaveText(`Arrives with Bloodline: ${words}`);
-      await expect(card).toHaveAttribute('data-arrives', table);
-      const smallest = await card.evaluate((e) => Math.min(...[e, ...e.querySelectorAll('*')].map((x) => parseFloat(getComputedStyle(x).fontSize))));
-      expect(smallest).toBeGreaterThanOrEqual(13);
-    }
-  });
+test('CD Hub sections that stay do not show Bloodline placeholder cards', async ({ page }) => {
+  await page.goto('cdhub/');
+  await signIn(page);
+  for (const id of ['map', 'work', 'today', 'round', 'dogs', 'areas', 'sops', 'compliance']) {
+    await openTab(page, id);
+    await expect(page.locator('#main')).not.toContainText('Arrives with Bloodline');
+  }
 });
 

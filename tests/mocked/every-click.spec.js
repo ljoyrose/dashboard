@@ -6,7 +6,7 @@ const { test, expect } = require('../support/test');
 const ROUTES = [
   ['./', ['#/map', '#/drives', '#/drives/shared', '#/drives/readfirst', '#/drives/shared/drv-alpha1', '#/drives/work', '#/drives/personal-drive', '#/drives/usb', '#/drives/dropbox', '#/drives/icloud', '#/drives/mac', '#/bin', '#/changes', '#/changes/24h', '#/changes/7d', '#/changes/totals'], '#signInBtn'],
   ['money/', ['#/now', '#/money', '#/dates', '#/todo', '#/accountant', '#/control', '#/e/TESTCO', '#/register/R001'], '#signInBtn'],
-  ['cdhub/', ['#/map', '#/work', '#/shape', '#/today', '#/round', '#/dogs', '#/areas', '#/litters', '#/vet', '#/buyers', '#/sops'], '#signinbtn'],
+  ['cdhub/', ['#/map', '#/work', '#/today', '#/round', '#/dogs', '#/areas', '#/sops', '#/compliance'], '#signinbtn'],
 ];
 // Not clicked here (each has its own test): signing out ends the session for the rest of the crawl.
 const SKIP = '[data-action="signout"], [data-signout], #signOutBtn, [data-skip], .skip';
