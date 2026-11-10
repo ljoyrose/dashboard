@@ -340,8 +340,7 @@ function cdAudit() {
       if (!el.disabled && !el.closest('[disabled]')) { const r = ratio(c, bgOf(el)); if (r < 4.5) out.text.push(name(el) + ' ' + r.toFixed(2)); }
     }
     const bw = ['Top', 'Right', 'Bottom', 'Left'].map((k) => parseFloat(s['border' + k + 'Width']) || 0);
-    // A 3px left colour bar is the one wider edge, the same allowance as the house check.
-    if (bw.some((v, i) => v > 1.01 && !(i === 3 && Math.abs(v - 3) < 0.01))) out.line.push(name(el) + ' ' + bw.join('/'));
+    if (Math.max(...bw) > 1) out.line.push(name(el) + ' ' + bw.join('/'));
     const rad = s.borderTopLeftRadius;
     const okRad = rad === '0px' || rad === '12px' || (rad === '50%' && el.matches(ROUND)) || (rad === '2px' && el.matches('nav#nav .bar')) || (rad === '50%' && el.matches('nav#nav .hic'));   // the bottom tabs (Lisa's picks, 2 Nov): a rounded line, a round count ring, the icon's round place
     if (!okRad) out.radius.push(name(el) + ' ' + rad);
