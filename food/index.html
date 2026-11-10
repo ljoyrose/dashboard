@@ -521,8 +521,8 @@
       h += '<p class="grp">' + esc(name) + (k && name !== k ? ' (' + esc(k) + ')' : '') + '</p><div class="tiles" data-brand="' + esc(k) + '">' +
         '<a class="tile" href="#/orders"><span class="k">Orders</span><span class="v">' + s.n30 + '</span><span class="m">last 30 days · ' + s.n + ' in all</span></a>' +
         '<a class="tile" href="#/orders"><span class="k">Sales (inc VAT)</span><span class="v">' + money(s.sales30) + '</span><span class="m">last 30 days · ' + money(s.sales) + ' in all</span></a>' +
-        '<a class="tile" href="#/orders"><span class="k">Profit (ex VAT)</span><span class="v' + (s.profit30 < 0 ? ' red' : '') + '">' + money(s.profit30) + '</span><span class="m">last 30 days · ' + money(s.profit) + ' in all</span></a>' +
-        '<a class="tile" href="#/orders?low"><span class="k">Under £' + s.min + ' profit</span><span class="v' + (s.low ? ' red' : '') + '">' + s.low + '</span><span class="m">minimum ' + (setting('MIN_PROFIT_' + k) ? 'MIN_PROFIT_' + esc(k) : 'MIN_PROFIT') + '</span></a></div>' +
+        '<a class="tile" href="#/orders"><span class="k">Profit (ex VAT)</span><span class="v">' + money(s.profit30) + '</span><span class="m">last 30 days · ' + money(s.profit) + ' in all</span></a>' +
+        '<a class="tile" href="#/orders?low"><span class="k">Under £' + s.min + ' profit</span><span class="v">' + s.low + '</span><span class="m">minimum ' + (setting('MIN_PROFIT_' + k) ? 'MIN_PROFIT_' + esc(k) : 'MIN_PROFIT') + '</span></a></div>' +
         '<div class="card"><div class="row"><div class="txt"><b>' + s.recipes.length + ' recipe' + (s.recipes.length === 1 ? '' : 's') + ' sold</b> · data sheet linked for ' + s.sheets + (s.recipes.length ? '<div class="m">' + esc(s.recipes.map(function (x) { return x.name + (x.sheet ? '' : ' (no data sheet)'); }).join(' · ')) + '</div>' : '') +
         '<div class="m">' + esc(plLine) + '</div>' + (plBtn ? '<div class="links">' + plBtn + '</div>' : '') + '</div></div></div>';
     });
