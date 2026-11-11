@@ -31,10 +31,12 @@
       label: 'Room temperatures', file: 'BLD-area_reading.csv',
       fields: {
         area_id: { type: 'ref', lookup: 'area', required: true, label: 'Room' },
-        min_c: { type: 'temp', required: true, label: 'Lowest (min) C' },
-        max_c: { type: 'temp', required: true, label: 'Highest (max) C' },
+        min_c: { type: 'temp', label: 'Lowest (min) C' },    // needed unless room_empty = yes (as the save, Specs.gs)
+        max_c: { type: 'temp', label: 'Highest (max) C' },
         spot_c: { type: 'temp', label: 'Spot reading C' },
-        mitigation_note: { type: 'text', label: 'What was done about it' }
+        mitigation_note: { type: 'text', label: 'What was done about it' },
+        room_empty: { type: 'enum', values: ['yes'], label: 'Room empty' },   // Lisa 11 Nov 2026: no dog; a reading is optional
+        thermometer_id: { type: 'ref', lookup: 'thermometer', ifLoaded: true, label: 'Thermometer' }   // checked only when the thermometer list is loaded
       }
     },
     occupancy: {
@@ -173,10 +175,19 @@
             if (bad.length) errors[name] = 'Not found in the ' + def.lookup + ' list: ' + bad.slice(0, 3).join(', ') + (bad.length > 3 ? ' and ' + (bad.length - 3) + ' more' : '') + '.';
           }
         } else if (def.type === 'ref') {
-          if (lookupSize(def.lookup) === 0) errors[name] = 'The ' + def.lookup + ' list is not loaded, so this cannot be checked.';
+          if (lookupSize(def.lookup) === 0) { if (!def.ifLoaded) errors[name] = 'The ' + def.lookup + ' list is not loaded, so this cannot be checked.'; }
           else if (!hasId(lookups[def.lookup], v)) errors[name] = 'Not found in the ' + def.lookup + ' list.';
         }
       });
+      if (spec.fields.room_empty && !errors.min_c && !errors.max_c && !errors.room_empty) {
+        var blank = function (k) { var x = fields[k]; return x === undefined || x === null || String(x).trim() === ''; };
+        if (String(fields.room_empty || '').trim() !== 'yes') {
+          if (blank('min_c')) errors.min_c = 'This is needed.';
+          if (blank('max_c')) errors.max_c = 'This is needed.';
+        } else if (blank('min_c') !== blank('max_c')) {
+          errors[blank('min_c') ? 'min_c' : 'max_c'] = 'Fill in both lowest and highest, or neither.';
+        }
+      }
       if (!errors.min_c && !errors.max_c && fields.min_c !== undefined && fields.max_c !== undefined &&
           String(fields.min_c).trim() !== '' && String(fields.max_c).trim() !== '' &&
           parseFloat(fields.min_c) > parseFloat(fields.max_c)) {
