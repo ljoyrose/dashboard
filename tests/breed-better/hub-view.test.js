@@ -83,3 +83,18 @@ test('Fit to Breed is read from BLD-fit_to_breed, which the hub loads as an opti
   assert.equal(c.byId.a1.verdict, 'pass');
   assert.equal(c.byId.a1.lines[0].date_then, '2026-10-03');
 });
+
+test('within a verdict, animals rank by percent of what they could earn', () => {
+  const T = tables({
+    'BLD-score_band.csv': [{ id: 'p', scheme_id: 's1', kind: 'points', label: 'Pts', sort_order: '1' }],
+    'BLD-score_criterion.csv': [
+      { id: 'c', scheme_id: 's1', band_id: 'p', label: 'A', evidence_source: 'BLD-exam', answer_field: 'r', date_field: 'on' },
+      { id: 'd', scheme_id: 's1', band_id: 'p', label: 'B', evidence_source: 'BLD-exam', answer_field: 'q', date_field: 'on', applies_to: 'sex=female' }],
+    'BLD-score_point.csv': [{ id: 'p1', criterion_id: 'c', answer_match: 'is:ok', points: '10' }, { id: 'p2', criterion_id: 'c', answer_match: 'any', points: '0' },
+      { id: 'p3', criterion_id: 'd', answer_match: 'is:ok', points: '10' }, { id: 'p4', criterion_id: 'd', answer_match: 'any', points: '0' }],
+    'BLD-subject.csv': [{ id: 'a1', name: 'Female', sex: 'female' }, { id: 'a2', name: 'Male', sex: 'male' }],
+    'BLD-exam.csv': [{ id: 'x', subject_id: 'a1', r: 'ok', q: 'no', on: '2026-01-02' }, { id: 'y', subject_id: 'a2', r: 'ok', on: '2026-01-02' }]
+  });
+  const c = View.compute({ T, today: '2026-06-05', esc });
+  assert.deepEqual(c.results.map((r) => [r.name, r.points_earned, r.points_available]), [['Male', 10, 10], ['Female', 10, 20]]);
+});

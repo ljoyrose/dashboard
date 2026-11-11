@@ -13,7 +13,8 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  var WHEN_MISSING = ['unknown', 'zero', 'fail'];
+  /* skip: no record means the line does not apply (a maiden has no last litter); never a pass, it just leaves the total */
+  var WHEN_MISSING = ['unknown', 'zero', 'fail', 'skip'];
   var READS = ['latest', 'lowest', 'count'];
   var OUTCOMES = ['pass', 'fail', 'unverified'];
   var TARGET_IS = ['points', 'percent'];
@@ -210,6 +211,7 @@
       var rule = ev.reason ? null : findRule(ruleRows, ev.answer);
       if (!ev.reason && !rule) line.unknown_reason = 'no_rule_for_answer';
       var when = text(c.when_missing) || 'unknown';
+      if (when === 'skip' && ev.reason === 'no_record') return;
 
       if (band.kind === 'gate') {
         var outcome;

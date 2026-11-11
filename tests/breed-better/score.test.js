@@ -247,3 +247,14 @@ test('target: points still unknown that could reach it keep the dog Unverified; 
   assert.equal(score(tInput('65', 'percent', 'clear', [exam('e1', 'a1', 'hip', 'poor', '2026-01-01'), exam('e2', 'a1', 'eye', 'clear', '2026-01-01')])).verdict, 'fail');
   assert.match(validateScheme(Object.assign({}, DOG, { scheme: { id: 's', target_is: 'half' } })).join(), /target_is must be points or percent/);
 });
+
+test('skip: with no record the line leaves the total (a maiden has no last litter), but a record still scores', () => {
+  const set = Object.assign({}, DOG, { criteria: [crit('hip', 'g'), crit('eye', 'p', { when_missing: 'skip' })] });
+  const none = score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01', evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', '2026-01-01')] } }));
+  assert.equal(none.points_available, 0);
+  assert.equal(none.lines.length, 1);
+  assert.equal(none.verdict, 'pass');
+  const some = score(Object.assign({}, set, { subject: { id: 'a1' }, asOf: '2026-06-01', evidence: { exam: [exam('e1', 'a1', 'hip', 'sound', '2026-01-01'), exam('e2', 'a1', 'eye', 'cloudy', '2026-01-01')] } }));
+  assert.equal(some.points_available, 10);
+  assert.equal(some.points_earned, 3);
+});

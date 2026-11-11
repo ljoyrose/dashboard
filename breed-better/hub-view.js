@@ -11,7 +11,7 @@
 
   var FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv',
     /* evidence only Breed Better reads; the hub already loads health_screen, dna_result, litter and subject_status */
-    'BLD-fit_to_breed.csv'];
+    'BLD-fit_to_breed.csv', 'BLD-score_judgement.csv'];
   /* default words; a scheme row can change any of them with verdict_words, e.g. "unverified=To prove" */
   var VERDICT = { pass: 'Pass', below_target: 'Below target', unverified: 'Unverified', fail: 'Fail' };
   var ORDER = ['pass', 'below_target', 'unverified', 'fail'];
@@ -23,7 +23,7 @@
     recorded_unverified: 'Recorded, cannot be scored yet'
   };
   var GO = { 'BLD-fit_to_breed': 'dogs', 'BLD-litter': 'litters', 'BLD-health_screen': 'dogs', 'BLD-dna_result': 'dogs', 'BLD-subject_status': 'dogs' };
-  var state = { filter: '', dog: '' }, last = null, memo = null;
+  var state = { filter: '', dog: '', open: {} }, last = null, memo = null;
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
 
@@ -74,12 +74,14 @@
     });
     out.results.sort(function (a, b) {
       var d = ORDER.indexOf(verdictOf(a)) - ORDER.indexOf(verdictOf(b));
-      return d || (b.points_earned - a.points_earned) || a.name.localeCompare(b.name);
+      /* within a verdict, by percent of what each animal could earn: a male and a female can have different totals */
+      return d || (pct(b) - pct(a)) || a.name.localeCompare(b.name);
     });
     memo = out;
     return out;
   }
 
+  function pct(r) { return r.points_available ? r.points_earned / r.points_available : 0; }
   function total(r) { return r.points_earned + ' of ' + r.points_available + (r.target !== '' && r.target !== undefined ? ', target ' + r.target : ''); }
   function vpill(k, w) { return '<span class="bb-v bb-' + k + '">' + (w || words)[k] + '</span>'; }
   function pill(r) { return vpill(verdictOf(r), r.words); }
@@ -108,7 +110,7 @@
       + bands.map(function (b) {
         var lines = r.lines.filter(function (l) { return l.band_id === b.id; });
         if (!lines.length) return '';
-        return '<details class="card bb-band bb-c-' + esc(t(b.colour)) + '"><summary>' + esc(b.label) + ' <span class="cnt">' + lines.length + '</span></summary>'
+        return '<details class="card bb-band bb-c-' + esc(t(b.colour)) + '" data-bb-band="' + esc(b.id) + '"' + (state.open[b.id] ? ' open' : '') + '><summary>' + esc(b.label) + ' <span class="cnt">' + lines.length + '</span></summary>'
           + lines.map(function (l) { return lineHtml(v, l, r.words); }).join('') + '</details>';
       }).join('');
   }
@@ -190,6 +192,11 @@
   function redraw() { var el = document.getElementById('bbRoot'); if (el && last) el.innerHTML = inner(last); }
 
   if (typeof document !== 'undefined') {
+    /* remember which sections are open, so a redraw keeps them */
+    document.addEventListener('toggle', function (e) {
+      var d = e.target;
+      if (d && d.getAttribute && d.hasAttribute('data-bb-band')) state.open[d.getAttribute('data-bb-band')] = d.open;
+    }, true);
     /* capture, so the chosen dog is set before the hub's own click handler opens the page */
     document.addEventListener('click', function (e) {
       var b = e.target.closest && e.target.closest('[data-bb-dog],[data-bb-filter],[data-bb-open],[data-bb-back]');
