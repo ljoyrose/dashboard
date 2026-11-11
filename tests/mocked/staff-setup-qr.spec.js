@@ -85,7 +85,7 @@ test('thermometer cards: one per active thermometer, by name; adding one saves i
   };
   const sent = [];
   await page.route(SCRIPT, (route) => {
-    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }, { key: 'thermometer', on: true, mode: 'direct' }], version: 'test' } });
     const b = JSON.parse(route.request().postData());
     if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [] } } });
     sent.push(b);
@@ -103,6 +103,8 @@ test('thermometer cards: one per active thermometer, by name; adding one saves i
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('.qcard b')).toHaveText(['Corridor 1']);
   expect(sent.slice(1).map((b) => [b.table, b.fields.name || b.fields.kind, b.fields.area_id || b.fields.ref_id])).toEqual([['thermometer', 'Corridor 1', 'area-t1'], ['qr_tag', 'thermometer', 'thm-3']]);
+});
+
 test('room signs are never made for a retired room (code starting ZZ_)', async ({ page }) => {
   const tables = {
     area: [{ id: 'area-t1', code: 'T1' }, { id: 'area-zz', code: 'ZZ_OLD' }], subject: [], subject_status: [], litter: [], occupancy: [],
