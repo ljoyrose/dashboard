@@ -468,11 +468,11 @@
       rows.forEach(function (r) {
         tb.appendChild(h('tr', { class: r.breach ? 'tg-br' : '' }, [
           h('td', { text: ddmmyy(r.date) }), h('td', { text: r.slot }), h('td', { text: r.min === null ? '' : r.min.toFixed(1) }), h('td', { text: r.max === null ? '' : r.max.toFixed(1) }),
-          h('td', { text: r.spot }), h('td', { text: r.kindLabel }), h('td', { text: r.note })
+          h('td', { text: r.spot }), h('td', { text: r.note })
         ]));
       });
       out.appendChild(h('h3', { text: 'Every reading' }));
-      out.appendChild(h('table', { class: 'tg-tab' }, [h('thead', {}, [h('tr', {}, ['Date', 'Round', 'Min', 'Max', 'Spot', 'How', 'What was done'].map(function (t) { return h('th', { text: t }); }))]), tb]));
+      out.appendChild(h('table', { class: 'tg-tab' }, [h('thead', {}, [h('tr', {}, ['Date', 'Round', 'Min', 'Max', 'Spot', 'What was done'].map(function (t) { return h('th', { text: t }); }))]), tb]));
       out.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Print', onclick: function () { window.print(); } }));
     }
     function rowBreach(r, lo, hi) {
@@ -487,8 +487,8 @@
     staff.forEach(function (r) {
       var at = String(r.period_start || r.taken_at || '');
       if (r.area_id !== areaId || at.slice(0, 4) !== year || r.corrects_id) return;
-      var how = r.read_method === 'camera' ? (r.camera_value_changed === 'true' ? 'Camera, corrected' : 'Camera') : (r.read_method === 'typed' ? 'Typed' : 'Recorded');
-      out.push({ kind: 'staff', kindLabel: how, date: at.slice(0, 10), slot: slotOf(at), sort: at, min: num(r.min_c), max: num(r.max_c), spot: r.spot_c || '', note: r.mitigation_note || '' });
+      // How a reading was taken is saved, never shown (Lisa, 11 Nov 2026).
+      out.push({ kind: 'staff', kindLabel: 'Staff', date: at.slice(0, 10), slot: slotOf(at), sort: at, min: num(r.min_c), max: num(r.max_c), spot: r.spot_c || '', note: r.mitigation_note || '' });
     });
     guest.forEach(function (r) {
       var at = String(r.period_start || r.taken_at || '');
@@ -517,7 +517,7 @@
       '.tg-pair .inp{font-size:24px;text-align:center}.tg-spot{margin:4px 0 8px;color:var(--mut)}' +
       '.tg-clr{border-left:3px solid var(--good);margin:12px 0}.tg-done{border-left-color:var(--good)}' +
       '.tg-tab{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 14px}.tg-tab th,.tg-tab td{border-bottom:1px solid var(--line);padding:5px 4px;text-align:left}' +
-      '.tg-br td{color:var(--bad);font-weight:600}' +
+      '.tg-br td{color:var(--ljr-3-text);font-weight:600}' +
       '@media print{.tabs,.back,.btn,select,.msg{display:none!important}.tg-tab{font-size:11px}}';
     document.head.appendChild(s);
   }
