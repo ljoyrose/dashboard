@@ -58,7 +58,7 @@ test('a thermometer ended 11 Nov is not in the 12 Nov round; its 10 Nov reading 
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => sent.length).toBe(1);
-  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-old', max_c: '18.5', min_c: '12.0', period_start: '2026-11-10T00:00:00+00:00', read_method: 'typed' } });
+  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-old', max_c: '18.5', min_c: '12.0', period_start: '2026-11-10T00:00:00+00:00', read_method: 'photo' } });   // Lisa 11 Nov: missed readings are from photos
   await expect(page.getByText('Now press CLR')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Done' }).click();

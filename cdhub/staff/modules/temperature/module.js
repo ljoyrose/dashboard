@@ -302,7 +302,8 @@
       var b = empty ? null : breach(lim, num(mn), num(mx));
       if (b && !noteIn.value.trim()) { setMsg(msg, 'Say what was done.', 'bad'); noteIn.focus(); return; }
       var f = { area_id: o.area.id, period_start: slot.periodStart };
-      if (!none) { f.max_c = mx; f.min_c = mn; f.read_method = cam ? 'camera' : 'typed'; }
+      // A missed reading is typed from a photo: saved as 'photo' (Lisa 11 Nov 2026), never shown.
+      if (!none) { f.max_c = mx; f.min_c = mn; f.read_method = cam ? 'camera' : past ? 'photo' : 'typed'; }
       if (empty) f.room_empty = 'yes';
       if (cam && !none) f.camera_value_changed = (cam.max !== mx || cam.min !== mn) ? 'true' : 'false';
       if (sp) f.spot_c = sp;
