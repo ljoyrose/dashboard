@@ -198,6 +198,9 @@ tr:last-child td{border-bottom:none}
 #sopcard .sopgrp{margin:0 0 12px}#sopcard .sopgrp>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:var(--radius);font-weight:600;--house-lbar-out:1px}
 #sopcard .sopgrp>summary::-webkit-details-marker{display:none}#sopcard .sopgrp>summary .n{font-weight:400;color:var(--muted)}
 #sopcard .sopgrp .mrow{margin-left:12px}
+.compfold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;min-height:44px}.compfold>summary::-webkit-details-marker{display:none}
+.compfold>summary h3{margin:0;flex:1}.compfold>summary::after{content:"\25BE";color:var(--muted);margin-left:8px}.compfold:not([open])>summary::after{content:"\25B8"}
+#compJobs td[data-n] a{text-decoration:none;display:inline-flex;min-height:32px;align-items:center}
 #sopcard .mrow .mut{flex:0 1 11em;overflow-wrap:anywhere}
 #sopcard .mrow .cb{flex:none;padding:0 10px}
 #sopcard .mrow:has(.sopopen){flex-wrap:wrap}
@@ -429,7 +432,13 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
 var OPTIONAL_FILES={'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
-function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy}; }
+function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy,fold:compOpen,sopHref:sopHref}; }
+/* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
+var COMP={shut:{}};
+function compOpen(k){ return COMP.shut[k]?'':' open'; }
+function compFold(id,k,title,body){ return '<section class="card" id="'+id+'"><details class="compfold" data-fold="'+k+'"'+compOpen(k)+'><summary><h3>'+title+'</h3></summary>'+body+'</details></section>'; }
+function sopHref(name){ return '#/sops/'+encodeURIComponent(name); }
+function roomLink(id,label){ return id?'<a href="#/areas/'+esc(id)+'" data-room-link>'+esc(label)+'</a>':esc(label); }
 function jobsHist(t){ return BLDJobsView.historyHtml(jobsV(),t,'<svg class="ricon" aria-hidden="true"><use href="#i-clipboard"/></svg>'); }
 var T={}, LOAD={state:'boot',err:null,storedAt:null,notes:[]};
 var DB=null, ROUND={}, ACCESS={}, DBERR=null;
@@ -2616,7 +2625,7 @@ function drawSops(){
   var out='', i=0;
   while(i<list.length){
    var c=list[i].colour, j=i; while(j<list.length&&list[j].colour===c) j++;
-   var shut=!!SOP.shut[c];
+   var shut=!!SOP.shut[c] && !list.slice(i,j).some(function(r){ return r.short_name===SOP.open; });
    out+='<details class="sopgrp" data-group="'+esc(c)+'"'+(shut?'':' open')+'><summary class="house-lbar" style="--sc:var('+sopDot(c)+')"><span class="g">'+esc(c)+(SOP_MEANING[c]?' \u2013 '+esc(SOP_MEANING[c]):'')+'</span> <span class="n">'+(j-i)+'</span></summary>'
      +html.slice(i,j).join('')+'</details>';
    i=j;
@@ -2640,33 +2649,34 @@ function pageCompliance(){
  da.forEach(function(x){ probs.push({who:x.dam,t:'Mated too young',s:'Mated '+x.on+(x.est?' (estimated from the litter, no mating row)':'')+', born '+x.dob+'. Your rule: '+x.months+' months.'}); });
  lc.forEach(function(x){ probs.push({who:x.dam,t:'Too many litters',s:'Litter '+x.n+' ('+(x.litter.pairing||x.litter.id)+', '+litDob(x.litter)+'). Your rule: '+x.max+'.'}); });
  var h='<h2>Compliance</h2><p class="sub">Breeding rules. You set them; every litter and mating is checked against the version in force on its own date.</p>';
- h+='<section class="card" id="compProblems"><h3>Needs a look'+cntPill(probs.length)+'</h3>';
- if(unset.length) h+='<p><span class="pill w">'+unset.length+' of 3 rules not set</span> '+esc(unset.map(function(b){return b[1].toLowerCase();}).join(', '))+'. Those checks are not run until you set them.</p>';
- h+=probs.length?'<ul class="notes">'+probs.map(function(p){ return '<li><b>'+esc(nameOf(p.who)||p.who)+'</b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
+ var pb='';
+ if(unset.length) pb+='<p><span class="pill w">'+unset.length+' of 3 rules not set</span> '+esc(unset.map(function(b){return b[1].toLowerCase();}).join(', '))+'. Those checks are not run until you set them.</p>';
+ pb+=probs.length?'<ul class="notes">'+probs.map(function(p){ return '<li><b><a href="#/dogs/'+esc(p.who)+'" data-dog-link>'+esc(nameOf(p.who)||p.who)+'</a></b> — '+esc(p.t)+'<br><span class="mut">'+esc(p.s)+'</span></li>'; }).join('')+'</ul>'
    :(unset.length<3?'<p class="mut">Nothing breaks the rules you have set.</p>':'');
- h+='</section>';
+ h+=compFold('compProblems','problems','Needs a look'+cntPill(probs.length),pb);
  var rl=roomAudit(today);
- h+='<section class="card" id="compRooms"><h3>Room limits'+cntPill(rl.over.length)+'</h3><p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses the limits in BLD-area_capacity and the flap setting.</p>'
-  +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
-  +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+esc(x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
-  +'<p><a href="#/areas">Open Areas</a></p></section>';
+ h+=compFold('compRooms','rooms','Room limits'+cntPill(rl.over.length),'<p class="mut">A room takes one alternative, e.g. 3 small or 2 medium. Mixed sizes are fine if the headcount fits the largest dog\u2019s limit. Uses the limits in BLD-area_capacity and the flap setting.</p>'
+  +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
+  +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
+  +'<p><a href="#/areas">Open Areas</a></p>');
  h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
- h+='<section class="card" id="compRules"><h3>Your breeding rules</h3><div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
+ h+=compFold('compRules','rules','Your breeding rules','<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
   +BREED_RULES.map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);
    return '<tr data-rule="'+b[0]+'"><td><b>'+esc(b[1])+'</b></td><td>'+(cur?'<b>'+esc(cur.value)+'</b> '+esc(b[2]):'<span class="pill w">not set</span>')+'</td>'
     +'<td>'+(cur?esc(dmy(cur.effective_from)):'—')+'</td><td class="mut">'+esc(cur&&cur.source||'—')+'</td>'
     +'<td class="mut">'+(all.length>1?all.map(function(r){ return esc(r.value)+' from '+esc(dmy(r.effective_from)); }).join(' → '):(all.length?'1 version':'—'))+'</td></tr>'; }).join('')
-  +'</tbody></table></div>'+((T['BLD-breeding_rule.csv']||[]).length?'':'<p class="mut">No rules saved yet. The file BLD-breeding_rule must exist in the folder (header row only) and its save switch be on.</p>')+'</section>';
- h+='<section class="card" id="compAdd"><h3>Add a rule or a change</h3>'
+  +'</tbody></table></div>'+((T['BLD-breeding_rule.csv']||[]).length?'':'<p class="mut">No rules saved yet. The file BLD-breeding_rule must exist in the folder (header row only) and its save switch be on.</p>'));
+ h+=compFold('compAdd','add','Add a rule or a change',''
   +'<p class="mut">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only an owner code can save.</p>'
   +'<div class="frow"><select id="brKey"><option value="">choose a rule…</option>'+BREED_RULES.map(function(b){ return '<option value="'+b[0]+'">'+esc(b[1])+' ('+b[2]+')</option>'; }).join('')+'</select> '
   +'<input id="brVal" type="number" inputmode="numeric" min="1" max="48" step="1" placeholder="number" aria-label="number" style="width:7em"> '
   +'<input id="brFrom" type="date" value="'+today+'" aria-label="in force from"> '
   +'<input id="brSrc" type="text" placeholder="source, e.g. licence condition" aria-label="source" style="min-width:14em"> '
-  +'<button type="button" id="brSave">Save rule</button></div><p id="brMsg" class="mut" aria-live="polite"></p></section>';
+  +'<button type="button" id="brSave">Save rule</button></div><p id="brMsg" class="mut" aria-live="polite"></p>');
  return h;
 }
 function bindCompliance(){
+ Array.prototype.forEach.call(document.querySelectorAll('details.compfold'),function(d){ d.addEventListener('toggle',function(){ COMP.shut[d.dataset.fold]=!d.open; }); });
  var b=document.getElementById('brSave'); if(!b) return;
  b.addEventListener('click',async function(){
   var key=document.getElementById('brKey').value, val=String(document.getElementById('brVal').value||'').trim(),
@@ -2761,8 +2771,8 @@ function focusView(){
 function cdIn(on){ document.documentElement.classList.toggle('cd-in',on); ['cdRefresh','cdSignout'].forEach(function(id){ document.getElementById(id).classList.toggle('hidden',!on); }); }
 function go(id,push){
  pill();
- var full=String(id||''), sub=null, m=/^(\w+)\/([\w.-]+)$/.exec(full);
- if(m){ id=m[1]; sub=m[2]; }
+ var full=String(id||''), sub=null, m=/^(\w+)\/([\w.%-]+)$/.exec(full);
+ if(m){ id=m[1]; try{ sub=decodeURIComponent(m[2]); }catch(e){ sub=m[2]; } }
  var main=document.getElementById('main');
  if(LOAD.state==='signin'){
   main.innerHTML='<div class="card acc4" style="margin-top:24px"><h2 class="hx4">Sign in to see the tables</h2>'
@@ -2782,6 +2792,7 @@ function go(id,push){
  }
  if(!PAGES[id]) id='map';
  DOGFOCUS=(id==='dogs'&&sub)?sub:''; AREAFOCUS=(id==='areas'&&sub)?sub:'';
+ if(id==='sops'&&sub) SOP.open=sub;   /* opened from a Compliance number: that SOP, unfolded */
  cdIn(true);
  document.getElementById('nav').innerHTML=navHtml();
  main.innerHTML=PAGES[id]();
@@ -2790,6 +2801,7 @@ function go(id,push){
  levelHeadings(main);
  document.getElementById('next').innerHTML=(NEXT[id]||[]).map(function(n){return '<button data-go="'+n+'">Next: '+label(n)+' →</button>';}).join('');
  if(id==='compliance') bindCompliance();
+ if(id==='sops'&&sub) setTimeout(function(){ var r=document.querySelector('[data-sop="'+CSS.escape(sub)+'"]'); if(r&&r.scrollIntoView) r.scrollIntoView({block:'start'}); },0);
  if(id==='dogs'){
   var fst=document.getElementById('fst');
   STATUS.forEach(function(x){ var o=document.createElement('option'); o.value=x[0]; o.textContent=x[1]; fst.appendChild(o); });
