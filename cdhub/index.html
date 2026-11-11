@@ -184,10 +184,10 @@ tr:last-child td{border-bottom:none}
 .mcard h3+.mrow,.mcard .mrow:first-of-type{border-top:0;padding-top:16px}
 .mrow .t{flex:1;min-width:0;font-weight:600;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden}
 
-#sopcard .mrow,#sopcard .mrow:first-child{border:1px solid var(--line);border-left:3px solid var(--c,var(--line));box-shadow:none;border-radius:var(--radius);background:var(--card);padding:0;margin:0 0 8px}
-@media (hover:hover){#sopcard .mrow:has(.sopopen:hover){border-color:var(--sel-bd);border-left-color:var(--c,var(--sel-bd))}}
+#sopcard .mrow,#sopcard .mrow:first-child{border:1px solid var(--line);box-shadow:none;border-radius:var(--radius);background:var(--card);padding:0;margin:0 0 8px}
+@media (hover:hover){#sopcard .mrow:has(.sopopen:hover){border-color:var(--sel-bd)}}
 #sopcard .mrow .sopopen:hover,#sopcard .mrow .sopopen:focus,#sopcard .mrow .sopopen:focus-visible{outline:none!important}
-#sopcard .mrow:has(.sopopen:focus-visible){border-color:var(--ink);border-left-color:var(--c,var(--ink))}
+#sopcard .mrow:has(.sopopen:focus-visible){border-color:var(--ink)}
 /* The card is the frame. The button is the words inside it, so it is not a second one-line control. */
 #main #sopcard button.sopopen{background:transparent;border:0;border-radius:0;box-shadow:none;min-height:44px;height:auto;padding:10px 12px;width:100%;min-width:0;display:flex;align-items:flex-start;text-align:left;cursor:pointer;color:inherit;font-weight:600}
 #sopcard .sopopen .t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;white-space:normal;overflow:visible;-webkit-line-clamp:unset;line-clamp:unset}
@@ -2586,7 +2586,7 @@ function drawSops(){
   var signType=signs.length?sopTypeOf(signs[0].type_code):null;
   var signBadge=signType?'<span class="sopsigns" data-type-code="'+esc(signType.type_code)+'" aria-label="'+signs.length+' linked '+esc(signType.label.toLowerCase())+(signs.length>1?'s':'')+'">'+sopIcon(signType.icon_key)+signs.length+'</span>':'';
   var isOpen=SOP.open===r.short_name, pid='sopb-'+list.indexOf(r);
-  return '<div class="mrow" data-sop="'+esc(r.short_name)+'" style="--c:var('+sopDot(r.colour)+')"><button type="button" class="sopopen" data-house="text" data-sop-open="'+esc(r.short_name)+'" aria-expanded="'+isOpen+'"'+(isOpen?' aria-controls="'+pid+'"':'')+'><span class="t"><span class="n">'+esc(r.short_name)+'</span><small>'+esc(r.frequency)+'</small></span><span class="sr">'+esc(r.colour)+'</span></button>'+badge+signBadge+form+'</div>'
+  return '<div class="mrow house-lbar" data-sop="'+esc(r.short_name)+'" style="--sc:var('+sopDot(r.colour)+')"><button type="button" class="sopopen" data-house="text" data-sop-open="'+esc(r.short_name)+'" aria-expanded="'+isOpen+'"'+(isOpen?' aria-controls="'+pid+'"':'')+'><span class="t"><span class="n">'+esc(r.short_name)+'</span><small>'+esc(r.frequency)+'</small></span><span class="sr">'+esc(r.colour)+'</span></button>'+badge+signBadge+form+'</div>'
    +(isOpen?'<div class="sopbody" id="'+pid+'" style="--hc:var('+sopDot(r.colour)+')" data-sop-body="'+esc(r.short_name)+'">'+sopCardHtml(r)+'</div>':'');
  }).join('');
  var empty=document.getElementById('sopempty');
