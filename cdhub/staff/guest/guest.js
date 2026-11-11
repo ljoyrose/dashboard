@@ -39,7 +39,7 @@
       }
       if (fresh) store(fresh);
       screen.textContent = '';
-      var areas = r.rows.map(function (a) { return { id: a.id, label: a.code || a.id, group: a.grouping || '' }; });
+      var areas = r.rows.filter(BLDOccupancy.inUse).map(function (a) { return { id: a.id, label: a.code || a.id, group: a.grouping || '' }; });
       save.setLookups({ area: areas });
       var host = document.createElement('div'); screen.appendChild(host);
       BLDScreens.temperatureEntry(host, { save: guestSave, areas: areas });

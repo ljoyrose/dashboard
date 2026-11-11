@@ -99,7 +99,7 @@
         if (!all.ok) { msg.textContent = all.message; return { ok: false, reason: 'read' }; }
         var types = currentTypes(all.tables.check_type, londonToday(opts.now));
         if (!types.length) { msg.textContent = 'No checks have been set up yet. Ask Lisa.'; return { ok: false, reason: 'none' }; }
-        draw(host, save, types, all.tables.area, onSite(all.tables), opts.type, msg);
+        draw(host, save, types, (all.tables.area || []).filter(function (a) { return !/^ZZ_/i.test(String(a.code || "")); }), onSite(all.tables), opts.type, msg);
         return { ok: true, types: types.length };
       });
     });
