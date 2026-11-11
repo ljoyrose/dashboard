@@ -196,7 +196,8 @@ var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
 var AREA_NAMES={};  /* areaId -> display name/code */
 var AREA_SORT={};   /* areaId -> group_sort from BLD-area (the round order is rows, never coded here) */
 var ROUND_DATE=null;
-var SPAN={};        /* areaId -> {first,last} reading day: a room is only needed inside its own span (no coded dates) */
+var SPAN={};        /* areaId -> {first,last} reading day */
+var FIRST_DAY='';   /* the first day any room has a reading: nothing is missed before readings began (no coded date) */
 
 /* ---- helpers ---- */
 var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -280,7 +281,8 @@ async function loadAreaData(){
         AREA_DAYS[date][r.area_id][slot]={min:r.min_c,max:r.max_c,note:r.mitigation_note||''};
       });
     }
-    SPAN={};
+    SPAN={}; FIRST_DAY='';
+    Object.keys(AREA_DAYS).forEach(function(d){ if(!FIRST_DAY||d<FIRST_DAY) FIRST_DAY=d; });
     Object.keys(AREA_DAYS).forEach(function(d){ Object.keys(AREA_DAYS[d]).forEach(function(aid){
       var s=SPAN[aid]||(SPAN[aid]={first:d,last:d}); if(d<s.first)s.first=d; if(d>s.last)s.last=d; }); });
     var af=await findDriveFile('BLD-area.csv');
@@ -416,12 +418,13 @@ function dpIndoor(v){
 }
 function dpOutdoor(v){ return dpIndoor(v).replace(/\.0$/,''); }
 /* ---- the one set of rules every view uses (spec: tests/mocked/history-calm.spec.js) ---- */
-/* A room is needed on a day only inside its own span of readings (first reading day to last; a room still in use
-   runs to today). Retired (ZZ_) rooms end at their last reading. So an old or renamed room never shows as missed. */
+/* Every room in use is needed from the first day any reading exists up to today, including a room with no readings
+   at all (its missed slots must show for the audit). A retired (ZZ_) room ends at its own last reading, so an old or
+   renamed room never shows as missed. */
 function neededOn(aid,day){
-  var sp=SPAN[aid]; if(!sp) return false;
-  var last=isRetired(aid)?sp.last:TODAY_STR;
-  return day>=sp.first&&day<=last;
+  if(!FIRST_DAY||day<FIRST_DAY||day>TODAY_STR) return false;
+  if(!isRetired(aid)) return aid in AREA_NAMES||aid in SPAN;
+  var sp=SPAN[aid]; return !!sp&&day<=sp.last;
 }
 function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 /* One slot: in / out / nolimit / miss / due / none */
