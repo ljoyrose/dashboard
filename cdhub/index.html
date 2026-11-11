@@ -1391,7 +1391,8 @@ function tempsCard(){
   +(out?row('Outside',esc(outdoorBit(out.min)+'\u2013'+outdoorBit(out.max))+' °C',esc(out.phrase||''),outState(out))
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
   +outdoorStrip(date)
-  +'<div class="mfoot"><span class="mut"></span><a class="btn" href="./history.html">Temperature history</a><button type="button" class="btn house-open" data-go="round">The round</button></div></section>';
+  +'<div class="mfoot"><span class="mut"></span><a class="btn" href="./history.html">Temperature history</a><button type="button" class="btn house-open" data-go="round">The round</button>'
+  +'<a class="btn" id="addThermo" href="./staff/print/?add=thermometer">+ Thermometer</a></div></section>';
 }
 /* foundation: checks (every data check as a ✓ / ✗ line; a check with a list to open has one Show button) */
 function checksCard(){
