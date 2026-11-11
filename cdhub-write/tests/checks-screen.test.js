@@ -170,25 +170,54 @@ test('the dog list is only dogs on site, A-Z: a dog that has left is not offered
   } finally { delete global.BLDOccupancy; }
 });
 
-test('a retired room (code starting ZZ_) is never offered on the checks', async () => {
+test('a room whose room.in_use rows ended before today is never offered on the checks; one still in use is', async () => {
+  global.BLDNeeds = require('../client/needs.js');
   global.BLDOccupancy = require('../client/occupancy.js');
   try {
     const w = world(), d = w.dom.window.document;
     const af = w.env.file('BLD-area.csv')[0];
     const h = w.env.ctx.csvParse_(af.content)[0];
-    af.content += h.map((c) => ({ id: 'area-zz', tenant_id: fx.TENANT, code: 'ZZ_OLD1', grouping: 'T - Test house' })[c] || '').join(',') + '\r\n';
+    af.content += h.map((c) => ({ id: 'area-old', tenant_id: fx.TENANT, code: 'OLD1', grouping: 'T - Test house' })[c] || '').join(',') + '\r\n';
+    af.content += h.map((c) => ({ id: 'area-new', tenant_id: fx.TENANT, code: 'NEW1', grouping: 'T - Test house' })[c] || '').join(',') + '\r\n';
+    const RH = ['id', 'tenant_id', 'need_type', 'target_table', 'target_id', 'from_date', 'to_date', 'source', 'set_by', 'set_on'];
+    const row = (o) => RH.map((c) => o[c] || '').join(',');
+    const vis = w.env.file('BLD-field_visibility.csv')[0];
+    ['*', 'id', 'need_type', 'target_table', 'target_id', 'from_date', 'to_date'].forEach((c) => { vis.content += `v-req-${c},${fx.TENANT},requirement,${c},aud-staff,yes,,,,,\r\n`; });
+    w.env.addFile('BLD-requirement.csv', RH.join(',') + '\r\n'
+      + row({ id: 'req-1', tenant_id: fx.TENANT, need_type: 'room.in_use', target_table: 'area', target_id: 'area-old', from_date: '2026-01-01', to_date: '2026-01-02' }) + '\r\n'
+      + row({ id: 'req-2', tenant_id: fx.TENANT, need_type: 'room.in_use', target_table: 'area', target_id: 'area-new', from_date: '2026-01-01' }) + '\r\n');
     await BLDChecks.mount(w.host, w.s, opts); await flush();
     const rooms = [...d.getElementById('chk-area_id').options].map((o) => o.value).filter(Boolean);
-    assert.equal(rooms.includes('area-zz'), false);
-    assert.ok(rooms.length > 0);
-  } finally { delete global.BLDOccupancy; }
+    assert.equal(rooms.includes('area-old'), false);
+    assert.equal(rooms.includes('area-new'), true);
+    assert.ok(rooms.length > 1);
+  } finally { delete global.BLDOccupancy; delete global.BLDNeeds; }
 });
 
-test('the staff Where list (dailyList) never shows a retired ZZ_ room; inUse is the one rule', () => {
+test('inUse is the one room rule: no rows = in use; rows = in use only on covered days (11 Nov in, 12 Nov out); a ZZ_ name means nothing now', () => {
   const Occ = require('../client/occupancy.js');
-  const T = { area: [{ id: 'a1', code: 'R1' }, { id: 'a2', code: 'ZZ_R2' }, { id: 'a3', code: 'zz_r3' }], subject: [], occupancy: [], subject_status: [] };
-  assert.deepEqual(Occ.dailyList(T).areas.map((a) => a.id), ['a1']);
-  assert.equal(Occ.inUse({ code: 'ZZ_X' }), false);
-  assert.equal(Occ.inUse({ code: '3B.1/2/3' }), true);
+  const req = [{ need_type: 'room.in_use', target_table: 'area', target_id: 'a2', from_date: '2026-01-01', to_date: '2026-11-11' },
+    { need_type: 'reading.temperature', target_table: 'thermometer', target_id: 'a3', from_date: '2026-01-01', to_date: '2026-01-02' }];
+  const T = { area: [{ id: 'a1', code: 'R1' }, { id: 'a2', code: '3A.1' }, { id: 'a3', code: 'ZZ_R3' }], subject: [], occupancy: [], subject_status: [], requirement: req };
+  assert.deepEqual(Occ.dailyList(T, '2026-11-11').areas.map((a) => a.id), ['a1', 'a2', 'a3']);
+  assert.deepEqual(Occ.dailyList(T, '2026-11-12').areas.map((a) => a.id), ['a1', 'a3']);   // another need_type never hides a room
+  assert.equal(Occ.inUse({ id: 'a2' }, '2026-11-11', req), true);
+  assert.equal(Occ.inUse({ id: 'a2' }, '2026-11-12', req), false);
+  assert.equal(Occ.inUse({ id: 'a2' }, '2025-12-31', req), false);
+  assert.equal(Occ.inUse({ id: 'x', code: 'ZZ_X' }, '2026-11-12', req), true);
   assert.equal(Occ.inUse(null), false);
+});
+
+test('BLDNeeds.coversDay: inclusive both ends, blank to_date = no end, any covering row counts; endDay gives the last day', () => {
+  const N = require('../client/needs.js');
+  const r = (f, t) => ({ need_type: 'n', target_table: 't', target_id: '1', from_date: f, to_date: t || '' });
+  assert.equal(N.coversDay([], 'n', 't', '1', '2026-11-12'), true);
+  const rows = [r('2026-11-01', '2026-11-05'), r('2026-11-10', '2026-11-11')];
+  ['2026-11-01', '2026-11-05', '2026-11-10', '2026-11-11'].forEach((d) => assert.equal(N.coversDay(rows, 'n', 't', '1', d), true, d));
+  ['2026-10-31', '2026-11-06', '2026-11-12'].forEach((d) => assert.equal(N.coversDay(rows, 'n', 't', '1', d), false, d));
+  assert.equal(N.coversDay([r('2026-11-01')], 'n', 't', '1', '2099-01-01'), true);
+  assert.equal(N.endDay(rows, 'n', 't', '1'), '2026-11-11');
+  assert.equal(N.endDay(rows.concat([r('2026-11-20')]), 'n', 't', '1'), '');
+  assert.equal(N.endDay([], 'n', 't', '1'), '');
+  assert.equal(N.coversDay(rows, 'n', 't', '2', '2026-11-12'), true);   // another target has no rows: open
 });

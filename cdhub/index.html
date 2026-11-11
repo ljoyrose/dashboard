@@ -791,9 +791,10 @@ function build(){
   });
 
 
-  CD.areas=(T['BLD-area.csv']||[]).map(function(r){ return {id:r.id,code:r.code,cabin:r.code,
+  /* rooms: a code starting ZZ_ is a row Lisa has retired (rows are never deleted) */
+  CD.areas=(T['BLD-area.csv']||[]).filter(function(r){ return !/^ZZ_/i.test(String(r.code||'')); }).map(function(r){ return {id:r.id,code:r.code,cabin:r.code,
     grouping:r.grouping||'other',group_sort:r.group_sort||'99',
-    m2:r.area_value||'',m2ok:r.m2_confirmed||'',m2note:r.m2_note||''}; });
+    m2:r.area_value||'',m2ok:r.m2_confirmed||'',m2note:r.m2_note||'',use:r.use||'',src:r.source||''}; });
   var CAP={}; (T['BLD-area_capacity.csv']||[]).forEach(function(r){
     var a=CAP[r.area_id]=CAP[r.area_id]||{free:{},limited:{}};
     (a[r.access_type]||(a[r.access_type]={}))[r.size_band]={n:r.max_dogs,basis:r.basis||''}; });
@@ -1892,6 +1893,7 @@ function pageAreas(){
     +'<h4>'+esc(a.code)+' <span class="mut" style="font-weight:400">'+esc(m2)+' m\u00b2</span>'
     +(cur?' <span class="pill '+(cur==='free'?'i':'w')+'">'+cur+'</span>':' <span class="pill no">flap?</span>')
     +(a.m2ok==='NO'?' <span class="pill w" title="'+esc(a.m2note)+'">m\u00b2 unconfirmed</span>':'')+'</h4>'
+    +(a.use?'<p class="mut" data-use="'+esc(a.id)+'" style="margin:0 0 6px">'+esc(a.use)+(a.src?' <small>('+esc(a.src)+')</small>':'')+'</p>':'')
     +'<div class="filt" style="margin-bottom:6px"><select class="aacc" data-area="'+a.id+'">'
     +'<option value="">how is it being run?</option>'
     +['free','limited'].map(function(m){
