@@ -221,7 +221,11 @@
 
   /* ------------------------------------------------------------------ one room: read, check, save */
   /**
-   * o: save, table ('area_reading' | 'guest_reading'), area {id,label}, limit {min,max,label}|{reason}, guest, onDone
+   * o: save, table ('area_reading' | 'guest_reading'), area {id,label}, limit {min,max,label}|{reason}, guest, onDone,
+   *    dogsHere (dogs recorded in the room, for the Room empty warning)
+   * Room empty (Lisa 11 Nov 2026): a flag on the slot's reading, meaning no dog present. A reading is optional with it;
+   * a reading outside the limit in an empty room is flagged "Room empty" and never counted as non-compliant, so no
+   * "What was done" is asked. Staff only (area_reading), never guests.
    */
   function entry(host, o) {
     var stopCam = null, cam = null;   // cam = {max, min} as the camera read them
@@ -238,6 +242,16 @@
     var typeBtn = h('button', { class: 'btn quiet', type: 'button', text: 'Type it', onclick: function () { stopNow(); form.hidden = false; maxIn.focus(); } });
     // A missed reading is typed from the paper sheet or a photo: the thermometer no longer shows that day's numbers.
     if (!past) host.appendChild(h('div', { class: 'tg-row' }, [camBtn, typeBtn]));
+    var emptyIn = h('input', { type: 'checkbox', 'aria-label': 'Room empty' }), emptyMsg = say('');
+    if (table === 'area_reading') {
+      host.appendChild(h('label', { class: 'tg-empty' }, [emptyIn, h('span', { text: 'Room empty' })]));
+      host.appendChild(emptyMsg);
+      emptyIn.addEventListener('change', function () {
+        if (emptyIn.checked) { form.hidden = false; setMsg(emptyMsg, o.dogsHere ? 'Dogs are recorded in this room.' : '', o.dogsHere ? 'warn' : ''); }
+        else setMsg(emptyMsg, '');
+        check();
+      });
+    }
     host.appendChild(camBox); host.appendChild(camMsg);
 
     function field(label, ph) { return h('input', { class: 'inp', inputmode: 'decimal', autocomplete: 'off', placeholder: ph || '00.0', 'aria-label': label }); }
@@ -272,7 +286,7 @@
     }
     function check() {
       requestId = null;
-      var mx = oneDp(maxIn.value), mn = oneDp(minIn.value), b = breach(lim, num(mn), num(mx));
+      var mx = oneDp(maxIn.value), mn = oneDp(minIn.value), b = emptyIn.checked ? null : breach(lim, num(mn), num(mx));
       noteRow.hidden = !b;
       if ((maxIn.value && !mx) || (minIn.value && !mn)) setMsg(checkMsg, 'One decimal place, e.g. 18.5', 'bad');
       else if (mx && mn && parseFloat(mn) > parseFloat(mx)) setMsg(checkMsg, 'MIN is higher than MAX. Wrong way round?', 'bad');
@@ -281,13 +295,16 @@
     }
     function send() {
       var mx = oneDp(maxIn.value), mn = oneDp(minIn.value), sp = spotIn.value.trim() ? oneDp(spotIn.value) : '';
-      if (!mx || !mn) { setMsg(msg, 'Type MAX and MIN, one decimal place.', 'bad'); return; }
+      var empty = emptyIn.checked, none = empty && !maxIn.value.trim() && !minIn.value.trim();
+      if (!none && (!mx || !mn)) { setMsg(msg, empty ? 'Type MAX and MIN, or leave both blank.' : 'Type MAX and MIN, one decimal place.', 'bad'); return; }
       if (sp === null) { setMsg(msg, 'Bed spot: one decimal place, or leave it empty.', 'bad'); return; }
-      if (parseFloat(mn) > parseFloat(mx)) { setMsg(msg, 'MIN is higher than MAX. Check the screen.', 'bad'); return; }
-      var b = breach(lim, num(mn), num(mx));
+      if (!none && parseFloat(mn) > parseFloat(mx)) { setMsg(msg, 'MIN is higher than MAX. Check the screen.', 'bad'); return; }
+      var b = empty ? null : breach(lim, num(mn), num(mx));
       if (b && !noteIn.value.trim()) { setMsg(msg, 'Say what was done.', 'bad'); noteIn.focus(); return; }
-      var f = { area_id: o.area.id, max_c: mx, min_c: mn, period_start: slot.periodStart, read_method: cam ? 'camera' : 'typed' };
-      if (cam) f.camera_value_changed = (cam.max !== mx || cam.min !== mn) ? 'true' : 'false';
+      var f = { area_id: o.area.id, period_start: slot.periodStart };
+      if (!none) { f.max_c = mx; f.min_c = mn; f.read_method = cam ? 'camera' : 'typed'; }
+      if (empty) f.room_empty = 'yes';
+      if (cam && !none) f.camera_value_changed = (cam.max !== mx || cam.min !== mn) ? 'true' : 'false';
       if (sp) f.spot_c = sp;
       if (noteIn.value.trim()) f.mitigation_note = noteIn.value.trim();
       requestId = requestId || o.save.newRequestId();
@@ -301,9 +318,9 @@
         form.hidden = true; camBox.textContent = ''; camMsg.textContent = '';
         host.appendChild(h('div', { class: 'card tg-clr', role: 'alert' }, [
           h('div', { class: 'nm', text: r.status === 'queued' ? 'Sent' : 'Saved' }),
-          past ? null : h('p', { text: 'Now press CLR on the thermometer.' })
+          past || none ? null : h('p', { text: 'Now press CLR on the thermometer.' })
         ]));
-        host.appendChild(h('button', { class: 'btn', type: 'button', text: past ? 'Done' : 'CLR pressed', onclick: function () { if (o.onDone) o.onDone(); } }));
+        host.appendChild(h('button', { class: 'btn', type: 'button', text: past || none ? 'Done' : 'CLR pressed', onclick: function () { if (o.onDone) o.onDone(); } }));
       });
     }
     return stopNow;
@@ -338,6 +355,7 @@
         cards.appendChild(h('button', { class: 'card go' + (done[a.id] ? ' tg-done' : ''), type: 'button', onclick: function () {
           var box = h('div'); list.textContent = ''; list.appendChild(box);
           o.setStop(entry(box, { save: o.save, table: 'area_reading', area: a, slot: slot,
+            dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length,
             limit: limitFor(a.id, o.bands, (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }), slot.date),
             onDone: function () { (o.readings = o.readings || []).push({ area_id: a.id, period_start: slot.periodStart }); show(); } }));
         } }, [h('div', { class: 'nm', text: (done[a.id] ? '✓ ' : '') + a.label }), done[a.id] ? h('div', { class: 'ds', text: 'Already has a reading' }) : null]));
@@ -363,7 +381,8 @@
       host.textContent = '';
       host.appendChild(h('button', { class: 'back', type: 'button', text: '← Rooms', onclick: list }));
       host.appendChild(box);
-      stop = entry(box, { save: o.save, table: o.guest ? 'guest_reading' : 'area_reading', area: a, limit: limit(a.id), guest: o.guest, onDone: function () { if (!o.guest) (o.done = o.done || {})[a.id] = true; list(); } });
+      stop = entry(box, { save: o.save, table: o.guest ? 'guest_reading' : 'area_reading', area: a, limit: limit(a.id), guest: o.guest,
+        dogsHere: (o.dogs || []).filter(function (d) { return d.areaId === a.id && !d.away; }).length, onDone: function () { if (!o.guest) (o.done = o.done || {})[a.id] = true; list(); } });
     }
     function list() {
       if (stop) { stop(); stop = null; }
@@ -517,7 +536,7 @@
       var months = {};
       rows.forEach(function (r) {
         var m = r.date.slice(0, 7), x = months[m] || (months[m] = { n: 0, lo: null, hi: null, br: 0 });
-        if (r.kind !== 'staff') return;
+        if (r.kind !== 'staff' || (r.min === null && r.max === null)) return;
         x.n++;
         if (r.min !== null && (x.lo === null || r.min < x.lo)) x.lo = r.min;
         if (r.max !== null && (x.hi === null || r.max > x.hi)) x.hi = r.max;
@@ -532,7 +551,7 @@
       // every reading
       var tb = h('tbody');
       rows.forEach(function (r) {
-        tb.appendChild(h('tr', { class: r.breach ? 'tg-br' : '' }, [
+        tb.appendChild(h('tr', { class: r.breach || r.flag ? 'tg-br' : '' }, [
           h('td', { text: ddmmyy(r.date) }), h('td', { text: r.slot }), h('td', { text: r.min === null ? '' : r.min.toFixed(1) }), h('td', { text: r.max === null ? '' : r.max.toFixed(1) }),
           h('td', { text: r.spot }), h('td', { text: r.note })   // neither how nor who/when is shown (Lisa, 11 Nov; who is on hold)
         ]));
@@ -543,7 +562,10 @@
     }
     function rowBreach(r, lo, hi) {
       if (r.kind !== 'staff') return;
-      r.breach = !!r.note || (lo !== null && r.min !== null && r.min < lo) || (hi !== null && r.max !== null && r.max > hi);
+      var outside = (lo !== null && r.min !== null && r.min < lo) || (hi !== null && r.max !== null && r.max > hi);
+      // Room empty (Lisa 11 Nov 2026): an outside reading is flagged with the caveat, never counted as outside the limit.
+      if (r.empty) { r.flag = outside; r.breach = false; return; }
+      r.breach = !!r.note || outside;
     }
   }
   /** Rows of one room and year from the three lists, oldest first. Guest and sensor rows are labelled, never merged. */
@@ -554,7 +576,9 @@
       var at = String(r.period_start || r.taken_at || '');
       if (r.area_id !== areaId || at.slice(0, 4) !== year || r.corrects_id) return;
       // Lisa, 11 Nov 2026: how a reading was taken (read_method, camera_value_changed) is saved only, never shown.
-      out.push({ kind: 'staff', kindLabel: 'Staff', date: at.slice(0, 10), slot: slotOf(at), sort: at, min: num(r.min_c), max: num(r.max_c), spot: r.spot_c || '', note: r.mitigation_note || '' });
+      var empty = String(r.room_empty || '').toLowerCase() === 'yes';
+      out.push({ kind: 'staff', kindLabel: 'Staff', date: at.slice(0, 10), slot: slotOf(at), sort: at, min: num(r.min_c), max: num(r.max_c), spot: r.spot_c || '', empty: empty,
+        note: [empty ? 'Room empty' : '', r.mitigation_note || ''].filter(Boolean).join(' · ') });
     });
     guest.forEach(function (r) {
       var at = String(r.period_start || r.taken_at || '');
@@ -581,6 +605,7 @@
       '.tg-guide span{position:absolute;right:4px;font:700 11px var(--body);color:var(--ljr-paper);background:var(--accent);padding:0 4px;border-radius:4px}.tg-max{top:2px}.tg-min{bottom:2px}' +
       '.tg-pair{display:grid;grid-template-columns:1fr 1fr;gap:10px}.tg-f{display:grid;font-size:13px;font-weight:700;color:var(--mut)}.tg-f[hidden]{display:none}' +
       '.tg-pair .inp{font-size:24px;text-align:center}.tg-spot{margin:4px 0 8px;color:var(--mut)}' +
+      '.tg-empty{display:flex;align-items:center;gap:10px;min-height:44px;font-weight:700;margin:8px 0}.tg-empty input{width:24px;height:24px}' +
       '.tg-clr{border-left:3px solid var(--good);margin:12px 0}.tg-done{border-left-color:var(--good)}' +
       '.tg-tab{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 14px}.tg-tab th,.tg-tab td{border-bottom:1px solid var(--line);padding:5px 4px;text-align:left}' +
       '.tg-br td{color:var(--ljr-3-text);font-weight:600}' +
