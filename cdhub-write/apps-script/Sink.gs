@@ -107,6 +107,35 @@ function findDuplicate_(spec, clean, rows, nowMs, today) {
   return null;
 }
 
+/**
+ * Late entry (Lisa 11 Nov 2026): an OWNER code sending read_method photo may give a period_start older than 7 days,
+ * back as far as the section's records are kept. Returns { oldestMs, keepYears, field } or null for everyone else.
+ */
+function lateAllowance_(spec, req, who, tenant, nowMs) {
+  var le = spec.lateEntry, f = req.fields || {};
+  if (!le || req.action !== 'add' || who.role !== le.role || String(f[le.field] || '').trim() !== le.value) return null;
+  var years = retentionYears_(le.retentionSection, tenant);
+  var oldest = new Date(nowMs);
+  oldest.setUTCFullYear(oldest.getUTCFullYear() - years);   // the same date and time, that many years ago
+  return { oldestMs: oldest.getTime(), keepYears: years, field: 'period_start' };
+}
+
+/** Years a section's records are kept: its BLD-retention_setting row (the last one), else the Config.gs default. */
+function retentionYears_(section, tenant) {
+  var r = store_read_(BLD.RETENTION_FILE, false), years = 0;
+  if (r) r.records.forEach(function (x) {
+    if ((!x.tenant_id || x.tenant_id === tenant) && String(x.section || '').trim() === section && /^\d{1,2}$/.test(String(x.keep_years || '').trim()) && parseInt(x.keep_years, 10) > 0) years = parseInt(x.keep_years, 10);
+  });
+  return years || BLD.LIMITS.RETENTION_DEFAULT_YEARS;
+}
+
+/** A late entry may never fill a slot already filled: the same room and period_start at any time is a repeat. */
+function sameSlot_(late, clean, rows) {
+  if (!clean[late.field]) return null;
+  for (var i = 0; i < rows.length; i++) if (rows[i].area_id === clean.area_id && rows[i][late.field] === clean[late.field]) return rows[i];
+  return null;
+}
+
 /** Main entry for a save. Returns a result object or throws err_. */
 function sinkHandle_(req) {
   var now = new Date(), nowMs = now.getTime();
@@ -213,7 +242,8 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
   var lookups = store_lookups_(spec, tenant);
-  var v = validateInput_(spec, req.fields, lookups, nowMs);
+  var late = lateAllowance_(spec, req, who, tenant, nowMs);
+  var v = validateInput_(spec, req.fields, lookups, nowMs, late);
   var errors = v.errors;
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
 
@@ -247,7 +277,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   }
 
   if (req.action === 'add') {
-    var dup = findDuplicate_(spec, v.clean, target.records.concat(waiting), nowMs, today);
+    var dup = findDuplicate_(spec, v.clean, target.records.concat(waiting), nowMs, today) || (late ? sameSlot_(late, v.clean, target.records.concat(waiting)) : null);
     if (dup) {
       throw err_('DUPLICATE', 'This looks like the same entry as one already saved' + (dup.id ? ' (' + dup.id + ')' : '') +
         '. If that one is wrong, tell the owner.', { duplicate_of: dup.id || '' });
