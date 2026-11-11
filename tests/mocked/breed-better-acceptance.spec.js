@@ -4,7 +4,7 @@
 // spec line it proves (S1, S2 ...). Invented animals only: the hub's own sample dogs plus tests/fixtures/breed-better/.
 //
 // Fixture, calculator, owner page, dog-card chip, missing-data and staff checks all run. Only the inspector view (S10)
-// is test.fixme: it needs a time-limited read-only link, which is not built yet. If a test fails, fix the PAGE, not
+// is test.fixme: it needs a time-limited read-only link, which is not built yet. If a test fails, fix the PAGE, no
 // the test, unless Lisa has changed the spec. Selectors: #/breed, data-bb-*, .bb-chip (breed-better/hub-view.js).
 const fs = require('fs');
 const path = require('path');
@@ -105,7 +105,7 @@ base.describe('Breed Better acceptance: fixtures (run now)', () => {
   });
 });
 
-// ---------------------------------------------------------------- hub page, owner 
+// ---------------------------------------------------------------- hub page, owner
 
 asOwner.describe('Breed Better acceptance: owner page', () => {
 
@@ -248,7 +248,7 @@ asOwner.describe('Breed Better acceptance: dog card chip', () => {
   });
 });
 
-// ---------------------------------------------------------------- missing data 
+// ---------------------------------------------------------------- missing data
 
 notEnrolled.describe('Breed Better acceptance: animal not enrolled', () => {
   notEnrolled('S6.1 a dog that is not enrolled has no chip and is not listed', async ({ page }) => {
@@ -276,7 +276,7 @@ draftScheme.describe('Breed Better acceptance: no active scheme', () => {
   });
 });
 
-// ---------------------------------------------------------------- staff 
+// ---------------------------------------------------------------- staff
 
 asStaff.describe('Breed Better acceptance: staff see nothing (Lisa 11 Nov 2026)', () => {
 
