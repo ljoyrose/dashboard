@@ -11,6 +11,7 @@
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
+<script src="staff/lib/thermometer.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 (function(){var o={};try{o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{};}catch(e){o={};}
@@ -414,17 +415,11 @@ var YEAR=2026;
    but a past day that has a reading for one still shows it, last, so no record is hidden. */
 function areaName(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')); }
 function isRetired(aid){ return /^ZZ_/i.test(String(AREA_NAMES[aid]||'')); }
-/* A thermometer row counts on a day when valid_from <= day <= valid_to (blank = open). A row switched off with no
-   valid_to was never meant (entered by mistake). Same rule as the staff round (thermInDate in the temperature module). */
-function thermInDate(t,day){
-  var f=String(t.valid_from||'').slice(0,10), to=String(t.valid_to||'').slice(0,10);
-  if(String(t.active).toLowerCase()==='false'&&!to) return false;
-  return (!f||f<=day)&&(!to||day<=to);
-}
-/* Due on a day: with thermometer rows, a place whose thermometer is in date; before any rows, every room not retired (ZZ_). */
+/* Due on a day: with thermometer rows, a place with a thermometer BLDThermometer.neededOn says is needed that day
+   (staff/lib/thermometer.js: the one rule for the round, History and Compliance); before any rows, every room not retired (ZZ_). */
 function dueOn(aid,day){
-  if(!THERMOS.length) return !isRetired(aid);
-  return THERMOS.some(function(t){ return t.area_id===aid&&thermInDate(t,day); });
+  if(!THERMOS.length||!window.BLDThermometer) return !isRetired(aid);
+  return THERMOS.some(function(t){ return t.area_id===aid&&window.BLDThermometer.neededOn(t,day); });
 }
 function areasInWalk(extra,day){
   var ids={};

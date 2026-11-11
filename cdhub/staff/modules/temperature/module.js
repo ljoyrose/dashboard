@@ -82,20 +82,15 @@
     if (t) { var a = (areas || []).filter(function (x) { return x.thermometerId && x.thermometerId === t.thermometerId; })[0]; if (a) return { areaId: a.id, at: t.at }; }
     return remembered(ROOM_KEY);
   }
-  /* A thermometer row counts on a day when valid_from <= day <= valid_to (blank = open). A row switched off with
-     no valid_to was never meant. Same rule as cdhub/history.html. */
-  function thermInDate(t, day) {
-    var f = String(t.valid_from || '').slice(0, 10), to = String(t.valid_to || '').slice(0, 10);
-    if (String(t.active).toLowerCase() === 'false' && !to) return false;
-    return (!f || f <= day) && (!to || day <= to);
-  }
   /* The round is the thermometer rows (BLD-thermometer: name, area_id, active, valid_from, valid_to), never a coded
      list: a room with no thermometer (a field) is not on it, a corridor is its own place, one thermometer per place,
-     and a thermometer is only due on the days it is in date. With no rows yet, every room is listed as before. */
+     and a thermometer is only due on the days BLDThermometer.neededOn says (cdhub/staff/lib/thermometer.js, the one
+     rule for the round, History and Compliance). With no rows yet, or no rule loaded, every room in use is listed. */
   function roundAreas(areas, thermos, day) {
+    var T = window.BLDThermometer;
     var all = (thermos || []).filter(function (t) { return t.area_id; });
-    if (!all.length) return areas.filter(function (a) { return !a.retired; });
-    var live = all.filter(function (t) { return thermInDate(t, day); });
+    if (!all.length || !T) return areas.filter(function (a) { return !a.retired; });
+    var live = T.neededList(all, day);
     var out = [];
     areas.forEach(function (a) {
       live.filter(function (t) { return t.area_id === a.id; }).slice(0, 1).forEach(function (t) {
@@ -578,7 +573,7 @@
     return function () { if (stop) stop(); };
   }
 
-  window.BLDTemperature = { rooms: function (host, o) { css(); return rooms(host, o); }, entry: entry, parseGovee: parseGovee, limitFor: limitFor, yearRows: yearRows, roundAreas: roundAreas, thermInDate: thermInDate, slotNow: slotNow, londonIso: londonIso };
+  window.BLDTemperature = { rooms: function (host, o) { css(); return rooms(host, o); }, entry: entry, parseGovee: parseGovee, limitFor: limitFor, yearRows: yearRows, roundAreas: roundAreas, slotNow: slotNow, londonIso: londonIso };
   if (window.StaffPage) {
     window.StaffPage.register({ id: 'temperature', title: 'Room temperatures', desc: 'Camera reads the min/max', icon: window.StaffPage.ctx.icons.temp, order: 20, open: openStaff });
   }
