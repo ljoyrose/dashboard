@@ -74,7 +74,7 @@
     if (!ok) return;
     var onSite = {}, roomOf = {}; BLDOccupancy.dailyList(T).dogs.forEach(function (d) { onSite[d.id] = true; if (d.known && !d.out && d.areaLabel && !/^ZZ_/i.test(d.areaLabel)) roomOf[d.id] = d.areaLabel; });   // same list as The Board: not dogs that have left
     opts.appendChild(btn('Whole-site code', function () { make('site', [{ id: 'site', label: 'Today' }]); }));
-    opts.appendChild(btn('Room signs', function () { make('area', T.area.filter(function (a) { return !/^ZZ_/i.test(String(a.code || "")); }).map(function (a) { return { id: a.id, label: a.code || a.id }; })); }));
+    opts.appendChild(btn('Room signs', function () { make('area', T.area.filter(BLDOccupancy.inUse).map(function (a) { return { id: a.id, label: a.code || a.id }; })); }));
     opts.appendChild(btn('Dog kennel cards', function () { make('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '' }; })); }));
     opts.appendChild(btn('Litter cards', function () {
       if (!(T.litter || []).length) { say('The litter list is not switched on yet.', 'warn'); return; }

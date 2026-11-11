@@ -241,17 +241,18 @@
 
     /**
      * Read one list through the script, as far as Lisa has allowed THIS staff code (no Google sign-in).
+     * Optional filter {area_id, from, to} (London days YYYY-MM-DD) narrows the rows; it never widens them.
      * Resolves (never rejects): {ok:true, table, fields, rows, count, scope} or {ok:false, code, message}.
      * Nothing is cached or kept: the rows live only in the page.
      */
-    function read(tableKey) {
+    function read(tableKey, filter) {
       if (!scriptUrl) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading is off. Lisa switches it on when it is ready.' });
       if (status.checked && status.reachable && !status.readEnabled) return Promise.resolve({ ok: false, code: 'READ_OFF', message: 'Reading from the records is switched off.' });
       if (!getCode()) return Promise.resolve({ ok: false, code: 'NO_CODE', message: 'Enter your staff code.' });
       if (!doFetch) return Promise.resolve({ ok: false, code: 'NETWORK', message: 'This browser cannot reach the records.' });
       return withTimeout(doFetch(scriptUrl, {
         method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ v: 1, action: 'read', code: getCode(), table: tableKey })
+        body: JSON.stringify(filter ? { v: 1, action: 'read', code: getCode(), table: tableKey, filter: filter } : { v: 1, action: 'read', code: getCode(), table: tableKey })
       })).then(function (r) { return r.json(); }).then(function (j) {
         if (j && j.ok && j.result) { var res = j.result; res.ok = true; return res; }
         return { ok: false, code: (j && j.code) || 'UNEXPECTED', message: (j && j.message) || 'Something went wrong.' };

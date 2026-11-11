@@ -143,3 +143,12 @@ test('a room job about dogs lists the room\'s dogs ticked and saves only those l
   expect(sent[0].fields.area_id).toBe('area-1');
   expect(sent[0].fields.how_recorded).toBe('scanned');
 });
+
+test('a scanned room has a Temperature button that opens the temperature screen', async ({ page }) => {
+  await setup(page);
+  await page.goto('cdhub/staff/#s/ROOMTAG2');
+  await page.getByRole('button', { name: 'Move dogs' }).click();
+  await page.getByRole('button', { name: 'Temperature' }).click();
+  await expect(page).toHaveURL(/#m\/temperature$/);
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('bld.move.room')).areaId)).toBe('area-1');
+});
