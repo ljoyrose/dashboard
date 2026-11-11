@@ -35,7 +35,8 @@
         max_c: { type: 'temp', label: 'Highest (max) C' },
         spot_c: { type: 'temp', label: 'Spot reading C' },
         mitigation_note: { type: 'text', label: 'What was done about it' },
-        room_empty: { type: 'enum', values: ['yes'], label: 'Room empty' }   // Lisa 11 Nov 2026: no dog; a reading is optional
+        room_empty: { type: 'enum', values: ['yes'], label: 'Room empty' },   // Lisa 11 Nov 2026: no dog; a reading is optional
+        thermometer_id: { type: 'ref', lookup: 'thermometer', ifLoaded: true, label: 'Thermometer' }   // checked only when the thermometer list is loaded
       }
     },
     occupancy: {
@@ -174,7 +175,7 @@
             if (bad.length) errors[name] = 'Not found in the ' + def.lookup + ' list: ' + bad.slice(0, 3).join(', ') + (bad.length > 3 ? ' and ' + (bad.length - 3) + ' more' : '') + '.';
           }
         } else if (def.type === 'ref') {
-          if (lookupSize(def.lookup) === 0) errors[name] = 'The ' + def.lookup + ' list is not loaded, so this cannot be checked.';
+          if (lookupSize(def.lookup) === 0) { if (!def.ifLoaded) errors[name] = 'The ' + def.lookup + ' list is not loaded, so this cannot be checked.'; }
           else if (!hasId(lookups[def.lookup], v)) errors[name] = 'Not found in the ' + def.lookup + ' list.';
         }
       });

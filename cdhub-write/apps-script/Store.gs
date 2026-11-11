@@ -323,7 +323,7 @@ function store_lookups_(spec, tenantId) {
     if (!r) { out[lk.name] = null; continue; }
     var set = {};
     r.records.forEach(function (rec) {
-      if (!rec.tenant_id || rec.tenant_id === tenantId) set[rec[lk.idCol]] = true;
+      if (!rec.tenant_id || rec.tenant_id === tenantId) set[rec[lk.idCol]] = lk.valCol ? (rec[lk.valCol] || true) : true;   // valCol: keep one column (e.g. a thermometer's area_id)
     });
     out[lk.name] = set;
   }

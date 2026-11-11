@@ -37,11 +37,13 @@ var TABLES = {
       'mitigation_note',    // PROPOSED: what was done when a reading is out of band
       'read_method',        // PROPOSED 8 Nov 2026: 'camera' or 'typed'; 'photo' (11 Nov) = typed later from a photo
       'camera_value_changed', // PROPOSED 8 Nov 2026: 'true' if staff changed the number the camera read
-      'room_empty'          // PROPOSED 11 Nov 2026 (Lisa): 'yes' = no dog in the room for this slot; blank = not said
+      'room_empty',         // PROPOSED 11 Nov 2026 (Lisa): 'yes' = no dog in the room for this slot; blank = not said
+      'thermometer_id'      // PROPOSED 11 Nov 2026 (Lisa): which named thermometer, so a room with 2 has 2 readings a slot
     ],
-    proposedColumns: ['corrects_id', 'mitigation_note', 'read_method', 'camera_value_changed', 'room_empty'],
+    proposedColumns: ['corrects_id', 'mitigation_note', 'read_method', 'camera_value_changed', 'room_empty', 'thermometer_id'],
     computedColumns: ['applied_limit_id', 'in_range', 'compliant', 'mitigation_required'],
-    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
+    // thermometer: id -> its area_id (valCol), so a reading can only name a thermometer in its own room
+    lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }, { name: 'thermometer', file: 'BLD-thermometer.csv', idCol: 'id', valCol: 'area_id' }],
     // Lisa 16 Oct (S02-4): staff see NO past entries, so they cannot point at one. A wrong entry is reported to
     // the owner, who fixes it with the owner edit (or an OWNER code sends a correction row).
     perms: { add: ROLE_ALL, correct: ['OWNER'] },
@@ -67,18 +69,24 @@ var TABLES = {
       // Lisa 11 Nov 2026: a room with no dog in it. The slot counts as covered and is shown flagged "Room empty", never
       // as non-compliant. A reading is optional then (staff may still read it: a dog may move in later), but both
       // min and max or neither. in_range / compliant stay blank: the save never judges a reading.
-      room_empty:          { type: 'enum', values: ['yes'] }
+      room_empty:          { type: 'enum', values: ['yes'] },
+      // Lisa 11 Nov 2026: "room H5/6 has 2 named thermometers". Optional: blank = one reading per room per slot, as before.
+      thermometer_id:      { type: 'ref', lookup: 'thermometer' }
     },
-    // duplicate guard: same tenant + same area + same period (morning/afternoon slot sent by the hub) within
-    // DUP_WINDOW_MIN of taken_at. Without period_start this is the old rule: same room inside the window.
-    dupKey: ['area_id', 'period_start'], dupTimeCol: 'taken_at',
+    // duplicate guard: same tenant + same area + same thermometer (blank = none named) + same period (morning/afternoon
+    // slot sent by the hub) within DUP_WINDOW_MIN of taken_at. Without period_start: same room inside the window.
+    dupKey: ['area_id', 'thermometer_id', 'period_start'], dupTimeCol: 'taken_at',
     stamp: function (row, ctx) {
       row.precision_dp = '1';   // Lisa 7 Nov 2026: room temperatures are kept to 1 decimal place
       if (row.min_c !== '' && row.max_c !== '') row[''] = (parseFloat(row.max_c) - parseFloat(row.min_c)).toFixed(1);
       row.taken_at = ctx.nowIso;
       row.taken_by = ctx.who;
     },
-    checkRow: function (row, errors) {
+    checkRow: function (row, errors, lookups) {
+      if (row.thermometer_id && !errors.thermometer_id && !errors.area_id && lookups && lookups.thermometer &&
+          lookups.thermometer[row.thermometer_id] !== row.area_id) {
+        errors.thermometer_id = 'That thermometer is in another room.';
+      }
       if (!errors.min_c && !errors.max_c && !errors.room_empty) {
         if (row.room_empty !== 'yes') {
           if (row.min_c === '') errors.min_c = 'This is needed.';
