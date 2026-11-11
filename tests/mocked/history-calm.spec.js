@@ -35,9 +35,10 @@ const RULES = {
 };
 
 // Fixture month: Jan 2026. Today is 12/01/26 at 20:00 (PM today is still due).
-// R1-R3 in use from 05/01; ZZ_R4 retired, last reading 10/01 (so never missed after that).
+// R1-R3 in use from 05/01; R4 retired: its room.in_use row ends 10/01 (BLD-requirement), so never missed after that.
 const NOW = new Date('2026-01-12T20:00:00');
-const ROOMS = 'id,code,group_sort\narea-r1,R1,1\narea-r2,R2,2\narea-r3,R3,3\narea-r4,ZZ_R4,4\n';
+const ROOMS = 'id,code,group_sort\narea-r1,R1,1\narea-r2,R2,2\narea-r3,R3,3\narea-r4,R4,4\n';
+const NEEDS = 'id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on\nreq-1,t,room.in_use,area,area-r4,2025-01-01,2026-01-10,,,\n';
 const R = [];
 const add = (aid, day, slot, min, max, note) => R.push([aid, day, slot, min, max, note || '']);
 for (const aid of ['area-r1', 'area-r2', 'area-r3', 'area-r4']) { add(aid, '2026-01-05', 'am', '12.0', '15.0'); add(aid, '2026-01-05', 'pm', '12.5', '16.0'); }
@@ -67,6 +68,8 @@ async function open(page, guard, size) {
   const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
   put('BLD-area.csv', ROOMS);
   put('BLD-area_reading.csv', READINGS);
+  const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
+  guard.world.file('bld-req', 'BLD-requirement.csv', NEEDS, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
   await page.clock.setFixedTime(NOW);
   if (size) await page.setViewportSize({ width: size.width, height: size.height });
   await page.addInitScript(() => localStorage.setItem('ljr-dash-auth', JSON.stringify({ access_token: 'FAKE-TEST-TOKEN', expires_at: Date.now() + 1800000, scope: 'https://www.googleapis.com/auth/drive.readonly' })));
@@ -129,7 +132,7 @@ test('information: one short line per room, a tick inside the limit, the unit on
   await expect(drill.locator('#d-out')).toHaveText('5.3 / -1.9 °C, rain 0 mm');
   await expect(drill.locator('#d-out')).toHaveText(RULES.words.outsideLine);
   const lines = drill.locator('.rl');
-  await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'ZZ_R4 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);
+  await expect(lines).toHaveText(['R1 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R2 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R3 · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓', 'R4 (retired 10/01/26) · AM 12.0–15.0 ✓ · PM 12.5–16.0 ✓']);
   for (const t of await lines.allTextContents()) { expect(t).toMatch(RULES.words.roomLine); expect(t).not.toContain('°C'); }
   await expect(drill.getByText('Indoors °C')).toHaveCount(1);
   for (const view of ['The round', 'Heat map', 'Year strip', 'Month cards']) {

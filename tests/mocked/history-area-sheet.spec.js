@@ -191,13 +191,16 @@ test.describe('Temperature history reads area files by mime type', () => {
     await expect(page.locator('.yr-btn').first()).toHaveText('2026');
   });
 
-  test('The round opens first with tiles, then a condensed °C table in BLD-area order (group_sort, then code; ZZ_ rooms left out)', async ({ page, guard }) => {
+  test('The round opens first with tiles, then a condensed °C table in BLD-area order (group_sort, then code; a retired room last, labelled)', async ({ page, guard }) => {
     const put = (name, content) => {
       const f = guard.world.files.find((x) => x.name === name);
       f.content = content;
       f.size = String(content.length);
     };
-    put('BLD-area.csv', 'id,code,group_sort\narea-h2,H2,1\narea-h1,H1,1\narea-tr,3TR,3\narea-4,4A,4\narea-z,Test Cabin Z,\narea-old,ZZ_3S.2-iso,3\narea-gone,ZZ_H4,1\n');
+    put('BLD-area.csv', 'id,code,group_sort\narea-h2,H2,1\narea-h1,H1,1\narea-tr,3TR,3\narea-4,4A,4\narea-z,Test Cabin Z,\narea-old,3S.2-iso,3\narea-gone,H4,1\n');
+    const a0 = live(guard.world, 'BLD-area.csv');
+    guard.world.file('bld-req', 'BLD-requirement.csv', 'id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on\nreq-1,t,room.in_use,area,area-old,2025-01-01,2026-01-15,,,\nreq-2,t,room.in_use,area,area-gone,2025-01-01,2025-12-31,,,\n',
+      { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
     put('BLD-area_reading.csv', [
       'id,area_id,taken_at,min_c,max_c',
       'a,area-h1,2026-01-15T08:00,8.24,14.0',
@@ -219,7 +222,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     await page.locator('#rdate').dispatchEvent('change');
     const round = page.locator('#view-d');
     // A room with no readings ever (Test Cabin Z) is not needed, so it is not listed or missed.
-    await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3TR', '4A', 'ZZ_3S.2-iso']);
+    await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3TR', '4A', '3S.2-iso (retired 15/01/26)']);
     await expect(round.locator('.rtable th')).toHaveText(['Room', 'AM min', 'AM max', 'PM min', 'PM max']);
     await expect(round.locator('.rtile').first()).toContainText('AM 8.2–14.0');
     await expect(round.locator('.rtile').first().locator('.warn').first()).toContainText('AM 8.2–14.0');
@@ -241,21 +244,22 @@ test.describe('Temperature history reads area files by mime type', () => {
     await expect(page.locator('#view-c')).not.toContainText('cold days');
   });
 
-  test('Lisa 11 Nov: a place is only due while its thermometer row is in date (valid_from, valid_to); never missed outside it', async ({ page, guard }) => {
+  test('Lisa 11 Nov (A standard): a place is only due on days its need rows cover; never missed outside them', async ({ page, guard }) => {
     const put = (name, content) => {
       const f = guard.world.files.find((x) => x.name === name);
       f.content = content;
       f.size = String(content.length);
     };
     const area = live(guard.world, 'BLD-area.csv');
-    put('BLD-area.csv', 'id,code,group_sort\narea-old,ZZ_3A.2-3,2\narea-new,3A.1/2,2\narea-f,Field 1,9\n');
-    guard.world.file('bld-thermo', 'BLD-thermometer.csv',
-      'id,name,area_id,active,valid_from,valid_to\nthm-1,3A.2/3,area-old,false,2025-01-01,2026-01-15\nthm-2,3A.1/2,area-new,true,2026-01-16,\n',
+    put('BLD-area.csv', 'id,code,group_sort\narea-old,3A.2-3,2\narea-new,3A.1/2,2\narea-f,Field 1,9\n');
+    guard.world.file('bld-thermo', 'BLD-thermometer.csv', 'id,tenant_id,name,area_id,made_at,made_by\nthm-1,t,3A.2/3,area-old,,\nthm-2,t,3A.1/2,area-new,,\n',
+      { parents: area.parents.slice(), driveId: area.driveId, mimeType: 'text/csv' });
+    guard.world.file('bld-req', 'BLD-requirement.csv', 'id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on\nr1,t,reading.temperature,thermometer,thm-1,2025-01-01,2026-01-15,,,\nr2,t,reading.temperature,thermometer,thm-2,2026-01-16,,,,\nr3,t,room.in_use,area,area-old,2025-01-01,2026-01-15,,,\n',
       { parents: area.parents.slice(), driveId: area.driveId, mimeType: 'text/csv' });
     put('BLD-area_reading.csv', 'id,area_id,taken_at,min_c,max_c\na,area-old,2026-01-15T08:00,12,18\n');
     await openHistory(page);
     const round = page.locator('#view-d');
-    for (const [day, names] of [['2026-01-15', ['ZZ_3A.2-3']], ['2026-01-16', ['3A.1/2']]]) {
+    for (const [day, names] of [['2026-01-15', ['3A.2-3 (retired 15/01/26)']], ['2026-01-16', ['3A.1/2']]]) {
       await page.locator('#rdate').fill(day);
       await page.locator('#rdate').dispatchEvent('change');
       await expect(round.locator('.rtile .rn')).toHaveText(names);
@@ -270,16 +274,17 @@ test.describe('Temperature history reads area files by mime type', () => {
       f.size = String(content.length);
     };
     const area = live(guard.world, 'BLD-area.csv');
-    put('BLD-area.csv', 'id,code,group_sort\narea-old,ZZ_3A.2-3,2\narea-new,3A.1/2,2\n');
-    guard.world.file('bld-thermo', 'BLD-thermometer.csv',
-      'id,name,area_id,active,valid_from,valid_to\nthm-1,3A.2/3,area-old,true,2025-01-01,2026-01-11\nthm-2,3A.1/2,area-new,true,2026-01-12,\n',
+    put('BLD-area.csv', 'id,code,group_sort\narea-old,3A.2-3,2\narea-new,3A.1/2,2\n');
+    guard.world.file('bld-thermo', 'BLD-thermometer.csv', 'id,tenant_id,name,area_id,made_at,made_by\nthm-1,t,3A.2/3,area-old,,\nthm-2,t,3A.1/2,area-new,,\n',
+      { parents: area.parents.slice(), driveId: area.driveId, mimeType: 'text/csv' });
+    guard.world.file('bld-req', 'BLD-requirement.csv', 'id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on\nr1,t,reading.temperature,thermometer,thm-1,2025-01-01,2026-01-11,,,\nr2,t,reading.temperature,thermometer,thm-2,2026-01-12,,,,\nr3,t,room.in_use,area,area-old,2025-01-01,2026-01-11,,,\n',
       { parents: area.parents.slice(), driveId: area.driveId, mimeType: 'text/csv' });
     put('BLD-area_reading.csv', 'id,area_id,taken_at,period_start,min_c,max_c,read_method,camera_value_changed\na,area-old,2026-01-12T09:00:00Z,2026-01-10T00:00:00+00:00,12.0,18.5,photo,\n');
     await openHistory(page);
     const round = page.locator('#view-d');
     await page.locator('#rdate').fill('2026-01-10');
     await page.locator('#rdate').dispatchEvent('change');
-    await expect(round.locator('.rtile .rn')).toHaveText(['ZZ_3A.2-3']);
+    await expect(round.locator('.rtile .rn')).toHaveText(['3A.2-3 (retired 11/01/26)']);
     await expect(round.locator('.rtile').first()).toContainText('18.5');
     await expect(page.locator('body')).not.toContainText(/camera|typed|photo/i);   // how a reading was taken is saved only (Lisa, 11 Nov)
     await page.locator('#rdate').fill('2026-01-12');

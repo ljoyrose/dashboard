@@ -87,24 +87,42 @@
     if (t) { var a = (areas || []).filter(function (x) { return x.thermometerId && x.thermometerId === t.thermometerId; })[0]; if (a) return { areaId: a.id, at: t.at }; }
     return remembered(ROOM_KEY);
   }
-  /* The round is the thermometer rows (BLD-thermometer: name, area_id, active, valid_from, valid_to), never a coded
-     list: a room with no thermometer (a field) is not on it, a corridor is its own place, one thermometer per place,
-     and a thermometer is only due on the days BLDThermometer.neededOn says (cdhub/staff/lib/thermometer.js, the one
-     rule for the round, History and Compliance). With no rows yet, or no rule loaded, every room in use is listed. */
-  function roundAreas(areas, thermos, day) {
+  /* The round is the thermometer rows (BLD-thermometer: name, area_id), never a coded list: a room with no
+     thermometer (a field) is not on it, a corridor is its own place, one thermometer per place. When something is
+     needed comes only from BLD-requirement rows through the shared lib (Lisa 11 Nov 2026, "A standard"):
+     BLDOccupancy.inUse (room.in_use) and BLDThermometer.neededOn (reading.temperature), both via BLDNeeds.coversDay.
+     With no thermometer rows yet, every room in use that day is listed. */
+  function roomInUse(a, day, req) {
+    var O = window.BLDOccupancy;
+    return O && O.inUse ? O.inUse({ id: a.id }, day, req) : !a.endDay || day <= a.endDay;
+  }
+  function roundAreas(areas, thermos, day, req) {
     var T = window.BLDThermometer;
+    var rooms = (areas || []).filter(function (a) { return roomInUse(a, day, req); });
     var all = (thermos || []).filter(function (t) { return t.area_id; });
-    if (!all.length || !T) return areas.filter(function (a) { return !a.retired; });
-    var live = T.neededList(all, day);
+    if (!all.length || !T) return rooms;
+    var live = T.neededList(all, day, req);
     var out = [];
-    areas.forEach(function (a) {
+    rooms.forEach(function (a) {
       live.filter(function (t) { return t.area_id === a.id; }).slice(0, 1).forEach(function (t) {
         var nm = String(t.name || '').trim();
-        var place = String(a.label).replace(/ \(retired\)$/, '');
-        out.push({ id: a.id, label: nm && nm !== place ? nm + ' · ' + a.label : a.label, thermometerId: t.id });
+        out.push({ id: a.id, label: nm && nm !== a.code ? nm + ' · ' + a.label : a.label, thermometerId: t.id });
       });
     });
     return out;
+  }
+  /* "3A.1 (retired 11/11/26)": a room whose room.in_use rows all ended before today (BLDNeeds.endDay). */
+  function areaRows(raw, req, today) {
+    var N = window.BLDNeeds;
+    return (raw || []).map(function (a) {
+      var code = String(a.code || a.id), end = N && N.endDay ? N.endDay(req, 'room.in_use', 'area', a.id) : '';
+      var gone = !!end && end < today;
+      return { id: a.id, code: code, endDay: end, retired: gone, label: gone ? code + ' (retired ' + ddmmyy(end) + ')' : code, sort: parseFloat(a.group_sort) };
+    }).sort(function (a, b) {
+      if (a.retired !== b.retired) return a.retired ? 1 : -1;
+      var x = isNaN(a.sort) ? Infinity : a.sort, y = isNaN(b.sort) ? Infinity : b.sort;
+      return x !== y ? (x < y ? -1 : 1) : a.code.localeCompare(b.code, 'en', { numeric: true });
+    });
   }
 
   /* ------------------------------------------------------------------ limits (rows, never coded) */
@@ -312,7 +330,7 @@
       var slot = slotFor(day.value, half.value);
       if (!(day.value < today.date || (day.value === today.date && half.value === 'am' && today.key === 'pm'))) { setMsg(msg, 'That is now or later: use the round.', 'bad'); return; }
       setMsg(msg, '');
-      var places = roundAreas(o.areas, o.thermos, slot.date), done = {};
+      var places = roundAreas(o.areas, o.thermos, slot.date, o.req), done = {};
       (o.readings || []).forEach(function (r) { if (String(r.period_start || '') === slot.periodStart) done[r.area_id] = true; });
       if (!places.length) { list.appendChild(say('No thermometer was needed that day.')); return; }
       var cards = h('div', { class: 'cards' });
@@ -565,7 +583,7 @@
       '.tg-pair .inp{font-size:24px;text-align:center}.tg-spot{margin:4px 0 8px;color:var(--mut)}' +
       '.tg-clr{border-left:3px solid var(--good);margin:12px 0}.tg-done{border-left-color:var(--good)}' +
       '.tg-tab{width:100%;border-collapse:collapse;font-size:13px;margin:8px 0 14px}.tg-tab th,.tg-tab td{border-bottom:1px solid var(--line);padding:5px 4px;text-align:left}' +
-      '.tg-br td{color:var(--bad);font-weight:600}' +
+      '.tg-br td{color:var(--ljr-3-text);font-weight:600}' +
       '@media print{.tabs,.back,.btn,select,.msg{display:none!important}.tg-tab{font-size:11px}}';
     document.head.appendChild(s);
   }
@@ -585,26 +603,21 @@
       if (!d.ok) { host.textContent = ''; host.appendChild(say(d.message, 'bad')); return; }
       var dob = {}; (d.raw.subject || []).forEach(function (s) { dob[s.id] = s.dob || ''; });
       var dogs = (d.dogs || []).map(function (x) { return { id: x.id, areaId: x.areaId, away: x.away, dob: dob[x.id] || '' }; });
-      // Every room row, retired (ZZ_) ones too, in group_sort then code order: a thermometer in date on a retired
-      // room is still due, and the year report must still open for a retired room's past readings.
-      var areas = (d.raw && d.raw.area && d.raw.area.length ? d.raw.area.map(function (a) {
-        var code = String(a.code || a.id), old = /^ZZ_/i.test(code);
-        return { id: a.id, label: old ? code.replace(/^ZZ_/i, '') + ' (retired)' : code, retired: old, sort: parseFloat(a.group_sort) };
-      }) : d.areas.map(function (a) { return { id: a.id, label: a.label, sort: a.sort }; })).sort(function (a, b) {
-        if (a.retired !== b.retired) return a.retired ? 1 : -1;
-        var x = isNaN(a.sort) ? Infinity : a.sort, y = isNaN(b.sort) ? Infinity : b.sort;
-        return x !== y ? (x < y ? -1 : 1) : String(a.label).localeCompare(String(b.label), 'en', { numeric: true });
-      });
+      // Every room row, retired ones too: a late reading for a day a room was in use still saves, and the year
+      // report still opens for a retired room's past readings. Retired = room.in_use rows ended (BLD-requirement).
+      var req = (d.raw && d.raw.requirement) || [];
+      var areas = d.raw && d.raw.area && d.raw.area.length ? areaRows(d.raw.area, req, slotNow().date)
+        : d.areas.map(function (a) { return { id: a.id, code: a.label, label: a.label, sort: a.sort }; });
       var bands = v[1].ok ? v[1].rows : [];
-      var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date);
+      var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date, req);
       var slot = slotNow(), done = {};
       if (v[2].ok) v[2].rows.forEach(function (r) { if (String(r.period_start || '') === slot.periodStart) done[r.area_id] = true; });
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
           h0('button', { class: 'btn quiet', type: 'button', text: 'Missed reading', onclick: function () { if (stop) stop(); stop = null; back();
-            backfill(sub, { save: c.save, areas: areas, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: v[2].ok ? v[2].rows.slice() : [], setStop: function (f) { stop = f; } }); } }),
+            backfill(sub, { save: c.save, areas: areas, req: req, thermos: v[3].ok ? v[3].rows : [], bands: bands, dogs: dogs, readings: v[2].ok ? v[2].rows.slice() : [], setStop: function (f) { stop = f; } }); } }),
           h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands); } }),
-          h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return !a.retired; })); } })
+          h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return roomInUse(a, slotNow().date, req); })); } })
         ]);
       }
       var sub = h('div');
@@ -620,7 +633,7 @@
     return function () { if (stop) stop(); };
   }
 
-  window.BLDTemperature = { rooms: function (host, o) { css(); return rooms(host, o); }, entry: entry, parseGovee: parseGovee, limitFor: limitFor, yearRows: yearRows, roundAreas: roundAreas, backfill: function (host, o) { css(); return backfill(host, o); }, slotFor: slotFor, slotNow: slotNow, londonIso: londonIso };
+  window.BLDTemperature = { rooms: function (host, o) { css(); return rooms(host, o); }, entry: entry, parseGovee: parseGovee, limitFor: limitFor, yearRows: yearRows, roundAreas: roundAreas, areaRows: areaRows, backfill: function (host, o) { css(); return backfill(host, o); }, slotFor: slotFor, slotNow: slotNow, londonIso: londonIso };
   if (window.StaffPage) {
     window.StaffPage.register({ id: 'temperature', title: 'Room temperatures', desc: 'Camera reads the min/max', icon: window.StaffPage.ctx.icons.temp, order: 20, open: openStaff });
   }

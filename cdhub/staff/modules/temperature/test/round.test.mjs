@@ -1,41 +1,54 @@
 // The round is the thermometer rows, never a coded list (overseer, 11 Nov 2026: one thermometer per place,
-// corridors are their own place, fields have none).
+// corridors are their own place, fields have none). When a room or thermometer is needed comes only from
+// BLD-requirement rows through the shared lib (Lisa 11 Nov 2026, "A standard"). Invented rows only.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-
 import { createRequire } from 'node:module';
-globalThis.window = { BLDThermometer: createRequire(import.meta.url)('../../../lib/thermometer.js') };
+
+const req = createRequire(import.meta.url);
+const N = req('../../../lib/needs.js');
+globalThis.self = { BLDNeeds: N };
+globalThis.window = { BLDNeeds: N, BLDThermometer: req('../../../lib/thermometer.js'), BLDOccupancy: req('../../../lib/occupancy.js') };
 globalThis.document = { currentScript: null };
 new Function(readFileSync(new URL('../module.js', import.meta.url), 'utf8'))();
-const { roundAreas } = globalThis.window.BLDTemperature;
+const { roundAreas, areaRows } = globalThis.window.BLDTemperature;
 
-const areas = [
-  { id: 'a1', label: '3A.1/2' }, { id: 'a2', label: '3A.3/4/5' }, { id: 'ac', label: '3A corridor' }, { id: 'f1', label: 'Field 1' },
-  { id: 'old', label: '3A.2/3 (retired)', retired: true }
+const RAW = [
+  { id: 'a1', code: '3A.1/2', group_sort: '1' }, { id: 'a2', code: '3A.3/4/5', group_sort: '2' },
+  { id: 'ac', code: '3A corridor', group_sort: '3' }, { id: 'f1', code: 'Field 1', group_sort: '4' },
+  { id: 'old', code: '3A.2/3', group_sort: '0' }
 ];
+const NEED = [
+  { need_type: 'room.in_use', target_table: 'area', target_id: 'old', from_date: '2025-01-01', to_date: '2026-11-11' },
+  { need_type: 'reading.temperature', target_table: 'thermometer', target_id: 't-old', from_date: '2025-01-01', to_date: '2026-11-11' },
+  { need_type: 'reading.temperature', target_table: 'thermometer', target_id: 't-new', from_date: '2026-11-12', to_date: '' }
+];
+const areas = areaRows(RAW, NEED, '2026-11-12');
 
-test('no thermometer rows yet: every room in use is listed, as before; retired rooms are not', () => {
-  assert.deepEqual(roundAreas(areas, [], '2026-11-12').map((x) => x.id), ['a1', 'a2', 'ac', 'f1']);
+test('a room whose room.in_use rows have ended reads "(retired DD/MM/YY)" and sorts last; no ZZ_ name check', () => {
+  assert.deepEqual(areas.map((a) => a.label), ['3A.1/2', '3A.3/4/5', '3A corridor', 'Field 1', '3A.2/3 (retired 11/11/26)']);
+  assert.equal(areaRows(RAW, NEED, '2026-11-11').find((a) => a.id === 'old').label, '3A.2/3');
+  assert.equal(areaRows([{ id: 'z', code: 'ZZ_old' }], [], '2026-11-12')[0].label, 'ZZ_old');
 });
 
-test('Lisa 11 Nov: the old thermometers are due up to and including 11 Nov, the new ones from 12 Nov', () => {
-  const rows = [
-    { id: 't-old', name: '3A.2/3', area_id: 'old', active: 'true', valid_from: '2025-01-01', valid_to: '2026-11-11' },
-    { id: 't-new', name: '3A.1/2', area_id: 'a1', active: 'true', valid_from: '2026-11-12', valid_to: '' },
-    { id: 't-oops', name: 'typo', area_id: 'a2', active: 'false', valid_from: '', valid_to: '' }
-  ];
-  assert.deepEqual(roundAreas(areas, rows, '2026-11-11').map((x) => x.id), ['old']);
-  assert.deepEqual(roundAreas(areas, rows, '2026-11-12').map((x) => x.id), ['a1']);
+test('no thermometer rows yet: every room in use that day is listed', () => {
+  assert.deepEqual(roundAreas(areas, [], '2026-11-12', NEED).map((x) => x.id), ['a1', 'a2', 'ac', 'f1']);
+  assert.deepEqual(roundAreas(areas, [], '2026-11-11', NEED).map((x) => x.id), ['a1', 'a2', 'ac', 'f1', 'old']);
 });
 
-test('only places with an active thermometer are on the round, in room order, one each', () => {
+test('Lisa 11 Nov: the old thermometer is due up to and including 11 Nov, the new one from 12 Nov', () => {
+  const rows = [{ id: 't-old', name: '3A.2/3', area_id: 'old' }, { id: 't-new', name: '3A.1/2', area_id: 'a1' }];
+  assert.deepEqual(roundAreas(areas, rows, '2026-11-11', NEED).map((x) => x.id), ['old']);
+  assert.deepEqual(roundAreas(areas, rows, '2026-11-12', NEED).map((x) => x.id), ['a1']);
+});
+
+test('only places with a thermometer are on the round, in room order, one each', () => {
   const r = roundAreas(areas, [
-    { id: 't3', name: '3A corridor', area_id: 'ac', active: 'true' },
-    { id: 't1', name: 'T1', area_id: 'a1', active: 'true' },
-    { id: 't1b', name: 'T1 spare', area_id: 'a1', active: 'true' },
-    { id: 't2', name: '3A.3/4/5', area_id: 'a2', active: 'false' }
-  ], '2026-11-12');
+    { id: 't3', name: '3A corridor', area_id: 'ac' },
+    { id: 't1', name: 'T1', area_id: 'a1' },
+    { id: 't1b', name: 'T1 spare', area_id: 'a1' }
+  ], '2026-11-12', NEED);
   assert.deepEqual(r.map((x) => x.id), ['a1', 'ac']);
   assert.equal(r[0].label, 'T1 · 3A.1/2');
   assert.equal(r[0].thermometerId, 't1');

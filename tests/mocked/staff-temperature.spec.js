@@ -8,13 +8,19 @@ test.use({ allowedConsole: [/404/] });
 const SCRIPT = 'https://script.google.com/macros/s/FAKE-TEST-ID/exec';
 const CORS = { 'access-control-allow-origin': '*' };
 const TABLES = {
-  area: [{ id: 'area-old', code: 'ZZ_3A.2/3', group_sort: '2' }, { id: 'area-new', code: '3A.1/2', group_sort: '2' }],
+  area: [{ id: 'area-old', code: '3A.2/3', group_sort: '2' }, { id: 'area-new', code: '3A.1/2', group_sort: '2' }],
   subject: [], occupancy: [], subject_status: [], check_type: [], check_log: [], area_capacity: [], area_access: [], litter: [], capacity_setting: [], qr_tag: [],
   temperature_band: [{ id: 'tb-1', band: 'Rest', age_from_days: '0', age_to_days: '', min_temp: '10', max_temp: '20' }],
   area_reading: [],
   thermometer: [
-    { id: 'thm-old', name: '3A.2/3', area_id: 'area-old', active: 'true', valid_from: '2025-01-01', valid_to: '2026-11-11' },
-    { id: 'thm-new', name: '3A.1/2', area_id: 'area-new', active: 'true', valid_from: '2026-11-12', valid_to: '' }
+    { id: 'thm-old', name: '3A.2/3', area_id: 'area-old' },
+    { id: 'thm-new', name: '3A.1/2', area_id: 'area-new' }
+  ],
+  // Lisa 11 Nov 2026, "A standard": when things are needed is need rows, never dates on the thing.
+  requirement: [
+    { id: 'req-1', need_type: 'reading.temperature', target_table: 'thermometer', target_id: 'thm-old', from_date: '2025-01-01', to_date: '2026-11-11' },
+    { id: 'req-2', need_type: 'reading.temperature', target_table: 'thermometer', target_id: 'thm-new', from_date: '2026-11-12', to_date: '' },
+    { id: 'req-3', need_type: 'room.in_use', target_table: 'area', target_id: 'area-old', from_date: '', to_date: '2026-11-11' }
   ]
 };
 
@@ -44,7 +50,7 @@ test('a thermometer ended 11 Nov is not in the 12 Nov round; its 10 Nov reading 
   await page.getByRole('button', { name: 'Missed reading' }).click();
   await page.getByLabel('Day').fill('2026-11-10');
   await page.getByLabel('Day').dispatchEvent('change');
-  await expect(cards).toHaveText(['3A.2/3 (retired)']);
+  await expect(cards).toHaveText(['3A.2/3 (retired 11/11/26)']);
   await cards.first().click();
   await expect(page.getByText('Missed reading · 10/11/26 Morning reading')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Read with camera' })).toHaveCount(0);
@@ -56,7 +62,7 @@ test('a thermometer ended 11 Nov is not in the 12 Nov round; its 10 Nov reading 
   await expect(page.getByText('Now press CLR')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Done' }).click();
-  await expect(page.locator('.cards .card .nm')).toHaveText(['✓ 3A.2/3 (retired)']);
+  await expect(page.locator('.cards .card .nm')).toHaveText(['✓ 3A.2/3 (retired 11/11/26)']);
 });
 
 test('a missed reading cannot be for now or later: that is the round', async ({ page }) => {
