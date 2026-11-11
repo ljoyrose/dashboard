@@ -516,11 +516,11 @@
       rows.forEach(function (r) {
         tb.appendChild(h('tr', { class: r.breach ? 'tg-br' : '' }, [
           h('td', { text: ddmmyy(r.date) }), h('td', { text: r.slot }), h('td', { text: r.min === null ? '' : r.min.toFixed(1) }), h('td', { text: r.max === null ? '' : r.max.toFixed(1) }),
-          h('td', { text: r.spot }), h('td', { text: r.kindLabel }), h('td', { text: r.note })
+          h('td', { text: r.spot }), h('td', { text: r.note })   // neither how nor who/when is shown (Lisa, 11 Nov; who is on hold)
         ]));
       });
       out.appendChild(h('h3', { text: 'Every reading' }));
-      out.appendChild(h('table', { class: 'tg-tab' }, [h('thead', {}, [h('tr', {}, ['Date', 'Round', 'Min', 'Max', 'Spot', 'By', 'What was done'].map(function (t) { return h('th', { text: t }); }))]), tb]));
+      out.appendChild(h('table', { class: 'tg-tab' }, [h('thead', {}, [h('tr', {}, ['Date', 'Round', 'Min', 'Max', 'Spot', 'What was done'].map(function (t) { return h('th', { text: t }); }))]), tb]));
       out.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Print', onclick: function () { window.print(); } }));
     }
     function rowBreach(r, lo, hi) {
