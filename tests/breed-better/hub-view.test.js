@@ -37,3 +37,37 @@ test('a draft scheme scores nothing and says so', () => {
   const v = { T: tables({ 'BLD-score_scheme.csv': [{ id: 's1', status: 'draft', effective_from: '2026-01-01' }] }), today: '2026-06-04', esc };
   assert.match(View.page(v), /No active scheme/);
 });
+
+test('dates read like 2 Mar 2026', () => {
+  assert.equal(View.day('2026-03-02'), '2 Mar 2026');
+  assert.equal(View.day(''), '');
+});
+
+test('a scheme row can rename any verdict word', () => {
+  const w = View.wordsFor({ verdict_words: 'unverified=To prove; below target=Under 65' });
+  assert.equal(w.unverified, 'To prove');
+  assert.equal(w.below_target, 'Under 65');
+  assert.equal(w.pass, 'Pass');
+});
+
+test('filters run best to worst and the page shows target, dates and Due', () => {
+  const T = tables({
+    'BLD-score_scheme.csv': [{ id: 's1', status: 'active', effective_from: '2026-01-01', verdict_words: 'unverified=To prove' }],
+    'BLD-score_criterion.csv': [{ id: 'c', scheme_id: 's1', band_id: 'g', label: 'Check', evidence_source: 'BLD-exam', answer_field: 'r', date_field: 'on', valid_months: '12', lapsed_affects_verdict: 'FALSE' }]
+  });
+  const v = { T, today: '2027-02-01', esc };
+  const html = View.page(v);
+  assert.match(html, /All[\s\S]*Pass[\s\S]*Below target[\s\S]*To prove[\s\S]*Fail/);
+  assert.doesNotMatch(html, /Unverified/);
+  const c = View.compute(v);
+  assert.equal(c.byId.a1.verdict, 'pass');
+  assert.equal(c.byId.a1.lines[0].due, 'overdue');
+  assert.match(View.page(v), /1 due/);
+});
+
+test('staff never see Breed Better: no staff, guest or print page loads it', () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]);
+  const hits = walk(path.join(__dirname, '../../cdhub/staff')).filter((f) => /\.(html|js)$/.test(f) && /breed-better|BBHubView/.test(fs.readFileSync(f, 'utf8')));
+  assert.deepEqual(hits, []);
+});

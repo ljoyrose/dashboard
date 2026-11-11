@@ -16,6 +16,7 @@
   var WHEN_MISSING = ['unknown', 'zero', 'fail'];
   var READS = ['latest', 'lowest', 'count'];
   var OUTCOMES = ['pass', 'fail', 'unverified'];
+  var TARGET_IS = ['points', 'percent'];
   var JUDGED = 'judged';
 
   function text(v) { return v === undefined || v === null ? '' : String(v).trim(); }
@@ -30,6 +31,18 @@
     var last = new Date(Date.UTC(y, m, 0)).getUTCDate();
     var d = Math.min(p[2], last);
     return y + '-' + (m < 10 ? '0' : '') + m + '-' + (d < 10 ? '0' : '') + d;
+  }
+
+  function addDays(date, days) {
+    var d = new Date(date + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
+  /** The points needed: a number, or a percent of what this animal could earn (rounded up). '' when no target. */
+  function targetFor(scheme, available) {
+    var n = text(scheme && scheme.target_points);
+    if (!/^\d+(\.\d+)?$/.test(n)) return '';
+    return same(scheme.target_is, 'percent') ? Math.ceil(available * Number(n) / 100) : Number(n);
   }
 
   /** Parse an answer rule. Fixed forms only; returns null when the rule is not one of them. */
@@ -82,6 +95,7 @@
   function validateScheme(set) {
     var errors = [];
     var bands = {};
+    if (set.scheme && text(set.scheme.target_is) && TARGET_IS.indexOf(text(set.scheme.target_is).toLowerCase()) < 0) errors.push((set.scheme.id || 'scheme') + ': target_is must be points or percent');
     (set.bands || []).forEach(function (b) { bands[b.id] = b; });
     (set.criteria || []).forEach(function (c) {
       var band = bands[c.band_id];
@@ -91,6 +105,9 @@
       if (text(c.reads) && READS.indexOf(text(c.reads)) < 0) errors.push(c.id + ': cannot read "' + c.reads + '"');
       if (text(c.valid_months) && !/^\d+$/.test(text(c.valid_months))) errors.push(c.id + ': valid_months must be a whole number');
       if (text(c.valid_months) && !text(c.date_field)) errors.push(c.id + ': valid_months needs a date_field');
+      if (text(c.due_soon_days) && !/^\d+$/.test(text(c.due_soon_days))) errors.push(c.id + ': due_soon_days must be a whole number');
+      if (text(c.due_soon_days) && !text(c.valid_months)) errors.push(c.id + ': due_soon_days needs valid_months');
+      if (text(c.lapsed_affects_verdict) && !/^(true|false)$/i.test(text(c.lapsed_affects_verdict))) errors.push(c.id + ': lapsed_affects_verdict must be TRUE or FALSE');
       var rows = (set.points || []).filter(function (p) { return p.criterion_id === c.id; });
       if (band.kind !== 'status' && !rows.length) errors.push(c.id + ': has no answers');
       rows.forEach(function (p) {
@@ -143,13 +160,19 @@
         return da === db ? 0 : (da < db ? 1 : -1);
       })[0];
     }
+    var due = '', dueDate = '';
     if (text(c.valid_months)) {
       var when = text(chosen[dateField]);
       if (!isDate(when)) return { reason: 'undated', row: chosen };
-      if (addMonths(when, Number(c.valid_months)) < asOf) return { reason: 'expired', row: chosen };
+      dueDate = addMonths(when, Number(c.valid_months));
+      if (dueDate < asOf) {
+        due = 'overdue';
+        /* a lapse changes the verdict only when the check's row says so; blank means it does */
+        if (!/^false$/i.test(text(c.lapsed_affects_verdict))) return { reason: 'expired', row: chosen, due: due, dueDate: dueDate };
+      } else if (text(c.due_soon_days) && addDays(asOf, Number(c.due_soon_days)) >= dueDate) due = 'due_soon';
     }
-    if (text(chosen[c.answer_field]) === '') return { reason: 'blank_answer', row: chosen };
-    return { answer: chosen[c.answer_field], row: chosen };
+    if (text(chosen[c.answer_field]) === '') return { reason: 'blank_answer', row: chosen, due: due, dueDate: dueDate };
+    return { answer: chosen[c.answer_field], row: chosen, due: due, dueDate: dueDate };
   }
 
   function appliesTo(c, subject) { return !text(c.applies_to) || fieldsMatch(c.applies_to, subject); }
@@ -178,6 +201,7 @@
         criterion_id: c.id, band_id: c.band_id, kind: band.kind, label_then: c.label,
         evidence_table: c.evidence_source, evidence_id: ev.row ? text(ev.row.id) : '',
         answer_then: ev.answer === undefined ? '' : text(ev.answer),
+        date_then: ev.row && text(c.date_field) ? text(ev.row[c.date_field]) : '', due: ev.due || '', due_date: ev.dueDate || '',
         points: '', points_max: '', gate_outcome: '', unknown_reason: ev.reason || '', judged_by: ev.judgedBy || ''
       };
 
@@ -219,12 +243,16 @@
     });
 
     var gateResult = gates.fail ? 'fail' : (gates.unverified ? 'unverified' : 'pass');
+    var target = targetFor(input.scheme, available);
+    /* one verdict: Fail, then Unverified, then the target. Points still unknown that could reach the target keep it Unverified */
+    var verdict = gateResult;
+    if (verdict === 'pass' && target !== '' && earned < target) verdict = earned + unverified >= target ? 'unverified' : 'below_target';
     return {
       subject_id: input.subject.id, scheme_id: input.scheme.id, as_of: input.asOf,
-      gate_result: gateResult, points_earned: earned, points_available: available,
+      gate_result: gateResult, verdict: verdict, target: target, points_earned: earned, points_available: available,
       points_unverified: unverified, unknown_count: unknownCount, lines: lines
     };
   }
 
-  return { score: score, pickScheme: pickScheme, validateScheme: validateScheme, parseMatch: parseMatch, addMonths: addMonths };
+  return { score: score, targetFor: targetFor, pickScheme: pickScheme, validateScheme: validateScheme, parseMatch: parseMatch, addMonths: addMonths };
 });

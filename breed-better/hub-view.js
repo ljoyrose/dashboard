@@ -10,8 +10,11 @@
   'use strict';
 
   var FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv'];
-  var VERDICT = { pass: 'Pass', unverified: 'Unverified', fail: 'Fail' };
-  var ORDER = ['pass', 'unverified', 'fail'];
+  /* default words; a scheme row can change any of them with verdict_words, e.g. "unverified=To prove" */
+  var VERDICT = { pass: 'Pass', below_target: 'Below target', unverified: 'Unverified', fail: 'Fail' };
+  var ORDER = ['pass', 'below_target', 'unverified', 'fail'];
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var words = VERDICT;
   var REASON = {
     no_source: 'Record type not set up yet', no_record: 'No record yet', not_judged: 'Not entered yet', expired: 'Out of date',
     undated: 'Record has no date', blank_answer: 'Blank on the record', no_rule_for_answer: 'Answer is not in the rules',
@@ -21,6 +24,22 @@
   var state = { filter: '', dog: '' }, last = null, memo = null;
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
+
+  /** 2026-03-02 -> "2 Mar 2026". Anything else is shown as it is. */
+  function day(d) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t(d));
+    return m ? Number(m[3]) + ' ' + MON[Number(m[2]) - 1] + ' ' + m[1] : t(d);
+  }
+
+  function wordsFor(scheme) {
+    var w = Object.assign({}, VERDICT);
+    t(scheme && scheme.verdict_words).split(';').forEach(function (pair) {
+      var at = pair.indexOf('='), k = pair.slice(0, at).trim().toLowerCase().replace(/\s+/g, '_');
+      if (at > 0 && w[k] && t(pair.slice(at + 1))) w[k] = t(pair.slice(at + 1));
+    });
+    return w;
+  }
+  function verdictOf(r) { return r.verdict || r.gate_result; }
 
   /** One result per enrolled animal, best first. { results, error, byId } */
   function compute(v) {
@@ -46,32 +65,36 @@
       var points = (T['BLD-score_point.csv'] || []).filter(function (p) { return ids[p.criterion_id]; });
       try {
         var r = Score.score({ scheme: scheme, bands: bands, criteria: criteria, points: points, subject: subject, evidence: evidence, judgements: {}, asOf: v.today });
-        r.name = t(subject.name); r.bands = bands;
+        r.name = t(subject.name); r.bands = bands; r.words = wordsFor(scheme);
+        out.words = r.words;
         out.results.push(r); out.byId[r.subject_id] = r;
       } catch (err) { out.error = err.message; }
     });
     out.results.sort(function (a, b) {
-      var d = ORDER.indexOf(a.gate_result) - ORDER.indexOf(b.gate_result);
+      var d = ORDER.indexOf(verdictOf(a)) - ORDER.indexOf(verdictOf(b));
       return d || (b.points_earned - a.points_earned) || a.name.localeCompare(b.name);
     });
     memo = out;
     return out;
   }
 
-  function total(r) { return r.points_earned + ' of ' + r.points_available; }
-  function pill(r) { return '<span class="bb-v bb-' + r.gate_result + '">' + VERDICT[r.gate_result] + '</span>'; }
+  function total(r) { return r.points_earned + ' of ' + r.points_available + (r.target !== '' && r.target !== undefined ? ', target ' + r.target : ''); }
+  function vpill(k, w) { return '<span class="bb-v bb-' + k + '">' + (w || words)[k] + '</span>'; }
+  function pill(r) { return vpill(verdictOf(r), r.words); }
+  function unv(r) { return r.points_unverified ? ', ' + r.points_unverified + ' ' + r.words.unverified.toLowerCase() : ''; }
 
   function listHtml(v, c) {
     var esc = v.esc, f = state.filter;
+    words = c.words || VERDICT;
     var counts = { '': c.results.length };
-    c.results.forEach(function (r) { counts[r.gate_result] = (counts[r.gate_result] || 0) + 1; });
+    c.results.forEach(function (r) { counts[verdictOf(r)] = (counts[verdictOf(r)] || 0) + 1; });
     var h = '<div class="bb-filt" role="group" aria-label="Filter by verdict">' + [''].concat(ORDER).map(function (k) {
-      return '<button type="button" class="bb-f" data-bb-filter="' + k + '" aria-pressed="' + (f === k) + '">' + (VERDICT[k] || 'All') + ' <span class="cnt">' + (counts[k] || '') + '</span></button>';
+      return '<button type="button" class="bb-f" data-bb-filter="' + k + '" aria-pressed="' + (f === k) + '">' + (words[k] || 'All') + ' <span class="cnt">' + (counts[k] || '') + '</span></button>';
     }).join('') + '</div>';
-    var shown = c.results.filter(function (r) { return !f || r.gate_result === f; });
+    var shown = c.results.filter(function (r) { return !f || verdictOf(r) === f; });
     return h + (shown.length ? shown.map(function (r) {
       return '<button type="button" class="bb-dog" data-bb-open="' + esc(r.subject_id) + '"><span class="bb-name">' + esc(r.name) + '</span>' + pill(r)
-        + '<span class="bb-pts">' + total(r) + (r.points_unverified ? ', ' + r.points_unverified + ' unverified' : '') + '</span></button>';
+        + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></button>';
     }).join('') : '<p class="mut">None.</p>');
   }
 
@@ -79,21 +102,37 @@
     var esc = v.esc;
     var bands = r.bands.slice().sort(function (a, b) { return Number(a.sort_order) - Number(b.sort_order); });
     return '<button type="button" class="bb-f" data-bb-back="1">Back</button>'
-      + '<div class="bb-head"><h3>' + esc(r.name) + '</h3>' + pill(r) + '<span class="bb-pts">' + total(r) + (r.points_unverified ? ', ' + r.points_unverified + ' unverified' : '') + '</span></div>'
+      + '<div class="bb-head"><h3>' + esc(r.name) + '</h3>' + pill(r) + '<span class="bb-pts">' + total(r) + unv(r) + dueCount(r) + '</span></div>'
       + bands.map(function (b) {
         var lines = r.lines.filter(function (l) { return l.band_id === b.id; });
         if (!lines.length) return '';
         return '<details class="card bb-band bb-c-' + esc(t(b.colour)) + '"><summary>' + esc(b.label) + ' <span class="cnt">' + lines.length + '</span></summary>'
-          + lines.map(function (l) { return lineHtml(v, l); }).join('') + '</details>';
+          + lines.map(function (l) { return lineHtml(v, l, r.words); }).join('') + '</details>';
       }).join('');
   }
 
-  function lineHtml(v, l) {
+  function dueCount(r) {
+    var n = r.lines.filter(function (l) { return l.due; }).length;
+    return n ? ', ' + n + ' due' : '';
+  }
+
+  /** The Due level: shown beside the result, never a result itself. */
+  function dueHtml(l) {
+    if (l.due === 'overdue') return '<span class="bb-due bb-overdue">Overdue since ' + day(l.due_date) + '</span>';
+    if (l.due === 'due_soon') return '<span class="bb-due">Due ' + day(l.due_date) + '</span>';
+    return '';
+  }
+
+  function lineHtml(v, l, w) {
     var esc = v.esc, res;
-    if (l.kind === 'gate') res = '<span class="bb-v bb-' + l.gate_outcome + '">' + VERDICT[l.gate_outcome] + '</span>';
+    w = w || words;
+    if (l.kind === 'gate') res = vpill(l.gate_outcome, w);
     else if (l.kind === 'status') res = '<span class="bb-pts">' + esc(l.answer_then) + '</span>';
-    else res = l.points === '' ? '<span class="bb-v bb-unverified">Unverified</span>' : '<span class="bb-pts">' + l.points + ' of ' + l.points_max + '</span>';
-    var why = l.unknown_reason ? (REASON[l.unknown_reason] || '') : (l.answer_then ? 'Recorded: ' + esc(l.answer_then) : '');
+    else res = l.points === '' ? vpill('unverified', w) : '<span class="bb-pts">' + l.points + ' of ' + l.points_max + '</span>';
+    var when = l.date_then ? ' \u00b7 ' + esc(day(l.date_then)) : '';
+    var why = l.unknown_reason ? (REASON[l.unknown_reason] || '') + when : (l.answer_then ? 'Recorded: ' + esc(l.answer_then) + when : '');
+    if (l.due_date && !l.due) why += ' \u00b7 due ' + esc(day(l.due_date));
+    res += dueHtml(l);
     var go = GO[l.evidence_table];
     return '<div class="bb-line"><span class="bb-l">' + esc(l.label_then) + '</span>' + res
       + '<span class="bb-why">' + why + (go ? ' <button type="button" class="bb-src" data-go="' + go + '">Open</button>' : '') + '</span></div>';
@@ -112,7 +151,8 @@
     var s = document.createElement('style'); s.id = 'bbStyle';
     s.textContent = [
       '.bb-v{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);border:1px solid;font-size:var(--fs-small);font-weight:500;white-space:nowrap;background:transparent}',
-      '.bb-pass{border-color:var(--ljr-5);color:var(--ljr-5-text)}.bb-unverified{border-color:var(--ljr-6);color:var(--ljr-6-text)}.bb-fail{border-color:var(--ljr-2);color:var(--ljr-2-text)}',
+      '.bb-pass{border-color:var(--ljr-5);color:var(--ljr-5-text)}.bb-below_target{border-color:var(--ljr-3);color:var(--ljr-3-text)}.bb-unverified{border-color:var(--ljr-6);color:var(--ljr-6-text)}.bb-fail{border-color:var(--ljr-2);color:var(--ljr-2-text)}',
+      '.bb-due{font-size:var(--fs-small);color:var(--muted);white-space:nowrap}.bb-overdue{color:var(--ljr-3-text)}',
       '.bb-test{border-color:var(--ljr-7);color:var(--ljr-7-text)}',
       '.bb-filt{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}',
       '.bb-f,.bb-dog,.bb-src,.bb-chip{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--radius);cursor:pointer}',
@@ -160,5 +200,5 @@
     }, true);
   }
 
-  return { FILES: FILES, compute: compute, page: page, chip: chip };
+  return { FILES: FILES, compute: compute, page: page, chip: chip, day: day, wordsFor: wordsFor };
 }));
