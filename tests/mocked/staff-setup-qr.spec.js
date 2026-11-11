@@ -99,11 +99,11 @@ test('thermometer cards: one per thermometer whose need rows have not all ended,
   await expect(page.locator('.qcard b')).toHaveText(['Hall']);
   expect(sent.map((b) => [b.table, b.fields.kind, b.fields.ref_id])).toEqual([['qr_tag', 'thermometer', 'thm-1']]);
   await page.getByRole('button', { name: 'Add thermometer' }).click();
-  await expect(page.getByRole('combobox', { name: 'Room' }).locator('option')).toHaveText(['Room', 'T1']);   // never a retired room
+  await expect(page.getByRole('combobox', { name: 'Place' }).locator('option')).toHaveText(['Place', 'T1']);   // never a retired room
   await page.getByRole('textbox', { name: 'Thermometer name' }).fill('Corridor 1');
-  await page.getByRole('combobox', { name: 'Room' }).selectOption('area-t1');
+  await page.getByRole('combobox', { name: 'Place' }).selectOption('area-t1');
   await page.getByRole('button', { name: 'Save' }).click();
-  await expect(page.locator('.qcard b')).toHaveText(['Corridor 1']);
+  await expect(page.locator('.qcard b')).toHaveText(['Corridor 1', 'Hall']);   // the list, A to Z, with the new one's card
   expect(sent.slice(1).map((b) => [b.table, b.fields.name || b.fields.kind, b.fields.area_id || b.fields.ref_id])).toEqual([['thermometer', 'Corridor 1', 'area-t1'], ['qr_tag', 'thermometer', 'thm-3']]);
   expect(Object.keys(sent[1].fields).sort()).toEqual(['area_id', 'name']);   // a thing carries no dates: when it is needed is need rows
 });
@@ -122,4 +122,33 @@ test('room signs are never made for a room whose room.in_use rows have ended', a
   await page.goto('cdhub/staff/print/');
   await page.getByRole('button', { name: 'Room signs' }).click();
   await expect(page.locator('.qcard b')).toHaveText(['T1']);
+});
+
+// Lisa 11 Nov 2026: "+ Thermometer" on the hub opens the print page straight at Add thermometer; the place list has
+// corridors as well as rooms; after the save the list shows with the new thermometer's QR card. Only an OWNER code
+// can save (the save script refuses any other); the button is on the owner's hub, never the staff page.
+test('add mode (?add=thermometer): straight to the form; corridors listed; saved thermometer joins the list with its QR card', async ({ page }) => {
+  const tables = {
+    area: [{ id: 'area-r1', code: '3A.1', group_sort: '1' }, { id: 'area-c', code: '3A corridor', group_sort: '2' }, { id: 'area-r2', code: '3A.2', group_sort: '1' }],
+    subject: [], subject_status: [], litter: [], occupancy: [], qr_tag: [{ tag: 'AAAA2222', kind: 'thermometer', ref_id: 'thm-1', active: 'true' }],
+    thermometer: [{ id: 'thm-1', name: '3A.1', area_id: 'area-r1' }], requirement: []
+  };
+  const sent = [];
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }, { key: 'thermometer', on: true, mode: 'direct' }], version: 'test' } });
+    const b = JSON.parse(route.request().postData());
+    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [] } } });
+    sent.push(b);
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: b.table === 'thermometer' ? 'thm-2' : 'qrt-' + sent.length } } });
+  });
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.goto('cdhub/staff/print/?add=thermometer');
+  await expect(page.getByText('Add thermometer', { exact: true }).last()).toBeVisible();
+  await expect(page.getByRole('combobox', { name: 'Place' }).locator('option')).toHaveText(['Place', '3A.1', '3A.2', '3A corridor']);
+  await page.getByRole('textbox', { name: 'Thermometer name' }).fill('3A corridor');
+  await page.getByRole('combobox', { name: 'Place' }).selectOption('area-c');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.qcard b')).toHaveText(['3A corridor', '3A.1']);
+  await expect(page.locator('.qcard', { hasText: '3A corridor' }).locator('svg')).toHaveCount(1);
+  expect(sent.map((b) => [b.table, b.fields.name || b.fields.kind, b.fields.area_id || b.fields.ref_id])).toEqual([['thermometer', '3A corridor', 'area-c'], ['qr_tag', 'thermometer', 'thm-2']]);
 });

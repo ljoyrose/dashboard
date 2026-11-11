@@ -71,14 +71,27 @@
     [input, show, holder, h('button', { class: 'btn quiet', type: 'button', text: 'Remove QR', onclick: clear })].forEach(function (n) { box.appendChild(n); });
     sheet.appendChild(box);
   }
-  /** One thermometer per place: the owner names it and picks its room; its card is made straight away. */
+  /** Every thermometer whose need rows have not all ended, A to Z by name, each with its QR card. */
+  function thermoCards() {
+    if (!T.thermometer) { say('The thermometer list is not switched on yet.', 'warn'); return; }
+    var today = BLDNeeds.today();   // a thermometer whose need rows all ended before today gets no card
+    make('thermometer', T.thermometer.filter(function (t) { var end = BLDNeeds.endDay(T.requirement, 'reading.temperature', 'thermometer', t.id); return !end || end >= today; })
+      .map(function (t) { return { id: t.id, label: t.name || t.id }; })
+      .sort(function (a, b) { return String(a.label).localeCompare(String(b.label), 'en', { numeric: true }); }));
+  }
+  /** One thermometer per place (a room or a corridor): the owner names it and picks its place; then the list shows
+      with its new QR card, ready to print (Lisa 11 Nov 2026). The hub's "+ Thermometer" opens this (?add=thermometer). */
   function addThermometer() {
     if (!T.thermometer) { say('The thermometer list is not switched on yet.', 'warn'); return; }
     sheet.textContent = ''; say('');
     var name = h('input', { class: 'inp', type: 'text', maxlength: '40', 'aria-label': 'Thermometer name', placeholder: 'Name' });
-    var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Room' })].concat(T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement); }).map(function (a) { return h('option', { value: a.id, text: a.code || a.id }); })));
+    var places = T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement); }).sort(function (a, b) {
+      var x = parseFloat(a.group_sort), y = parseFloat(b.group_sort); x = isNaN(x) ? Infinity : x; y = isNaN(y) ? Infinity : y;
+      return x !== y ? (x < y ? -1 : 1) : String(a.code || a.id).localeCompare(String(b.code || b.id), 'en', { numeric: true });
+    });   // every area in use: rooms and corridors alike (a corridor is its own place)
+    var room = h('select', { class: 'inp', 'aria-label': 'Place' }, [h('option', { value: '', text: 'Place' })].concat(places.map(function (a) { return h('option', { value: a.id, text: a.code || a.id }); })));
     var go = h('button', { class: 'btn', type: 'button', text: 'Save', onclick: function () {
-      if (!name.value.trim() || !room.value) { say('Name and room, please.', 'bad'); return; }
+      if (!name.value.trim() || !room.value) { say('Name and place, please.', 'bad'); return; }
       go.disabled = true; say('Saving...');
       var f = { name: name.value.trim(), area_id: room.value };
       save.submit('thermometer', f).then(function (r) {
@@ -87,7 +100,7 @@
         if (r.status !== 'saved' || !r.id) { say(r.message, 'good'); return; }
         var id = r.id;
         T.thermometer.push({ id: id, name: f.name, area_id: f.area_id });
-        make('thermometer', [{ id: id, label: name.value.trim() }]);
+        thermoCards();
       });
     } });
     sheet.appendChild(h('div', { class: 'qcard big noprint' }, [h('b', { text: 'Add thermometer' }), name, room, go]));
@@ -103,11 +116,7 @@
       var names = {}; T.subject.forEach(function (s) { names[s.id] = s.name; });
       make('litter', T.litter.map(function (l) { return { id: l.id, label: 'Litter of ' + (names[l.dam_subject_id] || l.id) }; }));
     }));
-    opts.appendChild(btn('Thermometer cards', function () {
-      if (!T.thermometer) { say('The thermometer list is not switched on yet.', 'warn'); return; }
-      var today = BLDNeeds.today();   // a thermometer whose need rows all ended before today gets no card
-      make('thermometer', T.thermometer.filter(function (t) { var end = BLDNeeds.endDay(T.requirement, 'reading.temperature', 'thermometer', t.id); return !end || end >= today; }).map(function (t) { return { id: t.id, label: t.name || t.id }; }));
-    }));
+    opts.appendChild(btn('Thermometer cards', thermoCards));
     opts.appendChild(btn('Add thermometer', addThermometer));
     opts.appendChild(btn('Phone set-up QR', function () {
       var url = ''; try { url = localStorage.getItem('bld.scriptUrl') || ''; } catch (e) { /* none */ }
@@ -116,5 +125,7 @@
       say('Staff scan this once, then type their own code.', 'good');
     }));
     opts.appendChild(btn('Private set-up QR', privateQr));
+    var add = ''; try { add = new URLSearchParams(location.search).get('add') || ''; } catch (e) { /* old browser */ }
+    if (add === 'thermometer') addThermometer();   // from the hub's "+ Thermometer"
   });
 }());

@@ -618,6 +618,19 @@ test.describe('CD Hub Bloodline screens (built from what the page already reads)
     await expect(page.locator('h1')).not.toContainText(/outdoor/i);
   });
 
+  // Lisa 11 Nov 2026: "+ Thermometer" on the owner's hub (signed in with Google) opens the owner print page at Add
+  // thermometer. The staff page never shows it, and only an OWNER code can save on the print page.
+  test('Temperatures today has "+ Thermometer", which opens the print page in add mode', async ({ page }) => {
+    await page.goto('cdhub/');
+    await expect(page.locator('#addThermo')).toHaveCount(0);   // nothing before the owner signs in
+    await signIn(page);
+    await openTab(page, 'today');
+    const add = page.locator('#tempsCard .mfoot').getByRole('link', { name: '+ Thermometer' });
+    await expect(add).toHaveAttribute('href', './staff/print/?add=thermometer');
+    const box = await add.boundingBox();
+    expect(box.height).toBeGreaterThanOrEqual(36);
+  });
+
   test('Temperatures today shows the next 6 outdoor days across, with words for cold, rain and wind', async ({ page, guard }) => {
     const head = 'on_date,reading_kind,min_temp,max_temp,rain_value,wind_kmh,phrase,cloud_cover_pct,source';
     const line = (days, kind, min, max, rain, wind, phrase) =>
