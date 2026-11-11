@@ -129,7 +129,7 @@ function validateInput_(spec, fields, lookups, nowMs, opts) {
         errors[name] = 'Unknown field type.';
     }
   }
-  if (spec.checkRow) spec.checkRow(clean, errors);
+  if (spec.checkRow) spec.checkRow(clean, errors, lookups);
   return { clean: clean, errors: errors };
 }
 
