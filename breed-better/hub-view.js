@@ -156,9 +156,9 @@
     var s = document.createElement('style'); s.id = 'bbStyle';
     s.textContent = [
       '.bb-v{display:inline-flex;align-items:center;height:24px;padding:0 8px;border-radius:var(--radius);border:1px solid;font-size:var(--fs-small);font-weight:500;white-space:nowrap;background:transparent}',
-      '.bb-pass{border-color:var(--ljr-5);color:var(--ljr-5-text)}.bb-below_target{border-color:var(--ljr-3);color:var(--ljr-3-text)}.bb-unverified{border-color:var(--ljr-6);color:var(--ljr-6-text)}.bb-fail{border-color:var(--ljr-2);color:var(--ljr-2-text)}',
+      '.bb-pass{border-color:var(--ljr-5);color:var(--ink)}.bb-below_target{border-color:var(--ljr-3);color:var(--ink)}.bb-unverified{border-color:var(--ljr-6);color:var(--ink)}.bb-fail{border-color:var(--ljr-2);color:var(--ink)}',
       '.bb-due{font-size:var(--fs-small);color:var(--muted);white-space:nowrap}.bb-overdue{color:var(--ljr-3-text)}',
-      '.bb-test{border-color:var(--ljr-7);color:var(--ljr-7-text)}',
+      '.bb-test{border-color:var(--ljr-7);color:var(--ink)}',
       '.bb-filt{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px}',
       '.bb-f,.bb-dog,.bb-src,.bb-chip{font:inherit;color:var(--ink);background:transparent;border:1px solid var(--line);border-radius:var(--radius);cursor:pointer}',
       '.bb-f{min-height:44px;padding:0 12px;display:inline-flex;align-items:center;gap:8px;font-weight:500}',
