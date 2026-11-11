@@ -194,6 +194,10 @@ tr:last-child td{border-bottom:none}
 #sopcard .sopopen .t{display:flex;flex-direction:column;align-items:flex-start;gap:2px;white-space:normal;overflow:visible;-webkit-line-clamp:unset;line-clamp:unset}
 #sopcard .sopopen .t .n{font-size:var(--fs-small);font-weight:600;line-height:1.2}
 #sopcard .sopopen .t small{display:block;font-size:var(--fs-small);font-weight:400;line-height:1.2;color:var(--ink)}
+#sopcard .sopopen .t{display:block;text-align:left}#sopcard .sopopen .t .fq{font-size:var(--fs-small);font-weight:400;color:var(--muted)}
+#sopcard .sopgrp{margin:0 0 12px}#sopcard .sopgrp>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;margin:0 0 8px;border:1px solid var(--line);border-radius:var(--radius);font-weight:600;--house-lbar-out:1px}
+#sopcard .sopgrp>summary::-webkit-details-marker{display:none}#sopcard .sopgrp>summary .n{font-weight:400;color:var(--muted)}
+#sopcard .sopgrp .mrow{margin-left:12px}
 #sopcard .mrow .mut{flex:0 1 11em;overflow-wrap:anywhere}
 #sopcard .mrow .cb{flex:none;padding:0 10px}
 #sopcard .mrow:has(.sopopen){flex-wrap:wrap}
@@ -436,7 +440,7 @@ function safeUrl(u){ u=String(u==null?'':u).trim(); return /^https?:\/\/[^\s"'<>
 
 
 
-var SOP={rows:null,err:'',pending:null,cards:null,cardsErr:'',cardsPending:null,open:''};
+var SOP={rows:null,err:'',pending:null,cards:null,cardsErr:'',cardsPending:null,open:'',shut:{}};
 var SOP_CARDS_FILE='BLD-sop_cards.json';
 var SOP_COLOURS=['White','Red','Orange','Yellow','Green','Blue','Purple'];
 var SOP_FREQS=['Daily','Weekly','Monthly','Quarterly','Annual','Ongoing','Per litter','Ad hoc','Breeding'];
@@ -448,6 +452,8 @@ var SOP_ROLE_RANK=SOP_ROLES.concat(['inspector_view']);
 var SOP_ROLE_LABEL={licence_holder:'Licence holder',manager:'Manager',kennel_staff:'Kennel staff',all_staff:'All staff',inspector_view:'Inspector view'};
 var SOP_DOT={White:'--ljr-0',Red:'--ljr-2',Orange:'--ljr-3',Yellow:'--ljr-4',Green:'--ljr-5',Blue:'--ljr-6',Purple:'--ljr-7'};
 function sopDot(c){ return SOP_DOT[c]||'--ljr-0'; }
+/* the colour's meaning on the LJR7 spine (tokens.css), as on Lisa's 5 Nov SOP mock-up: "Yellow – operations" */
+var SOP_MEANING={White:'vision',Red:'risk and legal',Orange:'money',Yellow:'operations',Green:'connection',Blue:'sales',Purple:'ideas'};
 function sopLabel(r){ return r.colour+' \u2013 '+r.frequency+': '+r.short_name; }
 function sopRoleLabel(code){ return SOP_ROLE_LABEL[code]||code||''; }
 function sopNorm(r){
@@ -2506,7 +2512,7 @@ function pageSops(){
  var cats=sopChoices(SOP.rows.map(function(r){return r.category;}), SOP_CATEGORIES);
  var roles=sopChoices(SOP.rows.map(function(r){return r.role;}), SOP_ROLES);
  return '<h2>SOPs</h2>'
-  +fbar({id:'sops',what:'SOPs',q:'sopq',count:'sopcnt',clear:'sopclr',sort:['sopsort',[['','name A to Z'],['colour','colour'],['frequency','frequency'],['category','category'],['role','role']]],
+  +fbar({id:'sops',what:'SOPs',q:'sopq',count:'sopcnt',clear:'sopclr',sort:['sopsort',[['','colour, then how often'],['name','name A to Z'],['frequency','frequency'],['category','category'],['role','role']]],
     groups:[['Colour',fsel('sopcol','Colour',colours.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join(''))],
      ['Frequency',fsel('sopfr','Frequency',freqs.map(function(f){return '<option value="'+esc(f)+'">'+esc(f)+'</option>';}).join(''))],
      ['Category',fsel('sopcat','Category',cats.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>';}).join(''))],
@@ -2581,13 +2587,14 @@ function drawSops(){
   if(ia<0) ia=999; if(ib<0) ib=999;
   return ia-ib||byLabel(a,b);
  }; };
- if(so==='colour') list.sort(rank(SOP_COLOURS,'colour'));
+ var grouped=!so;   /* Lisa's 5 Nov layout: one section per colour, rows "How often: Name" in frequency order */
+ if(grouped) list.sort(function(a,b){ var c=rank(SOP_COLOURS,'colour')(a,b); return SOP_COLOURS.indexOf(a.colour)-SOP_COLOURS.indexOf(b.colour)||rank(SOP_FREQS,'frequency')(a,b)||c; });
  else if(so==='frequency') list.sort(rank(SOP_FREQS,'frequency'));
  else if(so==='category') list.sort(rank(SOP_CATEGORIES,'category'));
  else if(so==='role') list.sort(rank(SOP_ROLE_RANK,'role'));
  else list.sort(byLabel);
  var el=document.getElementById('soprows'); if(!el) return;
- el.innerHTML=list.map(function(r){
+ var html=list.map(function(r){
   var label=sopLabel(r);
   var type=sopShownType(r);
   var badge=type
@@ -2602,9 +2609,21 @@ function drawSops(){
   var signType=signs.length?sopTypeOf(signs[0].type_code):null;
   var signBadge=signType?'<span class="sopsigns" data-type-code="'+esc(signType.type_code)+'" aria-label="'+signs.length+' linked '+esc(signType.label.toLowerCase())+(signs.length>1?'s':'')+'">'+sopIcon(signType.icon_key)+signs.length+'</span>':'';
   var isOpen=SOP.open===r.short_name, pid='sopb-'+list.indexOf(r);
-  return '<div class="mrow house-lbar" data-sop="'+esc(r.short_name)+'" style="--sc:var('+sopDot(r.colour)+')"><button type="button" class="sopopen" data-house="text" data-sop-open="'+esc(r.short_name)+'" aria-expanded="'+isOpen+'"'+(isOpen?' aria-controls="'+pid+'"':'')+'><span class="t"><span class="n">'+esc(r.short_name)+'</span><small>'+esc(r.frequency)+'</small></span><span class="sr">'+esc(r.colour)+'</span></button>'+badge+signBadge+form+'</div>'
+  return '<div class="mrow house-lbar" data-sop="'+esc(r.short_name)+'" style="--sc:var('+sopDot(r.colour)+')"><button type="button" class="sopopen" data-house="text" data-sop-open="'+esc(r.short_name)+'" aria-expanded="'+isOpen+'"'+(isOpen?' aria-controls="'+pid+'"':'')+'><span class="t"><span class="fq">'+esc(r.frequency)+': </span><span class="n">'+esc(r.short_name)+'</span></span><span class="sr">'+esc(r.colour)+'</span></button>'+badge+signBadge+form+'</div>'
    +(isOpen?'<div class="sopbody" id="'+pid+'" style="--hc:var('+sopDot(r.colour)+')" data-sop-body="'+esc(r.short_name)+'">'+sopCardHtml(r)+'</div>':'');
- }).join('');
+ });
+ if(grouped){
+  var out='', i=0;
+  while(i<list.length){
+   var c=list[i].colour, j=i; while(j<list.length&&list[j].colour===c) j++;
+   var shut=!!SOP.shut[c];
+   out+='<details class="sopgrp" data-group="'+esc(c)+'"'+(shut?'':' open')+'><summary class="house-lbar" style="--sc:var('+sopDot(c)+')"><span class="g">'+esc(c)+(SOP_MEANING[c]?' \u2013 '+esc(SOP_MEANING[c]):'')+'</span> <span class="n">'+(j-i)+'</span></summary>'
+     +html.slice(i,j).join('')+'</details>';
+   i=j;
+  }
+  el.innerHTML=out;
+  Array.prototype.forEach.call(el.querySelectorAll('details.sopgrp'),function(d){ d.addEventListener('toggle',function(){ SOP.shut[d.dataset.group]=!d.open; }); });
+ } else el.innerHTML=html.join('');
  var empty=document.getElementById('sopempty');
  if(empty) empty.classList.toggle('hidden', !!list.length);
  var cnt=document.getElementById('sopcnt');
