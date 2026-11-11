@@ -400,7 +400,14 @@
       out.textContent = '';
       if (!room.value) { setMsg(msg, 'Choose the room.', 'bad'); return; }
       setMsg(msg, 'Loading...');
-      Promise.all([c.readOptional('area_reading'), c.readOptional('guest_reading'), c.readOptional('sensor_reading')]).then(function (v) {
+      // One room, one year per read (the save script's filter), so a year of readings stays under the read limit.
+      // An older script that refuses the filter gets the plain read; yearRows still picks the room and year.
+      var f = { area_id: room.value, from: year.value + '-01-01', to: year.value + '-12-31' };
+      function readYear(key) {
+        return c.save.read(key, f).then(function (r) { return r.ok || r.code !== 'BAD_FILTER' ? r : c.save.read(key); })
+          .then(function (r) { return r.ok ? r : { ok: false, rows: [], code: r.code, message: r.message }; });
+      }
+      Promise.all([readYear('area_reading'), readYear('guest_reading'), readYear('sensor_reading')]).then(function (v) {
         if (!v[0].ok) { setMsg(msg, 'Readings cannot be read with this code: ' + (v[0].message || ''), 'bad'); return; }
         setMsg(msg, (v[0].truncated ? 'Only the first ' + v[0].rows.length + ' readings came back: the list is longer than one read allows. ' : '') + (v[1].ok ? '' : 'Guest readings not shown. ') + (v[2].ok ? '' : 'Sensor back-up not shown.'), v[0].truncated ? 'warn' : '');
         draw(yearRows(v[0].rows, v[1].ok ? v[1].rows : [], v[2].ok ? v[2].rows : [], room.value, year.value));
