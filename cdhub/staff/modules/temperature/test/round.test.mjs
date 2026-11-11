@@ -4,7 +4,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
-globalThis.window = {};
+import { createRequire } from 'node:module';
+globalThis.window = { BLDThermometer: createRequire(import.meta.url)('../../../lib/thermometer.js') };
 globalThis.document = { currentScript: null };
 new Function(readFileSync(new URL('../module.js', import.meta.url), 'utf8'))();
 const { roundAreas } = globalThis.window.BLDTemperature;
