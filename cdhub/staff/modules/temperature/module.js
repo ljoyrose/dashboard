@@ -20,7 +20,7 @@
 (function () {
   'use strict';
   var BASE = (document.currentScript && document.currentScript.src || '').replace(/[^/]*$/, '');
-  var ROOM_KEY = 'bld.move.room', ROOM_MINUTES = 30, READ_MS = 250, GIVE_UP_MS = 20000;
+  var ROOM_KEY = 'bld.move.room', THERMO_KEY = 'bld.temp.thermometer', ROOM_MINUTES = 30, READ_MS = 250, GIVE_UP_MS = 20000;
   var readerP = null;
 
   function loadReader() {
@@ -72,9 +72,30 @@
     return { key: am ? 'am' : 'pm', label: am ? 'Morning' : 'Afternoon', date: p.date, periodStart: londonIso(p.date, am ? '00' : '12') };
   }
   function ddmmyy(iso) { iso = String(iso || ''); return /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(8, 10) + '/' + iso.slice(5, 7) + '/' + iso.slice(2, 4) : iso; }
-  function rememberedRoom() {
-    try { var r = JSON.parse(localStorage.getItem(ROOM_KEY) || 'null'); if (r && Date.now() - r.at < ROOM_MINUTES * 60000) return r; } catch (e) { /* none */ }
+  function remembered(key) {
+    try { var r = JSON.parse(localStorage.getItem(key) || 'null'); if (r && Date.now() - r.at < ROOM_MINUTES * 60000) return r; } catch (e) { /* none */ }
     return null;
+  }
+  // A thermometer QR (set by the staff page's scan) wins over a room scan; it names the place it hangs in.
+  function rememberedRoom(areas) {
+    var t = remembered(THERMO_KEY);
+    if (t) { var a = (areas || []).filter(function (x) { return x.thermometerId && x.thermometerId === t.thermometerId; })[0]; if (a) return { areaId: a.id, at: t.at }; }
+    return remembered(ROOM_KEY);
+  }
+  /* The round is the thermometer rows (BLD-thermometer: name, area_id, active), never a coded list: a room with no
+     thermometer (a field) is not on it, and a corridor is its own place. One thermometer per place. With no rows
+     yet, every room is listed as before. */
+  function roundAreas(areas, thermos) {
+    var live = (thermos || []).filter(function (t) { return t.area_id && String(t.active).toLowerCase() !== 'false'; });
+    if (!live.length) return areas;
+    var out = [];
+    areas.forEach(function (a) {
+      live.filter(function (t) { return t.area_id === a.id; }).slice(0, 1).forEach(function (t) {
+        var nm = String(t.name || '').trim();
+        out.push({ id: a.id, label: nm && nm !== a.label ? nm + ' · ' + a.label : a.label, thermometerId: t.id });
+      });
+    });
+    return out;
   }
 
   /* ------------------------------------------------------------------ limits (rows, never coded) */
@@ -284,14 +305,14 @@
       host.appendChild(h('h2', { text: o.guest ? 'Guest temperatures' : 'Room temperatures' }));
       host.appendChild(h('p', { class: 'sub', text: slot.label + ' · ' + ddmmyy(slot.date) + (o.guest ? ' · Your readings are kept apart from the staff record.' : '') }));
       if (!o.areas.length) { host.appendChild(say('No rooms loaded.', 'bad')); return; }
-      var here = !o.guest && rememberedRoom(), cards = h('div', { class: 'cards' });
+      var here = !o.guest && rememberedRoom(o.areas), cards = h('div', { class: 'cards' });
       var sorted = o.areas.slice();
       if (here) sorted.sort(function (a, b) { return (b.id === here.areaId) - (a.id === here.areaId); });
       sorted.forEach(function (a) {
         var done = o.done && o.done[a.id], scanned = here && here.areaId === a.id;
         cards.appendChild(h('button', { class: 'card go' + (done ? ' tg-done' : ''), type: 'button', onclick: function () { open(a); } }, [
           h('div', { class: 'nm', text: (done ? '✓ ' : '') + a.label }),
-          scanned ? h('div', { class: 'ds', text: 'Room you scanned' }) : (done ? h('div', { class: 'ds', text: 'Done' }) : null)
+          scanned ? h('div', { class: 'ds', text: 'You scanned this' }) : (done ? h('div', { class: 'ds', text: 'Done' }) : null)
         ]));
       });
       host.appendChild(cards);
@@ -511,13 +532,14 @@
       min_c: { type: 'temp', required: true, label: 'Lowest C' }, max_c: { type: 'temp', required: true, label: 'Highest C' },
       device_label: { type: 'text', label: 'Sensor' }
     } });
-    Promise.all([c.data(), c.readOptional('temperature_band'), c.readOptional('area_reading')]).then(function (v) {
+    Promise.all([c.data(), c.readOptional('temperature_band'), c.readOptional('area_reading'), c.readOptional('thermometer')]).then(function (v) {
       var d = v[0];
       if (!d.ok) { host.textContent = ''; host.appendChild(say(d.message, 'bad')); return; }
       var dob = {}; (d.raw.subject || []).forEach(function (s) { dob[s.id] = s.dob || ''; });
       var dogs = (d.dogs || []).map(function (x) { return { id: x.id, areaId: x.areaId, away: x.away, dob: dob[x.id] || '' }; });
       var areas = d.areas.map(function (a) { return { id: a.id, label: a.label }; });
       var bands = v[1].ok ? v[1].rows : [];
+      var round = roundAreas(areas, v[3].ok ? v[3].rows : []);
       var slot = slotNow(), done = {};
       if (v[2].ok) v[2].rows.forEach(function (r) { if (String(r.period_start || '') === slot.periodStart) done[r.area_id] = true; });
       function tools() {
@@ -532,14 +554,14 @@
         host.textContent = ''; sub = h('div'); host.appendChild(sub);
         if (!v[1].ok) sub.appendChild(say('Room limits are not loaded, so no limit is checked: ' + (v[1].message || ''), 'warn'));
         var inner = h('div'); sub.appendChild(inner);
-        stop = rooms(inner, { save: c.save, areas: areas, dogs: dogs, bands: bands, done: done, tools: tools, autoOpen: true });
+        stop = rooms(inner, { save: c.save, areas: round, dogs: dogs, bands: bands, done: done, tools: tools, autoOpen: true });
       }
       start();
     });
     return function () { if (stop) stop(); };
   }
 
-  window.BLDTemperature = { rooms: function (host, o) { css(); return rooms(host, o); }, entry: entry, parseGovee: parseGovee, limitFor: limitFor, yearRows: yearRows, slotNow: slotNow, londonIso: londonIso };
+  window.BLDTemperature = { rooms: function (host, o) { css(); return rooms(host, o); }, entry: entry, parseGovee: parseGovee, limitFor: limitFor, yearRows: yearRows, roundAreas: roundAreas, slotNow: slotNow, londonIso: londonIso };
   if (window.StaffPage) {
     window.StaffPage.register({ id: 'temperature', title: 'Room temperatures', desc: 'Camera reads the min/max', icon: window.StaffPage.ctx.icons.temp, order: 20, open: openStaff });
   }
