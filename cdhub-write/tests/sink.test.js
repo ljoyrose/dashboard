@@ -61,7 +61,7 @@ test('bad input is refused with plain messages and nothing is written', () => {
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', reading_type: 'humidity' }, 'reading_type', /Not one of/],
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2026-10-15 07:40' }, 'period_start', /time zone/],
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2027-01-01T00:00:00Z' }, 'period_start', /future/],
-    [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2026-09-01T00:00:00Z' }, 'period_start', /7 days/]
+    [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2019-09-01T00:00:00Z' }, 'period_start', /kept \(6 years\)/]   // no 7-day limit on readings, only the kept years
   ];
   bad.forEach(([fields, field, re]) => {
     const r = save(env, req(env, { fields }));
@@ -889,9 +889,10 @@ test('owner edit of an OLD row: an unchanged old period_start is not re-checked 
   assert.equal(e.ok, true);
   assert.deepEqual(Array.from(e.result.changed), ['mitigation_note']);
   assert.equal(rows(env, 'BLD-area_reading.csv')[0].period_start, ps);
-  // but a CHANGED date is checked
-  const bad = env.ctx.ui_edit('area_reading', r.result.id, { period_start: '2026-01-01T00:00:00Z' });
-  assert.match(bad.fields.period_start, /7 days/);
+  // but a CHANGED date is checked: readings have no 7-day limit (Lisa 11 Nov 2026), only how long records are kept
+  const bad = env.ctx.ui_edit('area_reading', r.result.id, { period_start: '2019-01-01T00:00:00Z' });
+  assert.match(bad.fields.period_start, /kept \(6 years\)/);
+  assert.equal(env.ctx.ui_edit('area_reading', r.result.id, { period_start: '2026-01-01T00:00:00Z' }).ok, true);
 });
 
 test('owner edit of an occupancy row (including moved_out, which staff can never set); other rows unchanged', () => {

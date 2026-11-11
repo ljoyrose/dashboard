@@ -22,6 +22,8 @@ const SCORE_FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_cr
 const PENDING = 'Breed Better page and dog-card chip are not on main yet (Grok is building them). Remove fixme once they land.';
 const PENDING_TARGET = 'Below target is in the spec but not built: score.js has no target_points yet.';
 const PENDING_LABEL = 'Spec wants the Testing label on the dog-card chip too; hub-view.js shows it on the page heading only.';
+const PENDING_INSPECTOR = 'Inspector view (spec S10, Lisa 11 Nov 2026) is not built. The route and data-bb-inspector hook are proposed; change selectors only.';
+const MONTHS = 'Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec';
 
 // Expected results for the invented rows (see tests/fixtures/breed-better/README.md). Best first.
 const EXPECT = [
@@ -206,15 +208,25 @@ asOwner.describe('Breed Better acceptance: owner page', () => {
     expect(thick, 'only the left colour line may be wider than 1px').toEqual([]);
   });
 
-  asOwner('S8 wording: Unverified, never Unproven; any date is DD/MM/YY', async ({ page }) => {
+  asOwner('S8 wording: Unverified, never Unproven; dates read like 2 Mar 2026', async ({ page }) => {
     await openBreed(page);
     for (const r of await dogRows(page).all()) {
       await r.click();
       const text = await page.locator('#main').innerText();
       expect(text).not.toMatch(/unproven/i);
-      expect(text, 'dates are DD/MM/YY').not.toMatch(/\b\d{4}-\d{2}-\d{2}\b/);
+      expect(text, 'no 2026-03-02 dates').not.toMatch(/\b\d{4}-\d{2}-\d{2}\b/);
+      expect(text, 'no 02/03/26 dates: they read differently by country').not.toMatch(/\b\d{1,2}\/\d{1,2}\/\d{2,4}\b/);
       await page.locator('#bbRoot [data-bb-back]').click();
     }
+    // Test Dog One's hips X-ray is dated 2025-06-01 in the fixtures
+    await dogRows(page).filter({ hasText: 'Test Dog One' }).click();
+    await expect(page.locator('#bbRoot')).toContainText('1 Jun 2025');
+  });
+
+  asOwner('S11 trial scope: no offspring or post-adoption check-up section', async ({ page }) => {
+    await openBreed(page);
+    await dogRows(page).first().click();
+    await expect(page.locator('#bbRoot')).not.toContainText(/offspring|check-?up/i);
   });
 });
 
@@ -279,7 +291,7 @@ draftScheme.describe('Breed Better acceptance: no active scheme', () => {
 
 // ---------------------------------------------------------------- staff (pending)
 
-asStaff.describe('Breed Better acceptance: staff see no change', () => {
+asStaff.describe('Breed Better acceptance: staff see nothing (Lisa 11 Nov 2026)', () => {
   asStaff.fixme(true, PENDING);
 
   asStaff('S2 staff (who cannot read the score files) see no Breed Better entry under More', async ({ page }) => {
@@ -299,5 +311,41 @@ asStaff.describe('Breed Better acceptance: staff see no change', () => {
     await page.goto('cdhub/#/breed');
     await signIn(page);
     await expect(page.locator('#main')).not.toContainText(/\d+ of \d+/);
+  });
+});
+
+// ---------------------------------------------------------------- inspector (pending, spec S10)
+
+asOwner.describe('Breed Better acceptance: inspector view', () => {
+  asOwner.fixme(true, PENDING_INSPECTOR);
+  const openInspector = async (page) => {
+    await page.goto('cdhub/#inspect');
+    await expect(page.locator('[data-bb-inspector]')).toBeVisible();
+  };
+
+  asOwner('S10.1 read only: no buttons that change anything', async ({ page }) => {
+    await openInspector(page);
+    const root = page.locator('[data-bb-inspector]');
+    await expect(root).toContainText('Read only');
+    await expect(root.locator('input, textarea, select, [data-save], [data-edit]')).toHaveCount(0);
+  });
+
+  asOwner('S10.2 shows the four must-pass checks, never points, target or ranking', async ({ page }) => {
+    await openInspector(page);
+    const root = page.locator('[data-bb-inspector]');
+    for (const label of ['Hips', 'Elbows', 'Patella', 'Fit to Breed']) await expect(root).toContainText(label);
+    await expect(root).not.toContainText(/\d+ of (20|85|100)\b|Below target|target|points/i);
+  });
+
+  asOwner('S10.3 dogs are A to Z, not best to worst', async ({ page }) => {
+    await openInspector(page);
+    const names = await page.locator('[data-bb-inspector] [data-bb-dog]').allInnerTexts();
+    const first = names.map((n) => n.split('\n')[0].trim());
+    expect(first).toEqual([...first].sort((a, b) => a.localeCompare(b)));
+  });
+
+  asOwner('S10.4 the link shows when it ends, as a date like 18 Nov 2026', async ({ page }) => {
+    await openInspector(page);
+    await expect(page.locator('[data-bb-inspector]')).toContainText(new RegExp('Ends \\d{1,2} (' + MONTHS + ') \\d{4}'));
   });
 });

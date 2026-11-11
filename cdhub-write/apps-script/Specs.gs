@@ -16,7 +16,7 @@ var ROLE_ALL = ['OWNER', 'STAFF', 'VET', 'TRAINER'];
 var ROLE_GUEST = 'GUEST';
 
 /** The default allow-list: the temperature log (plus the approvals queue, see Config.gs PENDING_FILE). */
-var READ_METHODS_ = ['camera', 'typed'];
+var READ_METHODS_ = ['camera', 'typed', 'photo'];   // photo (11 Nov 2026): typed later from a photo. Saved, never shown (Lisa 11 Nov)
 
 var TABLES = {
 
@@ -35,7 +35,7 @@ var TABLES = {
       'applied_limit_id', 'in_range', 'compliant', 'mitigation_required',
       'corrects_id',        // PROPOSED: pointer to the row this one corrects
       'mitigation_note',    // PROPOSED: what was done when a reading is out of band
-      'read_method',        // PROPOSED 8 Nov 2026: 'camera' or 'typed'
+      'read_method',        // PROPOSED 8 Nov 2026: 'camera' or 'typed'; 'photo' (11 Nov) = typed later from a photo
       'camera_value_changed' // PROPOSED 8 Nov 2026: 'true' if staff changed the number the camera read
     ],
     proposedColumns: ['corrects_id', 'mitigation_note', 'read_method', 'camera_value_changed'],
@@ -47,6 +47,10 @@ var TABLES = {
     ownerEditable: true,
     alwaysPending: false,
     defaultMode: 'direct',   // Lisa 16 Oct: temperature readings go straight in; corrections always wait
+    // Lisa 11 Nov 2026 ("remove 7 day limit on readings"): any role may send a period_start older than 7 days, back as
+    // far as temperature records are kept (BLD-retention_setting row for section temperature, else the default in
+    // Config.gs). Never a future time. taken_at/taken_by still show when it was typed.
+    ageCap: { retentionSection: 'temperature', field: 'period_start' },
     // fields the browser may send (everything else is set by the server)
     input: {
       area_id:             { type: 'ref', lookup: 'area', required: true },
@@ -57,7 +61,7 @@ var TABLES = {
       period_start:        { type: 'datetime' },
       reset_after_reading: { type: 'bool' },
       mitigation_note:     { type: 'text' },
-      read_method:         { type: 'enum', values: READ_METHODS_ },
+      read_method:         { type: 'enum', values: READ_METHODS_, dflt: 'typed' },
       camera_value_changed: { type: 'bool' }
     },
     // duplicate guard: same tenant + same area + same period (morning/afternoon slot sent by the hub) within
@@ -97,13 +101,14 @@ var TABLES = {
     noCorrect: true,
     alwaysPending: false,
     defaultMode: 'direct',
+    ageCap: { retentionSection: 'temperature', field: 'period_start' },   // as area_reading (Lisa 11 Nov 2026)
     input: {
       area_id:              { type: 'ref', lookup: 'area', required: true },
       min_c:                { type: 'temp', required: true },
       max_c:                { type: 'temp', required: true },
       spot_c:               { type: 'temp' },
       period_start:         { type: 'datetime' },
-      read_method:          { type: 'enum', values: READ_METHODS_ },
+      read_method:          { type: 'enum', values: READ_METHODS_, dflt: 'typed' },
       camera_value_changed: { type: 'bool' },
       mitigation_note:      { type: 'text' },
       note:                 { type: 'text' }
