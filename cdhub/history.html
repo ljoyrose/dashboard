@@ -195,6 +195,7 @@ var DRIVE_API=window.DASH_CONFIG.urls.files;
 var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
 var AREA_NAMES={};  /* areaId -> display name/code */
 var AREA_SORT={};   /* areaId -> group_sort from BLD-area (the round order is rows, never coded here) */
+var THERMOS=[];      /* BLD-thermometer rows: a place is due on a day only while its thermometer is in date */
 var ROUND_DATE=null;
 
 /* ---- helpers ---- */
@@ -284,6 +285,8 @@ async function loadAreaData(){
       var atxt=await readDriveFile(af);
       parseCSV(atxt).forEach(function(a){if(!a.id)return;AREA_NAMES[a.id]=a.code||a.name||a.id;var g=parseFloat(a.group_sort);AREA_SORT[a.id]=isNaN(g)?Infinity:g;});
     }
+    var tf=await findDriveFile('BLD-thermometer.csv');
+    if(tf){ THERMOS=parseCSV(await readDriveFile(tf)).filter(function(t){return t.id&&t.area_id;}); }
   }catch(e){console.warn('Area data load failed:',e);}
 }
 
@@ -389,7 +392,7 @@ function openDrill(isoDate){
   el('d-cloud').textContent=r.cloud_cover_pct!==undefined&&r.cloud_cover_pct!==''?r.cloud_cover_pct+'%':'—';
   el('d-wind').textContent=r.wind_kmh!==undefined&&r.wind_kmh!==''?dpOutdoor(r.wind_kmh)+' km/h':'—';
   var dayAreas=AREA_DAYS[isoDate]||{};
-  var areaIds=areasInWalk(Object.keys(dayAreas));
+  var areaIds=areasInWalk(Object.keys(dayAreas),isoDate);
   var areasEl=el('d-areas');
   if(areaIds.length){
     el('d-areas-inner').innerHTML=areaIds.map(function(aid){
@@ -411,9 +414,21 @@ var YEAR=2026;
    but a past day that has a reading for one still shows it, last, so no record is hidden. */
 function areaName(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')); }
 function isRetired(aid){ return /^ZZ_/i.test(String(AREA_NAMES[aid]||'')); }
-function areasInWalk(extra){
+/* A thermometer row counts on a day when valid_from <= day <= valid_to (blank = open). A row switched off with no
+   valid_to was never meant (entered by mistake). Same rule as the staff round (thermInDate in the temperature module). */
+function thermInDate(t,day){
+  var f=String(t.valid_from||'').slice(0,10), to=String(t.valid_to||'').slice(0,10);
+  if(String(t.active).toLowerCase()==='false'&&!to) return false;
+  return (!f||f<=day)&&(!to||day<=to);
+}
+/* Due on a day: with thermometer rows, a place whose thermometer is in date; before any rows, every room not retired (ZZ_). */
+function dueOn(aid,day){
+  if(!THERMOS.length) return !isRetired(aid);
+  return THERMOS.some(function(t){ return t.area_id===aid&&thermInDate(t,day); });
+}
+function areasInWalk(extra,day){
   var ids={};
-  Object.keys(AREA_NAMES).forEach(function(id){ if(!isRetired(id)) ids[id]=1; });
+  Object.keys(AREA_NAMES).forEach(function(id){ if(day?dueOn(id,day):!isRetired(id)) ids[id]=1; });
   (extra||[]).forEach(function(id){ if(id) ids[id]=1; });
   function key(id){ return [isRetired(id)?1:0, id in AREA_SORT?AREA_SORT[id]:Infinity]; }
   return Object.keys(ids).sort(function(a,b){
@@ -517,12 +532,12 @@ function buildMonthCards(y){
       var date=ds(y,mi,d);
       if(date>TODAY_STR) continue;
       var day=AREA_DAYS[date]||{};
-      var use=known.length?areasInWalk(Object.keys(day)):Object.keys(day);
+      var use=known.length?areasInWalk(Object.keys(day),date):Object.keys(day);
       use.forEach(function(aid){
         var ar=day[aid]||{};
         ['am','pm'].forEach(function(slot){
           var t=ar[slot], s=slotState(t);
-          if(s.miss){ if(!isRetired(aid)) missed++; return; }
+          if(s.miss){ if(dueOn(aid,date)) missed++; return; }
           any=true;
           if(!s.inn) outN++;
           var mx=parseFloat(t.max), mn2=parseFloat(t.min), name=areaName(aid);
@@ -560,7 +575,7 @@ function outsideBlock(dateStr){
 }
 function buildRound(dateStr){
   var day=AREA_DAYS[dateStr]||{};
-  var ids=areasInWalk(Object.keys(day));
+  var ids=areasInWalk(Object.keys(day),dateStr);
   var dateInput='<div class="rdate"><label for="rdate">Date</label><input id="rdate" type="date" value="'+esc(dateStr)+'" onchange="setRoundDate(this.value)"></div>';
   var tiles='<div class="rtiles">', rows='';
   ids.forEach(function(aid){

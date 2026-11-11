@@ -82,12 +82,20 @@
     if (t) { var a = (areas || []).filter(function (x) { return x.thermometerId && x.thermometerId === t.thermometerId; })[0]; if (a) return { areaId: a.id, at: t.at }; }
     return remembered(ROOM_KEY);
   }
-  /* The round is the thermometer rows (BLD-thermometer: name, area_id, active), never a coded list: a room with no
-     thermometer (a field) is not on it, and a corridor is its own place. One thermometer per place. With no rows
-     yet, every room is listed as before. */
-  function roundAreas(areas, thermos) {
-    var live = (thermos || []).filter(function (t) { return t.area_id && String(t.active).toLowerCase() !== 'false'; });
-    if (!live.length) return areas;
+  /* A thermometer row counts on a day when valid_from <= day <= valid_to (blank = open). A row switched off with
+     no valid_to was never meant. Same rule as cdhub/history.html. */
+  function thermInDate(t, day) {
+    var f = String(t.valid_from || '').slice(0, 10), to = String(t.valid_to || '').slice(0, 10);
+    if (String(t.active).toLowerCase() === 'false' && !to) return false;
+    return (!f || f <= day) && (!to || day <= to);
+  }
+  /* The round is the thermometer rows (BLD-thermometer: name, area_id, active, valid_from, valid_to), never a coded
+     list: a room with no thermometer (a field) is not on it, a corridor is its own place, one thermometer per place,
+     and a thermometer is only due on the days it is in date. With no rows yet, every room is listed as before. */
+  function roundAreas(areas, thermos, day) {
+    var all = (thermos || []).filter(function (t) { return t.area_id; });
+    if (!all.length) return areas.filter(function (a) { return !a.retired; });
+    var live = all.filter(function (t) { return thermInDate(t, day); });
     var out = [];
     areas.forEach(function (a) {
       live.filter(function (t) { return t.area_id === a.id; }).slice(0, 1).forEach(function (t) {
@@ -537,15 +545,24 @@
       if (!d.ok) { host.textContent = ''; host.appendChild(say(d.message, 'bad')); return; }
       var dob = {}; (d.raw.subject || []).forEach(function (s) { dob[s.id] = s.dob || ''; });
       var dogs = (d.dogs || []).map(function (x) { return { id: x.id, areaId: x.areaId, away: x.away, dob: dob[x.id] || '' }; });
-      var areas = d.areas.map(function (a) { return { id: a.id, label: a.label }; });
+      // Every room row, retired (ZZ_) ones too, in group_sort then code order: a thermometer in date on a retired
+      // room is still due, and the year report must still open for a retired room's past readings.
+      var areas = (d.raw && d.raw.area && d.raw.area.length ? d.raw.area.map(function (a) {
+        var code = String(a.code || a.id), old = /^ZZ_/i.test(code);
+        return { id: a.id, label: old ? code.replace(/^ZZ_/i, '') + ' (retired)' : code, retired: old, sort: parseFloat(a.group_sort) };
+      }) : d.areas.map(function (a) { return { id: a.id, label: a.label, sort: a.sort }; })).sort(function (a, b) {
+        if (a.retired !== b.retired) return a.retired ? 1 : -1;
+        var x = isNaN(a.sort) ? Infinity : a.sort, y = isNaN(b.sort) ? Infinity : b.sort;
+        return x !== y ? (x < y ? -1 : 1) : String(a.label).localeCompare(String(b.label), 'en', { numeric: true });
+      });
       var bands = v[1].ok ? v[1].rows : [];
-      var round = roundAreas(areas, v[3].ok ? v[3].rows : []);
+      var round = roundAreas(areas, v[3].ok ? v[3].rows : [], slotNow().date);
       var slot = slotNow(), done = {};
       if (v[2].ok) v[2].rows.forEach(function (r) { if (String(r.period_start || '') === slot.periodStart) done[r.area_id] = true; });
       function tools() {
         return h0('div', { class: 'tg-row', style: 'margin-top:16px' }, [
           h0('button', { class: 'btn quiet', type: 'button', text: 'Year report', onclick: function () { if (stop) stop(); stop = null; back(); report(sub, c, areas, bands); } }),
-          h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas); } })
+          h0('button', { class: 'btn quiet', type: 'button', text: 'Sensor CSV', onclick: function () { if (stop) stop(); stop = null; back(); importer(sub, c, areas.filter(function (a) { return !a.retired; })); } })
         ]);
       }
       var sub = h('div');
@@ -561,7 +578,7 @@
     return function () { if (stop) stop(); };
   }
 
-  window.BLDTemperature = { rooms: function (host, o) { css(); return rooms(host, o); }, entry: entry, parseGovee: parseGovee, limitFor: limitFor, yearRows: yearRows, roundAreas: roundAreas, slotNow: slotNow, londonIso: londonIso };
+  window.BLDTemperature = { rooms: function (host, o) { css(); return rooms(host, o); }, entry: entry, parseGovee: parseGovee, limitFor: limitFor, yearRows: yearRows, roundAreas: roundAreas, thermInDate: thermInDate, slotNow: slotNow, londonIso: londonIso };
   if (window.StaffPage) {
     window.StaffPage.register({ id: 'temperature', title: 'Room temperatures', desc: 'Camera reads the min/max', icon: window.StaffPage.ctx.icons.temp, order: 20, open: openStaff });
   }
