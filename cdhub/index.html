@@ -12,6 +12,7 @@
 <script src="../auth.js"></script>
 <script src="staff/lib/needs.js"></script>
 <script src="staff/lib/occupancy.js"></script>
+<script src="staff/lib/thermometer.js"></script>
 <script src="staff/lib/capacity.js"></script>
 <script src="staff/lib/due.js"></script>
 <script src="jobs-view.js"></script>
@@ -202,6 +203,7 @@ tr:last-child td{border-bottom:none}
 #sopcard .sopgrp .mrow{margin-left:12px}
 .compfold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;min-height:44px}.compfold>summary::-webkit-details-marker{display:none}
 .compfold>summary h3{margin:0;flex:1}.compfold>summary::after{content:"\25BE";color:var(--muted);margin-left:8px}.compfold:not([open])>summary::after{content:"\25B8"}
+ul.ctemps{list-style:none;margin:8px 0;padding:0}ul.ctemps>li{margin:6px 0}ul.ctemps .ctl{margin:4px 0 0;padding-left:20px;font-size:var(--fs-small)}
 #compJobs td[data-n] a{text-decoration:none;display:inline-flex;min-height:32px;align-items:center}
 #sopcard .mrow .mut{flex:0 1 11em;overflow-wrap:anywhere}
 #sopcard .mrow .cb{flex:none;padding:0 10px}
@@ -431,9 +433,9 @@ var WANT=['BLD-check_type.csv','BLD-check_log.csv','BLD-_MANIFEST.csv','BLD-tena
  'BLD-dna_marker.csv','BLD-dna_result.csv','BLD-doc_type.csv','BLD-prospect_set.csv','BLD-outdoor_temp.csv','BLD-area_reading.csv','BLD-WORK.csv',
  'BLD-jurisdiction.csv','BLD-authority.csv','BLD-unit.csv','BLD-locale.csv','BLD-species.csv',
  'BLD-outcome.csv','BLD-declaration.csv','BLD-frequency.csv','BLD-checklist_template.csv','BLD-checklist_template_item.csv',
- 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv'];
+ 'BLD-checklist_instance.csv','BLD-deviation.csv','BLD-verification.csv','BLD-finding.csv','BLD-governed_by.csv','BLD-sop.csv','BLD-sop_version.csv','BLD-role.csv','BLD-vaccination.csv','BLD-breeding_rule.csv','BLD-requirement.csv','BLD-thermometer.csv'];
 /* new tables the owner creates when ready: absent is fine (the page that needs one says so), not a read fault */
-var OPTIONAL_FILES={'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
+var OPTIONAL_FILES={'BLD-thermometer.csv':1,'BLD-requirement.csv':1,'BLD-breeding_rule.csv':1,'BLD-check_type.csv':1,'BLD-check_log.csv':1};
 function jobsV(){ return {types:T['BLD-check_type.csv']||[],logs:T['BLD-check_log.csv']||[],dogs:(CD.dogs||[]).filter(function(d){return d.area_id&&!d.off;}),areas:CD.areas||[],today:todayISO(),esc:esc,dmy:dmy,fold:compOpen,sopHref:sopHref}; }
 /* Compliance folds (Lisa: foldable sections). State lasts while the page is open. */
 var COMP={shut:{}};
@@ -1386,17 +1388,17 @@ function outdoorStrip(date){
 /* foundation: readings against a rule band (temperature per place, per round slot) */
 function tempsCard(){
  var date=CD._roundDate||todayISO(), A=liveCabins(), N=A.length;
- var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
+ var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max||t.empty); }).length; };
  var am=has('am'), pm=has('pm');
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
  var row=function(t,v,s,state){ var cls=state===true||state==='ok'?' ok':state==='cold'?' cold':state==='hot'?' late':''; return '<div class="mrow"><span class="ic'+cls+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
  var outState=function(r){ return r?tempState(r.min,r.max):''; };
- var cold=0, hot=0, swap=0, unk=0; A.forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{}, bd=roomBand(a.id,date);
-   ['am','pm'].forEach(function(s){ var st=r['t_'+s]?tempState(r['t_'+s].min,r['t_'+s].max,bd):''; if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap') swap++; if(st==='unknown') unk++; }); });
+ var cold=0, hot=0, swap=0, unk=0, mt=0; A.forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{}, bd=roomBand(a.id,date);
+   ['am','pm'].forEach(function(s){ var t=r['t_'+s], st=t&&(t.min||t.max)?tempState(t.min,t.max,bd):''; if(t&&t.empty&&st&&st!=='ok'&&st!=='unknown'){ mt++; return; } if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap') swap++; if(st==='unknown') unk++; }); });
  var inState=(am||pm)?(swap||hot?'hot':cold?'cold':unk?'':'ok'):'';
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
   +row('Morning',am+' of '+N,'',N&&am===N)+row('Evening',pm+' of '+N,'',N&&pm===N)
-  +((am||pm)?row('Rooms',swap?swap+' max lower than min':(hot?hot+' too hot':cold?cold+' too cold':unk?unk+' with no limit set':'all in range'),swap?'typed the wrong way round? check and correct':(hot&&cold?cold+' too cold too':''),inState):'')
+  +((am||pm)?row('Rooms',swap?swap+' max lower than min':(hot?hot+' too hot':cold?cold+' too cold':unk?unk+' with no limit set':'all in range'),swap?'typed the wrong way round? check and correct':(hot&&cold?cold+' too cold too':'')+(mt?((hot&&cold)||swap?' \u00b7 ':'')+mt+' out of range, Room empty (not counted)':''),inState):'')
   +(out?row('Outside',esc(outdoorBit(out.min)+'\u2013'+outdoorBit(out.max))+' °C',esc(out.phrase||''),outState(out))
        :'<div class="mrow"><span class="ic" aria-hidden="true"></span><span class="t">Outside<small>No reading today</small></span></div>')
   +outdoorStrip(date)
@@ -1506,7 +1508,7 @@ function flapChosen(v){ v=normPlace(v); return v==='free'||v==='limited'; }
    worked out from what is read: placements, flap modes, readings and headcounts. Nothing is stored. */
 function todayChecklist(date,unplacedN){
  var A=liveCabins(), N=A.length;
- var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
+ var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max||t.empty); }).length; };
  var am=has('am'), pm=has('pm'), modes=A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return flapChosen(r.access||accessOf(a.id)); }).length;
  var over=A.filter(function(a){ var acc=(ROUND[roundKey(date,a.id)]||{}).access||accessOf(a.id); return roomCheck(a.id,inCabin(a.id,date),acc).status==='over'; }).length;
  var c=counts();
@@ -2187,8 +2189,8 @@ function roundKey(date,areaId){ return date+'__'+areaId; }
 function keptReadings(date){
  var rows=areasOn(date).map(function(ar){ var r=ROUND[roundKey(date,ar.id)]||{};
    return {a:ar, am:r.t_am, pm:r.t_pm}; }).filter(function(x){ return x.am||x.pm; });
- var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; var st=tempState(t.min,t.max,bd), sw=st==='swap', unk=st==='unknown'; if(sw) st='hot';
-   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+'</span>'; };
+ var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; if(t.empty&&!t.min&&!t.max) return '<span class="kr" data-empty>Room empty</span>'; var mt=t.empty?' \u2014 Room empty':'', st=tempState(t.min,t.max,bd), sw=st==='swap', unk=st==='unknown'; if(sw) st='hot';
+   return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+mt+'</span>'; };
  return '<section class="card" id="kept-readings"><h3>Kept readings</h3>'
   +(rows.length
     ?'<table class="kt"><thead><tr><th>Room</th><th>Morning</th><th>Evening</th></tr></thead><tbody>'
@@ -2197,6 +2199,9 @@ function keptReadings(date){
     :'<p class="mut">No readings for '+esc(date)+'.</p>')
   +'<p class="mut" style="margin-bottom:0">From BLD-area_reading.csv. Blue under 10 °C, green 10–27 °C, red over 27 °C.</p></section>'; }
 /* indoor: BLD-area_reading.csv rows -> ROUND[date__area].t_am / t_pm (before 12:00 = morning). A later row for the same slot wins (corrections). */
+/* Room empty (Lisa, 11 Nov 2026): BLD-area_reading.room_empty = yes. An out-of-range reading is still flagged, with "Room empty",
+   and never counted as non-compliant. An empty mark with no reading counts as covered. */
+function roomEmpty(r){ return /^yes$/i.test(String(r&&r.room_empty||'').trim()); }
 function tempSwapped(min,max){ var lo=parseFloat(min), hi=parseFloat(max); return !isNaN(lo)&&!isNaN(hi)&&hi<lo; }
 function foldAreaReadings(rows){
  CD.tempSwaps=rows.filter(function(r){ return tempSwapped(r.min_c,r.max_c); })
@@ -2205,7 +2210,7 @@ function foldAreaReadings(rows){
   var at=String(r.period_start||r.taken_at||''); if(!r.area_id||at.length<10) return;   /* period_start = the slot the Round saved (Nov 2026) */
   var k=roundKey(at.slice(0,10),r.area_id), hr=parseInt(at.slice(11,13),10);
   var cur=ROUND[k]||(ROUND[k]={areaId:r.area_id,date:at.slice(0,10),subjects:null,access:''});
-  cur['t_'+(isNaN(hr)||hr<12?'am':'pm')]={min:r.min_c,max:r.max_c,at:r.taken_at||''};
+  cur['t_'+(isNaN(hr)||hr<12?'am':'pm')]={min:r.min_c,max:r.max_c,at:r.taken_at||'',empty:roomEmpty(r)};
  });
  Object.keys(ROUND).forEach(function(k){ if(ROUND[k].subjects===null) delete ROUND[k].subjects; });
 }
@@ -2668,6 +2673,41 @@ function drawSops(){
 /* COMPLIANCE (under More). First screen: the breeder's own breeding rules (Lisa, 8 Nov 2026). Problems first, then the
    rules in force with their history, then the box to add a rule or a change. Only an OWNER code can save a rule (the save
    script refuses any other), and a change is a new row from a later date: nothing already saved is edited. */
+/* Compliance: room temperatures for the last COMP_DAYS days, best to worst: in range, Room empty (flagged, never counted),
+   out of range, missing. Missing = BLDThermometer.missingOn: a thermometer is only flagged on days its need rows cover. */
+var COMP_DAYS=7;
+function dayMinus(iso,n){ var d=new Date(iso+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-n); return d.toISOString().slice(0,10); }
+function compTemps(){
+ var today=todayISO(), req=CD.req||[], th=T['BLD-thermometer.csv'], rd=T['BLD-area_reading.csv']||[], days=[], i;
+ for(i=0;i<COMP_DAYS;i++) days.push(dayMinus(today,i));
+ var code={}; (CD.allAreas||CD.areas||[]).forEach(function(a){ code[a.id]=a.code||a.id; });
+ var slot={};   /* one reading per room, day and slot: a later row wins (corrections), as on The round */
+ rd.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
+  var at=String(r.period_start||r.taken_at||''), d=at.slice(0,10); if(!r.area_id||days.indexOf(d)<0) return;
+  var hr=parseInt(at.slice(11,13),10); slot[d+'__'+r.area_id+'__'+(isNaN(hr)||hr<12?'am':'pm')]=r; });
+ var out={ok:0,empty:[],bad:[],miss:[]};
+ Object.keys(slot).sort().reverse().forEach(function(k){ var r=slot[k], p=k.split('__');
+  if(r.min_c===''&&r.max_c===''||r.min_c==null&&r.max_c==null){ out.ok++; return; }   /* Room empty with no reading: covered */
+  var st=tempState(r.min_c,r.max_c,roomBand(r.area_id,p[0]));
+  if(st==='ok'||st==='unknown'){ out.ok++; return; }
+  var x={day:p[0],slot:p[2],area:r.area_id,label:code[r.area_id]||r.area_id,min:r.min_c,max:r.max_c,st:st};
+  (roomEmpty(r)?out.empty:out.bad).push(x); });
+ if(th) days.forEach(function(d){ BLDThermometer.missingOn(th,rd,d,req).forEach(function(t){ out.miss.push({day:d,name:t.name||t.id,area:t.area_id,label:code[t.area_id]||t.area_id}); }); });
+ out.on=!!th; return out;
+}
+function compTempsHtml(){
+ var c=compTemps(), n=c.bad.length+c.miss.length;
+ var word={cold:'too cold',hot:'too hot',swap:'max lower than min'};
+ var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(extra||'')+'</li>'; };
+ return compFold('compTemps','temps','Room temperatures'+cntPill(n),'<p class="mut">Last '+COMP_DAYS+' days, from BLD-area_reading. A reading in a room marked empty is flagged but never counted.</p>'
+  +'<ul class="ctemps">'
+  +'<li data-k="ok"><span class="pill ok">'+c.ok+'</span> in range or covered</li>'
+  +'<li data-k="empty"><span class="pill w">'+c.empty.length+'</span> out of range, Room empty (not counted)'+(c.empty.length?'<ul class="ctl">'+c.empty.map(function(x){ return li(x,' \u2014 Room empty'); }).join('')+'</ul>':'')+'</li>'
+  +'<li data-k="bad"><span class="pill no">'+c.bad.length+'</span> out of range'+(c.bad.length?'<ul class="ctl">'+c.bad.map(function(x){ return li(x); }).join('')+'</ul>':'')+'</li>'
+  +'<li data-k="miss"><span class="pill no">'+c.miss.length+'</span> missing'+(c.on?'':' <span class="mut">(the thermometer list is not switched on yet)</span>')
+   +(c.miss.length?'<ul class="ctl">'+c.miss.map(function(x){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+esc(dmyShort(x.day))+' \u2014 '+esc(x.name)+', no reading</li>'; }).join('')+'</ul>':'')+'</li>'
+  +'</ul><p><a href="#/round">Open The round</a> \u00b7 <a href="./history.html">Temperature history</a></p>');
+}
 function pageCompliance(){
  var today=todayISO(), lg=litterGaps(), da=damAgeBreaches(), lc=litterCountBreaches(), unset=breedRulesMissing();
  var probs=[];
@@ -2685,6 +2725,7 @@ function pageCompliance(){
   +(rl.over.length?'<ul class="notes">'+rl.over.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+(x.reasons.length?'<br><span class="mut">Reason given: '+esc(x.reasons.join('; '))+'</span>':'<br><span class="mut">No reason recorded</span>')+'</li>'; }).join('')+'</ul>':'<p class="mut">No room is over its limit.</p>')
   +(rl.unknown.length?'<p><span class="pill w">'+rl.unknown.length+' cannot be checked</span></p><ul class="notes">'+rl.unknown.map(function(x){ return '<li><b>'+roomLink(x.areaId,x.label)+'</b> \u2014 '+esc(x.message)+'</li>'; }).join('')+'</ul>':'')
   +'<p><a href="#/areas">Open Areas</a></p>');
+ h+=compTempsHtml();
  h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
  h+=compFold('compRules','rules','Your breeding rules','<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
   +BREED_RULES.map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);

@@ -139,6 +139,42 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(page.locator('#main')).not.toContainText('Room D');
   });
 
+  test('Compliance temperatures: Room empty is flagged but not counted; missing only on days a thermometer is needed', async ({ page, guard }) => {
+    const w = guard.world;
+    put(w, 'BLD-area.csv', AREA);
+    put(w, 'BLD-subject.csv', SUBJECT);
+    put(w, 'BLD-subject_status.csv', STATUS);
+    put(w, 'BLD-occupancy.csv', OCC);
+    put(w, 'BLD-requirement.csv', REQ);
+    await HUBS.cdhub.open(page, guard);
+    const c = await page.evaluate(() => {
+      const t = todayISO(), y = dayMinus(t, 1);
+      T['BLD-area_reading.csv'] = [
+        { id: 'r1', area_id: 'ar-a', min_c: '2.0', max_c: '3.0', period_start: t + 'T08:00:00Z', taken_at: t + 'T08:00:00Z', room_empty: 'yes' },   // out of range, empty: flagged, not counted
+        { id: 'r2', area_id: 'ar-b', min_c: '2.0', max_c: '3.0', period_start: t + 'T08:00:00Z', taken_at: t + 'T08:00:00Z', room_empty: '' },      // out of range: counted
+        { id: 'r3', area_id: 'ar-a', min_c: '', max_c: '', period_start: t + 'T13:00:00Z', taken_at: t + 'T13:00:00Z', room_empty: 'yes' },         // empty, no reading: covered
+        { id: 'r4', area_id: 'ar-b', min_c: '18.0', max_c: '20.0', period_start: y + 'T08:00:00Z', taken_at: y + 'T08:00:00Z', room_empty: '' }
+      ];
+      T['BLD-thermometer.csv'] = [{ id: 'th-a', name: 'Pretend A', area_id: 'ar-a' }, { id: 'th-b', name: 'Pretend B', area_id: 'ar-b' }, { id: 'th-c', name: 'Pretend C', area_id: 'ar-c' }];
+      CD.req = CD.req.concat([{ need_type: 'reading.temperature', target_table: 'thermometer', target_id: 'th-a', from_date: t, to_date: '' }]);
+      go('compliance', false);
+      const x = compTemps();
+      return { t, y, ok: x.ok, empty: x.empty.map((r) => r.area), bad: x.bad.map((r) => r.area), miss: x.miss.map((m) => m.name + '@' + (m.day === t ? 'today' : m.day === y ? 'yesterday' : 'earlier')) };
+    });
+    expect(c.empty).toEqual(['ar-a']);
+    expect(c.bad).toEqual(['ar-b']);
+    // A needed from today only: never flagged for earlier days. B: always needed, read yesterday and today, so missing only on the other 5 days.
+    // C: always needed, never read. Room empty with no reading counts as a reading.
+    expect(c.miss.filter((m) => m.startsWith('Pretend A'))).toEqual([]);
+    expect(c.miss.filter((m) => m.startsWith('Pretend B'))).toHaveLength(5);
+    expect(c.miss.filter((m) => m.startsWith('Pretend C'))).toHaveLength(7);
+    await expect(page.locator('#compTemps h3 .cnt')).toHaveText(String(1 + 5 + 7));
+    await expect(page.locator('#compTemps [data-k="empty"]')).toContainText('Room empty (not counted)');
+    await expect(page.locator('#compTemps [data-k="empty"] a[data-room-link]')).toHaveAttribute('href', '#/areas/ar-a');
+    const order = await page.locator('#compTemps > details > ul > li').evaluateAll((ls) => ls.map((l) => l.dataset.k));
+    expect(order).toEqual(['ok', 'empty', 'bad', 'miss']);
+  });
+
   test('cards link both ways: dog card opens its room, room card opens its dogs, retired rooms never linked', async ({ page, guard }) => {
     const w = guard.world;
     put(w, 'BLD-area.csv', AREA);
