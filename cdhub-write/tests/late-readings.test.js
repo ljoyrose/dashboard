@@ -2,7 +2,7 @@
 /**
  * 11 Nov 2026, Lisa: "remove 7 day limit on readings". Room temperature readings (staff, owner, guest) may be typed in
  * late, e.g. from photos, back as far as temperature records are kept (a BLD-retention_setting row, else 6 years).
- * Never a future time; read_method is required; taken_at / taken_by show when it was typed; other lists keep 7 days.
+ * Never a future time; read_method defaults to typed; taken_at / taken_by show when it was typed; other lists keep 7 days.
  */
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -32,13 +32,27 @@ test('staff, owner and guest: a reading 30 days old saves, typed or from a photo
   assert.match(env.text('BLD-area_reading.csv'), /2026-11-12T10:00:00Z?|2026-11-12T10:00:00\+00:00/);   // taken_at = when typed
 });
 
-test('read_method is required: camera, typed or photo, nothing else', () => {
+test('read_method: none sent is saved as typed (the CD Hub round, cached pages); a value sent must be camera, typed or photo', () => {
   const env = env0();
-  const none = send(env, env.codes.staff, { read_method: '' });
-  assert.equal(none.code, 'INVALID'); assert.match(none.fields.read_method, /needed/);
-  assert.equal(send(env, env.codes.staff, { read_method: 'guess' }).code, 'INVALID');
-  assert.equal(send(env, env.guest, { read_method: '' }, 'guest_reading').code, 'INVALID');
-  assert.equal(count(env), 0);
+  assert.equal(send(env, env.codes.owner, { read_method: '' }).ok, true);
+  assert.equal(save(env, req(env, { code: env.codes.owner, fields: { area_id: 'area-t1', min_c: '18.0', max_c: '22.0', read_method: undefined, period_start: '2026-11-11T08:00:00Z' } })).ok, true);
+  assert.equal(send(env, env.guest, { read_method: '' }, 'guest_reading').ok, true);
+  const bad = send(env, env.codes.staff, { read_method: 'guess' });
+  assert.equal(bad.code, 'INVALID'); assert.match(bad.fields.read_method, /Not one of/);
+  const rows = env.text('BLD-area_reading.csv').split(/\r?\n/).filter(Boolean);
+  const h = rows[0].split(','), i = h.indexOf('read_method'), by = h.indexOf('taken_by'), at = h.indexOf('taken_at');
+  rows.slice(1).forEach((line) => { const c = line.split(','); assert.equal(c[i], 'typed'); assert.ok(c[by] && c[at]); });
+});
+
+test('every reading, late ones too, is stamped with who entered it (from the code) and when', () => {
+  const env = env0();
+  assert.equal(send(env, env.codes.staff, { period_start: iso(NOW - 40 * DAY) }).ok, true);
+  assert.equal(send(env, env.guest, { period_start: iso(NOW - 40 * DAY) }, 'guest_reading').ok, true);
+  [['BLD-area_reading.csv'], ['BLD-guest_reading.csv']].forEach(([f]) => {
+    const [hd, row] = env.text(f).split(/\r?\n/).filter(Boolean).map((l) => l.split(','));
+    const o = Object.fromEntries(hd.map((c, k) => [c, row[k]]));
+    assert.ok(o.taken_by, f + ' taken_by'); assert.match(o.taken_at, /^2026-11-12T10:00/, f + ' taken_at is when it was typed');
+  });
 });
 
 test('a future time is still refused, for every role', () => {

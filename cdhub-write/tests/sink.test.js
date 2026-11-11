@@ -61,8 +61,7 @@ test('bad input is refused with plain messages and nothing is written', () => {
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', reading_type: 'humidity' }, 'reading_type', /Not one of/],
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2026-10-15 07:40' }, 'period_start', /time zone/],
     [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2027-01-01T00:00:00Z' }, 'period_start', /future/],
-    [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2019-09-01T00:00:00Z' }, 'period_start', /kept \(6 years\)/],   // no 7-day limit on readings, only the kept years
-    [{ area_id: 'area-t1', min_c: '21', max_c: '22', read_method: '' }, 'read_method', /needed/]
+    [{ area_id: 'area-t1', min_c: '21', max_c: '22', period_start: '2019-09-01T00:00:00Z' }, 'period_start', /kept \(6 years\)/]   // no 7-day limit on readings, only the kept years
   ];
   bad.forEach(([fields, field, re]) => {
     const r = save(env, req(env, { fields }));

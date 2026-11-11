@@ -210,16 +210,10 @@ let rid = 0;
 const nextRid = () => 'req-test-' + String(++rid).padStart(6, '0');
 
 function req(env, over = {}) {
-  const r = Object.assign({
+  return Object.assign({
     v: 1, request_id: nextRid(), code: env.codes.staff, table: 'area_reading', action: 'add',
     fields: { area_id: 'area-t1', min_c: '21.4', max_c: '24.1' }
   }, over);
-  // read_method is required on readings (11 Nov 2026); tests that do not care send 'typed', as the typed form does.
-  // A test that sets read_method itself (even to '') keeps its own value.
-  if (/^(BLD-)?(area|guest)_reading(\.csv)?$/.test(String(r.table || r.file || '')) && r.fields && typeof r.fields === 'object' && !('read_method' in r.fields)) {
-    r.fields = Object.assign({ read_method: 'typed' }, r.fields);
-  }
-  return r;
 }
 
 /** Run a save and return {ok, result} or {ok:false, code, message, fields} - the same shape the web app sends. */

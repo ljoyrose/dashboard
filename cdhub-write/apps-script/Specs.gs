@@ -61,7 +61,7 @@ var TABLES = {
       period_start:        { type: 'datetime' },
       reset_after_reading: { type: 'bool' },
       mitigation_note:     { type: 'text' },
-      read_method:         { type: 'enum', values: READ_METHODS_, required: true },
+      read_method:         { type: 'enum', values: READ_METHODS_, dflt: 'typed' },
       camera_value_changed: { type: 'bool' }
     },
     // duplicate guard: same tenant + same area + same period (morning/afternoon slot sent by the hub) within
@@ -108,7 +108,7 @@ var TABLES = {
       max_c:                { type: 'temp', required: true },
       spot_c:               { type: 'temp' },
       period_start:         { type: 'datetime' },
-      read_method:          { type: 'enum', values: READ_METHODS_, required: true },
+      read_method:          { type: 'enum', values: READ_METHODS_, dflt: 'typed' },
       camera_value_changed: { type: 'bool' },
       mitigation_note:      { type: 'text' },
       note:                 { type: 'text' }
