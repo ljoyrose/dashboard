@@ -67,3 +67,20 @@ test('a missed reading cannot be for now or later: that is the round', async ({ 
   await page.getByLabel('Day').dispatchEvent('change');
   await expect(page.getByText('That is now or later: use the round.')).toBeVisible();
 });
+
+test('Lisa 11 Nov: how a reading was taken is saved only; the year report never shows camera, typed or photo', async ({ page }) => {
+  TABLES.area_reading = [
+    { id: 'r1', area_id: 'area-new', period_start: '2026-11-12T00:00:00+00:00', taken_at: '2026-11-12T08:00:00Z', min_c: '12.0', max_c: '18.0', read_method: 'camera', camera_value_changed: 'true' },
+    { id: 'r2', area_id: 'area-new', period_start: '2026-11-12T12:00:00+00:00', taken_at: '2026-11-12T15:00:00Z', min_c: '12.5', max_c: '18.5', read_method: 'typed' },
+    { id: 'r3', area_id: 'area-new', period_start: '2026-11-11T12:00:00+00:00', taken_at: '2026-11-12T15:00:00Z', min_c: '11.5', max_c: '17.5', read_method: 'photo' }
+  ];
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.getByLabel('Room').selectOption('area-new');
+    await page.getByRole('button', { name: 'Open report' }).click();
+    await expect(page.locator('.tg-tab tbody tr')).not.toHaveCount(0);
+    await expect(page.locator('#screen, body').first()).not.toContainText(/camera|typed|photo|corrected/i);
+  } finally { TABLES.area_reading = []; }
+});

@@ -274,13 +274,14 @@ test.describe('Temperature history reads area files by mime type', () => {
     guard.world.file('bld-thermo', 'BLD-thermometer.csv',
       'id,name,area_id,active,valid_from,valid_to\nthm-1,3A.2/3,area-old,true,2025-01-01,2026-01-11\nthm-2,3A.1/2,area-new,true,2026-01-12,\n',
       { parents: area.parents.slice(), driveId: area.driveId, mimeType: 'text/csv' });
-    put('BLD-area_reading.csv', 'id,area_id,taken_at,period_start,min_c,max_c\na,area-old,2026-01-12T09:00:00Z,2026-01-10T00:00:00+00:00,12.0,18.5\n');
+    put('BLD-area_reading.csv', 'id,area_id,taken_at,period_start,min_c,max_c,read_method,camera_value_changed\na,area-old,2026-01-12T09:00:00Z,2026-01-10T00:00:00+00:00,12.0,18.5,photo,\n');
     await openHistory(page);
     const round = page.locator('#view-d');
     await page.locator('#rdate').fill('2026-01-10');
     await page.locator('#rdate').dispatchEvent('change');
     await expect(round.locator('.rtile .rn')).toHaveText(['ZZ_3A.2-3']);
     await expect(round.locator('.rtile').first()).toContainText('18.5');
+    await expect(page.locator('body')).not.toContainText(/camera|typed|photo/i);   // how a reading was taken is saved only (Lisa, 11 Nov)
     await page.locator('#rdate').fill('2026-01-12');
     await page.locator('#rdate').dispatchEvent('change');
     await expect(round.locator('.rtile .rn')).toHaveText(['3A.1/2']);

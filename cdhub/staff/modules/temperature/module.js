@@ -520,7 +520,7 @@
         ]));
       });
       out.appendChild(h('h3', { text: 'Every reading' }));
-      out.appendChild(h('table', { class: 'tg-tab' }, [h('thead', {}, [h('tr', {}, ['Date', 'Round', 'Min', 'Max', 'Spot', 'How', 'What was done'].map(function (t) { return h('th', { text: t }); }))]), tb]));
+      out.appendChild(h('table', { class: 'tg-tab' }, [h('thead', {}, [h('tr', {}, ['Date', 'Round', 'Min', 'Max', 'Spot', 'By', 'What was done'].map(function (t) { return h('th', { text: t }); }))]), tb]));
       out.appendChild(h('button', { class: 'btn quiet', type: 'button', text: 'Print', onclick: function () { window.print(); } }));
     }
     function rowBreach(r, lo, hi) {
@@ -535,8 +535,8 @@
     staff.forEach(function (r) {
       var at = String(r.period_start || r.taken_at || '');
       if (r.area_id !== areaId || at.slice(0, 4) !== year || r.corrects_id) return;
-      var how = r.read_method === 'camera' ? (r.camera_value_changed === 'true' ? 'Camera, corrected' : 'Camera') : (r.read_method === 'typed' ? 'Typed' : 'Recorded');
-      out.push({ kind: 'staff', kindLabel: how, date: at.slice(0, 10), slot: slotOf(at), sort: at, min: num(r.min_c), max: num(r.max_c), spot: r.spot_c || '', note: r.mitigation_note || '' });
+      // Lisa, 11 Nov 2026: how a reading was taken (read_method, camera_value_changed) is saved only, never shown.
+      out.push({ kind: 'staff', kindLabel: 'Staff', date: at.slice(0, 10), slot: slotOf(at), sort: at, min: num(r.min_c), max: num(r.max_c), spot: r.spot_c || '', note: r.mitigation_note || '' });
     });
     guest.forEach(function (r) {
       var at = String(r.period_start || r.taken_at || '');
