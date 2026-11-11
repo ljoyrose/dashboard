@@ -84,3 +84,24 @@ test('Lisa 11 Nov: how a reading was taken is saved only; the year report never 
     await expect(page.locator('#screen, body').first()).not.toContainText(/camera|typed|photo|corrected/i);
   } finally { TABLES.area_reading = []; }
 });
+
+test('Lisa 11 Nov: a missed reading outside the limit asks "What was done?", as the round does, and saves the note', async ({ page }) => {
+  const sent = await setup(page);
+  await page.clock.setFixedTime(new Date('2026-11-12T15:00:00Z'));   // afternoon: this morning is now a missed slot
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.getByRole('button', { name: 'Missed reading' }).click();
+  await page.getByLabel('Day').fill('2026-11-12');
+  await page.getByLabel('Day').dispatchEvent('change');
+  await page.locator('.cards .card').first().click();
+  await expect(page.getByText('Limit 10.0 to 20.0 C')).toBeVisible();
+  await page.getByLabel('MAX').fill('14.0');
+  await page.getByLabel('MIN').fill('8.5');
+  await expect(page.getByText('Below the limit.')).toBeVisible();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Say what was done.')).toBeVisible();
+  expect(sent).toHaveLength(0);
+  await page.getByLabel('What was done').fill('Heater on, rechecked at 12:00');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].fields).toMatchObject({ area_id: 'area-new', min_c: '8.5', period_start: '2026-11-12T00:00:00+00:00', mitigation_note: 'Heater on, rechecked at 12:00' });
+});
