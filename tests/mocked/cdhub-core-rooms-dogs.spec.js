@@ -1,13 +1,18 @@
 // CD Hub core: rooms and dogs agree on the hub, the staff list and the print page. Invented rows only.
-// Fails on a wrong count, a retired room showing, or a dog in the wrong room.
+// Fails on a wrong count, a retired room showing, a fields line counted as a cabin, or a dog in the wrong room.
 const { tabClick } = require('../support/tabs');
-const { test, expect, HUBS } = require('../fixtures/job34/load');
+const { test, expect, HUBS, IDS } = require('../fixtures/job34/load');
 
 const csv = (h, rows) => [h].concat(rows).join('\r\n') + '\r\n';
 const AREA = csv('id,tenant_id,code,grouping,group_sort,area_value,area_unit_id,m2_confirmed,m2_note,use,source', [
   'ar-a,t,Room A,A,1,10,u-m2,yes,,Housing with free access,Pretend list 2026',
   'ar-b,t,Room B,A,1,8,u-m2,yes,,,',
-  'ar-c,t,ZZ_Room C,A,1,6,u-m2,yes,retired,,'
+  'ar-c,t,Room C,A,1,6,u-m2,yes,,,',
+  'ar-f,t,Level 1 and level 5,Fields,9,0,u-m2,yes,,Fields,Pretend list 2026'
+]);
+const ACCESS = csv('id,area_id,access_type,reason', [
+  'aa-a,ar-a,free,invented',
+  'aa-b,ar-b,limited,invented'
 ]);
 const SUBJECT = csv('id,tenant_id,name,sex,dob,kind,neuter_status,size_band', [
   'sub-x1,t,Pretend Adult One,Female,2021-01-01,Breeding Female,entire,10-25kg (medium)',
@@ -21,6 +26,11 @@ const OCC = csv('id,tenant_id,subject_id,area_id,off_site_kind,moved_in,moved_ou
   'o1,t,sub-x1,ar-a,,,,Breeding Bitch,',
   'o2,t,sub-x2,ar-c,,,,Breeding Bitch,',
   'o3,t,sub-x3,,,,,Stud Boy,'
+]);
+// Need rows (Lisa 11 Nov 2026, A standard): Room C ended long ago; Room B has a row still running; Room A has none (always in use).
+const REQ = csv('id,tenant_id,need_type,target_table,target_id,from_date,to_date,source,set_by,set_on', [
+  'req-1,t,room.in_use,area,ar-c,2020-01-01,2020-12-31,Pretend retirement,,',
+  'req-2,t,room.in_use,area,ar-b,2020-01-01,,Pretend,,'
 ]);
 const RULES = csv('id,tenant_id,rule_key,value,effective_from,source,note,set_at,set_by', [
   'r1,t,size_colour.small,orange,2026-11-11,Pretend poster,,,',
@@ -43,15 +53,74 @@ test.describe('CD Hub core: rooms and dogs', () => {
     put(w, 'BLD-subject.csv', SUBJECT);
     put(w, 'BLD-subject_status.csv', STATUS);
     put(w, 'BLD-occupancy.csv', OCC);
+    put(w, 'BLD-requirement.csv', REQ);
+    w.file('bld-access-invented', 'BLD-area_access.csv', ACCESS, { parents: [IDS.bld], driveId: 'drv-alpha1' });
     await HUBS.cdhub.open(page, guard);
     const n = await page.evaluate(() => ({ here: counts().here.length, pups: counts().pups.length, areas: CD.areas.map((a) => a.code) }));
     expect(n.here).toBe(5);
     expect(n.pups).toBe(2);
-    expect(n.areas).toEqual(['Room A', 'Room B']);
+    expect(n.areas).toEqual(['Room A', 'Room B', 'Level 1 and level 5']);
+    const who = await page.evaluate(() => ({
+      group: isLiveCabin({ code: 'Room Z', grouping: 'Fields', use: 'Housing' }),
+      code: isLiveCabin({ code: 'Level 1 and level 5', grouping: 'A', use: '' }),
+      use: isLiveCabin({ code: 'Room Y', grouping: 'A', use: 'Fields' }),
+      cabin: isLiveCabin({ code: 'Room A', grouping: 'A', use: 'Housing with free access' }),
+      free: flapChosen('free'),
+      padded: flapChosen(' Limited '),
+      yes: flapChosen('yes'),
+      dash: flapChosen('-')
+    }));
+    expect(who).toEqual({ group: false, code: false, use: false, cabin: true, free: true, padded: true, yes: false, dash: false });
     await tabClick(page, '#nav button[data-go="areas"]');
-    await expect(page.locator('#main')).not.toContainText('ZZ_');
+    await expect(page.locator('#main')).toContainText('Level 1 and level 5');
+    await expect(page.locator('#main')).not.toContainText('Room C');
     await expect(page.locator('[data-use="ar-a"]')).toContainText('Housing with free access');
     await expect(page.locator('[data-use="ar-a"]')).toContainText('Pretend list 2026');
+    await expect(page.locator('[data-use="ar-f"]')).toContainText('Fields');
+    await tabClick(page, '#nav button[data-go="today"]');
+    const card = page.locator('#todayChecklist');
+    const flap = card.locator('.mrow', { hasText: 'Every cabin has its flap mode' });
+    const morning = card.locator('.mrow', { hasText: 'Morning temperature in every cabin' });
+    const evening = card.locator('.mrow', { hasText: 'Evening temperature in every cabin' });
+    await expect(flap.locator('.mk')).toHaveText('✓');
+    await expect(flap).toContainText('2 of 2 chosen');
+    await expect(morning.locator('.mk')).toHaveText('✗');
+    await expect(morning).toContainText('0 of 2 cabins');
+    await expect(evening).toContainText('0 of 2 cabins');
+    await tabClick(page, '#nav button[data-go="round"]');
+    await expect(page.locator('.card[data-area]')).toHaveCount(2);
+    await expect(page.locator('#main')).not.toContainText('Level 1 and level 5');
+    await page.evaluate(() => {
+      var date = CD._roundDate || todayISO();
+      ['ar-a', 'ar-b'].forEach(function (id) {
+        var k = roundKey(date, id);
+        var cur = ROUND[k] || (ROUND[k] = { areaId: id, date: date, access: '' });
+        cur.t_am = { min: '18.0', max: '20.0', at: date + 'T08:00:00Z' };
+        cur.t_pm = { min: '18.0', max: '20.0', at: date + 'T16:00:00Z' };
+      });
+      go('today', false);
+    });
+    await expect(morning.locator('.mk')).toHaveText('✓');
+    await expect(morning).toContainText('2 of 2 cabins');
+    await expect(evening.locator('.mk')).toHaveText('✓');
+    await expect(evening).toContainText('2 of 2 cabins');
+    await expect(flap.locator('.mk')).toHaveText('✓');
+    await page.evaluate(() => {
+      var date = CD._roundDate || todayISO();
+      var k = roundKey(date, 'ar-b');
+      var cur = ROUND[k] || (ROUND[k] = { areaId: 'ar-b', date: date, access: '' });
+      cur.access = 'yes';
+      go('today', false);
+    });
+    await expect(flap.locator('.mk')).toHaveText('✗');
+    await expect(flap).toContainText('1 of 2 chosen');
+    await page.evaluate(() => {
+      var date = CD._roundDate || todayISO();
+      ROUND[roundKey(date, 'ar-b')].access = 'limited';
+      go('today', false);
+    });
+    await expect(flap.locator('.mk')).toHaveText('✓');
+    await expect(flap).toContainText('2 of 2 chosen');
   });
 
   test('cards link both ways: dog card opens its room, room card opens its dogs, retired rooms never linked', async ({ page, guard }) => {
@@ -60,6 +129,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     put(w, 'BLD-subject.csv', SUBJECT);
     put(w, 'BLD-subject_status.csv', STATUS);
     put(w, 'BLD-occupancy.csv', OCC);
+    put(w, 'BLD-requirement.csv', REQ);
     put(w, 'BLD-breeding_rule.csv', RULES);
     await HUBS.cdhub.open(page, guard);
     await page.evaluate(() => go('dogs/sub-x1'));
@@ -78,10 +148,10 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await dog.click();
     await expect(page).toHaveURL(/#\/dogs\/sub-x1$/);
     await expect(page.locator('#rows article.dc')).toHaveCount(1);
-    // a dog whose room row is retired (ZZ_) gets no room link and never shows ZZ_
+    // a dog whose room has ended (room.in_use to_date passed) gets no room link and never shows that room
     await page.evaluate(() => go('dogs/sub-x2'));
     await expect(page.locator('#rows [data-room-link]')).toHaveCount(0);
-    await expect(page.locator('#rows')).not.toContainText('ZZ_');
+    await expect(page.locator('#rows')).not.toContainText('Room C');
   });
 
   test('print: each kennel card names its room; none for a dog off site or in a retired room', async ({ page }) => {
@@ -89,7 +159,8 @@ test.describe('CD Hub core: rooms and dogs', () => {
     const CORS = { 'access-control-allow-origin': '*' };
     const tag = (ref, t, kind) => ({ tag: t, kind: kind || 'subject', ref_id: ref, active: 'true' });
     const tables = {
-      area: [{ id: 'ar-a', code: 'Room A' }, { id: 'ar-c', code: 'ZZ_Room C' }],
+      area: [{ id: 'ar-a', code: 'Room A' }, { id: 'ar-c', code: 'Room C' }],
+      requirement: [{ need_type: 'room.in_use', target_table: 'area', target_id: 'ar-c', from_date: '2020-01-01', to_date: '2020-12-31' }],
       subject: [{ id: 'd1', name: 'Pretend One', sex: 'Female', dob: '2022-01-05', size_band: '10-25kg (medium)' }, { id: 'd2', name: 'Pretend Two' }, { id: 'd3', name: 'Pretend Three' }],
       subject_status: [], litter: [],
       breeding_rule: [{ rule_key: 'size_colour.small', value: 'orange' }, { rule_key: 'size_colour.medium', value: 'green' }, { rule_key: 'size_colour.large', value: 'blue' }],
@@ -123,7 +194,7 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(one.locator('.sex')).toHaveAttribute('aria-label', 'Female');
     await expect(one.locator('.band small')).toHaveText('Medium10–25 kg');
     await expect(page.locator('[data-k="Room"]')).toHaveCount(1);   // off-site and retired-room dogs: no room line
-    await expect(page.locator('.sheet')).not.toContainText('ZZ_');
+    await expect(page.locator('.sheet')).not.toContainText('Room C');
     await page.getByRole('button', { name: 'Room signs' }).click();
     await expect(page.locator('.rcard > b')).toHaveText(['Room A']);
     // limits for the room's current access (limited, the later row), small first, none at 0, no pups line

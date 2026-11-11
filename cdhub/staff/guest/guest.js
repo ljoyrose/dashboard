@@ -32,14 +32,15 @@
     screen.appendChild(msg);
   }
   function show(fail, fresh) {
-    save.checkStatus().then(function () { return save.read('area'); }).then(function (r) {
+    var req = [];   // need rows (room.in_use): a retired room is hidden after its last day
+    save.checkStatus().then(function () { return save.read('requirement'); }).then(function (q) { req = q.ok ? q.rows : []; return save.read('area'); }).then(function (r) {
       if (!r.ok) {
         if (!fresh) { store(''); save.clearCode(); ask(r.code === 'BAD_CODE' ? 'That guest code has expired or was switched off.' : r.message); return; }
         fail(r.message || 'That did not work.'); return;
       }
       if (fresh) store(fresh);
       screen.textContent = '';
-      var areas = r.rows.filter(BLDOccupancy.inUse).map(function (a) { return { id: a.id, label: a.code || a.id, group: a.grouping || '' }; });
+      var areas = r.rows.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), req); }).map(function (a) { return { id: a.id, label: a.code || a.id, group: a.grouping || '' }; });
       save.setLookups({ area: areas });
       var host = document.createElement('div'); screen.appendChild(host);
       withTemperature(function () {

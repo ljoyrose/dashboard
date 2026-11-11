@@ -7,7 +7,8 @@
   var CODE_KEY = 'bld.device.code', ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789', LEN = 8;
   var screen = document.getElementById('screen'), save = BLDSave.create({});
   var base = location.origin + location.pathname.replace(/print\/(index\.html)?$/, '');
-  save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
+  save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
+  save.TABLES.thermometer = { label: 'Thermometers', file: 'BLD-thermometer.csv', fields: { name: { type: 'text', required: true, label: 'Name' }, area_id: { type: 'text', required: true, label: 'Room' } } };   // the save checks the room exists
   function h(t, a, k) { var e = document.createElement(t); Object.keys(a || {}).forEach(function (x) { if (x === 'text') e.textContent = a[x]; else if (x === 'class') e.className = a[x]; else if (x === 'html') e.innerHTML = a[x]; else if (x.slice(0, 2) === 'on') e.addEventListener(x.slice(2), a[x]); else e.setAttribute(x, a[x]); }); (k || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
   function newTag() { var a = new Uint8Array(LEN), s = ''; crypto.getRandomValues(a); for (var i = 0; i < LEN; i++) s += ALPHABET.charAt(a[i] % ALPHABET.length); return s; }
   function say(t, k) { msg.className = 'msg ' + (k || ''); msg.textContent = t; }
@@ -22,7 +23,7 @@
   var T = null;
   function load() {
     say('Loading...');
-    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'breeding_rule', 'area_capacity', 'area_access'], ['subject_status', 'litter', 'breeding_rule', 'area_capacity', 'area_access']); }).then(function (r) {
+    return save.checkStatus().then(function () { return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'qr_tag', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access'], ['subject_status', 'litter', 'thermometer', 'requirement', 'breeding_rule', 'area_capacity', 'area_access']); }).then(function (r) {
       if (!r.ok) { say(r.message || 'Could not load the lists.', 'bad'); return false; }
       T = r.tables; say(''); return true;
     });
@@ -122,11 +123,32 @@
     [input, show, holder, h('button', { class: 'btn quiet', type: 'button', text: 'Remove QR', onclick: clear })].forEach(function (n) { box.appendChild(n); });
     sheet.appendChild(box);
   }
+  /** One thermometer per place: the owner names it and picks its room; its card is made straight away. */
+  function addThermometer() {
+    if (!T.thermometer) { say('The thermometer list is not switched on yet.', 'warn'); return; }
+    sheet.textContent = ''; say('');
+    var name = h('input', { class: 'inp', type: 'text', maxlength: '40', 'aria-label': 'Thermometer name', placeholder: 'Name' });
+    var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Room' })].concat(T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement); }).map(function (a) { return h('option', { value: a.id, text: a.code || a.id }); })));
+    var go = h('button', { class: 'btn', type: 'button', text: 'Save', onclick: function () {
+      if (!name.value.trim() || !room.value) { say('Name and room, please.', 'bad'); return; }
+      go.disabled = true; say('Saving...');
+      var f = { name: name.value.trim(), area_id: room.value };
+      save.submit('thermometer', f).then(function (r) {
+        go.disabled = false;
+        if (!r.ok) { say(r.message || 'Not saved.', 'bad'); return; }
+        if (r.status !== 'saved' || !r.id) { say(r.message, 'good'); return; }
+        var id = r.id;
+        T.thermometer.push({ id: id, name: f.name, area_id: f.area_id });
+        make('thermometer', [{ id: id, label: name.value.trim() }]);
+      });
+    } });
+    sheet.appendChild(h('div', { class: 'qcard big noprint' }, [h('b', { text: 'Add thermometer' }), name, room, go]));
+  }
   load().then(function (ok) {
     if (!ok) return;
-    var onSite = {}, roomOf = {}; BLDOccupancy.dailyList(T).dogs.forEach(function (d) { onSite[d.id] = true; if (d.known && !d.out && d.areaLabel && !/^ZZ_/i.test(d.areaLabel)) roomOf[d.id] = d.areaLabel; });   // same list as The Board: not dogs that have left
+    var onSite = {}, roomOf = {}; BLDOccupancy.dailyList(T).dogs.forEach(function (d) { onSite[d.id] = true; if (d.known && !d.out && d.areaLabel) roomOf[d.id] = d.areaLabel; });   // same list as The Board: not dogs that have left
     opts.appendChild(btn('Whole-site code', function () { sheet.className = 'sheet'; make('site', [{ id: 'site', label: 'Today' }]); }));
-    opts.appendChild(btn('Room signs', function () { sheet.className = 'sheet rooms'; make('area', T.area.filter(BLDOccupancy.inUse).map(function (a) { return { id: a.id, label: a.code || a.id }; }), roomCard); }));
+    opts.appendChild(btn('Room signs', function () { sheet.className = 'sheet rooms'; make('area', T.area.filter(function (a) { return BLDOccupancy.inUse(a, BLDNeeds.today(), T.requirement); }).map(function (a) { return { id: a.id, label: a.code || a.id }; }), roomCard); }));
     opts.appendChild(btn('Dog kennel cards', function () { sheet.className = 'sheet dogs per' + per; make('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '', s: s }; }), dogCard); }));
     var perBox = h('span', { class: 'per', role: 'group', 'aria-label': 'Kennel cards per A4' }, [1, 2, 4].map(function (n) {
       return h('button', { class: 'btn quiet', type: 'button', 'aria-pressed': String(n === per), text: n === 1 ? 'Full A4' : n + ' per A4', onclick: function () {
@@ -139,6 +161,12 @@
       var names = {}; T.subject.forEach(function (s) { names[s.id] = s.name; });
       make('litter', T.litter.map(function (l) { return { id: l.id, label: 'Litter of ' + (names[l.dam_subject_id] || l.id) }; }));
     }));
+    opts.appendChild(btn('Thermometer cards', function () { sheet.className = 'sheet';
+      if (!T.thermometer) { say('The thermometer list is not switched on yet.', 'warn'); return; }
+      var today = BLDNeeds.today();   // a thermometer whose need rows all ended before today gets no card
+      make('thermometer', T.thermometer.filter(function (t) { var end = BLDNeeds.endDay(T.requirement, 'reading.temperature', 'thermometer', t.id); return !end || end >= today; }).map(function (t) { return { id: t.id, label: t.name || t.id }; }));
+    }));
+    opts.appendChild(btn('Add thermometer', addThermometer));
     opts.appendChild(btn('Phone set-up QR', function () { sheet.className = 'sheet';
       var url = ''; try { url = localStorage.getItem('bld.scriptUrl') || ''; } catch (e) { /* none */ }
       sheet.textContent = '';

@@ -10,10 +10,12 @@
  * (BLDLookups.fromTables maps the BLD-*.csv names to these).
  */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.BLDOccupancy = factory();
-}(typeof self !== 'undefined' ? self : this, function () {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./needs.js'));
+  else root.BLDOccupancy = factory(root.BLDNeeds);
+}(typeof self !== 'undefined' ? self : this, function (N) {
   'use strict';
+  // needs.js missing on a page: every room counts as in use (never hides a room by mistake)
+  N = N || { coversDay: function () { return true; }, today: function () { return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' }); } };
 
   // Permanently not on site (Lisa 16 Oct, S02-7): sold, owned_by_family, Collected, deceased. Never asked to move.
   var GONE_KIND = { sold: true, owned_by_family: true, deceased: true };
@@ -21,8 +23,12 @@
   // Temporarily off site (vets, groomers...): status off_site_temp. Shown as "Away", keeps its room, not asked to move.
   var AWAY_STATE = 'off_site_temp';
 
-  /** A room row Lisa has retired: its code starts ZZ_ (rows are never deleted). Hidden everywhere. */
-  function inUse(a) { return !!a && !/^ZZ_/i.test(String(a.code || '')); }
+  /**
+   * Is room `a` in use on `day`? From BLD-requirement rows (need_type room.in_use, target_table area): a room with no
+   * rows is in use; one with rows only on days a row covers (Lisa 11 Nov 2026). Rows are never deleted; a retired
+   * room is hidden after its last day and still shows in History.
+   */
+  function inUse(a, day, reqRows) { return !!a && N.coversDay(reqRows, 'room.in_use', 'area', a.id, day || N.today()); }
   /** Latest occupancy row for one dog, or null. */
   function latestRow(rows, subjectId) {
     var best = null, bestKey = '', bestIdx = -1;
@@ -51,9 +57,10 @@
    * only when a status row says it is not sold or collected; otherwise it is counted in `skipped`.
    * @return {{dogs:Array<{id,label,areaId,areaLabel,known,lastMovedIn,away}>, skipped:number, areas:Array}}
    */
-  function dailyList(T) {
+  function dailyList(T, day) {
     T = T || {};
-    var areas = (T.area || []).filter(inUse).map(function (a) {
+    day = day || N.today();
+    var areas = (T.area || []).filter(function (a) { return inUse(a, day, T.requirement); }).map(function (a) {
       return { id: a.id, label: a.code || a.id, group: a.grouping || '', sort: parseFloat(a.group_sort) || 0 };
     });
     var areaById = {};
@@ -94,9 +101,9 @@
    * @return {Promise<{ok:true, lookups:{areas,dogs,subjects,dogsSkipped}} | {ok:false, message}>}
    */
   function loadViaScript(save) {
-    return save.readMany(['area', 'subject', 'occupancy', 'subject_status']).then(function (r) {
+    return save.readMany(['area', 'subject', 'occupancy', 'subject_status', 'requirement'], ['requirement']).then(function (r) {
       if (!r.ok) return { ok: false, message: r.message || 'Could not load the dogs.' };
-      var t = r.tables, d = dailyList({ area: t.area, subject: t.subject, subject_status: t.subject_status, occupancy: t.occupancy });
+      var t = r.tables, d = dailyList({ area: t.area, subject: t.subject, subject_status: t.subject_status, occupancy: t.occupancy, requirement: t.requirement });
       return { ok: true, lookups: {
         areas: d.areas, dogs: d.dogs, dogsSkipped: d.skipped,
         subjects: (t.subject || []).map(function (x) { return { id: x.id, label: x.name || x.id }; })
