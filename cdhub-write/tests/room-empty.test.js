@@ -71,3 +71,18 @@ test('a guest reading has no room_empty: a guest cannot mark a room empty', () =
   const g = save(env, req(env, { code: env.ctx.adminAddGuestCode(), table: 'guest_reading', fields: { area_id: 'area-t1', room_empty: 'yes' } }));
   assert.equal(g.ok, false);
 });
+
+test('the page check (bld-save.js, both copies) follows the same rule, so a blank Room empty slot is not stopped on the page', () => {
+  ['../client/bld-save.js', '../../cdhub/staff/lib/bld-save.js'].forEach((p) => {
+    const s = require(p).create({ fetch: async () => ({}), localStorage: null, sessionStorage: null });
+    s.setLookups({ area: [{ id: 'area-t1' }] });
+    const v = (f) => s.validate('area_reading', Object.assign({ area_id: 'area-t1' }, f));
+    assert.equal(v({ room_empty: 'yes' }).ok, true, p);
+    assert.equal(v({ room_empty: 'yes', min_c: '18.0', max_c: '22.0' }).ok, true, p);
+    assert.match(v({ room_empty: 'yes', min_c: '18.0' }).errors.max_c, /both/, p);
+    assert.equal(v({}).errors.min_c, 'This is needed.', p);
+    assert.equal(v({ min_c: '18.0' }).errors.max_c, 'This is needed.', p);
+    assert.equal(v({ min_c: '18.0', max_c: '22.0' }).ok, true, p);
+    assert.equal(v({ room_empty: 'no', min_c: '18.0', max_c: '22.0' }).ok, false, p);
+  });
+});
