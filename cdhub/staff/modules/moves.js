@@ -88,7 +88,9 @@
             });
           } });
         }
-        host.appendChild(h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, [flapBtn('free'), flapBtn('limited')]));
+        host.appendChild(h('div', { style: 'display:flex;gap:8px;flex-wrap:wrap' }, [flapBtn('free'), flapBtn('limited'),
+          // the temperature screen opens this room first (it reads bld.move.room, set just above)
+          h('button', { class: 'btn quiet', type: 'button', text: 'Temperature', onclick: function () { c.go('m/temperature'); } })]));
         host.appendChild(msg);
         host.appendChild(h('h3', { text: 'In this room' }));
         var list = h('div', { class: 'cards' });
