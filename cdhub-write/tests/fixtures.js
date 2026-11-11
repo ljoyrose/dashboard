@@ -76,7 +76,7 @@ const AREA_READING_HEADER = [
   'id', 'tenant_id', 'area_id', 'reading_type', 'min_c', 'max_c', '', 'spot_c', 'precision_dp',
   'period_start', 'taken_at', 'taken_by', 'device_id', 'reset_after_reading',
   'applied_limit_id', 'in_range', 'compliant', 'mitigation_required', 'corrects_id', 'mitigation_note',
-  'read_method', 'camera_value_changed'
+  'read_method', 'camera_value_changed', 'room_empty'
 ];
 const PENDING_HEADER = [
   'event_id', 'pending_id', 'event', 'at', 'by', 'role', 'target_file',
