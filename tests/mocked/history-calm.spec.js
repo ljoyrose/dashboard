@@ -247,3 +247,35 @@ test('audit: a room in use with no readings at all is listed and shows missed, n
 });
 
 module.exports = { RULES };
+
+// Room empty (Lisa 11 Nov 2026): no dog present, a flag on the slot's reading. With no reading the slot is covered
+// (never missed); outside the limit while empty is flagged "Room empty" but never counted as outside the limit.
+test('audit: Room empty is covered, never missed; an outside reading in an empty room is flagged but not counted', async ({ page, guard }) => {
+  const extra = '\nrdg-e1,area-r3,2026-01-07T16:00:00Z,2026-01-07T12:00:00+00:00,,,,,stf-1,,yes'
+    + '\nrdg-e2,area-r1,2026-01-08T09:00:00Z,2026-01-08T00:00:00+00:00,8.0,14.0,typed,,stf-1,,yes'
+    + '\nrdg-e3,area-r2,2026-01-08T09:00:00Z,2026-01-08T00:00:00+00:00,12.0,15.0,typed,,stf-1,,yes';
+  const readings = READINGS.replace('mitigation_note\n', 'mitigation_note,room_empty\n').trimEnd().split('\n')
+    .map((l, i) => (i === 0 ? l : l + ',')).join('\n') + extra + '\n';
+  const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
+  await open(page, guard);
+  put('BLD-area_reading.csv', readings);
+  await page.reload();
+  await expect(page.locator('#livepill')).toHaveText('Up to date');
+  await page.locator('.yr-btn[data-yr="2026"]').click();
+  await openDay(page, '2026-01-07');
+  await expect(page.locator('#drill .rl', { hasText: 'R3' })).toContainText('PM empty');
+  await expect(page.locator('#drill .rl', { hasText: 'R3' }).locator('.warn')).toHaveCount(0);
+  await page.locator('#drill .dclose').click();
+  expect((await day(page, '2026-01-07').getAttribute('class')).split(' ')[1]).toBe('allok');   // the only gap was an empty room
+  await openDay(page, '2026-01-08');
+  await expect(page.locator('#drill .rl', { hasText: 'R1' }).locator('.warn').first()).toHaveText('AM 8.0–14.0 · Room empty');
+  await expect(page.locator('#drill .rl', { hasText: 'R1' })).not.toContainText('what was done');
+  await expect(page.locator('#drill .rl', { hasText: 'R2' })).toContainText('AM 12.0–15.0 ✓ (empty)');
+  await page.locator('#drill .dclose').click();
+  const want = expected();
+  await page.getByRole('button', { name: 'Month cards' }).click();
+  const jan = page.locator('#view-c .mitem[data-month="1"]');
+  await expect(jan).toHaveAttribute('data-out', String(want.out));          // the empty room's outside reading is not counted
+  await expect(jan).toHaveAttribute('data-read', String(want.read + 2));
+  await expect(jan).toHaveAttribute('data-miss', String(want.miss - 3));    // R3 PM 07/01, R1 and R2 AM 08/01 covered
+});
