@@ -20,10 +20,10 @@ const rows = (env) => {
   return lines.slice(1).map((l) => { const v = env.ctx.csvParse_(l)[0]; const o = {}; h.forEach((c, i) => { o[c] = v[i]; }); return o; });
 };
 
-test('room_empty is the last column of the area_reading header', () => {
+test('room_empty is in the area_reading header, just before thermometer_id (the last column)', () => {
   const env = env1();
   const cols = Array.from(env.ctx.TABLES.area_reading.columns);
-  assert.equal(cols[cols.length - 1], 'room_empty');
+  assert.deepEqual(cols.slice(-2), ['room_empty', 'thermometer_id']);
   assert.deepEqual(cols, fx.AREA_READING_HEADER);
 });
 
