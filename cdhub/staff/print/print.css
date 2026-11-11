@@ -4,3 +4,4 @@
 .qcard.big{grid-column:1/-1;max-width:320px;margin:0 auto}.qcard.big b{font-size:34px}
 .opts{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 @media print{.noprint{display:none!important}body{background:#fff}.screen{max-width:none;padding:0}.sheet{grid-template-columns:repeat(3,1fr)}}
+.qcard .room{display:block;font-size:14px;font-weight:600}

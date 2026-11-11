@@ -28,7 +28,7 @@
     });
   }
   function current(kind, refId) { return (T.qr_tag || []).filter(function (t) { return t.kind === kind && t.ref_id === refId && String(t.active).toLowerCase() !== 'false'; })[0]; }
-  function card(tag, title, big) { return h('div', { class: 'qcard' + (big ? ' big' : '') }, [h('div', { html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + title) }), h('b', { text: title }), h('small', { text: tag })]); }
+  function card(tag, title, big, room) { return h('div', { class: 'qcard' + (big ? ' big' : '') }, [h('div', { html: BLDQr.svg(base + '#s/' + tag, 'QR code for ' + title) }), h('b', { text: title })].concat(room ? [h('span', { class: 'room', 'data-room': room, text: room })] : []).concat([h('small', { text: tag })])); }
   function make(kind, items) {
     sheet.textContent = '';
     var missing = items.filter(function (it) { return !current(kind, it.id); }), i = 0, failed = '';
@@ -42,7 +42,7 @@
         });
         return;
       }
-      items.forEach(function (it) { var t = current(kind, it.id); if (t) sheet.appendChild(card(t.tag, it.label, kind === 'area')); });
+      items.forEach(function (it) { var t = current(kind, it.id); if (t) sheet.appendChild(card(t.tag, it.label, kind === 'area', it.room)); });
       say(failed ? 'Stopped: ' + failed : (sheet.children.length + ' cards ready. Use your browser’s Print.'), failed ? 'bad' : 'good');
     }());
   }
@@ -72,10 +72,10 @@
   }
   load().then(function (ok) {
     if (!ok) return;
-    var onSite = {}; BLDOccupancy.dailyList(T).dogs.forEach(function (d) { onSite[d.id] = true; });   // same list as The Board: not dogs that have left
+    var onSite = {}, roomOf = {}; BLDOccupancy.dailyList(T).dogs.forEach(function (d) { onSite[d.id] = true; if (d.known && !d.out && d.areaLabel && !/^ZZ_/i.test(d.areaLabel)) roomOf[d.id] = d.areaLabel; });   // same list as The Board: not dogs that have left
     opts.appendChild(btn('Whole-site code', function () { make('site', [{ id: 'site', label: 'Today' }]); }));
     opts.appendChild(btn('Room signs', function () { make('area', T.area.filter(function (a) { return !/^ZZ_/i.test(String(a.code || "")); }).map(function (a) { return { id: a.id, label: a.code || a.id }; })); }));
-    opts.appendChild(btn('Dog kennel cards', function () { make('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id }; })); }));
+    opts.appendChild(btn('Dog kennel cards', function () { make('subject', T.subject.filter(function (s) { return onSite[s.id]; }).map(function (s) { return { id: s.id, label: s.name || s.id, room: roomOf[s.id] || '' }; })); }));
     opts.appendChild(btn('Litter cards', function () {
       if (!(T.litter || []).length) { say('The litter list is not switched on yet.', 'warn'); return; }
       var names = {}; T.subject.forEach(function (s) { names[s.id] = s.name; });
