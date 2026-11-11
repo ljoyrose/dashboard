@@ -169,3 +169,26 @@ test('the dog list is only dogs on site, A-Z: a dog that has left is not offered
     assert.deepEqual(names, names.slice().sort());
   } finally { delete global.BLDOccupancy; }
 });
+
+test('a retired room (code starting ZZ_) is never offered on the checks', async () => {
+  global.BLDOccupancy = require('../client/occupancy.js');
+  try {
+    const w = world(), d = w.dom.window.document;
+    const af = w.env.file('BLD-area.csv')[0];
+    const h = w.env.ctx.csvParse_(af.content)[0];
+    af.content += h.map((c) => ({ id: 'area-zz', tenant_id: fx.TENANT, code: 'ZZ_OLD1', grouping: 'T - Test house' })[c] || '').join(',') + '\r\n';
+    await BLDChecks.mount(w.host, w.s, opts); await flush();
+    const rooms = [...d.getElementById('chk-area_id').options].map((o) => o.value).filter(Boolean);
+    assert.equal(rooms.includes('area-zz'), false);
+    assert.ok(rooms.length > 0);
+  } finally { delete global.BLDOccupancy; }
+});
+
+test('the staff Where list (dailyList) never shows a retired ZZ_ room; inUse is the one rule', () => {
+  const Occ = require('../client/occupancy.js');
+  const T = { area: [{ id: 'a1', code: 'R1' }, { id: 'a2', code: 'ZZ_R2' }, { id: 'a3', code: 'zz_r3' }], subject: [], occupancy: [], subject_status: [] };
+  assert.deepEqual(Occ.dailyList(T).areas.map((a) => a.id), ['a1']);
+  assert.equal(Occ.inUse({ code: 'ZZ_X' }), false);
+  assert.equal(Occ.inUse({ code: '3B.1/2/3' }), true);
+  assert.equal(Occ.inUse(null), false);
+});
