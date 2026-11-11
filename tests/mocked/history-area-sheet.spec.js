@@ -191,19 +191,20 @@ test.describe('Temperature history reads area files by mime type', () => {
     await expect(page.locator('.yr-btn').first()).toHaveText('2026');
   });
 
-  test('The round opens first with tiles, then a condensed °C table in walk order', async ({ page, guard }) => {
+  test('The round opens first with tiles, then a condensed °C table in BLD-area order (group_sort, then code; ZZ_ rooms left out)', async ({ page, guard }) => {
     const put = (name, content) => {
       const f = guard.world.files.find((x) => x.name === name);
       f.content = content;
       f.size = String(content.length);
     };
-    put('BLD-area.csv', 'id,code\narea-h2,H2\narea-h1,H1\narea-tr,3S.T1\narea-4,4A\narea-z,Test Cabin Z\n');
+    put('BLD-area.csv', 'id,code,group_sort\narea-h2,H2,1\narea-h1,H1,1\narea-tr,3TR,3\narea-4,4A,4\narea-z,Test Cabin Z,\narea-old,ZZ_3S.2-iso,3\narea-gone,ZZ_H4,1\n');
     put('BLD-area_reading.csv', [
       'id,area_id,taken_at,min_c,max_c',
       'a,area-h1,2026-01-15T08:00,8.24,14.0',
       'b,area-h2,2026-01-15T08:00,11.0,16.0',
       'c,area-tr,2026-01-15T18:00,20,28.55',
       'd,area-4,2026-01-15T08:00,12,18',
+      'e,area-old,2026-01-15T08:00,12,18',
     ].join('\n') + '\n');
     await openHistory(page);
     await expect(page.locator('h1')).toHaveText('Temperatures');
@@ -217,7 +218,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     await page.locator('#rdate').fill('2026-01-15');
     await page.locator('#rdate').dispatchEvent('change');
     const round = page.locator('#view-d');
-    await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3S.TR', '4A', 'Test Cabin Z']);
+    await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3TR', '4A', 'Test Cabin Z', 'ZZ_3S.2-iso']);
     await expect(round.locator('.rtable th')).toHaveText(['Area', 'AM min °C', 'AM max °C', 'PM min °C', 'PM max °C']);
     await expect(round.locator('.rtile').first()).toContainText('8.2');
     await expect(round.locator('.rtile').first()).toContainText('Cold');
