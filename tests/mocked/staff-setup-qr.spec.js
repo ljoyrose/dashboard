@@ -78,10 +78,41 @@ test('dog kennel cards are only for dogs on site: none for a dog that has left',
   await expect(page.locator('.qcard b')).toHaveText(['Test here', 'Test offsite']);
 });
 
-test('room signs are never made for a retired room (code starting ZZ_)', async ({ page }) => {
+test('thermometer cards: one per thermometer whose need rows have not all ended, by name; adding one saves it and makes its card', async ({ page }) => {
   const tables = {
-    area: [{ id: 'area-t1', code: 'T1' }, { id: 'area-zz', code: 'ZZ_OLD' }], subject: [], subject_status: [], litter: [], occupancy: [],
-    qr_tag: [{ tag: 'EEEEEEEE', kind: 'area', ref_id: 'area-t1', active: 'true' }, { tag: 'FFFFFFFF', kind: 'area', ref_id: 'area-zz', active: 'true' }]
+    area: [{ id: 'area-t1', code: 'T1' }, { id: 'area-old', code: '3A.1' }], subject: [], subject_status: [], litter: [], occupancy: [], qr_tag: [],
+    thermometer: [{ id: 'thm-1', name: 'Hall', area_id: 'area-t1' }, { id: 'thm-4', name: 'Ended', area_id: 'area-t1' }],
+    requirement: [{ need_type: 'reading.temperature', target_table: 'thermometer', target_id: 'thm-4', from_date: '2026-01-01', to_date: '2026-01-31' },
+      { need_type: 'room.in_use', target_table: 'area', target_id: 'area-old', from_date: '2026-01-01', to_date: '2026-01-31' }]
+  };
+  const sent = [];
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [{ key: 'qr_tag', on: true, mode: 'direct' }, { key: 'thermometer', on: true, mode: 'direct' }], version: 'test' } });
+    const b = JSON.parse(route.request().postData());
+    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [] } } });
+    sent.push(b);
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: b.table === 'thermometer' ? 'thm-3' : 'qrt-' + sent.length } } });
+  });
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.goto('cdhub/staff/print/');
+  await page.getByRole('button', { name: 'Thermometer cards' }).click();
+  await expect(page.locator('.qcard b')).toHaveText(['Hall']);
+  expect(sent.map((b) => [b.table, b.fields.kind, b.fields.ref_id])).toEqual([['qr_tag', 'thermometer', 'thm-1']]);
+  await page.getByRole('button', { name: 'Add thermometer' }).click();
+  await expect(page.getByRole('combobox', { name: 'Room' }).locator('option')).toHaveText(['Room', 'T1']);   // never a retired room
+  await page.getByRole('textbox', { name: 'Thermometer name' }).fill('Corridor 1');
+  await page.getByRole('combobox', { name: 'Room' }).selectOption('area-t1');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.qcard b')).toHaveText(['Corridor 1']);
+  expect(sent.slice(1).map((b) => [b.table, b.fields.name || b.fields.kind, b.fields.area_id || b.fields.ref_id])).toEqual([['thermometer', 'Corridor 1', 'area-t1'], ['qr_tag', 'thermometer', 'thm-3']]);
+  expect(Object.keys(sent[1].fields).sort()).toEqual(['area_id', 'name']);   // a thing carries no dates: when it is needed is need rows
+});
+
+test('room signs are never made for a room whose room.in_use rows have ended', async ({ page }) => {
+  const tables = {
+    area: [{ id: 'area-t1', code: 'T1' }, { id: 'area-old', code: '3A.1' }], subject: [], subject_status: [], litter: [], occupancy: [],
+    qr_tag: [{ tag: 'EEEEEEEE', kind: 'area', ref_id: 'area-t1', active: 'true' }, { tag: 'FFFFFFFF', kind: 'area', ref_id: 'area-old', active: 'true' }],
+    requirement: [{ need_type: 'room.in_use', target_table: 'area', target_id: 'area-old', from_date: '2026-01-01', to_date: '2026-01-31' }]
   };
   await page.route(SCRIPT, (route) => {
     if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
