@@ -64,9 +64,9 @@ function expected() {
   return { read, out, miss: slots - read };
 }
 
-async function open(page, guard, size) {
+async function open(page, guard, size, rooms) {
   const put = (name, content) => { const f = guard.world.files.find((x) => x.name === name); f.content = content; f.size = String(content.length); };
-  put('BLD-area.csv', ROOMS);
+  put('BLD-area.csv', rooms || ROOMS);
   put('BLD-area_reading.csv', READINGS);
   const a0 = guard.world.files.find((x) => x.name === 'BLD-area.csv');
   guard.world.file('bld-req', 'BLD-requirement.csv', NEEDS, { parents: a0.parents.slice(), driveId: a0.driveId, mimeType: 'text/csv' });
@@ -230,6 +230,20 @@ test('audit: each day matches its rows; missed only where needed; outside-limit 
   await expect(jan).toContainText(`${want.read} read`);
   await expect(jan).toContainText(`${want.out} outside limit`);
   await expect(jan).toContainText(`${want.miss} missed`);
+});
+
+test('audit: a room in use with no readings at all is listed and shows missed, never hidden', async ({ page, guard }) => {
+  await open(page, guard, null, ROOMS + 'area-r5,R5,5\n');
+  await page.locator('#rdate').fill('2026-01-11');
+  await page.locator('#rdate').dispatchEvent('change');
+  await expect(page.locator('#view-d .rtile .rn')).toHaveText(['R1', 'R2', 'R3', 'R5']);
+  await expect(page.locator('#view-d .rtile', { hasText: 'R5' }).locator('.warn')).toHaveText(['AM missed', 'PM missed']);
+  await page.getByRole('button', { name: 'Heat map' }).click();
+  expect((await day(page, '2026-01-05').getAttribute('class')).split(' ')[1]).toBe('warn');   // R5 missed from the first reading day
+  expect((await day(page, '2026-01-04').getAttribute('class')).split(' ')[1]).toBe('nd');     // nothing before readings began
+  await page.getByRole('button', { name: 'Month cards' }).click();
+  const want = expected();
+  await expect(page.locator('#view-c .mitem[data-month="1"]')).toHaveAttribute('data-miss', String(want.miss + 15));   // R5: 7 days x 2 + today AM
 });
 
 module.exports = { RULES };

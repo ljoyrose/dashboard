@@ -199,7 +199,8 @@ var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
 var AREA_NAMES={};  /* areaId -> display name/code */
 var AREA_SORT={};   /* areaId -> group_sort from BLD-area (the round order is rows, never coded here) */
 var ROUND_DATE=null;
-var SPAN={};        /* areaId -> {first,last} reading day: nothing is missed before a room's first reading */
+var SPAN={};        /* areaId -> {first,last} reading day */
+var FIRST_DAY='';   /* the first day any room has a reading: nothing is missed before readings began (no coded date) */
 var REQ=[];         /* BLD-requirement rows (room.in_use, reading.temperature); optional until the table is switched on */
 var THERMOS=[];     /* BLD-thermometer rows (name, area_id); optional */
 
@@ -289,7 +290,8 @@ async function loadAreaData(){
         AREA_DAYS[date][r.area_id][slot]={min:r.min_c,max:r.max_c,note:r.mitigation_note||''};
       });
     }
-    SPAN={};
+    SPAN={}; FIRST_DAY='';
+    Object.keys(AREA_DAYS).forEach(function(d){ if(!FIRST_DAY||d<FIRST_DAY) FIRST_DAY=d; });
     Object.keys(AREA_DAYS).forEach(function(d){ Object.keys(AREA_DAYS[d]).forEach(function(aid){
       var s=SPAN[aid]||(SPAN[aid]={first:d,last:d}); if(d<s.first)s.first=d; if(d>s.last)s.last=d; }); });
     REQ=await optionalCsv('BLD-requirement.csv');
@@ -438,15 +440,17 @@ function dpOutdoor(v){ return dpIndoor(v).replace(/\.0$/,''); }
 /* ---- the one set of rules every view uses (spec: tests/mocked/history-calm.spec.js) ---- */
 /* A reading is needed on a day when the room is in use (room.in_use) and it has a thermometer needed that day
    (reading.temperature), up to today. It starts at the earliest from_date of the room's thermometer need rows, or,
-   with none, at the room's first reading (so nothing is missed from before readings began). */
+   with none, at the first day any room has a reading (so nothing is missed before readings began). A room in use
+   with no readings at all is still needed: its missed slots must show for the audit. */
 function needStart(aid){
   var ids={}, start='';
   THERMOS.forEach(function(t){ if(t.area_id===aid) ids[t.id]=1; });
   REQ.forEach(function(r){ var f=String(r.from_date||'').slice(0,10);
     if(r.need_type==='reading.temperature'&&r.target_table==='thermometer'&&ids[r.target_id]&&f&&(!start||f<start)) start=f; });
-  return start||(SPAN[aid]?SPAN[aid].first:'');
+  return start||FIRST_DAY;
 }
 function neededOn(aid,day){
+  if(!(aid in AREA_NAMES||aid in SPAN)) return false;
   var first=needStart(aid); if(!first||day<first||day>TODAY_STR) return false;
   return roomInUse(aid,day)&&thermoNeeded(aid,day);
 }

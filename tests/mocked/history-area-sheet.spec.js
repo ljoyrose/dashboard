@@ -221,8 +221,10 @@ test.describe('Temperature history reads area files by mime type', () => {
     await page.locator('#rdate').fill('2026-01-15');
     await page.locator('#rdate').dispatchEvent('change');
     const round = page.locator('#view-d');
-    // A room with no readings ever (Test Cabin Z) is not needed, so it is not listed or missed.
-    await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3TR', '4A', '3S.2-iso (retired 15/01/26)']);
+    // A room in use with no readings at all (Test Cabin Z) is still listed, and shows its missed slots (the audit).
+    await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3TR', '4A', 'Test Cabin Z', '3S.2-iso (retired 15/01/26)']);
+    await expect(round.locator('.rtile', { hasText: 'Test Cabin Z' })).toContainText('AM missed');
+    await expect(round.locator('.rtile', { hasText: 'Test Cabin Z' })).toContainText('PM missed');
     await expect(round.locator('.rtable th')).toHaveText(['Room', 'AM min', 'AM max', 'PM min', 'PM max']);
     await expect(round.locator('.rtile').first()).toContainText('AM 8.2–14.0');
     await expect(round.locator('.rtile').first().locator('.warn').first()).toContainText('AM 8.2–14.0');
