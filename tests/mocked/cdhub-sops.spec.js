@@ -91,8 +91,27 @@ test('bottom bar is Main, Do, Today, Dogs, SOPs; Assocs is only under More', asy
 
 test('#/sops lists all 49 labels; colour and frequency filters and search work', async ({ page }) => {
   await openSops(page);
-  const want = rows().map(label).sort((a, b) => a.localeCompare(b));
-  await expect(page.locator('#soprows .t .n')).toHaveText(want);
+  // Lisa's 5 Nov layout: one section per colour (in colour order), rows by how often, then name
+  const COL = ['White', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple'];
+  const FREQ = ['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annual', 'Ongoing', 'Per litter', 'Ad hoc', 'Breeding'];
+  const ix = (l, v) => (l.indexOf(v) < 0 ? 999 : l.indexOf(v));
+  const sorted = rows().slice().sort((a, b) => ix(COL, a.colour) - ix(COL, b.colour) || ix(FREQ, a.frequency) - ix(FREQ, b.frequency) || a.short_name.localeCompare(b.short_name));
+  await expect(page.locator('#soprows .t .n')).toHaveText(sorted.map(label));
+  await expect(page.locator('#soprows .t').first()).toHaveText(sorted[0].frequency + ': ' + sorted[0].short_name);
+  const groups = COL.filter((c) => rows().some((r) => r.colour === c));
+  await expect(page.locator('#soprows details.sopgrp')).toHaveCount(groups.length);
+  const yellow = rows().filter((r) => r.colour === 'Yellow').length;
+  await expect(page.locator('#soprows details.sopgrp[data-group="Yellow"] > summary')).toHaveText('Yellow \u2013 operations ' + yellow);
+  // a section folds and stays folded when a card opens
+  await page.locator('#soprows details.sopgrp[data-group="Yellow"] > summary').click();
+  await expect(page.locator('#soprows details.sopgrp[data-group="Yellow"] [data-sop]').first()).toBeHidden();
+  await page.locator('#soprows [data-sop-open]').first().click();
+  await expect(page.locator('#soprows details.sopgrp[data-group="Yellow"]')).not.toHaveAttribute('open', '');
+  await page.locator('#soprows [data-sop-open]').first().click();
+  await page.locator('#sopsort').selectOption('name');
+  await expect(page.locator('#soprows .t .n')).toHaveText(rows().map(label).sort((a, b) => a.localeCompare(b)));
+  await expect(page.locator('#soprows details.sopgrp')).toHaveCount(0);
+  await page.locator('#sopsort').selectOption('');
   await expect(page.locator('#sopcnt')).toHaveText('49 of 49');
 
   await page.locator('[data-fpanel="fp-sops"]').click();
@@ -112,12 +131,12 @@ test('#/sops lists all 49 labels; colour and frequency filters and search work',
 
   await page.locator('#sopfr').selectOption('Per litter');
   const litter = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
-  expect(litter).toEqual(['Puppy Handover', 'Puppy Packs', 'Socialisation', 'Whelping']);
+  expect(litter.slice().sort()).toEqual(['Puppy Handover', 'Puppy Packs', 'Socialisation', 'Whelping']);
 
   await page.locator('#sopclr').click();
   await page.locator('#sopfr').selectOption('Breeding');
   const breeding = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
-  expect(breeding).toEqual(['Health Screening', 'Mating and Retirement', 'Mating Plan', 'Ovulation Testing', 'Season Tracking']);
+  expect(breeding.slice().sort((a, b) => a.localeCompare(b))).toEqual(['Health Screening', 'Mating and Retirement', 'Mating Plan', 'Ovulation Testing', 'Season Tracking']);
 
   await page.locator('#sopclr').click();
   await page.locator('#sopcol').selectOption('Purple');
@@ -187,7 +206,7 @@ test('category and role filters combine with colour, frequency, search and sort'
   await page.locator('#sopcat').selectOption('Staff');
   await page.locator('#soprole').selectOption('manager');
   const staff = await page.locator('#soprows [data-sop]').evaluateAll((els) => els.map((e) => e.getAttribute('data-sop')));
-  expect(staff).toEqual(['Induction', 'Staff Rota', 'Staff Training']);
+  expect(staff.slice().sort()).toEqual(['Induction', 'Staff Rota', 'Staff Training']);
   await page.locator('.achip[data-fclear="soprole"]').click();
   await expect(page.locator('#soprows [data-sop]')).toHaveCount(4);
   await page.locator('#sopq').fill('rota');
@@ -246,7 +265,7 @@ test('no form address in the seed: no link and no "form not on hub yet" noise', 
 test('each SOP is a card with its colour as a 3px full-height line; the search box has no square focus ring', async ({ page }) => {
   await openSops(page);
   const card = page.locator('#soprows [data-sop="Care Rounds"]');
-  await expect(card.locator('.t small')).toHaveText('Daily');
+  await expect(card.locator('.t')).toHaveText('Daily: Care Rounds');
   const look = await card.evaluate((e) => { const s = getComputedStyle(e), b = getComputedStyle(e, '::before'); return { left: s.borderLeftWidth, bar: b.borderLeftWidth, same: b.borderLeftColor !== s.borderTopColor, radius: parseFloat(s.borderTopLeftRadius) > 0 }; });
   // Every line is 1px (house look); the colour is the house bar (house.css 10), 3px down the whole left edge, curved.
   expect(look).toEqual({ left: '1px', bar: '3px', same: true, radius: true });  // same = the bar is its own colour, not the card line
@@ -414,6 +433,7 @@ test('other and sheet are not remapped; a real type code keeps its icon and the 
   await expect(row('Care Rounds').locator('a')).toHaveAttribute('href', 'https://example.com/care-form');
   await expect(page.locator('#soptypes [data-type-code]')).toHaveCount(3);
   await page.locator('#sopclr').click();
+  await page.locator('#sopsort').selectOption('name');
   await expect(page.locator('#soprows .t .n')).toHaveText([
     'Care Rounds',
     'Emergency Display',
