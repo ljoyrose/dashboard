@@ -95,11 +95,11 @@
       var b = save.banner('check_log');
       msg.textContent = b.text;
       if (!b.canSave) return { ok: false, reason: 'off' };
-      return save.readMany(['check_type', 'area', 'subject', 'occupancy', 'subject_status'], ['subject', 'occupancy', 'subject_status']).then(function (all) {
+      return save.readMany(['check_type', 'area', 'subject', 'occupancy', 'subject_status', 'requirement'], ['subject', 'occupancy', 'subject_status', 'requirement']).then(function (all) {
         if (!all.ok) { msg.textContent = all.message; return { ok: false, reason: 'read' }; }
         var types = currentTypes(all.tables.check_type, londonToday(opts.now));
         if (!types.length) { msg.textContent = 'No checks have been set up yet. Ask Lisa.'; return { ok: false, reason: 'none' }; }
-        draw(host, save, types, (all.tables.area || []).filter(function (a) { return !/^ZZ_/i.test(String(a.code || "")); }), onSite(all.tables), opts.type, msg);
+        draw(host, save, types, (all.tables.area || []).filter(function (a) { return typeof BLDOccupancy === 'undefined' || BLDOccupancy.inUse(a, londonToday(opts.now), all.tables.requirement); }), onSite(all.tables), opts.type, msg);
         return { ok: true, types: types.length };
       });
     });

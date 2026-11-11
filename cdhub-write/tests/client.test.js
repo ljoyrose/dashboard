@@ -802,7 +802,7 @@ domTest('Bloodline: staff load the dogs with their personal code, no Google sign
   load.click();
   await tick(60);
   const reads = srv.posts().filter((p) => p.action === 'read');
-  assert.deepEqual(reads.map((p) => p.table), ['area', 'subject', 'occupancy', 'subject_status']);
+  assert.deepEqual(reads.map((p) => p.table), ['area', 'subject', 'occupancy', 'subject_status', 'requirement']);
   reads.forEach((p) => assert.equal(p.code, 'STAFFCODE12'));
   srv.calls.forEach((c) => assert.ok(!c.url.includes('STAFFCODE12')));
   assert.equal(d.querySelectorAll('.bs-dog').length, 2);
