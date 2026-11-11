@@ -81,8 +81,8 @@ test('dog kennel cards are only for dogs on site: none for a dog that has left',
 test('thermometer cards: one per thermometer not retired or ended, by name; adding one saves it and makes its card', async ({ page }) => {
   const tables = {
     area: [{ id: 'area-t1', code: 'T1' }, { id: 'area-zz', code: 'ZZ_OLD' }], subject: [], subject_status: [], litter: [], occupancy: [], qr_tag: [],
-    thermometer: [{ id: 'thm-1', name: 'Hall', area_id: 'area-t1', from_date: '2026-01-01', active: 'true' }, { id: 'thm-2', name: 'Old one', area_id: 'area-t1', from_date: '2026-01-01', active: 'false' },
-      { id: 'thm-4', name: 'Ended', area_id: 'area-t1', from_date: '2026-01-01', to_date: '2026-01-31', active: 'true' }]
+    thermometer: [{ id: 'thm-1', name: 'Hall', area_id: 'area-t1', valid_from: '2026-01-01', active: 'true' }, { id: 'thm-2', name: 'Old one', area_id: 'area-t1', valid_from: '2026-01-01', active: 'false' },
+      { id: 'thm-4', name: 'Ended', area_id: 'area-t1', valid_from: '2026-01-01', valid_to: '2026-01-31', active: 'true' }]
   };
   const sent = [];
   await page.route(SCRIPT, (route) => {
@@ -106,7 +106,7 @@ test('thermometer cards: one per thermometer not retired or ended, by name; addi
   await page.getByRole('button', { name: 'Save' }).click();
   await expect(page.locator('.qcard b')).toHaveText(['Corridor 1']);
   expect(sent.slice(1).map((b) => [b.table, b.fields.name || b.fields.kind, b.fields.area_id || b.fields.ref_id])).toEqual([['thermometer', 'Corridor 1', 'area-t1'], ['qr_tag', 'thermometer', 'thm-3']]);
-  expect([sent[1].fields.from_date, sent[1].fields.to_date]).toEqual(['2026-11-01', '2026-11-11']);
+  expect([sent[1].fields.valid_from, sent[1].fields.valid_to]).toEqual(['2026-11-01', '2026-11-11']);
 });
 
 test('room signs are never made for a retired room (code starting ZZ_)', async ({ page }) => {

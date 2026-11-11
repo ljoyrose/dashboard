@@ -8,7 +8,7 @@
   var screen = document.getElementById('screen'), save = BLDSave.create({});
   var base = location.origin + location.pathname.replace(/print\/(index\.html)?$/, '');
   save.TABLES.qr_tag = { label: 'QR codes', file: 'BLD-qr_tag.csv', fields: { tag: { type: 'text', required: true, label: 'Tag' }, kind: { type: 'enum', values: ['area', 'subject', 'litter', 'site', 'thermometer'], required: true, label: 'Kind' }, ref_id: { type: 'text', required: true, label: 'Refers to' } } };
-  save.TABLES.thermometer = { label: 'Thermometers', file: 'BLD-thermometer.csv', fields: { name: { type: 'text', required: true, label: 'Name' }, area_id: { type: 'text', required: true, label: 'Room' }, from_date: { type: 'date', required: true, label: 'From' }, to_date: { type: 'date', label: 'To' } } };   // the save checks the room exists
+  save.TABLES.thermometer = { label: 'Thermometers', file: 'BLD-thermometer.csv', fields: { name: { type: 'text', required: true, label: 'Name' }, area_id: { type: 'text', required: true, label: 'Room' }, valid_from: { type: 'date', required: true, label: 'From' }, valid_to: { type: 'date', label: 'To' } } };   // the save checks the room exists
   function h(t, a, k) { var e = document.createElement(t); Object.keys(a || {}).forEach(function (x) { if (x === 'text') e.textContent = a[x]; else if (x === 'class') e.className = a[x]; else if (x === 'html') e.innerHTML = a[x]; else if (x.slice(0, 2) === 'on') e.addEventListener(x.slice(2), a[x]); else e.setAttribute(x, a[x]); }); (k || []).forEach(function (c) { if (c) e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); }); return e; }
   function newTag() { var a = new Uint8Array(LEN), s = ''; crypto.getRandomValues(a); for (var i = 0; i < LEN; i++) s += ALPHABET.charAt(a[i] % ALPHABET.length); return s; }
   function say(t, k) { msg.className = 'msg ' + (k || ''); msg.textContent = t; }
@@ -82,14 +82,14 @@
     var go = h('button', { class: 'btn', type: 'button', text: 'Save', onclick: function () {
       if (!name.value.trim() || !room.value || !from.value) { say('Name, room and From, please.', 'bad'); return; }
       go.disabled = true; say('Saving...');
-      var f = { name: name.value.trim(), area_id: room.value, from_date: from.value };
-      if (to.value) f.to_date = to.value;
+      var f = { name: name.value.trim(), area_id: room.value, valid_from: from.value };
+      if (to.value) f.valid_to = to.value;
       save.submit('thermometer', f).then(function (r) {
         go.disabled = false;
         if (!r.ok) { say(r.message || 'Not saved.', 'bad'); return; }
         if (r.status !== 'saved' || !r.id) { say(r.message, 'good'); return; }
         var id = r.id;
-        T.thermometer.push({ id: id, name: f.name, area_id: f.area_id, from_date: f.from_date, to_date: f.to_date || '', active: 'true' });
+        T.thermometer.push({ id: id, name: f.name, area_id: f.area_id, valid_from: f.valid_from, valid_to: f.valid_to || '', active: 'true' });
         make('thermometer', [{ id: id, label: name.value.trim() }]);
       });
     } });
@@ -108,8 +108,8 @@
     }));
     opts.appendChild(btn('Thermometer cards', function () {
       if (!T.thermometer) { say('The thermometer list is not switched on yet.', 'warn'); return; }
-      var today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });   // ended ones (to_date before today) are not printed
-      make('thermometer', T.thermometer.filter(function (t) { return BLDThermometer.neededOn(t, today) || (String(t.active).toLowerCase() !== 'false' && String(t.from_date || '') > today); }).map(function (t) { return { id: t.id, label: t.name || t.id }; }));
+      var today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/London' });   // ended ones (valid_to before today) are not printed
+      make('thermometer', T.thermometer.filter(function (t) { return BLDThermometer.neededOn(t, today) || (String(t.active).toLowerCase() !== 'false' && String(t.valid_from || '') > today); }).map(function (t) { return { id: t.id, label: t.name || t.id }; }));
     }));
     opts.appendChild(btn('Add thermometer', addThermometer));
     opts.appendChild(btn('Phone set-up QR', function () {

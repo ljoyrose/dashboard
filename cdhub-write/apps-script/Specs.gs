@@ -160,14 +160,14 @@ var TABLES = {
   // One thermometer per place (a room or a corridor, never a field), so the round lists the thermometers, not the
   // rooms (NEW: TEMPS, 11 Nov 2026). How many there are is rows, never code. The OWNER adds one; its QR card is made on
   // the print page like a room sign (qr_tag kind thermometer). Readings still save against area_id. To fix a row the
-  // owner edits it in place (name, area_id, from_date, to_date, active); to retire one, active = false. Needed from
-  // from_date up to and including to_date: outside those days nothing flags it for a missing reading. Own switch, OFF by default.
+  // owner edits it in place (name, area_id, valid_from, valid_to, active); to retire one, active = false. Needed from
+  // valid_from up to and including valid_to: outside those days nothing flags it for a missing reading. Own switch, OFF by default.
   thermometer: {
     key: 'thermometer',
     file: 'BLD-thermometer.csv',
     idPrefix: 'thm',
-    columns: ['id', 'tenant_id', 'name', 'area_id', 'from_date', 'to_date', 'active', 'made_at', 'made_by'],
-    proposedColumns: ['id', 'tenant_id', 'name', 'area_id', 'from_date', 'to_date', 'active', 'made_at', 'made_by'],
+    columns: ['id', 'tenant_id', 'name', 'area_id', 'active', 'valid_from', 'valid_to', 'made_at', 'made_by'],
+    proposedColumns: ['id', 'tenant_id', 'name', 'area_id', 'active', 'valid_from', 'valid_to', 'made_at', 'made_by'],
     computedColumns: [],
     lookups: [{ name: 'area', file: 'BLD-area.csv', idCol: 'id' }],
     perms: { add: ['OWNER'], correct: [] },
@@ -179,14 +179,14 @@ var TABLES = {
     input: {
       name:      { type: 'text', required: true },
       area_id:   { type: 'ref', lookup: 'area', required: true },
-      from_date: { type: 'date', required: true },   // needed from this day...
-      to_date:   { type: 'date' }                    // ...up to and including this day; blank = not ended (Lisa 11 Nov 2026)
+      valid_from: { type: 'date', required: true },   // needed from this day...
+      valid_to:   { type: 'date' }                    // ...up to and including this day; blank = not ended (Lisa 11 Nov 2026)
     },
     dupKey: ['name'], dupTimeCol: null,
     stamp: function (row, ctx) { row.active = 'true'; row.made_at = ctx.nowIso; row.made_by = ctx.whoId || ctx.who; },
     checkRow: function (row, errors) {
       if (!errors.name && row.name !== '' && row.name.length > 40) errors.name = 'Use 40 characters or fewer.';
-      if (!errors.from_date && !errors.to_date && row.from_date && row.to_date && row.to_date < row.from_date) errors.to_date = 'The end date cannot be before the start date.';
+      if (!errors.valid_from && !errors.valid_to && row.valid_from && row.valid_to && row.valid_to < row.valid_from) errors.valid_to = 'The end date cannot be before the start date.';
     }
   },
 
