@@ -48,7 +48,7 @@ header .btn{color:var(--frame-ink);background:transparent;border-color:var(--fra
 @media (prefers-reduced-motion:reduce){.botring{animation:none;stroke-dasharray:none}}
 .live{font-size:var(--fs-small);font-weight:600;border:1px solid var(--frame-line);border-radius:var(--radius);padding:0 8px;height:24px;display:inline-flex;align-items:center;white-space:nowrap;color:var(--frame-ink)}
 .live.ok{border-color:var(--ljr-5)}
-.live.bad{border-color:var(--ljr-2)}
+.live.bad{border-color:var(--ljr-3)}
 .sec h3{font-size:var(--fs-head);margin:0 0 8px}
 .sec+.sec{margin-top:20px;padding-top:12px;border-top:1px solid var(--line)}
 .rdate{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:0 0 12px}
@@ -71,10 +71,10 @@ header .btn{color:var(--frame-ink);background:transparent;border-color:var(--fra
 h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .sub{color:var(--muted);font-size:var(--fs-body);margin:0 0 16px}
 .yr-row{display:flex;gap:6px;margin:0 0 12px;align-items:center;flex-wrap:wrap}
-.yr-btn{min-height:30px;font-size:var(--fs-small);font-weight:600;padding:0 12px}
+.yr-btn{min-height:40px;font-size:var(--fs-small);font-weight:600;padding:0 12px}
 .yr-btn.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
 .tab-row{display:flex;flex-wrap:wrap;gap:2px;background:var(--soft);padding:3px;border-radius:calc(var(--radius) + 3px);width:auto;max-width:100%;margin:0 0 16px}
-.tab{padding:6px 16px;border:none;background:transparent;border-radius:var(--radius);cursor:pointer;font:600 var(--fs-small)/1 var(--house-font);color:var(--muted)}
+.tab{min-height:40px;padding:6px 16px;border:none;background:transparent;border-radius:var(--radius);cursor:pointer;font:600 var(--fs-small)/1 var(--house-font);color:var(--muted)}
 .tab.on{background:var(--card);color:var(--ink);box-shadow:var(--shadow)}
 @media(hover:hover){.tab:not(.on):hover{color:var(--ink)}}
 .view{display:none}.view.on{display:block}
@@ -85,21 +85,20 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .leg-sq{width:11px;height:11px;border-radius:2px;flex:none}
 
 /* Heat-map calendar */
-.month-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:20px}
-@media(max-width:780px){.month-grid{grid-template-columns:repeat(3,1fr)}}
-@media(max-width:540px){.month-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:340px){.month-grid{grid-template-columns:1fr}}
+/* Months at least 320px wide, so every day is a 40px+ tap target (one month per row on a phone). */
+.month-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:10px;margin-bottom:20px}
 .mc{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:10px;box-shadow:var(--shadow)}
 .mn{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin-bottom:6px}
 .dg{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
-.dh{font-size:8px;color:var(--muted);text-align:center;padding-bottom:2px;user-select:none}
+.dh{font-size:10px;color:var(--muted);text-align:center;padding-bottom:2px;user-select:none}
 .d{width:100%;aspect-ratio:1;border-radius:3px;border:none;font-size:0;background:var(--soft);cursor:default}
 .d:not(.empty):not(.future):not(.nd){cursor:pointer}
 @media(hover:hover){.d:not(.empty):not(.future):not(.nd):hover{transform:scale(1.35);z-index:2;position:relative}}
 .d.empty{background:transparent}
 .d.future{background:var(--paper);border:1px solid var(--line);opacity:.35}
 .d.unknown,.sd.unknown{background:var(--soft);border:1px dashed var(--line)}
-.d.cold{background:var(--ljr-6)}.d.ok{background:var(--ljr-5)}.d.hot{background:var(--ljr-2)}
+.d.allok{background:var(--ljr-5-tint)}.d.warn{background:var(--ljr-3)}.d.nolimit{background:var(--soft);border:1px dashed var(--line)}
+.d.ocool{background:var(--ljr-6-tint)}.d.omild{background:var(--card);border:1px solid var(--line)}.d.owarm{background:var(--ljr-4-tint)}
 .d.today:not(.empty){outline:2px solid var(--ink);outline-offset:-2px}
 
 /* Strip view */
@@ -110,7 +109,8 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .sd{height:14px;min-width:3px;flex:1;border-radius:2px;cursor:default;background:var(--soft)}
 .sd:not(.future):not(.nd){cursor:pointer}
 @media(hover:hover){.sd:not(.future):not(.nd):hover{transform:scaleY(1.5);z-index:2}}
-.sd.cold{background:var(--ljr-6)}.sd.ok{background:var(--ljr-5)}.sd.hot{background:var(--ljr-2)}
+.sd.allok{background:var(--ljr-5-tint)}.sd.warn{background:var(--ljr-3)}.sd.nolimit{background:var(--soft)}
+.sd.ocool{background:var(--ljr-6-tint)}.sd.omild{background:var(--card);border:1px solid var(--line)}.sd.owarm{background:var(--ljr-4-tint)}
 .sd.future{background:var(--paper);border:1px solid var(--line);opacity:.3;cursor:default}
 .smlbls{display:flex;gap:1px;padding-left:30px;margin-bottom:3px}
 .sml{flex:1;font-size:9px;color:var(--muted);text-align:center}
@@ -128,16 +128,23 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
 .chev{font-size:14px;color:var(--muted)}
 
 /* Drill panel */
-#drill{display:none;position:fixed;top:0;right:0;width:290px;height:100%;background:var(--card);border-left:1px solid var(--line);z-index:100;padding:16px;overflow-y:auto;box-shadow:var(--shadow)}
+#drill{display:none;position:fixed;top:0;right:0;width:min(320px,100vw);height:100%;background:var(--card);border-left:1px solid var(--line);z-index:100;padding:16px;overflow-y:auto;box-shadow:var(--shadow)}
 #drill.open{display:block}
-.dclose{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);float:right;line-height:1;padding:0}
+.dclose{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);float:right;line-height:1;padding:0;min-width:44px;min-height:44px}
 .dtitle{font-size:var(--fs-head);font-weight:600;margin:0 0 2px;clear:right}
 .dsub{font-size:var(--fs-small);color:var(--muted);margin:0 0 14px}
 .dr{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid var(--line);font-size:var(--fs-small)}
 .dr:last-child{border-bottom:none}
 .dsec{font-size:var(--fs-small);font-weight:600;color:var(--muted);margin:14px 0 2px;letter-spacing:.04em}
-.pill{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:var(--radius);font-size:var(--fs-small);font-weight:600;border:1px solid;white-space:nowrap}
-.pc{border-color:var(--ljr-6)}.po{border-color:var(--ljr-5)}.ph{border-color:var(--ljr-2)}
+/* Calm by rule (Lisa 11 Nov): no red anywhere; orange (.warn) only for a reading outside its limit or a missed needed one. */
+.warn{color:var(--ljr-3-text);font-weight:600}
+.tick{color:var(--ljr-5-text)}
+.due{color:var(--muted)}
+.rl{padding:7px 0;border-bottom:1px solid var(--line);font-size:var(--fs-small);font-variant-numeric:tabular-nums}
+.rl:last-child{border-bottom:none}
+.rl b{font-weight:600}
+.rl .note{display:block;margin-top:2px}
+.oline{font-size:var(--fs-small);font-variant-numeric:tabular-nums;margin:0}
 </style>
 </head>
 <body>
@@ -167,16 +174,9 @@ h2.ph{font-size:var(--fs-head);margin:24px 0 2px}
   <button class="dclose" onclick="closeDrill()" aria-label="Close">✕</button>
   <p class="dtitle" id="d-title">—</p>
   <p class="dsec">Outside</p>
-  <div class="dgrid">
-  <div class="dr"><span>Max °C</span><span id="d-max">—</span></div>
-  <div class="dr"><span>Min °C</span><span id="d-min">—</span></div>
-  <div class="dr"><span>Feels like °C</span><span id="d-feels">—</span></div>
-  <div class="dr"><span>Rain</span><span id="d-rain">—</span></div>
-  <div class="dr"><span>Cloud</span><span id="d-cloud">—</span></div>
-  <div class="dr"><span>Wind</span><span id="d-wind">—</span></div>
-  </div>
+  <p class="oline" id="d-out">—</p>
   <div id="d-areas" style="display:none">
-    <p class="dsec">Indoors</p>
+    <p class="dsec">Indoors °C</p>
     <div id="d-areas-inner"></div>
   </div>
 </aside>
@@ -196,6 +196,8 @@ var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
 var AREA_NAMES={};  /* areaId -> display name/code */
 var AREA_SORT={};   /* areaId -> group_sort from BLD-area (the round order is rows, never coded here) */
 var ROUND_DATE=null;
+var SPAN={};        /* areaId -> {first,last} reading day */
+var FIRST_DAY='';   /* the first day any room has a reading: nothing is missed before readings began (no coded date) */
 
 /* ---- helpers ---- */
 var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -272,13 +274,17 @@ async function loadAreaData(){
       var rows=parseCSV(txt);
       AREA_DAYS={};
       rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
-        var at=String(r.taken_at||'');if(!r.area_id||at.length<10)return;
+        var at=String(r.period_start||r.taken_at||'');if(!r.area_id||at.length<10)return;   /* period_start: a reading typed later belongs to its own slot */
         var date=at.slice(0,10),hr=parseInt(at.slice(11,13),10),slot=(isNaN(hr)||hr<12)?'am':'pm';
         if(!AREA_DAYS[date])AREA_DAYS[date]={};
         if(!AREA_DAYS[date][r.area_id])AREA_DAYS[date][r.area_id]={};
-        AREA_DAYS[date][r.area_id][slot]={min:r.min_c,max:r.max_c};
+        AREA_DAYS[date][r.area_id][slot]={min:r.min_c,max:r.max_c,note:r.mitigation_note||''};
       });
     }
+    SPAN={}; FIRST_DAY='';
+    Object.keys(AREA_DAYS).forEach(function(d){ if(!FIRST_DAY||d<FIRST_DAY) FIRST_DAY=d; });
+    Object.keys(AREA_DAYS).forEach(function(d){ Object.keys(AREA_DAYS[d]).forEach(function(aid){
+      var s=SPAN[aid]||(SPAN[aid]={first:d,last:d}); if(d<s.first)s.first=d; if(d>s.last)s.last=d; }); });
     var af=await findDriveFile('BLD-area.csv');
     if(af){
       var atxt=await readDriveFile(af);
@@ -370,37 +376,19 @@ function dayClass(isoDate){
   if(!r)return'nd';
   var t=parseFloat(r.max_temp);
   if(isNaN(t))return'nd';
-  if(!BAND)return'unknown';
-  if(t<BAND.min)return'cold';
-  if(t>BAND.max)return'hot';
-  return'ok';
+  if(!BAND)return'omild';
+  if(t<BAND.min)return'ocool';
+  if(t>BAND.max)return'owarm';
+  return'omild';
 }
 
+function ddmmyy(iso){ iso=String(iso||''); return iso.slice(8,10)+'/'+iso.slice(5,7)+'/'+iso.slice(2,4); }
 function openDrill(isoDate){
-  var r=DAYS[isoDate]||{};
-  var parts=isoDate.split('-');
-  var dLabel=parseInt(parts[2],10)+' '+MONTHS[parseInt(parts[1],10)-1]+' '+parts[0];
-  el('d-title').textContent=dLabel;
-  var show=function(v){var s=dpOutdoor(v);return s?s+'°C':'—';};
-  el('d-max').textContent=show(r.max_temp);
-  el('d-min').textContent=show(r.min_temp);
-  el('d-feels').textContent=show(r.realfeel_max_temp);
-  el('d-rain').textContent=r.rain_value!==undefined&&r.rain_value!==''?dpOutdoor(r.rain_value)+' mm':'—';
-  el('d-cloud').textContent=r.cloud_cover_pct!==undefined&&r.cloud_cover_pct!==''?r.cloud_cover_pct+'%':'—';
-  el('d-wind').textContent=r.wind_kmh!==undefined&&r.wind_kmh!==''?dpOutdoor(r.wind_kmh)+' km/h':'—';
-  var dayAreas=AREA_DAYS[isoDate]||{};
-  var areaIds=areasInWalk(Object.keys(dayAreas));
-  var areasEl=el('d-areas');
-  if(areaIds.length){
-    el('d-areas-inner').innerHTML=areaIds.map(function(aid){
-      var ar=dayAreas[aid]||{};
-      return '<div class="dr"><span>'+esc(areaName(aid))+'</span><span>'+esc(slotLine('AM',ar.am))+' · '+esc(slotLine('PM',ar.pm))+'</span></div>';
-    }).join('');
-    areasEl.style.display='';
-  }else{
-    areasEl.style.display='none';
-    el('d-areas-inner').innerHTML='';
-  }
+  el('d-title').textContent=ddmmyy(isoDate);
+  el('d-out').textContent=outsideLine(isoDate)||'No outside reading';
+  var lines=dayRooms(isoDate).map(function(x){ return roomLine(x,true); });
+  el('d-areas-inner').innerHTML=lines.join('');
+  el('d-areas').style.display=lines.length?'':'none';
   el('drill').classList.add('open');
 }
 function closeDrill(){el('drill').classList.remove('open');}
@@ -429,36 +417,70 @@ function dpIndoor(v){
   return (Math.round(n*10)/10).toFixed(1);
 }
 function dpOutdoor(v){ return dpIndoor(v).replace(/\.0$/,''); }
-function bandWord(cls){ return cls==='cold'?'Cold':cls==='hot'?'Hot':cls==='ok'?'OK':cls==='unknown'?'No limit set':''; }
-function slotState(t){
-  if(!t||((t.min==null||String(t.min).trim()==='')&&(t.max==null||String(t.max).trim()===''))) return {miss:true};
-  var cls=tempCls(t.min,t.max)||'ok';
-  var lo=dpIndoor(t.min), hi=dpIndoor(t.max);
-  return {miss:false, cls:cls, word:bandWord(cls)||'OK', range:(lo||'–')+'–'+(hi||'–')+'°C', inn:cls==='ok'};
+/* ---- the one set of rules every view uses (spec: tests/mocked/history-calm.spec.js) ---- */
+/* Every room in use is needed from the first day any reading exists up to today, including a room with no readings
+   at all (its missed slots must show for the audit). A retired (ZZ_) room ends at its own last reading, so an old or
+   renamed room never shows as missed. */
+function neededOn(aid,day){
+  if(!FIRST_DAY||day<FIRST_DAY||day>TODAY_STR) return false;
+  if(!isRetired(aid)) return aid in AREA_NAMES||aid in SPAN;
+  var sp=SPAN[aid]; return !!sp&&day<=sp.last;
 }
-function slotLine(label,t){
-  var s=slotState(t);
-  if(s.miss) return label+' Missed';
-  return label+' '+s.range+' · '+s.word+' · '+(s.inn?'In range':s.cls==='unknown'?'Not judged':'Out of range')+' · Submitted';
+function hasVal(v){ return v!=null&&String(v).trim()!==''; }
+/* One slot: in / out / nolimit / miss / due / none */
+function slotState(t,aid,day,slot){
+  if(t&&(hasVal(t.min)||hasVal(t.max))){
+    var cls=tempCls(t.min,t.max);
+    return {k:cls==='ok'?'in':cls==='unknown'?'nolimit':'out', lo:dpIndoor(t.min), hi:dpIndoor(t.max), note:t.note||''};
+  }
+  if(!neededOn(aid,day)) return {k:'none'};
+  if(day===TODAY_STR&&(slot==='pm'||new Date().getHours()<12)) return {k:'due'};
+  if(day>TODAY_STR) return {k:'due'};
+  return {k:'miss'};
+}
+/* The rooms shown for a day: needed that day or with a reading, in round order. */
+function dayRooms(day){
+  var ar=AREA_DAYS[day]||{};
+  return areasInWalk(Object.keys(ar).concat(Object.keys(SPAN))).filter(function(aid){ return ar[aid]||neededOn(aid,day); }).map(function(aid){
+    var r=ar[aid]||{};
+    return {aid:aid, name:areaName(aid), am:slotState(r.am,aid,day,'am'), pm:slotState(r.pm,aid,day,'pm')};
+  });
+}
+function daySummary(day){
+  var n={in:0,out:0,nolimit:0,miss:0,due:0,read:0};
+  dayRooms(day).forEach(function(x){ [x.am,x.pm].forEach(function(s){ if(s.k in n) n[s.k]++; if(s.k==='in'||s.k==='out'||s.k==='nolimit') n.read++; }); });
+  return n;
+}
+function indoorDayClass(day){
+  if(day>TODAY_STR) return 'future';
+  var n=daySummary(day);
+  if(n.out||n.miss) return 'warn';
+  if(!n.read) return 'nd';
+  if(n.nolimit) return 'nolimit';
+  return 'allok';
+}
+function slotHtml(label,s){
+  if(s.k==='none') return '';
+  if(s.k==='miss') return '<span class="warn">'+label+' missed</span>';
+  if(s.k==='due') return '<span class="due">'+label+' due</span>';
+  var txt=label+' '+(s.lo||'–')+'–'+(s.hi||'–');
+  if(s.k==='out') return '<span class="warn">'+esc(txt)+'</span>';
+  return esc(txt)+(s.k==='in'?' <span class="tick" aria-label="inside limit">✓</span>':'');
+}
+/* "H1 · AM 18.1–21.0 ✓ · PM 17.2–19.5 ✓"; outside the limit, "What was done" follows on the day panel. */
+function roomLine(x,withNotes){
+  var parts=[slotHtml('AM',x.am),slotHtml('PM',x.pm)].filter(Boolean);
+  var notes='';
+  if(withNotes) [['AM',x.am],['PM',x.pm]].forEach(function(p){ if(p[1].k==='out') notes+='<span class="note warn">'+p[0]+' what was done: '+esc(p[1].note||'not recorded')+'</span>'; });
+  return '<div class="rl"><b>'+esc(x.name)+'</b> · '+parts.join(' · ')+notes+'</div>';
+}
+function outsideLine(day){
+  var r=DAYS[day]; if(!r) return '';
+  var hi=dpOutdoor(r.max_temp), lo=dpOutdoor(r.min_temp), rain=dpOutdoor(r.rain_value);
+  return (hi||'–')+' / '+(lo||'–')+' °C'+(rain!==''?', rain '+rain+' mm':'');
 }
 function stateWord(cls){
-  return cls==='future'?'Later':cls==='nd'?'No reading':cls==='unknown'?'No limit set':cls==='cold'?'Cold':cls==='hot'?'Hot':cls==='ok'?'OK':cls;
-}
-function indoorDayClass(isoDate){
-  if(isoDate>TODAY_STR) return 'future';
-  var day=AREA_DAYS[isoDate]; if(!day) return 'nd';
-  var any=false, hot=false, cold=false, unk=false;
-  Object.keys(day).forEach(function(aid){
-    ['am','pm'].forEach(function(slot){
-      var s=slotState((day[aid]||{})[slot]);
-      if(s.miss) return;
-      any=true; if(s.cls==='hot') hot=true; else if(s.cls==='cold') cold=true; else if(s.cls==='unknown') unk=true;
-    });
-  });
-  if(!any) return 'nd';
-  if(hot) return 'hot';
-  if(cold) return 'cold';
-  return unk?'unknown':'ok';
+  return {future:'Later',nd:'No readings',nolimit:'No limit set',warn:'Check',allok:'In limit',ocool:'Cool',omild:'Mild',owarm:'Warm'}[cls]||cls;
 }
 function monthCal(y, classOf, kind){
   var md=mdays(y);
@@ -511,75 +533,47 @@ function buildMonthCards(y){
   var mdn=mdays(y);
   var h='<div class="mlist">';
   MONTHS.forEach(function(mn,mi){
-    var outN=0, missed=0, hi=null, lo=null, any=false;
-    var known=areasInWalk([]);
+    var t={in:0,out:0,nolimit:0,miss:0,read:0}, hi=null, lo=null;
     for(var d=1;d<=mdn[mi];d++){
       var date=ds(y,mi,d);
       if(date>TODAY_STR) continue;
-      var day=AREA_DAYS[date]||{};
-      var use=known.length?areasInWalk(Object.keys(day)):Object.keys(day);
-      use.forEach(function(aid){
-        var ar=day[aid]||{};
-        ['am','pm'].forEach(function(slot){
-          var t=ar[slot], s=slotState(t);
-          if(s.miss){ if(!isRetired(aid)) missed++; return; }
-          any=true;
-          if(!s.inn) outN++;
-          var mx=parseFloat(t.max), mn2=parseFloat(t.min), name=areaName(aid);
-          if(!isNaN(mx)&&(hi==null||mx>hi.v)) hi={v:mx,name:name};
-          if(!isNaN(mn2)&&(lo==null||mn2<lo.v)) lo={v:mn2,name:name};
-        });
-      });
+      dayRooms(date).forEach(function(x){ [x.am,x.pm].forEach(function(s){
+        if(s.k in t) t[s.k]++;
+        if(s.k!=='in'&&s.k!=='out'&&s.k!=='nolimit') return;
+        t.read++;
+        var mx=parseFloat(s.hi), mn2=parseFloat(s.lo);
+        if(!isNaN(mx)&&(hi==null||mx>hi.v)) hi={v:mx,name:x.name};
+        if(!isNaN(mn2)&&(lo==null||mn2<lo.v)) lo={v:mn2,name:x.name};
+      }); });
     }
-    h+='<div class="mitem"><div class="mitem-head"><span class="mitem-name">'+mn+' '+y+'</span></div><div class="mitem-stats">';
-    if(!any && !missed) h+='<span>No indoor readings</span>';
-    else if(!any) h+='<span>'+missed+' rounds missed</span>';
+    h+='<div class="mitem" data-month="'+(mi+1)+'" data-read="'+t.read+'" data-out="'+t.out+'" data-miss="'+t.miss+'"><div class="mitem-head"><span class="mitem-name">'+mn+' '+y+'</span></div><div class="mitem-stats">';
+    if(!t.read&&!t.miss) h+='<span>No readings</span>';
     else{
-      h+='<span>'+outN+' out of range</span>';
-      if(hi) h+='<span>Highest '+esc(hi.name)+' '+dpIndoor(hi.v)+'°C</span>';
-      if(lo) h+='<span>Lowest '+esc(lo.name)+' '+dpIndoor(lo.v)+'°C</span>';
-      h+='<span>'+missed+' rounds missed</span>';
+      h+='<span>'+t.read+' read</span>';
+      if(hi) h+='<span>High '+dpIndoor(hi.v)+' '+esc(hi.name)+'</span>';
+      if(lo) h+='<span>Low '+dpIndoor(lo.v)+' '+esc(lo.name)+'</span>';
+      if(t.out) h+='<span class="warn">'+t.out+' outside limit</span>';
+      if(t.miss) h+='<span class="warn">'+t.miss+' missed</span>';
     }
     h+='</div></div>';
   });
   return h+'</div>';
 }
-function outsideBlock(dateStr){
-  var r=DAYS[dateStr];
-  if(!r) return '<p class="sub">No outside reading for this date.</p>';
-  var lo=dpOutdoor(r.min_temp), hi=dpOutdoor(r.max_temp);
-  var word=bandWord(tempCls(r.min_temp, r.max_temp));
-  var bits=[];
-  if(lo||hi) bits.push((lo||'–')+'–'+(hi||'–')+'°C');
-  if(word) bits.push(word);
-  var rain=dpOutdoor(r.rain_value);
-  if(rain) bits.push(parseFloat(r.rain_value)>0?rain+' mm rain':'No rain');
-  var wind=parseFloat(r.wind_kmh);
-  if(!isNaN(wind)&&wind>=40) bits.push('Windy');
-  return '<p>'+esc(bits.join(' · '))+'</p>';
-}
 function buildRound(dateStr){
-  var day=AREA_DAYS[dateStr]||{};
-  var ids=areasInWalk(Object.keys(day));
+  var rooms=dayRooms(dateStr);
   var dateInput='<div class="rdate"><label for="rdate">Date</label><input id="rdate" type="date" value="'+esc(dateStr)+'" onchange="setRoundDate(this.value)"></div>';
-  var tiles='<div class="rtiles">', rows='';
-  ids.forEach(function(aid){
-    var ar=day[aid]||{}, name=areaName(aid);
-    var pair=function(t){
-      var s=slotState(t);
-      if(s.miss) return '<td>—</td><td>—</td>';
-      return '<td>'+esc(dpIndoor(t.min)||'—')+'</td><td>'+esc(dpIndoor(t.max)||'—')+'</td>';
-    };
-    tiles+='<div class="rtile"><div class="rn">'+esc(name)+'</div><div class="rs">'+esc(slotLine('AM',ar.am))+'</div><div class="rs">'+esc(slotLine('PM',ar.pm))+'</div></div>';
-    rows+='<tr><td class="nm">'+esc(name)+'</td>'+pair(ar.am)+pair(ar.pm)+'</tr>';
-  });
-  tiles+='</div>';
-  var table=ids.length
-    ?'<div class="rscroll" tabindex="0" role="region" aria-label="Indoor temperatures in degrees C. Scroll sideways for more."><table class="rtable"><thead><tr><th>Area</th><th>AM min °C</th><th>AM max °C</th><th>PM min °C</th><th>PM max °C</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
-    :'<p class="sub">No indoor readings on record for this date.</p>';
+  var tiles='<div class="rtiles">'+rooms.map(function(x){
+    return '<div class="rtile"><div class="rn">'+esc(x.name)+'</div><div class="rs">'+slotHtml('AM',x.am)+'</div><div class="rs">'+slotHtml('PM',x.pm)+'</div></div>';
+  }).join('')+'</div>';
+  var cell=function(s,v){ return '<td'+(s.k==='out'?' class="warn"':'')+'>'+esc(v||'—')+'</td>'; };
+  var rows=rooms.map(function(x){ return '<tr><td class="nm">'+esc(x.name)+'</td>'+cell(x.am,x.am.lo)+cell(x.am,x.am.hi)+cell(x.pm,x.pm.lo)+cell(x.pm,x.pm.hi)+'</tr>'; }).join('');
+  var table=rooms.length
+    ?'<div class="rscroll" tabindex="0" role="region" aria-label="Indoor temperatures in degrees C"><table class="rtable"><thead><tr><th>Room</th><th>AM min</th><th>AM max</th><th>PM min</th><th>PM max</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    :'<p class="sub">No readings for this date.</p>';
+  var out=outsideLine(dateStr);
   return dateInput
-    +'<section class="sec"><h3>Indoors</h3>'+(ids.length?tiles:'')+table+'</section>'
-    +'<section class="sec"><h3>Outside</h3>'+outsideBlock(dateStr)+'</section>';
+    +'<section class="sec"><h3>Indoors °C</h3>'+(rooms.length?tiles:'')+table+'</section>'
+    +'<section class="sec"><h3>Outside</h3><p class="oline">'+esc(out||'No outside reading')+'</p></section>';
 }
 function setRoundDate(dateStr){
   ROUND_DATE=dateStr;
@@ -606,12 +600,12 @@ function setYear(y){
   closeDrill();
 }
 function legend(){
+  var sq=function(st){ return '<div class="leg-sq" style="'+st+'"></div>'; };
   return '<div class="legend">'
-    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-6)"></div>'+(BAND?'&lt;'+BAND.min+'°C Cold':'No limits loaded')+'</div>'
-    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-5)"></div>'+(BAND?BAND.min+'–'+BAND.max+'°C OK':'Limits unknown')+'</div>'
-    +'<div class="leg"><div class="leg-sq" style="background:var(--ljr-2)"></div>'+(BAND?'&gt;'+BAND.max+'°C Hot':'Limits unknown')+'</div>'
-    +'<div class="leg"><div class="leg-sq" style="background:var(--soft);border:1px solid var(--line)"></div>No reading</div>'
-    +'<div class="leg">Adult limits; puppy rooms are judged on The round</div>'
+    +'<div class="leg">'+sq('background:var(--ljr-5-tint);border:1px solid var(--line)')+'In limit</div>'
+    +'<div class="leg">'+sq('background:var(--ljr-3)')+'Outside limit or missed</div>'
+    +'<div class="leg">'+sq('background:var(--soft);border:1px solid var(--line)')+'No readings</div>'
+    +'<div class="leg">Outside: '+sq('background:var(--ljr-6-tint)')+(BAND?'below '+BAND.min:'cool')+' '+sq('background:var(--ljr-4-tint)')+(BAND?'above '+BAND.max:'warm')+'</div>'
     +'</div>';
 }
 function renderPage(){
@@ -622,7 +616,7 @@ function renderPage(){
     +'<button class="btn yr-btn on" data-yr="2026" onclick="setYear(2026)">2026</button>'
     +'<button class="btn yr-btn" data-yr="2025" onclick="setYear(2025)">2025</button>'
     +'<button class="btn yr-btn" data-yr="2024" onclick="setYear(2024)">2024</button>'
-    +'<a class="btn" href="./history-archive.html">Archive</a>'
+    +'<a class="btn" style="min-height:40px" href="./history-archive.html">Archive</a>'
     +'</div>'
     +'<div class="tab-row">'
     +'<button class="tab on" onclick="setView(\'d\',this)">The round</button>'
