@@ -114,8 +114,7 @@ test('Lisa 11 Nov: a missed reading outside the limit asks "What was done?", as 
 
 // Room empty (Lisa 11 Nov 2026): no dog present. A flag on the slot's reading; a reading is optional with it, and an
 // outside reading in an empty room is never a non-compliance, so "What was done" is not asked.
-// Needs STAFF's save side (bld-save.js: room_empty field; min_c/max_c optional when it is yes). Unpark when that merges.
-test.fixme('Room empty with no reading saves room_empty yes and no temperatures; no CLR step', async ({ page }) => {
+test('Room empty with no reading saves room_empty yes and no temperatures; no CLR step', async ({ page }) => {
   const sent = await setup(page);
   await page.goto('cdhub/staff/#m/temperature');
   await page.locator('.cards .card').first().click();
