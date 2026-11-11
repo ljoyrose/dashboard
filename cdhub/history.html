@@ -274,7 +274,7 @@ async function loadAreaData(){
       var rows=parseCSV(txt);
       AREA_DAYS={};
       rows.slice().sort(function(a,b){return String(a.taken_at||'')<String(b.taken_at||'')?-1:1;}).forEach(function(r){
-        var at=String(r.taken_at||'');if(!r.area_id||at.length<10)return;
+        var at=String(r.period_start||r.taken_at||'');if(!r.area_id||at.length<10)return;   /* period_start: a missed reading typed later belongs to its own day */
         var date=at.slice(0,10),hr=parseInt(at.slice(11,13),10),slot=(isNaN(hr)||hr<12)?'am':'pm';
         if(!AREA_DAYS[date])AREA_DAYS[date]={};
         if(!AREA_DAYS[date][r.area_id])AREA_DAYS[date][r.area_id]={};
