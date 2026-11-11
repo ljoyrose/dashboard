@@ -1359,13 +1359,13 @@ function outdoorStrip(date){
 }
 /* foundation: readings against a rule band (temperature per place, per round slot) */
 function tempsCard(){
- var date=CD._roundDate||todayISO(), N=(CD.areas||[]).length;
- var has=function(slot){ return (CD.areas||[]).filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
+ var date=CD._roundDate||todayISO(), A=liveCabins(), N=A.length;
+ var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
  var am=has('am'), pm=has('pm');
  var out=(CD.outdoor||[]).filter(function(r){ return (r.on||'').slice(0,10)===date; })[0];
  var row=function(t,v,s,state){ var cls=state===true||state==='ok'?' ok':state==='cold'?' cold':state==='hot'?' late':''; return '<div class="mrow"><span class="ic'+cls+'" aria-hidden="true"></span><span class="t">'+t+(s?'<small>'+s+'</small>':'')+'</span><span class="v">'+v+'</span></div>'; };
  var outState=function(r){ return r?tempState(r.min,r.max):''; };
- var cold=0, hot=0, swap=0, unk=0; (CD.areas||[]).forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{}, bd=roomBand(a.id,date);
+ var cold=0, hot=0, swap=0, unk=0; A.forEach(function(a){ var r=ROUND[roundKey(date,a.id)]||{}, bd=roomBand(a.id,date);
    ['am','pm'].forEach(function(s){ var st=r['t_'+s]?tempState(r['t_'+s].min,r['t_'+s].max,bd):''; if(st==='cold') cold++; if(st==='hot') hot++; if(st==='swap') swap++; if(st==='unknown') unk++; }); });
  var inState=(am||pm)?(swap||hot?'hot':cold?'cold':unk?'':'ok'):'';
  return '<section class="mcard" id="tempsCard" data-open-row style="--hc:var(--ljr-4-icon)"><h3><svg class="ti" aria-hidden="true"><use href="#i-thermometer"/></svg>Temperatures today</h3>'
@@ -1402,8 +1402,8 @@ function mainRows(){
 
 
 function mainNums(ok){
- var c=ok?counts():null, date=CD._roundDate||todayISO(), N=ok?(CD.areas||[]).length:0;
- var t=ok?Object.keys(ROUND).filter(function(k){ return k.indexOf(date+'__')===0 && (ROUND[k].t_am||ROUND[k].t_pm); }).length:0;
+ var c=ok?counts():null, date=CD._roundDate||todayISO(), A=ok?liveCabins():[], N=A.length;
+ var t=ok?A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.t_am||r.t_pm; }).length:0;
  return [{label:'Temps',value:ok&&N?t+' of '+N:null,href:'#/round',aria:ok&&N?'Temps: '+t+' of '+N+' cabins have a temperature today. Open The round':null},
   {label:'Unplaced',value:ok?listFor('unplaced').length:null,href:'#/today/unplaced'},
   {label:'Bitches',value:ok?c.bitches.length:null,href:'#/today/bitches',late:ok&&c.bitches.length!==c.active.length}];
@@ -1416,8 +1416,9 @@ function pageToday(){
  var c=counts(), date=CD._roundDate||todayISO();
  var placed={}; Object.keys(ROUND).forEach(function(k){ if(k.indexOf(date+'__')===0)
    (ROUND[k].subjects||[]).forEach(function(sid){ placed[sid]=ROUND[k].areaId; }); });
- var temps=Object.keys(ROUND).filter(function(k){ return k.indexOf(date+'__')===0 && (ROUND[k].t_am||ROUND[k].t_pm); });
- var cabins=CD.areas.length;
+ var cabinRows=liveCabins();
+ var temps=cabinRows.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.t_am||r.t_pm; });
+ var cabins=cabinRows.length;
  var unplaced=c.here.filter(function(d){ return !placed[d.id] && !d.area_id; });
  var ft=Math.ceil(c.adults.length/20), pt=Math.ceil(c.adults.length/10);
  var h='<h2>Today: '+esc(dmy(date))+'</h2>'
@@ -1457,12 +1458,26 @@ function pageToday(){
  +'';
  return h;
 }
+/* Live cabins for the Today checklist and The round. Retired ZZ_ rows are already left out of CD.areas.
+   The fields line is not a cabin (grouping Fields, code "Level 1 and level 5", or use Fields). It stays on Areas
+   and is not asked for a flap mode or a morning or evening cabin temperature. */
+function normPlace(s){ return String(s==null?'':s).trim().toLowerCase().replace(/\s+/g,' '); }
+function isFieldsRow(a){
+ if(!a) return false;
+ return normPlace(a.grouping)==='fields' || normPlace(a.code||a.cabin)==='level 1 and level 5' || normPlace(a.use)==='fields';
+}
+function isLiveCabin(a){
+ return !!a && !/^ZZ_/i.test(String(a.code||a.cabin||'')) && !isFieldsRow(a);
+}
+function liveCabins(){ return (CD.areas||[]).filter(isLiveCabin); }
+/* A chosen flap mode is only free or limited (the sheet value, or the same value on today's round). */
+function flapChosen(v){ v=normPlace(v); return v==='free'||v==='limited'; }
 /* foundation: checklist instance for today's round. Each line is a check on the round's places (✓ done / ✗ not yet),
    worked out from what is read: placements, flap modes, readings and headcounts. Nothing is stored. */
 function todayChecklist(date,unplacedN){
- var A=CD.areas||[], N=A.length;
+ var A=liveCabins(), N=A.length;
  var has=function(slot){ return A.filter(function(a){ var t=(ROUND[roundKey(date,a.id)]||{})['t_'+slot]; return t&&(t.min||t.max); }).length; };
- var am=has('am'), pm=has('pm'), modes=A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.access||accessOf(a.id); }).length;
+ var am=has('am'), pm=has('pm'), modes=A.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return flapChosen(r.access||accessOf(a.id)); }).length;
  var over=A.filter(function(a){ var acc=(ROUND[roundKey(date,a.id)]||{}).access||accessOf(a.id); return roomCheck(a.id,inCabin(a.id,date),acc).status==='over'; }).length;
  var c=counts();
  var L=[
@@ -2116,7 +2131,7 @@ function rk(x){ return x in RK ? RK[x] : 9; }
 function todayISO(){ var d=new Date(); return d.toISOString().slice(0,10); }
 
 function walkList(){
- var fam={}; CD.areas.forEach(function(a){ (fam[familyOf(a)]=fam[familyOf(a)]||[]).push(a); });
+ var fam={}; liveCabins().forEach(function(a){ (fam[familyOf(a)]=fam[familyOf(a)]||[]).push(a); });
  var out=[], step=0;
  Object.keys(fam).sort(function(a,b){return famSort(a)-famSort(b);}).forEach(function(f){
   fam[f].sort(function(x,y){return cabSort(x.code)-cabSort(y.code)||(x.code<y.code?-1:1);}).forEach(function(a){
@@ -2175,7 +2190,7 @@ function pageRound(){
  var unplaced=dogs.filter(function(d){ return !placed[d.id]; });
  var h='<h2>The round</h2>'
  +'<div class="filt"><label class="mut" for="rdate">date</label><input id="rdate" type="date" value="'+date+'">'
- +'<span class="mut" id="rstat">'+(sinkOn()?(Object.keys(ROUND).filter(function(k){return k.indexOf(date+"__")===0;}).length+' cabins \u00b7 '+Object.keys(ROUND).filter(function(x){return x.indexOf(date+'__')===0 && (ROUND[x].t_am||ROUND[x].t_pm);}).length+' with a temperature'):'')+'</span></div>';
+ +'<span class="mut" id="rstat">'+(sinkOn()?(function(){ var rows=liveCabins(), n=rows.filter(function(a){ var r=ROUND[roundKey(date,a.id)]||{}; return r.t_am||r.t_pm; }).length; return rows.length+' cabins \u00b7 '+n+' with a temperature'; })():'')+'</span></div>';
  h+=sinkCard();
  h+=keptReadings(date);   /* kept readings: read from BLD-area_reading.csv (blue < 10, green 10-27, red > 27) */
  var unN=unplacedShown==='all'?unplaced.length:Math.min(unplaced.length, Math.max(40, unplacedShown));
@@ -2189,6 +2204,7 @@ function pageRound(){
     if(lives.length) sel=lives; }
   var acc=r.access||accessOf(aid), fromArea=!r.access&&!!acc;
    var m2=a.m2;
+  var cap=capFor(aid,'10-25kg (medium)',acc);
   var roomR=roomCheck(aid,sel,acc), over=roomR.status==='over';
   h+='<div class="card '+(over?'acc2':(sel.length?'acc5':''))+'" data-area="'+aid+'">'
    +'<h4><span class="step">Step '+c.step+':</span> '+esc(c.cabin)
