@@ -173,6 +173,22 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await expect(page.locator('#compTemps [data-k="empty"] a[data-room-link]')).toHaveAttribute('href', '#/areas/ar-a');
     const order = await page.locator('#compTemps > details > ul > li').evaluateAll((ls) => ls.map((l) => l.dataset.k));
     expect(order).toEqual(['ok', 'empty', 'bad', 'miss']);
+    await expect(page.locator('#compTemps [data-window]')).toHaveAttribute('data-window', '7');
+    await expect(page.locator('#compTemps [data-window]')).toContainText('not set yet');
+    // the window is a user row; a reading with a thermometer_id is its own line, by name
+    const d = await page.evaluate(() => {
+      const t = todayISO();
+      T['BLD-breeding_rule.csv'] = [{ id: 'b1', rule_key: 'compliance.look_back_days', value: '3', effective_from: '2020-01-01', source: 'Pretend setting' }];
+      T['BLD-area_reading.csv'].push({ id: 'r5', area_id: 'ar-b', thermometer_id: 'th-b', min_c: '40.0', max_c: '41.0', period_start: t + 'T08:00:00Z', taken_at: t + 'T08:00:00Z', room_empty: '' });
+      go('compliance', false);
+      const x = compTemps();
+      return { n: x.win.n, c: x.miss.filter((m) => m.name === 'Pretend C').length, bad: x.bad.map((b) => b.th) };
+    });
+    expect(d.n).toBe(3);
+    expect(d.c).toBe(3);
+    expect(d.bad.sort()).toEqual(['', 'Pretend B']);
+    await expect(page.locator('#compTemps [data-window]')).toContainText('Last 3 days (your setting: Pretend setting)');
+    await expect(page.locator('#compTemps [data-k="bad"]')).toContainText('Pretend B');
   });
 
   test('cards link both ways: dog card opens its room, room card opens its dogs, retired rooms never linked', async ({ page, guard }) => {

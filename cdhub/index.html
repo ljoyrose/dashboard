@@ -1122,6 +1122,8 @@ var BREED_RULES=[
  ['min_dam_age_months','Youngest age a bitch can be mated','months'],
  ['max_litters_per_dam','Most litters per bitch','litters'],
  ['min_months_between_litters','Shortest time between litters','months']];
+/* settings kept in the same rule list (one rule list, Lisa 9 Nov), not breeding checks: not in the "3 rules not set" count */
+var SETTING_RULES=[['compliance.look_back_days','Days Compliance looks back','days']];
 function breedRuleRows(key){ return (T['BLD-breeding_rule.csv']||[]).filter(function(r){ return r.rule_key===key && /^\d{4}-\d{2}-\d{2}$/.test(r.effective_from||'') && /^\d+$/.test(r.value||''); })
  .sort(function(a,b){ return a.effective_from<b.effective_from?-1:(a.effective_from>b.effective_from?1:((a.set_at||'')<(b.set_at||'')?-1:1)); }); }
 /* the version in force on a date: latest effective_from on or before it (null = no rule yet on that date) */
@@ -2673,33 +2675,37 @@ function drawSops(){
 /* COMPLIANCE (under More). First screen: the breeder's own breeding rules (Lisa, 8 Nov 2026). Problems first, then the
    rules in force with their history, then the box to add a rule or a change. Only an OWNER code can save a rule (the save
    script refuses any other), and a change is a new row from a later date: nothing already saved is edited. */
-/* Compliance: room temperatures for the last COMP_DAYS days, best to worst: in range, Room empty (flagged, never counted),
-   out of range, missing. Missing = BLDThermometer.missingOn: a thermometer is only flagged on days its need rows cover. */
-var COMP_DAYS=7;
+/* Compliance: room temperatures for the last N days, best to worst: in range, Room empty (flagged, never counted),
+   out of range, missing. Missing = BLDThermometer.missingOn: a thermometer is only flagged on days its need rows cover.
+   N is a user row (no assumed timings): BLD-breeding_rule compliance.look_back_days, the version in force today; 7 until set.
+   A reading with a thermometer_id is its own line (a room may have more than one named thermometer). */
+var COMP_DAYS_KEY='compliance.look_back_days', COMP_DAYS_DEFAULT=7;
+function compDays(){ var r=breedRule(COMP_DAYS_KEY,todayISO()), n=r?parseInt(r.value,10):NaN; return n>0&&n<=366?{n:n,set:true,src:r.source||''}:{n:COMP_DAYS_DEFAULT,set:false,src:''}; }
 function dayMinus(iso,n){ var d=new Date(iso+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()-n); return d.toISOString().slice(0,10); }
 function compTemps(){
- var today=todayISO(), req=CD.req||[], th=T['BLD-thermometer.csv'], rd=T['BLD-area_reading.csv']||[], days=[], i;
- for(i=0;i<COMP_DAYS;i++) days.push(dayMinus(today,i));
+ var today=todayISO(), req=CD.req||[], th=T['BLD-thermometer.csv'], rd=T['BLD-area_reading.csv']||[], days=[], i, win=compDays();
+ var tname={}; (th||[]).forEach(function(t){ tname[t.id]=t.name||t.id; });
+ for(i=0;i<win.n;i++) days.push(dayMinus(today,i));
  var code={}; (CD.allAreas||CD.areas||[]).forEach(function(a){ code[a.id]=a.code||a.id; });
  var slot={};   /* one reading per room, day and slot: a later row wins (corrections), as on The round */
  rd.slice().sort(function(a,b){ return String(a.taken_at||'')<String(b.taken_at||'')?-1:1; }).forEach(function(r){
   var at=String(r.period_start||r.taken_at||''), d=at.slice(0,10); if(!r.area_id||days.indexOf(d)<0) return;
-  var hr=parseInt(at.slice(11,13),10); slot[d+'__'+r.area_id+'__'+(isNaN(hr)||hr<12?'am':'pm')]=r; });
+  var hr=parseInt(at.slice(11,13),10); slot[d+'__'+r.area_id+'__'+(isNaN(hr)||hr<12?'am':'pm')+'__'+(r.thermometer_id||'')]=r; });
  var out={ok:0,empty:[],bad:[],miss:[]};
  Object.keys(slot).sort().reverse().forEach(function(k){ var r=slot[k], p=k.split('__');
   if(r.min_c===''&&r.max_c===''||r.min_c==null&&r.max_c==null){ out.ok++; return; }   /* Room empty with no reading: covered */
   var st=tempState(r.min_c,r.max_c,roomBand(r.area_id,p[0]));
   if(st==='ok'||st==='unknown'){ out.ok++; return; }
-  var x={day:p[0],slot:p[2],area:r.area_id,label:code[r.area_id]||r.area_id,min:r.min_c,max:r.max_c,st:st};
+  var x={day:p[0],slot:p[2],area:r.area_id,label:code[r.area_id]||r.area_id,th:r.thermometer_id?(tname[r.thermometer_id]||r.thermometer_id):'',min:r.min_c,max:r.max_c,st:st};
   (roomEmpty(r)?out.empty:out.bad).push(x); });
  if(th) days.forEach(function(d){ BLDThermometer.missingOn(th,rd,d,req).forEach(function(t){ out.miss.push({day:d,name:t.name||t.id,area:t.area_id,label:code[t.area_id]||t.area_id}); }); });
- out.on=!!th; return out;
+ out.on=!!th; out.win=win; return out;
 }
 function compTempsHtml(){
  var c=compTemps(), n=c.bad.length+c.miss.length;
  var word={cold:'too cold',hot:'too hot',swap:'max lower than min'};
- var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(extra||'')+'</li>'; };
- return compFold('compTemps','temps','Room temperatures'+cntPill(n),'<p class="mut">Last '+COMP_DAYS+' days, from BLD-area_reading. A reading in a room marked empty is flagged but never counted.</p>'
+ var li=function(x,extra){ return '<li data-day="'+esc(x.day)+'"><b>'+roomLink(x.area,x.label)+'</b> '+(x.th?esc(x.th)+' ':'')+esc(dmyShort(x.day))+' '+(x.slot==='pm'?'evening':'morning')+' \u2014 '+esc((x.min||'?')+'\u2013'+(x.max||'?'))+' \u00b0C, '+esc(word[x.st]||x.st)+(extra||'')+'</li>'; };
+ return compFold('compTemps','temps','Room temperatures'+cntPill(n),'<p class="mut" data-window="'+c.win.n+'">Last '+c.win.n+' days'+(c.win.set?(c.win.src?' (your setting: '+esc(c.win.src)+')':' (your setting)'):' (not set yet, so 7: set \u201cDays Compliance looks back\u201d below)')+', from BLD-area_reading. A reading in a room marked empty is flagged but never counted.</p>'
   +'<ul class="ctemps">'
   +'<li data-k="ok"><span class="pill ok">'+c.ok+'</span> in range or covered</li>'
   +'<li data-k="empty"><span class="pill w">'+c.empty.length+'</span> out of range, Room empty (not counted)'+(c.empty.length?'<ul class="ctl">'+c.empty.map(function(x){ return li(x,' \u2014 Room empty'); }).join('')+'</ul>':'')+'</li>'
@@ -2728,14 +2734,14 @@ function pageCompliance(){
  h+=compTempsHtml();
  h+=BLDJobsView.complianceHtml(jobsV(),cntPill);
  h+=compFold('compRules','rules','Your breeding rules','<div class="scroll" tabindex="0" role="group" aria-label="Table, scroll sideways for more"><table><thead><tr><th>rule</th><th>in force today</th><th>from</th><th>source</th><th>history</th></tr></thead><tbody>'
-  +BREED_RULES.map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);
+  +BREED_RULES.concat(SETTING_RULES).map(function(b){ var all=breedRuleRows(b[0]), cur=breedRule(b[0],today);
    return '<tr data-rule="'+b[0]+'"><td><b>'+esc(b[1])+'</b></td><td>'+(cur?'<b>'+esc(cur.value)+'</b> '+esc(b[2]):'<span class="pill w">not set</span>')+'</td>'
     +'<td>'+(cur?esc(dmy(cur.effective_from)):'—')+'</td><td class="mut">'+esc(cur&&cur.source||'—')+'</td>'
     +'<td class="mut">'+(all.length>1?all.map(function(r){ return esc(r.value)+' from '+esc(dmy(r.effective_from)); }).join(' → '):(all.length?'1 version':'—'))+'</td></tr>'; }).join('')
   +'</tbody></table></div>'+((T['BLD-breeding_rule.csv']||[]).length?'':'<p class="mut">No rules saved yet. The file BLD-breeding_rule must exist in the folder (header row only) and its save switch be on.</p>'));
  h+=compFold('compAdd','add','Add a rule or a change',''
   +'<p class="mut">A change starts on a later date than the last version; earlier litters stay judged by the old one. Only an owner code can save.</p>'
-  +'<div class="frow"><select id="brKey"><option value="">choose a rule…</option>'+BREED_RULES.map(function(b){ return '<option value="'+b[0]+'">'+esc(b[1])+' ('+b[2]+')</option>'; }).join('')+'</select> '
+  +'<div class="frow"><select id="brKey"><option value="">choose a rule…</option>'+BREED_RULES.concat(SETTING_RULES).map(function(b){ return '<option value="'+b[0]+'">'+esc(b[1])+' ('+b[2]+')</option>'; }).join('')+'</select> '
   +'<input id="brVal" type="number" inputmode="numeric" min="1" max="48" step="1" placeholder="number" aria-label="number" style="width:7em"> '
   +'<input id="brFrom" type="date" value="'+today+'" aria-label="in force from"> '
   +'<input id="brSrc" type="text" placeholder="source, e.g. licence condition" aria-label="source" style="min-width:14em"> '
