@@ -90,8 +90,17 @@ test.describe('CD Hub core: rooms and dogs', () => {
     const tag = (ref, t, kind) => ({ tag: t, kind: kind || 'subject', ref_id: ref, active: 'true' });
     const tables = {
       area: [{ id: 'ar-a', code: 'Room A' }, { id: 'ar-c', code: 'ZZ_Room C' }],
-      subject: [{ id: 'd1', name: 'Pretend One' }, { id: 'd2', name: 'Pretend Two' }, { id: 'd3', name: 'Pretend Three' }],
+      subject: [{ id: 'd1', name: 'Pretend One', sex: 'Female', dob: '2022-01-05', size_band: '10-25kg (medium)' }, { id: 'd2', name: 'Pretend Two' }, { id: 'd3', name: 'Pretend Three' }],
       subject_status: [], litter: [],
+      breeding_rule: [{ rule_key: 'size_colour.small', value: 'orange' }, { rule_key: 'size_colour.medium', value: 'green' }, { rule_key: 'size_colour.large', value: 'blue' }],
+      area_access: [{ area_id: 'ar-a', access_type: 'free', effective_from: '2026-01-01' }, { area_id: 'ar-a', access_type: 'limited', effective_from: '2026-11-11' }],
+      area_capacity: [
+        { area_id: 'ar-a', access_type: 'free', size_band: '<10kg (small)', max_dogs: '9' },
+        { area_id: 'ar-a', access_type: 'limited', size_band: '25kg+ (large)', max_dogs: '0' },
+        { area_id: 'ar-a', access_type: 'limited', size_band: '10-25kg (medium)', max_dogs: '2' },
+        { area_id: 'ar-a', access_type: 'limited', size_band: '<10kg (small)', max_dogs: '3' },
+        { area_id: 'ar-a', access_type: 'limited', size_band: 'small + pups', max_dogs: '1' }
+      ],
       occupancy: [
         { subject_id: 'd1', area_id: 'ar-a', moved_in: '2026-10-01' },
         { subject_id: 'd2', area_id: 'ar-a', moved_in: '2026-10-01' }, { subject_id: 'd2', off_site_kind: 'temporary', moved_in: '2026-10-09' },
@@ -106,10 +115,18 @@ test.describe('CD Hub core: rooms and dogs', () => {
     await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
     await page.goto('cdhub/staff/print/');
     await page.getByRole('button', { name: 'Dog kennel cards' }).click();
-    await expect(page.locator('.qcard b')).toHaveText(['Pretend One', 'Pretend Two', 'Pretend Three']);
-    await expect(page.locator('.qcard .room')).toHaveText(['Room A']);
+    await expect(page.locator('.dcard .who b')).toHaveText(['Pretend One', 'Pretend Two', 'Pretend Three']);
+    const one = page.locator('.dcard[data-dog="d1"]');
+    await expect(one.locator('[data-k="Room"] dd')).toHaveText('Room A');
+    await expect(one.locator('[data-k="DOB"] dd')).toHaveText('05/01/22');
+    await expect(one).toHaveAttribute('style', /--c:var\(--sz-green, green\)/);
+    await expect(one.locator('.sex')).toHaveAttribute('aria-label', 'Female');
+    await expect(one.locator('.band small')).toHaveText('Medium10–25 kg');
+    await expect(page.locator('[data-k="Room"]')).toHaveCount(1);   // off-site and retired-room dogs: no room line
     await expect(page.locator('.sheet')).not.toContainText('ZZ_');
     await page.getByRole('button', { name: 'Room signs' }).click();
-    await expect(page.locator('.qcard b')).toHaveText(['Room A']);
+    await expect(page.locator('.rcard > b')).toHaveText(['Room A']);
+    // limits for the room's current access (limited, the later row), small first, none at 0, no pups line
+    await expect(page.locator('.rcard .sz')).toHaveText(['3 small', 'or 2 medium']);
   });
 });
