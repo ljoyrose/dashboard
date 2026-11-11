@@ -194,6 +194,7 @@ var FOLDER_ID=window.DASH_CONFIG.cdhub.folderId;
 var DRIVE_API=window.DASH_CONFIG.urls.files;
 var AREA_DAYS={};  /* ISO date -> areaId -> {am:{min,max},pm:{min,max}} */
 var AREA_NAMES={};  /* areaId -> display name/code */
+var AREA_SORT={};   /* areaId -> group_sort from BLD-area (the round order is rows, never coded here) */
 var ROUND_DATE=null;
 
 /* ---- helpers ---- */
@@ -281,7 +282,7 @@ async function loadAreaData(){
     var af=await findDriveFile('BLD-area.csv');
     if(af){
       var atxt=await readDriveFile(af);
-      parseCSV(atxt).forEach(function(a){if(a.id)AREA_NAMES[a.id]=a.code||a.name||a.id;});
+      parseCSV(atxt).forEach(function(a){if(!a.id)return;AREA_NAMES[a.id]=a.code||a.name||a.id;var g=parseFloat(a.group_sort);AREA_SORT[a.id]=isNaN(g)?Infinity:g;});
     }
   }catch(e){console.warn('Area data load failed:',e);}
 }
@@ -406,23 +407,20 @@ function closeDrill(){el('drill').classList.remove('open');}
 
 /* ---- views ---- */
 var YEAR=2026;
-/* Capacity walk. 3S.T1 is shown as 3S.TR. Nearby rooms sit beside their neighbours. */
-var ROUND_WALK=['H1','H2','H2-iso','H3','H4','H5','H5-6','H6','3A','3B','3C','3S.TR','3S.2','3S.2-iso','3S.3','3S.3-iso','4A','4B','4.1','4.2','4.3'];
-function areaLabel(code){ var c=String(code||''); return c==='3S.T1'?'3S.TR':c; }
-function areaName(aid){ return areaLabel(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')); }
-function walkRank(label){
-  var i=ROUND_WALK.indexOf(label);
-  if(i<0) return 'z'+label;
-  return (i<10?'00':i<100?'0':'')+i;
-}
+/* Round order comes from BLD-area rows: group_sort, then code. ZZ_ rooms are retired: left out of the round,
+   but a past day that has a reading for one still shows it, last, so no record is hidden. */
+function areaName(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')); }
+function isRetired(aid){ return /^ZZ_/i.test(String(AREA_NAMES[aid]||'')); }
 function areasInWalk(extra){
   var ids={};
-  Object.keys(AREA_NAMES).forEach(function(id){ ids[id]=1; });
+  Object.keys(AREA_NAMES).forEach(function(id){ if(!isRetired(id)) ids[id]=1; });
   (extra||[]).forEach(function(id){ if(id) ids[id]=1; });
+  function key(id){ return [isRetired(id)?1:0, id in AREA_SORT?AREA_SORT[id]:Infinity]; }
   return Object.keys(ids).sort(function(a,b){
-    var la=areaName(a), lb=areaName(b), ra=walkRank(la), rb=walkRank(lb);
-    if(ra<rb) return -1; if(ra>rb) return 1;
-    return la<lb?-1:la>lb?1:0;
+    var ka=key(a), kb=key(b);
+    if(ka[0]!==kb[0]) return ka[0]-kb[0];
+    if(ka[1]!==kb[1]) return ka[1]<kb[1]?-1:1;
+    return areaName(a).localeCompare(areaName(b),'en',{numeric:true});
   });
 }
 function dpIndoor(v){
@@ -519,12 +517,12 @@ function buildMonthCards(y){
       var date=ds(y,mi,d);
       if(date>TODAY_STR) continue;
       var day=AREA_DAYS[date]||{};
-      var use=known.length?known:Object.keys(day);
+      var use=known.length?areasInWalk(Object.keys(day)):Object.keys(day);
       use.forEach(function(aid){
         var ar=day[aid]||{};
         ['am','pm'].forEach(function(slot){
           var t=ar[slot], s=slotState(t);
-          if(s.miss){ missed++; return; }
+          if(s.miss){ if(!isRetired(aid)) missed++; return; }
           any=true;
           if(!s.inn) outN++;
           var mx=parseFloat(t.max), mn2=parseFloat(t.min), name=areaName(aid);
