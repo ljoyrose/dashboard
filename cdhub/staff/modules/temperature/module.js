@@ -421,7 +421,10 @@
       });
       host.appendChild(cards);
       if (o.tools) host.appendChild(o.tools());
-      if (here && o.autoOpen) { o.autoOpen = false; var a = o.areas.filter(function (x) { return isHere(x) && !(o.done && o.done[itemKey(x)]); })[0]; if (a) open(a); }
+      // A thermometer QR opens that thermometer; a room QR opens the room only when it has one thermometer, else both
+      // are listed first, by name, for staff to pick (Lisa 11 Nov 2026).
+      var mine = here ? o.areas.filter(isHere) : [];
+      if (o.autoOpen && mine.length === 1) { o.autoOpen = false; if (!(o.done && o.done[itemKey(mine[0])])) open(mine[0]); }
     }
     list();
     return function () { if (stop) stop(); };
@@ -527,7 +530,7 @@
     host.textContent = '';
     host.appendChild(h('h2', { text: 'Year report' }));
     host.appendChild(h('p', { class: 'sub', text: 'Every reading for one room, the highs and lows by month, and each reading outside the limit with what was done.' }));
-    var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(areas.map(function (a) { return h('option', { value: a.id, text: a.label }); })));
+    var room = h('select', { class: 'inp', 'aria-label': 'Room' }, [h('option', { value: '', text: 'Choose the room' })].concat(reportChoices(areas, thermos).map(function (o) { return h('option', { value: o.value, text: o.text }); })));
     var y = Number(londonParts().date.slice(0, 4)), year = h('select', { class: 'inp', 'aria-label': 'Year' }, [y, y - 1, y - 2].map(function (v) { return h('option', { value: String(v), text: String(v) }); }));
     var msg = say(''), out = h('div', { class: 'tg-report' });
     host.appendChild(room); host.appendChild(year);
