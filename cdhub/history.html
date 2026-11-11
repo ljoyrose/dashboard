@@ -11,6 +11,9 @@
 <script src="../config.js"></script>
 <script src="../toolkit.js"></script>
 <script src="../auth.js"></script>
+<script src="staff/lib/needs.js"></script>
+<script src="staff/lib/thermometer.js"></script>
+<script src="staff/lib/occupancy.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 (function(){var o={};try{o=JSON.parse(localStorage.getItem('dash-look')||'{}')||{};}catch(e){o={};}
@@ -198,6 +201,8 @@ var AREA_SORT={};   /* areaId -> group_sort from BLD-area (the round order is ro
 var ROUND_DATE=null;
 var SPAN={};        /* areaId -> {first,last} reading day */
 var FIRST_DAY='';   /* the first day any room has a reading: nothing is missed before readings began (no coded date) */
+var REQ=[];         /* BLD-requirement rows (room.in_use, reading.temperature); optional until the table is switched on */
+var THERMOS=[];     /* BLD-thermometer rows (name, area_id); optional */
 
 /* ---- helpers ---- */
 var MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -265,6 +270,10 @@ async function loadBand(){
     });
   }catch(e){console.warn('Temperature limits load failed:',e);}
 }
+async function optionalCsv(name){
+  try{ var f=await findDriveFile(name); return f?parseCSV(await readDriveFile(f)):[]; }
+  catch(e){ console.warn(name+' not read:',e); return []; }
+}
 async function loadAreaData(){
   await loadBand();
   try{
@@ -285,6 +294,8 @@ async function loadAreaData(){
     Object.keys(AREA_DAYS).forEach(function(d){ if(!FIRST_DAY||d<FIRST_DAY) FIRST_DAY=d; });
     Object.keys(AREA_DAYS).forEach(function(d){ Object.keys(AREA_DAYS[d]).forEach(function(aid){
       var s=SPAN[aid]||(SPAN[aid]={first:d,last:d}); if(d<s.first)s.first=d; if(d>s.last)s.last=d; }); });
+    REQ=await optionalCsv('BLD-requirement.csv');
+    THERMOS=await optionalCsv('BLD-thermometer.csv');
     var af=await findDriveFile('BLD-area.csv');
     if(af){
       var atxt=await readDriveFile(af);
@@ -395,10 +406,19 @@ function closeDrill(){el('drill').classList.remove('open');}
 
 /* ---- views ---- */
 var YEAR=2026;
-/* Round order comes from BLD-area rows: group_sort, then code. ZZ_ rooms are retired: left out of the round,
-   but a past day that has a reading for one still shows it, last, so no record is hidden. */
-function areaName(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')); }
-function isRetired(aid){ return /^ZZ_/i.test(String(AREA_NAMES[aid]||'')); }
+/* Round order comes from BLD-area rows: group_sort, then code. When a room is in use and a thermometer is needed
+   comes only from BLD-requirement rows through the shared lib (staff/lib/needs.js, thermometer.js, occupancy.js;
+   Lisa 11 Nov 2026, "A standard"). A room whose room.in_use rows have all ended is retired: left out of the round
+   after its end day, shown as "3A.1 (retired 11/11/26)", and its past readings still show. */
+function areaEnd(aid){ var N=window.BLDNeeds; return N?N.endDay(REQ,'room.in_use','area',aid):''; }
+function isRetired(aid){ var e=areaEnd(aid); return !!e&&e<TODAY_STR; }
+function areaCode(aid){ return String(AREA_NAMES[aid]||String(aid||'').replace(/^area-/,'').replace(/-/g,' ')); }
+function areaName(aid){ return areaCode(aid)+(isRetired(aid)?' (retired '+ddmmyy(areaEnd(aid))+')':''); }
+function roomInUse(aid,day){ var O=window.BLDOccupancy; return O?O.inUse({id:aid},day,REQ):true; }
+function thermoNeeded(aid,day){
+  var T=window.BLDThermometer; if(!T||!THERMOS.length) return true;
+  return THERMOS.some(function(t){ return t.area_id===aid&&T.neededOn(t,day,REQ); });
+}
 function areasInWalk(extra){
   var ids={};
   Object.keys(AREA_NAMES).forEach(function(id){ if(!isRetired(id)) ids[id]=1; });
@@ -418,13 +438,21 @@ function dpIndoor(v){
 }
 function dpOutdoor(v){ return dpIndoor(v).replace(/\.0$/,''); }
 /* ---- the one set of rules every view uses (spec: tests/mocked/history-calm.spec.js) ---- */
-/* Every room in use is needed from the first day any reading exists up to today, including a room with no readings
-   at all (its missed slots must show for the audit). A retired (ZZ_) room ends at its own last reading, so an old or
-   renamed room never shows as missed. */
+/* A reading is needed on a day when the room is in use (room.in_use) and it has a thermometer needed that day
+   (reading.temperature), up to today. It starts at the earliest from_date of the room's thermometer need rows, or,
+   with none, at the first day any room has a reading (so nothing is missed before readings began). A room in use
+   with no readings at all is still needed: its missed slots must show for the audit. */
+function needStart(aid){
+  var ids={}, start='';
+  THERMOS.forEach(function(t){ if(t.area_id===aid) ids[t.id]=1; });
+  REQ.forEach(function(r){ var f=String(r.from_date||'').slice(0,10);
+    if(r.need_type==='reading.temperature'&&r.target_table==='thermometer'&&ids[r.target_id]&&f&&(!start||f<start)) start=f; });
+  return start||FIRST_DAY;
+}
 function neededOn(aid,day){
-  if(!FIRST_DAY||day<FIRST_DAY||day>TODAY_STR) return false;
-  if(!isRetired(aid)) return aid in AREA_NAMES||aid in SPAN;
-  var sp=SPAN[aid]; return !!sp&&day<=sp.last;
+  if(!(aid in AREA_NAMES||aid in SPAN)) return false;
+  var first=needStart(aid); if(!first||day<first||day>TODAY_STR) return false;
+  return roomInUse(aid,day)&&thermoNeeded(aid,day);
 }
 function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 /* One slot: in / out / nolimit / miss / due / none */
@@ -441,7 +469,7 @@ function slotState(t,aid,day,slot){
 /* The rooms shown for a day: needed that day or with a reading, in round order. */
 function dayRooms(day){
   var ar=AREA_DAYS[day]||{};
-  return areasInWalk(Object.keys(ar).concat(Object.keys(SPAN))).filter(function(aid){ return ar[aid]||neededOn(aid,day); }).map(function(aid){
+  return areasInWalk(Object.keys(ar).concat(Object.keys(SPAN),THERMOS.map(function(t){ return t.area_id; }))).filter(function(aid){ return ar[aid]||neededOn(aid,day); }).map(function(aid){
     var r=ar[aid]||{};
     return {aid:aid, name:areaName(aid), am:slotState(r.am,aid,day,'am'), pm:slotState(r.pm,aid,day,'pm')};
   });
