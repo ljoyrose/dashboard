@@ -185,6 +185,9 @@ test('compliance: a retired thermometer with no reading on 12 Nov is not flagged
   assert.deepEqual(T.missingOn(rows, readings, '2026-11-12').map((t) => t.id), ['thm-1']);            // Extra A ended 11 Nov: no flag
   assert.deepEqual(T.missingOn(rows, readings, '2026-11-11').map((t) => t.id).sort(), ['thm-1', 'thm-2']);   // on 11 Nov Extra A had its reading
   assert.deepEqual(T.missingOn(rows, [], '2026-10-31'), []);                                         // before any valid_from: nothing to flag
+  const late = [{ area_id: 'area-h', period_start: '2026-11-12T07:00:00Z', taken_at: '2026-11-20T09:00:00+00:00' }, { area_id: 'area-c', taken_at: '2026-11-12T08:00:00+00:00' }];
+  assert.deepEqual(T.missingOn(rows, late, '2026-11-12'), []);                                        // a reading typed in on the 20th for the 12th covers the 12th
+  assert.deepEqual(T.missingOn(rows, late, '2026-11-20').map((t) => t.id).sort(), ['thm-1', 'thm-2']); // and not the day it was typed
 });
 
 test('after a thermometer ends, a late reading for a day it was needed still saves (Lisa 11 Nov: late readings from photos)', () => {

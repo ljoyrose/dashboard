@@ -26,11 +26,12 @@
   }
   /**
    * The thermometers to flag for no reading on `on`: needed that day, and no reading (area_reading rows, which save
-   * against area_id) for its place with a taken_at on that London day. A thermometer outside its dates is never flagged.
+   * against area_id) for its place on that day: the day of period_start, else of taken_at. A thermometer outside its dates is never flagged.
    */
   function missingOn(rows, readings, on) {
     var seen = {};
-    (readings || []).forEach(function (r) { if (day(r.taken_at) === day(on)) seen[r.area_id] = true; });
+    // matched on the reading's own day (period_start), else when it was typed: late entries and empty-room rows count
+    (readings || []).forEach(function (r) { if (day(r.period_start || r.taken_at) === day(on)) seen[r.area_id] = true; });
     return neededList(rows, on).filter(function (t) { return !seen[t.area_id]; });
   }
   return { neededOn: neededOn, neededList: neededList, missingOn: missingOn };
