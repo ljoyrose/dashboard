@@ -182,7 +182,7 @@
     last = v; css();
     var r = compute(v).byId[id];
     if (!r) return '';
-    return '<button type="button" class="bb-chip" data-go="breed" data-bb-dog="' + v.esc(id) + '" aria-label="Breed Better score">' + pill(r) + '<span class="bb-pts">' + total(r) + '</span></button>';
+    return '<button type="button" class="bb-chip" data-go="breed" data-bb-dog="' + v.esc(id) + '" aria-label="Breed Better score, testing">' + pill(r) + '<span class="bb-pts">' + total(r) + '</span><span class="bb-v bb-test">Testing</span></button>';
   }
 
   function redraw() { var el = document.getElementById('bbRoot'); if (el && last) el.innerHTML = inner(last); }
