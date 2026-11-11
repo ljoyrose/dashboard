@@ -797,9 +797,11 @@ function build(){
   /* rooms in use today: a room with room.in_use rows in BLD-requirement is shown only on days a row covers (need rows, Lisa 11 Nov 2026).
      No rows = always in use. Rows are never deleted; a retired room keeps its code and its records. */
   var _req=T['BLD-requirement.csv']||[], _day=BLDNeeds.today();
-  CD.areas=(T['BLD-area.csv']||[]).filter(function(r){ return BLDOccupancy.inUse(r,_day,_req); }).map(function(r){ return {id:r.id,code:r.code,cabin:r.code,
+  CD.req=_req;
+  CD.allAreas=(T['BLD-area.csv']||[]).map(function(r){ return {id:r.id,code:r.code,cabin:r.code,
     grouping:r.grouping||'other',group_sort:r.group_sort||'99',
     m2:r.area_value||'',m2ok:r.m2_confirmed||'',m2note:r.m2_note||'',use:r.use||'',src:r.source||''}; });
+  CD.areas=CD.allAreas.filter(function(a){ return BLDOccupancy.inUse(a,_day,_req); });
   var CAP={}; (T['BLD-area_capacity.csv']||[]).forEach(function(r){
     var a=CAP[r.area_id]=CAP[r.area_id]||{free:{},limited:{}};
     (a[r.access_type]||(a[r.access_type]={}))[r.size_band]={n:r.max_dogs,basis:r.basis||''}; });
@@ -1241,7 +1243,7 @@ function needsToday(){
   out.push({title:x.dog.name+' in whelp',sub:'Day '+x.day+' · window '+dmy(x.from)+' to '+dmy(x.to),date:x.due,
    tone:x.day>63?'late':(x.day>=57?'soon':''),go:'today',kind:'kit'}); });
  /* foundation: place capacity rule (a place holding more than its permitted headcount today) */
- (CD.areas||[]).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id));
+ areasOn(date).forEach(function(a){ var r=roomCheck(a.id,inCabin(a.id,date),accessOf(a.id));
   if(r.status==='over') out.push({title:a.code+' is over its limit',sub:r.message,date:date,tone:'late',go:'compliance',kind:'rule'}); });
  /* foundation: work record (an open item waiting on the owner) */
  (CD.work||[]).filter(function(r){return r.status==='BLOCKED' && r.owner==='Lisa';}).forEach(function(r){
@@ -1478,7 +1480,11 @@ function isFieldsRow(a){
 function isLiveCabin(a){
  return !!a && !isFieldsRow(a);
 }
-function liveCabins(){ return (CD.areas||[]).filter(isLiveCabin); }
+/* Rooms in use on a day (Lisa: late entry stays open for every day a thing was needed). A past date on The round
+   shows the rooms in use THAT day: a room retired since still shows, a room added since does not. */
+function areasOn(day){ day=day||todayISO(); if(day===todayISO()||!CD.allAreas) return CD.areas||[];
+ return CD.allAreas.filter(function(a){ return BLDOccupancy.inUse(a,day,CD.req||[]); }); }
+function liveCabins(day){ return areasOn(day||CD._roundDate||todayISO()).filter(isLiveCabin); }
 /* A chosen flap mode is only free or limited (the sheet value, or the same value on today's round). */
 function flapChosen(v){ v=normPlace(v); return v==='free'||v==='limited'; }
 /* foundation: checklist instance for today's round. Each line is a check on the round's places (✓ done / ✗ not yet),
@@ -1879,7 +1885,7 @@ function roomCheck(aid,ids,acc){ return BLDCapacity.check({areaId:aid,access:acc
 function roomReasons(ids){ var R=[], occ=T['BLD-occupancy.csv']||[];
  ids.forEach(function(id){ var last=null; occ.forEach(function(o){ if(o.subject_id===id&&(!last||(o.moved_in||'')>=(last.moved_in||''))) last=o; });
   if(last&&last.classification_note) R.push((nameOf(id)||id)+': '+last.classification_note); }); return R; }
-function roomAudit(date){ return BLDCapacity.audit((CD.areas||[]).map(function(a){ var ids=inCabin(a.id,date);
+function roomAudit(date){ return BLDCapacity.audit(areasOn(date).map(function(a){ var ids=inCabin(a.id,date);
  return {areaId:a.id,label:a.code,access:accessOf(a.id),dogs:roomDogs(ids),reasons:roomReasons(ids)}; }),T['BLD-area_capacity.csv']||[]); }
 function capFor(aid,band,access){ var a=CD.cap[aid]; if(!a||!access) return null;
  var c=(a[access]||{})[band]; return (c && c.n!=='' && c.n!=null)?c.n:null; }
@@ -2164,7 +2170,7 @@ function hereNow(){ return CD.dogs.filter(function(d){
 
 function roundKey(date,areaId){ return date+'__'+areaId; }
 function keptReadings(date){
- var rows=(CD.areas||[]).map(function(ar){ var r=ROUND[roundKey(date,ar.id)]||{};
+ var rows=areasOn(date).map(function(ar){ var r=ROUND[roundKey(date,ar.id)]||{};
    return {a:ar, am:r.t_am, pm:r.t_pm}; }).filter(function(x){ return x.am||x.pm; });
  var cell=function(t,bd){ if(!t) return '<span class="mut">—</span>'; var st=tempState(t.min,t.max,bd), sw=st==='swap', unk=st==='unknown'; if(sw) st='hot';
    return '<span class="kr '+(st==='hot'?'late':st)+'"><span class="ic '+(st==='hot'?'late':st)+'" aria-hidden="true"></span>'+esc((t.min||'?')+'–'+(t.max||'?'))+' °C'+(sw?' \u2014 max lower than min':unk?' \u2014 no limit set':'')+'</span>'; };
