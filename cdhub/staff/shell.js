@@ -74,7 +74,7 @@
     dataP = save.readMany(['area', 'subject', 'occupancy', 'subject_status']).then(function (r) {
       if (!r.ok) { dataP = null; guard(r); return { ok: false, code: r.code, message: r.message || 'Could not load the records.' }; }
       var t = r.tables, d = BLDOccupancy.dailyList(t), subjects = (t.subject || []).map(function (x) { return { id: x.id, label: x.name || x.id }; });
-      save.setLookups({ area: d.areas, subject: subjects });
+      save.setLookups({ area: t.area || d.areas, subject: subjects });   // every room, ZZ_ too: a late reading may name a retired room (screens still hide it)
       return { ok: true, areas: d.areas, dogs: d.dogs, skipped: d.skipped, subjects: subjects, raw: t };
     });
     return dataP;

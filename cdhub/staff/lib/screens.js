@@ -138,7 +138,7 @@
       btn.addEventListener('click', function () {
         showErrors(errs, null);
         result.textContent = ''; result.className = 'bs-result';
-        var fields = { area_id: a.id, min_c: minIn.value, max_c: maxIn.value };
+        var fields = { area_id: a.id, min_c: minIn.value, max_c: maxIn.value, read_method: 'typed' };
         if (spotIn.value.trim()) fields.spot_c = spotIn.value;
         if (!noteRow.hidden) {
           if (!noteIn.value.trim()) { errs.mitigation_note.textContent = 'Say what was done about it.'; return; }

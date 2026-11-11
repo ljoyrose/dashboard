@@ -108,16 +108,15 @@ function findDuplicate_(spec, clean, rows, nowMs, today) {
 }
 
 /**
- * Late entry (Lisa 11 Nov 2026): an OWNER code sending read_method photo may give a period_start older than 7 days,
- * back as far as the section's records are kept. Returns { oldestMs, keepYears, field } or null for everyone else.
+ * Readings (Lisa 11 Nov 2026): no 7-day limit for any role. A table with ageCap takes a period_start back as far as
+ * its section's records are kept. Returns { oldestMs, keepYears, field } for those tables, else null (the 7-day rule).
  */
-function lateAllowance_(spec, req, who, tenant, nowMs) {
-  var le = spec.lateEntry, f = req.fields || {};
-  if (!le || req.action !== 'add' || who.role !== le.role || String(f[le.field] || '').trim() !== le.value) return null;
-  var years = retentionYears_(le.retentionSection, tenant);
-  var oldest = new Date(nowMs);
+function ageCap_(spec, tenant, nowMs) {
+  var cap = spec.ageCap;
+  if (!cap) return null;
+  var years = retentionYears_(cap.retentionSection, tenant), oldest = new Date(nowMs);
   oldest.setUTCFullYear(oldest.getUTCFullYear() - years);   // the same date and time, that many years ago
-  return { oldestMs: oldest.getTime(), keepYears: years, field: 'period_start' };
+  return { oldestMs: oldest.getTime(), keepYears: years, field: cap.field };
 }
 
 /** Years a section's records are kept: its BLD-retention_setting row (the last one), else the Config.gs default. */
@@ -129,9 +128,9 @@ function retentionYears_(section, tenant) {
   return years || BLD.LIMITS.RETENTION_DEFAULT_YEARS;
 }
 
-/** A late entry may never fill a slot already filled: the same room and period_start at any time is a repeat. */
-function sameSlot_(late, clean, rows) {
-  if (!clean[late.field]) return null;
+/** A reading typed in more than 7 days late may never fill a slot already filled: the same room and period_start at any time is a repeat. */
+function sameSlot_(late, clean, rows, nowMs) {
+  if (!clean[late.field] || Date.parse(clean[late.field]) >= nowMs - BLD.LIMITS.PERIOD_MAX_AGE_HOURS * 3600000) return null;
   for (var i = 0; i < rows.length; i++) if (rows[i].area_id === clean.area_id && rows[i][late.field] === clean[late.field]) return rows[i];
   return null;
 }
@@ -242,7 +241,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
     throw err_('HEADER_MISMATCH', spec.file + ' does not have the columns the save system expects, so nothing was saved. Lisa needs to check the file header.');
   }
   var lookups = store_lookups_(spec, tenant);
-  var late = lateAllowance_(spec, req, who, tenant, nowMs);
+  var late = ageCap_(spec, tenant, nowMs);
   var v = validateInput_(spec, req.fields, lookups, nowMs, late);
   var errors = v.errors;
   var today = Utilities.formatDate(now, BLD.TZ, 'yyyy-MM-dd');
@@ -277,7 +276,7 @@ function sinkProcess_(spec, req, who, now, nowMs) {
   }
 
   if (req.action === 'add') {
-    var dup = findDuplicate_(spec, v.clean, target.records.concat(waiting), nowMs, today) || (late ? sameSlot_(late, v.clean, target.records.concat(waiting)) : null);
+    var dup = findDuplicate_(spec, v.clean, target.records.concat(waiting), nowMs, today) || (late ? sameSlot_(late, v.clean, target.records.concat(waiting), nowMs) : null);
     if (dup) {
       throw err_('DUPLICATE', 'This looks like the same entry as one already saved' + (dup.id ? ' (' + dup.id + ')' : '') +
         '. If that one is wrong, tell the owner.', { duplicate_of: dup.id || '' });
@@ -457,7 +456,7 @@ function sinkOwnerEdit_(tableKey, rowId, fields, adminEmail) {
       if (want === String(cur[name] || '')) continue;
       changedDefs[name] = defs[name]; changedVals[name] = want;
     }
-    var v = validateInput_({ input: changedDefs, checkRow: null }, changedVals, store_lookups_({ lookups: spec.lookups }, tenant), nowMs);
+    var v = validateInput_({ input: changedDefs, checkRow: null }, changedVals, store_lookups_({ lookups: spec.lookups }, tenant), nowMs, ageCap_(spec, tenant, nowMs));
     for (name in v.errors) if (Object.prototype.hasOwnProperty.call(v.errors, name)) errors[name] = v.errors[name];
     var next = {}, c;
     for (c in cur) if (Object.prototype.hasOwnProperty.call(cur, c)) next[c] = cur[c];
