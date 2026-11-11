@@ -77,3 +77,30 @@ test('dog kennel cards are only for dogs on site: none for a dog that has left',
   await page.getByRole('button', { name: 'Dog kennel cards' }).click();
   await expect(page.locator('.qcard b')).toHaveText(['Test here', 'Test offsite']);
 });
+
+test('thermometer cards: one per active thermometer, by name; adding one saves it and makes its card', async ({ page }) => {
+  const tables = {
+    area: [{ id: 'area-t1', code: 'T1' }, { id: 'area-zz', code: 'ZZ_OLD' }], subject: [], subject_status: [], litter: [], occupancy: [], qr_tag: [],
+    thermometer: [{ id: 'thm-1', name: 'Hall', area_id: 'area-t1', active: 'true' }, { id: 'thm-2', name: 'Old one', area_id: 'area-t1', active: 'false' }]
+  };
+  const sent = [];
+  await page.route(SCRIPT, (route) => {
+    if (route.request().method() === 'GET') return route.fulfill({ headers: CORS, json: { saveEnabled: true, readEnabled: true, tables: [], version: 'test' } });
+    const b = JSON.parse(route.request().postData());
+    if (b.action === 'read') return route.fulfill({ headers: CORS, json: { ok: true, result: { rows: tables[b.table] || [] } } });
+    sent.push(b);
+    return route.fulfill({ headers: CORS, json: { ok: true, result: { status: 'saved', id: b.table === 'thermometer' ? 'thm-3' : 'qrt-' + sent.length } } });
+  });
+  await page.addInitScript(([c, u]) => { localStorage.setItem('bld.device.code', c); localStorage.setItem('bld.scriptUrl', u); }, ['FAKE-OWNER', SCRIPT]);
+  await page.goto('cdhub/staff/print/');
+  await page.getByRole('button', { name: 'Thermometer cards' }).click();
+  await expect(page.locator('.qcard b')).toHaveText(['Hall']);
+  expect(sent.map((b) => [b.table, b.fields.kind, b.fields.ref_id])).toEqual([['qr_tag', 'thermometer', 'thm-1']]);
+  await page.getByRole('button', { name: 'Add thermometer' }).click();
+  await expect(page.getByRole('combobox', { name: 'Room' }).locator('option')).toHaveText(['Room', 'T1']);   // never a retired room
+  await page.getByRole('textbox', { name: 'Thermometer name' }).fill('Corridor 1');
+  await page.getByRole('combobox', { name: 'Room' }).selectOption('area-t1');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.locator('.qcard b')).toHaveText(['Corridor 1']);
+  expect(sent.slice(1).map((b) => [b.table, b.fields.name || b.fields.kind, b.fields.area_id || b.fields.ref_id])).toEqual([['thermometer', 'Corridor 1', 'area-t1'], ['qr_tag', 'thermometer', 'thm-3']]);
+});
