@@ -166,7 +166,7 @@ test.describe('Temperature history reads area files by mime type', () => {
     await page.locator('button.dout[title*="15 Jan 2026"]').click();
     const drill = page.locator('#drill');
     await expect(drill).toBeVisible();
-    await expect(drill.locator('#d-max')).toContainText('12');
+    await expect(drill.locator('#d-out')).toHaveText('12 / 4 °C, rain 0 mm');
     await expect(drill.locator('#d-src')).toHaveCount(0);
     await expect(drill.locator('#d-sub')).toHaveCount(0);
     await expect(drill).not.toContainText(/source/i);
@@ -218,16 +218,16 @@ test.describe('Temperature history reads area files by mime type', () => {
     await page.locator('#rdate').fill('2026-01-15');
     await page.locator('#rdate').dispatchEvent('change');
     const round = page.locator('#view-d');
-    await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3TR', '4A', 'Test Cabin Z', 'ZZ_3S.2-iso']);
-    await expect(round.locator('.rtable th')).toHaveText(['Area', 'AM min °C', 'AM max °C', 'PM min °C', 'PM max °C']);
-    await expect(round.locator('.rtile').first()).toContainText('8.2');
-    await expect(round.locator('.rtile').first()).toContainText('Cold');
-    await expect(round.locator('.rtile').first()).toContainText('Out of range');
-    await expect(round.locator('.rtile').first()).toContainText('Submitted');
-    await expect(round.locator('.rtile', { hasText: 'Test Cabin Z' })).toContainText('Missed');
+    // A room with no readings ever (Test Cabin Z) is not needed, so it is not listed or missed.
+    await expect(round.locator('.rtile .rn')).toHaveText(['H1', 'H2', '3TR', '4A', 'ZZ_3S.2-iso']);
+    await expect(round.locator('.rtable th')).toHaveText(['Room', 'AM min', 'AM max', 'PM min', 'PM max']);
+    await expect(round.locator('.rtile').first()).toContainText('AM 8.2–14.0');
+    await expect(round.locator('.rtile').first().locator('.warn').first()).toContainText('AM 8.2–14.0');
+    await expect(round.locator('.rtile').first()).toContainText('PM missed');
+    await expect(round).not.toContainText(/Submitted|In range|Out of range|\bOK\b/);
     const pad = await round.locator('.rtable td').first().evaluate((e) => parseFloat(getComputedStyle(e).paddingTop));
     expect(pad).toBeLessThanOrEqual(4);
-    await expect(round.locator('h3').nth(0)).toHaveText('Indoors');
+    await expect(round.locator('h3').nth(0)).toHaveText('Indoors °C');
     await expect(round.locator('h3').nth(1)).toHaveText('Outside');
     const tileBox = await round.locator('.rtile').first().boundingBox();
     const tableBox = await round.locator('.rtable').boundingBox();
@@ -235,9 +235,9 @@ test.describe('Temperature history reads area files by mime type', () => {
     await expect(round).not.toContainText(/\bactual/i);
     await expect(round).not.toContainText(/source/i);
     await page.getByRole('button', { name: 'Month cards' }).click();
-    await expect(page.locator('#view-c')).toContainText('out of range');
-    await expect(page.locator('#view-c')).toContainText('Highest');
-    await expect(page.locator('#view-c')).toContainText('rounds missed');
+    await expect(page.locator('#view-c')).toContainText('outside limit');
+    await expect(page.locator('#view-c')).toContainText('High');
+    await expect(page.locator('#view-c')).toContainText('missed');
     await expect(page.locator('#view-c')).not.toContainText('cold days');
   });
 });
