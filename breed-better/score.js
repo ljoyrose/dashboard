@@ -42,7 +42,7 @@
   function targetFor(scheme, available) {
     var n = text(scheme && scheme.target_points);
     if (!/^\d+(\.\d+)?$/.test(n)) return '';
-    return same(scheme.target_is, 'percent') ? Math.ceil(available * Number(n) / 100) : Number(n);
+    return /^percent\b/i.test(text(scheme.target_is)) ? Math.ceil(available * Number(n) / 100) : Number(n);
   }
 
   /** Parse an answer rule. Fixed forms only; returns null when the rule is not one of them. */
@@ -95,7 +95,7 @@
   function validateScheme(set) {
     var errors = [];
     var bands = {};
-    if (set.scheme && text(set.scheme.target_is) && TARGET_IS.indexOf(text(set.scheme.target_is).toLowerCase()) < 0) errors.push((set.scheme.id || 'scheme') + ': target_is must be points or percent');
+    if (set.scheme && text(set.scheme.target_is) && TARGET_IS.indexOf(text(set.scheme.target_is).toLowerCase().split(/\s/)[0]) < 0) errors.push((set.scheme.id || 'scheme') + ': target_is must be points or percent');
     (set.bands || []).forEach(function (b) { bands[b.id] = b; });
     (set.criteria || []).forEach(function (c) {
       var band = bands[c.band_id];

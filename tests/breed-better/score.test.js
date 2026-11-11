@@ -232,6 +232,7 @@ test('target: percent of available, rounded up; under it is Below target', () =>
   assert.equal(r.verdict, 'below_target');
   assert.equal(r.gate_result, 'pass');
   assert.equal(score(tInput('65', 'percent', 'clear')).verdict, 'pass');
+  assert.equal(score(tInput('65', 'percent of points available', 'cloudy')).target, 7);
 });
 
 test('target: a fixed number works too, and no target means gates alone decide', () => {

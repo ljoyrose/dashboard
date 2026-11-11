@@ -9,7 +9,9 @@
 }(typeof self !== 'undefined' ? self : this, function (Score) {
   'use strict';
 
-  var FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv'];
+  var FILES = ['BLD-score_scheme.csv', 'BLD-score_band.csv', 'BLD-score_criterion.csv', 'BLD-score_point.csv', 'BLD-score_enrolment.csv',
+    /* evidence only Breed Better reads; the hub already loads health_screen, dna_result, litter and subject_status */
+    'BLD-fit_to_breed.csv'];
   /* default words; a scheme row can change any of them with verdict_words, e.g. "unverified=To prove" */
   var VERDICT = { pass: 'Pass', below_target: 'Below target', unverified: 'Unverified', fail: 'Fail' };
   var ORDER = ['pass', 'below_target', 'unverified', 'fail'];
@@ -20,7 +22,7 @@
     undated: 'Record has no date', blank_answer: 'Blank on the record', no_rule_for_answer: 'Answer is not in the rules',
     recorded_unverified: 'Recorded, cannot be scored yet'
   };
-  var GO = { 'BLD-litter': 'litters', 'BLD-health_screen': 'dogs', 'BLD-dna_result': 'dogs', 'BLD-subject_status': 'dogs' };
+  var GO = { 'BLD-fit_to_breed': 'dogs', 'BLD-litter': 'litters', 'BLD-health_screen': 'dogs', 'BLD-dna_result': 'dogs', 'BLD-subject_status': 'dogs' };
   var state = { filter: '', dog: '' }, last = null, memo = null;
 
   function t(v) { return v === undefined || v === null ? '' : String(v).trim(); }
@@ -43,7 +45,7 @@
 
   /** One result per enrolled animal, best first. { results, error, byId } */
   function compute(v) {
-    var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv'])
+    var T = v.T, key = v.today + '|' + FILES.concat(['BLD-subject.csv', 'BLD-health_screen.csv', 'BLD-dna_result.csv', 'BLD-litter.csv', 'BLD-subject_status.csv'])
       .map(function (f) { return (T[f] || []).length; }).join(',');
     if (memo && memo.key === key) return memo;
     var out = { key: key, results: [], byId: {}, error: '', setUp: !!(T['BLD-score_enrolment.csv'] || []).length };

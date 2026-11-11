@@ -71,3 +71,15 @@ test('staff never see Breed Better: no staff, guest or print page loads it', () 
   const hits = walk(path.join(__dirname, '../../cdhub/staff')).filter((f) => /\.(html|js)$/.test(f) && /breed-better|BBHubView/.test(fs.readFileSync(f, 'utf8')));
   assert.deepEqual(hits, []);
 });
+
+test('Fit to Breed is read from BLD-fit_to_breed, which the hub loads as an optional file', () => {
+  assert.ok(View.FILES.includes('BLD-fit_to_breed.csv'));
+  const T = tables({
+    'BLD-score_criterion.csv': [{ id: 'c', scheme_id: 's1', band_id: 'g', label: 'Fit to Breed', evidence_source: 'BLD-fit_to_breed', answer_field: 'outcome', date_field: 'assessed_on' }],
+    'BLD-score_point.csv': [{ id: 'p', criterion_id: 'c', answer_match: 'is:fit', gate_outcome: 'pass' }, { id: 'q', criterion_id: 'c', answer_match: 'any', gate_outcome: 'fail' }],
+    'BLD-fit_to_breed.csv': [{ id: 'f1', subject_id: 'a1', outcome: 'fit', assessed_on: '2026-10-03' }]
+  });
+  const c = View.compute({ T, today: '2026-11-11', esc });
+  assert.equal(c.byId.a1.verdict, 'pass');
+  assert.equal(c.byId.a1.lines[0].date_then, '2026-10-03');
+});
