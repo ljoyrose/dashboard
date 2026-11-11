@@ -277,6 +277,8 @@ async function optionalCsv(name){
 async function loadAreaData(){
   await loadBand();
   try{
+    REQ=await optionalCsv('BLD-requirement.csv');
+    THERMOS=await optionalCsv('BLD-thermometer.csv');
     var rf=await findDriveFile('BLD-area_reading.csv');
     if(rf){
       var txt=await readDriveFile(rf);
@@ -286,16 +288,15 @@ async function loadAreaData(){
         var at=String(r.period_start||r.taken_at||'');if(!r.area_id||at.length<10)return;   /* period_start: a reading typed later belongs to its own slot */
         var date=at.slice(0,10),hr=parseInt(at.slice(11,13),10),slot=(isNaN(hr)||hr<12)?'am':'pm';
         if(!AREA_DAYS[date])AREA_DAYS[date]={};
-        if(!AREA_DAYS[date][r.area_id])AREA_DAYS[date][r.area_id]={};
-        AREA_DAYS[date][r.area_id][slot]={min:r.min_c,max:r.max_c,note:r.mitigation_note||''};
+        var u=unitFor(r.area_id,r.thermometer_id);
+        if(!AREA_DAYS[date][u])AREA_DAYS[date][u]={};
+        AREA_DAYS[date][u][slot]={min:r.min_c,max:r.max_c,note:r.mitigation_note||'',empty:String(r.room_empty||'').toLowerCase()==='yes'};
       });
     }
     SPAN={}; FIRST_DAY='';
     Object.keys(AREA_DAYS).forEach(function(d){ if(!FIRST_DAY||d<FIRST_DAY) FIRST_DAY=d; });
     Object.keys(AREA_DAYS).forEach(function(d){ Object.keys(AREA_DAYS[d]).forEach(function(aid){
       var s=SPAN[aid]||(SPAN[aid]={first:d,last:d}); if(d<s.first)s.first=d; if(d>s.last)s.last=d; }); });
-    REQ=await optionalCsv('BLD-requirement.csv');
-    THERMOS=await optionalCsv('BLD-thermometer.csv');
     var af=await findDriveFile('BLD-area.csv');
     if(af){
       var atxt=await readDriveFile(af);
@@ -449,18 +450,37 @@ function needStart(aid){
     if(r.need_type==='reading.temperature'&&r.target_table==='thermometer'&&ids[r.target_id]&&f&&(!start||f<start)) start=f; });
   return start||FIRST_DAY;
 }
-function neededOn(aid,day){
-  if(!(aid in AREA_NAMES||aid in SPAN)) return false;
+/* A line is a unit: the room, or, for a room with two or more thermometers (H5/6: H5 and H6), "room|thermometer"
+   (Lisa 11 Nov 2026: each reading shown in the room by thermometer name). A reading names its thermometer
+   (thermometer_id); an older one with none counts for the room's only thermometer, or stays on a room line. */
+function roomThermos(aid){ return THERMOS.filter(function(t){ return t.area_id===aid; }).sort(function(a,b){ return String(a.name||'').localeCompare(String(b.name||''),'en',{numeric:true}); }); }
+function multi(aid){ return roomThermos(aid).length>1; }
+function unitFor(aid,tid){ return tid&&multi(aid)?aid+'|'+tid:aid; }
+function unitArea(u){ return String(u).split('|')[0]; }
+function unitThermo(u){ var tid=String(u).split('|')[1]||''; return tid?THERMOS.filter(function(t){ return t.id===tid; })[0]||{id:tid}:null; }
+function unitName(u){ var t=unitThermo(u); return areaName(unitArea(u))+(t?' · '+(t.name||t.id):''); }
+function unitsOf(aid){ return multi(aid)?[aid].concat(roomThermos(aid).map(function(t){ return aid+'|'+t.id; })):[aid]; }
+function neededOn(u,day){
+  var aid=unitArea(u), t=unitThermo(u);
+  if(!(aid in AREA_NAMES||u in SPAN)) return false;
+  if(!t&&multi(aid)) return false;   /* a room line beside named thermometers holds only older readings */
   var first=needStart(aid); if(!first||day<first||day>TODAY_STR) return false;
-  return roomInUse(aid,day)&&thermoNeeded(aid,day);
+  var T=window.BLDThermometer;
+  return roomInUse(aid,day)&&(t&&T?T.neededOn(t,day,REQ):thermoNeeded(aid,day));
 }
 function hasVal(v){ return v!=null&&String(v).trim()!==''; }
 /* One slot: in / out / nolimit / miss / due / none */
+/* Room empty (Lisa 11 Nov 2026) = no dog present, a flag on the slot's reading. With no reading the slot is covered
+   ('empty', never missed). Outside the limit while empty is flagged with "Room empty" but never counted as outside
+   ('eout'). */
+function isRead(k){ return k==='in'||k==='out'||k==='nolimit'||k==='eout'; }
 function slotState(t,aid,day,slot){
   if(t&&(hasVal(t.min)||hasVal(t.max))){
-    var cls=tempCls(t.min,t.max);
-    return {k:cls==='ok'?'in':cls==='unknown'?'nolimit':'out', lo:dpIndoor(t.min), hi:dpIndoor(t.max), note:t.note||''};
+    var cls=tempCls(t.min,t.max), k=cls==='ok'?'in':cls==='unknown'?'nolimit':'out';
+    if(t.empty&&k==='out') k='eout';
+    return {k:k, empty:!!t.empty, lo:dpIndoor(t.min), hi:dpIndoor(t.max), note:t.note||''};
   }
+  if(t&&t.empty) return {k:'empty'};
   if(!neededOn(aid,day)) return {k:'none'};
   if(day===TODAY_STR&&(slot==='pm'||new Date().getHours()<12)) return {k:'due'};
   if(day>TODAY_STR) return {k:'due'};
@@ -469,14 +489,16 @@ function slotState(t,aid,day,slot){
 /* The rooms shown for a day: needed that day or with a reading, in round order. */
 function dayRooms(day){
   var ar=AREA_DAYS[day]||{};
-  return areasInWalk(Object.keys(ar).concat(Object.keys(SPAN),THERMOS.map(function(t){ return t.area_id; }))).filter(function(aid){ return ar[aid]||neededOn(aid,day); }).map(function(aid){
-    var r=ar[aid]||{};
-    return {aid:aid, name:areaName(aid), am:slotState(r.am,aid,day,'am'), pm:slotState(r.pm,aid,day,'pm')};
+  var ids=Object.keys(ar).concat(Object.keys(SPAN)).map(unitArea).concat(THERMOS.map(function(t){ return t.area_id; }));
+  var units=[]; areasInWalk(ids).forEach(function(aid){ units=units.concat(unitsOf(aid)); });
+  return units.filter(function(u){ return ar[u]||neededOn(u,day); }).map(function(u){
+    var r=ar[u]||{};
+    return {aid:u, name:unitName(u), am:slotState(r.am,u,day,'am'), pm:slotState(r.pm,u,day,'pm')};
   });
 }
 function daySummary(day){
   var n={in:0,out:0,nolimit:0,miss:0,due:0,read:0};
-  dayRooms(day).forEach(function(x){ [x.am,x.pm].forEach(function(s){ if(s.k in n) n[s.k]++; if(s.k==='in'||s.k==='out'||s.k==='nolimit') n.read++; }); });
+  dayRooms(day).forEach(function(x){ [x.am,x.pm].forEach(function(s){ if(s.k in n) n[s.k]++; if(isRead(s.k)) n.read++; }); });
   return n;
 }
 function indoorDayClass(day){
@@ -491,9 +513,11 @@ function slotHtml(label,s){
   if(s.k==='none') return '';
   if(s.k==='miss') return '<span class="warn">'+label+' missed</span>';
   if(s.k==='due') return '<span class="due">'+label+' due</span>';
+  if(s.k==='empty') return '<span class="due">'+label+' empty</span>';
   var txt=label+' '+(s.lo||'–')+'–'+(s.hi||'–');
   if(s.k==='out') return '<span class="warn">'+esc(txt)+'</span>';
-  return esc(txt)+(s.k==='in'?' <span class="tick" aria-label="inside limit">✓</span>':'');
+  if(s.k==='eout') return '<span class="warn">'+esc(txt)+' · Room empty</span>';
+  return esc(txt)+(s.k==='in'?' <span class="tick" aria-label="inside limit">✓</span>':'')+(s.empty?' <span class="due">(empty)</span>':'');
 }
 /* "H1 · AM 18.1–21.0 ✓ · PM 17.2–19.5 ✓"; outside the limit, "What was done" follows on the day panel. */
 function roomLine(x,withNotes){
@@ -567,7 +591,7 @@ function buildMonthCards(y){
       if(date>TODAY_STR) continue;
       dayRooms(date).forEach(function(x){ [x.am,x.pm].forEach(function(s){
         if(s.k in t) t[s.k]++;
-        if(s.k!=='in'&&s.k!=='out'&&s.k!=='nolimit') return;
+        if(!isRead(s.k)) return;
         t.read++;
         var mx=parseFloat(s.hi), mn2=parseFloat(s.lo);
         if(!isNaN(mx)&&(hi==null||mx>hi.v)) hi={v:mx,name:x.name};
@@ -593,7 +617,7 @@ function buildRound(dateStr){
   var tiles='<div class="rtiles">'+rooms.map(function(x){
     return '<div class="rtile"><div class="rn">'+esc(x.name)+'</div><div class="rs">'+slotHtml('AM',x.am)+'</div><div class="rs">'+slotHtml('PM',x.pm)+'</div></div>';
   }).join('')+'</div>';
-  var cell=function(s,v){ return '<td'+(s.k==='out'?' class="warn"':'')+'>'+esc(v||'—')+'</td>'; };
+  var cell=function(s,v){ return '<td'+(s.k==='out'||s.k==='eout'?' class="warn"':'')+'>'+esc(v||'—')+'</td>'; };
   var rows=rooms.map(function(x){ return '<tr><td class="nm">'+esc(x.name)+'</td>'+cell(x.am,x.am.lo)+cell(x.am,x.am.hi)+cell(x.pm,x.pm.lo)+cell(x.pm,x.pm.hi)+'</tr>'; }).join('');
   var table=rooms.length
     ?'<div class="rscroll" tabindex="0" role="region" aria-label="Indoor temperatures in degrees C"><table class="rtable"><thead><tr><th>Room</th><th>AM min</th><th>AM max</th><th>PM min</th><th>PM max</th></tr></thead><tbody>'+rows+'</tbody></table></div>'

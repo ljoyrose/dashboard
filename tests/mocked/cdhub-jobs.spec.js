@@ -36,6 +36,31 @@ test.describe('CD Hub: jobs', () => {
     await expect(page.locator('#compJobs')).toContainText('No job rows yet');
   });
 
+  test('Compliance: sections fold and stay folded; jobs run best to worst, done then due then late; counts open the SOP', async ({ page, guard }) => {
+    addTable(guard.world, 'BLD-check_type.csv', TYPES);
+    addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [
+      'l1,t,t1,,sub-test-dog-1,,,ok,2026-01-05T09:00:00Z,,2026-01-05T09:00:00Z,Staff A,,,scanned'
+    ]));
+    await HUBS.cdhub.open(page, guard);
+    await tab(page, 'compliance');
+    await expect(page.locator('#compJobs table').first().locator('thead th')).toHaveText(['SOP', 'job', 'done', 'due', 'late', 'last']);
+    const late = await page.locator('#compJobs tr[data-job]').evaluateAll((rs) => rs.map((r) => +(r.querySelector('td[data-n="late"]').textContent) || 0));
+    expect(late).toEqual(late.slice().sort((a, b) => a - b));
+    const link = page.locator('#compJobs tr[data-job="nails"] td[data-n="late"] a');
+    await expect(link).toHaveAttribute('href', '#/sops/Care%20Check');
+    for (const id of ['compProblems', 'compRooms', 'compJobs', 'compRules', 'compAdd']) await expect(page.locator('#' + id + ' details.compfold')).toHaveAttribute('open', '');
+    await page.locator('#compRules details.compfold > summary').click();
+    await expect(page.locator('#compRules details.compfold')).not.toHaveAttribute('open', '');
+    await tab(page, 'dogs');
+    await tab(page, 'compliance');
+    await expect(page.locator('#compRules details.compfold')).not.toHaveAttribute('open', '');
+    await expect(page.locator('#compJobs details.compfold')).toHaveAttribute('open', '');
+    await link.click();
+    await expect(page).toHaveURL(/#\/sops\/Care%20Check$/);
+    await expect(page.locator('#nav button[data-go="sops"]')).toHaveAttribute('aria-current', 'page');
+    expect(await page.evaluate(() => SOP.open)).toBe('Care Check');
+  });
+
   test('Compliance shows late, due and source; dog card shows its history in plain words', async ({ page, guard }) => {
     addTable(guard.world, 'BLD-check_type.csv', TYPES);
     addTable(guard.world, 'BLD-check_log.csv', csv(LOG_H, [

@@ -58,7 +58,7 @@ test('a thermometer ended 11 Nov is not in the 12 Nov round; its 10 Nov reading 
   await page.getByLabel('MIN').fill('12.0');
   await page.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => sent.length).toBe(1);
-  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-old', max_c: '18.5', min_c: '12.0', period_start: '2026-11-10T00:00:00+00:00', read_method: 'typed' } });
+  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-old', max_c: '18.5', min_c: '12.0', period_start: '2026-11-10T00:00:00+00:00', read_method: 'photo' } });   // Lisa 11 Nov: missed readings are from photos
   await expect(page.getByText('Now press CLR')).toHaveCount(0);
 
   await page.getByRole('button', { name: 'Done' }).click();
@@ -110,4 +110,74 @@ test('Lisa 11 Nov: a missed reading outside the limit asks "What was done?", as 
   await page.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => sent.length).toBe(1);
   expect(sent[0].fields).toMatchObject({ area_id: 'area-new', min_c: '8.5', period_start: '2026-11-12T00:00:00+00:00', mitigation_note: 'Heater on, rechecked at 12:00' });
+});
+
+// Room empty (Lisa 11 Nov 2026): no dog present. A flag on the slot's reading; a reading is optional with it, and an
+// outside reading in an empty room is never a non-compliance, so "What was done" is not asked.
+test('Room empty with no reading saves room_empty yes and no temperatures; no CLR step', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card').first().click();
+  await page.getByLabel('Room empty').check();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0]).toMatchObject({ table: 'area_reading', fields: { area_id: 'area-new', room_empty: 'yes', period_start: '2026-11-12T00:00:00+00:00' } });
+  expect(sent[0].fields).not.toHaveProperty('min_c');
+  expect(sent[0].fields).not.toHaveProperty('max_c');
+  expect(sent[0].fields).not.toHaveProperty('read_method');
+  await expect(page.getByText('Now press CLR')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Done' })).toBeVisible();
+});
+
+test('Room empty with an outside reading saves without "What was done"; one temperature alone is refused', async ({ page }) => {
+  const sent = await setup(page);
+  await page.goto('cdhub/staff/#m/temperature');
+  await page.locator('.cards .card').first().click();
+  await page.getByLabel('Room empty').check();
+  await page.getByLabel('MAX').fill('24.0');
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByText('Type MAX and MIN, or leave both blank.')).toBeVisible();
+  await page.getByLabel('MIN').fill('8.0');
+  await expect(page.getByLabel('What was done')).toBeHidden();
+  await page.getByRole('button', { name: 'Save' }).click();
+  await expect.poll(() => sent.length).toBe(1);
+  expect(sent[0].fields).toMatchObject({ area_id: 'area-new', room_empty: 'yes', max_c: '24.0', min_c: '8.0', read_method: 'typed' });
+  expect(sent[0].fields).not.toHaveProperty('mitigation_note');
+});
+
+test('Room empty with dogs recorded in the room warns but still allows it', async ({ page }) => {
+  TABLES.subject = [{ id: 'dog-1', name: 'Test Dog', dob: '2020-01-01' }];
+  TABLES.occupancy = [{ id: 'occ-1', subject_id: 'dog-1', area_id: 'area-new', moved_in: '2026-11-01' }];
+  try {
+    const sent = await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await page.locator('.cards .card').first().click();
+    await page.getByLabel('Room empty').check();
+    await expect(page.getByText('Dogs are recorded in this room.')).toBeVisible();
+    await page.getByLabel('MAX').fill('18.0');
+    await page.getByLabel('MIN').fill('12.0');
+    await page.getByRole('button', { name: 'Save' }).click();
+    await expect.poll(() => sent.length).toBe(1);
+  } finally { TABLES.subject = []; TABLES.occupancy = []; }
+});
+
+test('year report: an empty room\'s outside reading is flagged "Room empty" but not counted as outside the limit', async ({ page }) => {
+  TABLES.area_reading = [
+    { id: 'r1', area_id: 'area-new', period_start: '2026-11-12T00:00:00+00:00', min_c: '8.0', max_c: '24.0', room_empty: 'yes' },
+    { id: 'r2', area_id: 'area-new', period_start: '2026-11-12T12:00:00+00:00', room_empty: 'yes' }
+  ];
+  try {
+    await setup(page);
+    await page.goto('cdhub/staff/#m/temperature');
+    await page.getByRole('button', { name: 'Year report' }).click();
+    await page.getByLabel('Room').selectOption('area-new');
+    await page.getByRole('button', { name: 'Open report' }).click();
+    const month = page.locator('.tg-tab').first().locator('tbody tr').first();
+    await expect(month.locator('td')).toHaveText(['11/26', '1', '8.0', '24.0', '0']);
+    const rows = page.locator('.tg-tab').nth(1).locator('tbody tr');
+    await expect(rows.first()).toHaveClass(/tg-br/);
+    await expect(rows.first()).toContainText('Room empty');
+    await expect(rows.nth(1)).toContainText('Room empty');
+    await expect(rows.nth(1)).not.toHaveClass(/tg-br/);
+  } finally { TABLES.area_reading = []; }
 });
